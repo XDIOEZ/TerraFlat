@@ -64,7 +64,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 罐内连续液面与罐口重力条带为表现；液流在 Mod_WaterVessel 成功移除后触发，Graphic 不参与数量结算且位于内腔 Mask 外。
 - 载具尾波消费实际水面位移并逐发射点确认水面，限额世界空间粒子随主体 Sorting Layer、Order+1 排序；停用/回池/换世界清理。
 - ShipEngineExhaustPresenter 消费船引擎实际耗油后的出力，复用 Resources/ShipEngineExhaust 材质；材质 .meta 的 GUID 必须为 32 位十六进制，导入后确认 Resources 可加载。局部粒子按 vehicle -3 排在船地板/管线后面，停推残留继续同步；单引擎最多 48 粒子，停推 StopEmitting、禁用 StopEmittingAndClear。
-- `SpaceStarfield` 用固定种子生成 420 个大小/亮度/微色温不同的星点，均匀底层与局部星群表达疏密；单 Mesh 持有全部四边形，屏幕像素大小固定，缩放只变背景平面，分辨率变化才重建几何，退出释放自有 Mesh/Material/Texture 并恢复相机背景。
+- `SpaceStarfield` 固定420个白/暖白/红/蓝星点，用 Resources/Space/Starfield Shader 做三层轻微视差、环绕和独立闪烁；CPU 只传双精度镜头位移，单 Mesh 九宫格补边，像素大小固定，分辨率变化才重建几何，退出释放 Mesh/Material 并恢复相机背景。
 
 ## AIECS 与批量表现
 

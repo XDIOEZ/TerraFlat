@@ -17,6 +17,9 @@ internal static partial class Program
         Run("喷嘴分配工作区复用无临时分配", ThrusterAllocations);
         Run("乘员继承船速、松键及转向保留漂移、碰撞冲量与快照恢复", PassengerInertia);
         Run("降落范围、星体上方自由飞行及实际降落姿态", LandingBoundary);
+        Run("椭圆近远点、公转周期、父星运动和快照恢复", OrbitMotion);
+        Run("移动星体扫掠、起飞边缘停留和星系更新无分配", MovingBodyEntry);
+        Run("延长起降、实际推力不足和重新点火", SurfaceFlightTiming);
         Run("不同步长及横向初速下到点停稳", Arrival);
         Run("船头转向取最短方向", Heading);
         Run("导航到星体画面中心及穿过星体到达航点", OverflightNavigation);

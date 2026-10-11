@@ -16,11 +16,12 @@ public partial class Mod_Mover
         if (spaceUpright != enabled)
         {
             spaceUpright = enabled;
-            item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(!enabled);
+            // 只固定玩家本体，左右翻面和手持物瞄准仍由各自模块处理。
+            item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(true);
         }
         item?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetFollowTargetRotation(!enabled);
         if (!enabled || item == null) return;
-        // 太空里固定玩家与镜头朝上，鼠标只继续负责手持物瞄准。
+        // 太空里固定玩家与镜头朝上，鼠标仍可控制左右朝向与手持物瞄准。
         item.transform.rotation = Quaternion.identity;
         if (rb != null) { rb.rotation = 0f; rb.angularVelocity = 0f; }
     }

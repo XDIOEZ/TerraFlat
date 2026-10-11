@@ -28,7 +28,10 @@ Material:
     - _SurfaceStyle: 0
     - _SurfaceDetailStrength: 0.2
     - _SurfaceDetailScale: 12
+    - _SurfaceExtent: 1.12
+    - _SurfaceSeed: 0
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _SurfaceAccentColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    - _SurfaceLightDirection: {r: 0.65, g: 0.35, b: 0.8, a: 0}
   m_BuildTextureStacks: []

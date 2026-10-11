@@ -13,16 +13,17 @@ namespace FlatWorld.Spaceflight
             public SurfaceContact Contact;
             public double AngularAcceleration;
             public bool IsLanding;
+            public bool ApplyImpact = true;
         }
         private readonly Dictionary<string, QueuedSurfaceContact> pendingSurfaceContacts = new(StringComparer.Ordinal);
 
         // 地表下降保留真实触地时刻，先解算本步横移接触再提交落地。
-        public void QueueSurfaceLanding(ShipAssemblyState assembly, SurfaceContact contact)
+        public void QueueSurfaceLanding(ShipAssemblyState assembly, SurfaceContact contact, bool applyImpact = true)
         {
             if (assembly == null || assembly.MemberShipIds.Count == 0 || !contact.IsValid || !SpaceVector2.Finite(contact.Fraction)) return;
             contact.Fraction = Math.Clamp(contact.Fraction, 0d, 1d);
             pendingSurfaceContacts[assembly.MemberShipIds[0]] = new QueuedSurfaceContact
-                { Assembly = assembly, Contact = contact, IsLanding = true };
+                { Assembly = assembly, Contact = contact, IsLanding = true, ApplyImpact = applyImpact };
         }
 
         public void CommitSurfaceContacts(double seconds)
@@ -46,7 +47,7 @@ namespace FlatWorld.Spaceflight
                     contact.RelativeVelocityMetersPerSecond = new SpaceVector2(
                         Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY),
                         contact.RelativeVelocityMetersPerSecond.Y);
-                    LandAssembly(assembly, contact);
+                    LandAssembly(assembly, contact, candidate.ApplyImpact);
                 }
             }
             // 已接受的降落指令使用本步碰撞后的最终姿态，不因漂出按钮范围或重积轨迹静默丢失。
@@ -55,7 +56,7 @@ namespace FlatWorld.Spaceflight
                 ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
                 if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising) ||
                     !Universe.TryGetBody(flight.RequestedLandingBodyId, out BodyState body)) continue;
-                bool poweredLanding = TryConsumeLandingFuel(assembly, seconds);
+                bool poweredLanding = CanBeginPoweredLanding(assembly, body.SurfaceGravity);
                 BeginSurfaceDescent(assembly, ShipLandingGuidance.CreateDescentContact(body,
                     new SpaceVector2(assembly.PositionX, assembly.PositionY),
                     new SpaceVector2(assembly.VelocityX, assembly.VelocityY), Universe.State.SimulationSeconds), poweredLanding);
@@ -117,7 +118,8 @@ namespace FlatWorld.Spaceflight
             ShipDockingService.RigidlyCarryMembers(body.Assembly, body.Members);
             if (body.SurfaceContact is SurfaceContact next)
                 pendingSurfaceContacts[body.Assembly.MemberShipIds[0]] = new QueuedSurfaceContact
-                    { Assembly = body.Assembly, Contact = next, AngularAcceleration = body.AngularAcceleration, IsLanding = landing };
+                    { Assembly = body.Assembly, Contact = next, AngularAcceleration = body.AngularAcceleration,
+                      IsLanding = landing, ApplyImpact = queued?.ApplyImpact ?? true };
         }
 
         #endregion

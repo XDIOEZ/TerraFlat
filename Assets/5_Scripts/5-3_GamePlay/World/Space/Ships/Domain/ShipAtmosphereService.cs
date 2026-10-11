@@ -314,13 +314,7 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool HasFloor(ShipState ship, int cellX, int cellY)
-        {
-            var target = new ShipCell(cellX, cellY);
-            foreach (ShipPieceState piece in ship.Pieces)
-                if (piece != null && piece.IsAlive && piece.Kind == ShipPieceKind.Floor)
-                    foreach (ShipCell cell in ShipGeometry.Footprint(piece)) if (cell.Equals(target)) return true;
-            return false;
-        }
+            => ShipGeometry.HasFloor(ship, cellX, cellY);
 
         public static ShipCompartmentState FindCompartment(ShipState ship, int cellX, int cellY)
         {

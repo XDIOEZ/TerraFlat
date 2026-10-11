@@ -238,13 +238,38 @@ namespace FlatWorld.Spaceflight
             if (navigating) task.Status = !ignited ? "引擎已停机，保持惯性，等待点火" : !requestedEngine
                 ? "当前方向没有可用喷嘴，保持惯性" : "燃料不足，保持惯性，等待补给";
         }
-        // 正常降落复用可用引擎的真实燃料路径，停机状态也能执行一次着陆消耗。
-        private bool TryConsumeLandingFuel(ShipAssemblyState assembly, double seconds)
+        // 起降共用真实动力入口，控制台失电、缺发动机或供油不足不会产生免费制动。
+        private double ConsumeVerticalThrust(ShipAssemblyState assembly, double requestedThrust, double seconds)
         {
+            if (!HasPoweredFlightConsole(assembly) || requestedThrust <= 0d) return 0d;
             CollectActuators(assembly);
+            double capacity = 0d;
             foreach (ShipActuator engine in actuators)
-                if (ConsumeEngineFuel(engine, 1d, seconds) > 0d) return true;
+                capacity += engine.Device.Configuration.EngineThrustNewtons;
+            if (capacity <= 0d) return 0d;
+            double throttle = Math.Clamp(requestedThrust / capacity, 0d, 1d);
+            double thrust = 0d;
+            foreach (ShipActuator engine in actuators)
+                thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine, throttle, seconds);
+            return thrust;
+        }
+
+        private bool HasPoweredFlightConsole(ShipAssemblyState assembly)
+        {
+            foreach (string id in assembly.MemberShipIds)
+            {
+                ShipState member = GetShip(id);
+                foreach (ShipPieceState piece in member.Pieces)
+                    if (piece.IsAlive && piece.Kind == ShipPieceKind.Console && IsPowered(member, piece)) return true;
+            }
             return false;
+        }
+
+        private bool CanBeginPoweredLanding(ShipAssemblyState assembly, double gravity)
+        {
+            if (!HasPoweredFlightConsole(assembly)) return false;
+            CollectActuators(assembly);
+            return GetAvailableEngineThrust() > Math.Max(.001d, assembly.MassKg) * gravity;
         }
 
         private double GetAvailableEngineThrust()

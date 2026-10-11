@@ -21,6 +21,7 @@ internal static partial class Program
 
     private static void MassProperties()
     {
+        FloorSupportQueries();
         var ship = MassShip();
         var actual = ShipStructureService.RecalculateMass(ship, new ShipStructureService.MassWorkspace());
         Near(24d, actual.MassKg, "structure, cargo, occupant and cabin gas all count");
@@ -41,6 +42,36 @@ internal static partial class Program
         Near(-1d, actual.CenterX, "quarter turn swaps footprint width");
         Near(2d, actual.CenterY, "quarter turn swaps footprint height");
         Near(20d, actual.InertiaKgM2, "quarter turn preserves intrinsic rectangle inertia");
+    }
+
+    private static void FloorSupportQueries()
+    {
+        ShipState ship = new();
+        ShipPieceState floor = new() { Kind = ShipPieceKind.Floor, CellX = -4, CellY = -3, Width = 2, Height = 3 };
+        ship.Pieces.Add(null); ship.Pieces.Add(floor);
+        for (int turn = 0; turn < 4; turn++)
+        {
+            floor.QuarterTurns = turn;
+            HashSet<ShipCell> expected = new(ShipGeometry.Footprint(floor));
+            for (int y = -5; y <= 2; y++)
+            for (int x = -6; x <= 2; x++)
+                Check(ShipGeometry.HasFloor(ship, x, y) == expected.Contains(new(x, y)), "floor support matches rotated footprint");
+        }
+        floor.Destroyed = true;
+        Check(!ShipGeometry.HasFloor(ship, -4, -3), "destroyed floor provides no support");
+        floor.Destroyed = false; floor.Width = floor.Height = 0;
+        Check(ShipGeometry.HasFloor(ship, -4, -3), "minimum footprint is one cell");
+        int supported = 0;
+        for (int i = 0; i < 100; i++) if (ShipGeometry.HasFloor(ship, -4, -3)) supported++;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 100000; i++)
+        {
+            if (ShipGeometry.HasFloor(ship, -4, -3)) supported++;
+            if (ShipGeometry.HasFloor(ship, 1000, 1000)) supported++;
+        }
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Check(supported == 100100 && allocated == 0, $"floor queries retain support without allocations: {allocated} bytes");
+        Console.WriteLine($"Floor support fixture: 200000 queries, {allocated} bytes allocated.");
     }
 
     private static void MassChanges()

@@ -218,6 +218,21 @@ namespace FlatWorld.Spaceflight
                     yield return new ShipCell(piece.CellX + x, piece.CellY + y);
         }
 
+        public static bool HasFloor(ShipState ship, int cellX, int cellY)
+        {
+            if (ship == null) return false;
+            foreach (ShipPieceState piece in ship.Pieces)
+                if (piece != null && piece.IsAlive && piece.Kind == ShipPieceKind.Floor)
+                {
+                    // 支撑查询直接检查旋转后的矩形，不生成格子或迭代器。
+                    int width = Math.Max(1, piece.Width), height = Math.Max(1, piece.Height);
+                    if ((piece.QuarterTurns & 1) != 0) { int swap = width; width = height; height = swap; }
+                    long x = (long)cellX - piece.CellX, y = (long)cellY - piece.CellY;
+                    if (x >= 0 && x < width && y >= 0 && y < height) return true;
+                }
+            return false;
+        }
+
         public static IEnumerable<ShipCell> Neighbors(ShipCell cell)
         {
             yield return new ShipCell(cell.X + 1, cell.Y);

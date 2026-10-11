@@ -46,6 +46,7 @@ namespace FlatWorld.Spaceflight
         public double SimulationSeconds;
         public double FixedStepSeconds = 0.02d;
         public double MetersPerUnityUnit = 1d;
+        public double OrbitTimeScale = 1d;
         public List<BodyState> Bodies = new();
         #endregion
     }
@@ -53,7 +54,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class BodyState
     {
-        #region 固定星体与地表配置
+        #region 星体轨道与地表配置
         public string BodyId;
         public string PlanetId;
         public string DisplayName;
@@ -65,9 +66,13 @@ namespace FlatWorld.Spaceflight
         public double SurfaceGravity;
         public double PlacementDistanceMeters;
         public double PlacementAngleRadians;
+        public double OrbitalPeriodSeconds;
+        public double OrbitalEccentricity;
+        public double OrbitalPeriapsisRadians;
         public double RotationPeriodSeconds;
         public double RotationInitialRadians;
         public SpaceVector2 PositionMeters;
+        [JsonIgnore] public SpaceVector2 VelocityMetersPerSecond;
         [JsonIgnore] public WorldAddress SurfaceAddress => new(PlanetId, WorldAddress.SurfaceDimensionId);
         #endregion
     }

@@ -89,6 +89,7 @@ namespace FlatWorld.Spaceflight
             fixedShips.Clear();
             simulationAssemblies.Clear(); queryAssemblies.Clear();
             freeContactAssemblies.Clear();
+            ResetShipContactWorkspace();
             pickingNavigationConsole = null;
             ResetMassWorkspace();
             viewBindingsDirty = false;
@@ -98,6 +99,7 @@ namespace FlatWorld.Spaceflight
                 : JsonConvert.DeserializeObject<SpaceSessionState>(save.SpaceStateJson);
             if (State == null || State.Version != 1 || State.Universe == null)
                 throw new InvalidOperationException("太空存档格式无效。");
+            SpaceCatalog.LoadDefault().RebindUniverse(State.Universe);
             Universe = new UniverseSimulation(State.Universe);
             var earth = Universe.GetBody("earth");
             PlanetData template = GameManager.Instance?.ReadyPlanetData;
@@ -141,6 +143,7 @@ namespace FlatWorld.Spaceflight
             Current.fixedShips.Clear();
             Current.simulationAssemblies.Clear(); Current.queryAssemblies.Clear();
             Current.freeContactAssemblies.Clear();
+            Current.ResetShipContactWorkspace();
             Current.controlRequests.Clear(); Current.pickingNavigationConsole = null;
             Current.engineOutputs.Clear();
             Current.ResetMassWorkspace();

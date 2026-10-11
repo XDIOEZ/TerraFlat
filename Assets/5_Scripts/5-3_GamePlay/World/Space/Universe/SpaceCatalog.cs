@@ -68,7 +68,7 @@ namespace FlatWorld.Spaceflight
             var validation = new UniverseSimulation(new UniverseState
             {
                 TemplateId = config.TemplateId, FixedStepSeconds = config.FixedStepSeconds,
-                MetersPerUnityUnit = config.MetersPerUnityUnit, Bodies = config.Bodies
+                MetersPerUnityUnit = config.MetersPerUnityUnit, OrbitTimeScale = config.OrbitTimeScale, Bodies = config.Bodies
             });
             foreach (BodyState body in validation.State.Bodies)
             {
@@ -100,6 +100,29 @@ namespace FlatWorld.Spaceflight
         }
 
         public static void Reset() => current = null;
+
+        public void RebindUniverse(UniverseState state)
+        {
+            if (state?.Bodies == null) throw new ArgumentNullException(nameof(state));
+            // 存档保留身份、种子、初相位和时钟，物理规则重新绑定当前内容目录。
+            state.TemplateId = config.TemplateId;
+            state.FixedStepSeconds = config.FixedStepSeconds;
+            state.MetersPerUnityUnit = config.MetersPerUnityUnit;
+            state.OrbitTimeScale = config.OrbitTimeScale;
+            foreach (BodyState body in state.Bodies)
+            {
+                BodyState definition = GetBodyDefinition(body.BodyId);
+                body.DisplayName = definition.DisplayName; body.PrefabId = definition.PrefabId;
+                body.SurfaceProfileId = definition.SurfaceProfileId; body.ParentBodyId = definition.ParentBodyId;
+                body.RadiusMeters = definition.RadiusMeters; body.SurfaceGravity = definition.SurfaceGravity;
+                body.PlacementDistanceMeters = definition.PlacementDistanceMeters;
+                body.OrbitalPeriodSeconds = definition.OrbitalPeriodSeconds;
+                body.OrbitalEccentricity = definition.OrbitalEccentricity;
+                body.OrbitalPeriapsisRadians = definition.OrbitalPeriapsisRadians;
+                body.RotationPeriodSeconds = definition.RotationPeriodSeconds;
+            }
+        }
+
         private static void ValidateNumbers(Dictionary<string, double> values)
         {
             foreach (var value in values)
@@ -114,7 +137,7 @@ namespace FlatWorld.Spaceflight
             var state = new UniverseState
             {
                 TemplateId = config.TemplateId, Seed = seed, FixedStepSeconds = config.FixedStepSeconds,
-                MetersPerUnityUnit = config.MetersPerUnityUnit,
+                MetersPerUnityUnit = config.MetersPerUnityUnit, OrbitTimeScale = config.OrbitTimeScale,
                 Bodies = JsonConvert.DeserializeObject<List<BodyState>>(JsonConvert.SerializeObject(config.Bodies))
             };
             foreach (BodyState body in state.Bodies)
@@ -284,6 +307,7 @@ namespace FlatWorld.Spaceflight
         public string TemplateId;
         public double FixedStepSeconds = 0.02d;
         public double MetersPerUnityUnit = 1d;
+        public double OrbitTimeScale = 1d;
         public bool RandomizeBodyPlacements = true;
         public List<BodyState> Bodies;
         public List<SurfaceProfile> Surfaces;

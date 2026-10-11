@@ -10,8 +10,27 @@ namespace FlatWorld.Spaceflight
         private const double ShipContactSkin = .001d;
         private const int MaximumContactSweepIterations = 128;
         private readonly Dictionary<string, ShipContactPose> shipContactStarts = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, double> shipContactRadii = new(StringComparer.Ordinal);
         private readonly ShipAssemblyCache freeContactAssemblies = new();
+        private readonly List<ShipContactBody> contactBodyWorkspace = new();
+        private readonly List<ShipContactBody> contactBodyPool = new();
         private double shipContactTime = double.NaN;
+
+        private void ResetShipContactWorkspace()
+        {
+            shipContactStarts.Clear(); shipContactRadii.Clear();
+            contactBodyWorkspace.Clear(); contactBodyPool.Clear();
+            shipContactTime = double.NaN;
+        }
+
+        private static void ReleaseContactReferences(ShipContactBody body, int firstShape)
+        {
+            for (int i = firstShape; i < body.ShapePool.Count; i++)
+            {
+                ShipContactShape shape = body.ShapePool[i];
+                shape.Ship = null; shape.Piece = null; shape.Owner = null;
+            }
+        }
 
         private readonly struct ShipContactPose
         {
@@ -36,6 +55,7 @@ namespace FlatWorld.Spaceflight
             public double StartFraction, EndFraction = 1d;
             public readonly List<ShipState> Members = new();
             public readonly List<ShipContactShape> Shapes = new();
+            public readonly List<ShipContactShape> ShapePool = new();
             public SpaceVector2 Position => new(Assembly.PositionX, Assembly.PositionY);
             public double InverseMass => Dynamic && Assembly.MassKg > 0d ? 1d / Assembly.MassKg : 0d;
             public double InverseInertia => Dynamic && Assembly.InertiaKgM2 > 0d ? 1d / Assembly.InertiaKgM2 : 0d;
@@ -79,13 +99,17 @@ namespace FlatWorld.Spaceflight
         public void CaptureShipContactPoses()
         {
             shipContactStarts.Clear();
+            shipContactRadii.Clear();
             ResetSurfaceContactFrame();
             shipContactTime = Universe?.State.SimulationSeconds ?? double.NaN;
             if (State == null) return;
             foreach (ShipState ship in State.Ships)
                 if (TryGetShipContactRealm(ship, out string realm, out _, out _))
+                {
                     shipContactStarts[ship.ShipId] = new ShipContactPose(new SpaceVector2(ship.PositionX, ship.PositionY), ship.AngleRadians,
                         realm, new SpaceVector2(ship.VelocityX, ship.VelocityY), ship.AngularVelocityRadiansPerSecond);
+                    shipContactRadii[ship.ShipId] = CalculateShipContactRadius(ship);
+                }
         }
         private bool TryGetShipContactRealm(ShipState ship, out string realm, out double height, out bool dynamic,
             bool? inSpaceFilter = null, string surfaceWorldKey = null)
@@ -116,24 +140,63 @@ namespace FlatWorld.Spaceflight
                 ship.AngleRadians - ship.AngularVelocityRadiansPerSecond * seconds, realm,
                 new SpaceVector2(ship.VelocityX, ship.VelocityY), ship.AngularVelocityRadiansPerSecond);
         }
-        private bool HasShipContactRealm(bool inSpace, string worldKey = null)
+        private static double CalculateShipContactRadius(ShipState ship)
         {
+            double radius = 0d;
+            foreach (ShipPieceState piece in ship.Pieces)
+            {
+                if (!piece.IsAlive || piece.Kind is ShipPieceKind.Wire or ShipPieceKind.Fiber) continue;
+                int width = Math.Max(1, (piece.QuarterTurns & 1) == 0 ? piece.Width : piece.Height);
+                int height = Math.Max(1, (piece.QuarterTurns & 1) == 0 ? piece.Height : piece.Width);
+                double dx = (piece.CellX + width * .5d) * ship.CellSizeMeters - ship.CenterOfMassLocalX;
+                double dy = (piece.CellY + height * .5d) * ship.CellSizeMeters - ship.CenterOfMassLocalY;
+                radius = Math.Max(radius, Math.Sqrt(dx * dx + dy * dy) +
+                    .5d * ship.CellSizeMeters * Math.Sqrt((double)width * width + (double)height * height));
+            }
+            return radius + ShipContactSkin;
+        }
+        private ShipContactBounds GetShipBroadphaseBounds(ShipState ship, string realm, double seconds)
+        {
+            double radius = shipContactTime == Universe?.State.SimulationSeconds && shipContactRadii.TryGetValue(ship.ShipId, out double cached)
+                ? cached : CalculateShipContactRadius(ship);
+            SpaceVector2 previous = GetShipContactStart(ship, realm, seconds).Position;
+            return new ShipContactBounds(Math.Min(previous.X, ship.PositionX) - radius, Math.Min(previous.Y, ship.PositionY) - radius,
+                Math.Max(previous.X, ship.PositionX) + radius, Math.Max(previous.Y, ship.PositionY) + radius);
+        }
+        private bool HasNearbyShipContact(bool inSpace, string worldKey, double height, double radius,
+            SpaceVector2 previous, SpaceVector2 destination, double seconds)
+        {
+            if (!previous.IsFinite || !destination.IsFinite || !SpaceVector2.Finite(seconds) || seconds <= 0d) return false;
+            ShipContactBounds bounds = new(Math.Min(previous.X, destination.X) - radius, Math.Min(previous.Y, destination.Y) - radius,
+                Math.Max(previous.X, destination.X) + radius, Math.Max(previous.Y, destination.Y) + radius);
+            // 距离和高度不相交时，先跳过解码、计重和碰撞部件构建。
             foreach (ShipState ship in State.Ships)
-                if (TryGetShipContactRealm(ship, out _, out _, out _, inSpace, worldKey)) return true;
+                if (TryGetShipContactRealm(ship, out string realm, out double shipHeight, out _, inSpace, worldKey) &&
+                    (inSpace || Math.Abs(height - shipHeight) <= Math.Max(.01d, ship.CabinHeightMeters * .5d) + radius) &&
+                    bounds.Overlaps(GetShipBroadphaseBounds(ship, realm, seconds))) return true;
             return false;
         }
         private List<ShipContactBody> BuildShipContactBodies(double seconds, IReadOnlyList<ShipAssemblyState> assemblies = null,
             string contactRealm = null)
         {
-            var bodies = new List<ShipContactBody>();
+            List<ShipContactBody> bodies = contactBodyWorkspace;
+            bodies.Clear();
             // 自由物每次刷新真实运动量，但不重复重建整舰队的对接拓扑。
             assemblies ??= freeContactAssemblies.Refresh(State.Ships, State.Docking);
-            foreach (ShipAssemblyState assembly in assemblies)
+            for (int assemblyIndex = 0; assemblyIndex < assemblies.Count; assemblyIndex++)
             {
+                ShipAssemblyState assembly = assemblies[assemblyIndex];
                 ShipState primary = GetShip(assembly.MemberShipIds[0]);
                 if (!TryGetShipContactRealm(primary, out string realm, out double height, out bool dynamic) ||
                     contactRealm != null && !string.Equals(realm, contactRealm, StringComparison.Ordinal)) continue;
-                var body = new ShipContactBody { Assembly = assembly, Realm = realm, Height = height, Dynamic = dynamic };
+                // 同一固定步的连续散落物复用容器，姿态与速度仍每次读取最新权威值。
+                if (bodies.Count >= contactBodyPool.Count) contactBodyPool.Add(new ShipContactBody());
+                ShipContactBody body = contactBodyPool[bodies.Count];
+                body.Assembly = assembly; body.Realm = realm; body.Height = height; body.Dynamic = dynamic;
+                body.HalfHeight = body.PreviousAngle = body.PreviousAngularVelocity = body.AngularAcceleration = body.StartFraction = 0d;
+                body.EndFraction = 1d; body.SurfaceStopped = false; body.SurfaceContact = null;
+                body.PreviousPosition = body.PreviousVelocity = default;
+                body.Members.Clear(); body.Shapes.Clear();
                 QueuedSurfaceContact queued = FindQueuedSurfaceContact(assembly);
                 if (queued != null)
                 { body.EndFraction = queued.Contact.Fraction; body.SurfaceContact = queued.Contact; body.AngularAcceleration = queued.AngularAcceleration; }
@@ -157,13 +220,23 @@ namespace FlatWorld.Spaceflight
                         double dx = (piece.CellX + Math.Max(1, width) * .5d) * ship.CellSizeMeters - ship.CenterOfMassLocalX;
                         double dy = (piece.CellY + Math.Max(1, heightCells) * .5d) * ship.CellSizeMeters - ship.CenterOfMassLocalY;
                         double radius = Math.Sqrt(dx * dx + dy * dy) + .5d * ship.CellSizeMeters * Math.Sqrt((double)width * width + (double)heightCells * heightCells);
-                        body.Shapes.Add(new ShipContactShape { Ship = ship, Piece = piece, Owner = body, Previous = previous, RadiusFromCenter = radius });
+                        if (body.Shapes.Count >= body.ShapePool.Count) body.ShapePool.Add(new ShipContactShape());
+                        ShipContactShape shape = body.ShapePool[body.Shapes.Count];
+                        shape.Ship = ship; shape.Piece = piece; shape.Owner = body; shape.Previous = previous; shape.RadiusFromCenter = radius;
+                        body.Shapes.Add(shape);
                     }
                 }
                 body.PreviousPosition = totalMass > 0d ? body.PreviousPosition / totalMass : GetShipContactStart(primary, realm, seconds).Position;
                 body.PreviousVelocity = totalMass > 0d ? body.PreviousVelocity / totalMass : GetShipContactStart(primary, realm, seconds).Velocity;
                 if (queued == null) body.AngularAcceleration = (assembly.AngularVelocityRadiansPerSecond - body.PreviousAngularVelocity) / seconds;
+                ReleaseContactReferences(body, body.Shapes.Count);
                 if (body.Shapes.Count > 0) bodies.Add(body);
+            }
+            for (int i = bodies.Count; i < contactBodyPool.Count; i++)
+            {
+                ShipContactBody unused = contactBodyPool[i];
+                unused.Assembly = null; unused.Realm = null; unused.Members.Clear(); unused.Shapes.Clear();
+                ReleaseContactReferences(unused, 0);
             }
             return bodies;
         }
@@ -399,7 +472,8 @@ namespace FlatWorld.Spaceflight
             firstContactFraction = double.PositiveInfinity;
             if (!GameNetwork.HasStateAuthority || State == null || passenger?.FreeMotion == null || !passenger.IsInSpace ||
                 passenger.Supported || passenger.SurfaceDescending || passenger.LandingResolved) return false;
-            if (!HasShipContactRealm(true)) return false;
+            if (!HasNearbyShipContact(true, null, 0d, Math.Max(.01d, passenger.FreeMotion.RadiusMeters),
+                previousPosition, passenger.FreeMotion.PositionMeters, seconds)) return false;
             Player player = null;
             if (ItemMgr.Instance != null) ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out player);
             Data_Player data = player?.Data;
@@ -417,8 +491,9 @@ namespace FlatWorld.Spaceflight
             firstContactFraction = double.PositiveInfinity;
             if (!GameNetwork.HasStateAuthority || State == null || item?.Motion == null ||
                 !item.InSpace && string.IsNullOrWhiteSpace(item.WorldKey) || string.IsNullOrWhiteSpace(item.Snapshot)) return false;
-            // 没有同空间船体时直接保留自由运动，省掉快照计重和全部碰撞部件的构建。
-            if (!HasShipContactRealm(item.InSpace, item.WorldKey)) return false;
+            // 没有同空间且扫掠距离相交的船体时，保留自由运动并跳过快照与接触构建。
+            if (!HasNearbyShipContact(item.InSpace, item.WorldKey, item.SurfaceHeight, Math.Max(.01d, item.Motion.RadiusMeters),
+                previousPosition, item.Motion.PositionMeters, seconds)) return false;
             looseViews.TryGetValue(item.Id, out Item live);
             if (live != null && (live.Owner != null || live.InHand || live.itemData.Stack.Amount <= 0f)) return false;
             ItemData data = live != null ? live.itemData : looseData.TryGetValue(item.Id, out ItemData cached) ? cached : Decode(item.Snapshot);

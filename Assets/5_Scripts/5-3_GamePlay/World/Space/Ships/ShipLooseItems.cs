@@ -173,10 +173,13 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
             bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
+            double radius = CalculateShipContactRadius(ship);
             foreach (SpaceLooseItemState cargo in State.LooseItems)
             {
                 if (cargo.InSpace != inSpace || !inSpace && cargo.WorldKey != ship.WorldAddress ||
                     !inSpace && Math.Abs(cargo.SurfaceHeight - flight.HeightMeters) > 1d) continue;
+                double dx = cargo.Motion.PositionMeters.X - ship.PositionX, dy = cargo.Motion.PositionMeters.Y - ship.PositionY;
+                if (dx * dx + dy * dy > radius * radius) continue;
                 ShipGeometry.WorldToLocal(ship, cargo.Motion.PositionMeters.X, cargo.Motion.PositionMeters.Y, out double x, out double y);
                 int cx = (int)Math.Floor(x / ship.CellSizeMeters), cy = (int)Math.Floor(y / ship.CellSizeMeters);
                 if (!ShipAtmosphereService.HasFloor(ship, cx, cy)) continue;

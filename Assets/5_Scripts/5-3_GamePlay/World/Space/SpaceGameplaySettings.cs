@@ -16,6 +16,10 @@ namespace FlatWorld.Spaceflight
         public double MinimumLaunchHeightMeters = 40d;
         public double LaunchHeightRadiusFraction = .1d;
         public double MinimumSpaceExitSpeedMetersPerSecond = 2d;
+        public double TakeoffDurationSeconds = 12d;
+        public double LandingDurationSeconds = 10d;
+        public double SpaceEntryClearanceMeters = 12d;
+        public double MaximumSafeLandingSpeedMetersPerSecond = .5d;
         public double CruiseMaxSpeedMetersPerSecond = 120d;
         public double CruiseAccelerationMetersPerSecondSquared = 60d;
         public double CruiseBrakingMetersPerSecondSquared = 100d;
@@ -46,6 +50,10 @@ namespace FlatWorld.Spaceflight
                     current.ImpactForcePerDurability <= 0d || current.ImpactStoppingSeconds <= 0d || current.SurfaceEntryHeightMeters <= 0d ||
                     current.MinimumLaunchHeightMeters <= 0d || current.LaunchHeightRadiusFraction < 0d ||
                     current.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
+                    !SpaceVector2.Finite(current.TakeoffDurationSeconds) || current.TakeoffDurationSeconds <= 0d ||
+                    !SpaceVector2.Finite(current.LandingDurationSeconds) || current.LandingDurationSeconds <= 0d ||
+                    !SpaceVector2.Finite(current.SpaceEntryClearanceMeters) || current.SpaceEntryClearanceMeters < 0d ||
+                    !SpaceVector2.Finite(current.MaximumSafeLandingSpeedMetersPerSecond) || current.MaximumSafeLandingSpeedMetersPerSecond <= 0d ||
                     current.CruiseMaxSpeedMetersPerSecond <= 0d || current.CruiseAccelerationMetersPerSecondSquared <= 0d ||
                     current.CruiseBrakingMetersPerSecondSquared <= 0d ||
                     !SpaceVector2.Finite(current.CruiseTurnDegreesPerSecond) || current.CruiseTurnDegreesPerSecond <= 0d ||

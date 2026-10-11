@@ -7,6 +7,9 @@ internal static class Program
     private static void Main()
     {
         DistantExplosionDebrisSkipsAllWork();
+        DistantDebrisInSameRealmSkipsAllWork();
+        NearbyContactWorkspaceHasNoAllocations();
+        MovingShipBroadphaseIncludesSweep();
         SpaceContactsPublishAndRefreshImpulse();
         SurfaceRealmAndHeightFilter();
         CandidateChangesAndDockingTopology();
@@ -58,6 +61,33 @@ internal static class Program
         Near(second.Motion.VelocityMetersPerSecond.X, ship.VelocityX, "正中接触后双方速度应相同。");
     }
 
+    private static void DistantDebrisInSameRealmSkipsAllWork()
+    {
+        SpaceSession session = new();
+        ShipState ship = AddShip(session, "third-ship", ShipFlightPhase.Cruising, "Earth_Surface", 175);
+        ship.PositionX = -32560d; ship.PositionY = -2284d;
+        session.CaptureShipContactPoses();
+        SpaceLooseItemState[] debris = Enumerable.Range(0, 166)
+            .Select(index => Loose("old-debris-" + index, true, null, invalidSnapshot: true)).ToArray();
+        for (int warm = 0; warm < 8; warm++)
+            foreach (SpaceLooseItemState item in debris) session.ResolveLooseItemContact(item, new(-.6d, 0d), .02d);
+        SpaceSession.ResetCounters();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        bool hit = false;
+        for (int round = 0; round < 100; round++)
+            foreach (SpaceLooseItemState item in debris) hit |= session.ResolveLooseItemContact(item, new(-.6d, 0d), .02d);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert(!hit, "同在太空但相隔数千米的残骸不能碰撞。");
+        Assert(SpaceSession.DecodeCalls == 0 && ShipMassReader.ReadCalls == 0, "远处碎片不解码、不计重。");
+        Assert(session.TestContactRebuildCount == 0, "远处碎片不重建船体整体。");
+        Assert(allocated == 0, $"16600次同空间远处接触入口应无分配，实际{allocated}字节。");
+        Near(ship.VelocityX, 0d, "远处碎片不能改变船速。");
+        Console.WriteLine($"Same-space fixture: 166 debris, 175 ship pieces, 16600 calls, {allocated} bytes allocated.");
+        ship.PositionX = ship.PositionY = 0d;
+        session.CaptureShipContactPoses();
+        Assert(session.ResolveLooseItemContact(Loose("now-nearby", true, null), new(-.6d, 0d), .02d), "移动到身边后立即恢复真实碰撞。");
+    }
+
     private static void SurfaceRealmAndHeightFilter()
     {
         SpaceSession session = new();
@@ -72,6 +102,37 @@ internal static class Program
         SpaceLooseItemState sameWorld = Loose("same-world", false, "Earth_Surface");
         Assert(session.ResolveLooseItemContact(sameWorld, new(-.6d, 0d), .02d), "同地表同高度仍须正常接触。");
         Near(sameWorld.Motion.VelocityMetersPerSecond.X, 0d, "地面静止船应挡住物品。");
+    }
+
+    private static void NearbyContactWorkspaceHasNoAllocations()
+    {
+        SpaceSession session = new();
+        AddShip(session, "nearby", ShipFlightPhase.Cruising, "Earth_Surface");
+        session.CaptureShipContactPoses();
+        SpaceLooseItemState item = Loose("near-corner", true, null);
+        item.Motion.PositionMeters = new(-.65d, .65d); item.Motion.VelocityMetersPerSecond = default;
+        for (int warm = 0; warm < 8; warm++) session.ResolveLooseItemContact(item, item.Motion.PositionMeters, .02d);
+        SpaceSession.ResetCounters();
+        bool hit = false;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 10000; i++) hit |= session.ResolveLooseItemContact(item, item.Motion.PositionMeters, .02d);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert(!hit && ShipMassReader.ReadCalls == 10000, "近角落候选必须进入真实接触算法，但不能产生虚假碰撞。");
+        Assert(allocated == 0, $"近处接触容器复用后应无分配，实际{allocated}字节。");
+        Console.WriteLine($"Nearby fixture: 10000 contact queries, {allocated} bytes allocated.");
+    }
+
+    private static void MovingShipBroadphaseIncludesSweep()
+    {
+        SpaceSession session = new();
+        ShipState ship = AddShip(session, "fast-ship", ShipFlightPhase.Cruising, "Earth_Surface");
+        ship.PositionX = -10d; ship.VelocityX = 1000d;
+        session.CaptureShipContactPoses();
+        ship.PositionX = 10d;
+        SpaceLooseItemState item = Loose("crossed", true, null);
+        item.Motion.PositionMeters = default; item.Motion.VelocityMetersPerSecond = default;
+        Assert(session.ResolveLooseItemContact(item, default, .02d), "快速船穿过碎片时，远距筛选必须保留本步完整扫掠。");
+        Assert(item.Motion.VelocityMetersPerSecond.X > 0d, "快速船实际接触仍传递动量。");
     }
 
     private static void CandidateChangesAndDockingTopology()

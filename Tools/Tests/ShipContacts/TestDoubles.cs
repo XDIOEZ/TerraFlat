@@ -128,11 +128,11 @@ namespace FlatWorld.Spaceflight
         #region 非目标场景入口
         public ShipAssemblyState GetConnectedAssembly(string id)
             => throw new NotSupportedException("接触测试不查询场景降落整体。");
-        private bool TryConsumeLandingFuel(ShipAssemblyState assembly, double seconds)
+        private bool CanBeginPoweredLanding(ShipAssemblyState assembly, double gravity)
             => throw new NotSupportedException("接触测试不消费降落燃料。");
         private void BeginSurfaceDescent(ShipAssemblyState assembly, SurfaceContact contact, bool powered = false)
             => throw new NotSupportedException("接触测试不启动场景下降。");
-        private void LandAssembly(ShipAssemblyState assembly, SurfaceContact contact)
+        private void LandAssembly(ShipAssemblyState assembly, SurfaceContact contact, bool applyImpact = true)
             => throw new NotSupportedException("接触测试不落地或切场景。");
         private double AssemblyRadius(ShipAssemblyState assembly) => 1d;
         #endregion

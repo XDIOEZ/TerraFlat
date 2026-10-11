@@ -50,6 +50,7 @@ namespace FlatWorld.Spaceflight
             {
                 ShipFlightState member = GetFlight(id);
                 member.Ignited = ignite;
+                if (ignite) member.PoweredDescent = false;
                 if (member.Ignited && member.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating)
                 {
                     member.Phase = ShipFlightPhase.Lifting; member.LandingResolved = false; member.LandingEventId = null;
@@ -57,6 +58,7 @@ namespace FlatWorld.Spaceflight
                     member.SurfaceX = GetShip(id).PositionX; member.SurfaceY = GetShip(id).PositionY;
                     member.SurfaceAngle = member.SurfaceX / sourceBody.RadiusMeters + Universe.GetRotationRadians(sourceBody.BodyId);
                     member.EntrySurfaceVelocity = default;
+                    member.SurfaceStageElapsedSeconds = 0d;
                 }
             }
             return true;
@@ -114,21 +116,23 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
             BodyState body = Universe.GetBody(flight.BodyId);
-            double thrust = 0d;
-            if (flight.Ignited)
-            {
-                CollectActuators(assembly);
-                bool consolePowered = false;
-                foreach (string id in assembly.MemberShipIds)
-                {
-                    ShipState member = GetShip(id);
-                    consolePowered |= member.Pieces.Exists(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console && IsPowered(member, piece));
-                }
-                if (consolePowered)
-                    foreach (ShipActuator engine in actuators)
-                        thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine, 1d, seconds);
-            }
+            SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+            double requiredHeight = Math.Max(settings.MinimumLaunchHeightMeters, body.RadiusMeters * settings.LaunchHeightRadiusFraction);
             double gravity = body.SurfaceGravity;
+            double thrust = 0d;
+            if (flight.Ignited || flight.PoweredDescent)
+            {
+                // 自动起降只申请当前速度需要的推力，实际出力仍由供电、引擎和真实管路燃料决定。
+                double desiredSpeed = flight.PoweredDescent
+                    ? ShipLandingGuidance.LandingSpeed(flight.SurfaceStageElapsedSeconds, flight.HeightMeters, seconds, settings)
+                    : ShipLandingGuidance.TakeoffSpeed(requiredHeight, settings);
+                double requestedThrust = ShipLandingGuidance.RequiredVerticalThrust(assembly.MassKg, gravity,
+                    flight.VerticalSpeed, desiredSpeed, seconds);
+                thrust = ConsumeVerticalThrust(assembly, requestedThrust, seconds);
+                if (flight.PoweredDescent && thrust <= 0d && requestedThrust > 0d)
+                    foreach (string id in assembly.MemberShipIds) GetFlight(id).PoweredDescent = false;
+            }
+            flight.SurfaceStageElapsedSeconds += seconds;
             double previousHeight = flight.HeightMeters;
             flight.VerticalSpeed += (thrust / Math.Max(.001d, assembly.MassKg) - gravity) * seconds;
             flight.HeightMeters += flight.VerticalSpeed * seconds;
@@ -150,13 +154,15 @@ namespace FlatWorld.Spaceflight
                 ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
             }
             flight.EntrySurfaceVelocity = new SpaceVector2(Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY), flight.VerticalSpeed);
-            double requiredHeight = Math.Max(SpaceGameplaySettings.Current.MinimumLaunchHeightMeters, body.RadiusMeters * SpaceGameplaySettings.Current.LaunchHeightRadiusFraction);
-            double requiredSpeed = SpaceGameplaySettings.Current.MinimumSpaceExitSpeedMetersPerSecond;
+            double requiredSpeed = settings.MinimumSpaceExitSpeedMetersPerSecond;
             foreach (string id in assembly.MemberShipIds)
             {
                 ShipFlightState member = GetFlight(id);
                 member.HeightMeters = flight.HeightMeters; member.VerticalSpeed = flight.VerticalSpeed;
+                member.SurfaceStageElapsedSeconds = flight.SurfaceStageElapsedSeconds;
                 member.EntrySurfaceVelocity = flight.EntrySurfaceVelocity;
+                if (flight.Phase == ShipFlightPhase.Lifting)
+                    member.SurfaceAngle = member.SurfaceX / body.RadiusMeters + Universe.GetRotationRadians(body.BodyId);
                 if (flight.Phase == ShipFlightPhase.SurfaceDescending)
                 {
                     ShipState ship = GetShip(id);
@@ -166,24 +172,22 @@ namespace FlatWorld.Spaceflight
                     member.SurfaceAngle = ship.PositionX / body.RadiusMeters + Universe.GetRotationRadians(body.BodyId);
                 }
             }
-            if (flight.HeightMeters >= requiredHeight && flight.VerticalSpeed >= requiredSpeed)
+            if (flight.HeightMeters >= requiredHeight && flight.VerticalSpeed >= requiredSpeed &&
+                flight.SurfaceStageElapsedSeconds >= settings.TakeoffDurationSeconds)
             {
-                SpaceMotionState lifted = Universe.CreateSpaceEntryState(flight.BodyId, flight.SurfaceAngle, flight.HeightMeters,
-                    Math.Min(flight.VerticalSpeed, SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond));
+                SpaceMotionState lifted = ShipLandingGuidance.CreateParkedSpaceEntry(Universe, body,
+                    flight.SurfaceAngle, AssemblyRadius(assembly), settings);
                 SpaceVector2 delta = lifted.PositionMeters - new SpaceVector2(assembly.PositionX, assembly.PositionY);
                 assembly.PositionX += delta.X; assembly.PositionY += delta.Y;
-                // 水平地表速度保留为离开星球时的切向速度，但整体受巡航速度限制。
-                SpaceVector2 radial = SpaceVector2.FromAngle(flight.SurfaceAngle);
-                SpaceVector2 tangent = new(-radial.Y, radial.X);
-                SpaceVector2 exitVelocity = lifted.VelocityMetersPerSecond + tangent * assembly.VelocityX;
-                if (exitVelocity.Magnitude > SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond)
-                    exitVelocity = exitVelocity.Normalized * SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond;
+                // 正常起飞完成后停在星体边缘，继承公转速度但不带向外冲刺的速度。
+                SpaceVector2 exitVelocity = lifted.VelocityMetersPerSecond;
                 assembly.VelocityX = exitVelocity.X; assembly.VelocityY = exitVelocity.Y;
                 ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
                 foreach (string id in assembly.MemberShipIds)
                 {
                     ShipState ship = GetShip(id); ShipFlightState member = GetFlight(id);
                     member.Phase = ShipFlightPhase.Cruising; ship.PlatformKind = ShipPlatformKind.Space;
+                    member.PoweredDescent = false;
                     member.Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY),
                         VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY) };
                 }
@@ -194,7 +198,8 @@ namespace FlatWorld.Spaceflight
                 var contact = new SurfaceContact { BodyId = body.BodyId, PlanetId = body.PlanetId,
                     RelativeVelocityMetersPerSecond = new SpaceVector2(flight.EntrySurfaceVelocity.X, flight.VerticalSpeed),
                     SurfaceAngleRadians = flight.SurfaceAngle, Fraction = movementSeconds / seconds };
-                QueueSurfaceLanding(assembly, contact);
+                bool safelyPowered = flight.PoweredDescent && Math.Abs(flight.VerticalSpeed) <= settings.MaximumSafeLandingSpeedMetersPerSecond + 1e-6d;
+                QueueSurfaceLanding(assembly, contact, applyImpact: !safelyPowered);
                 foreach (string id in assembly.MemberShipIds) GetFlight(id).HeightMeters = 0d;
             }
             else if (flight.HeightMeters < 0d) { flight.HeightMeters = 0d; flight.VerticalSpeed = 0d; }
@@ -203,6 +208,8 @@ namespace FlatWorld.Spaceflight
         {
             if (flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
             {
+                if (flight.PoweredDescent)
+                    return Math.Max(0d, SpaceGameplaySettings.Current.LandingDurationSeconds - flight.SurfaceStageElapsedSeconds);
                 double g = Universe.GetBody(flight.BodyId).SurfaceGravity;
                 return g > 0d ? (flight.VerticalSpeed + Math.Sqrt(flight.VerticalSpeed * flight.VerticalSpeed + 2d * g * Math.Max(0d, flight.HeightMeters))) / g
                     : flight.VerticalSpeed < 0d ? Math.Max(0d, flight.HeightMeters / -flight.VerticalSpeed) : double.PositiveInfinity;
@@ -283,6 +290,7 @@ namespace FlatWorld.Spaceflight
                 flight.RequestedLandingBodyId = null;
                 flight.LandingX = ship.PositionX; flight.LandingY = ship.PositionY; flight.LandingSelected = true;
                 flight.HeightMeters = 0; flight.VerticalSpeed = 0; flight.BodyId = contact.BodyId; flight.SurfaceWorldKey = world;
+                flight.PoweredDescent = false;
                 flight.ImpactSpeed = impactSpeed; flight.Ignited = false; flight.SurfaceX = ship.PositionX; flight.SurfaceY = ship.PositionY;
                 flight.Phase = sample.IsWater ? ShipFlightPhase.Floating : ShipFlightPhase.Landed; ship.WorldAddress = world;
                 ship.PlatformKind = sample.IsWater ? ShipPlatformKind.Ocean : ShipPlatformKind.Land;
@@ -338,15 +346,12 @@ namespace FlatWorld.Spaceflight
                 flight.HeightMeters = SpaceGameplaySettings.Current.SurfaceEntryHeightMeters;
                 flight.VerticalSpeed = -inward; flight.EntrySurfaceVelocity = new SpaceVector2(tangent, -inward);
                 flight.Ignited = false; flight.LandingResolved = false; flight.LandingSelected = true;
+                flight.PoweredDescent = poweredLanding; flight.SurfaceStageElapsedSeconds = 0d;
                 flight.LandingEventId = Guid.NewGuid().ToString("N");
             }
-            // 有真实燃料时直接平稳着陆，无燃料才保留地表下降与触地冲击。
-            if (poweredLanding)
-            {
-                LandAssembly(assembly, contact, applyImpact: false);
-                if (carrying) ShipPanelSession.CloseForPlayer(this, ItemMgr.Instance?.User_Player);
-            }
-            else if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));
+            // 有动力也保留完整下降阶段，期间燃料或供电中断会转为真实坠落。
+            if (carrying) ShipPanelSession.CloseForPlayer(this, ItemMgr.Instance?.User_Player);
+            if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));
         }
         private IEnumerator TransferPlayerToSpace()
         {
@@ -359,7 +364,19 @@ namespace FlatWorld.Spaceflight
             ReleaseViews();
             bool began = DimensionManager.Instance.TryBeginPlanetLanding(player, WorldAddress.FromWorldKey("SpaceScene"), player.transform.position);
             while (began && DimensionManager.Instance.IsTransitioning) yield return null;
-            if (IsSpaceView) RestorePassengerPose(ItemMgr.Instance?.User_Player);
+            if (IsSpaceView)
+            {
+                Player currentPlayer = ItemMgr.Instance?.User_Player;
+                RestorePassengerPose(currentPlayer);
+                if (currentPlayer != null && passenger.Supported && GetConnectedAssembly(passenger.ShipId) is ShipAssemblyState assembly)
+                {
+                    // 离地后的首次镜头保留船体和旁边星体边缘，之后玩家仍可自由缩放。
+                    SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+                    float size = (float)Math.Max(settings.DrivingCameraSize,
+                        AssemblyRadius(assembly) + settings.SpaceEntryClearanceMeters + 8d);
+                    currentPlayer.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetOrthographicSize(size);
+                }
+            }
             else passenger.IsInSpace = false;
             transitionRunning = false;
         }

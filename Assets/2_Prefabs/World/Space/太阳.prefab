@@ -47,7 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   surfaceStyle: 3
   surfaceAccentColor: {r: 1, g: 0.56, b: 0.18, a: 1}
-  surfaceDetailStrength: 0.24
+  surfaceDetailStrength: 0.88
   surfaceDetailScale: 28
   planetData:
     Name: 

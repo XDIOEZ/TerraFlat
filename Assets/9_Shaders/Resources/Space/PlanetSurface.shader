@@ -7,6 +7,9 @@ Shader "FlatWorld/Space/PlanetSurface"
         [Enum(Rocky,0,Ocean,1,Banded,2,Stellar,3)] _SurfaceStyle("Surface Style", Float) = 0
         _SurfaceDetailStrength("Surface Detail Strength", Range(0,1)) = 0.2
         _SurfaceDetailScale("Surface Detail Scale", Float) = 12
+        _SurfaceExtent("Surface Extent", Float) = 1.12
+        _SurfaceLightDirection("Sun Direction", Vector) = (0.65,0.35,0.8,0)
+        _SurfaceSeed("Surface Seed", Float) = 0
     }
     SubShader
     {
@@ -23,6 +26,9 @@ Shader "FlatWorld/Space/PlanetSurface"
             float _SurfaceStyle;
             float _SurfaceDetailStrength;
             float _SurfaceDetailScale;
+            float _SurfaceExtent;
+            float4 _SurfaceLightDirection;
+            float _SurfaceSeed;
         CBUFFER_END
 
         struct Attributes
@@ -48,64 +54,133 @@ Shader "FlatWorld/Space/PlanetSurface"
         float PlanetCoverage(float2 uv)
         {
             // 圆边只柔化一个屏幕像素，放大时不会继承贴图的模糊边。
-            float radius = length(uv * 2.0 - 1.0);
+            float radius = length((uv * 2.0 - 1.0) * _SurfaceExtent);
             float pixelWidth = max(fwidth(radius), 0.0000001);
-            return 1.0 - smoothstep(1.0 - pixelWidth, 1.0, radius);
+            return 1.0 - smoothstep(1.0 - pixelWidth, 1.0 + pixelWidth, radius);
         }
-        float PlanetHash(float2 p)
+        float PlanetHash(float3 p)
         {
-            float3 p3 = frac(float3(p.xyx) * 0.1031);
+            float3 p3 = frac(p * 0.1031);
             p3 += dot(p3, p3.yzx + 33.33);
             return frac((p3.x + p3.y) * p3.z);
         }
-        float PlanetNoise(float2 p)
+        float PlanetNoise(float3 p)
         {
-            float2 cell = floor(p);
-            float2 t = frac(p);
+            float3 cell = floor(p);
+            float3 t = frac(p);
             t = t * t * (3.0 - 2.0 * t);
-            return lerp(lerp(PlanetHash(cell), PlanetHash(cell + float2(1,0)), t.x),
-                        lerp(PlanetHash(cell + float2(0,1)), PlanetHash(cell + float2(1,1)), t.x), t.y);
+            float lower = lerp(lerp(PlanetHash(cell), PlanetHash(cell + float3(1,0,0)), t.x),
+                               lerp(PlanetHash(cell + float3(0,1,0)), PlanetHash(cell + float3(1,1,0)), t.x), t.y);
+            float upper = lerp(lerp(PlanetHash(cell + float3(0,0,1)), PlanetHash(cell + float3(1,0,1)), t.x),
+                               lerp(PlanetHash(cell + float3(0,1,1)), PlanetHash(cell + float3(1,1,1)), t.x), t.y);
+            return lerp(lower, upper, t.z);
         }
-        float PlanetFilteredNoise(float2 p)
+        float PlanetFilteredNoise(float3 p)
         {
             // 小于屏幕像素的细节自动淡出，远看不闪烁，也不分配高清纹理。
             float pixelWidth = max(length(ddx(p)), length(ddy(p)));
+            if (pixelWidth >= 0.8) return 0.5;
             return lerp(PlanetNoise(p), 0.5, smoothstep(0.35, 0.8, pixelWidth));
+        }
+        float PlanetFractal(float3 p)
+        {
+            return PlanetFilteredNoise(p) * 0.58 + PlanetFilteredNoise(p * 2.03 + 17.0) * 0.28 +
+                   PlanetFilteredNoise(p * 4.13 + 53.0) * 0.14;
+        }
+        float3 PlanetRotate(float3 p, float angle)
+        {
+            float sine, cosine;
+            sincos(angle, sine, cosine);
+            return float3(p.x * cosine + p.z * sine, p.y, p.z * cosine - p.x * sine);
+        }
+        float PlanetAtmosphere(float radius, float3 normal)
+        {
+            if (_SurfaceStyle < 0.5 || _SurfaceStyle > 2.5) return 0.0;
+            float outer = 1.0 - smoothstep(1.0, 1.115, radius);
+            float rim = exp2(-abs(radius - 1.0) * 65.0);
+            float daylight = 0.4 + 0.6 * saturate(dot(normal, normalize(_SurfaceLightDirection.xyz)));
+            return outer * rim * daylight * (_SurfaceStyle < 1.5 ? 0.42 : 0.24);
+        }
+        float PlanetCorona(float2 p, float radius)
+        {
+            float angle = atan2(p.y, p.x + 0.0000001);
+            float pulse = 0.8 + sin(angle * 11.0 + _Time.y * 0.45) * 0.12 +
+                          sin(angle * 23.0 - _Time.y * 0.3) * 0.08;
+            float flare = pow(saturate(0.5 + 0.5 * sin(angle * 7.0 + _Time.y * 0.16)), 6.0);
+            float falloff = exp2(-max(0.0, radius - 1.0) * (18.0 - flare * 9.0));
+            return falloff * pulse * (1.0 - smoothstep(1.16, 1.295, radius)) * 0.65;
         }
         half4 PlanetColor(float2 uv)
         {
-            float alpha = PlanetCoverage(uv) * _Color.a;
+            float2 p = (uv * 2.0 - 1.0) * _SurfaceExtent;
+            float radius = length(p);
+            float coverage = PlanetCoverage(uv);
+            float3 normal = normalize(float3(p, sqrt(saturate(1.0 - dot(p, p)))));
+            float glow = _SurfaceStyle > 2.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
+            float alpha = max(coverage, glow) * _Color.a;
             clip(alpha - 0.0001);
-            float2 p = uv * 2.0 - 1.0;
-            float2 coords = p * max(1.0, _SurfaceDetailScale);
-            float coarse = PlanetFilteredNoise(coords) * 0.6 +
-                           PlanetFilteredNoise(coords * 2.1 + 17.0) * 0.3 +
-                           PlanetFilteredNoise(coords * 4.3 + 53.0) * 0.1;
-            float fine = PlanetFilteredNoise(coords * 64.0 + 91.0) - 0.5;
+            float3 coords = normal * max(1.0, _SurfaceDetailScale) + _SurfaceSeed;
+            float coarse = _SurfaceStyle < 1.5 ? PlanetFractal(coords) : 0.5;
+            float fine = PlanetFilteredNoise(coords * 7.3 + 91.0) - 0.5;
+            float diffuse = saturate(dot(normal, normalize(_SurfaceLightDirection.xyz)));
             half3 color = _Color.rgb;
             if (_SurfaceStyle < 0.5)
             {
-                color *= 1.0 + _SurfaceDetailStrength * ((coarse - 0.5) * 0.75 + fine * 0.18);
+                float ridges = 1.0 - abs(coarse * 2.0 - 1.0);
+                float basins = smoothstep(0.22, 0.5, coarse);
+                color *= 1.0 + _SurfaceDetailStrength * ((ridges - 0.65) * 0.85 + fine * 0.5);
+                color = lerp(color * 0.6, color, lerp(1.0, basins, _SurfaceDetailStrength * 0.6));
+                color *= 0.24 + diffuse * 0.76;
             }
             else if (_SurfaceStyle < 1.5)
             {
-                float coastlineWidth = max(fwidth(coarse), 0.003);
-                float land = smoothstep(0.53 - coastlineWidth, 0.53 + coastlineWidth, coarse);
-                color = lerp(color, _SurfaceAccentColor.rgb, land * _SurfaceDetailStrength);
-                color *= 1.0 + fine * 0.08;
+                float coastlineWidth = max(fwidth(coarse), 0.007);
+                float land = smoothstep(0.5 - coastlineWidth, 0.5 + coastlineWidth, coarse);
+                float shallow = smoothstep(0.4, 0.5, coarse);
+                half3 ocean = color * lerp(0.48, 0.85, shallow);
+                half3 terrain = lerp(_SurfaceAccentColor.rgb * 0.6, _SurfaceAccentColor.rgb,
+                    saturate((coarse - 0.48) * 6.0));
+                terrain = lerp(terrain, half3(0.6,0.5,0.3), smoothstep(0.64, 0.8, coarse) * 0.45);
+                color = lerp(ocean, terrain, land * _SurfaceDetailStrength);
+                float ice = smoothstep(0.86 + (coarse - 0.5) * 0.08, 0.95, abs(normal.y));
+                color = lerp(color, half3(0.88,0.94,1.0), ice);
+                float3 cloudCoords = PlanetRotate(normal, _Time.y * 0.012) * (_SurfaceDetailScale * 1.7) + _SurfaceSeed + 137.0;
+                float clouds = PlanetFractal(cloudCoords);
+                float cloudAlpha = smoothstep(0.56, 0.72, clouds) * 0.82;
+                color *= 1.0 - cloudAlpha * 0.14;
+                color = lerp(color, half3(0.94,0.96,1.0), cloudAlpha);
+                color *= 0.22 + diffuse * 0.78;
+                float specular = pow(saturate(dot(normal, normalize(normalize(_SurfaceLightDirection.xyz) + float3(0,0,1)))), 48.0);
+                color += specular * (1.0 - land) * (1.0 - cloudAlpha) * 0.22;
             }
             else if (_SurfaceStyle < 2.5)
             {
-                float bandPhase = p.y * _SurfaceDetailScale * 3.0 + (coarse - 0.5) * 4.0;
+                float3 flowCoords = PlanetRotate(normal, _Time.y * 0.018) * _SurfaceDetailScale + _SurfaceSeed;
+                float flow = PlanetFractal(flowCoords);
+                float bandPhase = normal.y * _SurfaceDetailScale * 3.0 + (flow - 0.5) * 6.0;
                 float bandVisibility = 1.0 - smoothstep(0.8, 3.0, fwidth(bandPhase));
                 float band = 0.5 + 0.5 * sin(bandPhase) * bandVisibility;
                 color = lerp(color, _SurfaceAccentColor.rgb, band * _SurfaceDetailStrength);
-                color *= 1.0 + fine * 0.06;
+                color *= 1.0 + _SurfaceDetailStrength * ((flow - 0.5) * 0.8 + fine * 0.12);
+                color *= 0.28 + diffuse * 0.72;
             }
             else
             {
-                color = lerp(color, _SurfaceAccentColor.rgb, coarse * _SurfaceDetailStrength);
-                color *= 0.95 + coarse * 0.1 + fine * 0.05;
+                // 太阳粒状表面、热点和日冕只读 Shader 时间，不逐帧重绘 CPU 纹理。
+                float3 flowCoords = coords + float3(_Time.y * 0.06, _Time.y * 0.035, 0.0);
+                float granules = PlanetFractal(flowCoords);
+                float cells = smoothstep(0.28, 0.68, granules + fine * 0.12);
+                half3 hotColor = lerp(_Color.rgb, half3(1.0,0.96,0.72), 0.55);
+                color = lerp(_SurfaceAccentColor.rgb * 0.65, hotColor, cells);
+                color *= 0.7 + sqrt(saturate(1.0 - dot(p, p))) * 0.35;
+                color = lerp(_Color.rgb, color, _SurfaceDetailStrength);
+                color = lerp(_SurfaceAccentColor.rgb, color, coverage);
+            }
+            if (_SurfaceStyle < 2.5)
+            {
+                half3 atmosphereColor = _SurfaceStyle < 1.5 ? half3(0.28,0.57,1.0) : lerp(_Color.rgb, half3(0.8,0.9,1.0), 0.25);
+                color += atmosphereColor * glow * coverage * 0.65;
+                color = lerp(atmosphereColor, color, coverage);
             }
             return half4(color, alpha);
         }
@@ -139,6 +214,7 @@ Shader "FlatWorld/Space/PlanetSurface"
             half4 PlanetLitFragment(Varyings input) : SV_Target
             {
                 half4 color = PlanetColor(input.uv);
+                if (_SurfaceStyle > 2.5) return color;
                 SurfaceData2D surfaceData;
                 InputData2D inputData;
                 InitializeSurfaceData(color.rgb, color.a, half4(1,1,1,1), surfaceData);
@@ -156,7 +232,11 @@ Shader "FlatWorld/Space/PlanetSurface"
             #pragma fragment PlanetNormalsFragment
             half4 PlanetNormalsFragment(Varyings input) : SV_Target
             {
-                half alpha = PlanetCoverage(input.uv) * _Color.a;
+                float2 p = (input.uv * 2.0 - 1.0) * _SurfaceExtent;
+                float radius = length(p);
+                float3 normal = normalize(float3(p, sqrt(saturate(1.0 - dot(p, p)))));
+                float glow = _SurfaceStyle > 2.5 ? PlanetCorona(p, radius) : PlanetAtmosphere(radius, normal);
+                half alpha = max(PlanetCoverage(input.uv), glow) * _Color.a;
                 clip(alpha - 0.0001);
                 return half4(0.5 * (1.0 - GetViewForwardDir()), alpha);
             }
