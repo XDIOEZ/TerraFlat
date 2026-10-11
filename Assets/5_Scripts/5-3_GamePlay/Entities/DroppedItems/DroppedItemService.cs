@@ -392,6 +392,8 @@ public static partial class DroppedItemService
         DroppedItemSpawnReason spawnReason, Item sourceItem)
     {
         ItemData data = FastCloner.FastCloner.DeepClone(source); data.inHand = false;
+        // 新掉落物由登记入口分配身份，不能复用仍由手持物或来源实体占用的 GUID。
+        data.Guid = 0;
         data.Stack.CanBePickedUp = duration <= 0f;
         Item item = null;
         try

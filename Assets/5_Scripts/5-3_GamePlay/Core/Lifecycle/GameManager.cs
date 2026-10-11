@@ -1256,7 +1256,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        var generator = new FlatWorld.WorldModel.DeterministicChunkGenerator();
+        var generator = new FlatWorld.WorldModel.DeterministicChunkGenerator(GameRes.RequireWorldLiquidTypes());
         if (generator.TryFindWalkableSurfaceNear(
                 dimensionId,
                 GetActiveWorldGenerationSeed(),

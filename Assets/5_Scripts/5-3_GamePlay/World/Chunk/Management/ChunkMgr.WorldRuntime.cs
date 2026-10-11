@@ -89,7 +89,7 @@ public partial class ChunkMgr
         set => authoritativeSimulation = value;
     }
 
-    /// <summary>初始化纯世界运行时，并把主线程宿主绑定到 ChunkMgr。</summary>
+    /// <summary>先绑定主线程宿主，完整资源就绪后按真实世界请求创建纯世界运行时。</summary>
     protected override void Awake()
     {
         base.Awake();
@@ -97,7 +97,6 @@ public partial class ChunkMgr
             return;
         WorldStreamingPreferences.Changed -= ApplyWorldStreamingPreferences;
         WorldStreamingPreferences.Changed += ApplyWorldStreamingPreferences;
-        InitializeWorldRuntime();
         runtimeHost = GetComponent<WorldRuntimeHost>();
         if (runtimeHost == null)
             runtimeHost = gameObject.AddComponent<WorldRuntimeHost>();
@@ -272,12 +271,15 @@ public partial class ChunkMgr
         ApplyChunkLoadSpeedToRuntimeScheduler();
     }
 
+    #region 资源会话与世界生命周期
+
     /// <summary>创建世界模型、确定性生成器和后台任务调度器。</summary>
     private void InitializeWorldRuntime()
     {
         if (runtimeChunkManager != null || !IsSurfaceStreamingScene)
             return;
 
+        LiquidTypeCatalog liquidTypes = GameRes.RequireWorldLiquidTypes();
         runtimeEpoch = Math.Max(1, runtimeEpoch + 1);
         defaultGenerationSnapshot = defaultGenerationProfile != null
             ? defaultGenerationProfile.CreateSnapshot()
@@ -294,7 +296,7 @@ public partial class ChunkMgr
         slowChunkLogWindowStart = Time.realtimeSinceStartup;
         world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
 #endif
-        runtimeGenerator = new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes,
+        runtimeGenerator = new DeterministicChunkGenerator(liquidTypes,
             FlatWorld.Spaceflight.SpaceSurfaceTerrain.Apply);
         runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
@@ -313,26 +315,19 @@ public partial class ChunkMgr
 
     #endregion
 
-    /// <summary>切换场景时清空旧区块，并让新场景使用新的世界纪元。</summary>
+    /// <summary>切换场景时释放旧生成器，下次进入按当前资源会话创建新世界。</summary>
     private void ResetWorldRuntimeForSceneChange()
     {
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
         ClearRuntimeWindowBindings();
         WorldEntityRuntime.ReleaseWorld();
-        activeGenerationSnapshot = null;
-        if (runtimeChunkManager == null)
-            return;
-        runtimeChunkManager.ClearWindow();
-        runtimeChunkManager.CancelAllRequests();
+        ReleaseAirHumidityField();
+        runtimeChunkManager?.ClearWindow();
+        runtimeChunkManager?.CancelAllRequests();
         runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
-        runtimeChunkManager.CommitCompleted();
-        runtimeEpoch++;
-        runtimeChunkManager.World.BeginNewEpoch(runtimeEpoch);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        slowChunkLogCount = 0;
-        slowChunkLogWindowStart = Time.realtimeSinceStartup;
-#endif
+        runtimeChunkManager?.CommitCompleted();
+        DisposeWorldRuntime();
     }
 
     /// <summary>彻底关闭世界运行时，释放区块、任务和事件资源。</summary>
@@ -357,27 +352,34 @@ public partial class ChunkMgr
         {
             // 表现清理发生异常时，后台任务与纯数据仍必须释放，原始异常继续上报。
             WorldEntityRuntime.ReleaseWorld();
-            RuntimeChunkMgr manager = runtimeChunkManager;
-            runtimeChunkManager = null;
-            runtimeGenerator = null;
-            sightBlockingChunkCommittedSubscription?.Dispose();
-            sightBlockingChunkCommittedSubscription = null;
-            activeGenerationSnapshot = null;
-            runtimeTileCatalogSnapshot = null;
-            if (manager != null)
+            DisposeWorldRuntime();
+        }
+    }
+
+    /// <summary>完整卸载世界与终止管理器共用释放顺序，不保留上一资源会话的液体编号表。</summary>
+    private void DisposeWorldRuntime()
+    {
+        RuntimeChunkMgr manager = runtimeChunkManager;
+        runtimeChunkManager = null;
+        runtimeGenerator = null;
+        sightBlockingChunkCommittedSubscription?.Dispose();
+        sightBlockingChunkCommittedSubscription = null;
+        activeGenerationSnapshot = null;
+        runtimeTileCatalogSnapshot = null;
+        defaultGenerationSnapshot = null;
+        if (manager != null)
+        {
+            WorldRuntime world = manager.World;
+            try
             {
-                WorldRuntime world = manager.World;
-                try
-                {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
+                world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
 #endif
-                    manager.Dispose();
-                }
-                finally
-                {
-                    world.Dispose();
-                }
+                manager.Dispose();
+            }
+            finally
+            {
+                world.Dispose();
             }
         }
     }
@@ -392,6 +394,7 @@ public partial class ChunkMgr
         if (runtimeChunkManager == null)
             InitializeWorldRuntime();
     }
+    #endregion
 
     /// <summary>当正式配置不可用时创建一份最小的备用生成配置。</summary>
     private static ChunkGenerationProfileSnapshot CreateFallbackGenerationSnapshot()

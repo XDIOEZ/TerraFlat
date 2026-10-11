@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -8,6 +9,15 @@ public partial class GameRes
 {
     #region 世界液体资源
     public LiquidTypeCatalog LiquidTypes { get; private set; }
+
+    /// <summary>正式生成必须使用完整资源会话的编号表，不能把启动中的空目录当成本体默认表。</summary>
+    public static LiquidTypeCatalog RequireWorldLiquidTypes()
+    {
+        GameRes resources = ExistingInstance;
+        if (resources == null || !resources.isLoadFinish || resources.LiquidTypes == null)
+            throw new InvalidOperationException("完整液体资源目录尚未就绪，不能创建正式世界地形。");
+        return resources.LiquidTypes;
+    }
 
     /// <summary>纯生成器仅收到不可变编号副本；Unity 资源继续由本资源会话持有。</summary>
     private IEnumerator LoadWorldLiquidResources()

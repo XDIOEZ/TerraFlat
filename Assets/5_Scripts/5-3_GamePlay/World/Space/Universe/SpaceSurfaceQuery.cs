@@ -150,7 +150,7 @@ namespace FlatWorld.Spaceflight
                 if (!caches.TryGetValue(planetId, out SurfaceCache cache) || cache.Fingerprint != profile.GenerationFingerprint || cache.Seed != seed)
                 {
                     cache?.Dispose();
-                    cache = new SurfaceCache(planetId, profile, seed, GameRes.ExistingInstance?.LiquidTypes);
+                    cache = new SurfaceCache(planetId, profile, seed, GameRes.RequireWorldLiquidTypes());
                     caches[planetId] = cache;
                 }
                 if (!cache.World.TryGetChunkTerrain(address, out terrain))

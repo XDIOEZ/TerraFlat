@@ -16,8 +16,9 @@ public partial class Map
     /// <summary>重建 MapCore 生成期独立液体格，不向 Ground 栈写入任何液体地块。</summary>
     public void ResetGeneratedLiquids()
     {
+        LiquidTypeCatalog liquidTypes = GameRes.RequireWorldLiquidTypes();
         DisposeGeneratedLiquids();
-        using var buffer = new ChunkTerrainBuffer(Data.Width, Data.Height, GameRes.ExistingInstance?.LiquidTypes);
+        using var buffer = new ChunkTerrainBuffer(Data.Width, Data.Height, liquidTypes);
         generatedLiquidTerrain = buffer.Seal();
     }
     public void SetGeneratedLiquid(Vector2Int worldCell, string liquidId, float depth)

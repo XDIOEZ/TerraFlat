@@ -21,6 +21,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `ChunkRuntime + ChunkTerrainData` 是权威；Tilemap/Collider/Renderer 是投影。后台与 Burst 只接收冻结值，不访问 Unity 对象；`RuntimeTileDefinition/Behaviour` 留在主线程资源层。
 - 提交核对世界 Epoch 和请求版本；取消/失败/逐出释放生成结果及租约。`Seal` 将池化 Liquid 深度/类型和环境数组唯一所有权交给区块，Dispose 归还；`height` 随区块存活，只作原生成高度。
 - Liquid 的会话索引来自冻结 `LiquidTypeCatalog`；哈希/持久化使用稳定 LiquidId。Ground 与 Liquid 分开，`SetLiquid` 不写 Ground。`LiquidCellValue.NormalizeDepth` 清除 epsilon 尾数并清类型，抽取量按实际写入前后差计算。
+- 正式 Chunk/Map/冷地表与出生查询通过 `GameRes.RequireWorldLiquidTypes` 取得 Ready 后的完整表；ChunkMgr Awake 只绑定宿主，首次请求才建世界，换场景释放旧生成器，不能把启动空目录冻结成 BuiltIn 表。
 - `WriteCell` 同步数据、固定 LOS 遮挡位与版本，建筑/机械叠独立动态位。`TerrainSupportLayer.GetSurfaceCell` 投影平台有效表面，不改底材/底液。
 - `ChunkTerrainChanged.EnvironmentLayerId/AffectsEnvironmentLayer` 表达真实变化层；液体变化影响当前及八邻区岸线/四角液深/导航。`SetLiquidBatch` 索引唯一递增，跨块先全部写回再 Publish，仅发 `LiquidBatchChanged`；借用索引限同步回调内使用。
 - `WorldTopologyDomain` 是 noEngine 的纯坐标真源，Jobs 使用主线程冻结副本；`WorldTopologyRuntime` 仍读取存档，仅主线程。`ChunkRuntime.Address/ChunkOrigin` 永远是规范坐标，View Transform 由 `WorldLocalPresentation` 选本地镜像；HUD 经 `ToLogical` 还原。连续曲线用 double 和显式半周期符号策略。
