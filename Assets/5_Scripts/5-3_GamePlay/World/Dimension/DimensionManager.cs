@@ -169,7 +169,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             return false;
         }
 
-        WorldAddress sourceAddress = ActiveAddress.IsValid
+        // 太空场景保留最近地表地址，重生必须以实际场景判断是否需要跨世界。
+        WorldAddress sourceAddress = SceneManager.GetActiveScene().name != "SpaceScene" && ActiveAddress.IsValid
             ? ActiveAddress
             : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
         if (!targetAddress.IsValid || !targetAddress.IsSurface || targetAddress == sourceAddress ||

@@ -26,6 +26,8 @@ public readonly struct WorldAddress
 }
 namespace FlatWorld.Spaceflight
 {
+    public sealed class ShipPartConfiguration { }
+    public sealed class SpaceLooseItemState { }
     public interface IShipAtmosphereSource { }
     public static class ShipAtmosphereService
     {

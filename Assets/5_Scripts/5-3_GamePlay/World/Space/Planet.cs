@@ -28,11 +28,11 @@ public class Planet : MonoBehaviour
                 surfaceDetailStrength, surfaceDetailScale);
             initializedPresentation = true;
         }
-        // 星体只显示固定位置与自转，永不进行公转模拟。
+        // 太空星体保持固定位置和外观朝向，地表环境时钟继续正常运行。
         Vector2 position = session.ProjectPosition(body.PositionMeters);
         transform.position = new Vector3(position.x, position.y, 0f);
         transform.localScale = renderScale;
-        transform.rotation = Quaternion.Euler(0f, 0f, (float)(session.Universe.GetRotationRadians(body.BodyId) * 180d / System.Math.PI));
+        transform.rotation = Quaternion.Euler(0f, 0f, (float)(body.RotationInitialRadians * 180d / System.Math.PI));
     }
 
     private void OnDestroy() => surfacePresentation?.Dispose();

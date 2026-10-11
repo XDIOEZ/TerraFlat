@@ -10,6 +10,7 @@ internal static partial class Program
     {
         Run("限速、反向制动、部分燃料", Velocity);
         Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
+        Run("乘员继承船速、松键及转向保留漂移、碰撞冲量与快照恢复", PassengerInertia);
         Run("降落范围、星体上方自由飞行及实际降落姿态", LandingBoundary);
         Run("不同步长及横向初速下到点停稳", Arrival);
         Run("船头转向取最短方向", Heading);
@@ -87,6 +88,45 @@ internal static partial class Program
         var smallRequest = ShipCruiseGuidance.ManualVelocity(default, new SpaceVector2(.1d, 0d), Settings, .02d);
         var smallPartial = ShipCruiseGuidance.StepVelocity(default, smallRequest, Settings, .02d, .05d);
         Near(.06d, smallPartial.X, "half fuel on ten percent throttle gives half the requested change");
+    }
+
+    private static void PassengerInertia()
+    {
+        var ship = new ShipState { PositionX = 1000d, PositionY = 1000d, VelocityX = 120d, VelocityY = 30d };
+        ShipGeometry.PointVelocity(ship, ship.PositionX + 2d, ship.PositionY + 3d, out double vx, out double vy);
+        var passenger = new SpacePassengerState { IsInSpace = true,
+            FreeMotion = new SpaceMotionState { PositionMeters = new SpaceVector2(1002d, 1003d),
+                VelocityMetersPerSecond = new SpaceVector2(vx, vy) } };
+        var universe = new UniverseSimulation(new UniverseState { Bodies = new List<BodyState>
+            { new BodyState { BodyId = "earth", PlanetId = "earth", RadiusMeters = 1d } } });
+        for (int i = 0; i < 500; i++)
+        {
+            passenger.UpdateFreeWalkVelocity(default);
+            universe.StepFreeMotion(passenger.FreeMotion, default, .02d);
+        }
+        Near(120d, passenger.FreeMotion.VelocityMetersPerSecond.X, "release input preserves inherited ship speed above walking cap");
+        Near(30d, passenger.FreeMotion.VelocityMetersPerSecond.Y, "release input preserves lateral ship speed");
+        Near(1200d, passenger.FreeMotion.PositionMeters.X - 1002d, "ten seconds outside coasting ship maintains relative distance");
+        passenger.UpdateFreeWalkVelocity(new SpaceVector2(0d, 10d));
+        Near(120d, passenger.FreeMotion.VelocityMetersPerSecond.X, "sideways walking keeps carrier drift");
+        Near(40d, passenger.FreeMotion.VelocityMetersPerSecond.Y, "walking adds relative velocity");
+        passenger.FreeMotion.VelocityMetersPerSecond += new SpaceVector2(-80d, 5d);
+        passenger.UpdateFreeWalkVelocity(new SpaceVector2(-10d, 0d));
+        passenger.UpdateFreeWalkVelocity(default);
+        Near(40d, passenger.FreeMotion.VelocityMetersPerSecond.X, "turning and stopping preserve collision impulse");
+        Near(35d, passenger.FreeMotion.VelocityMetersPerSecond.Y, "stopping removes only walking velocity");
+        passenger.UpdateFreeWalkVelocity(new SpaceVector2(3d, 4d));
+        var restored = Newtonsoft.Json.JsonConvert.DeserializeObject<SpacePassengerState>(
+            Newtonsoft.Json.JsonConvert.SerializeObject(passenger));
+        restored.UpdateFreeWalkVelocity(default);
+        Near(40d, restored.FreeMotion.VelocityMetersPerSecond.X, "snapshot restores driven component separately");
+        Near(35d, restored.FreeMotion.VelocityMetersPerSecond.Y, "loaded input release preserves drift");
+        ship.AngularVelocityRadiansPerSecond = .5d;
+        ShipGeometry.PointVelocity(ship, ship.PositionX + 2d, ship.PositionY + 3d, out vx, out vy);
+        Near(118.5d, vx, "departure inherits rotational point velocity x");
+        Near(31d, vy, "departure inherits rotational point velocity y");
+        Near(.35d, Settings.FreeFloatAccelerationMultiplier * 3d, "space acceleration uses one third of ice", 1e-7d);
+        Near(.15d, Settings.FreeFloatDecelerationMultiplier * 3d, "space deceleration uses one third of ice", 1e-7d);
     }
 
     private static void LandingBoundary()

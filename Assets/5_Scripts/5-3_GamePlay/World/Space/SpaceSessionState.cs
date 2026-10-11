@@ -46,8 +46,9 @@ namespace FlatWorld.Spaceflight
     public sealed class SpacePassengerState
     {
         public string ProfileId, ShipId, ConsolePieceId;
-        public double LocalX, LocalY, RelativeHeadingRadians;
+        public double LocalX, LocalY;
         public SpaceMotionState FreeMotion = new();
+        public SpaceVector2 FreeWalkVelocity;
         public bool Supported, IsInSpace;
         public bool DescentControlEntered, DescentDriving;
         public double LandingX, LandingY, LandingOriginX, LandingOriginY;
@@ -55,8 +56,14 @@ namespace FlatWorld.Spaceflight
         public string LandingBodyId, LandingWorldKey;
         public double SurfaceHeight, SurfaceVerticalSpeed, WalkVelocityX, WalkVelocityY, SavedCameraSize;
         public double SurfaceHorizontalSpeed;
-        public double FreeHeadingRadians;
         public ulong LandingRandomState = 1;
+
+        // 步行只替换自己的速度分量，继承的船速与外部碰撞冲量保持不变。
+        public void UpdateFreeWalkVelocity(SpaceVector2 velocity)
+        {
+            FreeMotion.VelocityMetersPerSecond += velocity - FreeWalkVelocity;
+            FreeWalkVelocity = velocity;
+        }
     }
     [Serializable]
     public sealed class ShipNavigationState

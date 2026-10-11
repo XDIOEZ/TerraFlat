@@ -22,14 +22,13 @@ namespace FlatWorld.Spaceflight
         public double CruiseTurnDegreesPerSecond = 45d; // 飞船驾驶与导航共用的直接旋转速度上限。
         public double NavigationArrivalDistanceMeters = 1d;
         public double NavigationArrivalSpeedMetersPerSecond = .25d;
-        public double FreeFloatMaxSpeedMetersPerSecond = 12d;
+        public double FreeFloatMaxSpeedMetersPerSecond = 12d; // 仅限制玩家主动移动，不限制继承的飞船速度与碰撞速度。
         public float FreeFloatAccelerationMultiplier = .35f / 3f; // 加减速响应为冰面的三分之一，惯性约为冰面的三倍。
         public float FreeFloatDecelerationMultiplier = .15f / 3f;
         public double SurfaceEntryHeightMeters = 80d;
         public double ImpactStoppingSeconds = .25d;
         public double ImpactForcePerDurability = 1000d;
         public double LandingChoiceRadiusMeters = 10d;
-        public float PlayerTurnDegreesPerSecond = 45f; // 失重玩家朝鼠标方向转动本体的最大角速度。
         public float DrivingCameraSize = 30f;
         public double ImpactJoulesPerDurability = 1000d;
         private static SpaceGameplaySettings current;
@@ -53,8 +52,7 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(current.NavigationArrivalSpeedMetersPerSecond) || current.NavigationArrivalSpeedMetersPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.FreeFloatMaxSpeedMetersPerSecond) || current.FreeFloatMaxSpeedMetersPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.FreeFloatAccelerationMultiplier) || current.FreeFloatAccelerationMultiplier <= 0f ||
-                    !SpaceVector2.Finite(current.FreeFloatDecelerationMultiplier) || current.FreeFloatDecelerationMultiplier <= 0f ||
-                    !SpaceVector2.Finite(current.PlayerTurnDegreesPerSecond) || current.PlayerTurnDegreesPerSecond <= 0f)
+                    !SpaceVector2.Finite(current.FreeFloatDecelerationMultiplier) || current.FreeFloatDecelerationMultiplier <= 0f)
                     throw new InvalidOperationException("太空移动与冲击配置无效。");
                 return current;
             }

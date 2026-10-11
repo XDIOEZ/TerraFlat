@@ -31,9 +31,6 @@ namespace FlatWorld.Spaceflight
                 VelocityMetersPerSecond = motion.VelocityMetersPerSecond,
                 RadiusMeters = motion.RadiusMeters
             };
-            double speed = targetMotion.VelocityMetersPerSecond.Magnitude;
-            double maxSpeed = SpaceGameplaySettings.Current.FreeFloatMaxSpeedMetersPerSecond;
-            if (speed > maxSpeed) targetMotion.VelocityMetersPerSecond *= maxSpeed / speed;
             StartCoroutine(TeleportPlayerToSpace(player, targetMotion, completed));
             return true;
         }
@@ -48,7 +45,6 @@ namespace FlatWorld.Spaceflight
                 ProfileId = previous.ProfileId,
                 IsInSpace = true,
                 FreeMotion = motion,
-                FreeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d,
                 SavedCameraSize = previous.SavedCameraSize
             };
             bool succeeded = false;

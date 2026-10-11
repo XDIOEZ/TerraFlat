@@ -4,6 +4,7 @@ using MemoryPack;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using FlatWorld.Spaceflight;
 
 /// <summary>
 /// 玩家死亡状态模块：监听 Mod_DamageReceiver 的死亡事件，处理濒死UI、重生与回主菜单。
@@ -231,14 +232,14 @@ public partial class Mod_PlayerDeathState : Module
         if (RequiresWorldTransition(activeAddress, targetAddress))
         {
             DimensionManager dimensionManager = DimensionManager.Instance;
-            if (dimensionManager == null ||
-                !dimensionManager.TryBeginRespawnTransition(
-                    _player,
-                    targetAddress,
-                    respawnPos,
-                    () => CompleteRespawnState(
-                        restartChunkStreaming: false,
-                        unlockInput: false)))
+            System.Action preparePlayer = () => CompleteRespawnState(
+                restartChunkStreaming: false, unlockInput: false);
+            SpaceSession space = SpaceSession.Current;
+            bool started = space?.State != null
+                ? space.TryBeginRespawnTransition(_player, targetAddress, respawnPos, preparePlayer)
+                : dimensionManager != null && dimensionManager.TryBeginRespawnTransition(
+                    _player, targetAddress, respawnPos, preparePlayer);
+            if (!started)
             {
                 Debug.LogError(
                     $"[Mod_PlayerDeathState] 无法开始跨维度重生：" +
@@ -253,6 +254,7 @@ public partial class Mod_PlayerDeathState : Module
             return;
         }
 
+        SpaceSession.Current?.ResetPassengerForRespawn(_player);
         _respawnCoroutine = StartCoroutine(RespawnAfterChunksReadyCoroutine(respawnPos));
     }
 
@@ -304,6 +306,21 @@ public partial class Mod_PlayerDeathState : Module
     {
         activeAddress = ResolveActiveWorldAddress();
         targetAddress = activeAddress.WithDimension(WorldAddress.SurfaceDimensionId);
+
+        if (activeAddress.WorldKey == "SpaceScene")
+        {
+            // 太空死亡固定回地球，宇宙投影坐标不能当作地表出生点。
+            targetAddress = SpaceSession.Current?.Universe?.GetSurfaceAddress("earth")
+                ?? WorldAddress.FromWorldKey("地球");
+            if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out respawnPosition,
+                    out string earthSpawnWorld) && WorldAddress.FromWorldKey(earthSpawnWorld) == targetAddress)
+                return;
+            if (DimensionTravelProgressStore.TryGetLastPosition(_player.Data, targetAddress, out respawnPosition))
+                return;
+            respawnPosition = DimensionManager.Instance.TryGetDefinition(targetAddress.DimensionId,
+                out DimensionDefinition earthDefinition) ? earthDefinition.DefaultSpawnPosition : Vector3.zero;
+            return;
+        }
 
         if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
                 _player.Data,
@@ -474,6 +491,8 @@ public partial class Mod_PlayerDeathState : Module
     /// <summary>优先读取维度管理器的权威地址，Scene 名作为启动兼容兜底。</summary>
     private static WorldAddress ResolveActiveWorldAddress()
     {
+        if (SceneManager.GetActiveScene().name == "SpaceScene")
+            return WorldAddress.FromWorldKey("SpaceScene");
         if (DimensionManager.Instance != null && DimensionManager.Instance.ActiveAddress.IsValid)
             return DimensionManager.Instance.ActiveAddress;
 
@@ -486,6 +505,7 @@ public partial class Mod_PlayerDeathState : Module
         WorldAddress activeAddress = ResolveActiveWorldAddress();
         GameManager gameManager = GameManager.Instance;
         if (_player?.Data == null ||
+            activeAddress.WorldKey == "SpaceScene" ||
             !activeAddress.IsSurface ||
             PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out _, out _) ||
             gameManager == null ||

@@ -6,25 +6,13 @@ public sealed class CameraFollowRotation : CinemachineExtension
     #region 跟随目标朝向
     public Transform FollowTarget { get; set; }
     public bool FollowTargetRotation { get; set; } = true;
-    private Quaternion followOrientation;
-    private bool hasFollowOrientation;
 
     public override void PrePipelineMutateCameraStateCallback(
         CinemachineVirtualCameraBase vcam, ref CameraState state, float deltaTime)
     {
-        if (FollowTargetRotation && FollowTarget != null)
-        {
-            followOrientation = Quaternion.Euler(0f, 0f, FollowTarget.eulerAngles.z);
-            hasFollowOrientation = true;
-        }
-        else if (!hasFollowOrientation)
-        {
-            followOrientation = state.RawOrientation;
-            hasFollowOrientation = true;
-        }
-
-        // 在镜头管线内设置绝对朝向，避免主相机与虚拟相机共用 Transform 时重复叠加旋转。
-        state.RawOrientation = followOrientation;
+        // 固定镜头恢复朝上，不能继续保留此前跟随飞船留下的倾斜角度。
+        state.RawOrientation = FollowTargetRotation && FollowTarget != null
+            ? Quaternion.Euler(0f, 0f, FollowTarget.eulerAngles.z) : Quaternion.identity;
         state.Lens.Dutch = 0f;
     }
 

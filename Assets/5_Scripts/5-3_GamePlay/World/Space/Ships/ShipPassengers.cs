@@ -19,17 +19,16 @@ namespace FlatWorld.Spaceflight
             Vector2 screenInput, float turn, float seconds)
         {
             if (State == null || transitionRunning) return false;
+            mover.SetSpaceUpright(IsSpaceView);
             SpacePassengerState passenger = GetPassenger(player);
             if (GetPassengerWorld(passenger) is string expectedWorld && expectedWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
             {
-                mover.SetPointerBodyRotation(false);
                 return true;
             }
             ShipState ship = GetShip(passenger.ShipId);
             UpdateDescentControl(player, passenger, ship);
             if (passenger.SurfaceDescending)
             {
-                mover.SetPointerBodyRotation(false);
                 Vector2 position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
                 player.transform.position = position;
                 return true;
@@ -41,7 +40,6 @@ namespace FlatWorld.Spaceflight
                     ExitConsole(player);
                 else
                 {
-                    mover.SetPointerBodyRotation(false);
                     SetControl(console.PieceId, screenInput, turn);
                     if (!passenger.DescentDriving)
                     {
@@ -61,11 +59,9 @@ namespace FlatWorld.Spaceflight
             bool ground = floorFlight != null && floorFlight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
             if (floor && (gravity || ground))
             {
-                mover.SetPointerBodyRotation(false);
                 if (passenger.ShipId != floorShip.ShipId || !passenger.Supported)
                 {
                     passenger.ShipId = floorShip.ShipId; passenger.LocalX = local.x; passenger.LocalY = local.y;
-                    passenger.RelativeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d - floorShip.AngleRadians;
                 }
                 passenger.Supported = true; ship = floorShip;
                 ShipGeometry.Rotate(worldInput.x, worldInput.y, -ship.AngleRadians, out double x, out double y);
@@ -86,31 +82,13 @@ namespace FlatWorld.Spaceflight
             }
             if (!IsSpaceView)
             {
-                mover.SetPointerBodyRotation(false);
                 passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
                 SetTerrainSuppression(player, false); return false;
             }
-            mover.SetPointerBodyRotation(true);
             passenger.IsInSpace = true;
             if (passenger.Supported && ship != null) ReleasePassenger(passenger, ship);
-            TurnPassengerToPointer(player, mover, controller, seconds);
-            passenger.FreeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d;
             SetTerrainSuppression(player, floor);
             return true;
-        }
-
-        private void TurnPassengerToPointer(Player player, Mod_Mover mover, Mod_GameController controller, float seconds)
-        {
-            if (mover.rb != null) mover.rb.angularVelocity = 0f;
-            if (controller == null || controller.IsGameplayInputLocked ||
-                player.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.IsDirectionLocked == true ||
-                !mover.TryGetPointerBodyTargetHeading(controller, out float targetHeading)) return;
-
-            // 失重时沿最短角度转动整个玩家，鼠标贴近中心时保留原来的朝向。
-            float heading = Mathf.MoveTowardsAngle(player.transform.eulerAngles.z, targetHeading,
-                SpaceGameplaySettings.Current.PlayerTurnDegreesPerSecond * seconds);
-            player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
-            if (mover.rb != null) mover.rb.rotation = heading;
         }
 
         public bool HasArtificialGravity(ShipState ship, double x, double y)
@@ -136,7 +114,7 @@ namespace FlatWorld.Spaceflight
             passenger.FreeMotion.PositionMeters = new SpaceVector2(x, y);
             ShipGeometry.Rotate(passenger.WalkVelocityX, passenger.WalkVelocityY, ship.AngleRadians, out double wx, out double wy);
             passenger.FreeMotion.VelocityMetersPerSecond = new SpaceVector2(vx + wx, vy + wy);
-            passenger.FreeHeadingRadians = ship.AngleRadians + passenger.RelativeHeadingRadians;
+            passenger.FreeWalkVelocity = new SpaceVector2(wx, wy);
             passenger.WalkVelocityX = passenger.WalkVelocityY = 0d;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight is { HeightMeters: > 0d } && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
@@ -153,7 +131,7 @@ namespace FlatWorld.Spaceflight
         private void PlacePassenger(Player player, SpacePassengerState passenger, ShipState ship)
         {
             Vector2 position = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
-            float heading = (float)((ship.AngleRadians + passenger.RelativeHeadingRadians) * 180d / Math.PI);
+            const float heading = 0f;
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
             // 视觉起飞时玩家物理位置未变，不重复触发物品空间索引和物理同步。
             if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Lifting &&
@@ -179,7 +157,6 @@ namespace FlatWorld.Spaceflight
             bool alreadyDriving = !string.IsNullOrWhiteSpace(passenger.ConsolePieceId);
             if (alreadyDriving) ClearControl(passenger.ConsolePieceId);
             passenger.ShipId = ship.ShipId; passenger.ConsolePieceId = piece.PieceId; passenger.Supported = true;
-            passenger.RelativeHeadingRadians = 0d;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
                 passenger.DescentControlEntered = passenger.DescentDriving = true;
@@ -262,14 +239,14 @@ namespace FlatWorld.Spaceflight
             double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? flight.HeightMeters : 0d;
             float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
             drivingCameraTarget.position = new Vector3(position.x, position.y + rise, player.transform.position.z);
-            drivingCameraTarget.rotation = Quaternion.Euler(0f, 0f, (float)(ship.AngleRadians * 180d / Math.PI));
+            drivingCameraTarget.rotation = Quaternion.identity;
             if (drivingCamera != camera)
             {
                 drivingCamera?.ClearFollowOverride(drivingCameraTarget);
                 drivingCamera = camera;
                 camera.SetOrthographicSize(SpaceGameplaySettings.Current.DrivingCameraSize);
             }
-            camera.SetFollowTargetRotation(true);
+            camera.SetFollowTargetRotation(false);
             camera.SetFollowOverride(drivingCameraTarget);
         }
 
@@ -312,16 +289,14 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 if (!passenger.IsInSpace || passenger.Supported || passenger.LandingResolved) continue;
-                SpaceGameplaySettings config = SpaceGameplaySettings.Current;
-                SpaceVector2 velocity = passenger.FreeMotion.VelocityMetersPerSecond;
                 Mod_Mover mover = player != null && player.ProfileName == passenger.ProfileId && IsSpaceView
                     ? player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover) : null;
-                // WASD 的速度响应在权威固定步内结算，松键与反向输入都保留惯性。
-                if (mover != null) velocity = SpaceVector2.FromVector2(mover.SmoothSpaceVelocity(velocity.ToVector2(), (float)seconds));
-                double speed = velocity.Magnitude;
-                if (speed > config.FreeFloatMaxSpeedMetersPerSecond)
-                    velocity *= config.FreeFloatMaxSpeedMetersPerSecond / speed;
-                passenger.FreeMotion.VelocityMetersPerSecond = velocity;
+                // 只平滑主动步行分量，离船继承的速度和碰撞冲量持续保留。
+                if (mover != null)
+                {
+                    SpaceVector2 walking = SpaceVector2.FromVector2(mover.SmoothSpaceVelocity(passenger.FreeWalkVelocity.ToVector2(), (float)seconds));
+                    passenger.UpdateFreeWalkVelocity(walking);
+                }
                 passenger.FreeMotion.RadiusMeters = .3d;
                 SpaceVector2 previousPosition = passenger.FreeMotion.PositionMeters;
                 bool touched = Universe.StepMotion(passenger.FreeMotion, default, seconds, out SurfaceContact contact);
@@ -358,9 +333,10 @@ namespace FlatWorld.Spaceflight
             else if (IsSpaceView && passenger.IsInSpace)
             {
                 player.transform.position = ProjectPosition(passenger.FreeMotion.PositionMeters);
-                player.transform.rotation = Quaternion.Euler(0f, 0f, (float)(passenger.FreeHeadingRadians * 180d / Math.PI));
+                player.transform.rotation = Quaternion.identity;
             }
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            mover?.SetSpaceUpright(IsSpaceView);
             if (mover?.rb != null) { mover.rb.position = player.transform.position; mover.rb.rotation = player.transform.eulerAngles.z; }
         }
         #endregion

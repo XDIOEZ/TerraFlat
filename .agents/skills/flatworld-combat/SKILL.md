@@ -30,6 +30,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 返回 0 是有效但全防御命中，可显示数字/附加状态；负值 -1 是死亡/冷却等拒绝，不触发表现或状态。ResolvedDamageValues 已应用难度、防御/倍率，按 DamageValue 裁过量。
 - 出血经 DamageReceivedStatusEffectRegistry 消费同一笔 DamageReceiverDamageInfo，要求 Blood 标签和实际切割/穿刺/劈砍损失；部位提示读同笔 BodyPartHits，不重新抽样。玩家受击表现由接收侧订阅保证。
 - 濒死 HP 不再被被动恢复改成小正数；控制/UI 在本地 Event_PlayerEnterWorld（模块已加载）按权威血量恢复，不重发 OnDead。
+- 太空死亡由 Mod_PlayerDeathState 读取实际 SpaceScene，回 earth 对应地表的固定主出生点；SpaceSession.Respawn 在完整维度事务期间解除驾驶/支撑/下降并锁住迁移，成功清乘员、失败恢复，不能只改玩家显示位置或使用最近地表 ActiveAddress 判断当前场景。
 
 ## 武器、命中与组合
 

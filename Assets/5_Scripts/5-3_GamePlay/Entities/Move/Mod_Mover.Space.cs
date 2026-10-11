@@ -8,48 +8,28 @@ public partial class Mod_Mover
     private InputAction spaceTurnAction;
     private bool spaceMotionOwned;
     private RigidbodyType2D beforeSpaceBodyType;
-    private Vector2 pointerBodyScreenPosition;
-    private float pointerBodyTargetHeading;
-    private bool pointerBodyHeadingInitialized;
     private bool IsSpaceRunningDisabled => item is Player && SpaceSession.Current?.IsSpaceView == true;
-    public bool IsUsingPointerBodyRotation { get; private set; }
+    private bool spaceUpright;
 
-    public void SetPointerBodyRotation(bool enabled)
+    public void SetSpaceUpright(bool enabled)
     {
-        if (IsUsingPointerBodyRotation == enabled) return;
-        IsUsingPointerBodyRotation = enabled;
-        pointerBodyHeadingInitialized = false;
-        item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(!enabled);
-    }
-
-    public bool TryGetPointerBodyTargetHeading(Mod_GameController controller, out float heading)
-    {
-        heading = pointerBodyTargetHeading;
-        if (!IsUsingPointerBodyRotation || controller == null) return false;
-        Vector2 screenPosition = controller.GetPointerScreenPosition();
-        bool worldAim = controller.HasExternalGameplayControl ||
-            controller.PreferredInputDevice == Mod_GameController.InputDeviceType.Mobile;
-        if (worldAim || !pointerBodyHeadingInitialized ||
-            (screenPosition - pointerBodyScreenPosition).sqrMagnitude > .01f)
+        if (spaceUpright != enabled)
         {
-            if (!controller.TryGetMouseWorldPosition(out Vector3 point)) return false;
-            Vector2 direction = point - item.transform.position;
-            pointerBodyScreenPosition = screenPosition;
-            pointerBodyHeadingInitialized = true;
-            // 屏幕指针只在真正移动时更新转向目标，镜头自身旋转不会让玩家一直追着落点转圈。
-            pointerBodyTargetHeading = direction.sqrMagnitude <= .01f
-                ? item.transform.eulerAngles.z
-                : Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            spaceUpright = enabled;
+            item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(!enabled);
         }
-        heading = pointerBodyTargetHeading;
-        return true;
+        item?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetFollowTargetRotation(!enabled);
+        if (!enabled || item == null) return;
+        // 太空里固定玩家与镜头朝上，鼠标只继续负责手持物瞄准。
+        item.transform.rotation = Quaternion.identity;
+        if (rb != null) { rb.rotation = 0f; rb.angularVelocity = 0f; }
     }
 
     private bool UpdateSpaceMotion(float seconds)
     {
         if (item is not Player player || !player.IsLocalProfile || SpaceSession.Current?.State == null || rb == null)
         {
-            SetPointerBodyRotation(false);
+            SetSpaceUpright(false);
             return false;
         }
         if (IsSpaceRunningDisabled) SetRunState(false);
@@ -78,7 +58,7 @@ public partial class Mod_Mover
         }
         else
         {
-            SetPointerBodyRotation(false);
+            SetSpaceUpright(false);
             if (spaceMotionOwned)
             {
                 rb.bodyType = beforeSpaceBodyType; spaceMotionOwned = false;
@@ -111,7 +91,7 @@ public partial class Mod_Mover
     }
     private void ReleaseSpaceInput()
     {
-        SetPointerBodyRotation(false);
+        SetSpaceUpright(false);
         spaceTurnAction?.Disable(); spaceTurnAction?.Dispose(); spaceTurnAction = null;
         if (spaceMotionOwned && rb != null) rb.bodyType = beforeSpaceBodyType;
         spaceMotionOwned = false;
