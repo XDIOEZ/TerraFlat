@@ -57,7 +57,7 @@ public partial class WeatherMgr
         FlatWorld.WorldModel.Int2 region = regionalEngine.ResolveRegion(new FlatWorld.WorldModel.Int2(
             Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
         double now = GetRegionalStepTime(clock);
-        regionalEngine.Advance(region, now, SampleRegionalInput(ChunkMgr.ExistingInstance, region));
+        regionalEngine.Advance(region, now);
         regionalEngine.ForceElements(region, now, GetCurrentDayLength() * 0.15d, windStrength: Mathf.Clamp01(strength));
         PersistRegionalStates();
         UpdateLocalWeatherProjection();

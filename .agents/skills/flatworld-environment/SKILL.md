@@ -12,7 +12,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 | 目录/文件 | 职责 |
 | --- | --- |
 | `5-3_GamePlay/World/Time/` | `DayTimeSystem/TimeData/DayNightTimeManager` |
-| `5-0_WorldModel/RegionalWeather{Engine,Settings,State}.cs` | 纯区域天气 |
+| `5-0_WorldModel/{ChunkWeatherProfile,RegionalWeatherEngine,RegionalWeatherSettings,RegionalWeatherState}.cs` | 纯区块天气 |
 | `5-3_GamePlay/World/Environment/` | `WeatherMgr.Regional`、`LightLayerMgr`、`TemperatureMgr.Field`、`LocalTemperatureField/Source` |
 | `5-0_WorldModel/{AirHumidityKernel,WorldAirHumidityField}.cs` | 静态/动态供湿 |
 | `5-3_GamePlay/World/Chunk/Management/ChunkMgr.AirHumidity.cs` | 湿度桥 |
@@ -25,21 +25,21 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 - DayTimeSystem 是跨场景/保存主入口，场景也可能引用 DayNightTimeManager。日长为 RotationPeriodSeconds、年长为 OrbitalPeriodSeconds，运行时 SetRotationPeriod/SetOrbitalPeriod；季节、年与轨道共用游戏秒轴。SeasonCalendar 历史快照冻结周期/倾角/离心率，不用当前日长重算过去。
 - 活动场景名称按 handle 缓存，时刻/天气/维度实时读；GM 滑条按实际 DayLength 预览，松开由权威端 JumpToTime 一次。主菜单使用无报错 GetInstance 探测。
-- 区域天气按规范区域五固定点采样 B、剥离上次雨冷的实时温度和地理 P；全输入就绪才新事件，各区先冻结旧输入再推进。`PlanetData.RegionalWeatherStates` 保存权威，查询不推进，普通 Client 只应用状态。
-- 固定游戏秒格推进；跳时有界补已有事件，缺数据不新生雨，新区块不追补未加载积分。回拨平移时限、保留 D/C，复制以 Revision 为主。
-- BaseCheckProbability/MaximumCheckProbability/CooldownSeconds 控制检查，实际概率还乘湿度/温度/气候系数；雨雪、风、雷电、云雾独立输出，手动覆盖只限当前区域期限。
+- 区块生成时一次汇总固定 airHumidity、windX/Y、每格风模长和地理温度；`ChunkTerrainData.WeatherProfile` 冻结每种要素的 Probability/Intensity/DurationSeconds。自然要素为 rain/wind/thunder，配置 Elements 按稳定字符串 ID 扩展；生成器与调度器经 `ChunkWeatherConfiguration` 共用冻结配置。
+- 天气按真实区块原点独立推进，`CheckIntervalSeconds` 表示空闲要素每次概率检查的间隔，持续中的要素不重复抽取。运行时不再采五点气候、温差或动态供湿；查询只读本块，普通 Client 只应用权威效果。
+- 固定游戏秒格推进；跳时有界补已有事件，新区块不追补未加载的浇水/积雪，不补播历史雷声。回拨平移各独立时限，复制以 Revision 为主；`PlanetData.RegionalWeatherStates` 保存固定档案和事件状态。云量从雨/雷派生，自然雾、湿气消耗和雨冷反馈已移除；云雾仍可限时手动覆盖。
 - 静态 precipitation 是长期风携水汽降水，影响径流/生态；输送 humidity、固定 airHumidity、动态空气湿度与地表 moisture 分开。
 - `TryGetGeographicAirHumidity` 读固定层；`TryGetAirHumiditySupply` 从恢复后的真实 Liquid/深度/距离得 B，背景仅 airHumidity.background；`TryGetAirHumidity` 返回 clamp(B-D)。缺邻区返回不可用，不生成地形，缓存只依 Terrain/LiquidRevision/Epoch。
-- 雾读当地冷湿弱风；雷电为带序号单次事件，首次/读档只建基线，频率受最短间隔约束。`DenseFogRendererFeature` 在本地主相机最终画面合成 owned 玩家遮罩，半径是世界格距离，进房恢复、退出/抑制天气维度清除。
+- 雷电在本块 thunder 事件期间按强度和最短间隔产生新序号，首次/读档只建基线。手动雾仍由 `DenseFogRendererFeature` 在本地主相机最终画面合成 owned 玩家遮罩，进房恢复、退出/抑制天气维度清除。
 - `WeatherMgr.Audio` 通过 AudioService 播放当地雨/风循环并平滑更新句柄音量；雨声读实时雨雪分流，雷声只订阅新 LightningOccurred，按环绕最短距离衰减和传播延迟，首次推进不补播，退出/抑制天气维度清空待播和句柄。
-- 雨雪积分经 SamplePrecipitationExposureAt，与可见天气同平滑权重；筛实际降水/待融雪格后 TrySampleAmbientChunk 同批冻结温度，不跨帧借数组。邻区雨雪参与边界，即使本区晴天。
+- 地表每块只接收一个降水积分，不再逐格查询或插值邻区天气；晴天无天气雪/玩家雪直接跳过。筛实际地面/待融雪格后 TrySampleAmbientChunk 同批冻结温度，按当地温度分雨雪，不跨帧借数组。
 
 ## 地理温度、热源与生存
 
 - 地理 temperature.celsius 在生成时固定：纬度底温 + 局部噪声 + 一次海拔修正，再按 blendRadius 固定顺序平滑，归一化温度同源；不含季节/天气。TryGetGeographicTemperature 也不叠全局调温。
 - `TryGetClimateBaseline` 排除季节/天气/局部源，供历史生态/雪；`TryGetAmbientTemperature` 从已加载地理层叠 PlanetData 基准差、允许的天气/季节与局部源，供体温/产量/调试。未加载返回 false，出生格不写回全局温度。
 - `LocalTemperatureSource` 是中心摄氏增量而非功率/目标温度，按来源注册/撤销，无热惯性；分区缓存依源快照失效，环绕键/距离规范化。来源设备拥有燃料/供电/保存，偏移不写生成层。
-- 液体辐射来自 `radiantHeatRadius/radiantHeatOffset`；RadiantLiquidTemperatureField 只查加载块，以 Terrain/SurfaceLiquidRevision 缓存逐格最大贡献，液体/支撑面/目录改变重算，雪土光变化不重扫。雨冷只经区域 C 合成一次。
+- 液体辐射来自 `radiantHeatRadius/radiantHeatOffset`；RadiantLiquidTemperatureField 只查加载块，以 Terrain/SurfaceLiquidRevision 缓存逐格最大贡献，液体/支撑面/目录改变重算，雪土光变化不重扫。
 - 体温是最外层体表；环境趋近速度为目标绝对温度 1%/s，整数四舍五入、最低 1℃/s。各趋近过程统一 ThermalRuntime.AdvanceTowards；入水有独立过渡速度，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。

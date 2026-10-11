@@ -17,8 +17,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 26; // 区域天气状态随核心数据保存，旧布局在解析前拒绝。
-    private const int ModdedSaveVersion = 12;
+    private const int CompactSaveVersion = 27; // 区块天气档案与独立要素状态采用新布局，旧档在解析前拒绝。
+    private const int ModdedSaveVersion = 13;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";

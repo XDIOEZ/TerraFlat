@@ -2,65 +2,33 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>一次采样的完整输入，温度已经剥离本区域上一次雨天降温。</summary>
-    public struct RegionalWeatherInput
+    /// <summary>各天气要素独立记录活动时段，运行时不再反复计算气候。</summary>
+    [Serializable]
+    public sealed class WeatherElementState
     {
-        #region 环境输入
-        public bool IsComplete;
-        public float AirHumiditySupply;
-        public float TemperatureBeforeRainCooling;
-        public float GeographicPrecipitation;
-        public float GeographicWindX;
-        public float GeographicWindY;
-        public float TemperatureGradientX;
-        public float TemperatureGradientY;
-
-        public RegionalWeatherInput(bool isComplete, float airHumiditySupply,
-            float temperatureBeforeRainCooling, float geographicPrecipitation,
-            float geographicWindX, float geographicWindY,
-            float temperatureGradientX = 0f, float temperatureGradientY = 0f)
-        {
-            IsComplete = isComplete;
-            AirHumiditySupply = airHumiditySupply;
-            TemperatureBeforeRainCooling = temperatureBeforeRainCooling;
-            GeographicPrecipitation = geographicPrecipitation;
-            GeographicWindX = geographicWindX;
-            GeographicWindY = geographicWindY;
-            TemperatureGradientX = temperatureGradientX;
-            TemperatureGradientY = temperatureGradientY;
-        }
+        #region 独立事件时段
+        public string Id;
+        public double StartedTime;
+        public double EndTime;
+        public float Intensity;
+        public WeatherElementState Clone() => (WeatherElementState)MemberwiseClone();
         #endregion
     }
 
-    /// <summary>区域保存真值，外部导出和恢复都复制，禁止修改引擎内部状态。</summary>
+    /// <summary>区块天气保存真值，外部导出和恢复都复制，禁止修改引擎内部状态。</summary>
     [Serializable]
     public sealed class RegionalWeatherState
     {
-        #region 时钟与最近有效采样
+        #region 固定气候、要素与时钟
         public Int2 Region;
         public double LastStepTime;
         public long CheckIndex;
-        public bool HasValidInput;
-        public RegionalWeatherInput LastValidInput;
+        public ChunkWeatherProfile Profile;
+        public WeatherElementState[] Elements = Array.Empty<WeatherElementState>();
         #endregion
 
-        #region 降水与环境反馈
-        public double PrecipitationStartedTime;
-        public double PrecipitationEndTime;
-        public double CooldownEndTime;
-        public float InitialPrecipitationIntensity;
-        public float PrecipitationIntensity;
+        #region 手动表现覆盖与雷电序号
         public bool ForcedSnow;
-        public float HumidityDeficit;
-        public float CoolingAmountCelsius;
-        #endregion
-
-        #region 独立天气要素
-        public float WindX;
-        public float WindY;
-        public float CloudCoverage;
-        public float FogDensity;
-        public float LightningActivity;
         public float ForcedCloudCoverage = -1f;
         public float ForcedFogDensity = -1f;
         public float ForcedWindStrength = -1f;
@@ -70,14 +38,23 @@ namespace FlatWorld.WorldModel
         public int LightningSequence;
         public int Revision;
 
-        public RegionalWeatherState Clone() => (RegionalWeatherState)MemberwiseClone();
+        public RegionalWeatherState Clone()
+        {
+            var copy = (RegionalWeatherState)MemberwiseClone();
+            // 固定配置完全只读，可共享；运行中事件必须逐个复制。
+            copy.Profile = Profile;
+            copy.Elements = new WeatherElementState[Elements?.Length ?? 0];
+            for (int i = 0; i < copy.Elements.Length; i++)
+                copy.Elements[i] = Elements[i]?.Clone();
+            return copy;
+        }
         #endregion
     }
 
     /// <summary>只读消费快照；名称由使用方按独立效果组合派生。</summary>
     public struct RegionalWeatherSnapshot
     {
-        #region 连续天气与所属区域
+        #region 连续天气与所属区块
         public Int2 Region;
         public double SampleTime;
         public float AirHumidity;

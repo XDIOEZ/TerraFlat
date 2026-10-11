@@ -20,12 +20,15 @@ namespace FlatWorld.WorldModel
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
+        private readonly RegionalWeatherSettings weatherSettings;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
         public DeterministicChunkGenerator(LiquidTypeCatalog liquidTypes = null,
-            Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator = null)
+            Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator = null,
+            RegionalWeatherSettings weatherSettings = null)
         {
             this.liquidTypes = liquidTypes ?? LiquidTypeCatalog.BuiltIn;
             this.terrainDecorator = terrainDecorator;
+            this.weatherSettings = (weatherSettings ?? new RegionalWeatherSettings()).Snapshot();
         }
 
         #region 水文区域共享缓存与调度
@@ -93,6 +96,9 @@ namespace FlatWorld.WorldModel
             {
                 bool cave = IsCaveGeneration(request);
                 PopulateTerrain(request, terrain, cave, cancellationToken, timing);
+                cancellationToken.ThrowIfCancellationRequested();
+                using (timing?.MeasureStage("terrain.weather_profile") ?? default)
+                    terrain.InitializeWeatherProfile(weatherSettings);
                 ChunkEcologyData ecology;
                 using (timing?.MeasureStage("ecology") ?? default)
                 {

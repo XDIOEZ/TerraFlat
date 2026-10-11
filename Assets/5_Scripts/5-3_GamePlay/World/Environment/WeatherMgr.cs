@@ -468,14 +468,22 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
             Vector2 localPosition = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
             if (TryGetLocalWeather(out var sample))
             {
-                GUILayout.Label($"区域: {sample.Region.X}, {sample.Region.Y}  湿度消耗: {sample.HumidityDeficit:F3}", _valueStyle);
-                if (ChunkMgr.ExistingInstance != null && ChunkMgr.ExistingInstance.TryGetAirHumidity(localPosition, out float humidity))
-                    GUILayout.Label($"当地空气湿度: {humidity:F3}", _valueStyle);
+                GUILayout.Label($"区块: {sample.Region.X}, {sample.Region.Y}", _valueStyle);
+                if (TryGetWeatherProfileAt(localPosition, out var profile))
+                {
+                    GUILayout.Label($"生成湿度: {profile.Climate.AirHumidity:F3}  风力: {profile.Climate.WindStrength:F3}", _valueStyle);
+                    GUILayout.Label($"每 {regionalSettings.CheckIntervalSeconds:F0} 秒检查一次空闲天气", _valueStyle);
+                    foreach (var element in profile.Elements)
+                    {
+                        string label = element.Id switch { "rain" => "下雨", "wind" => "刮风", "thunder" => "打雷", _ => element.Id };
+                        GUILayout.Label($"{label}: 概率 {element.Probability:P0}  强度 {element.Intensity:F2}  持续 {element.DurationSeconds:F0} 秒", _valueStyle);
+                    }
+                }
                 if (TemperatureMgr.Instance.TryGetAmbientTemperature(localPosition, out float temperature))
                     GUILayout.Label($"当地实时温度: {temperature:F2} ℃", _valueStyle);
                 GUILayout.Label($"云: {sample.CloudCoverage:F2}  雾: {sample.FogDensity:F2}  雷电: {sample.LightningActivity:F2}", _valueStyle);
             }
-            else GUILayout.Label("区域地形与湿度邻域尚未就绪", _valueStyle);
+            else GUILayout.Label("所在区块的天气尚未就绪", _valueStyle);
         }
         else
         {

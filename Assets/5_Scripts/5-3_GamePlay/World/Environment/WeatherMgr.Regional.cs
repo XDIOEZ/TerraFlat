@@ -32,8 +32,7 @@ public partial class WeatherMgr
 {
     #region 区域运行时
 
-    [Header("区域自然天气")]
-    [SerializeField] private RegionalWeatherSettings regionalSettings = new RegionalWeatherSettings();
+    private RegionalWeatherSettings regionalSettings;
     [SerializeField, Min(0f)] private float surfaceRainWaterPerSecond = 0.2f;
     [SerializeField, Min(0f)] private float meltWaterPerSnowDepth = 50f;
     public float SurfaceRainWaterPerSecond => surfaceRainWaterPerSecond;
@@ -46,24 +45,18 @@ public partial class WeatherMgr
     private PlanetData regionalPlanet;
     private WorldTopologyDomain regionalDomain;
     private double lastRegionalAdvance = double.NegativeInfinity;
-    private bool regionalSettingsLoaded;
-    private readonly HashSet<Int2> regionalWorkSet = new();
     private readonly List<Int2> regionalWork = new();
-    private readonly Dictionary<Int2, RegionalWeatherInput> regionalInputs = new();
     private readonly Dictionary<Int2, RegionalWeatherAdvanceResult> regionalExposure = new();
     private readonly Dictionary<Int2, int> regionalSaveIndices = new();
     private readonly Dictionary<Int2, int> lightningSeen = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksLastStep = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksThisStep = new();
     private float surfaceStepSeconds;
-    private Func<Int2, float> surfaceExposureSampler;
-    private static readonly ProfilerMarker RegionalInputsMarker = new("FlatWorld.Weather.FreezeRegionalInputs");
     private static readonly ProfilerMarker RegionalAdvanceMarker = new("FlatWorld.Weather.AdvanceRegions");
     private static readonly ProfilerMarker SurfaceAdvanceMarker = new("FlatWorld.Weather.AdvanceSurface");
-    private readonly float[] sampleTemperatures = new float[5];
     private LightningEffectController lightningEffect;
 
-    // 状态只在推进入口创建；查询不抽随机数、不生成地形、不扣湿度。
+    // 状态只在推进入口创建；查询不抽随机数，也不生成地形。
     public bool TryGetWeatherAt(Vector2 position, out RegionalWeatherSnapshot sample)
     {
         sample = default;
@@ -81,7 +74,21 @@ public partial class WeatherMgr
     public float GetAirHumidityDeficitAt(Vector2 position) =>
         TryGetWeatherAt(position, out var sample) ? sample.HumidityDeficit : 0f;
 
-    /// <summary>雨雪按同一份当地实时温度分流，核心温度查询只读取上面的雨冷接口。</summary>
+    // 调试只读取生成好的区块天气参数，不再现场采地块计算气候。
+    public bool TryGetWeatherProfileAt(Vector2 position, out ChunkWeatherProfile profile)
+    {
+        profile = null;
+        if (!_weatherRuntimeAllowed || regionalEngine == null ||
+            !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
+        if (regionalEngine.TryGetProfile(regionalEngine.ResolveRegion(
+            new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y))), out profile)) return true;
+        // 普通客户端只展示本地生成的固定档案，不在此推进权威天气。
+        if (ChunkMgr.ExistingInstance?.TryGetRestoredTerrainForEnvironment(position, out var tile) != true) return false;
+        profile = tile.Terrain.WeatherProfile;
+        return profile != null;
+    }
+
+    /// <summary>降水发生由区块决定，雨雪表现只按当地实时温度分流。</summary>
     public bool TryGetPrecipitationAt(Vector2 position, out float rainIntensity, out float snowIntensity)
     {
         rainIntensity = snowIntensity = 0f;
@@ -133,18 +140,12 @@ public partial class WeatherMgr
             domain.Min.Equals(regionalDomain.Min) && domain.Span.Equals(regionalDomain.Span))
             return true;
 
-        if (!regionalSettingsLoaded)
-        {
-            TextAsset configuration = Resources.Load<TextAsset>("Config/Weather/regional-weather");
-            if (configuration != null) regionalSettings = JsonUtility.FromJson<RegionalWeatherSettings>(configuration.text);
-            regionalSettings ??= new RegionalWeatherSettings();
-            regionalSettings.FreezingTemperature = PrecipitationFreezingTemperature;
-            regionalSettings.Validate();
-            regionalSettingsLoaded = true;
-        }
+        regionalSettings = ChunkWeatherConfiguration.Load();
         regionalPlanet = planet;
         regionalDomain = domain;
-        regionalEngine = new RegionalWeatherEngine(regionalSettings, GetDeterministicSeed(), domain);
+        Vector2Int chunkSize = PlanetData.NormalizeChunkSize(planet.ChunkSize);
+        regionalEngine = new RegionalWeatherEngine(regionalSettings, GetDeterministicSeed(), domain,
+            chunkSize.x, chunkSize.y);
         ResetWeatherAudioBaseline();
         regionalSaveIndices.Clear();
         lightningSeen.Clear();
@@ -172,7 +173,7 @@ public partial class WeatherMgr
         return true;
     }
 
-    // 所有区域先采上一步输入，再统一推进，避免遍历次序影响邻区温度。
+    // 每个就绪区块只登记生成好的档案，然后推进独立天气的概率与时限。
     private void AdvanceRegionalWeather()
     {
         if (!PrepareRegionalContext() || !GameNetwork.HasStateAuthority ||
@@ -188,46 +189,25 @@ public partial class WeatherMgr
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
         if (chunks?.WorldRuntime == null) return;
 
-        regionalWorkSet.Clear();
+        regionalWork.Clear();
         surfaceChunksThisStep.Clear();
         foreach (var pair in chunks.Chunks)
         {
             ChunkRuntime chunk = pair.Value;
             if (!chunks.IsTerrainRestoredForEnvironment(chunk)) continue;
             surfaceChunksThisStep[chunk.Address] = chunk;
-            // 固定网格取区块内部及边缘，较大区块也不会漏掉中间的天气区域。
-            int stride = Math.Max(1, regionalSettings.RegionSizeTiles / 2);
-            for (int y = 0; y < chunk.Terrain.Height; y += stride)
-            {
-                for (int x = 0; x < chunk.Terrain.Width; x += stride)
-                    regionalWorkSet.Add(regionalEngine.ResolveRegion(new Int2(chunk.Address.ChunkOrigin.X + x,
-                        chunk.Address.ChunkOrigin.Y + y)));
-                regionalWorkSet.Add(regionalEngine.ResolveRegion(new Int2(chunk.Address.ChunkOrigin.X + chunk.Terrain.Width - 1,
-                    chunk.Address.ChunkOrigin.Y + y)));
-            }
-            for (int x = 0; x < chunk.Terrain.Width; x += stride)
-                regionalWorkSet.Add(regionalEngine.ResolveRegion(new Int2(chunk.Address.ChunkOrigin.X + x,
-                    chunk.Address.ChunkOrigin.Y + chunk.Terrain.Height - 1)));
-            regionalWorkSet.Add(regionalEngine.ResolveRegion(new Int2(chunk.Address.ChunkOrigin.X + chunk.Terrain.Width - 1,
-                chunk.Address.ChunkOrigin.Y + chunk.Terrain.Height - 1)));
+            if (chunk.Terrain.WeatherProfile == null) continue;
+            Int2 region = chunk.Address.ChunkOrigin;
+            regionalEngine.RegisterChunk(region, chunk.Terrain.WeatherProfile, now);
+            regionalWork.Add(region);
         }
-        foreach (RegionalWeatherState state in regionalEngine.EnumerateStates())
-            if (state.PrecipitationIntensity > 0f || state.HumidityDeficit > 0f || state.CoolingAmountCelsius > 0f)
-                regionalWorkSet.Add(state.Region);
-        regionalWork.Clear();
-        regionalWork.AddRange(regionalWorkSet);
         regionalWork.Sort((a, b) => a.Y == b.Y ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
-        regionalInputs.Clear();
-        using (RegionalInputsMarker.Auto())
-            foreach (Int2 region in regionalWork) regionalInputs[region] = SampleRegionalInput(chunks, region);
         regionalExposure.Clear();
-        bool hasPrecipitationExposure = false;
         using (RegionalAdvanceMarker.Auto())
         foreach (Int2 region in regionalWork)
         {
-            RegionalWeatherAdvanceResult result = regionalEngine.Advance(region, now, regionalInputs[region]);
+            RegionalWeatherAdvanceResult result = regionalEngine.Advance(region, now);
             regionalExposure[region] = result;
-            hasPrecipitationExposure |= result.RainExposureSeconds > 0f || result.SnowExposureSeconds > 0f;
             ObserveLightning(result.Snapshot, false);
             AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, result.Snapshot));
         }
@@ -236,69 +216,40 @@ public partial class WeatherMgr
         float elapsed = double.IsNegativeInfinity(lastRegionalAdvance) ? 0f :
             (float)Math.Min(now - lastRegionalAdvance, regionalSettings.StepSeconds * regionalSettings.MaximumCatchUpSteps);
         surfaceStepSeconds = elapsed;
-        // 全部区域都没有降水积分时跳过逐格插值，避免漏算边界邻区仍在下的雨雪。
-        Func<Int2, float> resolveExposure = hasPrecipitationExposure
-            ? surfaceExposureSampler ??= ResolveSurfaceExposure : null;
         using (SurfaceAdvanceMarker.Auto())
         if (elapsed > 0f)
             foreach (var pair in surfaceChunksThisStep)
                 if (surfaceChunksLastStep.TryGetValue(pair.Key, out var previous) && ReferenceEquals(previous, pair.Value))
-                    WorldWeatherSurfaceSystem.AdvanceChunk(pair.Value, this, elapsed, resolveExposure);
+                {
+                    regionalExposure.TryGetValue(pair.Key.ChunkOrigin, out var exposure);
+                    float precipitation = Mathf.Min(exposure.RainExposureSeconds + exposure.SnowExposureSeconds,
+                        surfaceStepSeconds);
+                    WorldWeatherSurfaceSystem.AdvanceChunk(pair.Value, this, elapsed, precipitation);
+                }
         surfaceChunksLastStep.Clear();
         foreach (var pair in surfaceChunksThisStep) surfaceChunksLastStep[pair.Key] = pair.Value;
         lastRegionalAdvance = now;
         CompleteWeatherAudioBaseline();
-        PersistRegionalStates();
+        foreach (Int2 region in regionalWork)
+            if (regionalEngine.TryGetState(region, out var state)) PersistRegionalState(state);
         UpdateLocalWeatherProjection();
-    }
-
-    private float ResolveSurfaceExposure(Int2 cell)
-    {
-        float total = regionalEngine.SamplePrecipitationExposureAt(cell, regionalExposure);
-        return Mathf.Min(total, surfaceStepSeconds);
-    }
-
-    private RegionalWeatherInput SampleRegionalInput(ChunkMgr chunks, Int2 region)
-    {
-        if (chunks == null) return default;
-        var input = new RegionalWeatherInput();
-        for (int i = 0; i < 5; i++)
-        {
-            Int2 cell = regionalEngine.GetFixedSampleCell(region, i);
-            Vector2 position = new(cell.X + 0.5f, cell.Y + 0.5f);
-            if (!chunks.TryGetRestoredTerrainForEnvironment(position, out var tile) ||
-                !chunks.TryGetAirHumiditySupply(position, out float supply) ||
-                !TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float temperature) ||
-                !tile.Terrain.TryGetEnvironmentValue("precipitation", tile.LocalCell.x, tile.LocalCell.y, out float precipitation) ||
-                !tile.Terrain.TryGetEnvironmentValue("windX", tile.LocalCell.x, tile.LocalCell.y, out float windX) ||
-                !tile.Terrain.TryGetEnvironmentValue("windY", tile.LocalCell.x, tile.LocalCell.y, out float windY))
-                return default;
-            sampleTemperatures[i] = temperature;
-            temperature -= GetTemperatureOffsetAt(position);
-            input.AirHumiditySupply += supply * 0.2f;
-            input.TemperatureBeforeRainCooling += temperature * 0.2f;
-            input.GeographicPrecipitation += precipitation * 0.2f;
-            input.GeographicWindX += windX * 0.2f;
-            input.GeographicWindY += windY * 0.2f;
-        }
-        input.TemperatureGradientX = (sampleTemperatures[2] + sampleTemperatures[4] - sampleTemperatures[1] - sampleTemperatures[3]) * 0.5f;
-        input.TemperatureGradientY = (sampleTemperatures[3] + sampleTemperatures[4] - sampleTemperatures[1] - sampleTemperatures[2]) * 0.5f;
-        input.IsComplete = true;
-        return input;
     }
 
     private void PersistRegionalStates()
     {
         if (regionalPlanet == null || regionalEngine == null || !GameNetwork.HasStateAuthority) return;
         foreach (RegionalWeatherState state in regionalEngine.EnumerateStates())
+            PersistRegionalState(state);
+    }
+
+    private void PersistRegionalState(RegionalWeatherState state)
+    {
+        RegionalWeatherRecord record = RegionalWeatherRecord.FromState(state);
+        if (regionalSaveIndices.TryGetValue(state.Region, out int index)) regionalPlanet.RegionalWeatherStates[index] = record;
+        else
         {
-            RegionalWeatherRecord record = RegionalWeatherRecord.FromState(state);
-            if (regionalSaveIndices.TryGetValue(state.Region, out int index)) regionalPlanet.RegionalWeatherStates[index] = record;
-            else
-            {
-                regionalSaveIndices[state.Region] = regionalPlanet.RegionalWeatherStates.Count;
-                regionalPlanet.RegionalWeatherStates.Add(record);
-            }
+            regionalSaveIndices[state.Region] = regionalPlanet.RegionalWeatherStates.Count;
+            regionalPlanet.RegionalWeatherStates.Add(record);
         }
     }
 
@@ -354,13 +305,18 @@ public partial class WeatherMgr
         Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
         Int2 region = regionalEngine.ResolveRegion(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
         double now = GetRegionalStepTime(clock);
-        regionalEngine.Advance(region, now, SampleRegionalInput(ChunkMgr.ExistingInstance, region));
+        regionalEngine.Advance(region, now);
         if (weather == WeatherType.Clear) regionalEngine.Clear(region, now);
         else if (weather is WeatherType.Rain or WeatherType.Storm)
             regionalEngine.ForcePrecipitation(region, now, Mathf.Clamp01(intensity), Mathf.Max(1f, durationSeconds));
         else regionalEngine.ForceElements(region, now, durationSeconds,
             cloudCoverage: weather == WeatherType.Cloudy ? Mathf.Clamp01(intensity) : -1f,
             fogDensity: weather == WeatherType.Fog ? Mathf.Clamp01(intensity) : -1f);
+        if (weather == WeatherType.Storm)
+        {
+            regionalEngine.ForceElement(region, now, WeatherElementIds.Wind, Mathf.Clamp01(intensity), durationSeconds);
+            regionalEngine.ForceElement(region, now, WeatherElementIds.Thunder, Mathf.Clamp01(intensity), durationSeconds);
+        }
         PersistRegionalStates();
         UpdateLocalWeatherProjection();
         if (regionalEngine.TryGetRegionSnapshot(region, out var sample))

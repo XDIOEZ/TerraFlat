@@ -16,6 +16,10 @@ namespace FlatWorld.WorldModel
         private Dictionary<int, int[]> _extendedTileStacks;
         private byte[] _grass;
         private bool _sealed;
+        private bool _weatherProfileInitialized;
+
+        /// <summary>区块创建时固定一次的天气参数；没有气候层的人工草稿可以不带天气。</summary>
+        public ChunkWeatherProfile WeatherProfile { get; private set; }
 
         public ChunkTerrainBuffer(int width, int height, LiquidTypeCatalog liquidTypes = null)
         {
@@ -96,6 +100,38 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
+        #region 区块固定天气汇总
+        public void InitializeWeatherProfile(RegionalWeatherSettings settings)
+        {
+            ThrowIfUnavailable();
+            if (_weatherProfileInitialized)
+                return;
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+            _weatherProfileInitialized = true;
+            if (!_environmentLayers.TryGetValue(AirHumidityKernel.GeographicLayer, out float[] humidity) ||
+                !_environmentLayers.TryGetValue("windX", out float[] windX) ||
+                !_environmentLayers.TryGetValue("windY", out float[] windY) ||
+                !_environmentLayers.TryGetValue("temperature.celsius", out float[] temperature))
+                return;
+
+            // 风力逐格取模长再求平均，避免相反方向的风被抵消。
+            double humiditySum = 0d, windXSum = 0d, windYSum = 0d, windStrengthSum = 0d, temperatureSum = 0d;
+            for (int i = 0; i < CellCount; i++)
+            {
+                humiditySum += humidity[i];
+                windXSum += windX[i];
+                windYSum += windY[i];
+                windStrengthSum += Math.Sqrt((double)windX[i] * windX[i] + (double)windY[i] * windY[i]);
+                temperatureSum += temperature[i];
+            }
+            var climate = new ChunkWeatherClimate((float)(humiditySum / CellCount),
+                (float)(windXSum / CellCount), (float)(windYSum / CellCount),
+                (float)(windStrengthSum / CellCount), (float)(temperatureSum / CellCount));
+            WeatherProfile = settings.CreateProfile(climate);
+        }
+        #endregion
+
         /// <summary>设置某个格子的草地状态。</summary>
         public void SetGrass(int x, int y, byte value)
         {
@@ -134,7 +170,7 @@ namespace FlatWorld.WorldModel
             // 保留生成时的 height 供地表高度分层读取，随区块统一释放；液体仍只认独立 LiquidDepth。
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
-                _extendedTileStacks, liquid);
+                _extendedTileStacks, liquid, WeatherProfile);
             liquid = null;
             _cells = null;
             _environmentLayers = null;
@@ -232,7 +268,8 @@ namespace FlatWorld.WorldModel
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
-            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null)
+            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null,
+            ChunkWeatherProfile weatherProfile = null)
         {
             Width = width;
             Height = height;
@@ -249,6 +286,7 @@ namespace FlatWorld.WorldModel
             _environmentLayers = environmentLayers ??
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
             _extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
+            WeatherProfile = weatherProfile;
             _grass = grass ?? ArrayPool<byte>.Shared.Rent(CellCount);
             if (grass == null)
                 Array.Clear(_grass, 0, CellCount);
@@ -260,6 +298,8 @@ namespace FlatWorld.WorldModel
         public int Height { get; }
         /// <summary>格子总数。</summary>
         public int CellCount { get; }
+        /// <summary>创建区块时固定的气候与天气要素，不随单格环境修改而重新计算。</summary>
+        public ChunkWeatherProfile WeatherProfile { get; }
         /// <summary>这份地形是否已经释放，不能再用了。</summary>
         public bool IsDisposed => _cells == null;
         /// <summary>生成完成后又被修改了多少次；刚生成时是 0。</summary>

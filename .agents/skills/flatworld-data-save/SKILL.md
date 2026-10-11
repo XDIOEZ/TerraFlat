@@ -20,7 +20,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 ## 快照与磁盘边界
 
-- 当前实例格式 FWD9/26、外层 FWD5/12；格式头在解析内部对象前校验，仅支持当前格式，拒绝的文件保留。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
+- 当前实例格式 FWD9/27、外层 FWD5/13；格式头在解析内部对象前校验，仅支持当前格式，拒绝的文件保留。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
 - ItemData 的持久化边界是 InstanceSnapshot，JSON/Unity 字段是配置外壳。冷数据不查 GameRes；入世/入包先按当前定义恢复重量/标签/耐久/模块，再合并稳定模块实例状态，未知扩展负载保留。
 - ItemInstanceDataFactory 冷编译共享配置/默认状态，CloneRuntime 创建独立运行态，不经 MemoryPack 往返；同 GUID 跨槽保留 ItemData 引用，分堆分配新 GUID。活跃库存只 rebase 新冷物品，专用二进制库存由持有模块显式逐槽处理。
 - InventoryInstanceSnapshot 只保存内容/用户状态，恢复保留当前槽标签、UI、输入。不透明 BitData 的配置/进度由模块区分；IItemInstanceStateRestorer 在模块状态恢复后恢复派生属性。
@@ -39,7 +39,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - LiquidCells 只存局部坐标、稳定 LiquidId、深度；生成后覆盖、绑定前恢复，回到生成值删除差量。写液体不产生地形/农业差量，RecordLiquidBatch 先写权威内存再通知；缺失液体/污染定义明确拒绝恢复。
 - AI 休眠先写完整 ChangedItems 再卸载，跨帧保存冻结出生/睡醒迁移，合并活动快照保留休眠居民。宿主维护的临时 AI 由双向宿主/成员 GUID 保存，排除独立 AI 快照。
 - Frozen 使用冻结 Ecology Profile；FollowCurrent 使用当前生成配置。切换清 Profile 时保留生态删除 GUID、状态覆盖和恢复年份。
-- RegionalWeatherStates 持续保存区域检查游标、消耗/降温偏移、输入及雷电序号。SerializableTimeData 保存物理周期/轨道参数和绝对起点，日年季长度为派生值；历史冻结当时参数，不保存镜头/粒子/输入动作。
+- RegionalWeatherStates 按真实区块原点保存生成时冻结的气候与可扩展要素档案（稳定 ID、概率、强度、持续秒数）、各要素当前事件、检查游标、雷电序号及手动覆盖时限；MemoryPack 只依赖存档专属 Record，恢复复制回纯模型。SerializableTimeData 保存物理周期/轨道参数和绝对起点，日年季长度为派生值；历史冻结当时参数，不保存镜头/粒子/输入动作。
 
 ## 独立载荷
 

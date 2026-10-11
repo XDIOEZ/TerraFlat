@@ -1,122 +1,130 @@
 using System;
+using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>区域天气的有限数值配置，全部速率使用游戏秒。</summary>
+    /// <summary>天气要素只由固定区块气候生成概率、强度和持续时间。</summary>
+    [Serializable]
+    public sealed class WeatherElementRule
+    {
+        #region 气候权重与三个数值范围
+        public string Id;
+        public float HumidityWeight;
+        public float WindWeight;
+        public float MinimumProbability;
+        public float MaximumProbability;
+        public float MinimumIntensity;
+        public float MaximumIntensity;
+        public float MinimumDurationSeconds;
+        public float MaximumDurationSeconds;
+
+        public WeatherElementRule Clone() => (WeatherElementRule)MemberwiseClone();
+
+        internal void Validate()
+        {
+            if (string.IsNullOrWhiteSpace(Id) ||
+                !NonNegative(HumidityWeight) || !NonNegative(WindWeight) ||
+                !Finite(HumidityWeight + WindWeight) || HumidityWeight + WindWeight <= 0f ||
+                !Unit(MinimumProbability) || !Unit(MaximumProbability) || MaximumProbability < MinimumProbability ||
+                !Unit(MinimumIntensity) || !Unit(MaximumIntensity) || MaximumIntensity < MinimumIntensity ||
+                !NonNegative(MinimumDurationSeconds) || MinimumDurationSeconds <= 0f ||
+                !NonNegative(MaximumDurationSeconds) || MaximumDurationSeconds < MinimumDurationSeconds)
+                throw new ArgumentOutOfRangeException(nameof(WeatherElementRule), "区块天气要素参数超出有限配置范围。");
+        }
+
+        internal WeatherElementProfile CreateProfile(ChunkWeatherClimate climate)
+        {
+            float factor = (climate.AirHumidity * HumidityWeight + climate.WindStrength * WindWeight) /
+                           (HumidityWeight + WindWeight);
+            return new WeatherElementProfile(Id,
+                Lerp(MinimumProbability, MaximumProbability, factor),
+                Lerp(MinimumIntensity, MaximumIntensity, factor),
+                Lerp(MinimumDurationSeconds, MaximumDurationSeconds, factor));
+        }
+
+        private static float Lerp(float from, float to, float factor) => from + (to - from) * factor;
+        private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool NonNegative(float value) => Finite(value) && value >= 0f;
+        private static bool Unit(float value) => Finite(value) && value >= 0f && value <= 1f;
+        #endregion
+    }
+
+    /// <summary>区块天气的固定时钟与可扩展要素配置，速率统一使用游戏秒。</summary>
     [Serializable]
     public sealed class RegionalWeatherSettings
     {
-        #region 区域与固定时钟
-        public int RegionSizeTiles = 32;
+        #region 固定时钟与天气要素
         public float StepSeconds = 2f;
         public float CheckIntervalSeconds = 30f;
         public int MaximumCatchUpSteps = 120;
-        #endregion
-
-        #region 湿气、降水与温度反馈
-        public float HumidityStart = 0.12f;
-        public float HumidityStop = 0.06f;
-        public float FullRainHumidity = 0.7f;
-        public float HumidityConsumptionPerSecond = 0.003f;
-        public float HumidityRecoveryPerSecond = 0.0006f;
-        public float WarmTemperatureStart = 5f;
-        public float WarmTemperatureFull = 30f;
-        public float ColdPrecipitationFactor = 0.35f;
-        public float WarmPrecipitationFactor = 1.6f;
         public float FreezingTemperature = 0f;
-        public float MinimumClimateWeight = 0.35f;
-        public float MaximumClimateWeight = 1.3f;
-        // 全局概率与雨后冷却统一限制自然降水频率。
-        public float BaseCheckProbability = 0.06f;
-        public float MaximumCheckProbability = 0.25f;
-        public float MinimumDurationSeconds = 45f;
-        public float MaximumDurationSeconds = 240f;
-        public float HardMaximumDurationSeconds = 420f;
-        public float MinimumIntensity = 0.1f;
-        public float MaximumIntensity = 0.9f;
-        public float CooldownSeconds = 180f;
-        public float MaximumCoolingCelsius = 7f;
-        public float CoolingPerSecond = 0.04f;
-        public float CoolingRecoveryPerSecond = 0.015f;
-        #endregion
-
-        #region 风、云、雾与雷电
-        public float GeographicWindStrength = 0.35f;
-        public float TemperatureGradientWindFactor = 0.03f;
-        public float WindPerturbationStrength = 0.25f;
-        public float WindPerturbationPeriodSeconds = 180f;
-        public float WindChangePerSecond = 0.015f;
-        public float CloudChangePerSecond = 0.015f;
-        public float FogChangePerSecond = 0.01f;
-        public float FogHumidityStart = 0.18f;
-        public float FogHumidityFull = 0.6f;
-        public float FogTemperatureStart = 15f;
-        public float FogTemperatureFull = 2f;
-        public float FogWindLimit = 0.45f;
-        public float LightningHumidityStart = 0.2f;
-        public float LightningHumidityFull = 0.65f;
-        public float LightningTemperatureStart = 15f;
-        public float LightningTemperatureFull = 30f;
-        public float LightningChangePerSecond = 0.02f;
-        public float BaseLightningIntervalSeconds = 60f;
         public float MinimumLightningIntervalSeconds = 5f;
-        public float StrongWindStart = 0.4f;
-        public float MaximumLightningWindBonus = 0.75f;
+        public WeatherElementRule[] Elements =
+        {
+            new WeatherElementRule
+            {
+                Id = WeatherElementIds.Rain, HumidityWeight = 1f, WindWeight = 0f,
+                MinimumProbability = 0f, MaximumProbability = 0.16f,
+                MinimumIntensity = 0.1f, MaximumIntensity = 0.85f,
+                MinimumDurationSeconds = 45f, MaximumDurationSeconds = 180f
+            },
+            new WeatherElementRule
+            {
+                Id = WeatherElementIds.Wind, HumidityWeight = 0f, WindWeight = 1f,
+                MinimumProbability = 0f, MaximumProbability = 0.25f,
+                MinimumIntensity = 0.1f, MaximumIntensity = 0.85f,
+                MinimumDurationSeconds = 45f, MaximumDurationSeconds = 180f
+            },
+            new WeatherElementRule
+            {
+                Id = WeatherElementIds.Thunder, HumidityWeight = 0.7f, WindWeight = 0.3f,
+                MinimumProbability = 0f, MaximumProbability = 0.06f,
+                MinimumIntensity = 0.15f, MaximumIntensity = 0.8f,
+                MinimumDurationSeconds = 15f, MaximumDurationSeconds = 60f
+            }
+        };
         #endregion
 
-        #region 配置快照与约束
+        #region 配置冻结与生成
         public RegionalWeatherSettings Snapshot()
         {
             Validate();
-            return (RegionalWeatherSettings)MemberwiseClone();
+            var copy = (RegionalWeatherSettings)MemberwiseClone();
+            copy.Elements = new WeatherElementRule[Elements.Length];
+            for (int i = 0; i < Elements.Length; i++)
+                copy.Elements[i] = Elements[i].Clone();
+            return copy;
+        }
+
+        public ChunkWeatherProfile CreateProfile(ChunkWeatherClimate climate)
+        {
+            Validate();
+            var profiles = new WeatherElementProfile[Elements.Length];
+            for (int i = 0; i < Elements.Length; i++)
+                profiles[i] = Elements[i].CreateProfile(climate);
+            return new ChunkWeatherProfile(climate, profiles);
         }
 
         public void Validate()
         {
-            if (RegionSizeTiles < 4 || RegionSizeTiles > 1024 ||
-                !Positive(StepSeconds) || StepSeconds < 0.1f || StepSeconds > 60f ||
-                !Positive(CheckIntervalSeconds) || CheckIntervalSeconds < StepSeconds ||
+            if (!Finite(StepSeconds) || StepSeconds < 0.1f || StepSeconds > 60f ||
+                !Finite(CheckIntervalSeconds) || CheckIntervalSeconds < StepSeconds ||
                 MaximumCatchUpSteps < 1 || MaximumCatchUpSteps > 1024 ||
-                !Unit(HumidityStart) || !Unit(HumidityStop) ||
-                HumidityStop <= 0f || HumidityStop >= HumidityStart ||
-                !Unit(FullRainHumidity) || FullRainHumidity <= HumidityStart ||
-                !Positive(HumidityConsumptionPerSecond) || !Positive(HumidityRecoveryPerSecond) ||
-                !Finite(WarmTemperatureStart) || !Finite(WarmTemperatureFull) ||
-                WarmTemperatureFull <= WarmTemperatureStart || !Finite(FreezingTemperature) ||
-                !Positive(ColdPrecipitationFactor) || !Positive(WarmPrecipitationFactor) ||
-                WarmPrecipitationFactor < ColdPrecipitationFactor ||
-                !Positive(MinimumClimateWeight) || !Positive(MaximumClimateWeight) ||
-                MaximumClimateWeight < MinimumClimateWeight ||
-                !Unit(BaseCheckProbability) || !Unit(MaximumCheckProbability) ||
-                MaximumCheckProbability < BaseCheckProbability ||
-                !Positive(MinimumDurationSeconds) || !Positive(MaximumDurationSeconds) ||
-                !Positive(HardMaximumDurationSeconds) || MaximumDurationSeconds < MinimumDurationSeconds ||
-                HardMaximumDurationSeconds < MaximumDurationSeconds ||
-                !Unit(MinimumIntensity) || MinimumIntensity <= 0f || !Unit(MaximumIntensity) ||
-                MaximumIntensity < MinimumIntensity || !Positive(CooldownSeconds) ||
-                !NonNegative(MaximumCoolingCelsius) || !NonNegative(CoolingPerSecond) ||
-                !Positive(CoolingRecoveryPerSecond) || !Unit(GeographicWindStrength) ||
-                !NonNegative(TemperatureGradientWindFactor) || TemperatureGradientWindFactor > 10f || !Unit(WindPerturbationStrength) ||
-                !Positive(WindPerturbationPeriodSeconds) || WindPerturbationPeriodSeconds < StepSeconds || !Positive(WindChangePerSecond) ||
-                !Positive(CloudChangePerSecond) || !Positive(FogChangePerSecond) ||
-                !Unit(FogHumidityStart) || !Unit(FogHumidityFull) || FogHumidityFull <= FogHumidityStart ||
-                !Finite(FogTemperatureStart) || !Finite(FogTemperatureFull) ||
-                FogTemperatureStart <= FogTemperatureFull || !Positive(FogWindLimit) || FogWindLimit > 1f ||
-                !Unit(LightningHumidityStart) || !Unit(LightningHumidityFull) ||
-                LightningHumidityFull <= LightningHumidityStart ||
-                !Finite(LightningTemperatureStart) || !Finite(LightningTemperatureFull) ||
-                LightningTemperatureFull <= LightningTemperatureStart ||
-                !Positive(LightningChangePerSecond) || !Positive(BaseLightningIntervalSeconds) ||
-                !Positive(MinimumLightningIntervalSeconds) ||
-                MinimumLightningIntervalSeconds > BaseLightningIntervalSeconds ||
-                !Unit(StrongWindStart) || StrongWindStart >= 1f || !NonNegative(MaximumLightningWindBonus))
-                throw new ArgumentOutOfRangeException(nameof(RegionalWeatherSettings), "区域天气参数超出有限配置范围。");
+                !Finite(FreezingTemperature) || !Finite(MinimumLightningIntervalSeconds) ||
+                MinimumLightningIntervalSeconds <= 0f || Elements == null || Elements.Length == 0)
+                throw new ArgumentOutOfRangeException(nameof(RegionalWeatherSettings), "区块天气参数超出有限配置范围。");
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (WeatherElementRule element in Elements)
+            {
+                if (element == null)
+                    throw new ArgumentException("区块天气要素不能为空。", nameof(Elements));
+                element.Validate();
+                if (!ids.Add(element.Id))
+                    throw new ArgumentException("区块天气要素标识不能重复。", nameof(Elements));
+            }
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-        private static bool Positive(float value) => Finite(value) && value > 0f;
-        private static bool NonNegative(float value) => Finite(value) && value >= 0f;
-        private static bool Unit(float value) => Finite(value) && value >= 0f && value <= 1f;
         #endregion
     }
 }

@@ -148,8 +148,8 @@ public partial class PlanetData
     [LabelText("生态世界数据")]
     public EcologyWorldSaveData Ecology = new();
 
-    [LabelText("区域天气状态")]
-    public List<RegionalWeatherRecord> RegionalWeatherStates = new(); // 区域气候反馈与事件时刻随世界一起保存。
+    [LabelText("区块天气状态")]
+    public List<RegionalWeatherRecord> RegionalWeatherStates = new(); // 区块天气概率档案和独立事件时刻随世界一起保存。
     #endregion
 
 }
