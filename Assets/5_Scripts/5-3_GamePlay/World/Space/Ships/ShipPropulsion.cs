@@ -45,6 +45,12 @@ namespace FlatWorld.Spaceflight
         private readonly List<FluidInventory> fuelTanks = new();
         private readonly List<MachineEntity> machineScratch = new();
         private readonly ShipOpticalGraph.Workspace opticalWorkspace = new();
+        private readonly Dictionary<string, float> engineOutputs = new(StringComparer.Ordinal);
+
+        // 喷焰只读本步真实耗油后的出力，不把移动、点火请求或存档当成工作状态。
+        public float GetEngineOutput(string pieceId)
+            => running && !transitionRunning && State != null && GameManager.Instance?.IsGameplayReady == true &&
+                !string.IsNullOrEmpty(pieceId) && engineOutputs.TryGetValue(pieceId, out float output) ? output : 0f;
 
         public void SetControl(string consolePieceId, Vector2 move, float turn)
         {
@@ -226,7 +232,7 @@ namespace FlatWorld.Spaceflight
             }
             foreach (ShipActuator engine in actuators)
             {
-                double actual = ConsumeEngineFuel(engine.Device.Configuration, 1d, seconds);
+                double actual = ConsumeEngineFuel(engine.Device, 1d, seconds);
                 if (actual <= 0d) continue;
                 driveAuthority = actual;
                 turn *= actual;
@@ -236,8 +242,9 @@ namespace FlatWorld.Spaceflight
             targetVelocity = navigating ? default : current; turn = 0d; driveAuthority = navigating ? 1d : 0d;
             if (navigating) task.Status = "燃料不足，制动等待补给";
         }
-        private double ConsumeEngineFuel(ShipPartConfiguration configuration, double throttle, double seconds)
+        private double ConsumeEngineFuel(ShipDeviceState engine, double throttle, double seconds)
         {
+            ShipPartConfiguration configuration = engine.Configuration;
             decimal request = AtmosphereService.Quantize((decimal)(configuration.FuelMolesPerSecond * throttle * seconds));
             if (request <= 0m) return 0d;
             decimal consumed = 0m;
@@ -248,7 +255,9 @@ namespace FlatWorld.Spaceflight
                 if (amount > 0m && ShipFuel.TryBurn(tank, amount, out _)) consumed += amount;
                 if (consumed >= request) break;
             }
-            return throttle * (double)(consumed / request);
+            double actual = throttle * (double)(consumed / request);
+            if (actual > 0d) engineOutputs[engine.PieceId] = (float)actual;
+            return actual;
         }
         #endregion
     }

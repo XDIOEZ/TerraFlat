@@ -27,6 +27,7 @@ namespace FlatWorld.Spaceflight
         private double boundCellSize;
         private bool pendingMachineBinding;
         private bool registeredForInteraction;
+        private ShipEngineExhaustPresenter engineExhaust;
         public Vector3 WorldPosition => transform.position;
         public int TargetGuid => int.TryParse(pieceId, out int id) ? id : 0;
         public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
@@ -79,6 +80,11 @@ namespace FlatWorld.Spaceflight
             {
                 visual.transform.localRotation = Quaternion.Euler(0f, 0f, piece.QuarterTurns * 90f);
                 baseVisualPosition.x = hitBox.offset.x; baseVisualPosition.y = hitBox.offset.y;
+                if (piece.Kind == ShipPieceKind.Engine)
+                {
+                    if (engineExhaust == null) engineExhaust = visual.gameObject.AddComponent<ShipEngineExhaustPresenter>();
+                    engineExhaust.Bind(session, piece, visual);
+                }
             }
             machineTarget = null;
             machineDefinition = MachineCatalog.Get(piece.ItemId);

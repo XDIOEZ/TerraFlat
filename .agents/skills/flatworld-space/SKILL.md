@@ -57,6 +57,7 @@ description: "FlatWorld 太空会话、静态星系、船体航行/接触、对�
 - 船上普通机器按 `MachineDefinition.IsConnectionLine` 排除连接线路，不能只看 `ShipPieceKind`；落点使用真实部件碰撞范围。机器休眠会释放交互对象，实际开始交互时须在本船作用域重新取得当前对象，外观缓存不能作为永久操作入口。
 - 舱门只经交互键 TryToggleDoor，鼠标点选拒绝；DoorOpen 持久化，通行/碰撞读 BlocksPassage，开门留 Trigger，通道有人拒绝关门，不改变 SealsAtmosphere。
 - 船部件能力 ID 为“船体部件模块”，Prefab Module_ShipPart，脚本 Mod_ShipPart；固定船补给按成员身份及共享罐实际组容量分配，GM 船复用正常起飞条件。
+- 引擎喷焰由 ShipEngineExhaustPresenter 读取 SpaceSession.GetEngineOutput；固定步清空出力，起飞/巡航成功消耗真实燃料后才发布，不按移动或 Ignited 猜测。局部粒子随安装朝向、机身与升空偏移，停推自然消退，禁用/卸载清理；出力不进入存档。
 
 ## 载荷读取与离线检查
 

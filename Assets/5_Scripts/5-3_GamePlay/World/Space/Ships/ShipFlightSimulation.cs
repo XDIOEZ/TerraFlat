@@ -123,7 +123,7 @@ namespace FlatWorld.Spaceflight
                 }
                 if (consolePowered)
                     foreach (ShipActuator engine in actuators)
-                        thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine.Device.Configuration, 1d, seconds);
+                        thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine.Device, 1d, seconds);
             }
             double gravity = body.SurfaceGravity;
             double previousHeight = flight.HeightMeters;

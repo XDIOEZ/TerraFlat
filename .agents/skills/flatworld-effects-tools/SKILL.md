@@ -61,6 +61,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - ProjectileFlightTrailPresenter 只读投射物飞行/Sprite。DamageTextEffect 持有样式/显示倍率；CombatFeedbackEvents 的逻辑未命中快照由 CombatMissFeedbackPresenter 消费，独立于伤害结算。
 - 罐内连续液面与罐口重力条带为表现；液流在 Mod_WaterVessel 成功移除后触发，Graphic 不参与数量结算且位于内腔 Mask 外。
 - 载具尾波消费实际水面位移并逐发射点确认水面，限额世界空间粒子随主体 Sorting Layer、Order+1 排序；停用/回池/换世界清理。
+- ShipEngineExhaustPresenter 消费船引擎实际耗油后的出力，复用 Resources/ShipEngineExhaust 材质；局部空间避免浮动原点拖尾，单引擎最多 48 粒子，停推 StopEmitting、禁用 StopEmittingAndClear。
 
 ## AIECS 与批量表现
 

@@ -81,6 +81,7 @@ namespace FlatWorld.Spaceflight
             if (save == null || ReferenceEquals(owner, save)) return;
             ReleaseViews();
             contents.Clear(); controlRequests.Clear();
+            engineOutputs.Clear();
             pieceIndex.Clear(); pieceIndexDirty = false;
             fixedShips.Clear();
             simulationAssemblies.Clear(); queryAssemblies.Clear();
@@ -135,6 +136,7 @@ namespace FlatWorld.Spaceflight
             Current.fixedShips.Clear();
             Current.simulationAssemblies.Clear(); Current.queryAssemblies.Clear();
             Current.controlRequests.Clear(); Current.pickingNavigationConsole = null;
+            Current.engineOutputs.Clear();
             Current.ResetMassWorkspace();
             Current.viewBindingsDirty = false;
             SpaceSurfaceQuery.Reset();
@@ -169,6 +171,7 @@ namespace FlatWorld.Spaceflight
             if (!running || transitionRunning || State == null || Universe == null || GameManager.Instance?.IsGameplayReady != true || Time.timeScale <= 0f || !GameNetwork.HasStateAuthority) return;
             if (ResumePendingPassengerTransfer()) return;
             double seconds = Time.fixedDeltaTime;
+            engineOutputs.Clear();
             Universe.AdvanceTime(seconds);
             fixedShips.Clear();
             fixedShips.AddRange(State.Ships);
