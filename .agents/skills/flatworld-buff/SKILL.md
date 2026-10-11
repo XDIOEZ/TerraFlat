@@ -1,52 +1,36 @@
 ---
 name: flatworld-buff
-description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录、运行时实例、叠加与持续时间、Tick 效果、效果处理器、Buff 存档、MOD Buff 注册或 Mod_BuffManager Prefab。关键词：Mod_BuffManager、BuffDefinition、BuffInstance、BuffEffectDispatcher、BuffCatalogLoader、buff-manifest.json。"
+description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来源归属与 GameObject/Native 生命周期。"
 ---
 
-# FlatWorld Buff
+# Buff
 
 ## 入口
 
-- 生命周期：`Assets/5_Scripts/5-3_GamePlay/Entities/Buff/{Mod_BuffManager,BuffInstance}.cs`
-- 叠层与角色水体时钟：同目录 `Mod_BuffManager.Stacks.cs`；Wiki 展示/写回位于 `StreamingAssets/ItemWiki/{buffs.js,buff_validation.py,wiki_server.py}`。
-- 定义链：同目录 `{BuffDefinition,BuffDefinitionDto,BuffDefinitionFactory}.cs`
-- 效果映射：`BuffEffectDispatcher.cs`、`BuffEffectTypeIds`
-- 内容：`Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json` 及其分包 JSON
+- `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/`：`Mod_BuffManager/BuffInstance` 生命周期；`Stacks/Rain` 水体/淋雨时钟；`BuffDefinition/Dto/Factory` 定义；`BuffEffectDispatcher/BuffEffectTypeIds` 效果注册。
+- `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json` 及分包：内容真源。
+- `Assets/StreamingAssets/ItemWiki/{buffs.js,buff_validation.py,wiki_server.py}`：展示、校验、文件指纹/备份/原子写回。
 
-## 不变量
+## 定义与状态
 
-- Buff ID 同时用于注册、运行时、存档和内容引用；重命名必须提供迁移映射。
-- JSON schemaVersion 1 严格校验；重复 ID、未知 typeId/字段、非法枚举和非有限数值应在构建阶段失败。
-- `durationSeconds: null` 表示永久；Tick Buff 的间隔必须大于 0；extend/refresh 只用于正持续时间。
-- Handler 在定义构建时缓存，运行 Tick 不做反射或字符串查找。
-- `add_stacks` 只改变单实例 `StackCount` 并续期，不重放 Start/Stop、不重置 Tick 相位；冷却/移速等登记型倍率仍只登记一次。按层伤害由效果 `scaleWithStacks` 显式声明，不能把整个效果集合一律乘层数。
-- 层数必须追加在 BuffInstance 原有持久化字段后；恢复时按当前定义把缺失/越界层数归一到 `1..MaxStacks`。表现订阅 `BuffStacksChanged`，不能靠重建 Buff 或反复触发布局表达层数变化。
-- 水体叠层时钟由每个 Mod_BuffManager 独享，不能放入共享 LiquidDefinition/WorldLiquidBehaviour；使用真实地形深度而不是漂浮后的视觉浸没深度。同帧跨水格保留计时，进入浅水只限制后续增长，不削掉已有层数；潮湿通过 `decayStacksOnExpiry` 每次到期脱落一层并重新计时，最后一层才执行 Stop，定义与 Wiki 校验必须同步。
-- 淋雨由 `Mod_BuffManager.Rain` 在每个生物的权威 Tick 中独立累计，空 Buff 也须推进；`RainWetnessClock` 按 `雨量 / rainReferenceIntensity` 折算 `rainStackIntervalSeconds`，`rainMaxStacks` 只限制淋雨新增，不削减浸水层数。持续淋雨保持潮湿时限但不暂停周期效果，雨停/死亡/回池/清空状态重置未满层进度；雨量切换不重置。天气查询使用现有天气管理器与生物当地雨雪判定，不依赖镜头或雨粒子，非生物、Client 和抑制天气的维度不施加。
-- 火焰施加先比较完整候选层数：同层潮湿阻止点燃，强火成功施加后才蒸发弱潮湿。燃烧期间重新浸水允许潮湿累计到灭火阈值，不能每次把新加的单层水立即删除而导致永久无法灭火。
-- 岩浆真实接触属于最高强度火源：相邻格边缘交互不触发；真实进入时先清潮湿并直接维持燃烧最高层，离开时把燃烧剩余时间刷新为 10 秒。燃烧全局最高层由 JSON 定义，不在液体逻辑重复硬编码层数。
-- Wiki BUFF 页与 Item 共用内联编辑、文件指纹、备份及原子写回事务；BuffManifest 是可写目标白名单，校验器须与 BuffDefinitionFactory 同步。保存不代表正在运行的 GameRes 已热重载，页面必须说明生效边界；公开模式只读。
-- 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。
-- `core:temperature_warming` 在 start/stop 按 Buff 实例登记、撤销临时增温，start 必须配置正 `value` 和 `upperLimit`；不要在 Tick 中反复加温，也不要在 Stop 固定减去配置值。受限增温和基础体温由 `Mod_Temperature` 分层结算，重复食用使用续期而不重复登记来源。
-- `低温冻伤` 是永久派生 Buff；`热射病` 是 240 秒限时派生 Buff。两者由 `Mod_Temperature` 在体表温度越界且共用危险温度缓冲耗尽后通过来源键持有，安全时立即移除，且都每 10 秒执行一次 `core:true_damage=10`。缓冲默认 60 秒，安全时每秒补回 1 秒，由体温模块保存剩余量，不能靠清 Buff 补满。持续高温时 `EnsureSourceBuff` 不刷新热射病剩余时间；自然到期移除后若仍高温，下一次安全检查重新施加完整 240 秒。派生温度 Buff 不写角色存档，不能重新在 `TemperatureMgr` 中维护独立伤害计时器。
-- 内容分包只决定归档；运行时语义仍由 `category`/effects 决定。
-- “当前位于某环境、可执行某操作”以及只在环境内生效的减速等被动影响，不使用可清除 Buff；只有潮湿、感染、中毒等角色状态进入 Mod_BuffManager。
-- 玩家正式重生视为新的角色生命周期，必须在 `Mod_PlayerDeathState.CompleteRespawnState` 的统一重生收口调用 `Mod_BuffManager.ClearAllBuffs()`；同世界重生与跨维度重生都走这一规则，不能只清 UI 或只清部分 Buff 类别。
-- Buff 的只读调试表现可从 `Mod_BuffManager.ActiveBuffs` 读取 `BuffInstance.Definition.DisplayName` 与剩余时间；表现层不得通过显示逻辑修改、续期或移除 Buff。
-- 出血状态固定使用互斥等级 `出血1/出血2/出血3`；统一通过 `Mod_BuffManager.ApplyBleedingTier` 应用，更低等级只续期当前更高等级，更高等级替换低等级。历史 `失血/流血/出血` 只作为存档迁移别名存在，不能重新作为内容或玩法 ID 使用。
+- ID 用于注册、内容和保存。`schemaVersion:1` 严格拒绝重复 ID、未知 typeId/字段、非法枚举/非有限值；新效果由稳定 typeId、Dispatcher、参数校验组成。Handler 构建时缓存。
+- `durationSeconds:null` 永久，周期间隔为正，extend/refresh 用正持续时间；分包只是归档，语义由 category/effects 定义。
+- `add_stacks` 改单实例 StackCount 并续期，不重放 Start/Stop 或重置 Tick 相位；登记倍率仅一份，`scaleWithStacks` 显式按层。恢复层数归一到 `1..MaxStacks`，表现订 `BuffStacksChanged`。
+- 可清 Buff 表达潮湿/感染/中毒等角色状态；环境内被动能力/可执行动作由环境运行器负责。`ActiveBuffs` 是只读表现入口。
+- 正式重生在 `Mod_PlayerDeathState.CompleteRespawnState` 收口 `ClearAllBuffs`，同世界/跨维度一致。
+- 出血互斥 `出血1/2/3`，`ApplyBleedingTier` 低等级续期高等级、高等级替换低等级。
+- Wiki 写目标由 BuffManifest 白名单限定，校验与 Factory 同步；公开模式只读，文件保存与 GameRes 重载是两个阶段。
 
-## 原生 AIECS 状态边界
+## 湿、火与温度
 
-- Native Buff 由当前 GameRes 定义冷编译，实例以定义索引、到期时间、下次 Tick 和 Credit 保存在 DynamicBuffer；不得把托管 Handler 放进 Burst。只支持完整效果集合的定义，未知效果/阶段/标签条件必须显式报告，不能只迁移同一 Buff 中的伤害而漏掉其它效果。
-- 每个 Buff 的周期命中独立保留来源 Credit，禁止把同实体的多个 Buff 合并后使用最后一个来源作击杀者；按模拟时间推进，过期前已到期的 Tick 仍结算。输出容量按实际周期命中数量扩张，不能用固定最大 Buff 数静默丢事件。
-- 当前原生能力是周期真实伤害、水量变化、出血互斥等级与 refresh/extend/ignore/add_stacks；常量伤害与按层伤害分别编译，命中上下文的完整层数一次传递。温度、完整潮湿/环境状态、营养完整玩法、自定义 Handler 仍需通过能力阶段迁移。玩家继续由旧 Mod_BuffManager 管理，外部代理不重复 Tick 玩家 Buff。
+- 水体时钟属于每个 Manager，按真实液深累计；跨水格不断计时，浅水只限后续增长。`decayStacksOnExpiry` 每次到期减一层并重新计时，最后一层 Stop。
+- Rain 在权威生物 Tick 中推进，即使无现存 Buff。`RainWetnessClock` 按当地雨量/reference 折算 interval，rainMaxStacks 只限淋雨新增；持续雨续期限但不暂停周期效果。雨停/死亡/回池/清状态清未满层进度，雨量切换保留；Client/抑制天气维度不施加。
+- 点燃比较完整候选层数：同层湿阻火，强火成功后蒸发弱湿；燃烧中浸水仍能积到灭火阈值。岩浆真实接触清湿并维持 JSON 最高燃烧层，退出续 10 秒，边缘交互不算接触。
+- `core:temperature_warming` Start/Stop 按实例登记/撤增温，正 value/upperLimit，重复食用续期；基础与受限增温由 Mod_Temperature 分层。
+- 低温冻伤永久、热射病 240 秒，由体温越界且共用缓冲耗尽后的来源键持有，安全即移除；均每 10 秒 true_damage=10。热射病持续危险不续期，到期仍危险再完整施加。派生温度 Buff 不保存，缓冲由体温模块独立保存，清 Buff 不补满。
 
-## 工作流与验证
+## Native 边界
 
-1. 数值/组合只改 JSON；schema、叠加、生命周期才改 C#。
-2. 存档字段或 ID 变化联动 `flatworld-data-save`；MOD 定义联动 `flatworld-modding`；伤害语义联动 `flatworld-combat`。
-
-## Skill 维护原则
-
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- GameRes 定义冷编译，DynamicBuffer 存定义索引、期限、下次 Tick、Credit，不存托管 Handler；只接完整支持的效果集合，未知阶段/条件显式报告。
+- 各周期命中独立来源 Credit，模拟时间推进，过期前已到期 Tick 仍结算；输出按实际事件扩容。
+- 当前支持周期真实伤害、水量、出血互斥、refresh/extend/ignore/add_stacks，常量/按层分别编译；完整温度/潮湿/营养/自定义 Handler 尚未迁移。玩家由 Mod_BuffManager 推进，代理不重复 Tick。

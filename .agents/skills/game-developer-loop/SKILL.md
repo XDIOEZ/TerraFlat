@@ -1,14 +1,15 @@
 ---
 name: game-developer-loop
-description: "像开发者一样通过 GamePlayMCP 游玩 FlatWorld，定时查看截图，主动发现并修复问题；每次启动至少优化三处，再重编译重启并继续循环。用户提到 GameDeveloperLoop、开发者游玩或循环 DEBUG 时使用。"
+description: "GameDeveloperLoop：沿用隔离存档，通过真实游玩、截图和 Console 发现问题并迭代改进。"
 ---
 
 # GameDeveloperLoop
 
-1. 读取 `../flatworld-gameplay-mcp/SKILL.md`，通过 GamePlayMCP 启动隔离存档、获取控制并游玩；启用 GM 无敌，避免操作延迟导致死亡。启动保护、定时采集和重复动作优先由代码实现，缺少自动入口时使用 `gameplay_gm(command="enable_invincibility")`。
-2. 启动前读取同级 `Memory/存档记录.md`，优先沿用其中的隔离存档并显式传入 `saveName`，重启前保存。创建、换档或成功保存后更新记录：存档名、位置、种子、玩家、已保存进度和下步目标；未保存进度单独注明，未知信息不猜。若 Bug 导致存档无法进入，直接创建新隔离存档并记录换档原因，不写兼容、迁移或兜底代码。
-3. 每轮固定选择 30 秒或 60 秒截图间隔，持续采集 GameView；Agent 必须打开截图查看，同时检查 Console 和游戏状态。
-4. 主动探索移动、战斗、采集、背包、建造等玩法；观察画面、遮挡、动画、UI、交互反馈、AI 行为和卡顿是否合理，不能只看控制台报错。
-5. 对异常记录截图、复现动作和状态，读取对应领域 Skill 与生产代码，找到原因再修复或优化。每次启动至少完成三处有证据的实际改进，不因完成一处就中断，也不为凑数制造问题。
-6. 累积三处改进后，再保存、释放控制、退出本轮游戏，重编译并重启；进入同一存档，重新获取控制、开启 GM，复查改动并继续循环，直到达到用户指定目标或用户叫停。
-7. 用户正在操作的 Play Mode 只做静态修改；退出、重启须已有授权。向用户简短说明改了什么和仍存在的问题，最终验收由用户完成。
+链路：`同一隔离存档 → 游玩与观察 → 记录问题证据 → 改进 → 保存 → 授权重启 → 原场景复查`。控制、动作和 UI 协议见 [GamePlayMCP](../flatworld-gameplay-mcp/SKILL.md)。
+
+- [Memory/存档记录.md](Memory/存档记录.md)：隔离存档、种子、已保存进度和后续目标；未保存或未知信息分别注明。
+- [Memory/UnityMCP连接经验.md](Memory/UnityMCP连接经验.md)、[Memory/性能优化经验.md](Memory/性能优化经验.md)：连接和性能诊断经验，按问题读取。
+- `scripts/gameplay_client.py`、`scripts/collect_drop.py`：现有游玩与采集辅助入口。
+- GM 无敌保护入口为 `gameplay_gm(command="enable_invincibility")`，是否启用按当前测试目标确定。
+
+截图覆盖画面与交互表现，Console 和结构化状态提供逻辑证据。循环时长、截图频率及调试保护按当前请求确定，实际改进依据问题证据，不设置固定数量。用户正在操作的 Play Mode 只做静态修改，最终验收由用户完成。

@@ -1,56 +1,41 @@
 ---
 name: flatworld-core
-description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界、继续游戏、退出世界、出生点、场景切换、资源初始化与全局生命周期。关键词：GameManager、GameRes、SceneMgr、GameStartScene、Manager scene。"
+description: "FlatWorld 启动、世界进入退出、资源加载/原位更新、场景与玩家生命周期。"
 ---
 
-# FlatWorld 核心生命周期
+# 核心生命周期
 
-## 入口
+## 代码入口
 
-- 世界生命周期：`Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.cs`
-- UI 绑定：同目录 `GameManager.UI.cs`
-- 资源门面：同目录 `GameRes.cs`；会话：`GameRes.Loading.cs`；阶段组合：`GameRes.LoadPlan.cs`
-- 阶段执行/所有权/校验：同目录 `ResourceLoadPipeline.cs`、`ResourceAssetScope.cs`、`ResourceCatalogValidation.cs`
-- 世界内原位更新：同目录 `GameRes.HotReload.cs`、`ResourceReloadContext.cs`
-- 场景服务：同目录 `SceneMgr.cs`
-- 保存：同目录 `{AutoSaveController,SaveDataMgr}.cs`
+根目录：`Assets/5_Scripts/5-3_GamePlay/Core/`。
 
-## 主链
+| 目录 | 入口与职责 |
+| --- | --- |
+| `Lifecycle/` | GameManager、GameManager.UI、SceneMgr：世界与场景 |
+| 同上 | GameRes、GameRes.Loading/LoadPlan/HotReload：资源会话 |
+| 同上 | ResourceLoadPipeline、ResourceAssetScope、ResourceCatalogValidation、ResourceReloadContext：阶段/所有权/发布 |
+| `Save/` | SaveDataMgr、AutoSaveController：持久化 |
 
-`GameStartScene → GameRes 加载 Prefab/Item JSON/Actor JSON/Recipe/Buff/Quest/MOD → CreateNewWorld 或 ContinueGame → UI_WorldLoading → SaveDataMgr → Event_GameWorldEnter → ItemMgr 创建玩家 → Event_PlayerEnterWorld → 等待活动 ChunkView → 解锁输入`
+`启动场景 → 主菜单必需资源 → 完整内容 Ready → 新建/继续 → 加载页 → 世界存档 → WorldEnter → 玩家创建/Load → PlayerEnter → 可见 ChunkView 绑定/物理收尾 → 解锁`
 
-## 不变量
+## 世界生命周期
 
-- `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
-- 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
-- `SpaceScene` 是磁盘上的静态 Scene，必须启用在 `ProjectSettings/EditorBuildSettings.asset` 中；它与动态维度 Scene 的规则不同。
-- Alt+R/调试资源刷新统一走 `RequestResourceReload`：主菜单使用 `TryReloadResources` 完整替换会话；单机世界使用 `GameRes.HotReload` 准备候选目录，校验后同帧发布，不保存、不退出、不重新加载存档。候选加载期间正式 `LoadState` 保持 Ready，以 `IsResourceReloadInProgress` 防重入；结构性错误仍撤销候选，单个 Actor 定义错误只隔离该候选并保留已发布版本，其他有效目录继续更新。联机世界仍禁止单边热更新。
-- `ResourceReloadContext` 只交换资源目录和会话标量，每次加载器 `MoveNext` 返回 Unity 前恢复正式引用；禁止登记玩家、区块、库存等持续变化的运行态。新增静态目录由所有者提供 `ConfigureResourceReload`，加载阶段不能用异步回调绕过上下文写入全局目录，也不能提前触发世界生命周期事件。
-- 原位更新成功后发布 `ResourcesReloaded`，活跃 Item 和 Chunk 不重建；旧代 Addressables、MOD 模板与 Lua 保留到正式退出完成后释放。候选目录删除或重命名物品 ID、机械节点或机械配方身份时，将上一代定义暂留在当前资源会话，保证旧 Item、机械快照与未加载区块仍可解析；重新定义的同 ID 使用新定义，暂留定义在世界退出、保存并清空活跃 Item 后移除，再释放旧代资源。运行中仍不能删除地块/MOD 身份、改变地块数字编号或增删/重排液体身份，在用 MOD Bundle 二进制变更同样拒绝。`TryReloadResources` 只允许无世界和活跃 Item 时调用。
-- 新目录在 `GameRes.LoadPlan.cs` 注册阶段及依赖；阶段内返回嵌套 `IEnumerator`，禁止 `StartCoroutine` 脱离 `ResourceLoadPipeline` 的异常、超时与取消管理。
-- 本体资源句柄发出时即交给 `ResourceAssetScope` 持有，成功保留到目录卸载，失败/取消统一释放；卸载必须先处理 MOD 与物品池，再清空派生目录、释放资源，禁止用自动创建单例的查询入口做销毁清理。
-- Addressables 初始化句柄属于 `GameRes` 生命周期，必须跨资源会话重载保留；`ResourceAssetScope` 只持有具体资源请求，不能释放初始化句柄，否则 Fast Mode Locator 可能保留但不再重建有效目录。
-- 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。
-- 完整资源会话在 `validate-final` 后执行 `brg-sprite-mesh-prewarm`，合并最终 TileBase/JSON/MOD 目录与 Palette，完成后才允许 Ready。原位 Alt+R 候选跳过共享缓存预热，发布后经 `GetOrCreate` 按需构建，失败候选不得清理正式 BRG/Mesh。完整卸载及旧代回收必须先解绑 BRG、清理共享 Mesh，再释放源资源；停止播放和域重载也必须显式释放隐藏 Mesh。
-- 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 `FullPlayModeReloadPolicy` 在编辑状态及进入播放前维护配置，当前 Play 不受影响；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，检查 `Settings.groups` 是否存在空引用，即使磁盘组与 GUID 完整，Alt+R 也不能重建失效的编辑器组引用。
-- `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
-- 启动资源采用双闸门：`GameRes.IsStartupReady` 只表示主菜单必要 UI 与基础配置已经就绪，此时启动遮罩关闭、完整内容继续在同一资源会话后台加载；`isLoadFinish/LoadState.Ready` 仍是进入世界的硬门槛。玩家在后台加载完成前点击新建或继续时，必须先显示 `UI_WorldLoading` 并等待完整 Ready，禁止先创建世界再补资源。
-- 菜单开放后的资源工作共用 `ResourceLoadPipeline` 每帧 1ms 协作预算；大循环通过 `ShouldYieldResourceWork` 让出，资源请求限制为小批次。`StreamingAssetsTextLoader.RunPureDataAsync` 只接收私有字符串/DTO/ID 快照，禁止后台访问 Unity 对象、单例或交换中的目录，回调由会话主线程执行。重型校验扩展 `IIncrementalResourceCatalogValidator`；正式世界生成资源路径登记到 `worldAuthoringResourcePaths`，预热禁止根目录同步 `Resources.LoadAll`。菜单加载期间临时降低 Player 接入/GPU 上传预算，成功、失败和销毁均恢复；Unity 2022.3 的 `backgroundLoadingPriority` 不影响 Editor，单个 Unity 资源接入也无法强行抢占，阶段日志的最慢单步用于继续定位。
-- 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。
-- 停止播放/关闭程序的对象销毁顺序不能承担业务依赖：清理使用绑定时保存的管理器和事件源引用，禁止重新查找单例或创建场景/池根节点；整个 Chunk 窗口关闭时直接销毁 View，正常流送才入池。表现清理必须可重复调用，终止时取消后台生成并保证纯运行时最终释放；应用退出不能记成自然物被采集。
-- 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。
-- 新玩家由 `ItemMgr` 在 `Player.Load()` 前应用 `PlayerCreationTemplateCatalogService` 解析的 JSON 模板；内建目录位于 `GameConfig/Players`，MOD 在同一资源就绪阶段注册，已有存档和跨维度重建不重新覆盖创建参数。
-- 标准世界进入中，全新玩家的主世界出生点由 `GameManager` 在确认最终安全陆地后写入；`Mod_PlayerDeathState.Load()` 不得提前重复搜索。联机直接创建玩家及旧档缺失出生点仍走补写路径。新世界后台预搜索只处理冻结的纯生成输入，不注册临时 Chunk，并与正式流送共用生成器、Profile、种子、拓扑和世界纪元以复用水文缓存；退出或失败必须取消搜索任务。
-- UI 逻辑留在 `GameManager.UI.cs`；加载视觉来自 Prefab，不在运行时拼装。
-- 标准新建/继续游戏的加载页只能在玩家脚下区块与完整可见 `ChunkView` 窗口完成表现绑定、物理同步收尾后发布 `Completed` 并淡出；后台生成队列清空不等于可展示，诊断超时只能告警，不能提前放行。
-- 世界/资源/玩家/UI 契约变化时只加载实际命中的 Data、Dimension、Item、Networking 或 UI Skill。
+- GameManager 是新建、继续、运行、退出的权威。动态维度以 WorldKey 创建 Scene 并复用 RunWorld，不入 Build Settings；SpaceScene 是需启用的静态场景。
+- IsStartupReady 只开放主菜单，完整内容仍在同会话后台加载；isLoadFinish/LoadState.Ready 才允许进入世界。加载页 Completed 等待脚下区块及完整可见窗口绑定/物理完成，生成队列清空不等于完成。
+- 新角色由 ItemMgr 在 Player.Load 前注入 GameConfig/Players 模板，已有存档/跨维度不重复注入。创建、网络提升与远程副本显式设置 ProfileContext，玩家事件一次发布。
+- GameManager 确认安全陆地后写新角色出生点；后台预搜索使用冻结纯数据并共享正式生成器/水文缓存，退出/失败取消。
+- 跨场景单例保留有效实例，重复 GameRes 不开启资源协程。停止/退出通过已绑定引用清理，不重新查单例创建对象；终止流送直接销毁 View、取消后台任务，正常流送才回池。
 
-## 验证
+## 资源会话
 
-- 检查成功、取消、失败、无保存退出均能释放事件、输入锁、玩家、Chunk 和 Scene。
-- 系统级生命周期变化必须在真实 Play Mode 中实际覆盖启动、进世界、退出/重进和资源释放；编译与 Console 只作为运行门禁和故障定位。
+- LoadPlan 声明阶段和依赖，嵌套 IEnumerator 受 ResourceLoadPipeline 统一异常/超时/取消管理。菜单后台阶段每帧协作预算1ms；PureDataAsync 仅处理私有字符串/DTO/ID，Unity 对象和目录发布仍在主线程。
+- 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。
+- 具体资源请求立即归 ResourceAssetScope，失败/取消释放；Addressables 初始化句柄归 GameRes、跨会话保留。卸载顺序为 MOD/池、表现/共享 Mesh、目录、源资源；销毁清理使用现有引用。
+- 编辑器 FullPlayModeReloadPolicy 保持 Domain/Scene Reload 开启；Prefab 标签空结果在 GameRes 入口失败。TimeSystem JSON 在允许新世界前完成，玩家覆盖配置无效时保留内建。
 
-## Skill 维护原则
+## 原位更新
 
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- RequestResourceReload 在主菜单完整替换会话，单机世界加载隔离候选、校验后同帧发布 ResourcesReloaded；不保存退出或重建活跃 Item/Chunk。联机不做单边更新；TryReloadResources 仅无世界/活跃 Item 时可用。
+- 候选期间正式 Ready 保留，IsResourceReloadInProgress 防重入；ResourceReloadContext 只交换目录/会话标量，每次向 Unity 让出前还原引用。持续玩家、库存、区块运行态不属于候选。
+- 结构错误丢弃候选；单个 Actor 错误隔离并保留已发布版本。物品/机器身份删除时暂留旧定义供现存实例与冷区块解析，退出保存/清实例后再回收旧代 Addressables、模板、Lua。
+- 在用地块/MOD 身份、Tile 数字编号、液体身份布局及 Bundle 二进制变更不在世界内发布。候选跳过共享预热，发布后按需 GetOrCreate；失败候选不清正式 BRG/Mesh。

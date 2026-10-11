@@ -1,46 +1,35 @@
 ---
 name: flatworld-networking
-description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、主机客户端、会话抽象、网络玩家、世界快照、Chunk 流送、Item 状态同步、建筑网络事务、联机 UI 或测试场景。关键词：NetworkGameBootstrap、FlatWorldGameNetworkManager、GameNetwork。"
+description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、区块与物品同步。"
 ---
 
 # FlatWorld 联机
 
 ## 入口
 
-- 启动/管理：`Assets/5_Scripts/5-4_Networking/Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`
-- 抽象：`Assets/5_Scripts/5-4_Networking/Core/`；Mirror 适配：`.../Mirror/`
-- 会话入口：`Core/GameNetwork.cs`
-- 同步：`Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`
-- 快照：`SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`
-- UI：`Gameplay/NetworkModeUIController*.cs` 与 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`
+代码根目录：`Assets/5_Scripts/5-4_Networking/`。
+- `Core/GameNetwork.cs`：会话门面；`Core/` 为传输抽象，`Mirror/` 为适配。
+- `Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`：启动、连接与玩家。
+- `Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`：区块、物品、天气复制。
+- `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
+- `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 
-## 权威边界
+## 权威与坐标
 
-- 建造消息层只校验连接身份、真实快捷栏材料并发布结果，放置规则和扣料/回滚统一交给 `BuildingPlacementService`；没有网络发布器的后端必须拒绝并回滚，不能只向请求方报成功。Host 的确认回调不重复发布已由权威事务产生的建造进度。
+- 服务端结算生成、伤害、死亡、建筑及持久状态；远程视觉副本不进入本地 Item Tick、AI 感知、教程、对话或存档索引。只有 owned 玩家驱动本地输入、导航窗口和 HUD；玩家加载、提升和远程配置显式设置 ProfileContext。
+- 协议、存档和权威判定使用规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是服务端玩家位置；Host 中远端 Transform 可能已是本机镜像。`WorldLocalPresentation` 在各客户端选择 owned 玩家附近的表现镜像，远端插值先保存逻辑目标。区块流送消费 `ObserverLogicalPosition`，按观察者并集加载。
+- 建造消息校验连接与真实快捷栏材料，`BuildingPlacementService` 处理放置、扣料和回滚；缺少网络发布器时事务回滚。Host 确认回调不重复发布建造进度。
+- 区域天气、雨雪反馈由权威端推进；客户端按 WorldKey、规范地址及修订号复制，首次雷电同步只建立序号基线。地表批次只传水肥和雪层，复制序号独立于 Terrain.Revision；可靠消息按通道大小分片，待就绪区块缓存最多 256 个地址，淘汰后补拉快照，消息本身不生成地形。
+- 维度迁移目前仅离线；联机入世会核对生成指纹和 MOD 集合。
 
-- 服务端结算世界生成、伤害、死亡、建筑与持久状态；客户端只应用权威结果。
-- 区域天气与地表雨雪反馈只在权威端推进；普通 Client 按 WorldKey、规范区域/Chunk 地址和修订号应用复制，不重复扣湿度、降温或浇水。首次区域复制建立雷电序号基线，不能重播历史闪电；地表批次仅传水肥与雪层数值，不携带作物 ItemData。地表复制序号独立递增，不能复用可能因区块重新生成而回退的 Terrain.Revision；分片按可靠通道大小限制，本地待生成/就绪区块最多缓存 256 个地址，淘汰后在就绪窗口补拉完整快照，消息不触发地形生成。
-- 远程视觉副本不得进入本地 Item Tick、AI 感知、教程/对话或存档索引。
-- `LoadNetworkPlayer/Promote.../ConfigureRemote...` 显式维护 Player ProfileContext；只有 owned 玩家驱动本地输入、导航窗口与 HUD。
-- 网络协议、存档和服务端判定只传规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是连接在服务端的玩家位置真源；Host 上远端 `NetworkIdentity.transform.position` 可能已经是本机局部表现镜像，拾取、建造、拆除、生成距离等权威判定禁止直接读取它。
-- 每个客户端通过 `WorldLocalPresentation` 独立把远端玩家、世界 Item 与 Chunk 投影到 owned 玩家附近；远端插值目标先保持服务器逻辑坐标，再在本机选择最近镜像。`NetworkChunkStreamingCoordinator` 只消费 `ObserverLogicalPosition`/规范化坐标，不能把表现 Transform 发回流送或导航逻辑。
-- 世界/Item 快照必须版本化、可往返；生成指纹或 MOD 集合不兼容时在入世前拒绝。
-- Item 状态使用 FWI1 实例快照，捕获不得暂改活跃 ItemData、库存或 Transform；公开世界捕获上下文是线程局部作用域，不能跨 await。热快照只合并活跃实例当前配置下的状态，不迁移模块布局；未变模块不卸载，非重载/远程白名单通过 BindSnapshotData 保持生命周期，回调中回收或换代后停止处理旧实例。
-- 网络与手持库存的原位恢复共用 CaptureRuntimeStateBaseline/ApplyMergedRuntimeStates；基线必须在合并前捕获，只刷新原代际中状态变化的模块。嵌套库存恢复后仅为新冷数据补配置，禁止对既有活跃槽位再次执行整份定义 rebase。
-- `ItemNetworkCaptureCache` 先执行 ModuleSave，再读取实例/模块状态指纹；按 Item 代际、数据引用与公开上下文隔离，未变模块复用冻结快照，实例版本变化才编码。字节载荷与食物私有浮点缓存必须读实际值；MOD 可在 codec 实现 IModuleInstanceStateFingerprintProvider，未覆盖类型完整捕获。公共 Capture 返回独立缓冲，捕获不得回写活跃位姿；世界状态包不带位姿，NetworkItemPoseMessage 独立递增姿态版本，完整状态/出生包带当前姿态版本，接收端使用本机投影并拒绝旧姿态。DTO 变化须同步升级 NetworkGameplayProtocol。
-- Chunk 按观察者并集流送；本地导航窗口仍只跟随 owned 玩家。
-- 机械及工作方块以 `MachineWorld` 快照、删除消息与转速增量同步，不进入普通世界 Item 出生/状态流；完整重同步先清空客户端旧节点。服务端放置直接提交数据，拆除先发布召唤器再删除节点；客户端交互、库存转移及排序/整理只发命令，不能直接修改机器库存。具体入口见 `flatworld-machines/SKILL.md`。
-- 网络 UI 从正式 Prefab 实例化，不运行时构造；网络玩家名称节点预制在 `Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
-- `NetworkModeUIController` 常驻于 `NetworkGameBootstrap`，但联机面板和主菜单入口属于场景 UI；必须按 `GameStartScene` 加载与 `UIManager.InteractionSurfaceChanged` 幂等重建/重绑，不能只在 `Initialize` 中缓存一次引用。
-- `UI_NetworkMode` 在完整资源就绪后实例化；Prefab 根 `CanvasGroup` 的 Alpha 保持 1 供 Prefab Mode 编辑，交互与射线默认关闭；运行时在注册面板前调用 `BasePanel.InitClosed()` 无动画地隐藏，不能靠带动画的 `Close()` 初始化。
-- 维度切换当前仅离线；完成服务器权威迁移协议前不得解除。
+## 快照与复制
 
-## 验证
+- Item 使用 FWI1 实例快照；捕获不改活跃 ItemData、库存或位姿。公开世界捕获上下文为线程局部作用域，不能跨 await。
+- 热快照按当前配置合并状态，不迁移模块布局；未变模块保留，非重载/远程白名单通过 `BindSnapshotData` 绑定。`CaptureRuntimeStateBaseline` 在合并前捕获基线，`ApplyMergedRuntimeStates` 只刷新原代际中改变的模块；回调回收或换代后停止旧实例处理。嵌套库存仅为新冷数据补配置。
+- `ItemNetworkCaptureCache` 在 ModuleSave 后计算状态指纹，按实例代际、数据引用和捕获上下文隔离；未变模块复用冻结快照，未覆盖的 codec 完整捕获。MOD 可实现 `IModuleInstanceStateFingerprintProvider`；公共 Capture 返回独立缓冲。
+- 状态与位姿分别复制：普通世界状态包不带位姿，`NetworkItemPoseMessage` 独立递增版本；出生/完整包带当前姿态版本，客户端拒绝旧位姿。DTO 协议号由 `NetworkGameplayProtocol` 管理。
+- 机器走 `MachineWorld` 快照、删除消息和转速增量，不进普通 Item 状态流。完整重同步清空旧节点；拆除先发布召唤器再删节点；客户端库存交互只发命令。
 
-- 隔离端口、进程和临时存档；覆盖 Host/Client、拒绝路径、断线清理、消息往返和无重复结算。
-- 按改动联动 Core/Player、Data/Item、Map/Navigation、Building 或 Modding。
+## UI 生命周期
 
-## Skill 维护原则
-
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+`NetworkModeUIController` 常驻，场景 UI 在 `GameStartScene` 加载及 `UIManager.InteractionSurfaceChanged` 后幂等重绑。联机面板等待完整资源就绪；Prefab 根 CanvasGroup Alpha 为 1、默认关闭交互与射线，运行时以 `BasePanel.InitClosed()` 初始化隐藏。

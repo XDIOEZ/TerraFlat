@@ -1,34 +1,18 @@
 ---
 name: flatworld-guide
-description: "Use when: 定位或修改 FlatWorld 的新手引导、教程资格、阶段推导、里程碑存档、玩法进度监听或引导对话 Facts。关键词：NewPlayerGuideController、NewPlayerGuideProgressStore、NewPlayerGuideStage、flatworld.tutorial。"
+description: "FlatWorld 本地新手引导资格、玩法里程碑、教程阶段、存档与对话 Facts。"
 ---
 
 # FlatWorld 新手引导
 
-## 入口
+## 入口与数据流
 
-- 控制器：`Assets/5_Scripts/5-3_GamePlay/Presentation/Guide/NewPlayerGuideController.cs`
-- 阶段与 ID：同目录 `NewPlayerGuideStage.cs`
-- 进度存档：同目录 `NewPlayerGuideProgressStore.cs`
-- 引导台词：`Assets/Resources/Dialogue/Soliloquy/guide_survival.json`
+`Assets/5_Scripts/5-3_GamePlay/Presentation/Guide/`：`NewPlayerGuideController.cs` 控制，`NewPlayerGuideStage.cs` 阶段/ID，`NewPlayerGuideProgressStore.cs` 进度。台词：`Assets/Resources/Dialogue/Soliloquy/guide_survival.json`。
 
-## 主链
+`本地角色资格 → GameplayProgressEvents → 里程碑 → 当前阶段 → Tutorial Facts → 自言自语系统`
 
-`本地新角色资格 → 订阅 GameplayProgressEvents → 写入里程碑 → 推导当前阶段 → 提供 Tutorial Facts → 自言自语系统显示`
+## 职责
 
-## 边界
-
-- 只处理本地玩家；旧存档默认不自动开启，引导资格一旦建立必须持久化。
-- 里程碑只在玩法事务真正成功后记录，不从按钮点击或预览状态推断成功。
-- 进度只写入 `flatworld.tutorial` 命名空间；保留其他 `ItemSpecialData` 数据。
-- 控制器只贡献 Facts 和进度，不直接创建引导 UI 或硬编码显示文本。
-- 后续新增教程内容通过书籍阅读入口承载，不恢复占据玩家屏幕的常驻任务追踪面板。
-- 修改制作、建筑、背包或台词联动时，同时使用对应专项 Skill。
-
-## 验证
-
-- 验收统一进入真实 Play Mode，实际推进对应玩法里程碑并观察引导阶段、Facts 和持久化；编译与 Console 只作为辅助诊断。
-
-## Skill 维护原则
-
-- 只补充可复用的易错点、隐含约束和必要注意事项，不记录近期改动流水账。
+- 引导仅属于本地玩家，资格建立后持久化；里程碑来自成功玩法事务，与按钮点击/预览状态分离。
+- 数据仅写 `ItemSpecialData.flatworld.tutorial` 命名空间。
+- 控制器提供 Facts 和进度；对话系统持有文本/显示，扩展教程阅读入口约定为书籍。

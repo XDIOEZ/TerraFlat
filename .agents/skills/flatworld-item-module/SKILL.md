@@ -1,135 +1,62 @@
 ---
 name: flatworld-item-module
-description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构、实体创建销毁、对象池、模块加载保存、Tick 调度、运行时注册、空间索引或网络模块序列化。关键词：ItemMgr、Item、Module、ItemMods、ItemMaker。"
+description: "FlatWorld 物品与模块的组合、生命周期、调度、对象池、定义装配及世界实体后端。"
 ---
 
-# FlatWorld Item / Module
+# Item / Module
 
-## 入口
+## 代码与内容
 
-- 生命周期：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Core/{Item,Module,ItemMods,ItemMaker}.cs`
-- 管理器：`Entities/Item/Management/ItemMgr*.cs`（Spawning/Perception/Players/RandomDrop partial）
-- 数据：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`
-- 本体定义：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`
-- 模板化物品编辑：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`
-- Actor 定义复用 Item/Module 实例化与池化：`Entities/AI/Definitions/ActorDefinitionCatalogLoader.cs`
-- 资源产出倍率契约与聚合：`Entities/Item/Modules/World/ResourceYieldUtility.cs`；温度修饰：`Mod_TemperatureYield.cs`。
+以下代码目录以 `Assets/5_Scripts/5-3_GamePlay/` 为根：
 
-## 主链与不变量
+| 目录 | 入口与职责 |
+| --- | --- |
+| `Entities/Item/Core/` | `Item`、`Module`、`ItemMods`、`ItemMaker`：实例与模块生命周期 |
+| `Entities/Item/Management/` | `ItemMgr*.cs`：注册、生成、玩家、感知、距离分档 |
+| `Entities/Item/Definitions/` | `ItemDefinitionRuntime`、`ModuleJsonConfigurator`：定义装配、参数与资源刷新 |
+| `Entities/DroppedItems/` | `DroppedItemService`、`DroppedItemRuntime*`：世界掉落 |
+| `Entities/NaturalECS/` | `NaturalEntityEcsService*`、`NaturalEntityEcsProfileCompiler`：自然资源后端 |
+| `World/Chunk/Management/` | `WorldItemWaterSystem`：完整 Item 的水体运行态 |
 
-- 实体能力只来自 Prefab 或 JSON 的显式模块组合；`Item` 基类不得自动补齐装备等玩法模块。定义实体按当前 `ModuleData` 装配具体 Prefab，不能把模块能力 ID 当作具体 Prefab 地址。
+- 数据：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`。
+- 内容：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；Actor 使用独立目录但复用装配与池化。
+- 编辑：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`。
 
-- `Item.RuntimeGeneration` 是每次 Load 更新的运行态代际，不进存档；纯数据战斗 Bridge 将其与持久 UID、world/dimension 一起构成外部身份。对象池复用、读档重载后即使 UID 相同，也不能接收上一代事件；它与 ItemMgr 感知索引自身的注册代际不是同一个生命周期。
+## 身份与生命周期
 
-- 新建物品尚无正式美术、明确需要占位贴图时，优先复用 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png`，禁止借用其他具体物品的贴图充当通用占位。JSON `visual.spriteAddress` 使用 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，资源标签为 `ItemSprite`。内容工坊图标留空时由 `ContentWorkshopRepository.ResolveItemIcon` 统一提供预览与保存图标；手选正式素材优先，不能将现有物品的加载错误静默改成占位图。
+`当前定义 → ItemData → 全部模块登记 → ModuleInit → 依赖绑定 → OnLoad → Tick/Save → OnUnload → Despawn/Pool`
 
-`ItemMaker/ItemMgr → ItemData → ItemMods → ModuleInit/Load → ItemMgr 分级 Tick → Save/Despawn/Pool`
+- 能力来自 Prefab/JSON 的显式组合。`StableName` 是 Item 内唯一模块实例键；`ModuleId` 是可共享能力 ID；`PrefabId`/JSON `prefab` 是具体实现地址，不入实例存档。JSON 键决定 StableName，Prefab-only 回退确定性对象名；`CanonicalModuleId` 提供固定能力默认值，JSON 显式 ID 仍须符合依赖契约。
+- 跨模块依赖由 `IItemModuleDependencyBinder` 在配置完成后解析唯一 ID/接口。`ItemMods` 的只读视图通过 `AddMod/RemoveMod/BeginMutation` 更新结构版本和能力缓存；可变 ModuleData 不跨宿主共享。
+- `Module.Load/Save/Unload` 为受控入口，子类实现 `OnLoad/OnSave/OnUnload`。实际加载态决定保存和 Tick；Enabled 是当前配置，运行切换用 `SetEnabled`。资源建立与清理分别属于 OnLoad/OnUnload，保存只捕获状态。
+- `RuntimeGeneration` 每次 Load 更新，不持久化；战斗身份包含 UID、world/dimension 与该代际。感知注册有独立代际。注册同一实例幂等，不同实例 GUID 冲突报错；注销使用登记时身份。
+- `BindData` 只绑定未加载、未注册外壳；世界物换定义由 `ReplaceRuntimeItem` 创建停用候选并提供失败恢复。独立模块拥有自身 Prefab 根，内嵌模块只拥有组件。
+- 池身份在 Item 序列化字段，`PooledItemMarker` 是运行时层级基线；JSON 装配完成后记录基线，卸载完成且层级匹配才可回池，资格与 saveData 独立。临时缓冲按调用借还，嵌套生成不共用同一缓冲。
 
-- `ModuleData` 的权威身份字段是 `StableName / ModuleId / Enabled`：`StableName` 是单个 Item 内唯一实例键，`ModuleId` 是可一对多复用的能力 ID，`PrefabId` 只描述当前定义选用的具体实现且不进入实例存档。禁止再生成随机模块名；重复 StableName 必须直接报错。
-- 会覆写 `ModUpdate` 的模块必须显式选择 EveryFrame、FixedInterval 或 Disabled；`Module.TickMode` 默认 Unspecified，新模块不得依赖隐式 EveryFrame。增删模块、启停、配置变化和池复用必须使调度缓存失效。
-- 框架 Tick 经 `Module.TickWithProfiler` 采样为 `FlatWorld.Module.<类型名>`；排查物品调度热点先比较模块总耗时与 GC 路径，不能因新增子标记降低了父标记 Self 就认定已经提速。
-- 事件驱动的临时能力在空闲时返回 `Disabled`，开始、结束和延迟收尾状态切换必须调用 `MarkModuleScheduleDirty`；投掷伤害通过 `Mod_Damage.SetIdleTickSuppressed` 显式选择窗口调度，手持与动画武器仍保留完整更新，不能对普通伤害源全局降频。
-- JSON `enabled` 统一写入 `ModuleData.Enabled`，快照不保存或覆盖这个配置开关；运行中切换走 `Module.SetEnabled`，由框架负责 Load/Unload 与 Tick 参与资格，禁止各模块各自维护第二套启用状态。
-- 距离模拟档只限制 `ItemMgr` 驱动的玩法 Tick 频率，不改变模块自身更慢的 FixedInterval；以同场景最近玩家和循环世界最短距离判定，玩家、地图、手持物保持完整更新。`Owner` 不能作为免降频条件，因为在飞投射物也会保留发射者引用。范围外暂停时重置调度时钟，停用根刚体并回调 `ISimulationRangeAware` 模块释放导航运行态；重入时先恢复原 `Rigidbody2D.simulated` 值再重提目标，不能补算休眠期间的 Tick。对象池或模块卸载也须恢复刚体开关；不要把摄像机缩放当模拟距离。
-- `ItemSimulationRangeIndex` 按场景与逻辑区域共用内部判档，边界才精算；近档活动集合、中远档到期堆、停止档不逐帧遍历。移动须经 NotifyRuntimeItemMoved 刷新资格，玩家/拓扑/范围设置变化使区域失效，个体时钟与登记令牌必须保留；范围回调异常不能阻止其余模块和根刚体切换。
-- `ItemData.ModuleDataDic` 使用 ModuleDataCollection 发布增删、替换及启停的结构版本，数值写回不重建库存规则；跨宿主集合不得共享可变模块，临时模板移交先解绑来源事件。
-- 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
-- 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；依赖 JSON 能力字段的事件订阅也须在该回调中按当前配置解绑、重绑，不能只在 `Load` 订阅。禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
-- 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。
-- 对象池身份由 `Item` 的序列化字段持有，`PooledItemMarker` 是纯运行时层级快照，不再作为 MonoBehaviour 动态添加到每个新物品；装配 JSON 模块后才抓取层级基线。改回池逻辑时须同时检查脚本重载后的身份保留与回池前的层级校验。
-- 注册同一实例必须幂等；不同实例的 GUID 冲突直接报错，不自动换身份。注册与模块索引按登记时的身份注销；密集集合通过槽位交换移除，对外只读，禁止单独改分组或 GUID 字典。
-- `Item.BindData` 只用于未注册、未加载的外壳。普通世界物换定义走 `ItemMgr.ReplaceRuntimeItem`，候选体先停用装配，失败恢复源实例原模块布局；玩家、地图、机器及自然生态使用各自权威入口。
-- Item 回池资格独立于 `saveData`；JSON 模块装配完成后才记录层级基线，回池时按子节点身份核验。模块若用 `OnDestroy` 清理订阅或资源，必须在 `OnUnload` 提供同等清理；加载中、已加载或卸载中的模块不能回池。
-- 池复用与模块装配的临时查询列表按调用借还，异常和嵌套生成也要归还独立缓冲；模块索引只在卸载后清空复用。层级保持实时查询，禁止为减少分配缓存未经结构失效通知维护的组件集合。
-- 模块装配计划属于当前 `RuntimeItemDefinition`：具体 Prefab、组件位置、类型与 JSON 参数在目录冷路径编译，生成与 Load 使用稳定槽位及精确实现，不按同类型猜测变体。资源重载替换定义及计划；Prefab-only 工厂缓存也须按资源会话/版本失效。
-- 远程网络副本不进入本地 Tick、感知和存档索引。
-- 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。`ItemPhysicsProjection2D` 只把 `ItemData.Stack.CurrentWeight` 映射成动态刚体质量，并将实际速度与接触事实写回不入存档的 `ItemData.PhysicsState`。
-- 感知批次对已存在空间格的重复访问用格子内 `LastVisitedBatch` 访问戳去重，禁止恢复每批 `HashSet<long>` 已访问集合；格子回池时必须清空成员并重置访问戳。
-- `ItemMgr.NotifyRuntimeItemMoved` 完成位置索引刷新后发布通用 `RuntimeItemMoved` 适配事件；移动订阅方只维护显式声明需要跟随的状态，并按网格根格变化去重，避免轮询或给普通 Item 增加每帧扫描。
-- 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
-- 可复用的“玩家主动丢出后触发效果”应实现 `IDroppedItemSpawnContextReceiver` 并作为正式 `Module` 由 JSON 组合；不要把具体物品脚本挂在 `sourcePrefab` 上，因为 JSON 物品运行时可能使用通用 Shell 而不会实例化该源 Prefab。
-- 游戏内容分类（武器类别、生物种类、阵营语义、资源类型等）统一使用 `ItemData.Tags`，以便 JSON/MOD 扩展；Unity Tag 只用于 `MainCamera`、`MapCore`、UI/编辑器辅助等场景与开发基础设施，玩法判定不得依赖 Unity Tag。
-- `Module.Load/Save/Unload` 是不可覆写的受控入口；子类实现 `OnLoad/OnSave/OnUnload`，基类调用也使用对应 On 钩子。只有实际加载态才保存和 Tick；加载失败要清理部分运行态，卸载某模块失败仍清理其他模块，禁止靠 Enabled 推测已加载。运行资源在 OnLoad 建立，不在 Awake 提前订阅或分配。
-- `ItemMods.Mods/Mods_List` 及分组列表为实际只读视图，增删走 AddMod/RemoveMod 并维护 StructureVersion 与能力缓存；批量装配使用 BeginMutation 合并结构通知。独立模块只销毁自己的 Prefab 根，内嵌模块只删除组件，不能删除 Item 或共享表现节点。
-- Tick 轮次捕获注册令牌和 Item/Module 代际；回调结束后复核身份，移除、回池和同轮新建不能漏跳或运行新代。调度重建保留未变模块的累计时间，新增/重启/策略变化才重置；活跃分档保留时钟，休眠边界不补算。
-- 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划` 和失败阶段；通用 Prefab 数量为 0 时先查标签、目录与初始化，不能直接断言某个物品定义错误。
-- JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
-- `MineResource_Base` 只提供矿点外壳与基础数据；需要工具专精加成时显式组合 `Mod_ResourceHarvest`。其中 `requiredTool/minimumTier` 表示专精工具与完整加成参考等级，不是采矿资格；缺少模块或工具不匹配时仍按普通伤害结算，禁止恢复等级门槛或在物品说明、百科中写成硬性要求。
-- 通用世界实体外壳只能提供 `Item`、表现节点与查询 Collider；作物等玩法必须由 JSON 组合模块。成熟交互的可扩展副作用通过 `ICropHarvestAction` 注册，权威状态模块只负责按顺序调度动作与结束实体生命周期。
-- Prefab 必须由 Unity 序列化生成，禁止手写根对象 `fileID: 100100000`；该值是 Prefab 资产保留 ID，把它分配给 GameObject 会触发 `GameObject to Prefab` 的 PPtr 转换错误。
-- 批量调整 Prefab override 后不得在 `m_Modification.m_Modifications` 序列中留下空项；Unity 会把对应 `PrefabInstance` 判为损坏并在导入时删除整个嵌套模块，修改后必须重新导入并核对实际层级。
-- Item 与 Actor 的 `modules.*.parameters` 共用 `ModuleJsonConfigurator` 严格契约；删除或改名可配置字段后必须同步现行 JSON，并运行“FlatWorld/内容配置/校验全部本体内容”，禁止等到具体实例生成时才发现漂移。
-- 运行时生成模块参数时，`Vector2/Vector3` 必须显式写成 `x/y/z` 的 `JObject`；禁止 `JToken.FromObject(UnityEngine.Vector*)`，否则 Json.NET 会遍历 `normalized` 等计算属性并形成自引用。
-- JSON 定义实体的死亡战利品由顶层 `lootTableId` 引用全局 `GameConfig/LootTables/loot-tables.json`；表内 `itemId` 是稳定 ItemDefinition ID，运行时才展开为 `LootPrefabName`，禁止再内联 `Data.LootTable` 或保存 `LootPrefab` 对象引用。
-- 产出修饰统一实现 `IResourceYieldModifier`，由 `ResourceYieldUtility.GetMultiplier(资源实体, 产物ID)` 聚合有效模块；外部采集设备应传资源源头而非自身。每条产出链只在最终数量或累计生产进度中应用一次，整数掉落与难度倍率合并后统一随机取整，禁止重复放大或改写基础战利品表。
-- Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。启动只异步解析一次 Item Manifest，Prefab 排除计划和物品构建共用该结果，Android 不得退回另一套发现规则。
-- 本体 Item/Actor 的 Sprite、材质、动画和独立外壳请求由 `GameRes.ResourceAssets` 持有；新增加载分支不能丢失句柄所有权。`shellPrefab` 引用通用目录，独立加载只接受 `shellAddress`，禁止从编辑器 `sourcePrefab` 推导运行时外壳。
-- 每个具体定义必须独立填写默认显示名 `gameName`；`id` 与名称翻译键分别承担业务引用和界面查询职责。继承不能把父物品的名称或翻译键带入子物品，编辑器也不能把 GameObject 名和 `ItemData.ToString()` 写成显示名与说明。
-- 物品身份合并用当前定义的 `formerIds` 声明旧查找名，别名不继承、不进入物品枚举；查询统一走 `TryGetItemDefinition`，存档重建生成当前 ID。别名字典与正式目录一起隔离、重载和清理，不能把已合并的旧定义作为退役内容重新放回目录。
-- JSON 通用 Item Shell 的 SpriteRenderer 必须使用 `SpriteSortPoint.Pivot`；运行时换图也要重新写入该值，透明排序锚点以 Sprite 导入 Pivot 为唯一权威。
-- 通用 `Module_Production` Prefab 不能内置 Apple 等具体产物；具体产物由物品 JSON 或专用 Prefab override 明确配置。`ProductionList` 的产物、数量、周期等属于当前定义；读取模块存档时只恢复 `ProductionTime`、`CurrentProductionCount`、`IsInitialized` 等运行时进度，禁止让 BitData 整体覆盖当前配置，否则内容改动后会继续生产历史产物。
-- 世界物品若由主体 SpriteRenderer + 子提示/装饰 SpriteRenderer 组成，子层级需要 `sortingOrder` 偏移时必须用根 `SortingGroup` 把整件物品作为一个 Y 深度单元；禁止让子 Renderer 的正偏移直接跨过角色等外部实体的世界排序。
-- 世界物品的拾取吸入快照/反馈必须沿用原 `world-item` 排序键，禁止为了“显示在原物品上方”额外增加 `sortingOrder`；原物品回收或隐藏后，由动画当前位置继续参与 Y 轴透明排序，才能正确经过树冠等遮挡物。
-- 世界物品可用 `visual.materialAddress` 声明共享 Addressable 材质；运行时定义必须在对象池复用时显式恢复“配置材质或外壳默认材质”，避免共用 Shell 把上一个物品的材质带给下一个实例。
-- `GameRes.CreateItemData`、群系生成与生产模块只接受 Manifest 中存在的 JSON 物品 ID；缺失定义必须直接报错，禁止回退到同名 Prefab。`sourcePrefab` 用于编辑器迁移定位与通用 Prefab 目录的冗余排除，不得作为运行时加载依赖。
-- 既有具体 Prefab 改为 JSON 共用 Shell 后，只要源 Prefab 仍保留在 Addressables 中，就必须在具体定义填写匹配其 Address 的 `sourcePrefab`；否则旧 Prefab 名称会先占用物品 ID，使 `RegisterItemDefinition` 报别名冲突。修正发现配置，禁止放宽冲突校验或静默覆盖注册。
-- 具体 Prefab 删除后，JSON 必须同步移除 `sourcePrefab`，迁移器则把这类无源定义登记为手工保留项；否则再次执行全量迁移会误删权威 JSON。
-- 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
-- `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
-- 存档恢复不能把历史 `ItemData/ModuleDataDic` 当配置真源；必须先按当前 `RuntimeItemDefinition` 重建静态数据和模块集合，再恢复匹配稳定模块名的运行态。这样 F5 资源重载或版本更新后的 JSON 配置会覆盖旧档配置，已删除模块也不会被旧档复活。
-- `Ex_ModData_MemoryPackable` 若序列化了带 `ItemData` 的内嵌 `Inventory_Data`，`ItemDefinitionRuntime` 不会自动遍历这段二进制负载；模块读取状态后应逐槽调用 `RebasePersistedData(GameRes.Instance, itemData)`，再绑定库存 UI，确保内嵌物品按当前定义恢复。
-- 制作材料赋予的实例耐久使用 `ItemData.CraftedDurabilityMultiplier` 持久化；定义重建后以当前定义的基础耐久重新应用倍率，不能直接沿用旧 `MaxDurability`。堆叠身份必须包含该倍率，避免不同品质实例合并后丢失品质。
-- 物品连续物质状态统一保存在 `ItemData.MatterState`，静态参数与相变写在 `ItemDefinition.matter`，多物料条件反应写在 `ItemDefinition.reactions`。反应不要求固定归属物，可声明在任一参与物品；运行时按规范化反应签名去重，设备不得复制具体材料反应表。
-- 液体粘度属于 `LiquidDefinition.viscosity` 的数据属性，1 表示普通水；容器倾倒速度和液流/液面表现都从同一值派生，UI Prefab 不再作为粘度权威。未配置专用 `visualState` 样式的液体按 `primaryColor` 自动生成容器液面表现。
-- 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
-- 模块 Prefab 的 `StableName/ModuleId` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空确定性身份。JSON 模块以 `modules` 的键作为 StableName；Prefab-only 模块才允许回退到确定性的 GameObject 名，禁止随机后缀。
-- 固定能力 ID 必须由具体模块覆写 `CanonicalModuleId`，不能只在 `Awake/OnValidate` 填写；模板工厂可能早于 Awake 读取 Prefab，提前写入外壳名后会使依赖索引永久错位。注册后禁止在生命周期回调中修改身份。
-- 存在固定依赖约定时，JSON 显式 `modules.*.id` 必须与消费方的能力 ID 一致；`CanonicalModuleId` 不会覆盖 JSON 声明，禁止把 `prefab` 实现名误填为能力 ID。定义、源 Prefab 与构建器须同步，依赖代码复用模块的 ID 常量。
-- JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；全部模块先进入 `ItemMods`，ModuleInit 完成配置，再绑定依赖，最后 OnLoad。依赖按唯一稳定 ID 或能力接口解析，缺失或重复直接报错。
-- 供氧采用外部主动推送：`Mod_Oxygen` 只绑定生命，维护自身氧气与缺氧伤害，不记录来源，仅提供 `CanReceiveOxygen`、`GetOxygenSupplyAmount(seconds)`、`SupplyOxygen(amount)`。`Mod_AtmosphericOxygenSupply` 每 0.2 秒检查大气、水体 `IsWaterBreathBlocked` 和装备汇总 `BlocksAmbientOxygen`；宇航服效果 `EquipmentInstance_SpacesuitSupport` 每次解析当前实际插槽、扣气后供给，通过通用 `IAmbientOxygenBlocker` 报告密封，空罐仍隔离。套装判断与通用耐压来源加撤属于装备效果，氧气／气压模块不依赖宇航服或装备。
-- 可燃物品采用纯组合：`Mod_Fuel` 提供燃料数据，`Mod_Combustion` 提供燃烧状态与世界时间消耗，`Mod_FuelInteraction` 提供通用投料/点火交互；光源、燃烧粒子、局部温度、命中 Buff 等通过 `ICombustionStateReceiver` 独立响应。具体物品名称、外观与组件选择只存在于 JSON，禁止新增 `Mod_具体物品名` 来重新聚合这些职责。
-- JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。
-- `Mod_ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。
-- 掉落拾取时序由 `Mod_Droping` 的轨迹状态决定：必须先移除掉落模块，再把 `CanBePickedUp` 设为 true；拾取器不能只信任这个数据标志。
-- 世界掉落物的水体浮沉只能把 `ItemStack.Weight / Volume` 当作玩法比值，不能直接按真实水密度把阈值写成 1.0；当前内容数据里木墙约 0.32、石墙约 0.67、铜/青铜/铁墙约 0.69/0.78/0.88，因此阈值应按这些已定义物品重新标定，而不是套物理单位常数。
-- 世界散落物的水体浮沉/漂流统一由 `WorldItemWaterSystem` + `WorldItemWaterRuntime` 根据最终世界位置派生；`ItemMgr.InstantiateItem` 只登记延迟检查，抛掷/投射等入口在轨迹结束后交回该系统，禁止把水体逻辑重新塞回 `Mod_Droping` 或只覆盖丢弃路径。
-- 水体运行态不写入库存 `ItemData/ModuleData`，也不能用 `CanBePickedUp=false` 表示“在水中”；拾取时无需再剔除临时水体模块，对象池复用由 `IItemPoolLifecycle` 清理运行态。世界散落物随水移动统一读取 `ChunkMgr.TryGetRuntimeWaterCurrent`，跨新版 ChunkView 时通过 `ItemWorldPlacement.TryAttachWorldModelTransientItem` 重绑临时归属。
-- 入水真实转换的源物品若需要一次性表现，实现 `IWaterEntryTransformEffect`；`WorldItemWaterSystem` 会在 `DespawnItem` 前调用，表现对象必须自行脱离源物品，避免源物品同帧回收时把粒子一起清掉。
-- Wrapped World 的 Item 只保留真实根刚体适配：`WrappedWorldPhysicsAdapter` 经完整的 `RuntimeItemRegistered/RuntimeItemUnregistered` 链管理 `WrappedRigidbody2DAdapter`；禁止恢复逐 Item 的接缝 Collider Proxy 或为镜像对象新增 `Update/FixedUpdate`。
-- 世界 Item 的 `ItemData.transform.position`、存档与空间索引使用规范逻辑坐标；`Transform/Rigidbody2D` 可以位于当前客户端的局部世界镜像。玩家跨周时只在事件边界由 `ItemMgr.ReprojectRuntimeItemsToLocalAnchor` 批量重选镜像，连续运动期间不得逐帧把表现坐标强制归一化。
-- Physics2D 命中统一通过 `GameplayPhysics2D.ResolveComponent<T>` 解析源对象；通用 `ColliderSource2D` 标记不依赖 Item，Item 根下兄弟模块的查找仅留在 Gameplay 解析入口，不能把镜像识别成独立物品或库存对象。
+## 调度与空间
 
-## 验证
+- 覆写 `ModUpdate` 的模块显式选择 EveryFrame/FixedInterval/Disabled；启停、结构、配置、池复用使调度失效，事件能力状态切换用 `MarkModuleScheduleDirty`。投掷伤害可用 `SetIdleTickSuppressed`，手持武器保持完整更新。
+- Tick 捕获注册令牌及 Item/Module 代际，回调后复核。重建保留未变模块时钟；休眠不补算。Profiler 标记为 `FlatWorld.Module.<类型名>`。
+- 距离档按同场景最近玩家及循环最短距离限制 ItemMgr Tick，不提高模块自身频率。玩家、地图、手持物保持完整更新；Owner 不代表豁免。`ItemSimulationRangeIndex` 使用近档集合、到期堆及区域判档。
+- 休眠重置时钟、停根刚体并通知 `ISimulationRangeAware`；重入先恢复原 simulated 值再重提目标。`NotifyRuntimeItemMoved` 更新空间索引与分档后发布移动事件。
+- Actor 感知几何来自当前定义；Collider Bridge 仅服务旧对象。注册/结构变化选择后端并增代际，移动只更新位置；格访问以 `LastVisitedBatch` 去重。`ItemPhysicsProjection2D` 将总重量投影成质量，将速度/接触写入非持久化 PhysicsState。
+- `ItemData.transform`、索引与存档使用规范逻辑坐标；Transform/刚体可位于客户端镜像。跨周事件通过 `ReprojectRuntimeItemsToLocalAnchor` 重投影，根刚体由 `WrappedWorldPhysicsAdapter` 管理；Physics2D 命中经 `GameplayPhysics2D.ResolveComponent<T>` 解析源对象。远程副本不进本地 Tick、感知或存档索引。
 
-- 可重复装液的容器保持同一物品身份，液体类型、份数和温度只保存在通用容器状态；有状态的落地容器使用 `worldDropBehavior=interactive`，不能拆成满桶/空桶配方或在拾取时重置内容。
-- 从世界装液由 `LiquidVesselOperations.FillFromWorld` 将 `DepthPerServing` 换算后有限抽取，保留来源温度；先成功提交世界侧再提交容器。往液面倾倒时拒绝异种液体、平台、阻挡和满格，失败不扣液；干地浇水仍走土壤水分入口，不能把水量加给岩浆格。
+## 定义、资源与状态
 
-- 单机世界掉落统一经 `DroppedItemService.Spawn/SpawnLoot`。定义的 `worldDropBehavior` 默认为 `passive`：进入普通 C# 轻量模拟器，只保留位置、数量、短期运动、水体与拾取数据；表现仅在镜头附近从对象池取一个无 Update/Collider/Rigidbody/Item/Module 的 SpriteRenderer GameObject。`interactive` 则始终保留完整 Item，继续运行受伤、死亡掉落、燃烧、水容器等世界交互模块。
-- 世界掉落物外层缩放统一为 0.5；无精确目标的静态掉落使用小幅随机位置偏移，普通掉落加入小角度随机初始旋转。自然生成的可拾取散落物即使走完整 Item 路径也必须沿用 0.5 缩放，并用稳定 GUID 生成偏移和 360° 随机旋转，避免联机或重载后漂移；调用统一掉落服务时关闭二次旋转抖动。钓鱼、玩家指向丢弃等需要精确落点的入口应显式传 `destination`，避免全局偏移改写目标。
-- 当前所有 AI（含 Zombie）恢复完整 GameObject/Item 模块主控。保留的可选 ECS AI 与静态资源共用 `WorldEntityRuntime`，但关闭 ECS AI 不影响资源 ECS；不可因共享底座再次强制迁移原生 AI。新增 ECS 领域能力不能另建 World，诊断隔离 World 例外。
-- 声明 `entityRuntime: "resource"` 的树、矿点和作物经 `NaturalEntityEcsProfileCompiler` 按模块组合编译，缺失能力必须报错，禁止按距离、联机状态或物种名回退完整 Item。`NaturalEntityEcsService` 持有同一 World 内的实体句柄；`ItemData/ModuleData` 仅用于定义与冷存档，不调用资源 Item.Load 或 Module Tick。
-- ECS 模块冷编译统一通过 `DeserializeConfiguration<T>` 以 `ObjectCreationHandling.Replace` 读取配置；显式集合必须替换构造默认集合，缺省字段仍保留默认值，禁止把成长阶段、采集提示点等追加到默认列表后再放宽校验。
-- 植物共用 `EntityGrowth/EntityClimate/AiecsVital`，带 `EntityPlantLifecycle` 的实体只由 `EntityPlantModuleSystem` 推进，普通通用能力查询必须排除它，避免成长和耐候重复结算；资源库存与周期生产分别使用 `EntityResourceStock/EntityStockProduction`。树冠的 `EntityCanopyFruitModule` 为托管组件，复用纯 C# 事件时间线，不代表所有树果结算已经 Burst 化。
-- 静态资源的配置刷新以当前定义为准，已保存树龄、冷热负担和实例生命保留；天然初始化只执行一次。历史耐候读取冻结季节历史，当前局部热源不能延伸到过去。自然物句柄包含 World 代际，过期 Chunk 回调不能命中新世界复用的整数 ID。
-- 资源实体持续维护纯数据导航、矩形接触阻挡和空间交互；玩家武器通过 `GameplayCombatBridge` 直接提交命中。区块解绑只保存释放，不触发采集或死亡；真实死亡/一次性收获才提交来源删除，天然续生和耕地作物快照分开管理。不得恢复近端 Item 接管；接触物理允许独立 Box 代理，由 Chunk 的静态碰撞容器统一管理，禁止给资源创建 Item/Module/逐实体更新回调。
-- 资源 Entity 在终端 ChunkView 解绑时直接把内部 `ItemData` 快照所有权移交给存档后释放实体；只有实体仍会继续运行的自动保存/手动快照才做 `DeepClone`。禁止在玩家跨区块触发的同步解绑链里批量深拷贝全部自然资源，避免把 GC 和克隆尖峰塞进 `Mod_Mover.FixedUpdate`。
-- 自然物 `VisualVersion` 不等于阻挡形状版本：果实、受击和外观变化仍刷新空间索引，只有 `BlocksMovement` 或 `BodyBounds` 改变才发布物理变更；移动/缩放需通知旧、新范围，World 重置先清理旧代理再消费新注册。
-- 资源 BRG 使用运行时实体 ID 与部件号分配负槽位，不能用格子或自然 GUID 覆盖树身、果实、阴影。静态自然物表现由 Dirty/Event 队列驱动，成长版本、采集、受击、树冠变化和环世界重投影才触发重提；禁止在 `Present` 中每帧全量遍历所有资源。接触阴影几何只在实体几何/绑定变化时重建，昼夜透明度走批次级材质参数。源材质缓存键必须区分机械与资源 Shader 变体；逻辑坐标进入存档，局部镜像变换只用于表现。渲染卸载必须清除全部部件。
-- 带 `Tag.Tree` 的资源主体与附属果实使用 `NaturalEntityEcsService.TreeSortingVisual` 纯视觉桥，以树根本地镜像为 `SortingGroup` 锚点，读取 `world-item` 排序键与玩家混排。不得同时保留主体 BRG 实例；太阳/接触阴影继续合批。视觉外壳只含 Transform、SortingGroup、SpriteRenderer，不恢复 Item、Module、Collider 或逐树 Update，解绑与换世界必须一并释放。
-- 资源客户端不推进权威植物 Job；客户端采集命令及资源状态增量同步仍需独立接入，不能把服务端实体迁移当成联机链已经完成，也不能回退旧 GameObject 来掩盖缺口。蜂巢、传送门等未声明资源后端的独立玩法不在植物后端中静默模拟。
-- 旧 Item 返回型扩展只有在定义为 `passive` 时才通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交；`interactive` 不得被转换，避免在 Item.Load 的模块栈内丢失玩法能力。联机仍使用已有 Item 权威链。
-- 轻量掉落与完整 Item 的浮沉数值统一读取 `WorldItemWaterRules`；达到有效阈值即下沉，液体倍率只改变浮力阈值，水线、时长和水花曲线保持同一来源。
-- 轻量掉落物的物质温度与燃烧统一由 `DroppedItemRuntime.Matter` 低频分帧推进，按每个物品自己的实际间隔补算，新增/删除同步登记/清理时钟；不能用统一批次间隔少算后处理的物品。`DroppedItems.Tick.*` 区分运动、入水、输送、物质与拾取阶段。`matter.ignitionTemperature` 是显式燃点，已有引火物、木材和燃料标签可取得默认燃点。液体浮沉的 `WaterKind` 不能代表真实水接触，潮湿/灭火必须读取液体 `waterContact`，高温液体接触传热复用 `contactHeatingPerSecond`；燃烧表现只能挂池化粒子，禁止恢复逐物品脚本或 Update。
-- 自然实体普通组件读写与 `GetBuffer` 使用 EntityManager 的组件依赖同步，不要逐实体 `CompleteAllTrackedJobs`；完整同步保留在创建、销毁和释放边界。资源输入运行器不调度 Job，不应等待整个 World；通用/植物 Job 在 `OnUpdate` 内合并本轮依赖后统一完成，不能在 `SystemBase.Update` 前写入新 Dependency，否则前置更新会提前等待。
-- 资源定义编译完整组件组合并缓存 Archetype，创建时一次配齐。结果发布按通用能力批次版本和即时脏实体队列处理，托管树冠时间线保持逐帧；外部改写本体生命、位置或外观后调用 `NaturalEntityEcsService.NotifyChanged(handle)`。
-- 自定义资源能力经 `ResourceEntityCapabilityRegistry.Register` 注册稳定模块地址，初始化/捕获/释放使用冻结定义与实例快照，运行器共用当前 World。原生组件不得覆盖本体权威；启动后加载的普通 C# MOD 状态用 `context.SetState/GetState<T>`，不能假设 Unity 已初始化的类型表会自动注册 DLL 新组件。示例见 `ModSDK/Examples/ResourceCapabilities/`。
-- 河流漂移的物品加速统一调用 `WorldItemWaterRules.ResolveDriftSpeed(kind, flow, stack)`，按 `Stack.CurrentWeight` 总重量只增加速度、不低于原速；浮沉仍用单件重量/体积比。双参数重载保留无重量基础流速供水面表现使用，不能把物品加速扩散到海流、角色或载具。
-- `Entities/DroppedItems/Core` 的旧 ECS 掉落实现保留为 Editor-only 学习参考，不参与正式游戏运行；菜单 `FlatWorld/诊断/学习参考/验证旧掉落物 ECS` 只验证这份参考实现。
+- Manifest 唯一发现内容；装配计划在 `RuntimeItemDefinition` 冷路径编译具体 Prefab、组件槽与参数。`shellPrefab` 引用通用目录，独立外壳用 `shellAddress`；`sourcePrefab` 只供编辑器与冗余排除，源资产删除后同步移除该字段。创建物品不回退同名 Prefab。
+- `ModuleJsonConfigurator` 对 Item/Actor 参数采用严格契约；向量 JSON 显式写 x/y/z，Unity Vector 的计算属性不能交给 `JToken.FromObject`。显示名 gameName 属于具体定义；业务 id、翻译键和 `formerIds` 别名各自独立。
+- `GameRes.ResourceAssets` 持有 Sprite/材质/动画/外壳句柄。Shell 使用 Sprite Pivot 排序，子装饰以根 SortingGroup 保持整体深度；材质池复用恢复配置值或外壳默认值。通用占位图为 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，标签 ItemSprite。
+- F5 `RefreshLiveConfiguration` 原位更新改变的显式参数和仍受定义控制的视觉，不替换 ItemData/模块集合或重新 Load；结构与删除参数后的默认值应用于新实例。`ApplyResourceConfiguration/OnResourcesReloaded` 保留进度并更新缓存/订阅。发布时清闲置池并禁用活跃旧实例回池。
+- 恢复先重建当前定义，再按稳定模块名合并实例状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配保留时间、次数和初始化标记。制作耐久倍率进入实例堆叠身份。
+- 物质状态在 `ItemData.MatterState`，静态相变/反应在定义 `matter/reactions`。玩法分类使用 `ItemData.Tags`；战利品通过顶层 lootTableId 引用稳定物品 ID。`IResourceYieldModifier` 在资源源头聚合，每条产出链应用一次并统一随机取整。
 
-- 检查加载→Tick→保存→Despawn→复用后无旧状态、订阅、空间索引或调度残留。
-- 生命周期/ModuleData 联动 Data Skill；网络状态联动 Networking；具体玩法只加载其领域 Skill。
+- 燃烧由 Fuel 数据、Combustion 状态、FuelInteraction 交互与 ICombustionStateReceiver 表现组合；氧气模块只管储备/缺氧并暴露 SupplyOxygen，环境/装备供给方负责真实条件与扣量。`requiredTool/minimumTier` 是采集专精加成参考，不是普通采矿资格。
 
-## Skill 维护原则
+## 世界后端
 
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- 单机掉落经 `DroppedItemService.Spawn/SpawnLoot`：passive 使用纯 C# 轻量数据和近镜头池化 Sprite；interactive 保留完整 Item。需要模块飞行效果的物品使用 interactive 与 `IDroppedItemSpawnContextReceiver`。普通世界掉落缩放 0.5，精确落点由 destination 指定；联机沿用 Item 权威链。
+- 完整 Item 的浮沉/漂流由 `WorldItemWaterSystem` 按最终位置派生，轻量掉落复用 `WorldItemWaterRules`。水体状态不入库存；轨迹结束后交回水系统，先移除 Mod_Droping 再允许拾取。河流加速按总重量，浮沉按单件重量/体积玩法比值；转换表现用 `IWaterEntryTransformEffect` 在回收前脱离源物。
+- 原生 AI 使用完整 Item。`entityRuntime: resource` 的树、矿点、作物按组合冷编译到共享 `WorldEntityRuntime`，不创建资源 Item 或运行 Module Tick；通用配置集合采用 Replace。能力扩展由 `ResourceEntityCapabilityRegistry` 注册，DLL 状态使用 context.SetState/GetState。
+- 自然实体独立维护导航、空间交互与接触几何，命中经 `GameplayCombatBridge`。植物生命周期只由 `EntityPlantModuleSystem` 推进；区块解绑保存释放，死亡/一次收获才删来源。终端解绑转交快照所有权，仍运行的快照才克隆；句柄包含 World 代际。
+- 自然资源表现按 Dirty/Event 更新，几何版本与外观版本独立；TreeSortingVisual 用根镜像 SortingGroup 与玩家混排，主体不重复 BRG。客户端不推进权威植物 Job，采集命令/增量同步有独立接入点。旧 `DroppedItems/Core` ECS 实现仅为 Editor 学习参考。

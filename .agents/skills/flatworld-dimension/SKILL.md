@@ -1,41 +1,26 @@
 ---
 name: flatworld-dimension
-description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地下矿洞切换、世界地址、动态世界 Scene、维度独立地图与种子、维度入口、维度环境覆盖或未来星球旅行。关键词：DimensionManager、WorldAddress、Mod_DimensionPortal、DimensionCatalogSO、CaveLayoutKernel。"
+description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维度生成与环境覆盖。"
 ---
 
-# FlatWorld 维度
+# 维度
 
 ## 入口
 
-- 地址/管理：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/{WorldAddress,DimensionManager}.cs`
-- 定义/入口/进度：同目录 `{DimensionCatalogSO,Mod_DimensionPortal,DimensionTravelProgressStore}.cs`
-- 正式洞穴生成：定位 `DeterministicChunkGenerator`、`CaveLayoutKernel`、`CaveGenerationFeatureGenerator`
+- `Assets/5_Scripts/5-3_GamePlay/World/Dimension/`：`WorldAddress`、`DimensionManager`、`DimensionCatalogSO`、`Mod_DimensionPortal`、`DimensionTravelProgressStore`。
+- `Assets/5_Scripts/5-0_WorldModel/Generation/`：`DeterministicChunkGenerator`、`CaveLayoutKernel`、`CaveGenerationFeatureGenerator`。
+- `Assets/StreamingAssets/GameConfig/Items/shells/dimension_portals.json`：运行时入口定义。
 
-## 不变量
+## 地址与切换
 
-- 地表 `WorldKey=PlanetId`；非地表为 `PlanetId__dimension__DimensionId`。只用 `WorldAddress` API，业务代码不拼字符串。
-- 每个 WorldKey 独立 `PlanetData/MapData/Chunk` 差量；新维度从地表继承 TopologyMode、Radius、ChunkSize，清空维度运行态。
-- 切换链必须保存当前状态、释放玩家/世界、创建动态 Scene、运行目标世界、定位锚点、等待完整活动窗口和世界收尾，再解锁输入；失败路径恢复状态。玩家 `Mod_Mover` 的序列化奔跑开关也必须在输入解锁后恢复。
-- 维度切换的 `Event_PlayerEnterWorld` 只表示玩家实例已创建，不能作为加载页完成信号；专属呈现必须等 `AreRuntimeWindowPresentationsReady`、出口/地块效果及物理同步后由 `DimensionManager` 显式完成。诊断阈值只能告警，不能放行未完成窗口。
-- 玩家位置与入口锚点保存在 `ItemSpecialData` 的 `flatworld.dimensions`，不改 MemoryPack 布局。
-- 环绕世界由额外相机绘制平移副本，但 `Light2D` 等局部空间组件不会随画面自动平移；这类表现必须为当前可见世界镜像同步轻量代理，并将纯表现代理排除出光照、AI、存档等玩法查询。
-- 洞穴只走 WorldModel 的 Profile、`DeterministicChunkGenerator`、`CaveLayoutKernel` 与 `CaveGenerationFeatureGenerator`；旧 Map 不再维护独立洞穴生成器或采样器。
-- 洞穴规则需要参考地表时，只能使用 `CavePortalPairingSnapshot` 冻结的地表 Profile、派生种子与拓扑做纯采样；禁止查询已生成或已加载的地表 Chunk、Tilemap，配对指纹必须参与洞穴生成指纹。地下湖只按同一快照复算的地表高度带和最低降水阈值决定是否形成，不保留独立随机成湖概率，也不能读取地表环境层。
-- 洞穴布局跟随地表 `world.spatialDistanceScale`；配对地表必须复制同一空间距离倍率，洞室、隧道、地下河和入口安全区等空间距离统一缩放，底层噪声坐标频率再由该倍率反算。群系交界默认只复算基础气候群系，不引入依赖区域构建结果的水文覆盖。
-- 地表入口必须是已安装 MineEntrance；CaveExit 在基线完成后创建以进入差量。
-- CaveExit 运行时定义位于 `StreamingAssets/GameConfig/Items/shells/dimension_portals.json`，复用 `BuildingBodyShell` 与维度入口模块；独立 CaveExit Prefab 只作编辑器迁移源，不得加入 Addressables。需要阻挡寻路的入口由模块参数显式注册 `WorldNavigationObstacle`，占地来自通用 Shell 的非 Trigger 碰撞体。
-- 矿洞默认抑制天气/怪物生成，`FixedLighting` 是上限。
-- 当前只支持离线切换；服务器权威迁移协议完成前不得开放联机。
+- `WorldAddress` 生成键：地表为 `PlanetId`，其他为 `PlanetId__dimension__DimensionId`；各键独享 Planet/Map/Chunk 差量。新维度继承地表拓扑、半径、ChunkSize，运行态独立。
+- 切换顺序：保存 → 退出 Ground/Liquid 接触 → 释放玩家/世界 → 动态 Scene → 目标世界/锚点 → 完整活动窗口、出口/地块效果、物理同步 → 刷新接触 → 解锁输入/恢复奔跑。失败恢复原状态。
+- `Event_PlayerEnterWorld` 只表示玩家已创建；完成信号由 `DimensionManager` 在 `AreRuntimeWindowPresentationsReady` 及收尾后发布。位置/锚点存入 `ItemSpecialData.flatworld.dimensions`。
+- 当前切换仅支持离线。矿洞默认抑制天气/怪物，`FixedLighting` 是光照上限。环绕补绘相机的局部 Light2D 使用轻量镜像代理，代理不进入玩法查询。
 
-- 地下入口开辟安全区时，替换 Ground/Blocking 后仍须显式通过 `WorldLiquidSystem.TrySet(..., 0)` 清空目标 Liquid；删除 Water 标记不能清水。维度切换准备必须退出 Ground 与 Liquid 两套接触，准备期间不重新推进地块效果，目的地完成后显式刷新。
+## 洞穴与入口
 
-## 验证
-
-- 覆盖地表键兼容、往返、位置/锚点恢复、入口唯一性、Chunk 差量、环境覆盖与失败清理。
-- 地址/生命周期联动 Core+Data；生成联动 Map；环境联动 Environment；联机限制联动 Networking。
-- 验收使用实际地表/地下往返与游戏中的状态变化；不以冒烟或静态结果代替实际验证，不打断用户明确要求保留的试玩。
-
-## Skill 维护原则
-
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- 洞穴走 WorldModel Profile；`CavePortalPairingSnapshot` 冻结地表 Profile、派生种子、拓扑和空间倍率，纯采样决定配对，指纹进入洞穴签名，不读取已加载地表。
+- 地下湖由同一快照复算地表高度带与最低降水门槛；群系交界用基础气候，洞室/隧道/河流/安全区跟随 `world.spatialDistanceScale`。
+- 地表入口是已安装 `MineEntrance`；`CaveExit` 在基线完成后创建并进入差量，复用 `BuildingBodyShell` 和入口模块。独立 CaveExit Prefab 仅为编辑器迁移源；导航阻挡由 `WorldNavigationObstacle` 参数显式登记。
+- 入口安全区分别改 Ground/Blocking，并经 `WorldLiquidSystem.TrySet(...,0)` 清 Liquid；准备期间不推进旧地块效果。

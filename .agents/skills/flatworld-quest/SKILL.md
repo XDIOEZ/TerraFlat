@@ -1,39 +1,24 @@
 ---
 name: flatworld-quest
-description: "Use when: 定位或修改 FlatWorld 的任务定义、任务目录、接取/阶段/目标/交付、统一进度信号、任务奖励、任务存档、MOD 任务或任务 UI 接口。关键词：QuestManager、PlayerQuestRuntime、QuestCatalog、QuestProgressStore、GameplayProgressEvents、flatworld.quests。"
+description: "FlatWorld 任务目录、玩家进度、玩法信号、阶段目标、原子奖励与 MOD 扩展。"
 ---
 
 # FlatWorld 任务
 
-## 入口
+## 入口与数据流
 
-- 定义/目录：`Assets/5_Scripts/5-3_GamePlay/Core/Quests/{QuestDefinitions,QuestCatalog,QuestCatalogLoader}.cs`
-- 运行时/扩展：同目录 `{PlayerQuestRuntime,QuestManager,QuestExtensions}.cs`
-- 信号/存档：`Core/Progress/{GameplayProgressEvents,ItemSpecialDataJsonStore}.cs`、`Core/Quests/QuestProgressStore.cs`
-- 内容：`Assets/StreamingAssets/GameConfig/Quests/quest-manifest.json`
+`Assets/5_Scripts/5-3_GamePlay/Core/`：
 
-## 权威链
+- `Quests/`：`QuestDefinitions`、`QuestCatalog/QuestCatalogLoader` 定义与目录，`PlayerQuestRuntime/QuestManager` 运行时，`QuestExtensions` 扩展，`QuestProgressStore` 保存。
+- `Progress/`：`GameplayProgressEvents` 成功事务信号，`ItemSpecialDataJsonStore` 命名空间数据。
+- 本体内容：`Assets/StreamingAssets/GameConfig/Quests/quest-manifest.json`。
 
-`本体 JSON → Catalog → MOD quests → Finalize → 本地玩家入世创建 Runtime → GameplayProgressEvents → 目标/阶段 → 原子奖励 → flatworld.quests`
+`本体 JSON + MOD quests → Catalog Finalize → 本地玩家 Runtime → GameplayProgressEvents → 目标/阶段 → QuestRewardPlan → flatworld.quests`
 
-## 不变量
+## 契约
 
-- 本体 ID 用 `flatworld:`，MOD 用 `modId:`；阶段、目标、奖励 ID 在各自作用域唯一。
-- `debugOnly` 永不自动接取。改变现有语义时递增 `definitionVersion`；已完成记录不重复奖励。
-- 新类型实现并注册 Handler，在 Catalog Finalize 时严格校验；不要在 `PlayerQuestRuntime` 写玩法名称分支。
-- 信号只在玩法事务最终成功后发布，Actor 为实际本地玩家，Amount>0；监听异常不回滚已完成玩法。
-- 奖励先准备 `QuestRewardPlan`，物品在同一库存快照中全部可放才提交；满包保持 ReadyToClaim，不部分发放。
-- 进度使用 `ItemSpecialData` 的 `flatworld.quests`，保留未知任务/字段；未来版本禁用运行时并停止写回。
-- 远程玩家不创建本地任务 Runtime；UI 只读 Snapshot 并订阅 QuestChanged，不持有可写记录。
-- 任务运行时独立于显示层；后续玩家任务与教程的阅读入口放在书籍物品，不恢复常驻任务追踪 HUD。书籍若展示动态任务进度，仍只读 Snapshot 与 QuestChanged。
-- 玩家入世事件可能与资源热重载交错；目录、`GameRes` 和 MOD 尚未共同 Ready 时，本地玩家 Runtime 必须排队，并在最终内容快照就绪后补启动，不能把竞态当永久失败。
-
-## 联动与验证
-
-- 存档→Data；物品奖励→Inventory；入世/加载顺序→Core；MOD 内容→Modding；UI 文本→UI+Localization；真实玩法→对应领域 Skill。
-- 验收统一进入真实 Play Mode，实际完成接取、推进、交付、奖励与必要的保存重进；编译与 Console 只作为辅助诊断，不再维护专项 Test Runner 用例。
-
-## Skill 维护原则
-
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- 本体 ID 使用 `flatworld:`，MOD 使用 `modId:`；阶段/目标/奖励 ID 在各自作用域唯一。`debugOnly` 不自动接取，`definitionVersion` 标识语义版本，已完成记录不重复奖励。
+- 类型通过 Handler 注册并在 Finalize 校验；信号 Actor 为实际本地玩家、Amount>0，仅在玩法事务成功后发布，监听异常不回滚玩法。
+- 奖励在同一库存快照中全部可放才原子提交；满包保留 ReadyToClaim。进度存于 `ItemSpecialData.flatworld.quests`，保持其它命名空间；未知任务/字段保留，高于支持版本时停止运行与写回。
+- 远程副本不建本地 Runtime；目录、GameRes、MOD 共同 Ready 前入世请求排队，最终内容就绪后补启动。
+- 阅读入口为书籍物品；显示层只读 Snapshot、订阅 QuestChanged，独立于可写运行态。

@@ -1,88 +1,60 @@
 ---
 name: flatworld-machines
-description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、熔炉、箱子、堆肥、晾架、落地便携加工设施、机械/电力网络、机器交互/存档及 Harmony MOD 入口。关键词：MachineWorld、MachineEntity、MachineLogic、MechanicalNetworkGraph、ElectricalNetworkGraph、RecipeProcessor、FurnaceLogic。"
+description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流体网络、交互表现及扩展接口。"
 ---
 
-# FlatWorld 机器与工作方块
+# 机器与工作设施
 
-## 入口
+## 代码入口
 
-- 权威实体和粗粒度领域逻辑：`Assets/5_Scripts/5-3_GamePlay/World/Machines/`。
-- 调度/存档：`MachineWorld.cs`；无端口设施/命令/鼓风：`MachineWorld.Facilities.cs`。
-- 电力：`ElectricalNetwork.cs` 负责电网拓扑与整网功率解算，`MachineWorld.Electrical.cs` 负责机械↔电力桥和扩展 Provider；不要再建第二套 ElectricalWorld。
-- 工作台、熔炉、储物、堆肥、晾架、手动加工、手钻、取火、石臼、水容器各有 `MachineLogic`，机械扭矩仍由 `MechanicalNetworkGraph` 解算。
-- 表现：`ChunkTilemapRenderer.Mechanical.cs`、`ChunkDepthMeshRenderer*.cs`、`MechanicalDepthVisual*.cs`；面板：`MachinePanelSession`、`MechanicalPanelSession`、`VesselMachinePanelSession`。
-- 网络：`NetworkItemStateCoordinator.Machines.cs`；库存入口：`MachineInventoryCommands`。
-- 代码 MOD：`ModRuntimeManager.Managed.cs`、`ModManagedAssemblyStore.cs`；作者示例：`ModSDK/Examples/HarmonyMachines/`。
+以 `Assets/5_Scripts/5-3_GamePlay/` 为根：
 
-## 约束
+| 目录 | 入口与职责 |
+| --- | --- |
+| `World/Machines/` | MachineWorld*、MachineEntity、MachineLogic：唯一权威机器世界 |
+| 同上 | MechanicalNetworkGraph、ElectricalNetwork、MachineWorld.Fluid*：三套独立拓扑 |
+| 同上 | RecipeProcessor、FurnaceLogic、FluidDeviceOperations、MachineInventoryCommands：业务与事务 |
+| `Presentation/UI/` | MachinePanelSession、MechanicalPanelSession、VesselMachinePanelSession：命令/读数 |
+| `Extensibility/Mods/` | ModRuntimeManager.Managed、ModManagedAssemblyStore：C# 扩展 |
 
-- 移动船体使用 `MachineWorld.UseScope("ship:" + ShipId)` 和 `TickShip`，不得让当前地表切换重建或冻结船上网络；表现位置由 SpaceSession.ProjectMachinePosition 投影，本地 Cell 保持不变。
-- 共享罐跨船转移、分裂或回收前，先按各真实罐体容积分配 decimal 组分和内能，并归还各端口预留；撤销旧共享引用和流量预算，再重建两侧网络。不能将整组气体复制到单罐快照。
-- 培育仓由 CultivatorLogic 管理多个独立作物进度、真实水库存、供电、肥料及待收产量；配置来自 Mod_Cultivator 和 `space_devices.json`，面板只发正式库存命令，断供与满输出保留状态。
-- 培育仓机身只画空土槽，植株用作物定义的 seedling/growing/mature 图独立显示；`CultivatorPlotPresentation` 共用槽位锚点，地面行网格与船上 Sprite 都读取真实槽位，空槽立即隐藏。循环采收作物完成首次成长后保持成熟植株；休眠/客户端只读快照，不为显示创建逻辑或库存。气液机身分支也须提交内容图层，内容部件 ID 避开其管口与仪表。
-- 船上流体设备通过环境提供方读取真实舱室温压和气体库存，进气抽取实际舱气；不可拿当前 TemperatureMgr 或星球大气替代另一世界船舱。
+表现入口为 `ChunkTilemapRenderer.Mechanical`、`ChunkDepthMeshRenderer*`、`MechanicalDepthVisual*`；网络入口为 `NetworkItemStateCoordinator.Machines`。目录配置在 `Resources/Config/Mechanical/mechanical-catalog.json`，示例在 `ModSDK/Examples/HarmonyMachines/`。
 
-- 只维护一套 `MachineWorld`，不新建并列的 WorkBlockWorld；普通设施 `Ports=none` 共用格索引，但不能伪造扭矩网络。传动网络和设施业务都保持粗粒度内聚。
-- 机械网与电网是同一批 `MachineEntity` 上的两张独立拓扑图；电线使用独立覆盖层。`Electrical.Connection=cell` 接同格线，方向名接旋转后的邻格；双向电机 `Role=converter` 的电气接口和唯一 `AxlePorts` 必须分开，默认左线右轴，不要求世界布线区分正负极。
-- 双向电机每轮先排除电驱动力探测机械输入，再从独立电源向外确定方向；机械输入优先，转换链的上游电网不能成为发电回流目标。电池探算不写储能，正式结算每轮一次；输出按实际功率预算限制，电驱扭矩向下取整，不能将上一轮输出或四舍五入增量当作新能量。转换效率与游戏功率换算统一取目录配置。
-- 电线 `visual.spriteStates` 使用 `wire0..wire15`，连接位为北1、东2、南4、西8；朝向只读取权威电线格与方向端口索引，同格设备不产生额外支路。邻格增删须刷新跨区块/循环边界的连接形状，连接未变化不重提网格，不能按召唤器旋转或每帧轮询选图。
-- 普通 `Fluid.Kind=pipe` 与电线共用 `IsConnectionLine` 分类和机械主体下方的连接层，管道用 `pipe0..pipe15` 且不手动旋转。掩码由正式流体图边两端缓存，遵守端口朝向、输入输出、相位和启停，不读取流量或出口路由；方向编号东0北1西2南3需换算为北1东2南4西8。管层阀门/出气口仍是设备，不能把所有 Layer=2 都当普通管线。
-- 地表邻管沿 `CellChanged` 刷新；船上不发地表格事件，须在船作用域消费节点状态/删除事件，并清理会话订阅。两个世界共用 `GetFluidPipeConnectionMask(node)`，禁止拿当前地表索引绘制另一条船的管线。
-- 混合电力/机械设备的接口属于独立表现层：机械轴口由 `MachineDefinition.AxisPortVisual` 配置 `Count=1/2`、`StartX`、`Y`，统一复用 `Shaft_Wood/axisPort` 标准贴图并始终绘制在机械主体下层；单端保留 `StartX` 正负决定左右，双端按 `±abs(StartX)` 镜像。电线口仍用 `electricalPort + ElectricalPortLocalPosition`；机身、召唤器与库存图标不得烘入机械连接杆、轴口、铁环或外部流体连接短管/法兰；流体管道的接入和离开同样由程序化表现层负责，贴图只绘制完整设备主体。
-- 电网首版按整网功率求解：W 表示功率、J 表示储能；电压参与兼容性，电流由 `P/V` 推导，电阻只保留正式数据接口，未实现逐段压降/基尔霍夫仿真。
-- 电池面板由交互入口显式启用 `MechanicalPanelSession` 的 0.2 秒非缩放状态刷新：打开立即读数，关闭/销毁停协程，仅更新有变化的状态文本，不轮询库存或重排布局；其他面板默认仍走事件。储能读取节点当前 `ElectricalStoredJoules`，未接电网也要显示，不依赖加工 Tick、不在 UI 累加或预测电量。
-- 召唤器、玩家库存和手持玩法保留 Item；落地设施走 `Place/SpawnGenerated/RestoreMachine`，`ItemMgr` 拒绝再实例化其完整 Item。`Mod_MachineAuthoring` 只保存配置，禁止重新启用其 Load/Tick 做运行时兜底。
-- 模拟不依赖 ChunkView。网络整体先恢复再 Tick、先快照再休眠；无端口设施独立按玩家窗口休眠。显示卸载不能删除实体或撤销已保存库存。
-- 业务时间使用传入的世界时间；有界补算保留剩余时间。手摇倒计时在领域逻辑分派前推进，定制领域逻辑不能绕过动力耗时。
-- 工作台配方与进度属于 `RecipeProcessor`，面板只发命令；输入/输出预检与结算复用 `CraftingService`。只提供通用加工方式的设备使用 `MachineDefinition.ProcessCapability`：石磨提供 `grind`、锯木机提供 `cut`、织布机提供 `weave`（纺织），具体输入、产物和工作量读取物品自己的 `ItemDefinition.processing`，禁止再在 `mechanical-catalog.Processes` 为每种可加工物复制设备专用配方。扩展棉花、蚕丝或新纤维的纺织结果时，只在原料定义声明 `processing.weave`，不要在机器侧按原料 ID 或 Fiber 标签推断产物。需要加工尺度约束时，设备用 `ProcessCapabilityLevel` 提供单一等级，目标物品用 `processing.<capability>.minLevel/maxLevel` 声明可接受闭区间；等级过低或过高都不匹配。尚未迁移为物品能力的手钻、锻造等专用转换继续使用现有 `MachineProcessDefinition`。炉温、燃料、点火、副产物仍内聚在 `FurnaceLogic`，不要用“温度直接乘秒”替代实际热加工规则。
-- 热加工同样遵循“设备给条件、材料定义结果”：晾架只提高空气暴露并读取 `TemperatureMgr` 的实际环境温度；炉体与坩埚优先解析物品 `reactions`，反应温度判断使用参与材料自身的 `MatterState.TemperatureCelsius`，不能把炉温直接当作材料温度。
-- 钻木器手持/落地共用 `MaterialHeatingProcessor`，只配置热源上限与每次供热量；温度存于输入材料 `MatterState`，不存点击进度、固定产物或火绒白名单。单物料受热结果读取材料 `matter.transitions`，达到条件后经库存事务转入输出槽；新材料从实际环境温度初始化，禁止初始化成热源温度或冷却原本更热的材料。堆叠共用温度且平分单次供热，整槽转化必须先检查输出容量。
-- 炉体先用 `Combustion.Fuel` Tag 判断物品是否允许作为燃料，再走 `Mod_Fuel.TryResolveItemData` 读取数值；冷 `ItemData` 先读保存态 BitData，缺失时回退当前物品定义的 `parameters.Data`。Tag 负责语义资格，FuelData 负责燃值与最高温度。
-- 机械运行态 `Rpm/SourceRpm/SpeedRatio` 带符号：世界 XY 平面正值为正转（逆时针）、负值为反转（顺时针）、零为停止；`RotationDirection` 从 RPM 派生，不另存或另同步方向。配置 `Rpm/ManualDriveRpm` 仍是正数大小，内建动力源读取 `SourceRotationDirection=1/-1`，RPM Provider 直接返回最终有符号转速。
-- 轴、离合器、跨轴器与齿轮轴口保持转向，齿轮齿牙啮合及穿过齿轮箱翻转转向；多动力源核对抵达自身后的有符号转速，闭环转向不一致必须整网停转。放置朝向、输入端与坐标奇偶不能代替转向；坐标奇偶只保留齿牙初相位，箱内动画复用 `GetGearboxRpm`。
-- 工作效率、风箱与发电功率只读取 `SpeedRpm`（RPM 绝对值），扭矩仍为非负供给门槛；反转不能变成零效率、负功率或倒扣加工进度。联机沿用有符号 RPM 增量，方向翻转和停转即使低于速度阈值也必须刷新相位并同步；风箱通过 `Airflow` 输入影响炉体，炉体不遍历网络拓扑。
-- 机器库存只能由权威端修改。拖放、快捷转移、排序/整理都走正式命令和现有库存事务；服务端校验玩家归属、距离与物品身份。客户端快照先校验候选，再更新同格 ItemSlot 的内容；保留库存和槽位身份、本地 UI 布局，并同步禁止放入状态，不能因定期同步使拖拽来源失效。
-- 每名玩家独占、跨多个箱体共享的库存用 `MachineInventoryCommands.RegisterPrivateInventory` 注册角色与机器双键解析；不要放进公开的 `MachineLogic.Inventories` 或箱体快照。服务端用现有搬运/整理事务，私有库存只回给发起交互的连接；公共角色状态与联机全量存档快照也要剔除已注册的私有键。
-- 放置提交失败不得消费召唤器；拆回先捕获全部状态、成功生成返还物再删除。便携设施继续按 SharedModuleIds 迁移同一状态，不能另存手持/落地两份进度。
-- 砧台等重型手动加工设施的召唤器默认走放置，`RequiresPlacementRequest=false`；`Mod_ManualProcessor` 只保存和转移载体加工状态，不订阅手持使用动作，交互和加工必须检查已安装建筑。地面掉落的 Summoner 仍是待放置物，不能冒充已安装设施；手钻等便携工具继续使用独立模块。
-- 箱子首次创建须接收当前配置/结构生成载荷中的库存及 InventoryInitName，后续只恢复 MachineStorageState；随机空结果也视为初始化完成，休眠、读档、F5 都不能重抽战利品。
-- 机器最大生命按当前定义 MaxHp 与快照 CraftedDurabilityMultiplier 共用 CraftedDurabilityQuality 换算；只在未初始化时赋当前生命，读档/唤醒不得重复叠乘已有受损生命。受损表现阈值同样使用实例最大生命。
-- 全部落地机器通过 `MachineCombatBridge` 消费真实武器窗口：目录必须校验有限正生命与启用的独立受击 Trigger，不能静默跳过关闭的 `health.collider`。候选格范围由当前全部节点的受击外延缓存派生，拓扑或资源变化后重建；偏移、朝向与转换器镜像和物理投影共用同一形状。提交耐久/拆除后必须调用 `PublishExternalDamage` 回传实际生命损失，防御抵消仍回传有效 0，不能只扣内部 HP 而漏掉武器命中反馈。
-- `MachineArchive` 使用现有外层 `MechanicalNetworks` 载荷；保留缺失 MOD 的冷快照，避免卸载显示或暂缺资源导致存档丢失。不建立旧运行架构兼容层。
-- 新增设施必须通过资源目录预检：稳定身份、主领域工厂、必要库存/燃料配置与正式面板。预检不创建 MachineLogic、面板或世界节点，不污染 F5 候选会话。
-- 工业气液共用 `MachineWorld.Fluid*.cs` 的固定步长和库存预算；管层为 2，机械/电子测压层为 4/5。输送方向来自真实输入与独立出气口，不按压差自然流动；新料不能同轮穿过无限管格，测压探针必须切断真实动力边。
-- 流体设备差异由 `MachineLogicRegistry.RegisterFluidDevice` 登记 `FluidDeviceBehavior`，具体事务放在 `FluidDeviceOperations`；Kind 只作策略键，调度、构图和动力层读取策略能力。持有并释放注册租约，替换策略必须让拓扑和能力缓存失效。
-- 周围电加热由独立 `ElectricHeaterLogic` 消费电网实际 `ElectricalSuppliedWatts`，向现有局部温度场发布按供电比例缩放的热源；不挂气液腔体或伪造管口，断电、休眠、拆除和远端停机快照都撤销来源。
-- 炉体只接收 `ICombustionSupportReceiver` 请求；供给侧实现 `ICombustionSupportSource` 并随领域实例生灭登记/注销。氧气助燃由具备环境排放能力的真实出气口提供，须朝向相邻炉体并走原气包预留、冻结库存与吞吐预算，已助燃的氧气不重复排入大气；供氧与机械风箱的温度加成只取最大值，不相加。先扣真实供给，再完成一次请求，同时扣本轮库存预算；相邻液体容器按 `IContainerPortProvider/ILiquidTransferPort` 发现，不能要求具体 `VesselLogic`。
-- 接口发现的工业管网成员必须继续走正式图边，不能用普通容器事务直抽，也不能回退抽地表；否则会绕过冻结库存与吞吐预算，让新液体同轮穿透多段。
-- 同材组合罐只由稳定主成员保存共享库存、随机种子和各口预留，其余块引用主身份；成员变化同步主快照。超压固定本轮受损成员，破裂沿 `PressureExplosionQueue` 的有限预算结算，清空队列后才解锁重建。
-- 气罐方块每格一体积单元，外观连接与库存分组共用四邻同材成员关系；拆除仅释放该格的真实库存份额并返还空方块，气相进入所在环境，液相走持久化地面溢流。便携气罐继续保存内容，不能套用方块拆除规则。
-- 机械图形代理不保存 HP、库存、炉温等权威数据；主体和运动部件合入所属区块的 Y 行网格，轻量 `MechanicalDepthVisual` 只负责交互与灯光，阴影继续走 BRG。
-- 传动轴、齿轮输入短轴和标准 `axisPort` 连接件统一走 `MechanicalShaft` 下层合批，固定压在机械主体下面；它们不再因为所在格的 Y 行跑到相邻机械主体上方。
-- 带 `Mod_Fuel` 的燃烧工作方块，其运行时灯光只跟随 `MachineLogic.IsBurning` 与燃料余量，不依赖加工进度；`MechanicalDepthVisual` 统一使用火把的橙红 Light2D 颜色，没有专用 `Mod_LightSource`/Light2D 模板时再补默认强度与范围。
-- 普通设施本体的 `visual.rendererLocalPosition` 要同时用于放置预览、落地 Sprite 和阴影落点；格心仍是建造与动态排序锚点，不要用图片偏移改动权威占格。
-- 工作设施库存/加工面板保持非模态，不主动获取玩法输入锁；交互发送器会在锁定时取消当前目标，面板自行加锁会形成“刚打开就关闭”的循环。距离失效、切换目标和关闭按钮继续走原清理链。
-- `MechanicalPanelSession` 的机器节点构造入口必须显式关闭玩法输入锁；面板按钮和定时读数在回调时用 `MachineWorld.UseNodeScope` 进入所属作用域，不能沿用按键调用栈或当前地表作用域。
-- 火堆与高炉/熔炉统一视为可交互炉类机械：`Mod_Furnace -> FurnaceLogic -> MachineWorld`；火堆是 `Ports=none` 的普通设施，不另建火堆专用交互运行时。炉体面板的输入/输出/燃料槽数量与命名必须和库存模板一致。
-- dynamicY 视觉用 `SpatialInteractionRegistry.Register` 绑定 `MachineWorld.GetOrCreateInteractionTarget` 返回的同一数据目标，光标命中按实际图层范围，描边由 `IWorldInteractionPreview` 通知现有视觉；停用/卸载须注销和清理描边，不为预览逐帧查询机械图，也不把库存或面板搬回视觉代理。
+## 实体与业务
 
-- 水电解器仅一个液体输入口和一个混合气体输出口；各气体组分写入同一输出腔，按现有气包规则从共用出口抽取，不另造混合气身份。水源逐项声明：淡水产氢氧，盐水/海水产氢氯及碱液。`LiquidResidueFluidId/Chamber` 声明副产物液腔，手持容器沿 `ILiquidTransferPort` 原子事务取液并保留小数尾量，不新增管道口、不转成库存物品；残渣槽仅收固体杂质。
-- 氢能发动机使用两个独立气体输入管道和一个回收水输出管道；氢气口限定 core:hydrogen 并写入 main 腔，氧气口限定 core:oxygen 并写入 oxygen 腔，按 2:1 摩尔比例消费真实库存。机械轴口独立保留，动力仍按有效负载结算；缺氢、缺氧或回收水无空间时停止消费，不把其他气体当燃料。
+- 召唤器/手持保留 Item，落地设施经 Place/SpawnGenerated/RestoreMachine 创建数据节点；Mod_MachineAuthoring 保存配置，不驱动落地 Load/Tick。普通 Ports=none 设施共用格索引，不产生扭矩网络。
+- 模拟不依赖 ChunkView，网络整体恢复后才 Tick，快照后才休眠；无端口设施按玩家窗口休眠。世界时间由调用方传入，有界补算保留余量，手摇倒计时先于领域分派。
+- 移动船使用 `UseScope("ship:"+ShipId)/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。面板/延迟回调通过 UseNodeScope 进入节点所在作用域。
+- 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
+- FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
+- CultivatorLogic 保存每槽作物、水、肥、电力和待收产量；断供/满输出保留状态。显示读取真实种植槽，空槽隐藏，不为客户端或休眠显示创建业务逻辑。
+- 初始化库存/战利品只执行一次，随机空结果也算完成。最大生命由当前定义及 CraftedDurabilityMultiplier 派生，受损生命不重复叠乘；MachineCombatBridge 消费真实武器窗口并 PublishExternalDamage 回传实际损失。
+- 放置失败不扣召唤器；拆回捕获全状态、成功生成返还物再移除。MachineArchive 持有独立归档，缺失 MOD 定义保留冷快照，显示卸载不删节点或库存。
+- 权威库存命令校验玩家归属、距离、身份。客户端更新同格槽内容并保留槽/库存对象和本地布局。私有跨箱库存用 RegisterPrivateInventory 注册玩家/机器双键，不进入公开库存、箱快照或公共角色同步。
 
-## MOD
+## 机械与电力
 
-- `MechanicalShaft` 必须排在地表效果之上、`Player` 主体层之下，并加入太阳光和局部光的受光列表；新增排序层不能只改渲染器而漏掉 Global Light 的序列化范围。
-- 输送带的 `ConveyorPath` 默认从相邻带格派生，互选带端连通运输与动力，余下两边为供能轴口；面板通过 `conveyor.orientation` 命令切换 `MachineState.ConveyorMode`（0 自动、1~12 固定直线/拐角输入输出），冷节点同步该值，自动方向传播必须从手动段优先开始且不得覆盖手动段。运输、玩家推动与安装显示共用该路径，不能只旋转图像；带面模式 6/7 按实际输送距离连续积分，GPU 只滚动中间带条。
-- 地面输送用 `MachineDefinition.Transport` 声明额定速度和带宽，读取节点有符号 RPM；普通掉落由 `DroppedItemRuntime` 维护局部输送候选与空间索引，完整 Item 走 `DroppedItemService.TransportItemBacked`。跨带每轮只搬一次，移动后同步拾取、地形订阅、存档和联机位置，不改库存数量、不扫描全场景。
-- 传送带末端向邻接输入端口调用 `ContainerTransferService`，仅按成功的实际数量扣除地面物品；拒收或满箱时保留原位置和数量。
+- RPM/SourceRpm/SpeedRatio 有符号：正逆时针、负顺时针；方向由 RPM 派生，效率与功率读绝对值 SpeedRpm。轴、离合器、跨轴器保持方向，齿牙啮合/齿轮箱翻转；闭环转向不一致整网停转。
+- 动力源分别提供扭矩与 RPM；同速有效源累加扭矩，异速冲突停转。用力器是输入终点，不转送扭矩，按最近可达源距离分配固定 TorqueLoad，同距按稳定 ID；不足完整需求才停该用力器。传动件不限制通过量，TorqueCapacity 不参与求解。
+- 效率为 SpeedRpm/RequiredRpm，不封顶。齿轮箱按局部输入侧换算：左大轮输入 RPM×2/扭矩×0.5，右小轮反向；负载按侧倍率折算。水车由真实水流和半径算 RPM，供给强度由基础扭矩决定。
+- CrossShaft 占 Layer1，要求同格 Layer0 下穿节点，但 A/B 只接相邻 Layer0，不把同格节点接入上层网。手持朝向是临时状态，世界端口/预览/动画共用 RotationQuarterTurns。
+- 手推设备声明 ManualDriveTorque/Rpm/SecondsPerPress；CanManualDrive 先排除手推检查整网外源，外源存在则禁手推。加工器仍按节点最终 RPM 工作。风箱朝向相邻炉体，通过 Airflow 提交，20 RPM 对应最多 500℃上限增量。
+- 电网与机械网共用节点但拓扑独立；线为独立覆盖层，cell 接同格，方向接旋转后的邻格。W=功率、J=储能，电压负责兼容、电流=P/V；当前无逐段压降求解。
+- converter 先排除电驱动力探测机械输入，从独立电源确定转换方向；机械输入优先，上游电网不作回流目标。电池探算不写能量，正式每轮结算一次；电驱扭矩向下取整，输出受真实功率预算限制。
+- 电线 wire0..15、管线 pipe0..15 共用北1/东2/南4/西8掩码。电线读权威线格/方向口；管线读正式图边，端口相位/方向/启停参与掩码，流量不参与。地表格事件与船作用域事件分别刷新连接，两个世界使用各自节点索引。
 
-- 关键规则保留普通托管、具名、禁止内联的入口；`link.xml` 保留推荐补丁类型。注册整类逻辑用 `MachineLogicRegistry.Register` 返回租约；多个 MOD 覆盖必须允许乱序卸载，不能恢复已经释放的工厂。
-- C# MOD 只从 managed 清单声明的程序集加载，先核对用户授权的代码指纹；不自动信任包，不把 DLL 当沙箱。未声明可执行文件仍拒绝加载。
-- `Initialize` 注册扩展，`ContentReady` 使用正式内容，`Dispose` 只撤销本 MOD 补丁和租约。世界切换不清除资源会话级注册；资源结束须释放配置模板缓存。
-- 当前支持目标是桌面 Mono。IL2CPP 加载器明确拒绝托管 DLL，不擅自修改 Android 后端；不要承诺 Unity 原生/Burst 代码能按普通 Harmony IL 补丁处理。
+## 工业气液
 
-## 检查
+- 固定步长冻结库存与吞吐预算；方向由端口输入/输出决定，不按压差自然输送，新料不在同轮穿透无限管格。管层2、机械/电子测压层4/5；测压探针切断真实动力边。
+- FluidDeviceBehavior 经 RegisterFluidDevice 注册能力策略，具体事务在 FluidDeviceOperations；注册租约管理生灭，策略变更使拓扑/能力缓存失效。管网成员始终走正式图边，普通容器仅通过 IContainerPortProvider/ILiquidTransferPort 转移。
+- 同材组合罐主成员保存共享 decimal 组分、内能、随机态与端口预留，其余引用主身份。拆分/跨船/回收先按真实容积分配并归还预留，再撤共享引用/预算和重建网络；超压固定受损成员，经 PressureExplosionQueue 有界处理。
+- 气罐方块拆除只释放该格真实份额、返空方块：气相入所在环境，液相持久化溢流；便携罐继续保存内容。船上环境 Provider 读取真实舱温压/舱气，不借当前地表。
+- 炉体接收 ICombustionSupportReceiver，供给侧 ICombustionSupportSource 随领域实例注册；氧气助燃只消费朝向邻炉的真实出气口预留和库存预算，已助燃气不再排环境，供氧/风箱加温取最大值。
+- 电加热器只按实际 ElectricalSuppliedWatts 发布局部热源；断电、休眠、拆除撤来源。电解器一个液入/一个混气出口，液副产物用液腔与转液接口；氢能发动机双气输入按真实 H₂:O₂=2:1 mol 消耗，回收水无空间或缺气时停耗。
 
-- 编辑模式 `FlatWorld/诊断/验证机器世界契约` 检查注册注销、库存快照、加工余量、分组、持久化与托管入口，不安装 MOD、不读写真实存档。
-- 内容入口为 `FlatWorld/内容配置/校验全部本体内容`；编译和纯逻辑检查不等于放置/加工/读档/联机的真实游戏验收。
+## 表现与扩展
+
+- 主体/运动部件按脚点 Y 行合批，MechanicalDepthVisual 只负责交互/灯光，HP/库存不在代理。MechanicalShaft 连接层在机械主体下方；端口、铁环、连接短管由独立层生成，主体贴图只画设备本体。
+- Pivot/Renderer 局部变换供预览、落地与阴影共用，逻辑占格不随贴图偏移。旋转/往复部件保持同画布/PPU/Pivot，变速先积旧相位再改角速度；太阳/接触阴影独立 BRG 管理。交互目标经 SpatialInteractionRegistry 注册同一数据目标。
+- 机器面板非模态；电池读数使用 0.2 秒非缩放刷新且仅改变化文本，关闭停止。灯光跟随真实燃烧/燃料，不跟加工进度。
+- ConveyorPath 同时决定运输/推动/显示；ConveyorMode 0自动、1~12手动，自动传播优先手动段。DroppedItemRuntime/TransportItemBacked 按局部索引每轮搬一次，末端经 ContainerTransferService 按成功数量扣地面物。
+- MachineLogicRegistry 返回可乱序释放租约，关键托管入口由 link.xml 保留。C# MOD 当前仅桌面 Mono，已启用 MOD 启动加载，程序集仍须清单声明；Initialize 注册、ContentReady 用内容、Dispose 撤本 MOD 资源，IL2CPP 拒绝托管 DLL。

@@ -1,45 +1,23 @@
 ---
 name: flatworld-localization
-description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Localization、Locale 切换、String Table、UI 文本、物品名称/说明、翻译资源或语言持久化。关键词：FlatWorldLocalizationService、FlatWorldLocalizationSetup、LocalizedTextBinder、FlatWorldUIAutoLocalizer、TrySetLocale、GetUiText、GetItemLabelKey。"
+description: "FlatWorld 多语言服务、文本绑定、内容/UI 字符串表、翻译源与语言设置。"
 ---
 
 # FlatWorld 本地化
 
 ## 入口
 
-- 服务：`Assets/5_Scripts/5-7_Localization/FlatWorldLocalizationService.cs`
-- 绑定：同目录 `LocalizedTextBinder.cs`
-- 编辑器同步：`Assets/Editor/FlatWorld/ProjectTools/Localization/FlatWorldLocalizationSetup.cs`
-- UI 自动绑定：`Assets/5_Scripts/5-5_UI/Core/BasePanel.cs`、`Assets/5_Scripts/5-5_UI/Common/Presentation/FlatWorldUIAutoLocalizer.cs`
-- 详细文件导航：`references/file-map.md`（只在路径不明确时读）
+- `Assets/5_Scripts/5-7_Localization/`：`FlatWorldLocalizationService.cs`、`LocalizedTextBinder.cs`。
+- 同步工具：`Assets/Editor/FlatWorld/ProjectTools/Localization/FlatWorldLocalizationSetup.cs`。
+- UI 自动绑定：`Assets/5_Scripts/5-5_UI/Core/BasePanel.cs`、`Common/Presentation/FlatWorldUIAutoLocalizer.cs`。
+- 翻译源：`Assets/Localization/ItemNames.en.json`、`Assets/Resources/Localization/ItemTagCatalog.json`；补充路径见 `references/file-map.md`。
 
-## 固定契约
+## 数据与绑定
 
-- 使用 Unity Localization 1.4.5；Locale 为 `zh-CN`/`en`，默认中文，选择存于 `FlatWorld.Localization.Locale`。
-- `FlatWorld` 表放 Item/Quest 等内容；`FlatWorldUI` 放正式 UI；角色台词预留独立 `FlatWorldDialogue`。
-- Key 必须稳定：Item 使用显式 label/description key；UI 使用 `GetUiTextKey(sourceText)`；不可用英文译文或显示名作业务 ID。
-- 物品名称分三层：`id/ItemData.IDName` 是稳定引用，定义 `gameName` 是本体默认中文名，`Assets/Localization/ItemNames.en.json` 保存按 ID 关联的英文译名；`FlatWorld` 表的名称条目由这两份源数据生成，不能直接改生成表或拆分 ID 猜译名。界面读取 `RuntimeItemDefinition.DisplayName`，绑定使用 `LabelKey` 与 `SourceDisplayName`，不读取存档里的名称缓存。
-- 物品名称同步使用正式 Manifest 和继承解析结果，在写表前校验完整的中文名、英文译名和名称键冲突；继承只复用玩法和外观，子物品不得隐式继承父级 `gameName/labelKey/descriptionKey`。
-- 跨语言物品搜索使用 `FlatWorldLocalizationService.GetInLocale` 按正式 `LabelKey` 读取指定 Locale 的 String Table；`ItemNames.en.json` 只作为编辑器同步源，不在运行时直接读取。
-- 物品 `ItemData.Tags` 只保存语言无关的稳定 ASCII ID；Tag 显示/搜索别名由 `ItemTagLocalizationCatalog` 维护，并同步为 `tag.<TagId>.name` 到 `FlatWorld` 表。背包搜索必须同时匹配 Tag ID 与所有已登记语言名称，禁止把中文/英文显示文本直接写回业务 Tag。
-- 动物食性 Tag 固定使用 `Carnivore`、`Herbivore`、`Omnivore`；旧 `Vegetarian` 不再作为正式 ID。新增或修改食性 Tag 时同步维护 `Assets/Resources/Localization/ItemTagCatalog.json` 的中英文名称。
-- 静态 Prefab 文本由 Setup 扫描并自动绑定；动态文本用 `GetUiText/GetUiFormat`，在语言事件后刷新，模板同时登记英文覆盖。
-- 动态物品名称可用 `LocalizedTextBinder` 显式绑定物品定义的 `LabelKey`；运行时静态文本扫描必须尊重已有绑定，不能根据当前显示的中文覆盖其内容表与 key。
-- 运行时若从已本地化控件克隆新的按钮/文本，克隆体会继承原 `LocalizedTextBinder` 的 key；改业务文案时必须同时 `Configure` 新 key，不能只改 `TMP_Text.text`，否则后续刷新语言或 UI 时会被旧 key 覆盖回来。
-- `GetEnglishUiText` 必须先匹配完整文本的精确覆盖，再执行关键词/子串回退；否则包含控件名的长提示会被错误翻译成单个短标签。
-- 保留中文 fallback；玩家自由输入与开发调试输出通常不进正式表。
-- 新增语言需同时配置 Locale、String Table、选择 UI、同步工具和 Addressables。
-- 语言下拉设置由 `FlatWorldLocalizationService.SettingsProvider` 暴露为 `ISettingsDropdown`；Locale 代码是稳定 `SettingOption.Id`，主菜单只按 Provider/Key 绑定，不在 `GameManager.UI` 维护另一份语言列表。
-
-## 工作流
-
-1. 判断文本属于内容、UI、对话还是调试；选目标表与稳定 key。
-2. 修改 JSON/Prefab/动态赋值点和英文覆盖。
-3. 仅物品名称变更执行 `FlatWorld/Localization/Sync Item Names`；需要全量内容和 UI 同步时执行 `FlatWorld/Localization/Setup Default Tables`，核对中英文、占位符与 Addressables。
-4. UI 文字联动 `flatworld-ui`；Item/Quest/Dialogue 只加载命中的领域 Skill。
-5. 验收统一在真实 Play Mode 中切换语言并实际打开受影响界面/内容观察刷新结果；不再使用 Test Runner 或静态校验代替运行验证。
-
-## Skill 维护原则
-
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- Unity Localization 1.4.5；Locale 为 `zh-CN/en`，默认中文，选择存于 `FlatWorld.Localization.Locale`。内容表 `FlatWorld`，正式 UI 表 `FlatWorldUI`，台词表 `FlatWorldDialogue`。
+- 业务 ID 与显示文本分离：物品 `id/ItemData.IDName` 稳定；定义 `gameName` 提供默认中文，英文源按 ID 对应。名称表由正式 Manifest 的继承解析结果和英文源生成，同步前校验中英文与键冲突；子物品独立定义 `gameName/labelKey/descriptionKey`。
+- 界面名称来自 `RuntimeItemDefinition.DisplayName`，绑定使用 `LabelKey/SourceDisplayName`；跨语言搜索通过 `GetInLocale` 读取正式表，英文 JSON 仅为编辑器源。Tag 保存稳定 ASCII ID，`ItemTagLocalizationCatalog` 提供所有语言别名及 `tag.<TagId>.name`；食性 ID 为 `Carnivore/Herbivore/Omnivore`。
+- 静态 Prefab 文本由 Setup 扫描绑定；动态文案使用 `GetUiText/GetUiFormat` 并随语言事件刷新，UI key 来自 `GetUiTextKey(sourceText)`。物品显式绑定优先于静态扫描；克隆本地化控件会继承旧 key，业务文案和 Binder 的 `Configure` 保持对应。
+- 英文 UI 翻译先匹配完整文本覆盖，再做关键词回退；中文为 fallback。玩家自由输入与开发日志独立于正式表，节点名保持绑定身份。
+- 语言选项由服务的 `SettingsProvider` 以 `ISettingsDropdown` 提供，Locale 代码为稳定 `SettingOption.Id`；语言资源由 Locale、String Table、同步工具和 Addressables 共同组成。
+- 菜单 `FlatWorld/Localization/Sync Item Names` 只同步物品名；`Setup Default Tables` 同步全部内容与 UI。

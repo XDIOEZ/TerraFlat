@@ -1,35 +1,21 @@
 ---
 name: flatworld-dialogue
-description: "Use when: 定位或修改 FlatWorld 的角色自言自语、屏幕气泡、Speech Provider、Facts、JSON 台词配置、触发条件、冷却或一次性台词存档。关键词：CharacterSoliloquyController、ConfiguredSpeechProvider、CharacterSpeechContext、ScreenSpaceSpeechBubblePresenter。"
+description: "FlatWorld 角色台词、Facts、请求调度、冷却、一次性进度与屏幕气泡。"
 ---
 
-# FlatWorld 角色对话
+# 角色对话
 
-## 入口
+代码：`Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/`。
 
-- 调度/上下文：定位 `CharacterSoliloquyController`、`CharacterSpeechContext`
-- 配置 Provider：定位 `ConfiguredSpeechProvider` 与 Facts/条件实现
-- 表现：定位 `ScreenSpaceSpeechBubblePresenter`
-- 台词配置：在 `Assets/StreamingAssets/GameConfig/` 下搜索对应 dialogue/speech manifest 或 JSON
-- Prefab：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/`
+| 入口 | 职责 |
+| --- | --- |
+| `CharacterSoliloquyController`、`CharacterSpeechContext` | 上下文、优先级、冷却与调度 |
+| `ConfiguredSpeechProvider`、Facts/条件实现 | 从配置与权威状态产出台词请求 |
+| `ScreenSpaceSpeechBubblePresenter` | 气泡显示 |
+| `SeasonSpeechContextContributor` | 比例化季节预告 Fact |
 
-## 不变量
+台词 JSON 位于 `Assets/StreamingAssets/GameConfig/`；气泡 Prefab 位于 `Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/`。
 
-- Provider 只产出请求，Presenter 只负责显示；不要把触发、冷却或存档逻辑塞入气泡 UI。
-- 只有本地 `Player.IsLocalProfile` 运行玩家语音；远程副本不调度、不写一次性进度。
-- 一次性完成标记通过共享 `ItemSpecialDataJsonStore` 命名空间保存，保留其他系统未知字段。
-- Facts 从权威状态读取；扫描普通物品时缺少可选模块应静默跳过，避免重复警告。
-- 随机候选测试使用唯一候选或固定随机状态。
-- 玩法程序集通过语义事件请求角色反馈，`FlatWorld.Dialogue` 内的独立桥接负责本地玩家筛选、本地化和 `Say`；禁止让 `GamePlay` 反向引用 Dialogue，也不要把具体玩法订阅塞入通用调度器。
-- 文本本地化联动 `flatworld-localization`；气泡层级/节点联动 UI；存档或网络身份变化联动对应 Skill。
-
-- 季节预告通过 `SeasonSpeechContextContributor` 提供比例化 Fact，由配置台词消费；`weather.isRaining` 表达既有降水过程，区分雨雪文案需额外读取 `weather.isSnowing`，不能将雪天继续描述为淋雨。即时物品失败反馈经通用事件适配到气泡，不让采集、容器业务引用 UI。
-
-## 验证
-
-- 覆盖 Fact→Provider→调度→Presenter、优先级/冷却、一次性恢复、远程副本隔离及解除订阅。
-
-## Skill 维护原则
-
-- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
-- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- 玩家台词仅由 `Player.IsLocalProfile` 调度；一次性标记存入 `ItemSpecialDataJsonStore` 命名空间并保留其他系统字段。
+- Provider 产请求，调度器管理时序，Presenter 显示。玩法语义事件由 `FlatWorld.Dialogue` 独立桥接筛选本地玩家、完成本地化并 `Say`；GamePlay 无 Dialogue 反向依赖。
+- Facts 读权威状态，可选模块缺失表示无该 Fact。`weather.isRaining` 表达降水过程，雨雪文案另读 `weather.isSnowing`；物品失败反馈也经语义事件进入气泡。

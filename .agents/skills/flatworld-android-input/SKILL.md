@@ -1,69 +1,39 @@
 ---
 name: flatworld-android-input
-description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系统。Use when: 处理触摸、多点触控、虚拟摇杆、右侧触控区指向、攻击摇杆、FlatWorldMobileDevice、Mobile 控制方案、手机 HUD、安全区、Android 返回键、移动端输入锁清理，或排查手机交互/使用误触发攻击、移动与攻击卡住、触控被 UI 吞掉、刘海遮挡等问题。关键词：FlatWorldMobileDevice、MobileInputRuntime、MobileVirtualJoystick、PlayerMobileControlsHUD、MobileAim_Player、MobileAttackAim_Player。"
+description: "FlatWorld 移动触控、虚拟输入设备、摇杆/指向/攻击、手机 HUD、多指所有权与安全区。"
 ---
 
-# FlatWorld Android 输入系统导航
+# FlatWorld Android 输入
 
-## 执行流程
+## 入口与分层
 
-1. 先读取 [运行时导航图](references/runtime-map.md)，沿“触摸控件 → 虚拟设备 → Input Actions → `Mod_GameController` → 玩法消费者”定位问题，不要从症状处复制一套输入状态。
-2. 修改前检查 `git status --short` 与目标文件 diff，保留用户已有改动；定位到明确入口后停止泛化搜索。
-3. 按职责修改最小层级：触控所有权留在控件层，设备状态留在 `MobileInputRuntime`，输入语义留在 `Mod_GameController`，具体效果留在对应玩法模块。
-4. 涉及 HUD、Prefab、安全区或 EventSystem 时同时使用 `flatworld-ui`；涉及武器攻击时使用 `flatworld-combat`；涉及快捷栏、槽位长按、丢弃、种植或工具时使用 `flatworld-inventory-crafting`；涉及建筑放置时使用 `flatworld-building`。
-5. 完成后读取 [验证导航图](references/validation-map.md)，按真实运行链验证触摸、HUD、输入锁和玩法结果；不再使用 Unity Test Runner、冒烟或静态布局校验作为验收。
+`Assets/5_Scripts/5-3_GamePlay/`：
 
-## 必须保持的不变量
+- `Player/Controller/FlatWorldMobileDevice.cs`：独立 InputDevice 与 `MobileInputRuntime` 状态；首次触控写入时按需创建。
+- 同目录 `Mod_GameController.cs/PlayerAimCursorSystem.cs`：输入语义、径向指针与最后瞄准状态。
+- `Presentation/UI/{MobileVirtualJoystick,MobileInputButton,MobileHeldItemDropSurface,PlayerMobileControlsHUD}.cs`：触点、手持丢弃、HUD。
+- 视觉：`Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab`；动作源：`Assets/PlayerInput/PlayerInputActions.inputactions`。
+- UI 支撑：`Assets/5_Scripts/5-5_UI/Input/EventSystemGuard.cs`、`Common/Controls/{SafeAreaRectController,AndroidSystemGestureInsets}.cs`。
+- 补充导航：`references/runtime-map.md`。
 
-- 保持 `FlatWorldMobileDevice` 为独立 `InputDevice`，不得继承或伪装成 `Gamepad`，否则会误启用手柄焦点导航和手柄光标模式。
-- 仅选择手机控制方案时不要提前创建 `FlatWorldMobileDevice`；由首次触控写入按需创建，避免 Unity 域重载尝试恢复虚拟设备时产生布局重建警告。
-- 只编辑 `PlayerInputActions.inputactions` 作为 Action/Binding 真相；`PlayerInputActions.cs` 是生成文件，不要手工维护。
-- 保持攻击、交互、使用三条语义分流：手机攻击只产生 `AttackStarted`/`AttackEnded`；交互复用 `E`；使用复用 `RightClick`。不得让手机攻击回落到 `LeftClick`。
-- 手机 `RightClick` 使用事件来自 HUD 按钮，`Mod_GameController` 与快捷栏消费端都不能再用 `IsPointerOverUI()` 拦截；仅 Mobile 绕过，桌面右键仍保持 UI 遮挡保护。
-- 保持普通指向只更新朝向和最后有效力度；准线每帧按玩家当前位置、最后方向和力度重算，松手后仍跟随玩家；攻击按下立即开始，未出死区时沿普通朝向，拖出死区后同步为普通朝向并持续保持，松手后仍跟随玩家移动。
-- 战斗摇杆抬起时只释放攻击输入并保留摇杆头的视觉位置；输入锁、面板、失焦和控件重置仍使用完整清理恢复摇杆中心。
-- 摇杆控件回中和设备清零只结束即时输入；`Mod_GameController` 的最后有效瞄准方向、力度及世界目标属于持续状态，不能随失焦或输入锁一起清空，否则武器和准线会被拉回玩家中心。
-- 普通指向的最终方向同时作为交互目标选择依据；交互优先命中该方向前方目标，找不到时才回退到距离排序。
-- 所有需要世界坐标的交互、放置、种植、锄地、工具和丢弃路径统一调用 `Mod_GameController.GetPointerScreenPosition()` 或 `GetMouseWorldPosition()`，不得直接新增 `Mouse.current`、`Input.mousePosition` 或 `Camera.ScreenToWorldPoint` 读取。
-- 轻点建筑放置虚影旋转时，触控层按独立 `touchId` 识别短按并避让正式按钮、攻击区；输入层用 `Mod_GameController.GetMouseWorldPosition(screenPosition)` 命中当前手持建筑的虚影，再调用建筑模块的统一旋转入口。拖动、长按、模态面板和输入锁不得触发旋转，也不能给虚影增加物理碰撞体。
-- 每个摇杆和按住型按钮独立持有自己的 `pointerId`。不得使用单个全局触摸、`Input.GetTouch(0)` 或共享“当前手指”。
-- `Inventory_Hand` 有有效物品时，`MobileVirtualJoystick` 不得取得触摸所有权；已有摇杆必须立即 `ResetOwnership`，避免拖拽丢弃期间生成浮动摇杆。
-- 快捷栏拖拽进入世界空白区后的长按检测必须复用 `ItemSlot_UI` 的独立 `pointerId` 与 EventSystem 射线；不得把其它 UI 区域当作世界落点。
-- 玩家已经拿起物品后的轻点/长按由 `MobileHeldItemDropSurface` 独立持有触点；轻点在抬起时提交单件，长按提交前结束触点，移动超限或离开触控面时只取消丢弃意图、必须继续保留该触点到抬起以驱动 `UI_Hand` 实时跟手，换物则完整取消，禁止长按后的松手重复丢弃：左右摇杆和攻击区复用该组件，中间空白区使用位于所有玩法控件下方的专用触控面；中间触控面仅在 `Inventory_Hand` 有物品时参与射线，禁止为补齐丢弃入口而扩大摇杆区域或加入常驻全屏射线层。
-- 本地玩家行囊模态打开时仍允许向面板外的世界空白区丢弃 `Inventory_Hand`：只把既有“手持物丢弃区”临时迁到常驻控制层最底部，关闭行囊后恢复玩法控制层；槽位、按钮和正式面板必须继续拥有更高射线优先级，其他模态面板不能因此开放世界丢弃。
-- 在输入锁、模态面板、暂停、失焦、后台、控件禁用、方向/尺寸变化、玩家销毁时，同时释放触摸所有权、移动、攻击按钮和攻击语义；清理必须幂等。
-- 保持 `EventSystemGuard` 的 `UIPointerBehavior.AllPointersAsIs` 与逐触点 UI 绑定；不要将多点触控合并为单指。
-- 保持右侧普通指向层位于功能按钮和攻击摇杆之后，只有空白区域能取得普通指向所有权；不要用全屏透明层遮住按钮射线。
-- 手机控制根正常游戏时必须排在同级常驻 HUD 后方，让 HUD 上的真实按钮优先接收射线；仅在没有正式模态面板时允许展开的抽屉置顶，有正式面板时控制根必须沉底，不能在响应面板 BringToFront 通知时再次抢到面板上方；快捷栏的模态拖放优先级由其独立 Canvas 维护。
-- 手机 HUD 的菜单/返回入口必须放在独立的常驻控制层，不能和移动、指向、攻击、交互、使用、奔跑一起放入玩法控制层；模态玩法面板打开时菜单仍可展开作为背包/制作等并行入口，Android 返回键或 Escape 才优先关闭最上层可取消面板。
-- 抽屉滚动列表中的面板入口必须用 `Button.onClick` 完整点击后脉冲虚拟按钮；不得绑定按下即生效的 `MobileInputButton`，否则手指开始滚动时会误打开装备、制作等面板。抽屉显隐与方向图标统一由 `SetDrawerOpen` 更新。
-- 左右摇杆捕获区统一读取 `UIUserSettings.LeftControlZoneRatio` 与 `RightControlZoneRatio`，中间剩余区域不得被透明摇杆层接管；比例改变时必须先释放已有触点再重算边界。移动摇杆的固定/浮动偏好继续由 `FloatingMoveJoystick` 持久化，移动与普通指向摇杆仅在各自区域取得触点后显示，固定攻击摇杆不受该可见性规则影响。
-- 触屏玩法控件透明度统一读取 `UIUserSettings.TouchControlsOpacityPercent`（设置页 0～100）；`PlayerMobileControlsHUD` 只把归一化 alpha 作用于玩法控制层和手机模式下挂入的快捷栏，常驻菜单/设置入口保持完全可见。透明度只能影响视觉，0% 也不得关闭射线或交互；浮动移动/普通指向摇杆自身的动态显隐继续由 `MobileVirtualJoystick` 管理并与父级 alpha 相乘。
-- 正式手机视觉以 `UI_MobileControls.prefab` 为真相并挂到 `UIManager.SafeAreaRoot`；运行时只绑定行为和现有 HUD，不拼装另一套视觉。
-- 手机快捷栏锚点必须与玩法控制层同级，不能成为玩法层子节点；模态背包只隐藏摇杆和玩法按钮，快捷栏需保持可见并提升到面板之上参与拖放。
-- Android 底部回到桌面/多任务手势属于强制系统手势区，不能靠 `setSystemGestureExclusionRects` 屏蔽；快捷栏等带上滑操作的控件必须读取 `WindowInsets` 的 `mandatorySystemGestures` 并只补齐尚未被 `Screen.safeArea` 覆盖的边距。
-- `UI_HotBar.prefab` 自带独立 Canvas；模态容器打开时仅调整手机 HUD 根节点兄弟顺序不足以保证快捷栏获得射线，必须临时启用快捷栏 Canvas 的 `overrideSorting` 并提升排序，关闭容器后恢复原始值。
-- 快捷栏槽内的选中框切换时必须重新挂到目标槽位并按槽位兄弟顺序置底；手机模态提升的是快捷栏整体 Canvas，不能用整体排序覆盖槽内物品数量文本。
-- 面板接管玩法输入必须独立于手柄导航资格：`BasePanel` 默认阻断玩法输入，快捷栏、手部库存和状态条等常驻 HUD 必须显式调用 `SetGameplayInputBlocking(false)`；不能因为某个面板未调用 `PrepareForGamepadNavigation` 就让手机摇杆继续生效。
-- 只为本地玩家在设置页手动选择 Mobile 控制方式时显示 HUD；真实触屏、键鼠或手柄输入不得自动切换控制方式。不要让远程玩家或未选择 Mobile 的实例创建手机控制层。
-- 保持键鼠、手柄与存档格式兼容；新增移动端行为不得修改桌面端原有合成语义。
-- `PlayerInputActions` 资产、`Win10` 玩法 ActionMap 与运行时 UI ActionMap 都不得设置设备组 `bindingMask`；控制偏好只决定 HUD/指针呈现，键盘、手柄和手机虚拟设备必须能并行输入。
-- 当前输入设备变化只更新指针/UI状态，不得调用 `MobileInputRuntime.ResetAll()` 或清空触摸所有权；触摸清理只能由输入锁、模态面板、生命周期和真实控件失效触发。
-- 手机方案下 Shift 等键盘修饰键只由对应玩法模块消费，不参与设备切换；真实鼠标或 Device Simulator 转发的 Touchscreen 点击才退出手柄 UI/虚拟光标模式。不得切走手机 HUD、清空触摸或继续使用旧的虚拟光标位置判断 UI 命中。
-- 双指缩放必须按两个独立 `TouchControl.touchId` 持续跟踪，仅在玩法控制层可见且未锁定时生效；两个触点都必须位于左右控制区之间的中间区域，并按双指屏幕间距变化识别捏合：分开时拉近、合拢时拉远，双指同向平移不得触发缩放，左右区域永久留给摇杆；视野变化统一调用 `Mod_Cam.ApplyPinchZoom`，禁止使用 `Input.GetTouch(0)` 或直接改相机尺寸。
-- 双指缩放灵敏度统一读取 `UIUserSettings.PinchZoomSensitivity`：设置页显示 0～300，0 表示关闭，100 保持原有基准速度；运行时不得另设独立开关或硬编码另一份灵敏度。
-- 手机最终径向朝向的准线复用 `GamepadCursorGraphic`，正式节点必须位于 `UI_MobileControls.prefab`，并由 `PlayerMobileControlsHUD` 在 `Canvas.willRenderCanvases` 阶段按本帧最终玩家与相机位置投影；不要再启用 `GamepadUIRuntimeController` 的手机光标视觉，否则两套准线会因更新阶段不同产生一帧错位。
-- 手机准线的世界距离必须按当前手持物动态取值：空手或非建筑复用 `Mod_InteractSender.maxInteractDistance`，建筑召唤器复用 `Mod_Building.Data.maxVisibleDistance`。
-- `PlayerMobileControlsHUD` 允许仅在旧 Addressables/缓存 Prefab 缺少正式准线节点时补建兼容节点，正常视觉仍以 `UI_MobileControls.prefab` 为准。
-- 手机进入玩法时准线要按 `Mod_TurnBack.currentDirection` 初始化并立即显示，不能要求玩家先触摸普通指向区才出现。
+`触控所有权 → MobileInputRuntime → FlatWorldMobileDevice → Input Actions → Mod_GameController → 玩法模块`
 
-## 跨系统边界
+## 输入语义与触点
 
-- 修改输入设备、Action、设备切换、径向指向或清理生命周期：同时读取 `flatworld-player-interaction`。
-- 修改可见文案：同时读取 `flatworld-localization`，将文本写入 `FlatWorldUI` 中英文表，不在脚本里新增硬编码玩家文案。
-- 修改 Android 启动、平台配置或全局生命周期：同时读取 `flatworld-core`。
+- 虚拟设备独立于 Gamepad。攻击仅产生 `AttackStarted/AttackEnded`，交互为 E，使用为 RightClick；手机使用按钮允许从 HUD 进入，桌面右键仍受 UI 遮挡保护。
+- 普通指向更新朝向/最后力度；攻击按下立即开始，死区内沿普通朝向、死区外更新并保持。松开只结束即时输入，攻击摇杆保留视觉位置；输入锁等完整清理回中，但持久瞄准方向/力度/目标保留。
+- 每个摇杆/按住按钮持有独立 pointerId，EventSystem 为 `AllPointersAsIs`。锁定、模态、暂停、失焦/后台、禁用、尺寸变化、玩家销毁统一幂等释放触点与移动/攻击语义；设备状态变化不清触摸。
+- 世界坐标来自控制器统一指针接口。建筑虚影旋转使用独立 touchId 的短按与当前虚影命中，再调用建筑旋转入口；拖动/长按/正式按钮/攻击区/锁定不进入该通道。
+- `Inventory_Hand` 有物品时摇杆释放所有权；快捷栏拖拽长按复用槽位 pointerId 与 UI 射线。拿起后的轻点/长按由 `MobileHeldItemDropSurface` 持有，轻点抬起丢单件，长按提交前结束触点以避免重复；移动超限取消丢弃但保留跟手到抬起，换物完整取消。
+- 中间丢弃面只在手持物存在时接收射线，位于玩法控件下；主背包打开时移至常驻层底部，正式面板/槽位优先，其它模态不开放世界丢弃。
+- 双指捏合只占左右控制区之间的中间区域，按两个 touchId 的间距变化识别：分开拉近、合拢拉远，同向平移无缩放。统一调用 `Mod_Cam.ApplyPinchZoom`，灵敏度为 `PinchZoomSensitivity` 的 0～300（0 关闭、100 基准）。
 
-## Skill 维护
+## HUD、射线与安全区
 
-- 只补充后续维护可复用的入口、易错点、隐含约束和验证方式。
-- 不记录日期、提交、近期变更或“这次改了什么”的流水账；代码已经清楚表达的实现细节不要重复抄入 Skill。
+- HUD 仅为本地玩家选择 Mobile 后显示；控制偏好手动持久化，键鼠/手柄/手机设备可并行输入。正式 Prefab 挂于 `UIManager.SafeAreaRoot`，行为绑定与视觉结构分离。
+- 普通指向捕获层在按钮/攻击摇杆后，仅接收空白区域；左右区域比例来自 `LeftControlZoneRatio/RightControlZoneRatio`，改比例先释放触点。`FloatingMoveJoystick` 保存固定/浮动偏好；移动/指向摇杆取得触点后显示，攻击摇杆固定。
+- `TouchControlsOpacityPercent` 仅作用玩法层及手机快捷栏，0% 仍可交互；常驻菜单完全可见。菜单/返回独立于可隐藏玩法层，抽屉入口在 Button.onClick 完整点击后脉冲；返回先关闭顶层面板，再抽屉，再设置。
+- 控制根平时位于常驻 HUD 后，模态时沉底；抽屉仅无正式模态时置顶。快捷栏为玩法层兄弟，在背包/容器下保持拖放；模态时独立 Canvas 临时 overrideSorting，关闭后恢复。槽内选中框归属当前槽位并按内部兄弟顺序置底。
+- `BasePanel` 的 GameplayInputBlocking 与手柄导航资格独立，常驻 HUD 显式关闭阻断，模态接管玩法输入。
+- Android `mandatorySystemGestures` 补齐 safeArea 未覆盖的底部边距；强制系统手势区不可被 exclusionRects 屏蔽。
+- 手机准线使用 Prefab 的非交互 `GamepadCursorGraphic`，HUD 在 `Canvas.willRenderCanvases` 按最终玩家/相机位置投影；普通距离来自交互模块，建筑来自放置距离，入世按 `Mod_TurnBack.currentDirection` 初始化，HUD 对缺失准线节点有一次性补齐路径。
