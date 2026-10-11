@@ -56,6 +56,10 @@ internal sealed partial class DroppedItemRuntime
     /// <summary>陆地静止实体只响应所在格变化，不为每个实体逐帧查询地形。</summary>
     private void OnTerrainChanged(TerrainWatch watch, ChunkTerrainChanged change)
     {
+        // 土壤含水和雪厚不改变液体接触，静止掉落物只被实际地表变化唤醒。
+        if (change.Kind == TerrainChangeKind.Environment &&
+            !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
+            return;
         Vector2Int cell = watch.Origin + new Vector2Int(change.LocalCell.X, change.LocalCell.Y);
         if (!spatial.TryGetValue(SpatialCell((Vector2)cell + Vector2.one * 0.5f), out HashSet<int> bucket)) return;
         foreach (int id in bucket)

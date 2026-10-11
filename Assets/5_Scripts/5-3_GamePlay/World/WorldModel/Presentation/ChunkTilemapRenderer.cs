@@ -300,11 +300,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             RefreshFireVisual(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
             return;
         }
-        if (changed.Kind == TerrainChangeKind.Liquid)
+        if (changed.Kind == TerrainChangeKind.Liquid ||
+            changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
             liquidGlowDirty = true;
         if (changed.Kind != TerrainChangeKind.Cell &&
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
+            return;
+        if (!AffectsBaseTerrainEnvironment(changed))
             return;
 
         if (!EnsureBatchPresentationForIncrementalRefresh("TerrainChanged"))
@@ -312,6 +315,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
         RefreshBatchArea(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y, 1);
     }
+
+    /// <summary>基础地形只读取高度、水流和风向，土壤与雪层不重提地形网格。</summary>
+    private static bool AffectsBaseTerrainEnvironment(ChunkTerrainChanged changed) =>
+        changed.Kind != TerrainChangeKind.Environment ||
+        changed.AffectsEnvironmentLayer("height") || changed.AffectsEnvironmentLayer("riverKind") ||
+        changed.AffectsEnvironmentLayer("riverFlowX") || changed.AffectsEnvironmentLayer("riverFlowY") ||
+        changed.AffectsEnvironmentLayer("riverFlow") || changed.AffectsEnvironmentLayer("windX") ||
+        changed.AffectsEnvironmentLayer("windY");
 
     #region 世界火焰表现
 
@@ -599,6 +610,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         {
             return;
         }
+        if (!AffectsBaseTerrainEnvironment(changed))
+            return;
 
         bool touchesSharedX = offsetX == 0 || (offsetX < 0
             ? changed.LocalCell.X == neighbourTerrain.Width - 1

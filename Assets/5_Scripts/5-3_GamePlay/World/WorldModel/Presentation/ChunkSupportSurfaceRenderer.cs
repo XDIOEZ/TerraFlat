@@ -52,6 +52,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         chunk = value;
         SubscribeNeighbourChunkEvents();
         chunk.Terrain.Changed += HandleChanged;
+        chunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
         owner.BatchPresentationRebuilt += HandleBatchPresentationRebuilt;
         RefreshNeighbourTerrainSubscriptions();
         RefreshAll();
@@ -61,7 +62,10 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     public void Unbind()
     {
         if (chunk?.Terrain != null)
+        {
             chunk.Terrain.Changed -= HandleChanged;
+            chunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
+        }
         ClearNeighbourTerrainSubscriptions();
         ClearNeighbourChunkSubscriptions();
         if (owner != null)
@@ -96,7 +100,9 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     private void HandleChanged(ChunkTerrainChanged change)
     {
         if ((change.Kind != TerrainChangeKind.Environment && change.Kind != TerrainChangeKind.Liquid) ||
-            chunk?.Terrain == null)
+            chunk?.Terrain == null ||
+            change.Kind == TerrainChangeKind.Environment &&
+            !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
             return;
 
         int x = change.LocalCell.X;
@@ -106,6 +112,15 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         Refresh(x + 1, y);
         Refresh(x, y - 1);
         Refresh(x, y + 1);
+    }
+
+    /// <summary>批量液深变化只更新本格的平台水上阴影，不依赖其他环境写入唤醒。</summary>
+    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged change)
+    {
+        if (chunk?.Terrain == null || !ReferenceEquals(change.Terrain, chunk.Terrain))
+            return;
+        foreach (int index in change.CellIndices.Span)
+            Refresh(index % change.Terrain.Width, index / change.Terrain.Width);
     }
 
     /// <summary>重建当前 Chunk 的覆盖面和外露边缘遮罩。</summary>
@@ -337,7 +352,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         int offsetY,
         ChunkTerrainChanged change)
     {
-        if (chunk?.Terrain == null || change.Kind != TerrainChangeKind.Environment)
+        if (chunk?.Terrain == null || !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
             return;
 
         if (offsetX < 0)

@@ -323,6 +323,11 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void HandleChanged(ChunkTerrainChanged change)
     {
+        // 渐显读取采挖损伤与已挖层数，水肥变化由作物模拟自身消费。
+        if (change.Kind == TerrainChangeKind.Environment &&
+            !change.AffectsEnvironmentLayer(TileBuildingSystem.RuntimeDamageLayerId) &&
+            !change.AffectsEnvironmentLayer(GroundTileLayerSystem.DepthLayerId))
+            return;
         if (change.Kind == TerrainChangeKind.Cell || change.Kind == TerrainChangeKind.TileStack ||
             change.Kind == TerrainChangeKind.Environment)
             RefreshCell(new Vector2Int(change.LocalCell.X, change.LocalCell.Y));

@@ -73,7 +73,10 @@ public partial class WeatherMgr
     }
 
     public float GetTemperatureOffsetAt(Vector2 position) =>
-        TryGetWeatherAt(position, out var sample) ? sample.CoolingOffsetCelsius : 0f;
+        _weatherRuntimeAllowed && regionalEngine != null &&
+        float.IsFinite(position.x) && float.IsFinite(position.y)
+            ? regionalEngine.SampleCoolingOffsetAt(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)))
+            : 0f;
 
     public float GetAirHumidityDeficitAt(Vector2 position) =>
         TryGetWeatherAt(position, out var sample) ? sample.HumidityDeficit : 0f;

@@ -61,6 +61,7 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
         if (boundChunk?.Terrain == null ||
             (changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid &&
              changed.Kind != TerrainChangeKind.Cell && changed.Kind != TerrainChangeKind.TileStack) ||
+            changed.Kind == TerrainChangeKind.Environment && !changed.AffectsEnvironmentLayer(environmentLayerId) ||
             tile == null || material == null)
             return;
         RefreshCellFromTerrain(changed.LocalCell.X, changed.LocalCell.Y);

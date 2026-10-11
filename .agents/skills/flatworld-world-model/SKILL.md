@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 - `5-0_WorldModel` 保持纯 C#，后台生成不得访问 Unity 对象。
 - `ChunkRuntime + ChunkTerrainData` 是权威状态；Tilemap、Collider 和 Renderer 只是表现。
+- `ChunkTerrainChanged.EnvironmentLayerId` 标明实际写入的环境层，消费者用 `AffectsEnvironmentLayer` 按真实依赖筛选；未指定层名仍按广域通知处理。本区块与邻区订阅都须过滤，水肥和雪厚不能重刷基础地形、支撑轮廓或导航；导航仍响应支撑面身份及成本，液体批量变化独立订阅。
 - 正式地块写入统一经 `ChunkTerrainData.WriteCell` 同步核心数据、固定视线遮挡位及版本；生成时建初始遮挡位，建筑和机械占地通过独立动态位叠加，读者只读合成结果。
 - 墙体裂缝等耐久表现必须从 `ChunkTerrainData` 的 `flatworld.tileBuilding.damage` 权威层推导；`IChunkViewRenderer.Bind` 时重建、监听 `TerrainChangeKind.Environment/Cell/TileStack` 增量刷新、`Unbind` 时解除订阅，禁止在表现组件中保存第二份生命值。
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。

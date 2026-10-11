@@ -36,6 +36,11 @@ public sealed class ChunkNavigationBinder : MonoBehaviour, IChunkViewRenderer
     #region 增量导航同步
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
+        // 导航只读取支撑面身份与通行成本，雨水、肥料和雪厚不会改变导航格。
+        if (changed.Kind == TerrainChangeKind.Environment &&
+            !changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) &&
+            !changed.AffectsEnvironmentLayer(TerrainSupportLayer.CostLayer))
+            return;
         if (boundChunk != null && changed.Kind != TerrainChangeKind.Grass)
             WorldNavigationManager.ExistingInstance?.UpdateChunkRuntimeCell(
                 boundChunk, changed.LocalCell.X, changed.LocalCell.Y);

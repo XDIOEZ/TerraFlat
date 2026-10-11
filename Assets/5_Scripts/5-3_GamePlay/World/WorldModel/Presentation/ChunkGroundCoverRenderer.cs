@@ -159,9 +159,12 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
             RefreshCell(cell);
     }
 
-    /// <summary>地块、支撑、环境或单格液体变化时重查该格植被可见性。</summary>
+    /// <summary>只在地块、支撑或液体变化时重查植被可见性，雨天水肥不重复提交花层。</summary>
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
+        if (changed.Kind == TerrainChangeKind.Environment &&
+            !changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
+            return;
         if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack ||
             changed.Kind == TerrainChangeKind.Environment || changed.Kind == TerrainChangeKind.Liquid)
             RefreshCell(new Vector3Int(changed.LocalCell.X, changed.LocalCell.Y, 0));

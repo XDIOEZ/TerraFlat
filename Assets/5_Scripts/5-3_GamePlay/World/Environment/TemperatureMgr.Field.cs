@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -123,6 +124,48 @@ public partial class TemperatureMgr
     public bool TryGetAmbientAndClimateBaseline(Vector2 worldPosition, out float ambient, out float baseline)
         => TrySampleTemperature(worldPosition, true, out ambient, out baseline);
 
+    /// <summary>同步采样已绑定区块，复用冷热源缓存；结果只用于本次结算，不跨帧保存。</summary>
+    internal bool TrySampleAmbientChunk(ChunkRuntime chunk, ReadOnlySpan<int> cellIndices,
+        Span<float> temperatures)
+    {
+        PrepareFieldContext();
+        if (localTemperatureField == null || fieldChunkManager == null || chunk?.Terrain == null ||
+            chunk.Terrain.IsDisposed || chunk.DataStatus != ChunkDataStatus.Ready ||
+            chunk.Address.DimensionId != fieldDimension || chunk.Terrain.Width != fieldChunkWidth ||
+            chunk.Terrain.Height != fieldChunkHeight ||
+            !fieldChunkManager.TryGetChunkRuntime(chunk.Address, out ChunkRuntime current) ||
+            !ReferenceEquals(current, chunk))
+            return false;
+
+        ChunkTerrainData terrain = chunk.Terrain;
+        if (temperatures.Length < terrain.CellCount)
+            throw new ArgumentException("区块温度缓冲区小于格子数量。", nameof(temperatures));
+        Vector2Int origin = new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+        ReadOnlySpan<float> localOffsets = localTemperatureField.GetChunkOffsets(origin);
+        ReadOnlySpan<float> radiantOffsets = radiantLiquidTemperatureField != null
+            ? radiantLiquidTemperatureField.GetChunkOffsets(origin) : ReadOnlySpan<float>.Empty;
+        foreach (int index in cellIndices)
+        {
+            if ((uint)index >= (uint)terrain.CellCount)
+                throw new ArgumentOutOfRangeException(nameof(cellIndices), "区块温度采样格超出范围。");
+            int x = index % terrain.Width;
+            int y = index / terrain.Width;
+            if (!terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
+            {
+                temperatures[index] = float.NaN;
+                continue;
+            }
+            Vector2 position = new(origin.x + x + 0.5f, origin.y + y + 0.5f);
+            if (fieldBounds.IsWrapped)
+                position = fieldBounds.NormalizePosition(position);
+            Vector2Int cell = new(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+            temperatures[index] = ComposeAmbientTemperature(position, cell, terrain, x, y, baseline,
+                localOffsets.IsEmpty ? 0f : localOffsets[index],
+                radiantOffsets.IsEmpty ? 0f : radiantOffsets[index]);
+        }
+        return true;
+    }
+
     /// <summary>共用地块查询，按需要叠加当前季节、天气及局部热源。</summary>
     private bool TrySampleTemperature(Vector2 worldPosition, bool includeTransient, out float temperature,
         bool includePlanetOffset = true)
@@ -154,31 +197,32 @@ public partial class TemperatureMgr
             !terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
             return false;
         climateBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
-
-        float seasonOffset = 0f;
-        if (includeTransient && fieldPlanet != null)
-        {
-            float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(fieldBounds, position);
-            float physicalBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
-            seasonOffset = seasonTiltOffsetAtPole * poleProximity +
-                           Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalTemperatureFactor;
-        }
-
         temperature = includeTransient
-            ? baseline + ambientFieldOffset + seasonOffset + localTemperatureField.Sample(cell) +
-              (radiantLiquidTemperatureField?.Sample(cell) ?? 0f)
+            ? ComposeAmbientTemperature(position, cell, terrain, x, y, baseline,
+                localTemperatureField.Sample(cell), radiantLiquidTemperatureField?.Sample(cell) ?? 0f)
             : baseline + (includePlanetOffset ? fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f);
-        if (includeTransient)
-            temperature = ApplyCellTemperatureSources(cell, temperature);
+        return true;
+    }
+
+    // 单格与批量入口共用温度合成，避免雨雪和角色读到不同规则。
+    private float ComposeAmbientTemperature(Vector2 position, Vector2Int cell, ChunkTerrainData terrain,
+        int x, int y, float baseline, float localOffset, float radiantOffset)
+    {
+        float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(fieldBounds, position);
+        float physicalBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
+        float seasonOffset = seasonTiltOffsetAtPole * poleProximity +
+                             Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalTemperatureFactor;
+        float temperature = baseline + ambientFieldOffset + seasonOffset + localOffset + radiantOffset;
+        temperature = ApplyCellTemperatureSources(cell, temperature);
         // 热液体的当前温度随 Liquid 身份派生，抽干即撤销，不污染地形基温或历史季节。
-        if (includeTransient && WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f &&
+        if (WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f &&
             GameRes.ExistingInstance != null &&
             GameRes.ExistingInstance.TryGetLiquidDefinition(terrain.GetLiquidId(x, y), out var liquid) &&
             liquid.WorldWater?.ContactHeatingPerSecond > 0f)
             temperature = Mathf.Max(temperature, liquid.WorldWater.Temperature);
         // 雨冷在全部动态来源合成后叠加一次，采样下一步天气时可准确剥离。
-        if (includeTransient) temperature += WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f;
-        return true;
+        temperature += WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f;
+        return temperature;
     }
 
     #endregion

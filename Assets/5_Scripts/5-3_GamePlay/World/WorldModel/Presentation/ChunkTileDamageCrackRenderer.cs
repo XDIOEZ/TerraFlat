@@ -81,6 +81,10 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
 
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
+        // 水肥与雪层不会改变墙体损伤，避免雨天逐格重查裂缝。
+        if (changed.Kind == TerrainChangeKind.Environment &&
+            !changed.AffectsEnvironmentLayer(TileBuildingSystem.RuntimeDamageLayerId))
+            return;
         if (changed.Kind != TerrainChangeKind.Cell &&
             changed.Kind != TerrainChangeKind.TileStack &&
             changed.Kind != TerrainChangeKind.Environment)

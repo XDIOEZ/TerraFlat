@@ -136,11 +136,18 @@ internal sealed class LocalTemperatureField
         Vector2Int origin = new(
             Mathf.FloorToInt((float)cell.x / width) * width,
             Mathf.FloorToInt((float)cell.y / height) * height);
+        ReadOnlySpan<float> offsets = GetChunkOffsets(origin);
+        return offsets.IsEmpty ? 0f : offsets[(cell.y - origin.y) * width + cell.x - origin.x];
+    }
+
+    // 同步区块采样复用只读缓存，来源变化仍在下一次查询时重建。
+    public ReadOnlySpan<float> GetChunkOffsets(Vector2Int origin)
+    {
         if (!buckets.TryGetValue(origin, out Bucket bucket))
-            return 0f;
+            return ReadOnlySpan<float>.Empty;
         if (bucket.Dirty)
             Rebuild(origin, bucket);
-        return bucket.Offsets[(cell.y - origin.y) * width + cell.x - origin.x];
+        return bucket.Offsets;
     }
 
     private void Rebuild(Vector2Int origin, Bucket bucket)
@@ -225,9 +232,20 @@ internal sealed class RadiantLiquidTemperatureField
 
     public float Sample(Vector2Int cell)
     {
+        Vector2Int origin = ResolveChunkOrigin(cell);
+        ReadOnlySpan<float> offsets = GetChunkOffsets(origin);
+        int x = cell.x - origin.x;
+        int y = cell.y - origin.y;
+        return offsets.IsEmpty || (uint)x >= (uint)width || (uint)y >= (uint)height
+            ? 0f : offsets[y * width + x];
+    }
+
+    // 一次同步批次只验证一次邻区液体版本，单格查询继续实时验证。
+    public ReadOnlySpan<float> GetChunkOffsets(Vector2Int origin)
+    {
         GameRes resources = GameRes.ExistingInstance;
         if (chunkManager == null || resources == null)
-            return 0f;
+            return ReadOnlySpan<float>.Empty;
 
         // 液体配置原位重载后丢弃旧热量缓存，不长期订阅资源会话事件。
         if (!ReferenceEquals(cachedResources, resources) ||
@@ -238,7 +256,8 @@ internal sealed class RadiantLiquidTemperatureField
             cachedResourceReloadVersion = resources.ResourceReloadVersion;
         }
 
-        Vector2Int origin = ResolveChunkOrigin(cell);
+        if (bounds.IsWrapped)
+            origin = bounds.NormalizeChunkOrigin(origin);
         if (!buckets.TryGetValue(origin, out Bucket bucket))
         {
             bucket = new Bucket();
@@ -250,11 +269,7 @@ internal sealed class RadiantLiquidTemperatureField
             Rebuild(origin, bucket);
         }
 
-        int x = cell.x - origin.x;
-        int y = cell.y - origin.y;
-        if ((uint)x >= (uint)width || (uint)y >= (uint)height)
-            return 0f;
-        return bucket.Offsets[y * width + x];
+        return bucket.Offsets;
     }
 
     private bool DependenciesAreCurrent(Bucket bucket)

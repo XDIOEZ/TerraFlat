@@ -12,7 +12,14 @@ public static class WorldWeatherSurfaceSystem
     private static readonly List<int> SoilChanged = new();
     private static readonly List<int> SnowChanged = new();
     private static SnowCoverConfig snowConfig;
+    private static float[] ambientTemperatures = Array.Empty<float>();
+    private static float[] precipitationExposures = Array.Empty<float>();
+    private static int[] activeCells = Array.Empty<int>();
     private static readonly ProfilerMarker AdvanceChunkMarker = new("FlatWorld.Weather.SurfaceChunk");
+    private static readonly ProfilerMarker ExposureMarker = new("FlatWorld.Weather.SurfaceExposure");
+    private static readonly ProfilerMarker TemperatureMarker = new("FlatWorld.Weather.SurfaceTemperatures");
+    private static readonly ProfilerMarker WaterMarker = new("FlatWorld.Weather.SurfaceWater");
+    private static readonly ProfilerMarker PersistMarker = new("FlatWorld.Weather.PersistSurfaceChunk");
 
     // 天气来源只提供真实降水积分；没有降水时传 null，已有积雪仍正常融化。
     public static void AdvanceChunk(ChunkRuntime chunk, WeatherMgr weather, float seconds,
@@ -35,37 +42,45 @@ public static class WorldWeatherSurfaceSystem
         SnowCoverConfig config = GetSnowConfig();
         float freezingTemperature = weather.PrecipitationFreezingTemperature;
         TemperatureMgr temperature = TemperatureMgr.Instance;
+        if (temperature == null)
+            return;
+        if (ambientTemperatures.Length < terrain.CellCount)
+        {
+            ambientTemperatures = new float[terrain.CellCount];
+            precipitationExposures = new float[terrain.CellCount];
+            activeCells = new int[terrain.CellCount];
+        }
+        int activeCount;
+        using (ExposureMarker.Auto())
+            activeCount = CollectActiveCells(chunk, resolveExposure);
+        if (activeCount == 0)
+            return;
+        // 修改土壤和雪层前统一冻结当地温度，邻区热源依赖每块只检查一次。
+        using (TemperatureMarker.Auto())
+            if (!temperature.TrySampleAmbientChunk(chunk, activeCells.AsSpan(0, activeCount), ambientTemperatures))
+                return;
         SoilChanged.Clear();
         SnowChanged.Clear();
         try
         {
-            for (int y = 0; y < terrain.Height; y++)
-            for (int x = 0; x < terrain.Width; x++)
+            for (int i = 0; i < activeCount; i++)
             {
+                int index = activeCells[i];
+                int x = index % terrain.Width;
+                int y = index / terrain.Width;
                 float previousWeatherSnow = WorldSnowSystem.GetWeatherDepth(terrain, x, y);
                 bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y,
                     out float editedValue) && editedValue > 0f;
                 terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float playerDepth);
-                if (resolveExposure == null && previousWeatherSnow <= 0f && (!edited || playerDepth <= 0f))
-                    continue;
-
-                TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
-                if (surface.GroundTileId == 0 || WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)
-                    continue;
-
                 var world = new Int2(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
-                float precipitationSeconds = Mathf.Max(0f, resolveExposure?.Invoke(world) ?? 0f);
-                if (precipitationSeconds <= 0f && previousWeatherSnow <= 0f && (!edited || playerDepth <= 0f))
-                    continue;
-                if (!float.IsFinite(precipitationSeconds) || temperature == null ||
-                    !temperature.TryGetAmbientTemperature(new Vector2(world.X + 0.5f, world.Y + 0.5f),
-                        out float currentTemperature) || !float.IsFinite(currentTemperature))
+                float precipitationSeconds = precipitationExposures[index];
+                float currentTemperature = ambientTemperatures[index];
+                if (!float.IsFinite(currentTemperature))
                     continue;
 
                 var local = new Vector2Int(x, y);
                 var sample = new RuntimeTerrainTileSample(chunk.Address, terrain,
                     new Vector2Int(world.X, world.Y), local, terrain.GetCell(x, y), terrain.GetTopTileId(x, y));
-                int index = y * terrain.Width + x;
                 float nextWeatherSnow = previousWeatherSnow;
                 float waterPoints = 0f;
                 bool snowChanged = false;
@@ -105,17 +120,49 @@ public static class WorldWeatherSurfaceSystem
                 }
                 if (snowChanged)
                     SnowChanged.Add(index);
-                if (waterPoints > 0f && FarmlandSystem.SupplySurfaceWater(sample, waterPoints, false))
-                    SoilChanged.Add(index);
+                if (waterPoints > 0f)
+                    using (WaterMarker.Auto())
+                        if (FarmlandSystem.SupplySurfaceWater(sample, waterPoints, false))
+                            SoilChanged.Add(index);
             }
             if (SoilChanged.Count > 0 || SnowChanged.Count > 0)
-                SaveDataMgr.Instance.RecordWeatherSurfaceChunk(chunk, SoilChanged, SnowChanged);
+                using (PersistMarker.Auto())
+                    SaveDataMgr.Instance.RecordWeatherSurfaceChunk(chunk, SoilChanged, SnowChanged);
         }
         finally
         {
             SoilChanged.Clear();
             SnowChanged.Clear();
         }
+    }
+
+    // 先筛选真实受雨雪影响的地面格，邻区下雨不会让晴天区块白采整层温度。
+    private static int CollectActiveCells(ChunkRuntime chunk, Func<Int2, float> resolveExposure)
+    {
+        ChunkTerrainData terrain = chunk.Terrain;
+        int count = 0;
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+        {
+            float weatherSnow = WorldSnowSystem.GetWeatherDepth(terrain, x, y);
+            bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y,
+                out float editedValue) && editedValue > 0f;
+            terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float playerDepth);
+            bool hasSnow = weatherSnow > 0f || edited && playerDepth > 0f;
+            if (resolveExposure == null && !hasSnow)
+                continue;
+            TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
+            if (surface.GroundTileId == 0 || WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)
+                continue;
+            var world = new Int2(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
+            float precipitation = Mathf.Max(0f, resolveExposure?.Invoke(world) ?? 0f);
+            if (!float.IsFinite(precipitation) || precipitation <= 0f && !hasSnow)
+                continue;
+            int index = y * terrain.Width + x;
+            activeCells[count++] = index;
+            precipitationExposures[index] = precipitation;
+        }
+        return count;
     }
 
     #endregion

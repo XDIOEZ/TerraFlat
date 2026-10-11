@@ -597,7 +597,7 @@ namespace FlatWorld.WorldModel
             values[index] = value;
             if (string.Equals(layerId, TerrainSupportLayer.TileIdLayer, StringComparison.Ordinal))
                 _surfaceLiquidRevision++;
-            MarkChanged(x, y, TerrainChangeKind.Environment);
+            MarkChanged(x, y, TerrainChangeKind.Environment, layerId);
         }
 
         /// <summary>复制一份所有格子的核心地形数据。</summary>
@@ -741,12 +741,12 @@ namespace FlatWorld.WorldModel
                 throw new ObjectDisposedException(nameof(ChunkTerrainData));
         }
 
-        private void MarkChanged(int x, int y, TerrainChangeKind kind)
+        private void MarkChanged(int x, int y, TerrainChangeKind kind, string environmentLayerId = null)
         {
             _revision++;
             if (kind == TerrainChangeKind.Liquid)
                 _surfaceLiquidRevision++;
-            Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision));
+            Changed?.Invoke(new ChunkTerrainChanged(new Int2(x, y), kind, _revision, environmentLayerId));
         }
 
         #region 地块核心变更
@@ -809,11 +809,15 @@ namespace FlatWorld.WorldModel
     /// <summary>一次“某个地形格子发生变化”的通知内容。</summary>
     public readonly struct ChunkTerrainChanged
     {
-        public ChunkTerrainChanged(Int2 localCell, TerrainChangeKind kind, long revision)
+        #region 变化范围
+
+        public ChunkTerrainChanged(Int2 localCell, TerrainChangeKind kind, long revision,
+            string environmentLayerId = null)
         {
             LocalCell = localCell;
             Kind = kind;
             Revision = revision;
+            EnvironmentLayerId = kind == TerrainChangeKind.Environment ? environmentLayerId : null;
         }
 
         /// <summary>区块里的哪个格子变了。</summary>
@@ -822,5 +826,14 @@ namespace FlatWorld.WorldModel
         public TerrainChangeKind Kind { get; }
         /// <summary>改完以后，这份地形是第几个版本。</summary>
         public long Revision { get; }
+        /// <summary>环境变化的具体层；未指定时保持整个环境层可能变化的通知语义。</summary>
+        public string EnvironmentLayerId { get; }
+
+        /// <summary>消费者只响应自己读取的环境层，未标明层名的通知仍会命中。</summary>
+        public bool AffectsEnvironmentLayer(string layerId) => Kind == TerrainChangeKind.Environment &&
+            (string.IsNullOrEmpty(EnvironmentLayerId) ||
+             string.Equals(EnvironmentLayerId, layerId, StringComparison.Ordinal));
+
+        #endregion
     }
 }

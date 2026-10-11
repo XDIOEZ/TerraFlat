@@ -87,10 +87,21 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>地块、支撑面和单格液体变化时唤醒覆盖层；草变化不影响雪。</summary>
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
+        if (changed.Kind == TerrainChangeKind.Environment && !AffectsSnowCoverage(changed))
+            return;
         if (changed.Kind is TerrainChangeKind.Cell or TerrainChangeKind.TileStack or
             TerrainChangeKind.Environment or TerrainChangeKind.Liquid)
             QueueTerrainRefresh();
     }
+
+    /// <summary>积雪表现只读取天然雪、天气雪、玩家编辑雪和支撑面，土壤变化不唤醒整块覆雪。</summary>
+    private static bool AffectsSnowCoverage(ChunkTerrainChanged changed) =>
+        changed.AffectsEnvironmentLayer(SnowDepthLayer.LayerId) ||
+        changed.AffectsEnvironmentLayer(WorldSnowSystem.WeatherDepthLayer) ||
+        changed.AffectsEnvironmentLayer(WorldSnowInteraction.EditedLayer) ||
+        changed.AffectsEnvironmentLayer(WorldSnowInteraction.DepthLayer) ||
+        changed.AffectsEnvironmentLayer(WorldSnowInteraction.SeasonLayer) ||
+        changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer);
 
     /// <summary>批量液体变化仅唤醒一次，刷新时读取完整权威地形。</summary>
     private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed) => QueueTerrainRefresh();

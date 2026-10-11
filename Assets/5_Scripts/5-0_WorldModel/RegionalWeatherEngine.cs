@@ -489,6 +489,36 @@ namespace FlatWorld.WorldModel
             return true;
         }
 
+        /// <summary>温度只插值雨冷，沿用完整天气的权重和缺失邻区回退，不构造其他效果。</summary>
+        public float SampleCoolingOffsetAt(Int2 cell)
+        {
+            if (!TryGetRegionCooling(ResolveRegion(cell), out float own))
+                return 0f;
+            GetBlendCoordinates(cell, out int left, out int bottom, out float x, out float y);
+            float result = GetCoolingOrOwn(new Int2(left, bottom), own) * ((1f - x) * (1f - y));
+            result += GetCoolingOrOwn(new Int2(left + 1, bottom), own) * (x * (1f - y));
+            result += GetCoolingOrOwn(new Int2(left, bottom + 1), own) * ((1f - x) * y);
+            result += GetCoolingOrOwn(new Int2(left + 1, bottom + 1), own) * (x * y);
+            return result;
+        }
+
+        private bool TryGetRegionCooling(Int2 region, out float cooling)
+        {
+            region = NormalizeRegion(region);
+            if (replicaMode)
+            {
+                bool found = replicas.TryGetValue(region, out RegionalWeatherSnapshot snapshot);
+                cooling = snapshot.CoolingOffsetCelsius;
+                return found;
+            }
+            bool exists = states.TryGetValue(region, out RegionalWeatherState state);
+            cooling = exists ? -state.CoolingAmountCelsius : 0f;
+            return exists;
+        }
+
+        private float GetCoolingOrOwn(Int2 region, float own)
+            => TryGetRegionCooling(region, out float cooling) ? cooling : own;
+
         /// <summary>地表使用与连续表现一致的降水积分权重，不因硬区域边界漏结算邻区雨雪。</summary>
         public RegionalWeatherAdvanceResult SampleExposureAt(Int2 cell,
             IReadOnlyDictionary<Int2, RegionalWeatherAdvanceResult> exposures)
