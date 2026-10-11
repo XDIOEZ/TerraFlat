@@ -69,6 +69,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            ReleaseSurfaceShadows();
             UnregisterShipDamageFeedback();
             DestroyDrivingCameraTarget();
             placementRegistration?.Dispose();

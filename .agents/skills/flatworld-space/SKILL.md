@@ -59,6 +59,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 ## 表现与交互
 
 - 地表升高共用 ShipLandingGuidance.SurfaceVisualRise，不限制最高显示距离；船体、玩家、散落物与驾驶镜头保持一致。迁移前捕获船体外观，ShipTakeoffLoadingPresentation 在维度加载页按非缩放时间持续滚动起飞气流，场景准备完成/失败后随加载页释放。
+- ShipSurfaceShadowPresenter 每船合并去重占地 Mesh，复用 ActorBlobShadow 材质与 ground-shadow 排序；地面位置不加升高偏移，真实高度控制缩小/淡出，日照和柔化沿用共享阴影设置，结构或柔化变化才重建，离开地表/会话结束释放。
 - 星球/星空仅在实际 SpaceScene 内生成；正式入口等待 SpaceMgr.LoadPresentation 分帧准备星体，玩家镜头创建后等待 PreparePresentationForCamera 预建星空网格并完成一帧，再结束过渡。地面不绘制宇宙背景，权威会话及无人船仍继续运行。
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。

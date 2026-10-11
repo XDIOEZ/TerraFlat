@@ -257,7 +257,11 @@ namespace FlatWorld.Spaceflight
             shipMachineVisualTopology.Clear();
         }
 
-        private void OnDisable() => UnbindShipMachineVisualEvents();
+        private void OnDisable()
+        {
+            UnbindShipMachineVisualEvents();
+            ReleaseSurfaceShadows();
+        }
 
         internal void TrackShipMachineVisualTopology(MachineEntity node)
         {
@@ -318,6 +322,7 @@ namespace FlatWorld.Spaceflight
             BindShipMachineVisualEvents();
             bool forceBindings = refreshBindings || viewBindingsDirty;
             viewBindingsDirty = false;
+            visibleSurfaceShadows.Clear();
             foreach (ShipState ship in State.Ships)
             {
                 if (ship.IsWreck) { SynchronizeWreckView(ship); continue; }
@@ -326,6 +331,7 @@ namespace FlatWorld.Spaceflight
                 float angle = (float)(ship.AngleRadians * 180d / Math.PI);
                 double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending
                     ? flight.HeightMeters : 0d;
+                SynchronizeSurfaceShadow(ship, visible, height, forceBindings);
                 // 同一船体所有部件共用一次视觉升高偏移，避免逐部件计算变换矩阵。
                 float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
                 float radians = angle * Mathf.Deg2Rad;
@@ -385,6 +391,7 @@ namespace FlatWorld.Spaceflight
                     view.SetPose(position, angle, visualLiftOffset);
                 }
             }
+            RemoveExpiredSurfaceShadows();
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return;
             SpacePassengerState passenger = GetPassenger(player);
@@ -411,6 +418,7 @@ namespace FlatWorld.Spaceflight
         }
         private void ReleaseViews()
         {
+            ReleaseSurfaceShadows();
             foreach (string id in new System.Collections.Generic.List<string>(wreckViews.Keys)) RemoveWreckView(id);
             ReleaseDrivingCamera();
             UnbindShipMachineVisualEvents();

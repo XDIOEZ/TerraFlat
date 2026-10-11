@@ -68,8 +68,9 @@ Shader "FlatWorld/2D/AIECS Blob Shadow"
             half4 Frag(Varyings input) : SV_Target
             {
                 float radiusSquared = dot(input.uv, input.uv);
-                half softness = max(fwidth(radiusSquared), _WorldSunShadowBlur);
-                half alpha = 1.0h - smoothstep(1.0h - softness, 1.0h, radiusSquared);
+                // 占地剪影使用固定 UV，关闭柔化时仍避免 smoothstep 两端相等。
+                float softness = max(max(fwidth(radiusSquared), _WorldSunShadowBlur), 0.0001);
+                half alpha = 1.0 - smoothstep(1.0 - softness, 1.0, radiusSquared);
                 return half4(_WorldSunShadowColor.rgb,
                     alpha * input.alpha * _WorldSunShadowColor.a);
             }
