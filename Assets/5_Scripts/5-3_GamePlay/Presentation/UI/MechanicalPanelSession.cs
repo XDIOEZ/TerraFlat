@@ -58,6 +58,9 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable, refreshStatusPeriodically)
     {
         mechanicalOwner = owner;
+        // 世界设备面板不能锁住自身交互，否则发送器会立即取消交互并关窗。
+        panel.SetGameplayInputBlocking(false);
+        panel.PrepareForGamepadNavigation(closeOnCancel: true);
     }
     public void Toggle(Item playerItem)
     {
@@ -78,12 +81,14 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     }
     private void OnAction()
     {
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : null;
         if (actionAvailable?.Invoke() != false) action?.Invoke(actor);
         Refresh();
     }
     public void Refresh()
     {
         if (!IsOpen) return;
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : null;
         string itemId = mechanicalOwner?.Definition.Id ?? owner?.itemData?.IDName;
         if (itemId != null && GameRes.Instance.TryGetItemDefinition(itemId, out var definition))
             view.Title.text = definition.DisplayName;
@@ -159,6 +164,8 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     private void RefreshStatus()
     {
         if (!IsOpen) return;
+        // 定时刷新已经离开按 F 时的调用栈，必须重新进入设备所属的机器作用域。
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : null;
         string text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
         if (view.Status.text != text) view.Status.text = text;
     }
