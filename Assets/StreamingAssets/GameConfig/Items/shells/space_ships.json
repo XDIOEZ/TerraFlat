@@ -2133,10 +2133,10 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipFiber/ShipFiber_Idle.png",
         "color": {
-          "r": 0.35,
-          "g": 0.85,
+          "r": 1.0,
+          "g": 1.0,
           "b": 1.0,
           "a": 1.0
         }
@@ -2226,10 +2226,10 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]",
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipFiber/ShipFiber_Idle.png",
         "color": {
-          "r": 0.35,
-          "g": 0.85,
+          "r": 1.0,
+          "g": 1.0,
           "b": 1.0,
           "a": 1.0
         }

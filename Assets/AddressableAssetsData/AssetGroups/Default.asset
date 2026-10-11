@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 04f56ca12ee94e6f8ea13f0288a7a33f
+    m_Address: Assets/6_Art/Generated/Space/ShipFiber/ShipFiber_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7eef1c5ee25a2c842b14531f283ab19d
     m_Address: Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png
     m_ReadOnly: 0
