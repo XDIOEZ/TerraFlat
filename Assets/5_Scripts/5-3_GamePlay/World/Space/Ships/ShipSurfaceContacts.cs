@@ -67,7 +67,37 @@ namespace FlatWorld.Spaceflight
                     LandAssembly(assembly, contact);
                 }
                 else if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
-                    BeginSurfaceDescent(assembly, candidate.Contact);
+                {
+                    if (flight.RequestedLandingBodyId == candidate.Contact.BodyId)
+                        BeginSurfaceDescent(assembly, candidate.Contact);
+                    else
+                    {
+                        SpaceVector2 position = new(assembly.PositionX, assembly.PositionY);
+                        SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
+                        ShipLandingGuidance.ResolveExteriorContact(Universe.GetBody(candidate.Contact.BodyId), AssemblyRadius(assembly),
+                            candidate.Contact, ref position, ref velocity);
+                        assembly.PositionX = position.X; assembly.PositionY = position.Y;
+                        assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
+                        ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
+                        foreach (string memberId in assembly.MemberShipIds)
+                        {
+                            ShipState member = GetShip(memberId); ShipFlightState memberFlight = GetFlight(memberId);
+                            memberFlight.Motion.PositionMeters = new SpaceVector2(member.PositionX, member.PositionY);
+                            memberFlight.Motion.VelocityMetersPerSecond = new SpaceVector2(member.VelocityX, member.VelocityY);
+                            UpdateDescent(memberFlight, member);
+                        }
+                    }
+                }
+            }
+            // 已接受的降落指令使用本步碰撞后的最终姿态，不因漂出按钮范围或重积轨迹静默丢失。
+            foreach (ShipAssemblyState assembly in queryAssemblies.Refresh(State.Ships, State.Docking))
+            {
+                ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
+                if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending) ||
+                    !Universe.TryGetBody(flight.RequestedLandingBodyId, out BodyState body)) continue;
+                BeginSurfaceDescent(assembly, ShipLandingGuidance.CreateDescentContact(body,
+                    new SpaceVector2(assembly.PositionX, assembly.PositionY),
+                    new SpaceVector2(assembly.VelocityX, assembly.VelocityY), Universe.State.SimulationSeconds));
             }
         }
 

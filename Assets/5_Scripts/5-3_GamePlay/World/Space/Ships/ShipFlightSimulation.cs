@@ -7,7 +7,7 @@ namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
-        #region 发射与街机式太空航行
+        #region 发射与惯性太空航行
         public BodyState FindSurfaceBody(string worldKey)
         {
             if (Universe == null) return null;
@@ -29,11 +29,19 @@ namespace FlatWorld.Spaceflight
             if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             var flight = GetFlight(ship.ShipId);
             if (flight == null) return false;
+            var assembly = GetConnectedAssembly(ship.ShipId);
+            if (assembly == null) return false;
+            if (flight.Ignited)
+            {
+                foreach (string id in assembly.MemberShipIds) GetFlight(id).Ignited = false;
+                return true;
+            }
             // 从停靠转入动力模拟前同步实际载荷，避免使用静态阶段的旧质量。
             RefreshMass();
-            var assembly = GetConnectedAssembly(ship.ShipId);
+            assembly = GetConnectedAssembly(ship.ShipId);
             CollectActuators(assembly);
             double thrust = GetAvailableEngineThrust();
+            if (thrust <= 0d) return false;
             double gravity = Universe.GetBody(flight.BodyId).SurfaceGravity;
             if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating && thrust <= assembly.MassKg * gravity) return false;
             bool ignite = !flight.Ignited;
@@ -45,6 +53,7 @@ namespace FlatWorld.Spaceflight
                 if (member.Ignited && member.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating)
                 {
                     member.Phase = ShipFlightPhase.Lifting; member.LandingResolved = false; member.LandingEventId = null;
+                    member.RequestedLandingBodyId = null;
                     member.SurfaceX = GetShip(id).PositionX; member.SurfaceY = GetShip(id).PositionY;
                     member.SurfaceAngle = member.SurfaceX / sourceBody.RadiusMeters + Universe.GetRotationRadians(sourceBody.BodyId);
                     member.EntrySurfaceVelocity = default;
@@ -181,7 +190,7 @@ namespace FlatWorld.Spaceflight
                 foreach (string id in assembly.MemberShipIds)
                 {
                     ShipState ship = GetShip(id); ShipFlightState member = GetFlight(id);
-                    member.Phase = ShipFlightPhase.Cruising; member.Ignited = false; ship.PlatformKind = ShipPlatformKind.Space;
+                    member.Phase = ShipFlightPhase.Cruising; ship.PlatformKind = ShipPlatformKind.Space;
                     member.Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY),
                         VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY) };
                 }
@@ -299,6 +308,7 @@ namespace FlatWorld.Spaceflight
             {
                 ShipState ship = GetShip(id); ShipFlightState flight = GetFlight(id);
                 flight.LandingResolved = true; flight.LandingEventId = impactEvent;
+                flight.RequestedLandingBodyId = null;
                 flight.LandingX = ship.PositionX; flight.LandingY = ship.PositionY; flight.LandingSelected = true;
                 flight.HeightMeters = 0; flight.VerticalSpeed = 0; flight.BodyId = contact.BodyId; flight.SurfaceWorldKey = world;
                 flight.ImpactSpeed = impactSpeed; flight.Ignited = false; flight.SurfaceX = ship.PositionX; flight.SurfaceY = ship.PositionY;
@@ -348,6 +358,7 @@ namespace FlatWorld.Spaceflight
                 ShipState ship = GetShip(id); ShipFlightState flight = GetFlight(id);
                 ship.WorldAddress = world; ship.PlatformKind = ShipPlatformKind.Land;
                 flight.Phase = ShipFlightPhase.SurfaceDescending; flight.BodyId = contact.BodyId; flight.SurfaceWorldKey = world;
+                flight.RequestedLandingBodyId = null;
                 flight.SurfaceX = flight.LandingX = ship.PositionX;
                 flight.SurfaceY = flight.LandingY = ship.PositionY; flight.SurfaceAngle = contact.SurfaceAngleRadians;
                 flight.HeightMeters = SpaceGameplaySettings.Current.SurfaceEntryHeightMeters;

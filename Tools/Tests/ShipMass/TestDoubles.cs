@@ -34,6 +34,8 @@ public sealed class GameRes
 {
     public static GameRes ExistingInstance { get; set; } = new();
     public int ResourceReloadVersion { get; set; }
+    public Func<string, ItemData> ItemFactory;
+    public ItemData CreateItemData(string id) => ItemFactory(id);
 }
 public static class ItemDefinitionRuntime
 {
@@ -49,7 +51,16 @@ public class ItemData
     public string ItemSpecialData;
     public Dictionary<string, ModuleData> ModuleDataDic = new(StringComparer.Ordinal);
     public FluidInventory PortableTank;
+    public bool inHand;
+    public ItemInstanceSnapshot InstanceSnapshot => new() { Data = this };
 }
+public sealed class ItemInstanceSnapshot
+{
+    public ItemData Data;
+    public ItemData CreateColdData() => Data;
+}
+public static class ItemSnapshotSerialization
+{ public static byte[] SerializePayload<T>(T data) => MemoryPack.MemoryPackSerializer.Serialize(data); }
 public sealed class Data_Player : ItemData
 { public Dictionary<string, Inventory_Data> _inventoryData = new(); }
 public sealed class StackData
@@ -123,9 +134,17 @@ public static class ModText
 {
     public const string Building = "building", Equipment_Module = "equipment", Equipment_Store = "equipment-store";
 }
-public static class Mod_Building
+public enum BuildingState { NotInstalled, Installed, Uninstalled }
+public enum BuildingRole { Summoner, PlacedBuilding }
+public partial class Mod_Building
 {
-    public sealed class Building_Data { public string SnapshotBase64; }
+    private const int MaxEmbeddedSnapshotBytes = 320 * 1024;
+    public sealed class Building_Data
+    {
+        public string SnapshotBase64, BuildingPrefabId, SummonerPrefabId;
+        public BuildingState State;
+        public BuildingRole Role;
+    }
     public static bool TryReadBuildingData(ItemData data, out Ex_ModData module, out Building_Data state)
     {
         foreach (ModuleData candidate in data.ModuleDataDic.Values)
@@ -135,11 +154,34 @@ public static class Mod_Building
         }
         module = null; state = null; return false;
     }
+    private static int GenerateUniqueRuntimeGuid() => 100000;
+    private static string CreateStatefulSummonerIdentity(string snapshot) => "building-snapshot:" + snapshot;
+    private static bool WriteBuildingData(ItemData data, Action<Building_Data> mutate)
+    {
+        if (!TryReadBuildingData(data, out Ex_ModData module, out Building_Data state)) return false;
+        mutate(state); module.WriteData(state); return true;
+    }
 }
 public static class ItemNetworkStateSerialization
 {
+    private static readonly byte[] Magic = { (byte)'F', (byte)'W', (byte)'I', (byte)'1' };
+    // 替身严格校验正式封包，不能把裸 MemoryPack 数据误当成建筑快照。
+    public static bool IsValidPayload(byte[] bytes)
+        => bytes != null && bytes.Length > Magic.Length && bytes.Length <= 512 * 1024 &&
+            bytes.AsSpan(0, Magic.Length).SequenceEqual(Magic);
+    public static bool TrySerializeItemData(ItemData item, out byte[] bytes)
+    {
+        if (item == null) { bytes = null; return false; }
+        byte[] body = MemoryPack.MemoryPackSerializer.Serialize(item.InstanceSnapshot);
+        bytes = new byte[Magic.Length + body.Length];
+        Magic.CopyTo(bytes, 0); body.CopyTo(bytes, Magic.Length); return true;
+    }
     public static bool TryDeserializeItemData(byte[] bytes, out ItemData item)
-    { item = MemoryPack.MemoryPackSerializer.Deserialize<ItemData>(bytes); return item != null; }
+    {
+        item = null; if (!IsValidPayload(bytes)) return false;
+        item = MemoryPack.MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(bytes[Magic.Length..]).CreateColdData();
+        return item != null;
+    }
 }
 public sealed class FluidInventory { public FluidInventoryState State; }
 public sealed class FluidInventoryState { public List<FluidComponentState> Components = new(); }

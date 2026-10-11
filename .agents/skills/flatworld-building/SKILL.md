@@ -24,6 +24,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - SharedModuleIds 以唯一能力 ID 深拷贝单件载体的连续状态；返还载体在 Load 前注入。耐久品质 CraftedDurabilityMultiplier 双向转移，实际最大生命按当前定义重算；两端状态贴图各自声明。
 - RequiresPlacementRequest 由正式入口 BeginPlacement 开启，TryHandlePlacementAction 仲裁；普通无显式入口召唤器直接 Install。世界根旋转初始化 identity，手持旋转不迁移；世界朝向/镜像是已放置状态，拆回清零。
 - 拆回先捕获快照、成功生成返还物再删除原建筑。堆叠身份取规范化快照（去放置重写的 GUID/Transform）；IBuildingSnapshotRepackPolicy 可省默认快照，损伤/共享状态继续保留。
+- SnapshotBase64 统一由 ItemNetworkStateSerialization.TrySerializeItemData 写入带 FWI1 包头的实例封包；船部件回收也复用此入口，不能直接写裸 MemoryPack。放置与 ShipMassReader 使用同一恢复契约，Tools/Tests/ShipMass 覆盖回收载体库存。
 - 主动完整拆回与受伤摧毁分开：锤类致命伤返 Summoner，其它破坏按唯一精确配方随机返材料。拆平台先检查上下层、设施和对象占用，返还装配成功才撤支撑。
 
 ## 占地、碰撞与支撑

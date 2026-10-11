@@ -13,14 +13,26 @@ namespace FlatWorld.Spaceflight
         public static SpaceVector2 StepVelocity(SpaceVector2 current, SpaceVector2 target,
             SpaceGameplaySettings settings, double seconds, double authority = 1d)
         {
-            if (seconds <= 0d || !SpaceVector2.Finite(seconds)) return current;
+            if (seconds <= 0d || !SpaceVector2.Finite(seconds) || authority <= 0d || target == current) return current;
+            if (target.Magnitude > settings.CruiseMaxSpeedMetersPerSecond)
+                target = target.Normalized * settings.CruiseMaxSpeedMetersPerSecond;
             SpaceVector2 delta = target - current;
             double distance = delta.Magnitude;
             double change = ChangeRate(current, target, settings) * seconds * Math.Clamp(authority, 0d, 1d);
-            SpaceVector2 velocity = distance <= change ? target : current + delta.Normalized * change;
-            double speed = velocity.Magnitude;
-            return speed > settings.CruiseMaxSpeedMetersPerSecond
-                ? velocity * (settings.CruiseMaxSpeedMetersPerSecond / speed) : velocity;
+            return distance <= change ? target : current + delta.Normalized * change;
+        }
+
+        // 手动输入在已有速度上施加推力，松键及转船头都不自动刹掉平移惯性。
+        public static SpaceVector2 ManualVelocity(SpaceVector2 current, SpaceVector2 steering,
+            SpaceGameplaySettings settings, double seconds)
+        {
+            if (seconds <= 0d || steering.SqrMagnitude < 1e-12d) return current;
+            if (steering.Magnitude > 1d) steering = steering.Normalized;
+            double rate = SpaceVector2.Dot(steering, current) < 0d
+                ? settings.CruiseBrakingMetersPerSecondSquared : settings.CruiseAccelerationMetersPerSecondSquared;
+            SpaceVector2 next = current + steering * (rate * seconds);
+            return next.Magnitude > settings.CruiseMaxSpeedMetersPerSecond
+                ? next.Normalized * settings.CruiseMaxSpeedMetersPerSecond : next;
         }
 
         public static SpaceVector2 ArrivalVelocity(SpaceVector2 error, SpaceGameplaySettings settings, double seconds)
@@ -47,7 +59,7 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 星体外侧安全航点
-        // 自动导航只到达星体外侧，手动驾驶仍可进入原有降落流程。
+        // 自动导航只到达星体外侧，降落由控制台的独立指令开始。
         public static SpaceVector2 SafeTarget(SpaceVector2 origin, SpaceVector2 target,
             IReadOnlyList<BodyState> bodies, double shipRadius, double clearance, out BodyState blocker)
         {

@@ -9,6 +9,8 @@ internal static partial class Program
     private static void Main()
     {
         Run("限速、反向制动、部分燃料", Velocity);
+        Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
+        Run("降落范围、星体外侧接触及切向滑行", LandingBoundary);
         Run("不同步长及横向初速下到点停稳", Arrival);
         Run("船头转向取最短方向", Heading);
         Run("星体拦截、近侧停靠及离开安全圈", SafeTargets);
@@ -54,9 +56,72 @@ internal static partial class Program
         Near(.12d, velocity.X, "ten percent fuel gives ten percent acceleration");
         velocity = new SpaceVector2(100d, 50d);
         for (int i = 0; i < 100; i++) velocity = ShipCruiseGuidance.StepVelocity(velocity, default, Settings, .02d);
-        Near(0d, velocity.Magnitude, "release stops exactly");
+        Near(0d, velocity.Magnitude, "powered navigation brakes exactly");
         var coast = new SpaceVector2(10d, 0d);
         Check(ShipCruiseGuidance.StepVelocity(coast, new SpaceVector2(120d, 0d), Settings, .02d, 0d) == coast, "empty tank cannot accelerate");
+    }
+
+    private static void ManualInertia()
+    {
+        var coast = new SpaceVector2(35d, 12d);
+        var current = coast;
+        for (int i = 0; i < 500; i++)
+            current = ShipCruiseGuidance.StepVelocity(current,
+                ShipCruiseGuidance.ManualVelocity(current, default, Settings, .02d), Settings, .02d);
+        Check(current == coast, "released input must preserve full velocity over ten seconds");
+        var sideways = ShipCruiseGuidance.ManualVelocity(coast, new SpaceVector2(0d, 1d), Settings, .02d);
+        Near(coast.X, sideways.X, "sideways thrust cannot cancel existing drift");
+        Near(coast.Y + 1.2d, sideways.Y, "sideways thrust adds bounded acceleration");
+        var reverse = ShipCruiseGuidance.ManualVelocity(new SpaceVector2(120d, 0d), new SpaceVector2(-1d, 0d), Settings, .02d);
+        Near(118d, reverse.X, "reverse input must brake gradually");
+        var overspeed = new SpaceVector2(180d, 0d);
+        Check(ShipCruiseGuidance.StepVelocity(overspeed, default, Settings, .02d, 0d) == overspeed,
+            "lost power or fuel cannot silently cap collision speed");
+        Near(178d, ShipCruiseGuidance.StepVelocity(overspeed, default, Settings, .02d, 1d).X,
+            "powered braking of collision speed is still gradual");
+        var diagonal = ShipCruiseGuidance.ManualVelocity(default, new SpaceVector2(1d, 1d), Settings, .02d);
+        Near(1.2d, diagonal.Magnitude, "multiple inputs cannot multiply acceleration");
+        var partial = ShipCruiseGuidance.StepVelocity(coast, sideways, Settings, .02d, .25d);
+        Near(coast.X, partial.X, "partial fuel preserves lateral drift");
+        Near(coast.Y + .3d, partial.Y, "partial fuel proportionally limits thrust");
+        var smallRequest = ShipCruiseGuidance.ManualVelocity(default, new SpaceVector2(.1d, 0d), Settings, .02d);
+        var smallPartial = ShipCruiseGuidance.StepVelocity(default, smallRequest, Settings, .02d, .05d);
+        Near(.06d, smallPartial.X, "half fuel on ten percent throttle gives half the requested change");
+    }
+
+    private static void LandingBoundary()
+    {
+        var body = new BodyState { BodyId = "target", PlanetId = "planet", RadiusMeters = 100d };
+        var bodies = new[] { body };
+        Check(ShipLandingGuidance.FindNearbyBody(new SpaceVector2(211d, 0d), 10d, bodies) == null,
+            "far ships cannot request landing");
+        Check(ShipLandingGuidance.FindNearbyBody(new SpaceVector2(210d, 0d), 10d, bodies) == body,
+            "landing range includes ship radius");
+        var position = new SpaceVector2(110d, 0d);
+        var velocity = new SpaceVector2(-30d, 7d);
+        var contact = ShipLandingGuidance.CreateDescentContact(body, position, velocity, 4d);
+        ShipLandingGuidance.ResolveExteriorContact(body, 10d, contact, ref position, ref velocity);
+        Near(110.01d, position.X, "unrequested contact remains strictly outside the planet");
+        Near(0d, velocity.X, "unrequested contact only blocks inward movement");
+        Near(7d, velocity.Y, "contact must preserve tangential inertia");
+        velocity = new SpaceVector2(5d, 7d);
+        ShipLandingGuidance.ResolveExteriorContact(body, 10d, contact, ref position, ref velocity);
+        Near(5d, velocity.X, "ship can leave the planet boundary");
+        Near(7d, velocity.Y, "outward movement does not brake drift");
+        var universe = new UniverseSimulation(new UniverseState { Bodies = new List<BodyState> { body } });
+        var motion = new SpaceMotionState { PositionMeters = new SpaceVector2(140d, 0d),
+            VelocityMetersPerSecond = new SpaceVector2(-60d, 9d), RadiusMeters = 10d };
+        Check(universe.StepMotionAtTime(motion, default, 0d, 1d, out contact), "fast approach detects swept contact");
+        position = motion.PositionMeters; velocity = motion.VelocityMetersPerSecond;
+        ShipLandingGuidance.ResolveExteriorContact(body, 10d, contact, ref position, ref velocity);
+        motion.PositionMeters = position; motion.VelocityMetersPerSecond = velocity;
+        Check(!universe.StepMotionAtTime(motion, default, 1d, .02d, out _),
+            "boundary does not retrigger a zero-fraction contact while gliding");
+        var explicitDescent = ShipLandingGuidance.CreateDescentContact(body, position, velocity, 2d);
+        Check(explicitDescent.IsValid && explicitDescent.BodyId == body.BodyId,
+            "explicit request uses the actual nearby body");
+        Near(position.X, explicitDescent.PositionMeters.X, "descent uses actual position");
+        Near(velocity.Y, explicitDescent.RelativeVelocityMetersPerSecond.Y, "descent preserves actual entry speed");
     }
     private static void Arrival()
     {

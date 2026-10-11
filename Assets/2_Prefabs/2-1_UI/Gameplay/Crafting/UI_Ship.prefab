@@ -4742,7 +4742,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6415406742046473239, guid: 92c26ca78f387f246803a706b73bbfe9, type: 3}
       propertyPath: m_text
-      value: "\u5BFC\u822A/\u843D\u70B9 X"
+      value: "\u5BFC\u822A X"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5181,7 +5181,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6230221144704590992, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
       propertyPath: m_text
-      value: "\u8BBE\u7F6E\u4E0B\u843D\u4F4D\u7F6E"
+      value: "\u964D\u843D"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5412,7 +5412,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6415406742046473239, guid: 92c26ca78f387f246803a706b73bbfe9, type: 3}
       propertyPath: m_text
-      value: "\u5BFC\u822A/\u843D\u70B9 Y"
+      value: "\u5BFC\u822A Y"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

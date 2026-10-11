@@ -24,6 +24,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private TextMeshProUGUI status, output;
     private TMP_InputField xField, yField, pressureField, commandField;
     private ScrollRect outputScroll;
+    private Button landingButton;
     private Coroutine scrollRoutine;
     private bool outputDirty, observed, followCommand;
     private float nextRefreshTime;
@@ -75,8 +76,8 @@ public sealed class ShipPanelSession : IMachinePanelSession
         Bind("FWUI_ShipNavigate", () => Execute($"navigate {xField.text} {yField.text}"));
         Bind("FWUI_ShipPick", () => Execute("pick"));
         Bind("FWUI_ShipCancel", () => Execute("cancel"));
-        // 正式面板保留资源结构，旧落点按钮在实例中隐藏以免绕过真实驾驶。
-        panel.GetComponentsInChildren<Button>(true).First(value => value.name == "FWUI_ShipLanding").gameObject.SetActive(false);
+        Bind("FWUI_ShipLanding", () => Execute("land"));
+        landingButton = panel.GetComponentsInChildren<Button>(true).First(value => value.name == "FWUI_ShipLanding");
         Bind("FWUI_ShipDock", () => Execute("dock"));
         Bind("FWUI_ShipUndock", () => Execute("undock"));
         Bind("FWUI_ShipPressure", () => Execute($"pressure {pressureField.text}"));
@@ -174,7 +175,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         switch (command)
         {
             case "help":
-                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\n下落时自动进入船控视角；有电、有燃料且有可用引擎时，WASD 移动、Q/E 旋转。落点由实际船体位置决定。");
+                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。接触星体停在外侧，点击降落才进入地表下降。");
                 break;
             case "status":
                 Append("系统", status.text, literal: true);
@@ -201,6 +202,16 @@ public sealed class ShipPanelSession : IMachinePanelSession
                     Append("拒绝", "点火失败：需要供电、有效航空燃料及足够升空推力。");
                 else
                     Append("完成", session.GetFlight(shipId).Ignited ? "点火已开启。" : "引擎已停机，飞船继续按惯性运动。");
+                break;
+            case "land":
+                if (session.RequestLanding(console))
+                {
+                    Append("完成", "降落已开始，将进入地表下落；落点由实际船体位置决定。");
+                    RenderOutput();
+                    Close();
+                    return;
+                }
+                Append("拒绝", "降落失败：请在太空中靠近目标星体，并使用已供电的控制台。");
                 break;
             case "navigate":
                 if (TryCoordinates(parts, out Vector2 target))
@@ -384,6 +395,8 @@ public sealed class ShipPanelSession : IMachinePanelSession
         ShipFlightState flight = session.GetFlight(shipId);
         if (flight == null) { Close(); return; }
         ShipNavigationState task = session.GetLatestNavigation(shipId);
+        BodyState landingTarget = session.GetLandingCandidate(shipId);
+        landingButton.interactable = landingTarget != null && session.ResolveConsole(shipId, pieceId) != null;
         ObserveChanges(ship, flight, task);
         var text = new StringBuilder();
         text.AppendLine(Format("飞船 {0}", ship.ShipId.Substring(0, Math.Min(8, ship.ShipId.Length))));
@@ -396,6 +409,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         text.AppendLine();
         text.AppendLine(Format("速度  {0:0.##} m/s\n角速度  {1:0.##}°/s",
             Math.Sqrt(ship.VelocityX * ship.VelocityX + ship.VelocityY * ship.VelocityY), ship.AngularVelocityRadiansPerSecond * 180d / Math.PI));
+        text.AppendLine(Text("WASD 推进，松键继续滑行，反向输入制动；停机后保留平移惯性。"));
         double altitude = flight.HeightMeters;
         if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
         {
@@ -412,14 +426,14 @@ public sealed class ShipPanelSession : IMachinePanelSession
             text.AppendLine(Format("最近星体  {0}", nearest?.DisplayName ?? Text("未知")));
         }
         text.AppendLine(Format("地表高度  {0:0.##} m\n升空速度  {1:0.##} m/s", Math.Max(0d, altitude), flight.VerticalSpeed));
-        if (flight.Phase is ShipFlightPhase.Descending or ShipFlightPhase.SurfaceDescending || flight.VerticalSpeed < 0d)
+        if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
             text.AppendLine(Format("预计触地  {0:0.0} s", session.DescentSeconds(flight)));
         bool surfaceFlight = flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
         if (surfaceFlight)
             text.AppendLine(Format("实际地表位置  ({0:0.##}, {1:0.##})", ship.PositionX, ship.PositionY));
         else
             text.AppendLine(Text("地表落点由飞船进入地表后的实际位置决定。"));
-        if (flight.Phase is ShipFlightPhase.Descending or ShipFlightPhase.SurfaceDescending || flight.VerticalSpeed < 0d)
+        if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
             text.AppendLine(Text("下落船控视角：WASD 移动、Q/E 旋转需要供电、可用引擎及燃料；落点随实际船体位置变化。"));
         text.AppendLine();
         text.AppendLine(Format("导航  {0}", task == null ? Text("待机") : Text(task.Status)));
@@ -433,7 +447,9 @@ public sealed class ShipPanelSession : IMachinePanelSession
             text.AppendLine(Format("剩余距离  {0:0.0} m\n当前刹停距离  {1:0.0} m", remaining,
                 ShipCruiseGuidance.BrakingDistance(speed, SpaceGameplaySettings.Current, Time.fixedDeltaTime)));
         }
-        text.AppendLine(Text("自动导航停在星体外侧；登陆请手动接近。"));
+        text.AppendLine(landingTarget == null ? Text("靠近目标星体后，点击降落进入地表下降。") :
+            Format("可降落星体  {0}；点击降落才开始下降。", landingTarget.DisplayName));
+        text.AppendLine(Text("接触星体停在外侧，自动导航也不会触发降落。"));
         foreach (ShipCompartmentState room in ship.Compartments)
         {
             var gas = new FluidInventory(room.Gas);

@@ -23,6 +23,7 @@ namespace FlatWorld.Spaceflight
     public sealed class ShipFlightState
     {
         public string ShipId, BodyId, SurfaceWorldKey;
+        public string RequestedLandingBodyId;
         public ShipFlightPhase Phase;
         public double SurfaceX, SurfaceY, HeightMeters, VerticalSpeed, SurfaceAngle;
         public SpaceMotionState Motion = new();

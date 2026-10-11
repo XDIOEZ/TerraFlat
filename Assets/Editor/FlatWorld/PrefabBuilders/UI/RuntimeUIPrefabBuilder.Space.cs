@@ -37,15 +37,15 @@ public static partial class RuntimeUIPrefabBuilder
                 if (name == "UI_Ship")
                 {
                     ConfigureShipTerminal(root, view);
-                    AddIndustrialField(root.transform, "FWUI_ShipX", "导航/落点 X", new Vector2(24, -580), new Vector2(300, 60));
-                    AddIndustrialField(root.transform, "FWUI_ShipY", "导航/落点 Y", new Vector2(340, -580), new Vector2(300, 60));
+                    AddIndustrialField(root.transform, "FWUI_ShipX", "导航 X", new Vector2(24, -580), new Vector2(300, 60));
+                    AddIndustrialField(root.transform, "FWUI_ShipY", "导航 Y", new Vector2(340, -580), new Vector2(300, 60));
                     AddIndustrialField(root.transform, "FWUI_ShipPressure", "舱内目标气压 kPa", new Vector2(656, -580), new Vector2(500, 60));
                     AddIndustrialField(root.transform, "FWUI_ShipCommand", "输入命令，help 查看帮助", new Vector2(24, -504), new Vector2(990, 60));
                     TMP_InputField command = FindShipControl<TMP_InputField>(root, "FWUI_ShipCommand");
                     command.characterLimit = 160; command.richText = false;
                     AddIndustrialButton(root.transform, "FWUI_ShipSubmit", "执行", new Vector2(1030, 286), new Vector2(126, 60), Vector2.zero, new Vector2(0, .5f));
                     string[] keys = { "Drive", "Exit", "Ignite", "Navigate", "Pick", "Cancel", "Landing", "Dock", "Undock", "Pressure" };
-                    string[] labels = { "驾驶", "退出驾驶", "点火 / 停机", "按坐标导航", "点击画面选点", "取消导航", "设置下落位置", "本船确认对接", "解除当前接口", "应用供气压强" };
+                    string[] labels = { "驾驶", "退出驾驶", "点火 / 停机", "按坐标导航", "点击画面选点", "取消导航", "降落", "本船确认对接", "解除当前接口", "应用供气压强" };
                     for (int i = 0; i < keys.Length; i++)
                         AddIndustrialButton(root.transform, "FWUI_Ship" + keys[i], labels[i],
                             new Vector2(24 + i % 5 * 229, 138 - i / 5 * 72), new Vector2(216, 60), Vector2.zero, new Vector2(0, .5f));

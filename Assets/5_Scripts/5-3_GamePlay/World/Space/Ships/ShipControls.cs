@@ -50,6 +50,29 @@ namespace FlatWorld.Spaceflight
             chosen ??= ship.Pieces.Find(p => p.IsAlive && p.Kind == ShipPieceKind.Console && IsPowered(ship, p));
             return chosen?.PieceId;
         }
+
+        public BodyState GetLandingCandidate(string shipId)
+        {
+            ShipFlightState flight = GetFlight(shipId);
+            if (Universe == null || flight == null || flight.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) return null;
+            ShipAssemblyState assembly = GetConnectedAssembly(shipId);
+            return assembly == null ? null : ShipLandingGuidance.FindNearbyBody(new SpaceVector2(assembly.PositionX, assembly.PositionY),
+                AssemblyRadius(assembly), Universe.State.Bodies);
+        }
+
+        // 降落指令在固定步的接触提交阶段生效，按钮点击不直接切场景或改坐标。
+        public bool RequestLanding(string consoleId)
+        {
+            if (!IsSpaceView || !FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||
+                console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
+            BodyState body = GetLandingCandidate(ship.ShipId);
+            if (body == null) return false;
+            ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
+            foreach (string id in assembly.MemberShipIds) GetFlight(id).RequestedLandingBodyId = body.BodyId;
+            CancelNavigation(ship.ShipId);
+            pickingNavigationConsole = null;
+            return true;
+        }
         public bool BeginPickingNavigation(string consoleId)
         {
             if (!IsSpaceView || !FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||

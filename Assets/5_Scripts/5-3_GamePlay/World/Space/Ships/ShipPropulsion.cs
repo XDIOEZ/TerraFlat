@@ -154,47 +154,39 @@ namespace FlatWorld.Spaceflight
                 FlatWorldLocalizationService.GetUiFormat("真实储气 氢 {0:0.###} mol / 氧 {1:0.###} mol · 氢氧比 {2} · 杂气 {3:0.###} mol", h, o, ratio, Math.Max(0m, gas - h - o));
         }
 
-        // 操作直接指定期望速度，发动机只决定能否改变航向与速度。
+        // 手动推力与导航制动共用真实动力授权，无输入或失去动力时保持当前速度。
         private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn, out double driveAuthority, bool surfaceDescent = false)
         {
-            targetVelocity = default; turn = 0d; driveAuthority = 1d;
+            SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
+            targetVelocity = current; turn = 0d; driveAuthority = 0d;
             SpaceVector2 steering = default;
-            bool manual = false, hasControl = false;
+            bool manual = false;
             foreach (ShipControlRequest request in controlRequests.Values)
             {
                 if (!FindPiece(request.ConsolePieceId, out ShipState ship, out ShipPieceState console) ||
                     !assembly.MemberShipIds.Contains(ship.ShipId) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) continue;
-                hasControl = true;
                 steering += SpaceVector2.FromAngle(ship.AngleRadians) * request.Move.x +
                             SpaceVector2.FromAngle(ship.AngleRadians + Math.PI / 2d) * request.Move.y;
                 turn += request.Turn;
                 manual |= request.Move.sqrMagnitude > .0001f || Math.Abs(request.Turn) > .001f;
             }
             SpaceGameplaySettings config = SpaceGameplaySettings.Current;
-            targetVelocity = steering.Magnitude > 1d ? steering.Normalized * config.CruiseMaxSpeedMetersPerSecond :
-                steering * config.CruiseMaxSpeedMetersPerSecond;
+            targetVelocity = ShipCruiseGuidance.ManualVelocity(current, steering, config, seconds);
             turn = Math.Clamp(turn, -1d, 1d);
-            SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
-            // 地表下落只接收手动船控，没有有效驾驶输入时保留真实惯性。
-            if (surfaceDescent && !hasControl)
-            {
-                targetVelocity = current; turn = 0d; driveAuthority = 0d;
-                return;
-            }
             ShipNavigationState task = surfaceDescent ? null : GetNavigation(assembly);
             if (task != null && !manual && NavigationConnected(task))
             {
                 ShipState controlled = GetShip(task.ShipId);
                 bool powered = FindPiece(task.NavigationPieceId, out _, out ShipPieceState nav) && IsPowered(controlled, nav) &&
                     FindPiece(task.ConsolePieceId, out _, out ShipPieceState console) && IsPowered(controlled, console);
-                if (!powered) { task.Status = "断电，等待导航设备恢复"; return; }
+                if (!powered) { targetVelocity = current; turn = 0d; task.Status = "断电，保持惯性，等待导航设备恢复"; return; }
                 SpaceVector2 target = new(task.TargetX, task.TargetY);
                 SpaceVector2 error = target - new SpaceVector2(assembly.PositionX, assembly.PositionY);
                 SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
-                if (error.Magnitude <= config.NavigationArrivalDistanceMeters && velocity.Magnitude <= config.NavigationArrivalSpeedMetersPerSecond)
+                if (error.Magnitude <= config.NavigationArrivalDistanceMeters && velocity.Magnitude <= Math.Min(.001d, config.NavigationArrivalSpeedMetersPerSecond))
                 {
                     task.Active = false; task.Status = "已到达导航点";
-                    targetVelocity = default; turn = 0d;
+                    targetVelocity = current; turn = 0d;
                     return;
                 }
                 targetVelocity = ShipCruiseGuidance.ArrivalVelocity(error, config, seconds);
@@ -203,29 +195,30 @@ namespace FlatWorld.Spaceflight
                 task.Status = targetVelocity.Magnitude < config.CruiseMaxSpeedMetersPerSecond * .95d ? "接近目标，减速中" : "正在导航";
             }
             if ((targetVelocity - current).Magnitude < .001d && Math.Abs(turn) < .001d) return;
-            // 巡航保留原松键制动，地表下落的制动与转向都使用真实引擎燃料。
-            bool driveNeeded = surfaceDescent || Math.Abs(turn) > .001d ||
-                targetVelocity.Magnitude > .001d && (targetVelocity - current).Magnitude > .001d;
-            if (!driveNeeded) return;
             CollectActuators(assembly);
             if (actuators.Count == 0)
             {
-                targetVelocity = surfaceDescent ? current : default; turn = 0d;
-                if (surfaceDescent) driveAuthority = 0d;
+                targetVelocity = current; turn = 0d;
                 if (task != null && task.Active) task.Status = "没有可用引擎";
                 return;
             }
+            double change = ShipCruiseGuidance.ChangeRate(current, targetVelocity, config) * seconds;
+            double throttle = Math.Clamp(Math.Max(Math.Abs(turn), change > 0d ? (targetVelocity - current).Magnitude / change : 0d), 0d, 1d);
+            bool ignited = false;
             foreach (ShipActuator engine in actuators)
             {
-                double actual = ConsumeEngineFuel(engine, 1d, seconds);
+                // 地表下降的按键推力独立于点火救船的垂直推力，避免进入降落后自动爬升。
+                if (!surfaceDescent && (!FindPiece(engine.Device.PieceId, out ShipState engineShip, out _) || GetFlight(engineShip.ShipId)?.Ignited != true)) continue;
+                ignited = true;
+                double actual = ConsumeEngineFuel(engine, throttle, seconds);
                 if (actual <= 0d) continue;
                 driveAuthority = actual;
-                turn *= actual;
+                turn *= actual / throttle;
                 return;
             }
             bool navigating = task != null && task.Active;
-            targetVelocity = navigating ? default : current; turn = 0d; driveAuthority = navigating ? 1d : 0d;
-            if (navigating) task.Status = "燃料不足，制动等待补给";
+            targetVelocity = current; turn = 0d;
+            if (navigating) task.Status = ignited ? "燃料不足，保持惯性，等待补给" : "引擎已停机，保持惯性，等待点火";
         }
         private double GetAvailableEngineThrust()
         {

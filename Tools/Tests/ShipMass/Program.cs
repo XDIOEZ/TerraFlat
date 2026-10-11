@@ -14,6 +14,7 @@ internal static class Program
         { Id = "test-gas", LiquidId = "test-liquid", MolarMassKgPerMol = .5d, LiquidDensityKgPerLiter = 2d };
         Run("165 个部件重复读取复用建筑 JSON", StructuralJson);
         Run("建筑 JSON 和打包快照变化失效", BuildingChanges);
+        Run("船部件回收快照遵守封包契约且保留库存", RecoveredBuilding);
         Run("二进制变化失效且冷库存只还原一次", BinarySnapshots);
         Run("冷机器只解析一次根文档和已有载荷", ColdMachine);
         Run("运行库存、堆叠和流体每步读取真实状态", LiveChanges);
@@ -78,8 +79,9 @@ internal static class Program
         var packed = Cargo(900, 123d);
         packed.ModuleDataDic["storage"] = new Inventory_ModuleData
         { Data = new() { ["cargo"] = Inventory(Cargo(901, 3d)) } };
+        Check(ItemNetworkStateSerialization.TrySerializeItemData(packed, out byte[] payload), "packed building capture");
         building.WriteData(new Mod_Building.Building_Data
-        { SnapshotBase64 = Convert.ToBase64String(MemoryPack.MemoryPackSerializer.Serialize(packed)) });
+        { SnapshotBase64 = Convert.ToBase64String(payload) });
         reader.Reset(); Near(3d, reader.ReadContents(piece), "packed contents count without packed shell weight");
         Check(DecodeCounters.Json == 2 && DecodeCounters.Binary == 1, "changed building source must decode once");
         reader.Reset(); Near(3d, reader.ReadContents(piece), "unchanged packed contents");
@@ -87,6 +89,31 @@ internal static class Program
         building.WriteData(new Mod_Building.Building_Data());
         reader.Reset(); Near(0d, reader.ReadContents(piece), "removing packed state updates mass");
         Check(DecodeCounters.Json == 3, "new JSON invalidates previous decode");
+    }
+    private static void RecoveredBuilding()
+    {
+        var placed = Cargo(900, 123d); placed.IDName = "test-building";
+        Building(placed);
+        placed.ModuleDataDic["storage"] = new Inventory_ModuleData
+        { Data = new() { ["cargo"] = Inventory(Cargo(901, 3d), Cargo(902, 5d)) } };
+        GameRes.ExistingInstance.ItemFactory = id =>
+        {
+            var created = Cargo(0, 10d); created.IDName = id; Building(created); return created;
+        };
+        ItemData carrier = Mod_Building.CreateRecoveredCarrier(placed, "test-building_Summoner");
+        Check(Mod_Building.TryReadBuildingData(carrier, out _, out Mod_Building.Building_Data building), "returned carrier has building state");
+        byte[] payload = Convert.FromBase64String(building.SnapshotBase64);
+        Check(ItemNetworkStateSerialization.IsValidPayload(payload), "recovery must use FWI1 envelope accepted by placement and mass readers");
+        Check(ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData restored), "recovery snapshot must restore");
+        Check(restored.IDName == placed.IDName, "recovery keeps building identity");
+        var reader = new Reader(); reader.Reset();
+        Near(18d, reader.ReadItem(carrier), "recovery preserves both cargo slots without double-counting the packed shell");
+        reader.Reset(); Near(18d, reader.ReadItem(carrier), "cached recovered carrier remains readable");
+        Building(carrier, Convert.ToBase64String(ItemSnapshotSerialization.SerializePayload(placed.InstanceSnapshot)));
+        reader.Reset();
+        try { reader.ReadItem(carrier); throw new Exception("raw snapshot should be rejected"); }
+        catch (InvalidOperationException exception)
+        { Check(exception.Message == "船载建筑库存快照无法读取。", "invalid payload retains the explicit rejection"); }
     }
     private static void BinarySnapshots()
     {
