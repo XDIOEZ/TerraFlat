@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
-    public sealed class ShipPieceView : MonoBehaviour, IWorldInteractionTarget, IWorldInteractionPreview
+    public sealed partial class ShipPieceView : MonoBehaviour, IWorldInteractionTarget, IWorldInteractionPreview
     {
         #region 船体表现与正式交互
         public Item Item { get; private set; }
@@ -154,6 +154,8 @@ namespace FlatWorld.Spaceflight
                 Vector3 local = baseVisualPosition + visualLiftOffset;
                 if (visual.transform.localPosition != local) visual.transform.localPosition = local;
             }
+            SynchronizeDoorVisual();
+            SynchronizePassageCollider();
         }
         public void OnInteractStart(Item actor)
         {
@@ -162,13 +164,17 @@ namespace FlatWorld.Spaceflight
             if (piece.Kind == ShipPieceKind.Console || piece.Kind == ShipPieceKind.DockingPort || piece.Kind == ShipPieceKind.Navigation || piece.Kind == ShipPieceKind.Engine)
             { ShipPanelSession.Open(session, player, shipId, pieceId); return; }
             if (piece.Kind == ShipPieceKind.Door)
-            { session.MoveThroughDoor(player, ship, piece); return; }
+            { session.TryToggleDoor(pieceId); return; }
             if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractStart(actor);
         }
         public void OnInteractUpdate(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractUpdate(actor); }
         public void OnInteractEnd(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractEnd(actor); }
         public void OnInteractCancel(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractCancel(actor); }
-        private void OnDestroy() { SpatialInteractionRegistry.Unregister(this); InteractionHighlightChanged = null; }
+        private void OnDestroy()
+        {
+            SpatialInteractionRegistry.Unregister(this); InteractionHighlightChanged = null;
+            ReleaseDoorVisual();
+        }
         #endregion
     }
     public sealed partial class SpaceSession
@@ -231,7 +237,7 @@ namespace FlatWorld.Spaceflight
                         BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
                         collider.size = new Vector2((float)(piece.Width * ship.CellSizeMeters - .05d), (float)(piece.Height * ship.CellSizeMeters - .05d));
                         collider.offset = new Vector2((float)((piece.Width - 1) * ship.CellSizeMeters * .5d), (float)((piece.Height - 1) * ship.CellSizeMeters * .5d));
-                        collider.isTrigger = !piece.BlocksMovement;
+                        collider.isTrigger = !piece.BlocksPassage;
                         Rigidbody2D body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic;
                         body.gravityScale = 0; body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.Interpolate;
                         int layer = LayerMask.NameToLayer("Collider"); if (layer >= 0) root.layer = layer;
@@ -281,29 +287,6 @@ namespace FlatWorld.Spaceflight
             { passengerVisual = player.Sprite; if (passengerVisual != null) passengerVisualPosition = passengerVisual.transform.localPosition; }
             if (passengerVisual != null)
                 passengerVisual.transform.localPosition = passengerVisualPosition + passengerVisual.transform.parent.InverseTransformVector(Vector3.up * (float)Math.Min(4d, Math.Max(0d, height) * .04d));
-        }
-        public void MoveThroughDoor(Player player, ShipState ship, ShipPieceState door)
-        {
-            SpacePassengerState passenger = GetPassenger(player);
-            Vector2 localOffset = new(door.QuarterTurns == 0 ? 1f : door.QuarterTurns == 2 ? -1f : 0f,
-                door.QuarterTurns == 1 ? 1f : door.QuarterTurns == 3 ? -1f : 0f);
-            ShipGeometry.Rotate(localOffset.x, localOffset.y, ship.AngleRadians, out double offsetX, out double offsetY);
-            Vector2 offset = new((float)offsetX, (float)offsetY);
-            Vector2 center = DisplayPoint(ship, (door.CellX + .5d) * ship.CellSizeMeters, (door.CellY + .5d) * ship.CellSizeMeters);
-            Vector2 from = (Vector2)player.transform.position - center;
-            Vector2 destination = center + offset * (Vector2.Dot(from, offset) > 0f ? -1.1f : 1.1f);
-            player.transform.position = destination;
-            Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-            if (mover?.rb != null) mover.rb.position = destination;
-            if (TryGetSupport(destination, out ShipState target, out _, out Vector2 local))
-            { passenger.ShipId = target.ShipId; passenger.LocalX = local.x; passenger.LocalY = local.y; passenger.Supported = true; }
-            else if (passenger.ShipId == ship.ShipId)
-            {
-                SpaceVector2 absolute = IsSpaceView ? UnprojectPosition(destination) : SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(destination));
-                if (!IsSpaceView) absolute = new SpaceVector2(ship.PositionX, ship.PositionY) + SpaceVector2.FromVector2(WorldTopologyRuntime.ShortestDelta(DisplayPoint(ship, ship.CenterOfMassLocalX, ship.CenterOfMassLocalY), destination));
-                ShipGeometry.WorldToLocal(ship, absolute.X, absolute.Y, out passenger.LocalX, out passenger.LocalY);
-                ReleasePassenger(passenger, ship);
-            }
         }
         #endregion
     }

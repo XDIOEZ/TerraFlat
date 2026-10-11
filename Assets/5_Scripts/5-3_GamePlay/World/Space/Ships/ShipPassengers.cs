@@ -64,7 +64,7 @@ namespace FlatWorld.Spaceflight
                 passenger.WalkVelocityX = x * mover.Speed.Value * multiplier; passenger.WalkVelocityY = y * mover.Speed.Value * multiplier;
                 double nextX = passenger.LocalX + x * speed, nextY = passenger.LocalY + y * speed;
                 int cx = (int)Math.Floor(nextX / ship.CellSizeMeters), cy = (int)Math.Floor(nextY / ship.CellSizeMeters);
-                bool wall = ship.Pieces.Exists(piece => piece.IsAlive && piece.BlocksMovement &&
+                bool wall = ship.Pieces.Exists(piece => piece.IsAlive && piece.BlocksPassage &&
                     System.Linq.Enumerable.Contains(ShipGeometry.Footprint(piece), new ShipCell(cx, cy)));
                 if (!wall) { passenger.LocalX = nextX; passenger.LocalY = nextY; }
                 PlacePassenger(player, passenger, ship);

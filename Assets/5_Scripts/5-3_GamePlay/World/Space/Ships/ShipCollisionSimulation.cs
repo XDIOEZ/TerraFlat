@@ -436,7 +436,7 @@ namespace FlatWorld.Spaceflight
                         Math.Clamp((endFraction - fraction) / Math.Max(1e-12d, movementFraction - fraction), 0d, 1d));
                     foreach (ShipContactShape shape in body.Shapes)
                     {
-                        if (!shape.Piece.IsAlive || !shape.Piece.BlocksMovement || !circleBounds.Overlaps(GetShapeContactBounds(shape, true)) ||
+                        if (!shape.Piece.IsAlive || !shape.Piece.BlocksPassage || !circleBounds.Overlaps(GetShapeContactBounds(shape, true)) ||
                             !SweepCircleAgainstShip(from, sweepDestination, radius, fraction, endFraction, shape, out ShipContactHit hit) || hit.Fraction >= best.Fraction ||
                             body.SurfaceContact.HasValue && hit.Fraction >= body.EndFraction - 1e-10d) continue;
                         hit.Body = body; best = hit;

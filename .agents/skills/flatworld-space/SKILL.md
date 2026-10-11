@@ -36,6 +36,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系
 - 船体部件能力 ID 为 `船体部件模块`，Prefab 为 `Module_ShipPart`，MonoBehaviour 文件必须同名 `Mod_ShipPart.cs`；配置位于 `space_ships.json`。设备、太阳系和飞行参数分别在 `space_devices.json`、`GameConfig/Space/solar-system.json`、`Resources/Config/Space/space-gameplay.json`。
 - 船体动态表现复用 `WorldSortingManager`：承载地板用 `vehicle`，其它部件用 `building`，材质取物品定义，附属箭头继承主体排序层；禁止硬编码 Default 负 Order，否则地表会遮住地板。
 - `UI_Ship` 只允许玩家在标准交互半径内靠近本船实际 Console 时打开，远离后关闭；地板和墙壁不承担控制台交互，也不注册到空间目标查询。各设备共用互斥的飞船面板会话，不能叠加多个窗口。
+- 舱门交互只调用 `SpaceSession.TryToggleDoor`，禁止瞬移乘员；`DoorOpen` 随部件保存，步行、自由碰撞和视图 Collider 统一读取 `BlocksPassage`。双扇滑门只负责表现，开门仍保留交互 Trigger，通道有人时拒绝关闭；正常开关不改变 `SealsAtmosphere`。
 
 ## 规划约束
 

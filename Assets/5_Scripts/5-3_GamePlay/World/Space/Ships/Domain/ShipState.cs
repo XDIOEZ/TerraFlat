@@ -45,6 +45,8 @@ namespace FlatWorld.Spaceflight
         public bool Destroyed;
         public bool SealsAtmosphere;
         public bool BlocksMovement;
+        // 舱门只切换通行状态，结构阻挡配置和气密能力保持独立。
+        public bool DoorOpen;
         public bool RequiresFloorSupport = true;
         public double MinimumPressureKPa;
         public double MaximumPressureKPa = 1000000d;
@@ -55,6 +57,7 @@ namespace FlatWorld.Spaceflight
         public string MaterialId;
         public string SnapshotJson;
         [JsonIgnore] public bool IsAlive => !Destroyed && Health > 0d;
+        [JsonIgnore] public bool BlocksPassage => BlocksMovement && !(Kind == ShipPieceKind.Door && DoorOpen);
     }
 
     [Serializable, JsonObject(MemberSerialization.Fields)]
