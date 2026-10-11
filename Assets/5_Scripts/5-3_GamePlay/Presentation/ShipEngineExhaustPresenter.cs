@@ -34,6 +34,7 @@ namespace FlatWorld.Spaceflight
                 ? Mathf.Clamp01(session.GetEngineOutput(piece.PieceId)) : 0f;
             if (output <= 0f)
             {
+                if (particles != null && source != null) SynchronizeNozzle();
                 if (emitting) particles.Stop(false, ParticleSystemStopBehavior.StopEmitting);
                 emitting = false;
                 appliedOutput = -1f;
@@ -138,9 +139,8 @@ namespace FlatWorld.Spaceflight
                 Bounds bounds = source.sprite.bounds;
                 particles.transform.localPosition = new Vector3(bounds.center.x, bounds.min.y + .025f, 0f);
             }
-            WorldSortingManager.ReadExternalRendererKey(source, out int layerId, out int order);
-            particleRenderer.sortingLayerID = layerId;
-            particleRenderer.sortingOrder = order - 1;
+            // 喷焰排在船地板、管道和电线后面，停推后的残留粒子也保持同一层级。
+            WorldSortingManager.GetInstance().ApplyRenderer(particleRenderer, WorldSortingManager.VehicleCategory, -3);
             particles.gameObject.layer = source.gameObject.layer;
         }
         #endregion
