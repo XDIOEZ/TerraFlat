@@ -11,7 +11,7 @@ using UnityEngine.Networking;
 public sealed class GameplayTestScene : MonoBehaviour
 {
     #region 场景配置
-    [SerializeField] private string luaPath = "GameplayTests/enter_showroom.lua";
+    [SerializeField] private string testSuitePath = "GameplayTests/test-suite.json";
     [SerializeField] private string seed = "flatworld-showroom-001";
     [SerializeField, Min(1f)] private float resourceTimeoutSeconds = 120f;
     [SerializeField, Min(1f)] private float worldTimeoutSeconds = 120f;
@@ -25,10 +25,15 @@ public sealed class GameplayTestScene : MonoBehaviour
     #region 运行状态
     private static GameplayTestScene activeRunner;
     private readonly object reportLock = new();
+    private readonly object logQueueLock = new();
+    private readonly Queue<CapturedLog> pendingLogs = new();
+    private readonly Dictionary<GameplayTestCaseReport, OmittedLogs> pendingCaseOmissions = new();
     private readonly System.Diagnostics.Stopwatch clock = new();
     private GameplayTestReport report;
     private GameplayTestShowroom showroom;
     private GameplayTestLuaRunner luaRunner;
+    private GameplayTestSuite suite;
+    private volatile GameplayTestCaseReport activeCase;
     private GameManager manager;
     private SaveDataMgr saveManager;
     private GameplayTestSaveScope saveScope;
@@ -42,8 +47,23 @@ public sealed class GameplayTestScene : MonoBehaviour
     private bool interruptionRequested;
     private bool worldExited;
     private bool subscribed;
-    private bool logCaptureClosed;
+    private volatile bool logCaptureClosed;
     private bool failedStep;
+    private int capturedLogCount;
+    private int pendingOmittedCount;
+    private int pendingOmittedWarnings;
+
+    private sealed class CapturedLog
+    {
+        public GameplayTestCaseReport TestCase;
+        public GameplayTestLogRecord Record;
+    }
+
+    private sealed class OmittedLogs
+    {
+        public int Count;
+        public int Warnings;
+    }
     #endregion
 
     #region 场景生命周期
@@ -67,7 +87,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         isolatedSaveDirectory = Path.Combine(root, "Saves", runId);
         report = new GameplayTestReport
         {
-            RunId = runId, Scene = gameObject.scene.path, LuaPath = luaPath,
+            RunId = runId, Scene = gameObject.scene.path, TestSuitePath = testSuitePath,
             StartedUtc = DateTime.UtcNow.ToString("O"), SaveDirectory = isolatedSaveDirectory,
             ReportPath = Path.Combine(root, "Reports", runId + ".json")
         };
@@ -84,9 +104,11 @@ public sealed class GameplayTestScene : MonoBehaviour
     {
         showroom?.UpdatePresentation();
         if (report == null || finished) return;
+        lock (reportLock) DrainCapturedLogs();
         if (worldExited || clock.Elapsed.TotalSeconds > totalTimeoutSeconds)
         {
-            Record("abort", "测试中断", false, worldExited ? "测试期间退出了世界。" : "测试达到总时间上限。");
+            if (!interruptionRequested)
+                Record("abort", "测试中断", false, worldExited ? "测试期间退出了世界。" : "测试达到总时间上限。");
             interruptionRequested = true;
             StopAllCoroutines();
             Finish(true);
@@ -111,6 +133,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         {
             Record("abort", "测试中断", false, "应用关闭或 Play Mode 已停止。");
             interruptionRequested = true;
+            StopAllCoroutines();
             Finish(true);
         }
     }
@@ -145,6 +168,20 @@ public sealed class GameplayTestScene : MonoBehaviour
             yield return null;
         }
         Record("resources", "完整资源就绪", true, GameRes.ExistingInstance.LoadStatusText);
+
+        Stage("load_suite");
+        string suiteJson = null;
+        yield return LoadText(testSuitePath, text => suiteJson = text);
+        suite = GameplayTestSuite.Parse(suiteJson);
+        foreach (GameplayTestCase testCase in suite.Cases)
+            report.Cases.Add(new GameplayTestCaseReport
+            {
+                Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath,
+                Status = testCase.Enabled ? "pending" : "disabled",
+                Reason = testCase.Enabled ? null : "用例未启用。",
+                ReportPath = Path.Combine(Path.GetDirectoryName(report.ReportPath), report.RunId, testCase.Id + ".json")
+            });
+        Record("load_suite", "读取 Lua 测试清单", true, $"已登记 {report.Cases.Count} 个用例。");
 
         manager = GameManager.Instance;
         if (manager.IsInGameWorld || manager.IsWorldEntryInProgress)
@@ -184,33 +221,37 @@ public sealed class GameplayTestScene : MonoBehaviour
         Record("showroom", "陈列厅构建完成", showroom.IsComplete && showroom.IsTerrainReady,
             $"已放置 {showroom.PlacedCount}/{showroom.ExpectedCount} 种物品。");
 
-        Stage("load_lua");
-        string script;
-        string path = Path.Combine(Application.streamingAssetsPath, luaPath);
-        using (UnityWebRequest requestLua = UnityWebRequest.Get(
-            path.Contains("://") ? path : new Uri(Path.GetFullPath(path)).AbsoluteUri))
-        {
-            requestLua.timeout = 30;
-            yield return requestLua.SendWebRequest();
-            if (requestLua.result != UnityWebRequest.Result.Success)
-                throw new IOException($"测试 Lua 读取失败：{path}，{requestLua.error}");
-            script = requestLua.downloadHandler.text;
-        }
-        Record("load_lua", "读取测试 Lua", true, luaPath);
-        Stage("lua");
-        luaRunner = new GameplayTestLuaRunner(player, Check, Record);
-        yield return luaRunner.Run(script, "@" + luaPath);
-        if (!luaRunner.Succeeded) failedStep = true;
+        yield return RunCases();
         flowCompleted = true;
     }
 
+    private IEnumerator LoadText(string relativePath, Action<string> loaded)
+    {
+        string path = Application.streamingAssetsPath.TrimEnd('/', '\\') + "/" + relativePath.Replace('\\', '/');
+        using (UnityWebRequest requestText = UnityWebRequest.Get(
+            path.Contains("://") ? path : new Uri(Path.GetFullPath(path)).AbsoluteUri))
+        {
+            requestText.timeout = 30;
+            yield return requestText.SendWebRequest();
+            if (requestText.result != UnityWebRequest.Result.Success)
+                throw new IOException($"测试文件读取失败：{path}，{requestText.error}");
+            loaded(requestText.downloadHandler.text);
+        }
+    }
+
     private IEnumerator RunGuarded(IEnumerator routine)
+    {
+        try { yield return AdvanceGuarded(routine); }
+        finally { Finish(interruptionRequested); }
+    }
+
+    private IEnumerator AdvanceGuarded(IEnumerator routine)
     {
         var stack = new Stack<IEnumerator>();
         stack.Push(routine);
         try
         {
-            while (stack.Count > 0)
+            while (stack.Count > 0 && !finished && !interruptionRequested)
             {
                 object next = null;
                 bool moved = false;
@@ -219,6 +260,7 @@ public sealed class GameplayTestScene : MonoBehaviour
                 {
                     moved = stack.Peek().MoveNext();
                     if (moved) next = stack.Peek().Current;
+                    else (stack.Pop() as IDisposable)?.Dispose();
                 }
                 catch (Exception exception) { failure = exception; }
                 if (failure != null)
@@ -227,11 +269,7 @@ public sealed class GameplayTestScene : MonoBehaviour
                     Debug.LogException(failure, this);
                     break;
                 }
-                if (!moved)
-                {
-                    (stack.Pop() as IDisposable)?.Dispose();
-                    continue;
-                }
+                if (!moved) continue;
                 if (next is IEnumerator nested) stack.Push(nested);
                 else yield return next;
             }
@@ -243,7 +281,6 @@ public sealed class GameplayTestScene : MonoBehaviour
                 try { (stack.Pop() as IDisposable)?.Dispose(); }
                 catch (Exception exception) { Record("cleanup", "协程清理失败", false, exception.ToString()); }
             }
-            Finish(interruptionRequested);
         }
     }
 
@@ -265,7 +302,14 @@ public sealed class GameplayTestScene : MonoBehaviour
         if (progress.State == WorldEntryProgressState.Failed) worldEntryFailure = progress.Status;
     }
 
-    private void OnWorldExit() => worldExited = true;
+    private void OnWorldExit()
+    {
+        worldExited = true;
+        if (finished) return;
+        // 退出事件当帧就标记中断，避免协程先结束而把退出误记为普通失败。
+        interruptionRequested = true;
+        Record("abort", "测试中断", false, "测试期间退出了世界。");
+    }
 
     private void OnReturnedToMenu()
     {
@@ -274,9 +318,127 @@ public sealed class GameplayTestScene : MonoBehaviour
     }
     #endregion
 
+    #region 多用例调度
+    private IEnumerator RunCases()
+    {
+        bool stopped = false;
+        foreach (GameplayTestCaseReport testCase in report.Cases)
+        {
+            if (finished || interruptionRequested) yield break;
+            lock (reportLock)
+            {
+                DrainCapturedLogs();
+                RefreshCaseCounts();
+                stopped |= !suite.ContinueAfterFailure && report.FailedCaseCount > 0;
+            }
+            if (testCase.Status == "disabled") continue;
+            if (stopped || !Check("world_ready") || !Check("player_ready"))
+            {
+                testCase.Status = "skipped";
+                testCase.Reason = stopped ? "前面的用例失败，清单已配置失败即停。" : "世界或玩家不再就绪。";
+                testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
+                failedStep = true;
+                continue;
+            }
+            yield return RunCase(testCase);
+            stopped |= testCase.Status != "passed" && !suite.ContinueAfterFailure;
+        }
+    }
+
+    private IEnumerator RunCase(GameplayTestCaseReport testCase)
+    {
+        lock (reportLock)
+        {
+            lock (logQueueLock) activeCase = testCase;
+            testCase.Status = "running";
+            testCase.StartedUtc = DateTime.UtcNow.ToString("O");
+            testCase.StartedElapsedSeconds = clock.Elapsed.TotalSeconds;
+            playerStart = player.transform.position;
+            testCase.PlayerStart = new GameplayTestPosition(playerStart);
+        }
+        bool succeeded = false;
+        try
+        {
+            // 每个用例自己捕获异常，读取失败或 Lua 报错不会截断整个测试清单。
+            yield return AdvanceGuarded(ExecuteCase(testCase));
+            succeeded = luaRunner?.Succeeded == true;
+        }
+        finally
+        {
+            ReleaseLuaRunner();
+            CompleteCase(testCase, succeeded, interruptionRequested);
+        }
+    }
+
+    private IEnumerator ExecuteCase(GameplayTestCaseReport testCase)
+    {
+        Stage("case." + testCase.Id + ".load_lua");
+        string script = null;
+        yield return LoadText(testCase.LuaPath, text => script = text);
+        Record("load_lua", "读取测试 Lua", true, testCase.LuaPath);
+        Stage("case." + testCase.Id + ".lua");
+        luaRunner = new GameplayTestLuaRunner(player, Check, Record);
+        yield return luaRunner.Run(script, "@" + testCase.LuaPath);
+    }
+
+    private void CompleteCase(GameplayTestCaseReport testCase, bool succeeded, bool interrupted)
+    {
+        lock (reportLock)
+        {
+            if (finished || testCase.Status != "running") return;
+            DrainCapturedLogs(clearCurrentCase: true);
+            testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
+            testCase.DurationSeconds = clock.Elapsed.TotalSeconds - testCase.StartedElapsedSeconds;
+            testCase.PlayerEnd = player == null ? null : new GameplayTestPosition(player.transform.position);
+            testCase.Status = interrupted ? "interrupted" : succeeded && testCase.FailedStepCount == 0 &&
+                testCase.ErrorCount == 0 ? "passed" : "failed";
+            if (testCase.Status != "passed") failedStep = true;
+            if (!WriteCaseReport(testCase)) testCase.Status = "failed";
+            RefreshCaseCounts();
+        }
+        Stage("between_cases");
+    }
+
+    private void ReleaseLuaRunner()
+    {
+        try { luaRunner?.Dispose(); }
+        catch (Exception exception) { Record("cleanup", "玩家控制清理失败", false, exception.ToString()); }
+        luaRunner = null;
+    }
+
+    private bool WriteCaseReport(GameplayTestCaseReport testCase)
+    {
+        try
+        {
+            GameplayTestReport.WriteJson(testCase.ReportPath, testCase);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            failedStep = true;
+            testCase.ReportWriteError = exception.ToString();
+            Debug.LogError($"[GameplayTest] 用例报告写入失败：{testCase.ReportPath}\n{exception}", this);
+            return false;
+        }
+    }
+
+    private void RefreshCaseCounts()
+    {
+        report.PassedCaseCount = report.FailedCaseCount = report.SkippedCaseCount = report.InterruptedCaseCount = 0;
+        foreach (GameplayTestCaseReport testCase in report.Cases)
+        {
+            if (testCase.Status == "passed") report.PassedCaseCount++;
+            if (testCase.Status == "failed") report.FailedCaseCount++;
+            if (testCase.Status == "skipped") report.SkippedCaseCount++;
+            if (testCase.Status == "interrupted") report.InterruptedCaseCount++;
+        }
+    }
+    #endregion
+
     #region 步骤与线程日志
     private void Stage(string stage)
     {
+        if (finished) return;
         currentStage = stage;
         report.CurrentStage = stage;
         WriteReport();
@@ -284,36 +446,98 @@ public sealed class GameplayTestScene : MonoBehaviour
 
     private void Record(string command, string label, bool success, string message)
     {
-        failedStep |= !success;
         lock (reportLock)
-            report.Steps.Add(new GameplayTestStepRecord
+        {
+            if (logCaptureClosed) return;
+            failedStep |= !success;
+            var step = new GameplayTestStepRecord
             {
                 Index = report.Steps.Count + 1, Stage = currentStage, Command = command,
+                CaseId = activeCase?.Id,
                 Label = label, Success = success, Message = message,
                 ElapsedSeconds = clock.Elapsed.TotalSeconds,
                 PlayerPosition = player == null ? null : new GameplayTestPosition(player.transform.position)
-            });
+            };
+            report.Steps.Add(step);
+            if (activeCase != null)
+            {
+                activeCase.Steps.Add(step);
+                if (!success) activeCase.FailedStepCount++;
+            }
+        }
     }
 
     private void CaptureLog(string message, string stackTrace, LogType type)
     {
-        // 日志回调可能来自后台线程，只收集普通数据，写文件放回主线程。
-        lock (reportLock)
+        // 短锁内冻结归属并入队，后台日志不等待 JSON 写盘，也不访问 Unity 对象。
+        lock (logQueueLock)
         {
             if (logCaptureClosed) return;
+            GameplayTestCaseReport testCase = activeCase;
             bool isError = type == LogType.Error || type == LogType.Exception || type == LogType.Assert;
-            if (isError) report.ErrorCount++;
-            if (type == LogType.Warning) report.WarningCount++;
-            if (!isError && report.Logs.Count >= maximumLogEntries)
+            if (!isError && capturedLogCount >= maximumLogEntries)
             {
-                report.OmittedLogCount++;
+                pendingOmittedCount++;
+                if (type == LogType.Warning) pendingOmittedWarnings++;
+                if (testCase != null)
+                {
+                    if (!pendingCaseOmissions.TryGetValue(testCase, out OmittedLogs counts))
+                        pendingCaseOmissions.Add(testCase, counts = new OmittedLogs());
+                    counts.Count++;
+                    if (type == LogType.Warning) counts.Warnings++;
+                }
                 return;
             }
-            report.Logs.Add(new GameplayTestLogRecord
+            capturedLogCount++;
+            pendingLogs.Enqueue(new CapturedLog
             {
-                Utc = DateTime.UtcNow.ToString("O"), ElapsedSeconds = clock.Elapsed.TotalSeconds,
-                Stage = currentStage, Type = type.ToString(), Message = message, StackTrace = stackTrace
+                TestCase = testCase,
+                Record = new GameplayTestLogRecord
+                {
+                    Utc = DateTime.UtcNow.ToString("O"), ElapsedSeconds = clock.Elapsed.TotalSeconds,
+                    Stage = currentStage, CaseId = testCase?.Id,
+                    Type = type.ToString(), Message = message, StackTrace = stackTrace
+                }
             });
+        }
+    }
+
+    private void DrainCapturedLogs(bool clearCurrentCase = false, bool closeCapture = false)
+    {
+        CapturedLog[] logs;
+        lock (logQueueLock)
+        {
+            if (clearCurrentCase) activeCase = null;
+            if (closeCapture) logCaptureClosed = true;
+            logs = pendingLogs.ToArray();
+            pendingLogs.Clear();
+            report.OmittedLogCount += pendingOmittedCount;
+            report.WarningCount += pendingOmittedWarnings;
+            pendingOmittedCount = pendingOmittedWarnings = 0;
+            foreach (KeyValuePair<GameplayTestCaseReport, OmittedLogs> entry in pendingCaseOmissions)
+            {
+                entry.Key.OmittedLogCount += entry.Value.Count;
+                entry.Key.WarningCount += entry.Value.Warnings;
+            }
+            pendingCaseOmissions.Clear();
+        }
+        foreach (CapturedLog captured in logs)
+        {
+            GameplayTestLogRecord log = captured.Record;
+            GameplayTestCaseReport testCase = captured.TestCase;
+            bool isError = log.Type == "Error" || log.Type == "Exception" || log.Type == "Assert";
+            if (isError) report.ErrorCount++;
+            if (log.Type == "Warning") report.WarningCount++;
+            report.Logs.Add(log);
+            if (testCase == null) continue;
+            if (isError) testCase.ErrorCount++;
+            if (log.Type == "Warning") testCase.WarningCount++;
+            testCase.Logs.Add(log);
+            if (isError && testCase.Status == "passed")
+            {
+                testCase.Status = "failed";
+                failedStep = true;
+            }
         }
     }
 
@@ -329,12 +553,29 @@ public sealed class GameplayTestScene : MonoBehaviour
     {
         if (finished || report == null) return;
         finished = true;
-        try { luaRunner?.Dispose(); }
-        catch (Exception exception) { Record("cleanup", "玩家控制清理失败", false, exception.ToString()); }
-        luaRunner = null;
+        ReleaseLuaRunner();
         lock (reportLock)
         {
-            logCaptureClosed = true;
+            DrainCapturedLogs(clearCurrentCase: true, closeCapture: true);
+            foreach (GameplayTestCaseReport testCase in report.Cases)
+            {
+                if (testCase.Status == "running")
+                {
+                    testCase.Status = interrupted ? "interrupted" : "failed";
+                    testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
+                    testCase.DurationSeconds = clock.Elapsed.TotalSeconds - testCase.StartedElapsedSeconds;
+                    testCase.PlayerEnd = player == null ? null : new GameplayTestPosition(player.transform.position);
+                    testCase.Reason = "测试流程提前结束。";
+                }
+                if (testCase.Status == "pending")
+                {
+                    testCase.Status = "skipped";
+                    testCase.Reason = "测试流程提前结束，本用例未执行。";
+                    testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
+                }
+                if (!WriteCaseReport(testCase)) testCase.Status = "failed";
+            }
+            RefreshCaseCounts();
             CopyShowroomReport();
             report.PlayerEnd = player == null ? null : new GameplayTestPosition(player.transform.position);
             report.DurationSeconds = clock.Elapsed.TotalSeconds;
@@ -353,7 +594,12 @@ public sealed class GameplayTestScene : MonoBehaviour
     {
         try
         {
-            lock (reportLock) report.Write();
+            lock (reportLock)
+            {
+                DrainCapturedLogs();
+                RefreshCaseCounts();
+                report.Write();
+            }
             return true;
         }
         catch (Exception exception)

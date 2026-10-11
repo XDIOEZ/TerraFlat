@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "enter_showroom",
+      "name": "游戏入场与物品陈列",
+      "luaPath": "GameplayTests/enter_showroom.lua",
+      "enabled": true
+    },
+    {
+      "id": "player_movement",
+      "name": "玩家基础移动",
+      "luaPath": "GameplayTests/player_movement.lua",
+      "enabled": true
+    }
+  ]
+}

@@ -10,10 +10,10 @@ using UnityEngine;
 public sealed class GameplayTestReport
 {
     #region 报告数据
-    public int SchemaVersion = 1;
+    public int SchemaVersion = 2;
     public string RunId;
     public string Scene;
-    public string LuaPath;
+    public string TestSuitePath;
     public string SaveDirectory;
     public string ReportPath;
     public string ReportWriteError;
@@ -27,24 +27,57 @@ public sealed class GameplayTestReport
     public int OmittedLogCount;
     public int ExpectedItemCount;
     public int PlacedItemCount;
+    public int PassedCaseCount;
+    public int FailedCaseCount;
+    public int SkippedCaseCount;
+    public int InterruptedCaseCount;
     public GameplayTestPosition PlayerStart;
     public GameplayTestPosition PlayerEnd;
     public List<GameplayTestStepRecord> Steps = new();
     public List<GameplayTestLogRecord> Logs = new();
     public List<GameplayTestExhibit> Exhibits = new();
+    public List<GameplayTestCaseReport> Cases = new();
     #endregion
 
     #region 文件输出
-    public void Write()
+    public void Write() => WriteJson(ReportPath, this);
+
+    internal static void WriteJson(string path, object value)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(ReportPath));
-        string json = JsonConvert.SerializeObject(this, Formatting.Indented,
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        string json = JsonConvert.SerializeObject(value, Formatting.Indented,
             new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-        string temporaryPath = ReportPath + ".tmp";
+        string temporaryPath = path + ".tmp";
         File.WriteAllText(temporaryPath, json, new UTF8Encoding(false));
-        if (File.Exists(ReportPath)) File.Replace(temporaryPath, ReportPath, null);
-        else File.Move(temporaryPath, ReportPath);
+        if (File.Exists(path)) File.Replace(temporaryPath, path, null);
+        else File.Move(temporaryPath, path);
     }
+    #endregion
+}
+
+[Serializable]
+public sealed class GameplayTestCaseReport
+{
+    #region 用例数据
+    public string Id;
+    public string Name;
+    public string LuaPath;
+    public string ReportPath;
+    public string ReportWriteError;
+    public string Status = "pending";
+    public string Reason;
+    public string StartedUtc;
+    public string FinishedUtc;
+    public double StartedElapsedSeconds;
+    public double DurationSeconds;
+    public int ErrorCount;
+    public int WarningCount;
+    public int FailedStepCount;
+    public int OmittedLogCount;
+    public GameplayTestPosition PlayerStart;
+    public GameplayTestPosition PlayerEnd;
+    public List<GameplayTestStepRecord> Steps = new();
+    public List<GameplayTestLogRecord> Logs = new();
     #endregion
 }
 
@@ -54,6 +87,7 @@ public sealed class GameplayTestStepRecord
     #region 步骤数据
     public int Index;
     public string Stage;
+    public string CaseId;
     public string Command;
     public string Label;
     public bool Success;
@@ -70,6 +104,7 @@ public sealed class GameplayTestLogRecord
     public string Utc;
     public double ElapsedSeconds;
     public string Stage;
+    public string CaseId;
     public string Type;
     public string Message;
     public string StackTrace;
