@@ -12,10 +12,10 @@ public interface IInteractable
         return true;
     }
 
-    /// <summary>判断鼠标左键落点能否直接触发目标；关闭时仍可通过交互键操作。</summary>
+    /// <summary>默认只由交互键触发；不打开设备面板的点选动作需由自身明确允许。</summary>
     bool CanPointerInteract(Item playerItem)
     {
-        return true;
+        return false;
     }
 
     void OnInteractUpdate(Item playerItem)

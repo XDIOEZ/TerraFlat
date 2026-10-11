@@ -201,6 +201,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
         return mover != null && (Rider == mover || (Rider == null && mover.CarrierSource == null));
     }
 
+    // 上下木筏是直接乘坐动作，保留鼠标点选。
+    public bool CanPointerInteract(Item actor) => true;
+
     /// <summary>再次交互下船；优先落到附近安全陆地，远海则落到船体外侧的安全水面。</summary>
     public void OnInteractStart(Item actor)
     {

@@ -199,6 +199,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         return cropModule == null && playerItem != null && CanHarvest;
     }
 
+    // 采摘不打开设备面板，继续允许鼠标点选。
+    public bool CanPointerInteract(Item playerItem) => true;
+
     public void OnInteractStart(Item playerItem)
     {
         if (playerItem == null)

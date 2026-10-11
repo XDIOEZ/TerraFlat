@@ -64,15 +64,11 @@ namespace FlatWorld.Spaceflight
             string console = pickingNavigationConsole; pickingNavigationConsole = null;
             StartNavigation(console, point); return true;
         }
-        public bool TryOpenShipInfo(Player player)
+        public bool TryCancelNavigationPicking(Player player)
         {
-            if (player == null || State == null) return false;
-            if (pickingNavigationConsole != null) { pickingNavigationConsole = null; return true; }
-            Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-            if (controller == null || !controller.TryGetMouseWorldPosition(out Vector3 point) ||
-                !TryGetSupport(point, out ShipState ship, out _, out _) ||
-                !TryGetNearbyConsole(player, ship.ShipId, out string consoleId)) return false;
-            ShipPanelSession.Open(this, player, ship.ShipId, consoleId);
+            // 右键只取消导航选点，船控面板统一从控制台交互打开。
+            if (player == null || State == null || pickingNavigationConsole == null) return false;
+            pickingNavigationConsole = null;
             return true;
         }
         public bool ConfirmNearbyDock(string shipId)

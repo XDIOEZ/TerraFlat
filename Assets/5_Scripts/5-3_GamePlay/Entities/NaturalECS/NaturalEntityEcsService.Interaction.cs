@@ -26,6 +26,8 @@ namespace FlatWorld.NaturalEntities
             public int TargetGuid => Snapshot.Guid;
             public bool IsValid => Contains(Handle) && simulation.GetBody(Handle.Id).Dead == 0;
             public bool CanInteract(Item actor) => actor != null && IsValid && CanHarvest(Handle);
+            // 资源采集保留鼠标点选，不经过设备面板入口。
+            public bool CanPointerInteract(Item actor) => true;
             public bool ContainsInteractionPoint(Vector2 point) => ContainsPoint(this, point);
             public void OnInteractStart(Item actor) => TryHarvest(Handle, actor);
             public void OnInteractCancel(Item actor) { }

@@ -391,6 +391,9 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
                (harvestPolicy?.CanHarvest ?? true);
     }
 
+    // 作物收获保留鼠标点选，设备开面板仍走交互键。
+    public bool CanPointerInteract(Item playerItem) => true;
+
     /// <summary>历史状态尚未结算时暂缓收获，避免重载首帧绕过气候死亡。</summary>
     private bool HasPendingEnvironment() => TryReadWorldClock(out _, out double now) &&
         (!Data.simulationInitialized || now - Data.lastSimulatedTime > 1d);

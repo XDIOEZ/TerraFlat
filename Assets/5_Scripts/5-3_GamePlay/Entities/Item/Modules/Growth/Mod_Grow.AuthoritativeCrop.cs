@@ -478,6 +478,9 @@ public partial class Mod_Grow
             !_harvestInProgress;
     }
 
+    // 作物采集保留鼠标点选，仍复用正式收获资格。
+    public bool CanPointerInteract(Item playerItem) => true;
+
     /// <summary>采集开始时复核环境结算、种植来源和一次性收获状态。</summary>
     public void OnInteractStart(Item playerItem)
     {

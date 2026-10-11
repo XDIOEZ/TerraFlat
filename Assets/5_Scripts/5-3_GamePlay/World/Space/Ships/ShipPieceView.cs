@@ -45,8 +45,8 @@ namespace FlatWorld.Spaceflight
                 : WorldTopologyRuntime.Distance(actor.transform.position, WorldPosition);
             return distance <= SpaceSession.ConsoleInteractionDistance;
         }
-        // 舱门只接受交互键，鼠标点选仍可用于其它船上设备。
-        public bool CanPointerInteract(Item actor) => boundPiece != null && boundPiece.Kind != ShipPieceKind.Door;
+        // 船上设备和舱门统一由交互键操作，鼠标左键不打开面板。
+        public bool CanPointerInteract(Item actor) => false;
         public void SetInteractionHighlighted(bool highlighted)
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);
