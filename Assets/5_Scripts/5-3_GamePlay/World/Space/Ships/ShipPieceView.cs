@@ -31,9 +31,11 @@ namespace FlatWorld.Spaceflight
         public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
         public bool IsInteractionHighlighted { get; private set; }
         public event Action<bool> InteractionHighlightChanged;
+        // 导航设备和信息、电力线路只提供能力，不能抢走控制台的交互入口。
         private bool HasInteractionAction => boundPiece != null &&
-            boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall) &&
-            ((boundPiece.Kind is ShipPieceKind.Console or ShipPieceKind.DockingPort or ShipPieceKind.Navigation or
+            boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall or ShipPieceKind.Navigation or
+                ShipPieceKind.Wire or ShipPieceKind.Fiber) &&
+            ((boundPiece.Kind is ShipPieceKind.Console or ShipPieceKind.DockingPort or
                 ShipPieceKind.Engine or ShipPieceKind.Door) || machineTarget != null);
         public bool CanInteract(Item actor)
         {
@@ -188,7 +190,7 @@ namespace FlatWorld.Spaceflight
         {
             if (!CanInteract(actor) || actor is not Player player) return;
             session.FindPiece(pieceId, out ShipState ship, out ShipPieceState piece);
-            if (piece.Kind == ShipPieceKind.Console || piece.Kind == ShipPieceKind.DockingPort || piece.Kind == ShipPieceKind.Navigation || piece.Kind == ShipPieceKind.Engine)
+            if (piece.Kind == ShipPieceKind.Console || piece.Kind == ShipPieceKind.DockingPort || piece.Kind == ShipPieceKind.Engine)
             { ShipPanelSession.Open(session, player, shipId, pieceId); return; }
             if (piece.Kind == ShipPieceKind.Door)
             { session.TryToggleDoor(pieceId); return; }

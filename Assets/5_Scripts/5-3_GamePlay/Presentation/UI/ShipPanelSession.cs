@@ -92,7 +92,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     public static void Open(SpaceSession session, Player player, string ship, string piece)
     {
-        if (session == null || !session.TryGetNearbyConsole(player, ship, out _)) return;
+        if (session == null || !session.CanOpenShipPanel(player, ship, piece)) return;
         ShipPanelSession existing = sessions.Find(value => value.IsAlive && value.session == session && value.shipId == ship && value.pieceId == piece);
         existing ??= new ShipPanelSession(session, ship, piece);
         if (!existing.IsOpen) existing.Toggle(player);
@@ -103,7 +103,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
         Player nearbyPlayer = player as Player;
-        if (session == null || !session.TryGetNearbyConsole(nearbyPlayer, shipId, out _))
+        if (session == null || !session.CanOpenShipPanel(nearbyPlayer, shipId, pieceId))
         { Dispose(); return; }
         // 每个玩家同时只保留一个船控窗口，切换部件时销毁旧实例而非叠加面板。
         foreach (ShipPanelSession other in sessions.ToArray())
@@ -372,9 +372,9 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (!immediate && Time.unscaledTime < nextRefreshTime) return;
         nextRefreshTime = Time.unscaledTime + .2f;
         actor = ItemMgr.Instance?.User_Player ?? actor;
-        if (!session.TryGetNearbyConsole(actor, shipId, out _)) { Close(); return; }
         if (!session.FindPiece(pieceId, out ShipState ship, out _)) { Close(); return; }
         shipId = ship.ShipId;
+        if (!session.CanOpenShipPanel(actor, shipId, pieceId)) { Close(); return; }
         ShipFlightState flight = session.GetFlight(shipId);
         if (flight == null) { Close(); return; }
         ShipNavigationState task = session.GetLatestNavigation(shipId);

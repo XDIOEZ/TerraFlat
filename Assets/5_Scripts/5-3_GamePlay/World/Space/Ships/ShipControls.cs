@@ -10,7 +10,7 @@ namespace FlatWorld.Spaceflight
         public const float ConsoleInteractionDistance = Mod_InteractSender.DefaultMaxInteractDistance;
 
         // 只有靠近本船实际控制台才能操作整船面板，船体地板不作为控制台。
-        public bool TryGetNearbyConsole(Player player, string shipId, out string consoleId)
+        public bool TryGetNearbyConsole(Player player, string shipId, out string consoleId, string requiredConsoleId = null)
         {
             consoleId = null;
             if (player == null || State == null) return false;
@@ -20,7 +20,9 @@ namespace FlatWorld.Spaceflight
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (!piece.IsAlive || piece.Kind != ShipPieceKind.Console) continue;
-                Vector2 center = DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d);
+                if (requiredConsoleId != null && piece.PieceId != requiredConsoleId) continue;
+                Vector2 center = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
+                    (piece.CellY + .5d) * ship.CellSizeMeters);
                 float distance = IsSpaceView
                     ? Vector2.Distance(player.transform.position, center)
                     : WorldTopologyRuntime.Distance(player.transform.position, center);
@@ -29,6 +31,15 @@ namespace FlatWorld.Spaceflight
                 consoleId = piece.PieceId;
             }
             return consoleId != null;
+        }
+
+        // 面板绑定实际操作部件，导航模块不能借附近控制台冒充船控入口。
+        public bool CanOpenShipPanel(Player player, string shipId, string pieceId)
+        {
+            if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) || ship.ShipId != shipId ||
+                piece.Kind is not (ShipPieceKind.Console or ShipPieceKind.DockingPort or ShipPieceKind.Engine or
+                    ShipPieceKind.GravityGenerator or ShipPieceKind.Equipment)) return false;
+            return TryGetNearbyConsole(player, shipId, out _, piece.Kind == ShipPieceKind.Console ? pieceId : null);
         }
 
         public string ResolveConsole(string shipId, string preferred = null)

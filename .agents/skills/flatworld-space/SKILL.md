@@ -38,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系
 - 船体动态表现复用 `WorldSortingManager`：承载地板、普通管道、电线依次用 `vehicle` 的 -2/-1/0 偏移，机器及其它部件用 `building`，材质取物品定义，附属箭头继承主体排序层；禁止硬编码 Default 负 Order，否则地表会遮住地板。普通管道按本船正式端口掩码选择 `pipe0..pipe15`，节点状态/删除事件只在端口拓扑签名变化时刷新相邻管线，会话释放须退订。
 - 船上设备投影必须读取物品定义的 `visual.rendererLocalScale`，与召唤器和放置预览保持相同尺寸；复用小型设备贴图时按 PNG 画布、PPU 与目标格宽换算缩放，不修改共享贴图的导入尺寸。
 - `UI_Ship` 只允许玩家在标准交互半径内靠近本船实际 Console 时打开，远离后关闭；地板和墙壁不承担控制台交互，也不注册到空间目标查询。各设备共用互斥的飞船面板会话，不能叠加多个窗口。
+- 自动导航设备只经光纤为控制台提供导航能力，不作为船控面板入口；电线和光纤不参与设备交互，避免同格线路遮住实际控制台。面板打开、切换与刷新共用 `CanOpenShipPanel`，控制台窗口校验自身距离，不借其它控制台通过检查。
 - 舱门只接受交互键开关，`ShipPieceView.CanPointerInteract` 必须拒绝舱门鼠标点选；交互只调用 `SpaceSession.TryToggleDoor`，禁止瞬移乘员。`DoorOpen` 随部件保存，步行、自由碰撞和视图 Collider 统一读取 `BlocksPassage`。双扇滑门只负责表现，开门仍保留交互 Trigger，通道有人时拒绝关闭；正常开关不改变 `SealsAtmosphere`。
 
 ## 规划约束
