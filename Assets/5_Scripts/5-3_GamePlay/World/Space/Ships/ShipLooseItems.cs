@@ -20,9 +20,11 @@ namespace FlatWorld.Spaceflight
         #region 不随船固定的散落物
         private readonly Dictionary<string, Item> looseViews = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ItemData> looseData = new(StringComparer.Ordinal);
+        private readonly Dictionary<Item, (SpriteRenderer Renderer, Vector3 LocalPosition)> looseHeightVisuals = new(ItemReferenceComparer.Instance);
         private bool releasingLooseViews;
         private void OnLooseItemDespawning(Item item)
         {
+            RestoreLooseItemHeightVisual(item);
             if (releasingLooseViews || State == null || !ReferenceEquals(item.PersistenceOwner, this)) return;
             string key = null;
             foreach (var pair in looseViews) if (ReferenceEquals(pair.Value, item)) { key = pair.Key; break; }
@@ -31,6 +33,7 @@ namespace FlatWorld.Spaceflight
         }
         private void DespawnLooseView(Item item)
         {
+            RestoreLooseItemHeightVisual(item);
             releasingLooseViews = true;
             try { if (item != null) ItemMgr.Instance?.DespawnItem(item, false); }
             finally { releasingLooseViews = false; }
@@ -42,14 +45,17 @@ namespace FlatWorld.Spaceflight
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
             data.inHand = false; data.Stack.CanBePickedUp = true;
             var flight = GetFlight(ship.ShipId);
+            bool inSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending;
             State.LooseItems.Add(new SpaceLooseItemState
             {
                 Snapshot = Encode(data), WorldKey = flight.SurfaceWorldKey,
-                InSpace = flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending,
+                InSpace = inSpace,
                 Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
                     RadiusMeters = .15d },
                 RotationDegrees = ship.AngleRadians * 180d / Math.PI + piece.QuarterTurns * 90d,
-                SurfaceHeight = Math.Max(0d, flight.HeightMeters), SurfaceVerticalSpeed = flight.VerticalSpeed
+                // 太空掉落不能继承船体残留的地表升空高度。
+                SurfaceHeight = inSpace ? 0d : Math.Max(0d, flight.HeightMeters),
+                SurfaceVerticalSpeed = inSpace ? 0d : flight.VerticalSpeed
             });
         }
         private void StepLooseItems(double seconds)
@@ -89,7 +95,10 @@ namespace FlatWorld.Spaceflight
             {
                 if (looseViews.TryGetValue(state.Id, out Item existing) && existing != null &&
                     (existing.Owner != null || existing.InHand || existing.itemData.Stack.Amount <= 0f))
-                { looseViews.Remove(state.Id); looseData.Remove(state.Id); State.LooseItems.Remove(state); continue; }
+                {
+                    RestoreLooseItemHeightVisual(existing);
+                    looseViews.Remove(state.Id); looseData.Remove(state.Id); State.LooseItems.Remove(state); continue;
+                }
                 bool visible = state.InSpace ? IsSpaceView && (state.Motion.PositionMeters - ViewOrigin).Magnitude < 1200d
                     : !IsSpaceView && state.WorldKey == SceneManager.GetActiveScene().name;
                 if (!visible)
@@ -110,7 +119,6 @@ namespace FlatWorld.Spaceflight
                     existing.transform.position = position;
                     Rigidbody2D body = existing.GetComponent<Rigidbody2D>();
                     if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0; body.position = position; }
-                    if (existing.Sprite != null) existing.Sprite.transform.position = position + Vector2.up * (float)Math.Min(4d, state.SurfaceHeight * .04d);
                 }
                 else
                 {
@@ -118,14 +126,40 @@ namespace FlatWorld.Spaceflight
                     if (body != null) body.bodyType = RigidbodyType2D.Dynamic;
                     state.Motion.PositionMeters = SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(existing.transform.position));
                 }
+                ApplyLooseItemHeightVisual(existing, state.InSpace ? 0d : state.SurfaceHeight);
             }
+        }
+        private void ApplyLooseItemHeightVisual(Item item, double height)
+        {
+            float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
+            SpriteRenderer renderer = item.Sprite;
+            if (rise <= 0f || renderer == null || renderer.transform == item.transform)
+            { RestoreLooseItemHeightVisual(item); return; }
+            if (!looseHeightVisuals.TryGetValue(item, out var visual) || visual.Renderer != renderer)
+            {
+                RestoreLooseItemHeightVisual(item);
+                visual = (renderer, renderer.transform.localPosition);
+                looseHeightVisuals[item] = visual;
+            }
+            // 升高只叠加显示偏移，保留贴图原来的局部位置和旋转缩放关系。
+            Vector3 offset = renderer.transform.parent.InverseTransformVector(Vector3.up * rise);
+            renderer.transform.localPosition = visual.LocalPosition + offset;
+        }
+        private void RestoreLooseItemHeightVisual(Item item)
+        {
+            if (ReferenceEquals(item, null) || !looseHeightVisuals.Remove(item, out var visual)) return;
+            if (visual.Renderer != null) visual.Renderer.transform.localPosition = visual.LocalPosition;
         }
         private void CaptureLooseItems()
         {
             foreach (SpaceLooseItemState state in State.LooseItems.ToArray())
                 if (looseViews.TryGetValue(state.Id, out Item item) && item != null)
                 {
-                    if (item.Owner != null || item.InHand) { State.LooseItems.Remove(state); looseViews.Remove(state.Id); continue; }
+                    if (item.Owner != null || item.InHand)
+                    {
+                        RestoreLooseItemHeightVisual(item);
+                        State.LooseItems.Remove(state); looseViews.Remove(state.Id); looseData.Remove(state.Id); continue;
+                    }
                     item.Save(); state.Snapshot = Encode(item.itemData);
                 }
         }
@@ -133,7 +167,7 @@ namespace FlatWorld.Spaceflight
         {
             CaptureLooseItems();
             foreach (Item item in looseViews.Values) DespawnLooseView(item);
-            looseViews.Clear(); looseData.Clear();
+            looseViews.Clear(); looseData.Clear(); looseHeightVisuals.Clear();
         }
         private void AddLooseCargoMass(ShipState ship, ShipMassReader reader)
         {
