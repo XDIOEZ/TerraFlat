@@ -10,6 +10,7 @@ namespace FlatWorld.Spaceflight
         private const double ShipContactSkin = .001d;
         private const int MaximumContactSweepIterations = 128;
         private readonly Dictionary<string, ShipContactPose> shipContactStarts = new(StringComparer.Ordinal);
+        private readonly ShipAssemblyCache freeContactAssemblies = new();
         private double shipContactTime = double.NaN;
 
         private readonly struct ShipContactPose
@@ -86,14 +87,19 @@ namespace FlatWorld.Spaceflight
                     shipContactStarts[ship.ShipId] = new ShipContactPose(new SpaceVector2(ship.PositionX, ship.PositionY), ship.AngleRadians,
                         realm, new SpaceVector2(ship.VelocityX, ship.VelocityY), ship.AngularVelocityRadiansPerSecond);
         }
-        private bool TryGetShipContactRealm(ShipState ship, out string realm, out double height, out bool dynamic)
+        private bool TryGetShipContactRealm(ShipState ship, out string realm, out double height, out bool dynamic,
+            bool? inSpaceFilter = null, string surfaceWorldKey = null)
         {
             realm = null; height = 0d; dynamic = false;
             ShipFlightState flight = ship == null ? null : GetFlight(ship.ShipId);
             if (flight == null) return false;
             if (flight.Phase is ShipFlightPhase.Cruising)
-            { realm = "space"; dynamic = true; return true; }
-            if (string.IsNullOrWhiteSpace(flight.SurfaceWorldKey)) return false;
+            {
+                if (inSpaceFilter == false) return false;
+                realm = "space"; dynamic = true; return true;
+            }
+            if (inSpaceFilter == true || string.IsNullOrWhiteSpace(flight.SurfaceWorldKey) ||
+                inSpaceFilter == false && !string.Equals(flight.SurfaceWorldKey, surfaceWorldKey, StringComparison.Ordinal)) return false;
             realm = "surface:" + flight.SurfaceWorldKey;
             height = Math.Max(0d, flight.HeightMeters);
             // 起飞只有高度动画，不再把地面上的飞船视为正在运动的刚体。
@@ -110,14 +116,23 @@ namespace FlatWorld.Spaceflight
                 ship.AngleRadians - ship.AngularVelocityRadiansPerSecond * seconds, realm,
                 new SpaceVector2(ship.VelocityX, ship.VelocityY), ship.AngularVelocityRadiansPerSecond);
         }
-        private List<ShipContactBody> BuildShipContactBodies(double seconds, IReadOnlyList<ShipAssemblyState> assemblies = null)
+        private bool HasShipContactRealm(bool inSpace, string worldKey = null)
+        {
+            foreach (ShipState ship in State.Ships)
+                if (TryGetShipContactRealm(ship, out _, out _, out _, inSpace, worldKey)) return true;
+            return false;
+        }
+        private List<ShipContactBody> BuildShipContactBodies(double seconds, IReadOnlyList<ShipAssemblyState> assemblies = null,
+            string contactRealm = null)
         {
             var bodies = new List<ShipContactBody>();
-            assemblies ??= ShipDockingService.RebuildAssemblies(State.Ships, State.Docking);
+            // 自由物每次刷新真实运动量，但不重复重建整舰队的对接拓扑。
+            assemblies ??= freeContactAssemblies.Refresh(State.Ships, State.Docking);
             foreach (ShipAssemblyState assembly in assemblies)
             {
                 ShipState primary = GetShip(assembly.MemberShipIds[0]);
-                if (!TryGetShipContactRealm(primary, out string realm, out double height, out bool dynamic)) continue;
+                if (!TryGetShipContactRealm(primary, out string realm, out double height, out bool dynamic) ||
+                    contactRealm != null && !string.Equals(realm, contactRealm, StringComparison.Ordinal)) continue;
                 var body = new ShipContactBody { Assembly = assembly, Realm = realm, Height = height, Dynamic = dynamic };
                 QueuedSurfaceContact queued = FindQueuedSurfaceContact(assembly);
                 if (queued != null)
@@ -384,6 +399,7 @@ namespace FlatWorld.Spaceflight
             firstContactFraction = double.PositiveInfinity;
             if (!GameNetwork.HasStateAuthority || State == null || passenger?.FreeMotion == null || !passenger.IsInSpace ||
                 passenger.Supported || passenger.SurfaceDescending || passenger.LandingResolved) return false;
+            if (!HasShipContactRealm(true)) return false;
             Player player = null;
             if (ItemMgr.Instance != null) ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out player);
             Data_Player data = player?.Data;
@@ -401,6 +417,8 @@ namespace FlatWorld.Spaceflight
             firstContactFraction = double.PositiveInfinity;
             if (!GameNetwork.HasStateAuthority || State == null || item?.Motion == null ||
                 !item.InSpace && string.IsNullOrWhiteSpace(item.WorldKey) || string.IsNullOrWhiteSpace(item.Snapshot)) return false;
+            // 没有同空间船体时直接保留自由运动，省掉快照计重和全部碰撞部件的构建。
+            if (!HasShipContactRealm(item.InSpace, item.WorldKey)) return false;
             looseViews.TryGetValue(item.Id, out Item live);
             if (live != null && (live.Owner != null || live.InHand || live.itemData.Stack.Amount <= 0f)) return false;
             ItemData data = live != null ? live.itemData : looseData.TryGetValue(item.Id, out ItemData cached) ? cached : Decode(item.Snapshot);
@@ -418,7 +436,7 @@ namespace FlatWorld.Spaceflight
             if (!GameNetwork.HasStateAuthority || State == null || !SpaceVector2.Finite(seconds) || seconds <= 0d ||
                 !SpaceVector2.Finite(movementFraction) || movementFraction <= 0d || movementFraction > 1d ||
                 !previousPosition.IsFinite || !motion.PositionMeters.IsFinite || !motion.VelocityMetersPerSecond.IsFinite) return false;
-            List<ShipContactBody> bodies = BuildShipContactBodies(seconds);
+            List<ShipContactBody> bodies = BuildShipContactBodies(seconds, contactRealm: realm);
             SpaceVector2 from = previousPosition, destination = motion.PositionMeters;
             double fraction = 0d;
             for (int contact = 0; contact < 8 && fraction < movementFraction; contact++)

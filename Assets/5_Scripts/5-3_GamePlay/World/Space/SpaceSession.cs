@@ -37,6 +37,8 @@ namespace FlatWorld.Spaceflight
         private static readonly ProfilerMarker ShipMassMarker = new("SpaceSession.Fixed.Mass");
         private static readonly ProfilerMarker ShipMotionMarker = new("SpaceSession.Fixed.Motion");
         private static readonly ProfilerMarker ShipContactMarker = new("SpaceSession.Fixed.Contacts");
+        private static readonly ProfilerMarker FreePassengerMarker = new("SpaceSession.Fixed.FreePassengers");
+        private static readonly ProfilerMarker LooseItemMarker = new("SpaceSession.Fixed.LooseItems");
         private static readonly ProfilerMarker ShipEnvironmentMarker = new("SpaceSession.Fixed.Environment");
         private static readonly ProfilerMarker ShipViewMarker = new("SpaceSession.Late.Pieces");
 
@@ -86,6 +88,7 @@ namespace FlatWorld.Spaceflight
             pieceIndex.Clear(); pieceIndexDirty = false;
             fixedShips.Clear();
             simulationAssemblies.Clear(); queryAssemblies.Clear();
+            freeContactAssemblies.Clear();
             pickingNavigationConsole = null;
             ResetMassWorkspace();
             viewBindingsDirty = false;
@@ -137,6 +140,7 @@ namespace FlatWorld.Spaceflight
             Current.pieceIndexDirty = false;
             Current.fixedShips.Clear();
             Current.simulationAssemblies.Clear(); Current.queryAssemblies.Clear();
+            Current.freeContactAssemblies.Clear();
             Current.controlRequests.Clear(); Current.pickingNavigationConsole = null;
             Current.engineOutputs.Clear();
             Current.ResetMassWorkspace();
@@ -205,8 +209,8 @@ namespace FlatWorld.Spaceflight
                 if (assemblies.Count > 1 && hasPhysicalShips)
                     using (ShipContactMarker.Auto()) StepShipContacts(seconds, assemblies);
             }
-            StepFreePassengers(seconds);
-            StepLooseItems(seconds);
+            using (FreePassengerMarker.Auto()) StepFreePassengers(seconds);
+            using (LooseItemMarker.Auto()) StepLooseItems(seconds);
             CommitSurfaceContacts(seconds);
             environmentElapsed += (float)seconds;
             if (environmentElapsed >= .2f)
