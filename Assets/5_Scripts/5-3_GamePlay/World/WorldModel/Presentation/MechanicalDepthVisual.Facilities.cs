@@ -12,6 +12,7 @@ public sealed partial class MechanicalDepthVisual
     /// <summary>灯光保留 Unity 专用代理，晾架内容与主体一起合入脚点行。</summary>
     internal void UpdateFacility(MachineEntity entity)
     {
+        UpdateCultivatorSprites(entity);
         if (entity.Definition.Content?.Find<Mod_Fuel>() != null) UpdateCombustionLight(entity);
         if (entity.Definition.LogicId == "drying") UpdateDryingSprites(entity);
     }
@@ -96,12 +97,13 @@ public sealed partial class MechanicalDepthVisual
         }
     }
 
-    private void SetFacilitySprite(int index, Sprite sprite, Material material, Vector3 position, int order, Color color)
+    private void SetFacilitySprite(int index, Sprite sprite, Material material, Vector3 position, int order, Color color,
+        Vector3? scale = null, Quaternion? rotation = null)
     {
         while (facilityParts.Count <= index) facilityParts.Add(null);
         PartVisual part = facilityParts[index] ??= new PartVisual { Id = 4 + index };
         part.Sprite = sprite; part.Material = material; part.Offset = position;
-        part.Rotation = Quaternion.identity; part.Scale = Vector3.one;
+        part.Rotation = rotation ?? Quaternion.identity; part.Scale = scale ?? Vector3.one;
         part.Order = occupancy * 32 + order; part.Tint = color;
         part.Animation = Vector4.zero; part.Touched = part.Visible = true;
         Submit(part);

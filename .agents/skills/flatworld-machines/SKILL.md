@@ -20,6 +20,7 @@ description: "Use when: 定位或修改 FlatWorld 的机器世界、工作台、
 - 移动船体使用 `MachineWorld.UseScope("ship:" + ShipId)` 和 `TickShip`，不得让当前地表切换重建或冻结船上网络；表现位置由 SpaceSession.ProjectMachinePosition 投影，本地 Cell 保持不变。
 - 共享罐跨船转移、分裂或回收前，先按各真实罐体容积分配 decimal 组分和内能，并归还各端口预留；撤销旧共享引用和流量预算，再重建两侧网络。不能将整组气体复制到单罐快照。
 - 培育仓由 CultivatorLogic 管理多个独立作物进度、真实水库存、供电、肥料及待收产量；配置来自 Mod_Cultivator 和 `space_devices.json`，面板只发正式库存命令，断供与满输出保留状态。
+- 培育仓机身只画空土槽，植株用作物定义的 seedling/growing/mature 图独立显示；`CultivatorPlotPresentation` 共用槽位锚点，地面行网格与船上 Sprite 都读取真实槽位，空槽立即隐藏。循环采收作物完成首次成长后保持成熟植株；休眠/客户端只读快照，不为显示创建逻辑或库存。气液机身分支也须提交内容图层，内容部件 ID 避开其管口与仪表。
 - 船上流体设备通过环境提供方读取真实舱室温压和气体库存，进气抽取实际舱气；不可拿当前 TemperatureMgr 或星球大气替代另一世界船舱。
 
 - 只维护一套 `MachineWorld`，不新建并列的 WorkBlockWorld；普通设施 `Ports=none` 共用格索引，但不能伪造扭矩网络。传动网络和设施业务都保持粗粒度内聚。

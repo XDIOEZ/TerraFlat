@@ -362,6 +362,7 @@ public sealed partial class ChunkTilemapRenderer
             Fit(body, pipe ? .55f : probe ? .32f : .85f, pipe ? .55f : probe ? .32f : .85f), 0, 0);
         MechanicalDepthVisual visual = mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)];
         Ports(node, x, y, 6, material, origin, rotation);
+        visual.UpdateFacility(node);
         if (probe) { visual.SetPartTint(0, state.ProbeConnected ? new Color(.35f, 1, .45f) : new Color(1, .25f, .2f)); return; }
         if (inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(node), MachineWorld.GetFluidMinimumGasSpaceLiters(node)) > node.Definition.Fluid.MaxSafePressureKPa)
         {

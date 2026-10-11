@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 /// <summary>培育器只声明配置，真实种植、库存与供水由机器领域持有。</summary>
 public sealed class Mod_Cultivator : Mod_MachineAuthoring, IModuleJsonParameterValidator
@@ -11,8 +12,34 @@ public sealed class Mod_Cultivator : Mod_MachineAuthoring, IModuleJsonParameterV
     public Ex_ModData_MemoryPackable ModData = new() { ID = ModuleId };
     public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData_MemoryPackable)value; }
     public CultivatorConfiguration Configuration = new();
+    public CultivatorVisualConfiguration Visual = new();
     public void ValidateJsonParameters(JObject parameters)
-        => (parameters[nameof(Configuration)]?.ToObject<CultivatorConfiguration>() ?? Configuration).Validate();
+    {
+        var configuration = parameters[nameof(Configuration)]?.ToObject<CultivatorConfiguration>() ?? Configuration;
+        configuration.Validate();
+        (parameters[nameof(Visual)]?.ToObject<CultivatorVisualConfiguration>() ?? Visual).Validate(configuration.PlotCount);
+    }
+    #endregion
+}
+
+[Serializable]
+public sealed class CultivatorVisualConfiguration
+{
+    #region 空槽机身中的植株布局
+    // 坐标按机身图片左下角归一化，底图只保留土槽，植物由真实状态单独显示。
+    public Vector2[] PlotAnchors = { new(.345f, .625f), new(.655f, .625f), new(.345f, .375f), new(.655f, .375f) };
+    public Vector2 PlotSize = new(.24f, .18f);
+    public void Validate(int plotCount)
+    {
+        if (PlotAnchors == null || PlotAnchors.Length < plotCount || PlotAnchors.Length > 16 ||
+            !float.IsFinite(PlotSize.x) || !float.IsFinite(PlotSize.y) ||
+            PlotSize.x <= 0f || PlotSize.x > 1f || PlotSize.y <= 0f || PlotSize.y > 1f)
+            throw new InvalidOperationException("培育仓植株布局与种植槽数不符。");
+        foreach (Vector2 anchor in PlotAnchors)
+            if (!float.IsFinite(anchor.x) || !float.IsFinite(anchor.y) ||
+                anchor.x < 0f || anchor.x > 1f || anchor.y < 0f || anchor.y > 1f)
+                throw new InvalidOperationException("培育仓植株锚点必须位于机身图片内。");
+    }
     #endregion
 }
 

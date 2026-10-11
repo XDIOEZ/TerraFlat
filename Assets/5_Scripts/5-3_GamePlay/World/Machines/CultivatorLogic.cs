@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using FlatWorld.Networking;
 using FlatWorld.Spaceflight;
@@ -131,6 +132,75 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
     }
     private static ItemData Rebase(ItemData value) => ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, value);
     protected override void OnInventoryChanged(ItemSlot slot) { if (!committing) base.OnInventoryChanged(slot); }
+    #endregion
+
+    #region 只读植株表现
+    private static readonly ConditionalWeakTable<RuntimeItemDefinition, CropProfile> snapshotVisualProfiles = new();
+    // 植株成长与采果周期分开读取，空槽和已移除的一次性作物不会留下植物图。
+    public bool TryGetPlotVisual(int index, out Sprite sprite, out float growth01)
+        => TryGetPlotVisual(index, out sprite, out growth01, out _);
+
+    public bool TryGetPlotVisual(int index, out Sprite sprite, out float growth01, out float relativeScale)
+    {
+        sprite = null;
+        growth01 = 0f;
+        relativeScale = 1f;
+        if ((uint)index >= (uint)State.Plots.Count) return false;
+        CultivatorPlotState plot = State.Plots[index];
+        if (string.IsNullOrEmpty(plot?.CropId)) return false;
+        CropProfile profile = Profile(plot.CropId);
+        return ResolvePlotVisual(plot, profile, out sprite, out growth01, out relativeScale);
+    }
+
+    // 休眠和客户端表现只读取快照，不为了显示植物创建机器逻辑或库存。
+    public static bool TryGetPlotVisual(CultivatorState state, int index, out Sprite sprite, out float relativeScale)
+    {
+        sprite = null; relativeScale = 1f;
+        if (state?.Plots == null || (uint)index >= (uint)state.Plots.Count ||
+            string.IsNullOrEmpty(state.Plots[index]?.CropId)) return false;
+        CultivatorPlotState plot = state.Plots[index];
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.TryGetItemDefinition(plot.CropId, out var definition)) return false;
+        if (!snapshotVisualProfiles.TryGetValue(definition, out CropProfile profile))
+        {
+            var content = new MachineContent(definition);
+            var growth = content.Find<Mod_Crop>();
+            if (growth == null) return false;
+            profile = new() { CropGrowthSeconds = growth.Value("growthDurationSeconds", 500f) };
+            ResolveCropVisual(profile, content);
+            if (content.Find<Mod_CropYield>() == null)
+            {
+                var production = content.Find<Mod_Production>();
+                var entries = production?.Value<List<Mod_Production.ItemProductionData>>("ProductionList", null);
+                if (entries?.Count == 1)
+                {
+                    profile.Production = entries[0];
+                    profile.Repeatable = !entries[0].DestroySelf;
+                }
+            }
+            snapshotVisualProfiles.Add(definition, profile);
+        }
+        profile.GrowthSeconds = profile.CropGrowthSeconds +
+            (profile.Production != null ? ProductionDuration(profile.Production) : 0f);
+        return ResolvePlotVisual(plot, profile, out sprite, out _, out relativeScale);
+    }
+
+    private static bool ResolvePlotVisual(CultivatorPlotState plot, CropProfile profile,
+        out Sprite sprite, out float growth01, out float relativeScale)
+    {
+        sprite = null; relativeScale = 1f;
+        growth01 = plot.Growth >= 1f || plot.HasCompletedFirstGrowth && profile.Repeatable ? 1f :
+            Mathf.Clamp01(plot.Growth * profile.GrowthSeconds / Mathf.Max(.0001f, profile.CropGrowthSeconds));
+        if (profile.UseDiscreteSprites)
+            sprite = growth01 >= 1f ? profile.MatureSprite :
+                growth01 >= profile.GrowingVisualThreshold ? profile.GrowingSprite : profile.SeedlingSprite;
+        else
+        {
+            sprite = profile.BaseSprite;
+            relativeScale = Mathf.Lerp(profile.SeedlingScale, profile.MatureScale, growth01);
+        }
+        return sprite != null;
+    }
     #endregion
 
     #region 生长与收获
@@ -329,6 +399,14 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         public bool Repeatable, CalendarInterval, ProductionUsesGrowthMultiplier;
         public List<CropYieldEntry> Outputs;
         public Mod_Production.ItemProductionData Production;
+        public Sprite BaseSprite, SeedlingSprite, GrowingSprite, MatureSprite;
+        public bool UseDiscreteSprites;
+        public float GrowingVisualThreshold = .34f, SeedlingScale = .25f, MatureScale = 1f;
+    }
+    [Serializable]
+    private sealed class CropVisualConfiguration
+    {
+        public float growingVisualThreshold = .34f, seedlingScale = .25f, matureScale = 1f;
     }
     private bool TryResolveSeed(ItemData seed, out string cropId)
     {
@@ -353,6 +431,7 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         MachineModuleConfiguration growth = content.Find<Mod_Crop>();
         if (growth == null) throw new InvalidOperationException("培育器只支持非树农作物：" + cropId);
         profile = new() { GrowthSeconds = growth.Value("growthDurationSeconds", 500f), Outputs = new() };
+        ResolveCropVisual(profile, content);
         profile.CropGrowthSeconds = profile.GrowthSeconds;
         MachineModuleConfiguration yield = content.Find<Mod_CropYield>();
         if (yield != null) profile.Outputs = yield.Value("outputs", ((Mod_CropYield)yield.Authoring).outputs);
@@ -379,6 +458,27 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
                 throw new InvalidOperationException("培育器作物收获表无效：" + cropId);
         profiles.Add(cropId, profile);
         return profile;
+    }
+    private static void ResolveCropVisual(CropProfile profile, MachineContent content)
+    {
+        RuntimeItemDefinition definition = content.Definition;
+        profile.BaseSprite = definition.Sprite;
+        MachineModuleConfiguration visual = content.Find<Mod_CropVisual>();
+        if (visual != null)
+        {
+            // 配置模板只投影一次，查询画面时复用缓存并保留 JSON 对 Prefab 的覆盖。
+            var template = new CropVisualConfiguration();
+            JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(visual.Authoring), template);
+            profile.GrowingVisualThreshold = Mathf.Clamp(visual.Value("growingVisualThreshold", template.growingVisualThreshold), .01f, .99f);
+            profile.SeedlingScale = Mathf.Clamp(visual.Value("seedlingScale", template.seedlingScale), .01f, 1f);
+            profile.MatureScale = Mathf.Max(profile.SeedlingScale, visual.Value("matureScale", template.matureScale));
+        }
+        bool seedling = definition.TryGetVisualStateSprite("seedling", out profile.SeedlingSprite);
+        bool growing = definition.TryGetVisualStateSprite("growing", out profile.GrowingSprite);
+        bool mature = definition.TryGetVisualStateSprite("mature", out profile.MatureSprite);
+        if ((seedling || growing || mature) && !(seedling && growing && mature))
+            throw new InvalidOperationException("培育器作物阶段图必须同时提供 seedling/growing/mature：" + definition.Id);
+        profile.UseDiscreteSprites = seedling && growing && mature;
     }
     private List<CultivatorHarvestOutput> RollHarvest(CultivatorPlotState plot, CropProfile profile)
     {

@@ -88,6 +88,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     {
         if (disposed) return;
         disposed = true;
+        UnsubscribeCultivator();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
         foreach (PartVisual part in facilityParts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -98,18 +99,22 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnEnable()
     {
+        SubscribeCultivator();
+        if (cultivatorEntity != null) RefreshCultivatorSprites();
         RegisterInteraction();
         foreach (PartVisual part in parts) if (part != null) Submit(part);
         foreach (PartVisual part in facilityParts) if (part != null) Submit(part);
     }
     private void OnDisable()
     {
+        UnsubscribeCultivator();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
         foreach (PartVisual part in facilityParts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
     }
     private void OnDestroy()
     {
+        UnsubscribeCultivator();
         UnregisterInteraction();
         owner?.RemoveMachineDepthEntity(entityId);
         owner = null;
