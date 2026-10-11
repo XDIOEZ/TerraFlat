@@ -71,10 +71,8 @@ namespace FlatWorld.Spaceflight
             {
                 StepLift(assembly, seconds); return;
             }
-            ResolveCruiseCommand(assembly, seconds, out SpaceVector2 targetVelocity, out double turn, out double driveAuthority);
+            ResolveCruiseCommand(assembly, seconds, out SpaceVector2 velocity, out double turn);
             SpaceGameplaySettings config = SpaceGameplaySettings.Current;
-            SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
-            velocity = ShipCruiseGuidance.StepVelocity(velocity, targetVelocity, config, seconds, driveAuthority);
             var motion = flight.Motion;
             motion.PositionMeters = new SpaceVector2(assembly.PositionX, assembly.PositionY);
             motion.VelocityMetersPerSecond = velocity;
@@ -142,12 +140,8 @@ namespace FlatWorld.Spaceflight
             {
                 movementSeconds = flight.HeightMeters <= 0d && previousHeight > 0d
                     ? seconds * Math.Clamp(previousHeight / (previousHeight - flight.HeightMeters), 0d, 1d) : seconds;
-                ResolveCruiseCommand(assembly, movementSeconds, out SpaceVector2 targetVelocity, out double turn,
-                    out double driveAuthority, surfaceDescent: true);
+                ResolveCruiseCommand(assembly, movementSeconds, out SpaceVector2 velocity, out double turn, surfaceDescent: true);
                 SpaceGameplaySettings config = SpaceGameplaySettings.Current;
-                SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
-                if (driveAuthority > 0d)
-                    velocity = ShipCruiseGuidance.StepVelocity(velocity, targetVelocity, config, movementSeconds, driveAuthority);
                 assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
                 assembly.PositionX += velocity.X * movementSeconds;
                 assembly.PositionY += velocity.Y * movementSeconds;

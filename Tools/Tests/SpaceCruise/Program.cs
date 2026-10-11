@@ -10,6 +10,11 @@ internal static partial class Program
     {
         Run("限速、反向制动、部分燃料", Velocity);
         Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
+        Run("四向与斜向喷嘴、船体旋转和对接成员朝向", ThrusterDirectionRules);
+        Run("喷嘴按推力需求选择、反向制动与松键滑行", ThrusterDemandRules);
+        Run("单轴缺油、部分供油与同向多引擎容量", ThrusterFuelRules);
+        Run("转向喷嘴力矩与平移转向独立授权", ThrusterTurnRules);
+        Run("喷嘴分配工作区复用无临时分配", ThrusterAllocations);
         Run("乘员继承船速、松键及转向保留漂移、碰撞冲量与快照恢复", PassengerInertia);
         Run("降落范围、星体上方自由飞行及实际降落姿态", LandingBoundary);
         Run("不同步长及横向初速下到点停稳", Arrival);

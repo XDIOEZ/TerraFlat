@@ -24,6 +24,7 @@ namespace FlatWorld.Spaceflight
         private static readonly string[] engineFuelIds = { FluidIds.Hydrogen, FluidIds.Oxygen };
         private readonly ShipOpticalGraph.Workspace opticalWorkspace = new();
         private readonly Dictionary<string, float> engineOutputs = new(StringComparer.Ordinal);
+        private readonly ShipThrustAllocation thrustAllocation = new();
 
         // 喷焰只读本步真实耗油后的出力，不把移动、点火请求或存档当成工作状态。
         public float GetEngineOutput(string pieceId)
@@ -153,10 +154,10 @@ namespace FlatWorld.Spaceflight
         }
 
         // 手动推力与导航制动共用真实动力授权，无输入或失去动力时保持当前速度。
-        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn, out double driveAuthority, bool surfaceDescent = false)
+        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn, bool surfaceDescent = false)
         {
             SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
-            targetVelocity = current; turn = 0d; driveAuthority = 0d;
+            targetVelocity = current; turn = 0d;
             SpaceVector2 steering = default;
             bool manual = false;
             foreach (ShipControlRequest request in controlRequests.Values)
@@ -192,7 +193,8 @@ namespace FlatWorld.Spaceflight
                     ? ShipCruiseGuidance.TurnToward(controlled.AngleRadians, error, config, seconds) : 0d;
                 task.Status = targetVelocity.Magnitude < config.CruiseMaxSpeedMetersPerSecond * .95d ? "接近目标，减速中" : "正在导航";
             }
-            if ((targetVelocity - current).Magnitude < .001d && Math.Abs(turn) < .001d) return;
+            if ((targetVelocity - current).Magnitude < .001d && Math.Abs(turn) < .001d)
+            { targetVelocity = current; turn = 0d; return; }
             CollectActuators(assembly);
             if (actuators.Count == 0)
             {
@@ -201,22 +203,40 @@ namespace FlatWorld.Spaceflight
                 return;
             }
             double change = ShipCruiseGuidance.ChangeRate(current, targetVelocity, config) * seconds;
-            double throttle = Math.Clamp(Math.Max(Math.Abs(turn), change > 0d ? (targetVelocity - current).Magnitude / change : 0d), 0d, 1d);
+            SpaceVector2 requestedChange = ShipCruiseGuidance.StepVelocity(current, targetVelocity, config, seconds) - current;
+            thrustAllocation.Reset(requestedChange, change, turn);
             bool ignited = false;
             foreach (ShipActuator engine in actuators)
             {
                 // 地表下降的按键推力独立于点火救船的垂直推力，避免进入降落后自动爬升。
-                if (!surfaceDescent && (!FindPiece(engine.Device.PieceId, out ShipState engineShip, out _) || GetFlight(engineShip.ShipId)?.Ignited != true)) continue;
+                if (!FindPiece(engine.Device.PieceId, out ShipState engineShip, out ShipPieceState enginePiece) ||
+                    (!surfaceDescent && GetFlight(engineShip.ShipId)?.Ignited != true))
+                {
+                    thrustAllocation.Add(default, default, 0d);
+                    continue;
+                }
                 ignited = true;
-                double actual = ConsumeEngineFuel(engine, throttle, seconds);
-                if (actual <= 0d) continue;
-                driveAuthority = actual;
-                turn *= actual / throttle;
-                return;
+                ShipGeometry.LocalToWorld(engineShip, (enginePiece.CellX + .5d) * engineShip.CellSizeMeters,
+                    (enginePiece.CellY + .5d) * engineShip.CellSizeMeters, out double x, out double y);
+                thrustAllocation.Add(ShipThrustAllocation.GetThrustDirection(engineShip.AngleRadians, enginePiece.QuarterTurns),
+                    new SpaceVector2(x - assembly.PositionX, y - assembly.PositionY), engine.Device.Configuration.EngineThrustNewtons);
             }
+            bool requestedEngine = false;
+            for (int index = 0; index < actuators.Count; index++)
+            {
+                double throttle = thrustAllocation.GetThrottle(index);
+                if (throttle <= 0d) continue;
+                requestedEngine = true;
+                thrustAllocation.SetActualOutput(index, ConsumeEngineFuel(actuators[index], throttle, seconds));
+            }
+            // 平移与转向分别按对应喷嘴的真实供油恢复，缺某侧燃料不借其它朝向的引擎。
+            SpaceVector2 actualChange = thrustAllocation.ResolveVelocityChange();
+            targetVelocity = current + actualChange;
+            turn *= thrustAllocation.ResolveTurnAuthority();
+            if (actualChange.SqrMagnitude > 1e-12d || Math.Abs(turn) > .001d) return;
             bool navigating = task != null && task.Active;
-            targetVelocity = current; turn = 0d;
-            if (navigating) task.Status = ignited ? "燃料不足，保持惯性，等待补给" : "引擎已停机，保持惯性，等待点火";
+            if (navigating) task.Status = !ignited ? "引擎已停机，保持惯性，等待点火" : !requestedEngine
+                ? "当前方向没有可用喷嘴，保持惯性" : "燃料不足，保持惯性，等待补给";
         }
         private double GetAvailableEngineThrust()
         {
@@ -287,7 +307,11 @@ namespace FlatWorld.Spaceflight
                 if (consumed >= request) break;
             }
             double actual = throttle * (double)(consumed / request);
-            if (actual > 0d) engineOutputs[engine.PieceId] = (float)actual;
+            if (actual > 0d)
+            {
+                engineOutputs.TryGetValue(engine.PieceId, out float previous);
+                engineOutputs[engine.PieceId] = Mathf.Clamp01(previous + (float)actual);
+            }
             return actual;
         }
         #endregion
