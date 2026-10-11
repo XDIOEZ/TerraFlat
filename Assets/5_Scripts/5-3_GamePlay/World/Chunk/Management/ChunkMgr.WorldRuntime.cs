@@ -297,7 +297,8 @@ public partial class ChunkMgr
         world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
 #endif
         runtimeGenerator = new DeterministicChunkGenerator(liquidTypes,
-            FlatWorld.Spaceflight.SpaceSurfaceTerrain.Apply, ChunkWeatherConfiguration.Load());
+            WorldGenerationRuntimeHooks.CaptureWorldModelTerrainDecorator(
+                FlatWorld.Spaceflight.SpaceSurfaceTerrain.Apply), ChunkWeatherConfiguration.Load());
         runtimeChunkManager = new RuntimeChunkMgr(world, runtimeGenerator,
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
         sightBlockingChunkCommittedSubscription =

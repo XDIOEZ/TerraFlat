@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
@@ -9,16 +10,27 @@ using UnityEngine;
 /// </summary>
 public static class WorldGenerationRuntimeHooks
 {
+    #region 生成扩展
+
     public static event Action<Map> BeforeMapGeneration;
     public static event Func<ChunkGenerationProfileSnapshot, ChunkGenerationProfileSnapshot>
         BeforeWorldModelGeneration;
+    public static event Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken>
+        WorldModelTerrainDecorator;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()
     {
         BeforeMapGeneration = null;
         BeforeWorldModelGeneration = null;
+        WorldModelTerrainDecorator = null;
     }
+
+    // 主线程一次捕获纯数据扩展，后台任务不再读取运行时订阅列表。
+    public static Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken>
+        CaptureWorldModelTerrainDecorator(
+            Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> builtIn = null)
+        => builtIn + WorldModelTerrainDecorator;
 
     public static void ApplyBeforeMapGeneration(Map map)
     {
@@ -48,4 +60,6 @@ public static class WorldGenerationRuntimeHooks
 
         return profile;
     }
+
+    #endregion
 }

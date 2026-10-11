@@ -39,3 +39,8 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 候选期间正式 Ready 保留，IsResourceReloadInProgress 防重入；ResourceReloadContext 只交换目录/会话标量，每次向 Unity 让出前还原引用。持续玩家、库存、区块运行态不属于候选。
 - 结构错误丢弃候选；单个 Actor 错误隔离并保留已发布版本。物品/机器身份删除时暂留旧定义供现存实例与冷区块解析，退出保存/清实例后再回收旧代 Addressables、模板、Lua。
 - 在用地块/MOD 身份、Tile 数字编号、液体身份布局及 Bundle 二进制变更不在世界内发布。候选跳过共享预热，发布后按需 GetOrCreate；失败候选不清正式 BRG/Mesh。
+
+## 通用 Lua 测试场景
+
+- `Assets/3_Scenes/Development/GameplayTestScene.unity` 复用正式 WorldManager/建世界/默认玩家模板；`Development/Testing/GameplayTest{Scene,Showroom,LuaRunner,Report}.cs` 分别负责启动、陈列、步骤与 JSON。默认流程及命令见 `Assets/StreamingAssets/GameplayTests/README.md`，改组件 luaPath 可换用例。
+- 陈列遍历全部非 Actor 物品定义，按正式资源/机器/掉落/Item 后端生成；通过世界生成 Hook 配置平地空生态，模拟租约保持展区数据。编辑器报告/存档在 `Library/FlatWorldGameplayTests/{Reports,Saves}/`；保存隔离租约独立于场景组件，退出写盘并返回菜单后才恢复正式目录。
