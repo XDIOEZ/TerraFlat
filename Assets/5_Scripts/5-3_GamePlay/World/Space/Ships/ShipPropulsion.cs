@@ -66,8 +66,6 @@ namespace FlatWorld.Spaceflight
             if (device == null) return false;
             ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
             if (assembly == null) return false;
-            absolute = ShipCruiseGuidance.SafeTarget(new SpaceVector2(assembly.PositionX, assembly.PositionY), absolute,
-                Universe.State.Bodies, AssemblyRadius(assembly), SpaceGameplaySettings.Current.NavigationSurfaceClearanceMeters, out BodyState blocker);
             // 同一运动整体只保留最新任务，重新选点复用任务而不是积累历史快照。
             ShipNavigationState task = null;
             for (int i = State.Navigation.Count - 1; i >= 0; i--)
@@ -81,7 +79,7 @@ namespace FlatWorld.Spaceflight
             task.ShipId = ship.ShipId; task.ConsolePieceId = consoleId; task.NavigationPieceId = device.PieceId;
             task.TargetX = absolute.X; task.TargetY = absolute.Y;
             task.Active = true; task.NeedsManualRestart = false; task.Sequence = ++State.NavigationSequence;
-            task.Status = blocker == null ? "正在导航" : "航线遇到星体，改为在近侧安全距离停靠";
+            task.Status = "正在导航";
             State.Navigation.Add(task);
             return true;
         }

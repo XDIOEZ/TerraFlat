@@ -67,6 +67,21 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 无引力航行与星球接触
+        // 飞船在星球画面上方自由航行，只有显式降落指令才切换到地表。
+        public void StepFreeMotion(SpaceMotionState motion, SpaceVector2 acceleration, double seconds)
+        {
+            ValidateMotion(motion, acceleration, seconds);
+            motion.PositionMeters += motion.VelocityMetersPerSecond * seconds + acceleration * (.5d * seconds * seconds);
+            motion.VelocityMetersPerSecond += acceleration * seconds;
+        }
+
+        private static void ValidateMotion(SpaceMotionState motion, SpaceVector2 acceleration, double seconds)
+        {
+            if (motion == null || !motion.PositionMeters.IsFinite || !motion.VelocityMetersPerSecond.IsFinite ||
+                !acceleration.IsFinite || !NonNegative(motion.RadiusMeters) || !NonNegative(seconds))
+                throw new ArgumentOutOfRangeException(nameof(motion));
+        }
+
         // 只按游戏设定的速度移动，不计算天体吸引、轨道捕获或公转速度。
         public bool StepMotion(SpaceMotionState motion, SpaceVector2 acceleration, double seconds, out SurfaceContact contact)
             => StepMotionAtTime(motion, acceleration, Math.Max(0d, State.SimulationSeconds - seconds), seconds, out contact);
@@ -74,9 +89,8 @@ namespace FlatWorld.Spaceflight
         public bool StepMotionAtTime(SpaceMotionState motion, SpaceVector2 acceleration, double startSeconds,
             double seconds, out SurfaceContact contact)
         {
-            if (motion == null || !motion.PositionMeters.IsFinite || !motion.VelocityMetersPerSecond.IsFinite ||
-                !acceleration.IsFinite || !NonNegative(motion.RadiusMeters) || !NonNegative(startSeconds) || !NonNegative(seconds))
-                throw new ArgumentOutOfRangeException(nameof(motion));
+            ValidateMotion(motion, acceleration, seconds);
+            if (!NonNegative(startSeconds)) throw new ArgumentOutOfRangeException(nameof(startSeconds));
             SpaceVector2 from = motion.PositionMeters;
             SpaceVector2 velocityBefore = motion.VelocityMetersPerSecond;
             SpaceVector2 next = from + velocityBefore * seconds + acceleration * (.5d * seconds * seconds);

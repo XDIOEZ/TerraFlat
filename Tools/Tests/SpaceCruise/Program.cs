@@ -10,10 +10,10 @@ internal static partial class Program
     {
         Run("限速、反向制动、部分燃料", Velocity);
         Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
-        Run("降落范围、星体外侧接触及切向滑行", LandingBoundary);
+        Run("降落范围、星体上方自由飞行及实际降落姿态", LandingBoundary);
         Run("不同步长及横向初速下到点停稳", Arrival);
         Run("船头转向取最短方向", Heading);
-        Run("星体拦截、近侧停靠及离开安全圈", SafeTargets);
+        Run("导航到星体画面中心及穿过星体到达航点", OverflightNavigation);
         Run("缓存保留实时载荷及运动量", AssemblyRefresh);
         Run("对接、断开、损坏及碎片归属失效", AssemblyChanges);
         Run("光纤断开、修复及集合复用", Optical);
@@ -97,31 +97,30 @@ internal static partial class Program
             "far ships cannot request landing");
         Check(ShipLandingGuidance.FindNearbyBody(new SpaceVector2(210d, 0d), 10d, bodies) == body,
             "landing range includes ship radius");
-        var position = new SpaceVector2(110d, 0d);
-        var velocity = new SpaceVector2(-30d, 7d);
-        var contact = ShipLandingGuidance.CreateDescentContact(body, position, velocity, 4d);
-        ShipLandingGuidance.ResolveExteriorContact(body, 10d, contact, ref position, ref velocity);
-        Near(110.01d, position.X, "unrequested contact remains strictly outside the planet");
-        Near(0d, velocity.X, "unrequested contact only blocks inward movement");
-        Near(7d, velocity.Y, "contact must preserve tangential inertia");
-        velocity = new SpaceVector2(5d, 7d);
-        ShipLandingGuidance.ResolveExteriorContact(body, 10d, contact, ref position, ref velocity);
-        Near(5d, velocity.X, "ship can leave the planet boundary");
-        Near(7d, velocity.Y, "outward movement does not brake drift");
         var universe = new UniverseSimulation(new UniverseState { Bodies = new List<BodyState> { body } });
         var motion = new SpaceMotionState { PositionMeters = new SpaceVector2(140d, 0d),
             VelocityMetersPerSecond = new SpaceVector2(-60d, 9d), RadiusMeters = 10d };
-        Check(universe.StepMotionAtTime(motion, default, 0d, 1d, out contact), "fast approach detects swept contact");
-        position = motion.PositionMeters; velocity = motion.VelocityMetersPerSecond;
-        ShipLandingGuidance.ResolveExteriorContact(body, 10d, contact, ref position, ref velocity);
-        motion.PositionMeters = position; motion.VelocityMetersPerSecond = velocity;
-        Check(!universe.StepMotionAtTime(motion, default, 1d, .02d, out _),
-            "boundary does not retrigger a zero-fraction contact while gliding");
-        var explicitDescent = ShipLandingGuidance.CreateDescentContact(body, position, velocity, 2d);
+        universe.StepFreeMotion(motion, default, 1d);
+        Near(80d, motion.PositionMeters.X, "ship flies over planet disk instead of stopping at its boundary");
+        Near(9d, motion.PositionMeters.Y, "lateral drift remains intact over planet");
+        Near(-60d, motion.VelocityMetersPerSecond.X, "planet overlap does not brake inward velocity");
+        Check(ShipLandingGuidance.FindNearbyBody(motion.PositionMeters, motion.RadiusMeters, bodies) == body,
+            "landing button is available while ship overlaps planet disk");
+        universe.StepFreeMotion(motion, default, 4d);
+        Near(-160d, motion.PositionMeters.X, "ship crosses the whole planet without being intercepted");
+        var accelerated = new SpaceMotionState { PositionMeters = default, RadiusMeters = 10d };
+        universe.StepFreeMotion(accelerated, new SpaceVector2(2d, 0d), 2d);
+        Near(4d, accelerated.PositionMeters.X, "movement can start inside planet disk");
+        Near(4d, accelerated.VelocityMetersPerSecond.X, "free flight retains acceleration integration");
+        var explicitDescent = ShipLandingGuidance.CreateDescentContact(body, motion.PositionMeters, motion.VelocityMetersPerSecond, 2d);
         Check(explicitDescent.IsValid && explicitDescent.BodyId == body.BodyId,
             "explicit request uses the actual nearby body");
-        Near(position.X, explicitDescent.PositionMeters.X, "descent uses actual position");
-        Near(velocity.Y, explicitDescent.RelativeVelocityMetersPerSecond.Y, "descent preserves actual entry speed");
+        Near(motion.PositionMeters.X, explicitDescent.PositionMeters.X, "descent uses actual position");
+        Near(motion.VelocityMetersPerSecond.Y, explicitDescent.RelativeVelocityMetersPerSecond.Y, "descent preserves actual entry speed");
+        var freePassenger = new SpaceMotionState { PositionMeters = new SpaceVector2(140d, 0d),
+            VelocityMetersPerSecond = new SpaceVector2(-60d, 0d), RadiusMeters = 1d };
+        Check(universe.StepMotionAtTime(freePassenger, default, 0d, 1d, out _),
+            "independent passenger contact rules remain available");
     }
     private static void Arrival()
     {
@@ -149,22 +148,26 @@ internal static partial class Program
         Check(turn > 0d && turn <= 1d, "heading wraps via short arc");
         Near(0d, ShipCruiseGuidance.TurnToward(0d, new SpaceVector2(0d, 1d), Settings, .02d), "local up is forward");
     }
-    private static void SafeTargets()
+    private static void OverflightNavigation()
     {
-        var first = new BodyState { BodyId = "near", PositionMeters = new SpaceVector2(100d, 0d), RadiusMeters = 10d };
-        var far = new BodyState { BodyId = "far", PositionMeters = new SpaceVector2(200d, 0d), RadiusMeters = 10d };
-        var bodies = new List<BodyState> { far, first };
-        var target = ShipCruiseGuidance.SafeTarget(default, new SpaceVector2(100d, 0d), bodies, 5d, 12d, out var blocker);
-        Near(72.99d, target.X, "planet center becomes near-side standoff");
-        Check(blocker == first, "nearest blocker selected regardless of order");
-        target = ShipCruiseGuidance.SafeTarget(default, new SpaceVector2(300d, 0d), bodies, 5d, 12d, out blocker);
-        Near(72.99d, target.X, "route crossing a planet stops before it");
-        target = ShipCruiseGuidance.SafeTarget(default, new SpaceVector2(0d, 300d), bodies, 5d, 12d, out blocker);
-        Check(blocker == null && target.Y == 300d, "clear route unchanged");
-        target = ShipCruiseGuidance.SafeTarget(new SpaceVector2(80d, 0d), default, bodies, 5d, 12d, out blocker);
-        Check(blocker == null && target == default, "ship can leave safety shell");
-        target = ShipCruiseGuidance.SafeTarget(new SpaceVector2(80d, 0d), new SpaceVector2(100d, 0d), bodies, 5d, 12d, out blocker);
-        Near(80d, target.X, "inside shell cannot navigate further inward");
+        var body = new BodyState { BodyId = "planet", PlanetId = "planet", RadiusMeters = 100d };
+        var universe = new UniverseSimulation(new UniverseState { Bodies = new List<BodyState> { body } });
+        foreach (SpaceVector2 target in new[] { new SpaceVector2(), new SpaceVector2(250d, 0d) })
+        {
+            var motion = new SpaceMotionState { PositionMeters = new SpaceVector2(-250d, 0d), RadiusMeters = 5d };
+            bool crossedDisk = false, reached = false;
+            for (int i = 0; i < 10000; i++)
+            {
+                SpaceVector2 error = target - motion.PositionMeters;
+                if (error.Magnitude <= Settings.NavigationArrivalDistanceMeters && motion.VelocityMetersPerSecond.Magnitude < .001d)
+                { reached = true; break; }
+                motion.VelocityMetersPerSecond = ShipCruiseGuidance.StepVelocity(motion.VelocityMetersPerSecond,
+                    ShipCruiseGuidance.ArrivalVelocity(error, Settings, .02d), Settings, .02d);
+                universe.StepFreeMotion(motion, default, .02d);
+                crossedDisk |= motion.PositionMeters.Magnitude < body.RadiusMeters;
+            }
+            Check(reached && crossedDisk, "navigation reaches requested point over or beyond planet");
+        }
     }
     #endregion
 

@@ -6,7 +6,7 @@ namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
-        #region 同一步的船体与星体接触顺序
+        #region 船体碰撞与手动降落的提交顺序
         private sealed class QueuedSurfaceContact
         {
             public ShipAssemblyState Assembly;
@@ -15,24 +15,6 @@ namespace FlatWorld.Spaceflight
             public bool IsLanding;
         }
         private readonly Dictionary<string, QueuedSurfaceContact> pendingSurfaceContacts = new(StringComparer.Ordinal);
-
-        // 先保留真实触星体时刻，船体接触结束前不切换坐标系。
-        public void QueueSurfaceContact(ShipAssemblyState assembly, SurfaceContact contact, double seconds)
-        {
-            if (assembly == null || assembly.MemberShipIds.Count == 0 || !contact.IsValid || seconds <= 0d) return;
-            string id = assembly.MemberShipIds[0];
-            double fraction = Math.Clamp(contact.Fraction, 0d, 1d), angularAcceleration = 0d;
-            if (shipContactStarts.TryGetValue(id, out ShipContactPose previous) && previous.Realm == "space")
-            {
-                angularAcceleration = (assembly.AngularVelocityRadiansPerSecond - previous.AngularVelocity) / seconds;
-                assembly.AngleRadians = previous.Angle + (assembly.AngleRadians - previous.Angle) * fraction;
-                assembly.AngularVelocityRadiansPerSecond = previous.AngularVelocity + angularAcceleration * seconds * fraction;
-                ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
-            }
-            contact.Fraction = fraction;
-            pendingSurfaceContacts[id] = new QueuedSurfaceContact
-                { Assembly = assembly, Contact = contact, AngularAcceleration = angularAcceleration };
-        }
 
         // 地表下降保留真实触地时刻，先解算本步横移接触再提交落地。
         public void QueueSurfaceLanding(ShipAssemblyState assembly, SurfaceContact contact)
@@ -65,28 +47,6 @@ namespace FlatWorld.Spaceflight
                         Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY),
                         contact.RelativeVelocityMetersPerSecond.Y);
                     LandAssembly(assembly, contact);
-                }
-                else if (flight.Phase is ShipFlightPhase.Cruising or ShipFlightPhase.Descending)
-                {
-                    if (flight.RequestedLandingBodyId == candidate.Contact.BodyId)
-                        BeginSurfaceDescent(assembly, candidate.Contact);
-                    else
-                    {
-                        SpaceVector2 position = new(assembly.PositionX, assembly.PositionY);
-                        SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
-                        ShipLandingGuidance.ResolveExteriorContact(Universe.GetBody(candidate.Contact.BodyId), AssemblyRadius(assembly),
-                            candidate.Contact, ref position, ref velocity);
-                        assembly.PositionX = position.X; assembly.PositionY = position.Y;
-                        assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
-                        ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
-                        foreach (string memberId in assembly.MemberShipIds)
-                        {
-                            ShipState member = GetShip(memberId); ShipFlightState memberFlight = GetFlight(memberId);
-                            memberFlight.Motion.PositionMeters = new SpaceVector2(member.PositionX, member.PositionY);
-                            memberFlight.Motion.VelocityMetersPerSecond = new SpaceVector2(member.VelocityX, member.VelocityY);
-                            UpdateDescent(memberFlight, member);
-                        }
-                    }
                 }
             }
             // 已接受的降落指令使用本步碰撞后的最终姿态，不因漂出按钮范围或重积轨迹静默丢失。
@@ -138,53 +98,27 @@ namespace FlatWorld.Spaceflight
 
             body.EndFraction = landing ? queued.Contact.Fraction : 1d;
             double remaining = Math.Max(0d, (body.EndFraction - fraction) * seconds);
-            double actualSeconds = remaining;
             if (body.Realm == "space")
             {
                 var motion = new SpaceMotionState { PositionMeters = body.Position, VelocityMetersPerSecond = body.PreviousVelocity,
                     RadiusMeters = AssemblyRadius(body.Assembly) };
-                double startTime = Math.Max(0d, Universe.State.SimulationSeconds - seconds + fraction * seconds);
-                SurfaceContact contact;
-                bool touched = remaining > 1e-12d
-                    ? Universe.StepMotionAtTime(motion, default, startTime, remaining, out contact)
-                    : Universe.TrySweepSurfaceContact(motion.PositionMeters, motion.PositionMeters, motion.VelocityMetersPerSecond,
-                        motion.VelocityMetersPerSecond, motion.RadiusMeters, startTime, 0d, out contact);
+                Universe.StepFreeMotion(motion, default, remaining);
                 body.Assembly.PositionX = motion.PositionMeters.X; body.Assembly.PositionY = motion.PositionMeters.Y;
                 body.Assembly.VelocityX = motion.VelocityMetersPerSecond.X; body.Assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
-                if (touched)
-                {
-                    actualSeconds = remaining * contact.Fraction;
-                    contact.Fraction = fraction + (1d - fraction) * contact.Fraction;
-                    body.EndFraction = contact.Fraction;
-                    body.SurfaceContact = contact;
-                }
             }
             else
             {
                 body.Assembly.PositionX += body.Assembly.VelocityX * remaining;
                 body.Assembly.PositionY += body.Assembly.VelocityY * remaining;
             }
-            body.Assembly.AngularVelocityRadiansPerSecond = body.PreviousAngularVelocity + body.AngularAcceleration * actualSeconds;
-            body.Assembly.AngleRadians = body.PreviousAngle + body.Assembly.AngularVelocityRadiansPerSecond * actualSeconds;
+            body.Assembly.AngularVelocityRadiansPerSecond = body.PreviousAngularVelocity + body.AngularAcceleration * remaining;
+            body.Assembly.AngleRadians = body.PreviousAngle + body.Assembly.AngularVelocityRadiansPerSecond * remaining;
             ShipDockingService.RigidlyCarryMembers(body.Assembly, body.Members);
             if (body.SurfaceContact is SurfaceContact next)
                 pendingSurfaceContacts[body.Assembly.MemberShipIds[0]] = new QueuedSurfaceContact
                     { Assembly = body.Assembly, Contact = next, AngularAcceleration = body.AngularAcceleration, IsLanding = landing };
         }
 
-        private void RecheckContactSeparationAgainstSurface(ShipContactBody body, SpaceVector2 from)
-        {
-            if (body.Realm != "space" || body.SurfaceStopped) return;
-            SpaceVector2 velocity = new(body.Assembly.VelocityX, body.Assembly.VelocityY);
-            if (!Universe.TrySweepSurfaceContact(from, body.Position, velocity, velocity, AssemblyRadius(body.Assembly),
-                Universe.State.SimulationSeconds, 0d, out SurfaceContact contact)) return;
-            body.Assembly.PositionX = contact.PositionMeters.X; body.Assembly.PositionY = contact.PositionMeters.Y;
-            ShipDockingService.RigidlyCarryMembers(body.Assembly, body.Members);
-            contact.Fraction = 1d;
-            body.EndFraction = 1d; body.SurfaceContact = contact; body.SurfaceStopped = true;
-            pendingSurfaceContacts[body.Assembly.MemberShipIds[0]] = new QueuedSurfaceContact
-                { Assembly = body.Assembly, Contact = contact, AngularAcceleration = body.AngularAcceleration };
-        }
         #endregion
     }
 }

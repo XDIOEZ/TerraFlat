@@ -13,7 +13,6 @@
   "CruiseTurnDegreesPerSecond": 45.0,
   "NavigationArrivalDistanceMeters": 1.0,
   "NavigationArrivalSpeedMetersPerSecond": 0.25,
-  "NavigationSurfaceClearanceMeters": 12.0,
   "FreeFloatMaxSpeedMetersPerSecond": 12.0,
   "FreeFloatAccelerationMultiplier": 0.11666667,
   "FreeFloatDecelerationMultiplier": 0.05,

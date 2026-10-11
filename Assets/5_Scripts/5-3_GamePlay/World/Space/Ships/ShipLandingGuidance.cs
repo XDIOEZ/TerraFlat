@@ -5,7 +5,7 @@ namespace FlatWorld.Spaceflight
 {
     public static class ShipLandingGuidance
     {
-        #region 控制台降落范围与星体外侧接触
+        #region 控制台降落范围与实际姿态
         public static BodyState FindNearbyBody(SpaceVector2 position, double shipRadius, IReadOnlyList<BodyState> bodies)
         {
             BodyState nearest = null;
@@ -29,18 +29,6 @@ namespace FlatWorld.Spaceflight
             RelativeVelocityMetersPerSecond = velocity
         };
 
-        // 没有降落指令时仅挡住朝内的运动，保留切向滑行与向外离开的速度。
-        public static void ResolveExteriorContact(BodyState body, double shipRadius, SurfaceContact contact,
-            ref SpaceVector2 position, ref SpaceVector2 velocity)
-        {
-            SpaceVector2 normal = (position - body.PositionMeters).Normalized;
-            if (normal.SqrMagnitude < 1e-12d) normal = SpaceVector2.FromAngle(contact.SurfaceAngleRadians);
-            double minimumDistance = body.RadiusMeters + shipRadius + .01d;
-            if ((position - body.PositionMeters).Magnitude < minimumDistance)
-                position = body.PositionMeters + normal * minimumDistance;
-            double inward = SpaceVector2.Dot(velocity, normal);
-            if (inward < 0d) velocity -= normal * inward;
-        }
         #endregion
     }
 }

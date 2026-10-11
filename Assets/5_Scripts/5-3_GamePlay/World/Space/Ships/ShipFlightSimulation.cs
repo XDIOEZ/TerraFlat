@@ -79,7 +79,7 @@ namespace FlatWorld.Spaceflight
             motion.PositionMeters = new SpaceVector2(assembly.PositionX, assembly.PositionY);
             motion.VelocityMetersPerSecond = velocity;
             motion.RadiusMeters = AssemblyRadius(assembly);
-            bool touched = Universe.StepMotion(motion, default, seconds, out SurfaceContact contact);
+            Universe.StepFreeMotion(motion, default, seconds);
             assembly.PositionX = motion.PositionMeters.X; assembly.PositionY = motion.PositionMeters.Y;
             assembly.VelocityX = motion.VelocityMetersPerSecond.X; assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
             // Q/E 直接指定本步角速度，松键停转、反向立即换向，不累加角加速度。
@@ -93,7 +93,6 @@ namespace FlatWorld.Spaceflight
                 member.Motion.VelocityMetersPerSecond = new SpaceVector2(ship.VelocityX, ship.VelocityY);
                 UpdateDescent(member, ship);
             }
-            if (touched) QueueSurfaceContact(assembly, contact, seconds);
         }
         private double AssemblyRadius(ShipAssemblyState assembly)
         {

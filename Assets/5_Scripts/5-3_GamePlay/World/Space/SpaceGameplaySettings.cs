@@ -22,7 +22,6 @@ namespace FlatWorld.Spaceflight
         public double CruiseTurnDegreesPerSecond = 45d; // 飞船驾驶与导航共用的直接旋转速度上限。
         public double NavigationArrivalDistanceMeters = 1d;
         public double NavigationArrivalSpeedMetersPerSecond = .25d;
-        public double NavigationSurfaceClearanceMeters = 12d;
         public double FreeFloatMaxSpeedMetersPerSecond = 12d;
         public float FreeFloatAccelerationMultiplier = .35f / 3f; // 加减速响应为冰面的三分之一，惯性约为冰面的三倍。
         public float FreeFloatDecelerationMultiplier = .15f / 3f;
@@ -52,7 +51,6 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(current.CruiseTurnDegreesPerSecond) || current.CruiseTurnDegreesPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.NavigationArrivalDistanceMeters) || current.NavigationArrivalDistanceMeters <= 0d ||
                     !SpaceVector2.Finite(current.NavigationArrivalSpeedMetersPerSecond) || current.NavigationArrivalSpeedMetersPerSecond <= 0d ||
-                    !SpaceVector2.Finite(current.NavigationSurfaceClearanceMeters) || current.NavigationSurfaceClearanceMeters < current.NavigationArrivalDistanceMeters ||
                     !SpaceVector2.Finite(current.FreeFloatMaxSpeedMetersPerSecond) || current.FreeFloatMaxSpeedMetersPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.FreeFloatAccelerationMultiplier) || current.FreeFloatAccelerationMultiplier <= 0f ||
                     !SpaceVector2.Finite(current.FreeFloatDecelerationMultiplier) || current.FreeFloatDecelerationMultiplier <= 0f ||

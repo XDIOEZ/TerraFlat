@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace FlatWorld.Spaceflight
 {
@@ -58,42 +57,5 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
 
-        #region 星体外侧安全航点
-        // 自动导航只到达星体外侧，降落由控制台的独立指令开始。
-        public static SpaceVector2 SafeTarget(SpaceVector2 origin, SpaceVector2 target,
-            IReadOnlyList<BodyState> bodies, double shipRadius, double clearance, out BodyState blocker)
-        {
-            blocker = null;
-            SpaceVector2 route = target - origin;
-            double length = route.Magnitude;
-            if (length < 1e-9d) return origin;
-            SpaceVector2 direction = route / length;
-            double nearest = length;
-            for (int i = 0; i < bodies.Count; i++)
-            {
-                BodyState body = bodies[i];
-                double radius = body.RadiusMeters + Math.Max(0d, shipRadius) + Math.Max(0d, clearance);
-                SpaceVector2 offset = origin - body.PositionMeters;
-                double along = SpaceVector2.Dot(offset, direction);
-                double outside = offset.SqrMagnitude - radius * radius;
-                double distance;
-                if (outside <= 0d)
-                {
-                    if (along >= 0d) continue;
-                    distance = 0d;
-                }
-                else
-                {
-                    double discriminant = along * along - outside;
-                    if (discriminant < 0d || along >= 0d) continue;
-                    distance = -along - Math.Sqrt(discriminant);
-                }
-                if (distance < 0d || distance > nearest) continue;
-                nearest = Math.Max(0d, distance - .01d);
-                blocker = body;
-            }
-            return origin + direction * nearest;
-        }
-        #endregion
     }
 }

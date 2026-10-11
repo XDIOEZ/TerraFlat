@@ -14,7 +14,7 @@ description: "FlatWorld 太空会话、静态星系、船体航行/接触、对�
 | SpaceSession*、SpaceSessionState | 权威会话/时钟/快照；SpaceMgr 只投影视图 |
 | Universe/SpaceCatalog、UniverseSimulation、SpaceSurfaceQuery | 星系、双精度运动、冷地表查询 |
 | Ships/、Ships/Domain/ | 船结构、气密、运动、碰撞、乘员、导航与对接 |
-| Ships/ShipCruiseGuidance、ShipLandingGuidance、ShipAssemblyCache | 惯性推进/巡航、手动降落范围/外侧接触、对接整体缓存 |
+| Ships/ShipCruiseGuidance、ShipLandingGuidance、ShipAssemblyCache | 惯性推进/巡航、手动降落范围/实际姿态、对接整体缓存 |
 
 - 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；面板：`Presentation/UI/{ShipPanelSession,SpaceLandingPanelSession}.cs`。
 - PlanetData 是太空目录与 `World/Map/Data/PlanetData.cs` 的 partial；场景/Prefab 在 `Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`。
@@ -25,7 +25,7 @@ description: "FlatWorld 太空会话、静态星系、船体航行/接触、对�
 
 `世界进入/恢复 → SpaceSession 固定时钟 → 记录接触姿态 → 船体运动 → 船间/乘员/散落物接触 → 地表提交 → 场景投影`
 
-- 固定步等待 IsGameplayReady，CaptureShipContactPoses/StepShipContacts/CommitSurfaceContacts 控制顺序；Kinematic Collider 是表现，平动/旋转反作用由权威扫掠解算。船/星体接触比较同一步 Fraction，先撞船后重积剩余轨迹。
+- 固定步等待 IsGameplayReady，CaptureShipContactPoses/StepShipContacts/CommitSurfaceContacts 控制顺序；Kinematic Collider 是表现，平动/旋转反作用由权威扫掠解算。地表触地与船间接触比较同一步 Fraction，先撞船后重积剩余轨迹；太空飞船及碰撞后的轨迹重积共用 StepFreeMotion，不做星体表面扫掠。
 - 宇宙位置/速度用 double 米，ViewOrigin 只影响显示；地表坐标/镜像经 WorldLocalPresentation，不交太空坐标给 Chunk 或 NormalizePosition。LateUpdate 先按玩家位置更新原点再统一投影。
 - 星体位置由种子和静态 PlacementDistanceMeters/PlacementAngleRadians 确定，不公转；时间驱动自转/地表环境，逆向周期有效。SpaceMotionState/StepMotion 在外部无引力直线运动，Cruising 按速度/加速/刹车/转向上限驾驶。
 - Landed/Floating 不积动力、不做船间动态碰撞，机器/气密/自由乘员继续；起飞先同步真实载荷。地表 Lifting 只推进高度/垂直速度/燃料，物理坐标静态、Sprite 偏移显示；下降继续原运动碰撞。
@@ -35,7 +35,7 @@ description: "FlatWorld 太空会话、静态星系、船体航行/接触、对�
 
 - 四邻接地板定义船体，普通接触/补地板/光纤不形成对接。独立船通过墙类接口和双方控制台确认形成整体；断开清双方确认，按剩余连接重算成员，保留身份/库存/分离速度。
 - ShipAssemblyCache 复用拓扑，质量/运动每步更新；模拟与即时查询使用独立缓存。机器/库存按船本地格子作用域运行，分裂后满足控制台/电力/燃料/引擎条件即可驾驶。
-- 对接整体只保留最新导航任务，手动接管/到点结束；断电、停机或缺燃料保留任务与平移惯性，恢复动力后续航，不能无燃料自动制动。航线遇星体近侧停靠，不自动降落。真实剩余燃料限制速度变化，光纤查询检查实际连接。航空燃料为罐内近2:1氢氧气相用途，按真实 mol 原子扣量，不另造燃料物质。
+- 对接整体只保留最新导航任务，手动接管/到点结束；断电、停机或缺燃料保留任务与平移惯性，恢复动力后续航，不能无燃料自动制动。导航保留玩家选择的真实目标，可到星体画面上方或穿过星体，不自动改为外侧停靠或触发降落。真实剩余燃料限制速度变化，光纤查询检查实际连接。航空燃料为罐内近2:1氢氧气相用途，按真实 mol 原子扣量，不另造燃料物质。
 - 手动 WASD 在已有速度上累加推力，松键继续滑行，反向输入渐进制动；转船头不抹掉已有侧向速度。太空操纵检查点火与真实动力，起飞进入太空保留点火开关；无输入不耗推进燃料，碰撞造成的超速也不能被无动力限速静默清除。
 - 引擎本地 +Y 为气相燃料输入、-Y 为喷口，朝向随安装旋转；每台只从本船正式气相供给路径取料，端口/阀门/选择器及逐段共享吞吐限制供给，不从未接管的罐或对接船跨网扣量。GM测试船模板保留舱门到控制台前两格中央通道，设备与供电改位同步更新。
 - 驾驶 Q/E 直接控制整船角速度，`CruiseTurnDegreesPerSecond` 默认 45°/秒；松键停转、反向立即换向，同向多控制台不叠加超速、反向抵消。导航共用转速上限，转向仍需有效供电、可用引擎和真实燃料，不按力矩与转动惯量累加按键角加速度。
@@ -49,7 +49,7 @@ description: "FlatWorld 太空会话、静态星系、船体航行/接触、对�
 - 墙体压力耐受只比较船外气压；墙/地板/船体各自按外温越界距离计算损伤，归零刷新结构/密闭。承载地板隔离危险地块对乘员的直接伤害，撞击/爆炸照常；Cabin FluidInventory 最小空间使用 MinimumCabinGasSpaceLiters。
 - 生物与结构环境损伤各有职责，星体可登陆性由材料耐受表达。冲击/燃爆复用唯一伤害入口，真实燃料库存和压力预算只释放/消费一次。
 - TryTeleportPlayerToSpace 接收宇宙坐标/速度，负责脱支撑/驾驶/下落状态及失败恢复。场景迁移限单机，复用 DimensionManager 黑屏/玩家快照；读档以飞行阶段选目标场景，未就绪不下落。
-- 船接触星体只挡朝内速度、保留切向滑行和向外离开，不自动切地表。只有控制台 `land`/降落按钮能对附近星体登记 RequestedLandingBodyId；有效范围含整船半径，按星体半径四分之一与100米取较大值。已接受请求由 CommitSurfaceContacts 在碰撞后的最终姿态执行，不因下一步漂出按钮范围或重积轨迹而丢失。
+- 飞船可自由经过星球画面上方，太空星体不挡船、不削减速度、不自动切地表。只有控制台 `land`/降落按钮能对附近或画面重叠的星体登记 RequestedLandingBodyId；有效范围含整船半径，按星体半径四分之一与100米取较大值。已接受请求由 CommitSurfaceContacts 在碰撞后的最终姿态执行，不因下一步漂出按钮范围或重积轨迹而丢失；独立乘员/散落物继续使用各自的星体接触规则。
 - 船下降自动接管本船控制台并关闭船控窗口，WASD 按船轴平移、Q/E 旋转，镜头跟整船中心与朝向；同次下降 Esc 退出不强制重进，触地或重返太空恢复原镜头。下降按键的平移/制动/转向需要实际供电、引擎与燃料，但独立于点火救船的垂直推力；无输入、无动力或无人保留平移惯性。触地用真实船体位置，不能由 UI 选点或随机跳点。独自玩家保留附近选址 UI 与随机落点。
 - 下降末步先按触地 Fraction 处理船体、乘员和散落物接触，再 CommitSurfaceContacts 结算落地，使用最终速度与落点中心决定陆海；可重新点火救船，海上 Floating 禁驾。冷地表读取目标冻结 Profile+最新差量，不加载地表 Scene 代替查询。
 
@@ -69,4 +69,4 @@ description: "FlatWorld 太空会话、静态星系、船体航行/接触、对�
 
 - 方块引擎严格占一格、默认喷口朝本地 -Y；ShipEnginePlacement 共用放置预览/提交/可用引擎收集的船体外缘与喷射净空检查，后续建造也不能堵喷口。气密边界只读 SealsAtmosphere 能力，边缘引擎可替代舱壁；固定船型同步调整引擎、舱壁和同格电线。
 - ShipMassReader 按源 JSON 内容或二进制引用复用解码，资源实例/版本变化与会话结束清缓存；库存、流体、堆叠数量仍每步读取真实状态，不缓存整船重量。载荷样本池在分裂移交前丢弃，避免复用已交给新船的对象。
-- `dotnet run --project Tools/Tests/ShipMass/ShipMass.Tests.csproj -c Release` 验证载荷缓存失效、真实状态及建筑回收封包；SpaceCruise 离线回归另覆盖惯性推进、降落范围/外侧扫掠、质量、重心、惯量和样本池。专项耗时/分配不代表 Unity 场景帧率，试玩中只静态修改，不操作 Play Mode。
+- `dotnet run --project Tools/Tests/ShipMass/ShipMass.Tests.csproj -c Release` 验证载荷缓存失效、真实状态及建筑回收封包；SpaceCruise 离线回归另覆盖惯性推进、降落范围、星体上方自由飞行/导航、质量、重心、惯量和样本池。专项耗时/分配不代表 Unity 场景帧率，试玩中只静态修改，不操作 Play Mode。

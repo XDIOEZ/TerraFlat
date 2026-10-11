@@ -210,9 +210,7 @@ namespace FlatWorld.Spaceflight
                     if (left.SurfaceStopped || right.SurfaceStopped || !ContactRealmsMatch(left, right) || left.InverseMass + right.InverseMass <= 0d ||
                         !GetBodyContactBounds(left, false).Overlaps(GetBodyContactBounds(right, false))) continue;
                     if (!FindDeepestShipContact(left, right, out ShipContactHit hit)) continue;
-                    SpaceVector2 beforeA = left.Position, beforeB = right.Position;
                     ResolveShipContact(left, right, hit);
-                    RecheckContactSeparationAgainstSurface(left, beforeA); RecheckContactSeparationAgainstSurface(right, beforeB);
                     changed = true;
                 }
                 if (!changed) break;

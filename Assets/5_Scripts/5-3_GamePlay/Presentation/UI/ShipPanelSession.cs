@@ -175,7 +175,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         switch (command)
         {
             case "help":
-                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。接触星体停在外侧，点击降落才进入地表下降。");
+                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。可以飞到星体画面上方，点击降落才进入地表下降。");
                 break;
             case "status":
                 Append("系统", status.text, literal: true);
@@ -449,7 +449,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         }
         text.AppendLine(landingTarget == null ? Text("靠近目标星体后，点击降落进入地表下降。") :
             Format("可降落星体  {0}；点击降落才开始下降。", landingTarget.DisplayName));
-        text.AppendLine(Text("接触星体停在外侧，自动导航也不会触发降落。"));
+        text.AppendLine(Text("飞船可经过星体画面上方，只有点击降落才进入地表下降。"));
         foreach (ShipCompartmentState room in ship.Compartments)
         {
             var gas = new FluidInventory(room.Gas);
