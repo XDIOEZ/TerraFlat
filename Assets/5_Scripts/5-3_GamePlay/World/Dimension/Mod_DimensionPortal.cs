@@ -143,9 +143,6 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
         OnBuildingPlacementCommitted();
     }
 
-    // 维度入口执行直接穿越，保留原有鼠标点选。
-    public bool CanPointerInteract(Item playerItem) => true;
-
     public void OnInteractStart(Item playerItem)
     {
         if (transitionRequested || playerItem is not Player player)

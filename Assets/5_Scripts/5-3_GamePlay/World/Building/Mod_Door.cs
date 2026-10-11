@@ -114,9 +114,6 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         return loaded && isActiveAndEnabled && building != null && building.IsInstalled();
     }
 
-    // 普通门只切换通行状态，保留原有鼠标点选。
-    public bool CanPointerInteract(Item playerItem) => true;
-
     public void OnInteractStart(Item playerItem)
     {
         if (!CanInteract(playerItem)) return;

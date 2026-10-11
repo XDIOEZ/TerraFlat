@@ -383,12 +383,6 @@ public partial class Mod_GameController : Module
             return;
         }
 
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryCancelNavigationPicking(item as Player) == true)
-        {
-            _rightClickHeld = false;
-            _suppressRightClickUntilRelease = true;
-            return;
-        }
         _suppressRightClickUntilRelease = false;
         _rightClickHeld = true;
         RightClick.Invoke();

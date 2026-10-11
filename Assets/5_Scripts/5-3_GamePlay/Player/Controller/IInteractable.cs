@@ -12,7 +12,7 @@ public interface IInteractable
         return true;
     }
 
-    /// <summary>默认只由交互键触发；不打开设备面板的点选动作需由自身明确允许。</summary>
+    /// <summary>默认只由交互键触发；采集等左键动作需由自身明确允许。</summary>
     bool CanPointerInteract(Item playerItem)
     {
         return false;

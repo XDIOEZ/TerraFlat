@@ -57,9 +57,11 @@ public sealed class Mod_ManualProcessor : Module, IInteractable
         return building != null && building.IsInstalled();
     }
 
+    public bool CanInteract(Item actor) => actor != null && GameNetwork.HasStateAuthority && CanUsePlacedStation();
+
     public void OnInteractStart(Item actor)
     {
-        if (!GameNetwork.HasStateAuthority || !CanUsePlacedStation())
+        if (!CanInteract(actor))
             return;
 
         panel ??= new MechanicalPanelSession("UI_HandDrill", item, Processor, PerformWork, GetStatus, GetActionLabel);

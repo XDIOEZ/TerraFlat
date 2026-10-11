@@ -67,14 +67,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
         }
 
-        // 建筑放置模式独占世界操作，避免准线附近的设施/物品在同一输入阶段被打开。
-        if (HasHeldBuildingPlacementPriority())
-        {
-            EndEnvironmentActionHold();
-            CancelCurrentInteraction();
-            return;
-        }
-
         ValidateCurrentInteractionDistance();
         TickHeldInteraction();
         RefreshInteractionPreview();
@@ -94,7 +86,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         action.performed += OnInteractPressed;
         action.canceled += OnInteractReleased;
 
-        // 世界物体支持左键直接交互；Mod_GameController 已过滤 UI 与锁定状态。
+        // 左键只接收目标明确允许的采集动作，建筑和设备统一由交互键操作。
         gameController.LeftClick -= OnPointerClick;
         gameController.LeftClick += OnPointerClick;
     }
@@ -115,14 +107,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
             return;
 
-        // 放置由手持物“使用”动作提交；交互键在放置模式下只让位，不再打开旁边目标。
-        if (HasHeldBuildingPlacementPriority())
-        {
-            EndEnvironmentActionHold();
-            CancelCurrentInteraction();
-            return;
-        }
-
+        // 交互键只操作世界目标，手持建筑的放置状态不占用这条通道。
         bool interacted = TryBeginHeldInteraction();
         if (!interacted)
             BeginEnvironmentActionHold();
@@ -144,7 +129,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>只执行交互开始，用于把物理按住状态交给持续交互通道。</summary>
     private bool TryStartInteractionAtCurrentPosition()
     {
-        if (!IsLocalInteractionOwner() || IsGameplayInputLocked() || HasHeldBuildingPlacementPriority())
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
             return false;
 
         // 每次按下交互键都做一次纯查询，交互链不再启用任何 Physics2D Trigger。
@@ -187,7 +172,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>复用正式交互发送器的全部准入规则，供结构化观察和非物理输入源判断目标当前是否可交互。</summary>
     public bool CanInteractTarget(IInteractable receiver)
     {
-        if (!IsLocalInteractionOwner() || IsGameplayInputLocked() || HasHeldBuildingPlacementPriority())
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
             return false;
 
         Component receiverComponent = receiver as Component;
@@ -208,11 +193,11 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         EndEnvironmentActionHold();
     }
 
-    /// <summary>把左键落点转换为世界交互，兼容石门等没有手持物品的 IInteractable。</summary>
+    /// <summary>把左键落点交给明确允许点选的采集目标。</summary>
     private void OnPointerClick()
     {
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked() ||
-            HasHeldBuildingPlacementPriority() || gameController == null || item == null)
+            IsHeldBuildingPlacementActive() || gameController == null || item == null)
             return;
 
         try
@@ -301,8 +286,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void RefreshInteractionPreview()
     {
         if (!IsLocalInteractionOwner() ||
-            item == null || !item.gameObject.activeInHierarchy ||
-            HasHeldBuildingPlacementPriority())
+            item == null || !item.gameObject.activeInHierarchy)
         {
             ClearInteractionPreview();
             return;
@@ -535,14 +519,18 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return false;
         }
 
+        // 带世界目标接口的组件也须先排除手持物，避免绕过世界交互边界。
+        if (receiverComponent != null)
+        {
+            if (!receiverComponent.gameObject.activeInHierarchy)
+                return false;
+            Item receiverItem = receiverComponent.GetComponentInParent<Item>();
+            if (receiverItem == item || (receiverItem != null && receiverItem.InHand))
+                return false;
+        }
         if (receiver is IWorldInteractionTarget worldTarget)
             return worldTarget.IsValid && receiver.CanInteract(item);
-        if (receiverComponent == null || !receiverComponent.gameObject.activeInHierarchy)
-            return false;
-
-        Item receiverItem = receiverComponent.GetComponentInParent<Item>();
-        // 手持物只参与使用和攻击，不能抢走附近世界目标的交互。
-        if (receiverItem == item || (receiverItem != null && receiverItem.InHand))
+        if (receiverComponent == null)
             return false;
 
         // 只有按下交互键确实会触发打开、采集或其他玩法结果的目标才显示描边。
@@ -691,8 +679,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         return gameController != null && gameController.IsGameplayInputLocked;
     }
 
-    /// <summary>手持建筑进入放置模式后，放置优先于半径内所有普通世界交互。</summary>
-    private bool HasHeldBuildingPlacementPriority()
+    /// <summary>放置预览期间停用左键采集；交互键仍可独立操作世界设施。</summary>
+    private bool IsHeldBuildingPlacementActive()
     {
         if (item == null)
             return false;

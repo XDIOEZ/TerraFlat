@@ -85,10 +85,8 @@ public class Mod_SkillManager : Module
             controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         }
 
-        if (controller != null)
-        {
-            controller.RightClick += Act;
-        }
+        // 技能跟随所属物品的使用事件，不直接抢占玩家右键。
+        item.OnAct += Act;
 
         SkillNameList = new List<string>(Data.SkillNames);
         CurrentSelectSkilIndex = Data.CurrentSelectIndex;
@@ -224,6 +222,8 @@ public class Mod_SkillManager : Module
 
     protected override void OnUnload()
     {
+        if (item != null)
+            item.OnAct -= Act;
         StopAllSkills();
     }
 

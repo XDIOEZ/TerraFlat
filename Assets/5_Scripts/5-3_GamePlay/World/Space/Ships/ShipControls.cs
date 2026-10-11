@@ -66,7 +66,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool TryCancelNavigationPicking(Player player)
         {
-            // 右键只取消导航选点，船控面板统一从控制台交互打开。
+            // 返回动作取消导航选点，手持物使用不受导航状态影响。
             if (player == null || State == null || pickingNavigationConsole == null) return false;
             pickingNavigationConsole = null;
             return true;

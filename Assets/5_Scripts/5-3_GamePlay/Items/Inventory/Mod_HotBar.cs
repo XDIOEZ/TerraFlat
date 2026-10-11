@@ -730,13 +730,16 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         SyncCurrentHeldItemWithSlot();
 
-        if (CurentSelectItem == null)
+        Item heldItem = CurentSelectItem;
+        // 使用只发给当前槽位中真正由本玩家持有的实例。
+        if (heldItem == null || !heldItem.InHand || heldItem.Owner != item ||
+            !ReferenceEquals(heldItem.itemData, CurrentSelectItemSlot?.itemData))
         {
             // 空快捷栏槽位的右键操作是无效操作，不应把正常输入记录成警告。
             return;
         }
 
-        CurentSelectItem.Act();
+        heldItem.Act();
     }
 
     private void OnScrollSwitch(InputAction.CallbackContext ctx)
