@@ -3994,6 +3994,18 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bf72b6191a344fb6baffc649372d8645
+    m_Address: Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d61b6daf9c4e443b9d1762a510e71195
+    m_Address: Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

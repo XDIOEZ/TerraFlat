@@ -758,7 +758,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png[ShipDoor_Closed]"
       },
       "health": {
         "hasHp": true,
@@ -845,7 +845,7 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png[ShipDoor_Closed]"
       },
       "health": {
         "hasHp": true,

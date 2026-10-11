@@ -12,7 +12,7 @@
       "canBePickedUp": false,
       "tags": ["35", "Space.Device", "InventoryGroup.WorkFacilities"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png[SpaceCultivator_Idle]",
         "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": false, "size": { "x": 0.95, "y": 0.95 }, "offset": { "x": 0, "y": 0 } }
       },
       "health": {
@@ -70,7 +70,7 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": ["35", "Space.Device", "InventoryGroup.WorkFacilities"],
-      "visual": { "spriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]" },
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png[SpaceCultivator_Idle]" },
       "health": {
         "hasHp": true,
         "hp": 120,
