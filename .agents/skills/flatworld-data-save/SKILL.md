@@ -46,6 +46,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - CompactSaveEnvelope.MechanicalNetworks 保存 MachineArchive；GameSaveData.Mechanical 为 MemoryPackIgnore。落地机器不在 Item 档双写，冷 ItemData 不创建运行 Item，缺失 MOD 机器保留原快照；专用加工库存恢复当前定义。
 - 外层 DroppedItems 保存独立版本掉落快照，GameSaveData.DroppedItems 为 MemoryPackIgnore；按实际维度 WorldKey 隔离，存稳定 ID/库存/轨迹，不存 Entity 地址或显示对象，缺失定义保留记录。
 - SpaceStateJson 在核心封装前捕获船/接口身份、局部乘员、实际 ItemInstanceSnapshot、船作用域 MachineArchive、舱气、导航/下降阶段及未结算预算。加载按飞行阶段选场景，离线/加载不补模拟；冷地表撞击读取目标冻结地形与最新差量，按 GUID 去重。
+- SpaceLooseItemState 是独立散落物保存模型；Scale 用字段专属 JSON 转换器只读写 x/y/z，不能直接展开 Unity Vector3 的计算属性。SpaceCruise 离线回归覆盖缩放及完整会话快照往返，不操作 Play Mode。
 - LiquidContainerState.Composition 保存真实份数、尾量、PendingOutputs/随机态；FluidInventoryState 保存 decimal 气液 mol、内能和各口预留，预留已计入库存，温压/比例派生。
 - PlanetData.Atmosphere 仅首次按 Profile 初始化，保存固定容量与实际余量，同星球维度共用；PressureExplosionQueue 和组合罐待释放预算进入机器档案。
 

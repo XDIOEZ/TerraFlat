@@ -6,6 +6,16 @@ namespace UnityEngine
         public float x, y;
         public Vector2(float x, float y) { this.x = x; this.y = y; }
     }
+    public struct Vector3
+    {
+        public float x, y, z;
+        public Vector3(float x, float y, float z) { this.x = x; this.y = y; this.z = z; }
+        public static Vector3 one => new(1f, 1f, 1f);
+        public float sqrMagnitude => x * x + y * y + z * z;
+        public float magnitude => MathF.Sqrt(sqrMagnitude);
+        // 保留 Unity 的计算属性，避免离线替身掩盖 JSON 递归展开问题。
+        public Vector3 normalized => magnitude > 1e-5f ? new(x / magnitude, y / magnitude, z / magnitude) : default;
+    }
     public class TextAsset { public string text; }
     public static class Resources { public static T Load<T>(string path) where T : class => null; }
     public enum RuntimeInitializeLoadType { SubsystemRegistration }
@@ -27,7 +37,6 @@ public readonly struct WorldAddress
 namespace FlatWorld.Spaceflight
 {
     public sealed class ShipPartConfiguration { }
-    public sealed class SpaceLooseItemState { }
     public interface IShipAtmosphereSource { }
     public static class ShipAtmosphereService
     {

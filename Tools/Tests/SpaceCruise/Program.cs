@@ -8,6 +8,8 @@ internal static partial class Program
     private static readonly SpaceGameplaySettings Settings = new();
     private static void Main()
     {
+        Run("散落物缩放仅保存分量并完整往返", LooseItemScaleSnapshot);
+        Run("完整太空会话散落物保存、读回和重复保存", LooseItemSessionSnapshot);
         Run("限速、反向制动、部分燃料", Velocity);
         Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
         Run("四向与斜向喷嘴、船体旋转和对接成员朝向", ThrusterDirectionRules);

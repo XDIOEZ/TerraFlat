@@ -5,16 +5,6 @@ using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Spaceflight
 {
-    [Serializable]
-    public sealed class SpaceLooseItemState
-    {
-        public string Id = Guid.NewGuid().ToString("N"), Snapshot, WorldKey;
-        public bool InSpace;
-        public SpaceMotionState Motion = new();
-        public double RotationDegrees;
-        public double SurfaceHeight, SurfaceVerticalSpeed;
-        public Vector3 Scale = Vector3.one;
-    }
     public sealed partial class SpaceSession
     {
         #region 不随船固定的散落物
