@@ -24,6 +24,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## MPB、光照与后处理
 
+- HLSL 参数和局部变量避开 `point/line/triangle` 等保留关键字；命名冲突可导致语法错误和后续标识符未声明的连带报错，共享代码需统一改名。
 - 角色 Shader 参数经统一 MPB 控制器合成；静态效果 RequiresContinuousRendering=false 并按变化 MarkRenderStateDirty。换图、重新绑定与启停仍更新；动态外部 Renderer 创建后单独注册，销毁前注销。
 - 代理同步源贴图、分离 Alpha、UV 边界、裁剪与 MPB；Universal2D/NormalsRendering/回退 Pass 共用坐标和阈值。URP 2D Lit Shader 实际采样 Shape Light，标签本身不提供光照。SpriteRenderer 与 MeshRenderer 分节点，共同根负责生命周期。
 - 动态世界图标复用 RuntimeItemDefinition.Material/外壳回退。全局 Shader 参数置于全局声明，与材质 Properties 分离，避免材质默认值遮蔽。

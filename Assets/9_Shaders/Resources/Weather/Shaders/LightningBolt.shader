@@ -63,11 +63,12 @@ Shader "Game/Weather/LightningBolt"
             return frac(sin(value * 127.1 + _Seed * 17.73) * 43758.5453);
         }
 
-        float SegmentDistance(float2 point, float2 start, float2 end)
+        // 采样坐标避开 HLSL 保留关键字，防止图形后端解析失败。
+        float SegmentDistance(float2 samplePosition, float2 start, float2 end)
         {
             float2 edge = end - start;
-            float projection = saturate(dot(point - start, edge) / max(dot(edge, edge), 0.00001));
-            return length(point - start - edge * projection);
+            float projection = saturate(dot(samplePosition - start, edge) / max(dot(edge, edge), 0.00001));
+            return length(samplePosition - start - edge * projection);
         }
 
         float MainX(float height)
@@ -80,12 +81,12 @@ Shader "Game/Weather/LightningBolt"
             return lerp(lower, upper, scaledHeight - index) * _BoltSize.x * 0.18;
         }
 
-        float MainDistance(float2 point, float height)
+        float MainDistance(float2 samplePosition, float height)
         {
             float index = min(floor(saturate(height) * 16.0), 15.0);
             float lower = index / 16.0;
             float upper = (index + 1.0) / 16.0;
-            return SegmentDistance(point, float2(MainX(lower), lower * _BoltSize.y),
+            return SegmentDistance(samplePosition, float2(MainX(lower), lower * _BoltSize.y),
                 float2(MainX(upper), upper * _BoltSize.y));
         }
 
@@ -100,7 +101,7 @@ Shader "Game/Weather/LightningBolt"
             return MainX(rootHeight) + direction * _BoltSize.x * progress * 0.36 + noise * _BoltSize.x * 0.07;
         }
 
-        float BranchDistance(float2 point, float height, float rootHeight, float endHeight, float direction, float key)
+        float BranchDistance(float2 samplePosition, float height, float rootHeight, float endHeight, float direction, float key)
         {
             if (height > rootHeight || height < endHeight) return 1000.0;
             float progress = (rootHeight - height) / max(rootHeight - endHeight, 0.001);
@@ -111,17 +112,17 @@ Shader "Game/Weather/LightningBolt"
                 lerp(rootHeight, endHeight, lower) * _BoltSize.y);
             float2 end = float2(BranchX(upper, rootHeight, direction, key),
                 lerp(rootHeight, endHeight, upper) * _BoltSize.y);
-            return SegmentDistance(point, start, end);
+            return SegmentDistance(samplePosition, start, end);
         }
 
         float3 BoltColor(float2 uv)
         {
-            float2 point = float2((uv.x - 0.5) * _BoltSize.x, uv.y * _BoltSize.y);
-            float mainDistance = MainDistance(point, uv.y);
+            float2 samplePosition = float2((uv.x - 0.5) * _BoltSize.x, uv.y * _BoltSize.y);
+            float mainDistance = MainDistance(samplePosition, uv.y);
             float branchDistance = min(
-                BranchDistance(point, uv.y, 0.82, 0.43, -1.0, 30.0),
-                min(BranchDistance(point, uv.y, 0.63, 0.24, 1.0, 50.0),
-                    BranchDistance(point, uv.y, 0.4, 0.12, -1.0, 70.0)));
+                BranchDistance(samplePosition, uv.y, 0.82, 0.43, -1.0, 30.0),
+                min(BranchDistance(samplePosition, uv.y, 0.63, 0.24, 1.0, 50.0),
+                    BranchDistance(samplePosition, uv.y, 0.4, 0.12, -1.0, 70.0)));
             float antiAlias = max(fwidth(mainDistance), 0.003);
             float core = 1.0 - smoothstep(_BoltSize.z, _BoltSize.z + antiAlias, mainDistance);
             float branchCore = 1.0 - smoothstep(_BoltSize.z * 0.55,
@@ -141,9 +142,9 @@ Shader "Game/Weather/LightningBolt"
 
         float3 ImpactColor(float2 uv)
         {
-            float2 point = (uv - 0.5) * 2.0;
-            float radius = length(point);
-            float angle = atan2(point.y, point.x + 0.00001);
+            float2 samplePosition = (uv - 0.5) * 2.0;
+            float radius = length(samplePosition);
+            float angle = atan2(samplePosition.y, samplePosition.x + 0.00001);
             float wave = sin(radius * 31.0 + _Seed) * 0.13 + sin(radius * 13.0 + _Seed * 0.7) * 0.1;
             float arcDistance = abs(sin((angle - wave - _Seed) * 3.0)) * radius;
             float arcs = 1.0 - smoothstep(0.009, 0.009 + max(fwidth(arcDistance), 0.003), arcDistance);
