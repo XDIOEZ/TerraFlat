@@ -26,6 +26,8 @@ public sealed class FluidNetworkGraph
     private readonly Dictionary<Vector2Int, List<MachineEntity>> devices = new();
     private readonly Dictionary<int, List<Edge>> incoming = new();
     private readonly Dictionary<int, int> outletDistance = new();
+    private readonly Dictionary<int, int> connectionMasks = new(); // 连接外形只读取正式端口图，不依赖本轮流量。
+    private static readonly int[] directionBits = { 2, 1, 8, 4 };
     public readonly List<Edge> Edges = new();
     public readonly List<Component> Components = new();
     public readonly Dictionary<int, Component> NodeComponents = new();
@@ -33,10 +35,12 @@ public sealed class FluidNetworkGraph
     public FluidNetworkGraph(Func<Vector2Int, Vector2Int> normalize) => this.normalize = normalize;
 
     public MachineEntity PipeAt(Vector2Int cell) => pipes.TryGetValue(normalize(cell), out var node) ? node : null;
+    public int GetConnectionMask(MachineEntity node)
+        => node != null && connectionMasks.TryGetValue(node.Id, out int mask) ? mask : 0;
 
     public void Rebuild(IEnumerable<MachineEntity> source)
     {
-        pipes.Clear(); devices.Clear(); incoming.Clear(); outletDistance.Clear(); Edges.Clear(); Components.Clear(); NodeComponents.Clear();
+        pipes.Clear(); devices.Clear(); incoming.Clear(); outletDistance.Clear(); connectionMasks.Clear(); Edges.Clear(); Components.Clear(); NodeComponents.Clear();
         var sorted = new List<MachineEntity>();
         foreach (MachineEntity node in source)
         {
@@ -73,6 +77,8 @@ public sealed class FluidNetworkGraph
         foreach (Edge edge in Edges)
         {
             if (edge.Target == null) continue;
+            connectionMasks[edge.Source.Id] = GetConnectionMask(edge.Source) | directionBits[edge.Direction];
+            connectionMasks[edge.Target.Id] = GetConnectionMask(edge.Target) | directionBits[(edge.Direction + 2) & 3];
             if (!incoming.TryGetValue(edge.Target.Id, out var list)) incoming[edge.Target.Id] = list = new List<Edge>();
             list.Add(edge);
         }

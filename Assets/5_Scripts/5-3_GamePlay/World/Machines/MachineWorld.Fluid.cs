@@ -95,6 +95,13 @@ public static partial class MachineWorld
         => fluidTankOwners.TryGetValue(node.Id, out var group) ? group.MinimumGasSpace : node.Definition.Fluid.MinimumGasSpaceLiters;
     public static MachineEntity GetFluidPipeAt(Vector2Int cell)
     { EnsureScope(); RebuildGraphsIfDirty(); return fluidGraph?.PipeAt(cell); }
+    public static int GetFluidPipeConnectionMask(MachineEntity node)
+    {
+        if (node?.Definition.Fluid?.Kind != "pipe") return 0;
+        using var nodeScope = UseNodeScope(node);
+        RebuildGraphsIfDirty();
+        return fluidGraph?.GetConnectionMask(node) ?? 0;
+    }
     public static void CollectFluidTankGroups(List<FluidTankGroup> result)
     { EnsureScope(); RebuildGraphsIfDirty(); result.Clear(); result.AddRange(fluidTankGroups); }
 

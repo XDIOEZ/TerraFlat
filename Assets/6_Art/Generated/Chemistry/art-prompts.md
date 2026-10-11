@@ -77,7 +77,7 @@ Use case: stylized-concept. Asset type: FlatWorld pixel-art inventory MATERIAL i
 | FilterResidue | 1254 x 1254 | 173, 413, 1081, 891 | 9212 | 256 | 1254 |
 | FluidFilter | 1254 x 1254 | 141, 183, 1113, 1062 | 42169 | 256 | 1475.294118 |
 | FluidOutlet | 1254 x 1254 | 236, 288, 1019, 972 | 45294 | 256 | 2280 |
-| FluidPipe | 1254 x 1254 | 155, 185, 1099, 1087 | 24938 | 256 | 2280 |
+| FluidPipe_Connections | 1254 x 1254 | 0, 0, 1254, 1254 | 11421 | 256 | 309.5 |
 | FluidValve | 1254 x 1254 | 151, 100, 1104, 1148 | 45451 | 256 | 2280 |
 | GasCompressor_Electric | 1254 x 1254 | 120, 179, 1135, 1076 | 39639 | 256 | 1475.294118 |
 | GasCompressor_Mechanical | 1254 x 1254 | 85, 276, 1159, 981 | 39445 | 256 | 1475.294118 |
@@ -98,3 +98,13 @@ Use case: stylized-concept. Asset type: FlatWorld pixel-art inventory MATERIAL i
 | Spacesuit_Legs | 1117 x 1408 | 232, 155, 885, 1231 | 14950 | 256 | 1408 |
 | Spacesuit_Torso | 1312 x 1199 | 56, 159, 1257, 1028 | 23445 | 256 | 1312 |
 | WaterElectrolyzer | 1254 x 1254 | 181, 221, 1073, 1047 | 53206 | 256 | 1475.294118 |
+
+## 管道连接图
+
+`FluidPipe/FluidPipe_Connections.png` 通过内置 `imagegen` 编辑模式生成，保留原图 Alpha；以铜电线连接表为布局参考、钢罐为灰蓝金属参考。4×4 等格布局，每格原始 313.5×313.5 px；导入切片四边各内缩 2 px，防止相邻格贴图的端点串入本格，实际切片 309.5×309.5 px、中心 Pivot、309.5 PPU，对应一世界格，Point、无压缩、无 Mipmap。`Pipe_00..Pipe_15` 按北1、东2、南4、西8排序，16 格切片边缘方向静态检查通过；图标使用水平 `Pipe_10`，世界表现按正式端口连接选图，未接邻格时使用 `Pipe_00`。保留旧 `FluidPipe_Idle.png`，当前管道定义改用连接图。
+
+生成提示词：
+
+```text
+Use case: precise-object-edit. Asset type: game-ready FlatWorld 2D pixel-art fluid pipe connection spritesheet. Image 1 is the exact 4 by 4 wire connection sheet geometry/layout template to edit; Image 2 is the gray-blue steel material palette reference only. Produce a new square transparent PNG with exactly 16 equal square cells, 4 columns and 4 rows, with NO gutters or margin. Keep all cell centers at the same positions, preserve the exact branch directions of every cell in Image 1. Change the copper wires into slightly thicker gray-blue steel fluid pipes: narrow straight metal tubes about 14 percent of each cell width, charcoal outline, restrained blue-gray highlight and shadow, small compact square steel coupling at the cell center (about 22 percent width). Tubes reach exactly to their cell edges at the center; connecting edges are flat and seamless, no black end caps. Copy directions precisely, listed row by row from top to bottom, left to right: row 1 = isolated small coupling; North only; East only; North+East. Row 2 = South only; North+South; East+South; North+East+South. Row 3 = West only; North+West; East+West; North+East+West. Row 4 = South+West; North+South+West; East+South+West; North+East+South+West. All pipes on the same centerline in each cell. Preserve hard square pixel clusters and simple top down presentation. Genuine alpha transparency everywhere outside the pipe silhouettes, including between branches; no background, no grid lines, no labels, no arrows, no icons, no machinery housing, no shadows, no glow, no extra branches. This is a technical connection sheet, not a collage. Preserve geometry of Image 1 rigorously.
+```

@@ -17,6 +17,9 @@ public sealed partial class ChunkTilemapRenderer
     private static readonly string[] wireSpriteStates =
         { "wire0", "wire1", "wire2", "wire3", "wire4", "wire5", "wire6", "wire7",
           "wire8", "wire9", "wire10", "wire11", "wire12", "wire13", "wire14", "wire15" };
+    private static readonly string[] pipeSpriteStates =
+        { "pipe0", "pipe1", "pipe2", "pipe3", "pipe4", "pipe5", "pipe6", "pipe7",
+          "pipe8", "pipe9", "pipe10", "pipe11", "pipe12", "pipe13", "pipe14", "pipe15" };
 
     /// <summary>机械物品定义中的图层坐标，新增 MOD 机械可沿用同一参数契约。</summary>
     private sealed class MechanicalVisualConfig
@@ -40,6 +43,7 @@ public sealed partial class ChunkTilemapRenderer
     private readonly Dictionary<Vector3Int, MechanicalDepthVisual> mechanicalDepthVisuals = new(); // 机器的交互和灯光桥，图像统一合入行网格。
     private readonly HashSet<Vector3Int> submittedMechanicalCells = new(); // 资源重建时清理已提交的机械和阴影身份。
     private readonly Dictionary<Vector3Int, int> submittedWireMasks = new(); // 相邻事件只重提连接发生变化的电线。
+    private readonly Dictionary<Vector3Int, int> submittedPipeMasks = new(); // 管口增删和旋转只刷新连接外形变化的邻管。
     private readonly Dictionary<Vector3Int, int> submittedTankMasks = new(); // 储罐边框只在四邻连接变化时重新提交。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
     private static Material mechanicalFallbackMaterial;
@@ -97,6 +101,7 @@ public sealed partial class ChunkTilemapRenderer
     {
         if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
         RefreshElectricalWireNeighbours(cell);
+        RefreshFluidPipeNeighbours(cell);
         RefreshFluidTankNeighbours(cell);
         var origin = boundChunk.Address.ChunkOrigin;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(
@@ -112,6 +117,7 @@ public sealed partial class ChunkTilemapRenderer
                 MechanicalShadowRegistry.Remove(this, new Vector3Int(x, y, occupancy));
                 submittedMechanicalCells.Remove(new Vector3Int(x, y, occupancy));
                 submittedWireMasks.Remove(new Vector3Int(x, y, occupancy));
+                submittedPipeMasks.Remove(new Vector3Int(x, y, occupancy));
                 submittedTankMasks.Remove(new Vector3Int(x, y, occupancy));
                 RemoveMechanicalDepthVisual(x, y, occupancy);
             }
@@ -158,6 +164,26 @@ public sealed partial class ChunkTilemapRenderer
         }
     }
 
+    /// <summary>相邻设备管口变化沿正式管网刷新，循环边界与跨区块共用同一查询。</summary>
+    private void RefreshFluidPipeNeighbours(Vector2Int changedCell)
+    {
+        var origin = boundChunk.Address.ChunkOrigin;
+        foreach (Vector2Int direction in wireNeighborDirections)
+        {
+            Vector2Int cell = changedCell + direction;
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(
+                new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
+            int x = Mathf.RoundToInt(delta.x), y = Mathf.RoundToInt(delta.y);
+            if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) continue;
+            MachineEntity node = MachineWorld.GetFluidPipeAt(cell);
+            if (node?.Definition.Fluid?.Kind != "pipe") continue;
+            var key = new Vector3Int(x, y, node.Definition.Layer);
+            int mask = MachineWorld.GetFluidPipeConnectionMask(node);
+            if (!submittedPipeMasks.TryGetValue(key, out int previous) || previous != mask)
+                SubmitMechanicalNode(node, x, y);
+        }
+    }
+
     /// <summary>按机械类型组合 Sprite，视觉状态来自物品定义而不是运行时 Item。</summary>
     private void SubmitMechanicalNode(MachineEntity node, int x, int y)
     {
@@ -193,7 +219,7 @@ public sealed partial class ChunkTilemapRenderer
 
         if (node.Definition.Fluid != null)
         {
-            SubmitFluidNode(node, x, y, def.Sprite, material, origin, rotation);
+            SubmitFluidNode(node, x, y, def, material, origin, rotation);
             return;
         }
 
@@ -337,15 +363,23 @@ public sealed partial class ChunkTilemapRenderer
     }
 
     /// <summary>流体覆盖层沿原行网格显示两相余量与实际方向，读数不反写权威库存。</summary>
-    private void SubmitFluidNode(MachineEntity node, int x, int y, Sprite body, Material material, Vector3 origin, Quaternion rotation)
+    private void SubmitFluidNode(MachineEntity node, int x, int y, RuntimeItemDefinition def, Material material, Vector3 origin, Quaternion rotation)
     {
+        Sprite body = def.Sprite;
         bool tankBlock = MachineWorld.IsFluidTankBlock(node);
         int tankMask = tankBlock ? MachineWorld.GetFluidTankConnectionMask(node) : 0;
         FluidMachineState state = MachineWorld.GetFluidState(node);
         FluidInventory inventory = MachineWorld.GetFluidInventory(node);
         bool probe = node.Definition.Fluid.Kind is "mechanical-probe" or "electronic-probe";
-        bool pipe = node.Definition.Layer == 2;
-        if (tankBlock)
+        bool pipe = node.Definition.Fluid.Kind == "pipe";
+        if (pipe)
+        {
+            int mask = MachineWorld.GetFluidPipeConnectionMask(node);
+            Part(node, x, y, 0, State(def, pipeSpriteStates[mask]), material, origin,
+                Quaternion.identity, Vector3.zero, Vector3.one, 0, 0);
+            submittedPipeMasks[new Vector3Int(x, y, node.Definition.Layer)] = mask;
+        }
+        else if (tankBlock)
         {
             submittedTankMasks[new Vector3Int(x, y, node.Definition.Layer)] = tankMask;
             // 罐体始终占满一格，太阳投影仍只提交一次完整外壳。
@@ -359,7 +393,8 @@ public sealed partial class ChunkTilemapRenderer
             }
         }
         else Part(node, x, y, 0, body, material, origin, rotation, Vector3.zero,
-            Fit(body, pipe ? .55f : probe ? .32f : .85f, pipe ? .55f : probe ? .32f : .85f), 0, 0);
+            Fit(body, node.Definition.Layer == 2 ? .55f : probe ? .32f : .85f,
+                node.Definition.Layer == 2 ? .55f : probe ? .32f : .85f), 0, 0);
         MechanicalDepthVisual visual = mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)];
         Ports(node, x, y, 6, material, origin, rotation);
         visual.UpdateFacility(node);
@@ -430,6 +465,7 @@ public sealed partial class ChunkTilemapRenderer
         int mode, float multiplier, float phase = 0f, int track = 0, float stroke = 0f,
         bool drawBelowMechanical = false, Vector4 conveyorSurface = default, int partOrder = -1)
     {
+        drawBelowMechanical |= node.Definition.IsConnectionLine;
         // 电机反向只做水平镜像，避免 180 度旋转把支脚和顶部结构倒置。
         if (node.Definition.IsConverter && (node.RotationQuarterTurns & 3) == 2)
         {
@@ -461,7 +497,8 @@ public sealed partial class ChunkTilemapRenderer
         if (!mechanicalDepthVisuals.TryGetValue(key, out MechanicalDepthVisual visual) || visual == null)
         {
             int id = x + y * boundChunk.Terrain.Width + node.Definition.Layer * boundChunk.Terrain.CellCount;
-            int visualLayer = node.Definition.Electrical?.IsWire == true ? -1 : node.Definition.Layer;
+            int visualLayer = node.Definition.Fluid?.Kind == "pipe" ? -2 :
+                node.Definition.Electrical?.IsWire == true ? -1 : node.Definition.Layer;
             visual = MechanicalDepthVisual.Create(this, origin, id, visualLayer);
             mechanicalDepthVisuals[key] = visual;
         }
@@ -482,6 +519,7 @@ public sealed partial class ChunkTilemapRenderer
     private void ClearMechanicalDepthVisuals()
     {
         submittedWireMasks.Clear();
+        submittedPipeMasks.Clear();
         submittedTankMasks.Clear();
         foreach (MechanicalDepthVisual visual in mechanicalDepthVisuals.Values)
             if (visual != null) visual.Dispose();

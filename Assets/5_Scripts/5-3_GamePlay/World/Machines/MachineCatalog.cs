@@ -236,7 +236,8 @@ public sealed class MachineDefinition
     public bool HasMechanicalPorts => Ports == "axis" || Ports == "all";
     public bool HasElectricalPorts => Electrical?.HasConnection == true;
     public bool IsConverter => Electrical?.IsConverter == true;
-    public bool Rotatable => Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0);
+    public bool IsConnectionLine => Electrical?.IsWire == true || Fluid?.Kind == "pipe"; // 自动接邻格的线路与设备主体分层显示。
+    public bool Rotatable => !IsConnectionLine && (Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0));
     /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
     public bool ShouldCastVisualShadows()
         => CastVisualShadows ?? (Kind == "source" || Kind == "consumer" || Kind == "bellows" ||

@@ -3736,6 +3736,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 64a3a03e261b4bf39470b79fbec2a753
+    m_Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0c370d56e19945209114ef87ed621741
     m_Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png
     m_ReadOnly: 0

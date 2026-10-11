@@ -5,7 +5,7 @@
       "id": "FluidPipe",
       "parent": "BuildingBody_Base",
       "gameName": "通用管道-建筑",
-      "description": "通用管道。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "铺在独立覆盖层的气液连接线，自动连接相邻管道和朝向匹配的设备管口。可在面板查看真实库存与流向。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -18,7 +18,25 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+        "spriteStates": {
+          "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
+          "pipe1": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]",
+          "pipe2": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]",
+          "pipe3": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]",
+          "pipe4": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]",
+          "pipe5": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]",
+          "pipe6": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]",
+          "pipe7": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]",
+          "pipe8": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]",
+          "pipe9": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]",
+          "pipe10": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+          "pipe11": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]",
+          "pipe12": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]",
+          "pipe13": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]",
+          "pipe14": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]",
+          "pipe15": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]"
+        }
       },
       "health": {
         "hasHp": true,
@@ -77,7 +95,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "通用管道",
-      "description": "通用管道。通过配置面板查看真实气液库存、方向和动力；空设备默认真空。",
+      "description": "铺在独立覆盖层的气液连接线，自动连接相邻管道和朝向匹配的设备管口。可在面板查看真实库存与流向。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
@@ -90,7 +108,25 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+        "spriteStates": {
+          "pipe0": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]",
+          "pipe1": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]",
+          "pipe2": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]",
+          "pipe3": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]",
+          "pipe4": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]",
+          "pipe5": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]",
+          "pipe6": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]",
+          "pipe7": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]",
+          "pipe8": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]",
+          "pipe9": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]",
+          "pipe10": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]",
+          "pipe11": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]",
+          "pipe12": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]",
+          "pipe13": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]",
+          "pipe14": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]",
+          "pipe15": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]"
+        }
       },
       "health": {
         "hasHp": true,
