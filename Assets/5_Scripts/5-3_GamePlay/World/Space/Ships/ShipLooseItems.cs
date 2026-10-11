@@ -29,7 +29,7 @@ namespace FlatWorld.Spaceflight
             try { if (item != null) ItemMgr.Instance?.DespawnItem(item, false); }
             finally { releasingLooseViews = false; }
         }
-        private void QueueDrop(ItemData data, ShipState ship, ShipPieceState piece)
+        private SpaceLooseItemState QueueDrop(ItemData data, ShipState ship, ShipPieceState piece)
         {
             ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
                 (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
@@ -39,7 +39,7 @@ namespace FlatWorld.Spaceflight
             data.inHand = false; data.Stack.CanBePickedUp = true;
             var flight = GetFlight(ship.ShipId);
             bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
-            State.LooseItems.Add(new SpaceLooseItemState
+            var drop = new SpaceLooseItemState
             {
                 Snapshot = Encode(data), WorldKey = flight.SurfaceWorldKey,
                 InSpace = inSpace,
@@ -50,7 +50,9 @@ namespace FlatWorld.Spaceflight
                 // 太空掉落不能继承船体残留的地表升空高度。
                 SurfaceHeight = inSpace ? 0d : Math.Max(0d, flight.HeightMeters),
                 SurfaceVerticalSpeed = inSpace ? 0d : flight.VerticalSpeed
-            });
+            };
+            State.LooseItems.Add(drop);
+            return drop;
         }
         private void StepLooseItems(double seconds)
         {

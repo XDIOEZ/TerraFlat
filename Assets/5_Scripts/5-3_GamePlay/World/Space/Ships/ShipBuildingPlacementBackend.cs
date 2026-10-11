@@ -276,6 +276,57 @@ namespace FlatWorld.Spaceflight
             ShipAtmosphereService.RebuildCompartments(ship, GetOutside(ship));
             SynchronizeViews(refreshBindings: true);
         }
+
+        #region 船上机器主动拆回
+        // 返还物先由太空会话接管，节点删除成功后才撤销船部件和结构表现。
+        public bool TryDismantleMachinePiece(MachineEntity node, ItemData returned, out string reason)
+        {
+            reason = null;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || node == null || returned == null ||
+                !FindPiece(node.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), out ShipState ship, out ShipPieceState piece) ||
+                node.ScopeKey != "ship:" + ship.ShipId || GetFlight(ship.ShipId) == null)
+            {
+                reason = "机械节点所属的船部件已失效";
+                return false;
+            }
+            using var nodeScope = MachineWorld.UseNodeScope(node);
+            if (!MachineWorld.Contains(node))
+            {
+                reason = "机械节点已失效";
+                return false;
+            }
+            SpaceLooseItemState drop = QueueDrop(returned, ship, piece);
+            try
+            {
+                if (MachineWorld.Remove(node.Id) == null)
+                {
+                    State.LooseItems.Remove(drop);
+                    reason = "机械节点已失效";
+                    return false;
+                }
+            }
+            catch (Exception exception)
+            {
+                if (MachineWorld.Contains(node))
+                {
+                    State.LooseItems.Remove(drop);
+                    throw;
+                }
+                // 节点已删除后的通知异常不能撤掉返还物，船部件仍需完成提交。
+                Debug.LogException(exception);
+            }
+            piece.Destroyed = true;
+            if (piece.Kind == ShipPieceKind.Floor || piece.SealsAtmosphere) ship.AtmosphereStructureDirty = true;
+            contents.Remove(piece.PieceId);
+            State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
+            destroyed.Add(piece.PieceId);
+            pieceIndexDirty = true;
+            viewBindingsDirty = true;
+            RemovePieceView(piece.PieceId);
+            return true;
+        }
+        #endregion
+
         public void DestroyPiece(ShipState ship, ShipPieceState piece, string reason)
         {
             if (destroyed.Contains(piece.PieceId)) return;

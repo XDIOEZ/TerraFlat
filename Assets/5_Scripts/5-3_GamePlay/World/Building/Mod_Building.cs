@@ -668,11 +668,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         ItemMgr.Instance.DespawnItem(item, false);
     }
 
-    /// <summary>纯数据机械先生成返还召唤器，成功后才移除权威节点和 BRG 占格。</summary>
+    #region 纯数据机械拆回
+    /// <summary>纯数据机械先生成返还召唤器，成功后才移除权威节点和占格。</summary>
     public static bool TryDismantleMechanical(MachineEntity node, out string reason)
         => TryDismantleMechanical(node, out _, out reason);
 
-    /// <summary>服务端可取得返还物以广播正式出生消息。</summary>
+    /// <summary>地表返还物可供服务端发布，船上返还物由太空会话持有。</summary>
     public static bool TryDismantleMechanical(MachineEntity node, out Item summoner, out string reason)
         => TryCreateMechanicalDismantledSummoner(node, true, out summoner, out reason);
 
@@ -688,6 +689,24 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         if (!GameNetwork.HasStateAuthority || node == null || ItemMgr.Instance == null)
         {
             reason = "机械拆除需要当前世界写入权限";
+            return false;
+        }
+        // 面板回调已离开交互调用栈，整笔拆除必须留在节点所属的世界。
+        using var nodeScope = MachineWorld.UseNodeScope(node);
+        if (!MachineWorld.Contains(node))
+        {
+            reason = "机械节点已失效";
+            return false;
+        }
+        bool onShip = MachineWorld.IsShipScope;
+        if (onShip && !removeNode)
+        {
+            reason = "当前联机拆除事务尚不支持船上设施";
+            return false;
+        }
+        if (onShip && FlatWorld.Spaceflight.SpaceSession.Current?.Owns(node.Id) != true)
+        {
+            reason = "机械节点所属的船部件已失效";
             return false;
         }
         if (!MachineWorld.CanDismantleFluid(node, out reason)) return false;
@@ -719,7 +738,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             string summonerId = ResolveSummonerPrefabId(node.Definition.Id, building);
             ItemData returned = GameRes.Instance.CreateItemData(summonerId) ??
                 throw new InvalidOperationException("机械召唤器资源缺失：" + summonerId);
-            Vector3 position = NormalizePlacement(node.Snapshot.transform.position);
+            Vector3 position = onShip ? Vector3.zero : NormalizePlacement(node.Snapshot.transform.position);
             returned.Guid = GenerateUniqueRuntimeGuid();
             returned.inHand = false;
             returned.Stack ??= new ItemStack();
@@ -741,6 +760,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
                 }))
                 throw new InvalidOperationException("机械召唤器缺少建筑模块");
             returned.ItemSpecialData = CreateStatefulSummonerIdentity(snapshotBase64);
+            if (onShip)
+                return FlatWorld.Spaceflight.SpaceSession.Current.TryDismantleMachinePiece(node, returned, out reason);
             summoner = ItemMgr.Instance.InstantiateItem(returned, position,
                 returned.transform.rotation, returned.transform.scale);
             summoner.Load();
@@ -759,6 +780,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             return false;
         }
     }
+    #endregion
 
     /// <summary>非锤击致命伤害按原建筑材料回收规则处理纯数据机械。</summary>
     public static void DestroyMechanical(MachineEntity node)
