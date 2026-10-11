@@ -943,10 +943,10 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipDockingPort/ShipDockingPort_Idle.png",
         "color": {
-          "r": 0.35,
-          "g": 0.85,
+          "r": 1.0,
+          "g": 1.0,
           "b": 1.0,
           "a": 1.0
         }
@@ -1036,10 +1036,10 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipDockingPort/ShipDockingPort_Idle.png",
         "color": {
-          "r": 0.35,
-          "g": 0.85,
+          "r": 1.0,
+          "g": 1.0,
           "b": 1.0,
           "a": 1.0
         }
