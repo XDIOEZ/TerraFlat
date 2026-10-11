@@ -18,6 +18,9 @@ public abstract class FluidDeviceBehavior
     public virtual bool UsesFilterMaterial => false;
     public virtual bool StoresResidue => false;
     public virtual bool ReceivesOnDemand => false;
+    public virtual bool CanCacheElectricalDemandWithinStep => false;
+    // 启用后 Tick 只改加工读数或流体腔；扩展策略若修改其他字段则自行发布变化或保留默认通知。
+    public virtual bool UsesObservedTickState => false;
     public virtual bool PortsEnabled(MachineEntity node) => true;
     public virtual bool CanOutput(MachineEntity node, out string reason) { reason = null; return true; }
     public virtual bool CanRoute(MachineEntity node, FluidMachinePortDefinition port, FluidPhase phase,
@@ -37,6 +40,7 @@ public sealed class FluidReceiverBehavior : FluidDeviceBehavior
     #region 按需供给入口
     // 需求方沿正式管路原子取料，避免随机单气批次把混气入口灌偏。
     public override bool ReceivesOnDemand => true;
+    public override bool UsesObservedTickState => true;
     #endregion
 }
 
@@ -44,6 +48,7 @@ public class FluidTransitBehavior : FluidDeviceBehavior
 {
     #region 普通管段
     public override bool IsTransit => true;
+    public override bool UsesObservedTickState => true;
     public override string ActionLabel(MachineEntity node) => "排出气体";
     public override bool Execute(MachineEntity node, string operation, string argument)
         => (operation == "fluid.vent" || operation == "work") && MachineWorld.VentFluidPipe(node);
@@ -108,6 +113,7 @@ public sealed class FluidStorageBehavior : FluidDeviceBehavior
 {
     #region 共享储存
     public override bool IsSharedStorage => true;
+    public override bool UsesObservedTickState => true;
     public override void AppendDescription(MachineEntity node, StringBuilder text)
     {
         FluidMachineState state = MachineWorld.GetFluidState(node);
@@ -120,6 +126,7 @@ public sealed class FluidStorageBehavior : FluidDeviceBehavior
 public sealed class FluidGasPumpBehavior : FluidDeviceBehavior
 {
     #region 大气抽取
+    public override bool UsesObservedTickState => true;
     public override bool CanOutput(MachineEntity node, out string reason)
     { reason = FluidDeviceOperations.IsGasPumpWet(node) ? "气泵遇到液体" : null; return reason == null; }
     public override void Advance(MachineEntity node, float seconds) => FluidDeviceOperations.AdvanceGasPump(node, seconds);
@@ -135,6 +142,8 @@ public sealed class FluidGasPumpBehavior : FluidDeviceBehavior
 public sealed class FluidLiquidPumpBehavior : FluidDeviceBehavior
 {
     #region 液体抽取
+    public override bool CanCacheElectricalDemandWithinStep => true;
+    public override bool UsesObservedTickState => true;
     public override void Advance(MachineEntity node, float seconds) => FluidDeviceOperations.AdvanceLiquidPump(node, seconds);
     public override float ElectricalDemand(MachineEntity node)
         => MachineWorld.GetFluidInventory(node).GetLiquidLiters() < node.Definition.Fluid.VolumeLiters - node.Definition.Fluid.MinimumGasSpaceLiters ? 1 : 0;
@@ -144,6 +153,8 @@ public sealed class FluidLiquidPumpBehavior : FluidDeviceBehavior
 public sealed class FluidCompressorBehavior : FluidDeviceBehavior
 {
     #region 压缩与充装
+    public override bool CanCacheElectricalDemandWithinStep => true;
+    public override bool UsesObservedTickState => true;
     public override void Advance(MachineEntity node, float seconds) => FluidDeviceOperations.AdvanceCompressor(node, seconds);
     public override float ElectricalDemand(MachineEntity node) => MachineWorld.GetFluidInventory(node).GasMoles > 0 ? 1 : 0;
     public override string ActionLabel(MachineEntity node) => "调整充装压力";
@@ -163,6 +174,8 @@ public sealed class FluidCompressorBehavior : FluidDeviceBehavior
 public class FluidReactionBehavior : FluidDeviceBehavior
 {
     #region 守恒反应
+    public override bool CanCacheElectricalDemandWithinStep => true;
+    public override bool UsesObservedTickState => true;
     public override void Advance(MachineEntity node, float seconds) => FluidDeviceOperations.AdvanceFluidReaction(node, seconds);
     public override float ElectricalDemand(MachineEntity node) => FluidDeviceOperations.GetReactionDemand(node);
     #endregion
@@ -187,6 +200,7 @@ public sealed class FluidElectrolyzerBehavior : FluidReactionBehavior
 public sealed class FluidEngineBehavior : FluidDeviceBehavior
 {
     #region 燃料动力结算
+    public override bool UsesObservedTickState => true;
     public override bool FloorsSourceTorque => true;
     public override bool HasMechanicalSource => true;
     public override void BeginStep(MachineEntity node, float seconds)
@@ -199,6 +213,7 @@ public sealed class FluidEngineBehavior : FluidDeviceBehavior
 public sealed class FluidPressureProbeBehavior : FluidDeviceBehavior
 {
     #region 压力开关
+    public override bool UsesObservedTickState => true;
     private readonly bool electrical;
     public FluidPressureProbeBehavior(bool electrical) => this.electrical = electrical;
     public override bool SwitchesMechanicalPorts => !electrical;

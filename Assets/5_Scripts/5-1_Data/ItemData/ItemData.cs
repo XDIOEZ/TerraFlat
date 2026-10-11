@@ -49,7 +49,13 @@ public abstract partial class ItemData
     [MemoryPackIgnore] public List<string> Tags = new();
 
     [Tooltip("物品堆叠信息")]
-    [MemoryPackIgnore] public ItemStack Stack;
+    [SerializeField, FormerlySerializedAs("Stack"), MemoryPackIgnore, JsonIgnore] private ItemStack stack;
+    [MemoryPackIgnore]
+    public ItemStack Stack
+    {
+        get { BindMassStack(); return stack; }
+        set { if (ReferenceEquals(stack, value)) return; UnbindMassStack(); stack = value; BindMassStack(); NotifyMassChanged(); }
+    }
 
     [Tooltip("物品缩放")]
     [MemoryPackIgnore] public ItemTransform transform = new();

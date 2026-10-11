@@ -122,6 +122,10 @@ namespace FlatWorld.Spaceflight
         public double CenterOfMassLocalY;
         public double InertiaKgM2;
         public List<ShipPieceState> Pieces = new List<ShipPieceState>();
+        [JsonIgnore] public ulong StructureRevision { get; private set; }
+        [JsonIgnore] public ulong MassRevision { get; internal set; }
+        // 结构事务统一失效质量、支撑和对接登记，正常运动不改版本。
+        public void NotifyStructureChanged() { unchecked { StructureRevision++; } }
         public List<ShipMassContribution> MassContributions = new List<ShipMassContribution>();
         public List<ShipCompartmentState> Compartments = new List<ShipCompartmentState>();
         [JsonIgnore] public bool AtmosphereStructureDirty = true;

@@ -9,6 +9,7 @@
   <ItemGroup>
     <!-- 直接编译生产质量读取器和机器载荷解析，不启动或暂停 Unity。 -->
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/ShipMassReader.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/ShipMassReader.Incremental.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachinePersistence.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.Recovery.cs" />
     <Reference Include="Newtonsoft.Json">

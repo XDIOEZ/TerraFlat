@@ -20,5 +20,8 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>$(MSBuildSDKsPath)/../Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="FastCloner">
+      <HintPath>$(RepoRoot)Assets/Packages/FastCloner.3.3.10/lib/netstandard2.0/FastCloner.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

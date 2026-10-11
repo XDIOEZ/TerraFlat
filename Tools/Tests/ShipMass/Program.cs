@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Reader = FlatWorld.Spaceflight.SpaceSession.MassReaderHarness;
 
-internal static class Program
+internal static partial class Program
 {
     #region 离线回归入口
     private static int passed;
@@ -24,6 +24,10 @@ internal static class Program
         Run("运行装备包优先于冷载荷", EquipmentPriority);
         Run("资源版本和资源实例变更清理缓存", ResourceChanges);
         Run("递归运行模块集合保持隔离", NestedLiveModules);
+        Run("增量来源缓存与真实数量流体变化", IncrementalSources);
+        Run("增量来源共享身份去重及同一步移交", IncrementalOwnership);
+        Run("同一机器的库存和流体腔引用替换失效", IncrementalMachineReplacement);
+        Run("增量来源稳定读取无分配", IncrementalAllocations);
         Benchmark();
         Console.WriteLine($"PASS: {passed} regression groups");
     }

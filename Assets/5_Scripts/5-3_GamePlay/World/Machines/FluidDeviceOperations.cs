@@ -1,11 +1,83 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using static MachineWorld;
 
 /// <summary>设备加工各自调用这里的事务，统一管网不识别设备种类。</summary>
 public static class FluidDeviceOperations
 {
+    #region 反应定义与事务工作区
+    private sealed class CompiledReaction
+    {
+        public FluidCatalog Catalog;
+        public FluidReactionTerm[] Inputs;
+        public (string Chamber, double Moles)[] GasOutputs;
+        public (string Chamber, double Liters)[] LiquidOutputs;
+    }
+    private sealed class ReactionWorkspace
+    {
+        public readonly List<FluidInventory> Inventories = new();
+        public readonly List<FluidInventoryState> Snapshots = new();
+        public int Count;
+        public void Begin() { Inventories.Clear(); Count = 0; }
+        public void Remember(FluidInventory inventory)
+        {
+            if (Inventories.Contains(inventory)) return;
+            if (Count == Snapshots.Count) Snapshots.Add(new FluidInventoryState());
+            Snapshots[Count].CopyFrom(inventory.State); Inventories.Add(inventory); Count++;
+        }
+        public void Restore()
+        { for (int i = 0; i < Count; i++) Inventories[i].Restore(Snapshots[i]); }
+    }
+    private sealed class CompressorWorkspace
+    {
+        public readonly FluidInventoryState Before = new();
+        public string CompressionPort, PortablePort;
+        public CompressorWorkspace(MachineEntity node)
+        { CompressionPort = node.Id + ":compress"; PortablePort = node.Id + ":portable-fill"; }
+    }
+    private static readonly Dictionary<FluidMachineReactionDefinition, CompiledReaction> compiledReactions = new();
+    private static readonly ConditionalWeakTable<MachineEntity, ReactionWorkspace> reactionWorkspaces = new();
+    private static readonly ConditionalWeakTable<MachineEntity, CompressorWorkspace> compressorWorkspaces = new();
+    internal static void ClearCompiledReactions() => compiledReactions.Clear();
+    private static CompiledReaction CompileReaction(FluidMachineReactionDefinition reaction)
+    {
+        FluidCatalog catalog = FluidCatalog.Default;
+        if (compiledReactions.TryGetValue(reaction, out CompiledReaction existing) && ReferenceEquals(existing.Catalog, catalog)) return existing;
+        // 静态配方先合并同腔同相需求，正常供电探算不再拼键或创建字典。
+        var requirements = new Dictionary<(string Chamber, string FluidId, string Phase), double>();
+        foreach (FluidReactionTerm input in reaction.Inputs)
+        {
+            var key = (input.Chamber, input.FluidId, input.Phase);
+            requirements[key] = requirements.GetValueOrDefault(key) + input.Moles;
+        }
+        var inputs = new FluidReactionTerm[requirements.Count];
+        int index = 0;
+        foreach (var input in requirements)
+            inputs[index++] = new FluidReactionTerm { Chamber = input.Key.Chamber, FluidId = input.Key.FluidId,
+                Phase = input.Key.Phase, Moles = input.Value };
+        var gas = new Dictionary<string, double>(StringComparer.Ordinal);
+        var liquid = new Dictionary<string, double>(StringComparer.Ordinal);
+        foreach (FluidReactionTerm output in reaction.Outputs)
+        {
+            if (output.Phase == "gas") gas[output.Chamber] = gas.GetValueOrDefault(output.Chamber) + output.Moles;
+            else
+            {
+                FluidDefinition fluid = catalog.Find(output.FluidId);
+                liquid[output.Chamber] = liquid.GetValueOrDefault(output.Chamber) +
+                    output.Moles * fluid.MolarMassKgPerMol / fluid.LiquidDensityKgPerLiter;
+            }
+        }
+        var result = new CompiledReaction { Catalog = catalog, Inputs = inputs,
+            GasOutputs = new (string, double)[gas.Count], LiquidOutputs = new (string, double)[liquid.Count] };
+        index = 0; foreach (var value in gas) result.GasOutputs[index++] = (value.Key, value.Value);
+        index = 0; foreach (var value in liquid) result.LiquidOutputs[index++] = (value.Key, value.Value);
+        compiledReactions[reaction] = result;
+        return result;
+    }
+    #endregion
+
     #region 流体设备实际动力与取料
     private static double AvailableDeviceWork(MachineEntity node, double seconds)
     {
@@ -130,7 +202,8 @@ public static class FluidDeviceOperations
         if (work <= 0) { state.Status = node.Definition.Electrical != null ? "没有电" : "没有动力"; return; }
         double pressure = input.GetPressureKPa(definition.VolumeLiters, definition.MinimumGasSpaceLiters);
         if (pressure <= 0 || input.GasMoles <= 0) { state.Status = "入口没有气体"; return; }
-        if (!input.TryReserve(node.Id + ":compress", FluidPhase.Gas,
+        CompressorWorkspace workspace = compressorWorkspaces.GetValue(node, value => new CompressorWorkspace(value));
+        if (!input.TryReserve(workspace.CompressionPort, FluidPhase.Gas,
             FluidUnits.StandardLitersToMol((decimal)Math.Min(definition.ThroughputLitersPerSecond * seconds, definition.BatchStandardLiters)), out FluidBatch batch)) return;
         double targetPressure = Math.Min(definition.MaximumPumpPressureKPa, Math.Max(state.CompressionTargetKPa,
             output.GetPressureKPa(definition.VolumeLiters, definition.MinimumGasSpaceLiters)));
@@ -138,10 +211,10 @@ public static class FluidDeviceOperations
         if (!compressed.Success || output.GasMoles + compressed.Batch.GasMoles > FluidUnits.StandardLitersToMol((decimal)definition.GasBufferStandardLiters) ||
             !output.CanAdd(compressed.Batch, definition.VolumeLiters, definition.MinimumGasSpaceLiters, false, false))
         { state.Status = "压缩机出口被堵住了"; return; }
-        FluidInventoryState previous = input.State.Clone();
-        if (!input.TryTakeReserved(node.Id + ":compress", compressed.Batch.TotalMoles, out _)) return;
+        workspace.Before.CopyFrom(input.State);
+        if (!input.TryTakeReserved(workspace.CompressionPort, compressed.Batch.TotalMoles, out _)) return;
         if (!output.TryAdd(compressed.Batch, definition.VolumeLiters, definition.MinimumGasSpaceLiters, false, false))
-        { input.Restore(previous); throw new InvalidOperationException("压缩机预算提交失败。"); }
+        { input.Restore(workspace.Before); throw new InvalidOperationException("压缩机预算提交失败。"); }
         state.DissipatedHeatJoules += compressed.LossJoules; state.Status = "正在压缩";
     }
 
@@ -151,7 +224,7 @@ public static class FluidDeviceOperations
         if (item == null || !FluidTankStorage.TryGet(item, out FluidInventory target, out FluidTankConfiguration configuration)) return;
         FluidInventory source = GetFluidInventory(node, "output");
         if (!TryGetFluidTransferBudget(source, out FluidInventoryState beginning, out double budget) || budget <= 0) return;
-        string port = node.Id + ":portable-fill";
+        string port = compressorWorkspaces.GetValue(node, value => new CompressorWorkspace(value)).PortablePort;
         if (!source.TryReserve(port, FluidPhase.Gas, FluidUnits.StandardLitersToMol((decimal)node.Definition.Fluid.BatchStandardLiters), out FluidBatch batch)) return;
         FluidComponentState stock = beginning.Components.Find(component => component.FluidId == batch.FluidId);
         if (stock == null || stock.GasMoles <= 0 || batch.LiquidMoles > 0) return;
@@ -169,15 +242,12 @@ public static class FluidDeviceOperations
     private static decimal LimitPortableFillByPressure(FluidInventory target, FluidBatch batch, decimal maximum, double pressure,
         double volume, double minimum)
     {
-        FluidInventory trial = new(target.State.Clone(), target.Catalog);
-        FluidInventoryState original = trial.State.Clone();
         decimal low = 0, high = maximum;
         for (int attempt = 0; attempt < 40; attempt++)
         {
             decimal middle = (low + high) / 2;
-            trial.Restore(original);
             FluidBatch candidate = batch.Scale(middle / batch.TotalMoles);
-            if (trial.TryAdd(candidate, volume, minimum) && trial.GetPressureKPa(volume, minimum) <= pressure) low = middle;
+            if (target.TryGetPressureAfterAdding(candidate, volume, minimum, out double predicted) && predicted <= pressure) low = middle;
             else high = middle;
         }
         return low;
@@ -237,38 +307,22 @@ public static class FluidDeviceOperations
     public static double GetReactionInputExtent(MachineEntity node, FluidMachineReactionDefinition reaction, double seconds)
     {
         double result = reaction.MolesPerSecond * seconds;
-        var required = new Dictionary<string, double>(StringComparer.Ordinal);
-        foreach (FluidReactionTerm input in reaction.Inputs)
-            required[input.Chamber + "|" + input.FluidId + "|" + input.Phase] = required.GetValueOrDefault(input.Chamber + "|" + input.FluidId + "|" + input.Phase) + input.Moles;
-        var checkedKeys = new HashSet<string>(StringComparer.Ordinal);
-        foreach (FluidReactionTerm input in reaction.Inputs)
+        foreach (FluidReactionTerm input in CompileReaction(reaction).Inputs)
         {
-            string key = input.Chamber + "|" + input.FluidId + "|" + input.Phase;
-            if (!checkedKeys.Add(key)) continue;
             FluidInventory inventory = GetFluidInventory(node, input.Chamber);
             decimal available = inventory.GetAvailableMoles(input.FluidId, input.Phase == "gas" ? FluidPhase.Gas : FluidPhase.Liquid);
-            result = Math.Min(result, (double)available / required[key]);
+            result = Math.Min(result, (double)available / input.Moles);
         }
         return result;
     }
     public static double GetReactionOutputExtent(MachineEntity node, FluidMachineReactionDefinition reaction)
     {
         double result = double.PositiveInfinity;
-        var gasPerChamber = new Dictionary<string, double>(StringComparer.Ordinal);
-        var litersPerChamber = new Dictionary<string, double>(StringComparer.Ordinal);
-        foreach (FluidReactionTerm output in reaction.Outputs)
-        {
-            if (output.Phase == "gas") gasPerChamber[output.Chamber] = gasPerChamber.GetValueOrDefault(output.Chamber) + output.Moles;
-            else
-            {
-                FluidDefinition fluid = FluidCatalog.Default.Find(output.FluidId);
-                litersPerChamber[output.Chamber] = litersPerChamber.GetValueOrDefault(output.Chamber) + output.Moles * fluid.MolarMassKgPerMol / fluid.LiquidDensityKgPerLiter;
-            }
-        }
-        foreach (var gas in gasPerChamber)
-            result = Math.Min(result, Math.Max(0, (double)(FluidUnits.StandardLitersToMol((decimal)node.Definition.Fluid.GasBufferStandardLiters) - GetFluidInventory(node, gas.Key).GasMoles)) / gas.Value);
-        foreach (var liquid in litersPerChamber)
-            result = Math.Min(result, Math.Max(0, node.Definition.Fluid.VolumeLiters - node.Definition.Fluid.MinimumGasSpaceLiters - GetFluidInventory(node, liquid.Key).GetLiquidLiters()) / liquid.Value);
+        CompiledReaction compiled = CompileReaction(reaction);
+        foreach (var gas in compiled.GasOutputs)
+            result = Math.Min(result, Math.Max(0, (double)(FluidUnits.StandardLitersToMol((decimal)node.Definition.Fluid.GasBufferStandardLiters) - GetFluidInventory(node, gas.Chamber).GasMoles)) / gas.Moles);
+        foreach (var liquid in compiled.LiquidOutputs)
+            result = Math.Min(result, Math.Max(0, node.Definition.Fluid.VolumeLiters - node.Definition.Fluid.MinimumGasSpaceLiters - GetFluidInventory(node, liquid.Chamber).GetLiquidLiters()) / liquid.Liters);
         if (reaction.ResidueItemsPerReaction > 0)
         {
             if (!TryGetResiduePort(node, reaction, out IItemTransferPort residue, out ItemData product)) return 0;
@@ -288,16 +342,17 @@ public static class FluidDeviceOperations
         IItemTransferPort residuePort = null; ItemData residueItem = null;
         if (reaction.ResidueItemsPerReaction > 0 && (!TryGetResiduePort(node, reaction, out residuePort, out residueItem) ||
             residuePort.GetReceivableItems(residueItem, residueItems) < residueItems)) return false;
-        var snapshots = new Dictionary<FluidInventory, FluidInventoryState>();
+        ReactionWorkspace snapshots = reactionWorkspaces.GetValue(node, _ => new ReactionWorkspace());
+        snapshots.Begin();
         double inputEnergy = 0, inputMoles = 0, weightedTemperature = 0;
         foreach (FluidReactionTerm input in reaction.Inputs)
         {
             FluidInventory inventory = GetFluidInventory(node, input.Chamber);
-            if (!snapshots.ContainsKey(inventory)) snapshots.Add(inventory, inventory.State.Clone());
+            snapshots.Remember(inventory);
             decimal moles = (decimal)(extent * input.Moles);
             double inputTemperature = inventory.GetTemperatureKelvin();
             if (!inventory.TryTakeExact(input.FluidId, input.Phase == "gas" ? FluidPhase.Gas : FluidPhase.Liquid, moles, out FluidBatch batch))
-            { RestoreFluidSnapshots(snapshots); return false; }
+            { snapshots.Restore(); return false; }
             inputEnergy += batch.InternalEnergyJoules; weightedTemperature += inputTemperature * (double)moles; inputMoles += (double)moles;
         }
         double capacity = 0, offset = 0;
@@ -311,24 +366,24 @@ public static class FluidDeviceOperations
         double available = inputEnergy + work + extent * (reaction.ChemicalJoulesPerReaction - reaction.StoredChemicalJoulesPerReaction) - mechanicalWork;
         double temperatureLimit = weightedTemperature / Math.Max(.000001, inputMoles);
         double temperature = Math.Min(temperatureLimit, (available - offset) / capacity);
-        if (!double.IsFinite(temperature) || temperature <= 0) { RestoreFluidSnapshots(snapshots); return false; }
+        if (!double.IsFinite(temperature) || temperature <= 0) { snapshots.Restore(); return false; }
         foreach (FluidReactionTerm output in reaction.Outputs)
         {
             FluidInventory inventory = GetFluidInventory(node, output.Chamber);
-            if (!snapshots.ContainsKey(inventory)) snapshots.Add(inventory, inventory.State.Clone());
+            snapshots.Remember(inventory);
             decimal moles = (decimal)(extent * output.Moles);
             FluidBatch batch = FluidInventory.CreateBatch(inventory.Catalog.Find(output.FluidId), output.Phase == "gas" ? moles : 0,
                 output.Phase == "liquid" ? moles : 0, temperature);
             if (!inventory.TryAdd(batch, node.Definition.Fluid.VolumeLiters, node.Definition.Fluid.MinimumGasSpaceLiters, node.Definition.Fluid.SingleGas, node.Definition.Fluid.SingleLiquid))
-            { RestoreFluidSnapshots(snapshots); return false; }
+            { snapshots.Restore(); return false; }
         }
         object residueBefore = residueItems > 0 ? residuePort.CaptureState() : null;
         if (residueItems > 0 && !residuePort.InsertItems(residueItem, residueItems))
-        { residuePort.RestoreState(residueBefore); RestoreFluidSnapshots(snapshots); return false; }
+        { residuePort.RestoreState(residueBefore); snapshots.Restore(); return false; }
         if (reaction.RequiresFilter && !EnsureFilterMaterial(node))
         {
             if (residueBefore != null) residuePort.RestoreState(residueBefore);
-            RestoreFluidSnapshots(snapshots); return false;
+            snapshots.Restore(); return false;
         }
         if (reaction.RequiresFilter) state.FilterRemainingWork = Math.Max(0, state.FilterRemainingWork - extent);
         if (reaction.ResidueItemsPerReaction > 0) state.ResidueProgress[reaction.SolidResidueItemId] = Math.Max(0, nextResidue - residueItems);
@@ -336,9 +391,6 @@ public static class FluidDeviceOperations
         state.DissipatedHeatJoules += Math.Max(0, available - (offset + capacity * temperature));
         return true;
     }
-    private static void RestoreFluidSnapshots(Dictionary<FluidInventory, FluidInventoryState> snapshots)
-    { foreach (var pair in snapshots) pair.Key.Restore(pair.Value); }
-
     private static bool EnsureFilterMaterial(MachineEntity node)
     {
         FluidMachineState state = GetFluidState(node);

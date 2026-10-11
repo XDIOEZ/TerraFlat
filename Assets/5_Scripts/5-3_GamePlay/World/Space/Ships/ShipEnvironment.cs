@@ -103,7 +103,7 @@ namespace FlatWorld.Spaceflight
         {
             if (maximumAmount <= 0f || !TryGetSupport(item.transform.position, out ShipState ship, out _, out Vector2 local)) return 0f;
             int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
-            ShipCompartmentState room = ship.Compartments.Find(value => value.Cells.Exists(cell => cell.X == x && cell.Y == y));
+            ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
             decimal requested = AtmosphereService.Quantize((decimal)maximumAmount * AmbientMolesPerOxygenUnit);
             if (room == null)
             {
@@ -119,7 +119,7 @@ namespace FlatWorld.Spaceflight
                     }
                 return 0f;
             }
-            var inventory = new FluidInventory(room.Gas);
+            var inventory = ShipAtmosphereService.GetCompartmentInventory(room);
             decimal amount = Math.Min(requested, inventory.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas));
             if (amount <= 0m || !inventory.TryTakeExact(FluidIds.Oxygen, FluidPhase.Gas, amount, out _)) return 0f;
             FluidBatch exhaled = FluidInventory.CreateBatch(FluidCatalog.Default.Find(FluidIds.CarbonDioxide), amount, 0m, ship.NormalCabinTemperatureCelsius + 273.15d);
@@ -128,7 +128,7 @@ namespace FlatWorld.Spaceflight
         }
         private void RefillCompartments(ShipState ship, float seconds)
         {
-            using (MachineWorld.UseScope("ship:" + ship.ShipId))
+            using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 ShipDeviceState device = GetDevice(piece.PieceId);

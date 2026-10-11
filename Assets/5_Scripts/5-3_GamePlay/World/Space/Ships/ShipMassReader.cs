@@ -8,7 +8,7 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 实际嵌套库存质量读取
-        private sealed class ShipMassReader
+        private sealed partial class ShipMassReader
         {
             private readonly HashSet<int> itemIds = new();
             private readonly HashSet<ItemData> items = new();
@@ -50,6 +50,7 @@ namespace FlatWorld.Spaceflight
             // 缓存只属于质量读取器，源载荷变化或资源重载后重建，不写回真实库存。
             public void ClearCache()
             {
+                ClearSources();
                 buildingPayloads = new(); binaryPayloads = new(); snapshotInventories = new(); machinePayloads = new();
                 resourceSource = GameRes.ExistingInstance;
                 resourceRevision = resourceSource != null ? resourceSource.ResourceReloadVersion : 0;
@@ -57,6 +58,7 @@ namespace FlatWorld.Spaceflight
             }
             private T ReadBinary<T>(Ex_ModData_MemoryPackable binary)
             {
+                WatchPayload(binary);
                 BinaryPayload cache = binaryPayloads.GetValue(binary, _ => new BinaryPayload());
                 if (!ReferenceEquals(cache.Source, binary.BitData) || cache.StateType != typeof(T))
                 {
@@ -67,9 +69,11 @@ namespace FlatWorld.Spaceflight
             }
             private ItemData ReadPackedBuilding(ItemData data)
             {
-                foreach (ModuleData module in data.ModuleDataDic.Values)
+                foreach (var entry in data.ModuleDataDic)
                 {
+                    ModuleData module = entry.Value;
                     if (module is not Ex_ModData binary || module.ID != ModText.Building) continue;
+                    WatchPayload(binary);
                     BuildingPayload cache = buildingPayloads.GetValue(binary, _ => new BuildingPayload());
                     if (cache.Source != binary.BitData)
                     {
@@ -124,15 +128,17 @@ namespace FlatWorld.Spaceflight
             { if (data == null) return; items.Add(data); if (data.Guid != 0) itemIds.Add(data.Guid); }
             public double ReadItem(ItemData data, Item live, int depth)
             {
-                if (data == null || data.Stack?.Amount <= 0f || !items.Add(data)) return 0d;
-                if (data.Guid != 0 && !itemIds.Add(data.Guid)) return 0d;
+                WatchItem(data);
+                if (data == null || data.Stack?.Amount <= 0f || !items.Add(data) || activeSource != null && structuralItems.Contains(data) || !Own(data)) return 0d;
+                if (data.Guid != 0 && (!itemIds.Add(data.Guid) || !OwnId(data.Guid))) return 0d;
                 if (depth > 64) throw new InvalidOperationException("物品库存嵌套过深。");
                 if (data.SharedConfiguration == null) ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data);
                 return Math.Max(0d, data.Stack?.CurrentWeight ?? 0d) + ReadItemContents(data, live, null, depth + 1);
             }
             public double ReadInventory(Inventory_Data inventory, int depth)
             {
-                if (inventory?.itemSlots == null || !inventories.Add(inventory)) return 0d;
+                WatchInventory(inventory);
+                if (inventory?.itemSlots == null || !inventories.Add(inventory) || !Own(inventory)) return 0d;
                 double mass = 0d;
                 foreach (ItemSlot slot in inventory.itemSlots) mass += ReadItem(slot?.itemData, null, depth + 1);
                 return mass;
@@ -141,7 +147,8 @@ namespace FlatWorld.Spaceflight
                 => snapshot == null ? 0d : ReadInventory(snapshotInventories.GetValue(snapshot, value => value.CreateColdData()), depth + 1);
             public double ReadFluidMass(FluidInventoryState state)
             {
-                if (state?.Components == null || !fluids.Add(state)) return 0d;
+                WatchFluid(state);
+                if (state?.Components == null || !fluids.Add(state) || !Own(state)) return 0d;
                 double mass = 0d;
                 foreach (FluidComponentState component in state.Components)
                     mass += (double)(component.GasMoles + component.LiquidMoles) * FluidCatalog.Default.Find(component.FluidId).MolarMassKgPerMol;
@@ -149,7 +156,8 @@ namespace FlatWorld.Spaceflight
             }
             private double ReadLiquidMass(LiquidContainerState state)
             {
-                if (state == null || !liquids.Add(state)) return 0d;
+                WatchLiquid(state);
+                if (state == null || !liquids.Add(state) || !Own(state)) return 0d;
                 MixedLiquidContents.Ensure(state);
                 double mass = 0d;
                 foreach (var entry in state.Composition)
@@ -162,6 +170,7 @@ namespace FlatWorld.Spaceflight
             }
             public double ReadItemContents(ItemData data, Item live, MachineEntity machine, int depth)
             {
+                WatchItem(data);
                 if (data == null) return 0d;
                 if (depth > 64) throw new InvalidOperationException("物品库存嵌套过深。");
                 double mass = 0d;
@@ -203,7 +212,7 @@ namespace FlatWorld.Spaceflight
                 if (data is Data_Player player && player._inventoryData != null)
                     foreach (Inventory_Data inventory in player._inventoryData.Values) mass += ReadInventory(inventory, depth + 1);
                 if (machine?.Logic != null)
-                    foreach (Inventory inventory in machine.Logic.Inventories) mass += ReadInventory(inventory?.Data, depth + 1);
+                    for (int i = 0; i < machine.Logic.Inventories.Count; i++) mass += ReadInventory(machine.Logic.Inventories[i]?.Data, depth + 1);
                 if (machine?.Processor != null)
                     mass += ReadInventory(machine.Processor.Input?.Data, depth + 1) + ReadInventory(machine.Processor.Output?.Data, depth + 1);
                 if (machine?.Logic is VesselLogic actualVessel) mass += ReadLiquidMass(actualVessel.Data);
@@ -213,6 +222,7 @@ namespace FlatWorld.Spaceflight
                 foreach (var entry in data.ModuleDataDic)
                 {
                     ModuleData module = entry.Value;
+                    if (portableRead && module?.ModuleId == Mod_FluidTank.ModuleId) WatchPayload(module);
                     // 暂停能力不会凭空拿走已经装在物品内的真实载荷。
                     if (module == null || liveModules != null && liveModules.Contains(entry.Key)) continue;
                     if (module is Inventory_ModuleData storage)
@@ -256,7 +266,7 @@ namespace FlatWorld.Spaceflight
                 if (machine == null) mass += ReadColdMachine(data, depth + 1);
                 ItemData packed = ReadPackedBuilding(data);
                 if (packed != null)
-                    if (packed.Guid == 0 || itemIds.Add(packed.Guid)) mass += ReadItemContents(packed, null, null, depth + 1);
+                    if (packed.Guid == 0 || itemIds.Add(packed.Guid) && OwnId(packed.Guid)) mass += ReadItemContents(packed, null, null, depth + 1);
                 return mass;
             }
             private double ReadColdMachine(ItemData data, int depth)

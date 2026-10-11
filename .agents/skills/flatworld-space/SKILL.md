@@ -76,5 +76,6 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 - 自由乘员/散落物先筛空间、高度和完整扫掠距离，再解码计重；船外接半径每固定步预算，近处接触复用整体/部件容器且每次刷新真实运动量，会话结束释放引用。散落载荷先筛距离，ShipGeometry.HasFloor 直接检查旋转矩形，无格子/迭代器分配。性能看 Fixed.FreePassengers/LooseItems/Mass，离线回归不代表场景帧率。
 - 方块引擎严格占一格、默认喷口朝本地 -Y；ShipEnginePlacement 共用放置预览/提交/可用引擎收集的船体外缘与喷射净空检查，后续建造也不能堵喷口。气密边界只读 SealsAtmosphere 能力，边缘引擎可替代舱壁；固定船型同步调整引擎、舱壁和同格电线。
-- ShipMassReader 按源 JSON 内容或二进制引用复用解码，资源实例/版本变化与会话结束清缓存；库存、流体、堆叠数量仍每步读取真实状态，不缓存整船重量。载荷样本池在分裂移交前丢弃，避免复用已交给新船的对象。
+- ShipMassReader 按源 JSON/二进制身份复用解码，并监听真实库存、堆叠、模块载荷和流体质量变化；未变来源复用质量，动态乘员/散物位置仍逐步更新。ShipMassLedger 按来源增减质量、两个一阶矩及惯量，保持重心变化前后的船体点位置/速度；资源、流体图身份变化及会话结束释放绑定，分裂移交前丢弃旧来源归属。
+- 船体结构事务须 NotifyStructureChanged；舱室格子、支撑和正式对接登记由 StructureRevision 失效。Ships/Flights/Devices 使用 SpaceStateCollection 权威增删版本与值类型遍历，身份在加入前确定；GetShip/GetFlight/GetDevice 复用 ID 索引，恢复/卸载释放索引。舱气库存包装复用，换 Gas 状态或材料目录时重绑。
 - `dotnet run --project Tools/Tests/ShipMass/ShipMass.Tests.csproj -c Release` 验证载荷缓存失效、真实状态及建筑回收封包；SpaceCruise 离线回归另覆盖惯性推进、乘员继承速度/碰撞冲量/快照恢复、降落范围、星体上方自由飞行/导航、质量、重心、惯量和样本池。专项耗时/分配不代表 Unity 场景帧率，试玩中只静态修改，不操作 Play Mode。

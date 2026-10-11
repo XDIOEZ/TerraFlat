@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using MemoryPack;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -556,6 +557,10 @@ public static partial class MachineWorld
     #endregion
 
     #region 调度与休眠
+    private static readonly ProfilerMarker MachineTickMarker = new("MachineWorld.Tick");
+    private static readonly ProfilerMarker MachineFluidBeginMarker = new("MachineWorld.Fluid.Begin");
+    private static readonly ProfilerMarker MachineLogicMarker = new("MachineWorld.Logic.Advance");
+    private static readonly ProfilerMarker MachineFluidCompleteMarker = new("MachineWorld.Fluid.Complete");
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Tick(float deltaTime)
     {
@@ -564,6 +569,7 @@ public static partial class MachineWorld
         elapsed += Mathf.Max(0, deltaTime);
         float step = MachineCatalog.Settings.TickSeconds;
         if (elapsed < step) return;
+        using var tickSample = MachineTickMarker.Auto();
         RebuildGraphsIfDirty();
         CollectPlayerChunks();
         // 帧内补算有上限，余量留到后续帧；暂停和时间缩放仍服从传入的世界时间。
@@ -572,7 +578,7 @@ public static partial class MachineWorld
         {
             TransportStep++;
             elapsed -= step;
-            BeginFluidStep(step);
+            using (MachineFluidBeginMarker.Auto()) BeginFluidStep(step);
             RebuildGraphsIfDirty();
             foreach (var network in graph.Networks)
             {
@@ -593,57 +599,22 @@ public static partial class MachineWorld
             foreach (var network in graph.Networks)
             {
                 if (!network.Active) continue;
-                SolveNetwork(network);
                 foreach (var node in network.Nodes) UpdateVisualSpeed(node);
             }
             // 所有网络先完成转速分配，再推进设施，风箱跨网供风不读上一轮结果。
-            foreach (var network in graph.Networks)
+            using (MachineLogicMarker.Auto())
             {
-                if (!network.Active) continue;
-                foreach (var node in network.Nodes) SimulateNode(node, step);
+                foreach (var network in graph.Networks)
+                {
+                    if (!network.Active) continue;
+                    foreach (var node in network.Nodes) SimulateNode(node, step);
+                }
+                AdvanceFacilities(step);
             }
-            AdvanceFacilities(step);
-            CompleteFluidStep(step);
+            using (MachineFluidCompleteMarker.Auto()) CompleteFluidStep(step);
             PressureExplosionQueue.Tick(step);
         }
     }
-
-    /// <summary>先排除手推源检查整网外部动力，再让无外部动力的手推石磨作为动力源入网。</summary>
-    private static void SolveNetwork(MechanicalNetwork network, bool independentPowerOnly = false)
-    {
-        float referenceRpm = MachineCatalog.Settings.ReferenceRpm;
-        MechanicalNetworkGraph.Solve(network, independentPowerOnly ? GetIndependentExternalSourceFactor : GetExternalSourceFactor,
-            GetSourceRpm, referenceRpm);
-        bool hasExternalSource = false;
-        foreach (MachineEntity node in network.Nodes)
-            if (node.Definition.ManualDriveTorque <= 0 && node.SourceFactor > 0)
-                hasExternalSource = true;
-        bool manualDriveActive = false;
-        foreach (MachineEntity node in network.Nodes)
-        {
-            if (node.Definition.ManualDriveTorque <= 0) continue;
-            node.IncomingPower = hasExternalSource;
-            manualDriveActive |= !node.IncomingPower && node.State.ManualSeconds > 0;
-        }
-        if (manualDriveActive)
-        {
-            MechanicalNetworkGraph.Solve(network, independentPowerOnly ? GetIndependentSourceFactor : GetSourceFactor,
-                GetSourceRpm, referenceRpm);
-            foreach (MachineEntity node in network.Nodes)
-                if (node.Definition.ManualDriveTorque > 0 && node.FlowVisited && node.EntryDirection >= 0)
-                    node.IncomingPower = true;
-        }
-        UpdateConversionPowerBudget(network);
-    }
-
-    /// <summary>外部动力探测不计入手推石磨自身，避免按钮状态依赖上一次解算顺序。</summary>
-    private static float GetExternalSourceFactor(MachineEntity node)
-        => node.Definition.ManualDriveTorque > 0 ? 0f : GetSourceFactor(node);
-
-    private static float GetIndependentSourceFactor(MachineEntity node)
-        => node.Definition.IsConverter || node.Definition.Source == "electric" ? 0f : GetSourceFactor(node);
-    private static float GetIndependentExternalSourceFactor(MachineEntity node)
-        => node.Definition.ManualDriveTorque > 0 ? 0f : GetIndependentSourceFactor(node);
 
     private static void CollectPlayerChunks()
     {

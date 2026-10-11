@@ -10,7 +10,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     #region 设备状态与生命周期
     public FluidMachineState State { get; private set; }
     public FluidMachineDefinition Definition => Entity.Definition.Fluid;
-    public FluidDeviceBehavior Behavior => MachineLogicRegistry.GetFluidDeviceBehavior(Definition.Kind);
+    public FluidDeviceBehavior Behavior => MachineWorld.GetFluidDeviceBehavior(Entity);
     private Inventory portableTank;
     private Inventory filterMaterial;
     private Inventory residue;
@@ -22,6 +22,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     private readonly List<IContainerPort> containerPorts = new();
     private IndustrialLiquidTransferPort liquidResiduePort;
     private long portRegistryGeneration = -1;
+    private readonly List<(string Chamber, FluidInventoryState State, long Revision)> tickContents = new();
     public ILiquidTransferPort LiquidResiduePort { get { EnsureContainerPorts(); return liquidResiduePort; } }
     public override float TickInterval => .1f;
     public override float Progress01 => (float)Math.Clamp(State.PumpProgress, 0, 1);
@@ -67,9 +68,30 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public override void Tick(float seconds)
     {
         EnsureDeviceInventories();
-        if (MachineWorld.IsFluidActive(Entity) && !State.Ruptured && string.IsNullOrEmpty(State.RuptureBudgetId))
-            Behavior.Advance(Entity, seconds);
-        NotifyChanged();
+        if (!MachineWorld.IsFluidActive(Entity) || State.Ruptured || !string.IsNullOrEmpty(State.RuptureBudgetId)) return;
+        FluidDeviceBehavior behavior = Behavior;
+        // 内置设备没有实际变化就不推送整台状态，自定义策略仍保留原来的显式调度通知。
+        if (!behavior.UsesObservedTickState) { behavior.Advance(Entity, seconds); NotifyChanged(); return; }
+        var before = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.DissipatedHeatJoules,
+            State.FilterRemainingWork, State.RandomState);
+        tickContents.Clear();
+        foreach (string chamber in State.Chambers.Keys)
+        {
+            FluidInventoryState contents = MachineWorld.GetFluidInventory(Entity, chamber).State;
+            tickContents.Add((chamber, contents, contents.StateRevision));
+        }
+        behavior.Advance(Entity, seconds);
+        var after = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.DissipatedHeatJoules,
+            State.FilterRemainingWork, State.RandomState);
+        bool changed = before != after || tickContents.Count != State.Chambers.Count;
+        if (!changed)
+            foreach (var previous in tickContents)
+            {
+                if (!State.Chambers.ContainsKey(previous.Chamber)) { changed = true; break; }
+                FluidInventoryState current = MachineWorld.GetFluidInventory(Entity, previous.Chamber).State;
+                if (!ReferenceEquals(current, previous.State) || current.StateRevision != previous.Revision) { changed = true; break; }
+            }
+        if (changed) NotifyChanged();
     }
     public void CollectContainerPorts(List<IContainerPort> ports)
     {

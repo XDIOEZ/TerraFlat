@@ -11,11 +11,17 @@ public sealed class FluidInventory
     {
         State = state ?? new FluidInventoryState(); Catalog = catalog ?? FluidCatalog.Default;
         ValidateState(State, Catalog);
+        State.SynchronizeComponents();
+        State.SynchronizeReservations();
     }
     public FluidInventoryState State { get; }
     public FluidCatalog Catalog { get; }
-    public decimal GasMoles { get { decimal n = 0m; foreach (var c in State.Components) n += c.GasMoles; return n; } }
-    public decimal LiquidMoles { get { decimal n = 0m; foreach (var c in State.Components) n += c.LiquidMoles; return n; } }
+    private long derivedRevision = -1;
+    private decimal gasMoles, liquidMoles;
+    private double liquidLiters, heatCapacity, energyOffset;
+    private readonly List<string> phaseChangeIds = new();
+    public decimal GasMoles { get { RefreshDerivedValues(); return gasMoles; } }
+    public decimal LiquidMoles { get { RefreshDerivedValues(); return liquidMoles; } }
     public bool IsEmpty => GasMoles == 0m && LiquidMoles == 0m;
     public decimal GetGasMoles(string id) => FindComponent(id)?.GasMoles ?? 0m;
     public decimal GetLiquidMoles(string id) => FindComponent(id)?.LiquidMoles ?? 0m;
@@ -28,11 +34,34 @@ public sealed class FluidInventory
     }
     public double GetLiquidLiters()
     {
-        double result = 0d;
-        foreach (var component in State.Components)
-            result += (double)FluidUnits.MolToLiquidLiters(Catalog.Find(component.FluidId), component.LiquidMoles);
-        return result;
+        RefreshDerivedValues(); return liquidLiters;
     }
+    // 同一份真实内容只汇总一次热容量、相量和液体体积，查询读数复用这一轮结果。
+    private void RefreshDerivedValues()
+    {
+        long revision = State.MassRevision;
+        if (derivedRevision == revision) return;
+        gasMoles = 0m; liquidMoles = 0m; liquidLiters = 0d; heatCapacity = 0d; energyOffset = 0d;
+        bool idsChanged = phaseChangeIds.Count != State.Components.Count;
+        foreach (FluidComponentState component in State.Components)
+        {
+            FluidDefinition definition = Catalog.Find(component.FluidId);
+            gasMoles += component.GasMoles; liquidMoles += component.LiquidMoles;
+            liquidLiters += (double)FluidUnits.MolToLiquidLiters(definition, component.LiquidMoles);
+            heatCapacity += (double)component.GasMoles * definition.GasHeatCapacityJPerMolKelvin +
+                (double)component.LiquidMoles * definition.LiquidHeatCapacityJPerMolKelvin;
+            energyOffset += (double)component.GasMoles * definition.GasEnergyOffsetJPerMol;
+            if (!idsChanged && !phaseChangeIds.Contains(component.FluidId)) idsChanged = true;
+        }
+        if (idsChanged)
+        {
+            phaseChangeIds.Clear();
+            foreach (FluidComponentState component in State.Components) phaseChangeIds.Add(component.FluidId);
+            phaseChangeIds.Sort(StringComparer.Ordinal);
+        }
+        derivedRevision = revision;
+    }
+    internal IReadOnlyList<string> PhaseChangeIds { get { RefreshDerivedValues(); return phaseChangeIds; } }
     public double GetTemperatureKelvin()
     {
         if (IsEmpty) return FluidUnits.ReferenceTemperatureKelvin;
@@ -59,8 +88,12 @@ public sealed class FluidInventory
 
     #region 接收与真实提取
     public bool CanAdd(FluidBatch batch, double volumeLiters, double minimumGasSpaceLiters,
-        bool singleGas = false, bool singleLiquid = false)
+        bool singleGas = false, bool singleLiquid = false) =>
+        TryGetPressureAfterAdding(batch, volumeLiters, minimumGasSpaceLiters, out _, singleGas, singleLiquid);
+    internal bool TryGetPressureAfterAdding(FluidBatch batch, double volumeLiters, double minimumGasSpaceLiters,
+        out double pressure, bool singleGas = false, bool singleLiquid = false)
     {
+        pressure = 0d;
         ValidateGeometry(volumeLiters, minimumGasSpaceLiters);
         if (!IsValidBatch(batch) || !Catalog.TryGet(batch.FluidId, out var definition)) return false;
         double batchCapacity = (double)batch.GasMoles * definition.GasHeatCapacityJPerMolKelvin +
@@ -84,7 +117,7 @@ public sealed class FluidInventory
         double temperature = (State.TotalInternalEnergyJoules + batch.InternalEnergyJoules - offset) / capacity;
         double gasSpace = Math.Max(minimumGasSpaceLiters,
             volumeLiters - GetLiquidLiters() - (double)FluidUnits.MolToLiquidLiters(definition, batch.LiquidMoles));
-        double pressure = (double)(GasMoles + batch.GasMoles) / gasSpace * FluidUnits.GasConstant * temperature;
+        pressure = (double)(GasMoles + batch.GasMoles) / gasSpace * FluidUnits.GasConstant * temperature;
         return FluidUnits.IsFinite(temperature) && temperature > 0d && FluidUnits.IsFinite(pressure);
     }
     public bool TryAdd(FluidBatch batch, double volumeLiters, double minimumGasSpaceLiters,
@@ -92,7 +125,11 @@ public sealed class FluidInventory
     {
         if (!CanAdd(batch, volumeLiters, minimumGasSpaceLiters, singleGas, singleLiquid)) return false;
         var component = FindComponent(batch.FluidId);
-        if (component == null) { component = new FluidComponentState { FluidId = batch.FluidId }; State.Components.Add(component); }
+        if (component == null)
+        {
+            component = new FluidComponentState { FluidId = batch.FluidId }; State.Components.Add(component);
+            State.SynchronizeComponents();
+        }
         component.GasMoles += batch.GasMoles; component.LiquidMoles += batch.LiquidMoles;
         State.TotalInternalEnergyJoules += batch.InternalEnergyJoules;
         return true;
@@ -153,15 +190,13 @@ public sealed class FluidInventory
         foreach (var component in State.Components)
             if (component.GasMoles + component.LiquidMoles > 0m)
                 batches.Add(CreateBatch(Catalog.Find(component.FluidId), component.GasMoles, component.LiquidMoles, temperature));
-        State.Components.Clear(); State.Ports.Clear(); State.TotalInternalEnergyJoules = 0d;
+        State.Components.Clear(); State.SynchronizeComponents(); State.Ports.Clear(); State.TotalInternalEnergyJoules = 0d;
         return batches;
     }
     public void Restore(FluidInventoryState snapshot)
     {
         ValidateState(snapshot, Catalog);
-        var copy = snapshot.Clone();
-        State.Components = copy.Components; State.Ports = copy.Ports;
-        State.RandomState = copy.RandomState; State.TotalInternalEnergyJoules = copy.TotalInternalEnergyJoules;
+        State.CopyFrom(snapshot);
     }
     #endregion
 
@@ -197,7 +232,7 @@ public sealed class FluidInventory
         var port = new FluidOutputReservation
         { PortId = portId, FluidId = chosen.FluidId, GasMoles = phase == FluidPhase.Gas ? reserved : 0m,
             LiquidMoles = phase == FluidPhase.Liquid ? reserved : 0m };
-        State.Ports.Add(port); State.RandomState = random;
+        State.Ports.Add(port); State.SynchronizeReservations(); State.RandomState = random;
         batch = CurrentBatch(port.FluidId, port.GasMoles, port.LiquidMoles); return true;
     }
     public FluidOutputReservation GetReservation(string portId)
@@ -208,7 +243,7 @@ public sealed class FluidInventory
     public void ReleaseReservation(string portId)
     {
         var port = GetReservation(portId);
-        if (port != null) State.Ports.Remove(port);
+        if (port != null) { State.Ports.Remove(port); State.SynchronizeReservations(); }
     }
     public bool TryTransfer(string portId, FluidInventory target, decimal maximumMoles, double targetVolumeLiters,
         double targetMinimumGasSpaceLiters, bool singleGas = false, bool singleLiquid = false) =>
@@ -251,14 +286,7 @@ public sealed class FluidInventory
     #region 内能和相变的统一维护
     internal void GetEnergyTerms(out double capacity, out double offset)
     {
-        capacity = 0d; offset = 0d;
-        foreach (var component in State.Components)
-        {
-            var definition = Catalog.Find(component.FluidId);
-            capacity += (double)component.GasMoles * definition.GasHeatCapacityJPerMolKelvin +
-                        (double)component.LiquidMoles * definition.LiquidHeatCapacityJPerMolKelvin;
-            offset += (double)component.GasMoles * definition.GasEnergyOffsetJPerMol;
-        }
+        RefreshDerivedValues(); capacity = heatCapacity; offset = energyOffset;
     }
     internal bool HasOther(string id, FluidPhase phase)
     {
@@ -315,7 +343,9 @@ public sealed class FluidInventory
     private void TrimEmpty()
     {
         State.Components.RemoveAll(c => c.GasMoles == 0m && c.LiquidMoles == 0m);
+        State.SynchronizeComponents();
         State.Ports.RemoveAll(p => p.TotalMoles == 0m);
+        State.SynchronizeReservations();
         if (State.Components.Count == 0) State.TotalInternalEnergyJoules = 0d;
     }
     internal static bool Same(string left, string right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);

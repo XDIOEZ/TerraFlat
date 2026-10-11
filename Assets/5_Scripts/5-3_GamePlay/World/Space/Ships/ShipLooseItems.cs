@@ -199,7 +199,7 @@ namespace FlatWorld.Spaceflight
                 looseViews.TryGetValue(cargo.Id, out Item live);
                 if (live != null && (live.Owner != null || live.InHand)) continue;
                 if (!looseData.TryGetValue(cargo.Id, out ItemData data)) looseData[cargo.Id] = data = Decode(cargo.Snapshot);
-                double mass = reader.ReadItem(live != null ? live.itemData : data, live, 0);
+                double mass = reader.ReadCachedItem(cargo, live != null ? live.itemData : data, live);
                 if (mass > 0d)
                 {
                     ShipMassContribution value = AddMassContribution(ship, "loose:", cargo.Id);

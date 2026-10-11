@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>一个连通电网的聚合运行状态；首版按整网功率分配，不做逐支路基尔霍夫解算。</summary>
@@ -35,6 +36,9 @@ public sealed class ElectricalNetworkGraph
     private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
     private readonly WorldTopologyDomain topology;
     public readonly List<ElectricalNetwork> Networks = new();
+    internal readonly HashSet<MechanicalNetwork> ResolvedMechanicalNetworks = new();
+    internal readonly Dictionary<ElectricalNetwork, HashSet<ElectricalNetwork>> ElectricalAncestors = new();
+    internal readonly HashSet<ElectricalNetwork> CouplingInputs = new();
 
     public ElectricalNetworkGraph(WorldTopologyDomain topology) => this.topology = topology;
 
@@ -65,6 +69,7 @@ public sealed class ElectricalNetworkGraph
     public void Rebuild(IEnumerable<MachineEntity> source)
     {
         wires.Clear(); endpoints.Clear(); pressureSwitches.Clear(); Networks.Clear();
+        ResolvedMechanicalNetworks.Clear(); ElectricalAncestors.Clear(); CouplingInputs.Clear();
         var sorted = new List<MachineEntity>(source);
         sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
         foreach (MachineEntity node in sorted)
@@ -149,6 +154,7 @@ public sealed class ElectricalNetworkGraph
     #endregion
 
     #region 功率解算
+    private static readonly ProfilerMarker ElectricalSolveMarker = new("MachineWorld.Electrical.Solve");
     /// <summary>发电优先供负载，余电充电、缺口放电；电压参与兼容性，电流由 P/V 推导，电阻首版只保留数据。</summary>
     public static void Solve(ElectricalNetwork network, float seconds,
         Func<MachineEntity, float> generatorFactor,
@@ -156,10 +162,15 @@ public sealed class ElectricalNetworkGraph
         Action<MachineEntity> batteryChanged, bool commitStorage = true)
     {
         if (network == null) return;
+        using var solveSample = ElectricalSolveMarker.Auto();
         seconds = Mathf.Max(0.0001f, seconds);
         Reset(network);
+        // 同一次电网解算只采样一次发电条件，电压和功率使用同一份真实出力。
+        foreach (MachineEntity node in network.Nodes)
+            node.SampledElectricalGeneration = node.IsElectricalGenerator
+                ? Mathf.Clamp01(generatorFactor?.Invoke(node) ?? 1f) : 0f;
 
-        float voltage = ResolveVoltage(network, generatorFactor, out bool sourceConflict);
+        float voltage = ResolveVoltage(network, out bool sourceConflict);
         network.Voltage = voltage;
         network.VoltageConflict = sourceConflict;
         foreach (MachineEntity node in network.Nodes) node.ElectricalVoltage = voltage;
@@ -174,7 +185,7 @@ public sealed class ElectricalNetworkGraph
             ElectricalDefinition electrical = node.Definition.Electrical;
             if (node.IsElectricalGenerator)
             {
-                float factor = Mathf.Clamp01(generatorFactor?.Invoke(node) ?? 1f);
+                float factor = node.SampledElectricalGeneration;
                 float output = electrical.PowerWatts * factor;
                 if (output > 0f && voltage > 0f && electrical.AcceptsVoltage(voltage))
                 {
@@ -274,8 +285,7 @@ public sealed class ElectricalNetworkGraph
         }
     }
 
-    private static float ResolveVoltage(ElectricalNetwork network,
-        Func<MachineEntity, float> generatorFactor, out bool conflict)
+    private static float ResolveVoltage(ElectricalNetwork network, out bool conflict)
     {
         conflict = false;
         float voltage = 0f;
@@ -283,7 +293,7 @@ public sealed class ElectricalNetworkGraph
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
             if (!node.IsElectricalGenerator || electrical.PowerWatts <= 0f ||
-                Mathf.Clamp01(generatorFactor?.Invoke(node) ?? 1f) <= 0f) continue;
+                node.SampledElectricalGeneration <= 0f) continue;
             if (!MergeSourceVoltage(ref voltage, electrical.NominalVoltage)) conflict = true;
         }
         if (voltage > 0f)
@@ -327,11 +337,11 @@ public sealed class ElectricalNetworkGraph
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
             if (!electrical.IsBattery || !electrical.AcceptsVoltage(voltage) || remaining <= 0f) continue;
-            node.ElectricalStoredJoules = Mathf.Clamp(node.ElectricalStoredJoules, 0f, electrical.CapacityJoules);
+            float storedJoules = Mathf.Clamp(node.ElectricalStoredJoules, 0f, electrical.CapacityJoules);
             float watts = Mathf.Min(remaining, Mathf.Min(electrical.MaxDischargeWatts,
-                node.ElectricalStoredJoules / seconds));
+                storedJoules / seconds));
             if (watts <= 0f) continue;
-            if (commitStorage) node.ElectricalStoredJoules -= watts * seconds;
+            if (commitStorage) node.ElectricalStoredJoules = storedJoules - watts * seconds;
             node.ElectricalGeneratedWatts = watts;
             node.ElectricalCurrentAmps = watts / voltage;
             remaining -= watts; total += watts;
@@ -348,11 +358,11 @@ public sealed class ElectricalNetworkGraph
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
             if (!electrical.IsBattery || !electrical.AcceptsVoltage(voltage) || remaining <= 0f) continue;
-            node.ElectricalStoredJoules = Mathf.Clamp(node.ElectricalStoredJoules, 0f, electrical.CapacityJoules);
-            float room = electrical.CapacityJoules - node.ElectricalStoredJoules;
+            float storedJoules = Mathf.Clamp(node.ElectricalStoredJoules, 0f, electrical.CapacityJoules);
+            float room = electrical.CapacityJoules - storedJoules;
             float watts = Mathf.Min(remaining, Mathf.Min(electrical.MaxChargeWatts, room / seconds));
             if (watts <= 0f) continue;
-            if (commitStorage) node.ElectricalStoredJoules += watts * seconds;
+            if (commitStorage) node.ElectricalStoredJoules = storedJoules + watts * seconds;
             node.ElectricalSuppliedWatts = watts;
             node.ElectricalCurrentAmps = watts / voltage;
             remaining -= watts; total += watts;

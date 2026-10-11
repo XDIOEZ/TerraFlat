@@ -136,7 +136,8 @@ public static class MachineLogicRegistry
     }
 
     /// <summary>资源会话结束后释放配置模板引用；注册工厂由所属 MOD 的租约单独管理。</summary>
-    internal static void ClearContentCache() => compiled.Clear();
+    internal static void ClearContentCache()
+    { compiled.Clear(); MachineWorld.ClearFluidDefinitionCaches(); }
 
     /// <summary>内容预检与 MOD 可查询领域工厂是否存在，不创建机器或修改运行态。</summary>
     public static bool IsRegistered(string id)

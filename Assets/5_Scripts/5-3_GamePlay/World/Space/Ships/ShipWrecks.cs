@@ -15,6 +15,7 @@ namespace FlatWorld.Spaceflight
         {
             ship.IsWreck = true;
             if (ship.WreckMaxHealth > 0d) return;
+            ship.NotifyStructureChanged();
             ship.WreckGuid = AllocateSessionDropGuid(0);
             double health = 0d;
             using (MachineWorld.UseScope("ship:" + ship.ShipId))
@@ -72,6 +73,7 @@ namespace FlatWorld.Spaceflight
                     string sourceShipId = wreck.ShipId;
                     wreck.ShipId = Guid.NewGuid().ToString("N");
                     wreck.Pieces = group;
+                    wreck.NotifyStructureChanged();
                     wreck.IsWreck = true; wreck.WreckMaxHealth = 0d;
                     ShipStructureService.RecalculateMass(wreck);
                     State.Ships.Add(wreck);
@@ -82,8 +84,10 @@ namespace FlatWorld.Spaceflight
                     flight.Motion.PositionMeters = new SpaceVector2(wreck.PositionX, wreck.PositionY);
                     flight.Motion.VelocityMetersPerSecond = new SpaceVector2(wreck.VelocityX, wreck.VelocityY);
                     State.Flights.Add(flight);
+                    transferMassPieceIds.Clear();
                     foreach (ShipPieceState member in group)
-                        if (int.TryParse(member.PieceId, out int id)) MachineWorld.TransferShipNode(sourceShipId, wreck.ShipId, id);
+                        if (int.TryParse(member.PieceId, out int id)) transferMassPieceIds.Add(id);
+                    MachineWorld.TransferShipNodes(sourceShipId, wreck.ShipId, transferMassPieceIds);
                     PrepareWreck(wreck);
                 }
             }

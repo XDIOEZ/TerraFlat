@@ -39,6 +39,10 @@ public abstract partial class ModuleData
 
     [field: NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
     internal event Action<ModuleData> RuntimeStructureChanged;
+    [field: NonSerialized, MemoryPackIgnore, JsonIgnore, FastClonerIgnore]
+    public event Action<ModuleData> PayloadChanged;
+    // 载荷通知独立于模块结构，计重只订阅真正保存库存的模块。
+    public void NotifyPayloadChanged() => PayloadChanged?.Invoke(this);
     public ModuleType Type;
 
     // 旧代码别名仅转发到唯一字段，不再形成第二套模块身份。

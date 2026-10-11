@@ -1,10 +1,18 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 public static partial class MachineWorld
 {
     #region 电网与扩展
+    private static readonly ProfilerMarker ElectricalCouplingMarker = new("MachineWorld.Electrical.Coupling");
+    private static readonly ProfilerMarker ElectricalProbeMarker = new("MachineWorld.Electrical.Probe");
+    private static readonly ProfilerMarker ElectricalCommitMarker = new("MachineWorld.Electrical.Commit");
+    private static readonly ProfilerMarker MachineTopologyMarker = new("MachineWorld.Topology.Rebuild");
+    private static readonly Func<MachineEntity, float> ElectricalGeneratorFactorDelegate = GetElectricalGeneratorFactor;
+    private static readonly Func<MachineEntity, float> ElectricalDemandFactorDelegate = GetElectricalDemandFactor;
+    private static readonly Action<MachineEntity> ElectricalBatteryChangedDelegate = ElectricalBatteryChanged;
     private static ElectricalNetworkGraph electricalGraph { get => scope.Electrical; set => scope.Electrical = value; }
     private static readonly Dictionary<string, Func<MachineEntity, float>> electricalPowerProviders =
         new(StringComparer.Ordinal);
@@ -45,7 +53,9 @@ public static partial class MachineWorld
     /// <summary>机械与电力共用同一批世界节点，拓扑变化时两张图必须在同一时刻重建。</summary>
     private static void RebuildGraphsIfDirty()
     {
+        if (scope.TopologyMutationDepth > 0) return;
         if (!dirty) return;
+        using var topologySample = MachineTopologyMarker.Auto();
         graph.Rebuild(nodes.Values);
         electricalGraph?.Rebuild(nodes.Values);
         RebuildFluidNetworks();
@@ -62,17 +72,20 @@ public static partial class MachineWorld
     private static void SolveElectricalNetworks(float seconds)
     {
         if (electricalGraph == null) return;
-        bool hasConverters = false;
-        foreach (MechanicalNetwork network in graph.Networks) hasConverters |= network.HasConverters;
+        using var couplingSample = ElectricalCouplingMarker.Auto();
+        bool hasConverters = graph.ConverterNetworks.Count > 0;
         if (!hasConverters)
         {
             foreach (MechanicalNetwork network in graph.Networks)
                 if (network.Active) SolveNetwork(network);
             SettleElectricalNetworks(seconds, true);
+            SolveElectricalDependentMechanicalNetworks();
             return;
         }
-        var resolved = new HashSet<MechanicalNetwork>();
-        var ancestry = new Dictionary<ElectricalNetwork, HashSet<ElectricalNetwork>>();
+        HashSet<MechanicalNetwork> resolved = electricalGraph.ResolvedMechanicalNetworks;
+        Dictionary<ElectricalNetwork, HashSet<ElectricalNetwork>> ancestry = electricalGraph.ElectricalAncestors;
+        resolved.Clear();
+        foreach (HashSet<ElectricalNetwork> parents in ancestry.Values) parents.Clear();
         foreach (MachineEntity node in nodes.Values)
         {
             node.ConversionMode = ElectricalConversionMode.Idle;
@@ -85,33 +98,33 @@ public static partial class MachineWorld
             SolveNetwork(network, true);
             bool independent = false;
             foreach (MachineEntity node in network.Nodes) independent |= node.SourceFactor > 0f;
-            foreach (MachineEntity node in network.Nodes)
-                if (node.Definition.IsConverter)
-                    node.ConversionMode = independent ? ElectricalConversionMode.Generator : ElectricalConversionMode.Motor;
+            foreach (MachineEntity node in network.ConverterNodes)
+                node.ConversionMode = independent ? ElectricalConversionMode.Generator : ElectricalConversionMode.Motor;
             if (!independent) continue;
             resolved.Add(network);
-            SolveNetwork(network, true);
+            if (network.HasConverters) SolveNetwork(network, true);
         }
 
         int depth = 0;
-        for (; depth <= graph.Networks.Count; depth++)
+        for (; depth <= graph.ConverterNetworks.Count; depth++)
         {
             SettleElectricalNetworks(seconds, false);
             bool advanced = false;
-            foreach (MechanicalNetwork network in graph.Networks)
+            foreach (MechanicalNetwork network in graph.ConverterNetworks)
             {
                 if (!network.Active || !network.HasConverters || resolved.Contains(network)) continue;
-                var inputs = new HashSet<ElectricalNetwork>();
-                foreach (MachineEntity node in network.Nodes)
-                    if (node.Definition.IsConverter && node.ElectricalSuppliedWatts > 0f)
+                HashSet<ElectricalNetwork> inputs = electricalGraph.CouplingInputs;
+                inputs.Clear();
+                foreach (MachineEntity node in network.ConverterNodes)
+                    if (node.ElectricalSuppliedWatts > 0f)
                     {
                         inputs.Add(node.ElectricalNetwork);
                         if (ancestry.TryGetValue(node.ElectricalNetwork, out var parents)) inputs.UnionWith(parents);
                     }
                 if (inputs.Count == 0) continue;
-                foreach (MachineEntity node in network.Nodes)
+                foreach (MachineEntity node in network.ConverterNodes)
                 {
-                    if (!node.Definition.IsConverter || node.ElectricalSuppliedWatts > 0f) continue;
+                    if (node.ElectricalSuppliedWatts > 0f) continue;
                     node.ConversionMode = inputs.Contains(node.ElectricalNetwork)
                         ? ElectricalConversionMode.Idle : ElectricalConversionMode.Generator;
                     if (node.ConversionMode != ElectricalConversionMode.Generator) continue;
@@ -130,17 +143,36 @@ public static partial class MachineWorld
         for (int pass = 0; pass <= depth; pass++)
         {
             SettleElectricalNetworks(seconds, false);
-            foreach (MechanicalNetwork network in graph.Networks)
-                if (network.Active) SolveNetwork(network);
+            SolveElectricalDependentMechanicalNetworks();
         }
         SettleElectricalNetworks(seconds, true);
+        SolveElectricalDependentMechanicalNetworks();
+    }
+
+    // 不受本轮电网影响的独立机械网已经完成求解；扩展动力条件仍保留每轮重新采样。
+    private static void SolveElectricalDependentMechanicalNetworks()
+    {
+        foreach (MechanicalNetwork network in graph.Networks)
+        {
+            if (!network.Active) continue;
+            bool dependent = network.HasConverters;
+            foreach (MachineEntity node in network.PowerNodes)
+            {
+                string source = node.Definition.Source;
+                if (source == "electric" || sourceProviders.ContainsKey(source) || sourceRpmProviders.ContainsKey(source) ||
+                    GetFluidDeviceBehavior(node)?.HasMechanicalSource == true)
+                { dependent = true; break; }
+            }
+            if (dependent) SolveNetwork(network);
+        }
     }
 
     private static void SettleElectricalNetworks(float seconds, bool commitStorage)
     {
+        using var electricalSample = (commitStorage ? ElectricalCommitMarker : ElectricalProbeMarker).Auto();
         foreach (ElectricalNetwork network in electricalGraph.Networks)
             ElectricalNetworkGraph.Solve(network, seconds,
-                GetElectricalGeneratorFactor, GetElectricalDemandFactor, ElectricalBatteryChanged, commitStorage);
+                ElectricalGeneratorFactorDelegate, ElectricalDemandFactorDelegate, ElectricalBatteryChangedDelegate, commitStorage);
     }
 
     /// <summary>发电机和马达跨越机械网与电网，首版保持其机械网全局求解，避免远端输电因休眠断能。</summary>
@@ -188,7 +220,19 @@ public static partial class MachineWorld
         }
         if (electricalDemandProviders.TryGetValue(electrical.DemandProvider ?? string.Empty, out var provider))
             return Mathf.Clamp01(provider(node));
-        if (electrical.DemandProvider == "fluid") return GetFluidElectricalDemand(node);
+        if (electrical.DemandProvider == "fluid")
+        {
+            if (GetFluidDeviceBehavior(node)?.CanCacheElectricalDemandWithinStep != true)
+                return GetFluidElectricalDemand(node);
+            // 冻结库存后的同一工业步还未加工，多轮电力探算复用同一份流体工作需求。
+            if (!node.HasFluidElectricalDemand || node.FluidElectricalDemandStep != TransportStep)
+            {
+                node.FluidElectricalDemand = GetFluidElectricalDemand(node);
+                node.FluidElectricalDemandStep = TransportStep;
+                node.HasFluidElectricalDemand = true;
+            }
+            return node.FluidElectricalDemand;
+        }
         if (electrical.DemandProvider == "motor")
             return node.Network != null && node.Network.TorqueDemand > 0f ? 1f : 0f;
         if (!string.IsNullOrWhiteSpace(electrical.DemandProvider)) return 0f;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.Profiling;
 using UnityEngine;
 
 public enum ElectricalConversionMode { Idle, Motor, Generator }
@@ -64,6 +65,10 @@ public sealed partial class MachineEntity
     public float ElectricalCurrentAmps;
     public float ElectricalPowerRatio;
     public ElectricalConversionMode ConversionMode; // 每轮按真实输入重算，不保存上轮输出作为动力来源。
+    internal uint FluidElectricalDemandStep;
+    internal bool HasFluidElectricalDemand;
+    internal float FluidElectricalDemand;
+    internal float SampledElectricalGeneration;
     public float LoadTorque => Definition.IsConverter
         ? ConversionMode == ElectricalConversionMode.Generator ? Definition.TorqueLoad : 0f
         : Definition.TorqueLoad;
@@ -170,8 +175,17 @@ public readonly struct MechanicalLink
 /// <summary>实际连通网络的运行单位；Bounds 仅在拓扑变化时计算，SingleChunk 不建立跨区块端口表。</summary>
 public sealed class MechanicalNetwork
 {
+    #region 网络运行与求解工作区
     public readonly List<MachineEntity> Nodes = new();
     internal readonly Queue<MachineEntity> FlowQueue = new();
+    internal readonly List<MachineEntity> Consumers = new();
+    internal readonly Dictionary<MachineEntity, MechanicalNetworkGraph.SourceRouteCache> SourceRoutes = new();
+    internal readonly Dictionary<MachineEntity, MechanicalNetworkGraph.RouteNodeState> RouteStates = new();
+    internal readonly HashSet<MachineEntity> RouteVisited = new();
+    internal readonly Queue<MechanicalNetworkGraph.SourceRoute> RouteQueue = new();
+    internal uint RouteVersion;
+    internal readonly List<MachineEntity> PowerNodes = new();
+    internal readonly List<MachineEntity> ConverterNodes = new();
     public BoundsInt Bounds;
     public bool SingleChunk;
     public bool Active;
@@ -184,6 +198,7 @@ public sealed class MechanicalNetwork
     public float TorqueDemand;
     public bool HasConverters; // 转换能力只在拓扑重建时归集。
     public float ConversionGenerationFactor = 1f; // 跨网络发电总量受本轮实际输入功率约束。
+    #endregion
 }
 
 /// <summary>确定性的分层端口构图与整网负载求解；邻块显示卸载不参与断网判断。</summary>
@@ -195,6 +210,7 @@ public sealed partial class MechanicalNetworkGraph
     private readonly HashSet<Vector2Int> occupiedOnPlacementLayers = new();
     private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
     public readonly List<MechanicalNetwork> Networks = new();
+    internal readonly List<MechanicalNetwork> ConverterNetworks = new();
     public readonly List<MachineEntity> Facilities = new(); // 无端口设施不构造扭矩网络。
     private readonly Func<Vector2Int, Vector2Int> normalize; // 旧 MOD 构图入口的坐标归一化委托。
     private readonly WorldTopologyDomain topology; // 核心机械世界的纯坐标域快照。
@@ -281,7 +297,7 @@ public sealed partial class MechanicalNetworkGraph
     public void Rebuild(IEnumerable<MachineEntity> nodes)
     {
         pointerWindow.Reset(); nearbyWindow.Reset();
-        cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); Facilities.Clear();
+        cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); ConverterNetworks.Clear(); Facilities.Clear();
         var sorted = new List<MachineEntity>(nodes);
         sorted.Sort(CompareNodes);
         foreach (var node in sorted)
@@ -317,6 +333,8 @@ public sealed partial class MechanicalNetworkGraph
                 var node = queue.Dequeue();
                 network.Nodes.Add(node);
                 network.HasConverters |= node.Definition.IsConverter;
+                if (node.SourceTorque > 0f) network.PowerNodes.Add(node);
+                if (node.Definition.IsConverter) network.ConverterNodes.Add(node);
                 network.Active |= node.State != null;
                 for (int direction = 0; direction < 4; direction++)
                 {
@@ -331,6 +349,7 @@ public sealed partial class MechanicalNetworkGraph
             }
             network.Bounds = CalculateBounds(network.Nodes);
             network.SingleChunk = network.Bounds.size.x == 1 && network.Bounds.size.y == 1;
+            if (network.HasConverters) ConverterNetworks.Add(network);
         }
     }
 
@@ -418,6 +437,10 @@ public sealed partial class MechanicalNetworkGraph
     #endregion
 
     #region 扭矩求解
+    private static readonly ProfilerMarker MechanicalSolveMarker = new("MachineWorld.Mechanical.Solve");
+    private static readonly ProfilerMarker MechanicalRoutesMarker = new("MachineWorld.Mechanical.Routes.Rebuild");
+    private static readonly Comparison<MachineEntity> ConsumerComparison = CompareConsumers;
+    private static readonly Comparison<SourceRoute> SourceRouteComparison = CompareSourceRoutes;
     /// <summary>同速扭矩源沿连接合流；输入端不转送扭矩，转速或闭环倍率冲突时整网停转。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Solve(MechanicalNetwork network, Func<MachineEntity, float> sourceFactor, float referenceRpm)
@@ -430,6 +453,7 @@ public sealed partial class MechanicalNetworkGraph
     public static void Solve(MechanicalNetwork network, Func<MachineEntity, float> sourceFactor,
         Func<MachineEntity, float> sourceRpm, float referenceRpm)
     {
+        using var solveSample = MechanicalSolveMarker.Auto();
         // 保留 referenceRpm 公开参数供旧 MOD 调用；固定扭矩需求不再依赖基准转速。
         network.TorqueSupply = 0; network.TorqueDemand = 0;
         network.RatioConflict = false; network.RotationConflict = false; network.OutputConflict = false;
@@ -464,11 +488,13 @@ public sealed partial class MechanicalNetworkGraph
         foreach (var node in network.Nodes)
             if (node.SourceFactor > 0 && node.SourceTorque > 0 && !node.FlowVisited)
                 network.OutputConflict = true;
+        RefreshRouteVersion(network);
         if (network.RotationConflict) { network.Status = "转向冲突"; return; }
         if (network.OutputConflict) { network.Status = "机械卡死"; return; }
         if (network.RatioConflict) { network.Status = "传动比冲突"; return; }
         float rootRpm = root.SourceRpm;
-        var consumers = new List<MachineEntity>();
+        List<MachineEntity> consumers = network.Consumers;
+        consumers.Clear();
         foreach (var node in network.Nodes)
         {
             if (!node.FlowVisited) continue; // 用力器输入端以外的断开支路不吃动力。
@@ -484,18 +510,16 @@ public sealed partial class MechanicalNetworkGraph
             }
         }
         if (network.TorqueSupply <= 0f) { network.Status = "无扭矩"; return; }
-        var sourceRoutes = new Dictionary<MachineEntity, List<SourceRoute>>(consumers.Count);
         foreach (var consumer in consumers)
         {
-            List<SourceRoute> routes = CollectSourceRoutes(consumer);
-            sourceRoutes.Add(consumer, routes);
+            List<SourceRoute> routes = CollectSourceRoutes(network, consumer);
             if (routes.Count > 0) consumer.SourceDistance = routes[0].Distance;
         }
-        consumers.Sort(CompareConsumers);
+        consumers.Sort(ConsumerComparison);
         foreach (var consumer in consumers)
         {
             float required = GetRootSideLoad(consumer);
-            List<SourceRoute> routes = sourceRoutes[consumer];
+            List<SourceRoute> routes = network.SourceRoutes[consumer].Routes;
             float available = RouteTorque(routes, float.PositiveInfinity, false);
             consumer.AvailableTorque = available * consumer.TorqueRatio;
             if (available + .001f < required) continue;
@@ -589,11 +613,49 @@ public sealed partial class MechanicalNetworkGraph
         => RoundLoadTorqueToTens(node.LoadTorque) / node.TorqueRatio;
 
     /// <summary>从用力器沿实际连接查找可达动力源，输入终点不能作为其它节点的传动通道。</summary>
-    private static List<SourceRoute> CollectSourceRoutes(MachineEntity destination)
+    // 路径只在可达节点、有效源或输入终点状态变化时失效，出力大小变化继续复用原距离。
+    private static void RefreshRouteVersion(MechanicalNetwork network)
     {
-        var routes = new List<SourceRoute>();
-        var visited = new HashSet<MachineEntity> { destination };
-        var queue = new Queue<SourceRoute>();
+        bool changed = network.RouteStates.Count != network.Nodes.Count;
+        if (changed) network.RouteStates.Clear();
+        foreach (MachineEntity node in network.Nodes)
+        {
+            int state = (node.FlowVisited ? 1 : 0) | (node.SourceFactor > 0f && node.SourceTorque > 0f ? 2 : 0) |
+                (node.SourceFactor <= 0f && (node.Definition.GetPortMode() == "input" || node.Definition.ManualDriveTorque > 0f) ? 4 : 0);
+            if (!network.RouteStates.TryGetValue(node, out RouteNodeState previous))
+            {
+                network.RouteStates.Add(node, previous = new RouteNodeState());
+                changed = true;
+            }
+            bool linksChanged = previous.Links.Count != node.Links.Count;
+            if (!linksChanged)
+                for (int index = 0; index < node.Links.Count; index++)
+                    if (!ReferenceEquals(previous.Links[index].Target, node.Links[index].Target) ||
+                        previous.Links[index].Direction != node.Links[index].Direction)
+                    { linksChanged = true; break; }
+            if (linksChanged)
+            {
+                previous.Links.Clear(); previous.Links.AddRange(node.Links);
+                changed = true;
+            }
+            if (previous.Flags != state) changed = true;
+            previous.Flags = state;
+        }
+        if (changed) network.RouteVersion++;
+    }
+
+    private static List<SourceRoute> CollectSourceRoutes(MechanicalNetwork network, MachineEntity destination)
+    {
+        if (!network.SourceRoutes.TryGetValue(destination, out SourceRouteCache cache))
+            network.SourceRoutes.Add(destination, cache = new SourceRouteCache());
+        if (cache.Valid && cache.Version == network.RouteVersion) return cache.Routes;
+        using var routeSample = MechanicalRoutesMarker.Auto();
+        List<SourceRoute> routes = cache.Routes;
+        routes.Clear();
+        HashSet<MachineEntity> visited = network.RouteVisited;
+        visited.Clear(); visited.Add(destination);
+        Queue<SourceRoute> queue = network.RouteQueue;
+        queue.Clear();
         queue.Enqueue(new SourceRoute(destination, 0));
         while (queue.Count > 0)
         {
@@ -609,7 +671,9 @@ public sealed partial class MechanicalNetworkGraph
                 queue.Enqueue(new SourceRoute(link.Target, current.Distance + 1));
             }
         }
-        routes.Sort(CompareSourceRoutes);
+        routes.Sort(SourceRouteComparison);
+        cache.Version = network.RouteVersion;
+        cache.Valid = true;
         return routes;
     }
 
@@ -637,11 +701,24 @@ public sealed partial class MechanicalNetworkGraph
 
     /// <summary>传动件面板按需读取已完成用力器分配后的剩余本地扭矩。</summary>
     public static float GetRemainingLocalTorque(MachineEntity node)
-        => node == null || !node.FlowVisited ? 0f
-            : RouteTorque(CollectSourceRoutes(node), float.PositiveInfinity, false) * node.TorqueRatio;
+        => node == null || !node.FlowVisited || node.Network == null ? 0f
+            : RouteTorque(CollectSourceRoutes(node.Network, node), float.PositiveInfinity, false) * node.TorqueRatio;
+
+    internal sealed class SourceRouteCache
+    {
+        public readonly List<SourceRoute> Routes = new();
+        public uint Version;
+        public bool Valid;
+    }
+
+    internal sealed class RouteNodeState
+    {
+        public int Flags;
+        public readonly List<MechanicalLink> Links = new();
+    }
 
     /// <summary>动力源及其到目标的最短传动距离。</summary>
-    private readonly struct SourceRoute
+    internal readonly struct SourceRoute
     {
         public readonly MachineEntity Node;
         public readonly int Distance;

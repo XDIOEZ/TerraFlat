@@ -17,6 +17,11 @@ namespace FlatWorld.Spaceflight
             public double ReadContents(ItemData data, Item live = null, MachineEntity machine = null)
                 => reader.ReadItemContents(data, live, machine, 0);
             public double ReadFluidMass(FluidInventoryState state) => reader.ReadFluidMass(state);
+            public void BeginIncremental() => reader.BeginIncrementalStep();
+            public bool EndIncremental() => reader.EndIncrementalStep();
+            public double CachedItem(object key, ItemData data, Item live = null) => reader.ReadCachedItem(key, data, live);
+            public double CachedFluid(object key, FluidInventoryState data) => reader.ReadCachedFluid(key, data);
+            public double CachedContents(object key, ItemData data, Item live = null, MachineEntity machine = null) => reader.ReadCachedPiece(key, data, live, machine);
         }
         #endregion
     }
@@ -44,6 +49,9 @@ public static class ItemDefinitionRuntime
 }
 public class ItemData
 {
+    public event Action<ItemData> MassChanged, ModuleStructureChanged;
+    public void NotifyMassChanged() => MassChanged?.Invoke(this);
+    public void NotifyModuleStructureChanged() => ModuleStructureChanged?.Invoke(this);
     public int Guid;
     public string IDName = "test";
     public StackData Stack = new();
@@ -70,7 +78,14 @@ public sealed class StackData
     public double CurrentWeight => Amount * UnitWeight;
 }
 public sealed class ItemSlot { public ItemData itemData; }
-public sealed class Inventory_Data { public List<ItemSlot> itemSlots = new(); }
+public sealed class Inventory_Data
+{
+    public List<ItemSlot> itemSlots = new();
+    public ulong MassRevision;
+    public event Action<Inventory_Data> MassChanged, RuntimeStructureChanged;
+    public void NotifyMassChanged() { MassRevision++; MassChanged?.Invoke(this); }
+    public void NotifyStructureChanged() { RuntimeStructureChanged?.Invoke(this); NotifyMassChanged(); }
+}
 public sealed class Inventory { public Inventory_Data Data; }
 public sealed class InventoryInstanceSnapshot
 {
@@ -79,6 +94,8 @@ public sealed class InventoryInstanceSnapshot
 }
 public class ModuleData
 {
+    public event Action<ModuleData> PayloadChanged;
+    public void NotifyPayloadChanged() => PayloadChanged?.Invoke(this);
     public string ID;
     public string ModuleId;
 }
@@ -87,7 +104,7 @@ public class Ex_ModData : ModuleData
     public string BitData;
     public T GetData<T>() { DecodeCounters.Json++; return string.IsNullOrEmpty(BitData) ? default : JsonConvert.DeserializeObject<T>(BitData); }
     public void ReadData<T>(ref T data) => data = GetData<T>();
-    public void WriteData<T>(T data) => BitData = JsonConvert.SerializeObject(data);
+    public void WriteData<T>(T data) { BitData = JsonConvert.SerializeObject(data); NotifyPayloadChanged(); }
 }
 public class Ex_ModData_MemoryPackable : ModuleData
 {
@@ -184,7 +201,13 @@ public static class ItemNetworkStateSerialization
     }
 }
 public sealed class FluidInventory { public FluidInventoryState State; }
-public sealed class FluidInventoryState { public List<FluidComponentState> Components = new(); }
+public sealed class FluidInventoryState
+{
+    public List<FluidComponentState> Components = new();
+    public ulong MassRevision;
+    public event Action<FluidInventoryState> MassChanged;
+    public void NotifyMassChanged() { MassRevision++; MassChanged?.Invoke(this); }
+}
 public sealed class FluidComponentState { public string FluidId; public double GasMoles, LiquidMoles; }
 public sealed class FluidDefinition
 {
@@ -199,7 +222,12 @@ public sealed class FluidCatalog
     public bool TryFromLiquidId(string id, out FluidDefinition value)
     { value = Definitions.Values.FirstOrDefault(x => x.LiquidId == id); return value != null; }
 }
-public sealed class LiquidContainerState { public Dictionary<string, double> Composition = new(); }
+public sealed class LiquidContainerState
+{
+    public Dictionary<string, double> Composition = new();
+    public event Action<LiquidContainerState> MassChanged;
+    public void NotifyMassChanged() => MassChanged?.Invoke(this);
+}
 public static class MixedLiquidContents { public static void Ensure(LiquidContainerState data) { } }
 public static class FluidTankStorage
 {
@@ -215,7 +243,14 @@ public sealed class FluidTankState { public FluidInventoryState Contents; }
 public static class Mod_Cultivator { public const string ModuleId = "cultivator"; }
 public sealed class CultivatorState { public InventoryInstanceSnapshot Seeds, Harvest, Fertilizer; }
 public sealed class VesselContentsState { public InventoryInstanceSnapshot Items; }
-public sealed class MachineEntity { public MachineLogic Logic; public MachineProcessor Processor; }
+public sealed class MachineEntity { public MachineLogic Logic; public MachineProcessor Processor; public MachineDefinition Definition = new(); public FluidMachineState FluidState = new() { Chambers = new() }; }
+public sealed class MachineDefinition { public object Fluid; }
+public static class MachineWorld
+{
+    public static FluidMachineState GetFluidState(MachineEntity machine) => machine.FluidState;
+    public static FluidInventory GetFluidInventory(MachineEntity machine, string chamber)
+        => machine.FluidState.Chambers.TryGetValue(chamber, out FluidInventoryState state) ? new FluidInventory { State = state } : null;
+}
 public class MachineLogic { public List<Inventory> Inventories = new(); }
 public sealed class VesselLogic : MachineLogic { public LiquidContainerState Data; }
 public sealed class CultivatorLogic : MachineLogic { }

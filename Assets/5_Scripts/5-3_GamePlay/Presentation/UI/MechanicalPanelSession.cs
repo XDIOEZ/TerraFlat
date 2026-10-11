@@ -81,14 +81,14 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     }
     private void OnAction()
     {
-        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : null;
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : default;
         if (actionAvailable?.Invoke() != false) action?.Invoke(actor);
         Refresh();
     }
     public void Refresh()
     {
         if (!IsOpen) return;
-        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : null;
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : default;
         string itemId = mechanicalOwner?.Definition.Id ?? owner?.itemData?.IDName;
         if (itemId != null && GameRes.Instance.TryGetItemDefinition(itemId, out var definition))
             view.Title.text = definition.DisplayName;
@@ -165,7 +165,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     {
         if (!IsOpen) return;
         // 定时刷新已经离开按 F 时的调用栈，必须重新进入设备所属的机器作用域。
-        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : null;
+        using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : default;
         string text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
         if (view.Status.text != text) view.Status.text = text;
     }

@@ -87,6 +87,7 @@ namespace FlatWorld.Spaceflight
             if (save == null || ReferenceEquals(owner, save)) return;
             ReleaseViews();
             contents.Clear(); controlRequests.Clear();
+            ClearQueryIndexes();
             engineOutputs.Clear();
             pieceIndex.Clear(); pieceIndexDirty = false;
             fixedShips.Clear();
@@ -141,6 +142,7 @@ namespace FlatWorld.Spaceflight
             Current.State = null;
             Current.Universe = null;
             Current.contents.Clear();
+            Current.ClearQueryIndexes();
             Current.pieceIndex.Clear();
             Current.pieceIndexDirty = false;
             Current.fixedShips.Clear();
@@ -250,26 +252,11 @@ namespace FlatWorld.Spaceflight
             SpaceLandingPanelSession.Refresh(this, ItemMgr.Instance?.User_Player);
         }
         public ShipState GetShip(string id)
-        {
-            if (State != null)
-                foreach (ShipState ship in State.Ships)
-                    if (ship.ShipId == id) return ship;
-            return null;
-        }
+            => shipQueryIndex.Find(State?.Ships, id);
         public ShipFlightState GetFlight(string id)
-        {
-            if (State != null)
-                foreach (ShipFlightState flight in State.Flights)
-                    if (flight.ShipId == id) return flight;
-            return null;
-        }
+            => flightQueryIndex.Find(State?.Flights, id);
         public ShipDeviceState GetDevice(string id)
-        {
-            if (State != null)
-                foreach (ShipDeviceState device in State.Devices)
-                    if (device.PieceId == id) return device;
-            return null;
-        }
+            => deviceQueryIndex.Find(State?.Devices, id);
         public bool Owns(int guid) => FindPiece(guid.ToString(CultureInfo.InvariantCulture), out _, out _);
         public bool FindPiece(string id, out ShipState ship, out ShipPieceState piece)
         {

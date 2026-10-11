@@ -95,18 +95,18 @@ public static class FluidThermodynamics
         bool singleGas = false, bool singleLiquid = false)
     {
         FluidInventory.ValidateGeometry(volumeLiters, minimumGasSpaceLiters);
-        var unsupported = new List<string>();
+        List<string> unsupported = null;
         if (inventory == null || inventory.IsEmpty || !FluidUnits.IsFinite(seconds) || seconds <= 0d ||
             !FluidUnits.IsFinite(maximumMolesPerSecond) || maximumMolesPerSecond <= 0d)
-            return new FluidPhaseChangeResult(0m, null, unsupported);
+            return new FluidPhaseChangeResult(0m, null, Array.Empty<string>());
         decimal budget = (decimal)Math.Min((double)FluidInventory.MaximumMoles, maximumMolesPerSecond * seconds);
         decimal converted = 0m;
         string blocked = null;
-        var ids = new List<string>();
-        foreach (var component in inventory.State.Components) ids.Add(component.FluidId);
-        ids.Sort(StringComparer.Ordinal);
-        foreach (string id in ids)
+        // 组分身份没变就沿用稳定排序，空管段不再创建两份临时列表。
+        IReadOnlyList<string> ids = inventory.PhaseChangeIds;
+        for (int componentIndex = 0; componentIndex < ids.Count; componentIndex++)
         {
+            string id = ids[componentIndex];
             var definition = inventory.Catalog.Find(id);
             var curve = definition.PhaseChange;
             if (curve == null) continue;
@@ -114,7 +114,7 @@ public static class FluidThermodynamics
             if (!curve.TrySaturationPressure(temperature, out double saturation))
             {
                 if (inventory.GetLiquidMoles(id) > 0m || temperature < curve.MinimumTemperatureKelvin)
-                    unsupported.Add(id);
+                    (unsupported ??= new List<string>()).Add(id);
                 continue;
             }
             var component = inventory.FindComponent(id);
@@ -160,7 +160,7 @@ public static class FluidThermodynamics
             budget -= low;
             if (budget <= 0m) break;
         }
-        return new FluidPhaseChangeResult(converted, blocked, unsupported);
+        return new FluidPhaseChangeResult(converted, blocked, (IReadOnlyList<string>)unsupported ?? Array.Empty<string>());
     }
     #endregion
 }

@@ -8,6 +8,8 @@ internal static partial class Program
     private static readonly SpaceGameplaySettings Settings = new();
     private static void Main()
     {
+        Run("会话身份索引增删、替换与保存恢复", QueryIndexMutations);
+        Run("稳定船体身份查询无临时分配", QueryIndexAllocations);
         Run("散落物缩放仅保存分量并完整往返", LooseItemScaleSnapshot);
         Run("完整太空会话散落物保存、读回和重复保存", LooseItemSessionSnapshot);
         Run("限速、反向制动、部分燃料", Velocity);
@@ -31,6 +33,7 @@ internal static partial class Program
         Run("稳定拓扑与光纤查询无临时分配", Allocations);
         Run("船体、载荷与舱气质量及惯量", MassProperties);
         Run("载荷变动及重心移动保持船体坐标和点速度", MassChanges);
+        Run("增量质量账本、动态载荷移交及重心修正", IncrementalMassLedger);
         Run("质量来源去重与非法输入拒绝", MassIdentity);
         Run("质量工作区跨船复用及热路径分配", MassWorkspace);
         Run("载荷池来源更新与全字段清理", ContributionPoolFields);

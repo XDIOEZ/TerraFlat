@@ -18,6 +18,11 @@ public partial class LiquidContainerState
     public Dictionary<string, LiquidPendingBatch> PendingOutputs = new(StringComparer.Ordinal);
     public uint RandomState;
     public long Revision;
+    [field: NonSerialized, MemoryPackIgnore, Newtonsoft.Json.JsonIgnore, FastCloner.Code.FastClonerIgnore]
+    public event Action<LiquidContainerState> MassChanged;
+    [MemoryPackIgnore, Newtonsoft.Json.JsonIgnore] public ulong MassRevision { get; private set; }
+    // 真实组分提交后通知计重，端口预留和加热不改变库存质量。
+    public void NotifyMassChanged() { unchecked { MassRevision++; } MassChanged?.Invoke(this); }
     #endregion
 }
 
@@ -31,7 +36,7 @@ public static class MixedLiquidContents
         state.ComponentProcessingSeconds ??= new(StringComparer.OrdinalIgnoreCase);
         state.PendingOutputs ??= new(StringComparer.Ordinal);
         if (state.Composition.Count == 0 && state.Amount > Mod_WaterVessel.AmountEpsilon && !string.IsNullOrWhiteSpace(state.LiquidId))
-            state.Composition[state.LiquidId] = state.Amount;
+        { state.Composition[state.LiquidId] = state.Amount; state.NotifyMassChanged(); }
         if (state.RandomState == 0) state.RandomState = 0x9e3779b9;
     }
     public static void SynchronizeAmounts(LiquidContainerState state)
@@ -74,7 +79,7 @@ public static class MixedLiquidContents
             (float)((state.Temperature * previousCapacity + temperature * incomingCapacity) / (previousCapacity + incomingCapacity));
         state.ComponentProcessingSeconds[id] = 0f;
         state.ProcessingSeconds = 0f; state.Revision++;
-        SynchronizeAmounts(state);
+        SynchronizeAmounts(state); state.NotifyMassChanged();
     }
     private static double HeatCapacity(string id, float servings)
     {
@@ -92,7 +97,7 @@ public static class MixedLiquidContents
         if (reservedPort != null && state.PendingOutputs.TryGetValue(reservedPort, out var pending))
         { pending.Servings -= servings; if (pending.Servings <= 0f) state.PendingOutputs.Remove(reservedPort); }
         state.ComponentProcessingSeconds[id] = 0f; state.ProcessingSeconds = 0f; state.Revision++;
-        SynchronizeAmounts(state); return true;
+        SynchronizeAmounts(state); state.NotifyMassChanged(); return true;
     }
     public static bool TransformSpecies(LiquidContainerState state, string fromId, string toId)
     {
@@ -103,12 +108,13 @@ public static class MixedLiquidContents
         state.Composition[toId] = GetAmount(state, toId) + amount;
         state.ComponentProcessingSeconds[fromId] = 0f;
         state.ComponentProcessingSeconds[toId] = 0f;
-        state.Revision++; SynchronizeAmounts(state); return true;
+        state.Revision++; SynchronizeAmounts(state); state.NotifyMassChanged(); return true;
     }
     public static void Clear(LiquidContainerState state)
     {
         Ensure(state); state.Composition.Clear(); state.ComponentProcessingSeconds.Clear(); state.PendingOutputs.Clear();
         state.Amount = 0f; state.LiquidId = null; state.Temperature = 0f; state.ProcessingSeconds = 0f; state.Revision++;
+        state.NotifyMassChanged();
     }
     #endregion
 
@@ -156,6 +162,7 @@ public static class MixedLiquidContents
         target.ProcessingSeconds = saved.ProcessingSeconds; target.Composition = saved.Composition;
         target.ComponentProcessingSeconds = saved.ComponentProcessingSeconds; target.PendingOutputs = saved.PendingOutputs;
         target.RandomState = saved.RandomState; target.Revision = saved.Revision;
+        target.NotifyMassChanged();
     }
     #endregion
 

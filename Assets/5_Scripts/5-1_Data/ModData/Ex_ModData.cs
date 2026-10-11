@@ -9,7 +9,9 @@ using System;
 public partial class Ex_ModData : ModuleData
 {
     [ReadOnly]
-    public string BitData;
+    [UnityEngine.SerializeField, UnityEngine.Serialization.FormerlySerializedAs("BitData"), MemoryPackIgnore, Newtonsoft.Json.JsonIgnore]
+    private string bitData;
+    public string BitData { get => bitData; set { if (bitData == value) return; bitData = value; NotifyPayloadChanged(); } }
 
     public T GetData<T>()
     {
@@ -35,7 +37,9 @@ public partial class Ex_ModData : ModuleData
 public partial class Ex_ModData_MemoryPackable : ModuleData
 {
     [ReadOnly]
-    public byte[] BitData;
+    [UnityEngine.SerializeField, UnityEngine.Serialization.FormerlySerializedAs("BitData"), MemoryPackIgnore, Newtonsoft.Json.JsonIgnore]
+    private byte[] bitData;
+    public byte[] BitData { get => bitData; set { if (System.Object.ReferenceEquals(bitData, value)) return; bitData = value; NotifyPayloadChanged(); } }
 
     public T GetData<T>()
     {

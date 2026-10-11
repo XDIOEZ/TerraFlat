@@ -151,6 +151,7 @@ public partial class Inventory_Data
     private void PublishRuntimeStructureChanged()
     {
         contentStructureRevision++;
+        RebindMassSlots();
         RuntimeStructureChanged?.Invoke(this);
     }
 

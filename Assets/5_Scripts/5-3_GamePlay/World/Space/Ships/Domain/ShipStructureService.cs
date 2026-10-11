@@ -88,6 +88,13 @@ namespace FlatWorld.Spaceflight
                 double dx = entry.LocalX - centerX, dy = entry.LocalY - centerY;
                 inertia += entry.IntrinsicInertiaKgM2 + entry.MassKg * (dx * dx + dy * dy);
             }
+            return ApplyMassProperties(ship, total, centerX, centerY, inertia);
+        }
+
+        internal static ShipMassProperties ApplyMassProperties(ShipState ship, double total, double centerX, double centerY, double inertia)
+        {
+            if (ship.MassKg != total || ship.CenterOfMassLocalX != centerX || ship.CenterOfMassLocalY != centerY || ship.InertiaKgM2 != inertia)
+                unchecked { ship.MassRevision++; }
             ShipGeometry.Rotate(centerX - ship.CenterOfMassLocalX, centerY - ship.CenterOfMassLocalY,
                 ship.AngleRadians, out double shiftX, out double shiftY);
             ship.PositionX += shiftX; ship.PositionY += shiftY;
@@ -249,6 +256,7 @@ namespace FlatWorld.Spaceflight
         };
         private static void ReplaceState(ShipState target, ShipState source)
         {
+            target.NotifyStructureChanged();
             target.IdentityAnchorPieceId = source.IdentityAnchorPieceId; target.IsWreck = source.IsWreck;
             target.Pieces = source.Pieces; target.MassContributions = source.MassContributions;
             target.Compartments = source.Compartments; target.EverEnclosedCells = source.EverEnclosedCells;
@@ -282,6 +290,7 @@ namespace FlatWorld.Spaceflight
                 {
                     // 先提交摧毁标记再回调，连锁伤害和保存重入不会重复结算掉落。
                     piece.Destroyed = true;
+                    ship.NotifyStructureChanged();
                     if (piece.Kind == ShipPieceKind.Floor || piece.SealsAtmosphere) ship.AtmosphereStructureDirty = true;
                     onDestroyed?.Invoke(ship, piece, reason);
                 }

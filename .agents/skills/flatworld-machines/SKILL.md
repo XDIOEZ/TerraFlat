@@ -23,7 +23,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 - 召唤器/手持保留 Item，落地设施经 Place/SpawnGenerated/RestoreMachine 创建数据节点；Mod_MachineAuthoring 保存配置，不驱动落地 Load/Tick。普通 Ports=none 设施共用格索引，不产生扭矩网络。
 - 模拟不依赖 ChunkView，网络整体恢复后才 Tick，快照后才休眠；无端口设施按玩家窗口休眠。世界时间由调用方传入，有界补算保留余量，手摇倒计时先于领域分派。
-- 移动船使用 `UseScope("ship:"+ShipId)/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。面板/延迟回调通过 UseNodeScope 进入节点所在作用域。
+- 移动船使用 `UseScope(GetShipScopeKey(ShipId))/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。ScopeLease 为值类型，按单一 using 生命周期释放；面板/延迟回调通过 UseNodeScope 进入节点所在作用域。分裂以 TransferShipNodes 整批移交，真实库存先拆分，每个作用域整批结束才重建拓扑。
 - 船上无机械端口的设施与机械网、流体网一样持续模拟，不用地表玩家区块决定休眠；`ship:` 作用域不是场景名，不能因场景匹配不到玩家而释放电池、培育仓等设备的交互对象和面板。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
 - FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
@@ -42,11 +42,13 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 手推设备声明 ManualDriveTorque/Rpm/SecondsPerPress；CanManualDrive 先排除手推检查整网外源，外源存在则禁手推。加工器仍按节点最终 RPM 工作。风箱朝向相邻炉体，通过 Airflow 提交，20 RPM 对应最多 500℃上限增量。
 - 电网与机械网共用节点但拓扑独立；线为独立覆盖层，cell 接同格，方向接旋转后的邻格。W=功率、J=储能，电压负责兼容、电流=P/V；当前无逐段压降求解。
 - converter 先排除电驱动力探测机械输入，从独立电源确定转换方向；机械输入优先，上游电网不作回流目标。电池探算不写能量，正式每轮结算一次；电驱扭矩向下取整，输出受真实功率预算限制。
+- 机械路线缓存由可达节点、有效源、输入终点与实际图边变化失效，功率数值变化仍逐步结算；电力协调器拥有本步最终机械求解。只有显式声明 CanCacheElectricalDemandWithinStep 的策略才复用冻结需求，自定义来源默认动态采样。离线规则对照见 Tools/Tests/MachineNetworks。
 - 电线 wire0..15、管线 pipe0..15 共用北1/东2/南4/西8掩码。电线读权威线格/方向口；管线读正式图边，端口相位/方向/启停参与掩码，流量不参与。地表格事件与船作用域事件分别刷新连接，两个世界使用各自节点索引。
 
 ## 工业气液
 
 - 固定步长冻结库存与吞吐预算；方向由端口输入/输出决定，不按压差自然输送，新料不在同轮穿透无限管格。管层2、机械/电子测压层4/5；测压探针切断真实动力边。
+- StockCache 冻结工作区只复制组分数量，不复制端口预留；共享罐只在拓扑变化时绑定库存，Capture 同步目标组。FluidInventoryState 的组分原位改量通知 MassChanged，热量/预留只改状态版本；观察绑定与事件不进序列化/克隆。UsesObservedTickState 策略若改未观察字段，须主动通知或关闭该能力。
 - FluidDeviceBehavior 经 RegisterFluidDevice 注册能力策略，具体事务在 FluidDeviceOperations；注册租约管理生灭，策略变更使拓扑/能力缓存失效。管网成员始终走正式图边，普通容器仅通过 IContainerPortProvider/ILiquidTransferPort 转移。
 - `receiver` 为按需接收端，不接普通随机单物质推送；需求方经正式有向供给图检查全部所需物质，原子扣源库存与路径各段共享吞吐，同一共享罐去重。基础管道及铁/钢气罐显式配置1000 L/s，普通管道召唤器可在背包数量堆叠。
 - 同材组合罐主成员保存共享 decimal 组分、内能、随机态与端口预留，其余引用主身份。拆分/跨船/回收先按真实容积分配并归还预留，再撤共享引用/预算和重建网络；超压固定受损成员，经 PressureExplosionQueue 有界处理。

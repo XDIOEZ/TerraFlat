@@ -26,6 +26,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 ## 库存与手持
 
 - 重量 kg、体积 L、Stackable 独立。普通槽 `DefaultSlotVolume=int.MaxValue`，不可堆叠物一件一槽，装配槽显式为 1；数量/容量使用 float，整数转换用 `GetWholeStackAmount`。生存行囊固定 20 格，储物/制作采用配置格数。
+- ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 绑定实际槽内 ItemData 的 MassChanged，供船载质量缓存使用。新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
 - 携带量统计主背包与快捷栏，超重状态由库存数据事件更新。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。
 - 物品修改经 `TryConsumeFromSlot/TrySetSlotItemAmount` 等事务。`InventoryContextResolver` 以 ItemData 引用/Guid 找真实所属库存；快捷栏修改后按真实槽索引刷新。`BindController/UnbindController` 只管理输入，数据/UI 监听由 `UnbindRuntimeDataEvents` 清理。
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。

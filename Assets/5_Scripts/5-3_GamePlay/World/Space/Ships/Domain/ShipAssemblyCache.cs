@@ -6,7 +6,7 @@ namespace FlatWorld.Spaceflight
     public sealed class ShipAssemblyCache
     {
         #region 对接拓扑快照
-        private readonly List<(ShipState Ship, string Id)> ships = new();
+        private readonly List<(ShipState Ship, string Id, ulong StructureRevision)> ships = new();
         private readonly List<PortStamp> ports = new();
         private readonly List<PairStamp> pairs = new();
         private readonly Dictionary<string, ShipAssemblyState> byShip = new(StringComparer.Ordinal);
@@ -58,13 +58,16 @@ namespace FlatWorld.Spaceflight
             {
                 ShipState ship = source[i];
                 if (ship == null || !ReferenceEquals(ships[i].Ship, ship) || ships[i].Id != ship.ShipId) return false;
+                if (ships[i].StructureRevision != ship.StructureRevision) return false;
+                // 正式会话由结构事务维护版本，普通列表保留离线直接修改的校验路径。
+                if (source is SpaceStateCollection<ShipState>) continue;
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (piece == null || piece.Kind != ShipPieceKind.DockingPort) continue;
                     if (portIndex >= ports.Count || !ports[portIndex++].Matches(ship, piece)) return false;
                 }
             }
-            if (portIndex != ports.Count) return false;
+            if (source is not SpaceStateCollection<ShipState> && portIndex != ports.Count) return false;
             for (int i = 0; i < connections.Count; i++)
                 if (!pairs[i].Matches(connections[i])) return false;
             return true;
@@ -77,7 +80,7 @@ namespace FlatWorld.Spaceflight
             ships.Clear(); ports.Clear(); pairs.Clear(); byShip.Clear(); members.Clear();
             foreach (ShipState ship in source)
             {
-                ships.Add((ship, ship.ShipId));
+                ships.Add((ship, ship.ShipId, ship.StructureRevision));
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece != null && piece.Kind == ShipPieceKind.DockingPort) ports.Add(new PortStamp(ship, piece));
             }

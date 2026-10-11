@@ -17,25 +17,44 @@ public static partial class MachineWorld
         public int OverpressureVictimId;
         public ulong RandomState = 1;
         public bool Active;
+        internal int SavedVictimId = int.MinValue;
+        internal ulong SavedRandomState;
         public int OwnerId => Members.Count == 0 ? 0 : Members[0].Id;
     }
 
     private static FluidNetworkGraph fluidGraph { get => scope.Fluid; set => scope.Fluid = value; }
     private static Dictionary<int, FluidMachineState> fluidStates => scope.Fluids;
-    private static Dictionary<string, FluidInventory> fluidInventories => scope.Inventories;
+    private static Dictionary<(int NodeId, string Chamber), FluidInventory> fluidInventories => scope.Inventories;
     private static Dictionary<int, FluidTankGroup> fluidTankOwners => scope.TankOwners;
     private static List<FluidTankGroup> fluidTankGroups => scope.Tanks;
     private static Dictionary<FluidInventory, FluidInventoryState> fluidStepStock => scope.Stock;
+    private static Dictionary<FluidInventory, FluidInventoryState> fluidStockCache => scope.StockCache;
     private static Dictionary<FluidInventory, double> fluidThroughputRemaining => scope.Throughput;
     private static Dictionary<MachineEntity, double> fluidMechanicalPower => scope.MechanicalPower;
     private static Dictionary<int, int> fluidAppearance => scope.Appearance;
 
     internal static FluidNetworkGraph FluidGraph => fluidGraph;
+    private static readonly Dictionary<FluidMachineDefinition, (string Kind, long Generation, FluidDeviceBehavior Behavior)> fluidBehaviors = new();
     public static FluidDeviceBehavior GetFluidDeviceBehavior(MachineEntity node)
-        => node?.Definition.Fluid == null ? null : MachineLogicRegistry.GetFluidDeviceBehavior(node.Definition.Fluid.Kind);
+    {
+        FluidMachineDefinition definition = node?.Definition.Fluid;
+        if (definition == null) return null;
+        long generation = MachineLogicRegistry.FluidDeviceGeneration;
+        if (fluidBehaviors.TryGetValue(definition, out var cached) && cached.Generation == generation && cached.Kind == definition.Kind)
+            return cached.Behavior;
+        FluidDeviceBehavior behavior = MachineLogicRegistry.GetFluidDeviceBehavior(definition.Kind);
+        fluidBehaviors[definition] = (definition.Kind, generation, behavior);
+        return behavior;
+    }
     internal static Vector2Int NormalizeMachineCell(Vector2Int cell) => graph.NormalizeCell(cell);
+    internal static void ClearFluidDefinitionCaches()
+    { fluidBehaviors.Clear(); FluidDeviceOperations.ClearCompiledReactions(); }
     internal static void InvalidateFluidDeviceStrategies()
-    { dirty = true; fluidAppearance.Clear(); InvalidateCombustionSupportSources(); }
+    {
+        ClearFluidDefinitionCaches();
+        foreach (ScopeState value in scopes.Values) { value.Dirty = true; value.Appearance.Clear(); }
+        dirty = true; fluidAppearance.Clear(); InvalidateCombustionSupportSources();
+    }
     internal static bool TryGetFluidTransferBudget(FluidInventory inventory, out FluidInventoryState stock, out double budget)
     {
         bool hasStock = fluidStepStock.TryGetValue(inventory, out stock);
@@ -80,7 +99,7 @@ public static partial class MachineWorld
         FluidMachineState state = GetFluidState(node);
         if (state == null) return null;
         if (chamberId == "main" && fluidTankOwners.TryGetValue(node.Id, out var group)) return group.Inventory;
-        string key = node.Id + ":" + chamberId;
+        var key = (node.Id, chamberId);
         if (fluidInventories.TryGetValue(key, out FluidInventory existing)) return existing;
         if (!state.Chambers.TryGetValue(chamberId, out FluidInventoryState contents))
             state.Chambers[chamberId] = contents = new FluidInventoryState();
@@ -172,13 +191,13 @@ public static partial class MachineWorld
                 }
                 if (state.OverpressureVictimId != 0) group.OverpressureVictimId = state.OverpressureVictimId;
                 if (member.Id == group.OwnerId) group.RandomState = state.RandomState;
-                fluidInventories.Remove(member.Id + ":main");
+                fluidInventories.Remove((member.Id, "main"));
             }
             if (!inheritedRandom) group.Inventory.State.RandomState = group.RandomState;
         }
         fluidGraph = new FluidNetworkGraph(graph.NormalizeCell);
         fluidGraph.Rebuild(sorted);
-        SaveFluidGroups();
+        SaveFluidGroups(true);
         // 新网接过真实库存后撤销旧对象中的份额，旧端口引用不能继续取第二次。
         foreach (FluidInventoryState previous in previousContents)
             new FluidInventory(previous).Restore(new FluidInventoryState { RandomState = previous.RandomState });
@@ -187,7 +206,7 @@ public static partial class MachineWorld
             previous.Inventory.Restore(new FluidInventoryState { RandomState = previous.Inventory.State.RandomState });
             previous.Members.Clear(); previous.TotalVolume = 0d; previous.MinimumGasSpace = 0d; previous.Active = false;
         }
-        fluidStepStock.Clear(); fluidThroughputRemaining.Clear();
+        fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear();
     }
 
     private static void MergeFluidInventory(FluidInventory target, FluidInventory source, double volume, double minimum)
@@ -200,26 +219,38 @@ public static partial class MachineWorld
         target.State.TotalInternalEnergyJoules = totalEnergy;
     }
 
-    private static void SaveFluidGroups()
+    private static void SaveFluidGroups(bool bindInventories = false)
     {
         foreach (FluidTankGroup group in fluidTankGroups)
+            SaveFluidGroup(group, bindInventories);
+    }
+
+    private static void SaveFluidGroup(FluidTankGroup group, bool bindInventories = false)
+    {
+        if (!bindInventories && group.SavedVictimId == group.OverpressureVictimId && group.SavedRandomState == group.RandomState) return;
+        // 拓扑改变时绑定唯一真实库存，正常结算只同步确实改变的组级状态。
+        foreach (MachineEntity member in group.Members)
         {
-            foreach (MachineEntity member in group.Members)
+            if (!nodes.ContainsKey(member.Id)) continue;
+            FluidMachineState state = GetFluidState(member);
+            state.GroupOwnerId = group.OwnerId;
+            state.OverpressureVictimId = group.OverpressureVictimId;
+            state.RandomState = group.RandomState;
+            if (bindInventories)
             {
-                if (!nodes.ContainsKey(member.Id)) continue;
-                FluidMachineState state = GetFluidState(member);
-                state.GroupOwnerId = group.OwnerId;
-                state.OverpressureVictimId = group.OverpressureVictimId;
-                state.RandomState = group.RandomState;
-                state.Chambers["main"] = member.Id == group.OwnerId ? group.Inventory.State : new FluidInventoryState();
+                if (member.Id == group.OwnerId) state.Chambers["main"] = group.Inventory.State;
+                else if (!state.Chambers.TryGetValue("main", out FluidInventoryState empty) ||
+                    empty.Components.Count != 0 || empty.Ports.Count != 0 || empty.TotalInternalEnergyJoules != 0d)
+                    state.Chambers["main"] = new FluidInventoryState();
             }
         }
+        group.SavedVictimId = group.OverpressureVictimId; group.SavedRandomState = group.RandomState;
     }
 
     public static void CaptureFluidState(MachineEntity node)
     {
         if (node?.Definition.Fluid == null) return;
-        SaveFluidGroups();
+        if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) SaveFluidGroup(group);
         MachinePersistence.Write(node.Snapshot, "fluid", GetFluidState(node));
     }
 
@@ -243,16 +274,16 @@ public static partial class MachineWorld
         ForgetFluidNodeInventoryCaches(node.Id);
         fluidAppearance.Remove(node.Id);
         fluidMechanicalPower.Remove(node);
-        fluidStepStock.Clear(); fluidThroughputRemaining.Clear();
+        fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear();
         InvalidateCombustionSupportSources();
     }
 
     private static void ForgetFluidNodeInventoryCaches(int id)
     {
-        var remove = new List<string>();
-        string prefix = id.ToString(CultureInfo.InvariantCulture) + ":";
-        foreach (string key in fluidInventories.Keys) if (key.StartsWith(prefix, StringComparison.Ordinal)) remove.Add(key);
-        foreach (string key in remove) fluidInventories.Remove(key);
+        var remove = new List<(int NodeId, string Chamber)>();
+        foreach (var key in fluidInventories.Keys) if (key.NodeId == id) remove.Add(key);
+        foreach (var key in remove)
+        { fluidStockCache.Remove(fluidInventories[key]); fluidInventories.Remove(key); }
     }
 
     private static void PartitionFluidGroupForScopeTransfer(FluidTankGroup group)
@@ -314,7 +345,7 @@ public static partial class MachineWorld
             state.OverpressureVictimId = group.OverpressureVictimId == member.Id ? member.Id : 0;
             state.RandomState = group.RandomState;
             fluidTankOwners.Remove(member.Id);
-            fluidInventories.Remove(member.Id.ToString(CultureInfo.InvariantCulture) + ":main");
+            fluidInventories.Remove((member.Id, "main"));
         }
         fluidTankGroups.Remove(group);
         group.Inventory.Restore(new FluidInventoryState { RandomState = original.RandomState });
@@ -325,7 +356,7 @@ public static partial class MachineWorld
     private static void ResetFluidRuntime()
     {
         fluidGraph = null; fluidStates.Clear(); fluidInventories.Clear(); fluidTankOwners.Clear(); fluidTankGroups.Clear();
-        fluidStepStock.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
+        fluidStepStock.Clear(); fluidStockCache.Clear(); fluidThroughputRemaining.Clear(); fluidMechanicalPower.Clear();
         fluidAppearance.Clear();
         combustionSources.Clear();
         combustionSourceSnapshot = Array.Empty<CombustionSupportLease>();
@@ -338,6 +369,7 @@ public static partial class MachineWorld
         fluidStates[node.Id] = logicApplied && node.Logic is FluidMachineLogic logic ? logic.State :
             MachinePersistence.Read<FluidMachineState>(node.Snapshot, "fluid") ?? new FluidMachineState();
         fluidInventories.Clear(); fluidTankOwners.Clear(); fluidTankGroups.Clear(); fluidGraph = null;
+        fluidStockCache.Clear(); fluidStepStock.Clear(); fluidThroughputRemaining.Clear();
     }
     #endregion
 
@@ -399,7 +431,10 @@ public static partial class MachineWorld
     {
         FluidInventory inventory = GetFluidInventory(node, chamber);
         if (fluidStepStock.ContainsKey(inventory)) return;
-        fluidStepStock.Add(inventory, inventory.State.Clone());
+        if (!fluidStockCache.TryGetValue(inventory, out FluidInventoryState stock))
+            fluidStockCache.Add(inventory, stock = new FluidInventoryState());
+        stock.CopyFrom(inventory.State, false);
+        fluidStepStock.Add(inventory, stock);
         double capacity = node.Definition.Fluid.ThroughputLitersPerSecond * seconds;
         if (fluidTankOwners.TryGetValue(node.Id, out var group)) capacity *= group.Members.Count;
         fluidThroughputRemaining.Add(inventory, capacity);

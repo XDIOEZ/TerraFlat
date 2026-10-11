@@ -6,6 +6,13 @@ namespace UnityEngine
         public float x, y;
         public Vector2(float x, float y) { this.x = x; this.y = y; }
     }
+    public class TextAsset { public string text; }
+    public static class Resources { public static T Load<T>(string path) where T : class => null; }
+    public enum RuntimeInitializeLoadType { SubsystemRegistration }
+    public sealed class RuntimeInitializeOnLoadMethodAttribute : System.Attribute
+    {
+        public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType type) { }
+    }
     #endregion
 }
 
@@ -126,6 +133,8 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 非目标场景入口
+        private void ApplyLineImpact(ShipState ship, double damage, string reason)
+            => throw new NotSupportedException("散落物接触测试不模拟船间结构断裂。");
         public ShipAssemblyState GetConnectedAssembly(string id)
             => throw new NotSupportedException("接触测试不查询场景降落整体。");
         private bool CanBeginPoweredLanding(ShipAssemblyState assembly, double gravity)

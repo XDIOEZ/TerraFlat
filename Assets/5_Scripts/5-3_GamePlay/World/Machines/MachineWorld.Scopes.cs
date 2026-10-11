@@ -19,12 +19,14 @@ public static partial class MachineWorld
         public bool Dirty, SuppressRemoval;
         public float Elapsed;
         public uint Step;
+        public int TopologyMutationDepth;
         public Vector2 CombatPadding = Vector2.one;
         public readonly Dictionary<int, FluidMachineState> Fluids = new();
-        public readonly Dictionary<string, FluidInventory> Inventories = new(StringComparer.Ordinal);
+        public readonly Dictionary<(int NodeId, string Chamber), FluidInventory> Inventories = new();
         public readonly Dictionary<int, FluidTankGroup> TankOwners = new();
         public readonly List<FluidTankGroup> Tanks = new();
         public readonly Dictionary<FluidInventory, FluidInventoryState> Stock = new();
+        public readonly Dictionary<FluidInventory, FluidInventoryState> StockCache = new();
         public readonly Dictionary<FluidInventory, double> Throughput = new();
         public readonly Dictionary<MachineEntity, double> MechanicalPower = new();
         public readonly Dictionary<int, int> Appearance = new();
@@ -32,6 +34,7 @@ public static partial class MachineWorld
 
     private static ScopeState scope = new();
     private static readonly Dictionary<string, ScopeState> scopes = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string> shipScopeKeys = new(StringComparer.Ordinal);
     private static string scopeOverride;
     public static bool IsShipScope => worldKey != null && worldKey.StartsWith("ship:", StringComparison.Ordinal);
 
@@ -42,20 +45,21 @@ public static partial class MachineWorld
 
     public static void ReleaseShipScope(string shipId, bool capture = false)
     {
-        string key = "ship:" + shipId;
+        string key = GetShipScopeKey(shipId);
         if (!scopes.TryGetValue(key, out ScopeState value)) return;
         ScopeState previous = scope;
         scope = value;
         if (capture) CaptureCurrentWorld();
         ReleaseRuntime();
         scopes.Remove(key);
+        shipScopeKeys.Remove(shipId);
         if (!capture) value.Owner?.Mechanical?.Worlds.Remove(key);
         scope = ReferenceEquals(previous, value) ? new ScopeState() : previous;
         ReleaseCombatBridgeIfNoScopes();
     }
 
     // 作用域只切换运行态引用，不休眠、复制库存或重建正在加工的设备。
-    public static IDisposable UseScope(string key)
+    public static ScopeLease UseScope(string key)
     {
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("机器作用域为空。", nameof(key));
         var lease = new ScopeLease(scopeOverride);
@@ -63,15 +67,15 @@ public static partial class MachineWorld
         EnsureScope();
         return lease;
     }
-    private sealed class ScopeLease : IDisposable
+    public struct ScopeLease : IDisposable
     {
         private readonly string previous;
-        private bool disposed;
-        public ScopeLease(string value) => previous = value;
+        private bool active;
+        internal ScopeLease(string value) { previous = value; active = true; }
         public void Dispose()
         {
-            if (disposed) return;
-            disposed = true;
+            if (!active) return;
+            active = false;
             scopeOverride = previous;
             EnsureScope();
         }
@@ -108,6 +112,7 @@ public static partial class MachineWorld
             ReleaseRuntime();
         }
         scopes.Clear();
+        shipScopeKeys.Clear();
         scope = new ScopeState();
         scopeOverride = null;
         ReleaseCombatBridgeIfNoScopes();
@@ -115,59 +120,98 @@ public static partial class MachineWorld
 
     public static void TickShip(string shipId, float seconds)
     {
-        using (UseScope("ship:" + shipId)) Tick(seconds);
+        using (UseScope(GetShipScopeKey(shipId))) Tick(seconds);
     }
 
     public static MachineEntity PlaceOnShip(string shipId, ItemData snapshot)
     {
-        using (UseScope("ship:" + shipId)) return Place(snapshot);
+        using (UseScope(GetShipScopeKey(shipId))) return Place(snapshot);
     }
 
     public static ItemData RemoveFromShip(string shipId, int id)
     {
-        using (UseScope("ship:" + shipId)) return Remove(id);
+        using (UseScope(GetShipScopeKey(shipId))) return Remove(id);
     }
-    public static IDisposable UseNodeScope(MachineEntity node)
+    public static ScopeLease UseNodeScope(MachineEntity node)
         => UseScope(node?.ScopeKey ?? UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
 
     public static void TransferShipNode(string fromShip, string toShip, int id)
+        => TransferShipNodes(fromShip, toShip, new[] { id });
+
+    public static string GetShipScopeKey(string shipId)
     {
-        if (fromShip == toShip) return;
-        MachineEntity node;
-        FluidMachineState transferredFluid = null;
-        using (UseScope("ship:" + toShip))
+        if (string.IsNullOrWhiteSpace(shipId)) throw new ArgumentException("船体身份为空。", nameof(shipId));
+        if (!shipScopeKeys.TryGetValue(shipId, out string key))
+            shipScopeKeys.Add(shipId, key = "ship:" + shipId);
+        return key;
+    }
+
+    // 分裂先剥离一批节点的真实库存，整批移交完成后才各重建一次网络。
+    public static void TransferShipNodes(string fromShip, string toShip, IReadOnlyList<int> ids)
+    {
+        if (fromShip == toShip || ids == null || ids.Count == 0) return;
+        var candidates = new List<MachineEntity>(ids.Count);
+        var transferred = new List<FluidMachineState>(ids.Count);
+        var identities = new HashSet<int>();
+        using (UseScope(GetShipScopeKey(fromShip)))
         {
-            if (nodes.ContainsKey(id)) throw new InvalidOperationException("目标船体已经包含待转移的机器：" + id);
             RebuildGraphsIfDirty();
-        }
-        using (UseScope("ship:" + fromShip))
-        {
-            if (!nodes.TryGetValue(id, out node)) return;
-            RebuildGraphsIfDirty();
-            CaptureNode(node);
-            if (node.Definition.Fluid != null)
+            for (int i = 0; i < ids.Count; i++)
             {
-                // 旧作用域先释放来源租约，再按真实容积剥离共享库存。
-                DisposeMachineRuntime(node);
-                transferredFluid = DetachFluidNodeForScopeTransfer(node);
+                if (!identities.Add(ids[i])) throw new ArgumentException("批量转移包含重复机器身份。", nameof(ids));
+                if (nodes.TryGetValue(ids[i], out MachineEntity node)) candidates.Add(node);
             }
-            else if (interactions.Remove(id, out MachineInteractionTarget target)) target.Dispose();
-            nodes.Remove(id); dirty = true;
-            if (node.Processor != null) processorOwners.Remove(node.Processor);
-            RebuildGraphsIfDirty();
         }
-        using (UseScope("ship:" + toShip))
+        if (candidates.Count == 0) return;
+        using (UseScope(GetShipScopeKey(toShip)))
         {
-            node.ScopeKey = worldKey;
-            nodes.Add(id, node); dirty = true;
-            if (node.Processor != null) processorOwners[node.Processor] = node;
-            if (transferredFluid != null)
-            {
-                ForgetFluidNodeInventoryCaches(id);
-                fluidStates[id] = transferredFluid;
-                EnsureProcessor(node);
-            }
             RebuildGraphsIfDirty();
+            foreach (MachineEntity node in candidates)
+                if (nodes.ContainsKey(node.Id)) throw new InvalidOperationException("目标船体已经包含待转移的机器：" + node.Id);
+        }
+        using (UseScope(GetShipScopeKey(fromShip)))
+        {
+            foreach (MachineEntity node in candidates) CaptureNode(node);
+            ScopeState source = scope;
+            source.TopologyMutationDepth++;
+            try
+            {
+                var groups = new HashSet<FluidTankGroup>();
+                foreach (MachineEntity node in candidates)
+                    if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) groups.Add(group);
+                foreach (FluidTankGroup group in groups) PartitionFluidGroupForScopeTransfer(group);
+                foreach (MachineEntity node in candidates)
+                {
+                    FluidMachineState contents = null;
+                    if (node.Definition.Fluid != null)
+                    { DisposeMachineRuntime(node); contents = DetachFluidNodeForScopeTransfer(node); }
+                    else if (interactions.Remove(node.Id, out MachineInteractionTarget target)) target.Dispose();
+                    transferred.Add(contents);
+                    nodes.Remove(node.Id); dirty = true;
+                    if (node.Processor != null) processorOwners.Remove(node.Processor);
+                }
+            }
+            finally { source.TopologyMutationDepth--; RebuildGraphsIfDirty(); }
+        }
+        using (UseScope(GetShipScopeKey(toShip)))
+        {
+            ScopeState destination = scope;
+            destination.TopologyMutationDepth++;
+            try
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    MachineEntity node = candidates[i];
+                    node.ScopeKey = worldKey;
+                    nodes.Add(node.Id, node); dirty = true;
+                    if (node.Processor != null) processorOwners[node.Processor] = node;
+                    if (transferred[i] == null) continue;
+                    ForgetFluidNodeInventoryCaches(node.Id);
+                    fluidStates[node.Id] = transferred[i];
+                    EnsureProcessor(node);
+                }
+            }
+            finally { destination.TopologyMutationDepth--; RebuildGraphsIfDirty(); }
         }
     }
 

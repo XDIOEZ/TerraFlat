@@ -196,6 +196,25 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 供气与呼吸真实库存
+        private sealed class RoomInventoryCache
+        {
+            public FluidInventory Inventory;
+            public FluidInventory Get(ShipCompartmentState room)
+            {
+                if (Inventory == null || !ReferenceEquals(Inventory.State, room.Gas) ||
+                    !ReferenceEquals(Inventory.Catalog, FluidCatalog.Default))
+                    Inventory = new FluidInventory(room.Gas);
+                return Inventory;
+            }
+        }
+        private static readonly ConditionalWeakTable<ShipCompartmentState, RoomInventoryCache> roomInventories = new();
+        private static readonly ConditionalWeakTable<ShipCompartmentState, RoomInventoryCache>.CreateValueCallback roomInventoryFactory = _ => new();
+        internal static FluidInventory GetCompartmentInventory(ShipCompartmentState room)
+        {
+            // 舱气包装复用真实库存对象，换气体状态或材料目录时重新绑定。
+            return roomInventories.GetValue(room, roomInventoryFactory).Get(room);
+        }
+
         public static bool TrySupplyGas(ShipState ship, int cellX, int cellY, IShipAtmosphereSource source,
             double targetPressureKPa, decimal maxMoles, out decimal received)
         {
@@ -207,7 +226,6 @@ namespace FlatWorld.Spaceflight
             decimal needed = Math.Max(0m, target - TotalMoles(room.Gas));
             if (needed <= 0m) return false;
             bool result = AddFromSource(room, source, Math.Min(maxMoles, needed), ship.NormalCabinTemperatureCelsius, out received);
-            if (result) ShipStructureService.RecalculateMass(ship);
             return result;
         }
 
@@ -217,11 +235,10 @@ namespace FlatWorld.Spaceflight
             batch = default;
             ShipCompartmentState room = FindCompartment(ship, cellX, cellY);
             if (room == null || requestedMoles <= 0m) return false;
-            var inventory = new FluidInventory(room.Gas);
+            var inventory = GetCompartmentInventory(room);
             decimal amount = Math.Min(requestedMoles, inventory.GetAvailableMoles(fluidId, FluidPhase.Gas));
             if (amount <= 0m || !inventory.TryTakeExact(fluidId, FluidPhase.Gas, amount, out batch)) return false;
             NormalizeTemperature(room.Gas, ship.NormalCabinTemperatureCelsius);
-            ShipStructureService.RecalculateMass(ship);
             return true;
         }
 
@@ -229,9 +246,8 @@ namespace FlatWorld.Spaceflight
         {
             ShipCompartmentState room = FindCompartment(ship, cellX, cellY);
             if (room == null || !batch.IsGas) return false;
-            if (!new FluidInventory(room.Gas).CanAdd(batch, room.VolumeLiters, MinimumCabinGasSpaceLiters)) return false;
+            if (!GetCompartmentInventory(room).CanAdd(batch, room.VolumeLiters, MinimumCabinGasSpaceLiters)) return false;
             AddGas(room, batch, ship.NormalCabinTemperatureCelsius);
-            ShipStructureService.RecalculateMass(ship);
             return true;
         }
 
@@ -257,7 +273,7 @@ namespace FlatWorld.Spaceflight
         private static void AddGas(ShipCompartmentState room, FluidBatch batch, double normalTemperature)
         {
             if (!batch.IsGas || room.VolumeLiters <= 0d) throw new InvalidDataException("密闭舱只接收真实气相库存");
-            var inventory = new FluidInventory(room.Gas);
+            var inventory = GetCompartmentInventory(room);
             if (!inventory.TryAdd(batch, room.VolumeLiters, MinimumCabinGasSpaceLiters))
                 throw new InvalidDataException("实际气包无法写入船舱库存");
             NormalizeTemperature(room.Gas, normalTemperature);
@@ -301,9 +317,48 @@ namespace FlatWorld.Spaceflight
         {
             public bool HasLine;
             public ShipDamageLine Line;
+            public readonly List<ShipPieceState> Pieces = new();
         }
         private static readonly ConditionalWeakTable<ShipState, PressureDamagePattern> pressurePatterns = new();
         private static readonly Random pressurePatternRandom = new();
+
+        #region 舱室与支撑格子索引
+        private sealed class GeometryIndex
+        {
+            private List<ShipCompartmentState> rooms;
+            private List<ShipPieceState> pieces;
+            private ulong structureRevision;
+            private int roomCount, pieceCount;
+            public readonly Dictionary<(int X, int Y), ShipCompartmentState> Rooms = new();
+            public readonly HashSet<(int X, int Y)> Floors = new();
+            public void Ensure(ShipState ship)
+            {
+                if (ReferenceEquals(rooms, ship.Compartments) && ReferenceEquals(pieces, ship.Pieces) &&
+                    structureRevision == ship.StructureRevision && roomCount == ship.Compartments.Count && pieceCount == ship.Pieces.Count) return;
+                Rooms.Clear(); Floors.Clear();
+                foreach (ShipCompartmentState room in ship.Compartments)
+                    foreach (ShipCell cell in room.Cells) Rooms.TryAdd((cell.X, cell.Y), room);
+                foreach (ShipPieceState piece in ship.Pieces)
+                {
+                    if (piece?.IsAlive != true || piece.Kind != ShipPieceKind.Floor) continue;
+                    int width = Math.Max(1, piece.Width), height = Math.Max(1, piece.Height);
+                    if ((piece.QuarterTurns & 1) != 0) { int swap = width; width = height; height = swap; }
+                    for (int y = 0; y < height; y++)
+                        for (int x = 0; x < width; x++) Floors.Add((piece.CellX + x, piece.CellY + y));
+                }
+                rooms = ship.Compartments; pieces = ship.Pieces;
+                roomCount = rooms.Count; pieceCount = pieces.Count; structureRevision = ship.StructureRevision;
+            }
+        }
+        private static readonly ConditionalWeakTable<ShipState, GeometryIndex> geometryIndexes = new();
+        private static readonly ConditionalWeakTable<ShipState, GeometryIndex>.CreateValueCallback geometryFactory = _ => new();
+        private static GeometryIndex GetGeometryIndex(ShipState ship)
+        {
+            // 结构或舱室集合变化才建格子索引，环境热查询不再扫描整船。
+            GeometryIndex result = geometryIndexes.GetValue(ship, geometryFactory);
+            result.Ensure(ship); return result;
+        }
+        #endregion
         public static ShipEnvironmentSnapshot GetEnvironment(ShipState ship, int cellX, int cellY,
             IShipAtmosphereSource outside = null)
         {
@@ -312,7 +367,7 @@ namespace FlatWorld.Spaceflight
             if (room == null)
                 return new ShipEnvironmentSnapshot(false, support, outside?.PressureKPa ?? 0d,
                     outside?.TemperatureCelsius ?? -270d, 0d, 0d, null);
-            var inventory = new FluidInventory(room.Gas);
+            var inventory = GetCompartmentInventory(room);
             double pressure = inventory.GetPressureKPa(room.VolumeLiters, MinimumCabinGasSpaceLiters);
             decimal total = inventory.GasMoles;
             double oxygen = total > 0m ? pressure * (double)(inventory.GetGasMoles(FluidIds.Oxygen) / total) : 0d;
@@ -322,14 +377,12 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool HasFloor(ShipState ship, int cellX, int cellY)
-            => ShipGeometry.HasFloor(ship, cellX, cellY);
+            => ship != null && GetGeometryIndex(ship).Floors.Contains((cellX, cellY));
 
         public static ShipCompartmentState FindCompartment(ShipState ship, int cellX, int cellY)
         {
-            var target = new ShipCell(cellX, cellY);
-            foreach (ShipCompartmentState room in ship.Compartments)
-                foreach (ShipCell cell in room.Cells) if (cell.Equals(target)) return room;
-            return null;
+            return ship != null && GetGeometryIndex(ship).Rooms.TryGetValue((cellX, cellY), out ShipCompartmentState room)
+                ? room : null;
         }
 
         public static bool StepStructureEnvironment(ShipState ship, double pressureKPa, double temperatureCelsius,
@@ -351,7 +404,8 @@ namespace FlatWorld.Spaceflight
                 pattern.HasLine = ShipDamagePattern.TryCreateLine(ship, pressurePatternRandom.NextDouble(),
                     pressurePatternRandom.NextDouble(), out pattern.Line, pressureEligible);
             bool changed = false;
-            foreach (ShipPieceState piece in new List<ShipPieceState>(ship.Pieces))
+            pattern.Pieces.Clear(); pattern.Pieces.AddRange(ship.Pieces);
+            foreach (ShipPieceState piece in pattern.Pieces)
             {
                 if (piece == null || !piece.IsAlive) continue;
                 double pressureDamage = 0d;

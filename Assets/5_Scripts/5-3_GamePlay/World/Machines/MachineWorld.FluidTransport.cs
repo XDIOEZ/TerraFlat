@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,6 +8,14 @@ using UnityEngine.SceneManagement;
 public static partial class MachineWorld
 {
     #region 共享吞吐与原子搬运
+    private static readonly ConditionalWeakTable<FluidInventory, FluidInventoryState> emissionSnapshots = new();
+    private sealed class FluidEdgeReservations
+    {
+        public readonly string Gas, Liquid;
+        public FluidEdgeReservations(FluidNetworkGraph.Edge edge)
+        { string id = edge.Id; Gas = id + ":gas"; Liquid = id + ":liquid"; }
+    }
+    private static readonly ConditionalWeakTable<FluidNetworkGraph.Edge, FluidEdgeReservations> edgeReservations = new();
     private static void TryMoveFluidEdge(FluidNetworkGraph.Edge edge, float seconds)
     {
         if (edge.Target != null && GetFluidDeviceBehavior(edge.Target).ReceivesOnDemand) return;
@@ -56,7 +65,10 @@ public static partial class MachineWorld
     }
 
     private static string FluidEdgeReservationId(FluidNetworkGraph.Edge edge, FluidPhase phase)
-        => edge.Id + (phase == FluidPhase.Gas ? ":gas" : ":liquid");
+    {
+        FluidEdgeReservations ids = edgeReservations.GetValue(edge, value => new FluidEdgeReservations(value));
+        return phase == FluidPhase.Gas ? ids.Gas : ids.Liquid;
+    }
 
     private static bool MoveReservedFluid(FluidNetworkGraph.Edge edge, FluidInventory source, string reservationId, double budget, float seconds,
         CombustionSupportRequest combustion = null)
@@ -156,7 +168,12 @@ public static partial class MachineWorld
         FluidOutputReservation reservation = source.GetReservation(reservationId);
         if (reservation == null) return false;
         FluidDefinition substance = source.Catalog.Find(reservation.FluidId);
-        FluidInventoryState before = source.State.Clone();
+        FluidInventoryState before = null;
+        if (reservation.LiquidMoles > 0m)
+        {
+            before = emissionSnapshots.GetValue(source, _ => new FluidInventoryState());
+            before.CopyFrom(source.State);
+        }
         if (!source.TryTakeReserved(reservationId, maximum, out moved)) return false;
         if (moved.LiquidMoles > 0)
         {
