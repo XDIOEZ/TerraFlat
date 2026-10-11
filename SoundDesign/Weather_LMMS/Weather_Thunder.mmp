@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.2" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="72" masterpitch="0" />
+  <song>
+    <trackcontainer type="song" visible="1" width="600" height="300" x="5" y="5" maximized="0" minimized="0">
+      <track muted="0" type="0" name="Thunder - deep rolling body" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="175" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.707" ftype="0" fcut="190" fwet="1">
+            <elvol pdel="0" att="0.07211102550927978" hold="0" dec="0.9695359714832659" rel="0.4472135954999579" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern len="2638" muted="0" name="Thunder - deep rolling body" steps="16" pos="0" type="1">
+          <note len="700" key="57" vol="88" pos="18" pan="-6" />
+          <note len="570" key="57" vol="44" pos="85" pan="14" />
+          <note len="440" key="57" vol="25" pos="178" pan="-16" />
+          <note len="700" key="57" vol="84" pos="978" pan="0" />
+          <note len="570" key="57" vol="48" pos="1057" pan="4" />
+          <note len="440" key="57" vol="30" pos="1128" pan="-2" />
+          <note len="700" key="57" vol="80" pos="1938" pan="6" />
+          <note len="570" key="57" vol="52" pos="2029" pan="-6" />
+          <note len="440" key="57" vol="35" pos="2078" pan="12" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="Thunder - diffuse crack" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="58" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.707" ftype="0" fcut="1100" fwet="1">
+            <elvol pdel="0" att="0.042426406871192854" hold="0" dec="0.58309518948453" rel="0.33166247903554" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern len="2235" muted="0" name="Thunder - diffuse crack" steps="16" pos="0" type="1">
+          <note len="300" key="57" vol="88" pos="15" pan="12" />
+          <note len="250" key="57" vol="48" pos="45" pan="-22" />
+          <note len="220" key="57" vol="25" pos="92" pan="20" />
+          <note len="300" key="57" vol="84" pos="975" pan="0" />
+          <note len="250" key="57" vol="52" pos="1015" pan="-8" />
+          <note len="220" key="57" vol="33" pos="1052" pan="5" />
+          <note len="300" key="57" vol="80" pos="1935" pan="-12" />
+          <note len="250" key="57" vol="56" pos="1985" pan="6" />
+          <note len="220" key="57" vol="41" pos="2012" pan="-10" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="Thunder - early crack texture" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="28" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.707" ftype="0" fcut="5100" fwet="1">
+            <elvol pdel="0" att="0.02" hold="0" dec="0.17888543819998318" rel="0.1414213562373095" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern len="1997" muted="0" name="Thunder - early crack texture" steps="16" pos="0" type="1">
+          <note len="40" key="57" vol="84" pos="14" pan="8" />
+          <note len="32" key="57" vol="48" pos="18" pan="-12" />
+          <note len="36" key="57" vol="34" pos="31" pan="15" />
+          <note len="40" key="57" vol="74" pos="974" pan="0" />
+          <note len="32" key="57" vol="51" pos="980" pan="0" />
+          <note len="36" key="57" vol="40" pos="996" pan="5" />
+          <note len="40" key="57" vol="64" pos="1934" pan="-8" />
+          <note len="32" key="57" vol="54" pos="1942" pan="12" />
+          <note len="36" key="57" vol="46" pos="1961" pan="-5" />
+        </pattern>
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

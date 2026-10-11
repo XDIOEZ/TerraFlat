@@ -31,6 +31,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 静态 precipitation 是长期风携水汽降水，影响径流/生态；输送 humidity、固定 airHumidity、动态空气湿度与地表 moisture 分开。
 - `TryGetGeographicAirHumidity` 读固定层；`TryGetAirHumiditySupply` 从恢复后的真实 Liquid/深度/距离得 B，背景仅 airHumidity.background；`TryGetAirHumidity` 返回 clamp(B-D)。缺邻区返回不可用，不生成地形，缓存只依 Terrain/LiquidRevision/Epoch。
 - 雾读当地冷湿弱风；雷电为带序号单次事件，首次/读档只建基线，频率受最短间隔约束。`DenseFogRendererFeature` 在本地主相机最终画面合成 owned 玩家遮罩，半径是世界格距离，进房恢复、退出/抑制天气维度清除。
+- `WeatherMgr.Audio` 通过 AudioService 播放当地雨/风循环并平滑更新句柄音量；雨声读实时雨雪分流，雷声只订阅新 LightningOccurred，按环绕最短距离衰减和传播延迟，首次推进不补播，退出/抑制天气维度清空待播和句柄。
 - 雨雪积分经 SamplePrecipitationExposureAt，与可见天气同平滑权重；筛实际降水/待融雪格后 TrySampleAmbientChunk 同批冻结温度，不跨帧借数组。邻区雨雪参与边界，即使本区晴天。
 
 ## 地理温度、热源与生存

@@ -219,6 +219,13 @@ namespace FlatWorld.Audio
         public const string FoodCrunch = "food.crunch";
         public const string FoodDrink = "food.drink";
         public const string PlayerWetClothesMoveLoop = "player.wet_clothes.move.loop";
+
+        #region 天气音效
+
         public const string WeatherRainLoop = "weather.rain.loop";
+        public const string WeatherWindLoop = "weather.wind.loop";
+        public const string WeatherThunder = "weather.thunder";
+
+        #endregion
     }
 }

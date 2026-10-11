@@ -147,6 +147,7 @@ namespace FlatWorld.Audio.Editor
         {
             bool isUi = eventId.StartsWith("ui.", StringComparison.OrdinalIgnoreCase);
             bool isWeatherAmbient = eventId.StartsWith("weather.", StringComparison.OrdinalIgnoreCase);
+            bool isThunder = string.Equals(eventId, AudioEventIds.WeatherThunder, StringComparison.OrdinalIgnoreCase);
             bool isLooping = eventId.EndsWith(".loop", StringComparison.OrdinalIgnoreCase);
             bool isWorldSfx = eventId.StartsWith("door.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("item.", StringComparison.OrdinalIgnoreCase) ||
@@ -159,8 +160,9 @@ namespace FlatWorld.Audio.Editor
             cueObject.FindProperty("minDistance").floatValue = isWorldSfx ? 1.5f : 1f;
             cueObject.FindProperty("maxDistance").floatValue = isWorldSfx ? 14f : 20f;
             cueObject.FindProperty("priority").intValue = isUi ? 48 : isWeatherAmbient ? 96 : 128;
-            cueObject.FindProperty("cooldown").floatValue = isLooping ? 0f : isUi ? 0.025f : 0.04f;
-            cueObject.FindProperty("maxInstances").intValue = isWeatherAmbient ? 1 : isUi ? 3 : 5;
+            cueObject.FindProperty("cooldown").floatValue = isLooping ? 0f : isThunder ? 0.1f : isUi ? 0.025f : 0.04f;
+            // 雷声允许少量尾音重叠，雨风仍只保留一条循环。
+            cueObject.FindProperty("maxInstances").intValue = isThunder ? 3 : isWeatherAmbient ? 1 : isUi ? 3 : 5;
             cueObject.FindProperty("loop").boolValue = isLooping;
         }
 

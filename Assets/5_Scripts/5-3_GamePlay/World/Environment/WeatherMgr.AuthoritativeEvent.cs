@@ -1,5 +1,4 @@
 using System;
-using FlatWorld.Audio;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -44,7 +43,6 @@ public partial class WeatherMgr
     public static event Action<WeatherStateSnapshot> AuthoritativeWeatherStateChanged;
 
     private DayTimeSystem _subscribedTimeSystem;
-    private AudioHandle _rainAudioHandle;
     private WeatherType _lastFeedbackWeather = (WeatherType)(-1);
     private WeatherPhase _lastFeedbackPhase = (WeatherPhase)(-1);
     private float _lastFeedbackIntensity = -1f;
@@ -83,6 +81,7 @@ public partial class WeatherMgr
     private void ActivateWeatherEventSystem()
     {
         SubscribeTimeSystem();
+        ActivateWeatherAudio();
         PlanetData planetData = GetActivePlanetData();
         if (planetData == null)
             return;
@@ -99,6 +98,7 @@ public partial class WeatherMgr
         AdvanceRegionalWeather();
         UpdateLocalWeatherProjection();
         RefreshWeatherFeedbackIfChanged();
+        MaintainWeatherAudio();
     }
 
     private void ShutdownWeatherEventSystem()
@@ -287,33 +287,11 @@ public partial class WeatherMgr
     private void RefreshWeatherFeedback()
     {
         RefreshRainEffect();
-        RefreshRainAudio();
         RefreshWindFeedback();
         _lastFeedbackWeather = GetCurrentWeather();
         _lastFeedbackPhase = GetCurrentWeatherPhase();
         _lastFeedbackIntensity = GetCurrentWeatherIntensity();
         _lastFeedbackWindStrength = GetCurrentWindStrength();
-    }
-
-    private void RefreshRainAudio()
-    {
-        if (!IsRaining())
-        {
-            if (_rainAudioHandle.IsPlaying)
-                _rainAudioHandle.Stop(0.8f);
-            _rainAudioHandle = AudioHandle.Invalid;
-            return;
-        }
-
-        if (_rainAudioHandle.IsPlaying)
-            return;
-
-        float rainIntensity = GetLocalRainIntensity();
-        AudioPlayOptions options = AudioPlayOptions.Global(Mathf.Lerp(0.45f, 0.8f, rainIntensity));
-        options.FadeIn = 0.8f;
-        options.OverrideLoop = true;
-        options.Loop = true;
-        _rainAudioHandle = AudioService.Instance.Play(AudioEventIds.WeatherRainLoop, options);
     }
 
     private void DeactivateWeatherFeedback()
@@ -327,9 +305,7 @@ public partial class WeatherMgr
 
         SetRainGroundSplashActive(false, 0f);
 
-        if (_rainAudioHandle.IsPlaying)
-            _rainAudioHandle.Stop(0.5f);
-        _rainAudioHandle = AudioHandle.Invalid;
+        DeactivateWeatherAudio();
         _lastFeedbackWeather = (WeatherType)(-1);
         _lastFeedbackPhase = (WeatherPhase)(-1);
         _lastFeedbackIntensity = -1f;

@@ -95,6 +95,7 @@ namespace FlatWorld.Audio
             public int Id;
             public float StartedAt;
             public float BaseGain;
+            public float VolumeScale;
             public float Fade;
             public float FadeSpeed;
             public bool Stopping;
@@ -402,7 +403,8 @@ namespace FlatWorld.Audio
             voice.WorldPosition = worldPosition;
             voice.IsSpatial = isSpatial;
             voice.StartedAt = now;
-            voice.BaseGain = Mathf.Max(0f, cue.Volume.Sample() * options.VolumeScale);
+            voice.BaseGain = Mathf.Max(0f, cue.Volume.Sample());
+            voice.VolumeScale = options.VolumeScale;
             voice.Fade = options.FadeIn > 0f ? 0f : 1f;
             voice.FadeSpeed = options.FadeIn > 0f ? 1f / options.FadeIn : 0f;
             voice.Stopping = false;
@@ -445,6 +447,21 @@ namespace FlatWorld.Audio
             voice.Stopping = true;
             voice.FadeSpeed = 1f / fadeOut;
         }
+
+        #region 运行时句柄音量
+
+        // 只调整本次播放的倍率，保留 Cue 随机增益、淡入淡出和用户音量。
+        public void SetVolumeScale(AudioHandle handle, float volumeScale)
+        {
+            Voice voice = FindVoice(handle);
+            if (voice == null || voice.Stopping || !float.IsFinite(volumeScale))
+                return;
+
+            voice.VolumeScale = Mathf.Max(0f, volumeScale);
+            ApplyVolume(voice);
+        }
+
+        #endregion
 
         public void StopAll(float fadeOut = 0f)
         {
@@ -613,6 +630,7 @@ namespace FlatWorld.Audio
             voice.Cue = null;
             voice.Id = 0;
             voice.Fade = 1f;
+            voice.VolumeScale = 1f;
             voice.FadeSpeed = 0f;
             voice.Stopping = false;
             voice.GameObject.transform.SetParent(transform, false);
@@ -640,7 +658,7 @@ namespace FlatWorld.Audio
             float settingsGain = userSettings.Muted
                 ? 0f
                 : userSettings.Master * userSettings.GetBusVolume(voice.Cue.Bus);
-            voice.Source.volume = Mathf.Clamp01(voice.BaseGain * voice.Fade * settingsGain);
+            voice.Source.volume = Mathf.Clamp01(voice.BaseGain * voice.VolumeScale * voice.Fade * settingsGain);
         }
 
         private void LoadUserSettings()

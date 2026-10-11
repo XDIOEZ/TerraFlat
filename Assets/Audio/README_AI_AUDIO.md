@@ -28,8 +28,16 @@ ambient.forest.day__01.wav
 - `ui.*` → UI
 - `music.*` → Music
 - `ambient.*` → Ambient
+- `weather.*` → Ambient
 - `voice.*` → Voice
 - 其他 → Sfx
+
+## 天气音效
+
+- 雨声 `weather.rain.loop` 已替换为 LMMS MCP 合成的 31.7 秒立体声循环，保留原 WAV 与 Cue 的 GUID。
+- 风声 `weather.wind.loop` 为 43.7 秒阵风循环；雷声 `weather.thunder` 包含三条 8.5 秒变体。
+- 雨风由本地天气强度控制音量；雷声消费已发布的单次雷电事件，按环绕距离衰减和延迟。均走 Ambient 音量设置，退出或抑制天气的维度会停止。
+- 原始可编辑工程、制作说明与母带裁切脚本在 `SoundDesign/Weather_LMMS/`。雨声不再属于 `Generate Default AI SFX` 的生成条目，避免覆盖新素材。
 
 ## 业务调用
 

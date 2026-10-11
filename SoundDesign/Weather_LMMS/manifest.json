@@ -1,0 +1,65 @@
+{
+  "engine": "LMMS 1.2.2 via MCP",
+  "sounds": [
+    {
+      "file": "Assets/Audio/Generated/weather.rain.loop__01.wav",
+      "project": "Weather_Rain.mmp",
+      "seconds": 31.7,
+      "sampleRate": 48000,
+      "channels": 2,
+      "loop": true,
+      "peakDb": -3.0,
+      "rmsDb": -15.8,
+      "seamStep": 0.14207352203973228,
+      "rawPeak": 0.265045166015625
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.wind.loop__01.wav",
+      "project": "Weather_Wind.mmp",
+      "seconds": 43.7,
+      "sampleRate": 48000,
+      "channels": 2,
+      "loop": true,
+      "peakDb": -5.0,
+      "rmsDb": -19.88,
+      "seamStep": 0.05908917080449043,
+      "rawPeak": 0.27374267578125
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.thunder__01.wav",
+      "project": "Weather_Thunder.mmp",
+      "seconds": 8.5,
+      "sampleRate": 48000,
+      "channels": 2,
+      "loop": false,
+      "peakDb": -2.0,
+      "rmsDb": -22.69,
+      "seamStep": null,
+      "rawPeak": 0.189361572265625
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.thunder__02.wav",
+      "project": "Weather_Thunder.mmp",
+      "seconds": 8.5,
+      "sampleRate": 48000,
+      "channels": 2,
+      "loop": false,
+      "peakDb": -2.0,
+      "rmsDb": -21.91,
+      "seamStep": null,
+      "rawPeak": 0.189361572265625
+    },
+    {
+      "file": "Assets/Audio/Generated/weather.thunder__03.wav",
+      "project": "Weather_Thunder.mmp",
+      "seconds": 8.5,
+      "sampleRate": 48000,
+      "channels": 2,
+      "loop": false,
+      "peakDb": -2.0,
+      "rmsDb": -21.61,
+      "seamStep": null,
+      "rawPeak": 0.189361572265625
+    }
+  ]
+}

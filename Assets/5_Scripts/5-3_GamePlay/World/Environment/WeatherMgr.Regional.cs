@@ -145,6 +145,7 @@ public partial class WeatherMgr
         regionalPlanet = planet;
         regionalDomain = domain;
         regionalEngine = new RegionalWeatherEngine(regionalSettings, GetDeterministicSeed(), domain);
+        ResetWeatherAudioBaseline();
         regionalSaveIndices.Clear();
         lightningSeen.Clear();
         surfaceChunksLastStep.Clear();
@@ -246,6 +247,7 @@ public partial class WeatherMgr
         surfaceChunksLastStep.Clear();
         foreach (var pair in surfaceChunksThisStep) surfaceChunksLastStep[pair.Key] = pair.Value;
         lastRegionalAdvance = now;
+        CompleteWeatherAudioBaseline();
         PersistRegionalStates();
         UpdateLocalWeatherProjection();
     }
@@ -319,6 +321,7 @@ public partial class WeatherMgr
         RegionalWeatherSnapshot sample = state.ToSnapshot();
         regionalEngine.ApplyReplicatedSnapshot(sample);
         ObserveLightning(sample, initialState);
+        CompleteWeatherAudioBaseline();
         UpdateLocalWeatherProjection();
         RefreshWeatherFeedback();
     }
