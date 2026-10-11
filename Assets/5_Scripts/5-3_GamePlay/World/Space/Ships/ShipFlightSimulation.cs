@@ -76,7 +76,8 @@ namespace FlatWorld.Spaceflight
             bool touched = Universe.StepMotion(motion, default, seconds, out SurfaceContact contact);
             assembly.PositionX = motion.PositionMeters.X; assembly.PositionY = motion.PositionMeters.Y;
             assembly.VelocityX = motion.VelocityMetersPerSecond.X; assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
-            assembly.AngularVelocityRadiansPerSecond = turn * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
+            // Q/E 直接指定本步角速度，松键停转、反向立即换向，不累加角加速度。
+            assembly.AngularVelocityRadiansPerSecond = Math.Clamp(turn, -1d, 1d) * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
             assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * seconds;
             ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
             foreach (string id in assembly.MemberShipIds)

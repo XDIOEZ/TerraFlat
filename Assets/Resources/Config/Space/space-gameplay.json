@@ -10,7 +10,7 @@
   "CruiseMaxSpeedMetersPerSecond": 120.0,
   "CruiseAccelerationMetersPerSecondSquared": 60.0,
   "CruiseBrakingMetersPerSecondSquared": 100.0,
-  "CruiseTurnDegreesPerSecond": 150.0,
+  "CruiseTurnDegreesPerSecond": 45.0,
   "NavigationArrivalDistanceMeters": 1.0,
   "NavigationArrivalSpeedMetersPerSecond": 0.25,
   "NavigationSurfaceClearanceMeters": 12.0,

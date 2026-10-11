@@ -19,7 +19,7 @@ namespace FlatWorld.Spaceflight
         public double CruiseMaxSpeedMetersPerSecond = 120d;
         public double CruiseAccelerationMetersPerSecondSquared = 60d;
         public double CruiseBrakingMetersPerSecondSquared = 100d;
-        public double CruiseTurnDegreesPerSecond = 150d;
+        public double CruiseTurnDegreesPerSecond = 45d; // 飞船驾驶与导航共用的直接旋转速度上限。
         public double NavigationArrivalDistanceMeters = 1d;
         public double NavigationArrivalSpeedMetersPerSecond = .25d;
         public double NavigationSurfaceClearanceMeters = 12d;
@@ -48,7 +48,8 @@ namespace FlatWorld.Spaceflight
                     current.MinimumLaunchHeightMeters <= 0d || current.LaunchHeightRadiusFraction < 0d ||
                     current.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
                     current.CruiseMaxSpeedMetersPerSecond <= 0d || current.CruiseAccelerationMetersPerSecondSquared <= 0d ||
-                    current.CruiseBrakingMetersPerSecondSquared <= 0d || current.CruiseTurnDegreesPerSecond <= 0d ||
+                    current.CruiseBrakingMetersPerSecondSquared <= 0d ||
+                    !SpaceVector2.Finite(current.CruiseTurnDegreesPerSecond) || current.CruiseTurnDegreesPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.NavigationArrivalDistanceMeters) || current.NavigationArrivalDistanceMeters <= 0d ||
                     !SpaceVector2.Finite(current.NavigationArrivalSpeedMetersPerSecond) || current.NavigationArrivalSpeedMetersPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.NavigationSurfaceClearanceMeters) || current.NavigationSurfaceClearanceMeters < current.NavigationArrivalDistanceMeters ||
