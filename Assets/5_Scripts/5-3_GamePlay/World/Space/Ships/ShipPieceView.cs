@@ -3,13 +3,14 @@ using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
-    public sealed partial class ShipPieceView : MonoBehaviour, IWorldInteractionTarget, IWorldInteractionPreview
+    public sealed partial class ShipPieceView : MonoBehaviour, IWorldInteractionTarget, IWorldInteractionPreview, ISpatialInteractionShape
     {
         #region 船体表现与正式交互
         public Item Item { get; private set; }
         private SpaceSession session;
         private string shipId, pieceId;
         private MachineInteractionTarget machineTarget;
+        private MachineDefinition machineDefinition;
         private SpriteRenderer visual;
         private Rigidbody2D body;
         private Vector3 baseVisualPosition;
@@ -31,12 +32,13 @@ namespace FlatWorld.Spaceflight
         public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
         public bool IsInteractionHighlighted { get; private set; }
         public event Action<bool> InteractionHighlightChanged;
-        // 导航设备和信息、电力线路只提供能力，不能抢走控制台的交互入口。
+        // 普通设备装到船上仍按实际线路能力过滤，不能只依赖船体部件分类。
         private bool HasInteractionAction => boundPiece != null &&
             boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall or ShipPieceKind.Navigation or
                 ShipPieceKind.Wire or ShipPieceKind.Fiber) &&
             ((boundPiece.Kind is ShipPieceKind.Console or ShipPieceKind.DockingPort or
-                ShipPieceKind.Engine or ShipPieceKind.Door) || machineTarget != null);
+                ShipPieceKind.Engine or ShipPieceKind.Door) ||
+                (machineTarget != null && machineDefinition?.IsConnectionLine == false));
         public bool CanInteract(Item actor)
         {
             if (actor == null || !HasInteractionAction || !IsValid) return false;
@@ -47,6 +49,7 @@ namespace FlatWorld.Spaceflight
         }
         // 船上设备和舱门统一由交互键操作，鼠标左键不打开面板。
         public bool CanPointerInteract(Item actor) => false;
+        public bool ContainsInteractionPoint(Vector2 point) => hitBox != null && hitBox.OverlapPoint(point);
         public void SetInteractionHighlighted(bool highlighted)
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);
@@ -78,8 +81,9 @@ namespace FlatWorld.Spaceflight
                 baseVisualPosition.x = hitBox.offset.x; baseVisualPosition.y = hitBox.offset.y;
             }
             machineTarget = null;
+            machineDefinition = MachineCatalog.Get(piece.ItemId);
             pendingMachineBinding = false;
-            if (MachineCatalog.Get(piece.ItemId) != null)
+            if (machineDefinition != null)
                 using (MachineWorld.UseScope("ship:" + shipId))
                 {
                     MachineEntity node = MachineWorld.GetById(TargetGuid);
@@ -194,10 +198,26 @@ namespace FlatWorld.Spaceflight
             { ShipPanelSession.Open(session, player, shipId, pieceId); return; }
             if (piece.Kind == ShipPieceKind.Door)
             { session.TryToggleDoor(pieceId); return; }
-            if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractStart(actor);
+            using (MachineWorld.UseScope("ship:" + shipId))
+            {
+                // 休眠会释放旧交互对象，实际操作时从本船节点重新取得当前对象。
+                MachineEntity node = MachineWorld.GetById(TargetGuid);
+                machineTarget = MachineWorld.GetOrCreateInteractionTarget(node);
+                machineTarget?.OnInteractStart(actor);
+            }
         }
-        public void OnInteractUpdate(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractUpdate(actor); }
-        public void OnInteractEnd(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractEnd(actor); }
+        public void OnInteractUpdate(Item actor)
+        {
+            if (machineTarget == null) return;
+            using (MachineWorld.UseScope("ship:" + shipId))
+                if (machineTarget.IsValid) machineTarget.OnInteractUpdate(actor);
+        }
+        public void OnInteractEnd(Item actor)
+        {
+            if (machineTarget == null) return;
+            using (MachineWorld.UseScope("ship:" + shipId))
+                if (machineTarget.IsValid) machineTarget.OnInteractEnd(actor);
+        }
         public void OnInteractCancel(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractCancel(actor); }
         private void OnDestroy()
         {

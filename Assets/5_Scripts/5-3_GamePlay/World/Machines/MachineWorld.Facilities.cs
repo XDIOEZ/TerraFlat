@@ -176,13 +176,15 @@ public static partial class MachineWorld
                 if (IsFluidActive(entity)) AdvanceFacilityLogic(entity, seconds);
                 continue;
             }
-            bool active = false;
+            // 船内格不对应地表场景，设施与船上机械网一样持续模拟。
+            bool active = IsShipScope;
             int range = entity.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
-            foreach (Vector2Int player in players)
-            {
-                if (!IsFacilityNear(entity, player, range)) continue;
-                active = true; break;
-            }
+            if (!active)
+                foreach (Vector2Int player in players)
+                {
+                    if (!IsFacilityNear(entity, player, range)) continue;
+                    active = true; break;
+                }
             if (active) entity.AwaySeconds = 0f;
             else if (entity.Active)
             {
