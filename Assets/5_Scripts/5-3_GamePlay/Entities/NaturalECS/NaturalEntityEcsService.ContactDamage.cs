@@ -70,7 +70,7 @@ namespace FlatWorld.NaturalEntities
                 Vector3 localPosition = WorldLocalPresentation.ProjectPosition(new Vector3(body.Position.x, body.Position.y));
                 root.SetColumn(3, new Vector4(localPosition.x, localPosition.y, localPosition.z, 1f));
                 record.ContactDamage.Tick(record.Profile.ContactDamage, root, identity,
-                    worldKey, record.Snapshot.FactionId);
+                    worldKey, record.Snapshot.FactionId, sourceItemId: record.Snapshot.IDName);
             }
             contactDamageBatch.Clear();
         }

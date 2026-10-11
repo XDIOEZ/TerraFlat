@@ -78,6 +78,8 @@ namespace FlatWorld.Combat
         public CombatDeliveryCapabilities DeliveryCapabilities;
         public CombatAttackKey Attack; // 去重与攻击者身份。
         public CombatIdentity Credit; // 击杀归因；武器可以与 Attack.Source 不同。
+        public FixedString64Bytes DeathCauseId; // 环境和特殊来源显式声明死因，空值由投送能力解释。
+        public FixedString128Bytes SourceItemId, CreditItemId, WeaponItemId; // 冻结来源定义，避免死亡后读取已换掉的武器。
         public FixedString128Bytes Faction; // 来源阵营的稳定 ID。
         public float4 Damage; // 合计为物理攻击力，分槽仅保留旧表现标签。
         public float2 Origin, HitPoint; // 来源与最终命中位置。

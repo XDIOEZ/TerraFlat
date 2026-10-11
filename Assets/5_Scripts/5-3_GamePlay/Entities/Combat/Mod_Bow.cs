@@ -337,7 +337,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             return;
         }
 
-        projectile.Launch(shooter, direction, charge01, sourceDamageMultiplier, sourceSpeedMultiplier);
+        projectile.Launch(shooter, direction, charge01, sourceDamageMultiplier, sourceSpeedMultiplier, item);
         if (UseHeldItemAsAmmo)
         {
             hotbar?.RefreshUI(ammoSlot.Index);

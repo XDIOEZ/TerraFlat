@@ -9,6 +9,7 @@ public sealed class BuffDefinition
 {
     public string Id { get; internal set; }
     public string DisplayName { get; internal set; }
+    public string DeathCauseId { get; internal set; }
     public BuffCategory Category { get; internal set; } = BuffCategory.General;
     public string Description { get; internal set; }
     public float? DurationSeconds { get; internal set; }

@@ -1353,14 +1353,21 @@ public static class GameUIPrefabRebuilder
         SetTopCenter(eyebrow.rectTransform, 42f, 680f, 28f);
         eyebrow.characterSpacing = 4f;
 
-        TextMeshProUGUI title = CreateText("FWUI_Death标题", card.transform, "旅程暂告一段落", 48f, Cream, FontStyles.Bold, TextAlignmentOptions.Center);
-        SetTopCenter(title.rectTransform, 94f, 720f, 72f);
+        TextMeshProUGUI title = CreateText("FWUI_Death标题", card.transform, "你变成了一具尸体。", 44f, Cream, FontStyles.Bold, TextAlignmentOptions.Center);
+        SetTopCenter(title.rectTransform, 82f, 720f, 150f);
+        // 来源链较长时允许多行并缩小字号，给下方操作保留固定空间。
+        title.enableAutoSizing = true;
+        title.fontSizeMin = 26f;
+        title.fontSizeMax = 44f;
+        title.enableWordWrapping = true;
+        title.richText = false;
 
-        TextMeshProUGUI copy = CreateText("FWUI_DeathCopy", card.transform, "带着这次留下的经验，再次回到这片世界。", 19f, Muted, FontStyles.Normal, TextAlignmentOptions.Center);
-        SetTopCenter(copy.rectTransform, 174f, 720f, 38f);
+        TextMeshProUGUI copy = CreateText("FWUI_DeathCopy", card.transform, "带着经验，重新出发。", 19f, Muted, FontStyles.Normal, TextAlignmentOptions.Center);
+        SetTopCenter(copy.rectTransform, 242f, 720f, 30f);
+        copy.richText = false;
 
         Image accent = CreateImage("FWUI_DeathAccent", card.transform, Amber);
-        SetTopCenter(accent.rectTransform, 232f, 92f, 4f);
+        SetTopCenter(accent.rectTransform, 286f, 92f, 4f);
 
         PlaceBottomButton(root.transform, "重生", -118f, 118f, 230f, 62f, "重新醒来");
         PlaceBottomButton(root.transform, "回到主菜单", 132f, 118f, 230f, 62f, "结束本次旅程");

@@ -164,6 +164,9 @@ public class WorldLiquidBehaviour
         if (!buffManager.TryGetBuff(BurningBuffIds.Burning, out BuffInstance burning))
             return;
 
+        // 岩浆接管真实火源，不能继续把此前武器留下的燃烧归给旧攻击者。
+        burning.DamageOrigin = new DeathCauseRecord { CauseId = "lava", UseCauseForEffect = true };
+
         if (forceFullDuration || burning.RemainingDurationSeconds <= LavaBurningRefreshThresholdSeconds)
             buffManager.TrySetBuffDuration(BurningBuffIds.Burning, LavaBurningDurationSeconds);
     }

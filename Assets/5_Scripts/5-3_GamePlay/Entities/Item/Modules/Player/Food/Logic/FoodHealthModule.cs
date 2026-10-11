@@ -77,7 +77,7 @@ public sealed class FoodHealthModule : IFoodMechanic, IFoodTickObserver, IFoodTi
             hungerDamageTickTimer += safeDelta;
             while (hungerDamageTickTimer >= 1f)
             {
-                damageReceiver.ForceHurt(state.ProteinSelfHurt);
+                damageReceiver.ForceHurt(state.ProteinSelfHurt, "starvation");
                 hungerDamageTickTimer -= 1f;
             }
         }
@@ -97,7 +97,7 @@ public sealed class FoodHealthModule : IFoodMechanic, IFoodTickObserver, IFoodTi
             waterDamageTickTimer += safeDelta;
             while (waterDamageTickTimer >= WaterDamageTickInterval)
             {
-                damageReceiver.ForceHurt(state.WaterSelfHurt);
+                damageReceiver.ForceHurt(state.WaterSelfHurt, "dehydration");
                 waterDamageTickTimer -= WaterDamageTickInterval;
             }
         }
@@ -107,7 +107,7 @@ public sealed class FoodHealthModule : IFoodMechanic, IFoodTickObserver, IFoodTi
         }
 
         if (currentNutrition.Vitamins <= 0f)
-            damageReceiver.ForceHurt(state.VitaminSelfHurt * safeDelta);
+            damageReceiver.ForceHurt(state.VitaminSelfHurt * safeDelta, "malnutrition");
     }
 
     private void ApplyProteinHealthRecovery(float timeDelta)

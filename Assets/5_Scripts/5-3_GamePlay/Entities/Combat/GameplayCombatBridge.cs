@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Geometry;
 using Unity.Mathematics;
+using Unity.Collections;
 using UnityEngine;
 
 /// <summary>少量后端 Bridge 的契约；只有实际武器 Pulse 查询外部后端，不为每只 AI 注册事件。</summary>
@@ -105,7 +106,14 @@ public static class GameplayCombatBridge
     public static CombatDamageContext Context(IDamageSender sender, CombatClock clock)
     {
         Item item = sender.attacker; var slow = sender as IHitSlowdownSource;
-        var context = new CombatDamageContext { Attack = new CombatAttackKey { Source = Identity(item) }, Credit = Identity(item?.Owner ?? item),
+        Item credit = item;
+        for (int depth = 0; credit?.Owner != null && credit.Owner != credit && depth < 8; depth++)
+            credit = credit.Owner;
+        var context = new CombatDamageContext { Attack = new CombatAttackKey { Source = Identity(item) }, Credit = Identity(credit),
+            SourceItemId = NarrativeItemId(item?.itemData?.IDName),
+            CreditItemId = NarrativeItemId(credit?.itemData?.IDName),
+            WeaponItemId = NarrativeItemId(item != credit ? item?.itemData?.IDName : null),
+            DeathCauseId = sender is IDeathCauseSource reason ? NarrativeCauseId(reason.DeathCauseId) : default,
             Faction = FactionRelationService.GetFactionId(item), Damage = Values(sender.DamageValues), Clock = clock,
             Origin = sender is Mod_Damage weapon ? (float2)weapon.DamageOrigin : item != null ? (float2)(Vector2)item.transform.position : float2.zero,
             SourceIsPlayer = (byte)(GameDifficultyService.IsPlayer(item) ? 1 : 0),
@@ -120,6 +128,19 @@ public static class GameplayCombatBridge
             context.ResourceToolEfficiency = resourceTool.HarvestEfficiency;
         }
         return context;
+    }
+
+    /// <summary>叙事字段超容量时留空，不能阻断正式伤害或把截断 ID 当成另一物品。</summary>
+    public static Unity.Collections.FixedString128Bytes NarrativeItemId(string value)
+    {
+        var result = new Unity.Collections.FixedString128Bytes();
+        return result.CopyFrom(value ?? string.Empty) == Unity.Collections.CopyError.None ? result : default;
+    }
+
+    public static Unity.Collections.FixedString64Bytes NarrativeCauseId(string value)
+    {
+        var result = new Unity.Collections.FixedString64Bytes();
+        return result.CopyFrom(value ?? string.Empty) == Unity.Collections.CopyError.None ? result : default;
     }
 
     /// <summary>一次实际攻击 Pulse 分发给少量注册后端；不因 Collider 每帧启用而反复扫描。</summary>

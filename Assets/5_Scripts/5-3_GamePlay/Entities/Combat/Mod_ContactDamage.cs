@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
+using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -98,7 +99,7 @@ internal sealed class ContactDamageRuntime
     public ContactDamageRuntime(Func<bool> isSourceActive) => this.isSourceActive = isSourceActive;
 
     public void Tick(ContactDamageSettings settings, Matrix4x4 root, CombatIdentity source,
-        string worldKey, string faction, Item sourceItem = null)
+        string worldKey, string faction, Item sourceItem = null, string sourceItemId = null)
     {
         if (!GameNetwork.HasStateAuthority || !source.IsValid || string.IsNullOrEmpty(worldKey) ||
             !isSourceActive()) return;
@@ -117,6 +118,10 @@ internal sealed class ContactDamageRuntime
         Physics2D.OverlapBox(center, size, root.rotation.eulerAngles.z, filter, overlaps);
         uint currentPulse = ++pulse;
         bool hasSourceItem = !ReferenceEquals(sourceItem, null);
+        FixedString128Bytes causeItemId = default;
+        // 接触来源保留真实定义 ID，元数据超容量时留空以免阻断伤害或伪造截断 ID。
+        if (causeItemId.CopyFrom(sourceItemId ?? sourceItem?.itemData?.IDName ?? string.Empty) != CopyError.None)
+            causeItemId = default;
         foreach (Collider2D collider in overlaps)
         {
             if (!isSourceActive() || (hasSourceItem && (sourceItem == null ||
@@ -143,6 +148,8 @@ internal sealed class ContactDamageRuntime
             {
                 Attack = new CombatAttackKey { Source = attackSource, Sequence = currentPulse, Window = 1, Pulse = 1 },
                 Credit = attackSource,
+                SourceItemId = causeItemId,
+                CreditItemId = causeItemId,
                 Faction = faction ?? string.Empty,
                 Damage = GameplayCombatBridge.Values(settings.DamageValues),
                 Origin = center,

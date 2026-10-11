@@ -101,17 +101,17 @@ public sealed partial class Mod_Pressure : Module, IItemModuleDependencyBinder, 
         if (Danger == 0) { lowDamageClock = highDamageClock = 0f; Changed?.Invoke(); return; }
         float exposure = Mathf.Max(0f, deltaTime - before);
         if (exposure <= 0f) return;
-        if (Danger < 0) ApplyDamageClock(ref lowDamageClock, exposure, LowPressureDamage);
-        else ApplyDamageClock(ref highDamageClock, exposure, HighPressureDamage);
+        if (Danger < 0) ApplyDamageClock(ref lowDamageClock, exposure, LowPressureDamage, "pressure_low");
+        else ApplyDamageClock(ref highDamageClock, exposure, HighPressureDamage, "pressure_high");
         Changed?.Invoke();
     }
-    private void ApplyDamageClock(ref float clock, float seconds, float damage)
+    private void ApplyDamageClock(ref float clock, float seconds, float damage, string causeId)
     {
         clock += seconds;
         while (clock >= DamageIntervalSeconds && health != null && health.Hp > 0f)
         {
             clock -= DamageIntervalSeconds;
-            health.ForceHurt(damage);
+            health.ForceHurt(damage, causeId);
         }
     }
     public void ValidateJsonParameters(JObject parameters)

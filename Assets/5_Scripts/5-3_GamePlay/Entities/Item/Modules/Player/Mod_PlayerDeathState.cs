@@ -127,6 +127,7 @@ public partial class Mod_PlayerDeathState : Module
 
         _damageReceiver.OnDead -= OnPlayerDead;
         _damageReceiver.OnDead += OnPlayerDead;
+        SubscribeDeathMessageLocalization();
 
         // 模块 Load 顺序不保证生命数据先就绪，等全部玩家模块加载完成后再恢复状态。
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
@@ -143,6 +144,7 @@ public partial class Mod_PlayerDeathState : Module
 
     protected override void OnUnload()
     {
+        UnsubscribeDeathMessageLocalization();
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
         GameManager.Event_LocalPlayerRuntimeReloaded -= RestoreDyingStateOnWorldEnter;
         if (_damageReceiver != null)
@@ -191,7 +193,7 @@ public partial class Mod_PlayerDeathState : Module
                 ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
             }
 
-            _damageReceiver.ResolveNetworkAuthoritativeDeath();
+            _damageReceiver.ResolveNetworkAuthoritativeDeath("suicide");
         }
         finally
         {
@@ -684,6 +686,7 @@ public partial class Mod_PlayerDeathState : Module
         }
 
         _dyingPanel.Open();
+        RefreshDeathMessage();
     }
 
     private void EnsureDyingPanelPrefab()

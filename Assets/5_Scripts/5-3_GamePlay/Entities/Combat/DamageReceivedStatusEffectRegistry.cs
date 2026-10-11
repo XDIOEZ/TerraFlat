@@ -104,7 +104,7 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
         if (buffManager == null)
             return;
 
-        buffManager.ApplyBleedingTier(tier);
+        buffManager.ApplyBleedingTier(tier, DeathCauseRecord.FromDamage(damageInfo.DamageSender, damageInfo.Context));
     }
 
     /// <summary>仅声明 Blood 标签的实体属于可出血目标；物种分类与是否有血保持解耦。</summary>

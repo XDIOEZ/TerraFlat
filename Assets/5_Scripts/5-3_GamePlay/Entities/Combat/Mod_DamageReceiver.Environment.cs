@@ -14,10 +14,10 @@ public partial class Mod_DamageReceiver
         return ResolveDamage(damage, null, 0f);
     }
     public float HurtPressureExplosion(ulong eventId, Vector2 logicalOrigin, float physicalDamage)
-        => HurtEnvironmentalDamage(eventId, logicalOrigin, physicalDamage);
+        => HurtEnvironmentalDamage(eventId, logicalOrigin, physicalDamage, "explosion");
 
     /// <summary>中立环境命中保留防御、部位生命和死亡链，不占用普通攻击冷却。</summary>
-    public float HurtEnvironmentalDamage(ulong eventId, Vector2 logicalOrigin, float physicalDamage)
+    public float HurtEnvironmentalDamage(ulong eventId, Vector2 logicalOrigin, float physicalDamage, string deathCauseId = "unknown")
     {
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null) return 0f;
         if (eventId == 0) throw new ArgumentOutOfRangeException(nameof(eventId));
@@ -29,6 +29,7 @@ public partial class Mod_DamageReceiver
         {
             Attack = new CombatAttackKey { Source = source, Sequence = (uint)eventId, Pulse = 1 },
             Credit = source, Damage = new float4(0f, 0f, 0f, physicalDamage),
+            DeathCauseId = GameplayCombatBridge.NarrativeCauseId(deathCauseId),
             Origin = logicalOrigin, HitPoint = (Vector2)WorldLocalPresentation.ToLogical(item.transform.position),
             Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime },
             BuildingMultiplier = 1f, ResourceToolEfficiency = 1f

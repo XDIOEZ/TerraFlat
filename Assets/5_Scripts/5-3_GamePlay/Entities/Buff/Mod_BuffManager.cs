@@ -231,7 +231,9 @@ public partial class Mod_BuffManager : Module
     }
 
     /// <summary>施加指定层数；非叠层定义保持原有续期/忽略语义，调用者无需循环施加。</summary>
-    public bool AddBuff(string buffId, int stacks)
+    public bool AddBuff(string buffId, int stacks) => AddBuff(buffId, stacks, null);
+
+    public bool AddBuff(string buffId, int stacks, DeathCauseRecord damageOrigin)
     {
         if (stacks <= 0)
             return false;
@@ -264,6 +266,8 @@ public partial class Mod_BuffManager : Module
             existing != null)
         {
             bool handled = HandleBuffStack(definition, existing, incomingStacks);
+            if (handled && definition.StackMode != BuffStackMode.Ignore)
+                existing.DamageOrigin = damageOrigin?.Copy();
             if (handled)
                 ResolveAppliedBuffInteractions(definitionId);
             return handled;
@@ -274,6 +278,7 @@ public partial class Mod_BuffManager : Module
             return false;
 
         runtime.SetStackCount(incomingStacks);
+        runtime.DamageOrigin = damageOrigin?.Copy();
 
         ActiveBuffs[definitionId] = runtime;
         runtime.Start();
@@ -327,7 +332,9 @@ public partial class Mod_BuffManager : Module
     #region 查询与延时
 
     /// <summary>应用互斥的出血等级；更低等级不会覆盖更高等级，更高等级会替换已有低等级。</summary>
-    public bool ApplyBleedingTier(int tier)
+    public bool ApplyBleedingTier(int tier) => ApplyBleedingTier(tier, null);
+
+    public bool ApplyBleedingTier(int tier, DeathCauseRecord damageOrigin)
     {
         string targetId = BloodLossBuffIds.GetIdForTier(tier);
         int highestActiveTier = 0;
@@ -345,10 +352,10 @@ public partial class Mod_BuffManager : Module
 
         // 低等级命中只能续期当前更严重的出血，不能把伤势降级。
         if (highestActiveTier > tier && !string.IsNullOrEmpty(highestActiveId))
-            return AddBuff(highestActiveId);
+            return AddBuff(highestActiveId, 1, ActiveBuffs[highestActiveId].DamageOrigin);
 
         // 先确保目标等级成功加入，再清理旧等级，避免目录缺失时把已有状态先删掉。
-        if (!AddBuff(targetId))
+        if (!AddBuff(targetId, 1, damageOrigin))
             return false;
 
         for (int currentTier = 1; currentTier <= BloodLossBuffIds.MaxTier; currentTier++)

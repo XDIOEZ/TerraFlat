@@ -165,6 +165,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         public CombatDefense DefenseValues = new CombatDefense();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
+        public DeathCauseRecord DeathCause; // 本次生命的致死快照，与血量一起保存和同步。
 
         [Header("伤害接收间隔时间 (秒)")]
         [Min(0f)]
@@ -349,6 +350,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         _resolvingDamage = false;
         _reportedInvalidCombatFaction = false;
         ResetDeathResolution();
+        if (Hp > 0f) Data.DeathCause = null;
         _deathConsumedByExternalHandler = false;
         lastDamageTime = double.NegativeInfinity;
         LastDamageSource = default; LastDamageCredit = default;
@@ -683,7 +685,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             if (buffManager != null)
                 foreach (var effect in context.OnHitBuffs)
                     if (effect.Chance >= 1f || Random.value < effect.Chance)
-                        buffManager.AddBuff(effect.Id.ToString(), Mathf.Max(1, effect.Stacks));
+                        buffManager.AddBuff(effect.Id.ToString(), Mathf.Max(1, effect.Stacks), DeathCauseRecord.FromDamage(null, context));
         }
         return result;
     }
@@ -760,7 +762,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         float durabilityDamage,
         CombatDamage resolvedDamageValues = null,
         FlatWorld.Combat.CombatDamageContext? context = null,
-        List<BodyPartDamageInfo> preparedHits = null)
+        List<BodyPartDamageInfo> preparedHits = null,
+        DeathCauseRecord deathCause = null)
     {
         if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
             throw new ArgumentOutOfRangeException(nameof(damage), "伤害必须是有限非负数。");
@@ -789,6 +792,12 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                 damageInfo.HpAfter = Hp;
                 damageInfo.IsFatal = Hp <= 0f;
                 damageInfo.BodyPartHits = bodyPartHits ?? damageInfo.BodyPartHits;
+                // 在任何受伤回调与网络提交前锁存，回调死亡时已经能读到完整原因。
+                if (damageInfo.IsFatal)
+                {
+                    Data.DeathCause = deathCause?.Copy() ?? DeathCauseRecord.FromDamage(sender, context ?? default);
+                    Data.DeathCause.Variant = Random.Range(0, int.MaxValue);
+                }
 
                 foreach (BodyPartDamageInfo hit in damageInfo.BodyPartHits)
                     DispatchBodyPartDamaged(hit);
@@ -920,18 +929,25 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     #endregion
 
 
-    public virtual float ForceHurt(float damage)
+    #region 生存伤害与死因
+
+    public virtual float ForceHurt(float damage) => ForceHurt(damage, (DeathCauseRecord)null);
+
+    public float ForceHurt(float damage, string causeId)
+        => ForceHurt(damage, new DeathCauseRecord { CauseId = causeId });
+
+    public virtual float ForceHurt(float damage, DeathCauseRecord deathCause)
     {
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0) return -1;
         damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
         damage *= Mathf.Max(0f, damageTakenMultiplier);
         if (damage <= 0f) return Hp;
 
-        ResolveDamage(damage, null, durabilityDamage: 0f);
+        ResolveDamage(damage, null, durabilityDamage: 0f, deathCause: deathCause ?? new DeathCauseRecord());
         return Hp;
     }
 
-
+    #endregion
 
     #region 通用治疗结算
 
@@ -986,10 +1002,17 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     #endregion
 
-    public void ResolveNetworkAuthoritativeDeath()
+    public void ResolveNetworkAuthoritativeDeath(string causeId = null)
     {
         if (Hp <= 0f)
+        {
+            if (!_deathHandled && !string.IsNullOrWhiteSpace(causeId))
+            {
+                Data.DeathCause = new DeathCauseRecord { CauseId = causeId, Variant = Random.Range(0, int.MaxValue) };
+                ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            }
             HandleDeath(CreateDamageInfo(null, 0f, Hp, Hp));
+        }
     }
 
     public void AddDefense(CombatDefense value)
@@ -1424,6 +1447,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     private void ResetDeathResolution()
     {
         _deathHandled = false;
+        if (Hp > 0f && Data != null) Data.DeathCause = null;
         if (_deathCoroutine != null)
         {
             StopCoroutine(_deathCoroutine);

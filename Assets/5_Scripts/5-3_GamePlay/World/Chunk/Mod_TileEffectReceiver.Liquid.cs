@@ -32,7 +32,8 @@ public partial class Mod_TileEffectReceiver
         if (liquidHeatDamageSeconds < interval) return;
         float elapsed = Mathf.Floor(liquidHeatDamageSeconds / interval) * interval;
         liquidHeatDamageSeconds -= elapsed;
-        health.ForceHurt(settings.ContactDamagePerSecond * elapsed);
+        string causeId = LiquidId == FlatWorld.WorldModel.LiquidTypeCatalog.LavaId ? "lava" : "overheating";
+        health.ForceHurt(settings.ContactDamagePerSecond * elapsed, causeId);
     }
 
     public void ResetLiquidContactHeat() => liquidHeatDamageSeconds = 0f;
@@ -142,6 +143,7 @@ public partial class Mod_TileEffectReceiver
     protected override void OnUnload()
     {
         PrepareForWorldTransition();
+        waterOxygen?.RemoveBreathingBlockCause(this);
         effectSuppressors.Clear();
         base.OnUnload();
     }

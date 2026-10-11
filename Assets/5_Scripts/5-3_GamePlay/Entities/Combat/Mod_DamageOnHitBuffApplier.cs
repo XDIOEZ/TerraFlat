@@ -93,6 +93,9 @@ public sealed class Mod_DamageOnHitBuffApplier : Module, IItemModuleDependencyBi
         Item targetItem = receiver.item;
         Mod_BuffManager buffManager = targetItem?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (buffManager != null)
-            buffManager.AddBuff(buffId.Trim(), Mathf.Max(1, applicationStacks));
+        {
+            var context = GameplayCombatBridge.Context(damageModule, default);
+            buffManager.AddBuff(buffId.Trim(), Mathf.Max(1, applicationStacks), DeathCauseRecord.FromDamage(damageModule, context));
+        }
     }
 }

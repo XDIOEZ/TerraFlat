@@ -144,14 +144,14 @@ public partial class Mod_San : Module
         if (_playerTraits != null)
         {
             Debug.Log($"[Mod_San] 理智归零，触发玩家死亡: {item.itemData.GameName}");
-            _playerTraits.Death();
+            _playerTraits.Death("insanity");
             return;
         }
 
         if (_damageReceiver != null)
         {
             Debug.Log($"[Mod_San] 理智归零，触发血量归零死亡: {item.itemData.GameName}");
-            _damageReceiver.ForceHurt(_damageReceiver.Hp + _damageReceiver.MaxHp + 99999f);
+            _damageReceiver.ForceHurt(_damageReceiver.Hp + _damageReceiver.MaxHp + 99999f, "insanity");
             return;
         }
 

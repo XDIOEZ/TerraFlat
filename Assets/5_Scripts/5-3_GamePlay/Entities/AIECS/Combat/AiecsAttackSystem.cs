@@ -51,6 +51,7 @@ namespace FlatWorld.AIECS
                     Hits[index] = new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key,
                         Context = new CombatDamageContext { Attack = new CombatAttackKey { Source = identity.Key,
                             Sequence = attack.Sequence, Window = 1, Pulse = attack.Pulse }, Credit = identity.Key,
+                            SourceItemId = definition.Id, CreditItemId = definition.Id,
                             Faction = Factions[identity.Faction], Damage = definition.Damage, Origin = actor.Position,
                             HitPoint = target.Position, Clock = Clock, SourceIsPlayer = identity.Player,
                             SlowEnabled = (byte)(definition.SlowDuration > 0f ? 1 : 0), SlowMultiplier = definition.SlowMultiplier,

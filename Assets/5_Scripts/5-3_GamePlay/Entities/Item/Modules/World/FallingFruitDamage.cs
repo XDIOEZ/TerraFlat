@@ -1,12 +1,13 @@
 using System;
 
 /// <summary>只在飞行期间创建的临时请求，默认 10 点钝击、头部优先；不会给 ECS 掉落或库存添加伤害模块。</summary>
-public sealed class FallingFruitDamage : IDamageSender, IPreferredBodyPartDamageSource
+public sealed class FallingFruitDamage : IDamageSender, IPreferredBodyPartDamageSource, IDeathCauseSource
 {
     #region 伤害契约
     public CombatDamage DamageValues { get; } // 此次坠落伤害。
     public Item attacker { get; set; } // 自然坠落为空，不借用树木阵营。
     public BodyPartType PreferredBodyPart => BodyPartType.Head;
+    public string DeathCauseId => "falling_object";
 
     /// <summary>创建临时伤害请求。</summary>
     public FallingFruitDamage(float bluntDamage) => DamageValues = new CombatDamage { Blunt = bluntDamage };

@@ -70,11 +70,12 @@ public static class LightningStrikeSystem
         {
             Attack = new CombatAttackKey { Source = source, Sequence = unchecked((uint)strike.Sequence), Pulse = 1 },
             Credit = source, Damage = new float4(0f, 0f, 0f, peakDamage), Origin = center, HitPoint = center,
+            DeathCauseId = "lightning",
             ResourceToolEfficiency = 1f, BuildingMultiplier = 1f,
             Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime }
         };
         GameplayCombatBridge.ApplyEnvironmentalDamage(strike.WorldKey, context, radius);
-        FlatWorld.NaturalEntities.NaturalEntityEcsService.ApplyEnvironmentalDamage(strike.WorldKey, eventId, center, radius, peakDamage);
+        FlatWorld.NaturalEntities.NaturalEntityEcsService.ApplyEnvironmentalDamage(strike.WorldKey, eventId, center, radius, peakDamage, "lightning");
         FlatWorld.Spaceflight.SpaceSurfaceQuery.ApplyEnvironmentalDamageInRadius(strike.WorldKey, center, radius, peakDamage, eventId);
     }
 
@@ -94,7 +95,7 @@ public static class LightningStrikeSystem
             float distance = WorldTopologyRuntime.Distance(center, position);
             if (distance >= radius) continue;
             target.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.HurtEnvironmentalDamage(eventId, center,
-                peakDamage * (1f - distance / radius));
+                peakDamage * (1f - distance / radius), "lightning");
         }
     }
 

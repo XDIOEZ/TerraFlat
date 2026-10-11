@@ -36,7 +36,7 @@ public sealed class RawMeatInfectionMechanic : IFoodMechanic, IFoodConsumptionOb
 
         Mod_BuffManager buffManager = result.Consumer.itemMods?.GetMod_ByID<Mod_BuffManager>(
             ModText.Mod_BuffManager);
-        if (buffManager == null || !buffManager.AddBuff(InfectionBuffIds.Infection))
+        if (buffManager == null || !buffManager.AddBuff(InfectionBuffIds.Infection, 1, DeathCauseRecord.CaptureAttack(result.ConsumedItem, null)))
             return;
 
         buffManager.TrySetBuffDuration(

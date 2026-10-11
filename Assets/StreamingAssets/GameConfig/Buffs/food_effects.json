@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "辣",
+      "deathCauseId": "spicy",
       "displayName": "辣",
       "category": "general",
       "description": "持续 60 秒，每 10 秒损失 0.1 点生命；期间最多增温 5℃，这部分增温不会超过 30℃。再次食用刷新持续时间，增温与伤害频率不叠加。",

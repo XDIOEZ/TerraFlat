@@ -23,6 +23,7 @@ public partial class BuffInstance
     public float TickElapsedSeconds;
     // 只在原有三个持久化字段后追加；旧存档缺失层数时恢复为第一层。
     public int StackCount = 1;
+    public DeathCauseRecord DamageOrigin; // 状态施加时冻结来源，施加者离场后仍能解释致死原因。
 
     [MemoryPackIgnore]
     public BuffDefinition Definition { get; private set; }

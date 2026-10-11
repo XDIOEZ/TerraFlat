@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MemoryPack;
 using UltEvents;
 using UnityEngine;
@@ -59,6 +60,7 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
     private float suppliedOxygen;
     private Mod_DamageReceiver breathingHealth;
     private float hypoxiaClock;
+    private readonly Dictionary<object, string> breathingBlockCauses = new();
 
     #endregion
 
@@ -77,6 +79,7 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
         NormalizeData();
         hypoxiaClock = float.IsFinite(Data.HypoxiaSeconds) ? Mathf.Clamp(Data.HypoxiaSeconds, 0f, 5f) : 0f;
         suppliedOxygen = 0f;
+        breathingBlockCauses.Clear();
         PublishBreathBlocked(false);
         if (breathingHealth != null) breathingHealth.DeathStarted += ClearDeadBreathing;
     }
@@ -93,6 +96,7 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
         breathingHealth = null;
         hypoxiaClock = 0f;
         suppliedOxygen = 0f;
+        breathingBlockCauses.Clear();
         PublishBreathBlocked(false);
         base.OnUnload();
     }
@@ -120,6 +124,30 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
 
         isBreathBlocked = nextBlocked;
         BreathBlockedChanged?.Invoke(isBreathBlocked);
+    }
+
+    #endregion
+
+    #region 缺氧原因来源
+
+    /// <summary>环境供给方登记呼吸被阻断的原因，氧气模块只保留通用来源记录。</summary>
+    public void SetBreathingBlockCause(object source, string causeId)
+    {
+        if (source == null) return;
+        if (string.IsNullOrWhiteSpace(causeId)) { RemoveBreathingBlockCause(source); return; }
+        breathingBlockCauses[source] = causeId;
+    }
+
+    public void RemoveBreathingBlockCause(object source)
+    {
+        if (source != null) breathingBlockCauses.Remove(source);
+    }
+
+    private string ResolveHypoxiaCauseId()
+    {
+        foreach (string causeId in breathingBlockCauses.Values)
+            return causeId;
+        return "suffocation";
     }
 
     #endregion
@@ -159,11 +187,12 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
     {
         breathingHealth = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
     }
-    private void ClearDeadBreathing(Mod_DamageReceiver _) { hypoxiaClock = 0f; suppliedOxygen = 0f; PublishBreathBlocked(false); }
+    private void ClearDeadBreathing(Mod_DamageReceiver _) { hypoxiaClock = 0f; suppliedOxygen = 0f; breathingBlockCauses.Clear(); PublishBreathBlocked(false); }
     public void ResetForNewLife()
     {
         hypoxiaClock = 0f;
         suppliedOxygen = 0f;
+        breathingBlockCauses.Clear();
         PublishBreathBlocked(false);
         SetCurrentOxygen(MaxValue);
     }
@@ -184,7 +213,7 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
         while (hypoxiaClock >= 5f && breathingHealth != null && breathingHealth.Hp > 0f)
         {
             hypoxiaClock -= 5f;
-            breathingHealth.ForceHurt(hypoxiaDamagePerTick);
+            breathingHealth.ForceHurt(hypoxiaDamagePerTick, ResolveHypoxiaCauseId());
         }
     }
     #endregion

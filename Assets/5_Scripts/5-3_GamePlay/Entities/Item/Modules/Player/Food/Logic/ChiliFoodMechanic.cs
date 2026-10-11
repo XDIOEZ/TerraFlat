@@ -26,7 +26,7 @@ public sealed class ChiliFoodMechanic : IFoodMechanic, IFoodConsumptionObserver
             return;
 
         Mod_BuffManager buffs = result.Consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
-        buffs?.AddBuff(BuffId);
+        buffs?.AddBuff(BuffId, 1, DeathCauseRecord.CaptureAttack(result.ConsumedItem, null));
     }
 
     #endregion

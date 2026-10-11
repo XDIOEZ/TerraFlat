@@ -48,6 +48,9 @@ public sealed class BuffDefinitionDto
     [JsonProperty("displayName")]
     public string DisplayName;
 
+    [JsonProperty("deathCauseId")]
+    public string DeathCauseId;
+
     [JsonProperty("category")]
     public string Category = "general";
 

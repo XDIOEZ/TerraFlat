@@ -44,6 +44,6 @@ public sealed class Mod_ConsumableBuff : Module, IFoodMechanic, IFoodConsumption
             return;
         Mod_BuffManager manager = result.Consumer.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         foreach (string id in buffIds)
-            manager.AddBuff(id);
+            manager.AddBuff(id, 1, DeathCauseRecord.CaptureAttack(result.ConsumedItem, null));
     }
 }

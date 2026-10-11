@@ -423,6 +423,7 @@ public partial class Mod_TileEffectReceiver : Module
         lastWaterExitWasActive = waterSurvivalActive;
         lastWaterExitFrame = Time.frameCount;
         waterSurvivalActive = false;
+        waterOxygen?.RemoveBreathingBlockCause(this);
         SetLiquidFloating(false);
         drowningDamageTickTimer = 0f;
     }
@@ -432,6 +433,7 @@ public partial class Mod_TileEffectReceiver : Module
     {
         ResolveWaterVitals(item);
         EnsureFallbackWaterVitals();
+        waterOxygen?.RemoveBreathingBlockCause(this);
         drowningDamageTickTimer = 0f;
 
         if (!GameNetwork.HasStateAuthority)
@@ -461,6 +463,7 @@ public partial class Mod_TileEffectReceiver : Module
         if (waterVitalsItem == actor)
             return;
 
+        waterOxygen?.RemoveBreathingBlockCause(this);
         waterVitalsItem = actor;
         waterStamina = actor?.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         waterOxygen = actor?.itemMods?.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
@@ -510,6 +513,9 @@ public partial class Mod_TileEffectReceiver : Module
 
         if (waterOxygen != null)
         {
+            // 水体只声明阻断原因，耗氧和伤害仍由通用氧气模块统一结算。
+            if (breathBlocked) waterOxygen.SetBreathingBlockCause(this, "drowning");
+            else waterOxygen.RemoveBreathingBlockCause(this);
             drowningDamageTickTimer = 0f;
             return;
         }
@@ -566,7 +572,7 @@ public partial class Mod_TileEffectReceiver : Module
         drowningDamageTickTimer = 0f;
         float damagePerTick = Mathf.Max(0f, fallbackDrowningDamagePerTick);
         if (damagePerTick > 0f)
-            waterDamageReceiver.ForceHurt(damagePerTick);
+            waterDamageReceiver.ForceHurt(damagePerTick, "drowning");
     }
 
     #endregion

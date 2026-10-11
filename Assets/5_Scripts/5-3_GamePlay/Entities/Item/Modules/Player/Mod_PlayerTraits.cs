@@ -53,10 +53,18 @@ public class Mod_PlayerTraits : Module
         Debug.Log($"克隆成功：{clone.IDName}，已创建独立状态副本。");
     }
 
+    #region 主动死亡
+
     /// <summary>
     /// 玩家死亡处理（统一走 Mod_DamageReceiver 濒死流程）
     /// </summary>
     public void Death()
+    {
+        Death("suicide");
+    }
+
+    /// <summary>主动死亡沿用正式生命入口，并保留触发者声明的原因。</summary>
+    public void Death(string causeId)
     {
         // 仅无敌开启的管理员忽略理智等主动触发的死亡。
         if (HasAdminInvincibility())
@@ -71,8 +79,10 @@ public class Mod_PlayerTraits : Module
             throw new MissingComponentException($"[Mod_PlayerTraits] 玩家缺少 {nameof(Mod_DamageReceiver)}，无法触发濒死状态");
         }
 
-        damageReceiver.ForceHurt(damageReceiver.Hp + damageReceiver.MaxHp + 99999f);
+        damageReceiver.ForceHurt(damageReceiver.Hp + damageReceiver.MaxHp + 99999f, causeId);
     }
+
+    #endregion
 
     #region 创造背包
 

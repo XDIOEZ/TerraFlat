@@ -22,6 +22,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - GO 的 DamageReceiver、原生 ECS 的 AiecsDamageSettlementSystem 各为目标唯一生命权威，外部代理 HP 是快照；远程 Client 仅应用权威结果。
 - ResolveDamage 先提交钳制 HP 和实际损失快照，再发回调；同步/死亡收尾/解锁保证执行。死亡在通知前锁存一次，重入/延迟结果不重复掉落；Unload 取消延迟销毁，显式复活/新 Load 重置死亡标记。
+- 致命扣血在回调前把 `DeathCauseRecord` 锁存到生命 Data，随血量保存/同步，重生清除；`ForceHurt` 的来源方传稳定原因 ID，特殊发送端用 `IDeathCauseSource`，投射物用 `IDeathCauseSnapshotSource` 冻结射手和发射武器。Shared Context 只携固定容量定义 ID，不让叙事字段溢出阻断伤害。
 - Heal 查询 IHealingCostPolicy 可恢复额度，按实际恢复量支付，无策略免费；普通回血不复活，启用部位生命时只分配给存活部位，重生/满血赋值才恢复耗尽部位。
 - 掉落以稳定物品 ID 定义，实体顶层 lootTableId 展开到唯一接收器；LootPrefabName 实为 Item.itemData.IDName，非外壳名。引用在目录加载时校验。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。

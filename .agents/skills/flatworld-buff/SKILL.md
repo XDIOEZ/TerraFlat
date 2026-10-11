@@ -14,6 +14,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 ## 定义与状态
 
 - ID 用于注册、内容和保存。`schemaVersion:1` 严格拒绝重复 ID、未知 typeId/字段、非法枚举/非有限值；新效果由稳定 typeId、Dispatcher、参数校验组成。Handler 构建时缓存。
+- 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照，真伤沿用统一扣血入口。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因，避免归给此前武器。
 - `durationSeconds:null` 永久，周期间隔为正，extend/refresh 用正持续时间；分包只是归档，语义由 category/effects 定义。
 - `add_stacks` 改单实例 StackCount 并续期，不重放 Start/Stop 或重置 Tick 相位；登记倍率仅一份，`scaleWithStacks` 显式按层。恢复层数归一到 `1..MaxStacks`，表现订 `BuffStacksChanged`。
 - 可清 Buff 表达潮湿/感染/中毒等角色状态；环境内被动能力/可执行动作由环境运行器负责。`ActiveBuffs` 是只读表现入口。

@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "出血1",
+      "deathCauseId": "bleeding",
       "displayName": "出血1",
       "category": "blood_loss",
       "description": "轻度出血：每2秒损失1点生命和2点水分；每次喝水延长5秒。",
@@ -26,6 +27,7 @@
     },
     {
       "id": "出血2",
+      "deathCauseId": "bleeding",
       "displayName": "出血2",
       "category": "blood_loss",
       "description": "中度出血：每2秒损失2点生命和5点水分；每次喝水延长10秒。",
@@ -49,6 +51,7 @@
     },
     {
       "id": "出血3",
+      "deathCauseId": "bleeding",
       "displayName": "出血3",
       "category": "blood_loss",
       "description": "重度出血：每2秒损失3点生命和10点水分；每次喝水延长20秒。",
@@ -72,6 +75,7 @@
     },
     {
       "id": "燃烧",
+      "deathCauseId": "burning",
       "displayName": "燃烧",
       "category": "general",
       "description": "最高10层，每层每秒受到1点真实伤害，火焰随层数增大。同层或更高潮湿阻止普通点燃，强火蒸发较低潮湿；浸水累计到同层潮湿时熄灭。岩浆接触会直接施加10层。",
@@ -92,6 +96,7 @@
     },
     {
       "id": "感染",
+      "deathCauseId": "infection",
       "displayName": "感染",
       "category": "general",
       "description": "感染期间身体微微发绿，每10秒受到1点真实伤害。",
@@ -108,6 +113,7 @@
     },
     {
       "id": "光耀",
+      "deathCauseId": "radiant",
       "displayName": "光耀",
       "description": "每秒对幽灵造成5%最大生命值的真实伤害",
       "durationSeconds": null,

@@ -710,6 +710,8 @@ namespace FlatWorld.Localization.Editor
                 { "投入可腐物 · 等待自然转化", "Add compostables · wait for natural conversion" },
                 { "JOURNEY INTERRUPTED / 生存记录", "JOURNEY INTERRUPTED / SURVIVAL LOG" },
                 { "旅程暂告一段落", "Journey Paused" },
+                { "你变成了一具尸体。", "You became a corpse." },
+                { "带着经验，重新出发。", "Take what you learned and begin again." },
                 { "带着这次留下的经验，再次回到这片世界。", "Return to this world with what you learned." },
                 { "重新醒来", "Wake Up Again" },
                 { "结束本次旅程", "End This Journey" },

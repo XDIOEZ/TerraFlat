@@ -261,7 +261,7 @@ public static class BuffEffectDispatcher
         Item receiver = GetReceiver(runtime);
         Mod_DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
         if (effect.Value > 0f)
-            damageReceiver?.ForceHurt(effect.Value * (effect.ScaleWithStacks ? runtime.StackCount : 1));
+            damageReceiver?.ForceHurt(effect.Value * (effect.ScaleWithStacks ? runtime.StackCount : 1), DeathCauseRecord.FromBuff(runtime));
     }
 
     private static void ApplyMaxHealthPercentTrueDamage(BuffEffectDefinition effect, BuffInstance runtime)
@@ -286,7 +286,7 @@ public static class BuffEffectDispatcher
         if (damageReceiver == null || damageReceiver.MaxHp <= 0f || effect.Value <= 0f)
             return;
 
-        damageReceiver.ForceHurt(damageReceiver.MaxHp * Mathf.Clamp01(effect.Value));
+        damageReceiver.ForceHurt(damageReceiver.MaxHp * Mathf.Clamp01(effect.Value), DeathCauseRecord.FromBuff(runtime));
     }
 
     private static string NormalizeTarget(string targetId)

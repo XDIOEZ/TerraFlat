@@ -1,0 +1,584 @@
+{
+  "victim": {
+    "zhCN": "你",
+    "en": "You"
+  },
+  "subtitle": {
+    "zhCN": "带着经验，重新出发。",
+    "en": "Take what you learned and begin again."
+  },
+  "effectNames": {
+    "燃烧": {
+      "zhCN": "燃烧",
+      "en": "burning"
+    },
+    "感染": {
+      "zhCN": "感染",
+      "en": "infection"
+    },
+    "光耀": {
+      "zhCN": "光耀",
+      "en": "radiant damage"
+    },
+    "核聚变接触": {
+      "zhCN": "核聚变接触",
+      "en": "fusion contact"
+    },
+    "辣": {
+      "zhCN": "辣",
+      "en": "spice"
+    },
+    "出血1": {
+      "zhCN": "流血",
+      "en": "bleeding"
+    },
+    "出血2": {
+      "zhCN": "流血",
+      "en": "bleeding"
+    },
+    "出血3": {
+      "zhCN": "流血",
+      "en": "bleeding"
+    },
+    "低温冻伤": {
+      "zhCN": "低温冻伤",
+      "en": "frostbite"
+    },
+    "热射病": {
+      "zhCN": "热射病",
+      "en": "heatstroke"
+    }
+  },
+  "messages": [
+    {
+      "causeId": "combat",
+      "requires": [
+        "attacker",
+        "weapon"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}被{attacker}用{weapon}变成了一具尸体。",
+          "en": "{victim} were turned into a corpse by {attacker} with {weapon}."
+        },
+        {
+          "zhCN": "{attacker}的{weapon}终结了{victim}的旅程。",
+          "en": "{attacker} ended your journey with {weapon}."
+        }
+      ]
+    },
+    {
+      "causeId": "combat",
+      "requires": [
+        "attacker"
+      ],
+      "variants": [
+        {
+          "zhCN": "{attacker}把{victim}变成了一具尸体。",
+          "en": "{attacker} turned you into a corpse."
+        },
+        {
+          "zhCN": "{victim}没能从{attacker}手里活着回来。",
+          "en": "{victim} did not survive an encounter with {attacker}."
+        }
+      ]
+    },
+    {
+      "causeId": "combat",
+      "requires": [
+        "weapon"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}倒在了{weapon}之下。",
+          "en": "{victim} fell to {weapon}."
+        },
+        {
+          "zhCN": "{weapon}让{victim}变成了一具尸体。",
+          "en": "{weapon} turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "combat",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}在战斗中变成了一具尸体。",
+          "en": "{victim} became a corpse in battle."
+        },
+        {
+          "zhCN": "{victim}没能挺过最后一击。",
+          "en": "{victim} did not survive the final blow."
+        }
+      ]
+    },
+    {
+      "causeId": "projectile",
+      "requires": [
+        "attacker",
+        "weapon"
+      ],
+      "variants": [
+        {
+          "zhCN": "{attacker}用{weapon}射穿了{victim}最后的希望。",
+          "en": "{attacker} shot down your last hope with {weapon}."
+        },
+        {
+          "zhCN": "{victim}倒在了{attacker}用{weapon}发动的远程攻击下。",
+          "en": "{victim} fell to {attacker}'s ranged attack with {weapon}."
+        }
+      ]
+    },
+    {
+      "causeId": "projectile",
+      "requires": [
+        "attacker"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}没能躲过{attacker}的射击。",
+          "en": "{victim} could not dodge {attacker}'s shot."
+        },
+        {
+          "zhCN": "{attacker}射中了{victim}的旅程终点。",
+          "en": "{attacker}'s shot brought your journey to an end."
+        }
+      ]
+    },
+    {
+      "causeId": "projectile",
+      "requires": [
+        "weapon"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}没能避开{weapon}的远程攻击。",
+          "en": "{victim} could not avoid a ranged attack with {weapon}."
+        },
+        {
+          "zhCN": "{weapon}把{victim}留在了这里。",
+          "en": "{weapon} brought your journey to an end."
+        }
+      ]
+    },
+    {
+      "causeId": "projectile",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能躲过那枚致命的投射物。",
+          "en": "{victim} could not dodge a fatal projectile."
+        },
+        {
+          "zhCN": "{victim}被投射物变成了一具尸体。",
+          "en": "{victim} were turned into a corpse by a projectile."
+        }
+      ]
+    },
+    {
+      "causeId": "effect",
+      "requires": [
+        "attacker",
+        "weapon",
+        "effect"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}因{attacker}用{weapon}造成的{effect}，变成了一具尸体。",
+          "en": "{victim} died from {effect} inflicted by {attacker} with {weapon}."
+        },
+        {
+          "zhCN": "{attacker}的{weapon}带来了{effect}，也带走了{victim}。",
+          "en": "{attacker}'s {weapon} inflicted {effect}, and it finished you off."
+        }
+      ]
+    },
+    {
+      "causeId": "effect",
+      "requires": [
+        "attacker",
+        "effect"
+      ],
+      "variants": [
+        {
+          "zhCN": "{attacker}留下的{effect}把{victim}变成了一具尸体。",
+          "en": "{attacker}'s {effect} turned you into a corpse."
+        },
+        {
+          "zhCN": "{victim}没能熬过{attacker}造成的{effect}。",
+          "en": "{victim} did not survive {effect} inflicted by {attacker}."
+        }
+      ]
+    },
+    {
+      "causeId": "effect",
+      "requires": [
+        "weapon",
+        "effect"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}死于{weapon}带来的{effect}。",
+          "en": "{victim} died from {effect} caused by {weapon}."
+        },
+        {
+          "zhCN": "{weapon}造成的{effect}终结了{victim}的旅程。",
+          "en": "The {effect} caused by {weapon} ended your journey."
+        }
+      ]
+    },
+    {
+      "causeId": "effect",
+      "requires": [
+        "effect"
+      ],
+      "variants": [
+        {
+          "zhCN": "{victim}因{effect}变成了一具尸体。",
+          "en": "{victim} became a corpse due to {effect}."
+        },
+        {
+          "zhCN": "{victim}没能熬过{effect}。",
+          "en": "{victim} did not survive {effect}."
+        }
+      ]
+    },
+    {
+      "causeId": "unknown",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}变成了一具尸体。",
+          "en": "{victim} became a corpse."
+        },
+        {
+          "zhCN": "{victim}的旅程停在了这里。",
+          "en": "Your journey ended here."
+        }
+      ]
+    },
+    {
+      "causeId": "effect",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能熬过身上的致命状态。",
+          "en": "{victim} did not survive a fatal condition."
+        },
+        {
+          "zhCN": "致命状态让{victim}变成了一具尸体。",
+          "en": "A fatal condition turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "lava",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}试着在岩浆里游泳。",
+          "en": "{victim} tried to swim in lava."
+        },
+        {
+          "zhCN": "岩浆替{victim}结束了这趟旅程。",
+          "en": "Lava brought your journey to an end."
+        }
+      ]
+    },
+    {
+      "causeId": "burning",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}被烧成了灰烬。",
+          "en": "{victim} burned to ashes."
+        },
+        {
+          "zhCN": "{victim}没能从火焰里活着回来。",
+          "en": "{victim} did not make it out of the flames."
+        }
+      ]
+    },
+    {
+      "causeId": "poison",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}把最后一口气留给了毒素。",
+          "en": "Poison took your final breath."
+        },
+        {
+          "zhCN": "{victim}因中毒变成了一具尸体。",
+          "en": "{victim} became a corpse from poisoning."
+        }
+      ]
+    },
+    {
+      "causeId": "bleeding",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}的血先一步离开了身体。",
+          "en": "Your blood left your body before you did."
+        },
+        {
+          "zhCN": "{victim}因失血过多变成了一具尸体。",
+          "en": "{victim} became a corpse from blood loss."
+        }
+      ]
+    },
+    {
+      "causeId": "drowning",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}把最后一口气留在了水里。",
+          "en": "{victim} left your last breath underwater."
+        },
+        {
+          "zhCN": "{victim}没能游回水面。",
+          "en": "{victim} never made it back to the surface."
+        }
+      ]
+    },
+    {
+      "causeId": "suffocation",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能等到下一口氧气。",
+          "en": "{victim} never got your next breath of oxygen."
+        },
+        {
+          "zhCN": "缺氧让{victim}变成了一具尸体。",
+          "en": "A lack of oxygen turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "starvation",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能等到下一顿饭。",
+          "en": "{victim} never made it to your next meal."
+        },
+        {
+          "zhCN": "饥饿把{victim}变成了一具尸体。",
+          "en": "Hunger turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "dehydration",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能等到下一口水。",
+          "en": "{victim} never got your next sip of water."
+        },
+        {
+          "zhCN": "脱水终结了{victim}的旅程。",
+          "en": "Dehydration ended your journey."
+        }
+      ]
+    },
+    {
+      "causeId": "malnutrition",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}的身体耗尽了最后一点营养。",
+          "en": "Your body ran out of nourishment."
+        },
+        {
+          "zhCN": "营养不足让{victim}变成了一具尸体。",
+          "en": "Malnutrition turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "freezing",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}被冻成了冰冷的尸体。",
+          "en": "{victim} froze into a lifeless corpse."
+        },
+        {
+          "zhCN": "寒冷带走了{victim}最后一点体温。",
+          "en": "The cold stole the last warmth from your body."
+        }
+      ]
+    },
+    {
+      "causeId": "overheating",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能撑过这份灼热。",
+          "en": "{victim} could not survive the heat."
+        },
+        {
+          "zhCN": "高温把{victim}变成了一具尸体。",
+          "en": "Extreme heat turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "pressure_low",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}的身体没能撑住这片低压环境。",
+          "en": "Your body could not survive the low pressure."
+        },
+        {
+          "zhCN": "过低的气压终结了{victim}的旅程。",
+          "en": "Low pressure ended your journey."
+        }
+      ]
+    },
+    {
+      "causeId": "pressure_high",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能承受这里的高压。",
+          "en": "{victim} could not withstand the high pressure."
+        },
+        {
+          "zhCN": "过高的气压把{victim}变成了一具尸体。",
+          "en": "High pressure turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "lightning",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}成了闪电选中的落点。",
+          "en": "{victim} became lightning's chosen landing spot."
+        },
+        {
+          "zhCN": "一道闪电把{victim}变成了一具尸体。",
+          "en": "A bolt of lightning turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "explosion",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}的旅程在爆炸中戛然而止。",
+          "en": "Your journey ended with a bang."
+        },
+        {
+          "zhCN": "{victim}离爆炸近了一点。",
+          "en": "{victim} were a little too close to an explosion."
+        }
+      ]
+    },
+    {
+      "causeId": "insanity",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}的精神先一步崩溃了。",
+          "en": "Your mind collapsed before your body did."
+        },
+        {
+          "zhCN": "精神崩溃终结了{victim}的旅程。",
+          "en": "A shattered mind brought your journey to an end."
+        }
+      ]
+    },
+    {
+      "causeId": "suicide",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}亲手结束了这趟旅程。",
+          "en": "{victim} ended your own journey."
+        },
+        {
+          "zhCN": "{victim}选择让这次冒险停在这里。",
+          "en": "{victim} chose to bring this adventure to an end."
+        }
+      ]
+    },
+    {
+      "causeId": "falling_object",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能躲过落下的重物。",
+          "en": "{victim} could not dodge a falling object."
+        },
+        {
+          "zhCN": "落下的重物把{victim}压成了一具尸体。",
+          "en": "A falling object crushed you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "infection",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}没能战胜身体里的感染。",
+          "en": "{victim} could not overcome an infection."
+        },
+        {
+          "zhCN": "感染把{victim}变成了一具尸体。",
+          "en": "An infection turned you into a corpse."
+        }
+      ]
+    },
+    {
+      "causeId": "radiant",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "光耀耗尽了{victim}最后的生命。",
+          "en": "Radiant damage drained your last life."
+        },
+        {
+          "zhCN": "{victim}倒在了光耀之中。",
+          "en": "{victim} fell to radiant damage."
+        }
+      ]
+    },
+    {
+      "causeId": "fusion",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}离核聚变太近了。",
+          "en": "{victim} got too close to nuclear fusion."
+        },
+        {
+          "zhCN": "核聚变让{victim}的旅程化为灰烬。",
+          "en": "Nuclear fusion reduced your journey to ashes."
+        }
+      ]
+    },
+    {
+      "causeId": "spicy",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "{victim}低估了这口辣味。",
+          "en": "{victim} underestimated that spicy bite."
+        },
+        {
+          "zhCN": "辣味比{victim}的生命更顽强。",
+          "en": "The spice outlasted your life."
+        }
+      ]
+    }
+  ]
+}

@@ -5,9 +5,21 @@ using UnityEngine;
 /// 通用物品投射模块：负责把带 Mod_Damage 的物品以刚体方式发射、按蓄力缩放速度与伤害，
 /// 用碰撞体扫掠补足高速 Trigger 的帧间穿透，并以轻微空气阻力和虚拟抛物线高度决定落地停止。
 /// </summary>
-public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
+public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, ICombatDamageContextModifier, IDeathCauseSnapshotSource
 {
     public const string PersistedModuleId = "Mod_Projectile";
+
+    #region 发射来源
+    private DeathCauseRecord launchDeathCause;
+
+    public DeathCauseRecord CaptureDeathCause() => launchDeathCause?.Copy();
+
+    public void ModifyDamageContext(ref FlatWorld.Combat.CombatDamageContext context)
+    {
+        if (launchDeathCause != null)
+            context.WeaponItemId = GameplayCombatBridge.NarrativeItemId(launchDeathCause.WeaponItemId);
+    }
+    #endregion
 
     #region 配置
 
@@ -201,6 +213,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>解除伤害事件，防止对象池复用后重复订阅。</summary>
     protected override void OnUnload()
     {
+        launchDeathCause = null;
         _damage?.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
         if (_damage != null)
         {
@@ -305,7 +318,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     }
 
     /// <summary>按射手、蓄力和武器模块产出的速度与伤害倍率开始一次飞行。</summary>
-    public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier, float sourceSpeedMultiplier)
+    public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier, float sourceSpeedMultiplier, Item sourceWeapon = null)
     {
         if (item == null || _damage == null || direction.sqrMagnitude < 0.0001f)
             throw new System.InvalidOperationException($"{name} 无法发射：投射物尚未正确初始化或方向无效。");
@@ -320,6 +333,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         Vector2 normalizedDirection = direction.normalized;
 
         item.Owner = shooter;
+        // 发射时记住真实射手和武器，之后切换手持物也不会改变这支箭的来源。
+        launchDeathCause = DeathCauseRecord.CaptureAttack(sourceWeapon != null ? sourceWeapon : item, shooter);
         item.SetInHand(false);
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = false;
