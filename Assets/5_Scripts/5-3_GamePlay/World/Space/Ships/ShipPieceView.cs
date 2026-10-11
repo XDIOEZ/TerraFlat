@@ -323,6 +323,8 @@ namespace FlatWorld.Spaceflight
                         if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
                         {
                             renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white;
+                            // 船上设备复用物品定义的缩放，让放置预览与船体实体保持相同尺寸。
+                            visual.transform.localScale = definition.Visual?.RendererLocalScale ?? Vector3.one;
                             if (definition.Material != null) renderer.sharedMaterial = definition.Material;
                         }
                         if (piece.Kind == ShipPieceKind.Engine)

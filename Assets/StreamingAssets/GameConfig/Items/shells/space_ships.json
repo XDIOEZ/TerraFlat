@@ -1140,7 +1140,8 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 }
       },
       "health": {
         "hasHp": true,
@@ -1239,7 +1240,8 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 }
       },
       "health": {
         "hasHp": true,
@@ -1739,7 +1741,8 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png",
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 }
       },
       "health": {
         "hasHp": true,
@@ -1838,7 +1841,8 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png",
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 }
       },
       "health": {
         "hasHp": true,

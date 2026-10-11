@@ -35,6 +35,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、固定星系
 - 船内重力判定只读支撑地板与供电；密闭舱的环境查询不请求船外地表，外界查询优先使用已加载温度场。冷地表生成 Profile 按存档和资源会话缓存，资源原位更新后必须失效。
 - 船体部件能力 ID 为 `船体部件模块`，Prefab 为 `Module_ShipPart`，MonoBehaviour 文件必须同名 `Mod_ShipPart.cs`；配置位于 `space_ships.json`。设备、太阳系和飞行参数分别在 `space_devices.json`、`GameConfig/Space/solar-system.json`、`Resources/Config/Space/space-gameplay.json`。
 - 船体动态表现复用 `WorldSortingManager`：承载地板、普通管道、电线依次用 `vehicle` 的 -2/-1/0 偏移，机器及其它部件用 `building`，材质取物品定义，附属箭头继承主体排序层；禁止硬编码 Default 负 Order，否则地表会遮住地板。普通管道按本船正式端口掩码选择 `pipe0..pipe15`，节点状态/删除事件只在端口拓扑签名变化时刷新相邻管线，会话释放须退订。
+- 船上设备投影必须读取物品定义的 `visual.rendererLocalScale`，与召唤器和放置预览保持相同尺寸；复用小型设备贴图时按 PNG 画布、PPU 与目标格宽换算缩放，不修改共享贴图的导入尺寸。
 - `UI_Ship` 只允许玩家在标准交互半径内靠近本船实际 Console 时打开，远离后关闭；地板和墙壁不承担控制台交互，也不注册到空间目标查询。各设备共用互斥的飞船面板会话，不能叠加多个窗口。
 - 舱门只接受交互键开关，`ShipPieceView.CanPointerInteract` 必须拒绝舱门鼠标点选；交互只调用 `SpaceSession.TryToggleDoor`，禁止瞬移乘员。`DoorOpen` 随部件保存，步行、自由碰撞和视图 Collider 统一读取 `BlocksPassage`。双扇滑门只负责表现，开门仍保留交互 Trigger，通道有人时拒绝关闭；正常开关不改变 `SealsAtmosphere`。
 
