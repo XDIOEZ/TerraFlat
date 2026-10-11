@@ -1326,7 +1326,7 @@
       "id": "ShipChemicalEngine",
       "parent": "BuildingBody_Base",
       "gameName": "化学燃料引擎-建筑",
-      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、推力朝上，安装时 R 旋转。",
+      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、进气口朝上，安装时 R 旋转。进气口需通过管道接通氢氧燃料罐，同时接通电线。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -1482,7 +1482,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "化学燃料引擎",
-      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、推力朝上，安装时 R 旋转。",
+      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、进气口朝上，安装时 R 旋转。进气口需通过管道接通氢氧燃料罐，同时接通电线。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -1545,7 +1545,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidPipe"
+            "DefinitionId": "ShipChemicalEngine"
           }
         },
         "ship-part": {

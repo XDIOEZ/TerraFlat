@@ -230,7 +230,10 @@ namespace FlatWorld.Spaceflight
             double health = tile?.DamageProfile?.MaxHealth ?? definition?.Health?.MaxHp ?? 250f;
             return new ShipPartConfiguration
             {
-                Kind = door ? ShipPieceKind.Door : wall ? ShipPieceKind.Wall : ShipPieceKind.Equipment,
+                // 线路按真实能力归类，避免管道和电线被当成阻挡喷口的设备。
+                Kind = door ? ShipPieceKind.Door : wall ? ShipPieceKind.Wall :
+                    machine?.Electrical?.IsWire == true ? ShipPieceKind.Wire :
+                    machine?.Fluid?.Kind == "pipe" ? ShipPieceKind.Pipe : ShipPieceKind.Equipment,
                 Layer = layer,
                 SealsAtmosphere = door || wall, StructuralMassKg = data.Stack?.CurrentWeight ?? 20f,
                 BlocksMovement = door || wall || (machine?.BlocksMovement ?? (layer == (int)BuildingPlacementLayer.Structure && tile == null)),

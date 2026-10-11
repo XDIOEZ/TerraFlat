@@ -284,7 +284,8 @@
           }
         ],
         "VolumeLiters": 1,
-        "GasBufferStandardLiters": 10
+        "GasBufferStandardLiters": 10,
+        "ThroughputLitersPerSecond": 1000
       }
     },
     {
@@ -465,7 +466,7 @@
         "CombineAdjacent": true,
         "SingleGas": false,
         "SingleLiquid": false,
-        "ThroughputLitersPerSecond": 10,
+        "ThroughputLitersPerSecond": 1000,
         "TrackAmbientTemperature": true,
         "BodyTemperatureChangePerSecond": 1,
         "HeatConductanceWattsPerKelvin": 20
@@ -526,7 +527,7 @@
         "CombineAdjacent": true,
         "SingleGas": false,
         "SingleLiquid": false,
-        "ThroughputLitersPerSecond": 10,
+        "ThroughputLitersPerSecond": 1000,
         "TrackAmbientTemperature": true,
         "BodyTemperatureChangePerSecond": 1,
         "HeatConductanceWattsPerKelvin": 20
@@ -1248,6 +1249,25 @@
       "Ports": "none",
       "LogicId": "ship-device",
       "BlocksMovement": true,
+      "Fluid": {
+        "Kind": "receiver",
+        "VolumeLiters": 5,
+        "MinimumGasSpaceLiters": 1,
+        "MaxSafePressureKPa": 2000,
+        "GasBufferStandardLiters": 100,
+        "ThroughputLitersPerSecond": 1000,
+        "BatchStandardLiters": 10,
+        "SingleGas": false,
+        "Ports": [
+          {
+            "Id": "fuel",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "input",
+            "Phase": "gas"
+          }
+        ]
+      },
       "Electrical": {
         "Role": "consumer",
         "Connection": "cell",
@@ -1261,6 +1281,25 @@
       "Ports": "none",
       "LogicId": "ship-device",
       "BlocksMovement": true,
+      "Fluid": {
+        "Kind": "receiver",
+        "VolumeLiters": 5,
+        "MinimumGasSpaceLiters": 1,
+        "MaxSafePressureKPa": 2000,
+        "GasBufferStandardLiters": 100,
+        "ThroughputLitersPerSecond": 1000,
+        "BatchStandardLiters": 10,
+        "SingleGas": false,
+        "Ports": [
+          {
+            "Id": "fuel",
+            "Chamber": "main",
+            "Direction": 1,
+            "Mode": "input",
+            "Phase": "gas"
+          }
+        ]
+      },
       "Electrical": {
         "Role": "consumer",
         "Connection": "cell",

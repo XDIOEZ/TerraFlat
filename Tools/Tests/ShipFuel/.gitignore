@@ -1,0 +1,3 @@
+/bin/
+/obj/
+!/ShipFuel.Tests.csproj

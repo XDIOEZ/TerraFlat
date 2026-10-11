@@ -33,10 +33,7 @@ namespace FlatWorld.Spaceflight
             RefreshMass();
             var assembly = GetConnectedAssembly(ship.ShipId);
             CollectActuators(assembly);
-            double thrust = 0d;
-            foreach (ShipActuator engine in actuators)
-                foreach (FluidInventory tank in fuelTanks)
-                    if (ShipFuel.IsEligible(tank, engine.Device.Configuration)) { thrust += engine.Device.Configuration.EngineThrustNewtons; break; }
+            double thrust = GetAvailableEngineThrust();
             double gravity = Universe.GetBody(flight.BodyId).SurfaceGravity;
             if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating && thrust <= assembly.MassKg * gravity) return false;
             bool ignite = !flight.Ignited;
@@ -123,7 +120,7 @@ namespace FlatWorld.Spaceflight
                 }
                 if (consolePowered)
                     foreach (ShipActuator engine in actuators)
-                        thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine.Device, 1d, seconds);
+                        thrust += engine.Device.Configuration.EngineThrustNewtons * ConsumeEngineFuel(engine, 1d, seconds);
             }
             double gravity = body.SurfaceGravity;
             double previousHeight = flight.HeightMeters;

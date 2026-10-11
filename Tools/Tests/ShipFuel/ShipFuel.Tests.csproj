@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RepoRoot>$(MSBuildThisFileDirectory)../../../</RepoRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接编译生产管路和库存算法，不操作 Unity。 -->
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/FluidNetworkGraph.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/FluidMachineDefinition.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.FluidSupply.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidState.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidInventory.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidRequirement.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidUnits.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Catalog/FluidDefinition.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/ShipFuel.cs" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(MSBuildSDKsPath)/../Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

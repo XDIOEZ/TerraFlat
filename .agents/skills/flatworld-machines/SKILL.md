@@ -47,6 +47,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 - 固定步长冻结库存与吞吐预算；方向由端口输入/输出决定，不按压差自然输送，新料不在同轮穿透无限管格。管层2、机械/电子测压层4/5；测压探针切断真实动力边。
 - FluidDeviceBehavior 经 RegisterFluidDevice 注册能力策略，具体事务在 FluidDeviceOperations；注册租约管理生灭，策略变更使拓扑/能力缓存失效。管网成员始终走正式图边，普通容器仅通过 IContainerPortProvider/ILiquidTransferPort 转移。
+- `receiver` 为按需接收端，不接普通随机单物质推送；需求方经正式有向供给图检查全部所需物质，原子扣源库存与路径各段共享吞吐，同一共享罐去重。基础管道及铁/钢气罐显式配置1000 L/s，普通管道召唤器可在背包数量堆叠。
 - 同材组合罐主成员保存共享 decimal 组分、内能、随机态与端口预留，其余引用主身份。拆分/跨船/回收先按真实容积分配并归还预留，再撤共享引用/预算和重建网络；超压固定受损成员，经 PressureExplosionQueue 有界处理。
 - 气罐方块拆除只释放该格真实份额、返空方块：气相入所在环境，液相持久化溢流；便携罐继续保存内容。船上环境 Provider 读取真实舱温压/舱气，不借当前地表。
 - 炉体接收 ICombustionSupportReceiver，供给侧 ICombustionSupportSource 随领域实例注册；氧气助燃只消费朝向邻炉的真实出气口预留和库存预算，已助燃气不再排环境，供氧/风箱加温取最大值。

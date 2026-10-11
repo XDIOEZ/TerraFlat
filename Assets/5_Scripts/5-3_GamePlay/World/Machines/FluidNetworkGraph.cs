@@ -22,6 +22,20 @@ public sealed class FluidNetworkGraph
         public bool Active;
         public float AwaySeconds;
     }
+    public readonly struct SupplyNode
+    {
+        public readonly MachineEntity Node;
+        public readonly string Chamber;
+        public readonly int DownstreamIndex;
+        public SupplyNode(MachineEntity node, string chamber, int downstreamIndex)
+        { Node = node; Chamber = chamber; DownstreamIndex = downstreamIndex; }
+    }
+    public sealed class SupplyWorkspace
+    {
+        public readonly List<SupplyNode> Nodes = new();
+        internal readonly HashSet<(int, string)> Visited = new();
+        internal readonly HashSet<FluidInventory> Inventories = new();
+    }
     private readonly Dictionary<Vector2Int, MachineEntity> pipes = new();
     private readonly Dictionary<Vector2Int, List<MachineEntity>> devices = new();
     private readonly Dictionary<int, List<Edge>> incoming = new();
@@ -37,6 +51,46 @@ public sealed class FluidNetworkGraph
     public MachineEntity PipeAt(Vector2Int cell) => pipes.TryGetValue(normalize(cell), out var node) ? node : null;
     public int GetConnectionMask(MachineEntity node)
         => node != null && connectionMasks.TryGetValue(node.Id, out int mask) ? mask : 0;
+
+    // 按真实输入方向回溯供给，路径上每一个口都必须允许全部所需物质通过。
+    public void CollectSupplyRoutes(MachineEntity receiver, string chamber, FluidPhase phase,
+        IReadOnlyList<string> requiredFluidIds, SupplyWorkspace workspace)
+    {
+        workspace.Nodes.Clear(); workspace.Visited.Clear();
+        if (receiver?.Definition.Fluid == null || requiredFluidIds == null || requiredFluidIds.Count == 0 ||
+            !CanSupply(receiver, phase)) return;
+        workspace.Nodes.Add(new SupplyNode(receiver, chamber, -1));
+        workspace.Visited.Add((receiver.Id, chamber));
+        for (int index = 0; index < workspace.Nodes.Count; index++)
+        {
+            SupplyNode downstream = workspace.Nodes[index];
+            if (!incoming.TryGetValue(downstream.Node.Id, out var inputs)) continue;
+            foreach (Edge edge in inputs)
+            {
+                if (edge.TargetPort.Chamber != downstream.Chamber || !CanSupply(edge.Source, phase)) continue;
+                FluidDeviceBehavior behavior = MachineWorld.GetFluidDeviceBehavior(edge.Source);
+                if (!behavior.CanOutput(edge.Source, out _)) continue;
+                bool allowed = true;
+                foreach (string id in requiredFluidIds)
+                    if (!Accepts(edge.SourcePort, phase, id) || !Accepts(edge.TargetPort, phase, id) ||
+                        !behavior.CanRoute(edge.Source, edge.SourcePort, phase, id, out _))
+                    { allowed = false; break; }
+                if (!allowed || !workspace.Visited.Add((edge.Source.Id, edge.SourcePort.Chamber))) continue;
+                workspace.Nodes.Add(new SupplyNode(edge.Source, edge.SourcePort.Chamber, index));
+            }
+        }
+    }
+
+    private static bool CanSupply(MachineEntity node, FluidPhase phase)
+    {
+        FluidMachineState state = MachineWorld.GetFluidState(node);
+        return state != null && !state.Ruptured && string.IsNullOrEmpty(state.RuptureBudgetId) &&
+            MachineWorld.GetFluidDeviceBehavior(node).PortsEnabled(node) &&
+            (state.OutletPhase == "both" || state.OutletPhase == (phase == FluidPhase.Gas ? "gas" : "liquid"));
+    }
+    private static bool Accepts(FluidMachinePortDefinition port, FluidPhase phase, string fluidId)
+        => (port.Phase == "both" || port.Phase == (phase == FluidPhase.Gas ? "gas" : "liquid")) &&
+            (string.IsNullOrEmpty(port.FluidId) || string.Equals(port.FluidId, fluidId, StringComparison.OrdinalIgnoreCase));
 
     public void Rebuild(IEnumerable<MachineEntity> source)
     {

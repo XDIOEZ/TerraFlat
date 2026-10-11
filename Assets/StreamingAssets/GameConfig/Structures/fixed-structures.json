@@ -179,8 +179,8 @@
         {
           "memberId": "gravity",
           "itemId": "ShipGravityGenerator",
-          "x": 4,
-          "y": 2
+          "x": 3,
+          "y": 4
         },
         {
           "memberId": "air-supply",
@@ -201,7 +201,7 @@
         {
           "memberId": "cultivator",
           "itemId": "SpaceCultivator",
-          "x": 5,
+          "x": 6,
           "y": 2,
           "resources": {
             "liquids": {
@@ -278,10 +278,10 @@
           }
         },
         {
-          "memberId": "fuel-1-2",
+          "memberId": "fuel-1-1",
           "itemId": "GasTankBlock_Steel",
           "x": 1,
-          "y": 2,
+          "y": 1,
           "height": 2,
           "resources": {
             "gas": {
@@ -312,10 +312,10 @@
           }
         },
         {
-          "memberId": "fuel-7-2",
+          "memberId": "fuel-7-1",
           "itemId": "GasTankBlock_Steel",
           "x": 7,
-          "y": 2,
+          "y": 1,
           "height": 2,
           "resources": {
             "gas": {
@@ -346,9 +346,9 @@
           }
         },
         {
-          "memberId": "fuel-2-4",
+          "memberId": "fuel-1-4",
           "itemId": "GasTankBlock_Steel",
-          "x": 2,
+          "x": 1,
           "y": 4,
           "resources": {
             "gas": {
@@ -362,9 +362,9 @@
           }
         },
         {
-          "memberId": "fuel-6-4",
+          "memberId": "fuel-7-4",
           "itemId": "GasTankBlock_Steel",
-          "x": 6,
+          "x": 7,
           "y": 4,
           "resources": {
             "gas": {
@@ -410,6 +410,44 @@
           }
         },
         {
+          "memberId": "fuel-pipe-bottom-left",
+          "itemId": "FluidPipe",
+          "x": 2,
+          "y": 1
+        },
+        {
+          "memberId": "fuel-pipe-bottom-right",
+          "itemId": "FluidPipe",
+          "x": 6,
+          "y": 1
+        },
+        {
+          "memberId": "fuel-pipe-top-left",
+          "itemId": "FluidPipe",
+          "x": 1,
+          "y": 7,
+          "width": 2
+        },
+        {
+          "memberId": "fuel-pipe-top-right",
+          "itemId": "FluidPipe",
+          "x": 6,
+          "y": 7,
+          "width": 2
+        },
+        {
+          "memberId": "fuel-pipe-side-left",
+          "itemId": "FluidPipe",
+          "x": 1,
+          "y": 3
+        },
+        {
+          "memberId": "fuel-pipe-side-right",
+          "itemId": "FluidPipe",
+          "x": 7,
+          "y": 3
+        },
+        {
           "memberId": "copper-left",
           "itemId": "Wire_Copper",
           "x": 2,
@@ -429,6 +467,13 @@
           "x": 3,
           "y": 2,
           "width": 3
+        },
+        {
+          "memberId": "copper-gravity",
+          "itemId": "Wire_Copper",
+          "x": 3,
+          "y": 3,
+          "height": 2
         },
         {
           "memberId": "copper-console",

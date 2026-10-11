@@ -48,7 +48,7 @@ TextureImporter:
   spriteMeshType: 0
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 309.5
+  spritePixelsToUnits: 281.5
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 0
   alphaUsage: 1
@@ -126,10 +126,10 @@ TextureImporter:
       name: Pipe_00
       rect:
         serializedVersion: 2
-        x: 2.0
-        y: 942.5
-        width: 309.5
-        height: 309.5
+        x: 16.0
+        y: 956.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -147,10 +147,10 @@ TextureImporter:
       name: Pipe_01
       rect:
         serializedVersion: 2
-        x: 315.5
-        y: 942.5
-        width: 309.5
-        height: 309.5
+        x: 329.5
+        y: 956.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -168,10 +168,10 @@ TextureImporter:
       name: Pipe_02
       rect:
         serializedVersion: 2
-        x: 629.0
-        y: 942.5
-        width: 309.5
-        height: 309.5
+        x: 643.0
+        y: 956.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -189,10 +189,10 @@ TextureImporter:
       name: Pipe_03
       rect:
         serializedVersion: 2
-        x: 942.5
-        y: 942.5
-        width: 309.5
-        height: 309.5
+        x: 956.5
+        y: 956.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -210,10 +210,10 @@ TextureImporter:
       name: Pipe_04
       rect:
         serializedVersion: 2
-        x: 2.0
-        y: 629.0
-        width: 309.5
-        height: 309.5
+        x: 16.0
+        y: 643.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -231,10 +231,10 @@ TextureImporter:
       name: Pipe_05
       rect:
         serializedVersion: 2
-        x: 315.5
-        y: 629.0
-        width: 309.5
-        height: 309.5
+        x: 329.5
+        y: 643.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -252,10 +252,10 @@ TextureImporter:
       name: Pipe_06
       rect:
         serializedVersion: 2
-        x: 629.0
-        y: 629.0
-        width: 309.5
-        height: 309.5
+        x: 643.0
+        y: 643.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -273,10 +273,10 @@ TextureImporter:
       name: Pipe_07
       rect:
         serializedVersion: 2
-        x: 942.5
-        y: 629.0
-        width: 309.5
-        height: 309.5
+        x: 956.5
+        y: 643.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -294,10 +294,10 @@ TextureImporter:
       name: Pipe_08
       rect:
         serializedVersion: 2
-        x: 2.0
-        y: 315.5
-        width: 309.5
-        height: 309.5
+        x: 16.0
+        y: 329.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -315,10 +315,10 @@ TextureImporter:
       name: Pipe_09
       rect:
         serializedVersion: 2
-        x: 315.5
-        y: 315.5
-        width: 309.5
-        height: 309.5
+        x: 329.5
+        y: 329.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -336,10 +336,10 @@ TextureImporter:
       name: Pipe_10
       rect:
         serializedVersion: 2
-        x: 629.0
-        y: 315.5
-        width: 309.5
-        height: 309.5
+        x: 643.0
+        y: 329.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -357,10 +357,10 @@ TextureImporter:
       name: Pipe_11
       rect:
         serializedVersion: 2
-        x: 942.5
-        y: 315.5
-        width: 309.5
-        height: 309.5
+        x: 956.5
+        y: 329.5
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -378,10 +378,10 @@ TextureImporter:
       name: Pipe_12
       rect:
         serializedVersion: 2
-        x: 2.0
-        y: 2.0
-        width: 309.5
-        height: 309.5
+        x: 16.0
+        y: 16.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -399,10 +399,10 @@ TextureImporter:
       name: Pipe_13
       rect:
         serializedVersion: 2
-        x: 315.5
-        y: 2.0
-        width: 309.5
-        height: 309.5
+        x: 329.5
+        y: 16.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -420,10 +420,10 @@ TextureImporter:
       name: Pipe_14
       rect:
         serializedVersion: 2
-        x: 629.0
-        y: 2.0
-        width: 309.5
-        height: 309.5
+        x: 643.0
+        y: 16.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -441,10 +441,10 @@ TextureImporter:
       name: Pipe_15
       rect:
         serializedVersion: 2
-        x: 942.5
-        y: 2.0
-        width: 309.5
-        height: 309.5
+        x: 956.5
+        y: 16.0
+        width: 281.5
+        height: 281.5
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}

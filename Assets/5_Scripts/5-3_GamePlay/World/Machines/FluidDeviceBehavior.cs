@@ -17,6 +17,7 @@ public abstract class FluidDeviceBehavior
     public virtual bool HasMechanicalSource => false;
     public virtual bool UsesFilterMaterial => false;
     public virtual bool StoresResidue => false;
+    public virtual bool ReceivesOnDemand => false;
     public virtual bool PortsEnabled(MachineEntity node) => true;
     public virtual bool CanOutput(MachineEntity node, out string reason) { reason = null; return true; }
     public virtual bool CanRoute(MachineEntity node, FluidMachinePortDefinition port, FluidPhase phase,
@@ -28,6 +29,14 @@ public abstract class FluidDeviceBehavior
     public virtual string ActionLabel(MachineEntity node) => string.Empty;
     public virtual bool Execute(MachineEntity node, string operation, string argument) => false;
     public virtual void AppendDescription(MachineEntity node, StringBuilder text) { }
+    #endregion
+}
+
+public sealed class FluidReceiverBehavior : FluidDeviceBehavior
+{
+    #region 按需供给入口
+    // 需求方沿正式管路原子取料，避免随机单气批次把混气入口灌偏。
+    public override bool ReceivesOnDemand => true;
     #endregion
 }
 

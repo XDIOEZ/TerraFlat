@@ -117,8 +117,15 @@ internal static partial class Program
         }
         using var machines = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "Assets/Resources/Config/Mechanical/mechanical-catalog.json")));
         var layers = new Dictionary<string, int>(StringComparer.Ordinal);
+        var lineKinds = new Dictionary<string, ShipPieceKind>(StringComparer.Ordinal);
         foreach (var node in machines.RootElement.GetProperty("Nodes").EnumerateArray())
+        {
             layers.Add(node.GetProperty("Id").GetString(), JsonInt(node, "PlacementLayer", JsonString(node, "Kind") == "bridge" ? 1 : 0));
+            if (node.TryGetProperty("Fluid", out var fluid) && JsonString(fluid, "Kind") == "pipe")
+                lineKinds.Add(node.GetProperty("Id").GetString(), ShipPieceKind.Pipe);
+            else if (node.TryGetProperty("Electrical", out var electrical) && JsonString(electrical, "Role") == "wire")
+                lineKinds.Add(node.GetProperty("Id").GetString(), ShipPieceKind.Wire);
+        }
         using var structures = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "Assets/StreamingAssets/GameConfig/Structures/fixed-structures.json")));
         var template = structures.RootElement.GetProperty("structures").EnumerateArray().Single(value => value.GetProperty("id").GetString() == "gm:small-test-ship");
         var ship = new ShipState();
@@ -126,7 +133,8 @@ internal static partial class Program
         {
             string itemId = stamp.GetProperty("itemId").GetString();
             var kindValue = EngineItemValue(items, itemId, "modules", "ship-part", "parameters", "Configuration", "Kind");
-            var kind = kindValue.ValueKind == JsonValueKind.String ? Enum.Parse<ShipPieceKind>(kindValue.GetString()) : ShipPieceKind.Equipment;
+            var kind = kindValue.ValueKind == JsonValueKind.String ? Enum.Parse<ShipPieceKind>(kindValue.GetString()) :
+                lineKinds.GetValueOrDefault(itemId, ShipPieceKind.Equipment);
             var layerValue = EngineItemValue(items, itemId, "modules", "ship-part", "parameters", "Configuration", "Layer");
             int layer = layerValue.ValueKind == JsonValueKind.Number ? layerValue.GetInt32() : layers.GetValueOrDefault(itemId);
             var buildingValue = EngineItemValue(items, itemId, "modules", "建筑模块", "data", "BitData");
@@ -152,6 +160,9 @@ internal static partial class Program
                 Check(occupied.TryAdd(cell, piece.PieceId), $"template structure overlap at {cell.X},{cell.Y}: {piece.PieceId}");
         }
         var engines = ship.Pieces.Where(piece => piece.Kind == ShipPieceKind.Engine).ToArray();
+        for (int y = 1; y <= 4; y++)
+        foreach (int x in new[] { 4, 5 })
+            Check(!occupied.ContainsKey(new ShipCell(x, y)), $"GM player route to console remains clear at {x},{y}");
         Check(engines.Length == 6, "GM template must have six engines");
         foreach (var engine in engines)
         {

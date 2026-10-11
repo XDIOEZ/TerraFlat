@@ -77,7 +77,7 @@ Use case: stylized-concept. Asset type: FlatWorld pixel-art inventory MATERIAL i
 | FilterResidue | 1254 x 1254 | 173, 413, 1081, 891 | 9212 | 256 | 1254 |
 | FluidFilter | 1254 x 1254 | 141, 183, 1113, 1062 | 42169 | 256 | 1475.294118 |
 | FluidOutlet | 1254 x 1254 | 236, 288, 1019, 972 | 45294 | 256 | 2280 |
-| FluidPipe_Connections | 1254 x 1254 | 0, 0, 1254, 1254 | 11421 | 256 | 309.5 |
+| FluidPipe_Connections | 1254 x 1254 | 0, 0, 1254, 1254 | 50694 | 256 | 281.5 |
 | FluidValve | 1254 x 1254 | 151, 100, 1104, 1148 | 45451 | 256 | 2280 |
 | GasCompressor_Electric | 1254 x 1254 | 120, 179, 1135, 1076 | 39639 | 256 | 1475.294118 |
 | GasCompressor_Mechanical | 1254 x 1254 | 85, 276, 1159, 981 | 39445 | 256 | 1475.294118 |
@@ -101,10 +101,25 @@ Use case: stylized-concept. Asset type: FlatWorld pixel-art inventory MATERIAL i
 
 ## 管道连接图
 
-`FluidPipe/FluidPipe_Connections.png` 通过内置 `imagegen` 编辑模式生成，保留原图 Alpha；以铜电线连接表为布局参考、钢罐为灰蓝金属参考。4×4 等格布局，每格原始 313.5×313.5 px；导入切片四边各内缩 2 px，防止相邻格贴图的端点串入本格，实际切片 309.5×309.5 px、中心 Pivot、309.5 PPU，对应一世界格，Point、无压缩、无 Mipmap。`Pipe_00..Pipe_15` 按北1、东2、南4、西8排序，16 格切片边缘方向静态检查通过；图标使用水平 `Pipe_10`，世界表现按正式端口连接选图，未接邻格时使用 `Pipe_00`。保留旧 `FluidPipe_Idle.png`，当前管道定义改用连接图。
+`FluidPipe/FluidPipe_Connections.png` 通过内置 `imagegen` 编辑模式生成，原始 PNG 和 Alpha 直接保留。2026-10-11 重绘为银蓝粗金属管、带四角螺栓的八边法兰和冷青色管箍，与细橙铜电线及方形接线头区分；以旧管道表为严格方向模板、铜电线为对比参考、钢罐为灰蓝金属参考。4×4 等格布局，每格原始 313.5×313.5 px；新法兰与管端比旧图更宽，导入切片四边各内缩 16 px，防止邻格管端串入本格，实际切片 281.5×281.5 px、中心 Pivot、281.5 PPU，对应一世界格，Point、无压缩、无 Mipmap。`Pipe_00..Pipe_15` 按北1、东2、南4、西8排序，16 格四边有效 Alpha 方向静态检查通过；GUID、Sprite 名称和 Sprite ID 保持不变。图标使用水平 `Pipe_10`，世界表现按正式端口连接选图，未接邻格时使用 `Pipe_00`。保留旧 `FluidPipe_Idle.png`，当前管道定义使用连接图。未在用户的 Play Mode 中主动导入或刷新，运行时外观由用户重新导入后验收。
 
-生成提示词：
+初版生成提示词（历史记录）：
 
 ```text
 Use case: precise-object-edit. Asset type: game-ready FlatWorld 2D pixel-art fluid pipe connection spritesheet. Image 1 is the exact 4 by 4 wire connection sheet geometry/layout template to edit; Image 2 is the gray-blue steel material palette reference only. Produce a new square transparent PNG with exactly 16 equal square cells, 4 columns and 4 rows, with NO gutters or margin. Keep all cell centers at the same positions, preserve the exact branch directions of every cell in Image 1. Change the copper wires into slightly thicker gray-blue steel fluid pipes: narrow straight metal tubes about 14 percent of each cell width, charcoal outline, restrained blue-gray highlight and shadow, small compact square steel coupling at the cell center (about 22 percent width). Tubes reach exactly to their cell edges at the center; connecting edges are flat and seamless, no black end caps. Copy directions precisely, listed row by row from top to bottom, left to right: row 1 = isolated small coupling; North only; East only; North+East. Row 2 = South only; North+South; East+South; North+East+South. Row 3 = West only; North+West; East+West; North+East+West. Row 4 = South+West; North+South+West; East+South+West; North+East+South+West. All pipes on the same centerline in each cell. Preserve hard square pixel clusters and simple top down presentation. Genuine alpha transparency everywhere outside the pipe silhouettes, including between branches; no background, no grid lines, no labels, no arrows, no icons, no machinery housing, no shadows, no glow, no extra branches. This is a technical connection sheet, not a collage. Preserve geometry of Image 1 rigorously.
+```
+
+
+2026-10-11 重绘提示词（当前成图，内置工具模式）：
+
+```text
+Use case: precise-object-edit.
+Asset type: FlatWorld production pixel-art fluid pipe connection spritesheet.
+Primary request: Replace Image 1's visually wire-like blue-gray pipes with unmistakably robust industrial FLUID PIPES, visibly different from the thin orange copper wires in Image 2.
+Input images: Image 1 is the exact existing pipe connection atlas to edit and the strict layout/direction template. Image 2 is copper electrical wires for visual contrast only, do not copy their square wiring hubs. Image 3 is the steel tank palette/style reference.
+Canvas: Keep original 1254 by 1254 square PNG dimensions. Exactly 4 columns by 4 rows of equal square cells. NO gutters and NO outer margin. Keep each original cell center and axis unchanged.
+Geometry: Preserve every branch direction of Image 1, listed by row from top to bottom, left to right: row 1 = isolated round flange; North only; East only; North+East. Row 2 = South only; North+South; East+South; North+East+South. Row 3 = West only; North+West; East+West; North+East+West. Row 4 = South+West; North+South+West; East+South+West; North+East+South+West. Do not move, add or omit a branch. North/up bit=1, East/right=2, South/down=4, West/left=8.
+Visual design: Tubes are thick steel silver-blue pipes, approximately 25 percent of cell width, rather than slender wires. Central junction is a sturdy octagonal round metal flange about 34 percent of cell width, with four small bolt heads arranged off the pipe axes around its corners; metal center is plain and a small subtle teal indicator. No square electric wiring box. Each outgoing branch has one stout cold-cyan/teal identification band and steel pipe collar near its midpoint. Teal bands must be clean restrained color blocks, no glow, and pipes remain predominantly light steel gray-blue. Clear dark charcoal silhouette, blue-gray underside, restrained pale upper-left highlight, chunky hard-edged pixel clusters. All 16 cells have identical pipe width and shared material/design.
+Seams: Every allowed tube branch extends exactly to its corresponding CELL EDGE on the central axis with a FLAT OPEN CUT, with no vertical black endcap crossing the tube and no transparent break at the boundary. No pipe on disallowed edges. Connecting ends match adjacent tiles seamlessly. Outside the pipe/flange silhouettes remains genuinely transparent alpha, including transparent corners. Preserve the transparency.
+Style: Hard-edged FlatWorld industrial pixel art, simplified readable bolted metal; not soft illustration or 3D. No background, grid lines, labels, numbers, arrows, text, logos, watermark, scenery, machinery, shadows or glow. Render ONLY the exact 16 connection shapes in this exact atlas layout.
 ```

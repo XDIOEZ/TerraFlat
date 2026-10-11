@@ -9,6 +9,7 @@ public static partial class MachineWorld
     #region 共享吞吐与原子搬运
     private static void TryMoveFluidEdge(FluidNetworkGraph.Edge edge, float seconds)
     {
+        if (edge.Target != null && GetFluidDeviceBehavior(edge.Target).ReceivesOnDemand) return;
         FluidMachineState sourceState = GetFluidState(edge.Source);
         if (sourceState.Ruptured || !string.IsNullOrEmpty(sourceState.RuptureBudgetId)) return;
         if (edge.Target != null && (GetFluidState(edge.Target).Ruptured || !string.IsNullOrEmpty(GetFluidState(edge.Target).RuptureBudgetId))) return;

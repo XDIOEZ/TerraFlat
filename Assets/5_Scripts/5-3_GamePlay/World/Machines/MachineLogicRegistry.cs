@@ -72,6 +72,7 @@ public static class MachineLogicRegistry
         AddFluidDevice("valve", new FluidValveBehavior());
         AddFluidDevice("selector", new FluidSelectorBehavior());
         AddFluidDevice("tank", new FluidStorageBehavior());
+        AddFluidDevice("receiver", new FluidReceiverBehavior());
         AddFluidDevice("gas-pump", new FluidGasPumpBehavior());
         AddFluidDevice("liquid-pump", new FluidLiquidPumpBehavior());
         AddFluidDevice("compressor", new FluidCompressorBehavior());
