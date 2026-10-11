@@ -9,18 +9,33 @@ public partial class Mod_Mover
     private bool spaceMotionOwned;
     private RigidbodyType2D beforeSpaceBodyType;
     public bool IsHoldRunInputActive => holdRunInputActive;
+    public bool IsUsingPointerBodyRotation { get; private set; }
+
+    public void SetPointerBodyRotation(bool enabled)
+    {
+        if (IsUsingPointerBodyRotation == enabled) return;
+        IsUsingPointerBodyRotation = enabled;
+        item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(!enabled);
+        item?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetFollowTargetRotation(!enabled);
+    }
+
     private bool UpdateSpaceMotion(float seconds)
     {
-        if (item is not Player player || !player.IsLocalProfile || SpaceSession.Current == null || rb == null) return false;
+        if (item is not Player player || !player.IsLocalProfile || SpaceSession.Current?.State == null || rb == null)
+        {
+            SetPointerBodyRotation(false);
+            return false;
+        }
         Mod_GameController controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         Vector2 input = controller != null && !controller.IsGameplayInputLocked ? controller.ReadMoveInput(moveAction) : Vector2.zero;
-        if (spaceTurnAction == null)
+        bool driving = !string.IsNullOrWhiteSpace(SpaceSession.Current.GetPassenger(player).ConsolePieceId);
+        if (driving && spaceTurnAction == null)
         {
             spaceTurnAction = new InputAction("SpaceTurn", InputActionType.Value);
             spaceTurnAction.AddCompositeBinding("1DAxis").With("Negative", "<Keyboard>/e").With("Positive", "<Keyboard>/q");
             spaceTurnAction.Enable();
         }
-        float turn = controller != null && !controller.IsGameplayInputLocked &&
+        float turn = driving && controller != null && !controller.IsGameplayInputLocked &&
             controller.IsGameplayInputAllowed(spaceTurnAction.activeControl?.device) ? spaceTurnAction.ReadValue<float>() : 0f;
         bool controlled = SpaceSession.Current.HandlePassengerInput(player, this, controller, input, turn, holdRunInputActive, seconds);
         if (controlled)
@@ -34,10 +49,14 @@ public partial class Mod_Mover
             hungerActionInstance?.SetMovementState(input.sqrMagnitude > .001f, IsRunning);
             UpdateMovementState();
         }
-        else if (spaceMotionOwned)
+        else
         {
-            rb.bodyType = beforeSpaceBodyType; spaceMotionOwned = false;
-            DrivenVelocity = ExternalVelocity = Vector2.zero;
+            SetPointerBodyRotation(false);
+            if (spaceMotionOwned)
+            {
+                rb.bodyType = beforeSpaceBodyType; spaceMotionOwned = false;
+                DrivenVelocity = ExternalVelocity = Vector2.zero;
+            }
         }
         return controlled;
     }
@@ -51,6 +70,7 @@ public partial class Mod_Mover
     }
     private void ReleaseSpaceInput()
     {
+        SetPointerBodyRotation(false);
         spaceTurnAction?.Disable(); spaceTurnAction?.Dispose(); spaceTurnAction = null;
         if (spaceMotionOwned && rb != null) rb.bodyType = beforeSpaceBodyType;
         spaceMotionOwned = false;

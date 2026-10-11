@@ -66,6 +66,10 @@ public class Mod_Cam : Module
     /// <summary>相机模块是否已完成虚拟相机初始化，供外部系统判断可用状态而不暴露 Cinemachine 类型依赖。</summary>
     public bool IsCameraReady => vcam != null;
 
+    public bool FollowTargetRotation { get; private set; } = true;
+
+    public void SetFollowTargetRotation(bool enabled) => FollowTargetRotation = enabled;
+
     /// <summary>
     /// 获取虚拟相机组件
     /// </summary>
@@ -87,10 +91,10 @@ public class Mod_Cam : Module
         BindWorldAudioListener();
     }
 
-    // 镜头使用玩家世界朝向；承载船体转动时玩家与镜头一起转。
+    // 鼠标控制本体转向时保持镜头角度，避免镜头转动让鼠标落点持续追着角色旋转。
     private void LateUpdate()
     {
-        if (Enabled && vcam != null && CameraFollowItem != null)
+        if (Enabled && FollowTargetRotation && vcam != null && CameraFollowItem != null)
             vcam.m_Lens.Dutch = CameraFollowItem.transform.eulerAngles.z;
     }
 

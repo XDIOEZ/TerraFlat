@@ -30,6 +30,9 @@ public class Mod_TurnBack : Module
     /// <summary>角色当前实际使用的左右转身角，供瞄准对象合成最终旋转。</summary>
     public float CurrentTurnAngleY { get; private set; }
 
+    /// <summary>关闭镜像时保留默认朝右姿态，交给外部系统旋转角色本体。</summary>
+    public bool IsMirroringEnabled { get; private set; } = true;
+
     /// <summary>仅在真实左右翻面时广播；无 Inspector 持久监听，使用 C# 事件避免 Vector2 装箱。</summary>
     public event System.Action<Vector2> OnTrun;
 
@@ -82,6 +85,7 @@ public class Mod_TurnBack : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (!IsMirroringEnabled) return;
         UpdateWork();
         UpdateTurn(deltaTime);
         UpdateTransform_Positions();
@@ -92,6 +96,19 @@ public class Mod_TurnBack : Module
     #endregion
 
     #region 转向逻辑
+
+    public void SetMirroringEnabled(bool enabled)
+    {
+        if (IsMirroringEnabled == enabled) return;
+        IsMirroringEnabled = enabled;
+        if (enabled) return;
+
+        bool wasFacingLeft = currentDirection.x < 0f;
+        currentDirection = Vector2.right;
+        isPositionTransforming = false;
+        ResetTurnState();
+        if (wasFacingLeft) OnTrun?.Invoke(currentDirection);
+    }
 
     private void UpdateWork()
     {
@@ -109,6 +126,7 @@ public class Mod_TurnBack : Module
 
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
+        if (!IsMirroringEnabled) return;
         if (IsDirectionLocked) return;
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
 
@@ -126,7 +144,7 @@ public class Mod_TurnBack : Module
 
         targetY = (currentDirection == Vector2.right) ? 0f : 180f;
         startY = controlledTransforms_Direction.Count > 0
-            ? NormalizeAngle(controlledTransforms_Direction[0].eulerAngles.y)
+            ? NormalizeAngle(controlledTransforms_Direction[0].localEulerAngles.y)
             : CurrentTurnAngleY;
         CurrentTurnAngleY = startY;
 
@@ -137,7 +155,7 @@ public class Mod_TurnBack : Module
 
     public void UpdateTurn(float deltaTime)
     {
-        if (!isTurning) return;
+        if (!IsMirroringEnabled || !isTurning) return;
 
         turnTimeElapsed += deltaTime;
         float t = Mathf.Clamp01(turnTimeElapsed / Duration);
@@ -149,8 +167,8 @@ public class Mod_TurnBack : Module
             if (tform != null)
             {
                 // 只修改Y轴旋转，保持X和Z轴不变
-                Vector3 currentEulerAngles = tform.eulerAngles;
-                tform.rotation = Quaternion.Euler(currentEulerAngles.x, newY, currentEulerAngles.z);
+                Vector3 currentEulerAngles = tform.localEulerAngles;
+                tform.localRotation = Quaternion.Euler(currentEulerAngles.x, newY, currentEulerAngles.z);
             }
         }
 
@@ -161,8 +179,8 @@ public class Mod_TurnBack : Module
                 if (tform != null)
                 {
                     // 只修改Y轴旋转，保持X和Z轴不变
-                    Vector3 currentEulerAngles = tform.eulerAngles;
-                    tform.rotation = Quaternion.Euler(currentEulerAngles.x, targetY, currentEulerAngles.z);
+                    Vector3 currentEulerAngles = tform.localEulerAngles;
+                    tform.localRotation = Quaternion.Euler(currentEulerAngles.x, targetY, currentEulerAngles.z);
                 }
             }
 
@@ -225,8 +243,8 @@ public class Mod_TurnBack : Module
         if (transform == null) return;
 
         // 根据当前转身插值设置Y轴旋转
-        Vector3 currentEulerAngles = transform.eulerAngles;
-        transform.rotation = Quaternion.Euler(currentEulerAngles.x, CurrentTurnAngleY, currentEulerAngles.z);
+        Vector3 currentEulerAngles = transform.localEulerAngles;
+        transform.localRotation = Quaternion.Euler(currentEulerAngles.x, CurrentTurnAngleY, currentEulerAngles.z);
     }
     /// <summary>
     /// 批量更新所有受控制对象的朝向

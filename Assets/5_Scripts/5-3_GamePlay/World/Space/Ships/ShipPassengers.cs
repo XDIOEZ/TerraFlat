@@ -22,10 +22,15 @@ namespace FlatWorld.Spaceflight
         {
             if (State == null || transitionRunning) return false;
             SpacePassengerState passenger = GetPassenger(player);
-            if (GetPassengerWorld(passenger) is string expectedWorld && expectedWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) return true;
+            if (GetPassengerWorld(passenger) is string expectedWorld && expectedWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
+            {
+                mover.SetPointerBodyRotation(false);
+                return true;
+            }
             ShipState ship = GetShip(passenger.ShipId);
             if (passenger.SurfaceDescending)
             {
+                mover.SetPointerBodyRotation(false);
                 Vector2 position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
                 player.transform.position = position;
                 return true;
@@ -36,6 +41,7 @@ namespace FlatWorld.Spaceflight
                     ExitConsole(player);
                 else
                 {
+                    mover.SetPointerBodyRotation(false);
                     SetControl(console.PieceId, screenInput, turn);
                     passenger.LocalX = (console.CellX + .5d) * ship.CellSizeMeters;
                     passenger.LocalY = (console.CellY + .5d) * ship.CellSizeMeters;
@@ -52,6 +58,7 @@ namespace FlatWorld.Spaceflight
             bool ground = floorFlight != null && floorFlight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
             if (floor && (gravity || ground))
             {
+                mover.SetPointerBodyRotation(false);
                 if (passenger.ShipId != floorShip.ShipId || !passenger.Supported)
                 {
                     passenger.ShipId = floorShip.ShipId; passenger.LocalX = local.x; passenger.LocalY = local.y;
@@ -77,9 +84,11 @@ namespace FlatWorld.Spaceflight
             }
             if (!IsSpaceView)
             {
+                mover.SetPointerBodyRotation(false);
                 passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
                 SetTerrainSuppression(player, false); return false;
             }
+            mover.SetPointerBodyRotation(true);
             passenger.IsInSpace = true;
             if (passenger.Supported && ship != null && string.IsNullOrWhiteSpace(passenger.GripPieceId)) ReleasePassenger(passenger, ship);
             if (passenger.Supported && !string.IsNullOrWhiteSpace(passenger.GripPieceId) && ship != null)
@@ -120,17 +129,34 @@ namespace FlatWorld.Spaceflight
                     passengerImpulses.TryGetValue(passenger.ProfileId, out SpaceVector2 pending);
                     passengerImpulses[passenger.ProfileId] = pending + SpaceVector2.FromVector2(deltaVelocity);
                 }
-                // Q/E 直接控制角速度，松键立即停转，并清除刚体残留的旋转速度。
-                float turnSpeed = Mathf.Clamp(turn, -1f, 1f) * SpaceGameplaySettings.Current.PlayerTurnDegreesPerSecond;
-                float heading = player.transform.eulerAngles.z + turnSpeed * seconds;
-                player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
-                if (mover.rb != null) { mover.rb.angularVelocity = 0f; mover.rb.rotation = heading; }
             }
+            TurnPassengerToPointer(player, mover, controller, seconds);
+            if (passenger.Supported && nearShip != null)
+                passenger.RelativeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d - nearShip.AngleRadians;
             passenger.PreviousShift = shift;
             passenger.FreeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d;
             SetTerrainSuppression(player, floor);
             return true;
         }
+
+        private void TurnPassengerToPointer(Player player, Mod_Mover mover, Mod_GameController controller, float seconds)
+        {
+            if (mover.rb != null) mover.rb.angularVelocity = 0f;
+            if (controller == null || controller.IsGameplayInputLocked ||
+                player.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.IsDirectionLocked == true ||
+                !controller.TryGetMouseWorldPosition(out Vector3 point)) return;
+
+            Vector2 direction = point - player.transform.position;
+            if (direction.sqrMagnitude <= .01f) return;
+
+            // 失重时沿最短角度转动整个玩家，鼠标贴近中心时保留原来的朝向。
+            float targetHeading = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            float heading = Mathf.MoveTowardsAngle(player.transform.eulerAngles.z, targetHeading,
+                SpaceGameplaySettings.Current.PlayerTurnDegreesPerSecond * seconds);
+            player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
+            if (mover.rb != null) mover.rb.rotation = heading;
+        }
+
         private bool NearStructure(SpaceVector2 point)
         {
             foreach (ShipState ship in State.Ships)

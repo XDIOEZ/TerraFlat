@@ -30,7 +30,7 @@ namespace FlatWorld.Spaceflight
         public double ImpactForcePerDurability = 1000d;
         public double LandingChoiceRadiusMeters = 10d;
         public double WallPushSpeedMetersPerSecond = 8d;
-        public float PlayerTurnDegreesPerSecond = 45f; // 失重玩家按 Q/E 匀速旋转，松键即停。
+        public float PlayerTurnDegreesPerSecond = 45f; // 失重玩家朝鼠标方向转动本体的最大角速度。
         public float DrivingCameraSize = 30f;
         public double ImpactJoulesPerDurability = 1000d;
         private static SpaceGameplaySettings current;

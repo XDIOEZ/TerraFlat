@@ -143,6 +143,7 @@ public partial class Mod_FocusPoint : Module
     #region Private Methods
     private void FaceToMouse(Vector3 targetPosition, float deltaTime)
     {
+        bool bodyRotationAim = turnBody != null && !turnBody.IsMirroringEnabled;
         // 获取玩家当前朝向
         float playerFacingDirection = 1f; // 1表示朝右，-1表示朝左
         if (turnBody != null)
@@ -154,14 +155,22 @@ public partial class Mod_FocusPoint : Module
         foreach (var targetTrans in GetValidRotationTargets())
         {
             // 计算目标对象到鼠标位置的距离
-            float distanceToMouse = WorldTopologyRuntime.Distance(targetTrans.position, targetPosition);
+            float distanceToMouse = bodyRotationAim
+                ? Vector2.Distance(targetTrans.position, targetPosition)
+                : WorldTopologyRuntime.Distance(targetTrans.position, targetPosition);
 
             // 如果距离小于阈值，则停止旋转，保留当前角度
             if (distanceToMouse <= Data.StopRotationDistance)
                 continue;
 
             // 计算目标对象到鼠标位置的方向
-            Vector2 direction = WorldTopologyRuntime.ShortestDelta(targetTrans.position, targetPosition);
+            Vector2 direction = bodyRotationAim
+                ? (Vector2)(targetPosition - targetTrans.position)
+                : WorldTopologyRuntime.ShortestDelta(targetTrans.position, targetPosition);
+
+            // 本体已经转动时，手持物只补父节点坐标中的瞄准角，避免重复叠加整个人的旋转。
+            if (bodyRotationAim && targetTrans.parent != null)
+                direction = targetTrans.parent.InverseTransformDirection(direction);
             
             // 根据玩家朝向调整方向
             if (playerFacingDirection < 0) // 玩家朝左
