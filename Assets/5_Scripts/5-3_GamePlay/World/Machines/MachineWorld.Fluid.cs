@@ -347,10 +347,14 @@ public static partial class MachineWorld
         if (fluidGraph == null) return;
         foreach (FluidNetworkGraph.Component component in fluidGraph.Components)
         {
-            bool near = false;
+            // 船内流体网随船持续模拟，不用地表玩家区块判断休眠。
+            bool near = IsShipScope;
             int range = component.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
-            foreach (MachineEntity node in component.Nodes)
-            foreach (Vector2Int player in players) near |= graph.IsNear(node.SimulationBounds, player, range);
+            if (!near)
+            {
+                foreach (MachineEntity node in component.Nodes)
+                foreach (Vector2Int player in players) near |= graph.IsNear(node.SimulationBounds, player, range);
+            }
             if (near) component.AwaySeconds = 0;
             else if (component.Active) component.AwaySeconds += seconds;
             component.Active = near || component.Active && component.AwaySeconds < MachineCatalog.Settings.UnloadDelaySeconds;
