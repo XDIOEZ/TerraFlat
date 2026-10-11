@@ -1363,6 +1363,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fc471a0a37b74dc39e2a16d619c51e85
+    m_Address: Assets/6_Art/Generated/Tools/Torch/Torch_Spent.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5712a19fbac535840803f6efdce3f650
     m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png
     m_ReadOnly: 0

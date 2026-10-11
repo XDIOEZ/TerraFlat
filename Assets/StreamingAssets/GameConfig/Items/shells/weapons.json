@@ -1108,7 +1108,7 @@
               "b": 0.0,
               "a": 1.0
             },
-            "ignore2DShadowsOnSourceSprite": true,
+            "ignore2DShadowsOnSourceSprite": false,
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -1127,10 +1127,20 @@
             "Type": 0
           },
           "parameters": {
+            "flameScale": 3.0,
+            "flameHeightRatio": 1.8,
+            "flameEmissionMultiplier": 3.0,
+            "attachFlameToAnchor": true,
+            "followSourceRenderer": true,
+            "sourceRendererAnchorOffset": {
+              "x": 0.0,
+              "y": 0.625,
+              "z": 0.0
+            },
             "$transform": {
               "localPosition": {
                 "x": 0.0,
-                "y": 0.5,
+                "y": 0.0,
                 "z": 0.0
               }
             }

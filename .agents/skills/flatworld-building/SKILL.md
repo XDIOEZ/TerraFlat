@@ -21,6 +21,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - BuildingShadow 只显示反馈，不提供安装资格/坐标。范围为交互半径两倍，创造模式无限；预览与提交按目标格最近边缘校验。失败反馈由实际 Install 的语义事件发布，逐帧预览不发提示。
 - Summoner 来自快捷栏真实 InHand/Owner/CurrentSelectItemSlot；成功扣减经 Inventory_Data 事务，并按实际槽索引 RefreshUI。放置模式拥有使用动作和普通世界交互的优先权。
 - BuildingRole 区分载体/落地实体，并与当前 SummonerPrefabId/BuildingPrefabId 对齐。无快照从 CreateItemData(BuildingPrefabId) 创建当前本体；有快照先恢复，再用当前载体共享状态覆盖。
+- 召唤器与本体的基础建筑模块必须 enabled=true，让 OnLoad 读取正式配对与快照；迁移不能沿用源 Prefab 的禁用旗标，目录检查拒绝禁用配置。
 - SharedModuleIds 以唯一能力 ID 深拷贝单件载体的连续状态；返还载体在 Load 前注入。耐久品质 CraftedDurabilityMultiplier 双向转移，实际最大生命按当前定义重算；两端状态贴图各自声明。
 - RequiresPlacementRequest 由正式入口 BeginPlacement 开启，TryHandlePlacementAction 仲裁；普通无显式入口召唤器直接 Install。世界根旋转初始化 identity，手持旋转不迁移；世界朝向/镜像是已放置状态，拆回清零。
 - 拆回先捕获快照、成功生成返还物再删除原建筑。堆叠身份取规范化快照（去放置重写的 GUID/Transform）；IBuildingSnapshotRepackPolicy 可省默认快照，损伤/共享状态继续保留。

@@ -32,6 +32,8 @@ public sealed class BuildingResourceCatalogValidator : IIncrementalResourceCatal
             if (!definition.HasModule(ModText.Building)) continue;
             ItemData data = definition.CreateItemData();
             if (!Mod_Building.TryReadBuildingData(data, out Ex_ModData module, out Mod_Building.Building_Data state)) continue;
+            // 建筑加载时才读取配对与快照，禁用会让放置和拆回丢失正式关系。
+            if (!module.Enabled) errors.Add($"建筑 {definition.Id} 的基础建筑模块必须启用");
             if (string.IsNullOrWhiteSpace(module.BitData))
             { errors.Add($"建筑 {definition.Id} 缺少 BuildingData.BitData"); continue; }
             if (!string.IsNullOrWhiteSpace(state.TileBlockId)) tileRequests[definition.Id] = state.TileBlockId;

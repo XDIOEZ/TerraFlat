@@ -93,7 +93,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"BlastFurnace\",\"SummonerPrefabId\":\"BlastFurnace_Summoner\"}",
             "Type": 0
@@ -242,7 +242,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Bonfire\",\"SummonerPrefabId\":\"Bonfire_Summoner\"}",
             "Type": 0
@@ -426,7 +426,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
             "Type": 0
@@ -551,7 +551,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\"}",
             "Type": 0
@@ -669,7 +669,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
             "Type": 0
@@ -787,7 +787,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
             "Type": 0
@@ -914,7 +914,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "parameters": {
             "PlacementLayer": "Ground",
             "LightOcclusionMode": "None",
@@ -1047,7 +1047,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Scarecrow\",\"SummonerPrefabId\":\"Scarecrow_Summoner\"}",
             "Type": 0
@@ -1165,7 +1165,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Smelter\",\"SummonerPrefabId\":\"Smelter_Summoner\"}",
             "Type": 0
@@ -1320,7 +1320,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Tent\",\"SummonerPrefabId\":\"Tent_Summoner\"}",
             "Type": 0
@@ -1444,7 +1444,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WorkBench\",\"SummonerPrefabId\":\"WorkBench_Summoner\"}",
             "Type": 0
@@ -1623,7 +1623,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/item_tool_torches.png[item_tool_torches_0]",
+        "spriteAddress": "Assets/6_Art/Generated/Tools/Torch/Torch_Spent.png[Torch_Spent]",
         "rendererLocalPosition": {
           "x": 0,
           "y": 0,
@@ -1693,7 +1693,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"]}",
             "Type": 0
@@ -1745,7 +1745,7 @@
               "b": 0.0,
               "a": 1.0
             },
-            "ignore2DShadowsOnSourceSprite": true,
+            "ignore2DShadowsOnSourceSprite": false,
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -1764,10 +1764,20 @@
             "Type": 0
           },
           "parameters": {
+            "flameScale": 3.0,
+            "flameHeightRatio": 1.8,
+            "flameEmissionMultiplier": 3.0,
+            "attachFlameToAnchor": true,
+            "followSourceRenderer": true,
+            "sourceRendererAnchorOffset": {
+              "x": 0.0,
+              "y": 0.625,
+              "z": 0.0
+            },
             "$transform": {
               "localPosition": {
                 "x": 0.0,
-                "y": 0.5,
+                "y": 0.0,
                 "z": 0.0
               }
             }
@@ -1931,7 +1941,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CompostBin\",\"SummonerPrefabId\":\"CompostBin_Summoner\"}",
             "Type": 0

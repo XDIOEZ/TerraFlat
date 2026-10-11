@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 通用燃烧表现：持续生成小型火焰、火星与烟雾粒子。
-/// 粒子使用世界空间速度，因此宿主旋转或挥动时，已喷出的烟与火星仍会自然向上飘。
+/// 烟与火星在世界空间向上飘，主体火苗可配置为跟随燃烧点。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransformEffect
@@ -33,6 +33,14 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private ParticleSystem smokeParticles;
     private bool particlesPlaying;
     private bool combustionActive;
+    private float flameScale = 1f;
+    private float flameHeightRatio = 1f;
+    private float flameEmissionMultiplier = 1f;
+    private bool attachFlameToAnchor;
+    private bool followSourceRenderer;
+    private Vector3 sourceRendererAnchorOffset;
+    private Transform defaultFlameAnchor;
+    private Transform rendererFlameAnchor;
 
     #endregion
 
@@ -200,6 +208,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
 
     private void LateUpdate()
     {
+        RefreshRendererAnchor();
         RefreshSorting();
         RefreshPlayingState(force: false);
     }
@@ -220,6 +229,22 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     #endregion
 
     #region 引用与状态
+
+    // 火苗跟随手持物，烟和火星继续独立飘散。
+    public void ConfigureFlamePresentation(float scale, float heightRatio,
+        float emissionMultiplier, bool followAnchor, bool followRenderer, Vector3 rendererOffset)
+    {
+        flameScale = Mathf.Max(0.01f, scale);
+        flameHeightRatio = Mathf.Max(0.01f, heightRatio);
+        flameEmissionMultiplier = Mathf.Max(0f, emissionMultiplier);
+        attachFlameToAnchor = followAnchor;
+        followSourceRenderer = followRenderer;
+        sourceRendererAnchorOffset = rendererOffset;
+        SetParticleSystemPlaying(flameParticles, false, clear: true);
+        ResolveReferences();
+        EnsureParticleSystems();
+        RefreshPlayingState(force: true);
+    }
 
     /// <summary>显式绑定宿主表现，避免通用模块 Prefab 依赖自身父子层级猜测排序来源。</summary>
     public void BindHost(Item host)
@@ -243,6 +268,7 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
             sourceSpriteRenderer ??= renderer;
         }
 
+        RefreshRendererAnchor();
         RefreshSorting();
     }
 
@@ -256,14 +282,39 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     /// <summary>优先使用同层级 Light2D 的位置作为燃烧点。</summary>
     private void ResolveReferences()
     {
-        if (flameAnchor == null)
+        if (defaultFlameAnchor == null)
         {
             Light2D light = GetComponentInChildren<Light2D>(true);
-            flameAnchor = light != null ? light.transform : transform;
+            defaultFlameAnchor = flameAnchor != null ? flameAnchor : light != null ? light.transform : transform;
         }
 
-        sourceLight ??= flameAnchor != null ? flameAnchor.GetComponent<Light2D>() : null;
+        // 在 Awake 就准备锚点，让物品池记录到固定的表现层级。
+        if (rendererFlameAnchor == null)
+        {
+            var anchorObject = new GameObject("Combustion Renderer Anchor");
+            anchorObject.layer = gameObject.layer;
+            rendererFlameAnchor = anchorObject.transform;
+            rendererFlameAnchor.SetParent(transform, false);
+        }
+        flameAnchor = followSourceRenderer ? rendererFlameAnchor : defaultFlameAnchor;
+        sourceLight ??= defaultFlameAnchor.GetComponent<Light2D>();
         sourceSpriteRenderer ??= GetComponentInParent<SpriteRenderer>();
+        RefreshRendererAnchor();
+    }
+
+    // 燃烧点读取主贴图的真实动画变换，避免挥动时火焰与木柄分离。
+    private void RefreshRendererAnchor()
+    {
+        if (!followSourceRenderer || rendererFlameAnchor == null || sourceSpriteRenderer == null)
+            return;
+        Transform source = sourceSpriteRenderer.transform;
+        rendererFlameAnchor.SetPositionAndRotation(source.TransformPoint(sourceRendererAnchorOffset), source.rotation);
+        Vector3 parentScale = transform.lossyScale;
+        Vector3 sourceScale = source.lossyScale;
+        rendererFlameAnchor.localScale = new Vector3(
+            parentScale.x != 0f ? sourceScale.x / parentScale.x : 1f,
+            parentScale.y != 0f ? sourceScale.y / parentScale.y : 1f,
+            parentScale.z != 0f ? sourceScale.z / parentScale.z : 1f);
     }
 
     /// <summary>光源被关闭时同步熄灭燃烧粒子。</summary>
@@ -325,10 +376,19 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         if (smokeParticles == null)
             smokeParticles = CreateParticleSystem(SmokeName);
 
+        ReparentParticleSystem(flameParticles);
+        ReparentParticleSystem(emberParticles);
+        ReparentParticleSystem(smokeParticles);
         ConfigureFlame(flameParticles);
         ConfigureEmbers(emberParticles);
         ConfigureSmoke(smokeParticles);
         RefreshSorting();
+    }
+
+    private void ReparentParticleSystem(ParticleSystem particles)
+    {
+        if (particles.transform.parent != flameAnchor)
+            particles.transform.SetParent(flameAnchor, false);
     }
 
     private ParticleSystem FindParticleSystem(string objectName)
@@ -358,17 +418,28 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     {
         ConfigureBase(
             particles,
-            maxParticles: 12,
-            emissionRate: flameRate,
+            maxParticles: Mathf.Clamp(Mathf.CeilToInt(flameRate * flameEmissionMultiplier * 0.32f) + 2, 12, 64),
+            emissionRate: flameRate * flameEmissionMultiplier,
             lifetimeMin: 0.18f,
             lifetimeMax: 0.32f,
-            sizeMin: 0.055f,
-            sizeMax: 0.095f,
-            radius: 0.018f,
-            velocityXMin: -0.035f,
-            velocityXMax: 0.035f,
-            velocityYMin: 0.15f,
-            velocityYMax: 0.28f);
+            sizeMin: 0.055f * flameScale,
+            sizeMax: 0.095f * flameScale,
+            radius: 0.018f * flameScale,
+            velocityXMin: -0.035f * flameScale,
+            velocityXMax: 0.035f * flameScale,
+            velocityYMin: 0.15f * flameScale,
+            velocityYMax: 0.28f * flameScale);
+
+        ParticleSystem.MainModule main = particles.main;
+        main.simulationSpace = attachFlameToAnchor
+            ? ParticleSystemSimulationSpace.Local
+            : ParticleSystemSimulationSpace.World;
+        main.prewarm = attachFlameToAnchor;
+        main.startSize3D = true;
+        main.startSizeX = new ParticleSystem.MinMaxCurve(0.055f * flameScale, 0.095f * flameScale);
+        main.startSizeY = new ParticleSystem.MinMaxCurve(
+            0.055f * flameScale * flameHeightRatio, 0.095f * flameScale * flameHeightRatio);
+        main.startSizeZ = 1f;
 
         ParticleSystem.ColorOverLifetimeModule color = particles.colorOverLifetime;
         color.enabled = true;

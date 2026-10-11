@@ -544,6 +544,8 @@ public static class BuildingShellMigrationTool
         try
         {
             building.ConfigurePrefabRole(role, entry.BodyId, entry.SummonerId);
+            // 基础建筑能力必须加载，不能把源 Prefab 的旧运行旗标当作禁用配置。
+            building.BuildingData.Enabled = true;
             JObject modules = new JObject
             {
                 ["建筑模块"] = BuildModuleDefinition(building, "Module_Building", false)

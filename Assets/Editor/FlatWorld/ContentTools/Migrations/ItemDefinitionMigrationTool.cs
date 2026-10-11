@@ -645,7 +645,8 @@ public static class ItemDefinitionMigrationTool
             {
                 ["prefab"] = modulePrefab,
                 ["id"] = moduleId,
-                ["enabled"] = module._Data.isRunning
+                // 建筑能力必须加载配对与快照，其它模块保留源定义的启用规则。
+                ["enabled"] = module is Mod_Building || module._Data.Enabled
             };
             if (moduleData.HasValues)
                 moduleDefinition["data"] = moduleData;

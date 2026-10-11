@@ -16,7 +16,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Wood\",\"SummonerPrefabId\":\"Floor_Wood_Summoner\",\"TileBlockId\":\"Tile_Floor_Wood\"}",
             "Type": 0
@@ -39,7 +39,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Stone\",\"SummonerPrefabId\":\"Floor_Stone_Summoner\",\"TileBlockId\":\"Tile_Floor_Stone\"}",
             "Type": 0
@@ -62,7 +62,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Copper\",\"SummonerPrefabId\":\"Floor_Copper_Summoner\",\"TileBlockId\":\"Tile_Floor_Copper\"}",
             "Type": 0
@@ -85,7 +85,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Iron\",\"SummonerPrefabId\":\"Floor_Iron_Summoner\",\"TileBlockId\":\"Tile_Floor_Iron\"}",
             "Type": 0
@@ -108,7 +108,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Bronze\",\"SummonerPrefabId\":\"Floor_Bronze_Summoner\",\"TileBlockId\":\"Tile_Floor_Bronze\"}",
             "Type": 0

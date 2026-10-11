@@ -1623,6 +1623,17 @@ public static class FlatWorldContentValidator
             return false;
         }
 
+        if (buildingModules[0].Value.Enabled == false)
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-012",
+                assetPath,
+                field + $"[{buildingModules[0].Key}].enabled",
+                "基础建筑模块必须启用，否则加载时不会读取正式配对和快照。",
+                null);
+        }
+
         JToken bitDataToken = buildingModules[0].Value.Data?["BitData"];
         string bitData = bitDataToken?.Type == JTokenType.String
             ? bitDataToken.Value<string>()

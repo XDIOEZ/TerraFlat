@@ -790,7 +790,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Stone\",\"SummonerPrefabId\":\"Platform_Stone_Summoner\",\"TileBlockId\":\"Tile_Platform_Stone\"}",
             "Type": 0
@@ -819,7 +819,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Copper\",\"SummonerPrefabId\":\"Platform_Copper_Summoner\",\"TileBlockId\":\"Tile_Platform_Copper\"}",
             "Type": 0
@@ -848,7 +848,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Copper\",\"SummonerPrefabId\":\"Wall_Copper_Summoner\",\"TileBlockId\":\"Tile_Wall_Copper\"}",
             "Type": 0
@@ -877,7 +877,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Iron\",\"SummonerPrefabId\":\"Platform_Iron_Summoner\",\"TileBlockId\":\"Tile_Platform_Iron\"}",
             "Type": 0
@@ -906,7 +906,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Iron\",\"SummonerPrefabId\":\"Wall_Iron_Summoner\",\"TileBlockId\":\"Tile_Wall_Iron\"}",
             "Type": 0
@@ -935,7 +935,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Bronze\",\"SummonerPrefabId\":\"Platform_Bronze_Summoner\",\"TileBlockId\":\"Tile_Platform_Bronze\"}",
             "Type": 0
@@ -964,7 +964,7 @@
         "建筑模块": {
           "prefab": "Module_Building",
           "id": "建筑模块",
-          "enabled": false,
+          "enabled": true,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Bronze\",\"SummonerPrefabId\":\"Wall_Bronze_Summoner\",\"TileBlockId\":\"Tile_Wall_Bronze\"}",
             "Type": 0

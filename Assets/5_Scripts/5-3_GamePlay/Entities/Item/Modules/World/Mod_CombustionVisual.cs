@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 /// <summary>
 /// 通用燃烧视觉模块：把燃烧状态转发给同 Prefab 的 CombustionVisualEffect。
@@ -11,6 +12,12 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
     public const string ModuleId = "Mod_CombustionVisual";
 
     public Ex_ModData_MemoryPackable ModData = new() { ID = ModuleId };
+    [Min(0.01f)] public float flameScale = 1f;
+    [Min(0.01f)] public float flameHeightRatio = 1f;
+    [Min(0f)] public float flameEmissionMultiplier = 1f;
+    public bool attachFlameToAnchor;
+    public bool followSourceRenderer;
+    public Vector3 sourceRendererAnchorOffset;
     private CombustionVisualEffect effect;
     private bool combustionActive;
 
@@ -33,6 +40,7 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
         effect = GetComponent<CombustionVisualEffect>();
         if (effect == null)
             throw new InvalidOperationException($"{name} 缺少 {nameof(CombustionVisualEffect)}。");
+        ApplyPresentationConfiguration();
         effect.BindHost(item);
         effect.SetCombustionActive(combustionActive);
     }
@@ -44,6 +52,20 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
     protected override void OnUnload()
     {
         effect?.SetCombustionActive(false);
+    }
+
+    public override void OnResourcesReloaded()
+    {
+        ApplyPresentationConfiguration();
+    }
+
+    // 具体物品通过配置决定火苗尺寸，燃烧规则仍由燃烧模块负责。
+    private void ApplyPresentationConfiguration()
+    {
+        effect ??= GetComponent<CombustionVisualEffect>();
+        effect?.ConfigureFlamePresentation(flameScale, flameHeightRatio,
+            flameEmissionMultiplier, attachFlameToAnchor,
+            followSourceRenderer, sourceRendererAnchorOffset);
     }
 
     public void SetCombustionActive(bool active)

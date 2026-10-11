@@ -51,7 +51,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 恢复先重建当前定义，再按稳定模块名合并实例状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配保留时间、次数和初始化标记。制作耐久倍率进入实例堆叠身份。
 - 物质状态在 `ItemData.MatterState`，静态相变/反应在定义 `matter/reactions`。玩法分类使用 `ItemData.Tags`；战利品通过顶层 lootTableId 引用稳定物品 ID。`IResourceYieldModifier` 在资源源头聚合，每条产出链应用一次并统一随机取整。
 
-- 燃烧由 Fuel 数据、Combustion 状态、FuelInteraction 交互与 ICombustionStateReceiver 表现组合；氧气模块只管储备/缺氧并暴露 SupplyOxygen，环境/装备供给方负责真实条件与扣量。`requiredTool/minimumTier` 是采集专精加成参考，不是普通采矿资格。
+- 燃烧由 Fuel 数据、Combustion 状态、FuelInteraction 交互与 ICombustionStateReceiver 表现组合；视觉尺寸/密度由 flameScale/flameHeightRatio/flameEmissionMultiplier 配置，attachFlameToAnchor 让主体火苗跟随燃烧点，followSourceRenderer/sourceRendererAnchorOffset 绑定真实贴图动画。火把底图为熄灭状态，熄灭清空粒子；氧气模块只管储备/缺氧并暴露 SupplyOxygen，环境/装备供给方负责真实条件与扣量。`requiredTool/minimumTier` 是采集专精加成参考，不是普通采矿资格。
 
 ## 世界后端
 

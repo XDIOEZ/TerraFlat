@@ -137,7 +137,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 1141763884, guid: 56759c2d2818ac14a876d08fdf6d06c8, type: 3}
+  m_Sprite: {fileID: 21300000, guid: fc471a0a37b74dc39e2a16d619c51e85, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -156,9 +156,9 @@ Animator:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2474529295941820286}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 556e94ef14c14b04b9b29e2d84abb8ad, type: 2}
+  m_Controller: {fileID: 0}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -549,7 +549,7 @@ MonoBehaviour:
     Range: 8
     InnerRadius: 0.1
   keepUpperSpriteEmissive: 0
-  ignore2DShadowsOnSourceSprite: 1
+  ignore2DShadowsOnSourceSprite: 0
   emissiveStartLocalY: 0.38
 --- !u!114 &7643096827154029811
 MonoBehaviour:
