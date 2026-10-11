@@ -35,6 +35,8 @@
 
 游戏的桌面 Mono 发行包自带 Harmony。包里有 `Example.EnderChest.dll`、清单、配方和 `Art/EnderChest_Closed.png`，**不要把 `0Harmony.dll` 再打进去**。Unity 项目之外编译时，可通过 `-p:GameManagedDirectory=...` 指向游戏的 `Managed` 目录；若 Unity 安装位置不同，再传 `-p:UnityEngineCorePath=...`。打包工具不会复制游戏或 Unity 的程序集。
 
+游戏程序集的公开接口变动后，先等当前游戏编译完成，再重新编译 MOD，并替换已安装的 `lib/Example.EnderChest.dll`。可选参数同样会改变 DLL 的调用签名；旧 DLL 出现 `RuntimeItemDefinition..ctor` 的 `MissingMethodException` 时，必须按当前游戏程序集重编译。已加载的 C# DLL 不能在同一程序集域中热替换，桌面游戏需要重启；Unity 编辑器需要重新进入启用 Domain Reload 的 Play Mode，关闭 Domain Reload 时则重启编辑器。
+
 ## 美术资源
 
 正式贴图是 16×16、底部中心 Pivot、16 PPU、10 色、硬 Alpha 的单帧像素图。运行时从 MOD 包读取 PNG，Point 过滤创建 Sprite；不用改本体木箱图集，也不用额外设置 Addressables。项目里的 PNG `.meta` 同样设置了 Sprite、Point、关闭 Mipmap 和压缩。`Art/draw_ender_chest.py` 保存了可读的逐像素画稿，其他作者可以改调色板或矩阵再执行脚本。
@@ -48,6 +50,7 @@
 - `EnderVault` 对每个角色只创建一个 `Inventory` 对象。相同 `Inventory_Data` 不能同时给多个 `Inventory.InitData()`，否则旧 UI 和数据监听会被清掉。
 - `MachineInventoryCommands.RegisterPrivateInventory` 只是通用网络扩展点，服务端最终仍用原版 `Inventory.ExecuteMachineTransfer` 处理拖放，不信任客户端上传的物品数据。
 - `ManagedModContext.Track` 在卸载时撤销私有库存注册和内容定义；`ModEntry.Dispose` 只撤销本 MOD 的 Harmony 补丁和角色缓存。
+- 克隆 `RuntimeItemDefinition` 时传入 `moduleResources`，让模块装配使用当前资源目录；掉落、加工、物质和反应规则沿用源定义，内容身份与翻译键由末影箱自身提供。
 - 这份示例面向 **桌面 Mono**。当前 IL2CPP 构建不会加载可信 C# MOD。
 
 Harmony 的 Prefix 在这里只拦截 `example.enderchest:chest`，其余机器继续执行原方法。可以对照 [Harmony 官方补丁说明](https://harmony.pardeike.net/v2/articles/patching.html) 和 [基本用法](https://harmony.pardeike.net/v2/articles/basics.html) 读 `ModEntry.cs`。

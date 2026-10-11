@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace Example.EnderChest
@@ -54,12 +55,26 @@ namespace Example.EnderChest
             }
 
             ItemVisualDefinitionDto visual = CopyVisual(source.Visual);
+            // 克隆当前定义的通用规则，并用资源目录编译具体模块装配计划。
             return new RuntimeItemDefinition(id, id, shell, data, visual, source.Health,
                 source.LootTableId, source.WaterEntryTransformItemId, sprite,
-                parameters, prefabs, null, null, source.AnimatorController,
-                source.IsActor, source.Material, null, source.IsGroundCover,
-                source.WorldGridOccupancy, source.RequiredGroundSupport, source.ActorEcs,
-                source.EntityRuntime);
+                parameters, prefabs, null, null,
+                animatorController: source.AnimatorController,
+                isActor: source.IsActor,
+                material: source.Material,
+                isGroundCover: source.IsGroundCover,
+                worldGridOccupancy: source.WorldGridOccupancy,
+                requiredGroundSupport: source.RequiredGroundSupport,
+                actorEcs: source.ActorEcs,
+                entityRuntime: source.EntityRuntime,
+                worldDropBehavior: source.DropBehavior,
+                processing: source.ProcessingDefinitions.ToDictionary(entry => entry.Key,
+                    entry => entry.Value, StringComparer.OrdinalIgnoreCase),
+                processingCapabilities: source.ProcessingCapabilityLevels.ToDictionary(entry => entry.Key,
+                    entry => entry.Value, StringComparer.OrdinalIgnoreCase),
+                matter: source.Matter,
+                reactions: source.Reactions,
+                moduleResources: resources);
         }
 
         private static ItemVisualDefinitionDto CopyVisual(ItemVisualDefinitionDto source)
