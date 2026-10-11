@@ -32,8 +32,14 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 有真实推力的缓慢起降
-        public static double TakeoffSpeed(double requiredHeight, SpaceGameplaySettings settings)
-            => Math.Max(settings.MinimumSpaceExitSpeedMetersPerSecond, requiredHeight / settings.TakeoffDurationSeconds);
+        public static double TakeoffSpeed(SpaceGameplaySettings settings)
+            => Math.Max(settings.MinimumSpaceExitSpeedMetersPerSecond, settings.TakeoffSpeedMetersPerSecond);
+
+        // 起飞只等待速度和时间，不以高度或星球大小决定何时结束。
+        public static bool CanCompleteTakeoff(double verticalSpeed, double elapsedSeconds, SpaceGameplaySettings settings)
+            => verticalSpeed >= settings.MinimumSpaceExitSpeedMetersPerSecond && elapsedSeconds >= settings.TakeoffDurationSeconds;
+
+        public static double SurfaceVisualRise(double height) => Math.Max(0d, height) * .04d;
 
         public static double LandingSpeed(double elapsedSeconds, double height, double seconds, SpaceGameplaySettings settings)
         {

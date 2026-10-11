@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Spaceflight
 {
@@ -28,6 +29,13 @@ namespace FlatWorld.Spaceflight
 
         private void Awake()
         {
+            SceneManager.activeSceneChanged += OnSceneChanged;
+        }
+
+        private void InitializeResources()
+        {
+            if (material != null) return;
+            // 只有目标宇宙场景需要显示时才创建星空资源与固定样本。
             Material template = Resources.Load<Material>("Space/Starfield");
             if (template == null) throw new System.InvalidOperationException("太空星空缺少 Space/Starfield 材质。");
             material = new Material(template) { name = "太空星空" };
@@ -81,10 +89,21 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 屏幕尺度与单网格合批
-        private void LateUpdate()
+        private void LateUpdate() => Prepare(Camera.main);
+
+        public bool IsPreparedFor(Camera camera) => IsSpaceScene && isActiveAndEnabled && camera != null &&
+            activeCamera == camera && mesh != null && starPlane != null && starPlane.gameObject.activeInHierarchy &&
+            geometryWidth == Mathf.Max(1, camera.pixelWidth) && geometryHeight == Mathf.Max(1, camera.pixelHeight);
+
+        public void Prepare(Camera camera)
         {
-            Camera camera = Camera.main;
-            if (camera == null) return;
+            if (!IsSpaceScene || !isActiveAndEnabled || camera == null)
+            {
+                HidePresentation();
+                return;
+            }
+            InitializeResources();
+            if (!starPlane.gameObject.activeSelf) starPlane.gameObject.SetActive(true);
             if (activeCamera != camera)
             {
                 RestoreCamera(); activeCamera = camera;
@@ -168,7 +187,18 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 相机背景所有权与释放
-        private void OnDisable() { RestoreCamera(); hasPreviousPosition = false; }
+        private static bool IsSpaceScene => SceneManager.GetActiveScene().name == "SpaceScene";
+        private void OnSceneChanged(Scene previous, Scene current)
+        {
+            if (!IsSpaceScene) HidePresentation();
+        }
+        private void OnDisable() => HidePresentation();
+        private void HidePresentation()
+        {
+            if (starPlane != null) starPlane.gameObject.SetActive(false);
+            RestoreCamera();
+            hasPreviousPosition = false;
+        }
         private void RestoreCamera()
         {
             if (activeCamera == null) return;
@@ -177,6 +207,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            SceneManager.activeSceneChanged -= OnSceneChanged;
             RestoreCamera();
             if (mesh != null) Destroy(mesh);
             if (material != null) Destroy(material);

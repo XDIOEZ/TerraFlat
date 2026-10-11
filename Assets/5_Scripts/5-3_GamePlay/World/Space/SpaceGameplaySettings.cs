@@ -13,8 +13,7 @@ namespace FlatWorld.Spaceflight
         public double MinimumWalkSpeedMultiplier = .35d;
         public double MaximumWalkSpeedMultiplier = 2d;
         public double GravityWalkExponent = .5d;
-        public double MinimumLaunchHeightMeters = 40d;
-        public double LaunchHeightRadiusFraction = .1d;
+        public double TakeoffSpeedMetersPerSecond = 16.6666666667d;
         public double MinimumSpaceExitSpeedMetersPerSecond = 2d;
         public double TakeoffDurationSeconds = 12d;
         public double LandingDurationSeconds = 10d;
@@ -48,7 +47,7 @@ namespace FlatWorld.Spaceflight
                     current.MinimumWalkSpeedMultiplier <= 0d || current.MaximumWalkSpeedMultiplier < current.MinimumWalkSpeedMultiplier ||
                     current.ImpactJoulesPerDurability <= 0d || current.LandingChoiceRadiusMeters <= 0d ||
                     current.ImpactForcePerDurability <= 0d || current.ImpactStoppingSeconds <= 0d || current.SurfaceEntryHeightMeters <= 0d ||
-                    current.MinimumLaunchHeightMeters <= 0d || current.LaunchHeightRadiusFraction < 0d ||
+                    !SpaceVector2.Finite(current.TakeoffSpeedMetersPerSecond) || current.TakeoffSpeedMetersPerSecond <= 0d ||
                     current.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
                     !SpaceVector2.Finite(current.TakeoffDurationSeconds) || current.TakeoffDurationSeconds <= 0d ||
                     !SpaceVector2.Finite(current.LandingDurationSeconds) || current.LandingDurationSeconds <= 0d ||

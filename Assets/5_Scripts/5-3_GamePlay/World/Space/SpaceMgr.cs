@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
 using Sirenix.OdinInspector;
@@ -14,6 +15,8 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     [SerializeField] private PlanetData debugPlanetData = new();
     private SpaceStarfield starfield;
     private GameManager eventManager;
+    private bool loadingPresentation;
+    private bool presentationLoaded;
     public static SpaceMgr ExistingInstance => instance;
 
     protected override void Awake()
@@ -60,26 +63,80 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     #endregion
 
     #region 星系加载与存档
-    public void Load()
+    public void Load() => StartCoroutine(LoadPresentation());
+
+    public IEnumerator LoadPresentation()
     {
-        SpaceSession session = SpaceSession.EnsureLoaded();
-        if (session.Universe == null) throw new InvalidOperationException("太空会话尚未准备好");
-        Debug_ClearRuntimePlanets();
-        SpaceCatalog catalog = SpaceCatalog.LoadDefault();
-        foreach (BodyState body in session.Universe.State.Bodies)
+        RequireSpaceScene();
+        if (loadingPresentation)
         {
-            PlanetData data;
-            var saves = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;
-            if (saves == null || !saves.TryGetValue(body.PlanetId, out data))
-                data = catalog.CreatePlanetData(body.BodyId);
-            AddPlanet(data);
+            while (loadingPresentation) yield return null;
+            RequireSpaceScene();
+            if (!presentationLoaded) throw new InvalidOperationException("太空表现加载未完成");
+            yield break;
         }
-        if (starfield == null)
+        loadingPresentation = true;
+        presentationLoaded = false;
+        try
         {
-            var background = new GameObject("黑色星空"); background.transform.SetParent(transform, false);
-            starfield = background.AddComponent<SpaceStarfield>();
+            SpaceSession session = SpaceSession.EnsureLoaded();
+            if (session.Universe == null) throw new InvalidOperationException("太空会话尚未准备好");
+            Debug_ClearRuntimePlanets();
+            SpaceCatalog catalog = SpaceCatalog.LoadDefault();
+            foreach (BodyState body in session.Universe.State.Bodies)
+            {
+                RequireSpaceScene();
+                PlanetData data;
+                var saves = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;
+                if (saves == null || !saves.TryGetValue(body.PlanetId, out data))
+                    data = catalog.CreatePlanetData(body.BodyId);
+                AddPlanet(data);
+                Planet planet = FindPlanetByBodyId(body.BodyId);
+                if (planet == null) throw new InvalidOperationException($"星体表现身份不匹配：{body.BodyId}");
+                planet.ApplyUniverse(session, body);
+                // 每个星体准备完让出一帧，起飞过渡可以继续播放。
+                yield return null;
+            }
+            RequireSpaceScene();
+            if (starfield == null)
+            {
+                var background = new GameObject("黑色星空"); background.transform.SetParent(transform, false);
+                starfield = background.AddComponent<SpaceStarfield>();
+            }
+            TickRuntimePlanets(0f); UpdateVisibility();
+            presentationLoaded = true;
         }
-        TickRuntimePlanets(0f); UpdateVisibility();
+        finally { loadingPresentation = false; }
+    }
+
+    public IEnumerator PreparePresentationForCamera()
+    {
+        RequireSpaceScene();
+        if (!presentationLoaded || starfield == null)
+            throw new InvalidOperationException("太空表现尚未加载，无法准备目标镜头");
+        UpdateVisibility();
+        for (int frame = 0; frame < 300; frame++)
+        {
+            RequireSpaceScene();
+            Camera camera = Camera.main;
+            if (camera == null) { yield return null; continue; }
+            TickRuntimePlanets(0f);
+            starfield.Prepare(camera);
+            // 等玩家镜头与浮动原点完成一帧同步后再结束加载过渡。
+            yield return null;
+            RequireSpaceScene();
+            if (camera != Camera.main || !starfield.IsPreparedFor(camera)) continue;
+            TickRuntimePlanets(0f);
+            starfield.Prepare(camera);
+            yield break;
+        }
+        throw new TimeoutException("太空场景玩家镜头未就绪");
+    }
+
+    private static void RequireSpaceScene()
+    {
+        if (SceneManager.GetActiveScene().name != "SpaceScene")
+            throw new InvalidOperationException("只能在实际进入太空场景后准备宇宙表现");
     }
     // 保存权威数据由会话负责，表现不能把第一个星体覆盖成当前星球。
     public void Save() => SpaceSession.Capture(SaveDataMgr.Instance?.SaveData);
@@ -88,6 +145,7 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     #region 星体与物品表现
     public void AddPlanet(PlanetData planet)
     {
+        RequireSpaceScene();
         if (planet == null) throw new ArgumentNullException(nameof(planet));
         string key = string.IsNullOrWhiteSpace(planet.BodyId) ? planet.RuntimePlanetName : planet.BodyId;
         if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("星体身份不能为空", nameof(planet));
@@ -146,6 +204,7 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     #region 同一权威状态的渲染
     public void TickRuntimePlanets(float ignoredDeltaTime)
     {
+        if (SceneManager.GetActiveScene().name != "SpaceScene") return;
         SpaceSession session = SpaceSession.Current;
         if (session?.Universe == null) return;
         for (int i = RuntimePlanets.Count - 1; i >= 0; i--)
@@ -166,6 +225,7 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     [FoldoutGroup("调试"), Button("清空运行时星球")]
     public void Debug_ClearRuntimePlanets()
     {
+        presentationLoaded = false;
         foreach (Planet planet in RuntimePlanets) if (planet != null) Destroy(planet.gameObject);
         RuntimePlanets.Clear(); RuntimePlanetDict.Clear();
     }

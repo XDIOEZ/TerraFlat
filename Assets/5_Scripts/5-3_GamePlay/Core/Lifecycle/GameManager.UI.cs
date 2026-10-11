@@ -214,6 +214,7 @@ public partial class GameManager
 
     partial void DisposeWorldEntryPresentation()
     {
+        ClearShipTakeoffPresentation();
         WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
         saveStatusHUD?.CancelResourceReload();
         activeSaveOperationCount = 0;
@@ -398,6 +399,13 @@ public partial class GameManager
         dimensionLoadingView.SetActive(true);
         dimensionLoadingCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
+        if (shipTakeoffPresentation != null)
+        {
+            shipTakeoffPresentation.Show(dimensionLoadingIcon);
+            dimensionLoadingName.text = LocalizeWorldLoadingText("正在进入太空");
+            if (shipTakeoffAnimation == null) shipTakeoffAnimation = StartCoroutine(AnimateShipTakeoffPresentation());
+        }
+
         if (progress.State == WorldEntryProgressState.Completed)
             dimensionLoadingHideCoroutine = StartCoroutine(FadeDimensionLoadingView(0f));
         else if (progress.State == WorldEntryProgressState.Failed)
@@ -502,6 +510,7 @@ public partial class GameManager
 
     private void HideDimensionLoadingViewImmediate()
     {
+        ClearShipTakeoffPresentation();
         if (dimensionLoadingHideCoroutine != null)
             StopCoroutine(dimensionLoadingHideCoroutine);
         dimensionLoadingHideCoroutine = null;

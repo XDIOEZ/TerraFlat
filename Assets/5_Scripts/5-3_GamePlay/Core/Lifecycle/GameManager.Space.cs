@@ -7,6 +7,37 @@ using UnityEngine;
 public partial class GameManager
 {
     #region 太空世界恢复与加载过渡
+    private ShipTakeoffLoadingPresentation shipTakeoffPresentation;
+    private Coroutine shipTakeoffAnimation;
+
+    internal void PrepareShipTakeoffPresentation(SpaceSession session, Player player)
+    {
+        ClearShipTakeoffPresentation();
+        if (player == null) return;
+        var renderers = new System.Collections.Generic.List<SpriteRenderer>();
+        session.CollectAssemblyPresentationRenderers(session.GetPassenger(player).ShipId, renderers);
+        renderers.AddRange(player.GetComponentsInChildren<SpriteRenderer>());
+        renderers.RemoveAll(value => value == null);
+        shipTakeoffPresentation = ShipTakeoffLoadingPresentation.Capture(renderers,
+            (float)ShipLandingGuidance.TakeoffSpeed(SpaceGameplaySettings.Current) * 5f);
+    }
+
+    private IEnumerator AnimateShipTakeoffPresentation()
+    {
+        while (shipTakeoffPresentation != null)
+        {
+            shipTakeoffPresentation.Tick(Time.unscaledDeltaTime);
+            yield return null;
+        }
+    }
+
+    private void ClearShipTakeoffPresentation()
+    {
+        if (shipTakeoffAnimation != null) StopCoroutine(shipTakeoffAnimation);
+        shipTakeoffAnimation = null;
+        shipTakeoffPresentation?.Dispose();
+        shipTakeoffPresentation = null;
+    }
     private static string ResolveSavedSpacePlayerWorld(GameSaveData save, Data_Player playerData)
     {
         if (playerData == null || string.IsNullOrWhiteSpace(save?.SpaceStateJson)) return null;
@@ -43,15 +74,21 @@ public partial class GameManager
 
     private IEnumerator ResumeSpaceWorld(Action sceneReady)
     {
+        Exception failure = null;
+        yield return RunWorldTransitionSteps(LoadSavedSpacePresentation(sceneReady), exception => failure = exception);
+        if (failure != null) FailWorldEntry("太空场景准备失败。", failure);
+    }
+
+    private IEnumerator LoadSavedSpacePresentation(Action sceneReady)
+    {
         IsInGameWorld = true;
         SetGameplayReady(!isWorldEntryInProgress);
         SpaceSession.EnsureLoaded();
-        yield return LoadSceneSingleAndInvokeWhenReady("SpaceScene", () =>
-        {
-            SpaceMgr.Instance.Load();
-            NotifyDimensionWorldEntered();
-            sceneReady?.Invoke();
-        });
+        yield return LoadSceneSingleAndInvokeWhenReady("SpaceScene");
+        yield return SpaceMgr.Instance.LoadPresentation();
+        NotifyDimensionWorldEntered();
+        sceneReady?.Invoke();
+        yield return SpaceMgr.Instance.PreparePresentationForCamera();
     }
     #endregion
 }

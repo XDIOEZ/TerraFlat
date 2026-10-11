@@ -89,18 +89,25 @@ internal static partial class Program
     private static void SurfaceFlightTiming()
     {
         const double mass = 1000d, gravity = 9.81d, seconds = .02d;
-        double requiredHeight = 200d;
         double height = 0d, speed = 0d, elapsed = 0d;
-        while (height < requiredHeight - 1e-6d && elapsed < 30d)
+        while (!ShipLandingGuidance.CanCompleteTakeoff(speed, elapsed, Settings) && elapsed < 30d)
         {
             double request = ShipLandingGuidance.RequiredVerticalThrust(mass, gravity, speed,
-                ShipLandingGuidance.TakeoffSpeed(requiredHeight, Settings), seconds);
+                ShipLandingGuidance.TakeoffSpeed(Settings), seconds);
             double actual = Math.Min(mass * 200d, request);
             speed += (actual / mass - gravity) * seconds;
             height += speed * seconds; elapsed += seconds;
         }
         Check(elapsed >= Settings.TakeoffDurationSeconds - 1e-6d && elapsed < 14d,
             "healthy ship takes at least configured takeoff duration");
+        Check(!ShipLandingGuidance.CanCompleteTakeoff(speed, Settings.TakeoffDurationSeconds - 1d, Settings),
+            "reaching full speed cannot end the takeoff transition early");
+        Check(!ShipLandingGuidance.CanCompleteTakeoff(0d, elapsed, Settings),
+            "elapsed time cannot launch a falling or stalled ship");
+        Check(ShipLandingGuidance.CanCompleteTakeoff(Settings.MinimumSpaceExitSpeedMetersPerSecond, elapsed, Settings),
+            "takeoff completion depends only on speed and time without a height requirement");
+        Near(40d, ShipLandingGuidance.SurfaceVisualRise(1000d), "visual rise continues above the former four-unit cap");
+        Near(400d, ShipLandingGuidance.SurfaceVisualRise(10000d), "visual rise keeps growing without a distance limit");
 
         height = Settings.SurfaceEntryHeightMeters; speed = 0d; elapsed = 0d;
         while (height > 1e-8d && elapsed < 20d)
@@ -121,7 +128,7 @@ internal static partial class Program
         double noFuelSpeed = limitedSpeed - gravity * seconds;
         Check(noFuelSpeed < limitedSpeed, "fuel loss keeps real gravity-driven descent");
         double rescueRequest = ShipLandingGuidance.RequiredVerticalThrust(mass, gravity, noFuelSpeed,
-            ShipLandingGuidance.TakeoffSpeed(requiredHeight, Settings), seconds);
+            ShipLandingGuidance.TakeoffSpeed(Settings), seconds);
         double rescueSpeed = noFuelSpeed + (Math.Min(rescueRequest, mass * 200d) / mass - gravity) * seconds;
         Check(rescueSpeed > noFuelSpeed, "reignition with available thrust can rescue falling ship");
     }

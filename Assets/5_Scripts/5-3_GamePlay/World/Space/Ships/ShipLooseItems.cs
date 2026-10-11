@@ -121,7 +121,7 @@ namespace FlatWorld.Spaceflight
         }
         private void ApplyLooseItemHeightVisual(Item item, double height)
         {
-            float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
+            float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
             SpriteRenderer renderer = item.Sprite;
             if (rise <= 0f || renderer == null || renderer.transform == item.transform)
             { RestoreLooseItemHeightVisual(item); return; }

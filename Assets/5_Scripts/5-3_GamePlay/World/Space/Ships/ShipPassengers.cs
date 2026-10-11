@@ -237,7 +237,7 @@ namespace FlatWorld.Spaceflight
             Vector2 position = IsSpaceView ? ProjectPosition(center) : WorldLocalPresentation.ProjectPosition(center.ToVector2());
             ShipFlightState flight = GetFlight(ship.ShipId);
             double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? flight.HeightMeters : 0d;
-            float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
+            float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
             drivingCameraTarget.position = new Vector3(position.x, position.y + rise, player.transform.position.z);
             drivingCameraTarget.rotation = Quaternion.identity;
             if (drivingCamera != camera)

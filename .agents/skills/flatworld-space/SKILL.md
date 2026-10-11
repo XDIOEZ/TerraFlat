@@ -51,12 +51,14 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 生物与结构环境损伤各有职责，星体可登陆性由材料耐受表达。冲击/燃爆复用唯一伤害入口，真实燃料库存和压力预算只释放/消费一次。
 - TryTeleportPlayerToSpace 接收宇宙坐标/速度，负责脱支撑/驾驶/下落状态及失败恢复。场景迁移限单机，复用 DimensionManager 黑屏/玩家快照；读档以飞行阶段选目标场景，未就绪不下落。
 - 太空死亡以实际 SpaceScene 判断来源，回 earth 地表的固定主世界出生点；SpaceSession.Respawn 在完整维度重生事务前解除驾驶/支撑/下降状态，迁移期间用中立乘员与 transitionRunning 防止重建太空归属，成功清记录、失败恢复。SpaceScene 不能补写为主世界出生点。
-- 飞船可自由经过星球画面，不自动撞毁或切地表；只有控制台 `land`/降落按钮登记 RequestedLandingBodyId，有效范围含船半径及 max(100米,星体半径/4)。CommitSurfaceContacts 在碰撞后开始下降；正常起飞至少12秒，正常降落约10秒，每步通过正式引擎供电/管路消耗真实燃料。断电或缺油转真实坠落，可再点火救船；持续受控下降且触地垂直速度≤0.5米/秒才免冲击。起飞完成距星体边缘为船半径加12米、只继承星体平移速度，首次镜头留出星体边缘。独立乘员/散落物保留星体接触规则。
+- 飞船可自由经过星球画面，不自动撞毁或切地表；只有控制台 `land`/降落按钮登记 RequestedLandingBodyId，有效范围含船半径及 max(100米,星体半径/4)。CommitSurfaceContacts 在碰撞后开始下降；起飞目标速度由 TakeoffSpeedMetersPerSecond 配置，完成只看速度与至少12秒的时长，不检查高度或星球半径；正常降落约10秒，每步通过正式引擎供电/管路消耗真实燃料。断电或缺油转真实坠落，可再点火救船；持续受控下降且触地垂直速度≤0.5米/秒才免冲击。起飞完成距星体边缘为船半径加12米、只继承星体平移速度，首次镜头留出星体边缘。独立乘员/散落物保留星体接触规则。
 - 船下降自动接管本船控制台并关闭船控窗口，WASD 按船轴平移、Q/E 旋转，镜头跟整船中心并固定朝上；同次下降 Esc 退出不强制重进，触地或重返太空恢复原镜头。下降按键的平移/制动/转向需要实际供电、引擎与燃料，但独立于点火救船的垂直推力；无输入、无动力或无人保留平移惯性。触地用真实船体位置，不能由 UI 选点或随机跳点。独自玩家保留附近选址 UI 与随机落点。
 - 下降末步先按触地 Fraction 处理船体、乘员和散落物接触，再 CommitSurfaceContacts 结算落地，使用最终速度与落点中心决定陆海；可重新点火救船，海上 Floating 禁驾。冷地表读取目标冻结 Profile+最新差量，不加载地表 Scene 代替查询。
 
 ## 表现与交互
 
+- 地表升高共用 ShipLandingGuidance.SurfaceVisualRise，不限制最高显示距离；船体、玩家、散落物与驾驶镜头保持一致。迁移前捕获船体外观，ShipTakeoffLoadingPresentation 在维度加载页按非缩放时间持续滚动起飞气流，场景准备完成/失败后随加载页释放。
+- 星球/星空仅在实际 SpaceScene 内生成；正式入口等待 SpaceMgr.LoadPresentation 分帧准备星体，玩家镜头创建后等待 PreparePresentationForCamera 预建星空网格并完成一帧，再结束过渡。地面不绘制宇宙背景，权威会话及无人船仍继续运行。
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。

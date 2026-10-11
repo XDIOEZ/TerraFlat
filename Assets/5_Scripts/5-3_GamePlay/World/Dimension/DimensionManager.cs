@@ -355,27 +355,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             state);
         Exception failure = null;
 
-        while (true)
-        {
-            bool hasNext;
-            object current = null;
-            try
-            {
-                hasNext = routine.MoveNext();
-                if (hasNext)
-                    current = routine.Current;
-            }
-            catch (Exception exception)
-            {
-                failure = exception;
-                break;
-            }
-
-            if (!hasNext)
-                break;
-
-            yield return current;
-        }
+        yield return GameManager.RunWorldTransitionSteps(routine, exception => failure = exception);
 
         if (failure != null)
         {
@@ -389,27 +369,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 state.EnterNotified,
                 state.PreserveRunState);
             Exception recoveryFailure = null;
-            while (true)
-            {
-                bool hasNext;
-                object current = null;
-                try
-                {
-                    hasNext = recoveryRoutine.MoveNext();
-                    if (hasNext)
-                        current = recoveryRoutine.Current;
-                }
-                catch (Exception exception)
-                {
-                    recoveryFailure = exception;
-                    break;
-                }
-
-                if (!hasNext)
-                    break;
-
-                yield return current;
-            }
+            yield return GameManager.RunWorldTransitionSteps(recoveryRoutine, exception => recoveryFailure = exception);
 
             GameManager.Instance.FailDimensionTransitionLoading(
                 recoveryFailure == null
@@ -453,7 +413,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         Scene targetScene = SceneManager.GetSceneByName(targetAddress.WorldKey);
         if (toSpace)
         {
-            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene", () => SpaceMgr.Instance.Load());
+            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene");
+            yield return SpaceMgr.Instance.LoadPresentation();
             targetScene = SceneManager.GetSceneByName("SpaceScene");
         }
         else if (!targetScene.IsValid() || !targetScene.isLoaded)
@@ -489,7 +450,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         GameManager.Instance.NotifyDimensionPlayerEntered(targetPlayer);
 
         GameManager.Instance.SetDimensionTransitionLoading("正在生成目标区块…", 0.78f);
-        if (!toSpace) yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
+        if (toSpace) yield return SpaceMgr.Instance.PreparePresentationForCamera();
+        else yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
 
         if (portalContext?.EnsureCaveExit == true)
         {
@@ -558,7 +520,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         bool fromSpace = sourceAddress.WorldKey == "SpaceScene";
         if (fromSpace)
         {
-            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene", () => SpaceMgr.Instance.Load());
+            yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene");
+            yield return SpaceMgr.Instance.LoadPresentation();
             sourceScene = SceneManager.GetSceneByName("SpaceScene");
         }
         else if (!sourceScene.IsValid() || !sourceScene.isLoaded)
@@ -583,7 +546,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         recoveredPlayer.Data.transform.position = sourcePosition;
         recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);
-        if (!fromSpace) yield return WaitForRuntimeChunkPresentation(sourceAddress, sourcePosition, recoveredPlayer);
+        if (fromSpace) yield return SpaceMgr.Instance.PreparePresentationForCamera();
+        else yield return WaitForRuntimeChunkPresentation(sourceAddress, sourcePosition, recoveredPlayer);
 
         recoveredPlayer.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
         recoveredPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);

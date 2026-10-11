@@ -326,7 +326,7 @@ namespace FlatWorld.Spaceflight
                 double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending
                     ? flight.HeightMeters : 0d;
                 // 同一船体所有部件共用一次视觉升高偏移，避免逐部件计算变换矩阵。
-                float rise = (float)Math.Min(4d, Math.Max(0d, height) * .04d);
+                float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
                 float radians = angle * Mathf.Deg2Rad;
                 Vector3 visualLiftOffset = new(Mathf.Sin(radians) * rise, Mathf.Cos(radians) * rise, 0f);
                 foreach (ShipPieceState piece in ship.Pieces)
@@ -422,7 +422,14 @@ namespace FlatWorld.Spaceflight
             if (passengerVisual != player.Sprite)
             { passengerVisual = player.Sprite; if (passengerVisual != null) passengerVisualPosition = passengerVisual.transform.localPosition; }
             if (passengerVisual != null)
-                passengerVisual.transform.localPosition = passengerVisualPosition + passengerVisual.transform.parent.InverseTransformVector(Vector3.up * (float)Math.Min(4d, Math.Max(0d, height) * .04d));
+                passengerVisual.transform.localPosition = passengerVisualPosition + passengerVisual.transform.parent.InverseTransformVector(Vector3.up * (float)ShipLandingGuidance.SurfaceVisualRise(height));
+        }
+
+        public void CollectAssemblyPresentationRenderers(string shipId, System.Collections.Generic.List<SpriteRenderer> renderers)
+        {
+            foreach (var pair in views)
+                if (pair.Value != null && FindPiece(pair.Key, out ShipState ship, out _) && SameAssembly(ship.ShipId, shipId))
+                    renderers.AddRange(pair.Value.GetComponentsInChildren<SpriteRenderer>());
         }
         #endregion
     }

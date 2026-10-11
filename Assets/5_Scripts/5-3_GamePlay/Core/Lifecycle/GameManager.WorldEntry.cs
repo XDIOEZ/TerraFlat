@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum WorldEntryProgressState
@@ -433,6 +434,7 @@ public partial class GameManager
 
     private void ResetWorldEntryLifecycle()
     {
+        HideDimensionLoadingViewImmediate();
         startNewWorldSpawnSearchOnActivation = false;
         ClearPendingNewWorldSpawnSearch(cancel: true);
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
@@ -447,4 +449,38 @@ public partial class GameManager
         SetGameplayReady(false);
         ResetCurrentWorldEntryContext();
     }
+
+    #region 场景过渡协程的嵌套失败收尾
+    internal static IEnumerator RunWorldTransitionSteps(IEnumerator routine, Action<Exception> failed)
+    {
+        var steps = new Stack<IEnumerator>();
+        steps.Push(routine);
+        try
+        {
+            while (steps.Count > 0)
+            {
+                bool hasNext = false;
+                object current = null;
+                Exception failure = null;
+                try
+                {
+                    IEnumerator step = steps.Peek();
+                    hasNext = step.MoveNext();
+                    if (hasNext) current = step.Current;
+                    else (steps.Pop() as IDisposable)?.Dispose();
+                }
+                catch (Exception exception) { failure = exception; }
+                if (failure != null) { failed(failure); yield break; }
+                if (!hasNext) continue;
+                // 嵌套加载同样交给迁移事务捕获，避免失败后永远保留起飞加载页。
+                if (current is IEnumerator nested && current is not CustomYieldInstruction) steps.Push(nested);
+                else yield return current;
+            }
+        }
+        finally
+        {
+            while (steps.Count > 0) (steps.Pop() as IDisposable)?.Dispose();
+        }
+    }
+    #endregion
 }
