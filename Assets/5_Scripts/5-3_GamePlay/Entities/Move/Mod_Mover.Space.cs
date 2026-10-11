@@ -8,7 +8,7 @@ public partial class Mod_Mover
     private InputAction spaceTurnAction;
     private bool spaceMotionOwned;
     private RigidbodyType2D beforeSpaceBodyType;
-    public bool IsHoldRunInputActive => holdRunInputActive;
+    private bool IsSpaceRunningDisabled => item is Player && SpaceSession.Current?.IsSpaceView == true;
     public bool IsUsingPointerBodyRotation { get; private set; }
 
     public void SetPointerBodyRotation(bool enabled)
@@ -26,6 +26,7 @@ public partial class Mod_Mover
             SetPointerBodyRotation(false);
             return false;
         }
+        if (IsSpaceRunningDisabled) SetRunState(false);
         Mod_GameController controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         Vector2 input = controller != null && !controller.IsGameplayInputLocked ? controller.ReadMoveInput(moveAction) : Vector2.zero;
         bool driving = !string.IsNullOrWhiteSpace(SpaceSession.Current.GetPassenger(player).ConsolePieceId);
@@ -37,7 +38,7 @@ public partial class Mod_Mover
         }
         float turn = driving && controller != null && !controller.IsGameplayInputLocked &&
             controller.IsGameplayInputAllowed(spaceTurnAction.activeControl?.device) ? spaceTurnAction.ReadValue<float>() : 0f;
-        bool controlled = SpaceSession.Current.HandlePassengerInput(player, this, controller, input, turn, holdRunInputActive, seconds);
+        bool controlled = SpaceSession.Current.HandlePassengerInput(player, this, controller, input, turn, seconds);
         if (controlled)
         {
             if (!spaceMotionOwned) { beforeSpaceBodyType = rb.bodyType; spaceMotionOwned = true; }
@@ -60,6 +61,20 @@ public partial class Mod_Mover
         }
         return controlled;
     }
+
+    public Vector2 SmoothSpaceVelocity(Vector2 currentVelocity, float seconds)
+    {
+        SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+        Vector2 input = Enabled && !IsLock && inputController != null && !inputController.IsGameplayInputLocked
+            ? Vector2.ClampMagnitude(RequestedMoveInput, 1f) : Vector2.zero;
+        if (inputController?._mainCamera != null)
+            input = inputController._mainCamera.transform.TransformDirection(input);
+        float speed = Mathf.Min(Mathf.Max(0f, Speed.Value), (float)settings.FreeFloatMaxSpeedMetersPerSecond);
+        // 失重与冰面共用速度过渡，只降低响应倍率来延长加速、转向和松键滑行。
+        return SmoothSurfaceVelocity(currentVelocity, input * speed, seconds,
+            settings.FreeFloatAccelerationMultiplier, settings.FreeFloatDecelerationMultiplier);
+    }
+
     private float ResolveSurfaceGravitySpeedMultiplier()
     {
         if (SpaceSession.Current?.State == null || SpaceSession.Current.IsSpaceView) return 1f;

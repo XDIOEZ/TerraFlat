@@ -51,7 +51,6 @@ namespace FlatWorld.Spaceflight
                 FreeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d,
                 SavedCameraSize = previous.SavedCameraSize
             };
-            bool hadImpulse = passengerImpulses.Remove(previous.ProfileId, out SpaceVector2 impulse);
             bool succeeded = false;
             bool migrationStarted = false;
             transitionRunning = true;
@@ -95,7 +94,6 @@ namespace FlatWorld.Spaceflight
                     if (!succeeded && State == sessionState)
                     {
                         sessionState.Passengers[index] = previous;
-                        if (hadImpulse) passengerImpulses[previous.ProfileId] = impulse;
                         Capture(owner);
                         SaveDataMgr saveManager = SaveDataMgr.Instance;
                         if (migrationStarted && ReferenceEquals(saveManager?.SaveData, owner))

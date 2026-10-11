@@ -322,8 +322,6 @@ namespace FlatWorld.Spaceflight
                     if (passenger.ShipId != ship.ShipId) continue;
                     ShipState support = fragments.Find(fragment => ShipAtmosphereService.HasFloor(fragment,
                         (int)Math.Floor(passenger.LocalX / fragment.CellSizeMeters), (int)Math.Floor(passenger.LocalY / fragment.CellSizeMeters)));
-                    if (!string.IsNullOrWhiteSpace(passenger.GripPieceId))
-                        support = fragments.Find(fragment => fragment.Pieces.Exists(piece => piece.PieceId == passenger.GripPieceId && piece.IsAlive));
                     if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId) &&
                         (support == null || !support.Pieces.Exists(piece => piece.PieceId == passenger.ConsolePieceId && piece.IsAlive)))
                     {

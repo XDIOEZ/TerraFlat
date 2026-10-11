@@ -44,10 +44,10 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpacePassengerState
     {
-        public string ProfileId, ShipId, ConsolePieceId, GripPieceId;
+        public string ProfileId, ShipId, ConsolePieceId;
         public double LocalX, LocalY, RelativeHeadingRadians;
         public SpaceMotionState FreeMotion = new();
-        public bool Supported, IsInSpace, PreviousShift;
+        public bool Supported, IsInSpace;
         public bool DescentControlEntered, DescentDriving;
         public double LandingX, LandingY, LandingOriginX, LandingOriginY;
         public bool LandingSelected, LandingResolved, SurfaceDescending;

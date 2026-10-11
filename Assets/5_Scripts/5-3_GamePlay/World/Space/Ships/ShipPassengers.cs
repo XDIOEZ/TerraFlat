@@ -1,13 +1,11 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
-        #region 乘员支撑、抓墙与惯性
-        private readonly Dictionary<string, SpaceVector2> passengerImpulses = new(StringComparer.Ordinal);
+        #region 乘员支撑与惯性
         public SpacePassengerState GetPassenger(Player player)
         {
             SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
@@ -18,7 +16,7 @@ namespace FlatWorld.Spaceflight
             State.Passengers.Add(passenger); return passenger;
         }
         public bool HandlePassengerInput(Player player, Mod_Mover mover, Mod_GameController controller,
-            Vector2 screenInput, float turn, bool shift, float seconds)
+            Vector2 screenInput, float turn, float seconds)
         {
             if (State == null || transitionRunning) return false;
             SpacePassengerState passenger = GetPassenger(player);
@@ -69,7 +67,7 @@ namespace FlatWorld.Spaceflight
                     passenger.ShipId = floorShip.ShipId; passenger.LocalX = local.x; passenger.LocalY = local.y;
                     passenger.RelativeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d - floorShip.AngleRadians;
                 }
-                passenger.Supported = true; passenger.GripPieceId = null; ship = floorShip;
+                passenger.Supported = true; ship = floorShip;
                 ShipGeometry.Rotate(worldInput.x, worldInput.y, -ship.AngleRadians, out double x, out double y);
                 double multiplier = gravity ? 1d : SpaceGameplaySettings.Current.WalkingMultiplier(Universe.GetBody(floorFlight.BodyId).SurfaceGravity);
                 double speed = mover.Speed.Value * seconds * multiplier;
@@ -84,7 +82,6 @@ namespace FlatWorld.Spaceflight
                 if (!TryGetSupport(display, out _, out _, out _))
                 { ReleasePassenger(passenger, ship); SetTerrainSuppression(player, false); }
                 else SetTerrainSuppression(player, true);
-                passenger.PreviousShift = shift;
                 return true;
             }
             if (!IsSpaceView)
@@ -95,50 +92,8 @@ namespace FlatWorld.Spaceflight
             }
             mover.SetPointerBodyRotation(true);
             passenger.IsInSpace = true;
-            if (passenger.Supported && ship != null && string.IsNullOrWhiteSpace(passenger.GripPieceId)) ReleasePassenger(passenger, ship);
-            if (passenger.Supported && !string.IsNullOrWhiteSpace(passenger.GripPieceId) && ship != null)
-            {
-                ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double gx, out double gy);
-                passenger.FreeMotion.PositionMeters = new SpaceVector2(gx, gy);
-            }
-            ShipPieceState nearWall = null; ShipState nearShip = null;
-            foreach (ShipState candidate in State.Ships)
-            {
-                if (GetFlight(candidate.ShipId)?.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) continue;
-                SpaceVector2 absolute = passenger.FreeMotion.PositionMeters;
-                ShipGeometry.WorldToLocal(candidate, absolute.X, absolute.Y, out double x, out double y);
-                foreach (ShipPieceState piece in candidate.Pieces)
-                    if (piece.IsAlive && piece.Kind is ShipPieceKind.Wall or ShipPieceKind.Door or ShipPieceKind.DockingPort &&
-                        Math.Abs(x / candidate.CellSizeMeters - piece.CellX - .5d) <= 1.5d && Math.Abs(y / candidate.CellSizeMeters - piece.CellY - .5d) <= 1.5d)
-                    { nearWall = piece; nearShip = candidate; break; }
-                if (nearWall != null) break;
-            }
-            if (shift && worldInput.sqrMagnitude < .001f && nearWall != null)
-            {
-                if (passenger.GripPieceId != nearWall.PieceId)
-                {
-                    ShipGeometry.WorldToLocal(nearShip, passenger.FreeMotion.PositionMeters.X, passenger.FreeMotion.PositionMeters.Y, out passenger.LocalX, out passenger.LocalY);
-                    passenger.RelativeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d - nearShip.AngleRadians;
-                    passenger.ShipId = nearShip.ShipId; passenger.GripPieceId = nearWall.PieceId;
-                }
-                passenger.Supported = true; PlacePassenger(player, passenger, nearShip);
-            }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(passenger.GripPieceId) && ship != null) ReleasePassenger(passenger, ship);
-                if (shift && !passenger.PreviousShift && worldInput.sqrMagnitude > .001f && NearStructure(passenger.FreeMotion.PositionMeters))
-                    passenger.FreeMotion.VelocityMetersPerSecond += SpaceVector2.FromVector2(worldInput.normalized) * SpaceGameplaySettings.Current.WallPushSpeedMetersPerSecond;
-                if (!passenger.LandingResolved &&
-                    SpacesuitSystem.TryApplyPropulsion(player, seconds, worldInput, out Vector2 deltaVelocity))
-                {
-                    passengerImpulses.TryGetValue(passenger.ProfileId, out SpaceVector2 pending);
-                    passengerImpulses[passenger.ProfileId] = pending + SpaceVector2.FromVector2(deltaVelocity);
-                }
-            }
+            if (passenger.Supported && ship != null) ReleasePassenger(passenger, ship);
             TurnPassengerToPointer(player, mover, controller, seconds);
-            if (passenger.Supported && nearShip != null)
-                passenger.RelativeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d - nearShip.AngleRadians;
-            passenger.PreviousShift = shift;
             passenger.FreeHeadingRadians = player.transform.eulerAngles.z * Math.PI / 180d;
             SetTerrainSuppression(player, floor);
             return true;
@@ -162,18 +117,6 @@ namespace FlatWorld.Spaceflight
             if (mover.rb != null) mover.rb.rotation = heading;
         }
 
-        private bool NearStructure(SpaceVector2 point)
-        {
-            foreach (ShipState ship in State.Ships)
-            {
-                if (GetFlight(ship.ShipId)?.Phase is not (ShipFlightPhase.Cruising or ShipFlightPhase.Descending)) continue;
-                ShipGeometry.WorldToLocal(ship, point.X, point.Y, out double x, out double y);
-                foreach (ShipPieceState piece in ship.Pieces)
-                    if (piece.IsAlive && Math.Abs(x / ship.CellSizeMeters - piece.CellX - .5d) <= 1.5d &&
-                        Math.Abs(y / ship.CellSizeMeters - piece.CellY - .5d) <= 1.5d) return true;
-            }
-            return false;
-        }
         public bool HasArtificialGravity(ShipState ship, double x, double y)
         {
             // 重力只需要确认地板支撑，不读取昂贵的船外地表与舱气状态。
@@ -209,7 +152,7 @@ namespace FlatWorld.Spaceflight
                 passenger.LandingOriginX = passenger.LandingX = x; passenger.LandingOriginY = passenger.LandingY = y;
                 passenger.LandingSelected = false;
             }
-            passenger.Supported = false; passenger.ShipId = null; passenger.GripPieceId = null; passenger.ConsolePieceId = null;
+            passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
         }
         private void PlacePassenger(Player player, SpacePassengerState passenger, ShipState ship)
         {
@@ -373,14 +316,15 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 if (!passenger.IsInSpace || passenger.Supported || passenger.LandingResolved) continue;
-                if (passengerImpulses.Remove(passenger.ProfileId, out SpaceVector2 delta)) passenger.FreeMotion.VelocityMetersPerSecond += delta;
                 SpaceGameplaySettings config = SpaceGameplaySettings.Current;
                 SpaceVector2 velocity = passenger.FreeMotion.VelocityMetersPerSecond;
+                Mod_Mover mover = player != null && player.ProfileName == passenger.ProfileId && IsSpaceView
+                    ? player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover) : null;
+                // WASD 的速度响应在权威固定步内结算，松键与反向输入都保留惯性。
+                if (mover != null) velocity = SpaceVector2.FromVector2(mover.SmoothSpaceVelocity(velocity.ToVector2(), (float)seconds));
                 double speed = velocity.Magnitude;
                 if (speed > config.FreeFloatMaxSpeedMetersPerSecond)
                     velocity *= config.FreeFloatMaxSpeedMetersPerSecond / speed;
-                else if (speed > 0d)
-                    velocity *= Math.Max(0d, speed - config.FreeFloatBrakingMetersPerSecondSquared * seconds) / speed;
                 passenger.FreeMotion.VelocityMetersPerSecond = velocity;
                 passenger.FreeMotion.RadiusMeters = .3d;
                 SpaceVector2 previousPosition = passenger.FreeMotion.PositionMeters;

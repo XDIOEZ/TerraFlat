@@ -378,6 +378,8 @@ public partial class Mod_Mover : Module
     /// <summary>设置可持久化的奔跑模式；输入锁只限制玩家输入，不阻止读档或跨维度恢复该状态。</summary>
     public void SetRunState(bool isRun)
     {
+        if (isRun && IsSpaceRunningDisabled) return;
+
         // 体力不足时禁止跑步
         if (isRun && stamina != null && stamina.CurrentValue < RunStaminaThreshold)
         {
@@ -488,6 +490,11 @@ public partial class Mod_Mover : Module
 
     /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>
     public Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime)
+        => SmoothSurfaceVelocity(currentVelocity, targetVelocity, deltaTime,
+            surfaceAccelerationMultiplier, surfaceDecelerationMultiplier);
+
+    private Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime,
+        float accelerationMultiplier, float decelerationMultiplier)
     {
         bool isStopping = targetVelocity.sqrMagnitude <= InputMoveThresholdSqr;
         float transitionDuration = isStopping
@@ -501,8 +508,8 @@ public partial class Mod_Mover : Module
             minimumChangeRate,
             referenceSpeed / Mathf.Max(MinimumTransitionDuration, transitionDuration));
         float surfaceMultiplier = isStopping
-            ? surfaceDecelerationMultiplier
-            : surfaceAccelerationMultiplier;
+            ? decelerationMultiplier
+            : accelerationMultiplier;
         float actorAccelerationMultiplier = item is Player
             ? PlayerAccelerationMultiplier
             : 1f;
