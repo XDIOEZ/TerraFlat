@@ -16,7 +16,8 @@ namespace FlatWorld.Spaceflight
         {
             SpaceSession session = SpaceSession.Current;
             ShipPartConfiguration config = Mod_ShipPart.Read(request.SourceData);
-            return config?.Kind == ShipPieceKind.Floor || session != null && session.TryGetSupport(request.Position, out _, out _, out _);
+            return config?.Kind is ShipPieceKind.Floor or ShipPieceKind.Engine ||
+                session != null && session.TryGetSupport(request.Position, out _, out _, out _);
         }
         public BuildingPlacementResult Place(BuildingPlacementRequest request)
         {
@@ -99,6 +100,8 @@ namespace FlatWorld.Spaceflight
             };
             try
             {
+                if (!ShipEnginePlacement.TryValidateAddition(ship, piece, out string engineReason))
+                    throw new InvalidOperationException(engineReason);
                 var footprint = new HashSet<ShipCell>(ShipGeometry.Footprint(piece));
                 foreach (ShipCell cell in footprint)
                 {

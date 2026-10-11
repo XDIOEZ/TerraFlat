@@ -23,6 +23,9 @@ internal static partial class Program
         Run("载荷池来源更新与全字段清理", ContributionPoolFields);
         Run("载荷池收缩、清空与不同船隔离", ContributionPoolIsolation);
         Run("载荷池稳定来源预热后无临时分配", ContributionPoolAllocations);
+        Run("引擎外缘朝向、缺口、凹形与旋转占地", EnginePlacementRules);
+        Run("后续安装保留引擎喷口通道", EnginePlacementAdditions);
+        Run("GM模板六台引擎有效且结构层无重叠", EnginePlacementTemplate);
         Benchmark();
         MassBenchmark();
         Console.WriteLine($"PASS: {passed} regression groups");

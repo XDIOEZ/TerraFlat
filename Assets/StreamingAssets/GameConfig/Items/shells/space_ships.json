@@ -1326,7 +1326,7 @@
       "id": "ShipChemicalEngine",
       "parent": "BuildingBody_Base",
       "gameName": "化学燃料引擎-建筑",
-      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。默认推力朝船体前方，安装时 R 旋转朝向；船上箭头显示实际推力方向。",
+      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、推力朝上，安装时 R 旋转。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -1339,7 +1339,8 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png[ShipChemicalEngine_Idle]",
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 }
       },
       "health": {
         "hasHp": true,
@@ -1391,9 +1392,11 @@
             "Configuration": {
               "Kind": "Engine",
               "Layer": 0,
+              "FootprintWidth": 1,
+              "FootprintHeight": 1,
               "StructuralMassKg": 50,
               "Health": 240,
-              "SealsAtmosphere": false,
+              "SealsAtmosphere": true,
               "BlocksMovement": true,
               "MinimumPressureKPa": 0,
               "MaximumPressureKPa": 650,
@@ -1479,7 +1482,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "化学燃料引擎",
-      "description": "安装在飞船地板本地格上，随所属船体移动、旋转与保存。默认推力朝船体前方，安装时 R 旋转朝向；船上箭头显示实际推力方向。",
+      "description": "占一格的气密方块引擎，只能安装在船体外缘，喷口必须朝船外且前方不能被船体遮挡。默认喷口朝下、推力朝上，安装时 R 旋转。",
       "durability": 240,
       "maxDurability": 240,
       "amount": 1,
@@ -1492,7 +1495,8 @@
         "InventoryGroup.Chemistry"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png[ShipChemicalEngine_Idle]",
+        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 }
       },
       "health": {
         "hasHp": true,
@@ -1556,9 +1560,11 @@
             "Configuration": {
               "Kind": "Engine",
               "Layer": 0,
+              "FootprintWidth": 1,
+              "FootprintHeight": 1,
               "StructuralMassKg": 50,
               "Health": 240,
-              "SealsAtmosphere": false,
+              "SealsAtmosphere": true,
               "BlocksMovement": true,
               "MinimumPressureKPa": 0,
               "MaximumPressureKPa": 650,

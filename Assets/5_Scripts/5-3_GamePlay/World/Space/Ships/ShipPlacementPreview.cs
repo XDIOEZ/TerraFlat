@@ -37,6 +37,8 @@ namespace FlatWorld.Spaceflight
             if (ship == null)
             {
                 if (config?.Kind == ShipPieceKind.Floor) { valid = true; return true; }
+                if (config?.Kind == ShipPieceKind.Engine)
+                { reason = "引擎需要安装在飞船边缘的地板上。"; return true; }
                 if (!IsSpaceView) return false;
                 reason = "太空中的设备需要飞船地板支撑。"; return true;
             }
@@ -46,6 +48,7 @@ namespace FlatWorld.Spaceflight
                 CellX = (int)Math.Floor(local.x / ship.CellSizeMeters), CellY = (int)Math.Floor(local.y / ship.CellSizeMeters),
                 Width = Math.Max(config.FootprintWidth, building?.FootprintWidth ?? 1), Height = Math.Max(config.FootprintHeight, building?.FootprintHeight ?? 1),
                 QuarterTurns = quarterTurns & 3 };
+            if (!ShipEnginePlacement.TryValidateAddition(ship, proposal, out reason)) return true;
             foreach (ShipCell cell in ShipGeometry.Footprint(proposal))
             {
                 if (proposal.Kind != ShipPieceKind.Floor && !ShipAtmosphereService.HasFloor(ship, cell.X, cell.Y))

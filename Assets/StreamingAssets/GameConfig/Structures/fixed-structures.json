@@ -31,28 +31,55 @@
           "itemId": "ShipWall_Iron",
           "x": 0,
           "y": 0,
-          "width": 4
+          "width": 2
         },
         {
           "memberId": "wall-bottom-right",
           "itemId": "ShipWall_Iron",
           "x": 5,
           "y": 0,
-          "width": 4
+          "width": 1
         },
         {
           "memberId": "wall-top",
           "itemId": "ShipWall_Iron",
           "x": 0,
           "y": 8,
-          "width": 9
+          "width": 2
+        },
+        {
+          "memberId": "wall-bottom-inner-left",
+          "itemId": "ShipWall_Iron",
+          "x": 3,
+          "y": 0
+        },
+        {
+          "memberId": "wall-bottom-outer-right",
+          "itemId": "ShipWall_Iron",
+          "x": 7,
+          "y": 0,
+          "width": 2
+        },
+        {
+          "memberId": "wall-top-middle",
+          "itemId": "ShipWall_Iron",
+          "x": 3,
+          "y": 8,
+          "width": 3
+        },
+        {
+          "memberId": "wall-top-right",
+          "itemId": "ShipWall_Iron",
+          "x": 7,
+          "y": 8,
+          "width": 2
         },
         {
           "memberId": "wall-0-1",
           "itemId": "ShipWall_Iron",
           "x": 0,
           "y": 1,
-          "height": 3
+          "height": 2
         },
         {
           "memberId": "wall-0-5",
@@ -66,7 +93,7 @@
           "itemId": "ShipWall_Iron",
           "x": 8,
           "y": 1,
-          "height": 3
+          "height": 2
         },
         {
           "memberId": "wall-8-5",
@@ -99,42 +126,42 @@
           "memberId": "engine-up-2",
           "itemId": "ShipChemicalEngine_GM",
           "x": 2,
-          "y": 1,
+          "y": 0,
           "quarterTurns": 0
         },
         {
           "memberId": "engine-down-2",
           "itemId": "ShipChemicalEngine_GM",
           "x": 2,
-          "y": 7,
+          "y": 8,
           "quarterTurns": 2
         },
         {
           "memberId": "engine-up-6",
           "itemId": "ShipChemicalEngine_GM",
           "x": 6,
-          "y": 1,
+          "y": 0,
           "quarterTurns": 0
         },
         {
           "memberId": "engine-down-6",
           "itemId": "ShipChemicalEngine_GM",
           "x": 6,
-          "y": 7,
+          "y": 8,
           "quarterTurns": 2
         },
         {
           "memberId": "engine-right",
           "itemId": "ShipChemicalEngine_GM",
-          "x": 1,
-          "y": 4,
+          "x": 0,
+          "y": 3,
           "quarterTurns": 3
         },
         {
           "memberId": "engine-left",
           "itemId": "ShipChemicalEngine_GM",
-          "x": 7,
-          "y": 4,
+          "x": 8,
+          "y": 3,
           "quarterTurns": 1
         },
         {
@@ -386,15 +413,15 @@
           "memberId": "copper-left",
           "itemId": "Wire_Copper",
           "x": 2,
-          "y": 1,
-          "height": 7
+          "y": 0,
+          "height": 9
         },
         {
           "memberId": "copper-right",
           "itemId": "Wire_Copper",
           "x": 6,
-          "y": 1,
-          "height": 7
+          "y": 0,
+          "height": 9
         },
         {
           "memberId": "copper-life-support",
@@ -419,14 +446,16 @@
         {
           "memberId": "copper-side-engine-left",
           "itemId": "Wire_Copper",
-          "x": 1,
-          "y": 4
+          "x": 0,
+          "y": 3,
+          "width": 2
         },
         {
           "memberId": "copper-side-engine-right",
           "itemId": "Wire_Copper",
           "x": 7,
-          "y": 4
+          "y": 3,
+          "width": 2
         },
         {
           "memberId": "fiber",

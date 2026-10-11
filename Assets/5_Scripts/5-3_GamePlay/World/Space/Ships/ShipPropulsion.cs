@@ -139,7 +139,8 @@ namespace FlatWorld.Spaceflight
             {
                 ShipState ship = GetShip(id);
                 foreach (ShipPieceState piece in ship.Pieces)
-                    if (piece.IsAlive && piece.Kind == ShipPieceKind.Engine && IsPowered(ship, piece))
+                    if (piece.IsAlive && piece.Kind == ShipPieceKind.Engine &&
+                        ShipEnginePlacement.TryValidateEngine(ship, piece, out _) && IsPowered(ship, piece))
                         actuators.Add(new ShipActuator(GetDevice(piece.PieceId)));
                 using (MachineWorld.UseScope("ship:" + id))
                 {

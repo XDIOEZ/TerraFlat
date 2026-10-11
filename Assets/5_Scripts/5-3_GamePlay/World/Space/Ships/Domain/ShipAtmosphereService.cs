@@ -183,8 +183,7 @@ namespace FlatWorld.Spaceflight
             List<FluidBatch> batches = new FluidInventory(room.Gas).Drain();
             foreach (FluidBatch batch in batches) outside?.ReleaseGas(batch);
         }
-        private static bool IsBoundary(ShipPieceState piece) => piece.SealsAtmosphere &&
-            (piece.Kind == ShipPieceKind.Wall || piece.Kind == ShipPieceKind.Door || piece.Kind == ShipPieceKind.DockingPort);
+        private static bool IsBoundary(ShipPieceState piece) => piece.SealsAtmosphere;
         private static double CellVolumeLiters(ShipState ship) => ship.CellSizeMeters * ship.CellSizeMeters * ship.CabinHeightMeters * 1000d;
         private static void ValidateGeometry(ShipState ship)
         {
