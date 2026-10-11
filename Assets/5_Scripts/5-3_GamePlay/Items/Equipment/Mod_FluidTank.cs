@@ -135,6 +135,16 @@ public static class FluidTankStorage
         inventory = new FluidInventory(state.Contents);
         return true;
     }
+    // 计重只读真实组分，复用运行状态，不解析容量配置或创建库存包装器。
+    public static bool TryReadContents(ItemData item, out FluidInventoryState contents)
+    {
+        contents = null;
+        if (FindBinary(item, Mod_FluidTank.ModuleId) is not Ex_ModData_MemoryPackable binary) return false;
+        FluidTankState state = GetState(binary);
+        if (state.Ruptured) return false;
+        contents = state.Contents;
+        return true;
+    }
     public static FluidTankState Ensure(ItemData item)
     {
         var binary = FindBinary(item, Mod_FluidTank.ModuleId) ?? throw new InvalidOperationException("物品没有气罐模块。");
@@ -159,7 +169,10 @@ public static class FluidTankStorage
         Cache cache = states.GetValue(binary, _ => new Cache());
         if (cache.State == null || !ReferenceEquals(cache.Bytes, binary.BitData))
         {
-            cache.State = binary.GetData<FluidTankState>() ?? new FluidTankState();
+            FluidTankState state = binary.GetData<FluidTankState>() ?? new FluidTankState();
+            // 新载荷入缓存前校验一次，计重不再每步创建校验集合。
+            FluidInventory.ValidateState(state.Contents, FluidCatalog.Default);
+            cache.State = state;
             cache.Bytes = binary.BitData;
         }
         return cache.State;

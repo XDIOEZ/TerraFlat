@@ -390,7 +390,8 @@ namespace FlatWorld.Spaceflight
             if (ItemMgr.Instance != null) ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out player);
             Data_Player data = player?.Data;
             if (data == null) owner?.PlayerData_Dict.TryGetValue(passenger.ProfileId, out data);
-            double mass = data == null ? 70d : new ShipMassReader().ReadItem(data, player, 0);
+            contactMassReader.Reset();
+            double mass = data == null ? 70d : contactMassReader.ReadItem(data, player, 0);
             return ResolveFreeCircleContact(passenger.FreeMotion, previousPosition, seconds, Math.Max(.001d, mass),
                 Math.Max(.01d, passenger.FreeMotion.RadiusMeters), "space", 0d, movementFraction, out firstContactFraction);
         }
@@ -406,7 +407,8 @@ namespace FlatWorld.Spaceflight
             if (live != null && (live.Owner != null || live.InHand || live.itemData.Stack.Amount <= 0f)) return false;
             ItemData data = live != null ? live.itemData : looseData.TryGetValue(item.Id, out ItemData cached) ? cached : Decode(item.Snapshot);
             looseData[item.Id] = data;
-            double mass = new ShipMassReader().ReadItem(data, live, 0);
+            contactMassReader.Reset();
+            double mass = contactMassReader.ReadItem(data, live, 0);
             return ResolveFreeCircleContact(item.Motion, previousPosition, seconds, Math.Max(.001d, mass),
                 Math.Max(.01d, item.Motion.RadiusMeters), item.InSpace ? "space" : "surface:" + item.WorldKey,
                 item.InSpace ? 0d : item.SurfaceHeight, movementFraction, out firstContactFraction);

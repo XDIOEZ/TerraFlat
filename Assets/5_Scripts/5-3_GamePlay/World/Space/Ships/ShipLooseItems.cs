@@ -150,8 +150,11 @@ namespace FlatWorld.Spaceflight
                 if (live != null && (live.Owner != null || live.InHand)) continue;
                 if (!looseData.TryGetValue(cargo.Id, out ItemData data)) looseData[cargo.Id] = data = Decode(cargo.Snapshot);
                 double mass = reader.ReadItem(live != null ? live.itemData : data, live, 0);
-                if (mass > 0d) ship.MassContributions.Add(new ShipMassContribution { SourceId = "loose:" + cargo.Id,
-                    Kind = ShipMassKind.Cargo, LocalX = x, LocalY = y, MassKg = mass });
+                if (mass > 0d)
+                {
+                    ShipMassContribution value = AddMassContribution(ship, "loose:", cargo.Id);
+                    value.LocalX = x; value.LocalY = y; value.MassKg = mass;
+                }
             }
         }
         public static bool TryGetMachineScene(MachineEntity node, out Scene scene)

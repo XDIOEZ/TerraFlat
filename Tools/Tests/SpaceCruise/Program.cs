@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using FlatWorld.Spaceflight;
 
-internal static class Program
+internal static partial class Program
 {
     #region 离线回归入口
     private static int passed;
@@ -16,7 +16,15 @@ internal static class Program
         Run("对接、断开、损坏及碎片归属失效", AssemblyChanges);
         Run("光纤断开、修复及集合复用", Optical);
         Run("稳定拓扑与光纤查询无临时分配", Allocations);
+        Run("船体、载荷与舱气质量及惯量", MassProperties);
+        Run("载荷变动及重心移动保持船体坐标和点速度", MassChanges);
+        Run("质量来源去重与非法输入拒绝", MassIdentity);
+        Run("质量工作区跨船复用及热路径分配", MassWorkspace);
+        Run("载荷池来源更新与全字段清理", ContributionPoolFields);
+        Run("载荷池收缩、清空与不同船隔离", ContributionPoolIsolation);
+        Run("载荷池稳定来源预热后无临时分配", ContributionPoolAllocations);
         Benchmark();
+        MassBenchmark();
         Console.WriteLine($"PASS: {passed} regression groups");
     }
     private static void Run(string name, Action test)

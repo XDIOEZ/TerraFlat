@@ -16,8 +16,11 @@ public static class MachinePersistence
         => ReadDocument(snapshot)?[key]?.Type == JTokenType.String;
 
     public static T Read<T>(ItemData snapshot, string key)
+        => ReadPayload<T>(ReadDocument(snapshot), key);
+
+    // 同一次只读扫描复用已校验的文档，避免每读一个状态都重新解析 JSON。
+    internal static T ReadPayload<T>(JObject document, string key)
     {
-        JObject document = ReadDocument(snapshot);
         string text = (string)document?[key];
         if (string.IsNullOrEmpty(text)) return default;
         if (text.Length > MaximumPayloadBytes * 4L / 3L + 4)
@@ -57,7 +60,7 @@ public static class MachinePersistence
         return false;
     }
 
-    private static JObject ReadDocument(ItemData snapshot)
+    internal static JObject ReadDocument(ItemData snapshot)
     {
         if (snapshot == null) return null;
         JObject root = ItemSpecialDataJsonStore.ReadRoot(snapshot.ItemSpecialData);

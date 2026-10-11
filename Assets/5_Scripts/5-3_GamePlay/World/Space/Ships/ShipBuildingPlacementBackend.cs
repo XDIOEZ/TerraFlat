@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Building;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -279,6 +280,8 @@ namespace FlatWorld.Spaceflight
         private void ProcessStructureChanges()
         {
             if (destroyed.Count == 0) return;
+            // 分裂会把旧载荷分给新船，丢弃样本池以免复用这些已移交的对象。
+            massContributionPools = new();
             viewBindingsDirty = true;
             pieceIndexDirty = true;
             foreach (ShipState ship in State.Ships.ToArray())
@@ -354,14 +357,17 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<int, ShipPieceState> massPiecesById = new();
         private readonly List<MachineWorld.FluidTankGroup> massFluidGroups = new();
         private readonly ShipMassReader massReader = new();
+        private readonly ShipMassReader contactMassReader = new();
         private readonly ShipStructureService.MassWorkspace massWorkspace = new();
+        private ConditionalWeakTable<ShipState, ShipMassContributionPool> massContributionPools = new();
 
         private void ResetMassWorkspace()
         {
             assignedMassPassengers.Clear();
             massPiecesById.Clear();
             massFluidGroups.Clear();
-            massReader.Reset();
+            massReader.ClearCache(); contactMassReader.ClearCache();
+            massContributionPools = new();
             massWorkspace.Masses.Clear();
             massWorkspace.Sources.Clear();
         }
@@ -372,14 +378,14 @@ namespace FlatWorld.Spaceflight
             assignedMassPassengers.Clear();
             foreach (ShipState ship in State.Ships)
             {
-                ship.MassContributions.Clear();
+                massContributionPools.GetValue(ship, _ => new ShipMassContributionPool()).Begin(ship);
                 massReader.Reset();
                 massPiecesById.Clear();
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && int.TryParse(piece.PieceId, out int id))
                     {
                         massPiecesById.Add(id, piece);
-                        massReader.RegisterStructuralItem(GetPieceData(piece));
+                        massReader.RegisterStructuralItem(GetMassPieceData(piece, out _));
                     }
                 using (MachineWorld.UseScope("ship:" + ship.ShipId))
                 {
@@ -399,16 +405,16 @@ namespace FlatWorld.Spaceflight
                             double portion = i == group.Members.Count - 1 ? remaining :
                                 mass * member.Definition.Fluid.VolumeLiters / group.TotalVolume;
                             remaining -= portion;
-                            AddCargoMass(ship, piece, "fluid-group:" + group.OwnerId + ":" + member.Id, portion);
+                            AddCargoMass(ship, piece, "fluid-group:", portion, group.OwnerId);
                         }
                     }
                     foreach (var entry in massPiecesById)
                     {
                         ShipPieceState piece = entry.Value;
-                        ItemData data = GetPieceData(piece);
+                        ItemData data = GetMassPieceData(piece, out Item live);
                         if (data?.Stack != null) piece.MassKg = Math.Max(0d, data.Stack.CurrentWeight);
                         MachineEntity node = MachineWorld.GetById(entry.Key);
-                        double cargo = massReader.ReadItemContents(data, null, node, 0);
+                        double cargo = massReader.ReadItemContents(data, live, node, 0);
                         if (node?.Definition.Fluid != null)
                         {
                             FluidMachineState fluids = MachineWorld.GetFluidState(node);
@@ -417,7 +423,7 @@ namespace FlatWorld.Spaceflight
                             cargo += massReader.ReadFluidMass(MachineWorld.GetFluidInventory(node, "main")?.State);
                             cargo += massReader.ReadInventory(fluids.PortableTank, 0) + massReader.ReadInventory(fluids.FilterMaterial, 0) + massReader.ReadInventory(fluids.Residue, 0);
                         }
-                        AddCargoMass(ship, piece, "cargo:" + piece.PieceId, cargo);
+                        AddCargoMass(ship, piece, "cargo:", cargo);
                     }
                 }
                 foreach (SpacePassengerState passenger in State.Passengers)
@@ -430,26 +436,34 @@ namespace FlatWorld.Spaceflight
                     if (playerData == null || !TryGetPassengerMassPosition(passenger, ship, player, playerData, out double x, out double y)) continue;
                     assignedMassPassengers.Add(passenger.ProfileId);
                     double mass = massReader.ReadItem(playerData, player, 0);
-                    if (mass > 0d) ship.MassContributions.Add(new ShipMassContribution
+                    if (mass > 0d)
                     {
-                        SourceId = "person:" + passenger.ProfileId, Kind = ShipMassKind.Occupant,
-                        LocalX = x, LocalY = y, MassKg = mass
-                    });
+                        ShipMassContribution value = AddMassContribution(ship, "person:", passenger.ProfileId);
+                        value.Kind = ShipMassKind.Occupant; value.LocalX = x; value.LocalY = y; value.MassKg = mass;
+                    }
                 }
                 AddLooseCargoMass(ship, massReader);
                 ShipStructureService.RecalculateMass(ship, massWorkspace);
             }
         }
-        private static void AddCargoMass(ShipState ship, ShipPieceState piece, string source, double mass)
+        private ItemData GetMassPieceData(ShipPieceState piece, out Item live)
+        {
+            live = views.TryGetValue(piece.PieceId, out ShipPieceView view) && view != null ? view.Item : null;
+            return live != null ? live.itemData : GetPieceData(piece);
+        }
+        private ShipMassContribution AddMassContribution(ShipState ship, string prefix, string identity, int ownerId = 0)
+            => massContributionPools.GetValue(ship, _ => new ShipMassContributionPool()).Add(ship, prefix, identity, ownerId);
+        private void AddCargoMass(ShipState ship, ShipPieceState piece, string prefix, double mass, int ownerId = 0)
         {
             if (mass <= 0d) return;
             int width = (piece.QuarterTurns & 1) == 0 ? piece.Width : piece.Height;
             int height = (piece.QuarterTurns & 1) == 0 ? piece.Height : piece.Width;
             double w = width * ship.CellSizeMeters, h = height * ship.CellSizeMeters;
-            ship.MassContributions.Add(new ShipMassContribution { SourceId = source, SupportPieceId = piece.PieceId,
-                Kind = ShipMassKind.Cargo, LocalX = (piece.CellX + width * .5d) * ship.CellSizeMeters,
-                LocalY = (piece.CellY + height * .5d) * ship.CellSizeMeters, MassKg = mass,
-                IntrinsicInertiaKgM2 = mass * (w * w + h * h) / 12d });
+            ShipMassContribution value = AddMassContribution(ship, prefix, piece.PieceId, ownerId);
+            value.SupportPieceId = piece.PieceId;
+            value.LocalX = (piece.CellX + width * .5d) * ship.CellSizeMeters;
+            value.LocalY = (piece.CellY + height * .5d) * ship.CellSizeMeters; value.MassKg = mass;
+            value.IntrinsicInertiaKgM2 = mass * (w * w + h * h) / 12d;
         }
         private bool TryGetPassengerMassPosition(SpacePassengerState passenger, ShipState ship, Player player,
             Data_Player data, out double localX, out double localY)
@@ -471,182 +485,6 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
 
-        #region 实际嵌套库存质量读取
-        private sealed class ShipMassReader
-        {
-            private readonly HashSet<int> itemIds = new();
-            private readonly HashSet<ItemData> items = new();
-            private readonly HashSet<Inventory_Data> inventories = new();
-            private readonly HashSet<FluidInventoryState> fluids = new();
-            private readonly HashSet<LiquidContainerState> liquids = new();
-            private readonly HashSet<int> liveEquipmentStores = new();
 
-            public void Reset()
-            {
-                itemIds.Clear(); items.Clear(); inventories.Clear(); fluids.Clear(); liquids.Clear(); liveEquipmentStores.Clear();
-            }
-
-            public void RegisterStructuralItem(ItemData data)
-            { if (data == null) return; items.Add(data); if (data.Guid != 0) itemIds.Add(data.Guid); }
-            public double ReadItem(ItemData data, Item live, int depth)
-            {
-                if (data == null || data.Stack?.Amount <= 0f || !items.Add(data)) return 0d;
-                if (data.Guid != 0 && !itemIds.Add(data.Guid)) return 0d;
-                if (depth > 64) throw new InvalidOperationException("物品库存嵌套过深。");
-                if (data.SharedConfiguration == null) ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data);
-                return Math.Max(0d, data.Stack?.CurrentWeight ?? 0d) + ReadItemContents(data, live, null, depth + 1);
-            }
-            public double ReadInventory(Inventory_Data inventory, int depth)
-            {
-                if (inventory?.itemSlots == null || !inventories.Add(inventory)) return 0d;
-                double mass = 0d;
-                foreach (ItemSlot slot in inventory.itemSlots) mass += ReadItem(slot?.itemData, null, depth + 1);
-                return mass;
-            }
-            private double ReadSnapshot(InventoryInstanceSnapshot snapshot, int depth)
-                => snapshot == null ? 0d : ReadInventory(snapshot.CreateColdData(), depth + 1);
-            public double ReadFluidMass(FluidInventoryState state)
-            {
-                if (state?.Components == null || !fluids.Add(state)) return 0d;
-                double mass = 0d;
-                foreach (FluidComponentState component in state.Components)
-                    mass += (double)(component.GasMoles + component.LiquidMoles) * FluidCatalog.Default.Find(component.FluidId).MolarMassKgPerMol;
-                return mass;
-            }
-            private double ReadLiquidMass(LiquidContainerState state)
-            {
-                if (state == null || !liquids.Add(state)) return 0d;
-                MixedLiquidContents.Ensure(state);
-                double mass = 0d;
-                foreach (var entry in state.Composition)
-                {
-                    if (!FluidCatalog.Default.TryFromLiquidId(entry.Key, out FluidDefinition definition))
-                        throw new InvalidOperationException("船载液体缺少真实密度定义：" + entry.Key);
-                    mass += entry.Value * (double)definition.LitersPerServing * definition.LiquidDensityKgPerLiter;
-                }
-                return mass;
-            }
-            public double ReadItemContents(ItemData data, Item live, MachineEntity machine, int depth)
-            {
-                if (data == null) return 0d;
-                if (depth > 64) throw new InvalidOperationException("物品库存嵌套过深。");
-                double mass = 0d;
-                // 冷快照无运行模块，避免每个飞船部件都新建一个空集合。
-                HashSet<string> liveModules = live != null ? new HashSet<string>(StringComparer.Ordinal) : null;
-                if (live != null)
-                {
-                    foreach (var entry in live.Mods)
-                    {
-                        Module module = entry.Value;
-                        if (module == null || !module.Enabled || !module.IsRuntimeLoaded) continue;
-                        if (module is Mod_Equipment equipment)
-                        {
-                            // 装备包先读运行态，跳过同一装备可能尚未刷新的冷载荷。
-                            foreach (EquipmentInstance instance in equipment.EnumerateEquippedInstances())
-                                if (instance is EquipmentInstance_Bag bag)
-                                { if (bag.EquippedItem != null) liveEquipmentStores.Add(bag.EquippedItem.Guid); mass += ReadInventory(bag.BagData, depth + 1); }
-                            mass += ReadInventory(equipment.EquipmentInventory?.Data, depth + 1);
-                            liveModules.Add(entry.Key);
-                        }
-                        else if (module is Mod_Inventory storage)
-                        {
-                            if (storage.InventoryInstances != null) foreach (Inventory inventory in storage.InventoryInstances) mass += ReadInventory(inventory?.Data, depth + 1);
-                            if (storage.InventoryRefDic != null) foreach (Inventory inventory in storage.InventoryRefDic.Values) mass += ReadInventory(inventory?.Data, depth + 1);
-                            liveModules.Add(entry.Key);
-                        }
-                        else if (module is Mod_VesselContents vessel)
-                        { mass += ReadInventory(vessel.Contents?.Data, depth + 1); liveModules.Add(entry.Key); }
-                        else if (module is Mod_WaterVessel water)
-                        { mass += ReadLiquidMass(water.Data); liveModules.Add(entry.Key); }
-                        else if (module is Mod_Hand hand) mass += ReadInventory(hand.HandInventory?.Data, depth + 1);
-                        else if (module is Mod_HotBar hotbar) mass += ReadInventory(hotbar.RuntimeInventory?.Data, depth + 1);
-                        else if (module is Mod_HandCraftTable handcraft)
-                            mass += ReadInventory(handcraft.inputInventory?.Data, depth + 1) + ReadInventory(handcraft.outputInventory?.Data, depth + 1);
-                        else if (module is Mod_HandMade handmade && handmade.InventoryRefDic != null)
-                            foreach (Inventory inventory in handmade.InventoryRefDic.Values) mass += ReadInventory(inventory?.Data, depth + 1);
-                    }
-                }
-                if (data is Data_Player player && player._inventoryData != null)
-                    foreach (Inventory_Data inventory in player._inventoryData.Values) mass += ReadInventory(inventory, depth + 1);
-                if (machine?.Logic != null)
-                    foreach (Inventory inventory in machine.Logic.Inventories) mass += ReadInventory(inventory?.Data, depth + 1);
-                if (machine?.Processor != null)
-                    mass += ReadInventory(machine.Processor.Input?.Data, depth + 1) + ReadInventory(machine.Processor.Output?.Data, depth + 1);
-                if (machine?.Logic is VesselLogic actualVessel) mass += ReadLiquidMass(actualVessel.Data);
-                bool portableRead = FluidTankStorage.TryGet(data, out FluidInventory portable, out _);
-                if (portableRead) mass += ReadFluidMass(portable.State);
-
-                foreach (var entry in data.ModuleDataDic)
-                {
-                    ModuleData module = entry.Value;
-                    // 暂停能力不会凭空拿走已经装在物品内的真实载荷。
-                    if (module == null || liveModules != null && liveModules.Contains(entry.Key)) continue;
-                    if (module is Inventory_ModuleData storage)
-                    {
-                        if (machine?.Logic == null && storage.Data != null)
-                            foreach (Inventory_Data inventory in storage.Data.Values) mass += ReadInventory(inventory, depth + 1);
-                        continue;
-                    }
-                    if (module is not Ex_ModData_MemoryPackable binary || binary.BitData?.Length is not > 0) continue;
-                    if (module.ModuleId == ModText.Equipment_Module)
-                    {
-                        Mod_EquipmentSaveData equipment = binary.GetData<Mod_EquipmentSaveData>();
-                        mass += ReadSnapshot(equipment?.EquipmentInventoryData, depth + 1);
-                        if (equipment?.EquipmentInstances != null) foreach (List<EquipmentInstance> group in equipment.EquipmentInstances)
-                            if (group != null) foreach (EquipmentInstance instance in group)
-                                if (instance is EquipmentInstance_Bag bag) mass += ReadInventory(bag.BagData, depth + 1);
-                    }
-                    else if (module.ModuleId == ModText.Equipment_Store && !liveEquipmentStores.Contains(data.Guid))
-                    {
-                        List<EquipmentInstance> equipment = binary.GetData<List<EquipmentInstance>>();
-                        if (equipment != null) foreach (EquipmentInstance instance in equipment)
-                            if (instance is EquipmentInstance_Bag bag) mass += ReadInventory(bag.BagData, depth + 1);
-                    }
-                    else if (module.ModuleId == Mod_VesselContents.ModuleId && machine?.Logic is not VesselLogic)
-                        mass += ReadSnapshot(binary.GetData<VesselContentsState>()?.Items, depth + 1);
-                    else if (module.ModuleId == Mod_WaterVessel.ModuleId && machine?.Logic is not VesselLogic)
-                        mass += ReadLiquidMass(binary.GetData<LiquidContainerState>());
-                    else if (module.ModuleId == Mod_Spacesuit.ModuleId)
-                    {
-                        SpacesuitState suit = binary.GetData<SpacesuitState>();
-                        mass += ReadSnapshot(suit?.OxygenTank, depth + 1) + ReadSnapshot(suit?.PropulsionTank, depth + 1);
-                    }
-                    else if (module.ModuleId == Mod_FluidTank.ModuleId && !portableRead)
-                        mass += ReadFluidMass(binary.GetData<FluidTankState>()?.Contents);
-                    else if (module.ModuleId == Mod_Cultivator.ModuleId && machine?.Logic is not CultivatorLogic)
-                    {
-                        CultivatorState plots = binary.GetData<CultivatorState>();
-                        mass += ReadSnapshot(plots?.Seeds, depth + 1) + ReadSnapshot(plots?.Harvest, depth + 1) + ReadSnapshot(plots?.Fertilizer, depth + 1);
-                    }
-                }
-                if (machine == null) mass += ReadColdMachine(data, depth + 1);
-                if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.SnapshotBase64))
-                {
-                    if (!ItemNetworkStateSerialization.TryDeserializeItemData(Convert.FromBase64String(building.SnapshotBase64), out ItemData packed))
-                        throw new InvalidOperationException("船载建筑库存快照无法读取。");
-                    if (packed.Guid == 0 || itemIds.Add(packed.Guid)) mass += ReadItemContents(packed, null, null, depth + 1);
-                }
-                return mass;
-            }
-            private double ReadColdMachine(ItemData data, int depth)
-            {
-                if (string.IsNullOrWhiteSpace(data.ItemSpecialData) || !data.ItemSpecialData.Contains(MachinePersistence.Namespace)) return 0d;
-                double mass = 0d;
-                MachineStorageState storage = MachinePersistence.Read<MachineStorageState>(data, "storage");
-                if (storage?.Inventories != null) foreach (Inventory_Data inventory in storage.Inventories) mass += ReadInventory(inventory, depth + 1);
-                RecipeProcessingState workbench = MachinePersistence.Read<RecipeProcessingState>(data, "workbench");
-                mass += ReadInventory(workbench?.Input, depth + 1) + ReadInventory(workbench?.Output, depth + 1);
-                FurnaceRuntimeState furnace = MachinePersistence.Read<FurnaceRuntimeState>(data, "furnace");
-                if (furnace?.Smelting?.InvData != null) foreach (Inventory_Data inventory in furnace.Smelting.InvData.Values) mass += ReadInventory(inventory, depth + 1);
-                mass += ReadInventory(furnace?.Processing?.Input, depth + 1) + ReadInventory(furnace?.Processing?.Output, depth + 1);
-                mass += ReadInventory(MachinePersistence.Read<SlotProcessingState>(data, "compost")?.Inventory, depth + 1);
-                mass += ReadInventory(MachinePersistence.Read<SlotProcessingState>(data, "drying")?.Inventory, depth + 1);
-                FluidMachineState fluid = MachinePersistence.Read<FluidMachineState>(data, "fluid");
-                if (fluid?.Chambers != null) foreach (FluidInventoryState chamber in fluid.Chambers.Values) mass += ReadFluidMass(chamber);
-                mass += ReadInventory(fluid?.PortableTank, depth + 1) + ReadInventory(fluid?.FilterMaterial, depth + 1) + ReadInventory(fluid?.Residue, depth + 1);
-                return mass;
-            }
-        }
-        #endregion
     }
 }
