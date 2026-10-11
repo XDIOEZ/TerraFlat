@@ -36,6 +36,8 @@ namespace FlatWorld.WorldModel
         public double NextLightningTime;
         public double LastLightningTime = -1d;
         public int LightningSequence;
+        public Int2 LightningCell;
+        public float LightningStrength;
         public int Revision;
 
         public RegionalWeatherState Clone()
@@ -70,6 +72,8 @@ namespace FlatWorld.WorldModel
         public float FogDensity;
         public float LightningActivity;
         public int LightningSequence;
+        public Int2 LightningCell;
+        public float LightningStrength;
         public float RemainingSeconds;
         public int Revision;
         #endregion

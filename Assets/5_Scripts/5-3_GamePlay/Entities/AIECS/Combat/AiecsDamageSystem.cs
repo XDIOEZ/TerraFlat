@@ -95,15 +95,16 @@ namespace FlatWorld.AIECS
             {
                 AiecsHitEvent hit = i < range.y ? Hits[range.x + i] : periodic[i - range.y].Hit;
                 CombatDamageContext context = hit.Context;
+                bool environmental = context.Attack.Source.Backend == CombatBackend.Environment;
                 if (hasPrevious && previous.Equals(context.Attack)) continue;
                 previous = context.Attack; hasPrevious = true;
                 if (identity.Key != hit.TargetKey || !Allowed(identity, context)) continue;
                 if (identity.External != 0) { ExternalHits.AddNoResize(hit); continue; }
                 float loss = -1f; float4 typed = float4.zero; byte fatal = 0;
-                if (vital.Dead == 0 && vital.Hp > 0f && (context.IsTrueDamage != 0 ||
+                if (vital.Dead == 0 && vital.Hp > 0f && (environmental || context.IsTrueDamage != 0 ||
                     context.Clock.Time - vital.LastDamageTime >= vital.DamageInterval))
                 {
-                    if (context.IsTrueDamage == 0) vital.LastDamageTime = context.Clock.Time;
+                    if (context.IsTrueDamage == 0 && !environmental) vital.LastDamageTime = context.Clock.Time;
                     float4 damage = context.IsTrueDamage != 0 ? math.max(float4.zero, context.Damage) :
                         CombatRules.Resolve(context.Damage, defense.Values,
                             Difficulty.Resolve(context.SourceIsPlayer != 0, identity.Player != 0), vital.ReceivedMultiplier);
@@ -150,13 +151,13 @@ namespace FlatWorld.AIECS
             brain.RandomState = random.state;
         }
 
-        /// <summary>来源身份、世界和阵营均有效；环境周期仅允许显式真实伤害分支。</summary>
+        /// <summary>环境来源保持真实世界身份并独立于阵营，物理环境伤害仍保留防御。</summary>
         private bool Allowed(AiecsIdentity target, CombatDamageContext context)
         {
             if (!context.Attack.Source.IsValid || context.Attack.Source.World != target.Key.World ||
                 context.Attack.Source.Dimension != target.Key.Dimension || context.Attack.Source == target.Key ||
                 !math.all(math.isfinite(context.Damage)) || !math.isfinite(context.Clock.Time)) return false;
-            if (context.Attack.Source.Backend == CombatBackend.Environment) return context.IsTrueDamage != 0;
+            if (context.Attack.Source.Backend == CombatBackend.Environment) return true;
             for (int i = 0; i < Factions.Length; i++) if (Factions[i].Equals(context.Faction)) return Spatial.IsHostile(i, target.Faction);
             return false;
         }

@@ -28,6 +28,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 热快照按当前配置合并状态，不迁移模块布局；未变模块保留，非重载/远程白名单通过 `BindSnapshotData` 绑定。`CaptureRuntimeStateBaseline` 在合并前捕获基线，`ApplyMergedRuntimeStates` 只刷新原代际中改变的模块；回调回收或换代后停止旧实例处理。嵌套库存仅为新冷数据补配置。
 - `ItemNetworkCaptureCache` 在 ModuleSave 后计算状态指纹，按实例代际、数据引用和捕获上下文隔离；未变模块复用冻结快照，未覆盖的 codec 完整捕获。MOD 可实现 `IModuleInstanceStateFingerprintProvider`；公共 Capture 返回独立缓冲。
 - 状态与位姿分别复制：普通世界状态包不带位姿，`NetworkItemPoseMessage` 独立递增版本；出生/完整包带当前姿态版本，客户端拒绝旧位姿。DTO 协议号由 `NetworkGameplayProtocol` 管理。
+- 天气雷击复制同时携带最新 LightningCell、LightningStrength 和序号，客户端只播放同落点的视觉/雷声，不重算落点或伤害；初始同步只建基线。新增雷击字段后 Gameplay 协议为 15。
 - 机器走 `MachineWorld` 快照、删除消息和转速增量，不进普通 Item 状态流。完整重同步清空旧节点；拆除先发布召唤器再删节点；客户端库存交互只发命令。
 
 ## UI 生命周期

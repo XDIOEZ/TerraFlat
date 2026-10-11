@@ -18,6 +18,9 @@ public partial class RegionalWeatherRecord
     public double NextLightningTime;
     public double LastLightningTime = -1d;
     public int LightningSequence;
+    public int LightningCellX;
+    public int LightningCellY;
+    public float LightningStrength;
     public int Revision;
     public float ForcedCloudCoverage = -1f;
     public float ForcedFogDensity = -1f;
@@ -51,6 +54,9 @@ public partial class RegionalWeatherRecord
             NextLightningTime = state.NextLightningTime,
             LastLightningTime = state.LastLightningTime,
             LightningSequence = state.LightningSequence,
+            LightningCellX = state.LightningCell.X,
+            LightningCellY = state.LightningCell.Y,
+            LightningStrength = state.LightningStrength,
             Revision = state.Revision,
             ForcedCloudCoverage = state.ForcedCloudCoverage,
             ForcedFogDensity = state.ForcedFogDensity,
@@ -77,6 +83,8 @@ public partial class RegionalWeatherRecord
             NextLightningTime = NextLightningTime,
             LastLightningTime = LastLightningTime,
             LightningSequence = LightningSequence,
+            LightningCell = new Int2(LightningCellX, LightningCellY),
+            LightningStrength = LightningStrength,
             Revision = Revision,
             ForcedCloudCoverage = ForcedCloudCoverage,
             ForcedFogDensity = ForcedFogDensity,

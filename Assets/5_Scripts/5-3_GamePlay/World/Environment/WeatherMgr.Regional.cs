@@ -35,6 +35,10 @@ public partial class WeatherMgr
     private RegionalWeatherSettings regionalSettings;
     [SerializeField, Min(0f)] private float surfaceRainWaterPerSecond = 0.2f;
     [SerializeField, Min(0f)] private float meltWaterPerSnowDepth = 50f;
+    [SerializeField, Min(0f), Tooltip("雷击落点的伤害半径，边缘衰减到零。")]
+    private float lightningDamageRadius = 1.5f;
+    [SerializeField, Min(0f), Tooltip("满强度雷击中心的物理伤害，仍计算目标防御。")]
+    private float lightningMaximumDamage = 40f;
     public float SurfaceRainWaterPerSecond => surfaceRainWaterPerSecond;
     public float MeltWaterPerSnowDepth => meltWaterPerSnowDepth;
     public float PrecipitationFreezingTemperature => GetSnowConfig().FreezingTemperature;
@@ -149,6 +153,7 @@ public partial class WeatherMgr
         ResetWeatherAudioBaseline();
         regionalSaveIndices.Clear();
         lightningSeen.Clear();
+        LightningStrikeSystem.Reset();
         surfaceChunksLastStep.Clear();
         surfaceChunksThisStep.Clear();
         regionalPlanet.RegionalWeatherStates ??= new List<RegionalWeatherRecord>();
@@ -206,6 +211,8 @@ public partial class WeatherMgr
         using (RegionalAdvanceMarker.Auto())
         foreach (Int2 region in regionalWork)
         {
+            if (!lightningSeen.ContainsKey(region) && regionalEngine.TryGetRegionSnapshot(region, out var baseline))
+                lightningSeen[region] = baseline.LightningSequence;
             RegionalWeatherAdvanceResult result = regionalEngine.Advance(region, now);
             regionalExposure[region] = result;
             ObserveLightning(result.Snapshot, false);
@@ -280,11 +287,44 @@ public partial class WeatherMgr
     private void ObserveLightning(RegionalWeatherSnapshot sample, bool initialState)
     {
         bool hadBaseline = lightningSeen.TryGetValue(sample.Region, out int previous);
-        lightningSeen[sample.Region] = Math.Max(previous, sample.LightningSequence);
-        if (initialState || !hadBaseline || sample.LightningSequence <= previous) return;
-        Int2 center = regionalEngine.GetFixedSampleCell(sample.Region, 0);
-        LightningOccurred?.Invoke(new RegionalLightningEvent(regionalPlanet.Name, sample.Region,
-            new Vector2(center.X + 0.5f, center.Y + 0.5f), sample.LightningActivity, sample.LightningSequence));
+        lightningSeen[sample.Region] = sample.LightningSequence;
+        if (initialState || !hadBaseline || sample.LightningSequence == previous || sample.LightningSequence <= 0) return;
+        var strike = new RegionalLightningEvent(regionalPlanet.Name, sample.Region,
+            new Vector2(sample.LightningCell.X + 0.5f, sample.LightningCell.Y + 0.5f),
+            sample.LightningStrength, sample.LightningSequence);
+        if (GameNetwork.HasStateAuthority)
+            LightningStrikeSystem.Apply(strike, lightningDamageRadius,
+                lightningMaximumDamage * Mathf.Clamp01(strike.Strength));
+        LightningOccurred?.Invoke(strike);
+    }
+
+    // 调试雷击与自然雷击共用落点、伤害和复制链，只允许已加载地表。
+    public bool StrikeLightningAt(Vector2 logicalPosition, float strength = 1f)
+    {
+        if (!GameNetwork.HasStateAuthority || !PrepareRegionalContext() ||
+            !TryGetCurrentTimeData(out var clock) || !float.IsFinite(logicalPosition.x) ||
+            !float.IsFinite(logicalPosition.y) || !float.IsFinite(strength) || strength <= 0f ||
+            ChunkMgr.ExistingInstance?.TryGetRestoredTerrainForEnvironment(logicalPosition, out var tile) != true ||
+            tile.Terrain.WeatherProfile == null) return false;
+        double now = GetRegionalStepTime(clock);
+        regionalEngine.RegisterChunk(tile.Address.ChunkOrigin, tile.Terrain.WeatherProfile, now);
+        Int2 cell = new(Mathf.FloorToInt(logicalPosition.x), Mathf.FloorToInt(logicalPosition.y));
+        Int2 region = regionalEngine.ResolveRegion(cell);
+        if (!lightningSeen.ContainsKey(region) && regionalEngine.TryGetRegionSnapshot(region, out var baseline))
+            lightningSeen[region] = baseline.LightningSequence;
+        RegionalWeatherSnapshot sample = regionalEngine.StrikeLightning(cell, now, Mathf.Clamp01(strength));
+        ObserveLightning(sample, false);
+        if (regionalEngine.TryGetState(region, out var state)) PersistRegionalState(state);
+        AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, sample));
+        return true;
+    }
+
+    [Sirenix.OdinInspector.Button("玩家上方三格雷击（有真实伤害）")]
+    public void StrikeLightningDebug()
+    {
+        Player player = ItemMgr.GetInstance()?.User_Player;
+        if (player != null && player.gameObject.activeInHierarchy)
+            StrikeLightningAt(WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + Vector2.up * 3f);
     }
 
     private void UpdateLocalWeatherProjection()

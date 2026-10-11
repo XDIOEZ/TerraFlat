@@ -21,6 +21,8 @@ public readonly struct RegionalWeatherStateSnapshot
     public readonly float FogDensity;
     public readonly float LightningActivity;
     public readonly int LightningSequence;
+    public readonly Int2 LightningCell;
+    public readonly float LightningStrength;
     public readonly float RemainingSeconds;
 
     #endregion
@@ -34,7 +36,7 @@ public readonly struct RegionalWeatherStateSnapshot
             snapshot.RainIntensity, snapshot.SnowIntensity, snapshot.PrecipitationIntensity,
             snapshot.WindX, snapshot.WindY, snapshot.WindStrength, snapshot.CloudCoverage,
             snapshot.FogDensity, snapshot.LightningActivity, snapshot.LightningSequence,
-            snapshot.RemainingSeconds)
+            snapshot.LightningCell, snapshot.LightningStrength, snapshot.RemainingSeconds)
     {
     }
 
@@ -56,6 +58,8 @@ public readonly struct RegionalWeatherStateSnapshot
         float fogDensity,
         float lightningActivity,
         int lightningSequence,
+        Int2 lightningCell,
+        float lightningStrength,
         float remainingSeconds)
     {
         WorldKey = worldKey ?? string.Empty;
@@ -75,6 +79,8 @@ public readonly struct RegionalWeatherStateSnapshot
         FogDensity = fogDensity;
         LightningActivity = lightningActivity;
         LightningSequence = lightningSequence;
+        LightningCell = lightningCell;
+        LightningStrength = lightningStrength;
         RemainingSeconds = remainingSeconds;
     }
 
@@ -98,6 +104,8 @@ public readonly struct RegionalWeatherStateSnapshot
             FogDensity = FogDensity,
             LightningActivity = LightningActivity,
             LightningSequence = LightningSequence,
+            LightningCell = LightningCell,
+            LightningStrength = LightningStrength,
             RemainingSeconds = RemainingSeconds
         };
     }

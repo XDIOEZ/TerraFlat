@@ -28,9 +28,14 @@ namespace FlatWorld.Spaceflight
     {
         #region 地表结构冲击入口
         public static SpaceSurfaceImpactResult ApplyStructureDamageInRadius(string worldKey, Vector2 center, float radius, float peak,
-            bool pressureExplosion = false, ulong eventId = 0)
+            bool environmentalDamage = false, ulong eventId = 0)
             => SaveDataMgr.Instance.ApplySpaceSurfaceImpact(global::WorldAddress.FromWorldKey(worldKey), center, radius, peak,
-                pressureExplosion, eventId);
+                environmentalDamage, eventId);
+
+        /// <summary>环境范围伤害复用地表防御、建筑库存掉落与冷热差量提交。</summary>
+        public static SpaceSurfaceImpactResult ApplyEnvironmentalDamageInRadius(string worldKey, Vector2 center, float radius, float peak,
+            ulong eventId)
+            => ApplyStructureDamageInRadius(worldKey, center, radius, peak, true, eventId);
 
         // 冷地表也按真实格容量接纳液体，调用者只扣除返回的实际泄出量。
         public static float ReleaseLiquidInWorld(string worldKey, Vector2 center, string liquidId, float depth)

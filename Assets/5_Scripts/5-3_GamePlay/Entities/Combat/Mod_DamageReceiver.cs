@@ -658,6 +658,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
         var target = GameplayCombatBridge.Identity(item);
         if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension) return -1f;
+        if (context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment)
+            return HurtContext(context, 1f, targetPart: targetPart, ignoreInterval: true);
         if (!FactionRelationService.TryGetCombatRelation(in context.Faction, FactionRelationService.GetFactionId(item),
             out FactionRelation relation, out string factionError))
         {
@@ -712,9 +714,9 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
         if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
-        lastDamageTime = context.Clock.Time;
+        if (!ignoreInterval) lastDamageTime = context.Clock.Time;
         float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
-        if (context.IsTrueDamage == 0)
+        if (context.IsTrueDamage == 0 && context.Attack.Source.Backend != FlatWorld.Combat.CombatBackend.Environment)
             rules *= Mod_ResourceHarvest.ResolveAffinityMultiplier(weakTool, 1,
                 (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
         List<BodyPartDamageInfo> preparedHits = null;

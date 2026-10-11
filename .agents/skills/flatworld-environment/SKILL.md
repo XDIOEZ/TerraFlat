@@ -30,7 +30,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 固定游戏秒格推进；跳时有界补已有事件，新区块不追补未加载的浇水/积雪，不补播历史雷声。回拨平移各独立时限，复制以 Revision 为主；`PlanetData.RegionalWeatherStates` 保存固定档案和事件状态。云量从雨/雷派生，自然雾、湿气消耗和雨冷反馈已移除；云雾仍可限时手动覆盖。
 - 静态 precipitation 是长期风携水汽降水，影响径流/生态；输送 humidity、固定 airHumidity、动态空气湿度与地表 moisture 分开。
 - `TryGetGeographicAirHumidity` 读固定层；`TryGetAirHumiditySupply` 从恢复后的真实 Liquid/深度/距离得 B，背景仅 airHumidity.background；`TryGetAirHumidity` 返回 clamp(B-D)。缺邻区返回不可用，不生成地形，缓存只依 Terrain/LiquidRevision/Epoch。
-- 雷电在本块 thunder 事件期间按强度和最短间隔产生新序号，首次/读档只建基线。手动雾仍由 `DenseFogRendererFeature` 在本地主相机最终画面合成 owned 玩家遮罩，进房恢复、退出/抑制天气维度清除。
+- 雷电在本块 thunder 事件期间按强度和最短间隔产生新序号，权威端选本块随机格落点并保存/复制最新落点和强度；`LightningStrikeSystem` 同事件仅结算一次线性衰减环境伤害，`LightningEffectController` 订阅同落点绘制闪电/落点电弧/屏幕闪光。首次/读档只建基线，F12 或 StrikeLightningAt 调试共用真实伤害链。手动雾仍由 `DenseFogRendererFeature` 在本地主相机最终画面合成 owned 玩家遮罩，进房恢复、退出/抑制天气维度清除。
 - `WeatherMgr.Audio` 通过 AudioService 播放当地雨/风循环并平滑更新句柄音量；雨声读实时雨雪分流，雷声只订阅新 LightningOccurred，按环绕最短距离衰减和传播延迟，首次推进不补播，退出/抑制天气维度清空待播和句柄。
 - 地表每块只接收一个降水积分，不再逐格查询或插值邻区天气；晴天无天气雪/玩家雪直接跳过。筛实际地面/待融雪格后 TrySampleAmbientChunk 同批冻结温度，按当地温度分雨雪，不跨帧借数组。
 

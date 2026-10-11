@@ -8,10 +8,15 @@ namespace FlatWorld.NaturalEntities
 {
     public static partial class NaturalEntityEcsService
     {
-        #region 压力爆炸正式伤害适配
+        #region 中立环境范围伤害适配
         public static void ApplyPressureExplosion(string world, ulong eventId, Vector2 center, float radius, float peak)
+            => ApplyEnvironmentalDamage(world, eventId, center, radius, peak);
+
+        /// <summary>雷击和爆炸共享真实资源生命与防御，避开采集资格和普通攻击冷却。</summary>
+        public static void ApplyEnvironmentalDamage(string world, ulong eventId, Vector2 center, float radius, float peak)
         {
-            if (!GameNetwork.HasStateAuthority || simulation == null || MachineWorld.WorldKey != world || radius <= 0f) return;
+            if (!GameNetwork.HasStateAuthority || simulation == null || MachineWorld.WorldKey != world || eventId == 0 ||
+                !float.IsFinite(radius) || !float.IsFinite(peak) || radius <= 0f || peak <= 0f) return;
             using ResourceQuery query = QueryBounds(center, Vector2.one * radius);
             foreach (Record record in query)
             {

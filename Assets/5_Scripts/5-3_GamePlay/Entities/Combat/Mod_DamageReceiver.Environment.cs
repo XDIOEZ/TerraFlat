@@ -5,7 +5,7 @@ using UnityEngine;
 
 public partial class Mod_DamageReceiver
 {
-    #region 环境结构损伤与压力爆炸
+    #region 环境结构损伤与范围命中
     public float ApplyStructuralDamage(float damage)
     {
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f) return 0f;
@@ -14,8 +14,13 @@ public partial class Mod_DamageReceiver
         return ResolveDamage(damage, null, 0f);
     }
     public float HurtPressureExplosion(ulong eventId, Vector2 logicalOrigin, float physicalDamage)
+        => HurtEnvironmentalDamage(eventId, logicalOrigin, physicalDamage);
+
+    /// <summary>中立环境命中保留防御、部位生命和死亡链，不占用普通攻击冷却。</summary>
+    public float HurtEnvironmentalDamage(ulong eventId, Vector2 logicalOrigin, float physicalDamage)
     {
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null) return 0f;
+        if (eventId == 0) throw new ArgumentOutOfRangeException(nameof(eventId));
         if (!float.IsFinite(physicalDamage) || physicalDamage < 0f) throw new ArgumentOutOfRangeException(nameof(physicalDamage));
         CombatIdentity target = GameplayCombatBridge.Identity(item);
         var source = new CombatIdentity { Backend = CombatBackend.Environment, Value = eventId,

@@ -14,7 +14,7 @@ namespace FlatWorld.AIECS.Gameplay
     /// 正式模拟与旧玩法的生命周期适配器：只采集少量外部玩家，负责武器 Pulse、旧接收器结算与死亡掉落。
     /// AI↔AI 不经过本桥；世界更换先销毁旧模拟，禁止让旧身份、命中或借用的 Native 数据进入新世界。
     /// </summary>
-    public sealed class AiecsGameplayBridge : IDisposable, IGameplayCombatBridge, IWorldNavigationFlowSource
+    public sealed class AiecsGameplayBridge : IDisposable, IGameplayCombatBridge, IGameplayEnvironmentalDamageBridge, IWorldNavigationFlowSource
     {
         #region 所有权与外部代理
         private sealed class ExternalProxy
@@ -491,6 +491,46 @@ namespace FlatWorld.AIECS.Gameplay
             int result = a.Fraction.CompareTo(b.Fraction);
             if (result == 0) result = a.Distance.CompareTo(b.Distance);
             return result == 0 ? a.Hit.TargetKey.CompareTo(b.Hit.TargetKey) : result;
+        }
+
+        /// <summary>环境输入按空间桶覆盖所有阵营，只提交本桥的原生动物，避免玩家双重受击。</summary>
+        public void ApplyEnvironmentalDamage(string worldKey, in CombatDamageContext context, float radius)
+        {
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || Simulation?.IsCreated != true ||
+                context.Attack.Source.Backend != CombatBackend.Environment || !context.Attack.Source.IsValid ||
+                !float.IsFinite(radius) || radius <= 0f) return;
+            Player player = ItemMgr.Instance?.User_Player;
+            if (!IsCurrentWorld(player) || player.gameObject.scene.name != worldKey ||
+                WorldEntityRuntime.DimensionId != dimensionName) return;
+            AiecsSpatialView view = Simulation.Spatial;
+            if (!view.Samples.IsCreated) return;
+            weaponVisited.Clear();
+            view.BucketRange(context.Origin, new float2(radius), out int2 first, out int2 size);
+            for (int y = 0; y < size.y; y++)
+            for (int x = 0; x < size.x; x++)
+            {
+                int2 bucket = view.NormalizeBucket(first + new int2(x, y));
+                for (int faction = 0; faction < factionNames.Count; faction++)
+                {
+                    if (!view.Buckets.TryGetFirstValue(new int3(bucket, faction), out int index, out var iterator)) continue;
+                    do
+                    {
+                        AiecsTargetSample target = view.Samples[index];
+                        if (!weaponVisited.Add(index) || target.Identity.External != 0 || target.Dead != 0 || target.Hp <= 0f ||
+                            target.Identity.Key.World != worldStamp || target.Identity.Key.Dimension != dimensionStamp ||
+                            !Simulation.Entities.Exists(target.Entity)) continue;
+                        float distance = math.length(view.Domain.ShortestDelta(context.Origin, target.Position));
+                        if (distance >= radius) continue;
+                        CombatDamageContext hit = context;
+                        CombatIdentity source = hit.Attack.Source;
+                        source.World = worldStamp; source.Dimension = dimensionStamp;
+                        hit.Attack.Source = source; hit.Credit = source;
+                        hit.Damage *= 1f - distance / radius;
+                        hit.HitPoint = target.Position;
+                        Simulation.SubmitHit(new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit });
+                    } while (view.Buckets.TryGetNextValue(out index, ref iterator));
+                }
+            }
         }
 
         /// <summary>只有玩家 Bridge 采集 Collider 形状；Native AI 的任何阶段均没有物理对象。</summary>

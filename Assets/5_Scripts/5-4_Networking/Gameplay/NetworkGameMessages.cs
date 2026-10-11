@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 14;
+        public const int CurrentVersion = 15;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -180,6 +180,9 @@ namespace FlatWorld.Networking.Gameplay
         public float FogDensity;
         public float LightningActivity;
         public int LightningSequence;
+        public int LightningCellX;
+        public int LightningCellY;
+        public float LightningStrength;
         public float RemainingSeconds;
         public bool InitialState;
     }

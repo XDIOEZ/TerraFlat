@@ -16,19 +16,19 @@ public static partial class MachineWorld
     private static WorldTopologyDomain ResolveScopedTopology(PlanetData planet)
         => WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
 
-    // 直接结构损伤与压力武器分开，致命清理由拥有落点世界的调用方完成。
+    // 直接结构损伤与需要防御的环境伤害分开，致命清理由拥有落点世界的调用方完成。
     public static bool ApplySurfaceStructuralDamage(MachineEntity node, float damage, Action<MachineEntity> fatalResolver,
-        bool pressureExplosion = false)
+        bool environmentalDamage = false)
     {
         if (!GameNetwork.HasStateAuthority || node == null || !float.IsFinite(damage) || damage <= 0f) return false;
         using var lease = UseNodeScope(node);
         if (!Contains(node)) return false;
         WakeForInteraction(node);
         if (node.State == null || node.State.Hp <= 0f) return false;
-        if (pressureExplosion)
+        if (environmentalDamage)
         {
             if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition))
-                throw new InvalidOperationException("压力伤害缺少机器的真实定义：" + node.Definition.Id);
+                throw new InvalidOperationException("环境伤害缺少机器的真实定义：" + node.Definition.Id);
             damage = CombatRules.ResolvePhysical(damage, definition.Health?.Defense?.Physical ?? 0f);
             if (damage <= 0f) return false;
         }

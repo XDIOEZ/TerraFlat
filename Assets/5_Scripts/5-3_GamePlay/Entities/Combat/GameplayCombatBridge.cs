@@ -13,6 +13,12 @@ public interface IGameplayCombatBridge
     void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context);
 }
 
+/// <summary>中立环境范围伤害由真实数据后端采候选，外部玩家仍由自身接收器结算。</summary>
+public interface IGameplayEnvironmentalDamageBridge
+{
+    void ApplyEnvironmentalDamage(string worldKey, in CombatDamageContext context, float radius);
+}
+
 /// <summary>可组合发送端能力把静态值附加到统一上下文，不订阅或查询每个 ECS 目标。</summary>
 public interface ICombatDamageContextModifier
 {
@@ -121,4 +127,18 @@ public static class GameplayCombatBridge
     {
         for (int i = 0; i < Bridges.Count; i++) Bridges[i].QueryWeaponPulse(weapon, shape, context);
     }
+
+    #region 中立环境输入
+    /// <summary>一次环境事件只分发已注册后端，不创建实体代理或修改表现层生命。</summary>
+    public static void ApplyEnvironmentalDamage(string worldKey, in CombatDamageContext context, float radius)
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority ||
+            !string.Equals(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, worldKey, System.StringComparison.Ordinal) ||
+            context.Attack.Source.Backend != CombatBackend.Environment || !context.Attack.Source.IsValid ||
+            !float.IsFinite(radius) || radius <= 0f) return;
+        for (int i = 0; i < Bridges.Count; i++)
+            if (Bridges[i] is IGameplayEnvironmentalDamageBridge environment)
+                environment.ApplyEnvironmentalDamage(worldKey, context, radius);
+    }
+    #endregion
 }

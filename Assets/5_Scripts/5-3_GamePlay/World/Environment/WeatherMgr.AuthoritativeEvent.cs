@@ -106,6 +106,7 @@ public partial class WeatherMgr
         UnsubscribeTimeSystem();
         PersistRegionalStates();
         lightningEffect?.Shutdown();
+        LightningStrikeSystem.Reset();
         DeactivateWeatherFeedback();
     }
 

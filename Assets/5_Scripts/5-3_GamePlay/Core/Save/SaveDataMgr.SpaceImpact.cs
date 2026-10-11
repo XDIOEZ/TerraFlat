@@ -23,7 +23,7 @@ public partial class SaveDataMgr
     #region 跨场景地表结构冲击
     // 当前实体、纯机器和冷差量共用一次伤害，结果进入正式存档而不加载星球场景。
     public SpaceSurfaceImpactResult ApplySpaceSurfaceImpact(global::WorldAddress address, Vector2 center,
-        float radius, float structuralDamage, bool pressureExplosion = false, ulong eventId = 0)
+        float radius, float structuralDamage, bool environmentalDamage = false, ulong eventId = 0)
     {
         var result = new SpaceSurfaceImpactResult();
         if (!GameNetwork.HasStateAuthority || SaveData == null || structuralDamage == 0f) return result;
@@ -52,7 +52,7 @@ public partial class SaveDataMgr
                 {
                     DestroyImpactMachine(target, address.WorldKey, visible);
                     destroyed = true;
-                }, pressureExplosion)) continue;
+                }, environmentalDamage)) continue;
                 result.DamagedBuildings++;
                 if (destroyed) result.DestroyedBuildings++;
             }
@@ -84,7 +84,7 @@ public partial class SaveDataMgr
                 }
                 float actual;
                 health.DeathStarted += DropFatalInventories;
-                try { actual = pressureExplosion ? health.HurtPressureExplosion(eventId, center, damage) : health.ApplyStructuralDamage(damage); }
+                try { actual = environmentalDamage ? health.HurtEnvironmentalDamage(eventId, center, damage) : health.ApplyStructuralDamage(damage); }
                 finally { health.DeathStarted -= DropFatalInventories; }
                 if (actual <= 0f) continue;
                 destroyed |= health.Hp <= 0f;
@@ -120,7 +120,7 @@ public partial class SaveDataMgr
                 if (!TryGetImpactHealth(cold, out Ex_ModData storage, out Mod_DamageReceiver.DamageReceiver_SaveData health)) continue;
                 processed.Add(cold.Guid);
                 if (health.Hp <= 0f) continue;
-                if (pressureExplosion) damage = CombatRules.ResolvePhysical(damage, health.DefenseValues?.Physical ?? 0f);
+                if (environmentalDamage) damage = CombatRules.ResolvePhysical(damage, health.DefenseValues?.Physical ?? 0f);
                 if (damage <= 0f) continue;
                 health.Hp = Mathf.Max(0f, health.Hp - damage); storage.WriteData(health);
                 record.RemovedItemGuids ??= new List<int>();
@@ -141,7 +141,7 @@ public partial class SaveDataMgr
             }
         }
 
-        ApplyImpactTiles(address.WorldKey, center, radius, structuralDamage, domain, visible, pressureExplosion, records, ref result);
+        ApplyImpactTiles(address.WorldKey, center, radius, structuralDamage, domain, visible, environmentalDamage, records, ref result);
         foreach (ChunkSaveRecord record in records)
         {
             record.ChangedItems?.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
@@ -299,7 +299,7 @@ public partial class SaveDataMgr
 
     #region 已加载与冷地块墙体伤害
     private void ApplyImpactTiles(string worldKey, Vector2 center, float radius, float damage, WorldTopologyDomain domain,
-        bool visible, bool pressureExplosion, HashSet<ChunkSaveRecord> changedRecords, ref SpaceSurfaceImpactResult result)
+        bool visible, bool environmentalDamage, HashSet<ChunkSaveRecord> changedRecords, ref SpaceSurfaceImpactResult result)
     {
         var visited = new HashSet<Vector2Int>();
         ChunkMgr manager = visible ? ChunkMgr.ExistingInstance : null;
@@ -316,7 +316,7 @@ public partial class SaveDataMgr
                 TileBuildingDamageProfile profile = definition.damageProfile;
                 float current = ReadRuntimeBuildingDamage(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
                 float actual = damage * Mathf.Clamp01(1f - ImpactCellDistance(center, cell, domain) / radius);
-                if (pressureExplosion) actual = CombatRules.ResolvePhysical(actual, profile.ResolveDefense().Physical);
+                if (environmentalDamage) actual = CombatRules.ResolvePhysical(actual, profile.ResolveDefense().Physical);
                 if (actual <= 0f) continue;
                 float accumulated = Mathf.Min(profile.MaxHealth, current + actual);
                 bool destroyed = accumulated >= profile.MaxHealth;
@@ -342,7 +342,7 @@ public partial class SaveDataMgr
                 !TryGetImpactTileProfile(saved.BlockingTileId, out RuntimeTileDefinition definition)) continue;
             TileBuildingDamageProfile profile = definition.damageProfile;
             float actual = damage * Mathf.Clamp01(1f - ImpactCellDistance(center, cell, domain) / radius);
-            if (pressureExplosion) actual = CombatRules.ResolvePhysical(actual, profile.ResolveDefense().Physical);
+            if (environmentalDamage) actual = CombatRules.ResolvePhysical(actual, profile.ResolveDefense().Physical);
             if (actual <= 0f) continue;
             saved.AccumulatedDamage = Mathf.Min(profile.MaxHealth, saved.AccumulatedDamage + actual);
             bool destroyed = saved.AccumulatedDamage >= profile.MaxHealth;

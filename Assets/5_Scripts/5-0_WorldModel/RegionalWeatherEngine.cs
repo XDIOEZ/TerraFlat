@@ -42,16 +42,6 @@ namespace FlatWorld.WorldModel
             return new Int2(origin.x, origin.y);
         }
 
-        /// <summary>雷电表现只需区块中心，保留参数以方便原调用方迁移。</summary>
-        public Int2 GetFixedSampleCell(Int2 region, int index)
-        {
-            if ((uint)index >= 5u)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            region = ResolveRegion(region);
-            int2 cell = domain.Normalize(new int2(region.X + chunkWidth / 2, region.Y + chunkHeight / 2));
-            return new Int2(cell.x, cell.y);
-        }
-
         public void RegisterChunk(Int2 origin, ChunkWeatherProfile profile, double now)
         {
             RequireAuthority();
@@ -221,9 +211,21 @@ namespace FlatWorld.WorldModel
                 state.LastLightningTime >= 0d &&
                 state.LastStepTime - state.LastLightningTime < settings.MinimumLightningIntervalSeconds)
                 return;
+            int sequence = state.LightningSequence == int.MaxValue ? 1 : state.LightningSequence + 1;
+            int2 cell = domain.Normalize(new int2(
+                state.Region.X + (int)(Random01(state.Region, sequence, "lightning.x") * chunkWidth),
+                state.Region.Y + (int)(Random01(state.Region, sequence, "lightning.y") * chunkHeight)));
+            CommitLightning(state, new Int2(cell.x, cell.y), activity);
+        }
+
+        // 落点只由权威端决定，保存和复制同时携带同一次雷击的强度。
+        private void CommitLightning(RegionalWeatherState state, Int2 cell, float strength)
+        {
             state.LightningSequence = state.LightningSequence == int.MaxValue ? 1 : state.LightningSequence + 1;
+            state.LightningCell = cell;
+            state.LightningStrength = strength;
             state.LastLightningTime = state.LastStepTime;
-            state.NextLightningTime = state.LastStepTime + LightningInterval(activity);
+            state.NextLightningTime = state.LastStepTime + LightningInterval(strength);
         }
 
         private double LightningInterval(float activity)
@@ -394,6 +396,7 @@ namespace FlatWorld.WorldModel
                     ? state.ForcedCloudCoverage : Math.Max(precipitation, thunder),
                 FogDensity = hasOverride && state.ForcedFogDensity >= 0f ? state.ForcedFogDensity : 0f,
                 LightningActivity = thunder, LightningSequence = state.LightningSequence,
+                LightningCell = state.LightningCell, LightningStrength = state.LightningStrength,
                 RemainingSeconds = remainingSeconds,
                 Revision = state.Revision
             };
@@ -442,6 +445,23 @@ namespace FlatWorld.WorldModel
         #endregion
 
         #region 手动天气入口
+        public RegionalWeatherSnapshot StrikeLightning(Int2 cell, double now, float strength)
+        {
+            RequireAuthority();
+            RequireTime(now);
+            if (!Unit(strength) || strength <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(strength));
+            int2 normalized = domain.Normalize(new int2(cell.X, cell.Y));
+            cell = new Int2(normalized.x, normalized.y);
+            RegionalWeatherState state = GetOrCreateState(ResolveRegion(cell), now);
+            state.LastStepTime = now;
+            state.CheckIndex = GetCheckIndex(now);
+            ExpireElements(state);
+            CommitLightning(state, cell, strength);
+            IncrementRevision(state);
+            return BuildSnapshot(state);
+        }
+
         public void ForceElement(Int2 region, double now, string elementId, float intensity, float durationSeconds)
         {
             RequireAuthority();
@@ -526,7 +546,8 @@ namespace FlatWorld.WorldModel
                 !OverrideValue(state.ForcedCloudCoverage) || !OverrideValue(state.ForcedFogDensity) ||
                 !OverrideValue(state.ForcedWindStrength) ||
                 !Finite(state.NextLightningTime) || state.NextLightningTime < 0d ||
-                !Finite(state.LastLightningTime) || state.LastLightningTime < -1d || state.Elements == null)
+                !Finite(state.LastLightningTime) || state.LastLightningTime < -1d ||
+                !Unit(state.LightningStrength) || state.Elements == null)
                 throw new ArgumentException("区块天气保存状态超出配置范围。", nameof(state));
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (WeatherElementState element in state.Elements)
@@ -545,6 +566,7 @@ namespace FlatWorld.WorldModel
                Finite(value.WindX) && Finite(value.WindY) && Math.Abs(value.WindX) <= 1f &&
                Math.Abs(value.WindY) <= 1f && Unit(value.WindStrength) &&
                Unit(value.CloudCoverage) && Unit(value.FogDensity) && Unit(value.LightningActivity) &&
+               Unit(value.LightningStrength) &&
                Finite(value.RemainingSeconds) && value.RemainingSeconds >= 0f;
 
         private static int FloorDiv(int value, int divisor)

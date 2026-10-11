@@ -516,6 +516,8 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         if (planetData != null)
         {
+            if (GUILayout.Button("暴风雷雨")) SetWeather(WeatherType.Storm, 1f);
+            if (GUILayout.Button("玩家上方三格雷击（有真实伤害）")) StrikeLightningDebug();
             GUILayout.Space(8f);
             GUILayout.Label("风力", _labelStyle);
             float nextWindStrength = GUILayout.HorizontalSlider(planetData.WindStrength, 0f, 1f);

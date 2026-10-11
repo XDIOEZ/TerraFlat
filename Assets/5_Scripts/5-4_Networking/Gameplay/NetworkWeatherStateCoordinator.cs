@@ -139,6 +139,9 @@ namespace FlatWorld.Networking.Gameplay
                 FogDensity = snapshot.FogDensity,
                 LightningActivity = snapshot.LightningActivity,
                 LightningSequence = snapshot.LightningSequence,
+                LightningCellX = snapshot.LightningCell.X,
+                LightningCellY = snapshot.LightningCell.Y,
+                LightningStrength = snapshot.LightningStrength,
                 RemainingSeconds = snapshot.RemainingSeconds,
                 InitialState = initialState
             };
@@ -208,6 +211,8 @@ namespace FlatWorld.Networking.Gameplay
                 message.FogDensity,
                 message.LightningActivity,
                 message.LightningSequence,
+                new Int2(message.LightningCellX, message.LightningCellY),
+                message.LightningStrength,
                 message.RemainingSeconds);
             WeatherMgr.Instance.ApplyReplicatedRegionalWeatherState(snapshot, message.InitialState);
         }
