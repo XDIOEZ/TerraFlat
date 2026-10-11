@@ -26,14 +26,15 @@ namespace FlatWorld.WorldModel
         public float FreezingTemperature = 0f;
         public float MinimumClimateWeight = 0.35f;
         public float MaximumClimateWeight = 1.3f;
-        public float BaseCheckProbability = 0.18f;
-        public float MaximumCheckProbability = 0.8f;
+        // 全局概率与雨后冷却统一限制自然降水频率。
+        public float BaseCheckProbability = 0.06f;
+        public float MaximumCheckProbability = 0.25f;
         public float MinimumDurationSeconds = 45f;
         public float MaximumDurationSeconds = 240f;
         public float HardMaximumDurationSeconds = 420f;
         public float MinimumIntensity = 0.1f;
         public float MaximumIntensity = 0.9f;
-        public float CooldownSeconds = 90f;
+        public float CooldownSeconds = 180f;
         public float MaximumCoolingCelsius = 7f;
         public float CoolingPerSecond = 0.04f;
         public float CoolingRecoveryPerSecond = 0.015f;

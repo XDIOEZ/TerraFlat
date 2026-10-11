@@ -33,6 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 高频时钟消费者复用 `DayTimeSystem.GetCurrentActiveSceneName()`，只按活动场景句柄缓存名称，并在世界进入/退出时失效；时刻、天气和维度规则继续实时读取，不能随名称一起缓存。
 - GM 当天时刻滑条应解析活动场景实际引用的时钟，按当前 `DayLength` 映射 00:00～23:59；拖动期间只预览，松开后由状态权威端调用 `JumpToTime` 一次，避免每个刻度都触发时间事件和天气调度。GM 面板在主菜单也会创建，此时先确认已进入世界，再用 `DayTimeSystem.GetInstance()` 无报错地探测时钟；不要在非世界场景用会打印缺失错误的 `Instance`。
 - 天气按固定规范区域与五个固定点采样 B、实时温度和地理 P；全部输入就绪才触发新事件，所有区域先冻结旧输入再推进。引擎只接收剥离上一步平滑雨冷的温度，不把某个玩家、火把或角色体温当成整区温度。
+- 整体降水频率调整优先使用 `BaseCheckProbability/MaximumCheckProbability` 与 `CooldownSeconds`，同步 JSON 与 `RegionalWeatherSettings` 默认值；基础概率还要乘湿度、温度和气候系数，不能当作最终概率，也不要用修改静态地理降水量来代替天气调参。
 - 权威区域状态保存到 `PlanetData.RegionalWeatherStates`；区域与地表使用同一固定游戏秒格，查询不推进。跳时有界补已有事件，缺数据不制造新雨；GM 回拨平移时限并保留 D/C，复制以 Revision 为主。新区块不接收未加载期间的旧雨雪积分。
 - 雨雪、风、雷电、云雾是独立输出，`WeatherType/Phase` 只是组合名称。旧每日随机阴天/雾事件默认关闭，手动覆盖作用于当前区域并有结束时间；不能恢复全球互斥天气驱动。
 - 云量只在 `DayTimeSystem.GetLighting/GetSunLighting` 外层衰减一次，不重复乘引用场景或影响局部灯光。`PlanetData.WindStrength` 只是镜头附近的投影；风机、植物等功能按自身坐标查询，GPU 全局风参数按镜头采样并在退出时清零。
