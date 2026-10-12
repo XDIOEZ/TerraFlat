@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-/// <summary>只消费单次雷电事件，把逻辑落点投影为分叉闪电、电弧和屏幕闪光。</summary>
+/// <summary>只消费单次雷电事件，通过程序化 Shader 将逻辑落点绘制为分叉闪电、电弧和屏幕闪光。</summary>
 [DisallowMultipleComponent]
 public sealed class LightningEffectController : MonoBehaviour
 {
@@ -19,7 +19,7 @@ public sealed class LightningEffectController : MonoBehaviour
     [SerializeField, Min(0.01f)] private float flashDurationSeconds = 0.16f;
     [SerializeField, Range(0f, 1f)] private float maximumFlashOpacity = 0.3f;
     [SerializeField, Min(0.05f)] private float boltDurationSeconds = 0.28f;
-    [SerializeField, Min(1f)] private float boltHeight = 12f;
+    [SerializeField, Min(1f)] private float boltHeight = 24f;
     [SerializeField, Min(0.5f)] private float boltWidth = 5.5f;
     [SerializeField, Min(0.1f)] private float impactRadius = 2.4f;
     [SerializeField, Range(1, 24)] private int maximumSimultaneousBolts = 12;

@@ -5,7 +5,7 @@ Shader "Game/Weather/LightningBolt"
         _Progress("Lifetime Progress", Range(0, 1)) = 0
         _Strength("Intensity", Range(0, 1)) = 1
         _Seed("Strike Seed", Float) = 1
-        _BoltSize("Width Height Core Glow", Vector) = (5.5, 12, 0.035, 0.16)
+        _BoltSize("Width Height Core Glow", Vector) = (5.5, 24, 0.035, 0.16)
         _Mode("Bolt Or Ground Impact", Float) = 0
     }
 

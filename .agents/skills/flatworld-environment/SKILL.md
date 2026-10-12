@@ -28,7 +28,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 区块生成时一次汇总固定 airHumidity、windX/Y、每格风模长和地理温度；`ChunkTerrainData.WeatherProfile` 冻结每种要素的 Probability/Intensity/DurationSeconds。自然要素为 rain/wind/thunder，配置 Elements 按稳定字符串 ID 扩展；生成器与调度器经 `ChunkWeatherConfiguration` 共用冻结配置。
 - 天气按共享区域推进，`RegionSizeInChunks` 默认 8（16 格区块对应 128×128 格），区域首次登记冻结代表区块档案，成员共用要素概率、强度和时限；每区每步只推进/复制一次，地表积分分发到所有已加载成员。环绕世界以 Min 分区，剩余窄边并入末区，雷击按实际区域边界选点。`CheckIntervalSeconds` 为空闲要素检查间隔；运行时不重采气候，查询只读共享状态，普通 Client 只应用权威效果。
 - 本机雨雪用 `_precipitationTransitionSeconds` 完整 SmoothStep 过渡（WorldManager 默认 12 秒，低强度小雨也走完）；风/云光仍用 `_weatherTransitionSeconds` 零到满 3 秒。跨区块从当前表现续接，雨滴/水花由零按强度增多，雨声线性消费同一强度，停雨让现有粒子落完。程序入口 `SetPrecipitationIntensity(intensity, durationSeconds=60, transitionSeconds=-1)` 只改本块降水，0 停雨、0 过渡秒立即切换、-1 用默认值；普通客户端返回 false。`PresentedRainIntensity/PresentedSnowIntensity` 可读当前表现，权威浇水/积雪仍读真实当地天气。
-- 雷束/电弧/屏幕闪光按环绕最短距离读取当前近/远雷声 Cue 的 MinDistance/MaxDistance，共用线性距离衰减；当前 8 格内完整、8～192 格渐弱、192 格处归零，修改雷声距离时雷光自动跟随。雷声仍按原传播延迟播放。
+- 雷束/电弧/屏幕闪光按环绕最短距离读取当前近/远雷声 Cue 的 MinDistance/MaxDistance，共用线性距离衰减；当前 8 格内完整、8～192 格渐弱、192 格处归零，修改雷声距离时雷光自动跟随。主雷束默认从落点向上 24 格，Shader 程序化计算折线/分叉/光晕，不采样整张闪电贴图；雷声仍按原传播延迟播放。
 - 固定游戏秒格推进；跳时有界补已有事件，新区块不追补未加载的浇水/积雪，不补播历史雷声。回拨平移各独立时限，复制以 Revision 为主；`PlanetData.RegionalWeatherStates` 保存固定档案和事件状态。云量从雨/雷派生，自然雾、湿气消耗和雨冷反馈已移除；云雾仍可限时手动覆盖。
 - 静态 precipitation 是长期风携水汽降水，影响径流/生态；输送 humidity、固定 airHumidity、动态空气湿度与地表 moisture 分开。
 - `TryGetGeographicAirHumidity` 读固定层；`TryGetAirHumiditySupply` 从恢复后的真实 Liquid/深度/距离得 B，背景仅 airHumidity.background；`TryGetAirHumidity` 返回 clamp(B-D)。缺邻区返回不可用，不生成地形，缓存只依 Terrain/LiquidRevision/Epoch。
