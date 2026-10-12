@@ -36,6 +36,18 @@ public class Planet : MonoBehaviour
         surfacePresentation?.UpdateLighting(session, body);
     }
 
+    // 同一个星体外观供实际太空和远景观察复用，不在观察端另写颜色或类型规则。
+    public void ApplySurfaceProperties(MaterialPropertyBlock properties)
+    {
+        SpriteRenderer sprite = GetComponentInChildren<SpriteRenderer>(true);
+        properties.SetColor("_Color", sprite != null ? sprite.color : Color.white);
+        properties.SetColor("_SurfaceAccentColor", surfaceAccentColor);
+        properties.SetFloat("_SurfaceStyle", (float)surfaceStyle);
+        properties.SetFloat("_SurfaceDetailStrength", Mathf.Clamp01(surfaceDetailStrength));
+        properties.SetFloat("_SurfaceDetailScale", Mathf.Max(1f, surfaceDetailScale));
+        properties.SetFloat("_SurfaceExtent", surfaceStyle == PlanetSurfaceStyle.Stellar ? 1.3f : 1.12f);
+    }
+
     private void OnDestroy() => surfacePresentation?.Dispose();
 
     #endregion

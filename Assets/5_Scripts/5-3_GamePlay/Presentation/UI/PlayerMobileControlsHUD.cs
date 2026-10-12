@@ -973,25 +973,19 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (cameraModule == null || cameraModule.Vcam == null)
             return;
 
-        float minimum = Mathf.Max(.001f, cameraModule.MinPovValue);
-        float maximum = Mathf.Max(minimum + .001f, cameraModule.EffectiveMaxPovValue);
-        bool proportional = cameraModule.UsesProportionalZoom;
-        float size = Mathf.Clamp(cameraModule.CurrentOrthographicSize, minimum, maximum);
         // 滑条切换数值范围时会发值变化事件，回填期间不能反过来修改镜头。
         refreshingCameraZoomSlider = true;
         try
         {
-            cameraZoomSlider.minValue = proportional ? 0f : minimum;
-            cameraZoomSlider.maxValue = proportional ? 1f : maximum;
+            cameraZoomSlider.minValue = 0f;
+            cameraZoomSlider.maxValue = 1f;
             cameraZoomSlider.wholeNumbers = false;
-            cameraZoomSlider.SetValueWithoutNotify(proportional
-                ? Mathf.Log(size / minimum) / Mathf.Log(maximum / minimum)
-                : size);
+            cameraZoomSlider.SetValueWithoutNotify(cameraModule.GetViewSliderValue());
         }
         finally { refreshingCameraZoomSlider = false; }
     }
 
-    /// <summary>远景滑条按比例分配缩放距离，近景仍使用原来的绝对尺寸。</summary>
+    /// <summary>把归一化滑条值交给相机当前的连续缩放规则。</summary>
     private void HandleCameraZoomChanged(float value)
     {
         if (refreshingCameraZoomSlider) return;
@@ -999,13 +993,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (cameraModule == null || cameraModule.Vcam == null)
             return;
 
-        if (cameraModule.UsesProportionalZoom)
-        {
-            float minimum = Mathf.Max(.001f, cameraModule.MinPovValue);
-            float maximum = Mathf.Max(minimum + .001f, cameraModule.EffectiveMaxPovValue);
-            value = minimum * Mathf.Pow(maximum / minimum, Mathf.Clamp01(value));
-        }
-        cameraModule.SetOrthographicSize(value);
+        cameraModule.SetViewSliderValue(value);
         RefreshCameraZoomSlider();
     }
 

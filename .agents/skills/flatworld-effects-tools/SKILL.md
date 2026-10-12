@@ -36,6 +36,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 打包时 `UberPostShaderVariantStripper` 仅剔除当前未启用的畸变、色差、胶片颗粒和 Bloom 脏镜头组合；新增这些效果时先更新剔除表，再检查构建中的变体数量和实际画面。动态创建 Volume，不能直接启用 URP 的「剔除未使用后处理变体」。
 - 低血量强度交给 LowHealthRedEdgeRendererFeature，在最终相机 resolveFinalTarget 且强度>0 时 Alpha Blend 全屏红边；普通 Vignette 为乘法压暗。
 - 高视野云雾由 `ZoomCloudRendererFeature` 与 Resources/Shaders/ZoomClouds 在最终本地世界相机合成；`zoomClouds` 配置实际正交尺寸 20 起雾、40 最浓，玩家 8 格内清晰、28 格外最浓全遮挡。GPU 双层噪声沿玩家所在地风向漂移，CPU 只积分连续相位与提交参数；环绕只累加最短位移，天气禁用维度/退出清状态，不依赖深度纹理。参考 [GPU-Fog-Particles](https://github.com/MirzaBeig/GPU-Fog-Particles)、[URPFog urp14](https://github.com/meryuhi/URPFog/tree/urp14) 的噪声分层和全屏合成思路，项目 Shader 独立实现。
+- `UniverseOverviewRendererFeature` 在云雾后、红边前合成独立宇宙观察；`universeView` 默认 60 起、90 完全、每步 ×1.25，地表真实镜头封顶 60。星体复用 Planet 外观和 PlanetSurface 的 PlanetUnlit Pass，位置来自会话，未进入的配置星区只建目录副本；一张无深度 RT 供整体淡入，退出/换玩家/换世界释放，不迁移角色或加载太空场景。
 - 自定义 Blitter 后处理的像素采样步长由调用方按源 RTHandle 纹理尺寸显式传入；URP 14 的 `Blit.hlsl` 不声明 `_BlitTexture_TexelSize`。
 
 ## 阴影与遮光

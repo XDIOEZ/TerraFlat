@@ -245,6 +245,7 @@ Shader "FlatWorld/Space/PlanetSurface"
         Pass
         {
             Tags { "LightMode"="UniversalForward" }
+            Name "PlanetUnlit"
             HLSLPROGRAM
             #pragma target 3.0
             #pragma vertex PlanetVertex

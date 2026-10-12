@@ -12,6 +12,7 @@ public sealed class WorldRenderingConfig
     public RenderingOcclusion occlusion;
     public RenderingDenseFog denseFog;
     public RenderingZoomClouds zoomClouds;
+    public RenderingUniverseView universeView;
     public RenderingInteractionOutline interactionOutline;
     public RenderingPostProcess postProcess;
     public RenderingGrass grass;
@@ -173,6 +174,34 @@ public sealed class WorldRenderingConfig
 
     #endregion
 
+    #region 宇宙观察视野配置
+
+    [Serializable]
+    public sealed class RenderingUniverseView
+    {
+        public float startOrthographicSize;
+        public float opaqueOrthographicSize;
+        public float maximumOrthographicSize;
+        public float zoomMultiplier;
+        public float transitionSeconds;
+        public float entryPlanetRadiusMultiplier;
+        public float minimumBodyPixels;
+
+        // 宇宙观察只放大显示比例，实际地表镜头停在过渡起点。
+        public bool IsValid =>
+            IsFinite(startOrthographicSize) && startOrthographicSize > 0f &&
+            IsFinite(opaqueOrthographicSize) && opaqueOrthographicSize > startOrthographicSize &&
+            IsFinite(maximumOrthographicSize) && maximumOrthographicSize >= opaqueOrthographicSize &&
+            IsFinite(zoomMultiplier) && zoomMultiplier > 1f &&
+            IsFinite(transitionSeconds) && transitionSeconds >= 0f &&
+            IsFinite(entryPlanetRadiusMultiplier) && entryPlanetRadiusMultiplier > 1f &&
+            IsFinite(minimumBodyPixels) && minimumBodyPixels >= 0f;
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+
+    #endregion
+
     [Serializable]
     public sealed class RenderingPostProcess
     {
@@ -306,7 +335,7 @@ public static class WorldRenderingConfigCatalog
         if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
-            config.denseFog == null || config.zoomClouds == null ||
+            config.denseFog == null || config.zoomClouds == null || config.universeView == null ||
             config.postProcess == null || config.postProcess.worldVolume == null ||
             config.postProcess.worldVolume.bloom == null ||
             config.postProcess.worldVolume.colorGrading == null ||
@@ -317,7 +346,8 @@ public static class WorldRenderingConfigCatalog
             config.sorting.batchProfiles == null ||
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
-        if (!config.denseFog.IsValid || !config.zoomClouds.IsValid ||
+        if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.universeView.IsValid ||
+            config.universeView.startOrthographicSize < config.zoomClouds.opaqueOrthographicSize ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 1 ||

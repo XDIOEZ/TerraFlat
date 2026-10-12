@@ -54,9 +54,11 @@ public class Mod_Cam : Module
     private float povValue = DefaultPovValue;
 
     /// <summary>
-    /// 当前目标正交尺寸（直接读取 vcam lens，避免 Cinemachine 同步延迟）
+    /// 当前目标视野尺寸；观察模式保留逻辑尺寸，其余模式读取实际镜头。
     /// </summary>
-    public float CurrentOrthographicSize => vcam != null ? vcam.m_Lens.OrthographicSize : (ControllerCamera != null ? ControllerCamera.orthographicSize : 0f);
+    public float CurrentOrthographicSize => GetZoomProfile().MaximumRenderSize > 0f
+        ? povValue
+        : (vcam != null ? vcam.m_Lens.OrthographicSize : (ControllerCamera != null ? ControllerCamera.orthographicSize : 0f));
     
     [Header("视野限制")]
     public float MaxPovValue = 40f; // 视野最大拉伸值
@@ -64,8 +66,20 @@ public class Mod_Cam : Module
     private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
     private float _adminFiniteViewMaxOverride; // GM 可临时扩展有限视野，不改普通玩法上限。
 
-    public float EffectiveMaxPovValue => Mathf.Max(MaxPovValue, _followOverride != null ? _followOverrideMaxPov : 0f);
-    public bool UsesProportionalZoom => _followOverride != null && _followOverrideZoomMultiplier > 1f;
+    public bool HasFollowOverride => _followOverride != null;
+    public float EffectiveMaxPovValue => Mathf.Max(
+        Mathf.Max(MaxPovValue, HasFollowOverride ? _followOverrideMaxPov : 0f),
+        GetZoomProfile().MaximumSize);
+    public bool UsesProportionalZoom
+    {
+        get
+        {
+            if (HasFollowOverride) return _followOverrideZoomMultiplier > 1f;
+            CameraZoomProfile profile = GetZoomProfile();
+            return profile.Enabled && profile.ZoomMultiplier > 1f &&
+                CurrentOrthographicSize >= profile.ProportionalStartSize;
+        }
+    }
 
     /// <summary>当前是否启用了管理员无限视野。</summary>
     public bool IsUnlimitedViewEnabled => _unlimitedViewEnabled;
@@ -174,11 +188,7 @@ public class Mod_Cam : Module
         {
             CacheCameraFollowDefaults();
             LoadPovValue();
-            povValue = ClampPovValue(povValue);
-            Vcam.m_Lens.OrthographicSize = povValue;
-            if (ControllerCamera != null)
-                ControllerCamera.orthographicSize = povValue;
-            ApplyCameraFollowSettings();
+            SetOrthographicSize(povValue);
         }
         GameController._mainCamera = ControllerCamera;
         BindWorldAudioListener();
@@ -353,23 +363,64 @@ public class Mod_Cam : Module
     /// <param name="delta">视野变化值</param>
     public void ChangeCameraView(float delta)
     {
-        if (Vcam == null) return;
-        // 远景每次按当前距离成比例缩放，拉远和拉近使用互逆倍率。
-        SetOrthographicSize(UsesProportionalZoom
-            ? CurrentOrthographicSize * Mathf.Pow(_followOverrideZoomMultiplier, delta)
+        if (Vcam == null || float.IsNaN(delta) || float.IsInfinity(delta)) return;
+        if (HasFollowOverride)
+        {
+            SetOrthographicSize(_followOverrideZoomMultiplier > 1f
+                ? CurrentOrthographicSize * Mathf.Pow(_followOverrideZoomMultiplier, delta)
+                : CurrentOrthographicSize + delta);
+            return;
+        }
+        CameraZoomProfile profile = GetZoomProfile();
+        SetOrthographicSize(profile.Enabled
+            ? profile.Step(CurrentOrthographicSize, delta)
             : CurrentOrthographicSize + delta);
     }
 
     /// <summary>设置相机正交视野；区块加载窗口由区块配置独立控制。</summary>
     public void SetOrthographicSize(float value)
     {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+            throw new System.ArgumentOutOfRangeException(nameof(value), "镜头视野必须是有限数值。");
         if (Vcam == null)
             throw new System.InvalidOperationException("Camera module has no Cinemachine virtual camera.");
         povValue = ClampPovValue(value);
-        Vcam.m_Lens.OrthographicSize = povValue;
+        CameraZoomProfile profile = GetZoomProfile();
+        float renderSize = profile.MaximumRenderSize > 0f
+            ? Mathf.Min(povValue, profile.MaximumRenderSize)
+            : povValue;
+        Vcam.m_Lens.OrthographicSize = renderSize;
         if (ControllerCamera != null)
-            ControllerCamera.orthographicSize = povValue;
+            ControllerCamera.orthographicSize = renderSize;
         ApplyCameraFollowSettings();
+    }
+
+    // 手机滑条固定使用同一归一化坐标，近景到宇宙视野不切换滑条范围。
+    public float GetViewSliderValue()
+    {
+        float minimum = Mathf.Max(.001f, MinPovValue);
+        float maximum = Mathf.Max(minimum + .001f, EffectiveMaxPovValue);
+        float size = Mathf.Clamp(CurrentOrthographicSize, minimum, maximum);
+        CameraZoomProfile profile = GetZoomProfile();
+        if (profile.Enabled) return profile.ToSliderValue(size, minimum, maximum);
+        return HasFollowOverride && _followOverrideZoomMultiplier > 1f
+            ? Mathf.Log(size / minimum) / Mathf.Log(maximum / minimum)
+            : Mathf.InverseLerp(minimum, maximum, size);
+    }
+
+    public void SetViewSliderValue(float normalized)
+    {
+        if (float.IsNaN(normalized) || float.IsInfinity(normalized))
+            throw new System.ArgumentOutOfRangeException(nameof(normalized), "镜头滑条值必须是有限数值。");
+        float minimum = Mathf.Max(.001f, MinPovValue);
+        float maximum = Mathf.Max(minimum + .001f, EffectiveMaxPovValue);
+        float value = Mathf.Clamp01(normalized);
+        CameraZoomProfile profile = GetZoomProfile();
+        SetOrthographicSize(profile.Enabled
+            ? profile.FromSliderValue(value, minimum, maximum)
+            : (HasFollowOverride && _followOverrideZoomMultiplier > 1f
+                ? minimum * Mathf.Pow(maximum / minimum, value)
+                : Mathf.Lerp(minimum, maximum, value)));
     }
 
     /// <summary>按双指间距变化调整正交视野；两指分开时镜头拉近，合拢时镜头拉远。</summary>
@@ -399,10 +450,13 @@ public class Mod_Cam : Module
     private float ClampPovValue(float value)
     {
         float finiteMax = _adminFiniteViewMaxOverride > 0f
-            ? Mathf.Max(_adminFiniteViewMaxOverride, _followOverride != null ? _followOverrideMaxPov : 0f)
+            ? Mathf.Max(_adminFiniteViewMaxOverride, EffectiveMaxPovValue)
             : EffectiveMaxPovValue;
         return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, finiteMax));
     }
+
+    private CameraZoomProfile GetZoomProfile()
+        => HasFollowOverride ? default : CameraZoomExtensions.GetProfile(this);
     #endregion
 
     private void LoadPovValue()

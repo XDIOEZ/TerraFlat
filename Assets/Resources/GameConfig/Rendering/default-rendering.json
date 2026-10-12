@@ -74,6 +74,15 @@
     "color": { "r": 0.92, "g": 0.95, "b": 0.98, "a": 1.0 },
     "shadowStrength": 0.22
   },
+  "universeView": {
+    "startOrthographicSize": 60.0,
+    "opaqueOrthographicSize": 90.0,
+    "maximumOrthographicSize": 5000000.0,
+    "zoomMultiplier": 1.25,
+    "transitionSeconds": 1.0,
+    "entryPlanetRadiusMultiplier": 1.2,
+    "minimumBodyPixels": 1.25
+  },
   "interactionOutline": {
     "enabled": true,
     "thicknessPixels": 2.0,
