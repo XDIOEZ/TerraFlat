@@ -1,0 +1,21 @@
+# 草地地面贴图
+
+- 消费链：`Assets/StreamingAssets/GameConfig/Tiles/terrain.json` 中的 `Tile_Grass` → `Assets/7_Tiles/Base/Tile_Grass.asset` → `Grass_Ground.png`。只替换现有 Tile 的 Sprite 引用。
+- 外观：黄绿色底面、短草叶和零散小草簇；细节稀疏，参考现有泥土与石头的像素块和对比度。
+- 参考：`Assets/6_Art/Generated/Environment/Dirt/Dirt_Ground.png`、`Assets/6_Art/Generated/Environment/StoneGround/Stone_Ground.png`。
+- 生成方式：内置 ImageGen；最终源 PNG 原样复制到项目，未做本地像素编辑。最终生成文件：`exec-c33a426e-cafb-4d0a-8db3-446ece3daeb2.png`。
+- 实际源图：1254×1254、RGB、4871 个可见颜色，全幅不透明。提示词中的 32×32 是逻辑像素风格目标，生成文件不是原生 32×32 或严格有限色图。
+- Unity 导入：沿用泥土与石头的 Single Sprite、Full Rect、中心 Pivot、Point、关闭 Mipmap、无压缩设置；各平台最大导入尺寸 32，源 PPU=1254，保持 1×1 世界尺寸。源图颜色统计不代表导入后的颜色数。
+- Sprite GUID：`a4fd8944c8064006985cca29e05c143d`，fileID 为 `21300000`；Tile 保持白色、原变换和碰撞设置。
+- 现有 Tile 位于带 `TileBase` 标签的 Addressables 文件夹中，新 Sprite 由 Tile 作为直接依赖加载。
+- 原共享图集和其他切片保留；沙漠、沙滩与其他使用 `Tile_Sand` 的地方统一使用新沙地纹理。
+- 本次为静态美术资源接入，游戏内观感和连续铺接由用户验收。
+- 导入参数参考：[Unity Sprite 导入说明](https://docs.unity.com/en-us/engine/6000.5/manual/materials-and-shaders/textures/textures-reference/texture-type-sprite)。
+
+## 初次生成提示词
+
+Use case: style-transfer. Asset type: one production grass ground texture for the FlatWorld 2D top-down pixel-art sandbox. Input images: Image 1 is the existing dirt ground texture and Image 2 is the existing stone ground texture; both are STYLE REFERENCES ONLY, especially their sparse texture density and simple square pixel clusters. Primary request: redraw the plain grass ground into a textured grass surface matching these ground tiles. Create exactly ONE square, edge-to-edge, fully opaque, seamless repeating texture, viewed straight down. Use a muted yellow-green/olive midtone base close to #9CB653, with darker olive #809942 and restrained light green #B1C96C. Sprinkle around 8-12 very small short grass blade clusters formed from chunky square pixel steps and a few tiny short dashes; the grass should look like short closely cropped grass, NOT separate big plants, and keep at least 75 percent of the surface quiet midtone. Match the sparse marks and soft overall contrast of the dirt reference. Design on a uniform 32x32 logical pixel grid, with crisp square edges and flat solid color blocks, enlarged uniformly for output; small marks must survive a 32x32 game import. Keep texture density uniform across all four edges for seamless tiling, no dark tile border, no central focal point, no vignette. Avoid continuous gradients, photographic texture, brush strokes, antialiasing, dense noise, flowers, stones, bare dirt patches, tall grass, buildings, perspective, cast shadows, text, labels, gridlines, frames or watermarks. Output only the single square grass texture, no comparison sheet or repeated tile preview.
+
+## 最终调整提示词
+
+Use case: precise-object-edit. Image 1 is the GRASS TEXTURE EDIT TARGET; Image 2 is a dirt texture STYLE REFERENCE and Image 3 is a stone texture STYLE REFERENCE. Improve ONLY the shapes of the grass texture marks in image 1: the current L-shaped blocks and square dots resemble recolored dirt. Replace most of them with about TWELVE small recognizable short grass tuft motifs, little angular V-shaped / fork-shaped blade clusters, each just 3-4 logical pixels wide and 2-3 logical pixels tall. Use tiny dark olive stepped blades with one restrained pale green pixel tip on some tufts. A few two-pixel short diagonal grass strokes are enough between them. Rearrange marks into an original irregular scatter, do NOT copy positions or L-shaped clumps from the dirt reference. Retain the same muted yellow-green/olive grass base close to #9CB653 and low contrast, matching the calm sparse style of the project dirt and stone, not a dense lawn pattern. Preserve square 1:1 composition, edge-to-edge fully opaque ground, intended 32x32 logical grid, no borders and a seamless repeating surface. At least 80 percent quiet midtone base. Grass blades are extremely SHORT ground texture marks, not upright tall plant sprites or large vegetation silhouettes. Pixel-art hard square color clusters only, no outline around the tile. No bare dirt, flowers, stones, clods, straight rows, visible grid, scenery, buildings, text, watermark, cast shadows, perspective, antialiasing, realistic texture, noisy detail, or gradient shading. Output only ONE square texture.
