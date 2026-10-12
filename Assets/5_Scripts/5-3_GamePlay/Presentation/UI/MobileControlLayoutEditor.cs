@@ -62,7 +62,8 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         UIManager manager = UIManager.Instance;
         BasePanel panel = manager.CreatePanelFromGameObject(
             editorPrefab,
-            RuntimeUIPrefabKeys.MobileControlLayoutEditor);
+            RuntimeUIPrefabKeys.MobileControlLayoutEditor,
+            initializeClosed: true);
         manager.ConfigureGlobalOverlayPanel(panel);
         // 布局位置是相对 SafeAreaRoot 保存的；编辑预览也必须使用同一坐标系，
         // 否则刘海/打孔屏上会出现“编辑时一处、回到游戏另一处”的偏差。
@@ -86,35 +87,42 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
             return false;
         }
 
-        editor.Initialize(owner, panel, controlsPrefab);
+        // 初始化成功后才登记活动实例，失败面板由入口统一释放。
+        if (!editor.Initialize(owner, panel, controlsPrefab, out error))
+        {
+            panel.Destroy();
+            return false;
+        }
+
         activeEditor = editor;
         return true;
     }
 
     /// <summary>绑定正式编辑器 Prefab，并创建一份不会发送玩法输入的手机 HUD 预览。</summary>
-    private void Initialize(BasePanel owner, BasePanel panel, GameObject controlsPrefab)
+    private bool Initialize(BasePanel owner, BasePanel panel, GameObject controlsPrefab, out string error)
     {
+        error = null;
         if (initialized)
-            return;
+            return true;
 
-        initialized = true;
         ownerPanel = owner;
         editorPanel = panel;
-        previewRoot = FindComponent<RectTransform>(transform, "预览根");
-        statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本");
-        saveButton = FindComponent<Button>(transform, "保存按钮");
-        resetButton = FindComponent<Button>(transform, "恢复默认按钮");
-        cancelButton = FindComponent<Button>(transform, "取消按钮");
-        decreaseSizeButton = FindComponent<Button>(transform, "缩小按钮");
-        increaseSizeButton = FindComponent<Button>(transform, "放大按钮");
-        sizeText = FindComponent<TextMeshProUGUI>(transform, "尺寸文本");
-        if (previewRoot == null || statusText == null || saveButton == null ||
-            resetButton == null || cancelButton == null || decreaseSizeButton == null ||
-            increaseSizeButton == null || sizeText == null)
+        List<string> missingNodes = new List<string>();
+        previewRoot = FindComponent<RectTransform>(transform, "预览根", missingNodes);
+        statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本", missingNodes);
+        saveButton = FindComponent<Button>(transform, "保存按钮", missingNodes);
+        resetButton = FindComponent<Button>(transform, "恢复默认按钮", missingNodes);
+        cancelButton = FindComponent<Button>(transform, "取消按钮", missingNodes);
+        decreaseSizeButton = FindComponent<Button>(transform, "缩小按钮", missingNodes);
+        increaseSizeButton = FindComponent<Button>(transform, "放大按钮", missingNodes);
+        sizeText = FindComponent<TextMeshProUGUI>(transform, "尺寸文本", missingNodes);
+        if (missingNodes.Count > 0)
         {
-            Debug.LogError("[MobileLayoutEditor] 正式编辑器 Prefab 节点契约不完整。", this);
-            editorPanel.Destroy();
-            return;
+            Debug.LogError(
+                $"[MobileLayoutEditor] 正式编辑器 Prefab 节点契约不完整，缺少节点或组件：{string.Join("、", missingNodes)}。",
+                this);
+            error = FlatWorldLocalizationService.GetUiText("无法打开触屏布局编辑器。");
+            return false;
         }
 
         saveButton.onClick.AddListener(SaveAndClose);
@@ -138,8 +146,10 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         editorPanel.PrepareForGamepadNavigation("保存按钮", true, true);
         editorPanel.CancelOverride = HandleCancel;
         editorPanel.CancelShortcutOverride = HandleCancelShortcut;
+        initialized = true;
         editorPanel.Open();
         SetStatus("拖动按钮和摇杆到想要的位置；保存后会立即应用。", false);
+        return true;
     }
 
     /// <summary>关闭非玩法层、移除普通 UI 射线，仅给布局节点开启拖动。</summary>
@@ -329,10 +339,14 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         return null;
     }
 
-    private static T FindComponent<T>(Transform root, string objectName) where T : Component
+    private static T FindComponent<T>(Transform root, string objectName, List<string> missingNodes)
+        where T : Component
     {
         Transform target = FindTransform(root, objectName);
-        return target != null ? target.GetComponent<T>() : null;
+        T component = target != null ? target.GetComponent<T>() : null;
+        if (component == null)
+            missingNodes.Add($"{objectName} ({typeof(T).Name})");
+        return component;
     }
 
     private void OnDestroy()

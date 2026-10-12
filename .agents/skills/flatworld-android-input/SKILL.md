@@ -31,6 +31,7 @@ description: "FlatWorld 移动触控、虚拟输入设备、摇杆/指向/攻击
 ## HUD、射线与安全区
 
 - HUD 仅为本地玩家选择 Mobile 后显示；控制偏好手动持久化，键鼠/手柄/手机设备可并行输入。正式 Prefab 挂于 `UIManager.SafeAreaRoot`，行为绑定与视觉结构分离。
+- 触屏布局编辑器的正式 `UI_MobileControlLayoutEditor.prefab` 与 `BuildMobileControlLayoutEditor` 同步维护节点/组件契约；尺寸编辑需同时具备“尺寸文本、缩小按钮、放大按钮”。初始化失败返回 false 并销毁临时面板，成功后才登记活动实例。
 - 普通指向捕获层在按钮/攻击摇杆后，仅接收空白区域；左右区域比例来自 `LeftControlZoneRatio/RightControlZoneRatio`，改比例先释放触点。`FloatingMoveJoystick` 保存固定/浮动偏好；移动/指向摇杆取得触点后显示，攻击摇杆固定。
 - `TouchControlsOpacityPercent` 仅作用玩法层及手机快捷栏，0% 仍可交互；常驻菜单完全可见。菜单/返回独立于可隐藏玩法层，抽屉入口在 Button.onClick 完整点击后脉冲；返回先关闭顶层面板，再抽屉，再设置。
 - 控制根平时位于常驻 HUD 后，模态时沉底；抽屉仅无正式模态时置顶。快捷栏为玩法层兄弟，在背包/容器下保持拖放；模态时独立 Canvas 临时 overrideSorting，关闭后恢复。槽内选中框归属当前槽位并按内部兄弟顺序置底。
