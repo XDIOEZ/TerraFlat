@@ -35,6 +35,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 ## 行为能力与表现
 
 - 食性使用稳定数据 Tag `Carnivore/Herbivore/Omnivore`；玩家独立为威胁。当前动物继承 `Module_Temperature`，安全范围在 Actor 配置；`ITemperatureSafetyMovement` 优先于追击/觅食/游荡，陆地由 Mod_Mover_AI、鸟/鱼由自定义移动实现。
+- 雪地专属白兔/雪豹在 `snow-actors.json` 配置初始体表 -10℃，安全范围分别 -85～20℃/-85～25℃；耐寒下限覆盖极地、区域噪声、海拔与冬季叠加的约 -82℃保守下界。新增物种按栖息地全年温度配安全范围与初始体温，不在通用温度模块堆物种特例。
 - `AI_DebugOverlayRenderer` 集中绘头顶信息；实时读 `_currentState`，`AI_Chicken.Data.State` 只在加载/保存同步。小鸡只缓存所属 Scene.handle 名称，时间实时读取；受伤禁睡保存绝对游戏日截止，逃跑记忆与睡眠警戒独立。
 - 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持搜索最后可见位置，到点等待，重见重计时；夜间归巢不抢占追击，蜂巢销毁后无领地巡逻。
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。

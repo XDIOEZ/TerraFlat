@@ -366,8 +366,9 @@
         "temperature": {
           "parameters": {
             "Data": {
-              "SafeTemperatureMin": -20.0,
-              "SafeTemperatureMax": 55.0
+              "CurrentTemperature": -10.0,
+              "SafeTemperatureMin": -85.0,
+              "SafeTemperatureMax": 20.0
             }
           }
         }
@@ -473,8 +474,9 @@
         "temperature": {
           "parameters": {
             "Data": {
-              "SafeTemperatureMin": -25.0,
-              "SafeTemperatureMax": 55.0
+              "CurrentTemperature": -10.0,
+              "SafeTemperatureMin": -85.0,
+              "SafeTemperatureMax": 25.0
             }
           }
         }
