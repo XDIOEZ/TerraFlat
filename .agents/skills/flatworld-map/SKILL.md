@@ -40,6 +40,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - `Precipitation/Runoff/MacroHydrology` 依次处理风携背景水汽、海洋补汽/陆地扣汽、降水扣渗透后的陆地径流与局部河槽。上游距离预算和 Region 只限制计算/缓存，不表示天然终点。
 - `LakeBasinKernel` 先求天然有界盆地和真实下坡出口，再由降水、入流、温度/面积蒸发求水位、干湖与净出流。重叠候选按原始稳定优先级竞争，抑制候选仍保留声明；普通湖与罕见大湖共用 `lake.basin.*` 二次峰值长尾。
 - `SurfaceBiomeClassifier.Resolve/ResolveRule` 按 priority、稳定编号、规则名匹配高度/摄氏温度/降水/湿度，失败读 `biome.fallback.id`。`groundTileId/wetGroundTileId/wetGroundMinimumMoisture` 控制干湿底材；沙漠还要求最低摄氏温度。
+- `biome.<规则名>.spawnChance` 在环境条件之外控制出现概率，默认 1；`biome.regions.size` 控制平滑区域尺度。独立种子的区域场校正为均匀概率，单格/区块/定位共用并支持环绕；减少沙漠概率无需改变降水门槛或仙人掌密度。
 - 地理气温由纬度底温、局部噪声、海拔修正合成；`climate.temperature.blendRadius` 以固定求和顺序平滑，归一化温度从同值派生。季节/天气只进入运行时温度。
 - `climate.polarBand.halfWidth` 是整条冷带占比，`position=0` 在上下边缘各占一半；冷带到温带按 `transitionTiles` 过渡。极圈边界与赤道底温使用固定种子控制点和平滑插值，共用环绕端点；`climate.equator.widthRatio` 是赤道两侧总占比。
 - 天然水体在最终 `temperature.celsius<0` 时写冰 Ground 并清 Liquid，保留水文/群系身份，岩浆除外。雪是独立 `snow.depth`；极圈资格由 `biome.snow.polar.*` 决定，极圈外另读 `biome.snow.regions/large/peak.*` 并要求零下与降水条件。天然雪十档，极圈层数 `ceil(1+clamp((-10-T)/20,0,1)*9)`。

@@ -295,6 +295,10 @@ MonoBehaviour:
     Value: 1
   - Id: biome.desert.priority
     Value: 400
+  - Id: biome.desert.spawnChance
+    Value: 0.5
+  - Id: biome.regions.size
+    Value: 256
   - Id: biome.beach.enabled
     Value: 1
   - Id: biome.beach.priority

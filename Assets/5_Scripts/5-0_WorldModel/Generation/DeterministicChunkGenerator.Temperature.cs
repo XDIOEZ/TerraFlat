@@ -7,13 +7,15 @@ namespace FlatWorld.WorldModel
     {
         #region 环世界地理温度带
 
-        // 降水完成后只判定零散雪原资格，不回写已确定的地理温度。
+        // 降水完成后补齐群系区域资格，不回写已确定的地理温度。
         private static SurfaceClimateSample FinishSurfaceClimate(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY, SurfaceClimateSample sample)
         {
             // 极圈是否跳过零散雪原资格由雪地群系配置决定。
             sample.SnowAllowed = IsSnowRegionAllowed(request, settings, sample.Height,
                 sample.TemperatureCelsius, sample.Precipitation, worldX, worldY);
+            sample.BiomeRegionProbability = settings.HasProbabilisticSurfaceBiomes
+                ? SampleBiomeRegionProbability(request, settings, worldX, worldY) : 0d;
             return sample;
         }
 
@@ -136,6 +138,11 @@ namespace FlatWorld.WorldModel
                 return value;
             // 校正随机插值的累计概率，避免平滑过程把温度概率峰推离配置值。
             double probability = Clamp01((value + 1d) * 0.5d);
+            return ResolveUniformInterpolationProbability(probability, weight);
+        }
+
+        private static double ResolveUniformInterpolationProbability(double probability, double weight)
+        {
             double smaller = Math.Min(weight, 1d - weight);
             double larger = 1d - smaller;
             if (smaller <= 0.000000001d)
@@ -188,6 +195,41 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
+        #region 群系区域概率
+
+        // 独立种子的平滑区域概率保留大片群系，并用累计概率校正保证 0.5 表示一半机会。
+        private static double SampleBiomeRegionProbability(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+        {
+            bool wrapped = request.Topology.IsWrapped;
+            int repeatX = wrapped ? Math.Max(2, (int)Math.Ceiling(
+                request.Topology.Span.X / (double)settings.BiomeRegionSize)) : 0;
+            int repeatY = wrapped ? Math.Max(2, (int)Math.Ceiling(
+                request.Topology.Span.Y / (double)settings.BiomeRegionSize)) : 0;
+            double x = wrapped
+                ? (request.Topology.NormalizeX(worldX) - (double)request.Topology.Min.X) /
+                  request.Topology.Span.X * repeatX
+                : worldX / (double)settings.BiomeRegionSize;
+            double y = wrapped
+                ? (request.Topology.NormalizeY(worldY) - (double)request.Topology.Min.Y) /
+                  request.Topology.Span.Y * repeatY
+                : worldY / (double)settings.BiomeRegionSize;
+            int x0 = (int)Math.Floor(x), y0 = (int)Math.Floor(y);
+            int x1 = wrapped ? PositiveMod(x0 + 1, repeatX) : x0 + 1;
+            int y1 = wrapped ? PositiveMod(y0 + 1, repeatY) : y0 + 1;
+            double tx = Smooth(x - x0), ty = Smooth(y - y0);
+            const uint salt = 0x8b5ad4c3u;
+            double a = Hash01(request.WorldSeed, x0, y0, salt);
+            double b = Hash01(request.WorldSeed, x1, y0, salt);
+            double c = Hash01(request.WorldSeed, x0, y1, salt);
+            double d = Hash01(request.WorldSeed, x1, y1, salt);
+            double lower = ResolveUniformInterpolationProbability(Lerp(a, b, tx), tx);
+            double upper = ResolveUniformInterpolationProbability(Lerp(c, d, tx), tx);
+            return ResolveUniformInterpolationProbability(Lerp(lower, upper, ty), ty);
+        }
+
+        #endregion
+
         #region 群系温度过渡
         private static SurfaceBiomeKind ResolveSurfaceBiome(ChunkGenerationSettingsSnapshot settings,
             SurfaceClimateSample sample, double moisture, bool river, double? blendedCelsius = null)
@@ -202,7 +244,7 @@ namespace FlatWorld.WorldModel
             double celsius = blendedCelsius ?? sample.TemperatureCelsius;
             return SurfaceBiomeClassifier.ResolveRule(settings, sample.Height,
                 settings.NormalizeTemperatureCelsius(celsius), sample.Precipitation, moisture, river,
-                sample.SnowAllowed, celsius, sample.IsPolarBand);
+                sample.BiomeRegionProbability, sample.SnowAllowed, celsius, sample.IsPolarBand);
         }
 
         // 单格出生查询与完整区块使用同一个世界坐标窗口，环绕边界由气候采样归一化。

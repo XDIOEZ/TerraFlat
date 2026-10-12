@@ -483,6 +483,7 @@ namespace FlatWorld.WorldModel
             public SurfaceBiomeKind BaseBiome;
             public bool Classified;
             public bool SnowAllowed;
+            public double BiomeRegionProbability;
         }
 
         private struct SurfaceCellOutput
