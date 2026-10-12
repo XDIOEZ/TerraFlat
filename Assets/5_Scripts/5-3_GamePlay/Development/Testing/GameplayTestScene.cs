@@ -175,6 +175,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         string suiteJson = null;
         yield return LoadText(testSuitePath, text => suiteJson = text);
         suite = GameplayTestSuite.Parse(suiteJson);
+        GameplayTestSelection.ApplySelectedCases(suite, testSuitePath);
         foreach (GameplayTestCase testCase in suite.Cases)
             report.Cases.Add(new GameplayTestCaseReport
             {

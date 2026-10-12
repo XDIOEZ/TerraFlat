@@ -2,6 +2,21 @@
 
 ## AI 快速测试流水线：EditMode → PlayMode
 
+### Unity 图形测试中心（多选）
+
+在 Unity 顶部打开 **`FlatWorld → 测试 → 测试中心（多选案例）`**：
+
+1. 从下拉框选择 `quick-suite.json`、`test-suite.json` 或其他已登记的 JSON 清单。
+2. 给需要执行的 Lua 案例**逐个勾选复选框**，也可全选、反选或清空（至少勾一个）。
+3. 点击 **「开始测试已勾选的 N 个案例」**，EditMode 全部通过后，只进入 **一次** PlayMode，在同一测试世界内按清单顺序执行这些案例。
+4. 窗口会显示阶段进度、断言结果、玩法案例 PASS/FAIL 和失败详情，并可定位或复制完整报告。
+
+勾选状态按测试清单保存在 EditorPrefs 中；实际执行的案例 ID 仅写到
+`Library/FlatWorldGameplayTests/Pipeline/selected-suite.json`。
+**不修改原始测试清单、不重新导入资源、不为每个案例重新启动 PlayMode**。
+原清单里标记 `enabled: false` 的用例在界面中显示为禁用，不能误选。
+测试期间如果 Unity 已在 PlayMode，启动按钮会禁用，避免干扰当前玩家或调试现场。
+
 **AI 只负责写清单和 Lua、启动一轮测试、读取报告并修复问题，不再逐步调用移动/攻击 MCP。**
 项目已安装 Unity Test Framework 1.4.5，使用两套独立测试程序集：
 `Assets/Tests/FlatWorld/EditMode/` 和 `Assets/Tests/FlatWorld/PlayMode/`。
@@ -13,6 +28,8 @@
 
 ```powershell
 python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json
+# AI/CLI 也可多选，用例 ID 用空格隔开：
+python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json --cases enter_world player_movement
 ```
 
 Python 只写入 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 的本地请求，
@@ -25,6 +42,7 @@ Python 只写入 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 的本地请�
 
 ```text
 gameplay_test_pipeline(action="run", suitePath="GameplayTests/quick-suite.json")
+gameplay_test_pipeline(action="run", suitePath="GameplayTests/quick-suite.json", caseIds=["enter_world","player_movement"])
 gameplay_test_pipeline(action="status")
 gameplay_test_pipeline(action="report")
 ```

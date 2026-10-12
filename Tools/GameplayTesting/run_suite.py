@@ -22,7 +22,7 @@ def wait_json(path: Path, deadline: float):
     raise TimeoutError(f"等待 Unity Editor 报告超时：{path}")
 
 
-def run(suite: str, editor_timeout: float, run_timeout: float):
+def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
     request_id = uuid.uuid4().hex
     inbox = PIPELINE / "inbox"
     outbox = PIPELINE / "outbox"
@@ -31,7 +31,10 @@ def run(suite: str, editor_timeout: float, run_timeout: float):
     request = inbox / f"{request_id}.json"
     receipt = outbox / f"{request_id}.json"
     temporary = inbox / f"{request_id}.tmp"
-    temporary.write_text(json.dumps({"suitePath": suite}), encoding="utf-8")
+    request_data = {"suitePath": suite}
+    if case_ids is not None:
+        request_data["caseIds"] = case_ids
+    temporary.write_text(json.dumps(request_data), encoding="utf-8")
     os.replace(temporary, request)
     try:
         acknowledged = wait_json(receipt, time.monotonic() + editor_timeout)
@@ -68,9 +71,11 @@ if __name__ == "__main__":
                         help="Editor 收到本地请求的等待秒数")
     parser.add_argument("--run-timeout", type=float, default=900,
                         help="本轮 EditMode+PlayMode 流水线执行上限秒数")
+    parser.add_argument("--cases", nargs="+", metavar="CASE_ID",
+                        help="只执行指定的一个或多个 Lua 用例 ID，不修改源清单")
     args = parser.parse_args()
     try:
-        sys.exit(run(args.suite, args.editor_timeout, args.run_timeout))
+        sys.exit(run(args.suite, args.editor_timeout, args.run_timeout, args.cases))
     except (TimeoutError, OSError, KeyError) as failure:
         print(f"[FlatWorld] {failure}", file=sys.stderr)
         sys.exit(3)

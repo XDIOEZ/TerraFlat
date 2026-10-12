@@ -16,6 +16,7 @@ namespace FlatWorld.Tests.EditMode
             string path = GameplayTestSelection.GetAbsoluteSuitePath(selected);
             Assert.That(File.Exists(path), Is.True, "待执行清单不存在：" + path);
             GameplayTestSuite suite = GameplayTestSuite.Parse(File.ReadAllText(path));
+            GameplayTestSelection.ApplySelectedCases(suite, selected);
             Assert.That(suite.Cases.Exists(test => test.Enabled), Is.True);
         }
 
@@ -25,6 +26,7 @@ namespace FlatWorld.Tests.EditMode
             string selected = GameplayTestSelection.ResolveSuitePath(GameplayTestSelection.QuickSuitePath);
             GameplayTestSuite suite = GameplayTestSuite.Parse(
                 File.ReadAllText(GameplayTestSelection.GetAbsoluteSuitePath(selected)));
+            GameplayTestSelection.ApplySelectedCases(suite, selected);
             foreach (GameplayTestCase entry in suite.Cases)
             {
                 if (!entry.Enabled) continue;
@@ -58,6 +60,24 @@ namespace FlatWorld.Tests.EditMode
                 GameplayTestSelection.NormalizeSuitePath("GameplayTests/../GameStartScene.unity"));
             Assert.Throws<InvalidDataException>(() =>
                 GameplayTestSuite.Parse("{\"schemaVersion\":1,\"unknown\":true,\"cases\":[]}"));
+        }
+
+        [Test]
+        public void Suite_MultipleSelectedCasesExecuteWithoutEditingSource()
+        {
+            const string json = "{\"schemaVersion\":1,\"cases\":[" +
+                "{\"id\":\"first\",\"name\":\"第一个\",\"luaPath\":\"GameplayTests/first.lua\"}," +
+                "{\"id\":\"second\",\"name\":\"第二个\",\"luaPath\":\"GameplayTests/second.lua\"}," +
+                "{\"id\":\"third\",\"name\":\"第三个\",\"luaPath\":\"GameplayTests/third.lua\"}]}";
+            GameplayTestSuite suite = GameplayTestSuite.Parse(json);
+            GameplayTestSelection.FilterCases(suite, new[] { "first", "THIRD" });
+            Assert.That(suite.Cases[0].Enabled, Is.True);
+            Assert.That(suite.Cases[1].Enabled, Is.False);
+            Assert.That(suite.Cases[2].Enabled, Is.True);
+            Assert.Throws<InvalidDataException>(() =>
+                GameplayTestSelection.FilterCases(GameplayTestSuite.Parse(json), new[] { "missing" }));
+            Assert.Throws<InvalidDataException>(() =>
+                GameplayTestSelection.FilterCases(GameplayTestSuite.Parse(json), Array.Empty<string>()));
         }
         #endregion
     }

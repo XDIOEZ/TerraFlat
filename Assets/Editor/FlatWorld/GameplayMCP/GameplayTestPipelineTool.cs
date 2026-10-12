@@ -1,6 +1,7 @@
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace FlatWorld.GameplayMCP
 {
@@ -18,14 +19,24 @@ namespace FlatWorld.GameplayMCP
 
             [ToolParameter("StreamingAssets-relative suite path; default GameplayTests/quick-suite.json.", Required = false)]
             public string suitePath { get; set; }
+
+            [ToolParameter("Optional list of selected Lua case IDs; all enabled cases run when omitted.", Required = false)]
+            public string[] caseIds { get; set; }
         }
 
         public static object HandleCommand(JObject parameters)
         {
             string action = parameters?.Value<string>("action")?.Trim().ToLowerInvariant();
+            List<string> selectedIds = null;
+            if (parameters?["caseIds"] is JArray ids)
+            {
+                selectedIds = new List<string>(ids.Count);
+                foreach (JToken id in ids)
+                    selectedIds.Add(id.Type == JTokenType.String ? id.Value<string>() : string.Empty);
+            }
             JObject result = action switch
             {
-                "run" => GameplayTestPipelineCoordinator.Start(parameters?.Value<string>("suitePath")),
+                "run" => GameplayTestPipelineCoordinator.Start(parameters?.Value<string>("suitePath"), selectedIds),
                 "status" => GameplayTestPipelineCoordinator.Status(false),
                 "report" => GameplayTestPipelineCoordinator.Status(true),
                 _ => new JObject { ["ok"] = false, ["message"] = "action 必须为 run、status 或 report。" }

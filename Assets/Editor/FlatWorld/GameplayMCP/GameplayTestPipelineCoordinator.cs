@@ -17,6 +17,7 @@ namespace FlatWorld.GameplayMCP
     {
         #region 文件与生命周期
         private const string SessionRunKey = "FlatWorld.GameplayTestPipeline.ActiveRun";
+        private const string PlayModeExitKey = "FlatWorld.GameplayTestPipeline.PlayModeExitUtc";
         private const string EditAssembly = "FlatWorld.Gameplay.EditModeTests";
         private const string PlayAssembly = "FlatWorld.Gameplay.PlayModeTests";
         private static TestRunnerApi api;
@@ -49,6 +50,7 @@ namespace FlatWorld.GameplayMCP
         {
             public string RunId;
             public string SuitePath;
+            public List<string> SelectedCaseIds = new();
             public string ReportPath;
             public string StartedUtc;
             public string FinishedUtc;
@@ -63,6 +65,7 @@ namespace FlatWorld.GameplayMCP
         static GameplayTestPipelineCoordinator()
         {
             EditorApplication.update += PollLocalRequests;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             // PlayMode 域重载后补登记同一个监听器，避免丢失最终报告。
             EditorApplication.delayCall += () =>
             {
@@ -123,6 +126,7 @@ namespace FlatWorld.GameplayMCP
         {
             if (EditorApplication.timeSinceStartup < nextRequestPoll) return;
             nextRequestPoll = EditorApplication.timeSinceStartup + 0.5d;
+            CheckUnexpectedPlayModeExit();
             ResumeQueuedPhase();
             if (!Directory.Exists(InboxDirectory)) return;
             string[] requests = Directory.GetFiles(InboxDirectory, "*.json");
@@ -136,7 +140,20 @@ namespace FlatWorld.GameplayMCP
                 if (requestId.Length != 32 || !Guid.TryParseExact(requestId, "N", out _))
                     throw new InvalidDataException("无效本地请求编号。");
                 JObject command = JObject.Parse(File.ReadAllText(requestPath, Encoding.UTF8));
-                response = Start(command.Value<string>("suitePath"));
+                string[] selectedIds = null;
+                if (command["caseIds"] != null)
+                {
+                    if (command["caseIds"] is not JArray ids)
+                        throw new InvalidDataException("caseIds 必须是用例 ID 数组。");
+                    selectedIds = new string[ids.Count];
+                    for (int i = 0; i < ids.Count; i++)
+                    {
+                        if (ids[i].Type != JTokenType.String)
+                            throw new InvalidDataException("caseIds 中的用例 ID 必须是字符串。");
+                        selectedIds[i] = ids[i].Value<string>();
+                    }
+                }
+                response = Start(command.Value<string>("suitePath"), selectedIds);
             }
             catch (Exception exception)
             {
@@ -154,6 +171,40 @@ namespace FlatWorld.GameplayMCP
             }
         }
 
+        private static void OnPlayModeStateChanged(PlayModeStateChange change)
+        {
+            if (change != PlayModeStateChange.ExitingPlayMode) return;
+            PipelineReport report = LoadCurrent();
+            if (report?.Status == "running" && report.Phase == "playmode")
+                SessionState.SetString(PlayModeExitKey, DateTime.UtcNow.ToString("O"));
+        }
+
+        private static void CheckUnexpectedPlayModeExit()
+        {
+            string exitText = SessionState.GetString(PlayModeExitKey, string.Empty);
+            if (EditorApplication.isPlayingOrWillChangePlaymode ||
+                EditorApplication.isCompiling || EditorApplication.isUpdating)
+                return;
+            PipelineReport report = LoadCurrent();
+            if (report?.Status != "running" || report.Phase != "playmode")
+            {
+                if (!string.IsNullOrEmpty(exitText))
+                    SessionState.SetString(PlayModeExitKey, string.Empty);
+                return;
+            }
+            bool knownExit = DateTime.TryParse(exitText, out DateTime exitedAt);
+            // 异常重编译可能丢掉退出事件；超时后仍要自动清掉僵死运行状态。
+            DateTime.TryParse(report.StartedUtc, out DateTime startedAt);
+            bool stale = !knownExit && startedAt != default &&
+                         DateTime.UtcNow - startedAt.ToUniversalTime() > TimeSpan.FromMinutes(4);
+            if (knownExit &&
+                DateTime.UtcNow - exitedAt.ToUniversalTime() < TimeSpan.FromSeconds(12) || !knownExit && !stale)
+                return;
+            if (report.Status == "running")
+                Finish(report, "interrupted", "PlayMode 已退出，但 Test Framework 未返回最终结果；请查看场景报告与 Unity Console。");
+            SessionState.SetString(PlayModeExitKey, string.Empty);
+        }
+
         private static void ResumeQueuedPhase()
         {
             PipelineReport report = LoadCurrent();
@@ -166,7 +217,7 @@ namespace FlatWorld.GameplayMCP
         #endregion
 
         #region AI 和菜单入口
-        internal static JObject Start(string suitePath)
+        internal static JObject Start(string suitePath, IReadOnlyCollection<string> selectedCaseIds = null)
         {
             PipelineReport active = LoadCurrent();
             if (active != null && active.Status == "running")
@@ -178,9 +229,13 @@ namespace FlatWorld.GameplayMCP
             {
                 string path = GameplayTestSelection.GetAbsoluteSuitePath(suitePath);
                 GameplayTestSuite suite = GameplayTestSuite.Parse(File.ReadAllText(path, Encoding.UTF8));
+                if (selectedCaseIds != null)
+                    GameplayTestSelection.FilterCases(suite, selectedCaseIds);
+                var casesToRun = new List<string>();
                 foreach (GameplayTestCase testCase in suite.Cases)
                 {
                     if (!testCase.Enabled) continue;
+                    casesToRun.Add(testCase.Id);
                     string script = Path.GetFullPath(Path.Combine(Application.streamingAssetsPath,
                         testCase.LuaPath.Replace('/', Path.DirectorySeparatorChar)));
                     if (!File.Exists(script) || new FileInfo(script).Length == 0)
@@ -191,9 +246,10 @@ namespace FlatWorld.GameplayMCP
                                Guid.NewGuid().ToString("N").Substring(0, 8);
                 var report = new PipelineReport
                 {
-                    RunId = runId, SuitePath = suitePath, StartedUtc = DateTime.UtcNow.ToString("O")
+                    RunId = runId, SuitePath = suitePath, StartedUtc = DateTime.UtcNow.ToString("O"),
+                    SelectedCaseIds = casesToRun
                 };
-                GameplayTestSelection.SelectSuite(suitePath, runId);
+                GameplayTestSelection.SelectSuite(suitePath, runId, selectedCaseIds);
                 CurrentRunId = runId;
                 Write(report);
                 // 编译中先接单保存现场，待 Unity 稳定后由更新循环启动，无需 Agent 重发请求。
@@ -245,6 +301,7 @@ namespace FlatWorld.GameplayMCP
                 ["status"] = report?.Status,
                 ["phase"] = report?.Phase,
                 ["suitePath"] = report?.SuitePath,
+                ["selectedCaseIds"] = report == null ? null : new JArray(report.SelectedCaseIds),
                 ["reportPath"] = report?.ReportPath,
                 ["gameplayReportPath"] = report?.GameplayReportPath,
                 ["reason"] = report?.Reason,
@@ -295,6 +352,8 @@ namespace FlatWorld.GameplayMCP
         {
             report.Status = status;
             report.Phase = "finished";
+            if (report.EditMode.Status == "running") report.EditMode.Status = "interrupted";
+            if (report.PlayMode.Status == "running") report.PlayMode.Status = "interrupted";
             report.Reason = reason;
             report.FinishedUtc = DateTime.UtcNow.ToString("O");
             if (File.Exists(GameplayTestSelection.LastGameplayReportPath))
@@ -304,6 +363,7 @@ namespace FlatWorld.GameplayMCP
             }
             Write(report);
             GameplayTestSelection.ClearSuite(report.RunId);
+            SessionState.SetString(PlayModeExitKey, string.Empty);
             CurrentRunId = string.Empty;
             Debug.Log($"[GameplayTestPipeline] {status}：{reason}，报告：{report.ReportPath}");
         }

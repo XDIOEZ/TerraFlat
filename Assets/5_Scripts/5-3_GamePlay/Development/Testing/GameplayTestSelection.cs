@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json.Linq;
@@ -49,18 +50,21 @@ public static class GameplayTestSelection
     #endregion
 
     #region 隔离启动选择
-    public static void SelectSuite(string path, string runId)
+    public static void SelectSuite(string path, string runId, IReadOnlyCollection<string> selectedCaseIds = null)
     {
         string normalized = NormalizeSuitePath(path);
         if (string.IsNullOrWhiteSpace(runId) || runId.Length > 80)
             throw new ArgumentException("无效测试运行编号。", nameof(runId));
         Directory.CreateDirectory(Path.GetDirectoryName(SelectionPath));
-        File.WriteAllText(SelectionPath, new JObject
+        var selection = new JObject
         {
             ["suitePath"] = normalized,
             ["runId"] = runId,
             ["createdUtc"] = DateTime.UtcNow.ToString("O")
-        }.ToString(), new UTF8Encoding(false));
+        };
+        if (selectedCaseIds != null)
+            selection["selectedCaseIds"] = new JArray(selectedCaseIds);
+        File.WriteAllText(SelectionPath, selection.ToString(), new UTF8Encoding(false));
         if (File.Exists(LastGameplayReportPath)) File.Delete(LastGameplayReportPath);
     }
 
@@ -70,6 +74,50 @@ public static class GameplayTestSelection
         JObject selection = JObject.Parse(File.ReadAllText(SelectionPath, Encoding.UTF8));
         // 指针由每轮启动覆盖、结束后清除，不使用本机时钟判定，避免不同测试域的时区误判。
         return NormalizeSuitePath(selection.Value<string>("suitePath"));
+    }
+
+    /// <summary>仅将用户选中的有效用例标记为启用；原始清单和 Lua 文件都保持不变。</summary>
+    public static void ApplySelectedCases(GameplayTestSuite suite, string suitePath)
+    {
+        if (suite == null) throw new ArgumentNullException(nameof(suite));
+        if (!File.Exists(SelectionPath)) return;
+        JObject selection = JObject.Parse(File.ReadAllText(SelectionPath, Encoding.UTF8));
+        if (!string.Equals(NormalizeSuitePath(selection.Value<string>("suitePath")),
+                NormalizeSuitePath(suitePath), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("本轮测试清单与用例选择不一致。");
+        if (selection["selectedCaseIds"] == null) return;
+        if (selection["selectedCaseIds"] is not JArray ids)
+            throw new InvalidDataException("选中用例列表必须是数组。");
+        var selected = new List<string>(ids.Count);
+        foreach (JToken id in ids)
+        {
+            if (id.Type != JTokenType.String)
+                throw new InvalidDataException("选中的用例 ID 必须是字符串。");
+            selected.Add(id.Value<string>());
+        }
+        FilterCases(suite, selected);
+    }
+
+    /// <summary>测试清单子集验证使用同一入口，防止把禁用用例误当成执行成功。</summary>
+    public static void FilterCases(GameplayTestSuite suite, IEnumerable<string> selectedCaseIds)
+    {
+        if (suite == null || selectedCaseIds == null)
+            throw new ArgumentNullException(suite == null ? nameof(suite) : nameof(selectedCaseIds));
+        var selected = new HashSet<string>(selectedCaseIds, StringComparer.OrdinalIgnoreCase);
+        if (selected.Count == 0) throw new InvalidDataException("请至少勾选一个测试案例。");
+        foreach (string id in selected)
+        {
+            bool valid = false;
+            foreach (GameplayTestCase entry in suite.Cases)
+                if (entry.Enabled && string.Equals(entry.Id, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    valid = true;
+                    break;
+                }
+            if (!valid) throw new InvalidDataException("选中的用例不存在或被清单禁用：" + id);
+        }
+        foreach (GameplayTestCase entry in suite.Cases)
+            entry.Enabled = entry.Enabled && selected.Contains(entry.Id);
     }
 
     public static void ClearSuite(string runId)
