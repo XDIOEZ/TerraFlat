@@ -19,10 +19,28 @@ namespace Puerts.Editor.Generator
     /// </summary>
     public class GenerateChecker : IPreprocessBuildWithReport
     {
+        #region IL2CPP 构建前生成检查
+
         public int callbackOrder => -100; // Run early in the build process
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            // 仅在目标使用 IL2CPP 优化时要求生成桥接文件。
+            BuildTargetGroup targetGroup = BuildPipeline.GetBuildTargetGroup(report.summary.platform);
+            if (targetGroup == BuildTargetGroup.Unknown ||
+                PlayerSettings.GetScriptingBackend(targetGroup) != ScriptingImplementation.IL2CPP)
+            {
+                return;
+            }
+
+            foreach (string define in PlayerSettings.GetScriptingDefineSymbolsForGroup(targetGroup).Split(';'))
+            {
+                if (define.Trim() == "PUERTS_DISABLE_IL2CPP_OPTIMIZATION")
+                {
+                    return;
+                }
+            }
+
             string saveTo = PathHelper.GetIl2cppPluginPath();
             string requiredFile = Path.Combine(saveTo, "Puerts_il2cpp.cpp");
 
@@ -31,9 +49,9 @@ namespace Puerts.Editor.Generator
                 string dialogMessage = "Required file 'Puerts_il2cpp.cpp' not found!\n\n" +
                     $"Expected location:\n{requiredFile}\n\n" +
                     "Please generate IL2CPP files first by selecting one of the following menu options:\n\n" +
-                    "• PuerTS -> Generate For Il2cpp (all in one without wrapper)\n" +
-                    "• PuerTS -> Generate For Il2cpp (all in one with full wrapper)\n" +
-                    "• PuerTS -> Generate For Il2cpp (all in one with minimum bridge and without wrapper)\n\n" +
+                    "• Tools -> PuerTS -> Generate il2cpp -> Reflection Mode\n" +
+                    "• Tools -> PuerTS -> Generate il2cpp -> Static Wrapper Mode\n" +
+                    "• Tools -> PuerTS -> Generate il2cpp -> Minimal Bridge, Reflection Mode\n\n" +
                     "The build will be cancelled.";
 
                 EditorUtility.DisplayDialog(
@@ -42,7 +60,8 @@ namespace Puerts.Editor.Generator
                     "OK"
                 );
 
-                string errorMessage = "[Puerts IL2CPP] Build cancelled. Required file 'Puerts_il2cpp.cpp' not found at: " + requiredFile;
+                string errorMessage = "[Puerts IL2CPP] Build cancelled. Required file 'Puerts_il2cpp.cpp' not found at: " + requiredFile +
+                    ". Generate it first with Tools -> PuerTS -> Generate il2cpp -> Minimal Bridge, Reflection Mode.";
                 Debug.LogError(errorMessage);
                 throw new BuildFailedException(errorMessage);
             }
@@ -51,6 +70,8 @@ namespace Puerts.Editor.Generator
                 Debug.Log($"[Puerts IL2CPP] Generate check passed. Found: {requiredFile}");
             }
         }
+
+        #endregion
     }
 }
 #endif

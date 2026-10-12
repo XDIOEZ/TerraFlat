@@ -72,11 +72,12 @@ Shader "Game/2D/AIECS Sprite Lit"
             #if defined(UNITY_DOTS_INSTANCING_ENABLED)
             uint address = UNITY_DOTS_INSTANCED_METADATA_NAME(uint, _AiecsInstanceData)
                 + GetDOTSInstanceIndex() * 96u;
-            float4 transform0 = asfloat(unity_DOTSInstanceData.Load4(address));
-            float4 transform1 = asfloat(unity_DOTSInstanceData.Load4(address + 16u));
-            float4 atlas = asfloat(unity_DOTSInstanceData.Load4(address + 32u));
-            float4 tint = asfloat(unity_DOTSInstanceData.Load4(address + 48u));
-            float4 water = asfloat(unity_DOTSInstanceData.Load4(address + 64u));
+            // 使用 URP 统一读取入口，兼容 GLES 常量缓冲与其它后端的原始缓冲。
+            float4 transform0 = asfloat(DOTSInstanceData_Load4(address));
+            float4 transform1 = asfloat(DOTSInstanceData_Load4(address + 16u));
+            float4 atlas = asfloat(DOTSInstanceData_Load4(address + 32u));
+            float4 tint = asfloat(DOTSInstanceData_Load4(address + 48u));
+            float4 water = asfloat(DOTSInstanceData_Load4(address + 64u));
             float2 positionWS = float2(dot(transform0.xy, input.positionOS.xy) + transform0.z,
                 dot(transform1.xy, input.positionOS.xy) + transform1.z);
             output.positionCS = TransformWorldToHClip(float3(positionWS, 0));

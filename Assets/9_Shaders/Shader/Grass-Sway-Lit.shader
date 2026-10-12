@@ -216,6 +216,9 @@ Shader "FlatWorld/2D/Grass Sway Lit"
             #pragma multi_compile_instancing
             #pragma multi_compile _ DEBUG_DISPLAY
 
+            // 每个 Pass 独立编译，显式引入调试路径所需的二维表面与输入类型。
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Debug/Debugging2D.hlsl"
+
             struct Attributes
             {
                 float3 positionOS : POSITION;

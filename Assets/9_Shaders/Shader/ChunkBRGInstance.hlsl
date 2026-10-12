@@ -31,13 +31,14 @@ ChunkBRGInstanceData LoadChunkBRGInstanceData()
     // 必须使用可见列表映射后的真实实例索引，否则后续地块会重复绘制到批次开头的位置。
     uint instanceIndex = GetDOTSInstanceIndex();
     uint address = baseAddress + instanceIndex * 112u;
-    data.transform0 = asfloat(unity_DOTSInstanceData.Load4(address));
-    data.transform1 = asfloat(unity_DOTSInstanceData.Load4(address + 16u));
-    data.data0 = asfloat(unity_DOTSInstanceData.Load4(address + 32u));
-    data.data1 = asfloat(unity_DOTSInstanceData.Load4(address + 48u));
-    data.tint = asfloat(unity_DOTSInstanceData.Load4(address + 64u));
-    data.flowX = asfloat(unity_DOTSInstanceData.Load4(address + 80u));
-    data.flowY = asfloat(unity_DOTSInstanceData.Load4(address + 96u));
+    // 使用 URP 统一读取入口，兼容 GLES 常量缓冲与其它后端的原始缓冲。
+    data.transform0 = asfloat(DOTSInstanceData_Load4(address));
+    data.transform1 = asfloat(DOTSInstanceData_Load4(address + 16u));
+    data.data0 = asfloat(DOTSInstanceData_Load4(address + 32u));
+    data.data1 = asfloat(DOTSInstanceData_Load4(address + 48u));
+    data.tint = asfloat(DOTSInstanceData_Load4(address + 64u));
+    data.flowX = asfloat(DOTSInstanceData_Load4(address + 80u));
+    data.flowY = asfloat(DOTSInstanceData_Load4(address + 96u));
 #else
     data.transform0 = float4(1, 0, 0, 0);
     data.transform1 = float4(0, 1, 0, 0);

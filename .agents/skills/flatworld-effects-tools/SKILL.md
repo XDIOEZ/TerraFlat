@@ -74,6 +74,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 动画按实际 Actor Manifest/覆盖控制器与真实三角形/UV 导出，保留尺寸/Pivot/PPU，非循环保留终点；重导为显式菜单并保留 GUID。AiecsLegacySortScope 适用单相机完整 Sprite 场景。
 - DroppedItemPresentation 按空间行/贴图/层增量合并真实 Sprite，静止不重传，离视野释放；类别为 world-item，共享材质在 `Assets/9_Shaders/Resources/DroppedItems`，水线为规范坐标，镜像由默认零的 `_WaterLineOffset` 补偿。
 - BRG OnDisable/域重载执行幂等 Dispose，先释放整个组，再 finally 释放自有缓冲/Mesh/材质，启用按需重建；多子批次失败仍释放组。
+- DOTS 自定义实例读取使用 `DOTSInstanceData_Load4`，兼容 GLES 常量缓冲路径；Shader 各 Pass 独立引入自己使用的二维调试类型。
 
 ## 编辑器与调试工具
 

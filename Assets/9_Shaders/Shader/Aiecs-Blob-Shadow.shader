@@ -52,8 +52,9 @@ Shader "FlatWorld/2D/AIECS Blob Shadow"
                 #if defined(UNITY_DOTS_INSTANCING_ENABLED)
                 uint address = UNITY_DOTS_INSTANCED_METADATA_NAME(uint, _ContactShadowData)
                     + GetDOTSInstanceIndex() * 32u;
-                float4 footprint = asfloat(unity_DOTSInstanceData.Load4(address));
-                float4 appearance = asfloat(unity_DOTSInstanceData.Load4(address + 16u));
+                // 使用 URP 统一读取入口，兼容 GLES 常量缓冲与其它后端的原始缓冲。
+                float4 footprint = asfloat(DOTSInstanceData_Load4(address));
+                float4 appearance = asfloat(DOTSInstanceData_Load4(address + 16u));
                 float3 positionWS = float3(footprint.xy + input.positionOS.xy * footprint.zw, 0);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.uv = input.uv;
