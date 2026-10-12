@@ -18,8 +18,6 @@ public sealed class LightningEffectController : MonoBehaviour
     private static readonly int ModeId = Shader.PropertyToID("_Mode");
     [SerializeField, Min(0.01f)] private float flashDurationSeconds = 0.16f;
     [SerializeField, Range(0f, 1f)] private float maximumFlashOpacity = 0.3f;
-    [SerializeField, Min(1f)] private float visibleRadius = 64f;
-    [SerializeField, Min(0f)] private float fullStrengthRadius = 8f;
     [SerializeField, Min(0.05f)] private float boltDurationSeconds = 0.28f;
     [SerializeField, Min(1f)] private float boltHeight = 12f;
     [SerializeField, Min(0.5f)] private float boltWidth = 5.5f;
@@ -176,10 +174,7 @@ public sealed class LightningEffectController : MonoBehaviour
     {
         Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
         float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, logicalPosition).magnitude;
-        float outerRadius = Mathf.Max(1f, visibleRadius);
-        float innerRadius = Mathf.Clamp(fullStrengthRadius, 0f, outerRadius - 0.01f);
-        // 近处保留完整闪光，远处沿平滑距离曲线渐弱到零，环绕边界仍按最近落点计算。
-        return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(innerRadius, outerRadius, distance));
+        return weather.GetLightningDistanceAttenuation(distance);
     }
 
     private void UpdateVisual(LightningVisual visual, Player player, float now)

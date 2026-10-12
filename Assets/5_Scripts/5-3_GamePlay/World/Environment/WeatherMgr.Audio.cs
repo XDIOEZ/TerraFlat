@@ -10,7 +10,6 @@ public partial class WeatherMgr
     private const float WeatherAudioThreshold = 0.001f;
     private const float WindAudioStartStrength = 0.5f;
     private const float WindAudioMaximumVolume = 0.4f;
-    private const float ThunderAudibleRadius = 192f;
     private const float ThunderNearRadius = 64f;
     private const float ThunderPropagationSpeed = 64f;
     private const int MaximumPendingThunder = 8;
@@ -145,6 +144,20 @@ public partial class WeatherMgr
 
     #region 单次雷声与传播延迟
 
+    private static bool TryGetWeatherThunderCue(float distance, out AudioCue cue)
+    {
+        string cueId = distance <= ThunderNearRadius
+            ? AudioEventIds.WeatherThunder : AudioEventIds.WeatherThunderFar;
+        return AudioService.Instance.TryGetCue(cueId, out cue) && distance < cue.MaxDistance;
+    }
+
+    internal float GetLightningDistanceAttenuation(float distance)
+    {
+        // 雷光复用雷声配置的线性距离衰减，传播范围只由声音资源决定。
+        return TryGetWeatherThunderCue(distance, out AudioCue cue)
+            ? 1f - Mathf.InverseLerp(cue.MinDistance, cue.MaxDistance, distance) : 0f;
+    }
+
     private bool TryGetWeatherAudioPlayer(out Player player)
     {
         player = ItemMgr.GetInstance()?.User_Player;
@@ -161,7 +174,7 @@ public partial class WeatherMgr
 
         Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
         float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, lightning.Position).magnitude;
-        if (distance >= ThunderAudibleRadius || lightning.Strength <= 0f)
+        if (lightning.Strength <= 0f || !TryGetWeatherThunderCue(distance, out _))
             return;
 
         pendingWeatherThunder.Add(new PendingWeatherThunder(lightning,
@@ -185,11 +198,9 @@ public partial class WeatherMgr
             Vector2 logicalPlayer = WorldLocalPresentation.ToLogical(playerPosition);
             float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, pending.Lightning.Position).magnitude;
             float strength = Mathf.Clamp01(pending.Lightning.Strength);
-            if (distance >= ThunderAudibleRadius || strength <= WeatherAudioThreshold)
+            if (strength <= WeatherAudioThreshold || !TryGetWeatherThunderCue(distance, out AudioCue cue))
                 continue;
-            string cueId = distance <= ThunderNearRadius
-                ? AudioEventIds.WeatherThunder : AudioEventIds.WeatherThunderFar;
-            AudioHandle handle = AudioService.Instance.Play(cueId,
+            AudioHandle handle = AudioService.Instance.Play(cue,
                 AudioPlayOptions.At(WorldLocalPresentation.ProjectPosition(pending.Lightning.Position, playerPosition), strength));
             if (handle.IsValid)
                 weatherThunderHandles.Add(new ActiveWeatherThunder(handle, pending.Lightning.Position));
