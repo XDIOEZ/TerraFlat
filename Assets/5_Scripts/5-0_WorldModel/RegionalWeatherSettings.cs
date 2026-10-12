@@ -58,7 +58,8 @@ namespace FlatWorld.WorldModel
         public float CheckIntervalSeconds = 30f;
         public int MaximumCatchUpSteps = 120;
         public float FreezingTemperature = 0f;
-        public float MinimumLightningIntervalSeconds = 5f;
+        public float MinimumLightningIntervalSeconds = 20f;
+        public float LightningSeparationRadius = 384f; // 可被同一玩家听见的邻近雷击共用最短间隔。
         public WeatherElementRule[] Elements =
         {
             new WeatherElementRule
@@ -78,7 +79,7 @@ namespace FlatWorld.WorldModel
             new WeatherElementRule
             {
                 Id = WeatherElementIds.Thunder, HumidityWeight = 0.7f, WindWeight = 0.3f,
-                MinimumProbability = 0f, MaximumProbability = 0.06f,
+                MinimumProbability = 0f, MaximumProbability = 0.015f,
                 MinimumIntensity = 0.15f, MaximumIntensity = 0.8f,
                 MinimumDurationSeconds = 15f, MaximumDurationSeconds = 60f
             }
@@ -111,7 +112,8 @@ namespace FlatWorld.WorldModel
                 !Finite(CheckIntervalSeconds) || CheckIntervalSeconds < StepSeconds ||
                 MaximumCatchUpSteps < 1 || MaximumCatchUpSteps > 1024 ||
                 !Finite(FreezingTemperature) || !Finite(MinimumLightningIntervalSeconds) ||
-                MinimumLightningIntervalSeconds <= 0f || Elements == null || Elements.Length == 0)
+                MinimumLightningIntervalSeconds <= 0f || !Finite(LightningSeparationRadius) ||
+                LightningSeparationRadius < 0f || Elements == null || Elements.Length == 0)
                 throw new ArgumentOutOfRangeException(nameof(RegionalWeatherSettings), "区块天气参数超出有限配置范围。");
             var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (WeatherElementRule element in Elements)

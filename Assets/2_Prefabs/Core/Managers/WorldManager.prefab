@@ -314,6 +314,7 @@ MonoBehaviour:
     RecoveryIntensity: 0.15
   _deterministicSeedOverride: 0
   _weatherTransitionSeconds: 3
+  _precipitationTransitionSeconds: 12
   EnableDebugLog: 0
   _toggleDebugPanelInputKey: 105
   _debugPanelVisible: 0

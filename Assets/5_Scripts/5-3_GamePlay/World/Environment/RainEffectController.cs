@@ -22,7 +22,6 @@ public class RainEffectController : MonoBehaviour
     [SerializeField, Min(0.01f)] private float _minimumParticleLifetime = 0.35f; // 生命周期下限
     [SerializeField, Min(1f)] private float _lifetimeCoverageMultiplier = 1.12f; // 下边缘安全覆盖倍率
     [SerializeField] private ParticleSystem[] _targetParticleSystems; // 受控粒子系统列表（为空则自动查找子节点）
-    [SerializeField] private float _minEmissionFactor = 0.05f; // 最小发射倍率（0~1）
     [SerializeField] private float _minMaxParticlesFactor = 0.1f; // 最小粒子上限倍率（0~1）
 
     private float _currentIntensity; // 当前雨雪表现强度。
@@ -56,7 +55,6 @@ public class RainEffectController : MonoBehaviour
         _coveragePadding = Mathf.Max(1f, _coveragePadding);
         _minimumParticleLifetime = Mathf.Max(0.01f, _minimumParticleLifetime);
         _lifetimeCoverageMultiplier = Mathf.Max(1f, _lifetimeCoverageMultiplier);
-        _minEmissionFactor = Mathf.Clamp01(_minEmissionFactor);
         _minMaxParticlesFactor = Mathf.Clamp01(_minMaxParticlesFactor);
     }
 
@@ -316,9 +314,8 @@ public class RainEffectController : MonoBehaviour
             return;
         }
 
-        float emissionFactor = Mathf.Lerp(_minEmissionFactor, 1f, _currentIntensity);
-        // 接近停雨时连最小发射量也淡出，已有粒子继续落完。
-        emissionFactor *= Mathf.Clamp01(_currentIntensity / Mathf.Max(0.001f, _minEmissionFactor));
+        // 发射量从零按雨量成比例增加，已有粒子在停雨时继续落完。
+        float emissionFactor = _currentIntensity;
         float maxParticlesFactor = Mathf.Lerp(_minMaxParticlesFactor, 1f, _currentIntensity);
 
         for (int i = 0; i < _runtimeParticleSystems.Length; i++)

@@ -3,7 +3,8 @@
   "CheckIntervalSeconds": 30.0,
   "MaximumCatchUpSteps": 120,
   "FreezingTemperature": 0.0,
-  "MinimumLightningIntervalSeconds": 5.0,
+  "MinimumLightningIntervalSeconds": 20.0,
+  "LightningSeparationRadius": 384.0,
   "Elements": [
     {
       "Id": "rain",
@@ -32,7 +33,7 @@
       "HumidityWeight": 0.7,
       "WindWeight": 0.3,
       "MinimumProbability": 0.0,
-      "MaximumProbability": 0.06,
+      "MaximumProbability": 0.015,
       "MinimumIntensity": 0.15,
       "MaximumIntensity": 0.8,
       "MinimumDurationSeconds": 15.0,

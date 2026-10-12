@@ -104,17 +104,19 @@ public partial class WeatherMgr
         // 雨风声音消费同一份表现过渡，进入和离开区块都从当前音量继续变化。
         float rain = _presentedRainIntensity;
         float wind = _presentedWindStrength;
-        UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, 0.9f * Mathf.Sqrt(rain),
-            ref rainAudioHandle, ref rainAudioVolume);
+        UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, 0.9f * rain,
+            ref rainAudioHandle, ref rainAudioVolume, followPresentation: true);
         UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, 0.8f * Mathf.Pow(wind, 1.5f),
             ref windAudioHandle, ref windAudioVolume);
         PlayPendingWeatherThunder();
     }
 
     private static void UpdateWeatherLoop(string cueId, float targetVolume,
-        ref AudioHandle handle, ref float currentVolume)
+        ref AudioHandle handle, ref float currentVolume, bool followPresentation = false)
     {
-        currentVolume = Mathf.MoveTowards(currentVolume, targetVolume, Time.unscaledDeltaTime * 0.75f);
+        // 雨声直接跟随已平滑的雨量，避免小雨刚开始就被开方放大。
+        currentVolume = followPresentation ? targetVolume :
+            Mathf.MoveTowards(currentVolume, targetVolume, Time.unscaledDeltaTime * 0.75f);
         if (currentVolume <= WeatherAudioThreshold && targetVolume <= WeatherAudioThreshold)
         {
             handle.Stop(0.8f);
@@ -126,7 +128,7 @@ public partial class WeatherMgr
         if (!handle.IsPlaying)
         {
             AudioPlayOptions options = AudioPlayOptions.Global(currentVolume);
-            options.FadeIn = 0.8f;
+            options.FadeIn = followPresentation ? 0f : 0.8f;
             options.OverrideLoop = true;
             options.Loop = true;
             handle = AudioService.Instance.Play(cueId, options);

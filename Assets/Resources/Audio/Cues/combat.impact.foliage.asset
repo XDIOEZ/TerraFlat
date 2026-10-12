@@ -16,6 +16,8 @@ MonoBehaviour:
   bus: 1
   clips:
   - {fileID: 8300000, guid: 77fd80f50fc70e4dbb4c795e60c524e9, type: 3}
+  - {fileID: 8300000, guid: 881a2708f01b4328959e72f06c4dd1ec, type: 3}
+  - {fileID: 8300000, guid: 22adfccdd4a64fa2baad8eba9952d8ed, type: 3}
   selection: 0
   loop: 0
   volume:

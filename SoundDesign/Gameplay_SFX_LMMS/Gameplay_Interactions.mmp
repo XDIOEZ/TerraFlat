@@ -1,0 +1,1404 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.2" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="55" masterpitch="0" />
+  <song>
+    <trackcontainer type="song">
+      <track muted="0" type="0" name="拿起物品的轻触与衣料声 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="35" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1800.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1019803902718557" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1019803902718557" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1019803902718557" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="item.pickup">
+          <note pos="12" key="50" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="拿起物品的轻触与衣料声 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="31" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1700.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.048989794855663564" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.048989794855663564" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.048989794855663564" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="item.pickup">
+          <note pos="13" key="57" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="拿起物品的轻触与衣料声 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="35" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1894.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1037496987947435" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1037496987947435" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1037496987947435" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="item.pickup">
+          <note pos="12" key="51" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="拿起物品的轻触与衣料声 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="31" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1789.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.048989794855663564" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.048989794855663564" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.048989794855663564" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="item.pickup">
+          <note pos="13" key="58" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="拿起物品的轻触与衣料声 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="35" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1719.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.10043903623591775" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.10043903623591775" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.10043903623591775" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="item.pickup">
+          <note pos="12" key="49" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="拿起物品的轻触与衣料声 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="31" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1623.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.048989794855663564" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.048989794855663564" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.048989794855663564" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="item.pickup">
+          <note pos="13" key="56" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="放下物品的短接触声 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2100.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.12806248474865697" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.12806248474865697" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.12806248474865697" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="item.drop">
+          <note pos="12" key="37" len="10" vol="78" pan="0" />
+          <note pos="16" key="37" len="10" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="放下物品的短接触声 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="41" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2200.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.08485281374238571" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.08485281374238571" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.08485281374238571" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="item.drop">
+          <note pos="12" key="57" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="放下物品的短接触声 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2210.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13028430450365078" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13028430450365078" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13028430450365078" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="item.drop">
+          <note pos="12" key="38" len="11" vol="78" pan="0" />
+          <note pos="16" key="38" len="11" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="放下物品的短接触声 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="41" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2315.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.08632496741962895" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.08632496741962895" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.08632496741962895" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="item.drop">
+          <note pos="12" key="58" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="放下物品的短接触声 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2005.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.12612692020342048" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.12612692020342048" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.12612692020342048" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="item.drop">
+          <note pos="12" key="36" len="10" vol="78" pan="0" />
+          <note pos="16" key="36" len="10" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="放下物品的短接触声 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="41" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2101.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.08357032966310471" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.08357032966310471" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.08357032966310471" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="item.drop">
+          <note pos="12" key="56" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="锄土与土粒散落 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="44" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.11135528725660043" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.11135528725660043" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.11135528725660043" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="item.hoe.till">
+          <note pos="12" key="29" len="9" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="锄土与土粒散落 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="61" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2300.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.17320508075688773" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.17320508075688773" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.17320508075688773" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="item.hoe.till">
+          <note pos="12" key="57" len="17" vol="78" pan="0" />
+          <note pos="19" key="57" len="17" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="锄土与土粒散落 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="44" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1684.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.11328724553099523" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.11328724553099523" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.11328724553099523" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="item.hoe.till">
+          <note pos="12" key="30" len="9" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="锄土与土粒散落 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="61" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2420.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.17621010186706093" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.17621010186706093" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.17621010186706093" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="item.hoe.till">
+          <note pos="12" key="58" len="18" vol="78" pan="0" />
+          <note pos="19" key="58" len="18" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="锄土与土粒散落 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="44" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1528.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.10967223896684156" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.10967223896684156" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.10967223896684156" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="item.hoe.till">
+          <note pos="12" key="28" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="锄土与土粒散落 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="61" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2196.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.1705872210923198" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.1705872210923198" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.1705872210923198" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="item.hoe.till">
+          <note pos="12" key="56" len="17" vol="78" pan="0" />
+          <note pos="19" key="56" len="17" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门摩擦后打开 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="900.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.09165151389911681" dec="0.18973665961010275" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.09165151389911681" dec="0.18973665961010275" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.09165151389911681" dec="0.18973665961010275" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1728" name="door.open">
+          <note pos="12" key="57" len="24" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门摩擦后打开 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="13" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3000.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1728" name="door.open">
+          <note pos="29" key="35" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门摩擦后打开 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="947.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.09165151389911681" dec="0.19302849530574492" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.09165151389911681" dec="0.19302849530574492" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.09165151389911681" dec="0.19302849530574492" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1920" name="door.open">
+          <note pos="12" key="58" len="24" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门摩擦后打开 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="13" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3157.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.10173494974687902" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.10173494974687902" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.10173494974687902" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1920" name="door.open">
+          <note pos="29" key="36" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门摩擦后打开 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="859.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.09165151389911681" dec="0.18686893802876922" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.09165151389911681" dec="0.18686893802876922" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.09165151389911681" dec="0.18686893802876922" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2112" name="door.open">
+          <note pos="12" key="56" len="23" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门摩擦后打开 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="40" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="13" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2865.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09848857801796104" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09848857801796104" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09848857801796104" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2112" name="door.open">
+          <note pos="29" key="34" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门合上的闷响 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="39" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1100.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07348469228349534" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07348469228349534" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07348469228349534" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2304" name="door.close">
+          <note pos="12" key="57" len="14" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门合上的闷响 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="62" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1400.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2304" name="door.close">
+          <note pos="19" key="28" len="15" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门合上的闷响 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="39" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1157.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07348469228349534" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07348469228349534" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07348469228349534" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2496" name="door.close">
+          <note pos="12" key="58" len="14" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门合上的闷响 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="62" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1473.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1640426773739078" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1640426773739078" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1640426773739078" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2496" name="door.close">
+          <note pos="19" key="29" len="16" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门合上的闷响 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="39" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1050.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07348469228349534" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07348469228349534" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07348469228349534" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2688" name="door.close">
+          <note pos="12" key="56" len="13" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木门合上的闷响 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="62" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1337.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.15880806024884253" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.15880806024884253" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.15880806024884253" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2688" name="door.close">
+          <note pos="19" key="27" len="15" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软咀嚼 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1150.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10488088481701516" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10488088481701516" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10488088481701516" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2880" name="food.eat">
+          <note pos="12" key="57" len="8" vol="78" pan="0" />
+          <note pos="20" key="57" len="8" vol="58" pan="0" />
+          <note pos="27" key="57" len="8" vol="42" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软咀嚼 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="24" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="700.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.08366600265340757" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.08366600265340757" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.08366600265340757" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2880" name="food.eat">
+          <note pos="12" key="24" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软咀嚼 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1210.375" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10670051546267244" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10670051546267244" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10670051546267244" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3072" name="food.eat">
+          <note pos="12" key="58" len="8" vol="78" pan="0" />
+          <note pos="20" key="58" len="8" vol="58" pan="0" />
+          <note pos="27" key="58" len="8" vol="42" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软咀嚼 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="24" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="736.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.08511756575466664" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.08511756575466664" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.08511756575466664" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3072" name="food.eat">
+          <note pos="12" key="25" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软咀嚼 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1098.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10329569206893384" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10329569206893384" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.10329569206893384" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3264" name="food.eat">
+          <note pos="12" key="56" len="8" vol="78" pan="0" />
+          <note pos="20" key="56" len="8" vol="58" pan="0" />
+          <note pos="27" key="56" len="8" vol="42" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔软咀嚼 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="24" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="668.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.08240145629781066" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.08240145629781066" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.08240145629781066" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3264" name="food.eat">
+          <note pos="12" key="23" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="脆食碎裂 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="58" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4800.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08366600265340757" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08366600265340757" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08366600265340757" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3456" name="food.crunch">
+          <note pos="12" key="57" len="6" vol="78" pan="0" />
+          <note pos="16" key="57" len="6" vol="47" pan="0" />
+          <note pos="20" key="57" len="6" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="脆食碎裂 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="32" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3000.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09273618495495704" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09273618495495704" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09273618495495704" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3456" name="food.crunch">
+          <note pos="12" key="40" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="脆食碎裂 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="58" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5052.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08511756575466664" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08511756575466664" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08511756575466664" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3648" name="food.crunch">
+          <note pos="12" key="58" len="6" vol="78" pan="0" />
+          <note pos="16" key="58" len="6" vol="47" pan="0" />
+          <note pos="20" key="58" len="6" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="脆食碎裂 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="32" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3157.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09434511116109832" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09434511116109832" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09434511116109832" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3648" name="food.crunch">
+          <note pos="12" key="41" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="脆食碎裂 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="58" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4584.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08240145629781066" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08240145629781066" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.08240145629781066" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3840" name="food.crunch">
+          <note pos="12" key="56" len="6" vol="78" pan="0" />
+          <note pos="16" key="56" len="6" vol="47" pan="0" />
+          <note pos="20" key="56" len="6" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="脆食碎裂 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="32" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2865.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.0913345498702435" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.0913345498702435" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.0913345498702435" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3840" name="food.crunch">
+          <note pos="12" key="39" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="短促喝水与吞咽 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="38" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="7" finel1="-30" finer1="-30" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="19" finel2="24" finer2="24" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="750.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4032" name="food.drink">
+          <note pos="12" key="30" len="9" vol="78" pan="0" />
+          <note pos="21" key="30" len="9" vol="43" pan="0" />
+          <note pos="31" key="30" len="9" vol="23" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="短促喝水与吞咽 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1250.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.06" dec="0.17888543819998318" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.06" dec="0.17888543819998318" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.06" dec="0.17888543819998318" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4032" name="food.drink">
+          <note pos="12" key="57" len="20" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="短促喝水与吞咽 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="38" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="7" finel1="-30" finer1="-30" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="19" finel2="24" finer2="24" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="789.375" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4224" name="food.drink">
+          <note pos="12" key="31" len="9" vol="78" pan="0" />
+          <note pos="21" key="31" len="9" vol="43" pan="0" />
+          <note pos="31" key="31" len="9" vol="23" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="短促喝水与吞咽 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1315.625" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.06" dec="0.18198901065723722" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.06" dec="0.18198901065723722" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.06" dec="0.18198901065723722" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4224" name="food.drink">
+          <note pos="12" key="58" len="20" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="短促喝水与吞咽 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="38" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="20" wavetype1="0" coarse1="7" finel1="-30" finer1="-30" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="19" finel2="24" finer2="24" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="716.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4416" name="food.drink">
+          <note pos="12" key="29" len="9" vol="78" pan="0" />
+          <note pos="21" key="29" len="9" vol="43" pan="0" />
+          <note pos="31" key="29" len="9" vol="23" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="短促喝水与吞咽 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1193.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.06" dec="0.17618172436436194" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.06" dec="0.17618172436436194" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.06" dec="0.17618172436436194" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4416" name="food.drink">
+          <note pos="12" key="56" len="19" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="轻柔悬停 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4608" name="ui.hover">
+          <note pos="12" key="66" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="轻柔悬停 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4800" name="ui.hover">
+          <note pos="12" key="67" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="轻柔悬停 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4992" name="ui.hover">
+          <note pos="12" key="65" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔和点击 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5184" name="ui.click">
+          <note pos="12" key="58" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔和点击 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5376" name="ui.click">
+          <note pos="12" key="59" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="柔和点击 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5568" name="ui.click">
+          <note pos="12" key="57" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5760" name="ui.confirm">
+          <note pos="12" key="58" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5760" name="ui.confirm">
+          <note pos="18" key="65" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 1 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5760" name="ui.confirm">
+          <note pos="24" key="70" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5952" name="ui.confirm">
+          <note pos="12" key="59" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5952" name="ui.confirm">
+          <note pos="18" key="66" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 2 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5952" name="ui.confirm">
+          <note pos="24" key="71" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6144" name="ui.confirm">
+          <note pos="12" key="57" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6144" name="ui.confirm">
+          <note pos="18" key="64" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="确认上行短音 / 3 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6144" name="ui.confirm">
+          <note pos="24" key="69" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="返回下行短音 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6336" name="ui.cancel">
+          <note pos="12" key="61" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="返回下行短音 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09591663046625439" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6336" name="ui.cancel">
+          <note pos="19" key="54" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="返回下行短音 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6528" name="ui.cancel">
+          <note pos="12" key="62" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="返回下行短音 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2736.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09758073580374356" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6528" name="ui.cancel">
+          <note pos="19" key="55" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="返回下行短音 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="48" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6720" name="ui.cancel">
+          <note pos="12" key="60" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="返回下行短音 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="76" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="14" wavetype1="0" coarse1="12" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="7" wavetype2="1" coarse2="19" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2483.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09446692542895635" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6720" name="ui.cancel">
+          <note pos="19" key="53" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="湿衣服轻柔摩擦循环 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="30" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="850.0" fwet="1">
+            <elvol pdel="0" hold="0.2" att="0.18973665961010275" dec="0.2" rel="0.07071067811865475" sustain="0.6" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.2" att="0.18973665961010275" dec="0.2" rel="0.07071067811865475" sustain="0.6" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.2" att="0.18973665961010275" dec="0.2" rel="0.07071067811865475" sustain="0.6" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="768" pos="6912" name="player.wet_clothes.move.loop">
+          <note pos="12" key="57" len="528" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="湿衣服轻柔摩擦循环 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="21" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1900.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07211102550927978" dec="0.1414213562373095" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07211102550927978" dec="0.1414213562373095" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07211102550927978" dec="0.1414213562373095" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="768" pos="6912" name="player.wet_clothes.move.loop">
+          <note pos="12" key="57" len="15" vol="78" pan="0" />
+          <note pos="53" key="57" len="15" vol="51" pan="0" />
+          <note pos="95" key="57" len="15" vol="62" pan="0" />
+          <note pos="136" key="57" len="15" vol="39" pan="0" />
+          <note pos="177" key="57" len="15" vol="51" pan="0" />
+          <note pos="218" key="57" len="15" vol="62" pan="0" />
+          <note pos="260" key="57" len="15" vol="39" pan="0" />
+          <note pos="301" key="57" len="15" vol="51" pan="0" />
+          <note pos="342" key="57" len="15" vol="62" pan="0" />
+          <note pos="384" key="57" len="15" vol="39" pan="0" />
+          <note pos="425" key="57" len="15" vol="51" pan="0" />
+          <note pos="466" key="57" len="15" vol="62" pan="0" />
+        </pattern>
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="7680" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

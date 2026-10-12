@@ -70,11 +70,11 @@ public sealed class RainGroundSplashController : MonoBehaviour
         if (!_splashParticles.isPlaying)
             _splashParticles.Play(true);
 
-        float splashRate = Mathf.Lerp(
-            _lightRainSplashesPerSecond,
-            _heavyRainSplashesPerSecond,
-            _rainIntensity);
-        splashRate *= Mathf.Clamp01(_rainIntensity / 0.05f);
+        // 小雨四分之一强度对应小雨频率，开雨从零水花逐步加到大雨频率。
+        float splashRate = _rainIntensity <= 0.25f
+            ? Mathf.Lerp(0f, _lightRainSplashesPerSecond, _rainIntensity / 0.25f)
+            : Mathf.Lerp(_lightRainSplashesPerSecond, _heavyRainSplashesPerSecond,
+                (_rainIntensity - 0.25f) / 0.75f);
         _spawnAccumulator = Mathf.Min(
             MaxSpawnAccumulator,
             _spawnAccumulator + splashRate * Mathf.Max(0f, Time.deltaTime));

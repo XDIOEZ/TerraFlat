@@ -15,6 +15,7 @@ namespace FlatWorld.WorldModel
         private readonly int chunkHeight;
         private readonly Dictionary<Int2, RegionalWeatherState> states = new();
         private readonly Dictionary<Int2, RegionalWeatherSnapshot> replicas = new();
+        private readonly List<RegionalWeatherState> recentLightning = new();
         private bool replicaMode;
 
         public RegionalWeatherEngine(RegionalWeatherSettings settings, int worldSeed,
@@ -167,8 +168,8 @@ namespace FlatWorld.WorldModel
             if (element.Id == WeatherElementIds.Rain)
                 state.ForcedSnow = false;
             if (element.Id == WeatherElementIds.Thunder)
-                state.NextLightningTime = state.LastLightningTime < 0d ? now :
-                    Math.Max(now, state.LastLightningTime + settings.MinimumLightningIntervalSeconds);
+                state.NextLightningTime = Math.Max(now + settings.MinimumLightningIntervalSeconds,
+                    state.LastLightningTime + settings.MinimumLightningIntervalSeconds);
         }
 
         private void AccumulatePrecipitation(RegionalWeatherState state, double start, double end,
@@ -215,7 +216,33 @@ namespace FlatWorld.WorldModel
             int2 cell = domain.Normalize(new int2(
                 state.Region.X + (int)(Random01(state.Region, sequence, "lightning.x") * chunkWidth),
                 state.Region.Y + (int)(Random01(state.Region, sequence, "lightning.y") * chunkHeight)));
+            if (!IsLightningSpacingAvailable(state.LastStepTime, cell))
+            {
+                state.NextLightningTime = state.LastStepTime + settings.StepSeconds;
+                return;
+            }
             CommitLightning(state, new Int2(cell.x, cell.y), activity);
+        }
+
+        private bool IsLightningSpacingAvailable(double now, int2 cell)
+        {
+            double radiusSquared = (double)settings.LightningSeparationRadius * settings.LightningSeparationRadius;
+            bool available = true;
+            // 只查近期落雷，阻止加载区块数量把同一片区域的雷击频率叠加。
+            for (int i = recentLightning.Count - 1; i >= 0; i--)
+            {
+                RegionalWeatherState previous = recentLightning[i];
+                if (now - previous.LastLightningTime >= settings.MinimumLightningIntervalSeconds)
+                {
+                    recentLightning.RemoveAt(i);
+                    continue;
+                }
+                double2 delta = domain.ShortestDelta(new double2(cell.x, cell.y),
+                    new double2(previous.LightningCell.X, previous.LightningCell.Y));
+                if (math.lengthsq(delta) <= radiusSquared)
+                    available = false;
+            }
+            return available;
         }
 
         // 落点只由权威端决定，保存和复制同时携带同一次雷击的强度。
@@ -226,6 +253,8 @@ namespace FlatWorld.WorldModel
             state.LightningStrength = strength;
             state.LastLightningTime = state.LastStepTime;
             state.NextLightningTime = state.LastStepTime + LightningInterval(strength);
+            if (!recentLightning.Contains(state))
+                recentLightning.Add(state);
         }
 
         private double LightningInterval(float activity)
@@ -423,6 +452,12 @@ namespace FlatWorld.WorldModel
             RegionalWeatherState copy = state.Clone();
             copy.Region = ResolveRegion(copy.Region);
             states[copy.Region] = copy;
+            for (int i = recentLightning.Count - 1; i >= 0; i--)
+                if (recentLightning[i].Region.Equals(copy.Region))
+                    recentLightning.RemoveAt(i);
+            if (copy.LastLightningTime >= 0d &&
+                copy.LastStepTime - copy.LastLightningTime < settings.MinimumLightningIntervalSeconds)
+                recentLightning.Add(copy);
         }
 
         public void ApplyReplicatedSnapshot(RegionalWeatherSnapshot snapshot)
@@ -433,6 +468,7 @@ namespace FlatWorld.WorldModel
             if (!replicaMode)
             {
                 states.Clear();
+                recentLightning.Clear();
                 replicaMode = true;
             }
             snapshot.Region = ResolveRegion(snapshot.Region);

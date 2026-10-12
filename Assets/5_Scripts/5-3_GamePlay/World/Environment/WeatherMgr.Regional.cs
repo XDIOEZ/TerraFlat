@@ -337,9 +337,9 @@ public partial class WeatherMgr
         regionalPlanet.WindStrength = sample.WindStrength;
     }
 
-    private void ForceRegionalWeather(WeatherType weather, float intensity, float durationSeconds)
+    private bool ForceRegionalWeather(WeatherType weather, float intensity, float durationSeconds)
     {
-        if (!PrepareRegionalContext() || !GameNetwork.HasStateAuthority || !TryGetCurrentTimeData(out var clock)) return;
+        if (!GameNetwork.HasStateAuthority || !PrepareRegionalContext() || !TryGetCurrentTimeData(out var clock)) return false;
         AdvanceRegionalWeather();
         Camera camera = Camera.main;
         Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
@@ -362,6 +362,7 @@ public partial class WeatherMgr
         if (regionalEngine.TryGetRegionSnapshot(region, out var sample))
             AuthoritativeRegionalWeatherStateChanged?.Invoke(new RegionalWeatherStateSnapshot(regionalPlanet.Name, sample));
         PublishAuthoritativeWeatherState();
+        return true;
     }
 
     private double GetRegionalStepTime(TimeData clock) =>

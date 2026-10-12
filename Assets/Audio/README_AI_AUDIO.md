@@ -40,6 +40,13 @@ ambient.forest.day__01.wav
 - 原始可编辑工程、制作说明与母带裁切脚本在 `SoundDesign/Weather_LMMS/`。雨声不再属于 `Generate Default AI SFX` 的生成条目，避免覆盖新素材。
 - 真实雷声来自 Freesound 的 CC0 录音；作者、来源、裁切范围、公共预览散列与处理参数记录在 `SoundDesign/Weather_LMMS/sources.json` 和 `THIRD_PARTY_NOTICES.md`。
 
+## 玩法音效
+
+- 原来由 C# 默认生成器制作的 30 类音效已全部换成 LMMS MCP 素材：六类武器挥动、通用伤害和十类材质命中、拾取/放下/锄地、木门开关、吃喝、四类 UI 和湿衣服摩擦。
+- 29 类短音各有三个变体，湿衣服保留一条循环，共 88 个 WAV。现有 Cue 使用随机不连续重复策略，武器动作与确认命中仍分开触发。
+- 短音使用 48 kHz 单声道 PCM、预加载、关闭导入归一化；世界声音继续由 AudioService 处理空间方向。旧 `__01` 和 Cue 保留 GUID，新增变体已绑定，无需修改武器或拾取代码。
+- 三个可编辑工程、完整清单和试听串在 `SoundDesign/Gameplay_SFX_LMMS/`，制作步骤见该目录 `README.md`。旧 `Generate Default AI SFX` 代码生成器已移除，后续用 LMMS 工程导出，再执行整理脚本；`Rebuild AI Audio Catalog` 仍可用于整理新增音效。
+
 ## 业务调用
 
 全局或 UI：

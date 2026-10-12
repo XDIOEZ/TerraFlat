@@ -149,6 +149,28 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         SetWeather(WeatherType.Rain, intensity);
     }
 
+    // 程序只设置降水目标，零强度停雨，雨雪数量与声音从当前表现继续过渡。
+    public bool SetPrecipitationIntensity(float intensity, float durationSeconds = 60f,
+        float transitionSeconds = -1f)
+    {
+        if (!float.IsFinite(intensity) || intensity < 0f || intensity > 1f)
+            throw new ArgumentOutOfRangeException(nameof(intensity));
+        if (!float.IsFinite(durationSeconds) || durationSeconds <= 0f)
+            throw new ArgumentOutOfRangeException(nameof(durationSeconds));
+        if (!float.IsFinite(transitionSeconds) || transitionSeconds < 0f && transitionSeconds != -1f)
+            throw new ArgumentOutOfRangeException(nameof(transitionSeconds));
+        if (!ForceRegionalWeather(WeatherType.Rain, intensity, durationSeconds))
+            return false;
+
+        Camera camera = Camera.main;
+        Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
+        TryGetPrecipitationAt(position, out float rain, out float snow);
+        BeginPrecipitationPresentationTransition(rain, snow,
+            transitionSeconds < 0f ? _precipitationTransitionSeconds : transitionSeconds);
+        RefreshRainEffect();
+        return true;
+    }
+
     public void SetFog(float intensity = 1f)
     {
         SetWeather(WeatherType.Fog, intensity);
@@ -337,12 +359,23 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
 #region 天气表现过渡
 
-    [SerializeField, Min(0.01f), Tooltip("雨雪、风和云层从零到满强度的表现过渡秒数。")]
+    [SerializeField, Min(0.01f), Tooltip("风和云层从零到满强度的表现过渡秒数。")]
     private float _weatherTransitionSeconds = 3f;
+    [SerializeField, Min(0f), Tooltip("雨雪从当前雨量到目标雨量的完整过渡秒数，小雨同样走完整段过渡。")]
+    private float _precipitationTransitionSeconds = 12f;
     private float _presentedRainIntensity;
     private float _presentedSnowIntensity;
     private float _presentedWindStrength;
     private float _presentedCloudCoverage;
+    private float _targetRainIntensity;
+    private float _targetSnowIntensity;
+    private float _rainTransitionStartIntensity;
+    private float _snowTransitionStartIntensity;
+    private float _precipitationTransitionElapsed;
+    private float _activePrecipitationTransitionSeconds;
+
+    public float PresentedRainIntensity => _presentedRainIntensity;
+    public float PresentedSnowIntensity => _presentedSnowIntensity;
 
     private void MaintainWeatherPresentation(float deltaTime)
     {
@@ -355,9 +388,16 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         float previousSnow = _presentedSnowIntensity;
         float previousWind = _presentedWindStrength;
 
-        // 只平滑本机视听强度，跨区块从当前表现继续过渡，不改当地天气结算。
-        _presentedRainIntensity = Mathf.MoveTowards(previousRain, Mathf.Clamp01(rain), step);
-        _presentedSnowIntensity = Mathf.MoveTowards(previousSnow, Mathf.Clamp01(snow), step);
+        // 任意雨量都走完整段由少到多的过渡，跨区块从当前值续接。
+        if (!Mathf.Approximately(_targetRainIntensity, rain) ||
+            !Mathf.Approximately(_targetSnowIntensity, snow))
+            BeginPrecipitationPresentationTransition(rain, snow, _precipitationTransitionSeconds);
+        _precipitationTransitionElapsed += Mathf.Max(0f, deltaTime);
+        float precipitationProgress = _activePrecipitationTransitionSeconds <= 0f ? 1f :
+            Mathf.Clamp01(_precipitationTransitionElapsed / _activePrecipitationTransitionSeconds);
+        float precipitationBlend = Mathf.SmoothStep(0f, 1f, precipitationProgress);
+        _presentedRainIntensity = Mathf.Lerp(_rainTransitionStartIntensity, _targetRainIntensity, precipitationBlend);
+        _presentedSnowIntensity = Mathf.Lerp(_snowTransitionStartIntensity, _targetSnowIntensity, precipitationBlend);
         _presentedWindStrength = Mathf.MoveTowards(previousWind, Mathf.Clamp01(weather.WindStrength), step);
         _presentedCloudCoverage = Mathf.MoveTowards(_presentedCloudCoverage, Mathf.Clamp01(weather.CloudCoverage), step);
 
@@ -376,6 +416,24 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     {
         _presentedRainIntensity = _presentedSnowIntensity = 0f;
         _presentedWindStrength = _presentedCloudCoverage = 0f;
+        _targetRainIntensity = _targetSnowIntensity = 0f;
+        _rainTransitionStartIntensity = _snowTransitionStartIntensity = 0f;
+        _precipitationTransitionElapsed = _activePrecipitationTransitionSeconds = 0f;
+    }
+
+    private void BeginPrecipitationPresentationTransition(float rain, float snow, float seconds)
+    {
+        _rainTransitionStartIntensity = _presentedRainIntensity;
+        _snowTransitionStartIntensity = _presentedSnowIntensity;
+        _targetRainIntensity = Mathf.Clamp01(rain);
+        _targetSnowIntensity = Mathf.Clamp01(snow);
+        _activePrecipitationTransitionSeconds = Mathf.Max(0f, seconds);
+        _precipitationTransitionElapsed = 0f;
+        if (_activePrecipitationTransitionSeconds <= 0f)
+        {
+            _presentedRainIntensity = _targetRainIntensity;
+            _presentedSnowIntensity = _targetSnowIntensity;
+        }
     }
 
 #endregion

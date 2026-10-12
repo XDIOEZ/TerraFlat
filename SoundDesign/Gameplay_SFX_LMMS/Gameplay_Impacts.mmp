@@ -1,0 +1,1481 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.2" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="55" masterpitch="0" />
+  <song>
+    <trackcontainer type="song">
+      <track muted="0" type="0" name="通用伤害反馈 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="75" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="10" wavetype1="0" coarse1="7" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="10" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="800.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13784048752090222" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13784048752090222" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13784048752090222" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="combat.hit">
+          <note pos="12" key="22" len="12" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="64" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="950.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1224744871391589" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1224744871391589" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1224744871391589" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="combat.hit">
+          <note pos="12" key="57" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 1 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="23" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2400.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06324555320336758" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06324555320336758" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06324555320336758" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="combat.hit">
+          <note pos="12" key="57" len="4" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="75" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="10" wavetype1="0" coarse1="7" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="10" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="842.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.14023195071024291" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.14023195071024291" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.14023195071024291" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="combat.hit">
+          <note pos="12" key="23" len="12" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="64" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="999.875" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.12459935794377111" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.12459935794377111" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.12459935794377111" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="combat.hit">
+          <note pos="12" key="58" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 2 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="23" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2526.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06434283176858165" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06434283176858165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06434283176858165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="combat.hit">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="75" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="10" wavetype1="0" coarse1="7" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="10" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="764.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13575713609236165" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13575713609236165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13575713609236165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="combat.hit">
+          <note pos="12" key="21" len="11" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="64" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="907.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.12062338081814818" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.12062338081814818" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.12062338081814818" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="combat.hit">
+          <note pos="12" key="56" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用伤害反馈 / 3 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="23" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2292.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06228964600958975" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06228964600958975" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06228964600958975" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="combat.hit">
+          <note pos="12" key="56" len="4" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用碰撞 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="65" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="18" wavetype1="0" coarse1="14" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3000.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1140175425099138" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="combat.impact.default">
+          <note pos="12" key="27" len="9" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用碰撞 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="50" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2900.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08602325267042626" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08602325267042626" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08602325267042626" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="combat.impact.default">
+          <note pos="12" key="57" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用碰撞 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="65" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="18" wavetype1="0" coarse1="14" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3157.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.11599568957508723" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="combat.impact.default">
+          <note pos="12" key="28" len="9" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用碰撞 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="50" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3052.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08751571287488892" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08751571287488892" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08751571287488892" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="combat.impact.default">
+          <note pos="12" key="58" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用碰撞 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="65" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="18" wavetype1="0" coarse1="14" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2865.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.11229425630903835" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="combat.impact.default">
+          <note pos="12" key="26" len="9" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="通用碰撞 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="50" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2769.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08472307831990053" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08472307831990053" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.017320508075688773" dec="0.08472307831990053" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="combat.impact.default">
+          <note pos="12" key="56" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="草叶割裂 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="51" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4700.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.042426406871192854" dec="0.1414213562373095" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.042426406871192854" dec="0.1414213562373095" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.042426406871192854" dec="0.1414213562373095" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="combat.impact.foliage">
+          <note pos="12" key="57" len="13" vol="78" pan="0" />
+          <note pos="17" key="57" len="13" vol="33" pan="0" />
+          <note pos="21" key="57" len="13" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="草叶割裂 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="37" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1200.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03741657386773942" dec="0.1019803902718557" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03741657386773942" dec="0.1019803902718557" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03741657386773942" dec="0.1019803902718557" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="combat.impact.foliage">
+          <note pos="12" key="57" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="草叶割裂 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="51" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4946.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.042426406871192854" dec="0.14387494569938158" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.042426406871192854" dec="0.14387494569938158" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.042426406871192854" dec="0.14387494569938158" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="combat.impact.foliage">
+          <note pos="12" key="58" len="13" vol="78" pan="0" />
+          <note pos="17" key="58" len="13" vol="33" pan="0" />
+          <note pos="21" key="58" len="13" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="草叶割裂 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="37" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1263.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03741657386773942" dec="0.1037496987947435" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03741657386773942" dec="0.1037496987947435" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03741657386773942" dec="0.1037496987947435" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="combat.impact.foliage">
+          <note pos="12" key="58" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="草叶割裂 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="51" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4488.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.042426406871192854" dec="0.1392838827718412" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.042426406871192854" dec="0.1392838827718412" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.042426406871192854" dec="0.1392838827718412" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="combat.impact.foliage">
+          <note pos="12" key="56" len="13" vol="78" pan="0" />
+          <note pos="17" key="56" len="13" vol="33" pan="0" />
+          <note pos="21" key="56" len="13" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="草叶割裂 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="37" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1146.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03741657386773942" dec="0.10043903623591775" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03741657386773942" dec="0.10043903623591775" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03741657386773942" dec="0.10043903623591775" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="combat.impact.foliage">
+          <note pos="12" key="56" len="8" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木头敲裂 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="6" coarse2="28" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2400.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1728" name="combat.impact.wood">
+          <note pos="12" key="34" len="11" vol="78" pan="0" />
+          <note pos="15" key="34" len="11" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木头敲裂 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3800.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1728" name="combat.impact.wood">
+          <note pos="12" key="57" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木头敲裂 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="6" coarse2="28" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2526.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1920" name="combat.impact.wood">
+          <note pos="12" key="35" len="12" vol="78" pan="0" />
+          <note pos="15" key="35" len="12" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木头敲裂 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3999.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1920" name="combat.impact.wood">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木头敲裂 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="6" coarse2="28" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2292.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2112" name="combat.impact.wood">
+          <note pos="12" key="33" len="11" vol="78" pan="0" />
+          <note pos="15" key="33" len="11" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="木头敲裂 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3629.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2112" name="combat.impact.wood">
+          <note pos="12" key="56" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石头碎屑 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="77" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6200.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2304" name="combat.impact.stone">
+          <note pos="12" key="57" len="5" vol="78" pan="0" />
+          <note pos="14" key="57" len="5" vol="26" pan="0" />
+          <note pos="17" key="57" len="5" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石头碎屑 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4100.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09380831519646858" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09380831519646858" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09380831519646858" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2304" name="combat.impact.stone">
+          <note pos="12" key="43" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石头碎屑 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="77" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6525.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07475961476626267" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07475961476626267" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07475961476626267" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2496" name="combat.impact.stone">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+          <note pos="14" key="58" len="5" vol="26" pan="0" />
+          <note pos="17" key="58" len="5" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石头碎屑 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4315.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.0954358423235212" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.0954358423235212" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.0954358423235212" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2496" name="combat.impact.stone">
+          <note pos="12" key="44" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石头碎屑 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="77" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5921.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.0723740284908889" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.0723740284908889" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.0723740284908889" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2688" name="combat.impact.stone">
+          <note pos="12" key="56" len="5" vol="78" pan="0" />
+          <note pos="14" key="56" len="5" vol="26" pan="0" />
+          <note pos="17" key="56" len="5" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="石头碎屑 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="47" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3915.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09239047569960877" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09239047569960877" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09239047569960877" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2688" name="combat.impact.stone">
+          <note pos="12" key="42" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属撞击 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="45" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="57" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="15" finel1="31" finer1="31" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="14" wavetype2="6" coarse2="23" finel2="-27" finer2="-27" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5600.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.22360679774997896" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.22360679774997896" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.22360679774997896" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2880" name="combat.impact.metal">
+          <note pos="12" key="66" len="27" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属撞击 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="71" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5500.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="2880" name="combat.impact.metal">
+          <note pos="12" key="57" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属撞击 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="45" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="57" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="15" finel1="31" finer1="31" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="14" wavetype2="6" coarse2="23" finel2="-27" finer2="-27" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5894.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.2274862633215465" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.2274862633215465" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.2274862633215465" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3072" name="combat.impact.metal">
+          <note pos="12" key="67" len="27" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属撞击 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="71" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5788.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3072" name="combat.impact.metal">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属撞击 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="45" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="57" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="15" finel1="31" finer1="31" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="14" wavetype2="6" coarse2="23" finel2="-27" finer2="-27" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5348.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.2202271554554524" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.2202271554554524" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.2202271554554524" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3264" name="combat.impact.metal">
+          <note pos="12" key="65" len="26" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="金属撞击 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="71" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5252.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3264" name="combat.impact.metal">
+          <note pos="12" key="56" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="75" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="10" wavetype1="0" coarse1="7" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="10" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="800.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13784048752090222" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13784048752090222" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13784048752090222" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3456" name="combat.impact.flesh">
+          <note pos="12" key="22" len="12" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="64" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="950.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1224744871391589" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1224744871391589" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1224744871391589" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3456" name="combat.impact.flesh">
+          <note pos="12" key="57" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 1 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="23" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2400.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06324555320336758" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06324555320336758" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06324555320336758" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3456" name="combat.impact.flesh">
+          <note pos="12" key="57" len="4" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="75" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="10" wavetype1="0" coarse1="7" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="10" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="842.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.14023195071024291" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.14023195071024291" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.14023195071024291" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3648" name="combat.impact.flesh">
+          <note pos="12" key="23" len="12" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="64" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="999.875" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.12459935794377111" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.12459935794377111" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.12459935794377111" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3648" name="combat.impact.flesh">
+          <note pos="12" key="58" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 2 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="23" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2526.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06434283176858165" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06434283176858165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06434283176858165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3648" name="combat.impact.flesh">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="55" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="75" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="10" wavetype1="0" coarse1="7" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="10" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="764.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13575713609236165" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13575713609236165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13575713609236165" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3840" name="combat.impact.flesh">
+          <note pos="12" key="21" len="11" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="64" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="907.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.12062338081814818" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.12062338081814818" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.12062338081814818" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3840" name="combat.impact.flesh">
+          <note pos="12" key="56" len="10" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="肉体闷击 / 3 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="23" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2292.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06228964600958975" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06228964600958975" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06228964600958975" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="3840" name="combat.impact.flesh">
+          <note pos="12" key="56" len="4" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀割草叶 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="57" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4700.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.042426406871192854" dec="0.11832159566199231" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.042426406871192854" dec="0.11832159566199231" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.042426406871192854" dec="0.11832159566199231" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4032" name="combat.impact.knife.foliage">
+          <note pos="12" key="57" len="10" vol="78" pan="0" />
+          <note pos="17" key="57" len="10" vol="33" pan="0" />
+          <note pos="21" key="57" len="10" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀割草叶 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="41" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1200.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08532291603080616" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08532291603080616" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08532291603080616" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4032" name="combat.impact.knife.foliage">
+          <note pos="12" key="57" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀割草叶 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="57" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4946.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.042426406871192854" dec="0.12037441588643327" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.042426406871192854" dec="0.12037441588643327" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.042426406871192854" dec="0.12037441588643327" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4224" name="combat.impact.knife.foliage">
+          <note pos="12" key="58" len="10" vol="78" pan="0" />
+          <note pos="17" key="58" len="10" vol="33" pan="0" />
+          <note pos="21" key="58" len="10" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀割草叶 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="41" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1263.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08680322574651243" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08680322574651243" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08680322574651243" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4224" name="combat.impact.knife.foliage">
+          <note pos="12" key="58" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀割草叶 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="57" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4488.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.042426406871192854" dec="0.11653325705565772" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.042426406871192854" dec="0.11653325705565772" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.042426406871192854" dec="0.11653325705565772" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4416" name="combat.impact.knife.foliage">
+          <note pos="12" key="56" len="10" vol="78" pan="0" />
+          <note pos="17" key="56" len="10" vol="33" pan="0" />
+          <note pos="21" key="56" len="10" vol="16" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀割草叶 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="41" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="1146.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08403332672219992" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08403332672219992" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03741657386773942" dec="0.08403332672219992" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4416" name="combat.impact.knife.foliage">
+          <note pos="12" key="56" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀碰石头 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="86" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6200.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06148170459575759" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06148170459575759" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06148170459575759" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4608" name="combat.impact.knife.stone">
+          <note pos="12" key="57" len="4" vol="78" pan="0" />
+          <note pos="14" key="57" len="4" vol="26" pan="0" />
+          <note pos="17" key="57" len="4" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀碰石头 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4100.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.07848566748139434" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.07848566748139434" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.07848566748139434" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4608" name="combat.impact.knife.stone">
+          <note pos="12" key="43" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀碰石头 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="86" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6525.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06254838127401859" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06254838127401859" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06254838127401859" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4800" name="combat.impact.knife.stone">
+          <note pos="12" key="58" len="4" vol="78" pan="0" />
+          <note pos="14" key="58" len="4" vol="26" pan="0" />
+          <note pos="17" key="58" len="4" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀碰石头 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4315.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.07984735437069909" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.07984735437069909" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.07984735437069909" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4800" name="combat.impact.knife.stone">
+          <note pos="12" key="44" len="6" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀碰石头 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="86" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5921.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06055245659756506" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06055245659756506" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06055245659756506" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4992" name="combat.impact.knife.stone">
+          <note pos="12" key="56" len="4" vol="78" pan="0" />
+          <note pos="14" key="56" len="4" vol="26" pan="0" />
+          <note pos="17" key="56" len="4" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="刀碰石头 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3915.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.07729941785033054" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.07729941785033054" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.07729941785033054" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="4992" name="combat.impact.knife.stone">
+          <note pos="12" key="42" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="斧头砍木头 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="62" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="6" coarse2="28" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2400.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1341640786499874" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5184" name="combat.impact.axe.wood">
+          <note pos="12" key="34" len="11" vol="78" pan="0" />
+          <note pos="15" key="34" len="11" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="斧头砍木头 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="59" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3800.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5184" name="combat.impact.axe.wood">
+          <note pos="12" key="57" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="斧头砍木头 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="62" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="6" coarse2="28" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2526.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1364917579929279" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5376" name="combat.impact.axe.wood">
+          <note pos="12" key="35" len="12" vol="78" pan="0" />
+          <note pos="15" key="35" len="12" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="斧头砍木头 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="59" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3999.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07048404074682438" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5376" name="combat.impact.axe.wood">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="斧头砍木头 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="62" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="64" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="26" wavetype1="0" coarse1="16" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="11" wavetype2="6" coarse2="28" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="2292.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.13213629327327142" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5568" name="combat.impact.axe.wood">
+          <note pos="12" key="33" len="11" vol="78" pan="0" />
+          <note pos="15" key="33" len="11" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="斧头砍木头 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="59" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3629.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.06823488843692792" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5568" name="combat.impact.axe.wood">
+          <note pos="12" key="56" len="5" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 1 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="86" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6200.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5760" name="combat.impact.pickaxe.stone">
+          <note pos="12" key="57" len="5" vol="78" pan="0" />
+          <note pos="14" key="57" len="5" vol="26" pan="0" />
+          <note pos="17" key="57" len="5" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 1 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4100.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09380831519646858" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09380831519646858" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09380831519646858" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5760" name="combat.impact.pickaxe.stone">
+          <note pos="12" key="43" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 1 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="22" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="62" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="13" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="9" wavetype2="6" coarse2="25" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6400.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5760" name="combat.impact.pickaxe.stone">
+          <note pos="13" key="71" len="15" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 2 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="86" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6525.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07475961476626267" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07475961476626267" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.07475961476626267" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5952" name="combat.impact.pickaxe.stone">
+          <note pos="12" key="58" len="5" vol="78" pan="0" />
+          <note pos="14" key="58" len="5" vol="26" pan="0" />
+          <note pos="17" key="58" len="5" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 2 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="4315.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.0954358423235212" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.0954358423235212" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.0954358423235212" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5952" name="combat.impact.pickaxe.stone">
+          <note pos="12" key="44" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 2 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="22" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="62" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="13" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="9" wavetype2="6" coarse2="25" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6736.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.1640426773739078" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.1640426773739078" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.1640426773739078" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="5952" name="combat.impact.pickaxe.stone">
+          <note pos="13" key="72" len="16" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 3 / layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="86" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="5921.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.01414213562373095" dec="0.0723740284908889" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.01414213562373095" dec="0.0723740284908889" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.01414213562373095" dec="0.0723740284908889" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6144" name="combat.impact.pickaxe.stone">
+          <note pos="12" key="56" len="5" vol="78" pan="0" />
+          <note pos="14" key="56" len="5" vol="26" pan="0" />
+          <note pos="17" key="56" len="5" vol="14" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 3 / layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="53" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="56" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="27" wavetype1="0" coarse1="19" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="12" wavetype2="6" coarse2="31" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="3915.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.09239047569960877" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.09239047569960877" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.09239047569960877" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6144" name="combat.impact.pickaxe.stone">
+          <note pos="12" key="42" len="7" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="镐凿石头 / 3 / layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="22" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="62" wavetype0="0" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="24" wavetype1="0" coarse1="13" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="9" wavetype2="6" coarse2="25" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.6" ftype="0" fcut="6112.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.15880806024884253" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.15880806024884253" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.15880806024884253" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="6144" name="combat.impact.pickaxe.stone">
+          <note pos="13" key="70" len="15" vol="78" pan="0" />
+        </pattern>
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="6336" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>
