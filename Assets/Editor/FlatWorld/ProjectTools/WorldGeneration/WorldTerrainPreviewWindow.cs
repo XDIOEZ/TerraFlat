@@ -167,13 +167,6 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.height.offsetY",
         "terrain.height.secondaryBoostEnabled",
         "terrain.height.secondaryBoostStrength",
-        "climate.transport.cellSize",
-        "climate.transport.maxSteps",
-        "climate.transport.backgroundWater",
-        "climate.transport.oceanRecharge",
-        "climate.transport.landLoss",
-        "climate.transport.amountScale",
-        "climate.transport.freezeCelsius",
         "climate.temperature.coordScale",
         "climate.temperature.altitudeCoolingStart",
         "climate.temperature.altitudeCoolingStrength",
@@ -191,16 +184,20 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "climate.polarBand.boundary.detailStrength",
         "climate.temperature.regionalVariationCelsius",
         "river.enabled",
-        "river.runoffScale",
-        "lake.basin.enabled",
-        "lake.basin.minRadius",
-        "lake.basin.peakRadius",
-        "lake.basin.maxRadius",
-        "lake.basin.rareMaxRadius",
-        "lake.basin.rareChance",
-        "lake.basin.maxLevelRise",
-        "lake.basin.evaporationScale",
-        "lake.basin.inflowScale",
+        "climate.distance.oceanRadiusChunks",
+        "climate.distance.freshwaterRadiusChunks",
+        "climate.distance.minimumRainfall",
+        "climate.distance.maximumRainfall",
+        "climate.distance.coldCelsius",
+        "climate.distance.warmCelsius",
+        "climate.distance.coldMultiplier",
+        "lake.large.enabled",
+        "lake.large.regionSize",
+        "lake.large.chance",
+        "lake.large.minRadius",
+        "lake.large.maxRadius",
+        "lake.large.islandChance",
+
         "airHumidity.background",
         "airHumidity.waterContribution",
         "airHumidity.radiusTiles",
@@ -213,21 +210,16 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
     {
         "river.algorithm",
         "river.runoffSampleStride",
-        "river.minimumVisibleCourseLength",
-        "river.tributaryStartFlow",
         "river.meanderTieTolerance",
         "river.valleyDetailWeight",
         "river.lookAheadWeight",
         "river.lookAheadDistance",
-        "river.polarSourceChanceMultiplier",
-        "river.minLakeCells",
-        "river.maxLakeCells",
-        "river.maxLakeLevelRise",
-        "river.lakeMinFlow",
-        "river.lakeChance",
         "climate.orographic.sampleDistance",
         "climate.orographic.sampleCount",
-        "climate.orographic.leewardLoss"
+        "climate.orographic.leewardLoss",
+
+        "climate.distance.chunkWidth",
+        "climate.distance.chunkHeight",
     };
 
     // 预览窗口之间共享纯生成器，复用已构建的水文区域；缓存键仍由种子、坐标和 Profile 指纹隔离。
@@ -275,13 +267,6 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.height.offsetY"] = "沿 Y 方向平移整张高度噪声图",
             ["terrain.height.secondaryBoostEnabled"] = "是否再次拉开高地和低地的高度差",
             ["terrain.height.secondaryBoostStrength"] = "越大高低差越明显，海陆分界更强",
-            ["climate.transport.cellSize"] = "水汽输送宏观格的大小；随空间距离倍率缩放，越小降水分布越细",
-            ["climate.transport.maxSteps"] = "沿上风方向追踪的固定步数，最多 64 步；不按区域边界补水",
-            ["climate.transport.backgroundWater"] = "风携带的少量初始水汽；内陆未经过海洋时仍可产生少量降水",
-            ["climate.transport.oceanRecharge"] = "每经过一个海洋采样点补充的水汽量",
-            ["climate.transport.landLoss"] = "风经过陆地时释放为降水的水汽比例；越大上风陆地消耗越快",
-            ["climate.transport.amountScale"] = "水汽释放量换算为地理降水量的倍率；表示长期水量",
-            ["climate.transport.freezeCelsius"] = "低于该地理温度时暂停水汽通量，单位为摄氏度",
             ["climate.temperature.coordScale"] = "温度图坐标倍率；越大冷热区域越密集",
             ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
             ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
@@ -308,13 +293,32 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.temperature.celsiusMax"] = "原始温度噪声上界，实际合成气候允许超出此范围",
             ["climate.wind.regionSize"] = "主风上的小幅方向扰动尺度；越大风向变化越缓",
             ["climate.wind.seedSalt"] = "改变风场排列，不改变世界种子和高度图",
-            ["climate.orographic.windwardGain"] = "迎风坡增雨强度；越大山前越湿",
+            ["climate.distance.oceanRadiusChunks"] = "海洋对第一层降水的影响半径，以地形区块计；越大沿海湿润区域越宽",
+            ["climate.distance.freshwaterRadiusChunks"] = "河流和湖泊对最终降水的影响半径，以地形区块计",
+            ["climate.distance.minimumRainfall"] = "远离水源时保留的长期降水下限",
+            ["climate.distance.maximumRainfall"] = "温暖且紧邻水源时的长期降水上限",
+            ["climate.distance.coldCelsius"] = "不高于这个摄氏温度时使用冷区降水倍率",
+            ["climate.distance.warmCelsius"] = "达到这个摄氏温度时水源产生完整降水影响",
+            ["climate.distance.coldMultiplier"] = "寒冷地区水源增雨效果保留的比例",
+            ["lake.large.enabled"] = "按旧版独立内陆候选生成湖泊，不进行蒸发干湖判断",
+            ["lake.large.regionSize"] = "独立湖泊候选区域边长，单位为格",
+            ["lake.large.chance"] = "内陆湖泊候选的基础机会，再受第一层海洋降水轻度调整",
+            ["lake.large.minRadius"] = "独立湖泊的半径下限，单位为格",
+            ["lake.large.maxRadius"] = "独立湖泊的半径上限，单位为格",
+            ["lake.large.islandChance"] = "独立湖泊中出现岛屿的机会",
+            ["river.minimumVisibleCourseLength"] = "成熟主河的最短河程，已选主河继续延伸至真实终点",
+            ["river.tributaryStartFlow"] = "接入成熟主河的支流最低水量",
+            ["river.polarSourceChanceMultiplier"] = "极圈河源出现机会的倍率",
+            ["river.minLakeCells"] = "河流天然终点小湖所需最少格数",
+            ["river.maxLakeCells"] = "河流天然终点小湖最多扩展格数",
+            ["river.maxLakeLevelRise"] = "天然终点小湖允许的最大水位升高",
+            ["river.lakeMinFlow"] = "天然终点扩展小湖所需水量",
+            ["river.lakeChance"] = "天然终点扩展小湖的机会，默认关闭以保留旧版分布",
             ["river.enabled"] = "是否按照正式地势和降水结果生成河流",
             ["river.hydrologyRegionSize"] = "宏观水文缓存的区域边长；不作为河流的物理边界",
-            ["river.runoffCellSize"] = "汇总所有陆地降水径流的宏观格大小；越小河网地势采样越细",
+            ["river.runoffCellSize"] = "稀疏河源及汇流的宏观格大小；越小河网地势采样越细",
             ["river.maxTraceSteps"] = "固定汇流近似范围，单位为格；越大累计的上游来水越多",
             ["river.infiltrationFloor"] = "低于该降水量时水被地面吸收；越高河流越少",
-            ["river.runoffScale"] = "所有陆地宏观格的有效径流倍率；越大河流和湖盆入水越多",
             ["river.startFlow"] = "达到该累计水量时显示河流；越高河流越少",
             ["river.fullWidthFlow"] = "河流长到最大宽度所需水量；越低大河越早变宽",
             ["river.maxWidth"] = "河道允许达到的最大格宽",
@@ -343,16 +347,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["biome.grassland.maximumCelsius"] = "温带草原允许的最高摄氏气温",
             ["biome.grassland.minimumPrecipitation"] = "降水低于该值不判定温带草原",
             ["biome.grassland.maximumPrecipitation"] = "降水高于该值不判定温带草原，通常转森林",
-            ["lake.basin.enabled"] = "根据真实洼地生成统一湖盆，随后由降水和汇流决定蓄水",
-            ["lake.basin.minRadius"] = "普通湖盆的半径下限，单位为格；随空间距离倍率缩放",
-            ["lake.basin.peakRadius"] = "普通湖盆最常见的半径；二次权重让尺寸集中在此值附近",
-            ["lake.basin.maxRadius"] = "普通湖盆的半径上限，单位为格",
-            ["lake.basin.rareMaxRadius"] = "稀有大湖盆长尾的半径上限；大湖仍属于同一套湖盆",
-            ["lake.basin.rareChance"] = "湖盆尺寸进入稀有大尺寸长尾的概率",
-            ["lake.basin.maxLevelRise"] = "盆地最低处到允许蓄水高度的最大差；最低溢流口可提前限制水位",
-            ["lake.basin.evaporationScale"] = "地理温度和湖盆面积产生的长期蒸发倍率；越大越容易浅湖或干湖",
-            ["lake.basin.inflowScale"] = "河流汇入湖盆的水量倍率；湖盆直接降水另外计入",
-            ["airHumidity.background"] = "空气湿度基线；不参与风携水汽或降水计算",
+            ["airHumidity.background"] = "空气湿度基线；不参与河湖距离降水计算",
             ["airHumidity.waterContribution"] = "附近水体对空气湿度的最大增量，按距离衰减",
             ["airHumidity.radiusTiles"] = "水体供湿影响半径，单位为格；随空间距离倍率缩放",
             ["airHumidity.fullSourceDepth"] = "水深达到该值时提供完整供湿强度；更浅的水体按水深比例减弱",
@@ -797,28 +792,24 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawDoubleField("climate.temperature.altitudeCoolingStrength", "海拔降温强度");
 
             EditorGUILayout.Space(3f);
-            EditorGUILayout.LabelField("风携水汽与降水量", EditorStyles.miniBoldLabel);
-            DrawDoubleField("climate.transport.cellSize", "输送宏观格大小（格）");
-            DrawIntegerSlider("climate.transport.maxSteps", "固定追踪步数", 1, 64);
-            DrawSlider("climate.transport.backgroundWater", "背景水汽量", 0f, 1f);
-            DrawSlider("climate.transport.oceanRecharge", "海洋补充水汽量", 0f, 1f);
-            DrawSlider("climate.transport.landLoss", "陆地水汽释放比例", 0f, 1f);
-            DrawDoubleField("climate.transport.amountScale", "降水量换算倍率");
-            DrawDoubleField("climate.transport.freezeCelsius", "水汽通量暂停温度（°C）");
+            EditorGUILayout.LabelField("区块水源距离与两层降水", EditorStyles.miniBoldLabel);
+            DrawDoubleField("climate.distance.oceanRadiusChunks", "海洋影响半径（区块）");
+            DrawDoubleField("climate.distance.freshwaterRadiusChunks", "河湖影响半径（区块）");
+            DrawSlider("climate.distance.minimumRainfall", "远水源降水下限", 0f, 1f);
+            DrawSlider("climate.distance.maximumRainfall", "近水源温暖降水上限", 0f, 1f);
+            DrawDoubleField("climate.distance.coldCelsius", "冷区参考温度（°C）");
+            DrawDoubleField("climate.distance.warmCelsius", "暖区参考温度（°C）");
+            DrawSlider("climate.distance.coldMultiplier", "冷区增雨倍率", 0f, 1f);
             DrawToggle("river.enabled", "生成河流");
-            DrawDoubleField("river.runoffScale", "地表径流倍率");
 
             EditorGUILayout.Space(3f);
-            EditorGUILayout.LabelField("统一湖盆与蓄水", EditorStyles.miniBoldLabel);
-            DrawToggle("lake.basin.enabled", "生成湖盆");
-            DrawDoubleField("lake.basin.minRadius", "普通湖盆最小半径（格）");
-            DrawDoubleField("lake.basin.peakRadius", "普通湖盆常见半径（格）");
-            DrawDoubleField("lake.basin.maxRadius", "普通湖盆最大半径（格）");
-            DrawDoubleField("lake.basin.rareMaxRadius", "稀有大湖盆最大半径（格）");
-            DrawSlider("lake.basin.rareChance", "稀有大尺寸长尾概率", 0f, 1f);
-            DrawSlider("lake.basin.maxLevelRise", "最大蓄水高度差", 0.001f, 0.25f);
-            DrawDoubleField("lake.basin.evaporationScale", "长期蒸发倍率");
-            DrawDoubleField("lake.basin.inflowScale", "河流入水倍率");
+            EditorGUILayout.LabelField("独立内陆湖泊", EditorStyles.miniBoldLabel);
+            DrawToggle("lake.large.enabled", "生成湖泊");
+            DrawDoubleField("lake.large.regionSize", "湖泊候选区域边长（格）");
+            DrawSlider("lake.large.chance", "湖泊候选基础机会", 0f, 1f);
+            DrawDoubleField("lake.large.minRadius", "湖泊最小半径（格）");
+            DrawDoubleField("lake.large.maxRadius", "湖泊最大半径（格）");
+            DrawSlider("lake.large.islandChance", "湖中岛机会", 0f, 1f);
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("空气湿度", EditorStyles.miniBoldLabel);
@@ -1585,7 +1576,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             // 快速预览只关闭最高成本的水文和结构阶段，地形、群系和生态规则仍走正式生成器。
             numbers["river.enabled"] = 0d;
-            numbers["lake.basin.enabled"] = 0d;
+            numbers["lake.large.enabled"] = 0d;
             numbers["structure.enabled"] = 0d;
         }
 
@@ -1687,7 +1678,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             // 与矿洞快速预览使用相同的低成本地表判断，避免为少数出口重复构建水文图。
             numbers["river.enabled"] = 0d;
-            numbers["lake.basin.enabled"] = 0d;
+            numbers["lake.large.enabled"] = 0d;
             numbers["structure.enabled"] = 0d;
         }
 

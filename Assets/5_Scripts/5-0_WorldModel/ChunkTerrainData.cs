@@ -114,9 +114,11 @@ namespace FlatWorld.WorldModel
                 !_environmentLayers.TryGetValue("windY", out float[] windY) ||
                 !_environmentLayers.TryGetValue("temperature.celsius", out float[] temperature))
                 return;
+            _environmentLayers.TryGetValue("precipitation", out float[] precipitation);
 
             // 风力逐格取模长再求平均，避免相反方向的风被抵消。
             double humiditySum = 0d, windXSum = 0d, windYSum = 0d, windStrengthSum = 0d, temperatureSum = 0d;
+            double precipitationSum = 0d;
             for (int i = 0; i < CellCount; i++)
             {
                 humiditySum += humidity[i];
@@ -124,10 +126,12 @@ namespace FlatWorld.WorldModel
                 windYSum += windY[i];
                 windStrengthSum += Math.Sqrt((double)windX[i] * windX[i] + (double)windY[i] * windY[i]);
                 temperatureSum += temperature[i];
+                precipitationSum += precipitation?[i] ?? 0f;
             }
             var climate = new ChunkWeatherClimate((float)(humiditySum / CellCount),
                 (float)(windXSum / CellCount), (float)(windYSum / CellCount),
-                (float)(windStrengthSum / CellCount), (float)(temperatureSum / CellCount));
+                (float)(windStrengthSum / CellCount), (float)(temperatureSum / CellCount),
+                (float)(precipitationSum / CellCount));
             WeatherProfile = settings.CreateProfile(climate);
         }
         #endregion

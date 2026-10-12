@@ -256,7 +256,7 @@ namespace FlatWorld.WorldModel
             for (int y = -radius; y <= radius; y++)
             for (int x = -radius; x <= radius; x++)
             {
-                var sample = SampleSurfaceClimate(request, settings, worldX + x, worldY + y);
+                var sample = SampleGeographicClimate(request, settings, worldX + x, worldY + y);
                 total += sample.TemperatureCelsius;
             }
             int diameter = radius * 2 + 1;

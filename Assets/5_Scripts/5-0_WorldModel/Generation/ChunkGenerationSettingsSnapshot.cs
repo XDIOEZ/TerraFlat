@@ -338,22 +338,24 @@ namespace FlatWorld.WorldModel
                 GetText(texts, "climate.algorithm", "simple"));
             HeightNoise = CreateNoiseChannel(numbers, "terrain.height", 2d, 0.05d, 5,
                 2d, 0.45d, 9000d, 0d);
-            // 水汽沿世界坐标上的宏观风场有限传播，步数不随空间倍率重复放大。
-            PrecipitationCellSize = ScaleDistance(
-                GetInt(numbers, "climate.transport.cellSize", 32),
-                WorldSpatialDistanceScale, 4, 256);
-            PrecipitationTraceSteps = Clamp(
-                GetInt(numbers, "climate.transport.maxSteps", 32), 1, 64);
-            PrecipitationBackgroundWater = Clamp01(Finite(
-                GetDouble(numbers, "climate.transport.backgroundWater", 0.18d), 0.18d));
-            PrecipitationOceanRecharge = Clamp01(Finite(
-                GetDouble(numbers, "climate.transport.oceanRecharge", 0.25d), 0.25d));
-            PrecipitationLandLoss = Clamp01(Finite(
-                GetDouble(numbers, "climate.transport.landLoss", 0.08d), 0.08d));
-            PrecipitationAmountScale = FinitePositive(
-                GetDouble(numbers, "climate.transport.amountScale", 6d), 6d);
-            PrecipitationFreezeCelsius = Finite(
-                GetDouble(numbers, "climate.transport.freezeCelsius", -5d), -5d);
+            PrecipitationChunkWidth = Clamp(GetInt(numbers, "climate.distance.chunkWidth", 16), 1, 256);
+            PrecipitationChunkHeight = Clamp(GetInt(numbers, "climate.distance.chunkHeight", 16), 1, 256);
+            PrecipitationOceanRadius = ScaleDistance(
+                GetDouble(numbers, "climate.distance.oceanRadiusChunks", 32d) *
+                Math.Max(PrecipitationChunkWidth, PrecipitationChunkHeight),
+                WorldSpatialDistanceScale, 1d, 2048d);
+            PrecipitationFreshwaterRadius = ScaleDistance(
+                GetDouble(numbers, "climate.distance.freshwaterRadiusChunks", 8d) *
+                Math.Max(PrecipitationChunkWidth, PrecipitationChunkHeight),
+                WorldSpatialDistanceScale, 1d, 512d);
+            PrecipitationMinimum = Clamp01(GetDouble(numbers, "climate.distance.minimumRainfall", 0.04d));
+            PrecipitationMaximum = Math.Max(PrecipitationMinimum,
+                Clamp01(GetDouble(numbers, "climate.distance.maximumRainfall", 0.9d)));
+            PrecipitationColdCelsius = Finite(GetDouble(numbers, "climate.distance.coldCelsius", -10d), -10d);
+            PrecipitationWarmCelsius = Math.Max(PrecipitationColdCelsius + 0.01d,
+                Finite(GetDouble(numbers, "climate.distance.warmCelsius", 30d), 30d));
+            PrecipitationColdMultiplier = Clamp01(
+                GetDouble(numbers, "climate.distance.coldMultiplier", 0.15d));
             TemperatureNoise = CreateNoiseChannel(numbers, "climate.temperature", 10d,
                 0.015d, 4, 2d, 0.55d, 0d, 0d);
             TemperatureCelsiusMin = Finite(
@@ -420,8 +422,6 @@ namespace FlatWorld.WorldModel
                     GetDouble(numbers, "climate.wind.regionSize", 256d), 256d),
                 WorldSpatialDistanceScale, 8d, 8192d);
             WindSeedSalt = GetInt(numbers, "climate.wind.seedSalt", 1779033703);
-            WindwardRainGain = NonNegativeFinite(
-                GetDouble(numbers, "climate.orographic.windwardGain", 0.8d), 0.8d);
             RiverEnabled = GetBool(numbers, "river.enabled", true);
             RiverHydrologyRegionSize = ScaleDistance(
                 GetInt(numbers, "river.hydrologyRegionSize", 256),
@@ -438,8 +438,6 @@ namespace FlatWorld.WorldModel
                 2048);
             RiverInfiltrationFloor = Clamp01(
                 GetDouble(numbers, "river.infiltrationFloor", 0.25d));
-            RiverRunoffScale = NonNegativeFinite(
-                GetDouble(numbers, "river.runoffScale", 0.08d), 0.08d);
             RiverStartFlow = Positive(GetDouble(numbers, "river.startFlow", 0.14d), 0.14d);
             RiverFullWidthFlow = Math.Max(
                 RiverStartFlow,
@@ -490,30 +488,39 @@ namespace FlatWorld.WorldModel
             RiverDepthMax = Math.Max(
                 RiverDepthMin,
                 Clamp01(GetDouble(numbers, "river.depthMax", 0.9d)));
+            PolarRiverSourceChanceMultiplier = Clamp01(Finite(
+                GetDouble(numbers, "river.polarSourceChanceMultiplier", 0.05d), 0.05d));
+            RiverMinimumVisibleCourseLength = ScaleDistance(
+                GetInt(numbers, "river.minimumVisibleCourseLength", 96),
+                WorldSpatialDistanceScale,
+                0,
+                RiverMaxTraceSteps);
+            RiverTributaryStartFlow = Math.Min(
+                RiverStartFlow,
+                Positive(GetDouble(numbers, "river.tributaryStartFlow", 0.10d), 0.10d));
+            RiverMinLakeCells = ScaleArea(
+                GetInt(numbers, "river.minLakeCells", 18), WorldSpatialDistanceScale, 1, 4096);
+            RiverMaxLakeCells = ScaleArea(
+                GetInt(numbers, "river.maxLakeCells", 220), WorldSpatialDistanceScale,
+                RiverMinLakeCells, 4096);
+            RiverMaxLakeLevelRise = Clamp(
+                GetDouble(numbers, "river.maxLakeLevelRise", 0.045d), 0.001d, 0.25d);
+            RiverLakeMinFlow = Positive(
+                GetDouble(numbers, "river.lakeMinFlow", 0.35d), 0.35d);
+            RiverLakeChance = Clamp01(
+                GetDouble(numbers, "river.lakeChance", 0d));
             RiverMaxCachedRegions = Clamp(
                 GetInt(numbers, "river.maxCachedRegions", 9), 1, 32);
-            // 普通湖和稀有大湖共用一套先盆地、后蓄水的尺寸与水量参数。
-            LakeBasinEnabled = GetBool(numbers, "lake.basin.enabled", true);
-            LakeMinRadius = ScaleDistance(FinitePositive(
-                    GetDouble(numbers, "lake.basin.minRadius", 6d), 6d),
-                WorldSpatialDistanceScale, 1d, 512d);
-            LakePeakRadius = ScaleDistance(FinitePositive(
-                    GetDouble(numbers, "lake.basin.peakRadius", 12d), 12d),
-                WorldSpatialDistanceScale, LakeMinRadius, 1024d);
-            LakeMaxRadius = ScaleDistance(FinitePositive(
-                    GetDouble(numbers, "lake.basin.maxRadius", 24d), 24d),
-                WorldSpatialDistanceScale, LakePeakRadius, 2048d);
-            LakeRareMaxRadius = ScaleDistance(FinitePositive(
-                    GetDouble(numbers, "lake.basin.rareMaxRadius", 96d), 96d),
-                WorldSpatialDistanceScale, LakeMaxRadius, 4096d);
-            LakeRareChance = Clamp01(Finite(
-                GetDouble(numbers, "lake.basin.rareChance", 0.02d), 0.02d));
-            LakeMaxLevelRise = Clamp(Finite(
-                GetDouble(numbers, "lake.basin.maxLevelRise", 0.045d), 0.045d), 0.001d, 0.25d);
-            LakeEvaporationScale = NonNegativeFinite(
-                GetDouble(numbers, "lake.basin.evaporationScale", 0.05d), 0.05d);
-            LakeInflowScale = NonNegativeFinite(
-                GetDouble(numbers, "lake.basin.inflowScale", 1d), 1d);
+            // 内陆湖泊沿用独立候选、湖岸和岛屿，不依靠蒸发水量判断是否消失。
+            LargeLakeEnabled = GetBool(numbers, "lake.large.enabled", true);
+            LargeLakeRegionSize = ScaleDistance(GetInt(numbers, "lake.large.regionSize", 384),
+                WorldSpatialDistanceScale, 32, 16384);
+            LargeLakeChance = Clamp01(GetDouble(numbers, "lake.large.chance", 0.65d));
+            LargeLakeMinRadius = ScaleDistance(GetDouble(numbers, "lake.large.minRadius", 48d),
+                WorldSpatialDistanceScale, 4d, 1024d);
+            LargeLakeMaxRadius = ScaleDistance(GetDouble(numbers, "lake.large.maxRadius", 104d),
+                WorldSpatialDistanceScale, LargeLakeMinRadius, 2048d);
+            LargeLakeIslandChance = Clamp01(GetDouble(numbers, "lake.large.islandChance", 0.7d));
             // 旧冻结配置没有显式启用时保持原样；新世界 Profile 决定是否生成火山小湖。
             LavaLakeEnabled = GetBool(numbers, "lake.lava.enabled", false);
             LavaLakeRegionSize = ScaleDistance(GetInt(numbers, "lake.lava.regionSize", 192),
@@ -815,14 +822,16 @@ namespace FlatWorld.WorldModel
         public SurfaceClimateAlgorithm SurfaceClimateAlgorithm { get; }
         /// <summary>旧版 Land 高度噪声通道。</summary>
         public TerrainNoiseChannelSettings HeightNoise { get; }
-        /// <summary>有限水汽输送的宏观格尺寸、步数和相对水量参数。</summary>
-        public int PrecipitationCellSize { get; }
-        public int PrecipitationTraceSteps { get; }
-        public double PrecipitationBackgroundWater { get; }
-        public double PrecipitationOceanRecharge { get; }
-        public double PrecipitationLandLoss { get; }
-        public double PrecipitationAmountScale { get; }
-        public double PrecipitationFreezeCelsius { get; }
+        /// <summary>降水按冻结的地形区块汇总，影响距离随世界空间倍率缩放。</summary>
+        public int PrecipitationChunkWidth { get; }
+        public int PrecipitationChunkHeight { get; }
+        public double PrecipitationOceanRadius { get; }
+        public double PrecipitationFreshwaterRadius { get; }
+        public double PrecipitationMinimum { get; }
+        public double PrecipitationMaximum { get; }
+        public double PrecipitationColdCelsius { get; }
+        public double PrecipitationWarmCelsius { get; }
+        public double PrecipitationColdMultiplier { get; }
         /// <summary>旧版 Land 温度噪声通道及归一化温度对应的摄氏范围。</summary>
         public TerrainNoiseChannelSettings TemperatureNoise { get; }
         public double TemperatureCelsiusMin { get; }
@@ -857,20 +866,16 @@ namespace FlatWorld.WorldModel
         /// <summary>区域风向插值网格的世界尺寸。</summary>
         public double WindRegionSize { get; }
         public int WindSeedSalt { get; }
-        /// <summary>风携水汽遇到地形抬升时增加的降水强度。</summary>
-        public double WindwardRainGain { get; }
         /// <summary>地表要不要生成河流。</summary>
         public bool RiverEnabled { get; }
         /// <summary>统一水文按区域缓存的正方形边长，不作为物理边界。</summary>
         public int RiverHydrologyRegionSize { get; }
-        /// <summary>按固定宏观格汇总所有陆地的降水径流。</summary>
+        /// <summary>稀疏河源和下坡汇流的宏观格尺寸。</summary>
         public int RiverRunoffCellSize { get; }
         /// <summary>有限上游汇流的最大世界格距离预算。</summary>
         public int RiverMaxTraceSteps { get; }
         /// <summary>低于该值的降水被地表吸收，不形成有效径流。</summary>
         public double RiverInfiltrationFloor { get; }
-        /// <summary>所有陆地宏观格的降水径流统一乘以此倍率。</summary>
-        public double RiverRunoffScale { get; }
         /// <summary>累计径流达到该值后形成可见河道。</summary>
         public double RiverStartFlow { get; }
         /// <summary>累计径流达到该值后河道扩展到最大宽度。</summary>
@@ -903,16 +908,13 @@ namespace FlatWorld.WorldModel
         public double RiverDepthMin { get; }
         public double RiverDepthMax { get; }
 
-        /// <summary>统一湖盆的二次峰值尺寸分布与静态水量预算。</summary>
-        public bool LakeBasinEnabled { get; }
-        public double LakeMinRadius { get; }
-        public double LakePeakRadius { get; }
-        public double LakeMaxRadius { get; }
-        public double LakeRareMaxRadius { get; }
-        public double LakeRareChance { get; }
-        public double LakeMaxLevelRise { get; }
-        public double LakeEvaporationScale { get; }
-        public double LakeInflowScale { get; }
+        /// <summary>独立内陆湖泊的候选分布、湖岸尺寸与岛屿。</summary>
+        public bool LargeLakeEnabled { get; }
+        public int LargeLakeRegionSize { get; }
+        public double LargeLakeChance { get; }
+        public double LargeLakeMinRadius { get; }
+        public double LargeLakeMaxRadius { get; }
+        public double LargeLakeIslandChance { get; }
 
         public bool LavaLakeEnabled { get; }
         public int LavaLakeRegionSize { get; }
@@ -924,6 +926,16 @@ namespace FlatWorld.WorldModel
         public double LavaLakeShoreWidth { get; }
         /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>
         public int RiverMaxCachedRegions { get; }
+        /// <summary>恢复稀疏河源、成熟主河和小湖的独立参数。</summary>
+        public double PolarRiverSourceChanceMultiplier { get; }
+        public int RiverMinimumVisibleCourseLength { get; }
+        public double RiverTributaryStartFlow { get; }
+        public int RiverMinLakeCells { get; }
+        public int RiverMaxLakeCells { get; }
+        public double RiverMaxLakeLevelRise { get; }
+        public double RiverLakeMinFlow { get; }
+        public double RiverLakeChance { get; }
+
         /// <summary>合适的地面上长出草的基本概率。</summary>
         public double GrassDensity { get; }
         /// <summary>草的摄氏温度下限，不受归一化气候标尺变化影响。</summary>
@@ -1149,6 +1161,14 @@ namespace FlatWorld.WorldModel
         private static double ScaleDistance(double value, double scale, double min, double max)
         {
             return Clamp(value * scale, min, max);
+        }
+
+        /// <summary>湖泊格数按空间倍率的平方缩放。</summary>
+        private static int ScaleArea(int value, double distanceScale, int min, int max)
+        {
+            int scaled = (int)Math.Round(value * distanceScale * distanceScale,
+                MidpointRounding.AwayFromZero);
+            return Clamp(scaled, min, max);
         }
 
         /// <summary>过滤负数和无穷数，保证空间参数可以安全参与计算。</summary>

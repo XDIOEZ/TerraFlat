@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 75;
+        public const int CurrentGenerationSignature = 76;
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
@@ -49,6 +49,8 @@ namespace FlatWorld.WorldModel
             heightDrivenRegionCache.Clear();
             precipitationCache.Clear();
             while (precipitationCacheOrder.TryDequeue(out _)) { }
+            oceanChunkCache.Clear();
+            while (oceanChunkCacheOrder.TryDequeue(out _)) { }
             lavaBasins.Clear();
             while (lavaBasinOrder.TryDequeue(out _)) { }
             while (heightDrivenCacheOrder.TryDequeue(out _)) { }
@@ -61,7 +63,7 @@ namespace FlatWorld.WorldModel
         public object GetPendingGenerationGroupKey(ChunkGenerationRequest request)
         {
             ChunkGenerationSettingsSnapshot settings = request.Profile.Settings;
-            if ((!settings.RiverEnabled && !settings.LakeBasinEnabled) ||
+            if (!settings.RiverEnabled ||
                 settings.Mode == ChunkGenerationMode.Cave ||
                 request.Address.DimensionId.IndexOf("cave", StringComparison.OrdinalIgnoreCase) >= 0)
                 return null;
@@ -405,16 +407,21 @@ namespace FlatWorld.WorldModel
 
         #region 地表与高度图采样
 
-        /// <summary>正式区块与出生查询共用统一河网、湖盆及其缓存键。</summary>
+        /// <summary>先按海洋距离降水生成河网，再恢复独立内陆湖泊。</summary>
         private GeneratedHydrologyMap BuildSurfaceHydrologyMap(
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             CancellationToken cancellationToken, ChunkGenerationTiming timing = null)
         {
-            if (!settings.RiverEnabled && !settings.LakeBasinEnabled) return null;
-            // 湖盆与河流共用降水汇流图，不再另行随机放置大湖或河流源点。
-            using (timing?.MeasureStage("hydrology.runoff_basins") ?? default)
-                return BuildHeightDrivenRiverMap(request, settings, cancellationToken, timing);
+            GeneratedHydrologyMap rivers = settings.RiverEnabled
+                ? BuildHeightDrivenRiverMap(request, settings, cancellationToken, timing) : null;
+            if (settings.LargeLakeEnabled)
+                using (timing?.MeasureStage("hydrology.large_lake") ?? default)
+                    rivers = LargeFreshwaterLakeKernel.Build(request, settings, rivers,
+                        p => SampleHeight(request, settings, p.X, p.Y), cancellationToken,
+                        GetHydrologyOutputPadding(request),
+                        p => SampleOceanPrecipitation(request, settings, p.X, p.Y));
+            return rivers;
         }
 
         #region 地表区块批量生成
@@ -425,7 +432,7 @@ namespace FlatWorld.WorldModel
             GeneratedHydrologyMap riverMap, CancellationToken cancellationToken,
             ChunkGenerationTiming timing)
         {
-            using var batch = new SurfaceChunkBatch(request, settings);
+            using var batch = new SurfaceChunkBatch(request, settings, riverMap);
             using (timing?.MeasureStage("terrain.noise") ?? default)
                 batch.SampleCore(cancellationToken);
             int seaWater = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId);
@@ -594,13 +601,15 @@ namespace FlatWorld.WorldModel
             private readonly int peatRadius;
             private readonly int stride;
             private readonly SurfaceClimateSample[] samples;
+            private readonly SurfacePrecipitationSampler precipitation;
             public readonly SurfaceCellOutput[] Output;
 
             public SurfaceChunkBatch(ChunkGenerationRequest request,
-                ChunkGenerationSettingsSnapshot settings)
+                ChunkGenerationSettingsSnapshot settings, GeneratedHydrologyMap riverMap = null)
             {
                 this.request = request;
                 this.settings = settings;
+                precipitation = new SurfacePrecipitationSampler(request, settings, riverMap);
                 peatRadius = settings.PeatTileId > 0 && settings.PeatSpawnChance > 0d
                     ? settings.PeatStoneBoundaryRadius : 0;
                 radius = Math.Max(peatRadius, settings.BiomeTemperatureBlendRadius);
@@ -638,7 +647,7 @@ namespace FlatWorld.WorldModel
                                 WindX = value.WindX,
                                 WindY = value.WindY
                             });
-                            sample.Precipitation = SampleTransportPrecipitation(request, settings, worldX, worldY);
+                            sample.Precipitation = precipitation.Sample(worldX, worldY);
                             samples[index] = FinishSurfaceClimate(request, settings, worldX, worldY, sample);
                         }
                     }
@@ -657,7 +666,7 @@ namespace FlatWorld.WorldModel
                     samples[index] =
                         SampleSurfaceClimate(request, settings,
                             request.Address.ChunkOrigin.X + x - radius,
-                            request.Address.ChunkOrigin.Y + y - radius);
+                            request.Address.ChunkOrigin.Y + y - radius, precipitation);
                 }
             }
 
@@ -693,7 +702,7 @@ namespace FlatWorld.WorldModel
                     {
                         sample = SampleSurfaceClimate(request, settings,
                             request.Address.ChunkOrigin.X + x + offsetX,
-                            request.Address.ChunkOrigin.Y + y + offsetY);
+                            request.Address.ChunkOrigin.Y + y + offsetY, precipitation);
                         ClassifyBase(ref sample);
                         samples[sampleIndex] = sample;
                     }
@@ -732,10 +741,11 @@ namespace FlatWorld.WorldModel
 
         private static SurfaceClimateSample SampleSurfaceClimate(
             ChunkGenerationRequest request, ChunkGenerationSettingsSnapshot settings,
-            int worldX, int worldY)
+            int worldX, int worldY, SurfacePrecipitationSampler precipitation = null)
         {
             SurfaceClimateSample sample = SampleGeographicClimate(request, settings, worldX, worldY);
-            sample.Precipitation = SampleTransportPrecipitation(request, settings, worldX, worldY);
+            sample.Precipitation = precipitation?.Sample(worldX, worldY) ??
+                SampleOceanPrecipitation(request, settings, worldX, worldY);
             return FinishSurfaceClimate(request, settings, worldX, worldY, sample);
         }
 
@@ -766,7 +776,7 @@ namespace FlatWorld.WorldModel
             int x, int y, int worldX, int worldY, LiquidTypeCatalog types)
         {
             SurfaceClimateSample climate = SampleSurfaceClimate(
-                request, settings, worldX, worldY);
+                request, settings, worldX, worldY, new SurfacePrecipitationSampler(request, settings, riverMap));
             double baseMoisture = Clamp01(climate.Precipitation * 0.78d +
                                           (1d - climate.Height) * 0.22d);
             climate.BaseBiome = ResolveSurfaceBiome(settings, climate, baseMoisture, false);
@@ -1715,13 +1725,13 @@ namespace FlatWorld.WorldModel
                 return value;
             }
 
-            /// <summary>读取风携水汽形成的长期降水量，缓存同一世界坐标的结果。</summary>
+            /// <summary>河源只读取第一层海洋距离降水，不反馈最终河湖影响。</summary>
             public double Precipitation(Int2 position)
             {
                 position = Normalize(position);
                 if (!precipitationCache.TryGetValue(position, out double value))
                 {
-                    value = SampleTransportPrecipitation(Request, Settings, position.X, position.Y);
+                    value = SampleOceanPrecipitation(Request, Settings, position.X, position.Y);
                     precipitationCache.Add(position, value);
                 }
                 return value;

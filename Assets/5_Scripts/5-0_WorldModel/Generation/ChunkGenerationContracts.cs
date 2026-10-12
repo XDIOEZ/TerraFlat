@@ -191,10 +191,13 @@ namespace FlatWorld.WorldModel
             Signature = signature;
             Width = width;
             Height = height;
-            this.numericParameters = new ReadOnlyDictionary<string, double>(
-                numericParameters == null
-                    ? new Dictionary<string, double>(StringComparer.Ordinal)
-                    : new Dictionary<string, double>(numericParameters, StringComparer.Ordinal));
+            var frozenNumbers = numericParameters == null
+                ? new Dictionary<string, double>(StringComparer.Ordinal)
+                : new Dictionary<string, double>(numericParameters, StringComparer.Ordinal);
+            // 扩大预览或水文范围时仍按原始地形区块算降水，不能把区域尺寸当成区块尺寸。
+            frozenNumbers.TryAdd("climate.distance.chunkWidth", width);
+            frozenNumbers.TryAdd("climate.distance.chunkHeight", height);
+            this.numericParameters = new ReadOnlyDictionary<string, double>(frozenNumbers);
             this.textParameters = new ReadOnlyDictionary<string, string>(
                 textParameters == null
                     ? new Dictionary<string, string>(StringComparer.Ordinal)
@@ -301,21 +304,31 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>复制 Profile 并覆盖区块尺寸；运行时世界的 PlanetData 是区块网格唯一真源。</summary>
-        public ChunkGenerationProfileSnapshot WithChunkSize(int width, int height)
+        public ChunkGenerationProfileSnapshot WithChunkSize(int width, int height, bool resizeClimateGrid = true)
         {
             if (width <= 0)
                 throw new ArgumentOutOfRangeException(nameof(width));
             if (height <= 0)
                 throw new ArgumentOutOfRangeException(nameof(height));
-            if (Width == width && Height == height)
+            if (Width == width && Height == height &&
+                (!resizeClimateGrid || Settings.PrecipitationChunkWidth == width &&
+                 Settings.PrecipitationChunkHeight == height))
                 return this;
+
+            var numbers = new Dictionary<string, double>(numericParameters, StringComparer.Ordinal);
+            // 真实世界改区块尺寸时同步气候格网，临时外圈扩展只改输出范围。
+            if (resizeClimateGrid)
+            {
+                numbers["climate.distance.chunkWidth"] = width;
+                numbers["climate.distance.chunkHeight"] = height;
+            }
 
             return new ChunkGenerationProfileSnapshot(
                 ProfileId,
                 Signature,
                 width,
                 height,
-                new Dictionary<string, double>(numericParameters, StringComparer.Ordinal),
+                numbers,
                 new Dictionary<string, string>(textParameters, StringComparer.Ordinal),
                 EcologyGlobalMultiplier,
                 EcologyRules,

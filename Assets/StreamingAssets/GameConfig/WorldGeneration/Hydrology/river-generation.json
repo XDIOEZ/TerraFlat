@@ -25,10 +25,6 @@
           "value": 0.25
         },
         {
-          "id": "river.runoffScale",
-          "value": 0.08
-        },
-        {
           "id": "river.startFlow",
           "value": 0.14
         },
@@ -107,6 +103,38 @@
         {
           "id": "river.maxCachedRegions",
           "value": 9
+        },
+        {
+          "id": "river.polarSourceChanceMultiplier",
+          "value": 0.05
+        },
+        {
+          "id": "river.minimumVisibleCourseLength",
+          "value": 96
+        },
+        {
+          "id": "river.tributaryStartFlow",
+          "value": 0.1
+        },
+        {
+          "id": "river.minLakeCells",
+          "value": 18
+        },
+        {
+          "id": "river.maxLakeCells",
+          "value": 220
+        },
+        {
+          "id": "river.maxLakeLevelRise",
+          "value": 0.045
+        },
+        {
+          "id": "river.lakeMinFlow",
+          "value": 0.35
+        },
+        {
+          "id": "river.lakeChance",
+          "value": 0
         }
       ],
       "textParameters": []

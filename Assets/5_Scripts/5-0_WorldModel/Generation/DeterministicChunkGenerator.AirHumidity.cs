@@ -14,7 +14,8 @@ namespace FlatWorld.WorldModel
             return new ChunkGenerationRequest(source.WorldEpoch,
                 new WorldAddress(source.Address.DimensionId, source.Address.ChunkOrigin - new Int2(padding, padding)),
                 source.WorldSeed, source.RequestVersion,
-                source.Profile.WithChunkSize(source.Profile.Width + padding * 2, source.Profile.Height + padding * 2),
+                source.Profile.WithChunkSize(source.Profile.Width + padding * 2,
+                    source.Profile.Height + padding * 2, resizeClimateGrid: false),
                 source.Topology);
         }
 
@@ -139,7 +140,7 @@ namespace FlatWorld.WorldModel
                 {
                     if ((climateSamples.Count & 63) == 0)
                         cancellation.ThrowIfCancellationRequested();
-                    sample = SampleSurfaceClimate(request, settings, source.X, source.Y);
+                    sample = SampleGeographicClimate(request, settings, source.X, source.Y);
                     climateSamples.Add(source, sample);
                 }
                 return sample;

@@ -12,7 +12,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 | 目录/文件 | 职责 |
 | --- | --- |
 | `5-3_GamePlay/World/Map/` | 地块、定义、地图数据；`Definitions/` 构建运行时地块目录 |
-| `5-0_WorldModel/Generation/` | `DeterministicChunkGenerator.*`、`SurfaceBiomeClassifier`、`LakeBasinKernel` |
+| `5-0_WorldModel/Generation/` | `DeterministicChunkGenerator.*`、`SurfaceBiomeClassifier`、`LargeFreshwaterLakeKernel` |
 | `5-3_GamePlay/World/Planting/GroundTileLayerSystem.cs` | 天然深度、玩家覆盖层与恢复 |
 | `5-3_GamePlay/World/Chunk/` | 生成结果接入、自然物归属与差量 |
 
@@ -37,8 +37,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 ## 确定性气候与水文
 
 - 固定种子、规范逻辑坐标、稳定排序和生成签名共同决定结果；正式批次、单格、邻区、预览和定位共用规则。`WorldTopologyDomain` 提供纯坐标数学，物理镜像属于表现层。
-- `Precipitation/Runoff/MacroHydrology` 依次处理风携背景水汽、海洋补汽/陆地扣汽、降水扣渗透后的陆地径流与局部河槽。上游距离预算和 Region 只限制计算/缓存，不表示天然终点。
-- `LakeBasinKernel` 先求天然有界盆地和真实下坡出口，再由降水、入流、温度/面积蒸发求水位、干湖与净出流。重叠候选按原始稳定优先级竞争，抑制候选仍保留声明；普通湖与罕见大湖共用 `lake.basin.*` 二次峰值长尾。
+- `Precipitation` 按冻结的地形区块和水源距离、地理温度算两层长期降水：第一层只看海洋，`Runoff/MacroHydrology` 恢复稀疏河源、下坡汇流，`LargeFreshwaterLakeKernel` 恢复独立内陆湖岸/岛屿。第二层加入实际天然河湖有水区块，只提升最终降水，不重建河网。默认海洋 32 区块、河湖 8 区块，冷暖 -10～30℃，降水 0.04～0.9；`climate.distance.*` 可调，相邻区块 SmoothStep 过渡。
+- 河源每 3×3 宏观格组稳定选一处；海洋第一层降水扣渗透后决定水量，湖候选保留至少一半基础机会。`lake.large.*` 管独立湖泊，不做蒸发干湖；天然终点小湖由 `river.lake*` 控制，默认机会 0。主河/支流共享汇合切线和流量过渡；计算窗口、追踪预算不冒充天然终点。水文外圈覆盖河湖降水影响及区块插值，只提交核心地形。
 - `SurfaceBiomeClassifier.Resolve/ResolveRule` 按 priority、稳定编号、规则名匹配高度/摄氏温度/降水/湿度，失败读 `biome.fallback.id`。`groundTileId/wetGroundTileId/wetGroundMinimumMoisture` 控制干湿底材；沙漠还要求最低摄氏温度。
 - `biome.<规则名>.spawnChance` 在环境条件之外控制出现概率，默认 1；`biome.regions.size` 控制平滑区域尺度。独立种子的区域场校正为均匀概率，单格/区块/定位共用并支持环绕；减少沙漠概率无需改变降水门槛或仙人掌密度。
 - 地理气温由纬度底温、局部噪声、海拔修正合成；`climate.temperature.blendRadius` 以固定求和顺序平滑，归一化温度从同值派生。季节/天气只进入运行时温度。

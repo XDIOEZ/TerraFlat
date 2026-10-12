@@ -28,7 +28,6 @@ namespace FlatWorld.WorldModel
             {
                 if ((i & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
                 if (!region.Visible[i] || region.Downstream[i] < 0) continue;
-                if (region.BasinByNode[i] != null) continue;
                 int next = region.Downstream[i];
                 Int2 source = ChannelPosition(region, i);
                 Int2 target = ChannelPosition(region, next);
@@ -62,7 +61,7 @@ namespace FlatWorld.WorldModel
                     source.X + delta.x, source.Y + delta.y, 2d / 3d, amplitude);
                 bool bedEdgeDeposit = TryResolveBedEdgeDepositRange(
                     request, settings, source, target,
-                    Math.Max(region.Outflows[i], region.Flows[next]),
+                    Math.Max(region.Flows[i], region.Flows[next]),
                     out double bedEdgeDepositStart);
                 int steps = Math.Max(1, (int)Math.Ceiling(length / 0.28d));
                 double previousX = 0d;
@@ -94,7 +93,8 @@ namespace FlatWorld.WorldModel
                         continue;
                     }
                     Int2 cell = sampling.Normalize(new Int2(source.X + (int)Math.Floor(relativeX), source.Y + (int)Math.Floor(relativeY)));
-                    double flow = Lerp(region.Outflows[i], region.Flows[next], t);
+                    // 汇合处的流量缓入缓出，主支流河宽不会在节点突然变速。
+                    double flow = Lerp(region.Flows[i], region.Flows[next], Smooth(t));
                     double directionX = step == 0 ? startTangentX : relativeX - previousX;
                     double directionY = step == 0 ? startTangentY : relativeY - previousY;
                     double directionLength = Math.Sqrt(directionX * directionX +
@@ -114,7 +114,6 @@ namespace FlatWorld.WorldModel
                     previousY = relativeY;
                 }
             }
-            RenderBasinOutletCenters(request, settings, region, sampling, centers, minX, minY, maxX, maxY);
 
             var riverCells = new Dictionary<Int2, GeneratedHydrologyCell>();
             var floodplainCells = new Dictionary<Int2, double>();
@@ -122,68 +121,22 @@ namespace FlatWorld.WorldModel
             RenderMacroCenters(request, settings, sampling, centers, maximumRadius,
                 riverCells, floodplainCells, cancellationToken);
 
-            foreach (MacroBasin basin in region.Basins)
+            if (settings.RiverLakeChance > 0d)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (basin.State.IsDry) continue;
-                for (int i = 0; i < basin.Geometry.Count; i++)
+                var terminals = new Dictionary<Int2, double>();
+                for (int i = 0; i < region.Count; i++)
                 {
-                    Int2 position = basin.Geometry.Cells[i];
-                    double bottom = basin.Geometry.BottomHeights[i];
-                    if (bottom >= basin.State.WaterLevel || !ContainsHydrologyOutput(request, position)) continue;
-                    double depth = Clamp01((basin.State.WaterLevel - bottom) / Math.Max(0.000001d, settings.LakeMaxLevelRise));
-                    if (riverCells.TryGetValue(position, out GeneratedHydrologyCell existing) &&
-                        existing.Kind == GeneratedHydrologyKind.Lake && existing.SurfaceLevel >= basin.State.WaterLevel) continue;
-                    // 静态湖面不携带河流方向，盆底高于水位的格子自然保持为干地。
-                    riverCells[position] = new GeneratedHydrologyCell(GeneratedHydrologyKind.Lake, 0d, depth, basin.State.WaterLevel);
+                    if (region.Terminals[i] >= settings.RiverLakeMinFlow)
+                        terminals[region.Positions[i]] = region.Terminals[i];
                 }
+                AddHeightDrivenTerminalLakes(request, settings, sampling, terminals,
+                    riverCells, cancellationToken);
             }
             return new GeneratedHydrologyMap(riverCells, floodplainCells);
         }
 
         private static Int2 ChannelPosition(MacroHydrologyRegion region, int index) =>
-            region.BasinByNode[index]?.Geometry.Center ?? region.Positions[index];
-
-        // 保留真实地格出口路径，粗格内的短出口河也不会因压缩而消失。
-        private static void RenderBasinOutletCenters(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, MacroHydrologyRegion region,
-            HydrologySamplingContext sampling, Dictionary<Int2, ChannelCenterSample> centers,
-            int minX, int minY, int maxX, int maxY)
-        {
-            if (!settings.RiverEnabled) return;
-            var lattice = new RunoffLattice(request, settings.RiverRunoffCellSize);
-            double area = lattice.StepX * lattice.StepY;
-            var domain = request.Topology.ToDomain();
-            foreach (MacroBasin basin in region.Basins)
-            {
-                double flow = basin.State.OutletFlow / area;
-                if (!basin.Geometry.HasOutlet || flow < settings.RiverStartFlow) continue;
-                var path = new List<Int2>(basin.Geometry.OutletPath);
-                int next = region.Downstream[basin.Node];
-                if (next >= 0) path.Add(ChannelPosition(region, next));
-                if (path.Count == 1) path.Add(path[0]);
-                for (int segment = 0; segment + 1 < path.Count; segment++)
-                {
-                    Int2 from = path[segment], to = path[segment + 1];
-                    int x = ShiftNearChunk(from.X, request.Address.ChunkOrigin.X + request.Profile.Width / 2,
-                        request.Topology.IsWrapped ? request.Topology.Span.X : 0);
-                    int y = ShiftNearChunk(from.Y, request.Address.ChunkOrigin.Y + request.Profile.Height / 2,
-                        request.Topology.IsWrapped ? request.Topology.Span.Y : 0);
-                    int2 delta = domain.ShortestDelta(new int2(from.X, from.Y), new int2(to.X, to.Y));
-                    double length = Math.Sqrt(delta.x * (double)delta.x + delta.y * (double)delta.y);
-                    int steps = Math.Max(1, (int)Math.Ceiling(length / 0.4d));
-                    for (int step = 0; step <= steps; step++)
-                    {
-                        double t = step / (double)steps;
-                        double px = x + delta.x * t, py = y + delta.y * t;
-                        if (px < minX || px > maxX || py < minY || py > maxY) continue;
-                        Int2 cell = sampling.Normalize(new Int2(from.X + (int)Math.Floor(delta.x * t), from.Y + (int)Math.Floor(delta.y * t)));
-                        SetChannelCenterSample(centers, cell, new ChannelCenterSample(flow,
-                            length > 0d ? delta.x / length : 0d, length > 0d ? delta.y / length : 0d, false));
-                    }
-                }
-            }
-        }
+            region.Positions[index];
 
         /// <summary>少量偏下游宏观河段会得到一小段沉积带，出现率和长度都走确定性二次峰值分布。</summary>
         private static bool TryResolveBedEdgeDepositRange(
@@ -280,8 +233,8 @@ namespace FlatWorld.WorldModel
                 int next = region.Downstream[i];
                 if (!region.Visible[i] || next < 0) continue;
                 int current = upstream[next];
-                if (current < 0 || region.Outflows[i] > region.Outflows[current] ||
-                    region.Outflows[i] == region.Outflows[current] && CompareWorldPosition(region.Positions[i], region.Positions[current]) < 0)
+                if (current < 0 || region.Flows[i] > region.Flows[current] ||
+                    region.Flows[i] == region.Flows[current] && CompareWorldPosition(region.Positions[i], region.Positions[current]) < 0)
                     upstream[next] = i;
             }
             return upstream;
@@ -312,7 +265,14 @@ namespace FlatWorld.WorldModel
                 int2 outgoing = request.Topology.ToDomain().ShortestDelta(
                     new int2(ChannelPosition(region, target).X, ChannelPosition(region, target).Y),
                     new int2(ChannelPosition(region, following).X, ChannelPosition(region, following).Y));
-                SetChannelTangent(deltaX + outgoing.x, deltaY + outgoing.y,
+                int dominant = primaryUpstream[target];
+                int2 incoming = dominant >= 0
+                    ? request.Topology.ToDomain().ShortestDelta(
+                        new int2(ChannelPosition(region, dominant).X, ChannelPosition(region, dominant).Y),
+                        new int2(ChannelPosition(region, target).X, ChannelPosition(region, target).Y))
+                    : new int2((int)deltaX, (int)deltaY);
+                // 各支流靠近汇合点时共享主槽方向，与下游河段的起始切线保持一致。
+                SetChannelTangent(incoming.x + outgoing.x, incoming.y + outgoing.y,
                     deltaX, deltaY, length, out endX, out endY);
             }
         }
@@ -389,7 +349,7 @@ namespace FlatWorld.WorldModel
                         1d - Clamp01(distance / (radius + 0.5d));
                     double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                     SetRiverCell(riverCells, water, new GeneratedHydrologyCell(
-                        GeneratedHydrologyKind.River, sample.Flow, depth, sampling.Height(water) + depth * settings.LakeMaxLevelRise,
+                        GeneratedHydrologyKind.River, sample.Flow, depth, sampling.Height(water) + depth * settings.RiverMaxLakeLevelRise,
                         sample.DirectionX, sample.DirectionY, edgeStrength,
                         sample.BedEdgeDeposit));
                 }
@@ -399,7 +359,11 @@ namespace FlatWorld.WorldModel
         }
 
         private static int GetHydrologyOutputPadding(ChunkGenerationRequest request) =>
-            (int)Math.Ceiling(AirHumiditySettings.FromProfile(request.Profile).RadiusTiles);
+            (int)Math.Ceiling(Math.Max(AirHumiditySettings.FromProfile(request.Profile).RadiusTiles,
+                request.Profile.Settings.PrecipitationFreshwaterRadius +
+                Math.Max(request.Profile.Settings.PrecipitationChunkWidth,
+                    request.Profile.Settings.PrecipitationChunkHeight) * 2d +
+                request.Profile.Settings.PeatStoneBoundaryRadius));
 
         private static bool ContainsHydrologyOutput(ChunkGenerationRequest request, Int2 position)
         {

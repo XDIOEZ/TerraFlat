@@ -66,6 +66,9 @@ namespace FlatWorld.WorldModel
         private readonly IReadOnlyDictionary<Int2, GeneratedHydrologyCell> cells;
         private readonly IReadOnlyDictionary<Int2, double> floodplainCells;
 
+        /// <summary>外圈天然淡水只供生成期距离采样，不提交到邻区。</summary>
+        internal IEnumerable<KeyValuePair<Int2, GeneratedHydrologyCell>> WaterCells => cells;
+
         internal GeneratedHydrologyMap(
             IReadOnlyDictionary<Int2, GeneratedHydrologyCell> cells,
             IReadOnlyDictionary<Int2, double> floodplainCells)

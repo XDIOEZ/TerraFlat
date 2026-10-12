@@ -16,7 +16,9 @@ public sealed class RiverGenerationConfigCatalog
     private static readonly string[] SurfaceNumericIds =
     {
         "river.enabled", "river.hydrologyRegionSize", "river.runoffCellSize", "river.maxTraceSteps",
-        "river.infiltrationFloor", "river.runoffScale", "river.startFlow",
+        "river.infiltrationFloor", "river.startFlow",
+        "river.polarSourceChanceMultiplier", "river.minimumVisibleCourseLength", "river.tributaryStartFlow",
+        "river.minLakeCells", "river.maxLakeCells", "river.maxLakeLevelRise", "river.lakeMinFlow", "river.lakeChance",
         "river.fullWidthFlow", "river.maxWidth", "river.meanderStrength", "river.meanderScale",
         "river.floodplainStartFlow",
         "river.floodplainMaxRadius", "river.floodplainMaxSlope",
@@ -63,7 +65,7 @@ public sealed class RiverGenerationConfigCatalog
             if (!numbers.SetEquals(requiredNumbers))
                 throw new InvalidDataException($"河流生成数值参数缺失或多余：{profile.ProfileId}");
 
-            // 正式水文只有统一入口，不接受切回旧算法的文本参数。
+            // 正式水文固定使用宏观河源路径，不另设算法切换。
             if (profile.TextParameters.Count != 0)
                 throw new InvalidDataException("河流生成配置不使用文本参数。");
         }

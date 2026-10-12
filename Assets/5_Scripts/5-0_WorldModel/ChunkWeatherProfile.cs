@@ -22,18 +22,20 @@ namespace FlatWorld.WorldModel
         public readonly float WindY;
         public readonly float WindStrength;
         public readonly float TemperatureCelsius;
+        public readonly float Precipitation;
 
         public ChunkWeatherClimate(float airHumidity, float windX, float windY,
-            float windStrength, float temperatureCelsius)
+            float windStrength, float temperatureCelsius, float precipitation = 0f)
         {
             if (!Finite(airHumidity) || !Finite(windX) || !Finite(windY) ||
-                !Finite(windStrength) || !Finite(temperatureCelsius))
+                !Finite(windStrength) || !Finite(temperatureCelsius) || !Finite(precipitation))
                 throw new ArgumentOutOfRangeException(nameof(airHumidity), "区块固定气候须为有限数值。");
             AirHumidity = Math.Max(0f, Math.Min(1f, airHumidity));
             WindX = windX;
             WindY = windY;
             WindStrength = Math.Max(0f, Math.Min(1f, windStrength));
             TemperatureCelsius = temperatureCelsius;
+            Precipitation = Math.Max(0f, Math.Min(1f, precipitation));
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

@@ -107,6 +107,7 @@ public partial class ChunkWeatherProfileRecord
     public float WindY;
     public float WindStrength;
     public float TemperatureCelsius;
+    public float Precipitation;
     public WeatherElementProfileRecord[] Elements = Array.Empty<WeatherElementProfileRecord>();
 
     public static ChunkWeatherProfileRecord FromProfile(ChunkWeatherProfile profile)
@@ -125,6 +126,7 @@ public partial class ChunkWeatherProfileRecord
             WindY = profile.Climate.WindY,
             WindStrength = profile.Climate.WindStrength,
             TemperatureCelsius = profile.Climate.TemperatureCelsius,
+            Precipitation = profile.Climate.Precipitation,
             Elements = elements
         };
     }
@@ -141,7 +143,8 @@ public partial class ChunkWeatherProfileRecord
         }
 
         return new ChunkWeatherProfile(
-            new ChunkWeatherClimate(AirHumidity, WindX, WindY, WindStrength, TemperatureCelsius), elements);
+            new ChunkWeatherClimate(AirHumidity, WindX, WindY, WindStrength, TemperatureCelsius,
+                Precipitation), elements);
     }
 
     #endregion

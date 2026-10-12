@@ -154,7 +154,7 @@ namespace FlatWorld.WorldModel
                 if (biome == SurfaceBiomeKind.Snow && profile.Settings.SnowRegionsEnabled)
                     return SearchSnowRegions(minX, minY, maxX, maxY);
                 if (biome == SurfaceBiomeKind.River &&
-                    (profile.Settings.RiverEnabled || profile.Settings.LakeBasinEnabled) &&
+                    profile.Settings.RiverEnabled &&
                     SearchRiverRegions(minX, minY, maxX, maxY))
                     return true;
 
@@ -182,16 +182,13 @@ namespace FlatWorld.WorldModel
                 sampledCount++;
                 Report();
                 ChunkGenerationRequest request = Request(candidate);
-                SurfaceBiomeKind baseBiome = SampleBaseSurfaceBiome(request, profile.Settings,
-                    candidate.X, candidate.Y, out _, out _);
                 if (biome == SurfaceBiomeKind.River)
                 {
-                    if (baseBiome == SurfaceBiomeKind.Ocean) return false;
+                    if (SampleHeight(request, profile.Settings, candidate.X, candidate.Y) <
+                        profile.Settings.SeaLevel) return false;
                     return CheckRiverChunk(request);
                 }
-                if (generator.terrainDecorator == null && baseBiome != biome &&
-                    !(biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest &&
-                      baseBiome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest)) return false;
+                // 河湖第二层可以改变群系，定位不能用海洋第一层提前排除候选。
                 return CheckFinalCell(request, Map(request), candidate);
             }
 

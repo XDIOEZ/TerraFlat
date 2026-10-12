@@ -7,28 +7,16 @@ namespace FlatWorld.WorldModel
 {
     public sealed partial class DeterministicChunkGenerator
     {
-        #region 固定世界格网与湖盆节点
-
-        private sealed class MacroBasin
-        {
-            public LakeBasinKernel.Basin Geometry;
-            public LakeBasinKernel.State State;
-            public int Node;
-            public double Precipitation;
-            public double Celsius;
-            public readonly List<int> SinkNodes = new();
-        }
+        #region 固定世界格网与稀疏河源
 
         private sealed class MacroHydrologyRegion
         {
             public Int2[] Positions;
             public double[] Heights;
             public double[] Flows;
-            public double[] Outflows;
+            public double[] Terminals;
             public int[] Downstream;
             public bool[] Visible;
-            public MacroBasin[] Basins;
-            public MacroBasin[] BasinByNode;
             public int Count => Positions.Length;
         }
 
@@ -70,24 +58,24 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
-        #region 全陆地径流与固定范围累积
+        #region 稀疏河源与下坡汇流
 
+        // 恢复旧版每组一个河源，海洋距离降水只计算河源水量，不参与湖盆蒸发闭环。
         private static MacroHydrologyRegion BuildMacroHydrologyRegion(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, CancellationToken cancellationToken)
         {
             var sampling = new HydrologySamplingContext(request, settings);
             var lattice = new RunoffLattice(request, settings.RiverRunoffCellSize);
-            int budget = Math.Min(64, Math.Max(1, (int)Math.Ceiling(settings.RiverMaxTraceSteps / Math.Min(lattice.StepX, lattice.StepY))));
-            // 外圈同时覆盖最长天然出口、出口盆的直接竞争证据及上游预算，不能只覆盖湖面半径。
-            int padding = (int)Math.Ceiling(budget * Math.Max(lattice.StepX, lattice.StepY) +
-                settings.LakeRareMaxRadius * 8d + Math.Max(lattice.StepX, lattice.StepY) * 4d +
-                AirHumiditySettings.FromProfile(request.Profile).RadiusTiles + settings.RiverMaxWidth + settings.RiverFloodplainMaxRadius);
+            int maxSteps = Math.Max(1, (int)Math.Ceiling(
+                settings.RiverMaxTraceSteps / Math.Min(lattice.StepX, lattice.StepY)));
+            int padding = (int)Math.Ceiling(maxSteps * 2d * Math.Max(lattice.StepX, lattice.StepY) +
+                Math.Max(lattice.StepX, lattice.StepY)) + settings.RiverMaxWidth +
+                settings.RiverFloodplainMaxRadius + GetHydrologyOutputPadding(request);
             int minX = (int)Math.Floor((request.Address.ChunkOrigin.X - padding - (double)lattice.AnchorX) / lattice.StepX);
             int minY = (int)Math.Floor((request.Address.ChunkOrigin.Y - padding - (double)lattice.AnchorY) / lattice.StepY);
             int maxX = (int)Math.Floor((request.Address.ChunkOrigin.X + request.Profile.Width - 1 + padding - (double)lattice.AnchorX) / lattice.StepX);
             int maxY = (int)Math.Floor((request.Address.ChunkOrigin.Y + request.Profile.Height - 1 + padding - (double)lattice.AnchorY) / lattice.StepY);
             var positions = new List<Int2>();
-            var heights = new List<double>();
             var byPosition = new Dictionary<Int2, int>();
             for (int y = minY; y <= maxY; y++)
             for (int x = minX; x <= maxX; x++)
@@ -97,20 +85,32 @@ namespace FlatWorld.WorldModel
                 if (byPosition.ContainsKey(position)) continue;
                 byPosition.Add(position, positions.Count);
                 positions.Add(position);
-                heights.Add(sampling.Height(position));
             }
+            // 固定坐标排序保证环绕接缝两侧按同一顺序累加上游流量。
             positions.Sort(CompareWorldPosition);
-            heights.Clear();
             byPosition.Clear();
-            foreach (Int2 position in positions)
-            {
-                byPosition.Add(position, heights.Count);
-                heights.Add(sampling.Height(position));
-            }
-
             int count = positions.Count;
+            var heights = new double[count];
+            var runoff = new double[count];
             var downstream = new int[count];
-            var sinks = new List<Int2>();
+            var flows = new double[count];
+            var terminals = new double[count];
+            var visible = new bool[count];
+            for (int i = 0; i < count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Int2 position = positions[i];
+                byPosition.Add(position, i);
+                heights[i] = sampling.Height(position);
+                if (settings.RiverEnabled && heights[i] > settings.SeaLevel &&
+                    ShouldTraceRunoffSource(request.WorldSeed, lattice.Grid(position)) &&
+                    ShouldGeneratePolarRiverSource(request, settings, position))
+                {
+                    double precipitation = sampling.Precipitation(position);
+                    runoff[i] = Clamp01((precipitation - settings.RiverInfiltrationFloor) /
+                        Math.Max(0.0001d, 1d - settings.RiverInfiltrationFloor));
+                }
+            }
             for (int i = 0; i < count; i++)
             {
                 if ((i & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
@@ -125,179 +125,77 @@ namespace FlatWorld.WorldModel
                     if (next == positions[i]) continue;
                     double drop = heights[i] - sampling.Height(next);
                     if (drop <= DownhillEpsilon) continue;
-                    double score = drop * (offset.X != 0 && offset.Y != 0 ? 0.7071067811865476d : 1d);
+                    double variation = 0.85d + Hash01(request.WorldSeed, next.X, next.Y,
+                        0x94d049bbu) * 0.3d;
+                    double score = drop * (offset.X != 0 && offset.Y != 0 ? 0.7071067811865476d : 1d) * variation;
                     if (score > bestScore || score == bestScore && CompareWorldPosition(next, receiver) < 0)
                     {
                         bestScore = score;
                         receiver = next;
                     }
                 }
-                // 完整八邻域决定流向；窗口外的接收点只是未缓存，不能冒充天然低洼终点。
+                // 窗口外的更低接收点只是没有缓存，不能被当成天然终点扩湖。
                 if (bestScore > 0d)
-                    downstream[i] = byPosition.TryGetValue(receiver, out int receiverIndex) ? receiverIndex : -2;
-                else if (settings.LakeBasinEnabled)
-                    sinks.Add(positions[i]);
+                    downstream[i] = byPosition.TryGetValue(receiver, out int nextIndex) ? nextIndex : -2;
             }
-
-            var basins = new List<MacroBasin>();
-            var basinCenters = new Dictionary<Int2, MacroBasin>();
-            foreach (Int2 sink in sinks)
+            for (int source = 0; source < count; source++)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                LakeBasinKernel.Basin basin = LakeBasinKernel.Build(request, settings, sink, sampling.Height, cancellationToken);
-                if (basin == null) continue;
-                if (basinCenters.TryGetValue(basin.Center, out MacroBasin existingBasin))
+                if ((source & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
+                double contribution = runoff[source];
+                if (contribution <= 0.0001d) continue;
+                int current = source;
+                for (int step = 0; step <= maxSteps && current >= 0; step++)
                 {
-                    existingBasin.SinkNodes.Add(byPosition[sink]);
-                    continue;
-                }
-                Int2 grid = lattice.Grid(basin.Center);
-                if (!byPosition.TryGetValue(lattice.Position(grid.X, grid.Y), out int node)) continue;
-                var candidate = new MacroBasin { Geometry = basin, Node = node };
-                candidate.SinkNodes.Add(byPosition[sink]);
-                basins.Add(candidate);
-                basinCenters.Add(basin.Center, candidate);
-            }
-            basins.Sort((a, b) =>
-            {
-                int height = a.Geometry.MinimumHeight.CompareTo(b.Geometry.MinimumHeight);
-                return height != 0 ? height : CompareWorldPosition(a.Geometry.Center, b.Geometry.Center);
-            });
-            var basinByNode = new MacroBasin[count];
-            var candidateByNode = new MacroBasin[count];
-            var candidateByTile = new Dictionary<Int2, MacroBasin>();
-            var blockedBasins = new HashSet<MacroBasin>();
-            // 原始候选直接竞争固定邻域，被抑制的候选也保留声明，避免接受顺序沿重叠链传播。
-            foreach (MacroBasin basin in basins)
-            {
-                ClaimBasinNode(basin, basin.Node);
-                foreach (int sink in basin.SinkNodes) ClaimBasinNode(basin, sink);
-                foreach (Int2 tile in basin.Geometry.Cells)
-                {
-                    if (candidateByTile.TryGetValue(tile, out MacroBasin owner))
-                    {
-                        if (!ReferenceEquals(owner, basin)) blockedBasins.Add(basin);
-                    }
-                    else candidateByTile.Add(tile, basin);
-                    Int2 grid = lattice.Grid(tile);
-                    if (byPosition.TryGetValue(lattice.Position(grid.X, grid.Y), out int member) &&
-                        basin.Geometry.TryGetBottomHeight(positions[member], out _))
-                        ClaimBasinNode(basin, member);
+                    if (heights[current] <= settings.SeaLevel) break;
+                    flows[current] += contribution;
+                    int next = downstream[current];
+                    if (next == -1) terminals[current] += contribution;
+                    if (step == maxSteps || next < 0) break;
+                    current = next;
                 }
             }
-
-            void ClaimBasinNode(MacroBasin basin, int node)
-            {
-                MacroBasin owner = candidateByNode[node];
-                if (owner == null) candidateByNode[node] = basin;
-                else if (!ReferenceEquals(owner, basin)) blockedBasins.Add(basin);
-            }
-
-            var basinTileCounts = new int[count];
-            var countedBasinTiles = new HashSet<Int2>();
-            var accepted = new List<MacroBasin>();
-            foreach (MacroBasin basin in basins)
-            {
-                if (blockedBasins.Contains(basin)) continue;
-                basinByNode[basin.Node] = basin;
-                accepted.Add(basin);
-                foreach (int sink in basin.SinkNodes)
-                {
-                    if (sink == basin.Node) continue;
-                    downstream[sink] = basin.Node;
-                }
-                foreach (Int2 tile in basin.Geometry.Cells)
-                {
-                    Int2 grid = lattice.Grid(tile);
-                    if (!byPosition.TryGetValue(lattice.Position(grid.X, grid.Y), out int member)) continue;
-                    if (countedBasinTiles.Add(tile)) basinTileCounts[member]++;
-                    if (member == basin.Node ||
-                        !basin.Geometry.TryGetBottomHeight(positions[member], out _)) continue;
-                    downstream[member] = basin.Node;
-                }
-                downstream[basin.Node] = -1;
-                if (basin.Geometry.HasOutlet)
-                {
-                    Int2 grid = lattice.Grid(basin.Geometry.OutletEndpoint);
-                    Int2 receiver = default;
-                    double bestDistance = double.MaxValue;
-                    bool found = false;
-                    for (int y = -1; y <= 1; y++)
-                    for (int x = -1; x <= 1; x++)
-                    {
-                        Int2 candidate = lattice.Position(grid.X + x, grid.Y + y);
-                        if (sampling.Height(candidate) >= basin.Geometry.MinimumHeight - DownhillEpsilon ||
-                            basin.Geometry.TryGetBottomHeight(candidate, out _)) continue;
-                        int2 delta = request.Topology.ToDomain().ShortestDelta(
-                            new int2(candidate.X, candidate.Y), new int2(basin.Geometry.OutletEndpoint.X, basin.Geometry.OutletEndpoint.Y));
-                        double distance = delta.x * (double)delta.x + delta.y * (double)delta.y;
-                        if (!found || distance < bestDistance || distance == bestDistance && CompareWorldPosition(candidate, receiver) < 0)
-                        {
-                            found = true;
-                            bestDistance = distance;
-                            receiver = candidate;
-                        }
-                    }
-                    // 宏网只接更低的接收节点，避免粗格压缩把天然外流重新接回本盆。
-                    if (found && receiver != positions[basin.Node])
-                        downstream[basin.Node] = byPosition.TryGetValue(receiver, out int outlet) ? outlet : -2;
-                }
-            }
-
-            double area = lattice.StepX * lattice.StepY;
-            var runoff = new double[count];
+            int minimumCourseNodes = Math.Max(1, (int)Math.Ceiling(
+                settings.RiverMinimumVisibleCourseLength / Math.Min(lattice.StepX, lattice.StepY)));
             for (int i = 0; i < count; i++)
             {
-                if ((i & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
-                if (heights[i] <= settings.SeaLevel) continue;
-                double precipitation = sampling.Precipitation(positions[i]);
-                runoff[i] = Math.Max(0d, precipitation - settings.RiverInfiltrationFloor) /
-                    Math.Max(0.0001d, 1d - settings.RiverInfiltrationFloor) * settings.RiverRunoffScale;
-                runoff[i] *= Math.Max(0d, 1d - basinTileCounts[i] / area);
-            }
-            foreach (MacroBasin basin in accepted)
-            {
-                double precipitation = 0d;
-                foreach (Int2 cell in basin.Geometry.Cells) precipitation += sampling.Precipitation(cell);
-                basin.Precipitation = precipitation / Math.Max(1, basin.Geometry.Count);
-                basin.Celsius = SampleGeographicClimate(request, settings, basin.Geometry.Center.X, basin.Geometry.Center.Y).TemperatureCelsius;
-            }
-
-            var costs = new int[count];
-            for (int i = 0; i < count; i++)
-                costs[i] = downstream[i] >= 0 ? lattice.Cost(positions[i], positions[downstream[i]]) : 1;
-            var transferred = new double[budget + 1][];
-            double[] flows = null;
-            // 参考 Azgaar 全陆地产流；按固定传播预算求 F=本地径流+上游出流，不用窗口边缘造终点。
-            for (int distance = 0; distance <= budget; distance++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                flows = (double[])runoff.Clone();
-                for (int source = 0; source < count; source++)
+                if (flows[i] < settings.RiverStartFlow) continue;
+                int current = i;
+                int length = 0;
+                while (current >= 0 && length < minimumCourseNodes)
                 {
-                    int target = downstream[source];
-                    int previous = distance - costs[source];
-                    if (target >= 0 && previous >= 0) flows[target] += transferred[previous][source];
+                    current = downstream[current];
+                    length++;
                 }
-                var next = new double[count];
-                for (int i = 0; i < count; i++)
-                {
-                    MacroBasin basin = basinByNode[i];
-                    if (basin == null) { next[i] = flows[i]; continue; }
-                    basin.State = LakeBasinKernel.ResolveState(basin.Geometry, flows[i] * area,
-                        basin.Precipitation, basin.Celsius, settings);
-                    next[i] = downstream[i] >= 0 ? basin.State.OutletFlow / area : 0d;
-                }
-                transferred[distance] = next;
+                visible[i] = length >= minimumCourseNodes && current >= 0;
             }
-            var visible = new bool[count];
+            // 成熟主河延续到真实终点，河口最后一段不能再被最短河程门槛隐藏。
+            bool[] mainVisible = (bool[])visible.Clone();
             for (int i = 0; i < count; i++)
-                visible[i] = settings.RiverEnabled && transferred[budget][i] >= settings.RiverStartFlow && downstream[i] >= 0;
+            {
+                if (!mainVisible[i]) continue;
+                int current = downstream[i];
+                for (int step = 0; current >= 0 && step <= maxSteps; step++)
+                {
+                    if (flows[current] <= 0.0001d) break;
+                    visible[current] = heights[current] > settings.SeaLevel && downstream[current] >= 0;
+                    current = downstream[current];
+                }
+            }
+            for (int i = 0; i < count; i++)
+            {
+                if (visible[i] || flows[i] < settings.RiverTributaryStartFlow) continue;
+                int current = downstream[i];
+                for (int step = 0; current >= 0 && step < maxSteps; step++)
+                {
+                    // 支流只接入原始成熟主河，补显节点不能反复传播并重置距离预算。
+                    if (mainVisible[current]) { visible[i] = true; break; }
+                    current = downstream[current];
+                }
+            }
             return new MacroHydrologyRegion
             {
-                Positions = positions.ToArray(), Heights = heights.ToArray(), Flows = flows,
-                Outflows = transferred[budget], Downstream = downstream, Visible = visible,
-                Basins = accepted.ToArray(), BasinByNode = basinByNode
+                Positions = positions.ToArray(), Heights = heights, Flows = flows,
+                Terminals = terminals, Downstream = downstream, Visible = visible
             };
         }
 

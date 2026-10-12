@@ -9,36 +9,39 @@
   "Elements": [
     {
       "Id": "rain",
-      "HumidityWeight": 1.0,
+      "HumidityWeight": 0,
       "WindWeight": 0.0,
       "MinimumProbability": 0.0,
       "MaximumProbability": 0.16,
       "MinimumIntensity": 0.1,
       "MaximumIntensity": 0.85,
       "MinimumDurationSeconds": 45.0,
-      "MaximumDurationSeconds": 180.0
+      "MaximumDurationSeconds": 180.0,
+      "PrecipitationWeight": 1.0
     },
     {
       "Id": "wind",
-      "HumidityWeight": 0.0,
+      "HumidityWeight": 0,
       "WindWeight": 1.0,
       "MinimumProbability": 0.0,
       "MaximumProbability": 0.25,
       "MinimumIntensity": 0.1,
       "MaximumIntensity": 1.0,
       "MinimumDurationSeconds": 45.0,
-      "MaximumDurationSeconds": 180.0
+      "MaximumDurationSeconds": 180.0,
+      "PrecipitationWeight": 0.0
     },
     {
       "Id": "thunder",
-      "HumidityWeight": 0.7,
+      "HumidityWeight": 0,
       "WindWeight": 0.3,
       "MinimumProbability": 0.0,
       "MaximumProbability": 0.015,
       "MinimumIntensity": 0.15,
       "MaximumIntensity": 0.8,
       "MinimumDurationSeconds": 15.0,
-      "MaximumDurationSeconds": 60.0
+      "MaximumDurationSeconds": 60.0,
+      "PrecipitationWeight": 0.7
     }
   ]
 }
