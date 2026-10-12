@@ -25,7 +25,7 @@
       "MinimumProbability": 0.0,
       "MaximumProbability": 0.25,
       "MinimumIntensity": 0.1,
-      "MaximumIntensity": 0.85,
+      "MaximumIntensity": 1.0,
       "MinimumDurationSeconds": 45.0,
       "MaximumDurationSeconds": 180.0
     },

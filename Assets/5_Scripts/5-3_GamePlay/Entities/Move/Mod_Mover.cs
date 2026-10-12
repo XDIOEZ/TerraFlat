@@ -563,8 +563,13 @@ public partial class Mod_Mover : Module
         Vector2 velocity = inputController?.IsGameplayInputLocked == true
             ? Vector2.zero : ResolveWaterCurrentVelocity();
         if (item is Player player && player.IsLocalProfile && !item.DestructionHandled &&
-            rb != null && rb.simulated && CarrierSource == null && item.gameObject.scene.name == MachineWorld.WorldKey)
-            velocity += MachineWorld.SampleConveyorVelocity(rb.position, Time.fixedDeltaTime);
+            rb != null && rb.simulated && CarrierSource == null && !spaceMotionOwned)
+        {
+            // 风力叠加到被动速度，站立或输入锁定时仍由刚体碰撞处理推动。
+            velocity += WorldMotionSystem.SamplePlayerWindVelocity(rb.position);
+            if (item.gameObject.scene.name == MachineWorld.WorldKey)
+                velocity += MachineWorld.SampleConveyorVelocity(rb.position, Time.fixedDeltaTime);
+        }
         return velocity;
     }
     #endregion

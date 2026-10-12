@@ -75,7 +75,7 @@ namespace FlatWorld.WorldModel
             {
                 Id = WeatherElementIds.Wind, HumidityWeight = 0f, WindWeight = 1f,
                 MinimumProbability = 0f, MaximumProbability = 0.25f,
-                MinimumIntensity = 0.1f, MaximumIntensity = 0.85f,
+                MinimumIntensity = 0.1f, MaximumIntensity = 1f,
                 MinimumDurationSeconds = 45f, MaximumDurationSeconds = 180f
             },
             new WeatherElementRule

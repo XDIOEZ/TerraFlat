@@ -25,6 +25,17 @@ public static class WorldMotionSystem
             : Mathf.Clamp01(current.Flow);
         return current.Direction * (speed * strength);
     }
+
+    /// <summary>按玩家实际位置读取风向与风力，禁用天气的维度没有风力推动。</summary>
+    public static Vector2 SamplePlayerWindVelocity(Vector2 position)
+    {
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        if (weather == null || !weather.TryGetWeatherAt(WorldLocalPresentation.ToLogical(position), out var sample))
+            return Vector2.zero;
+
+        float speed = WindEnvironmentRules.ResolvePlayerPushSpeed(sample.WindStrength);
+        return new Vector2(sample.WindX, sample.WindY).normalized * speed;
+    }
     #endregion
 
     #region 主动推动意图
