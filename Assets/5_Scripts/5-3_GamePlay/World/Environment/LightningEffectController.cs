@@ -18,7 +18,7 @@ public sealed class LightningEffectController : MonoBehaviour
     private static readonly int ModeId = Shader.PropertyToID("_Mode");
     [SerializeField, Min(0.01f)] private float flashDurationSeconds = 0.16f;
     [SerializeField, Range(0f, 1f)] private float maximumFlashOpacity = 0.3f;
-    [SerializeField, Min(1f)] private float visibleRadius = 128f;
+    [SerializeField, Min(1f)] private float visibleRadius = 64f;
     [SerializeField, Min(0f)] private float fullStrengthRadius = 8f;
     [SerializeField, Min(0.05f)] private float boltDurationSeconds = 0.28f;
     [SerializeField, Min(1f)] private float boltHeight = 12f;
