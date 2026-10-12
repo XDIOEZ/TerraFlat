@@ -12,9 +12,10 @@ Shader "Hidden/FlatWorld/BodyTraumaBlur"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
             float _Radius;
+            float2 _SourceTexelSize;
             half4 Frag(Varyings input) : SV_Target
             {
-                float2 offset = _Radius * _BlitTexture_TexelSize.xy;
+                float2 offset = _Radius * _SourceTexelSize;
                 half4 color = 0;
                 for (int row = -1; row <= 1; row++)
                     for (int column = -1; column <= 1; column++)

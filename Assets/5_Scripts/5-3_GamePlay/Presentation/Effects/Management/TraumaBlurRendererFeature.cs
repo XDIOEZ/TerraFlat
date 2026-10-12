@@ -30,6 +30,7 @@ public sealed class TraumaBlurRendererFeature : ScriptableRendererFeature
 
     private sealed class BlurPass : ScriptableRenderPass
     {
+        private static readonly int SourceTexelSizeId = Shader.PropertyToID("_SourceTexelSize");
         private RTHandle temporary;
         private Material material;
         private float radius;
@@ -47,6 +48,11 @@ public sealed class TraumaBlurRendererFeature : ScriptableRendererFeature
             var source = renderingData.cameraData.renderer.cameraColorTargetHandle;
             var cmd = CommandBufferPool.Get("Body trauma blur");
             material.SetFloat("_Radius", radius);
+            // 显式传入源纹理像素尺寸，避免依赖当前 URP Blit 头文件未提供的变量。
+            var descriptor = renderingData.cameraData.cameraTargetDescriptor;
+            int sourceWidth = Mathf.Max(1, source.rt != null ? source.rt.width : descriptor.width);
+            int sourceHeight = Mathf.Max(1, source.rt != null ? source.rt.height : descriptor.height);
+            material.SetVector(SourceTexelSizeId, new Vector4(1f / sourceWidth, 1f / sourceHeight, 0f, 0f));
             Blitter.BlitCameraTexture(cmd, source, temporary, material, 0);
             Blitter.BlitCameraTexture(cmd, temporary, source);
             context.ExecuteCommandBuffer(cmd);
