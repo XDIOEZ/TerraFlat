@@ -45,7 +45,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 - Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，Blocking Tilemap 仅留碰撞；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。
 - 玩家/GO AI 用 SpriteRenderer 与行网格同 Player Layer/Order；行中心排序有半格近似，真实脚点仍用于几何/遮挡。草/花/阴影 BRG 只能在自身排序域排序。
-- 草/花共用 ChunkTilemapRenderer Owner，以 VisualLayer/单格槽隔离；解绑只清自身槽，重建事件重提交。`sorting.batchProfiles` 是排序配置真源，草图集 Sprite 跨 Chunk 共享。花初绑一次扫 Placements，避免逐点全表查询。
+- 草/花共用 ChunkTilemapRenderer Owner，以 VisualLayer/单格槽隔离；提交确认后登记缓存，解绑清自身整个图层并合并删除。`IRecoverableChunkViewRenderer` 在窗口刷新核对权威数据和真实实例，Owner 重建从权威数据恢复，不用旧可见缓存。`sorting.batchProfiles` 是排序配置真源，草图集 Sprite 跨 Chunk 共享。花初绑一次扫 Placements，避免逐点全表查询。
 - 世界 Fire 是独立玩法层，表现走 Y 行网格/GPU 图集翻帧；实体燃烧不写火格。地面积雪走地形光照 Mesh，墙冠用独立 Y 行网格，二者低于 Player。
 - `ChunkNaturalItemRenderer` 从所属 View 找 Owner，GUID/部件号标主体，太阳阴影用独立负槽；共用 `WorldEntityRuntime`。解绑先保存并撤表现/导航，最后释放世界。
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。

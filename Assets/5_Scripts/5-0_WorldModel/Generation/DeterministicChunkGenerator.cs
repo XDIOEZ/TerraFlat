@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 74;
+        public const int CurrentGenerationSignature = 75;
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
@@ -981,23 +981,24 @@ namespace FlatWorld.WorldModel
             if (snowDepth > 0f && climate.IsPolarBand)
                 snowDepth = ResolvePolarSnowDepth(temperatureCelsius);
 
-            // 草先过较宽松的气候门槛，再由湿度决定局部密度；全程只依赖种子和环境层。
-            bool snowSurface = biome == SurfaceBiomeKind.Snow &&
-                               snowDepth > 0f &&
-                               groundTileId == settings.GroundTileId;
+            // 降水只连续调稀密，底材能力和摄氏温度决定资格，避免气候标尺变动清空整片草地。
+            bool snowSurface = snowDepth > 0f;
             double grassDensity = snowSurface
                 ? settings.GrassDensity * settings.SnowGrassDensityMultiplier
                 : settings.GrassDensity;
+            double rainfallDensity = settings.GrassDryDensityMultiplier +
+                (1d - settings.GrassDryDensityMultiplier) *
+                Clamp01(precipitation / settings.GrassRainfallForFullDensity);
             bool grassClimateSuitable =
-                temperature >= settings.GrassMinimumTemperature &&
-                temperature <= settings.GrassMaximumTemperature &&
-                precipitation >= settings.GrassMinimumPrecipitation &&
+                temperatureCelsius >= settings.GrassMinimumCelsius &&
+                temperatureCelsius <= settings.GrassMaximumCelsius &&
                 height <= settings.GrassMaximumHeight;
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
-                         groundTileId == settings.GroundTileId &&
+                         (groundTileId == settings.GroundTileId || settings.IsNaturalPlantableGround(groundTileId)) &&
+                         initialLiquidDepth <= 0f &&
                          grassClimateSuitable &&
                          Hash01(request.WorldSeed, worldX, worldY, 0x165667b1u) <
-                         grassDensity * (0.55d + moisture * 0.75d);
+                         grassDensity * rainfallDensity * (0.55d + moisture * 0.75d);
             return new SurfaceCellOutput
             {
                 Cell = new TerrainCell(groundTileId, 0, 0, biomeId,

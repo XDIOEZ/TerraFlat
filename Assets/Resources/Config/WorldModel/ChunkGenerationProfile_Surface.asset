@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 74
+  generationSignature: 75
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -223,12 +223,14 @@ MonoBehaviour:
     Value: 2.5
   - Id: grass.density
     Value: 0.24
-  - Id: grass.minimumTemperature
+  - Id: grass.minimumCelsius
+    Value: -10
+  - Id: grass.maximumCelsius
+    Value: 50
+  - Id: grass.rainfallForFullDensity
     Value: 0.15
-  - Id: grass.maximumTemperature
-    Value: 0.9
-  - Id: grass.minimumPrecipitation
-    Value: 0.15
+  - Id: grass.dryDensityMultiplier
+    Value: 0.35
   - Id: grass.maximumHeight
     Value: 0.72
   - Id: biome.snow.grassDensityMultiplier

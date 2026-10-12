@@ -76,15 +76,16 @@ public sealed class ChunkView : MonoBehaviour
     {
         if (chunk == null || !presentationComplete)
             return false;
-        for (int i = 0; i < renderers.Count; i++)
-        {
-            if (renderers[i] is ChunkTilemapRenderer tilemapRenderer)
-                return tilemapRenderer.RepairBatchPresentationIfNeeded();
-        }
+        if (terrainRenderer == null || renderers.Count == 0)
+            CacheRenderers();
+        if (terrainRenderer == null || !terrainRenderer.RepairBatchPresentationIfNeeded())
+            return false;
 
-        // Editor 脚本热重载可能清掉接口缓存，但场景组件仍存在；按组件重新找一次即可自愈。
-        ChunkTilemapRenderer fallback = GetComponentInChildren<ChunkTilemapRenderer>(true);
-        return fallback != null && fallback.RepairBatchPresentationIfNeeded();
+        bool complete = true;
+        for (int i = 0; i < renderers.Count; i++)
+            if (renderers[i] is IRecoverableChunkViewRenderer recoverable)
+                complete &= recoverable.RepairPresentationIfNeeded(chunk);
+        return complete;
     }
 
     /// <summary>区块所需表现组件由 Prefab 明确装配，避免流送时动态添加脚本组件。</summary>

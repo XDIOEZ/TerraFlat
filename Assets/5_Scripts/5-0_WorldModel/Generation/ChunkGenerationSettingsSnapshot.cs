@@ -532,13 +532,13 @@ namespace FlatWorld.WorldModel
             LavaLakeShoreWidth = ScaleDistance(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d),
                 WorldSpatialDistanceScale, 0.25d, 24d);
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
-            GrassMinimumTemperature = Clamp01(
-                GetDouble(numbers, "grass.minimumTemperature", 0.15d));
-            GrassMaximumTemperature = Math.Max(
-                GrassMinimumTemperature,
-                Clamp01(GetDouble(numbers, "grass.maximumTemperature", 0.9d)));
-            GrassMinimumPrecipitation = Clamp01(
-                GetDouble(numbers, "grass.minimumPrecipitation", 0.15d));
+            GrassMinimumCelsius = Finite(GetDouble(numbers, "grass.minimumCelsius", -10d), -10d);
+            GrassMaximumCelsius = Math.Max(GrassMinimumCelsius,
+                Finite(GetDouble(numbers, "grass.maximumCelsius", 50d), 50d));
+            GrassRainfallForFullDensity = Math.Max(0.0001d,
+                Clamp01(GetDouble(numbers, "grass.rainfallForFullDensity", 0.15d)));
+            GrassDryDensityMultiplier = Clamp01(
+                GetDouble(numbers, "grass.dryDensityMultiplier", 0.35d));
             GrassMaximumHeight = Clamp01(
                 GetDouble(numbers, "grass.maximumHeight", MountainLevel));
             StructureEnabled = GetBool(numbers, "structure.enabled", true);
@@ -926,11 +926,13 @@ namespace FlatWorld.WorldModel
         public int RiverMaxCachedRegions { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>
         public double GrassDensity { get; }
-        /// <summary>草的宽松气候下限，避免极寒区域继续生成普通草。</summary>
-        public double GrassMinimumTemperature { get; }
-        public double GrassMaximumTemperature { get; }
-        /// <summary>低于该降水值时不生成草，区间内仍由湿度继续调节密度。</summary>
-        public double GrassMinimumPrecipitation { get; }
+        /// <summary>草的摄氏温度下限，不受归一化气候标尺变化影响。</summary>
+        public double GrassMinimumCelsius { get; }
+        public double GrassMaximumCelsius { get; }
+        /// <summary>降水达到此值时恢复完整密度，更干燥时连续变稀。</summary>
+        public double GrassRainfallForFullDensity { get; }
+        /// <summary>适合生长的干燥地面保留的密度比例，零降水也不会突然清空草层。</summary>
+        public double GrassDryDensityMultiplier { get; }
         /// <summary>草允许出现的最高归一化地形高度。</summary>
         public double GrassMaximumHeight { get; }
         /// <summary>是否生成遗迹等结构；同样的种子会得到同样的位置。</summary>

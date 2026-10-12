@@ -883,20 +883,20 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     }
 
     /// <summary>向地形 Owner 提交无地块高度语义的扩展表现，供草花等区块图层共享裁剪与批次。</summary>
-    internal void SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
+    internal bool SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
         Sprite sprite, Material sourceMaterial, Matrix4x4 localToWorld, Color tint)
         => SetLayerVisual(layer, x, y, sprite, sourceMaterial, localToWorld, tint,
             Vector4.zero, Vector4.zero);
 
     /// <summary>带实例动画参数的区块表现入口；共享材质无需逐节点复制。</summary>
-    internal void SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
+    internal bool SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
         Sprite sprite, Material sourceMaterial, Matrix4x4 localToWorld, Color tint,
         Vector4 animation, Vector4 textureRegion)
         => SetLayerVisual(layer, x, y, sprite, sourceMaterial, localToWorld, tint,
             animation, textureRegion, null);
 
     /// <summary>带透明深度排序锚点的扩展表现；用于需要按世界 Y 轴动态排序的 BRG 实例。</summary>
-    internal void SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
+    internal bool SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
         Sprite sprite, Material sourceMaterial, Matrix4x4 localToWorld, Color tint,
         Vector4 animation, Vector4 textureRegion, Vector3? sortingPosition)
     {
@@ -911,7 +911,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
             ? new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData,
                 sortingPosition.Value)
             : new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData);
-        ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
+        return ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
             visual);
     }
 

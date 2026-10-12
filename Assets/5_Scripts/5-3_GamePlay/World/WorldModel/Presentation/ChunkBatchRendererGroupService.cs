@@ -138,12 +138,20 @@ internal static class ChunkBatchRendererGroupService
         ReleaseBackend(false);
     }
 
-    internal static void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
+    internal static bool SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
     {
         // 只有 RegisterOwner 能创建后端。增量提交不能借 SetVisual 偷偷复活后端，
         // 否则一次脏格刷新就可能制造“只登记了局部实例”的伪完整 Owner。
-        backend?.SetVisual(owner, slotKey, visual);
+        return backend?.SetVisual(owner, slotKey, visual) == true;
     }
+
+    /// <summary>按真实后端实例核对扩展图层，避免只相信表现器自己的提交缓存。</summary>
+    internal static int GetOwnerLayerVisualCount(ChunkTilemapRenderer owner, VisualLayer layer)
+        => owner != null && backend != null ? backend.GetOwnerLayerVisualCount(owner, layer) : 0;
+
+    /// <summary>恢复时清空整个图层，包括已经丢失本地索引的残留实例。</summary>
+    internal static void ClearOwnerLayer(ChunkTilemapRenderer owner, VisualLayer layer)
+        => backend?.ClearOwnerLayer(owner, layer);
 
     internal static void ClearVisual(ChunkTilemapRenderer owner, int slotKey)
     {
@@ -454,12 +462,54 @@ internal static class ChunkBatchRendererGroupService
             visibleInstanceListsDirty = true;
         }
 
-        public void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
+        public int GetOwnerLayerVisualCount(ChunkTilemapRenderer owner, VisualLayer layer)
+        {
+            lock (syncRoot)
+            {
+                if (!ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
+                    return 0;
+                int count = 0;
+                foreach (InstanceHandle handle in handles.Values)
+                    if (handle.Batch.Key.Layer == layer) count++;
+                return count;
+            }
+        }
+
+        public void ClearOwnerLayer(ChunkTilemapRenderer owner, VisualLayer layer)
+        {
+            if (owner == null) return;
+            lock (syncRoot)
+            {
+                if (!ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
+                    return;
+                var slots = new List<int>();
+                var removalBatches = new HashSet<TileBatch>();
+                foreach (KeyValuePair<int, InstanceHandle> entry in handles)
+                    if (entry.Value.Batch.Key.Layer == layer)
+                    {
+                        slots.Add(entry.Key);
+                        if (removalBatches.Add(entry.Value.Batch))
+                            entry.Value.Batch.BeginBulkRemoval();
+                    }
+                try
+                {
+                    for (int i = 0; i < slots.Count; i++)
+                        RemoveHandle(owner, slots[i], handles[slots[i]], handles);
+                }
+                finally
+                {
+                    foreach (TileBatch batch in removalBatches)
+                        batch.EndBulkRemoval();
+                }
+            }
+        }
+
+        public bool SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
         {
             if (owner == null || visual.Sprite == null || visual.SourceMaterial == null)
             {
                 ClearVisual(owner, slotKey);
-                return;
+                return false;
             }
 
             lock (syncRoot)
@@ -472,7 +522,7 @@ internal static class ChunkBatchRendererGroupService
                                          $"layer={visual.Layer} reason=owner-not-registered. " +
                                          "禁止通过单格增量提交隐式创建 Owner，避免只恢复局部地块。");
                     }
-                    return;
+                    return false;
                 }
 
                 OwnerCullingState cullingState = ownerCullingById[owner.GetInstanceID()];
@@ -492,7 +542,7 @@ internal static class ChunkBatchRendererGroupService
                     {
                         current.Batch.Update(current.Index, data, sortingPosition);
                         if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(current.Batch);
-                        return;
+                        return true;
                     }
 
                     RemoveHandle(owner, slotKey, current, handles);
@@ -503,6 +553,7 @@ internal static class ChunkBatchRendererGroupService
                 if (bulkSubmitDepth > 0) bulkSubmitBatches.Add(batch);
                 handles[slotKey] = new InstanceHandle(batch, index);
                 visibleInstanceListsDirty = true;
+                return true;
             }
         }
 

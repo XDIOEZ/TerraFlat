@@ -9,7 +9,7 @@ using UnityEngine;
 /// 按权威草格提交全局 BatchRendererGroup 实例；每格只保存确定性变体、局部矩阵与色调。
 /// 32×32 区块按 128 格分步绑定，运行时 Sprite 变体按贴图配置跨区块共享，避免重复对象和逐 Chunk Tilemap。
 /// </summary>
-public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
+public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRenderer, IRecoverableChunkViewRenderer
 {
     #region 配置与缓存
 
@@ -28,9 +28,9 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
     [SerializeField, Range(0f, 1f)] private float accentVariantChance = 0.2f;
     [SerializeField] private Material grassMaterial;
 
-    private readonly List<int> visibleCellIndices = new(); // 当前提交的草格索引，供增量清理和后端恢复。
     private readonly HashSet<int> visibleCells = new(); // 快速判断区块草格是否已有实例。
     private ChunkRuntime boundChunk; // 当前绑定的权威区块。
+    private ChunkTerrainData boundTerrain; // 订阅与当前地形身份一起保存，替换数据时解除旧订阅。
     private ChunkTilemapRenderer ownerRenderer; // 共享区块边界裁剪与 BRG 生命周期。
     private Sprite[] sharedSprites; // 同配置区块共用同一组 Sprite 身份。
 
@@ -105,7 +105,8 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
             throw new InvalidOperationException("草地贴图未包含可用的变体 Sprite。");
 
         boundChunk = chunk;
-        boundChunk.Terrain.Changed += HandleTerrainChanged;
+        boundTerrain = chunk.Terrain;
+        boundTerrain.Changed += HandleTerrainChanged;
         ownerRenderer.BatchPresentationRebuilt += HandleOwnerPresentationRebuilt;
         return true;
     }
@@ -113,27 +114,19 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
     /// <summary>回池时移除本图层实例，不销毁跨区块共享的 Sprite 变体。</summary>
     public void Unbind()
     {
-        if (boundChunk?.Terrain != null)
-            boundChunk.Terrain.Changed -= HandleTerrainChanged;
-        if (ownerRenderer != null && boundChunk?.Terrain != null)
+        if (boundTerrain != null)
+            boundTerrain.Changed -= HandleTerrainChanged;
+        if (ownerRenderer != null)
             ownerRenderer.BatchPresentationRebuilt -= HandleOwnerPresentationRebuilt;
         if (ownerRenderer != null)
-        {
-            for (int i = 0; i < visibleCellIndices.Count; i++)
-            {
-                int index = visibleCellIndices[i];
-                ownerRenderer.ClearLayerVisual(
-                    ChunkBatchRendererGroupService.VisualLayer.Grass,
-                    index % boundChunk.Terrain.Width,
-                    index / boundChunk.Terrain.Width);
-            }
-        }
+            ChunkBatchRendererGroupService.ClearOwnerLayer(ownerRenderer,
+                ChunkBatchRendererGroupService.VisualLayer.Grass);
 
-        visibleCellIndices.Clear();
         visibleCells.Clear();
         sharedSprites = null;
         ownerRenderer = null;
         boundChunk = null;
+        boundTerrain = null;
     }
 
     /// <summary>区块销毁时解除 Terrain 与 Owner 事件订阅。</summary>
@@ -150,21 +143,57 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
             RenderCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
     }
 
-    /// <summary>基础 BRG Owner 修复后重提交本区块草实例。</summary>
+    /// <summary>基础 BRG Owner 修复后从权威草格重建，不依赖可能已丢失的提交缓存。</summary>
     private void HandleOwnerPresentationRebuilt()
     {
         if (boundChunk?.Terrain == null)
             return;
+        RebuildGrassPresentation();
+    }
+
+    /// <summary>流送窗口检查真实实例与权威草格，空缓存或局部丢失也能恢复。</summary>
+    public bool RepairPresentationIfNeeded(ChunkRuntime chunk)
+    {
+        if (chunk?.Terrain == null || chunk.Terrain.IsDisposed)
+            return false;
+        if (!ReferenceEquals(boundChunk, chunk) || !ReferenceEquals(boundTerrain, chunk.Terrain))
+        {
+            Unbind();
+            Bind(chunk);
+        }
+        if (ownerRenderer == null || !ownerRenderer.IsBatchPresentationComplete)
+            return false;
+
+        int expected = 0;
+        bool matches = sharedSprites != null && sharedSprites.Length > 0 && sharedSprites[0] != null;
+        for (int index = 0; index < chunk.Terrain.CellCount; index++)
+        {
+            bool present = chunk.Terrain.GetGrass(index % chunk.Terrain.Width,
+                index / chunk.Terrain.Width) == ChunkTerrainData.GrassPresent;
+            if (present) expected++;
+            matches &= present == visibleCells.Contains(index);
+        }
+        int submitted = ChunkBatchRendererGroupService.GetOwnerLayerVisualCount(ownerRenderer,
+            ChunkBatchRendererGroupService.VisualLayer.Grass);
+        if (matches && submitted == expected)
+            return true;
+
+        if (Application.isEditor || Debug.isDebugBuild)
+            Debug.LogWarning($"[ChunkRenderDebug] RepairGrass chunk={chunk.Address} " +
+                             $"expected={expected} cached={visibleCells.Count} submitted={submitted}。");
+        RebuildGrassPresentation();
+        return ChunkBatchRendererGroupService.GetOwnerLayerVisualCount(ownerRenderer,
+            ChunkBatchRendererGroupService.VisualLayer.Grass) == expected;
+    }
+
+    private void RebuildGrassPresentation()
+    {
+        ChunkBatchRendererGroupService.ClearOwnerLayer(ownerRenderer,
+            ChunkBatchRendererGroupService.VisualLayer.Grass);
+        visibleCells.Clear();
         sharedSprites = GrassSpriteVariantCache.Get(
             sourceTexture, variantCount, textureColumns, spriteSizePixels, pixelsPerUnit);
-        for (int i = 0; i < visibleCellIndices.Count; i++)
-        {
-            int index = visibleCellIndices[i];
-            int x = index % boundChunk.Terrain.Width;
-            int y = index / boundChunk.Terrain.Width;
-            if (boundChunk.Terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
-                RenderPresentCell(x, y);
-        }
+        RenderRange(boundChunk.Terrain, 0, boundChunk.Terrain.CellCount);
     }
 
     /// <summary>逐段读取权威草层，空格无需进入 BRG 后端。</summary>
@@ -172,13 +201,18 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
     {
         using (RenderRangeMarker.Auto())
         {
-            for (int index = startIndex; index < startIndex + count; index++)
+            ChunkBatchRendererGroupService.BeginBulkSubmit();
+            try
             {
-                int x = index % terrain.Width;
-                int y = index / terrain.Width;
-                if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
-                    RenderPresentCell(x, y);
+                for (int index = startIndex; index < startIndex + count; index++)
+                {
+                    int x = index % terrain.Width;
+                    int y = index / terrain.Width;
+                    if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
+                        RenderPresentCell(x, y);
+                }
             }
+            finally { ChunkBatchRendererGroupService.EndBulkSubmit(); }
         }
     }
 
@@ -211,10 +245,10 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
                                  Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity,
                                      new Vector3(scale * flipX, scale, 1f));
 
-        ownerRenderer.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Grass, x, y,
-            sprite, grassMaterial, localToWorld, new Color(tint, tint, tint, 1f));
-        if (visibleCells.Add(y * boundChunk.Terrain.Width + x))
-            visibleCellIndices.Add(y * boundChunk.Terrain.Width + x);
+        if (!ownerRenderer.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Grass, x, y,
+                sprite, grassMaterial, localToWorld, new Color(tint, tint, tint, 1f)))
+            throw new InvalidOperationException($"草实例提交失败：{boundChunk.Address} local={x},{y}。");
+        visibleCells.Add(y * boundChunk.Terrain.Width + x);
     }
 
     /// <summary>草格消失时只清理已登记的单格实例。</summary>
@@ -223,7 +257,6 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
         int index = y * boundChunk.Terrain.Width + x;
         if (!visibleCells.Remove(index))
             return;
-        visibleCellIndices.Remove(index);
         ownerRenderer.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Grass, x, y);
     }
 

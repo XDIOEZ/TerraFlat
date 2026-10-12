@@ -9,7 +9,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// 草层中的花朵等地表植被以全局 BatchRendererGroup 批量表现，不创建 Tile 或常驻 Item。
 /// 每区块最多提交每格一株；采集差量仍是唯一权威状态，解绑只清理表现实例。
 /// </summary>
-public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkViewRenderer
+public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkViewRenderer, IRecoverableChunkViewRenderer
 {
     #region 表现缓存
 
@@ -19,7 +19,9 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
     private readonly Dictionary<int, Vector3Int> placementCells = new(); // GUID 到表现格的索引。
     private readonly HashSet<Vector3Int> coverCells = new(); // 跳过没有植被的格子变化通知。
     private readonly HashSet<Vector3Int> visibleCells = new(); // 仅跟踪当前 BRG 实例，不保存采集状态。
+    private readonly HashSet<Vector3Int> expectedCells = new(); // 窗口检查复用集合，不按帧创建临时对象。
     private ChunkRuntime boundChunk; // 当前绑定的权威区块。
+    private ChunkTerrainData boundTerrain; // 解除订阅时使用实际绑定的数据，避免地形替换后漏退订。
     private ChunkTilemapRenderer ownerRenderer; // 共享区块边界裁剪与 BRG 生命周期。
     private ChunkMgr manager; // 绑定时获取并在解绑时解除观察。
 
@@ -93,9 +95,10 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
             throw new InvalidOperationException("地表植被绑定前必须完成世界和物品目录初始化。");
 
         boundChunk = chunk;
+        boundTerrain = chunk.Terrain;
         manager.NaturalItemRemoved += HandleRemoved;
-        boundChunk.Terrain.Changed += HandleTerrainChanged;
-        boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
+        boundTerrain.Changed += HandleTerrainChanged;
+        boundTerrain.LiquidBatchChanged += HandleLiquidBatchChanged;
         ownerRenderer.BatchPresentationRebuilt += HandleOwnerPresentationRebuilt;
         return true;
     }
@@ -105,10 +108,10 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
     {
         if (manager != null)
             manager.NaturalItemRemoved -= HandleRemoved;
-        if (boundChunk?.Terrain != null)
+        if (boundTerrain != null)
         {
-            boundChunk.Terrain.Changed -= HandleTerrainChanged;
-            boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
+            boundTerrain.Changed -= HandleTerrainChanged;
+            boundTerrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
         }
         ClearVisibleInstances();
         if (ownerRenderer != null)
@@ -117,7 +120,9 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
         placementCells.Clear();
         coverCells.Clear();
         visibleCells.Clear();
+        expectedCells.Clear();
         boundChunk = null;
+        boundTerrain = null;
         ownerRenderer = null;
         manager = null;
     }
@@ -190,6 +195,46 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
         RenderPlacements(placements, 0, placements.Count);
     }
 
+    /// <summary>按生态、采集差量和当前地表核对花层，后端还在也检查局部实例丢失。</summary>
+    public bool RepairPresentationIfNeeded(ChunkRuntime chunk)
+    {
+        if (chunk?.Terrain == null || chunk.Terrain.IsDisposed)
+            return false;
+        if (!ReferenceEquals(boundChunk, chunk) || !ReferenceEquals(boundTerrain, chunk.Terrain))
+        {
+            Unbind();
+            Bind(chunk);
+        }
+        if (ownerRenderer == null || !ownerRenderer.IsBatchPresentationComplete || manager == null)
+            return false;
+
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null) return false;
+        expectedCells.Clear();
+        IReadOnlyList<NaturalItemPlacement> placements = chunk.Ecology?.Placements;
+        if (placements != null)
+            for (int i = 0; i < placements.Count; i++)
+            {
+                NaturalItemPlacement placement = placements[i];
+                if (resources.TryGetItemDefinition(placement.ItemId, out RuntimeItemDefinition definition) &&
+                    definition.IsGroundCover && !manager.IsNaturalItemRemoved(chunk.Address, placement.Guid) &&
+                    GroundCoverSystem.CanShowAt(chunk, placement.LocalX, placement.LocalY))
+                    expectedCells.Add(new Vector3Int(placement.LocalX, placement.LocalY, 0));
+            }
+        int expected = expectedCells.Count;
+        int submitted = ChunkBatchRendererGroupService.GetOwnerLayerVisualCount(ownerRenderer,
+            ChunkBatchRendererGroupService.VisualLayer.GroundCover);
+        if (submitted == expected && expectedCells.SetEquals(visibleCells))
+            return true;
+
+        if (Application.isEditor || Debug.isDebugBuild)
+            Debug.LogWarning($"[ChunkRenderDebug] RepairGroundCover chunk={chunk.Address} " +
+                             $"expected={expected} cached={visibleCells.Count} submitted={submitted}。");
+        HandleOwnerPresentationRebuilt();
+        return ChunkBatchRendererGroupService.GetOwnerLayerVisualCount(ownerRenderer,
+            ChunkBatchRendererGroupService.VisualLayer.GroundCover) == expected;
+    }
+
     /// <summary>用与工具相同的查询选取此格剩余植被，全部采完后清除实例。</summary>
     private void RefreshCell(Vector3Int cell)
     {
@@ -223,9 +268,11 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
                                  Matrix4x4.TRS(offset,
                                      Quaternion.Euler(definition.Visual?.RendererLocalEulerAngles ?? Vector3.zero),
                                      scale);
-        ownerRenderer.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.GroundCover,
-            cell.x, cell.y, definition.Sprite, groundCoverMaterial, localToWorld,
-            definition.Visual?.Color ?? Color.white);
+        if (!ownerRenderer.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.GroundCover,
+                cell.x, cell.y, definition.Sprite, groundCoverMaterial, localToWorld,
+                definition.Visual?.Color ?? Color.white))
+            throw new InvalidOperationException($"地表植被实例提交失败：{boundChunk.Address} " +
+                                                $"local={cell.x},{cell.y} item={definition.Id}。");
         visibleCells.Add(cell);
     }
 
@@ -241,9 +288,8 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
     private void ClearVisibleInstances()
     {
         if (ownerRenderer != null)
-            foreach (Vector3Int cell in visibleCells)
-                ownerRenderer.ClearLayerVisual(
-                    ChunkBatchRendererGroupService.VisualLayer.GroundCover, cell.x, cell.y);
+            ChunkBatchRendererGroupService.ClearOwnerLayer(ownerRenderer,
+                ChunkBatchRendererGroupService.VisualLayer.GroundCover);
         visibleCells.Clear();
     }
 

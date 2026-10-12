@@ -53,7 +53,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - `itemCountDistribution=1` 使用 `itemCountMin..itemCount` 的二次峰值数量；`itemCountPeak/itemCountQuadraticRadius` 控制分布。`distributionMode=2` 聚落按 `(1-d/r)^2` 衰减，中心来自全局种子网格。
 - `CompanionHostTag` 要求同格实际宿主；`RequiredChunkTag/RequiredTagChunkRadius` 查确定性邻区标签，不依赖加载顺序。洞穴占格顺序为入口 → 配置植物 → 藤蔓/矿物，安全区不生植物。
 - 草与可采植被分别由 `ChunkGrassRenderer/ChunkGroundCoverRenderer` 绘制；`groundCover:true` 保留确定性点，采集才创建 Item，持久化用生态删除 GUID。`GroundCoverSystem` 管理选格/图层，解绑不是采集。
-- 草先过温度/降水/高度门槛，再由湿度调密度；耐旱植物按群系/降水筛选，`maxRiverFloodplainStrength` 可排湿地。自然作物用 `naturalPlantable/requireNaturalPlantableGround` 表达基质；伴生矿产用 `requiredEnvironmentLayer/minimumEnvironmentValue`，缺层拒绝。
+- 草读取可自然种植底材、摄氏温度和高度资格，水下不生成；降水按 `grass.rainfallForFullDensity/dryDensityMultiplier` 连续调密度，不设骤然清空的降水门槛。草原花由群系、自然底材和稀疏分布筛选；耐旱植物按群系/降水筛选，`maxRiverFloodplainStrength` 可排湿地。自然作物用 `naturalPlantable/requireNaturalPlantableGround` 表达基质；伴生矿产用 `requiredEnvironmentLayer/minimumEnvironmentValue`，缺层拒绝。
+- 草花规则回归：`Tools/Tests/GroundCover/verify.ps1` 编译生产代码，检查干湿密度、确定性、底材和摄氏资格；不证明游戏画面或原生 BRG 恢复效果。
 - `INaturalRenewalPolicy` 保存 `RenewalYears`；成功补位后才清移除标记，玩家种植、建筑/耕地/平台不参加自然补位。萝卜分森林/草原两条规则；泥炭仅在草原侧石地交界且排除 floodplain。
 - 山顶岩浆湖由 `lake.lava.*` 和确定性山峰候选生成；`rareMaxRadius` 是长尾上限，`lava.shore` 仅标天然岸带。接触属性来自 `WorldLiquidSettings`，热源读未被平台遮挡的实际液体。
 - `groundHarvest` 声明工具/等级/产物/距离/使用次数/挖后地表。`Mod_GroundHarvestToolBase → GroundTileHarvestSystem` 累积并保存进度，完成一层才生成掉落/提交地面；`GroundTileLayerSystem` 保存天然层数和覆盖栈，覆盖栈含原地块、进度、草层，开采优先弹栈。

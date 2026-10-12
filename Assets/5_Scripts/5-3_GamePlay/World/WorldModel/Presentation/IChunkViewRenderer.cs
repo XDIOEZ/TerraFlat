@@ -18,3 +18,9 @@ public interface IWorldAwareChunkViewRenderer
 {
     void SetWorld(WorldRuntime worldRuntime);
 }
+
+/// <summary>可丢失的表现实例从权威区块恢复，检查不改变地形或采集状态。</summary>
+public interface IRecoverableChunkViewRenderer
+{
+    bool RepairPresentationIfNeeded(ChunkRuntime chunk);
+}
