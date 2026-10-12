@@ -159,6 +159,10 @@ public static class WorldItemWaterSystem
     {
         if (sourceItem?.itemData == null)
             return false;
+        // 入水转换读取液体接触性质，不能把岩浆中的火把当成浸水熄灭。
+        if (!WorldLiquidSourceResolver.TryResolve(sourceItem.transform.position, out WorldLiquidSourceTarget liquid) ||
+            liquid.Liquid.WorldWater?.WaterContact != true)
+            return false;
 
         GameRes gameRes = GameRes.ExistingInstance;
         if (gameRes == null ||

@@ -28,7 +28,6 @@ internal sealed partial class DroppedItemRuntime
             nextMatterSweepTime = matterTime + MatterTickInterval;
         }
         long deadline = Stopwatch.GetTimestamp() + MatterStepBudgetTicks;
-        TemperatureMgr temperature = TemperatureMgr.Instance;
         // 每个物品按自己的实际间隔补算，分帧不会少算温度或燃烧时间。
         for (int processed = 0; matterCursor < matterScratch.Count && processed < MatterItemsPerStep &&
              Stopwatch.GetTimestamp() < deadline; processed++)
@@ -40,21 +39,8 @@ internal sealed partial class DroppedItemRuntime
             lastMatterTimes[id] = matterTime;
             if (seconds <= 0f) continue;
             LightweightDroppedBody body = simulation.Get(id);
-            float ambient = TemperatureMgr.DefaultAmbientTemperature;
-            if (temperature != null)
-                temperature.TryGetAmbientTemperature(body.Position, out ambient);
-
-            bool waterContact = false;
-            float transferPerSecond = data.HeatConductionRate;
-            if (TryResolveLiquidContact(body, out WorldLiquidSettings liquidSettings))
-            {
-                waterContact = liquidSettings.WaterContact;
-                transferPerSecond = Mathf.Max(transferPerSecond, liquidSettings.ContactHeatingPerSecond);
-            }
-
-            bool changed = ItemMatterRuntime.Advance(
-                data, ambient, 1f, seconds, submerged: waterContact,
-                transferPerSecondOverride: transferPerSecond);
+            bool changed = WorldItemMatterRules.Advance(data, body.Position, seconds,
+                liquidContact: body.WaterKind != 0 && !simulation.TryGetFlight(id, out _), out bool waterContact);
             changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact, out bool consumedAll);
             if (changed)
                 presentation.Changed(id);
@@ -84,17 +70,5 @@ internal sealed partial class DroppedItemRuntime
         }
     }
 
-    /// <summary>液体身份必须来自真实地形，WaterKind 只表示浮沉状态，不能把岩浆误判成水。</summary>
-    private static bool TryResolveLiquidContact(LightweightDroppedBody body, out WorldLiquidSettings settings)
-    {
-        settings = null;
-        if (body.WaterKind == 0 || ChunkMgr.ExistingInstance == null || GameRes.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(body.Position, out RuntimeTerrainTileSample sample) ||
-            sample.LiquidDepth <= 0f || string.IsNullOrWhiteSpace(sample.LiquidId) ||
-            !GameRes.ExistingInstance.TryGetLiquidDefinition(sample.LiquidId, out LiquidDefinition liquid))
-            return false;
-        settings = liquid.WorldWater;
-        return settings != null;
-    }
     #endregion
 }

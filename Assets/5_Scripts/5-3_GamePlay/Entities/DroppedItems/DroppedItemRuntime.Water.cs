@@ -166,6 +166,9 @@ internal sealed partial class DroppedItemRuntime
     /// <summary>火把等规则从定义读取；先准备替代载荷与视觉，成功后保留同一实体及整组数量。</summary>
     private void TransformOnWaterEntry(int id, ref LightweightDroppedBody body)
     {
+        // 入水熄灭转换只适用于真实水接触，岩浆等熔体不能把火把变成木棍。
+        if (!WorldLiquidSourceResolver.TryResolve(body.Position, out WorldLiquidSourceTarget source) ||
+            source.Liquid.WorldWater?.WaterContact != true) return;
         GameRes resources = GameRes.ExistingInstance;
         ItemData original = payloads[id];
         if (!resources.TryGetItemDefinition(original.IDName, out RuntimeItemDefinition definition) ||

@@ -14,6 +14,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     private static readonly ProfilerMarker PerceptionCompleteMarker = new("ItemMgr.Update.PerceptionComplete");
     private static readonly ProfilerMarker SchedulerTickMarker = new("ItemMgr.Update.TickScheduler");
     private static readonly ProfilerMarker WaterTickMarker = new("ItemMgr.Update.WorldItemWater");
+    private static readonly ProfilerMarker MatterTickMarker = new("ItemMgr.Update.WorldItemMatter");
     private static readonly ProfilerMarker DroppedTickMarker = new("ItemMgr.Update.DroppedItems");
     private static readonly ProfilerMarker PerceptionScheduleMarker = new("ItemMgr.Update.PerceptionSchedule");
     private static readonly ProfilerMarker DroppedPresentMarker = new("ItemMgr.LateUpdate.DroppedPresent");
@@ -164,6 +165,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     {
         base.Awake();
         Item.RuntimeStructureChanged += OnPerceptionStructureChanged;
+        RuntimeItemUnregistered += ReleaseWorldItemMatter;
         // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
     }
 
@@ -197,6 +199,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        RuntimeItemUnregistered -= ReleaseWorldItemMatter;
+        ClearWorldItemMatter();
         MachineWorld.ReleaseWorld(capture: false);
         WorldEntityRuntime.ReleaseWorld();
         DroppedItemService.ReleaseWorld(capture: false);
@@ -215,6 +219,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private void OnDisable()
     {
+        ClearWorldItemMatter();
         CompletePerceptionBatch(false);
     }
 
@@ -222,6 +227,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     {
         if (!IsWorldItemRuntimeActive())
         {
+            ClearWorldItemMatter();
             if (!_itemTickSuspended)
             {
                 _tickScheduler.Pause(RuntimeItems);
@@ -257,6 +263,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
                 _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
         using (WaterTickMarker.Auto())
             WorldItemWaterSystem.ProcessPendingSpawnChecks();
+        using (MatterTickMarker.Auto())
+            TickWorldItemMatter(Time.deltaTime);
         using (DroppedTickMarker.Auto())
             DroppedItemService.Tick(Time.deltaTime);
         // AI Tick 已提交本帧全部检测请求后立即调度，让 Job 在剩余帧时间里并行运行到下一帧结算。
@@ -269,6 +277,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         if (!IsWorldItemRuntimeActive())
             return;
 
+        PresentWorldItemMatter();
         using (DroppedPresentMarker.Auto())
             DroppedItemService.Present();
         using (NaturalPresentMarker.Auto())
