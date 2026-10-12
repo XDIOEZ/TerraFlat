@@ -8,6 +8,8 @@ public partial class WeatherMgr
     #region 天气声音状态
 
     private const float WeatherAudioThreshold = 0.001f;
+    private const float WindAudioStartStrength = 0.5f;
+    private const float WindAudioMaximumVolume = 0.4f;
     private const float ThunderAudibleRadius = 192f;
     private const float ThunderNearRadius = 64f;
     private const float ThunderPropagationSpeed = 64f;
@@ -106,7 +108,9 @@ public partial class WeatherMgr
         float wind = _presentedWindStrength;
         UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, 0.9f * rain,
             ref rainAudioHandle, ref rainAudioVolume, followPresentation: true);
-        UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, 0.8f * Mathf.Pow(wind, 1.5f),
+        // 弱风保持安静，风力超过一半才逐渐出声，满风音量降低一半。
+        float audibleWind = Mathf.InverseLerp(WindAudioStartStrength, 1f, wind);
+        UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, WindAudioMaximumVolume * Mathf.Pow(audibleWind, 1.5f),
             ref windAudioHandle, ref windAudioVolume);
         PlayPendingWeatherThunder();
     }
