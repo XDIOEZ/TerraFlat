@@ -1,4 +1,5 @@
 {
+  "RegionSizeInChunks": 8,
   "StepSeconds": 2.0,
   "CheckIntervalSeconds": 30.0,
   "MaximumCatchUpSteps": 120,

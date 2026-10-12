@@ -4,15 +4,15 @@ using Unity.Mathematics;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>按区块固定配置推进独立天气事件，查询不生成地形也不重新采样气候。</summary>
+    /// <summary>相邻区块共享区域天气事件，查询不生成地形也不重新采样气候。</summary>
     public sealed class RegionalWeatherEngine
     {
-        #region 冻结配置与区块真值
+        #region 冻结配置与共享天气真值
         private readonly RegionalWeatherSettings settings;
         private readonly int worldSeed;
         private readonly WorldTopologyDomain domain;
-        private readonly int chunkWidth;
-        private readonly int chunkHeight;
+        private readonly int regionWidth;
+        private readonly int regionHeight;
         private readonly Dictionary<Int2, RegionalWeatherState> states = new();
         private readonly Dictionary<Int2, RegionalWeatherSnapshot> replicas = new();
         private readonly List<RegionalWeatherState> recentLightning = new();
@@ -28,19 +28,43 @@ namespace FlatWorld.WorldModel
                 throw new ArgumentOutOfRangeException(nameof(domain));
             this.worldSeed = worldSeed;
             this.domain = domain;
-            this.chunkWidth = chunkWidth;
-            this.chunkHeight = chunkHeight;
+            regionWidth = checked(chunkWidth * this.settings.RegionSizeInChunks);
+            regionHeight = checked(chunkHeight * this.settings.RegionSizeInChunks);
         }
         #endregion
 
-        #region 规范区块坐标与注册
+        #region 规范天气区域与区块注册
         public Int2 ResolveRegion(Int2 cell)
+            => ResolveRegionBounds(cell, out _);
+
+        public Int2 GetRegionSize(Int2 cell)
+        {
+            ResolveRegionBounds(cell, out Int2 size);
+            return size;
+        }
+
+        private Int2 ResolveRegionBounds(Int2 cell, out Int2 size)
         {
             int2 normalized = domain.Normalize(new int2(cell.X, cell.Y));
-            int2 origin = domain.Normalize(new int2(
-                FloorDiv(normalized.x, chunkWidth) * chunkWidth,
-                FloorDiv(normalized.y, chunkHeight) * chunkHeight));
-            return new Int2(origin.x, origin.y);
+            int x = ResolveRegionAxis(normalized.x, regionWidth, domain.Min.x, domain.Span.x, out int width);
+            int y = ResolveRegionAxis(normalized.y, regionHeight, domain.Min.y, domain.Span.y, out int height);
+            size = new Int2(width, height);
+            return new Int2(x, y);
+        }
+
+        private int ResolveRegionAxis(int cell, int targetSize, int minimum, int worldSpan, out int size)
+        {
+            if (!domain.IsWrapped)
+            {
+                size = targetSize;
+                return checked(FloorDiv(cell, targetSize) * targetSize);
+            }
+            // 环绕世界从真实最小边界分区，剩余窄边并入最后一区。
+            int count = Math.Max(1, worldSpan / targetSize);
+            int index = (int)Math.Min(((long)cell - minimum) / targetSize, count - 1L);
+            int origin = checked((int)((long)minimum + (long)index * targetSize));
+            size = index == count - 1 ? (int)((long)minimum + worldSpan - origin) : targetSize;
+            return origin;
         }
 
         public void RegisterChunk(Int2 origin, ChunkWeatherProfile profile, double now)
@@ -50,7 +74,7 @@ namespace FlatWorld.WorldModel
             if (profile == null)
                 return;
             RegionalWeatherState state = GetOrCreateState(ResolveRegion(origin), now);
-            // 已存档的固定配置随区块事件恢复，不因重新加载而重算。
+            // 天气区首次登记时冻结代表区块档案，后续进入的邻块沿用同一场天气。
             if (state.Profile != null)
                 return;
             state.Profile = profile;
@@ -213,9 +237,10 @@ namespace FlatWorld.WorldModel
                 state.LastStepTime - state.LastLightningTime < settings.MinimumLightningIntervalSeconds)
                 return;
             int sequence = state.LightningSequence == int.MaxValue ? 1 : state.LightningSequence + 1;
+            Int2 size = GetRegionSize(state.Region);
             int2 cell = domain.Normalize(new int2(
-                state.Region.X + (int)(Random01(state.Region, sequence, "lightning.x") * chunkWidth),
-                state.Region.Y + (int)(Random01(state.Region, sequence, "lightning.y") * chunkHeight)));
+                state.Region.X + (int)(Random01(state.Region, sequence, "lightning.x") * size.X),
+                state.Region.Y + (int)(Random01(state.Region, sequence, "lightning.y") * size.Y)));
             if (!IsLightningSpacingAvailable(state.LastStepTime, cell))
             {
                 state.NextLightningTime = state.LastStepTime + settings.StepSeconds;
@@ -317,7 +342,7 @@ namespace FlatWorld.WorldModel
         }
         #endregion
 
-        #region 只读区块查询与降水积分
+        #region 只读区域查询与降水积分
         public bool TryGetRegionSnapshot(Int2 region, out RegionalWeatherSnapshot snapshot)
         {
             region = ResolveRegion(region);

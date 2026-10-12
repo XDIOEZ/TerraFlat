@@ -26,13 +26,13 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - DayTimeSystem 是跨场景/保存主入口，场景也可能引用 DayNightTimeManager。日长为 RotationPeriodSeconds、年长为 OrbitalPeriodSeconds，运行时 SetRotationPeriod/SetOrbitalPeriod；季节、年与轨道共用游戏秒轴。SeasonCalendar 历史快照冻结周期/倾角/离心率，不用当前日长重算过去。
 - 活动场景名称按 handle 缓存，时刻/天气/维度实时读；GM 滑条按实际 DayLength 预览，松开由权威端 JumpToTime 一次。主菜单使用无报错 GetInstance 探测。
 - 区块生成时一次汇总固定 airHumidity、windX/Y、每格风模长和地理温度；`ChunkTerrainData.WeatherProfile` 冻结每种要素的 Probability/Intensity/DurationSeconds。自然要素为 rain/wind/thunder，配置 Elements 按稳定字符串 ID 扩展；生成器与调度器经 `ChunkWeatherConfiguration` 共用冻结配置。
-- 天气按真实区块原点独立推进，`CheckIntervalSeconds` 表示空闲要素每次概率检查的间隔，持续中的要素不重复抽取。运行时不再采五点气候、温差或动态供湿；查询只读本块，普通 Client 只应用权威效果。
+- 天气按共享区域推进，`RegionSizeInChunks` 默认 8（16 格区块对应 128×128 格），区域首次登记冻结代表区块档案，成员共用要素概率、强度和时限；每区每步只推进/复制一次，地表积分分发到所有已加载成员。环绕世界以 Min 分区，剩余窄边并入末区，雷击按实际区域边界选点。`CheckIntervalSeconds` 为空闲要素检查间隔；运行时不重采气候，查询只读共享状态，普通 Client 只应用权威效果。
 - 本机雨雪用 `_precipitationTransitionSeconds` 完整 SmoothStep 过渡（WorldManager 默认 12 秒，低强度小雨也走完）；风/云光仍用 `_weatherTransitionSeconds` 零到满 3 秒。跨区块从当前表现续接，雨滴/水花由零按强度增多，雨声线性消费同一强度，停雨让现有粒子落完。程序入口 `SetPrecipitationIntensity(intensity, durationSeconds=60, transitionSeconds=-1)` 只改本块降水，0 停雨、0 过渡秒立即切换、-1 用默认值；普通客户端返回 false。`PresentedRainIntensity/PresentedSnowIntensity` 可读当前表现，权威浇水/积雪仍读真实当地天气。
 - 雷束/电弧/屏幕闪光共用环绕最短距离强度，默认 8 格内完整、8～64 格 SmoothStep 渐弱；雷声仍按声音服务的空间衰减与原传播延迟播放。
 - 固定游戏秒格推进；跳时有界补已有事件，新区块不追补未加载的浇水/积雪，不补播历史雷声。回拨平移各独立时限，复制以 Revision 为主；`PlanetData.RegionalWeatherStates` 保存固定档案和事件状态。云量从雨/雷派生，自然雾、湿气消耗和雨冷反馈已移除；云雾仍可限时手动覆盖。
 - 静态 precipitation 是长期风携水汽降水，影响径流/生态；输送 humidity、固定 airHumidity、动态空气湿度与地表 moisture 分开。
 - `TryGetGeographicAirHumidity` 读固定层；`TryGetAirHumiditySupply` 从恢复后的真实 Liquid/深度/距离得 B，背景仅 airHumidity.background；`TryGetAirHumidity` 返回 clamp(B-D)。缺邻区返回不可用，不生成地形，缓存只依 Terrain/LiquidRevision/Epoch。
-- 雷电在本块 thunder 事件期间按强度和最短间隔产生新序号，默认最短 20 游戏秒、384 格内跨区块共用该间隔，避免加载块叠加频率；雷事件开始先等待最短间隔，自然雷最大概率 0.015/每 30 游戏秒。近期落雷缓存从存档真值恢复，按环绕最短距离判断；默认时间 1 倍时约为 20 真实秒，加速档 4 倍为约 5 秒。权威端选本块随机格落点并保存/复制最新落点和强度；`LightningStrikeSystem` 同事件只结算一次，表现/雷声共用落点。首次/读档只建基线，F12/StrikeLightningAt 调试允许立即雷击并共用真实伤害链。手动雾由 `DenseFogRendererFeature` 在本地主相机合成玩家遮罩，进房恢复、退出/抑制天气维度清除。
+- 雷电在共享天气区 thunder 事件期间按强度和最短间隔产生新序号，默认最短 20 游戏秒、384 格内跨区块共用该间隔，避免加载块叠加频率；雷事件开始先等待最短间隔，自然雷最大概率 0.015/每 30 游戏秒。近期落雷缓存从存档真值恢复，按环绕最短距离判断；默认时间 1 倍时约为 20 真实秒，加速档 4 倍为约 5 秒。权威端在共享天气区选随机格落点并保存/复制最新落点和强度；`LightningStrikeSystem` 同事件只结算一次，表现/雷声共用落点。首次/读档只建基线，F12/StrikeLightningAt 调试允许立即雷击并共用真实伤害链。手动雾由 `DenseFogRendererFeature` 在本地主相机合成玩家遮罩，进房恢复、退出/抑制天气维度清除。
 - `WeatherMgr.Audio` 通过 AudioService 播放当地雨/风循环并平滑更新句柄音量；雨声读实时雨雪分流。雷声只订阅新 LightningOccurred，沿用雷光事件落点，按环绕最短距离选近/远音色和传播延迟，以空间 Cue 衰减；LateUpdate 将落点映射到玩家最近副本并经 SetWorldPosition 更新方位，首次推进不补播，退出/抑制天气维度清空待播和句柄。
 - 地表每块只接收一个降水积分，不再逐格查询或插值邻区天气；晴天无天气雪/玩家雪直接跳过。筛实际地面/待融雪格后 TrySampleAmbientChunk 同批冻结温度，按当地温度分雨雪，不跨帧借数组。
 

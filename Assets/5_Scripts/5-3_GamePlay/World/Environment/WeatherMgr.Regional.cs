@@ -49,6 +49,7 @@ public partial class WeatherMgr
     private PlanetData regionalPlanet;
     private WorldTopologyDomain regionalDomain;
     private double lastRegionalAdvance = double.NegativeInfinity;
+    private readonly List<ChunkRuntime> regionalChunks = new();
     private readonly List<Int2> regionalWork = new();
     private readonly Dictionary<Int2, RegionalWeatherAdvanceResult> regionalExposure = new();
     private readonly Dictionary<Int2, int> regionalSaveIndices = new();
@@ -92,7 +93,7 @@ public partial class WeatherMgr
         return profile != null;
     }
 
-    /// <summary>降水发生由区块决定，雨雪表现只按当地实时温度分流。</summary>
+    /// <summary>降水发生由共享天气区决定，雨雪表现只按当地实时温度分流。</summary>
     public bool TryGetPrecipitationAt(Vector2 position, out float rainIntensity, out float snowIntensity)
     {
         rainIntensity = snowIntensity = 0f;
@@ -163,6 +164,7 @@ public partial class WeatherMgr
             RegionalWeatherRecord record = regionalPlanet.RegionalWeatherStates[i];
             if (record == null) throw new InvalidOperationException("区域天气档案包含空记录。");
             RegionalWeatherState state = record.ToState();
+            state.Region = regionalEngine.ResolveRegion(state.Region);
             if (regionalSaveIndices.ContainsKey(state.Region))
                 throw new InvalidOperationException("区域天气档案包含重复区域。");
             regionalEngine.RestoreState(state);
@@ -178,7 +180,7 @@ public partial class WeatherMgr
         return true;
     }
 
-    // 每个就绪区块只登记生成好的档案，然后推进独立天气的概率与时限。
+    // 就绪区块共用区域事件，每个天气区只推进一次并向所有成员分发降水。
     private void AdvanceRegionalWeather()
     {
         if (!PrepareRegionalContext() || !GameNetwork.HasStateAuthority ||
@@ -195,6 +197,8 @@ public partial class WeatherMgr
         if (chunks?.WorldRuntime == null) return;
 
         regionalWork.Clear();
+        regionalChunks.Clear();
+        regionalExposure.Clear();
         surfaceChunksThisStep.Clear();
         foreach (var pair in chunks.Chunks)
         {
@@ -202,12 +206,18 @@ public partial class WeatherMgr
             if (!chunks.IsTerrainRestoredForEnvironment(chunk)) continue;
             surfaceChunksThisStep[chunk.Address] = chunk;
             if (chunk.Terrain.WeatherProfile == null) continue;
-            Int2 region = chunk.Address.ChunkOrigin;
-            regionalEngine.RegisterChunk(region, chunk.Terrain.WeatherProfile, now);
-            regionalWork.Add(region);
+            regionalChunks.Add(chunk);
+        }
+        regionalChunks.Sort((a, b) => a.Address.ChunkOrigin.Y == b.Address.ChunkOrigin.Y
+            ? a.Address.ChunkOrigin.X.CompareTo(b.Address.ChunkOrigin.X)
+            : a.Address.ChunkOrigin.Y.CompareTo(b.Address.ChunkOrigin.Y));
+        foreach (ChunkRuntime chunk in regionalChunks)
+        {
+            Int2 region = regionalEngine.ResolveRegion(chunk.Address.ChunkOrigin);
+            regionalEngine.RegisterChunk(chunk.Address.ChunkOrigin, chunk.Terrain.WeatherProfile, now);
+            if (regionalExposure.TryAdd(region, default)) regionalWork.Add(region);
         }
         regionalWork.Sort((a, b) => a.Y == b.Y ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
-        regionalExposure.Clear();
         using (RegionalAdvanceMarker.Auto())
         foreach (Int2 region in regionalWork)
         {
@@ -228,8 +238,8 @@ public partial class WeatherMgr
             foreach (var pair in surfaceChunksThisStep)
                 if (surfaceChunksLastStep.TryGetValue(pair.Key, out var previous) && ReferenceEquals(previous, pair.Value))
                 {
-                    regionalExposure.TryGetValue(pair.Key.ChunkOrigin, out var exposure);
-                    float precipitation = Mathf.Min(exposure.RainExposureSeconds + exposure.SnowExposureSeconds,
+                    float precipitation = Mathf.Min(regionalEngine.SamplePrecipitationExposureAt(
+                        pair.Key.ChunkOrigin, regionalExposure),
                         surfaceStepSeconds);
                     WorldWeatherSurfaceSystem.AdvanceChunk(pair.Value, this, elapsed, precipitation);
                 }

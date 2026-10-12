@@ -1,4 +1,6 @@
 using System;
+using FlatWorld.Networking;
+using FlatWorld.WorldModel;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -574,9 +576,12 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
             Vector2 localPosition = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
             if (TryGetLocalWeather(out var sample))
             {
-                GUILayout.Label($"区块: {sample.Region.X}, {sample.Region.Y}", _valueStyle);
+                Int2 weatherSize = regionalEngine.GetRegionSize(sample.Region);
+                GUILayout.Label($"天气区: {sample.Region.X}, {sample.Region.Y}", _valueStyle);
+                GUILayout.Label($"共享范围: {weatherSize.X}×{weatherSize.Y} 格", _valueStyle);
                 if (TryGetWeatherProfileAt(localPosition, out var profile))
                 {
+                    GUILayout.Label(GameNetwork.HasStateAuthority ? "天气区固定参数" : "本块生成参数（气候参考）", _valueStyle);
                     GUILayout.Label($"生成湿度: {profile.Climate.AirHumidity:F3}  风力: {profile.Climate.WindStrength:F3}", _valueStyle);
                     GUILayout.Label($"每 {regionalSettings.CheckIntervalSeconds:F0} 秒检查一次空闲天气", _valueStyle);
                     foreach (var element in profile.Elements)
@@ -589,7 +594,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
                     GUILayout.Label($"当地实时温度: {temperature:F2} ℃", _valueStyle);
                 GUILayout.Label($"云: {sample.CloudCoverage:F2}  雾: {sample.FogDensity:F2}  雷电: {sample.LightningActivity:F2}", _valueStyle);
             }
-            else GUILayout.Label("所在区块的天气尚未就绪", _valueStyle);
+            else GUILayout.Label("所在天气区尚未就绪", _valueStyle);
         }
         else
         {

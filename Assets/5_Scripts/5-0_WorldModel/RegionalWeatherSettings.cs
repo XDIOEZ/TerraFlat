@@ -49,11 +49,13 @@ namespace FlatWorld.WorldModel
         #endregion
     }
 
-    /// <summary>区块天气的固定时钟与可扩展要素配置，速率统一使用游戏秒。</summary>
+    /// <summary>共享天气区的覆盖范围、固定时钟与可扩展要素配置，速率统一使用游戏秒。</summary>
     [Serializable]
     public sealed class RegionalWeatherSettings
     {
         #region 固定时钟与天气要素
+        // 相邻多个地形区块共享一场天气，避免走几步就穿过整片雨区。
+        public int RegionSizeInChunks = 8;
         public float StepSeconds = 2f;
         public float CheckIntervalSeconds = 30f;
         public int MaximumCatchUpSteps = 120;
@@ -108,7 +110,8 @@ namespace FlatWorld.WorldModel
 
         public void Validate()
         {
-            if (!Finite(StepSeconds) || StepSeconds < 0.1f || StepSeconds > 60f ||
+            if (RegionSizeInChunks < 1 || RegionSizeInChunks > 64 ||
+                !Finite(StepSeconds) || StepSeconds < 0.1f || StepSeconds > 60f ||
                 !Finite(CheckIntervalSeconds) || CheckIntervalSeconds < StepSeconds ||
                 MaximumCatchUpSteps < 1 || MaximumCatchUpSteps > 1024 ||
                 !Finite(FreezingTemperature) || !Finite(MinimumLightningIntervalSeconds) ||
