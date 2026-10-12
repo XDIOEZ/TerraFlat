@@ -32,6 +32,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - WeatherMgr 的 `_GlobalWindStrength` 驱动 VegetationSway.hlsl；独立 Sprite 按根部 Pivot/PPU 弯曲，Tilemap 按格锚点，材质 FLATWORLD_VEGETATION_SWAY 控制接入，所有活跃 Pass 位移一致。
 - LightningEffectController 消费权威雷击落点；Resources/Weather/Shaders/LightningBolt 程序化绘制分叉、白芯蓝紫外光、落点电弧并配合屏幕短闪。有限池共享 owned Mesh/Material，各事件用 MPB，落点每帧投影环绕镜像；换世界/禁天气立即释放，表现不扣血。
 - WorldPostProcessQuality 从渲染 JSON 建世界 Volume，绑定 GameManager 进出世界事件并释放自建 Profile/组件；画质只改泛光采样。ScreenPostProcessManager 在优先级 100 合成状态，质量接口声明最低档位；可选质量档均持有效 URP 资产。
+- 打包时 `UberPostShaderVariantStripper` 仅剔除当前未启用的畸变、色差、胶片颗粒和 Bloom 脏镜头组合；新增这些效果时先更新剔除表，再检查构建中的变体数量和实际画面。动态创建 Volume，不能直接启用 URP 的「剔除未使用后处理变体」。
 - 低血量强度交给 LowHealthRedEdgeRendererFeature，在最终相机 resolveFinalTarget 且强度>0 时 Alpha Blend 全屏红边；普通 Vignette 为乘法压暗。
 
 ## 阴影与遮光
