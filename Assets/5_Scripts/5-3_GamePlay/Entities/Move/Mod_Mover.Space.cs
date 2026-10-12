@@ -10,12 +10,18 @@ public partial class Mod_Mover
     private RigidbodyType2D beforeSpaceBodyType;
     private bool IsSpaceRunningDisabled => item is Player && SpaceSession.Current?.IsSpaceView == true;
     private bool spaceUpright;
+    private bool beforeSpaceSimulated;
 
     public void SetSpaceUpright(bool enabled)
     {
         if (spaceUpright != enabled)
         {
             spaceUpright = enabled;
+            if (rb != null)
+            {
+                if (enabled) { beforeSpaceSimulated = rb.simulated; rb.simulated = false; }
+                else rb.simulated = beforeSpaceSimulated;
+            }
             // 只固定玩家本体，左右翻面和手持物瞄准仍由各自模块处理。
             item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(true);
         }
@@ -28,6 +34,12 @@ public partial class Mod_Mover
 
     private bool UpdateSpaceMotion(float seconds)
     {
+        if (item is Player replica && !replica.IsLocalProfile && SpaceSession.Current != null &&
+            SpaceSession.Current.TryGetNetworkObserver(replica.ProfileName, out SpaceNetworkObserver observer) && observer.InSpace)
+        {
+            SetSpaceUpright(true);
+            return true;
+        }
         if (item is not Player player || !player.IsLocalProfile || SpaceSession.Current?.State == null || rb == null)
         {
             SetSpaceUpright(false);
@@ -71,11 +83,17 @@ public partial class Mod_Mover
 
     public Vector2 SmoothSpaceVelocity(Vector2 currentVelocity, float seconds)
     {
-        SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
         Vector2 input = Enabled && !IsLock && inputController != null && !inputController.IsGameplayInputLocked
             ? Vector2.ClampMagnitude(RequestedMoveInput, 1f) : Vector2.zero;
         if (inputController?._mainCamera != null)
             input = inputController._mainCamera.transform.TransformDirection(input);
+        return SmoothSpaceVelocity(currentVelocity, seconds, input);
+    }
+
+    public Vector2 SmoothSpaceVelocity(Vector2 currentVelocity, float seconds, Vector2 input)
+    {
+        SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+        input = Vector2.ClampMagnitude(input, 1f);
         float speed = Mathf.Min(Mathf.Max(0f, Speed.Value), (float)settings.FreeFloatMaxSpeedMetersPerSecond);
         // 失重移动只在按键时累加速度，松键没有摩擦，反向输入才会制动。
         if (input.sqrMagnitude <= InputMoveThresholdSqr) return currentVelocity;

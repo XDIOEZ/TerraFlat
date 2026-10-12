@@ -190,7 +190,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     private void UpdateBinding(Item item, ShadowBinding binding)
     {
         // 太空玩家不画地面阴影，舱内人工重力也不改变这条表现规则。
-        if (item is Player && SceneManager.GetActiveScene().name == "SpaceScene")
+        if (item is Player && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
             return;
 
         SpriteRenderer sourceRenderer = binding.SourceRenderer;

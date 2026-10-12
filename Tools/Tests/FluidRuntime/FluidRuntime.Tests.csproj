@@ -25,6 +25,8 @@
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidThermodynamics.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Catalog/FluidDefinition.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/Domain/ShipState.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Universe/UniverseState.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Universe/SpaceSectorCoordinates.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/Domain/ShipAtmosphereService.cs" />
     <Reference Include="MemoryPack.Core">
       <HintPath>$(RepoRoot)Assets/Packages/MemoryPack.Core.1.21.3/lib/netstandard2.1/MemoryPack.Core.dll</HintPath>

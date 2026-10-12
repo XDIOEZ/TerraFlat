@@ -39,7 +39,7 @@ public sealed class ElectricHeaterLogic : MachineLogic
 
     private void PublishTemperature()
     {
-        TemperatureMgr current = TemperatureMgr.Instance;
+        TemperatureMgr current = MachineWorld.CanPublishLocalEnvironment(Entity) ? TemperatureMgr.Instance : null;
         if (temperatureManager != current)
         {
             if (temperatureManager != null) temperatureManager.RemoveLocalTemperatureSource(this);

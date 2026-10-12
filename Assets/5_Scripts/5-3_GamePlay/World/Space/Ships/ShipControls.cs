@@ -56,17 +56,27 @@ namespace FlatWorld.Spaceflight
             ShipFlightState flight = GetFlight(shipId);
             if (Universe == null || flight == null || flight.Phase is not (ShipFlightPhase.Cruising)) return null;
             ShipAssemblyState assembly = GetConnectedAssembly(shipId);
-            return assembly == null ? null : ShipLandingGuidance.FindNearbyBody(new SpaceVector2(assembly.PositionX, assembly.PositionY),
-                AssemblyRadius(assembly), Universe.State.Bodies);
+            if (assembly == null) return null;
+            BodyState found = null;
+            foreach (UniverseSimulation universe in sectorDirectory.Values)
+            {
+                SpaceVector2 point = SpaceSectorCoordinates.Relative(assembly.Sector, new SpaceVector2(assembly.PositionX, assembly.PositionY), universe.State.Sector);
+                BodyState candidate = ShipLandingGuidance.FindNearbyBody(point, AssemblyRadius(assembly), universe.State.Bodies);
+                if (candidate != null) { found = candidate; break; }
+            }
+            return found;
         }
 
         // 降落指令在固定步的接触提交阶段生效，按钮点击不直接切场景或改坐标。
         public bool RequestLanding(string consoleId)
         {
-            if (!IsSpaceView || !FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||
+            if (SubmitLocalIntent(SpaceNetworkIntentKind.RequestLanding, consoleId)) return true;
+            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||
                 console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             BodyState body = GetLandingCandidate(ship.ShipId);
             if (body == null) return false;
+            if (FlatWorld.Networking.GameNetwork.IsOnline && !CanTransferToNetworkSurface(body.SurfaceAddress.WorldKey, out string reason))
+            { Debug.LogWarning("[太空联机] " + reason, this); return false; }
             ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
             foreach (string id in assembly.MemberShipIds) GetFlight(id).RequestedLandingBodyId = body.BodyId;
             CancelNavigation(ship.ShipId);
@@ -75,7 +85,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool BeginPickingNavigation(string consoleId)
         {
-            if (!IsSpaceView || !FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||
+            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||
                 console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             pickingNavigationConsole = consoleId; return true;
         }
@@ -96,6 +106,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool ConfirmNearbyDock(string shipId)
         {
+            if (SubmitLocalIntent(SpaceNetworkIntentKind.ConfirmDock, ResolveConsole(shipId), shipId)) return true;
             ShipState ship = GetShip(shipId);
             string consoleId = ResolveConsole(shipId);
             Player actor = ItemMgr.Instance?.User_Player;
@@ -121,6 +132,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool DisconnectDock(string shipId, string portId)
         {
+            if (SubmitLocalIntent(SpaceNetworkIntentKind.DisconnectDock, ResolveConsole(shipId), shipId, portId)) return true;
             foreach (ShipDockingPairState pair in State.Docking)
                 if ((pair.ShipAId == shipId || pair.ShipBId == shipId) &&
                     (pair.PortAId == portId || pair.PortBId == portId))

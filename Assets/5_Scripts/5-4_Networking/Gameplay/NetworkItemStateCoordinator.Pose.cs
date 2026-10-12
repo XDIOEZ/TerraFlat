@@ -23,7 +23,7 @@ namespace FlatWorld.Networking.Gameplay
         private void BroadcastServerPose(int guid, StateRecord state)
         {
             if (!NetworkServer.active) return;
-            NetworkServer.SendToAll(new NetworkItemPoseMessage
+            SendToGroundObservers(new NetworkItemPoseMessage
             {
                 ItemGuid = guid, ItemId = state.ItemId,
                 StateRevision = state.Revision, PoseRevision = state.PoseRevision,

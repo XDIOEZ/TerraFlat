@@ -43,7 +43,7 @@ namespace FlatWorld.Spaceflight
             {
                 Snapshot = Encode(data), WorldKey = flight.SurfaceWorldKey,
                 InSpace = inSpace,
-                Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
+                Motion = new SpaceMotionState { Sector = ship.Sector, PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
                     RadiusMeters = .15d },
                 RotationDegrees = ship.AngleRadians * 180d / Math.PI + piece.QuarterTurns * 90d,
                 Scale = Vector3.one * .5f,
@@ -51,6 +51,11 @@ namespace FlatWorld.Spaceflight
                 SurfaceHeight = inSpace ? 0d : Math.Max(0d, flight.HeightMeters),
                 SurfaceVerticalSpeed = inSpace ? 0d : flight.VerticalSpeed
             };
+            if (drop.InSpace)
+            {
+                SpaceSectorCoordinates.Normalize(ref drop.Motion.Sector, ref drop.Motion.PositionMeters);
+                drop.WorldKey = SpaceSectorCoordinates.SceneKey(drop.Motion.Sector);
+            }
             State.LooseItems.Add(drop);
             return drop;
         }
@@ -72,14 +77,12 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 SpaceVector2 previousPosition = state.Motion.PositionMeters;
-                // 漂浮物没有星体引力，只做有上限的直线移动与碰撞。
-                double speed = state.Motion.VelocityMetersPerSecond.Magnitude;
-                double maxSpeed = SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond;
-                if (speed > maxSpeed) state.Motion.VelocityMetersPerSecond *= maxSpeed / speed;
-                bool touched = Universe.StepMotion(state.Motion, default, seconds, out SurfaceContact contact);
+                // 漂浮物保留继承的船速和碰撞冲量，不因换区或离船静默限速。
+                bool touched = StepSectorMotion(state.Motion, seconds, out SurfaceContact contact);
                 bool hitShip = ResolveLooseItemContact(state, previousPosition, seconds, out _, touched ? contact.Fraction : 1d);
                 if (hitShip || !touched) continue;
-                state.InSpace = false; state.WorldKey = Universe.GetSurfaceAddress(contact.BodyId).WorldKey;
+                state.InSpace = false; state.WorldKey = GetBody(contact.BodyId).SurfaceAddress.WorldKey;
+                state.Motion.Sector = contact.Sector;
                 state.Motion.PositionMeters = SurfaceCenter(contact.BodyId, contact.SurfaceAngleRadians);
                 state.Motion.VelocityMetersPerSecond = default;
                 state.SurfaceHeight = state.SurfaceVerticalSpeed = 0d;
@@ -98,14 +101,14 @@ namespace FlatWorld.Spaceflight
                     RestoreLooseItemHeightVisual(existing);
                     looseViews.Remove(state.Id); looseData.Remove(state.Id); State.LooseItems.Remove(state); continue;
                 }
-                bool visible = state.InSpace ? IsSpaceView && (state.Motion.PositionMeters - ViewOrigin).Magnitude < 1200d
+                bool visible = state.InSpace ? IsSpaceView && (SpaceSectorCoordinates.Relative(state.Motion.Sector, state.Motion.PositionMeters, ViewSector) - ViewOrigin).Magnitude < 1200d
                     : !IsSpaceView && state.WorldKey == SceneManager.GetActiveScene().name;
                 if (!visible)
                 {
                     if (existing != null) { existing.Save(); state.Snapshot = Encode(existing.itemData); DespawnLooseView(existing); }
                     looseViews.Remove(state.Id); continue;
                 }
-                Vector2 position = state.InSpace ? ProjectPosition(state.Motion.PositionMeters) : WorldLocalPresentation.ProjectPosition(state.Motion.PositionMeters.ToVector2());
+                Vector2 position = state.InSpace ? ProjectPosition(new SpaceSectorPosition(state.Motion.Sector, state.Motion.PositionMeters)) : WorldLocalPresentation.ProjectPosition(state.Motion.PositionMeters.ToVector2());
                 if (existing == null)
                 {
                     ItemData data = Decode(state.Snapshot);
@@ -191,9 +194,10 @@ namespace FlatWorld.Spaceflight
             {
                 if (cargo.InSpace != inSpace || !inSpace && cargo.WorldKey != ship.WorldAddress ||
                     !inSpace && Math.Abs(cargo.SurfaceHeight - flight.HeightMeters) > 1d) continue;
-                double dx = cargo.Motion.PositionMeters.X - ship.PositionX, dy = cargo.Motion.PositionMeters.Y - ship.PositionY;
+                SpaceVector2 point = inSpace ? SpaceSectorCoordinates.Relative(cargo.Motion.Sector, cargo.Motion.PositionMeters, ship.Sector) : cargo.Motion.PositionMeters;
+                double dx = point.X - ship.PositionX, dy = point.Y - ship.PositionY;
                 if (dx * dx + dy * dy > radius * radius) continue;
-                ShipGeometry.WorldToLocal(ship, cargo.Motion.PositionMeters.X, cargo.Motion.PositionMeters.Y, out double x, out double y);
+                ShipGeometry.WorldToLocal(ship, point.X, point.Y, out double x, out double y);
                 int cx = (int)Math.Floor(x / ship.CellSizeMeters), cy = (int)Math.Floor(y / ship.CellSizeMeters);
                 if (!ShipAtmosphereService.HasFloor(ship, cx, cy)) continue;
                 looseViews.TryGetValue(cargo.Id, out Item live);

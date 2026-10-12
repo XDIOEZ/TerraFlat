@@ -24,7 +24,7 @@ namespace FlatWorld.Spaceflight
                 !ReferenceEquals(owner, SaveDataMgr.Instance?.SaveData)) return false;
             Item source = context.SourceItem;
             if (source != null && source.PersistenceOwner != null && !ReferenceEquals(source.PersistenceOwner, this)) return false;
-            if (source != null && source.gameObject.scene.name == "SpaceScene") return true;
+            if (source != null && SpaceMgr.IsSpaceScene(source.gameObject.scene.name)) return true;
             if (source == null && IsSpaceView) return true;
             if (source != null && ReferenceEquals(source.PersistenceOwner, this))
             {
@@ -108,9 +108,10 @@ namespace FlatWorld.Spaceflight
         #region 初速度与来源移动继承
         private SpaceLooseItemState CreateSessionDropMotion(in DroppedItemSpawnContext context, float rotation, Vector3 scale)
         {
+            SpaceSectorPosition point = IsSpaceView ? UnprojectSectorPosition(context.Start) : default;
             var state = new SpaceLooseItemState { InSpace = IsSpaceView, WorldKey = SceneManager.GetActiveScene().name,
                 RotationDegrees = rotation, Scale = scale,
-                Motion = new SpaceMotionState { PositionMeters = IsSpaceView ? UnprojectPosition(context.Start)
+                Motion = new SpaceMotionState { Sector = point.Sector, PositionMeters = IsSpaceView ? point.LocalMeters
                     : SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(context.Start)), RadiusMeters = .15d } };
             bool inherited = false;
             Item source = context.SourceItem;
@@ -132,7 +133,9 @@ namespace FlatWorld.Spaceflight
                 ShipFlightState flight = GetFlight(carrier.ShipId);
                 state.InSpace = flight.Phase is ShipFlightPhase.Cruising;
                 state.WorldKey = flight.SurfaceWorldKey;
-                ShipGeometry.PointVelocity(carrier, state.Motion.PositionMeters.X, state.Motion.PositionMeters.Y, out double vx, out double vy);
+                SpaceVector2 carrierPoint = state.InSpace ? SpaceSectorCoordinates.Relative(state.Motion.Sector,
+                    state.Motion.PositionMeters, carrier.Sector) : state.Motion.PositionMeters;
+                ShipGeometry.PointVelocity(carrier, carrierPoint.X, carrierPoint.Y, out double vx, out double vy);
                 state.Motion.VelocityMetersPerSecond = new SpaceVector2(vx, vy);
                 if (!state.InSpace) { state.SurfaceHeight = Math.Max(0d, flight.HeightMeters); state.SurfaceVerticalSpeed = flight.VerticalSpeed; }
                 inherited = true;
@@ -163,9 +166,8 @@ namespace FlatWorld.Spaceflight
                 throw new InvalidOperationException("太空掉落的初始运动状态无效。");
             if (state.InSpace)
             {
-                double speed = state.Motion.VelocityMetersPerSecond.Magnitude;
-                double limit = SpaceGameplaySettings.Current.CruiseMaxSpeedMetersPerSecond;
-                if (speed > limit) state.Motion.VelocityMetersPerSecond *= limit / speed;
+                SpaceSectorCoordinates.Normalize(ref state.Motion.Sector, ref state.Motion.PositionMeters);
+                state.WorldKey = SpaceSectorCoordinates.SceneKey(state.Motion.Sector);
             }
             return state;
         }

@@ -21,13 +21,14 @@ namespace FlatWorld.Spaceflight
                 !SpaceVector2.Finite(motion.RadiusMeters) || motion.RadiusMeters < 0d)
                 return false;
 
-            foreach (BodyState body in Universe.State.Bodies)
-                if ((motion.PositionMeters - body.PositionMeters).Magnitude <= body.RadiusMeters + motion.RadiusMeters)
+            SpaceSectorPosition targetPosition = SpaceSectorCoordinates.Normalize(motion.Sector, motion.PositionMeters);
+            foreach (BodyState body in GetUniverse(targetPosition.Sector).State.Bodies)
+                if ((targetPosition.LocalMeters - body.PositionMeters).Magnitude <= body.RadiusMeters + motion.RadiusMeters)
                     return false;
 
             var targetMotion = new SpaceMotionState
             {
-                PositionMeters = motion.PositionMeters,
+                Sector = targetPosition.Sector, PositionMeters = targetPosition.LocalMeters,
                 VelocityMetersPerSecond = motion.VelocityMetersPerSecond,
                 RadiusMeters = motion.RadiusMeters
             };
@@ -64,7 +65,7 @@ namespace FlatWorld.Spaceflight
                 {
                     ReleaseViews();
                     migrationStarted = DimensionManager.Instance.TryBeginPlanetLanding(player,
-                        WorldAddress.FromWorldKey("SpaceScene"), Vector2.zero);
+                        WorldAddress.FromWorldKey(SpaceSectorCoordinates.SceneKey(motion.Sector)), Vector2.zero);
                     if (!migrationStarted) yield break;
                     while (DimensionManager.Instance.IsTransitioning) yield return null;
                 }

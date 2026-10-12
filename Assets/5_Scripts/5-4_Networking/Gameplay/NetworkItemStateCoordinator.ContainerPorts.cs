@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace FlatWorld.Networking.Gameplay
 {
-    public struct NetworkContainerIntentRequest : NetworkMessage { public uint Token; public string IntentJson; }
+    public struct NetworkContainerIntentRequest : NetworkMessage { public uint Token; public string IntentJson; public string ShipId; }
     public struct NetworkContainerIntentResponse : NetworkMessage
     {
         public uint Token;
@@ -44,7 +44,7 @@ namespace FlatWorld.Networking.Gameplay
             string json = JsonConvert.SerializeObject(intent);
             if (json.Length > 4096) return false;
             pendingContainerIntent = NextMachineToken(); containerIntentDeadline = Time.unscaledTime + 8f;
-            NetworkClient.Send(new NetworkContainerIntentRequest { Token = pendingContainerIntent, IntentJson = json }); return true;
+            NetworkClient.Send(new NetworkContainerIntentRequest { Token = pendingContainerIntent, IntentJson = json, ShipId = CurrentRequestShipId() }); return true;
         }
         private bool CanUseContainerAddress(NetworkConnectionToClient connection, Player actor, ContainerPortAddress address)
         {
@@ -56,6 +56,11 @@ namespace FlatWorld.Networking.Gameplay
         private void OnContainerIntent(NetworkConnectionToClient connection, NetworkContainerIntentRequest request)
         {
             if (!AcceptMachineToken(connection, request.Token) || string.IsNullOrEmpty(request.IntentJson) || request.IntentJson.Length > 4096) return;
+            if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope)) return;
+            using (scope) ExecuteContainerIntent(connection, request);
+        }
+        private void ExecuteContainerIntent(NetworkConnectionToClient connection, NetworkContainerIntentRequest request)
+        {
             ContainerTransferIntent intent;
             try { intent = JsonConvert.DeserializeObject<ContainerTransferIntent>(request.IntentJson, new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }); }
             catch (JsonException) { connection.Send(new NetworkContainerIntentResponse { Token = request.Token, Failure = (int)ContainerTransferFailure.InvalidRequest }); return; }

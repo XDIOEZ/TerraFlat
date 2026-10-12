@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 15;
+        public const int CurrentVersion = 16;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -270,6 +270,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkMechanicalNodeMessage : NetworkMessage
     {
         public int NodeGuid;
+        public string WorldKey;
         public byte[] Payload;
         public bool Reset;
         public bool Removed;

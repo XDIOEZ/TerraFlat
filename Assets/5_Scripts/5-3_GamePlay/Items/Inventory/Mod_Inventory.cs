@@ -130,7 +130,7 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
 
             // 根据保存的面板状态决定是否提前初始化UI
             // 如果面板之前是打开的，则在Load阶段预先创建，否则延迟到需要时再创建
-            if (currentInventory.Data != null && currentInventory.Data.PanelIsOpen)
+            if (currentInventory.Data != null && currentInventory.Data.PanelIsOpen && (item is not Player player || player.IsLocalProfile))
             {
                 EnsurePanelCreated(currentInventory);
                 NewMethod(currentInventory);
@@ -224,6 +224,8 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
 
     public virtual void BindController()
     {
+        if (item is Player networkPlayer && !networkPlayer.IsLocalProfile)
+        { foreach (Inventory container in inventoryRefDic.Values) container?.UnbindController(); return; }
         Mod_GameController gameController = null;
         if (item?.itemMods?.ContainsKey_ID(ModText.Controller) == true)
             gameController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);

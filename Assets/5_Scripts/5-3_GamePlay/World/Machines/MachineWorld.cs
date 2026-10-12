@@ -582,7 +582,7 @@ public static partial class MachineWorld
             RebuildGraphsIfDirty();
             foreach (var network in graph.Networks)
             {
-                bool active = IsShipScope || graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
+                bool active = KeepSimulatingWithoutPlayers || graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
                     RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network);
                 if (!active)
                 {
@@ -696,7 +696,10 @@ public static partial class MachineWorld
         if (node.Definition.Source == "manual" || node.Definition.ManualDriveTorque > 0)
             node.State.ManualSeconds = Mathf.Max(0, node.State.ManualSeconds - step);
         if (node.Definition.Transport != null && node.SpeedRpm > 0f)
-            DroppedItemService.TransportItemBacked(node, step);
+        {
+            if (CanPublishLocalEnvironment(node)) DroppedItemService.TransportItemBacked(node, step);
+            else DroppedItemService.TransportWorldDrops(node, step);
+        }
         if (node.Logic != null)
         {
             AdvanceFacilityLogic(node, step);
@@ -737,8 +740,11 @@ public static partial class MachineWorld
         {
             // 风机只消费自身地表位置的风力，船舱和其它世界不借当前地表天气。
             WeatherMgr weather = WeatherMgr.ExistingInstance;
-            return weather != null && node.ScopeKey == SceneManager.GetActiveScene().name &&
-                weather.TryGetWeatherAt(node.Position, out var localWeather) ? localWeather.WindStrength : 0f;
+            if (weather != null && node.ScopeKey == SceneManager.GetActiveScene().name &&
+                weather.TryGetWeatherAt(node.Position, out var localWeather)) return localWeather.WindStrength;
+            return WorldAddress.FromWorldKey(node.ScopeKey).IsSurface &&
+                FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleEnvironmentValue(node.ScopeKey, node.Position,
+                    "windStrength", out float wind) ? Mathf.Clamp01(wind) : 0f;
         }
         if (source == "water") return GetWaterSourceFactor(node);
         FluidDeviceBehavior fluidBehavior = GetFluidDeviceBehavior(node);
@@ -778,8 +784,16 @@ public static partial class MachineWorld
     private static bool TryGetWaterCurrentSpeed(MachineEntity node, out float speed)
     {
         speed = 0f;
+        if (node == null) return false;
+        if (worldKey != SceneManager.GetActiveScene().name)
+        {
+            if (!WorldAddress.FromWorldKey(worldKey).IsSurface ||
+                !FlatWorld.Spaceflight.SpaceSurfaceQuery.TryGetWaterCurrent(worldKey, node.Position, out RuntimeWaterCurrentSample coldCurrent)) return false;
+            speed = WorldItemWaterRules.ResolveDriftSpeed(coldCurrent.Kind, coldCurrent.Flow);
+            return speed > 0f;
+        }
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager == null || node == null || !IsWaterCell(node.Cell)) return false;
+        if (manager == null || !IsWaterCell(node.Cell)) return false;
         Vector2 samplePosition = new(node.Cell.x + .5f, node.Cell.y + .5f);
         if (!manager.TryGetRuntimeWaterCurrent(samplePosition, out RuntimeWaterCurrentSample current)) return false;
         speed = WorldItemWaterRules.ResolveDriftSpeed(current.Kind, current.Flow);
@@ -836,9 +850,12 @@ public static partial class MachineWorld
         finally { suppressRemoval = false; }
     }
 
-    public static Vector2Int CellOf(Vector3 position) => IsShipScope
-        ? new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y))
-        : WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
+    public static Vector2Int CellOf(Vector3 position)
+    {
+        Vector2Int cell = new(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+        // 冷地表使用自己冻结的拓扑，不能借当前玩家所在世界的环绕尺寸。
+        return IsShipScope ? cell : graph != null ? graph.NormalizeCell(cell) : WorldTopologyRuntime.NormalizeCell(cell);
+    }
     public static bool IsOccupied(Vector2Int cell, int layer, int except = 0)
     {
         if (graph == null) return false;
@@ -894,6 +911,9 @@ public static partial class MachineWorld
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         GameRes resources = GameRes.Instance;
         Vector2 samplePosition = new(cell.x + .5f, cell.y + .5f);
+        if (worldKey != SceneManager.GetActiveScene().name)
+            return WorldAddress.FromWorldKey(worldKey).IsSurface &&
+                FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleLiquid(worldKey, samplePosition, out _, out _);
         return manager != null && resources != null &&
                manager.TryGetRuntimeTerrainTile(samplePosition, out RuntimeTerrainTileSample sample) &&
                sample.LiquidDepth > 0f &&

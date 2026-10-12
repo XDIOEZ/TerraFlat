@@ -44,7 +44,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     public void ActivateWorldFromScene(string worldKey)
     {
-        if (worldKey != "SpaceScene") ActivateWorld(WorldAddress.FromWorldKey(worldKey));
+        if (!SpaceMgr.IsSpaceScene(worldKey)) ActivateWorld(WorldAddress.FromWorldKey(worldKey));
     }
 
     public void ActivateWorld(WorldAddress address)
@@ -170,7 +170,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         }
 
         // 太空场景保留最近地表地址，重生必须以实际场景判断是否需要跨世界。
-        WorldAddress sourceAddress = SceneManager.GetActiveScene().name != "SpaceScene" && ActiveAddress.IsValid
+        WorldAddress sourceAddress = !SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name) && ActiveAddress.IsValid
             ? ActiveAddress
             : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
         if (!targetAddress.IsValid || !targetAddress.IsSurface || targetAddress == sourceAddress ||
@@ -225,7 +225,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             !targetAddress.IsValid || !targetAddress.IsSurface || !IsFinitePosition(position)) return false;
         LoadCatalog();
         DimensionDefinition definition = catalog.Find(targetAddress.DimensionId);
-        bool toSpace = targetAddress.WorldKey == "SpaceScene";
+        bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
         if (definition == null || !(toSpace ? GameManager.Instance.BeginSpaceTransitionLoading() : GameManager.Instance.BeginDimensionTransitionLoading(definition))) return false;
         var context = new PortalTransitionContext { TargetPortalPosition = position, UseExactTargetPosition = true };
         StartCoroutine(TransitionCoroutine(player, WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name),
@@ -407,7 +407,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         yield return null;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在创建目标维度…", 0.48f);
-        bool toSpace = targetAddress.WorldKey == "SpaceScene";
+        bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
         if (!toSpace) EnsureWorldData(targetAddress);
         Scene oldScene = SceneManager.GetActiveScene();
         Scene targetScene = SceneManager.GetSceneByName(targetAddress.WorldKey);
@@ -415,7 +415,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         {
             yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene");
             yield return SpaceMgr.Instance.LoadPresentation();
-            targetScene = SceneManager.GetSceneByName("SpaceScene");
+            targetScene = SceneManager.GetActiveScene();
         }
         else if (!targetScene.IsValid() || !targetScene.isLoaded)
             targetScene = SceneManager.CreateScene(targetAddress.WorldKey);
@@ -517,12 +517,12 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         Scene previousScene = SceneManager.GetActiveScene();
         Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
-        bool fromSpace = sourceAddress.WorldKey == "SpaceScene";
+        bool fromSpace = SpaceMgr.IsSpaceScene(sourceAddress.WorldKey);
         if (fromSpace)
         {
             yield return GameManager.Instance.LoadSceneSingleAndInvokeWhenReady("SpaceScene");
             yield return SpaceMgr.Instance.LoadPresentation();
-            sourceScene = SceneManager.GetSceneByName("SpaceScene");
+            sourceScene = SceneManager.GetActiveScene();
         }
         else if (!sourceScene.IsValid() || !sourceScene.isLoaded)
             sourceScene = SceneManager.CreateScene(sourceAddress.WorldKey);

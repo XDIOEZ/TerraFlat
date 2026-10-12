@@ -22,7 +22,7 @@ namespace FlatWorld.Spaceflight
         private CameraClearFlags previousFlags;
         private int geometryWidth;
         private int geometryHeight;
-        private SpaceVector2 previousPosition;
+        private SpaceSectorPosition previousPosition;
         private bool hasPreviousPosition;
         private double parallaxX;
         private double parallaxY;
@@ -129,12 +129,12 @@ namespace FlatWorld.Spaceflight
         {
             // 只传双精度镜头位移，星点分层移动和闪烁全部交给显卡，不受浮动原点影响。
             SpaceSession session = SpaceSession.Current;
-            SpaceVector2 position = session != null
-                ? session.UnprojectPosition(camera.transform.position)
-                : SpaceVector2.FromVector2(camera.transform.position);
+            SpaceSectorPosition position = session != null
+                ? session.UnprojectSectorPosition(camera.transform.position)
+                : new SpaceSectorPosition(default, SpaceVector2.FromVector2(camera.transform.position));
             if (hasPreviousPosition && position.IsFinite)
             {
-                SpaceVector2 delta = position - previousPosition;
+                SpaceVector2 delta = SpaceSectorCoordinates.Difference(position, previousPosition);
                 Vector3 right = camera.transform.right, up = camera.transform.up;
                 parallaxX = (parallaxX + (delta.X * right.x + delta.Y * right.y) /
                     System.Math.Max(.001d, worldWidth) * ParallaxStrength) % 4d;
@@ -187,7 +187,7 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 相机背景所有权与释放
-        private static bool IsSpaceScene => SceneManager.GetActiveScene().name == "SpaceScene";
+        private static bool IsSpaceScene => SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name);
         private void OnSceneChanged(Scene previous, Scene current)
         {
             if (!IsSpaceScene) HidePresentation();

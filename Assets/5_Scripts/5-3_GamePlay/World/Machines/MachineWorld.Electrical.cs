@@ -64,7 +64,7 @@ public static partial class MachineWorld
         foreach (MachineEntity conveyor in graph.ConveyorChanges)
         {
             UpdateConveyorVisualSpeed(conveyor);
-            CellChanged?.Invoke(conveyor.Cell);
+            NotifySurfaceCellChanged(conveyor.Cell);
         }
     }
 

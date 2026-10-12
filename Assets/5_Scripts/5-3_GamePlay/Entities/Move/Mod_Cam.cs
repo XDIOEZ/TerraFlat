@@ -81,6 +81,13 @@ public class Mod_Cam : Module
         if (_rotationFollower != null) _rotationFollower.FollowTargetRotation = enabled;
     }
 
+    // 星区浮点重定位同时移动镜头缓存，保持屏幕上的位置和跟随惯性。
+    public void ShiftSpacePresentation(Vector2 shift)
+    {
+        if (vcam != null && vcam.Follow != null) vcam.OnTargetObjectWarped(vcam.Follow, shift);
+        if (ControllerCamera != null) ControllerCamera.transform.position += (Vector3)shift;
+    }
+
     /// <summary>
     /// 获取虚拟相机组件
     /// </summary>

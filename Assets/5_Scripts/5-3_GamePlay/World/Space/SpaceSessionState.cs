@@ -9,8 +9,10 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceSessionState
     {
-        public int Version = 1;
-        public UniverseState Universe;
+        public int Version = 2;
+        [JsonIgnore] public UniverseState Universe;
+        public List<UniverseState> Sectors = new();
+        public double SimulationSeconds;
         public SpaceStateCollection<ShipState> Ships = new();
         public SpaceStateCollection<ShipFlightState> Flights = new();
         public SpaceStateCollection<ShipDeviceState> Devices = new();
@@ -108,6 +110,7 @@ namespace FlatWorld.Spaceflight
     public sealed class SpacePassengerState
     {
         public string ProfileId, ShipId, ConsolePieceId;
+        public uint RealmRevision;
         public double LocalX, LocalY;
         public SpaceMotionState FreeMotion = new();
         public SpaceVector2 FreeWalkVelocity;
@@ -132,6 +135,7 @@ namespace FlatWorld.Spaceflight
     {
         public string ShipId, NavigationPieceId, ConsolePieceId;
         public double TargetX, TargetY;
+        public SpaceSectorId TargetSector;
         public long Sequence;
         public bool Active, NeedsManualRestart;
         public string Status = "待机";

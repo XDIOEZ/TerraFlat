@@ -13,6 +13,7 @@ namespace FlatWorld.Spaceflight
         private sealed class ShipDamageFeedback
         {
             public bool InSpace;
+            public SpaceSectorId Sector;
             public string WorldKey, Reason;
             public SpaceSessionState Session;
             public double X, Y, Amount;
@@ -59,7 +60,8 @@ namespace FlatWorld.Spaceflight
                     (piece.CellY + height * .5d) * ship.CellSizeMeters, out feedback.X, out feedback.Y);
             }
             feedback.InSpace = flight.Phase == ShipFlightPhase.Cruising;
-            feedback.WorldKey = feedback.InSpace ? "SpaceScene" : flight.SurfaceWorldKey;
+            feedback.Sector = ship.Sector;
+            feedback.WorldKey = feedback.InSpace ? SpaceSectorCoordinates.SceneKey(ship.Sector) : flight.SurfaceWorldKey;
             feedback.Amount += actualLoss; feedback.Reason = reason;
             if (piece?.Health <= 0d || ship.IsWreck && ship.WreckHealth <= 0d) feedback.ShowAt = Time.time;
         }
@@ -75,12 +77,15 @@ namespace FlatWorld.Spaceflight
             foreach (var pair in pendingShipDamageFeedback)
             {
                 ShipDamageFeedback feedback = pair.Value;
-                if (!running || !ReferenceEquals(State, feedback.Session) || feedback.WorldKey != SceneManager.GetActiveScene().name)
+                bool visible = feedback.InSpace ? IsSpaceView &&
+                    (SpaceSectorCoordinates.Relative(feedback.Sector, new SpaceVector2(feedback.X, feedback.Y), ViewSector) - ViewOrigin).Magnitude < 1200d :
+                    feedback.WorldKey == SceneManager.GetActiveScene().name;
+                if (!running || !ReferenceEquals(State, feedback.Session) || !visible)
                 { shipDamageFeedbackKeys.Add(pair.Key); continue; }
                 if (Time.time < feedback.ShowAt || presented >= 24) continue;
                 shipDamageFeedbackKeys.Add(pair.Key);
                 if (template == null) continue;
-                Vector2 point = feedback.InSpace ? ProjectPosition(new SpaceVector2(feedback.X, feedback.Y))
+                Vector2 point = feedback.InSpace ? ProjectPosition(new SpaceSectorPosition(feedback.Sector, new SpaceVector2(feedback.X, feedback.Y)))
                     : WorldLocalPresentation.ProjectPosition(new Vector2((float)feedback.X, (float)feedback.Y));
                 var data = new DamageTextEffectData((float)Math.Min(float.MaxValue, feedback.Amount))
                 {

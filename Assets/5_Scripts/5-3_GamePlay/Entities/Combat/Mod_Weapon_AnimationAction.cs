@@ -414,6 +414,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
     private void OnAttackStarted()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, cachedController != null ? cachedController.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (cachedController != null && cachedController.IsGameplayInputLocked)
         {
             return;
@@ -425,6 +426,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
     private void OnAttackEnded()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, cachedController != null ? cachedController.GetAimWorldPosition(8192f) : item.transform.position)) return;
         isHoldingInput = false;
     }
 

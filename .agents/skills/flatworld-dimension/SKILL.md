@@ -16,7 +16,8 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 - `WorldAddress` 生成键：地表为 `PlanetId`，其他为 `PlanetId__dimension__DimensionId`；各键独享 Planet/Map/Chunk 差量。新维度继承地表拓扑、半径、ChunkSize，运行态独立。
 - 切换顺序：保存 → 退出 Ground/Liquid 接触 → 释放玩家/世界 → 动态 Scene → 目标世界/锚点 → 完整活动窗口、出口/地块效果、物理同步 → 刷新接触 → 解锁输入/恢复奔跑。失败恢复原状态。
 - `Event_PlayerEnterWorld` 只表示玩家已创建；完成信号由 `DimensionManager` 在 `AreRuntimeWindowPresentationsReady` 及收尾后发布。位置/锚点存入 `ItemSpecialData.flatworld.dimensions`。
-- 当前切换仅支持离线。矿洞默认抑制天气/怪物，`FixedLighting` 是光照上限。环绕补绘相机的局部 Light2D 使用轻量镜像代理，代理不进入玩法查询。
+- DimensionManager 的完整维度切换仍仅支持离线。联机太空返回仍保留的地表与复活走 SpaceSession.Realm 的服务器状态事务、本机观察呈现；客户端只发重生意图，服务器选出生点并恢复生存状态。未绑定的另一星球地表明确拒绝，不能创建空 Scene 冒充就绪。
+- 矿洞默认抑制天气/怪物，`FixedLighting` 是光照上限。环绕补绘相机的局部 Light2D 使用轻量镜像代理，代理不进入玩法查询。
 
 ## 洞穴与入口
 

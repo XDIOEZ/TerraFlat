@@ -13,6 +13,8 @@ internal static class Program
         SpaceContactsPublishAndRefreshImpulse();
         SurfaceRealmAndHeightFilter();
         CandidateChangesAndDockingTopology();
+        CrossSectorContactsAndFarIsolation();
+        CrossSectorShipOverlapKeepsLocalPrecision();
         Console.WriteLine($"PASS: {assertions} ship contact assertions.");
     }
 
@@ -172,6 +174,49 @@ internal static class Program
     #endregion
 
     #region 几何夹具与断言
+    private static void CrossSectorShipOverlapKeepsLocalPrecision()
+    {
+        SpaceSession session = new();
+        ShipState a = AddShip(session, "a-boundary", ShipFlightPhase.Cruising, "a-space");
+        ShipState b = AddShip(session, "b-boundary", ShipFlightPhase.Cruising, "b-space");
+        ShipState remote = AddShip(session, "c-remote", ShipFlightPhase.Cruising, "c-space");
+        a.Sector = new(long.MaxValue - 1, 0); b.Sector = new(long.MaxValue, 0);
+        a.PositionX = 127999.75d; b.PositionX = -127999.75d;
+        remote.PositionX = .125d; remote.PositionY = .25d;
+        session.CaptureShipContactPoses();
+        var assemblies = new ShipAssemblyCache().Refresh(session.State.Ships, session.State.Docking);
+        session.StepShipContacts(.02d, assemblies);
+        double distance = SpaceSectorCoordinates.Difference(new(b.Sector, new(b.PositionX, b.PositionY)),
+            new(a.Sector, new(a.PositionX, a.PositionY))).Magnitude;
+        Near(distance, 1.001d, "边界两侧的实际船体重叠按真实矩形分开。");
+        Near(remote.PositionX, .125d, "多个遥远星区成对查询不会吃掉船体亚米坐标。");
+        Near(remote.PositionY, .25d, "遥远查询不会把纯局部起点反复转换成巨大绝对坐标。");
+    }
+
+    private static void CrossSectorContactsAndFarIsolation()
+    {
+        SpaceSession session = new();
+        ShipState ship = AddShip(session, "boundary", ShipFlightPhase.Cruising, "unused-space-key");
+        ship.Sector = new SpaceSectorId(long.MaxValue - 1, 0);
+        ship.PositionX = 127999.75d;
+        SpaceLooseItemState item = Loose("neighbor", true, null);
+        item.Motion.Sector = new SpaceSectorId(long.MaxValue, 0);
+        item.Motion.PositionMeters = new(-127999.85d, 0d);
+        item.Motion.VelocityMetersPerSecond = new(-10d, 0d);
+        Assert(session.ResolveLooseItemContact(item, new(-127999.65d, 0d), .02d), "边界另一侧的散落物能撞到实际相邻船体。");
+        Near(ship.VelocityX, -10d / 6d, "巨大星区编号附近仍传递正确动量。");
+        Assert(item.Motion.Sector.X == long.MaxValue, "接触解算不擅自改变散落物归属。");
+        Assert(ship.PositionX > 127998d && ship.PositionX < 128001d, "碰撞不把船坐标转换成巨大绝对值。");
+        Assert(session.GetFlight(ship.ShipId).Motion.Sector == ship.Sector, "飞行状态发布保留船体星区。");
+
+        SpaceLooseItemState distant = Loose("far-copy", true, null, true);
+        distant.Motion.Sector = new(0, 0);
+        distant.Motion.PositionMeters = new(ship.PositionX - .4d, 0d);
+        SpaceSession.ResetCounters();
+        Assert(!session.ResolveLooseItemContact(distant, new(ship.PositionX - .6d, 0d), .02d), "遥远星区同样的局部坐标不发生碰撞。");
+        Assert(SpaceSession.DecodeCalls == 0 && ShipMassReader.ReadCalls == 0, "遥远同坐标物体被权威距离筛掉。");
+    }
+
     private static ShipState AddShip(SpaceSession session, string id, ShipFlightPhase phase, string world, int count = 1)
     {
         ShipState ship = new()

@@ -247,7 +247,7 @@ namespace FlatWorld.Spaceflight
         }
         private static ShipState CopyKinematics(ShipState ship, string shipId) => new ShipState
         {
-            ShipId = shipId, ReferenceBodyId = ship.ReferenceBodyId, WorldAddress = ship.WorldAddress,
+            ShipId = shipId, Sector = ship.Sector, ReferenceBodyId = ship.ReferenceBodyId, WorldAddress = ship.WorldAddress,
             PlatformKind = ship.PlatformKind, CellSizeMeters = ship.CellSizeMeters,
             CabinHeightMeters = ship.CabinHeightMeters, NormalCabinTemperatureCelsius = ship.NormalCabinTemperatureCelsius,
             PositionX = ship.PositionX, PositionY = ship.PositionY, VelocityX = ship.VelocityX, VelocityY = ship.VelocityY,
@@ -257,6 +257,7 @@ namespace FlatWorld.Spaceflight
         private static void ReplaceState(ShipState target, ShipState source)
         {
             target.NotifyStructureChanged();
+            target.Sector = source.Sector;
             target.IdentityAnchorPieceId = source.IdentityAnchorPieceId; target.IsWreck = source.IsWreck;
             target.Pieces = source.Pieces; target.MassContributions = source.MassContributions;
             target.Compartments = source.Compartments; target.EverEnclosedCells = source.EverEnclosedCells;

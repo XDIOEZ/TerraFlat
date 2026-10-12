@@ -101,7 +101,7 @@ internal sealed class PlanetSurfacePresentation : IDisposable
     public void UpdateLighting(SpaceSession session, BodyState body)
     {
         if (renderer == null || session?.Universe == null || body == null) return;
-        UniverseState universe = session.Universe.State;
+        UniverseState universe = session.GetUniverse(body.Sector).State;
         if (!ReferenceEquals(lightingUniverse, universe))
         {
             lightingUniverse = universe;

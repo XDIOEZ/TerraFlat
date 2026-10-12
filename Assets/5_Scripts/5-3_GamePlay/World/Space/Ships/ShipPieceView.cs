@@ -389,17 +389,19 @@ namespace FlatWorld.Spaceflight
                     Vector2 position = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters);
                     view.Rebind(ship, piece, forceBindings);
                     view.SetPose(position, angle, visualLiftOffset);
+                    if (IsSpaceView) SpaceMgr.ExistingInstance?.MovePresentationToSector(view.gameObject, ship.Sector);
                 }
             }
             RemoveExpiredSurfaceShadows();
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return;
             SpacePassengerState passenger = GetPassenger(player);
+            SetTerrainSuppression(player, IsSpaceView || passenger.Supported);
             ShipState carrier = GetShip(passenger.ShipId);
             if (passenger.Supported && carrier != null && IsVisible(carrier)) PlacePassenger(player, passenger, carrier);
             else if (IsSpaceView && passenger.IsInSpace && !passenger.LandingResolved)
             {
-                Vector2 position = ProjectPosition(passenger.FreeMotion.PositionMeters);
+                Vector2 position = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
                 player.transform.position = new Vector3(position.x, position.y, 0f);
                 Rigidbody2D playerBody = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.rb;
                 if (playerBody != null) playerBody.position = position;

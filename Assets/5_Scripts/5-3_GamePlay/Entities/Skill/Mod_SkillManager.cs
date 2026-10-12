@@ -229,6 +229,7 @@ public class Mod_SkillManager : Module
 
     public override void Act()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 2, focusPoint != null ? focusPoint.Data.DefaultSkill_Point : item.transform.position)) return;
         if (CurrentSelectSkilIndex >= 0 && CurrentSelectSkilIndex < skillDataList.Count)
         {
             BaseSkill selectedSkill = skillDataList[CurrentSelectSkilIndex];

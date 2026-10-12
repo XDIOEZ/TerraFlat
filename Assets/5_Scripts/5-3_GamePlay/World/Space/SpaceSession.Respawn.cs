@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -13,6 +14,8 @@ namespace FlatWorld.Spaceflight
         public bool TryBeginRespawnTransition(Player player, WorldAddress targetAddress,
             Vector3 targetPosition, Action preparePlayerForSave)
         {
+            if (GameNetwork.IsOnline)
+                return TryBeginNetworkRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
             if (State == null || transitionRunning || player == null || preparePlayerForSave == null ||
                 DimensionManager.Instance.IsTransitioning)
                 return false;
@@ -58,15 +61,19 @@ namespace FlatWorld.Spaceflight
                 player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetOrthographicSize(
                     (float)Math.Max(1d, previous.SavedCameraSize));
             }
-            ReleaseDrivingCamera();
-            pickingNavigationConsole = null;
-            ShipPanelSession.CloseForPlayer(this, player);
-            SpaceLandingPanelSession.Refresh(null, null);
+            if (player == ItemMgr.Instance?.User_Player)
+            {
+                ReleaseDrivingCamera();
+                pickingNavigationConsole = null;
+                ShipPanelSession.CloseForPlayer(this, player);
+                SpaceLandingPanelSession.Refresh(null, null);
+            }
             SetTerrainSuppression(player, false);
             player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
             State.Passengers.RemoveAll(value => value.ProfileId == player.ProfileName);
             // 迁移前仍会刷新视图，保留中立记录可防止被重新识别成太空漂浮乘员。
-            State.Passengers.Add(new SpacePassengerState { ProfileId = player.ProfileName, LandingResolved = true });
+            State.Passengers.Add(new SpacePassengerState { ProfileId = player.ProfileName, LandingResolved = true,
+                RealmRevision = previous?.RealmRevision ?? 0 });
         }
 
         private IEnumerator FinishRespawnTransition(SpaceSessionState sessionState, string profileId,

@@ -8,6 +8,7 @@ namespace FlatWorld.Spaceflight
     {
         #region 椭圆轨道与游戏时钟
         private readonly Dictionary<string, BodyState> bodies = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, BodyState> templateBodies = new(StringComparer.Ordinal);
         private readonly List<BodyState> orbitOrder = new();
         private readonly Dictionary<string, SpaceVector2> previousPositions = new(StringComparer.Ordinal);
         private double previousSimulationSeconds;
@@ -18,7 +19,7 @@ namespace FlatWorld.Spaceflight
             State = state ?? throw new ArgumentNullException(nameof(state));
             if (!SpaceVector2.Finite(state.SimulationSeconds) || state.SimulationSeconds < 0d ||
                 !Positive(state.FixedStepSeconds) || !Positive(state.MetersPerUnityUnit) || !Positive(state.OrbitTimeScale) ||
-                state.Bodies == null || state.Bodies.Count == 0)
+                state.Bodies == null)
                 throw new InvalidDataException("星系时间、步长、表现比例或星体列表无效");
             var planetIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (BodyState body in state.Bodies)
@@ -31,6 +32,9 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(body.OrbitalPeriapsisRadians) ||
                     !SpaceVector2.Finite(body.RotationPeriodSeconds) || !SpaceVector2.Finite(body.RotationInitialRadians))
                     throw new InvalidDataException("星体身份、地址或轨道参数无效");
+                body.Sector = state.Sector;
+                if (!string.IsNullOrWhiteSpace(body.TemplateBodyId) && !templateBodies.TryAdd(body.TemplateBodyId, body))
+                    throw new InvalidDataException("同一星区中的星体模板身份重复");
             }
             var visited = new HashSet<string>(StringComparer.Ordinal);
             var path = new HashSet<string>(StringComparer.Ordinal);
@@ -109,7 +113,7 @@ namespace FlatWorld.Spaceflight
             BodyState body = GetBody(bodyId);
             // 正常固定步的乘员和散落物扫掠复用两端位置，碰撞子步才重新求轨道。
             if (Math.Abs(simulationSeconds - State.SimulationSeconds) <= 1e-9d) return body.PositionMeters;
-            if (Math.Abs(simulationSeconds - previousSimulationSeconds) <= 1e-9d) return previousPositions[bodyId];
+            if (Math.Abs(simulationSeconds - previousSimulationSeconds) <= 1e-9d) return previousPositions[body.BodyId];
             EvaluateRelativeMotion(body, simulationSeconds, out SpaceVector2 position, out _);
             return string.IsNullOrWhiteSpace(body.ParentBodyId) ? position :
                 GetPositionAtTime(body.ParentBodyId, simulationSeconds) + position;
@@ -117,7 +121,8 @@ namespace FlatWorld.Spaceflight
 
         public BodyState GetBody(string bodyId) => TryGetBody(bodyId, out BodyState body) ? body :
             throw new KeyNotFoundException($"星体不存在：{bodyId}");
-        public bool TryGetBody(string bodyId, out BodyState body) => bodies.TryGetValue(bodyId ?? string.Empty, out body);
+        public bool TryGetBody(string bodyId, out BodyState body)
+            => bodies.TryGetValue(bodyId ?? string.Empty, out body) || templateBodies.TryGetValue(bodyId ?? string.Empty, out body);
         public WorldAddress GetSurfaceAddress(string bodyId) => GetBody(bodyId).SurfaceAddress;
 
         public void AdvanceTime(double seconds)
@@ -159,17 +164,18 @@ namespace FlatWorld.Spaceflight
         {
             ValidateMotion(motion, acceleration, seconds);
             if (!NonNegative(startSeconds)) throw new ArgumentOutOfRangeException(nameof(startSeconds));
-            SpaceVector2 from = motion.PositionMeters;
+            SpaceVector2 from = SpaceSectorCoordinates.Relative(motion.Sector, motion.PositionMeters, State.Sector);
             SpaceVector2 velocityBefore = motion.VelocityMetersPerSecond;
-            SpaceVector2 next = from + velocityBefore * seconds + acceleration * (.5d * seconds * seconds);
+            SpaceVector2 displacement = velocityBefore * seconds + acceleration * (.5d * seconds * seconds);
+            SpaceVector2 next = from + displacement;
             SpaceVector2 velocityAfter = velocityBefore + acceleration * seconds;
             if (TryFindContact(from, next, velocityBefore, velocityAfter, motion.RadiusMeters, startSeconds, seconds, out contact))
             {
-                motion.PositionMeters = contact.PositionMeters;
+                motion.PositionMeters = SpaceSectorCoordinates.Relative(contact.Sector, contact.PositionMeters, motion.Sector);
                 motion.VelocityMetersPerSecond = SpaceVector2.Lerp(velocityBefore, velocityAfter, contact.Fraction);
                 return true;
             }
-            motion.PositionMeters = next;
+            motion.PositionMeters += displacement;
             motion.VelocityMetersPerSecond = velocityAfter;
             return false;
         }
@@ -182,6 +188,13 @@ namespace FlatWorld.Spaceflight
                 throw new ArgumentOutOfRangeException(nameof(seconds));
             return TryFindContact(from, to, velocityBefore, velocityAfter, radius, startSeconds, seconds, out contact);
         }
+
+        public bool TrySweepSurfaceContact(SpaceSectorId motionSector, SpaceVector2 from, SpaceVector2 to,
+            SpaceVector2 velocityBefore, SpaceVector2 velocityAfter, double radius, double startSeconds,
+            double seconds, out SurfaceContact contact)
+            => TrySweepSurfaceContact(SpaceSectorCoordinates.Relative(motionSector, from, State.Sector),
+                SpaceSectorCoordinates.Relative(motionSector, to, State.Sector), velocityBefore, velocityAfter,
+                radius, startSeconds, seconds, out contact);
 
         private bool TryFindContact(SpaceVector2 from, SpaceVector2 to, SpaceVector2 velocityBefore,
             SpaceVector2 velocityAfter, double radius, double startSeconds, double seconds, out SurfaceContact contact)
@@ -200,6 +213,7 @@ namespace FlatWorld.Spaceflight
                 contact = new SurfaceContact
                 {
                     BodyId = body.BodyId, PlanetId = body.PlanetId, Fraction = fraction,
+                    Sector = State.Sector,
                     SimulationSeconds = startSeconds + seconds * fraction,
                     PositionMeters = hitPosition, SurfaceAngleRadians = Math.Atan2(relative.Y, relative.X),
                     RelativeVelocityMetersPerSecond = SpaceVector2.Lerp(velocityBefore, velocityAfter, fraction) -
@@ -237,6 +251,7 @@ namespace FlatWorld.Spaceflight
             SpaceVector2 radial = SpaceVector2.FromAngle(surfaceAngleRadians);
             return new SpaceMotionState
             {
+                Sector = body.Sector,
                 PositionMeters = body.PositionMeters + radial * (body.RadiusMeters + heightMeters),
                 VelocityMetersPerSecond = body.VelocityMetersPerSecond + radial * outwardSpeedMetersPerSecond
             };

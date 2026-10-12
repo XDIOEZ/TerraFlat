@@ -111,6 +111,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     private float _bounceSpinReferenceSpeed;
     private bool _isFlying;
     private bool _endingFlight;
+    private FlatWorld.Spaceflight.SpaceCombatFrame spaceFrame;
+    public Vector2 SpaceFlightVelocity => _arcVelocity;
     private Transform _embeddedTarget;
     private bool _wasEmbedded;
     private Vector3 _embeddedLocalPosition;
@@ -187,6 +189,19 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         _flightElapsed += step;
         _flightRemain -= step;
 
+        if (spaceFrame?.Active == true)
+        {
+            RefreshSpaceProjectilePresentation();
+            // 太空投射物使用权威直线位移和规范坐标扫掠，不接触本机地表物理世界。
+            Vector2 next = (Vector2)item.transform.position + _arcVelocity * step;
+            SetProjectilePosition(next);
+            _virtualHeight = 0f;
+            UpdateArcPresentation(0f);
+            SweepFlightPath();
+            if (_isFlying && _flightRemain <= 0f) FinishFlight();
+            return;
+        }
+
         float gravity = Mathf.Max(0.01f, VirtualGravity);
         _virtualHeight = _virtualLaunchVerticalSpeed * _flightElapsed -
                          0.5f * gravity * _flightElapsed * _flightElapsed;
@@ -213,6 +228,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     /// <summary>解除伤害事件，防止对象池复用后重复订阅。</summary>
     protected override void OnUnload()
     {
+        spaceFrame?.Finish();
         launchDeathCause = null;
         _damage?.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
         if (_damage != null)
@@ -342,6 +358,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
         EnsureBody();
         EnsureSolidCollider();
+        _body.simulated = true;
         _body.bodyType = RigidbodyType2D.Dynamic;
         _body.gravityScale = 0f;
         _body.mass = Mathf.Max(0.01f, item.itemData.Stack.CurrentWeight);
@@ -379,6 +396,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         _isFlying = true;
 
         _damage.SetExplicitProjectileSweep(true);
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(shooter, out FlatWorld.Spaceflight.SpaceSectorPosition origin, out Vector2 presentation))
+        {
+            spaceFrame = item.GetComponent<FlatWorld.Spaceflight.SpaceCombatFrame>() ?? item.gameObject.AddComponent<FlatWorld.Spaceflight.SpaceCombatFrame>();
+            spaceFrame.Initialize(item, origin, presentation);
+            _body.simulated = false;
+            if (_solidCollider != null) _solidCollider.enabled = false;
+        }
         SetFlightDeliveryCapabilities();
 
         // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
@@ -392,18 +416,34 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
     }
 
+    private void RefreshSpaceProjectilePresentation()
+    {
+        var session = FlatWorld.Spaceflight.SpaceSession.Current;
+        Player local = ItemMgr.Instance?.User_Player;
+        bool visible = session != null && local != null && session.TryGetNetworkObserver(local.ProfileName, out var observer) && observer.InSpace &&
+            FlatWorld.Spaceflight.SpaceSession.TryGetCombatPosition(item, item.transform.position, out var point) &&
+            FlatWorld.Spaceflight.SpaceSectorCoordinates.Difference(point, observer.Position).Magnitude <= 8192d;
+        foreach (Renderer renderer in item.GetComponentsInChildren<Renderer>(true)) renderer.enabled = visible;
+        if (!visible || !FlatWorld.Spaceflight.SpaceSession.TryGetCombatPosition(item, item.transform.position, out var canonical)) return;
+        Vector2 shift = session.ProjectPosition(canonical) - (Vector2)item.transform.position;
+        spaceFrame.PresentationOrigin += shift;
+        _lastFlightPosition += shift; _lastSensorPosition += shift;
+        SetProjectilePosition((Vector2)item.transform.position + shift);
+    }
+
     /// <summary>高空段与落地段共享同一窗口，切换资格不能清掉已经命中的目标。</summary>
     private void SetFlightDeliveryCapabilities()
     {
         var capabilities = FlatWorld.Combat.CombatDeliveryCapabilities.Projectile |
             FlatWorld.Combat.CombatDeliveryCapabilities.AirborneTargets;
-        bool airborneOnly = UseVisibleArc &&
+        bool airborneOnly = spaceFrame?.Active != true && UseVisibleArc &&
             _flightElapsed < _flightDuration * (1f - Mathf.Clamp01(GroundImpactFraction));
         if (airborneOnly)
             capabilities |= FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly;
         _damage.SetDeliveryCapabilities(capabilities);
 
         // 高空段的地面投影不能推动地面实体；落地段重新启用时恢复本次飞行的碰撞排除。
+        if (spaceFrame?.Active == true) { if (_solidCollider != null) _solidCollider.enabled = false; return; }
         if (_solidCollider != null && _solidCollider.enabled == airborneOnly)
         {
             _solidCollider.enabled = !airborneOnly;
@@ -471,6 +511,14 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     /// <summary>用伤害盒扫过上一帧到当前帧的完整路径，补足高速 Trigger 可能漏掉的目标。</summary>
     private void SweepFlightPath()
     {
+        if (spaceFrame?.Active == true)
+        {
+            Vector2 center = ResolveSensorPosition();
+            _damage.QueryProjectileSweep(center - _lastSensorPosition);
+            _lastSensorPosition = ResolveSensorPosition();
+            _lastFlightPosition = item.transform.position;
+            return;
+        }
         _resolvedBounceThisSweep = false;
         Vector2 currentPosition = _body != null ? _body.position : (Vector2)item.transform.position;
         if (!(_damage.DamageCollider is BoxCollider2D damageBox) || !damageBox.enabled)
@@ -627,7 +675,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         {
             Vector2 offset = _damage.DamageCollider is BoxCollider2D box
                 ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
-            SetProjectilePosition(WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset));
+            Vector2 point = (Vector2)context.HitPoint - offset;
+            SetProjectilePosition(spaceFrame?.Active == true ? point : WorldTopologyRuntime.NormalizePosition(point));
         }
         if (resolvedDamage == 0f)
         {
@@ -853,6 +902,14 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
         bool recover = Random.value < Mathf.Clamp01(RecoveryChance);
+        if (spaceFrame?.Active == true)
+        {
+            if (recover && FlatWorld.Spaceflight.SpaceSession.TryGetCombatPosition(item, item.transform.position, out FlatWorld.Spaceflight.SpaceSectorPosition point))
+                FlatWorld.Spaceflight.SpaceSession.Current?.RecoverNetworkProjectile(item, point, _arcVelocity);
+            spaceFrame.Finish();
+            ItemMgr.Instance?.DespawnItem(item, saveData: false);
+            return;
+        }
         if (!recover)
         {
             TryDropBrokenSalvage();

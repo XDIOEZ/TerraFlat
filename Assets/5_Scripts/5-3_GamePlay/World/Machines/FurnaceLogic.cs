@@ -230,6 +230,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private void AbsorbDroppedFuelFromCell()
     {
         if (FuelInventory?.Data?.itemSlots == null || FuelInventory.Data.itemSlots.Count == 0) return;
+        if (!MachineWorld.CanPublishLocalEnvironment(Entity))
+        { DroppedItemService.AbsorbWorldFuel(Entity, FuelInventory.Data); return; }
 
         Vector2 center = new(Entity.Cell.x + .5f, Entity.Cell.y + .5f);
         const float sameCellRadius = .72f;
@@ -352,7 +354,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private void PublishTemperature()
     {
         if (!hasLocalHeat) return;
-        if (!IsBurning)
+        if (!IsBurning || !MachineWorld.CanPublishLocalEnvironment(Entity))
         {
             if (temperatureManager != null)
             {

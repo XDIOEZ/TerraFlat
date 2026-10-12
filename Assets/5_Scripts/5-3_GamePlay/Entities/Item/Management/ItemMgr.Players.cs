@@ -32,7 +32,7 @@ public partial class ItemMgr
         {
             if (player == null) continue;
             if (_networkRemoteReplicas.Contains(player)) continue;
-            player.Save();
+            SavePlayerAtAuthoritativePosition(player);
 
             SaveDataMgr.Instance.SaveData.PlayerData_Dict[RequireProfileName(player)] = player.Data;
 
@@ -40,6 +40,19 @@ public partial class ItemMgr
         }
 
         return playerCount;
+    }
+
+    private static void SavePlayerAtAuthoritativePosition(Player player)
+    {
+        player.Save();
+        // 联机存真实世界坐标，远端显示对象的位置不能覆盖服务器记录。
+        if (FlatWorld.Networking.GameNetwork.IsOnline && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
+            FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName, out var observer) == true)
+        {
+            player.Data.CurrentSceneName = observer.WorldKey;
+            player.Data.transform.position = new Vector3((float)observer.Position.LocalMeters.X,
+                (float)observer.Position.LocalMeters.Y);
+        }
     }
 
     [Button("加载玩家")]
@@ -195,8 +208,10 @@ public partial class ItemMgr
 
         if (!hasSavedData)
             playerData.Name_User = playerName;
-        playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
-        playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
+        if (!hasSavedData || string.IsNullOrEmpty(playerData.CurrentSceneName))
+            playerData.CurrentSceneName = SceneManager.GetActiveScene().name;
+        if (!SpaceMgr.IsSpaceScene(playerData.CurrentSceneName))
+            playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
         playerData.transform.rotation = Quaternion.identity;
         if (playerData.transform.scale == Vector3.zero)
             playerData.transform.scale = Vector3.one;
@@ -230,11 +245,15 @@ public partial class ItemMgr
         if (player == null || !_networkPlayers.Contains(player))
             return;
 
+        bool wasAuthority = _networkAuthorityPlayers.Remove(player);
+        if (wasAuthority) player.ModuleUnload();
         _networkRemoteReplicas.Remove(player);
         player.SetProfileContext(
             localProfile: true,
             profileDataWasCreated: player.WasProfileDataCreated,
             runtimeProfileName: player.ProfileName);
+        if (wasAuthority)
+            foreach (Module module in player.Mods.Values) module?.LoadRuntime();
         InitializeNetworkLocalPlayer(player, spawnPosition);
     }
 
@@ -245,6 +264,7 @@ public partial class ItemMgr
 
         _networkRemoteReplicas.Remove(player);
         _networkInitializedPlayers.Remove(player);
+        _networkAuthorityPlayers.Remove(player);
 
         if (player.Data != null)
         {
@@ -254,7 +274,7 @@ public partial class ItemMgr
 
             if (persistData)
             {
-                player.Save();
+                SavePlayerAtAuthoritativePosition(player);
                 SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = player.Data;
             }
         }
@@ -283,8 +303,45 @@ public partial class ItemMgr
         player.Data.transform.position = logicalSpawnPosition;
 
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+        if (controller != null) controller.enabled = true;
         controller?.SetGameplayInputLocked(false);
     }
+
+    #region 远端玩家服务器结算模块
+    private readonly HashSet<Player> _networkAuthorityPlayers = new();
+    public void InitializeNetworkAuthorityPlayer(Player player)
+    {
+        if (player == null || player.IsLocalProfile || !_networkAuthorityPlayers.Add(player)) return;
+        _networkRemoteReplicas.Remove(player);
+        // 只加载权威结算与手持模块，输入、相机、地表流送仍由本机玩家负责。
+        player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.ClearNetworkVisualHeldItem();
+        var enabledStates = new Dictionary<Module, bool>();
+        foreach (Module module in player.Mods.Values)
+            if (module?._Data != null)
+            {
+                enabledStates[module] = module._Data.Enabled;
+                module._Data.Enabled = module is Mod_GameController or Mod_DamageReceiver or Mod_Stamina or
+                    Mod_BuffManager or Mod_FocusPoint or Mod_TurnBack or Mod_AnimatorController or Mod_HotBar or Mod_Inventory or Mod_PlayerDeathState or Mod_Oxygen;
+            }
+        try { player.ResumeRuntimeAfterReplacement(); }
+        finally { foreach (var state in enabledStates) if (state.Key?._Data != null) state.Key._Data.Enabled = state.Value; }
+        Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
+        if (controller != null)
+        {
+            controller.enabled = false;
+            controller.SetGameplayInputLocked(false);
+        }
+        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.simulated = false; }
+        Mod_ItemPicker picker = player.GetComponentInChildren<Mod_ItemPicker>(true);
+        if (picker != null)
+        {
+            picker.AddTargetInventories.Clear();
+            if (player.itemMods.GetMod_ByID(ModText.Hotbar) is IInventory hotbar) picker.AddTargetInventories.Add(hotbar);
+            if (player.itemMods.GetMod_ByID(ModText.Bag) is IInventory bag) picker.AddTargetInventories.Add(bag);
+        }
+    }
+    #endregion
 
     private static void ConfigureRemoteNetworkReplica(Player player, Vector3 spawnPosition)
     {

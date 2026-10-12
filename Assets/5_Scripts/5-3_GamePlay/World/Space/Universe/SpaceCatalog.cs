@@ -34,15 +34,18 @@ namespace FlatWorld.Spaceflight
         private readonly SpaceCatalogConfig config;
         private readonly Dictionary<string, BodyState> bodies = new(StringComparer.Ordinal);
         private readonly Dictionary<string, SurfaceProfile> surfaces = new(StringComparer.Ordinal);
+        private readonly Dictionary<SpaceSectorId, SpaceSectorSystemDefinition> systems = new();
+        private readonly List<SpaceSectorId> configuredSectors = new() { default };
         public string TemplateId => config.TemplateId;
         public IReadOnlyList<BodyState> Bodies => config.Bodies;
+        public IReadOnlyList<SpaceSectorId> ConfiguredSectors => configuredSectors;
 
         public SpaceCatalog(string json)
         {
             config = JsonConvert.DeserializeObject<SpaceCatalogConfig>(json,
                 new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }) ??
                 throw new InvalidDataException("星系配置为空");
-            if (config.SchemaVersion != 1 || string.IsNullOrWhiteSpace(config.TemplateId) || config.Surfaces == null)
+            if (config.SchemaVersion != 1 || string.IsNullOrWhiteSpace(config.TemplateId) || config.Surfaces == null || config.SectorSystems == null)
                 throw new InvalidDataException("星系模板版本、身份或地表列表无效");
             foreach (SurfaceProfile surface in config.Surfaces)
             {
@@ -76,6 +79,17 @@ namespace FlatWorld.Spaceflight
                     throw new InvalidDataException($"星体缺少独立地表配置：{body.BodyId}");
                 bodies.Add(body.BodyId, body);
             }
+            foreach (SpaceSectorSystemDefinition system in config.SectorSystems)
+            {
+                if (system == null || system.Sector == default || string.IsNullOrWhiteSpace(system.TemplateId) ||
+                    system.Bodies == null || !systems.TryAdd(system.Sector, system))
+                    throw new InvalidDataException("星区目录的坐标、模板身份或星体列表无效");
+                _ = new UniverseSimulation(new UniverseState { Sector = system.Sector, Bodies = system.Bodies });
+                configuredSectors.Add(system.Sector);
+                foreach (BodyState body in system.Bodies)
+                    if (string.IsNullOrWhiteSpace(body.SurfaceProfileId) || !surfaces.ContainsKey(body.SurfaceProfileId))
+                        throw new InvalidDataException($"星区 {system.Sector} 的星体缺少地表配置：{body.BodyId}");
+            }
         }
 
         public static SpaceCatalog LoadDefault()
@@ -105,15 +119,18 @@ namespace FlatWorld.Spaceflight
         {
             if (state?.Bodies == null) throw new ArgumentNullException(nameof(state));
             // 存档保留身份、种子、初相位和时钟，物理规则重新绑定当前内容目录。
-            state.TemplateId = config.TemplateId;
             state.FixedStepSeconds = config.FixedStepSeconds;
             state.MetersPerUnityUnit = config.MetersPerUnityUnit;
             state.OrbitTimeScale = config.OrbitTimeScale;
             foreach (BodyState body in state.Bodies)
             {
-                BodyState definition = GetBodyDefinition(body.BodyId);
+                string localId = string.IsNullOrWhiteSpace(body.TemplateBodyId) ? body.BodyId : body.TemplateBodyId;
+                BodyState definition = FindDefinition(state.Sector, localId);
+                body.TemplateBodyId = definition.BodyId; body.Sector = state.Sector;
                 body.DisplayName = definition.DisplayName; body.PrefabId = definition.PrefabId;
-                body.SurfaceProfileId = definition.SurfaceProfileId; body.ParentBodyId = definition.ParentBodyId;
+                body.SurfaceProfileId = definition.SurfaceProfileId;
+                body.ParentBodyId = string.IsNullOrWhiteSpace(definition.ParentBodyId) ? string.Empty :
+                    SpaceSectorCoordinates.BodyId(state.Sector, definition.ParentBodyId);
                 body.RadiusMeters = definition.RadiusMeters; body.SurfaceGravity = definition.SurfaceGravity;
                 body.PlacementDistanceMeters = definition.PlacementDistanceMeters;
                 body.OrbitalPeriodSeconds = definition.OrbitalPeriodSeconds;
@@ -132,47 +149,59 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 程序化星系与稳定身份
-        public UniverseState Generate(int seed)
+        public UniverseState Generate(int seed) => GenerateSector(seed, default);
+
+        public UniverseState GenerateSector(int seed, SpaceSectorId sector)
         {
-            var state = new UniverseState
+            IReadOnlyList<BodyState> definitions = GetDefinitions(sector);
+            var template = new UniverseState
             {
-                TemplateId = config.TemplateId, Seed = seed, FixedStepSeconds = config.FixedStepSeconds,
+                TemplateId = sector == default ? config.TemplateId :
+                    systems.TryGetValue(sector, out SpaceSectorSystemDefinition system) ? system.TemplateId : "core:empty-space",
+                FixedStepSeconds = config.FixedStepSeconds,
                 MetersPerUnityUnit = config.MetersPerUnityUnit, OrbitTimeScale = config.OrbitTimeScale,
-                Bodies = JsonConvert.DeserializeObject<List<BodyState>>(JsonConvert.SerializeObject(config.Bodies))
+                Bodies = new List<BodyState>(definitions)
             };
-            foreach (BodyState body in state.Bodies)
-            {
-                body.Seed = DeriveSeed(seed, body.BodyId);
-                if (config.RandomizeBodyPlacements && !string.IsNullOrWhiteSpace(body.ParentBodyId))
-                    body.PlacementAngleRadians = ((uint)body.Seed / (double)uint.MaxValue) * Math.PI * 2d;
-            }
-            _ = new UniverseSimulation(state);
-            return state;
+            return UniverseSectorFactory.Generate(template, seed, sector, config.RandomizeBodyPlacements);
         }
 
         public string ResolveBodyId(string planetId)
         {
-            foreach (BodyState body in config.Bodies)
+            SpaceSectorId sector = default;
+            if (SpaceSectorCoordinates.TryParseIdentity(planetId, out SpaceSectorId parsed, out string localId))
+            { sector = parsed; planetId = localId; }
+            foreach (BodyState body in GetDefinitions(sector))
                 if (string.Equals(body.PlanetId, planetId, StringComparison.Ordinal) ||
-                    string.Equals(body.DisplayName, planetId, StringComparison.Ordinal)) return body.BodyId;
+                    string.Equals(body.DisplayName, planetId, StringComparison.Ordinal) ||
+                    string.Equals(body.BodyId, planetId, StringComparison.Ordinal)) return SpaceSectorCoordinates.BodyId(sector, body.BodyId);
             return null;
         }
 
-        public BodyState GetBodyDefinition(string bodyId) => bodies.TryGetValue(bodyId ?? string.Empty, out var body) ? body :
-            throw new KeyNotFoundException($"星系模板中不存在星体：{bodyId}");
+        private IReadOnlyList<BodyState> GetDefinitions(SpaceSectorId sector)
+            => sector == default ? config.Bodies : systems.TryGetValue(sector, out SpaceSectorSystemDefinition system) ?
+                system.Bodies : Array.Empty<BodyState>();
+        private BodyState FindDefinition(SpaceSectorId sector, string localId)
+        {
+            foreach (BodyState body in GetDefinitions(sector)) if (body.BodyId == localId) return body;
+            throw new KeyNotFoundException($"星区 {sector} 的模板中不存在星体：{localId}");
+        }
+        public BodyState GetBodyDefinition(string bodyId)
+            => SpaceSectorCoordinates.TryParseIdentity(bodyId, out SpaceSectorId sector, out string localId)
+                ? FindDefinition(sector, localId) : FindDefinition(default, bodyId);
+        public bool TryGetBodyDefinition(string bodyId, out BodyState definition)
+        {
+            definition = null;
+            SpaceSectorId sector = default;
+            if (SpaceSectorCoordinates.TryParseIdentity(bodyId, out SpaceSectorId parsed, out string localId))
+            { sector = parsed; bodyId = localId; }
+            foreach (BodyState body in GetDefinitions(sector)) if (body.BodyId == bodyId) { definition = body; return true; }
+            return false;
+        }
         public SurfaceProfile GetSurfaceProfile(string bodyId) => surfaces[GetBodyDefinition(bodyId).SurfaceProfileId];
         public SurfaceProfile GetSurfaceProfileById(string id) => surfaces.TryGetValue(id ?? string.Empty, out var surface) ? surface :
             throw new KeyNotFoundException($"星体地表配置不存在：{id}");
 
-        public static int DeriveSeed(int seed, string bodyId)
-        {
-            unchecked
-            {
-                uint hash = (uint)seed ^ 2166136261u;
-                foreach (char character in bodyId) { hash ^= character; hash *= 16777619u; }
-                return (int)hash;
-            }
-        }
+        public static int DeriveSeed(int seed, string bodyId) => UniverseSectorFactory.DeriveSeed(seed, bodyId);
         #endregion
 
         #region 星球持久数据与真实大气
@@ -246,7 +275,7 @@ namespace FlatWorld.Spaceflight
         public ChunkGenerationProfileSnapshot ApplySurfaceProfile(string bodyId, ChunkGenerationProfileSnapshot original)
         {
             if (original == null) throw new ArgumentNullException(nameof(original));
-            if (string.IsNullOrWhiteSpace(bodyId) || !bodies.ContainsKey(bodyId)) return original;
+            if (string.IsNullOrWhiteSpace(bodyId) || !TryGetBodyDefinition(bodyId, out _)) return original;
             if (original.TextParameters.TryGetValue("space.bodyId", out string applied) && applied == bodyId) return original;
             SurfaceProfile surface = GetSurfaceProfile(bodyId);
             bool cave = original.Settings.Mode == ChunkGenerationMode.Cave;
@@ -309,8 +338,19 @@ namespace FlatWorld.Spaceflight
         public double MetersPerUnityUnit = 1d;
         public double OrbitTimeScale = 1d;
         public bool RandomizeBodyPlacements = true;
+        public List<SpaceSectorSystemDefinition> SectorSystems = new();
         public List<BodyState> Bodies;
         public List<SurfaceProfile> Surfaces;
+        #endregion
+    }
+
+    [Serializable]
+    internal sealed class SpaceSectorSystemDefinition
+    {
+        #region 可扩展星区内容目录
+        public SpaceSectorId Sector;
+        public string TemplateId;
+        public List<BodyState> Bodies;
         #endregion
     }
 }

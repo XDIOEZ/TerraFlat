@@ -1,6 +1,22 @@
 using System;
 using System.Collections.Generic;
 
+#region 非流体目标的坐标依赖
+namespace UnityEngine
+{
+    public struct Vector2
+    {
+        public float x, y;
+        public Vector2(float x, float y) { this.x = x; this.y = y; }
+    }
+}
+public readonly struct WorldAddress
+{
+    public const string SurfaceDimensionId = "surface";
+    public WorldAddress(string planetId, string dimensionId) { }
+}
+#endregion
+
 public sealed class FluidCatalog
 {
     #region 测试材料入口

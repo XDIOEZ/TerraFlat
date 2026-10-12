@@ -12,7 +12,7 @@ namespace FlatWorld.Networking.Gameplay
     /// 第一阶段正式联机玩家：本地预测移动、服务端校验位置、所有客户端共同观察区块。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class NetworkWorldPlayer : NetworkBehaviour
+    public sealed partial class NetworkWorldPlayer : NetworkBehaviour
     {
         private const float MaxSupportedWorldCoordinate = 100000f;
 
@@ -83,12 +83,14 @@ namespace FlatWorld.Networking.Gameplay
         public string DisplayName => displayName;
         public Player CorePlayer => corePlayer;
         /// <summary>服务器权威逻辑坐标；协议、距离校验和存档禁止读取本机表现 Transform 代替它。</summary>
-        public Vector3 AuthoritativeLogicalPosition => IsValidPosition(authoritativePosition)
+        public Vector3 AuthoritativeLogicalPosition => IsInSpace && SpaceSessionForNetwork != null
+            ? (Vector3)SpaceSessionForNetwork.ProjectPosition(AuthoritativeSpacePosition)
+            : IsValidPosition(authoritativePosition)
             ? WorldTopologyRuntime.NormalizePosition(authoritativePosition)
             : WorldTopologyRuntime.NormalizePosition(transform.position);
 
         /// <summary>区块观察者使用的逻辑位置；本机拥有者可使用尚未发包的最新预测位置。</summary>
-        public Vector3 ObserverLogicalPosition => isOwned && corePlayer != null
+        public Vector3 ObserverLogicalPosition => IsInSpace ? AuthoritativeLogicalPosition : isOwned && corePlayer != null
             ? WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position)
             : AuthoritativeLogicalPosition;
 
@@ -105,13 +107,14 @@ namespace FlatWorld.Networking.Gameplay
             authoritativeVelocity = Vector2.zero;
             authoritativeFacingLeft = false;
             authoritativeVisualState = NetworkPlayerVisualState.Idle;
+            RefreshSpaceAuthority();
         }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
             DontDestroyOnLoad(gameObject);
-            remoteTargetPosition = WorldLocalPresentation.ProjectPosition(authoritativePosition);
+            remoteTargetPosition = IsInSpace ? AuthoritativeLogicalPosition : WorldLocalPresentation.ProjectPosition(authoritativePosition);
             remoteSnapshotStartPosition = transform.position;
             remoteVelocity = authoritativeVelocity;
             if (!isOwned && IsValidPosition(authoritativePosition))
@@ -150,7 +153,7 @@ namespace FlatWorld.Networking.Gameplay
             if (manualCameraFollow && followCamera != null)
                 Destroy(followCamera.gameObject);
 
-            if (corePlayer != null && ItemMgr.Instance != null)
+            if (!isServer && corePlayer != null && ItemMgr.Instance != null)
             {
                 ItemMgr.Instance.ReleaseNetworkPlayer(corePlayer, persistData: isServer || NetworkServer.active);
                 corePlayer = null;
@@ -167,6 +170,14 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
+            if (isServer)
+            {
+                if (corePlayer == null) EnsureCorePlayer(isOwned);
+                SynchronizeGroundObserver();
+                RefreshSpaceAuthority();
+                if (IsInSpace && corePlayer != null && !coreAvatarIsLocal) ItemMgr.Instance?.InitializeNetworkAuthorityPlayer(corePlayer);
+                PublishServerPlayerState();
+            }
             if (!NetworkClient.active)
                 return;
 
@@ -188,6 +199,11 @@ namespace FlatWorld.Networking.Gameplay
 
         private void UpdateOwnedMovement()
         {
+            if (IsInSpace)
+            {
+                UpdateSpaceMovement();
+                return;
+            }
             if (corePlayer != null)
             {
                 Vector3 itemPosition = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
@@ -224,7 +240,7 @@ namespace FlatWorld.Networking.Gameplay
             if (corePlayer == null || !corePlayer.IsInitialized)
                 return;
 
-            if (corePlayer.Data?.transform != null)
+            if (!IsInSpace && corePlayer.Data?.transform != null)
                 corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
 
             itemStateSendTimer -= Time.deltaTime;
@@ -312,10 +328,32 @@ namespace FlatWorld.Networking.Gameplay
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
 
-            if (corePlayer != null && !isOwned)
-                ApplyRemoteItemState(payload);
-
-            authoritativeItemState = payload;
+            if (corePlayer == null) return;
+            if (!IsInSpace)
+            {
+                if (!isOwned)
+                {
+                    if (corePlayer.IsInitialized)
+                        ItemNetworkStateSerialization.ApplyRemoteReplica(corePlayer, payload, (module, state) =>
+                        {
+                            if (module is Mod_HotBar hotbar) hotbar.ApplyNetworkAuthorityData(corePlayer, state);
+                            else if (module is IRemoteNetworkModule remote) remote.ApplyRemoteNetworkData(corePlayer, state);
+                        });
+                    else ApplyRemoteItemState(payload);
+                }
+                authoritativeItemState = payload;
+                return;
+            }
+            if (!isOwned)
+            {
+                if (!ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData incoming) ||
+                    incoming is not Data_Player || incoming.Guid != corePlayer.itemData.Guid) return;
+                // 客户端只提交快捷栏选择，数量和生命状态始终来自服务器事务。
+                foreach (Module module in corePlayer.Mods.Values)
+                    if (module is Mod_HotBar hotbar && incoming.ModuleDataDic.TryGetValue(module.StableName, out ModuleData state))
+                        hotbar.ApplyNetworkSelectedSlot(state);
+            }
+            PublishServerPlayerState(force: true);
         }
 
         [Command]
@@ -335,6 +373,7 @@ namespace FlatWorld.Networking.Gameplay
             bool facingLeft,
             NetworkPlayerVisualState visualState)
         {
+            if (IsInSpace) return;
             if (!IsValidPosition(requestedPosition))
                 return;
 
@@ -373,6 +412,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnAuthoritativePositionChanged(Vector3 oldPosition, Vector3 newPosition)
         {
+            if (IsInSpace) return;
             if (!IsValidPosition(newPosition))
                 return;
 
@@ -394,6 +434,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnAuthoritativeVelocityChanged(Vector2 oldVelocity, Vector2 newVelocity)
         {
+            if (IsInSpace) return;
             remoteVelocity = IsValidVelocity(newVelocity) ? newVelocity : Vector2.zero;
 
             // 停止时可能没有新的位置脏数据，单独用速度 SyncVar 把外推位置拉回最终坐标。
@@ -403,6 +444,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void BeginRemoteSnapshot(Vector3 targetPosition, Vector2 velocity)
         {
+            if (IsInSpace) return;
             if (!IsValidPosition(targetPosition))
                 return;
 
@@ -434,6 +476,12 @@ namespace FlatWorld.Networking.Gameplay
 
         private void UpdateRemoteMovement()
         {
+            if (IsInSpace || !SharesLocalRealm())
+            {
+                UpdateSpaceMovement();
+                return;
+            }
+            SetNetworkVisibility(true);
             if (!IsValidPosition(remoteTargetPosition))
                 return;
 
@@ -463,7 +511,10 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnAuthoritativeItemStateChanged(byte[] oldState, byte[] newState)
         {
-            if (!isOwned)
+            if (isServer) return;
+            if (isOwned && IsInSpace && corePlayer != null)
+                ItemNetworkStateSerialization.Apply(corePlayer, newState, reloadRuntimeModules: true, requireMatchingGuid: true);
+            else if (!isOwned)
                 ApplyRemoteItemState(newState);
         }
 
@@ -592,7 +643,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             if (corePlayer != null && IsValidPosition(corePlayer.transform.position))
-                transform.position = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
+                transform.position = IsInSpace ? corePlayer.transform.position : WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
 
             if (manualCameraFollow)
             {
@@ -609,7 +660,7 @@ namespace FlatWorld.Networking.Gameplay
             try
             {
                 int networkGuid = unchecked((int)(0x40000000u | (netId & 0x3fffffffu)));
-                Vector3 logicalSpawnPosition = localControl
+                Vector3 logicalSpawnPosition = IsInSpace ? AuthoritativeLogicalPosition : localControl
                     ? WorldTopologyRuntime.NormalizePosition(transform.position)
                     : AuthoritativeLogicalPosition;
                 corePlayer = ItemMgr.Instance.LoadNetworkPlayer(displayName, networkGuid, logicalSpawnPosition, localControl);
@@ -621,18 +672,21 @@ namespace FlatWorld.Networking.Gameplay
 
                 coreAvatarIsLocal |= localControl;
                 if (!coreAvatarIsLocal)
+                {
                     BindRemoteVisualModules(corePlayer);
+                    if (isServer && IsInSpace) ItemMgr.Instance.InitializeNetworkAuthorityPlayer(corePlayer);
+                }
 
                 coreMover = corePlayer.GetComponentInChildren<Mod_Mover>(true);
                 coreBody = corePlayer.GetComponent<Rigidbody2D>();
                 coreTurnBack = corePlayer.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
                 coreAnimator = corePlayer.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
                 coreAnimatorReceiver = coreAnimator as Mod_AnimatorController_Receiver;
-                if (!coreAvatarIsLocal && coreTurnBack != null)
+                if (!coreAvatarIsLocal && !isServer && coreTurnBack != null)
                     coreTurnBack.faceMouse = null;
 
                 Mod_GameController controller = corePlayer.GetComponentInChildren<Mod_GameController>(true);
-                controller?.SetGameplayInputLocked(!coreAvatarIsLocal);
+                controller?.SetGameplayInputLocked(!coreAvatarIsLocal && !isServer);
                 if (coreMover != null)
                     coreMover.IsLock = !coreAvatarIsLocal;
 
@@ -642,10 +696,11 @@ namespace FlatWorld.Networking.Gameplay
                 HideNetworkProxyRenderer();
                 SyncCorePlayerPosition(localControl
                     ? corePlayer.transform.position
-                    : WorldLocalPresentation.ProjectPosition(AuthoritativeLogicalPosition));
+                    : IsInSpace ? AuthoritativeLogicalPosition : WorldLocalPresentation.ProjectPosition(AuthoritativeLogicalPosition));
+                if (isServer) SpaceSessionForNetwork?.EnsureNetworkPassenger(corePlayer);
                 itemStateDirty = true;
 
-                if (!isOwned && ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
+                if (!isServer && !isOwned && ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
                     ApplyRemoteItemState(authoritativeItemState);
 
                 if (!isOwned)
@@ -747,13 +802,14 @@ namespace FlatWorld.Networking.Gameplay
                     corePlayer.transform.position = position;
             }
 
-            if (corePlayer.Data != null)
+            if (!IsInSpace && corePlayer.Data != null)
                 corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(position);
         }
 
         /// <summary>本机锚点跨周时只重选远端玩家的显示镜像，服务器 SyncVar 逻辑坐标保持不变。</summary>
         private void HandleLocalPresentationWrap()
         {
+            if (IsInSpace) return;
             if (isOwned || !IsValidPosition(authoritativePosition))
                 return;
 

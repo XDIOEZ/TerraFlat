@@ -730,6 +730,8 @@ internal static class ChunkBatchRendererGroupService
         private unsafe JobHandle OnPerformCulling(BatchRendererGroup group,
             BatchCullingContext context, BatchCullingOutput output, IntPtr userContext)
         {
+            // 本机太空视图只关闭地表绘制，其他玩家的地表数据和碰撞继续运行。
+            if (SpaceMgr.LocalSpacePresentationActive) { output.drawCommands[0] = default; return default; }
             lock (syncRoot)
             {
                 cullingCallbackCount++;

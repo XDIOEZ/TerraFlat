@@ -104,7 +104,8 @@ public partial class Mod_GameController
         }
 
         worldPosition.z = 0f;
-        _externalAimWorldPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);
+        _externalAimWorldPosition = FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
+            ? worldPosition : WorldTopologyRuntime.NormalizePosition(worldPosition);
         _externalAimWorldPositionInitialized = true;
         return true;
     }

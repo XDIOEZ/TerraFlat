@@ -53,8 +53,9 @@ namespace FlatWorld.Spaceflight
             if (State != null) foreach (ShipState value in State.Ships)
             {
                 if (value.IsWreck || !IsVisible(value)) continue;
+                SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, position, value.Sector) : position;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)value.PositionX, (float)value.PositionY));
-                ShipGeometry.WorldToLocal(value, IsSpaceView ? position.X : ground.x, IsSpaceView ? position.Y : ground.y, out double x, out double y);
+                ShipGeometry.WorldToLocal(value, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out double x, out double y);
                 int cellX = (int)Math.Floor(x / value.CellSizeMeters), cellY = (int)Math.Floor(y / value.CellSizeMeters);
                 ShipPieceState found = value.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Floor &&
                     ContainsCell(piece, cellX, cellY));
@@ -177,8 +178,9 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState candidate in State.Ships)
             {
                 if (!IsVisible(candidate)) continue;
+                SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, absolute, candidate.Sector) : absolute;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
-                ShipGeometry.WorldToLocal(candidate, IsSpaceView ? absolute.X : ground.x, IsSpaceView ? absolute.Y : ground.y, out double x, out double y);
+                ShipGeometry.WorldToLocal(candidate, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out double x, out double y);
                 var proposal = new ShipPieceState { CellX = (int)Math.Floor(x / candidate.CellSizeMeters),
                     CellY = (int)Math.Floor(y / candidate.CellSizeMeters), Width = width,
                     Height = height, QuarterTurns = quarterTurns };
@@ -203,17 +205,19 @@ namespace FlatWorld.Spaceflight
             var ship = new ShipState { PositionX = Math.Floor(position.x), PositionY = Math.Floor(position.y), WorldAddress = world, PlatformKind = ShipPlatformKind.Land };
             if (IsSpaceView)
             {
-                SpaceVector2 absolute = UnprojectPosition(position);
-                ship.PositionX = Math.Floor(absolute.X); ship.PositionY = Math.Floor(absolute.Y); ship.PlatformKind = ShipPlatformKind.Space;
+                SpaceSectorPosition absolute = UnprojectSectorPosition(position);
+                ship.Sector = absolute.Sector; ship.WorldAddress = SpaceSectorCoordinates.SceneKey(ship.Sector);
+                ship.PositionX = Math.Floor(absolute.LocalMeters.X); ship.PositionY = Math.Floor(absolute.LocalMeters.Y); ship.PlatformKind = ShipPlatformKind.Space;
             }
+            else if (FindSurfaceBody(world) is BodyState source) ship.Sector = source.Sector;
             State.Ships.Add(ship);
-            string bodyId = FindSurfaceBody(world)?.BodyId ?? "earth";
+            string bodyId = FindSurfaceBody(world)?.BodyId;
             State.Flights.Add(new ShipFlightState
             {
                 ShipId = ship.ShipId, BodyId = bodyId, SurfaceWorldKey = world,
                 SurfaceX = position.x, SurfaceY = position.y,
                 Phase = IsSpaceView ? ShipFlightPhase.Cruising : ShipFlightPhase.Landed,
-                Motion = new SpaceMotionState { PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY) },
+                Motion = new SpaceMotionState { Sector = ship.Sector, PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY) },
                 LandingRandomState = unchecked((ulong)(uint)owner.Seed * 6364136223846793005UL + (uint)State.Ships.Count) | 1UL
             });
             local = new Vector2(.5f, .5f); return ship;
@@ -352,7 +356,7 @@ namespace FlatWorld.Spaceflight
             {
                 if (!ship.Pieces.Exists(piece => destroyed.Contains(piece.PieceId))) continue;
                 // 先保留原船的实际姿态，失去支撑的人从原来所在点继承速度。
-                var oldPose = new ShipState { ShipId = ship.ShipId, PositionX = ship.PositionX, PositionY = ship.PositionY,
+                var oldPose = new ShipState { ShipId = ship.ShipId, Sector = ship.Sector, PositionX = ship.PositionX, PositionY = ship.PositionY,
                     VelocityX = ship.VelocityX, VelocityY = ship.VelocityY, AngleRadians = ship.AngleRadians,
                     AngularVelocityRadiansPerSecond = ship.AngularVelocityRadiansPerSecond,
                     CenterOfMassLocalX = ship.CenterOfMassLocalX, CenterOfMassLocalY = ship.CenterOfMassLocalY };
@@ -372,6 +376,7 @@ namespace FlatWorld.Spaceflight
                             if (int.TryParse(member.PieceId, out int id)) transferMassPieceIds.Add(id);
                         MachineWorld.TransferShipNodes(ship.ShipId, fragment.ShipId, transferMassPieceIds);
                     }
+                    flight.Motion.Sector = fragment.Sector;
                     flight.Motion.PositionMeters = new SpaceVector2(fragment.PositionX, fragment.PositionY);
                     flight.Motion.VelocityMetersPerSecond = new SpaceVector2(fragment.VelocityX, fragment.VelocityY);
                     if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
@@ -537,7 +542,7 @@ namespace FlatWorld.Spaceflight
             if (!string.IsNullOrWhiteSpace(passenger.ShipId)) return passenger.ShipId == ship.ShipId;
             if (passenger.IsInSpace != (ship.PlatformKind == ShipPlatformKind.Space)) return false;
             SpaceVector2 position;
-            if (passenger.IsInSpace) position = passenger.FreeMotion.PositionMeters;
+            if (passenger.IsInSpace) position = SpaceSectorCoordinates.Relative(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters, ship.Sector);
             else
             {
                 string world = player != null ? player.gameObject.scene.name : data.CurrentSceneName;

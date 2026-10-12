@@ -68,8 +68,7 @@ public class FireDrillLogic : MachineLogic
 
     private float GetAmbientTemperature()
     {
-        TemperatureMgr.Instance.TryGetAmbientTemperature(Entity.Position, out float temperature);
-        return temperature;
+        return MachineWorld.SampleAmbientTemperature(Entity);
     }
 
     public override void Capture()

@@ -40,8 +40,7 @@ public class DryingRackLogic : MachineLogic
     {
         State.EnsureSlots(Inventory.Data.itemSlots.Count);
         bool changed = false;
-        float ambientTemperature = TemperatureMgr.DefaultAmbientTemperature;
-        TemperatureMgr.Instance.TryGetAmbientTemperature(Entity.Position, out ambientTemperature);
+        float ambientTemperature = MachineWorld.SampleAmbientTemperature(Entity);
         for (int i = 0; i < Inventory.Data.itemSlots.Count; i++)
         {
             ItemData item = Inventory.Data.itemSlots[i].itemData;

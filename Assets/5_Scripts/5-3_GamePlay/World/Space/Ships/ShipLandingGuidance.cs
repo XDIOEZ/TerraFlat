@@ -23,7 +23,7 @@ namespace FlatWorld.Spaceflight
         public static SurfaceContact CreateDescentContact(BodyState body, SpaceVector2 position,
             SpaceVector2 velocity, double simulationSeconds) => new()
         {
-            BodyId = body.BodyId, PlanetId = body.PlanetId, Fraction = 1d,
+            Sector = body.Sector, BodyId = body.BodyId, PlanetId = body.PlanetId, Fraction = 1d,
             SimulationSeconds = simulationSeconds, PositionMeters = position,
             SurfaceAngleRadians = Math.Atan2(position.Y - body.PositionMeters.Y, position.X - body.PositionMeters.X),
             RelativeVelocityMetersPerSecond = velocity - body.VelocityMetersPerSecond

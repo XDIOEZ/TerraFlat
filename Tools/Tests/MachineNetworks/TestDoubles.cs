@@ -141,6 +141,7 @@ public static partial class MachineWorld
     private static bool dirty;
     public static uint TransportStep;
     public static event Action<Vector2Int> CellChanged;
+    private static void NotifySurfaceCellChanged(Vector2Int cell) => CellChanged?.Invoke(cell);
     public static FluidDeviceBehavior GetFluidDeviceBehavior(MachineEntity node) => null;
     public static float GetSourceFactor(MachineEntity node)
     {

@@ -499,7 +499,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void ApplyGameWorldLifecycleState(bool isActive)
     {
-        _weatherRuntimeAllowed = isActive && UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "SpaceScene" &&
+        _weatherRuntimeAllowed = isActive && !SpaceMgr.IsSpaceScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) &&
                                  !IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition);
         enabled = _weatherRuntimeAllowed;
 

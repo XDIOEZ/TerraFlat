@@ -17,7 +17,8 @@ namespace FlatWorld.Spaceflight
         public SpaceSessionState State { get; private set; }
         public UniverseSimulation Universe { get; private set; }
         public SpaceVector2 ViewOrigin { get; private set; }
-        public bool IsSpaceView => SceneManager.GetActiveScene().name == "SpaceScene";
+        public SpaceSectorId ViewSector { get; private set; }
+        public bool IsSpaceView => SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name);
         private GameSaveData owner;
         private bool running;
         private IDisposable placementRegistration;
@@ -99,30 +100,23 @@ namespace FlatWorld.Spaceflight
             viewBindingsDirty = false;
             owner = save;
             State = string.IsNullOrWhiteSpace(save.SpaceStateJson)
-                ? new SpaceSessionState { Universe = SpaceCatalog.LoadDefault().Generate(save.Seed) }
-                : JsonConvert.DeserializeObject<SpaceSessionState>(save.SpaceStateJson);
-            if (State == null || State.Version != 1 || State.Universe == null)
+                ? new SpaceSessionState { Sectors = new List<UniverseState> { SpaceCatalog.LoadDefault().GenerateSector(save.Seed, default) } }
+                : SaveDataMgr.DeserializeSpaceState(save.SpaceStateJson);
+            if (State == null || State.Version != 2 || State.Sectors == null || State.Sectors.Count == 0)
                 throw new InvalidOperationException("太空存档格式无效。");
-            SpaceCatalog.LoadDefault().RebindUniverse(State.Universe);
-            Universe = new UniverseSimulation(State.Universe);
+            RebuildSectorDirectory();
             var earth = Universe.GetBody("earth");
             PlanetData template = GameManager.Instance?.ReadyPlanetData;
             if (string.IsNullOrWhiteSpace(save.SpaceStateJson) && template != null && !string.IsNullOrWhiteSpace(template.Name))
                 earth.PlanetId = template.Name;
-            foreach (var body in State.Universe.Bodies)
-            {
-                if (!save.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))
-                    save.PlanetData_Dict[body.PlanetId] = planet = SpaceCatalog.LoadDefault().CreatePlanetData(body.BodyId, template);
-                SpaceCatalog.LoadDefault().ApplyPlanetMetadata(body, planet);
-                planet.BodyId = body.BodyId;
-                planet.Name = body.PlanetId;
-            }
+            foreach (UniverseState sector in State.Sectors) RegisterSectorPlanets(sector, template);
             foreach (ShipState ship in State.Ships)
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson)) contents[piece.PieceId] = Decode(piece.SnapshotJson);
             RebuildPieceIndex();
             running = true;
             ViewOrigin = default;
+            ViewSector = default;
         }
         public void SetRunning(bool value) => running = value;
         public static void Capture(GameSaveData save)
@@ -141,6 +135,11 @@ namespace FlatWorld.Spaceflight
             Current.owner = null;
             Current.State = null;
             Current.Universe = null;
+            Current.sectorDirectory.Clear();
+            Current.passengerInputs.Clear();
+            ClientAttackHeld = false;
+            Current.contactPassengers.Clear();
+            Current.sectorStreaming.Clear();
             Current.contents.Clear();
             Current.ClearQueryIndexes();
             Current.pieceIndex.Clear();
@@ -182,16 +181,21 @@ namespace FlatWorld.Spaceflight
         #region 唯一固定模拟时钟
         private void FixedUpdate()
         {
-            if (!running || transitionRunning || State == null || Universe == null || GameManager.Instance?.IsGameplayReady != true || Time.timeScale <= 0f || !GameNetwork.HasStateAuthority) return;
-            if (ResumePendingPassengerTransfer()) return;
+            if (!running || State == null || Universe == null || GameManager.Instance?.IsGameplayReady != true || Time.timeScale <= 0f || !GameNetwork.HasStateAuthority) return;
+            ResumePendingPassengerTransfer();
             double seconds = Time.fixedDeltaTime;
             engineOutputs.Clear();
-            Universe.AdvanceTime(seconds);
+            AdvanceSectorTime(seconds);
+            CapturePassengerContactPoses();
+            StepRemotePassengerInput(seconds);
             fixedShips.Clear();
             fixedShips.AddRange(State.Ships);
             using (ShipMachineMarker.Auto())
+            {
+                MachineWorld.TickBackgroundWorlds((float)seconds);
                 foreach (ShipState ship in fixedShips)
                     if (!ship.IsWreck) MachineWorld.TickShip(ship.ShipId, (float)seconds);
+            }
 
             // 视觉升空仍推进高度与燃料，但不触发每帧的全船质量重算和动态碰撞。
             bool hasMovingShips = false;
@@ -218,9 +222,11 @@ namespace FlatWorld.Spaceflight
                 if (assemblies.Count > 1 && hasPhysicalShips)
                     using (ShipContactMarker.Auto()) StepShipContacts(seconds, assemblies);
             }
-            using (FreePassengerMarker.Auto()) StepFreePassengers(seconds);
+            using (FreePassengerMarker.Auto())
+            { StepFreePassengers(seconds); ResolvePassengerPairs(seconds); }
             using (LooseItemMarker.Auto()) StepLooseItems(seconds);
             CommitSurfaceContacts(seconds);
+            NormalizeSectorOwnership();
             environmentElapsed += (float)seconds;
             if (environmentElapsed >= .2f)
             {
@@ -243,6 +249,7 @@ namespace FlatWorld.Spaceflight
         {
             if (!running || State == null) return;
             UpdateViewOrigin();
+            UpdateSectorStreaming();
             FlushShipDamageFeedback();
             // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
@@ -290,19 +297,23 @@ namespace FlatWorld.Spaceflight
             pieceIndexDirty = false;
         }
         public ItemData GetPieceData(ShipPieceState piece) => contents.TryGetValue(piece.PieceId, out ItemData data) ? data : null;
+        public Vector2 ProjectPosition(SpaceSectorPosition position)
+            => (SpaceSectorCoordinates.Relative(position, ViewSector) - ViewOrigin).ToVector2();
+        public SpaceSectorPosition UnprojectSectorPosition(Vector2 display)
+            => SpaceSectorCoordinates.Normalize(ViewSector, UnprojectPosition(display));
         public Vector2 ProjectPosition(SpaceVector2 absolute) => new((float)(absolute.X - ViewOrigin.X), (float)(absolute.Y - ViewOrigin.Y));
         public SpaceVector2 UnprojectPosition(Vector2 display) => new(display.x + ViewOrigin.X, display.y + ViewOrigin.Y);
         public Vector2 DisplayPoint(ShipState ship, double localX, double localY)
         {
             ShipGeometry.LocalToWorld(ship, localX, localY, out double x, out double y);
-            return IsSpaceView ? ProjectPosition(new SpaceVector2(x, y)) : WorldLocalPresentation.ProjectPosition(new Vector2((float)x, (float)y));
+            return IsSpaceView ? ProjectPosition(new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y))) : WorldLocalPresentation.ProjectPosition(new Vector2((float)x, (float)y));
         }
         public bool IsVisible(ShipState ship)
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
             return flight != null && (IsSpaceView ?
                 (flight.Phase is ShipFlightPhase.Cruising) &&
-                    (new SpaceVector2(ship.PositionX, ship.PositionY) - ViewOrigin).Magnitude < 1200d
+                    (SpaceSectorCoordinates.Relative(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY), ViewSector) - ViewOrigin).Magnitude < 1200d
                 : flight.SurfaceWorldKey == SceneManager.GetActiveScene().name &&
                     flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending);
         }
@@ -312,20 +323,7 @@ namespace FlatWorld.Spaceflight
             Player player = ItemMgr.Instance?.User_Player;
             SpacePassengerState passenger = player != null ? GetPassenger(player) : null;
             if (passenger == null) return;
-            SpaceVector2 point = GetPassengerViewPoint(passenger);
-            // 视图每帧跟随玩家的双精度坐标，不再积累五千米误差后突然跳帧。
-            if (point.IsFinite) ViewOrigin = point;
-        }
-        private SpaceVector2 GetPassengerViewPoint(SpacePassengerState passenger)
-        {
-            ShipState ship = GetShip(passenger.ShipId);
-            SpaceVector2 point = passenger.FreeMotion.PositionMeters;
-            if (passenger.Supported && ship != null)
-            {
-                ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
-                point = new SpaceVector2(x, y);
-            }
-            return point;
+            UpdateProjection(GetPassengerPosition(passenger));
         }
         #endregion
     }

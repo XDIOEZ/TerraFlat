@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using FlatWorld.Networking.MirrorAdapter;
+using FlatWorld.Spaceflight;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,6 +25,7 @@ namespace FlatWorld.Networking.Gameplay
         private Coroutine worldEnterCoroutine;
         private NetworkItemStateCoordinator itemStateCoordinator;
         private NetworkWeatherStateCoordinator weatherStateCoordinator;
+        private NetworkSpaceStateCoordinator spaceStateCoordinator;
         private IncomingWorldSnapshot incomingWorldSnapshot;
         private int nextSnapshotTransferId;
 
@@ -108,6 +110,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkWorldReady>(OnServerWorldReady, false);
             EnsureItemStateCoordinator().StartServerSide();
             EnsureWeatherStateCoordinator().StartServerSide();
+            EnsureSpaceStateCoordinator().StartServerSide();
             base.OnStartServer();
             SetGameplayStatus("服务器已启动，等待玩家");
         }
@@ -120,6 +123,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkWorldSnapshotChunk>(OnClientWorldSnapshotChunk, false);
             EnsureItemStateCoordinator().StartClientSide();
             EnsureWeatherStateCoordinator().StartClientSide();
+            EnsureSpaceStateCoordinator().StartClientSide();
             base.OnStartClient();
         }
 
@@ -165,8 +169,19 @@ namespace FlatWorld.Networking.Gameplay
                     int playerIndex = NetworkServer.connections.Values.Count(activeConnection =>
                         activeConnection != null && activeConnection.identity != null);
 
-                    if (TryResolvePlayerLandSpawnPosition(playerName, playerIndex, out Vector3 spawnPosition))
+                    SpaceSession space = SpaceSession.EnsureLoaded();
+                    bool spaceSpawn = space.TryGetNetworkObserver(playerName, out SpaceNetworkObserver observer) && observer.InSpace;
+                    Vector3 spawnPosition = spaceSpawn ? (Vector3)space.ProjectPosition(observer.Position) : default;
+                    if (spaceSpawn || TryResolvePlayerLandSpawnPosition(playerName, playerIndex, out spawnPosition))
                     {
+                        if (!spaceSpawn)
+                        {
+                            string worldKey = ResolveCurrentPlanetName();
+                            space.SetNetworkPlayerRealm(playerName, false,
+                                new SpaceSectorPosition(default, SpaceVector2.FromVector2(spawnPosition)), worldKey);
+                            if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player savedPlayer))
+                                savedPlayer.CurrentSceneName = worldKey;
+                        }
                         GameObject playerObject = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
                         playerObject.name = $"网络玩家_{playerName}";
 
@@ -176,7 +191,9 @@ namespace FlatWorld.Networking.Gameplay
 
                         player.InitializeOnServer(playerName, playerIndex);
                         NetworkServer.AddPlayerForConnection(connection, playerObject);
-                        SetGameplayStatus($"玩家已进入：{playerName}（陆地出生 {spawnPosition}）");
+                        if (!spaceSpawn && player.CorePlayer?.Data != null)
+                            player.CorePlayer.Data.CurrentSceneName = ResolveCurrentPlanetName();
+                        SetGameplayStatus($"玩家已进入：{playerName}（{(spaceSpawn ? "太空恢复" : "陆地出生")} {spawnPosition}）");
                         yield break;
                     }
 
@@ -199,6 +216,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnServerDisconnect(NetworkConnectionToClient connection)
         {
+            spaceStateCoordinator?.RemoveConnection(connection);
             pendingPlayerNames.Remove(connection.connectionId);
             clientProtocolHellos.Remove(connection.connectionId);
             pendingPlayerSpawns.Remove(connection.connectionId);
@@ -217,6 +235,7 @@ namespace FlatWorld.Networking.Gameplay
                 itemStateCoordinator.StopClientSide();
             if (weatherStateCoordinator != null)
                 weatherStateCoordinator.StopClientSide();
+            spaceStateCoordinator?.StopClientSide();
             base.OnStopClient();
             SetGameplayStatus("客户端已停止");
         }
@@ -231,6 +250,7 @@ namespace FlatWorld.Networking.Gameplay
                 itemStateCoordinator.StopServerSide();
             if (weatherStateCoordinator != null)
                 weatherStateCoordinator.StopServerSide();
+            spaceStateCoordinator?.StopServerSide();
             pendingPlayerNames.Clear();
             clientProtocolHellos.Clear();
             pendingPlayerSpawns.Clear();
@@ -286,6 +306,7 @@ namespace FlatWorld.Networking.Gameplay
             pendingPlayerNames[connection.connectionId] = playerName;
 
             CaptureLoadedChunks();
+            SpaceSession.Capture(SaveDataMgr.Instance?.SaveData);
             string planetName = ResolveCurrentPlanetName();
             PlanetData synchronizedPlanet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[planetName];
             NormalizeGenerationSettings(synchronizedPlanet);
@@ -653,7 +674,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private string ResolveCurrentPlanetName()
         {
-            if (GameManager.Instance != null && GameManager.Instance.IsInGameWorld)
+            if (GameManager.Instance != null && GameManager.Instance.IsInGameWorld &&
+                SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(SceneManager.GetActiveScene().name))
                 currentPlanetName = SceneManager.GetActiveScene().name;
 
             if (string.IsNullOrWhiteSpace(currentPlanetName))
@@ -664,10 +686,13 @@ namespace FlatWorld.Networking.Gameplay
 
         private string MakeUniquePlayerName(string requestedName, int connectionId)
         {
-            if (!pendingPlayerNames.Values.Contains(requestedName))
-                return requestedName;
-
-            return $"{requestedName}_{connectionId}";
+            var used = new HashSet<string>(pendingPlayerNames.Values, StringComparer.Ordinal);
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (connection?.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer player) used.Add(player.DisplayName);
+            string candidate = requestedName;
+            int suffix = 0;
+            while (used.Contains(candidate)) candidate = $"{requestedName}_{connectionId}_{++suffix}";
+            return candidate;
         }
 
         private static bool TryResolvePlayerLandSpawnPosition(
@@ -737,6 +762,17 @@ namespace FlatWorld.Networking.Gameplay
                 weatherStateCoordinator = gameObject.AddComponent<NetworkWeatherStateCoordinator>();
             return weatherStateCoordinator;
         }
+
+        #region 太空同步与观察者策略
+        private NetworkSpaceStateCoordinator EnsureSpaceStateCoordinator()
+        {
+            if (spaceStateCoordinator == null)
+                spaceStateCoordinator = GetComponent<NetworkSpaceStateCoordinator>() ?? gameObject.AddComponent<NetworkSpaceStateCoordinator>();
+            if (GetComponent<NetworkSpaceInterestManagement>() == null)
+                gameObject.AddComponent<NetworkSpaceInterestManagement>();
+            return spaceStateCoordinator;
+        }
+        #endregion
 
         private void SetGameplayStatus(string status)
         {

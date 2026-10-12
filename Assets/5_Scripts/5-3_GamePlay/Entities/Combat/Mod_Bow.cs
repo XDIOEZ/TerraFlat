@@ -235,6 +235,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>按下攻击时只在同库存存在弹药的情况下开始蓄力并搭箭。</summary>
     private void BeginCharge()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (_charging || item == null || !item.InHand || item.Owner == null)
             return;
 
@@ -266,11 +267,13 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>松开攻击时消费同库存的一支箭并按当前蓄力发射。</summary>
     private void ReleaseCharge()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (!_charging)
             return;
 
         // 输入锁、失焦或应用暂停会由 GameController 主动释放“按住”状态；这些属于取消，不应误射一箭。
-        if ((_controller != null && _controller.IsGameplayInputLocked) || !Application.isFocused)
+        if ((_controller != null && _controller.IsGameplayInputLocked) ||
+            !Application.isFocused && !(FlatWorld.Networking.GameNetwork.HasStateAuthority && item?.Owner is Player player && !player.IsLocalProfile))
         {
             CancelCharge();
             return;
@@ -585,7 +588,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         Vector3 aimWorld = _controller != null
             ? _controller.GetAimWorldPosition(Mathf.Max(0.1f, MaxAimDistance))
             : item.transform.position + item.transform.right;
-        Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, aimWorld);
+        Vector2 delta = FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
+            ? (Vector2)aimWorld - origin : WorldTopologyRuntime.ShortestDelta(origin, aimWorld);
         return delta.sqrMagnitude > 0.0001f ? delta.normalized : Vector2.zero;
     }
 
@@ -628,14 +632,16 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
                 LocalMuzzlePosition.x,
                 LocalMuzzlePosition.y,
                 0f));
-            return WorldTopologyRuntime.NormalizePosition((Vector2)muzzleWorld);
+            return FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
+                ? (Vector2)muzzleWorld : WorldTopologyRuntime.NormalizePosition((Vector2)muzzleWorld);
         }
 
         Vector2 shooterPosition = item.Owner != null
             ? (Vector2)item.Owner.transform.position
             : (Vector2)item.transform.position;
-        return WorldTopologyRuntime.NormalizePosition(
-            shooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset));
+        Vector2 point = shooterPosition + direction * Mathf.Max(0f, SpawnForwardOffset);
+        return FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
+            ? point : WorldTopologyRuntime.NormalizePosition(point);
     }
 
     #endregion

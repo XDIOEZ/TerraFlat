@@ -18,6 +18,7 @@ namespace FlatWorld.Spaceflight
         public int SupportTileId;
         public string LiquidId;
         public float LiquidDepth;
+        public int BiomeId;
         public double TemperatureCelsius;
         public double PressureKPa;
         public Vector2Int Cell;
@@ -131,7 +132,12 @@ namespace FlatWorld.Spaceflight
 
         // 无人船落地也从同一冻结生成规则与已保存差量读取，查询不会加载场景。
         public static LandingSurfaceSample GetLandingSurface(string planetId, Vector2 position)
+            => GetLandingSurface(planetId, position, out _, out _);
+
+        private static LandingSurfaceSample GetLandingSurface(string planetId, Vector2 position,
+            out ChunkTerrainData sampledTerrain, out Vector2Int sampledLocalCell)
         {
+            sampledTerrain = null; sampledLocalCell = default;
             SaveDataMgr saves = SaveDataMgr.Instance;
             GameSaveData save = saves?.SaveData;
             if (save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(planetId, out PlanetData planet))
@@ -188,10 +194,11 @@ namespace FlatWorld.Spaceflight
                 GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition liquidDefinition) &&
                 liquidDefinition.WorldWater?.WaterContact == true;
             terrain.TryGetEnvironmentValue("temperature.celsius", localX, localY, out float geographicTemperature);
+            sampledTerrain = terrain; sampledLocalCell = new Vector2Int(localX, localY);
             return new LandingSurfaceSample
             {
                 IsWater = water, GroundTileId = cell.GroundTileId, BlockingTileId = cell.BlockingTileId, SupportTileId = support,
-                LiquidId = liquidId, LiquidDepth = liquidDepth, Cell = new Vector2Int(cellX, cellY),
+                LiquidId = liquidId, LiquidDepth = liquidDepth, BiomeId = cell.BiomeId, Cell = new Vector2Int(cellX, cellY),
                 TemperatureCelsius = geographicTemperature + planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature,
                 PressureKPa = AtmosphereService.PressureKPa(planet.Atmosphere)
             };
@@ -204,6 +211,54 @@ namespace FlatWorld.Spaceflight
             if (save?.PlanetData_Dict == null || !save.PlanetData_Dict.ContainsKey(planetId ?? string.Empty)) return false;
             sample = GetLandingSurface(planetId, position);
             return true;
+        }
+
+        // 无人地表机器从自己的冷地形和最新差量取环境，不借用本地玩家所在世界。
+        public static bool TrySampleEnvironmentValue(string worldKey, Vector2 position, string key, out float value)
+        {
+            value = 0f;
+            if (!TryGetColdSample(worldKey, position, out _, out ChunkTerrainData terrain, out Vector2Int local)) return false;
+            if (key == "windStrength")
+            {
+                if (terrain.WeatherProfile == null) return false;
+                value = terrain.WeatherProfile.Climate.WindStrength; return true;
+            }
+            return terrain.TryGetEnvironmentValue(key, local.x, local.y, out value);
+        }
+
+        public static bool TryGetWaterCurrent(string worldKey, Vector2 position, out RuntimeWaterCurrentSample current)
+        {
+            current = default;
+            if (!TryGetColdSample(worldKey, position, out LandingSurfaceSample sample, out ChunkTerrainData terrain, out Vector2Int local) ||
+                sample.LiquidDepth <= 0f || sample.SupportTileId != 0) return false;
+            terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
+            RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(Mathf.RoundToInt(riverKind),
+                (SurfaceBiomeKind)sample.BiomeId == SurfaceBiomeKind.Ocean);
+            if (kind == RuntimeWaterCurrentKind.River)
+            {
+                terrain.TryGetEnvironmentValue("riverFlowX", local.x, local.y, out float x);
+                terrain.TryGetEnvironmentValue("riverFlowY", local.x, local.y, out float y);
+                terrain.TryGetEnvironmentValue("riverFlow", local.x, local.y, out float flow);
+                Vector2 direction = new(x, y);
+                if (direction.sqrMagnitude <= .000001f) return false;
+                current = new RuntimeWaterCurrentSample(kind, direction, flow); return true;
+            }
+            if (kind != RuntimeWaterCurrentKind.Ocean) return false;
+            terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
+            terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
+            Vector2 ocean = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+            if (ocean == Vector2.zero) return false;
+            current = new RuntimeWaterCurrentSample(kind, ocean, 1f); return true;
+        }
+
+        private static bool TryGetColdSample(string worldKey, Vector2 position, out LandingSurfaceSample sample,
+            out ChunkTerrainData terrain, out Vector2Int local)
+        {
+            sample = default; terrain = null; local = default;
+            if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
+            global::WorldAddress address = global::WorldAddress.FromWorldKey(worldKey);
+            if (!address.IsSurface || SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.ContainsKey(address.PlanetId) != true) return false;
+            sample = GetLandingSurface(address.PlanetId, position, out terrain, out local); return true;
         }
 
         private static ChunkTerrainData GetLoadedTerrain(string planetId, RuntimeAddress address)

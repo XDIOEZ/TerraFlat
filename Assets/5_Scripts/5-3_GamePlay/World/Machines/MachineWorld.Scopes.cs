@@ -16,7 +16,7 @@ public static partial class MachineWorld
         public FluidNetworkGraph Fluid;
         public GameSaveData Owner;
         public string Key;
-        public bool Dirty, SuppressRemoval;
+        public bool Dirty, SuppressRemoval, BackgroundSimulation;
         public float Elapsed;
         public uint Step;
         public int TopologyMutationDepth;
@@ -37,6 +37,7 @@ public static partial class MachineWorld
     private static readonly Dictionary<string, string> shipScopeKeys = new(StringComparer.Ordinal);
     private static string scopeOverride;
     public static bool IsShipScope => worldKey != null && worldKey.StartsWith("ship:", StringComparison.Ordinal);
+    private static bool KeepSimulatingWithoutPlayers => IsShipScope || scope.BackgroundSimulation;
 
     private static void NotifySurfaceMechanicalChanged(Vector2Int cell)
     { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) BuildingOccupancyRegistry.NotifyMechanicalChanged(cell); }

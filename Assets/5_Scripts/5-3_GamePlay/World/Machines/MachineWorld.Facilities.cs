@@ -31,7 +31,7 @@ public static partial class MachineWorld
             if (belt == null || !belt.Active || belt.SpeedRpm <= 0f) break;
             MachineTransportDefinition transport = belt.Definition.Transport;
             Vector2 center = (Vector2)belt.Cell + Vector2.one * .5f;
-            Vector2 offset = WorldTopologyRuntime.ShortestDelta(center, current);
+            Vector2 offset = PressureExplosionQueue.DeltaInWorld(worldKey, center, current);
             float speed = transport.Speed * GetWorkEfficiency(belt);
             float step = Mathf.Min(remaining, .1f / speed);
             if (!belt.ConveyorRoute.TryMove(offset, speed * step * Mathf.Sign(belt.Rpm),
@@ -39,16 +39,24 @@ public static partial class MachineWorld
             Vector2 move = advanced - offset;
             float distance = move.magnitude;
             // Physics2D 只给出墙体和实体的阻挡反馈，掉落物位置仍由数据系统持有。
-            if (distance > .00001f && Physics2D.CircleCast(current, .06f, move / distance,
+            bool localPresentation = worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (localPresentation && distance > .00001f && Physics2D.CircleCast(current, .06f, move / distance,
                 filter, transportHits, distance) > 0)
             {
                 float allowed = Mathf.Max(0f, transportHits[0].distance - .01f);
                 current += move / distance * allowed;
                 break;
             }
-            Vector2 destination = WorldTopologyRuntime.NormalizePosition(current + move);
-            if (ChunkMgr.ExistingInstance == null ||
-                !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(destination, out _)) break;
+            Vector2 destination = PressureExplosionQueue.NormalizeInWorld(worldKey, current + move);
+            if (localPresentation)
+            {
+                if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(destination, out _)) break;
+            }
+            else if (WorldAddress.FromWorldKey(worldKey).IsSurface)
+            {
+                var surface = FlatWorld.Spaceflight.SpaceSurfaceQuery.GetLandingSurface(worldKey, destination);
+                if (surface.BlockingTileId != 0) break;
+            }
             current = destination;
             remaining -= step;
         }
@@ -88,7 +96,7 @@ public static partial class MachineWorld
     }
 
     public static void NotifyVisualChanged(MachineEntity entity)
-    { if (Contains(entity)) CellChanged?.Invoke(entity.Cell); }
+    { if (Contains(entity)) NotifySurfaceCellChanged(entity.Cell); }
 
     public static bool TryFindContainingInventory(Item actor, ItemData item, out Inventory inventory)
     {
@@ -177,7 +185,7 @@ public static partial class MachineWorld
                 continue;
             }
             // 船内格不对应地表场景，设施与船上机械网一样持续模拟。
-            bool active = IsShipScope;
+            bool active = KeepSimulatingWithoutPlayers;
             int range = entity.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
             if (!active)
                 foreach (Vector2Int player in players)

@@ -239,7 +239,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
         context.Attack.Sequence = attackSequence; context.Attack.Window = 1; context.Attack.Pulse = ++attackPulse;
         context.Origin = shape.Center - shape.SweepDelta;
-        GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _))
+            FlatWorld.Spaceflight.ShipCombatBridge.Instance.QueryWeaponPulse(this, shape, context);
+        else GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
     }
 
     /// <summary>纯数据后端确认生命提交后复用武器反馈，原 DamageReceiver 专用事件仍只传真实旧接收器。</summary>
@@ -436,6 +438,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>统一处理 Trigger 与显式扫掠得到的伤害碰撞体。</summary>
     private void ProcessDamageColliderHit(Collider2D other)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)) return;
         // 伤害接触只接受 DamageReciver 层；交互、拾取、玩家身体等不会进入伤害解析链。
         if (damageCollider == null || !damageCollider.enabled ||
             !CombatPhysicsChannels.IsDamageReceiverCollider(other))
@@ -503,6 +506,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private void ApplyDamageToInsideReceivers()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)) return;
         // 对所有在碰撞体内的接收器造成伤害
         for (int i = insideReceivers.Count - 1; i >= 0; i--)
         {
@@ -691,6 +695,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private void TryApplyDamageToTilemap()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)) return;
         if ((DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly) != 0 || tileDamageAppliedThisWindow ||
             damageCollider == null ||
             !damageCollider.enabled ||
@@ -1099,6 +1104,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// </summary>
     protected void ScanCurrentOverlapsAndApplyDamageForWindow(bool continueWindow = false)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)) return;
         if (damageCollider == null || !damageCollider.enabled)
             return;
 

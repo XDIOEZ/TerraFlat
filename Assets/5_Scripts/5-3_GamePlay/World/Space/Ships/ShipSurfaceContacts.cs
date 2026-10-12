@@ -55,11 +55,14 @@ namespace FlatWorld.Spaceflight
             {
                 ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
                 if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising) ||
-                    !Universe.TryGetBody(flight.RequestedLandingBodyId, out BodyState body)) continue;
+                    !TryGetBody(flight.RequestedLandingBodyId, out BodyState body)) continue;
                 bool poweredLanding = CanBeginPoweredLanding(assembly, body.SurfaceGravity);
-                BeginSurfaceDescent(assembly, ShipLandingGuidance.CreateDescentContact(body,
-                    new SpaceVector2(assembly.PositionX, assembly.PositionY),
-                    new SpaceVector2(assembly.VelocityX, assembly.VelocityY), Universe.State.SimulationSeconds), poweredLanding);
+                SpaceVector2 position = SpaceSectorCoordinates.Relative(assembly.Sector,
+                    new SpaceVector2(assembly.PositionX, assembly.PositionY), body.Sector);
+                SurfaceContact contact = ShipLandingGuidance.CreateDescentContact(body, position,
+                    new SpaceVector2(assembly.VelocityX, assembly.VelocityY), GetUniverse(body.Sector).State.SimulationSeconds);
+                contact.Sector = body.Sector;
+                BeginSurfaceDescent(assembly, contact, poweredLanding);
             }
         }
 
@@ -96,16 +99,18 @@ namespace FlatWorld.Spaceflight
             body.PreviousAngularVelocity = body.Assembly.AngularVelocityRadiansPerSecond;
             foreach (ShipContactShape shape in body.Shapes)
                 shape.Previous = new ShipContactPose(new SpaceVector2(shape.Ship.PositionX, shape.Ship.PositionY),
-                    shape.Ship.AngleRadians, body.Realm, new SpaceVector2(shape.Ship.VelocityX, shape.Ship.VelocityY), shape.Ship.AngularVelocityRadiansPerSecond);
+                    shape.Ship.AngleRadians, body.Realm, new SpaceVector2(shape.Ship.VelocityX, shape.Ship.VelocityY),
+                    shape.Ship.AngularVelocityRadiansPerSecond, shape.Ship.Sector);
 
             body.EndFraction = landing ? queued.Contact.Fraction : 1d;
             double remaining = Math.Max(0d, (body.EndFraction - fraction) * seconds);
             if (body.Realm == "space")
             {
-                var motion = new SpaceMotionState { PositionMeters = body.Position, VelocityMetersPerSecond = body.PreviousVelocity,
+                var motion = new SpaceMotionState { Sector = body.CalculationSector, PositionMeters = body.Position, VelocityMetersPerSecond = body.PreviousVelocity,
                     RadiusMeters = AssemblyRadius(body.Assembly) };
                 Universe.StepFreeMotion(motion, default, remaining);
-                body.Assembly.PositionX = motion.PositionMeters.X; body.Assembly.PositionY = motion.PositionMeters.Y;
+                SpaceVector2 position = SpaceSectorCoordinates.Relative(motion.Sector, motion.PositionMeters, body.Assembly.Sector);
+                body.Assembly.PositionX = position.X; body.Assembly.PositionY = position.Y;
                 body.Assembly.VelocityX = motion.VelocityMetersPerSecond.X; body.Assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
             }
             else

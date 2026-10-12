@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;
@@ -222,6 +222,7 @@ public partial class Mod_ColdWeapon : Module
     #region 输入与攻击控制
     public void OnAttackStarted()
     {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, cachedController != null ? cachedController.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (cachedController != null && cachedController.IsGameplayInputLocked)
         {
             return;
@@ -230,7 +231,11 @@ public partial class Mod_ColdWeapon : Module
         StartAttack();
     }
 
-    private void OnAttackEnded() => StopAttack();
+    private void OnAttackEnded()
+    {
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, cachedController != null ? cachedController.GetAimWorldPosition(8192f) : item.transform.position)) return;
+        StopAttack();
+    }
 
     [Button("开始攻击")]
     public virtual void StartAttack()

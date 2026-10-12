@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 28; // 区块天气增加真实雷击落点与强度，旧档在解析前拒绝。
+    private const int CompactSaveVersion = 29; // 星区坐标与全局身份使用新格式，旧档在解析核心数据前拒绝。
     private const int ModdedSaveVersion = 14;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -2644,6 +2644,9 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (saveData == null)
             throw new InvalidDataException("差异存档的核心数据为空");
 
+        if (!string.IsNullOrWhiteSpace(saveData.SpaceStateJson))
+            _ = DeserializeSpaceState(saveData.SpaceStateJson);
+
         DroppedItemService.RestoreArchive(saveData, envelope.DroppedItems);
         MachineWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
 
@@ -2687,6 +2690,30 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         return true;
     }
+
+    #region 星区快照的严格格式边界
+    // 先验证真实 JSON 版本，字段默认值不能把缺少版本的档案伪装成新格式。
+    public static FlatWorld.Spaceflight.SpaceSessionState DeserializeSpaceState(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) throw new InvalidDataException("太空存档内容为空。");
+        Newtonsoft.Json.Linq.JObject document = Newtonsoft.Json.Linq.JObject.Parse(json);
+        Newtonsoft.Json.Linq.JToken version = document[nameof(FlatWorld.Spaceflight.SpaceSessionState.Version)];
+        if (version?.Type != Newtonsoft.Json.Linq.JTokenType.Integer)
+            throw new InvalidDataException("太空存档缺少有效的格式版本。");
+        EnsureCurrentSaveVersion("太空星区存档", version.ToObject<int>(), 2);
+        var state = document.ToObject<FlatWorld.Spaceflight.SpaceSessionState>();
+        if (state == null || state.Sectors == null || state.Sectors.Count == 0 || state.Ships == null ||
+            state.Flights == null || state.Devices == null || state.Passengers == null || state.Navigation == null ||
+            state.Docking == null || state.LooseItems == null ||
+            !FlatWorld.Spaceflight.SpaceVector2.Finite(state.SimulationSeconds) || state.SimulationSeconds < 0d)
+            throw new InvalidDataException("太空星区存档的权威状态不完整。");
+        var sectors = new HashSet<FlatWorld.Spaceflight.SpaceSectorId>();
+        foreach (FlatWorld.Spaceflight.UniverseState sector in state.Sectors)
+            if (sector == null || !sectors.Add(sector.Sector) || sector.Bodies == null)
+                throw new InvalidDataException("太空存档存在无效或重复的星区身份。");
+        return state;
+    }
+    #endregion
 
     /// <summary>只读取当前存档格式；开发阶段不保留旧版本迁移或自动升级路径。</summary>
     private static void EnsureCurrentSaveVersion(string label, int savedVersion, int currentVersion)

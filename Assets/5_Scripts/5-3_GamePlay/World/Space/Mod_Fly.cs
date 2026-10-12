@@ -529,7 +529,7 @@ public class Mod_Fly : Module, IInteract, IInteractable
 
 	private bool IsInSpaceScene()
 	{
-		return SceneManager.GetActiveScene().name == targetSpaceSceneName;
+		return SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name);
 	}
 
 	private string ResolveSourcePlanetBodyId()

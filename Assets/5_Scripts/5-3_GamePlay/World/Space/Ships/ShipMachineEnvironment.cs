@@ -119,10 +119,16 @@ namespace FlatWorld.Spaceflight
             if (ship == null) return false;
             ShipFlightState flight = GetFlight(shipId);
             bool space = flight?.Phase is ShipFlightPhase.Cruising;
-            world = space ? "SpaceScene" : flight?.SurfaceWorldKey ?? ship.WorldAddress;
+            world = space ? SpaceSectorCoordinates.SceneKey(ship.Sector) : flight?.SurfaceWorldKey ?? ship.WorldAddress;
             if (string.IsNullOrWhiteSpace(world)) return false;
             ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);
             position = new Vector2((float)x, (float)y);
+            if (space)
+            {
+                SpaceSectorPosition point = SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y));
+                world = SpaceSectorCoordinates.SceneKey(point.Sector);
+                position = point.LocalMeters.ToVector2();
+            }
             if (!space) position = PressureExplosionQueue.NormalizeInWorld(world, position);
             return true;
         }

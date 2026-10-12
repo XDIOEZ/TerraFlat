@@ -27,7 +27,7 @@ internal static partial class Program
     {
         var state = new SpaceSessionState
         {
-            Universe = new UniverseState { TemplateId = "save-fixture", Seed = 42, SimulationSeconds = 123.456d },
+            Sectors = new List<UniverseState> { new() { TemplateId = "save-fixture", Seed = 42, SimulationSeconds = 123.456d } },
             NavigationSequence = 17
         };
         state.LooseItems.Add(new SpaceLooseItemState
@@ -48,11 +48,11 @@ internal static partial class Program
         for (int cycle = 0; cycle < 3; cycle++)
         {
             state = JsonConvert.DeserializeObject<SpaceSessionState>(JsonConvert.SerializeObject(state));
-            Check(state.Version == 1 && state.NavigationSequence == 17 && state.LooseItems.Count == 2,
+            Check(state.Version == 2 && state.NavigationSequence == 17 && state.LooseItems.Count == 2,
                 "session version, navigation sequence and loose item count must survive repeated saves");
-            Check(state.Universe.TemplateId == "save-fixture" && state.Universe.Seed == 42,
+            Check(state.Sectors[0].TemplateId == "save-fixture" && state.Sectors[0].Seed == 42,
                 "universe identity must survive saves containing loose items");
-            Near(123.456d, state.Universe.SimulationSeconds, "universe clock");
+            Near(123.456d, state.Sectors[0].SimulationSeconds, "universe clock");
             SpaceLooseItemState space = state.LooseItems[0], surface = state.LooseItems[1];
             Check(space.Id == "space-item" && space.Snapshot == "opaque-item-snapshot" && space.WorldKey == "SpaceScene" && space.InSpace,
                 "space item identity, payload and location must survive");

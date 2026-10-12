@@ -1354,7 +1354,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     public static Vector2 GetChunkSize()
     {
         var sceneName = SceneManager.GetActiveScene().name;
-        if (sceneName == "SpaceScene") return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
+        if (SpaceMgr.IsSpaceScene(sceneName)) return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
 
         // 添加null检查，防止出现NullReferenceException
         if (SaveDataMgr.Instance == null)

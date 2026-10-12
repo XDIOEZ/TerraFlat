@@ -93,6 +93,8 @@ namespace FlatWorld.Networking.Gameplay
             observerPositions.Clear();
             for (int i = 0; i < observers.Count; i++)
             {
+                NetworkWorldPlayer realmPlayer = observers[i].GetComponent<NetworkWorldPlayer>();
+                if (realmPlayer != null && (realmPlayer.IsInSpace || !realmPlayer.SharesLocalRealm())) continue;
                 Vector3 position = ResolveLogicalObserverPosition(observers[i]);
                 if (!IsValidObserverPosition(position))
                     continue;
@@ -143,6 +145,7 @@ namespace FlatWorld.Networking.Gameplay
                     continue;
 
                 NetworkWorldPlayer networkPlayer = observer.GetComponent<NetworkWorldPlayer>();
+                if (networkPlayer?.IsInSpace == true) continue;
                 Mod_ChunkLoader loader = networkPlayer?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
                 if (loader != null)
                     return loader.CurrentLoadChunkDistance;
@@ -169,6 +172,8 @@ namespace FlatWorld.Networking.Gameplay
             anchor ??= observers.Count > 0 ? observers[0] : null;
             if (anchor == null)
                 return;
+
+            if (anchor.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
 
             Vector3 logicalPosition = ResolveLogicalObserverPosition(anchor);
             if (!IsValidObserverPosition(logicalPosition))

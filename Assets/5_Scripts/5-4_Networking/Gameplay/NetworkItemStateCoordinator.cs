@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.Building;
+using FlatWorld.Spaceflight;
 using Mirror;
 using UnityEngine;
 
@@ -50,6 +51,7 @@ namespace FlatWorld.Networking.Gameplay
             public int ConnectionId;
             public uint Token;
             public Item Item;
+            public ItemData SpaceData;
             public float ExpiresAt;
         }
 
@@ -332,6 +334,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerStateRequest(NetworkConnectionToClient connection, NetworkItemStateRequest request)
         {
+            if (connection?.identity?.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
             ScanServerItems();
             foreach (KeyValuePair<int, StateRecord> pair in serverStates)
                 connection.Send(CreateMessage(pair.Key, pair.Value));
@@ -351,15 +354,17 @@ namespace FlatWorld.Networking.Gameplay
         private void OnMechanicalRemoved(int id)
         {
             dirtyMechanicalNodes.Remove(id);
+            if (MachineWorld.IsShipScope) return;
             if (NetworkServer.active)
-                NetworkServer.SendToAll(new NetworkMechanicalNodeMessage { NodeGuid = id, Removed = true });
+                SendToGroundObservers(new NetworkMechanicalNodeMessage { NodeGuid = id, Removed = true });
         }
 
         /// <summary>动力解算只发转速变化，不重复发送整份加工库存。</summary>
         private void OnMechanicalSpeedChanged(MachineEntity node)
         {
+            if (MachineWorld.IsShipScope) return;
             if (NetworkServer.active && node != null)
-                NetworkServer.SendToAll(new NetworkMechanicalNodeMessage
+                SendToGroundObservers(new NetworkMechanicalNodeMessage
                 { NodeGuid = node.Id, SpeedOnly = true, Rpm = node.Rpm,
                     EntryDirection = node.EntryDirection });
         }
@@ -386,7 +391,7 @@ namespace FlatWorld.Networking.Gameplay
                 !ItemNetworkStateSerialization.TrySerializeItemData(snapshot, out byte[] payload))
                 throw new InvalidOperationException("机械联机快照序列化失败：" + node?.Id);
             return new NetworkMechanicalNodeMessage
-            { NodeGuid = node.Id, Payload = payload, Rpm = node.Rpm,
+            { NodeGuid = node.Id, Payload = payload, WorldKey = MachineWorld.WorldKey, Rpm = node.Rpm,
                 EntryDirection = node.EntryDirection };
         }
 
@@ -394,12 +399,22 @@ namespace FlatWorld.Networking.Gameplay
             => connection.Send(CreateMechanicalSnapshot(node));
 
         private static void BroadcastMechanicalSnapshot(MachineEntity node)
-            => NetworkServer.SendToAll(CreateMechanicalSnapshot(node));
+        { if (!MachineWorld.IsShipScope) SendToGroundObservers(CreateMechanicalSnapshot(node)); }
 
         /// <summary>客户端把服务器快照还原为数据节点并通知区块 BRG。</summary>
         private void OnClientMechanicalNode(NetworkMechanicalNodeMessage message)
         {
             if (NetworkServer.active) return;
+            if (!string.IsNullOrEmpty(message.WorldKey) && message.WorldKey.StartsWith("ship:", StringComparison.Ordinal))
+            {
+                using (MachineWorld.UseScope(message.WorldKey)) ApplyClientMechanicalNode(message);
+                return;
+            }
+            if (NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
+            ApplyClientMechanicalNode(message);
+        }
+        private void ApplyClientMechanicalNode(NetworkMechanicalNodeMessage message)
+        {
             if (message.Reset) { MachineWorld.ApplyRemoteReset(); return; }
             if (message.Removed) { MachineWorld.ApplyRemoteRemoval(message.NodeGuid); return; }
             if (message.SpeedOnly)
@@ -565,7 +580,14 @@ namespace FlatWorld.Networking.Gameplay
         private void BroadcastServerState(int guid, StateRecord state)
         {
             if (NetworkServer.active)
-                NetworkServer.SendToAll(CreateMessage(guid, state));
+                SendToGroundObservers(CreateMessage(guid, state));
+        }
+
+        private static void SendToGroundObservers<T>(T message) where T : struct, NetworkMessage
+        {
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (connection != null && connection.isAuthenticated && connection.isReady &&
+                    connection.identity?.GetComponent<NetworkWorldPlayer>()?.IsInSpace != true) connection.Send(message);
         }
 
         private void BroadcastDespawn(Item item)
@@ -573,7 +595,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!NetworkServer.active || item?.itemData == null)
                 return;
 
-            NetworkServer.SendToAll(new NetworkItemDespawnMessage
+            SendToGroundObservers(new NetworkItemDespawnMessage
             {
                 ItemGuid = item.itemData.Guid,
                 ItemId = item.itemData.IDName
@@ -608,7 +630,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkConnectionToClient connection,
             NetworkItemPickupRequest request)
         {
-            if (!CanGrantPickup(connection, request.ItemGuid, out Item item))
+            if (!CanGrantPickup(connection, request.ItemGuid, out Item item, out ItemData spaceData))
             {
                 connection?.Send(new NetworkItemPickupResponse
                 {
@@ -620,7 +642,9 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             // 水体浮沉现在是非持久化的世界运行态，不会写入 ItemData/ModuleData。
-            byte[] payload = CaptureSafely(item);
+            byte[] payload;
+            if (spaceData != null) ItemNetworkStateSerialization.TrySerializeItemData(spaceData, out payload);
+            else payload = CaptureSafely(item);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
             {
                 connection.Send(new NetworkItemPickupResponse
@@ -636,15 +660,18 @@ namespace FlatWorld.Networking.Gameplay
             if (token == 0)
                 token = unchecked(++nextPickupReservationToken);
 
-            item.itemData.Stack.CanBePickedUp = false;
+            if (spaceData != null)
+            { spaceData.Stack.CanBePickedUp = false; SpaceSession.Current.UpdateNetworkLooseItem(spaceData); }
+            else item.itemData.Stack.CanBePickedUp = false;
             serverPickupReservations[request.ItemGuid] = new ServerPickupReservation
             {
                 ConnectionId = connection.connectionId,
                 Token = token,
                 Item = item,
+                SpaceData = spaceData,
                 ExpiresAt = Time.unscaledTime + PickupReservationSeconds
             };
-            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            if (item != null) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
 
             connection.Send(new NetworkItemPickupResponse
             {
@@ -693,6 +720,17 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             serverPickupReservations.Remove(commit.ItemGuid);
+            if (reservation.SpaceData != null)
+            {
+                NetworkWorldPlayer actor = connection.identity?.GetComponent<NetworkWorldPlayer>();
+                Mod_ItemPicker picker = actor?.CorePlayer?.GetComponentInChildren<Mod_ItemPicker>(true);
+                ItemData payload = FastCloner.FastCloner.DeepClone(reservation.SpaceData);
+                payload.Stack.CanBePickedUp = true;
+                if (commit.AcceptedIntoInventory && (connection is LocalConnectionToClient || picker != null && picker.TryAcceptNetworkPickup(payload, allowPartial: false)))
+                    SpaceSession.Current?.RemoveNetworkLooseItem(commit.ItemGuid);
+                else ReleasePickupReservation(reservation);
+                return;
+            }
             Item item = reservation.Item;
             if (item == null || item.itemData == null)
                 return;
@@ -710,13 +748,24 @@ namespace FlatWorld.Networking.Gameplay
         private bool CanGrantPickup(
             NetworkConnectionToClient connection,
             int itemGuid,
-            out Item item)
+            out Item item,
+            out ItemData spaceData)
         {
-            item = null;
-            if (connection?.identity == null || itemGuid == 0 ||
+            item = null; spaceData = null;
+            if (connection?.identity == null || !connection.isAuthenticated || !connection.isReady || itemGuid == 0 ||
                 serverPickupReservations.ContainsKey(itemGuid) || ItemMgr.Instance == null)
             {
                 return false;
+            }
+
+            NetworkWorldPlayer player = connection.identity.GetComponent<NetworkWorldPlayer>();
+            if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true && observer.InSpace)
+            {
+                if (SpaceSession.Current?.TryGetNetworkLooseItem(itemGuid, out ItemData data, out SpaceSectorPosition position) != true ||
+                    data.Stack?.CanBePickedUp != true || SpaceSectorCoordinates.Difference(position, observer.Position).Magnitude > MaxPickupDistance)
+                    return false;
+                spaceData = data;
+                return true;
             }
 
             item = ItemMgr.Instance.GetItemByGuid(itemGuid);
@@ -776,6 +825,12 @@ namespace FlatWorld.Networking.Gameplay
 
         private static void ReleasePickupReservation(ServerPickupReservation reservation)
         {
+            if (reservation?.SpaceData?.Stack != null)
+            {
+                reservation.SpaceData.Stack.CanBePickedUp = true;
+                SpaceSession.Current?.UpdateNetworkLooseItem(reservation.SpaceData);
+                return;
+            }
             Item item = reservation?.Item;
             if (item?.itemData?.Stack == null)
                 return;
@@ -840,7 +895,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void RequestServerSpawn(Item item, Vector2 start, Vector2 end, float duration)
         {
-            if (!CanSynchronizeWorldItem(item) || requestedClientSpawns.Contains(item.itemData.Guid))
+            if (!CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession || requestedClientSpawns.Contains(item.itemData.Guid))
                 return;
 
             byte[] payload = CaptureSafely(item);
@@ -906,7 +961,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private bool PublishServerSpawn(Item item, Vector2 start, Vector2 end, float duration, bool animateDrop)
         {
-            if (!NetworkServer.active || !CanSynchronizeWorldItem(item))
+            if (!NetworkServer.active || !CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession)
                 return false;
 
             start = WorldTopologyRuntime.NormalizePosition(start);
@@ -926,7 +981,7 @@ namespace FlatWorld.Networking.Gameplay
             CapturePose(item, state);
             serverStates[guid] = state;
 
-            NetworkServer.SendToAll(new NetworkItemSpawnMessage
+            SendToGroundObservers(new NetworkItemSpawnMessage
             {
                 ItemGuid = guid,
                 ItemId = state.ItemId,
@@ -1724,7 +1779,9 @@ namespace FlatWorld.Networking.Gameplay
 
         private static bool ShouldSynchronize(Item item)
         {
+            if (item != null && SpaceSession.TryGetCombatFrame(item, out _, out _)) return false;
             return CanSynchronizeWorldItem(item) &&
+                   !(item.PersistenceOwner is SpaceSession) &&
                    item.itemData.ModuleDataDic != null && item.itemData.ModuleDataDic.Count > 0;
         }
 

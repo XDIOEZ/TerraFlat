@@ -42,6 +42,7 @@ namespace FlatWorld.Spaceflight
     {
         #region 星系权威状态
         public string TemplateId;
+        public SpaceSectorId Sector;
         public int Seed;
         public double SimulationSeconds;
         public double FixedStepSeconds = 0.02d;
@@ -56,6 +57,8 @@ namespace FlatWorld.Spaceflight
     {
         #region 星体轨道与地表配置
         public string BodyId;
+        public string TemplateBodyId;
+        public SpaceSectorId Sector;
         public string PlanetId;
         public string DisplayName;
         public string PrefabId;
@@ -81,6 +84,7 @@ namespace FlatWorld.Spaceflight
     public sealed class SpaceMotionState
     {
         #region 无引力的太空移动主体
+        public SpaceSectorId Sector;
         public SpaceVector2 PositionMeters;
         public SpaceVector2 VelocityMetersPerSecond;
         public double RadiusMeters;
@@ -92,6 +96,7 @@ namespace FlatWorld.Spaceflight
         #region 单次接触快照
         public string BodyId;
         public string PlanetId;
+        public SpaceSectorId Sector;
         public double Fraction;
         public double SimulationSeconds;
         public double SurfaceAngleRadians;

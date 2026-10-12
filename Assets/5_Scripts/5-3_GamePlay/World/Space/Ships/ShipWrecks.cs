@@ -81,6 +81,7 @@ namespace FlatWorld.Spaceflight
                     ShipFlightState flight = sourceFlight == null ? new ShipFlightState { Phase = ShipFlightPhase.Cruising }
                         : JsonConvert.DeserializeObject<ShipFlightState>(JsonConvert.SerializeObject(sourceFlight));
                     flight.ShipId = wreck.ShipId;
+                    flight.Motion.Sector = wreck.Sector;
                     flight.Motion.PositionMeters = new SpaceVector2(wreck.PositionX, wreck.PositionY);
                     flight.Motion.VelocityMetersPerSecond = new SpaceVector2(wreck.VelocityX, wreck.VelocityY);
                     State.Flights.Add(flight);
@@ -114,7 +115,7 @@ namespace FlatWorld.Spaceflight
                 view.RefreshPayload();
                 wreckViews[ship.ShipId] = view;
             }
-            Vector2 point = IsSpaceView ? ProjectPosition(new SpaceVector2(ship.PositionX, ship.PositionY))
+            Vector2 point = IsSpaceView ? ProjectPosition(new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)))
                 : WorldLocalPresentation.ProjectPosition(new Vector2((float)ship.PositionX, (float)ship.PositionY));
             view.transform.SetPositionAndRotation(point, Quaternion.Euler(0, 0, (float)(ship.AngleRadians * 180d / Math.PI)));
         }

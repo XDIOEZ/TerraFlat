@@ -115,6 +115,8 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState ship in State.Ships) if (ship.ShipId == id) return ship;
             return null;
         }
+        public UniverseSimulation GetUniverse(SpaceSectorId sector) => Universe;
+        public bool TryGetBody(string id, out BodyState body) => Universe.TryGetBody(id, out body);
         public ShipFlightState GetFlight(string id)
         {
             foreach (ShipFlightState flight in State.Flights) if (flight.ShipId == id) return flight;

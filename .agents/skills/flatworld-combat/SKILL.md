@@ -39,6 +39,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - Mod_Damage 管统一发送/窗口，工具由 Mod_ResourceTool/Mod_Shovel 等通过 ICombatDamageContextModifier 附上下文；动作表现经 IWeaponActionAnimation，概率状态由独立 DamageOnHitBuffApplier 组合。
 - JSON 模块装配后 IItemModuleDependencyBinder 按稳定 ID 绑定；武器 Mod_Damage 为实例直接子物体。修饰器从已注册 ItemMods 缓存并校验 FixedList 容量，多伤害盒合法，聚合器排除所有其它 Mod_Damage，避免互调。
 - 武器自身 Source 与 Owner Credit 分开，防自伤在候选/扫描/结算排 Owner，不改 IDamageSender.attacker；上下文携 generation/world/dimension 和 double 模拟 Tick/Time。
+- 太空联机经 `SpaceSession.CombatNetworking` 校验真实连接玩家并驱动原武器输入、体力及弹药事务；`ShipCombatBridge` 在攻击者规范坐标系查询船体和乘员，远端船不依赖 Host 视野。太空 `Mod_Projectile` 不参与地表 Physics2D，固定规范坐标扫掠命中，回收交 `SpaceLooseItemState`；客户端投射物仅复制表现。
 - 窗口打开主动扫已重叠目标；动画武器在 Animator 后 LateUpdate 逐帧采样，窗口预约集跨帧保留、关窗清空，DamageInterval 不限制姿态采样；持续伤害用 Pulse。默认 MaxAttackTargets=3，可被 Prefab/JSON 覆盖。
 - AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
 - DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 自带同节点专用 Trigger，身体/拾取阻挡分开。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。

@@ -54,10 +54,16 @@ namespace FlatWorld.Spaceflight
         }
         public bool StartNavigation(string consoleId, Vector2 displayPoint)
         {
-            if (!IsSpaceView || !FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
+            SpaceSectorPosition target = UnprojectSectorPosition(displayPoint);
+            if (SubmitLocalIntent(SpaceNetworkIntentKind.StartNavigation, consoleId, position: target)) return true;
+            return StartNavigation(consoleId, target);
+        }
+        public bool StartNavigation(string consoleId, SpaceSectorPosition position)
+        {
+            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is not (ShipFlightPhase.Cruising)) return false;
-            SpaceVector2 absolute = UnprojectPosition(displayPoint);
+            SpaceVector2 absolute = position.LocalMeters;
             if (!absolute.IsFinite) return false;
             ShipPieceState device = null;
             foreach (ShipPieceState candidate in ship.Pieces)
@@ -78,7 +84,7 @@ namespace FlatWorld.Spaceflight
             }
             task ??= new ShipNavigationState();
             task.ShipId = ship.ShipId; task.ConsolePieceId = consoleId; task.NavigationPieceId = device.PieceId;
-            task.TargetX = absolute.X; task.TargetY = absolute.Y;
+            task.TargetSector = position.Sector; task.TargetX = absolute.X; task.TargetY = absolute.Y;
             task.Active = true; task.NeedsManualRestart = false; task.Sequence = ++State.NavigationSequence;
             task.Status = "正在导航";
             State.Navigation.Add(task);
@@ -86,6 +92,7 @@ namespace FlatWorld.Spaceflight
         }
         public void CancelNavigation(string shipId)
         {
+            if (SubmitLocalIntent(SpaceNetworkIntentKind.CancelNavigation, ResolveConsole(shipId), shipId)) return;
             foreach (ShipNavigationState task in State.Navigation)
                 if (SameAssembly(shipId, task.ShipId)) { task.Active = false; task.Status = "已取消"; }
         }
@@ -146,7 +153,7 @@ namespace FlatWorld.Spaceflight
             foreach (FluidInventory tank in fuelTanks)
             { h += tank.GetAvailableMoles(FluidIds.Hydrogen, FluidPhase.Gas); o += tank.GetAvailableMoles(FluidIds.Oxygen, FluidPhase.Gas); gas += tank.GasMoles; }
             var flight = GetFlight(shipId);
-            double gravity = Universe.TryGetBody(flight.BodyId, out BodyState body) ? body.SurfaceGravity : 0d;
+            double gravity = TryGetBody(flight.BodyId, out BodyState body) ? body.SurfaceGravity : 0d;
             string ratio = o > 0m ? (h / o).ToString("0.###") + ":1" : FlatWorldLocalizationService.GetUiText("缺氧气");
             string twr = gravity > 0d ? (usableThrust / Math.Max(.001d, assembly.MassKg * gravity)).ToString("0.##") : FlatWorldLocalizationService.GetUiText("失重");
             return FlatWorldLocalizationService.GetUiFormat("有效控制台 {0}/{1} · 可用引擎 {2} · 合格燃料推力 {3:0.##} N · 推重比 {4}", powered, consoles, actuators.Count, usableThrust, twr) + "\n" +
@@ -179,7 +186,7 @@ namespace FlatWorld.Spaceflight
                 bool powered = FindPiece(task.NavigationPieceId, out _, out ShipPieceState nav) && IsPowered(controlled, nav) &&
                     FindPiece(task.ConsolePieceId, out _, out ShipPieceState console) && IsPowered(controlled, console);
                 if (!powered) { targetVelocity = current; turn = 0d; task.Status = "断电，保持惯性，等待导航设备恢复"; return; }
-                SpaceVector2 target = new(task.TargetX, task.TargetY);
+                SpaceVector2 target = SpaceSectorCoordinates.Relative(task.TargetSector, new SpaceVector2(task.TargetX, task.TargetY), assembly.Sector);
                 SpaceVector2 error = target - new SpaceVector2(assembly.PositionX, assembly.PositionY);
                 SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
                 if (error.Magnitude <= config.NavigationArrivalDistanceMeters && velocity.Magnitude <= Math.Min(.001d, config.NavigationArrivalSpeedMetersPerSecond))
@@ -219,7 +226,7 @@ namespace FlatWorld.Spaceflight
                 ShipGeometry.LocalToWorld(engineShip, (enginePiece.CellX + .5d) * engineShip.CellSizeMeters,
                     (enginePiece.CellY + .5d) * engineShip.CellSizeMeters, out double x, out double y);
                 thrustAllocation.Add(ShipThrustAllocation.GetThrustDirection(engineShip.AngleRadians, enginePiece.QuarterTurns),
-                    new SpaceVector2(x - assembly.PositionX, y - assembly.PositionY), engine.Device.Configuration.EngineThrustNewtons);
+                    SpaceSectorCoordinates.Relative(engineShip.Sector, new SpaceVector2(x, y), assembly.Sector) - new SpaceVector2(assembly.PositionX, assembly.PositionY), engine.Device.Configuration.EngineThrustNewtons);
             }
             bool requestedEngine = false;
             for (int index = 0; index < actuators.Count; index++)

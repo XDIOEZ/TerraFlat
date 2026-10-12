@@ -593,6 +593,12 @@ public partial class Mod_GameController : Module
     /// <summary>获取当前准星世界位置，并按调用方提供的玩法距离统一裁剪。</summary>
     public Vector3 GetAimWorldPosition(float maxWorldDistance)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _))
+        {
+            Vector3 target = GetMouseWorldPosition();
+            Vector2 delta = (Vector2)(target - transform.position);
+            return transform.position + (Vector3)(maxWorldDistance > 0f ? Vector2.ClampMagnitude(delta, maxWorldDistance) : delta);
+        }
         return _aimCursor.ClampWorldPosition(
             transform.position,
             GetMouseWorldPosition(),

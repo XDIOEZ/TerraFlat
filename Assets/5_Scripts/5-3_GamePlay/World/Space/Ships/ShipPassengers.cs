@@ -10,9 +10,11 @@ namespace FlatWorld.Spaceflight
         {
             SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
             if (passenger != null) return passenger;
+            SpaceSectorPosition position = IsSpaceView ? UnprojectSectorPosition(player.transform.position)
+                : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(player.transform.position)));
             passenger = new SpacePassengerState { ProfileId = player.ProfileName, IsInSpace = IsSpaceView,
-                FreeMotion = new SpaceMotionState { PositionMeters = IsSpaceView ? UnprojectPosition(player.transform.position)
-                    : SpaceVector2.FromVector2(player.transform.position) } };
+                LandingWorldKey = IsSpaceView ? null : player.Data.CurrentSceneName,
+                FreeMotion = new SpaceMotionState { Sector = position.Sector, PositionMeters = position.LocalMeters } };
             State.Passengers.Add(passenger); return passenger;
         }
         public bool HandlePassengerInput(Player player, Mod_Mover mover, Mod_GameController controller,
@@ -21,7 +23,14 @@ namespace FlatWorld.Spaceflight
             if (State == null || transitionRunning) return false;
             mover.SetSpaceUpright(IsSpaceView);
             SpacePassengerState passenger = GetPassenger(player);
-            if (GetPassengerWorld(passenger) is string expectedWorld && expectedWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority && (passenger.IsInSpace || passenger.Supported))
+            {
+                Vector2 command = !string.IsNullOrEmpty(passenger.ConsolePieceId) || controller?._mainCamera == null
+                    ? screenInput : (Vector2)controller._mainCamera.transform.TransformDirection(screenInput);
+                SpaceNetworkBridge.SubmitInput(player.ProfileName, new SpacePassengerInput { MoveX = command.x, MoveY = command.y, Turn = turn });
+                return true;
+            }
+            if (GetPassengerWorld(passenger) is string expectedWorld && !SpaceMgr.IsSpaceScene(expectedWorld) && expectedWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
             {
                 return true;
             }
@@ -65,7 +74,7 @@ namespace FlatWorld.Spaceflight
                 }
                 passenger.Supported = true; ship = floorShip;
                 ShipGeometry.Rotate(worldInput.x, worldInput.y, -ship.AngleRadians, out double x, out double y);
-                double multiplier = gravity ? 1d : SpaceGameplaySettings.Current.WalkingMultiplier(Universe.GetBody(floorFlight.BodyId).SurfaceGravity);
+                double multiplier = gravity ? 1d : SpaceGameplaySettings.Current.WalkingMultiplier(GetBody(floorFlight.BodyId).SurfaceGravity);
                 double speed = mover.Speed.Value * seconds * multiplier;
                 passenger.WalkVelocityX = x * mover.Speed.Value * multiplier; passenger.WalkVelocityY = y * mover.Speed.Value * multiplier;
                 double nextX = passenger.LocalX + x * speed, nextY = passenger.LocalY + y * speed;
@@ -111,6 +120,7 @@ namespace FlatWorld.Spaceflight
             if (localPlayer != null && passenger.ProfileId == localPlayer.ProfileName) ExitConsole(localPlayer);
             ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
             ShipGeometry.PointVelocity(ship, x, y, out double vx, out double vy);
+            passenger.FreeMotion.Sector = ship.Sector;
             passenger.FreeMotion.PositionMeters = new SpaceVector2(x, y);
             ShipGeometry.Rotate(passenger.WalkVelocityX, passenger.WalkVelocityY, ship.AngleRadians, out double wx, out double wy);
             passenger.FreeMotion.VelocityMetersPerSecond = new SpaceVector2(vx + wx, vy + wy);
@@ -150,6 +160,7 @@ namespace FlatWorld.Spaceflight
             => player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver)?.SetEffectsSuppressed(this, value);
         public bool EnterConsole(Player player, string pieceId)
         {
+            if (SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.EnterConsole, PieceId = pieceId })) return true;
             if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) || piece.Kind != ShipPieceKind.Console ||
                 !IsPowered(ship, piece) || GetFlight(ship.ShipId).Phase == ShipFlightPhase.Floating) return false;
             if (Vector2.Distance(player.transform.position, DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
@@ -168,6 +179,7 @@ namespace FlatWorld.Spaceflight
         public bool ExitConsole(Player player)
         {
             if (player == null || State == null) return false;
+            if (SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ExitConsole })) return true;
             SpacePassengerState passenger = GetPassenger(player);
             if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId)) return false;
             ClearControl(passenger.ConsolePieceId); passenger.ConsolePieceId = null;
@@ -234,7 +246,7 @@ namespace FlatWorld.Spaceflight
             ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
             SpaceVector2 center = assembly != null ? new SpaceVector2(assembly.PositionX, assembly.PositionY)
                 : new SpaceVector2(ship.PositionX, ship.PositionY);
-            Vector2 position = IsSpaceView ? ProjectPosition(center) : WorldLocalPresentation.ProjectPosition(center.ToVector2());
+            Vector2 position = IsSpaceView ? ProjectPosition(new SpaceSectorPosition(assembly?.Sector ?? ship.Sector, center)) : WorldLocalPresentation.ProjectPosition(center.ToVector2());
             ShipFlightState flight = GetFlight(ship.ShipId);
             double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? flight.HeightMeters : 0d;
             float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
@@ -269,10 +281,10 @@ namespace FlatWorld.Spaceflight
         {
             foreach (SpacePassengerState passenger in State.Passengers)
             {
-                Player player = ItemMgr.Instance?.User_Player;
+                Player player = FindNetworkPlayer(passenger.ProfileId);
                 if (passenger.SurfaceDescending)
                 {
-                    BodyState body = Universe.GetBody(passenger.LandingBodyId);
+                    BodyState body = GetBody(passenger.LandingBodyId);
                     passenger.SurfaceVerticalSpeed -= body.SurfaceGravity * seconds;
                     passenger.SurfaceHeight += passenger.SurfaceVerticalSpeed * seconds;
                     if (passenger.SurfaceHeight > 0d) continue;
@@ -292,28 +304,35 @@ namespace FlatWorld.Spaceflight
                     continue;
                 }
                 if (!passenger.IsInSpace || passenger.Supported || passenger.LandingResolved) continue;
-                Mod_Mover mover = player != null && player.ProfileName == passenger.ProfileId && IsSpaceView
+                Mod_Mover mover = player != null && player.ProfileName == passenger.ProfileId
                     ? player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover) : null;
                 // 主动推力只修改自己的速度分量，松键保留全部漂移与碰撞冲量。
                 if (mover != null)
                 {
-                    SpaceVector2 walking = SpaceVector2.FromVector2(mover.SmoothSpaceVelocity(passenger.FreeWalkVelocity.ToVector2(), (float)seconds));
+                    SpaceVector2 walking = SpaceVector2.FromVector2(passengerInputs.TryGetValue(passenger.ProfileId, out SpacePassengerInput input)
+                        ? mover.SmoothSpaceVelocity(passenger.FreeWalkVelocity.ToVector2(), (float)seconds, new Vector2(input.MoveX, input.MoveY))
+                        : mover.SmoothSpaceVelocity(passenger.FreeWalkVelocity.ToVector2(), (float)seconds));
                     passenger.UpdateFreeWalkVelocity(walking);
                 }
                 passenger.FreeMotion.RadiusMeters = .3d;
                 SpaceVector2 previousPosition = passenger.FreeMotion.PositionMeters;
-                bool touched = Universe.StepMotion(passenger.FreeMotion, default, seconds, out SurfaceContact contact);
+                bool touched = StepSectorMotion(passenger.FreeMotion, seconds, out SurfaceContact contact);
                 bool hitShip = ResolveFreePassengerContact(passenger, previousPosition, seconds, out _, touched ? contact.Fraction : 1d);
                 if (hitShip || !touched) continue;
+                if (FlatWorld.Networking.GameNetwork.IsOnline && !CanTransferToNetworkSurface(GetBody(contact.BodyId).SurfaceAddress.WorldKey, out _))
+                {
+                    passenger.FreeMotion.PositionMeters = previousPosition + passenger.FreeMotion.VelocityMetersPerSecond * seconds;
+                    continue;
+                }
                 SpaceVector2 normal = SpaceVector2.FromAngle(contact.SurfaceAngleRadians);
                 SpaceVector2 center = SurfaceCenter(contact.BodyId, contact.SurfaceAngleRadians);
                 passenger.SurfaceDescending = true; passenger.IsInSpace = false;
-                passenger.LandingBodyId = contact.BodyId; passenger.LandingWorldKey = Universe.GetSurfaceAddress(contact.BodyId).WorldKey;
+                passenger.LandingBodyId = contact.BodyId; passenger.LandingWorldKey = GetBody(contact.BodyId).SurfaceAddress.WorldKey;
                 passenger.LandingOriginX = center.X; passenger.LandingOriginY = center.Y;
                 passenger.SurfaceHeight = SpaceGameplaySettings.Current.SurfaceEntryHeightMeters;
                 passenger.SurfaceVerticalSpeed = Math.Min(0d, SpaceVector2.Dot(contact.RelativeVelocityMetersPerSecond, normal));
                 passenger.SurfaceHorizontalSpeed = SpaceVector2.Cross(normal, contact.RelativeVelocityMetersPerSecond);
-                passenger.LandingRandomState = passenger.LandingRandomState == 1 ? unchecked((ulong)(uint)Universe.GetBody(contact.BodyId).Seed) | 1UL : passenger.LandingRandomState;
+                passenger.LandingRandomState = passenger.LandingRandomState == 1 ? unchecked((ulong)(uint)GetBody(contact.BodyId).Seed) | 1UL : passenger.LandingRandomState;
                 double randomAngle = (double)FluidRandom.Next01(ref passenger.LandingRandomState) * Math.PI * 2d;
                 double randomRadius = Math.Sqrt((double)FluidRandom.Next01(ref passenger.LandingRandomState)) * SpaceGameplaySettings.Current.LandingChoiceRadiusMeters;
                 passenger.LandingX = center.X + Math.Cos(randomAngle) * randomRadius;
@@ -329,13 +348,13 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             ShipState ship = GetShip(passenger.ShipId);
             if (IsSpaceView)
-                ViewOrigin = GetPassengerViewPoint(passenger);
+                { SpaceSectorPosition position = GetPassengerPosition(passenger); ViewSector = position.Sector; ViewOrigin = position.LocalMeters; }
             if (ship != null && passenger.Supported && IsVisible(ship)) PlacePassenger(player, passenger, ship);
             else if (passenger.SurfaceDescending && !IsSpaceView && passenger.LandingWorldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
                 player.transform.position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
             else if (IsSpaceView && passenger.IsInSpace)
             {
-                player.transform.position = ProjectPosition(passenger.FreeMotion.PositionMeters);
+                player.transform.position = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
                 player.transform.rotation = Quaternion.identity;
             }
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);

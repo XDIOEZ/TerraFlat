@@ -134,7 +134,8 @@ namespace FlatWorld.Spaceflight
             var snapshot = new ShipExplosionSpatialContext
             {
                 SourceShipId = source.ShipId, InSpace = space,
-                WorldKey = space ? "SpaceScene" : flight?.SurfaceWorldKey ?? source.WorldAddress,
+                Sector = source.Sector,
+                WorldKey = space ? SpaceSectorCoordinates.SceneKey(source.Sector) : flight?.SurfaceWorldKey ?? source.WorldAddress,
                 CenterX = x, CenterY = y, HeightMeters = space ? 0d : Math.Max(0d, flight?.HeightMeters ?? 0d),
                 SourcePositionX = source.PositionX, SourcePositionY = source.PositionY, SourceAngleRadians = source.AngleRadians,
                 SourceCenterOfMassLocalX = source.CenterOfMassLocalX, SourceCenterOfMassLocalY = source.CenterOfMassLocalY
@@ -232,6 +233,11 @@ namespace FlatWorld.Spaceflight
                 if (flight == null || explosion.InSpace != (flight.Phase is ShipFlightPhase.Cruising) ||
                     !explosion.InSpace && (flight.SurfaceWorldKey != explosion.WorldKey || Math.Abs(flight.HeightMeters - explosion.HeightMeters) > .01d)) continue;
                 double x = explosion.CenterX, y = explosion.CenterY;
+                if (explosion.InSpace)
+                {
+                    SpaceVector2 point = SpaceSectorCoordinates.Relative(explosion.Sector, new SpaceVector2(x, y), ship.Sector);
+                    x = point.X; y = point.Y;
+                }
                 if (!explosion.InSpace)
                 {
                     Vector2 delta = PressureExplosionQueue.DeltaInWorld(explosion.WorldKey,
@@ -264,6 +270,11 @@ namespace FlatWorld.Spaceflight
         private double DistanceToPiece(ShipExplosionSpatialContext explosion, ShipState ship, ShipPieceState piece)
         {
             double x = explosion.CenterX, y = explosion.CenterY;
+            if (explosion.InSpace)
+            {
+                SpaceVector2 point = SpaceSectorCoordinates.Relative(explosion.Sector, new SpaceVector2(x, y), ship.Sector);
+                x = point.X; y = point.Y;
+            }
             if (!explosion.InSpace)
             {
                 Vector2 delta = PressureExplosionQueue.DeltaInWorld(explosion.WorldKey,
@@ -286,13 +297,18 @@ namespace FlatWorld.Spaceflight
             {
                 if (target == null || target.Owner != null || target.InHand || Owns(target.itemData.Guid) ||
                     Mod_Building.TryReadBuildingData(target.itemData, out _, out var building) && building.Role == BuildingRole.PlacedBuilding) continue;
-                bool space = target.gameObject.scene.name == "SpaceScene";
+                bool space = SpaceMgr.IsSpaceScene(target.gameObject.scene.name);
+                SpaceSectorId sector = ViewSector;
                 string world = target.gameObject.scene.name;
                 double x, y, height = 0d;
                 Vector2 position = target.gameObject.scene.name == SceneManager.GetActiveScene().name
                     ? WorldLocalPresentation.ToLogical(target.transform.position) : (Vector2)target.itemData.transform.position;
                 x = position.x; y = position.y;
-                if (space) { SpaceVector2 absolute = UnprojectPosition(target.transform.position); x = absolute.X; y = absolute.Y; }
+                if (space)
+                {
+                    SpaceSectorPosition absolute = UnprojectSectorPosition(target.transform.position);
+                    sector = absolute.Sector; x = absolute.LocalMeters.X; y = absolute.LocalMeters.Y;
+                }
                 SpacePassengerState passenger = target is Player actor ? State.Passengers.Find(value => value.ProfileId == actor.ProfileName) : null;
                 ShipState carrier = passenger != null && passenger.Supported ? GetShip(passenger.ShipId) : null;
                 if (carrier != null)
@@ -300,14 +316,20 @@ namespace FlatWorld.Spaceflight
                     ShipFlightState flight = GetFlight(carrier.ShipId);
                     if (flight == null) continue;
                     space = flight.Phase is ShipFlightPhase.Cruising;
-                    world = space ? "SpaceScene" : flight.SurfaceWorldKey; height = space ? 0d : Math.Max(0d, flight.HeightMeters);
+                    sector = carrier.Sector;
+                    world = space ? SpaceSectorCoordinates.SceneKey(sector) : flight.SurfaceWorldKey; height = space ? 0d : Math.Max(0d, flight.HeightMeters);
                     ShipGeometry.LocalToWorld(carrier, passenger.LocalX, passenger.LocalY, out x, out y);
                 }
                 else if (passenger?.SurfaceDescending == true)
                 { space = false; world = passenger.LandingWorldKey; x = passenger.LandingX; y = passenger.LandingY; height = Math.Max(0d, passenger.SurfaceHeight); }
                 else if (passenger?.IsInSpace == true && space)
-                { x = passenger.FreeMotion.PositionMeters.X; y = passenger.FreeMotion.PositionMeters.Y; }
-                if (space != explosion.InSpace || world != explosion.WorldKey) continue;
+                { sector = passenger.FreeMotion.Sector; x = passenger.FreeMotion.PositionMeters.X; y = passenger.FreeMotion.PositionMeters.Y; }
+                if (space != explosion.InSpace || !space && world != explosion.WorldKey) continue;
+                if (space)
+                {
+                    SpaceVector2 point = SpaceSectorCoordinates.Relative(sector, new SpaceVector2(x, y), explosion.Sector);
+                    x = point.X; y = point.Y;
+                }
                 double dx = x - explosion.CenterX, dy = y - explosion.CenterY;
                 if (!space)
                 {
@@ -316,7 +338,7 @@ namespace FlatWorld.Spaceflight
                 }
                 double dz = height - explosion.HeightMeters, distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
                 if (distance >= radius) continue;
-                Vector2 origin = space ? ProjectPosition(new SpaceVector2(explosion.CenterX, explosion.CenterY))
+                Vector2 origin = space ? ProjectPosition(new SpaceSectorPosition(explosion.Sector, new SpaceVector2(explosion.CenterX, explosion.CenterY)))
                     : new Vector2((float)explosion.CenterX, (float)explosion.CenterY);
                 target.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.HurtPressureExplosion(entry.Id, origin, peak * (1f - (float)distance / radius));
             }
@@ -355,8 +377,11 @@ namespace FlatWorld.Spaceflight
         {
             if (!entry.WorldKey.StartsWith("ship:", StringComparison.Ordinal)) return false;
             ShipExplosionSpatialContext explosion = ReadExplosionContext(entry);
-            if (SceneManager.GetActiveScene().name != explosion.WorldKey) return true;
-            Vector2 center = explosion.InSpace ? ProjectPosition(new SpaceVector2(explosion.CenterX, explosion.CenterY))
+            bool visible = explosion.InSpace ? IsSpaceView &&
+                (SpaceSectorCoordinates.Relative(explosion.Sector, new SpaceVector2(explosion.CenterX, explosion.CenterY), ViewSector) - ViewOrigin).Magnitude < 1200d + radius :
+                SceneManager.GetActiveScene().name == explosion.WorldKey;
+            if (!visible) return true;
+            Vector2 center = explosion.InSpace ? ProjectPosition(new SpaceSectorPosition(explosion.Sector, new SpaceVector2(explosion.CenterX, explosion.CenterY)))
                 : WorldLocalPresentation.ProjectPosition(new Vector2((float)explosion.CenterX, (float)explosion.CenterY));
             PressureExplosionQueue.PresentAt(center, radius);
             return true;
@@ -392,6 +417,7 @@ namespace FlatWorld.Spaceflight
         #region 爆炸生成时的世界与姿态
         public string SourceShipId, WorldKey;
         public bool InSpace;
+        public SpaceSectorId Sector;
         public double CenterX, CenterY, HeightMeters;
         public double SourcePositionX, SourcePositionY, SourceAngleRadians, SourceCenterOfMassLocalX, SourceCenterOfMassLocalY;
         #endregion

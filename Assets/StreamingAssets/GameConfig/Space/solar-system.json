@@ -5,6 +5,16 @@
   "metersPerUnityUnit": 1,
   "orbitTimeScale": 720,
   "randomizeBodyPlacements": true,
+  "sectorSystems": [
+    {
+      "sector": { "x": -1, "y": 0 },
+      "templateId": "core:sirius-system",
+      "bodies": [
+        { "bodyId": "sirius_a", "planetId": "天狼星A", "displayName": "天狼星A", "prefabId": "太阳", "parentBodyId": "", "surfaceProfileId": "core:surface.sun", "radiusMeters": 12000, "surfaceGravity": 60, "placementDistanceMeters": 0, "placementAngleRadians": 0, "rotationPeriodSeconds": 30000 },
+        { "bodyId": "sirius_b", "planetId": "天狼星B", "displayName": "天狼星B", "prefabId": "太阳", "parentBodyId": "sirius_a", "surfaceProfileId": "core:surface.sun", "radiusMeters": 2500, "surfaceGravity": 100, "placementDistanceMeters": 48000, "placementAngleRadians": 2.1, "rotationPeriodSeconds": 12000, "orbitalPeriodSeconds": 1587888000, "orbitalEccentricity": 0.2, "orbitalPeriapsisRadians": 0.4 }
+      ]
+    }
+  ],
   "bodies": [
     { "bodyId": "sun", "planetId": "太阳", "displayName": "太阳", "prefabId": "太阳", "parentBodyId": "", "surfaceProfileId": "core:surface.sun", "radiusMeters": 10000, "surfaceGravity": 50, "placementDistanceMeters": 0, "placementAngleRadians": 0, "rotationPeriodSeconds": 35236 },
     { "bodyId": "mercury", "planetId": "水星", "displayName": "水星", "prefabId": "水星", "parentBodyId": "sun", "surfaceProfileId": "core:surface.mercury", "radiusMeters": 800, "surfaceGravity": 3.7, "placementDistanceMeters": 14000, "placementAngleRadians": 0.26, "rotationPeriodSeconds": 84450, "orbitalPeriodSeconds": 7600543.820, "orbitalEccentricity": 0.20563593, "orbitalPeriapsisRadians": 1.3518935764 },

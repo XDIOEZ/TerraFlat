@@ -661,7 +661,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return;
 
         FlatWorld.Spaceflight.SpaceSession.EnsureLoaded();
-        if (NewScenename == "SpaceScene")
+        if (SpaceMgr.IsSpaceScene(NewScenename))
         {
             StartCoroutine(ResumeSpaceWorld(onOldSceneUnloaded));
             return;

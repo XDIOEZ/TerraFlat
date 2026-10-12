@@ -9,6 +9,11 @@ internal static partial class Program
     private static void Main()
     {
         Run("会话身份索引增删、替换与保存恢复", QueryIndexMutations);
+        Run("星区负向、多区、高位整数与空域惯性", SectorCoordinates);
+        Run("边界预加载、自由穿越、折返及多人资源租约", SectorStreaming);
+        Run("跨区星体扫掠与巨大编号局部坐标", SectorSurfaceContacts);
+        Run("跨边界对接整体的重心、惯量与刚体携带", SectorDocking);
+        Run("跨界自由乘员、支撑乘员及极大编号接触", SectorPassengerContacts);
         Run("稳定船体身份查询无临时分配", QueryIndexAllocations);
         Run("散落物缩放仅保存分量并完整往返", LooseItemScaleSnapshot);
         Run("完整太空会话散落物保存、读回和重复保存", LooseItemSessionSnapshot);

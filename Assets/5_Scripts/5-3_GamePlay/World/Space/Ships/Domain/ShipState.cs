@@ -101,6 +101,7 @@ namespace FlatWorld.Spaceflight
     public sealed class ShipState
     {
         public string ShipId = Guid.NewGuid().ToString("N");
+        public SpaceSectorId Sector;
         public string IdentityAnchorPieceId;
         public string ReferenceBodyId;
         public string WorldAddress;
@@ -148,6 +149,7 @@ namespace FlatWorld.Spaceflight
     public sealed class ShipAssemblyState
     {
         public string AssemblyId;
+        public SpaceSectorId Sector;
         public List<string> MemberShipIds = new List<string>();
         public double MassKg;
         public double PositionX;
@@ -207,6 +209,21 @@ namespace FlatWorld.Spaceflight
         {
             Rotate(worldX - ship.PositionX, worldY - ship.PositionY, -ship.AngleRadians, out x, out y);
             x += ship.CenterOfMassLocalX; y += ship.CenterOfMassLocalY;
+        }
+
+        public static void LocalToWorld(ShipState ship, double localX, double localY, SpaceSectorId reference,
+            out double x, out double y)
+        {
+            LocalToWorld(ship, localX, localY, out x, out y);
+            SpaceVector2 position = SpaceSectorCoordinates.Relative(ship.Sector, new SpaceVector2(x, y), reference);
+            x = position.X; y = position.Y;
+        }
+
+        public static void WorldToLocal(ShipState ship, SpaceSectorId source, double worldX, double worldY,
+            out double x, out double y)
+        {
+            SpaceVector2 position = SpaceSectorCoordinates.Relative(source, new SpaceVector2(worldX, worldY), ship.Sector);
+            WorldToLocal(ship, position.X, position.Y, out x, out y);
         }
 
         public static void PointVelocity(ShipState ship, double worldX, double worldY, out double x, out double y)

@@ -12,6 +12,7 @@ namespace FlatWorld.Spaceflight
 
         public bool TryToggleDoor(string pieceId)
         {
+            if (SubmitLocalIntent(SpaceNetworkIntentKind.ToggleDoor, pieceId)) return true;
             if (!GameNetwork.HasStateAuthority || !FindPiece(pieceId, out ShipState ship, out ShipPieceState door) ||
                 !door.IsAlive || door.Kind != ShipPieceKind.Door) return false;
             // 通道有人时保持打开，不通过挪动乘员来强行关门。
@@ -32,10 +33,12 @@ namespace FlatWorld.Spaceflight
                 double x, y;
                 if (passenger.Supported && passenger.ShipId == ship.ShipId)
                 { x = passenger.LocalX; y = passenger.LocalY; }
-                else if (!passenger.Supported && IsSpaceView && passenger.IsInSpace &&
+                else if (!passenger.Supported && passenger.IsInSpace &&
                     !passenger.SurfaceDescending && !passenger.LandingResolved)
-                    ShipGeometry.WorldToLocal(ship, passenger.FreeMotion.PositionMeters.X,
-                        passenger.FreeMotion.PositionMeters.Y, out x, out y);
+                    {
+                    SpaceVector2 point = SpaceSectorCoordinates.Relative(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters, ship.Sector);
+                    ShipGeometry.WorldToLocal(ship, point.X, point.Y, out x, out y);
+                }
                 else continue;
                 double dx = x - Math.Clamp(x, minX, maxX), dy = y - Math.Clamp(y, minY, maxY);
                 if (dx * dx + dy * dy <= .3d * .3d) return true;

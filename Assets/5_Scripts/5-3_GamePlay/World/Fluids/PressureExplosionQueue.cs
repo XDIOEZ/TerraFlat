@@ -247,7 +247,7 @@ public static class PressureExplosionQueue
                 if (!MachineWorld.TryResolveFluidSurfacePoint(spill.Center, out string surfaceWorld, out Vector2 surfacePosition)) continue;
                 spill.WorldKey = surfaceWorld; spill.Center = surfacePosition;
             }
-            if (spill.WorldKey == "SpaceScene") continue;
+            if (SpaceMgr.IsSpaceScene(spill.WorldKey)) continue;
             FluidDefinition definition = FluidCatalog.Default.Find(spill.FluidId);
             if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetLiquidDefinition(definition.LiquidId, out LiquidDefinition liquid) ||
                 liquid.WorldWater == null || liquid.WorldWater.DepthPerServing <= 0f) continue;

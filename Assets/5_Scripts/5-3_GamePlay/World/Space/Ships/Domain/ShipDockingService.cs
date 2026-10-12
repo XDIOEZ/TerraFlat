@@ -124,10 +124,12 @@ namespace FlatWorld.Spaceflight
         private static bool CanCapture(ShipState a, ShipDockingPortState portA, ShipState b, ShipDockingPortState portB,
             double positionTolerance, double angleTolerance, double speedTolerance)
         {
-            if (a.PlatformKind != b.PlatformKind || a.WorldAddress != b.WorldAddress) return false;
+            if (a.PlatformKind != b.PlatformKind || a.PlatformKind != ShipPlatformKind.Space && a.WorldAddress != b.WorldAddress) return false;
             PortWorldPose(a, portA, out double ax, out double ay, out double anx, out double any);
             PortWorldPose(b, portB, out double bx, out double by, out double bnx, out double bny);
-            double dx = ax - bx, dy = ay - by;
+            SpaceVector2 relativeB = a.PlatformKind == ShipPlatformKind.Space ?
+                SpaceSectorCoordinates.Relative(b.Sector, new SpaceVector2(bx, by), a.Sector) : new SpaceVector2(bx, by);
+            double dx = ax - relativeB.X, dy = ay - relativeB.Y;
             if (dx * dx + dy * dy > positionTolerance * positionTolerance) return false;
             double dot = Math.Max(-1d, Math.Min(1d, -(anx * bnx + any * bny)));
             if (Math.Acos(dot) > angleTolerance) return false;
@@ -211,6 +213,7 @@ namespace FlatWorld.Spaceflight
         // 连接关系不变时只更新质量与运动量，复用组合和成员变换。
         internal static void RefreshAssembly(ShipAssemblyState assembly, IReadOnlyList<ShipState> members)
         {
+            assembly.Sector = members[0].Sector;
             assembly.AngleRadians = members[0].AngleRadians;
             assembly.MassKg = assembly.PositionX = assembly.PositionY = 0d;
             assembly.VelocityX = assembly.VelocityY = assembly.InertiaKgM2 = 0d;
@@ -220,8 +223,9 @@ namespace FlatWorld.Spaceflight
                 if (!FluidUnits.IsFinite(member.MassKg) || member.MassKg < 0d)
                     throw new InvalidDataException("对接成员质量无效");
                 assembly.MassKg += member.MassKg;
-                assembly.PositionX += member.MassKg * member.PositionX;
-                assembly.PositionY += member.MassKg * member.PositionY;
+                SpaceVector2 position = MemberPosition(member, assembly);
+                assembly.PositionX += member.MassKg * position.X;
+                assembly.PositionY += member.MassKg * position.Y;
                 assembly.VelocityX += member.MassKg * member.VelocityX;
                 assembly.VelocityY += member.MassKg * member.VelocityY;
             }
@@ -239,7 +243,8 @@ namespace FlatWorld.Spaceflight
             for (int i = 0; i < members.Count; i++)
             {
                 ShipState member = members[i];
-                double dx = member.PositionX - assembly.PositionX, dy = member.PositionY - assembly.PositionY;
+                SpaceVector2 position = MemberPosition(member, assembly);
+                double dx = position.X - assembly.PositionX, dy = position.Y - assembly.PositionY;
                 assembly.InertiaKgM2 += member.InertiaKgM2 + member.MassKg * (dx * dx + dy * dy);
                 angularMomentum += member.InertiaKgM2 * member.AngularVelocityRadiansPerSecond +
                     member.MassKg * (dx * (member.VelocityY - assembly.VelocityY) -
@@ -260,13 +265,20 @@ namespace FlatWorld.Spaceflight
                 ShipState member = FindShip(ships, transform.ShipId);
                 if (member == null) continue;
                 ShipGeometry.Rotate(transform.OffsetX, transform.OffsetY, assembly.AngleRadians, out double dx, out double dy);
-                member.PositionX = assembly.PositionX + dx; member.PositionY = assembly.PositionY + dy;
+                SpaceVector2 position = new(assembly.PositionX + dx, assembly.PositionY + dy);
+                if (member.PlatformKind == ShipPlatformKind.Space)
+                    position = SpaceSectorCoordinates.Relative(assembly.Sector, position, member.Sector);
+                member.PositionX = position.X; member.PositionY = position.Y;
                 member.AngleRadians = assembly.AngleRadians + transform.RelativeAngleRadians;
                 member.VelocityX = assembly.VelocityX - assembly.AngularVelocityRadiansPerSecond * dy;
                 member.VelocityY = assembly.VelocityY + assembly.AngularVelocityRadiansPerSecond * dx;
                 member.AngularVelocityRadiansPerSecond = assembly.AngularVelocityRadiansPerSecond;
             }
         }
+        private static SpaceVector2 MemberPosition(ShipState member, ShipAssemblyState assembly)
+            => member.PlatformKind == ShipPlatformKind.Space ?
+                SpaceSectorCoordinates.Relative(member.Sector, new SpaceVector2(member.PositionX, member.PositionY), assembly.Sector) :
+                new SpaceVector2(member.PositionX, member.PositionY);
         #endregion
 
         #region 连接身份与状态清理

@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using FlatWorld.Networking;
 using Sirenix.OdinInspector;
 using MemoryPack;
 using UnityEngine;
@@ -15,6 +17,8 @@ public partial class Mod_PlayerDeathState : Module
 #region 基础参数
 
     public const string ModuleId = "PlayerDeathState";
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => .1f;
 
     [System.Serializable]
     [MemoryPackable]
@@ -77,6 +81,7 @@ public partial class Mod_PlayerDeathState : Module
     private Button _exitButton; // 回主菜单按钮
     private Coroutine _respawnCoroutine; // 等待周围区块准备完成的协程
     private bool _respawnInProgress; // 防止重复点击重生
+    private float networkRespawnRequestedAt;
 
 #endregion
 
@@ -225,11 +230,25 @@ public partial class Mod_PlayerDeathState : Module
         }
 
         _respawnInProgress = true;
+        if (GameNetwork.IsOnline && !GameNetwork.HasStateAuthority)
+            networkRespawnRequestedAt = Time.unscaledTime;
 
         ResolveRespawnDestination(
             out Vector3 respawnPos,
             out WorldAddress activeAddress,
             out WorldAddress targetAddress);
+
+        if (GameNetwork.IsOnline)
+        {
+            bool started = SpaceSession.Current?.TryBeginRespawnTransition(
+                _player, targetAddress, respawnPos, CompleteNetworkRespawn) == true;
+            if (!started)
+            {
+                _respawnInProgress = false;
+                Debug.LogWarning("[玩家重生] 联机重生目标地表尚未准备好。", this);
+            }
+            return;
+        }
 
         if (RequiresWorldTransition(activeAddress, targetAddress))
         {
@@ -300,6 +319,48 @@ public partial class Mod_PlayerDeathState : Module
 
 #region 重生恢复
 
+    // 远端角色的生存模块只在重生时短暂恢复数据，不开启地表环境调度。
+    public void CompleteNetworkRespawn()
+    {
+        if (!GameNetwork.HasStateAuthority || _player == null || _damageReceiver == null) return;
+        var temporary = new List<Module>();
+        try
+        {
+            PrepareNetworkRespawnModule(_food, temporary);
+            PrepareNetworkRespawnModule(_temperature, temporary);
+            PrepareNetworkRespawnModule(item.itemMods.GetMod_ByID<Mod_Oxygen>(Mod_Oxygen.ModuleId), temporary);
+            PrepareNetworkRespawnModule(item.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId), temporary);
+            CompleteRespawnState(restartChunkStreaming: false, unlockInput: true);
+            foreach (Module module in temporary) module.Save();
+        }
+        finally { foreach (Module module in temporary) module.Unload(); }
+    }
+
+    private static void PrepareNetworkRespawnModule(Module module, List<Module> temporary)
+    {
+        if (module == null || module.IsRuntimeLoaded) return;
+        module.Load(); temporary.Add(module);
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        if (!GameNetwork.IsOnline || _player?.IsLocalProfile != true || _damageReceiver == null) return;
+        // 客户端从服务器生命状态恢复濒死界面，死亡掉落与生命重置只由权威端执行。
+        if (_damageReceiver.Hp <= 0f)
+        {
+            if (!_isInDyingState) EnterDyingState();
+            if (_respawnInProgress && !GameNetwork.HasStateAuthority && Time.unscaledTime - networkRespawnRequestedAt >= 5f)
+                _respawnInProgress = false;
+        }
+        else if (_isInDyingState)
+        {
+            _isInDyingState = false; _respawnInProgress = false;
+            _gameController?.SetGameplayInputLocked(false);
+            if (_mover != null) { _mover.enabled = true; _mover.SetRunState(false); }
+            CloseAndDestroyDyingPanel();
+        }
+    }
+
     /// <summary>解析主世界复活地址与坐标；现代存档优先读取固定主世界出生点。</summary>
     private void ResolveRespawnDestination(
         out Vector3 respawnPosition,
@@ -309,7 +370,7 @@ public partial class Mod_PlayerDeathState : Module
         activeAddress = ResolveActiveWorldAddress();
         targetAddress = activeAddress.WithDimension(WorldAddress.SurfaceDimensionId);
 
-        if (activeAddress.WorldKey == "SpaceScene")
+        if (SpaceMgr.IsSpaceScene(activeAddress.WorldKey))
         {
             // 太空死亡固定回地球，宇宙投影坐标不能当作地表出生点。
             targetAddress = SpaceSession.Current?.Universe?.GetSurfaceAddress("earth")
@@ -491,9 +552,11 @@ public partial class Mod_PlayerDeathState : Module
     }
 
     /// <summary>优先读取维度管理器的权威地址，Scene 名作为启动兼容兜底。</summary>
-    private static WorldAddress ResolveActiveWorldAddress()
+    private WorldAddress ResolveActiveWorldAddress()
     {
-        if (SceneManager.GetActiveScene().name == "SpaceScene")
+        if (GameNetwork.IsOnline && !string.IsNullOrWhiteSpace(_player?.Data?.CurrentSceneName))
+            return WorldAddress.FromWorldKey(_player.Data.CurrentSceneName);
+        if (SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
             return WorldAddress.FromWorldKey("SpaceScene");
         if (DimensionManager.Instance != null && DimensionManager.Instance.ActiveAddress.IsValid)
             return DimensionManager.Instance.ActiveAddress;
@@ -507,7 +570,7 @@ public partial class Mod_PlayerDeathState : Module
         WorldAddress activeAddress = ResolveActiveWorldAddress();
         GameManager gameManager = GameManager.Instance;
         if (_player?.Data == null ||
-            activeAddress.WorldKey == "SpaceScene" ||
+            SpaceMgr.IsSpaceScene(activeAddress.WorldKey) ||
             !activeAddress.IsSurface ||
             PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out _, out _) ||
             gameManager == null ||
@@ -610,7 +673,7 @@ public partial class Mod_PlayerDeathState : Module
         _damageReceiver.Data.AttackersUIDs.Clear();
         EnterDyingState();
 
-        if (GameDifficultyService.Current.PlayerDeath.DropAllCarriedItems)
+        if (GameNetwork.HasStateAuthority && GameDifficultyService.Current.PlayerDeath.DropAllCarriedItems)
         {
             int droppedStackCount = PlayerDeathInventoryDropper.DropAll(_player);
             Debug.Log($"[Mod_PlayerDeathState] 困难难度死亡掉落完成，共掉落 {droppedStackCount} 组物品");
@@ -666,7 +729,7 @@ public partial class Mod_PlayerDeathState : Module
 
     private void ShowDyingPanel()
     {
-        if (!_isInDyingState)
+        if (!_isInDyingState || _player?.IsLocalProfile != true)
         {
             return;
         }

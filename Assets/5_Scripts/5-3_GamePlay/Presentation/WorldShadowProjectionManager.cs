@@ -522,7 +522,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         Item owner = binding.Owner;
         // 场景切换只隐藏太空玩家的投影，回到地表后沿现有绑定恢复。
-        if (owner is Player && SceneManager.GetActiveScene().name == "SpaceScene")
+        if (owner is Player && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
         {
             ReleaseProxy(binding);
             binding.NextCheck = 0f;
