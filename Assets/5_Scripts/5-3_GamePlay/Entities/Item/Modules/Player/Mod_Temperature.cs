@@ -192,6 +192,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         ClearTemperatureConditionBuffs();
         Data.RemainingTemperatureBufferSeconds = Data.DangerTemperatureBufferSeconds;
         ClearTemperatureSafetyRetreat();
+        ResetTemperatureDangerMemory();
         SetNaturalTemperature(NormalSurfaceTemperature);
     }
 

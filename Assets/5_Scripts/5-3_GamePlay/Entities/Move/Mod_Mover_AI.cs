@@ -40,6 +40,10 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
 
     private bool hasDestination;
     private bool hasTemperatureSafetyDestination;
+    private Mod_Temperature temperature;
+    private bool hasTemperatureBiasedDestination;
+    private Vector2 temperatureBiasedRequest;
+    private Vector2 temperatureBiasedDestination;
     private Vector2 lastSubmittedDestination;
     private float EffectiveDestinationChangeDistance =>
         Mathf.Max(MinimumDestinationChangeDistance, destinationChangeThreshold);
@@ -85,6 +89,8 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         lastSubmittedDestination = currentPosition;
         hasDestination = false;
         hasTemperatureSafetyDestination = false;
+        hasTemperatureBiasedDestination = false;
+        temperature = item?.itemMods?.GetMod_ByID<Mod_Temperature>(Mod_Temperature.ModuleId);
         HasReachedTarget = true;
         CanMove = true;
         NavigationAgent.Stop(clearDestination: true);
@@ -118,7 +124,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     {
         if (hasTemperatureSafetyDestination)
             return;
-        SubmitDestination(destination, int.MaxValue, forceRepath);
+        SubmitDestination(ResolveTemperatureBiasedDestination(destination), int.MaxValue, forceRepath);
     }
 
     /// <summary>提交只有路径总代价严格小于上限时才接受的移动目标。</summary>
@@ -129,7 +135,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     {
         if (hasTemperatureSafetyDestination)
             return DestinationResult;
-        SubmitDestination(destination, Mathf.Max(1, maximumPathCostExclusive), forceRepath);
+        SubmitDestination(ResolveTemperatureBiasedDestination(destination), Mathf.Max(1, maximumPathCostExclusive), forceRepath);
         return DestinationResult;
     }
 
@@ -183,8 +189,13 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
 
     public void SetTemperatureSafetyDestination(Vector2 destination)
     {
+        bool changed = !hasTemperatureSafetyDestination ||
+            WorldTopologyRuntime.SqrDistance(TargetPosition, destination) >
+            EffectiveDestinationChangeDistance * EffectiveDestinationChangeDistance;
         hasTemperatureSafetyDestination = true;
-        SubmitDestination(destination, int.MaxValue, forceRepath: true);
+        hasTemperatureBiasedDestination = false;
+        if (changed)
+            SubmitDestination(destination, int.MaxValue, forceRepath: true);
     }
 
     public void ClearTemperatureSafetyDestination()
@@ -193,7 +204,32 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
             return;
 
         hasTemperatureSafetyDestination = false;
+        hasTemperatureBiasedDestination = false;
         StopMovementInternal();
+    }
+
+    private Vector2 ResolveTemperatureBiasedDestination(Vector2 destination)
+    {
+        temperature ??= item?.itemMods?.GetMod_ByID<Mod_Temperature>(Mod_Temperature.ModuleId);
+        if (temperature == null || !temperature.HasTemperatureDangerMemory)
+        {
+            hasTemperatureBiasedDestination = false;
+            return destination;
+        }
+
+        // 同一个普通目标按整段保持偏向，不能因逐帧改变原点反复刷新寻路。
+        if (!hasTemperatureBiasedDestination || HasReachedTarget ||
+            DestinationResult == WorldNavigationDestinationResult.Failed ||
+            WorldTopologyRuntime.SqrDistance(temperatureBiasedRequest, destination) >
+            EffectiveDestinationChangeDistance * EffectiveDestinationChangeDistance)
+        {
+            Vector2 current = rb != null ? rb.position : (Vector2)item.transform.position;
+            temperatureBiasedRequest = destination;
+            temperatureBiasedDestination = temperature.BiasTemperatureMovementDestination(current, destination);
+            hasTemperatureBiasedDestination = WorldTopologyRuntime.SqrDistance(
+                temperatureBiasedDestination, destination) > 0.0001f;
+        }
+        return temperatureBiasedDestination;
     }
 
     #endregion
@@ -231,6 +267,8 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     protected override void OnUnload()
     {
         hasTemperatureSafetyDestination = false;
+        hasTemperatureBiasedDestination = false;
+        temperature = null;
         StopMovementInternal();
         base.OnUnload();
     }

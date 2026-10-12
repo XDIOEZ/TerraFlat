@@ -30,7 +30,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - `DestinationResult` 表达目的地结果，含 `RejectedByPathCost`；同目标四次无路径后保持 Failed，目标/网格修订/成功路径解除。新路径超限不覆盖已接受路径，旧路径走完后停续算，明显目标移动才再评估。
 - 追击上限随 RequestPath 进入共享搜索，前沿到上限只结束该请求；成功/拒绝/取消/失败清等待链，缓存只用已收敛起点成本。
 - Wrapped 网格/路点用规范格和最短位移，Job 用冻结 WorldTopologyDomain。当前通行配置只支持半径小于半格的圆形单位，能力/大体型差异尚未拆缓存，环绕跨度为 16 的正整数倍。
-- Mod_Mover_AI 的 `ITemperatureSafetyMovement` 安全目标优先；普通目标/停止不抢占，死亡/卸载仍强停，安全记录由体温模块选择。
+- Mod_Mover_AI 的 `ITemperatureSafetyMovement` 避险目标优先；普通目标/停止不抢占，死亡/卸载仍强停。体温模块拥有危险记忆与方向偏置，普通目标按整段缓存偏置，同一个避险目标重复提交不强制重寻路；鸟的地面到达/失败沿用 mover 结果。
 
 ## 共享 Flow 与并发
 

@@ -132,7 +132,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     public float FlightStamina => state.Stamina;
     public bool IsRecoveringFlightStamina => state.MustRecoverStamina;
     public int TemperatureSafetyMovementPriority => 100;
-    public bool ShouldAdvanceTemperatureSafetyDestination => temperatureSafetyRetreat && temperatureSafetyReached;
+    public bool ShouldAdvanceTemperatureSafetyDestination => temperatureSafetyRetreat &&
+        (IsAirborne ? temperatureSafetyReached : mover.ShouldAdvanceTemperatureSafetyDestination);
     #endregion
 
     #region 装配与回收
@@ -388,6 +389,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         Vector2 current = body.position;
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(current, temperatureSafetyDestination);
+        if (!IsAirborne)
+        {
+            mover.SetTemperatureSafetyDestination(temperatureSafetyDestination);
+            temperatureSafetyReached = mover.ShouldAdvanceTemperatureSafetyDestination;
+            return;
+        }
         if (delta.sqrMagnitude <= FlightTargetArrivalDistance * FlightTargetArrivalDistance)
         {
             mover.StopMovement();
@@ -397,15 +404,9 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         }
 
         temperatureSafetyReached = false;
-        if (IsAirborne)
-        {
-            mover.ClearTemperatureSafetyDestination();
-            if (!MoveCruiseStep(delta, deltaTime))
-                temperatureSafetyReached = true;
-            return;
-        }
-
-        mover.SetTemperatureSafetyDestination(temperatureSafetyDestination);
+        mover.ClearTemperatureSafetyDestination();
+        if (!MoveCruiseStep(delta, deltaTime))
+            temperatureSafetyReached = true;
     }
 
     #endregion

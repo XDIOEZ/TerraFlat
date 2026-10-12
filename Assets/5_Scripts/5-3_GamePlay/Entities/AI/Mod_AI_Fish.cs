@@ -707,7 +707,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             return;
         }
 
-        SwimTowards(temperatureSafetyDestination, deltaTime);
+        temperatureSafetyReached = !SwimTowards(temperatureSafetyDestination, deltaTime);
     }
 
     #endregion
