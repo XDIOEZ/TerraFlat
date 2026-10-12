@@ -18,6 +18,7 @@ internal sealed partial class DroppedItemRuntime
 
     private void TickMatter(float deltaTime)
     {
+        if (!float.IsFinite(deltaTime) || deltaTime <= 0f) return;
         matterTime += deltaTime;
         if (matterCursor >= matterScratch.Count)
         {

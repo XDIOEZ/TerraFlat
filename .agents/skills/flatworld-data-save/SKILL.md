@@ -53,6 +53,6 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 ## 内容与资源
 
 - Item/Recipe/Tile/Actor 都由显式 Manifest 发现。Tile 保存稳定字符串 ID 与 runtimeTileId，数字编号不重排/复用，行为工厂与 MemoryPack Union 是不同注册边界；Actor 资源地址随 GUID，sourcePrefab 仅编辑器。
-- 玩家创建模板只在新角色模块加载前注入，不入存档；现有角色的 core.heatConductionRate 仍由当前静态配置覆盖。
+- 玩家创建模板只在新角色模块加载前注入，不入存档。
 - Addressables 条目变更保存所属 Group；外部目录/源资源导入经 BatchModification 使 Fast Mode Locator 失效，AssetDatabase.Refresh 本身不够。Sprite 单图用主地址，Multiple 才加子资源名。
 - Player 构建启用随 Player 构建 Addressables；`AddressablesPlayerBuildGuard` 在资源构建失败时终止打包。SBP 的 `slimWriteResults` 固定为 false，避免构建报告临时改写配置遇到 Windows 文件映射占用；APK 的 `Succeeded` 不能代替资源构建成功。MemoryPack 结构变更与格式头配套，追加可选数值缺省不能靠字段初始化值；0 有效时用可空值区分缺省。

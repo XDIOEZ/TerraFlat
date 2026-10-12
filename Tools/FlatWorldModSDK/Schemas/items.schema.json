@@ -77,7 +77,6 @@
           "enum": [
             "core:move_speed_multiplier",
             "core:food_consume_speed_multiplier",
-            "core:temperature_cooling_multiplier",
             "core:heal",
             "core:stamina_change",
             "core:nutrition_change",

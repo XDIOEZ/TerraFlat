@@ -185,6 +185,8 @@ internal static class Program
 
         var tickingDto = catalog.Buffs.Single(b => b.Id == WetBuffIds.Wet);
         tickingDto.TickIntervalSeconds = 1f;
+        // 测试自行提供 Start 效果，避免依赖正式潮湿的具体效果配置。
+        tickingDto.Effects.Add(new BuffEffectDto { Phase = "start", TypeId = BuffEffectTypeIds.Heal, Value = 1f });
         tickingDto.Effects.Add(new BuffEffectDto { Phase = "tick", TypeId = "core:true_damage", Value = 1f });
         GameRes.Instance.Buffs[WetBuffIds.Wet] = BuffDefinitionFactory.Build(tickingDto);
         BuffEffectDispatcher.Executions.Clear();

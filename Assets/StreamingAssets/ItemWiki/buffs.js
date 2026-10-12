@@ -29,7 +29,6 @@
         "core:max_health_percent_heal": "最大生命比例治疗",
         "core:max_health_percent_true_damage": "最大生命比例伤害",
         "core:nutrition_change": "营养变化",
-        "core:temperature_cooling_multiplier": "体温下降速度倍率",
         "core:temperature_warming": "临时增温",
         "core:move_speed_multiplier": "移动速度倍率",
         "core:damage_taken_multiplier": "承受伤害倍率",

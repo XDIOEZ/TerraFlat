@@ -505,8 +505,10 @@ public static class ItemMatterRuntime
         bool submerged = false,
         float? transferPerSecondOverride = null)
     {
-        if (item == null || seconds <= 0f || float.IsNaN(seconds) || float.IsInfinity(seconds) ||
-            float.IsNaN(ambientTemperature) || float.IsInfinity(ambientTemperature)) return false;
+        if (item == null || seconds <= 0f || !float.IsFinite(seconds) ||
+            !float.IsFinite(ambientTemperature) || !float.IsFinite(airExposure) ||
+            (transferPerSecondOverride.HasValue &&
+             (!float.IsFinite(transferPerSecondOverride.Value) || transferPerSecondOverride.Value < 0f))) return false;
         bool initialized = EnsureInitialized(item, ambientTemperature);
         ItemMatterState state = item.MatterState;
         if (state?.Initialized != true) return false;
@@ -515,12 +517,11 @@ public static class ItemMatterRuntime
         float exposure = Mathf.Max(0f, airExposure);
         float beforeTemperature = state.TemperatureCelsius;
         float beforeMoisture = state.Moisture;
-        state.TemperatureCelsius = ThermalRuntime.AdvanceTowards(
-            state.TemperatureCelsius,
-            ambientTemperature,
-            transferPerSecondOverride ?? item.HeatConductionRate,
-            seconds,
-            Mathf.Max(0.01f, exposure));
+        // 普通环境统一缩小温差，只有设备和特殊接触显式提供固定速率。
+        state.TemperatureCelsius = transferPerSecondOverride.HasValue
+            ? ThermalRuntime.AdvanceTowards(beforeTemperature, ambientTemperature,
+                transferPerSecondOverride.Value, seconds, Mathf.Max(0.01f, exposure))
+            : ThermalRuntime.AdvanceAmbient(beforeTemperature, ambientTemperature, seconds);
 
         if (matter != null)
         {

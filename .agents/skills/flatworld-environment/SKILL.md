@@ -42,7 +42,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `TryGetClimateBaseline` 排除季节/天气/局部源，供历史生态/雪；`TryGetAmbientTemperature` 从已加载地理层叠 PlanetData 基准差、允许的天气/季节与局部源，供体温/产量/调试。未加载返回 false，出生格不写回全局温度。
 - `LocalTemperatureSource` 是中心摄氏增量而非功率/目标温度，按来源注册/撤销，无热惯性；分区缓存依源快照失效，环绕键/距离规范化。来源设备拥有燃料/供电/保存，偏移不写生成层。
 - 液体辐射来自 `radiantHeatRadius/radiantHeatOffset`；RadiantLiquidTemperatureField 只查加载块，以 Terrain/SurfaceLiquidRevision 缓存逐格最大贡献，液体/支撑面/目录改变重算，雪土光变化不重扫。
-- 体温是最外层体表；环境趋近速度为目标绝对温度 1%/s，整数四舍五入、最低 1℃/s。各趋近过程统一 ThermalRuntime.AdvanceTowards；入水有独立过渡速度，衣物只修安全范围。
+- 体温是最外层体表；角色与普通物品的环境传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，按 `0.99^seconds` 指数结算，温差小于 0.0001℃收敛。冷热不分速率，不读物品传热率或潮湿/附近火源倍率；`AdvanceTowards` 仅保留给入水、岩浆接触和设备专属传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。
 - 冷热共用 RemainingTemperatureBufferSeconds：危险扣 1/s、安全默认补 1/s、容量默认 60；短暂安全/冷热切换/清 Buff 不重置，保存剩余量，RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点并向远离方向随机引导，不再记录或回退安全点；普通陆地移动也保留短期方向偏置。

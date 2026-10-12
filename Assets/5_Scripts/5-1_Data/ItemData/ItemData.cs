@@ -131,16 +131,6 @@ public abstract partial class ItemData
     [Tooltip("物品实例当前的温度与含水率状态")]
     [MemoryPackIgnore] public ItemMatterState MatterState = new();
 
-    #region 热量传导
-
-    public const float DefaultHeatConductionRate = 1f; // 未在 JSON 配置时的基础热量传导速率(℃/s)
-
-    [HideInInspector, JsonProperty("heatConductionRate")]
-    [Tooltip("热量传导速率（℃/s）；由物品或玩家 JSON 配置，温差决定升温或降温方向")]
-    [MemoryPackIgnore] public float HeatConductionRate = DefaultHeatConductionRate; // 实体自身的基础热量传导速率
-
-    #endregion
-
     #region 定义与实例持久化边界
 
     [MemoryPackIgnore, JsonIgnore, FastClonerIgnore]

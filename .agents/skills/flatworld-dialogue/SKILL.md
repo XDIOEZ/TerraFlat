@@ -19,3 +19,4 @@ description: "FlatWorld 角色台词、Facts、请求调度、冷却、一次性
 - 玩家台词仅由 `Player.IsLocalProfile` 调度；一次性标记存入 `ItemSpecialDataJsonStore` 命名空间并保留其他系统字段。
 - Provider 产请求，调度器管理时序，Presenter 显示。玩法语义事件由 `FlatWorld.Dialogue` 独立桥接筛选本地玩家、完成本地化并 `Say`；GamePlay 无 Dialogue 反向依赖。
 - Facts 读权威状态，可选模块缺失表示无该 Fact。`weather.isRaining` 表达降水过程，雨雪文案另读 `weather.isSnowing`；物品失败反馈也经语义事件进入气泡。
+- `WeatherExposureSpeechProvider` 只贡献所在地天气与附近燃烧源 Facts；实际热影响由权威环境温度场和温度模块结算。

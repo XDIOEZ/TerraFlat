@@ -452,9 +452,6 @@ MonoBehaviour:
     DangerTemperatureBufferSeconds: 60
     TemperatureBufferRecoveryPerSecond: 1
     RemainingTemperatureBufferSeconds: 60
-    RuntimeAmbientOffset: 0
-    RuntimeChangeSpeedMultiplier: 1
-    RuntimeCoolingSpeedMultiplier: 1
   OnTemperatureChanged:
     _PersistentCalls: []
 --- !u!1 &4411885219965820198
@@ -830,7 +827,6 @@ MonoBehaviour:
       Moisture: 0
       IsBurning: 0
       CombustionElapsedSeconds: 0
-    HeatConductionRate: 1
     CurrentSceneName: "\u5730\u7403"
     hp:
       value: 30
@@ -1030,11 +1026,6 @@ MonoBehaviour:
   heatSourceLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  lightRainAmbientPenalty: -8
-  heavyRainAmbientPenalty: -16
-  rainCoolingSpeedMultiplier: 4
-  heatSourceAmbientBonus: 10
-  heatRecoverySpeedMultiplier: 5
 --- !u!114 &8512309475123094754
 MonoBehaviour:
   m_ObjectHideFlags: 0

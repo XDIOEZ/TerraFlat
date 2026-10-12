@@ -36,15 +36,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         [LabelText("危险温度剩余缓冲"), ReadOnly, SuffixLabel("秒", true)]
         public float RemainingTemperatureBufferSeconds = 60f; // 剩余缓冲随角色保存，不能靠重载补满。
 
-        [MemoryPackIgnore]
-        public float RuntimeAmbientOffset = 0f; // 天气暴露、火源等运行时环境修正
-
-        [MemoryPackIgnore]
-        public float RuntimeChangeSpeedMultiplier = 1f; // 运行时体温变化速度倍率
-
-        [MemoryPackIgnore]
-        public float RuntimeCoolingSpeedMultiplier = 1f; // 仅在体温下降时生效的运行时倍率
-
         /// <summary>制作独立存档快照，只替换基础体温，不修改仍在运行的有效体温。</summary>
         public TemperatureData CreateSaveSnapshot(float naturalTemperature)
         {
@@ -225,20 +216,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         _waterEntryTemperatureDrop = temperatureDrop;
         BeginWaterEntryCooling(temperatureDrop, minimumTemperature, transitionSeconds);
-    }
-
-    public void MultiplyRuntimeCoolingSpeed(float multiplier)
-    {
-        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
-        {
-            Debug.LogWarning($"[Mod_Temperature] 忽略无效降温倍率：{multiplier}", this);
-            return;
-        }
-
-        Data.RuntimeCoolingSpeedMultiplier = Mathf.Clamp(
-            Data.RuntimeCoolingSpeedMultiplier * multiplier,
-            0.01f,
-            100f);
     }
 
     /// <summary>叠加入水降温保护；0.8 表示只保留 20% 的入水降温速度，1 及以上表示完全阻止入水降温。</summary>

@@ -35,10 +35,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentOutOfRangeException(nameof(data), "危险温度缓冲参数必须是有限非负数，剩余时间必须是有限数值。");
         data.RemainingTemperatureBufferSeconds = Mathf.Clamp(
             data.RemainingTemperatureBufferSeconds, 0f, data.DangerTemperatureBufferSeconds);
-        if (data.RuntimeChangeSpeedMultiplier <= 0f)
-            data.RuntimeChangeSpeedMultiplier = 1f;
-        if (data.RuntimeCoolingSpeedMultiplier <= 0f)
-            data.RuntimeCoolingSpeedMultiplier = 1f;
     }
 
     /// <summary>推进角色体表温度；超出安全范围后的状态与伤害由 Buff 系统统一结算。</summary>
@@ -70,21 +66,9 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(data));
         }
 
-        float targetTemperature = data.AmbientTemperature + data.RuntimeAmbientOffset;
         // 临时 Buff 增温不参与环境趋近计算，伤害仍读取回调提交后的有效体温。
         float currentTemperature = naturalTemperature ?? data.CurrentTemperature;
-        float directionMultiplier = targetTemperature < currentTemperature
-            ? data.RuntimeCoolingSpeedMultiplier
-            : 1f;
-        float transferPerSecond = Mathf.Max(
-            1f,
-            Mathf.Floor(Mathf.Abs(targetTemperature) * 0.01f + 0.5f));
-        return ThermalRuntime.AdvanceTowards(
-            currentTemperature,
-            targetTemperature,
-            transferPerSecond,
-            deltaTime,
-            Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier) * Mathf.Max(0f, directionMultiplier));
+        return ThermalRuntime.AdvanceAmbient(currentTemperature, data.AmbientTemperature, deltaTime);
     }
 
     public float GetGlobalAmbientTemperature()
@@ -121,26 +105,6 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         {
             Debug.Log($"[TemperatureMgr] 设置基础环境温度成功，基础温度={value:F1}℃，天气修正={WeatherMgr.CalculateWeatherTemperatureOffset(planetData):F1}℃，有效环境温度={GetGlobalAmbientTemperature():F1}℃");
         }
-    }
-
-#endregion
-}
-
-/// <summary>统一处理生物、物质与液体按传热速率向目标温度趋近的基础计算。</summary>
-public static class ThermalRuntime
-{
-#region 温度推进
-
-    /// <summary>按每秒传热速率推进当前温度；速率、倍率与时间均不允许产生反向传热。</summary>
-    public static float AdvanceTowards(
-        float currentTemperature,
-        float targetTemperature,
-        float transferPerSecond,
-        float seconds,
-        float transferMultiplier = 1f)
-    {
-        float speed = Mathf.Max(0f, transferPerSecond) * Mathf.Max(0f, transferMultiplier);
-        return Mathf.MoveTowards(currentTemperature, targetTemperature, speed * Mathf.Max(0f, seconds));
     }
 
 #endregion

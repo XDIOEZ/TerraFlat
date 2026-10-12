@@ -27,6 +27,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - 水体时钟属于每个 Manager，按真实液深累计；跨水格不断计时，浅水只限后续增长。`decayStacksOnExpiry` 每次到期减一层并重新计时，最后一层 Stop。
 - Rain 在权威生物 Tick 中推进，即使无现存 Buff。`RainWetnessClock` 按当地雨量/reference 折算 interval，rainMaxStacks 只限淋雨新增；持续雨续期限但不暂停周期效果。雨停/死亡/回池/清状态清未满层进度，雨量切换保留；Client/抑制天气维度不施加。
 - 点燃比较完整候选层数：同层湿阻火，强火成功后蒸发弱湿；燃烧中浸水仍能积到灭火阈值。岩浆真实接触清湿并维持 JSON 最高燃烧层，退出续 10 秒，边缘交互不算接触。
+- 潮湿保留叠层、到期脱层和灭火规则，effects 为空；环境热传导统一每秒缩小温差 1%，临时增温与入水保护由各自接口结算。
 - `core:temperature_warming` Start/Stop 按实例登记/撤增温，正 value/upperLimit，重复食用续期；基础与受限增温由 Mod_Temperature 分层。
 - 低温冻伤永久、热射病 240 秒，由体温越界且共用缓冲耗尽后的来源键持有，安全即移除；均每 10 秒 true_damage=10。热射病持续危险不续期，到期仍危险再完整施加。派生温度 Buff 不保存，缓冲由体温模块独立保存，清 Buff 不补满。
 

@@ -7,7 +7,6 @@ public static class BuffEffectTypeIds
     public const string MoveSpeedMultiplier = "core:move_speed_multiplier";
     public const string FoodConsumeSpeedMultiplier = "core:food_consume_speed_multiplier";
     public const string WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier";
-    public const string TemperatureCoolingMultiplier = "core:temperature_cooling_multiplier";
     public const string TemperatureWarming = "core:temperature_warming";
     public const string NightVision = "core:night_vision";
     public const string DamageTakenMultiplier = "core:damage_taken_multiplier";
@@ -37,7 +36,6 @@ public static class BuffEffectDispatcher
         Register(BuffEffectTypeIds.MoveSpeedMultiplier, ApplyMoveSpeedMultiplier);
         Register(BuffEffectTypeIds.FoodConsumeSpeedMultiplier, ApplyFoodConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.WaterConsumeSpeedMultiplier, ApplyWaterConsumeSpeedMultiplier);
-        Register(BuffEffectTypeIds.TemperatureCoolingMultiplier, ApplyTemperatureCoolingMultiplier);
         Register(BuffEffectTypeIds.TemperatureWarming, ApplyTemperatureWarming);
         Register(BuffEffectTypeIds.NightVision, ApplyNightVision);
         Register(BuffEffectTypeIds.DamageTakenMultiplier, ApplyDamageTakenMultiplier);
@@ -133,13 +131,6 @@ public static class BuffEffectDispatcher
         Item receiver = GetReceiver(runtime);
         Mod_Food food = receiver?.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
         food?.MultiplyRuntimeWaterConsumeSpeed(effect.Value);
-    }
-
-    private static void ApplyTemperatureCoolingMultiplier(BuffEffectDefinition effect, BuffInstance runtime)
-    {
-        Item receiver = GetReceiver(runtime);
-        Mod_Temperature temperature = receiver?.itemMods.GetMod_ByID(ModText.Temperature) as Mod_Temperature;
-        temperature?.MultiplyRuntimeCoolingSpeed(effect.Value);
     }
 
     /// <summary>按 Buff 实例登记或撤销临时增温，重复恢复同一实例不会叠加。</summary>

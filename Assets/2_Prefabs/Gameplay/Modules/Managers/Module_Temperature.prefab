@@ -60,8 +60,5 @@ MonoBehaviour:
     DangerTemperatureBufferSeconds: 60
     TemperatureBufferRecoveryPerSecond: 1
     RemainingTemperatureBufferSeconds: 60
-    RuntimeAmbientOffset: 0
-    RuntimeChangeSpeedMultiplier: 1
-    RuntimeCoolingSpeedMultiplier: 1
   OnTemperatureChanged:
     _PersistentCalls: []

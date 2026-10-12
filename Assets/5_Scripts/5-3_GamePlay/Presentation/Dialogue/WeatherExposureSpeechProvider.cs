@@ -4,7 +4,7 @@ using UnityEngine;
 namespace FlatWorld.Dialogue
 {
     /// <summary>
-    /// 读取角色所在地天气并贡献自言自语 Facts，实时雨冷由统一环境温度处理。
+    /// 读取角色所在地天气与附近燃烧源，只贡献自言自语 Facts。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class WeatherExposureSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor
@@ -16,16 +16,11 @@ namespace FlatWorld.Dialogue
         [SerializeField, Min(0.1f)] private float scanInterval = 0.5f;
         [SerializeField] private LayerMask heatSourceLayerMask = ~0;
 
-        [Header("体温影响")]
-        [SerializeField] private float heatSourceAmbientBonus = 10f;
-        [SerializeField, Min(1f)] private float heatRecoverySpeedMultiplier = 5f;
-
 #endregion
 
 #region 运行时状态
 
         private Item actorItem;
-        private Mod_Temperature temperature;
         private float nextScanAt;
         private float localRainIntensity;
 
@@ -47,7 +42,6 @@ namespace FlatWorld.Dialogue
 
         private void OnDisable()
         {
-            ResetRuntimeTemperatureModifiers();
             IsRainExposed = false;
             HasNearbyHeatSource = false;
         }
@@ -91,28 +85,17 @@ namespace FlatWorld.Dialogue
 
 #endregion
 
-#region 暴露与恢复
+#region 暴露检测
 
         private void RefreshExposureState()
         {
             nextScanAt = Time.unscaledTime + Mathf.Max(0.1f, scanInterval);
+            actorItem ??= GetComponentInParent<Item>();
             WeatherMgr weather = WeatherMgr.ExistingInstance;
             localRainIntensity = weather != null && weather.TryGetPrecipitationAt(transform.position, out float rainIntensity, out _)
                 ? rainIntensity : 0f;
             HasNearbyHeatSource = FindNearbyIgnitedHeatSource();
             IsRainExposed = localRainIntensity > 0f && !HasNearbyHeatSource;
-
-            if (!TryResolveTemperature())
-                return;
-
-            if (HasNearbyHeatSource)
-            {
-                temperature.Data.RuntimeAmbientOffset = heatSourceAmbientBonus;
-                temperature.Data.RuntimeChangeSpeedMultiplier = heatRecoverySpeedMultiplier;
-                return;
-            }
-
-            ResetRuntimeTemperatureModifiers();
         }
 
         private bool FindNearbyIgnitedHeatSource()
@@ -138,28 +121,6 @@ namespace FlatWorld.Dialogue
             }
 
             return false;
-        }
-
-        private bool TryResolveTemperature()
-        {
-            if (temperature != null && temperature.Data != null)
-                return true;
-
-            actorItem ??= GetComponentInParent<Item>();
-            if (actorItem == null || !actorItem.IsInitialized || actorItem.itemMods == null)
-                return false;
-
-            temperature = actorItem.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
-            return temperature != null && temperature.Data != null;
-        }
-
-        private void ResetRuntimeTemperatureModifiers()
-        {
-            if (!TryResolveTemperature())
-                return;
-
-            temperature.Data.RuntimeAmbientOffset = 0f;
-            temperature.Data.RuntimeChangeSpeedMultiplier = 1f;
         }
 
 #endregion

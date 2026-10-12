@@ -123,7 +123,7 @@ public static class MachineWorldContractDiagnostics
     // 供热只改材料温度，温度阈值、散热、堆叠与载体切换分别验证。
     private static void CheckMaterialHeating()
     {
-        var material = new Data_GeneralItem { Stack = new ItemStack { Amount = 1f }, HeatConductionRate = 1f };
+        var material = new Data_GeneralItem { Stack = new ItemStack { Amount = 1f } };
         Require(ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f) && material.MatterState.TemperatureCelsius == 30f,
             "首次摩擦必须从环境温度升温，不能直接初始化成热源温度。");
         var transition = new RuntimeItemMatterTransition("diagnostic.heat", 100f, null, null, null, "FireSeed", 1f, null);
@@ -138,7 +138,7 @@ public static class MachineWorldContractDiagnostics
         ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f);
         Require(material.MatterState.TemperatureCelsius == 200f, "摩擦不能冷却已经更热的材料。");
         ItemMatterRuntime.Advance(material, 20f, 1f, 1f);
-        Require(material.MatterState.TemperatureCelsius == 199f, "停止摩擦后必须按材料传热速率向环境散热。");
+        Require(Mathf.Abs(material.MatterState.TemperatureCelsius - 198.2f) < .001f, "停止摩擦后必须每秒缩小与环境温差的 1%。");
         material.Stack.Amount = 2f;
         material.MatterState.TemperatureCelsius = 20f;
         ItemMatterRuntime.AddHeat(material, 20f, 150f, 10f);

@@ -400,7 +400,9 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         foreach (ItemSlot slot in Input.Data.itemSlots)
         {
             ItemData item = slot?.itemData;
-            if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds))
+            // 炉内材料保留设备原有的固定加热规则，环境散热不复用该速率。
+            if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds,
+                    transferPerSecondOverride: 1f))
                 Input.Data.NotifyItemStateChanged(item);
         }
         if (heatVessels && InventoryVesselHeating.ProcessHeat(Input, Output, Data.Temperature, seconds))

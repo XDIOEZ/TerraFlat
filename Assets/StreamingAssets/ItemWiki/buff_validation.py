@@ -5,7 +5,7 @@ import math
 
 FIELDS = set("id displayName deathCauseId category description labelKey descriptionKey durationSeconds tickIntervalSeconds stackMode maxStacks decayStacksOnExpiry visualBaseScale visualScalePerStack waterStackIntervalSeconds waterStacksPerDepthLevel rainStackIntervalSeconds rainMaxStacks rainReferenceIntensity drinkDurationExtensionSeconds effects".split())
 EFFECT_FIELDS = set("phase typeId targetId requiredTag value upperLimit scaleWithStacks".split())
-MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "temperature_cooling_multiplier", "damage_taken_multiplier")}
+MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "damage_taken_multiplier")}
 TRAUMA = {f"core:trauma_{name}" for name in ("move", "attack", "confusion", "blur")}
 TYPES = MULTIPLIERS | TRAUMA | {f"core:{name}" for name in ("temperature_warming", "night_vision", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "max_health_percent_true_damage", "body_durability_restore")}
 BODY_PARTS = {"Head", "Chest", "Abdomen", "Pelvis", "LeftHand", "RightHand", "LeftLeg", "RightLeg"}

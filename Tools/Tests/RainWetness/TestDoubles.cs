@@ -57,9 +57,12 @@ public class Module : UnityEngine.MonoBehaviour
     public virtual string CanonicalModuleId => "";
     public virtual bool MatchesPersistedId(string id) => false;
     public virtual void Awake() { }
-    public virtual void Load() { }
-    public virtual void Save() { }
-    public virtual void Unload() { }
+    public void Load() => OnLoad();
+    public void Save() => OnSave();
+    public void Unload() => OnUnload();
+    protected virtual void OnLoad() { }
+    protected virtual void OnSave() { }
+    protected virtual void OnUnload() { }
     public virtual void ModUpdate(float dt) { }
 }
 public static class ModText
@@ -81,6 +84,8 @@ public sealed class ItemMods
     public T GetMod_ByID<T>(string id) where T : Module => GetMod_ByID(id) as T;
 }
 public sealed class Mod_DamageReceiver : Module { public float Hp = 100f; }
+// 这里只替代死亡来源的复制边界，潮湿测试不执行伤害归因。
+public sealed class DeathCauseRecord { public DeathCauseRecord Copy() => (DeathCauseRecord)MemberwiseClone(); }
 public struct FoodConsumeResult { public bool IsDrink; }
 public sealed class Mod_Food : Module
 {
@@ -107,6 +112,14 @@ public sealed class WeatherMgr
     public bool IsRaining() => !Suppressed && Raining && Intensity > 0f;
     public bool IsSnowingAt(UnityEngine.Vector3 position) => Snowing || position.x < 0f;
     public float GetCurrentWeatherIntensity() => Intensity;
+    public bool TryGetPrecipitationAt(UnityEngine.Vector3 position, out float rainIntensity, out float snowIntensity)
+    {
+        float precipitation = IsRaining() ? Intensity : 0f;
+        bool snowing = IsSnowingAt(position);
+        rainIntensity = snowing ? 0f : precipitation;
+        snowIntensity = snowing ? precipitation : 0f;
+        return !Suppressed;
+    }
 }
 public enum BodyPartType { Head, Chest, Abdomen, Pelvis, LeftHand, RightHand, LeftLeg, RightLeg }
 public static class BodyTraumaBuffEffects
@@ -119,7 +132,7 @@ public static class BuffEffectTypeIds
     public const string TrueDamage = "core:true_damage", TemperatureWarming = "core:temperature_warming",
         NightVision = "core:night_vision", MoveSpeedMultiplier = "core:move_speed_multiplier",
         FoodConsumeSpeedMultiplier = "core:food_consume_speed_multiplier", WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier",
-        TemperatureCoolingMultiplier = "core:temperature_cooling_multiplier", DamageTakenMultiplier = "core:damage_taken_multiplier",
+        DamageTakenMultiplier = "core:damage_taken_multiplier",
         Heal = "core:heal", MaxHealthPercentTrueDamage = "core:max_health_percent_true_damage",
         MaxHealthPercentHeal = "core:max_health_percent_heal", NutritionChange = "core:nutrition_change";
 }

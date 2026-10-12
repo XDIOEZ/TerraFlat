@@ -29,7 +29,8 @@ public partial class ItemMgr
     // 完整散落物独立于模块调度推进，休眠模块的普通联机掉落也能受热燃烧。
     private void TickWorldItemMatter(float deltaTime)
     {
-        worldMatterTime += Mathf.Max(0f, deltaTime);
+        if (!float.IsFinite(deltaTime) || deltaTime <= 0f) return;
+        worldMatterTime += deltaTime;
         if (worldMatterCursor >= worldMatterSnapshot.Count)
         {
             if (worldMatterTime < nextWorldMatterSweepTime) return;
@@ -98,6 +99,15 @@ public partial class ItemMgr
             return false;
         Mod_Projectile projectile = item.GetComponentInChildren<Mod_Projectile>(true);
         return projectile == null || !projectile.HasActiveWorldAttachment;
+    }
+
+    // 注册或加载完成就建立时间基线，避免首轮分帧扫描丢掉已过去的游戏时间。
+    private void TrackWorldItemMatter(Item item)
+    {
+        if (IsWorldMatterCandidate(item))
+            GetWorldMatterEntry(item);
+        else
+            ReleaseWorldItemMatter(item);
     }
 
     private WorldMatterEntry GetWorldMatterEntry(Item item)

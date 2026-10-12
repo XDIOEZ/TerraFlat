@@ -17,7 +17,7 @@ public static class WorldItemMatterRules
 
         bool changed = ItemMatterRuntime.EnsureInitialized(data, ambient);
         float targetTemperature = ambient;
-        float transferPerSecond = data.HeatConductionRate;
+        float? contactHeatingPerSecond = null;
         if (liquidContact && WorldLiquidSourceResolver.TryResolve(position, out WorldLiquidSourceTarget source) &&
             source.Liquid.WorldWater is WorldLiquidSettings settings)
         {
@@ -26,12 +26,12 @@ public static class WorldItemMatterRules
             if (settings.ContactHeatingPerSecond > 0f)
             {
                 targetTemperature = settings.Temperature;
-                transferPerSecond = Mathf.Max(transferPerSecond, settings.ContactHeatingPerSecond);
+                contactHeatingPerSecond = settings.ContactHeatingPerSecond;
             }
         }
 
         return ItemMatterRuntime.Advance(data, targetTemperature, 1f, seconds,
-            submerged: waterContact, transferPerSecondOverride: transferPerSecond) || changed;
+            submerged: waterContact, transferPerSecondOverride: contactHeatingPerSecond) || changed;
     }
 
     public static bool CanIgnite(ItemData data) => data?.MatterState?.Initialized == true &&

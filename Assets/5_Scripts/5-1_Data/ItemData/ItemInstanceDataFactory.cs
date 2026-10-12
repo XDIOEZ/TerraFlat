@@ -16,7 +16,6 @@ public sealed class ItemSharedConfiguration
     public float UnitWeight { get; }
     public float UnitVolume { get; }
     public bool Stackable { get; }
-    public float HeatConductionRate { get; }
     public IReadOnlyList<string> Tags { get; }
 
     internal ItemSharedConfiguration(ItemData source)
@@ -29,7 +28,6 @@ public sealed class ItemSharedConfiguration
         UnitWeight = source.Stack?.Weight ?? 1f;
         UnitVolume = source.Stack?.Volume ?? 1f;
         Stackable = source.Stack?.Stackable ?? true;
-        HeatConductionRate = source.HeatConductionRate;
         Tags = new ReadOnlyCollection<string>(source.Tags == null ? new List<string>() : new List<string>(source.Tags));
     }
 
@@ -40,7 +38,6 @@ public sealed class ItemSharedConfiguration
         data.GameName = GameName;
         data.Description = Description;
         data.MaxDurability = MaxDurability;
-        data.HeatConductionRate = HeatConductionRate;
         data.Stack ??= new ItemStack();
         data.Stack.Weight = UnitWeight;
         data.Stack.Volume = UnitVolume;

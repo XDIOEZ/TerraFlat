@@ -183,7 +183,6 @@ MonoBehaviour:
       Initialized: 0
       TemperatureCelsius: 20
       Moisture: 0
-    HeatConductionRate: 1
     code: 
 --- !u!61 &5184069754986619223
 BoxCollider2D:

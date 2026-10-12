@@ -165,6 +165,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     {
         base.Awake();
         Item.RuntimeStructureChanged += OnPerceptionStructureChanged;
+        Item.RuntimeStructureChanged += TrackWorldItemMatter;
+        RuntimeItemRegistered += TrackWorldItemMatter;
         RuntimeItemUnregistered += ReleaseWorldItemMatter;
         // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
     }
@@ -199,6 +201,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        Item.RuntimeStructureChanged -= TrackWorldItemMatter;
+        RuntimeItemRegistered -= TrackWorldItemMatter;
         RuntimeItemUnregistered -= ReleaseWorldItemMatter;
         ClearWorldItemMatter();
         MachineWorld.ReleaseWorld(capture: false);

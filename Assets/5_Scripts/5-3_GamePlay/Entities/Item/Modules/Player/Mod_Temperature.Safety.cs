@@ -249,7 +249,7 @@ public partial class Mod_Temperature
         temperatureSafetyLastPosition = current;
         hasTemperatureSafetyLastPosition = true;
 
-        float effectiveAmbient = Data.AmbientTemperature + Data.RuntimeAmbientOffset;
+        float effectiveAmbient = Data.AmbientTemperature;
         bool bodySafe = IsTemperatureSafe(Data.CurrentTemperature);
         bool ambientSafe = IsTemperatureSafe(effectiveAmbient);
 

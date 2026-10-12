@@ -873,12 +873,8 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException($"物品 {id} 的外壳不是有效 Item：{shellId}");
 
         ItemData template = FastCloner.FastCloner.DeepClone(shellItem.itemData);
-        template.HeatConductionRate = ItemData.DefaultHeatConductionRate; // 基础速率只取代码默认值或 JSON，不继承外壳 Prefab。
         template.MatterState = new ItemMatterState(); // 连续物质状态属于实例，不继承外壳或静态定义。
         PopulateTemplateData(dto.ItemData, template, id);
-        if (float.IsNaN(template.HeatConductionRate) || float.IsInfinity(template.HeatConductionRate) ||
-            template.HeatConductionRate < 0f)
-            throw new InvalidDataException($"物品 {id} 的 itemData.heatConductionRate 必须是非负的有限速率(℃/s)。");
         template.IDName = id;
         template.Guid = 0;
         if (string.IsNullOrWhiteSpace(dto.GameName))
