@@ -129,6 +129,11 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         }
     }
 
+    // 粒子等独立表现挂到主体同一行，沿用脚点排序与行内前后关系。
+    internal Transform GetPartSortingRoot(int domain, int entityId, int part)
+        => entries.TryGetValue(new PartKey(domain, entityId, part), out Entry entry)
+            ? entry.Group.Row.Root : null;
+
     internal void RemoveEntity(int domain, int entityId)
     {
         removalScratch.Clear();

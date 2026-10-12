@@ -41,6 +41,9 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private Vector3 sourceRendererAnchorOffset;
     private Transform defaultFlameAnchor;
     private Transform rendererFlameAnchor;
+    private bool hasExplicitSorting;
+    private int explicitSortingLayerId;
+    private int explicitSortingOrder;
 
     #endregion
 
@@ -229,6 +232,23 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     #endregion
 
     #region 引用与状态
+
+    // 行网格设施没有 SpriteRenderer，直接复用粒子模板并显式传入宿主排序。
+    public void BindWorldPresentation(CombustionVisualEffect template, int sortingLayerId, int sortingOrder)
+    {
+        if (template == null)
+            throw new System.ArgumentNullException(nameof(template));
+
+        particleMaterial = template.particleMaterial;
+        flameRate = template.flameRate;
+        emberRate = template.emberRate;
+        smokeRate = template.smokeRate;
+        hasExplicitSorting = true;
+        explicitSortingLayerId = sortingLayerId;
+        explicitSortingOrder = sortingOrder;
+        EnsureParticleSystems();
+        RefreshSorting();
+    }
 
     // 火苗跟随手持物，烟和火星继续独立飘散。
     public void ConfigureFlamePresentation(float scale, float heightRatio,
@@ -582,11 +602,13 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
 
     private void RefreshSorting()
     {
-        if (sourceSpriteRenderer == null)
+        if (!hasExplicitSorting && sourceSpriteRenderer == null)
             sourceSpriteRenderer = GetComponentInParent<SpriteRenderer>();
 
-        int sortingLayerId = sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingLayerID : 0;
-        int sortingOrder = sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder + 2 : 2;
+        int sortingLayerId = hasExplicitSorting ? explicitSortingLayerId :
+            sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingLayerID : 0;
+        int sortingOrder = (hasExplicitSorting ? explicitSortingOrder :
+            sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder : 0) + 2;
         ApplySorting(flameParticles, sortingLayerId, sortingOrder);
         ApplySorting(emberParticles, sortingLayerId, sortingOrder + 1);
         ApplySorting(smokeParticles, sortingLayerId, sortingOrder - 1);

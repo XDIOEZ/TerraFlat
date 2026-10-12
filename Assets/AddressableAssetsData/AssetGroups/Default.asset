@@ -1399,6 +1399,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1597bb2b13c840c1be6c70c008f3e4d4
+    m_Address: Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5712a19fbac535840803f6efdce3f650
     m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png
     m_ReadOnly: 0

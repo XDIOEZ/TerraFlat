@@ -182,7 +182,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_56]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png[Bonfire_Spent]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -314,6 +314,34 @@
           "data": {
             "BitData": null,
             "Type": 0
+          }
+        },
+        "combustionVisual": {
+          "prefab": "Module_CombustionVisual",
+          "id": "Mod_CombustionVisual",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "flameScale": 4.5,
+            "flameHeightRatio": 1.8,
+            "flameEmissionMultiplier": 4.5,
+            "attachFlameToAnchor": true,
+            "followSourceRenderer": true,
+            "sourceRendererAnchorOffset": {
+              "x": 0.0,
+              "y": -0.125,
+              "z": 0.0
+            },
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              }
+            }
           }
         },
         "vesselHeating": {

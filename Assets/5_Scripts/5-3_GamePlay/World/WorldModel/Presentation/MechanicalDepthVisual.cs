@@ -37,6 +37,8 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         foreach (PartVisual part in parts) if (part != null) part.Touched = false;
         foreach (PartVisual part in facilityParts) if (part != null) part.Touched = false;
         if (facilityLight != null) facilityLight.enabled = false;
+        facilityCombustionTouched = false;
+        if (facilityCombustion != null) facilityCombustion.transform.SetParent(transform, true);
     }
 
     internal void SetPart(int index, Sprite sprite, Material material, Quaternion rotation,
@@ -58,6 +60,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     {
         foreach (PartVisual part in parts) RemoveUntouched(part);
         foreach (PartVisual part in facilityParts) RemoveUntouched(part);
+        if (!facilityCombustionTouched) facilityCombustion?.SetCombustionActive(false);
     }
     internal void SetPartTint(int index, Color tint)
     {
@@ -88,6 +91,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     {
         if (disposed) return;
         disposed = true;
+        ReleaseFacilityCombustion();
         UnsubscribeCultivator();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -99,6 +103,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnEnable()
     {
+        if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(true);
         SubscribeCultivator();
         if (cultivatorEntity != null) RefreshCultivatorSprites();
         RegisterInteraction();
@@ -107,6 +112,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnDisable()
     {
+        if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(false);
         UnsubscribeCultivator();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -114,6 +120,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnDestroy()
     {
+        ReleaseFacilityCombustion();
         UnsubscribeCultivator();
         UnregisterInteraction();
         owner?.RemoveMachineDepthEntity(entityId);

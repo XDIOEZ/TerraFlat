@@ -155,7 +155,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_56]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png[Bonfire_Spent]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
