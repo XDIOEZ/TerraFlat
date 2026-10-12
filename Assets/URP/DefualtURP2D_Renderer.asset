@@ -17,8 +17,9 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: 6792246138593207564}
+  - {fileID: 6119732469843578001}
   - {fileID: 8357198432651427101}
-  m_RendererFeatureMap: 0ce5dd4de0e7425e1dbda337b2bbfa73
+  m_RendererFeatureMap: 0ce5dd4de0e7425e914c73f141a8ed541dbda337b2bbfa73
   m_UseNativeRenderPass: 0
   m_TransparencySortMode: 3
   m_TransparencySortAxis: {x: 0, y: 1, z: 0}
@@ -76,6 +77,20 @@ MonoBehaviour:
   m_Name: Dense Fog
   m_EditorClassIdentifier:
   fogShader: {fileID: 4800000, guid: d489a6ceb2da4436ad9832b4ed5788ad, type: 3}
+  m_Active: 1
+--- !u!114 &6119732469843578001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d70c4d71f3bf469fb49e943713d01df3, type: 3}
+  m_Name: Zoom Clouds
+  m_EditorClassIdentifier:
+  cloudShader: {fileID: 4800000, guid: ad41e1362624472ead9551935e967d77, type: 3}
   m_Active: 1
 --- !u!114 &8357198432651427101
 MonoBehaviour:

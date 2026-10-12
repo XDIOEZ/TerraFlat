@@ -61,6 +61,19 @@
     "driftSpeed": 0.08,
     "noiseStrength": 0.04
   },
+  "zoomClouds": {
+    "startOrthographicSize": 20.0,
+    "opaqueOrthographicSize": 40.0,
+    "transitionSeconds": 2.0,
+    "clearRadius": 8.0,
+    "opaqueRadius": 28.0,
+    "noiseScale": 0.055,
+    "minimumDriftSpeed": 0.08,
+    "maximumDriftSpeed": 6.0,
+    "windResponseExponent": 1.5,
+    "color": { "r": 0.92, "g": 0.95, "b": 0.98, "a": 1.0 },
+    "shadowStrength": 0.22
+  },
   "interactionOutline": {
     "enabled": true,
     "thicknessPixels": 2.0,

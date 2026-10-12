@@ -11,6 +11,7 @@ public sealed class WorldRenderingConfig
     public RenderingShadows shadows;
     public RenderingOcclusion occlusion;
     public RenderingDenseFog denseFog;
+    public RenderingZoomClouds zoomClouds;
     public RenderingInteractionOutline interactionOutline;
     public RenderingPostProcess postProcess;
     public RenderingGrass grass;
@@ -127,6 +128,45 @@ public sealed class WorldRenderingConfig
             IsFinite(color.r) && color.r >= 0f && color.r <= 1f &&
             IsFinite(color.g) && color.g >= 0f && color.g <= 1f &&
             IsFinite(color.b) && color.b >= 0f && color.b <= 1f;
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+
+    #endregion
+
+    #region 高视野云雾配置
+
+    [Serializable]
+    public sealed class RenderingZoomClouds
+    {
+        public float startOrthographicSize;
+        public float opaqueOrthographicSize;
+        public float transitionSeconds;
+        public float clearRadius;
+        public float opaqueRadius;
+        public float noiseScale;
+        public float minimumDriftSpeed;
+        public float maximumDriftSpeed;
+        public float windResponseExponent;
+        public Color color;
+        public float shadowStrength;
+
+        // 拉远阈值读取实际正交尺寸，风速参数只负责控制云层移动。
+        public bool IsValid =>
+            IsFinite(startOrthographicSize) && startOrthographicSize > 0f &&
+            IsFinite(opaqueOrthographicSize) && opaqueOrthographicSize > startOrthographicSize &&
+            IsFinite(transitionSeconds) && transitionSeconds >= 0f &&
+            IsFinite(clearRadius) && clearRadius >= 0f &&
+            IsFinite(opaqueRadius) && opaqueRadius > clearRadius &&
+            IsFinite(noiseScale) && noiseScale > 0f &&
+            IsFinite(minimumDriftSpeed) && minimumDriftSpeed >= 0f &&
+            IsFinite(maximumDriftSpeed) && maximumDriftSpeed >= minimumDriftSpeed &&
+            IsFinite(windResponseExponent) && windResponseExponent > 0f &&
+            IsFinite(shadowStrength) && shadowStrength >= 0f && shadowStrength <= 1f &&
+            IsFinite(color.r) && color.r >= 0f && color.r <= 1f &&
+            IsFinite(color.g) && color.g >= 0f && color.g <= 1f &&
+            IsFinite(color.b) && color.b >= 0f && color.b <= 1f &&
+            IsFinite(color.a) && color.a >= 0f && color.a <= 1f;
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
@@ -266,7 +306,7 @@ public static class WorldRenderingConfigCatalog
         if (config == null || config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
-            config.denseFog == null ||
+            config.denseFog == null || config.zoomClouds == null ||
             config.postProcess == null || config.postProcess.worldVolume == null ||
             config.postProcess.worldVolume.bloom == null ||
             config.postProcess.worldVolume.colorGrading == null ||
@@ -277,7 +317,7 @@ public static class WorldRenderingConfigCatalog
             config.sorting.batchProfiles == null ||
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
-        if (!config.denseFog.IsValid ||
+        if (!config.denseFog.IsValid || !config.zoomClouds.IsValid ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 1 ||
