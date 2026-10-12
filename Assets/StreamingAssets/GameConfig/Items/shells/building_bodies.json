@@ -132,6 +132,27 @@
             "acceptsMechanicalBellows": true
           }
         },
+        "combustionVisual": {
+          "prefab": "Module_CombustionVisual",
+          "id": "Mod_CombustionVisual",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "flameScale": 1.5,
+            "flameHeightRatio": 1.0,
+            "flameEmissionMultiplier": 2.5,
+            "attachFlameToAnchor": true,
+            "followSourceRenderer": true,
+            "sourceRendererAnchorOffset": {
+              "x": 0.0,
+              "y": -0.28125,
+              "z": 0.0
+            }
+          }
+        },
         "vesselHeating": {
           "prefab": "Module_VesselHeating",
           "id": "Mod_VesselHeating",
@@ -1133,7 +1154,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_43]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Smelter/Smelter_Unlit.png[Smelter_Unlit]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1230,6 +1251,27 @@
             "lightBaseIntensity": 1.0,
             "burnSpeedMultiplier": 1.0,
             "igniteWhileHeld": false
+          }
+        },
+        "combustionVisual": {
+          "prefab": "Module_CombustionVisual",
+          "id": "Mod_CombustionVisual",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "flameScale": 1.1,
+            "flameHeightRatio": 1.2,
+            "flameEmissionMultiplier": 2.0,
+            "attachFlameToAnchor": true,
+            "followSourceRenderer": true,
+            "sourceRendererAnchorOffset": {
+              "x": 0.0,
+              "y": -0.34375,
+              "z": 0.0
+            }
           }
         },
         "vesselHeating": {

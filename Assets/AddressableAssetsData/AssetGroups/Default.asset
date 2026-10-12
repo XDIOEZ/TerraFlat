@@ -1405,6 +1405,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fa3ed23698bd4d5ba454d7ffa7253ca5
+    m_Address: Assets/6_Art/Generated/Building/Smelter/Smelter_Unlit.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5712a19fbac535840803f6efdce3f650
     m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Growing.png
     m_ReadOnly: 0

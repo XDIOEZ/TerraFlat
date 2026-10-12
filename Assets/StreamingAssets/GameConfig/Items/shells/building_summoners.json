@@ -1064,7 +1064,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_43]",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Smelter/Smelter_Unlit.png[Smelter_Unlit]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
