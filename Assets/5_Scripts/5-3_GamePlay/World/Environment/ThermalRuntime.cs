@@ -47,3 +47,33 @@ public static class ThermalRuntime
 
     #endregion
 }
+
+/// <summary>通用冷热源只给环境提供目标温度，按距离衰减后的温差择优合成。</summary>
+public static class ThermalInfluenceRuntime
+{
+    #region 目标温度影响
+
+    public static float DistanceWeight(float distanceSquared, float radiusSquared)
+    {
+        if (radiusSquared <= 0f || distanceSquared >= radiusSquared)
+            return 0f;
+        float weight = Mathf.Max(0f, 1f - distanceSquared / radiusSquared);
+        return weight * weight;
+    }
+
+    /// <summary>冷热分别取最强影响，不因堆叠相同热源而无限升温。</summary>
+    public static void Accumulate(float ambient, float target, float weight,
+        ref float strongestHeating, ref float strongestCooling, bool cooling = false)
+    {
+        float delta = (target - ambient) * Mathf.Clamp01(weight);
+        if (cooling)
+            strongestCooling = Mathf.Min(strongestCooling, delta);
+        else
+            strongestHeating = Mathf.Max(strongestHeating, delta);
+    }
+
+    public static float Compose(float ambient, float strongestHeating, float strongestCooling)
+        => ambient + strongestHeating + strongestCooling;
+
+    #endregion
+}

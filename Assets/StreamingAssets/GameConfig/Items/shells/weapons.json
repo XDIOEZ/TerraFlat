@@ -1156,7 +1156,7 @@
           },
           "parameters": {
             "radius": 6.0,
-            "celsiusOffset": 15.0,
+            "targetTemperature": 40.0,
             "requiresCombustion": true
           }
         },

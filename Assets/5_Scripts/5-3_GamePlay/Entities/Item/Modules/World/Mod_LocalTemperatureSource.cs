@@ -16,8 +16,11 @@ public sealed class Mod_LocalTemperatureSource : Module, ICombustionStateReceive
     [Range(0.5f, 64f), Tooltip("影响半径，单位为地块。")]
     public float radius = 6f;
 
-    [Tooltip("源中心温度增量；正数加热，负数制冷。")]
-    public float celsiusOffset = 15f;
+    [Tooltip("源中心的目标环境温度；勾选制冷模式才允许降低环境温度。")]
+    public float targetTemperature = 40f;
+
+    [Tooltip("开启后改为制冷源，只有环境高于目标温度才降温。")]
+    public bool coolsEnvironment;
 
     [Tooltip("开启后，仅在同一物品的燃烧模块处于活动状态时输出温度。")]
     public bool requiresCombustion = true;
@@ -53,7 +56,7 @@ public sealed class Mod_LocalTemperatureSource : Module, ICombustionStateReceive
 
     protected override void OnUnload()
     {
-        source?.Configure(radius, 0f);
+        source?.Configure(radius, targetTemperature, false);
     }
 
     public void SetCombustionActive(bool active)
@@ -68,8 +71,8 @@ public sealed class Mod_LocalTemperatureSource : Module, ICombustionStateReceive
         if (source == null)
             return;
 
-        float output = !requiresCombustion || combustionActive ? celsiusOffset : 0f;
-        source.Configure(Mathf.Max(0.5f, radius), output);
+        source.Configure(Mathf.Max(0.5f, radius), targetTemperature,
+            !requiresCombustion || combustionActive, coolsEnvironment);
     }
 
     #endregion

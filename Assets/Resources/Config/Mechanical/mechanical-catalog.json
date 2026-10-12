@@ -810,7 +810,7 @@
       },
       "Heating": {
         "Radius": 3,
-        "CenterTemperatureOffset": 60,
+        "TargetTemperature": 60,
         "PanelId": "UI_Mechanical"
       }
     },

@@ -9,12 +9,13 @@ internal static class Program
     private static void Main()
     {
         AmbientExamples();
+        HeatSourceExamples();
         TimePartitioning();
         NumericBoundaries();
         ActorAndItemIntegration();
         WorldContactAndCombustion();
         WorldScheduling();
-        Console.WriteLine($"PASS {assertions} checks: production thermal formula, actor/item integration, tick partitioning, numeric boundaries, lava contact, ignition, water extinguishing and both world-item schedulers.");
+        Console.WriteLine($"PASS {assertions} checks: ambient heat transfer, distance-weighted heat-source targets, overlap limits, actor/item integration, lava contact and world-item schedulers.");
     }
 
     private static void Expect(bool condition, string message)
@@ -56,6 +57,52 @@ internal static class Program
             "Absolute ambient temperature must not control rate");
         Near(ThermalRuntime.AdvanceAmbient(20f, 21f, 1f), 20.01f,
             "Small difference must not use a minimum one degree per second");
+    }
+
+    private static void HeatSourceExamples()
+    {
+        float full = ThermalInfluenceRuntime.DistanceWeight(0f, 36f);
+        float middle = ThermalInfluenceRuntime.DistanceWeight(9f, 36f);
+        Near(full, 1f, "Heat source center must have full influence");
+        Near(middle, 0.5625f, "Heat source distance uses quadratic falloff");
+        Near(ThermalInfluenceRuntime.DistanceWeight(36f, 36f), 0f, "Heat source radius boundary");
+
+        foreach ((float ambient, float expected) in new[] { (-50f, 40f), (20f, 40f), (50f, 50f) })
+        {
+            float heating = 0f, cooling = 0f;
+            ThermalInfluenceRuntime.Accumulate(ambient, 40f, full, ref heating, ref cooling);
+            Near(ThermalInfluenceRuntime.Compose(ambient, heating, cooling), expected,
+                "Campfire must help in cold climates but not heat hotter deserts");
+            ThermalInfluenceRuntime.Accumulate(ambient, 40f, full, ref heating, ref cooling);
+            Near(ThermalInfluenceRuntime.Compose(ambient, heating, cooling), expected,
+                "Identical heat sources must not stack");
+        }
+
+        float heat = 0f, cold = 0f;
+        ThermalInfluenceRuntime.Accumulate(-50f, 40f, middle, ref heat, ref cold);
+        Near(ThermalInfluenceRuntime.Compose(-50f, heat, cold), 0.625f,
+            "Snowy area must approach heat source target with distance falloff");
+        heat = cold = 0f;
+        ThermalInfluenceRuntime.Accumulate(20f, 40f, 1f, ref heat, ref cold);
+        ThermalInfluenceRuntime.Accumulate(20f, 60f, 0.25f, ref heat, ref cold);
+        Near(ThermalInfluenceRuntime.Compose(20f, heat, cold), 40f,
+            "Overlapping sources must choose highest effective heating, not highest nominal target");
+        heat = cold = 0f;
+        ThermalInfluenceRuntime.Accumulate(-50f, 60f, 0.5f, ref heat, ref cold);
+        Near(ThermalInfluenceRuntime.Compose(-50f, heat, cold), 5f,
+            "Half-powered heater must apply half of target temperature difference");
+        heat = cold = 0f;
+        ThermalInfluenceRuntime.Accumulate(50f, 10f, full, ref heat, ref cold, cooling: true);
+        Near(ThermalInfluenceRuntime.Compose(50f, heat, cold), 10f,
+            "Cooling devices use the same falloff toward a lower target");
+        heat = cold = 0f;
+        ThermalInfluenceRuntime.Accumulate(-50f, 10f, full, ref heat, ref cold, cooling: true);
+        Near(ThermalInfluenceRuntime.Compose(-50f, heat, cold), -50f,
+            "Cooling devices must not warm colder surroundings");
+        heat = cold = 0f;
+        ThermalInfluenceRuntime.Accumulate(-50f, 180f, full, ref heat, ref cold);
+        Near(ThermalInfluenceRuntime.Compose(-50f, heat, cold), 180f,
+            "Lava surface heats toward ambient target, not a fixed additive offset");
     }
 
     private static void TimePartitioning()

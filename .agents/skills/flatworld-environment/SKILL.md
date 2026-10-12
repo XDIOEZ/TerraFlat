@@ -40,8 +40,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 - 地理 temperature.celsius 在生成时固定：纬度底温 + 局部噪声 + 一次海拔修正，再按 blendRadius 固定顺序平滑，归一化温度同源；不含季节/天气。TryGetGeographicTemperature 也不叠全局调温。
 - `TryGetClimateBaseline` 排除季节/天气/局部源，供历史生态/雪；`TryGetAmbientTemperature` 从已加载地理层叠 PlanetData 基准差、允许的天气/季节与局部源，供体温/产量/调试。未加载返回 false，出生格不写回全局温度。
-- `LocalTemperatureSource` 是中心摄氏增量而非功率/目标温度，按来源注册/撤销，无热惯性；分区缓存依源快照失效，环绕键/距离规范化。来源设备拥有燃料/供电/保存，偏移不写生成层。
-- 液体辐射来自 `radiantHeatRadius/radiantHeatOffset`；RadiantLiquidTemperatureField 只查加载块，以 Terrain/SurfaceLiquidRevision 缓存逐格最大贡献，液体/支撑面/目录改变重算，雪土光变化不重扫。
+- `LocalTemperatureSource` 发布目标环境温度（默认篝火 40℃）而非固定摄氏增量；`ThermalInfluenceRuntime` 用 `max(0,1-d²/R²)²` 衰减，按当前天气环境温差取最强升温/降温（独立制冷模式），同类热源不累加。区块只缓存每源距离权重，源温、功率与天气变化不重建几何；设备管理燃料/供电/撤销。
+- 液体热辐射复用相同目标温度模型，配置 `radiantHeatRadius/radiantTargetTemperature`（岩浆目标环境 180℃）；`LiquidTemperatureField` 只索引已加载地表液体，按液体目标温度分组缓存各格最大权重，依 Terrain/SurfaceLiquidRevision/目录重建。岩浆接触仍走 1100℃物质温度、接触加热与伤害，环境不再直接强制成液体自身温度。
 - 体温是最外层体表；角色与普通物品的环境传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，按 `0.99^seconds` 指数结算，温差小于 0.0001℃收敛。冷热不分速率，不读物品传热率或潮湿/附近火源倍率；`AdvanceTowards` 仅保留给入水、岩浆接触和设备专属传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。

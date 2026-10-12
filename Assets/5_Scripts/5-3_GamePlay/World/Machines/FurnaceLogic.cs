@@ -47,9 +47,12 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private readonly bool heatVessels;
     private readonly bool hasLocalHeat;
     private readonly bool publishCellTemperature;
-    private readonly float neighborTemperatureOffset;
+    private readonly float neighborTargetTemperature;
     private readonly float heatRadius;
-    private readonly float heatOffset;
+    private readonly float heatTargetTemperature;
+    private readonly object coreHeatOwner = new();
+    private const float FurnaceNeighborHeatRadius = 1.75f;
+    private const float FurnaceCoreHeatRadius = 0.7f;
     private TemperatureMgr temperatureManager;
     private Player productionActor;
     private RuntimeItemReactionDefinition activeReaction;
@@ -90,11 +93,11 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         heatVessels = entity.Definition.Content.Has<Mod_VesselHeating>();
         PanelPrefab = authoring.UI_Prefab;
         publishCellTemperature = config.Value("publishCellTemperature", authoring.publishCellTemperature);
-        neighborTemperatureOffset = config.Value("neighborTemperatureOffset", authoring.neighborTemperatureOffset);
+        neighborTargetTemperature = config.Value("neighborTargetTemperature", authoring.neighborTargetTemperature);
         LocalTemperatureSource source = authoring.GetComponent<LocalTemperatureSource>();
         hasLocalHeat = source != null || publishCellTemperature;
         heatRadius = source != null ? source.Radius : 0f;
-        heatOffset = source != null ? source.CelsiusOffset : 0f;
+        heatTargetTemperature = source != null ? source.TargetTemperature : 0f;
         Input = RestoreInventory("furnace.input", authoring.InputInventory);
         Output = RestoreInventory("furnace.output", authoring.OutputInventory);
         FuelInventory = RestoreInventory("furnace.fuel", authoring.FuelInventory);
@@ -143,7 +146,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         if (temperatureManager != null)
         {
             temperatureManager.RemoveLocalTemperatureSource(this);
-            temperatureManager.RemoveCellTemperatureSource(this);
+            temperatureManager.RemoveLocalTemperatureSource(coreHeatOwner);
         }
         temperatureManager = null;
         productionActor = null;
@@ -359,7 +362,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             if (temperatureManager != null)
             {
                 temperatureManager.RemoveLocalTemperatureSource(this);
-                temperatureManager.RemoveCellTemperatureSource(this);
+                temperatureManager.RemoveLocalTemperatureSource(coreHeatOwner);
             }
             return;
         }
@@ -369,17 +372,17 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 
         if (publishCellTemperature)
         {
-            temperatureManager.RemoveLocalTemperatureSource(this);
-            temperatureManager.SetCellTemperatureSource(
-                this,
-                Entity.Position,
-                Data.Temperature,
-                neighborTemperatureOffset);
+            // 炉心真实炉温和周围空气目标温度共用普通热源索引与衰减算法。
+            Vector2 center = new(Entity.Cell.x + .5f, Entity.Cell.y + .5f);
+            temperatureManager.SetLocalTemperatureSource(this, center,
+                FurnaceNeighborHeatRadius, neighborTargetTemperature);
+            temperatureManager.SetLocalTemperatureSource(coreHeatOwner, center,
+                FurnaceCoreHeatRadius, Data.Temperature);
         }
         else
         {
-            temperatureManager.RemoveCellTemperatureSource(this);
-            temperatureManager.SetLocalTemperatureSource(this, Entity.Position, heatRadius, heatOffset);
+            temperatureManager.RemoveLocalTemperatureSource(coreHeatOwner);
+            temperatureManager.SetLocalTemperatureSource(this, Entity.Position, heatRadius, heatTargetTemperature);
         }
     }
     #endregion

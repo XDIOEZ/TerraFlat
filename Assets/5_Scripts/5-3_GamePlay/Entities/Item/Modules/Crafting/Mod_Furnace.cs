@@ -24,10 +24,10 @@ public class Mod_Furnace : Mod_MachineAuthoring
     public bool acceptsMechanicalBellows;
     [Tooltip("是否自动吸收落在同一格的燃料掉落物到燃料槽。")]
     public bool absorbDroppedFuel;
-    [Tooltip("是否把炉体所在格提升到当前炉温，并仅给周围八格固定增温。")]
+    [Tooltip("是否让炉心使用真实炉温，并以独立目标温度温暖相邻地块。")]
     public bool publishCellTemperature;
-    [Tooltip("九宫格热源周围八格的固定增温。")]
-    public float neighborTemperatureOffset = 15f;
+    [Tooltip("炉体周围的目标环境温度。")]
+    public float neighborTargetTemperature = 40f;
     public List<FurnaceFuelByproductRule> fuelByproductRules = new();
     public List<string> ignitionItemIds = new() { "FireSeed" };
     public List<string> ignitionTags = new() { Tag.CombustionTinder };

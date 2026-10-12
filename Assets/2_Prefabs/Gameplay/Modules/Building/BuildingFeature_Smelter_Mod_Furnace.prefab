@@ -174,4 +174,4 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   radius: 6
-  celsiusOffset: 15
+  targetTemperature: 40

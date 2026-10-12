@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   radius: 6
-  celsiusOffset: 15
+  targetTemperature: 40
 --- !u!114 &5228340380081889140
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -67,5 +67,5 @@ MonoBehaviour:
     Type: 0
     BitData: 
   radius: 6
-  celsiusOffset: 15
+  targetTemperature: 40
   requiresCombustion: 1

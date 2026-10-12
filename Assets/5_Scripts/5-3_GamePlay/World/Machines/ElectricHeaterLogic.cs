@@ -16,11 +16,10 @@ public sealed class ElectricHeaterLogic : MachineLogic
     public override string ActionLabel => "通电自动加热";
     public override GameObject PanelPrefab => GameRes.Instance.GetPrefab(Heating.PanelId);
     public override string Status => FlatWorldLocalizationService.GetUiFormat(
-        "{0}\n实际供电 {1:0.#}/{2:0.#} W\n加热半径 {3:0.#} 格 · 中心升温 {4:0.#}℃",
+        "{0}\n实际供电 {1:0.#}/{2:0.#} W\n加热半径 {3:0.#} 格 · 目标温度 {4:0.#}℃",
         FlatWorldLocalizationService.GetUiText(state.SuppliedWatts > 0 ? "正在加热" : "没有电"),
-        state.SuppliedWatts, Entity.Definition.Electrical.PowerWatts, Heating.Radius, EffectiveOffset);
-    private float EffectiveOffset => Heating.CenterTemperatureOffset *
-        Mathf.Clamp01(state.SuppliedWatts / Entity.Definition.Electrical.PowerWatts);
+        state.SuppliedWatts, Entity.Definition.Electrical.PowerWatts, Heating.Radius, Heating.TargetTemperature);
+    private float PowerFraction => Mathf.Clamp01(state.SuppliedWatts / Entity.Definition.Electrical.PowerWatts);
 
     public ElectricHeaterLogic(MachineEntity entity) : base(entity)
     {
@@ -46,8 +45,9 @@ public sealed class ElectricHeaterLogic : MachineLogic
             temperatureManager = current;
         }
         if (temperatureManager == null) return;
-        if (EffectiveOffset <= 0) temperatureManager.RemoveLocalTemperatureSource(this);
-        else temperatureManager.SetLocalTemperatureSource(this, Entity.Position, Heating.Radius, EffectiveOffset);
+        if (PowerFraction <= 0f) temperatureManager.RemoveLocalTemperatureSource(this);
+        else temperatureManager.SetLocalTemperatureSource(this, Entity.Position, Heating.Radius,
+            Heating.TargetTemperature, strength: PowerFraction);
     }
 
     public override bool Execute(string operation, string argument, Player actor) => operation == "begin-interaction";
@@ -83,12 +83,12 @@ public sealed class ElectricHeaterDefinition
 {
     #region 加热配置
     public float Radius = 3;
-    public float CenterTemperatureOffset = 60;
+    public float TargetTemperature = 60;
     public string PanelId = "UI_Mechanical";
     public void Validate(string id, ElectricalDefinition electrical)
     {
         if (!MachineDefinition.Positive(Radius) || Radius > 64 ||
-            !MachineDefinition.Positive(CenterTemperatureOffset) || string.IsNullOrWhiteSpace(PanelId) ||
+            !MachineDefinition.Positive(TargetTemperature) || string.IsNullOrWhiteSpace(PanelId) ||
             electrical?.IsConsumer != true || !MachineDefinition.Positive(electrical.PowerWatts))
             throw new ArgumentException("电热器必须声明有效供电与加热配置：" + id);
     }

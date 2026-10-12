@@ -35,7 +35,7 @@ public sealed class WorldLiquidSettings
     [JsonProperty("contactHeatingPerSecond")] public float ContactHeatingPerSecond;
     [JsonProperty("contactDamagePerSecond")] public float ContactDamagePerSecond;
     [JsonProperty("radiantHeatRadius")] public float RadiantHeatRadius;
-    [JsonProperty("radiantHeatOffset")] public float RadiantHeatOffset;
+    [JsonProperty("radiantTargetTemperature")] public float RadiantTargetTemperature = 20f;
     [JsonProperty("depthPerServing")] public float DepthPerServing = UnifiedDepthPerServing;
     #endregion
 
@@ -56,8 +56,7 @@ public sealed class WorldLiquidSettings
             !Positive(EntryTemperatureTransitionSeconds) || !Positive(DrinkTickSeconds) ||
             !NonNegative(Temperature) || !NonNegative(ContactHeatingPerSecond) ||
             !NonNegative(ContactDamagePerSecond) || !NonNegative(RadiantHeatRadius) ||
-            RadiantHeatRadius > MaximumRadiantHeatRadius || !NonNegative(RadiantHeatOffset) ||
-            (RadiantHeatOffset > 0f && RadiantHeatRadius <= 0f) ||
+            RadiantHeatRadius > MaximumRadiantHeatRadius || !float.IsFinite(RadiantTargetTemperature) ||
             !Positive(DepthPerServing) || Mathf.Abs(DepthPerServing - UnifiedDepthPerServing) > 0.000001f ||
             float.IsNaN(DrinkHoldSeconds) || float.IsInfinity(DrinkHoldSeconds) || DrinkHoldSeconds < 0f)
             throw new InvalidDataException($"液体 {id} 的世界玩法参数无效。");

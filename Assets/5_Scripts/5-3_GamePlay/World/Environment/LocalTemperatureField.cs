@@ -5,9 +5,9 @@ using UnityEngine;
 using Unity.Profiling;
 
 /// <summary>
-/// 局部冷热源的空间索引。只为冷热源覆盖的区块分配温度偏移缓存，不遍历世界或持有地形租约。
-/// 源中心使用摄氏度增量，正数升温、负数降温；影响按 (1 - 距离平方 / 半径平方)² 衰减并叠加。
-/// 最大半径 64 格；只有注册、移动、改值或移除才使覆盖区块失效，查询重建一次后为数组读取。
+/// 局部冷热源的空间索引。只为冷热源覆盖的区块分配距离权重缓存，不遍历世界或持有地形租约。
+/// 热源提供目标温度，距离权重由 ThermalInfluenceRuntime 共用；区块仅缓存几何权重，不缓存天气温度。
+/// 最大半径 64 格；目标温度变化无需重建几何缓存，只有移动、半径变化或移除才使覆盖区块失效。
 /// 这是可重建的环境影响层，设备开关、燃料和持久化由来源模块负责。
 /// </summary>
 internal sealed class LocalTemperatureField
@@ -17,18 +17,27 @@ internal sealed class LocalTemperatureField
 
     #region 空间数据
 
-    private sealed class Source
+    internal sealed class Source
     {
         public Vector2 Center; // 已归一化的中心位置
         public float Radius; // 影响半径
-        public float Offset; // 中心温度增量
+        public float TargetTemperature; // 热源希望达到的环境温度
+        public bool Cooling; // 制冷设备才会降低当地环境温度
+        public float Strength; // 供电等来源强度改变无需重算空间权重
         public readonly List<Vector2Int> Buckets = new(); // 覆盖的空间分区
+    }
+
+    internal readonly struct Influence
+    {
+        public readonly Source Source;
+        public readonly float[] Weights;
+        public Influence(Source source, float[] weights) { Source = source; Weights = weights; }
     }
 
     private sealed class Bucket
     {
         public readonly List<Source> Sources = new(); // 只保存能影响当前分区的来源
-        public float[] Offsets; // 行优先的逐格温度偏移
+        public Influence[] Influences = Array.Empty<Influence>(); // 每种来源的逐格距离权重
         public bool Dirty = true; // 来源变化后延迟重建
     }
 
@@ -50,25 +59,27 @@ internal sealed class LocalTemperatureField
     #region 来源注册
 
     /// <summary>添加或更新一个来源；相同快照不重复使缓存失效。</summary>
-    public void SetSource(object owner, Vector2 center, float radius, float offset)
+    public void SetSource(object owner, Vector2 center, float radius, float targetTemperature,
+        bool cooling = false, float strength = 1f)
     {
         if (owner == null)
             throw new ArgumentNullException(nameof(owner));
-        if (!IsFinite(center.x) || !IsFinite(center.y) || !IsFinite(offset) ||
+        if (!IsFinite(center.x) || !IsFinite(center.y) || !IsFinite(targetTemperature) ||
+            !IsFinite(strength) || strength < 0f || strength > 1f ||
             !IsFinite(radius) || radius <= 0f || radius > MaximumSourceRadius)
             throw new ArgumentOutOfRangeException(nameof(radius), "冷热源参数必须有限，半径范围为 (0, 64] 格。");
 
         center = Normalize(center);
-        if (offset == 0f)
-        {
-            RemoveSource(owner);
-            return;
-        }
-
         if (sources.TryGetValue(owner, out Source source))
         {
-            if (source.Center == center && source.Radius == radius && source.Offset == offset)
+            // 热源变温不影响位置权重，炉温实时变化也不用重新遍历区块。
+            if (source.Center == center && source.Radius == radius)
+            {
+                source.TargetTemperature = targetTemperature;
+                source.Cooling = cooling;
+                source.Strength = strength;
                 return;
+            }
             RemoveFromBuckets(source);
         }
         else
@@ -79,7 +90,9 @@ internal sealed class LocalTemperatureField
 
         source.Center = center;
         source.Radius = radius;
-        source.Offset = offset;
+        source.TargetTemperature = targetTemperature;
+        source.Cooling = cooling;
+        source.Strength = strength;
         int minX = Mathf.FloorToInt((center.x - radius) / width) * width;
         int minY = Mathf.FloorToInt((center.y - radius) / height) * height;
         int maxX = Mathf.FloorToInt((center.x + radius) / width) * width;
@@ -130,35 +143,42 @@ internal sealed class LocalTemperatureField
 
     #region 查询
 
-    /// <summary>从已归一化的世界格坐标读取温度偏移；没有冷热源的区域直接返回零。</summary>
-    public float Sample(Vector2Int cell)
+    /// <summary>读取缓存好的来源权重，逐格采样时用实时基础温度合成。</summary>
+    public ReadOnlySpan<Influence> Sample(Vector2Int cell)
     {
         Vector2Int origin = new(
             Mathf.FloorToInt((float)cell.x / width) * width,
             Mathf.FloorToInt((float)cell.y / height) * height);
-        ReadOnlySpan<float> offsets = GetChunkOffsets(origin);
-        return offsets.IsEmpty ? 0f : offsets[(cell.y - origin.y) * width + cell.x - origin.x];
+        return GetChunkInfluences(origin);
     }
 
-    // 同步区块采样复用只读缓存，来源变化仍在下一次查询时重建。
-    public ReadOnlySpan<float> GetChunkOffsets(Vector2Int origin)
+    public ReadOnlySpan<Influence> GetChunkInfluences(Vector2Int origin)
     {
         if (!buckets.TryGetValue(origin, out Bucket bucket))
-            return ReadOnlySpan<float>.Empty;
+            return ReadOnlySpan<Influence>.Empty;
         if (bucket.Dirty)
             Rebuild(origin, bucket);
-        return bucket.Offsets;
+        return bucket.Influences;
+    }
+
+    public static void Accumulate(ReadOnlySpan<Influence> influences, int index, float ambient,
+        ref float strongestHeating, ref float strongestCooling)
+    {
+        foreach (Influence influence in influences)
+            ThermalInfluenceRuntime.Accumulate(ambient, influence.Source.TargetTemperature,
+                influence.Weights[index] * influence.Source.Strength,
+                ref strongestHeating, ref strongestCooling, influence.Source.Cooling);
     }
 
     private void Rebuild(Vector2Int origin, Bucket bucket)
     {
         using (RebuildMarker.Auto())
         {
-            bucket.Offsets ??= new float[width * height];
-            Array.Clear(bucket.Offsets, 0, bucket.Offsets.Length);
-            foreach (Source source in bucket.Sources)
+            var influences = new Influence[bucket.Sources.Count];
+            for (int sourceIndex = 0; sourceIndex < bucket.Sources.Count; sourceIndex++)
             {
-                float inverseRadiusSquared = 1f / (source.Radius * source.Radius);
+                Source source = bucket.Sources[sourceIndex];
+                float[] weights = new float[width * height];
                 for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {
@@ -166,10 +186,12 @@ internal sealed class LocalTemperatureField
                     Vector2 delta = bounds.IsWrapped
                         ? bounds.ShortestDelta(source.Center, center)
                         : center - source.Center;
-                    float weight = Mathf.Max(0f, 1f - delta.sqrMagnitude * inverseRadiusSquared);
-                    bucket.Offsets[y * width + x] += source.Offset * weight * weight;
+                    weights[y * width + x] = ThermalInfluenceRuntime.DistanceWeight(
+                        delta.sqrMagnitude, source.Radius * source.Radius);
                 }
+                influences[sourceIndex] = new Influence(source, weights);
             }
+            bucket.Influences = influences;
             bucket.Dirty = false;
         }
     }
@@ -180,8 +202,8 @@ internal sealed class LocalTemperatureField
     #endregion
 }
 
-/// <summary>把已加载世界液体的辐射热缓存成逐格最大温升，避免大面积岩浆按格叠加到失控。</summary>
-internal sealed class RadiantLiquidTemperatureField
+/// <summary>把液面按液体目标温度分组，缓存各组最大距离权重，避免岩浆湖逐格重复叠热。</summary>
+internal sealed class LiquidTemperatureField
 {
     #region 分区缓存
 
@@ -203,8 +225,15 @@ internal sealed class RadiantLiquidTemperatureField
 
     private sealed class Bucket
     {
-        public float[] Offsets;
+        public Influence[] Influences = Array.Empty<Influence>();
         public readonly List<Dependency> Dependencies = new(9);
+    }
+
+    internal readonly struct Influence
+    {
+        public readonly float TargetTemperature;
+        public readonly float[] Weights;
+        public Influence(float temperature, float[] weights) { TargetTemperature = temperature; Weights = weights; }
     }
 
     private readonly Dictionary<Vector2Int, Bucket> buckets = new();
@@ -216,7 +245,7 @@ internal sealed class RadiantLiquidTemperatureField
     private GameRes cachedResources;
     private int cachedResourceReloadVersion = -1;
 
-    public RadiantLiquidTemperatureField(ChunkMgr chunkManager, string dimensionId,
+    public LiquidTemperatureField(ChunkMgr chunkManager, string dimensionId,
         int width, int height, WorldTopologyBounds bounds)
     {
         this.chunkManager = chunkManager;
@@ -230,22 +259,18 @@ internal sealed class RadiantLiquidTemperatureField
 
     #region 查询与重建
 
-    public float Sample(Vector2Int cell)
+    public ReadOnlySpan<Influence> Sample(Vector2Int cell)
     {
         Vector2Int origin = ResolveChunkOrigin(cell);
-        ReadOnlySpan<float> offsets = GetChunkOffsets(origin);
-        int x = cell.x - origin.x;
-        int y = cell.y - origin.y;
-        return offsets.IsEmpty || (uint)x >= (uint)width || (uint)y >= (uint)height
-            ? 0f : offsets[y * width + x];
+        return GetChunkInfluences(origin);
     }
 
     // 一次同步批次只验证一次邻区液体版本，单格查询继续实时验证。
-    public ReadOnlySpan<float> GetChunkOffsets(Vector2Int origin)
+    public ReadOnlySpan<Influence> GetChunkInfluences(Vector2Int origin)
     {
         GameRes resources = GameRes.ExistingInstance;
         if (chunkManager == null || resources == null)
-            return ReadOnlySpan<float>.Empty;
+            return ReadOnlySpan<Influence>.Empty;
 
         // 液体配置原位重载后丢弃旧热量缓存，不长期订阅资源会话事件。
         if (!ReferenceEquals(cachedResources, resources) ||
@@ -269,7 +294,15 @@ internal sealed class RadiantLiquidTemperatureField
             Rebuild(origin, bucket);
         }
 
-        return bucket.Offsets;
+        return bucket.Influences;
+    }
+
+    public static void Accumulate(ReadOnlySpan<Influence> influences, int index, float ambient,
+        ref float strongestHeating, ref float strongestCooling)
+    {
+        foreach (Influence influence in influences)
+            ThermalInfluenceRuntime.Accumulate(ambient, influence.TargetTemperature,
+                influence.Weights[index], ref strongestHeating, ref strongestCooling);
     }
 
     private bool DependenciesAreCurrent(Bucket bucket)
@@ -288,8 +321,7 @@ internal sealed class RadiantLiquidTemperatureField
     {
         using (RebuildMarker.Auto())
         {
-            bucket.Offsets ??= new float[width * height];
-            Array.Clear(bucket.Offsets, 0, bucket.Offsets.Length);
+            var weightsByTemperature = new Dictionary<float, float[]>();
             bucket.Dependencies.Clear();
 
             int radius = Mathf.CeilToInt(WorldLiquidSettings.MaximumRadiantHeatRadius);
@@ -310,13 +342,17 @@ internal sealed class RadiantLiquidTemperatureField
                 ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
                 bucket.Dependencies.Add(new Dependency(sourceOrigin, terrain));
                 if (terrain != null)
-                    AccumulateTerrain(targetOrigin, sourceOrigin, terrain, bucket.Offsets);
+                    AccumulateTerrain(targetOrigin, sourceOrigin, terrain, weightsByTemperature);
             }
+            bucket.Influences = new Influence[weightsByTemperature.Count];
+            int influenceIndex = 0;
+            foreach (KeyValuePair<float, float[]> pair in weightsByTemperature)
+                bucket.Influences[influenceIndex++] = new Influence(pair.Key, pair.Value);
         }
     }
 
     private void AccumulateTerrain(Vector2Int targetOrigin, Vector2Int sourceOrigin,
-        ChunkTerrainData terrain, float[] offsets)
+        ChunkTerrainData terrain, Dictionary<float, float[]> weightsByTemperature)
     {
         GameRes resources = GameRes.ExistingInstance;
         for (int sourceY = 0; sourceY < terrain.Height; sourceY++)
@@ -327,9 +363,14 @@ internal sealed class RadiantLiquidTemperatureField
                 continue;
 
             WorldLiquidSettings settings = liquid.WorldWater;
-            if (settings == null || settings.RadiantHeatRadius <= 0f || settings.RadiantHeatOffset <= 0f)
+            if (settings == null || settings.RadiantHeatRadius <= 0f)
                 continue;
 
+            if (!weightsByTemperature.TryGetValue(settings.RadiantTargetTemperature, out float[] weights))
+            {
+                weights = new float[width * height];
+                weightsByTemperature.Add(settings.RadiantTargetTemperature, weights);
+            }
             Vector2 sourceCenter = new(sourceOrigin.x + sourceX + 0.5f, sourceOrigin.y + sourceY + 0.5f);
             float radiusSquared = settings.RadiantHeatRadius * settings.RadiantHeatRadius;
             for (int targetY = 0; targetY < height; targetY++)
@@ -342,11 +383,10 @@ internal sealed class RadiantLiquidTemperatureField
                 if (delta.sqrMagnitude >= radiusSquared)
                     continue;
 
-                float weight = Mathf.Max(0f, 1f - delta.sqrMagnitude / radiusSquared);
-                float offset = settings.RadiantHeatOffset * weight * weight;
+                float weight = ThermalInfluenceRuntime.DistanceWeight(delta.sqrMagnitude, radiusSquared);
                 int index = targetY * width + targetX;
-                if (offset > offsets[index])
-                    offsets[index] = offset;
+                if (weight > weights[index])
+                    weights[index] = weight;
             }
         }
     }

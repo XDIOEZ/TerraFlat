@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 供篝火、加热器和空调复用的局部温度源组件。默认半径 6 格、中心升温 15℃，负值可制冷。
+/// 供篝火、加热器和空调复用的局部温度源组件。默认半径 6 格、目标环境温度 40℃。
 /// 只负责向环境场注册影响；燃料、电力、目标温度控制和保存由设备模块负责，并通过 Configure 驱动。
 /// 每 0.25 秒发布位置快照；静止源不会重建缓存，停用或回池立即撤销影响。
 /// </summary>
@@ -13,12 +13,14 @@ public sealed class LocalTemperatureSource : MonoBehaviour
 
     [SerializeField, Range(0.5f, 64f), Tooltip("影响半径，单位为地块。")]
     private float radius = 6f;
-    [SerializeField, Tooltip("源中心的摄氏度增量；正数加热，负数制冷。")]
-    private float celsiusOffset = 15f;
+    [SerializeField, Tooltip("源中心期望的环境温度；高于当前环境时加热，低于时制冷。")]
+    private float targetTemperature = 40f;
+    private bool isEmitting = true;
+    private bool cooling;
     private float nextPublishTime;
     private TemperatureMgr registeredManager;
     public float Radius => radius;
-    public float CelsiusOffset => celsiusOffset;
+    public float TargetTemperature => targetTemperature;
 
     #endregion
 
@@ -46,17 +48,19 @@ public sealed class LocalTemperatureSource : MonoBehaviour
     #region 设备入口
 
     /// <summary>设备根据燃烧、供电或恒温控制更新有效强度，零强度等同于关闭温度影响。</summary>
-    public void Configure(float influenceRadius, float temperatureOffset)
+    public void Configure(float influenceRadius, float temperature, bool enabled, bool isCooling = false)
     {
         radius = influenceRadius;
-        celsiusOffset = temperatureOffset;
+        targetTemperature = temperature;
+        isEmitting = enabled;
+        cooling = isCooling;
         if (isActiveAndEnabled)
             Publish();
     }
 
     private void Publish()
     {
-        if (Mathf.Approximately(celsiusOffset, 0f))
+        if (!isEmitting)
         {
             if (registeredManager != null)
                 registeredManager.RemoveLocalTemperatureSource(this);
@@ -74,7 +78,7 @@ public sealed class LocalTemperatureSource : MonoBehaviour
         }
         registeredManager = TemperatureMgr.Instance;
         if (registeredManager != null)
-            registeredManager.SetLocalTemperatureSource(this, transform.position, radius, celsiusOffset);
+            registeredManager.SetLocalTemperatureSource(this, transform.position, radius, targetTemperature, cooling);
     }
 
     #endregion
