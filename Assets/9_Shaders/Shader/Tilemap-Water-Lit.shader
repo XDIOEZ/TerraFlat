@@ -13,10 +13,13 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _SurfaceTint("海水染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
-        _WaveSpeed("海浪速度", Range(0, 3)) = 0.42
+        _WaveSpeed("波浪传播速度", Range(0, 3)) = 0.42
         _WaveDistortion("海流扭曲", Range(0, 4)) = 0.8
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.44
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
+        _WaveDirection("波浪传播方向（零为跟随水流/风向）", Vector) = (0, 0, 0, 0)
+        _FlowSpeed("水流平移倍率", Range(0, 4)) = 1
+        _FlowCycleSeconds("流动交接周期（秒）", Range(2, 16)) = 8
         _FlowDirection("流动方向", Vector) = (1, 0.35, 0, 0)
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
         _RippleColor("浪脊颜色", Color) = (0.3, 0.57, 0.98, 1)
@@ -165,12 +168,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                     input.positionWS,
                     input.lightingUV,
                     liquidDepth,
-                    ResolveWaterFlowAxis(_FlowDirection.xy));
+                    ResolveWaterMotion(_FlowDirection.xy, 2.0));
                 main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
-                    ResolveWaterFlowAxis(_FlowDirection.xy));
+                    ResolveWaterMotion(_FlowDirection.xy, 2.0));
 
                 half4 lightMask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
                 SurfaceData2D surfaceData;
@@ -245,12 +248,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                     input.positionWS,
                     input.screenUV,
                     liquidDepth,
-                    ResolveWaterFlowAxis(_FlowDirection.xy));
+                    ResolveWaterMotion(_FlowDirection.xy, 2.0));
                 main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
-                    ResolveWaterFlowAxis(_FlowDirection.xy));
+                    ResolveWaterMotion(_FlowDirection.xy, 2.0));
                 main.rgb = ApplyMoonReflection(main.rgb, waterSurface.moonReflection);
                 return main;
             }

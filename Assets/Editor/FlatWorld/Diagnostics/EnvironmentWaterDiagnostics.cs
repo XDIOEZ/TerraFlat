@@ -133,10 +133,20 @@ public static class EnvironmentWaterDiagnostics
         string renderer = ReadAsset("Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilemapRenderer.cs");
         Check(renderer.Contains("ResolveCornerCurrent(terrain, x - 1, y - 1)") &&
             renderer.Contains("TryResolveTerrainCell(terrain, left + offsetX, bottom + offsetY"), "河流格角读取邻区权威数据");
-        string shader = ReadAsset("Assets/9_Shaders/Shader/Chunk-BRG-Water-Lit.shader");
-        Check(shader.Contains("positionWS - velocity * phase * 8.0") &&
-            shader.Contains("CalculateChunkWaterSurface(input.positionWS, input.lightingUV") &&
-            shader.Contains("CalculateChunkWaterSurface(input.positionWS, input.screenUV"), "双 Pass 均接入下游平流而非材质固定方向");
+        string flowShader = ReadAsset("Assets/9_Shaders/Shader/WaterSurfaceFlow.hlsl");
+        // 平流实现由共享文件拥有，正式 Mesh 和 BRG 两路均检查入口。
+        Check(flowShader.Contains("positionWS - velocity * firstPhase * cycle") &&
+            flowShader.Contains("frac(firstPhase + 0.5)") &&
+            flowShader.Contains("1.0 - abs(1.0 - 2.0 * firstPhase)"), "双相流动在重置时淡出且保留速度大小");
+        foreach (string shaderPath in new[] { "Assets/9_Shaders/Shader/Chunk-BRG-Water-Lit.shader",
+            "Assets/9_Shaders/Shader/Chunk-Mesh-Water-Lit.shader" })
+        {
+            string shader = ReadAsset(shaderPath);
+            Check(shader.Contains("ResolveWaterMotion(") && shader.Contains("InterpolateWaterCurrent(") &&
+                shader.Contains("CalculateChunkWaterSurface(input.positionWS, input.lightingUV") &&
+                shader.Contains("CalculateChunkWaterSurface(input.positionWS, input.screenUV"),
+                "双 Pass 均接入共享完整水面与权威水流：" + shaderPath);
+        }
         Type backend = typeof(ChunkTilemapRenderer).Assembly.GetType("ChunkBatchRendererGroupService", true);
         Type instance = backend.GetNestedType("InstanceData", BindingFlags.NonPublic);
         Check(Marshal.SizeOf(instance) == 112, "CPU BRG 实例尺寸为 112 字节");

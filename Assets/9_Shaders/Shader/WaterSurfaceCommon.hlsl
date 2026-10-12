@@ -25,6 +25,9 @@ SAMPLER(sampler_LiquidDepthTexture);
     half4 _MoonReflectionColor;
     half4 _ShoreColor;
     float4 _FlowDirection;
+    float4 _WaveDirection;
+    float _FlowSpeed;
+    float _FlowCycleSeconds;
     float _TideCyclesPerDay;
     float4 _ReflectionDirection;
     float4 _SunDirection;
@@ -115,6 +118,8 @@ struct WaterSurfaceData
     half moonReflection;
 };
 
+#include "WaterSurfaceFlow.hlsl"
+
 /// <summary>Tile Color RGBA 只表示左、右、下、上四向岸线。</summary>
 half4 DecodeWaterShoreMask(half4 encodedData)
 {
@@ -184,51 +189,53 @@ half ComputeMoonReflection(
         _GlobalMoonlightIntensity * max(_MoonReflectionStrength, 0.0h))
         * _MoonReflectionColor.a
         * brightnessEase;
+    half reflectedMoon = 0.0h;
     UNITY_BRANCH
-    if (moonStrength <= 0.0001h)
-        return 0.0h;
+    if (moonStrength > 0.0001h)
+    {
+        float aspect = max(_ScreenParams.x / max(_ScreenParams.y, 1.0), 0.001);
+        float2 moonDelta = screenUV - _MoonReflectionPosition.xy;
+        float correctedX = moonDelta.x * aspect;
+        float sizeEase = lerp(0.2, 1.0, appearanceEase);
+        float discRadius = max(_MoonDiscRadius * sizeEase, 0.001);
+        float discWaveShift = (height * 0.08 + macroA - macroB) * discRadius * 0.16;
+        float discDistance = length(float2(correctedX + discWaveShift, moonDelta.y));
+        half disc = 1.0h - smoothstep(discRadius * 0.72, discRadius, discDistance);
+        half halo = (1.0h - smoothstep(discRadius, discRadius * 1.85, discDistance)) * 0.2h;
+        half discBreakup = lerp(
+            0.62h,
+            1.0h,
+            smoothstep(-0.55, 0.65, height + (macroA - macroB) * 0.7));
 
-    float aspect = max(_ScreenParams.x / max(_ScreenParams.y, 1.0), 0.001);
-    float2 moonDelta = screenUV - _MoonReflectionPosition.xy;
-    float correctedX = moonDelta.x * aspect;
-    float sizeEase = lerp(0.2, 1.0, appearanceEase);
-    float discRadius = max(_MoonDiscRadius * sizeEase, 0.001);
-    float discWaveShift = (height * 0.08 + macroA - macroB) * discRadius * 0.16;
-    float discDistance = length(float2(correctedX + discWaveShift, moonDelta.y));
-    half disc = 1.0h - smoothstep(discRadius * 0.72, discRadius, discDistance);
-    half halo = (1.0h - smoothstep(discRadius, discRadius * 1.85, discDistance)) * 0.2h;
-    half discBreakup = lerp(
-        0.62h,
-        1.0h,
-        smoothstep(-0.55, 0.65, height + (macroA - macroB) * 0.7));
+        float belowMoon = -moonDelta.y;
+        float trailLength = max(_MoonTrailLength * lerp(0.12, 1.0, appearanceEase), 0.001);
+        float trailProgress = saturate(belowMoon / trailLength);
+        half trailRange = step(0.0, belowMoon)
+            * (1.0h - smoothstep(trailLength * 0.72, trailLength, belowMoon));
+        float trailWidth = max(_MoonTrailWidth * lerp(0.3, 1.0, appearanceEase), 0.001)
+            * lerp(0.6, 1.55, trailProgress);
+        float trailWaveShift = (
+            height * 0.28
+            + (macroA - macroB) * 0.32
+            + sin(screenUV.y * 58.0 - time * 1.7) * 0.16)
+            * trailWidth;
+        half trailCenter = 1.0h - smoothstep(
+            trailWidth * 0.2,
+            trailWidth,
+            abs(correctedX + trailWaveShift));
+        float stripeWave = sin(screenUV.y * 220.0 + time * 2.3 + macroA * 4.0);
+        half stripeBreakup = lerp(
+            0.18h,
+            1.0h,
+            smoothstep(-0.42, 0.62, stripeWave + detailA * 0.24 + detailB * 0.14));
+        half trail = trailRange
+            * trailCenter
+            * stripeBreakup
+            * lerp(1.0h, 0.42h, trailProgress);
 
-    float belowMoon = -moonDelta.y;
-    float trailLength = max(_MoonTrailLength * lerp(0.12, 1.0, appearanceEase), 0.001);
-    float trailProgress = saturate(belowMoon / trailLength);
-    half trailRange = step(0.0, belowMoon)
-        * (1.0h - smoothstep(trailLength * 0.72, trailLength, belowMoon));
-    float trailWidth = max(_MoonTrailWidth * lerp(0.3, 1.0, appearanceEase), 0.001)
-        * lerp(0.6, 1.55, trailProgress);
-    float trailWaveShift = (
-        height * 0.28
-        + (macroA - macroB) * 0.32
-        + sin(screenUV.y * 58.0 - time * 1.7) * 0.16)
-        * trailWidth;
-    half trailCenter = 1.0h - smoothstep(
-        trailWidth * 0.2,
-        trailWidth,
-        abs(correctedX + trailWaveShift));
-    float stripeWave = sin(screenUV.y * 220.0 + time * 2.3 + macroA * 4.0);
-    half stripeBreakup = lerp(
-        0.18h,
-        1.0h,
-        smoothstep(-0.42, 0.62, stripeWave + detailA * 0.24 + detailB * 0.14));
-    half trail = trailRange
-        * trailCenter
-        * stripeBreakup
-        * lerp(1.0h, 0.42h, trailProgress);
-
-    return saturate(disc * discBreakup + halo + trail) * moonStrength;
+        reflectedMoon = saturate(disc * discBreakup + halo + trail) * moonStrength;
+    }
+    return reflectedMoon;
 }
 
 /// <summary>在场景 2D 光照之后叠加月光，避免夜间亮度被重复相乘。</summary>

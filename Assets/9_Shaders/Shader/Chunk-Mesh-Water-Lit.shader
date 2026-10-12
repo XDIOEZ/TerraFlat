@@ -12,10 +12,14 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _SurfaceTint("海水染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.74
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.6
-        _WaveSpeed("海浪速度", Range(0, 3)) = 0.42
+        _WaveSpeed("波浪传播速度", Range(0, 3)) = 0.42
         _WaveDistortion("海流扭曲", Range(0, 4)) = 0.8
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.44
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
+        _WaveDirection("波浪传播方向（零为跟随水流/风向）", Vector) = (0, 0, 0, 0)
+        _FlowSpeed("水流平移倍率", Range(0, 4)) = 1
+        _FlowCycleSeconds("流动交接周期（秒）", Range(2, 16)) = 8
+        _FlowDirection("静水默认波向", Vector) = (1, 0.35, 0, 0)
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
         _RippleColor("浪脊颜色", Color) = (0.3, 0.57, 0.98, 1)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.12
@@ -94,6 +98,10 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float4 _ReflectionDirection;
             float4 _SunDirection;
             float4 _MoonReflectionPosition;
+            float4 _FlowDirection;
+            float4 _WaveDirection;
+            float _FlowSpeed;
+            float _FlowCycleSeconds;
             float4 _LavaCrustColor;
             float4 _LavaMoltenColor;
             float4 _LavaHotColor;
@@ -159,79 +167,19 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
-        // 双相位平流周期交接，避免长时间运行时弯道纹理无限拉伸；共享世界坐标无 Chunk 重置。
-        float SampleRiverPattern(float2 positionWS, float2 velocity)
-        {
-            float phase = frac(_Time.y / 8.0);
-            float nextPhase = frac(phase + 0.5);
-            float blend = abs(phase * 2.0 - 1.0);
-            float first = WaterNoise((positionWS - velocity * phase * 8.0) * 2.4);
-            float second = WaterNoise((positionWS - velocity * nextPhase * 8.0) * 2.4);
-            return lerp(first, second, blend);
-        }
-
-        // 同一格角只有一份权威邻格平均；世界格内插值让弯道和共享边连续。
-        float2 ResolveRiverVelocity(float2 positionWS, ChunkMeshWaterData data)
-        {
-            float2 cellUV = frac(positionWS);
-            return float2(
-                lerp(lerp(data.flowX.x, data.flowX.y, cellUV.x),
-                    lerp(data.flowX.z, data.flowX.w, cellUV.x), cellUV.y),
-                lerp(lerp(data.flowY.x, data.flowY.y, cellUV.x),
-                    lerp(data.flowY.z, data.flowY.w, cellUV.x), cellUV.y));
-        }
-
-        // 海洋使用世界风场写入的逐格流向，材质不再拥有独立方向。
-        float2 ResolveOceanFlowAxis(float2 positionWS, ChunkMeshWaterData data)
-        {
-            return ResolveWaterFlowAxis(ResolveRiverVelocity(positionWS, data));
-        }
-
-        // 静水也有表面细波；物理流速为零不代表视觉冻结。河口反射波只影响渲染。
+        // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth, ChunkMeshWaterData data)
         {
-            if (data.waterKind > 1.5)
-                return CalculateWaterSurface(positionWS, screenUV, depth, ResolveOceanFlowAxis(positionWS, data));
-            float2 velocity = ResolveRiverVelocity(positionWS, data);
-            float strength = saturate(length(velocity) / 0.45);
-            float lake = 1.0 - step(0.5, data.waterKind);
-            // 邻河传播到湖口的波纹向河道缓慢反射；河道本身仍按真实下游平流。
-            float2 visualVelocity = lerp(velocity, -velocity * 0.35, lake);
-            float pattern = SampleRiverPattern(positionWS, visualVelocity);
-            float gentlePhase = dot(positionWS, float2(0.72, 0.31)) * 3.2 - _Time.y * 0.65;
-            float gentleWave = pow(saturate(0.5 + 0.5 * sin(gentlePhase +
-                WaterNoise(positionWS * 0.24) * 3.0)), 10.0);
-            gentleWave *= 0.45 + 0.55 * WaterNoise(positionWS * 0.7 + float2(_Time.y * 0.03, 0.0));
-            WaterSurfaceData surface = (WaterSurfaceData)0;
-            surface.liquidDepth = saturate(depth);
-            surface.depthBlend = 1.0h - surface.liquidDepth;
-            surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.55;
-            surface.ripple += gentleWave * _RippleStrength * lerp(0.35, 0.85, lake);
-            surface.rippleShadow = smoothstep(0.5, 0.8, 1.0 - pattern)
-                * _RippleShadowStrength * strength * 0.3;
-            surface.caustic = pattern * _CausticStrength * surface.depthBlend * 0.3;
-            // 细小天空反光不随深度归零，深湖仍服从日夜照明但不会成为一整片纯黑色。
-            surface.reflection = lake * saturate(_ReflectionStrength) * (0.08 + gentleWave * 0.12);
-            surface.whitecap = smoothstep(0.64, 0.88, pattern) * _WhitecapStrength
-                * strength * lerp(0.25, 0.65, lake);
-            surface.moonReflection = ComputeMoonReflection(screenUV, 0.0, pattern, pattern,
-                0.0, 0.0, 0.0);
-            return surface;
+            WaterMotionData motion = ResolveWaterMotion(
+                InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
+            return CalculateWaterSurface(positionWS, screenUV, depth, motion);
         }
 
         half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS, ChunkMeshWaterData data)
         {
-            if (data.waterKind > 1.5)
-                return ApplyShore(sourceColor, recess, positionWS, ResolveOceanFlowAxis(positionWS, data));
-            half band = saturate(recess * (1.0h - recess) * 4.0h);
-            float2 velocity = ResolveRiverVelocity(positionWS, data);
-            float lake = 1.0 - step(0.5, data.waterKind);
-            float2 visualVelocity = lerp(velocity, -velocity * 0.35, lake);
-            float stillWash = lake * (0.08 + 0.04 * sin(_Time.y * 0.7 + dot(positionWS, float2(0.6, 0.4))));
-            half foam = SampleRiverPattern(positionWS, visualVelocity) * band
-                * (length(velocity) / 0.45 + stillWash) * _ShoreFoamStrength * _FoamColor.a;
-            sourceColor = lerp(sourceColor, _ShoreColor.rgb, band * _ShoreStrength * _ShoreColor.a);
-            return lerp(sourceColor, _FoamColor.rgb, saturate(foam));
+            WaterMotionData motion = ResolveWaterMotion(
+                InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
+            return ApplyShore(sourceColor, recess, positionWS, motion);
         }
     ENDHLSL
 

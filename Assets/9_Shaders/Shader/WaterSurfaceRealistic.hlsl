@@ -41,17 +41,18 @@ WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
     half liquidDepth,
-    float2 direction)
+    WaterMotionData motion)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
+    float2 direction = motion.waveDirection;
     float2 lateral = float2(-direction.y, direction.x);
-    float waveSpeed = max(_WaveSpeed, 0.0);
-    float time = _OceanWaveTime * waveSpeed;
-    float tide = ResolveTideFlowPhase(waveSpeed);
-    float2 waterPosition = positionWS - direction * tide * 0.045;
+    float time = motion.waveTime;
+    float2 waterPosition = positionWS - motion.tideOffset;
     float2 drift = direction * time * 0.08;
-    float macroA = WaterNoise(waterPosition * 0.075 - drift * 0.1);
-    float macroB = WaterNoise(waterPosition * 0.13 + drift * 0.07 + float2(17.31, 9.17));
+    float macroA = SampleAdvectedWaterNoise(positionWS, motion.velocity, 0.075, -drift * 0.1);
+    float macroB = SampleAdvectedWaterNoise(positionWS, motion.velocity, 0.13,
+        drift * 0.07 + float2(17.31, 9.17));
+    float3 currentDetail = SampleWaterCurrentDetail(positionWS, motion);
     float2 warpedPosition = waterPosition
         + (direction * (macroA - 0.5) + lateral * (macroB - 0.5)) * _WaveDistortion;
 
@@ -93,17 +94,20 @@ WaterSurfaceData CalculateWaterSurface(
         shimmerDirectionB * shimmerB.y * 0.31 +
         shimmerDirectionC * shimmerC.y * 0.17;
     slope += fineSlope * 0.12 * rippleScale;
-    height *= _OceanWaveFactors.y;
-    slope *= _OceanWaveFactors.y;
+    slope += currentDetail.yz * 0.18 * motion.currentStrength;
+    height *= motion.waveHeight;
+    slope *= motion.waveHeight;
     float3 normalWS = normalize(float3(-slope * _NormalStrength, 1.0));
 
     // 写实水面按共享格角的连续水深渐变，避免逐格色阶造成硬接缝。
     surface.liquidDepth = saturate(liquidDepth);
     surface.depthBlend = 1.0h - surface.liquidDepth;
 
-    float3 sunDirection = normalize(_SunDirection.xyz);
+    float3 sunDirection = _SunDirection.xyz
+        * rsqrt(max(dot(_SunDirection.xyz, _SunDirection.xyz), 0.0001));
     float3 viewDirection = float3(0.0, 0.0, 1.0);
-    float3 halfDirection = normalize(sunDirection + viewDirection);
+    float3 halfDirection = sunDirection + viewDirection;
+    halfDirection *= rsqrt(max(dot(halfDirection, halfDirection), 0.0001));
     float ndv = saturate(normalWS.z);
     float ndl = saturate(dot(normalWS, sunDirection));
     float ndh = saturate(dot(normalWS, halfDirection));
@@ -112,7 +116,9 @@ WaterSurfaceData CalculateWaterSurface(
 
     // 天空只提供柔和反射；太阳使用 GGX 微表面高光，波光由法线自然切碎。
     float3 reflectedView = reflect(-viewDirection, normalWS);
-    float mirrorAlignment = saturate(dot(reflectedView, normalize(_ReflectionDirection.xyz)));
+    float3 mirrorDirection = _ReflectionDirection.xyz
+        * rsqrt(max(dot(_ReflectionDirection.xyz, _ReflectionDirection.xyz), 0.0001));
+    float mirrorAlignment = saturate(dot(reflectedView, mirrorDirection));
     float skyLobe = pow(mirrorAlignment, lerp(4.0, 18.0, _ReflectionSmoothness));
     surface.reflection = saturate(_ReflectionStrength) * (fresnel + skyLobe * 0.075)
         * _ReflectionColor.a;
@@ -161,7 +167,8 @@ WaterSurfaceData CalculateWaterSurface(
         0.82,
         detailA * 0.46 + detailB * 0.34 + detailC * 0.2);
     surface.whitecap = steepCrest * foamBreakup
-        * saturate(_WhitecapStrength) * _FoamColor.a * _OceanWaveFactors.z;
+        * saturate(_WhitecapStrength) * _FoamColor.a * motion.foamActivity;
+    ApplyWaterCurrentDetail(surface, currentDetail, motion);
     surface.moonReflection = ComputeMoonReflection(
         screenUV,
         height,
@@ -193,21 +200,9 @@ half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
 }
 
 /// <summary>岸边只留断续的薄泡沫，沿游戏时间起落，避免描出连续的方格亮边。</summary>
-half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS, float2 direction)
+half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS, WaterMotionData motion)
 {
-    float tide = ResolveTideFlowPhase(_FoamSpeed);
-    float time = _GlobalGameDay * 180.0 * _FoamSpeed;
-    float2 foamPosition = positionWS - direction * tide * 0.04;
-    float foamNoise = WaterNoise(foamPosition * 1.1 + float2(11.3, 27.1));
-    float foamDetail = WaterNoise(foamPosition * 3.7 - direction * time * 0.12);
-    float wash = 0.5 + 0.5 * sin(time + foamNoise * 4.0);
-    float shoreBand = pow(saturate(recess * (1.0 - recess) * 4.0), 1.5);
-    float foamCoverage = smoothstep(0.48, 0.82,
-        foamNoise * 0.5 + foamDetail * 0.35 + wash * 0.25);
-    float foam = shoreBand * foamCoverage * saturate(_ShoreFoamStrength) * _FoamColor.a;
-    sourceColor = lerp(sourceColor, _ShoreColor.rgb,
-        shoreBand * foamNoise * saturate(_ShoreStrength) * _ShoreColor.a);
-    return lerp(sourceColor, _FoamColor.rgb, foam);
+    return ApplyFlowingWaterShore(sourceColor, recess, positionWS, motion);
 }
 
 #endif

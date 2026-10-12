@@ -1256,27 +1256,27 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         terrain.TryGetEnvironmentValue("riverKind", x, y, out float riverKind);
         RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(
             Mathf.RoundToInt(riverKind), (SurfaceBiomeKind)terrain.GetCell(x, y).BiomeId == SurfaceBiomeKind.Ocean);
+        Vector2 worldCell = new(boundChunk.Address.ChunkOrigin.X + x, boundChunk.Address.ChunkOrigin.Y + y);
+        // 只由当前格真实实验水流标记动态液体，邻河扰动仍保持湖泊类型。
+        if (ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.TryGetExperimentalLiquidFlow(worldCell, out _))
+            kind = RuntimeWaterCurrentKind.ExperimentalLiquid;
         instanceData.Transform0.w = (float)kind;
         instanceData.FlowX = Vector4.zero;
         instanceData.FlowY = Vector4.zero;
         // 湖泊仅在河口读取邻河的表面扰动，绝不写回权威水流或推动漂浮物。
         if (kind == RuntimeWaterCurrentKind.Ocean)
         {
-            Vector2 worldCell = new(boundChunk.Address.ChunkOrigin.X + x, boundChunk.Address.ChunkOrigin.Y + y);
-            if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetExperimentalLiquidFlow(worldCell, out _))
-            {
-                terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
-                terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
-                Vector2 fallback = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
-                Vector2 oceanBottomLeft = ResolveOceanCornerDirection(terrain, x - 1, y - 1, fallback);
-                Vector2 oceanBottomRight = ResolveOceanCornerDirection(terrain, x, y - 1, fallback);
-                Vector2 oceanTopLeft = ResolveOceanCornerDirection(terrain, x - 1, y, fallback);
-                Vector2 oceanTopRight = ResolveOceanCornerDirection(terrain, x, y, fallback);
-                instanceData.FlowX = new Vector4(oceanBottomLeft.x, oceanBottomRight.x, oceanTopLeft.x, oceanTopRight.x);
-                instanceData.FlowY = new Vector4(oceanBottomLeft.y, oceanBottomRight.y, oceanTopLeft.y, oceanTopRight.y);
-                return;
-            }
-            instanceData.Transform0.w = (float)RuntimeWaterCurrentKind.River;
+            terrain.TryGetEnvironmentValue("windX", x, y, out float windX);
+            terrain.TryGetEnvironmentValue("windY", x, y, out float windY);
+            Vector2 fallback = WaterEnvironmentRules.ResolveOceanCurrentDirection(new Vector2(windX, windY));
+            Vector2 oceanBottomLeft = ResolveOceanCornerDirection(terrain, x - 1, y - 1, fallback);
+            Vector2 oceanBottomRight = ResolveOceanCornerDirection(terrain, x, y - 1, fallback);
+            Vector2 oceanTopLeft = ResolveOceanCornerDirection(terrain, x - 1, y, fallback);
+            Vector2 oceanTopRight = ResolveOceanCornerDirection(terrain, x, y, fallback);
+            instanceData.FlowX = new Vector4(oceanBottomLeft.x, oceanBottomRight.x, oceanTopLeft.x, oceanTopRight.x);
+            instanceData.FlowY = new Vector4(oceanBottomLeft.y, oceanBottomRight.y, oceanTopLeft.y, oceanTopRight.y);
+            return;
         }
 
         Vector2 bottomLeft = ResolveCornerCurrent(terrain, x - 1, y - 1);

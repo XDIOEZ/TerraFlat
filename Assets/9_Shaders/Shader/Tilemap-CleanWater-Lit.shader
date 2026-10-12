@@ -13,10 +13,13 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _SurfaceTint("水面染色强度", Range(0, 1)) = 1
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.42
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.4
-        _WaveSpeed("水流速度", Range(-3, 3)) = 0.26
+        _WaveSpeed("波浪传播速度", Range(0, 3)) = 0.26
         _WaveDistortion("水流扭曲", Range(0, 4)) = 0.9
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.22
         _PixelDensity("风格化采样密度", Range(1, 128)) = 64
+        _WaveDirection("波浪传播方向（零为跟随水流/风向）", Vector) = (0, 0, 0, 0)
+        _FlowSpeed("水流平移倍率", Range(0, 4)) = 1
+        _FlowCycleSeconds("流动交接周期（秒）", Range(2, 16)) = 8
         _FlowDirection("流动方向", Vector) = (0.7, 0.28, 0, 0)
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
         _RippleColor("浪脊颜色", Color) = (0.3, 0.57, 0.98, 0.8)
