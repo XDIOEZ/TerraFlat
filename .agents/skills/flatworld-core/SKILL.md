@@ -43,5 +43,5 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 ## 通用 Lua 测试场景
 
-- `Assets/3_Scenes/Development/GameplayTestScene.unity` 复用正式 WorldManager/建世界/默认玩家模板；`Development/Testing/GameplayTest{Scene,Showroom,LuaRunner,Report,Suite}.cs` 负责启动、陈列、步骤、报告与严格清单。默认读取 `GameplayTests/test-suite.json` 顺序运行独立 Lua 用例，共享世界；总报告和每用例 JSON 分开输出，命令及清单格式见 `Assets/StreamingAssets/GameplayTests/README.md`。
+- `Assets/3_Scenes/Development/GameplayTestScene.unity` 复用正式 WorldManager/建世界/默认玩家模板；`Development/Testing/GameplayTest{Scene,Showroom,LuaRunner,Report,Suite,Selection}.cs` 负责启动、可跳过陈列、步骤与严格报告。默认读取 `GameplayTests/test-suite.json` 顺序运行独立 Lua 用例；AI 可用 `gameplay_test_pipeline(run/status/report)` 在同一 Editor 里先跑 EditMode Test Framework、全部通过后只启动一次 PlayMode 执行整份清单，默认 `GameplayTests/quick-suite.json`。详细命令见 `Assets/StreamingAssets/GameplayTests/README.md`。
 - 陈列遍历全部非 Actor 物品定义，按正式资源/机器/掉落/Item 后端生成；通过世界生成 Hook 配置平地空生态，模拟租约保持展区数据。编辑器报告/存档在 `Library/FlatWorldGameplayTests/{Reports,Saves}/`；保存隔离租约独立于场景组件，退出写盘并返回菜单后才恢复正式目录。

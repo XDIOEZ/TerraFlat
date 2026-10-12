@@ -1,5 +1,67 @@
 # 通用 Lua 测试场景
 
+## AI 快速测试流水线：EditMode → PlayMode
+
+**AI 只负责写清单和 Lua、启动一轮测试、读取报告并修复问题，不再逐步调用移动/攻击 MCP。**
+项目已安装 Unity Test Framework 1.4.5，使用两套独立测试程序集：
+`Assets/Tests/FlatWorld/EditMode/` 和 `Assets/Tests/FlatWorld/PlayMode/`。
+
+在**已经打开、未运行 PlayMode** 的 Unity Editor 内通过菜单
+`FlatWorld/测试/快速执行 EditMode 然后 PlayMode`，或调用 MCP 工具：
+
+**更推荐直接让 AI 用 HomePC2 执行一条命令，等报告一次性返回（不需要循环调用 MCP）：**
+
+```powershell
+python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json
+```
+
+Python 只写入 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 的本地请求，
+已打开的 Editor 自动接单、运行两个阶段，再将 PASS / FAIL 和报告路径返回给同一条命令。
+不额外启动 Unity、不反复调用玩法 MCP；退出码 0 为全部通过，1 为测试失败，
+2 为 Editor 拒绝（例如已在 PlayMode），3 为 Editor 未响应或超时。
+默认等待接单 45 秒、运行上限 900 秒，可用 `--editor-timeout` / `--run-timeout` 修改。
+
+也可以使用 MCP 工具：
+
+```text
+gameplay_test_pipeline(action="run", suitePath="GameplayTests/quick-suite.json")
+gameplay_test_pipeline(action="status")
+gameplay_test_pipeline(action="report")
+```
+
+MCP 的第一条命令只负责启动整个流水线，后续由 Unity 自己执行；`status` 返回阶段与进度，
+`report` 额外包含真实世界用例结果、Console 错误与调用堆栈。结果在：
+
+```text
+Library/FlatWorldGameplayTests/Pipeline/<runId>.json
+Library/FlatWorldGameplayTests/Pipeline/latest-run.txt
+```
+
+EditMode 阶段通过生产清单解析器校验严格 JSON、脚本文件、**Lua 沙箱预编译与步骤限制**、用例有效性和测试场景，
+由 Test Framework 自动执行 `FlatWorld.Gameplay.EditModeTests` 的所有测试。
+**只有至少一项成功，且没有任何失败、跳过或未确定的测试时，才允许进入 PlayMode**。
+PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene`、
+建立一个隔离世界，在该世界中顺序跑完所有启用的 Lua 用例；不用每步往返 MCP，
+也不重复启动 Unity Editor 进程。
+
+`quick-suite.json` 设置 `buildShowroom: false`，跳过全物品陈列，只准备玩家所在真实区块。
+这适合性能、温度和交互等专项快速回归。原 `test-suite.json` 默认保留全物品陈列，
+专项需要检查物品目录时仍可开启。两个阶段的失败会写入同一份流水线报告，
+包含独立的 EditMode / PlayMode 断言结果，PlayMode 会链接场景原有的每用例报告。
+
+### AI 修复循环
+
+1. AI 编写/更新一份 `GameplayTests/*.json` 清单及独立 Lua 文件，尽量保证用例前置条件可重复。
+2. 调用 `run`，之后用 `status` 或 `report` 取得最终状态，而非逐步遥控。
+3. 失败时根据最先失败的断言、日志/堆栈以及真实代码定位根因，修改后重新 `run` 原清单。
+4. 重复至所有阶段通过；如果环境故障、连续无进展或当前用户正在 PlayMode，则停止并明确汇报阻塞，不改动/暂停正在使用的运行现场。
+
+不要为了获得 PASS 而删除、禁用或放宽失败用例，也不要在未修改问题的情况下无限重复运行。
+每轮都会生成新的独立报告和存档，方便 AI 比较修复前后的错误。测试驱动程序并不具备自主改代码的能力；修复仍由外部 AI Agent 执行。
+
+**注意：** 两阶段范围是 FlatWorld 自己的 EditMode/PlayMode 测试程序集，
+不自动执行第三方 Package 的全部测试。用户正在 PlayMode 时启动命令会拒绝执行，不会擅自停止游戏。
+
 在 Unity 中打开 `Assets/3_Scenes/Development/GameplayTestScene.unity`，点击 Play 即可。场景复用正式 WorldManager 和建世界流程，自动加载完整资源、创建默认模板玩家，再建立平整的物品陈列厅，不需要操作主菜单。
 
 陈列读取本次资源会话的物品目录，每个非 Actor 物品 ID 放置一个，按网格排列并留出通道。机器、自然资源与普通物品分别走各自的正式生成入口。角色、动物和怪物不作为物品陈列。新增物品会自动进入下一次陈列，不需要手动维护列表。
@@ -35,6 +97,7 @@
 | --- | --- |
 | `schemaVersion` | 必填，当前为 `1` |
 | `continueAfterFailure` | 可省略，默认 `true`；某个用例失败后继续下一个。设为 `false` 时，后续启用用例记为 `skipped` |
+| `buildShowroom` | 可省略，默认 `true`；设为 `false` 时只准备玩家脚下区块，节省搭建全物品陈列的时间 |
 | `cases` | 必填，包含 1 至 64 个用例，至少启用一个 |
 | `id` | 每个用例必填，1 至 64 个英文字母、数字、下划线或连字符；忽略大小写时也不能重复，不能使用 Windows 保留文件名 |
 | `name` | 每个用例必填，非空显示名称 |

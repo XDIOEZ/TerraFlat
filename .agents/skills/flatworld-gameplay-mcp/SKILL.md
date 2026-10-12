@@ -49,6 +49,8 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 
 ## 扩展与诊断
 
+- AI 快速回归优先 `python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json`：一个 HomePC2 命令等待整轮完成，不用反复调用玩法 MCP；也可使用 `gameplay_test_pipeline(run/status/report)`。复用当前未进入 PlayMode 的 Editor，Test Framework 顺序跑完 `FlatWorld.Gameplay.EditModeTests`，全部通过后**仅启动一次** `FlatWorld.Gameplay.PlayModeTests`。PlayMode 内复用 `GameplayTestScene` 按 JSON + Lua 跑整份清单，quick-suite 跳过全陈列。总报告在 `Library/FlatWorldGameplayTests/Pipeline/`，详细错误见关联报告。失败后由 Agent 查看堆栈、修复、重新运行；不得盲目重试或禁用用例。
+
 - `capability_gap` 表示正常玩法缺少协议表达。动作实现 `IGameplayMcpAction` 并加 `GameplayMcpActionAttribute`，TypeCache 注册表生成能力清单；扩展复用生产接口/UI 事件，不引入任意代码执行或私有状态写入。
 - `gameplay_aiecs_debug(status/sample)` 只读 GM 模拟；`gameplay_chunk_render_debug(status/sample)` 只读区块阶段/心跳/耗时。采样 1～20 秒；区块采样在暂停、换世界、编译时标记无效，报告位于 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/`，菜单 `FlatWorld/调试/区块加载`。
 - 功能复现使用真实玩法链，协议不维护一次性测试动作。连接、超时和性能解释见 [MCP游戏测试经验.md](Exp/MCP游戏测试经验.md)，采集查询见 [采集查询.md](Exp/采集查询.md)。

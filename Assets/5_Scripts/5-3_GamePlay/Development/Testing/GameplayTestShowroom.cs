@@ -155,6 +155,30 @@ public sealed class GameplayTestShowroom : IDisposable
 
     #region 陈列目录与场地准备
 
+    /// <summary>专项回归只申请玩家所在区块，不花时间准备全部物品陈列。</summary>
+    public IEnumerator PrepareMinimal(Vector3 spawn, Action<string, string, bool, string> record)
+    {
+        if (disposed || !configured || building) throw new InvalidOperationException("最小测试地形状态无效。");
+        building = true;
+        ChunkMgr manager = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("测试区块管理器尚未就绪。");
+        ChunkGenerationProfileSnapshot profile = manager.ActiveGenerationProfile
+            ?? throw new InvalidOperationException("测试区块生成配置尚未就绪。");
+        RuntimeWorldAddress address = manager.ResolveWorldAddress((Vector2)spawn);
+        leases.Add(manager.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
+        int seed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
+        if (DimensionManager.Instance != null)
+            seed = DimensionManager.Instance.GetActiveGenerationSeed(seed);
+        Task<ChunkRuntime> task = manager.RequestChunkDataAsync(address, seed, profile, cancellation.Token);
+        float started = Time.realtimeSinceStartup;
+        while (!disposed && !task.IsCompleted && Time.realtimeSinceStartup - started < TerrainTimeoutSeconds)
+            yield return null;
+        IsTerrainReady = !disposed && task.Status == TaskStatus.RanToCompletion &&
+                         task.Result?.DataStatus == ChunkDataStatus.Ready && task.Result.Terrain != null;
+        record("showroom.terrain", address.ToString(), IsTerrainReady,
+            IsTerrainReady ? "玩家所在真实区块就绪。" :
+                task.IsFaulted ? task.Exception.GetBaseException().ToString() : "最小测试地形加载失败或超时。");
+    }
+
     public IEnumerator Build(PlanetData planet, Action<string, string, bool, string> record)
     {
         if (record == null) throw new ArgumentNullException(nameof(record));

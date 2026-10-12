@@ -170,6 +170,8 @@ public sealed class GameplayTestScene : MonoBehaviour
         Record("resources", "完整资源就绪", true, GameRes.ExistingInstance.LoadStatusText);
 
         Stage("load_suite");
+        testSuitePath = GameplayTestSelection.ResolveSuitePath(testSuitePath);
+        report.TestSuitePath = testSuitePath;
         string suiteJson = null;
         yield return LoadText(testSuitePath, text => suiteJson = text);
         suite = GameplayTestSuite.Parse(suiteJson);
@@ -216,10 +218,16 @@ public sealed class GameplayTestScene : MonoBehaviour
         Record("create_world", "世界和默认玩家就绪", true, planet.Name);
 
         Stage("showroom");
-        yield return showroom.Build(planet, Record);
+        if (suite.BuildShowroom)
+            yield return showroom.Build(planet, Record);
+        else
+            yield return showroom.PrepareMinimal(player.transform.position, Record);
         CopyShowroomReport();
-        Record("showroom", "陈列厅构建完成", showroom.IsComplete && showroom.IsTerrainReady,
-            $"已放置 {showroom.PlacedCount}/{showroom.ExpectedCount} 种物品。");
+        Record("showroom", suite.BuildShowroom ? "陈列厅构建完成" : "最小测试地形就绪",
+            showroom.IsTerrainReady && (!suite.BuildShowroom || showroom.IsComplete),
+            suite.BuildShowroom
+                ? $"已放置 {showroom.PlacedCount}/{showroom.ExpectedCount} 种物品。"
+                : "已跳过全物品陈列，只保留真实世界和玩家。");
 
         yield return RunCases();
         flowCompleted = true;
@@ -585,7 +593,10 @@ public sealed class GameplayTestScene : MonoBehaviour
         UnsubscribeLogs();
         saveScope?.Dispose();
         if (WriteReport())
+        {
+            GameplayTestSelection.WriteLastGameplayReport(report.ReportPath);
             Debug.Log($"[GameplayTest] 测试结束：{report.Status}，报告：{report.ReportPath}", this);
+        }
         else
             Debug.LogError("[GameplayTest] 测试已经结束，但最终 JSON 未能保存，请查看报告写入错误。", this);
     }

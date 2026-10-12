@@ -49,6 +49,16 @@ public sealed class GameplayTestLuaRunner : IDisposable
         this.record = record ?? throw new ArgumentNullException(nameof(record));
     }
 
+    /// <summary>EditMode 共用正式 Lua 解析和限额检查，但不获取玩家也不执行任何玩法动作。</summary>
+    public static void ValidateScript(string source, string chunkName)
+    {
+        string failure = null;
+        var validator = new GameplayTestLuaRunner(null, _ => true,
+            (_, _, success, message) => { if (!success) failure = message; });
+        if (!validator.TryReadCommands(source, chunkName, out _))
+            throw new InvalidOperationException("测试 Lua 预检失败：" + (failure ?? chunkName));
+    }
+
     #endregion
 
     #region Lua 有界流程编排

@@ -12,6 +12,7 @@ public sealed class GameplayTestSuite
     #region 清单数据
     [JsonProperty("schemaVersion", Required = Required.Always)] public int SchemaVersion = 1;
     [JsonProperty("continueAfterFailure")] public bool ContinueAfterFailure = true;
+    [JsonProperty("buildShowroom")] public bool BuildShowroom = true;
     [JsonProperty("cases", Required = Required.Always)] public List<GameplayTestCase> Cases = new();
     #endregion
 
@@ -24,9 +25,10 @@ public sealed class GameplayTestSuite
         JObject root = JObject.Load(reader, new JsonLoadSettings
             { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
         if (reader.Read()) throw new InvalidDataException("测试清单 JSON 包含多余内容。");
-        ValidateMembers(root, "测试清单", "schemaVersion", "continueAfterFailure", "cases");
+        ValidateMembers(root, "测试清单", "schemaVersion", "continueAfterFailure", "buildShowroom", "cases");
         RequireType(root, "schemaVersion", JTokenType.Integer);
         RequireType(root, "continueAfterFailure", JTokenType.Boolean, false);
+        RequireType(root, "buildShowroom", JTokenType.Boolean, false);
         RequireType(root, "cases", JTokenType.Array);
         if (((JArray)root["cases"]).Count < 1 || ((JArray)root["cases"]).Count > 64)
             throw new InvalidDataException("测试清单必须包含 1 至 64 个用例。");
