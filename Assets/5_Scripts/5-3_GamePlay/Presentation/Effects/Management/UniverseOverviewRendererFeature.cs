@@ -137,9 +137,9 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
             pass.ReleaseTexture();
             return;
         }
-        // 远景用独立显示比例，地表镜头与玩家逻辑坐标都保持原来的所有权。
+        // 过渡完成时只露出星球局部，继续拉远才逐步看到整颗星球。
         double halfHeight = anchor.RadiusMeters * config.entryPlanetRadiusMultiplier *
-                            Math.Max(1d, (double)size / config.startOrthographicSize);
+                            (Math.Max(config.startOrthographicSize, (double)size) / config.opaqueOrthographicSize);
         pass.Setup(session, anchor, halfHeight, opacity, config.minimumBodyPixels);
         renderer.EnqueuePass(pass);
     }

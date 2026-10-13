@@ -187,14 +187,14 @@ public sealed class WorldRenderingConfig
         public float entryPlanetRadiusMultiplier;
         public float minimumBodyPixels;
 
-        // 宇宙观察只放大显示比例，实际地表镜头停在过渡起点。
+        // 入场允许贴近星球局部，实际地表镜头仍停在过渡起点。
         public bool IsValid =>
             IsFinite(startOrthographicSize) && startOrthographicSize > 0f &&
             IsFinite(opaqueOrthographicSize) && opaqueOrthographicSize > startOrthographicSize &&
             IsFinite(maximumOrthographicSize) && maximumOrthographicSize >= opaqueOrthographicSize &&
             IsFinite(zoomMultiplier) && zoomMultiplier > 1f &&
             IsFinite(transitionSeconds) && transitionSeconds >= 0f &&
-            IsFinite(entryPlanetRadiusMultiplier) && entryPlanetRadiusMultiplier > 1f &&
+            IsFinite(entryPlanetRadiusMultiplier) && entryPlanetRadiusMultiplier > 0f &&
             IsFinite(minimumBodyPixels) && minimumBodyPixels >= 0f;
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

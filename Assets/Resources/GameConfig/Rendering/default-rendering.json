@@ -80,7 +80,7 @@
     "maximumOrthographicSize": 5000000.0,
     "zoomMultiplier": 1.25,
     "transitionSeconds": 1.0,
-    "entryPlanetRadiusMultiplier": 1.2,
+    "entryPlanetRadiusMultiplier": 0.3,
     "minimumBodyPixels": 1.25
   },
   "interactionOutline": {

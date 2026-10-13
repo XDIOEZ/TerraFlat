@@ -78,19 +78,36 @@ Shader "Hidden/FlatWorld/ZoomClouds"
                     return half4(0.0, 0.0, 0.0, 0.0);
 
                 float2 worldPosition = input.playerOffset + _CloudWorldCenter.xy;
-                float2 coarsePosition = (worldPosition - _CloudDriftOffset.xy) * _CloudShape.x;
-                float2 detailPosition = (worldPosition - _CloudDriftOffset.xy * 0.63) * _CloudShape.x * 2.17 + float2(7.1, 19.4);
-                // 两层不同尺度与速度的噪声都沿当地风向移动，云团和细雾形成流动层次。
-                float coarse = CloudNoise(coarsePosition) * 0.57 +
-                    CloudNoise(coarsePosition * 2.03 + 11.7) * 0.28 +
-                    CloudNoise(coarsePosition * 4.09 + 23.1) * 0.15;
-                float detail = CloudNoise(detailPosition) * 0.65 + CloudNoise(detailPosition * 2.07 + 3.9) * 0.35;
-                float cloudShape = smoothstep(0.3, 0.7, coarse * 0.78 + detail * 0.22);
+                float2 coarsePosition = (worldPosition - _CloudDriftOffset.xy) * _CloudShape.x * float2(0.42, 1.25);
+                // 错行的扁长云团始终缩在各自区域内，云与云之间保留真正透明的空隙。
+                coarsePosition.x += frac(floor(coarsePosition.y) * 0.5);
+                float2 cell = floor(coarsePosition);
+                float seed = CloudHash(cell + float2(2.3, 13.7));
+                if (seed < 0.2)
+                    return half4(0.0, 0.0, 0.0, 0.0);
+
+                float2 center = float2(
+                    0.5 + (CloudHash(cell + float2(1.7, 7.3)) - 0.5) * 0.1,
+                    0.5 + (CloudHash(cell + float2(5.2, 2.8)) - 0.5) * 0.3);
+                float2 cloudSize = float2(
+                    0.32 + CloudHash(cell + float2(8.1, 4.7)) * 0.09,
+                    0.17 + seed * 0.07);
+                float2 cloudLocal = (frac(coarsePosition) - center) / cloudSize;
+                float shapeDistance = dot(cloudLocal, cloudLocal);
+                if (shapeDistance >= 1.0)
+                    return half4(0.0, 0.0, 0.0, 0.0);
+
+                float2 detailPosition = (worldPosition - _CloudDriftOffset.xy * 0.63) *
+                    _CloudShape.x * float2(2.17, 4.09) + float2(7.1, 19.4);
+                // 两层随风噪声只修饰云边和阴影，不会随着拉远把透明间隙填成白雾。
+                float coarse = CloudNoise(coarsePosition * float2(4.1, 2.7) + 11.7);
+                float detail = CloudNoise(detailPosition);
+                float edgeNoise = coarse * 0.75 + detail * 0.25;
+                float cloudShape = 1.0 - smoothstep(0.48 + edgeNoise * 0.14,
+                    0.72 + edgeNoise * 0.28, shapeDistance);
                 float strength = saturate(_CloudRadiiStrength.z);
-                // 高视野最浓时远处不留透明孔，继续拉远也只能看清玩家附近。
-                float density = lerp(cloudShape, 1.0, strength * strength * radial);
-                float alpha = strength * radial * density;
-                half3 cloudColor = _CloudColor.rgb * (1.0 - (1.0 - cloudShape) * _CloudShape.y);
+                float alpha = strength * radial * cloudShape;
+                half3 cloudColor = _CloudColor.rgb * (1.0 - (1.0 - coarse * 0.6 - detail * 0.4) * _CloudShape.y);
                 return half4(cloudColor, saturate(alpha));
             }
             ENDHLSL
