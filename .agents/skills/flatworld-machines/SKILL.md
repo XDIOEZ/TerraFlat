@@ -64,6 +64,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 - 主体/运动部件按脚点 Y 行合批，MechanicalDepthVisual 只负责交互/灯光，HP/库存不在代理。MechanicalShaft 连接层在机械主体下方；端口、铁环、连接短管由独立层生成，主体贴图只画设备本体。
 - Pivot/Renderer 局部变换供预览、落地与阴影共用，逻辑占格不随贴图偏移。旋转/往复部件保持同画布/PPU/Pivot，变速先积旧相位再改角速度；太阳/接触阴影独立 BRG 管理。交互目标经 SpatialInteractionRegistry 注册同一数据目标。
+- 电池世界三格灯由 `BatteryChargePresentation` 共用 33%/66%/99% 门槛；`BatteryIndicator.Cells` 为原图左上原点的像素矩形。地面 `MechanicalDepthVisual.Battery` 合入主体脚点行，船上 `ShipPieceView.Battery` 跟随主体变换；节点状态通知只在档位变化时更新，未亮格保留底图，精确数值仍看面板。
 - 机器面板非模态；电池读数、电池形竖向填充和居中百分比使用 0.2 秒非缩放刷新，关闭停止，文本仅在变化时更新；比例读取节点 `ElectricalStoredJoules/CapacityJoules`，未接电网仍显示，UI 不修改储能。灯光跟随真实燃烧/燃料，不跟加工进度；声明 Mod_CombustionVisual 的设施由 MechanicalDepthVisual 读取同一燃烧状态并复用粒子，主体与粒子共享脚点行排序，停用/拆除清空。
 - ConveyorPath 同时决定运输/推动/显示；ConveyorMode 0自动、1~12手动，自动传播优先手动段。DroppedItemRuntime/TransportItemBacked 按局部索引每轮搬一次，末端经 ContainerTransferService 按成功数量扣地面物。
 - MachineLogicRegistry 返回可乱序释放租约，关键托管入口由 link.xml 保留。C# MOD 当前仅桌面 Mono，已启用 MOD 启动加载，程序集仍须清单声明；Initialize 注册、ContentReady 用内容、Dispose 撤本 MOD 资源，IL2CPP 拒绝托管 DLL。

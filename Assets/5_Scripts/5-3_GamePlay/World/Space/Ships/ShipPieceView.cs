@@ -98,12 +98,14 @@ namespace FlatWorld.Spaceflight
                     session.TrackShipMachineVisualTopology(node);
                     SynchronizeTankVisual(ship, node);
                     BindCultivatorVisual(node);
+                    BindBatteryChargeVisual(node);
                     BindElectricLightVisual(node);
                     SynchronizePipeVisual(node);
                 }
             else
             {
                 BindCultivatorVisual(null);
+                BindBatteryChargeVisual(null);
                 BindElectricLightVisual(null);
             }
             // 只登记真正能交互的船体设备，避免地板和墙壁进入每帧目标查询。
@@ -235,6 +237,7 @@ namespace FlatWorld.Spaceflight
             SpatialInteractionRegistry.Unregister(this); InteractionHighlightChanged = null;
             ReleaseDoorVisual();
             ReleaseCultivatorVisual();
+            ReleaseBatteryChargeVisual();
             ReleaseElectricLightVisual();
         }
         #endregion

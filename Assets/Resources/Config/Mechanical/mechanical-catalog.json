@@ -199,6 +199,13 @@
       "Id": "Battery_Basic",
       "Kind": "electrical_battery",
       "Ports": "none",
+      "BatteryIndicator": {
+        "Cells": [
+          { "x": 527, "y": 373, "z": 43, "w": 37 },
+          { "x": 605, "y": 373, "z": 44, "w": 37 },
+          { "x": 685, "y": 373, "z": 42, "w": 37 }
+        ]
+      },
       "Electrical": {
         "Role": "battery",
         "NominalVoltage": 120,

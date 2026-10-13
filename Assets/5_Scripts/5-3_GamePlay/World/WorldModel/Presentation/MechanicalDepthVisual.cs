@@ -96,6 +96,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         ReleaseFacilityCombustion();
         ReleaseLighting();
         UnsubscribeCultivator();
+        UnsubscribeBattery();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
         foreach (PartVisual part in facilityParts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -109,6 +110,8 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(true);
         SubscribeCultivator();
         if (cultivatorEntity != null) RefreshCultivatorSprites();
+        SubscribeBattery();
+        if (batteryEntity != null) RefreshBatterySprites(true);
         RegisterInteraction();
         foreach (PartVisual part in parts) if (part != null) Submit(part);
         foreach (PartVisual part in facilityParts) if (part != null) Submit(part);
@@ -120,6 +123,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         if (poweredEmission != null) poweredEmission.enabled = false;
         if (poweredLightEntity != null && facilityLight != null) facilityLight.enabled = false;
         UnsubscribeCultivator();
+        UnsubscribeBattery();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
         foreach (PartVisual part in facilityParts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -129,6 +133,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         ReleaseFacilityCombustion();
         ReleaseLighting();
         UnsubscribeCultivator();
+        UnsubscribeBattery();
         UnregisterInteraction();
         owner?.RemoveMachineDepthEntity(entityId);
         owner = null;
