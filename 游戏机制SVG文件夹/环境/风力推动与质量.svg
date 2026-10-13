@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="620" viewBox="0 0 1040 620">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#142333"/><stop offset="1" stop-color="#0c1420"/></linearGradient>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#8ea6bc" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="1040" height="620" rx="24" fill="url(#bg)"/>
+  <g font-family="Microsoft YaHei, sans-serif" fill="#eaf2fa">
+    <text x="46" y="60" font-size="29" font-weight="700">风推动：越轻越快，最大 0.5 单位 / 秒</text>
+    <text x="46" y="96" font-size="17" fill="#9cb1c6">规则示意 · 下面的曲线表示最大风力时的速度</text>
+    <rect x="46" y="122" width="948" height="64" rx="12" fill="#233648"/>
+    <text x="67" y="162" font-size="21">B = 目录中最轻的质量　 A = 目录中最重的质量　 C = (A + B) / 2</text>
+    <rect x="136" y="233" width="420" height="235" fill="#163f40" opacity=".65"/>
+    <rect x="556" y="233" width="362" height="235" fill="#342a39" opacity=".7"/>
+    <g stroke="#33495e" stroke-width="1">
+      <path d="M136 258H918M136 353H918M136 448H918"/>
+    </g>
+    <path d="M136 225V470M122 448H934" fill="none" stroke="#8ea6bc" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M136 258L556 448H918" fill="none" stroke="#64e0c4" stroke-width="5" stroke-linecap="round"/>
+    <path d="M556 230V448" stroke="#cfa0c9" stroke-width="2" stroke-dasharray="6 6"/>
+    <g fill="#eaf2fa" font-size="17">
+      <text x="70" y="264">0.5</text><text x="70" y="359">0.25</text><text x="88" y="454">0</text>
+      <text x="62" y="218" fill="#9cb1c6">速度</text>
+      <text x="910" y="500" fill="#9cb1c6">质量 →</text>
+      <text x="128" y="492">B</text><text x="545" y="492">C</text><text x="908" y="492">A</text>
+      <text x="192" y="270" fill="#a7eddf">可被吹动：越接近 C 越慢</text>
+      <text x="644" y="312" fill="#dfb6d5">达到 C 或更重</text>
+      <text x="672" y="346" font-size="23" fill="#dfb6d5">推动速度 = 0</text>
+    </g>
+    <circle cx="136" cy="258" r="6" fill="#64e0c4"/><circle cx="556" cy="448" r="6" fill="#64e0c4"/>
+    <text x="46" y="552" font-size="18">满风速度 = 0.5 × clamp((C − 当前总质量) / (C − B), 0, 1)</text>
+    <text x="46" y="588" font-size="16" fill="#9cb1c6">保留 8 级风起推；较弱的风按比例减速。固定建筑与扎根资源保持固定。</text>
+  </g>
+</svg>
