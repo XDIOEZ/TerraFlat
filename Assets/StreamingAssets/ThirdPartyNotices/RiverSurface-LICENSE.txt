@@ -1,0 +1,76 @@
+River surface rendering adaptations
+
+MochiesCode/Mochies-Unity-Shaders
+Source: https://github.com/MochiesCode/Mochies-Unity-Shaders
+Revision: 1ee6231f5af6f2266ec69277d21bc620b7170642
+Original: Mochie/Water Shader/WaterFunctions.cginc (FlowUV)
+Original: Mochie/Water Shader/WaterInput.cginc (flow normal and foam sampling)
+Adaptation: Assets/9_Shaders/Shader/RiverSurface.hlsl
+FlatWorld removes the fixed UV jump, supplies authoritative corner velocities,
+and uses its own packed derivative/glint/foam data texture with URP 2D lighting.
+
+MIT License
+
+Copyright (c) 2020 MochiesCode
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+Tiled Directional Flow
+Source: https://github.com/Scrawk/Tiled-Directional-Flow
+Revision: 386892cc3f6e21b4694b2777a9e7e66d47a3dd67
+Original: Assets/TiledDirectionalFlow/Shaders/TiledDirectinalFlow.shader
+Adaptation: four local corner directions and normal-energy compensation.
+Credit: Frans van Hoesel, University of Groningen, 2010; Justin, 2017.
+FlatWorld anchors samples at shared world corners and rotates slopes back to world space.
+
+MIT License
+
+Copyright (c) 2017 Justin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+//////////////////////////////////////////////////////////////////////////////////
+//                     This software is Creditware:
+//
+// you can do whatever you want with this shader except claiming rights
+// you may sell it, but you cannot prevent others from selling it, giving it away
+// or use it as they please.
+//
+// Having said that, it would be nice if you gave me some credit for it, when you
+// use it.
+//
+//                     Frans van Hoesel, (c) 2010
+//////////////////////////////////////////////////////////////////////////////////

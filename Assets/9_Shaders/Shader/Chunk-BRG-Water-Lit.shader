@@ -38,6 +38,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         _CausticStrength("焦散强度", Range(0, 1)) = 0.025
         _FoamColor("泡沫颜色", Color) = (0.75, 0.87, 1, 1)
         _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.12
+        [Header(River Current)]
+        [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
+        _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
         _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 4.2
@@ -78,6 +81,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             float4 _WaveDirection;
             float _FlowSpeed;
             float _FlowCycleSeconds;
+            float _RiverFoamCoverage;
             float _TideCyclesPerDay;
             float _SurfaceTint;
             float _SwellScale;
@@ -126,6 +130,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             UNITY_DOTS_INSTANCED_PROP(float4, _WaveDirection)
             UNITY_DOTS_INSTANCED_PROP(float, _FlowSpeed)
             UNITY_DOTS_INSTANCED_PROP(float, _FlowCycleSeconds)
+            UNITY_DOTS_INSTANCED_PROP(float, _RiverFoamCoverage)
             UNITY_DOTS_INSTANCED_PROP(float, _TideCyclesPerDay)
             UNITY_DOTS_INSTANCED_PROP(float, _SurfaceTint)
             UNITY_DOTS_INSTANCED_PROP(float, _SwellScale)
@@ -172,6 +177,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #define _WaveDirection UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _WaveDirection)
         #define _FlowSpeed UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _FlowSpeed)
         #define _FlowCycleSeconds UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _FlowCycleSeconds)
+        #define _RiverFoamCoverage UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _RiverFoamCoverage)
         #define _TideCyclesPerDay UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _TideCyclesPerDay)
         #define _SurfaceTint UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _SurfaceTint)
         #define _SwellScale UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _SwellScale)
@@ -207,12 +213,19 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
+        #include "RiverSurface.hlsl"
+
         // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
+            float2 positionDx = ddx(positionWS);
+            float2 positionDy = ddy(positionWS);
+            UNITY_BRANCH
+            if (abs(data.transform0.w - 1.0) < 0.25 || abs(data.transform0.w - 3.0) < 0.25)
+                return CalculateRiverSurface(positionWS, screenUV, depth, data.flowX, data.flowY, motion, positionDx, positionDy);
             return CalculateWaterSurface(positionWS, screenUV, depth, motion);
         }
 

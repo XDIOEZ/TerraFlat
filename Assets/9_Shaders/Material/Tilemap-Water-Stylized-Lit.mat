@@ -24,6 +24,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _RiverPatternTex:
+        m_Texture: {fileID: 2800000, guid: 179922a5644a4ee583302def9ba54d54, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _AlphaTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -38,6 +42,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _RiverFoamCoverage: 0.18
     - _FlowSpeed: 1
     - _FlowCycleSeconds: 8
     - _CausticStrength: 0.12

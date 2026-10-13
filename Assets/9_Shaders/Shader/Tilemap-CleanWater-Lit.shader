@@ -42,6 +42,9 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _FoamColor("泡沫颜色", Color) = (0.75, 0.87, 1, 0.65)
         _WhitecapStrength("浪峰泡沫", Range(0, 1)) = 0.025
 
+        [Header(River Current)]
+        [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
+        _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (1, 0.9, 0.72, 1)
         _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 3.4

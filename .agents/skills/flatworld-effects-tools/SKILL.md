@@ -58,6 +58,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - WaterSurfaceCommon.hlsl 共用深度/岸线/月光，包装 UsePass Shader 暴露同名新增材质属性；月光在 Light2D 后合成，月亮出现与月相亮度为独立参数。
 - 写实水色连续、风格化十档，两种路径 Alpha 都随连续深度 0.60→0.80。ChunkEnvironmentRenderer 默认排除有液格，抽干恢复地表覆盖；岩浆用 LavaSurfaceCommon 与 LavaMode，独立 LavaPatternTex 承载形态。
 - `WaterSurfaceFlow.hlsl` 统一 Mesh/BRG 的完整水面输入：FlowX/Y 为河流/实验液流四角实际速度，天然海洋为风向；仅 kind=2 使用海面规则，kind=3 顺流。双相平流移植自 unity-voronoi-water（MIT-0，许可在 StreamingAssets/ThirdPartyNotices），用世界坐标与二维噪声交接，保留流速大小。
+- 河流/实验液流（kind=1/3）走 `RiverSurface.hlsl` 独立纹理法线与稀疏泡沫分支，海洋/湖泊保留原效果；Mochie FlowUV 配合 Scrawk 共享格角局部方向混合，禁止恢复噪声中值闭环描边。采样用未量化世界坐标的显式梯度，避免格边误选 Mipmap；泡沫先按源纹理阈值、再混合透明度。
+- `RiverPattern_RGBA` 为线性、Repeat、Mipmap、不压缩的数据图（RG斜率/B碎光/A泡沫），由 `Tools/Rendering/generate_river_surface_pattern.py` 生成；来源和许可见 `RiverSurface-LICENSE.txt`，`_RiverFoamCoverage` 只调河流泡沫。
 - `_FlowSpeed` 只控制水流平移倍率，`_WaveSpeed/_WaveDirection` 控制独立波浪传播（方向为零跟随水流/风向），`_FlowCycleSeconds` 控制交接周期；湖泊无单向漂移但保留细波/反光。潮汐由 `_GlobalGameDay/_TideCyclesPerDay` 独立往返，海洋风浪仍读取 `_OceanWaveTime/_OceanWaveFactors`；完整波光、法线、焦散与岸沫参数在各水体均生效。
 - WaterVisualSettings 更换 Water/CaveWater 共享材质，保留水深 MPB/地形实例；风格化用 FLATWORLD_WATER_STYLIZED，两种正式材质均由 Prefab 引用。
 - ActorWaterCommon.hlsl 共用于 Sprite-Lit-Master/AIECS；旋转附属物共享角色世界水线坐标。视觉读取 Mod_TileEffectReceiver 的有效淹没，独立权威 LiquidDepth 不被漂浮改写；边缘邻格容错仅用于交互，液体接触独立于 Ground，液体身份变化才 Exit/Enter。

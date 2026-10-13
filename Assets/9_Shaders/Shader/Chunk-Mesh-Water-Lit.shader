@@ -39,6 +39,9 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         _CausticStrength("焦散强度", Range(0, 1)) = 0.025
         _FoamColor("泡沫颜色", Color) = (0.75, 0.87, 1, 1)
         _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.12
+        [Header(River Current)]
+        [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
+        _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
         _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 4.2
@@ -102,6 +105,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float4 _WaveDirection;
             float _FlowSpeed;
             float _FlowCycleSeconds;
+            float _RiverFoamCoverage;
             float4 _LavaCrustColor;
             float4 _LavaMoltenColor;
             float4 _LavaHotColor;
@@ -167,11 +171,18 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
+        #include "RiverSurface.hlsl"
+
         // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth, ChunkMeshWaterData data)
         {
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
+            float2 positionDx = ddx(positionWS);
+            float2 positionDy = ddy(positionWS);
+            UNITY_BRANCH
+            if (abs(data.waterKind - 1.0) < 0.25 || abs(data.waterKind - 3.0) < 0.25)
+                return CalculateRiverSurface(positionWS, screenUV, depth, data.flowX, data.flowY, motion, positionDx, positionDy);
             return CalculateWaterSurface(positionWS, screenUV, depth, motion);
         }
 
