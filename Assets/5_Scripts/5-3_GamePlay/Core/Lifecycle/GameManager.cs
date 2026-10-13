@@ -866,6 +866,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             yield return null;
         }
 
+        // Single 加载会卸载计算场景，保留权威位置与速度并在下个固定步重建物理代理。
+        FlatWorld.Spaceflight.SpaceSession.Current?.ResetSpacePhysics();
+
         int waitFrames = Mathf.Max(0, extraWaitFrames);
         for (int i = 0; i < waitFrames; i++)
         {

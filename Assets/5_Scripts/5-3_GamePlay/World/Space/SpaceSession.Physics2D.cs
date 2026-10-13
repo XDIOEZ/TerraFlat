@@ -9,7 +9,7 @@ namespace FlatWorld.Spaceflight
         #region 太空物理接入与业务提交
         private SpacePhysicsWorld spacePhysics;
 
-        private void ResetSpacePhysics()
+        internal void ResetSpacePhysics()
         {
             spacePhysics?.Dispose();
             spacePhysics = null;

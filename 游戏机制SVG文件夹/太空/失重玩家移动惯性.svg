@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="620" viewBox="0 0 1120 620" role="img" aria-labelledby="title desc">
+  <title id="title">失重玩家也能移动：起步慢，松手漂，反向慢慢刹</title>
+  <desc id="desc">示意玩家按右移动逐渐加速、松键保持漂移、按左逐渐刹车再反向。有人工重力时恢复普通步行。曲线只解释规则，不表示实际游戏测量。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#66d9ed"/></marker>
+    <style>
+      text { font-family: 'Microsoft YaHei', 'Noto Sans SC', sans-serif; }
+      .label { fill:#e7eef9; font-size:20px; }
+      .small { fill:#abb9ce; font-size:17px; }
+      .heading { fill:#ffffff; font-size:24px; font-weight:700; }
+    </style>
+  </defs>
+  <rect width="1120" height="620" rx="22" fill="#101a2c"/>
+  <text x="46" y="58" fill="#ffffff" font-size="30" font-weight="700">没有重力，也能用 WASD 移动</text>
+  <text x="46" y="91" class="small">按键改变速度；惯性保留已有运动。人工重力只负责切换普通步行。</text>
+
+  <g transform="translate(46 123)">
+    <rect width="326" height="145" rx="14" fill="#1b3049"/>
+    <text x="22" y="36" class="heading">① 按住 D：慢慢起步</text>
+    <text x="22" y="70" class="label">从静止逐渐加速向右</text>
+    <text x="22" y="105" class="small">不会一按就达到最高速度</text>
+  </g>
+  <g transform="translate(397 123)">
+    <rect width="326" height="145" rx="14" fill="#1b3049"/>
+    <text x="22" y="36" class="heading">② 松开：继续漂</text>
+    <text x="22" y="70" class="label">保留已有速度和方向</text>
+    <text x="22" y="105" class="small">松手不会自动刹停</text>
+  </g>
+  <g transform="translate(748 123)">
+    <rect width="326" height="145" rx="14" fill="#1b3049"/>
+    <text x="22" y="36" class="heading">③ 按住 A：渐进刹车</text>
+    <text x="22" y="70" class="label">先减速，停住后再向左</text>
+    <text x="22" y="105" class="small">不会立刻停下或立刻掉头</text>
+  </g>
+
+  <text x="46" y="307" class="label">速度变化示意</text>
+  <text x="232" y="307" class="small">（忽略外力和碰撞，用于解释规则）</text>
+  <rect x="106" y="328" width="306" height="166" fill="#173143"/>
+  <rect x="412" y="328" width="306" height="166" fill="#1b2c3e"/>
+  <rect x="718" y="328" width="306" height="166" fill="#302c3b"/>
+  <path d="M106 346 V494 M106 458 H1024" fill="none" stroke="#60718a" stroke-width="2"/>
+  <text x="51" y="382" class="small">向右</text>
+  <text x="78" y="464" class="small">0</text>
+  <text x="51" y="494" class="small">向左</text>
+  <path d="M106 458 L412 362 H718 L922 458 L992 491" fill="none" stroke="#66d9ed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle r="7" fill="#fff">
+    <animateMotion dur="8s" repeatCount="indefinite" path="M106 458 L412 362 H718 L922 458 L992 491"/>
+  </circle>
+  <text x="205" y="524" class="small">持续按右</text>
+  <text x="513" y="524" class="small">松开按键</text>
+  <text x="785" y="524" class="small">持续按左</text>
+  <path d="M1042 458 H1082" stroke="#66d9ed" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="1029" y="492" class="small">时间</text>
+
+  <rect x="46" y="548" width="1028" height="46" rx="10" fill="#253a42"/>
+  <text x="66" y="578" class="label">有人工重力：普通步行　｜　失去重力：进入惯性移动　｜　离船：继承船体运动速度</text>
+</svg>
