@@ -41,6 +41,16 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         [Header(River Current)]
         [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
         _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
+        [Header(Unity Stylized Water)]
+        [NoScaleOffset] _UnityWaterPatternTex("四向波纹RGBA图(RG法线/B泡沫/A浅水亮度)", 2D) = "gray" {}
+        [NoScaleOffset] _UnityWaterDetailTex("碎光法线图", 2D) = "gray" {}
+        _UnityNormalScale("四向波纹尺度", Range(0.1, 16)) = 4
+        _UnityFoamScale("白沫尺度", Range(0.1, 16)) = 5.2
+        _UnitySparkleScale("碎光尺度", Range(0.1, 4)) = 0.7
+        _UnitySparkleStrength("碎光强度", Range(0, 2)) = 0.8
+        _UnitySparkleExponent("碎光集中度", Range(4, 1024)) = 256
+        _UnityDepthDensity("深浅颜色密度", Range(0.1, 8)) = 2.6
+        _UnitySparkleColor("碎光颜色", Color) = (0.65, 1, 0.88, 1)
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
         _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 4.2
@@ -109,6 +119,13 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             float _ShoreStrength;
             float _ShoreFoamStrength;
             float _FoamSpeed;
+            float _UnityNormalScale;
+            float _UnityFoamScale;
+            float _UnitySparkleScale;
+            float _UnitySparkleStrength;
+            float _UnitySparkleExponent;
+            float _UnityDepthDensity;
+            float4 _UnitySparkleColor;
         CBUFFER_END
         #if defined(UNITY_DOTS_INSTANCING_ENABLED)
         UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
@@ -158,6 +175,13 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             UNITY_DOTS_INSTANCED_PROP(float, _ShoreStrength)
             UNITY_DOTS_INSTANCED_PROP(float, _ShoreFoamStrength)
             UNITY_DOTS_INSTANCED_PROP(float, _FoamSpeed)
+            UNITY_DOTS_INSTANCED_PROP(float, _UnityNormalScale)
+            UNITY_DOTS_INSTANCED_PROP(float, _UnityFoamScale)
+            UNITY_DOTS_INSTANCED_PROP(float, _UnitySparkleScale)
+            UNITY_DOTS_INSTANCED_PROP(float, _UnitySparkleStrength)
+            UNITY_DOTS_INSTANCED_PROP(float, _UnitySparkleExponent)
+            UNITY_DOTS_INSTANCED_PROP(float, _UnityDepthDensity)
+            UNITY_DOTS_INSTANCED_PROP(float4, _UnitySparkleColor)
         UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
         #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
         #define _RendererColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RendererColor)
@@ -205,15 +229,26 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #define _ShoreStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ShoreStrength)
         #define _ShoreFoamStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _ShoreFoamStrength)
         #define _FoamSpeed UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _FoamSpeed)
+        #define _UnityNormalScale UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _UnityNormalScale)
+        #define _UnityFoamScale UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _UnityFoamScale)
+        #define _UnitySparkleScale UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _UnitySparkleScale)
+        #define _UnitySparkleStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _UnitySparkleStrength)
+        #define _UnitySparkleExponent UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _UnitySparkleExponent)
+        #define _UnityDepthDensity UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _UnityDepthDensity)
+        #define _UnitySparkleColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _UnitySparkleColor)
         #endif
         #include "WaterSurfaceCommon.hlsl"
-        #if defined(FLATWORLD_WATER_STYLIZED)
+        #if defined(FLATWORLD_WATER_UNITY_STYLIZED)
+            #include "UnityStylizedWaterSurface.hlsl"
+        #elif defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
         #else
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
+        #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
         #include "RiverSurface.hlsl"
+        #endif
 
         // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
@@ -221,12 +256,17 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
+            WaterSurfaceData surface = (WaterSurfaceData)0;
+            #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
             float2 positionDx = ddx(positionWS);
             float2 positionDy = ddy(positionWS);
             UNITY_BRANCH
             if (abs(data.transform0.w - 1.0) < 0.25 || abs(data.transform0.w - 3.0) < 0.25)
-                return CalculateRiverSurface(positionWS, screenUV, depth, data.flowX, data.flowY, motion, positionDx, positionDy);
-            return CalculateWaterSurface(positionWS, screenUV, depth, motion);
+                surface = CalculateRiverSurface(positionWS, screenUV, depth, data.flowX, data.flowY, motion, positionDx, positionDy);
+            else
+            #endif
+                surface = CalculateWaterSurface(positionWS, screenUV, depth, motion);
+            return surface;
         }
 
         half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS)
@@ -254,7 +294,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -331,7 +371,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 shore:TEXCOORD1; half4 depth:TEXCOORD2; float2 positionWS:TEXCOORD3; float2 screenUV:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             Varyings Vert(Attributes input)

@@ -14,6 +14,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
 
     [SerializeField] private Button stylizedButton;
     [SerializeField] private Button realisticButton;
+    [SerializeField] private Button unityStylizedButton;
     [SerializeField] private Button resetButton;
     [SerializeField] private Toggle occlusionToggle;
     [SerializeField] private Toggle sunShadowToggle;
@@ -44,7 +45,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>页面首次显示时解析设置契约，保留正式 Prefab 的序列化控件引用。</summary>
     private void Awake()
     {
-        if (stylizedButton == null || realisticButton == null || resetButton == null ||
+        if (stylizedButton == null || realisticButton == null || unityStylizedButton == null || resetButton == null ||
             occlusionToggle == null || sunShadowToggle == null || sunShadowBlurToggle == null ||
             sunShadowBlurSlider == null || sunShadowBlurValueText == null || groundElevationToggle == null ||
             groundElevationWidthSlider == null || groundElevationWidthValueText == null ||
@@ -85,6 +86,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         occlusionToggle.onValueChanged.AddListener(SetOcclusion);
         stylizedButton.onClick.AddListener(SelectStylized);
         realisticButton.onClick.AddListener(SelectRealistic);
+        unityStylizedButton.onClick.AddListener(SelectUnityStylized);
         resetButton.onClick.AddListener(ResetToDefaults);
     }
 
@@ -136,6 +138,9 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>通过设置契约选用写实水面。</summary>
     private void SelectRealistic() => SelectStyle(1);
 
+    /// <summary>通过设置契约选用 Unity 风格水面。</summary>
+    private void SelectUnityStylized() => SelectStyle((int)WaterVisualStyle.UnityStylized);
+
     /// <summary>提交风格并回填权威选中状态。</summary>
     private void SelectStyle(int index)
     {
@@ -154,7 +159,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         InteractionOutlineSettings.SettingsProvider.ResetToDefaults();
     }
 
-    /// <summary>用选中底色标识当前风格，两种按钮始终可导航和操作。</summary>
+    /// <summary>用选中底色标识当前风格，三个按钮始终可导航和操作。</summary>
     private void RefreshView()
     {
         occlusionToggle.SetIsOnWithoutNotify(PlayerOcclusionShaderGlobals.Enabled);
@@ -175,6 +180,8 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         stylizedButton.targetGraphic.color = styleSetting.SelectedIndex == 0
             ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
         realisticButton.targetGraphic.color = styleSetting.SelectedIndex == 1
+            ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
+        unityStylizedButton.targetGraphic.color = styleSetting.SelectedIndex == (int)WaterVisualStyle.UnityStylized
             ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
     }
 
@@ -198,6 +205,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
             interactionOutlineThicknessSlider.onValueChanged.RemoveListener(SetInteractionOutlineThickness);
         stylizedButton.onClick.RemoveListener(SelectStylized);
         realisticButton.onClick.RemoveListener(SelectRealistic);
+        unityStylizedButton.onClick.RemoveListener(SelectUnityStylized);
         resetButton.onClick.RemoveListener(ResetToDefaults);
     }
 

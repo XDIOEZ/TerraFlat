@@ -45,6 +45,16 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         [Header(River Current)]
         [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
         _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
+        [Header(Unity Stylized Water)]
+        [NoScaleOffset] _UnityWaterPatternTex("四向波纹RGBA图(RG法线/B泡沫/A浅水亮度)", 2D) = "gray" {}
+        [NoScaleOffset] _UnityWaterDetailTex("碎光法线图", 2D) = "gray" {}
+        _UnityNormalScale("四向波纹尺度", Range(0.1, 16)) = 4
+        _UnityFoamScale("白沫尺度", Range(0.1, 16)) = 5.2
+        _UnitySparkleScale("碎光尺度", Range(0.1, 4)) = 0.7
+        _UnitySparkleStrength("碎光强度", Range(0, 2)) = 0.8
+        _UnitySparkleExponent("碎光集中度", Range(4, 1024)) = 256
+        _UnityDepthDensity("深浅颜色密度", Range(0.1, 8)) = 2.6
+        _UnitySparkleColor("碎光颜色", Color) = (0.65, 1, 0.88, 1)
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
         _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 4.2
@@ -70,7 +80,9 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
 
     HLSLINCLUDE
         #include "WaterSurfaceCommon.hlsl"
-        #if defined(FLATWORLD_WATER_STYLIZED)
+        #if defined(FLATWORLD_WATER_UNITY_STYLIZED)
+            #include "UnityStylizedWaterSurface.hlsl"
+        #elif defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
         #else
             #include "WaterSurfaceRealistic.hlsl"
@@ -99,7 +111,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
             #pragma multi_compile_instancing
-            #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -200,7 +212,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
             #pragma multi_compile_instancing
-            #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
 
             struct Attributes
             {

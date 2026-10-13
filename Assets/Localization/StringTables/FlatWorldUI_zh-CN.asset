@@ -3293,6 +3293,14 @@ MonoBehaviour:
     m_Localized: "星体不会吸引或截停飞船；只有点击降落才进入地表。"
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740177
+    m_Localized: "Unity \u98ce\u683c\u6c34"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740178
+    m_Localized: "Unity \u98ce\u683c\u6c34\uff1a\u67d4\u548c\u6c34\u8272\u3001\u987a\u6d41\u6ce2\u7eb9\u4e0e\u5cb8\u8fb9\u6ce1\u6cab\u3002"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

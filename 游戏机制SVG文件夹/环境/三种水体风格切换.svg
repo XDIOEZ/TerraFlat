@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="720" viewBox="0 0 1120 720" role="img" aria-labelledby="title description">
+  <title id="title">三种水体风格切换</title>
+  <desc id="description">水体设置新增 Unity 风格水。风格化、写实和 Unity 风格水共用河流流向、河流流速、真实水深及海风数据。本图是原理和设置示意，新增选项属于本轮接入方案，不代表游戏实际画面。</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#142638"/><stop offset="1" stop-color="#0b1521"/></linearGradient>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#91adc6" stroke-width="1.6"/></marker>
+    <style>
+      text {font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #eef5fd;}
+      .muted {fill: #a9bfd3;}
+      .heading {font-size: 25px; font-weight: 700;}
+      .body {font-size: 18px;}
+      .small {font-size: 16px;}
+      .connector {fill: none; stroke: #91adc6; stroke-width: 2;}
+    </style>
+  </defs>
+  <rect width="1120" height="720" rx="24" fill="url(#background)"/>
+  <text x="40" y="61" font-size="32" font-weight="700">选一种喜欢的水面，游戏水流共用一份数据</text>
+  <text x="40" y="96" class="body muted">本轮接入方案 · 原理与设置示意 · 实际画面由玩家验收</text>
+  <rect x="40" y="125" width="1040" height="66" rx="14" fill="#263c52"/>
+  <text x="64" y="167" font-size="23" font-weight="700">设置 → 视觉特效 → 水体风格</text>
+  <rect x="829" y="143" width="227" height="31" rx="15" fill="#354e64"/>
+  <text x="943" y="165" text-anchor="middle" class="small">保存为本机偏好</text>
+  <path d="M560 191V211M205 211H905M205 211V233M560 211V233M905 211V233" class="connector"/>
+  <rect x="40" y="233" width="330" height="146" rx="16" fill="#1c3c53" stroke="#567f9d"/>
+  <text x="62" y="272" class="heading">风格化</text>
+  <text x="62" y="307" class="body muted">像素水纹 · 十档水色</text>
+  <path d="M62 347h25v-9h28v9h27v-9h28v9h27v-9h29v9h27v-9h28v9h27" fill="none" stroke="#66c5d5" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="395" y="233" width="330" height="146" rx="16" fill="#1c3b52" stroke="#567f9d"/>
+  <text x="417" y="272" class="heading">写实</text>
+  <text x="417" y="307" class="body muted">连续水色 · 柔和反光</text>
+  <path d="M417 347q24-16 48 0t48 0t48 0t48 0t48 0t24-6" fill="none" stroke="#70bfdc" stroke-width="4" stroke-linecap="round"/>
+  <rect x="750" y="233" width="330" height="146" rx="16" fill="#193d43" stroke="#6ed7b2" stroke-width="2"/>
+  <text x="772" y="272" class="heading">Unity 风格水</text>
+  <rect x="998" y="248" width="61" height="27" rx="13" fill="#6ed7b2"/>
+  <text x="1028" y="267" text-anchor="middle" font-size="15" font-weight="700" style="fill:#11392f">新增</text>
+  <text x="772" y="307" class="body muted">多层水纹 · 闪光 · 泡沫</text>
+  <path d="M772 348q21-13 42 0t42 0t42 0t42 0t42 0t40 0" fill="none" stroke="#72d8bf" stroke-width="3" stroke-linecap="round"/>
+  <path d="M806 333h13M859 358h11M942 332h14M1010 358h12" stroke="#def8e9" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="830" cy="356" r="2.5" fill="#def8e9"/><circle cx="986" cy="337" r="3" fill="#def8e9"/>
+  <path d="M205 379V405H905V379M560 379V428" class="connector" marker-end="url(#arrow)"/>
+  <rect x="40" y="438" width="1040" height="191" rx="16" fill="#1b2f42"/>
+  <text x="62" y="475" font-size="23" font-weight="700">三种外观都读取这些游戏数据</text>
+  <rect x="60" y="494" width="235" height="111" rx="12" fill="#234454"/>
+  <text x="77" y="526" font-size="21" font-weight="700">河流流向</text>
+  <text x="77" y="557" class="small muted">水纹沿实际下游前进</text>
+  <path d="M79 582H268" fill="none" stroke="#6dd9c7" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="315" y="494" width="235" height="111" rx="12" fill="#234454"/>
+  <text x="332" y="526" font-size="21" font-weight="700">河流流速</text>
+  <text x="332" y="557" class="small muted">流得越快，水纹移动越快</text>
+  <path d="M335 582h19m9 0h29m9 0h44m9 0h22" fill="none" stroke="#6dd9c7" stroke-width="3" stroke-linecap="round"/>
+  <rect x="570" y="494" width="235" height="111" rx="12" fill="#234054"/>
+  <text x="587" y="526" font-size="21" font-weight="700">真实水深</text>
+  <text x="587" y="557" class="small muted">决定浅水与深水的颜色</text>
+  <rect x="588" y="575" width="49" height="12" fill="#70c3c1"/><rect x="637" y="575" width="49" height="12" fill="#419fb4"/><rect x="686" y="575" width="49" height="12" fill="#256c91"/><rect x="735" y="575" width="49" height="12" fill="#153e69"/>
+  <rect x="825" y="494" width="235" height="111" rx="12" fill="#234054"/>
+  <text x="842" y="526" font-size="21" font-weight="700">海风</text>
+  <text x="842" y="557" class="small muted">带动浪速、浪高与白沫</text>
+  <path d="M845 583q12-7 24 0t24 0m18 0q14-14 28 0t28 0m18 0q14-20 28 0" fill="none" stroke="#90c9ef" stroke-width="3" stroke-linecap="round"/>
+  <text x="40" y="672" class="body">河流与海洋一起切换风格；流向、流速、水深和海风仍由游戏系统提供。</text>
+  <text x="40" y="701" class="small muted">图中水纹只作识别示意，三个选项的具体颜色、反光和泡沫以游戏内效果为准。</text>
+</svg>

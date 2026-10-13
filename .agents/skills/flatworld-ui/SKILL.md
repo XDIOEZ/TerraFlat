@@ -47,6 +47,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - Data 契约仅含元数据/读写能力；功能管理器实现 `ISettingsProvider` 及 Toggle/Slider/Dropdown/Switch 能力，在自身生命周期注册。UI 按稳定 ProviderId/Key 绑定；选项身份为 SettingOption.Id，写入返回校验结果。
 - `SettingsEditSessionController` 持有保存基线；非控件偏好由 `ISettingsEditSessionParticipant` 快照/还原，按键绑定单独编辑会话。Provider 不创建视觉，分页器收集子页 `ISettingsPageLifecycle`。
 - 模拟半径为设备级 PlayerPrefs 偏好，三半径整组校验严格递增，Item/AIECS 共用；镜头缩放独立。视觉特效默认/范围来自 default-rendering.json，玩家值由 Provider 保存；太阳投影关闭不关闭脚底阴影。
+- 水体风格由 `WaterVisualSettings` Provider 暴露风格化/写实/Unity 风格水三项，稳定 ID 为 `stylized/realistic/unity-stylized-water`；正式 `UI_VisualEffectsSettings` 与构建器同步三个 200×64 按钮，保存/放弃复用设置会话。
 - 主菜单/游戏内共用 NewWorldUserSettings。新世界窗口每次打开回填默认，名称/世界设置切页保留输入；返回先关难度层、再名称页、最后窗口。难度共用 GameDifficultyCatalog 的 0～20 级，摘要为战斗/生存/世界/生产。
 
 ## 业务视图契约

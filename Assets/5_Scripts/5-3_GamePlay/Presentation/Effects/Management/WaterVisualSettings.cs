@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using FlatWorld.Settings;
 using UnityEngine;
 
-/// <summary>水体的两种正式美术风格；只影响本地渲染，不改变水深、地形或玩法。</summary>
+/// <summary>水体的可选美术风格；只影响本地渲染，不改变水深、地形或玩法。</summary>
 public enum WaterVisualStyle
 {
     Stylized = 0,
-    Realistic = 1
+    Realistic = 1,
+    UnityStylized = 2
 }
 
 /// <summary>
@@ -69,6 +70,7 @@ public static class WaterVisualSettings
     {
         WaterVisualStyle.Stylized => "stylized",
         WaterVisualStyle.Realistic => "realistic",
+        WaterVisualStyle.UnityStylized => "unity-stylized-water",
         _ => throw new ArgumentOutOfRangeException(nameof(style), style, "未注册的水体风格。")
     };
 
@@ -83,6 +85,7 @@ public static class WaterVisualSettings
         {
             "stylized" => WaterVisualStyle.Stylized,
             "realistic" => WaterVisualStyle.Realistic,
+            "unity-stylized-water" => WaterVisualStyle.UnityStylized,
             _ => throw new InvalidOperationException($"未注册的水体风格偏好：{savedId}")
         };
         initialized = true;
@@ -120,12 +123,13 @@ public static class WaterVisualSettings
                 new SettingOption[]
                 {
                     new SettingOption("stylized", "风格化"),
-                    new SettingOption("realistic", "写实")
+                    new SettingOption("realistic", "写实"),
+                    new SettingOption("unity-stylized-water", "Unity 风格水")
                 },
                 () => (int)Style,
                 index =>
                 {
-                    if (index < 0 || index > 1)
+                    if (index < 0 || index > (int)WaterVisualStyle.UnityStylized)
                         return "未注册的水体风格选项。";
                     SetStyle((WaterVisualStyle)index);
                     return null;

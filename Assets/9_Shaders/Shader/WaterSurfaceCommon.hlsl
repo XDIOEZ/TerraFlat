@@ -114,6 +114,7 @@ struct WaterSurfaceData
     half reflection;
     half caustic;
     half specular;
+    half sparkle;
     half whitecap;
     half moonReflection;
 };

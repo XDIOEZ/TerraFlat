@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Tilemap-Water-UnityStylized-Lit
+  m_Shader: {fileID: 4800000, guid: 9b7e519d31c6485eb1d1d499a1142e63, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - FLATWORLD_WATER_UNITY_STYLIZED
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _UnityWaterDetailTex:
+        m_Texture: {fileID: 2800000, guid: 3dc9e82774e0437da2e8f2c72bed5aa5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _UnityWaterPatternTex:
+        m_Texture: {fileID: 2800000, guid: 8492c693eaa9423cbb7fe09ebc8069ec, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RiverPatternTex:
+        m_Texture: {fileID: 2800000, guid: 179922a5644a4ee583302def9ba54d54, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _AlphaTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _UnityDepthDensity: 2.6
+    - _UnitySparkleExponent: 256
+    - _UnitySparkleStrength: 0.8
+    - _UnitySparkleScale: 0.7
+    - _UnityFoamScale: 5.2
+    - _UnityNormalScale: 4
+    - _RiverFoamCoverage: 0.18
+    - _FlowSpeed: 1
+    - _FlowCycleSeconds: 8
+    - _CausticStrength: 0.08
+    - _CornerStrength: 0.18
+    - _DetailScale: 3.8
+    - _EdgeWidth: 0.16
+    - _EnableExternalAlpha: 0
+    - _FoamSpeed: 0.72
+    - _TideCyclesPerDay: 2
+    - _NormalStrength: 0.46
+    - _PixelDensity: 32
+    - _ReflectionSmoothness: 0.72
+    - _ReflectionStrength: 0.48
+    - _RippleScale: 1.8
+    - _RippleShadowStrength: 0.085
+    - _RippleStrength: 0.1
+    - _RippleWidth: 0.16
+    - _ShoreFoamStrength: 0.9
+    - _ShoreStrength: 0.035
+    - _SpecularPower: 72
+    - _SpecularStrength: 0.3
+    - _SurfaceTint: 1
+    - _SwellScale: 0.68
+    - _WaveDistortion: 0.65
+    - _WaveSpeed: 0.42
+    - _WhitecapStrength: 0.72
+    m_Colors:
+    - _UnitySparkleColor: {r: 0.65, g: 1, b: 0.88, a: 1}
+    - _WaveDirection: {r: 0, g: 0, b: 0, a: 0}
+    - _CausticColor: {r: 0.35, g: 0.82, b: 0.73, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DeepColor: {r: 0.0078, g: 0.10196, b: 0.27451, a: 1}
+    - _Flip: {r: 1, g: 1, b: 1, a: 1}
+    - _FlowDirection: {r: 1, g: 0.35, b: 0, a: 0}
+    - _FoamColor: {r: 0.89, g: 1, b: 0.95, a: 1}
+    - _ReflectionColor: {r: 0.38, g: 0.65, b: 0.87, a: 1}
+    - _ReflectionDirection: {r: -0.35, g: 0.18, b: 0.92, a: 0}
+    - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RippleColor: {r: 0.34, g: 0.68, b: 0.79, a: 1}
+    - _ShallowColor: {r: 0.443137, g: 0.913726, b: 0.662745, a: 1}
+    - _ShoreColor: {r: 0.31, g: 0.78, b: 0.69, a: 1}
+    - _SpecularColor: {r: 0.9, g: 0.98, b: 1, a: 1}
+    - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}
+  m_BuildTextureStacks: []

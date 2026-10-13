@@ -42,6 +42,16 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         [Header(River Current)]
         [NoScaleOffset] _RiverPatternTex("河流RGBA图(RG斜率/B碎光/A泡沫)", 2D) = "gray" {}
         _RiverFoamCoverage("河流泡沫覆盖率", Range(0, 1)) = 0.18
+        [Header(Unity Stylized Water)]
+        [NoScaleOffset] _UnityWaterPatternTex("四向波纹RGBA图(RG法线/B泡沫/A浅水亮度)", 2D) = "gray" {}
+        [NoScaleOffset] _UnityWaterDetailTex("碎光法线图", 2D) = "gray" {}
+        _UnityNormalScale("四向波纹尺度", Range(0.1, 16)) = 4
+        _UnityFoamScale("白沫尺度", Range(0.1, 16)) = 5.2
+        _UnitySparkleScale("碎光尺度", Range(0.1, 4)) = 0.7
+        _UnitySparkleStrength("碎光强度", Range(0, 2)) = 0.8
+        _UnitySparkleExponent("碎光集中度", Range(4, 1024)) = 256
+        _UnityDepthDensity("深浅颜色密度", Range(0.1, 8)) = 2.6
+        _UnitySparkleColor("碎光颜色", Color) = (0.65, 1, 0.88, 1)
         [Header(Moon Reflection)]
         _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
         _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 4.2
@@ -154,6 +164,13 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float _LavaShallowAlpha;
             float _LavaDeepAlpha;
             float _LavaMode;
+            float _UnityNormalScale;
+            float _UnityFoamScale;
+            float _UnitySparkleScale;
+            float _UnitySparkleStrength;
+            float _UnitySparkleExponent;
+            float _UnityDepthDensity;
+            float4 _UnitySparkleColor;
         CBUFFER_END
         struct ChunkMeshWaterData
         {
@@ -165,25 +182,34 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         };
         #include "WaterSurfaceCommon.hlsl"
         #include "LavaSurfaceCommon.hlsl"
-        #if defined(FLATWORLD_WATER_STYLIZED)
+        #if defined(FLATWORLD_WATER_UNITY_STYLIZED)
+            #include "UnityStylizedWaterSurface.hlsl"
+        #elif defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
         #else
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
+        #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
         #include "RiverSurface.hlsl"
+        #endif
 
         // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth, ChunkMeshWaterData data)
         {
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
+            WaterSurfaceData surface = (WaterSurfaceData)0;
+            #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
             float2 positionDx = ddx(positionWS);
             float2 positionDy = ddy(positionWS);
             UNITY_BRANCH
             if (abs(data.waterKind - 1.0) < 0.25 || abs(data.waterKind - 3.0) < 0.25)
-                return CalculateRiverSurface(positionWS, screenUV, depth, data.flowX, data.flowY, motion, positionDx, positionDy);
-            return CalculateWaterSurface(positionWS, screenUV, depth, motion);
+                surface = CalculateRiverSurface(positionWS, screenUV, depth, data.flowX, data.flowY, motion, positionDx, positionDy);
+            else
+            #endif
+                surface = CalculateWaterSurface(positionWS, screenUV, depth, motion);
+            return surface;
         }
 
         half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS, ChunkMeshWaterData data)
@@ -209,7 +235,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -313,7 +339,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma shader_feature_local_fragment _ FLATWORLD_WATER_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0;
                 float4 shore:TEXCOORD1; float4 depth:TEXCOORD2; float4 flowX:TEXCOORD4;
                 float4 flowY:TEXCOORD5; float kind:TEXCOORD6; };

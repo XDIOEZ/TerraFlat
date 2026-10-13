@@ -350,7 +350,7 @@ public static class WorldRenderingConfigCatalog
             config.universeView.startOrthographicSize < config.zoomClouds.opaqueOrthographicSize ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
-            config.preferences.waterStyle < 0 || config.preferences.waterStyle > 1 ||
+            config.preferences.waterStyle < 0 || config.preferences.waterStyle > 2 ||
             config.shadows.minimumBlurStrength < 0f ||
             config.shadows.maximumBlurStrength < config.shadows.minimumBlurStrength ||
             config.shadows.blurStrength < config.shadows.minimumBlurStrength ||

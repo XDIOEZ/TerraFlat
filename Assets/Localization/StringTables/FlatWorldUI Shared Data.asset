@@ -3243,6 +3243,14 @@ MonoBehaviour:
     m_Key: ui.text.6FE1415D
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740177
+    m_Key: ui.text.7CD450E0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740178
+    m_Key: ui.text.CAC9089A
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -19,6 +19,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     [SerializeField] private Material blockingMaterial;
     [SerializeField] private Material stylizedWaterMaterial;
     [SerializeField] private Material realisticWaterMaterial;
+    [SerializeField] private Material unityStylizedWaterMaterial;
     [SerializeField] private Sprite fireSprite;
     [SerializeField] private Material fireMaterial;
 
@@ -1029,8 +1030,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
 
     private Material GetActiveWaterMaterial()
     {
-        return WaterVisualSettings.Style == WaterVisualStyle.Stylized
-            ? stylizedWaterMaterial : realisticWaterMaterial;
+        // 三种外观共用真实水深和流场，仅切换表现材质。
+        return WaterVisualSettings.Style switch
+        {
+            WaterVisualStyle.Stylized => stylizedWaterMaterial,
+            WaterVisualStyle.Realistic => realisticWaterMaterial,
+            WaterVisualStyle.UnityStylized => unityStylizedWaterMaterial,
+            _ => throw new InvalidOperationException($"未登记的水体风格：{WaterVisualSettings.Style}")
+        };
     }
 
     #region BRG DEBUG
