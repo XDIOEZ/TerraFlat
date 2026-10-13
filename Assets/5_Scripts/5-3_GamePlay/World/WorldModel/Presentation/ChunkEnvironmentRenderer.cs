@@ -1,3 +1,4 @@
+using System;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -15,6 +16,17 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
     [SerializeField] private Color tint = new(1f, 1f, 1f, 0.22f);
     private ChunkRuntime boundChunk;
     private ChunkTilemapRenderer owner;
+    private CellVisualState[] cellVisualStates = Array.Empty<CellVisualState>();
+    private bool visualConfigurationChanged;
+
+    private enum CellVisualState : byte
+    {
+        Unknown,
+        Hidden,
+        Visible
+    }
+
+    private void OnValidate() => visualConfigurationChanged = true;
 
     public void Bind(ChunkRuntime chunk)
     {
@@ -50,6 +62,7 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
         }
         boundChunk = null;
         owner = null;
+        cellVisualStates = Array.Empty<CellVisualState>();
     }
 
     #endregion
@@ -69,6 +82,11 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void RefreshCellFromTerrain(int x, int y)
     {
+        if (visualConfigurationChanged)
+        {
+            Render(boundChunk.Terrain);
+            return;
+        }
         bool visible = boundChunk.Terrain.TryGetEnvironmentValue(environmentLayerId,
                            x, y, out float value) &&
                        value >= visibleThreshold;
@@ -96,6 +114,11 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
     {
         if (tile == null || material == null || terrain == null)
             return;
+        if (cellVisualStates.Length != terrain.CellCount)
+            cellVisualStates = new CellVisualState[terrain.CellCount];
+        else
+            Array.Clear(cellVisualStates, 0, cellVisualStates.Length);
+        visualConfigurationChanged = false;
         terrain.TryCopyEnvironmentLayer(environmentLayerId, out float[] values);
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
@@ -106,16 +129,24 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
     private void RefreshCell(int x, int y, bool visible)
     {
         ChunkTerrainData terrain = boundChunk.Terrain;
-        if (!visible || terrain.GetCell(x, y).GroundTileId == 0 ||
-            (!includeLiquidCells && terrain.GetLiquidDepth(x, y) > 0f))
+        visible = visible && terrain.GetCell(x, y).GroundTileId != 0 &&
+                  (includeLiquidCells || !(terrain.GetLiquidDepth(x, y) > 0f));
+        int index = y * terrain.Width + x;
+        CellVisualState nextState = visible ? CellVisualState.Visible : CellVisualState.Hidden;
+        // 只记住实际提交的显示状态，湿度继续变化但外观相同时不重复上传。
+        if (cellVisualStates[index] == nextState)
+            return;
+        if (!visible)
         {
             owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Environment, x, y);
+            cellVisualStates[index] = CellVisualState.Hidden;
             return;
         }
         Int2 origin = boundChunk.Address.ChunkOrigin;
         Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(origin.X + x + 0.5f, origin.Y + y + 0.5f));
-        owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Environment, x, y,
-            tile.sprite, material, matrix * tile.transform, tile.color * tint);
+        if (owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Environment, x, y,
+                tile.sprite, material, matrix * tile.transform, tile.color * tint))
+            cellVisualStates[index] = CellVisualState.Visible;
     }
 
     #endregion
