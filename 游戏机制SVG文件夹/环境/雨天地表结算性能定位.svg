@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9" fill="#8ea2bf"/></marker>
+    <style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#e8eef8}.title{font-size:29px;font-weight:bold}.label{font-size:22px;font-weight:bold}.body{font-size:20px}.small{font-size:17px}.muted{fill:#b5c3d8}.box{fill:#1b2b43;stroke:#48617f;stroke-width:1.5}.arrow{stroke:#8ea2bf;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect width="1200" height="720" rx="16" fill="#101b2d"/>
+  <text x="35" y="48" class="title">雨天卡顿：25,203 次完整补水集中在主线程的一帧</text>
+  <text x="35" y="81" class="small muted">MCP 读取已保存的 Profiler 帧；显示去重代码已加载，Deep Profiling 关闭。</text>
+  <rect x="35" y="103" width="1130" height="134" rx="12" class="box"/>
+  <text x="55" y="136" class="label">第 274766 帧：地表结算 425.06 ms，其中补水 342.91 ms（约 81%）</text>
+  <rect x="55" y="154" width="1090" height="30" rx="5" fill="#385073"/>
+  <rect x="55" y="154" width="879.3" height="30" rx="5" fill="#ef9176"/>
+  <text x="65" y="176" font-size="17" fill="#142033">SurfaceWater：每次完整补水的累计时间</text>
+  <text x="55" y="214" class="body">温度 21.53 ms　保存差量 19.83 ms　筛选格子 16.18 ms　其余地表工作约 24.61 ms</text>
+  <text x="35" y="273" class="label">4 次结算都重复出现，并非某一格偶发阻塞</text>
+  <text x="35" y="307" class="body">274588：342.97 ms　274664：341.35 ms　274691：328.28 ms　274766：342.91 ms</text>
+  <text x="35" y="336" class="small muted">每次均为 25 个区块、25,203 次补水。所选帧单次中位数 12.8 μs，最大 111.8 μs。</text>
+  <rect x="35" y="367" width="350" height="153" rx="12" class="box"/>
+  <text x="53" y="401" class="label">每格先做完整校验</text>
+  <text x="53" y="436" class="body">地块 / 层数 / 建筑占地</text>
+  <text x="53" y="470" class="small muted">NormalizeCell 每次查询活动场景</text>
+  <text x="53" y="498" class="small muted">并重新计算当前世界的环绕边界</text>
+  <path d="M394 444 L423 444" class="arrow"/>
+  <rect x="432" y="367" width="333" height="153" rx="12" class="box"/>
+  <text x="450" y="401" class="label">读写土壤环境层</text>
+  <text x="450" y="436" class="body">水量 / 湿度 / 肥力</text>
+  <text x="450" y="470" class="small muted">每个真实变化仍同步广播 Changed</text>
+  <text x="450" y="498" class="small muted">观察者即使过滤，也需逐个调用</text>
+  <path d="M774 444 L803 444" class="arrow"/>
+  <rect x="812" y="367" width="353" height="153" rx="12" class="box"/>
+  <text x="830" y="401" class="label">湿地覆盖显示</text>
+  <text x="830" y="436" class="body">显隐状态相同：已跳过提交</text>
+  <text x="830" y="470" class="small muted">跨显示阈值仍会单格上传</text>
+  <text x="830" y="498" class="small muted">这部分和左侧两部分尚未独立计时</text>
+  <rect x="35" y="545" width="1130" height="94" rx="12" fill="#433525" stroke="#bc9865"/>
+  <text x="55" y="580" class="label">已确认：完整补水调用的数量与集中调度，是持续出现的主线程热点。</text>
+  <text x="55" y="615" class="body">尚未确认：343 ms 内，校验、数值读写、事件广播和必要显示上传各占多少。</text>
+  <text x="35" y="680" class="small muted">诊断方向：拆分内部计时 → 复用批次世界上下文、合并通知、限制每帧结算预算；图中不是修复后的结果。</text>
+</svg>
