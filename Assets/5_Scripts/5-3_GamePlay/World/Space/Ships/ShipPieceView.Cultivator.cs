@@ -87,8 +87,15 @@ namespace FlatWorld.Spaceflight
         {
             SubscribeCultivatorVisual();
             if (cultivatorEntity != null) RefreshCultivatorSprites();
+            SubscribeElectricLightVisual();
+            if (lightEntity != null) RefreshElectricLightVisual();
         }
-        private void OnDisable() => UnsubscribeCultivatorVisual();
+        private void OnDisable()
+        {
+            UnsubscribeCultivatorVisual();
+            UnsubscribeElectricLightVisual();
+            DisableElectricLightVisual();
+        }
         #endregion
     }
 }

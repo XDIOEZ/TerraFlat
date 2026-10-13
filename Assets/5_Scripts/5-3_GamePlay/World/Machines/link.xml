@@ -4,6 +4,9 @@
     <type fullname="MachineEntity" preserve="all" />
     <type fullname="MachineState" preserve="all" />
     <type fullname="MachineDefinition" preserve="all" />
+    <type fullname="MachineLightDefinition" preserve="all" />
+    <type fullname="ElectricLightLogic" preserve="all" />
+    <type fullname="ElectricLightState" preserve="all" />
     <type fullname="FluidMachineDefinition" preserve="all" />
     <type fullname="FluidMachineLogic" preserve="all" />
     <type fullname="FluidMachineState" preserve="all" />

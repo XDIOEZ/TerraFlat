@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1100" height="780" viewBox="0 0 1100 780">
+  <title>灯泡通电与照明范围</title>
+  <desc>灯泡接同格电线，额定120伏60瓦。断电熄灭，通电发出暖光，照明半径16格，是火把8格的两倍。贴图展示真实半透明玻璃；下方范围是规则示意，不是游戏截图。</desc>
+  <defs>
+    <style>
+      text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#e8ecf1}
+      .small{font-size:16px;fill:#b6c0ce}.body{font-size:20px}.label{font-size:25px;font-weight:700}
+    </style>
+    <pattern id="glassGrid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <rect width="36" height="36" fill="#344552"/><path d="M0 0H18V18H0ZM18 18H36V36H18Z" fill="#536775"/>
+    </pattern>
+    <radialGradient id="torchGlow"><stop stop-color="#ffc45f" stop-opacity=".5"/><stop offset="1" stop-color="#ffc45f" stop-opacity=".04"/></radialGradient>
+    <radialGradient id="bulbGlow"><stop stop-color="#fff1a7" stop-opacity=".5"/><stop offset="1" stop-color="#fff1a7" stop-opacity=".04"/></radialGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#d5a567"/></marker>
+  </defs>
+  <rect width="1100" height="780" rx="20" fill="#16212d"/>
+  <text x="44" y="57" font-size="31" font-weight="700">灯泡：接上电线，亮起暖光</text>
+  <text x="44" y="90" class="small">沿用电力设备的铜色＋灰蓝金属；玻璃半透明，整体高度约 0.5 格。</text>
+  <rect x="40" y="112" width="1020" height="264" rx="16" fill="#233140"/>
+  <rect x="76" y="130" width="190" height="216" rx="8" fill="url(#glassGrid)"/>
+  <rect x="834" y="130" width="190" height="216" rx="8" fill="url(#glassGrid)"/>
+  <svg x="67" y="126" width="208" height="208" viewBox="0 0 887 887"><image width="1774" height="887" xlink:href="../../Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png"/></svg>
+  <svg x="825" y="126" width="208" height="208" viewBox="887 0 887 887"><image width="1774" height="887" xlink:href="../../Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png"/></svg>
+  <text x="171" y="364" class="body" text-anchor="middle">断电：灯丝不亮</text>
+  <text x="929" y="364" class="body" text-anchor="middle">通电：灯丝发光</text>
+  <path d="M302 236H372M728 236H794" stroke="#d5a567" stroke-width="4" marker-end="url(#arrow)"/>
+  <rect x="394" y="166" width="312" height="148" rx="14" fill="#192635" stroke="#536776"/>
+  <text x="550" y="204" class="label" text-anchor="middle">电源 → 电线 → 灯泡</text>
+  <text x="550" y="240" class="body" text-anchor="middle">灯泡与电线放在同一格</text>
+  <text x="550" y="272" class="body" text-anchor="middle">额定 120 V / 60 W</text>
+  <text x="550" y="299" class="small" text-anchor="middle">供电不足会变暗；断电完全熄灭</text>
+  <text x="44" y="420" class="label">照明范围：半径从 8 格扩大到 16 格</text>
+  <circle cx="262" cy="552" r="60" fill="url(#torchGlow)" stroke="#dc984b" stroke-width="2"/>
+  <circle cx="748" cy="552" r="120" fill="url(#bulbGlow)" stroke="#f3d990" stroke-width="2"/>
+  <circle cx="262" cy="552" r="5" fill="#f5aa58"/><circle cx="748" cy="552" r="5" fill="#ffe49b"/>
+  <path d="M262 552H322M748 552H868" stroke="#e6c88b" stroke-width="2"/>
+  <text x="281" y="543" class="small">8 格</text><text x="790" y="543" class="body">16 格</text>
+  <text x="262" y="646" class="body" text-anchor="middle">火把</text>
+  <text x="748" y="706" class="body" text-anchor="middle">灯泡：半径 × 2，圆形覆盖面积 × 4</text>
+  <path d="M420 552H564" stroke="#d5a567" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="490" y="539" class="small" text-anchor="middle">半径两倍</text>
+  <text x="44" y="748" class="small">制作：工作台，玻璃 × 1 ＋ 铜板 × 1 ＋ 熟铁锭 × 1。范围图仅解释规则，实际光照仍受遮挡影响。</text>
+</svg>

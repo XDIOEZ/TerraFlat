@@ -17,8 +17,10 @@ public sealed partial class MechanicalDepthVisual
     internal void UpdateFacility(MachineEntity entity)
     {
         UpdateCultivatorSprites(entity);
+        UpdatePoweredLight(entity);
         bool burning = IsFacilityBurning(entity);
-        if (entity.Definition.Content?.Find<Mod_Fuel>() != null) UpdateCombustionLight(entity, burning);
+        if (entity.Definition.Lighting == null && entity.Definition.Content?.Find<Mod_Fuel>() != null)
+            UpdateCombustionLight(entity, burning);
         UpdateCombustionVisual(entity, burning);
         if (entity.Definition.LogicId == "drying") UpdateDryingSprites(entity);
     }

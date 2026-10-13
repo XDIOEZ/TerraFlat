@@ -65,6 +65,7 @@ public static class MachineLogicRegistry
         Add("vessel", typeof(Mod_WaterVessel), entity => new VesselLogic(entity));
         Add("fluid", null, entity => new FluidMachineLogic(entity));
         Add("electric-heater", null, entity => new ElectricHeaterLogic(entity));
+        Add("electric-light", null, entity => new ElectricLightLogic(entity));
         Add("cultivator", typeof(Mod_Cultivator), entity => new CultivatorLogic(entity));
         Add("ship-device", null, entity => new ShipDeviceLogic(entity));
         AddFluidDevice("pipe", new FluidTransitBehavior());

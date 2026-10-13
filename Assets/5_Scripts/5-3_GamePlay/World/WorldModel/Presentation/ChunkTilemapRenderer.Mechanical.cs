@@ -353,6 +353,7 @@ public sealed partial class ChunkTilemapRenderer
             return;
         }
         Sprite body = def.Sprite;
+        if (node.Definition.Lighting != null) body = MachineLightPresentation.ResolveBodySprite(node, def);
         if (node.Definition.LogicId == "vessel" && Mod_WaterVessel.TryResolvePresentationSprite(node.Snapshot, out Sprite vessel)) body = vessel;
         // 设施本体沿用预览的图片局部偏移，让 Sprite Pivot 落在同一建造锚点上。
         int facilityPart = Ports(node, x, y, 0, material, origin, rotation);

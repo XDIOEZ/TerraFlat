@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 42f724342d0e3f7469f7dbb65f10d656
+    m_Address: Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 60921ec3e85d46d7a6af43bf8b1b62ce
     m_Address: Assets/6_Art/Generated/Space/ShipFloor_Iron/ShipFloor_Iron_Tile.png
     m_ReadOnly: 0

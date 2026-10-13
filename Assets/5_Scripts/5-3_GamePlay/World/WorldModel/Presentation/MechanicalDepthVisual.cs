@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-/// <summary>机械的轻量交互/灯光桥；所有主体和运动部件提交行网格，不含 SpriteRenderer 或逐帧动画脚本。</summary>
+/// <summary>机械的轻量交互/灯光桥；主体和运动部件提交行网格，专用粒子与自发光跟随同一脚点行。</summary>
 public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInteractionShape
 {
     #region 部件与生命周期
@@ -37,6 +37,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         foreach (PartVisual part in parts) if (part != null) part.Touched = false;
         foreach (PartVisual part in facilityParts) if (part != null) part.Touched = false;
         if (facilityLight != null) facilityLight.enabled = false;
+        BeginLightingUpdate();
         facilityCombustionTouched = false;
         if (facilityCombustion != null) facilityCombustion.transform.SetParent(transform, true);
     }
@@ -61,6 +62,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         foreach (PartVisual part in parts) RemoveUntouched(part);
         foreach (PartVisual part in facilityParts) RemoveUntouched(part);
         if (!facilityCombustionTouched) facilityCombustion?.SetCombustionActive(false);
+        EndLightingUpdate();
     }
     internal void SetPartTint(int index, Color tint)
     {
@@ -92,6 +94,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         if (disposed) return;
         disposed = true;
         ReleaseFacilityCombustion();
+        ReleaseLighting();
         UnsubscribeCultivator();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -109,10 +112,13 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         RegisterInteraction();
         foreach (PartVisual part in parts) if (part != null) Submit(part);
         foreach (PartVisual part in facilityParts) if (part != null) Submit(part);
+        if (poweredLightEntity != null) UpdatePoweredLight(poweredLightEntity);
     }
     private void OnDisable()
     {
         if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(false);
+        if (poweredEmission != null) poweredEmission.enabled = false;
+        if (poweredLightEntity != null && facilityLight != null) facilityLight.enabled = false;
         UnsubscribeCultivator();
         UnregisterInteraction();
         foreach (PartVisual part in parts) if (part != null) owner?.RemoveMachineDepthPart(entityId, part.Id);
@@ -121,6 +127,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     private void OnDestroy()
     {
         ReleaseFacilityCombustion();
+        ReleaseLighting();
         UnsubscribeCultivator();
         UnregisterInteraction();
         owner?.RemoveMachineDepthEntity(entityId);

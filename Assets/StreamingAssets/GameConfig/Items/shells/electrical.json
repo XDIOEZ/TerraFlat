@@ -479,6 +479,201 @@
       }
     },
     {
+      "id": "ElectricLightBulb",
+      "parent": "BuildingBody_Base",
+      "gameName": "灯泡-建筑",
+      "description": "接入同格铜电线后自动照明，断电熄灭；照明半径 16 格，为火把的两倍。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.4,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Idle]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "spriteStates": {
+          "powered": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Lit]"
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0.25
+          },
+          "size": {
+            "x": 0.35,
+            "y": 0.5
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 20,
+        "maxHp": 20,
+        "defense": {
+          "physical": 0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.25
+          },
+          "size": {
+            "x": 0.35,
+            "y": 0.5
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ElectricLightBulb\",\"SummonerPrefabId\":\"ElectricLightBulb_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ElectricLightBulb"
+          }
+        }
+      }
+    },
+    {
+      "id": "ElectricLightBulb_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "灯泡",
+      "description": "接入同格铜电线后自动照明，断电熄灭；照明半径 16 格，为火把的两倍。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.4,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Idle]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "spriteStates": {
+          "powered": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Lit]"
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0.25
+          },
+          "size": {
+            "x": 0.35,
+            "y": 0.5
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 20,
+        "maxHp": 20,
+        "defense": {
+          "physical": 0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.25
+          },
+          "size": {
+            "x": 0.35,
+            "y": 0.5
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ElectricLightBulb\",\"SummonerPrefabId\":\"ElectricLightBulb_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "ElectricLightBulb"
+          }
+        }
+      }
+    },
+    {
       "id": "Tree_Oak",
       "parent": "Tree_Pine",
       "gameName": "橡树",

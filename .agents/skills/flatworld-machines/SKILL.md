@@ -43,6 +43,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - CrossShaft 占 Layer1，要求同格 Layer0 下穿节点，但 A/B 只接相邻 Layer0，不把同格节点接入上层网。手持朝向是临时状态，世界端口/预览/动画共用 RotationQuarterTurns。
 - 手推设备声明 ManualDriveTorque/Rpm/SecondsPerPress；CanManualDrive 先排除手推检查整网外源，外源存在则禁手推。加工器仍按节点最终 RPM 工作。风箱朝向相邻炉体，通过 Airflow 提交，20 RPM 对应最多 500℃上限增量。
 - 电网与机械网共用节点但拓扑独立；线为独立覆盖层，cell 接同格，方向接旋转后的邻格。W=功率、J=储能，电压负责兼容、电流=P/V；当前无逐段压降求解。
+- 通电照明声明 `Lighting` 并复用 `electric-light` 逻辑，实供 `ElectricalSuppliedWatts` 决定亮度与 `powered` 贴图，断电/休眠撤光。地表和船体共用 `MachineLightPresentation`；玻璃保留源图 Alpha，专用自发光覆盖按脚点排序，不把底座一起提亮。灯泡默认 120V/60W、半径16格（火把8格）。
 - converter 先排除电驱动力探测机械输入，从独立电源确定转换方向；机械输入优先，上游电网不作回流目标。电池探算不写能量，正式每轮结算一次；电驱扭矩向下取整，输出受真实功率预算限制。
 - 机械路线缓存由可达节点、有效源、输入终点与实际图边变化失效，功率数值变化仍逐步结算；电力协调器拥有本步最终机械求解。只有显式声明 CanCacheElectricalDemandWithinStep 的策略才复用冻结需求，自定义来源默认动态采样。离线规则对照见 Tools/Tests/MachineNetworks。
 - 电线 wire0..15、管线 pipe0..15 共用北1/东2/南4/西8掩码。电线读权威线格/方向口；管线读正式图边，端口相位/方向/启停参与掩码，流量不参与。地表格事件与船作用域事件分别刷新连接，两个世界使用各自节点索引。

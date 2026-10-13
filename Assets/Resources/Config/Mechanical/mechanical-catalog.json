@@ -795,6 +795,41 @@
       }
     },
     {
+      "Id": "ElectricLightBulb",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "electric-light",
+      "PlacementLayer": 0,
+      "BlocksMovement": false,
+      "CastVisualShadows": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 60
+      },
+      "Lighting": {
+        "Radius": 16,
+        "InnerRadius": 0.1,
+        "Intensity": 1,
+        "Color": {
+          "r": 1,
+          "g": 0.9,
+          "b": 0.7,
+          "a": 1
+        },
+        "LocalPosition": {
+          "x": 0,
+          "y": 0.3,
+          "z": 0
+        },
+        "LitSpriteState": "powered",
+        "EmissiveSprite": true,
+        "EmissiveStartLocalY": 0.14,
+        "PanelId": "UI_Mechanical"
+      }
+    },
+    {
       "Id": "ElectricHeater",
       "Kind": "shaft",
       "Ports": "none",
