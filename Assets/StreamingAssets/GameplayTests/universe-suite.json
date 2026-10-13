@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "enter_world",
+      "name": "真实世界与玩家就绪",
+      "luaPath": "GameplayTests/enter_world.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_catalog",
+      "name": "所有星体与星区目录",
+      "luaPath": "GameplayTests/Universe/universe_catalog.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_orbits",
+      "name": "椭圆公转与正逆自转",
+      "luaPath": "GameplayTests/Universe/universe_orbits.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_coordinates",
+      "name": "双精度坐标与接触边界",
+      "luaPath": "GameplayTests/Universe/universe_coordinates.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_streaming",
+      "name": "星区租约与多观察者",
+      "luaPath": "GameplayTests/Universe/universe_streaming.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_snapshots",
+      "name": "宇宙快照与目录重新绑定",
+      "luaPath": "GameplayTests/Universe/universe_snapshots.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_surface",
+      "name": "所有星体冷地表生成",
+      "luaPath": "GameplayTests/Universe/universe_surface.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_structure",
+      "name": "船体支撑与断裂分组",
+      "luaPath": "GameplayTests/Universe/ship_structure.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_docking",
+      "name": "双方对接与断开",
+      "luaPath": "GameplayTests/Universe/ship_docking.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_atmosphere",
+      "name": "真实舱气与门边界",
+      "luaPath": "GameplayTests/Universe/ship_atmosphere.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_mass",
+      "name": "载荷质量与重心守恒",
+      "luaPath": "GameplayTests/Universe/ship_mass.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_propulsion",
+      "name": "四向推进与惯性导航",
+      "luaPath": "GameplayTests/Universe/ship_propulsion.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_contacts",
+      "name": "乘员与星体接触",
+      "luaPath": "GameplayTests/Universe/ship_contacts.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_snapshots",
+      "name": "船与乘员快照",
+      "luaPath": "GameplayTests/Universe/ship_snapshots.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_engine_placement",
+      "name": "引擎安装与喷口净空",
+      "luaPath": "GameplayTests/Universe/ship_engine_placement.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_fuel",
+      "name": "氢氧燃料原子结算",
+      "luaPath": "GameplayTests/Universe/ship_fuel.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_optical",
+      "name": "导航光纤连接",
+      "luaPath": "GameplayTests/Universe/ship_optical.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_session",
+      "name": "真实会话与固定步时钟",
+      "luaPath": "GameplayTests/Universe/live_session.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_templates",
+      "name": "全部正式飞船模板",
+      "luaPath": "GameplayTests/Universe/live_templates.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_catalog",
+      "name": "所有星区与真实星体表现",
+      "luaPath": "GameplayTests/Universe/live_catalog.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_flight",
+      "name": "真实飞船起飞航行降落",
+      "luaPath": "GameplayTests/Universe/live_flight.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_transition_right",
+      "name": "真实向右跨区与折返",
+      "luaPath": "GameplayTests/Universe/live_transition_right.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_transition_left",
+      "name": "真实向左跨区与折返",
+      "luaPath": "GameplayTests/Universe/live_transition_left.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_transition_up",
+      "name": "真实向上跨区与折返",
+      "luaPath": "GameplayTests/Universe/live_transition_up.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_transition_down",
+      "name": "真实向下跨区与折返",
+      "luaPath": "GameplayTests/Universe/live_transition_down.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_transition_corner",
+      "name": "真实对角跨区与折返",
+      "luaPath": "GameplayTests/Universe/live_transition_corner.lua",
+      "enabled": true
+    },
+    {
+      "id": "live_collision",
+      "name": "真实跨星区船体接触",
+      "luaPath": "GameplayTests/Universe/live_collision.lua",
+      "enabled": true
+    }
+  ]
+}

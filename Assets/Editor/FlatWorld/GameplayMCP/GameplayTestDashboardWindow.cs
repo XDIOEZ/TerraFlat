@@ -305,6 +305,9 @@ namespace FlatWorld.GameplayMCP
             if (!string.IsNullOrEmpty(pipeline.Value<string>("reason")))
                 EditorGUILayout.HelpBox(pipeline.Value<string>("reason"),
                     status == "passed" ? MessageType.Info : MessageType.Warning);
+            if (!string.IsNullOrEmpty(pipeline.Value<string>("artifactError")))
+                EditorGUILayout.HelpBox("测试产物未完整保存：" + pipeline.Value<string>("artifactError"),
+                    MessageType.Error);
 
             EditorGUILayout.BeginHorizontal();
             string reportPath = pipeline.Value<string>("reportPath");
@@ -317,6 +320,29 @@ namespace FlatWorld.GameplayMCP
             if (GUILayout.Button("复制报告路径") && !string.IsNullOrEmpty(reportPath))
                 EditorGUIUtility.systemCopyBuffer = reportPath;
             EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+            string runDirectory = pipeline.Value<string>("runDirectory");
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(runDirectory) || !Directory.Exists(runDirectory)))
+                if (GUILayout.Button("定位本轮结果文件夹"))
+                    EditorUtility.RevealInFinder(runDirectory);
+            string summaryPath = pipeline.Value<string>("summaryPath");
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(summaryPath) || !File.Exists(summaryPath)))
+                if (GUILayout.Button("打开阅读报告"))
+                    Application.OpenURL(new Uri(summaryPath).AbsoluteUri);
+            string packagePath = pipeline.Value<string>("packagePath");
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(packagePath) || !File.Exists(packagePath)))
+                if (GUILayout.Button("定位 ZIP 测试包"))
+                    EditorUtility.RevealInFinder(packagePath);
+            EditorGUILayout.EndHorizontal();
+            string screenshot = pipeline.Value<string>("screenshotPath");
+            if (!string.IsNullOrEmpty(screenshot) && File.Exists(screenshot))
+            {
+                if (GUILayout.Button("查看测试结束截图"))
+                    Application.OpenURL(new Uri(screenshot).AbsoluteUri);
+            }
+            else if (!string.IsNullOrEmpty(pipeline.Value<string>("screenshotError")))
+                EditorGUILayout.LabelField("结束截图：" + pipeline.Value<string>("screenshotError"),
+                    EditorStyles.wordWrappedMiniLabel);
             DrawFailures(edit);
             DrawFailures(play);
             DrawGameplayCases();
@@ -349,6 +375,15 @@ namespace FlatWorld.GameplayMCP
                 EditorGUILayout.LabelField(
                     (status == "passed" ? "✓ " : "✕ ") + item.Value<string>("name") +
                     "  [" + item.Value<string>("id") + "]  " + TranslateStatus(status));
+                string screenshotPath = item.Value<string>("screenshotPath");
+                if (!string.IsNullOrEmpty(screenshotPath) && File.Exists(screenshotPath))
+                {
+                    if (GUILayout.Button("查看此用例结束截图", GUILayout.Width(155f)))
+                        Application.OpenURL(new Uri(screenshotPath).AbsoluteUri);
+                }
+                else if (!string.IsNullOrEmpty(item.Value<string>("screenshotError")))
+                    EditorGUILayout.LabelField("截图：" + item.Value<string>("screenshotError"),
+                        EditorStyles.wordWrappedMiniLabel);
                 if (status == "failed" && item["steps"] is JArray steps)
                     foreach (JToken step in steps)
                         if (step.Value<bool?>("success") == false)

@@ -52,6 +52,12 @@ namespace FlatWorld.GameplayMCP
             public string SuitePath;
             public List<string> SelectedCaseIds = new();
             public string ReportPath;
+            public string RunDirectory;
+            public string SummaryPath;
+            public string PackagePath;
+            public string ScreenshotPath;
+            public string ScreenshotError;
+            public string ArtifactError;
             public string StartedUtc;
             public string FinishedUtc;
             public string Status = "running";
@@ -259,8 +265,12 @@ namespace FlatWorld.GameplayMCP
                 var report = new PipelineReport
                 {
                     RunId = runId, SuitePath = suitePath, StartedUtc = DateTime.UtcNow.ToString("O"),
-                    SelectedCaseIds = casesToRun
+                    SelectedCaseIds = casesToRun,
+                    RunDirectory = GameplayTestArtifacts.GetRunDirectory(runId)
                 };
+                report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
+                report.PackagePath = report.RunDirectory + ".zip";
+                Directory.CreateDirectory(report.RunDirectory);
                 GameplayTestSelection.SelectSuite(suitePath, runId, selectedCaseIds);
                 CurrentRunId = runId;
                 Write(report);
@@ -316,6 +326,12 @@ namespace FlatWorld.GameplayMCP
                 ["selectedCaseIds"] = report == null ? null : new JArray(report.SelectedCaseIds),
                 ["reportPath"] = report?.ReportPath,
                 ["gameplayReportPath"] = report?.GameplayReportPath,
+                ["runDirectory"] = report?.RunDirectory,
+                ["summaryPath"] = report?.SummaryPath,
+                ["packagePath"] = report?.PackagePath,
+                ["screenshotPath"] = report?.ScreenshotPath,
+                ["screenshotError"] = report?.ScreenshotError,
+                ["artifactError"] = report?.ArtifactError,
                 ["reason"] = report?.Reason,
                 ["editMode"] = report == null ? null : JObject.FromObject(report.EditMode),
                 ["playMode"] = report == null ? null : JObject.FromObject(report.PlayMode)
@@ -368,17 +384,193 @@ namespace FlatWorld.GameplayMCP
             if (report.PlayMode.Status == "running") report.PlayMode.Status = "interrupted";
             report.Reason = reason;
             report.FinishedUtc = DateTime.UtcNow.ToString("O");
-            if (File.Exists(GameplayTestSelection.LastGameplayReportPath))
-            {
-                string gameplayPath = File.ReadAllText(GameplayTestSelection.LastGameplayReportPath, Encoding.UTF8).Trim();
-                if (File.Exists(gameplayPath)) report.GameplayReportPath = gameplayPath;
-            }
+            FinalizeArtifacts(report);
             Write(report);
             GameplayTestSelection.ClearSuite(report.RunId);
             SessionState.SetString(PlayModeExitKey, string.Empty);
             CurrentRunId = string.Empty;
-            Debug.Log($"[GameplayTestPipeline] {status}：{reason}，报告：{report.ReportPath}");
+            Debug.Log($"[GameplayTestPipeline] {report.Status}：{report.Reason}，报告：{report.ReportPath}，测试包：{report.PackagePath}");
         }
+
+        #region 本轮结果归集
+        private static void FinalizeArtifacts(PipelineReport report)
+        {
+            report.RunDirectory = GameplayTestArtifacts.GetRunDirectory(report.RunId);
+            report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
+            report.PackagePath = report.RunDirectory + ".zip";
+            GameplayTestReport gameplay = null;
+            try
+            {
+                // 只关联同一编号目录内且 JSON 编号匹配的报告，拒绝把上一轮报告挂到本轮。
+                string expected = Path.Combine(report.RunDirectory, "report.json");
+                if (File.Exists(expected))
+                {
+                    gameplay = JsonConvert.DeserializeObject<GameplayTestReport>(File.ReadAllText(expected, Encoding.UTF8));
+                    if (gameplay == null || gameplay.RunId != report.RunId)
+                        throw new InvalidDataException("玩法报告与本轮运行编号不匹配。");
+                    report.GameplayReportPath = expected;
+                }
+                else
+                {
+                    gameplay = CreateUnstartedGameplayReport(report);
+                    report.GameplayReportPath = gameplay.ReportPath;
+                }
+                CompleteInterruptedArtifacts(gameplay, report);
+                gameplay.Write();
+                report.ScreenshotPath = gameplay.ScreenshotPath;
+                report.ScreenshotError = gameplay.ScreenshotError;
+                report.ArtifactError = gameplay.ArtifactError;
+                GameplayTestArtifacts.WriteSummary(gameplay);
+                string phaseSummary = BuildPipelineSummary(report);
+                File.AppendAllText(report.SummaryPath, phaseSummary, new UTF8Encoding(false));
+                WritePipelineArtifact(report);
+                report.PackagePath = GameplayTestArtifacts.CreatePackage(report.RunDirectory);
+            }
+            catch (Exception exception)
+            {
+                report.ArtifactError = string.IsNullOrEmpty(report.ArtifactError)
+                    ? exception.ToString() : report.ArtifactError + "\n" + exception;
+                report.PackagePath = null;
+                if (report.Status == "passed")
+                {
+                    report.Status = "failed";
+                    report.Reason += " 测试产物未能完整保存，请检查 artifactError。";
+                }
+                try
+                {
+                    Directory.CreateDirectory(report.RunDirectory);
+                    WritePipelineArtifact(report);
+                    if (gameplay != null && gameplay.RunId == report.RunId)
+                    {
+                        gameplay.ArtifactError = report.ArtifactError;
+                        gameplay.PackagePath = null;
+                        gameplay.Write();
+                        GameplayTestArtifacts.WriteSummary(gameplay);
+                        File.AppendAllText(report.SummaryPath, BuildPipelineSummary(report), new UTF8Encoding(false));
+                    }
+                    else
+                    {
+                        report.SummaryPath = Path.Combine(report.RunDirectory, "pipeline-report.md");
+                        File.WriteAllText(report.SummaryPath, BuildPipelineSummary(report), new UTF8Encoding(false));
+                    }
+                }
+                catch (Exception writeFailure)
+                {
+                    report.ArtifactError += "\n失败报告也未能保存：" + writeFailure;
+                }
+                Debug.LogWarning("[GameplayTestPipeline] 本轮测试产物归集失败：" + exception);
+            }
+        }
+
+        private static void WritePipelineArtifact(PipelineReport report)
+            => File.WriteAllText(Path.Combine(report.RunDirectory, "pipeline.json"),
+                JsonConvert.SerializeObject(report, Formatting.Indented,
+                    new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }),
+                new UTF8Encoding(false));
+
+        private static void CompleteInterruptedArtifacts(GameplayTestReport gameplay, PipelineReport pipeline)
+        {
+            GameplayTestArtifacts.Initialize(gameplay);
+            if (gameplay.Status == "running")
+            {
+                gameplay.Status = pipeline.Status == "failed" ? "failed" : "interrupted";
+                gameplay.FinishedUtc = pipeline.FinishedUtc;
+            }
+            if (!File.Exists(gameplay.ScreenshotPath) && string.IsNullOrEmpty(gameplay.ScreenshotError))
+                gameplay.ScreenshotError = "本轮结束时没有可用的截图，游戏场景可能提前退出。";
+            gameplay.PassedCaseCount = gameplay.FailedCaseCount = gameplay.SkippedCaseCount = gameplay.InterruptedCaseCount = 0;
+            foreach (GameplayTestCaseReport testCase in gameplay.Cases)
+            {
+                if (testCase.Status == "running" || testCase.Status == "pending")
+                {
+                    testCase.Status = testCase.Status == "running" ? "interrupted" : "skipped";
+                    testCase.Reason = pipeline.Reason;
+                    testCase.FinishedUtc = pipeline.FinishedUtc;
+                }
+                testCase.ReportPath = GameplayTestArtifacts.CaseReportPath(gameplay, testCase.Id);
+                testCase.ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(gameplay, testCase.Id);
+                if (!File.Exists(testCase.ScreenshotPath) && string.IsNullOrEmpty(testCase.ScreenshotError))
+                    testCase.ScreenshotError = "用例未执行，或结束前游戏场景已退出，未捕获结束画面。";
+                if (testCase.Status == "passed") gameplay.PassedCaseCount++;
+                if (testCase.Status == "failed") gameplay.FailedCaseCount++;
+                if (testCase.Status == "skipped") gameplay.SkippedCaseCount++;
+                if (testCase.Status == "interrupted") gameplay.InterruptedCaseCount++;
+                Directory.CreateDirectory(Path.GetDirectoryName(testCase.ReportPath));
+                File.WriteAllText(testCase.ReportPath, JsonConvert.SerializeObject(testCase, Formatting.Indented,
+                    new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }),
+                    new UTF8Encoding(false));
+            }
+        }
+
+        private static GameplayTestReport CreateUnstartedGameplayReport(PipelineReport pipeline)
+        {
+            string absence = pipeline.PlayMode.Status == "pending"
+                ? "PlayMode 未启动；EditMode 前置检查失败或测试提前中断，因此没有游戏截图。"
+                : "测试场景未保存本轮报告；PlayMode 可能启动失败或提前退出，因此没有游戏截图。";
+            var report = new GameplayTestReport
+            {
+                RunId = pipeline.RunId, TestSuitePath = pipeline.SuitePath,
+                StartedUtc = pipeline.StartedUtc, FinishedUtc = pipeline.FinishedUtc,
+                Status = pipeline.Status, CurrentStage = "not_started", ScreenshotError = absence
+            };
+            GameplayTestArtifacts.Initialize(report);
+            GameplayTestSuite suite = null;
+            try
+            {
+                suite = GameplayTestSuite.Parse(File.ReadAllText(
+                    GameplayTestSelection.GetAbsoluteSuitePath(pipeline.SuitePath), Encoding.UTF8));
+            }
+            catch (Exception exception) { report.ArtifactError = "收尾时无法读取用例清单：" + exception; }
+            foreach (string caseId in pipeline.SelectedCaseIds)
+            {
+                GameplayTestCase configured = suite?.Cases.Find(entry => entry.Id == caseId);
+                var testCase = new GameplayTestCaseReport
+                {
+                    Id = caseId, Name = configured?.Name ?? caseId, LuaPath = configured?.LuaPath,
+                    Status = "skipped", Reason = pipeline.Reason, FinishedUtc = pipeline.FinishedUtc,
+                    ScreenshotError = absence,
+                    ReportPath = GameplayTestArtifacts.CaseReportPath(report, caseId),
+                    ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(report, caseId)
+                };
+                report.Cases.Add(testCase);
+                report.SkippedCaseCount++;
+            }
+            return report;
+        }
+
+        private static string BuildPipelineSummary(PipelineReport report)
+        {
+            var text = new StringBuilder();
+            text.AppendLine();
+            text.AppendLine("## Test Framework 流水线");
+            text.AppendLine();
+            text.AppendLine("- 流水线结果：**" + report.Status + "**");
+            text.AppendLine("- 说明：" + (report.Reason ?? string.Empty).Replace("\n", "<br>"));
+            text.AppendLine("- [完整流水线结果](pipeline.json)");
+            text.AppendLine();
+            text.AppendLine("| 阶段 | 结果 | 通过 | 失败 | 跳过 | 不确定 |");
+            text.AppendLine("| --- | --- | --- | --- | --- | --- |");
+            AppendPhaseSummary(text, "EditMode", report.EditMode);
+            AppendPhaseSummary(text, "PlayMode", report.PlayMode);
+            text.AppendLine();
+            AppendFailures(text, "EditMode", report.EditMode);
+            AppendFailures(text, "PlayMode", report.PlayMode);
+            return text.ToString();
+        }
+
+        private static void AppendPhaseSummary(StringBuilder text, string name, PhaseResult phase)
+            => text.AppendLine($"| {name} | {phase.Status} | {phase.Passed} | {phase.Failed} | {phase.Skipped} | {phase.Inconclusive} |");
+
+        private static void AppendFailures(StringBuilder text, string name, PhaseResult phase)
+        {
+            foreach (CaseResult testCase in phase.Cases)
+            {
+                if (testCase.Status?.StartsWith("Passed", StringComparison.OrdinalIgnoreCase) == true) continue;
+                text.AppendLine("- " + name + "：`" + testCase.Name + "`（" + testCase.Status + "）");
+                text.AppendLine("  " + (testCase.Message ?? string.Empty).Replace("\n", "<br>"));
+            }
+        }
+        #endregion
 
         private sealed class Callbacks : ICallbacks
         {

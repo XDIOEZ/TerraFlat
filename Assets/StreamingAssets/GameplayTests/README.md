@@ -159,17 +159,24 @@ GM 命令和断言额外提供：
 
 每个 Lua 最多 256 步，单步等待或移动最多 30 秒，累计动作时间最多 180 秒。Lua 编排阶段有指令预算，死循环会记录错误并结束当前用例。场景另设资源、世界进入和整份清单的总流程超时，可在组件上调整；增加较长的业务测试时，要同时调整总流程超时。
 
-## JSON 报告与存档
+## 报告、截图、测试包与存档
 
 编辑器输出位于项目目录：
 
 ```text
-Library/FlatWorldGameplayTests/Reports/<运行时间_运行ID>.json
-Library/FlatWorldGameplayTests/Reports/<运行时间_运行ID>/<用例ID>.json
+Library/FlatWorldGameplayTests/Runs/<运行ID>/report.md
+Library/FlatWorldGameplayTests/Runs/<运行ID>/report.json
+Library/FlatWorldGameplayTests/Runs/<运行ID>/pipeline.json
+Library/FlatWorldGameplayTests/Runs/<运行ID>/screenshots/final.png
+Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/report.json
+Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/end.png
+Library/FlatWorldGameplayTests/Runs/<运行ID>.zip
 Library/FlatWorldGameplayTests/Saves/<运行时间_运行ID>/
 ```
 
-独立 Player 的同类目录位于 `Application.persistentDataPath/GameplayTests/`。测试期间的首次保存、自动保存和退出保存都留在本轮的独立 Saves 目录；退出保存完成并返回菜单后，恢复正式存档目录。
+独立 Player 的同类目录位于 `Application.persistentDataPath/FlatWorldGameplayTests/`。测试期间的首次保存、自动保存和退出保存都留在本轮的独立 Saves 目录；退出保存完成并返回菜单后，恢复正式存档目录。
+
+执行过的用例结束时截图，整轮再保存结束画面，然后输出同名 ZIP。无画面、跳过或中断会记录缺图原因；保持 Game 视图可渲染。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
 
 总报告包含运行时间、当前阶段、最终状态、测试清单及每个用例的状态和报告路径、每个陈列物品的 ID/坐标/后端/放置结果，以及 Unity 日志、错误和堆栈。每个用例另有一个 JSON，保存自己的步骤结果、起止玩家位置和日志，查看电力测试时可以直接打开 `electricity.json`。
 

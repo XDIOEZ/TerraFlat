@@ -79,18 +79,15 @@ public sealed class GameplayTestScene : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         clock.Start();
         string runId = DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffZ") + "_" + Guid.NewGuid().ToString("N").Substring(0, 8);
-#if UNITY_EDITOR
-        string root = Path.Combine(Path.GetDirectoryName(Application.dataPath), "Library", "FlatWorldGameplayTests");
-#else
-        string root = Path.Combine(Application.persistentDataPath, "GameplayTests");
-#endif
+        runId = GameplayTestSelection.ResolveRunId(runId);
+        string root = GameplayTestSelection.RootDirectory;
         isolatedSaveDirectory = Path.Combine(root, "Saves", runId);
         report = new GameplayTestReport
         {
             RunId = runId, Scene = gameObject.scene.path, TestSuitePath = testSuitePath,
-            StartedUtc = DateTime.UtcNow.ToString("O"), SaveDirectory = isolatedSaveDirectory,
-            ReportPath = Path.Combine(root, "Reports", runId + ".json")
+            StartedUtc = DateTime.UtcNow.ToString("O"), SaveDirectory = isolatedSaveDirectory
         };
+        GameplayTestArtifacts.Initialize(report);
         Application.logMessageReceivedThreaded += CaptureLog;
         subscribed = true;
     }
@@ -104,6 +101,8 @@ public sealed class GameplayTestScene : MonoBehaviour
     {
         showroom?.UpdatePresentation();
         if (report == null || finished) return;
+        if (GameManager.Instance?.IsGameplayReady == true && ItemMgr.Instance?.User_Player != null)
+            player = ItemMgr.Instance.User_Player;
         lock (reportLock) DrainCapturedLogs();
         if (worldExited || clock.Elapsed.TotalSeconds > totalTimeoutSeconds)
         {
@@ -182,7 +181,8 @@ public sealed class GameplayTestScene : MonoBehaviour
                 Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath,
                 Status = testCase.Enabled ? "pending" : "disabled",
                 Reason = testCase.Enabled ? null : "用例未启用。",
-                ReportPath = Path.Combine(Path.GetDirectoryName(report.ReportPath), report.RunId, testCase.Id + ".json")
+                ReportPath = GameplayTestArtifacts.CaseReportPath(report, testCase.Id),
+                ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(report, testCase.Id)
             });
         Record("load_suite", "读取 Lua 测试清单", true, $"已登记 {report.Cases.Count} 个用例。");
 
@@ -250,7 +250,18 @@ public sealed class GameplayTestScene : MonoBehaviour
 
     private IEnumerator RunGuarded(IEnumerator routine)
     {
-        try { yield return AdvanceGuarded(routine); }
+        try
+        {
+            yield return AdvanceGuarded(routine);
+            if (!interruptionRequested)
+            {
+                Stage("capture_final");
+                yield return GameplayTestArtifacts.CaptureScreenshot(this, report.ScreenshotPath,
+                    error => report.ScreenshotError = error);
+                Record("screenshot", "整轮结束截图", string.IsNullOrEmpty(report.ScreenshotError),
+                    report.ScreenshotError ?? report.ScreenshotPath);
+            }
+        }
         finally { Finish(interruptionRequested); }
     }
 
@@ -315,6 +326,7 @@ public sealed class GameplayTestScene : MonoBehaviour
 
     private void OnWorldExit()
     {
+        if (GameplayTestSpaceScenario.IsMigrationExpected) return;
         worldExited = true;
         if (finished) return;
         // 退出事件当帧就标记中断，避免协程先结束而把退出误记为普通失败。
@@ -346,6 +358,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             if (stopped || !Check("world_ready") || !Check("player_ready"))
             {
                 testCase.Status = "skipped";
+                testCase.ScreenshotError = "用例未执行，没有结束画面。";
                 testCase.Reason = stopped ? "前面的用例失败，清单已配置失败即停。" : "世界或玩家不再就绪。";
                 testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
                 failedStep = true;
@@ -373,6 +386,14 @@ public sealed class GameplayTestScene : MonoBehaviour
             // 每个用例自己捕获异常，读取失败或 Lua 报错不会截断整个测试清单。
             yield return AdvanceGuarded(ExecuteCase(testCase));
             succeeded = luaRunner?.Succeeded == true;
+            if (!interruptionRequested)
+            {
+                Stage("case." + testCase.Id + ".screenshot");
+                yield return GameplayTestArtifacts.CaptureScreenshot(this, testCase.ScreenshotPath,
+                    error => testCase.ScreenshotError = error);
+                Record("screenshot", "用例结束截图", string.IsNullOrEmpty(testCase.ScreenshotError),
+                    testCase.ScreenshotError ?? testCase.ScreenshotPath);
+            }
         }
         finally
         {
@@ -403,7 +424,13 @@ public sealed class GameplayTestScene : MonoBehaviour
             testCase.PlayerEnd = player == null ? null : new GameplayTestPosition(player.transform.position);
             testCase.Status = interrupted ? "interrupted" : succeeded && testCase.FailedStepCount == 0 &&
                 testCase.ErrorCount == 0 ? "passed" : "failed";
-            if (testCase.Status != "passed") failedStep = true;
+            if (testCase.Status != "passed")
+            {
+                failedStep = true;
+                testCase.Reason = interrupted ? "测试流程被中断。" : "请查看用例步骤与错误日志。";
+                foreach (GameplayTestStepRecord step in testCase.Steps)
+                    if (!step.Success) { testCase.Reason = step.Label + "：" + step.Message; break; }
+            }
             if (!WriteCaseReport(testCase)) testCase.Status = "failed";
             RefreshCaseCounts();
         }
@@ -565,11 +592,15 @@ public sealed class GameplayTestScene : MonoBehaviour
         if (finished || report == null) return;
         finished = true;
         ReleaseLuaRunner();
+        if (!File.Exists(report.ScreenshotPath) && string.IsNullOrEmpty(report.ScreenshotError))
+            report.ScreenshotError = "测试被中断，结束画面未能保存。";
         lock (reportLock)
         {
             DrainCapturedLogs(clearCurrentCase: true, closeCapture: true);
             foreach (GameplayTestCaseReport testCase in report.Cases)
             {
+                if (!File.Exists(testCase.ScreenshotPath) && string.IsNullOrEmpty(testCase.ScreenshotError))
+                    testCase.ScreenshotError = "用例未执行或被中断，没有可保存的结束画面。";
                 if (testCase.Status == "running")
                 {
                     testCase.Status = interrupted ? "interrupted" : "failed";
@@ -597,6 +628,21 @@ public sealed class GameplayTestScene : MonoBehaviour
         saveScope?.Dispose();
         if (WriteReport())
         {
+            try
+            {
+                GameplayTestArtifacts.WriteSummary(report);
+                report.PackagePath = GameplayTestArtifacts.CreatePackage(report.RunDirectory);
+            }
+            catch (Exception exception)
+            {
+                report.ArtifactError = exception.ToString();
+                report.PackagePath = null;
+                report.Status = "failed";
+                WriteReport();
+                try { GameplayTestArtifacts.WriteSummary(report); }
+                catch (Exception summaryError) { Debug.LogError("[GameplayTest] 阅读报告写入失败：" + summaryError, this); }
+                Debug.LogError("[GameplayTest] 结果包生成失败：" + exception, this);
+            }
             GameplayTestSelection.WriteLastGameplayReport(report.ReportPath);
             Debug.Log($"[GameplayTest] 测试结束：{report.Status}，报告：{report.ReportPath}", this);
         }

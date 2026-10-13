@@ -31,6 +31,24 @@ public sealed class GameplayTestExhibit
 /// <summary>真实世界上的物品陈列厅，复用地形、资源实体、机器与掉落物的正式入口。</summary>
 public sealed class GameplayTestShowroom : IDisposable
 {
+    #region 独立内容采样作用域
+    private static int profileOverrideSuspensions;
+
+    // 冷地表内容测试只在冻结配置时跳过陈列厅覆盖，不影响当前世界的运行配置。
+    public static IDisposable SuppressProfileOverrides() => new ProfileOverrideSuspension();
+
+    private sealed class ProfileOverrideSuspension : IDisposable
+    {
+        private bool disposed;
+        public ProfileOverrideSuspension() { profileOverrideSuspensions++; }
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            profileOverrideSuspensions--;
+        }
+    }
+    #endregion
     #region 配置与运行状态
 
     private const int MinimumSlotSize = 8;
@@ -85,6 +103,7 @@ public sealed class GameplayTestShowroom : IDisposable
 
     private ChunkGenerationProfileSnapshot ConfigureProfile(ChunkGenerationProfileSnapshot profile)
     {
+        if (profileOverrideSuspensions > 0) return profile;
         PlanetData active = null;
         bool activeTestWorld = SaveDataMgr.Instance != null &&
             SaveDataMgr.Instance.TryGetActivePlanetData(out active) &&

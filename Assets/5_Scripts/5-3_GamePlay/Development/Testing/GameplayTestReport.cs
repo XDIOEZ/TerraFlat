@@ -10,13 +10,19 @@ using UnityEngine;
 public sealed class GameplayTestReport
 {
     #region 报告数据
-    public int SchemaVersion = 2;
+    public int SchemaVersion = 3;
     public string RunId;
     public string Scene;
     public string TestSuitePath;
     public string SaveDirectory;
     public string ReportPath;
     public string ReportWriteError;
+    public string RunDirectory;
+    public string SummaryPath;
+    public string ScreenshotPath;
+    public string ScreenshotError;
+    public string PackagePath;
+    public string ArtifactError;
     public string StartedUtc;
     public string FinishedUtc;
     public string Status = "running";
@@ -76,6 +82,8 @@ public sealed class GameplayTestCaseReport
     public string LuaPath;
     public string ReportPath;
     public string ReportWriteError;
+    public string ScreenshotPath;
+    public string ScreenshotError;
     public string Status = "pending";
     public string Reason;
     public string StartedUtc;

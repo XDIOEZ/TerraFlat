@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using XLua;
 
@@ -14,7 +15,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private const int MaximumSourceCharacters = 1024 * 1024;
     private const float MaximumStepSeconds = 30f;
     private const float MaximumTotalSeconds = 180f;
-    private readonly Player player;
+    private Player player;
     private readonly Func<string, bool> check;
     private readonly Action<string, string, bool, string> record;
     private Mod_GameController controller;
@@ -32,6 +33,9 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private bool gmHealthChanged;
     private bool gmInvincibilityChanged;
     private readonly HashSet<string> createdBuffs = new(StringComparer.OrdinalIgnoreCase);
+    private LuaEnv luaEnvironment;
+    private LuaFunction executeLua;
+    private readonly List<LuaFunction> callbacks = new();
 
     private sealed class Command
     {
@@ -39,6 +43,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         public string Label;
         public string Text;
         public string Argument;
+        public LuaFunction Validator;
         public float X;
         public float Y;
         public float Seconds;
@@ -62,7 +67,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     public static void ValidateScript(string source, string chunkName)
     {
         string failure = null;
-        var validator = new GameplayTestLuaRunner(null, _ => true,
+        using var validator = new GameplayTestLuaRunner(null, _ => true,
             (_, _, success, message) => { if (!success) failure = message; });
         if (!validator.TryReadCommands(source, chunkName, out _))
             throw new InvalidOperationException("测试 Lua 预检失败：" + (failure ?? chunkName));
@@ -148,6 +153,13 @@ public sealed class GameplayTestLuaRunner : IDisposable
             if argument ~= nil then argument = text(argument, 'GM argument') end
             enqueue({name='gm', text=command, argument=argument, label='GM: ' .. command})
         end
+        function test.space(operation, validator, label, argument)
+            operation = text(operation, 'space operation')
+            assert(type(validator) == 'function', 'space 必须提供 Lua 断言回调')
+            if argument ~= nil then argument = text(argument, 'space argument') end
+            enqueue({name='space', text=operation, argument=argument, validator=validator,
+                label=label == nil and operation or text(label, 'label')})
+        end
         local function copy(source)
             local target = {}; for key, value in pairs(source or {}) do target[key] = value end
             return target
@@ -156,12 +168,14 @@ public sealed class GameplayTestLuaRunner : IDisposable
             next=next, select=select, tonumber=tonumber, tostring=tostring, type=type,
             math=copy(math), string=copy(string), table=copy(table), utf8=copy(utf8)}
         scope._G = scope
-        local function execute(chunk)
+        local function execute(chunk, ...)
+            local arguments = {...}
+            instructionCount = 0
             debug.sethook(function()
                 instructionCount = instructionCount + 1000
                 if instructionCount >= 1000000 then error('测试 Lua 超过 100 万条指令预算', 0) end
             end, '', 1000)
-            local ok, result = xpcall(chunk, function(message)
+            local ok, result = xpcall(function() return chunk(table.unpack(arguments)) end, function(message)
                 debug.sethook()
                 return debug.traceback(tostring(message), 2)
             end)
@@ -179,14 +193,15 @@ public sealed class GameplayTestLuaRunner : IDisposable
             if (string.IsNullOrWhiteSpace(source) || source.Length > MaximumSourceCharacters)
                 throw new InvalidOperationException("测试 Lua 不能为空，且不能超过 1MB 字符。");
 
-            using LuaEnv environment = new();
-            object[] bootstrap = environment.DoString(Bootstrap, "GameplayTestBootstrap");
+            ReleaseLua();
+            luaEnvironment = new LuaEnv();
+            object[] bootstrap = luaEnvironment.DoString(Bootstrap, "GameplayTestBootstrap");
             using LuaTable scope = (LuaTable)bootstrap[0];
             using LuaTable queue = (LuaTable)bootstrap[1];
-            using LuaFunction execute = (LuaFunction)bootstrap[2];
-            using LuaFunction script = environment.LoadString(source,
+            executeLua = (LuaFunction)bootstrap[2];
+            using LuaFunction script = luaEnvironment.LoadString(source,
                 string.IsNullOrWhiteSpace(chunkName) ? "@GameplayTest.lua" : chunkName, scope);
-            object[] result = execute.Call(script);
+            object[] result = executeLua.Call(script);
             if (result.Length == 0 || result[0] is not bool success || !success)
                 throw new InvalidOperationException(result.Length > 1
                     ? result[1]?.ToString() : "测试 Lua 未返回执行状态。");
@@ -219,6 +234,14 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     throw new InvalidOperationException(gmError);
                 if (command.Name == "fluid" && !GameplayTestFluids.IsScenario(command.Text))
                     throw new InvalidOperationException("未知流体测试案例：" + command.Text);
+                if (command.Name == "space")
+                {
+                    if (!GameplayTestSpaceScenario.TryValidate(command.Text, command.Argument, out string spaceError))
+                        throw new InvalidOperationException(spaceError);
+                    command.Validator = step.Get<LuaFunction>("validator") ??
+                        throw new InvalidOperationException("太空测试缺少 Lua 断言回调。");
+                    callbacks.Add(command.Validator);
+                }
                 commands.Add(command);
             }
             if (commands.Count == 0) throw new InvalidOperationException("测试 Lua 没有安排任何步骤。");
@@ -304,6 +327,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         finally
         {
             ReleaseControl();
+            ReleaseLua();
             running = false;
         }
     }
@@ -330,6 +354,11 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     createdBuffs.Add(command.Argument);
                 command.Success = GameplayTestGm.TryExecute(player, command.Text,
                     command.Argument, out command.Message);
+                break;
+            case "space":
+                IEnumerator probe = RunSpaceCommand(command);
+                try { while (probe.MoveNext()) yield return probe.Current; }
+                finally { (probe as IDisposable)?.Dispose(); }
                 break;
             case "log":
                 Debug.Log($"[GameplayTest Lua] {command.Text}");
@@ -398,6 +427,75 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 break;
         }
     }
+
+    #region 太空数据与 Lua 断言
+    private IEnumerator RunSpaceCommand(Command command)
+    {
+        JObject sample = null;
+        if (GameplayTestUniverseProbe.Supports(command.Text))
+            sample = GameplayTestUniverseProbe.Capture(command.Text);
+        else if (GameplayTestShipProbe.Supports(command.Text))
+            sample = GameplayTestShipProbe.Capture(command.Text);
+        else
+        {
+            // 迁移会重建玩家，先交还旧租约，再从正式会话取得新玩家。
+            ReleaseControl();
+            using var scenario = new GameplayTestSpaceScenario();
+            yield return scenario.Execute(command.Text, command.Argument, value => sample = value);
+            player = ItemMgr.Instance?.User_Player;
+            if (!TryAcquireControl(out string error)) throw new InvalidOperationException(error);
+        }
+        if (sample == null) throw new InvalidOperationException("太空操作没有返回真实结果。");
+        record("space_sample", command.Label + "（实际采样）", true,
+            sample.ToString(Newtonsoft.Json.Formatting.None));
+        var tables = new List<LuaTable>();
+        try
+        {
+            LuaTable data = (LuaTable)ToLuaValue(sample, tables);
+            object[] result = executeLua.Call(command.Validator, data);
+            command.Success = result.Length > 0 && result[0] is bool passed && passed;
+            command.Message = result.Length > 1 && result[1] != null ? result[1].ToString() :
+                command.Success ? "Lua 太空断言通过。" : "Lua 太空断言失败。";
+            foreach (object value in result) (value as IDisposable)?.Dispose();
+        }
+        finally
+        {
+            for (int index = tables.Count - 1; index >= 0; index--) tables[index].Dispose();
+        }
+    }
+
+    private object ToLuaValue(JToken value, List<LuaTable> tables)
+    {
+        if (value is JObject obj)
+        {
+            LuaTable table = luaEnvironment.NewTable();
+            tables.Add(table);
+            foreach (JProperty property in obj.Properties()) table.Set(property.Name, ToLuaValue(property.Value, tables));
+            return table;
+        }
+        if (value is JArray array)
+        {
+            LuaTable table = luaEnvironment.NewTable();
+            tables.Add(table);
+            for (int index = 0; index < array.Count; index++) table.Set(index + 1, ToLuaValue(array[index], tables));
+            return table;
+        }
+        if (value.Type == JTokenType.Null) return null;
+        if (value.Type == JTokenType.Boolean) return value.Value<bool>();
+        if (value.Type == JTokenType.Integer || value.Type == JTokenType.Float) return value.Value<double>();
+        return value.Value<string>();
+    }
+
+    private void ReleaseLua()
+    {
+        foreach (LuaFunction callback in callbacks) callback.Dispose();
+        callbacks.Clear();
+        executeLua?.Dispose();
+        executeLua = null;
+        luaEnvironment?.Dispose();
+        luaEnvironment = null;
+    }
+    #endregion
 
     private IEnumerator MoveTo(Command command)
     {
@@ -526,6 +624,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         if (disposed) return;
         disposed = true;
         ReleaseControl();
+        ReleaseLua();
     }
 
     #endregion

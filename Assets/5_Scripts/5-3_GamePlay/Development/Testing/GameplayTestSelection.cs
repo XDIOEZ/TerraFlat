@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -12,8 +13,9 @@ public static class GameplayTestSelection
     public const string DefaultSuitePath = "GameplayTests/test-suite.json";
     public const string QuickSuitePath = "GameplayTests/quick-suite.json";
 
-    public static string RootDirectory => Path.Combine(
-        Path.GetDirectoryName(Application.dataPath), "Library", "FlatWorldGameplayTests");
+    public static string RootDirectory => Application.isEditor
+        ? Path.Combine(Path.GetDirectoryName(Application.dataPath), "Library", "FlatWorldGameplayTests")
+        : Path.Combine(Application.persistentDataPath, "FlatWorldGameplayTests");
     public static string SelectionPath => Path.Combine(RootDirectory, "Pipeline", "selected-suite.json");
     public static string LastGameplayReportPath => Path.Combine(RootDirectory, "Pipeline", "last-gameplay-report.txt");
 
@@ -53,8 +55,7 @@ public static class GameplayTestSelection
     public static void SelectSuite(string path, string runId, IReadOnlyCollection<string> selectedCaseIds = null)
     {
         string normalized = NormalizeSuitePath(path);
-        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 80)
-            throw new ArgumentException("无效测试运行编号。", nameof(runId));
+        ValidateRunId(runId);
         Directory.CreateDirectory(Path.GetDirectoryName(SelectionPath));
         var selection = new JObject
         {
@@ -74,6 +75,22 @@ public static class GameplayTestSelection
         JObject selection = JObject.Parse(File.ReadAllText(SelectionPath, Encoding.UTF8));
         // 指针由每轮启动覆盖、结束后清除，不使用本机时钟判定，避免不同测试域的时区误判。
         return NormalizeSuitePath(selection.Value<string>("suitePath"));
+    }
+
+    public static string ResolveRunId(string fallback)
+    {
+        string runId = File.Exists(SelectionPath)
+            ? JObject.Parse(File.ReadAllText(SelectionPath, Encoding.UTF8)).Value<string>("runId")
+            : fallback;
+        ValidateRunId(runId);
+        return runId;
+    }
+
+    public static void ValidateRunId(string runId)
+    {
+        if (string.IsNullOrEmpty(runId) || !Regex.IsMatch(runId, "\\A[a-zA-Z0-9_-]{1,80}\\z") ||
+            Regex.IsMatch(runId, "\\A(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])\\z", RegexOptions.IgnoreCase))
+            throw new ArgumentException("无效测试运行编号。", nameof(runId));
     }
 
     /// <summary>仅将用户选中的有效用例标记为启用；原始清单和 Lua 文件都保持不变。</summary>
