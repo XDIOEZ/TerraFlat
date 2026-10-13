@@ -59,6 +59,8 @@
     "=======dotnet.defaultSolution": "TerraFlat-master.sln",
     ">>>>>>>origin/masterdotnet.preferCSharpExtension": true,
     "workbench.editorAssociations": {
+        "*.md": "cweijan.markdownViewer",
+        "*.markdown": "cweijan.markdownViewer",
         "*.prefab": "unityPrefabBrowser.prefabEditor"
     },
     "outline-map.follow": "manual",
