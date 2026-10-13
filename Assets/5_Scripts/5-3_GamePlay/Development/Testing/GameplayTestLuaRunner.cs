@@ -24,12 +24,21 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private bool controlAcquired;
     private bool running;
     private bool disposed;
+    private Mod_PlayerAdminController admin;
+    private float initialAdminSpeed;
+    private float initialHealth;
+    private bool initialInvincibility;
+    private bool gmSpeedChanged;
+    private bool gmHealthChanged;
+    private bool gmInvincibilityChanged;
+    private readonly HashSet<string> createdBuffs = new(StringComparer.OrdinalIgnoreCase);
 
     private sealed class Command
     {
         public string Name;
         public string Label;
         public string Text;
+        public string Argument;
         public float X;
         public float Y;
         public float Seconds;
@@ -129,6 +138,11 @@ public sealed class GameplayTestLuaRunner : IDisposable
             enqueue({name='select_hotbar', index=index})
         end
         function test.use() enqueue({name='use'}) end
+        function test.gm(command, argument)
+            command = text(command, 'GM command')
+            if argument ~= nil then argument = text(argument, 'GM argument') end
+            enqueue({name='gm', text=command, argument=argument, label='GM: ' .. command})
+        end
         local function copy(source)
             local target = {}; for key, value in pairs(source or {}) do target[key] = value end
             return target
@@ -184,6 +198,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     Name = step.Get<string>("name"),
                     Label = step.Get<string>("label"),
                     Text = step.Get<string>("text"),
+                    Argument = step.Get<string>("argument"),
                     X = ReadNumber(step, "x"),
                     Y = ReadNumber(step, "y"),
                     Seconds = ReadNumber(step, "seconds"),
@@ -194,6 +209,9 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 if (command.Seconds < 0f || command.Seconds > MaximumStepSeconds ||
                     totalSeconds > MaximumTotalSeconds)
                     throw new InvalidOperationException("测试时间超过单步 30 秒或累计 180 秒限制。");
+                if (command.Name == "gm" &&
+                    !GameplayTestGm.TryValidate(command.Text, command.Argument, out string gmError))
+                    throw new InvalidOperationException(gmError);
                 commands.Add(command);
             }
             if (commands.Count == 0) throw new InvalidOperationException("测试 Lua 没有安排任何步骤。");
@@ -290,6 +308,18 @@ public sealed class GameplayTestLuaRunner : IDisposable
             case "check":
                 command.Success = check(command.Text);
                 command.Message = command.Success ? $"检查通过：{command.Text}" : $"检查失败：{command.Text}";
+                break;
+            case "gm":
+                // 用例失败或中断时仍可还原 GM 制造的临时条件。
+                gmSpeedChanged |= command.Text == "set_move_speed";
+                gmHealthChanged |= command.Text == "set_health_ratio";
+                gmInvincibilityChanged |= command.Text == "enable_invincibility" ||
+                                         command.Text == "disable_invincibility";
+                if (command.Text == "apply_self_buff" &&
+                    player.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager)?.HasBuff(command.Argument) == false)
+                    createdBuffs.Add(command.Argument);
+                command.Success = GameplayTestGm.TryExecute(player, command.Text,
+                    command.Argument, out command.Message);
                 break;
             case "log":
                 Debug.Log($"[GameplayTest Lua] {command.Text}");
@@ -428,6 +458,10 @@ public sealed class GameplayTestLuaRunner : IDisposable
         }
         controlAcquired = true;
         previousRunState = mover.IsRunning;
+        admin = player.GetComponentInChildren<Mod_PlayerAdminController>(true);
+        initialAdminSpeed = admin?.AdminMoveSpeedMultiplier ?? 1f;
+        initialInvincibility = admin?.IsAdminInvincibilityEnabled ?? false;
+        initialHealth = player.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp ?? 0f;
         mover.SetRunState(false);
         return true;
     }
@@ -448,6 +482,25 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private void ReleaseControl()
     {
         if (navigation != null) navigation.TryCancelMoveTo(this);
+        if (player != null)
+        {
+            Mod_BuffManager buffs = player.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+            if (buffs != null)
+                foreach (string id in createdBuffs) buffs.RemoveBuff(id);
+            if (admin != null && admin.IsAdministrator)
+            {
+                if (gmInvincibilityChanged)
+                    admin.TrySetAdminInvincibilityEnabled(initialInvincibility);
+                if (gmSpeedChanged)
+                    admin.TrySetAdminMoveSpeedMultiplier(initialAdminSpeed, out _);
+            }
+            if (gmHealthChanged)
+            {
+                Mod_DamageReceiver health = player.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+                if (health != null && initialHealth > 0f) health.Hp = initialHealth;
+            }
+        }
+        createdBuffs.Clear();
         if (controller != null && controller.IsExternalGameplayControlOwner(this))
         {
             controller.TrySetExternalMoveInput(this, Vector2.zero);

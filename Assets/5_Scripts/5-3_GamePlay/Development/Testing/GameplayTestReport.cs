@@ -49,8 +49,20 @@ public sealed class GameplayTestReport
             new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
         string temporaryPath = path + ".tmp";
         File.WriteAllText(temporaryPath, json, new UTF8Encoding(false));
-        if (File.Exists(path)) File.Replace(temporaryPath, path, null);
-        else File.Move(temporaryPath, path);
+        // 外部报告读取器短暂占用文件时重试，避免测试流程被 Windows 共享冲突误判失败。
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Replace(temporaryPath, path, null);
+                else File.Move(temporaryPath, path);
+                break;
+            }
+            catch (IOException) when (attempt < 9)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+        }
     }
     #endregion
 }

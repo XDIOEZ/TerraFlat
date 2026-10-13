@@ -88,7 +88,7 @@ PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene
 
 场景的 `GameplayTestRunner` 组件默认读取 `Assets/StreamingAssets/GameplayTests/test-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
 
-默认清单包含两个实际用例：`enter_showroom.lua` 检查世界、默认模板玩家、地面和物品陈列是否就绪；`player_movement.lua` 让玩家右走半秒、确认真实位置发生变化，再左走半秒。默认移动发生在陈列区旁边的空通道。
+默认清单包括入世、移动、快捷栏和 GM 专项回归。`quick-suite.json` 包含 7 个用例，跳过物品陈列；`test-suite.json` 包含 8 个用例，额外执行全物品陈列及创造背包。所有用例独立 Lua 文件，可在测试中心按 ID 单独勾选；GM 用例自己准备条件，不依赖上一用例是否成功。
 
 例如，之后分别写好电力和机械动力的业务测试脚本，再把下列条目追加到清单的 `cases` 数组：
 
@@ -141,8 +141,21 @@ Lua 使用点调用语法，先编排步骤，再由 C# 按顺序分帧执行。
 | `test.interact()` | 通过正式交互接口操作当前位置的目标 |
 | `test.select_hotbar(index)` | 选择快捷栏，下标从 0 开始 |
 | `test.use()` | 调用当前手持物的正式使用入口 |
+| `test.gm(command, argument)` | 通过白名单 GM 命令准备测试条件；argument 根据命令可省略 |
 
 可检查的名称：`world_ready`、`player_ready`、`terrain_ready`、`showroom_complete`、`player_moved`。其中 `player_moved` 比较当前用例开始时的真实玩家位置，要求移动距离大于 0.1；`move_to` 只有导航返回已到达且实际距离满足阈值才算成功。`use` 的成功表示使用入口完成调用，具体物品效果需要后续另加业务检查。
+
+GM 命令和断言额外提供：
+
+| GM 命令 | 条件与使用 |
+| --- | --- |
+| `enable_admin`、`enable_invincibility`、`disable_invincibility` | 走正式玩家管理员与无敌 API |
+| `set_health_ratio`, `"0.5"` | 仅管理员可使用，设置为 10%～100% 最大血量（测试专用造条件） |
+| `set_move_speed`, `"2"` | 仅管理员可使用，走正式速度倍率接口 |
+| `apply_self_buff`、`remove_self_buff`，参数 `"core:night_vision"` | 使用正式 Buff 目录与生命周期 |
+| `initialize_creative_inventory` | 使用正式 F2 创造背包填充逻辑，耗时较长 |
+
+状态断言：`gm_admin_enabled`、`gm_invincibility_enabled`、`gm_invincibility_disabled`、`gm_damage_blocked`、`gm_damage_normal`、`gm_health_full`、`gm_health_partial`、`gm_move_speed:2`、`gm_buff_active:core:night_vision`、`gm_buff_absent:core:night_vision`、`gm_creative_inventory_enabled`、`hotbar_slot:0`（数字可替换）。每个检查都会读取真实模块状态；GM 命令未被白名单允许会在 EditMode Lua 预检阶段报错。用例结束或提前失败时会恢复本用例修改的无敌、移动倍率、生命和新增 Buff；启用的管理员身份及创造背包内容保留在本轮隔离测试世界中。
 
 每个 Lua 最多 256 步，单步等待或移动最多 30 秒，累计动作时间最多 180 秒。Lua 编排阶段有指令预算，死循环会记录错误并结束当前用例。场景另设资源、世界进入和整份清单的总流程超时，可在组件上调整；增加较长的业务测试时，要同时调整总流程超时。
 

@@ -302,7 +302,9 @@ public sealed class GameplayTestScene : MonoBehaviour
             case "terrain_ready": return showroom?.IsTerrainReady == true;
             case "showroom_complete": return showroom?.IsComplete == true;
             case "player_moved": return player != null && Vector3.Distance(playerStart, player.transform.position) > 0.1f;
-            default: throw new ArgumentException("未知测试检查：" + name);
+            default:
+                if (GameplayTestGm.TryCheck(player, name, out bool passed)) return passed;
+                throw new ArgumentException("未知测试检查：" + name);
         }
     }
 

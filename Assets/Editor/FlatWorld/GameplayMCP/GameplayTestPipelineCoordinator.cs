@@ -116,8 +116,20 @@ namespace FlatWorld.GameplayMCP
                 new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
             string temporaryPath = path + ".tmp";
             File.WriteAllText(temporaryPath, json, new UTF8Encoding(false));
-            if (File.Exists(path)) File.Replace(temporaryPath, path, null);
-            else File.Move(temporaryPath, path);
+            // CLI 轮询报告时 Windows 可能短暂锁住目标文件，重试而不破坏原子替换。
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    if (File.Exists(path)) File.Replace(temporaryPath, path, null);
+                    else File.Move(temporaryPath, path);
+                    break;
+                }
+                catch (IOException) when (attempt < 9)
+                {
+                    System.Threading.Thread.Sleep(50);
+                }
+            }
             File.WriteAllText(LatestPath, path, new UTF8Encoding(false));
         }
 
@@ -381,12 +393,16 @@ namespace FlatWorld.GameplayMCP
                 PhaseResult phase = report.Phase == "editmode" ? report.EditMode :
                     report.Phase == "playmode" ? report.PlayMode : null;
                 if (phase == null) return;
-                phase.Cases.Add(new CaseResult
+                var entry = new CaseResult
                 {
                     Name = result.FullName, Status = result.ResultState,
                     Message = result.Message, StackTrace = result.StackTrace,
                     DurationSeconds = result.Duration
-                });
+                };
+                // 重复注册的 TestRunner 回调不应在报告中重复计入同一测试。
+                int previous = phase.Cases.FindIndex(existing => existing.Name == entry.Name);
+                if (previous < 0) phase.Cases.Add(entry);
+                else phase.Cases[previous] = entry;
                 Write(report);
             }
 

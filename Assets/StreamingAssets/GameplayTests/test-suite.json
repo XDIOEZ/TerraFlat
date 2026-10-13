@@ -13,6 +13,42 @@
       "name": "玩家基础移动",
       "luaPath": "GameplayTests/player_movement.lua",
       "enabled": true
+    },
+    {
+      "id": "hotbar_selection",
+      "name": "快捷栏槽位切换",
+      "luaPath": "GameplayTests/hotbar_selection.lua",
+      "enabled": true
+    },
+    {
+      "id": "gm_invincibility",
+      "name": "GM 管理员与无敌免伤",
+      "luaPath": "GameplayTests/gm_invincibility.lua",
+      "enabled": true
+    },
+    {
+      "id": "gm_health_restore",
+      "name": "GM 半血构造与无敌恢复",
+      "luaPath": "GameplayTests/gm_health_restore.lua",
+      "enabled": true
+    },
+    {
+      "id": "gm_move_speed",
+      "name": "GM 速度倍率与真实移动",
+      "luaPath": "GameplayTests/gm_move_speed.lua",
+      "enabled": true
+    },
+    {
+      "id": "gm_buff",
+      "name": "GM Buff 生命周期",
+      "luaPath": "GameplayTests/gm_buff.lua",
+      "enabled": true
+    },
+    {
+      "id": "gm_creative_inventory",
+      "name": "GM 创造背包目录初始化",
+      "luaPath": "GameplayTests/gm_creative_inventory.lua",
+      "enabled": true
     }
   ]
 }
