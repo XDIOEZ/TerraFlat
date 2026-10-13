@@ -310,14 +310,26 @@ namespace FlatWorld.Spaceflight
             ShipGeometry.LocalToWorld(ship, localX, localY, out double x, out double y);
             return IsSpaceView ? ProjectPosition(new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y))) : WorldLocalPresentation.ProjectPosition(new Vector2((float)x, (float)y));
         }
-        public bool IsVisible(ShipState ship)
+        private bool IsInPresentationWorld(ShipState ship)
         {
+            if (ship == null) return false;
             ShipFlightState flight = GetFlight(ship.ShipId);
             return flight != null && (IsSpaceView ?
-                (flight.Phase is ShipFlightPhase.Cruising) &&
-                    (SpaceSectorCoordinates.Relative(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY), ViewSector) - ViewOrigin).Magnitude < 1200d
+                flight.Phase == ShipFlightPhase.Cruising
                 : flight.SurfaceWorldKey == SceneManager.GetActiveScene().name &&
                     flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending);
+        }
+        public bool IsVisible(ShipState ship)
+        {
+            if (!IsInPresentationWorld(ship)) return false;
+            if (!IsSpaceView) return true;
+            Player player = ItemMgr.Instance?.User_Player;
+            SpacePassengerState observer = player != null ? State.Passengers.Find(value => value.ProfileId == player.ProfileName) : null;
+            if (observer != null && observer.Supported && observer.ShipId == ship.ShipId) return true;
+            // 浮动原点只保障坐标精度，可见距离必须围绕当前乘员的权威位置计算。
+            SpaceSectorPosition focus = observer != null ? GetPassengerPosition(observer) : new SpaceSectorPosition(ViewSector, ViewOrigin);
+            SpaceVector2 delta = SpaceSectorCoordinates.Relative(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY), focus.Sector) - focus.LocalMeters;
+            return delta.SqrMagnitude < 1200d * 1200d;
         }
         private void UpdateViewOrigin()
         {

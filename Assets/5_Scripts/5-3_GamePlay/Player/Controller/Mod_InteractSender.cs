@@ -26,9 +26,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private Component previewReceiverComponent;
     private InteractionTargetOutline previewOutline;
     private IInteractable heldReceiver; // 仅记录当前由交互键按住产生的持续交互目标。
-    public bool HasHeldInteraction => heldReceiver != null && currentReceiver == heldReceiver; // 只读诊断：当前是否正在持续世界交互。
-    public string CurrentInteractionType => currentReceiver?.GetType().Name ?? string.Empty; // 只读诊断：当前交互目标类型。
-    public string HeldInteractionType => heldReceiver?.GetType().Name ?? string.Empty; // 只读诊断：按住交互目标类型。
+    public bool HasHeldInteraction => IsInteractionReceiverAlive(heldReceiver) && currentReceiver == heldReceiver; // 只读诊断：当前是否正在持续世界交互。
+    public string CurrentInteractionType => IsInteractionReceiverAlive(currentReceiver) ? currentReceiver.GetType().Name : string.Empty; // 只读诊断：当前交互目标类型。
+    public string HeldInteractionType => IsInteractionReceiverAlive(heldReceiver) ? heldReceiver.GetType().Name : string.Empty; // 只读诊断：按住交互目标类型。
     public int CurrentInteractionTargetGuid => ResolveInteractionTargetGuid(currentReceiver); // 只读诊断：当前目标所属 Item Guid。
     public int HeldInteractionTargetGuid => ResolveInteractionTargetGuid(heldReceiver); // 只读诊断：按住目标所属 Item Guid。
     public const float DefaultMaxInteractDistance = 2f;
@@ -54,6 +54,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     public override void ModUpdate(float deltaTime)
     {
+        PruneDestroyedInteractionTargets();
         if (!IsLocalInteractionOwner())
         {
             ClearInteractionPreview();
@@ -156,7 +157,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         bool interacted = receiver != null
             ? CanInteractTarget(receiver) && StartInteraction(receiver)
             : TryStartInteractionAtCurrentPosition();
-        heldReceiver = interacted ? currentReceiver : null;
+        heldReceiver = interacted && IsInteractionReceiverAlive(currentReceiver) ? currentReceiver : null;
         return interacted;
     }
 
@@ -165,7 +166,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         IInteractable releasedReceiver = heldReceiver;
         heldReceiver = null;
-        if (releasedReceiver != null && releasedReceiver == currentReceiver)
+        if (IsInteractionReceiverAlive(releasedReceiver) && releasedReceiver == currentReceiver)
             releasedReceiver.OnInteractEnd(item);
     }
 
@@ -179,7 +180,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (!IsInteractionCandidate(receiver, receiverComponent))
             return false;
 
-        TryGetInteractionPosition(receiver, out Vector3 targetPosition);
+        if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
+            return false;
         float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
         return distance <= maxInteractDistance;
     }
@@ -244,7 +246,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
                 (requirePointerPermission && !receiver.CanPointerInteract(item)))
                 continue;
 
-            TryGetInteractionPosition(receiver, out Vector3 targetPosition);
+            if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
+                continue;
             float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
             if (distance > maxInteractDistance || distance >= closestDistance)
                 continue;
@@ -260,9 +263,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates);
         foreach (IInteractable candidate in spatialCandidates)
         {
-            if (requirePointerPermission && !candidate.CanPointerInteract(item)) continue;
             if (!IsInteractionCandidate(candidate, candidate as Component) ||
                 !TryGetInteractionPosition(candidate, out Vector3 targetPosition)) continue;
+            if (requirePointerPermission && !candidate.CanPointerInteract(item)) continue;
             float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
             if (distance >= closestDistance) continue;
             closestDistance = distance;
@@ -332,7 +335,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         previewReceiver = receiver;
         previewReceiverComponent = receiverComponent;
         previewOutline = InteractionTargetOutline.GetOrCreate(receiverComponent);
-        previewOutline?.SetHighlighted(true);
+        if (previewOutline != null)
+            previewOutline.SetHighlighted(true);
     }
 
     /// <summary>扫描交互半径，按当前指向优先、距离规则兜底。</summary>
@@ -389,7 +393,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!IsInteractionCandidate(receiver, receiverComponent))
                 continue;
 
-            TryGetInteractionPosition(receiver, out Vector3 targetPosition);
+            if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
+                continue;
             float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
             if (distance > maxInteractDistance)
                 continue;
@@ -511,10 +516,31 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
                layer == CombatPhysicsChannels.DamageReceiverLayer;
     }
 
+    /// <summary>接口引用先按 Unity 原生生命周期判空，纯数据目标仍沿用普通引用生命周期。</summary>
+    private static bool IsInteractionReceiverAlive(IInteractable receiver)
+        => receiver != null && (receiver is not UnityEngine.Object unityObject || unityObject != null);
+
+    /// <summary>清除销毁目标的缓存，不向已经失效的对象发送交互或描边回调。</summary>
+    private void PruneDestroyedInteractionTargets()
+    {
+        if (!IsInteractionReceiverAlive(currentReceiver))
+            StopCurrentInteraction();
+        if (!IsInteractionReceiverAlive(heldReceiver))
+            heldReceiver = null;
+        if (!IsInteractionReceiverAlive(previewReceiver))
+            ClearInteractionPreview();
+        for (int i = receiversInRange.Count - 1; i >= 0; i--)
+            if (!IsInteractionReceiverAlive(receiversInRange[i]))
+                receiversInRange.RemoveAt(i);
+        for (int i = spatialCandidates.Count - 1; i >= 0; i--)
+            if (!IsInteractionReceiverAlive(spatialCandidates[i]))
+                spatialCandidates.RemoveAt(i);
+    }
+
     /// <summary>过滤自身及失效组件，保证描边目标与交互目标来源一致。</summary>
     private bool IsInteractionCandidate(IInteractable receiver, Component receiverComponent)
     {
-        if (receiver == null)
+        if (!IsInteractionReceiverAlive(receiver))
         {
             return false;
         }
@@ -540,8 +566,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>实体与纯数据机械共用世界坐标查询入口。</summary>
     private static bool TryGetInteractionPosition(IInteractable receiver, out Vector3 position)
     {
-        if (receiver is IWorldInteractionTarget worldTarget && worldTarget.IsValid)
+        position = default;
+        if (!IsInteractionReceiverAlive(receiver))
+            return false;
+        if (receiver is IWorldInteractionTarget worldTarget)
         {
+            if (!worldTarget.IsValid)
+                return false;
             position = worldTarget.WorldPosition;
             return true;
         }
@@ -550,7 +581,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             position = component.transform.position;
             return true;
         }
-        position = default;
         return false;
     }
 
@@ -565,12 +595,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>停止当前本地目标的描边，避免对象回收或切换目标后残留。</summary>
     private void ClearInteractionPreview()
     {
-        if (previewReceiver is IWorldInteractionPreview entityPreview)
-            entityPreview.SetInteractionHighlighted(false);
-        previewOutline?.SetHighlighted(false);
+        IInteractable clearedReceiver = previewReceiver;
+        InteractionTargetOutline clearedOutline = previewOutline;
         previewReceiver = null;
         previewReceiverComponent = null;
         previewOutline = null;
+        if (IsInteractionReceiverAlive(clearedReceiver) && clearedReceiver is IWorldInteractionPreview entityPreview)
+            entityPreview.SetInteractionHighlighted(false);
+        if (clearedOutline != null)
+            clearedOutline.SetHighlighted(false);
     }
 
     private void OnDisable()
@@ -591,7 +624,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private bool StartInteraction(IInteractable receiver)
     {
-        if (receiver == null)
+        if (!IsInteractionReceiverAlive(receiver))
             return false;
 
         var receiverComponent = receiver as Component;
@@ -604,16 +637,20 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (currentReceiver != null && currentReceiver != receiver)
             StopCurrentInteraction();
 
+        if (!IsInteractionReceiverAlive(receiver))
+            return false;
         currentReceiver = receiver;
         currentReceiverComponent = receiverComponent;
         currentReceiver.OnInteractStart(item);
+        PruneDestroyedInteractionTargets();
         return true;
     }
 
     /// <summary>单次按键、点选或外部触发完成时发送释放沿，不进入持续更新通道。</summary>
     private void CompleteSingleInteraction(IInteractable receiver)
     {
-        receiver?.OnInteractEnd(item);
+        if (IsInteractionReceiverAlive(receiver))
+            receiver.OnInteractEnd(item);
     }
 
     /// <summary>结束当前交互并清理一次性探测状态。</summary>
@@ -622,25 +659,28 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         ClearInteractionPreview();
         StopCurrentInteraction();
         receiversInRange.Clear();
+        spatialCandidates.Clear();
     }
 
     private void StopCurrentInteraction()
     {
-        if (currentReceiver == null)
-            return;
-
-        if (heldReceiver == currentReceiver)
+        IInteractable stoppedReceiver = currentReceiver;
+        if (heldReceiver == stoppedReceiver)
             heldReceiver = null;
-        currentReceiver.OnInteractCancel(item);
         currentReceiver = null;
         currentReceiverComponent = null;
+        if (IsInteractionReceiverAlive(stoppedReceiver))
+            stoppedReceiver.OnInteractCancel(item);
     }
 
     /// <summary>交互键保持期间才转发持续交互；鼠标单击和外部单次交互不会自动进入该通道。</summary>
     private void TickHeldInteraction()
     {
-        if (heldReceiver == null || currentReceiver != heldReceiver)
+        if (!IsInteractionReceiverAlive(heldReceiver) || currentReceiver != heldReceiver)
+        {
+            heldReceiver = null;
             return;
+        }
 
         currentReceiver.OnInteractUpdate(item);
     }
@@ -648,6 +688,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>把交互接口归属到 Item，供结构化调试读取，不改变交互选择规则。</summary>
     private static int ResolveInteractionTargetGuid(IInteractable receiver)
     {
+        if (!IsInteractionReceiverAlive(receiver)) return 0;
         if (receiver is IWorldInteractionTarget worldTarget) return worldTarget.TargetGuid;
         Component component = receiver as Component;
         Item target = component != null ? component.GetComponentInParent<Item>() : null;

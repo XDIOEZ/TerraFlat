@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="620" viewBox="0 0 1140 620" role="img" aria-labelledby="title desc">
+  <title id="title">船体裁剪、玩家跳原点与交互失效的修复</title>
+  <desc id="desc">旧逻辑把浮动原点当成观察中心，船距原点超过1200米但不足4096米时被裁剪。船上玩家被错误改用旧自由坐标，驾驶镜头释放，交互引用还持有销毁的船件。修复后按权威乘员位置裁剪，船上玩家和镜头按当前世界的船体跟随，交互先检查Unity对象存活。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#647990" stroke-width="1.6"/></marker>
+  </defs>
+  <rect width="1140" height="620" rx="20" fill="#f3f6fb"/>
+  <g font-family="Microsoft YaHei, sans-serif">
+    <text x="32" y="43" fill="#19344f" font-size="27" font-weight="700">船还在飞，为什么玩家和镜头会跳去旧位置？</text>
+    <text x="32" y="75" fill="#5a728a" font-size="17">已定位的代码缺陷：浮动原点负责坐标精度，却被拿来决定本地船体是否可见。</text>
+    <rect x="32" y="98" width="1076" height="130" rx="14" fill="#ffffff" stroke="#d6e0eb"/>
+    <text x="54" y="128" fill="#19344f" font-size="18" font-weight="700">旧规则中存在一个冲突区间</text>
+    <path d="M145 171 H1035" stroke="#9aaec0" stroke-width="3"/>
+    <path d="M377 171 H950" stroke="#d87964" stroke-width="10" opacity=".6"/>
+    <g fill="#19344f" font-size="15" text-anchor="middle">
+      <circle cx="145" cy="171" r="7" fill="#547caa"/>
+      <text x="145" y="200">旧浮动原点：0 米</text>
+      <path d="M377 151 V181" stroke="#bd6554" stroke-width="2"/>
+      <text x="377" y="200">1200 米：船被裁剪</text>
+      <path d="M950 151 V181" stroke="#547caa" stroke-width="2"/>
+      <text x="950" y="200">4096 米：原点才移动</text>
+      <text x="660" y="154" fill="#ab4c3f">玩家在船上，船也会在这段范围消失</text>
+    </g>
+    <text x="32" y="269" fill="#ac4b3e" font-size="20" font-weight="700">修复前的错误链</text>
+    <g fill="#fff" stroke="#dec7c3" stroke-width="1.5">
+      <rect x="32" y="287" width="242" height="95" rx="12"/>
+      <rect x="308" y="287" width="242" height="95" rx="12"/>
+      <rect x="584" y="287" width="242" height="95" rx="12"/>
+      <rect x="860" y="287" width="248" height="95" rx="12" fill="#fff0ec"/>
+    </g>
+    <g fill="#29445e" font-size="18" text-anchor="middle">
+      <text x="153" y="318">离旧原点超过 1200 米</text>
+      <text x="153" y="349" font-size="15">船件视图被移除</text>
+      <text x="429" y="318">船上玩家读旧自由坐标</text>
+      <text x="429" y="349" font-size="15">固定更新和晚更新写不同位置</text>
+      <text x="705" y="318">驾驶镜头解除跟随</text>
+      <text x="705" y="349" font-size="15">跨阈值时反复切回玩家</text>
+      <text x="984" y="318" fill="#ac4b3e">跳位、镜头抖动和报错</text>
+      <text x="984" y="349" font-size="15">交互仍访问已销毁船件</text>
+    </g>
+    <path d="M280 335 H297 M556 335 H573 M832 335 H849" fill="none" stroke="#647990" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="32" y="426" fill="#246d55" font-size="20" font-weight="700">修复后的职责</text>
+    <g fill="#edf8f1" stroke="#b9d8c7" stroke-width="1.5">
+      <rect x="32" y="444" width="336" height="110" rx="12"/>
+      <rect x="402" y="444" width="336" height="110" rx="12"/>
+      <rect x="772" y="444" width="336" height="110" rx="12"/>
+    </g>
+    <g fill="#29445e" font-size="19" text-anchor="middle">
+      <text x="200" y="477">显示范围跟着真实乘员</text>
+      <text x="200" y="508" font-size="16">浮动原点只用于保证坐标精度</text>
+      <text x="200" y="534" font-size="16">本地乘坐的船保持可见</text>
+      <text x="570" y="477">在船上就按船的状态跟随</text>
+      <text x="570" y="508" font-size="16">玩家姿态和驾驶镜头看世界归属</text>
+      <text x="570" y="534" font-size="16">自由坐标仅用于自由乘员</text>
+      <text x="940" y="477">交互先检查原生对象存活</text>
+      <text x="940" y="508" font-size="16">销毁后清理缓存和描边引用</text>
+      <text x="940" y="534" font-size="16">停止访问位置和执行目标回调</text>
+    </g>
+    <text x="32" y="594" fill="#5a728a" font-size="16">这是代码原因与修复说明，图中距离为规则阈值；实际飞行、画面和交互由用户验收。</text>
+  </g>
+</svg>

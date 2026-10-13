@@ -246,7 +246,7 @@ namespace FlatWorld.Spaceflight
 
         private void UpdateDrivingCamera(Player player, SpacePassengerState passenger, ShipState ship)
         {
-            if (!passenger.Supported || ship == null || !IsVisible(ship) || string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
+            if (!passenger.Supported || !IsInPresentationWorld(ship) || string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
             {
                 ReleaseDrivingCamera();
                 return;
@@ -339,10 +339,10 @@ namespace FlatWorld.Spaceflight
             ShipState ship = GetShip(passenger.ShipId);
             if (IsSpaceView)
                 { SpaceSectorPosition position = GetPassengerPosition(passenger); ViewSector = position.Sector; ViewOrigin = position.LocalMeters; }
-            if (ship != null && passenger.Supported && IsVisible(ship)) PlacePassenger(player, passenger, ship);
+            if (passenger.Supported && IsInPresentationWorld(ship)) PlacePassenger(player, passenger, ship);
             else if (passenger.SurfaceDescending && !IsSpaceView && passenger.LandingWorldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
                 player.transform.position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
-            else if (IsSpaceView && passenger.IsInSpace)
+            else if (!passenger.Supported && IsSpaceView && passenger.IsInSpace)
             {
                 player.transform.position = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
                 player.transform.rotation = Quaternion.identity;

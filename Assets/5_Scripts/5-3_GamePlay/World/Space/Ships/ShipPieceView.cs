@@ -407,8 +407,9 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             SetTerrainSuppression(player, IsSpaceView || passenger.Supported);
             ShipState carrier = GetShip(passenger.ShipId);
-            if (passenger.Supported && carrier != null && IsVisible(carrier)) PlacePassenger(player, passenger, carrier);
-            else if (IsSpaceView && passenger.IsInSpace && !passenger.LandingResolved)
+            // 支撑乘员始终跟随当前世界的船体，不能因美术裁剪改读旧自由漂浮坐标。
+            if (passenger.Supported && IsInPresentationWorld(carrier)) PlacePassenger(player, passenger, carrier);
+            else if (!passenger.Supported && IsSpaceView && passenger.IsInSpace && !passenger.LandingResolved)
             {
                 Vector2 position = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
                 player.transform.position = new Vector3(position.x, position.y, 0f);
