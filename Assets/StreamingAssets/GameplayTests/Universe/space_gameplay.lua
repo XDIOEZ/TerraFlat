@@ -46,13 +46,22 @@ do
     -- 实际进入每个配置星区，检查全部星体的数据登记与场景表现。
     test.space("space_visit", function(data)
         assert(data.scope == "live-presentation" and #data.visits > 0, "没有进入配置星区")
-        local ids, sectors, count = {}, {}, 0
+        local ids, sectors, count, uiRoot = {}, {}, 0, nil
         for _, visit in ipairs(data.visits) do
             local key = visit.sector.x .. ":" .. visit.sector.y
             assert(not sectors[key], "重复访问星区：" .. key)
             sectors[key] = true
             assert(visit.state.spaceView and not visit.state.dimensionTransitioning, "星区入场未完成：" .. key)
             assert(visit.state.sector.x == visit.sector.x and visit.state.sector.y == visit.sector.y, "玩家归属星区错误：" .. key)
+            assert(visit.state.uiRootReady and visit.state.uiRootPersistent, "UI 根没有归属持久管理器：" .. key)
+            assert(uiRoot == nil or uiRoot == visit.state.uiRootInstance, "切换配置星区销毁了 UI 根：" .. key)
+            uiRoot = visit.state.uiRootInstance
+            assert(visit.state.timeReady and visit.state.timeSource == "SpaceScene" and visit.state.lightingRateReady,
+                "星区缺少统一时间或采光登记：" .. key)
+            assert(math.abs(visit.state.lighting - visit.state.clockLighting) < 0.001,
+                "星区光照没有继承太空时钟：" .. key)
+            assert(visit.state.globalLighting ~= nil and math.abs(visit.state.globalLighting - visit.state.lighting) < 0.001,
+                "实际全局光没有跟随星区采光：" .. key)
             assert(#visit.bodies > 0, "配置星区没有任何星体：" .. key)
             for _, body in ipairs(visit.bodies) do
                 assert(not ids[body.id], "星体实例身份重复：" .. body.id)
@@ -136,10 +145,19 @@ for _, value in ipairs({"right", "left", "up", "down", "corner"}) do
         assert(same(data.returned.sector, data.source), "玩家无法自然折返")
         assert(contains(data.returned.required, data.destination), "折返时没有保留目标侧过渡场景")
         assert(data.before.playerInstance == data.crossed.playerInstance and data.crossed.playerInstance == data.returned.playerInstance, "普通星区越界重建了玩家")
+        assert(data.before.uiRootReady and data.crossed.uiRootReady and data.settled.uiRootReady and data.returned.uiRootReady and
+            data.before.uiRootPersistent and data.crossed.uiRootPersistent and data.settled.uiRootPersistent and data.returned.uiRootPersistent and
+            data.before.uiRootInstance == data.crossed.uiRootInstance and data.crossed.uiRootInstance == data.settled.uiRootInstance and
+            data.settled.uiRootInstance == data.returned.uiRootInstance, "普通星区越界销毁或重建了 UI 根")
         assert(data.before.cameraReady and data.crossed.cameraReady and data.settled.cameraReady and data.returned.cameraReady and
             data.before.cameraInstance == data.crossed.cameraInstance and data.crossed.cameraInstance == data.returned.cameraInstance,
             "普通星区越界丢失或重建玩家相机")
         assert(data.before.playerProfile == data.returned.playerProfile, "过渡后玩家身份丢失")
+        for _, state in ipairs({data.before, data.crossed, data.settled, data.returned}) do
+            assert(state.timeReady and state.timeSource == "SpaceScene" and state.lightingRateReady,
+                "跨区丢失统一时间或采光登记：" .. direction)
+            assert(math.abs(state.lighting - state.clockLighting) < 0.001, "跨区光照改变了时钟来源：" .. direction)
+        end
         assert(data.before.realmRevision == data.crossed.realmRevision and data.crossed.realmRevision == data.settled.realmRevision, "普通星区过渡错误地改变维度版本")
         assert(not data.crossed.dimensionTransitioning and not data.returned.dimensionTransitioning, "普通星区跨界触发了维度加载")
         assert(data.returned.seconds > data.before.seconds, "过渡期间宇宙时钟没有继续推进")
@@ -155,6 +173,7 @@ do
     test.space("ship_collision", function(data)
         assert(data.scope == "live-fixed-step-contacts" and data.fixtureSetup == "production-floor-transactions", "没有真实固定步接触结果")
         assert(data.afterTime > data.beforeTime, "真实宇宙会话没有推进")
+        assert(data.afterTime - data.beforeTime >= 3 - 0.000001, "船体接触采样前没有完成三秒真实模拟")
         local left, right = data.afterLeft, data.afterRight
         assert(left.id == data.beforeLeft.id and right.id == data.beforeRight.id, "接触改变了船体身份")
         assert(left.mass > 0 and right.mass > 0, "接触夹具没有真实质量")

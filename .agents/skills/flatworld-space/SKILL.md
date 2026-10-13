@@ -17,6 +17,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 | Ships/ShipCruiseGuidance、ShipLandingGuidance、ShipAssemblyCache | 惯性推进/巡航、手动降落范围/实际姿态、对接整体缓存 |
 
 - 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；面板：`Presentation/UI/{ShipPanelSession,SpaceLandingPanelSession}.cs`。
+- SpaceMgr 激活/维护星区时登记时间与采光，全部星区引用 `SpaceScene` 的统一时间源；跨区不重置昼夜，也不依赖重建玩家触发世界进入事件。UI 根由持久 UIManager 持有，星区卸载不销毁 HUD。
 - PlanetData 是太空目录与 `World/Map/Data/PlanetData.cs` 的 partial；场景/Prefab 在 `Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`。
 - 内容：`GameConfig/Space/solar-system.json` 的主目录在 `(0,0)`、`sectorSystems` 扩展其他星区，默认 `(-1,0)` 为天狼星，其余为空域；`Resources/Config/Space/space-gameplay.json`、Items/shells/space_ships.json 和 space_devices.json 配置玩法。固定船型在 `GameConfig/Structures/fixed-structures.json`，由 ShipFixedStructureBuilder 复用 AddPiece/CommitPiece/RollbackPiece。
 - 功能规划来源：`开发文档文件夹/01_世界生成与环境/太空场景开发待办.md`，未完成项与运行系统分开。

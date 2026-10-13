@@ -25,6 +25,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 - DayTimeSystem 是跨场景/保存主入口，场景也可能引用 DayNightTimeManager。日长为 RotationPeriodSeconds、年长为 OrbitalPeriodSeconds，运行时 SetRotationPeriod/SetOrbitalPeriod；季节、年与轨道共用游戏秒轴。SeasonCalendar 历史快照冻结周期/倾角/离心率，不用当前日长重算过去。
 - 活动场景名称按 handle 缓存，时刻/天气/维度实时读；GM 滑条按实际 DayLength 预览，松开由权威端 JumpToTime 一次。主菜单使用无报错 GetInstance 探测。
+- 普通太空跨区保留玩家，不触发 WorldEnter；SpaceMgr 使用通用时间初始化/引用接口登记新星区，统一引用 `SpaceScene` 时钟并补采光率，不能把未登记场景的零光照当成太空环境。
 - 区块生成时一次汇总固定 airHumidity、最终 precipitation、windX/Y、每格风模长和地理温度；`ChunkTerrainData.WeatherProfile` 冻结每种要素的 Probability/Intensity/DurationSeconds。自然要素为 rain/wind/thunder，配置 Elements 按稳定字符串 ID 扩展；生成器与调度器经 `ChunkWeatherConfiguration` 共用冻结配置。
 - 天气按共享区域推进，`RegionSizeInChunks` 默认 8（16 格区块对应 128×128 格），区域首次登记冻结代表区块档案，成员共用要素概率、强度和时限；每区每步只推进/复制一次，地表积分分发到所有已加载成员。环绕世界以 Min 分区，剩余窄边并入末区，雷击按实际区域边界选点。`CheckIntervalSeconds` 为空闲要素检查间隔；运行时不重采气候，查询只读共享状态，普通 Client 只应用权威效果。
 - 本机雨雪用 `_precipitationTransitionSeconds` 完整 SmoothStep 过渡（WorldManager 默认 12 秒，低强度小雨也走完）；风/云光仍用 `_weatherTransitionSeconds` 零到满 3 秒。跨区块从当前表现续接，雨滴/水花由零按强度增多，雨声线性消费同一强度，停雨让现有粒子落完。程序入口 `SetPrecipitationIntensity(intensity, durationSeconds=60, transitionSeconds=-1)` 只改本块降水，0 停雨、0 过渡秒立即切换、-1 用默认值；普通客户端返回 false。`PresentedRainIntensity/PresentedSnowIntensity` 可读当前表现，权威浇水/积雪仍读真实当地天气。

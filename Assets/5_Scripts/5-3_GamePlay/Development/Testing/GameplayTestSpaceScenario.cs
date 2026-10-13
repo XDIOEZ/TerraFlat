@@ -495,8 +495,10 @@ public sealed class GameplayTestSpaceScenario : IDisposable
 
     private IEnumerator Wait(double seconds)
     {
-        double until = Time.realtimeSinceStartupAsDouble + seconds;
-        yield return WaitUntil(() => Time.realtimeSinceStartupAsDouble >= until, seconds + 2d, "测试等待被中断。");
+        // 固定步证据按正式模拟时钟等待，慢帧或编辑器操作不能提前结束物理采样。
+        double until = session.State.SimulationSeconds + seconds;
+        yield return WaitUntil(() => session.State.SimulationSeconds >= until, Math.Max(15d, seconds * 5d),
+            "正式太空模拟没有推进到采样时刻。", () => $"当前 {session.State.SimulationSeconds:0.###}，目标 {until:0.###} 秒。");
     }
     private IEnumerator WaitUntil(Func<bool> condition, double timeout, string message, Func<string> diagnostic = null)
     {
@@ -532,6 +534,12 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         Player player = CurrentPlayer();
         SpacePassengerState passenger = session.GetPassenger(player);
         Camera camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ControllerCamera;
+        GameObject uiRoot = GameObject.Find("PanelRoot");
+        UIManager ui = UIManager.ExistingInstance;
+        string sceneName = SceneManager.GetActiveScene().name;
+        DayTimeSystem time = DayTimeSystem.GetInstance();
+        string timeSource = null;
+        bool timeReady = time != null && time.TryGetResolvedTimeData(sceneName, out timeSource, out _);
         SpaceSectorPosition position = session.GetPassengerPosition(passenger);
         var required = new JArray();
         foreach (SpaceSectorId sector in session.RequiredSectors) required.Add(Sector(sector));
@@ -550,6 +558,15 @@ public sealed class GameplayTestSpaceScenario : IDisposable
             ["shipId"] = passenger.ShipId, ["consoleId"] = passenger.ConsolePieceId,
             ["cameraReady"] = camera != null && camera.isActiveAndEnabled,
             ["cameraInstance"] = camera == null ? 0 : camera.GetInstanceID(),
+            ["uiRootReady"] = uiRoot != null,
+            ["uiRootInstance"] = uiRoot == null ? 0 : uiRoot.GetInstanceID(),
+            ["uiRootScene"] = uiRoot == null ? null : uiRoot.scene.name,
+            ["uiRootPersistent"] = uiRoot != null && ui != null && uiRoot.scene == ui.gameObject.scene,
+            ["timeReady"] = timeReady, ["timeSource"] = timeSource,
+            ["lightingRateReady"] = time != null && time.SceneLightingRateDict.ContainsKey(sceneName),
+            ["lighting"] = time?.GetLighting(sceneName),
+            ["clockLighting"] = time?.GetLighting("SpaceScene"),
+            ["globalLighting"] = time?.GlobalLight?.intensity,
             ["position"] = Vector(position.LocalMeters), ["velocity"] = Vector(passenger.FreeMotion.VelocityMetersPerSecond),
             ["realmRevision"] = passenger.RealmRevision, ["required"] = required, ["loadedScenes"] = scenes,
             ["dimensionTransitioning"] = DimensionManager.Instance.IsTransitioning };

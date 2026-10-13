@@ -252,7 +252,8 @@ public partial class ChunkMgr
     /// <summary>推进纯世界模拟，并修复后台生成完成后的画面绑定。</summary>
     internal void AdvanceWorldRuntime(float deltaSeconds)
     {
-        if (IsWorldRuntimeShuttingDown || !IsSurfaceStreamingScene)
+        // 渲染资源先于对象销毁结束，退出窗口不再提交会触发表现绑定的新区块。
+        if (IsWorldRuntimeShuttingDown || SharedSpriteMeshCache.IsSessionEnding || !IsSurfaceStreamingScene)
             return;
 
         RecordStreamingAdvance();

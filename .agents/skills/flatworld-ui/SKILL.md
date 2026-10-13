@@ -24,6 +24,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 ## 生命周期、输入与排序
 
 - 同一 PanelRoot 以兄弟顺序置顶/置底，sortingOrder 仅管理独立 Canvas。模态持有玩法锁和顶层手柄焦点，关闭/失败释放；常驻 HUD 输入透明，可收展 HUD 仅开关按钮接收射线。
+- UIManager 创建或解析的根 Canvas 统一挂到持久管理器下，SafeAreaRoot 和玩家 HUD 不归属可卸载星区；普通跨区保留同一 UI 根，玩家重建时只按模块生命周期更换对应面板。
 - 主背包 `UI_Bag` 可并行，参与置顶/导航/取消链但不持玩法锁；库存/加工/容器背景输入透明，只有槽位、按钮与拖放/手势区命中，`UIWindowDragSurface` 命中标题/窄边框。快捷栏随 PanelRoot 排序；手机模态拖放由独立 Canvas 临时提升。
 - 手机菜单/返回位于独立常驻层，返回顺序为顶层可取消面板→抽屉→设置。主菜单 CancelShortcutOverride 打开退出确认；嵌套危险确认先消费取消。存档删除统一由 `SaveDataManager_UI` 确认层提交并锁定目标身份。
 - 文本通过 FlatWorldUI 表与 GetUiText/GetUiFormat，节点名不翻译；手柄焦点限定顶层面板，TMP 输入确认后进入虚拟键盘。鼠标按下焦点与列表业务选中状态分离，完整点击才提交选择。

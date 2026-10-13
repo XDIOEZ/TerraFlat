@@ -666,7 +666,8 @@ public partial class ChunkMgr
     {
         // 先等一帧收集同批后台结果，才能真正按玩家距离排序，而不是按任务回调顺序抢画。
         yield return null;
-        while (runtimePresentationQueue.Count > 0 || runtimePresentationContinuationQueue.Count > 0)
+        while (!IsWorldRuntimeShuttingDown && !SharedSpriteMeshCache.IsSessionEnding &&
+               (runtimePresentationQueue.Count > 0 || runtimePresentationContinuationQueue.Count > 0))
         {
             int startBudget = RuntimeChunkPresentationStartBudget;
             long startDeadline = Stopwatch.GetTimestamp() + (long)(
@@ -821,7 +822,8 @@ public partial class ChunkMgr
             !binding.PresentationInProgress || binding.PresentationRoutine == null)
             return false;
 
-        if (!binding.WantsPresentation || binding.View == null)
+        if (IsWorldRuntimeShuttingDown || SharedSpriteMeshCache.IsSessionEnding ||
+            !binding.WantsPresentation || binding.View == null)
         {
             FinishRuntimeChunkPresentation(binding);
             return false;

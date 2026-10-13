@@ -219,7 +219,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
     /// <summary>按触发来源修复 BRG 表现；只在异常路径记录一次诊断。</summary>
     private bool RepairBatchPresentationIfNeeded(string reason)
     {
-        if (boundChunk?.Terrain == null)
+        // 会话结束后的 Owner 缺失是资源退出，不启动重建或异常恢复诊断。
+        if (SharedSpriteMeshCache.IsSessionEnding || boundChunk?.Terrain == null)
             return false;
 
         ChunkTerrainData terrain = boundChunk.Terrain;

@@ -417,10 +417,55 @@ public sealed class GameplayTestScene : MonoBehaviour
             testCase.Screenshots.Add(screenshot);
         }
         Stage("case." + testCase.Id + ".screenshot." + screenshot.Index);
+        // 相机已创建不代表主角已经入镜，以连续渲染帧的真实可见状态作为取图前提。
+        double deadline = Time.realtimeSinceStartupAsDouble + 8d;
+        int readyFrames = 0;
+        string presentation = string.Empty;
+        while (readyFrames < 2)
+        {
+            yield return null;
+            readyFrames = TryGetScreenshotPresentation(out presentation) ? readyFrames + 1 : 0;
+            if (Time.realtimeSinceStartupAsDouble < deadline || readyFrames >= 2) continue;
+            screenshot.Error = "截图现场未就绪：" + presentation;
+            Record("screenshot_ready", "截图现场可见性", false, screenshot.Error);
+            throw new InvalidOperationException(screenshot.Error);
+        }
+        lock (reportLock)
+        {
+            screenshot.Scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            screenshot.Utc = DateTime.UtcNow.ToString("O");
+            screenshot.ElapsedSeconds = clock.Elapsed.TotalSeconds;
+            screenshot.PlayerPosition = new GameplayTestPosition(ItemMgr.Instance.User_Player.transform.position);
+        }
+        Record("screenshot_ready", "截图现场可见性", true, presentation);
         yield return GameplayTestArtifacts.CaptureScreenshot(this, screenshot.Path,
             error => screenshot.Error = error);
         if (!string.IsNullOrEmpty(screenshot.Error)) throw new IOException(screenshot.Error);
         Stage("case." + testCase.Id + ".lua");
+    }
+
+    private bool TryGetScreenshotPresentation(out string reason)
+    {
+        Player current = ItemMgr.Instance?.User_Player;
+        if (manager?.IsGameplayReady != true || current == null)
+        {
+            reason = "玩法世界或本地玩家尚未就绪。";
+            return false;
+        }
+        Camera camera = current.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ControllerCamera;
+        SpriteRenderer sprite = current.Sprite;
+        if (camera == null || !camera.isActiveAndEnabled || sprite == null ||
+            !sprite.enabled || !sprite.gameObject.activeInHierarchy || sprite.sprite == null || sprite.color.a <= 0.01f)
+        {
+            reason = "玩家相机或主角贴图尚未显示。";
+            return false;
+        }
+        Vector3 viewport = camera.WorldToViewportPoint(sprite.bounds.center);
+        bool visible = (camera.cullingMask & (1 << sprite.gameObject.layer)) != 0 &&
+                       viewport.z >= camera.nearClipPlane && viewport.z <= camera.farClipPlane &&
+                       viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f;
+        reason = $"主角视口 ({viewport.x:0.###}, {viewport.y:0.###}, {viewport.z:0.###})，相机 {camera.GetInstanceID()}。";
+        return visible;
     }
 
     private void CompleteCase(GameplayTestCaseReport testCase, bool succeeded, bool interrupted)

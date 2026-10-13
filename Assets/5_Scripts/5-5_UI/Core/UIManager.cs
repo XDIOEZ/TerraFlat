@@ -281,6 +281,7 @@ public class UIManager : MonoBehaviour
         if (panelRoot != null)
         {
             CacheRootCanvas();
+            AttachRootCanvasToOwner();
             ResolveSafeAreaRoot();
             UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
             return;
@@ -291,6 +292,7 @@ public class UIManager : MonoBehaviour
         {
             panelRoot = existingPanelRoot.transform;
             CacheRootCanvas();
+            AttachRootCanvasToOwner();
             ResolveSafeAreaRoot();
             UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
             return;
@@ -309,8 +311,16 @@ public class UIManager : MonoBehaviour
         canvasObj.name = "PanelRoot";
         panelRoot = canvasObj.transform;
         CacheRootCanvas();
+        AttachRootCanvasToOwner();
         ResolveSafeAreaRoot();
         UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
+    }
+
+    private void AttachRootCanvasToOwner()
+    {
+        // UI 根随持久管理器存活，卸载星区场景不能销毁仍由同一玩家持有的 HUD。
+        if (rootCanvas != null && rootCanvas.transform.parent != transform)
+            rootCanvas.transform.SetParent(transform, true);
     }
 
     /// <summary>只在根 Canvas 无效或不再属于 PanelRoot 时重新解析引用。</summary>

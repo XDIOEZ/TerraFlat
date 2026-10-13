@@ -61,7 +61,9 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     private void OnWorldExit() { Debug_ClearRuntimePlanets(); UpdateVisibility(); }
     private void UpdateVisibility()
     {
-        bool visible = IsSpaceScene(SceneManager.GetActiveScene().name);
+        string sceneName = SceneManager.GetActiveScene().name;
+        bool visible = IsSpaceScene(sceneName);
+        if (visible) EnsureSpaceSceneTime(sceneName);
         LocalSpacePresentationActive = visible;
         foreach (SectorView view in sectors.Values) if (view.Root != null) view.Root.gameObject.SetActive(visible);
         if (starfield != null) starfield.gameObject.SetActive(visible);
@@ -94,6 +96,31 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
         view.Loading = StartCoroutine(LoadSectorPresentation(session, view, data.State));
         return view;
     }
+
+    #region 星区时间与采光归属
+    private static void EnsureSpaceSceneTime(string sceneName)
+    {
+        GameManager manager = GameManager.Instance;
+        DayTimeSystem time = DayTimeSystem.GetInstance();
+        if (manager?.IsInGameWorld != true || time == null) return;
+        const string clockScene = "SpaceScene";
+        // 所有星区引用同一个太空时钟，跨区只换表现，不重置昼夜或丢失采光登记。
+        if (!time.WorldTimeDict.TryGetValue(clockScene, out TimeData shared) || shared == null)
+        {
+            TimeData seed = time.TryGetResolvedTimeData(sceneName, out _, out TimeData current)
+                ? current : manager.ReadyTimeData;
+            time.EnsureSceneTimeData(clockScene, seed);
+            time.SetReferenceScene(clockScene, string.Empty);
+            shared = time.WorldTimeDict[clockScene];
+        }
+        if (sceneName == clockScene) return;
+        if (time.WorldTimeDict.TryGetValue(sceneName, out TimeData existing) && existing != null &&
+            existing.ReferenceScene == clockScene && time.SceneLightingRateDict.ContainsKey(sceneName)) return;
+        time.EnsureSceneTimeData(sceneName, shared);
+        time.SetReferenceScene(sceneName, clockScene);
+    }
+    #endregion
+
     private IEnumerator LoadSectorPresentation(SpaceSession session, SectorView view, UniverseState data)
     {
         var failures = new HashSet<string>(StringComparer.Ordinal);
@@ -135,6 +162,7 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
             SectorView current = EnsureSectorScene(session, observer.Position.Sector);
             if (!current.Unloading && current.Scene.IsValid() && current.Scene.isLoaded)
             {
+                EnsureSpaceSceneTime(current.Scene.name);
                 if (SceneManager.GetActiveScene() != current.Scene) SceneManager.SetActiveScene(current.Scene);
                 MovePresentationToSector(player.gameObject, observer.Position.Sector);
             }
@@ -203,6 +231,8 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     public IEnumerator PreparePresentationForCamera()
     {
         if (!presentationLoaded) yield return LoadPresentation();
+        // 世界时间载入完成后再补一次，避免首个星区采样早于下一次租约维护。
+        EnsureSpaceSceneTime(SceneManager.GetActiveScene().name);
         for (int frame = 0; frame < 300; frame++)
         {
             Camera camera = Camera.main;

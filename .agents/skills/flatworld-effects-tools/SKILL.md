@@ -21,6 +21,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - vehicle 与其它实体共用 Player，可独立配置 Order；类别判定中 Carrier 先于 Building。树资源主体以 TreeSortingVisual 的原生 SortingGroup 与角色混排，果实只在组内偏移，太阳投影仍为共享 BRG。
 - 草/花由 Owner 的 DepthPresentationOffset 投影到本机镜像，镜像变化同步实例与裁剪，增量输入为规范坐标；自然物阴影已是表现坐标。Shader 顶点位移同时扩展 CPU 包围盒。
 - 草花提交以 BRG 返回成功为准；窗口检查通过 `IRecoverableChunkViewRenderer` 核对权威格/生态与真实图层实例。恢复从权威数据全量重建，不能依赖可丢失的可见索引；清理整个 Owner 图层并合并 GPU 删除/提交。
+- `SharedSpriteMeshCache.IsSessionEnding` 标记渲染会话退出；此时停止区块提交与分帧表现推进，不再恢复 BRG Owner。活跃期登记/恢复失败仍保留真实异常，不能用退出分支吞掉正常运行错误。
 - 输送带 UV 使用 FullRect Sprite，尺寸/格心来自 rect/pivot/PPU，预览与合批共用 ConveyorPresentation；主体/侧轴在 MechanicalShaft 层、玩家下方，侧铁环仅直带显示，视觉端口与权威供能端口独立。
 
 ## MPB、光照与后处理
