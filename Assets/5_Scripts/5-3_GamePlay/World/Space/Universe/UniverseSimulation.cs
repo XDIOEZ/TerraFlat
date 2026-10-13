@@ -11,6 +11,7 @@ namespace FlatWorld.Spaceflight
         private readonly Dictionary<string, BodyState> templateBodies = new(StringComparer.Ordinal);
         private readonly List<BodyState> orbitOrder = new();
         private readonly Dictionary<string, SpaceVector2> previousPositions = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, SpaceVector2> previousVelocities = new(StringComparer.Ordinal);
         private double previousSimulationSeconds;
         public UniverseState State { get; }
 
@@ -26,7 +27,8 @@ namespace FlatWorld.Spaceflight
             {
                 if (body == null || string.IsNullOrWhiteSpace(body.BodyId) || string.IsNullOrWhiteSpace(body.PlanetId) ||
                     !bodies.TryAdd(body.BodyId, body) || !planetIds.Add(body.PlanetId) ||
-                    !Positive(body.RadiusMeters) || !NonNegative(body.SurfaceGravity) ||
+                    !Positive(body.RadiusMeters) || !NonNegative(body.SurfaceGravity) || !NonNegative(body.AtmosphereThickness) ||
+                    !NonNegative(body.MassKg) ||
                     !NonNegative(body.PlacementDistanceMeters) || !SpaceVector2.Finite(body.PlacementAngleRadians) ||
                     !NonNegative(body.OrbitalPeriodSeconds) || !NonNegative(body.OrbitalEccentricity) || body.OrbitalEccentricity >= 1d ||
                     !SpaceVector2.Finite(body.OrbitalPeriapsisRadians) ||
@@ -42,7 +44,11 @@ namespace FlatWorld.Spaceflight
                 BuildOrbitOrder(body, visited, path);
             UpdateBodyMotions();
             previousSimulationSeconds = State.SimulationSeconds;
-            foreach (BodyState body in orbitOrder) previousPositions.Add(body.BodyId, body.PositionMeters);
+            foreach (BodyState body in orbitOrder)
+            {
+                previousPositions.Add(body.BodyId, body.PositionMeters);
+                previousVelocities.Add(body.BodyId, body.VelocityMetersPerSecond);
+            }
         }
 
         private void BuildOrbitOrder(BodyState body, HashSet<string> visited, HashSet<string> path)
@@ -119,6 +125,17 @@ namespace FlatWorld.Spaceflight
                 GetPositionAtTime(body.ParentBodyId, simulationSeconds) + position;
         }
 
+        public SpaceVector2 GetVelocityAtTime(string bodyId, double simulationSeconds)
+        {
+            if (!NonNegative(simulationSeconds)) throw new ArgumentOutOfRangeException(nameof(simulationSeconds));
+            BodyState body = GetBody(bodyId);
+            if (Math.Abs(simulationSeconds - State.SimulationSeconds) <= 1e-9d) return body.VelocityMetersPerSecond;
+            if (Math.Abs(simulationSeconds - previousSimulationSeconds) <= 1e-9d) return previousVelocities[body.BodyId];
+            EvaluateRelativeMotion(body, simulationSeconds, out _, out SpaceVector2 velocity);
+            return string.IsNullOrWhiteSpace(body.ParentBodyId) ? velocity :
+                GetVelocityAtTime(body.ParentBodyId, simulationSeconds) + velocity;
+        }
+
         public BodyState GetBody(string bodyId) => TryGetBody(bodyId, out BodyState body) ? body :
             throw new KeyNotFoundException($"星体不存在：{bodyId}");
         public bool TryGetBody(string bodyId, out BodyState body)
@@ -129,7 +146,11 @@ namespace FlatWorld.Spaceflight
         {
             if (!NonNegative(seconds)) throw new ArgumentOutOfRangeException(nameof(seconds));
             previousSimulationSeconds = State.SimulationSeconds;
-            foreach (BodyState body in orbitOrder) previousPositions[body.BodyId] = body.PositionMeters;
+            foreach (BodyState body in orbitOrder)
+            {
+                previousPositions[body.BodyId] = body.PositionMeters;
+                previousVelocities[body.BodyId] = body.VelocityMetersPerSecond;
+            }
             State.SimulationSeconds += seconds;
             if (!SpaceVector2.Finite(State.SimulationSeconds)) throw new InvalidOperationException("星系时间溢出");
             UpdateBodyMotions();

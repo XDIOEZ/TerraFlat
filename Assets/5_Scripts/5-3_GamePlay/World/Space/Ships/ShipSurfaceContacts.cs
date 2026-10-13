@@ -104,20 +104,8 @@ namespace FlatWorld.Spaceflight
 
             body.EndFraction = landing ? queued.Contact.Fraction : 1d;
             double remaining = Math.Max(0d, (body.EndFraction - fraction) * seconds);
-            if (body.Realm == "space")
-            {
-                var motion = new SpaceMotionState { Sector = body.CalculationSector, PositionMeters = body.Position, VelocityMetersPerSecond = body.PreviousVelocity,
-                    RadiusMeters = AssemblyRadius(body.Assembly) };
-                Universe.StepFreeMotion(motion, default, remaining);
-                SpaceVector2 position = SpaceSectorCoordinates.Relative(motion.Sector, motion.PositionMeters, body.Assembly.Sector);
-                body.Assembly.PositionX = position.X; body.Assembly.PositionY = position.Y;
-                body.Assembly.VelocityX = motion.VelocityMetersPerSecond.X; body.Assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
-            }
-            else
-            {
-                body.Assembly.PositionX += body.Assembly.VelocityX * remaining;
-                body.Assembly.PositionY += body.Assembly.VelocityY * remaining;
-            }
+            body.Assembly.PositionX += body.Assembly.VelocityX * remaining;
+            body.Assembly.PositionY += body.Assembly.VelocityY * remaining;
             body.Assembly.AngularVelocityRadiansPerSecond = body.PreviousAngularVelocity + body.AngularAcceleration * remaining;
             body.Assembly.AngleRadians = body.PreviousAngle + body.Assembly.AngularVelocityRadiansPerSecond * remaining;
             ShipDockingService.RigidlyCarryMembers(body.Assembly, body.Members);

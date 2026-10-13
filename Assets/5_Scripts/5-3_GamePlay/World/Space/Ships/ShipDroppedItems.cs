@@ -121,6 +121,7 @@ namespace FlatWorld.Spaceflight
                     {
                         state.InSpace = original.InSpace; state.WorldKey = original.WorldKey;
                         state.Motion.VelocityMetersPerSecond = original.Motion.VelocityMetersPerSecond;
+                        state.AngularVelocityDegreesPerSecond = original.AngularVelocityDegreesPerSecond;
                         state.SurfaceHeight = original.SurfaceHeight; state.SurfaceVerticalSpeed = original.SurfaceVerticalSpeed;
                         inherited = true; break;
                     }
@@ -137,6 +138,7 @@ namespace FlatWorld.Spaceflight
                     state.Motion.PositionMeters, carrier.Sector) : state.Motion.PositionMeters;
                 ShipGeometry.PointVelocity(carrier, carrierPoint.X, carrierPoint.Y, out double vx, out double vy);
                 state.Motion.VelocityMetersPerSecond = new SpaceVector2(vx, vy);
+                state.AngularVelocityDegreesPerSecond = carrier.AngularVelocityRadiansPerSecond * 180d / Math.PI;
                 if (!state.InSpace) { state.SurfaceHeight = Math.Max(0d, flight.HeightMeters); state.SurfaceVerticalSpeed = flight.VerticalSpeed; }
                 inherited = true;
             }

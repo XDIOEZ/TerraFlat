@@ -18,6 +18,7 @@
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Universe/SpaceSectorCoordinates.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Universe/UniverseSectorFactory.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Universe/UniverseSimulation.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Universe/SpaceGravity.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/Domain/ShipState.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/Domain/ShipEnginePlacement.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/Ships/Domain/ShipThrustAllocation.cs" />

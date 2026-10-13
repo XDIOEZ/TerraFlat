@@ -70,6 +70,8 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            ResetSpacePhysics();
+            gravitySources.Clear();
             ReleaseSurfaceShadows();
             UnregisterShipDamageFeedback();
             DestroyDrivingCameraTarget();
@@ -86,6 +88,7 @@ namespace FlatWorld.Spaceflight
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;
+            ResetSpacePhysics();
             ReleaseViews();
             contents.Clear(); controlRequests.Clear();
             ClearQueryIndexes();
@@ -130,6 +133,7 @@ namespace FlatWorld.Spaceflight
         {
             if (Current == null) return;
             Current.running = false;
+            Current.ResetSpacePhysics();
             Current.ReleaseViews();
             Current.DestroyDrivingCameraTarget();
             Current.owner = null;
@@ -138,7 +142,6 @@ namespace FlatWorld.Spaceflight
             Current.sectorDirectory.Clear();
             Current.passengerInputs.Clear();
             ClientAttackHeld = false;
-            Current.contactPassengers.Clear();
             Current.sectorStreaming.Clear();
             Current.contents.Clear();
             Current.ClearQueryIndexes();
@@ -186,7 +189,6 @@ namespace FlatWorld.Spaceflight
             double seconds = Time.fixedDeltaTime;
             engineOutputs.Clear();
             AdvanceSectorTime(seconds);
-            CapturePassengerContactPoses();
             StepRemotePassengerInput(seconds);
             fixedShips.Clear();
             fixedShips.AddRange(State.Ships);
@@ -211,20 +213,20 @@ namespace FlatWorld.Spaceflight
             if (hasPhysicalShips)
                 using (ShipMassMarker.Auto()) RefreshMass();
             CaptureShipContactPoses();
+            List<ShipAssemblyState> assemblies = simulationAssemblies.Refresh(State.Ships, State.Docking);
             if (hasMovingShips)
             {
-                List<ShipAssemblyState> assemblies;
                 using (ShipMotionMarker.Auto())
                 {
-                    assemblies = simulationAssemblies.Refresh(State.Ships, State.Docking);
                     foreach (ShipAssemblyState assembly in assemblies) StepAssembly(assembly, seconds);
                 }
                 if (assemblies.Count > 1 && hasPhysicalShips)
                     using (ShipContactMarker.Auto()) StepShipContacts(seconds, assemblies);
             }
             using (FreePassengerMarker.Auto())
-            { StepFreePassengers(seconds); ResolvePassengerPairs(seconds); }
+                StepFreePassengers(seconds);
             using (LooseItemMarker.Auto()) StepLooseItems(seconds);
+            using (ShipContactMarker.Auto()) StepSpacePhysics(assemblies, seconds);
             CommitSurfaceContacts(seconds);
             NormalizeSectorOwnership();
             environmentElapsed += (float)seconds;

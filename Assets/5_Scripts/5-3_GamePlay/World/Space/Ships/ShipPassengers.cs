@@ -320,31 +320,6 @@ namespace FlatWorld.Spaceflight
                     passenger.UpdateFreeWalkVelocity(walking);
                 }
                 passenger.FreeMotion.RadiusMeters = .3d;
-                SpaceVector2 previousPosition = passenger.FreeMotion.PositionMeters;
-                bool touched = StepSectorMotion(passenger.FreeMotion, seconds, out SurfaceContact contact);
-                bool hitShip = ResolveFreePassengerContact(passenger, previousPosition, seconds, out _, touched ? contact.Fraction : 1d);
-                if (hitShip || !touched) continue;
-                if (FlatWorld.Networking.GameNetwork.IsOnline && !CanTransferToNetworkSurface(GetBody(contact.BodyId).SurfaceAddress.WorldKey, out _))
-                {
-                    passenger.FreeMotion.PositionMeters = previousPosition + passenger.FreeMotion.VelocityMetersPerSecond * seconds;
-                    continue;
-                }
-                SpaceVector2 normal = SpaceVector2.FromAngle(contact.SurfaceAngleRadians);
-                SpaceVector2 center = SurfaceCenter(contact.BodyId, contact.SurfaceAngleRadians);
-                passenger.SurfaceDescending = true; passenger.IsInSpace = false;
-                passenger.LandingBodyId = contact.BodyId; passenger.LandingWorldKey = GetBody(contact.BodyId).SurfaceAddress.WorldKey;
-                passenger.LandingOriginX = center.X; passenger.LandingOriginY = center.Y;
-                passenger.SurfaceHeight = SpaceGameplaySettings.Current.SurfaceEntryHeightMeters;
-                passenger.SurfaceVerticalSpeed = Math.Min(0d, SpaceVector2.Dot(contact.RelativeVelocityMetersPerSecond, normal));
-                passenger.SurfaceHorizontalSpeed = SpaceVector2.Cross(normal, contact.RelativeVelocityMetersPerSecond);
-                passenger.LandingRandomState = passenger.LandingRandomState == 1 ? unchecked((ulong)(uint)GetBody(contact.BodyId).Seed) | 1UL : passenger.LandingRandomState;
-                double randomAngle = (double)FluidRandom.Next01(ref passenger.LandingRandomState) * Math.PI * 2d;
-                double randomRadius = Math.Sqrt((double)FluidRandom.Next01(ref passenger.LandingRandomState)) * SpaceGameplaySettings.Current.LandingChoiceRadiusMeters;
-                passenger.LandingX = center.X + Math.Cos(randomAngle) * randomRadius;
-                passenger.LandingY = center.Y + Math.Sin(randomAngle) * randomRadius;
-                passenger.LandingSelected = false;
-                if (player != null && player.ProfileName == passenger.ProfileId)
-                    StartCoroutine(TransferPlayerToSurface(passenger.LandingWorldKey, new Vector2((float)passenger.LandingX, (float)passenger.LandingY)));
             }
         }
         public void RestorePassengerPose(Player player)

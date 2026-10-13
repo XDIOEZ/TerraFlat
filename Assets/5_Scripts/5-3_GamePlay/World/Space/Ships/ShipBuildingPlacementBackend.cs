@@ -544,6 +544,7 @@ namespace FlatWorld.Spaceflight
             Data_Player data, out double localX, out double localY)
         {
             localX = passenger.LocalX; localY = passenger.LocalY;
+            if (passenger.IsInSpace && !passenger.Supported) return false;
             if (!string.IsNullOrWhiteSpace(passenger.ShipId)) return passenger.ShipId == ship.ShipId;
             if (passenger.IsInSpace != (ship.PlatformKind == ShipPlatformKind.Space)) return false;
             SpaceVector2 position;

@@ -25,5 +25,14 @@
   "DrivingCameraSize": 30.0,
   "DrivingCameraMaxSize": 120000.0,
   "DrivingCameraZoomMultiplier": 1.25,
-  "ImpactJoulesPerDurability": 1000.0
+  "ImpactJoulesPerDurability": 1000.0,
+  "GravityReferenceRadiusMeters": 2000.0,
+  "GravityCaptureMarginMeters": 400.0,
+  "GravityReferenceCenterSpeedMetersPerSecond": 80.0,
+  "AtmosphereDampingPerSecond": 0.01,
+  "MaximumGravityDampingRatio": 0.75,
+  "GravityRestDistanceMeters": 0.05,
+  "GravityRestSpeedMetersPerSecond": 0.01,
+  "SpacePhysicsSubsteps": 4,
+  "SpacePhysicsIslandDistanceMeters": 512.0
 }

@@ -7,15 +7,22 @@ internal static class Program
     private static void Main()
     {
         DistantExplosionDebrisSkipsAllWork();
-        DistantDebrisInSameRealmSkipsAllWork();
-        NearbyContactWorkspaceHasNoAllocations();
-        MovingShipBroadphaseIncludesSweep();
-        SpaceContactsPublishAndRefreshImpulse();
+        SpaceObjectsBypassLegacySolver();
         SurfaceRealmAndHeightFilter();
-        CandidateChangesAndDockingTopology();
-        CrossSectorContactsAndFarIsolation();
-        CrossSectorShipOverlapKeepsLocalPrecision();
         Console.WriteLine($"PASS: {assertions} ship contact assertions.");
+    }
+
+    private static void SpaceObjectsBypassLegacySolver()
+    {
+        SpaceSession session = new();
+        ShipState ship = AddShip(session, "native-space", ShipFlightPhase.Cruising, "Earth_Surface");
+        var passenger = new SpacePassengerState { ProfileId = "player", IsInSpace = true, FreeMotion = Motion() };
+        SpaceSession.ResetCounters();
+        session.CaptureShipContactPoses();
+        Assert(!session.ResolveFreePassengerContact(passenger, new(-.6d, 0d), .02d), "太空玩家不进入自研接触求解。");
+        Assert(!session.ResolveLooseItemContact(Loose("native-item", true, null), new(-.6d, 0d), .02d), "太空物品不进入自研接触求解。");
+        Near(ship.VelocityX, 0d, "旧入口不得修改原生物理管理的船速。");
+        Assert(SpaceSession.DecodeCalls == 0 && ShipMassReader.ReadCalls == 0, "旧入口不解码或计重太空物体。");
     }
 
     private static void DistantExplosionDebrisSkipsAllWork()

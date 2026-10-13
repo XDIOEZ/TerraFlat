@@ -84,12 +84,12 @@ namespace FlatWorld.Spaceflight
             motion.VelocityMetersPerSecond = velocity;
             motion.RadiusMeters = AssemblyRadius(assembly);
             motion.Sector = assembly.Sector;
-            GetUniverse(assembly.Sector).StepFreeMotion(motion, default, seconds);
-            assembly.PositionX = motion.PositionMeters.X; assembly.PositionY = motion.PositionMeters.Y;
-            assembly.VelocityX = motion.VelocityMetersPerSecond.X; assembly.VelocityY = motion.VelocityMetersPerSecond.Y;
-            // Q/E 直接指定本步角速度，松键停转、反向立即换向，不累加角加速度。
-            assembly.AngularVelocityRadiansPerSecond = Math.Clamp(turn, -1d, 1d) * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
-            assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * seconds;
+            assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
+            // 控制只提交速度请求，平移和旋转都由同一次 Unity 2D 模拟推进。
+            bool turning = Math.Abs(turn) > .001d;
+            if (turning || flight.DrivingTurnActive)
+                assembly.AngularVelocityRadiansPerSecond = Math.Clamp(turn, -1d, 1d) * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
+            flight.DrivingTurnActive = turning;
             ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
             foreach (string id in assembly.MemberShipIds)
             {

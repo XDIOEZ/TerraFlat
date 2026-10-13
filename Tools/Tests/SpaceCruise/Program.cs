@@ -28,6 +28,10 @@ internal static partial class Program
         Run("降落范围、星体上方自由飞行及实际降落姿态", LandingBoundary);
         Run("椭圆近远点、公转周期、父星运动和快照恢复", OrbitMotion);
         Run("移动星体扫掠、起飞边缘停留和星系更新无分配", MovingBodyEntry);
+        Run("质量控制捕获范围和中心速度", GravityMassRules);
+        Run("无大气简谐模型数学参考（不验证 Unity 2D）", GravityUndampedMotion);
+        Run("大气厚度控制衰减且保留往返", GravityAtmosphere);
+        Run("高速穿入、逃逸边界和公转速度缓存", GravityBoundaries);
         Run("延长起降、实际推力不足和重新点火", SurfaceFlightTiming);
         Run("不同步长及横向初速下到点停稳", Arrival);
         Run("船头转向取最短方向", Heading);

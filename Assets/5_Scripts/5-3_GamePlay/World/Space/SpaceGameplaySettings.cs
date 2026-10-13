@@ -35,6 +35,18 @@ namespace FlatWorld.Spaceflight
         public float DrivingCameraMaxSize = 120000f;
         public float DrivingCameraZoomMultiplier = 1.25f;
         public double ImpactJoulesPerDurability = 1000d;
+        #region 引力捕获与大气参数
+        // 参考圈取地球尺寸加余量，中心速度是物体从圈边静止释放的基准。
+        public double GravityReferenceRadiusMeters = 2000d;
+        public double GravityCaptureMarginMeters = 400d;
+        public double GravityReferenceCenterSpeedMetersPerSecond = 80d;
+        public double AtmosphereDampingPerSecond = .01d;
+        public double MaximumGravityDampingRatio = .75d;
+        public double GravityRestDistanceMeters = .05d;
+        public double GravityRestSpeedMetersPerSecond = .01d;
+        public int SpacePhysicsSubsteps = 4;
+        public double SpacePhysicsIslandDistanceMeters = 512d;
+        #endregion
         private static SpaceGameplaySettings current;
         public static SpaceGameplaySettings Current
         {
@@ -62,7 +74,16 @@ namespace FlatWorld.Spaceflight
                     !SpaceVector2.Finite(current.FreeFloatAccelerationMultiplier) || current.FreeFloatAccelerationMultiplier <= 0f ||
                     !SpaceVector2.Finite(current.DrivingCameraSize) || current.DrivingCameraSize <= 0f ||
                     !SpaceVector2.Finite(current.DrivingCameraMaxSize) || current.DrivingCameraMaxSize < current.DrivingCameraSize ||
-                    !SpaceVector2.Finite(current.DrivingCameraZoomMultiplier) || current.DrivingCameraZoomMultiplier <= 1f)
+                    !SpaceVector2.Finite(current.DrivingCameraZoomMultiplier) || current.DrivingCameraZoomMultiplier <= 1f ||
+                    !SpaceVector2.Finite(current.GravityReferenceRadiusMeters) || current.GravityReferenceRadiusMeters <= 0d ||
+                    !SpaceVector2.Finite(current.GravityCaptureMarginMeters) || current.GravityCaptureMarginMeters <= 0d ||
+                    !SpaceVector2.Finite(current.GravityReferenceCenterSpeedMetersPerSecond) || current.GravityReferenceCenterSpeedMetersPerSecond <= 0d ||
+                    !SpaceVector2.Finite(current.AtmosphereDampingPerSecond) || current.AtmosphereDampingPerSecond < 0d ||
+                    !SpaceVector2.Finite(current.MaximumGravityDampingRatio) || current.MaximumGravityDampingRatio <= 0d || current.MaximumGravityDampingRatio >= 1d ||
+                    !SpaceVector2.Finite(current.GravityRestDistanceMeters) || current.GravityRestDistanceMeters <= 0d ||
+                    !SpaceVector2.Finite(current.GravityRestSpeedMetersPerSecond) || current.GravityRestSpeedMetersPerSecond <= 0d ||
+                    current.SpacePhysicsSubsteps < 1 || current.SpacePhysicsSubsteps > 32 ||
+                    !SpaceVector2.Finite(current.SpacePhysicsIslandDistanceMeters) || current.SpacePhysicsIslandDistanceMeters <= 0d)
                     throw new InvalidOperationException("太空移动与冲击配置无效。");
                 return current;
             }

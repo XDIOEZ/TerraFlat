@@ -14,15 +14,20 @@ namespace FlatWorld.Spaceflight
         private void RebuildSectorDirectory()
         {
             sectorDirectory.Clear();
+            gravitySources.Clear();
             foreach (UniverseState sector in State.Sectors)
             {
                 SpaceCatalog.LoadDefault().RebindUniverse(sector);
                 if (sectorDirectory.ContainsKey(sector.Sector)) throw new InvalidOperationException("太空存档存在重复星区。");
                 sector.SimulationSeconds = State.SimulationSeconds;
-                sectorDirectory.Add(sector.Sector, new UniverseSimulation(sector));
+                var simulation = new UniverseSimulation(sector);
+                sectorDirectory.Add(sector.Sector, simulation);
+                RegisterGravitySources(simulation);
             }
             Universe = GetUniverse(default);
             State.Universe = Universe.State;
+            // 已配置星区只准备纯数据，跨边界的引力不依赖对应场景是否可见。
+            foreach (SpaceSectorId sector in SpaceCatalog.LoadDefault().ConfiguredSectors) GetUniverse(sector);
         }
         public UniverseSimulation GetUniverse(SpaceSectorId sector)
         {
@@ -31,6 +36,7 @@ namespace FlatWorld.Spaceflight
             data.SimulationSeconds = State.SimulationSeconds;
             var simulation = new UniverseSimulation(data);
             State.Sectors.Add(data); sectorDirectory.Add(sector, simulation);
+            RegisterGravitySources(simulation);
             RegisterSectorPlanets(data, null);
             return simulation;
         }
@@ -61,39 +67,6 @@ namespace FlatWorld.Spaceflight
         {
             State.SimulationSeconds += seconds;
             foreach (UniverseSimulation simulation in sectorDirectory.Values) simulation.AdvanceTime(seconds);
-        }
-        // 移动只积一次，跨边界沿线的星体接触仍按最早接触时间结算。
-        private bool StepSectorMotion(SpaceMotionState motion, double seconds, out SurfaceContact contact)
-        {
-            SpaceVector2 previous = motion.PositionMeters;
-            double start = State.SimulationSeconds - seconds;
-            GetUniverse(motion.Sector).StepFreeMotion(motion, default, seconds);
-            bool touched = SweepSectorSurface(motion.Sector, previous, motion.PositionMeters,
-                motion.VelocityMetersPerSecond, motion.VelocityMetersPerSecond, motion.RadiusMeters, start, seconds, out contact);
-            if (touched)
-                motion.PositionMeters = SpaceSectorCoordinates.Relative(contact.Sector, contact.PositionMeters, motion.Sector);
-            return touched;
-        }
-        public bool SweepSectorSurface(SpaceSectorId sector, SpaceVector2 from, SpaceVector2 to,
-            SpaceVector2 before, SpaceVector2 after, double radius, double start, double seconds, out SurfaceContact contact)
-        {
-            contact = default;
-            SpaceSectorPosition end = SpaceSectorCoordinates.Normalize(sector, to);
-            GetUniverse(sector); GetUniverse(end.Sector);
-            foreach (SpaceSectorId configured in SpaceCatalog.LoadDefault().ConfiguredSectors)
-            {
-                SpaceVector2 a = SpaceSectorCoordinates.Relative(sector, from, configured);
-                SpaceVector2 b = SpaceSectorCoordinates.Relative(sector, to, configured);
-                double half = SpaceSectorCoordinates.SizeMeters * .5d + radius;
-                if (Math.Min(a.X, b.X) <= half && Math.Max(a.X, b.X) >= -half &&
-                    Math.Min(a.Y, b.Y) <= half && Math.Max(a.Y, b.Y) >= -half) GetUniverse(configured);
-            }
-            bool found = false;
-            foreach (UniverseSimulation simulation in sectorDirectory.Values)
-                if (simulation.TrySweepSurfaceContact(sector, from, to, before, after, radius, start, seconds, out SurfaceContact candidate) &&
-                    (!found || candidate.Fraction < contact.Fraction))
-                { contact = candidate; found = true; }
-            return found;
         }
         private void NormalizeSectorOwnership()
         {

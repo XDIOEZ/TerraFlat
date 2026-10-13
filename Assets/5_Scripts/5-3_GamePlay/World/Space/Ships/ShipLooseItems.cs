@@ -46,6 +46,7 @@ namespace FlatWorld.Spaceflight
                 Motion = new SpaceMotionState { Sector = ship.Sector, PositionMeters = new SpaceVector2(x, y), VelocityMetersPerSecond = new SpaceVector2(vx, vy),
                     RadiusMeters = .15d },
                 RotationDegrees = ship.AngleRadians * 180d / Math.PI + piece.QuarterTurns * 90d,
+                AngularVelocityDegreesPerSecond = ship.AngularVelocityRadiansPerSecond * 180d / Math.PI,
                 Scale = Vector3.one * .5f,
                 // 太空掉落不能继承船体残留的地表升空高度。
                 SurfaceHeight = inSpace ? 0d : Math.Max(0d, flight.HeightMeters),
@@ -76,16 +77,7 @@ namespace FlatWorld.Spaceflight
                     }
                     continue;
                 }
-                SpaceVector2 previousPosition = state.Motion.PositionMeters;
-                // 漂浮物保留继承的船速和碰撞冲量，不因换区或离船静默限速。
-                bool touched = StepSectorMotion(state.Motion, seconds, out SurfaceContact contact);
-                bool hitShip = ResolveLooseItemContact(state, previousPosition, seconds, out _, touched ? contact.Fraction : 1d);
-                if (hitShip || !touched) continue;
-                state.InSpace = false; state.WorldKey = GetBody(contact.BodyId).SurfaceAddress.WorldKey;
-                state.Motion.Sector = contact.Sector;
-                state.Motion.PositionMeters = SurfaceCenter(contact.BodyId, contact.SurfaceAngleRadians);
-                state.Motion.VelocityMetersPerSecond = default;
-                state.SurfaceHeight = state.SurfaceVerticalSpeed = 0d;
+                // 太空掉落由独立 Unity 2D 物理场景推进，经过星体不切换地表。
             }
         }
         private void SynchronizeLooseItems()
@@ -122,6 +114,7 @@ namespace FlatWorld.Spaceflight
                 if (state.InSpace || state.SurfaceHeight > 0d)
                 {
                     existing.transform.position = position;
+                    existing.transform.rotation = Quaternion.Euler(0f, 0f, (float)state.RotationDegrees);
                     Rigidbody2D body = existing.GetComponent<Rigidbody2D>();
                     if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0; body.position = position; }
                 }
@@ -187,6 +180,8 @@ namespace FlatWorld.Spaceflight
         }
         private void AddLooseCargoMass(ShipState ship, ShipMassReader reader)
         {
+            // 太空自由物已拥有独立刚体，不能再把同一份质量加入船体。
+            if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising) return;
             ShipFlightState flight = GetFlight(ship.ShipId);
             bool inSpace = flight.Phase is ShipFlightPhase.Cruising;
             double radius = CalculateShipContactRadius(ship);

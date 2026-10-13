@@ -22,9 +22,7 @@ namespace FlatWorld.Spaceflight
                 return false;
 
             SpaceSectorPosition targetPosition = SpaceSectorCoordinates.Normalize(motion.Sector, motion.PositionMeters);
-            foreach (BodyState body in GetUniverse(targetPosition.Sector).State.Bodies)
-                if ((targetPosition.LocalMeters - body.PositionMeters).Magnitude <= body.RadiusMeters + motion.RadiusMeters)
-                    return false;
+            GetUniverse(targetPosition.Sector);
 
             var targetMotion = new SpaceMotionState
             {

@@ -136,8 +136,8 @@ namespace FlatWorld.Spaceflight
             if (flight == null) return false;
             if (flight.Phase is ShipFlightPhase.Cruising)
             {
-                if (inSpaceFilter == false) return false;
-                realm = "space"; dynamic = true; return true;
+                // 太空刚体只由 Unity 2D 处理，旧扫掠入口只保留地表作用域。
+                return false;
             }
             if (inSpaceFilter == true || string.IsNullOrWhiteSpace(flight.SurfaceWorldKey) ||
                 inSpaceFilter == false && !string.Equals(flight.SurfaceWorldKey, surfaceWorldKey, StringComparison.Ordinal)) return false;
@@ -508,34 +508,23 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
 
-        #region 自由乘员与散落物的真实反作用
+        #region 地表散落物接触
         public bool ResolveFreePassengerContact(SpacePassengerState passenger, SpaceVector2 previousPosition, double seconds)
             => ResolveFreePassengerContact(passenger, previousPosition, seconds, out _);
         public bool ResolveFreePassengerContact(SpacePassengerState passenger, SpaceVector2 previousPosition, double seconds,
-            out double firstContactFraction, double movementFraction = 1d)
+            out double firstContactFraction, double movementFraction = 1d, SpaceVector2? previousVelocity = null)
         {
             firstContactFraction = double.PositiveInfinity;
-            if (!GameNetwork.HasStateAuthority || State == null || passenger?.FreeMotion == null || !passenger.IsInSpace ||
-                passenger.Supported || passenger.SurfaceDescending || passenger.LandingResolved) return false;
-            if (!HasNearbyShipContact(true, null, 0d, Math.Max(.01d, passenger.FreeMotion.RadiusMeters),
-                previousPosition, passenger.FreeMotion.PositionMeters, seconds, passenger.FreeMotion.Sector)) return false;
-            Player player = null;
-            if (ItemMgr.Instance != null) ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out player);
-            Data_Player data = player?.Data;
-            if (data == null) owner?.PlayerData_Dict.TryGetValue(passenger.ProfileId, out data);
-            contactMassReader.Reset();
-            double mass = data == null ? 70d : contactMassReader.ReadItem(data, player, 0);
-            return ResolveFreeCircleContact(passenger.FreeMotion, previousPosition, seconds, Math.Max(.001d, mass),
-                Math.Max(.01d, passenger.FreeMotion.RadiusMeters), "space", 0d, movementFraction, out firstContactFraction);
+            return false;
         }
         public bool ResolveLooseItemContact(SpaceLooseItemState item, SpaceVector2 previousPosition, double seconds)
             => ResolveLooseItemContact(item, previousPosition, seconds, out _);
         public bool ResolveLooseItemContact(SpaceLooseItemState item, SpaceVector2 previousPosition, double seconds,
-            out double firstContactFraction, double movementFraction = 1d)
+            out double firstContactFraction, double movementFraction = 1d, SpaceVector2? previousVelocity = null)
         {
             firstContactFraction = double.PositiveInfinity;
             if (!GameNetwork.HasStateAuthority || State == null || item?.Motion == null ||
-                !item.InSpace && string.IsNullOrWhiteSpace(item.WorldKey) || string.IsNullOrWhiteSpace(item.Snapshot)) return false;
+                item.InSpace || string.IsNullOrWhiteSpace(item.WorldKey) || string.IsNullOrWhiteSpace(item.Snapshot)) return false;
             // 没有同空间且扫掠距离相交的船体时，保留自由运动并跳过快照与接触构建。
             if (!HasNearbyShipContact(item.InSpace, item.WorldKey, item.SurfaceHeight, Math.Max(.01d, item.Motion.RadiusMeters),
                 previousPosition, item.Motion.PositionMeters, seconds, item.Motion.Sector)) return false;
@@ -547,10 +536,10 @@ namespace FlatWorld.Spaceflight
             double mass = contactMassReader.ReadItem(data, live, 0);
             return ResolveFreeCircleContact(item.Motion, previousPosition, seconds, Math.Max(.001d, mass),
                 Math.Max(.01d, item.Motion.RadiusMeters), item.InSpace ? "space" : "surface:" + item.WorldKey,
-                item.InSpace ? 0d : item.SurfaceHeight, movementFraction, out firstContactFraction);
+                item.InSpace ? 0d : item.SurfaceHeight, movementFraction, out firstContactFraction, previousVelocity);
         }
         private bool ResolveFreeCircleContact(SpaceMotionState motion, SpaceVector2 previousPosition, double seconds, double mass, double radius,
-            string realm, double height, double movementFraction, out double firstContactFraction)
+            string realm, double height, double movementFraction, out double firstContactFraction, SpaceVector2? previousVelocity = null)
         {
             firstContactFraction = double.PositiveInfinity;
             if (!GameNetwork.HasStateAuthority || State == null || !SpaceVector2.Finite(seconds) || seconds <= 0d ||
@@ -559,6 +548,8 @@ namespace FlatWorld.Spaceflight
             List<ShipContactBody> bodies = BuildShipContactBodies(seconds, contactRealm: realm);
             foreach (ShipContactBody body in bodies) SetContactReference(body, motion.Sector);
             SpaceVector2 from = previousPosition, destination = motion.PositionMeters;
+            SpaceVector2 fromVelocity = previousVelocity ?? motion.VelocityMetersPerSecond;
+            SpaceVector2 destinationVelocity = motion.VelocityMetersPerSecond;
             double fraction = 0d;
             for (int contact = 0; contact < 8 && fraction < movementFraction; contact++)
             {
@@ -586,6 +577,7 @@ namespace FlatWorld.Spaceflight
                 from = SpaceVector2.Lerp(from, destination, localFraction) + best.Normal * (best.Penetration + ShipContactSkin);
                 SpaceVector2 centerAtContact = ContactBodyPositionAt(best.Body, best.Fraction);
                 SpaceVector2 offset = best.Point - centerAtContact;
+                motion.VelocityMetersPerSecond = SpaceVector2.Lerp(fromVelocity, destinationVelocity, localFraction);
                 SpaceVector2 relative = motion.VelocityMetersPerSecond - ContactPointVelocityAt(best.Body, offset, best.Fraction);
                 double approaching = SpaceVector2.Dot(relative, best.Normal);
                 double lever = SpaceVector2.Cross(offset, best.Normal);
@@ -602,7 +594,12 @@ namespace FlatWorld.Spaceflight
                 }
                 else if (best.Penetration > ShipContactSkin) firstContactFraction = Math.Min(firstContactFraction, best.Fraction);
                 fraction = Math.Min(movementFraction, Math.Max(fraction + 1e-8d, best.Fraction));
-                destination = from + motion.VelocityMetersPerSecond * ((movementFraction - fraction) * seconds);
+                double remaining = (movementFraction - fraction) * seconds;
+                fromVelocity = motion.VelocityMetersPerSecond;
+                motion.PositionMeters = from;
+                motion.PositionMeters += motion.VelocityMetersPerSecond * remaining;
+                destination = motion.PositionMeters;
+                destinationVelocity = motion.VelocityMetersPerSecond;
             }
             motion.PositionMeters = from;
             return SpaceVector2.Finite(firstContactFraction);

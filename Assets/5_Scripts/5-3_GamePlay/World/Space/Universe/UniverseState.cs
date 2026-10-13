@@ -67,6 +67,8 @@ namespace FlatWorld.Spaceflight
         public int Seed;
         public double RadiusMeters;
         public double SurfaceGravity;
+        public double AtmosphereThickness;
+        [JsonIgnore] public double MassKg => SurfaceGravity * RadiusMeters * RadiusMeters / 6.67430e-11d;
         public double PlacementDistanceMeters;
         public double PlacementAngleRadians;
         public double OrbitalPeriodSeconds;
@@ -83,7 +85,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceMotionState
     {
-        #region 无引力的太空移动主体
+        #region 太空移动主体
         public SpaceSectorId Sector;
         public SpaceVector2 PositionMeters;
         public SpaceVector2 VelocityMetersPerSecond;

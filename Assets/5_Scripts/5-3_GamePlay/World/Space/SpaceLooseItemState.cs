@@ -13,6 +13,7 @@ namespace FlatWorld.Spaceflight
         public bool InSpace;
         public SpaceMotionState Motion = new();
         public double RotationDegrees;
+        public double AngularVelocityDegreesPerSecond;
         public double SurfaceHeight, SurfaceVerticalSpeed;
         [JsonConverter(typeof(ScaleJsonConverter))]
         public Vector3 Scale = Vector3.one;

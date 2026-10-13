@@ -132,6 +132,7 @@ namespace FlatWorld.Spaceflight
                 body.ParentBodyId = string.IsNullOrWhiteSpace(definition.ParentBodyId) ? string.Empty :
                     SpaceSectorCoordinates.BodyId(state.Sector, definition.ParentBodyId);
                 body.RadiusMeters = definition.RadiusMeters; body.SurfaceGravity = definition.SurfaceGravity;
+                body.AtmosphereThickness = definition.AtmosphereThickness;
                 body.PlacementDistanceMeters = definition.PlacementDistanceMeters;
                 body.OrbitalPeriodSeconds = definition.OrbitalPeriodSeconds;
                 body.OrbitalEccentricity = definition.OrbitalEccentricity;
