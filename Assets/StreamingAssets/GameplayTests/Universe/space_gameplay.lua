@@ -1,0 +1,156 @@
+-- 同一主题集中编排，子检查保留独立标签和原始采样。
+
+do
+    -- 检查真实会话时钟和正式快照入口，不手动推进当前宇宙。
+    test.space("session", function(data)
+        assert(data.scope == "live-session", "没有采样真实太空会话")
+        assert(data.before.version == 2 and data.after.version == 2, "会话版本不正确")
+        assert(data.after.seconds > data.before.seconds, "真实固定步没有推进宇宙时钟")
+        assert(data.after.playerProfile == data.before.playerProfile, "观察期间测试玩家改变")
+        assert(data.savedVersion == data.after.version, "正式捕获的快照版本不一致")
+        assert(data.savedTime >= data.before.seconds and data.savedTime <= data.after.seconds, "快照时钟不属于本次采样")
+        assert(data.savedSectorCount == data.after.sectorCount and data.savedSectorCount > 0, "快照遗漏星区")
+        return "真实固定步、会话身份和正式捕获快照已检查"
+    end, "真实宇宙会话与固定步时钟")
+end
+
+do
+    -- 遍历全部正式船型及展开部件，不用固定船型数量判断通过。
+    test.space("ship_templates", function(data)
+        assert(data.scope == "live-content" and #data.templates > 0, "没有正式飞船模板")
+        local ids, count = {}, 0
+        for _, ship in ipairs(data.templates) do
+            assert(not ids[ship.id], "重复船型：" .. ship.id)
+            ids[ship.id] = true
+            assert(ship.width > 0 and ship.height > 0 and #ship.members > 0, "空船型：" .. ship.id)
+            local members, floor, console, engine = {}, 0, 0, 0
+            for _, part in ipairs(ship.members) do
+                local label = ship.id .. "/" .. part.id
+                assert(not members[part.id], "重复部件：" .. label)
+                members[part.id] = true
+                assert(part.registered and part.kind ~= nil, "模板引用未注册船体物品：" .. label)
+                assert(part.x >= 0 and part.x < ship.width and part.y >= 0 and part.y < ship.height, "模板坐标越界：" .. label)
+                assert(part.quarterTurns >= 0 and part.quarterTurns <= 3, "模板朝向错误：" .. label)
+                if part.kind == "Floor" then floor = floor + 1 end
+                if part.kind == "Console" then console = console + 1 end
+                if part.kind == "Engine" then engine = engine + 1 end
+                count = count + 1
+            end
+            assert(floor > 0 and console > 0 and engine > 0, "测试船型缺少地板、控制台或引擎：" .. ship.id)
+        end
+        return "遍历 " .. #data.templates .. " 个正式船型、" .. count .. " 个部件"
+    end, "全部飞船模板与资源引用")
+end
+
+do
+    -- 实际进入每个配置星区，检查全部星体的数据登记与场景表现。
+    test.space("space_visit", function(data)
+        assert(data.scope == "live-presentation" and #data.visits > 0, "没有进入配置星区")
+        local ids, sectors, count = {}, {}, 0
+        for _, visit in ipairs(data.visits) do
+            local key = visit.sector.x .. ":" .. visit.sector.y
+            assert(not sectors[key], "重复访问星区：" .. key)
+            sectors[key] = true
+            assert(visit.state.spaceView and not visit.state.dimensionTransitioning, "星区入场未完成：" .. key)
+            assert(visit.state.sector.x == visit.sector.x and visit.state.sector.y == visit.sector.y, "玩家归属星区错误：" .. key)
+            assert(#visit.bodies > 0, "配置星区没有任何星体：" .. key)
+            for _, body in ipairs(visit.bodies) do
+                assert(not ids[body.id], "星体实例身份重复：" .. body.id)
+                ids[body.id] = true
+                assert(body.planetRegistered and body.registeredBodyId == body.id, "星球数据登记缺失：" .. body.id)
+                assert(body.viewReady and body.viewBodyId == body.id, "真实星体场景对象缺失：" .. body.id)
+                local dx, dy = body.projected.x - body.viewPosition.x, body.projected.y - body.viewPosition.y
+                assert(math.sqrt(dx * dx + dy * dy) < 2, "星体表现没有跟随权威位置：" .. body.id)
+                count = count + 1
+            end
+        end
+        return "实际访问 " .. #data.visits .. " 个配置星区、" .. count .. " 个真实星体表现"
+    end, "所有配置星区与星体场景表现")
+end
+
+do
+    -- 每个正式船型走真实生成、供油供电、起飞、惯性导航和降落入口。
+    test.space("ship_flight", function(data)
+        assert(data.scope == "live-ship-flight" and #data.ships > 0, "没有完成任何真实船型流程")
+        local function magnitude(v) return math.sqrt(v.x * v.x + v.y * v.y) end
+        local function difference(a, b) return magnitude({x = a.x - b.x, y = a.y - b.y}) end
+        for _, ship in ipairs(data.ships) do
+            local label = ship.templateId
+            assert(ship.enteredConsole, "进入控制台失败：" .. label)
+            assert(ship.landed.phase == "Landed", "生成后不是地面停靠状态：" .. label)
+            assert(ship.filled.hydrogen > 0 and ship.filled.oxygen > 0, "真实燃料罐为空：" .. label)
+            assert(ship.lifting.phase == "Lifting", "点火没有进入升空：" .. label)
+            assert(ship.cruising.phase == "Cruising" and ship.cruising.spaceView, "起飞未进入真实太空：" .. label)
+            assert(ship.cruising.id == ship.landed.id and ship.cruising.pieceCount == ship.landed.pieceCount, "起飞丢失船体或部件：" .. label)
+            assert(ship.thrust.engineOutput > 0, "真实推进没有引擎出力：" .. label)
+            assert(ship.thrust.hydrogen < ship.filled.hydrogen and ship.thrust.oxygen < ship.filled.oxygen, "飞行未消耗真实氢氧：" .. label)
+            assert(difference(ship.thrust.velocity, ship.cruising.velocity) > 0.01, "推进没有改变速度：" .. label)
+            assert(difference(ship.coast.velocity, ship.thrust.velocity) < 0.05, "松开控制后惯性速度丢失：" .. label)
+            assert(math.abs(ship.turned.angle - ship.coast.angle) > 0.01, "正式旋转输入未转动船体：" .. label)
+            assert(ship.navigationAccepted and ship.navigationDistance <= ship.arrivalDistance, "正式导航未到点：" .. label)
+            assert(magnitude(ship.navigated.velocity) <= ship.arrivalSpeed + 0.001, "到点后没有制动：" .. label)
+            local crossing = ship.shipTransition
+            local function same(a, b) return a.x == b.x and a.y == b.y end
+            local function contains(values, expected)
+                for _, value in ipairs(values) do if same(value, expected) then return true end end
+                return false
+            end
+            assert(crossing.fixtureSetup == "owned-ship-preposition", "船体过渡缺少明确的测试夹具来源：" .. label)
+            assert(crossing.shipId == ship.cruising.id and crossing.phase == "Cruising", "过渡期间船体身份或飞行状态丢失：" .. label)
+            assert(same(crossing.crossed.sector, crossing.destination) and same(crossing.shipSector, crossing.destination), "乘员或船体没有进入目标星区：" .. label)
+            assert(same(crossing.flightSector, crossing.shipSector), "飞行记录与船体星区不一致：" .. label)
+            assert(contains(crossing.crossed.required, crossing.source) and contains(crossing.crossed.required, crossing.destination), "船体跨界没有保留双侧租约：" .. label)
+            assert(not contains(crossing.settled.required, crossing.source), "船体越过过渡带后没有清退源星区：" .. label)
+            assert(crossing.before.playerInstance == crossing.crossed.playerInstance and not crossing.crossed.dimensionTransitioning, "船体跨区重建玩家或触发维度迁移：" .. label)
+            assert(ship.landingAccepted and ship.landedAgain.phase == "Landed", "没有完成受控陆地降落：" .. label)
+            assert(not ship.landedAgain.spaceView and ship.landedAgain.height <= 0.001, "降落后仍在太空或半空：" .. label)
+            assert(ship.landedAgain.id == ship.landed.id, "降落重建了错误的飞船身份：" .. label)
+        end
+        return "真实起飞、氢氧消耗、惯性、旋转、导航、船体跨区与降落：" .. #data.ships .. " 个船型"
+    end, "所有船型的真实起飞航行降落")
+end
+
+for _, value in ipairs({"right", "left", "up", "down", "corner"}) do
+    local direction = value
+    -- 以正式太空入场准备速度，随后由真实固定步越界、释放租约并折返。
+    test.space("sector_transition", function(data)
+        local function same(a, b) return a.x == b.x and a.y == b.y end
+        local function contains(values, expected)
+            for _, value in ipairs(values) do if same(value, expected) then return true end end
+            return false
+        end
+        assert(data.scope == "live-sector-transition" and data.direction == direction, "没有采样指定方向的真实过渡")
+        assert(same(data.before.sector, data.source), "初始玩家不在源星区")
+        assert(contains(data.before.required, data.source) and contains(data.before.required, data.destination), "行进方向星区没有提前加载")
+        assert(same(data.crossed.sector, data.destination), "真实移动未越过目标边界")
+        assert(contains(data.crossed.required, data.source) and contains(data.crossed.required, data.destination), "过渡带没有保留两侧租约")
+        assert(contains(data.crossed.loadedScenes, data.source) and contains(data.crossed.loadedScenes, data.destination), "过渡两侧实际场景缺失")
+        assert(same(data.settled.sector, data.destination) and not contains(data.settled.required, data.source), "离开过渡带后源星区没有释放")
+        assert(same(data.returned.sector, data.source), "玩家无法自然折返")
+        assert(contains(data.returned.required, data.destination), "折返时没有保留目标侧过渡场景")
+        assert(data.before.playerInstance == data.crossed.playerInstance and data.crossed.playerInstance == data.returned.playerInstance, "普通星区越界重建了玩家")
+        assert(data.before.playerProfile == data.returned.playerProfile, "过渡后玩家身份丢失")
+        assert(data.before.realmRevision == data.crossed.realmRevision and data.crossed.realmRevision == data.settled.realmRevision, "普通星区过渡错误地改变维度版本")
+        assert(not data.crossed.dimensionTransitioning and not data.returned.dimensionTransitioning, "普通星区跨界触发了维度加载")
+        assert(data.returned.seconds > data.before.seconds, "过渡期间宇宙时钟没有继续推进")
+        return direction .. "：真实越界、双侧场景、租约清退、玩家连续性与折返"
+    end, "真实星区 " .. direction .. " 过渡", direction)
+end
+
+do
+    -- 用正式地板事务构造自有夹具，等待真实固定步计算跨星区船体接触。
+    test.space("ship_collision", function(data)
+        assert(data.scope == "live-fixed-step-contacts" and data.fixtureSetup == "production-floor-transactions", "没有真实固定步接触结果")
+        assert(data.afterTime > data.beforeTime, "真实宇宙会话没有推进")
+        local left, right = data.afterLeft, data.afterRight
+        assert(left.id == data.beforeLeft.id and right.id == data.beforeRight.id, "接触改变了船体身份")
+        assert(left.mass > 0 and right.mass > 0, "接触夹具没有真实质量")
+        local beforeMomentum = data.beforeLeft.mass * data.beforeLeft.velocity.x + data.beforeRight.mass * data.beforeRight.velocity.x
+        local afterMomentum = left.mass * left.velocity.x + right.mass * right.velocity.x
+        assert(math.abs(afterMomentum - beforeMomentum) <= math.max(0.001, (left.mass + right.mass) * 0.0001), "跨区船体接触没有保持总动量")
+        assert(math.abs(left.velocity.x - data.beforeLeft.velocity.x) > 0.1 and math.abs(right.velocity.x - data.beforeRight.velocity.x) > 0.1, "相向跨区船体互相穿过，未结算冲量")
+        assert(math.abs(data.afterRemote.velocity.x - data.beforeRemote.velocity.x) < 0.000001 and math.abs(data.afterRemote.velocity.y) < 0.000001, "遥远星区的夹具受到错误接触")
+        assert(data.afterRemote.id == data.beforeRemote.id and data.afterRemote.mass == data.beforeRemote.mass, "远区船体身份或质量被改变")
+        return "真实固定步：跨星区船体相撞、冲量守恒、远区排除与自有夹具回收"
+    end, "真实船体跨区接触与远区排除")
+end

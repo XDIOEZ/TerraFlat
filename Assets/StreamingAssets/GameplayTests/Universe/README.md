@@ -1,20 +1,31 @@
 # 宇宙与太空玩法 Lua 测试模块
 
-入口清单：`GameplayTests/universe-suite.json`。测试中心会自动列出这份清单，可以全选或只勾选一个用例；每个用例自行准备前置条件。
+入口清单：`GameplayTests/universe-suite.json`。测试中心按四个主题组显示，可以全选或只勾选一个组；各项真实玩法检查仍自行准备前置条件。
 
 ```powershell
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json
-python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases universe_catalog universe_orbits
-python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases live_flight live_transition_right
+python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases universe_content sector_rules
+python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases space_gameplay
 ```
 
 运行前退出自己的 PlayMode，在测试期间保持 Game 视图可渲染。工具复用已经打开的 Unity，不停止用户正在玩的世界。整轮自动创建隔离存档；本次实现没有主动编译或执行测试，下述用例是否通过由实际运行报告决定。
 
 ## 覆盖清单
 
-清单共 27 个用例：一个入场前置用例、六个宇宙领域用例、十个飞船领域用例、十个真实会话用例。
+原来的 27 项逻辑检查整合为四个主题用例、四份 Lua，原断言与采样内容保留。公共 `enter_world.lua` 仍供其他清单使用，这份清单的入场检查直接放在宇宙内容组中。
 
-| 用例 | 自动检查的范围 | 使用的数据与入口 |
+| 主题用例 / Lua 文件 | 包含的子检查 |
+| --- | --- |
+| `universe_content` / `universe_content.lua` | 入场、全部星体目录、公转自转、宇宙快照、全部冷地表 |
+| `sector_rules` / `sector_rules.lua` | 双精度坐标、跨界接触、四向/角落租约、折返、多观察者 |
+| `ship_rules` / `ship_rules.lua` | 结构、对接、气密、质量、推进、接触、快照、引擎安装、燃料、光纤 |
+| `space_gameplay` / `space_gameplay.lua` | 真实会话、模板、星体表现、起飞导航降落、五向越界折返、船体接触 |
+
+`--cases` 现在选择上表的主题 ID。下面保留原子检查标识作为覆盖对照，不再把它们当成独立文件或可勾选的用例。五个跨区方向使用同一段循环，报告步骤标签仍区分方向。
+
+每组内的独立代码块隔离局部辅助函数；每个 `test.space` 子检查仍有自己的中文标签、原始采样和 Lua 错误位置。组内首个失败会停止本组后续步骤，清单的 `continueAfterFailure: true` 继续下一个主题组。组结束截图和整轮结束截图照常生成，报告不再为每个旧子检查单独创建用例文件夹。
+
+| 子检查标识 | 自动检查的范围 | 使用的数据与入口 |
 | --- | --- | --- |
 | `enter_world` | 世界、玩家、真实地表区块就绪 | 正式世界入口 |
 | `universe_catalog` | 全部配置星区和星体、身份、父子关系、Prefab/Profile/Planet 映射、环境、生成稳定性、空域 | 动态遍历 SpaceCatalog，不写死星体数量 |
