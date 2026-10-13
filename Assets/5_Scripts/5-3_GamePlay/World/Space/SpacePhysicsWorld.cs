@@ -116,6 +116,19 @@ namespace FlatWorld.Spaceflight
             if (body.Root != null) UnityEngine.Object.Destroy(body.Root);
             body.Root = null; body.Rigidbody = null; body.Colliders.Clear();
         }
+
+        private void EnsureIslandScene(SpacePhysicsIsland island)
+        {
+            if (island.Scene.IsValid() && island.Scene.isLoaded && island.Physics.IsValid()) return;
+            // 会话能跨场景保留，已卸载的计算场景及代理必须从权威业务状态重新建立。
+            foreach (SpacePhysicsBody body in bodies.Values)
+                if (body.Island == island) DestroyBody(body);
+            if (island.Scene.IsValid() && island.Scene.isLoaded) SceneManager.UnloadSceneAsync(island.Scene);
+            Scene scene = SceneManager.CreateScene($"SpacePhysics_{ownerId}_{++sceneNumber}",
+                new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+            island.Scene = scene; island.Physics = scene.GetPhysicsScene2D();
+            filtersDirty = true;
+        }
         #endregion
 
         #region 空间分组与精度边界
@@ -198,6 +211,7 @@ namespace FlatWorld.Spaceflight
                         island = new SpacePhysicsIsland { Scene = scene, Physics = scene.GetPhysicsScene2D() };
                         islands.Add(island);
                     }
+                    EnsureIslandScene(island);
                     groups.Add(root, island); claimed.Add(island);
                 }
                 if (body.Island != island) { body.Island = island; filtersDirty = true; }
@@ -247,6 +261,7 @@ namespace FlatWorld.Spaceflight
         {
             if (body.Root == null)
             {
+                DestroyBody(body);
                 body.Root = new GameObject(body.Id) { hideFlags = HideFlags.HideInHierarchy };
                 body.Rigidbody = body.Root.AddComponent<Rigidbody2D>();
                 body.Rigidbody.bodyType = RigidbodyType2D.Dynamic;

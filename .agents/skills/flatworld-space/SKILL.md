@@ -29,6 +29,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 固定步等待 IsGameplayReady；SpaceSession.Physics2D 只登记输入、质量与形状，SpacePhysicsWorld 使用真实 Dynamic Rigidbody2D/Collider2D 和独立 PhysicsScene2D 推进太空飞船、残骸、自由玩家及散落物，随后读取结果到业务状态。不得再对这些物体调用自研积分、扫掠或冲量；ShipCollisionSimulation 仅处理地表作用域。地表起降和手动落地继续原流程，太空经过星体不自动进入地表。
 - 物理代理不依赖画面加载；稀疏网格只分配局部物理岛，近处物体共用场景，场景及代理复用。碰撞圆支持物品之间、物品与玩家及船体互撞；支撑乘员的圆归整船，质量已在整船内，独立玩家和散落物不重复加入船重。地板等非阻挡部件对自由圆忽略碰撞，舱壁与关闭的舱门保留阻挡。原生接触回报只结算损伤，不再追加自研反作用。
 - 采用 Unity 2022.3 的 velocity/drag API；局部物理以米为单位，读回原生位移差保留双精度坐标余量，同一引力源中的物理岛以星体公转为平移参考。每固定步至少4个物理子步；只在独立场景 Simulate 期间临时提高平移/旋转上限，并在 finally 恢复，不能永久改地面物理。视图刚体只显示结果，所有权在权威端；会话重载、结束和销毁释放计算场景。
+- SpaceSession 跨场景保留，但 Single 加载会卸载独立计算场景；物理岛复用前检查 Scene 有效/已加载及 PhysicsScene2D 有效，失效时清理代理与碰撞体缓存，按权威业务状态重建场景和碰撞过滤。
 - 宇宙位置是 `SpaceSectorId(long X/Y)` 加所属区内 double 米，星区边长256000米、局部范围 `[-128000,128000)`；跨区用 Normalize/Relative，先算整数星区差再转局部距离，禁止合成巨大绝对 double。Ship/Assembly/Motion/Body 与接触快照显式保存 Sector；成员、重心、点速度与接触成对转换到指定参考区，不用全局静态上下文。
 - ViewSector/ViewOrigin 只影响显示；LateUpdate 先更新玩家投影，换区保持同一显示平面，离原点4096米才整体平移并通知镜头。创建自由物用 UnprojectSectorPosition，投影视图传 SectorPosition；地表坐标/镜像经 WorldLocalPresentation，不交太空坐标给 Chunk 或 NormalizePosition。
 - SpaceSessionState 版本2保存 Sectors 与 SimulationSeconds，Universe 只是主星区运行别名；所有目录由同一个固定时钟推进。BodyId/PlanetId使用全局实例身份，TemplateBodyId用于所属区模板查询；主地球PlanetId沿用当前存档主世界名，其余星体不能复用本地earth/moon身份。
