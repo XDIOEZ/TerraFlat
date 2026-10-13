@@ -99,6 +99,7 @@ namespace FlatWorld.WorldModel
         public float WindTransitionWidth = 32f; // 风区边界两侧共同组成按距离渐弱的过渡带。
         public float StepSeconds = 2f;
         public float CheckIntervalSeconds = 30f;
+        public float NaturalEventProbabilityMultiplier = 0.3f; // 所有自然天气统一减少出现机会，强风倍率再独立叠加。
         public int MaximumCatchUpSteps = 120;
         public float FreezingTemperature = 0f;
         public float MinimumLightningIntervalSeconds = 20f;
@@ -158,10 +159,11 @@ namespace FlatWorld.WorldModel
         /// <summary>区域抽签时应用当前配置，区块冻结的基础气候概率保持独立。</summary>
         public float ResolveActivationProbability(WeatherElementProfile profile)
         {
+            float probability = profile.Probability * NaturalEventProbabilityMultiplier;
             foreach (WeatherElementRule rule in Elements)
                 if (string.Equals(rule.Id, profile.Id, StringComparison.Ordinal))
-                    return profile.Probability * rule.ResolveProbabilityMultiplier(profile.Intensity);
-            return profile.Probability;
+                    return probability * rule.ResolveProbabilityMultiplier(profile.Intensity);
+            return probability;
         }
 
         public void Validate()
@@ -170,6 +172,7 @@ namespace FlatWorld.WorldModel
                 !Finite(WindTransitionWidth) || WindTransitionWidth < 0f ||
                 !Finite(StepSeconds) || StepSeconds < 0.1f || StepSeconds > 60f ||
                 !Finite(CheckIntervalSeconds) || CheckIntervalSeconds < StepSeconds ||
+                !Finite(NaturalEventProbabilityMultiplier) || NaturalEventProbabilityMultiplier < 0f || NaturalEventProbabilityMultiplier > 1f ||
                 MaximumCatchUpSteps < 1 || MaximumCatchUpSteps > 1024 ||
                 !Finite(FreezingTemperature) || !Finite(MinimumLightningIntervalSeconds) ||
                 MinimumLightningIntervalSeconds <= 0f || !Finite(LightningSeparationRadius) ||

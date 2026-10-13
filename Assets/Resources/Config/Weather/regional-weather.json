@@ -3,6 +3,7 @@
   "WindTransitionWidth": 32.0,
   "StepSeconds": 2.0,
   "CheckIntervalSeconds": 30.0,
+  "NaturalEventProbabilityMultiplier": 0.3,
   "MaximumCatchUpSteps": 120,
   "FreezingTemperature": 0.0,
   "MinimumLightningIntervalSeconds": 20.0,
