@@ -18,8 +18,6 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
     private Player playerOwner;
     private SpaceSessionState stateOwner;
     private int sceneHandle;
-    private int sampledFrame = -1;
-    private bool sampled;
     private float opacity;
 
     public override void Create()
@@ -75,8 +73,6 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
     {
         playerOwner = null;
         stateOwner = null;
-        sampledFrame = -1;
-        sampled = false;
         opacity = 0f;
         pass?.Reset();
     }
@@ -123,15 +119,8 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
         }
         var config = WorldRenderingConfigCatalog.Default.universeView;
         float size = camera.CurrentOrthographicSize;
-        if (sampledFrame != Time.frameCount)
-        {
-            float target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(
-                config.startOrthographicSize, config.opaqueOrthographicSize, size));
-            opacity = !sampled || config.transitionSeconds <= 0f ? target :
-                Mathf.MoveTowards(opacity, target, Time.deltaTime / config.transitionSeconds);
-            sampled = true;
-            sampledFrame = Time.frameCount;
-        }
+        // 与云层共用同一份表现进度，先满屏云再交接，缩近时按相同顺序反向返回。
+        opacity = SurfaceZoomTransition.Sample(camera).UniverseOpacity;
         if (opacity <= 0.0005f)
         {
             pass.ReleaseTexture();

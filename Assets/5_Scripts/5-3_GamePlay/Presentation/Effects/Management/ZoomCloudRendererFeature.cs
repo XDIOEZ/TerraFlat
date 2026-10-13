@@ -2,13 +2,12 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-/// <summary>高视野写实云层只合成本机最终世界画面，缩放控制强度，当地风控制漂移。</summary>
+/// <summary>共用星球柔边云团与外圈浓云，缩放时靠近或退开并遮住未加载区域。</summary>
 public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 {
     #region 本地云层状态
 
     [SerializeField] private Shader cloudShader;
-    private static readonly int DensityTextureId = Shader.PropertyToID("_CloudDensityTex");
     private Material material;
     private CloudPass pass;
     private Player localPlayer;
@@ -16,7 +15,6 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
     private bool hasSample;
     private int sampledFrame = -1;
     private int worldSceneHandle;
-    private float visibleStrength;
     private Vector2 driftVelocity;
     private Vector2 cloudOffset;
     private Vector2 cloudWorldCenter;
@@ -29,7 +27,6 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         cameraModule = null;
         hasSample = false;
         sampledFrame = -1;
-        visibleStrength = 0f;
         driftVelocity = cloudOffset = cloudWorldCenter = lastLogicalPlayerPosition = Vector2.zero;
     }
 
@@ -48,15 +45,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             Debug.LogError("[ZoomCloud] 渲染器资源缺少高视野云雾 Shader。", this);
             return;
         }
-        // 分形云团离线生成，运行时只采样纹理，不按网格摆放椭圆云片。
-        Texture2D densityTexture = Resources.Load<Texture2D>("Shaders/CloudDensity_RGBA");
-        if (densityTexture == null)
-        {
-            Debug.LogError("[ZoomCloud] 缺少写实云层密度数据图 Shaders/CloudDensity_RGBA。", this);
-            return;
-        }
         material = CoreUtils.CreateEngineMaterial(cloudShader);
-        material.SetTexture(DensityTextureId, densityTexture);
         pass = new CloudPass();
     }
 
@@ -99,12 +88,14 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             return;
 
         WorldRenderingConfig.RenderingZoomClouds config = WorldRenderingConfigCatalog.Default.zoomClouds;
+        SurfaceZoomTransition.Frame transition = SurfaceZoomTransition.Sample(cameraModule);
+        // 黑边保护直接跟随实际镜头，云团动画缓动时也不会暴露未加载区域。
+        float protectionStrength = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(
+            config.startOrthographicSize, config.opaqueOrthographicSize, sourceCamera.orthographicSize));
         if (sampledFrame != Time.frameCount)
         {
             Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             weather.TryGetWeatherAt(logicalPlayer, out var sample);
-            float target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(
-                config.startOrthographicSize, config.opaqueOrthographicSize, sourceCamera.orthographicSize));
             Vector2 wind = new Vector2(sample.WindX, sample.WindY);
             Vector2 direction = wind.sqrMagnitude > 0.000001f ? wind.normalized : new Vector2(1f, 0.37f).normalized;
             float speed = Mathf.Lerp(config.minimumDriftSpeed, config.maximumDriftSpeed,
@@ -113,14 +104,11 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             float seconds = Mathf.Max(0f, Time.deltaTime);
             if (!hasSample)
             {
-                visibleStrength = target;
                 driftVelocity = targetVelocity;
                 cloudWorldCenter = logicalPlayer;
             }
             else
             {
-                visibleStrength = config.transitionSeconds <= 0f ? target :
-                    Mathf.MoveTowards(visibleStrength, target, seconds / config.transitionSeconds);
                 driftVelocity = config.transitionSeconds <= 0f ? targetVelocity :
                     Vector2.MoveTowards(driftVelocity, targetVelocity,
                         config.maximumDriftSpeed * seconds / config.transitionSeconds);
@@ -133,11 +121,14 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             hasSample = true;
             sampledFrame = Time.frameCount;
         }
-        if (visibleStrength <= MinimumVisibleStrength)
+        if (transition.CloudStrength <= MinimumVisibleStrength && protectionStrength <= MinimumVisibleStrength)
+            return;
+        // 宇宙画面已完全接管时停止绘制底下的云，缩近交接时再恢复。
+        if (transition.UniverseOpacity >= 1f && CameraZoomExtensions.GetProfile(cameraModule).MaximumRenderSize > 0f)
             return;
 
         pass.Setup(material, sourceCamera, player.transform.position, cloudWorldCenter,
-            cloudOffset, visibleStrength, config);
+            cloudOffset, transition, protectionStrength, config);
         renderer.EnqueuePass(pass);
     }
 
@@ -170,6 +161,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         private static readonly int CenterId = Shader.PropertyToID("_CloudWorldCenter");
         private static readonly int OffsetId = Shader.PropertyToID("_CloudDriftOffset");
         private static readonly int RadiiId = Shader.PropertyToID("_CloudRadiiStrength");
+        private static readonly int ProtectionId = Shader.PropertyToID("_CloudProtection");
         private static readonly int ColorId = Shader.PropertyToID("_CloudColor");
         private static readonly int ShapeId = Shader.PropertyToID("_CloudShape");
         private readonly ProfilingSampler sampler = new ProfilingSampler("FlatWorld Zoom Clouds");
@@ -178,7 +170,8 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         private Vector3 playerPosition;
         private Vector2 worldCenter;
         private Vector2 offset;
-        private float strength;
+        private SurfaceZoomTransition.Frame transition;
+        private float protectionStrength;
         private WorldRenderingConfig.RenderingZoomClouds settings;
 
         public CloudPass()
@@ -188,20 +181,23 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         }
 
         public void Setup(Material target, Camera source, Vector3 player, Vector2 center,
-            Vector2 driftOffset, float opacity, WorldRenderingConfig.RenderingZoomClouds config)
+            Vector2 driftOffset, SurfaceZoomTransition.Frame frame, float protection,
+            WorldRenderingConfig.RenderingZoomClouds config)
         {
             passMaterial = target;
             sourceCamera = source;
             playerPosition = player;
             worldCenter = center;
             offset = driftOffset;
-            strength = opacity;
+            transition = frame;
+            protectionStrength = protection;
             settings = config;
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            if (passMaterial == null || sourceCamera == null || strength <= MinimumVisibleStrength)
+            if (passMaterial == null || sourceCamera == null ||
+                transition.CloudStrength <= MinimumVisibleStrength && protectionStrength <= MinimumVisibleStrength)
                 return;
 
             Matrix4x4 projection = GL.GetGPUProjectionMatrix(sourceCamera.projectionMatrix,
@@ -211,6 +207,11 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             Vector3 right = inverse.MultiplyPoint(new Vector3(1f, -1f, 0f)) - bottomLeft;
             Vector3 up = inverse.MultiplyPoint(new Vector3(-1f, 1f, 0f)) - bottomLeft;
             Vector3 origin = bottomLeft - playerPosition;
+            float feather = settings.opaqueRadius - settings.clearRadius;
+            float startingClearRadius = Mathf.Max(settings.opaqueRadius,
+                sourceCamera.orthographicSize * Mathf.Sqrt(1f + sourceCamera.aspect * sourceCamera.aspect));
+            float clearRadius = Mathf.Lerp(startingClearRadius, settings.clearRadius, transition.Approach);
+            clearRadius = Mathf.Lerp(clearRadius, -feather, transition.Closure);
 
             CommandBuffer cmd = CommandBufferPool.Get();
             using (new ProfilingScope(cmd, sampler))
@@ -221,9 +222,12 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
                 passMaterial.SetVector(CenterId, new Vector4(worldCenter.x, worldCenter.y, 0f, 0f));
                 passMaterial.SetVector(OffsetId, new Vector4(offset.x, offset.y, 0f, 0f));
                 passMaterial.SetVector(RadiiId,
-                    new Vector4(settings.clearRadius, settings.opaqueRadius, strength, 0f));
+                    new Vector4(clearRadius, clearRadius + feather, transition.CloudStrength, 1f - transition.Closure));
+                passMaterial.SetVector(ProtectionId,
+                    new Vector4(settings.clearRadius, settings.opaqueRadius, protectionStrength, 0f));
                 passMaterial.SetColor(ColorId, settings.color);
-                passMaterial.SetVector(ShapeId, new Vector4(settings.noiseScale, settings.shadowStrength, 0f, 0f));
+                passMaterial.SetVector(ShapeId, new Vector4(settings.noiseScale, settings.shadowStrength,
+                    sourceCamera.orthographicSize * 0.3f * transition.Approach, 0f));
 
                 CoreUtils.SetRenderTarget(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle);
                 cmd.DrawProcedural(Matrix4x4.identity, passMaterial, 0, MeshTopology.Triangles, 3, 1);

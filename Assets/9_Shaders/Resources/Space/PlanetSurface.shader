@@ -20,6 +20,7 @@ Shader "FlatWorld/Space/PlanetSurface"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Assets/9_Shaders/Shader/PlanetCloudCommon.hlsl"
         CBUFFER_START(UnityPerMaterial)
             float4 _Color;
             float4 _SurfaceAccentColor;
@@ -57,35 +58,6 @@ Shader "FlatWorld/Space/PlanetSurface"
             float radius = length((uv * 2.0 - 1.0) * _SurfaceExtent);
             float pixelWidth = max(fwidth(radius), 0.0000001);
             return 1.0 - smoothstep(1.0 - pixelWidth, 1.0 + pixelWidth, radius);
-        }
-        float PlanetHash(float3 p)
-        {
-            float3 p3 = frac(p * 0.1031);
-            p3 += dot(p3, p3.yzx + 33.33);
-            return frac((p3.x + p3.y) * p3.z);
-        }
-        float PlanetNoise(float3 p)
-        {
-            float3 cell = floor(p);
-            float3 t = frac(p);
-            t = t * t * (3.0 - 2.0 * t);
-            float lower = lerp(lerp(PlanetHash(cell), PlanetHash(cell + float3(1,0,0)), t.x),
-                               lerp(PlanetHash(cell + float3(0,1,0)), PlanetHash(cell + float3(1,1,0)), t.x), t.y);
-            float upper = lerp(lerp(PlanetHash(cell + float3(0,0,1)), PlanetHash(cell + float3(1,0,1)), t.x),
-                               lerp(PlanetHash(cell + float3(0,1,1)), PlanetHash(cell + float3(1,1,1)), t.x), t.y);
-            return lerp(lower, upper, t.z);
-        }
-        float PlanetFilteredNoise(float3 p)
-        {
-            // 小于屏幕像素的细节自动淡出，远看不闪烁，也不分配高清纹理。
-            float pixelWidth = max(length(ddx(p)), length(ddy(p)));
-            if (pixelWidth >= 0.8) return 0.5;
-            return lerp(PlanetNoise(p), 0.5, smoothstep(0.35, 0.8, pixelWidth));
-        }
-        float PlanetFractal(float3 p)
-        {
-            return PlanetFilteredNoise(p) * 0.58 + PlanetFilteredNoise(p * 2.03 + 17.0) * 0.28 +
-                   PlanetFilteredNoise(p * 4.13 + 53.0) * 0.14;
         }
         float3 PlanetRotate(float3 p, float angle)
         {
@@ -146,7 +118,7 @@ Shader "FlatWorld/Space/PlanetSurface"
                 color = lerp(color, half3(0.88,0.94,1.0), ice);
                 float3 cloudCoords = PlanetRotate(normal, _Time.y * 0.012) * (_SurfaceDetailScale * 1.7) + _SurfaceSeed + 137.0;
                 float clouds = PlanetFractal(cloudCoords);
-                float cloudAlpha = smoothstep(0.56, 0.72, clouds) * 0.82;
+                float cloudAlpha = PlanetCloudOpacity(clouds);
                 color *= 1.0 - cloudAlpha * 0.14;
                 color = lerp(color, half3(0.94,0.96,1.0), cloudAlpha);
                 color *= 0.22 + diffuse * 0.78;

@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="790" viewBox="0 0 1480 790" role="img" aria-labelledby="title description">
+  <title id="title">云从四周靠近，盖满之后再看见宇宙</title>
+  <desc id="description">流程示意，不是游戏截图。拉远时，地表共用星球的柔边云团，叠加不透明的外圈浓云，遮住未加载的黑边。云在视野尺寸55盖满画面，60以后才开始露出贴近星球的宇宙视野，90完全显示宇宙。拉近时按相反顺序返回。</desc>
+  <defs>
+    <linearGradient id="background" x2="0" y2="1">
+      <stop stop-color="#121f30"/>
+      <stop offset="1" stop-color="#09131f"/>
+    </linearGradient>
+    <linearGradient id="terrain" x2="0.7" y2="1">
+      <stop stop-color="#769952"/>
+      <stop offset="1" stop-color="#466943"/>
+    </linearGradient>
+    <radialGradient id="cloudLight" cx="0.34" cy="0.3" r="0.75">
+      <stop stop-color="#ffffff"/>
+      <stop offset="0.52" stop-color="#e9eff5"/>
+      <stop offset="1" stop-color="#a9b7c8"/>
+    </radialGradient>
+    <radialGradient id="planetLight" cx="0.3" cy="0.28" r="0.82">
+      <stop stop-color="#65aee1"/>
+      <stop offset="0.62" stop-color="#366eaf"/>
+      <stop offset="1" stop-color="#153b69"/>
+    </radialGradient>
+    <filter id="cloudEdge" x="-30%" y="-40%" width="160%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.026 0.033" numOctaves="3" seed="27" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="21" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="2.3"/>
+    </filter>
+    <filter id="fullCloud" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="61" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0.20 0.72 0 0 0 0.18 0.76 0 0 0 0.16 0.80 0 0 0 0 1"/>
+    </filter>
+    <marker id="forward" markerWidth="11" markerHeight="11" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L9 5L0 10Z" fill="#77d8ef"/>
+    </marker>
+    <marker id="reverse" markerWidth="11" markerHeight="11" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0 0L9 5L0 10Z" fill="#a5b5cc"/>
+    </marker>
+    <clipPath id="viewport"><rect width="312" height="258" rx="14"/></clipPath>
+    <g id="ground">
+      <rect width="312" height="258" fill="url(#terrain)"/>
+      <path d="M0 25C52 11 83 55 99 93S130 154 172 161 250 114 312 144V258H0Z" fill="#9ca760" opacity="0.5"/>
+      <path d="M-14 87C39 122 57 97 91 121S140 219 213 213 266 183 327 220" fill="none" stroke="#436f99" stroke-width="31"/>
+      <path d="M-14 83C39 118 57 93 91 117S140 215 213 209 266 179 327 216" fill="none" stroke="#6ba4c5" stroke-width="17"/>
+      <g fill="#294e37" opacity="0.65">
+        <path d="M34 44l-8 17h16zM53 35l-7 15h14zM70 63l-6 14h12zM259 46l-8 19h16zM239 64l-7 16h14zM224 38l-5 13h10zM74 198l-7 17h14zM44 185l-6 15h12z"/>
+      </g>
+      <circle cx="156" cy="129" r="5.5" fill="#ffeab8" stroke="#533d29" stroke-width="2"/>
+      <circle cx="156" cy="129" r="13" fill="none" stroke="#ffeab8" opacity="0.38"/>
+    </g>
+    <g id="cloudPatch" filter="url(#cloudEdge)" fill="url(#cloudLight)">
+      <path d="M-71 5C-88-4-70-28-48-24-56-47-14-58 5-36 23-61 62-43 59-21 88-24 97 1 76 17 98 41 54 52 30 42 11 60-18 48-26 39-58 57-92 32-71 5Z"/>
+      <path d="M-28-8C-47-21-16-39 2-23 20-39 43-17 32-3 52 9 28 26 11 15-8 32-43 18-28-8Z" fill="#f8fbff" opacity="0.55"/>
+    </g>
+    <g id="denseRim">
+      <path d="M-24-24H336V282H-24Z M58 60C84 39 112 57 136 48 161 39 189 55 213 44 238 39 259 67 254 89 272 109 244 122 258 145 271 170 240 194 211 188 183 210 161 186 135 202 111 211 91 187 72 196 41 193 45 161 30 144 20 115 46 101 36 82 34 67 49 68 58 60Z" fill="#edf2f7" fill-rule="evenodd"/>
+      <use href="#cloudPatch" transform="translate(48 38) scale(0.74)"/>
+      <use href="#cloudPatch" transform="translate(173 11) scale(0.91) rotate(14)"/>
+      <use href="#cloudPatch" transform="translate(292 75) scale(0.96) rotate(71)"/>
+      <use href="#cloudPatch" transform="translate(279 222) scale(0.85) rotate(24)"/>
+      <use href="#cloudPatch" transform="translate(119 249) scale(1.1) rotate(-10)"/>
+      <use href="#cloudPatch" transform="translate(4 162) scale(0.86) rotate(-64)"/>
+    </g>
+    <g id="planetNear">
+      <rect width="312" height="258" fill="#07101c"/>
+      <circle cx="152" cy="167" r="345" fill="url(#planetLight)"/>
+      <path d="M-31 7C24-22 63 17 60 53S111 72 99 107 141 136 125 172 170 209 149 282H-31ZM204-20C264 26 224 71 270 92S284 159 337 148V-20Z" fill="#6b985e"/>
+      <path d="M-23 7C20-7 42 26 35 60S82 86 72 121 112 150 96 184 124 226 110 277" fill="none" stroke="#aac27d" stroke-width="15" opacity="0.35"/>
+      <use href="#cloudPatch" transform="translate(99 42) scale(0.76) rotate(-21)" opacity="0.86"/>
+      <use href="#cloudPatch" transform="translate(225 189) scale(0.66) rotate(18)" opacity="0.83"/>
+      <use href="#cloudPatch" transform="translate(-7 213) scale(0.57) rotate(-12)" opacity="0.76"/>
+    </g>
+  </defs>
+  <style>
+    text{font-family:"Microsoft YaHei","Noto Sans SC",sans-serif;fill:#e9f0fa}
+    .subtitle{font-size:17px;fill:#99aec7}
+    .stage{font-size:22px;font-weight:700}
+    .note{font-size:16px;fill:#a6bad0}
+    .number{font-size:15px;fill:#81d7e9}
+    .rim-breathe{animation:approach 8s ease-in-out infinite;transform-origin:156px 129px}
+    @keyframes approach{0%,100%{transform:scale(1.12)}50%{transform:scale(0.91)}}
+    @media (prefers-reduced-motion:reduce){.rim-breathe{animation:none}}
+  </style>
+  <rect width="1480" height="790" rx="24" fill="url(#background)"/>
+  <text x="52" y="62" font-size="30" font-weight="700">云先盖住地表，再慢慢露出宇宙</text>
+  <text x="52" y="94" class="subtitle">流程示意 · 不是游戏截图 · 数字为默认镜头视野尺寸</text>
+  <path d="M61 131H1410" fill="none" stroke="#77d8ef" stroke-width="2" marker-end="url(#forward)"/>
+  <rect x="582" y="116" width="302" height="31" rx="10" fill="#122233"/>
+  <text x="733" y="138" text-anchor="middle" font-size="17" fill="#77d8ef">继续拉远 →</text>
+
+  <g transform="translate(52 176)">
+    <text class="number" y="0">① 视野尺寸 ≤20</text>
+    <text class="stage" y="32">正常地表</text>
+    <g transform="translate(0 52)" clip-path="url(#viewport)">
+      <use href="#ground"/>
+      <use href="#cloudPatch" transform="translate(-46 3) scale(0.69)" opacity="0.67"/>
+      <use href="#cloudPatch" transform="translate(337 258) scale(0.7)" opacity="0.73"/>
+    </g>
+    <text class="note" y="343">玩家附近清楚，云留在远处。</text>
+  </g>
+
+  <g transform="translate(405 176)">
+    <text class="number" y="0">② 20→40，外圈逐渐变浓</text>
+    <text class="stage" y="32">四周浓云靠近</text>
+    <g transform="translate(0 52)" clip-path="url(#viewport)">
+      <use href="#ground"/>
+      <g class="rim-breathe"><use href="#denseRim"/></g>
+      <use href="#cloudPatch" transform="translate(129 83) scale(0.28) rotate(21)" opacity="0.57"/>
+      <g stroke="#386176" fill="none" stroke-width="2.5" marker-end="url(#forward)">
+        <path d="M156 31V74M282 129H240M156 228V185M27 129H71"/>
+      </g>
+    </g>
+    <text class="note" y="343">外圈不透明，遮住未加载的黑边。</text>
+  </g>
+
+  <g transform="translate(758 176)">
+    <text class="number" y="0">③ 55，云已经盖满画面</text>
+    <text class="stage" y="32">先把地表完全盖住</text>
+    <g transform="translate(0 52)" clip-path="url(#viewport)">
+      <rect width="312" height="258" fill="#e0e8f0"/>
+      <rect width="312" height="258" filter="url(#fullCloud)"/>
+      <use href="#cloudPatch" transform="translate(63 61) scale(0.94) rotate(-29)" opacity="0.64"/>
+      <use href="#cloudPatch" transform="translate(222 143) scale(1.09) rotate(47)" opacity="0.58"/>
+      <use href="#cloudPatch" transform="translate(21 241) scale(0.84)" opacity="0.54"/>
+      <use href="#cloudPatch" transform="translate(275 -16) scale(0.81)" opacity="0.57"/>
+    </g>
+    <text class="note" y="343">这时只看见云，还没露出宇宙。</text>
+  </g>
+
+  <g transform="translate(1111 176)">
+    <text class="number" y="0">④ 60→90，宇宙逐渐显现</text>
+    <text class="stage" y="32">镜头仍贴近星球</text>
+    <g transform="translate(0 52)" clip-path="url(#viewport)">
+      <use href="#planetNear"/>
+    </g>
+    <text class="note" y="343">继续拉远，才看到整颗星球。</text>
+  </g>
+
+  <path d="M1419 564H67" fill="none" stroke="#a5b5cc" stroke-width="2" marker-end="url(#reverse)"/>
+  <rect x="352" y="548" width="778" height="32" rx="10" fill="#0c1826"/>
+  <text x="740" y="570" text-anchor="middle" font-size="17" fill="#a5b5cc">← 拉近：宇宙被云盖住 → 地表回来 → 云退到四周</text>
+
+  <rect x="52" y="611" width="1372" height="128" rx="18" fill="#152436" stroke="#2c4057"/>
+  <use href="#cloudPatch" transform="translate(112 654) scale(0.3)"/>
+  <text x="169" y="651" font-size="20" font-weight="700">柔边云团</text>
+  <text x="169" y="682" class="note">复用星球云层生成规则：有空隙、有厚薄、有自然团块。</text>
+  <path d="M744 633V713" stroke="#33485f"/>
+  <rect x="785" y="635" width="40" height="40" rx="12" fill="#e5edf5"/>
+  <text x="850" y="651" font-size="20" font-weight="700">外圈浓云</text>
+  <text x="850" y="682" class="note">负责挡住黑边；拉远时向内收，满屏后再过渡宇宙。</text>
+  <text x="52" y="771" font-size="14" fill="#738aa5">两个职责叠加：云团负责自然形状，浓云负责遮挡与过渡。</text>
+</svg>
