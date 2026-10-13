@@ -60,6 +60,7 @@ namespace FlatWorld.WorldModel
         #region 固定时钟与天气要素
         // 相邻多个地形区块共享一场天气，避免走几步就穿过整片雨区。
         public int RegionSizeInChunks = 8;
+        public float WindTransitionWidth = 32f; // 风区边界两侧共同组成按距离渐弱的过渡带。
         public float StepSeconds = 2f;
         public float CheckIntervalSeconds = 30f;
         public int MaximumCatchUpSteps = 120;
@@ -115,6 +116,7 @@ namespace FlatWorld.WorldModel
         public void Validate()
         {
             if (RegionSizeInChunks < 1 || RegionSizeInChunks > 64 ||
+                !Finite(WindTransitionWidth) || WindTransitionWidth < 0f ||
                 !Finite(StepSeconds) || StepSeconds < 0.1f || StepSeconds > 60f ||
                 !Finite(CheckIntervalSeconds) || CheckIntervalSeconds < StepSeconds ||
                 MaximumCatchUpSteps < 1 || MaximumCatchUpSteps > 1024 ||

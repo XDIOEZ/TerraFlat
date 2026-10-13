@@ -83,9 +83,27 @@ public partial class WeatherMgr
     public bool TryGetWeatherAt(Vector2 position, out RegionalWeatherSnapshot sample)
     {
         sample = default;
+        if (!_weatherRuntimeAllowed || regionalEngine == null ||
+            !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
+        bool found = regionalEngine.TryGetSnapshot(
+            new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)), out sample);
+        if (TryGetWindBlendAt(position, out var blend))
+        {
+            Unity.Mathematics.float2 wind = blend.Wind;
+            sample.WindX = wind.x;
+            sample.WindY = wind.y;
+            sample.WindStrength = Mathf.Clamp01(Unity.Mathematics.math.length(wind));
+            found = true;
+        }
+        return found;
+    }
+
+    /// <summary>提供风区原始风向量与空间权重，推力换算由移动规则负责。</summary>
+    public bool TryGetWindBlendAt(Vector2 position, out RegionalWindBlend blend)
+    {
+        blend = default;
         return _weatherRuntimeAllowed && regionalEngine != null &&
-               float.IsFinite(position.x) && float.IsFinite(position.y) &&
-               regionalEngine.TryGetSnapshot(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)), out sample);
+               regionalEngine.TryGetWindBlend(new Unity.Mathematics.double2(position.x, position.y), out blend);
     }
 
     public float GetTemperatureOffsetAt(Vector2 position) =>

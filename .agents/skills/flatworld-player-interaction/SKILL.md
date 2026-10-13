@@ -45,6 +45,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 移动、承载与镜头
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
+- 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：完整 ItemDefinitions（含 Actor/MOD）单件质量的最小值 B、最大值 A 决定门槛 C=(A+B)/2；当前堆叠总质量从 B 到 C 线性减速，达到 C 归零。最轻物体在 0.8/0.9/1.0 风力下为 0.06/0.2/0.5 单位每秒，档间连续增强、8 级以下为零。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具质量包含乘员，乘员不重复受风；太空与禁用天气维度返回零。
 - `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。

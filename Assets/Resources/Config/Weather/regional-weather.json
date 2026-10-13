@@ -1,5 +1,6 @@
 {
   "RegionSizeInChunks": 8,
+  "WindTransitionWidth": 32.0,
   "StepSeconds": 2.0,
   "CheckIntervalSeconds": 30.0,
   "MaximumCatchUpSteps": 120,

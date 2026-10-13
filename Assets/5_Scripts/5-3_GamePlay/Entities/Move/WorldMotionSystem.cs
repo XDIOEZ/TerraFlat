@@ -42,11 +42,21 @@ public static class WorldMotionSystem
             WindEnvironmentRules.ResolveMassFactor(mass, minimumMass, maximumMass) <= 0f)
             return Vector2.zero;
         WeatherMgr weather = WeatherMgr.ExistingInstance;
-        if (weather == null || !weather.TryGetWeatherAt(WorldLocalPresentation.ToLogical(position), out var sample))
+        if (weather == null || !weather.TryGetWindBlendAt(WorldLocalPresentation.ToLogical(position), out var sample))
             return Vector2.zero;
 
-        float speed = WindEnvironmentRules.ResolvePushSpeed(sample.WindStrength, mass, minimumMass, maximumMass);
-        return new Vector2(sample.WindX, sample.WindY).normalized * speed;
+        // 先换算各区推力再混合，避免边缘风强跌过推动门槛时突然停下。
+        Vector2 ResolveSourceVelocity(Unity.Mathematics.float3 wind)
+        {
+            Vector2 vector = new(wind.x, wind.y);
+            float speed = WindEnvironmentRules.ResolvePushSpeed(wind.z, mass, minimumMass, maximumMass);
+            return vector.normalized * speed;
+        }
+
+        return Vector2.Lerp(
+            Vector2.Lerp(ResolveSourceVelocity(sample.Origin), ResolveSourceVelocity(sample.Horizontal), sample.HorizontalWeight),
+            Vector2.Lerp(ResolveSourceVelocity(sample.Vertical), ResolveSourceVelocity(sample.Diagonal), sample.HorizontalWeight),
+            sample.VerticalWeight);
     }
     #endregion
 

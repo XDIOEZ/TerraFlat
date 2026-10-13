@@ -1,4 +1,5 @@
 using System;
+using Unity.Mathematics;
 
 namespace FlatWorld.WorldModel
 {
@@ -76,6 +77,34 @@ namespace FlatWorld.WorldModel
         public float LightningStrength;
         public float RemainingSeconds;
         public int Revision;
+        #endregion
+    }
+
+    /// <summary>风区各自提供原始风向量，消费方先换算自身响应再按同一空间权重混合。</summary>
+    public readonly struct RegionalWindBlend
+    {
+        #region 相邻风区与距离权重
+        // xy 为风向量，z 保留原始强度，避免浮点模长误差误触推动门槛。
+        public readonly float3 Origin;
+        public readonly float3 Horizontal;
+        public readonly float3 Vertical;
+        public readonly float3 Diagonal;
+        public readonly float HorizontalWeight;
+        public readonly float VerticalWeight;
+
+        public RegionalWindBlend(float3 origin, float3 horizontal, float3 vertical, float3 diagonal,
+            float horizontalWeight, float verticalWeight)
+        {
+            Origin = origin;
+            Horizontal = horizontal;
+            Vertical = vertical;
+            Diagonal = diagonal;
+            HorizontalWeight = horizontalWeight;
+            VerticalWeight = verticalWeight;
+        }
+
+        public float2 Wind => math.lerp(math.lerp(Origin.xy, Horizontal.xy, HorizontalWeight),
+            math.lerp(Vertical.xy, Diagonal.xy, HorizontalWeight), VerticalWeight);
         #endregion
     }
 

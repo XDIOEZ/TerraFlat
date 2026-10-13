@@ -360,6 +360,55 @@ namespace FlatWorld.WorldModel
         public bool TryGetSnapshot(Int2 cell, out RegionalWeatherSnapshot snapshot)
             => TryGetRegionSnapshot(ResolveRegion(cell), out snapshot);
 
+        /// <summary>按连续坐标平滑混合边缘风区，缺失邻区视为无风且不创建天气状态。</summary>
+        public bool TryGetWindBlend(double2 position, out RegionalWindBlend blend)
+        {
+            blend = default;
+            if (!Finite(position.x) || !Finite(position.y)) return false;
+            double2 normalized = domain.Normalize(position);
+            if (normalized.x < int.MinValue || normalized.x >= int.MaxValue ||
+                normalized.y < int.MinValue || normalized.y >= int.MaxValue) return false;
+            Int2 cell = new((int)Math.Floor(normalized.x), (int)Math.Floor(normalized.y));
+            Int2 region = ResolveRegionBounds(cell, out Int2 size);
+            float halfWidth = Math.Min(settings.WindTransitionWidth * 0.5f,
+                Math.Min(regionWidth, regionHeight) * 0.5f);
+            int neighborX = ResolveWindNeighbor(normalized.x, region.X, size.X, halfWidth, out float xWeight);
+            int neighborY = ResolveWindNeighbor(normalized.y, region.Y, size.Y, halfWidth, out float yWeight);
+
+            bool found = TryReadWind(region, out float3 own);
+            float3 horizontal = own, vertical = own, diagonal = own;
+            if (xWeight > 0f)
+                found |= TryReadWind(new Int2(neighborX, region.Y), out horizontal);
+            if (yWeight > 0f)
+                found |= TryReadWind(new Int2(region.X, neighborY), out vertical);
+            if (xWeight > 0f && yWeight > 0f)
+                found |= TryReadWind(new Int2(neighborX, neighborY), out diagonal);
+            else if (xWeight > 0f) diagonal = horizontal;
+            else if (yWeight > 0f) diagonal = vertical;
+            blend = new RegionalWindBlend(own, horizontal, vertical, diagonal, xWeight, yWeight);
+            return found;
+        }
+
+        private bool TryReadWind(Int2 region, out float3 wind)
+        {
+            bool found = TryGetRegionSnapshot(region, out RegionalWeatherSnapshot snapshot);
+            wind = found ? new float3(snapshot.WindX, snapshot.WindY, snapshot.WindStrength) : float3.zero;
+            return found;
+        }
+
+        private static int ResolveWindNeighbor(double position, int origin, int size, float halfWidth,
+            out float weight)
+        {
+            weight = 0f;
+            double startDistance = position - origin;
+            double endDistance = (double)origin + size - position;
+            double distance = Math.Min(startDistance, endDistance);
+            if (halfWidth <= 0f || distance >= halfWidth) return origin;
+            float progress = (float)((halfWidth - distance) / (2d * halfWidth));
+            weight = progress * progress * (3f - 2f * progress);
+            return checked((int)(startDistance <= endDistance ? (long)origin - 1L : (long)origin + size));
+        }
+
         /// <summary>只读检查已登记区域，避免弱风时逐个扫描世界物体。</summary>
         public bool HasWindStrengthAtLeast(float threshold)
         {
