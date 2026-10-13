@@ -1,15 +1,16 @@
 using System;
 using System.Collections;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-/// <summary>一轮测试共用一个结果目录，截图写盘后再生成可分发的报告包。</summary>
+/// <summary>一轮测试共用一个文件夹结果包，截图写盘后只保留最近十轮。</summary>
 public static class GameplayTestArtifacts
 {
     #region 结果目录
+    private const int RetainedPackageCount = 10;
+
     public static string GetRunDirectory(string runId)
     {
         GameplayTestSelection.ValidateRunId(runId);
@@ -23,7 +24,7 @@ public static class GameplayTestArtifacts
         report.ReportPath = Path.Combine(report.RunDirectory, "report.json");
         report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
         report.ScreenshotPath = Path.Combine(report.RunDirectory, "screenshots", "final.png");
-        report.PackagePath = report.RunDirectory + ".zip";
+        report.PackagePath = report.RunDirectory;
         Directory.CreateDirectory(report.RunDirectory);
     }
 
@@ -145,30 +146,64 @@ public static class GameplayTestArtifacts
         string expected = Path.GetFullPath(GetRunDirectory(Path.GetFileName(source)));
         if (!string.Equals(source, expected, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("测试包只能来自本轮 Runs 结果目录。");
-        string output = source + ".zip";
-        string temporary = output + ".tmp";
-        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
-        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create))
-        {
-            string[] files = Directory.GetFiles(source, "*", SearchOption.AllDirectories);
-            Array.Sort(files, StringComparer.Ordinal);
-            foreach (string path in files)
-            {
-                if (path.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) continue;
-                string name = path.Substring(source.Length + 1).Replace('\\', '/');
-                ZipArchiveEntry entry = archive.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
-                using Stream input = File.OpenRead(path);
-                using Stream destination = entry.Open();
-                input.CopyTo(destination);
-            }
-        }
-        if (File.Exists(output)) File.Replace(temporary, output, null);
-        else File.Move(temporary, output);
-        return output;
+        if (!Directory.Exists(source)) throw new DirectoryNotFoundException("本轮测试结果目录不存在：" + source);
+        CleanupPackages(source);
+        return source;
     }
 
     private static string Markdown(string value)
         => (value ?? string.Empty).Replace("\\", "\\\\").Replace("|", "\\|")
             .Replace("\r", string.Empty).Replace("\n", "<br>");
+    #endregion
+
+    #region 包体留存清理
+    private static void CleanupPackages(string currentRunDirectory)
+    {
+        var root = new DirectoryInfo(Path.GetDirectoryName(currentRunDirectory));
+        DirectoryInfo[] directories = Array.FindAll(root.GetDirectories(), directory =>
+            (directory.Attributes & FileAttributes.ReparsePoint) == 0 && IsRunId(directory.Name));
+        Array.Sort(directories, (left, right) =>
+        {
+            int order = right.CreationTimeUtc.CompareTo(left.CreationTimeUtc);
+            return order != 0 ? order : StringComparer.Ordinal.Compare(right.Name, left.Name);
+        });
+        // 本轮文件夹计入十份配额，按创建时间清掉更早的结果，历史 ZIP 不再重复留存。
+        int retained = 1;
+        foreach (DirectoryInfo directory in directories)
+        {
+            if (string.Equals(directory.FullName, currentRunDirectory, StringComparison.OrdinalIgnoreCase)) continue;
+            if (retained < RetainedPackageCount)
+            {
+                retained++;
+                continue;
+            }
+            try { directory.Delete(true); }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                Debug.LogWarning("[GameplayTest] 旧测试包清理失败：" + directory.FullName + "\n" + exception.Message);
+            }
+        }
+        foreach (FileInfo archive in root.GetFiles("*.zip*"))
+        {
+            string suffix = archive.Name.EndsWith(".zip.tmp", StringComparison.OrdinalIgnoreCase) ? ".zip.tmp" : ".zip";
+            if (!archive.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) ||
+                !IsRunId(archive.Name.Substring(0, archive.Name.Length - suffix.Length))) continue;
+            try { archive.Delete(); }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                Debug.LogWarning("[GameplayTest] 重复压缩包清理失败：" + archive.FullName + "\n" + exception.Message);
+            }
+        }
+    }
+
+    private static bool IsRunId(string value)
+    {
+        try
+        {
+            GameplayTestSelection.ValidateRunId(value);
+            return true;
+        }
+        catch (ArgumentException) { return false; }
+    }
     #endregion
 }

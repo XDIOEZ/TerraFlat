@@ -323,16 +323,12 @@ namespace FlatWorld.GameplayMCP
             EditorGUILayout.BeginHorizontal();
             string runDirectory = pipeline.Value<string>("runDirectory");
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(runDirectory) || !Directory.Exists(runDirectory)))
-                if (GUILayout.Button("定位本轮结果文件夹"))
+                if (GUILayout.Button("定位文件夹测试包"))
                     EditorUtility.RevealInFinder(runDirectory);
             string summaryPath = pipeline.Value<string>("summaryPath");
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(summaryPath) || !File.Exists(summaryPath)))
                 if (GUILayout.Button("打开阅读报告"))
                     Application.OpenURL(new Uri(summaryPath).AbsoluteUri);
-            string packagePath = pipeline.Value<string>("packagePath");
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(packagePath) || !File.Exists(packagePath)))
-                if (GUILayout.Button("定位 ZIP 测试包"))
-                    EditorUtility.RevealInFinder(packagePath);
             EditorGUILayout.EndHorizontal();
             string screenshot = pipeline.Value<string>("screenshotPath");
             if (!string.IsNullOrEmpty(screenshot) && File.Exists(screenshot))

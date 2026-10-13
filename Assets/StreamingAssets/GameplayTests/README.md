@@ -170,13 +170,12 @@ Library/FlatWorldGameplayTests/Runs/<运行ID>/pipeline.json
 Library/FlatWorldGameplayTests/Runs/<运行ID>/screenshots/final.png
 Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/report.json
 Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/end.png
-Library/FlatWorldGameplayTests/Runs/<运行ID>.zip
 Library/FlatWorldGameplayTests/Saves/<运行时间_运行ID>/
 ```
 
 独立 Player 的同类目录位于 `Application.persistentDataPath/FlatWorldGameplayTests/`。测试期间的首次保存、自动保存和退出保存都留在本轮的独立 Saves 目录；退出保存完成并返回菜单后，恢复正式存档目录。
 
-执行过的用例结束时截图，整轮再保存结束画面，然后输出同名 ZIP。无画面、跳过或中断会记录缺图原因；保持 Game 视图可渲染。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
+执行过的用例结束时截图，整轮再保存结束画面；本轮结果文件夹就是测试包，不额外生成 ZIP。每轮收尾按文件夹创建时间保留最近 10 份（包含本轮），超过的旧包自动删除，并清理历史 ZIP 及其临时文件；文件占用导致删除失败会在 Console 中提示。无画面、跳过或中断会记录缺图原因；保持 Game 视图可渲染。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
 
 总报告包含运行时间、当前阶段、最终状态、测试清单及每个用例的状态和报告路径、每个陈列物品的 ID/坐标/后端/放置结果，以及 Unity 日志、错误和堆栈。每个用例另有一个 JSON，保存自己的步骤结果、起止玩家位置和日志，查看电力测试时可以直接打开 `electricity.json`。
 

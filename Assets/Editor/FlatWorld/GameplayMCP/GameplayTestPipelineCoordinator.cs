@@ -269,7 +269,7 @@ namespace FlatWorld.GameplayMCP
                     RunDirectory = GameplayTestArtifacts.GetRunDirectory(runId)
                 };
                 report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
-                report.PackagePath = report.RunDirectory + ".zip";
+                report.PackagePath = report.RunDirectory;
                 Directory.CreateDirectory(report.RunDirectory);
                 GameplayTestSelection.SelectSuite(suitePath, runId, selectedCaseIds);
                 CurrentRunId = runId;
@@ -397,7 +397,7 @@ namespace FlatWorld.GameplayMCP
         {
             report.RunDirectory = GameplayTestArtifacts.GetRunDirectory(report.RunId);
             report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
-            report.PackagePath = report.RunDirectory + ".zip";
+            report.PackagePath = report.RunDirectory;
             GameplayTestReport gameplay = null;
             try
             {

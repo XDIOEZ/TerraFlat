@@ -92,12 +92,10 @@ Library/FlatWorldGameplayTests/Runs/<运行ID>/
 └─ cases/<用例ID>/
    ├─ report.json
    └─ end.png
-
-Library/FlatWorldGameplayTests/Runs/<运行ID>.zip
 ```
 
 每个执行过的用例在结束时截图，整轮结束后再截图，截图写盘后才发布完成状态。测试失败也保存结果包；禁用、跳过、无画面环境或 PlayMode 被中断时，报告明确记录缺图原因。普通帧末截图在切到 Scene 视图时可能不执行，因此设置独立 8 秒超时；截图缺失不会伪造图片。流水线以同一运行 ID 关联玩法报告，不能附入上轮结果。
 
-测试包是本轮结果证据，不是游戏发布包，也不复制正式玩家存档。独立 Player 的结果根目录为 `Application.persistentDataPath/FlatWorldGameplayTests`。
+结果文件夹直接作为测试包，不额外保存 ZIP；每轮收尾只保留最近 10 份文件夹包体（包含本轮），自动删除更旧的包并清理历史压缩副本。测试包是本轮结果证据，不是游戏发布包，也不复制正式玩家存档。独立 Player 的结果根目录为 `Application.persistentDataPath/FlatWorldGameplayTests`。
 
 官方参考：[Unity Test Framework 的结果接口](https://docs.unity3d.com/Packages/com.unity.test-framework@1.4/manual/reference-test-runner-api.html)、[帧末截图限制](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/WaitForEndOfFrame.html)。
