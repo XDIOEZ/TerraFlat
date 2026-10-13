@@ -415,11 +415,12 @@ namespace FlatWorld.GameplayMCP
                 }
                 CompleteInterruptedArtifacts(gameplay, report);
                 gameplay.Write();
-                // 对外只返回各 Lua 已落盘的截图，跳过的用例不占截图名额。
+                // 对外按 Lua 和命令顺序返回已落盘的关键现场截图。
                 report.ScreenshotPaths.Clear();
                 foreach (GameplayTestCaseReport testCase in gameplay.Cases)
-                    if (!string.IsNullOrEmpty(testCase.ScreenshotPath) && File.Exists(testCase.ScreenshotPath))
-                        report.ScreenshotPaths.Add(testCase.ScreenshotPath);
+                    foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
+                        if (!string.IsNullOrEmpty(screenshot.Path) && File.Exists(screenshot.Path))
+                            report.ScreenshotPaths.Add(screenshot.Path);
                 report.ArtifactError = gameplay.ArtifactError;
                 GameplayTestArtifacts.WriteSummary(gameplay);
                 string phaseSummary = BuildPipelineSummary(report);
@@ -487,8 +488,9 @@ namespace FlatWorld.GameplayMCP
                     testCase.FinishedUtc = pipeline.FinishedUtc;
                 }
                 testCase.ReportPath = GameplayTestArtifacts.CaseReportPath(gameplay, testCase.Id);
-                if (!File.Exists(testCase.ScreenshotPath) && string.IsNullOrEmpty(testCase.ScreenshotError))
-                    testCase.ScreenshotError = "用例未执行，或结束前游戏场景已退出，未捕获结束画面。";
+                foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
+                    if (!File.Exists(screenshot.Path) && string.IsNullOrEmpty(screenshot.Error))
+                        screenshot.Error = "截图命令已开始执行，但报告收尾时未找到截图文件。";
                 if (testCase.Status == "passed") gameplay.PassedCaseCount++;
                 if (testCase.Status == "failed") gameplay.FailedCaseCount++;
                 if (testCase.Status == "skipped") gameplay.SkippedCaseCount++;
@@ -502,9 +504,6 @@ namespace FlatWorld.GameplayMCP
 
         private static GameplayTestReport CreateUnstartedGameplayReport(PipelineReport pipeline)
         {
-            string absence = pipeline.PlayMode.Status == "pending"
-                ? "PlayMode 未启动；EditMode 前置检查失败或测试提前中断，因此没有游戏截图。"
-                : "测试场景未保存本轮报告；PlayMode 可能启动失败或提前退出，因此没有游戏截图。";
             var report = new GameplayTestReport
             {
                 RunId = pipeline.RunId, TestSuitePath = pipeline.SuitePath,
@@ -526,7 +525,6 @@ namespace FlatWorld.GameplayMCP
                 {
                     Id = caseId, Name = configured?.Name ?? caseId, LuaPath = configured?.LuaPath,
                     Status = "skipped", Reason = pipeline.Reason, FinishedUtc = pipeline.FinishedUtc,
-                    ScreenshotError = absence,
                     ReportPath = GameplayTestArtifacts.CaseReportPath(report, caseId)
                 };
                 report.Cases.Add(testCase);

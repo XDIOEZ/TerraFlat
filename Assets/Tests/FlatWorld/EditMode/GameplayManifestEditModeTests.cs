@@ -80,5 +80,24 @@ namespace FlatWorld.Tests.EditMode
                 GameplayTestSelection.FilterCases(GameplayTestSuite.Parse(json), Array.Empty<string>()));
         }
         #endregion
+
+        #region Lua 截图限额
+        [TestCase("test.log('纯数据检查无需截图')")]
+        [TestCase("test.screenshot('入场'); test.screenshot('操作后'); test.screenshot('结果')")]
+        public void Lua_ScreenshotCommandsAllowZeroOrThree(string source)
+        {
+            Assert.DoesNotThrow(() => GameplayTestLuaRunner.ValidateScript(source, "@screenshot-limit.lua"));
+        }
+
+        [TestCase("test.screenshot('一'); test.screenshot('二'); test.screenshot('三'); test.screenshot('四')")]
+        [TestCase("for i = 1, 4 do test.screenshot('循环现场 ' .. i) end")]
+        [TestCase("test.screenshot('')")]
+        [TestCase("test.screenshot('   ')")]
+        public void Lua_ScreenshotCommandsRejectOverflowOrEmptyLabel(string source)
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+                GameplayTestLuaRunner.ValidateScript(source, "@screenshot-limit.lua"));
+        }
+        #endregion
     }
 }

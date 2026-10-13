@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -30,8 +31,12 @@ public static class GameplayTestArtifacts
     public static string CaseReportPath(GameplayTestReport report, string caseId)
         => Path.Combine(CaseDirectory(report, caseId), "report.json");
 
-    public static string CaseScreenshotPath(GameplayTestReport report, string caseId)
-        => Path.Combine(CaseDirectory(report, caseId), "end.png");
+    public static string CaseScreenshotPath(GameplayTestReport report, string caseId, int index)
+    {
+        if (index < 1 || index > GameplayTestLuaRunner.MaximumScreenshots)
+            throw new ArgumentOutOfRangeException(nameof(index), "每个 Lua 最多执行三次截图命令。");
+        return Path.Combine(CaseDirectory(report, caseId), "screenshot-" + index.ToString("D2", CultureInfo.InvariantCulture) + ".png");
+    }
 
     private static string CaseDirectory(GameplayTestReport report, string caseId)
     {
@@ -115,26 +120,24 @@ public static class GameplayTestArtifacts
         text.AppendLine($"- 耗时：{report.DurationSeconds:F2} 秒；Unity 错误 {report.ErrorCount}，警告 {report.WarningCount}");
         text.AppendLine("- [完整 JSON 报告](report.json)");
         text.AppendLine();
-        text.AppendLine("| 用例 | 结果 | 用例报告 | 结束截图 | 原因 |");
+        text.AppendLine("| 用例 | 结果 | 用例报告 | 关键截图 | 原因 |");
         text.AppendLine("| --- | --- | --- | --- | --- |");
         foreach (GameplayTestCaseReport testCase in report.Cases)
         {
             string casePath = "cases/" + testCase.Id + "/";
-            string screenshot = !string.IsNullOrEmpty(testCase.ScreenshotPath) && File.Exists(testCase.ScreenshotPath)
-                ? "[截图](" + casePath + "end.png)" : Markdown(testCase.ScreenshotError ?? "未执行或未生成");
             text.AppendLine("| " + Markdown(testCase.Name) + " (`" + testCase.Id + "`) | " +
-                Markdown(testCase.Status) + " | [JSON](" + casePath + "report.json) | " + screenshot + " | " +
+                Markdown(testCase.Status) + " | [JSON](" + casePath + "report.json) | " + ScreenshotLinks(testCase) + " | " +
                 Markdown(testCase.Reason) + " |");
         }
         bool screenshotHeadingWritten = false;
         foreach (GameplayTestCaseReport testCase in report.Cases)
         {
-            if (string.IsNullOrEmpty(testCase.ScreenshotPath) || !File.Exists(testCase.ScreenshotPath)) continue;
-            // 报告按 Lua 顺序展示真实截图，未执行或缺图的用例只在表格说明原因。
+            if (testCase.Screenshots.Count == 0) continue;
+            // 按 Lua 和命令顺序展示现场，缺图也保留对应命令的错误信息。
             if (!screenshotHeadingWritten)
             {
                 text.AppendLine();
-                text.AppendLine("## Lua 结束截图");
+                text.AppendLine("## Lua 关键现场截图");
                 screenshotHeadingWritten = true;
             }
             text.AppendLine();
@@ -142,7 +145,26 @@ public static class GameplayTestArtifacts
             text.AppendLine();
             text.AppendLine("结果：**" + Markdown(testCase.Status) + "**");
             text.AppendLine();
-            text.AppendLine("![Lua 用例结束画面](cases/" + testCase.Id + "/end.png)");
+            foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
+            {
+                string label = ScreenshotLabel(screenshot);
+                text.AppendLine("#### " + screenshot.Index + ". " + Markdown(label));
+                text.AppendLine();
+                text.AppendLine("- 场景：" + Markdown(screenshot.Scene ?? "未记录"));
+                text.AppendLine("- 拍摄时间：" + Markdown(screenshot.Utc ?? "未记录") + "；运行第 " +
+                    screenshot.ElapsedSeconds.ToString("F2", CultureInfo.InvariantCulture) + " 秒");
+                GameplayTestPosition position = screenshot.PlayerPosition;
+                text.AppendLine("- 玩家坐标：" + (position == null ? "未记录" :
+                    string.Format(CultureInfo.InvariantCulture, "({0:F2}, {1:F2}, {2:F2})", position.X, position.Y, position.Z)));
+                text.AppendLine();
+                if (!string.IsNullOrEmpty(screenshot.Path) && File.Exists(screenshot.Path))
+                    text.AppendLine("![" + Markdown(label) + "](" + ScreenshotRelativePath(testCase, screenshot) + ")");
+                if (!string.IsNullOrEmpty(screenshot.Error))
+                    text.AppendLine("截图错误：" + Markdown(screenshot.Error));
+                else if (string.IsNullOrEmpty(screenshot.Path) || !File.Exists(screenshot.Path))
+                    text.AppendLine("截图错误：截图命令已执行，但截图文件未生成。");
+                text.AppendLine();
+            }
         }
         if (!string.IsNullOrEmpty(report.ArtifactError))
         {
@@ -151,6 +173,31 @@ public static class GameplayTestArtifacts
         }
         File.WriteAllText(report.SummaryPath, text.ToString(), new UTF8Encoding(false));
     }
+
+    private static string ScreenshotLinks(GameplayTestCaseReport testCase)
+    {
+        if (testCase.Screenshots.Count == 0)
+            return testCase.Status == "skipped" || testCase.Status == "pending"
+                ? "用例未执行；无截图（非错误）" : "未执行截图命令（非错误）";
+        var text = new StringBuilder();
+        foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
+        {
+            if (text.Length > 0) text.Append("<br>");
+            string label = screenshot.Index + ". " + ScreenshotLabel(screenshot);
+            bool exists = !string.IsNullOrEmpty(screenshot.Path) && File.Exists(screenshot.Path);
+            if (exists) text.Append("[" + Markdown(label) + "](" + ScreenshotRelativePath(testCase, screenshot) + ")");
+            else text.Append(Markdown(label));
+            if (!string.IsNullOrEmpty(screenshot.Error)) text.Append("：" + Markdown(screenshot.Error));
+            else if (!exists) text.Append("：截图文件未生成");
+        }
+        return text.ToString();
+    }
+
+    private static string ScreenshotLabel(GameplayTestScreenshotRecord screenshot)
+        => string.IsNullOrEmpty(screenshot.Label) ? "关键现场" : screenshot.Label;
+
+    private static string ScreenshotRelativePath(GameplayTestCaseReport testCase, GameplayTestScreenshotRecord screenshot)
+        => "cases/" + testCase.Id + "/" + Path.GetFileName(screenshot.Path);
 
     public static string CreatePackage(string runDirectory)
     {
@@ -165,6 +212,7 @@ public static class GameplayTestArtifacts
 
     private static string Markdown(string value)
         => (value ?? string.Empty).Replace("\\", "\\\\").Replace("|", "\\|")
+            .Replace("[", "\\[").Replace("]", "\\]")
             .Replace("\r", string.Empty).Replace("\n", "<br>");
     #endregion
 

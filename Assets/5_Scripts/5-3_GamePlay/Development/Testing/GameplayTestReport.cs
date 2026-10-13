@@ -10,7 +10,7 @@ using UnityEngine;
 public sealed class GameplayTestReport
 {
     #region 报告数据
-    public int SchemaVersion = 4;
+    public int SchemaVersion = 5;
     public string RunId;
     public string Scene;
     public string TestSuitePath;
@@ -80,8 +80,6 @@ public sealed class GameplayTestCaseReport
     public string LuaPath;
     public string ReportPath;
     public string ReportWriteError;
-    public string ScreenshotPath;
-    public string ScreenshotError;
     public string Status = "pending";
     public string Reason;
     public string StartedUtc;
@@ -96,6 +94,23 @@ public sealed class GameplayTestCaseReport
     public GameplayTestPosition PlayerEnd;
     public List<GameplayTestStepRecord> Steps = new();
     public List<GameplayTestLogRecord> Logs = new();
+    public List<GameplayTestScreenshotRecord> Screenshots = new();
+    #endregion
+}
+
+[Serializable]
+public sealed class GameplayTestScreenshotRecord
+{
+    #region 关键现场截图
+    // 每条记录对应 Lua 显式执行的一次截图命令，失败时保留现场和原因。
+    public int Index;
+    public string Label;
+    public string Path;
+    public string Error;
+    public string Scene;
+    public string Utc;
+    public double ElapsedSeconds;
+    public GameplayTestPosition PlayerPosition;
     #endregion
 }
 

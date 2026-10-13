@@ -1,5 +1,7 @@
 # 通用 Lua 测试场景
 
+AI 维护此系统时使用 [flatworld-lua-testing 导航 Skill](../../../.agents/skills/flatworld-lua-testing/SKILL.md)，业务规则另查对应领域 Skill。
+
 ## AI 快速测试流水线：EditMode → PlayMode
 
 ### Unity 图形测试中心（多选）
@@ -86,7 +88,7 @@ PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene
 
 ## 多 Lua 测试清单
 
-场景的 `GameplayTestRunner` 组件默认读取 `Assets/StreamingAssets/GameplayTests/test-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
+场景的 `GameplayTestScene` 组件默认读取 `Assets/StreamingAssets/GameplayTests/test-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
 
 默认清单包括入世、移动、快捷栏、GM 和机械动力回归。`quick-suite.json` 包含 7 个用例，跳过物品陈列；`test-suite.json` 包含 15 个用例，额外执行全物品陈列、创造背包和机械动力。所有用例都是独立 Lua 文件，可以在测试中心按 ID 勾选；新增业务必须有实际断言，不能只用 GM 摆放道具就判定通过。
 
@@ -135,6 +137,7 @@ Lua 使用点调用语法，先编排步骤，再由 C# 按顺序分帧执行。
 | --- | --- |
 | `test.check(name, label)` | 检查运行状态，label 可省略 |
 | `test.log(text)` | 记录流程说明 |
+| `test.screenshot(label)` | 在当前步骤拍现场图，label 为中文阶段说明；每份 Lua 最多 3 次，可为 0 次 |
 | `test.wait(seconds)` | 按真实时间等待 |
 | `test.move(x, y, seconds)` | 给真实玩家输入一个移动方向，结束时归零 |
 | `test.move_to(x, y, timeout, tolerance)` | 通过正式导航前往世界坐标；默认超时 10 秒、到达距离 0.25 |
@@ -160,6 +163,18 @@ GM 命令和断言额外提供：
 
 每个 Lua 最多 256 步，单步等待或移动最多 30 秒，累计动作时间最多 180 秒。Lua 编排阶段有指令预算，死循环会记录错误并结束当前用例。场景另设资源、世界进入和整份清单的总流程超时，可在组件上调整；增加较长的业务测试时，要同时调整总流程超时。
 
+### 关键现场截图
+
+截图是显式排队的 Lua 命令。AI 编写用例时自行选择重要命令之后、恢复或清理之前的位置插入，每份 Lua 允许 **0～3 次**；循环展开后也合计最多 3 次，EditMode 预检和运行时都会拒绝超限。纯数据断言没有有意义的画面时不必截图，不再自动补脚本结尾或失败截图。
+
+```lua
+test.move(1, 0, 0.5)
+test.check("player_moved", "玩家实际移动")
+test.screenshot("玩家移动后的现场")
+```
+
+`test.space` 的真实太空操作在采样与 Lua 断言后先保留现场；要拍它的画面，截图命令应紧跟该 `test.space`。下一个非截图命令之前或脚本结束时再恢复地表并清理。不要先插入 `test.log`、`test.wait` 等其他命令，也不要在采样验证回调内部排截图。领域数据组可省略截图；具体例子见 [太空模块](Universe/README.md)。
+
 ## 报告、截图、测试包与存档
 
 编辑器输出位于项目目录：
@@ -169,13 +184,17 @@ Library/FlatWorldGameplayTests/Runs/<运行ID>/report.md
 Library/FlatWorldGameplayTests/Runs/<运行ID>/report.json
 Library/FlatWorldGameplayTests/Runs/<运行ID>/pipeline.json
 Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/report.json
-Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/end.png
+Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/screenshot-01.png
+Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/screenshot-02.png
+Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/screenshot-03.png
 Library/FlatWorldGameplayTests/Saves/<运行时间_运行ID>/
 ```
 
 独立 Player 的同类目录位于 `Application.persistentDataPath/FlatWorldGameplayTests/`。测试期间的首次保存、自动保存和退出保存都留在本轮的独立 Saves 目录；退出保存完成并返回菜单后，恢复正式存档目录。
 
-每个实际执行的 Lua 成功或失败后各保存一张 `cases/<用例ID>/end.png`，截图写盘后才进入下一个用例；禁用、跳过和未执行的 Lua 不生成截图，不额外保存整轮结束截图。8 个 Lua 全部执行完会有 8 张对应截图；若 A 成功、B 失败、C 未执行，则只有 A、B 两张。失败后是否继续仍由 `continueAfterFailure` 控制。阅读报告按用例顺序直接展示已有截图，流水线和命令行的 `screenshotPaths` 只列实际存在的图片；无画面或中断时记录缺图原因，请保持 Game 视图可渲染。
+上述 3 张图片是可选输出，只生成实际执行的 `test.screenshot` 命令对应的图片，写盘完成后才继续下一步。没有截图命令的 Lua 为 0 张；已拍好的图保留，普通失败后停止后续命令，气液独立子案仍按继续收集规则执行；禁用、跳过和未执行的 Lua 无图。失败后是否继续下个用例仍由 `continueAfterFailure` 控制，脚本结尾和失败时均不自动补拍。
+
+新报告 `schemaVersion: 5`，每用例的 `screenshots` 数组保存各图的 `index`、`label`、`path`、`error`、`scene`、`utc`、`elapsedSeconds` 和 `playerPosition`。Markdown 按 Lua 和命令序号展示阶段说明及实际图片，流水线和 CLI 的 `screenshotPaths` 只列实际存在的图片；已尝试取图但无画面或被中断时记录失败原因，请保持 Game 视图可渲染。历史报告与旧图片保持原状，不修改或补造过去的现场。
 
 本轮结果文件夹就是测试包，不额外生成 ZIP。每轮收尾按文件夹创建时间保留最近 10 份（包含本轮），超过的旧包自动删除，并清理历史 ZIP 及其临时文件；文件占用导致删除失败会在 Console 中提示。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
 

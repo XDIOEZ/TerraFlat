@@ -2,6 +2,8 @@
 
 入口清单：`GameplayTests/universe-suite.json`。测试中心按四个主题组显示，可以全选或只勾选一个组；各项真实玩法检查仍自行准备前置条件。
 
+Lua 编写、截图上限和通用执行/报告契约统一见 [flatworld-lua-testing 导航 Skill](../../../../.agents/skills/flatworld-lua-testing/SKILL.md)。
+
 ```powershell
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases universe_content sector_rules
@@ -23,7 +25,7 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --ca
 
 `--cases` 现在选择上表的主题 ID。下面保留原子检查标识作为覆盖对照，不再把它们当成独立文件或可勾选的用例。五个跨区方向使用同一段循环，报告步骤标签仍区分方向。
 
-每组内的独立代码块隔离局部辅助函数；每个 `test.space` 子检查仍有自己的中文标签、原始采样和 Lua 错误位置。组内首个失败会停止本组后续步骤，清单的 `continueAfterFailure: true` 继续下一个主题组。每个执行过的主题 Lua 成功或失败后各保存一张结束截图，不额外生成整轮结束截图，报告不再为每个旧子检查单独创建用例文件夹。
+每组内的独立代码块隔离局部辅助函数；每个 `test.space` 子检查仍有自己的中文标签、原始采样和 Lua 错误位置。组内首个失败会停止本组后续步骤，清单的 `continueAfterFailure: true` 继续下一个主题组。前三组以数据断言为主，可为 0 张截图；真实玩法由 AI 在关键命令后选择插入最多 3 次 `test.screenshot`，不再强制结束截图，也不为每个旧子检查创建用例文件夹。
 
 | 子检查标识 | 自动检查的范围 | 使用的数据与入口 |
 | --- | --- | --- |
@@ -63,9 +65,12 @@ end, "宇宙目录")
 test.space("sector_transition", function(data)
     assert(data.crossed.spaceView, "没有进入太空")
 end, "向右跨区", "right")
+test.screenshot("向右跨区并折返后的太空现场")
 ```
 
 C# 仅提供白名单操作、准备独立夹具、采样正式状态并等待实际流程；业务断言保留在 Lua。数据转换使用 Lua 原生表，不开放 `CS`、`require` 或任意代码执行。每次 Lua 编排或断言回调有 100 万条指令预算。星区 `long` 编号返回字符串，位置/速度返回 double，不经过 float；Lua 不能把巨大星区编号转成普通浮点再比较。
+
+`test.screenshot("中文阶段说明")` 与其他命令一起预先排队，每份 Lua **0～3 次**，循环展开后的次数合并计数，预检与运行都拒绝超限。截图应紧跟要取证的真实 `test.space` 命令，不要插入其验证回调，也不要先排其他命令再拍太空现场；纯采样数据无需附地表截图。
 
 每个操作的原始实际采样保存在用例 JSON 的 `steps` 中，命令为 `space_sample`，即使后面的 Lua 断言失败也会保留，可据此查看输入、轨道位置、速度、燃料或星区租约。
 
@@ -77,7 +82,7 @@ C# 仅提供白名单操作、准备独立夹具、采样正式状态并等待�
 
 `live_flight` 的船体跨区环节只把本用例刚生成的船体预置到空星区边缘并设置起始速度，之后由正式固定步完成跨区和场景过渡。它检查跨区机制，不把夹具预置计作从星球一直导航至边界的完整航程。`live_collision` 使用正式地板物品生成自有船体，提高这些夹具的耐久以隔离冲量规则；不把这一环节当作正常材料耐久/战斗毁船验收。
 
-每个迁移用例正常结束后恢复起始测试世界。清理复用中立乘员迁移事务，不把清理传送记作降落成功。`live_flight` 的降落断言来自真实 RequestLanding 流程。
+每个真实迁移操作完成采样与 Lua 断言后先保留现场，允许紧随其后的截图命令取图；下一个非截图命令之前或脚本结束时才恢复起始测试世界并清理。清理复用中立乘员迁移事务，不把清理传送记作降落成功。`live_flight` 的降落断言来自真实 RequestLanding 流程，截图记录该命令全部执行后的实际现场，不能替代起飞/巡航的过程断言。
 
 本模块覆盖上表已实现的单机内容与行为入口，不宣称代码行或所有组合路径达到 100%。以下仍需专项或人工验收：多人网络与两端画面、GPU 星体外观/星空/浮动原点视觉、完整 UI 点击与相机手感、性能与设备表现、磁盘退出重载、活跃冷地表差量、断电缺油救船/海上落船/重生/战斗毁船和散落物回收的完整场景链。领域断言或一张截图不能替代这些验收。
 
@@ -90,10 +95,12 @@ Library/FlatWorldGameplayTests/Runs/<运行ID>/
 ├─ pipeline.json
 └─ cases/<用例ID>/
    ├─ report.json
-   └─ end.png
+   └─ screenshot-01.png … screenshot-03.png（按实际命令生成，可为 0 张）
 ```
 
-每个执行过的主题 Lua 成功或失败后各截图一次，截图写盘后才进入下一个用例；未执行的 Lua 没有截图，不额外生成整轮结束截图。阅读报告按 Lua 顺序展示已有图片，流水线的 `screenshotPaths` 只列实际保存的截图。测试失败也保存结果包；禁用、跳过、无画面环境或 PlayMode 被中断时，报告明确记录缺图原因。普通帧末截图在切到 Scene 视图时可能不执行，因此设置独立 8 秒超时；截图缺失不会伪造图片。流水线以同一运行 ID 关联玩法报告，不能附入上轮结果。
+截图只来自实际执行的 `test.screenshot` 命令，写盘完成后才继续下一步；每份 Lua 最多 3 张，不自动补结尾或失败现场。新报告 `schemaVersion: 5`，每用例的 `screenshots` 数组按命令顺序记录序号、阶段标签、路径、错误、场景、UTC 时间、耗时和玩家位置。阅读报告按 Lua 与截图序号展示，流水线/CLI 的 `screenshotPaths` 只列实际存在图片。
+
+失败前已拍的图保留，失败后的排队命令不执行；禁用、跳过、未执行或不含截图命令的 Lua 没有图片。已尝试取图但无画面或 PlayMode 被中断时保留失败原因；帧末截图在切到 Scene 视图时可能不执行，取图有独立 8 秒超时。流水线以同一运行 ID 关联玩法报告，不附入上轮结果；历史报告与旧图片不修改、不补造现场。
 
 结果文件夹直接作为测试包，不额外保存 ZIP；每轮收尾只保留最近 10 份文件夹包体（包含本轮），自动删除更旧的包并清理历史压缩副本。测试包是本轮结果证据，不是游戏发布包，也不复制正式玩家存档。独立 Player 的结果根目录为 `Application.persistentDataPath/FlatWorldGameplayTests`。
 

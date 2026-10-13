@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld Lua 测试"
+  short_description: "定位 Lua 测试系统，维护案例编排、关键现场截图、隔离执行及报告"
+  default_prompt: "使用 $flatworld-lua-testing 编写或调整 FlatWorld Lua 测试，选择关键命令后插入最多三次现场截图，并按授权范围执行和读取报告。"

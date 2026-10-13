@@ -12,12 +12,16 @@ public sealed class GameplayTestLuaRunner : IDisposable
     #region 测试上下文与限制
 
     private const int MaximumSteps = 256;
+    public const int MaximumScreenshots = 3;
     private const int MaximumSourceCharacters = 1024 * 1024;
     private const float MaximumStepSeconds = 30f;
     private const float MaximumTotalSeconds = 180f;
     private Player player;
     private readonly Func<string, bool> check;
     private readonly Action<string, string, bool, string> record;
+    private readonly Func<string, IEnumerator> captureScreenshot;
+    private int capturedScreenshotCount;
+    private GameplayTestSpaceScenario activeSpaceScenario;
     private Mod_GameController controller;
     private Mod_Mover mover;
     private Mod_GameMCP_LLM navigation;
@@ -56,11 +60,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
     public bool Succeeded { get; private set; }
 
     public GameplayTestLuaRunner(Player player, Func<string, bool> check,
-        Action<string, string, bool, string> record)
+        Action<string, string, bool, string> record, Func<string, IEnumerator> captureScreenshot = null)
     {
         this.player = player;
         this.check = check ?? throw new ArgumentNullException(nameof(check));
         this.record = record ?? throw new ArgumentNullException(nameof(record));
+        this.captureScreenshot = captureScreenshot;
     }
 
     /// <summary>EditMode 共用正式 Lua 解析和限额检查，但不获取玩家也不执行任何玩法动作。</summary>
@@ -82,6 +87,8 @@ public sealed class GameplayTestLuaRunner : IDisposable
         local commands = {}
         local totalSeconds = 0
         local instructionCount = 0
+        local screenshotCount = 0
+        local scheduling = true
         local function finite(value, name)
             assert(type(value) == 'number' and value == value
                 and value ~= math.huge and value ~= -math.huge,
@@ -101,6 +108,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
             return value
         end
         local function enqueue(command)
+            assert(scheduling, '断言回调不能追加测试命令，请在脚本编排阶段安排')
             assert(#commands < 256, '测试流程超过 256 步')
             command.label = command.label or command.name
             commands[#commands + 1] = command
@@ -112,6 +120,13 @@ public sealed class GameplayTestLuaRunner : IDisposable
         end
         function test.log(message)
             enqueue({name='log', text=text(message, 'log text')})
+        end
+        function test.screenshot(label)
+            label = text(label, 'screenshot label')
+            assert(string.find(label, '%S'), '截图说明不能为空白')
+            screenshotCount = screenshotCount + 1
+            assert(screenshotCount <= 3, '每个 Lua 最多安排 3 次截图')
+            enqueue({name='screenshot', label=label})
         end
         function test.wait(seconds)
             enqueue({name='wait', seconds=duration(seconds)})
@@ -182,7 +197,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
             debug.sethook()
             return ok, result
         end
-        return scope, commands, execute
+        return scope, commands, execute, function() scheduling = false end
     ";
 
     private bool TryReadCommands(string source, string chunkName, out List<Command> commands)
@@ -199,14 +214,17 @@ public sealed class GameplayTestLuaRunner : IDisposable
             using LuaTable scope = (LuaTable)bootstrap[0];
             using LuaTable queue = (LuaTable)bootstrap[1];
             executeLua = (LuaFunction)bootstrap[2];
+            using LuaFunction seal = (LuaFunction)bootstrap[3];
             using LuaFunction script = luaEnvironment.LoadString(source,
                 string.IsNullOrWhiteSpace(chunkName) ? "@GameplayTest.lua" : chunkName, scope);
             object[] result = executeLua.Call(script);
+            seal.Call();
             if (result.Length == 0 || result[0] is not bool success || !success)
                 throw new InvalidOperationException(result.Length > 1
                     ? result[1]?.ToString() : "测试 Lua 未返回执行状态。");
 
             float totalSeconds = 0f;
+            int screenshotCount = 0;
             for (int index = 1; index <= MaximumSteps + 1; index++)
             {
                 queue.Get(index, out LuaTable queuedStep);
@@ -226,6 +244,9 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     Index = checked((int)ReadNumber(step, "index"))
                 };
                 totalSeconds += command.Seconds;
+                if (command.Name == "screenshot" && (++screenshotCount > MaximumScreenshots ||
+                    string.IsNullOrWhiteSpace(command.Label)))
+                    throw new InvalidOperationException("每个 Lua 最多安排 3 次截图，且需要非空现场说明。");
                 if (command.Seconds < 0f || command.Seconds > MaximumStepSeconds ||
                     totalSeconds > MaximumTotalSeconds)
                     throw new InvalidOperationException("测试时间超过单步 30 秒或累计 180 秒限制。");
@@ -278,6 +299,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
 
         running = true;
         Succeeded = false;
+        capturedScreenshotCount = 0;
         try
         {
             if (!TryReadCommands(source, chunkName, out List<Command> commands)) yield break;
@@ -290,51 +312,53 @@ public sealed class GameplayTestLuaRunner : IDisposable
             bool fluidFailed = false;
             foreach (Command command in commands)
             {
+                // 连续截图保留太空现场，下一条玩法命令前才恢复隔离世界。
+                if (activeSpaceScenario != null && command.Name != "screenshot")
+                {
+                    bool restored = false;
+                    yield return RestoreSpaceScene(value => restored = value);
+                    if (!restored) yield break;
+                }
                 if (!TryEnsureContext(out error))
                 {
                     record(command.Name, command.Label, false, error);
+                    yield return RestoreSpaceScene(_ => { });
                     yield break;
                 }
 
-                IEnumerator operation = ExecuteCommand(command);
-                try
+                yield return Advance(ExecuteCommand(command), exception =>
                 {
-                    while (true)
-                    {
-                        bool hasNext = false;
-                        object current = null;
-                        try
-                        {
-                            hasNext = operation.MoveNext();
-                            if (hasNext) current = operation.Current;
-                        }
-                        catch (Exception exception)
-                        {
-                            command.Success = false;
-                            command.Message = exception.ToString();
-                        }
-                        if (!hasNext) break;
-                        yield return current;
-                    }
-                }
-                finally { (operation as IDisposable)?.Dispose(); }
+                    command.Success = false;
+                    command.Message = exception.ToString();
+                });
 
                 record(command.Name, command.Label, command.Success, command.Message);
                 // 流体子案例各自隔离并清理，失败后继续收集同组报告，但不能把整组改成通过。
                 if (!command.Success)
                 {
-                    if (command.Name != "fluid") yield break;
+                    if (command.Name != "fluid")
+                    {
+                        yield return RestoreSpaceScene(_ => { });
+                        yield break;
+                    }
                     fluidFailed = true;
                 }
                 yield return null;
             }
-            Succeeded = !fluidFailed;
+            bool cleaned = false;
+            yield return RestoreSpaceScene(value => cleaned = value);
+            Succeeded = !fluidFailed && cleaned;
         }
         finally
         {
             ReleaseControl();
-            ReleaseLua();
-            running = false;
+            try { activeSpaceScenario?.Dispose(); }
+            finally
+            {
+                activeSpaceScenario = null;
+                ReleaseLua();
+                running = false;
+            }
         }
     }
 
@@ -342,6 +366,15 @@ public sealed class GameplayTestLuaRunner : IDisposable
     {
         switch (command.Name)
         {
+            case "screenshot":
+                if (++capturedScreenshotCount > MaximumScreenshots)
+                    throw new InvalidOperationException("每个 Lua 最多执行 3 次截图。");
+                if (captureScreenshot == null)
+                    throw new InvalidOperationException("测试宿主未提供截图接口。");
+                yield return captureScreenshot(command.Label);
+                command.Success = true;
+                command.Message = command.Label;
+                break;
             case "check":
                 command.Success = check(command.Text);
                 command.Message = command.Success ? $"检查通过：{command.Text}" : $"检查失败：{command.Text}";
@@ -446,8 +479,8 @@ public sealed class GameplayTestLuaRunner : IDisposable
         {
             // 迁移会重建玩家，先交还旧租约，再从正式会话取得新玩家。
             ReleaseControl();
-            using var scenario = new GameplayTestSpaceScenario();
-            yield return scenario.Execute(command.Text, command.Argument, value => sample = value);
+            activeSpaceScenario = new GameplayTestSpaceScenario();
+            yield return activeSpaceScenario.Execute(command.Text, command.Argument, value => sample = value);
             player = ItemMgr.Instance?.User_Player;
             if (!TryAcquireControl(out string error)) throw new InvalidOperationException(error);
         }
@@ -467,6 +500,54 @@ public sealed class GameplayTestLuaRunner : IDisposable
         finally
         {
             for (int index = tables.Count - 1; index >= 0; index--) tables[index].Dispose();
+        }
+    }
+
+    private IEnumerator RestoreSpaceScene(Action<bool> completed)
+    {
+        if (activeSpaceScenario == null) { completed(true); yield break; }
+        GameplayTestSpaceScenario scenario = activeSpaceScenario;
+        activeSpaceScenario = null;
+        ReleaseControl();
+        Exception failure = null;
+        yield return Advance(scenario.Cleanup(), exception => failure = exception);
+        player = ItemMgr.Instance?.User_Player;
+        string error = null;
+        bool restored = failure == null && TryAcquireControl(out error);
+        if (!restored) record("space_cleanup", "恢复太空测试现场", false, failure?.ToString() ?? error);
+        completed(restored);
+    }
+
+    // 展开嵌套协程以捕获截图和场景迁移异常，让失败仍能进入统一清理。
+    internal static IEnumerator Advance(IEnumerator routine, Action<Exception> failed)
+    {
+        var stack = new Stack<IEnumerator>();
+        stack.Push(routine);
+        try
+        {
+            while (stack.Count > 0)
+            {
+                object next = null;
+                bool moved = false;
+                Exception failure = null;
+                try
+                {
+                    moved = stack.Peek().MoveNext();
+                    if (moved) next = stack.Peek().Current;
+                    else (stack.Pop() as IDisposable)?.Dispose();
+                }
+                catch (Exception exception) { failure = exception; }
+                if (failure != null) { failed(failure); yield break; }
+                if (!moved) continue;
+                if (next is IEnumerator nested) stack.Push(nested);
+                else yield return next;
+            }
+        }
+        finally
+        {
+            while (stack.Count > 0)
+                try { (stack.Pop() as IDisposable)?.Dispose(); }
+                catch (Exception exception) { failed(exception); }
         }
     }
 
@@ -630,7 +711,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
         if (disposed) return;
         disposed = true;
         ReleaseControl();
-        ReleaseLua();
+        try { activeSpaceScenario?.Dispose(); }
+        finally
+        {
+            activeSpaceScenario = null;
+            ReleaseLua();
+        }
     }
 
     #endregion

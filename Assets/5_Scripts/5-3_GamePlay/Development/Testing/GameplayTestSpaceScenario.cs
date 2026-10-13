@@ -59,6 +59,7 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         if (session?.State == null) throw new InvalidOperationException("正式太空会话没有载入。");
         JObject sample = null;
         Exception failure = null;
+        bool retainScene = false;
         IEnumerator flow = operation switch
         {
             "session" => ObserveSession(value => sample = value),
@@ -71,12 +72,24 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         };
         try
         {
-            yield return Advance(flow, exception => failure = exception);
-            if (homeChanged && Application.isPlaying)
-                yield return Advance(ReturnHome(), exception => failure = failure == null ? exception :
+            yield return GameplayTestLuaRunner.Advance(flow, exception => failure = exception);
+            if (failure != null && homeChanged && Application.isPlaying)
+                yield return GameplayTestLuaRunner.Advance(ReturnHome(), exception => failure =
                     new AggregateException("用例失败且恢复初始测试世界失败。", failure, exception));
             if (failure != null) throw failure;
             completed(sample ?? throw new InvalidOperationException("会话用例没有结果。"));
+            retainScene = true;
+        }
+        finally { if (!retainScene) Dispose(); }
+    }
+
+    /// <summary>Lua 的相邻截图完成后再恢复玩家与临时条件。</summary>
+    public IEnumerator Cleanup()
+    {
+        if (disposed) yield break;
+        try
+        {
+            if (homeChanged && Application.isPlaying) yield return ReturnHome();
         }
         finally { Dispose(); }
     }
@@ -283,9 +296,12 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         yield return FixedStructureCatalog.LoadAsync(value => templates = value, error => loadError = error);
         if (loadError != null) throw loadError;
         var results = new JArray();
+        var ships = new List<FixedStructureDefinition>();
         foreach (FixedStructureDefinition template in templates)
+            if (string.Equals(template.Kind, "ship", StringComparison.OrdinalIgnoreCase)) ships.Add(template);
+        for (int index = 0; index < ships.Count; index++)
         {
-            if (!string.Equals(template.Kind, "ship", StringComparison.OrdinalIgnoreCase)) continue;
+            FixedStructureDefinition template = ships[index];
             yield return PrepareSite(template);
             if (!ShipFixedStructureBuilder.TryBuild(CurrentPlayer(), template, out ShipState ship, out string reason))
                 throw new InvalidOperationException(reason);
@@ -354,8 +370,8 @@ public sealed class GameplayTestSpaceScenario : IDisposable
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
                 ["shipTransition"] = shipTransition,
                 ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain });
-            yield return ReturnHome();
-            homeChanged = false;
+            // 最后一艘保留正式降落现场，供紧随其后的 Lua 截图使用。
+            if (index + 1 < ships.Count) yield return ReturnHome();
         }
         completed(new JObject { ["scope"] = "live-ship-flight", ["ships"] = results });
     }
@@ -576,33 +592,6 @@ public sealed class GameplayTestSpaceScenario : IDisposable
     #endregion
 
     #region 异常收尾
-    private static IEnumerator Advance(IEnumerator routine, Action<Exception> failed)
-    {
-        var stack = new Stack<IEnumerator>();
-        stack.Push(routine);
-        try
-        {
-            while (stack.Count > 0)
-            {
-                object next = null;
-                bool moved = false;
-                Exception failure = null;
-                try
-                {
-                    moved = stack.Peek().MoveNext();
-                    if (moved) next = stack.Peek().Current;
-                    else (stack.Pop() as IDisposable)?.Dispose();
-                }
-                catch (Exception exception) { failure = exception; }
-                if (failure != null) { failed(failure); yield break; }
-                if (!moved) continue;
-                if (next is IEnumerator nested) stack.Push(nested);
-                else yield return next;
-            }
-        }
-        finally { while (stack.Count > 0) (stack.Pop() as IDisposable)?.Dispose(); }
-    }
-
     public void Dispose()
     {
         if (disposed) return;

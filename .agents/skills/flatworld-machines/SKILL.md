@@ -36,7 +36,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 机械与电力
 
-- 机械动力专项 Lua 入口为 `GameplayTests/mechanical-suite.json`，在独立真实世界组装全目录 20 种机械端口组件并核验动力、加工、发电、输送、测压及手推；清单与 GM 参数见 `Assets/StreamingAssets/GameplayTests/README.md`。
+- 机械动力专项 Lua 入口为 `GameplayTests/mechanical-suite.json`，在独立真实世界组装全目录 20 种机械端口组件并核验动力、加工、发电、输送、测压及手推；编写、截图和执行转 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，清单与 GM 参数见 `Assets/StreamingAssets/GameplayTests/README.md`。
 - RPM/SourceRpm/SpeedRatio 有符号：正逆时针、负顺时针；方向由 RPM 派生，效率与功率读绝对值 SpeedRpm。轴、离合器、跨轴器保持方向，齿牙啮合/齿轮箱翻转；闭环转向不一致整网停转。
 - 动力源分别提供扭矩与 RPM；同速有效源累加扭矩，异速冲突停转。用力器是输入终点，不转送扭矩，按最近可达源距离分配固定 TorqueLoad，同距按稳定 ID；不足完整需求才停该用力器。传动件不限制通过量，TorqueCapacity 不参与求解。
 - 效率为 SpeedRpm/RequiredRpm，不封顶。齿轮箱按局部输入侧换算：左大轮输入 RPM×2/扭矩×0.5，右小轮反向；负载按侧倍率折算。水车由真实水流和半径算 RPM，供给强度由基础扭矩决定。
@@ -49,7 +49,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 工业气液
 
-- 工业气液专项清单为 `GameplayTests/fluid-suite.json`，按功能组织 9 个 Lua 分组、保留 52 项检查；单系统保持 10 个 Lua 以内，新增检查优先并入已有组。覆盖矩阵见 `Assets/StreamingAssets/GameplayTests/Fluids/README.md`；子案独立清理，失败继续收集同组报告，整组仍失败，未运行不得报告通过。
+- 工业气液专项清单为 `GameplayTests/fluid-suite.json`，按功能组织 9 个 Lua 分组、保留 52 项检查；通用分组、截图和报告规则见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，覆盖矩阵见 `Assets/StreamingAssets/GameplayTests/Fluids/README.md`。子案独立清理，失败继续收集同组报告，整组仍失败，未运行不得报告通过。
 - 固定步长冻结库存与吞吐预算；方向由端口输入/输出决定，不按压差自然输送，新料不在同轮穿透无限管格。管层2、机械/电子测压层4/5；测压探针切断真实动力边。
 - StockCache 冻结工作区只复制组分数量，不复制端口预留；共享罐只在拓扑变化时绑定库存，Capture 同步目标组。FluidInventoryState 的组分原位改量通知 MassChanged，热量/预留只改状态版本；观察绑定与事件不进序列化/克隆。UsesObservedTickState 策略若改未观察字段，须主动通知或关闭该能力。
 - FluidDeviceBehavior 经 RegisterFluidDevice 注册能力策略，具体事务在 FluidDeviceOperations；注册租约管理生灭，策略变更使拓扑/能力缓存失效。管网成员始终走正式图边，普通容器仅通过 IContainerPortProvider/ILiquidTransferPort 转移。

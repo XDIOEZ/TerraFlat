@@ -350,7 +350,6 @@ public sealed class GameplayTestScene : MonoBehaviour
             if (stopped || !Check("world_ready") || !Check("player_ready"))
             {
                 testCase.Status = "skipped";
-                testCase.ScreenshotError = "用例未执行，没有结束画面。";
                 testCase.Reason = stopped ? "前面的用例失败，清单已配置失败即停。" : "世界或玩家不再就绪。";
                 testCase.FinishedUtc = DateTime.UtcNow.ToString("O");
                 failedStep = true;
@@ -378,16 +377,6 @@ public sealed class GameplayTestScene : MonoBehaviour
             // 每个用例自己捕获异常，读取失败或 Lua 报错不会截断整个测试清单。
             yield return AdvanceGuarded(ExecuteCase(testCase));
             succeeded = luaRunner?.Succeeded == true;
-            if (!interruptionRequested)
-            {
-                // 每个实际执行的 Lua 成功或失败后各截一次，写盘完成才进入下一个用例。
-                Stage("case." + testCase.Id + ".screenshot");
-                testCase.ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(report, testCase.Id);
-                yield return GameplayTestArtifacts.CaptureScreenshot(this, testCase.ScreenshotPath,
-                    error => testCase.ScreenshotError = error);
-                Record("screenshot", "用例结束截图", string.IsNullOrEmpty(testCase.ScreenshotError),
-                    testCase.ScreenshotError ?? testCase.ScreenshotPath);
-            }
         }
         finally
         {
@@ -403,8 +392,35 @@ public sealed class GameplayTestScene : MonoBehaviour
         yield return LoadText(testCase.LuaPath, text => script = text);
         Record("load_lua", "读取测试 Lua", true, testCase.LuaPath);
         Stage("case." + testCase.Id + ".lua");
-        luaRunner = new GameplayTestLuaRunner(player, Check, Record);
+        luaRunner = new GameplayTestLuaRunner(player, Check, Record, CaptureLuaScreenshot);
         yield return luaRunner.Run(script, "@" + testCase.LuaPath);
+    }
+
+    private IEnumerator CaptureLuaScreenshot(string label)
+    {
+        GameplayTestCaseReport testCase;
+        GameplayTestScreenshotRecord screenshot;
+        lock (reportLock)
+        {
+            testCase = activeCase ?? throw new InvalidOperationException("没有正在执行的 Lua 用例。");
+            int index = testCase.Screenshots.Count + 1;
+            screenshot = new GameplayTestScreenshotRecord
+            {
+                Index = index, Label = label,
+                Path = GameplayTestArtifacts.CaseScreenshotPath(report, testCase.Id, index),
+                Scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                Utc = DateTime.UtcNow.ToString("O"), ElapsedSeconds = clock.Elapsed.TotalSeconds,
+                PlayerPosition = ItemMgr.Instance?.User_Player == null ? null :
+                    new GameplayTestPosition(ItemMgr.Instance.User_Player.transform.position)
+            };
+            // 先记录请求，捕获中断时报告仍能说明哪个现场没有保存成功。
+            testCase.Screenshots.Add(screenshot);
+        }
+        Stage("case." + testCase.Id + ".screenshot." + screenshot.Index);
+        yield return GameplayTestArtifacts.CaptureScreenshot(this, screenshot.Path,
+            error => screenshot.Error = error);
+        if (!string.IsNullOrEmpty(screenshot.Error)) throw new IOException(screenshot.Error);
+        Stage("case." + testCase.Id + ".lua");
     }
 
     private void CompleteCase(GameplayTestCaseReport testCase, bool succeeded, bool interrupted)
@@ -591,8 +607,9 @@ public sealed class GameplayTestScene : MonoBehaviour
             DrainCapturedLogs(clearCurrentCase: true, closeCapture: true);
             foreach (GameplayTestCaseReport testCase in report.Cases)
             {
-                if (!File.Exists(testCase.ScreenshotPath) && string.IsNullOrEmpty(testCase.ScreenshotError))
-                    testCase.ScreenshotError = "用例未执行或被中断，没有可保存的结束画面。";
+                foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
+                    if (!File.Exists(screenshot.Path) && string.IsNullOrEmpty(screenshot.Error))
+                        screenshot.Error = "截图命令被中断，现场图片未保存。";
                 if (testCase.Status == "running")
                 {
                     testCase.Status = interrupted ? "interrupted" : "failed";

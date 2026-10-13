@@ -362,15 +362,22 @@ namespace FlatWorld.GameplayMCP
                 EditorGUILayout.LabelField(
                     (status == "passed" ? "✓ " : "✕ ") + item.Value<string>("name") +
                     "  [" + item.Value<string>("id") + "]  " + TranslateStatus(status));
-                string screenshotPath = item.Value<string>("screenshotPath");
-                if (!string.IsNullOrEmpty(screenshotPath) && File.Exists(screenshotPath))
-                {
-                    if (GUILayout.Button("查看此用例结束截图", GUILayout.Width(155f)))
-                        Application.OpenURL(new Uri(screenshotPath).AbsoluteUri);
-                }
-                else if (!string.IsNullOrEmpty(item.Value<string>("screenshotError")))
-                    EditorGUILayout.LabelField("截图：" + item.Value<string>("screenshotError"),
-                        EditorStyles.wordWrappedMiniLabel);
+                if (item["screenshots"] is JArray screenshots)
+                    foreach (JToken screenshot in screenshots)
+                    {
+                        string path = screenshot.Value<string>("path");
+                        string label = screenshot.Value<string>("label") ?? "关键现场";
+                        EditorGUILayout.LabelField("截图 " + screenshot.Value<int>("index") + "：" + label,
+                            EditorStyles.wordWrappedMiniLabel);
+                        if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                        {
+                            if (GUILayout.Button("查看此现场截图", GUILayout.Width(155f)))
+                                Application.OpenURL(new Uri(path).AbsoluteUri);
+                        }
+                        else
+                            EditorGUILayout.LabelField(screenshot.Value<string>("error") ?? "截图文件未生成。",
+                                EditorStyles.wordWrappedMiniLabel);
+                    }
                 if (status == "failed" && item["steps"] is JArray steps)
                     foreach (JToken step in steps)
                         if (step.Value<bool?>("success") == false)
