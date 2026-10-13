@@ -67,8 +67,7 @@ namespace FlatWorld.Spaceflight
 
         public ShipPieceState AddPiece(ItemData data, Vector2 displayPosition, int quarterTurns, out ShipState ship)
         {
-            ShipPartConfiguration config = Mod_ShipPart.Read(data);
-            config ??= InferPart(data);
+            ShipPartConfiguration config = ResolvePartConfiguration(data);
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
             MachineDefinition machine = MachineCatalog.Get(data.IDName);
             ResolvePlacedPieceHealth(data, config, machine, building, out double health, out double maximumHealth, out bool rebuilt);
@@ -222,6 +221,12 @@ namespace FlatWorld.Spaceflight
             });
             local = new Vector2(.5f, .5f); return ship;
         }
+        // 正式放置和测试共用部件识别规则，包含普通机器与线路的自动分类。
+        internal static ShipPartConfiguration ResolvePartConfiguration(ItemData data)
+        {
+            return data == null ? null : Mod_ShipPart.Read(data) ?? InferPart(data);
+        }
+
         private static ShipPartConfiguration InferPart(ItemData data)
         {
             var machine = MachineCatalog.Get(data.IDName);

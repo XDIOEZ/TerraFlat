@@ -445,6 +445,8 @@ public class Mod_PlayerTraits : Module
 
         Vector3 logicalDestination = WorldTopologyRuntime.NormalizePosition(destination);
         Vector3 presentationDestination = WorldLocalPresentation.ProjectPosition(logicalDestination);
+        // 地表传送先解除乘船与下降状态，避免权威船内位置把玩家拉回原船。
+        session?.ResetPassengerForRespawn(target);
         Rigidbody2D body = target.GetComponent<Rigidbody2D>();
         body.velocity = Vector2.zero;
         body.angularVelocity = 0f;

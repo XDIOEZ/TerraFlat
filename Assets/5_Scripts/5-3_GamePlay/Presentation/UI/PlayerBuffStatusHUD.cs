@@ -150,7 +150,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         if (runtime == null || string.IsNullOrWhiteSpace(runtime.DefinitionId))
             return;
 
-        if (activeRows.TryGetValue(runtime.DefinitionId, out BuffStatusRowView rowView))
+        if (activeRows.TryGetValue(runtime.DefinitionId, out BuffStatusRowView rowView) && rowView != null)
             rowView.Bind(runtime);
     }
 
@@ -162,6 +162,12 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     /// <summary>读取 ActiveBuffs 快照并复用行 Prefab；仅此结构入口标记 Content 布局。</summary>
     private void RefreshStructure()
     {
+        if (player == null || player.DestructionHandled || player.IsUnloadingModules)
+        {
+            UnbindBuffManager();
+            SetViewActive(false);
+            return;
+        }
         if (!EnsureView() || buffManager == null)
         {
             SetViewActive(false);
@@ -220,7 +226,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
         foreach (KeyValuePair<string, BuffStatusRowView> pair in activeRows)
         {
-            if (buffManager.TryGetBuff(pair.Key, out BuffInstance runtime))
+            if (pair.Value != null && buffManager.TryGetBuff(pair.Key, out BuffInstance runtime))
                 pair.Value.Bind(runtime);
         }
     }
@@ -237,6 +243,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     private void EnsureRowViews(int requiredCount)
     {
+        rowViews.RemoveAll(row => row == null);
         while (rowViews.Count < requiredCount)
         {
             GameObject rowObject = Instantiate(itemPrefab, contentRect, false);
@@ -273,6 +280,12 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             return viewRect != null && contentRect != null && itemPrefab != null;
         }
 
+        // 容器被场景或 UI 清理后，重建时同步丢弃旧行引用。
+        rowViews.Clear();
+        activeRows.Clear();
+        viewRect = null;
+        contentRect = null;
+        viewCanvasGroup = null;
         GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.BuffStatus, false);
         itemPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.BuffStatusItem, false);
         if (prefab == null || itemPrefab == null)

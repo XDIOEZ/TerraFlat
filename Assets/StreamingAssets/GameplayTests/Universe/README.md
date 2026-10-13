@@ -8,7 +8,7 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --ca
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases space_gameplay
 ```
 
-运行前退出自己的 PlayMode，在测试期间保持 Game 视图可渲染。工具复用已经打开的 Unity，不停止用户正在玩的世界。整轮自动创建隔离存档；本次实现没有主动编译或执行测试，下述用例是否通过由实际运行报告决定。
+运行前退出自己的 PlayMode，在测试期间保持 Game 视图可渲染。工具复用已经打开的 Unity，不停止用户正在玩的世界。整轮自动创建隔离存档；编译、EditMode 校验和真实 PlayMode 结果分别以实际运行报告为准。
 
 ## 覆盖清单
 
@@ -47,8 +47,8 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --ca
 | `live_session` | 真实固定步时钟、会话身份、正式捕获快照 | 活跃隔离会话；不手动推进固定步 |
 | `live_templates` | 全部正式测试船型、展开部件、资源注册、控制台/引擎/地板 | 正式固定结构目录 |
 | `live_catalog` | 实际进入全部配置星区、全部 PlanetData 登记、真实星体对象及位置投影 | 正式太空迁移、星区租约与表现 |
-| `live_flight` | 每个正式船型真实生成/补给、进入控制台、起飞迁移、实际耗油和出力、惯性、旋转、到点制动、船体跨区、降落 | 正式船型、机器、会话固定步与降落入口 |
-| `live_transition_right/left/up/down/corner` | 玩家自然越界、预加载、双侧实际场景、过渡带清退、自然折返、玩家连续性、无维度加载 | 正式太空入场准备速度，后续由真实固定步推进 |
+| `live_flight` | 每个正式船型真实生成/补给、进入控制台、起飞迁移、实际耗油和出力、惯性、旋转、到点制动、船体跨区的乘员支撑与相机连续性、降落 | 正式船型、机器、会话固定步与降落入口 |
+| `live_transition_right/left/up/down/corner` | 玩家自然越界、预加载、双侧实际场景、过渡带清退、自然折返、玩家与相机连续性、无维度加载 | 正式太空入场准备速度，后续由真实固定步推进 |
 | `live_collision` | 相邻星区船体接触冲量、总动量、远区排除 | 正式地板增添/提交事务构造自有夹具，真实会话固定步解算 |
 
 ## Lua 接口与职责

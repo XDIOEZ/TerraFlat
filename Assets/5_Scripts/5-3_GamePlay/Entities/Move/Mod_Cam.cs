@@ -132,6 +132,8 @@ public class Mod_Cam : Module
     // 在Load方法中实例化相机逻辑
     protected override void OnLoad()
     {
+        CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+        CameraUserSettings.Changed += HandleCameraSettingsChanged;
         // 获取GameController并绑定输入事件
         GameController = GetComponentInParent<Mod_GameController>();
         if (GameController != null && GameController._inputActions != null)
@@ -148,6 +150,8 @@ public class Mod_Cam : Module
         if (CamPrefab != null)
         {
             instantiatedCamera = Instantiate(CamPrefab);
+            // 相机由玩家模块释放，跨星区卸载源场景时保留同一实例。
+            DontDestroyOnLoad(instantiatedCamera);
             Debug.Log("相机预制体已实例化");
         }
         else
@@ -202,8 +206,12 @@ public class Mod_Cam : Module
         SavePovValue();
     }
     
-    // 销毁时调用，注销事件
-    private void OnDestroy()
+    protected override void OnUnload() => ReleaseCameraRuntime();
+
+    private void OnDestroy() => ReleaseCameraRuntime();
+
+    // 模块卸载与销毁共用清理，停用后重载不遗留持久相机或输入订阅。
+    private void ReleaseCameraRuntime()
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         ClearWorldAudioListener();
@@ -213,12 +221,25 @@ public class Mod_Cam : Module
         {
             GameController._inputActions.Win10.CtrlMouse.performed -= PovValueChanged;
         }
+        if (GameController != null && GameController._mainCamera == ControllerCamera)
+            GameController._mainCamera = null;
         
         // 销毁实例化的相机预制体
         if (instantiatedCamera != null)
         {
+            instantiatedCamera.SetActive(false);
             Destroy(instantiatedCamera);
         }
+        instantiatedCamera = null;
+        ControllerCamera = null;
+        vcam = null;
+        _wrappedWorldRenderer = null;
+        _framingTransposer = null;
+        _rotationFollower = null;
+        _cameraFollowDefaultsCaptured = false;
+        _followOverride = null;
+        _followOverrideMaxPov = 0f;
+        _followOverrideZoomMultiplier = 1f;
     }
     #endregion
 

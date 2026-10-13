@@ -30,7 +30,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
 - CultivatorLogic 保存每槽作物、水、肥、电力和待收产量；断供/满输出保留状态。显示读取真实种植槽，空槽隐藏，不为客户端或休眠显示创建业务逻辑。
 - 初始化库存/战利品只执行一次，随机空结果也算完成。最大生命由当前定义及 CraftedDurabilityMultiplier 派生，受损生命不重复叠乘；MachineCombatBridge 消费真实武器窗口并 PublishExternalDamage 回传实际损失。
-- 放置失败不扣召唤器；拆回捕获全状态、成功生成返还物再移除。MachineArchive 持有独立归档，缺失 MOD 定义保留冷快照，显示卸载不删节点或库存。
+- 放置失败不扣召唤器；拆回捕获全状态、成功生成返还物再移除。MachineArchive 持有独立归档，缺失 MOD 定义保留冷快照，显示卸载不删节点或库存；CaptureCurrentWorld 在捕获期间固定 scopeOverride，嵌套节点租约不得切回活动场景或把船库存写入地表档案。
 - 面板拆回整笔事务进入 UseNodeScope；船上机器返还载体交 SpaceSession.TryDismantleMachinePiece，以太空掉落记录继承部件位置/点速度，节点删除成功后撤船部件、设备与视图并重建结构。联机准备拆除仍只支持地表，不能提前提交船回收。
 - 权威库存命令校验玩家归属、距离、身份。客户端更新同格槽内容并保留槽/库存对象和本地布局。私有跨箱库存用 RegisterPrivateInventory 注册玩家/机器双键，不进入公开库存、箱快照或公共角色同步。
 

@@ -165,7 +165,7 @@ public sealed class GameplayTestSpaceScenario : IDisposable
             foreach (FixedStructureMember member in template.Members)
             {
                 ItemData data = GameRes.ExistingInstance.CreateItemData(member.ItemId);
-                ShipPartConfiguration part = data == null ? null : Mod_ShipPart.Read(data);
+                ShipPartConfiguration part = SpaceSession.ResolvePartConfiguration(data);
                 members.Add(new JObject { ["id"] = member.MemberId, ["itemId"] = member.ItemId,
                     ["registered"] = data != null, ["kind"] = part?.Kind.ToString(),
                     ["x"] = member.X, ["y"] = member.Y, ["quarterTurns"] = member.QuarterTurns });
@@ -388,7 +388,9 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         }
         finally { SetOwnedShipPose(ship, flight, originalSector, originalPosition, originalVelocity); }
         yield return WaitUntil(() => Ready() && SceneManager.GetActiveScene().name == SpaceSectorCoordinates.SceneKey(originalSector),
-            30d, "测试船未恢复起飞星区。");
+            30d, "测试船未恢复起飞星区。", () => new JObject {
+                ["expectedSector"] = Sector(originalSector), ["session"] = SessionSnapshot(),
+                ["ship"] = ShipSnapshot(ship) }.ToString(Newtonsoft.Json.Formatting.None));
     }
 
     private void SetOwnedShipPose(ShipState ship, ShipFlightState flight, SpaceSectorId sector,
@@ -480,13 +482,14 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         double until = Time.realtimeSinceStartupAsDouble + seconds;
         yield return WaitUntil(() => Time.realtimeSinceStartupAsDouble >= until, seconds + 2d, "测试等待被中断。");
     }
-    private IEnumerator WaitUntil(Func<bool> condition, double timeout, string message)
+    private IEnumerator WaitUntil(Func<bool> condition, double timeout, string message, Func<string> diagnostic = null)
     {
         double deadline = Time.realtimeSinceStartupAsDouble + timeout;
         while (!condition())
         {
             if (disposed || !Application.isPlaying) throw new OperationCanceledException(message);
-            if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException(message);
+            if (Time.realtimeSinceStartupAsDouble >= deadline)
+                throw new TimeoutException(message + (diagnostic == null ? "" : "\n" + diagnostic()));
             yield return null;
         }
     }
@@ -512,6 +515,7 @@ public sealed class GameplayTestSpaceScenario : IDisposable
     {
         Player player = CurrentPlayer();
         SpacePassengerState passenger = session.GetPassenger(player);
+        Camera camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ControllerCamera;
         SpaceSectorPosition position = session.GetPassengerPosition(passenger);
         var required = new JArray();
         foreach (SpaceSectorId sector in session.RequiredSectors) required.Add(Sector(sector));
@@ -526,6 +530,10 @@ public sealed class GameplayTestSpaceScenario : IDisposable
             ["sectorCount"] = session.State.Sectors.Count, ["scene"] = SceneManager.GetActiveScene().name,
             ["spaceView"] = session.IsSpaceView, ["playerProfile"] = player.ProfileName,
             ["playerInstance"] = player.GetInstanceID(), ["sector"] = Sector(position.Sector),
+            ["playerScene"] = player.gameObject.scene.name, ["supported"] = passenger.Supported,
+            ["shipId"] = passenger.ShipId, ["consoleId"] = passenger.ConsolePieceId,
+            ["cameraReady"] = camera != null && camera.isActiveAndEnabled,
+            ["cameraInstance"] = camera == null ? 0 : camera.GetInstanceID(),
             ["position"] = Vector(position.LocalMeters), ["velocity"] = Vector(passenger.FreeMotion.VelocityMetersPerSecond),
             ["realmRevision"] = passenger.RealmRevision, ["required"] = required, ["loadedScenes"] = scenes,
             ["dimensionTransitioning"] = DimensionManager.Instance.IsTransitioning };

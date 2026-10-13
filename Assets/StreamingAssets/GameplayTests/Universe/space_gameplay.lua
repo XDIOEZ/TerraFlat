@@ -97,11 +97,16 @@ do
             end
             assert(crossing.fixtureSetup == "owned-ship-preposition", "船体过渡缺少明确的测试夹具来源：" .. label)
             assert(crossing.shipId == ship.cruising.id and crossing.phase == "Cruising", "过渡期间船体身份或飞行状态丢失：" .. label)
+            assert(crossing.before.supported and crossing.crossed.supported and crossing.settled.supported and
+                crossing.before.shipId == crossing.shipId and crossing.crossed.shipId == crossing.shipId and crossing.settled.shipId == crossing.shipId,
+                "船体跨区期间乘员失去本船支撑：" .. label)
             assert(same(crossing.crossed.sector, crossing.destination) and same(crossing.shipSector, crossing.destination), "乘员或船体没有进入目标星区：" .. label)
             assert(same(crossing.flightSector, crossing.shipSector), "飞行记录与船体星区不一致：" .. label)
             assert(contains(crossing.crossed.required, crossing.source) and contains(crossing.crossed.required, crossing.destination), "船体跨界没有保留双侧租约：" .. label)
             assert(not contains(crossing.settled.required, crossing.source), "船体越过过渡带后没有清退源星区：" .. label)
             assert(crossing.before.playerInstance == crossing.crossed.playerInstance and not crossing.crossed.dimensionTransitioning, "船体跨区重建玩家或触发维度迁移：" .. label)
+            assert(crossing.before.cameraReady and crossing.crossed.cameraReady and crossing.settled.cameraReady and
+                crossing.before.cameraInstance == crossing.settled.cameraInstance, "船体跨区丢失或重建玩家相机：" .. label)
             assert(ship.landingAccepted and ship.landedAgain.phase == "Landed", "没有完成受控陆地降落：" .. label)
             assert(not ship.landedAgain.spaceView and ship.landedAgain.height <= 0.001, "降落后仍在太空或半空：" .. label)
             assert(ship.landedAgain.id == ship.landed.id, "降落重建了错误的飞船身份：" .. label)
@@ -129,6 +134,9 @@ for _, value in ipairs({"right", "left", "up", "down", "corner"}) do
         assert(same(data.returned.sector, data.source), "玩家无法自然折返")
         assert(contains(data.returned.required, data.destination), "折返时没有保留目标侧过渡场景")
         assert(data.before.playerInstance == data.crossed.playerInstance and data.crossed.playerInstance == data.returned.playerInstance, "普通星区越界重建了玩家")
+        assert(data.before.cameraReady and data.crossed.cameraReady and data.settled.cameraReady and data.returned.cameraReady and
+            data.before.cameraInstance == data.crossed.cameraInstance and data.crossed.cameraInstance == data.returned.cameraInstance,
+            "普通星区越界丢失或重建玩家相机")
         assert(data.before.playerProfile == data.returned.playerProfile, "过渡后玩家身份丢失")
         assert(data.before.realmRevision == data.crossed.realmRevision and data.crossed.realmRevision == data.settled.realmRevision, "普通星区过渡错误地改变维度版本")
         assert(not data.crossed.dimensionTransitioning and not data.returned.dimensionTransitioning, "普通星区跨界触发了维度加载")

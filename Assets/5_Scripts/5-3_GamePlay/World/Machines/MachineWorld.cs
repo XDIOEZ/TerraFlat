@@ -975,14 +975,26 @@ public static partial class MachineWorld
     private static void CaptureCurrentWorld()
     {
         if (owner == null || graph == null || string.IsNullOrEmpty(worldKey)) return;
-        owner.Mechanical ??= new MachineArchive();
-        var saved = new List<ItemData>();
-        if (owner.Mechanical.Worlds.TryGetValue(worldKey, out var previous))
-            foreach (var data in previous)
-                if (MachineCatalog.Get(data.IDName) == null) saved.Add(data);
-        foreach (var node in nodes.Values) { CaptureNode(node); saved.Add(FastCloner.FastCloner.DeepClone(node.Snapshot)); }
-        saved.Sort(CompareSnapshots);
-        owner.Mechanical.Worlds[worldKey] = saved;
+        ScopeState capturedScope = scope;
+        string previousOverride = scopeOverride;
+        // 捕获期间固定作用域，避免设备的嵌套租约释放时切回场景并写错档案。
+        scopeOverride = capturedScope.Key;
+        try
+        {
+            owner.Mechanical ??= new MachineArchive();
+            var saved = new List<ItemData>();
+            if (owner.Mechanical.Worlds.TryGetValue(worldKey, out var previous))
+                foreach (var data in previous)
+                    if (MachineCatalog.Get(data.IDName) == null) saved.Add(data);
+            foreach (var node in nodes.Values) { CaptureNode(node); saved.Add(FastCloner.FastCloner.DeepClone(node.Snapshot)); }
+            saved.Sort(CompareSnapshots);
+            owner.Mechanical.Worlds[worldKey] = saved;
+        }
+        finally
+        {
+            scope = capturedScope;
+            scopeOverride = previousOverride;
+        }
     }
     private static int CompareSnapshots(ItemData a, ItemData b) => a.Guid.CompareTo(b.Guid);
     public static byte[] CaptureArchive(GameSaveData save)

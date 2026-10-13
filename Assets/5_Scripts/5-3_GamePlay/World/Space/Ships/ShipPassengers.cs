@@ -62,7 +62,12 @@ namespace FlatWorld.Spaceflight
             }
             Vector2 worldInput = controller?._mainCamera != null
                 ? (Vector2)controller._mainCamera.transform.TransformDirection(screenInput) : screenInput;
-            bool floor = TryGetSupport(player.transform.position, out ShipState floorShip, out _, out Vector2 local);
+            // 已登船乘员用权威本地位置校验支撑，避免高速航行时旧画面位置把乘员甩出船。
+            ShipState floorShip = ship;
+            Vector2 local = new((float)passenger.LocalX, (float)passenger.LocalY);
+            bool floor = passenger.Supported && ship != null && ShipAtmosphereService.HasFloor(ship,
+                (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters), (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters));
+            if (!floor) floor = TryGetSupport(player.transform.position, out floorShip, out _, out local);
             bool gravity = floor && HasArtificialGravity(floorShip, local.x, local.y);
             ShipFlightState floorFlight = floor ? GetFlight(floorShip.ShipId) : null;
             bool ground = floorFlight != null && floorFlight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
@@ -83,8 +88,8 @@ namespace FlatWorld.Spaceflight
                     System.Linq.Enumerable.Contains(ShipGeometry.Footprint(piece), new ShipCell(cx, cy)));
                 if (!wall) { passenger.LocalX = nextX; passenger.LocalY = nextY; }
                 PlacePassenger(player, passenger, ship);
-                Vector2 display = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
-                if (!TryGetSupport(display, out _, out _, out _))
+                if (!ShipAtmosphereService.HasFloor(ship, (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters),
+                        (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters)))
                 { ReleasePassenger(passenger, ship); SetTerrainSuppression(player, false); }
                 else SetTerrainSuppression(player, true);
                 return true;

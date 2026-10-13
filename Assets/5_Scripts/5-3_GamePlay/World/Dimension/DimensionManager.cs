@@ -375,7 +375,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 recoveryFailure == null
                     ? "维度切换失败，已恢复到原世界。"
                     : "维度切换失败，原世界恢复也发生异常。",
-                recoveryFailure ?? failure);
+                recoveryFailure == null ? failure : new AggregateException("维度切换与原世界恢复均失败。", failure, recoveryFailure));
         }
 
         isTransitioning = false;
