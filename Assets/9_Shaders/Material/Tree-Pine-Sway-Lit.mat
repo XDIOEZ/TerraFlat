@@ -61,6 +61,7 @@ Material:
     - _GrassSwaySpeed: 0.95
     - _GrassTileAnchor: 0.5
     - _GrassUseObjectRoot: 1
+    - _GrassFollowWind: 1
     - _ActorTintStrength: 0
     - _HitFlash: 0
     - _WaterAlpha: 1

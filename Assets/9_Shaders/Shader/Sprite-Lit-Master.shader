@@ -54,6 +54,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _GrassBendStart("根部以上起摆高度", Range(0, 16)) = 0
         _GrassTileAnchor("Tile 锚点 Y", Range(0, 1)) = 0.5
         [Toggle] _GrassUseObjectRoot("使用对象根部弯曲", Float) = 0
+        [Toggle] _GrassFollowWind("强风跟随天气风向", Float) = 0
         _GrassDirection("风向", Vector) = (1, 0, 0, 0)
 
         // Legacy properties，保持与官方 Sprite-Lit-Default 一致，方便管线处理

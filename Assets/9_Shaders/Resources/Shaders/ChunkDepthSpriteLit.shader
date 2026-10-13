@@ -36,6 +36,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         _GrassBendStart("Bend Start", Float) = 0
         _GrassTileAnchor("Tile Anchor", Float) = .5
         _GrassUseObjectRoot("Object Root", Float) = 1
+        _GrassFollowWind("Follow Strong Wind", Float) = 0
         _GrassDirection("Wind Direction", Vector) = (1,0,0,0)
     }
     SubShader
@@ -64,7 +65,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             float _SnowCoverage, _HitFlash, _ActorTintStrength, _ActorTintPulseSpeed, _ActorTintPulseAmplitude;
             float _GrassSwayEnabled, _GrassSwayAmplitude, _GrassSwaySpeed, _GrassSwayFrequency;
             float _GrassBendPower, _GrassSecondaryStrength, _GrassSpriteHeight, _GrassBendStart;
-            float _GrassTileAnchor, _GrassUseObjectRoot;
+            float _GrassTileAnchor, _GrassUseObjectRoot, _GrassFollowWind;
         CBUFFER_END
         #define FLATWORLD_VEGETATION_SWAY_MATERIAL_DECLARED
         #include "../../Shader/VegetationSway.hlsl"
@@ -122,15 +123,10 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             float3 positionWS = TransformObjectToWorld(positionOS);
             if (_GrassSwayEnabled > .5 && _GrassSwayAmplitude > .0001)
             {
-                float2 direction = _GrassDirection.xy / max(.001, length(_GrassDirection.xy));
-                float wavePhase = sin(dot(positionWS.xy, float2(12.9898,78.233))) * 1.7;
-                float t = _Time.y * _GrassSwaySpeed;
-                float wave = sin(t + wavePhase + dot(positionWS.xy, direction) * _GrassSwayFrequency);
-                wave += sin(t * .63 + wavePhase * 1.71 + positionWS.y * _GrassSwayFrequency * .73) * _GrassSecondaryStrength;
-                float sway = wave * _GrassSwayAmplitude * ResolveVegetationVisualWindStrength(saturate(_GlobalWindStrength)) *
-                    GrassBendWeight(float3(input.localClip.xy, 0));
-                positionOS.xy += (input.basis.xy * direction.x + input.basis.zw * direction.y) * sway;
-                positionWS = TransformObjectToWorld(positionOS);
+                float2 basisX = TransformObjectToWorldDir(float3(input.basis.xy, 0), false).xy;
+                float2 basisY = TransformObjectToWorldDir(float3(input.basis.zw, 0), false).xy;
+                positionWS.xy += ResolveVegetationSwayOffset(positionWS.xy,
+                    GrassBendWeight(float3(input.localClip.xy, 0)), basisX, basisY);
             }
             output.positionCS = TransformWorldToHClip(positionWS);
             output.worldRoot = float3(positionWS.xy, TransformObjectToWorld(float3(0,0,0)).y);

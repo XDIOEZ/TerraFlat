@@ -10,9 +10,11 @@ public partial class WeatherMgr
     #region 区域风与风浪表现
 
     private static readonly int GlobalWindStrengthShaderId = Shader.PropertyToID("_GlobalWindStrength");
+    private static readonly int GlobalWindDirectionShaderId = Shader.PropertyToID("_GlobalWindDirection");
     private static readonly int OceanWaveFactorsShaderId = Shader.PropertyToID("_OceanWaveFactors");
     private static readonly int OceanWaveTimeShaderId = Shader.PropertyToID("_OceanWaveTime");
     private float oceanWaveTime; // 独立积分风浪时钟，风速变化不跳相位，也不改潮汐时钟
+    private Vector2 presentedWindDirection;
 
     /// <summary>只推进视觉风浪；暂停时停止，普通客户端读取已复制风力。</summary>
     private void AdvanceOceanWaveClock(float deltaTime)
@@ -66,10 +68,32 @@ public partial class WeatherMgr
         PublishAuthoritativeWeatherState();
     }
 
-    /// <summary>把过渡后的观察区域风力写入 Shader 全局参数。</summary>
+    // 风向按最短夹角过渡，反向风不会经过零向量，静风保留最后方向直到退出世界。
+    private bool MaintainWindDirection(Vector2 wind, float transitionStep)
+    {
+        if (wind.sqrMagnitude <= 0.000001f)
+            return false;
+
+        Vector2 previous = presentedWindDirection;
+        Vector2 target = wind.normalized;
+        if (previous.sqrMagnitude <= 0.000001f)
+            presentedWindDirection = target;
+        else
+        {
+            float currentAngle = Mathf.Atan2(previous.y, previous.x) * Mathf.Rad2Deg;
+            float targetAngle = Mathf.Atan2(target.y, target.x) * Mathf.Rad2Deg;
+            float angle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, 180f * transitionStep) * Mathf.Deg2Rad;
+            presentedWindDirection = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+        }
+        return presentedWindDirection.x != previous.x || presentedWindDirection.y != previous.y;
+    }
+
+    /// <summary>把过渡后的观察区域风力和吹去方向写入 Shader 全局参数。</summary>
     private void RefreshWindFeedback()
     {
         Shader.SetGlobalFloat(GlobalWindStrengthShaderId, _presentedWindStrength);
+        Shader.SetGlobalVector(GlobalWindDirectionShaderId,
+            new Vector4(presentedWindDirection.x, presentedWindDirection.y, 0f, 0f));
         Vector3 factors = WaterEnvironmentRules.ResolveOceanWaveFactors(_presentedWindStrength);
         Shader.SetGlobalVector(OceanWaveFactorsShaderId, new Vector4(factors.x, factors.y, factors.z, 0f));
     }
@@ -78,7 +102,9 @@ public partial class WeatherMgr
     private void DeactivateWindFeedback()
     {
         oceanWaveTime = 0f;
+        presentedWindDirection = Vector2.zero;
         Shader.SetGlobalFloat(GlobalWindStrengthShaderId, 0f);
+        Shader.SetGlobalVector(GlobalWindDirectionShaderId, Vector4.zero);
         Vector3 factors = WaterEnvironmentRules.ResolveOceanWaveFactors(0f);
         Shader.SetGlobalVector(OceanWaveFactorsShaderId, new Vector4(factors.x, factors.y, factors.z, 0f));
         Shader.SetGlobalFloat(OceanWaveTimeShaderId, 0f);

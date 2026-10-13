@@ -401,6 +401,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         _presentedRainIntensity = Mathf.Lerp(_rainTransitionStartIntensity, _targetRainIntensity, precipitationBlend);
         _presentedSnowIntensity = Mathf.Lerp(_snowTransitionStartIntensity, _targetSnowIntensity, precipitationBlend);
         _presentedWindStrength = Mathf.MoveTowards(previousWind, Mathf.Clamp01(weather.WindStrength), step);
+        bool windDirectionChanged = MaintainWindDirection(new Vector2(weather.WindX, weather.WindY), step);
         _presentedCloudCoverage = Mathf.MoveTowards(_presentedCloudCoverage, Mathf.Clamp01(weather.CloudCoverage), step);
 
         bool rainTailActive = _presentedRainIntensity <= 0.001f &&
@@ -410,7 +411,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (_presentedRainIntensity != previousRain || _presentedSnowIntensity != previousSnow ||
             rainTailActive || snowTailActive)
             RefreshRainEffect();
-        if (_presentedWindStrength != previousWind)
+        if (_presentedWindStrength != previousWind || windDirectionChanged)
             RefreshWindFeedback();
     }
 

@@ -17,6 +17,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
         _GrassBendStart("起摆高度", Float) = 0
         _GrassTileAnchor("Tile 锚点", Float) = 0.5
         _GrassUseObjectRoot("使用对象根部弯曲", Float) = 0
+        _GrassFollowWind("强风跟随天气风向", Float) = 0
         _GrassDirection("风向", Vector) = (1, 0, 0, 0)
     }
 
@@ -91,6 +92,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 float _GrassBendStart;
                 float _GrassTileAnchor;
                 float _GrassUseObjectRoot;
+                float _GrassFollowWind;
                 float4 _GrassDirection;
             CBUFFER_END
             #define FLATWORLD_VEGETATION_SWAY_MATERIAL_DECLARED
@@ -234,6 +236,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 float _GrassBendStart;
                 float _GrassTileAnchor;
                 float _GrassUseObjectRoot;
+                float _GrassFollowWind;
                 float4 _GrassDirection;
             CBUFFER_END
             #define FLATWORLD_VEGETATION_SWAY_MATERIAL_DECLARED

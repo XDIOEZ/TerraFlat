@@ -31,7 +31,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 代理同步源贴图、分离 Alpha、UV 边界、裁剪与 MPB；Universal2D/NormalsRendering/回退 Pass 共用坐标和阈值。URP 2D Lit Shader 实际采样 Shape Light，标签本身不提供光照。SpriteRenderer 与 MeshRenderer 分节点，共同根负责生命周期。
 - 动态世界图标复用 RuntimeItemDefinition.Material/外壳回退。全局 Shader 参数置于全局声明，与材质 Properties 分离，避免材质默认值遮蔽。
 - InteractionOutlineCommon 以屏幕 UV 导数和渲染缩放补偿画内侧白边，宽度来自 InteractionOutlineSettings；代理保持源尺寸。PlayerOcclusionShaderGlobals 提供本地主角坐标，逐 Renderer `_PlayerOccluder` 控制树冠穿透窗；共享壳/回池明确写入 1 或 0。
-- WeatherMgr 的 `_GlobalWindStrength` 驱动 VegetationSway.hlsl；独立 Sprite 按根部 Pivot/PPU 弯曲，Tilemap 按格锚点，材质 FLATWORLD_VEGETATION_SWAY 控制接入，所有活跃 Pass 位移一致。
+- WeatherMgr 平滑发布 `_GlobalWindStrength/_GlobalWindDirection`（XY 吹去方向）；VegetationSway.hlsl 的 ResolveVegetationSwayOffset 由 Sprite/BRG/区块行网格共用。树材质 `_GrassFollowWind=1`：≤0.5 保留原左右摆，0.5～0.6 连续转为顺风偏折，≥0.6 阵风回摆不越回上风侧；最大位移仍不超过 `摆幅×3×(1+abs(次级摆动))`，复用原 CPU 外扩。独立 Sprite 按根部 Pivot/PPU、Tilemap 按格锚点弯曲，FLATWORLD_VEGETATION_SWAY 控制接入，所有活跃 Pass 位移一致；风向单独改变也必须刷新，退出清零。
 - LightningEffectController 消费权威雷击落点；Resources/Weather/Shaders/LightningBolt 程序化绘制分叉、白芯蓝紫外光、落点电弧并配合屏幕短闪。有限池共享 owned Mesh/Material，各事件用 MPB，落点每帧投影环绕镜像；换世界/禁天气立即释放，表现不扣血。
 - WorldPostProcessQuality 从渲染 JSON 建世界 Volume，绑定 GameManager 进出世界事件并释放自建 Profile/组件；画质只改泛光采样。ScreenPostProcessManager 在优先级 100 合成状态，质量接口声明最低档位；可选质量档均持有效 URP 资产。
 - 打包时 `UberPostShaderVariantStripper` 仅剔除当前未启用的畸变、色差、胶片颗粒和 Bloom 脏镜头组合；新增这些效果时先更新剔除表，再检查构建中的变体数量和实际画面。动态创建 Volume，不能直接启用 URP 的「剔除未使用后处理变体」。
