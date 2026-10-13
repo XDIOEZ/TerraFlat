@@ -30,6 +30,32 @@ public static class WorldItemWaterRules
 
     #endregion
 
+    #region 水流显示插值
+
+    internal struct DriftInterpolation
+    {
+        private Vector2 startOffset;
+        private double startTime;
+        private float duration;
+
+        public Vector2 GetOffset(double now)
+        {
+            if (duration <= 0f) return Vector2.zero;
+            float progress = Mathf.Clamp01((float)((now - startTime) / duration));
+            return Vector2.LerpUnclamped(startOffset, Vector2.zero, progress);
+        }
+
+        public void RecordMovement(Vector2 movement, float seconds, double now)
+        {
+            // 逻辑位置先结算，贴图从当前显示位置匀速追到新位置，连续更新也不跳帧。
+            startOffset = GetOffset(now) - movement;
+            startTime = now;
+            duration = Mathf.Max(0.0001f, seconds);
+        }
+    }
+
+    #endregion
+
     #region 无实例浮沉计算
 
     /// <summary>不含物品重量的基础流速供水面表现复用；湖泊静止。</summary>

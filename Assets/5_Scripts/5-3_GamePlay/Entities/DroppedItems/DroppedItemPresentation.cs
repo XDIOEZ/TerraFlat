@@ -75,6 +75,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         public DroppedItemVisual Visual;
         public LightweightDroppedBody LastBody;
         public Vector2 LastNearestPosition;
+        public WorldItemWaterRules.DriftInterpolation WaterDrift;
         public ParticleSystem CombustionParticles;
         public bool LastBurning;
         public bool HasState;
@@ -124,6 +125,16 @@ internal sealed class DroppedItemPresentation : IDisposable
         // 表现由统一 Present 刷新；这里不产生逐物品回调或组件更新。
     }
 
+    #region 水流显示插值
+
+    public void RecordWaterDrift(int id, Vector2 movement, float seconds)
+    {
+        if (active.TryGetValue(id, out PooledView view))
+            view.WaterDrift.RecordMovement(movement, seconds, Time.timeAsDouble);
+    }
+
+    #endregion
+
     public void Remove(int id)
     {
         if (!active.TryGetValue(id, out PooledView view)) return;
@@ -158,13 +169,22 @@ internal sealed class DroppedItemPresentation : IDisposable
             if (!simulation.Contains(id) || !visuals.TryGetValue(id, out DroppedItemVisual visual))
                 continue;
             LightweightDroppedBody body = simulation.Get(id);
-            float2 nearest = domain.NearestImagePosition(cameraCenter, body.Position);
+            active.TryGetValue(id, out PooledView view);
+            float2 displayPosition = body.Position;
+            if (view != null)
+            {
+                if (body.WaterKind == 0 || simulation.TryGetFlight(id, out _))
+                    view.WaterDrift = default;
+                Vector2 offset = view.WaterDrift.GetOffset(Time.timeAsDouble);
+                displayPosition += new float2(offset.x, offset.y);
+            }
+            float2 nearest = domain.NearestImagePosition(cameraCenter, displayPosition);
             if (Mathf.Abs(nearest.x - cameraCenter.x) > xRadius ||
                 Mathf.Abs(nearest.y - cameraCenter.y) > yRadius)
                 continue;
 
             visible.Add(id);
-            if (!active.TryGetValue(id, out PooledView view))
+            if (view == null)
             {
                 view = Acquire();
                 active.Add(id, view);
@@ -330,6 +350,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         if (view?.Root == null) return;
         view.Visual = null;
         view.HasState = false;
+        view.WaterDrift = default;
         view.LastBurning = false;
         if (view.CombustionParticles != null)
             view.CombustionParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);

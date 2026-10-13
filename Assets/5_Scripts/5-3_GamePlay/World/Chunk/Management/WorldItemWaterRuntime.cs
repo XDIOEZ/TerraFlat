@@ -24,6 +24,9 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private float submergedElapsed;
     private Transform submergedVisual;
     private Vector3 originalVisualScale;
+    private Transform driftVisual;
+    private Vector3 originalDriftVisualPosition;
+    private DriftInterpolation driftInterpolation;
 
     public bool IsActive => waterItem != null && (isSinking || isFloating);
     public bool IsSubmerged => IsActive && waterImmersionEffect != null && waterImmersionEffect.CurrentDepth >= 0.995f;
@@ -53,7 +56,12 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (!IsActive)
             return;
 
-        float deltaTime = Mathf.Max(0f, Time.deltaTime);
+        UpdateWaterState(Mathf.Max(0f, Time.deltaTime));
+        ApplyDriftVisualPosition();
+    }
+
+    private void UpdateWaterState(float deltaTime)
+    {
         if (isSinking)
         {
             UpdateSink(deltaTime);
@@ -198,8 +206,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 
         floatSettled = true;
         settledTickElapsed = 0f;
-        waterRenderEffects.enabled = false;
-        waterImmersionEffect.enabled = false;
+        // 漂流时水线仍需跟随插值后的贴图位置，只有水流和地形查询保持低频。
         waterItem.itemData.Stack.CanBePickedUp = true;
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(waterItem);
     }
@@ -227,9 +234,12 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (!WorldItemWaterSystem.TryResolveWaterAt(targetPosition, out bool targetIsWater) || !targetIsWater)
             return;
 
+        driftInterpolation.RecordMovement(
+            WorldTopologyRuntime.ShortestDelta(currentPosition, targetPosition), deltaTime, Time.timeAsDouble);
+        Vector2 displayPosition = WorldTopologyRuntime.NearestImagePosition(currentPosition, targetPosition);
         Vector3 worldPosition = waterItem.transform.position;
-        worldPosition.x = targetPosition.x;
-        worldPosition.y = targetPosition.y;
+        worldPosition.x = displayPosition.x;
+        worldPosition.y = displayPosition.y;
         waterItem.transform.position = worldPosition;
         ItemWorldPlacement.TryAttachWorldModelTransientItem(waterItem, targetPosition);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(waterItem);
@@ -262,10 +272,31 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             ? targetItem.Sprite
             : FindReferenceRenderer(targetItem);
         waterImmersionEffect.SetReferenceRenderer(referenceRenderer);
+        if (referenceRenderer != null && referenceRenderer.transform != targetItem.transform)
+        {
+            driftVisual = referenceRenderer.transform;
+            originalDriftVisualPosition = driftVisual.localPosition;
+        }
     }
+
+    #region 水流显示插值
+
+    private void ApplyDriftVisualPosition()
+    {
+        if (driftVisual == null || driftVisual.parent == null) return;
+        Vector2 offset = driftInterpolation.GetOffset(Time.timeAsDouble);
+        driftVisual.localPosition = originalDriftVisualPosition +
+            driftVisual.parent.InverseTransformVector(new Vector3(offset.x, offset.y, 0f));
+    }
+
+    #endregion
 
     private void ResetRuntimeState(bool resetVisual)
     {
+        if (driftVisual != null)
+            driftVisual.localPosition = originalDriftVisualPosition;
+        driftVisual = null;
+        driftInterpolation = default;
         // 回池、拾取和离水都恢复表现尺寸，禁止把缩小结果带入库存或下一次实例。
         if (submergedVisual != null)
             submergedVisual.localScale = originalVisualScale;

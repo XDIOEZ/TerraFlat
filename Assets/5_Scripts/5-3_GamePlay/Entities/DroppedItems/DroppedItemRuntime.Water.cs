@@ -100,8 +100,10 @@ internal sealed partial class DroppedItemRuntime
             if (body.WaterKind == 0 || chunks == null || !chunks.TryGetRuntimeWaterCurrent(body.Position, out RuntimeWaterCurrentSample current)) continue;
             float speed = ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
             if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f) continue;
-            Vector2 destination = domain.Normalize((Vector2)body.Position + current.Direction * (speed * Mathf.Min(step, 1f)));
+            float driftSeconds = Mathf.Min(step, 1f);
+            Vector2 destination = domain.Normalize((Vector2)body.Position + current.Direction * (speed * driftSeconds));
             if (!WorldItemWaterSystem.TryResolveWaterAt(destination, out bool isWater) || !isWater) continue;
+            presentation.RecordWaterDrift(id, domain.ShortestDelta(body.Position, destination), driftSeconds);
             body.Position = destination; simulation.Set(body); UpdatePlacement(id); CheckEnvironment(id);
         }
     }

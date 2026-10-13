@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="660" viewBox="0 0 1120 660" role="img" aria-labelledby="title desc">
+  <title id="title">水流物品：逻辑低频更新，显示逐帧插值</title>
+  <desc id="desc">上方橙色木棍每半秒跳动一次，下方绿色木棍在确认的两个位置间匀速移动。逻辑位置、拾取与存档仍使用原坐标，显示最多落后一个水流更新间隔。动画为解释用示意，实际效果由用户验收。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7c9db5"/></marker>
+    <pattern id="water" width="76" height="32" patternUnits="userSpaceOnUse">
+      <path d="M8 17h28m10 0h15" stroke="#426d90" stroke-width="2" opacity=".6"/>
+    </pattern>
+    <g id="stick"><rect x="-16" y="-5" width="32" height="10" rx="3" fill="#bb7338" stroke="#573821" stroke-width="2"/><path d="M-9 -2H8M-7 2H12" stroke="#efba76" stroke-width="2"/></g>
+  </defs>
+  <style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif} .small{font-size:18px;fill:#afc5d6} .body{font-size:21px;fill:#dce9f2} .tick{stroke:#6688a4;stroke-width:2;stroke-dasharray:4 6}</style>
+  <rect width="1120" height="660" rx="24" fill="#111e2d"/>
+  <text x="44" y="59" font-size="31" font-weight="700" fill="#f0f6fc">水流里的物品，让贴图把中间的路走完</text>
+  <text x="44" y="97" class="body">水流计算仍然每 0.5 秒更新一次，只给显示补上中间帧。</text>
+
+  <rect x="44" y="129" width="1032" height="165" rx="16" fill="#20374b"/>
+  <text x="66" y="166" font-size="23" fill="#ffc68f" font-weight="700">原来：位置一更新，贴图就跳过去</text>
+  <rect x="226" y="184" width="774" height="74" rx="12" fill="url(#water)"/>
+  <path d="M244 221H980" stroke="#5b7c96" stroke-width="2" marker-end="url(#arrow)"/>
+  <g transform="translate(266 221)"><use href="#stick"/><circle r="24" fill="none" stroke="#ffbc79" stroke-width="2"/>
+    <animateTransform attributeName="transform" type="translate" values="266 221;386 221;506 221;626 221;746 221;866 221" keyTimes="0;.1666667;.3333333;.5;.6666667;.8333333" dur="3s" calcMode="discrete" repeatCount="indefinite"/>
+  </g>
+  <text x="66" y="218" class="small">停 → 跳 → 停</text>
+
+  <rect x="44" y="314" width="1032" height="191" rx="16" fill="#20374b"/>
+  <text x="66" y="351" font-size="23" fill="#8ce7bf" font-weight="700">修改后：逻辑先确定新位置，贴图匀速跟过去</text>
+  <rect x="226" y="369" width="774" height="74" rx="12" fill="url(#water)"/>
+  <path d="M244 406H980" stroke="#5b7c96" stroke-width="2" marker-end="url(#arrow)"/>
+  <g opacity=".45">
+    <path d="M266 378v56M386 378v56M506 378v56M626 378v56M746 378v56M866 378v56" class="tick"/>
+  </g>
+  <g transform="translate(266 406)"><circle r="24" fill="none" stroke="#8ce7bf" stroke-width="2"/><use href="#stick"/>
+    <animateTransform attributeName="transform" type="translate" values="266 406;386 406;506 406;626 406;746 406;866 406;866 406" keyTimes="0;.1666667;.3333333;.5;.6666667;.8333333;1" dur="3s" calcMode="linear" repeatCount="indefinite"/>
+  </g>
+  <text x="66" y="405" class="small">连续地走完</text>
+  <g class="small" text-anchor="middle"><text x="266" y="478">0s</text><text x="386" y="478">0.5s</text><text x="506" y="478">1.0s</text><text x="626" y="478">1.5s</text><text x="746" y="478">2.0s</text><text x="866" y="478">2.5s</text></g>
+
+  <text x="44" y="552" class="body">只补已确认的水流位移，靠岸后走完最后一段；不预测下一段。</text>
+  <text x="44" y="587" class="body">显示最多落后约半秒；拾取、存档仍用逻辑位置，离水和回池恢复贴图。</text>
+  <text x="44" y="625" class="small">示意动画每 3 秒重播，距离为示意比例；实际流速、浮沉规则保持原值。</text>
+</svg>
