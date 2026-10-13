@@ -57,8 +57,9 @@ float VegetationSwayWave(float2 worldPosition, float2 direction)
     return primary + secondary * _GrassSecondaryStrength;
 }
 
-// 五级以内沿用原摆动，五到六级连续转为顺风偏折，阵风回摆仍留在下风侧。
-float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float2 basisX, float2 basisY)
+// 强风把顺风倾斜和树身左右回摆分开，同一棵树按根部相位一起摇，始终留在下风侧。
+float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float2 basisX, float2 basisY,
+    float2 swayRootWS)
 {
     float windStrength = saturate(_GlobalWindStrength);
     if (_GrassSwayEnabled < 0.5 || _GrassSwayAmplitude <= 0.0001 || windStrength <= 0.0001)
@@ -73,10 +74,12 @@ float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float
         return legacyOffset;
 
     float2 windDirection = _GlobalWindDirection.xy / windLength;
-    float wave = VegetationSwayWave(worldPosition, windDirection);
-    float biasedWave = 0.75 * (1.0 + abs(_GrassSecondaryStrength)) + 0.25 * wave;
+    float wave = VegetationSwayWave(swayRootWS, windDirection);
+    float2 leanOffset = windDirection * (0.65 * (1.0 + abs(_GrassSecondaryStrength)));
+    float2 rockingDirection = basisX / max(length(basisX), 0.001);
+    float2 rockingOffset = rockingDirection * (0.35 * wave);
     float objectScale = max(length(basisX), length(basisY));
-    float2 directionalOffset = windDirection * biasedWave * amplitude * objectScale;
+    float2 directionalOffset = (leanOffset + rockingOffset) * amplitude * objectScale;
     return lerp(legacyOffset, directionalOffset, smoothstep(0.5, 0.6, windStrength));
 }
 
@@ -89,7 +92,9 @@ float3 ApplyGrassSway(float3 positionOS)
     float3 positionWS = TransformObjectToWorld(positionOS);
     float2 basisX = TransformObjectToWorldDir(float3(1, 0, 0), false).xy;
     float2 basisY = TransformObjectToWorldDir(float3(0, 1, 0), false).xy;
-    float2 offsetWS = ResolveVegetationSwayOffset(positionWS.xy, GrassBendWeight(positionOS), basisX, basisY);
+    float2 swayRootWS = TransformObjectToWorld(float3(0, 0, 0)).xy;
+    float2 offsetWS = ResolveVegetationSwayOffset(positionWS.xy, GrassBendWeight(positionOS), basisX, basisY,
+        swayRootWS);
     positionOS += TransformWorldToObjectDir(float3(offsetWS, 0), false);
     return positionOS;
 }
@@ -101,7 +106,8 @@ float3 ApplyChunkGrassSway(float3 positionOS, float3 positionWS)
         (positionOS.y + _GrassSpriteHeight * 0.5 - _GrassBendStart)
         / max(_GrassSpriteHeight - _GrassBendStart, 0.001));
     float bend = pow(normalizedHeight, max(_GrassBendPower, 0.01));
-    positionWS.xy += ResolveVegetationSwayOffset(positionWS.xy, bend, float2(1, 0), float2(0, 1));
+    float2 swayRootWS = TransformObjectToWorld(float3(0, 0, 0)).xy;
+    positionWS.xy += ResolveVegetationSwayOffset(positionWS.xy, bend, float2(1, 0), float2(0, 1), swayRootWS);
     return positionWS;
 }
 

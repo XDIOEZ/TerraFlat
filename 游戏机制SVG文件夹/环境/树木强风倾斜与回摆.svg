@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="560" viewBox="0 0 1040 560" role="img" aria-labelledby="title desc">
+  <title id="title">树木：顺风倾斜，同时小幅左右回摆</title>
+  <desc id="desc">弱风时树身轻微左右摆动。强风从西向东吹时，树身整体向右倾斜，仍在倾斜位置附近左右回摆；树根固定。图示说明运动规则，不代表游戏实际像素幅度。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto-start-reverse"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#287e95" stroke-width="1.5"/></marker>
+    <g id="tree">
+      <path d="M-8 0 L-7 -86 L7 -86 L8 0 Z" fill="#886141"/>
+      <path d="M0 -203 L-25 -159 L-12 -159 L-45 -111 L-27 -113 L-63 -65 L-30 -61 L-34 -45 L34 -45 L30 -61 L63 -65 L27 -113 L45 -111 L12 -159 L25 -159 Z" fill="#3f885a"/>
+      <path d="M0 0 L0 -203" fill="none" stroke="#1d5733" stroke-width="1.5" stroke-dasharray="6 5"/>
+    </g>
+    <style>
+      text { font-family:"Microsoft YaHei","Noto Sans SC",sans-serif; fill:#23352c; }
+      .heading { font-size:25px; font-weight:600; }
+      .label { font-size:21px; }
+      .note { font-size:18px; fill:#54675c; }
+      .ground { stroke:#bdcabb; stroke-width:2; }
+      .guide { stroke:#aab9ad; stroke-width:1.5; stroke-dasharray:5 5; }
+    </style>
+  </defs>
+  <rect width="1040" height="560" rx="16" fill="#f7f9f3"/>
+  <text x="40" y="48" class="heading">树木：顺风倾斜，同时小幅左右回摆</text>
+  <text x="40" y="80" class="note">图示说明运动规则，摆幅为示意；实际游戏效果由玩家验收。</text>
+  <text x="60" y="124" class="label">5 级及以下 · 轻微左右摆</text>
+  <text x="560" y="124" class="label">超过 5 级 · 倾斜位置附近回摆</text>
+  <path d="M80 425 H445 M560 425 H955" class="ground"/>
+  <path d="M263 423 V198 M726 423 V198" class="guide"/>
+  <g transform="translate(263 423)">
+    <g transform="skewX(0)">
+      <use href="#tree"/>
+      <animateTransform attributeName="transform" type="skewX" values="-1.8;1.8;-1.8" dur="4.5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/>
+    </g>
+    <circle r="4" fill="#23352c"/>
+  </g>
+  <path d="M228 188 H297" stroke="#287e95" stroke-width="2" fill="none" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <path d="M588 167 H908" stroke="#287e95" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <text x="650" y="155" class="note">风从西来，往东吹 →</text>
+  <g transform="translate(726 423)">
+    <path d="M0 0 L26 -203 M0 0 L57 -203" class="guide" fill="none"/>
+    <use href="#tree" transform="skewX(-11.5)" opacity="0.18"/>
+    <g transform="skewX(-11.5)">
+      <use href="#tree"/>
+      <animateTransform attributeName="transform" type="skewX" values="-7.5;-15.5;-7.5" dur="4.5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.42 0 0.58 1;0.42 0 0.58 1"/>
+    </g>
+    <circle r="4" fill="#23352c"/>
+  </g>
+  <path d="M750 199 H785" stroke="#287e95" stroke-width="2" fill="none" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="801" y="206" class="note">小范围左右摇</text>
+  <text x="200" y="458" class="note">树根保持固定</text>
+  <text x="663" y="458" class="note">最左侧也保持顺风倾斜</text>
+  <text x="40" y="512" class="label">顺风倾斜 + 正负回摆 = 倾斜着摇，而不是一直定在一个角度</text>
+  <text x="40" y="543" class="note">同一棵树使用同一个摆动节奏；越靠近树冠，摆幅越明显。</text>
+</svg>

@@ -125,8 +125,9 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             {
                 float2 basisX = TransformObjectToWorldDir(float3(input.basis.xy, 0), false).xy;
                 float2 basisY = TransformObjectToWorldDir(float3(input.basis.zw, 0), false).xy;
+                float2 swayRootWS = TransformObjectToWorld(input.origin.xyz).xy;
                 positionWS.xy += ResolveVegetationSwayOffset(positionWS.xy,
-                    GrassBendWeight(float3(input.localClip.xy, 0)), basisX, basisY);
+                    GrassBendWeight(float3(input.localClip.xy, 0)), basisX, basisY, swayRootWS);
             }
             output.positionCS = TransformWorldToHClip(positionWS);
             output.worldRoot = float3(positionWS.xy, TransformObjectToWorld(float3(0,0,0)).y);
