@@ -138,6 +138,11 @@ public sealed class GameplayTestLuaRunner : IDisposable
             enqueue({name='select_hotbar', index=index})
         end
         function test.use() enqueue({name='use'}) end
+        function test.fluid(scenario, label)
+            scenario = text(scenario, 'fluid scenario')
+            enqueue({name='fluid', text=scenario,
+                label=label == nil and scenario or text(label, 'label')})
+        end
         function test.gm(command, argument)
             command = text(command, 'GM command')
             if argument ~= nil then argument = text(argument, 'GM argument') end
@@ -212,6 +217,8 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 if (command.Name == "gm" &&
                     !GameplayTestGm.TryValidate(command.Text, command.Argument, out string gmError))
                     throw new InvalidOperationException(gmError);
+                if (command.Name == "fluid" && !GameplayTestFluids.IsScenario(command.Text))
+                    throw new InvalidOperationException("未知流体测试案例：" + command.Text);
                 commands.Add(command);
             }
             if (commands.Count == 0) throw new InvalidOperationException("测试 Lua 没有安排任何步骤。");
@@ -308,6 +315,9 @@ public sealed class GameplayTestLuaRunner : IDisposable
             case "check":
                 command.Success = check(command.Text);
                 command.Message = command.Success ? $"检查通过：{command.Text}" : $"检查失败：{command.Text}";
+                break;
+            case "fluid":
+                command.Success = GameplayTestFluids.Run(command.Text, record, out command.Message);
                 break;
             case "gm":
                 // 用例失败或中断时仍可还原 GM 制造的临时条件。

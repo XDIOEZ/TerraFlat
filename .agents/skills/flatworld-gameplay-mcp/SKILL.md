@@ -52,6 +52,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 - AI 快速回归优先 `python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json`：一个 HomePC2 命令等待整轮完成，不用反复调用玩法 MCP；也可使用 `gameplay_test_pipeline(run/status/report)`。复用当前未进入 PlayMode 的 Editor，Test Framework 顺序跑完 `FlatWorld.Gameplay.EditModeTests`，全部通过后**仅启动一次** `FlatWorld.Gameplay.PlayModeTests`。PlayMode 内复用 `GameplayTestScene` 按 JSON + Lua 跑整份清单，quick-suite 跳过全陈列。总报告在 `Library/FlatWorldGameplayTests/Pipeline/`，详细错误见关联报告。失败后由 Agent 查看堆栈、修复、重新运行；不得盲目重试或禁用用例。
 - Unity 顶部 `FlatWorld/测试/测试中心（多选案例）` 是 EditorWindow：从 JSON 套件中勾选多个 Lua 用例，一次执行、共用世界；案例选择只保存在 Library，原清单不变。CLI 可用 `--cases <ID> <ID>`；EditMode 始终全量执行安全前置检查。界面显示运行阶段、错误和报告入口。
 - Lua 测试可用 `test.gm(command, argument)` 通过生产模块准备管理员、无敌、半血、速度、Buff、创造背包条件，配套 `test.check` 核验真实状态；命令白名单与清单见 `Assets/StreamingAssets/GameplayTests/README.md`。
+- 工业管道气液使用 `GameplayTests/fluid-suite.json` 与白名单 `test.fluid(id, label)`，覆盖矩阵见 `Assets/StreamingAssets/GameplayTests/Fluids/README.md`；各项真实断言进入原用例报告，缺少案例/前提不能记为成功。
 
 - `capability_gap` 表示正常玩法缺少协议表达。动作实现 `IGameplayMcpAction` 并加 `GameplayMcpActionAttribute`，TypeCache 注册表生成能力清单；扩展复用生产接口/UI 事件，不引入任意代码执行或私有状态写入。
 - `gameplay_aiecs_debug(status/sample)` 只读 GM 模拟；`gameplay_chunk_render_debug(status/sample)` 只读区块阶段/心跳/耗时。采样 1～20 秒；区块采样在暂停、换世界、编译时标记无效，报告位于 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/`，菜单 `FlatWorld/调试/区块加载`。
