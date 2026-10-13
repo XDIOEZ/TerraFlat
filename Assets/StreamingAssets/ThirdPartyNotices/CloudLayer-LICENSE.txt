@@ -1,0 +1,65 @@
+FlatWorld realistic 2D cloud-layer algorithm references
+
+jbritain/glimmer-shaders
+Source: https://github.com/jbritain/glimmer-shaders
+Revision: 6a591097b6348155a4ba5a1aab92b79a2c9896d3
+Studied: shaders/lib/atmosphere/clouds.glsl
+Reference: continuous noise cloud density, coordinate warping, plane-layer
+optical thickness, exponential transmittance, and light-direction density.
+FlatWorld independently adapts these ideas to a URP 2D world overlay:
+offline periodic Perlin/Worley fields, four runtime data-texture samples,
+two light-direction samples, and its own wind integration and player mask.
+The data image is generated locally by Tools/Rendering/generate_cloud_density.py.
+
+MIT License
+
+Copyright (c) 2024 Josh Britain (jbritain)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+tuxalin/procedural-tileable-shaders
+Source: https://github.com/tuxalin/procedural-tileable-shaders
+Revision: 3b867954908418427683f705671b236db0454235
+Studied: fbm.glsl, warp.glsl
+Reference: periodic multi-octave noise and domain warping.
+FlatWorld's generator uses NumPy gradient noise and periodic feature points.
+No upstream image assets are used.
+
+MIT License
+
+Copyright (c) 2019 Alin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -1,5 +1,9 @@
 Shader "Hidden/FlatWorld/ZoomClouds"
 {
+    Properties
+    {
+        [HideInInspector] _CloudDensityTex("Cloud Density Data", 2D) = "black" {}
+    }
     SubShader
     {
         Tags { "RenderPipeline" = "UniversalPipeline" "Queue" = "Overlay" }
@@ -17,6 +21,9 @@ Shader "Hidden/FlatWorld/ZoomClouds"
             #pragma vertex Vert
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            TEXTURE2D(_CloudDensityTex);
+            SAMPLER(sampler_CloudDensityTex);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _CloudViewportOrigin;
@@ -54,60 +61,54 @@ Shader "Hidden/FlatWorld/ZoomClouds"
                 return output;
             }
 
-            float CloudHash(float2 noisePosition)
+            float CloudDensity(float4 cloudData, float detail)
             {
-                float3 value = frac(float3(noisePosition.xyx) * 0.1031);
-                value += dot(value, value.yzx + 33.33);
-                return frac((value.x + value.y) * value.z);
-            }
-
-            float CloudNoise(float2 noisePosition)
-            {
-                float2 cell = floor(noisePosition);
-                float2 local = frac(noisePosition);
-                local = local * local * (3.0 - 2.0 * local);
-                return lerp(lerp(CloudHash(cell), CloudHash(cell + float2(1.0, 0.0)), local.x),
-                    lerp(CloudHash(cell + float2(0.0, 1.0)), CloudHash(cell + 1.0), local.x), local.y);
+                // 噪声场决定整片云的厚度，细节侵蚀薄边，空域始终保持零密度。
+                float body = saturate((cloudData.r - 0.49) * 4.2);
+                float erosion = max(0.0, detail - 0.38) * 0.17 * (1.0 - body);
+                return max(0.0, body - erosion);
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float radial = smoothstep(_CloudRadiiStrength.x, _CloudRadiiStrength.y, length(input.playerOffset));
+                float2 worldPosition = input.playerOffset + _CloudWorldCenter.xy;
+                float2 densityUV = (worldPosition - _CloudDriftOffset.xy) * _CloudShape.x * float2(0.07, 0.085);
+                float2 detailUV = (worldPosition - _CloudDriftOffset.xy * 0.73) *
+                    _CloudShape.x * float2(0.157, 0.183) + float2(0.173, 0.619);
+                float2 gradientX = ddx(densityUV), gradientY = ddy(densityUV);
+                float2 detailGradientX = ddx(detailUV), detailGradientY = ddy(detailUV);
                 if (radial <= 0.0)
                     return half4(0.0, 0.0, 0.0, 0.0);
 
-                float2 worldPosition = input.playerOffset + _CloudWorldCenter.xy;
-                float2 coarsePosition = (worldPosition - _CloudDriftOffset.xy) * _CloudShape.x * float2(0.42, 1.25);
-                // 错行的扁长云团始终缩在各自区域内，云与云之间保留真正透明的空隙。
-                coarsePosition.x += frac(floor(coarsePosition.y) * 0.5);
-                float2 cell = floor(coarsePosition);
-                float seed = CloudHash(cell + float2(2.3, 13.7));
-                if (seed < 0.2)
+                float4 cloudData = SAMPLE_TEXTURE2D_GRAD(_CloudDensityTex, sampler_CloudDensityTex,
+                    densityUV, gradientX, gradientY);
+                float detail = SAMPLE_TEXTURE2D_GRAD(_CloudDensityTex, sampler_CloudDensityTex,
+                    detailUV, detailGradientX, detailGradientY).b;
+                float density = CloudDensity(cloudData, detail);
+                if (density <= 0.0)
                     return half4(0.0, 0.0, 0.0, 0.0);
 
-                float2 center = float2(
-                    0.5 + (CloudHash(cell + float2(1.7, 7.3)) - 0.5) * 0.1,
-                    0.5 + (CloudHash(cell + float2(5.2, 2.8)) - 0.5) * 0.3);
-                float2 cloudSize = float2(
-                    0.32 + CloudHash(cell + float2(8.1, 4.7)) * 0.09,
-                    0.17 + seed * 0.07);
-                float2 cloudLocal = (frac(coarsePosition) - center) / cloudSize;
-                float shapeDistance = dot(cloudLocal, cloudLocal);
-                if (shapeDistance >= 1.0)
-                    return half4(0.0, 0.0, 0.0, 0.0);
-
-                float2 detailPosition = (worldPosition - _CloudDriftOffset.xy * 0.63) *
-                    _CloudShape.x * float2(2.17, 4.09) + float2(7.1, 19.4);
-                // 两层随风噪声只修饰云边和阴影，不会随着拉远把透明间隙填成白雾。
-                float coarse = CloudNoise(coarsePosition * float2(4.1, 2.7) + 11.7);
-                float detail = CloudNoise(detailPosition);
-                float edgeNoise = coarse * 0.75 + detail * 0.25;
-                float cloudShape = 1.0 - smoothstep(0.48 + edgeNoise * 0.14,
-                    0.72 + edgeNoise * 0.28, shapeDistance);
+                // 沿光线读取邻近厚度形成自遮挡，云顶亮、厚处灰，薄边自然透光。
+                float2 lightOffset = float2(-0.006, 0.009);
+                float4 nearCloud = SAMPLE_TEXTURE2D_GRAD(_CloudDensityTex, sampler_CloudDensityTex,
+                    densityUV + lightOffset, gradientX, gradientY);
+                float4 farCloud = SAMPLE_TEXTURE2D_GRAD(_CloudDensityTex, sampler_CloudDensityTex,
+                    densityUV + lightOffset * 2.7, gradientX, gradientY);
+                float nearDensity = CloudDensity(nearCloud, detail);
+                float farDensity = CloudDensity(farCloud, detail);
+                float opticalDepth = density * lerp(1.5, 3.5, cloudData.g);
+                float lightDepth = max(0.0, nearDensity - density * 0.55) * 2.2 +
+                    farDensity * 0.65 + density * 0.25;
+                float illumination = 0.28 + 0.72 * exp2(-lightDepth * _CloudShape.y * 4.5);
+                float relief = saturate(0.72 + (cloudData.g - nearCloud.g) * 1.4);
+                half3 shadowColor = _CloudColor.rgb * half3(0.55, 0.64, 0.75);
+                half3 cloudColor = lerp(shadowColor, _CloudColor.rgb, illumination) *
+                    (0.91 + relief * 0.09);
+                cloudColor += pow(1.0 - density, 2.0) * smoothstep(0.0, 0.12, density) * 0.06;
                 float strength = saturate(_CloudRadiiStrength.z);
-                float alpha = strength * radial * cloudShape;
-                half3 cloudColor = _CloudColor.rgb * (1.0 - (1.0 - coarse * 0.6 - detail * 0.4) * _CloudShape.y);
+                float alpha = strength * radial * _CloudColor.a * (1.0 - exp2(-opticalDepth * 2.0));
                 return half4(cloudColor, saturate(alpha));
             }
             ENDHLSL

@@ -71,8 +71,8 @@
     "minimumDriftSpeed": 0.08,
     "maximumDriftSpeed": 6.0,
     "windResponseExponent": 1.5,
-    "color": { "r": 0.92, "g": 0.95, "b": 0.98, "a": 1.0 },
-    "shadowStrength": 0.22
+    "color": { "r": 0.98, "g": 0.99, "b": 1.0, "a": 1.0 },
+    "shadowStrength": 0.55
   },
   "universeView": {
     "startOrthographicSize": 60.0,

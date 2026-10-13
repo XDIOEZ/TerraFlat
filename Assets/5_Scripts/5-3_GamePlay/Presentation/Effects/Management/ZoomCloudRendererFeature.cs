@@ -2,12 +2,13 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-/// <summary>高视野云雾只合成本机最终世界画面，缩放控制遮挡，当地风控制云层漂移。</summary>
+/// <summary>高视野写实云层只合成本机最终世界画面，缩放控制强度，当地风控制漂移。</summary>
 public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 {
     #region 本地云层状态
 
     [SerializeField] private Shader cloudShader;
+    private static readonly int DensityTextureId = Shader.PropertyToID("_CloudDensityTex");
     private Material material;
     private CloudPass pass;
     private Player localPlayer;
@@ -47,7 +48,15 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             Debug.LogError("[ZoomCloud] 渲染器资源缺少高视野云雾 Shader。", this);
             return;
         }
+        // 分形云团离线生成，运行时只采样纹理，不按网格摆放椭圆云片。
+        Texture2D densityTexture = Resources.Load<Texture2D>("Shaders/CloudDensity_RGBA");
+        if (densityTexture == null)
+        {
+            Debug.LogError("[ZoomCloud] 缺少写实云层密度数据图 Shaders/CloudDensity_RGBA。", this);
+            return;
+        }
         material = CoreUtils.CreateEngineMaterial(cloudShader);
+        material.SetTexture(DensityTextureId, densityTexture);
         pass = new CloudPass();
     }
 
