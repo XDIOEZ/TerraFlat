@@ -273,7 +273,8 @@ public sealed class SettingsEditSessionController : MonoBehaviour
 
         unsavedConfirmationPanel = uiManager.CreatePanelFromGameObject(
             prefab,
-            UnsavedConfirmationPanelName);
+            UnsavedConfirmationPanelName,
+            parent: uiManager.GetPanelRootFor(basePanel.transform));
         if (unsavedConfirmationPanel == null)
             return false;
 

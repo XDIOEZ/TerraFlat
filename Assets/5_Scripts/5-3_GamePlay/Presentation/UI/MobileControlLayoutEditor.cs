@@ -63,11 +63,12 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         BasePanel panel = manager.CreatePanelFromGameObject(
             editorPrefab,
             RuntimeUIPrefabKeys.MobileControlLayoutEditor,
-            initializeClosed: true);
+            initializeClosed: true,
+            parent: manager.GetPanelRootFor(owner.transform));
         manager.ConfigureGlobalOverlayPanel(panel);
         // 布局位置是相对 SafeAreaRoot 保存的；编辑预览也必须使用同一坐标系，
         // 否则刘海/打孔屏上会出现“编辑时一处、回到游戏另一处”的偏差。
-        RectTransform safeAreaRoot = manager.SafeAreaRoot;
+        RectTransform safeAreaRoot = manager.GetPanelRootFor(owner.transform) as RectTransform;
         RectTransform panelRect = panel.transform as RectTransform;
         if (safeAreaRoot != null && panelRect != null)
         {

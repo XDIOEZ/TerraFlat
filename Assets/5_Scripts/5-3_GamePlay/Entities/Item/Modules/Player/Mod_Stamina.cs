@@ -69,7 +69,8 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         // 实例化体力 UI 预制体并获取 Slider 组件
         if (Prefab_UI != null)
         {
-            staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
+            // 玩家体力界面跨场景保留，由模块卸载时释放。
+            staminaPanel = UIManager.Instance.CreatePersistentPanelFromGameObject(Prefab_UI);
             if (staminaPanel != null)
             {
                 // 耐力条是常驻信息 HUD：不阻断玩法输入，并固定在其它面板下方。

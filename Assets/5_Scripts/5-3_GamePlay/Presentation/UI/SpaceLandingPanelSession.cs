@@ -39,6 +39,8 @@ public sealed class SpaceLandingPanelSession : IDisposable
         var passenger = session.GetPassenger(player);
         // 船上乘员通过真实驾驶调整落点，选址地图只服务独自下落的玩家。
         if (session.GetShip(passenger.ShipId) != null || !passenger.SurfaceDescending) { current?.Dispose(); return; }
+        // 临时场景面板销毁后释放旧缓存，下次刷新重新创建选址界面。
+        if (current != null && current.panel == null) current.Dispose();
         current ??= new SpaceLandingPanelSession();
         current.session = session; current.player = player;
         current.bodyId = passenger.LandingBodyId;

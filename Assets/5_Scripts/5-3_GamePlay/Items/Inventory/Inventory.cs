@@ -447,7 +447,12 @@ public class Inventory
         }
 
 
-        basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
+        // 玩家库存跨场景保留，其他实体的库存面板跟随当前场景销毁。
+        UIManager uiManager = UIManager.Instance;
+        BasePanel createdPanel = item is Player
+            ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
+            : uiManager.CreatePanelFromGameObject(panelPrefab);
+        basePanel = createdPanel.GetComponentInChildren<BasePanel>();
         ResolvePanelInputController();
         bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
         bool usesGameplayInputLock = UsesGameplayInputLock();

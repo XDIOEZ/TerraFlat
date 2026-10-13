@@ -188,7 +188,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             return false;
         }
 
-        BasePanel createdPanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab);
+        // 玩家生存状态界面跨场景保留，由本地玩家的食物模块释放。
+        BasePanel createdPanel = UIManager.Instance.CreatePersistentPanelFromGameObject(panelPrefab);
         if (createdPanel == null)
         {
             Debug.LogError("[FoodPanel] 创建食物参数面板失败。");

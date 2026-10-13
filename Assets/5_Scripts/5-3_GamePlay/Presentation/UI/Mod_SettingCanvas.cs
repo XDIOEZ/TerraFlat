@@ -117,7 +117,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         if (SettingCanvasPrefab == null)
             throw new System.InvalidOperationException("[Mod_SettingCanvas] SettingCanvasPrefab 为空，无法创建设置面板");
 
-        basePanel = UIManager.Instance.CreatePanelFromGameObject(
+        // 玩家设置界面跨场景保留，主菜单设置仍按场景生命周期创建。
+        basePanel = UIManager.Instance.CreatePersistentPanelFromGameObject(
             SettingCanvasPrefab,
             initializeClosed: true);
         BindButton(UIText.SaveButton, SaveGame);

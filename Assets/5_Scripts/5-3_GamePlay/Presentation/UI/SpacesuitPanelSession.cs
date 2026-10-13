@@ -23,7 +23,12 @@ public sealed class SpacesuitPanelSession : IDisposable
     {
         this.suit = suit; this.actor = actor;
         binding = SpacesuitSystem.GetBinding(suit, actor) ?? throw new InvalidOperationException("没有宇航服实例状态。");
-        panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab("UI_Spacesuit"));
+        // 玩家宇航服界面跨场景保留，其他实体的界面沿用场景生命周期。
+        UIManager uiManager = UIManager.Instance;
+        GameObject panelPrefab = GameRes.Instance.GetPrefab("UI_Spacesuit");
+        panel = actor is Player
+            ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
+            : uiManager.CreatePanelFromGameObject(panelPrefab);
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("宇航服面板缺少正式视图。");
         view.SetProcessingVisible(true);
         view.OutputSlot.gameObject.SetActive(true);
@@ -45,7 +50,8 @@ public sealed class SpacesuitPanelSession : IDisposable
     public static void Show(ItemData suit, Item actor)
     {
         if (suit == null || actor == null || FluidTankStorage.FindBinary(suit, Mod_Spacesuit.ModuleId) == null) return;
-        if (sessions.TryGetValue(suit.Guid, out var existing) && (!ReferenceEquals(existing.suit, suit) || existing.actor != actor))
+        if (sessions.TryGetValue(suit.Guid, out var existing) &&
+            (existing.panel == null || !ReferenceEquals(existing.suit, suit) || existing.actor != actor))
         { existing.Dispose(); existing = null; }
         if (!sessions.TryGetValue(suit.Guid, out SpacesuitPanelSession session))
             sessions[suit.Guid] = session = new(suit, actor);
@@ -179,9 +185,13 @@ public static class PortableFluidPanel
     public static void Show(Item tank, Item actor)
     {
         if (tank == null || actor == null) return;
-        if (!sessions.TryGetValue(tank.itemData.Guid, out var panel))
+        // 场景卸载后的旧气罐页面不再复用，释放会话后按当前场景重建。
+        if (!sessions.TryGetValue(tank.itemData.Guid, out var panel) || !panel.IsAlive)
+        {
+            panel?.Dispose();
             sessions[tank.itemData.Guid] = panel = new MechanicalPanelSession("UI_FluidTank", tank, null, null,
                 () => Status(tank.itemData, actor), () => "", refreshStatusPeriodically: true);
+        }
         panel.Toggle(actor);
     }
     public static void Close(Item tank)

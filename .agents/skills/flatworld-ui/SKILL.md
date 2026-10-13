@@ -24,11 +24,11 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 ## 生命周期、输入与排序
 
 - 同一 PanelRoot 以兄弟顺序置顶/置底，sortingOrder 仅管理独立 Canvas。模态持有玩法锁和顶层手柄焦点，关闭/失败释放；常驻 HUD 输入透明，可收展 HUD 仅开关按钮接收射线。
-- UIManager 创建或解析的根 Canvas 统一挂到持久管理器下，SafeAreaRoot 和玩家 HUD 不归属可卸载星区；普通跨区保留同一 UI 根，玩家重建时只按模块生命周期更换对应面板。
+- `UIManager.CreatePanelFromGameObject` 默认挂当前场景的 `SceneUI/SafeAreaRoot`，主菜单及其弹窗随场景卸载销毁；`CreatePersistentPanelFromGameObject` 显式挂常驻 `PanelRoot/SafeAreaRoot`，供玩家 HUD、库存、设置与死亡界面使用。共享库存按所属对象分流；附属弹窗/虚拟键盘用 `GetPanelRootFor` 继承拥有者归属，全屏覆盖层只提排序不改归属。跨星区保留玩家 UI，玩家重建仍按模块生命周期清理。
 - 主背包 `UI_Bag` 可并行，参与置顶/导航/取消链但不持玩法锁；库存/加工/容器背景输入透明，只有槽位、按钮与拖放/手势区命中，`UIWindowDragSurface` 命中标题/窄边框。快捷栏随 PanelRoot 排序；手机模态拖放由独立 Canvas 临时提升。
 - 手机菜单/返回位于独立常驻层，返回顺序为顶层可取消面板→抽屉→设置。主菜单 CancelShortcutOverride 打开退出确认；嵌套危险确认先消费取消。存档删除统一由 `SaveDataManager_UI` 确认层提交并锁定目标身份。
 - 文本通过 FlatWorldUI 表与 GetUiText/GetUiFormat，节点名不翻译；手柄焦点限定顶层面板，TMP 输入确认后进入虚拟键盘。鼠标按下焦点与列表业务选中状态分离，完整点击才提交选择。
-- 面板可能先于模块销毁，Unity `!= null` 判断存活；即使面板已销毁仍释放锁/快捷转移引用。资源重载清空运行时 UI 与注册缓存，保留 UIRoot/SafeAreaRoot，再由当前 GameRes/Player 重建。
+- 面板可能先于模块销毁，Unity `!= null` 判断存活；即使面板已销毁仍释放锁/快捷转移引用。场景卸载清理失效注册并刷新交互缓存；输入查询覆盖当前场景与常驻根。资源重载清空两类根下的运行时 UI 与注册缓存，保留 UIRoot/SafeAreaRoot，再由当前 GameRes/Player 重建。
 - `UI_WorldLoading` 为不透明黑幕与独立内容 CanvasGroup：进世界前覆盖并绘制一帧，区块表现就绪后内容→黑幕淡出→释放输入；同场景重生为单段淡出。
 - 角色世界状态条使用高于 Water 的 Sorting Layer；直接挂普通 Transform 的 RectTransform 偏移以 anchoredPosition 为准。
 

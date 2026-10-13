@@ -742,7 +742,8 @@ public partial class Mod_PlayerDeathState : Module
 
         if (_dyingPanel == null)
         {
-            _dyingPanel = UIManager.Instance.CreatePanelFromGameObject(dyingPanelPrefab, dyingPanelPrefabName);
+            // 玩家死亡界面跨场景保留，由玩家模块持有生命周期。
+            _dyingPanel = UIManager.Instance.CreatePersistentPanelFromGameObject(dyingPanelPrefab, dyingPanelPrefabName);
             UIManager.Instance.ConfigureGlobalOverlayPanel(_dyingPanel);
             _dyingPanel.CollectUIComponents();
             BindDyingPanelButtons();

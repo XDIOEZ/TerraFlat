@@ -47,13 +47,15 @@ namespace FlatWorld.Networking.Gameplay
 
         private IEnumerator EnsurePanelWhenUIReady()
         {
+            // 先登记协程，再创建会广播交互事件的场景 UI，避免同步回调重复启动。
+            yield return null;
             while (isActiveAndEnabled &&
                    SceneManager.GetActiveScene().name == NetworkGameBootstrap.StartSceneName)
             {
                 UIManager uiManager = UIManager.ExistingInstance;
                 if (uiManager == null)
                     uiManager = UIManager.Instance;
-                if (uiManager == null || uiManager.panelRoot == null ||
+                if (uiManager == null ||
                     GameRes.Instance == null || !GameRes.Instance.isLoadFinish)
                 {
                     yield return null;
@@ -62,10 +64,11 @@ namespace FlatWorld.Networking.Gameplay
 
                 SubscribeToUIManager(uiManager);
 
-                if (!IsPanelAttachedTo(uiManager.panelRoot))
+                Transform sceneRoot = uiManager.ScenePanelRoot;
+                if (!IsPanelAttachedTo(sceneRoot))
                 {
                     DestroyCurrentPanel();
-                    panel = CreateNetworkPanel(uiManager.panelRoot);
+                    panel = CreateNetworkPanel(sceneRoot);
                     if (panel == null)
                     {
                         Debug.LogError($"[联机UI] 无法从 GameRes 实例化 {NetworkPanelKey}，将在稍后重试。", this);
@@ -104,7 +107,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             UIManager uiManager = subscribedUIManager;
-            if (uiManager == null || !IsPanelAttachedTo(uiManager.panelRoot))
+            if (uiManager == null || !IsPanelAttachedTo(uiManager.ScenePanelRoot))
             {
                 RequestUIRefresh();
                 return;

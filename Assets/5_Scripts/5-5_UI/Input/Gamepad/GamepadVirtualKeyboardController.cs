@@ -43,7 +43,7 @@ public static class GamepadVirtualKeyboardController
         if (IsOpen)
             return ReferenceEquals(currentInputField, inputField);
 
-        Transform panelRoot = FindPanelRoot();
+        Transform panelRoot = FindPanelRoot(inputField);
         if (panelRoot == null)
             return false;
 
@@ -96,6 +96,12 @@ public static class GamepadVirtualKeyboardController
             typeof(Image),
             typeof(BasePanel));
         root.transform.SetParent(panelRoot, false);
+        // 键盘沿用输入框的归属，同时保持在设置面板上方。
+        Canvas keyboardCanvas = root.AddComponent<Canvas>();
+        keyboardCanvas.overrideSorting = true;
+        keyboardCanvas.sortingLayerID = panelRoot.GetComponentInParent<Canvas>().sortingLayerID;
+        keyboardCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
+        root.AddComponent<GraphicRaycaster>();
 
         RectTransform rectTransform = root.GetComponent<RectTransform>();
         rectTransform.anchorMin = new Vector2(0.5f, 0f);
@@ -248,13 +254,11 @@ public static class GamepadVirtualKeyboardController
         return label;
     }
 
-    private static Transform FindPanelRoot()
+    private static Transform FindPanelRoot(TMP_InputField inputField)
     {
         UIManager manager = UnityEngine.Object.FindObjectOfType<UIManager>();
-        if (manager != null && manager.panelRoot != null)
-            return manager.panelRoot;
-
-        return GameObject.Find("PanelRoot")?.transform;
+        // 虚拟键盘与输入框使用同一 UI 根，场景退出时一并清理。
+        return manager != null ? manager.GetPanelRootFor(inputField.transform) : null;
     }
 
     #endregion

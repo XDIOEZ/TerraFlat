@@ -4,10 +4,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// 管理 FlatWorld 的统一 PanelRoot、面板实例与手柄交互面版本。
+/// 管理 FlatWorld 的场景 UI、跨场景 PanelRoot、面板实例与手柄交互面版本。
 /// 根 Canvas 只在创建或失效时解析；交互面修订号供虚拟光标按需刷新命中结果。
 /// </summary>
 public class UIManager : MonoBehaviour
@@ -57,6 +58,7 @@ public class UIManager : MonoBehaviour
     [ShowInInspector]
     public Dictionary<string, List<BasePanel>> panels = new Dictionary<string, List<BasePanel>>();
 
+    [Tooltip("跨场景 UI 根；玩家界面显式创建在这里，普通面板默认归当前场景。")]
     public Transform panelRoot;
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
@@ -69,6 +71,8 @@ public class UIManager : MonoBehaviour
 
     private Canvas rootCanvas;
     private RectTransform safeAreaRoot;
+    private readonly Dictionary<int, RectTransform> scenePanelRoots = new Dictionary<int, RectTransform>();
+    private bool creatingSceneUi;
     private int nextSettingsPanelSortingOrder = SettingsPanelSortingOrder;
     private int interactionSurfaceRevision;
     private int lastHandledCancelFrame = -1;
@@ -111,6 +115,9 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>当前场景的默认 UI 根，随所属场景卸载而销毁。</summary>
+    public RectTransform ScenePanelRoot => GetScenePanelRoot(SceneManager.GetActiveScene());
+
     /// <summary>面板开关、排序或结构改变时递增，供虚拟光标判断是否需要重新射线。</summary>
     public int InteractionSurfaceRevision => interactionSurfaceRevision;
 
@@ -132,9 +139,10 @@ public class UIManager : MonoBehaviour
         if (canvas == null)
             canvas = panel.gameObject.AddComponent<Canvas>();
 
+        Canvas ownerCanvas = canvas.rootCanvas;
         canvas.overrideSorting = true;
-        if (RootCanvas != null)
-            canvas.sortingLayerID = RootCanvas.sortingLayerID;
+        if (ownerCanvas != null)
+            canvas.sortingLayerID = ownerCanvas.sortingLayerID;
 
         // 同一批设置页按创建顺序递增，打开子设置页时始终位于主设置页之上。
         if (canvas.sortingOrder < SettingsPanelSortingOrder)
@@ -156,15 +164,16 @@ public class UIManager : MonoBehaviour
         if (panel == null)
             return;
 
-        EnsurePanelRootExists();
-        if (rootCanvas == null)
+        // 覆盖层只提升显示顺序，保留面板原来的场景或跨场景归属。
+        Canvas ownerCanvas = panel.GetComponentInParent<Canvas>()?.rootCanvas;
+        if (ownerCanvas == null)
             return;
 
         RectTransform panelRect = panel.GetComponent<RectTransform>();
         if (panelRect == null)
             return;
 
-        panelRect.SetParent(rootCanvas.transform, false);
+        panelRect.SetParent(ownerCanvas.transform, false);
         panelRect.anchorMin = Vector2.zero;
         panelRect.anchorMax = Vector2.one;
         panelRect.anchoredPosition = Vector2.zero;
@@ -175,7 +184,7 @@ public class UIManager : MonoBehaviour
             canvas = panel.gameObject.AddComponent<Canvas>();
 
         canvas.overrideSorting = true;
-        canvas.sortingLayerID = rootCanvas.sortingLayerID;
+        canvas.sortingLayerID = ownerCanvas.sortingLayerID;
         canvas.sortingOrder = GlobalOverlaySortingOrder;
 
         if (panel.GetComponent<GraphicRaycaster>() == null)
@@ -235,6 +244,8 @@ public class UIManager : MonoBehaviour
 
         InitializePanels();
         EnsurePanelRootExists();
+        SceneManager.sceneUnloaded += HandleSceneUnloaded;
+        SceneManager.activeSceneChanged += HandleActiveSceneChanged;
     }
 
     private void Update()
@@ -260,6 +271,8 @@ public class UIManager : MonoBehaviour
     /// <summary>清理单例引用和事件，避免场景卸载后继续访问已销毁的 UI。</summary>
     private void OnDestroy()
     {
+        SceneManager.sceneUnloaded -= HandleSceneUnloaded;
+        SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         Canvas.preWillRenderCanvases -= EnforcePresentationUiHidden;
         RestorePresentationUi();
 
@@ -287,17 +300,17 @@ public class UIManager : MonoBehaviour
             return;
         }
 
-        GameObject existingPanelRoot = GameObject.Find("PanelRoot");
-        if (existingPanelRoot != null)
-        {
-            panelRoot = existingPanelRoot.transform;
-            CacheRootCanvas();
-            AttachRootCanvasToOwner();
-            ResolveSafeAreaRoot();
-            UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
-            return;
-        }
+        GameObject rootPrefab = GetRootPrefab();
+        GameObject canvasObj = Instantiate(rootPrefab, transform);
+        canvasObj.name = "PanelRoot";
+        panelRoot = canvasObj.transform;
+        CacheRootCanvas();
+        ResolveSafeAreaRoot();
+        UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
+    }
 
+    private GameObject GetRootPrefab()
+    {
         GameObject rootPrefab = panelRootPrefab != null
             ? panelRootPrefab
             : Resources.Load<GameObject>("UI/UIRoot");
@@ -307,13 +320,68 @@ public class UIManager : MonoBehaviour
                 "[UIManager] 缺少 Assets/Resources/UI/UIRoot.prefab，禁止运行时程序化创建 Canvas。");
         }
 
-        GameObject canvasObj = Instantiate(rootPrefab);
-        canvasObj.name = "PanelRoot";
-        panelRoot = canvasObj.transform;
-        CacheRootCanvas();
-        AttachRootCanvasToOwner();
-        ResolveSafeAreaRoot();
-        UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
+        return rootPrefab;
+    }
+
+    private RectTransform GetScenePanelRoot(Scene scene)
+    {
+        if (_isShuttingDown)
+            return null;
+        if (!scene.IsValid() || !scene.isLoaded)
+            throw new InvalidOperationException("[UIManager] 默认 UI 必须归属一个已加载的场景。");
+
+        if (scenePanelRoots.TryGetValue(scene.handle, out RectTransform existingRoot) && existingRoot != null)
+            return existingRoot;
+
+        RectTransform sceneSafeArea;
+        // 根 Prefab 的 OnEnable 会通知交互变化，登记完成前暂缓广播以免重入创建。
+        creatingSceneUi = true;
+        try
+        {
+            GameObject sceneUi = Instantiate(GetRootPrefab());
+            sceneUi.name = "SceneUI";
+            SceneManager.MoveGameObjectToScene(sceneUi, scene);
+            // 场景面板固定高于普通玩家 HUD，两根的显示与焦点查询使用同一排序规则。
+            sceneUi.GetComponent<Canvas>().sortingOrder = GameplayHudSortingOrder + 1;
+            sceneSafeArea = sceneUi.transform.Find("SafeAreaRoot") as RectTransform;
+            if (sceneSafeArea == null)
+            {
+                Destroy(sceneUi);
+                throw new InvalidOperationException("[UIManager] UIRoot.prefab 缺少 SafeAreaRoot。");
+            }
+
+            scenePanelRoots[scene.handle] = sceneSafeArea;
+            SafeAreaRectController.Ensure(sceneSafeArea);
+            UIScaleController.Ensure(sceneUi.transform);
+        }
+        finally
+        {
+            creatingSceneUi = false;
+        }
+        NotifyInteractionSurfaceChanged();
+        return sceneSafeArea;
+    }
+
+    /// <summary>附属弹窗和输入界面沿用拥有者的 UI 根与销毁时机。</summary>
+    public Transform GetPanelRootFor(Transform owner)
+    {
+        EnsurePanelRootExists();
+        if (owner != null && rootCanvas != null && owner.IsChildOf(rootCanvas.transform))
+            return panelRoot;
+        return GetScenePanelRoot(owner != null ? owner.gameObject.scene : SceneManager.GetActiveScene());
+    }
+
+    private void HandleActiveSceneChanged(Scene previous, Scene current)
+    {
+        NotifyInteractionSurfaceChanged();
+    }
+
+    private void HandleSceneUnloaded(Scene scene)
+    {
+        scenePanelRoots.Remove(scene.handle);
+        foreach (List<BasePanel> panelList in panels.Values)
+            panelList.RemoveAll(panel => panel == null);
+        NotifyInteractionSurfaceChanged();
     }
 
     private void AttachRootCanvasToOwner()
@@ -481,10 +549,8 @@ public class UIManager : MonoBehaviour
     #region 面板获取
     public BasePanel GetPanel(string panelName)
     {
-        if (panels.TryGetValue(panelName, out List<BasePanel> panelList) && panelList.Count > 0)
-        {
-            return panelList[0];
-        }
+        if (TryGetPanel(panelName, out BasePanel panel))
+            return panel;
 
         Debug.Log($"Panel '{panelName}' not found!");
         return null;
@@ -508,6 +574,7 @@ public class UIManager : MonoBehaviour
     {
         if (panels.TryGetValue(panelName, out List<BasePanel> panelList))
         {
+            panelList.RemoveAll(panel => panel == null);
             return panelList;
         }
         return new List<BasePanel>();
@@ -548,7 +615,8 @@ public class UIManager : MonoBehaviour
         {
             foreach (var panel in panelList)
             {
-                panel.Close();
+                if (panel != null)
+                    panel.Close();
             }
         }
     }
@@ -559,7 +627,8 @@ public class UIManager : MonoBehaviour
         {
             foreach (var panel in panelList)
             {
-                panel.Open();
+                if (panel != null)
+                    panel.Open();
             }
         }
     }
@@ -596,7 +665,7 @@ public class UIManager : MonoBehaviour
     /// <summary>通知虚拟光标当前可命中的 UI 表面已经变化。</summary>
     public void NotifyInteractionSurfaceChanged()
     {
-        if (_isShuttingDown)
+        if (_isShuttingDown || creatingSceneUi)
             return;
 
         unchecked
@@ -614,7 +683,12 @@ public class UIManager : MonoBehaviour
         EnsurePanelQueryCache();
         BasePanel panel = cachedTopmostCancelPanel;
         if (panel == excludedPanel)
-            panel = FindTopmostCancelPanel(panelRoot, excludedPanel);
+        {
+            panel = FindTopmostCancelPanel(rootCanvas != null ? rootCanvas.transform : null, excludedPanel);
+            BasePanel scenePanel = FindTopmostCancelPanel(GetCurrentSceneCanvasRoot(), excludedPanel);
+            if (IsPanelAbove(scenePanel, panel))
+                panel = scenePanel;
+        }
         if (panel == null)
             return false;
 
@@ -700,11 +774,28 @@ public class UIManager : MonoBehaviour
         cachedTopmostCancelPanel = null;
         panelQueryBuffer.Clear();
 
-        if (panelRoot != null)
+        InspectPanelQueryRoot(rootCanvas != null ? rootCanvas.transform : null);
+        InspectPanelQueryRoot(GetCurrentSceneCanvasRoot());
+
+        panelQueryCacheRoot = panelRoot;
+        panelQueryCacheRevision = interactionSurfaceRevision;
+        PanelQueryCacheRebuildCount++;
+    }
+
+    private Transform GetCurrentSceneCanvasRoot()
+    {
+        return scenePanelRoots.TryGetValue(SceneManager.GetActiveScene().handle, out RectTransform root) && root != null
+            ? root.parent
+            : null;
+    }
+
+    private void InspectPanelQueryRoot(Transform root)
+    {
+        if (root != null)
         {
-            for (int childIndex = panelRoot.childCount - 1; childIndex >= 0; childIndex--)
+            for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
             {
-                Transform child = panelRoot.GetChild(childIndex);
+                Transform child = root.GetChild(childIndex);
                 child.GetComponentsInChildren<BasePanel>(true, panelQueryBuffer);
                 for (int panelIndex = panelQueryBuffer.Count - 1; panelIndex >= 0; panelIndex--)
                 {
@@ -712,30 +803,37 @@ public class UIManager : MonoBehaviour
                     if (panel == null)
                         continue;
 
-                    if (cachedTopmostGamepadPanel == null &&
-                        panel.IsOpen() && panel.IsGamepadNavigationPrepared)
+                    if (panel.IsOpen() && panel.gameObject.activeInHierarchy && panel.IsGamepadNavigationPrepared &&
+                        IsPanelAbove(panel, cachedTopmostGamepadPanel))
                     {
                         cachedTopmostGamepadPanel = panel;
                     }
 
-                    if (cachedTopmostGameplayInputPanel == null && panel.IsGameplayInputBlocking)
+                    if (panel.IsGameplayInputBlocking && IsPanelAbove(panel, cachedTopmostGameplayInputPanel))
                         cachedTopmostGameplayInputPanel = panel;
 
-                    if (cachedTopmostCancelPanel == null && panel.IsCancelShortcutTarget)
+                    if (panel.IsCancelShortcutTarget && IsPanelAbove(panel, cachedTopmostCancelPanel))
                         cachedTopmostCancelPanel = panel;
                 }
 
                 panelQueryBuffer.Clear();
-                if (cachedTopmostGamepadPanel != null &&
-                    cachedTopmostGameplayInputPanel != null &&
-                    cachedTopmostCancelPanel != null)
-                    break;
             }
         }
+    }
 
-        panelQueryCacheRoot = panelRoot;
-        panelQueryCacheRevision = interactionSurfaceRevision;
-        PanelQueryCacheRebuildCount++;
+    private static bool IsPanelAbove(BasePanel candidate, BasePanel current)
+    {
+        if (candidate == null)
+            return false;
+        return current == null || GetPanelSortingOrder(candidate) > GetPanelSortingOrder(current);
+    }
+
+    private static int GetPanelSortingOrder(BasePanel panel)
+    {
+        Canvas canvas = panel.GetComponentInParent<Canvas>();
+        while (canvas != null && !canvas.isRootCanvas && !canvas.overrideSorting)
+            canvas = canvas.transform.parent?.GetComponentInParent<Canvas>();
+        return canvas != null ? canvas.sortingOrder : GameplayHudSortingOrder;
     }
 
     public static BasePanel FindTopmostCancelPanel(
@@ -745,6 +843,7 @@ public class UIManager : MonoBehaviour
         if (root == null)
             return null;
 
+        BasePanel topmost = null;
         for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
         {
             Transform child = root.GetChild(childIndex);
@@ -755,11 +854,12 @@ public class UIManager : MonoBehaviour
                 if (panel == null || panel == excludedPanel || !panel.IsCancelShortcutTarget)
                     continue;
 
-                return panel;
+                if (IsPanelAbove(panel, topmost))
+                    topmost = panel;
             }
         }
 
-        return null;
+        return topmost;
     }
     #endregion
 
@@ -768,11 +868,13 @@ public class UIManager : MonoBehaviour
     public BasePanel CreatePanelFromGameObject(
         GameObject panelPrefab,
         string panelName = "",
-        bool initializeClosed = false)
+        bool initializeClosed = false,
+        Transform parent = null)
     {
-        EnsurePanelRootExists();
-
-        GameObject panelInstance = Instantiate(panelPrefab, panelRoot);
+        if (_isShuttingDown)
+            return null;
+        // 普通面板默认随场景销毁，只有明确传入跨场景根的玩家界面才保留。
+        GameObject panelInstance = Instantiate(panelPrefab, parent != null ? parent : ScenePanelRoot);
         NormalizeCanvasLayers(panelInstance.transform);
 
         BasePanel _basePanel = panelInstance.GetComponent<BasePanel>();
@@ -810,6 +912,16 @@ public class UIManager : MonoBehaviour
         return _basePanel;
     }
 
+    /// <summary>玩家模块显式使用跨场景 UI 根，生命周期仍由所属模块清理。</summary>
+    public BasePanel CreatePersistentPanelFromGameObject(
+        GameObject panelPrefab,
+        string panelName = "",
+        bool initializeClosed = false)
+    {
+        EnsurePanelRootExists();
+        return CreatePanelFromGameObject(panelPrefab, panelName, initializeClosed, panelRoot);
+    }
+
     public void DestroyPanel(string panelName)
     {
         foreach (var kvp in panels)
@@ -830,6 +942,8 @@ public class UIManager : MonoBehaviour
 
     public void DestroyPanel(BasePanel panel)
     {
+        if (panel == null)
+            return;
         string baseName = panel.PanelName;
         // 移除后缀以获取基础名称
         int underscoreIndex = baseName.LastIndexOf('_');
@@ -877,27 +991,11 @@ public class UIManager : MonoBehaviour
         presentationRaycasterStates.Clear();
         panels.Clear();
 
-        if (safeAreaRoot != null)
+        DestroyRuntimeUiChildren(rootCanvas, safeAreaRoot);
+        foreach (RectTransform sceneRoot in scenePanelRoots.Values)
         {
-            for (int i = safeAreaRoot.childCount - 1; i >= 0; i--)
-            {
-                Transform child = safeAreaRoot.GetChild(i);
-                if (child != null)
-                    Destroy(child.gameObject);
-            }
-        }
-
-        if (rootCanvas != null)
-        {
-            Transform root = rootCanvas.transform;
-            for (int i = root.childCount - 1; i >= 0; i--)
-            {
-                Transform child = root.GetChild(i);
-                if (child == null || child == safeAreaRoot)
-                    continue;
-
-                Destroy(child.gameObject);
-            }
+            if (sceneRoot != null)
+                DestroyRuntimeUiChildren(sceneRoot.GetComponentInParent<Canvas>(), sceneRoot);
         }
 
         nextSettingsPanelSortingOrder = SettingsPanelSortingOrder;
@@ -908,6 +1006,32 @@ public class UIManager : MonoBehaviour
         cachedTopmostGameplayInputPanel = null;
         cachedTopmostCancelPanel = null;
         NotifyInteractionSurfaceChanged();
+    }
+
+    private void DestroyRuntimeUiChildren(Canvas canvas, Transform safeRoot)
+    {
+        if (safeRoot != null)
+        {
+            for (int i = safeRoot.childCount - 1; i >= 0; i--)
+            {
+                Transform child = safeRoot.GetChild(i);
+                if (child != null)
+                    Destroy(child.gameObject);
+            }
+        }
+
+        if (canvas != null)
+        {
+            Transform root = canvas.transform;
+            for (int i = root.childCount - 1; i >= 0; i--)
+            {
+                Transform child = root.GetChild(i);
+                if (child == null || child == safeRoot)
+                    continue;
+
+                Destroy(child.gameObject);
+            }
+        }
     }
     #endregion
 

@@ -652,6 +652,11 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             typeof(CanvasRenderer),
             typeof(GamepadCursorGraphic));
         cursorObject.transform.SetParent(canvas.transform, false);
+        // 光标跨两类 UI 根保持置顶，避免被后创建的场景 Canvas 遮住。
+        Canvas cursorCanvas = cursorObject.AddComponent<Canvas>();
+        cursorCanvas.overrideSorting = true;
+        cursorCanvas.sortingLayerID = canvas.sortingLayerID;
+        cursorCanvas.sortingOrder = UIManager.HeldItemSortingOrder;
         cursorRect = cursorObject.GetComponent<RectTransform>();
         cursorRect.anchorMin = new Vector2(0.5f, 0.5f);
         cursorRect.anchorMax = new Vector2(0.5f, 0.5f);

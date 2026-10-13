@@ -201,7 +201,12 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return false;
         }
 
-        basePanel = UIManager.Instance.CreatePanelFromGameObject(InventoryPanel_Prefab).GetComponentInChildren<BasePanel>();
+        // 玩家随身制作界面跨场景保留，世界工作台界面随所在场景销毁。
+        UIManager uiManager = UIManager.Instance;
+        BasePanel createdPanel = item is Player
+            ? uiManager.CreatePersistentPanelFromGameObject(InventoryPanel_Prefab)
+            : uiManager.CreatePanelFromGameObject(InventoryPanel_Prefab);
+        basePanel = createdPanel.GetComponentInChildren<BasePanel>();
         if (basePanel == null)
         {
             Debug.LogError("[Mod_HandCraftTable] 创建面板失败，未找到 BasePanel");

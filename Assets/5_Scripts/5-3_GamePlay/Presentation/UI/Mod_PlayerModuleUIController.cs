@@ -139,7 +139,8 @@ public class Mod_PlayerModuleUIController : Module
 
         if (ButtonListPrefab != null)
         {
-            _buttonListPanel = UIManager.Instance.CreatePanelFromGameObject(ButtonListPrefab);
+            // 玩家模块按钮界面跨场景保留，由所属玩家模块释放。
+            _buttonListPanel = UIManager.Instance.CreatePersistentPanelFromGameObject(ButtonListPrefab);
             _buttonListInstance = _buttonListPanel.gameObject;
             if (UIContainer != null)
                 _buttonListInstance.transform.SetParent(UIContainer, false);
