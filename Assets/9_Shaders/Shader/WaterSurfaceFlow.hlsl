@@ -12,6 +12,7 @@ struct WaterMotionData
     float waveHeight;
     float foamActivity;
     float currentStrength;
+    float ocean;
 };
 
 // 海面输入是风向，河流及实验液流输入是实际速度；波浪传播与带动物品的水流分开。
@@ -19,6 +20,7 @@ WaterMotionData ResolveWaterMotion(float2 current, float waterKind)
 {
     WaterMotionData motion = (WaterMotionData)0;
     float ocean = 1.0 - step(0.25, abs(waterKind - 2.0));
+    motion.ocean = ocean;
     float stillWater = 1.0 - step(0.5, waterKind);
     float2 fallback = ResolveWaterFlowAxis(_FlowDirection.xy);
     if (dot(fallback, fallback) < 0.5)
@@ -101,8 +103,13 @@ float SampleAdvectedWaterNoise(float2 positionWS, float2 velocity, float scale, 
 // 水流本身没有固有波速，纹理只能由 velocity 带动；静水只保留独立风浪。
 float3 SampleWaterCurrentDetail(float2 positionWS, WaterMotionData motion)
 {
-    return SampleAdvectedWaterGradient(positionWS, motion.velocity,
-        max(_DetailScale, 0.5) * 0.65, float2(23.7, 6.2));
+    // 海洋不采样噪声等值线，避免波光和焦散组成扭曲的闭合圆圈。
+    float3 detail = float3(0.5, 0.0, 0.0);
+    UNITY_BRANCH
+    if (motion.ocean < 0.5)
+        detail = SampleAdvectedWaterGradient(positionWS, motion.velocity,
+            max(_DetailScale, 0.5) * 0.65, float2(23.7, 6.2));
+    return detail;
 }
 
 // 快水的断续亮纹与泡沫使用同一平流场，宽度和密度复用既有材质参数。
@@ -113,7 +120,7 @@ void ApplyWaterCurrentDetail(inout WaterSurfaceData surface, float3 field, Water
     float crest = 1.0 - smoothstep(width * 0.35, width, distanceToCrest);
     float shadow = 1.0 - smoothstep(width, width * 2.1, abs(field.x - 0.54 + width));
     float breakup = smoothstep(0.14, 0.75, length(field.yz));
-    float activity = motion.currentStrength;
+    float activity = motion.currentStrength * (1.0 - motion.ocean);
     surface.ripple = saturate(surface.ripple + crest * breakup * activity
         * _RippleStrength * _RippleColor.a);
     surface.rippleShadow = saturate(surface.rippleShadow + shadow * (1.0 - crest)

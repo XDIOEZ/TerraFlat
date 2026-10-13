@@ -106,11 +106,12 @@ WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV, half 
         lerp(3.0, 24.0, saturate(_ReflectionSmoothness))) * 0.22) * _ReflectionStrength * _ReflectionColor.a;
     surface.specular = pow(saturate(dot(reflectedView, sunDirection)), max(_SpecularPower, 4.0) * 4.0)
         * _SpecularStrength * _SpecularColor.a;
-    surface.ripple = saturate(normalPattern.w * 0.4 + waveHeight * 0.45)
+    // 海洋亮纹只跟随定向小波，随机亮度通道不再铺满海面。
+    surface.ripple = saturate(normalPattern.w * 0.4 * (1.0 - motion.ocean) + waveHeight * 0.45)
         * _RippleStrength * _RippleColor.a;
     surface.rippleShadow = saturate(-waveHeight) * _RippleShadowStrength;
     surface.caustic = normalPattern.w * normalPattern.w * surface.depthBlend
-        * _CausticStrength * _CausticColor.a;
+        * _CausticStrength * _CausticColor.a * (1.0 - motion.ocean);
 
     float sparkleTime = motion.waveTime * 0.09;
     float3 sparkleA = lerp(UnityMotionFourWaySparkle(secondPosition, float4(1.0, 2.0, 3.0, 4.0),
@@ -128,7 +129,7 @@ WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV, half 
     surface.sparkle = sparkleMask * _UnitySparkleStrength * _UnitySparkleColor.a
         * (1.0 - smoothstep(0.2, 0.65, sparkleFootprint));
 
-    float2 foamShift = normalPattern.xy * min(max(_WaveDistortion, 0.0), 4.0) * 0.12;
+    float2 foamShift = normalPattern.xy * min(max(_WaveDistortion, 0.0), 4.0) * 0.12 * (1.0 - motion.ocean);
     float foamTime = _Time.y * max(_FoamSpeed, 0.0) * 0.08;
     float foamA = UnityMotionFourWayChaos(firstPosition + foamShift, _UnityFoamScale,
         foamTime, positionDx, positionDy, false).b;

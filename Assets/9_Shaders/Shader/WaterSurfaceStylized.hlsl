@@ -1,10 +1,13 @@
-// 风格化水面：细波、顺流亮纹、浅水焦散和破碎泡沫共用完整水流输入。
+// 风格化水面：海洋与河流共用短亮纹美术，静水保留原细波和浅水焦散。
 #ifndef FLATWORLD_WATERSURFACESTYLIZED_HLSL
 #define FLATWORLD_WATERSURFACESTYLIZED_HLSL
 
 #if !defined(FLATWORLD_WATER_MATERIAL_CBUFFER_DEFINED)
 float _PixelDensity;
 #endif
+
+#include "RiverSurface.hlsl"
+#include "OceanSurfaceStylized.hlsl"
 
 // 世界像素格跟随地图固定，镜头移动不会拖着水面噪声走。
 float2 QuantizeWaterPosition(float2 positionWS)
@@ -13,7 +16,7 @@ float2 QuantizeWaterPosition(float2 positionWS)
     return floor(positionWS * density + 0.5) / density;
 }
 
-WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV,
+WaterSurfaceData CalculateStillStylizedWaterSurface(float2 positionWS, float2 screenUV,
     half liquidDepth, WaterMotionData motion)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
@@ -88,6 +91,21 @@ WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV,
     ApplyWaterCurrentDetail(surface, currentDetail, motion);
     surface.moonReflection = ComputeMoonReflection(screenUV, height,
         macroA, macroB, detail, swellB, time);
+    return surface;
+}
+
+// 风格化海洋使用河流同款短亮纹，水深分档及材质切换仍由原入口负责。
+WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV,
+    half liquidDepth, WaterMotionData motion)
+{
+    float2 positionDx = ddx(positionWS);
+    float2 positionDy = ddy(positionWS);
+    WaterSurfaceData surface = (WaterSurfaceData)0;
+    UNITY_BRANCH
+    if (motion.ocean > 0.5)
+        surface = CalculateStylizedOceanSurface(positionWS, screenUV, liquidDepth, motion, positionDx, positionDy);
+    else
+        surface = CalculateStillStylizedWaterSurface(positionWS, screenUV, liquidDepth, motion);
     return surface;
 }
 

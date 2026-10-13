@@ -16,8 +16,8 @@ float3 RiverFlowUV(float2 uv, float2 velocityUV, float time, float phase)
 }
 
 // 先在共享格角的局部坐标旋转，再把斜率转回世界方向，避免大世界坐标产生扭曲。
-float4 SampleRiverCorner(float2 positionWS, float2 anchor, float2 velocity, float2 fallback,
-    float2 positionDx, float2 positionDy)
+float4 SampleDirectionalWaterCorner(float2 positionWS, float2 anchor, float2 velocity, float2 fallback,
+    float2 positionDx, float2 positionDy, float foamCoverage)
 {
     float speed = length(velocity);
     float2 axis = speed > 0.00001 ? velocity / speed : fallback;
@@ -37,7 +37,7 @@ float4 SampleRiverCorner(float2 positionWS, float2 anchor, float2 velocity, floa
     float4 first = SAMPLE_TEXTURE2D_GRAD(_RiverPatternTex, sampler_RiverPatternTex, firstUV.xy, uvDx, uvDy);
     float4 second = SAMPLE_TEXTURE2D_GRAD(_RiverPatternTex, sampler_RiverPatternTex, secondUV.xy, uvDx, uvDy);
     // 覆盖率在各源纹理上处理，交接只混合透明度，不让泡沫在格心被二次阈值吞掉。
-    float coverage = saturate(_RiverFoamCoverage);
+    float coverage = saturate(foamCoverage);
     float lower = lerp(0.45, 0.12, coverage);
     float upper = lerp(0.75, 0.32, coverage);
     first.w = smoothstep(lower, upper, first.w) * step(0.0001, coverage);
@@ -46,6 +46,13 @@ float4 SampleRiverCorner(float2 positionWS, float2 anchor, float2 velocity, floa
     float2 slope = pattern.rg * 2.0 - 1.0;
     pattern.xy = axis * slope.x * 0.75 + lateral * slope.y;
     return pattern;
+}
+
+float4 SampleRiverCorner(float2 positionWS, float2 anchor, float2 velocity, float2 fallback,
+    float2 positionDx, float2 positionDy)
+{
+    return SampleDirectionalWaterCorner(positionWS, anchor, velocity, fallback,
+        positionDx, positionDy, _RiverFoamCoverage);
 }
 
 // 相邻水格共用同一锚点和角速度，四块方向纹理平滑交接，不对逐像素噪声描等值线。
@@ -77,7 +84,7 @@ float4 SampleRiverSurfacePattern(float2 positionWS, float4 flowX, float4 flowY, 
     return pattern;
 }
 
-// 河流用柔和法线、断续碎光与稀疏实心泡沫，海洋继续调用原效果。
+// 河流保留柔和法线、断续碎光与稀疏实心泡沫，海洋有独立表现入口。
 WaterSurfaceData CalculateRiverSurface(float2 positionWS, float2 screenUV, half depth,
     float4 flowX, float4 flowY, WaterMotionData motion, float2 positionDx, float2 positionDy)
 {

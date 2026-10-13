@@ -54,7 +54,7 @@ WaterSurfaceData CalculateWaterSurface(
         drift * 0.07 + float2(17.31, 9.17));
     float3 currentDetail = SampleWaterCurrentDetail(positionWS, motion);
     float2 warpedPosition = waterPosition
-        + (direction * (macroA - 0.5) + lateral * (macroB - 0.5)) * _WaveDistortion;
+        + (direction * (macroA - 0.5) + lateral * (macroB - 0.5)) * _WaveDistortion * (1.0 - motion.ocean);
 
     // 波长不同，传播速度也不同；固定方向叠加，不让整片水面旋转或在潮汐换向时停住。
     float height = 0.0;
@@ -158,7 +158,7 @@ WaterSurfaceData CalculateWaterSurface(
     float detailC = shimmerC.x;
     float causticFocus = pow(saturate(1.0 - abs(detailA - detailB) * 3.0), 12.0);
     surface.caustic = causticFocus * pow(surface.depthBlend, 4.0)
-        * saturate(_CausticStrength) * _CausticColor.a;
+        * saturate(_CausticStrength) * _CausticColor.a * (1.0 - motion.ocean);
 
     // 白沫只在足够陡的波峰上零星出现，避免每道细浪都变成白线。
     float steepCrest = crest * smoothstep(0.12, 0.46, dot(slope, slope));
