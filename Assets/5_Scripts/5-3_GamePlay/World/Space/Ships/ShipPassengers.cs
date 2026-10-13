@@ -50,11 +50,6 @@ namespace FlatWorld.Spaceflight
                 else
                 {
                     SetControl(console.PieceId, screenInput, turn);
-                    if (!passenger.DescentDriving)
-                    {
-                        passenger.LocalX = (console.CellX + .5d) * ship.CellSizeMeters;
-                        passenger.LocalY = (console.CellY + .5d) * ship.CellSizeMeters;
-                    }
                     passenger.Supported = true;
                     PlacePassenger(player, passenger, ship);
                     return true;
@@ -171,8 +166,9 @@ namespace FlatWorld.Spaceflight
             if (Vector2.Distance(player.transform.position, DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
             SpacePassengerState passenger = GetPassenger(player);
             bool alreadyDriving = !string.IsNullOrWhiteSpace(passenger.ConsolePieceId);
-            if (alreadyDriving) ClearControl(passenger.ConsolePieceId);
-            passenger.ShipId = ship.ShipId; passenger.ConsolePieceId = piece.PieceId; passenger.Supported = true;
+            SpaceSectorPosition position = IsSpaceView ? UnprojectSectorPosition(player.transform.position)
+                : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(player.transform.position)));
+            BindConsoleControl(passenger, ship, piece, position, IsSpaceView);
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
                 passenger.DescentControlEntered = passenger.DescentDriving = true;
@@ -180,6 +176,20 @@ namespace FlatWorld.Spaceflight
             if (!alreadyDriving) passenger.SavedCameraSize = camera?.CurrentOrthographicSize ?? 10f;
             camera?.SetOrthographicSize(SpaceGameplaySettings.Current.DrivingCameraSize);
             return true;
+        }
+        private void BindConsoleControl(SpacePassengerState passenger, ShipState ship, ShipPieceState console,
+            SpaceSectorPosition position, bool inSpace)
+        {
+            // 原地接管保留船上站位，首次绑定也从玩家当前位置换算，避免落入控制台碰撞体。
+            if (!passenger.Supported || passenger.ShipId != ship.ShipId)
+            {
+                SpaceVector2 point = inSpace ? SpaceSectorCoordinates.Relative(position, ship.Sector)
+                    : SpaceVector2.FromVector2(WorldLocalPresentation.ProjectPosition(position.LocalMeters.ToVector2(),
+                        new Vector2((float)ship.PositionX, (float)ship.PositionY)));
+                ShipGeometry.WorldToLocal(ship, point.X, point.Y, out passenger.LocalX, out passenger.LocalY);
+            }
+            if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId)) ClearControl(passenger.ConsolePieceId);
+            passenger.ShipId = ship.ShipId; passenger.ConsolePieceId = console.PieceId; passenger.Supported = true;
         }
         public bool ExitConsole(Player player)
         {

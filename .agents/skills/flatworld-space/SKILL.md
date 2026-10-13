@@ -76,6 +76,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 散落物只有地表升降时叠加贴图高度，太空掉落不继承船体残留地表高度；偏移保留原局部位置，触地、拾取和卸载时恢复。
 - 玩家须在实际 Console 的交互半径内开 UI_Ship，离开关闭；自动导航器仅经光纤供能力，线路/地板/墙不作控制台入口。飞船面板会话互斥，CanOpenShipPanel 共用打开/切换/刷新校验。
 - 船上设备 UI 只由交互键打开，ShipPieceView 拒绝鼠标点选；Esc 优先取消导航选点，再退出驾驶，右键只使用手持物。
+- 驾驶进入与联机接管共用 BindConsoleControl：保留本船乘员 LocalX/LocalY，首次绑定或换船从玩家当前位置换算；驾驶期间只随船同步，不吸附控制台中心，退出沿用清输入与恢复镜头。
 - 船上普通机器按 `MachineDefinition.IsConnectionLine` 排除连接线路，不能只看 `ShipPieceKind`；落点使用真实部件碰撞范围。机器休眠会释放交互对象，实际开始交互时须在本船作用域重新取得当前对象，外观缓存不能作为永久操作入口。
 - 舱门只经交互键 TryToggleDoor，鼠标点选拒绝；DoorOpen 持久化，通行/碰撞读 BlocksPassage，开门留 Trigger，通道有人拒绝关门，不改变 SealsAtmosphere。
 - 船部件能力 ID 为“船体部件模块”，Prefab Module_ShipPart，脚本 Mod_ShipPart；部件分类共用 SpaceSession.ResolvePartConfiguration，包含普通机器与线路的自动识别，测试不能把缺少显式模块误判为物品未注册。固定船补给按成员身份及共享罐实际组容量分配，GM 船复用正常起飞条件。

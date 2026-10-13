@@ -104,9 +104,7 @@ namespace FlatWorld.Spaceflight
                         !State.Passengers.Exists(value => value.ProfileId != profile && value.ConsolePieceId == piece.PieceId);
                     if (result)
                     {
-                        if (passenger.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
-                        passenger.ShipId = ship.ShipId; passenger.ConsolePieceId = piece.PieceId; passenger.Supported = true;
-                        passenger.LocalX = (piece.CellX + .5d) * ship.CellSizeMeters; passenger.LocalY = (piece.CellY + .5d) * ship.CellSizeMeters;
+                        BindConsoleControl(passenger, ship, piece, observer.Position, observer.InSpace);
                     }
                     break;
                 case SpaceNetworkIntentKind.ToggleDoor: result = TryToggleDoor(piece.PieceId); break;
