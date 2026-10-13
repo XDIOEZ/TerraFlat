@@ -46,7 +46,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
-- 玩家风力推动由 `WindEnvironmentRules` 分档：0.8/0.9/1.0 对应 8/9/10 级，速度为 0.3/1/2.5 格每秒，档间连续增强、8 级以下为零；`WorldMotionSystem` 读取玩家实际位置的天气后合入 ExternalVelocity，不计步行与体力，承载和太空运动不叠加，禁用天气维度返回零。
+- 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：完整 ItemDefinitions（含 Actor/MOD）单件质量的最小值 B、最大值 A 决定门槛 C=(A+B)/2；当前堆叠总质量从 B 到 C 线性减速，达到 C 归零。最轻物体在 0.8/0.9/1.0 风力下为 0.06/0.2/0.5 单位每秒，档间连续增强、8 级以下为零。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具质量包含乘员，乘员不重复受风；太空与禁用天气维度返回零。
 - `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。
 - `Mover_SaveData.isRunning` 保存奔跑开关，输入锁停止位移但保留开关。Run 与 Move 分离，静止动画为 Idle，跑步播放不改全局 Animator.speed。体力统一经带来源的 `Mod_Stamina` API；管理员无限体力也在该权威模块处理。普通划船不耗体力，按住奔跑且移动时的载具加速记为 `flatworld.carrier.boost`。
 - 太空场景禁止玩家奔跑；失重 WASD 输入由 `SpaceSession.StepFreePassengers` 在固定步调用 `Mod_Mover.SmoothSpaceVelocity`，按屏幕方向给 FreeWalkVelocity 累加推力，松键无摩擦并保持速度，反向输入逐渐制动。离船继承船体点速度，继承/碰撞速度不受主动移动限速影响。Shift 不参与冲刺、借力或抓墙，普通地表奔跑保留。

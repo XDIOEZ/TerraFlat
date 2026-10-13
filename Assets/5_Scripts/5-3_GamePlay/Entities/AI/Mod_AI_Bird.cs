@@ -21,7 +21,7 @@ public interface IBirdFlightPilot
 /// </summary>
 public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
-    IWaterCurrentExposure, ITemperatureSafetyMovement, IDamageSender
+    IWaterCurrentExposure, IWindMotionOwner, ITemperatureSafetyMovement, IDamageSender
 {
     #region 配置与独立存档
     public const string ModuleId = "AI_Bird"; // 飞行能力 ID 与具体 Prefab 名分别维护。
@@ -129,6 +129,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     public BirdFlightPhase Phase => state.Phase;
     public bool IsAirborne => state.Phase != BirdFlightPhase.Ground && state.Phase != BirdFlightPhase.RunUp;
     public bool ReceivesWaterCurrent => !IsAirborne;
+    public bool OwnsWindMotion => IsAirborne;
     public float FlightStamina => state.Stamina;
     public bool IsRecoveringFlightStamina => state.MustRecoverStamina;
     public int TemperatureSafetyMovementPriority => 100;
@@ -248,80 +249,97 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         }
         if (GameNetwork.HasStateAuthority)
         {
-            float step = Mathf.Max(0f, deltaTime);
-            state.Elapsed += step;
-            bool exhausted = !permanentFlight && AdvanceFlightStamina(
-                state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
-            if (flightPilot == null)
-            {
-                TickBackpackSeedTaking(step);
-                TickVigilance(step);
-            }
-            TickEggLaying();
-            if (temperatureSafetyRetreat)
-            {
-                TickTemperatureSafetyRetreat(step);
-                ApplyFlightPresentation();
-                return;
-            }
-            if (flightPilot != null)
-            {
-                flightPilot.TickFlight(step);
-                ApplyFlightPresentation();
-                return;
-            }
-            float fatigueThreshold = Mathf.Max(0.01f, flightStaminaMax) * Mathf.Clamp01(fatigueLandingStaminaRatio);
-            if (IsFishHunting && (state.MustRecoverStamina || state.Stamina <= fatigueThreshold))
-                ResetFishHunting(releaseCaptured: true);
-            // 耗尽后仍把降落放在逃跑/觅食之前，但不允许在不可站立地块上硬降落。
-            // 若脚下没有安全地块，就继续飞到检测到安全落点为止。
-            if (exhausted && (state.Phase == BirdFlightPhase.Flying || state.Phase == BirdFlightPhase.TakingOff))
-            {
-                escapeRemaining = 0f;
-                if (state.Phase == BirdFlightPhase.TakingOff)
-                    TickTakeoff(step);
-                else
-                    TickFatigueLanding(step, forceLanding: true);
-                ApplyFlightPresentation();
-                return;
-            }
-            // 强制降落必须先于逃跑和觅食，避免零耐力后仍被逃跑分支继续当作飞机移动。
-            if (state.Phase == BirdFlightPhase.Landing && state.MustRecoverStamina)
-            {
-                mover.StopMovement();
-                if (state.Elapsed >= transitionDuration) CompleteLanding();
-                ApplyFlightPresentation();
-                return;
-            }
-            if (TickEscape(step) ||
-                (!permanentFlight && (TickFishHunting(step) || TickFatigueLanding(step, forceLanding: false) || TickForaging(step))))
-            {
-                ApplyFlightPresentation();
-                return;
-            }
-            switch (state.Phase)
-            {
-                case BirdFlightPhase.Ground:
-                    TickGroundWander(step);
-                    if (state.Elapsed >= groundDuration) BeginTakeoff();
-                    break;
-                case BirdFlightPhase.RunUp:
-                    TickRunUp(step);
-                    break;
-                case BirdFlightPhase.TakingOff:
-                    TickTakeoff(step);
-                    break;
-                case BirdFlightPhase.Flying:
-                    TickFlightWander(step);
-                    if (!permanentFlight && state.Elapsed >= flightDuration && CanLand(body.position)) BeginLanding();
-                    break;
-                case BirdFlightPhase.Landing:
-                    mover.StopMovement();
-                    if (state.Elapsed >= transitionDuration) CompleteLanding();
-                    break;
-            }
+            TickAuthoritativeFlight(deltaTime);
+            ApplyAirborneWind(deltaTime);
         }
         ApplyFlightPresentation();
+    }
+
+    /// <summary>行为只推进主动飞行，提前结束行为后仍由外层统一结算风推动。</summary>
+    private void TickAuthoritativeFlight(float deltaTime)
+    {
+        float step = Mathf.Max(0f, deltaTime);
+        state.Elapsed += step;
+        bool exhausted = !permanentFlight && AdvanceFlightStamina(
+            state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
+        if (flightPilot == null)
+        {
+            TickBackpackSeedTaking(step);
+            TickVigilance(step);
+        }
+        TickEggLaying();
+        if (temperatureSafetyRetreat)
+        {
+            TickTemperatureSafetyRetreat(step);
+            return;
+        }
+        if (flightPilot != null)
+        {
+            flightPilot.TickFlight(step);
+            return;
+        }
+        float fatigueThreshold = Mathf.Max(0.01f, flightStaminaMax) * Mathf.Clamp01(fatigueLandingStaminaRatio);
+        if (IsFishHunting && (state.MustRecoverStamina || state.Stamina <= fatigueThreshold))
+            ResetFishHunting(releaseCaptured: true);
+        // 耗尽后仍把降落放在逃跑/觅食之前，但不允许在不可站立地块上硬降落。
+        // 若脚下没有安全地块，就继续飞到检测到安全落点为止。
+        if (exhausted && (state.Phase == BirdFlightPhase.Flying || state.Phase == BirdFlightPhase.TakingOff))
+        {
+            escapeRemaining = 0f;
+            if (state.Phase == BirdFlightPhase.TakingOff)
+                TickTakeoff(step);
+            else
+                TickFatigueLanding(step, forceLanding: true);
+            return;
+        }
+        // 强制降落必须先于逃跑和觅食，避免零耐力后仍被逃跑分支继续当作飞机移动。
+        if (state.Phase == BirdFlightPhase.Landing && state.MustRecoverStamina)
+        {
+            mover.StopMovement();
+            if (state.Elapsed >= transitionDuration) CompleteLanding();
+            return;
+        }
+        if (TickEscape(step) ||
+            (!permanentFlight && (TickFishHunting(step) || TickFatigueLanding(step, forceLanding: false) || TickForaging(step))))
+        {
+            return;
+        }
+        switch (state.Phase)
+        {
+            case BirdFlightPhase.Ground:
+                TickGroundWander(step);
+                if (state.Elapsed >= groundDuration) BeginTakeoff();
+                break;
+            case BirdFlightPhase.RunUp:
+                TickRunUp(step);
+                break;
+            case BirdFlightPhase.TakingOff:
+                TickTakeoff(step);
+                break;
+            case BirdFlightPhase.Flying:
+                TickFlightWander(step);
+                if (!permanentFlight && state.Elapsed >= flightDuration && CanLand(body.position)) BeginLanding();
+                break;
+            case BirdFlightPhase.Landing:
+                mover.StopMovement();
+                if (state.Elapsed >= transitionDuration) CompleteLanding();
+                break;
+        }
+    }
+
+    /// <summary>空中只加一次当地风位移，悬停和降落过渡也受风且不改变主动飞行朝向。</summary>
+    private void ApplyAirborneWind(float deltaTime)
+    {
+        if (!IsAirborne || deltaTime <= 0f || !float.IsFinite(deltaTime)) return;
+        Vector2 position = body.position;
+        Vector2 velocity = WorldMotionSystem.SampleWindVelocity(position, item.itemData.Stack.CurrentWeight);
+        if (velocity.sqrMagnitude <= 0f) return;
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        if (chunks == null || !chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery query)) return;
+        Vector2 next = query.NormalizePosition(position + velocity * deltaTime);
+        if (!flightNavigation.CanTraverse(position, next, ref query)) return;
+        body.position = next;
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }
 
     /// <summary>地面起飞先选可走助跑线；从降落中受惊则沿现有高度直接重新加速。</summary>

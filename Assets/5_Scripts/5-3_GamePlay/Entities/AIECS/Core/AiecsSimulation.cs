@@ -42,6 +42,7 @@ namespace FlatWorld.AIECS
     {
         public int Definition, Faction;
         public float WaterCurrentPushSpeed; // 按 Actor ID 从统一水流 JSON 读取的推动速度。
+        public float MassKg; // 当前 Actor 定义的真实质量，供环境速度按重量缩放。
         public AiecsBody Body;
         public AiecsVital Vital;
         public AiecsDefense Defense;
@@ -475,7 +476,7 @@ namespace FlatWorld.AIECS
                 NextDecision = Clock.Time + random.NextFloat() * definition.DecisionPeriod,
                 BehaviorUntil = Clock.Time + definition.IdleSeconds * random.NextFloat(0.2f, 1f), EnteredAt = Clock.Time });
             Entities.SetComponentData(entity, new AiecsFlowAgent { Position = position, Radius = template.Body.Radius,
-                Speed = definition.MoveSpeed, WaterCurrentPushSpeed = template.WaterCurrentPushSpeed,
+                Speed = definition.MoveSpeed, WaterCurrentPushSpeed = template.WaterCurrentPushSpeed, MassKg = template.MassKg,
                 StopDistance = 0.15f, Mode = AiecsMoveMode.Hold });
             Entities.SetComponentData(entity, new AiecsSimulationPulse { LastTickTime = Clock.Time });
             if ((template.Capabilities & AiecsCapability.Nutrition) != 0)

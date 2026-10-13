@@ -26,6 +26,8 @@ namespace FlatWorld.AIECS
         public float Radius; // 连续移动体半径，当前共享通行配置要求小于半格。
         public float Speed; // 当前基础速度，Buff 后由行为层写入。
         public float WaterCurrentPushSpeed; // JSON 配置的单位流向推动速度。
+        public float MassKg; // 当前定义的真实单体质量，不借用碰撞体尺寸或命中权重。
+        public float2 WindVelocity; // 世界桥提供的当地被动风速，独立于主动移动和动画。
         public float2 DrivenVelocity; // 仅主动导航产生的速度，不混入水流惯性。
         public float StopDistance; // 到局部/共享目标的停止距离。
         public float LiquidDepth; // 当前平滑后的有效水深，仅表达移动/表现环境态。
@@ -168,6 +170,7 @@ namespace FlatWorld.AIECS
             actor.DrivenVelocity = Navigation.Domain.ShortestDelta(start, actor.Position) / deltaTime;
             if (!airborne)
                 MoveWithWaterCurrent(ref actor, Navigation.CurrentAt(start) * actor.WaterCurrentPushSpeed * deltaTime);
+            MoveWithEnvironment(ref actor, actor.WindVelocity * deltaTime, airborne);
             actor.Velocity = Navigation.Domain.ShortestDelta(start, actor.Position) / deltaTime;
         }
 
@@ -229,6 +232,10 @@ namespace FlatWorld.AIECS
 
         /// <summary>水流独立推动待机和移动生物，沿权威导航净空逐小步扫掠。</summary>
         private void MoveWithWaterCurrent(ref AiecsFlowAgent actor, float2 movement)
+            => MoveWithEnvironment(ref actor, movement, false);
+
+        /// <summary>风和水流共用小步扫掠，飞行生物沿用空中移动的通行边界。</summary>
+        private void MoveWithEnvironment(ref AiecsFlowAgent actor, float2 movement, bool airborne)
         {
             float length = math.length(movement);
             if (length <= 0f) return;
@@ -237,7 +244,7 @@ namespace FlatWorld.AIECS
             for (int i = 0; i < steps; i++)
             {
                 float2 next = Navigation.Domain.Normalize(actor.Position + step);
-                if (!Navigation.CanStep(actor.Position, next, actor.Radius)) break;
+                if (!airborne && !Navigation.CanStep(actor.Position, next, actor.Radius)) break;
                 actor.Position = next;
             }
         }

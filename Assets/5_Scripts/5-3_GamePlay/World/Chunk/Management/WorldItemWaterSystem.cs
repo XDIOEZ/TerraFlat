@@ -40,6 +40,7 @@ public static class WorldItemWaterSystem
     /// <summary>由 ItemMgr 每帧统一结算新实例的最终地块环境。</summary>
     public static void ProcessPendingSpawnChecks()
     {
+        WorldMotionSystem.TickLooseItemWind(Time.deltaTime);
         if (PendingSpawnChecks.Count == 0)
             return;
 
@@ -56,6 +57,8 @@ public static class WorldItemWaterSystem
             // 兼容未声明掉落 API 的 MOD/旧存档；passive 普通掉落移交轻量模拟器。
             if (DroppedItemService.UsesLightweightDrops && DroppedItemService.TryConvertLooseItem(item))
                 continue;
+
+            WorldMotionSystem.RegisterLooseWindItem(item);
 
             if (!TryResolveWaterAt(item.transform.position, out bool isWater))
             {
@@ -115,6 +118,7 @@ public static class WorldItemWaterSystem
     /// <summary>显式结束世界水体运行态；库存 ItemData 不保存这类临时表现。</summary>
     public static void ClearRuntimeState(Item item)
     {
+        WorldMotionSystem.UnregisterLooseWindItem(item);
         CancelSpawnCheck(item);
         item?.GetComponent<WorldItemWaterRuntime>()?.Deactivate();
     }

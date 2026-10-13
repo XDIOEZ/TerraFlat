@@ -53,6 +53,10 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly RuntimeLootTable[] lootTables;
         private readonly string[] actorIds; // 资源重载后按定义索引刷新现有 ECS 居民。
         private uint waterCurrentRevision;
+        private GameRes environmentResourceSource;
+        private int environmentResourceVersion;
+        private ulong environmentDefinitionRevision;
+        private bool hasWindVelocity;
         public AiecsSimulation Simulation { get; private set; }
         public FlowNavigationCache Navigation { get; private set; }
         public AiecsActorTemplate[] Templates { get; private set; }
@@ -103,6 +107,9 @@ namespace FlatWorld.AIECS.Gameplay
                 GameRes.Instance.TryGetLootTable(definitions[i].LootTable.ToString(), out lootTables[i]);
             }
             waterCurrentRevision = WaterCurrentPushConfigService.Revision;
+            environmentResourceSource = GameRes.ExistingInstance;
+            environmentResourceVersion = environmentResourceSource.ResourceReloadVersion;
+            environmentDefinitionRevision = environmentResourceSource.ItemDefinitionRevision;
             try
             {
                 los = new AiecsLosBridge();
@@ -241,6 +248,7 @@ namespace FlatWorld.AIECS.Gameplay
                 Simulation.GameDays = day.TotalDays + (double)day.CurrentTime / day.DayLength;
             }
             RefreshDarknessSamples(time);
+            RefreshWindVelocities();
             Simulation.Step(Navigation, losView, deltaTime, time, range);
             ApplyFeedRequests();
             ApplyProductionRequests();
@@ -382,16 +390,26 @@ namespace FlatWorld.AIECS.Gameplay
             }
         }
 
-        /// <summary>仅在水流 JSON 重新发布时同步模板和现有 ECS 居民，不增加常规 Tick 的逐实体托管访问。</summary>
+        /// <summary>只在资源重新发布时同步模板和居民的水流规则及质量，不逐 Tick 克隆定义。</summary>
         private void RefreshWaterCurrentPushSpeeds()
         {
             uint revision = WaterCurrentPushConfigService.Revision;
-            if (waterCurrentRevision == revision) return;
+            GameRes resources = GameRes.ExistingInstance;
+            int resourceVersion = resources != null ? resources.ResourceReloadVersion : 0;
+            ulong definitionRevision = resources != null ? resources.ItemDefinitionRevision : 0;
+            if (waterCurrentRevision == revision && ReferenceEquals(environmentResourceSource, resources) &&
+                environmentResourceVersion == resourceVersion && environmentDefinitionRevision == definitionRevision) return;
 
             for (int i = 0; i < Templates.Length; i++)
             {
+                if (resources == null || !resources.TryGetItemDefinition(actorIds[i], out RuntimeItemDefinition source) || !source.IsActor)
+                    throw new InvalidOperationException("环境推动无法读取 Actor 定义：" + actorIds[i]);
+                ItemData data = source.CreateItemData();
+                if (data?.Stack == null)
+                    throw new InvalidOperationException("环境推动 Actor 定义缺少重量数据：" + actorIds[i]);
                 AiecsActorTemplate template = Templates[i];
-                template.WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorIds[i]);
+                template.WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorIds[i], data.Stack.Weight);
+                template.MassKg = data.Stack.CurrentWeight;
                 template.Flight.BaseWaterPushSpeed = template.WaterCurrentPushSpeed;
                 Templates[i] = template;
             }
@@ -406,10 +424,45 @@ namespace FlatWorld.AIECS.Gameplay
                 if (identity.External != 0) continue;
                 AiecsFlowAgent agent = entities.GetComponentData<AiecsFlowAgent>(entity);
                 agent.WaterCurrentPushSpeed = Templates[identity.Definition].WaterCurrentPushSpeed;
+                agent.MassKg = Templates[identity.Definition].MassKg;
                 entities.SetComponentData(entity, agent);
             }
             waterCurrentRevision = revision;
+            environmentResourceSource = resources;
+            environmentResourceVersion = resourceVersion;
+            environmentDefinitionRevision = definitionRevision;
         }
+        #endregion
+
+        #region 当地风推动
+
+        /// <summary>世界桥只采集当地风速，Burst 移动消费纯值；无风时只在风停当次清除残留。</summary>
+        private void RefreshWindVelocities()
+        {
+            bool activeWind = WorldMotionSystem.HasWindPush;
+            if (!activeWind && !hasWindVelocity) return;
+            EntityManager entities = Simulation.Entities;
+            using EntityQuery query = entities.CreateEntityQuery(
+                ComponentType.ReadOnly<AiecsIdentity>(), ComponentType.ReadOnly<AiecsVital>(),
+                ComponentType.ReadWrite<AiecsFlowAgent>());
+            using NativeArray<Entity> residents = query.ToEntityArray(Allocator.Temp);
+            hasWindVelocity = false;
+            foreach (Entity entity in residents)
+            {
+                AiecsIdentity identity = entities.GetComponentData<AiecsIdentity>(entity);
+                if (identity.External != 0) continue;
+                AiecsFlowAgent agent = entities.GetComponentData<AiecsFlowAgent>(entity);
+                AiecsVital vital = entities.GetComponentData<AiecsVital>(entity);
+                Vector2 wind = activeWind && vital.Dead == 0
+                    ? WorldMotionSystem.SampleWindVelocity(new Vector2(agent.Position.x, agent.Position.y), agent.MassKg)
+                    : Vector2.zero;
+                // ECS 已保存规范逻辑坐标，风入口的 Normalize 操作可以直接重复执行。
+                agent.WindVelocity = new float2(wind.x, wind.y);
+                hasWindVelocity |= wind.sqrMagnitude > 0f;
+                entities.SetComponentData(entity, agent);
+            }
+        }
+
         #endregion
 
         #region 身份与武器输入

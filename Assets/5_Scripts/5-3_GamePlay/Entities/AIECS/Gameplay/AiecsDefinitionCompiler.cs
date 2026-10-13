@@ -149,6 +149,7 @@ namespace FlatWorld.AIECS.Gameplay
                     CandidateBudget = Mathf.Max(1, (int)Number(ecs?["pack"], "candidateBudget", 32f))
                 },
                 WaterCurrentPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorId, item.Stack.Weight),
+                MassKg = item.Stack.CurrentWeight,
                 Vital = new AiecsVital { Hp = hp, MaxHp = maxHp, DamageInterval = life.DamageInterval,
                     ReceivedMultiplier = 1f, LastDamageTime = double.NegativeInfinity },
                 Anatomy = anatomy, Defense = new AiecsDefense { Values = GameplayCombatBridge.Values(life.DefenseValues) },

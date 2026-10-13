@@ -360,6 +360,22 @@ namespace FlatWorld.WorldModel
         public bool TryGetSnapshot(Int2 cell, out RegionalWeatherSnapshot snapshot)
             => TryGetRegionSnapshot(ResolveRegion(cell), out snapshot);
 
+        /// <summary>只读检查已登记区域，避免弱风时逐个扫描世界物体。</summary>
+        public bool HasWindStrengthAtLeast(float threshold)
+        {
+            if (replicaMode)
+            {
+                foreach (RegionalWeatherSnapshot snapshot in replicas.Values)
+                    if (snapshot.WindStrength >= threshold) return true;
+            }
+            else
+            {
+                foreach (RegionalWeatherState state in states.Values)
+                    if (BuildSnapshot(state).WindStrength >= threshold) return true;
+            }
+            return false;
+        }
+
         public bool TryGetProfile(Int2 region, out ChunkWeatherProfile profile)
         {
             if (states.TryGetValue(ResolveRegion(region), out RegionalWeatherState state) && state.Profile != null)

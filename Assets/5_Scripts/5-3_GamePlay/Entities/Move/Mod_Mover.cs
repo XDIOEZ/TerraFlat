@@ -75,6 +75,7 @@ public partial class Mod_Mover : Module
     private bool holdRunInputActive; // 长按奔跑输入的语义状态；载具等玩法只消费这里，不重复轮询物理按键。
     private Mod_GameController inputController;
     private readonly List<IWaterCurrentExposure> waterCurrentExposures = new(); // 离地模块控制表层水流接触。
+    private readonly List<IWindMotionOwner> windMotionOwners = new();
     public Rigidbody2D rb;
 
     // 输入判定、到达判定与过渡时间的稳定下限。
@@ -200,9 +201,14 @@ public partial class Mod_Mover : Module
         _wasMoving = IsMoving = false;
         ResetWorldUnitTracking();
         waterCurrentExposures.Clear();
+        windMotionOwners.Clear();
         foreach (Module module in item.itemMods.Mods.Values)
+        {
             if (module is IWaterCurrentExposure exposure)
                 waterCurrentExposures.Add(exposure);
+            if (module is IWindMotionOwner owner)
+                windMotionOwners.Add(owner);
+        }
 
         hungerAction ??= new MovementHungerActionDefinition();
         hungerActionInstance = hungerAction.CreateInstance(item);
@@ -562,12 +568,17 @@ public partial class Mod_Mover : Module
     {
         Vector2 velocity = inputController?.IsGameplayInputLocked == true
             ? Vector2.zero : ResolveWaterCurrentVelocity();
-        if (item is Player player && player.IsLocalProfile && !item.DestructionHandled &&
+        if (item?.itemData?.Stack != null && !item.itemData.inHand && !item.DestructionHandled &&
+            (item is Player windPlayer ? windPlayer.IsLocalProfile : FlatWorld.Networking.GameNetwork.HasStateAuthority) &&
             rb != null && rb.simulated && CarrierSource == null && !spaceMotionOwned)
         {
             // 风力叠加到被动速度，站立或输入锁定时仍由刚体碰撞处理推动。
-            velocity += WorldMotionSystem.SamplePlayerWindVelocity(rb.position);
-            if (item.gameObject.scene.name == MachineWorld.WorldKey)
+            bool windOwned = false;
+            foreach (IWindMotionOwner owner in windMotionOwners)
+                windOwned |= owner.OwnsWindMotion;
+            if (!windOwned)
+                velocity += WorldMotionSystem.SampleWindVelocity(rb.position, item.itemData.Stack.CurrentWeight);
+            if (item is Player player && player.IsLocalProfile && item.gameObject.scene.name == MachineWorld.WorldKey)
                 velocity += MachineWorld.SampleConveyorVelocity(rb.position, Time.fixedDeltaTime);
         }
         return velocity;

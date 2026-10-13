@@ -322,6 +322,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IInteractable, I
             DrivenVelocity = Vector2.MoveTowards(DrivenVelocity, desiredVelocity, rate * deltaTime);
         }
         ExternalVelocity = WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
+        ExternalVelocity += WorldMotionSystem.SampleWindVelocity(body.position,
+            item.itemData.Stack.CurrentWeight + (Rider?.Item_Data?.Stack?.CurrentWeight ?? 0f));
         // 平移保留划行、推动与水流的真实方向，不能为了船头朝向重定向合速度。
         body.velocity = DrivenVelocity + ExternalVelocity;
         UpdateOperatorHeading(input, deltaTime);

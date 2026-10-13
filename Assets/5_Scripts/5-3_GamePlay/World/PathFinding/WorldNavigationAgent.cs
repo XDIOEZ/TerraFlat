@@ -910,7 +910,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
             body.velocity = waterActor != null
                 ? velocity + WorldMotionSystem.SampleWaterVelocity(body.position,
-                    WaterCurrentPushConfigService.ResolvePushSpeed(waterActor))
+                    WaterCurrentPushConfigService.ResolvePushSpeed(waterActor)) +
+                    WorldMotionSystem.SampleWindVelocity(body.position, waterActor.itemData.Stack.CurrentWeight)
                 : velocity;
             return;
         }

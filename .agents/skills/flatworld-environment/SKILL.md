@@ -60,4 +60,5 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 全局光由 TimeSystem.prefab 的 DayTimeSystem+Light2D 拥有；FixedLighting 是上限，SuppressWeather 关闭天气。`GetLighting/GetSunLighting` 外层只衰减一次云量，不影响局部灯。
 - 太阳/接触阴影透明度读纯 GetSunLighting，时间仅算轨迹；月相基于 TotalDays+CurrentTime/DayLength，月光作夜间下限后叠采光率/维度上限。MoonlightIntensity 与 MoonAppearance 分别表达亮度和出现进度，退出清 Shader 参数。
 - LightLayerMgr 热路径只读缓存 Light2D 成员并实时采强度/位置；成员集合低频刷新。风玩法按自身格查询，PlanetData.WindStrength/GPU 风只是镜头投影。
+- 风推动上限 0.5 单位/s，8 级风起推；质量范围读完整 ItemDefinitions 单件重量，按 ItemDefinitionRevision/目录引用缓存，中点以上不动、中点以下越轻越快。玩家、生物、载具和两种散落物后端共用 SampleWindVelocity；轻量/完整散落物只在有强风时扫描，未结束抛掷或完全沉没不受风，移动同步空间/区块归属。HasWindPush 每帧只读检查一次所有已登记天气区（含客户端副本），不能以镜头区判断全世界。
 - 单机散落物水态走 DroppedItemRuntime.Water；陆地静物订所在地格变化，未知格限量重试，水中低频查流。水态替换先备载荷/共享视觉再提交整组数量，水花归实际世界 Scene；浮力阈值与视觉浸没分开。

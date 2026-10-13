@@ -26,6 +26,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private Vector3 originalVisualScale;
 
     public bool IsActive => waterItem != null && (isSinking || isFloating);
+    public bool IsSubmerged => IsActive && waterImmersionEffect != null && waterImmersionEffect.CurrentDepth >= 0.995f;
 
     /// <summary>从当前位置建立浮沉状态；重复调用同一活动实例不会重置进度。</summary>
     public void Activate(Item targetItem)

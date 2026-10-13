@@ -115,6 +115,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     // 集中驱动也分阶段记账，区分运动、入水、输送、物质与拾取的实际开销。
     private static readonly ProfilerMarker MotionTickMarker = new("DroppedItems.Tick.Motion");
     private static readonly ProfilerMarker WaterTickMarker = new("DroppedItems.Tick.Water");
+    private static readonly ProfilerMarker WindTickMarker = new("DroppedItems.Tick.Wind");
     private static readonly ProfilerMarker TransportTickMarker = new("DroppedItems.Tick.Transport");
     private static readonly ProfilerMarker MatterTickMarker = new("DroppedItems.Tick.Matter");
     private static readonly ProfilerMarker PickupTickMarker = new("DroppedItems.Tick.Pickup");
@@ -135,6 +136,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             }
         }
         using (WaterTickMarker.Auto()) TickWater(deltaTime);
+        using (WindTickMarker.Auto()) TickWind(deltaTime);
         using (TransportTickMarker.Auto()) TickTransport(deltaTime);
         using (MatterTickMarker.Auto()) TickMatter(deltaTime);
         using (PickupTickMarker.Auto()) TickPickup(deltaTime, pickers);
@@ -241,5 +243,33 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             CheckEnvironment(id);
         }
     }
+    #endregion
+
+    #region 风推动掉落物
+
+    private readonly List<int> windScratch = new();
+
+    private void TickWind(float seconds)
+    {
+        if (!WorldMotionSystem.HasWindPush) return;
+        windScratch.Clear();
+        windScratch.AddRange(simulation.Ids);
+        foreach (int id in windScratch)
+        {
+            if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) continue;
+            LightweightDroppedBody body = simulation.Get(id);
+            if (body.Pickable == 0 || body.LiquidDepth >= 0.995f) continue;
+            Vector2 velocity = WorldMotionSystem.SampleWindVelocity(body.Position, payloads[id].Stack.CurrentWeight);
+            if (velocity.sqrMagnitude <= 0f) continue;
+            Vector2 destination = WorldMotionSystem.ResolveLooseWindPosition(body.Position, velocity * seconds);
+            if (WorldTopologyRuntime.ShortestDelta(body.Position, destination).sqrMagnitude <= 0.00000001f) continue;
+            body.Position = destination;
+            simulation.Set(body);
+            UpdatePlacement(id);
+            CheckEnvironment(id);
+        }
+        windScratch.Clear();
+    }
+
     #endregion
 }

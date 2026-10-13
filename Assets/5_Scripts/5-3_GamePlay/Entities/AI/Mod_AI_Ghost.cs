@@ -331,6 +331,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         // 幽灵直追不经导航刚体速度，仍须叠加与其它生物相同的表层水流位移。
         Vector2 currentVelocity = WorldMotionSystem.SampleWaterVelocity(
             item.transform.position, WaterCurrentPushConfigService.ResolvePushSpeed(item));
+        currentVelocity += WorldMotionSystem.SampleWindVelocity(currentPosition, item.itemData.Stack.CurrentWeight);
         Vector2 presentationPosition = nextPosition + currentVelocity * Mathf.Max(0f, deltaTime);
         Vector2 logicalPosition = WorldTopologyRuntime.NormalizePosition(presentationPosition);
 

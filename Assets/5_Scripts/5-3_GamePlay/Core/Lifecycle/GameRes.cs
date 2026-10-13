@@ -24,6 +24,8 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, RuntimeItemDefinition> ItemDefinitions =
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
+    /// <summary>物品目录成员变化时递增，环境质量等缓存只在目录变化后重建。</summary>
+    public ulong ItemDefinitionRevision { get; private set; }
     private Dictionary<string, string> itemDefinitionAliases = new(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("JSON Actor 定义字典")]
@@ -346,6 +348,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
                 AllPrefabs.TryGetValue(alias, out GameObject aliasPrefab) && aliasPrefab != definition.ShellPrefab)
                 throw new InvalidDataException($"ItemDefinition 旧身份冲突：{alias}");
         ItemDefinitions.Add(definition.Id, definition);
+        ItemDefinitionRevision++;
         foreach (string alias in definition.FormerIds)
         {
             itemDefinitionAliases.Add(alias, definition.Id);
@@ -406,6 +409,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (itemRegistered)
             {
                 ItemDefinitions.Remove(definition.Id);
+                ItemDefinitionRevision++;
                 UnregisterItemDefinitionAliases(definition);
                 if (AllPrefabs.TryGetValue(definition.Id, out GameObject prefab) &&
                     prefab == definition.ShellPrefab)
@@ -439,6 +443,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         }
 
         ItemDefinitions.Remove(actorId.Trim());
+        ItemDefinitionRevision++;
         UnregisterItemDefinitionAliases(definition);
         if (AllPrefabs.TryGetValue(actorId.Trim(), out GameObject prefab) &&
             prefab == definition.ShellPrefab)

@@ -245,6 +245,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
             {
                 machine.TransitionTo(Behaviour.Stranded, null);
                 machine.Tick(deltaTime);
+                ApplyStrandedWind(deltaTime);
                 UpdatePresentation(deltaTime);
                 return;
             }
@@ -379,6 +380,20 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     }
 
     #region 离水蹦跳与回水
+    /// <summary>离水鱼按地面阻挡受风，正在蹦跳的起点同步平移以免下一帧抵消风位移。</summary>
+    private void ApplyStrandedWind(float deltaTime)
+    {
+        Vector2 origin = body.position;
+        if (!AquaticHabitat.TryGetDepth(origin, out float depth) || depth >= AquaticHabitat.MinimumDepth) return;
+        Vector2 velocity = WorldMotionSystem.SampleWindVelocity(origin, item.itemData.Stack.CurrentWeight);
+        if (velocity.sqrMagnitude <= 0f) return;
+        Vector2 next = WorldMotionSystem.ResolveLooseWindPosition(origin, velocity * deltaTime);
+        Vector2 displacement = WorldTopologyRuntime.ShortestDelta(origin, next);
+        if (displacement.sqrMagnitude <= 0.00000001f || !CanHopAcross(origin, next)) return;
+        if (hopping) hopOrigin = WorldTopologyRuntime.NormalizePosition(hopOrigin + displacement);
+        MovePosition(next);
+    }
+
     private void ResetStrandedMotion()
     {
         hasReturnWaterDestination = hopping = false;

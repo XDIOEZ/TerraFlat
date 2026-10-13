@@ -508,6 +508,8 @@ public sealed class RuntimeItemDefinition
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
+    /// <summary>目录中的单件质量，供环境规则统计范围而不创建物品实例。</summary>
+    public float UnitWeight => templateData?.Stack?.Weight ?? 0f;
     public string EntityRuntime { get; }
     public bool UsesResourceEntities => string.Equals(EntityRuntime, "resource", StringComparison.Ordinal);
     public WorldDropBehavior DropBehavior { get; }

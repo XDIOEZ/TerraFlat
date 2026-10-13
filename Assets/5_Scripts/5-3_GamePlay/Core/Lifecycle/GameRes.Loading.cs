@@ -247,6 +247,7 @@ public partial class GameRes
     {
         AllPrefabs.Clear();
         ItemDefinitions.Clear();
+        ItemDefinitionRevision++;
         itemDefinitionAliases.Clear();
         ActorDefinitions.Clear();
         LootTables.Clear();

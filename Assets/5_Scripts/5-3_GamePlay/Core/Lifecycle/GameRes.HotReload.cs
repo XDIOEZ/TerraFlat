@@ -254,6 +254,7 @@ public partial class GameRes
         {
             if (TryGetItemDefinition(pair.Key, out _)) continue;
             ItemDefinitions.Add(pair.Key, pair.Value);
+            ItemDefinitionRevision++;
             retainedIds.Add(pair.Key);
         }
         return retainedIds.ToArray();
@@ -276,7 +277,10 @@ public partial class GameRes
         foreach (KeyValuePair<string, RuntimeItemDefinition> pair in retiredWorldItemDefinitions)
             if (ItemDefinitions.TryGetValue(pair.Key, out RuntimeItemDefinition current) &&
                 ReferenceEquals(current, pair.Value))
+            {
                 ItemDefinitions.Remove(pair.Key);
+                ItemDefinitionRevision++;
+            }
         retiredWorldItemDefinitions.Clear();
     }
 
