@@ -53,9 +53,11 @@ internal static partial class Program
 
     private static void GravityAtmosphere()
     {
-        var thin = GravityFixture(1d);
-        var thick = GravityFixture(2d);
         var dense = GravityFixture(10000d);
+        // 按当前阻尼上限选择未饱和厚度，调低引力后仍能比较薄厚大气。
+        double thinThickness = dense.DampingPerSecond / Settings.AtmosphereDampingPerSecond * .25d;
+        var thin = GravityFixture(thinThickness);
+        var thick = GravityFixture(thinThickness * 2d);
         Check(thick.DampingPerSecond > thin.DampingPerSecond, "thicker atmosphere increases damping");
         Check(dense.DampingPerSecond < 2d * dense.AngularFrequency, "damping stays below the loss of oscillation");
         SpaceVector2 origin = new(1000d, 0d), velocity = new(0d, 20d);

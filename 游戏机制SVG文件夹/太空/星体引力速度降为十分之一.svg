@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="530" viewBox="0 0 960 530" role="img" aria-labelledby="title desc">
+  <title id="title">星体引力带来的速度降为原来的十分之一</title>
+  <desc id="desc">同一星体质量 a，原先对应的引力基准速度为 10A，调整后为 A。配置从 80 米每秒改为 8 米每秒。此图展示基准速度比例，不代表任意时刻的总速度。</desc>
+  <style>
+    text { font-family: 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif; fill: #edf3ff; }
+    .label { font-size: 21px; }
+    .note { font-size: 17px; fill: #b9c8e3; }
+    .value { font-size: 31px; font-weight: 700; }
+  </style>
+  <rect width="960" height="530" rx="24" fill="#101a2d"/>
+  <text x="44" y="59" font-size="29" font-weight="700">星体引力带来的速度 × 0.1</text>
+  <text x="44" y="96" class="note">同一颗星球，质量仍为 a；对应的基准速度由 10A 降为 A。</text>
+  <circle cx="115" cy="238" r="49" fill="#4b78c8"/>
+  <path d="M77 217 Q107 185 142 214 Q112 231 146 257 Q100 283 78 254Z" fill="#72bd9b"/>
+  <text x="115" y="324" class="label" text-anchor="middle">星球质量 a</text>
+  <text x="230" y="168" class="label">修改前</text>
+  <rect x="230" y="183" width="500" height="36" rx="9" fill="#f0a36d"/>
+  <text x="758" y="213" class="value" fill="#f0a36d">10A</text>
+  <text x="230" y="270" class="label">修改后</text>
+  <rect x="230" y="285" width="50" height="36" rx="9" fill="#6bdfbc"/>
+  <text x="302" y="316" class="value" fill="#6bdfbc">A</text>
+  <text x="230" y="357" class="note">两条速度条使用同一比例尺：现在只剩原来的 10%。</text>
+  <rect x="44" y="393" width="872" height="94" rx="15" fill="#1d2c46"/>
+  <text x="66" y="428" class="label">配置与代码默认值：80 米/秒 → 8 米/秒</text>
+  <text x="66" y="463" class="note">比较条件：同一星体、同一起点、无初速、无大气阻尼的中心速度。</text>
+  <text x="44" y="513" font-size="14" fill="#b9c8e3">此图解释引力基准速度；已有惯性、推进和碰撞仍参与实际总速度。游戏效果由用户验收。</text>
+</svg>

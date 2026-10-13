@@ -28,7 +28,7 @@
   "ImpactJoulesPerDurability": 1000.0,
   "GravityReferenceRadiusMeters": 2000.0,
   "GravityCaptureMarginMeters": 400.0,
-  "GravityReferenceCenterSpeedMetersPerSecond": 80.0,
+  "GravityReferenceCenterSpeedMetersPerSecond": 8.0,
   "AtmosphereDampingPerSecond": 0.01,
   "MaximumGravityDampingRatio": 0.75,
   "GravityRestDistanceMeters": 0.05,

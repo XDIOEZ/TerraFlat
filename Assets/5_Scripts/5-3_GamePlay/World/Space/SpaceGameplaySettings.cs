@@ -39,7 +39,7 @@ namespace FlatWorld.Spaceflight
         // 参考圈取地球尺寸加余量，中心速度是物体从圈边静止释放的基准。
         public double GravityReferenceRadiusMeters = 2000d;
         public double GravityCaptureMarginMeters = 400d;
-        public double GravityReferenceCenterSpeedMetersPerSecond = 80d;
+        public double GravityReferenceCenterSpeedMetersPerSecond = 8d; // 星体引力带来的基准速度降为原来的十分之一。
         public double AtmosphereDampingPerSecond = .01d;
         public double MaximumGravityDampingRatio = .75d;
         public double GravityRestDistanceMeters = .05d;
