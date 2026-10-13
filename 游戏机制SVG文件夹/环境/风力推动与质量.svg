@@ -1,33 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="620" viewBox="0 0 1040 620">
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="810" viewBox="0 0 1040 810" role="img" aria-labelledby="title desc">
+  <title id="title">风推动的质量、重力和风级分档</title>
+  <desc id="desc">当前质量乘星球重力除以9.81得到等效质量。目录最轻质量到轻重中点分成三段，分别需要八、九、十级风。达到起吹级速度0.06，再高一级0.2，再高两级0.5单位每秒；同一风级内不插值。</desc>
   <defs>
     <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#142333"/><stop offset="1" stop-color="#0c1420"/></linearGradient>
     <marker id="arrow" markerWidth="9" markerHeight="9" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#8ea6bc" stroke-width="1.5"/></marker>
   </defs>
-  <rect width="1040" height="620" rx="24" fill="url(#bg)"/>
+  <rect width="1040" height="810" rx="24" fill="url(#bg)"/>
   <g font-family="Microsoft YaHei, sans-serif" fill="#eaf2fa">
-    <text x="46" y="60" font-size="29" font-weight="700">风推动：越轻越快，最大 0.5 单位 / 秒</text>
-    <text x="46" y="96" font-size="17" fill="#9cb1c6">规则示意 · 下面的曲线表示最大风力时的速度</text>
-    <rect x="46" y="122" width="948" height="64" rx="12" fill="#233648"/>
-    <text x="67" y="162" font-size="21">B = 目录中最轻的质量　 A = 目录中最重的质量　 C = (A + B) / 2</text>
-    <rect x="136" y="233" width="420" height="235" fill="#163f40" opacity=".65"/>
-    <rect x="556" y="233" width="362" height="235" fill="#342a39" opacity=".7"/>
+    <text x="46" y="58" font-size="29" font-weight="700">风推动分档：达到起吹等级才动</text>
+    <text x="46" y="92" font-size="17" fill="#9cb1c6">机制示意 · 上限 0.5 单位 / 秒 · 同一风级内速度固定</text>
+    <rect x="46" y="116" width="250" height="82" rx="12" fill="#233648"/>
+    <rect x="350" y="116" width="304" height="82" rx="12" fill="#233648"/>
+    <rect x="706" y="116" width="288" height="82" rx="12" fill="#233648"/>
+    <text x="68" y="149" font-size="18">当前总质量 m · 星球重力 g</text>
+    <text x="68" y="180" font-size="17" fill="#9cb1c6">质量越大 / 重力越大 → 越难吹</text>
+    <text x="372" y="149" font-size="18">等效质量 M = m × g / 9.81</text>
+    <text x="372" y="180" font-size="17" fill="#9cb1c6">折算到参考重力下比较轻重</text>
+    <text x="730" y="149" font-size="18">确定起吹级：8 / 9 / 10</text>
+    <text x="730" y="180" font-size="17" fill="#9cb1c6">风级不足 → 推动速度为 0</text>
+    <path d="M304 157H338M662 157H694" stroke="#8ea6bc" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="46" y="234" font-size="18">B = 最轻单件质量　A = 最重单件质量　C = (A + B) / 2　D = (C − B) / 3</text>
+    <g font-size="17">
+      <rect x="46" y="253" width="237" height="68" fill="#205648"/>
+      <rect x="283" y="253" width="237" height="68" fill="#64512e"/>
+      <rect x="520" y="253" width="237" height="68" fill="#294669"/>
+      <rect x="757" y="253" width="237" height="68" fill="#49364b"/>
+      <text x="67" y="280">M &lt; B + D</text><text x="67" y="307">8 级起吹</text>
+      <text x="303" y="280">B + D ≤ M &lt; B + 2D</text><text x="303" y="307">9 级起吹</text>
+      <text x="540" y="280">B + 2D ≤ M &lt; C</text><text x="540" y="307">10 级起吹</text>
+      <text x="777" y="280">M ≥ C</text><text x="777" y="307">10 级风也吹不动</text>
+    </g>
+    <text x="46" y="358" font-size="20" font-weight="700">速度按阶梯变化（图中单位：单位 / 秒）</text>
     <g stroke="#33495e" stroke-width="1">
-      <path d="M136 258H918M136 353H918M136 448H918"/>
+      <path d="M135 407H729M135 524H729M135 579H729M135 602H729"/>
     </g>
-    <path d="M136 225V470M122 448H934" fill="none" stroke="#8ea6bc" stroke-width="2" marker-end="url(#arrow)"/>
-    <path d="M136 258L556 448H918" fill="none" stroke="#64e0c4" stroke-width="5" stroke-linecap="round"/>
-    <path d="M556 230V448" stroke="#cfa0c9" stroke-width="2" stroke-dasharray="6 6"/>
-    <g fill="#eaf2fa" font-size="17">
-      <text x="70" y="264">0.5</text><text x="70" y="359">0.25</text><text x="88" y="454">0</text>
-      <text x="62" y="218" fill="#9cb1c6">速度</text>
-      <text x="910" y="500" fill="#9cb1c6">质量 →</text>
-      <text x="128" y="492">B</text><text x="545" y="492">C</text><text x="908" y="492">A</text>
-      <text x="192" y="270" fill="#a7eddf">可被吹动：越接近 C 越慢</text>
-      <text x="644" y="312" fill="#dfb6d5">达到 C 或更重</text>
-      <text x="672" y="346" font-size="23" fill="#dfb6d5">推动速度 = 0</text>
+    <path d="M135 393V614M121 602H741" fill="none" stroke="#8ea6bc" stroke-width="2" marker-end="url(#arrow)"/>
+    <g font-size="16" fill="#9cb1c6">
+      <text x="76" y="412">0.5</text><text x="76" y="529">0.2</text><text x="66" y="584">0.06</text><text x="90" y="607">0</text>
+      <text x="171" y="642">7 级</text><text x="316" y="642">8 级</text><text x="477" y="642">9 级</text><text x="636" y="642">10 级</text>
     </g>
-    <circle cx="136" cy="258" r="6" fill="#64e0c4"/><circle cx="556" cy="448" r="6" fill="#64e0c4"/>
-    <text x="46" y="552" font-size="18">满风速度 = 0.5 × clamp((C − 当前总质量) / (C − B), 0, 1)</text>
-    <text x="46" y="588" font-size="16" fill="#9cb1c6">保留 8 级风起推；较弱的风按比例减速。固定建筑与扎根资源保持固定。</text>
+    <path d="M135 602H335V579H495V524H655V407H729" fill="none" stroke="#64e0c4" stroke-width="4"/>
+    <path d="M135 602H495V579H655V524H729" fill="none" stroke="#f0c27b" stroke-width="3" stroke-dasharray="8 4"/>
+    <path d="M135 602H655V579H729" fill="none" stroke="#86baff" stroke-width="3" stroke-dasharray="3 5"/>
+    <g font-size="17">
+      <text x="773" y="420" fill="#64e0c4">8 级起吹：0.06 → 0.2 → 0.5</text>
+      <text x="773" y="456" fill="#f0c27b">9 级起吹：0 → 0.06 → 0.2</text>
+      <text x="773" y="492" fill="#86baff">10 级起吹：0 → 0 → 0.06</text>
+      <text x="773" y="546" fill="#9cb1c6">0.80～不足 0.90：8 级</text>
+      <text x="773" y="578" fill="#9cb1c6">0.90～不足 1.00：9 级</text>
+      <text x="773" y="610" fill="#9cb1c6">1.00：10 级</text>
+    </g>
+    <text x="46" y="695" font-size="18">同一物体换到低重力星球，起吹门槛可能降低；高重力星球则可能提高或完全吹不动。</text>
+    <text x="46" y="732" font-size="17" fill="#9cb1c6">邻风区各自先分档，边缘仍按距离混合方向与速度；上图展示单个风区内的档位。</text>
+    <text x="46" y="769" font-size="17" fill="#9cb1c6">固定建筑与扎根资源保持固定；图示解释已实现规则，实际玩法效果由用户验收。</text>
   </g>
 </svg>

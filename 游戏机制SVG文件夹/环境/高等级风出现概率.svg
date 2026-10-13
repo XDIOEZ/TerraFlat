@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="610" viewBox="0 0 1040 610" role="img" aria-labelledby="title desc">
+  <title id="title">高等级自然风出现概率调整</title>
+  <desc id="desc">以每个区域原来的自然风抽签概率为百分之百，低于八级的风保持不变，八级乘0.5、九级乘0.25、十级乘0.1。风的强度和持续时间保持不变。</desc>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#142333"/><stop offset="1" stop-color="#0c1420"/></linearGradient></defs>
+  <rect width="1040" height="610" rx="24" fill="url(#bg)"/>
+  <g font-family="Microsoft YaHei, sans-serif" fill="#eaf2fa">
+    <text x="46" y="58" font-size="29" font-weight="700">强风更少见，普通风沿用原来的概率</text>
+    <text x="46" y="96" font-size="17" fill="#9cb1c6">区域每次自然天气抽签 · 将同一区域调整前的概率当作 100% 来比较</text>
+    <rect x="710" y="120" width="20" height="12" fill="#40566b"/><text x="740" y="133" font-size="16" fill="#9cb1c6">原来</text>
+    <rect x="810" y="120" width="20" height="12" fill="#64e0c4"/><text x="840" y="133" font-size="16" fill="#9cb1c6">调整后</text>
+    <g font-size="21">
+      <text x="46" y="181">低于 8 级</text>
+      <rect x="218" y="157" width="550" height="13" rx="4" fill="#40566b"/>
+      <rect x="218" y="177" width="550" height="20" rx="4" fill="#64e0c4"/>
+      <text x="793" y="195" fill="#64e0c4">100% · 保持原概率</text>
+      <text x="46" y="257">8 级</text>
+      <rect x="218" y="233" width="550" height="13" rx="4" fill="#40566b"/>
+      <rect x="218" y="253" width="275" height="20" rx="4" fill="#64e0c4"/>
+      <text x="515" y="271" fill="#64e0c4">50% · 减少一半</text>
+      <text x="46" y="333">9 级</text>
+      <rect x="218" y="309" width="550" height="13" rx="4" fill="#40566b"/>
+      <rect x="218" y="329" width="137.5" height="20" rx="4" fill="#64e0c4"/>
+      <text x="378" y="347" fill="#64e0c4">25% · 减少四分之三</text>
+      <text x="46" y="409">10 级</text>
+      <rect x="218" y="385" width="550" height="13" rx="4" fill="#40566b"/>
+      <rect x="218" y="405" width="55" height="20" rx="4" fill="#64e0c4"/>
+      <text x="295" y="423" fill="#64e0c4">10% · 减少九成</text>
+    </g>
+    <rect x="46" y="458" width="948" height="63" rx="12" fill="#233648"/>
+    <text x="68" y="497" font-size="22">新出现概率 = 当地基础概率 × 对应风级倍率</text>
+    <text x="46" y="554" font-size="17" fill="#9cb1c6">这是概率的相对倍率，不是实际游玩时间占比；强度、持续时间、雨雷与手动强风保留。</text>
+    <text x="46" y="586" font-size="16" fill="#9cb1c6">配置：regional-weather.json → wind → ProbabilityBands；实际频率由用户游玩验收。</text>
+  </g>
+</svg>

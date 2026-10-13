@@ -28,6 +28,11 @@
       "MaximumProbability": 0.25,
       "MinimumIntensity": 0.1,
       "MaximumIntensity": 1.0,
+      "ProbabilityBands": [
+        { "MinimumIntensity": 0.8, "Multiplier": 0.5 },
+        { "MinimumIntensity": 0.9, "Multiplier": 0.25 },
+        { "MinimumIntensity": 1.0, "Multiplier": 0.1 }
+      ],
       "MinimumDurationSeconds": 45.0,
       "MaximumDurationSeconds": 180.0,
       "PrecipitationWeight": 0.0

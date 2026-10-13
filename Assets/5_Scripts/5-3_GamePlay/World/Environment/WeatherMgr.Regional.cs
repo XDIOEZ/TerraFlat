@@ -80,6 +80,13 @@ public partial class WeatherMgr
         }
     }
 
+    /// <summary>风推动读取同一天气世界的星球重力，不借镜头或其它场景的星球参数。</summary>
+    public bool TryGetWindSurfaceGravity(out double gravity)
+    {
+        gravity = regionalPlanet?.SurfaceGravityMetersPerSecondSquared ?? double.NaN;
+        return _weatherRuntimeAllowed && regionalEngine != null && double.IsFinite(gravity) && gravity >= 0d;
+    }
+
     public bool TryGetWeatherAt(Vector2 position, out RegionalWeatherSnapshot sample)
     {
         sample = default;

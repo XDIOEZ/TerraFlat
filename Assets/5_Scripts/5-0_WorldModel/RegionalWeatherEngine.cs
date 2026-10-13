@@ -176,8 +176,9 @@ namespace FlatWorld.WorldModel
             foreach (WeatherElementProfile profile in state.Profile.Elements)
             {
                 WeatherElementState element = GetOrCreateElement(state, profile.Id);
-                if (element.Intensity > 0f || profile.Intensity <= 0f || profile.Probability <= 0f ||
-                    Random01(state.Region, state.CheckIndex, profile.Id) >= profile.Probability)
+                float probability = settings.ResolveActivationProbability(profile);
+                if (element.Intensity > 0f || profile.Intensity <= 0f || probability <= 0f ||
+                    Random01(state.Region, state.CheckIndex, profile.Id) >= probability)
                     continue;
                 BeginElement(state, element, state.LastStepTime, profile.Intensity, profile.DurationSeconds);
             }

@@ -3,6 +3,16 @@ using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
+    /// <summary>按天气强度分段调整自然事件的出现概率。</summary>
+    [Serializable]
+    public struct WeatherProbabilityBand
+    {
+        #region 强度门槛与概率倍率
+        public float MinimumIntensity;
+        public float Multiplier;
+        #endregion
+    }
+
     /// <summary>天气要素只由固定区块气候生成概率、强度和持续时间。</summary>
     [Serializable]
     public sealed class WeatherElementRule
@@ -18,8 +28,26 @@ namespace FlatWorld.WorldModel
         public float MaximumIntensity;
         public float MinimumDurationSeconds;
         public float MaximumDurationSeconds;
+        public WeatherProbabilityBand[] ProbabilityBands = Array.Empty<WeatherProbabilityBand>();
 
-        public WeatherElementRule Clone() => (WeatherElementRule)MemberwiseClone();
+        public WeatherElementRule Clone()
+        {
+            var copy = (WeatherElementRule)MemberwiseClone();
+            copy.ProbabilityBands = (WeatherProbabilityBand[])ProbabilityBands.Clone();
+            return copy;
+        }
+
+        /// <summary>只改自然事件抽签概率，未达到任何配置门槛时沿用原概率。</summary>
+        public float ResolveProbabilityMultiplier(float intensity)
+        {
+            float multiplier = 1f;
+            foreach (WeatherProbabilityBand band in ProbabilityBands)
+            {
+                if (intensity < band.MinimumIntensity) break;
+                multiplier = band.Multiplier;
+            }
+            return multiplier;
+        }
 
         internal void Validate()
         {
@@ -30,8 +58,16 @@ namespace FlatWorld.WorldModel
                 !Unit(MinimumProbability) || !Unit(MaximumProbability) || MaximumProbability < MinimumProbability ||
                 !Unit(MinimumIntensity) || !Unit(MaximumIntensity) || MaximumIntensity < MinimumIntensity ||
                 !NonNegative(MinimumDurationSeconds) || MinimumDurationSeconds <= 0f ||
-                !NonNegative(MaximumDurationSeconds) || MaximumDurationSeconds < MinimumDurationSeconds)
+                !NonNegative(MaximumDurationSeconds) || MaximumDurationSeconds < MinimumDurationSeconds ||
+                ProbabilityBands == null)
                 throw new ArgumentOutOfRangeException(nameof(WeatherElementRule), "区块天气要素参数超出有限配置范围。");
+            float previousIntensity = -1f;
+            foreach (WeatherProbabilityBand band in ProbabilityBands)
+            {
+                if (!Unit(band.MinimumIntensity) || !Unit(band.Multiplier) || band.MinimumIntensity <= previousIntensity)
+                    throw new ArgumentOutOfRangeException(nameof(ProbabilityBands), "天气概率分段须按强度门槛递增且倍率在零到一之间。");
+                previousIntensity = band.MinimumIntensity;
+            }
         }
 
         internal WeatherElementProfile CreateProfile(ChunkWeatherClimate climate)
@@ -81,7 +117,13 @@ namespace FlatWorld.WorldModel
                 Id = WeatherElementIds.Wind, HumidityWeight = 0f, WindWeight = 1f,
                 MinimumProbability = 0f, MaximumProbability = 0.25f,
                 MinimumIntensity = 0.1f, MaximumIntensity = 1f,
-                MinimumDurationSeconds = 45f, MaximumDurationSeconds = 180f
+                MinimumDurationSeconds = 45f, MaximumDurationSeconds = 180f,
+                ProbabilityBands = new[]
+                {
+                    new WeatherProbabilityBand { MinimumIntensity = 0.8f, Multiplier = 0.5f },
+                    new WeatherProbabilityBand { MinimumIntensity = 0.9f, Multiplier = 0.25f },
+                    new WeatherProbabilityBand { MinimumIntensity = 1f, Multiplier = 0.1f }
+                }
             },
             new WeatherElementRule
             {
@@ -111,6 +153,15 @@ namespace FlatWorld.WorldModel
             for (int i = 0; i < Elements.Length; i++)
                 profiles[i] = Elements[i].CreateProfile(climate);
             return new ChunkWeatherProfile(climate, profiles);
+        }
+
+        /// <summary>区域抽签时应用当前配置，区块冻结的基础气候概率保持独立。</summary>
+        public float ResolveActivationProbability(WeatherElementProfile profile)
+        {
+            foreach (WeatherElementRule rule in Elements)
+                if (string.Equals(rule.Id, profile.Id, StringComparison.Ordinal))
+                    return profile.Probability * rule.ResolveProbabilityMultiplier(profile.Intensity);
+            return profile.Probability;
         }
 
         public void Validate()

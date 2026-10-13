@@ -35,21 +35,24 @@ public static class WorldMotionSystem
         return current.Direction * (speed * strength);
     }
 
-    /// <summary>按物体实际位置与总质量读取风推动，禁用天气的维度返回零。</summary>
+    /// <summary>按当地风级、物体总质量与星球重力读取分档推动速度。</summary>
     public static Vector2 SampleWindVelocity(Vector2 position, float mass)
     {
-        if (!WindEnvironmentRules.TryGetMassRange(out float minimumMass, out float maximumMass) ||
-            WindEnvironmentRules.ResolveMassFactor(mass, minimumMass, maximumMass) <= 0f)
+        if (!WindEnvironmentRules.TryGetMassRange(out float minimumMass, out float maximumMass))
             return Vector2.zero;
         WeatherMgr weather = WeatherMgr.ExistingInstance;
-        if (weather == null || !weather.TryGetWindBlendAt(WorldLocalPresentation.ToLogical(position), out var sample))
+        if (weather == null || !weather.TryGetWindSurfaceGravity(out double surfaceGravity))
+            return Vector2.zero;
+        int requiredWindLevel = WindEnvironmentRules.ResolveRequiredWindLevel(mass, surfaceGravity, minimumMass, maximumMass);
+        if (requiredWindLevel > WindEnvironmentRules.MaximumWindLevel ||
+            !weather.TryGetWindBlendAt(WorldLocalPresentation.ToLogical(position), out var sample))
             return Vector2.zero;
 
-        // 先换算各区推力再混合，避免边缘风强跌过推动门槛时突然停下。
+        // 每区先按自身风级裁定能否推动，再沿空间边缘混合速度向量。
         Vector2 ResolveSourceVelocity(Unity.Mathematics.float3 wind)
         {
             Vector2 vector = new(wind.x, wind.y);
-            float speed = WindEnvironmentRules.ResolvePushSpeed(wind.z, mass, minimumMass, maximumMass);
+            float speed = WindEnvironmentRules.ResolvePushSpeed(wind.z, requiredWindLevel);
             return vector.normalized * speed;
         }
 

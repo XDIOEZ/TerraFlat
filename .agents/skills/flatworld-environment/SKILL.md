@@ -28,6 +28,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 普通太空跨区保留玩家，不触发 WorldEnter；SpaceMgr 使用通用时间初始化/引用接口登记新星区，统一引用 `SpaceScene` 时钟并补采光率，不能把未登记场景的零光照当成太空环境。
 - 区块生成时一次汇总固定 airHumidity、最终 precipitation、windX/Y、每格风模长和地理温度；`ChunkTerrainData.WeatherProfile` 冻结每种要素的 Probability/Intensity/DurationSeconds。自然要素为 rain/wind/thunder，配置 Elements 按稳定字符串 ID 扩展；生成器与调度器经 `ChunkWeatherConfiguration` 共用冻结配置。
 - 天气按共享区域推进，`RegionSizeInChunks` 默认 8（16 格区块对应 128×128 格），区域首次登记冻结代表区块档案，成员共用要素概率、强度和时限；每区每步只推进/复制一次，地表积分分发到所有已加载成员。环绕世界以 Min 分区，剩余窄边并入末区，雷击按实际区域边界选点。`CheckIntervalSeconds` 为空闲要素检查间隔；运行时不重采气候，查询只读共享状态，普通 Client 只应用权威效果。
+- 自然事件起始抽签由 `ResolveActivationProbability` 将冻结基础概率乘要素 `ProbabilityBands`；风强 0.8/0.9/1.0 以上分别乘 0.5/0.25/0.1，低于 0.8 沿用原概率。配置在 regional-weather.json，默认值同源；只改变强风出现概率，不改风强/持续时间、雨雷抽签或手动强风覆盖。
 - 本机雨雪用 `_precipitationTransitionSeconds` 完整 SmoothStep 过渡（WorldManager 默认 12 秒，低强度小雨也走完）；风/云光仍用 `_weatherTransitionSeconds` 零到满 3 秒。跨区块从当前表现续接，雨滴/水花由零按强度增多，雨声线性消费同一强度，停雨让现有粒子落完。程序入口 `SetPrecipitationIntensity(intensity, durationSeconds=60, transitionSeconds=-1)` 只改本块降水，0 停雨、0 过渡秒立即切换、-1 用默认值；普通客户端返回 false。`PresentedRainIntensity/PresentedSnowIntensity` 可读当前表现，权威浇水/积雪仍读真实当地天气。
 - 雷束/电弧/屏幕闪光按环绕最短距离读取当前近/远雷声 Cue 的 MinDistance/MaxDistance，共用线性距离衰减；当前 8 格内完整、8～192 格渐弱、192 格处归零，修改雷声距离时雷光自动跟随。主雷束默认从落点向上 24 格，Shader 程序化计算折线/分叉/光晕，不采样整张闪电贴图；雷声仍按原传播延迟播放。
 - 固定游戏秒格推进；跳时有界补已有事件，新区块不追补未加载的浇水/积雪，不补播历史雷声。回拨平移各独立时限，复制以 Revision 为主；`PlanetData.RegionalWeatherStates` 保存固定档案和事件状态。云量从雨/雷派生，自然雾、湿气消耗和雨冷反馈已移除；云雾仍可限时手动覆盖。
@@ -62,5 +63,5 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 太阳/接触阴影透明度读纯 GetSunLighting，时间仅算轨迹；月相基于 TotalDays+CurrentTime/DayLength，月光作夜间下限后叠采光率/维度上限。MoonlightIntensity 与 MoonAppearance 分别表达亮度和出现进度，退出清 Shader 参数。
 - LightLayerMgr 热路径只读缓存 Light2D 成员并实时采强度/位置；成员集合低频刷新。风玩法按自身格查询，PlanetData.WindStrength/GPU 风只是镜头投影。
 - 风区边缘由 `WindTransitionWidth` 控制空间过渡总宽（默认 32 格，边界内外各 16 格）；`TryGetWindBlend` 按连续坐标 SmoothStep 混合最多四区，支持拐角、环绕和客户端副本，缺失区视为无风且不创建状态。风声/设施读混合风向量，移动先按各区原强度换算推速再混合，避免跌过 8 级门槛突然停住。
-- 风推动上限 0.5 单位/s，8 级风起推；质量范围读完整 ItemDefinitions 单件重量，按 ItemDefinitionRevision/目录引用缓存，中点以上不动、中点以下越轻越快。玩家、生物、载具和两种散落物后端共用 SampleWindVelocity；轻量/完整散落物只在有强风时扫描，未结束抛掷或完全沉没不受风，移动同步空间/区块归属。HasWindPush 每帧只读检查一次所有已登记天气区（含客户端副本），不能以镜头区判断全世界。
+- 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档不插值；邻风区各自分档后仍按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风。HasWindPush 每帧只读检查一次所有登记天气区（含客户端副本），不能以镜头区判断全世界。
 - 单机散落物水态走 DroppedItemRuntime.Water；陆地静物订所在地格变化，未知格限量重试，水中低频查流。水态替换先备载荷/共享视觉再提交整组数量，水花归实际世界 Scene；浮力阈值与视觉浸没分开。
