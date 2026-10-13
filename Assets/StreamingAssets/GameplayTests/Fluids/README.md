@@ -1,6 +1,6 @@
 # 工业管道气液 Lua 功能回归
 
-入口清单：`GameplayTests/fluid-suite.json`。共 **52 个独立 Lua 案例**，覆盖当前工业气液系统的功能分支；没有执行测试，也不声称达到 100% 行/分支覆盖率。
+入口清单：`GameplayTests/fluid-suite.json`。按功能组织 **9 个 Lua 分组，保留原有 52 项检查**，每个系统的测试集控制在 10 个 Lua 以内；没有执行测试，也不声称达到 100% 行/分支覆盖率。
 
 ## 执行
 
@@ -10,34 +10,41 @@ Unity 顶部打开 **FlatWorld → 测试 → 测试中心（多选案例）**�
 
 ```powershell
 python Tools/GameplayTesting/run_suite.py GameplayTests/fluid-suite.json
-python Tools/GameplayTesting/run_suite.py GameplayTests/fluid-suite.json --cases network_frozen_chain tank_scope_transfer surface_liquid_pump
+python Tools/GameplayTesting/run_suite.py GameplayTests/fluid-suite.json --cases fluid_transport fluid_tanks fluid_environment
 ```
 
 运行前让 Unity 完成脚本编译。默认测试场景仍使用原清单；此专项通过测试中心或上述命令选择，不自动加入日常 quick-suite。
 
-每个 Lua 可单独勾选，前置条件由自己的夹具准备，失败后按清单继续后续案例。详细断言记录在 `Library/FlatWorldGameplayTests/Reports/<运行ID>/<案例ID>.json`；流水线总报告在 `Library/FlatWorldGameplayTests/Pipeline/`。查阅首个失败断言和调用堆栈，不将脚本已保存等同于测试通过。
+测试中心显示 9 个分组，每组可以单独勾选。组内每项 `test.fluid` 仍使用独立夹具：某项失败后继续检查同组其余项，失败断言与子案例 ID 全部保留，整组最终仍为失败；世界、玩家或控制前提失效时立即停止。详细报告按分组 ID 写入 `Library/FlatWorldGameplayTests/Reports/<运行ID>/<分组ID>.json`；流水线总报告在 `Library/FlatWorldGameplayTests/Pipeline/`。
 
 ## Lua 接口
 
 ```lua
--- 选择白名单中的功能案例，所有检查读取生产系统的真实结果。
+-- 相关功能放进同一 Lua，各项检查仍读取生产系统的真实结果。
 test.check("world_ready")
 test.check("player_ready")
 test.fluid("network_frozen_chain", "同轮新料不能穿透多个管段")
+test.fluid("network_shared_throughput", "多出口共用吞吐预算")
+test.fluid("network_blocked_retry", "堵塞后不丢料并继续原批次")
 ```
 
 `test.fluid(id, label)` 只接受已登记案例。拼错 ID 在 Lua 预检时失败；它不会向沙箱开放 C#、文件读写、反射或任意代码执行。一个功能案例内部的各项断言均写入原有 JSON 报告，没有断言的案例不能被记为成功。必要前提失败记录异常，防止后续空数据检查冒充通过。
 
-Lua 编排沿用现有 256 步、1MB 源码和指令预算。每个脚本只有就绪检查和一个功能调用；整份清单仍受测试场景的 600 秒总流程上限约束。沙箱与错误处理参考 [Lua 官方手册](https://www.lua.org/manual/5.4/manual.html#pdf-xpcall)。
+Lua 编排沿用现有 256 步、1MB 源码和指令预算。每组通过 `ipairs` 顺序编排相关检查，最多 10 项功能调用加 2 项就绪检查；整份清单仍受测试场景的 600 秒总流程上限约束。顺序遍历参考 [Lua 官方手册](https://www.lua.org/manual/5.4/manual.html#pdf-ipairs)。
 
 ## 功能覆盖矩阵
 
-| 范围 | 案例数 | 已编写的检查 |
+| Lua 分组 ID | 子检查数 | 覆盖范围 |
 | --- | ---: | --- |
-| 库存与热力学 `core_*` | 12 | 单位/份数换算、气液共存、单相混料限制、decimal 尾量、预留防超卖、部分转移和失败回滚、多原料原子扣量、冻结库存、质量事件、热量/压力/传热、压缩做功、蒸发冷凝及曲线边界、JSON/MemoryPack/克隆隔离 |
-| 管网与作用域 | 23 | 20 种本体设备目录、16 种掩码、四向端口旋转、相态不兼容不建边、三轮管链、压差不自然流动、共享吞吐、堵塞原批次重试、阀门断边、选择器分流、方向相态偏好与回退、物质筛选、receiver 全需求路径、探针回差、同材罐组和异材隔离、唯一库存、拆分/跨船守恒、快照恢复、拆罐份额与液体溢流、固定超压受损对象、有限破裂队列、有限大气与逸散、液体容器事务、完整机器 Tick |
-| 工业设备 `device_*` | 14 | 气泵供能/缓冲/湿阻/高压/空来源；液泵工业入口不能旁路取料；机械及电动压缩的供能、堵塞和压力合法性；真实滤材/残渣及满槽；遍历全部实际电解配方、断电/混气满腔/液碱满腔、液碱独立取液权限；发动机缺氢缺氧/无负载/无水空间与实际负载能量结算；便携罐限压及冻结充装；电池→电线→压缩机完整电网供能与断供 |
-| 真实地表 `surface_*` | 3 | 独立 Liquid 层抽取/倾倒/异种拒收/满格拒收/空来源；真实地表液泵物质量换算、下一轮输出和气泵浸水阻塞；液体出口入世界及世界拒收时不丢料 |
+| `fluid_inventory` | 6 | 单位换算、两相与混料、decimal 尾量、预留防超卖、转移及多原料原子事务 |
+| `fluid_thermodynamics` | 3 | 热量压力、传热守恒、压缩做功、蒸发冷凝及曲线边界 |
+| `fluid_state_save` | 4 | 起始快照、质量观察与缓存、JSON/MemoryPack/克隆隔离、机器气液恢复 |
+| `fluid_topology` | 10 | 目录、16 种掩码、四向端口、压差规则、阀门、选择器、气液相偏好、物质筛选、receiver 路径、测压回差 |
+| `fluid_transport` | 4 | 冻结管链、共享吞吐、堵塞重试、完整机器固定步长调度 |
+| `fluid_tanks` | 6 | 同材组合与异材隔离、跨船迁移、拆除真实份额与溢流、超压、有限破裂、便携气罐限压充装 |
+| `fluid_pumps_compressors` | 6 | 机械气泵、工业液泵、机械/电动压缩、压力控制、真实电池电线供能 |
+| `fluid_reactions` | 7 | 滤材与残渣、满槽保护、全部实际电解配方、混气/液碱堵塞、液碱取液权限、发动机缺料与实际负载结算 |
+| `fluid_environment` | 6 | 有限大气抽排、管段放气、容器事务、真实地表抽液倾倒、地表液泵与湿阻、排液入地表及满格回滚 |
 
 ## 夹具与边界
 
@@ -51,4 +58,4 @@ Lua 编排沿用现有 256 步、1MB 源码和指令预算。每个脚本只有�
 
 ## 扩展
 
-核心、管网、设备和地表案例分别登记在 `GameplayTestFluidCore`、`GameplayTestFluidNetworks`、`GameplayTestFluidDevices`、`GameplayTestFluidSurface`。新增规则时在对应职责内添加真实行为断言，再增加独立 Lua 并登记专项清单；不把测试特例写入生产输送或设备逻辑。
+核心、管网、设备和地表子案例分别登记在 `GameplayTestFluidCore`、`GameplayTestFluidNetworks`、`GameplayTestFluidDevices`、`GameplayTestFluidSurface`。新增规则时在对应职责内添加真实行为断言，并将 `test.fluid` 调用并入现有 Lua 分组；只有职责确实独立时才新增分组，整个系统保持 10 个 Lua 以内。不把测试特例写入生产输送或设备逻辑。

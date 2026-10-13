@@ -287,6 +287,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 yield break;
             }
 
+            bool fluidFailed = false;
             foreach (Command command in commands)
             {
                 if (!TryEnsureContext(out error))
@@ -319,10 +320,15 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 finally { (operation as IDisposable)?.Dispose(); }
 
                 record(command.Name, command.Label, command.Success, command.Message);
-                if (!command.Success) yield break;
+                // 流体子案例各自隔离并清理，失败后继续收集同组报告，但不能把整组改成通过。
+                if (!command.Success)
+                {
+                    if (command.Name != "fluid") yield break;
+                    fluidFailed = true;
+                }
                 yield return null;
             }
-            Succeeded = true;
+            Succeeded = !fluidFailed;
         }
         finally
         {

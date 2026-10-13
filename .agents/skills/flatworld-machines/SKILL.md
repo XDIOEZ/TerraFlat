@@ -49,7 +49,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 工业气液
 
-- 工业气液专项 Lua 清单为 `GameplayTests/fluid-suite.json`，覆盖矩阵和执行入口见 `Assets/StreamingAssets/GameplayTests/Fluids/README.md`；测试中心可多选案例。夹具只走正式调度/事务并清理自建状态，未运行时不得报告通过。
+- 工业气液专项清单为 `GameplayTests/fluid-suite.json`，按功能组织 9 个 Lua 分组、保留 52 项检查；单系统保持 10 个 Lua 以内，新增检查优先并入已有组。覆盖矩阵见 `Assets/StreamingAssets/GameplayTests/Fluids/README.md`；子案独立清理，失败继续收集同组报告，整组仍失败，未运行不得报告通过。
 - 固定步长冻结库存与吞吐预算；方向由端口输入/输出决定，不按压差自然输送，新料不在同轮穿透无限管格。管层2、机械/电子测压层4/5；测压探针切断真实动力边。
 - StockCache 冻结工作区只复制组分数量，不复制端口预留；共享罐只在拓扑变化时绑定库存，Capture 同步目标组。FluidInventoryState 的组分原位改量通知 MassChanged，热量/预留只改状态版本；观察绑定与事件不进序列化/克隆。UsesObservedTickState 策略若改未观察字段，须主动通知或关闭该能力。
 - FluidDeviceBehavior 经 RegisterFluidDevice 注册能力策略，具体事务在 FluidDeviceOperations；注册租约管理生灭，策略变更使拓扑/能力缓存失效。管网成员始终走正式图边，普通容器仅通过 IContainerPortProvider/ILiquidTransferPort 转移。
