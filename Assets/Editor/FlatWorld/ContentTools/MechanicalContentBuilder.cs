@@ -62,6 +62,7 @@ public static class MechanicalContentBuilder
             view.Status = Find<TMP_Text>(root, "FWUI_FooterHint");
             view.InnerField = Find<RectTransform>(root, "FWUI_InnerField");
             view.StatusScroll = EnsureStatusScroll(root, view.Status, view.InnerField);
+            if (name == "UI_Mechanical") EnsureBatteryGauge(view);
             view.ActionButton = Find<Button>(root, "合成按钮");
             var buildingActions = root.GetComponent<BuildingPanelActions>()
                 ?? throw new InvalidOperationException(name + " 缺少建筑操作组件。");
@@ -235,9 +236,83 @@ public static class MechanicalContentBuilder
                 view.StatusScroll.content != view.Status.rectTransform ||
                 view.StatusScroll.viewport == null || !view.Status.transform.IsChildOf(view.StatusScroll.viewport))
                 throw new InvalidOperationException(id + " 状态滚动区必须位于正文框内并持有正确的内容与视口。");
+            if (id == "UI_Mechanical" && (view.BatteryCharge == null || view.BatteryPercentage == null ||
+                view.BatteryCharge.direction != Slider.Direction.BottomToTop || view.BatteryCharge.interactable))
+                throw new InvalidOperationException(id + " 必须持有自下向上的只读电池电量条和百分比文字。");
         }
         MachineCatalog.EnsureLoaded();
         Debug.Log("[Mechanical] 正式 Prefab 引用与机械目录校验通过。");
+    }
+    #endregion
+
+    #region 电池电量控件
+    // 正式资产和重建入口共同保留电池轮廓、竖向填充与居中的百分比。
+    private static void EnsureBatteryGauge(MechanicalPanelView view)
+    {
+        if (view.BatteryCharge != null && view.BatteryPercentage != null) return;
+        var gaugeObject = new GameObject("FWUI_BatteryCharge", typeof(RectTransform), typeof(Slider));
+        gaugeObject.layer = view.InnerField.gameObject.layer;
+        var gauge = (RectTransform)gaugeObject.transform;
+        gauge.SetParent(view.InnerField, false);
+        gauge.anchorMin = gauge.anchorMax = new Vector2(1, .5f);
+        gauge.anchoredPosition = new Vector2(-120, 0);
+        gauge.sizeDelta = new Vector2(72, 98);
+
+        Color border = new Color(.78f, .78f, .78f, 1);
+        Image body = AddBatteryImage("Body", gauge, border, Vector2.zero, new Vector2(0, -8));
+        AddBatteryImage("Background", body.transform, new Color(.2f, .2f, .2f, 1), new Vector2(3, 3), new Vector2(-3, -3));
+        Image terminal = AddBatteryImage("Terminal", gauge, border, Vector2.zero, Vector2.zero);
+        terminal.rectTransform.anchorMin = terminal.rectTransform.anchorMax = new Vector2(.5f, 1);
+        terminal.rectTransform.pivot = new Vector2(.5f, 1);
+        terminal.rectTransform.anchoredPosition = Vector2.zero;
+        terminal.rectTransform.sizeDelta = new Vector2(30, 8);
+
+        var fillArea = new GameObject("FillArea", typeof(RectTransform));
+        fillArea.layer = body.gameObject.layer;
+        var fillAreaRect = (RectTransform)fillArea.transform;
+        fillAreaRect.SetParent(body.transform, false);
+        fillAreaRect.anchorMin = Vector2.zero; fillAreaRect.anchorMax = Vector2.one;
+        fillAreaRect.offsetMin = new Vector2(6, 6); fillAreaRect.offsetMax = new Vector2(-6, -6);
+        Image fill = AddBatteryImage("Fill", fillAreaRect, new Color(.18f, .58f, .35f, 1), Vector2.zero, Vector2.zero);
+
+        var labelObject = new GameObject("Percentage", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        labelObject.layer = body.gameObject.layer;
+        labelObject.transform.SetParent(body.transform, false);
+        var label = labelObject.GetComponent<TextMeshProUGUI>();
+        label.font = view.Status.font;
+        label.fontSharedMaterial = view.Status.fontSharedMaterial;
+        label.fontSize = 24; label.enableAutoSizing = true;
+        label.fontSizeMin = 18; label.fontSizeMax = 24;
+        label.alignment = TextAlignmentOptions.Center;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Truncate;
+        label.color = Color.white; label.raycastTarget = false;
+        label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
+        label.rectTransform.offsetMin = new Vector2(4, 4); label.rectTransform.offsetMax = new Vector2(-4, -4);
+        label.text = "50%";
+
+        var slider = gaugeObject.GetComponent<Slider>();
+        slider.fillRect = fill.rectTransform;
+        slider.direction = Slider.Direction.BottomToTop;
+        slider.minValue = 0; slider.maxValue = 1;
+        slider.interactable = false;
+        slider.transition = Selectable.Transition.None;
+        slider.navigation = new Navigation { mode = Navigation.Mode.None };
+        slider.SetValueWithoutNotify(.5f);
+        view.BatteryCharge = slider; view.BatteryPercentage = label;
+        gaugeObject.SetActive(false);
+    }
+
+    private static Image AddBatteryImage(string name, Transform parent, Color color, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        var child = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        child.layer = parent.gameObject.layer;
+        child.transform.SetParent(parent, false);
+        var image = child.GetComponent<Image>();
+        image.color = color; image.raycastTarget = false;
+        image.rectTransform.anchorMin = Vector2.zero; image.rectTransform.anchorMax = Vector2.one;
+        image.rectTransform.offsetMin = offsetMin; image.rectTransform.offsetMax = offsetMax;
+        return image;
     }
     #endregion
 

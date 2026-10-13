@@ -15,6 +15,8 @@ public sealed class MechanicalPanelView : MonoBehaviour
     public TMP_Text Status;
     public ScrollRect StatusScroll; // 信息较多时允许纵向滚动，避免状态文字继续横向挤成一行。
     public RectTransform InnerField; // 加工内容底板，随面板模式同步缩放。
+    public Slider BatteryCharge; // 电池专用的自下而上只读电量条。
+    public TMP_Text BatteryPercentage;
     public Button ActionButton;
     public Button DismantleButton; // 已安装组件的拆回入口。
     public Button CloseButton;
@@ -102,6 +104,37 @@ public sealed class MechanicalPanelView : MonoBehaviour
             binder.enabled = true;
         }
         label.text = FlatWorldLocalizationService.GetUiText(caption);
+    }
+    #endregion
+
+    #region 电池电量显示
+    private const float BatteryStatusReserveWidth = 174f;
+    private int displayedBatteryPercentage = -1;
+
+    public void SetBatteryVisible(bool visible)
+    {
+        if (BatteryCharge == null)
+        {
+            if (visible) throw new System.InvalidOperationException(name + " 缺少正式电池电量控件。");
+            return;
+        }
+        if (visible && BatteryPercentage == null)
+            throw new System.InvalidOperationException(name + " 缺少正式电池百分比文字。");
+        BatteryCharge.gameObject.SetActive(visible);
+        if (PreservePrefabLayout || processingVisible) return;
+        ((RectTransform)StatusScroll.transform).offsetMax = new Vector2(
+            visible ? -BatteryStatusReserveWidth : -StatusPadding, -StatusPadding);
+    }
+
+    // 电量只用于显示，数值和填充共用同一份实际储能比例。
+    public void SetBatteryCharge(float charge01)
+    {
+        charge01 = Mathf.Clamp01(charge01);
+        BatteryCharge.SetValueWithoutNotify(charge01);
+        int percentage = Mathf.RoundToInt(charge01 * 100f);
+        if (displayedBatteryPercentage == percentage) return;
+        displayedBatteryPercentage = percentage;
+        BatteryPercentage.SetText("{0}%", percentage);
     }
     #endregion
 }

@@ -99,12 +99,20 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
         panel ??= new MechanicalPanelSession("UI_Mechanical", node,
             node.Processor,
             PerformOperation, GetStatus, GetActionLabel, CanPerformOperation,
-            refreshStatusPeriodically: node.Definition.Electrical?.IsBattery == true);
+            refreshStatusPeriodically: node.Definition.Electrical?.IsBattery == true,
+            batteryCharge01: node.Definition.Electrical?.IsBattery == true ? GetBatteryCharge01 : null);
         panel.Toggle(actor);
     }
 
     /// <summary>机械 Tick 后只刷新已打开面板的状态。</summary>
     public void RefreshPanel() => panel?.Refresh();
+
+    // 未接入电网的电池也直接读取自身储能，不依赖电网运行状态。
+    private float GetBatteryCharge01()
+    {
+        float capacity = node.Definition.Electrical.CapacityJoules;
+        return capacity > 0f ? node.ElectricalStoredJoules / capacity : 0f;
+    }
 
     /// <summary>面板按钮反映节点定义和加工器当前状态。</summary>
     private string GetActionLabel()
