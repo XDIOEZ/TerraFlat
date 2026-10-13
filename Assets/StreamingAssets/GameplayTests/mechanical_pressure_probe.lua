@@ -1,0 +1,11 @@
+-- 流体的真实测点气压触发机械动力线路自动断开和复位。
+test.gm("mechanical_build")
+test.gm("mechanical_start")
+test.wait(0.5)
+test.check("mechanical_running:pump", "压力保护前动力正常")
+test.gm("mechanical_probe_high")
+test.wait(0.5)
+test.check("mechanical_probe_disconnected", "管压超出 450kPa 后停转")
+test.gm("mechanical_probe_low")
+test.wait(0.5)
+test.check("mechanical_probe_reconnected", "压力降到 400kPa 以下后恢复传动")

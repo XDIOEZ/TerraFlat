@@ -16,6 +16,17 @@ public static class GameplayTestGm
             case "enable_invincibility":
             case "disable_invincibility":
             case "initialize_creative_inventory":
+            case "mechanical_build":
+            case "mechanical_start":
+            case "mechanical_clutch_off":
+            case "mechanical_clutch_on":
+            case "mechanical_clear":
+            case "mechanical_probe_high":
+            case "mechanical_probe_low":
+            case "mechanical_conveyor_drop":
+            case "mechanical_diagnose":
+            case "mechanical_stone_disconnect":
+            case "mechanical_stone_push":
                 if (string.IsNullOrEmpty(argument)) return true;
                 error = command + " 不接受参数。";
                 return false;
@@ -56,6 +67,10 @@ public static class GameplayTestGm
     public static bool TryExecute(Player player, string command, string argument, out string message)
     {
         if (!TryValidate(command, argument, out message)) return false;
+        if (command == "mechanical_build")
+            return GameplayTestMechanicalPlant.TryBuild(player, out message);
+        if (command.StartsWith("mechanical_", StringComparison.Ordinal))
+            return GameplayTestMechanicalPlant.TryOperate(command, out message);
         Mod_PlayerAdminController admin = player?.GetComponentInChildren<Mod_PlayerAdminController>(true);
         if (admin == null)
         {
@@ -143,6 +158,8 @@ public static class GameplayTestGm
 
     public static bool TryCheck(Player player, string name, out bool passed)
     {
+        if (name.StartsWith("mechanical_", StringComparison.Ordinal))
+            return GameplayTestMechanicalPlant.TryCheck(name, out passed);
         passed = false;
         Mod_PlayerAdminController admin = player?.GetComponentInChildren<Mod_PlayerAdminController>(true);
         switch (name)

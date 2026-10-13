@@ -343,7 +343,12 @@ public sealed partial class MechanicalNetworkGraph
                     // Layer1 只接两侧 Layer0 端点；绝不连接同格下层或另一座跨轴器。
                     Link(node, pressureSwitches.TryGetValue(neighborCell, out MachineEntity pressureSwitch)
                         ? pressureSwitch : AtNormalized(neighborCell, 0), direction, network, queue);
-                    if (node.Definition.Layer == 0 && !pressureSwitches.ContainsKey(neighborCell))
+                    // 四层压力探针替代下层动力口后，也必须能主动遍历相邻的一层跨轴器；
+                    // 否则仅有反向 Link 却没有合入同一个 Network，表现为已连接但永远停转。
+                    bool isPressureProbe = pressureSwitches.TryGetValue(node.Cell, out MachineEntity probe) &&
+                                           ReferenceEquals(node, probe);
+                    if ((node.Definition.Layer == 0 || isPressureProbe) &&
+                        !pressureSwitches.ContainsKey(neighborCell))
                         Link(node, AtNormalized(neighborCell, 1), direction, network, queue);
                 }
             }

@@ -1,0 +1,10 @@
+-- 由真实输入物品和正式配方产出产品，覆盖研磨、锯木、织布与锻压。
+test.gm("mechanical_build")
+test.gm("mechanical_start")
+test.wait(27)
+test.check("mechanical_output:loom:Cloth", "棉花完成织布")
+test.check("mechanical_output:sawmill:Plank", "木头完成锯切")
+test.check("mechanical_output:hammer:CopperPlate", "铜锭完成机械锤加工")
+test.wait(16)
+test.check("mechanical_output:millstone:OrePowder_Copper", "矿石完成机械研磨")
+test.check("mechanical_pump_delivered", "真实水车驱动气泵并将大气送入储罐")

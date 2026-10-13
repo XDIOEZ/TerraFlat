@@ -1,0 +1,10 @@
+-- 石磨除了受轴驱动外，还能不依赖外部动力通过正式手推供能。
+test.gm("mechanical_build")
+test.gm("mechanical_start")
+test.wait(0.3)
+test.gm("mechanical_stone_disconnect")
+test.wait(0.3)
+test.check("mechanical_stone_external_off", "外部手摇停转后石磨应停止")
+test.gm("mechanical_stone_push")
+test.wait(0.3)
+test.check("mechanical_stone_selfpowered", "石磨靠自身手推获得独立动力")

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {"id":"mechanical_assemble","name":"GM 创建全组件机械工厂","luaPath":"GameplayTests/mechanical_assemble.lua","enabled":true},
+    {"id":"mechanical_power","name":"多动力源、传动与用力器","luaPath":"GameplayTests/mechanical_power.lua","enabled":true},
+    {"id":"mechanical_conveyor","name":"动力输送带实际搬运物品","luaPath":"GameplayTests/mechanical_conveyor.lua","enabled":true},
+    {"id":"mechanical_pressure_probe","name":"管压超限断开机械动力","luaPath":"GameplayTests/mechanical_pressure_probe.lua","enabled":true},
+    {"id":"mechanical_control","name":"离合器断连及恢复","luaPath":"GameplayTests/mechanical_control.lua","enabled":true},
+    {"id":"mechanical_processing","name":"机器正式原料加工与气体收集","luaPath":"GameplayTests/mechanical_processing.lua","enabled":true},
+    {"id":"mechanical_manual_millstone","name":"石磨独立手推动力","luaPath":"GameplayTests/mechanical_manual_millstone.lua","enabled":true}
+  ]
+}

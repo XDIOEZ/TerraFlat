@@ -1,0 +1,10 @@
+-- GM 在同一个隔离世界创建 20 种机械动力组件及电力配套。
+test.check("world_ready", "正式世界已经进入")
+test.check("terrain_ready", "机械工厂所在地块已加载")
+test.gm("enable_admin")
+test.gm("mechanical_build")
+test.check("mechanical_plant_placed", "工厂设备全部落地且注册为真实节点")
+test.check("mechanical_catalog_coverage", "机械动力目录内全部带端口组件已出现")
+test.check("mechanical_water_current", "水车吃到真实水流并有转速来源")
+test.check("mechanical_wind_source", "风车吃到真实天气风力")
+test.check("mechanical_engine_fueled", "氢能发动机具有真实氢氧库存")

@@ -88,26 +88,27 @@ PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene
 
 场景的 `GameplayTestRunner` 组件默认读取 `Assets/StreamingAssets/GameplayTests/test-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
 
-默认清单包括入世、移动、快捷栏和 GM 专项回归。`quick-suite.json` 包含 7 个用例，跳过物品陈列；`test-suite.json` 包含 8 个用例，额外执行全物品陈列及创造背包。所有用例独立 Lua 文件，可在测试中心按 ID 单独勾选；GM 用例自己准备条件，不依赖上一用例是否成功。
+默认清单包括入世、移动、快捷栏、GM 和机械动力回归。`quick-suite.json` 包含 7 个用例，跳过物品陈列；`test-suite.json` 包含 15 个用例，额外执行全物品陈列、创造背包和机械动力。所有用例都是独立 Lua 文件，可以在测试中心按 ID 勾选；新增业务必须有实际断言，不能只用 GM 摆放道具就判定通过。
 
-例如，之后分别写好电力和机械动力的业务测试脚本，再把下列条目追加到清单的 `cases` 数组：
+### 机械动力专项（7 个 Lua 模块）
 
-```json
-{
-  "id": "electricity",
-  "name": "电力系统测试",
-  "luaPath": "GameplayTests/electricity.lua",
-  "enabled": true
-},
-{
-  "id": "mechanical_power",
-  "name": "机械动力测试",
-  "luaPath": "GameplayTests/mechanical_power.lua",
-  "enabled": true
-}
+```powershell
+python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json
 ```
 
-这两个条目是添加方式示例，当前没有提供相应业务脚本。应先写出具体测试步骤和业务检查，再启用条目；直接启用缺少文件的条目会记录为失败。现有 `test.check` 只支持下文列出的通用状态，电量、机械转速等业务断言需要在正式系统接口的基础上扩展检查能力。
+`mechanical-suite.json` 不建全物品陈列，只在本轮隔离世界建造一套真实机械系统。`mechanical_catalog_coverage` 依据机械目录动态校验所有 `Ports=axis/all` 的本体节点已实际放置，当前为 **20 种**；电线、管道和储罐作为配套节点。独立电气/工业气液/太空设施（`Ports=none`）不算机械扭矩端口设备，其业务另由对应专项覆盖。
+
+| Lua 案例 | 真实检查 |
+| --- | --- |
+| `mechanical_assemble` | GM 落地全部机械端口组件，准备权威风、水、氢氧和原料 |
+| `mechanical_power` | 水车、风机、手摇、燃气动力、齿轮反转、变速箱速比、跨轴器隔离、动力发电及电池充电、气体压缩与风箱 |
+| `mechanical_conveyor` | 两种输送带获得有效转速，真实掉落物发生位置变化 |
+| `mechanical_pressure_probe` | 真实管压越限切断动力、泄压后重新接通 |
+| `mechanical_control` | 离合器断开后下游停止，重新接合后恢复 |
+| `mechanical_processing` | 研磨、锯木、织布、机械锤真实消耗原料生成产物；气泵经管道和 FluidOutlet 将大气送入储罐 |
+| `mechanical_manual_millstone` | 关闭外源后，石磨通过正式手推接口独立供能 |
+
+GM 白名单包括 `mechanical_build`、`mechanical_start`、`mechanical_clutch_on/off`、`mechanical_probe_high/low`、`mechanical_conveyor_drop`、`mechanical_stone_disconnect/push` 等。原料、气体、风力和水流使用正式库存/环境 API 准备，RPM 与扭矩仍由游戏正式求解器计算。该套件验证上表的实际效果，不能代替所有参数组合和联机环境的穷尽测试；额外机械算法边界由 `Tools/Tests/MachineNetworks/` 离线测试覆盖。
 
 清单格式：
 

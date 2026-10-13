@@ -148,6 +148,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             manager.BackToHelloScene_Event_End -= OnReturnedToMenu;
         }
         luaRunner?.Dispose();
+        GameplayTestMechanicalPlant.Reset();
         showroom?.Dispose();
         saveScope?.Dispose();
     }
