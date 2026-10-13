@@ -23,7 +23,6 @@ public static class GameplayTestArtifacts
         report.RunDirectory = GetRunDirectory(report.RunId);
         report.ReportPath = Path.Combine(report.RunDirectory, "report.json");
         report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
-        report.ScreenshotPath = Path.Combine(report.RunDirectory, "screenshots", "final.png");
         report.PackagePath = report.RunDirectory;
         Directory.CreateDirectory(report.RunDirectory);
     }
@@ -116,11 +115,6 @@ public static class GameplayTestArtifacts
         text.AppendLine($"- 耗时：{report.DurationSeconds:F2} 秒；Unity 错误 {report.ErrorCount}，警告 {report.WarningCount}");
         text.AppendLine("- [完整 JSON 报告](report.json)");
         text.AppendLine();
-        if (!string.IsNullOrEmpty(report.ScreenshotPath) && File.Exists(report.ScreenshotPath))
-            text.AppendLine("![测试结束画面](screenshots/final.png)");
-        else
-            text.AppendLine("结束截图：" + Markdown(report.ScreenshotError ?? "未生成。"));
-        text.AppendLine();
         text.AppendLine("| 用例 | 结果 | 用例报告 | 结束截图 | 原因 |");
         text.AppendLine("| --- | --- | --- | --- | --- |");
         foreach (GameplayTestCaseReport testCase in report.Cases)
@@ -131,6 +125,24 @@ public static class GameplayTestArtifacts
             text.AppendLine("| " + Markdown(testCase.Name) + " (`" + testCase.Id + "`) | " +
                 Markdown(testCase.Status) + " | [JSON](" + casePath + "report.json) | " + screenshot + " | " +
                 Markdown(testCase.Reason) + " |");
+        }
+        bool screenshotHeadingWritten = false;
+        foreach (GameplayTestCaseReport testCase in report.Cases)
+        {
+            if (string.IsNullOrEmpty(testCase.ScreenshotPath) || !File.Exists(testCase.ScreenshotPath)) continue;
+            // 报告按 Lua 顺序展示真实截图，未执行或缺图的用例只在表格说明原因。
+            if (!screenshotHeadingWritten)
+            {
+                text.AppendLine();
+                text.AppendLine("## Lua 结束截图");
+                screenshotHeadingWritten = true;
+            }
+            text.AppendLine();
+            text.AppendLine("### " + Markdown(testCase.Name) + " (`" + testCase.Id + "`)");
+            text.AppendLine();
+            text.AppendLine("结果：**" + Markdown(testCase.Status) + "**");
+            text.AppendLine();
+            text.AppendLine("![Lua 用例结束画面](cases/" + testCase.Id + "/end.png)");
         }
         if (!string.IsNullOrEmpty(report.ArtifactError))
         {

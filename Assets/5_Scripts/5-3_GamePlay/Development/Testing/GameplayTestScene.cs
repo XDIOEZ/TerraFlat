@@ -182,8 +182,7 @@ public sealed class GameplayTestScene : MonoBehaviour
                 Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath,
                 Status = testCase.Enabled ? "pending" : "disabled",
                 Reason = testCase.Enabled ? null : "用例未启用。",
-                ReportPath = GameplayTestArtifacts.CaseReportPath(report, testCase.Id),
-                ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(report, testCase.Id)
+                ReportPath = GameplayTestArtifacts.CaseReportPath(report, testCase.Id)
             });
         Record("load_suite", "读取 Lua 测试清单", true, $"已登记 {report.Cases.Count} 个用例。");
 
@@ -254,14 +253,6 @@ public sealed class GameplayTestScene : MonoBehaviour
         try
         {
             yield return AdvanceGuarded(routine);
-            if (!interruptionRequested)
-            {
-                Stage("capture_final");
-                yield return GameplayTestArtifacts.CaptureScreenshot(this, report.ScreenshotPath,
-                    error => report.ScreenshotError = error);
-                Record("screenshot", "整轮结束截图", string.IsNullOrEmpty(report.ScreenshotError),
-                    report.ScreenshotError ?? report.ScreenshotPath);
-            }
         }
         finally { Finish(interruptionRequested); }
     }
@@ -389,7 +380,9 @@ public sealed class GameplayTestScene : MonoBehaviour
             succeeded = luaRunner?.Succeeded == true;
             if (!interruptionRequested)
             {
+                // 每个实际执行的 Lua 成功或失败后各截一次，写盘完成才进入下一个用例。
                 Stage("case." + testCase.Id + ".screenshot");
+                testCase.ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(report, testCase.Id);
                 yield return GameplayTestArtifacts.CaptureScreenshot(this, testCase.ScreenshotPath,
                     error => testCase.ScreenshotError = error);
                 Record("screenshot", "用例结束截图", string.IsNullOrEmpty(testCase.ScreenshotError),
@@ -593,8 +586,6 @@ public sealed class GameplayTestScene : MonoBehaviour
         if (finished || report == null) return;
         finished = true;
         ReleaseLuaRunner();
-        if (!File.Exists(report.ScreenshotPath) && string.IsNullOrEmpty(report.ScreenshotError))
-            report.ScreenshotError = "测试被中断，结束画面未能保存。";
         lock (reportLock)
         {
             DrainCapturedLogs(clearCurrentCase: true, closeCapture: true);

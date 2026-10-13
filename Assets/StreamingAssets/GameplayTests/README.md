@@ -168,7 +168,6 @@ GM 命令和断言额外提供：
 Library/FlatWorldGameplayTests/Runs/<运行ID>/report.md
 Library/FlatWorldGameplayTests/Runs/<运行ID>/report.json
 Library/FlatWorldGameplayTests/Runs/<运行ID>/pipeline.json
-Library/FlatWorldGameplayTests/Runs/<运行ID>/screenshots/final.png
 Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/report.json
 Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/end.png
 Library/FlatWorldGameplayTests/Saves/<运行时间_运行ID>/
@@ -176,7 +175,9 @@ Library/FlatWorldGameplayTests/Saves/<运行时间_运行ID>/
 
 独立 Player 的同类目录位于 `Application.persistentDataPath/FlatWorldGameplayTests/`。测试期间的首次保存、自动保存和退出保存都留在本轮的独立 Saves 目录；退出保存完成并返回菜单后，恢复正式存档目录。
 
-执行过的用例结束时截图，整轮再保存结束画面；本轮结果文件夹就是测试包，不额外生成 ZIP。每轮收尾按文件夹创建时间保留最近 10 份（包含本轮），超过的旧包自动删除，并清理历史 ZIP 及其临时文件；文件占用导致删除失败会在 Console 中提示。无画面、跳过或中断会记录缺图原因；保持 Game 视图可渲染。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
+每个实际执行的 Lua 成功或失败后各保存一张 `cases/<用例ID>/end.png`，截图写盘后才进入下一个用例；禁用、跳过和未执行的 Lua 不生成截图，不额外保存整轮结束截图。8 个 Lua 全部执行完会有 8 张对应截图；若 A 成功、B 失败、C 未执行，则只有 A、B 两张。失败后是否继续仍由 `continueAfterFailure` 控制。阅读报告按用例顺序直接展示已有截图，流水线和命令行的 `screenshotPaths` 只列实际存在的图片；无画面或中断时记录缺图原因，请保持 Game 视图可渲染。
+
+本轮结果文件夹就是测试包，不额外生成 ZIP。每轮收尾按文件夹创建时间保留最近 10 份（包含本轮），超过的旧包自动删除，并清理历史 ZIP 及其临时文件；文件占用导致删除失败会在 Console 中提示。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
 
 总报告包含运行时间、当前阶段、最终状态、测试清单及每个用例的状态和报告路径、每个陈列物品的 ID/坐标/后端/放置结果，以及 Unity 日志、错误和堆栈。每个用例另有一个 JSON，保存自己的步骤结果、起止玩家位置和日志，查看电力测试时可以直接打开 `electricity.json`。
 

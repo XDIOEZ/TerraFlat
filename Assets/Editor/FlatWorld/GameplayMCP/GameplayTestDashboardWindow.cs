@@ -330,15 +330,6 @@ namespace FlatWorld.GameplayMCP
                 if (GUILayout.Button("打开阅读报告"))
                     Application.OpenURL(new Uri(summaryPath).AbsoluteUri);
             EditorGUILayout.EndHorizontal();
-            string screenshot = pipeline.Value<string>("screenshotPath");
-            if (!string.IsNullOrEmpty(screenshot) && File.Exists(screenshot))
-            {
-                if (GUILayout.Button("查看测试结束截图"))
-                    Application.OpenURL(new Uri(screenshot).AbsoluteUri);
-            }
-            else if (!string.IsNullOrEmpty(pipeline.Value<string>("screenshotError")))
-                EditorGUILayout.LabelField("结束截图：" + pipeline.Value<string>("screenshotError"),
-                    EditorStyles.wordWrappedMiniLabel);
             DrawFailures(edit);
             DrawFailures(play);
             DrawGameplayCases();

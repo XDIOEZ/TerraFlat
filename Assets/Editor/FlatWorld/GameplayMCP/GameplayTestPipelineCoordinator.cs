@@ -55,8 +55,7 @@ namespace FlatWorld.GameplayMCP
             public string RunDirectory;
             public string SummaryPath;
             public string PackagePath;
-            public string ScreenshotPath;
-            public string ScreenshotError;
+            public List<string> ScreenshotPaths = new();
             public string ArtifactError;
             public string StartedUtc;
             public string FinishedUtc;
@@ -329,8 +328,7 @@ namespace FlatWorld.GameplayMCP
                 ["runDirectory"] = report?.RunDirectory,
                 ["summaryPath"] = report?.SummaryPath,
                 ["packagePath"] = report?.PackagePath,
-                ["screenshotPath"] = report?.ScreenshotPath,
-                ["screenshotError"] = report?.ScreenshotError,
+                ["screenshotPaths"] = report == null ? null : new JArray(report.ScreenshotPaths),
                 ["artifactError"] = report?.ArtifactError,
                 ["reason"] = report?.Reason,
                 ["editMode"] = report == null ? null : JObject.FromObject(report.EditMode),
@@ -417,8 +415,11 @@ namespace FlatWorld.GameplayMCP
                 }
                 CompleteInterruptedArtifacts(gameplay, report);
                 gameplay.Write();
-                report.ScreenshotPath = gameplay.ScreenshotPath;
-                report.ScreenshotError = gameplay.ScreenshotError;
+                // 对外只返回各 Lua 已落盘的截图，跳过的用例不占截图名额。
+                report.ScreenshotPaths.Clear();
+                foreach (GameplayTestCaseReport testCase in gameplay.Cases)
+                    if (!string.IsNullOrEmpty(testCase.ScreenshotPath) && File.Exists(testCase.ScreenshotPath))
+                        report.ScreenshotPaths.Add(testCase.ScreenshotPath);
                 report.ArtifactError = gameplay.ArtifactError;
                 GameplayTestArtifacts.WriteSummary(gameplay);
                 string phaseSummary = BuildPipelineSummary(report);
@@ -476,8 +477,6 @@ namespace FlatWorld.GameplayMCP
                 gameplay.Status = pipeline.Status == "failed" ? "failed" : "interrupted";
                 gameplay.FinishedUtc = pipeline.FinishedUtc;
             }
-            if (!File.Exists(gameplay.ScreenshotPath) && string.IsNullOrEmpty(gameplay.ScreenshotError))
-                gameplay.ScreenshotError = "本轮结束时没有可用的截图，游戏场景可能提前退出。";
             gameplay.PassedCaseCount = gameplay.FailedCaseCount = gameplay.SkippedCaseCount = gameplay.InterruptedCaseCount = 0;
             foreach (GameplayTestCaseReport testCase in gameplay.Cases)
             {
@@ -488,7 +487,6 @@ namespace FlatWorld.GameplayMCP
                     testCase.FinishedUtc = pipeline.FinishedUtc;
                 }
                 testCase.ReportPath = GameplayTestArtifacts.CaseReportPath(gameplay, testCase.Id);
-                testCase.ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(gameplay, testCase.Id);
                 if (!File.Exists(testCase.ScreenshotPath) && string.IsNullOrEmpty(testCase.ScreenshotError))
                     testCase.ScreenshotError = "用例未执行，或结束前游戏场景已退出，未捕获结束画面。";
                 if (testCase.Status == "passed") gameplay.PassedCaseCount++;
@@ -511,7 +509,7 @@ namespace FlatWorld.GameplayMCP
             {
                 RunId = pipeline.RunId, TestSuitePath = pipeline.SuitePath,
                 StartedUtc = pipeline.StartedUtc, FinishedUtc = pipeline.FinishedUtc,
-                Status = pipeline.Status, CurrentStage = "not_started", ScreenshotError = absence
+                Status = pipeline.Status, CurrentStage = "not_started"
             };
             GameplayTestArtifacts.Initialize(report);
             GameplayTestSuite suite = null;
@@ -529,8 +527,7 @@ namespace FlatWorld.GameplayMCP
                     Id = caseId, Name = configured?.Name ?? caseId, LuaPath = configured?.LuaPath,
                     Status = "skipped", Reason = pipeline.Reason, FinishedUtc = pipeline.FinishedUtc,
                     ScreenshotError = absence,
-                    ReportPath = GameplayTestArtifacts.CaseReportPath(report, caseId),
-                    ScreenshotPath = GameplayTestArtifacts.CaseScreenshotPath(report, caseId)
+                    ReportPath = GameplayTestArtifacts.CaseReportPath(report, caseId)
                 };
                 report.Cases.Add(testCase);
                 report.SkippedCaseCount++;

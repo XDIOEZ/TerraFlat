@@ -59,8 +59,8 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
         "reason": report.get("reason"), "reportPath": report.get("reportPath"),
         "gameplayReportPath": report.get("gameplayReportPath"),
         "runDirectory": report.get("runDirectory"), "summaryPath": report.get("summaryPath"),
-        "packagePath": report.get("packagePath"), "screenshotPath": report.get("screenshotPath"),
-        "screenshotError": report.get("screenshotError"), "artifactError": report.get("artifactError"),
+        "packagePath": report.get("packagePath"), "screenshotPaths": report.get("screenshotPaths", []),
+        "artifactError": report.get("artifactError"),
         "editMode": report.get("editMode"), "playMode": report.get("playMode")
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
