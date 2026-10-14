@@ -220,11 +220,16 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnServerDisconnect(NetworkConnectionToClient connection)
         {
-            spaceStateCoordinator?.RemoveConnection(connection);
-            pendingPlayerNames.Remove(connection.connectionId);
-            clientProtocolHellos.Remove(connection.connectionId);
-            pendingPlayerSpawns.Remove(connection.connectionId);
-            worldReadyConnections.Remove(connection.connectionId);
+            // 连接 ID 复用时旧回调只能释放旧连接，不得清空新连接的握手和出生登记。
+            if (!NetworkServer.connections.TryGetValue(connection.connectionId, out NetworkConnectionToClient current) ||
+                ReferenceEquals(current, connection))
+            {
+                spaceStateCoordinator?.RemoveConnection(connection);
+                pendingPlayerNames.Remove(connection.connectionId);
+                clientProtocolHellos.Remove(connection.connectionId);
+                pendingPlayerSpawns.Remove(connection.connectionId);
+                worldReadyConnections.Remove(connection.connectionId);
+            }
             base.OnServerDisconnect(connection);
             SetGameplayStatus($"玩家已断开（当前 {NetworkServer.connections.Count} 人）");
         }

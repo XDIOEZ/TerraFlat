@@ -88,7 +88,7 @@ end, "未经加入、仅握手、脚本版本及 MOD 环境不符均不能入世
 
 test.runtime("networking", "bots_reconnect", {}, function(data)
     assert(#data.rounds == 3, "重连测试没有完成三轮真实连接")
-    local profile, net_ids = nil, {}
+    local profile, net_ids, checkedStale = nil, {}, 0
     for _, round in ipairs(data.rounds) do
         assert(type(round.profile) == "string" and #round.profile > 0, "重连角色没有正式档案")
         if profile == nil then profile = round.profile end
@@ -99,9 +99,16 @@ test.runtime("networking", "bots_reconnect", {}, function(data)
         assert(round.connections == 1, "复用连接 ID 后服务端出现重复连接")
         assert(round.freshSequence.present and math.abs(round.freshSequence.x - 0.5) < 0.000001
             and round.freshSequence.y == 0, "新连接仍被上一轮输入序号挡住")
+        if round.staleCleanupPreservedInput then
+            checkedStale = checkedStale + 1
+            assert(round.staleCleanupPreservedInput.present
+                and math.abs(round.staleCleanupPreservedInput.x - 0.5) < 0.000001,
+                "旧连接的滞后清理删除了复用 ID 的新连接输入")
+        end
         assert(not round.runtimePresentAfterDisconnect and not round.inputAfterDisconnect.present,
             "断线后实际假人或旧输入没有移除")
         assert(round.savedAfterDisconnect, "正常断线删除了可供重连的玩家档案")
     end
+    assert(checkedStale == 2, "没有对两次重连执行旧连接滞后清理回归")
     assert_cleanup(data)
 end, "同档案三轮重连：连接 ID 复用、输入序号重置与断线清理")

@@ -258,6 +258,7 @@ namespace FlatWorld.Networking.Gameplay
             string profile = world.Prefix + "reconnect";
             Data_Player previousData = null;
             uint previousId = 0;
+            NetworkConnectionToClient previousConnection = null;
             for (int i = 0; i < 3; i++)
             {
                 yield return world.Join(71, profile);
@@ -270,6 +271,13 @@ namespace FlatWorld.Networking.Gameplay
                 previousId = bot.netId;
                 world.Transport.Receive(71, new NetworkSpaceInput { Sequence = 1, Input = new SpacePassengerInput { MoveX = .5f } });
                 sample["freshSequence"] = InputSample(world.Session, profile);
+                if (previousConnection != null)
+                {
+                    // 模拟已断开连接的滞后清理，核验复用 ID 的新连接仍保有输入。
+                    world.Manager.GetComponent<NetworkSpaceStateCoordinator>().RemoveConnection(previousConnection);
+                    sample["staleCleanupPreservedInput"] = InputSample(world.Session, profile);
+                }
+                previousConnection = NetworkServer.connections[71];
                 world.Transport.ServerDisconnect(71);
                 sample["runtimePresentAfterDisconnect"] = ItemMgr.Instance.Player_DIC.ContainsKey(profile);
                 sample["inputAfterDisconnect"] = InputSample(world.Session, profile);

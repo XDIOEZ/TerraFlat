@@ -21,6 +21,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 - 服务端结算生成、伤害、死亡、建筑及持久状态；远程视觉副本不进入本地 Item Tick、AI 感知、教程、对话或存档索引。只有 owned 玩家驱动本地输入、导航窗口和 HUD；玩家加载、提升和远程配置显式设置 ProfileContext。
 - 出生集中检查当前连接引用、认证、已通过版本/MOD 的 Join 和本连接的 WorldReady；Mirror AddPlayerMessage 不能提前出生。远端名字分配同时避开现有 Player_DIC 档案，本地主机可以接管自己的离线角色。
+- 断线清理须核对连接对象身份：复用相同 connectionId 后，旧连接的延迟回调不得删除新连接握手、出生预约或太空输入/攻击状态。
 - 协议、存档和权威判定使用规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是服务端玩家位置；Host 中远端 Transform 可能已是本机镜像。`WorldLocalPresentation` 在各客户端选择 owned 玩家附近的表现镜像，远端插值先保存逻辑目标。区块流送消费 `ObserverLogicalPosition`，按观察者并集加载。
 - 建造消息校验连接与真实快捷栏材料，`BuildingPlacementService` 处理放置、扣料和回滚；缺少网络发布器时事务回滚。Host 确认回调不重复发布建造进度。
 - 区域天气、雨雪反馈由权威端推进；客户端按 WorldKey、规范地址及修订号复制，首次雷电同步只建立序号基线。地表批次只传水肥和雪层，复制序号独立于 Terrain.Revision；可靠消息按通道大小分片，待就绪区块缓存最多 256 个地址，淘汰后补拉快照，消息本身不生成地形。

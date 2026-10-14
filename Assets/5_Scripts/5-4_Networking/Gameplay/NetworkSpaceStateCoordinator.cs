@@ -94,7 +94,9 @@ namespace FlatWorld.Networking.Gameplay
         }
         public void RemoveConnection(NetworkConnectionToClient connection)
         {
-            if (connection == null || !connections.TryGetValue(connection.connectionId, out ConnectionState state)) return;
+            // 只清理由原连接持有的输入与攻击状态，防止过期断线回调误删新连接。
+            if (connection == null || !connections.TryGetValue(connection.connectionId, out ConnectionState state) ||
+                !ReferenceEquals(state.Connection, connection)) return;
             SpaceSession.Current?.RemoveNetworkPassengerInput(state.Profile);
             SpaceSession.Current?.EndNetworkAttack(state.Profile);
             connections.Remove(connection.connectionId);
