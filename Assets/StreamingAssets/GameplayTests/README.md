@@ -31,6 +31,8 @@ python Tools/GameplayTesting/run_suite.py
 
 `--systems` 精确选择系统。`--changed` 按 `sourcePaths` 选直接归属，再沿 `dependsOn` 找使用这些规则的系统；测试基础设施改动会选择全部规则。两者可联合使用；不能再混用位置清单或 `--cases`。`--integration` 根据 `integrationCaseIds` 去重后，只提交一次 `all-systems-gameplay.json`，减少重复建世界。
 
+单个 `gameplay` 清单的案例还可填写 `dependsOn: ["前置案例ID"]`：多选或 `--cases` 单独选择后续案例时，会自动启用前置案例并按清单原顺序运行。依赖必须声明在后续案例前且已启用，缺失、重复、循环或禁用依赖会直接拒绝清单；此字段不同于 `systems.catalog.json` 的系统级依赖。
+
 系统没有现场案例时，`--integration` 仍运行已有案例，但返回 **4** 并列出缺口。已有现场入口也只是部分覆盖，仍须看 README。其余退出码：0 全部所选案例通过，1 测试失败，2 Editor 拒绝，3 请求/文件/等待错误。只选规则不检查完整 PlayMode、联机或设备行为。
 
 Python 仅在 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 写本地请求；Editor 自动接单、执行和回报，不启动新 Unity 进程。接单默认45秒、CLI执行上限默认900秒，可用 `--editor-timeout` / `--run-timeout` 修改。快速规则调度另有120秒上限。

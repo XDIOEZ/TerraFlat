@@ -79,6 +79,34 @@ namespace FlatWorld.Tests.EditMode
             Assert.Throws<InvalidDataException>(() =>
                 GameplayTestSelection.FilterCases(GameplayTestSuite.Parse(json), Array.Empty<string>()));
         }
+
+        [Test]
+        public void Suite_SelectingDependentCaseIncludesTransitivePrerequisites()
+        {
+            const string json = "{\"schemaVersion\":1,\"cases\":[" +
+                "{\"id\":\"first\",\"name\":\"基础\",\"luaPath\":\"GameplayTests/first.lua\"}," +
+                "{\"id\":\"second\",\"name\":\"中间\",\"luaPath\":\"GameplayTests/second.lua\",\"dependsOn\":[\"first\"]}," +
+                "{\"id\":\"third\",\"name\":\"结尾\",\"luaPath\":\"GameplayTests/third.lua\",\"dependsOn\":[\"SECOND\"]}," +
+                "{\"id\":\"other\",\"name\":\"其他\",\"luaPath\":\"GameplayTests/other.lua\"}]}";
+            GameplayTestSuite suite = GameplayTestSuite.Parse(json);
+            GameplayTestSelection.FilterCases(suite, new[] { "THIRD" });
+            Assert.That(suite.Cases.ConvertAll(entry => entry.Enabled), Is.EqualTo(new[] { true, true, true, false }));
+            Assert.That(suite.Cases.ConvertAll(entry => entry.Id), Is.EqualTo(new[] { "first", "second", "third", "other" }));
+        }
+
+        [Test]
+        public void Suite_RejectsBrokenCaseDependencies()
+        {
+            const string first = "{\"id\":\"first\",\"name\":\"基础\",\"luaPath\":\"GameplayTests/first.lua\"";
+            const string second = "{\"id\":\"second\",\"name\":\"后续\",\"luaPath\":\"GameplayTests/second.lua\"";
+            string Make(string before, string after) => "{\"schemaVersion\":1,\"cases\":[" + before + "," + after + "]}";
+            Assert.Throws<InvalidDataException>(() => GameplayTestSuite.Parse(Make(first + "}", second + ",\"dependsOn\":[\"missing\"]}")));
+            Assert.Throws<InvalidDataException>(() => GameplayTestSuite.Parse(Make(first + "}", second + ",\"dependsOn\":[\"second\"]}")));
+            Assert.Throws<InvalidDataException>(() => GameplayTestSuite.Parse(Make(first + "}", second + ",\"dependsOn\":[\"first\",\"FIRST\"]}")));
+            Assert.Throws<InvalidDataException>(() => GameplayTestSuite.Parse(Make(first + "}", second + ",\"dependsOn\":[123]}")));
+            Assert.Throws<InvalidDataException>(() => GameplayTestSuite.Parse(Make(first + ",\"enabled\":false}", second + ",\"dependsOn\":[\"first\"]}")));
+            Assert.Throws<InvalidDataException>(() => GameplayTestSuite.Parse(Make(second + ",\"dependsOn\":[\"first\"]}", first + "}")));
+        }
         #endregion
 
         #region Lua 截图限额

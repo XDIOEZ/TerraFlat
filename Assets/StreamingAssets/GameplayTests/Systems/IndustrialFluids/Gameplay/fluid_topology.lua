@@ -69,6 +69,14 @@ for _, seed in ipairs({1, 2, 7, 41, 91, 2026}) do
                 "已有预留被重新抽签或切换物质，堵塞重试不能保持原批次")
             near(data.sticky.firstMoles, 0.02, "首批预留数量错误")
             near(data.sticky.retryMoles, data.sticky.firstMoles, "重试把原批次数量改成新请求量")
+            assert(data.switched.oldReserved and data.switched.selectedOxygen and data.switched.selectedNitrogen,
+                "未能准备切换前的氧气预留与新的氮气选择")
+            assert(data.switched.remainingReservationFluid ~= "core:oxygen" and data.switched.receiverNitrogen > 0,
+                "切换选择器后旧氧气预留堵住了新的氮气输出")
+            near(data.switched.remainingOxygen, 0.1, "切换选择器错误消费了已取消预留的氧气")
+            near(data.switched.receiverOxygen, 0, "旧预留氧气仍流入了新的选择出口")
+            near(data.switched.finalGas, data.switched.initialGas, "切换选择器破坏了气体守恒")
+            near(data.switched.finalEnergy, data.switched.initialEnergy, "切换选择器破坏了内能守恒")
         end, "选择器原始输送与筛选预留，随机态 " .. seed .. (only_selected and "，只有所选气体" or "，氧氮混合"))
     end
 end

@@ -122,16 +122,24 @@ public static class GameplayTestSelection
             throw new ArgumentNullException(suite == null ? nameof(suite) : nameof(selectedCaseIds));
         var selected = new HashSet<string>(selectedCaseIds, StringComparer.OrdinalIgnoreCase);
         if (selected.Count == 0) throw new InvalidDataException("请至少勾选一个测试案例。");
+        var cases = new Dictionary<string, GameplayTestCase>(StringComparer.OrdinalIgnoreCase);
+        foreach (GameplayTestCase entry in suite.Cases) cases.Add(entry.Id, entry);
         foreach (string id in selected)
         {
-            bool valid = false;
-            foreach (GameplayTestCase entry in suite.Cases)
-                if (entry.Enabled && string.Equals(entry.Id, id, StringComparison.OrdinalIgnoreCase))
-                {
-                    valid = true;
-                    break;
-                }
-            if (!valid) throw new InvalidDataException("选中的用例不存在或被清单禁用：" + id);
+            if (!cases.TryGetValue(id, out GameplayTestCase entry) || !entry.Enabled)
+                throw new InvalidDataException("选中的用例不存在或被清单禁用：" + id);
+        }
+        // 保留清单顺序，递归补齐被勾选用例的前置案例，保证同一次启动执行完成。
+        var pending = new Queue<string>(selected);
+        while (pending.Count > 0)
+        {
+            GameplayTestCase entry = cases[pending.Dequeue()];
+            foreach (string prerequisite in (IEnumerable<string>)entry.DependsOn ?? Array.Empty<string>())
+            {
+                if (!cases.TryGetValue(prerequisite, out GameplayTestCase required) || !required.Enabled)
+                    throw new InvalidDataException($"测试用例 {entry.Id} 缺少可执行的前置案例：{prerequisite}");
+                if (selected.Add(required.Id)) pending.Enqueue(required.Id);
+            }
         }
         foreach (GameplayTestCase entry in suite.Cases)
             entry.Enabled = entry.Enabled && selected.Contains(entry.Id);

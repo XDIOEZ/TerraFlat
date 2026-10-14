@@ -84,8 +84,18 @@ public static partial class MachineWorld
                 (phase == FluidPhase.Gas ? component.GasMoles : component.LiquidMoles) > 0m)
             { availableAtStart = true; break; }
         if (!availableAtStart) return false;
-        return inventory.Catalog.TryGet(fluidId, out FluidDefinition definition) && definition.AllowIndustrialTransport &&
-            MatchesFluid(edge.SourcePort, fluidId) && (edge.TargetPort == null || MatchesFluid(edge.TargetPort, fluidId)) &&
+        return CanRouteReservedFluid(edge, inventory, phase, fluidId);
+    }
+
+    private static bool CanRouteReservedFluid(FluidNetworkGraph.Edge edge, FluidInventory inventory, FluidPhase phase, string fluidId)
+    {
+        string phaseName = phase == FluidPhase.Gas ? "gas" : "liquid";
+        string outletPhase = GetFluidState(edge.Source).OutletPhase;
+        return (outletPhase == "both" || outletPhase == phaseName) &&
+            PortAcceptsPhase(edge.SourcePort, phase) && (edge.TargetPort == null || PortAcceptsPhase(edge.TargetPort, phase)) &&
+            !string.IsNullOrEmpty(fluidId) && inventory.Catalog.TryGet(fluidId, out FluidDefinition definition) &&
+            definition.AllowIndustrialTransport && MatchesFluid(edge.SourcePort, fluidId) &&
+            (edge.TargetPort == null || MatchesFluid(edge.TargetPort, fluidId)) &&
             GetFluidDeviceBehavior(edge.Source).CanRoute(edge.Source, edge.SourcePort, phase, fluidId, out _);
     }
 
@@ -93,14 +103,11 @@ public static partial class MachineWorld
     {
         FluidOutputReservation reservation = source.GetReservation(reservationId);
         if (reservation == null) return;
-        string outletPhase = GetFluidState(edge.Source).OutletPhase;
         bool changed = false;
-        // 相变后的禁用相只归还预留，不扣库存；仍能经过此口的同物质余量继续原批次重试。
-        if (reservation.GasMoles > 0m && (slotPhase != FluidPhase.Gas || outletPhase != "both" && outletPhase != "gas" || !PortAcceptsPhase(edge.SourcePort, FluidPhase.Gas) ||
-            edge.TargetPort != null && !PortAcceptsPhase(edge.TargetPort, FluidPhase.Gas)))
+        // 相态或选择器路由改变时归还失效预留；仍合法的堵塞批次保持原物质和随机态。
+        if (reservation.GasMoles > 0m && (slotPhase != FluidPhase.Gas || !CanRouteReservedFluid(edge, source, FluidPhase.Gas, reservation.FluidId)))
         { reservation.GasMoles = 0m; changed = true; }
-        if (reservation.LiquidMoles > 0m && (slotPhase != FluidPhase.Liquid || outletPhase != "both" && outletPhase != "liquid" || !PortAcceptsPhase(edge.SourcePort, FluidPhase.Liquid) ||
-            edge.TargetPort != null && !PortAcceptsPhase(edge.TargetPort, FluidPhase.Liquid)))
+        if (reservation.LiquidMoles > 0m && (slotPhase != FluidPhase.Liquid || !CanRouteReservedFluid(edge, source, FluidPhase.Liquid, reservation.FluidId)))
         { reservation.LiquidMoles = 0m; changed = true; }
         if (!changed) return;
         if (reservation.TotalMoles == 0m) source.ReleaseReservation(reservationId);

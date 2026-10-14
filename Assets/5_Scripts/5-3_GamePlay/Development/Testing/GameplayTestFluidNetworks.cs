@@ -550,6 +550,33 @@ internal static class GameplayTestFluidNetworks
         bool reserved = pool.TryReserve("sticky", FluidPhase.Gas, .02m, id => id == FluidIds.Oxygen, out FluidBatch first);
         string retryBefore = Payload(pool), retryRandom = pool.State.RandomState.ToString();
         bool retried = pool.TryReserve("sticky", FluidPhase.Gas, .001m, id => id == FluidIds.Nitrogen, out FluidBatch retry);
+        MachineEntity switching = f.Add("GasSelector", 30), outlet = f.Add("FluidOutlet", 30, 1, 1);
+        MachineEntity receiver = f.Add("LiquidStorageTank", 30, 2);
+        switching.Definition.Fluid.SingleGas = false; TopologyChanged(switching); f.Rebuild();
+        FluidInventory switchingInventory = Fill(switching, FluidIds.Oxygen, .1m);
+        Fill(switching, FluidIds.Nitrogen, .1m);
+        FluidDeviceBehavior switchingBehavior = GetFluidDeviceBehavior(switching);
+        bool selectedOxygen = switchingBehavior.Execute(switching, "fluid.select", FluidIds.Oxygen);
+        FluidNetworkGraph.Edge selectedEdge = f.Graph.Edges.Single(edge => edge.Source == switching &&
+            edge.Target == outlet && edge.SourcePort.Id == "selected");
+        string switchedPort = selectedEdge.Id + ":gas";
+        bool oldReserved = switchingInventory.TryReserve(switchedPort, FluidPhase.Gas, .02m,
+            id => id == FluidIds.Oxygen, out _);
+        bool selectedNitrogen = switchingBehavior.Execute(switching, "fluid.select", FluidIds.Nitrogen);
+        var switchedInitial = Total(switching, outlet, receiver);
+        for (int step = 0; step < 5; step++) f.Step();
+        var switchedFinal = Total(switching, outlet, receiver);
+        FluidOutputReservation remainingReservation = switchingInventory.GetReservation(switchedPort);
+        var switched = new JObject
+        {
+            ["oldReserved"] = oldReserved, ["selectedOxygen"] = selectedOxygen, ["selectedNitrogen"] = selectedNitrogen,
+            ["remainingReservationFluid"] = remainingReservation?.FluidId ?? string.Empty,
+            ["remainingOxygen"] = switchingInventory.GetGasMoles(FluidIds.Oxygen),
+            ["receiverOxygen"] = GetFluidInventory(receiver).GetGasMoles(FluidIds.Oxygen),
+            ["receiverNitrogen"] = GetFluidInventory(receiver).GetGasMoles(FluidIds.Nitrogen),
+            ["initialGas"] = switchedInitial.Gas, ["finalGas"] = switchedFinal.Gas,
+            ["initialEnergy"] = switchedInitial.Energy, ["finalEnergy"] = switchedFinal.Energy
+        };
         return new JObject
         {
             ["seed"] = seed, ["onlySelected"] = onlySelected, ["selectionAccepted"] = selected,
@@ -558,6 +585,7 @@ internal static class GameplayTestFluidNetworks
             ["initialGas"] = initial.Gas, ["finalGas"] = final.Gas,
             ["initialEnergy"] = initial.Energy, ["finalEnergy"] = final.Energy,
             ["rejectedPool"] = rejection,
+            ["switched"] = switched,
             ["sticky"] = new JObject
             {
                 ["reserved"] = reserved, ["retried"] = retried,

@@ -38,11 +38,16 @@ public sealed class GameplayTestSuite
         foreach (JToken token in (JArray)root["cases"])
         {
             if (token is not JObject entry) throw new InvalidDataException("测试 cases 的每项必须是对象。");
-            ValidateMembers(entry, "测试用例", "id", "name", "luaPath", "enabled");
+            ValidateMembers(entry, "测试用例", "id", "name", "luaPath", "enabled", "dependsOn");
             RequireType(entry, "id", JTokenType.String);
             RequireType(entry, "name", JTokenType.String);
             RequireType(entry, "luaPath", JTokenType.String);
             RequireType(entry, "enabled", JTokenType.Boolean, false);
+            RequireType(entry, "dependsOn", JTokenType.Array, false);
+            if (entry["dependsOn"] is JArray dependencies)
+                foreach (JToken dependency in dependencies)
+                    if (dependency.Type != JTokenType.String)
+                        throw new InvalidDataException("测试依赖的用例 ID 必须是字符串。");
         }
 
         GameplayTestSuite suite = root.ToObject<GameplayTestSuite>(JsonSerializer.Create(
@@ -59,6 +64,7 @@ public sealed class GameplayTestSuite
 
         // 用例 ID 会成为报告文件名，忽略大小写检查重复，防止 Windows 下覆盖报告。
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var precedingCases = new Dictionary<string, GameplayTestCase>(StringComparer.OrdinalIgnoreCase);
         bool hasEnabledCase = false;
         foreach (GameplayTestCase testCase in suite.Cases)
         {
@@ -71,6 +77,17 @@ public sealed class GameplayTestSuite
             if (string.IsNullOrWhiteSpace(testCase.Name))
                 throw new InvalidDataException($"测试用例 {testCase.Id} 缺少 name。");
             testCase.LuaPath = ValidateLuaPath(testCase.LuaPath, testCase.Id);
+            var dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string dependency in testCase.DependsOn ?? throw new InvalidDataException($"测试用例 {testCase.Id} 的 dependsOn 不能为空值。"))
+            {
+                // 依赖必须位于当前案例之前，避免独立勾选时顺序错误或形成循环。
+                if (string.IsNullOrWhiteSpace(dependency) || !dependencies.Add(dependency) ||
+                    !precedingCases.TryGetValue(dependency, out GameplayTestCase prerequisite))
+                    throw new InvalidDataException($"测试用例 {testCase.Id} 的前置案例无效、重复或顺序错误：{dependency}");
+                if (testCase.Enabled && !prerequisite.Enabled)
+                    throw new InvalidDataException($"测试用例 {testCase.Id} 依赖已禁用的案例：{dependency}");
+            }
+            precedingCases.Add(testCase.Id, testCase);
             hasEnabledCase |= testCase.Enabled;
         }
         if (!hasEnabledCase) throw new InvalidDataException("测试清单至少要启用一个用例。");
@@ -123,5 +140,6 @@ public sealed class GameplayTestCase
     [JsonProperty("name", Required = Required.Always)] public string Name;
     [JsonProperty("luaPath", Required = Required.Always)] public string LuaPath;
     [JsonProperty("enabled")] public bool Enabled = true;
+    [JsonProperty("dependsOn")] public List<string> DependsOn = new();
     #endregion
 }

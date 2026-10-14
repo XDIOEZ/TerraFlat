@@ -296,6 +296,7 @@
       "id": "testing_cleanup_gameplay",
       "name": "Lua跨用例同步与跨帧收尾核对（需前置）",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-cleanup.lua",
+      "dependsOn": ["testing_queue_gameplay"],
       "enabled": true
     }
   ]
