@@ -19,7 +19,7 @@ public static partial class GameplayTestSystemProbe
         var grid = new WorldNavigationGrid();
         // 只构造本用例的稀疏网格，路径搜索仍调用正式导航算法。
         for (int y = 10; y <= 12; y++)
-        for (int x = 10; x <= 12; x++) grid.SetCell(new Vector2Int(x, y), 0, true);
+        for (int x = 10; x <= 12; x++) grid.SetCell(new Vector2Int(x, y), 1, true);
         return grid;
     }
 
@@ -35,13 +35,20 @@ public static partial class GameplayTestSystemProbe
         bool found = grid.TryFindPath(start, goal, path, checked((int)Number(args, "budget", 64d)));
         bool valid = found;
         int totalCost = 0;
+        bool includesCenter = path.Contains(center);
         for (int i = 1; i < path.Count; i++)
         {
-            bool traversable = grid.CanTraverse(path[i - 1], path[i], out int cost);
+            // 正式路径会平滑成多格线段，按正式线段遍历接口读取实际代价。
+            bool traversable = grid.TryCalculateLineTraversalCost(path[i - 1], path[i], out int cost);
             valid &= traversable; totalCost += cost;
+            Vector2Int delta = path[i] - path[i - 1], offset = center - path[i - 1];
+            int projection = offset.x * delta.x + offset.y * delta.y;
+            includesCenter |= offset.x * delta.y == offset.y * delta.x &&
+                projection >= 0 && projection <= delta.sqrMagnitude;
         }
         return new JObject { ["found"] = found, ["length"] = path.Count, ["valid"] = valid,
-            ["includesCostlyCell"] = path.Contains(center), ["totalCost"] = totalCost,
+            ["includesCostlyCell"] = includesCenter, ["totalCost"] = totalCost,
+            ["centerWalkable"] = grid.IsWalkable(center),
             ["endsAtTarget"] = found && path[path.Count - 1] == WorldNavigationGrid.NormalizeCell(goal),
             ["lineOfSight"] = grid.HasLineOfSight(start, goal) };
     }
@@ -70,18 +77,18 @@ public static partial class GameplayTestSystemProbe
         var grid = new WorldNavigationGrid();
         int initial = grid.Revision;
         grid.BeginBatchUpdate();
-        grid.SetCell(new Vector2Int(10, 10), 0, true);
-        grid.SetCell(new Vector2Int(11, 10), 0, true);
+        grid.SetCell(new Vector2Int(10, 10), 1, true);
+        grid.SetCell(new Vector2Int(11, 10), 1, true);
         int during = grid.Revision;
         grid.EndBatchUpdate();
         int after = grid.Revision;
         int beforeRepeat = grid.Revision;
-        grid.SetCell(new Vector2Int(10, 10), 0, true);
+        grid.SetCell(new Vector2Int(10, 10), 1, true);
         var changed = new List<Vector2Int>();
         grid.ConsumeChanges(changed, out bool reset);
         int repeated = grid.Revision;
         int removed = grid.RemoveRegion(new RectInt(10, 10, 2, 1));
-        grid.SetCell(new Vector2Int(10, 10), 0, true);
+        grid.SetCell(new Vector2Int(10, 10), 1, true);
         grid.Clear();
         grid.ConsumeChanges(changed, out bool cleared);
         return new JObject { ["initialRevision"] = initial, ["duringRevision"] = during, ["afterRevision"] = after,
@@ -97,7 +104,7 @@ public static partial class GameplayTestSystemProbe
         bool open = grid.CanTraverse(from, to, out int openCost);
         grid.SetCell(new Vector2Int(11, 10), 0, false);
         bool closed = grid.CanTraverse(from, to, out _);
-        grid.SetCell(new Vector2Int(11, 10), 0, true);
+        grid.SetCell(new Vector2Int(11, 10), 1, true);
         grid.SetCell(new Vector2Int(10, 11), 0, false);
         bool otherClosed = grid.CanTraverse(from, to, out _);
         return new JObject { ["open"] = open, ["openCost"] = openCost, ["closed"] = closed, ["otherClosed"] = otherClosed,

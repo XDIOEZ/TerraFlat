@@ -9,6 +9,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 代码根目录：`Assets/5_Scripts/5-4_Networking/`。
 - `Core/GameNetwork.cs`：会话门面；`Core/` 为传输抽象，`Mirror/` 为适配。
+- `Core/NetworkConnectionEndpoint.cs`：原始地址明确填写的端口必须在 1～65535；只在缺省时使用备用端口。IPv6 方括号内的冒号不是端口分隔符，不用 `Uri.IsDefaultPort` 判断用户是否显式填写端口。
 - `Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`：启动、连接与玩家。
 - `Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`：区块、物品、天气复制。
 - `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 16。

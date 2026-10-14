@@ -401,9 +401,9 @@ public static partial class GameplayTestSystemProbe
         try
         {
             rig.InitData();
-            var hook = new ItemSlot(0) { itemData = new ItemData { Tags = new List<string> { "FishingHook" } } };
-            var food = new ItemSlot(1) { itemData = new ItemData { Tags = new List<string> { "Food" } } };
-            var wrong = new ItemSlot(2) { itemData = new ItemData { Tags = new List<string> { "Stone" } } };
+            var hook = new ItemSlot(0) { itemData = new Data_GeneralItem { Tags = new List<string> { "FishingHook" } } };
+            var food = new ItemSlot(1) { itemData = new Data_GeneralItem { Tags = new List<string> { "Food" } } };
+            var wrong = new ItemSlot(2) { itemData = new Data_GeneralItem { Tags = new List<string> { "Stone" } } };
             return new JObject
             {
                 ["hookAccepted"] = rig.CanAcceptQuickTransfer(hook, rig.Data.itemSlots[0]),
@@ -422,7 +422,7 @@ public static partial class GameplayTestSystemProbe
     #region 机械动力与电力
     private static MachineEntity WorldMachineNode(int id, int x, float torque = 0f, float load = 0f, string mode = "relay") => new()
     {
-        Id = id, Cell = new Vector2Int(x, 0), State = new MachineState(), Snapshot = new ItemData(),
+        Id = id, Cell = new Vector2Int(x, 0), State = new MachineState(), Snapshot = new Data_GeneralItem(),
         Definition = new MachineDefinition { Id = "system-probe:" + id, Torque = torque, TorqueLoad = load,
             Rpm = 60f, RequiredRpm = 60f, PortMode = mode }
     };
@@ -641,7 +641,7 @@ public static partial class GameplayTestSystemProbe
     {
         var state = new SlotProcessingState();
         state.EnsureSlots(2);
-        var item = new ItemData { IDName = "system-probe:input", Guid = 42,
+        var item = new Data_GeneralItem { IDName = "system-probe:input", Guid = 42,
             Stack = new ItemStack { Amount = 2f } };
         state.Observe(0, item);
         state.Elapsed[0] = 5f; state.PendingAmounts[0] = 3; state.PendingItems[0] = "system-probe:output";

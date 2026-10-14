@@ -33,7 +33,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
 - 长按触屏的整组放置在进度完成时提交并消费手势；进度先缓冲 0.2 秒再显示，原总时长不延长。空槽起手才交 ScrollRect。拖拽来源允许同槽、同非零 Guid、同定义的事务替换实例；持续加工在被拖槽上暂缓。
 - `UI_Hand/InventoryDragGhost` 使用顶层 Canvas 且不拦射线；触屏位置取本次 PointerEventData，抬起后保留，桌面明确接管才改用 Pointer.current。`MobileHeldItemDropSurface` 只操作手部携带槽，丢弃经 Mod_DiscardItem，成功生成世界物后才扣源槽。
-- `InstantiateHeldItem` 在注册前绑定真实 ItemData、Owner/inHand；库存事件标脏，在安全边界同步，同 GUID 跨槽保留实例。保存先 ModuleSave 手持物再存库存；卸载释放输入、事件、PlayerHand 与所属 Item 引用。RuntimeInventory 在 Player Prefab 中以 `[SerializeReference]` 保存。
+- `InstantiateHeldItem` 在注册前绑定真实 ItemData、Owner/inHand；库存事件标脏，在安全边界同步，同 GUID 跨槽保留实例。保存先 ModuleSave 手持物再存库存；卸载释放输入、事件、PlayerHand 与所属 Item 引用。退出场景时 ItemMgr 可能先销毁，清理通过 GetInstance 获取仍存在的管理器，缺失时销毁自有手持物，不调用会报缺失错误的 Instance。RuntimeInventory 在 Player Prefab 中以 `[SerializeReference]` 保存。
 - 排序依次循环 ID/分类/数量/重量/体积；分类读 InventoryGroup 标签。整理稳定合堆压空槽；搜索只变槽 Alpha，以当前定义及 Tag 别名匹配，排序/整理将命中项稳定置顶。创造库存可扩缩、豁免重量体积，目录只含可持有定义；虚拟化槽映射可为 null，拖拽期间不重绑。
 - Inventory.basePanel 只拥有通用 UI_Content 槽位面板；自管组合面板通过 SyncQuickTransferTarget 判断状态。槽位皮肤由 InventorySlotVisualProfile 应用；Tooltip 经 IItemTooltipInfoProvider 扩展。模态库存获取输入锁，快捷栏/手部和机器面板不锁。
 

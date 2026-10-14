@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace FlatWorld.Networking
 {
@@ -67,7 +68,20 @@ namespace FlatWorld.Networking
                 return false;
             }
 
-            int resolvedPort = uri.IsDefaultPort ? fallbackPort : uri.Port;
+            // 原始地址是否写了端口必须独立判断，不能让 Uri 的默认端口规则把显式 0 换成备用端口。
+            string authority = uriValue.Substring(uriValue.IndexOf("://", StringComparison.Ordinal) + 3);
+            int authorityEnd = authority.IndexOfAny(new[] { '/', '?', '#' });
+            if (authorityEnd >= 0)
+                authority = authority.Substring(0, authorityEnd);
+            int portSeparator = authority.LastIndexOf(':');
+            bool hasExplicitPort = portSeparator >= 0 && portSeparator > authority.LastIndexOf(']');
+            int resolvedPort = fallbackPort;
+            if (hasExplicitPort && !int.TryParse(authority.Substring(portSeparator + 1),
+                    NumberStyles.None, CultureInfo.InvariantCulture, out resolvedPort))
+            {
+                error = "端口必须在 1 到 65535 之间。";
+                return false;
+            }
             if (resolvedPort <= 0 || resolvedPort > ushort.MaxValue)
             {
                 error = "端口必须在 1 到 65535 之间。";

@@ -19,24 +19,32 @@ public static partial class GameplayTestSystemProbe
 
     #region 真实 Collider 镜像归源
 
-    // 临时对象保持停用，不模拟物理，不登记到游戏世界。
+    // 源层级保持活动以遵守命中解析契约，禁用碰撞和行为，不登记到游戏世界。
     private static JObject InteractionPhysicsSource(JObject args)
     {
         var originalRoot = new GameObject("GameplayTest Independent Collider Source") { hideFlags = HideFlags.HideAndDontSave };
         var mirrorRoot = new GameObject("GameplayTest Independent Collider Image") { hideFlags = HideFlags.HideAndDontSave };
         originalRoot.SetActive(false); mirrorRoot.SetActive(false);
         GameItem owner = originalRoot.AddComponent<GameItem>();
+        owner.enabled = false;
         try
         {
             var body = new GameObject("Body");
             body.transform.SetParent(originalRoot.transform, false);
             Collider2D original = body.AddComponent<BoxCollider2D>();
+            original.enabled = false;
             var sibling = new GameObject("Sibling Oxygen Capability");
             sibling.transform.SetParent(originalRoot.transform, false);
             Mod_Oxygen capability = sibling.AddComponent<Mod_Oxygen>();
+            capability.enabled = false;
             Collider2D image = mirrorRoot.AddComponent<BoxCollider2D>();
+            image.enabled = false;
             ColliderSource2D binding = mirrorRoot.AddComponent<ColliderSource2D>();
             binding.Bind(original, new Vector2((float)Number(args, "offsetX", 10d), (float)Number(args, "offsetY", -20d)));
+            // 正式物理命中的源父级活动，组件禁用不影响组件归属查找。
+            originalRoot.SetActive(true);
+            bool sourceHierarchyActive = original.gameObject.activeInHierarchy;
+            bool collidersDisabled = !original.enabled && !image.enabled;
             bool ordinaryResolved = ColliderSource2D.Resolve(original) == original;
             bool imageResolved = ColliderSource2D.Resolve(image) == original;
             bool ownerResolved = ReferenceEquals(GameplayPhysics2D.ResolveComponent<GameItem>(image), owner);
@@ -55,6 +63,7 @@ public static partial class GameplayTestSystemProbe
             {
                 ["ordinaryResolved"] = ordinaryResolved, ["imageResolved"] = imageResolved,
                 ["ownerResolved"] = ownerResolved, ["siblingResolved"] = siblingResolved,
+                ["sourceHierarchyActive"] = sourceHierarchyActive, ["collidersDisabled"] = collidersDisabled,
                 ["offsetX"] = offset.x, ["offsetY"] = offset.y, ["absentCapability"] = absentCapability,
                 ["destroyedRejected"] = destroyedRejected, ["clearedRejected"] = clearedRejected,
                 ["nullRejected"] = ColliderSource2D.Resolve(null) == null
@@ -94,11 +103,17 @@ public static partial class GameplayTestSystemProbe
             string toolError = null;
             try
             {
-                ModuleJsonConfigurator.Apply(tool, "test:harvest_tool", "test-harvest-tool", Mod_ResourceTool.ModuleId,
+                tool.ApplyResourceConfiguration("test:harvest_tool", "test-harvest-tool",
                     parameters.ToString(Newtonsoft.Json.Formatting.None));
-                tool.OnResourcesReloaded();
             }
             catch (InvalidOperationException exception) { toolValid = false; toolError = exception.Message; }
+            bool readOnlyParameterRejected = false;
+            try
+            {
+                ModuleJsonConfigurator.Validate(tool, "test:harvest_tool", "test-harvest-tool", Mod_ResourceTool.ModuleId,
+                    "{\"HarvestKind\":\"Pickaxe\"}");
+            }
+            catch (InvalidOperationException) { readOnlyParameterRejected = true; }
             int layerCount = (int)Number(args, "layers", 1d);
             var rule = new GroundTileHarvestRule
             {
@@ -146,6 +161,7 @@ public static partial class GameplayTestSystemProbe
                 ["toolValid"] = toolValid, ["toolError"] = toolError, ["ruleValid"] = ruleValid, ["ruleError"] = ruleError,
                 ["requiredUses"] = toolValid && ruleValid ? GroundTileHarvestSystem.ResolveRequiredUses(tool, definition.GroundHarvest) : -1,
                 ["tier"] = tool.HarvestTier, ["efficiency"] = tool.HarvestEfficiency,
+                ["readOnlyParameterRejected"] = readOnlyParameterRejected,
                 ["interval"] = definition?.GroundHarvest.UseInterval, ["layers"] = definition?.GroundHarvest.NaturalLayerCount,
                 ["restoredDepth"] = GroundTileLayerSystem.ReadDepth(terrain, local), ["restoredGrass"] = terrain.GetGrass(0, 0),
                 ["invalidDepthRejected"] = invalidDepthRejected, ["progress"] = progress,

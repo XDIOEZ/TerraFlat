@@ -197,9 +197,9 @@ public static class ModuleJsonConfigurator
             }
 
             JsonProperty target = contract.Properties.GetClosestMatchProperty(property.Name);
-            if (target == null || target.Ignored)
+            if (target == null || target.Ignored || !target.Writable)
                 throw new JsonSerializationException(
-                    $"模块 {module.GetType().Name} 不包含可配置字段 {property.Name}");
+                    $"模块 {module.GetType().Name} 不包含可写配置字段 {property.Name}");
 
             property.Value.ToObject(target.PropertyType, serializer);
         }
@@ -417,7 +417,6 @@ public static class ModuleJsonConfigurator
         protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
         {
             List<JsonProperty> properties = base.CreateProperties(type, memberSerialization).ToList();
-            var names = new HashSet<string>(properties.Select(property => property.PropertyName), StringComparer.OrdinalIgnoreCase);
 
             for (Type current = type; current != null && current != typeof(MonoBehaviour); current = current.BaseType)
             {
@@ -427,16 +426,22 @@ public static class ModuleJsonConfigurator
                                            field.GetCustomAttribute<SerializeField>() != null ||
                                            field.GetCustomAttribute<SerializeReference>() != null;
                     if (!unitySerialized || field.IsStatic || field.IsInitOnly || field.IsNotSerialized ||
-                        field.GetCustomAttribute<JsonIgnoreAttribute>() != null || names.Contains(field.Name))
+                        field.GetCustomAttribute<JsonIgnoreAttribute>() != null)
                     {
                         continue;
                     }
 
+                    int existingIndex = properties.FindIndex(candidate =>
+                        string.Equals(candidate.PropertyName, field.Name, StringComparison.OrdinalIgnoreCase));
+                    if (existingIndex >= 0 && (properties[existingIndex].Writable || properties[existingIndex].Ignored))
+                        continue;
+
                     JsonProperty property = base.CreateProperty(field, memberSerialization);
                     property.Readable = true;
                     property.Writable = true;
-                    properties.Add(property);
-                    names.Add(property.PropertyName);
+                    // 只读公开属性不能遮住同名 Unity 字段，配置仍绑定实际字段而非开放计算属性。
+                    if (existingIndex >= 0) properties[existingIndex] = property;
+                    else properties.Add(property);
                 }
             }
 

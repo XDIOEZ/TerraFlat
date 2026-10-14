@@ -976,10 +976,15 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             turnBody.controlledTransforms_Position.Remove(previous.transform);
         }
 
-        if (!previous.DestructionHandled && ItemMgr.Instance != null)
-            ItemMgr.Instance.DespawnItem(previous);
-        else if (!previous.DestructionHandled)
-            Destroy(previous.gameObject);
+        if (!previous.DestructionHandled)
+        {
+            // 退出场景时管理器可能先销毁，沿用现有销毁回退且不触发缺失单例报错。
+            ItemMgr manager = ItemMgr.GetInstance();
+            if (manager != null)
+                manager.DespawnItem(previous);
+            else
+                Destroy(previous.gameObject);
+        }
         HeldItemChanged?.Invoke(null);
     }
 

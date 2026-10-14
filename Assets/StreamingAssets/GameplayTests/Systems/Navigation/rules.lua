@@ -1,7 +1,8 @@
 for _, case in ipairs({
     {label = "高代价格绕行", args = {penalty = 1000}, found = true, costly = false, cost = 28},
-    {label = "低代价格直达", args = {penalty = 0}, found = true, costly = true, cost = 20},
-    {label = "障碍格绕行", args = {blocked = true}, found = true, costly = false, cost = 28},
+    {label = "低代价格直达", args = {penalty = 1}, found = true, costly = true, cost = 20},
+    {label = "障碍格绕行且不切角", args = {blocked = true}, found = true, costly = false, cost = 40, center = false},
+    {label = "零权重为阻挡而非免费地形", args = {penalty = 0}, found = true, costly = false, cost = 40, center = false},
     {label = "搜索预算不足", args = {budget = 1}, found = false}
 }) do
     test.system("navigation", "weighted_path", case.args, function(data)
@@ -9,6 +10,7 @@ for _, case in ipairs({
         if case.found then
             assert(data.valid and data.endsAtTarget, "路径包含不可走边或没有到达目标")
             assert(data.includesCostlyCell == case.costly and data.totalCost == case.cost, "导航没有按正式代价择路")
+            if case.center ~= nil then assert(data.centerWalkable == case.center, "零权重或障碍格被误当可走") end
         else
             assert(data.length == 0, "未到达目标却返回了成功路径")
         end

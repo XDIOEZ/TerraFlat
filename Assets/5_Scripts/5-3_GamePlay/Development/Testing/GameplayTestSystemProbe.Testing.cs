@@ -45,7 +45,7 @@ public static partial class GameplayTestSystemProbe
         string mode = Text(args, "mode", "valid");
         string source = mode switch
         {
-            "valid" => "local args={penalty=0}; test.system('navigation','weighted_path',args,function(d) assert(d.found and d.totalCost==20) end); args.penalty=1000",
+            "valid" => "local args={penalty=1}; test.system('navigation','weighted_path',args,function(d) assert(d.found and d.totalCost==20) end); args.penalty=1000",
             "no_assert" => "test.system('navigation','corner',{},function(d) return '没有断言' end)",
             "failed_assert" => "test.system('navigation','corner',{},function(d) assert(false,'必须失败') end)",
             "callback_enqueue" => "test.system('navigation','corner',{},function(d) test.log('不能追加'); assert(true) end)",

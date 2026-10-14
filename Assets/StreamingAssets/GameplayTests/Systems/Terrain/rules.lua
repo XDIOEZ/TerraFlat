@@ -43,6 +43,8 @@ local harvestCases = {
 }
 for _, case in ipairs(harvestCases) do
     test.system("terrain", "harvest_rules", case.args, function(data)
+        assert(data.tier == (case.args.tier or 1) and data.efficiency == (case.args.efficiency or 1), "JSON 参数没有写入真实工具等级或效率字段")
+        assert(data.readOnlyParameterRejected, "只读计算属性被接受为可写 JSON 参数")
         assert(data.toolValid == case.tool and data.ruleValid == case.rule and data.requiredUses == case.uses, "正式采挖工具、规则校验或品质次数错误")
         assert(data.restoredDepth == (case.args.depth or 2) and data.restoredGrass == 4 and data.invalidDepthRejected, "地层深度快照恢复或非法层数保护错误")
         assert(math.abs(data.progress - .4) < .00001 and data.highProgress == 1 and data.lowProgress == 0, "权威采挖进度读取未钳制")

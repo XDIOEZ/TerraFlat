@@ -269,7 +269,8 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceCommitSnapshot(JObject args)
     {
         int tile = (int)Number(args, "tile", 23);
-        float depth = (float)Number(args, "depth", 2);
+        float depth = (float)Number(args, "depth", 0.25);
+        float changedDepth = (float)Number(args, "changedDepth", 0.75);
         using var world = new WorldRuntime("probe", 1);
         var address = new FlatWorld.WorldModel.WorldAddress("probe", new Int2(-8, 8));
         var profile = new ChunkGenerationProfileSnapshot("probe", 1, 2, 2);
@@ -287,7 +288,8 @@ public static partial class GameplayTestSystemProbe
         world.TryGetChunk(address, out ChunkRuntime chunk);
         WorldRuntimeSnapshot snapshot = world.CaptureSnapshot();
         chunk.Terrain.SetCell(0, 0, new TerrainCell(tile + 1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
-        chunk.Terrain.SetLiquid(0, 0, liquids.GetIndex("probe:water"), depth + 1);
+        chunk.Terrain.SetLiquid(0, 0, liquids.GetIndex("probe:water"), changedDepth);
+        float actualChangedDepth = chunk.Terrain.GetLiquidDepth(0, 0);
         bool repeatedAccepted = world.TryCommit(generated, out string repeatedReason);
         ChunkTerrainData terrain = chunk.Terrain;
         bool evicted = world.EvictChunk(address);
@@ -304,6 +306,7 @@ public static partial class GameplayTestSystemProbe
             ["evicted"] = evicted, ["terrainDisposed"] = terrain.IsDisposed,
             ["snapshotChunks"] = snapshot.Chunks.Count, ["snapshotGround"] = snapshot.Chunks[0].TerrainCells[0].GroundTileId,
             ["snapshotLiquid"] = snapshot.Chunks[0].LiquidIds[0], ["snapshotDepth"] = snapshot.Chunks[0].LiquidDepth[0],
+            ["changedDepth"] = actualChangedDepth,
             ["oldEpochAccepted"] = oldEpochAccepted, ["epochDisposed"] = epochResult.IsDisposed && epochBuffer.IsDisposed
         };
     }

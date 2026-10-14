@@ -18,7 +18,9 @@ end
 for _, offset in ipairs({{x = 10, y = -20}, {x = -128, y = 256}}) do
     test.system("player", "physics_source", {offsetX = offset.x, offsetY = offset.y}, function(data)
         assert(data.ordinaryResolved and data.imageResolved, "普通碰撞体或镜像碰撞体没有归到真实源")
-        assert(data.ownerResolved and data.siblingResolved, "镜像命中无法找到真实Item或其兄弟模块能力")
+        assert(data.sourceHierarchyActive and data.collidersDisabled, "物理归源夹具没有遵守活动源层级或启用了实际碰撞")
+        assert(data.ownerResolved, "镜像命中无法找到真实Item")
+        assert(data.siblingResolved, "镜像命中无法找到真实Item的兄弟模块能力")
         assert(data.offsetX == offset.x and data.offsetY == offset.y, "镜像偏移绑定丢失")
         assert(data.absentCapability and data.nullRejected, "缺失能力或空碰撞源产生了虚假目标")
         assert(data.destroyedRejected and data.clearedRejected, "失效源被镜像自有组件冒充成新的命中目标")

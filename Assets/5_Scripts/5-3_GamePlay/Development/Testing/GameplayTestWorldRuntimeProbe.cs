@@ -102,7 +102,7 @@ public static class GameplayTestWorldRuntimeProbe
             Vector2Int cell = WorldTopologyRuntime.NormalizeCell(origin + new Vector2Int(dx, dy));
             Vector2 center = (Vector2)cell + Vector2.one * .5f;
             if (!manager.TryGetRuntimeTerrainTile(center, out RuntimeTerrainTileSample sample) || !FarmlandSystem.IsOpen(sample) ||
-                sample.Terrain.GetGrass(sample.LocalCell.x, sample.LocalCell.y) != 0 || FarmlandSystem.HasWorldPlant(cell) ||
+                sample.Terrain.GetGrass(sample.LocalCell.x, sample.LocalCell.y) == ChunkTerrainData.GrassPresent || FarmlandSystem.HasWorldPlant(cell) ||
                 ReadEnvironment(sample, FarmlandSystem.SourceLayer) != 0f ||
                 FarmlandSystem.GetTillingVisualProgress(sample.Address, sample.LocalCell, sample.Cell.GroundTileId) > 0f ||
                 SaveDataMgr.TestExistingInstance.GetAgricultureCells(sample.Address).Any(value => value.LocalPosition == sample.LocalCell) ||
@@ -113,7 +113,8 @@ public static class GameplayTestWorldRuntimeProbe
             for (int ny = -1; ny <= 1 && dryNeighborhood; ny++)
             for (int nx = -1; nx <= 1; nx++)
                 if (!manager.TryGetRuntimeTerrainTile(center + new Vector2(nx, ny), out RuntimeTerrainTileSample neighbor) ||
-                    neighbor.LiquidDepth > 0f) { dryNeighborhood = false; break; }
+                    neighbor.Terrain.GetLiquidDepth(neighbor.LocalCell.x, neighbor.LocalCell.y) > 0f)
+                { dryNeighborhood = false; break; }
             if (dryNeighborhood) return new Site(player, sample, chunk, authority);
         }
         throw new InvalidOperationException("附近没有满足正式资格且可独立恢复的空格；需要准备干燥、无草、无作物的隔离场地。");
