@@ -1,4 +1,4 @@
-# 通用 Lua 测试场景
+# 游戏系统 Lua 测试
 
 AI 维护此系统时使用 [flatworld-lua-testing 导航 Skill](../../../.agents/skills/flatworld-lua-testing/SKILL.md)，业务规则另查对应领域 Skill。
 
@@ -8,7 +8,7 @@ AI 维护此系统时使用 [flatworld-lua-testing 导航 Skill](../../../.agent
 
 在 Unity 顶部打开 **`FlatWorld → 测试 → 测试中心（多选案例）`**：
 
-1. 从下拉框选择 `quick-suite.json`、`test-suite.json` 或其他已登记的 JSON 清单。
+1. 从下拉框选择机械动力 `mechanical-suite.json`、工业气液 `fluid-suite.json` 或太空 `universe-suite.json`。
 2. 给需要执行的 Lua 案例**逐个勾选复选框**，也可全选、反选或清空（至少勾一个）。
 3. 点击 **「开始测试已勾选的 N 个案例」**，EditMode 全部通过后，只进入 **一次** PlayMode，在同一测试世界内按清单顺序执行这些案例。
 4. 窗口会显示阶段进度、断言结果、玩法案例 PASS/FAIL 和失败详情，并可定位或复制完整报告。
@@ -24,14 +24,14 @@ AI 维护此系统时使用 [flatworld-lua-testing 导航 Skill](../../../.agent
 `Assets/Tests/FlatWorld/EditMode/` 和 `Assets/Tests/FlatWorld/PlayMode/`。
 
 在**已经打开、未运行 PlayMode** 的 Unity Editor 内通过菜单
-`FlatWorld/测试/快速执行 EditMode 然后 PlayMode`，或调用 MCP 工具：
+`FlatWorld/测试/执行机械动力系统（EditMode → PlayMode）`，或调用 MCP 工具：
 
 **更推荐直接让 AI 用 HomePC2 执行一条命令，等报告一次性返回（不需要循环调用 MCP）：**
 
 ```powershell
-python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json
+python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json
 # AI/CLI 也可多选，用例 ID 用空格隔开：
-python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json --cases enter_world player_movement
+python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json --cases mechanical_power mechanical_control
 ```
 
 Python 只写入 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 的本地请求，
@@ -43,8 +43,8 @@ Python 只写入 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 的本地请�
 也可以使用 MCP 工具：
 
 ```text
-gameplay_test_pipeline(action="run", suitePath="GameplayTests/quick-suite.json")
-gameplay_test_pipeline(action="run", suitePath="GameplayTests/quick-suite.json", caseIds=["enter_world","player_movement"])
+gameplay_test_pipeline(action="run", suitePath="GameplayTests/mechanical-suite.json")
+gameplay_test_pipeline(action="run", suitePath="GameplayTests/mechanical-suite.json", caseIds=["mechanical_power","mechanical_control"])
 gameplay_test_pipeline(action="status")
 gameplay_test_pipeline(action="report")
 ```
@@ -64,9 +64,8 @@ PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene
 建立一个隔离世界，在该世界中顺序跑完所有启用的 Lua 用例；不用每步往返 MCP，
 也不重复启动 Unity Editor 进程。
 
-`quick-suite.json` 设置 `buildShowroom: false`，跳过全物品陈列，只准备玩家所在真实区块。
-这适合性能、温度和交互等专项快速回归。原 `test-suite.json` 默认保留全物品陈列，
-专项需要检查物品目录时仍可开启。两个阶段的失败会写入同一份流水线报告，
+现有三个系统清单都设置 `buildShowroom: false`，只准备正式测试世界及各系统需要的夹具。
+两个阶段的失败会写入同一份流水线报告，
 包含独立的 EditMode / PlayMode 断言结果，PlayMode 会链接场景原有的每用例报告。
 
 ### AI 修复循环
@@ -82,15 +81,23 @@ PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene
 **注意：** 两阶段范围是 FlatWorld 自己的 EditMode/PlayMode 测试程序集，
 不自动执行第三方 Package 的全部测试。用户正在 PlayMode 时启动命令会拒绝执行，不会擅自停止游戏。
 
-在 Unity 中打开 `Assets/3_Scenes/Development/GameplayTestScene.unity`，点击 Play 即可。场景复用正式 WorldManager 和建世界流程，自动加载完整资源、创建默认模板玩家，再建立平整的物品陈列厅，不需要操作主菜单。
+在 Unity 中打开 `Assets/3_Scenes/Development/GameplayTestScene.unity`，点击 Play 即可执行默认机械动力专项。场景复用正式 WorldManager 和建世界流程，自动加载完整资源、创建默认模板玩家，再按所选系统准备夹具，不需要操作主菜单。
 
-陈列读取本次资源会话的物品目录，每个非 Actor 物品 ID 放置一个，按网格排列并留出通道。机器、自然资源与普通物品分别走各自的正式生成入口。角色、动物和怪物不作为物品陈列。新增物品会自动进入下一次陈列，不需要手动维护列表。
+测试场景仍支持通过 `buildShowroom` 可选准备物品陈列，现有系统专项均关闭该选项。
 
 ## 多 Lua 测试清单
 
-场景的 `GameplayTestScene` 组件默认读取 `Assets/StreamingAssets/GameplayTests/test-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
+场景的 `GameplayTestScene` 组件默认读取 `Assets/StreamingAssets/GameplayTests/mechanical-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
 
-默认清单包括入世、移动、快捷栏、GM 和机械动力回归。`quick-suite.json` 包含 7 个用例，跳过物品陈列；`test-suite.json` 包含 15 个用例，额外执行全物品陈列、创造背包和机械动力。所有用例都是独立 Lua 文件，可以在测试中心按 ID 勾选；新增业务必须有实际断言，不能只用 GM 摆放道具就判定通过。
+测试按业务系统组织，共保留 20 份 Lua：
+
+| 系统 | 清单 | Lua 数量 |
+| --- | --- | ---: |
+| 机械动力 | `mechanical-suite.json` | 7 |
+| 工业气液与管网 | `fluid-suite.json` | 9 |
+| 宇宙与太空 | `universe-suite.json` | 4 |
+
+玩家移动、独立入场/陈列、背包/快捷栏、生命/无敌及 Buff 的通用 Lua 已删除，通用快速和混合清单也已删除。世界、玩家和区块就绪仍是系统测试的前置条件，GM 白名单保留用于准备系统夹具。所有用例可以在测试中心按 ID 勾选；新增业务必须有实际断言，不能只用 GM 摆放道具就判定通过。
 
 ### 机械动力专项（7 个 Lua 模块）
 

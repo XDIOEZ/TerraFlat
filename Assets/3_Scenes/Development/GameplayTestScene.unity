@@ -303,7 +303,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b557a3be66fc41c882918acc77d5ec85, type: 3}
   m_Name:
   m_EditorClassIdentifier:
-  testSuitePath: GameplayTests/test-suite.json
+  testSuitePath: GameplayTests/mechanical-suite.json
   seed: flatworld-showroom-001
   resourceTimeoutSeconds: 120
   worldTimeoutSeconds: 120

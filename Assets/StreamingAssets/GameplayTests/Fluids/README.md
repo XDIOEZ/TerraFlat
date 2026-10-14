@@ -13,7 +13,7 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/fluid-suite.json
 python Tools/GameplayTesting/run_suite.py GameplayTests/fluid-suite.json --cases fluid_transport fluid_tanks fluid_environment
 ```
 
-运行前让 Unity 完成脚本编译。默认测试场景仍使用原清单；此专项通过测试中心或上述命令选择，不自动加入日常 quick-suite。
+运行前让 Unity 完成脚本编译。默认测试场景执行机械动力专项；工业气液专项通过测试中心或上述命令选择。
 
 测试中心显示 9 个分组，每组可以单独勾选。组内每项 `test.fluid` 仍使用独立夹具：某项失败后继续检查同组其余项，失败断言与子案例 ID 全部保留，整组最终仍为失败；世界、玩家或控制前提失效时立即停止。详细报告按分组 ID 写入 `Library/FlatWorldGameplayTests/Reports/<运行ID>/<分组ID>.json`；流水线总报告在 `Library/FlatWorldGameplayTests/Pipeline/`。
 

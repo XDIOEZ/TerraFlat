@@ -12,7 +12,7 @@ namespace FlatWorld.Tests.EditMode
         [Test]
         public void Suite_UsesProductionParser()
         {
-            string selected = GameplayTestSelection.ResolveSuitePath(GameplayTestSelection.QuickSuitePath);
+            string selected = GameplayTestSelection.ResolveSuitePath(GameplayTestSelection.DefaultSuitePath);
             string path = GameplayTestSelection.GetAbsoluteSuitePath(selected);
             Assert.That(File.Exists(path), Is.True, "待执行清单不存在：" + path);
             GameplayTestSuite suite = GameplayTestSuite.Parse(File.ReadAllText(path));
@@ -23,7 +23,7 @@ namespace FlatWorld.Tests.EditMode
         [Test]
         public void Suite_AllEnabledLuaScriptsExistAndCompile()
         {
-            string selected = GameplayTestSelection.ResolveSuitePath(GameplayTestSelection.QuickSuitePath);
+            string selected = GameplayTestSelection.ResolveSuitePath(GameplayTestSelection.DefaultSuitePath);
             GameplayTestSuite suite = GameplayTestSuite.Parse(
                 File.ReadAllText(GameplayTestSelection.GetAbsoluteSuitePath(selected)));
             GameplayTestSelection.ApplySelectedCases(suite, selected);

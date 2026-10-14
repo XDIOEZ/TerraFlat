@@ -69,7 +69,7 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FlatWorld Unity 同进程两阶段回归流水线")
-    parser.add_argument("suite", nargs="?", default="GameplayTests/quick-suite.json")
+    parser.add_argument("suite", nargs="?", default="GameplayTests/mechanical-suite.json")
     parser.add_argument("--editor-timeout", type=float, default=45,
                         help="Editor 收到本地请求的等待秒数")
     parser.add_argument("--run-timeout", type=float, default=900,

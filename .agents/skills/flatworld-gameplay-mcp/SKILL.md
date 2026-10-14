@@ -49,7 +49,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 
 ## 扩展与诊断
 
-- JSON + Lua 自动回归优先 `python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json`，也可用 `gameplay_test_pipeline(run/status/report)` 或测试中心多选。系统入口、编写规则、每份 Lua 最多三次显式截图、隔离执行及报告契约统一见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)。
+- JSON + Lua 自动回归优先 `python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json`，也可用 `gameplay_test_pipeline(run/status/report)` 或测试中心多选。系统入口、编写规则、每份 Lua 最多三次显式截图、隔离执行及报告契约统一见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)。
 
 - `capability_gap` 表示正常玩法缺少协议表达。动作实现 `IGameplayMcpAction` 并加 `GameplayMcpActionAttribute`，TypeCache 注册表生成能力清单；扩展复用生产接口/UI 事件，不引入任意代码执行或私有状态写入。
 - `gameplay_aiecs_debug(status/sample)` 只读 GM 模拟；`gameplay_chunk_render_debug(status/sample)` 只读区块阶段/心跳/耗时。采样 1～20 秒；区块采样在暂停、换世界、编译时标记无效，报告位于 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/`，菜单 `FlatWorld/调试/区块加载`。

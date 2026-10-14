@@ -25,6 +25,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 - Editor：`Assets/Editor/FlatWorld/GameplayMCP/GameplayTestPipelineCoordinator.cs` 串联 Test Framework；`GameplayTestDashboardWindow.cs` 是测试中心，`GameplayTestPipelineTool.cs` 提供 MCP 入口。
 - CLI：`Tools/GameplayTesting/run_suite.py`；安全前置与集成测试分别在 `Assets/Tests/FlatWorld/{EditMode,PlayMode}/`。
 - 清单与 Lua：`Assets/StreamingAssets/GameplayTests/`。命令、清单字段及运行选项见 [通用说明](../../../Assets/StreamingAssets/GameplayTests/README.md)；领域覆盖见 [太空](../../../Assets/StreamingAssets/GameplayTests/Universe/README.md)、[气液](../../../Assets/StreamingAssets/GameplayTests/Fluids/README.md)。
+- 现有入口按业务系统分为机械动力、工业气液与管网、宇宙与太空三个专项；默认机械动力。独立移动、入场/陈列、背包/快捷栏、生命/无敌和 Buff 通用案例已移除，系统前置检查与 GM 造条件接口继续复用。
 
 ## 编写与截图
 
@@ -47,7 +48,7 @@ test.screenshot("向右跨区并折返后的太空现场")
 ## 执行与范围
 
 ```powershell
-python Tools/GameplayTesting/run_suite.py GameplayTests/quick-suite.json
+python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases space_gameplay
 ```
 

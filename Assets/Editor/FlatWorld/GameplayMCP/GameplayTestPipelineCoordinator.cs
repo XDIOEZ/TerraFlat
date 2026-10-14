@@ -241,7 +241,7 @@ namespace FlatWorld.GameplayMCP
                 return Reply(false, active, "已有一轮测试正在执行，请读取状态，不要重复启动。");
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 return Reply(false, null, "当前 Unity 处于 PlayMode 或正在切换，不会打断你的游戏现场。");
-            suitePath = string.IsNullOrWhiteSpace(suitePath) ? GameplayTestSelection.QuickSuitePath : suitePath;
+            suitePath = string.IsNullOrWhiteSpace(suitePath) ? GameplayTestSelection.DefaultSuitePath : suitePath;
             try
             {
                 string path = GameplayTestSelection.GetAbsoluteSuitePath(suitePath);
@@ -301,10 +301,10 @@ namespace FlatWorld.GameplayMCP
             return response;
         }
 
-        [MenuItem("FlatWorld/测试/快速执行 EditMode 然后 PlayMode")]
+        [MenuItem("FlatWorld/测试/执行机械动力系统（EditMode → PlayMode）")]
         private static void MenuRun()
         {
-            JObject response = Start(GameplayTestSelection.QuickSuitePath);
+            JObject response = Start(GameplayTestSelection.DefaultSuitePath);
             Debug.Log("[GameplayTestPipeline] " + response.ToString(Formatting.None));
         }
 

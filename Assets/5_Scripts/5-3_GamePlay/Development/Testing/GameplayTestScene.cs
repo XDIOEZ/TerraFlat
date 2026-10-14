@@ -11,7 +11,7 @@ using UnityEngine.Networking;
 public sealed class GameplayTestScene : MonoBehaviour
 {
     #region 场景配置
-    [SerializeField] private string testSuitePath = "GameplayTests/test-suite.json";
+    [SerializeField] private string testSuitePath = GameplayTestSelection.DefaultSuitePath;
     [SerializeField] private string seed = "flatworld-showroom-001";
     [SerializeField, Min(1f)] private float resourceTimeoutSeconds = 120f;
     [SerializeField, Min(1f)] private float worldTimeoutSeconds = 120f;

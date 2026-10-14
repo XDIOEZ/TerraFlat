@@ -63,7 +63,7 @@ namespace FlatWorld.GameplayMCP
         private void ReloadSuiteList()
         {
             string previous = CurrentSuitePath ?? EditorPrefs.GetString(
-                SuitePreference, GameplayTestSelection.QuickSuitePath);
+                SuitePreference, GameplayTestSelection.DefaultSuitePath);
             suitePaths.Clear();
             string root = Path.Combine(Application.streamingAssetsPath, "GameplayTests");
             if (Directory.Exists(root))
@@ -78,7 +78,7 @@ namespace FlatWorld.GameplayMCP
             }
             int index = suitePaths.FindIndex(path => string.Equals(path, previous, StringComparison.OrdinalIgnoreCase));
             if (index < 0)
-                index = suitePaths.FindIndex(path => path == GameplayTestSelection.QuickSuitePath);
+                index = suitePaths.FindIndex(path => path == GameplayTestSelection.DefaultSuitePath);
             selectedSuiteIndex = Mathf.Max(0, index);
             LoadSuite();
         }

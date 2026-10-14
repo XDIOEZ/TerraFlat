@@ -7,7 +7,7 @@ namespace FlatWorld.GameplayMCP
 {
     /// <summary>AI 只发一次启动命令，再读取整体结果，不按逐帧玩法 MCP 反复操作。</summary>
     [McpForUnityTool("gameplay_test_pipeline",
-        Description = "Run FlatWorld EditMode tests first, then one PlayMode gameplay Lua suite only if all EditMode tests passed. Actions: run, status, report; optional suitePath such as GameplayTests/quick-suite.json. Does not interrupt an active PlayMode.",
+        Description = "Run FlatWorld EditMode tests first, then one PlayMode gameplay Lua suite only if all EditMode tests passed. Actions: run, status, report; optional suitePath such as GameplayTests/mechanical-suite.json. Does not interrupt an active PlayMode.",
         Group = "core")]
     public static class GameplayTestPipelineTool
     {
@@ -17,7 +17,7 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("run | status | report", Required = true)]
             public string action { get; set; }
 
-            [ToolParameter("StreamingAssets-relative suite path; default GameplayTests/quick-suite.json.", Required = false)]
+            [ToolParameter("StreamingAssets-relative suite path; default GameplayTests/mechanical-suite.json.", Required = false)]
             public string suitePath { get; set; }
 
             [ToolParameter("Optional list of selected Lua case IDs; all enabled cases run when omitted.", Required = false)]

@@ -14,7 +14,7 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --ca
 
 ## 覆盖清单
 
-原来的 27 项逻辑检查整合为四个主题用例、四份 Lua，原断言与采样内容保留。公共 `enter_world.lua` 仍供其他清单使用，这份清单的入场检查直接放在宇宙内容组中。
+原来的 27 项逻辑检查整合为四个主题用例、四份 Lua，原断言与采样内容保留。独立入场 Lua 已删除，这份清单的入场检查直接放在宇宙内容组中。
 
 | 主题用例 / Lua 文件 | 包含的子检查 |
 | --- | --- |
