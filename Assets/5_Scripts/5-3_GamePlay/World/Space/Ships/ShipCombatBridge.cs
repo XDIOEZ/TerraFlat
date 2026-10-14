@@ -27,7 +27,7 @@ namespace FlatWorld.Spaceflight
             bool spaceCombat = SpaceSession.TryGetCombatFrame(weapon.item, out SpaceSectorPosition canonicalOrigin, out Vector2 presentationOrigin);
             string surfaceWorld = null;
             bool hasSurfaceWorld = !spaceCombat && SpaceSession.TryGetCombatWorldKey(weapon.item, out surfaceWorld);
-            var candidates = new List<(ShipState Ship, ShipPieceState Piece, RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver)>();
+            var candidates = new List<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor, Mod_DamageReceiver Receiver)>();
             var hits = new List<CombatColliderHit2D>();
             using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
             {
@@ -68,7 +68,7 @@ namespace FlatWorld.Spaceflight
                         ShipGeometry.Rotate(local.Center.x, local.Center.y, angle, out double offsetX, out double offsetY);
                         local.Center = new float2(anchor.x + (float)offsetX, anchor.y + (float)offsetY);
                         physics.Add(candidates.Count, local, (float)(angle * 180d / Math.PI));
-                        candidates.Add((ship, piece, definition, null));
+                        candidates.Add((ship, piece, anchor, null));
                     }
                 }
                 if (spaceCombat && ItemMgr.Instance != null)
@@ -90,15 +90,34 @@ namespace FlatWorld.Spaceflight
                         if (Math.Abs(anchor.x + offset.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + extent.magnitude ||
                             Math.Abs(anchor.y + offset.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + extent.magnitude) continue;
                         physics.Add(candidates.Count, PerceptionShape2D.Aabb(anchor + offset, extent), Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg);
-                        candidates.Add((null, null, null, receiver));
+                        candidates.Add((null, null, default, receiver));
                     }
                 physics.Query(shape, hits);
             }
             hits.Sort((left, right) => left.Fraction.CompareTo(right.Fraction));
+            var resolvedHits = new List<(ShipState Ship, ShipPieceState Piece, RuntimeItemDefinition Definition,
+                Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>();
             foreach (CombatColliderHit2D contact in hits)
             {
-                if (weapon.RemainingAttackTargets == 0) break;
                 var target = candidates[contact.CandidateId];
+                if (target.Receiver != null)
+                {
+                    resolvedHits.Add((null, null, null, target.Receiver, contact));
+                    continue;
+                }
+                Vector2 delta = contact.Point - target.Anchor;
+                ShipGeometry.Rotate(delta.x, delta.y, -target.Ship.AngleRadians, out double dx, out double dy);
+                ShipPieceState piece = ShipDamageTargeting.SelectAtContact(target.Ship, target.Piece,
+                    (target.Piece.CellX + .5d) * target.Ship.CellSizeMeters + dx,
+                    (target.Piece.CellY + .5d) * target.Ship.CellSizeMeters + dy);
+                if (piece != null && GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+                    resolvedHits.Add((target.Ship, piece, definition, null, contact));
+            }
+            // 命中名单在扣血前固定，先摧毁设备也不能让同一发补打刚露出的地板。
+            foreach (var target in resolvedHits)
+            {
+                if (weapon.RemainingAttackTargets == 0) break;
+                CombatColliderHit2D contact = target.Contact;
                 if (target.Receiver != null)
                 {
                     if (!weapon.TryReserveExternalTarget(GameplayCombatBridge.Identity(target.Receiver.item))) continue;
@@ -106,22 +125,18 @@ namespace FlatWorld.Spaceflight
                     weapon.PublishExternalDamage(playerHit, target.Receiver.Hurt(playerHit));
                     continue;
                 }
-                var identity = new CombatIdentity { Backend = CombatBackend.External, Value = unchecked((uint)(target.Ship.IsWreck ? target.Ship.WreckGuid : int.Parse(target.Piece.PieceId))),
+                if (!target.Piece.IsAlive || !int.TryParse(target.Piece.PieceId, out int guid)) continue;
+                var identity = new CombatIdentity { Backend = CombatBackend.External, Value = unchecked((uint)guid),
                     World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
                 if (!weapon.TryReserveExternalTarget(identity)) continue;
                 CombatDamageContext hit = context; hit.HitPoint = contact.Point;
                 float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, false);
-                float damage = target.Definition.Health != null ? MachineCombatBridge.CalculateDamage(target.Definition.Health, hit, difficulty)
-                    : CombatRules.ResolvePhysical(math.csum(hit.Damage), 0f, difficulty, 1f);
-                if (target.Ship.IsWreck)
-                {
-                    weapon.PublishExternalDamage(hit, (float)session.ApplyWreckDamage(target.Ship, damage));
-                    continue;
-                }
-                double before = target.Piece.Health;
-                ShipStructureService.ApplyDamage(target.Ship, target.Piece.PieceId, damage, "攻击", session.DestroyPiece);
-                session.SynchronizePieceHealth(target.Ship, target.Piece);
-                weapon.PublishExternalDamage(hit, (float)(before - target.Piece.Health));
+                float weakness = hit.IsTrueDamage != 0 || target.Definition.Health == null ? 1f :
+                    Mod_ResourceHarvest.ResolveAffinityMultiplier(target.Definition.Health.WeakTool, 1,
+                        (ResourceToolKind)hit.ResourceToolKind, hit.ResourceToolTier, hit.ResourceToolEfficiency);
+                float damage = CombatRules.ResolvePhysical(math.csum(hit.Damage),
+                    hit.IsTrueDamage != 0 ? 0f : (float)target.Piece.PhysicalDefense, difficulty, weakness);
+                weapon.PublishExternalDamage(hit, (float)session.ApplyResolvedPieceDamage(target.Ship, target.Piece, damage, "攻击"));
             }
         }
         #endregion

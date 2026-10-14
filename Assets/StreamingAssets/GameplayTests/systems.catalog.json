@@ -695,7 +695,8 @@
         "dimension"
       ],
       "ruleCaseIds": [
-        "space_rules"
+        "space_rules",
+        "space_ship_damage_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Space/rules-suite.json",
       "integrationSuites": [
@@ -707,7 +708,8 @@
         "universe_content",
         "sector_rules",
         "ship_rules",
-        "space_gameplay"
+        "space_gameplay",
+        "ship_damage_gameplay"
       ],
       "rulesCoverage": "partial"
     },

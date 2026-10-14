@@ -62,6 +62,24 @@ namespace FlatWorld.Spaceflight
             return result;
         }
 
+        public static double ApplyLineDamage(ShipState ship, in ShipDamageLine line, double damageBudget,
+            string reason, Action<ShipState, ShipPieceState, string> onDestroyed = null,
+            Predicate<ShipPieceState> eligible = null)
+        {
+            if (!SpaceVector2.Finite(damageBudget) || damageBudget <= 0d) return 0d;
+            List<ShipPieceState> hit = SelectPieces(ship, line, eligible);
+            if (hit.Count == 0) return 0d;
+            // 先均分冻结的沿线名单，再逐块扣防御，摧毁和回调不能重新放大原有预算。
+            double share = damageBudget / hit.Count, actualLoss = 0d;
+            foreach (ShipPieceState piece in hit)
+            {
+                double before = piece.Health;
+                ShipStructureService.ApplyPhysicalDamage(ship, piece.PieceId, share, reason, onDestroyed);
+                actualLoss += Math.Max(0d, before - piece.Health);
+            }
+            return actualLoss;
+        }
+
         private static void GetBounds(ShipState ship, ShipPieceState piece,
             out double x, out double y, out double width, out double height)
         {

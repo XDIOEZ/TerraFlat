@@ -26,6 +26,12 @@
       "name": "真实太空入场、航行、跨区与接触",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/space_gameplay.lua",
       "enabled": true
+    },
+    {
+      "id": "ship_damage_gameplay",
+      "name": "真实长船局部截断与冷残骸继续破碎",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_damage_gameplay.lua",
+      "enabled": true
     }
   ]
 }

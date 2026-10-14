@@ -182,7 +182,9 @@ namespace FlatWorld.Spaceflight
             for (int i = 0; i < results.Count; i++)
             {
                 results[i].IdentityAnchorPieceId = SelectAnchor(results[i], results[i].Pieces);
-                results[i].IsWreck = !HasConsole(results[i]);
+                // 建造中的整船不因暂缺动力变成残骸，真正分裂后才判断各块能否继续驾驶。
+                results[i].IsWreck = ship.IsWreck || groups.Count > 1 &&
+                    (!HasOperationalConsole(results[i]) || !HasOperationalEngine(results[i]));
                 ShipAtmosphereService.RebuildCompartments(results[i], outside);
                 RecalculateMass(results[i]);
             }
@@ -227,6 +229,15 @@ namespace FlatWorld.Spaceflight
         {
             foreach (ShipPieceState piece in ship.Pieces)
                 if (piece != null && piece.IsAlive && piece.Kind == ShipPieceKind.Console) return true;
+            return false;
+        }
+        public static bool HasOperationalConsole(ShipState ship) => HasOperationalPiece(ship, ShipPieceKind.Console);
+        public static bool HasOperationalEngine(ShipState ship) => HasOperationalPiece(ship, ShipPieceKind.Engine);
+        private static bool HasOperationalPiece(ShipState ship, ShipPieceKind kind)
+        {
+            if (ship == null) return false;
+            foreach (ShipPieceState piece in ship.Pieces)
+                if (piece?.IsOperational == true && piece.Kind == kind) return true;
             return false;
         }
         private static string SelectAnchor(ShipState ship, List<ShipPieceState> pieces)
@@ -277,6 +288,21 @@ namespace FlatWorld.Spaceflight
 
         #region 唯一结构伤害入口
         public static event Action<ShipState, ShipPieceState, double, string> DamageApplied;
+        public static double ResolvePhysicalDamage(ShipPieceState piece, double rawDamage)
+        {
+            if (piece?.IsAlive != true || !FluidUnits.IsFinite(rawDamage) || rawDamage <= 0d) return 0d;
+            double defense = FluidUnits.IsFinite(piece.PhysicalDefense) ? Math.Max(0d, piece.PhysicalDefense) : 0d;
+            return Math.Max(0d, rawDamage - defense);
+        }
+        public static bool ApplyPhysicalDamage(ShipState ship, string pieceId, double rawDamage, string reason,
+            Action<ShipState, ShipPieceState, string> onDestroyed = null)
+        {
+            if (ship == null) return false;
+            foreach (ShipPieceState piece in ship.Pieces)
+                if (piece?.PieceId == pieceId)
+                    return ApplyDamage(ship, pieceId, ResolvePhysicalDamage(piece, rawDamage), reason, onDestroyed);
+            return false;
+        }
         public static bool ApplyDamage(ShipState ship, string pieceId, double damage, string reason,
             Action<ShipState, ShipPieceState, string> onDestroyed = null)
         {
@@ -285,6 +311,7 @@ namespace FlatWorld.Spaceflight
             {
                 if (piece == null || piece.PieceId != pieceId || !piece.IsAlive) continue;
                 double previousHealth = piece.Health;
+                if (piece.MaxDisableHealth > 0d) piece.DisableHealth -= damage;
                 piece.Health = Math.Max(0d, piece.Health - damage);
                 DamageApplied?.Invoke(ship, piece, previousHealth - piece.Health, reason);
                 if (piece.Health == 0d)

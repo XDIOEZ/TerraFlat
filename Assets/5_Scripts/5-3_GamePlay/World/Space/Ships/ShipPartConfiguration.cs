@@ -14,6 +14,9 @@ namespace FlatWorld.Spaceflight
         public bool? BlocksMovement;
         public string MaterialId;
         public float StructuralMassKg = 20f, Health = 250f;
+        // 防御抵消每次物理伤害，零功能耐久上限表示该部件没有单独瘫痪规则。
+        public float? PhysicalDefense;
+        public float DisableHealth;
         public bool SealsAtmosphere;
         public float MinimumPressureKPa, MaximumPressureKPa = 500f, PressureDamagePerKPaSecond = .04f;
         public float MinimumTemperatureCelsius = -250f, MaximumTemperatureCelsius = 500f;

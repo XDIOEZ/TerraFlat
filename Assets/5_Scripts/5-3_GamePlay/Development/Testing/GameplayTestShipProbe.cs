@@ -223,6 +223,8 @@ public static class GameplayTestShipProbe
         ship.Pieces.Add(Piece("floor-right", ShipPieceKind.Floor, 2, 0));
         ship.Pieces.Add(Piece("console-left", ShipPieceKind.Console, 0, 0));
         ship.Pieces.Add(Piece("console-right", ShipPieceKind.Console, 2, 0));
+        ship.Pieces.Add(Piece("engine-left", ShipPieceKind.Engine, 0, 0));
+        ship.Pieces.Add(Piece("engine-right", ShipPieceKind.Engine, 2, 0));
         var unsupported = Piece("unsupported", ShipPieceKind.Equipment, 8, 0);
         ship.Pieces.Add(unsupported);
         var detached = new JArray();

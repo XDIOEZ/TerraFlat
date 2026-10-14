@@ -35,11 +35,6 @@ namespace FlatWorld.Spaceflight
             QueueShipDamageFeedback(ship, piece, actualLoss, reason);
         }
 
-        private void RecordWreckDamage(ShipState wreck, double actualLoss, string reason)
-        {
-            if (reason != "攻击") QueueShipDamageFeedback(wreck, null, actualLoss, reason);
-        }
-
         private void QueueShipDamageFeedback(ShipState ship, ShipPieceState piece, double actualLoss, string reason)
         {
             if (ship == null || actualLoss <= 0d || State == null || !IsVisible(ship)) return;
@@ -63,7 +58,7 @@ namespace FlatWorld.Spaceflight
             feedback.Sector = ship.Sector;
             feedback.WorldKey = feedback.InSpace ? SpaceSectorCoordinates.SceneKey(ship.Sector) : flight.SurfaceWorldKey;
             feedback.Amount += actualLoss; feedback.Reason = reason;
-            if (piece?.Health <= 0d || ship.IsWreck && ship.WreckHealth <= 0d) feedback.ShowAt = Time.time;
+            if (piece?.Health <= 0d) feedback.ShowAt = Time.time;
         }
 
         private void FlushShipDamageFeedback()
@@ -117,16 +112,9 @@ namespace FlatWorld.Spaceflight
         private void ApplyLineImpact(ShipState ship, double damageBudget, string reason)
         {
             if (!SpaceVector2.Finite(damageBudget) || damageBudget <= 0d) return;
-            if (ship?.IsWreck == true) { ApplyWreckDamage(ship, damageBudget, reason); return; }
             if (!ShipDamagePattern.TryCreateLine(ship, UnityEngine.Random.value, UnityEngine.Random.value,
                     out ShipDamageLine line)) return;
-            List<ShipPieceState> hit = ShipDamagePattern.SelectPieces(ship, line);
-            double damage = damageBudget / Math.Max(1, hit.Count);
-            foreach (ShipPieceState piece in hit)
-            {
-                ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece);
-                SynchronizePieceHealth(ship, piece);
-            }
+            ShipDamagePattern.ApplyLineDamage(ship, line, damageBudget, reason, DestroyPiece);
         }
         #endregion
     }

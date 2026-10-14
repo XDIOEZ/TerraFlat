@@ -42,6 +42,10 @@ namespace FlatWorld.Spaceflight
         public double MassKg;
         public double Health = 100d;
         public double MaxHealth = 100d;
+        public double PhysicalDefense;
+        // 功能耐久独立于结构血量，停工后部件仍保留碰撞和真实库存。
+        public double DisableHealth;
+        public double MaxDisableHealth;
         public bool Destroyed;
         public bool SealsAtmosphere;
         public bool BlocksMovement;
@@ -57,6 +61,7 @@ namespace FlatWorld.Spaceflight
         public string MaterialId;
         public string SnapshotJson;
         [JsonIgnore] public bool IsAlive => !Destroyed && Health > 0d;
+        [JsonIgnore] public bool IsOperational => IsAlive && (MaxDisableHealth <= 0d || DisableHealth > 0d);
         [JsonIgnore] public bool BlocksPassage => BlocksMovement && !(Kind == ShipPieceKind.Door && DoorOpen);
     }
 
@@ -107,7 +112,6 @@ namespace FlatWorld.Spaceflight
         public string WorldAddress;
         public ShipPlatformKind PlatformKind;
         public bool IsWreck;
-        public double WreckHealth, WreckMaxHealth;
         public int WreckGuid;
         public double CellSizeMeters = 1d;
         public double CabinHeightMeters = 2.5d;

@@ -56,6 +56,10 @@ internal static partial class Program
         Run("引擎外缘朝向、缺口、凹形与旋转占地", EnginePlacementRules);
         Run("后续安装保留引擎喷口通道", EnginePlacementAdditions);
         Run("GM模板六台引擎有效且结构层无重叠", EnginePlacementTemplate);
+        Run("飞船局部耐久、防御与瘫痪几何", ShipDamageLocalDurability);
+        Run("飞船命中点上层遮挡与下一发地板", ShipDamageHitTargeting);
+        Run("飞船损伤线预算均分与分别防御", ShipDamageLineBudget);
+        Run("长船腰部截断和残骸递归拆分保留部位状态", ShipDamageRecursiveFragments);
         Benchmark();
         MassBenchmark();
         Console.WriteLine($"PASS: {passed} regression groups");

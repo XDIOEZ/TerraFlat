@@ -93,6 +93,8 @@ namespace FlatWorld.Spaceflight
                 Width = width, Height = height,
                 QuarterTurns = quarterTurns & 3, MassKg = Math.Max(.001d, data.Stack?.CurrentWeight ?? config.StructuralMassKg),
                 Health = health, MaxHealth = maximumHealth, SealsAtmosphere = config.SealsAtmosphere,
+                PhysicalDefense = ResolvePiecePhysicalDefense(data, config),
+                DisableHealth = Math.Max(0d, config.DisableHealth), MaxDisableHealth = Math.Max(0d, config.DisableHealth),
                 BlocksMovement = blocksMovement,
                 MaterialId = config.MaterialId,
                 MinimumPressureKPa = config.MinimumPressureKPa, MaximumPressureKPa = config.MaximumPressureKPa,
@@ -171,6 +173,13 @@ namespace FlatWorld.Spaceflight
             health = previous > 0d ? Math.Min(previous, maximum) : maximum;
             if (saved != null)
             { saved.Hp = (float)health; saved.MaxHp = (float)maximum; storage.WriteData(saved); }
+        }
+
+        private static double ResolvePiecePhysicalDefense(ItemData data, ShipPartConfiguration config)
+        {
+            double defense = config.PhysicalDefense ?? (GameRes.ExistingInstance.TryGetItemDefinition(data.IDName,
+                out RuntimeItemDefinition definition) ? definition.Health?.Defense?.Physical ?? 0f : 0f);
+            return FluidUnits.IsFinite(defense) ? Math.Max(0d, defense) : 0d;
         }
 
         private ShipState FindAdjacentShip(Vector2 displayPosition, int width, int height, int quarterTurns, out Vector2 local)
@@ -253,6 +262,7 @@ namespace FlatWorld.Spaceflight
                 BlocksMovement = door || wall || (machine?.BlocksMovement ?? (layer == (int)BuildingPlacementLayer.Structure && tile == null)),
                 FootprintWidth = Math.Max(1, building?.FootprintWidth ?? 1), FootprintHeight = Math.Max(1, building?.FootprintHeight ?? 1),
                 Health = (float)Math.Max(1d, health * data.CraftedDurabilityMultiplier), PowerWatts = 0f,
+                PhysicalDefense = wall || door ? 10f : Math.Max(0f, definition?.Health?.Defense?.Physical ?? 0f),
                 RecoveryItemId = !string.IsNullOrWhiteSpace(building?.TileBlockId) ? data.IDName : Mod_Building.GetSummonerPrefabId(data.IDName)
             };
         }
@@ -344,6 +354,7 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
 
+        #region 部件摧毁与船体分裂事务
         public void DestroyPiece(ShipState ship, ShipPieceState piece, string reason)
         {
             if (destroyed.Contains(piece.PieceId)) return;
@@ -370,6 +381,7 @@ namespace FlatWorld.Spaceflight
                     AngularVelocityRadiansPerSecond = ship.AngularVelocityRadiansPerSecond,
                     CenterOfMassLocalX = ship.CenterOfMassLocalX, CenterOfMassLocalY = ship.CenterOfMassLocalY };
                 ShipFlightState previous = GetFlight(ship.ShipId);
+                string previousFlightSnapshot = JsonConvert.SerializeObject(previous);
                 List<ShipState> fragments = ShipStructureService.RebuildAndSplit(ship, GetOutside(ship), RecoverUnsupportedPiece);
                 foreach (ShipState fragment in fragments)
                 {
@@ -377,7 +389,7 @@ namespace FlatWorld.Spaceflight
                     if (fragment.ShipId != ship.ShipId)
                     {
                         State.Ships.Add(fragment);
-                        flight = JsonConvert.DeserializeObject<ShipFlightState>(JsonConvert.SerializeObject(previous));
+                        flight = JsonConvert.DeserializeObject<ShipFlightState>(previousFlightSnapshot);
                         flight.ShipId = fragment.ShipId;
                         State.Flights.Add(flight);
                         transferMassPieceIds.Clear();
@@ -390,7 +402,6 @@ namespace FlatWorld.Spaceflight
                     flight.Motion.VelocityMetersPerSecond = new SpaceVector2(fragment.VelocityX, fragment.VelocityY);
                     if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
                     { flight.SurfaceX = fragment.PositionX; flight.SurfaceY = fragment.PositionY; }
-                    if (fragments.Count > 1 || fragment.IsWreck) PrepareWreck(fragment);
                 }
                 foreach (SpacePassengerState passenger in State.Passengers)
                 {
@@ -398,7 +409,7 @@ namespace FlatWorld.Spaceflight
                     ShipState support = fragments.Find(fragment => !fragment.IsWreck && ShipAtmosphereService.HasFloor(fragment,
                         (int)Math.Floor(passenger.LocalX / fragment.CellSizeMeters), (int)Math.Floor(passenger.LocalY / fragment.CellSizeMeters)));
                     if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId) &&
-                        (support == null || !support.Pieces.Exists(piece => piece.PieceId == passenger.ConsolePieceId && piece.IsAlive)))
+                        (support == null || !support.Pieces.Exists(piece => piece.PieceId == passenger.ConsolePieceId && piece.IsOperational)))
                     {
                         if (ItemMgr.Instance != null && ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player)) ExitConsole(player);
                         else { ClearControl(passenger.ConsolePieceId); passenger.ConsolePieceId = null; }
@@ -414,6 +425,14 @@ namespace FlatWorld.Spaceflight
                     if (target == null || !target.Pieces.Exists(piece => piece.PieceId == navigation.ConsolePieceId))
                     { navigation.Active = false; navigation.NeedsManualRestart = true; navigation.Status = "船体分裂，导航需要重新启动"; }
                 }
+                foreach (ShipDockingPairState pair in State.Docking)
+                {
+                    if (FindPiece(pair.PortAId, out ShipState ownerA, out _)) pair.ShipAId = ownerA.ShipId;
+                    if (FindPiece(pair.PortBId, out ShipState ownerB, out _)) pair.ShipBId = ownerB.ShipId;
+                }
+                // 先移交乘员、点火、导航和端口归属，再停掉残骸，不能误停另一块可驾驶船。
+                foreach (ShipState fragment in fragments)
+                    if (fragment.IsWreck) PrepareWreck(fragment);
                 FlushDetachedWrecks();
                 if (fragments.Count == 0) RemoveEmptyShip(ship);
             }
@@ -433,6 +452,7 @@ namespace FlatWorld.Spaceflight
             State.Navigation.RemoveAll(value => value.ShipId == ship.ShipId);
             State.Docking.RemoveAll(value => value.ShipAId == ship.ShipId || value.ShipBId == ship.ShipId);
         }
+        #endregion
 
         #region 飞船质量计算工作区
         private readonly HashSet<string> assignedMassPassengers = new(StringComparer.Ordinal);

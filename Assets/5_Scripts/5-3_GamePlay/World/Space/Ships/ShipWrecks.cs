@@ -7,17 +7,16 @@ namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
-        #region 成块残骸与攻击回收
+        #region 成块残骸与部件载荷
         private readonly Dictionary<string, ShipWreckView> wreckViews = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (ShipState Pose, List<ShipPieceState> Pieces)> detachedWrecks = new(StringComparer.Ordinal);
 
         private void PrepareWreck(ShipState ship)
         {
             ship.IsWreck = true;
-            if (ship.WreckMaxHealth > 0d) return;
+            if (ship.WreckGuid != 0) return;
             ship.NotifyStructureChanged();
             ship.WreckGuid = AllocateSessionDropGuid(0);
-            double health = 0d;
             using (MachineWorld.UseScope("ship:" + ship.ShipId))
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
@@ -33,13 +32,12 @@ namespace FlatWorld.Spaceflight
                     }
                     State.Devices.RemoveAll(device => device.PieceId == piece.PieceId);
                     RemovePieceView(piece.PieceId);
-                    health += Math.Max(0d, piece.Health);
                 }
-            ship.WreckHealth = ship.WreckMaxHealth = Math.Max(20d, health * .25d);
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight != null) { flight.Ignited = false; flight.RequestedLandingBodyId = null; }
             State.Navigation.RemoveAll(value => value.ShipId == ship.ShipId);
-            State.Docking.RemoveAll(value => value.ShipAId == ship.ShipId || value.ShipBId == ship.ShipId);
+            State.Docking.RemoveAll(value => ship.Pieces.Exists(piece =>
+                piece.PieceId == value.PortAId || piece.PieceId == value.PortBId));
         }
 
         private void QueueDetachedWreck(ShipState ship, ShipPieceState piece)
@@ -74,7 +72,7 @@ namespace FlatWorld.Spaceflight
                     wreck.ShipId = Guid.NewGuid().ToString("N");
                     wreck.Pieces = group;
                     wreck.NotifyStructureChanged();
-                    wreck.IsWreck = true; wreck.WreckMaxHealth = 0d;
+                    wreck.IsWreck = true; wreck.WreckGuid = 0;
                     ShipStructureService.RecalculateMass(wreck);
                     State.Ships.Add(wreck);
                     ShipFlightState sourceFlight = GetFlight(sourceShipId);
@@ -115,44 +113,19 @@ namespace FlatWorld.Spaceflight
                 view.RefreshPayload();
                 wreckViews[ship.ShipId] = view;
             }
-            Vector2 point = IsSpaceView ? ProjectPosition(new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)))
+            Vector2 point = IsSpaceView ? DisplayPresentationPoint(ship, ship.CenterOfMassLocalX, ship.CenterOfMassLocalY)
                 : WorldLocalPresentation.ProjectPosition(new Vector2((float)ship.PositionX, (float)ship.PositionY));
-            view.transform.SetPositionAndRotation(point, Quaternion.Euler(0, 0, (float)(ship.AngleRadians * 180d / Math.PI)));
+            view.Synchronize(ship, point, (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI));
+            if (IsSpaceView) SpaceMgr.ExistingInstance?.MovePresentationToSector(view.gameObject, ship.Sector);
         }
 
         private void RemoveWreckView(string shipId)
         {
-            if (wreckViews.Remove(shipId, out ShipWreckView view) && view != null) Destroy(view.gameObject);
-        }
-
-        public double ApplyWreckDamage(ShipState wreck, double damage, string reason = "攻击")
-        {
-            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || wreck?.IsWreck != true ||
-                GetShip(wreck.ShipId) != wreck || !FluidUnits.IsFinite(damage) || damage <= 0d) return 0d;
-            PrepareWreck(wreck);
-            double applied = Math.Min(wreck.WreckHealth, damage);
-            wreck.WreckHealth -= applied;
-            RecordWreckDamage(wreck, applied, reason);
-            if (wreck.WreckHealth > 0d)
+            if (wreckViews.Remove(shipId, out ShipWreckView view) && view != null)
             {
-                if (wreckViews.TryGetValue(wreck.ShipId, out ShipWreckView view)) view.RefreshPayload();
-                return applied;
+                view.ReleasePhysics();
+                Destroy(view.gameObject);
             }
-            // 回收时才拆出原材料或带库存的回收封包，不让残骸恢复机器运行。
-            foreach (ShipPieceState piece in wreck.Pieces)
-            {
-                ItemData data = GetPieceData(piece);
-                if (data != null)
-                {
-                    string carrier = Mod_Building.GetSummonerPrefabId(piece.ItemId);
-                    QueueDrop(string.IsNullOrWhiteSpace(carrier) ? data : Mod_Building.CreateRecoveredCarrier(data, carrier), wreck, piece);
-                }
-                contents.Remove(piece.PieceId); pieceIndex.Remove(piece.PieceId); piece.Destroyed = true;
-            }
-            RemoveWreckView(wreck.ShipId);
-            RemoveEmptyShip(wreck);
-            RebuildPieceIndex();
-            return applied;
         }
         #endregion
     }

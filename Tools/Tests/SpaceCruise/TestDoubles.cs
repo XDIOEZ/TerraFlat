@@ -43,11 +43,19 @@ namespace FlatWorld.Spaceflight
         // 质量测试直接提供舱气重量，不模拟气密拓扑或流体化学。
         public static double GetGasMassKg(ShipCompartmentState room) => room.Gas.TestMassKg;
         public static void ReleaseAllGas(ShipState ship, IShipAtmosphereSource outside = null)
-            => throw new NotSupportedException("离线质量测试不模拟舱气释放。");
+        {
+            if (ship.Compartments.Count != 0) throw new NotSupportedException("离线质量测试不模拟舱气释放。");
+        }
         public static void TransferToSplit(List<ShipCompartmentState> previous, List<ShipState> ships, IShipAtmosphereSource outside)
-            => throw new NotSupportedException("离线质量测试不模拟舱气分裂。");
+        {
+            if (previous.Count != 0) throw new NotSupportedException("离线质量测试不模拟舱气分裂。");
+        }
         public static void RebuildCompartments(ShipState ship, IShipAtmosphereSource outside = null)
-            => throw new NotSupportedException("离线质量测试不模拟气密拓扑。");
+        {
+            // 仅放行没有气密边界和舱气的结构样本，避免替身冒充气密算法。
+            if (ship.Compartments.Count != 0 || ship.Pieces.Any(piece => piece.SealsAtmosphere))
+                throw new NotSupportedException("离线质量测试不模拟气密拓扑。");
+        }
     }
 }
 #endregion

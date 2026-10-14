@@ -4,7 +4,17 @@ public sealed class ShipDeviceLogic : MachineLogic
 {
     #region 飞船设备与整船规则协作
     public ShipDeviceLogic(MachineEntity entity) : base(entity) { }
-    public override string Status => Entity.ElectricalPowerRatio >= .999f ? "已供电" : "缺少电力";
+    public override string Status
+    {
+        get
+        {
+            SpaceSession session = SpaceSession.Current;
+            string pieceId = Entity.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (session != null && session.FindPiece(pieceId, out _, out ShipPieceState piece) && !piece.IsOperational)
+                return "已瘫痪";
+            return Entity.ElectricalPowerRatio >= .999f ? "已供电" : "缺少电力";
+        }
+    }
     public override void Capture() { }
     public override bool Execute(string operation, string argument, Player actor)
     {

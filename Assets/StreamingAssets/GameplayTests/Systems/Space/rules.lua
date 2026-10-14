@@ -134,7 +134,7 @@ do
             assert(type(ship.id) == "string" and not identities[ship.id], "分裂船体身份缺失或重复")
             identities[ship.id] = true
             if ship.id == data.originalId then retained = retained + 1 end
-            assert(ship.wreck == false and ship.pieces == 2, "两侧控制台与地板未保持各自归属")
+            assert(ship.wreck == false and ship.pieces == 3, "两侧控制台、引擎与地板未保持各自归属")
             total = total + ship.pieces
         end
         assert(retained == 1 and total == data.connected[1].pieces - 1, "原船身份或移除后的部件守恒失败")

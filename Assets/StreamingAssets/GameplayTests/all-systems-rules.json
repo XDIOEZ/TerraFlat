@@ -143,6 +143,12 @@
       "enabled": true
     },
     {
+      "id": "space_ship_damage_rules",
+      "name": "飞船局部伤害、设备瘫痪与成块残骸",
+      "luaPath": "GameplayTests/Systems/Space/ship_damage_rules.lua",
+      "enabled": true
+    },
+    {
       "id": "quests_rules",
       "name": "任务与玩家进度规则与边界",
       "luaPath": "GameplayTests/Systems/Quests/rules.lua",

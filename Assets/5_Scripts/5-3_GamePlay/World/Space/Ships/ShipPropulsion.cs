@@ -29,7 +29,8 @@ namespace FlatWorld.Spaceflight
         // 喷焰只读本步真实耗油后的出力，不把移动、点火请求或存档当成工作状态。
         public float GetEngineOutput(string pieceId)
             => running && !transitionRunning && State != null && GameManager.Instance?.IsGameplayReady == true &&
-                !string.IsNullOrEmpty(pieceId) && engineOutputs.TryGetValue(pieceId, out float output) ? output : 0f;
+                !string.IsNullOrEmpty(pieceId) && FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) &&
+                !ship.IsWreck && piece.IsOperational && engineOutputs.TryGetValue(pieceId, out float output) ? output : 0f;
 
         public void SetControl(string consolePieceId, Vector2 move, float turn)
         {
@@ -46,8 +47,9 @@ namespace FlatWorld.Spaceflight
 
         public bool IsPowered(ShipState ship, ShipPieceState piece)
         {
+            if (ship == null || ship.IsWreck || piece?.IsOperational != true) return false;
             ShipDeviceState device = GetDevice(piece.PieceId);
-            if (device?.Enabled == false || !piece.IsAlive) return false;
+            if (device?.Enabled == false) return false;
             if (device == null || device.Configuration.PowerWatts <= 0f) return true;
             using (MachineWorld.UseScope("ship:" + ship.ShipId))
                 return int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id)?.ElectricalPowerRatio > .999f;
@@ -125,7 +127,7 @@ namespace FlatWorld.Spaceflight
                 using (MachineWorld.UseScope("ship:" + id))
                 {
                     foreach (ShipPieceState piece in ship.Pieces)
-                        if (piece.IsAlive && piece.Kind == ShipPieceKind.Engine &&
+                        if (piece.IsOperational && piece.Kind == ShipPieceKind.Engine &&
                             ShipEnginePlacement.TryValidateEngine(ship, piece, out _) && IsPowered(ship, piece) &&
                             int.TryParse(piece.PieceId, out int engineId) && MachineWorld.GetById(engineId) is MachineEntity machine)
                             actuators.Add(new ShipActuator(GetDevice(piece.PieceId), machine));

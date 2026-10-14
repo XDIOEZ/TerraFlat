@@ -37,9 +37,9 @@ namespace FlatWorld.Spaceflight
                     if (!rectangle.BlocksPassage) continue;
                     Vector2 center = new((float)((rectangle.X + rectangle.Width * .5d) * cellSize),
                         (float)((rectangle.Y + rectangle.Height * .5d) * cellSize));
-                    // 只给合并后的外边缘留原有间隙，内部格缝不再割开碰撞体。
-                    Vector2 size = new((float)Math.Max(.001d, rectangle.Width * cellSize - .05d),
-                        (float)Math.Max(.001d, rectangle.Height * cellSize - .05d));
+                    // 合并矩形使用完整占地，避免相邻矩形缩边后留下能穿过的细缝。
+                    Vector2 size = new((float)(rectangle.Width * cellSize),
+                        (float)(rectangle.Height * cellSize));
                     shapes.AddBox(center, size);
                 }
                 if (shapes.shapeCount == 0) { blocker.enabled = false; blocker.ClearCustomShapes(); }

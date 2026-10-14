@@ -44,7 +44,7 @@ namespace FlatWorld.Spaceflight
             }
             if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
             {
-                if (!FindPiece(passenger.ConsolePieceId, out ship, out ShipPieceState console) || !console.IsAlive ||
+                if (!FindPiece(passenger.ConsolePieceId, out ship, out ShipPieceState console) || !console.IsOperational ||
                     console.Kind != ShipPieceKind.Console || !passenger.DescentDriving && !IsPowered(ship, console))
                     ExitConsole(player);
                 else
@@ -218,10 +218,10 @@ namespace FlatWorld.Spaceflight
             }
             if (!passenger.Supported || passenger.DescentControlEntered || flight.HeightMeters <= 0d ||
                 flight.VerticalSpeed >= 0d || player != ItemMgr.Instance?.User_Player) return;
-            ShipPieceState console = ship.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console &&
+            ShipPieceState console = ship.Pieces.Find(piece => piece.IsOperational && piece.Kind == ShipPieceKind.Console &&
                 piece.PieceId == passenger.ConsolePieceId);
-            console ??= ship.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console && IsPowered(ship, piece));
-            console ??= ship.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Console);
+            console ??= ship.Pieces.Find(piece => piece.IsOperational && piece.Kind == ShipPieceKind.Console && IsPowered(ship, piece));
+            console ??= ship.Pieces.Find(piece => piece.IsOperational && piece.Kind == ShipPieceKind.Console);
             if (console == null) return;
             if (string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
                 passenger.SavedCameraSize = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.CurrentOrthographicSize ?? 10f;

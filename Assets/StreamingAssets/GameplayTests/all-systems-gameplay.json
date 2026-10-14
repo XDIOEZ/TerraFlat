@@ -167,6 +167,12 @@
       "enabled": true
     },
     {
+      "id": "ship_damage_gameplay",
+      "name": "真实长船局部截断与冷残骸继续破碎",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_damage_gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "core_lifecycle_gameplay",
       "name": "核心生命周期与资源真实关键流程",
       "luaPath": "GameplayTests/Systems/CoreLifecycle/gameplay.lua",

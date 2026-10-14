@@ -49,6 +49,9 @@ public static partial class GameplayTestSystemProbe
         operations.Add("space/streaming", _ => GameplayTestUniverseProbe.Capture("streaming"));
         operations.Add("space/ship_surface_state", _ => GameplayTestShipSurfaceProbe.Capture());
         operations.Add("space/presentation_interpolation", _ => GameplayTestSpacePresentationProbe.Capture());
+        foreach (string operation in new[] { "ship_local_damage", "ship_hit_targeting",
+                     "ship_damage_lines", "ship_damage_fragmentation" })
+            operations.Add("space/" + operation, _ => GameplayTestShipDamageProbe.Capture(operation));
     }
 
     private static string WorldException(Action action)

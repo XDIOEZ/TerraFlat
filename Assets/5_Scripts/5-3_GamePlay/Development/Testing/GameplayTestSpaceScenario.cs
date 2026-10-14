@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 using RuntimeAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>太空集成用例通过正式入口准备条件，结果交给 Lua 断言。</summary>
-public sealed class GameplayTestSpaceScenario : IDisposable
+public sealed partial class GameplayTestSpaceScenario : IDisposable
 {
     #region 操作契约与隔离状态
     public static bool IsMigrationExpected { get; private set; }
@@ -35,7 +35,7 @@ public sealed class GameplayTestSpaceScenario : IDisposable
     {
         error = null;
         bool supported = GameplayTestUniverseProbe.Supports(operation) || GameplayTestShipProbe.Supports(operation) ||
-            operation is "session" or "ship_templates" or "ship_flight" or "ship_collision" or "sector_transition" or "space_visit";
+            operation is "session" or "ship_templates" or "ship_flight" or "ship_collision" or "ship_damage_live" or "sector_transition" or "space_visit";
         if (!supported) error = "未开放的太空测试操作：" + operation;
         else if (operation == "sector_transition")
         {
@@ -66,6 +66,7 @@ public sealed class GameplayTestSpaceScenario : IDisposable
             "ship_templates" => ReadTemplates(value => sample = value),
             "ship_flight" => FlyTemplates(value => sample = value),
             "ship_collision" => CollideProductionFloors(value => sample = value),
+            "ship_damage_live" => DamageProductionLongShip(value => sample = value),
             "space_visit" => VisitConfiguredSectors(value => sample = value),
             "sector_transition" => CrossSector(argument, value => sample = value),
             _ => throw new ArgumentException("操作不是会话测试：" + operation)
@@ -642,6 +643,8 @@ public sealed class GameplayTestSpaceScenario : IDisposable
         cancellation.Dispose();
         if (!string.IsNullOrEmpty(controlledConsole)) session?.ClearControl(controlledConsole);
         var cleanupErrors = new List<Exception>();
+        try { CleanupDamageFixtures(); }
+        catch (Exception exception) { cleanupErrors.Add(exception); }
         for (int index = contactFixtures.Count - 1; index >= 0; index--)
         {
             try

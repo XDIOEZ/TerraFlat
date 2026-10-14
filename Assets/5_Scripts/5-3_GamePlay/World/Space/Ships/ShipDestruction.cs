@@ -13,6 +13,17 @@ namespace FlatWorld.Spaceflight
         #region 结构伤害、库存移交与唯一爆炸
         public void SynchronizePieceHealth(ShipState ship, ShipPieceState piece)
         {
+            if (ship?.IsWreck == true)
+            {
+                ItemData snapshot = GetPieceData(piece);
+                if (snapshot != null)
+                {
+                    CaptureRecoveredPieceHealth(snapshot, piece);
+                    piece.SnapshotJson = Encode(snapshot);
+                }
+                if (wreckViews.TryGetValue(ship.ShipId, out ShipWreckView view)) view.RefreshPayload();
+                return;
+            }
             if (int.TryParse(piece.PieceId, out int id) && MachineCatalog.Get(piece.ItemId) != null)
             using (MachineWorld.UseScope("ship:" + ship.ShipId))
             {
@@ -24,9 +35,16 @@ namespace FlatWorld.Spaceflight
         {
             if (!GameNetwork.HasStateAuthority || !float.IsFinite(damage) || damage <= 0f ||
                 !FindPiece(guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out ShipState ship, out ShipPieceState piece)) return false;
-            if (ship.IsWreck) return ApplyWreckDamage(ship, damage, reason) > 0d;
-            bool applied = ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece);
-            SynchronizePieceHealth(ship, piece); return applied;
+            return ApplyResolvedPieceDamage(ship, piece, damage, reason) > 0d;
+        }
+        internal double ApplyResolvedPieceDamage(ShipState ship, ShipPieceState piece, double damage, string reason)
+        {
+            if (!GameNetwork.HasStateAuthority || ship == null || piece?.IsAlive != true ||
+                GetShip(ship.ShipId) != ship || !FluidUnits.IsFinite(damage) || damage <= 0d) return 0d;
+            double before = piece.Health;
+            ShipStructureService.ApplyDamage(ship, piece.PieceId, damage, reason, DestroyPiece);
+            SynchronizePieceHealth(ship, piece);
+            return Math.Max(0d, before - piece.Health);
         }
         public void RecoverUnsupportedPiece(ShipState ship, ShipPieceState piece, string reason)
         {
@@ -35,6 +53,20 @@ namespace FlatWorld.Spaceflight
         private void HandleDestroyedInventory(ShipState ship, ShipPieceState piece, string reason)
         {
             ItemData snapshot = GetPieceData(piece);
+            if (ship.IsWreck)
+            {
+                // 冷残骸只回收被摧毁的这一部件，封包保留真实库存，不重新启动机器。
+                if (snapshot != null)
+                {
+                    CaptureRecoveredPieceHealth(snapshot, piece);
+                    string carrier = Mod_Building.GetSummonerPrefabId(piece.ItemId);
+                    QueueDrop(string.IsNullOrWhiteSpace(carrier) ? snapshot : Mod_Building.CreateRecoveredCarrier(snapshot, carrier), ship, piece);
+                }
+                else QueueMaterialSalvage(ship, piece);
+                contents.Remove(piece.PieceId);
+                State.Devices.RemoveAll(value => value.PieceId == piece.PieceId);
+                return;
+            }
             using (MachineWorld.UseScope("ship:" + ship.ShipId))
             {
                 if (int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id) is MachineEntity node)
@@ -68,6 +100,13 @@ namespace FlatWorld.Spaceflight
         private static void CaptureRecoveredPieceHealth(ItemData snapshot, ShipPieceState piece)
         {
             if (snapshot?.ModuleDataDic == null) return;
+            if (MachineCatalog.Get(snapshot.IDName) != null)
+            {
+                // 冷设备的机器核心也保存同一部位耐久，不能只更新带血量模块的外壳。
+                MachineState state = MachineWorld.ReadMachineState(snapshot);
+                state.Hp = (float)Math.Max(0d, piece.Health);
+                MachineWorld.WriteMachineState(snapshot, state);
+            }
             foreach (ModuleData module in snapshot.ModuleDataDic.Values)
             {
                 if (module.ID != ModText.Hp || module is not Ex_ModData storage) continue;
@@ -148,8 +187,7 @@ namespace FlatWorld.Spaceflight
         {
             if (!entry.WorldKey.StartsWith("ship:", StringComparison.Ordinal)) return false;
             ShipExplosionSpatialContext explosion = ReadExplosionContext(entry);
-            var structureHits = new List<(ShipState Ship, ShipPieceState Piece, double Damage)>();
-            double requestedDamage = 0d;
+            var structureHits = new List<(ShipState Ship, ShipPieceState Piece)>();
             foreach (ShipState target in State.Ships.ToArray())
             {
                 ShipFlightState flight = GetFlight(target.ShipId);
@@ -164,30 +202,17 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipPieceState piece in ShipDamagePattern.SelectPieces(target, line, inBlast))
                 {
                     if (!piece.IsAlive) continue;
-                    double planarDistance = DistanceToPiece(explosion, target, piece);
-                    double distance = Math.Sqrt(planarDistance * planarDistance + heightDifference * heightDifference);
-                    if (distance >= radius) continue;
-                    float damage = CombatRules.ResolvePhysical(peak * (1f - (float)distance / radius), GetPiecePhysicalDefense(piece));
-                    if (damage <= 0f) continue;
-                    structureHits.Add((target, piece, damage)); requestedDamage += damage;
+                    structureHits.Add((target, piece));
                 }
             }
-            // 所有命中共用已冻结的真实能量预算，增加部件数量不会增加爆炸总损伤。
+            // 冻结沿线部件后均分真实能量预算，每块在分到的伤害里单独扣防御。
             double structureBudget = entry.Intensity / SpaceGameplaySettings.Current.ImpactJoulesPerDurability;
-            double scale = requestedDamage > 0d ? Math.Min(1d, structureBudget / requestedDamage) : 0d;
-            var wreckHits = new Dictionary<ShipState, double>();
+            double share = structureBudget / Math.Max(1, structureHits.Count);
             foreach (var hit in structureHits)
             {
-                if (hit.Ship.IsWreck)
-                {
-                    wreckHits.TryGetValue(hit.Ship, out double pending);
-                    wreckHits[hit.Ship] = pending + hit.Damage * scale;
-                    continue;
-                }
-                ShipStructureService.ApplyDamage(hit.Ship, hit.Piece.PieceId, hit.Damage * scale, "燃料与压力爆炸", DestroyPiece);
+                ShipStructureService.ApplyPhysicalDamage(hit.Ship, hit.Piece.PieceId, share, "燃料与压力爆炸", DestroyPiece);
                 SynchronizePieceHealth(hit.Ship, hit.Piece);
             }
-            foreach (var hit in wreckHits) ApplyWreckDamage(hit.Key, hit.Value, "燃料与压力爆炸");
             ApplyExplosionActorDamage(entry, explosion, radius, peak);
             RetainExplosionGasInCabin(entry, explosion);
             if (!explosion.InSpace)
@@ -205,22 +230,6 @@ namespace FlatWorld.Spaceflight
                 }
             }
             return true;
-        }
-        private float GetPiecePhysicalDefense(ShipPieceState piece)
-        {
-            ItemData data = GetPieceData(piece);
-            if (Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) &&
-                !string.IsNullOrWhiteSpace(building.TileBlockId))
-            {
-                RuntimeTileDefinition tile = GameRes.ExistingInstance.GetTileBlock(building.TileBlockId);
-                if (tile?.DamageProfile != null) return tile.DamageProfile.ResolveDefense().Physical;
-            }
-            if (data?.ModuleDataDic != null)
-                foreach (ModuleData module in data.ModuleDataDic.Values)
-                    if (module.ID == ModText.Hp && module is Ex_ModData storage)
-                        return storage.GetData<Mod_DamageReceiver.DamageReceiver_SaveData>()?.DefenseValues?.Physical ?? 0f;
-            return GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition)
-                ? definition.Health?.Defense?.Physical ?? 0f : 0f;
         }
         private void RetainExplosionGasInCabin(PressureExplosionEvent entry, ShipExplosionSpatialContext explosion)
         {
