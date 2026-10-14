@@ -40,6 +40,10 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
             "入世快照的真实种子或生成协议与服务器不一致")
     end
     assert(data.independentData and data.independentInventories, "多个假人共享了同一份实际玩家数据或库存容器")
+    local replay = data.replayedHandshake
+    assert(replay and replay.snapshotsBefore == 1 and replay.snapshotsAfter == 1
+        and replay.notSpawnedBeforeReady and replay.originalProfilePreserved,
+        "重复 Join 或重发 Hello 改写了原始档案、提前出生或反复生成世界快照")
     assert(#data.nativeInventoryModuleCounts == 4, "没有读取四名假人的正式库存模块")
     for _, count in ipairs(data.nativeInventoryModuleCounts) do
         assert(count > 0, "库存模块缺失时不能用空集合证明独立")
@@ -59,13 +63,19 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
 end, "四假人正式加入：独立档案、快照分片、重复就绪与本地名冲突")
 
 test.runtime("networking", "bots_rejection", {}, function(data)
-    local required = { no_join = true, version = true, mod_api = true, mod_set = true, hello_only = true }
+    local required = { no_join = true, version = true, mod_api = true, mod_set = true,
+        hello_only = true, stale_rejection = true }
     local seen = {}
-    assert(#data.samples == 5, "协议拒绝流程没有覆盖五种正式入口")
+    assert(#data.samples == 6, "协议拒绝流程没有覆盖六种正式入口")
     for _, sample in ipairs(data.samples) do
         assert(required[sample.kind] and not seen[sample.kind], "协议拒绝样本重复或出现未知前提")
         seen[sample.kind] = true
-        assert(not sample.spawned and sample.snapshots == 0, sample.kind .. "越过入世检查生成角色或发送了存档快照")
+        if sample.kind == "stale_rejection" then
+            assert(sample.connected and not sample.spawned and sample.snapshots == 1,
+                "旧连接的延迟踢出误伤了复用 ID 的正常连接")
+        else
+            assert(not sample.spawned and sample.snapshots == 0, sample.kind .. "越过入世检查生成角色或发送了存档快照")
+        end
         if sample.kind == "version" or sample.kind == "mod_api" or sample.kind == "mod_set" then
             assert(not sample.connected and sample.rejections == 1
                 and type(sample.reason) == "string" and #sample.reason > 0,

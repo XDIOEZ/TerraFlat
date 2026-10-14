@@ -52,7 +52,7 @@ namespace FlatWorld.Networking.Gameplay
             for (int i = 0; i < count; i++)
             {
                 int id = 31 + i;
-                yield return world.Join(id, world.Prefix + "same");
+                yield return world.Join(id, world.Prefix + "same", i == 0);
                 NetworkWorldPlayer bot = world.Core(id);
                 uint netId = bot.netId;
                 world.Transport.Receive(id, new NetworkWorldReady());
@@ -65,6 +65,7 @@ namespace FlatWorld.Networking.Gameplay
                 players.Add(sample);
             }
             result["players"] = players;
+            result["replayedHandshake"] = world.ReplayedHandshake;
             result["independentData"] = players.Count == count &&
                 Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data).Distinct().Count() == count;
             var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data.ModuleDataDic.Values
@@ -164,6 +165,20 @@ namespace FlatWorld.Networking.Gameplay
             yield return null;
             samples.Add(new JObject { ["kind"] = "hello_only", ["spawned"] = world.Core(55) != null,
                 ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(55) });
+            // 旧连接的延迟拒绝回调不得踢掉复用同一连接 ID 的新合法连接。
+            world.Transport.ConnectBot(56);
+            NetworkProtocolHello invalid = Hello();
+            invalid.Version--;
+            world.Transport.Receive(56, invalid);
+            world.Transport.Receive(56, new NetworkJoinRequest { PlayerName = world.Prefix + "stale" });
+            world.Transport.ServerDisconnect(56);
+            world.Transport.ConnectBot(56);
+            world.Transport.Receive(56, Hello());
+            world.Transport.Receive(56, new NetworkJoinRequest { PlayerName = world.Prefix + "fresh" });
+            yield return Wait(() => world.Transport.Count<NetworkWorldSnapshotBegin>(56) == 1, "复用连接正常获取世界快照");
+            yield return null;
+            samples.Add(new JObject { ["kind"] = "stale_rejection", ["connected"] = world.Transport.IsBotConnected(56),
+                ["spawned"] = world.Core(56) != null, ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(56) });
             world.Dispose();
             yield return null;
             completed(new JObject { ["samples"] = samples, ["cleanup"] = world.CleanupSample() });
@@ -292,6 +307,7 @@ namespace FlatWorld.Networking.Gameplay
             private readonly Scene initialScene;
             private readonly bool ownsManager;
             private bool disposed;
+            public JObject ReplayedHandshake { get; private set; }
 
             public BotWorld(Player player)
             {
@@ -342,7 +358,7 @@ namespace FlatWorld.Networking.Gameplay
                 SaveDataMgr.Instance.SaveData.PlayerData_Dict[profile].transform.position = logicalPosition;
             }
 
-            public IEnumerator Join(int id, string requested)
+            public IEnumerator Join(int id, string requested, bool replayHandshake = false)
             {
                 // 固定合法陆地只用于出生前置，实际名字由正式服务器分配。
                 SeedProfile(requested);
@@ -353,11 +369,28 @@ namespace FlatWorld.Networking.Gameplay
                 yield return Wait(() => Transport.Count<NetworkWorldSnapshotBegin>(id) > 0 &&
                     Transport.Read<NetworkWorldSnapshotChunk>(id).Count == Transport.Read<NetworkWorldSnapshotBegin>(id).Last().ChunkCount,
                     "完整入世快照");
+                if (replayHandshake)
+                {
+                    int before = Transport.Count<NetworkWorldSnapshotBegin>(id);
+                    // 在出生前重发 Join 和错误版本 Hello，验证协议锁定且不重复压缩世界。
+                    Transport.Receive(id, new NetworkJoinRequest { PlayerName = requested + "_changed" });
+                    NetworkProtocolHello changed = Hello();
+                    changed.Version--;
+                    Transport.Receive(id, changed);
+                    ReplayedHandshake = new JObject
+                    {
+                        ["snapshotsBefore"] = before,
+                        ["snapshotsAfter"] = Transport.Count<NetworkWorldSnapshotBegin>(id),
+                        ["notSpawnedBeforeReady"] = Core(id) == null
+                    };
+                }
                 Transport.Receive(id, new AddPlayerMessage());
                 yield return null;
                 prematureSpawns[id] = Core(id) != null;
                 Transport.Receive(id, new NetworkWorldReady());
                 yield return Wait(() => Core(id)?.CorePlayer != null, "正式玩家出生");
+                if (replayHandshake)
+                    ReplayedHandshake["originalProfilePreserved"] = Core(id).DisplayName == requested;
                 // 假人通过明确消息拾取，关闭自有自动拾取触发器以免与测试请求竞争。
                 foreach (Mod_ItemPicker picker in Core(id).CorePlayer.GetComponentsInChildren<Mod_ItemPicker>(true))
                     foreach (Collider2D trigger in picker.GetComponentsInChildren<Collider2D>(true)) trigger.enabled = false;

@@ -211,7 +211,10 @@ namespace FlatWorld.Networking.Gameplay
             }
             finally
             {
-                pendingPlayerSpawns.Remove(connectionId);
+                // 旧连接的出生协程不能清掉相同连接 ID 上新连接的出生预约。
+                if (!NetworkServer.connections.TryGetValue(connectionId, out NetworkConnectionToClient current) ||
+                    ReferenceEquals(current, requestedConnection))
+                    pendingPlayerSpawns.Remove(connectionId);
             }
         }
 
@@ -263,6 +266,9 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerProtocolHello(NetworkConnectionToClient connection, NetworkProtocolHello hello)
         {
+            // Join 开始后锁定握手版本，避免同一连接中途替换出生协议。
+            if (!IsCurrentAuthenticatedConnection(connection) || connection.identity != null ||
+                pendingPlayerNames.ContainsKey(connection.connectionId)) return;
             if ((hello.ModSetHash?.Length ?? 0) > 128 || (hello.ModSummary?.Length ?? 0) > 4096)
             {
                 connection.Disconnect();
@@ -273,7 +279,9 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerJoinRequest(NetworkConnectionToClient connection, NetworkJoinRequest request)
         {
-            if (connection.identity != null)
+            // 每个真实连接只允许启动一次世界快照；重复 Join 不得改名或重复压缩整张地图。
+            if (!IsCurrentAuthenticatedConnection(connection) || connection.identity != null ||
+                pendingPlayerNames.ContainsKey(connection.connectionId))
                 return;
 
             if (!clientProtocolHellos.TryGetValue(connection.connectionId, out NetworkProtocolHello hello) ||
@@ -370,7 +378,9 @@ namespace FlatWorld.Networking.Gameplay
         private IEnumerator DisconnectProtocolMismatchNextFrame(NetworkConnectionToClient connection)
         {
             yield return null;
-            connection?.Disconnect();
+            // 延迟拒绝只影响原连接，不得误踢复用了连接 ID 的新玩家。
+            if (connection != null && NetworkServer.connections.TryGetValue(connection.connectionId, out var current) &&
+                ReferenceEquals(current, connection)) connection.Disconnect();
         }
 
         private void OnClientProtocolRejected(NetworkProtocolRejected rejected)
@@ -539,6 +549,7 @@ namespace FlatWorld.Networking.Gameplay
             }
         }
 
+        #region 已认证连接的握手与出生资格
         private void OnServerWorldReady(NetworkConnectionToClient connection, NetworkWorldReady message)
         {
             if (!CanSpawnJoinedPlayer(connection, requireWorldReady: false)) return;
@@ -550,9 +561,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool CanSpawnJoinedPlayer(NetworkConnectionToClient connection, bool requireWorldReady = true)
         {
             // 所有出生入口都要求当前连接完成正式版本、MOD 与入世检查。
-            if (connection == null || !connection.isAuthenticated ||
-                !NetworkServer.connections.TryGetValue(connection.connectionId, out var current) ||
-                !ReferenceEquals(current, connection) ||
+            if (!IsCurrentAuthenticatedConnection(connection) ||
                 !pendingPlayerNames.TryGetValue(connection.connectionId, out string name) || string.IsNullOrWhiteSpace(name) ||
                 !clientProtocolHellos.TryGetValue(connection.connectionId, out NetworkProtocolHello hello)) return false;
             return (!requireWorldReady || worldReadyConnections.TryGetValue(connection.connectionId, out var ready) && ReferenceEquals(ready, connection)) &&
@@ -560,6 +569,12 @@ namespace FlatWorld.Networking.Gameplay
                 hello.ModApiVersion == ModRuntimeManager.SupportedApiVersion &&
                 string.Equals(hello.ModSetHash, ModRuntimeManager.Instance?.ModSetHash ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         }
+
+        private static bool IsCurrentAuthenticatedConnection(NetworkConnectionToClient connection) =>
+            connection != null && connection.isAuthenticated &&
+            NetworkServer.connections.TryGetValue(connection.connectionId, out NetworkConnectionToClient current) &&
+            ReferenceEquals(current, connection);
+        #endregion
 
         private void CaptureLoadedChunks()
         {
