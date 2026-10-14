@@ -95,8 +95,23 @@ do
             assert(ship.thrust.engineOutput > 0, "真实推进没有引擎出力：" .. label)
             assert(ship.thrust.hydrogen < ship.filled.hydrogen and ship.thrust.oxygen < ship.filled.oxygen, "飞行未消耗真实氢氧：" .. label)
             assert(difference(ship.thrust.velocity, ship.cruising.velocity) > 0.01, "推进没有改变速度：" .. label)
-            assert(difference(ship.coast.velocity, ship.thrust.velocity) < 0.05, "松开控制后惯性速度丢失：" .. label)
-            assert(math.abs(ship.turned.angle - ship.coast.angle) > 0.01, "正式旋转输入未转动船体：" .. label)
+            local coast = ship.coast
+            assert(coast.fixtureSetup == "owned-ship-empty-sector", "惯性检查没有隔离星体引力与大气阻力：" .. label)
+            assert(coast.before.id == ship.thrust.id and coast.after.id == ship.thrust.id and
+                coast.before.phase == "Cruising" and coast.after.phase == "Cruising", "惯性夹具改变了船体身份或飞行状态：" .. label)
+            assert(coast.before.sector.x == coast.sector.x and coast.before.sector.y == coast.sector.y and
+                coast.after.sector.x == coast.sector.x and coast.after.sector.y == coast.sector.y, "惯性采样离开空星区：" .. label)
+            assert(coast.simulationSeconds >= 0.5 - 0.000001 and magnitude(coast.before.velocity) > 0.01,
+                "惯性检查没有带速度推进足够的真实固定步：" .. label)
+            assert(difference(coast.before.velocity, ship.thrust.velocity) < 0.05 and
+                difference(coast.after.velocity, coast.before.velocity) < 0.05, "空域松开控制后惯性速度丢失：" .. label)
+            local expected = {x = coast.before.position.x + coast.before.velocity.x * coast.simulationSeconds,
+                y = coast.before.position.y + coast.before.velocity.y * coast.simulationSeconds}
+            assert(difference(coast.after.position, expected) < 0.05, "空域松键后船体没有按惯性移动：" .. label)
+            assert(coast.before.engineOutput == 0 and coast.after.engineOutput == 0, "松键后引擎仍在出力：" .. label)
+            assert(math.abs(coast.after.hydrogen - coast.before.hydrogen) < 0.000001 and
+                math.abs(coast.after.oxygen - coast.before.oxygen) < 0.000001, "松键后推进仍在耗油：" .. label)
+            assert(math.abs(ship.turned.angle - coast.after.angle) > 0.01, "正式旋转输入未转动船体：" .. label)
             assert(ship.navigationAccepted and ship.navigationDistance <= ship.arrivalDistance, "正式导航未到点：" .. label)
             assert(magnitude(ship.navigated.velocity) <= ship.arrivalSpeed + 0.001, "到点后没有制动：" .. label)
             local crossing = ship.shipTransition

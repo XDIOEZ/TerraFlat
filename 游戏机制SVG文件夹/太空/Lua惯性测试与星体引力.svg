@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430">
+  <title>Lua 惯性测试为什么误报</title>
+  <desc>起飞船仍在地球引力和大气阻力范围内。松键不是关闭外力。空星区夹具保留真实速度并检查位移、停推和燃料。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#b9c8dc"/></marker>
+    <style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#e7eef8} .title{font-size:24px;font-weight:700}.head{font-size:19px;font-weight:700}.body{font-size:15px}.muted{fill:#aabbd1;font-size:13px}</style>
+  </defs>
+  <rect width="1000" height="430" rx="18" fill="#111c2e"/>
+  <text x="32" y="44" class="title">松开飞船控制 ≠ 关闭星体引力</text>
+  <text x="32" y="70" class="muted">2026-10-14 失败报告：速度变化约 0.087 米/秒，超过原断言 0.05；引擎停推、氢氧未再消耗。</text>
+  <rect x="28" y="94" width="450" height="232" rx="14" fill="#22314a"/>
+  <rect x="522" y="94" width="450" height="232" rx="14" fill="#1b3740"/>
+  <text x="48" y="125" class="head" fill="#ffbd82">原现场：地球附近刚起飞</text>
+  <circle cx="140" cy="214" r="70" fill="none" stroke="#7595b9" stroke-dasharray="6 6"/>
+  <circle cx="140" cy="214" r="39" fill="#417daa"/>
+  <text x="121" y="220" class="body">地球</text>
+  <path d="M203 163L220 188L207 184L193 188Z" fill="#e7eef8"/>
+  <path d="M208 173L169 196" stroke="#ffbd82" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="241" y="180" class="body">引力 + 相对大气阻力</text>
+  <text x="241" y="210" class="body">会继续改变速度</text>
+  <text x="48" y="290" class="body">“总速度必须不变”与现场规则不匹配</text>
+  <text x="542" y="125" class="head" fill="#7de0c1">修复夹具：无星体空域</text>
+  <path d="M568 178L593 194L584 200L581 211Z" fill="#e7eef8"/>
+  <path d="M592 197H686" stroke="#b9c8dc" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M710 178L735 194L726 200L723 211Z" fill="#7de0c1"/>
+  <text x="551" y="236" class="body">真实固定步推进 ≥ 0.5 秒</text>
+  <text x="551" y="261" class="body">速度保留 + 按速度移动</text>
+  <text x="551" y="290" class="body">引擎出力为零 + 氢氧不再消耗</text>
+  <path d="M480 210H516" stroke="#b9c8dc" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="32" y="362" class="body">真实起飞 → 空域惯性采样 → 恢复起飞星区 → 真实转向、导航、跨区、降落</text>
+  <text x="32" y="393" class="muted">正式重力规则保持原样；这里只预置本轮隔离测试船。位置与箭头为机制示意，不代表比例。</text>
+</svg>

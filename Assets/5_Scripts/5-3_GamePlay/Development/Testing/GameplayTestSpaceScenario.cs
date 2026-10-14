@@ -339,8 +339,8 @@ public sealed class GameplayTestSpaceScenario : IDisposable
             yield return Wait(.5d);
             JObject thrust = ShipSnapshot(ship);
             session.ClearControl(console);
-            yield return Wait(.5d);
-            JObject coast = ShipSnapshot(ship);
+            JObject coast = null;
+            yield return CoastOwnedShip(ship, value => coast = value);
             session.SetControl(console, Vector2.zero, 1f);
             yield return Wait(.25d);
             JObject turned = ShipSnapshot(ship);
@@ -374,6 +374,30 @@ public sealed class GameplayTestSpaceScenario : IDisposable
             if (index + 1 < ships.Count) yield return ReturnHome();
         }
         completed(new JObject { ["scope"] = "live-ship-flight", ["ships"] = results });
+    }
+
+    private IEnumerator CoastOwnedShip(ShipState ship, Action<JObject> completed)
+    {
+        ShipFlightState flight = session.GetFlight(ship.ShipId);
+        SpaceSectorId originalSector = ship.Sector, emptySector = FindEmptySector();
+        SpaceVector2 originalPosition = new(ship.PositionX, ship.PositionY);
+        SpaceVector2 originalVelocity = new(ship.VelocityX, ship.VelocityY);
+        // 无外力惯性在空星区采样，避免把起飞星体的真实引力和大气阻力误判成松键刹车。
+        SetOwnedShipPose(ship, flight, emptySector, default, originalVelocity);
+        try
+        {
+            yield return WaitUntil(() => Ready() && SceneManager.GetActiveScene().name == SpaceSectorCoordinates.SceneKey(emptySector),
+                30d, "惯性测试空星区场景未激活。");
+            JObject before = ShipSnapshot(ship);
+            double beforeTime = session.State.SimulationSeconds;
+            yield return Wait(.5d);
+            completed(new JObject { ["fixtureSetup"] = "owned-ship-empty-sector", ["sector"] = Sector(emptySector),
+                ["before"] = before, ["after"] = ShipSnapshot(ship),
+                ["simulationSeconds"] = session.State.SimulationSeconds - beforeTime });
+        }
+        finally { SetOwnedShipPose(ship, flight, originalSector, originalPosition, originalVelocity); }
+        yield return WaitUntil(() => Ready() && SceneManager.GetActiveScene().name == SpaceSectorCoordinates.SceneKey(originalSector),
+            30d, "惯性测试船未恢复起飞星区。");
     }
 
     private IEnumerator CrossOwnedShip(ShipState ship, Action<JObject> completed)
