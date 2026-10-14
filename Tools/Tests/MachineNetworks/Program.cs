@@ -87,6 +87,127 @@ electrical.Nodes.Add(generator); int samples = 0;
 ElectricalNetworkGraph.Solve(electrical, .1f, _ => { samples++; return 1; }, _ => 1, null, false);
 Check(samples == 1, "同次解算电压与功率应只采样一次发电provider");
 
+#region 无限发电规则
+// 创造电源按正式电网的实际需求供电，边界样本不进入当前游戏世界。
+MachineEntity ElectricalNode(int id, string role, float watts = 0f, bool unlimited = false)
+{
+    var node = Node(id, 0);
+    node.Definition.HasMechanicalPorts = false;
+    node.Definition.Electrical = new() { Role = role, PowerWatts = watts, UnlimitedGeneration = unlimited };
+    return node;
+}
+ElectricalNetwork ElectricalGraph(params MachineEntity[] nodes)
+{
+    var result = new ElectricalNetwork(); result.Nodes.AddRange(nodes); return result;
+}
+void SolveElectrical(ElectricalNetwork result, bool commit = true, float factor = 1f, float demand = 1f)
+    => ElectricalNetworkGraph.Solve(result, .5f, _ => factor, _ => demand, null, commit);
+bool FiniteElectrical(ElectricalNetwork result)
+    => float.IsFinite(result.GeneratedWatts) && float.IsFinite(result.DeliveredWatts) &&
+        float.IsFinite(result.ChargingWatts) && float.IsFinite(result.WastedWatts) && float.IsFinite(result.CurrentAmps) &&
+        result.Nodes.All(node => float.IsFinite(node.ElectricalGeneratedWatts) && float.IsFinite(node.ElectricalStoredJoules));
+
+var creative = ElectricalNode(300, "generator", unlimited: true);
+var heavyConsumer = ElectricalNode(301, "consumer", 12000f);
+var ordinaryBattery = ElectricalNode(302, "battery"); ordinaryBattery.ElectricalStoredJoules = 1000f;
+var creativeNetwork = ElectricalGraph(creative, heavyConsumer, ordinaryBattery);
+for (int tick = 0; tick < 64; tick++)
+{
+    SolveElectrical(creativeNetwork);
+    Check(heavyConsumer.ElectricalSuppliedWatts == 12000f && creative.ElectricalGeneratedWatts == 12000f &&
+        creativeNetwork.DischargingWatts == 0f && ordinaryBattery.ElectricalStoredJoules == 1000f &&
+        creative.ElectricalStoredJoules == 0f && FiniteElectrical(creativeNetwork),
+        "无限源连续32秒必须完整供12000瓦、不扣储能且读数有限");
+}
+SolveElectrical(creativeNetwork, demand: 0f);
+Check(creative.ElectricalGeneratedWatts == 0f && creativeNetwork.GeneratedWatts == 0f &&
+    creativeNetwork.CurrentAmps == 0f && creativeNetwork.WastedWatts == 0f && FiniteElectrical(creativeNetwork),
+    "闲置无限源必须归零，不用无穷大表示功率");
+
+ordinaryBattery.ElectricalStoredJoules = 250f;
+int creativeNotifications = 0;
+for (int preview = 0; preview < 5; preview++)
+    ElectricalNetworkGraph.Solve(creativeNetwork, .5f, _ => 1f, _ => 1f, _ => creativeNotifications++, false);
+Check(ordinaryBattery.ElectricalStoredJoules == 250f && creativeNotifications == 0 &&
+    creative.ElectricalGeneratedWatts == 12100f && creativeNetwork.ChargingWatts == 100f,
+    "无限源充电探算要有实际充电读数，但不写储能、不发通知");
+ElectricalNetworkGraph.Solve(creativeNetwork, .5f, _ => 1f, _ => 1f, _ => creativeNotifications++, true);
+Check(ordinaryBattery.ElectricalStoredJoules == 300f && creativeNotifications == 1 &&
+    heavyConsumer.ElectricalSuppliedWatts == 12000f && creativeNetwork.WastedWatts == 0f,
+    "正式半秒应只给普通电池充50焦耳，同时满足负载");
+for (int tick = 0; tick < 14; tick++) SolveElectrical(creativeNetwork);
+SolveElectrical(creativeNetwork);
+Check(ordinaryBattery.ElectricalStoredJoules == 1000f && creativeNetwork.ChargingWatts == 0f &&
+    creative.ElectricalGeneratedWatts == 12000f, "电池满电后无限源必须撤掉充电出力");
+
+var creativeSecond = ElectricalNode(303, "generator", unlimited: true);
+ordinaryBattery.ElectricalStoredJoules = 950f;
+creativeNetwork.Nodes.Add(creativeSecond);
+SolveElectrical(creativeNetwork);
+Check(creativeNetwork.GeneratedWatts == 12100f && creative.ElectricalGeneratedWatts == 6050f &&
+    creativeSecond.ElectricalGeneratedWatts == 6050f && ordinaryBattery.ElectricalStoredJoules == 1000f &&
+    creativeNetwork.WastedWatts == 0f, "多个无限源只能分摊一个真实供电和充电缺口");
+SolveElectrical(creativeNetwork);
+Check(creativeNetwork.GeneratedWatts == 12000f && creative.ElectricalGeneratedWatts == 6000f &&
+    creativeSecond.ElectricalGeneratedWatts == 6000f, "多个无限源满电后必须同步收回多余出力");
+
+var ordinaryGenerator = ElectricalNode(304, "generator", 5000f);
+creativeNetwork = ElectricalGraph(ordinaryGenerator, creative, heavyConsumer);
+SolveElectrical(creativeNetwork);
+Check(ordinaryGenerator.ElectricalGeneratedWatts == 5000f && creative.ElectricalGeneratedWatts == 7000f &&
+    creativeNetwork.GeneratedWatts == 12000f, "普通发电应优先，无限源仅补缺口");
+ordinaryGenerator.Definition.Electrical.PowerWatts = 15000f;
+SolveElectrical(creativeNetwork);
+Check(ordinaryGenerator.ElectricalGeneratedWatts == 15000f && creative.ElectricalGeneratedWatts == 0f &&
+    creativeNetwork.WastedWatts == 3000f, "普通发电已有余量时无限源必须待机，保留普通发电规则");
+ordinaryGenerator.Definition.Electrical.PowerWatts = 5000f;
+ordinaryBattery.ElectricalStoredJoules = 250f;
+creativeNetwork.Nodes.Add(ordinaryBattery);
+SolveElectrical(creativeNetwork);
+Check(creative.ElectricalGeneratedWatts == 7100f && creativeNetwork.GeneratedWatts == 12100f &&
+    creativeNetwork.ChargingWatts == 100f && ordinaryBattery.ElectricalStoredJoules == 300f,
+    "普通发电与无限源合供时应同时补负载和普通电池充电缺口");
+
+creativeNetwork = ElectricalGraph(creative, heavyConsumer);
+SolveElectrical(creativeNetwork, factor: 0f);
+Check(creativeNetwork.GeneratedWatts == 0f && heavyConsumer.ElectricalSuppliedWatts == 0f &&
+    creative.ElectricalGeneratedWatts == 0f, "无限发电provider停用仍必须立即断供并清除旧读数");
+SolveElectrical(creativeNetwork, factor: .2f);
+Check(heavyConsumer.ElectricalSuppliedWatts == 12000f, "有效无限源不能被provider比例变成有限额定功率");
+creativeSecond.Definition.Electrical.NominalVoltage = 24f;
+creativeNetwork.Nodes.Add(creativeSecond);
+SolveElectrical(creativeNetwork);
+Check(creativeNetwork.VoltageConflict && creativeNetwork.DeliveredWatts == 0f &&
+    creative.ElectricalGeneratedWatts == 0f && heavyConsumer.ElectricalSuppliedWatts == 0f,
+    "无限源仍必须遵守多个电压源冲突停网");
+creativeNetwork.Nodes.Remove(creativeSecond);
+heavyConsumer.Definition.Electrical.NominalVoltage = 24f;
+SolveElectrical(creativeNetwork);
+Check(creativeNetwork.VoltageIncompatible && heavyConsumer.ElectricalSuppliedWatts == 0f &&
+    creative.ElectricalGeneratedWatts == 0f, "无限源不能向电压不兼容负载供电");
+heavyConsumer.Definition.Electrical.NominalVoltage = 120f;
+var limitedWire = ElectricalNode(305, "wire"); limitedWire.Definition.Electrical.MaximumVoltage = 24f;
+creativeNetwork.Nodes.Add(limitedWire);
+SolveElectrical(creativeNetwork);
+Check(creativeNetwork.VoltageIncompatible && creativeNetwork.DeliveredWatts == 0f &&
+    creative.ElectricalGeneratedWatts == 0f, "无限源不能越过电线耐压限制");
+limitedWire.Definition.Electrical.MaximumVoltage = 0f;
+limitedWire.Definition.Electrical.MaxCurrentAmps = 1f;
+SolveElectrical(creativeNetwork);
+Check(creativeNetwork.Overloaded && creativeNetwork.CurrentAmps == 100f &&
+    heavyConsumer.ElectricalSuppliedWatts == 12000f, "无限源仍应根据实际电流标记电线过载");
+
+var disconnectedWireA = ElectricalNode(306, "wire");
+var disconnectedWireB = ElectricalNode(307, "wire"); disconnectedWireB.Cell = new(2, 0);
+heavyConsumer.Cell = new(2, 0);
+var disconnectedGraph = new ElectricalNetworkGraph(default);
+disconnectedGraph.Rebuild(new[] { creative, heavyConsumer, disconnectedWireA, disconnectedWireB });
+foreach (ElectricalNetwork component in disconnectedGraph.Networks) SolveElectrical(component);
+Check(disconnectedGraph.Networks.Count == 2 && !ReferenceEquals(creative.ElectricalNetwork, heavyConsumer.ElectricalNetwork) &&
+    creative.ElectricalGeneratedWatts == 0f && heavyConsumer.ElectricalSuppliedWatts == 0f,
+    "无限源断线后不得跨独立电网供电");
+#endregion
+
 // 无电力依赖网络一轮只求解一次，马达在电力结算后仍能带动负载。
 var independent = Node(40, 0, torque: 100, mode: "output");
 var independentLoad = Node(41, 1, load: 10, mode: "input");

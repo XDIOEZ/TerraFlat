@@ -31,6 +31,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
         operations.Add("electrical/battery_commit", WorldElectricalBattery);
         operations.Add("electrical/supply_limits", WorldElectricalLimits);
+        operations.Add("electrical/unlimited_supply", WorldElectricalUnlimitedSupply);
         operations.Add("industrial_fluids/reservations", WorldFluidReservations);
         operations.Add("industrial_fluids/atomic_recipe", WorldFluidRecipe);
         operations.Add("industrial_fluids/heat", WorldFluidHeat);
@@ -514,6 +515,90 @@ public static partial class GameplayTestSystemProbe
         ElectricalNetworkGraph.Solve(network, 1f, _ => 1f, _ => 1f, null);
         return new JObject { ["limited"] = limited, ["voltageConflict"] = network.VoltageConflict,
             ["conflictDelivered"] = network.DeliveredWatts, ["conflictSupplied"] = consumer.ElectricalSuppliedWatts };
+    }
+
+    private static JObject WorldElectricalUnlimitedSupply(JObject args)
+    {
+        int sourceCount = Mathf.Clamp((int)Number(args, "sources", 1d), 1, 2);
+        int steps = Mathf.Clamp((int)Number(args, "steps", 1d), 1, 100);
+        float seconds = (float)Number(args, "seconds", .5d);
+        float providerFactor = (float)Number(args, "providerFactor", 1d);
+        float demandFactor = (float)Number(args, "demandFactor", 1d);
+        bool commitStorage = Flag(args, "commitStorage", true);
+        var nodes = new List<MachineEntity>();
+        var sources = new List<MachineEntity>();
+        for (int i = 0; i < sourceCount; i++)
+        {
+            var source = WorldMachineNode(60 + i, 0);
+            source.RotationQuarterTurns = (int)Number(args, "sourceRotation", 0d);
+            source.Definition.Ports = "none";
+            source.Definition.Electrical = new ElectricalDefinition { Role = "generator", UnlimitedGeneration = true,
+                Connection = Text(args, "sourceConnection", "cell"),
+                NominalVoltage = i == 0 ? 120f : (float)Number(args, "secondSourceVoltage", 120d) };
+            sources.Add(source);
+            nodes.Add(source);
+        }
+        var consumer = WorldMachineNode(70, 2);
+        consumer.Definition.Ports = "none";
+        consumer.Definition.Electrical = new ElectricalDefinition { Role = "consumer",
+            PowerWatts = (float)Number(args, "demandWatts", 12000d),
+            NominalVoltage = (float)Number(args, "consumerVoltage", 120d) };
+        nodes.Add(consumer);
+        MachineEntity battery = null;
+        if (Flag(args, "battery", false))
+        {
+            battery = WorldMachineNode(71, 2);
+            battery.Definition.Ports = "none";
+            battery.Definition.Electrical = new ElectricalDefinition { Role = "battery", CapacityJoules = 1000f,
+                MaxChargeWatts = 100f, MaxDischargeWatts = 100f };
+            battery.ElectricalStoredJoules = (float)Number(args, "batteryJoules", 250d);
+            nodes.Add(battery);
+        }
+        for (int x = 0; x <= 2; x++)
+        {
+            if (x == 1 && !Flag(args, "connected", true)) continue;
+            var wire = WorldMachineNode(80 + x, x);
+            wire.Definition.Ports = "none";
+            wire.Definition.Electrical = new ElectricalDefinition { Role = "wire", MaxCurrentAmps = 1000f,
+                MaximumVoltage = (float)Number(args, "wireMaximumVoltage", 0d) };
+            nodes.Add(wire);
+        }
+
+        // 独立节点先走正式接线图，再逐步采样正式解算，不借用当前玩家的机器世界。
+        var graph = new ElectricalNetworkGraph(default(WorldTopologyDomain));
+        graph.Rebuild(nodes);
+        int notifications = 0;
+        var samples = new JArray();
+        for (int step = 0; step < steps; step++)
+        {
+            foreach (ElectricalNetwork network in graph.Networks)
+                ElectricalNetworkGraph.Solve(network, seconds, _ => providerFactor, _ => demandFactor,
+                    _ => notifications++, commitStorage);
+            ElectricalNetwork connectedNetwork = consumer.ElectricalNetwork;
+            var sourceWatts = new JArray();
+            var sourceJoules = new JArray();
+            foreach (MachineEntity source in sources)
+            {
+                sourceWatts.Add(source.ElectricalGeneratedWatts);
+                sourceJoules.Add(source.ElectricalStoredJoules);
+            }
+            samples.Add(new JObject { ["generatedWatts"] = connectedNetwork.GeneratedWatts,
+                ["deliveredWatts"] = connectedNetwork.DeliveredWatts, ["demandWatts"] = connectedNetwork.DemandWatts,
+                ["chargingWatts"] = connectedNetwork.ChargingWatts, ["dischargingWatts"] = connectedNetwork.DischargingWatts,
+                ["wastedWatts"] = connectedNetwork.WastedWatts, ["currentAmps"] = connectedNetwork.CurrentAmps,
+                ["suppliedWatts"] = consumer.ElectricalSuppliedWatts, ["powerRatio"] = consumer.ElectricalPowerRatio,
+                ["voltageConflict"] = connectedNetwork.VoltageConflict,
+                ["voltageIncompatible"] = connectedNetwork.VoltageIncompatible,
+                ["sourceWatts"] = sourceWatts, ["sourceJoules"] = sourceJoules,
+                ["batteryJoules"] = battery?.ElectricalStoredJoules ?? 0f, ["notifications"] = notifications });
+        }
+        var definition = new ElectricalDefinition { Role = "generator", UnlimitedGeneration = true };
+        string generatorValidation = WorldException(() => definition.Validate("system-probe:unlimited"));
+        definition.Role = "consumer";
+        definition.PowerWatts = 1f;
+        return new JObject { ["samples"] = samples, ["networkCount"] = graph.Networks.Count,
+            ["generatorValidation"] = generatorValidation,
+            ["consumerValidation"] = WorldException(() => definition.Validate("system-probe:invalid-unlimited")) };
     }
     #endregion
 

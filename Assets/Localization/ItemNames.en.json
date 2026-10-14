@@ -291,6 +291,8 @@
     "WaterTrough": "Water Trough",
     "WaterTrough_Building": "Water Trough",
     "ShipChemicalEngine_GM": "GM Heavy-Lift Test Engine",
-    "ShipChemicalEngine_GM_Summoner": "GM Heavy-Lift Test Engine"
+    "ShipChemicalEngine_GM_Summoner": "GM Heavy-Lift Test Engine",
+    "Creative_Power_Source": "Creative Power Source",
+    "Creative_Power_Source_Summoner": "Creative Power Source"
   }
 }

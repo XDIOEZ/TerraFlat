@@ -1750,6 +1750,26 @@ MonoBehaviour:
       fuel and electricity to lift heavy test cargo.
     m_Metadata:
       m_Items: []
+  - m_Id: 23082859458715651
+    m_Localized: Creative Power Source
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715652
+    m_Localized: Creative Power Source
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715653
+    m_Localized: Creative mode power source. Connect to a copper wire in the same cell
+      for unlimited power on demand without fuel or stored charge. Voltage compatibility
+      and wire capacity limits still apply.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715654
+    m_Localized: Creative mode power source. Connect to a copper wire in the same cell
+      for unlimited power on demand without fuel or stored charge. Voltage compatibility
+      and wire capacity limits still apply.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

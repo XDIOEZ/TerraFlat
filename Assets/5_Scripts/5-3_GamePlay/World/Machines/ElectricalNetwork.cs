@@ -180,11 +180,18 @@ public sealed class ElectricalNetworkGraph
             return;
         }
 
+        int unlimitedSources = 0;
         foreach (MachineEntity node in network.Nodes)
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
             if (node.IsElectricalGenerator)
             {
+                if (electrical.UnlimitedGeneration)
+                {
+                    if (node.SampledElectricalGeneration > 0f && voltage > 0f && electrical.AcceptsVoltage(voltage))
+                        unlimitedSources++;
+                    continue;
+                }
                 float factor = node.SampledElectricalGeneration;
                 float output = electrical.PowerWatts * factor;
                 if (output > 0f && voltage > 0f && electrical.AcceptsVoltage(voltage))
@@ -226,6 +233,8 @@ public sealed class ElectricalNetworkGraph
             if (node.IsElectricalConsumer && node.Definition.Electrical.AcceptsVoltage(voltage))
                 compatibleDemand += node.ElectricalRequestedWatts;
 
+        if (unlimitedSources > 0)
+            SupplyUnlimitedGeneration(network, voltage, compatibleDemand, seconds, unlimitedSources);
         float deficit = Mathf.Max(0f, compatibleDemand - network.GeneratedWatts);
         if (deficit > 0f)
             network.DischargingWatts = DischargeBatteries(network, voltage, deficit, seconds, batteryChanged, commitStorage);
@@ -292,7 +301,7 @@ public sealed class ElectricalNetworkGraph
         foreach (MachineEntity node in network.Nodes)
         {
             ElectricalDefinition electrical = node.Definition.Electrical;
-            if (!node.IsElectricalGenerator || electrical.PowerWatts <= 0f ||
+            if (!node.IsElectricalGenerator || (!electrical.UnlimitedGeneration && electrical.PowerWatts <= 0f) ||
                 node.SampledElectricalGeneration <= 0f) continue;
             if (!MergeSourceVoltage(ref voltage, electrical.NominalVoltage)) conflict = true;
         }
@@ -329,6 +338,39 @@ public sealed class ElectricalNetworkGraph
         return false;
     }
 
+    private static void SupplyUnlimitedGeneration(ElectricalNetwork network, float voltage,
+        float demandWatts, float seconds, int sources)
+    {
+        float chargingDemand = 0f;
+        foreach (MachineEntity node in network.Nodes)
+        {
+            ElectricalDefinition electrical = node.Definition.Electrical;
+            if (electrical.IsBattery && electrical.AcceptsVoltage(voltage))
+                chargingDemand += GetBatteryChargeWatts(node, seconds);
+        }
+        // 只补实际功率缺口，多个无限源分担出力，避免无穷数污染电流和储能读数。
+        float remaining = Mathf.Max(0f, demandWatts + chargingDemand - network.GeneratedWatts);
+        foreach (MachineEntity node in network.Nodes)
+        {
+            ElectricalDefinition electrical = node.Definition.Electrical;
+            if (!node.IsElectricalGenerator || !electrical.UnlimitedGeneration ||
+                node.SampledElectricalGeneration <= 0f || !electrical.AcceptsVoltage(voltage)) continue;
+            float output = remaining / sources;
+            sources--;
+            node.ElectricalGeneratedWatts = output;
+            node.ElectricalCurrentAmps = output / voltage;
+            network.GeneratedWatts += output;
+            remaining = Mathf.Max(0f, remaining - output);
+        }
+    }
+
+    private static float GetBatteryChargeWatts(MachineEntity node, float seconds)
+    {
+        ElectricalDefinition electrical = node.Definition.Electrical;
+        float storedJoules = Mathf.Clamp(node.ElectricalStoredJoules, 0f, electrical.CapacityJoules);
+        return Mathf.Min(electrical.MaxChargeWatts, (electrical.CapacityJoules - storedJoules) / seconds);
+    }
+
     private static float DischargeBatteries(ElectricalNetwork network, float voltage, float requestedWatts,
         float seconds, Action<MachineEntity> batteryChanged, bool commitStorage)
     {
@@ -359,8 +401,7 @@ public sealed class ElectricalNetworkGraph
             ElectricalDefinition electrical = node.Definition.Electrical;
             if (!electrical.IsBattery || !electrical.AcceptsVoltage(voltage) || remaining <= 0f) continue;
             float storedJoules = Mathf.Clamp(node.ElectricalStoredJoules, 0f, electrical.CapacityJoules);
-            float room = electrical.CapacityJoules - storedJoules;
-            float watts = Mathf.Min(remaining, Mathf.Min(electrical.MaxChargeWatts, room / seconds));
+            float watts = Mathf.Min(remaining, GetBatteryChargeWatts(node, seconds));
             if (watts <= 0f) continue;
             if (commitStorage) node.ElectricalStoredJoules = storedJoules + watts * seconds;
             node.ElectricalSuppliedWatts = watts;

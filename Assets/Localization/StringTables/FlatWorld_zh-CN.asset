@@ -1735,6 +1735,22 @@ MonoBehaviour:
       N\u63A8\u529B\uFF0C\u4F7F\u7528\u771F\u5B9E\u6C22\u6C27\u71C3\u6599\u548C\u7535\u529B\uFF0C\u65B9\u4FBF\u643A\u5E26\u5927\u91CF\u6D4B\u8BD5\u7269\u8D44\u8D77\u98DE\u3002"
     m_Metadata:
       m_Items: []
+  - m_Id: 23082859458715651
+    m_Localized: 创造电源-建筑
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715652
+    m_Localized: 创造电源
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715653
+    m_Localized: 创造模式专用，接入同格铜电线后按需无限供电；不消耗燃料或电量，仍遵守电压和线缆承载限制。
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715654
+    m_Localized: 创造模式专用，接入同格铜电线后按需无限供电；不消耗燃料或电量，仍遵守电压和线缆承载限制。
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

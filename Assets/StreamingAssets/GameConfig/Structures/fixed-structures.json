@@ -242,40 +242,10 @@
           }
         },
         {
-          "memberId": "battery-2-3",
-          "itemId": "Battery_Basic",
+          "memberId": "creative-power-source",
+          "itemId": "Creative_Power_Source",
           "x": 2,
-          "y": 3,
-          "resources": {
-            "batteryChargeRatio": 1
-          }
-        },
-        {
-          "memberId": "battery-2-5",
-          "itemId": "Battery_Basic",
-          "x": 2,
-          "y": 5,
-          "resources": {
-            "batteryChargeRatio": 1
-          }
-        },
-        {
-          "memberId": "battery-6-3",
-          "itemId": "Battery_Basic",
-          "x": 6,
-          "y": 3,
-          "resources": {
-            "batteryChargeRatio": 1
-          }
-        },
-        {
-          "memberId": "battery-6-5",
-          "itemId": "Battery_Basic",
-          "x": 6,
-          "y": 5,
-          "resources": {
-            "batteryChargeRatio": 1
-          }
+          "y": 3
         },
         {
           "memberId": "fuel-1-1",

@@ -479,6 +479,140 @@
       }
     },
     {
+      "id": "Creative_Power_Source",
+      "parent": "BuildingBody_Base",
+      "gameName": "创造电源-建筑",
+      "description": "创造模式专用，接入同格铜电线后按需无限供电；不消耗燃料或电量，仍遵守电压和线缆承载限制。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 30,
+      "volume": 45,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+        "color": {
+          "r": 0.8,
+          "g": 0.6,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 50,
+        "maxHp": 50,
+        "defense": {
+          "physical": 6
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Creative_Power_Source\",\"SummonerPrefabId\":\"Creative_Power_Source_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": { "LightOcclusionMode": "None", "CastSunShadow": false }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Creative_Power_Source" }
+        }
+      }
+    },
+    {
+      "id": "Creative_Power_Source_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "创造电源",
+      "description": "创造模式专用，接入同格铜电线后按需无限供电；不消耗燃料或电量，仍遵守电压和线缆承载限制。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 10,
+      "volume": 18,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": ["35", "InventoryGroup.ElectricalPower"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+        "color": {
+          "r": 0.8,
+          "g": 0.6,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 50,
+        "maxHp": 50,
+        "defense": {
+          "physical": 6
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Creative_Power_Source\",\"SummonerPrefabId\":\"Creative_Power_Source_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode", "id": "机械扭矩模块", "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "DefinitionId": "Creative_Power_Source" }
+        }
+      }
+    },
+    {
       "id": "ElectricLightBulb",
       "parent": "BuildingBody_Base",
       "gameName": "灯泡-建筑",

@@ -385,6 +385,7 @@ public sealed class ElectricalDefinition
     public float MinimumVoltage;
     public float MaximumVoltage;
     public float PowerWatts; // generator 为额定发电功率，consumer 为满负载需求。
+    public bool UnlimitedGeneration; // 无限电源按实际负载与充电需求发电，不储存或消耗电量。
     public float MaxCurrentAmps; // 电线允许的整网聚合电流上限。
     public float ResistanceOhms; // 首版保留但不参与压降求解。
     public float CapacityJoules; // battery 专用。
@@ -429,7 +430,9 @@ public sealed class ElectricalDefinition
             throw new ArgumentException("电气节点参数无效：" + ownerId);
         if (MinimumVoltage > 0f && MaximumVoltage > 0f && MaximumVoltage < MinimumVoltage)
             throw new ArgumentException("电气节点电压范围无效：" + ownerId);
-        if ((IsGenerator || IsConsumer || IsConverter) && !MachineDefinition.Positive(PowerWatts))
+        if (UnlimitedGeneration && !IsGenerator)
+            throw new ArgumentException("无限供电只能用于发电节点：" + ownerId);
+        if (((IsGenerator && !UnlimitedGeneration) || IsConsumer || IsConverter) && !MachineDefinition.Positive(PowerWatts))
             throw new ArgumentException("电气节点功率无效：" + ownerId);
         if (IsWire && !MachineDefinition.Positive(MaxCurrentAmps))
             throw new ArgumentException("电线载流上限无效：" + ownerId);

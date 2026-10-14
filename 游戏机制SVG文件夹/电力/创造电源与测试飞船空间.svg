@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="760" viewBox="0 0 1080 760">
+<title>创造电源与测试飞船空间</title>
+<desc>测试飞船由四个普通电池改成一台120V无限创造电源，释放三个原电池格。图中电线取自正式固定船型配置。</desc>
+<defs><pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><rect width="36" height="36" fill="#142737" stroke="#304758"/></pattern>
+<marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="#79d5de"/></marker></defs>
+<style>text{font-family:"Microsoft YaHei",sans-serif;fill:#e7f0f5}.h{font-size:30px;font-weight:700}.t{font-size:22px;font-weight:700}.body{font-size:18px}.small{font-size:15px;fill:#a9c2d0}.copper{stroke:#e8a665;stroke-width:5;stroke-linecap:round}.battery{fill:#c6954c;stroke:#f6d49a;stroke-width:2}.source{fill:#946ac7;stroke:#cfb4f7;stroke-width:2}.free{fill:#183b34;stroke:#6fc8a8;stroke-width:2;stroke-dasharray:5 3}</style>
+<rect width="1080" height="760" rx="22" fill="#0d1c29"/>
+<text x="38" y="49" class="h">创造电源：一台供整船，腾出三格</text>
+<text x="38" y="80" class="small">9 × 9 测试飞船 · 只强调电源和原有铜线，其余设备省略 · 坐标从左下角计</text>
+<rect x="32" y="103" width="496" height="455" rx="16" fill="#122535" stroke="#365162"/>
+<text x="56" y="135" class="t">原来：4 个普通电池</text>
+<g transform="translate(112,148)"><rect width="324" height="324" fill="url(#grid)"/>
+<line x1="18" y1="198" x2="54" y2="198" class="copper"/>
+<line x1="54" y1="198" x2="90" y2="198" class="copper"/>
+<line x1="90" y1="306" x2="90" y2="270" class="copper"/>
+<line x1="90" y1="270" x2="90" y2="234" class="copper"/>
+<line x1="90" y1="234" x2="126" y2="234" class="copper"/>
+<line x1="90" y1="234" x2="90" y2="198" class="copper"/>
+<line x1="90" y1="198" x2="126" y2="198" class="copper"/>
+<line x1="90" y1="198" x2="90" y2="162" class="copper"/>
+<line x1="90" y1="162" x2="126" y2="162" class="copper"/>
+<line x1="90" y1="162" x2="90" y2="126" class="copper"/>
+<line x1="90" y1="126" x2="126" y2="126" class="copper"/>
+<line x1="90" y1="126" x2="90" y2="90" class="copper"/>
+<line x1="90" y1="90" x2="90" y2="54" class="copper"/>
+<line x1="90" y1="54" x2="90" y2="18" class="copper"/>
+<line x1="126" y1="234" x2="162" y2="234" class="copper"/>
+<line x1="126" y1="234" x2="126" y2="198" class="copper"/>
+<line x1="126" y1="198" x2="126" y2="162" class="copper"/>
+<line x1="126" y1="162" x2="126" y2="126" class="copper"/>
+<line x1="126" y1="126" x2="162" y2="126" class="copper"/>
+<line x1="162" y1="234" x2="198" y2="234" class="copper"/>
+<line x1="162" y1="126" x2="198" y2="126" class="copper"/>
+<line x1="162" y1="126" x2="162" y2="90" class="copper"/>
+<line x1="198" y1="234" x2="234" y2="234" class="copper"/>
+<line x1="198" y1="126" x2="234" y2="126" class="copper"/>
+<line x1="234" y1="306" x2="234" y2="270" class="copper"/>
+<line x1="234" y1="270" x2="234" y2="234" class="copper"/>
+<line x1="234" y1="234" x2="234" y2="198" class="copper"/>
+<line x1="234" y1="198" x2="270" y2="198" class="copper"/>
+<line x1="234" y1="198" x2="234" y2="162" class="copper"/>
+<line x1="234" y1="162" x2="234" y2="126" class="copper"/>
+<line x1="234" y1="126" x2="234" y2="90" class="copper"/>
+<line x1="234" y1="90" x2="234" y2="54" class="copper"/>
+<line x1="234" y1="54" x2="234" y2="18" class="copper"/>
+<line x1="270" y1="198" x2="306" y2="198" class="copper"/>
+<rect x="75" y="183" width="30" height="30" rx="5" class="battery"/>
+<text x="90" y="203" text-anchor="middle" font-size="18">电</text>
+<rect x="75" y="111" width="30" height="30" rx="5" class="battery"/>
+<text x="90" y="131" text-anchor="middle" font-size="18">电</text>
+<rect x="219" y="183" width="30" height="30" rx="5" class="battery"/>
+<text x="234" y="203" text-anchor="middle" font-size="18">电</text>
+<rect x="219" y="111" width="30" height="30" rx="5" class="battery"/>
+<text x="234" y="131" text-anchor="middle" font-size="18">电</text>
+<text x="18" y="343" text-anchor="middle" class="small">0</text>
+<text x="-13" y="311" text-anchor="middle" class="small">0</text>
+<text x="54" y="343" text-anchor="middle" class="small">1</text>
+<text x="-13" y="275" text-anchor="middle" class="small">1</text>
+<text x="90" y="343" text-anchor="middle" class="small">2</text>
+<text x="-13" y="239" text-anchor="middle" class="small">2</text>
+<text x="126" y="343" text-anchor="middle" class="small">3</text>
+<text x="-13" y="203" text-anchor="middle" class="small">3</text>
+<text x="162" y="343" text-anchor="middle" class="small">4</text>
+<text x="-13" y="167" text-anchor="middle" class="small">4</text>
+<text x="198" y="343" text-anchor="middle" class="small">5</text>
+<text x="-13" y="131" text-anchor="middle" class="small">5</text>
+<text x="234" y="343" text-anchor="middle" class="small">6</text>
+<text x="-13" y="95" text-anchor="middle" class="small">6</text>
+<text x="270" y="343" text-anchor="middle" class="small">7</text>
+<text x="-13" y="59" text-anchor="middle" class="small">7</text>
+<text x="306" y="343" text-anchor="middle" class="small">8</text>
+<text x="-13" y="23" text-anchor="middle" class="small">8</text>
+</g>
+<text x="56" y="516" class="body">每个 60,000 J，最多输出 600 W</text>
+<text x="56" y="543" class="body">4 个占 4 格，会逐步耗尽电量</text>
+<rect x="552" y="103" width="496" height="455" rx="16" fill="#122535" stroke="#365162"/>
+<text x="576" y="135" class="t">现在：1 个创造电源</text>
+<g transform="translate(632,148)"><rect width="324" height="324" fill="url(#grid)"/>
+<line x1="18" y1="198" x2="54" y2="198" class="copper"/>
+<line x1="54" y1="198" x2="90" y2="198" class="copper"/>
+<line x1="90" y1="306" x2="90" y2="270" class="copper"/>
+<line x1="90" y1="270" x2="90" y2="234" class="copper"/>
+<line x1="90" y1="234" x2="126" y2="234" class="copper"/>
+<line x1="90" y1="234" x2="90" y2="198" class="copper"/>
+<line x1="90" y1="198" x2="126" y2="198" class="copper"/>
+<line x1="90" y1="198" x2="90" y2="162" class="copper"/>
+<line x1="90" y1="162" x2="126" y2="162" class="copper"/>
+<line x1="90" y1="162" x2="90" y2="126" class="copper"/>
+<line x1="90" y1="126" x2="126" y2="126" class="copper"/>
+<line x1="90" y1="126" x2="90" y2="90" class="copper"/>
+<line x1="90" y1="90" x2="90" y2="54" class="copper"/>
+<line x1="90" y1="54" x2="90" y2="18" class="copper"/>
+<line x1="126" y1="234" x2="162" y2="234" class="copper"/>
+<line x1="126" y1="234" x2="126" y2="198" class="copper"/>
+<line x1="126" y1="198" x2="126" y2="162" class="copper"/>
+<line x1="126" y1="162" x2="126" y2="126" class="copper"/>
+<line x1="126" y1="126" x2="162" y2="126" class="copper"/>
+<line x1="162" y1="234" x2="198" y2="234" class="copper"/>
+<line x1="162" y1="126" x2="198" y2="126" class="copper"/>
+<line x1="162" y1="126" x2="162" y2="90" class="copper"/>
+<line x1="198" y1="234" x2="234" y2="234" class="copper"/>
+<line x1="198" y1="126" x2="234" y2="126" class="copper"/>
+<line x1="234" y1="306" x2="234" y2="270" class="copper"/>
+<line x1="234" y1="270" x2="234" y2="234" class="copper"/>
+<line x1="234" y1="234" x2="234" y2="198" class="copper"/>
+<line x1="234" y1="198" x2="270" y2="198" class="copper"/>
+<line x1="234" y1="198" x2="234" y2="162" class="copper"/>
+<line x1="234" y1="162" x2="234" y2="126" class="copper"/>
+<line x1="234" y1="126" x2="234" y2="90" class="copper"/>
+<line x1="234" y1="90" x2="234" y2="54" class="copper"/>
+<line x1="234" y1="54" x2="234" y2="18" class="copper"/>
+<line x1="270" y1="198" x2="306" y2="198" class="copper"/>
+<rect x="75" y="183" width="30" height="30" rx="5" class="source"/>
+<text x="90" y="203" text-anchor="middle" font-size="18">∞</text>
+<rect x="75" y="111" width="30" height="30" rx="5" class="free"/>
+<text x="90" y="131" text-anchor="middle" font-size="18">空</text>
+<rect x="219" y="183" width="30" height="30" rx="5" class="free"/>
+<text x="234" y="203" text-anchor="middle" font-size="18">空</text>
+<rect x="219" y="111" width="30" height="30" rx="5" class="free"/>
+<text x="234" y="131" text-anchor="middle" font-size="18">空</text>
+<text x="18" y="343" text-anchor="middle" class="small">0</text>
+<text x="-13" y="311" text-anchor="middle" class="small">0</text>
+<text x="54" y="343" text-anchor="middle" class="small">1</text>
+<text x="-13" y="275" text-anchor="middle" class="small">1</text>
+<text x="90" y="343" text-anchor="middle" class="small">2</text>
+<text x="-13" y="239" text-anchor="middle" class="small">2</text>
+<text x="126" y="343" text-anchor="middle" class="small">3</text>
+<text x="-13" y="203" text-anchor="middle" class="small">3</text>
+<text x="162" y="343" text-anchor="middle" class="small">4</text>
+<text x="-13" y="167" text-anchor="middle" class="small">4</text>
+<text x="198" y="343" text-anchor="middle" class="small">5</text>
+<text x="-13" y="131" text-anchor="middle" class="small">5</text>
+<text x="234" y="343" text-anchor="middle" class="small">6</text>
+<text x="-13" y="95" text-anchor="middle" class="small">6</text>
+<text x="270" y="343" text-anchor="middle" class="small">7</text>
+<text x="-13" y="59" text-anchor="middle" class="small">7</text>
+<text x="306" y="343" text-anchor="middle" class="small">8</text>
+<text x="-13" y="23" text-anchor="middle" class="small">8</text>
+</g>
+<text x="576" y="516" class="body">(2,3) 保留一台，输出 120 V，不会耗尽</text>
+<text x="576" y="543" class="body">(2,5)、(6,3)、(6,5) 腾出，铜线保留</text>
+<rect x="32" y="579" width="250" height="58" rx="12" fill="#523d70"/><text x="157" y="615" text-anchor="middle" class="t">创造电源</text>
+<line x1="294" y1="608" x2="355" y2="608" stroke="#79d5de" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="368" y="579" width="280" height="58" rx="12" fill="#543e2d"/><text x="508" y="615" text-anchor="middle" class="t">原有铜线电网</text>
+<line x1="660" y1="608" x2="723" y2="608" stroke="#79d5de" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="736" y="579" width="312" height="58" rx="12" fill="#1f4850"/><text x="892" y="615" text-anchor="middle" class="t">11 台设备按需用电</text>
+<text x="38" y="673" class="body">当前模板满负载合计 670 W · 120 V 下约 5.58 A · 创造电源没有输出功率上限</text>
+<text x="38" y="704" class="small">仍走正式接线、电压与线缆规则；这次更新生成模板，已生成的旧船不会自动换件。</text>
+<text x="38" y="731" class="small">配置与规则示意；实际游戏表现由玩家验收。</text></svg>

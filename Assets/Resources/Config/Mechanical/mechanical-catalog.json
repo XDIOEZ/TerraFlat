@@ -215,6 +215,18 @@
       }
     },
     {
+      "Id": "Creative_Power_Source",
+      "Kind": "electrical_generator",
+      "Ports": "none",
+      "Electrical": {
+        "Role": "generator",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 0,
+        "UnlimitedGeneration": true
+      }
+    },
+    {
       "Id": "Conveyor_Wood",
       "Kind": "consumer",
       "Ports": "all",

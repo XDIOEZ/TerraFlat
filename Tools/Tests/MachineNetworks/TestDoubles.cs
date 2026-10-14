@@ -95,6 +95,7 @@ public sealed class MachineDefinition
 public sealed class TransportDefinition { public bool SideDrive; }
 public sealed class ElectricalDefinition
 {
+    public bool UnlimitedGeneration;
     public string Role = "wire", PowerProvider = "", DemandProvider = "", Connection = "cell";
     public float ConversionEfficiency = 1f, PowerWatts = 120, NominalVoltage = 120,
         MinimumVoltage, MaximumVoltage, CapacityJoules = 1000, MaxDischargeWatts = 100, MaxChargeWatts = 100, MaxCurrentAmps = 1000;

@@ -1715,6 +1715,22 @@ MonoBehaviour:
     m_Key: item.ShipChemicalEngine_GM_Summoner.description
     m_Metadata:
       m_Items: []
+  - m_Id: 23082859458715651
+    m_Key: item.Creative_Power_Source.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715652
+    m_Key: item.Creative_Power_Source_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715653
+    m_Key: item.Creative_Power_Source.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715654
+    m_Key: item.Creative_Power_Source_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
