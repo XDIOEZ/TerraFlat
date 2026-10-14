@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "networking_bots_session",
+      "name": "联机假人：加入快照、协议拒绝与重连",
+      "luaPath": "GameplayTests/Systems/Networking/bots-session.lua",
+      "enabled": true
+    },
+    {
+      "id": "networking_bots_input",
+      "name": "联机假人：输入与意图序号、超时和断线",
+      "luaPath": "GameplayTests/Systems/Networking/bots-input.lua",
+      "enabled": true
+    },
+    {
+      "id": "networking_bots_pickup",
+      "name": "联机假人：权威拾取租约与提交",
+      "luaPath": "GameplayTests/Systems/Networking/bots-pickup.lua",
+      "enabled": true
+    }
+  ]
+}

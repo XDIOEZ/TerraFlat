@@ -120,7 +120,6 @@ public static class AgricultureAssetBuilder
             };
             SerializedObject actionSerialized = new(action);
             actionSerialized.FindProperty("damageModule").objectReferenceValue = damage;
-            actionSerialized.FindProperty("useLocalInput").boolValue = false;
             actionSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             BoxCollider2D collider = root.AddComponent<BoxCollider2D>();

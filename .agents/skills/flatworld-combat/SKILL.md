@@ -37,6 +37,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - 技能模块通过所属 `Item.OnAct` 接收使用并在 Unload 解绑，不直接订阅玩家右键；快捷栏独占手持物使用入口。
 - Mod_Damage 管统一发送/窗口，工具由 Mod_ResourceTool/Mod_Shovel 等通过 ICombatDamageContextModifier 附上下文；动作表现经 IWeaponActionAnimation，概率状态由独立 DamageOnHitBuffApplier 组合。
+- 动画武器不读取全局鼠标或旧 Input；攻击/长按由持有者 Mod_GameController 的中央语义驱动，工具/AI 复用公开动作接口。落地武器 Load 后也不获得输入权，联机假人拾取专项持续加载真实燧石刀覆盖该路径。
 - JSON 模块装配后 IItemModuleDependencyBinder 按稳定 ID 绑定；武器 Mod_Damage 为实例直接子物体。修饰器从已注册 ItemMods 缓存并校验 FixedList 容量，多伤害盒合法，聚合器排除所有其它 Mod_Damage，避免互调。
 - 武器自身 Source 与 Owner Credit 分开，防自伤在候选/扫描/结算排 Owner，不改 IDamageSender.attacker；上下文携 generation/world/dimension 和 double 模拟 Tick/Time。
 - 太空联机经 `SpaceSession.CombatNetworking` 校验真实连接玩家并驱动原武器输入、体力及弹药事务；`ShipCombatBridge` 在攻击者规范坐标系查询船体和乘员，远端船不依赖 Host 视野。太空 `Mod_Projectile` 不参与地表 Physics2D，固定规范坐标扫掠命中，回收交 `SpaceLooseItemState`；客户端投射物仅复制表现。

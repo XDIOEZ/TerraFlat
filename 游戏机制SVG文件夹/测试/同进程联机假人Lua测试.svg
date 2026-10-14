@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="820" viewBox="0 0 1280 820" role="img" aria-labelledby="title desc">
+  <title id="title">同进程联机假人 Lua 测试</title>
+  <desc id="desc">多个独立假人连接经过 Mirror 正式消息收发，Lua 检查服务端权威状态，结束后恢复隔离世界。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8" fill="#81b7eb"/></marker>
+    <style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#e8eef8}.title{font-size:30px;font-weight:700}.sub{font-size:18px;fill:#b6c7df}.name{font-size:21px;font-weight:700}.body{font-size:17px}.small{font-size:16px;fill:#b6c7df}.box{fill:#172b45;stroke:#4c7198;stroke-width:2}.line{fill:none;stroke:#81b7eb;stroke-width:3;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect width="1280" height="820" rx="16" fill="#0c192b"/>
+  <text x="48" y="57" class="title">联机假人：正式服务端规则，Lua 持有断言</text>
+  <text x="48" y="91" class="sub">同一个 Unity 进程 · 独立连接 / 玩家 / 数据 · Library 隔离存档 · 不开放真实网络端口</text>
+  <rect x="48" y="125" width="230" height="176" rx="12" class="box"/>
+  <text x="68" y="159" class="name">假人 A / B / C / D</text>
+  <text x="68" y="195" class="body">各自连接 ID、玩家档案</text>
+  <text x="68" y="226" class="body">同名申请 → 独立角色</text>
+  <text x="68" y="257" class="body">不会抢占本地主角</text>
+  <path d="M278 211H333" class="line"/>
+  <rect x="337" y="125" width="260" height="176" rx="12" class="box"/>
+  <text x="357" y="159" class="name">Mirror 正式消息入口</text>
+  <text x="357" y="195" class="body">Pack → Batcher</text>
+  <text x="357" y="226" class="body">内存 Transport 连接回调</text>
+  <text x="357" y="257" class="body">正式反序列化 / 注册处理器</text>
+  <path d="M597 211H652" class="line"/>
+  <rect x="656" y="125" width="261" height="176" rx="12" class="box"/>
+  <text x="676" y="159" class="name">实际服务端权威状态</text>
+  <text x="676" y="195" class="body">版本、MOD、Join、出生</text>
+  <text x="676" y="226" class="body">连接绑定输入和独立序号</text>
+  <text x="676" y="257" class="body">拾取租约、断线与重连</text>
+  <path d="M917 211H971" class="line"/>
+  <rect x="975" y="125" width="257" height="176" rx="12" class="box"/>
+  <text x="995" y="159" class="name">实际回复 + 原始采样</text>
+  <text x="995" y="195" class="body">发送队列 → Unbatcher</text>
+  <text x="995" y="226" class="body">每个连接各自保存收包</text>
+  <text x="995" y="257" class="body">Lua assert 判断是否正确</text>
+  <rect x="48" y="343" width="377" height="175" rx="12" class="box"/>
+  <text x="68" y="380" class="name">bots-session.lua</text>
+  <text x="68" y="415" class="body">4 人加入：身份 / 数据 / 快照分片</text>
+  <text x="68" y="446" class="body">5 类拒绝：跳过 Join / 版本 / MOD</text>
+  <text x="68" y="477" class="body">3 轮重连：留存档，清旧实例和输入</text>
+  <rect x="451" y="343" width="377" height="175" rx="12" class="box"/>
+  <text x="471" y="380" class="name">bots-input.lua</text>
+  <text x="471" y="415" class="body">重复 / 旧 / 零序号、NaN、越界拒绝</text>
+  <text x="471" y="446" class="body">未就绪不改输入，A / B 不串号</text>
+  <text x="471" y="477" class="body">超时清零，断线不影响其他假人</text>
+  <rect x="854" y="343" width="378" height="175" rx="12" class="box"/>
+  <text x="874" y="380" class="name">bots-pickup.lua</text>
+  <text x="874" y="415" class="body">同一掉落物只能授予一个租约</text>
+  <text x="874" y="446" class="body">错误玩家 / token 提交不生效</text>
+  <text x="874" y="477" class="body">拒收回滚，重申请，合法提交删物</text>
+  <rect x="48" y="555" width="1184" height="99" rx="12" fill="#173f3b" stroke="#63bca6" stroke-width="2"/>
+  <text x="68" y="591" class="name">每次操作都收尾，失败也执行 finally</text>
+  <text x="68" y="625" class="body">停自建服务器 → 清连接 / 网络对象 / 自有测试档案 / 乘员 → 恢复原 Transport → 本地主角和场景保持原身份</text>
+  <rect x="48" y="686" width="1184" height="88" rx="12" fill="#3d3020" stroke="#c49a58" stroke-width="2"/>
+  <text x="68" y="720" class="name">本轮边界：服务端结果有证据，真实客户端链路另测</text>
+  <text x="68" y="751" class="small">尚未覆盖真实 Client 背包入账、KCP / LAN、跨进程延迟与丢包、Host 本地接管、远端插值、联机建造 / 战斗 / 太空兴趣分片。</text>
+</svg>

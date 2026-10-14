@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 /// <summary>工具模块只依赖这一层动作表现接口，不直接依赖伤害模块内部实现。</summary>
 public interface IWeaponActionAnimation
@@ -18,8 +17,6 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
     [Tooltip("该武器唯一的伤害模块；Prefab 可显式绑定，JSON 组合由 ItemMods 绑定")]
     [SerializeField] private Mod_Damage damageModule;
 
-    [Tooltip("是否使用本地输入触发攻击")]
-    [SerializeField] private bool useLocalInput = true;
     [Tooltip("待机动画状态名")]
     [SerializeField] private string idleAnimationName = "Idle_0";
     [Tooltip("攻击连击动画状态名列表")]
@@ -152,7 +149,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
         cachedController = null;
     }
     #endregion
-    [InfoBox("驱动本地输入与连击状态机")]
+    #region 攻击动作与持有者输入
+    [InfoBox("驱动持有者攻击语义与连击状态机")]
     private void Update()
     {
         if (cachedController != null && cachedController.IsGameplayInputLocked)
@@ -169,13 +167,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             return;
         }
 
-        if (useLocalInput &&
-            cachedController == null &&
-            Input.GetMouseButtonDown(0) &&
-            !IsLegacyPointerOverUI())
-        {
-            RequestAttack();
-        }
+        // 落地和远端武器不读取全局鼠标，只由持有者控制器或公开动作接口驱动。
 
         if (queuedNext)
         {
@@ -336,12 +328,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
             return;
         }
 
-        bool isHolding =
-            (useLocalInput &&
-             cachedController == null &&
-             Input.GetMouseButton(0) &&
-             !IsLegacyPointerOverUI()) ||
-            isHoldingInput;
+        bool isHolding = isHoldingInput;
         if (!queuedNext && !isHolding)
         {
             return;
@@ -397,21 +384,6 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
         }
     }
 
-    private static bool IsLegacyPointerOverUI()
-    {
-        EventSystem eventSystem = EventSystem.current;
-        if (eventSystem == null)
-            return false;
-
-        PointerEventData eventData = new PointerEventData(eventSystem)
-        {
-            position = Input.mousePosition
-        };
-        List<RaycastResult> results = new List<RaycastResult>();
-        eventSystem.RaycastAll(eventData, results);
-        return results.Count > 0;
-    }
-
     private void OnAttackStarted()
     {
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, cachedController != null ? cachedController.GetAimWorldPosition(8192f) : item.transform.position)) return;
@@ -439,4 +411,5 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
         animator.speed = AttackSpeedMultiplier;
     }
+    #endregion
 }

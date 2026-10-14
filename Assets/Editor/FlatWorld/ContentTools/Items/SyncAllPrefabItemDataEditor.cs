@@ -688,16 +688,6 @@ public static class SyncAllPrefabItemDataEditor
                 changed = true;
             }
 
-            // 统一使用角色输入，不走本地Input.GetMouseButton
-            SerializedObject actionSo = new SerializedObject(actionModule);
-            SerializedProperty useLocalInputProperty = actionSo.FindProperty("useLocalInput");
-            if (useLocalInputProperty != null && useLocalInputProperty.boolValue)
-            {
-                useLocalInputProperty.boolValue = false;
-                actionSo.ApplyModifiedPropertiesWithoutUndo();
-                changed = true;
-            }
-
             // 4) 清理旧伤害层级：删除DamageSender，并绑定稳定的伤害节点
             changed |= CleanupDamageHierarchy(prefabRoot, path);
 

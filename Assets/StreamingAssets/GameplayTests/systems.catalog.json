@@ -992,11 +992,15 @@
       ],
       "rulesSuite": "GameplayTests/Systems/Networking/rules-suite.json",
       "integrationSuites": [
+        "GameplayTests/Systems/Networking/gameplay-suite.json",
         "GameplayTests/Systems/ItemRuntime/gameplay-suite.json"
       ],
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Networking/README.md",
       "integrationCaseIds": [
+        "networking_bots_session",
+        "networking_bots_input",
+        "networking_bots_pickup",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"

@@ -17,3 +17,19 @@
 覆盖边界：这是实际网络物品收发端处理链的同进程现场测试，未开启Host/Client或网络传输；连接、重连、断线、协议序号、权威拾取/建造/战斗和跨区兴趣管理仍未覆盖。
 
 本轮按用户要求仅静态编写，未编译、未执行或验收。
+
+## 同进程联机假人专项
+
+入口：[gameplay-suite.json](gameplay-suite.json)。执行：`python Tools/GameplayTesting/run_suite.py GameplayTests/Systems/Networking/gameplay-suite.json`；`--systems networking --integration` 会同时选择本专项和上面的共享物品链路。
+
+假人是独立的 Mirror 连接和正式 NetworkWorldPlayer/CorePlayer，不打开网络端口，也不启动真实 NetworkClient。假人自有自动拾取触发器关闭，拾取由明确消息发起，避免无客户端库存的视觉副本自动触发。消息经过正式 Pack、Batcher、服务端传输回调和生产处理器；服务端回复经过正常发送队列与逐连接 Unbatcher，再交 Lua 验证原始数据。发送完成不能代替业务断言。
+
+| Lua | 现场和断言 |
+| --- | --- |
+| [bots-session.lua](bots-session.lua) | 四假人同名加入、独立角色/数据/库存容器、完整世界快照分片/字节/校验和、提前 AddPlayer 拒绝、重复就绪、已占用短名和本地主角名字申请；未加入/仅 Hello/版本/MOD API/MOD 集合不符拒绝；同档案三轮重连及连接 ID 复用 |
+| [bots-input.lua](bots-input.lua) | 连接绑定的真实乘员输入，重复/旧/零序号、NaN/越界、未就绪拒绝；两连接独立序号和真实意图拒绝回复；失联清零、断线清输入和运行实例且保留重连档案 |
+| [bots-pickup.lua](bots-pickup.lua) | 正式地表拾取请求与提交，授权租约独占、他人或错误令牌提交拒绝、拒收恢复、重新授权和合法提交删除掉落物 |
+
+夹具在 `Assets/5_Scripts/5-4_Networking/Gameplay/Testing/GameplayTestNetworkBots*.cs` 与 `GameplayTestBotTransport.cs`，仅 Editor/Development Build 编译；正式 Lua 入口仍要求 Editor PlayMode 的 Library 隔离存档。每个操作用 finally 收尾，Lua 另断言服务器/连接/网络对象/自有档案/乘员无残留，本地主角和场景不变，原传输器恢复。正常断线保留玩家存档用于重连，整份测试结束才移除自有测试档案。
+
+本专项没有截图，协议和服务端状态没有可供画面证明的变化。它不覆盖真实客户端库存入账、KCP/LAN、跨进程时延/丢包、设备差异、真实 Host 本地连接及远端插值表现，也尚未覆盖联机建造/战斗和太空兴趣分片。当前现场快照为单片，超过 24 KiB 的大世界多片边界与缺片重传仍待补。地表服务端接受拾取提交并销毁掉落物，不代表真实 Client 背包已经接收。执行结果见 [联机假人记录](../../联机假人测试记录_2026-10-15.md)，手动玩法验收由用户完成。

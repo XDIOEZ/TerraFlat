@@ -86,7 +86,6 @@
     "comboWindowOverride": "连击窗口覆盖",
     "comboWindowGrace": "连击宽限时间",
     "loopComboOnHold": "按住循环连击",
-    "useLocalInput": "使用本地输入",
     "ConsumeCompleteReplacementItemID": "食用完成替换物品 ID",
     "ConsumeAudio": "食用音效",
     "ConsumeKind": "食用方式",

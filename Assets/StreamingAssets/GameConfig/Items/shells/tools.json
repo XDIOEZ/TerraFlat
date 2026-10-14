@@ -167,7 +167,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -423,7 +422,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -645,7 +643,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -887,7 +884,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -1068,7 +1064,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -1249,7 +1244,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -1430,7 +1424,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2",
@@ -1612,7 +1605,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -1793,7 +1785,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -1993,7 +1984,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -2124,7 +2114,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -2361,7 +2350,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -2546,7 +2534,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
@@ -2731,7 +2718,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"

@@ -74,6 +74,12 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = State?.Passengers.Find(value => value.ProfileId == profile);
             if (passenger?.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
         }
+        /// <summary>只读返回服务端最后接受的输入，便于联机诊断和隔离测试。</summary>
+        public bool TryGetNetworkPassengerInput(string profile, out SpacePassengerInput input)
+        {
+            input = default;
+            return !string.IsNullOrEmpty(profile) && passengerInputs.TryGetValue(profile, out input);
+        }
         public bool ExecuteNetworkIntent(string profile, SpaceNetworkIntent intent, out string reason)
         {
             reason = "操作距离或权限不满足";

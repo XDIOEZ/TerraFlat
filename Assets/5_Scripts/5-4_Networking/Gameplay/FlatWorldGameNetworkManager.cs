@@ -20,6 +20,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly Dictionary<int, string> pendingPlayerNames = new Dictionary<int, string>();
         private readonly Dictionary<int, NetworkProtocolHello> clientProtocolHellos = new Dictionary<int, NetworkProtocolHello>();
         private readonly HashSet<int> pendingPlayerSpawns = new HashSet<int>();
+        private readonly Dictionary<int, NetworkConnectionToClient> worldReadyConnections = new();
         private string localPlayerName = NewWorldCreationRequest.CreateRandomPlayerName();
         private string currentPlanetName;
         private Coroutine worldEnterCoroutine;
@@ -144,7 +145,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnServerAddPlayer(NetworkConnectionToClient connection)
         {
-            if (connection == null || connection.identity != null ||
+            if (!CanSpawnJoinedPlayer(connection) || connection.identity != null ||
                 !pendingPlayerSpawns.Add(connection.connectionId))
             {
                 return;
@@ -161,7 +162,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 while (NetworkServer.active &&
                        NetworkServer.connections.TryGetValue(connectionId, out NetworkConnectionToClient connection) &&
-                       connection != null && connection.identity == null)
+                       ReferenceEquals(connection, requestedConnection) && CanSpawnJoinedPlayer(connection) && connection.identity == null)
                 {
                     string playerName = pendingPlayerNames.TryGetValue(connectionId, out string pendingName)
                         ? pendingName
@@ -220,6 +221,7 @@ namespace FlatWorld.Networking.Gameplay
             pendingPlayerNames.Remove(connection.connectionId);
             clientProtocolHellos.Remove(connection.connectionId);
             pendingPlayerSpawns.Remove(connection.connectionId);
+            worldReadyConnections.Remove(connection.connectionId);
             base.OnServerDisconnect(connection);
             SetGameplayStatus($"玩家已断开（当前 {NetworkServer.connections.Count} 人）");
         }
@@ -254,6 +256,7 @@ namespace FlatWorld.Networking.Gameplay
             pendingPlayerNames.Clear();
             clientProtocolHellos.Clear();
             pendingPlayerSpawns.Clear();
+            worldReadyConnections.Clear();
             base.OnStopServer();
             SetGameplayStatus("服务器已停止");
         }
@@ -538,8 +541,24 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerWorldReady(NetworkConnectionToClient connection, NetworkWorldReady message)
         {
+            if (!CanSpawnJoinedPlayer(connection, requireWorldReady: false)) return;
+            worldReadyConnections[connection.connectionId] = connection;
             if (connection.identity == null)
                 OnServerAddPlayer(connection);
+        }
+
+        private bool CanSpawnJoinedPlayer(NetworkConnectionToClient connection, bool requireWorldReady = true)
+        {
+            // 所有出生入口都要求当前连接完成正式版本、MOD 与入世检查。
+            if (connection == null || !connection.isAuthenticated ||
+                !NetworkServer.connections.TryGetValue(connection.connectionId, out var current) ||
+                !ReferenceEquals(current, connection) ||
+                !pendingPlayerNames.TryGetValue(connection.connectionId, out string name) || string.IsNullOrWhiteSpace(name) ||
+                !clientProtocolHellos.TryGetValue(connection.connectionId, out NetworkProtocolHello hello)) return false;
+            return (!requireWorldReady || worldReadyConnections.TryGetValue(connection.connectionId, out var ready) && ReferenceEquals(ready, connection)) &&
+                hello.Version == NetworkGameplayProtocol.CurrentVersion &&
+                hello.ModApiVersion == ModRuntimeManager.SupportedApiVersion &&
+                string.Equals(hello.ModSetHash, ModRuntimeManager.Instance?.ModSetHash ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         }
 
         private void CaptureLoadedChunks()
@@ -687,6 +706,10 @@ namespace FlatWorld.Networking.Gameplay
         private string MakeUniquePlayerName(string requestedName, int connectionId)
         {
             var used = new HashSet<string>(pendingPlayerNames.Values, StringComparer.Ordinal);
+            // 远端不能占用现有角色档案；本地主机仍可接管自己的离线角色。
+            if (ItemMgr.Instance != null)
+                foreach (var entry in ItemMgr.Instance.Player_DIC)
+                    if (entry.Value != null && (connectionId != 0 || !entry.Value.IsLocalProfile)) used.Add(entry.Key);
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
                 if (connection?.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer player) used.Add(player.DisplayName);
             string candidate = requestedName;

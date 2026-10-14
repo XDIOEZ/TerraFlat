@@ -250,7 +250,6 @@ MonoBehaviour:
   item: {fileID: 0}
   animator: {fileID: 4830466653062979987}
   damageModule: {fileID: 1752300247006564695}
-  useLocalInput: 0
   idleAnimationName: Idle_0
   attackAnimationNames:
   - Attack_2

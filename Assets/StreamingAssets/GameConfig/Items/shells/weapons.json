@@ -27,7 +27,6 @@
           "prefab": "Module_Weapon_AnimationAction",
           "enabled": true,
           "parameters": {
-            "useLocalInput": true,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_1",
@@ -341,7 +340,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_1"
@@ -523,7 +521,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_1"
@@ -705,7 +702,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_1"
@@ -887,7 +883,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_1"
@@ -1039,7 +1034,6 @@
             "Type": 0
           },
           "parameters": {
-            "useLocalInput": false,
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": [
               "Attack_2"
