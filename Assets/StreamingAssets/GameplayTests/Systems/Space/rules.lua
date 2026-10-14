@@ -34,6 +34,107 @@ do
 end
 
 do
+    -- 只展开正式矩形读数核对预期格子，不在夹具中复制合批算法或创建物理场景。
+    local function cell_key(x, y) return string.format("%d:%d", x, y) end
+    local function expected_rectangle(x, y, width, height, blocks)
+        local cells = {}
+        for cy = y, y + height - 1 do
+            for cx = x, x + width - 1 do cells[cell_key(cx, cy)] = blocks end
+        end
+        return cells
+    end
+    local function check(sample, expected, rectangle_count, label)
+        assert(type(sample) == "table" and type(sample.rectangles) == "table", label .. "缺少正式合批读数")
+        if rectangle_count then assert(#sample.rectangles == rectangle_count, label .. "矩形数量错误") end
+        local actual, count, blocked = {}, 0, 0
+        for _, rect in ipairs(sample.rectangles) do
+            assert(type(rect.x) == "number" and rect.x % 1 == 0 and type(rect.y) == "number" and rect.y % 1 == 0,
+                label .. "矩形起点必须是整数格")
+            assert(type(rect.width) == "number" and rect.width > 0 and rect.width % 1 == 0 and
+                type(rect.height) == "number" and rect.height > 0 and rect.height % 1 == 0,
+                label .. "矩形尺寸必须是正整数")
+            assert(type(rect.blocksPassage) == "boolean", label .. "缺少通行类别")
+            for y = rect.y, rect.y + rect.height - 1 do
+                for x = rect.x, rect.x + rect.width - 1 do
+                    local key = cell_key(x, y)
+                    assert(actual[key] == nil, label .. "同一格被多个碰撞矩形重复覆盖:" .. key)
+                    assert(expected[key] ~= nil, label .. "合批填上了本来没有碰撞的格子:" .. key)
+                    assert(expected[key] == rect.blocksPassage, label .. "阻挡与非阻挡类别错误:" .. key)
+                    actual[key], count = rect.blocksPassage, count + 1
+                    if rect.blocksPassage then blocked = blocked + 1 end
+                end
+            end
+        end
+        local expected_count = 0
+        for key, blocks in pairs(expected) do
+            assert(actual[key] ~= nil and actual[key] == blocks, label .. "漏掉真实碰撞格:" .. key)
+            expected_count = expected_count + 1
+        end
+        assert(count == expected_count, label .. "占地总数不守恒")
+        return count, blocked
+    end
+    local function check_rebuild(sample, changed, count, label)
+        assert(sample.rebuilt == changed and sample.rebuilds == count, label .. "缓存重建次数错误")
+    end
+    test.system("space", "ship_collider_batch", {}, function(data)
+        assert(data.operation == "ship_collider_batch" and data.scope == "production-domain", "缺少正式碰撞合批结果")
+        assert(data.full.inputPieces == 96 and data.overlapping.inputPieces == 97 and data.blockingOverlap.inputPieces == 98,
+            "完整地板与同格设备输入样本不完整")
+        local full = expected_rectangle(0, 0, 12, 8, false)
+        check(data.full, full, 1, "96格完整地板")
+        check(data.overlapping, full, 1, "同格控制台去重")
+        full["5:3"] = true
+        local count, blocked = check(data.blockingOverlap, full, nil, "地板与墙重叠时阻挡优先")
+        assert(count == 96 and blocked == 1 and count - blocked == 95, "同格墙不应重复生成地板接触")
+        check(data.blockingKinds, expected_rectangle(0, 0, 2, 1, true), 1, "相邻阻挡墙与设备")
+        return "覆盖96格地板合为1矩形、设备同格去重、阻挡优先和不同部件按通行类别合并。"
+    end, "飞船碰撞体合批与重叠去重")
+    test.system("space", "ship_collider_batch", {}, function(data)
+        local hole = expected_rectangle(0, 0, 3, 3, false)
+        hole["1:1"] = nil
+        check(data.hole, hole, nil, "中央空洞")
+        assert(#data.hole.rectangles > 1, "不能用整块矩形填上中央空洞")
+        local corner = expected_rectangle(0, 0, 3, 3, false)
+        corner["2:2"] = nil
+        check(data.corner, corner, nil, "缺角地板")
+        assert(#data.corner.rectangles > 1, "不能用整块矩形填上缺角")
+        check(data.islands, { ["0:0"] = false, ["1:1"] = false, ["5:0"] = false, ["6:0"] = false }, 3,
+            "斜角与分离岛")
+        local rotated = expected_rectangle(-4, -7, 3, 2, false)
+        for key, blocks in pairs(expected_rectangle(-9, -3, 2, 3, false)) do rotated[key] = blocks end
+        check(data.rotated, rotated, 2, "负坐标与奇偶旋转宽高")
+        check(data.exclusions, expected_rectangle(0, 0, 2, 1, false), 1, "管道保留与无碰撞部件排除")
+        return "覆盖洞和缺角保留、斜角/分离岛、负坐标旋转、管道保留以及线缆/光纤/开门/死亡部件排除。"
+    end, "飞船碰撞合批占地边界")
+    test.system("space", "ship_collider_batch", {}, function(data)
+        local closed = { ["0:0"] = false, ["1:0"] = true }
+        check(data.closed, closed, 2, "初次关闭舱门")
+        check_rebuild(data.closed, true, 1, "初次几何")
+        assert(#data.stableFrames == 5, "稳定帧读数不完整")
+        for _, frame in ipairs(data.stableFrames) do
+            check(frame, closed, 2, "稳定帧")
+            check_rebuild(frame, false, 1, "稳定帧复用")
+        end
+        check(data.moved, closed, 2, "船体位姿变化")
+        check_rebuild(data.moved, false, 1, "位移旋转速度变化")
+        check(data.massChanged, closed, 2, "货物改变质量")
+        check_rebuild(data.massChanged, false, 1, "普通质量变化")
+        assert(data.doorStructureRevisionUnchanged == true, "门开关样本不得依靠结构版本变化")
+        check(data.opened, { ["0:0"] = false }, 1, "打开门")
+        check_rebuild(data.opened, true, 2, "打开门失效")
+        check(data.reclosed, closed, 2, "重新关门")
+        check_rebuild(data.reclosed, true, 3, "重新关门失效")
+        check(data.removed, { ["1:0"] = true }, 1, "拆除地板")
+        check_rebuild(data.removed, true, 4, "拆除结构通知")
+        assert(data.destroyedByDamage == true, "真实伤害没有摧毁最后舱门")
+        check(data.emptied, {}, 0, "全部摧毁")
+        check_rebuild(data.emptied, true, 5, "真实摧毁通知")
+        assert(type(data.limitations) == "string" and #data.limitations > 0, "合批结果必须保留领域覆盖边界")
+        return "覆盖稳定帧、运动和质量复用，门开关独立失效，以及正式拆除/伤害通知后的重建。"
+    end, "飞船碰撞几何缓存与门开关")
+end
+
+do
     -- 独立相向接口样本走双方确认和断开事务，场景按钮与多人请求由额外流程验收。
     test.system("space", "ship_docking", {}, function(data)
         assert(data.operation == "ship_docking" and data.scope == "production-domain", "缺少正式对接领域结果")

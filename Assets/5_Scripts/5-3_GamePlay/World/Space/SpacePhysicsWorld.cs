@@ -22,10 +22,16 @@ namespace FlatWorld.Spaceflight
         internal GameObject Root;
         internal Rigidbody2D Rigidbody;
         internal readonly List<Collider2D> Colliders = new();
+        internal readonly List<SpacePhysicsShape> AppliedShapes = new();
+        internal readonly PhysicsShapeGroup2D BlockingShapes = new();
+        internal readonly PhysicsShapeGroup2D NonBlockingShapes = new();
+        internal readonly Dictionary<ShipState, ShipColliderGeometry> ShipGeometries = new();
+        internal readonly HashSet<ShipState> ShapeShips = new();
+        internal readonly List<ShipState> RemovedShapeShips = new();
+        internal bool ShapesApplied;
         internal SpacePhysicsIsland Island;
         internal Vector2 StartLocalPosition;
         internal float StartLocalAngle;
-        internal int FilterHash;
         public SpacePhysicsBody(string id) { Id = id; }
         #endregion
     }
@@ -115,6 +121,8 @@ namespace FlatWorld.Spaceflight
             if (body.Rigidbody != null) body.Rigidbody.simulated = false;
             if (body.Root != null) UnityEngine.Object.Destroy(body.Root);
             body.Root = null; body.Rigidbody = null; body.Colliders.Clear();
+            body.AppliedShapes.Clear(); body.BlockingShapes.Clear(); body.NonBlockingShapes.Clear();
+            body.ShapesApplied = false;
         }
 
         private void EnsureIslandScene(SpacePhysicsIsland island)
@@ -271,6 +279,9 @@ namespace FlatWorld.Spaceflight
                 body.Rigidbody.interpolation = RigidbodyInterpolation2D.None;
                 SpacePhysicsContactRelay relay = body.Root.AddComponent<SpacePhysicsContactRelay>();
                 relay.World = this; relay.Body = body;
+                body.Colliders.Add(body.Root.AddComponent<CustomCollider2D>());
+                body.Colliders.Add(body.Root.AddComponent<CustomCollider2D>());
+                foreach (Collider2D collider in body.Colliders) collider.sharedMaterial = material;
                 filtersDirty = true;
             }
             if (body.Root.scene != body.Island.Scene)
@@ -281,30 +292,7 @@ namespace FlatWorld.Spaceflight
                 filtersDirty = true;
             }
             body.Root.layer = collisionLayer;
-            int filterHash = body.Shapes.Count;
-            for (int i = 0; i < body.Shapes.Count; i++)
-            {
-                SpacePhysicsShape shape = body.Shapes[i];
-                unchecked { filterHash = filterHash * 31 + (shape.IgnoreFreeCircles ? 1 : 0); }
-                if (i == body.Colliders.Count) body.Colliders.Add(null);
-                Collider2D collider = body.Colliders[i];
-                if (collider == null || shape.Circle != (collider is CircleCollider2D))
-                {
-                    if (collider != null) { collider.enabled = false; UnityEngine.Object.Destroy(collider.gameObject); }
-                    GameObject node = new("Shape"); node.transform.SetParent(body.Root.transform, false);
-                    collider = shape.Circle ? node.AddComponent<CircleCollider2D>() : node.AddComponent<BoxCollider2D>();
-                    collider.sharedMaterial = material; body.Colliders[i] = collider; filtersDirty = true;
-                }
-                if (!collider.enabled) { collider.enabled = true; filtersDirty = true; }
-                collider.gameObject.layer = collisionLayer;
-                collider.transform.localPosition = shape.Offset;
-                collider.transform.localRotation = Quaternion.Euler(0f, 0f, shape.AngleDegrees);
-                if (collider is CircleCollider2D circle) circle.radius = shape.Size.x;
-                else if (collider is BoxCollider2D box) box.size = shape.Size;
-            }
-            if (body.FilterHash != filterHash) { body.FilterHash = filterHash; filtersDirty = true; }
-            for (int i = body.Shapes.Count; i < body.Colliders.Count; i++)
-                if (body.Colliders[i] != null && body.Colliders[i].enabled) { body.Colliders[i].enabled = false; filtersDirty = true; }
+            SynchronizeBodyShapes(body);
             Rigidbody2D rigidbody = body.Rigidbody;
             rigidbody.constraints = body.FreezeRotation ? RigidbodyConstraints2D.FreezeRotation : RigidbodyConstraints2D.None;
             rigidbody.useAutoMass = false;
@@ -321,16 +309,50 @@ namespace FlatWorld.Spaceflight
             body.StartLocalPosition = rigidbody.position; body.StartLocalAngle = rigidbody.rotation;
         }
 
+        private void SynchronizeBodyShapes(SpacePhysicsBody body)
+        {
+            bool changed = !body.ShapesApplied || body.Shapes.Count != body.AppliedShapes.Count;
+            for (int i = 0; !changed && i < body.Shapes.Count; i++)
+            {
+                SpacePhysicsShape current = body.Shapes[i], previous = body.AppliedShapes[i];
+                changed = current.Circle != previous.Circle || current.IgnoreFreeCircles != previous.IgnoreFreeCircles ||
+                    (current.Offset - previous.Offset).sqrMagnitude > 1e-10f ||
+                    (current.Size - previous.Size).sqrMagnitude > 1e-10f ||
+                    Mathf.Abs(Mathf.DeltaAngle(current.AngleDegrees, previous.AngleDegrees)) > .0001f;
+            }
+            if (!changed) return;
+            body.BlockingShapes.Clear(); body.NonBlockingShapes.Clear();
+            // 连片船件先合成矩形，再按是否阻挡自由物分装，原生组件数量不随部件增长。
+            foreach (SpacePhysicsShape shape in body.Shapes)
+            {
+                PhysicsShapeGroup2D group = shape.IgnoreFreeCircles ? body.NonBlockingShapes : body.BlockingShapes;
+                if (shape.Circle) group.AddCircle(shape.Offset, shape.Size.x);
+                else group.AddBox(shape.Offset, shape.Size, shape.AngleDegrees);
+            }
+            for (int i = 0; i < body.Colliders.Count; i++)
+            {
+                CustomCollider2D collider = (CustomCollider2D)body.Colliders[i];
+                PhysicsShapeGroup2D group = i == 0 ? body.BlockingShapes : body.NonBlockingShapes;
+                bool enabled = group.shapeCount > 0;
+                if (enabled) collider.SetCustomShapes(group);
+                else collider.ClearCustomShapes();
+                if (collider.enabled != enabled) { collider.enabled = enabled; filtersDirty = true; }
+            }
+            body.AppliedShapes.Clear(); body.AppliedShapes.AddRange(body.Shapes);
+            body.ShapesApplied = true;
+        }
+
         private void UpdateCollisionFilters()
         {
             if (!filtersDirty) return;
             foreach (SpacePhysicsBody hull in active)
             {
                 if (hull.FreeCircle) continue;
-                for (int i = 0; i < hull.Shapes.Count; i++)
+                for (int i = 0; i < hull.Colliders.Count; i++)
                 foreach (SpacePhysicsBody circle in active)
-                    if (circle.FreeCircle && circle.Island == hull.Island && circle.Colliders.Count > 0)
-                        Physics2D.IgnoreCollision(hull.Colliders[i], circle.Colliders[0], hull.Shapes[i].IgnoreFreeCircles);
+                    if (hull.Colliders[i].enabled && circle.FreeCircle && circle.Island == hull.Island &&
+                        circle.Colliders.Count > 0 && circle.Colliders[0].enabled)
+                        Physics2D.IgnoreCollision(hull.Colliders[i], circle.Colliders[0], i == 1);
             }
             filtersDirty = false;
         }

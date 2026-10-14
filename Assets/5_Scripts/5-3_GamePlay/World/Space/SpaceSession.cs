@@ -71,6 +71,7 @@ namespace FlatWorld.Spaceflight
         private void OnDestroy()
         {
             ResetSpacePhysics();
+            ReleaseShipColliderPresenters();
             gravitySources.Clear();
             ReleaseSurfaceShadows();
             UnregisterShipDamageFeedback();

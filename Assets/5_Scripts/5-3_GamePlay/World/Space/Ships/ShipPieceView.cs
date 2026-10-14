@@ -12,9 +12,8 @@ namespace FlatWorld.Spaceflight
         private MachineInteractionTarget machineTarget;
         private MachineDefinition machineDefinition;
         private SpriteRenderer visual;
-        private Rigidbody2D body;
         private Vector3 baseVisualPosition;
-        private BoxCollider2D hitBox;
+        private Rect interactionBounds;
         private SpriteRenderer[] tankParts;
         private Sprite tankSource;
         private int tankMask = -1;
@@ -23,7 +22,7 @@ namespace FlatWorld.Spaceflight
         private Sprite pipeSource;
         private ShipState boundShip;
         private ShipPieceState boundPiece;
-        private int boundWidth, boundHeight, boundQuarterTurns;
+        private int boundWidth, boundHeight, boundQuarterTurns, boundCellX, boundCellY;
         private double boundCellSize;
         private bool pendingMachineBinding;
         private bool registeredForInteraction;
@@ -50,7 +49,7 @@ namespace FlatWorld.Spaceflight
         }
         // 船上设备和舱门统一由交互键操作，鼠标左键不打开面板。
         public bool CanPointerInteract(Item actor) => false;
-        public bool ContainsInteractionPoint(Vector2 point) => hitBox != null && hitBox.OverlapPoint(point);
+        public bool ContainsInteractionPoint(Vector2 point) => interactionBounds.Contains((Vector2)transform.InverseTransformPoint(point));
         public void SetInteractionHighlighted(bool highlighted)
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);
@@ -58,7 +57,7 @@ namespace FlatWorld.Spaceflight
         public void Initialize(SpaceSession owner, ShipState ship, ShipPieceState piece, Item instance)
         {
             session = owner; shipId = ship.ShipId; pieceId = piece.PieceId; Item = instance;
-            visual = GetComponentInChildren<SpriteRenderer>(); body = GetComponent<Rigidbody2D>(); hitBox = GetComponent<BoxCollider2D>();
+            visual = GetComponentInChildren<SpriteRenderer>();
             baseVisualPosition = visual != null ? visual.transform.localPosition : Vector3.zero;
             Rebind(ship, piece);
         }
@@ -68,18 +67,25 @@ namespace FlatWorld.Spaceflight
             int height = piece.QuarterTurns % 2 == 0 ? piece.Height : piece.Width;
             if (!force && !pendingMachineBinding && ReferenceEquals(boundShip, ship) && ReferenceEquals(boundPiece, piece) &&
                 boundWidth == width && boundHeight == height && boundQuarterTurns == piece.QuarterTurns &&
+                boundCellX == piece.CellX && boundCellY == piece.CellY &&
                 boundCellSize == ship.CellSizeMeters)
                 return;
 
             boundShip = ship; boundPiece = piece; boundWidth = width; boundHeight = height;
             boundQuarterTurns = piece.QuarterTurns; boundCellSize = ship.CellSizeMeters;
+            boundCellX = piece.CellX; boundCellY = piece.CellY;
             shipId = ship.ShipId;
-            hitBox.size = new Vector2((float)(width * ship.CellSizeMeters - .05d), (float)(height * ship.CellSizeMeters - .05d));
-            hitBox.offset = new Vector2((float)((width - 1) * ship.CellSizeMeters * .5d), (float)((height - 1) * ship.CellSizeMeters * .5d));
+            Vector2 size = new((float)Math.Max(.001d, width * ship.CellSizeMeters - .05d),
+                (float)Math.Max(.001d, height * ship.CellSizeMeters - .05d));
+            Vector2 offset = new((float)((width - 1) * ship.CellSizeMeters * .5d), (float)((height - 1) * ship.CellSizeMeters * .5d));
+            interactionBounds = new Rect(offset - size * .5f, size);
+            transform.localPosition = new Vector3((float)((piece.CellX + .5d) * ship.CellSizeMeters),
+                (float)((piece.CellY + .5d) * ship.CellSizeMeters), 0f);
+            transform.localRotation = Quaternion.identity;
             if (visual != null)
             {
                 visual.transform.localRotation = Quaternion.Euler(0f, 0f, piece.QuarterTurns * 90f);
-                baseVisualPosition.x = hitBox.offset.x; baseVisualPosition.y = hitBox.offset.y;
+                baseVisualPosition.x = offset.x; baseVisualPosition.y = offset.y;
                 if (piece.Kind == ShipPieceKind.Engine)
                 {
                     if (engineExhaust == null) engineExhaust = visual.gameObject.AddComponent<ShipEngineExhaustPresenter>();
@@ -186,15 +192,8 @@ namespace FlatWorld.Spaceflight
             pipeMask = mask;
             pipeSource = definition.Sprite;
         }
-        public void SetPose(Vector2 position, float degrees, Vector3 visualLiftOffset)
+        public void SetVisualLift(Vector3 visualLiftOffset)
         {
-            // 静止船体不重复写入刚体与 Transform，避免无意义的物理同步。
-            if (body.position != position || Mathf.Abs(Mathf.DeltaAngle(body.rotation, degrees)) > .001f ||
-                (Vector2)transform.position != position)
-            {
-                body.position = position; body.rotation = degrees;
-                transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, degrees));
-            }
             if (visual != null)
             {
                 Vector3 local = baseVisualPosition + visualLiftOffset;
@@ -202,7 +201,6 @@ namespace FlatWorld.Spaceflight
             }
             SynchronizeDoorVisual();
             SynchronizeAirSupplyIndicator();
-            SynchronizePassageCollider();
         }
         public void OnInteractStart(Item actor)
         {
@@ -333,12 +331,18 @@ namespace FlatWorld.Spaceflight
             bool forceBindings = refreshBindings || viewBindingsDirty;
             viewBindingsDirty = false;
             visibleSurfaceShadows.Clear();
+            visibleShipColliderPresenters.Clear();
             foreach (ShipState ship in State.Ships)
             {
-                if (ship.IsWreck) { SynchronizeWreckView(ship); continue; }
+                if (ship.IsWreck)
+                {
+                    foreach (ShipPieceState piece in ship.Pieces) RemovePieceView(piece.PieceId);
+                    SynchronizeWreckView(ship); continue;
+                }
                 bool visible = IsVisible(ship);
                 ShipFlightState flight = visible ? GetFlight(ship.ShipId) : null;
                 float angle = (float)(ship.AngleRadians * 180d / Math.PI);
+                ShipColliderPresenter presenter = visible ? SynchronizeShipColliderPresenter(ship, angle) : null;
                 double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending
                     ? flight.HeightMeters : 0d;
                 SynchronizeSurfaceShadow(ship, visible, height, forceBindings);
@@ -355,6 +359,7 @@ namespace FlatWorld.Spaceflight
                         if (data == null) continue;
                         // 固定部件只投影权威快照，避免普通建筑模块重新登记地表和重复产生库存。
                         GameObject root = new("ShipPiece_" + piece.ItemId);
+                        root.transform.SetParent(presenter.Root.transform, false);
                         GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
                         SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
                         // 船体承载层依次绘制地板、管道、电线，统一压在机器和乘员下面。
@@ -386,22 +391,15 @@ namespace FlatWorld.Spaceflight
                             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
                             GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
                         { renderer.sprite = tile.sprite; renderer.color = tile.color; visual.transform.localScale = tile.transform.lossyScale; visual.transform.localPosition = tile.transform.GetColumn(3); }
-                        BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
-                        collider.size = new Vector2((float)(piece.Width * ship.CellSizeMeters - .05d), (float)(piece.Height * ship.CellSizeMeters - .05d));
-                        collider.offset = new Vector2((float)((piece.Width - 1) * ship.CellSizeMeters * .5d), (float)((piece.Height - 1) * ship.CellSizeMeters * .5d));
-                        collider.isTrigger = !piece.BlocksPassage;
-                        Rigidbody2D body = root.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic;
-                        body.gravityScale = 0; body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.Interpolate;
-                        int layer = LayerMask.NameToLayer("Collider"); if (layer >= 0) root.layer = layer;
                         view = root.AddComponent<ShipPieceView>(); view.Initialize(this, ship, piece, null);
                         views[piece.PieceId] = view;
                     }
-                    Vector2 position = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters);
+                    if (view.transform.parent != presenter.Root.transform) view.transform.SetParent(presenter.Root.transform, false);
                     view.Rebind(ship, piece, forceBindings);
-                    view.SetPose(position, angle, visualLiftOffset);
-                    if (IsSpaceView) SpaceMgr.ExistingInstance?.MovePresentationToSector(view.gameObject, ship.Sector);
+                    view.SetVisualLift(visualLiftOffset);
                 }
             }
+            RemoveExpiredShipColliderPresenters();
             RemoveExpiredSurfaceShadows();
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return;
@@ -437,6 +435,7 @@ namespace FlatWorld.Spaceflight
             UnbindShipMachineVisualEvents();
             if (State != null) ReleaseLooseViews();
             foreach (string id in new System.Collections.Generic.List<string>(views.Keys)) RemovePieceView(id);
+            ReleaseShipColliderPresenters();
             if (passengerVisual != null) passengerVisual.transform.localPosition = passengerVisualPosition;
             passengerVisual = null;
         }

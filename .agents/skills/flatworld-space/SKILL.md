@@ -28,6 +28,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 - 固定步等待 IsGameplayReady；SpaceSession.Physics2D 只登记输入、质量与形状，SpacePhysicsWorld 使用真实 Dynamic Rigidbody2D/Collider2D 和独立 PhysicsScene2D 推进太空飞船、残骸、自由玩家及散落物，随后读取结果到业务状态。不得再对这些物体调用自研积分、扫掠或冲量；ShipCollisionSimulation 仅处理地表作用域。地表起降和手动落地继续原流程，太空经过星体不自动进入地表。
 - 物理代理不依赖画面加载；稀疏网格只分配局部物理岛，近处物体共用场景，场景及代理复用。碰撞圆支持物品之间、物品与玩家及船体互撞；支撑乘员的圆归整船，质量已在整船内，独立玩家和散落物不重复加入船重。地板等非阻挡部件对自由圆忽略碰撞，舱壁与关闭的舱门保留阻挡。原生接触回报只结算损伤，不再追加自研反作用。
+- ShipColliderGeometry 按本地格去重、阻挡优先并合并同类连续矩形，保留洞和分离区域；StructureRevision 或门开关改变才重建。太空计算整体使用阻挡/非阻挡两个 CustomCollider2D，支持乘员圆归阻挡组；几何未变不重新提交。地表纯数学接触不走这条合批链。
 - 采用 Unity 2022.3 的 velocity/drag API；局部物理以米为单位，读回原生位移差保留双精度坐标余量，同一引力源中的物理岛以星体公转为平移参考。每固定步至少4个物理子步；只在独立场景 Simulate 期间临时提高平移/旋转上限，并在 finally 恢复，不能永久改地面物理。视图刚体只显示结果，所有权在权威端；会话重载、结束和销毁释放计算场景。
 - SpaceSession 跨场景保留，但 Single 加载会卸载独立计算场景；物理岛复用前检查 Scene 有效/已加载及 PhysicsScene2D 有效，失效时清理代理与碰撞体缓存，按权威业务状态重建场景和碰撞过滤。
 - 宇宙位置是 `SpaceSectorId(long X/Y)` 加所属区内 double 米，星区边长256000米、局部范围 `[-128000,128000)`；跨区用 Normalize/Relative，先算整数星区差再转局部距离，禁止合成巨大绝对 double。Ship/Assembly/Motion/Body 与接触快照显式保存 Sector；成员、重心、点速度与接触成对转换到指定参考区，不用全局静态上下文。
@@ -74,12 +75,13 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。
+- ShipColliderPresenter 每船一个表现刚体和一个阻挡 CustomCollider2D；ShipPieceView 是其子节点，只留贴图/交互，交互范围读局部矩形，不挂逐件刚体或地板 Trigger。移动整船根节点，跨区只迁移该根；卸载或结束释放。
 - 散落物只有地表升降时叠加贴图高度，太空掉落不继承船体残留地表高度；偏移保留原局部位置，触地、拾取和卸载时恢复。
 - 玩家须在实际 Console 的交互半径内开 UI_Ship，离开关闭；自动导航器仅经光纤供能力，线路/地板/墙不作控制台入口。飞船面板会话互斥，CanOpenShipPanel 共用打开/切换/刷新校验。
 - 船上设备 UI 只由交互键打开，ShipPieceView 拒绝鼠标点选；Esc 优先取消导航选点，再退出驾驶，右键只使用手持物。
 - 驾驶进入与联机接管共用 BindConsoleControl：保留本船乘员 LocalX/LocalY，首次绑定或换船从玩家当前位置换算；驾驶期间只随船同步，不吸附控制台中心，退出沿用清输入与恢复镜头。
 - 船上普通机器按 `MachineDefinition.IsConnectionLine` 排除连接线路，不能只看 `ShipPieceKind`；落点使用真实部件碰撞范围。机器休眠会释放交互对象，实际开始交互时须在本船作用域重新取得当前对象，外观缓存不能作为永久操作入口。
-- 舱门只经交互键 TryToggleDoor，鼠标点选拒绝；DoorOpen 持久化，通行/碰撞读 BlocksPassage，开门留 Trigger，通道有人拒绝关门，不改变 SealsAtmosphere。
+- 舱门只经交互键 TryToggleDoor，鼠标点选拒绝；DoorOpen 持久化，通行/碰撞读 BlocksPassage，开门移除该格阻挡并保留数据交互范围，通道有人拒绝关门，不改变 SealsAtmosphere。
 - 船部件能力 ID 为“船体部件模块”，Prefab Module_ShipPart，脚本 Mod_ShipPart；部件分类共用 SpaceSession.ResolvePartConfiguration，包含普通机器与线路的自动识别，测试不能把缺少显式模块误判为物品未注册。固定船补给按成员身份及共享罐实际组容量分配，GM 船复用正常起飞条件。
 - 引擎喷焰由 ShipEngineExhaustPresenter 读取 SpaceSession.GetEngineOutput；固定步清空出力，起飞/巡航成功消耗真实燃料后才发布，不按移动或 Ignited 猜测。局部粒子随安装朝向、机身与升空偏移，按 vehicle -3 排在船地板/管线后面，停推残留继续同步并自然消退，禁用/卸载清理；出力不进入存档。
 

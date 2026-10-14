@@ -89,35 +89,56 @@ namespace FlatWorld.Spaceflight
 
         private void AddSpaceShipShapes(SpacePhysicsBody body, ShipAssemblyState assembly)
         {
-            foreach (string id in assembly.MemberShipIds)
+            body.ShapeShips.Clear();
+            for (int memberIndex = 0; memberIndex < assembly.MemberShipIds.Count; memberIndex++)
             {
+                string id = assembly.MemberShipIds[memberIndex];
                 ShipState ship = GetShip(id);
-                foreach (ShipPieceState piece in ship.Pieces)
+                if (ship == null) continue;
+                body.ShapeShips.Add(ship);
+                if (!body.ShipGeometries.TryGetValue(ship, out ShipColliderGeometry geometry))
+                    body.ShipGeometries.Add(ship, geometry = new ShipColliderGeometry());
+                geometry.Synchronize(ship);
+                ShipAssemblyMemberState member = memberIndex < assembly.MemberTransforms.Count &&
+                    assembly.MemberTransforms[memberIndex].ShipId == id ? assembly.MemberTransforms[memberIndex] : null;
+                for (int rectangleIndex = 0; rectangleIndex < geometry.Rectangles.Count; rectangleIndex++)
                 {
-                    if (!piece.IsAlive || piece.Kind is ShipPieceKind.Wire or ShipPieceKind.Fiber ||
-                        piece.Kind == ShipPieceKind.Door && piece.DoorOpen) continue;
-                    int width = Math.Max(1, (piece.QuarterTurns & 1) == 0 ? piece.Width : piece.Height);
-                    int height = Math.Max(1, (piece.QuarterTurns & 1) == 0 ? piece.Height : piece.Width);
-                    ShipGeometry.LocalToWorld(ship, (piece.CellX + width * .5d) * ship.CellSizeMeters,
-                        (piece.CellY + height * .5d) * ship.CellSizeMeters, out double x, out double y);
-                    Vector2 local = SpacePhysicsShipOffset(ship.Sector, new SpaceVector2(x, y), assembly);
-                    body.Shapes.Add(new SpacePhysicsShape(local, new Vector2((float)(width * ship.CellSizeMeters), (float)(height * ship.CellSizeMeters)),
-                        (float)((ship.AngleRadians - assembly.AngleRadians) * Mathf.Rad2Deg), ignoreFreeCircles: !piece.BlocksPassage));
+                    ShipCollisionRect rectangle = geometry.Rectangles[rectangleIndex];
+                    Vector2 local = SpacePhysicsShipOffset(ship, (rectangle.X + rectangle.Width * .5d) * ship.CellSizeMeters,
+                        (rectangle.Y + rectangle.Height * .5d) * ship.CellSizeMeters, assembly, member);
+                    body.Shapes.Add(new SpacePhysicsShape(local, new Vector2((float)(rectangle.Width * ship.CellSizeMeters),
+                        (float)(rectangle.Height * ship.CellSizeMeters)),
+                        (float)((member?.RelativeAngleRadians ?? ship.AngleRadians - assembly.AngleRadians) * Mathf.Rad2Deg),
+                        ignoreFreeCircles: !rectangle.BlocksPassage));
                 }
                 foreach (SpacePassengerState passenger in State.Passengers)
                 {
                     if (!passenger.Supported || passenger.ShipId != id) continue;
-                    ShipGeometry.LocalToWorld(ship, passenger.LocalX, passenger.LocalY, out double x, out double y);
                     // 支撑乘员的质量已计入整船，碰撞圆也归同一个原生刚体，避免重复计重。
-                    body.Shapes.Add(new SpacePhysicsShape(SpacePhysicsShipOffset(ship.Sector, new SpaceVector2(x, y), assembly),
+                    body.Shapes.Add(new SpacePhysicsShape(SpacePhysicsShipOffset(ship, passenger.LocalX, passenger.LocalY, assembly, member),
                         new Vector2(.3f, .3f), circle: true));
                 }
             }
+            body.RemovedShapeShips.Clear();
+            foreach (ShipState ship in body.ShipGeometries.Keys)
+                if (!body.ShapeShips.Contains(ship)) body.RemovedShapeShips.Add(ship);
+            foreach (ShipState ship in body.RemovedShapeShips) body.ShipGeometries.Remove(ship);
+            body.ShapeShips.Clear(); body.RemovedShapeShips.Clear();
         }
 
-        private static Vector2 SpacePhysicsShipOffset(SpaceSectorId sector, SpaceVector2 position, ShipAssemblyState assembly)
+        private static Vector2 SpacePhysicsShipOffset(ShipState ship, double localX, double localY,
+            ShipAssemblyState assembly, ShipAssemblyMemberState member)
         {
-            SpaceVector2 delta = SpaceSectorCoordinates.Relative(sector, position, assembly.Sector) - new SpaceVector2(assembly.PositionX, assembly.PositionY);
+            if (member != null)
+            {
+                // 直接用成员相对变换，避免整船平移和旋转造成形状坐标往返换算漂移。
+                ShipGeometry.Rotate(localX - ship.CenterOfMassLocalX, localY - ship.CenterOfMassLocalY,
+                    member.RelativeAngleRadians, out double offsetX, out double offsetY);
+                return new Vector2((float)(member.OffsetX + offsetX), (float)(member.OffsetY + offsetY));
+            }
+            ShipGeometry.LocalToWorld(ship, localX, localY, out double worldX, out double worldY);
+            SpaceVector2 delta = SpaceSectorCoordinates.Relative(ship.Sector, new SpaceVector2(worldX, worldY), assembly.Sector) -
+                new SpaceVector2(assembly.PositionX, assembly.PositionY);
             ShipGeometry.Rotate(delta.X, delta.Y, -assembly.AngleRadians, out double x, out double y);
             return new Vector2((float)x, (float)y);
         }

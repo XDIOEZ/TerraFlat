@@ -18,7 +18,7 @@ namespace FlatWorld.Spaceflight
             // 通道有人时保持打开，不通过挪动乘员来强行关门。
             if (door.DoorOpen && IsDoorwayOccupied(ship, door)) return false;
             door.DoorOpen = !door.DoorOpen;
-            if (views.TryGetValue(pieceId, out ShipPieceView view) && view != null) view.SynchronizePassageCollider();
+            RefreshShipPassageGeometry(ship);
             return true;
         }
 
@@ -51,7 +51,8 @@ namespace FlatWorld.Spaceflight
             foreach (Collider2D collider in doorwayOverlaps)
                 if (collider != null && collider.attachedRigidbody != null &&
                     collider.attachedRigidbody.bodyType != RigidbodyType2D.Static &&
-                    collider.GetComponentInParent<ShipPieceView>() == null) return true;
+                    collider.GetComponentInParent<ShipPieceView>() == null &&
+                    !IsShipPresentationCollider(collider)) return true;
             return false;
         }
         #endregion
@@ -65,15 +66,6 @@ namespace FlatWorld.Spaceflight
         private SpriteRenderer[] doorLeaves;
         private Vector3[] doorClosedOffsets;
         private float doorSlide;
-
-        public void SynchronizePassageCollider()
-        {
-            if (hitBox != null && boundPiece != null)
-            {
-                bool trigger = !boundPiece.BlocksPassage;
-                if (hitBox.isTrigger != trigger) hitBox.isTrigger = trigger;
-            }
-        }
 
         private void SynchronizeDoorVisual()
         {

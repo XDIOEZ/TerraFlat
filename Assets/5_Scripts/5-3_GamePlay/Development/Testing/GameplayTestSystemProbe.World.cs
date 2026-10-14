@@ -39,7 +39,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/slot_identity", WorldProcessingIdentity);
         operations.Add("processing/atomic_output", WorldProcessingAtomicOutput);
         foreach (string operation in new[] { "ship_structure", "ship_docking", "ship_mass",
-                     "ship_propulsion", "ship_contacts", "ship_snapshots", "ship_engine_placement", "ship_optical" })
+                     "ship_propulsion", "ship_contacts", "ship_snapshots", "ship_engine_placement", "ship_optical",
+                     "ship_collider_batch" })
             operations.Add("space/" + operation, _ => GameplayTestShipProbe.Capture(operation));
         operations.Add("space/cabin_topology", WorldCabinTopology);
         operations.Add("space/ship_fuel", WorldShipFuel);

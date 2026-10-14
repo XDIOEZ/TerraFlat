@@ -13,7 +13,7 @@ public static class GameplayTestShipProbe
 
     public static bool Supports(string operation) => operation is "ship_structure" or "ship_docking" or
         "ship_atmosphere" or "ship_mass" or "ship_propulsion" or "ship_contacts" or
-        "ship_snapshots" or "ship_engine_placement" or "ship_fuel" or "ship_optical";
+        "ship_snapshots" or "ship_engine_placement" or "ship_fuel" or "ship_optical" or "ship_collider_batch";
 
     // 样本不注册到正式会话，也不推进当前玩家、机器、存档或世界时钟。
     public static JObject Capture(string operation)
@@ -30,6 +30,7 @@ public static class GameplayTestShipProbe
             "ship_engine_placement" => CaptureEnginePlacement(),
             "ship_fuel" => CaptureFuel(),
             "ship_optical" => CaptureOptical(),
+            "ship_collider_batch" => CaptureColliderBatch(),
             _ => throw new ArgumentException("未知飞船领域探针：" + operation, nameof(operation))
         };
         result["operation"] = operation;
@@ -78,6 +79,135 @@ public static class GameplayTestShipProbe
         var result = new JArray();
         foreach (ShipState ship in ships) result.Add(ShipReading(ship));
         return result;
+    }
+
+    #endregion
+
+    #region 船体碰撞格合批
+
+    private static JObject ColliderReading(ShipColliderGeometry geometry, bool rebuilt)
+    {
+        var rectangles = new JArray();
+        foreach (ShipCollisionRect rectangle in geometry.Rectangles)
+            rectangles.Add(new JObject
+            {
+                ["x"] = rectangle.X, ["y"] = rectangle.Y,
+                ["width"] = rectangle.Width, ["height"] = rectangle.Height,
+                ["blocksPassage"] = rectangle.BlocksPassage
+            });
+        return new JObject { ["rebuilt"] = rebuilt, ["rebuilds"] = geometry.RebuildCount,
+            ["rectangles"] = rectangles };
+    }
+
+    private static JObject ColliderSample(ShipState ship)
+    {
+        var geometry = new ShipColliderGeometry();
+        JObject reading = ColliderReading(geometry, geometry.Synchronize(ship));
+        reading["inputPieces"] = ship.Pieces.Count;
+        return reading;
+    }
+
+    private static JObject CaptureColliderBatch()
+    {
+        var full = NewShip("collider-full");
+        for (int y = 0; y < 8; y++)
+        for (int x = 0; x < 12; x++)
+            full.Pieces.Add(Piece($"collider-floor-{x}-{y}", ShipPieceKind.Floor, x, y));
+        var fullGeometry = new ShipColliderGeometry();
+        JObject initial = ColliderReading(fullGeometry, fullGeometry.Synchronize(full));
+        initial["inputPieces"] = full.Pieces.Count;
+        full.Pieces.Add(Piece("collider-console", ShipPieceKind.Console, 5, 3));
+        full.NotifyStructureChanged();
+        JObject overlapping = ColliderReading(fullGeometry, fullGeometry.Synchronize(full));
+        overlapping["inputPieces"] = full.Pieces.Count;
+        var wall = Piece("collider-wall", ShipPieceKind.Wall, 5, 3);
+        wall.BlocksMovement = true;
+        full.Pieces.Add(wall); full.NotifyStructureChanged();
+        JObject blockingOverlap = ColliderReading(fullGeometry, fullGeometry.Synchronize(full));
+        blockingOverlap["inputPieces"] = full.Pieces.Count;
+
+        var hole = NewShip("collider-hole");
+        var corner = NewShip("collider-corner");
+        for (int y = 0; y < 3; y++)
+        for (int x = 0; x < 3; x++)
+        {
+            if (x != 1 || y != 1) hole.Pieces.Add(Piece($"hole-{x}-{y}", ShipPieceKind.Floor, x, y));
+            if (x != 2 || y != 2) corner.Pieces.Add(Piece($"corner-{x}-{y}", ShipPieceKind.Floor, x, y));
+        }
+        var islands = NewShip("collider-islands");
+        islands.Pieces.Add(Piece("island-origin", ShipPieceKind.Floor, 0, 0));
+        islands.Pieces.Add(Piece("island-diagonal", ShipPieceKind.Floor, 1, 1));
+        islands.Pieces.Add(Piece("island-left", ShipPieceKind.Floor, 5, 0));
+        islands.Pieces.Add(Piece("island-right", ShipPieceKind.Floor, 6, 0));
+        var rotated = NewShip("collider-rotated");
+        var odd = Piece("rotated-odd", ShipPieceKind.Floor, -4, -7);
+        odd.Width = 2; odd.Height = 3; odd.QuarterTurns = -1;
+        rotated.Pieces.Add(odd);
+        var even = Piece("rotated-even", ShipPieceKind.Floor, -9, -3);
+        even.Width = 2; even.Height = 3; even.QuarterTurns = 2;
+        rotated.Pieces.Add(even);
+        var exclusions = NewShip("collider-exclusions");
+        exclusions.Pieces.Add(Piece("exclusion-floor", ShipPieceKind.Floor, 0, 0));
+        exclusions.Pieces.Add(Piece("exclusion-pipe", ShipPieceKind.Pipe, 1, 0));
+        exclusions.Pieces.Add(Piece("exclusion-wire", ShipPieceKind.Wire, 20, 20));
+        exclusions.Pieces.Add(Piece("exclusion-fiber", ShipPieceKind.Fiber, 21, 20));
+        var openDoor = Piece("exclusion-open-door", ShipPieceKind.Door, 22, 20);
+        openDoor.BlocksMovement = true; openDoor.DoorOpen = true;
+        exclusions.Pieces.Add(openDoor);
+        var destroyed = Piece("exclusion-destroyed", ShipPieceKind.Floor, 23, 20);
+        destroyed.Destroyed = true; exclusions.Pieces.Add(destroyed);
+        var dead = Piece("exclusion-dead", ShipPieceKind.Equipment, 24, 20);
+        dead.Health = 0d; exclusions.Pieces.Add(dead);
+        var blockingKinds = NewShip("collider-blocking-kinds");
+        blockingKinds.Pieces.Add(Piece("blocking-floor-left", ShipPieceKind.Floor, 0, 0));
+        blockingKinds.Pieces.Add(Piece("blocking-floor-right", ShipPieceKind.Floor, 1, 0));
+        var blockingWall = Piece("blocking-kind-wall", ShipPieceKind.Wall, 0, 0);
+        var blockingEquipment = Piece("blocking-kind-equipment", ShipPieceKind.Equipment, 1, 0);
+        blockingWall.BlocksMovement = true; blockingEquipment.BlocksMovement = true;
+        blockingKinds.Pieces.Add(blockingWall); blockingKinds.Pieces.Add(blockingEquipment);
+
+        var cached = NewShip("collider-cache");
+        var floor = Piece("cache-floor", ShipPieceKind.Floor, 0, 0);
+        var door = Piece("cache-door", ShipPieceKind.Door, 1, 0);
+        door.BlocksMovement = true;
+        cached.Pieces.Add(floor); cached.Pieces.Add(door);
+        var cache = new ShipColliderGeometry();
+        JObject closed = ColliderReading(cache, cache.Synchronize(cached));
+        var stableFrames = new JArray();
+        for (int index = 0; index < 5; index++)
+            stableFrames.Add(ColliderReading(cache, cache.Synchronize(cached)));
+        cached.PositionX = 123d; cached.PositionY = -45d; cached.AngleRadians = .7d;
+        cached.VelocityX = 9d; cached.VelocityY = -2d; cached.AngularVelocityRadiansPerSecond = .5d;
+        JObject moved = ColliderReading(cache, cache.Synchronize(cached));
+        cached.MassContributions.Add(new ShipMassContribution { SourceId = "collider-cargo",
+            LocalX = 4d, LocalY = 2d, MassKg = 30d, Kind = ShipMassKind.Cargo });
+        ShipStructureService.RecalculateMass(cached);
+        JObject massChanged = ColliderReading(cache, cache.Synchronize(cached));
+        ulong beforeDoorRevision = cached.StructureRevision;
+        // 门只改变通行状态，领域缓存必须自行察觉；结构拆除仍使用正式失效通知。
+        door.DoorOpen = true;
+        JObject opened = ColliderReading(cache, cache.Synchronize(cached));
+        door.DoorOpen = false;
+        JObject reclosed = ColliderReading(cache, cache.Synchronize(cached));
+        ulong afterDoorRevision = cached.StructureRevision;
+        cached.Pieces.Remove(floor); cached.NotifyStructureChanged();
+        JObject removed = ColliderReading(cache, cache.Synchronize(cached));
+        bool destroyedByDamage = ShipStructureService.ApplyDamage(cached, door.PieceId, door.Health, "Lua 碰撞合批样本");
+        JObject emptied = ColliderReading(cache, cache.Synchronize(cached));
+
+        return new JObject
+        {
+            ["full"] = initial, ["overlapping"] = overlapping, ["blockingOverlap"] = blockingOverlap,
+            ["hole"] = ColliderSample(hole), ["corner"] = ColliderSample(corner),
+            ["islands"] = ColliderSample(islands), ["rotated"] = ColliderSample(rotated),
+            ["exclusions"] = ColliderSample(exclusions), ["blockingKinds"] = ColliderSample(blockingKinds),
+            ["closed"] = closed,
+            ["stableFrames"] = stableFrames, ["moved"] = moved, ["massChanged"] = massChanged,
+            ["opened"] = opened, ["reclosed"] = reclosed, ["removed"] = removed, ["emptied"] = emptied,
+            ["doorStructureRevisionUnchanged"] = beforeDoorRevision == afterDoorRevision,
+            ["destroyedByDamage"] = destroyedByDamage,
+            ["limitations"] = "只读正式格合批与缓存输出，不创建 PhysicsScene2D；实际组件、船体碰撞和性能由现场验收。"
+        };
     }
 
     #endregion

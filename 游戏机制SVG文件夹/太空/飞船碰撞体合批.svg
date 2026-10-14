@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="870" viewBox="0 0 1280 870">
+  <defs>
+    <style>
+      text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#e8eef7}
+      .title{font-size:32px;font-weight:bold}.label{font-size:23px;font-weight:bold}.body{font-size:18px}.small{font-size:16px;fill:#b8c7dc}
+      .panel{fill:#19293c;stroke:#334b67;stroke-width:2}.old{fill:#294256;stroke:#ed9b65;stroke-width:2}
+      .new{fill:#294256;stroke:#63e0be;stroke-width:4}.line{stroke:#57738e;stroke-width:1}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10" fill="#63e0be"/></marker>
+    <pattern id="oldGrid" width="43" height="43" patternUnits="userSpaceOnUse"><rect x="3" y="3" width="37" height="37" rx="3" class="old"/></pattern>
+    <pattern id="newGrid" width="43" height="43" patternUnits="userSpaceOnUse"><path d="M43 0H0V43" class="line"/></pattern>
+  </defs>
+  <rect width="1280" height="870" fill="#0e1927"/>
+  <text x="48" y="57" class="title">飞船碰撞体合批：船件分开管理，物理按整船集中处理</text>
+  <text x="48" y="89" class="small">这是代码结构与规则示意；当前 Play Mode 未重新加载，场景效果由你验收。</text>
+  <rect x="40" y="116" width="560" height="312" rx="16" class="panel"/>
+  <rect x="676" y="116" width="560" height="312" rx="16" class="panel"/>
+  <text x="65" y="157" class="label">之前：每块地板都独立挂组件</text>
+  <rect x="70" y="180" width="258" height="172" fill="url(#oldGrid)"/>
+  <text x="350" y="218" class="body">示意 6 × 4 = 24 格</text>
+  <text x="350" y="257" class="body">24 个表现刚体</text>
+  <text x="350" y="291" class="body">24 个 BoxCollider2D</text>
+  <text x="65" y="397" class="small">计算层虽共用刚体，形状仍按每块船件创建。</text>
+  <path d="M614 270H661" stroke="#63e0be" stroke-width="5" marker-end="url(#arrow)"/>
+  <text x="702" y="157" class="label">现在：连续同类格子先合成大矩形</text>
+  <rect x="706" y="182" width="254" height="168" rx="3" class="new"/>
+  <rect x="706" y="182" width="254" height="168" fill="url(#newGrid)"/>
+  <text x="981" y="218" class="body">贴图仍是 24 块</text>
+  <text x="981" y="257" class="body">占地变成 1 个矩形</text>
+  <text x="981" y="291" class="body">表现刚体每船 1 个</text>
+  <text x="702" y="397" class="small">洞、缺角、分离区域继续拆成多个矩形，不补成实心。</text>
+  <rect x="40" y="448" width="560" height="223" rx="16" class="panel"/>
+  <rect x="676" y="448" width="560" height="223" rx="16" class="panel"/>
+  <text x="65" y="489" class="label">你在层级面板里看到的船</text>
+  <text x="65" y="528" class="body">ShipView：1 个刚体 + 1 个阻挡碰撞组件</text>
+  <path d="M84 546V616M84 559H107M84 590H107M84 618H107" fill="none" stroke="#57738e" stroke-width="2"/>
+  <text x="118" y="567" class="body">地板：贴图，无刚体 / 无碰撞组件</text>
+  <text x="118" y="598" class="body">墙、门：贴图，阻挡归整船组件</text>
+  <text x="118" y="629" class="body">设备：保留库存、模块和数据交互范围</text>
+  <text x="702" y="489" class="label">独立场景里计算的船或对接整体</text>
+  <text x="702" y="528" class="body">1 个动态刚体 + 2 个 CustomCollider2D</text>
+  <rect x="703" y="551" width="14" height="14" fill="#ed9b65"/>
+  <text x="728" y="566" class="body">阻挡组：墙、关闭的门、乘员圆形</text>
+  <rect x="703" y="585" width="14" height="14" fill="#63e0be"/>
+  <text x="728" y="600" class="body">非阻挡组：地板等，忽略自由玩家 / 物品</text>
+  <text x="702" y="640" class="small">同格优先保留阻挡组，减少重复形状和接触。</text>
+  <rect x="40" y="691" width="1196" height="139" rx="16" class="panel"/>
+  <text x="65" y="732" class="label">什么时候重建？</text>
+  <text x="65" y="770" class="body">建造 / 拆除 / 破坏 / 分裂 / 门开关 → 更新矩形和碰撞组件</text>
+  <text x="65" y="803" class="small">普通平移和旋转复用已有形状；船上乘员移动、重心和相对几何变化时更新计算形状。地表纯数学接触未改。</text>
+</svg>
