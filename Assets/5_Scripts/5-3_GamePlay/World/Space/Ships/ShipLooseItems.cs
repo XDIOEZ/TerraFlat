@@ -153,9 +153,11 @@ namespace FlatWorld.Spaceflight
             // 升高只叠加显示偏移，保留贴图原来的局部位置和旋转缩放关系。
             Vector3 offset = renderer.transform.parent.InverseTransformVector(Vector3.up * rise);
             renderer.transform.localPosition = visual.LocalPosition + offset;
+            ShipSurfacePresentation.SetElevated(item.gameObject, true, ShipSurfacePresentation.PassengerCategory);
         }
         private void RestoreLooseItemHeightVisual(Item item)
         {
+            if (item != null) ShipSurfacePresentation.SetElevated(item.gameObject, false, ShipSurfacePresentation.PassengerCategory);
             if (ReferenceEquals(item, null) || !looseHeightVisuals.Remove(item, out var visual)) return;
             if (visual.Renderer != null) visual.Renderer.transform.localPosition = visual.LocalPosition;
         }

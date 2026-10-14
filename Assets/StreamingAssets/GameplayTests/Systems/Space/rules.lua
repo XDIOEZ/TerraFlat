@@ -1,6 +1,53 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
 do
+    -- 点火、起降和太空阶段调用正式空地规则；真实贴图、碰撞和联机由现场验收。
+    test.system("space", "ship_surface_state", {}, function(data)
+        local function near(actual, expected, label)
+            assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) <= 0.0000001, label)
+        end
+        assert(data.operation == "ship_surface_state" and data.scope == "production-domain", "缺少正式飞船空地结果")
+        near(data.airborneVisualRise, 1, "空中阈值必须是贴图升高 1 Unity 单位")
+        local expected = {
+            ["no-flight"] = {0, false, false}, landed = {0, false, false},
+            ["landed-stale-height"] = {0, false, false}, floating = {0, false, false},
+            ["ignited-ground"] = {0, false, true}, ["lifting-negative"] = {0, false, true},
+            ["lifting-zero"] = {0, false, true}, ["lifting-below"] = {.99996, false, true},
+            ["lifting-threshold"] = {1, true, true}, ["lifting-above"] = {1.00004, true, true},
+            ["lifting-unpowered"] = {1, true, true}, ["descending-above"] = {1.00004, true, true},
+            ["descending-threshold"] = {1, true, true}, ["descending-below"] = {.99996, false, true},
+            ["descending-zero"] = {0, false, true}, cruising = {0, true, true},
+            ["cruising-unpowered"] = {0, true, true}
+        }
+        assert(type(data.samples) == "table" and #data.samples == 17, "空地边界与阶段样本不完整")
+        local seen = {}
+        for _, sample in ipairs(data.samples) do
+            local value = expected[sample.name]
+            assert(value and not seen[sample.name], "未知或重复空地样本：" .. sample.name)
+            seen[sample.name] = true
+            near(sample.visualRise, value[1], "贴图升高错误：" .. sample.name)
+            assert(sample.airborne == value[2], "空地模式错误：" .. sample.name)
+            assert(sample.elevated == value[3], "点火或起降排序资格错误：" .. sample.name)
+            local damage, airborne = sample.damage, value[2]
+            assert(type(damage) == "table", "缺少投送资格矩阵：" .. sample.name)
+            assert(damage.melee == not airborne, "普通近战空地资格错误：" .. sample.name)
+            assert(damage["projectile-without-airborne"] == not airborne,
+                "只有投射物标记不能绕过空中命中能力：" .. sample.name)
+            assert(damage.ranged == true, "可命中空中的远程投射物必须兼容地面与空中：" .. sample.name)
+            assert(damage["airborne-capability"] == not airborne,
+                "只有空中能力的近身攻击不能伤害空中船：" .. sample.name)
+            assert(damage["airborne-only"] == false and damage["airborne-only-projectile"] == airborne,
+                "空中限定攻击必须同时具备投射物和空中命中能力：" .. sample.name)
+            assert(damage["airborne-only-without-capability"] == false and
+                damage["airborne-only-projectile-without-capability"] == false,
+                "缺少空中命中能力的空中限定攻击必须拒绝：" .. sample.name)
+        end
+        assert(type(data.limitations) == "string" and #data.limitations > 0, "空地结果必须保留覆盖边界")
+        return "覆盖点火排序资格、1 单位阈值两侧、降落恢复、熄火和太空阶段，以及全部八种投送能力组合。"
+    end, "飞船点火排序与空地伤害模式")
+end
+
+do
     -- 独立结构样本验证四邻支撑、真实伤害后的分裂和旋转占地，不代表已执行场景放置。
     test.system("space", "ship_structure", {}, function(data)
         assert(data.operation == "ship_structure" and data.scope == "production-domain", "缺少正式结构领域结果")

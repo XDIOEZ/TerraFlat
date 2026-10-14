@@ -307,6 +307,7 @@ public static class CraftingService
 
     private static bool TryAcquireInventory(Inventory inventory, List<Inventory> acquiredInventories)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
         for (int index = 0; index < acquiredInventories.Count; index++)
         {
             if (ReferenceEquals(acquiredInventories[index], inventory))

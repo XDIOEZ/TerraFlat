@@ -81,8 +81,17 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profile);
             if (intent.Kind == SpaceNetworkIntentKind.Respawn) return ExecuteNetworkRespawn(profile, out reason);
             if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill)
+            {
+                if (!observer.InSpace && intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.TargetId != observer.WorldKey) return false;
+                Mod_HotBar combatHotbar = FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+                if (intent.Kind != SpaceNetworkIntentKind.AttackEnd)
+                {
+                    if (combatHotbar == null || intent.SelectedSlot < 0 || intent.SelectedSlot >= combatHotbar.MaxIndex) return false;
+                    combatHotbar.ApplyNetworkSelectedIndex(intent.SelectedSlot);
+                }
                 return ExecuteNetworkAttack(profile, intent.Kind == SpaceNetworkIntentKind.Attack ? 0 : intent.Kind == SpaceNetworkIntentKind.AttackEnd ? 1 : 2,
                     new SpaceSectorPosition(intent.Sector, new SpaceVector2(intent.X, intent.Y)), out reason);
+            }
             if (intent.Kind == SpaceNetworkIntentKind.ExitConsole)
             {
                 if (passenger.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
@@ -195,6 +204,8 @@ namespace FlatWorld.Spaceflight
             if (GameNetwork.HasStateAuthority || string.IsNullOrWhiteSpace(json)) return;
             SpaceSessionState received = SaveDataMgr.DeserializeSpaceState(json);
             if (State != null && received.SimulationSeconds < State.SimulationSeconds) return;
+            double presentationSeconds = State == null ? Time.fixedDeltaTime : received.SimulationSeconds - State.SimulationSeconds;
+            CapturePresentationState(false);
             State = received;
             RebuildSectorDirectory();
             foreach (UniverseState sector in State.Sectors) RegisterSectorPlanets(sector, null);
@@ -222,6 +233,7 @@ namespace FlatWorld.Spaceflight
             if (player != null && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !string.IsNullOrEmpty(observer.WorldKey))
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);
             running = true;
+            if (presentationSeconds > 0d) CompletePresentationSample(presentationSeconds, Time.timeAsDouble);
         }
         public bool TryGetNetworkLooseItem(int guid, out ItemData data, out SpaceSectorPosition position)
         {

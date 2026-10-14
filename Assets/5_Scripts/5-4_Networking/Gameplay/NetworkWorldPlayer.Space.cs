@@ -23,6 +23,12 @@ namespace FlatWorld.Networking.Gameplay
         private float serverStateTimer;
         private uint serverStateHash;
         private float nextCombatAim;
+        [SyncVar(hook = nameof(OnGroundCombatPendingChanged))] private bool authoritativeGroundCombatPending;
+        private bool serverGroundAttackHeld;
+        private bool groundCombatFrozen;
+        public bool GroundCombatPending => authoritativeGroundCombatPending;
+        private float groundCombatReleaseAfter, lastGroundCombatInput;
+        private uint acknowledgedGroundCombatHash, lastClientCombatAck, lastAppliedCombatStateHash;
         private static SpaceSession SpaceSessionForNetwork => SpaceSession.Current;
         public bool IsInSpace => authoritativeInSpace;
         public SpaceSectorPosition AuthoritativeSpacePosition => new(new SpaceSectorId(authoritativeSectorX, authoritativeSectorY),
@@ -81,13 +87,132 @@ namespace FlatWorld.Networking.Gameplay
         private void PublishServerPlayerState(bool force = false)
         {
             serverStateTimer -= Time.unscaledDeltaTime;
-            if (!IsInSpace || corePlayer == null || !corePlayer.IsInitialized || !force && serverStateTimer > 0f) return;
+            if (!IsInSpace && groundCombatFrozen) return;
+            if ((!IsInSpace && !authoritativeGroundCombatPending) || corePlayer == null || !corePlayer.IsInitialized || !force && serverStateTimer > 0f) return;
             serverStateTimer = .2f;
             byte[] payload = ItemNetworkStateSerialization.CaptureCachedNetworkPayload(corePlayer, true, out _, out uint hash);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload) || hash == serverStateHash) return;
+            if (!ItemNetworkStateSerialization.IsValidPayload(payload) || !force && hash == serverStateHash) return;
             serverStateHash = hash;
             authoritativeItemState = payload;
         }
+        #region 同地表船体战斗的临时权威交接
+        public bool SubmitGroundCombatBaseline()
+        {
+            if (!isOwned || isServer || corePlayer == null || !NetworkClient.ready) return false;
+            byte[] payload = ItemNetworkStateSerialization.Capture(corePlayer, true);
+            if (!ItemNetworkStateSerialization.IsValidPayload(payload)) return false;
+            CmdSubmitItemState(payload);
+            return true;
+        }
+        public bool PrepareGroundCombat(SpaceNetworkIntentKind kind)
+        {
+            if (!isServer || IsInSpace || corePlayer == null || SpaceSessionForNetwork == null) return false;
+            if (!SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) ||
+                !SpaceSessionForNetwork.HasAttackableSurfaceShip(observer.WorldKey) && !authoritativeGroundCombatPending) return false;
+            if (!authoritativeGroundCombatPending || groundCombatFrozen)
+            {
+                ItemMgr.Instance?.InitializeNetworkAuthorityPlayer(corePlayer, surfaceCombat: true);
+                authoritativeGroundCombatPending = true; acknowledgedGroundCombatHash = 0;
+                groundCombatFrozen = false;
+            }
+            serverGroundAttackHeld = kind == SpaceNetworkIntentKind.Attack;
+            lastGroundCombatInput = Time.unscaledTime;
+            groundCombatReleaseAfter = Time.unscaledTime + 1f;
+            return true;
+        }
+        public void AcknowledgeGroundCombat(uint hash)
+        {
+            if (isServer && authoritativeGroundCombatPending && hash == serverStateHash)
+                acknowledgedGroundCombatHash = hash;
+        }
+        public void CancelRejectedGroundCombat()
+        {
+            if (!isServer || !authoritativeGroundCombatPending) return;
+            SpaceSessionForNetwork?.EndNetworkAttack(displayName);
+            PublishServerPlayerState(force: true);
+            authoritativeGroundCombatPending = false; serverGroundAttackHeld = false; groundCombatFrozen = false;
+            if (!IsInSpace) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
+        }
+        private void UpdateNetworkCombat()
+        {
+            if (isServer && authoritativeGroundCombatPending)
+            {
+                bool validWorld = SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) &&
+                    !observer.InSpace && SpaceSessionForNetwork.HasAttackableSurfaceShip(observer.WorldKey);
+                if ((!validWorld || Time.unscaledTime - lastGroundCombatInput > 1f) && serverGroundAttackHeld)
+                { SpaceSessionForNetwork?.EndNetworkAttack(displayName); serverGroundAttackHeld = false; groundCombatReleaseAfter = Time.unscaledTime + 1f; }
+                if (!serverGroundAttackHeld && !groundCombatFrozen && Time.unscaledTime >= groundCombatReleaseAfter)
+                {
+                    Item held = corePlayer?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
+                    Mod_ColdWeapon cold = held?.GetComponentInChildren<Mod_ColdWeapon>(true);
+                    Mod_Damage damage = held?.GetComponentInChildren<Mod_Damage>(true);
+                    if ((cold == null || cold.CurrentState == AttackState.Idle) && (damage == null || !damage.IsDamageEnabled()))
+                    {
+                        SpaceSessionForNetwork?.EndNetworkAttack(displayName);
+                        PublishServerPlayerState(force: true);
+                        if (!IsInSpace) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
+                        groundCombatFrozen = true;
+                    }
+                }
+                if (IsInSpace || groundCombatFrozen && acknowledgedGroundCombatHash == serverStateHash)
+                { authoritativeGroundCombatPending = false; groundCombatFrozen = false; }
+            }
+            if (!isOwned || isServer || corePlayer == null) return;
+            if (SpaceSession.ClientAttackHeld && Time.unscaledTime >= nextCombatAim)
+            {
+                nextCombatAim = Time.unscaledTime + .1f;
+                Mod_GameController controller = corePlayer.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+                if (controller != null) SpaceSession.SubmitNetworkAttack(corePlayer, 0, controller.GetAimWorldPosition(8192f));
+            }
+            if (authoritativeGroundCombatPending && ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
+            {
+                uint hash = ItemNetworkStateSerialization.CalculateHash(authoritativeItemState);
+                if (hash == lastAppliedCombatStateHash && hash != lastClientCombatAck)
+                {
+                    lastClientCombatAck = hash;
+                    SpaceNetworkBridge.SendIntent(displayName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.CombatStateApplied, Action = unchecked((int)hash) });
+                }
+            }
+        }
+        private void OnGroundCombatPendingChanged(bool previous, bool pending)
+        {
+            if (!isOwned || isServer) return;
+            lastClientCombatAck = 0;
+            if (pending)
+            {
+                if (ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
+                    ApplyOwnedCombatState(authoritativeItemState);
+            }
+            else
+            {
+                SpaceSession.FinishClientGroundCombat();
+                lastSubmittedItemStateHash = 0; itemStateDirty = true;
+            }
+        }
+        private void ApplyOwnedCombatState(byte[] payload)
+        {
+            if (corePlayer == null || !ItemNetworkStateSerialization.IsValidPayload(payload)) return;
+            Mod_HotBar hotbar = corePlayer.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+            int selectedIndex = hotbar?.CurrentIndex ?? -1;
+            byte[] appliedPayload = payload;
+            if (!IsInSpace)
+            {
+                // 地表只回收本次战斗交接的模块，氧气、环境和其它本地状态继续使用当前数据。
+                byte[] localPayload = ItemNetworkStateSerialization.Capture(corePlayer, true);
+                if (!ItemNetworkStateSerialization.TryDeserializeItemData(localPayload, out ItemData merged) ||
+                    !ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData authority) || merged.Guid != authority.Guid) return;
+                foreach (Module module in corePlayer.Mods.Values)
+                    if ((module is Mod_HotBar or Mod_Inventory or Mod_DamageReceiver or Mod_Stamina or Mod_PlayerDeathState) &&
+                        authority.ModuleDataDic.TryGetValue(module.StableName, out ModuleData state))
+                        merged.ModuleDataDic[module.StableName] = state;
+                if (!ItemNetworkStateSerialization.TrySerializeItemData(merged, out appliedPayload)) return;
+            }
+            if (!ItemNetworkStateSerialization.Apply(corePlayer, appliedPayload, reloadRuntimeModules: true, requireMatchingGuid: true)) return;
+            if (selectedIndex >= 0) hotbar?.ApplyNetworkSelectedIndex(selectedIndex);
+            lastAppliedCombatStateHash = ItemNetworkStateSerialization.CalculateHash(payload);
+            lastSubmittedItemStateHash = 0; itemStateDirty = true;
+        }
+        #endregion
         public bool TryGetSpaceObserver(out SpaceNetworkObserver observer)
         {
             if (isServer && SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out observer)) return true;
@@ -132,12 +257,6 @@ namespace FlatWorld.Networking.Gameplay
             else if (corePlayer != null)
             {
                 transform.position = corePlayer.transform.position;
-                if (!isServer && SpaceSession.ClientAttackHeld && Time.unscaledTime >= nextCombatAim)
-                {
-                    nextCombatAim = Time.unscaledTime + .1f;
-                    Mod_GameController controller = corePlayer.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-                    if (controller != null) SpaceSession.SubmitNetworkAttack(corePlayer, 0, controller.GetAimWorldPosition(8192f));
-                }
             }
         }
         public void SetNetworkVisibility(bool visible)

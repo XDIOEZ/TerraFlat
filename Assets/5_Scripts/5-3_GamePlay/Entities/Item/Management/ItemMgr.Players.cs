@@ -309,7 +309,7 @@ public partial class ItemMgr
 
     #region 远端玩家服务器结算模块
     private readonly HashSet<Player> _networkAuthorityPlayers = new();
-    public void InitializeNetworkAuthorityPlayer(Player player)
+    public void InitializeNetworkAuthorityPlayer(Player player, bool surfaceCombat = false)
     {
         if (player == null || player.IsLocalProfile || !_networkAuthorityPlayers.Add(player)) return;
         _networkRemoteReplicas.Remove(player);
@@ -321,7 +321,8 @@ public partial class ItemMgr
             {
                 enabledStates[module] = module._Data.Enabled;
                 module._Data.Enabled = module is Mod_GameController or Mod_DamageReceiver or Mod_Stamina or
-                    Mod_BuffManager or Mod_FocusPoint or Mod_TurnBack or Mod_AnimatorController or Mod_HotBar or Mod_Inventory or Mod_PlayerDeathState or Mod_Oxygen;
+                    Mod_FocusPoint or Mod_TurnBack or Mod_AnimatorController or Mod_HotBar or Mod_Inventory or Mod_PlayerDeathState ||
+                    !surfaceCombat && (module is Mod_BuffManager or Mod_Oxygen);
             }
         try { player.ResumeRuntimeAfterReplacement(); }
         finally { foreach (var state in enabledStates) if (state.Key?._Data != null) state.Key._Data.Enabled = state.Value; }
@@ -340,6 +341,19 @@ public partial class ItemMgr
             if (player.itemMods.GetMod_ByID(ModText.Hotbar) is IInventory hotbar) picker.AddTargetInventories.Add(hotbar);
             if (player.itemMods.GetMod_ByID(ModText.Bag) is IInventory bag) picker.AddTargetInventories.Add(bag);
         }
+    }
+    public void ReleaseNetworkAuthorityPlayer(Player player)
+    {
+        if (player == null || player.IsLocalProfile || !_networkAuthorityPlayers.Remove(player)) return;
+        player.SuspendRuntimeForNetworkPresentation();
+        _networkRemoteReplicas.Add(player);
+        ConfigureRemoteNetworkReplica(player, player.transform.position);
+        foreach (Module module in player.Mods.Values)
+            if (module is Mod_TurnBack or Mod_AnimatorController) module.LoadRuntime();
+        Mod_TurnBack turn = player.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
+        if (turn != null) turn.faceMouse = null;
+        Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+        if (hotbar?._Data != null) hotbar.ApplyRemoteNetworkData(player, hotbar._Data);
     }
     #endregion
 

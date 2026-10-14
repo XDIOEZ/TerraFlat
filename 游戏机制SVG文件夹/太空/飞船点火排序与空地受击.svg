@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1210" viewBox="0 0 1480 1210" role="img" aria-labelledby="title desc">
+  <title id="title">飞船点火排序与空地受击</title>
+  <desc id="desc">点火后飞船压在地面物体上方、UI 下方。起降贴图沿 Y 轴升高到 1 Unity 单位后切为空中，受击区域随贴图移动，不再阻挡地面，只接受具有空中命中能力的远程投射物。降落低于阈值恢复地面模式，太空航行也属于空中。</desc>
+  <defs>
+    <style>
+      text { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #e8eef8; }
+      .title { font-size: 34px; font-weight: 700; }
+      .subtitle { font-size: 20px; fill: #aebdd3; }
+      .heading { font-size: 23px; font-weight: 700; }
+      .body { font-size: 20px; }
+      .small { font-size: 17px; fill: #bdcbe0; }
+      .tiny { font-size: 16px; fill: #aebdd3; }
+      .good { fill: #78e5b3; }
+      .bad { fill: #ff9fa3; }
+      .gold { fill: #ffd787; }
+      .card { fill: #1a2a43; stroke: #354c6c; stroke-width: 2; }
+      .ground { stroke: #739b74; stroke-width: 3; }
+      .receiver { fill: none; stroke: #70d7f5; stroke-width: 3; stroke-dasharray: 9 6; }
+      .ship { fill: #547494; stroke: #a7c1da; stroke-width: 2; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto-start-reverse">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="#78e5b3" stroke-width="2"/>
+    </marker>
+    <marker id="goldArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M1,1 L9,5 L1,9" fill="none" stroke="#ffd787" stroke-width="2"/>
+    </marker>
+    <g id="ship">
+      <rect class="ship" x="0" y="0" width="176" height="68" rx="10"/>
+      <rect x="18" y="17" width="38" height="33" rx="4" fill="#8fc0d4"/>
+      <rect x="67" y="10" width="45" height="47" rx="3" fill="#2d4767"/>
+      <rect x="124" y="17" width="35" height="33" rx="4" fill="#8fc0d4"/>
+      <path d="M8,55 L168,55" stroke="#afc5da" stroke-width="2"/>
+    </g>
+  </defs>
+
+  <rect width="1480" height="1210" fill="#101c30"/>
+  <text class="title" x="52" y="65">飞船点火后抬高排序，升起 1 单位切空中</text>
+  <text class="subtitle" x="52" y="102">这里的 1 单位，是画面里贴图沿世界 Y 轴的升高距离；玩法效果由用户验收。</text>
+
+  <rect class="card" x="52" y="133" width="1376" height="171" rx="14"/>
+  <text class="heading" x="76" y="169">先解决谁盖住谁</text>
+  <g>
+    <rect x="76" y="193" width="286" height="74" rx="9" fill="#4d3b69"/>
+    <text class="heading" x="98" y="226">UI / HUD</text>
+    <text class="small" x="98" y="253">始终在飞船上方显示</text>
+    <rect x="409" y="193" width="466" height="74" rx="9" fill="#2e526b"/>
+    <text class="heading" x="433" y="226">点火后的整船与船上乘员</text>
+    <text class="small" x="433" y="253">高于地面；船内前后关系继续保留</text>
+    <rect x="922" y="193" width="482" height="74" rx="9" fill="#334c38"/>
+    <text class="heading" x="946" y="226">地面物体</text>
+    <text class="small" x="946" y="253">树木、建筑、动物等压在飞船下面</text>
+    <text class="gold" x="378" y="236" font-size="32">›</text>
+    <text class="gold" x="890" y="236" font-size="32">›</text>
+  </g>
+
+  <text class="heading" x="52" y="354">一个受击区域，两种模式；点火和空中判定分开处理</text>
+  <g>
+    <rect class="card" x="52" y="382" width="420" height="340" rx="14"/>
+    <text class="heading" x="77" y="421">① 停在地面</text>
+    <text class="body" x="77" y="456">贴图升高：0</text>
+    <line class="ground" x1="77" y1="607" x2="447" y2="607"/>
+    <use href="#ship" x="167" y="529"/>
+    <rect class="receiver" x="158" y="521" width="194" height="85" rx="12"/>
+    <text class="small" x="77" y="644">地面碰撞正常，近战和弓箭都能打</text>
+    <text class="small" x="77" y="678">熄火并落地后，恢复普通地面排序</text>
+  </g>
+  <g>
+    <rect class="card" x="530" y="382" width="420" height="340" rx="14"/>
+    <text class="heading" x="555" y="421">② 点火，升高还不到 1</text>
+    <text class="body gold" x="555" y="456">排序已经抬高，受击仍是地面模式</text>
+    <line class="ground" x1="555" y1="607" x2="925" y2="607"/>
+    <use href="#ship" x="645" y="507"/>
+    <rect class="receiver" x="636" y="499" width="194" height="85" rx="12"/>
+    <path d="M662,580 L655,598 L673,598 Z M797,580 L790,598 L808,598 Z" fill="#ffd787"/>
+    <text class="small" x="555" y="644">贴图和受击区域一起向上移</text>
+    <text class="small" x="555" y="678">到达阈值前，仍可被近战和远程伤害</text>
+  </g>
+  <g>
+    <rect class="card" x="1008" y="382" width="420" height="340" rx="14"/>
+    <text class="heading" x="1033" y="421">③ 升高达到或超过 1</text>
+    <text class="body good" x="1033" y="456">切为空中模式</text>
+    <line class="ground" x1="1033" y1="607" x2="1403" y2="607"/>
+    <use href="#ship" x="1142" y="484"/>
+    <rect class="receiver" x="1133" y="476" width="194" height="85" rx="12"/>
+    <line x1="1090" y1="607" x2="1090" y2="552" stroke="#78e5b3" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <text class="small good" x="1037" y="583">≥ 1</text>
+    <path d="M1220,619 L1230,595 L1240,619 L1230,612 Z" fill="#aabbd0"/>
+    <path d="M1196,578 L1264,606 M1264,578 L1196,606" stroke="#ff9fa3" stroke-width="4"/>
+    <path d="M1373,571 L1328,538" stroke="#ffd787" stroke-width="3" marker-end="url(#goldArrow)"/>
+    <text class="small" x="1033" y="644">不挡地面物体；近战打不到船体</text>
+    <text class="small" x="1033" y="678">弓箭等可打空中的远程投射物仍能打</text>
+  </g>
+  <path d="M483,542 L515,542" stroke="#78e5b3" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M961,542 L993,542" stroke="#78e5b3" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect class="card" x="52" y="754" width="1376" height="226" rx="14"/>
+  <text class="heading" x="77" y="793">受击规则一眼看清</text>
+  <path d="M77,839 H1403 M77,902 H1403" stroke="#354c6c" stroke-width="2"/>
+  <text class="body" x="77" y="826">船体模式</text>
+  <text class="body" x="437" y="826">地面物体阻挡</text>
+  <text class="body" x="813" y="826">普通近战</text>
+  <text class="body" x="1096" y="826">可命中空中的投射物</text>
+  <text class="body" x="77" y="878">地面：升高 &lt; 1</text>
+  <text class="body" x="437" y="878">保留</text>
+  <text class="body good" x="813" y="878">可以伤害</text>
+  <text class="body good" x="1096" y="878">可以伤害</text>
+  <text class="body" x="77" y="946">空中：升高 ≥ 1 / 太空航行</text>
+  <text class="body good" x="437" y="946">取消地面阻挡</text>
+  <text class="body bad" x="813" y="946">拒绝伤害</text>
+  <text class="body good" x="1096" y="946">可以伤害</text>
+
+  <rect x="52" y="1010" width="1376" height="148" rx="14" fill="#233048"/>
+  <text class="heading" x="77" y="1048">落回地面与组合碰撞器兼容</text>
+  <text class="body" x="77" y="1083">降落低于 1 单位：恢复地面模式；起降过程仍保持高层排序，直到落地并熄火。</text>
+  <text class="small" x="77" y="1114">同一空地规则供船件和组合碰撞器读取；本轮保留受击区域，让它随贴图移动。碰撞器合并由另一个对话实现。</text>
+  <text class="tiny" x="77" y="1142">当前显示换算：真实高度 25 米 → 贴图升高 1 Unity 单位。判定按贴图升高，太空航行无需地表升高动画。</text>
+  <text class="tiny" x="52" y="1188">规则来源：ShipSurfaceState / ShipPieceView / ShipCombatBridge。图示解释机制，不代表真实画面、碰撞或联机已验收。</text>
+</svg>

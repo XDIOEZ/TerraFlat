@@ -68,6 +68,8 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 ## 表现与交互
 
+- `ShipSurfaceState` 共用空地规则：点火提高排序，贴图 `SurfaceVisualRise` 达到1单位切空中；`ShipSurfacePresentation` 对独立船件或整船 Collider 叠加同一局部升高偏移并切 Trigger，乘员/散物同步高层级。`ShipCombatBridge` 按攻击实际世界归属和升高后的形状查询，空中船体要求 `Projectile | AirborneTargets`，不依赖 Host 当前可见场景。
+
 - 地表升高共用 ShipLandingGuidance.SurfaceVisualRise，不限制最高显示距离；船体、玩家、散落物与驾驶镜头保持一致。迁移前捕获船体外观，ShipTakeoffLoadingPresentation 在维度加载页按非缩放时间持续滚动起飞气流，场景准备完成/失败后随加载页释放。
 - ShipSurfaceShadowPresenter 每船合并去重占地 Mesh，复用 ActorBlobShadow 材质与 ground-shadow 排序；地面位置不加升高偏移，真实高度控制缩小/淡出，日照和柔化沿用共享阴影设置，结构或柔化变化才重建，离开地表/会话结束释放。
 - 星球/星空场景对象仅在太空Scene内生成；SpaceMgr按星区租约分帧准备资源，地表初次进太空仍等待 PreparePresentationForCamera 预建星空并完成一帧。SpaceStarfield用两次SectorPosition之差算视差，不受换区/浮动原点影响；常规地面视野不绘制宇宙背景，权威会话及无人船仍继续运行。

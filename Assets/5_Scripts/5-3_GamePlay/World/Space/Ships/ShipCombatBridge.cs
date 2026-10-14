@@ -25,13 +25,20 @@ namespace FlatWorld.Spaceflight
             SpaceSession session = SpaceSession.Current;
             if (!GameNetwork.HasStateAuthority || session?.State == null || weapon == null || weapon.RemainingAttackTargets == 0) return;
             bool spaceCombat = SpaceSession.TryGetCombatFrame(weapon.item, out SpaceSectorPosition canonicalOrigin, out Vector2 presentationOrigin);
+            string surfaceWorld = null;
+            bool hasSurfaceWorld = !spaceCombat && SpaceSession.TryGetCombatWorldKey(weapon.item, out surfaceWorld);
             var candidates = new List<(ShipState Ship, ShipPieceState Piece, RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver)>();
             var hits = new List<CombatColliderHit2D>();
             using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
             {
                 foreach (ShipState ship in session.State.Ships)
                 {
-                    if (spaceCombat ? session.GetFlight(ship.ShipId)?.Phase != ShipFlightPhase.Cruising : !session.IsVisible(ship)) continue;
+                    ShipFlightState flight = session.GetFlight(ship.ShipId);
+                    if (spaceCombat ? flight?.Phase != ShipFlightPhase.Cruising :
+                        !hasSurfaceWorld || flight == null || flight.Phase == ShipFlightPhase.Cruising ||
+                        !string.Equals(flight.SurfaceWorldKey, surfaceWorld, StringComparison.Ordinal)) continue;
+                    // 船体按实际空地状态筛选投送能力，拒绝的攻击不占用命中名额。
+                    if (!ShipSurfaceState.AllowsDamage(flight, context.DeliveryCapabilities)) continue;
                     foreach (ShipPieceState piece in ship.Pieces)
                     {
                         if (!piece.IsAlive || !GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition)) continue;
@@ -43,7 +50,14 @@ namespace FlatWorld.Spaceflight
                             anchor = presentationOrigin + SpaceSectorCoordinates.Difference(
                                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y)), canonicalOrigin).ToVector2();
                         }
-                        else anchor = session.DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters, (piece.CellY + .5d) * ship.CellSizeMeters);
+                        else
+                        {
+                            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
+                                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
+                            anchor = SpaceSession.ProjectSurfaceCombatPoint(weapon.item, surfaceWorld,
+                                new Vector2((float)x, (float)y), (Vector2)shape.Center)
+                                + Vector2.up * (float)ShipSurfaceState.VisualRise(flight);
+                        }
                         float width = (float)((piece.QuarterTurns % 2 == 0 ? piece.Width : piece.Height) * ship.CellSizeMeters);
                         float height = (float)((piece.QuarterTurns % 2 == 0 ? piece.Height : piece.Width) * ship.CellSizeMeters);
                         float radius = Mathf.Sqrt(width * width + height * height);

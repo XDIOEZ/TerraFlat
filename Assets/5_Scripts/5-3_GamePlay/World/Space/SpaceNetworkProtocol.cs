@@ -23,7 +23,7 @@ namespace FlatWorld.Spaceflight
     public enum SpaceNetworkIntentKind
     {
         EnterConsole, ExitConsole, ToggleDoor, ToggleIgnition, RequestLanding,
-        StartNavigation, CancelNavigation, ConfirmDock, DisconnectDock, Attack, AttackEnd, UseSkill, Respawn
+        StartNavigation, CancelNavigation, ConfirmDock, DisconnectDock, Attack, AttackEnd, UseSkill, Respawn, CombatStateApplied
     }
 
     [Serializable]
@@ -32,6 +32,8 @@ namespace FlatWorld.Spaceflight
         public SpaceNetworkIntentKind Kind;
         public string ShipId, PieceId, TargetId;
         public int Action;
+        public int SelectedSlot;
+        public bool StartsGroundCombat;
         public double X, Y;
         public SpaceSectorId Sector;
     }
@@ -40,6 +42,7 @@ namespace FlatWorld.Spaceflight
     {
         public static Func<string, SpacePassengerInput, bool> InputSender;
         public static Func<string, SpaceNetworkIntent, bool> IntentSender;
+        public static Func<string, bool> CombatPreparationSender;
         public static bool SubmitInput(string profileId, SpacePassengerInput input)
             => GameNetwork.IsOnline && !GameNetwork.HasStateAuthority && InputSender?.Invoke(profileId, input) == true;
         public static bool SendIntent(string profileId, SpaceNetworkIntent intent)

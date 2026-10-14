@@ -11,16 +11,53 @@ namespace FlatWorld.Spaceflight
         #region 太空真实攻击请求与查询坐标
         private readonly object networkCombatControl = new();
         public static bool ClientAttackHeld { get; private set; }
+        public static bool ClientGroundCombatPending { get; private set; }
+        public bool HasAttackableSurfaceShip(string worldKey)
+        {
+            if (string.IsNullOrEmpty(worldKey) || State == null) return false;
+            foreach (ShipState ship in State.Ships)
+            {
+                ShipFlightState flight = GetFlight(ship.ShipId);
+                if (flight?.Phase != ShipFlightPhase.Cruising && flight?.SurfaceWorldKey == worldKey &&
+                    ship.Pieces.Exists(piece => piece.IsAlive)) return true;
+            }
+            return false;
+        }
+        public static void FinishClientGroundCombat() => ClientGroundCombatPending = false;
+        public static void ClearClientNetworkCombat()
+        { ClientAttackHeld = false; ClientGroundCombatPending = false; }
+        public static bool TryGetCombatWorldKey(Item source, out string worldKey)
+        {
+            worldKey = source?.GetComponentInChildren<Mod_Projectile>(true)?.NetworkSurfaceWorldKey;
+            if (!string.IsNullOrEmpty(worldKey)) return true;
+            Player player = CombatPlayer(source);
+            if (player != null && Current != null && Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace)
+            { worldKey = observer.WorldKey; return !string.IsNullOrEmpty(worldKey); }
+            worldKey = source != null ? source.gameObject.scene.name : null;
+            return !string.IsNullOrEmpty(worldKey) && !SpaceMgr.IsSpaceScene(worldKey);
+        }
+        public static Vector2 ProjectSurfaceCombatPoint(Item source, string worldKey, Vector2 logical, Vector2 fallbackAnchor)
+        {
+            Mod_Projectile projectile = source?.GetComponentInChildren<Mod_Projectile>(true);
+            if (projectile?.NetworkSurfaceWorldKey == worldKey)
+                return projectile.NetworkSurfacePresentationOrigin + PressureExplosionQueue.DeltaInWorld(worldKey, projectile.NetworkSurfaceCanonicalOrigin, logical);
+            Player player = CombatPlayer(source);
+            if (player != null && Current != null && Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace)
+                return (Vector2)player.transform.position + PressureExplosionQueue.DeltaInWorld(worldKey, observer.Position.LocalMeters.ToVector2(), logical);
+            return WorldLocalPresentation.ProjectPosition(logical, fallbackAnchor);
+        }
         public bool ExecuteNetworkAttack(string profile, int action, SpaceSectorPosition aim, out string reason)
         {
             reason = "玩家或手持武器尚未准备好";
             Player player = FindNetworkPlayer(profile);
-            if (!GameNetwork.HasStateAuthority || player == null || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer) || !observer.InSpace) return false;
+            if (!GameNetwork.HasStateAuthority || player == null || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer) ||
+                !observer.InSpace && !HasAttackableSurfaceShip(observer.WorldKey) && action != 1) return false;
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
             Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (controller == null || hotbar?.CurentSelectItem == null || health?.Hp <= 0f) return false;
-            SpaceVector2 delta = SpaceSectorCoordinates.Difference(aim, observer.Position);
+            SpaceVector2 delta = observer.InSpace ? SpaceSectorCoordinates.Difference(aim, observer.Position)
+                : SpaceVector2.FromVector2(PressureExplosionQueue.DeltaInWorld(observer.WorldKey, observer.Position.LocalMeters.ToVector2(), aim.LocalMeters.ToVector2()));
             if (!delta.IsFinite || delta.Magnitude > 8192d) { reason = "瞄准位置超出范围"; return false; }
             if (!controller.TryAcquireExternalGameplayControl(networkCombatControl)) return false;
             controller.TrySetExternalAimWorldPosition(networkCombatControl, player.transform.position + (Vector3)delta.ToVector2());
@@ -42,14 +79,27 @@ namespace FlatWorld.Spaceflight
             Player player = CombatPlayer(weapon);
             SpaceSession session = Current;
             if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority || player == null ||
-                session == null || !session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) || !observer.InSpace) return false;
+                session == null || !session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) ||
+                !observer.InSpace && !session.HasAttackableSurfaceShip(observer.WorldKey) && !ClientGroundCombatPending) return false;
+            bool startsGroundCombat = !observer.InSpace && !ClientGroundCombatPending;
+            if (startsGroundCombat && SpaceNetworkBridge.CombatPreparationSender?.Invoke(player.ProfileName) != true) return true;
             if (action != 2) ClientAttackHeld = action == 0;
-            SpaceSectorPosition aim = session.UnprojectSectorPosition(worldAim);
-            SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
+            if (!observer.InSpace) ClientGroundCombatPending = true;
+            SpaceSectorPosition aim = observer.InSpace ? session.UnprojectSectorPosition(worldAim)
+                : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(worldAim)));
+            bool sent = SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
             {
                 Kind = action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
-                Sector = aim.Sector, X = aim.LocalMeters.X, Y = aim.LocalMeters.Y
+                Sector = aim.Sector, X = aim.LocalMeters.X, Y = aim.LocalMeters.Y, TargetId = observer.InSpace ? null : observer.WorldKey,
+                SelectedSlot = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurrentIndex ?? -1, StartsGroundCombat = startsGroundCombat
             });
+            if (!sent) ClearClientNetworkCombat();
+            return true;
+        }
+        public static bool RejectClientGroundInventoryMutation()
+        {
+            if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority || !ClientGroundCombatPending) return false;
+            Debug.LogWarning("[库存] 正在等待服务器完成本次战斗结算，请稍后再整理物品或制作。");
             return true;
         }
 
@@ -64,6 +114,7 @@ namespace FlatWorld.Spaceflight
         {
             canonical = default; presentation = default;
             if (source == null || Current == null) return false;
+            if (!string.IsNullOrEmpty(source.GetComponentInChildren<Mod_Projectile>(true)?.NetworkSurfaceWorldKey)) return false;
             SpaceCombatFrame projectile = source.GetComponent<SpaceCombatFrame>();
             if (projectile != null && projectile.Active)
             { canonical = projectile.CanonicalOrigin; presentation = projectile.PresentationOrigin; return true; }
@@ -95,6 +146,16 @@ namespace FlatWorld.Spaceflight
                 Motion = new SpaceMotionState { Sector = position.Sector, PositionMeters = position.LocalMeters,
                     VelocityMetersPerSecond = SpaceVector2.FromVector2(velocity), RadiusMeters = .15d }
             });
+        }
+        public void RecoverNetworkSurfaceProjectile(Item item, string worldKey, Vector2 position)
+        {
+            if (!GameNetwork.HasStateAuthority || item?.itemData == null || string.IsNullOrEmpty(worldKey)) return;
+            item.ModuleSave();
+            ItemData data = FastCloner.FastCloner.DeepClone(item.itemData);
+            data.inHand = false; data.Stack.CanBePickedUp = true; data.Stack.Amount = 1f;
+            State.LooseItems.Add(new SpaceLooseItemState { InSpace = false, WorldKey = worldKey, Snapshot = Encode(data),
+                RotationDegrees = item.transform.eulerAngles.z, Scale = item.transform.localScale,
+                Motion = new SpaceMotionState { PositionMeters = SpaceVector2.FromVector2(position), RadiusMeters = .15d } });
         }
         #endregion
     }

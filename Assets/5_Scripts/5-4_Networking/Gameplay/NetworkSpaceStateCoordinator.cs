@@ -22,6 +22,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool serverStarted, clientStarted;
         private float nextServerSnapshot, nextClientRequest, nextInputSend;
         private uint inputSequence, intentSequence;
+        private uint latestCombatIntentSequence;
         private ulong snapshotSequence, lastAppliedSequence;
         private Incoming incoming;
         private bool needsSnapshot;
@@ -58,6 +59,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkSpaceProjectilePoses>(OnProjectilePoses, true);
             SpaceNetworkBridge.InputSender = SendInput;
             SpaceNetworkBridge.IntentSender = SendIntent;
+            SpaceNetworkBridge.CombatPreparationSender = PrepareLocalCombat;
             clientStarted = true;
             needsSnapshot = true;
             nextClientRequest = 0f; lastAppliedSequence = 0; inputSequence = intentSequence = 0;
@@ -84,8 +86,10 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkSpaceIntentResponse>();
             NetworkClient.UnregisterHandler<NetworkSpaceProjectilePoses>();
             ClearProjectileViews();
+            SpaceSession.ClearClientNetworkCombat();
             if (SpaceNetworkBridge.InputSender == SendInput) SpaceNetworkBridge.InputSender = null;
             if (SpaceNetworkBridge.IntentSender == SendIntent) SpaceNetworkBridge.IntentSender = null;
+            if (SpaceNetworkBridge.CombatPreparationSender == PrepareLocalCombat) SpaceNetworkBridge.CombatPreparationSender = null;
             incoming = null; clientStarted = false;
         }
         public void RemoveConnection(NetworkConnectionToClient connection)
@@ -123,9 +127,15 @@ namespace FlatWorld.Networking.Gameplay
         private bool SendIntent(string profile, SpaceNetworkIntent intent)
         {
             if (NetworkServer.active || !NetworkClient.ready || !OwnsProfile(profile)) return false;
-            NetworkClient.Send(new NetworkSpaceIntentRequest { Sequence = NextToken(ref intentSequence), Intent = intent });
+            uint sequence = NextToken(ref intentSequence);
+            if (intent.StartsGroundCombat || !SpaceSession.ClientGroundCombatPending &&
+                (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill))
+                latestCombatIntentSequence = sequence;
+            NetworkClient.Send(new NetworkSpaceIntentRequest { Sequence = sequence, Intent = intent });
             return true;
         }
+        private bool PrepareLocalCombat(string profile)
+            => OwnsProfile(profile) && NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.SubmitGroundCombatBaseline() == true;
         private void OnInput(NetworkConnectionToClient connection, NetworkSpaceInput message)
         {
             if (!ResolveConnection(connection, out ConnectionState state, out _) ||
@@ -135,12 +145,18 @@ namespace FlatWorld.Networking.Gameplay
         }
         private void OnIntent(NetworkConnectionToClient connection, NetworkSpaceIntentRequest message)
         {
-            if (!ResolveConnection(connection, out ConnectionState state, out _) || !IsNewer(message.Sequence, state.IntentSequence)) return;
+            if (!ResolveConnection(connection, out ConnectionState state, out NetworkWorldPlayer player) || !IsNewer(message.Sequence, state.IntentSequence)) return;
             state.IntentSequence = message.Sequence;
             SpaceNetworkIntent intent = message.Intent;
+            if (intent.Kind == SpaceNetworkIntentKind.CombatStateApplied)
+            { player.AcknowledgeGroundCombat(unchecked((uint)intent.Action)); return; }
+            bool wasGroundCombatPending = player.GroundCombatPending;
+            if (ValidIntent(intent) && (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill))
+                player.PrepareGroundCombat(intent.Kind);
             string reason = "太空操作请求无效";
             bool accepted = ValidIntent(intent) && SpaceSession.Current != null &&
                 SpaceSession.Current.ExecuteNetworkIntent(state.Profile, intent, out reason);
+            if (!accepted && !wasGroundCombatPending) player.CancelRejectedGroundCombat();
             connection.Send(new NetworkSpaceIntentResponse { Sequence = message.Sequence, Accepted = accepted,
                 Reason = string.IsNullOrEmpty(reason) ? string.Empty : reason.Substring(0, Math.Min(160, reason.Length)) });
             if (accepted) SendSnapshot(connection, state.Profile);
@@ -154,8 +170,13 @@ namespace FlatWorld.Networking.Gameplay
                Enum.IsDefined(intent.Kind.GetType(), intent.Kind);
         private static uint NextToken(ref uint value) { if (++value == 0) ++value; return value; }
         private static bool IsNewer(uint value, uint previous) => value != 0 && unchecked((int)(value - previous)) > 0;
-        private static void OnIntentResponse(NetworkSpaceIntentResponse response)
-        { if (!response.Accepted) Debug.LogWarning($"[太空联机] 操作被拒绝：{response.Reason}"); }
+        private void OnIntentResponse(NetworkSpaceIntentResponse response)
+        {
+            if (response.Accepted) return;
+            if (response.Sequence == latestCombatIntentSequence)
+            { SpaceSession.ClearClientNetworkCombat(); latestCombatIntentSequence = 0; }
+            Debug.LogWarning($"[太空联机] 操作被拒绝：{response.Reason}");
+        }
         #endregion
 
         #region 快照发送与有限分片接收

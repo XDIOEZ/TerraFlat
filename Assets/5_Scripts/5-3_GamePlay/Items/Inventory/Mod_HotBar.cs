@@ -334,6 +334,8 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (state?.Inventory == null || state.Version != InventoryHotBarSaveState.CurrentVersion) return;
         SwitchItem(Mathf.Clamp(state.Inventory.CreateColdData().Index, 0, Mathf.Max(0, MaxIndex - 1)), animateSelection: false);
     }
+    public void ApplyNetworkSelectedIndex(int index)
+        => SwitchItem(Mathf.Clamp(index, 0, Mathf.Max(0, MaxIndex - 1)), animateSelection: false);
 
     private void ApplyNetworkReplicaData(Item owner, ModuleData data, bool visualOnly)
     {

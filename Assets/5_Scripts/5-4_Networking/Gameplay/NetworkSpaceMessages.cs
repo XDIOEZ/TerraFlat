@@ -41,6 +41,8 @@ namespace FlatWorld.Networking.Gameplay
         public SpaceSectorPosition Position;
         public SpaceVector2 Velocity;
         public float Rotation;
+        public string SurfaceWorldKey;
+        public float VisualHeight, VisualRotation;
     }
     public struct NetworkSpaceProjectilePoses : NetworkMessage
     {

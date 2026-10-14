@@ -25,6 +25,8 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 库存与手持
 
+- 联机客户端在同地表船体攻击的 `ClientGroundCombatPending` 期间暂缓槽位拖拽、快捷转移与制作事务；等待 Host 消耗结果成功应用后恢复，不能让旧库存包覆盖箭数或静默丢失本地事务。
+
 - 重量 kg、体积 L、Stackable 独立。普通槽 `DefaultSlotVolume=int.MaxValue`，不可堆叠物一件一槽，装配槽显式为 1；数量/容量使用 float，整数转换用 `GetWholeStackAmount`。生存行囊固定 20 格，储物/制作采用配置格数。
 - ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 绑定实际槽内 ItemData 的 MassChanged，供船载质量缓存使用。新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
 - 携带量统计主背包与快捷栏，超重状态由库存数据事件更新。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。

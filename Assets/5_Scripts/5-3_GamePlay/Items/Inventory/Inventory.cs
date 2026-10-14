@@ -1395,6 +1395,7 @@ public class Inventory
         handInventory = GetPlayerHandInventory();
         localSlot = null;
         handSlot = null;
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
 
         if (!IsValidQuickTransferTarget(handInventory) || Data == null || Data.itemSlots == null ||
             index < 0 || index >= Data.itemSlots.Count || handInventory == this)
@@ -1408,6 +1409,7 @@ public class Inventory
     /// <summary>创建以当前槽为来源的直接拖拽事务，不在拖拽开始时改写手部槽。</summary>
     public virtual InventoryDragTransaction OnMouseDragBegin(int index)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return null;
         if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count ||
             Data.itemSlots[index]?.itemData?.Stack == null)
             return null;
@@ -1479,6 +1481,7 @@ public class Inventory
         Inventory targetInventory,
         int targetIndex)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
         ItemData sourceItem = ResolveCurrentDragSource(sourceSlot, draggedItem);
         if (sourceItem == null ||
             !IsValidQuickTransferTarget(targetInventory) ||
@@ -1820,6 +1823,7 @@ public class Inventory
 
     private bool TryQuickMoveSlotToInventory(int sourceIndex, Inventory targetInventory)
     {
+        if (FlatWorld.Spaceflight.SpaceSession.RejectClientGroundInventoryMutation()) return false;
         if (Data == null || Data.itemSlots == null || targetInventory == null || targetInventory.Data == null || targetInventory.Data.itemSlots == null)
             return false;
 

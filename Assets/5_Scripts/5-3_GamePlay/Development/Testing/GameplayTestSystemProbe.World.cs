@@ -47,6 +47,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("space/ship_fuel", WorldShipFuel);
         operations.Add("space/coordinates", _ => GameplayTestUniverseProbe.Capture("coordinates"));
         operations.Add("space/streaming", _ => GameplayTestUniverseProbe.Capture("streaming"));
+        operations.Add("space/ship_surface_state", _ => GameplayTestShipSurfaceProbe.Capture());
     }
 
     private static string WorldException(Action action)

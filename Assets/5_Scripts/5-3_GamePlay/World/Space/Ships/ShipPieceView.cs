@@ -200,6 +200,7 @@ namespace FlatWorld.Spaceflight
                 if (visual.transform.localPosition != local) visual.transform.localPosition = local;
             }
             SynchronizeDoorVisual();
+            SynchronizeSurfacePresentation(visualLiftOffset);
             SynchronizeAirSupplyIndicator();
         }
         public void OnInteractStart(Item actor)
@@ -401,6 +402,7 @@ namespace FlatWorld.Spaceflight
             }
             RemoveExpiredShipColliderPresenters();
             RemoveExpiredSurfaceShadows();
+            SynchronizeRemotePassengerSurfaceVisuals();
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return;
             SpacePassengerState passenger = GetPassenger(player);
@@ -429,6 +431,7 @@ namespace FlatWorld.Spaceflight
         }
         private void ReleaseViews()
         {
+            ReleasePassengerSurfacePresentation();
             ReleaseSurfaceShadows();
             foreach (string id in new System.Collections.Generic.List<string>(wreckViews.Keys)) RemoveWreckView(id);
             ReleaseDrivingCamera();
@@ -447,6 +450,9 @@ namespace FlatWorld.Spaceflight
             { passengerVisual = player.Sprite; if (passengerVisual != null) passengerVisualPosition = passengerVisual.transform.localPosition; }
             if (passengerVisual != null)
                 passengerVisual.transform.localPosition = passengerVisualPosition + passengerVisual.transform.parent.InverseTransformVector(Vector3.up * (float)ShipLandingGuidance.SurfaceVisualRise(height));
+            ShipState ship = GetShip(GetPassenger(player).ShipId);
+            ShipSurfacePresentation.SetElevated(player.gameObject, ShipSurfaceState.IsElevated(ship != null ? GetFlight(ship.ShipId) : null),
+                ShipSurfacePresentation.PassengerCategory);
         }
 
         public void CollectAssemblyPresentationRenderers(string shipId, System.Collections.Generic.List<SpriteRenderer> renderers)

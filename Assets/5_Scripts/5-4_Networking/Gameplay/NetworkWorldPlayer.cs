@@ -178,6 +178,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (IsInSpace && corePlayer != null && !coreAvatarIsLocal) ItemMgr.Instance?.InitializeNetworkAuthorityPlayer(corePlayer);
                 PublishServerPlayerState();
             }
+            UpdateNetworkCombat();
             if (!NetworkClient.active)
                 return;
 
@@ -329,7 +330,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             if (corePlayer == null) return;
-            if (!IsInSpace)
+            if (!IsInSpace && !authoritativeGroundCombatPending)
             {
                 if (!isOwned)
                 {
@@ -344,7 +345,7 @@ namespace FlatWorld.Networking.Gameplay
                 authoritativeItemState = payload;
                 return;
             }
-            if (!isOwned)
+            if (!isOwned && !groundCombatFrozen)
             {
                 if (!ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData incoming) ||
                     incoming is not Data_Player || incoming.Guid != corePlayer.itemData.Guid) return;
@@ -512,8 +513,8 @@ namespace FlatWorld.Networking.Gameplay
         private void OnAuthoritativeItemStateChanged(byte[] oldState, byte[] newState)
         {
             if (isServer) return;
-            if (isOwned && IsInSpace && corePlayer != null)
-                ItemNetworkStateSerialization.Apply(corePlayer, newState, reloadRuntimeModules: true, requireMatchingGuid: true);
+            if (isOwned && (IsInSpace || authoritativeGroundCombatPending || FlatWorld.Spaceflight.SpaceSession.ClientGroundCombatPending) && corePlayer != null)
+                ApplyOwnedCombatState(newState);
             else if (!isOwned)
                 ApplyRemoteItemState(newState);
         }

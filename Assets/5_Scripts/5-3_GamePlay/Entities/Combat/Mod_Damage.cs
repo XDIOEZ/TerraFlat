@@ -239,7 +239,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
         context.Attack.Sequence = attackSequence; context.Attack.Window = 1; context.Attack.Pulse = ++attackPulse;
         context.Origin = shape.Center - shape.SweepDelta;
-        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _))
+        if (FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _) ||
+            item.GetComponentInChildren<Mod_Projectile>(true)?.IsNetworkSurfaceQueryOnly == true)
             FlatWorld.Spaceflight.ShipCombatBridge.Instance.QueryWeaponPulse(this, shape, context);
         else GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
     }

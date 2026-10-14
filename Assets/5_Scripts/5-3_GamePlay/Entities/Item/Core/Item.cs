@@ -294,6 +294,16 @@ public abstract class Item : MonoBehaviour
         NotifyRuntimeStructureChanged();
     }
 
+    /// <summary>网络战斗交接结束后保留数据与模块绑定，只关闭远端权威调度。</summary>
+    internal void SuspendRuntimeForNetworkPresentation()
+    {
+        if (destructionHandled || lifecycleTransition || modulesLoading || modulesUnloading) return;
+        ModuleSave();
+        isInitialized = false;
+        ModuleUnload();
+        MarkModuleScheduleDirty();
+    }
+
 
     /// <summary>
     /// 初始化物品组件和模块

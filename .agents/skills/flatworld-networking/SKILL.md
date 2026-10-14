@@ -12,7 +12,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `Core/NetworkConnectionEndpoint.cs`：原始地址明确填写的端口必须在 1～65535；只在缺省时使用备用端口。IPv6 方括号内的冒号不是端口分隔符，不用 `Uri.IsDefaultPort` 判断用户是否显式填写端口。
 - `Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`：启动、连接与玩家。
 - `Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`：区块、物品、天气复制。
-- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 16。
+- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 17。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 
@@ -25,6 +25,8 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 维度迁移目前仅离线；联机入世会核对生成指纹和 MOD 集合。
 - 太空用 `SpaceSectorPosition` 的编号+区内 double 米坐标，观察、拾取、机器和攻击按规范距离判断，跨边界不按 Scene 名隔离。迁移只切本机呈现，不用 `ServerChangeScene` 停掉其它玩家；`RealmRevision` 使同地表复活也重定位。
 - 太空桥只接受连接绑定的 profile 与输入/意图；服务器玩家加载结算和真实库存，客户端只提交选中槽位，生命、体力和数量由服务器 `authoritativeItemState` 回传。断线清输入及攻击；地表保留原复制流程，普通地表物品包不发太空观察者，返回地表补拉。
+- 同一 WorldKey 有可攻击船体时，地表攻击临时复用服务器武器结算：起始先同步库存基线，攻击意图只带瞄准与选槽索引；结算期间整理库存/制作按忙碌拒绝，客户端只合并战斗模块，氧气与环境继续本地推进。武器停下后冻结最后状态，成功应用的回执才结束交接；无船地表沿用原同步。
+- 地表投射物姿态带 WorldKey、地表坐标与弧线表现；服务器不在该世界时只查询该世界船体，不借当前场景物理造成串世界伤害。船体高度与空地攻击资格读权威 Flight，不能由客户端 Collider/排序层反推。
 
 ## 快照与复制
 
