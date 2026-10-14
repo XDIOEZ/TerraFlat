@@ -7,3 +7,4 @@
 - 不调用 `surface` 全星体冷生成和任何真实会话操作。领域结果不是场景验收，没有截图。
 - `ship_surface_state` 直接采样 `ShipSurfaceState`：点火立即获得高层排序资格；贴图升高到 1 Unity 单位切空中，降落低于阈值恢复地面，太空航行阶段也属于空中。17 个状态样本检查空地边界、熄火和非起降阶段的残留高度，并逐一断言八种投送能力组合。普通近战只能打地面船；同时带 `Projectile` 与 `AirborneTargets` 的远程投射物可打空中船，只有一位能力时拒绝；`AirborneOnly` 仍遵守只打空中的限制。
 - 本轮空地新增规则未运行；组件是否跟随贴图、实际地面阻挡、整船排序与 UI 关系、远程武器命中及联机权威伤害仍由用户验收。
+- `presentation_interpolation` 只调用正式 `SpacePresentationPose` / `SpacePresentationTrack`，Lua 断言前后端点、中点、越界限制、跨正负 π 最短旋转、极大星区跨界精度、质量中心变化时船格原点稳定、船件/乘员/镜头共同局部变换和重置不拖尾。物理固定步仍为每秒 50 次；本轮未运行 Lua 规则或 Play Mode 回归，实际飞行画面由用户验收。

@@ -268,6 +268,7 @@ namespace FlatWorld.Spaceflight
 
         private void OnDisable()
         {
+            ResetPresentationHistory();
             UnbindShipMachineVisualEvents();
             ReleaseSurfaceShadows();
         }
@@ -324,7 +325,7 @@ namespace FlatWorld.Spaceflight
         {
             if (node?.ScopeKey == null || !node.ScopeKey.StartsWith("ship:", StringComparison.Ordinal)) return node?.Snapshot.transform.position ?? default;
             ShipState ship = GetShip(node.ScopeKey.Substring(5));
-            return ship == null ? node.Snapshot.transform.position : DisplayPoint(ship, (node.Cell.x + .5d) * ship.CellSizeMeters, (node.Cell.y + .5d) * ship.CellSizeMeters);
+            return ship == null ? node.Snapshot.transform.position : DisplayPresentationPoint(ship, (node.Cell.x + .5d) * ship.CellSizeMeters, (node.Cell.y + .5d) * ship.CellSizeMeters);
         }
         private void SynchronizeViews(bool refreshBindings = false)
         {
@@ -342,7 +343,7 @@ namespace FlatWorld.Spaceflight
                 }
                 bool visible = IsVisible(ship);
                 ShipFlightState flight = visible ? GetFlight(ship.ShipId) : null;
-                float angle = (float)(ship.AngleRadians * 180d / Math.PI);
+                float angle = (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI);
                 ShipColliderPresenter presenter = visible ? SynchronizeShipColliderPresenter(ship, angle) : null;
                 double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending
                     ? flight.HeightMeters : 0d;
@@ -409,10 +410,10 @@ namespace FlatWorld.Spaceflight
             SetTerrainSuppression(player, IsSpaceView || passenger.Supported);
             ShipState carrier = GetShip(passenger.ShipId);
             // 支撑乘员始终跟随当前世界的船体，不能因美术裁剪改读旧自由漂浮坐标。
-            if (passenger.Supported && IsInPresentationWorld(carrier)) PlacePassenger(player, passenger, carrier);
+            if (passenger.Supported && IsInPresentationWorld(carrier)) PlacePassenger(player, passenger, carrier, true);
             else if (!passenger.Supported && IsSpaceView && passenger.IsInSpace && !passenger.LandingResolved)
             {
-                Vector2 position = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
+                Vector2 position = GetPassengerPresentationPosition(passenger, null);
                 player.transform.position = new Vector3(position.x, position.y, 0f);
                 Rigidbody2D playerBody = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.rb;
                 if (playerBody != null) playerBody.position = position;

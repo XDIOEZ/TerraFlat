@@ -235,6 +235,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 规范坐标投影与本机可见性
         private void UpdateSpaceMovement()
         {
+            BindSpacePresentation();
             bool visible = SharesLocalRealm();
             NetworkWorldPlayer local = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (visible && IsInSpace && local != null && local != this)
@@ -242,11 +243,14 @@ namespace FlatWorld.Networking.Gameplay
             SetNetworkVisibility(visible);
             if (!visible || !IsInSpace || SpaceSessionForNetwork == null) return;
             Vector2 projected = SpaceSessionForNetwork.ProjectPosition(AuthoritativeSpacePosition);
+            if (!isOwned && SpaceSessionForNetwork.TryGetPassengerPresentationPosition(displayName, out Vector2 presentation))
+                projected = presentation;
             if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y)) return;
             if (!isOwned)
             {
                 transform.position = projected;
                 SyncCorePlayerPosition(projected);
+                if (corePlayer != null) corePlayer.transform.position = projected;
                 if (!isServer)
                 {
                     ApplyRemoteFacing(authoritativeFacingLeft);
@@ -258,6 +262,38 @@ namespace FlatWorld.Networking.Gameplay
             {
                 transform.position = corePlayer.transform.position;
             }
+        }
+
+        private SpaceSession spacePresentationSession;
+
+        private void BindSpacePresentation()
+        {
+            if (spacePresentationSession == SpaceSessionForNetwork) return;
+            if (spacePresentationSession != null) spacePresentationSession.PresentationSynchronized -= SynchronizeSpacePresentation;
+            spacePresentationSession = SpaceSessionForNetwork;
+            if (spacePresentationSession != null) spacePresentationSession.PresentationSynchronized += SynchronizeSpacePresentation;
+        }
+
+        private void SynchronizeSpacePresentation()
+        {
+            if (!IsInSpace || !networkVisible || spacePresentationSession == null) return;
+            if (isOwned)
+            {
+                if (corePlayer != null) transform.position = corePlayer.transform.position;
+                return;
+            }
+            Vector2 projected = spacePresentationSession.ProjectPosition(AuthoritativeSpacePosition);
+            if (spacePresentationSession.TryGetPassengerPresentationPosition(displayName, out Vector2 presentation)) projected = presentation;
+            if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y)) return;
+            transform.position = projected;
+            SyncCorePlayerPosition(projected);
+            if (corePlayer != null) corePlayer.transform.position = projected;
+        }
+
+        private void OnDisable()
+        {
+            if (spacePresentationSession != null) spacePresentationSession.PresentationSynchronized -= SynchronizeSpacePresentation;
+            spacePresentationSession = null;
         }
         public void SetNetworkVisibility(bool visible)
         {

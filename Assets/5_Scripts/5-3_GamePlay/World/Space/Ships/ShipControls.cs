@@ -24,7 +24,7 @@ namespace FlatWorld.Spaceflight
                 Vector2 center = DisplayPoint(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
                     (piece.CellY + .5d) * ship.CellSizeMeters);
                 float distance = IsSpaceView
-                    ? Vector2.Distance(player.transform.position, center)
+                    ? Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(player), center)
                     : WorldTopologyRuntime.Distance(player.transform.position, center);
                 if (distance > closestDistance) continue;
                 closestDistance = distance;
@@ -111,7 +111,7 @@ namespace FlatWorld.Spaceflight
             string consoleId = ResolveConsole(shipId);
             Player actor = ItemMgr.Instance?.User_Player;
             if (ship == null || actor == null || !FindPiece(consoleId, out _, out ShipPieceState console) ||
-                Vector2.Distance(actor.transform.position, DisplayPoint(ship, console.CellX + .5d, console.CellY + .5d)) > 3f) return false;
+                Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(actor), DisplayPoint(ship, console.CellX + .5d, console.CellY + .5d)) > 3f) return false;
             ShipFlightState ownFlight = GetFlight(shipId);
             ShipDockingService.SynchronizePorts(ship);
             foreach (ShipDockingPortState own in ship.DockingPorts)

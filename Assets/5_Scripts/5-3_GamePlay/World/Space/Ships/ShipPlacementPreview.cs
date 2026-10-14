@@ -22,9 +22,9 @@ namespace FlatWorld.Spaceflight
             }
             double x = (Math.Floor(local.x / ship.CellSizeMeters) + .5d) * ship.CellSizeMeters;
             double y = (Math.Floor(local.y / ship.CellSizeMeters) + .5d) * ship.CellSizeMeters;
-            snapped = DisplayPoint(ship, x, y);
+            snapped = DisplayPresentationPoint(ship, x, y);
             if (!IsSpaceView) snapped = WorldLocalPresentation.ToLogical(snapped);
-            angle = (float)(ship.AngleRadians * 180d / Math.PI) + quarterTurns * 90f;
+            angle = (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI) + quarterTurns * 90f;
             return true;
         }
         public bool TryValidatePlacement(ItemData source, Vector2 point, int quarterTurns, out bool valid, out string reason)

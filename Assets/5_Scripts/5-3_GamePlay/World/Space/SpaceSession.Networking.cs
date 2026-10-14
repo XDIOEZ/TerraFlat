@@ -234,6 +234,7 @@ namespace FlatWorld.Spaceflight
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);
             running = true;
             if (presentationSeconds > 0d) CompletePresentationSample(presentationSeconds, Time.timeAsDouble);
+            else ResetPresentationHistory();
         }
         public bool TryGetNetworkLooseItem(int guid, out ItemData data, out SpaceSectorPosition position)
         {

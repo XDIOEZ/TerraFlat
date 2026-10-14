@@ -1,6 +1,78 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
 do
+    -- 只采样正式表现插值，不创建世界或操作当前船体与镜头。
+    test.system("space", "presentation_interpolation", {}, function(data)
+        local function near(actual, expected, label)
+            assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) <= 0.0000001, label)
+        end
+        local function position(actual, sectorX, sectorY, x, y, label)
+            assert(type(actual) == "table" and actual.sector.x == sectorX and actual.sector.y == sectorY,
+                label .. "星区归属错误")
+            near(actual["local"].x, x, label .. "局部 X 错误")
+            near(actual["local"].y, y, label .. "局部 Y 错误")
+        end
+        local function pose(actual, x, y, angle, label)
+            position(actual.position, "0", "0", x, y, label)
+            near(actual.angle, angle, label .. "角度错误")
+        end
+        assert(data.operation == "presentation_interpolation" and data.scope == "production-domain",
+            "缺少正式飞船表现插值结果")
+        local expected = {
+            previous = {10, 20, 0}, current = {14, 28, math.pi / 2}, middle = {12, 24, math.pi / 4},
+            ["clamp-low"] = {10, 20, 0}, ["clamp-high"] = {14, 28, math.pi / 2}
+        }
+        assert(type(data.interpolation) == "table" and #data.interpolation == 5, "插值端点、中点和越界样本不完整")
+        local seen = {}
+        for _, sample in ipairs(data.interpolation) do
+            local value = expected[sample.name]
+            assert(value and not seen[sample.name], "未知或重复插值样本：" .. sample.name)
+            seen[sample.name] = true
+            pose(sample, value[1], value[2], value[3], sample.name)
+        end
+        local wrapped = data.wrappedRotation
+        near(math.abs(wrapped.forward.angle), math.pi, "跨正负 π 时应沿最短弧旋转")
+        near(math.abs(wrapped.reverse.angle), math.pi, "反向跨正负 π 时应沿最短弧旋转")
+        position(wrapped.forwardPoint, "0", "0", -1, 0, "正向旋转中点")
+        position(wrapped.reversePoint, "0", "0", -1, 0, "反向旋转中点")
+        local crossingExpected = {
+            quarter = {"9223372036854775805", 127999.875, -9},
+            middle = {"9223372036854775806", -128000, -8},
+            ["three-quarters"] = {"9223372036854775806", -127999.875, -7}
+        }
+        assert(type(data.sectorCrossing) == "table" and #data.sectorCrossing == 3, "极大星区跨界样本不完整")
+        seen = {}
+        for _, sample in ipairs(data.sectorCrossing) do
+            local value = crossingExpected[sample.name]
+            assert(value and not seen[sample.name], "未知或重复跨界样本：" .. sample.name)
+            seen[sample.name] = true
+            position(sample.position, value[1], "-9223372036854775806", value[2], value[3], sample.name)
+        end
+        local mass = data.massShift
+        pose(mass.before, 13, 18, math.pi / 2, "质量中心变化前的船格原点")
+        pose(mass.after, 13, 18, math.pi / 2, "质量中心变化后的船格原点")
+        position(mass.pieceBefore, "0", "0", 6, 24, "质量中心变化前的部件")
+        position(mass.pieceAfter, "0", "0", 6, 24, "质量中心变化后的部件")
+        local shared = data.sharedTransform
+        pose(shared.pose, 12, 24, math.pi / 2, "共同船体姿态")
+        position(shared.piece, "0", "0", 5, 30, "船件共同变换")
+        position(shared.passenger, "0", "0", 8, 26, "乘员共同变换")
+        position(shared.cameraCenter, "0", "0", 7, 27, "驾驶镜头中心共同变换")
+        local track = data.track
+        pose(track.initial, 10, 20, 0, "初始化不能从默认原点拖动")
+        pose(track.advancedPrevious, 10, 20, 0, "推进保留前一个固定步")
+        pose(track.advancedCurrent, 14, 28, math.pi / 2, "推进记录当前固定步")
+        pose(track.advancedMiddle, 12, 24, math.pi / 4, "首个固定步之间插值")
+        pose(track.secondMiddle, 16, 32, math.pi * 3 / 4, "第二次推进不能继续追首个位置")
+        for _, key in ipairs({"resetPrevious", "resetCurrent", "resetLow", "resetMiddle", "resetHigh"}) do
+            pose(track[key], 1000, -500, .3, "重置后不拖尾：" .. key)
+        end
+        assert(type(data.limitations) == "string" and #data.limitations > 0, "插值采样必须说明场景覆盖边界")
+        return "覆盖端点、中点、越界限制、最短旋转、极大星区跨界、质量原点稳定、共同变换和重置不拖尾。"
+    end, "飞船前后物理姿态插值与共同坐标变换")
+end
+
+do
     -- 点火、起降和太空阶段调用正式空地规则；真实贴图、碰撞和联机由现场验收。
     test.system("space", "ship_surface_state", {}, function(data)
         local function near(actual, expected, label)

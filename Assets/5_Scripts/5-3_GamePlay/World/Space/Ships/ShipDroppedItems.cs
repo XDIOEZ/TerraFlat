@@ -128,6 +128,12 @@ namespace FlatWorld.Spaceflight
             Player player = FindDroppedItemSourcePlayer(source, context.Start);
             SpacePassengerState passenger = player == null ? null : GetPassenger(player);
             ShipState carrier = passenger?.Supported == true ? GetShip(passenger.ShipId) : null;
+            if (IsSpaceView && passenger != null && !inherited)
+            {
+                // 丢弃起点保留手持物的局部偏移，但映射回当前权威姿态。
+                SpaceSectorPosition authority = GetAuthoritativePassengerActionPoint(player, passenger, context.Start);
+                state.Motion.Sector = authority.Sector; state.Motion.PositionMeters = authority.LocalMeters;
+            }
             if (carrier == null && passenger == null && TryGetSupport(context.Start, out ShipState floorShip, out _, out _)) carrier = floorShip;
             if (!inherited && carrier != null)
             {

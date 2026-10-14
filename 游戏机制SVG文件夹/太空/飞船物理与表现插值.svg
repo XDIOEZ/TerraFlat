@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1050" viewBox="0 0 1440 1050" role="img" aria-labelledby="title description">
+  <title id="title">飞船物理与表现插值</title>
+  <desc id="description">物理继续每秒更新五十次，画面在前后两次已完成的物理姿态之间逐帧插值。船件、船内玩家和驾驶镜头中心共用这一份姿态。正常表现延后约二十毫秒，瞬移或重建清空历史。</desc>
+  <defs>
+    <style>
+      text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#dbe8f3}
+      .title{font-size:34px;font-weight:700}.subtitle{font-size:20px;fill:#a5bacd}
+      .heading{font-size:24px;font-weight:700}.body{font-size:20px}.small{font-size:17px;fill:#b6c8d8}
+      .blue{fill:#78cfff}.green{fill:#84e5ba}.muted{fill:#849aae}
+      .card{fill:#15283b;stroke:#304b63;stroke-width:2}.line{stroke:#3c596f;stroke-width:2}
+      .arrow{stroke:#7acdf5;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#7acdf5"/></marker>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#264459" stroke-width="1"/></pattern>
+    <g id="ship">
+      <rect x="-50" y="-30" width="100" height="60" rx="9" fill="#43627b" stroke="#8dd5f2" stroke-width="3"/>
+      <path d="M-30-30V30M0-30V30M30-30V30M-50 0H50" stroke="#8aafc6" stroke-width="2"/>
+      <rect x="-60" y="-15" width="10" height="30" rx="3" fill="#f1b667"/>
+      <circle cx="3" cy="-5" r="10" fill="#f3f4e8"/>
+      <path d="M-4 5V17M9 5V17" stroke="#f3f4e8" stroke-width="6"/>
+      <path d="M-12-11H18M3-26V4" stroke="#7cf4cf" stroke-width="2"/>
+      <circle cx="3" cy="-11" r="18" fill="none" stroke="#7cf4cf" stroke-width="2" stroke-dasharray="4 3"/>
+    </g>
+  </defs>
+
+  <rect width="1440" height="1050" fill="#0c1928"/>
+  <text x="52" y="64" class="title">飞船平滑飞行：物理 50 次/秒，画面逐帧插值</text>
+  <text x="52" y="101" class="subtitle">“插值”就是在两个已知位置之间，算出这一帧该显示的位置和角度。</text>
+
+  <rect x="52" y="135" width="646" height="284" rx="18" class="card"/>
+  <rect x="742" y="135" width="646" height="284" rx="18" class="card"/>
+  <text x="79" y="173" class="heading">直接显示最新物理位置</text>
+  <text x="769" y="173" class="heading green">前后物理姿态之间插值</text>
+  <rect x="79" y="193" width="592" height="142" rx="10" fill="url(#grid)"/>
+  <rect x="769" y="193" width="592" height="142" rx="10" fill="url(#grid)"/>
+  <path d="M130 271H580" class="line" stroke-dasharray="6 6"/>
+  <path d="M820 271H1270" class="line" stroke-dasharray="6 6"/>
+  <g transform="translate(165 262)">
+    <g><use href="#ship"/><animateTransform attributeName="transform" type="translate" values="0 0;70 0;140 0;210 0;280 0;350 0" keyTimes="0;.2;.4;.6;.8;1" dur="4s" repeatCount="indefinite" calcMode="discrete"/></g>
+  </g>
+  <g transform="translate(855 262)">
+    <g><use href="#ship"/><animateTransform attributeName="transform" type="translate" values="0 0;70 0;140 0;210 0;280 0;350 0" keyTimes="0;.2;.4;.6;.8;1" dur="4s" repeatCount="indefinite" calcMode="linear"/></g>
+  </g>
+  <text x="79" y="370" class="body">船停一会儿，再跳一小步。</text>
+  <text x="79" y="399" class="small">镜头还在追目标时，整船可能轻微来回晃。</text>
+  <text x="769" y="370" class="body">每帧都有中间位置，船连续向前走。</text>
+  <text x="769" y="399" class="small">动画放慢了时间；循环回到起点只是示意。</text>
+
+  <text x="52" y="468" class="heading">一条共同的显示链，避免船、玩家、镜头各走各的</text>
+  <rect x="52" y="490" width="396" height="217" rx="16" class="card"/>
+  <rect x="522" y="490" width="396" height="217" rx="16" class="card"/>
+  <rect x="992" y="490" width="396" height="217" rx="16" class="card"/>
+  <path d="M460 596H507M930 596H977" class="arrow"/>
+  <text x="77" y="532" class="heading blue">① 物理照常算</text>
+  <text x="77" y="576" class="body">每 0.02 秒推进一次。</text>
+  <text x="77" y="608" class="body">记录前一个、当前两个姿态。</text>
+  <text x="77" y="651" class="small">推力、燃料、碰撞、位置规则</text>
+  <text x="77" y="677" class="small">继续使用权威物理状态。</text>
+  <text x="547" y="532" class="heading blue">② 渲染算这一帧姿态</text>
+  <text x="547" y="576" class="body">按固定步之间的进度 α 插值。</text>
+  <text x="547" y="608" class="body">位置补中间值，角度走短弧。</text>
+  <text x="547" y="651" class="small">α 从 0 到 1；只连接已知姿态。</text>
+  <text x="547" y="677" class="small">不预测下一步物理会发生什么。</text>
+  <text x="1017" y="532" class="heading green">③ 表现共用同一份</text>
+  <text x="1017" y="577" class="body">船根与船件</text>
+  <text x="1017" y="609" class="body">船内玩家</text>
+  <text x="1017" y="641" class="body">驾驶镜头中心</text>
+  <text x="1017" y="679" class="small">局部位置变换也从同一姿态出发。</text>
+
+  <rect x="52" y="733" width="1336" height="98" rx="16" fill="#173b3f" stroke="#3c7f78" stroke-width="2"/>
+  <text x="77" y="774" class="heading green">画面正常延后约 20 毫秒，换来连续移动</text>
+  <text x="77" y="807" class="body">物理并没有变慢；表现使用上一对已完成的姿态。瞬移、切换或重建时重置历史，避免从旧地点拖过来。</text>
+
+  <rect x="52" y="855" width="416" height="121" rx="14" class="card"/>
+  <rect x="512" y="855" width="416" height="121" rx="14" class="card"/>
+  <rect x="972" y="855" width="416" height="121" rx="14" class="card"/>
+  <text x="77" y="892" class="heading">跨过星区边界</text>
+  <text x="77" y="927" class="small">先算附近双精度差，再插值。</text>
+  <text x="77" y="953" class="small">极大星区编号也保留米级小位移。</text>
+  <text x="537" y="892" class="heading">角度跨过 ±180°</text>
+  <text x="537" y="927" class="small">179° → −179° 只转约 2°。</text>
+  <text x="537" y="953" class="small">不会为了补中间值转一大圈。</text>
+  <text x="997" y="892" class="heading">载荷改变质量中心</text>
+  <text x="997" y="927" class="small">用固定船格原点保存表现姿态。</text>
+  <text x="997" y="953" class="small">重心改变不拉动船件与乘员。</text>
+  <text x="52" y="1017" class="small muted">规则示意：静态修改和领域断言不代表飞行画面已经验收；最终平滑效果由用户在游戏里确认。</text>
+</svg>

@@ -70,6 +70,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseShipColliderPresenters();
             gravitySources.Clear();
@@ -89,6 +90,7 @@ namespace FlatWorld.Spaceflight
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;
+            ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseViews();
             contents.Clear(); controlRequests.Clear();
@@ -128,12 +130,14 @@ namespace FlatWorld.Spaceflight
             if (Current == null || !ReferenceEquals(Current.owner, save)) return;
             Current.CaptureContents();
             Current.CaptureLooseItems();
+            Current.CapturePassengerAuthoritativePositions();
             save.SpaceStateJson = JsonConvert.SerializeObject(Current.State);
         }
         public static void EndSession()
         {
             if (Current == null) return;
             Current.running = false;
+            Current.ResetPresentationHistory();
             Current.ResetSpacePhysics();
             Current.ReleaseViews();
             Current.DestroyDrivingCameraTarget();
@@ -186,6 +190,7 @@ namespace FlatWorld.Spaceflight
         private void FixedUpdate()
         {
             if (!running || State == null || Universe == null || GameManager.Instance?.IsGameplayReady != true || Time.timeScale <= 0f || !GameNetwork.HasStateAuthority) return;
+            CapturePresentationState(false);
             ResumePendingPassengerTransfer();
             double seconds = Time.fixedDeltaTime;
             engineOutputs.Clear();
@@ -247,10 +252,12 @@ namespace FlatWorld.Spaceflight
                 }
             }
             StepExplosions();
+            CompletePresentationSample(seconds, Time.fixedTimeAsDouble);
         }
         private void LateUpdate()
         {
             if (!running || State == null) return;
+            UpdatePresentationClock();
             UpdateViewOrigin();
             UpdateSectorStreaming();
             FlushShipDamageFeedback();
@@ -258,6 +265,7 @@ namespace FlatWorld.Spaceflight
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();
+            PresentationSynchronized?.Invoke();
             ShipPanelSession.RefreshOpen(this);
             SpaceLandingPanelSession.Refresh(this, ItemMgr.Instance?.User_Player);
         }

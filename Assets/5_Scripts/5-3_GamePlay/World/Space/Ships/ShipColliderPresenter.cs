@@ -21,7 +21,7 @@ namespace FlatWorld.Spaceflight
             if (layer >= 0) Root.layer = layer;
             body = Root.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0f;
-            body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.None;
             blocker = Root.AddComponent<CustomCollider2D>();
             blocker.enabled = false;
         }
@@ -77,14 +77,14 @@ namespace FlatWorld.Spaceflight
             }
             visibleShipColliderPresenters.Add(ship.ShipId);
             if (IsSpaceView) SpaceMgr.ExistingInstance?.MovePresentationToSector(presenter.Root, ship.Sector);
-            presenter.Synchronize(ship, DisplayPoint(ship, 0d, 0d), angle);
+            presenter.Synchronize(ship, DisplayPresentationPoint(ship, 0d, 0d), angle);
             return presenter;
         }
 
         internal void RefreshShipPassageGeometry(ShipState ship)
         {
             if (ship != null && shipColliderPresenters.TryGetValue(ship.ShipId, out ShipColliderPresenter presenter) && presenter.Root != null)
-                presenter.Synchronize(ship, DisplayPoint(ship, 0d, 0d), (float)(ship.AngleRadians * Mathf.Rad2Deg));
+                presenter.Synchronize(ship, DisplayPresentationPoint(ship, 0d, 0d), (float)(GetShipPresentationPose(ship).AngleRadians * Mathf.Rad2Deg));
         }
 
         private bool IsShipPresentationCollider(Collider2D collider)

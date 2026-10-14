@@ -13,6 +13,11 @@ internal static partial class Program
         Run("边界预加载、自由穿越、折返及多人资源租约", SectorStreaming);
         Run("跨区星体扫掠与巨大编号局部坐标", SectorSurfaceContacts);
         Run("跨边界对接整体的重心、惯量与刚体携带", SectorDocking);
+        Run("船体表现插值端点、夹取与历史重置", PresentationEndpoints);
+        Run("船体表现旋转跨正负圆周最短弧", PresentationShortestTurn);
+        Run("极大编号相邻星区表现插值精度", PresentationSectorCrossing);
+        Run("船体、部件与乘员共用刚性表现姿态", PresentationRigidPoints);
+        Run("质量重算保持船体本地格原点稳定", PresentationMassOrigin);
         Run("跨界自由乘员、支撑乘员及极大编号接触", SectorPassengerContacts);
         Run("稳定船体身份查询无临时分配", QueryIndexAllocations);
         Run("散落物缩放仅保存分量并完整往返", LooseItemScaleSnapshot);

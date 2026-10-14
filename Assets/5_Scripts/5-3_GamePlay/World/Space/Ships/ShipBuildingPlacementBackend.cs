@@ -47,7 +47,7 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 船体注册与结构变更
-        public bool TryGetSupport(Vector2 displayPosition, out ShipState ship, out ShipPieceState floor, out Vector2 local)
+        public bool TryGetSupport(Vector2 displayPosition, out ShipState ship, out ShipPieceState floor, out Vector2 local, bool presentation = true)
         {
             SpaceVector2 position = IsSpaceView ? UnprojectPosition(displayPosition) : new SpaceVector2(displayPosition.x, displayPosition.y);
             if (State != null) foreach (ShipState value in State.Ships)
@@ -55,7 +55,9 @@ namespace FlatWorld.Spaceflight
                 if (value.IsWreck || !IsVisible(value)) continue;
                 SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, position, value.Sector) : position;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)value.PositionX, (float)value.PositionY));
-                ShipGeometry.WorldToLocal(value, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out double x, out double y);
+                double x, y;
+                if (IsSpaceView && presentation) PresentationWorldToLocal(value, new SpaceSectorPosition(ViewSector, position), out x, out y);
+                else ShipGeometry.WorldToLocal(value, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out x, out y);
                 int cellX = (int)Math.Floor(x / value.CellSizeMeters), cellY = (int)Math.Floor(y / value.CellSizeMeters);
                 ShipPieceState found = value.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Floor &&
                     ContainsCell(piece, cellX, cellY));
@@ -179,7 +181,9 @@ namespace FlatWorld.Spaceflight
                 if (!IsVisible(candidate)) continue;
                 SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, absolute, candidate.Sector) : absolute;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
-                ShipGeometry.WorldToLocal(candidate, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out double x, out double y);
+                double x, y;
+                if (IsSpaceView) PresentationWorldToLocal(candidate, new SpaceSectorPosition(ViewSector, absolute), out x, out y);
+                else ShipGeometry.WorldToLocal(candidate, ground.x, ground.y, out x, out y);
                 var proposal = new ShipPieceState { CellX = (int)Math.Floor(x / candidate.CellSizeMeters),
                     CellY = (int)Math.Floor(y / candidate.CellSizeMeters), Width = width,
                     Height = height, QuarterTurns = quarterTurns };

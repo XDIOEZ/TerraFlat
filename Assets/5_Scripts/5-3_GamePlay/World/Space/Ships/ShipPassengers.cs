@@ -62,7 +62,7 @@ namespace FlatWorld.Spaceflight
             Vector2 local = new((float)passenger.LocalX, (float)passenger.LocalY);
             bool floor = passenger.Supported && ship != null && ShipAtmosphereService.HasFloor(ship,
                 (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters), (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters));
-            if (!floor) floor = TryGetSupport(player.transform.position, out floorShip, out _, out local);
+            if (!floor) floor = TryGetSupport(GetPlayerAuthoritativeDisplayPosition(player), out floorShip, out _, out local, false);
             bool gravity = floor && HasArtificialGravity(floorShip, local.x, local.y);
             ShipFlightState floorFlight = floor ? GetFlight(floorShip.ShipId) : null;
             bool ground = floorFlight != null && floorFlight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating or ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending;
@@ -138,9 +138,10 @@ namespace FlatWorld.Spaceflight
             }
             passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
         }
-        private void PlacePassenger(Player player, SpacePassengerState passenger, ShipState ship)
+        private void PlacePassenger(Player player, SpacePassengerState passenger, ShipState ship, bool presentation = false)
         {
-            Vector2 position = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
+            Vector2 authoritativePosition = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
+            Vector2 position = presentation ? GetPassengerPresentationPosition(passenger, ship) : authoritativePosition;
             const float heading = 0f;
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
             // 视觉起飞时玩家物理位置未变，不重复触发物品空间索引和物理同步。
@@ -153,7 +154,7 @@ namespace FlatWorld.Spaceflight
             player.transform.position = new Vector3(position.x, position.y, player.transform.position.z);
             player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
             if (mover?.rb != null) { mover.rb.position = position; mover.rb.rotation = heading; }
-            player.itemData.transform.position = player.transform.position;
+            player.itemData.transform.position = new Vector3(authoritativePosition.x, authoritativePosition.y, player.transform.position.z);
             ItemMgr.Instance.NotifyRuntimeItemMoved(player);
         }
         private void SetTerrainSuppression(Player player, bool value)
@@ -163,10 +164,10 @@ namespace FlatWorld.Spaceflight
             if (SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.EnterConsole, PieceId = pieceId })) return true;
             if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) || piece.Kind != ShipPieceKind.Console ||
                 !IsPowered(ship, piece) || GetFlight(ship.ShipId).Phase == ShipFlightPhase.Floating) return false;
-            if (Vector2.Distance(player.transform.position, DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
+            if (Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(player), DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
             SpacePassengerState passenger = GetPassenger(player);
             bool alreadyDriving = !string.IsNullOrWhiteSpace(passenger.ConsolePieceId);
-            SpaceSectorPosition position = IsSpaceView ? UnprojectSectorPosition(player.transform.position)
+            SpaceSectorPosition position = IsSpaceView ? GetPassengerPosition(passenger)
                 : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(player.transform.position)));
             BindConsoleControl(passenger, ship, piece, position, IsSpaceView);
             ShipFlightState flight = GetFlight(ship.ShipId);
@@ -262,6 +263,12 @@ namespace FlatWorld.Spaceflight
             SpaceVector2 center = assembly != null ? new SpaceVector2(assembly.PositionX, assembly.PositionY)
                 : new SpaceVector2(ship.PositionX, ship.PositionY);
             Vector2 position = IsSpaceView ? ProjectPosition(new SpaceSectorPosition(assembly?.Sector ?? ship.Sector, center)) : WorldLocalPresentation.ProjectPosition(center.ToVector2());
+            if (IsSpaceView)
+            {
+                SpaceVector2 relative = SpaceSectorCoordinates.Relative(assembly?.Sector ?? ship.Sector, center, ship.Sector);
+                ShipGeometry.WorldToLocal(ship, relative.X, relative.Y, out double x, out double y);
+                position = DisplayPresentationPoint(ship, x, y);
+            }
             ShipFlightState flight = GetFlight(ship.ShipId);
             double height = flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? flight.HeightMeters : 0d;
             float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
@@ -335,6 +342,7 @@ namespace FlatWorld.Spaceflight
         public void RestorePassengerPose(Player player)
         {
             if (player == null || State == null) return;
+            ResetPresentationHistory();
             SpacePassengerState passenger = GetPassenger(player);
             ShipState ship = GetShip(passenger.ShipId);
             if (IsSpaceView)
