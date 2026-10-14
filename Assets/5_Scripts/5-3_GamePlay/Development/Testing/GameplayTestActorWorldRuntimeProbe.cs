@@ -493,7 +493,7 @@ public static class GameplayTestActorWorldRuntimeProbe
             26f, 0f, sample.Address.DimensionId, resourceData, out own.Resource);
         if (!registered) throw new InvalidOperationException("真实自然资源 ECS 入口没有建立自有树木。");
         if (ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out var view))
-            NaturalEntityEcsService.BindPresentation(own.Resource, view);
+            NaturalEntityEcsService.BindPresentation(own.Resource, view.GetComponentInChildren<ChunkTilemapRenderer>(true));
         bool readBlocked = navigation.TryGetCell(center, out _, out bool blockedWalkable);
         bool captured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData snapshot);
         bool removed = NaturalEntityEcsService.TryTakeSnapshotAndRemove(own.Resource, out ItemData removedSnapshot);
@@ -501,7 +501,8 @@ public static class GameplayTestActorWorldRuntimeProbe
         bool remains = NaturalEntityEcsService.Contains(own.Resource);
         bool restoredEntity = NaturalEntityEcsService.TryRegister(resourceDefinition, resourceData.Guid, center,
             26f, 0f, sample.Address.DimensionId, removedSnapshot, out own.Resource);
-        if (restoredEntity && view != null) NaturalEntityEcsService.BindPresentation(own.Resource, view);
+        if (restoredEntity && view != null)
+            NaturalEntityEcsService.BindPresentation(own.Resource, view.GetComponentInChildren<ChunkTilemapRenderer>(true));
         bool recaptured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData recovered);
         return new JObject
         {
