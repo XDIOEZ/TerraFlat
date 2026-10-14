@@ -12,8 +12,14 @@ public static partial class MachineWorld
     private sealed class FluidEdgeReservations
     {
         public readonly string Gas, Liquid;
+        public readonly Func<string, bool> GasCandidates, LiquidCandidates, CombustionCandidates;
         public FluidEdgeReservations(FluidNetworkGraph.Edge edge)
-        { string id = edge.Id; Gas = id + ":gas"; Liquid = id + ":liquid"; }
+        {
+            string id = edge.Id; Gas = id + ":gas"; Liquid = id + ":liquid";
+            GasCandidates = fluid => CanReserveFluid(edge, FluidPhase.Gas, fluid);
+            LiquidCandidates = fluid => CanReserveFluid(edge, FluidPhase.Liquid, fluid);
+            CombustionCandidates = fluid => FluidInventory.Same(fluid, FluidIds.Oxygen) && CanReserveFluid(edge, FluidPhase.Gas, fluid);
+        }
     }
     private static readonly ConditionalWeakTable<FluidNetworkGraph.Edge, FluidEdgeReservations> edgeReservations = new();
     private static void TryMoveFluidEdge(FluidNetworkGraph.Edge edge, float seconds)
@@ -38,22 +44,25 @@ public static partial class MachineWorld
     private static bool TryReserveAndMove(FluidNetworkGraph.Edge edge, FluidInventory source, FluidPhase phase, double budget, float seconds,
         CombustionSupportRequest combustion = null)
     {
+        FluidEdgeReservations filters = edgeReservations.GetValue(edge, value => new FluidEdgeReservations(value));
+        ReleaseUnsupportedReservationPhase(edge, source, filters.Gas, FluidPhase.Gas);
+        ReleaseUnsupportedReservationPhase(edge, source, filters.Liquid, FluidPhase.Liquid);
         if (!PortAcceptsPhase(edge.SourcePort, phase) || edge.TargetPort != null && !PortAcceptsPhase(edge.TargetPort, phase)) return false;
         FluidMachineState state = GetFluidState(edge.Source);
         if (state.OutletPhase != "both" && state.OutletPhase != (phase == FluidPhase.Gas ? "gas" : "liquid")) return false;
-        if (phase == FluidPhase.Gas && source.GasMoles <= 0 || phase == FluidPhase.Liquid && source.LiquidMoles <= 0) return false;
         string reservationId = FluidEdgeReservationId(edge, phase);
-        string candidateId = source.GetReservation(reservationId)?.FluidId;
-        if (candidateId == null)
-            foreach (FluidComponentState component in source.State.Components)
-                if ((phase == FluidPhase.Gas ? component.GasMoles : component.LiquidMoles) > 0)
-                { candidateId = component.FluidId; break; }
-        if (!GetFluidDeviceBehavior(edge.Source).CanRoute(edge.Source, edge.SourcePort, phase, candidateId, out string routeReason))
-            return string.IsNullOrEmpty(routeReason) ? false : BlockFluid(edge, routeReason);
+        if (phase == FluidPhase.Gas && source.GasMoles <= 0 || phase == FluidPhase.Liquid && source.LiquidMoles <= 0) return false;
         decimal maximum = phase == FluidPhase.Gas
             ? FluidUnits.StandardLitersToMol((decimal)edge.Source.Definition.Fluid.BatchStandardLiters) : FluidInventory.MaximumMoles;
         bool alreadyReserved = source.GetReservation(reservationId) != null;
-        if (!source.TryReserve(reservationId, phase, maximum, out FluidBatch batch)) return false;
+        Func<string, bool> allowsFluid = combustion != null ? filters.CombustionCandidates
+            : phase == FluidPhase.Gas ? filters.GasCandidates : filters.LiquidCandidates;
+        if (!source.TryReserve(reservationId, phase, maximum, allowsFluid, out FluidBatch batch))
+        {
+            if (!GetFluidDeviceBehavior(edge.Source).CanRoute(edge.Source, edge.SourcePort, phase, null, out string routeReason) &&
+                !string.IsNullOrEmpty(routeReason)) return BlockFluid(edge, routeReason);
+            return false;
+        }
         if (combustion != null && (batch.FluidId != FluidIds.Oxygen || batch.GasMoles <= 0 || batch.LiquidMoles > 0)) return false;
         if (phase == FluidPhase.Liquid && !alreadyReserved)
         {
@@ -62,6 +71,40 @@ public static partial class MachineWorld
                 (decimal)edge.Source.Definition.Fluid.BatchLiquidServings));
         }
         return MoveReservedFluid(edge, source, reservationId, budget, seconds, combustion);
+    }
+
+    // 每条边复用筛选器，抽签前同时检查物性、两端端口与设备路由，避免留下永远送不出的错误批次。
+    private static bool CanReserveFluid(FluidNetworkGraph.Edge edge, FluidPhase phase, string fluidId)
+    {
+        FluidInventory inventory = GetFluidInventory(edge.Source, edge.SourcePort.Chamber);
+        if (!fluidStepStock.TryGetValue(inventory, out FluidInventoryState beginning)) return false;
+        bool availableAtStart = false;
+        foreach (FluidComponentState component in beginning.Components)
+            if (FluidInventory.Same(component.FluidId, fluidId) &&
+                (phase == FluidPhase.Gas ? component.GasMoles : component.LiquidMoles) > 0m)
+            { availableAtStart = true; break; }
+        if (!availableAtStart) return false;
+        return inventory.Catalog.TryGet(fluidId, out FluidDefinition definition) && definition.AllowIndustrialTransport &&
+            MatchesFluid(edge.SourcePort, fluidId) && (edge.TargetPort == null || MatchesFluid(edge.TargetPort, fluidId)) &&
+            GetFluidDeviceBehavior(edge.Source).CanRoute(edge.Source, edge.SourcePort, phase, fluidId, out _);
+    }
+
+    private static void ReleaseUnsupportedReservationPhase(FluidNetworkGraph.Edge edge, FluidInventory source, string reservationId, FluidPhase slotPhase)
+    {
+        FluidOutputReservation reservation = source.GetReservation(reservationId);
+        if (reservation == null) return;
+        string outletPhase = GetFluidState(edge.Source).OutletPhase;
+        bool changed = false;
+        // 相变后的禁用相只归还预留，不扣库存；仍能经过此口的同物质余量继续原批次重试。
+        if (reservation.GasMoles > 0m && (slotPhase != FluidPhase.Gas || outletPhase != "both" && outletPhase != "gas" || !PortAcceptsPhase(edge.SourcePort, FluidPhase.Gas) ||
+            edge.TargetPort != null && !PortAcceptsPhase(edge.TargetPort, FluidPhase.Gas)))
+        { reservation.GasMoles = 0m; changed = true; }
+        if (reservation.LiquidMoles > 0m && (slotPhase != FluidPhase.Liquid || outletPhase != "both" && outletPhase != "liquid" || !PortAcceptsPhase(edge.SourcePort, FluidPhase.Liquid) ||
+            edge.TargetPort != null && !PortAcceptsPhase(edge.TargetPort, FluidPhase.Liquid)))
+        { reservation.LiquidMoles = 0m; changed = true; }
+        if (!changed) return;
+        if (reservation.TotalMoles == 0m) source.ReleaseReservation(reservationId);
+        StateChanged(edge.Source);
     }
 
     private static string FluidEdgeReservationId(FluidNetworkGraph.Edge edge, FluidPhase phase)

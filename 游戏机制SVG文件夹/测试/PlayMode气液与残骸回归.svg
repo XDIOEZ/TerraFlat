@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="820" viewBox="0 0 1120 820">
+<title>PlayMode Lua 气液与残骸测试循环</title>
+<desc>正式隔离世界调用生产事务，C#返回原始采样，Lua验证守恒、拒收、预留和残骸清理，失败后修根因再重放。</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#80a9d4"/></marker>
+<style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#eaf2fb}.title{font-size:29px;font-weight:700}.head{font-size:22px;font-weight:700}.body{font-size:18px}.small{font-size:16px;fill:#b8cbe0}.box{fill:#162c43;stroke:#45617e;stroke-width:2}.link{fill:none;stroke:#80a9d4;stroke-width:3;marker-end:url(#arrow)}.good{fill:#81e4bc}.warn{fill:#ffc179}.pulse{animation:pulse 5s infinite}@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}@media(prefers-reduced-motion:reduce){.pulse{animation:none}}</style>
+</defs>
+<rect width="1120" height="820" rx="22" fill="#0b1727"/>
+<text x="44" y="55" class="title">PlayMode Lua：做真实操作，看真值，修根因，再重放</text>
+<text x="44" y="88" class="small">重点开发真实现场测试集 · 每轮使用隔离存档 · 正在使用的用户 PlayMode 保持运行</text>
+<rect class="box" x="44" y="120" width="304" height="118" rx="14"/>
+<text class="head" x="64" y="154">① 正式隔离世界</text>
+<text class="body" x="64" y="186">装真实原料、推进固定步</text>
+<text class="small" x="64" y="216">正式放置、输送、反应与伤害接口</text>
+<path class="link" d="M350 179H390"/>
+<rect class="box" x="398" y="120" width="294" height="118" rx="14"/>
+<text class="head" x="418" y="154">② C# 白名单返回真值</text>
+<text class="body" x="418" y="186">前后库存、端口、身份、能量</text>
+<text class="small" x="418" y="216">runtime_sample 保存原始数值</text>
+<path class="link" d="M694 179H734"/>
+<rect class="box" x="742" y="120" width="334" height="118" rx="14"/>
+<text class="head" x="762" y="154">③ Lua 判断业务结果</text>
+<text class="body" x="762" y="186">assert 守恒、拒收、回滚和清理</text>
+<text class="small" x="762" y="216">每个子检查保留独立中文标签</text>
+<rect class="box" x="44" y="272" width="490" height="262" rx="16"/>
+<text class="head" x="66" y="309">气液：管网、设备与世界液体</text>
+<text class="body" x="66" y="349">选择器：真正预留的物质符合出口规则</text>
+<text class="body" x="66" y="386">液泵：本轮新水等下一轮，不能穿透</text>
+<text class="body" x="66" y="423">相变：水蒸气＋液态水一起算总量</text>
+<text class="body" x="66" y="460">堵塞／切相：归还禁用预留，余量续送</text>
+<text class="body" x="66" y="497">加工／转液：大容量不溢出，尾量不超取</text>
+<rect class="box" x="570" y="272" width="506" height="262" rx="16"/>
+<text class="head" x="592" y="309">飞船：局部伤害与冷残骸清理</text>
+<text class="body" x="592" y="349">长船截断后，部件只有一份真实归属</text>
+<text class="body" x="592" y="386">设备失去地板：成为独立冷残骸</text>
+<text class="body" x="592" y="423">冷设备：库存、种植槽和已有血量保持</text>
+<text class="body" x="592" y="460">最后地板销毁：状态／外壳／刚体一起清理</text>
+<text class="body" x="592" y="497">保存往返：死件不复活，身份不重复</text>
+<path class="link" d="M294 536V577H424"/>
+<path class="link" d="M824 536V577H696"/>
+<rect class="box" x="436" y="553" width="250" height="91" rx="14"/>
+<text class="head" x="457" y="589">报告首个失败与真值</text>
+<text class="small" x="457" y="618">分清游戏规则和夹具前提</text>
+<path class="link pulse" d="M560 646V679H330V711"/>
+<rect class="box" x="44" y="713" width="516" height="66" rx="14"/>
+<text class="body good" x="66" y="754">修根因 → 原场景复测 → 扩展相关 PlayMode 案例</text>
+<rect class="box" x="590" y="713" width="486" height="66" rx="14"/>
+<text class="body warn" x="612" y="742">通过只代表已执行的断言</text>
+<text class="small" x="612" y="767">画面、手感与联机效果由用户验收</text>
+</svg>

@@ -42,7 +42,8 @@ public sealed class InventoryItemTransferPort : ContainerPortBase, IItemTransfer
     public int GetReceivableItems(ItemData item, int requested)
     {
         if (!Configuration.AllowsItem(item) || requested <= 0 || inventory.Data.IsDepositBlocked) return 0;
-        int capacity = Mathf.FloorToInt(inventory.Data.GetCapacityLimitedAmount(item, requested) + .0001f);
+        // 复用库存的整型上限钳制，避免无限槽的浮点容量转回整数时溢出。
+        int capacity = Math.Min(requested, Inventory_Data.GetWholeStackAmount(inventory.Data.GetCapacityLimitedAmount(item, requested) + .0001f));
         if (capacity <= 0) return 0;
         float space = 0f;
         var from = new ItemSlot(0) { itemData = item };
@@ -56,7 +57,7 @@ public sealed class InventoryItemTransferPort : ContainerPortBase, IItemTransfer
         }
         if (inventory.Data.HasUnlimitedSlots && (Configuration.SlotIndices == null || Configuration.SlotIndices.Length == 0) &&
             inventory.CanAcceptQuickTransfer(from, new ItemSlot(inventory.Data.itemSlots.Count))) return capacity;
-        return Mathf.FloorToInt(Mathf.Min(capacity, space) + .0001f);
+        return Math.Min(capacity, Inventory_Data.GetWholeStackAmount(space + .0001f));
     }
     public bool ExtractItems(ItemData expected, int amount, out ItemData extracted)
     {
@@ -88,7 +89,7 @@ public sealed class InventoryItemTransferPort : ContainerPortBase, IItemTransfer
                 ItemSlot target = inventory.Data.itemSlots[i];
                 if (!AllowedSlot(i) || target == null || inventory.IsSlotBeingDragged(i) ||
                     (pass == 0 ? target.itemData == null : target.itemData != null) || !inventory.CanAcceptQuickTransfer(sourceSlot, target)) continue;
-                source.TransferItemQuantityTo(sourceSlot, inventory.Data, target, Mathf.FloorToInt(sourceSlot.itemData.Stack.Amount));
+                source.TransferItemQuantityTo(sourceSlot, inventory.Data, target, Inventory_Data.GetWholeStackAmount(sourceSlot.itemData.Stack.Amount));
             }
         }
         return sourceSlot.itemData == null || sourceSlot.itemData.Stack.Amount <= .0001f;

@@ -328,7 +328,7 @@ public static class FluidDeviceOperations
             if (!TryGetResiduePort(node, reaction, out IItemTransferPort residue, out ItemData product)) return 0;
             int capacity = residue.GetReceivableItems(product, int.MaxValue);
             if (capacity <= 0) return 0;
-            result = Math.Min(result, Math.Max(0, capacity + 1 - GetFluidState(node).ResidueProgress.GetValueOrDefault(reaction.SolidResidueItemId) - .0000001) / reaction.ResidueItemsPerReaction);
+            result = Math.Min(result, Math.Max(0, capacity + 1d - GetFluidState(node).ResidueProgress.GetValueOrDefault(reaction.SolidResidueItemId) - .0000001) / reaction.ResidueItemsPerReaction);
         }
         return result;
     }
@@ -338,7 +338,10 @@ public static class FluidDeviceOperations
         FluidMachineState state = GetFluidState(node);
         if (reaction.RequiresFilter && GetAvailableFilterWork(node) + .000000001 < extent) return false;
         double nextResidue = state.ResidueProgress.GetValueOrDefault(reaction.SolidResidueItemId) + extent * reaction.ResidueItemsPerReaction;
-        int residueItems = (int)Math.Floor(nextResidue + .000000001);
+        double wholeResidue = Math.Floor(nextResidue + .000000001);
+        // 完整残渣超出整型端口范围时先拒绝，不能扣掉原料后留下负数量或巨大尾量。
+        if (!double.IsFinite(wholeResidue) || wholeResidue < 0d || wholeResidue > int.MaxValue) return false;
+        int residueItems = (int)wholeResidue;
         IItemTransferPort residuePort = null; ItemData residueItem = null;
         if (reaction.ResidueItemsPerReaction > 0 && (!TryGetResiduePort(node, reaction, out residuePort, out residueItem) ||
             residuePort.GetReceivableItems(residueItem, residueItems) < residueItems)) return false;

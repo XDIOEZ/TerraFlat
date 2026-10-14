@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using static MachineWorld;
 
@@ -243,7 +244,8 @@ internal static class GameplayTestFluidNetworks
             f.Step(); FluidInventory result = GetFluidInventory(target);
             bool expectLiquid = mixed ? vertical : !vertical;
             Check(report, $"方向 {direction} {(mixed ? "双相首选" : "单相回退")}", expectLiquid
-                ? result.LiquidMoles > 0 && result.GasMoles == 0 : result.GasMoles > 0 && result.LiquidMoles == 0);
+                ? GetFluidState(source).LastFlowPhase == "liquid" && result.GetLiquidMoles(FluidIds.PureWater) + result.GetGasMoles(FluidIds.PureWater) > 0 && result.GetGasMoles(FluidIds.Oxygen) == 0
+                : GetFluidState(source).LastFlowPhase == "gas" && result.GetGasMoles(FluidIds.Oxygen) > 0 && result.GetLiquidMoles(FluidIds.PureWater) + result.GetGasMoles(FluidIds.PureWater) == 0);
         }
     }
 
@@ -324,7 +326,8 @@ internal static class GameplayTestFluidNetworks
         Check(report, "储罐连接外形跟随权威组", GetFluidTankConnectionMask(a) == 2 && GetFluidTankConnectionMask(b) == 8 && GetFluidTankConnectionMask(c) == 0);
         Fill(a, FluidIds.Oxygen, 2m); Fill(a, FluidIds.PureWater, 0, 20m);
         FluidInventory old = GetFluidInventory(a); var initial = Total(a, b);
-        ItemData saved = CaptureSnapshot(b);
+        int ownerId = f.Groups().First(group => group.Members.Contains(a)).OwnerId;
+        ItemData saved = CaptureSnapshot(a.Id == ownerId ? b : a);
         Check(report, "非主成员不保存第二份内容", MachinePersistence.Read<FluidMachineState>(saved, "fluid").Chambers["main"].Components.Count == 0);
         TransferShipNodes(from, to, new[] { b.Id }); var end = Total(a, b);
         Check(report, "拆分库存和内能守恒", Near(end.Gas, initial.Gas) && Near(end.Liquid, initial.Liquid) && Near(end.Energy, initial.Energy));
@@ -478,6 +481,163 @@ internal static class GameplayTestFluidNetworks
         f.Tick();
         Check(report, "完整 MachineWorld.Tick 推进固定步长和真实管网", TransportStep == step + 1 && GetFluidInventory(target).GasMoles > 0);
         Check(report, "非玩家世界保持流体网活动", IsFluidActive(source) && IsFluidActive(target));
+    }
+    #endregion
+
+    #region PlayMode Lua 管网与储罐原始采样
+    // 夹具只摆放并调用生产接口，物质筛选、相态和守恒规则由 Lua 读取原始数值断言。
+    internal static JObject CaptureSelectorRoutes(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        int seed = args.Value<int?>("seed") ?? 1;
+        if (seed <= 0) throw new ArgumentOutOfRangeException(nameof(args), "选择器采样随机态必须为正整数。");
+        bool onlySelected = args.Value<bool?>("onlySelected") ?? false;
+        using var f = new GameplayFluidScope();
+        MachineEntity selector = f.Add("GasSelector"), north = f.Add("FluidOutlet", 0, 1, 1), south = f.Add("FluidOutlet", 0, -1, 3);
+        MachineEntity selectedTank = f.Add("LiquidStorageTank", 0, 2), otherTank = f.Add("LiquidStorageTank", 0, -2);
+        selector.Definition.Fluid.SingleGas = false; TopologyChanged(selector); f.Rebuild();
+        FluidInventory source = Fill(selector, FluidIds.Oxygen, .1m);
+        if (!onlySelected) Fill(selector, FluidIds.Nitrogen, .1m);
+        source.State.RandomState = (ulong)seed;
+        string unselectedBefore = Payload(source), unselectedRandom = source.State.RandomState.ToString();
+        f.Step();
+        var unselected = new JObject
+        {
+            ["before"] = unselectedBefore, ["after"] = Payload(source),
+            ["randomBefore"] = unselectedRandom, ["randomAfter"] = source.State.RandomState.ToString(),
+            ["ports"] = source.State.Ports.Count,
+            ["selectedTankMoles"] = GetFluidInventory(selectedTank).GasMoles,
+            ["otherTankMoles"] = GetFluidInventory(otherTank).GasMoles
+        };
+        FluidDeviceBehavior behavior = GetFluidDeviceBehavior(selector);
+        bool selected = behavior.Execute(selector, "fluid.select", FluidIds.Oxygen);
+        string selectedBeforeInvalid = GetFluidState(selector).SelectedGasId, invalidBefore = Payload(source);
+        bool invalidAccepted = behavior.Execute(selector, "fluid.select", "core:missing_test_fluid");
+        var invalid = new JObject
+        {
+            ["accepted"] = invalidAccepted, ["selectedBefore"] = selectedBeforeInvalid,
+            ["selectedAfter"] = GetFluidState(selector).SelectedGasId,
+            ["before"] = invalidBefore, ["after"] = Payload(source)
+        };
+        var initial = Total(selector, north, south, selectedTank, otherTank);
+        var steps = new JArray();
+        for (int i = 0; i < 12; i++)
+        {
+            f.Step();
+            steps.Add(new JObject
+            {
+                ["step"] = i + 1,
+                ["selectedOxygen"] = GetFluidInventory(selectedTank).GetGasMoles(FluidIds.Oxygen),
+                ["selectedNitrogen"] = GetFluidInventory(selectedTank).GetGasMoles(FluidIds.Nitrogen),
+                ["otherOxygen"] = GetFluidInventory(otherTank).GetGasMoles(FluidIds.Oxygen),
+                ["otherNitrogen"] = GetFluidInventory(otherTank).GetGasMoles(FluidIds.Nitrogen),
+                ["reservations"] = JArray.FromObject(source.State.Ports)
+            });
+        }
+        var final = Total(selector, north, south, selectedTank, otherTank);
+        MachineEntity poolNode = f.Add("GasSelector", 20);
+        poolNode.Definition.Fluid.SingleGas = false; TopologyChanged(poolNode); f.Rebuild();
+        FluidInventory pool = Fill(poolNode, FluidIds.Oxygen, .1m); Fill(poolNode, FluidIds.Nitrogen, .1m);
+        pool.State.RandomState = (ulong)seed;
+        string refusedBefore = Payload(pool), refusedRandom = pool.State.RandomState.ToString();
+        bool refused = pool.TryReserve("no-candidate", FluidPhase.Gas, .02m, id => id == FluidIds.Hydrogen, out _);
+        var rejection = new JObject
+        {
+            ["accepted"] = refused, ["before"] = refusedBefore, ["after"] = Payload(pool),
+            ["randomBefore"] = refusedRandom, ["randomAfter"] = pool.State.RandomState.ToString(),
+            ["ports"] = pool.State.Ports.Count
+        };
+        bool reserved = pool.TryReserve("sticky", FluidPhase.Gas, .02m, id => id == FluidIds.Oxygen, out FluidBatch first);
+        string retryBefore = Payload(pool), retryRandom = pool.State.RandomState.ToString();
+        bool retried = pool.TryReserve("sticky", FluidPhase.Gas, .001m, id => id == FluidIds.Nitrogen, out FluidBatch retry);
+        return new JObject
+        {
+            ["seed"] = seed, ["onlySelected"] = onlySelected, ["selectionAccepted"] = selected,
+            ["inputOxygen"] = .1m, ["inputNitrogen"] = onlySelected ? 0m : .1m,
+            ["unselected"] = unselected, ["invalidSelection"] = invalid, ["steps"] = steps,
+            ["initialGas"] = initial.Gas, ["finalGas"] = final.Gas,
+            ["initialEnergy"] = initial.Energy, ["finalEnergy"] = final.Energy,
+            ["rejectedPool"] = rejection,
+            ["sticky"] = new JObject
+            {
+                ["reserved"] = reserved, ["retried"] = retried,
+                ["firstFluid"] = first.FluidId, ["retryFluid"] = retry.FluidId,
+                ["firstMoles"] = first.GasMoles, ["retryMoles"] = retry.GasMoles,
+                ["before"] = retryBefore, ["after"] = Payload(pool),
+                ["randomBefore"] = retryRandom, ["randomAfter"] = pool.State.RandomState.ToString()
+            }
+        };
+    }
+
+    internal static JObject CapturePhasePreference(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        int direction = args.Value<int?>("direction") ?? 0;
+        if (direction < 0 || direction > 3) throw new ArgumentOutOfRangeException(nameof(args), "相态采样方向必须为 0 到 3。");
+        bool mixed = args.Value<bool?>("mixed") ?? true;
+        using var f = new GameplayFluidScope();
+        MachineEntity source = f.Add("FluidOutlet", rotation: direction);
+        Vector2Int offset = MechanicalNetworkGraph.Directions[direction];
+        MachineEntity target = f.Add("LiquidStorageTank", offset.x, offset.y);
+        f.Rebuild(); bool vertical = (direction & 1) == 1;
+        if (mixed || vertical) Fill(source, FluidIds.Oxygen, .05m);
+        if (mixed || !vertical) Fill(source, FluidIds.PureWater, 0, 1m);
+        var initial = Total(source, target);
+        f.Step();
+        FluidInventory result = GetFluidInventory(target), remaining = GetFluidInventory(source);
+        var final = Total(source, target);
+        return new JObject
+        {
+            ["direction"] = direction, ["mixed"] = mixed, ["flowPhase"] = GetFluidState(source).LastFlowPhase,
+            ["targetOxygenGas"] = result.GetGasMoles(FluidIds.Oxygen),
+            ["targetWaterGas"] = result.GetGasMoles(FluidIds.PureWater),
+            ["targetWaterLiquid"] = result.GetLiquidMoles(FluidIds.PureWater),
+            ["remainingOxygenGas"] = remaining.GetGasMoles(FluidIds.Oxygen),
+            ["remainingWaterGas"] = remaining.GetGasMoles(FluidIds.PureWater),
+            ["remainingWaterLiquid"] = remaining.GetLiquidMoles(FluidIds.PureWater),
+            ["initialGas"] = initial.Gas, ["initialLiquid"] = initial.Liquid,
+            ["finalGas"] = final.Gas, ["finalLiquid"] = final.Liquid,
+            ["initialEnergy"] = initial.Energy, ["finalEnergy"] = final.Energy,
+            ["reservations"] = JArray.FromObject(remaining.State.Ports)
+        };
+    }
+
+    internal static JObject CaptureTankOwnership(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var f = new GameplayFluidScope(); string from = f.NewShip(), to = f.NewShip();
+        using var fromScope = UseScope(GetShipScopeKey(from));
+        MachineEntity a = f.Add("GasTankBlock_Iron"), b = f.Add("GasTankBlock_Iron", 1), c = f.Add("GasTankBlock_Steel", 2);
+        f.Rebuild();
+        FluidTankGroup group = f.Groups().First(value => value.Members.Contains(a));
+        MachineEntity owner = group.OwnerId == a.Id ? a : b, nonOwner = group.OwnerId == a.Id ? b : a;
+        bool shared = ReferenceEquals(GetFluidInventory(a), GetFluidInventory(b));
+        bool foreignShared = ReferenceEquals(GetFluidInventory(b), GetFluidInventory(c));
+        double volume = GetFluidVolumeLiters(a), gasSpace = GetFluidMinimumGasSpaceLiters(a);
+        int maskA = GetFluidTankConnectionMask(a), maskB = GetFluidTankConnectionMask(b), maskC = GetFluidTankConnectionMask(c);
+        int ownerA = GetFluidState(a).GroupOwnerId, ownerB = GetFluidState(b).GroupOwnerId;
+        Fill(a, FluidIds.Oxygen, 2m); Fill(a, FluidIds.PureWater, 0, 20m);
+        FluidInventory old = GetFluidInventory(a); var initial = Total(a, b);
+        FluidMachineState primary = MachinePersistence.Read<FluidMachineState>(CaptureSnapshot(owner), "fluid");
+        FluidMachineState secondary = MachinePersistence.Read<FluidMachineState>(CaptureSnapshot(nonOwner), "fluid");
+        FluidInventoryState primaryContents = primary.Chambers["main"], secondaryContents = secondary.Chambers["main"];
+        int ownerId = group.OwnerId;
+        TransferShipNodes(from, to, new[] { b.Id }); var final = Total(a, b);
+        FluidInventory first; using (UseNodeScope(a)) first = GetFluidInventory(a);
+        FluidInventory second; using (UseNodeScope(b)) second = GetFluidInventory(b);
+        return new JObject
+        {
+            ["aId"] = a.Id, ["bId"] = b.Id, ["ownerId"] = ownerId,
+            ["ownerA"] = ownerA, ["ownerB"] = ownerB, ["savedOwnerId"] = owner.Id, ["savedNonOwnerId"] = nonOwner.Id,
+            ["shared"] = shared, ["foreignShared"] = foreignShared, ["volume"] = volume, ["minimumGasSpace"] = gasSpace,
+            ["maskA"] = maskA, ["maskB"] = maskB, ["maskC"] = maskC,
+            ["primaryContents"] = JObject.FromObject(primaryContents), ["secondaryContents"] = JObject.FromObject(secondaryContents),
+            ["initialGas"] = initial.Gas, ["initialLiquid"] = initial.Liquid, ["initialEnergy"] = initial.Energy,
+            ["finalGas"] = final.Gas, ["finalLiquid"] = final.Liquid, ["finalEnergy"] = final.Energy,
+            ["oldInventoryEmpty"] = old.IsEmpty, ["splitShared"] = ReferenceEquals(first, second),
+            ["firstGas"] = first.GasMoles, ["firstLiquid"] = first.LiquidMoles,
+            ["secondGas"] = second.GasMoles, ["secondLiquid"] = second.LiquidMoles
+        };
     }
     #endregion
 }

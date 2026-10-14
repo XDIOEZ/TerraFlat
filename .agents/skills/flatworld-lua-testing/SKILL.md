@@ -34,6 +34,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 
 - 先把改动的正常、边界、拒绝、回滚和关键流程对应到具体Lua断言；缺少则先增强同系统Lua，必要时扩展正式白名单采样，不复制业务算法或开放反射/任意C#。
 - `test.system(system,operation,args,validator,label)` 调用独立规则；`test.runtime(...)` 只用于正式隔离世界。每个回调必须实际调用assert，无断言即失败。参数排队时冻结，回调不能追加命令。
+- 气液 PlayMode 的选择器、相态、组主、设备容量、液碱端口和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。
 - 规则模式只允许system/log且至少一个system；不进入Test Framework/PlayMode，不建资源/存档世界。场景模式复用原EditMode→PlayMode流程。
 - 新主题更新本系统清单和README后运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总清单与映射；新系统登记sourcePaths/dependsOn。Lua组合无需编译，新增C#操作仍需编译。
 - `--systems` 精确选择；`--changed` 根据源码归属包含使用它的系统，未登记路径报错，测试框架改动选全部规则。影响实际链路再加 `--integration`，现场子集一次建世界。没有现场入口返回4；已有入口也须检查README中的缺口。
@@ -69,6 +70,7 @@ python Tools/GameplayTesting/run_suite.py --list-systems
 - 复用已打开且未处于 PlayMode 的 Editor；测试中心 `FlatWorld/测试/测试中心（多选案例）` 或 `gameplay_test_pipeline(run/status/report)` 也可执行。用户正在玩的 PlayMode 不停止、不暂停，只静态修改并说明本轮未运行。
 - `gameplay` 清单的 EditMode 对 FlatWorld 测试程序集全量做安全前置；全部通过后只进入一次 PlayMode，在同一隔离世界顺序执行选中 Lua。`--cases` 只筛玩法案例，原清单不改；`buildShowroom: false` 跳过全陈列。
 - 一份 Lua 一个沙箱与控制租约，世界、背包和玩家位置通常延续；前置条件自行准备。隔离保存租约覆盖首次、自动和退出保存，退出写盘并返回菜单后才恢复正式存档目录，不写正式玩家档案。
+- 太空迁移恢复会重建玩家；宿主的`player_ready`按本轮同档案和隔离存档边界重绑ItemMgr当前本地玩家。截图后的非截图命令先恢复现场，再显式检查world/player，保证后续Lua不因旧对象引用被跳过。
 - 失败先看首个失败步骤、原始采样及堆栈，再修复并重跑相关范围；用户要求循环时逐轮推进，不以删除、禁用或放宽断言换取通过。未执行、环境阻塞和视觉/联机未验收应如实区分。
 - 空地夹具按 ChunkTerrainData.GrassPresent 判断有草；GrassEmpty 为 1，不能把非零全部当作有草。冷生成等同步长步骤计入整场超时；应按预算拆分专项现场，记录未执行案例，不能把超时后的跳过计作通过。
 - 固定步采样等待正式 `SpaceSession.State.SimulationSeconds` 达到目标，同时保留真实时间超时；慢帧或编辑器操作耗时不能计作物理推进。无外力惯性使用空星区自有夹具，同时检查位移、停推和燃料；星体引力或大气阻力范围内不能断言总速度不变。太空跨区另核验 UI 根身份、统一时间源与实际采光，防止逻辑通过但画面失效。

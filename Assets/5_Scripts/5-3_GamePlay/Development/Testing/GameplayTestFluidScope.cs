@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,6 +13,54 @@ public static partial class MachineWorld
     // 测试夹具仅开放既有调度阶段，不复制输送算法，也不清空其他世界的机器或注册表。
     internal sealed class GameplayFluidScope : IDisposable
     {
+        private static readonly JsonSerializerSettings cloneSettings = new()
+        {
+            Converters =
+            {
+                new Vector4FieldsConverter(), new ColorFieldsConverter(),
+                new FlatWorld.Spaceflight.SpaceLooseItemState.ScaleJsonConverter()
+            }
+        };
+
+        // Color 只复制 RGBA 原值，避免 linear 与 gamma 等计算属性递归进入克隆。
+        private sealed class ColorFieldsConverter : JsonConverter<Color>
+        {
+            public override void WriteJson(JsonWriter writer, Color value, JsonSerializer serializer)
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("r"); writer.WriteValue(value.r);
+                writer.WritePropertyName("g"); writer.WriteValue(value.g);
+                writer.WritePropertyName("b"); writer.WriteValue(value.b);
+                writer.WritePropertyName("a"); writer.WriteValue(value.a);
+                writer.WriteEndObject();
+            }
+            public override Color ReadJson(JsonReader reader, Type objectType, Color existingValue,
+                bool hasExistingValue, JsonSerializer serializer)
+            {
+                JObject fields = JObject.Load(reader);
+                return new Color(fields.Value<float>("r"), fields.Value<float>("g"), fields.Value<float>("b"), fields.Value<float>("a"));
+            }
+        }
+
+        // Unity Vector4 只复制四个实际分量，防止 normalized 属性在定义克隆时无限自引用。
+        private sealed class Vector4FieldsConverter : JsonConverter<Vector4>
+        {
+            public override void WriteJson(JsonWriter writer, Vector4 value, JsonSerializer serializer)
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("x"); writer.WriteValue(value.x);
+                writer.WritePropertyName("y"); writer.WriteValue(value.y);
+                writer.WritePropertyName("z"); writer.WriteValue(value.z);
+                writer.WritePropertyName("w"); writer.WriteValue(value.w);
+                writer.WriteEndObject();
+            }
+            public override Vector4 ReadJson(JsonReader reader, Type objectType, Vector4 existingValue,
+                bool hasExistingValue, JsonSerializer serializer)
+            {
+                JObject fields = JObject.Load(reader);
+                return new Vector4(fields.Value<float>("x"), fields.Value<float>("y"), fields.Value<float>("z"), fields.Value<float>("w"));
+            }
+        }
         private readonly GameSaveData save;
         private readonly string planetId;
         private readonly List<string> keys = new();
@@ -67,7 +116,7 @@ public static partial class MachineWorld
             MachineEntity node = Place(data);
             created.Add(node);
             MachineDefinition original = node.Definition;
-            node.Definition = JsonConvert.DeserializeObject<MachineDefinition>(JsonConvert.SerializeObject(original));
+            node.Definition = JsonConvert.DeserializeObject<MachineDefinition>(JsonConvert.SerializeObject(original, cloneSettings), cloneSettings);
             node.Definition.Content = original.Content;
             TopologyChanged(node);
             return node;

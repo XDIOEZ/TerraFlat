@@ -202,6 +202,11 @@ public sealed class FluidInventory
 
     #region 每口独立预留与输出
     public bool TryReserve(string portId, FluidPhase phase, decimal maximumMoles, out FluidBatch batch)
+        => TryReserve(portId, phase, maximumMoles, null, out batch);
+
+    // 新批次仅从调用方允许的物质池抽取，已有批次重试保留原物质与随机态。
+    public bool TryReserve(string portId, FluidPhase phase, decimal maximumMoles, Func<string, bool> allowsFluid,
+        out FluidBatch batch)
     {
         batch = default;
         if ((phase != FluidPhase.Gas && phase != FluidPhase.Liquid) || string.IsNullOrWhiteSpace(portId) || maximumMoles <= 0m) return false;
@@ -211,6 +216,7 @@ public sealed class FluidInventory
         decimal sum = 0m;
         foreach (var component in State.Components)
         {
+            if (allowsFluid != null && !allowsFluid(component.FluidId)) continue;
             decimal amount = GetAvailableMoles(component.FluidId, phase);
             sum += phase == FluidPhase.Gas ? amount : FluidUnits.MolToServings(Catalog.Find(component.FluidId), amount);
         }
@@ -220,6 +226,7 @@ public sealed class FluidInventory
         FluidComponentState chosen = null;
         foreach (var component in State.Components)
         {
+            if (allowsFluid != null && !allowsFluid(component.FluidId)) continue;
             decimal amount = GetAvailableMoles(component.FluidId, phase);
             decimal weight = phase == FluidPhase.Gas ? amount : FluidUnits.MolToServings(Catalog.Find(component.FluidId), amount);
             if (weight <= 0m) continue;

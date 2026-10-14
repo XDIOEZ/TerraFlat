@@ -64,7 +64,8 @@ public sealed partial class GameplayTestSpaceScenario
             TargetSector = sector, Active = false, Sequence = ++session.State.NavigationSequence };
         session.State.Navigation.Add(navigationState);
         bool headDamage = DamageOwnedPiece(floors[2], 17f);
-        bool tailDamage = DamageOwnedPiece(floors[5], 11f);
+        // 尾部伤者选最终仍存活的锚点地板，不能把后续主动摧毁的小块当作保存基准。
+        bool tailDamage = DamageOwnedPiece(floors[8], 11f);
         bool cargoDamage = DamageOwnedPiece(cargo, 7f);
         yield return Wait(.25d);
         // 培育器会先把种子放进种植槽，基线必须捕获当前真实库存而不是最初放置的旧快照。
@@ -81,6 +82,30 @@ public sealed partial class GameplayTestSpaceScenario
         yield return WaitUntil(() => CollectDamageFragments().Count == 3, 15d, "真实冷残骸没有继续拆成两个碎块。");
         yield return Wait(.25d);
         JArray afterTail = DamageFragmentReadings(CollectDamageFragments());
+        // 继续打掉货物支撑和小块的最后地板，检查真实冷移交与空整体清理。
+        bool cargoFloorHit = DamageOwnedPiece(floors[7], 1000f);
+        yield return WaitUntil(() => CollectDamageFragments().Count == 4, 15d, "失去地板的冷货物没有成为独立残骸。");
+        yield return Wait(.25d);
+        JArray afterUnsupported = DamageFragmentReadings(CollectDamageFragments());
+        session.FindPiece(floors[4].PieceId, out ShipState emptyCandidate, out _);
+        string emptiedShipId = emptyCandidate?.ShipId;
+        int emptiedWreckGuid = emptyCandidate?.WreckGuid ?? 0;
+        bool smallFloorHit = DamageOwnedPiece(floors[4], 1000f);
+        yield return WaitUntil(() => !session.FindPiece(floors[4].PieceId, out _, out _), 15d, "第一块冷地板摧毁后仍可查询。");
+        yield return Wait(.25d);
+        bool lastFloorHit = DamageOwnedPiece(floors[5], 1000f);
+        yield return WaitUntil(() => session.GetShip(emptiedShipId) == null, 15d, "最后一块地板摧毁后空残骸没有移除。");
+        yield return Wait(.25d);
+        JArray afterEmpty = DamageFragmentReadings(CollectDamageFragments());
+        var destroyedReadings = new JArray();
+        foreach (int index in new[] { 3, 6, 7, 4, 5 })
+            destroyedReadings.Add(new JObject { ["id"] = floors[index].PieceId,
+                ["indexFound"] = session.FindPiece(floors[index].PieceId, out _, out _) });
+        int removedWreckViews = 0, removedPhysicsBodies = 0;
+        foreach (ShipWreckView view in Resources.FindObjectsOfTypeAll<ShipWreckView>())
+            if (view != null && (view.Composition?.ShipId == emptiedShipId || view.itemData?.Guid == emptiedWreckGuid)) removedWreckViews++;
+        foreach (Rigidbody2D body in Resources.FindObjectsOfTypeAll<Rigidbody2D>())
+            if (body != null && body.simulated && body.gameObject.name == "ship:" + emptiedShipId) removedPhysicsBodies++;
         SpaceSession.Capture(SaveDataMgr.Instance.SaveData);
         SpaceSessionState restored = SaveDataMgr.DeserializeSpaceState(SaveDataMgr.Instance.SaveData.SpaceStateJson);
         var saved = new List<ShipState>();
@@ -91,11 +116,20 @@ public sealed partial class GameplayTestSpaceScenario
             ["scope"] = "live-ship-local-damage", ["fixtureSetup"] = "production-piece-transactions-tail-anchor",
             ["originalId"] = original.ShipId, ["consoleId"] = console.PieceId, ["engineId"] = engine.PieceId,
             ["navigationId"] = navigation.PieceId, ["headWoundedId"] = floors[2].PieceId,
-            ["tailWoundedId"] = floors[5].PieceId, ["cargoId"] = cargo.PieceId,
+            ["tailWoundedId"] = floors[8].PieceId, ["cargoId"] = cargo.PieceId,
             ["headDamageAccepted"] = headDamage, ["tailDamageAccepted"] = tailDamage, ["cargoDamageAccepted"] = cargoDamage,
             ["coldCargoDamageAccepted"] = coldCargoDamage,
             ["waistHitAccepted"] = waistHit, ["tailHitAccepted"] = tailHit,
+            ["cargoFloorHitAccepted"] = cargoFloorHit, ["smallFloorHitAccepted"] = smallFloorHit,
+            ["lastFloorHitAccepted"] = lastFloorHit,
             ["before"] = before, ["afterWaist"] = afterWaist, ["afterTail"] = afterTail,
+            ["afterUnsupported"] = afterUnsupported, ["afterEmpty"] = afterEmpty,
+            ["destroyedPieces"] = destroyedReadings,
+            ["removedFragment"] = new JObject { ["id"] = emptiedShipId, ["wreckGuid"] = emptiedWreckGuid,
+                ["shipPresent"] = session.GetShip(emptiedShipId) != null,
+                ["flightPresent"] = session.GetFlight(emptiedShipId) != null,
+                ["flightCount"] = CountDamageFlights(emptiedShipId), ["wreckViews"] = removedWreckViews,
+                ["physicsBodies"] = removedPhysicsBodies },
             ["saved"] = DamageFragmentReadings(saved, includeViews: false),
             ["beforeTime"] = beforeTime, ["afterTime"] = session.State.SimulationSeconds,
             ["navigationShipId"] = navigationState.ShipId,
@@ -161,6 +195,13 @@ public sealed partial class GameplayTestSpaceScenario
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 var reading = new JObject { ["id"] = piece.PieceId, ["kind"] = piece.Kind.ToString(), ["health"] = piece.Health };
+                if (includeViews)
+                {
+                    bool indexFound = session.FindPiece(piece.PieceId, out ShipState indexedShip, out ShipPieceState indexedPiece);
+                    reading["indexFound"] = indexFound;
+                    reading["indexOwner"] = indexedShip?.ShipId ?? string.Empty;
+                    reading["sameIndexedPiece"] = ReferenceEquals(piece, indexedPiece);
+                }
                 if (piece.PieceId == damageCargoId)
                 {
                     ItemData cold = string.IsNullOrEmpty(piece.SnapshotJson) ? null : SpaceSession.Decode(piece.SnapshotJson);
@@ -190,10 +231,10 @@ public sealed partial class GameplayTestSpaceScenario
             }
             ShipFlightState flight = includeViews ? session.GetFlight(ship.ShipId) : null;
             GameObject viewRoot = null;
-            int wreckCount = 0;
+            int wreckCount = 0, shellGuid = 0;
             foreach (ShipWreckView view in wreckViews)
                 if (view != null && view.gameObject.activeInHierarchy && view.Composition?.ShipId == ship.ShipId)
-                { wreckCount++; viewRoot = view.gameObject; }
+                { wreckCount++; viewRoot = view.gameObject; shellGuid = view.itemData?.Guid ?? 0; }
             if (!ship.IsWreck && includeViews) viewRoot = GameObject.Find("ShipView_" + ship.ShipId);
             int physicsBodies = 0, physicsColliders = 0;
             ShipAssemblyState assembly = includeViews ? session.GetConnectedAssembly(ship.ShipId) : null;
@@ -208,7 +249,7 @@ public sealed partial class GameplayTestSpaceScenario
                 ["engine"] = ShipStructureService.HasOperationalEngine(ship), ["pieces"] = pieces,
                 ["phase"] = flight?.Phase.ToString() ?? string.Empty, ["ignited"] = flight?.Ignited == true,
                 ["flightCount"] = includeViews ? CountDamageFlights(ship.ShipId) : 0,
-                ["wreckViewCount"] = wreckCount,
+                ["wreckViewCount"] = wreckCount, ["wreckGuid"] = ship.WreckGuid, ["shellGuid"] = shellGuid,
                 ["presentationBodies"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<Rigidbody2D>(true).Length,
                 ["presentationColliders"] = viewRoot == null ? 0 : viewRoot.GetComponents<CustomCollider2D>().Length,
                 ["presentationItems"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<Item>(true).Length,

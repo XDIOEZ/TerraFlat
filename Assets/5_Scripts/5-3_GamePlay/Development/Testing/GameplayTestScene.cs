@@ -38,6 +38,7 @@ public sealed class GameplayTestScene : MonoBehaviour
     private SaveDataMgr saveManager;
     private GameplayTestSaveScope saveScope;
     private Player player;
+    private string testPlayerProfile;
     private Vector3 playerStart;
     private string isolatedSaveDirectory;
     private string worldEntryFailure;
@@ -216,6 +217,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             yield return null;
         }
         player = ItemMgr.Instance.User_Player;
+        testPlayerProfile = player.ProfileName;
         playerStart = player.transform.position;
         report.PlayerStart = new GameplayTestPosition(playerStart);
         Record("create_world", "世界和默认玩家就绪", true, planet.Name);
@@ -303,7 +305,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         switch (name)
         {
             case "world_ready": return manager != null && manager.IsInGameWorld && manager.IsGameplayReady;
-            case "player_ready": return player != null && ItemMgr.Instance.User_Player == player;
+            case "player_ready": return RebindTestPlayer();
             case "terrain_ready": return showroom?.IsTerrainReady == true;
             case "showroom_complete": return showroom?.IsComplete == true;
             case "player_moved": return player != null && Vector3.Distance(playerStart, player.transform.position) > 0.1f;
@@ -311,6 +313,22 @@ public sealed class GameplayTestScene : MonoBehaviour
                 if (GameplayTestGm.TryCheck(player, name, out bool passed)) return passed;
                 throw new ArgumentException("未知测试检查：" + name);
         }
+    }
+
+    // 场景迁移可以重建角色，只重绑同档案且属于本轮隔离存档的正式本地玩家。
+    private bool RebindTestPlayer()
+    {
+        Player current = ItemMgr.GetInstance()?.User_Player;
+        if (current == null || !current.IsLocalProfile || current.ProfileName != testPlayerProfile) return false;
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(current);
+        if (player != current)
+        {
+            int previousInstance = player == null ? 0 : player.GetInstanceID();
+            player = current;
+            Record("player_rebind", "迁移后重新绑定隔离测试玩家", true,
+                $"档案 {testPlayerProfile}；实例 {previousInstance} → {current.GetInstanceID()}。");
+        }
+        return true;
     }
 
     private void OnWorldEntryProgress(WorldEntryProgressInfo progress)

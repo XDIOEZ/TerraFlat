@@ -15,7 +15,15 @@ public static class GameplayTestRuntimeProbe
     {
         ["core_lifecycle/live_entry"] = CaptureLiveEntry,
         ["world_streaming/live_window"] = CaptureLiveWindow,
-        ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip
+        ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,
+        ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
+        ["industrial_fluids/phase_preference"] = GameplayTestFluidNetworks.CapturePhasePreference,
+        ["industrial_fluids/tank_ownership"] = GameplayTestFluidNetworks.CaptureTankOwnership,
+        ["industrial_fluids/reaction_capacity"] = GameplayTestFluidDevices.CaptureReactionCapacity,
+        ["industrial_fluids/residue_transfer"] = GameplayTestFluidDevices.CaptureResidueTransfer,
+        ["industrial_fluids/liquid_pump_flow"] = GameplayTestFluidDevices.CaptureLiquidPump,
+        ["industrial_fluids/surface_pump_flow"] = GameplayTestFluidSurface.CapturePumpFlow,
+        ["industrial_fluids/surface_outlet_flow"] = GameplayTestFluidSurface.CaptureOutletFlow
     };
 
     public static void Register(string systemId, string operationId, Func<Player, JObject, JObject> handler)

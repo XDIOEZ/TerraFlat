@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine.SceneManagement;
 
 /// <summary>设备用例准备已供能边界后调用正式事务，隔离作用域保存真实原料与产物。</summary>
@@ -120,7 +121,7 @@ internal static class GameplayTestFluidDevices
         using var fixture = new MachineWorld.GameplayFluidScope();
         MachineEntity source = fixture.Add("LiquidStorageTank", -1);
         MachineEntity pump = fixture.Add("LiquidPump_Electric");
-        fixture.Add("LiquidStorageTank", 1);
+        MachineEntity target = fixture.Add("LiquidStorageTank", 1);
         fixture.Rebuild(); AddFluid(report, source, FluidIds.PureWater, 0m, 20m);
         fixture.Begin();
         FluidInventory origin = Inventory(source), buffer = Inventory(pump);
@@ -131,7 +132,10 @@ internal static class GameplayTestFluidDevices
         Check(report, "工业入口等待正式管网而不旁路扣料", buffer.IsEmpty && origin.LiquidMoles == originalMoles && State(pump).Status == "等待管网输入");
         fixture.Complete();
         Check(report, "正式网络阶段向液泵输入起始液体", buffer.LiquidMoles > 0m && origin.LiquidMoles < originalMoles);
-        Check(report, "工业输入物质量守恒", origin.LiquidMoles + buffer.LiquidMoles == originalMoles);
+        Check(report, "工业输入物质量守恒", origin.GetGasMoles(FluidIds.PureWater) + origin.GetLiquidMoles(FluidIds.PureWater) +
+            buffer.GetGasMoles(FluidIds.PureWater) + buffer.GetLiquidMoles(FluidIds.PureWater) +
+            Inventory(target).GetGasMoles(FluidIds.PureWater) + Inventory(target).GetLiquidMoles(FluidIds.PureWater) == originalMoles);
+        Check(report, "本轮新到液泵的原料不能立即穿透目标罐", Inventory(target).IsEmpty);
         decimal after = buffer.LiquidMoles;
         FluidDeviceOperations.AdvanceLiquidPump(pump, fixture.Seconds);
         Check(report, "同轮不能通过液泵操作重复抽工业库存", buffer.LiquidMoles == after);
@@ -461,6 +465,133 @@ internal static class GameplayTestFluidDevices
         Check(report, "化学能按库存内能实际机械功和散热守恒", Near(actualEnergy + mechanicalWork + State(node).DissipatedHeatJoules - dissipatedBefore,
             energyBefore + chemicalEnergy));
         Check(report, "实际机械功率不越过可供燃料预算", mechanicalWork <= available * fixture.Seconds + 1e-8);
+    }
+    #endregion
+
+    #region PlayMode 原始设备采样与 Lua 断言边界
+    // 这里只准备正式设备并读取前后真值，业务结果由 PlayMode Lua 判断。
+    private static void Prepare(string label, bool success, string detail)
+    {
+        if (!success) throw new InvalidOperationException("流体现场夹具前提失败：" + label + "；" + detail);
+    }
+
+    internal static JObject CaptureReactionCapacity(Player player, JObject args)
+    {
+        using var fixture = new MachineWorld.GameplayFluidScope();
+        MachineEntity node = fixture.Add("FluidFilter"); fixture.Begin();
+        FluidMachineLogic logic = Logic(Prepare, node);
+        FluidMachineReactionDefinition reaction = node.Definition.Fluid.Reactions[0];
+        FluidReactionTerm input = reaction.Inputs[0];
+        reaction.ResidueItemsPerReaction = args.Value<double?>("residuePerReaction") ?? reaction.ResidueItemsPerReaction;
+        AddFluid(Prepare, node, input.FluidId, 0m, 10m, input.Chamber);
+        SetItem(Prepare, logic.FilterMaterial, node.Definition.Fluid.FilterMaterialItemId);
+        SetPower(node, true);
+        int requested = args.Value<int?>("requested") ?? int.MaxValue;
+        float slotCapacity = args.Value<float?>("slotCapacity") ?? Inventory_Data.DefaultSlotVolume;
+        foreach (ItemSlot slot in logic.Residue.Data.itemSlots) slot.SlotMaxVolume = slotCapacity;
+        if (args.Value<bool?>("occupied") == true)
+            SetItem(Prepare, logic.Residue, node.Definition.Fluid.FilterMaterialItemId);
+        if (args.Value<bool?>("full") == true)
+            SetItem(Prepare, logic.Residue, reaction.SolidResidueItemId, slotCapacity);
+        logic.Residue.Data.IsDepositBlocked = args.Value<bool?>("blocked") == true;
+        if (args.Value<bool?>("outputFull") == true)
+            FillLiquidCapacity(Prepare, node, reaction.Outputs[0].FluidId, reaction.Outputs[0].Chamber);
+        if (!GameRes.ExistingInstance.TryGetItemDefinition(reaction.SolidResidueItemId, out RuntimeItemDefinition definition))
+            throw new InvalidOperationException("残渣真实物品定义不存在。");
+        ItemData residueItem = definition.CreateItemData();
+        var port = new InventoryItemTransferPort(logic.Residue, null, new ContainerPortConfiguration { Id = "test_residue" });
+        int capacity = port.GetReceivableItems(residueItem, requested);
+        double outputExtent = FluidDeviceOperations.GetReactionOutputExtent(node, reaction);
+        string inputPayload = Payload(Inventory(node, input.Chamber));
+        decimal original = Inventory(node, input.Chamber).GetLiquidMoles(input.FluidId);
+        float filterBefore = logic.FilterMaterial.Data.itemSlots[0].itemData?.Stack.Amount ?? 0f;
+        float residueBefore = logic.Residue.Data.itemSlots[0].itemData?.Stack.Amount ?? 0f;
+        var products = new JArray();
+        foreach (FluidReactionTerm product in reaction.Outputs)
+            products.Add(new JObject { ["fluidId"] = product.FluidId, ["phase"] = product.Phase,
+                ["perReaction"] = product.Moles, ["before"] = (double)(product.Phase == "gas" ?
+                    Inventory(node, product.Chamber).GetGasMoles(product.FluidId) : Inventory(node, product.Chamber).GetLiquidMoles(product.FluidId)) });
+        FluidDeviceOperations.AdvanceFluidReaction(node, 2f);
+        for (int index = 0; index < reaction.Outputs.Length; index++)
+        {
+            FluidReactionTerm product = reaction.Outputs[index];
+            products[index]["after"] = (double)(product.Phase == "gas" ? Inventory(node, product.Chamber).GetGasMoles(product.FluidId) :
+                Inventory(node, product.Chamber).GetLiquidMoles(product.FluidId));
+        }
+        return new JObject { ["requested"] = requested, ["capacity"] = capacity, ["outputExtent"] = outputExtent,
+            ["inputBefore"] = (double)original, ["inputAfter"] = (double)Inventory(node, input.Chamber).GetLiquidMoles(input.FluidId),
+            ["inputPerReaction"] = input.Moles, ["inputUnchanged"] = inputPayload == Payload(Inventory(node, input.Chamber)),
+            ["filterBefore"] = filterBefore, ["filterAfter"] = logic.FilterMaterial.Data.itemSlots[0].itemData?.Stack.Amount ?? 0f,
+            ["filterWork"] = State(node).FilterRemainingWork, ["filterWorkPerItem"] = node.Definition.Fluid.FilterWorkPerItem,
+            ["residueBefore"] = residueBefore, ["residueAfter"] = logic.Residue.Data.itemSlots[0].itemData?.Stack.Amount ?? 0f,
+            ["residuePending"] = State(node).ResidueProgress.GetValueOrDefault(reaction.SolidResidueItemId),
+            ["residuePerReaction"] = reaction.ResidueItemsPerReaction, ["products"] = products };
+    }
+
+    internal static JObject CaptureResidueTransfer(Player player, JObject args)
+    {
+        using var fixture = new MachineWorld.GameplayFluidScope();
+        MachineEntity node = fixture.Add("WaterElectrolyzer"), target = fixture.Add("LiquidStorageTank", 1);
+        fixture.Begin();
+        FluidMachineLogic logic = Logic(Prepare, node), targetLogic = Logic(Prepare, target);
+        FluidMachineReactionDefinition reaction = Array.Find(node.Definition.Fluid.Reactions,
+            value => Array.Exists(value.Outputs, term => term.Phase == "liquid"));
+        if (reaction == null) throw new InvalidOperationException("液碱实际配方不存在。");
+        FluidReactionTerm byproduct = Array.Find(reaction.Outputs, term => term.Phase == "liquid");
+        AddFluid(Prepare, node, reaction.Inputs[0].FluidId, 0m, 1m);
+        SetPower(node, true); FluidDeviceOperations.AdvanceFluidReaction(node, 1f);
+        ILiquidTransferPort source = logic.LiquidResiduePort;
+        if (source == null || !source.ReserveLiquid(out LiquidTransferBatch batch))
+            throw new InvalidOperationException("真实电解没有产生可预留液碱。");
+        if (args.Value<bool?>("full") == true) FillLiquidCapacity(Prepare, target, byproduct.FluidId, "main");
+        var receiver = new IndustrialLiquidTransferPort(targetLogic, target.Definition.Fluid.Ports[0]);
+        int scene = SceneManager.GetSceneByName(fixture.Key).handle;
+        var context = new ContainerTransferContext(node.Position, scene, ContainerAccessKind.Mod, "Lua 液碱原子交易");
+        var machineContext = new ContainerTransferContext(node.Position, scene, ContainerAccessKind.Machine, "Lua 液碱机器访问");
+        FluidInventory origin = Inventory(node, byproduct.Chamber), destination = Inventory(target);
+        decimal before = origin.GetLiquidMoles(byproduct.FluidId), targetBefore = destination.GetLiquidMoles(byproduct.FluidId);
+        double gasBefore = (double)Inventory(node, "output").GasMoles;
+        string sourcePayload = Payload(origin), targetPayload = Payload(destination);
+        float requested = args.Value<float?>("requested") ?? 1f;
+        ContainerTransferResult preview = ContainerTransferService.PreviewLiquid(source, receiver, context, requested);
+        decimal roundtrip = FluidUnits.ServingsToMol(FluidCatalog.Default.Find(byproduct.FluidId), (decimal)batch.Servings);
+        bool machineDenied = !ContainerTransferService.PreviewLiquid(source, receiver, machineContext, requested).Success;
+        ContainerTransferResult result = ContainerTransferService.TransferLiquid(source, receiver, context, requested);
+        return new JObject { ["fluidId"] = byproduct.FluidId, ["visibleServings"] = batch.Servings,
+            ["visibleRoundtripMoles"] = (double)roundtrip, ["sourceBefore"] = (double)before,
+            ["targetBefore"] = (double)targetBefore, ["sourceAfter"] = (double)origin.GetLiquidMoles(byproduct.FluidId),
+            ["targetAfter"] = (double)destination.GetLiquidMoles(byproduct.FluidId), ["previewSuccess"] = preview.Success,
+            ["previewFailure"] = preview.Failure.ToString(), ["success"] = result.Success, ["failure"] = result.Failure.ToString(),
+            ["transferredServings"] = result.LiquidServings, ["machineDenied"] = machineDenied,
+            ["sourceUnchanged"] = sourcePayload == Payload(origin), ["targetUnchanged"] = targetPayload == Payload(destination),
+            ["gasBefore"] = gasBefore, ["gasAfter"] = (double)Inventory(node, "output").GasMoles,
+            ["sourcePortId"] = source.Reference.PortId, ["machineAccess"] = (source.Configuration.Access & ContainerAccessKind.Machine) != 0 };
+    }
+
+    internal static JObject CaptureLiquidPump(Player player, JObject args)
+    {
+        using var fixture = new MachineWorld.GameplayFluidScope();
+        MachineEntity source = fixture.Add("LiquidStorageTank", -1), pump = fixture.Add("LiquidPump_Electric"),
+            target = fixture.Add("LiquidStorageTank", 1);
+        fixture.Rebuild(); AddFluid(Prepare, source, FluidIds.PureWater, 0m, 20m);
+        fixture.Begin();
+        FluidInventory origin = Inventory(source), buffer = Inventory(pump), destination = Inventory(target);
+        SetPower(pump, false); FluidDeviceOperations.AdvanceLiquidPump(pump, fixture.Seconds);
+        decimal afterNoPower = origin.GasMoles + origin.LiquidMoles;
+        bool noPowerBufferEmpty = buffer.IsEmpty;
+        SetPower(pump, true); FluidDeviceOperations.AdvanceLiquidPump(pump, fixture.Seconds);
+        decimal afterAwaitingNetwork = origin.GasMoles + origin.LiquidMoles;
+        bool awaitingBufferEmpty = buffer.IsEmpty;
+        fixture.Complete();
+        decimal pumpBeforeRetry = buffer.GasMoles + buffer.LiquidMoles;
+        FluidDeviceOperations.AdvanceLiquidPump(pump, fixture.Seconds);
+        return new JObject { ["initialMoles"] = 20d, ["afterNoPower"] = (double)afterNoPower,
+            ["noPowerBufferEmpty"] = noPowerBufferEmpty, ["afterAwaitingNetwork"] = (double)afterAwaitingNetwork,
+            ["awaitingBufferEmpty"] = awaitingBufferEmpty, ["sourceGas"] = (double)origin.GetGasMoles(FluidIds.PureWater),
+            ["sourceLiquid"] = (double)origin.GetLiquidMoles(FluidIds.PureWater), ["pumpGas"] = (double)buffer.GetGasMoles(FluidIds.PureWater),
+            ["pumpLiquid"] = (double)buffer.GetLiquidMoles(FluidIds.PureWater), ["targetGas"] = (double)destination.GetGasMoles(FluidIds.PureWater),
+            ["targetLiquid"] = (double)destination.GetLiquidMoles(FluidIds.PureWater), ["pumpBeforeRetry"] = (double)pumpBeforeRetry,
+            ["pumpAfterRetry"] = (double)(buffer.GasMoles + buffer.LiquidMoles), ["lastFlowPhase"] = State(source).LastFlowPhase };
     }
     #endregion
 }

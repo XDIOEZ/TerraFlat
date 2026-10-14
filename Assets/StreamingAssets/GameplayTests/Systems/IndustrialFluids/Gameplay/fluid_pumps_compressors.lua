@@ -2,6 +2,18 @@
 test.check("world_ready")
 test.check("player_ready")
 
+test.runtime("industrial_fluids", "liquid_pump_flow", {}, function(data)
+    assert(data.noPowerBufferEmpty and data.afterNoPower == data.initialMoles, "断电液泵旁路扣了工业原料")
+    assert(data.awaitingBufferEmpty and data.afterAwaitingNetwork == data.initialMoles, "设备抽液绕过正式管网")
+    assert(data.pumpGas + data.pumpLiquid > 0 and data.sourceGas + data.sourceLiquid < data.initialMoles,
+        "正式冻结输送没有向液泵输入原料")
+    assert(math.abs(data.sourceGas + data.sourceLiquid + data.pumpGas + data.pumpLiquid + data.targetGas + data.targetLiquid - data.initialMoles) < .00000001,
+        "工业液泵两相水摩尔量不守恒")
+    assert(data.targetGas + data.targetLiquid == 0, "本轮新料立即穿透液泵出口")
+    assert(data.pumpBeforeRetry == data.pumpAfterRetry, "同轮重复设备操作旁路扣量")
+    assert(data.lastFlowPhase == "liquid", "实际工业入口输送相态错误")
+end, "工业液泵真实冻结输送、两相守恒和重复操作")
+
 local scenarios = {
     {"device_gas_pump", "机械气泵抽气及阻塞边界"},
     {"device_liquid_pump", "工业入口液泵冻结输送"},

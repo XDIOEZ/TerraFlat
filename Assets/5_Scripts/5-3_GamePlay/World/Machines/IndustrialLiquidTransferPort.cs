@@ -58,8 +58,17 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
     private bool Describe(string id, decimal moles, out LiquidTransferBatch batch)
     {
         FluidDefinition fluid = Inventory.Catalog.Find(id);
-        batch = new LiquidTransferBatch(fluid.LiquidId, (float)FluidUnits.MolToServings(fluid, moles), (float)(Inventory.GetTemperatureKelvin() - 273.15));
+        batch = new LiquidTransferBatch(fluid.LiquidId, AvailableServings(fluid, moles), (float)(Inventory.GetTemperatureKelvin() - 273.15));
         return moles > 0 && fluid.AllowIndustrialTransport && !string.IsNullOrEmpty(fluid.LiquidId);
+    }
+    // 对外份数向下取到可回转的浮点值，保留真实尾量而不预览超过库存的液体。
+    private static float AvailableServings(FluidDefinition fluid, decimal moles)
+    {
+        if (moles <= 0m) return 0f;
+        float servings = (float)FluidUnits.MolToServings(fluid, moles);
+        while (servings > 0f && FluidUnits.ServingsToMol(fluid, (decimal)servings) > moles)
+            servings = BitConverter.Int32BitsToSingle(BitConverter.SingleToInt32Bits(servings) - 1);
+        return servings;
     }
     public float GetReceivableServings(string liquidId, float requested)
     {
@@ -71,8 +80,7 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
                 if (component.LiquidMoles > 0 && component.FluidId != fluid.Id) return 0;
         double space = Math.Max(0, MachineWorld.GetFluidVolumeLiters(logic.Entity) -
             MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity) - Inventory.GetLiquidLiters());
-        decimal maximum = FluidUnits.MolToServings(fluid, FluidUnits.LiquidLitersToMol(fluid, (decimal)space));
-        return Math.Min(requested, (float)maximum);
+        return Math.Min(requested, AvailableServings(fluid, FluidUnits.LiquidLitersToMol(fluid, (decimal)space)));
     }
     public bool ExtractLiquid(LiquidTransferBatch batch, float servings)
     {
