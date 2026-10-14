@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "space_rules",
+      "name": "宇宙与太空飞船规则与边界",
+      "luaPath": "GameplayTests/Systems/Space/rules.lua",
+      "enabled": true
+    }
+  ]
+}

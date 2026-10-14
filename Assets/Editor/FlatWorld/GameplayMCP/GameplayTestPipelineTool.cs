@@ -2,26 +2,30 @@ using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using System;
 
 namespace FlatWorld.GameplayMCP
 {
     /// <summary>AI 只发一次启动命令，再读取整体结果，不按逐帧玩法 MCP 反复操作。</summary>
     [McpForUnityTool("gameplay_test_pipeline",
-        Description = "Run FlatWorld EditMode tests first, then one PlayMode gameplay Lua suite only if all EditMode tests passed. Actions: run, status, report; optional suitePath such as GameplayTests/mechanical-suite.json. Does not interrupt an active PlayMode.",
+        Description = "Run targeted FlatWorld Lua rules without starting a world, or explicit gameplay suites via EditMode then PlayMode. Actions: run, status, report, catalog. Optional systemIds selects fast rules; suitePath selects an explicit suite. Never interrupts active PlayMode.",
         Group = "core")]
     public static class GameplayTestPipelineTool
     {
         #region 测试流水线命令
         public sealed class Parameters
         {
-            [ToolParameter("run | status | report", Required = true)]
+            [ToolParameter("run | status | report | catalog", Required = true)]
             public string action { get; set; }
 
-            [ToolParameter("StreamingAssets-relative suite path; default GameplayTests/mechanical-suite.json.", Required = false)]
+            [ToolParameter("StreamingAssets-relative suite path; default GameplayTests/all-systems-rules.json.", Required = false)]
             public string suitePath { get; set; }
 
             [ToolParameter("Optional list of selected Lua case IDs; all enabled cases run when omitted.", Required = false)]
             public string[] caseIds { get; set; }
+
+            [ToolParameter("Optional registered system IDs, such as ai, mechanical, terrain. Selects fast rules; cannot combine with suitePath/caseIds.", Required = false)]
+            public string[] systemIds { get; set; }
         }
 
         public static object HandleCommand(JObject parameters)
@@ -34,13 +38,36 @@ namespace FlatWorld.GameplayMCP
                 foreach (JToken id in ids)
                     selectedIds.Add(id.Type == JTokenType.String ? id.Value<string>() : string.Empty);
             }
-            JObject result = action switch
+            JObject result;
+            try
             {
-                "run" => GameplayTestPipelineCoordinator.Start(parameters?.Value<string>("suitePath"), selectedIds),
-                "status" => GameplayTestPipelineCoordinator.Status(false),
-                "report" => GameplayTestPipelineCoordinator.Status(true),
-                _ => new JObject { ["ok"] = false, ["message"] = "action 必须为 run、status 或 report。" }
-            };
+                if (parameters?["caseIds"] != null && parameters["caseIds"] is not JArray)
+                    throw new ArgumentException("caseIds 必须是数组。");
+                string suitePath = parameters?.Value<string>("suitePath");
+                if (parameters?["systemIds"] != null)
+                {
+                    if (action != "run" || parameters["systemIds"] is not JArray systemIds || selectedIds != null || suitePath != null)
+                        throw new ArgumentException("systemIds 仅用于 run，且不能与 suitePath/caseIds 混用。");
+                    var selectedSystems = new List<string>();
+                    foreach (JToken systemId in systemIds)
+                    {
+                        if (systemId.Type != JTokenType.String) throw new ArgumentException("systemIds 必须包含文本 ID。");
+                        selectedSystems.Add(systemId.Value<string>());
+                    }
+                    selectedIds = new List<string>(GameplayTestSystemCatalog.SelectRuleCases(selectedSystems));
+                    suitePath = GameplayTestSystemCatalog.RulesSuitePath;
+                }
+                result = action switch
+                {
+                    "run" => GameplayTestPipelineCoordinator.Start(suitePath, selectedIds),
+                    "status" => GameplayTestPipelineCoordinator.Status(false),
+                    "report" => GameplayTestPipelineCoordinator.Status(true),
+                    "catalog" => new JObject { ["ok"] = true, ["catalog"] = GameplayTestSystemCatalog.Read(),
+                        ["ruleOperations"] = new JArray(GameplayTestSystemProbe.RegisteredOperations) },
+                    _ => new JObject { ["ok"] = false, ["message"] = "action 必须为 run、status、report 或 catalog。" }
+                };
+            }
+            catch (Exception exception) { result = new JObject { ["ok"] = false, ["message"] = exception.Message }; }
             return new SuccessResponse("FlatWorld test pipeline.", result);
         }
         #endregion

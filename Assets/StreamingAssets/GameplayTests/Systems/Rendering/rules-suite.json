@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "rendering_rules",
+      "name": "渲染光影与特效规则与边界",
+      "luaPath": "GameplayTests/Systems/Rendering/rules.lua",
+      "enabled": true
+    }
+  ]
+}

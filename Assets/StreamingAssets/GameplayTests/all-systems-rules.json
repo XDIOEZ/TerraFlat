@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "ai_rules",
+      "name": "AI生物规则与边界",
+      "luaPath": "GameplayTests/Systems/AI/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "navigation_rules",
+      "name": "导航寻路规则与边界",
+      "luaPath": "GameplayTests/Systems/Navigation/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "player_rules",
+      "name": "玩家控制与交互规则与边界",
+      "luaPath": "GameplayTests/Systems/Player/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "combat_rules",
+      "name": "战斗与技能规则与边界",
+      "luaPath": "GameplayTests/Systems/Combat/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "buff_rules",
+      "name": "Buff状态规则与边界",
+      "luaPath": "GameplayTests/Systems/Buff/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "survival_rules",
+      "name": "角色生存规则与边界",
+      "luaPath": "GameplayTests/Systems/Survival/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "inventory_rules",
+      "name": "库存与装备规则与边界",
+      "luaPath": "GameplayTests/Systems/Inventory/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "crafting_rules",
+      "name": "手工制作规则与边界",
+      "luaPath": "GameplayTests/Systems/Crafting/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "containers_rules",
+      "name": "液体容器规则与边界",
+      "luaPath": "GameplayTests/Systems/Containers/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "agriculture_rules",
+      "name": "农业种植规则与边界",
+      "luaPath": "GameplayTests/Systems/Agriculture/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "fishing_rules",
+      "name": "钓鱼规则与边界",
+      "luaPath": "GameplayTests/Systems/Fishing/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "terrain_rules",
+      "name": "地形生成规则与边界",
+      "luaPath": "GameplayTests/Systems/Terrain/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "ecology_rules",
+      "name": "自然生态与资源规则与边界",
+      "luaPath": "GameplayTests/Systems/Ecology/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "time_rules",
+      "name": "时间与季节规则与边界",
+      "luaPath": "GameplayTests/Systems/Time/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "environment_rules",
+      "name": "天气与环境规则与边界",
+      "luaPath": "GameplayTests/Systems/Environment/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "surface_fluids_rules",
+      "name": "地表水体规则与边界",
+      "luaPath": "GameplayTests/Systems/SurfaceFluids/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "dimension_rules",
+      "name": "维度迁移规则与边界",
+      "luaPath": "GameplayTests/Systems/Dimension/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "building_rules",
+      "name": "建造与拆除规则与边界",
+      "luaPath": "GameplayTests/Systems/Building/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_rules",
+      "name": "机械动力规则与边界",
+      "luaPath": "GameplayTests/Systems/Mechanical/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "electrical_rules",
+      "name": "电力规则与边界",
+      "luaPath": "GameplayTests/Systems/Electrical/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "industrial_fluids_rules",
+      "name": "工业气液与管网规则与边界",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "processing_rules",
+      "name": "机器加工与输送规则与边界",
+      "luaPath": "GameplayTests/Systems/Processing/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "space_rules",
+      "name": "宇宙与太空飞船规则与边界",
+      "luaPath": "GameplayTests/Systems/Space/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "quests_rules",
+      "name": "任务与玩家进度规则与边界",
+      "luaPath": "GameplayTests/Systems/Quests/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "game_events_rules",
+      "name": "全局游戏事件规则与边界",
+      "luaPath": "GameplayTests/Systems/GameEvents/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "dialogue_rules",
+      "name": "角色对话规则与边界",
+      "luaPath": "GameplayTests/Systems/Dialogue/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "guide_rules",
+      "name": "新手引导规则与边界",
+      "luaPath": "GameplayTests/Systems/Guide/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "core_lifecycle_rules",
+      "name": "核心生命周期与资源规则与边界",
+      "luaPath": "GameplayTests/Systems/CoreLifecycle/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "item_runtime_rules",
+      "name": "物品实体与模块运行规则与边界",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "world_streaming_rules",
+      "name": "世界模型与区块流送规则与边界",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "save_rules",
+      "name": "存档与恢复规则与边界",
+      "luaPath": "GameplayTests/Systems/Save/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "networking_rules",
+      "name": "联机与同步规则与边界",
+      "luaPath": "GameplayTests/Systems/Networking/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "modding_rules",
+      "name": "MOD与Lua扩展规则与边界",
+      "luaPath": "GameplayTests/Systems/Modding/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "ui_settings_rules",
+      "name": "UI与设置规则与边界",
+      "luaPath": "GameplayTests/Systems/UISettings/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "audio_rules",
+      "name": "音频规则与边界",
+      "luaPath": "GameplayTests/Systems/Audio/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "localization_rules",
+      "name": "本地化规则与边界",
+      "luaPath": "GameplayTests/Systems/Localization/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "rendering_rules",
+      "name": "渲染光影与特效规则与边界",
+      "luaPath": "GameplayTests/Systems/Rendering/rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "testing_rules",
+      "name": "Lua回归框架规则与边界",
+      "luaPath": "GameplayTests/Systems/Testing/rules.lua",
+      "enabled": true
+    }
+  ]
+}

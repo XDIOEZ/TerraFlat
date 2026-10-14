@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "crafting_rules",
+      "name": "手工制作规则与边界",
+      "luaPath": "GameplayTests/Systems/Crafting/rules.lua",
+      "enabled": true
+    }
+  ]
+}

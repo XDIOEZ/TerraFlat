@@ -1,0 +1,1086 @@
+{
+  "schemaVersion": 1,
+  "coveragePolicy": "所有系统都有真实规则断言入口；规则与现场链路均为部分覆盖，未覆盖项须先增强测试，未执行不得报告通过或全覆盖。",
+  "systems": [
+    {
+      "id": "ai",
+      "name": "AI生物",
+      "group": "实体与控制",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AI/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Spawner/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/AI/*",
+        "Assets/5_Scripts/Shared/Utilities/Geometry/PerceptionShape2D.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MonsterSpawnerSaveData.cs"
+      ],
+      "dependsOn": [
+        "navigation",
+        "time",
+        "combat"
+      ],
+      "ruleCaseIds": [
+        "ai_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/AI/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/AI/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "navigation",
+      "name": "导航寻路",
+      "group": "实体与控制",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/PathFinding/*",
+        "Assets/5_Scripts/Shared/Navigation/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Navigation/*",
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/AStar/*"
+      ],
+      "dependsOn": [
+        "terrain",
+        "world_streaming"
+      ],
+      "ruleCaseIds": [
+        "navigation_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Navigation/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Navigation/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "player",
+      "name": "玩家、输入与2D物理",
+      "group": "实体与控制",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Player/Controller/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Interaction/*",
+        "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset",
+        "Assets/StreamingAssets/GameplayTests/Systems/Player/*",
+        "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/ItemActionFeedback.cs",
+        "Assets/5_Scripts/Shared/Utilities/Geometry/AttackShape2D.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Input/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PrefabForPlayer.cs"
+      ],
+      "dependsOn": [
+        "navigation",
+        "survival"
+      ],
+      "ruleCaseIds": [
+        "player_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Player/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Player/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Player/README.md",
+      "integrationCaseIds": [
+        "player_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "combat",
+      "name": "战斗与技能",
+      "group": "实体与控制",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Combat/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Skill/*",
+        "Assets/5_Scripts/Shared/Combat/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Combat/*",
+        "Assets/5_Scripts/5-1_Data/CoreData/Damage.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/Defense.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/Hp.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/Loot.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Actions/*"
+      ],
+      "dependsOn": [
+        "buff",
+        "inventory"
+      ],
+      "ruleCaseIds": [
+        "combat_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Combat/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Combat/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Combat/README.md",
+      "integrationCaseIds": [
+        "combat_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "buff",
+      "name": "Buff状态",
+      "group": "实体与控制",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Buff/*",
+        "Assets/StreamingAssets/GameConfig/Buffs/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Buff/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "buff_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Buff/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Buff/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Buff/README.md",
+      "integrationCaseIds": [
+        "buff_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "survival",
+      "name": "角色生存",
+      "group": "生存与生产",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Food/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Oxygen*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Pressure*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Temperature*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Stamina*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Sanity*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Survival/*",
+        "Assets/5_Scripts/5-1_Data/CoreData/Food*",
+        "Assets/5_Scripts/5-1_Data/CoreData/Nutrition.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/GameValue_float.cs"
+      ],
+      "dependsOn": [
+        "buff",
+        "environment",
+        "containers"
+      ],
+      "ruleCaseIds": [
+        "survival_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Survival/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Survival/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "inventory",
+      "name": "库存与装备",
+      "group": "生存与生产",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/*",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/*",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Readable/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Bag*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_HotBar*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Inventory/*",
+        "Assets/5_Scripts/5-1_Data/CoreData/Inventory*",
+        "Assets/5_Scripts/5-1_Data/CoreData/ItemSlot.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/ItemStack.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Inventory/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "inventory_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Inventory/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Inventory/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Inventory/README.md",
+      "integrationCaseIds": [
+        "inventory_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "crafting",
+      "name": "手工制作",
+      "group": "生存与生产",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Items/Crafting/*",
+        "Assets/StreamingAssets/GameConfig/Crafting/*",
+        "Assets/StreamingAssets/GameConfig/Recipes/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Crafting/*"
+      ],
+      "dependsOn": [
+        "inventory"
+      ],
+      "ruleCaseIds": [
+        "crafting_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Crafting/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Crafting/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "containers",
+      "name": "液体容器",
+      "group": "生存与生产",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Items/Food/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Containers/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "containers_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Containers/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/fluid-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Containers/README.md",
+      "integrationCaseIds": [
+        "fluid_inventory",
+        "fluid_thermodynamics",
+        "fluid_state_save",
+        "fluid_topology",
+        "fluid_transport",
+        "fluid_tanks",
+        "fluid_pumps_compressors",
+        "fluid_reactions",
+        "fluid_environment"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "agriculture",
+      "name": "农业种植",
+      "group": "生存与生产",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Planting/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/*Growth*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Agriculture/*"
+      ],
+      "dependsOn": [
+        "terrain",
+        "environment",
+        "time",
+        "inventory"
+      ],
+      "ruleCaseIds": [
+        "agriculture_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Agriculture/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Agriculture/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Agriculture/README.md",
+      "integrationCaseIds": [
+        "agriculture_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "fishing",
+      "name": "钓鱼",
+      "group": "生存与生产",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Items/Tool/*Fishing*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AI/*Fish*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/FishingSpeechFeedback.cs",
+        "Assets/StreamingAssets/GameplayTests/Systems/Fishing/*"
+      ],
+      "dependsOn": [
+        "ai",
+        "inventory",
+        "surface_fluids"
+      ],
+      "ruleCaseIds": [
+        "fishing_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Fishing/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Fishing/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Fishing/README.md",
+      "integrationCaseIds": [
+        "fishing_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "terrain",
+      "name": "地形生成与地表采挖",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/*Generator*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/*Terrain*",
+        "Assets/5_Scripts/5-0_WorldModel/Generation/*",
+        "Assets/StreamingAssets/GameConfig/Tiles/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Terrain/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Base/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Definitions/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/SO/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/TileBehv/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/*Layer.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/GroundCoverSystem.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Item_Tile_Grass.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/Biome*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/WorldTopology.cs",
+        "Assets/5_Scripts/Shared/WorldTopology/*",
+        "Assets/5_Scripts/5-1_Data/TileData/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Planting/GroundTileHarvestSystem.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_GroundHarvestToolBase.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_ResourceHarvest.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_ResourceTool.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/MapMaker/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "terrain_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Terrain/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Terrain/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "ecology",
+      "name": "自然生态与资源",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/WorldECS/*",
+        "Assets/5_Scripts/5-0_WorldModel/Ecology/*",
+        "Assets/StreamingAssets/GameConfig/Actors/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Ecology/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs"
+      ],
+      "dependsOn": [
+        "terrain",
+        "time"
+      ],
+      "ruleCaseIds": [
+        "ecology_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Ecology/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Ecology/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "time",
+      "name": "时间与季节",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Time/*",
+        "Assets/StreamingAssets/GameConfig/Time/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Time/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetTimeData.cs"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "time_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Time/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Time/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "environment",
+      "name": "天气与环境",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Environment/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Fluids/Atmosphere/*",
+        "Assets/5_Scripts/5-0_WorldModel/*Weather*",
+        "Assets/5_Scripts/5-0_WorldModel/*Humidity*",
+        "Assets/Resources/Config/Weather/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Environment/*",
+        "Assets/5_Scripts/5-1_Data/CoreData/EnvironmentLayers.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EnvironmentConditionRange.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/RegionalWeatherRecord.cs"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "environment_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Environment/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/fluid-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Environment/README.md",
+      "integrationCaseIds": [
+        "fluid_inventory",
+        "fluid_thermodynamics",
+        "fluid_state_save",
+        "fluid_topology",
+        "fluid_transport",
+        "fluid_tanks",
+        "fluid_pumps_compressors",
+        "fluid_reactions",
+        "fluid_environment"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "surface_fluids",
+      "name": "地表水体",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldLiquid*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/ChunkMgr.Liquid*",
+        "Assets/StreamingAssets/GameplayTests/Systems/SurfaceFluids/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "surface_fluids_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/SurfaceFluids/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/fluid-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/SurfaceFluids/README.md",
+      "integrationCaseIds": [
+        "fluid_inventory",
+        "fluid_thermodynamics",
+        "fluid_state_save",
+        "fluid_topology",
+        "fluid_transport",
+        "fluid_tanks",
+        "fluid_pumps_compressors",
+        "fluid_reactions",
+        "fluid_environment"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "dimension",
+      "name": "维度迁移",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Dimension/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Dimension/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "dimension_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Dimension/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Dimension/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "building",
+      "name": "建造与拆除",
+      "group": "世界与环境",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Building/*",
+        "Assets/StreamingAssets/GameConfig/Structures/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Building/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/*"
+      ],
+      "dependsOn": [
+        "inventory",
+        "item_runtime"
+      ],
+      "ruleCaseIds": [
+        "building_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Building/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Building/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Building/README.md",
+      "integrationCaseIds": [
+        "building_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "mechanical",
+      "name": "机械动力",
+      "group": "工业与能源",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Mechanical*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
+        "Assets/Resources/Config/Mechanical/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Mechanical/*",
+        "Assets/StreamingAssets/GameplayTests/mechanical-suite.json"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "mechanical_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Mechanical/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/mechanical-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Mechanical/README.md",
+      "integrationCaseIds": [
+        "mechanical_assemble",
+        "mechanical_power",
+        "mechanical_conveyor",
+        "mechanical_pressure_probe",
+        "mechanical_control",
+        "mechanical_processing",
+        "mechanical_manual_millstone"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "electrical",
+      "name": "电力",
+      "group": "工业与能源",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Electrical*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Battery*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
+        "Assets/StreamingAssets/GameplayTests/Systems/Electrical/*",
+        "Assets/StreamingAssets/GameplayTests/mechanical-suite.json"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "electrical_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Electrical/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/mechanical-suite.json",
+        "GameplayTests/fluid-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Electrical/README.md",
+      "integrationCaseIds": [
+        "mechanical_assemble",
+        "mechanical_power",
+        "mechanical_conveyor",
+        "mechanical_pressure_probe",
+        "mechanical_control",
+        "mechanical_processing",
+        "mechanical_manual_millstone",
+        "fluid_inventory",
+        "fluid_thermodynamics",
+        "fluid_state_save",
+        "fluid_topology",
+        "fluid_transport",
+        "fluid_tanks",
+        "fluid_pumps_compressors",
+        "fluid_reactions",
+        "fluid_environment"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "industrial_fluids",
+      "name": "工业气液与管网",
+      "group": "工业与能源",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Fluids/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Fluid*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Tank*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
+        "Assets/StreamingAssets/GameConfig/Fluids/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/IndustrialFluids/*",
+        "Assets/StreamingAssets/GameplayTests/fluid-suite.json"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "industrial_fluids_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/IndustrialFluids/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/fluid-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/IndustrialFluids/README.md",
+      "integrationCaseIds": [
+        "fluid_inventory",
+        "fluid_thermodynamics",
+        "fluid_state_save",
+        "fluid_topology",
+        "fluid_transport",
+        "fluid_tanks",
+        "fluid_pumps_compressors",
+        "fluid_reactions",
+        "fluid_environment"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "processing",
+      "name": "机器加工与输送",
+      "group": "工业与能源",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Recipe*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Processing*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Furnace*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Conveyor*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Cultivator*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
+        "Assets/StreamingAssets/GameplayTests/Systems/Processing/*",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Tool/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*",
+        "Assets/StreamingAssets/GameplayTests/mechanical-suite.json"
+      ],
+      "dependsOn": [
+        "crafting",
+        "inventory",
+        "mechanical",
+        "electrical",
+        "industrial_fluids"
+      ],
+      "ruleCaseIds": [
+        "processing_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Processing/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/mechanical-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Processing/README.md",
+      "integrationCaseIds": [
+        "mechanical_assemble",
+        "mechanical_power",
+        "mechanical_conveyor",
+        "mechanical_pressure_probe",
+        "mechanical_control",
+        "mechanical_processing",
+        "mechanical_manual_millstone"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "space",
+      "name": "宇宙与太空飞船",
+      "group": "太空",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Space/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.Space*",
+        "Assets/Resources/Config/Space/*",
+        "Assets/StreamingAssets/GameConfig/Space/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Space/*",
+        "Assets/StreamingAssets/GameplayTests/universe-suite.json"
+      ],
+      "dependsOn": [
+        "mechanical",
+        "electrical",
+        "industrial_fluids",
+        "dimension"
+      ],
+      "ruleCaseIds": [
+        "space_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Space/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/universe-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Space/README.md",
+      "integrationCaseIds": [
+        "universe_content",
+        "sector_rules",
+        "ship_rules",
+        "space_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "quests",
+      "name": "任务与玩家进度",
+      "group": "任务与叙事",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Core/Quests/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Progress/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Quests/*"
+      ],
+      "dependsOn": [
+        "inventory",
+        "crafting"
+      ],
+      "ruleCaseIds": [
+        "quests_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Quests/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Quests/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "game_events",
+      "name": "全局游戏事件",
+      "group": "任务与叙事",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Core/GameEvents/*",
+        "Assets/Resources/Config/GameEvents/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/GameEvents/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "game_events_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/GameEvents/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/GameEvents/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "dialogue",
+      "name": "角色对话",
+      "group": "任务与叙事",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Dialogue/*"
+      ],
+      "dependsOn": [
+        "time",
+        "survival"
+      ],
+      "ruleCaseIds": [
+        "dialogue_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Dialogue/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Dialogue/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "guide",
+      "name": "新手引导",
+      "group": "任务与叙事",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Guide/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Guide/*"
+      ],
+      "dependsOn": [
+        "quests",
+        "inventory",
+        "crafting",
+        "building"
+      ],
+      "ruleCaseIds": [
+        "guide_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Guide/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Guide/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "core_lifecycle",
+      "name": "核心生命周期与资源",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Config/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/Difficulty/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/CoreLifecycle/*",
+        "Assets/5_Scripts/5-3_GamePlay/Core/MobilePlatformBootstrap.cs",
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Base/*",
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Mono/*",
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Res/*",
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Pool/*",
+        "Assets/5_Scripts/Shared/Utilities/XDTool.cs"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "core_lifecycle_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/CoreLifecycle/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/CoreLifecycle/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/CoreLifecycle/README.md",
+      "integrationCaseIds": [
+        "core_lifecycle_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "item_runtime",
+      "name": "物品实体与模块运行",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Core/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Definitions/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Management/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/*",
+        "Assets/StreamingAssets/GameConfig/Items/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/ItemRuntime/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/*",
+        "Assets/5_Scripts/5-1_Data/ItemData/*",
+        "Assets/5_Scripts/5-1_Data/ModData/*",
+        "Assets/5_Scripts/5-1_Data/CoreData/Tag.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/ItemTransform.cs",
+        "Assets/5_Scripts/5-1_Data/CoreData/ListTagExtensions.cs",
+        "Assets/5_Scripts/5-1_Data/EnumData/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "item_runtime_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/ItemRuntime/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/ItemRuntime/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "world_streaming",
+      "name": "世界模型与区块流送",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/*",
+        "Assets/5_Scripts/5-0_WorldModel/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/WorldStreaming/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "world_streaming_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/WorldStreaming/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/WorldStreaming/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/WorldStreaming/README.md",
+      "integrationCaseIds": [
+        "world_streaming_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "save",
+      "name": "存档与恢复",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Core/Save/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData*",
+        "Assets/5_Scripts/5-1_Data/*Snapshot*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Save/*",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/*Save*.cs"
+      ],
+      "dependsOn": [
+        "item_runtime",
+        "inventory"
+      ],
+      "ruleCaseIds": [
+        "save_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Save/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/Save/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Save/README.md",
+      "integrationCaseIds": [
+        "save_gameplay"
+      ],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "networking",
+      "name": "联机与同步",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-4_Networking/*",
+        "Assets/Resources/Networking/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Networking/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "networking_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Networking/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Networking/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "modding",
+      "name": "MOD与Lua扩展",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/*",
+        "ModSDK/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Modding/*"
+      ],
+      "dependsOn": [
+        "core_lifecycle"
+      ],
+      "ruleCaseIds": [
+        "modding_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Modding/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Modding/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "ui_settings",
+      "name": "UI与设置",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/*",
+        "Assets/5_Scripts/5-5_UI/*",
+        "Assets/Resources/UI/*",
+        "Assets/3_Prefabs/*UI*",
+        "Assets/StreamingAssets/GameplayTests/Systems/UISettings/*",
+        "Assets/5_Scripts/5-1_Data/Settings/SettingsContracts.cs"
+      ],
+      "dependsOn": [
+        "localization"
+      ],
+      "ruleCaseIds": [
+        "ui_settings_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/UISettings/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/UISettings/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "audio",
+      "name": "音频",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/*",
+        "Assets/5_Scripts/5-6_Audio/*",
+        "Assets/Audio/*",
+        "Assets/Resources/Audio/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Audio/*",
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Music/*"
+      ],
+      "dependsOn": [
+        "core_lifecycle"
+      ],
+      "ruleCaseIds": [
+        "audio_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Audio/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Audio/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "localization",
+      "name": "本地化",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-7_Localization/*",
+        "Assets/Localization/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Localization/*"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "localization_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Localization/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Localization/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "rendering",
+      "name": "渲染光影与特效",
+      "group": "共享支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/*",
+        "Assets/5_Scripts/Shader/*",
+        "Assets/6_Art/*",
+        "Assets/Shaders/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Rendering/*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/*.cs",
+        "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/*Layer.cs"
+      ],
+      "dependsOn": [
+        "time",
+        "environment"
+      ],
+      "ruleCaseIds": [
+        "rendering_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Rendering/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Rendering/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    },
+    {
+      "id": "testing",
+      "name": "Lua回归框架",
+      "group": "开发支撑",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/*",
+        "Assets/Editor/FlatWorld/GameplayMCP/*",
+        "Assets/Tests/FlatWorld/*",
+        "Tools/GameplayTesting/*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Testing/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/*",
+        "Assets/StreamingAssets/GameplayTests/systems.catalog.json",
+        "Assets/StreamingAssets/GameplayTests/all-systems-rules.json",
+        "Assets/StreamingAssets/GameplayTests/all-systems-gameplay.json",
+        "Assets/5_Scripts/*.asmdef"
+      ],
+      "dependsOn": [],
+      "ruleCaseIds": [
+        "testing_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Testing/rules-suite.json",
+      "integrationSuites": [],
+      "integrationCoverage": "missing",
+      "coverageDocument": "GameplayTests/Systems/Testing/README.md",
+      "integrationCaseIds": [],
+      "rulesCoverage": "partial"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "ecology_rules",
+      "name": "自然生态与资源规则与边界",
+      "luaPath": "GameplayTests/Systems/Ecology/rules.lua",
+      "enabled": true
+    }
+  ]
+}

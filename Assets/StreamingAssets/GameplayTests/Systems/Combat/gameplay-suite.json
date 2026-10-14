@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "combat_gameplay",
+      "name": "战斗与技能真实关键流程",
+      "luaPath": "GameplayTests/Systems/Combat/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

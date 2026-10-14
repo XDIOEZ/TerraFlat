@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "game_events_rules",
+      "name": "全局游戏事件规则与边界",
+      "luaPath": "GameplayTests/Systems/GameEvents/rules.lua",
+      "enabled": true
+    }
+  ]
+}

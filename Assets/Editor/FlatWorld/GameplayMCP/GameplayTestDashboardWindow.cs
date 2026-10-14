@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace FlatWorld.GameplayMCP
 {
-    /// <summary>测试中心从现有清单加载复选框，勾选多个案例后只启动一轮真实游戏。</summary>
+    /// <summary>测试中心按清单模式执行规则或一次隔离游戏，统一展示所选案例结果。</summary>
     public sealed class GameplayTestDashboardWindow : EditorWindow
     {
         #region 窗口状态
@@ -70,6 +70,7 @@ namespace FlatWorld.GameplayMCP
             {
                 foreach (string file in Directory.GetFiles(root, "*.json", SearchOption.AllDirectories))
                 {
+                    if (Path.GetFileName(file).Equals("systems.catalog.json", StringComparison.OrdinalIgnoreCase)) continue;
                     string relative = file.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar,
                         Path.AltDirectorySeparatorChar).Replace('\\', '/');
                     suitePaths.Add("GameplayTests/" + relative);
@@ -150,7 +151,7 @@ namespace FlatWorld.GameplayMCP
         {
             EditorGUILayout.Space(10f);
             EditorGUILayout.LabelField("FlatWorld · 自动化测试中心", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField("EditMode 全部通过 → PlayMode 一次启动 → 顺序执行所有勾选的 Lua 案例",
+            EditorGUILayout.LabelField("快速规则直接执行；场景清单通过 EditMode 后，在一次隔离世界中运行",
                 EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.Space(9f);
             DrawSuitePicker();
@@ -185,7 +186,8 @@ namespace FlatWorld.GameplayMCP
             EditorGUILayout.EndHorizontal();
             if (suite != null)
                 EditorGUILayout.LabelField(
-                    suite.BuildShowroom ? "模式：完整物品陈列厅（初始化较慢）" : "模式：快速测试世界（跳过全物品陈列）",
+                    suite.ExecutionMode == "rules" ? "模式：编辑态 Lua 规则（不启动世界）" :
+                    suite.BuildShowroom ? "模式：完整物品陈列厅（初始化较慢）" : "模式：真实场景（跳过全物品陈列）",
                     EditorStyles.miniLabel);
             EditorGUILayout.EndVertical();
         }
@@ -278,7 +280,7 @@ namespace FlatWorld.GameplayMCP
                 }
             }
             if (SelectedCount == 0)
-                EditorGUILayout.HelpBox("请至少勾选一个测试案例；EditMode 前置检查会自动全部执行。",
+                EditorGUILayout.HelpBox("请至少勾选一个测试案例。场景清单会自动执行 EditMode 前置检查。",
                     MessageType.Info);
         }
 
@@ -300,8 +302,14 @@ namespace FlatWorld.GameplayMCP
             EditorGUILayout.LabelField("本轮编号：" + pipeline.Value<string>("runId"), EditorStyles.miniLabel);
             JObject edit = pipeline["editMode"] as JObject;
             JObject play = pipeline["playMode"] as JObject;
-            EditorGUILayout.LabelField("EditMode：" + PhaseSummary(edit));
-            EditorGUILayout.LabelField("PlayMode：" + PhaseSummary(play));
+            JObject rules = pipeline["rules"] as JObject;
+            if (pipeline.Value<string>("executionMode") == "rules")
+                EditorGUILayout.LabelField("Lua 规则：" + PhaseSummary(rules));
+            else
+            {
+                EditorGUILayout.LabelField("EditMode：" + PhaseSummary(edit));
+                EditorGUILayout.LabelField("PlayMode：" + PhaseSummary(play));
+            }
             if (!string.IsNullOrEmpty(pipeline.Value<string>("reason")))
                 EditorGUILayout.HelpBox(pipeline.Value<string>("reason"),
                     status == "passed" ? MessageType.Info : MessageType.Warning);
@@ -315,7 +323,7 @@ namespace FlatWorld.GameplayMCP
                 EditorUtility.RevealInFinder(reportPath);
             string gamePath = pipeline.Value<string>("gameplayReportPath");
             using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(gamePath) || !File.Exists(gamePath)))
-                if (GUILayout.Button("定位玩法报告"))
+                if (GUILayout.Button("定位 Lua 报告"))
                     EditorUtility.RevealInFinder(gamePath);
             if (GUILayout.Button("复制报告路径") && !string.IsNullOrEmpty(reportPath))
                 EditorGUIUtility.systemCopyBuffer = reportPath;
@@ -332,6 +340,7 @@ namespace FlatWorld.GameplayMCP
             EditorGUILayout.EndHorizontal();
             DrawFailures(edit);
             DrawFailures(play);
+            DrawFailures(rules);
             DrawGameplayCases();
             EditorGUILayout.EndVertical();
         }
@@ -421,7 +430,7 @@ namespace FlatWorld.GameplayMCP
         private static string TranslatePhase(string phase) => phase switch
         {
             "queued" => "准备", "editmode" => "EditMode", "playmode_queued" => "等待 PlayMode",
-            "playmode" => "PlayMode", "finished" => "已结束", _ => phase ?? "未知"
+            "playmode" => "PlayMode", "rules" => "Lua 规则", "finished" => "已结束", _ => phase ?? "未知"
         };
         #endregion
     }

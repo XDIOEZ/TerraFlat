@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "navigation_rules",
+      "name": "导航寻路规则与边界",
+      "luaPath": "GameplayTests/Systems/Navigation/rules.lua",
+      "enabled": true
+    }
+  ]
+}

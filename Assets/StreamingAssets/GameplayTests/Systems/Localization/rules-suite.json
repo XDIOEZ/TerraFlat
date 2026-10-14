@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "localization_rules",
+      "name": "本地化规则与边界",
+      "luaPath": "GameplayTests/Systems/Localization/rules.lua",
+      "enabled": true
+    }
+  ]
+}

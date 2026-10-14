@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "dimension_rules",
+      "name": "维度迁移规则与边界",
+      "luaPath": "GameplayTests/Systems/Dimension/rules.lua",
+      "enabled": true
+    }
+  ]
+}

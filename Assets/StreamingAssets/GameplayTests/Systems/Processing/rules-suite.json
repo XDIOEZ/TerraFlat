@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "processing_rules",
+      "name": "机器加工与输送规则与边界",
+      "luaPath": "GameplayTests/Systems/Processing/rules.lua",
+      "enabled": true
+    }
+  ]
+}

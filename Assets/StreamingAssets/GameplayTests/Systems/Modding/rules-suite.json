@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "modding_rules",
+      "name": "MOD与Lua扩展规则与边界",
+      "luaPath": "GameplayTests/Systems/Modding/rules.lua",
+      "enabled": true
+    }
+  ]
+}

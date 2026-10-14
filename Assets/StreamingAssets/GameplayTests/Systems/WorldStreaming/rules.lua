@@ -1,0 +1,32 @@
+-- 独立 WorldRuntime 不生成地形，只测运行、表现和寻路租约的所有权。
+for _, row in ipairs({ { x = -64, y = 64 }, { x = 0, y = 0 } }) do
+    test.system("world_streaming", "chunk_leases", row, function(data)
+        assert(data.simulationCount == 2 and data.active == "Active", "模拟租约没有激活区块")
+        assert(data.bound == "Bound" and data.navigationCount == 1, "表现或寻路租约状态错误")
+        assert(data.dataStatus == "Absent", "领取租约意外生成了地形")
+        assert(not data.evictWhileLeased, "仍在使用的区块被逐出")
+        assert(data.afterFirst == 1 and data.stillActive == "Active", "重复归还租约或部分归还破坏计数")
+        assert(data.dormant == "Dormant" and data.unbound == "Unbound", "最后一张租约归还后仍模拟或显示")
+        assert(not data.evictWhileNavigation, "寻路持有的区块被逐出")
+        assert(data.evictReleased and data.remainingChunks == 0, "完全释放后没有逐出区块")
+    end, "区块独立租约与逐出：" .. row.x .. "," .. row.y)
+end
+
+test.system("world_streaming", "generation_lifecycle", {}, function(data)
+    assert(data.newVersionAdvanced, "重新请求没有增加生成任务版本")
+    assert(data.afterOldFailure == "Generating" and data.oldFailureReason == nil, "旧请求失败覆盖正在运行的新请求")
+    assert(data.afterCurrentFailure == "Failed" and data.currentFailureReason == "当前请求", "当前请求失败未保存原因")
+    assert(data.retryReasonCleared, "重试保留了上次失败原因")
+    assert(data.afterCancelledFailure == "Absent" and data.cancelledReason == nil, "取消后的旧失败仍改变区块")
+    assert(data.afterOldEpochFailure == "Generating" and data.oldEpochReason == nil, "旧世界失败污染新世界")
+end, "生成请求版本、取消与世界 Epoch 失效")
+
+test.system("world_streaming", "commit_snapshot", { tile = 23, depth = 2 }, function(data)
+    assert(not data.staleAccepted and data.staleDisposed, "旧生成结果被发布或未释放缓冲")
+    assert(data.committed and data.reason == nil and data.consumed and data.resultDisposed, "当前生成结果没有移交唯一所有权")
+    assert(not data.repeatedAccepted, "同一生成结果被重复提交")
+    assert(data.evicted and data.terrainDisposed, "逐出没有释放正式地形")
+    assert(data.snapshotChunks == 1 and data.snapshotGround == 23, "正式快照受后续地形修改或逐出影响")
+    assert(data.snapshotLiquid == "probe:water" and data.snapshotDepth == 2, "快照没有保存独立的稳定液体身份与深度")
+    assert(not data.oldEpochAccepted and data.epochDisposed, "旧世界结果被发布或丢弃后未释放")
+end, "生成结果提交、快照冻结和唯一所有权释放")

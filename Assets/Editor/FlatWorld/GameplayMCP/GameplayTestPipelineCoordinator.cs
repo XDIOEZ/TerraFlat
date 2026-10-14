@@ -11,9 +11,9 @@ using UnityEngine;
 
 namespace FlatWorld.GameplayMCP
 {
-    /// <summary>一个 Unity Editor 进程内串行执行 EditMode → PlayMode，失败阻断后续阶段。</summary>
+    /// <summary>一个 Unity Editor 内按清单执行 Lua 规则或 EditMode → PlayMode，统一保存报告。</summary>
     [InitializeOnLoad]
-    internal static class GameplayTestPipelineCoordinator
+    internal static partial class GameplayTestPipelineCoordinator
     {
         #region 文件与生命周期
         private const string SessionRunKey = "FlatWorld.GameplayTestPipeline.ActiveRun";
@@ -50,6 +50,7 @@ namespace FlatWorld.GameplayMCP
         {
             public string RunId;
             public string SuitePath;
+            public string ExecutionMode = "gameplay";
             public List<string> SelectedCaseIds = new();
             public string ReportPath;
             public string RunDirectory;
@@ -65,6 +66,7 @@ namespace FlatWorld.GameplayMCP
             public string GameplayReportPath;
             public PhaseResult EditMode = new();
             public PhaseResult PlayMode = new();
+            public PhaseResult Rules = new();
         }
 
         static GameplayTestPipelineCoordinator()
@@ -227,7 +229,12 @@ namespace FlatWorld.GameplayMCP
             PipelineReport report = LoadCurrent();
             if (report == null || report.Status != "running") return;
             if (report.Phase == "queued")
-                RunPhase(report.RunId, TestMode.EditMode);
+            {
+                if (report.ExecutionMode == "rules") StartRulesPhase(report.RunId);
+                else RunPhase(report.RunId, TestMode.EditMode);
+            }
+            else if (report.Phase == "rules" && rulesFlow == null)
+                Finish(report, "interrupted", "编辑器域重载中断了快速规则；请重新执行选中的系统。");
             else if (report.Phase == "playmode_queued")
                 RunPhase(report.RunId, TestMode.PlayMode);
         }
@@ -263,7 +270,7 @@ namespace FlatWorld.GameplayMCP
                                Guid.NewGuid().ToString("N").Substring(0, 8);
                 var report = new PipelineReport
                 {
-                    RunId = runId, SuitePath = suitePath, StartedUtc = DateTime.UtcNow.ToString("O"),
+                    RunId = runId, SuitePath = suitePath, ExecutionMode = suite.ExecutionMode, StartedUtc = DateTime.UtcNow.ToString("O"),
                     SelectedCaseIds = casesToRun,
                     RunDirectory = GameplayTestArtifacts.GetRunDirectory(runId)
                 };
@@ -274,11 +281,12 @@ namespace FlatWorld.GameplayMCP
                 CurrentRunId = runId;
                 Write(report);
                 // 编译中先接单保存现场，待 Unity 稳定后由更新循环启动，无需 Agent 重发请求。
-                if (!EditorApplication.isCompiling && !EditorApplication.isUpdating)
+                if (suite.ExecutionMode != "rules" && !EditorApplication.isCompiling && !EditorApplication.isUpdating)
                     EnsureCallbacks();
                 // 让本次 MCP 请求先返回，测试在 Editor 后续更新中自行跑完。
-                EditorApplication.delayCall += () => RunPhase(runId, TestMode.EditMode);
-                return Reply(true, report, "已排队执行 EditMode 测试，全部通过后才进入 PlayMode。");
+                EditorApplication.delayCall += ResumeQueuedPhase;
+                return Reply(true, report, suite.ExecutionMode == "rules" ?
+                    "已排队执行编辑态 Lua 规则，不启动世界或 PlayMode。" : "已排队执行 EditMode 测试，全部通过后才进入 PlayMode。");
             }
             catch (Exception exception)
             {
@@ -304,7 +312,7 @@ namespace FlatWorld.GameplayMCP
         [MenuItem("FlatWorld/测试/执行机械动力系统（EditMode → PlayMode）")]
         private static void MenuRun()
         {
-            JObject response = Start(GameplayTestSelection.DefaultSuitePath);
+            JObject response = Start("GameplayTests/mechanical-suite.json");
             Debug.Log("[GameplayTestPipeline] " + response.ToString(Formatting.None));
         }
 
@@ -314,6 +322,8 @@ namespace FlatWorld.GameplayMCP
 
         private static JObject Reply(bool ok, PipelineReport report, string message)
         {
+            var serializer = Newtonsoft.Json.JsonSerializer.Create(new JsonSerializerSettings
+                { ContractResolver = new CamelCasePropertyNamesContractResolver() });
             var result = new JObject
             {
                 ["ok"] = ok,
@@ -322,6 +332,8 @@ namespace FlatWorld.GameplayMCP
                 ["status"] = report?.Status,
                 ["phase"] = report?.Phase,
                 ["suitePath"] = report?.SuitePath,
+                ["executionMode"] = report?.ExecutionMode,
+                ["rules"] = report == null ? null : JObject.FromObject(report.Rules, serializer),
                 ["selectedCaseIds"] = report == null ? null : new JArray(report.SelectedCaseIds),
                 ["reportPath"] = report?.ReportPath,
                 ["gameplayReportPath"] = report?.GameplayReportPath,
@@ -331,8 +343,8 @@ namespace FlatWorld.GameplayMCP
                 ["screenshotPaths"] = report == null ? null : new JArray(report.ScreenshotPaths),
                 ["artifactError"] = report?.ArtifactError,
                 ["reason"] = report?.Reason,
-                ["editMode"] = report == null ? null : JObject.FromObject(report.EditMode),
-                ["playMode"] = report == null ? null : JObject.FromObject(report.PlayMode)
+                ["editMode"] = report == null ? null : JObject.FromObject(report.EditMode, serializer),
+                ["playMode"] = report == null ? null : JObject.FromObject(report.PlayMode, serializer)
             };
             if (!ok || report?.Status == "failed")
                 result["nextAction"] = "读取失败用例和堆栈 → 修复生产代码或清单 → 重新调用 run；不要原样无限重试。";
@@ -380,6 +392,7 @@ namespace FlatWorld.GameplayMCP
             report.Phase = "finished";
             if (report.EditMode.Status == "running") report.EditMode.Status = "interrupted";
             if (report.PlayMode.Status == "running") report.PlayMode.Status = "interrupted";
+            if (report.Rules.Status == "running") report.Rules.Status = "interrupted";
             report.Reason = reason;
             report.FinishedUtc = DateTime.UtcNow.ToString("O");
             FinalizeArtifacts(report);
@@ -414,6 +427,20 @@ namespace FlatWorld.GameplayMCP
                     report.GameplayReportPath = gameplay.ReportPath;
                 }
                 CompleteInterruptedArtifacts(gameplay, report);
+                if (report.ExecutionMode == "rules")
+                {
+                    // 中断也从已落盘的规则报告归集数量，不丢失已完成案例。
+                    report.Rules.Status = report.Status;
+                    report.Rules.Passed = gameplay.PassedCaseCount;
+                    report.Rules.Failed = gameplay.FailedCaseCount;
+                    report.Rules.Skipped = gameplay.SkippedCaseCount + gameplay.InterruptedCaseCount;
+                    report.Rules.Cases.Clear();
+                    foreach (GameplayTestCaseReport entry in gameplay.Cases)
+                        if (entry.Status != "disabled")
+                            report.Rules.Cases.Add(new CaseResult { Name = entry.Name,
+                                Status = entry.Status == "passed" ? "Passed" : entry.Status == "failed" ? "Failed" : "Skipped",
+                                Message = entry.Reason, DurationSeconds = entry.DurationSeconds });
+                }
                 gameplay.Write();
                 // 对外按 Lua 和命令顺序返回已落盘的关键现场截图。
                 report.ScreenshotPaths.Clear();
@@ -537,7 +564,7 @@ namespace FlatWorld.GameplayMCP
         {
             var text = new StringBuilder();
             text.AppendLine();
-            text.AppendLine("## Test Framework 流水线");
+            text.AppendLine(report.ExecutionMode == "rules" ? "## 编辑态 Lua 规则流水线" : "## Test Framework 流水线");
             text.AppendLine();
             text.AppendLine("- 流水线结果：**" + report.Status + "**");
             text.AppendLine("- 说明：" + (report.Reason ?? string.Empty).Replace("\n", "<br>"));
@@ -545,11 +572,16 @@ namespace FlatWorld.GameplayMCP
             text.AppendLine();
             text.AppendLine("| 阶段 | 结果 | 通过 | 失败 | 跳过 | 不确定 |");
             text.AppendLine("| --- | --- | --- | --- | --- | --- |");
-            AppendPhaseSummary(text, "EditMode", report.EditMode);
-            AppendPhaseSummary(text, "PlayMode", report.PlayMode);
+            if (report.ExecutionMode == "rules") AppendPhaseSummary(text, "Lua 规则", report.Rules);
+            else
+            {
+                AppendPhaseSummary(text, "EditMode", report.EditMode);
+                AppendPhaseSummary(text, "PlayMode", report.PlayMode);
+            }
             text.AppendLine();
             AppendFailures(text, "EditMode", report.EditMode);
             AppendFailures(text, "PlayMode", report.PlayMode);
+            AppendFailures(text, "Lua 规则", report.Rules);
             return text.ToString();
         }
 

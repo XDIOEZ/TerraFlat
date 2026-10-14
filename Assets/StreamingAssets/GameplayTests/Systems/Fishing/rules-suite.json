@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "fishing_rules",
+      "name": "钓鱼规则与边界",
+      "luaPath": "GameplayTests/Systems/Fishing/rules.lua",
+      "enabled": true
+    }
+  ]
+}

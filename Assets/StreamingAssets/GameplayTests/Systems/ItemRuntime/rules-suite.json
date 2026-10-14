@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "item_runtime_rules",
+      "name": "物品实体与模块运行规则与边界",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/rules.lua",
+      "enabled": true
+    }
+  ]
+}

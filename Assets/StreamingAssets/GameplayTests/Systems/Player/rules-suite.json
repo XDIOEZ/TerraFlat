@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "player_rules",
+      "name": "玩家控制与交互规则与边界",
+      "luaPath": "GameplayTests/Systems/Player/rules.lua",
+      "enabled": true
+    }
+  ]
+}

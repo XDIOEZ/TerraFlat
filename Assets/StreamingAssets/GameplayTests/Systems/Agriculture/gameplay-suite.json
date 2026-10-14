@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "agriculture_gameplay",
+      "name": "农业种植：实际流程",
+      "luaPath": "GameplayTests/Systems/Agriculture/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

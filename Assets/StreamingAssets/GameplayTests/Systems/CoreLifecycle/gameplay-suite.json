@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "core_lifecycle_gameplay",
+      "name": "核心生命周期与资源真实关键流程",
+      "luaPath": "GameplayTests/Systems/CoreLifecycle/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

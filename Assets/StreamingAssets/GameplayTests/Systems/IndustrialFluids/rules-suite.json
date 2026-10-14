@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "industrial_fluids_rules",
+      "name": "工业气液与管网规则与边界",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/rules.lua",
+      "enabled": true
+    }
+  ]
+}

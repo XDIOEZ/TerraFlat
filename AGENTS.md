@@ -4,6 +4,7 @@
 - 对话后使用大白话汇报
 - 按任务类型直接读取对应的 `.agents/skills/flatworld-*/SKILL.md`；
 - 完成代码或资源修改后检查相关 Skill 是否需要更新；保持SKILL简洁
+- 修改游戏系统后按 `.agents/skills/flatworld-lua-testing/SKILL.md` 和 `Assets/StreamingAssets/GameplayTests/systems.catalog.json` 选择回归；缺少改动对应断言时先增强本系统Lua。用户未要求跳过验证且Unity不在PlayMode时执行快速规则，影响真实关键流程再执行集成；未执行及覆盖缺口如实报告。
 - 使用 `#region` 以脚本内的系统为单位包裹代码块。
 - 代码添加中文注释一句话即可。
 - 扩展优先

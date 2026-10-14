@@ -1,0 +1,28 @@
+-- 只在内存中捕获和恢复当前格式，真实玩家存档不读写。
+test.system("save", "snapshot_memory", { amount = 3, stock = 7, maximumDurability = 100, durability = 25, targetMaximumDurability = 200, guid = 143 }, function(data)
+    assert(data.bytes > 0 and data.definitionId == "probe:item" and data.guid == 143, "快照丢失身份")
+    assert(data.amount == 3 and data.sourceAmount == 3, "恢复数量错误或污染源物品")
+    assert(data.maximumDurability == 200 and data.durability == 50, "新定义耐久没有保持原损伤比例")
+    assert(data.sourceStock == 7 and data.targetStock == 8, "恢复的模块载荷没有隔离")
+    assert(data.specialData == '{"probe":true}', "特殊实例状态丢失")
+end, "正式实例快照内存往返与当前定义恢复")
+
+test.system("save", "special_namespace", { counter = 3 }, function(data)
+    assert(data.root.other.keep == 42, "写命名空间覆盖了其他系统数据")
+    assert(data.copiedCounter == 3 and data.storedCounter == 3, "命名空间读写暴露共享可变引用")
+end, "特殊状态命名空间与副本隔离")
+
+test.system("save", "special_namespace", { raw = "非JSON原内容", counter = 5 }, function(data)
+    assert(data.root["flatworld.legacyItemSpecialData"] == "非JSON原内容", "未解析根数据被静默删除")
+    assert(data.storedCounter == 5, "转换根数据后命名空间写入失败")
+end, "未解析特殊状态保留与命名空间写入")
+
+test.system("save", "space_item_chain", { amount = 3, guid = 143 }, function(data)
+    assert(data.version == 2 and data.clock == 12.5 and data.sectorX == "-3" and data.sectorY == "4", "JSON 会话的版本、时钟或跨星区身份丢失")
+    assert(data.encodedPreserved and data.childAmount == 3 and data.sourceAmount == 3, "JSON/二进制/克隆链丢失库存或污染源对象")
+    assert(data.childGuid == data.sourceGuid and data.independentChild, "嵌套物品身份或独立引用错误")
+    assert(data.selected == 1 and data.slotCount == 2 and data.secondEmpty, "嵌套库存选择、容量或空槽丢失")
+    assert(data.scaleX == -2 and data.scaleY == 0 and data.scaleZ == 3.5 and data.scaleFields == 3, "Vector3 缩放序列化递归或分量丢失")
+    assert(data.missingVersion == "InvalidDataException" and data.wrongVersion == "SaveVersionIncompatibleException", "正式解析接受无版本或不同版本档案")
+    assert(data.invalidClock == "InvalidDataException", "正式解析接受负时钟")
+end, "正式 JSON、Base64、MemoryPack 与独立库存克隆链")

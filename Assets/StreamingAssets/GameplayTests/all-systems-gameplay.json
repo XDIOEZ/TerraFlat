@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "player_gameplay",
+      "name": "玩家控制与交互真实关键流程",
+      "luaPath": "GameplayTests/Systems/Player/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "combat_gameplay",
+      "name": "战斗与技能真实关键流程",
+      "luaPath": "GameplayTests/Systems/Combat/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "buff_gameplay",
+      "name": "Buff状态真实关键流程",
+      "luaPath": "GameplayTests/Systems/Buff/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "inventory_gameplay",
+      "name": "库存与装备真实关键流程",
+      "luaPath": "GameplayTests/Systems/Inventory/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_inventory",
+      "name": "库存与原子事务",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_inventory.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_thermodynamics",
+      "name": "热力学与相变",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_thermodynamics.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_state_save",
+      "name": "状态快照与存档",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_state_save.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_topology",
+      "name": "管网拓扑与路由",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_topology.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_transport",
+      "name": "冻结输送与吞吐",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_transport.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_tanks",
+      "name": "储罐生命周期与充装",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_tanks.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_pumps_compressors",
+      "name": "泵与压缩机",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_pumps_compressors.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_reactions",
+      "name": "过滤电解与发动机",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_reactions.lua",
+      "enabled": true
+    },
+    {
+      "id": "fluid_environment",
+      "name": "环境抽排与容器",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_environment.lua",
+      "enabled": true
+    },
+    {
+      "id": "agriculture_gameplay",
+      "name": "农业种植：实际流程",
+      "luaPath": "GameplayTests/Systems/Agriculture/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "fishing_gameplay",
+      "name": "钓鱼：实际流程",
+      "luaPath": "GameplayTests/Systems/Fishing/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "building_gameplay",
+      "name": "建造与拆除：实际流程",
+      "luaPath": "GameplayTests/Systems/Building/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_assemble",
+      "name": "GM 创建全组件机械工厂",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_assemble.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_power",
+      "name": "多动力源、传动与用力器",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_power.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_conveyor",
+      "name": "动力输送带实际搬运物品",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_conveyor.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_pressure_probe",
+      "name": "管压超限断开机械动力",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_pressure_probe.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_control",
+      "name": "离合器断连及恢复",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_control.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_processing",
+      "name": "机器正式原料加工与气体收集",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_processing.lua",
+      "enabled": true
+    },
+    {
+      "id": "mechanical_manual_millstone",
+      "name": "石磨独立手推动力",
+      "luaPath": "GameplayTests/Systems/Mechanical/mechanical_manual_millstone.lua",
+      "enabled": true
+    },
+    {
+      "id": "universe_content",
+      "name": "宇宙内容、轨道、地表与快照",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/universe_content.lua",
+      "enabled": true
+    },
+    {
+      "id": "sector_rules",
+      "name": "星区坐标、接触与租约",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/sector_rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "ship_rules",
+      "name": "飞船结构、环境、动力与快照",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_rules.lua",
+      "enabled": true
+    },
+    {
+      "id": "space_gameplay",
+      "name": "真实太空入场、航行、跨区与接触",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/space_gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "core_lifecycle_gameplay",
+      "name": "核心生命周期与资源真实关键流程",
+      "luaPath": "GameplayTests/Systems/CoreLifecycle/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "world_streaming_gameplay",
+      "name": "世界模型与区块流送真实关键流程",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "save_gameplay",
+      "name": "存档与恢复真实关键流程",
+      "luaPath": "GameplayTests/Systems/Save/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

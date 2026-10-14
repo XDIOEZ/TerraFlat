@@ -1,7 +1,8 @@
-"""一次调用：复用当前 Unity Editor，先跑 EditMode，再跑一轮 GameplayTestScene PlayMode。"""
+"""按系统选择快速 Lua 规则或真实场景清单，复用当前 Unity Editor。"""
 import argparse
 import json
 import os
+import fnmatch
 from pathlib import Path
 import sys
 import time
@@ -9,6 +10,46 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 PIPELINE = ROOT / "Library" / "FlatWorldGameplayTests" / "Pipeline"
+CATALOG = ROOT / "Assets" / "StreamingAssets" / "GameplayTests" / "systems.catalog.json"
+RULES_SUITE = "GameplayTests/all-systems-rules.json"
+GAMEPLAY_SUITE = "GameplayTests/all-systems-gameplay.json"
+
+
+def load_catalog():
+    return json.loads(CATALOG.read_text(encoding="utf-8"))["systems"]
+
+
+def choose_systems(ids, changed_paths):
+    systems = load_catalog()
+    known = {system["id"] for system in systems}
+    selected = set(ids or [])
+    unknown = selected - known
+    if unknown:
+        raise ValueError(f"未知系统：{', '.join(sorted(unknown))}；使用 --list-systems 查看")
+    unmatched = []
+    for path in changed_paths or []:
+        normalized = path.replace("\\", "/").removeprefix("./")
+        if Path(normalized).is_absolute():
+            normalized = Path(normalized).resolve().relative_to(ROOT.resolve()).as_posix()
+        matched = {system["id"] for system in systems
+                   if any(fnmatch.fnmatchcase(normalized, pattern) for pattern in system["sourcePaths"])}
+        if not matched:
+            unmatched.append(normalized)
+        selected.update(matched)
+    if unmatched:
+        raise ValueError("修改路径尚未登记系统归属，请补 systems.catalog.json：" + ", ".join(unmatched))
+    if changed_paths:
+        # 按修改路径回归时也覆盖使用该规则的系统；显式系统选择仍保持精确范围。
+        if "testing" in selected:
+            selected = known
+        else:
+            while True:
+                affected = {system["id"] for system in systems
+                            if selected.intersection(system.get("dependsOn", []))}
+                if affected.issubset(selected):
+                    break
+                selected.update(affected)
+    return [system for system in systems if system["id"] in selected]
 
 
 def wait_json(path: Path, deadline: float):
@@ -46,7 +87,7 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
         print(json.dumps(acknowledged, ensure_ascii=False, indent=2))
         return 2
 
-    print(f"[FlatWorld] Editor 已接单：{acknowledged['runId']}，等待 EditMode → PlayMode...", flush=True)
+    print(f"[FlatWorld] Editor 已接单：{acknowledged['runId']}，等待选定测试模式...", flush=True)
     deadline = time.monotonic() + run_timeout
     report = wait_json(Path(acknowledged["reportPath"]), deadline)
     while report.get("status") == "running":
@@ -61,6 +102,7 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
         "runDirectory": report.get("runDirectory"), "summaryPath": report.get("summaryPath"),
         "packagePath": report.get("packagePath"), "screenshotPaths": report.get("screenshotPaths", []),
         "artifactError": report.get("artifactError"),
+        "executionMode": report.get("executionMode"), "rules": report.get("rules"),
         "editMode": report.get("editMode"), "playMode": report.get("playMode")
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -68,17 +110,57 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FlatWorld Unity 同进程两阶段回归流水线")
-    parser.add_argument("suite", nargs="?", default="GameplayTests/mechanical-suite.json")
+    parser = argparse.ArgumentParser(description="FlatWorld 按系统运行 Lua 规则和场景回归")
+    parser.add_argument("suite", nargs="?", help="指定清单；省略时执行全部系统快速规则")
     parser.add_argument("--editor-timeout", type=float, default=45,
                         help="Editor 收到本地请求的等待秒数")
     parser.add_argument("--run-timeout", type=float, default=900,
-                        help="本轮 EditMode+PlayMode 流水线执行上限秒数")
+                        help="每轮流水线执行上限秒数")
     parser.add_argument("--cases", nargs="+", metavar="CASE_ID",
                         help="只执行指定的一个或多个 Lua 用例 ID，不修改源清单")
+    parser.add_argument("--systems", nargs="+", metavar="SYSTEM_ID", help="选择系统，默认只运行快速规则")
+    parser.add_argument("--changed", nargs="+", metavar="PATH", help="根据修改文件路径选择系统及使用它的系统")
+    parser.add_argument("--list-systems", action="store_true", help="列出系统、规则清单和场景入口，不启动测试")
+    parser.add_argument("--integration", action="store_true", help="系统规则通过后再执行所选系统的真实场景清单")
+    parser.add_argument("--plan", action="store_true", help="只显示系统选择和覆盖缺口，不向 Editor 提交请求")
     args = parser.parse_args()
     try:
-        sys.exit(run(args.suite, args.editor_timeout, args.run_timeout, args.cases))
-    except (TimeoutError, OSError, KeyError) as failure:
+        if args.list_systems:
+            for system in load_catalog():
+                print(f"{system['id']}: {system['name']} | {system['rulesSuite']} | 场景={','.join(system.get('integrationSuites', [])) or '暂无'}")
+            sys.exit(0)
+        if args.systems or args.changed:
+            if args.cases or args.suite:
+                raise ValueError("显式清单/--cases 与 --systems/--changed 不混用；系统规则用系统 ID 选择")
+            chosen = choose_systems(args.systems, args.changed)
+            if not chosen:
+                raise ValueError("没有选中任何系统")
+            print("[FlatWorld] 选中系统：" + ", ".join(system["id"] for system in chosen), flush=True)
+            selected_cases = [case_id for system in chosen for case_id in system["ruleCaseIds"]]
+            selected_live_cases = list(dict.fromkeys(case_id for system in chosen
+                                      for case_id in system.get("integrationCaseIds", [])))
+            missing = [system["id"] for system in chosen if not system.get("integrationCaseIds")]
+            if args.plan:
+                print(json.dumps({"rulesSuite": RULES_SUITE, "ruleCaseIds": selected_cases,
+                                  "integrationSuite": GAMEPLAY_SUITE, "integrationCaseIds": selected_live_cases,
+                                  "systemsWithoutIntegration": missing,
+                                  "coverageDocuments": [system["coverageDocument"] for system in chosen]},
+                                 ensure_ascii=False, indent=2))
+                sys.exit(0)
+            code = run(RULES_SUITE, args.editor_timeout, args.run_timeout, selected_cases)
+            if code == 0 and args.integration:
+                if selected_live_cases:
+                    # 所有现场案例合并到一轮隔离世界，避免逐系统重建资源与地形。
+                    code = run(GAMEPLAY_SUITE, args.editor_timeout, args.run_timeout, selected_live_cases)
+                if missing:
+                    print("[FlatWorld] 以下系统没有场景清单，不能视为关键流程已覆盖：" + ", ".join(missing), file=sys.stderr)
+                    code = code or 4
+            sys.exit(code)
+        if args.integration:
+            raise ValueError("--integration 需要配合 --systems 或 --changed")
+        if args.plan:
+            raise ValueError("--plan 需要配合 --systems 或 --changed")
+        sys.exit(run(args.suite or RULES_SUITE, args.editor_timeout, args.run_timeout, args.cases))
+    except (TimeoutError, OSError, KeyError, ValueError) as failure:
         print(f"[FlatWorld] {failure}", file=sys.stderr)
         sys.exit(3)

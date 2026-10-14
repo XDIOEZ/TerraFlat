@@ -152,6 +152,13 @@ public static partial class FarmlandSystem
         tillingRemoveBuffer.Clear();
     }
 
+    /// <summary>只取消指定格的临时耕作，其他地块的未完成进度继续保留。</summary>
+    public static void ClearTillingProgress(RuntimeWorldAddress address, Vector2Int localCell)
+    {
+        if (tillingStates.Remove(new TillingKey(address, localCell)))
+            TillingVisualChanged?.Invoke(address, localCell);
+    }
+
     private static float EvaluateTillingProgress(TillingRuntimeState state, float now)
     {
         float idle = Mathf.Max(0f, now - state.LastWorkedAt);

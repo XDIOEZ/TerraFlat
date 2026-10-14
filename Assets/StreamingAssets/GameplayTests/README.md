@@ -1,216 +1,154 @@
-# 游戏系统 Lua 测试
+# 游戏系统 Lua 回归测试
 
-AI 维护此系统时使用 [flatworld-lua-testing 导航 Skill](../../../.agents/skills/flatworld-lua-testing/SKILL.md)，业务规则另查对应领域 Skill。
+此目录按实际职责组织 **38 个系统测试域**。每个域已有可执行的规则 Lua，系统之间的关键流程另有隔离场景入口。系统列表、源码归属、依赖、规则和场景映射在 [systems.catalog.json](systems.catalog.json)，人读的覆盖入口在 [系统索引](系统索引.md)。
 
-## AI 快速测试流水线：EditMode → PlayMode
+**当前全部为部分覆盖，新增代码尚未编译、运行，也没有耗时实测。** 有入口或某一轮 PASS，不能证明整个系统规则与关键流程已经完全覆盖。各系统 README 明列断言范围、夹具和缺口，AI 修改时必须据此补齐受影响部分。
 
-### Unity 图形测试中心（多选）
+## 日常执行：先选系统，规则先跑
 
-在 Unity 顶部打开 **`FlatWorld → 测试 → 测试中心（多选案例）`**：
-
-1. 从下拉框选择机械动力 `mechanical-suite.json`、工业气液 `fluid-suite.json` 或太空 `universe-suite.json`。
-2. 给需要执行的 Lua 案例**逐个勾选复选框**，也可全选、反选或清空（至少勾一个）。
-3. 点击 **「开始测试已勾选的 N 个案例」**，EditMode 全部通过后，只进入 **一次** PlayMode，在同一测试世界内按清单顺序执行这些案例。
-4. 窗口会显示阶段进度、断言结果、玩法案例 PASS/FAIL 和失败详情，并可定位或复制完整报告。
-
-勾选状态按测试清单保存在 EditorPrefs 中；实际执行的案例 ID 仅写到
-`Library/FlatWorldGameplayTests/Pipeline/selected-suite.json`。
-**不修改原始测试清单、不重新导入资源、不为每个案例重新启动 PlayMode**。
-原清单里标记 `enabled: false` 的用例在界面中显示为禁用，不能误选。
-测试期间如果 Unity 已在 PlayMode，启动按钮会禁用，避免干扰当前玩家或调试现场。
-
-**AI 只负责写清单和 Lua、启动一轮测试、读取报告并修复问题，不再逐步调用移动/攻击 MCP。**
-项目已安装 Unity Test Framework 1.4.5，使用两套独立测试程序集：
-`Assets/Tests/FlatWorld/EditMode/` 和 `Assets/Tests/FlatWorld/PlayMode/`。
-
-在**已经打开、未运行 PlayMode** 的 Unity Editor 内通过菜单
-`FlatWorld/测试/执行机械动力系统（EditMode → PlayMode）`，或调用 MCP 工具：
-
-**更推荐直接让 AI 用 HomePC2 执行一条命令，等报告一次性返回（不需要循环调用 MCP）：**
+复用已打开、编译完成且未处于 PlayMode 的 Unity Editor，在仓库根目录执行：
 
 ```powershell
-python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json
-# AI/CLI 也可多选，用例 ID 用空格隔开：
-python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json --cases mechanical_power mechanical_control
+# 查看统计；只读文件，不启动测试
+python Tools/GameplayTesting/run_suite.py --list-systems
+
+# 修改哪个系统，通常只跑它的规则；系统 ID 见索引
+python Tools/GameplayTesting/run_suite.py --systems ai
+python Tools/GameplayTesting/run_suite.py --systems mechanical electrical
+
+# 已知改动文件：选所属系统及使用它的系统；未登记路径会报错
+python Tools/GameplayTesting/run_suite.py --changed Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetwork.cs
+
+# 先展示选择范围及场景缺口，不接触 Editor
+python Tools/GameplayTesting/run_suite.py --changed Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetwork.cs --plan
+
+# 规则通过后，相关现场案例合并到一轮隔离世界
+python Tools/GameplayTesting/run_suite.py --systems mechanical industrial_fluids space --integration
+
+# 全部快速规则；没有隐含场景测试
+python Tools/GameplayTesting/run_suite.py
 ```
 
-Python 只写入 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 的本地请求，
-已打开的 Editor 自动接单、运行两个阶段，再将 PASS / FAIL 和报告路径返回给同一条命令。
-不额外启动 Unity、不反复调用玩法 MCP；退出码 0 为全部通过，1 为测试失败，
-2 为 Editor 拒绝（例如已在 PlayMode），3 为 Editor 未响应或超时。
-默认等待接单 45 秒、运行上限 900 秒，可用 `--editor-timeout` / `--run-timeout` 修改。
+`--systems` 精确选择系统。`--changed` 按 `sourcePaths` 选直接归属，再沿 `dependsOn` 找使用这些规则的系统；测试基础设施改动会选择全部规则。两者可联合使用；不能再混用位置清单或 `--cases`。`--integration` 根据 `integrationCaseIds` 去重后，只提交一次 `all-systems-gameplay.json`，减少重复建世界。
 
-也可以使用 MCP 工具：
+系统没有现场案例时，`--integration` 仍运行已有案例，但返回 **4** 并列出缺口。已有现场入口也只是部分覆盖，仍须看 README。其余退出码：0 全部所选案例通过，1 测试失败，2 Editor 拒绝，3 请求/文件/等待错误。只选规则不检查完整 PlayMode、联机或设备行为。
+
+Python 仅在 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 写本地请求；Editor 自动接单、执行和回报，不启动新 Unity 进程。接单默认45秒、CLI执行上限默认900秒，可用 `--editor-timeout` / `--run-timeout` 修改。快速规则调度另有120秒上限。
+
+## 为什么快：规则和真实世界分层
+
+| 清单模式 | 执行方式 | 适用断言 |
+| --- | --- | --- |
+| `rules` | Editor 更新循环直接执行 Lua，不进入 Test Framework/PlayMode，不启动 GameRes 或建立存档世界 | 正式规则、独立对象事务、状态机、边界、拒绝、回滚 |
+| `gameplay` | EditMode 安全前置通过后，一次 PlayMode、一套正式资源和隔离世界 | 实际入世、移动、生命、Buff、库存、农业/建造、机器/气液/太空及存档流程 |
+
+规则夹具只调用登记的生产 API，不在测试里重新算一套业务结果。部分规则使用独立且不激活的 Unity 对象，结束时销毁；纯规则没有玩家控制租约。所有场景操作只允许隔离测试玩家，正式存档目录不会被现场探针使用。
+
+Lua 增加参数组合、断言和步骤无需重新编译 C#；新增白名单采样操作仍需要一次 C# 编译。正常速度收益来自跳过资源/世界启动以及精确选择范围，本轮没有跑计时，不提供秒数承诺。
+
+示意图见 [系统测试分层与修改回归](../../../游戏机制SVG文件夹/测试/系统测试分层与修改回归.svg)。
+
+## 目录与分类
 
 ```text
-gameplay_test_pipeline(action="run", suitePath="GameplayTests/mechanical-suite.json")
-gameplay_test_pipeline(action="run", suitePath="GameplayTests/mechanical-suite.json", caseIds=["mechanical_power","mechanical_control"])
+GameplayTests/
+├─ systems.catalog.json              源码归属、依赖、案例与覆盖说明
+├─ all-systems-rules.json             全部系统快速规则入口
+├─ all-systems-gameplay.json          现场案例总入口（按系统选子集）
+├─ 系统索引.md                       38个系统覆盖入口
+├─ mechanical-suite.json             既有七组机械集成
+├─ fluid-suite.json                  既有九组气液专项
+├─ universe-suite.json               既有四组宇宙太空专项
+└─ Systems/<系统>/
+   ├─ README.md                     已覆盖规则、夹具、关键流程缺口
+   ├─ rules.lua / rules-suite.json   对应系统的规则案例
+   ├─ gameplay.lua / gameplay-suite.json  该系统已实现的现场案例（可选）
+   └─ Gameplay/                     太空/气液原专项脚本及说明
+```
+
+每个系统最多十份 Lua，优先把同主题边界并入现有文件并保留独立中文标签。原有20份机械、气液、太空 Lua 迁入相应系统目录，断言保留。之前删除的根目录通用案例不恢复；新增玩家、Buff、库存等使用本次系统入口。
+
+## Lua 编写接口
+
+```lua
+-- 检查正式奔跑消耗规则
+ test.system("player", "movement_cost", {moving = true, running = true}, function(data)
+    assert(math.abs(data.nutrition - 3.2) < .00001, "奔跑营养消耗倍率错误")
+    assert(math.abs(data.water - .25) < .00001, "奔跑水分消耗倍率错误")
+end, "玩家奔跑消耗")
+
+-- 真实写盘只能进入gameplay清单，不能混进rules
+ test.runtime("save", "isolated_roundtrip", {amount = 3}, function(data)
+    assert(data.backupMatchesFirst, "正式写盘备份未保留上一版")
+end, "隔离存档写入和读回")
+```
+
+生产采样、参数组合及完整业务断言参考 [玩家规则](Systems/Player/rules.lua)、[存档现场](Systems/Save/gameplay.lua)。
+
+`test.system(systemId, operationId, args, validator, label)` 与 `test.runtime(...)` 会在排队时复制纯数据参数；只接受有限数字、字符串、布尔值、普通表，拒绝循环引用、函数和C#对象。对象键必须是字符串，数组键必须从1连续编号，空表按对象处理。C#生成原始采样，Lua回调验证；每个回调必须实际调用 `assert`，无断言直接失败。回调不能追加步骤。
+
+| 接口 | 用途 |
+| --- | --- |
+| `test.system(...)` | 白名单独立规则操作，规则/场景都可使用 |
+| `test.runtime(...)` | 隔离场景内真实流程采样 |
+| `test.log(text)` | 报告说明；不能单靠log构成规则用例 |
+| `test.check(name,label)` | 真实世界/玩家/地形就绪和正式GM状态 |
+| `test.gm(command,argument)` | 白名单准备管理员、生命、Buff和系统夹具 |
+| `test.fluid(caseId,label)` | 原气液专项，独立子案失败继续收集，整组仍失败 |
+| `test.space(operation,validator,label,argument)` | 原太空规则及真实会话 |
+| `test.move(x,y,seconds)` / `test.move_to(x,y,timeout,tolerance)` | 实际玩家移动/正式导航 |
+| `test.look_at(x,y)` / `test.interact()` / `test.select_hotbar(index)` / `test.use()` | 正式交互与手持入口，具体效果仍须断言 |
+| `test.wait(seconds)` | 真实时间等待，规则模式禁止 |
+| `test.screenshot(label)` | 实际现场图，每Lua可0～3次，规则模式禁止 |
+
+Lua 沙箱不开放 `CS`、`require`、文件或网络；单次编排/断言有100万条指令预算。每Lua最多256个展开步骤，单步等待/移动最多30秒，累计动作180秒。超过限制会拒绝或失败，不能靠无界循环等条件。
+
+场景脚本通常共用世界、背包、位置和机器状态，必须自备条件、只清理自己的夹具。截图由AI在有意义的现场明确插入，不自动补结尾或失败图。真实 `test.space` 若需要截图，紧接采样命令排截图，下一条非截图命令才恢复现场；同步 `test.runtime` 已清理的事务不再拍空地充当现场。详见 [气液专项](Systems/IndustrialFluids/Gameplay/README.md) 与 [太空专项](Systems/Space/Gameplay/README.md)。
+
+## 清单格式和编辑器入口
+
+```json
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [{"id":"ai_rules","name":"AI规则","luaPath":"GameplayTests/Systems/AI/rules.lua","enabled":true}]
+}
+```
+
+严格JSON拒绝重复/未知字段和错类型。`executionMode`为`rules`或`gameplay`，省略时为`gameplay`；规则模式禁止`buildShowroom:true`。每清单1～512案例、至少启用一个；案例ID1～64位英文字母/数字/下划线/连字符、不重复、不使用Windows保留名；路径只能是StreamingAssets内合法相对Lua路径。
+
+Unity菜单 **FlatWorld → 测试 → 测试中心（多选案例）** 可选择总规则、对应系统或已有专项，勾选所需案例并执行，显示独立规则阶段或EditMode/PlayMode结果。选择存于EditorPrefs和Library，不修改原清单。**已有PlayMode会拒绝测试，不暂停或退出用户游戏。** 直接打开测试场景点Play仍使用场景中显式保存的机械专项；规则清单请使用测试中心。
+
+MCP同样支持：
+
+```text
+gameplay_test_pipeline(action="catalog")
+gameplay_test_pipeline(action="run", systemIds=["ai","navigation"])
+gameplay_test_pipeline(action="run", suitePath="GameplayTests/fluid-suite.json", caseIds=["fluid_transport","fluid_tanks"])
 gameplay_test_pipeline(action="status")
 gameplay_test_pipeline(action="report")
 ```
 
-MCP 的第一条命令只负责启动整个流水线，后续由 Unity 自己执行；`status` 返回阶段与进度，
-`report` 额外包含真实世界用例结果、Console 错误与调用堆栈。结果在：
+## AI修改系统后的工作顺序
+
+1. 读取业务Skill及 [Lua测试Skill](../../../.agents/skills/flatworld-lua-testing/SKILL.md)，按索引定位归属和现有断言。
+2. 把修改影响的正常、边界、拒绝、回滚和关键流程逐项对应到现有用例；缺少的先增强Lua，再改生产代码。确需新的生产采样时扩展对应探针，不开放任意C#或反射访问。
+3. 同主题优先并入原Lua。新增主题后更新本系统`rules-suite.json`或`gameplay-suite.json`及README，再运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总入口和案例映射；新系统在catalog登记源码和依赖。
+4. 用户允许验证且Unity不在PlayMode时，按系统跑快速规则；影响实际生命周期/世界/输入/存档/机器/跨系统流程时再跑`--integration`。未映射路径和缺少场景用例都是补覆盖信号。
+5. 从首个失败步骤、原始采样及Lua堆栈找根因，修Lua/生产代码后重跑原范围。不得删除、禁用或放宽正确断言换PASS，亦不得原样无限重跑。
+6. 汇报实际选中系统、运行/未运行、失败与覆盖缺口；用户要求仅静态修改时不编译、不运行。
+
+## 结果文件
 
 ```text
-Library/FlatWorldGameplayTests/Pipeline/<runId>.json
-Library/FlatWorldGameplayTests/Pipeline/latest-run.txt
+Library/FlatWorldGameplayTests/
+├─ Pipeline/<runId>.json             阶段报告
+├─ Runs/<runId>/report.md / report.json / pipeline.json
+│  └─ cases/<caseId>/report.json      输入、原始采样、独立标签和错误位置
+│      screenshot-01.png …           仅实际执行截图命令后生成
+└─ Saves/<runId>/                    场景隔离档；规则模式不建世界存档
 ```
 
-EditMode 阶段通过生产清单解析器校验严格 JSON、脚本文件、**Lua 沙箱预编译与步骤限制**、用例有效性和测试场景，
-由 Test Framework 自动执行 `FlatWorld.Gameplay.EditModeTests` 的所有测试。
-**只有至少一项成功，且没有任何失败、跳过或未确定的测试时，才允许进入 PlayMode**。
-PlayMode 阶段只进入 Unity PlayMode 一次、加载一次 `GameplayTestScene`、
-建立一个隔离世界，在该世界中顺序跑完所有启用的 Lua 用例；不用每步往返 MCP，
-也不重复启动 Unity Editor 进程。
-
-现有三个系统清单都设置 `buildShowroom: false`，只准备正式测试世界及各系统需要的夹具。
-两个阶段的失败会写入同一份流水线报告，
-包含独立的 EditMode / PlayMode 断言结果，PlayMode 会链接场景原有的每用例报告。
-
-### AI 修复循环
-
-1. AI 编写/更新一份 `GameplayTests/*.json` 清单及独立 Lua 文件，尽量保证用例前置条件可重复。
-2. 调用 `run`，之后用 `status` 或 `report` 取得最终状态，而非逐步遥控。
-3. 失败时根据最先失败的断言、日志/堆栈以及真实代码定位根因，修改后重新 `run` 原清单。
-4. 重复至所有阶段通过；如果环境故障、连续无进展或当前用户正在 PlayMode，则停止并明确汇报阻塞，不改动/暂停正在使用的运行现场。
-
-不要为了获得 PASS 而删除、禁用或放宽失败用例，也不要在未修改问题的情况下无限重复运行。
-每轮都会生成新的独立报告和存档，方便 AI 比较修复前后的错误。测试驱动程序并不具备自主改代码的能力；修复仍由外部 AI Agent 执行。
-
-**注意：** 两阶段范围是 FlatWorld 自己的 EditMode/PlayMode 测试程序集，
-不自动执行第三方 Package 的全部测试。用户正在 PlayMode 时启动命令会拒绝执行，不会擅自停止游戏。
-
-在 Unity 中打开 `Assets/3_Scenes/Development/GameplayTestScene.unity`，点击 Play 即可执行默认机械动力专项。场景复用正式 WorldManager 和建世界流程，自动加载完整资源、创建默认模板玩家，再按所选系统准备夹具，不需要操作主菜单。
-
-测试场景仍支持通过 `buildShowroom` 可选准备物品陈列，现有系统专项均关闭该选项。
-
-## 多 Lua 测试清单
-
-场景的 `GameplayTestScene` 组件默认读取 `Assets/StreamingAssets/GameplayTests/mechanical-suite.json`，按照 `cases` 数组的顺序逐个执行启用的 Lua。组件的 `Test Suite Path` 可以指定另一份相对于 StreamingAssets 的 JSON 清单。每次点击 Play 都创建一个全新的测试世界，一份清单内的所有用例共用这个世界。
-
-测试按业务系统组织，共保留 20 份 Lua：
-
-| 系统 | 清单 | Lua 数量 |
-| --- | --- | ---: |
-| 机械动力 | `mechanical-suite.json` | 7 |
-| 工业气液与管网 | `fluid-suite.json` | 9 |
-| 宇宙与太空 | `universe-suite.json` | 4 |
-
-玩家移动、独立入场/陈列、背包/快捷栏、生命/无敌及 Buff 的通用 Lua 已删除，通用快速和混合清单也已删除。世界、玩家和区块就绪仍是系统测试的前置条件，GM 白名单保留用于准备系统夹具。所有用例可以在测试中心按 ID 勾选；新增业务必须有实际断言，不能只用 GM 摆放道具就判定通过。
-
-### 机械动力专项（7 个 Lua 模块）
-
-```powershell
-python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json
-```
-
-`mechanical-suite.json` 不建全物品陈列，只在本轮隔离世界建造一套真实机械系统。`mechanical_catalog_coverage` 依据机械目录动态校验所有 `Ports=axis/all` 的本体节点已实际放置，当前为 **20 种**；电线、管道和储罐作为配套节点。独立电气/工业气液/太空设施（`Ports=none`）不算机械扭矩端口设备，其业务另由对应专项覆盖。
-
-| Lua 案例 | 真实检查 |
-| --- | --- |
-| `mechanical_assemble` | GM 落地全部机械端口组件，准备权威风、水、氢氧和原料 |
-| `mechanical_power` | 水车、风机、手摇、燃气动力、齿轮反转、变速箱速比、跨轴器隔离、动力发电及电池充电、气体压缩与风箱 |
-| `mechanical_conveyor` | 两种输送带获得有效转速，真实掉落物发生位置变化 |
-| `mechanical_pressure_probe` | 真实管压越限切断动力、泄压后重新接通 |
-| `mechanical_control` | 离合器断开后下游停止，重新接合后恢复 |
-| `mechanical_processing` | 研磨、锯木、织布、机械锤真实消耗原料生成产物；气泵经管道和 FluidOutlet 将大气送入储罐 |
-| `mechanical_manual_millstone` | 关闭外源后，石磨通过正式手推接口独立供能 |
-
-GM 白名单包括 `mechanical_build`、`mechanical_start`、`mechanical_clutch_on/off`、`mechanical_probe_high/low`、`mechanical_conveyor_drop`、`mechanical_stone_disconnect/push` 等。原料、气体、风力和水流使用正式库存/环境 API 准备，RPM 与扭矩仍由游戏正式求解器计算。该套件验证上表的实际效果，不能代替所有参数组合和联机环境的穷尽测试；额外机械算法边界由 `Tools/Tests/MachineNetworks/` 离线测试覆盖。
-
-清单格式：
-
-| 字段 | 规则 |
-| --- | --- |
-| `schemaVersion` | 必填，当前为 `1` |
-| `continueAfterFailure` | 可省略，默认 `true`；某个用例失败后继续下一个。设为 `false` 时，后续启用用例记为 `skipped` |
-| `buildShowroom` | 可省略，默认 `true`；设为 `false` 时只准备玩家脚下区块，节省搭建全物品陈列的时间 |
-| `cases` | 必填，包含 1 至 64 个用例，至少启用一个 |
-| `id` | 每个用例必填，1 至 64 个英文字母、数字、下划线或连字符；忽略大小写时也不能重复，不能使用 Windows 保留文件名 |
-| `name` | 每个用例必填，非空显示名称 |
-| `luaPath` | 每个用例必填，StreamingAssets 下的相对 `.lua` 路径；禁止绝对路径、上级目录和无效路径字符 |
-| `enabled` | 可省略，默认 `true`；设为 `false` 时不执行，报告记为 `disabled` |
-
-未知字段、重复 JSON 字段和字段类型错误都会拒绝执行清单，避免拼错配置却继续运行。
-
-每个用例使用自己的 Lua 环境、玩家控制租约、步骤列表和日志，结束或失败后释放控制，再进入下一个用例。世界、玩家位置、背包和机器状态会延续到下一个用例；有前置条件的测试需要在自己的脚本里确认或准备这些条件。`continueAfterFailure` 只决定用例失败后是否继续，世界进入失败、场景退出或总流程超时仍会结束整轮测试。
-
-## Lua 命令
-
-Lua 使用点调用语法，先编排步骤，再由 C# 按顺序分帧执行。单个步骤失败会停止当前 Lua 的后续操作；接下来是否执行下一个 Lua 由清单决定。陈列中某个物品放置失败会继续尝试其他物品，并把各项失败写入总报告。
-
-| 命令 | 用途 |
-| --- | --- |
-| `test.check(name, label)` | 检查运行状态，label 可省略 |
-| `test.log(text)` | 记录流程说明 |
-| `test.screenshot(label)` | 在当前步骤拍现场图，label 为中文阶段说明；每份 Lua 最多 3 次，可为 0 次 |
-| `test.wait(seconds)` | 按真实时间等待 |
-| `test.move(x, y, seconds)` | 给真实玩家输入一个移动方向，结束时归零 |
-| `test.move_to(x, y, timeout, tolerance)` | 通过正式导航前往世界坐标；默认超时 10 秒、到达距离 0.25 |
-| `test.look_at(x, y)` | 设置玩家瞄准的世界坐标 |
-| `test.interact()` | 通过正式交互接口操作当前位置的目标 |
-| `test.select_hotbar(index)` | 选择快捷栏，下标从 0 开始 |
-| `test.use()` | 调用当前手持物的正式使用入口 |
-| `test.gm(command, argument)` | 通过白名单 GM 命令准备测试条件；argument 根据命令可省略 |
-
-可检查的名称：`world_ready`、`player_ready`、`terrain_ready`、`showroom_complete`、`player_moved`。其中 `player_moved` 比较当前用例开始时的真实玩家位置，要求移动距离大于 0.1；`move_to` 只有导航返回已到达且实际距离满足阈值才算成功。`use` 的成功表示使用入口完成调用，具体物品效果需要后续另加业务检查。
-
-GM 命令和断言额外提供：
-
-| GM 命令 | 条件与使用 |
-| --- | --- |
-| `enable_admin`、`enable_invincibility`、`disable_invincibility` | 走正式玩家管理员与无敌 API |
-| `set_health_ratio`, `"0.5"` | 仅管理员可使用，设置为 10%～100% 最大血量（测试专用造条件） |
-| `set_move_speed`, `"2"` | 仅管理员可使用，走正式速度倍率接口 |
-| `apply_self_buff`、`remove_self_buff`，参数 `"core:night_vision"` | 使用正式 Buff 目录与生命周期 |
-| `initialize_creative_inventory` | 使用正式 F2 创造背包填充逻辑，耗时较长 |
-
-状态断言：`gm_admin_enabled`、`gm_invincibility_enabled`、`gm_invincibility_disabled`、`gm_damage_blocked`、`gm_damage_normal`、`gm_health_full`、`gm_health_partial`、`gm_move_speed:2`、`gm_buff_active:core:night_vision`、`gm_buff_absent:core:night_vision`、`gm_creative_inventory_enabled`、`hotbar_slot:0`（数字可替换）。每个检查都会读取真实模块状态；GM 命令未被白名单允许会在 EditMode Lua 预检阶段报错。用例结束或提前失败时会恢复本用例修改的无敌、移动倍率、生命和新增 Buff；启用的管理员身份及创造背包内容保留在本轮隔离测试世界中。
-
-每个 Lua 最多 256 步，单步等待或移动最多 30 秒，累计动作时间最多 180 秒。Lua 编排阶段有指令预算，死循环会记录错误并结束当前用例。场景另设资源、世界进入和整份清单的总流程超时，可在组件上调整；增加较长的业务测试时，要同时调整总流程超时。
-
-### 关键现场截图
-
-截图是显式排队的 Lua 命令。AI 编写用例时自行选择重要命令之后、恢复或清理之前的位置插入，每份 Lua 允许 **0～3 次**；循环展开后也合计最多 3 次，EditMode 预检和运行时都会拒绝超限。纯数据断言没有有意义的画面时不必截图，不再自动补脚本结尾或失败截图。
-
-取图前检查主角贴图启用、透明度和相机视口，连续两帧就绪后才执行帧末截图；8 秒内仍未就绪时记录失败，不用固定延时或补造画面替代现场。
-
-```lua
-test.move(1, 0, 0.5)
-test.check("player_moved", "玩家实际移动")
-test.screenshot("玩家移动后的现场")
-```
-
-`test.space` 的真实太空操作在采样与 Lua 断言后先保留现场；要拍它的画面，截图命令应紧跟该 `test.space`。下一个非截图命令之前或脚本结束时再恢复地表并清理。不要先插入 `test.log`、`test.wait` 等其他命令，也不要在采样验证回调内部排截图。领域数据组可省略截图；具体例子见 [太空模块](Universe/README.md)。
-
-## 报告、截图、测试包与存档
-
-编辑器输出位于项目目录：
-
-```text
-Library/FlatWorldGameplayTests/Runs/<运行ID>/report.md
-Library/FlatWorldGameplayTests/Runs/<运行ID>/report.json
-Library/FlatWorldGameplayTests/Runs/<运行ID>/pipeline.json
-Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/report.json
-Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/screenshot-01.png
-Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/screenshot-02.png
-Library/FlatWorldGameplayTests/Runs/<运行ID>/cases/<用例ID>/screenshot-03.png
-Library/FlatWorldGameplayTests/Saves/<运行时间_运行ID>/
-```
-
-独立 Player 的同类目录位于 `Application.persistentDataPath/FlatWorldGameplayTests/`。测试期间的首次保存、自动保存和退出保存都留在本轮的独立 Saves 目录；退出保存完成并返回菜单后，恢复正式存档目录。
-
-上述 3 张图片是可选输出，只生成实际执行的 `test.screenshot` 命令对应的图片，写盘完成后才继续下一步。没有截图命令的 Lua 为 0 张；已拍好的图保留，普通失败后停止后续命令，气液独立子案仍按继续收集规则执行；禁用、跳过和未执行的 Lua 无图。失败后是否继续下个用例仍由 `continueAfterFailure` 控制，脚本结尾和失败时均不自动补拍。
-
-新报告 `schemaVersion: 5`，每用例的 `screenshots` 数组保存各图的 `index`、`label`、`path`、`error`、`scene`、`utc`、`elapsedSeconds` 和 `playerPosition`。Markdown 按 Lua 和命令序号展示阶段说明及实际图片，流水线和 CLI 的 `screenshotPaths` 只列实际存在的图片；已尝试取图但无画面或被中断时记录失败原因，请保持 Game 视图可渲染。历史报告与旧图片保持原状，不修改或补造过去的现场。
-
-本轮结果文件夹就是测试包，不额外生成 ZIP。每轮收尾按文件夹创建时间保留最近 10 份（包含本轮），超过的旧包自动删除，并清理历史 ZIP 及其临时文件；文件占用导致删除失败会在 Console 中提示。宇宙与太空玩法使用 `universe-suite.json`，通过 `test.space(operation, Lua断言回调, label, argument)` 取得受控采样，详见 [覆盖清单与夹具边界](Universe/README.md)。
-
-总报告包含运行时间、当前阶段、最终状态、测试清单及每个用例的状态和报告路径、每个陈列物品的 ID/坐标/后端/放置结果，以及 Unity 日志、错误和堆栈。每个用例另有一个 JSON，保存自己的步骤结果、起止玩家位置和日志，查看电力测试时可以直接打开 `electricity.json`。
-
-总报告最终状态为 `passed`、`failed` 或 `interrupted`，执行中为 `running`。用例状态区分 `pending`（等待）、`running`（执行中）、`passed`（通过）、`failed`（失败）、`interrupted`（中断）、`skipped`（跳过）和 `disabled`（未启用）。即使启用失败后继续，之前发生的失败仍会保留，总报告也不会被后续成功改成通过。Unity Error、Exception、Assert 或任意失败步骤都会使本轮失败，Warning 单独计数。普通日志有条数上限，超出的数量在报告中保留。
-
-正常结束后会释放测试玩家的控制租约，保留世界供人工检查；停止 Play Mode、组件停用、退出世界或超时都会尽力收尾并写入报告。Console 中的 `[GameplayTest]` 结束消息会给出报告的完整路径。
-
-本场景作为开发入口直接在编辑器运行，未加入正式游戏的 Build Settings。
+总报告及每Lua用例区分pending/running/passed/failed/interrupted/skipped/disabled；原始步骤保留失败，任意失败断言或采集到的Unity Error/Exception/Assert使整轮失败，Warning单独计数。新截图报告schemaVersion5，每图保留标签、序号、时间、位置、路径或取图错误；没有执行就没有图片。结果文件夹就是测试包，保留最近十轮，不另建ZIP或复用上轮证据。

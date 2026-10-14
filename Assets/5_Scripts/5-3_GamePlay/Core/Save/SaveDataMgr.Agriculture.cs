@@ -74,6 +74,21 @@ public partial class SaveDataMgr
     public IReadOnlyList<AgricultureCellSaveData> GetAgricultureCells(RuntimeWorldAddress address) =>
         GetRuntimeChunkRecord(address, false)?.AgricultureCells ?? (IReadOnlyList<AgricultureCellSaveData>)Array.Empty<AgricultureCellSaveData>();
 
+    /// <summary>土壤状态已清空且没有作物时移除本格农业记录，避免残留无来源的零差量。</summary>
+    public bool TryRemoveUninitializedAgricultureCell(RuntimeTerrainTileSample sample)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null || sample.Terrain == null || sample.Terrain.IsDisposed ||
+            FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer) > 0f)
+            return false;
+        ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, false);
+        if (record == null) return true;
+        AgricultureCellSaveData cell = record.AgricultureCells.Find(value => value.LocalPosition == sample.LocalCell);
+        if (cell == null) return true;
+        if (cell.Crop != null) return false;
+        record.AgricultureCells.Remove(cell);
+        return true;
+    }
+
     /// <summary>地形差量恢复后、表现绑定前恢复农业权威层。</summary>
     private static void RestoreAgricultureTerrain(ChunkRuntime chunk, ChunkSaveRecord record)
     {

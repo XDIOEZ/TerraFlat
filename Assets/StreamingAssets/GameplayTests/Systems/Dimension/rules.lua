@@ -1,0 +1,8 @@
+test.system("dimension", "address", {planet = " 火星 ", dimension = " CAVE "}, function(data)
+    assert(data.planet == "火星" and data.dimension == "cave", "世界地址没有规范化空白和维度大小写")
+    assert(data.key == "火星__dimension__cave" and data.roundTripEquals, "洞穴世界键往返丢失身份")
+    assert(data.surfaceKey == "火星" and data.surface, "回地表没有恢复星球独立键")
+    assert(data.valid and not data.differentDimensionsEqual, "维度身份被混为同一世界")
+    assert(data.fallbackKey == "地球" and data.fallbackDimension == "surface", "缺省地址回退错误")
+    assert(data.sanitizedPlanet == "A_B", "星球名中的保留分隔符没有转义")
+end, "维度地址规范化、独立身份与键往返")

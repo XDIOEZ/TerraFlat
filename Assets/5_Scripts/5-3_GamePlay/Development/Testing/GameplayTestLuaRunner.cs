@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using XLua;
@@ -47,6 +48,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         public string Label;
         public string Text;
         public string Argument;
+        public JObject Arguments;
         public LuaFunction Validator;
         public float X;
         public float Y;
@@ -87,6 +89,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         local commands = {}
         local totalSeconds = 0
         local instructionCount = 0
+        local assertionCount = 0
         local screenshotCount = 0
         local scheduling = true
         local function finite(value, name)
@@ -175,17 +178,51 @@ public sealed class GameplayTestLuaRunner : IDisposable
             enqueue({name='space', text=operation, argument=argument, validator=validator,
                 label=label == nil and operation or text(label, 'label')})
         end
+        local function cloneArguments(value, seen, depth)
+            local kind = type(value)
+            if kind == 'number' then return finite(value, 'system argument') end
+            if kind == 'string' or kind == 'boolean' or kind == 'nil' then return value end
+            assert(kind == 'table' and depth <= 8, '系统参数只能包含有限深度的普通数据表')
+            assert(not seen[value], '系统参数不能循环引用')
+            seen[value] = true
+            local result = {}
+            for key, entry in pairs(value) do
+                assert(type(key) == 'string' or type(key) == 'number', '系统参数键必须是文字或数组下标')
+                result[key] = cloneArguments(entry, seen, depth + 1)
+            end
+            seen[value] = nil
+            return result
+        end
+        function test.system(systemId, operation, arguments, validator, label)
+            assert(type(validator) == 'function', 'system 必须提供 Lua 断言回调')
+            assert(arguments == nil or type(arguments) == 'table', 'system 参数必须是普通数据表')
+            enqueue({name='system', text=text(systemId, 'system id'), argument=text(operation, 'system operation'),
+                arguments=cloneArguments(arguments or {}, {}, 0), validator=validator,
+                label=label == nil and (systemId .. '/' .. operation) or text(label, 'label')})
+        end
+        function test.runtime(systemId, operation, arguments, validator, label)
+            assert(type(validator) == 'function', 'runtime 必须提供 Lua 断言回调')
+            assert(arguments == nil or type(arguments) == 'table', 'runtime 参数必须是普通数据表')
+            enqueue({name='runtime', text=text(systemId, 'runtime system id'), argument=text(operation, 'runtime operation'),
+                arguments=cloneArguments(arguments or {}, {}, 0), validator=validator,
+                label=label == nil and (systemId .. '/' .. operation) or text(label, 'label')})
+        end
         local function copy(source)
             local target = {}; for key, value in pairs(source or {}) do target[key] = value end
             return target
         end
-        local scope = {test=test, assert=assert, error=error, ipairs=ipairs, pairs=pairs,
+        local function checkedAssert(...)
+            assertionCount = assertionCount + 1
+            return assert(...)
+        end
+        local scope = {test=test, assert=checkedAssert, error=error, ipairs=ipairs, pairs=pairs,
             next=next, select=select, tonumber=tonumber, tostring=tostring, type=type,
             math=copy(math), string=copy(string), table=copy(table), utf8=copy(utf8)}
         scope._G = scope
         local function execute(chunk, ...)
             local arguments = {...}
             instructionCount = 0
+            assertionCount = 0
             debug.sethook(function()
                 instructionCount = instructionCount + 1000
                 if instructionCount >= 1000000 then error('测试 Lua 超过 100 万条指令预算', 0) end
@@ -195,7 +232,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 return debug.traceback(tostring(message), 2)
             end)
             debug.sethook()
-            return ok, result
+            return ok, result, assertionCount
         end
         return scope, commands, execute, function() scheduling = false end
     ";
@@ -218,10 +255,14 @@ public sealed class GameplayTestLuaRunner : IDisposable
             using LuaFunction script = luaEnvironment.LoadString(source,
                 string.IsNullOrWhiteSpace(chunkName) ? "@GameplayTest.lua" : chunkName, scope);
             object[] result = executeLua.Call(script);
-            seal.Call();
-            if (result.Length == 0 || result[0] is not bool success || !success)
-                throw new InvalidOperationException(result.Length > 1
-                    ? result[1]?.ToString() : "测试 Lua 未返回执行状态。");
+            try
+            {
+                seal.Call();
+                if (result.Length == 0 || result[0] is not bool success || !success)
+                    throw new InvalidOperationException(result.Length > 1
+                        ? result[1]?.ToString() : "测试 Lua 未返回执行状态。");
+            }
+            finally { DisposeLuaResults(result); }
 
             float totalSeconds = 0f;
             int screenshotCount = 0;
@@ -255,12 +296,24 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     throw new InvalidOperationException(gmError);
                 if (command.Name == "fluid" && !GameplayTestFluids.IsScenario(command.Text))
                     throw new InvalidOperationException("未知流体测试案例：" + command.Text);
-                if (command.Name == "space")
+                if (command.Name is "space" or "system" or "runtime")
                 {
-                    if (!GameplayTestSpaceScenario.TryValidate(command.Text, command.Argument, out string spaceError))
+                    if (command.Name == "space" &&
+                        !GameplayTestSpaceScenario.TryValidate(command.Text, command.Argument, out string spaceError))
                         throw new InvalidOperationException(spaceError);
+                    if (command.Name is "system" or "runtime")
+                    {
+                        bool supported = command.Name == "system" ? GameplayTestSystemProbe.Supports(command.Text, command.Argument) :
+                            GameplayTestRuntimeProbe.Supports(command.Text, command.Argument);
+                        if (!supported)
+                            throw new InvalidOperationException("未登记的系统测试操作：" + command.Text + "/" + command.Argument);
+                        using LuaTable arguments = step.Get<LuaTable>("arguments");
+                        int values = 0;
+                        command.Arguments = ReadSystemArguments(arguments, 0, ref values) as JObject ??
+                            throw new InvalidOperationException("系统参数根必须是对象。");
+                    }
                     command.Validator = step.Get<LuaFunction>("validator") ??
-                        throw new InvalidOperationException("太空测试缺少 Lua 断言回调。");
+                        throw new InvalidOperationException("系统测试缺少 Lua 断言回调。");
                     callbacks.Add(command.Validator);
                 }
                 commands.Add(command);
@@ -285,9 +338,104 @@ public sealed class GameplayTestLuaRunner : IDisposable
         return number;
     }
 
+    private static JToken ReadSystemArguments(LuaTable table, int depth, ref int values)
+    {
+        if (table == null) return new JObject();
+        if (depth > 8) throw new InvalidOperationException("系统参数嵌套超过 8 层。");
+        var entries = new List<(object Key, object Value)>();
+        var result = new JObject();
+        var array = new SortedDictionary<int, JToken>();
+        try
+        {
+            table.ForEach<object, object>((key, value) => entries.Add((key, value)));
+            foreach (var entry in entries)
+            {
+                if (++values > 4096) throw new InvalidOperationException("系统参数超过 4096 个值。");
+                JToken value;
+                if (entry.Value is LuaTable nested) value = ReadSystemArguments(nested, depth + 1, ref values);
+                else if (entry.Value is string text) value = new JValue(text);
+                else if (entry.Value is bool flag) value = new JValue(flag);
+                else if (entry.Value is double or float or long or int)
+                {
+                    double number = Convert.ToDouble(entry.Value, CultureInfo.InvariantCulture);
+                    if (double.IsNaN(number) || double.IsInfinity(number)) throw new InvalidOperationException("系统参数必须是有限数字。");
+                    value = new JValue(number);
+                }
+                else if (entry.Value == null) value = JValue.CreateNull();
+                else throw new InvalidOperationException("系统参数不能包含函数或 C# 对象。");
+                if (entry.Key is string key) result.Add(key, value);
+                else
+                {
+                    double index = Convert.ToDouble(entry.Key, CultureInfo.InvariantCulture);
+                    if (index < 1 || index > 4096 || index != Math.Floor(index))
+                        throw new InvalidOperationException("系统数组下标必须从 1 连续递增。");
+                    array.Add((int)index, value);
+                }
+            }
+            if (array.Count == 0) return result;
+            if (result.Count > 0 || array.Keys.Last() != array.Count)
+                throw new InvalidOperationException("系统参数不能混合对象键与数组下标，也不能包含数组空洞。");
+            return new JArray(array.Values);
+        }
+        finally
+        {
+            foreach (var entry in entries)
+            {
+                (entry.Value as LuaBase)?.Dispose();
+                (entry.Key as LuaBase)?.Dispose();
+            }
+        }
+    }
+
     #endregion
 
     #region 流程逐帧执行
+
+    public static void ValidateRulesScript(string source, string chunkName)
+    {
+        string failure = null;
+        using var validator = new GameplayTestLuaRunner(null, _ => false,
+            (_, _, success, message) => { if (!success) failure = message; });
+        if (!validator.TryReadCommands(source, chunkName, out var commands))
+            throw new InvalidOperationException("快速规则 Lua 预检失败：" + chunkName + "\n" + failure);
+        if (!commands.Any(command => command.Name == "system") || commands.Any(command => command.Name is not ("system" or "log")))
+            throw new InvalidOperationException("快速规则清单必须包含 system 断言，只能使用 system 与 log；真实动作和截图放在独立场景清单。");
+    }
+
+    /// <summary>纯规则无需接管玩家或进入世界，按命令让出帧以保持编辑器响应。</summary>
+    public IEnumerator RunRules(string source, string chunkName)
+    {
+        if (disposed || running) throw new InvalidOperationException("规则执行器不可重复使用。");
+        running = true;
+        Succeeded = false;
+        try
+        {
+            if (!TryReadCommands(source, chunkName, out var commands)) yield break;
+            if (!commands.Any(command => command.Name == "system") || commands.Any(command => command.Name is not ("system" or "log")))
+            {
+                record("rules", "快速规则命令边界", false, "快速规则必须至少有一个 system 断言，不能使用真实世界动作。");
+                yield break;
+            }
+            foreach (Command command in commands)
+            {
+                try
+                {
+                    if (command.Name == "system") RunSystemCommand(command);
+                    else { command.Success = true; command.Message = command.Text; }
+                }
+                catch (Exception exception) { command.Success = false; command.Message = exception.ToString(); }
+                record(command.Name, command.Label, command.Success, command.Message);
+                if (!command.Success) yield break;
+                yield return null;
+            }
+            Succeeded = true;
+        }
+        finally
+        {
+            try { ReleaseLua(); }
+            finally { running = false; }
+        }
+    }
 
     public IEnumerator Run(string source, string chunkName)
     {
@@ -351,13 +499,16 @@ public sealed class GameplayTestLuaRunner : IDisposable
         }
         finally
         {
-            ReleaseControl();
-            try { activeSpaceScenario?.Dispose(); }
+            try { ReleaseControl(); }
             finally
             {
-                activeSpaceScenario = null;
-                ReleaseLua();
-                running = false;
+                try { activeSpaceScenario?.Dispose(); }
+                finally
+                {
+                    activeSpaceScenario = null;
+                    try { ReleaseLua(); }
+                    finally { running = false; }
+                }
             }
         }
     }
@@ -398,6 +549,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 IEnumerator probe = RunSpaceCommand(command);
                 try { while (probe.MoveNext()) yield return probe.Current; }
                 finally { (probe as IDisposable)?.Dispose(); }
+                break;
+            case "system":
+                RunSystemCommand(command);
+                break;
+            case "runtime":
+                RunRuntimeCommand(command);
                 break;
             case "log":
                 Debug.Log($"[GameplayTest Lua] {command.Text}");
@@ -468,6 +625,40 @@ public sealed class GameplayTestLuaRunner : IDisposable
     }
 
     #region 太空数据与 Lua 断言
+    private void RunSystemCommand(Command command)
+    {
+        JObject sample = GameplayTestSystemProbe.Capture(command.Text, command.Argument, command.Arguments);
+        record("system_sample", command.Label + "（实际采样）", true, sample.ToString(Newtonsoft.Json.Formatting.None));
+        ValidateSystemSample(command, sample);
+    }
+
+    private void RunRuntimeCommand(Command command)
+    {
+        JObject sample = GameplayTestRuntimeProbe.Capture(player, command.Text, command.Argument, command.Arguments);
+        record("runtime_sample", command.Label + "（实际采样）", true, sample.ToString(Newtonsoft.Json.Formatting.None));
+        ValidateSystemSample(command, sample);
+    }
+
+    private void ValidateSystemSample(Command command, JObject sample)
+    {
+        var tables = new List<LuaTable>();
+        try
+        {
+            object[] result = executeLua.Call(command.Validator, ToLuaValue(sample, tables));
+            try
+            {
+                bool executed = result.Length > 0 && result[0] is bool passed && passed;
+                int assertions = result.Length > 2 ? Convert.ToInt32(result[2], CultureInfo.InvariantCulture) : 0;
+                command.Success = executed && assertions > 0;
+                command.Message = !executed ? result.ElementAtOrDefault(1)?.ToString() ?? "系统 Lua 断言失败。" :
+                    assertions == 0 ? "系统回调没有执行 assert，不能记为通过。" :
+                    result.ElementAtOrDefault(1)?.ToString() ?? $"系统规则通过，共 {assertions} 项断言。";
+            }
+            finally { DisposeLuaResults(result); }
+        }
+        finally { for (int index = tables.Count - 1; index >= 0; index--) tables[index].Dispose(); }
+    }
+
     private IEnumerator RunSpaceCommand(Command command)
     {
         JObject sample = null;
@@ -492,10 +683,13 @@ public sealed class GameplayTestLuaRunner : IDisposable
         {
             LuaTable data = (LuaTable)ToLuaValue(sample, tables);
             object[] result = executeLua.Call(command.Validator, data);
-            command.Success = result.Length > 0 && result[0] is bool passed && passed;
-            command.Message = result.Length > 1 && result[1] != null ? result[1].ToString() :
-                command.Success ? "Lua 太空断言通过。" : "Lua 太空断言失败。";
-            foreach (object value in result) (value as IDisposable)?.Dispose();
+            try
+            {
+                command.Success = result.Length > 0 && result[0] is bool passed && passed;
+                command.Message = result.Length > 1 && result[1] != null ? result[1].ToString() :
+                    command.Success ? "Lua 太空断言通过。" : "Lua 太空断言失败。";
+            }
+            finally { DisposeLuaResults(result); }
         }
         finally
         {
@@ -519,7 +713,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     }
 
     // 展开嵌套协程以捕获截图和场景迁移异常，让失败仍能进入统一清理。
-    internal static IEnumerator Advance(IEnumerator routine, Action<Exception> failed)
+    public static IEnumerator Advance(IEnumerator routine, Action<Exception> failed)
     {
         var stack = new Stack<IEnumerator>();
         stack.Push(routine);
@@ -575,12 +769,27 @@ public sealed class GameplayTestLuaRunner : IDisposable
 
     private void ReleaseLua()
     {
-        foreach (LuaFunction callback in callbacks) callback.Dispose();
+        var failures = new List<Exception>();
+        foreach (LuaFunction callback in callbacks)
+            try { callback.Dispose(); }
+            catch (Exception exception) { failures.Add(exception); }
         callbacks.Clear();
-        executeLua?.Dispose();
+        LuaFunction executor = executeLua;
         executeLua = null;
-        luaEnvironment?.Dispose();
+        LuaEnv environment = luaEnvironment;
         luaEnvironment = null;
+        try { executor?.Dispose(); }
+        catch (Exception exception) { failures.Add(exception); }
+        try { environment?.Dispose(); }
+        catch (Exception exception) { failures.Add(exception); }
+        if (failures.Count > 0) throw new AggregateException("测试 Lua 资源释放失败。", failures);
+    }
+
+    // 即使结果解释失败，也释放脚本返回的临时表和函数引用。
+    private static void DisposeLuaResults(object[] result)
+    {
+        if (result == null) return;
+        foreach (object value in result) (value as LuaBase)?.Dispose();
     }
     #endregion
 
@@ -710,12 +919,15 @@ public sealed class GameplayTestLuaRunner : IDisposable
     {
         if (disposed) return;
         disposed = true;
-        ReleaseControl();
-        try { activeSpaceScenario?.Dispose(); }
+        try { ReleaseControl(); }
         finally
         {
-            activeSpaceScenario = null;
-            ReleaseLua();
+            try { activeSpaceScenario?.Dispose(); }
+            finally
+            {
+                activeSpaceScenario = null;
+                ReleaseLua();
+            }
         }
     }
 

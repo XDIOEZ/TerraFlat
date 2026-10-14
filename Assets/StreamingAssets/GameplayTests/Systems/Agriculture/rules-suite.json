@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "agriculture_rules",
+      "name": "农业种植规则与边界",
+      "luaPath": "GameplayTests/Systems/Agriculture/rules.lua",
+      "enabled": true
+    }
+  ]
+}

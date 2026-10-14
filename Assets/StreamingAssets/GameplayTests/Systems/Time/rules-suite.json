@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "time_rules",
+      "name": "时间与季节规则与边界",
+      "luaPath": "GameplayTests/Systems/Time/rules.lua",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "player_gameplay",
+      "name": "玩家控制与交互真实关键流程",
+      "luaPath": "GameplayTests/Systems/Player/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

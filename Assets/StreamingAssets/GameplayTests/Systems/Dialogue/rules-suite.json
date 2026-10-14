@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "dialogue_rules",
+      "name": "角色对话规则与边界",
+      "luaPath": "GameplayTests/Systems/Dialogue/rules.lua",
+      "enabled": true
+    }
+  ]
+}

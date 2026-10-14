@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "buff_gameplay",
+      "name": "Buff状态真实关键流程",
+      "luaPath": "GameplayTests/Systems/Buff/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

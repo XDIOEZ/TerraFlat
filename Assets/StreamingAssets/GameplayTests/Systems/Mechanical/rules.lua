@@ -1,0 +1,22 @@
+local function near(a, b, message)
+    assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
+end
+
+test.system("mechanical", "load_allocation", {}, function(data)
+    assert(data.first.nearSatisfied and not data.first.farSatisfied, "不足扭矩没有优先满足近处完整负载")
+    near(data.first.nearRpm, 60, "近处负载没有获得真实转速")
+    near(data.first.farRpm, 0, "不足完整需求的远处设备仍在运行")
+    assert(data.increased.nearSatisfied and data.increased.farSatisfied, "增加源扭矩后远处负载没有恢复")
+    near(data.increased.nearRpm, 60, "增力改变近处额定转速")
+    near(data.increased.farRpm, 60, "远处负载恢复转速错误")
+    assert(not data.stoppedNearSatisfied and not data.stoppedFarSatisfied, "断动力后负载仍报告满足")
+    near(data.stoppedNearRpm, 0, "断动力后近处继续转动")
+    near(data.stoppedFarRpm, 0, "断动力后远处继续转动")
+end, "扭矩负载优先、供给恢复与断动力")
+
+test.system("mechanical", "gear_conflict", {}, function(data)
+    assert(data.gearSatisfied, "齿轮传动没有满足负载")
+    near(data.gearRpm, -60, "齿轮啮合没有反转")
+    assert(data.conflict, "异速动力源没有触发整网冲突")
+    near(data.conflictRelayRpm, 0, "动力冲突后中间轴仍转动")
+end, "齿轮反转与异速源停网")

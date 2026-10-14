@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "buff_rules",
+      "name": "Buff状态规则与边界",
+      "luaPath": "GameplayTests/Systems/Buff/rules.lua",
+      "enabled": true
+    }
+  ]
+}

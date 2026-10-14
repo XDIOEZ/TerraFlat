@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "networking_rules",
+      "name": "联机与同步规则与边界",
+      "luaPath": "GameplayTests/Systems/Networking/rules.lua",
+      "enabled": true
+    }
+  ]
+}

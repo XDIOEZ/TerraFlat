@@ -6,25 +6,25 @@
     {
       "id": "universe_content",
       "name": "宇宙内容、轨道、地表与快照",
-      "luaPath": "GameplayTests/Universe/universe_content.lua",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/universe_content.lua",
       "enabled": true
     },
     {
       "id": "sector_rules",
       "name": "星区坐标、接触与租约",
-      "luaPath": "GameplayTests/Universe/sector_rules.lua",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/sector_rules.lua",
       "enabled": true
     },
     {
       "id": "ship_rules",
       "name": "飞船结构、环境、动力与快照",
-      "luaPath": "GameplayTests/Universe/ship_rules.lua",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_rules.lua",
       "enabled": true
     },
     {
       "id": "space_gameplay",
       "name": "真实太空入场、航行、跨区与接触",
-      "luaPath": "GameplayTests/Universe/space_gameplay.lua",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/space_gameplay.lua",
       "enabled": true
     }
   ]

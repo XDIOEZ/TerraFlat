@@ -1,0 +1,22 @@
+local function near(a, b, message)
+    assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
+end
+
+test.system("electrical", "battery_commit", {}, function(data)
+    near(data.previewEnergy, 100, "反复探算扣除了真实电池储能")
+    assert(data.previewNotifications == 0, "电池探算发布了储能变化")
+    near(data.committedEnergy, 95, "一次0.1秒50瓦负载没有只扣5焦耳")
+    assert(data.notifications == 1, "正式储能结算没有恰好通知一次")
+    near(data.deliveredWatts, 50, "电池实际交付功率错误")
+    near(data.suppliedWatts, 50, "用电器没有收到实际供电")
+end, "电池探算隔离与单次功率结算")
+
+test.system("electrical", "supply_limits", {}, function(data)
+    near(data.limited.delivered, 50, "供给不足时产生额外功率")
+    near(data.limited.demand, 100, "用电需求读数错误")
+    near(data.limited.ratio, 0.5, "缺电没有按真实功率折减")
+    near(data.limited.current, 50 / 120, "电流没有从实际功率和电压派生")
+    assert(data.voltageConflict, "两个不兼容电压源没有冲突")
+    near(data.conflictDelivered, 0, "电压冲突后电网仍交付功率")
+    near(data.conflictSupplied, 0, "电压冲突后保留了旧供电")
+end, "电网功率上限、电流与电压冲突")

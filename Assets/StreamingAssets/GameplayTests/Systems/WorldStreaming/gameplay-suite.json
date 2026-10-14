@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "world_streaming_gameplay",
+      "name": "世界模型与区块流送真实关键流程",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

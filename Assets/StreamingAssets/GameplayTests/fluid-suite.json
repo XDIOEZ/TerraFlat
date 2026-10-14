@@ -6,55 +6,55 @@
     {
       "id": "fluid_inventory",
       "name": "库存与原子事务",
-      "luaPath": "GameplayTests/Fluids/fluid_inventory.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_inventory.lua",
       "enabled": true
     },
     {
       "id": "fluid_thermodynamics",
       "name": "热力学与相变",
-      "luaPath": "GameplayTests/Fluids/fluid_thermodynamics.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_thermodynamics.lua",
       "enabled": true
     },
     {
       "id": "fluid_state_save",
       "name": "状态快照与存档",
-      "luaPath": "GameplayTests/Fluids/fluid_state_save.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_state_save.lua",
       "enabled": true
     },
     {
       "id": "fluid_topology",
       "name": "管网拓扑与路由",
-      "luaPath": "GameplayTests/Fluids/fluid_topology.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_topology.lua",
       "enabled": true
     },
     {
       "id": "fluid_transport",
       "name": "冻结输送与吞吐",
-      "luaPath": "GameplayTests/Fluids/fluid_transport.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_transport.lua",
       "enabled": true
     },
     {
       "id": "fluid_tanks",
       "name": "储罐生命周期与充装",
-      "luaPath": "GameplayTests/Fluids/fluid_tanks.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_tanks.lua",
       "enabled": true
     },
     {
       "id": "fluid_pumps_compressors",
       "name": "泵与压缩机",
-      "luaPath": "GameplayTests/Fluids/fluid_pumps_compressors.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_pumps_compressors.lua",
       "enabled": true
     },
     {
       "id": "fluid_reactions",
       "name": "过滤电解与发动机",
-      "luaPath": "GameplayTests/Fluids/fluid_reactions.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_reactions.lua",
       "enabled": true
     },
     {
       "id": "fluid_environment",
       "name": "环境抽排与容器",
-      "luaPath": "GameplayTests/Fluids/fluid_environment.lua",
+      "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_environment.lua",
       "enabled": true
     }
   ]

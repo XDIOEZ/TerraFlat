@@ -1,0 +1,10 @@
+-- 使用真实玩家、正式目录和 Buff 管理器，不写测试专用状态字段。
+test.check("player_ready", "真实玩家就绪")
+test.gm("enable_admin")
+test.gm("remove_self_buff", "core:night_vision")
+test.check("gm_buff_absent:core:night_vision", "前置夜视状态清除")
+test.gm("apply_self_buff", "core:night_vision")
+test.check("gm_buff_active:core:night_vision", "正式夜视状态已施加")
+test.screenshot("真实玩家持有正式夜视状态")
+test.gm("remove_self_buff", "core:night_vision")
+test.check("gm_buff_absent:core:night_vision", "正式夜视状态已移除")

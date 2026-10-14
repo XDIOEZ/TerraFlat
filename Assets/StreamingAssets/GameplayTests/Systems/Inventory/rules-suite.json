@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "inventory_rules",
+      "name": "库存与装备规则与边界",
+      "luaPath": "GameplayTests/Systems/Inventory/rules.lua",
+      "enabled": true
+    }
+  ]
+}

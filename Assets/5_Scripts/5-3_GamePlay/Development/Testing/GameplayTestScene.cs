@@ -11,7 +11,7 @@ using UnityEngine.Networking;
 public sealed class GameplayTestScene : MonoBehaviour
 {
     #region 场景配置
-    [SerializeField] private string testSuitePath = GameplayTestSelection.DefaultSuitePath;
+    [SerializeField] private string testSuitePath = "GameplayTests/mechanical-suite.json";
     [SerializeField] private string seed = "flatworld-showroom-001";
     [SerializeField, Min(1f)] private float resourceTimeoutSeconds = 120f;
     [SerializeField, Min(1f)] private float worldTimeoutSeconds = 120f;
@@ -175,6 +175,8 @@ public sealed class GameplayTestScene : MonoBehaviour
         string suiteJson = null;
         yield return LoadText(testSuitePath, text => suiteJson = text);
         suite = GameplayTestSuite.Parse(suiteJson);
+        if (suite.ExecutionMode != "gameplay")
+            throw new InvalidOperationException("快速规则清单应通过 Editor 测试中心执行，不能进入真实世界测试场景。");
         GameplayTestSelection.ApplySelectedCases(suite, testSuitePath);
         foreach (GameplayTestCase testCase in suite.Cases)
             report.Cases.Add(new GameplayTestCaseReport

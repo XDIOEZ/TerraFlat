@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "combat_rules",
+      "name": "战斗与技能规则与边界",
+      "luaPath": "GameplayTests/Systems/Combat/rules.lua",
+      "enabled": true
+    }
+  ]
+}

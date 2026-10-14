@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "fishing_gameplay",
+      "name": "钓鱼：实际流程",
+      "luaPath": "GameplayTests/Systems/Fishing/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

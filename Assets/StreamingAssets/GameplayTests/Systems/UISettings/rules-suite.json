@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "ui_settings_rules",
+      "name": "UI与设置规则与边界",
+      "luaPath": "GameplayTests/Systems/UISettings/rules.lua",
+      "enabled": true
+    }
+  ]
+}

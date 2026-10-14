@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "survival_rules",
+      "name": "角色生存规则与边界",
+      "luaPath": "GameplayTests/Systems/Survival/rules.lua",
+      "enabled": true
+    }
+  ]
+}

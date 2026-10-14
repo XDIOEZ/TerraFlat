@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "terrain_rules",
+      "name": "地形生成规则与边界",
+      "luaPath": "GameplayTests/Systems/Terrain/rules.lua",
+      "enabled": true
+    }
+  ]
+}

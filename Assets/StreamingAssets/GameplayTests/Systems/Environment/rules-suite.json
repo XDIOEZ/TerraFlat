@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "environment_rules",
+      "name": "天气与环境规则与边界",
+      "luaPath": "GameplayTests/Systems/Environment/rules.lua",
+      "enabled": true
+    }
+  ]
+}

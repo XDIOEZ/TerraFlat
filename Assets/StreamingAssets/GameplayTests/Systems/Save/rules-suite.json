@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "save_rules",
+      "name": "存档与恢复规则与边界",
+      "luaPath": "GameplayTests/Systems/Save/rules.lua",
+      "enabled": true
+    }
+  ]
+}

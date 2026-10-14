@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "building_rules",
+      "name": "建造与拆除规则与边界",
+      "luaPath": "GameplayTests/Systems/Building/rules.lua",
+      "enabled": true
+    }
+  ]
+}

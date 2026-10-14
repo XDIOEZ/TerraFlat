@@ -10,9 +10,11 @@ using Newtonsoft.Json.Linq;
 public sealed class GameplayTestSuite
 {
     #region 清单数据
+    public const int MaximumCases = 512;
     [JsonProperty("schemaVersion", Required = Required.Always)] public int SchemaVersion = 1;
     [JsonProperty("continueAfterFailure")] public bool ContinueAfterFailure = true;
     [JsonProperty("buildShowroom")] public bool BuildShowroom = true;
+    [JsonProperty("executionMode")] public string ExecutionMode = "gameplay";
     [JsonProperty("cases", Required = Required.Always)] public List<GameplayTestCase> Cases = new();
     #endregion
 
@@ -25,13 +27,14 @@ public sealed class GameplayTestSuite
         JObject root = JObject.Load(reader, new JsonLoadSettings
             { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
         if (reader.Read()) throw new InvalidDataException("测试清单 JSON 包含多余内容。");
-        ValidateMembers(root, "测试清单", "schemaVersion", "continueAfterFailure", "buildShowroom", "cases");
+        ValidateMembers(root, "测试清单", "schemaVersion", "continueAfterFailure", "buildShowroom", "executionMode", "cases");
         RequireType(root, "schemaVersion", JTokenType.Integer);
         RequireType(root, "continueAfterFailure", JTokenType.Boolean, false);
         RequireType(root, "buildShowroom", JTokenType.Boolean, false);
+        RequireType(root, "executionMode", JTokenType.String, false);
         RequireType(root, "cases", JTokenType.Array);
-        if (((JArray)root["cases"]).Count < 1 || ((JArray)root["cases"]).Count > 64)
-            throw new InvalidDataException("测试清单必须包含 1 至 64 个用例。");
+        if (((JArray)root["cases"]).Count < 1 || ((JArray)root["cases"]).Count > MaximumCases)
+            throw new InvalidDataException($"测试清单必须包含 1 至 {MaximumCases} 个用例。");
         foreach (JToken token in (JArray)root["cases"])
         {
             if (token is not JObject entry) throw new InvalidDataException("测试 cases 的每项必须是对象。");
@@ -46,8 +49,13 @@ public sealed class GameplayTestSuite
             new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }));
         if (suite == null || suite.SchemaVersion != 1)
             throw new InvalidDataException($"测试清单 schemaVersion 必须为 1：{suite?.SchemaVersion}");
-        if (suite.Cases == null || suite.Cases.Count < 1 || suite.Cases.Count > 64)
-            throw new InvalidDataException("测试清单必须包含 1 至 64 个用例。");
+        if (suite.ExecutionMode is not ("rules" or "gameplay"))
+            throw new InvalidDataException("executionMode 必须是 rules 或 gameplay。");
+        if (suite.ExecutionMode == "rules" && root.Value<bool?>("buildShowroom") == true)
+            throw new InvalidDataException("纯规则清单不能启用物品陈列。");
+        if (suite.ExecutionMode == "rules") suite.BuildShowroom = false;
+        if (suite.Cases == null || suite.Cases.Count < 1 || suite.Cases.Count > MaximumCases)
+            throw new InvalidDataException($"测试清单必须包含 1 至 {MaximumCases} 个用例。");
 
         // 用例 ID 会成为报告文件名，忽略大小写检查重复，防止 Windows 下覆盖报告。
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

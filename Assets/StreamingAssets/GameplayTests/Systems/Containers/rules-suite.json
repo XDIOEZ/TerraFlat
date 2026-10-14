@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "containers_rules",
+      "name": "液体容器规则与边界",
+      "luaPath": "GameplayTests/Systems/Containers/rules.lua",
+      "enabled": true
+    }
+  ]
+}

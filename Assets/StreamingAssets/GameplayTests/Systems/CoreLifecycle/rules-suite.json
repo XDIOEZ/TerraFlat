@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "core_lifecycle_rules",
+      "name": "核心生命周期与资源规则与边界",
+      "luaPath": "GameplayTests/Systems/CoreLifecycle/rules.lua",
+      "enabled": true
+    }
+  ]
+}

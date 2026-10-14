@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "surface_fluids_rules",
+      "name": "地表水体规则与边界",
+      "luaPath": "GameplayTests/Systems/SurfaceFluids/rules.lua",
+      "enabled": true
+    }
+  ]
+}

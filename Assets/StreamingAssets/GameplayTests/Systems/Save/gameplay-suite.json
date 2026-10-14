@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "save_gameplay",
+      "name": "存档与恢复真实关键流程",
+      "luaPath": "GameplayTests/Systems/Save/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

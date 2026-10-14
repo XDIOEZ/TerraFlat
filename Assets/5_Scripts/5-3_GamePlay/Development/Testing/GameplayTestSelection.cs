@@ -10,8 +10,8 @@ using UnityEngine;
 public static class GameplayTestSelection
 {
     #region 清单与报告地址
-    // 默认执行机械动力专项，其他系统通过测试中心或清单参数选择。
-    public const string DefaultSuitePath = "GameplayTests/mechanical-suite.json";
+    // 默认只执行快速规则，真实世界链路通过对应场景清单单独选择。
+    public const string DefaultSuitePath = "GameplayTests/all-systems-rules.json";
 
     public static string RootDirectory => Application.isEditor
         ? Path.Combine(Path.GetDirectoryName(Application.dataPath), "Library", "FlatWorldGameplayTests")

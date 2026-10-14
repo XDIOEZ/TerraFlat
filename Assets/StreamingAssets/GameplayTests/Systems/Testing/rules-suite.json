@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "testing_rules",
+      "name": "Lua回归框架规则与边界",
+      "luaPath": "GameplayTests/Systems/Testing/rules.lua",
+      "enabled": true
+    }
+  ]
+}

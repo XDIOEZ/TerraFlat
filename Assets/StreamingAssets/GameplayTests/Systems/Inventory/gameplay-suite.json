@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "inventory_gameplay",
+      "name": "库存与装备真实关键流程",
+      "luaPath": "GameplayTests/Systems/Inventory/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

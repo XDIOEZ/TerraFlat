@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="780" viewBox="0 0 1120 780">
+<title>FlatWorld系统测试分层与修改回归</title><desc>38个系统按代码归属选择规则；受影响消费者一起回归；真实流程合并到一次隔离世界。当前是部分覆盖，未编译运行。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill="#7496b8"/></marker><style>text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#e8eff9} .title{font-size:28px;font-weight:700}.head{font-size:21px;font-weight:700}.body{font-size:17px}.small{font-size:15px;fill:#b6c8dc}.box{fill:#15283d;stroke:#385572;stroke-width:2}.link{fill:none;stroke:#7496b8;stroke-width:3;marker-end:url(#arrow)}</style></defs>
+<rect width="1120" height="780" rx="22" fill="#0b1727"/>
+<text x="46" y="57" class="title">改动哪个系统，就把对应规则和关键流程纳入回归</text>
+<text x="46" y="90" class="small">38个系统测试域 · Lua负责参数与断言 · C#白名单调用生产接口 · 当前部分覆盖，尚未编译运行</text>
+<rect class="box" x="46" y="124" width="260" height="106" rx="14"/>
+<text class="head" x="67" y="163">修改源码或Lua</text><text class="body" x="67" y="196">AI先找到受影响的规则</text>
+<path class="link" d="M306 177H344"/>
+<rect class="box" x="354" y="124" width="366" height="106" rx="14"/>
+<text class="head" x="376" y="163">系统索引选择范围</text><text class="body" x="376" y="196">源码归属＋使用这些规则的系统</text>
+<path class="link" d="M720 177H758"/>
+<rect class="box" x="768" y="124" width="306" height="106" rx="14"/>
+<text class="head" x="790" y="163">对应到实际断言</text><text class="body" x="790" y="196">缺少覆盖？先增强该系统Lua</text>
+<path class="link" d="M920 230V254H305V282"/>
+<rect x="46" y="290" width="507" height="253" rx="17" fill="#102c31" stroke="#3d9f99" stroke-width="2"/>
+<text class="head" x="70" y="331" fill="#94e9d0">第一层：快速规则</text><text class="body" x="70" y="371">Editor直接跑Lua，不启动资源与世界</text>
+<text class="body" x="70" y="406">正常结果 · 边界值 · 拒绝条件 · 原子回滚</text>
+<text class="body" x="70" y="441">独立对象调用正式规则，回调必须有assert</text>
+<text class="small" x="70" y="482">日常：--systems ai　或　--changed 文件路径</text>
+<text class="small" x="70" y="517">省去世界启动；速度收益尚未实测</text>
+<path class="link" d="M553 417H581"/>
+<rect x="591" y="290" width="483" height="253" rx="17" fill="#29273d" stroke="#9989d1" stroke-width="2"/>
+<text class="head" x="616" y="331">第二层：关键流程现场</text>
+<text class="body" x="616" y="371">EditMode前置 → 一次PlayMode隔离世界</text>
+<text class="body" x="616" y="406">建造／存档／机器／气液／太空等真实链路</text>
+<text class="body" x="616" y="441">同一轮共用资源，检查实际状态与效果</text>
+<text class="small" x="616" y="482">涉及实际流程时：追加 --integration</text>
+<text class="small" x="616" y="517">无场景入口明确报缺口；用户PlayMode不打断</text>
+<path class="link" d="M297 543V578H540V601"/><path class="link" d="M833 543V578H566V601"/>
+<rect class="box" x="46" y="610" width="1028" height="108" rx="14"/>
+<text class="head" x="70" y="648">报告保留原始采样、中文子检查标签和Lua错误位置</text>
+<text class="body" x="70" y="682">失败 → 定位根因 → 修生产代码或测试 → 重跑受影响范围；未执行与缺口如实记录</text>
+<text class="small" x="46" y="756">覆盖目标：所有系统的规则与关键流程。入口齐全只是起点，各系统README持续记录尚未覆盖的部分。</text>
+</svg>
