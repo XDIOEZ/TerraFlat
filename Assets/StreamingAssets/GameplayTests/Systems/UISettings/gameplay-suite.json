@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "ui_localization_gameplay",
+      "name": "正式设置窗口、保存放弃与中英文切换",
+      "luaPath": "GameplayTests/Systems/UISettings/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

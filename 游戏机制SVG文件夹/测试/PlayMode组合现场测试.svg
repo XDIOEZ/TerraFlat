@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1220" viewBox="0 0 1280 1220">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#8fb4d8"/></marker></defs>
+<style>text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif} .title{font-size:32px;font-weight:700;fill:#eff7ff} .sub{font-size:18px;fill:#b9cadc} .name{font-size:19px;font-weight:600;fill:#d6ebff} .flow{font-size:18px;fill:#dbe4ee} .note{font-size:17px;fill:#b5c8dc}</style>
+<rect width="1280" height="1220" fill="#101c2c"/>
+<text x="44" y="58" class="title">PlayMode Lua：按实际链路组合现场测试</text>
+<text x="44" y="96" class="sub">原来缺入口的 20 个系统，共用 12 套新测试集；同一个案例在总清单中只执行一次。</text>
+<rect x="36" y="124" width="1208" height="53" rx="9" fill="#203c52"/>
+<text x="54" y="157" class="name">AI ＋ 寻路</text>
+<text x="424" y="157" class="flow">生物正式生成 → 推进目标 → 异步路径 → 实际移动到达</text>
+<rect x="36" y="186" width="1208" height="53" rx="9" fill="#203c52"/>
+<text x="54" y="219" class="name">地形 ＋ 生态</text>
+<text x="424" y="219" class="flow">加载地格 → 覆盖层 → 资源实体 → 导航占地 → 移除恢复</text>
+<rect x="36" y="248" width="1208" height="53" rx="9" fill="#203c52"/>
+<text x="54" y="281" class="name">任务 ＋ 事件 ＋ 对话 ＋ 引导</text>
+<text x="424" y="281" class="flow">实际背包 / 拾取 → 任务进度与奖励 → 引导 Facts / 气泡</text>
+<rect x="36" y="310" width="1208" height="53" rx="9" fill="#203c52"/>
+<text x="54" y="343" class="name">UI ＋ 本地化</text>
+<text x="424" y="343" class="flow">设置窗口 → 语言下拉 / TMP → 保存 → 关闭放弃 → 解锁</text>
+<rect x="36" y="372" width="1208" height="53" rx="9" fill="#203c52"/>
+<text x="54" y="405" class="name">物品 ＋ MOD Lua ＋ 网络副本</text>
+<text x="424" y="405" class="flow">正式实例加载 → Lua 调用 → FWI1 快照 → 远端副本隔离</text>
+<rect x="36" y="434" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="467" class="name">角色生存</text>
+<text x="424" y="467" class="flow">加载生物 → 体温缓冲 → 冷热疾病 Buff → 重新加载状态</text>
+<rect x="36" y="496" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="529" class="name">手工制作</text>
+<text x="424" y="529" class="flow">实际面板 → 放材料 → 点击制作 → 扣料产出 / 满槽拒绝</text>
+<rect x="36" y="558" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="591" class="name">时间</text>
+<text x="424" y="591" class="flow">服务私有时钟跨日 → 活动场景引用 → 采光 → 恢复原钟</text>
+<rect x="36" y="620" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="653" class="name">维度</text>
+<text x="424" y="653" class="flow">真实入口 → 洞穴 → 配对出口 → 地表 → 同档案玩家重绑</text>
+<rect x="36" y="682" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="715" class="name">音频</text>
+<text x="424" y="715" class="flow">正式声源 → 近远衰减 → 音量 / 静音 → 停止 / 回收</text>
+<rect x="36" y="744" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="777" class="name">渲染</text>
+<text x="424" y="777" class="flow">真实石斧 → 角色 MPB / 排序 → 湿特效 → 解绑与池回收</text>
+<rect x="36" y="806" width="1208" height="53" rx="9" fill="#1b2d42"/>
+<text x="54" y="839" class="name">Lua 测试框架</text>
+<text x="424" y="839" class="flow">实际队列 → 跨帧等待 → 异步 / 同步收尾 → 下份 Lua 核对</text>
+<text x="44" y="909" class="name">每份 Lua 的执行和收尾</text>
+<rect x="44" y="932" width="264" height="64" rx="10" fill="#234657"/>
+<text x="64" y="972" class="flow">正式隔离世界</text>
+<path d="M314,964 H343" stroke="#8fb4d8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="349" y="932" width="264" height="64" rx="10" fill="#24455d"/>
+<text x="369" y="972" class="flow">正式 API 跨帧采样</text>
+<path d="M619,964 H648" stroke="#8fb4d8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="654" y="932" width="264" height="64" rx="10" fill="#2d4566"/>
+<text x="674" y="972" class="flow">Lua 业务断言 / 截图</text>
+<path d="M924,964 H953" stroke="#8fb4d8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="959" y="932" width="264" height="64" rx="10" fill="#335246"/>
+<text x="979" y="972" class="flow">等待回程 ＋ 清理</text>
+<text x="44" y="1038" class="note">断言失败仍收尾；临时生物、面板、音源、状态按租约恢复，随后才进入下一个案例。</text>
+<rect x="36" y="1066" width="1208" height="113" rx="10" fill="#3b302b"/>
+<text x="54" y="1097" class="name">当前交付边界：已编写并接入清单，未编译 / 未运行 / 未验收</text>
+<text x="54" y="1130" class="note">全部仍为部分覆盖。网络副本 ≠ Host＋Client连接；MOD Lua ≠ 安装包加载；时间私有钟 ≠ 生态跨日。</text>
+<text x="54" y="1161" class="note">强制中断迁移由宿主退出世界兜底；正在玩的 Unity 不暂停。具体缺口以各系统 README 为准。</text>
+</svg>

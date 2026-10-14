@@ -30,6 +30,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private bool controlAcquired;
     private bool running;
     private bool disposed;
+    private IDisposable runtimeScope;
     private Mod_PlayerAdminController admin;
     private float initialAdminSpeed;
     private float initialHealth;
@@ -450,67 +451,89 @@ public sealed class GameplayTestLuaRunner : IDisposable
         capturedScreenshotCount = 0;
         try
         {
-            if (!TryReadCommands(source, chunkName, out List<Command> commands)) yield break;
-            if (!TryAcquireControl(out string error))
+            runtimeScope = GameplayTestRuntimeProbe.BeginCaseScope();
+            yield return Advance(RunPlayCommands(source, chunkName), exception =>
             {
-                record("control", "接管测试玩家", false, error);
-                yield break;
-            }
-
-            bool fluidFailed = false;
-            foreach (Command command in commands)
+                Succeeded = false;
+                record("runtime", "执行真实流程", false, exception.ToString());
+            });
+            yield return Advance(GameplayTestRuntimeProbe.CleanupAsync(), exception =>
             {
-                // 连续截图保留太空现场，下一条玩法命令前才恢复隔离世界。
-                if (activeSpaceScenario != null && command.Name != "screenshot")
-                {
-                    bool restored = false;
-                    yield return RestoreSpaceScene(value => restored = value);
-                    if (!restored) yield break;
-                }
-                if (!TryEnsureContext(out error))
-                {
-                    record(command.Name, command.Label, false, error);
-                    yield return RestoreSpaceScene(_ => { });
-                    yield break;
-                }
-
-                yield return Advance(ExecuteCommand(command), exception =>
-                {
-                    command.Success = false;
-                    command.Message = exception.ToString();
-                });
-
-                record(command.Name, command.Label, command.Success, command.Message);
-                // 流体子案例各自隔离并清理，失败后继续收集同组报告，但不能把整组改成通过。
-                if (!command.Success)
-                {
-                    if (command.Name != "fluid")
-                    {
-                        yield return RestoreSpaceScene(_ => { });
-                        yield break;
-                    }
-                    fluidFailed = true;
-                }
-                yield return null;
-            }
-            bool cleaned = false;
-            yield return RestoreSpaceScene(value => cleaned = value);
-            Succeeded = !fluidFailed && cleaned;
+                Succeeded = false;
+                record("runtime_cleanup", "跨帧恢复临时测试现场", false, exception.ToString());
+            });
         }
         finally
         {
-            try { ReleaseControl(); }
+            try
+            {
+                ReleaseRuntimeScope();
+            }
             finally
             {
-                try { activeSpaceScenario?.Dispose(); }
+                try { ReleaseControl(); }
                 finally
                 {
-                    activeSpaceScenario = null;
-                    try { ReleaseLua(); }
-                    finally { running = false; }
+                    try { activeSpaceScenario?.Dispose(); }
+                    finally
+                    {
+                        activeSpaceScenario = null;
+                        try { ReleaseLua(); }
+                        finally { running = false; }
+                    }
                 }
             }
         }
+    }
+
+    private IEnumerator RunPlayCommands(string source, string chunkName)
+    {
+        if (!TryReadCommands(source, chunkName, out List<Command> commands)) yield break;
+        if (!TryAcquireControl(out string error))
+        {
+            record("control", "接管测试玩家", false, error);
+            yield break;
+        }
+
+        bool fluidFailed = false;
+        foreach (Command command in commands)
+        {
+            // 连续截图保留太空现场，下一条玩法命令前才恢复隔离世界。
+            if (activeSpaceScenario != null && command.Name != "screenshot")
+            {
+                bool restored = false;
+                yield return RestoreSpaceScene(value => restored = value);
+                if (!restored) yield break;
+            }
+            if (!TryEnsureContext(out error))
+            {
+                record(command.Name, command.Label, false, error);
+                yield return RestoreSpaceScene(_ => { });
+                yield break;
+            }
+
+            yield return Advance(ExecuteCommand(command), exception =>
+            {
+                command.Success = false;
+                command.Message = exception.ToString();
+            });
+
+            record(command.Name, command.Label, command.Success, command.Message);
+            // 流体子案例各自隔离并清理，失败后继续收集同组报告，但不能把整组改成通过。
+            if (!command.Success)
+            {
+                if (command.Name != "fluid")
+                {
+                    yield return RestoreSpaceScene(_ => { });
+                    yield break;
+                }
+                fluidFailed = true;
+            }
+            yield return null;
+        }
+        bool cleaned = false;
+        yield return RestoreSpaceScene(value => cleaned = value);
+        Succeeded = !fluidFailed && cleaned;
     }
 
     private IEnumerator ExecuteCommand(Command command)
@@ -554,7 +577,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 RunSystemCommand(command);
                 break;
             case "runtime":
-                RunRuntimeCommand(command);
+                yield return RunRuntimeCommand(command);
                 break;
             case "log":
                 Debug.Log($"[GameplayTest Lua] {command.Text}");
@@ -632,9 +655,22 @@ public sealed class GameplayTestLuaRunner : IDisposable
         ValidateSystemSample(command, sample);
     }
 
-    private void RunRuntimeCommand(Command command)
+    private IEnumerator RunRuntimeCommand(Command command)
     {
-        JObject sample = GameplayTestRuntimeProbe.Capture(player, command.Text, command.Argument, command.Arguments);
+        JObject sample = null;
+        string profile = player.ProfileName;
+        Data_Player originalData = player.Data;
+        yield return GameplayTestRuntimeProbe.CaptureAsync(player, command.Text, command.Argument, command.Arguments, value => sample = value);
+        Player current = ItemMgr.Instance?.User_Player;
+        if (!ReferenceEquals(current, player))
+        {
+            if (current == null || current.ProfileName != profile || !ReferenceEquals(current.Data, originalData))
+                throw new InvalidOperationException("迁移后的角色不属于本轮测试档案。");
+            GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(current);
+            ReleaseControl();
+            player = current;
+            if (!TryAcquireControl(out string error)) throw new InvalidOperationException(error);
+        }
         record("runtime_sample", command.Label + "（实际采样）", true, sample.ToString(Newtonsoft.Json.Formatting.None));
         ValidateSystemSample(command, sample);
     }
@@ -915,18 +951,34 @@ public sealed class GameplayTestLuaRunner : IDisposable
         controlAcquired = false;
     }
 
+    private void ReleaseRuntimeScope()
+    {
+        IDisposable scope = runtimeScope;
+        runtimeScope = null;
+        try { scope?.Dispose(); }
+        catch (Exception exception)
+        {
+            Succeeded = false;
+            record("runtime_cleanup", "恢复临时测试现场", false, exception.ToString());
+        }
+    }
+
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
-        try { ReleaseControl(); }
+        try { ReleaseRuntimeScope(); }
         finally
         {
-            try { activeSpaceScenario?.Dispose(); }
+            try { ReleaseControl(); }
             finally
             {
-                activeSpaceScenario = null;
-                ReleaseLua();
+                try { activeSpaceScenario?.Dispose(); }
+                finally
+                {
+                    activeSpaceScenario = null;
+                    ReleaseLua();
+                }
             }
         }
     }

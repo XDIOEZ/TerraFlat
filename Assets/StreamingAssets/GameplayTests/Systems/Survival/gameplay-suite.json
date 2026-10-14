@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "survival_gameplay",
+      "name": "角色生存：真实体温缓冲、疾病和快照重载",
+      "luaPath": "GameplayTests/Systems/Survival/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

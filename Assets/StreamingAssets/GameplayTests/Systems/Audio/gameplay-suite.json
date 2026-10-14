@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "audio_gameplay",
+      "name": "真实空间音源、音量静音、声源复用和旧句柄隔离",
+      "luaPath": "GameplayTests/Systems/Audio/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

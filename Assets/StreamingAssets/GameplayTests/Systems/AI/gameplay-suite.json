@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "ai_navigation_gameplay",
+      "name": "AI 与导航：真实生物推进、异步寻路和到达",
+      "luaPath": "GameplayTests/Systems/AI/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

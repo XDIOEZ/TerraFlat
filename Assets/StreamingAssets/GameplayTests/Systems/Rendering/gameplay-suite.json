@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "rendering_gameplay",
+      "name": "真实物品排序、玩家跨帧 MPB 绑定与正式特效池清理",
+      "luaPath": "GameplayTests/Systems/Rendering/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

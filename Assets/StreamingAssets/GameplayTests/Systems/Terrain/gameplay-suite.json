@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "terrain_ecology_gameplay",
+      "name": "地形与生态：真实覆盖差量、资源占地和实体恢复",
+      "luaPath": "GameplayTests/Systems/Terrain/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

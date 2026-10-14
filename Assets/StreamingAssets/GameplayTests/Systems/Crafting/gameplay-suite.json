@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "crafting_gameplay",
+      "name": "手工制作：真实面板点击、扣料产出和满槽拒绝",
+      "luaPath": "GameplayTests/Systems/Crafting/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

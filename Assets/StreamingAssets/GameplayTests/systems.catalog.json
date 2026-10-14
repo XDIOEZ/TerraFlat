@@ -23,10 +23,14 @@
         "ai_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/AI/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/AI/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/AI/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "ai_navigation_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -47,10 +51,14 @@
         "navigation_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Navigation/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/AI/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Navigation/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "ai_navigation_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -169,10 +177,14 @@
         "survival_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Survival/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Survival/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Survival/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "survival_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -223,10 +235,14 @@
         "crafting_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Crafting/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Crafting/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Crafting/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "crafting_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -353,10 +369,14 @@
         "terrain_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Terrain/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Terrain/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Terrain/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "terrain_ecology_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -379,10 +399,14 @@
         "ecology_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Ecology/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Terrain/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Ecology/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "terrain_ecology_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -400,10 +424,14 @@
         "time_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Time/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Time/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Time/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "time_live_clock"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -489,10 +517,14 @@
         "dimension_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Dimension/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Dimension/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Dimension/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "dimension_cave_roundtrip"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -730,10 +762,16 @@
         "quests_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Quests/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Quests/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Quests/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "narrative_inventory_quest_guide",
+        "narrative_pickup_quest_guide",
+        "narrative_event_dialogue"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -750,10 +788,16 @@
         "game_events_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/GameEvents/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Quests/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/GameEvents/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "narrative_inventory_quest_guide",
+        "narrative_pickup_quest_guide",
+        "narrative_event_dialogue"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -772,10 +816,16 @@
         "dialogue_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Dialogue/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Quests/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Dialogue/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "narrative_inventory_quest_guide",
+        "narrative_pickup_quest_guide",
+        "narrative_event_dialogue"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -796,10 +846,16 @@
         "guide_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Guide/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Quests/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Guide/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "narrative_inventory_quest_guide",
+        "narrative_pickup_quest_guide",
+        "narrative_event_dialogue"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -857,10 +913,14 @@
         "item_runtime_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/ItemRuntime/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/ItemRuntime/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/ItemRuntime/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "item_mod_network_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -931,10 +991,14 @@
         "networking_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Networking/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/ItemRuntime/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Networking/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "item_mod_network_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -953,10 +1017,14 @@
         "modding_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Modding/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/ItemRuntime/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Modding/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "item_mod_network_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -978,10 +1046,14 @@
         "ui_settings_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/UISettings/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/UISettings/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/UISettings/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "ui_localization_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -1003,10 +1075,14 @@
         "audio_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Audio/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Audio/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Audio/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "audio_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -1023,10 +1099,14 @@
         "localization_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Localization/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/UISettings/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Localization/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "ui_localization_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -1051,10 +1131,14 @@
         "rendering_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Rendering/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Rendering/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Rendering/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "rendering_gameplay"
+      ],
       "rulesCoverage": "partial"
     },
     {
@@ -1078,10 +1162,15 @@
         "testing_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Testing/rules-suite.json",
-      "integrationSuites": [],
-      "integrationCoverage": "missing",
+      "integrationSuites": [
+        "GameplayTests/Systems/Testing/gameplay-suite.json"
+      ],
+      "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Testing/README.md",
-      "integrationCaseIds": [],
+      "integrationCaseIds": [
+        "testing_queue_gameplay",
+        "testing_cleanup_gameplay"
+      ],
       "rulesCoverage": "partial"
     }
   ]

@@ -58,7 +58,7 @@ GameplayTests/
 ├─ 系统索引.md                       38个系统覆盖入口
 ├─ mechanical-suite.json             既有七组机械集成
 ├─ fluid-suite.json                  既有九组气液专项
-├─ universe-suite.json               既有四组宇宙太空专项
+├─ universe-suite.json               既有五组宇宙太空专项
 └─ Systems/<系统>/
    ├─ README.md                     已覆盖规则、夹具、关键流程缺口
    ├─ rules.lua / rules-suite.json   对应系统的规则案例
@@ -67,6 +67,31 @@ GameplayTests/
 ```
 
 每个系统最多十份 Lua，优先把同主题边界并入现有文件并保留独立中文标签。原有20份机械、气液、太空 Lua 迁入相应系统目录，断言保留。之前删除的根目录通用案例不恢复；新增玩家、Buff、库存等使用本次系统入口。
+
+## 新增 PlayMode 组合现场
+
+2026-10-15 为此前没有现场入口的 20 个系统补上 12 套组合现场集。高耦合系统共用一份清单，并由系统目录表分别映射；总清单按案例 ID 去重。
+
+| 现场入口目录 | 关联系统 | 实际链路 |
+| --- | --- | --- |
+| `Systems/AI/` | AI、导航 | 正式生物推进命令、异步寻路、实际到达、路径代价拒绝和撤销 |
+| `Systems/Survival/` | 角色生存 | 真实加载生物体温缓冲、冷热疾病 Buff 与卸载恢复 |
+| `Systems/Crafting/` | 手工制作 | 主角制作面板、正式库存扣料产出、满输出槽拒绝 |
+| `Systems/Terrain/` | 地形、生态 | 真实加载地格覆盖栈、资源实体、导航占地、快照与恢复 |
+| `Systems/Time/` | 时间 | 正式时间服务私有钟跨日、活动场景引用与实际采光，保留原世界钟 |
+| `Systems/Dimension/` | 维度 | 正式矿洞入口、出口配对、角色重建和地表往返 |
+| `Systems/Quests/` | 任务、事件、对话、引导 | 实际背包与拾取、任务推进/奖励、引导 Facts、正式事件与屏幕气泡 |
+| `Systems/ItemRuntime/` | 物品运行、MOD、联机 | 实际物品加载/卸载、MOD Lua调用、网络快照与远程副本隔离 |
+| `Systems/UISettings/` | UI、本地化 | 实际设置窗口、语言下拉与TMP绑定、保存、关闭放弃和输入解锁 |
+| `Systems/Audio/` | 音频 | 正式声源和句柄、空间衰减、音量/静音、停止与池回收 |
+| `Systems/Rendering/` | 渲染 | 真实物品接入角色 MPB、世界排序、特效池绑定与回收 |
+| `Systems/Testing/` | 测试框架 | 真实命令顺序、跨帧等待、同步与跨帧清理在下个 Lua 前完成 |
+
+本次仅静态编写，未编译、未运行或验收。所有系统仍为部分覆盖；尤其网络副本现场没有开启 Host/Client，MOD现场没有加载用户安装包，时间现场没有推进自然生态跨日。各系统 README 列出具体边界。测试框架的两份 Lua 是前置与核对配对，不能只选后半份。
+
+跨帧 `test.runtime` 操作由 C# `RegisterAsync` 驱动，C#仅提供正式接口采样，Lua持有业务断言。截图保留现场先登记 `RegisterCleanup`；需要协程回程则登记 `RegisterAsyncCleanup`。正常结束或失败先等跨帧恢复，再同步释放；强制中断的场景迁移仍依赖宿主退出世界收尾。
+
+组合与执行顺序示意：[PlayMode组合现场测试](../../../游戏机制SVG文件夹/测试/PlayMode组合现场测试.svg)。
 
 ## Lua 编写接口
 

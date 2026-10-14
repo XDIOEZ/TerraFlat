@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "testing_queue_gameplay",
+      "name": "Lua真实命令队列与清理租约前置",
+      "luaPath": "GameplayTests/Systems/Testing/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "testing_cleanup_gameplay",
+      "name": "Lua跨用例同步与跨帧收尾核对（需前置）",
+      "luaPath": "GameplayTests/Systems/Testing/gameplay-cleanup.lua",
+      "enabled": true
+    }
+  ]
+}

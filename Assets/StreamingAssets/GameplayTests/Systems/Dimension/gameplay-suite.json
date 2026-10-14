@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "dimension_cave_roundtrip",
+      "name": "真实矿洞入口配对、完整迁移与返回地表",
+      "luaPath": "GameplayTests/Systems/Dimension/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "buildShowroom": false,
+  "continueAfterFailure": true,
+  "cases": [
+    {
+      "id": "item_mod_network_gameplay",
+      "name": "真实物品生命周期、MOD Lua与网络副本链路",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

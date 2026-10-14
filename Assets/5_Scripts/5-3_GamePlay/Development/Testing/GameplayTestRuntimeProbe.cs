@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>真实流程采样仅在正式 Lua 场景的隔离存档世界内执行。</summary>
-public static class GameplayTestRuntimeProbe
+public static partial class GameplayTestRuntimeProbe
 {
     #region 真实流程操作登记
 
@@ -30,6 +30,7 @@ public static class GameplayTestRuntimeProbe
     {
         if (handler == null) throw new ArgumentNullException(nameof(handler));
         string key = Key(systemId, operationId);
+        if (asyncOperations.ContainsKey(key)) throw new InvalidOperationException("同步与跨帧操作重复：" + key);
         if (operations.TryGetValue(key, out var previous))
         {
             if (previous.Method == handler.Method && Equals(previous.Target, handler.Target)) return;
@@ -38,7 +39,8 @@ public static class GameplayTestRuntimeProbe
         operations.Add(key, handler);
     }
 
-    public static bool Supports(string systemId, string operationId) => operations.ContainsKey(Key(systemId, operationId));
+    public static bool Supports(string systemId, string operationId) => operations.ContainsKey(Key(systemId, operationId)) ||
+        asyncOperations.ContainsKey(Key(systemId, operationId));
 
     public static JObject Capture(Player player, string systemId, string operationId, JObject arguments)
     {

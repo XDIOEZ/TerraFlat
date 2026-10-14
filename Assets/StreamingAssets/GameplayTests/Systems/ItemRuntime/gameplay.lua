@@ -1,0 +1,32 @@
+-- 物品运行、MOD Lua和网络副本共用正式资源与自有运行实例。
+test.check("world_ready", "正式隔离世界已就绪")
+test.runtime("item_runtime", "loaded_lifecycle", {}, function(d)
+    for _, state in ipairs({d.spawned, d.afterFrame, d.second}) do
+        assert(state.initialized and state.active and state.registered and state.indexed, "实际物品没有完整加载并登记")
+        assert(state.guid ~= 0 and state.generation > 0, "运行身份未建立")
+        assert(state.modules > 0 and state.enabledModules == state.loadedModules, "启用模块没有进入加载态")
+        assert(state.stableNamesUnique, "模块稳定名字重复")
+    end
+    assert(d.saveKeptIdentity, "ModuleSave改写了数据身份或运行代际")
+    assert(d.registeredEvents == 1 and d.unregisteredEvents == 1, "真实加载/卸载事件没有一一对应")
+    assert(d.firstRemoved and d.secondRemoved and d.newGeneration and d.independentData, "回收/再次加载残留索引或旧状态")
+end, "真实物品加载、跨帧存活、卸载和再次加载")
+
+test.runtime("modding", "live_lua_module", {}, function(d)
+    assert(d.maximum > 0, "正式小刀耐久不足以完成生命周期夹具")
+    assert(d.mainLoaded == "loaded" and d.mainState == "restored:probe.event", "MOD主Lua加载/恢复/事件/保存链错误")
+    assert(math.abs(d.afterLoad - (d.maximum * .8)) < .0001, "MOD物品OnLoad未实际扣耐久")
+    assert(math.abs(d.afterUpdate - (d.maximum * .7)) < .0001, "MOD物品OnUpdate未使用传入步长")
+    assert(math.abs(d.afterUnload - (d.maximum * .75)) < .0001, "MOD物品OnUnload未恢复耐久")
+    assert(d.state == "loaded:Knife_Flint:updated:unloaded", "物品Lua状态未按顺序传递")
+    assert(d.registeredAfterCallbacks and d.packageRemoved, "Lua生命周期破坏了实例登记或残留测试包")
+end, "MOD Lua实际调用正式物品API并传递生命周期状态")
+
+test.runtime("networking", "live_replica", {}, function(d)
+    assert(d.identityRead and d.bytes > 4 and d.payloadGuid == d.sourceGuid and d.itemId == "Knife_Flint", "实际物品网络负载身份错误")
+    assert(d.sourcePreserved and d.applied and d.replicaGuidPreserved, "捕获/合并破坏权威或副本身份")
+    assert(math.abs(d.replicaDurability - d.sourceDurability) < .0001 and d.specialData == '{"luaReplica":42}', "运行副本没有收到实例状态")
+    assert(d.replicaActive and not d.replicaRegistered and not d.replicaIndexed, "远程视觉副本误入本地权威循环")
+    assert(not d.corruptedApplied and d.afterRejectedGuid == d.expectedReplicaGuid, "损坏包未被拒绝或改写身份")
+    assert(math.abs(d.afterRejectedDurability - d.replicaDurability) < .0001, "损坏包改写了副本状态")
+end, "真实网络快照合并、远程副本隔离与损坏包拒绝")

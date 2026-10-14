@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "time_live_clock",
+      "name": "正式时钟登记、活动场景引用、跨日通知与保存",
+      "luaPath": "GameplayTests/Systems/Time/gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

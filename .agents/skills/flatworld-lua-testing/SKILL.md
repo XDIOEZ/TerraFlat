@@ -19,7 +19,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 | `GameplayTestSuite.cs` / `GameplayTestSelection.cs` | 严格 JSON、执行模式、路径/案例身份与多选清单 |
 | `GameplayTestSystemCatalog.cs` / `GameplayTestSystemProbe.*.cs` | 38个系统归属和生产规则白名单，Lua持有业务断言 |
 | `GameplayTestRulesSuiteRunner.cs` / Editor `GameplayTestPipelineCoordinator.Rules.cs` | 编辑态直接跑规则，不启动资源/世界/PlayMode |
-| `GameplayTestRuntimeProbe.cs` / `GameplayTestWorldRuntimeProbe.cs` | 仅隔离世界内的真实流程采样 |
+| `GameplayTestRuntimeProbe*.cs` / `GameplayTest*RuntimeProbe*.cs` | 隔离世界现场采样、跨帧流程与每用例收尾；对话/引导探针在各自程序集内自注册 |
 | `GameplayTestShowroom.cs` / `GameplayTestGm.cs` | 可选全物品陈列、白名单 GM 前置条件 |
 | `GameplayTestSpaceScenario.cs` / `GameplayTest{Universe,Ship}Probe.cs` | 真实太空现场与独立领域采样 |
 | `GameplayTestMechanicalPlant.cs` / `GameplayTestFluid*.cs` | 机械与管道气液夹具 |
@@ -28,7 +28,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 - Editor：`Assets/Editor/FlatWorld/GameplayMCP/GameplayTestPipelineCoordinator.cs` 串联 Test Framework；`GameplayTestDashboardWindow.cs` 是测试中心，`GameplayTestPipelineTool.cs` 提供 MCP 入口。
 - CLI：`Tools/GameplayTesting/run_suite.py`；安全前置与集成测试分别在 `Assets/Tests/FlatWorld/{EditMode,PlayMode}/`。
 - 清单与 Lua：`Assets/StreamingAssets/GameplayTests/`。命令、清单字段及运行选项见 [通用说明](../../../Assets/StreamingAssets/GameplayTests/README.md)；领域覆盖见 [系统索引](../../../Assets/StreamingAssets/GameplayTests/系统索引.md)、[太空](../../../Assets/StreamingAssets/GameplayTests/Systems/Space/Gameplay/README.md)、[气液](../../../Assets/StreamingAssets/GameplayTests/Systems/IndustrialFluids/Gameplay/README.md)。
-- 默认 `all-systems-rules.json` 只跑38个系统的快速规则，各系统在 `Systems/<系统>/`；现有机械、气液、太空专项保留并迁入相应系统目录。`systems.catalog.json` 登记代码归属、依赖、规则案例、现场入口及覆盖说明；目前均为部分覆盖，不将存在入口当成全覆盖。
+- 默认 `all-systems-rules.json` 只跑各系统的快速规则，各系统在 `Systems/<系统>/`；现有机械、气液、太空专项保留并迁入相应系统目录。`systems.catalog.json` 登记代码归属、依赖、规则案例、现场入口及覆盖说明；目前均为部分覆盖，不将存在入口当成全覆盖。
 
 ## 修改后选择与补覆盖
 
@@ -36,6 +36,8 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 - `test.system(system,operation,args,validator,label)` 调用独立规则；`test.runtime(...)` 只用于正式隔离世界。每个回调必须实际调用assert，无断言即失败。参数排队时冻结，回调不能追加命令。
 - 气液 PlayMode 的选择器、相态、组主、设备容量、液碱端口和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。
 - 规则模式只允许system/log且至少一个system；不进入Test Framework/PlayMode，不建资源/存档世界。场景模式复用原EditMode→PlayMode流程。
+- 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。
+- 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同档案、同 Data_Player 的隔离角色。
 - 新主题更新本系统清单和README后运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总清单与映射；新系统登记sourcePaths/dependsOn。Lua组合无需编译，新增C#操作仍需编译。
 - `--systems` 精确选择；`--changed` 根据源码归属包含使用它的系统，未登记路径报错，测试框架改动选全部规则。影响实际链路再加 `--integration`，现场子集一次建世界。没有现场入口返回4；已有入口也须检查README中的缺口。
 - 用户明确不需要验证时仅静态修改，未编译/未运行写清楚；其他任务在Unity未处于PlayMode时执行对应范围并读取真实报告，不能用静态检查冒充通过。
