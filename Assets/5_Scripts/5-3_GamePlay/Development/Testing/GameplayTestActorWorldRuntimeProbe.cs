@@ -188,6 +188,10 @@ public static class GameplayTestActorWorldRuntimeProbe
 
             own = new ActorFixture(start);
             Retain("ai", own);
+            // 自有生物与测试玩家同阵营，隔离近距离玩家触发的正式避让状态。
+            if (!FactionRelationService.TrySetFactionId(own.Actor, FactionRelationService.GetFactionId(player)))
+                throw new InvalidOperationException("自有推进生物无法设置测试阵营。");
+            bool playerThreatExcluded = !FactionRelationService.CanAttack(own.Actor, player);
             AI_Wolf ai = own.Actor.GetComponentInChildren<AI_Wolf>(true)
                 ?? throw new InvalidOperationException("正式测试生物没有推进状态机。");
             Mod_Mover_AI mover = own.Actor.GetComponentInChildren<Mod_Mover_AI>(true)
@@ -223,6 +227,7 @@ public static class GameplayTestActorWorldRuntimeProbe
             {
                 ["actorGuid"] = own.Guid, ["actorInitialized"] = own.Actor.IsInitialized,
                 ["aiLoaded"] = ai.IsRuntimeLoaded, ["moverLoaded"] = mover.IsRuntimeLoaded,
+                ["playerThreatExcluded"] = playerThreatExcluded,
                 ["commandAccepted"] = commandAccepted, ["commandStored"] = commandStored,
                 ["pathAccepted"] = acceptedPath, ["pathPendingObserved"] = pendingPath,
                 ["results"] = new JArray(results.OrderBy(value => value, StringComparer.Ordinal)),
@@ -249,6 +254,14 @@ public static class GameplayTestActorWorldRuntimeProbe
     #endregion
 
     #region 真实角色体温缓冲与疾病生命周期
+    private static BuffInstance FindSourceCondition(Mod_BuffManager manager, string source)
+    {
+        foreach (BuffInstance buff in manager.ActiveBuffs.Values)
+            if (buff != null && buff.SourceKey == source)
+                return buff;
+        return null;
+    }
+
     private static JObject CaptureTemperatureConditions(Player player, JObject args)
     {
         RuntimeTerrainTileSample site = FindOpenCell(player);
@@ -269,22 +282,33 @@ public static class GameplayTestActorWorldRuntimeProbe
             // 只加速自有生物的一次正式结算，不跳转全局世界时间或重新计算疾病规则。
             temperature.ModUpdate(.25f);
             result["beforeExhaustion"] = temperature.Data.RemainingTemperatureBufferSeconds;
-            result["coldBeforeExhaustion"] = buffs.HasBuff(TemperatureConditionBuffIds.Hypothermia);
+            result["coldBeforeExhaustion"] = FindSourceCondition(buffs, "temperature:hypothermia") != null;
             temperature.ModUpdate(.25f);
             result["afterExhaustion"] = temperature.Data.RemainingTemperatureBufferSeconds;
-            result["coldAfterExhaustion"] = buffs.HasBuff(TemperatureConditionBuffIds.Hypothermia);
-            result["hotWhileCold"] = buffs.HasBuff(TemperatureConditionBuffIds.Heatstroke);
+            BuffInstance coldCondition = FindSourceCondition(buffs, "temperature:hypothermia");
+            result["coldAfterExhaustion"] = coldCondition != null;
+            result["coldConditionSourceKey"] = coldCondition?.SourceKey;
+            result["coldConditionDefinitionId"] = coldCondition?.DefinitionId;
+            result["hotWhileCold"] = FindSourceCondition(buffs, "temperature:heatstroke") != null;
+            result["coldTemperature"] = temperature.Data.CurrentTemperature;
+            result["safeMinimum"] = temperature.SafeTemperatureMin;
             result["actualAmbient"] = temperature.Data.AmbientTemperature;
 
             temperature.SetTemperature(temperature.SafeTemperatureMax + 50f);
             temperature.ModUpdate(.25f);
-            result["hotAfterSwitch"] = buffs.HasBuff(TemperatureConditionBuffIds.Heatstroke);
-            result["coldAfterSwitch"] = buffs.HasBuff(TemperatureConditionBuffIds.Hypothermia);
+            BuffInstance hotCondition = FindSourceCondition(buffs, "temperature:heatstroke");
+            result["hotAfterSwitch"] = hotCondition != null;
+            result["hotConditionSourceKey"] = hotCondition?.SourceKey;
+            result["hotConditionDefinitionId"] = hotCondition?.DefinitionId;
+            result["coldAfterSwitch"] = FindSourceCondition(buffs, "temperature:hypothermia") != null;
+            result["hotTemperature"] = temperature.Data.CurrentTemperature;
+            result["safeMaximum"] = temperature.SafeTemperatureMax;
             result["bufferAfterSwitch"] = temperature.Data.RemainingTemperatureBufferSeconds;
             temperature.SetTemperature((temperature.SafeTemperatureMin + temperature.SafeTemperatureMax) * .5f);
             temperature.ModUpdate(.5f);
-            result["coldAfterSafe"] = buffs.HasBuff(TemperatureConditionBuffIds.Hypothermia);
-            result["hotAfterSafe"] = buffs.HasBuff(TemperatureConditionBuffIds.Heatstroke);
+            result["coldAfterSafe"] = FindSourceCondition(buffs, "temperature:hypothermia") != null;
+            result["hotAfterSafe"] = FindSourceCondition(buffs, "temperature:heatstroke") != null;
+            result["safeTemperature"] = temperature.Data.CurrentTemperature;
             result["bufferAfterSafe"] = temperature.Data.RemainingTemperatureBufferSeconds;
             result["maximumBuffer"] = originalMaximumBuffer;
             result["actorInitialized"] = own.Actor.IsInitialized;
@@ -472,8 +496,8 @@ public static class GameplayTestActorWorldRuntimeProbe
         var own = new TerrainFixture(player, sample);
         Retain("terrain", own);
         GameRes resources = GameRes.ExistingInstance;
-        if (!resources.TryGetTileDefinition("Tile_Soil", out var soil) || !resources.TryGetTileDefinition("Tile_Grass", out var grass))
-            throw new InvalidOperationException("正式地块目录缺少测试地表定义。");
+        if (!resources.TryGetTileDefinition("Tile_Dirt", out var soil) || !resources.TryGetTileDefinition("Tile_Grass", out var grass))
+            throw new InvalidOperationException("正式地块目录缺少 Tile_Dirt 或 Tile_Grass 测试定义。");
         Vector3 center = new(sample.WorldCell.x + .5f, sample.WorldCell.y + .5f);
         bool first = GroundTileLayerSystem.TryApplyPlayerCover(sample, soil, out string firstReason);
         GroundLayerCellSaveData one = GroundTileLayerSystem.Capture(sample.Terrain, sample.LocalCell);

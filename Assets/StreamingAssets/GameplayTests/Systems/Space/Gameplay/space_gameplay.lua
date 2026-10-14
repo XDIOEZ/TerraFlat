@@ -135,6 +135,25 @@ do
             assert(ship.landingAccepted and ship.landedAgain.phase == "Landed", "没有完成受控陆地降落：" .. label)
             assert(not ship.landedAgain.spaceView and ship.landedAgain.height <= 0.001, "降落后仍在太空或半空：" .. label)
             assert(ship.landedAgain.id == ship.landed.id, "降落重建了错误的飞船身份：" .. label)
+            local cache = ship.viewCache
+            local function reused(before, after, group)
+                local ids, matches = {}, 0
+                for _, view in ipairs(before[group]) do ids[view.id] = view.instanceId end
+                for _, view in ipairs(after[group]) do
+                    if ids[view.id] == view.instanceId and view.instanceId ~= 0 then matches = matches + 1 end
+                    assert(not view.pooled and view.active and view.scene == after.scene,
+                        "当前船体表现没有重新激活到正确场景：" .. label)
+                end
+                return matches
+            end
+            assert(reused(cache.surface, cache.space, "presenters") > 0 and
+                reused(cache.surface, cache.space, "pieces") > 0, "起飞重建了本船表现而未复用：" .. label)
+            assert(reused(cache.space, cache.returned, "presenters") > 0 and
+                reused(cache.space, cache.returned, "pieces") > 0, "降落重建了本船表现而未复用：" .. label)
+            for _, snapshot in ipairs({cache.surface, cache.space, cache.returned}) do
+                assert(snapshot.presenterPoolCount <= snapshot.presenterLimit and
+                    snapshot.piecePoolCount <= snapshot.pieceLimit, "船表现缓存超过容量：" .. label)
+            end
         end
         return "真实起飞、氢氧消耗、惯性、旋转、导航、船体跨区与降落：" .. #data.ships .. " 个船型"
     end, "所有船型的真实起飞航行降落")

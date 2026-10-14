@@ -7,6 +7,7 @@ test.runtime("ai", "advance_navigation", {}, function(data)
         "正式生成没有完成生物、AI 或移动模块加载")
     assert(data.limitCallbackReceived and not data.limitAccepted and data.limitRejectedByCost,
         "实际导航请求没有按路径代价拒绝")
+    assert(data.playerThreatExcluded, "自有测试生物仍会优先避让近处玩家，无法独立检查推进")
     assert(data.commandAccepted and data.commandStored, "正式 AI 推进命令未写入真实生物")
     assert(data.pathAccepted and data.gridRevision >= 0, "真实导航代理没有获得可执行路径")
     assert(data.maximumDisplacement > 1 and data.maximumSpeed > .01,

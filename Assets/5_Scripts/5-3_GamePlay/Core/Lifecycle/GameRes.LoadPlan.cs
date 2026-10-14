@@ -26,7 +26,7 @@ public partial class GameRes
 
             loadingText = title;
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
-        }, () => IsStartupReady || preparingInPlaceReload);
+        }, () => IsStartupReady || preparingInPlaceReload, () => GameplayTestResourceCache.Active ? 8d : (double?)null);
         List<ItemDefinitionDto> itemSources = null;
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
         plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
@@ -42,7 +42,7 @@ public partial class GameRes
             PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
-                ItemDefinitionCatalogLoader.LoadBuiltInDefinitionsAsync(done, fail, plan.Report), value => itemSources = value), "addressables");
+                GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report), value => itemSources = value), "addressables");
         plan.Add("loot", "加载战利品表", 1,
             () => LoadCatalog<IReadOnlyList<RuntimeLootTable>>(LootTableCatalogLoader.LoadBuiltInAsync,
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));

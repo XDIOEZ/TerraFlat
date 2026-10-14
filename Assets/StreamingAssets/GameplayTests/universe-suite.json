@@ -32,6 +32,12 @@
       "name": "真实长船局部截断与冷残骸继续破碎",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_damage_gameplay.lua",
       "enabled": true
+    },
+    {
+      "id": "presentation_cache",
+      "name": "地表与太空表现缓存两轮往返复用",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/presentation_cache.lua",
+      "enabled": true
     }
   ]
 }

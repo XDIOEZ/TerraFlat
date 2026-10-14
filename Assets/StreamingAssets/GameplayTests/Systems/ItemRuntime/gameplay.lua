@@ -2,9 +2,14 @@
 test.check("world_ready", "正式隔离世界已就绪")
 test.runtime("item_runtime", "loaded_lifecycle", {}, function(d)
     for _, state in ipairs({d.spawned, d.afterFrame, d.second}) do
-        assert(state.initialized and state.active and state.registered and state.indexed, "实际物品没有完整加载并登记")
+        assert(state.initialized and state.active and state.registered and state.indexed and
+            not state.destructionHandled and not state.inPool,
+            "实际物品没有完整加载并登记，或已进入回收流程")
+        assert(state.inHand and state.ownedByPlayer,
+            "跨帧小刀没有通过正式手持入口归属隔离玩家")
         assert(state.guid ~= 0 and state.generation > 0, "运行身份未建立")
-        assert(state.modules > 0 and state.enabledModules == state.loadedModules, "启用模块没有进入加载态")
+        assert(state.moduleDataCount > 0 and state.modules > 0 and
+            state.enabledModules == state.loadedModules, "正式模块数据或启用模块没有进入加载态")
         assert(state.stableNamesUnique, "模块稳定名字重复")
     end
     assert(d.saveKeptIdentity, "ModuleSave改写了数据身份或运行代际")

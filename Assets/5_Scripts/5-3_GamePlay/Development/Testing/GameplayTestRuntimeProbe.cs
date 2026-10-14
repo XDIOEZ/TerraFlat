@@ -13,6 +13,7 @@ public static partial class GameplayTestRuntimeProbe
 
     private static readonly Dictionary<string, Func<Player, JObject, JObject>> operations = new(StringComparer.Ordinal)
     {
+        ["testing/resource_cache"] = (_, _) => GameplayTestResourceCache.Sample(),
         ["core_lifecycle/live_entry"] = CaptureLiveEntry,
         ["world_streaming/live_window"] = CaptureLiveWindow,
         ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,

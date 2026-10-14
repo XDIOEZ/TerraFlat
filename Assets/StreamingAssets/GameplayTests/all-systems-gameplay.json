@@ -209,6 +209,12 @@
       "enabled": true
     },
     {
+      "id": "presentation_cache",
+      "name": "地表与太空表现缓存两轮往返复用",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/presentation_cache.lua",
+      "enabled": true
+    },
+    {
       "id": "narrative_inventory_quest_guide",
       "name": "正式背包开关、任务交付与新手引导",
       "luaPath": "GameplayTests/Systems/Quests/narrative_inventory.lua",
@@ -296,7 +302,15 @@
       "id": "testing_cleanup_gameplay",
       "name": "Lua跨用例同步与跨帧收尾核对（需前置）",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-cleanup.lua",
-      "dependsOn": ["testing_queue_gameplay"],
+      "dependsOn": [
+        "testing_queue_gameplay"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "testing_resource_cache_gameplay",
+      "name": "Lua专用GameRes跨编译缓存与正式目录",
+      "luaPath": "GameplayTests/Systems/Testing/gameplay-resource-cache.lua",
       "enabled": true
     }
   ]

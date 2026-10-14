@@ -24,16 +24,38 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 自有实例和模块状态
-    private static Item Spawn(Player player) => ItemMgr.Instance.InstantiateItem("Knife_Flint",
-        player.transform.position + new Vector3(1.5f, 0f, 0f));
+    private static Item Spawn(Player player) => LoadSpawned(ItemMgr.Instance.InstantiateItem("Knife_Flint",
+        player.transform.position + new Vector3(1.5f, 0f, 0f)));
 
-    private static JObject State(Item item) => new()
+    private static Item SpawnHeld(Player player, ItemData data) =>
+        LoadSpawned(ItemMgr.Instance.InstantiateHeldItem(data, player, player.transform));
+
+    private static Item LoadSpawned(Item item)
+    {
+        try
+        {
+            // ItemMgr 负责装配和登记，模块运行态须由正式 Item.Load 建立。
+            item.Load();
+            return item;
+        }
+        catch
+        {
+            if (item != null && !item.DestructionHandled)
+                ItemMgr.Instance.DespawnItem(item, saveData: false);
+            throw;
+        }
+    }
+
+    private static JObject State(Item item, Player player) => new()
     {
         ["initialized"] = item.IsInitialized, ["active"] = item.gameObject.activeInHierarchy,
+        ["destructionHandled"] = item.DestructionHandled, ["inPool"] = item.IsInPool,
+        ["inHand"] = item.InHand, ["ownedByPlayer"] = ReferenceEquals(item.Owner, player),
         ["guid"] = item.itemData.Guid, ["generation"] = item.RuntimeGeneration,
         ["registered"] = ItemMgr.Instance.IsRuntimeItemRegistered(item),
         ["indexed"] = ReferenceEquals(ItemMgr.Instance.GetItemByGuid(item.itemData.Guid), item),
         ["modules"] = item.Mods.Count,
+        ["moduleDataCount"] = item.itemData.ModuleDataDic?.Count ?? 0,
         ["enabledModules"] = item.Mods.Values.Count(module => module != null && module.Enabled),
         ["loadedModules"] = item.Mods.Values.Count(module => module != null && module.IsRuntimeLoaded),
         ["stableNamesUnique"] = item.Mods.Values.Select(module => module._Data.StableName).Distinct().Count() == item.Mods.Count
@@ -61,20 +83,21 @@ public static class GameplayTestItemPipelineRuntimeProbe
         try
         {
             firstData = GameRes.ExistingInstance.CreateItemData("Knife_Flint");
-            first = ItemMgr.Instance.InstantiateItem(firstData, player.transform.position + Vector3.right * 1.5f);
+            // 生命周期跨帧采样使用正式手持入口，避免普通世界散落物按规则转为轻量掉落。
+            first = SpawnHeld(player, firstData);
             int firstGuid = first.itemData.Guid;
             uint generation = first.RuntimeGeneration;
-            result["spawned"] = State(first);
+            result["spawned"] = State(first, player);
             yield return null;
-            result["afterFrame"] = State(first);
+            result["afterFrame"] = State(first, player);
             first.ModuleSave();
             result["saveKeptIdentity"] = ReferenceEquals(first.itemData, firstData) && first.RuntimeGeneration == generation;
             Despawn(ref first);
             result["firstRemoved"] = ItemMgr.Instance.GetItemByGuid(firstGuid) == null;
             result["registeredEvents"] = registered;
             result["unregisteredEvents"] = unregistered;
-            second = Spawn(player);
-            result["second"] = State(second);
+            second = SpawnHeld(player, GameRes.ExistingInstance.CreateItemData("Knife_Flint"));
+            result["second"] = State(second, player);
             result["newGeneration"] = second.RuntimeGeneration != generation;
             result["independentData"] = !ReferenceEquals(second.itemData, firstData);
             Despawn(ref second);

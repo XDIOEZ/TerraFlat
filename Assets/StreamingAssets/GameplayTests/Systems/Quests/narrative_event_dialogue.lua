@@ -2,6 +2,9 @@
 test.check("world_ready", "真实隔离世界就绪")
 test.check("player_ready", "真实主角就绪")
 test.runtime("game_events", "signal_lifecycle", {}, function(data)
+    assert(data.template.id == "survival_day_10_long_rain" and data.template.enabled and
+        data.template.oncePerWorld and data.template.durationDays > 0 and data.template.triggerType == "day.schedule",
+        "夹具没有借用正式目录中已启用的一次性事件模板")
     assert(data.ordinaryTrigger and data.activeAfterStart, "正式调度器没有启动自有事件")
     assert(not data.forcedDuplicate and not data.repeatTrigger and data.activeCount == 1, "活动事件被重复登记")
     assert(data.sourceWorld == data.currentWorld, "事件归属没有使用当前真实世界")
@@ -11,8 +14,22 @@ test.runtime("game_events", "signal_lifecycle", {}, function(data)
     assert(data.signals[1].payload.source == "actual-event-action" and data.signals[1].payload.amount == 7, "事件行动的原始载荷没有完整送达")
     assert(data.cancelled and not data.activeAfterCancel and not data.cancelAgain, "取消没有清除实际活动事件或重复取消被接受")
     assert(data.startedNotifications == 1 and data.endedNotifications == 1, "正式开始和结束通知不成对")
-    assert(data.storedTriggerCount == data.originalTriggerCount + 1, "实际触发没有唯一记录进度")
-    assert(data.selfEventCleaned and data.definitionRestored, "事件自有行动配置或活动状态没有清理")
+    assert(data.stagedTriggerCount == 0 and data.storedTriggerCount == 1, "实际触发没有在隔离进度中唯一记账")
+    assert(not data.postCancelRepeatTrigger and data.signalsAfterRejected == 1 and
+        data.storedTriggerCountAfterRejected == 1, "取消后普通重触发绕过了 oncePerWorld 或留下拒绝副作用")
+    assert(data.forcedAfterCancel and data.forcedActive and data.forcedSourceWorld == data.currentWorld and
+        data.forcedPayload.__gmForce == true, "正式 GM 强制重触发没有绕过一次性限制或标记真实来源")
+    assert(#data.forcedActions == 1 and data.forcedActions[1].Started and data.forcedActions[1].Completed and
+        (data.forcedActions[1].LastError == nil or data.forcedActions[1].LastError == ""),
+        "GM 重触发没有执行一次正式信号行动")
+    assert(#data.forcedSignals == 2 and data.forcedSignals[2].signal == "lua.narrative" and
+        data.forcedSignals[2].payload.source == "actual-event-action" and data.forcedSignals[2].payload.amount == 7,
+        "GM 强制重触发没有仅追加一次完整原始载荷")
+    assert(data.forcedCancel and not data.forcedActiveAfterCancel and not data.forcedCancelAgain and
+        data.startedNotificationsAfterForce == 2 and data.endedNotificationsAfterForce == 2 and
+        data.storedTriggerCountAfterForce == 2, "两次正式触发、取消、通知与进度数量不一致")
+    assert(data.selfEventCleaned and data.definitionRestored and data.progressRestored and
+        data.restoredTriggerCount == data.originalTriggerCount, "事件自有行动配置、进度或活动状态没有完整恢复")
 end, "真实事件调度、行动通知与取消")
 test.runtime("dialogue", "bubble_priority", {}, function(data)
     assert(data.accepted and data.visibleAfterFirst and data.equalAccepted and data.visible, "正式主角气泡拒绝了合法发言")

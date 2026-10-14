@@ -182,7 +182,9 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     {
         CanMove = false;
         HasReachedTarget = true;
-        NavigationAgent?.Stop();
+        hasDestination = false;
+        // 显式停止同时撤销导航目标；模拟范围休眠另行保留原移动意图。
+        NavigationAgent?.Stop(clearDestination: true);
     }
 
     #region 温度避险

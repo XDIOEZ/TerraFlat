@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceLocations;
 
 /// <summary>
 /// 一次资源目录的具体 Addressables 资源所有者。请求发出时立即记录句柄，成功资源保留到目录卸载，
@@ -46,8 +47,32 @@ internal sealed class ResourceAssetScope : IDisposable
         if (string.IsNullOrWhiteSpace(address)) throw new ArgumentException("资源地址不能为空。", nameof(address));
         var key = (typeof(T), address.Trim());
         if (assets.TryGetValue(key, out AsyncOperationHandle existing)) return existing.Convert<T>();
-        AsyncOperationHandle<T> handle = Own(Addressables.LoadAssetAsync<T>(key.Item2));
+        AsyncOperationHandle<T> handle = LoadSource<T>("address|" + typeof(T).FullName + "|" + key.Item2,
+            () => Addressables.LoadAssetAsync<T>(key.Item2));
         assets.Add(key, handle);
+        return handle;
+    }
+
+    public AsyncOperationHandle<T> Load<T>(IResourceLocation location) where T : UnityEngine.Object
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(ResourceAssetScope));
+        if (location == null) throw new ArgumentNullException(nameof(location));
+        return LoadSource<T>("location|" + typeof(T).FullName + "|" + location.ProviderId + "|" + location.InternalId + "|" + location.PrimaryKey,
+            () => Addressables.LoadAssetAsync<T>(location));
+    }
+
+    private AsyncOperationHandle<T> LoadSource<T>(string key, Func<AsyncOperationHandle<T>> load) where T : UnityEngine.Object
+    {
+        // 缓存只借用 Editor 持久源资产，当前会话仍持有自己的新请求句柄。
+        if (GameplayTestResourceCache.TryAsset(key, out T cached))
+            return Own(Addressables.ResourceManager.CreateCompletedOperation(cached, (string)null));
+        AsyncOperationHandle<T> handle = Own(load());
+        if (GameplayTestResourceCache.Active)
+            handle.Completed += completed =>
+            {
+                if (!disposed && completed.Status == AsyncOperationStatus.Succeeded)
+                    GameplayTestResourceCache.RecordAsset(key, completed.Result);
+            };
         return handle;
     }
 

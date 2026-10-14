@@ -58,6 +58,19 @@ namespace FlatWorld.Spaceflight
             if (body != null) body.simulated = false;
             if (Root != null) UnityEngine.Object.Destroy(Root);
         }
+
+        public void Suspend(Transform owner)
+        {
+            body.simulated = false;
+            Root.SetActive(false);
+            Root.transform.SetParent(owner, false);
+        }
+
+        public void Resume()
+        {
+            if (!Root.activeSelf) Root.SetActive(true);
+            if (!body.simulated) body.simulated = true;
+        }
         #endregion
     }
 
@@ -73,11 +86,38 @@ namespace FlatWorld.Spaceflight
             if (!shipColliderPresenters.TryGetValue(ship.ShipId, out ShipColliderPresenter presenter) || presenter.Root == null)
             {
                 presenter?.Dispose();
-                shipColliderPresenters[ship.ShipId] = presenter = new ShipColliderPresenter(ship.ShipId);
+                if (!TryRestoreShipColliderPresenter(ship.ShipId, out presenter))
+                {
+                    presenter = new ShipColliderPresenter(ship.ShipId);
+                    shipPresentersCreated++;
+                }
+                shipColliderPresenters[ship.ShipId] = presenter;
             }
             visibleShipColliderPresenters.Add(ship.ShipId);
-            if (IsSpaceView) SpaceMgr.ExistingInstance?.MovePresentationToSector(presenter.Root, ship.Sector);
+            if (shipViewPoolRoot != null && presenter.Root.transform.parent == shipViewPoolRoot)
+                presenter.Root.transform.SetParent(null, false);
+            if (IsSpaceView)
+            {
+                SpaceMgr.ExistingInstance?.MovePresentationToSector(presenter.Root, ship.Sector);
+                // 相邻星区尚未准备时先归当前加载场景，不能让醒来的碰撞体留在持久场景。
+                UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                if (presenter.Root.scene == gameObject.scene && scene.IsValid() && scene.isLoaded)
+                {
+                    presenter.Root.transform.SetParent(null, false);
+                    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(presenter.Root, scene);
+                }
+            }
+            else
+            {
+                UnityEngine.SceneManagement.Scene scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                if (scene.IsValid() && scene.isLoaded && presenter.Root.scene != scene)
+                {
+                    presenter.Root.transform.SetParent(null, false);
+                    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(presenter.Root, scene);
+                }
+            }
             presenter.Synchronize(ship, DisplayPresentationPoint(ship, 0d, 0d), angle);
+            presenter.Resume();
             return presenter;
         }
 
@@ -101,12 +141,13 @@ namespace FlatWorld.Spaceflight
                 if (!visibleShipColliderPresenters.Contains(pair.Key)) expiredShipColliderPresenters.Add(pair.Key);
             foreach (string id in expiredShipColliderPresenters)
             {
-                shipColliderPresenters[id].Dispose(); shipColliderPresenters.Remove(id);
+                SuspendShipColliderPresenter(id);
             }
         }
 
         private void ReleaseShipColliderPresenters()
         {
+            ClearShipViewPool();
             foreach (ShipColliderPresenter presenter in shipColliderPresenters.Values) presenter.Dispose();
             shipColliderPresenters.Clear(); visibleShipColliderPresenters.Clear(); expiredShipColliderPresenters.Clear();
         }

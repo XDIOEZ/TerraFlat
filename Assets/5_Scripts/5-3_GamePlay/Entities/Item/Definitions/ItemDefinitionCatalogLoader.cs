@@ -282,7 +282,7 @@ public static class ItemDefinitionCatalogLoader
                 if (gameRes.ShouldYieldResourceWork()) yield return null;
             }
             progress?.Invoke(0.2f + 0.6f * (start + count) / addresses.Length);
-            yield return null;
+            if (!GameplayTestResourceCache.Active || gameRes.ShouldYieldResourceWork()) yield return null;
         }
     }
 

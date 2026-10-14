@@ -32,16 +32,24 @@ public partial class ChunkMgr
     /// <summary>记录 ChunkView 的入池时刻与资源裁剪状态。</summary>
     private struct PooledChunkViewEntry
     {
-        public PooledChunkViewEntry(ChunkView view, float pooledAt)
+        public PooledChunkViewEntry(ChunkView view, float pooledAt, bool completed = false)
         {
             View = view;
             PooledAt = pooledAt;
             ResourcesTrimmed = false;
+            Completed = completed;
+            RetainedForTransition = false;
+            ResourceOwner = null;
+            ResourceRevision = 0;
         }
 
         public ChunkView View;
         public float PooledAt;
         public bool ResourcesTrimmed;
+        public bool Completed;
+        public bool RetainedForTransition;
+        public GameRes ResourceOwner;
+        public ulong ResourceRevision;
 
         /// <summary>取出 View 并清除该池条目的时间与裁剪状态。</summary>
         public ChunkView TakeView()
@@ -934,6 +942,17 @@ public partial class ChunkMgr
             if (pooled == null)
                 continue;
 
+            if (entry.RetainedForTransition &&
+                (entry.ResourceOwner != GameRes.ExistingInstance ||
+                 entry.ResourceRevision != GameRes.ExistingInstance?.ItemDefinitionRevision))
+            {
+                DestroyRuntimeChunkView(pooled);
+                continue;
+            }
+            if (entry.RetainedForTransition) RuntimeChunkViewTransitionHits++;
+
+            pooled.transform.SetParent(null, false);
+            SceneManager.MoveGameObjectToScene(pooled.gameObject, viewRoot.gameObject.scene);
             pooled.transform.SetParent(viewRoot, false);
             pooled.PrepareForPoolReuse();
             pooled.PresentationChanged -= HandleRuntimeEntityPresentationChanged;
@@ -941,6 +960,7 @@ public partial class ChunkMgr
             return pooled;
         }
         ChunkView created = Instantiate(prefab, viewRoot);
+        RuntimeChunkViewCreatedCount++;
         created.PresentationChanged += HandleRuntimeEntityPresentationChanged;
         return created;
     }
@@ -1122,10 +1142,11 @@ public partial class ChunkMgr
 
         ChunkView view = binding.View;
         binding.View = null;
+        bool completed = view.IsBound;
         view.Unbind();
         view.gameObject.SetActive(false);
         // View 已属于创建时的世界根节点，回收不创建根节点，也不迁移到其它场景。
-        chunkViewPool.Enqueue(new PooledChunkViewEntry(view, Time.realtimeSinceStartup));
+        chunkViewPool.Enqueue(new PooledChunkViewEntry(view, Time.realtimeSinceStartup, completed));
     }
 
     /// <summary>销毁 View 前再次确保表现、导航等全部租约已经释放。</summary>
@@ -1151,6 +1172,7 @@ public partial class ChunkMgr
             PooledChunkViewEntry entry = chunkViewPool.Dequeue();
             DestroyRuntimeChunkView(entry.TakeView());
         }
+        DestroySceneTransitionChunkPoolRoot();
     }
 
     /// <summary>先移除区块登记；正常流送回池，整个窗口关闭时直接销毁 View。</summary>
@@ -1177,7 +1199,7 @@ public partial class ChunkMgr
     }
 
     /// <summary>清空全部区块画面绑定和窗口目标记录。</summary>
-    private void ClearRuntimeWindowBindings()
+    private void ClearRuntimeWindowBindings(bool retainPresentationPool = false)
     {
         if (runtimePresentationCoroutine != null)
         {
@@ -1190,11 +1212,15 @@ public partial class ChunkMgr
             runtimePrefetchCoroutine = null;
         }
 
-        // 整个窗口关闭后不会复用这些 View，直接销毁，禁止先入池再申请场景根节点。
+        // 太空往返只保留已完成的 View 壳，所有世界租约仍走正式解绑。
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowRemovalBuffer.AddRange(activeRuntimeBindings.Keys);
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
-            DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i], recycleView: false);
+        {
+            RuntimeWorldAddress address = runtimeWindowRemovalBuffer[i];
+            bool reusable = retainPresentationPool && activeRuntimeBindings[address].View?.IsBound == true;
+            DeactivateRuntimeBinding(address, recycleView: reusable);
+        }
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
@@ -1210,7 +1236,8 @@ public partial class ChunkMgr
             CancelChunkDataRequest(inFlight);
         runtimePrefetchInFlight = null;
         runtimePrefetchInFlightCount = 0;
-        DestroyRuntimeChunkViewPool();
+        if (retainPresentationPool) RetainSceneTransitionChunkViews();
+        else DestroyRuntimeChunkViewPool();
         ChunkBatchRendererGroupService.ReleaseUnusedBackend();
     }
 

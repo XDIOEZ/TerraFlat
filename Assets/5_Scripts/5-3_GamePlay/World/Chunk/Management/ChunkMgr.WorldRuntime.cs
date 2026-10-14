@@ -318,11 +318,11 @@ public partial class ChunkMgr
     #endregion
 
     /// <summary>切换场景时释放旧生成器，下次进入按当前资源会话创建新世界。</summary>
-    private void ResetWorldRuntimeForSceneChange()
+    private void ResetWorldRuntimeForSceneChange(bool retainPresentationPool = false)
     {
         StopLiquidFlowExperiment();
         WorldLiquidFlowObstacles.ClearWorld();
-        ClearRuntimeWindowBindings();
+        ClearRuntimeWindowBindings(retainPresentationPool);
         WorldEntityRuntime.ReleaseWorld();
         ReleaseAirHumidityField();
         runtimeChunkManager?.ClearWindow();

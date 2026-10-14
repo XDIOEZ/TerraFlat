@@ -34,6 +34,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。
 - 具体资源请求立即归 ResourceAssetScope，失败/取消释放；Addressables 初始化句柄归 GameRes、跨会话保留。卸载顺序为 MOD/池、表现/共享 Mesh、目录、源资源；销毁清理使用现有引用。
 - 编辑器 FullPlayModeReloadPolicy 保持 Domain/Scene Reload 开启；Prefab 标签空结果在 GameRes 入口失败。TimeSystem JSON 在允许新世界前完成，玩家覆盖配置无效时保留内建。
+- Lua 测试入口可通过 `GameplayTestResourceCache` 恢复 Editor 持久源资产和物品 DTO；每轮新建 Scope/句柄、运行时模板和当前 C# 绑定，仅 Ready 后写缓存，失败/取消撤销暂存。缓存清理及诊断见 [Lua 测试](../flatworld-lua-testing/SKILL.md)。
 
 ## 原位更新
 

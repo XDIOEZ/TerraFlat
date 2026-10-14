@@ -1,6 +1,8 @@
 # 宇宙与太空玩法 Lua 测试模块
 
-入口清单：`GameplayTests/universe-suite.json`。测试中心按五个主题组显示，可以全选或只勾选一个组；各项真实玩法检查仍自行准备前置条件。
+2026-10-15：六个主题案例均已执行通过，另已通过同一世界全 51 案例连续复测。详见 [缓存与全系统 DEBUG](../../../缓存与38系统DEBUG循环_2026-10-15.md)；画面及未覆盖功能由用户验收。
+
+入口清单：`GameplayTests/universe-suite.json`。测试中心按六个主题组显示，可以全选或只勾选一个组；各项真实玩法检查仍自行准备前置条件。
 
 Lua 编写、截图上限和通用执行/报告契约统一见 [flatworld-lua-testing 导航 Skill](../../../../../../.agents/skills/flatworld-lua-testing/SKILL.md)。
 
@@ -23,6 +25,9 @@ python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --ca
 | `ship_rules` / `ship_rules.lua` | 结构、对接、气密、质量、推进、接触、快照、引擎安装、燃料、光纤 |
 | `space_gameplay` / `space_gameplay.lua` | 真实会话、模板、星体表现、起飞导航降落、五向越界折返、船体接触 |
 | `ship_damage_gameplay` / `ship_damage_gameplay.lua` | 正式放置九格长船、尾部身份锚点、真实固定步腰部截断、船首保留点火与导航、单 Item 冷船尾、真实种子/肥料库存、残骸二次拆分、无地板冷货物、最后地板清理、正式部件索引及会话快照 |
+| `presentation_cache` / `presentation_cache.lua` | 同一隔离档案两轮地表→太空→地表，复用区块壳/星区根/星体实例，缓存停用与容量、当前模型绑定和统一模拟时钟 |
+
+`presentation_cache` 先关闭两个表现缓存跑一轮对照，再开启跑两轮；报告每轮入场、回程及合计 wallSeconds，不设机器速度阈值。`space_gameplay` 的自有船样本另采起飞前、太空和降落后的本船视图身份，检查船根/部件复用及正确场景；不把其他船的命中替代本船复用。区块缓存只保留解绑壳，地形恢复、导航与物理收尾仍按正式入口执行。缓存示意见 [Lua与场景切换缓存](../../../../../../游戏机制SVG文件夹/测试/Lua与场景切换缓存.svg)。
 
 `--cases` 现在选择上表的主题 ID。下面保留原子检查标识作为覆盖对照，不再把它们当成独立文件或可勾选的用例。五个跨区方向使用同一段循环，报告步骤标签仍区分方向。
 

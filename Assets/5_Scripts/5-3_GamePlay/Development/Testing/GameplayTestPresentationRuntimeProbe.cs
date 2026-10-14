@@ -76,6 +76,42 @@ public static partial class GameplayTestPresentationRuntimeProbe
         Canvas.ForceUpdateCanvases();
         yield return null;
     }
+
+    private static IEnumerator ChangeSettingsLocale(TMP_Dropdown language, TMP_Text text,
+        int index, string localeCode, string expectedText, JObject sample)
+    {
+        string beforeLocale = FlatWorldLocalizationService.CurrentLocaleCode;
+        bool changeRequested = beforeLocale != localeCode;
+        bool received = false;
+        Action<string> onChanged = value => { if (value == localeCode) received = true; };
+        FlatWorldLocalizationService.LanguageChanged += onChanged;
+        float started = Time.realtimeSinceStartup;
+        try
+        {
+            language.value = index;
+            // 正式语言事件在资源预载完成后才发出，等待真实 Binder 刷新而不手动改文字。
+            do
+            {
+                yield return null;
+            }
+            while (language != null && text != null && Time.realtimeSinceStartup - started < 8f &&
+                (FlatWorldLocalizationService.CurrentLocaleCode != localeCode ||
+                 changeRequested && !received || text.text != expectedText));
+            sample["beforeLocale"] = beforeLocale;
+            sample["requestedLocale"] = localeCode;
+            sample["actualLocale"] = FlatWorldLocalizationService.CurrentLocaleCode;
+            sample["changeRequested"] = changeRequested;
+            sample["languageEventReceived"] = received;
+            sample["dropdownIndex"] = language != null ? language.value : -1;
+            sample["text"] = text != null ? text.text : null;
+            sample["textInstanceId"] = text != null ? text.GetInstanceID() : 0;
+            sample["elapsedSeconds"] = Time.realtimeSinceStartup - started;
+            sample["completed"] = language != null && text != null && language.value == index &&
+                FlatWorldLocalizationService.CurrentLocaleCode == localeCode &&
+                (!changeRequested || received) && text.text == expectedText;
+        }
+        finally { FlatWorldLocalizationService.LanguageChanged -= onChanged; }
+    }
     #endregion
 
     #region 正式设置窗口与语言现场
@@ -174,18 +210,21 @@ public static partial class GameplayTestPresentationRuntimeProbe
             string expectedZh = FlatWorldLocalizationService.GetInLocale(key, "zh-CN", FlatWorldLocalizationService.UiTable);
             string expectedEn = FlatWorldLocalizationService.GetInLocale(key, "en", FlatWorldLocalizationService.UiTable);
             string nodeName = saveText.name;
-            language.value = zh;
-            yield return null;
+            int textInstanceId = saveText.GetInstanceID();
+            int binderInstanceId = binder.GetInstanceID();
+            var chinese = new JObject();
+            var english = new JObject();
+            var discardedChinese = new JObject();
+            yield return ChangeSettingsLocale(language, saveText, zh, "zh-CN", expectedZh, chinese);
             string observedZh = saveText.text;
-            language.value = en;
             volume.value = .4f;
-            yield return null;
+            yield return ChangeSettingsLocale(language, saveText, en, "en", expectedEn, english);
             string observedEn = saveText.text;
             bool unsaved = SettingsProviderRegistry.HasEditSessionChanges();
             saveButton.onClick.Invoke();
             bool committedClean = !SettingsProviderRegistry.HasEditSessionChanges();
-            language.value = zh;
             volume.value = .7f;
+            yield return ChangeSettingsLocale(language, saveText, zh, "zh-CN", expectedZh, discardedChinese);
             bool changedAfterSave = SettingsProviderRegistry.HasEditSessionChanges();
             panel.Close();
             bool discardedLocale = FlatWorldLocalizationService.CurrentLocaleCode == "en";
@@ -214,6 +253,12 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["expectedChinese"] = expectedZh, ["observedChinese"] = observedZh,
                 ["expectedEnglish"] = expectedEn, ["observedEnglish"] = observedEn,
                 ["nodeNamePreserved"] = saveText.name == nodeName,
+                ["textInstanceId"] = textInstanceId, ["currentTextInstanceId"] = saveText.GetInstanceID(),
+                ["binderInstanceId"] = binderInstanceId, ["currentBinderInstanceId"] = binder.GetInstanceID(),
+                ["sameBoundText"] = ReferenceEquals(saveButton.GetComponentInChildren<TMP_Text>(true), saveText) &&
+                    ReferenceEquals(saveText.GetComponent<LocalizedTextBinder>(), binder),
+                ["chineseSwitch"] = chinese, ["englishSwitch"] = english,
+                ["discardedChineseSwitch"] = discardedChinese,
                 ["unsavedBeforeCommit"] = unsaved, ["commitClearedChanges"] = committedClean,
                 ["changedAfterCommit"] = changedAfterSave, ["discardedToCommittedLocale"] = discardedLocale,
                 ["discardedToCommittedVolume"] = discardedVolume, ["cleanAfterClose"] = cleanAfterClose,

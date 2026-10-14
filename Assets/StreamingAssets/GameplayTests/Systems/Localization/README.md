@@ -1,5 +1,7 @@
 # 本地化
 
+2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
+
 快速入口：`rules.lua`；操作：`localization/stable_identity`。
 
 已编写的规则覆盖：正式 ItemTagLocalizationCatalog 的 ASCII稳定ID；FlatWorldLocalizationService 的物品、Tag、UI文本稳定翻译键。
@@ -10,4 +12,4 @@ PlayMode 共用入口：[UISettings/gameplay-suite.json](../UISettings/gameplay-
 
 关键流程待补：全部内容/台词译文完整性、MOD 翻译覆盖边界、语言资源加载失败及断网恢复、CJK 字体/字形、翻译后布局、自动本地化器对动态新增控件的覆盖。读取一条正式译文和控件刷新不代表完整语言资源或全部界面画面合格。
 
-本轮仅静态编写，未编译、未运行；实际文字、排版和最终验收由用户执行。
+本轮已编译并执行登记断言；实际文字、排版和最终验收由用户执行。

@@ -1,5 +1,7 @@
 # 玩家控制测试
 
+2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
+
 - `rules.lua`：调用 `MovementHungerActionDefinition`。覆盖静止、步行、奔跑、停用、配置组合和负倍率钳制。
 - 同脚本调用真实 `ColliderSource2D.Bind/Resolve`、`GameplayPhysics2D.ResolveComponent`，覆盖镜像归源、Item 兄弟模块能力、偏移、缺失能力、销毁/清空源拒绝；镜像自有模块不能替代失效源。
 - `gameplay.lua`：在测试场景的隔离世界，走正式管理员速度配置、快捷栏选择和真实移动输入，检查实际位置变化并显式截图。

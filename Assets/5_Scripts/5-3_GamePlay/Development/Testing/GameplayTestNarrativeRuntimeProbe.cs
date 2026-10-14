@@ -248,20 +248,24 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     #region 正式事件调度行动与取消
     private static JObject CaptureEvent(Player player, JObject args)
     {
-        const string id = "surface_daily_cloudy";
+        const string id = "survival_day_10_long_rain";
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         GameEventManager manager = UnityEngine.Object.FindObjectOfType<GameEventManager>() ??
             throw new InvalidOperationException("隔离世界的正式事件调度器未启动。");
         if (manager.ActiveEvents.Count != 0)
             throw new InvalidOperationException("已有其他活动事件，拒绝强制事件覆盖非自有行动。");
-        GameEventDefinition definition = manager.Definitions.FirstOrDefault(value => value.Id == id && !value.Enabled) ??
-            throw new InvalidOperationException("缺少不自然运行的正式事件模板。");
+        GameEventDefinition definition = manager.Definitions.FirstOrDefault(value => value.Id == id && value.Enabled) ??
+            throw new InvalidOperationException("正式目录缺少已启用的漫长降雨事件模板。");
         List<GameEventActionDefinition> originalActions = definition.Actions;
+        GameEventExtensionDefinition originalTrigger = definition.Trigger;
+        List<GameEventExtensionDefinition> originalConditions = definition.Conditions;
         var parameters = new JObject { ["signal"] = "lua.narrative", ["payload"] = new JObject { ["source"] = "actual-event-action", ["amount"] = 7 } };
         if (!new EmitSignalGameEventAction().Validate(parameters, out string validationReason))
             throw new InvalidOperationException(validationReason);
         GameEventSaveData saved = SaveDataMgr.TestExistingInstance.SaveData.GameEventData;
         bool hadProgress = saved.EventProgress.TryGetValue(id, out GameEventProgressSaveData progress);
         GameEventProgressSaveData original = hadProgress ? FastCloner.FastCloner.DeepClone(progress) : null;
+        JToken originalProgress = original != null ? JObject.FromObject(original) : JValue.CreateNull();
         int started = 0, ended = 0;
         var signals = new JArray();
         Action<GameEventRuntimeNotification> onStart = value => { if (value.EventId == id) started++; };
@@ -273,9 +277,17 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         manager.ConfiguredSignalRaised += onSignal;
         try
         {
-            // 只在未活动的禁用模板上装配正式信号行动，避免天气覆盖改变其他系统前置条件。
+            // 禁用定义不会进入正式目录，只借用未活动的已登记模板并重置本事件自有进度。
+            saved.EventProgress.Remove(id);
             definition.Actions = new List<GameEventActionDefinition>
             { new() { Id = "lua_emit", Type = "signal.emit", Parameters = parameters } };
+            result["template"] = new JObject
+            {
+                ["id"] = definition.Id, ["source"] = definition.SourceName, ["enabled"] = definition.Enabled,
+                ["oncePerWorld"] = definition.OncePerWorld, ["durationDays"] = definition.DurationDays,
+                ["triggerType"] = definition.Trigger.Type
+            };
+            result["stagedTriggerCount"] = saved.EventProgress.TryGetValue(id, out var staged) ? staged.TriggerCount : 0;
             result["ordinaryTrigger"] = manager.TryTriggerNow(id);
             result["forcedDuplicate"] = manager.TryForceTriggerNow(id);
             result["activeAfterStart"] = manager.IsEventActive(id);
@@ -283,7 +295,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["sourceWorld"] = active?.SourceWorldKey;
             result["currentWorld"] = SceneManager.GetActiveScene().name;
             result["actions"] = active == null ? new JArray() : JArray.FromObject(active.ActionStates);
-            result["signals"] = signals;
+            result["signals"] = signals.DeepClone();
             result["repeatTrigger"] = manager.TryTriggerNow(id, true);
             result["activeCount"] = manager.ActiveEvents.Count(value => value.EventId == id);
             result["cancelled"] = manager.CancelEvent(id);
@@ -292,6 +304,24 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["startedNotifications"] = started; result["endedNotifications"] = ended;
             result["storedTriggerCount"] = saved.EventProgress.TryGetValue(id, out var stored) ? stored.TriggerCount : 0;
             result["originalTriggerCount"] = original?.TriggerCount ?? 0;
+            // 取消不抹掉一次性进度，GM 强制只能绕过限制，不能重复登记活动事件。
+            result["postCancelRepeatTrigger"] = manager.TryTriggerNow(id);
+            result["signalsAfterRejected"] = signals.Count;
+            result["storedTriggerCountAfterRejected"] = saved.EventProgress.TryGetValue(id, out stored) ? stored.TriggerCount : 0;
+            result["forcedAfterCancel"] = manager.TryForceTriggerNow(id);
+            result["forcedActive"] = manager.IsEventActive(id);
+            ActiveGameEventSaveData forced = manager.ActiveEvents.FirstOrDefault(value => value.EventId == id);
+            result["forcedSourceWorld"] = forced?.SourceWorldKey;
+            result["forcedActions"] = forced == null ? new JArray() : JArray.FromObject(forced.ActionStates);
+            result["forcedPayload"] = string.IsNullOrWhiteSpace(forced?.TriggerPayloadJson)
+                ? new JObject() : JObject.Parse(forced.TriggerPayloadJson);
+            result["forcedSignals"] = signals.DeepClone();
+            result["forcedCancel"] = manager.CancelEvent(id);
+            result["forcedActiveAfterCancel"] = manager.IsEventActive(id);
+            result["forcedCancelAgain"] = manager.CancelEvent(id);
+            result["storedTriggerCountAfterForce"] = saved.EventProgress.TryGetValue(id, out stored) ? stored.TriggerCount : 0;
+            result["startedNotificationsAfterForce"] = started;
+            result["endedNotificationsAfterForce"] = ended;
             return result;
         }
         finally
@@ -304,7 +334,12 @@ public static partial class GameplayTestNarrativeRuntimeProbe
                 definition.Actions = originalActions;
                 if (hadProgress) saved.EventProgress[id] = original; else saved.EventProgress.Remove(id);
                 result["selfEventCleaned"] = !manager.IsEventActive(id);
-                result["definitionRestored"] = ReferenceEquals(definition.Actions, originalActions);
+                result["definitionRestored"] = ReferenceEquals(definition.Actions, originalActions) &&
+                    ReferenceEquals(definition.Trigger, originalTrigger) && ReferenceEquals(definition.Conditions, originalConditions);
+                bool restoredExists = saved.EventProgress.TryGetValue(id, out GameEventProgressSaveData restored);
+                result["progressRestored"] = restoredExists == hadProgress && (!hadProgress ||
+                    JToken.DeepEquals(originalProgress, restored != null ? JObject.FromObject(restored) : JValue.CreateNull()));
+                result["restoredTriggerCount"] = restored?.TriggerCount ?? 0;
             }
         }
     }

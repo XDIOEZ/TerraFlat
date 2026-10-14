@@ -3,6 +3,8 @@ name: flatworld-world-model
 description: "FlatWorld 纯世界模型、异步区块生成、租约、流送、差量恢复与 Unity 表现绑定。"
 ---
 
+单机地表↔太空的表现池见 `ChunkMgr.PresentationCache.cs`：最多9个完整绑定过且已 Unbind 的壳移入持久根，回程重新绑定当前 WorldRuntime；不缓存旧 ChunkRuntime/导航/租约。资源代际不符、正式退出与销毁释放，相关现场 Lua 为 `presentation_cache`。
+
 # WorldModel
 
 ## 入口与数据流

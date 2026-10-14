@@ -29,7 +29,7 @@ namespace FlatWorld.Spaceflight
         private ShipEngineExhaustPresenter engineExhaust;
         public Vector3 WorldPosition => transform.position;
         public int TargetGuid => int.TryParse(pieceId, out int id) ? id : 0;
-        public bool IsValid => session != null && session.FindPiece(pieceId, out _, out _);
+        public bool IsValid => isActiveAndEnabled && session != null && session.FindPiece(pieceId, out _, out _);
         public bool IsInteractionHighlighted { get; private set; }
         public event Action<bool> InteractionHighlightChanged;
         // 普通设备装到船上仍按实际线路能力过滤，不能只依赖船体部件分类。
@@ -60,6 +60,60 @@ namespace FlatWorld.Spaceflight
             visual = GetComponentInChildren<SpriteRenderer>();
             baseVisualPosition = visual != null ? visual.transform.localPosition : Vector3.zero;
             Rebind(ship, piece);
+        }
+        // 休眠只保留表现对象和稳定身份，不保留旧世界的节点、交互与权威对象引用。
+        internal void SuspendView()
+        {
+            SetInteractionHighlighted(false);
+            InteractionHighlightChanged = null;
+            SpatialInteractionRegistry.Unregister(this);
+            registeredForInteraction = false;
+            gameObject.SetActive(false);
+            ReleaseCultivatorVisual();
+            cultivatorPlots.Refresh(null);
+            ReleaseBatteryChargeVisual();
+            ReleaseElectricLightVisual();
+            engineExhaust?.Bind(null, null, null);
+            session = null; boundShip = null; boundPiece = null;
+            machineTarget = null; machineDefinition = null;
+            surfaceCollider = null; surfaceSortingBound = false;
+            pendingMachineBinding = true;
+        }
+
+        internal void ResumeView(SpaceSession owner, ShipState ship, ShipPieceState piece, ItemData data)
+        {
+            session = owner; shipId = ship.ShipId; pieceId = piece.PieceId;
+            tankMask = pipeMask = -1;
+            surfaceCollider = null; surfaceSortingBound = false;
+            RefreshDefinitionVisual(piece, data);
+            gameObject.SetActive(true);
+            Rebind(ship, piece, true);
+        }
+
+        private void RefreshDefinitionVisual(ShipPieceState piece, ItemData data)
+        {
+            if (visual == null) return;
+            MachineDefinition machine = MachineCatalog.Get(piece.ItemId);
+            bool connectionLine = machine?.IsConnectionLine == true;
+            WorldSortingManager.GetInstance().ApplyRenderer(visual,
+                piece.Kind == ShipPieceKind.Floor || connectionLine
+                    ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
+                piece.Kind == ShipPieceKind.Floor ? -2 : machine?.Fluid?.Kind == "pipe" ? -1 : 0);
+            if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+            {
+                visual.sprite = definition.Sprite;
+                visual.color = definition.Visual?.Color ?? Color.white;
+                visual.transform.localScale = definition.Visual?.RendererLocalScale ?? Vector3.one;
+                if (definition.Material != null) visual.sharedMaterial = definition.Material;
+            }
+            if (Mod_ShipPart.Read(data) == null &&
+                Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) &&
+                !string.IsNullOrWhiteSpace(building.TileBlockId) &&
+                GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
+            {
+                visual.sprite = tile.sprite; visual.color = tile.color;
+                visual.transform.localScale = tile.transform.lossyScale;
+            }
         }
         public void Rebind(ShipState ship, ShipPieceState piece, bool force = false)
         {
@@ -329,11 +383,16 @@ namespace FlatWorld.Spaceflight
         }
         private void SynchronizeViews(bool refreshBindings = false)
         {
+            if (transitionRunning || DimensionManager.ExistingInstance?.IsTransitioning == true ||
+                GameManager.Instance?.IsWorldEntryInProgress == true) return;
+            EnsureShipViewResourceGeneration();
+            if (FlatWorld.Networking.GameNetwork.IsOnline) ClearShipViewPool();
             BindShipMachineVisualEvents();
             bool forceBindings = refreshBindings || viewBindingsDirty;
             viewBindingsDirty = false;
             visibleSurfaceShadows.Clear();
             visibleShipColliderPresenters.Clear();
+            visibleShipPieceIds.Clear();
             foreach (ShipState ship in State.Ships)
             {
                 if (ship.IsWreck)
@@ -354,53 +413,64 @@ namespace FlatWorld.Spaceflight
                 Vector3 visualLiftOffset = new(Mathf.Sin(radians) * rise, Mathf.Cos(radians) * rise, 0f);
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
-                    if (!piece.IsAlive || !visible) { RemovePieceView(piece.PieceId); continue; }
+                    if (!piece.IsAlive) { RemovePieceView(piece.PieceId); continue; }
+                    if (!visible) { SuspendPieceView(piece.PieceId); continue; }
+                    visibleShipPieceIds.Add(piece.PieceId);
                     if (!views.TryGetValue(piece.PieceId, out ShipPieceView view) || view == null)
                     {
-                        ItemData data = GetPieceData(piece);
-                        if (data == null) continue;
-                        // 固定部件只投影权威快照，避免普通建筑模块重新登记地表和重复产生库存。
-                        GameObject root = new("ShipPiece_" + piece.ItemId);
-                        root.transform.SetParent(presenter.Root.transform, false);
-                        GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
-                        SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-                        // 船体承载层依次绘制地板、管道、电线，统一压在机器和乘员下面。
-                        MachineDefinition machineDefinition = MachineCatalog.Get(piece.ItemId);
-                        bool connectionLine = machineDefinition?.IsConnectionLine == true;
-                        WorldSortingManager.GetInstance().ApplyRenderer(renderer,
-                            piece.Kind == ShipPieceKind.Floor || connectionLine
-                                ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
-                            piece.Kind == ShipPieceKind.Floor ? -2 : machineDefinition?.Fluid?.Kind == "pipe" ? -1 : 0);
-                        renderer.spriteSortPoint = SpriteSortPoint.Pivot;
-                        if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+                        if (TryRestorePieceView(ship, piece, presenter, out view))
                         {
-                            renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white;
-                            // 船上设备复用物品定义的缩放，让放置预览与船体实体保持相同尺寸。
-                            visual.transform.localScale = definition.Visual?.RendererLocalScale ?? Vector3.one;
-                            if (definition.Material != null) renderer.sharedMaterial = definition.Material;
+                            views[piece.PieceId] = view;
                         }
-                        if (piece.Kind == ShipPieceKind.Engine)
+                        else
                         {
-                            GameObject marker = new("推力方向"); marker.transform.SetParent(visual.transform, false);
-                            LineRenderer arrow = marker.AddComponent<LineRenderer>(); arrow.useWorldSpace = false;
-                            arrow.sharedMaterial = renderer.sharedMaterial; arrow.startWidth = arrow.endWidth = .05f;
-                            arrow.startColor = arrow.endColor = Color.cyan;
-                            arrow.sortingLayerID = renderer.sortingLayerID; arrow.sortingOrder = renderer.sortingOrder + 2; arrow.positionCount = 5;
-                            arrow.SetPositions(new[] { new Vector3(0, -.3f), new Vector3(0, .4f), new Vector3(-.13f, .23f), new Vector3(0, .4f), new Vector3(.13f, .23f) });
+                            ItemData data = GetPieceData(piece);
+                            if (data == null) continue;
+                            // 固定部件只投影权威快照，避免普通建筑模块重新登记地表和重复产生库存。
+                            GameObject root = new("ShipPiece_" + piece.ItemId);
+                            root.transform.SetParent(presenter.Root.transform, false);
+                            GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
+                            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
+                            // 船体承载层依次绘制地板、管道、电线，统一压在机器和乘员下面。
+                            MachineDefinition machineDefinition = MachineCatalog.Get(piece.ItemId);
+                            bool connectionLine = machineDefinition?.IsConnectionLine == true;
+                            WorldSortingManager.GetInstance().ApplyRenderer(renderer,
+                                piece.Kind == ShipPieceKind.Floor || connectionLine
+                                    ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
+                                piece.Kind == ShipPieceKind.Floor ? -2 : machineDefinition?.Fluid?.Kind == "pipe" ? -1 : 0);
+                            renderer.spriteSortPoint = SpriteSortPoint.Pivot;
+                            if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
+                            {
+                                renderer.sprite = definition.Sprite; renderer.color = definition.Visual?.Color ?? Color.white;
+                                // 船上设备复用物品定义的缩放，让放置预览与船体实体保持相同尺寸。
+                                visual.transform.localScale = definition.Visual?.RendererLocalScale ?? Vector3.one;
+                                if (definition.Material != null) renderer.sharedMaterial = definition.Material;
+                            }
+                            if (piece.Kind == ShipPieceKind.Engine)
+                            {
+                                GameObject marker = new("推力方向"); marker.transform.SetParent(visual.transform, false);
+                                LineRenderer arrow = marker.AddComponent<LineRenderer>(); arrow.useWorldSpace = false;
+                                arrow.sharedMaterial = renderer.sharedMaterial; arrow.startWidth = arrow.endWidth = .05f;
+                                arrow.startColor = arrow.endColor = Color.cyan;
+                                arrow.sortingLayerID = renderer.sortingLayerID; arrow.sortingOrder = renderer.sortingOrder + 2; arrow.positionCount = 5;
+                                arrow.SetPositions(new[] { new Vector3(0, -.3f), new Vector3(0, .4f), new Vector3(-.13f, .23f), new Vector3(0, .4f), new Vector3(.13f, .23f) });
+                            }
+                            // 专用船件保留定义外观，普通格子建筑才使用地块贴图覆盖。
+                            if (Mod_ShipPart.Read(data) == null &&
+                                Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
+                                GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
+                            { renderer.sprite = tile.sprite; renderer.color = tile.color; visual.transform.localScale = tile.transform.lossyScale; visual.transform.localPosition = tile.transform.GetColumn(3); }
+                            view = root.AddComponent<ShipPieceView>(); view.Initialize(this, ship, piece, null);
+                            views[piece.PieceId] = view;
+                            shipPieceViewsCreated++;
                         }
-                        // 专用船件保留定义外观，普通格子建筑才使用地块贴图覆盖。
-                        if (Mod_ShipPart.Read(data) == null &&
-                            Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) && !string.IsNullOrWhiteSpace(building.TileBlockId) &&
-                            GameRes.ExistingInstance.GetTileBlock(building.TileBlockId)?.TileBase is UnityEngine.Tilemaps.Tile tile)
-                        { renderer.sprite = tile.sprite; renderer.color = tile.color; visual.transform.localScale = tile.transform.lossyScale; visual.transform.localPosition = tile.transform.GetColumn(3); }
-                        view = root.AddComponent<ShipPieceView>(); view.Initialize(this, ship, piece, null);
-                        views[piece.PieceId] = view;
                     }
                     if (view.transform.parent != presenter.Root.transform) view.transform.SetParent(presenter.Root.transform, false);
                     view.Rebind(ship, piece, forceBindings);
                     view.SetVisualLift(visualLiftOffset);
                 }
             }
+            RemoveExpiredPieceViews();
             RemoveExpiredShipColliderPresenters();
             RemoveExpiredSurfaceShadows();
             SynchronizeRemotePassengerSurfaceVisuals();
@@ -426,9 +496,9 @@ namespace FlatWorld.Spaceflight
         }
         private void RemovePieceView(string id)
         {
+            RemovePooledPieceView(id);
             if (!views.Remove(id, out ShipPieceView view) || view == null) return;
-            if (view.Item != null && ItemMgr.Instance != null) ItemMgr.Instance.DespawnItem(view.Item, false);
-            else Destroy(view.gameObject);
+            DestroyPieceView(view);
         }
         private void ReleaseViews()
         {

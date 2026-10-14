@@ -173,6 +173,9 @@ public partial class Mod_GameController : Module
         _gameplayInputLockOwners.Count > 0 ||
         IsWorldLoadingGameplayLocked(); // 当前是否锁定玩家输入
 
+    public bool IsGameplayInputExplicitlyLocked => _isGameplayInputLocked; // 只读过场显式锁，不包含面板锁或外部控制租约。
+    public int GameplayInputLockOwnerCount => _gameplayInputLockOwners.Count; // 面板叠加锁数量只用于区分总锁来源。
+
     public bool IsRightClickHeld => _rightClickHeld; // 玩法模块只读取中央输入层维护的持续“使用”状态
 
     /// <summary>

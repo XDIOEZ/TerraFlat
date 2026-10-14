@@ -1,5 +1,7 @@
 # 世界模型与区块流送
 
+2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
+
 快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
 
 已编写的规则覆盖：独立 WorldRuntime 的模拟、表现、寻路租约，以及重复归还和逐出保护；生成失败消息的请求版本、取消和世界 Epoch 失效保护；真正 Commit 的唯一所有权移交、旧结果拒绝释放、地形修改和逐出后快照保持冻结。真实场景只读正式窗口、脚下区块数据、ChunkView和租约。

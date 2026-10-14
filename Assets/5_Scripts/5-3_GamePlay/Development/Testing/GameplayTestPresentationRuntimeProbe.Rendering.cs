@@ -13,7 +13,9 @@ public static partial class GameplayTestPresentationRuntimeProbe
         public readonly ItemMgr Items;
         public readonly ActorRenderEffectController Controller;
         public readonly VisualEffectManager Effects;
+        public Item WorldItem;
         public Item Item;
+        public GameObject Attachment;
         public GameObject Effect;
         private bool disposed;
 
@@ -32,16 +34,27 @@ public static partial class GameplayTestPresentationRuntimeProbe
             disposed = true;
             try
             {
-                if (Item != null)
+                try
                 {
-                    Effects.StopOwnerEffect(Item.transform, "WetStatusEffect");
-                    Controller.UnregisterExternalRenderers(Item.transform);
+                    if (Item != null)
+                    {
+                        try { Effects.StopOwnerEffect(Item.transform, "WetStatusEffect"); }
+                        finally { Controller.UnregisterExternalRenderers(Item.transform); }
+                    }
                 }
-                if (Effect != null) Effects.ReturnEffectToPool("WetStatusEffect", Effect);
+                finally { if (Effect != null) Effects.ReturnEffectToPool("WetStatusEffect", Effect); }
             }
             finally
             {
-                if (Item != null && !Item.DestructionHandled) Items.DespawnItem(Item, false);
+                try
+                {
+                    if (WorldItem != null && !WorldItem.DestructionHandled) Items.DespawnItem(WorldItem, false);
+                }
+                finally
+                {
+                    try { if (Item != null && !Item.DestructionHandled) Items.DespawnItem(Item, false); }
+                    finally { if (Attachment != null) UnityEngine.Object.Destroy(Attachment); }
+                }
             }
         }
     }
@@ -57,11 +70,40 @@ public static partial class GameplayTestPresentationRuntimeProbe
         int beforeEffects = ActiveWetEffects(fixture.Effects);
         try
         {
-            fixture.Item = fixture.Items.InstantiateItem("Axe_Stone", player.transform.position + Vector3.right * 2f);
+            fixture.WorldItem = fixture.Items.InstantiateItem("Axe_Stone", player.transform.position + Vector3.right * 6f);
+            fixture.WorldItem.Load();
+            SpriteRenderer worldSprite = fixture.WorldItem.GetComponentsInChildren<SpriteRenderer>(true)
+                .FirstOrDefault(value => value.enabled && value.sprite != null);
+            if (worldSprite == null) throw new InvalidOperationException("正式世界石斧没有真实 SpriteRenderer。");
+            WorldSortingMember member = fixture.WorldItem.GetComponent<WorldSortingMember>() ??
+                throw new InvalidOperationException("正式物品激活后没有接入世界排序。");
+            WorldSortingManager sorting = UnityEngine.Object.FindObjectOfType<WorldSortingManager>() ??
+                throw new InvalidOperationException("真实世界没有排序管理器。");
+            sorting.GetSortingKey(member.Category, out int expectedLayer, out int expectedOrder);
+            SortingGroup group = worldSprite.GetComponentsInParent<SortingGroup>(true).LastOrDefault(value => value.enabled &&
+                (value.transform == fixture.WorldItem.transform || value.transform.IsChildOf(fixture.WorldItem.transform)));
+            bool sortingMatches = (group != null ? group.sortingLayerID : worldSprite.sortingLayerID) == expectedLayer &&
+                (group != null ? group.sortingOrder : worldSprite.sortingOrder) == expectedOrder;
+            string category = member.Category;
+            int worldGuid = fixture.WorldItem.itemData.Guid;
+            bool realWorldItemLoaded = fixture.WorldItem.IsInitialized;
+            bool worldVisible = member.IsWorldVisible && !fixture.WorldItem.InHand;
+            // 世界物同帧采真实排序，跨帧绑定另用正式手持入口，避免散落物按规则转为轻量掉落。
+            fixture.Items.DespawnItem(fixture.WorldItem, false);
+            bool worldItemReleased = fixture.Items.GetItemByGuid(worldGuid) == null;
+            fixture.WorldItem = null;
+            fixture.Attachment = new GameObject("Lua渲染夹具_自有手持挂点");
+            fixture.Attachment.transform.position = player.transform.position + Vector3.right * 2f;
+            ItemData heldData = GameRes.ExistingInstance.CreateItemData("Axe_Stone");
+            heldData.Stack.CanBePickedUp = false;
+            fixture.Item = fixture.Items.InstantiateHeldItem(heldData, player, fixture.Attachment.transform);
             fixture.Item.Load();
             SpriteRenderer external = fixture.Item.GetComponentsInChildren<SpriteRenderer>(true)
                 .FirstOrDefault(value => value.enabled && value.sprite != null);
             if (external == null) throw new InvalidOperationException("正式石斧没有真实 SpriteRenderer。");
+            int itemInstanceId = fixture.Item.GetInstanceID();
+            int rendererInstanceId = external.GetInstanceID();
+            uint itemGeneration = fixture.Item.RuntimeGeneration;
             SpriteRenderer body = player.GetComponentsInChildren<SpriteRenderer>(true)
                 .FirstOrDefault(value => value.enabled && value.sprite != null && value.sharedMaterial != null &&
                     value.sharedMaterial.HasProperty("_BodyMinV") && fixture.Controller.Renderers.Contains(value));
@@ -75,19 +117,12 @@ public static partial class GameplayTestPresentationRuntimeProbe
             originalBlock.SetFloat(bodyMinId, -987f);
             external.SetPropertyBlock(originalBlock);
 
-            WorldSortingMember member = fixture.Item.GetComponent<WorldSortingMember>() ??
-                throw new InvalidOperationException("正式物品激活后没有接入世界排序。");
-            WorldSortingManager sorting = UnityEngine.Object.FindObjectOfType<WorldSortingManager>() ??
-                throw new InvalidOperationException("真实世界没有排序管理器。");
-            sorting.GetSortingKey(member.Category, out int expectedLayer, out int expectedOrder);
-            SortingGroup group = external.GetComponentsInParent<SortingGroup>(true).LastOrDefault(value => value.enabled &&
-                (value.transform == fixture.Item.transform || value.transform.IsChildOf(fixture.Item.transform)));
-            bool sortingMatches = (group != null ? group.sortingLayerID : external.sortingLayerID) == expectedLayer &&
-                (group != null ? group.sortingOrder : external.sortingOrder) == expectedOrder;
             fixture.Controller.RegisterExternalRenderers(fixture.Item.transform);
             fixture.Controller.RegisterExternalRenderers(fixture.Item.transform);
             yield return null;
             yield return null;
+            if (fixture.Item == null || !fixture.Item.IsInitialized || fixture.Item.RuntimeGeneration != itemGeneration || external == null)
+                throw new InvalidOperationException("正式自有手持石斧或 SpriteRenderer 在 MPB 等待期间被回收或换代。");
             var submitted = new MaterialPropertyBlock();
             external.GetPropertyBlock(submitted);
             bool registered = fixture.Controller.Renderers.Contains(external);
@@ -132,7 +167,15 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["realItemLoaded"] = fixture.Item.IsInitialized, ["itemId"] = fixture.Item.itemData.IDName,
                 ["realPlayerController"] = fixture.Controller.isActiveAndEnabled,
                 ["bodyVisible"] = body.gameObject.activeInHierarchy && body.enabled && body.color.a > 0f,
-                ["worldSortingMatches"] = sortingMatches, ["category"] = member.Category,
+                ["worldSortingMatches"] = sortingMatches, ["category"] = category,
+                ["realWorldItemLoaded"] = realWorldItemLoaded, ["worldVisible"] = worldVisible,
+                ["worldGuid"] = worldGuid, ["worldItemReleased"] = worldItemReleased,
+                ["heldGuid"] = fixture.Item.itemData.Guid, ["heldInHand"] = fixture.Item.InHand,
+                ["ownedByPlayer"] = ReferenceEquals(fixture.Item.Owner, player),
+                ["selfOwnedAttachment"] = fixture.Item.transform.parent == fixture.Attachment.transform,
+                ["itemInstanceId"] = itemInstanceId, ["currentItemInstanceId"] = fixture.Item.GetInstanceID(),
+                ["rendererInstanceId"] = rendererInstanceId, ["currentRendererInstanceId"] = external.GetInstanceID(),
+                ["itemGeneration"] = itemGeneration, ["currentItemGeneration"] = fixture.Item.RuntimeGeneration,
                 ["registered"] = registered, ["registrationCount"] = registrations,
                 ["sharedPlayerMaterial"] = sharedPlayerMaterial,
                 ["submittedBodyMin"] = submittedMin, ["expectedBodyMin"] = external.sprite.bounds.min.y,
@@ -151,6 +194,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
         finally { fixture.Dispose(); }
         result["itemReleased"] = fixture.Item == null || fixture.Item.IsInPool || fixture.Item.DestructionHandled;
         result["ownEffectReleased"] = fixture.Effect == null || !fixture.Effect.activeSelf;
+        yield return null;
+        result["attachmentReleased"] = fixture.Attachment == null;
         complete(result);
     }
     #endregion

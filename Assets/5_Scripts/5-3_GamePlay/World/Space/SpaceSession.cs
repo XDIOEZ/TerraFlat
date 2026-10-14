@@ -135,6 +135,7 @@ namespace FlatWorld.Spaceflight
         }
         public static void EndSession()
         {
+            SpaceMgr.ExistingInstance?.ReleaseRetainedPresentationCache();
             if (Current == null) return;
             Current.running = false;
             Current.ResetPresentationHistory();

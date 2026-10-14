@@ -342,9 +342,13 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
     /// - 停止所有仍在运行的随机地图协程
     /// - 清空区块字典引用
     /// </summary>
-    public void OnSceneChange()
+    public void OnSceneChange() => OnSceneChange(false);
+
+    public void OnSceneChange(bool retainPresentationPool)
     {
-        ResetWorldRuntimeForSceneChange();
+        retainPresentationPool &= SceneTransitionChunkViewCachingEnabled && !FlatWorld.Networking.GameNetwork.IsOnline &&
+            GameManager.Instance?.IsInGameWorld == true && !IsWorldRuntimeShuttingDown;
+        ResetWorldRuntimeForSceneChange(retainPresentationPool);
         // 停止所有正在运行的协程
         foreach (Coroutine coroutine in RandomMapCoroutines)
         {

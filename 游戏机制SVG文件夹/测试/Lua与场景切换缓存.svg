@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="880" viewBox="0 0 1200 880">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10" fill="#7196b9"/></marker></defs>
+<style>text{font-family:'Microsoft YaHei',sans-serif;fill:#e3edf7} .title{font-size:30px;font-weight:700}.head{font-size:22px;font-weight:700}.body{font-size:18px}.note{font-size:16px;fill:#afc4d9}.box{fill:#142c41;stroke:#355978;stroke-width:2}.link{stroke:#7196b9;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+<rect width="1200" height="880" rx="20" fill="#0b1928"/>
+<text x="48" y="58" class="title">Lua 测试加速：资源跨编译缓存 + 地面／太空表现复用</text>
+<text x="48" y="91" class="note">首次加载生成缓存；之后复用可安全保存的输入和对象，当前玩法数据与 C# 绑定仍重新接入。</text>
+<rect x="40" y="120" width="1120" height="294" rx="18" class="box"/>
+<text x="65" y="157" class="head">① Lua 专用 GameRes 缓存 · Library/FlatWorldGameplayTests/GameResCache</text>
+<rect x="68" y="182" width="238" height="126" rx="12" fill="#214365"/>
+<text x="88" y="216" class="body">开始 Lua 的 PlayMode</text><text x="88" y="249" class="note">完整 C# 域重载照常执行</text><text x="88" y="278" class="note">检查资源、配置、解析契约</text>
+<path d="M306 244H354" class="link"/>
+<rect x="364" y="182" width="375" height="126" rx="12" fill="#185447"/>
+<text x="385" y="216" class="body">命中：恢复源资产与物品解析输入</text><text x="385" y="249" class="note">Prefab / Sprite / Material 的持久引用</text><text x="385" y="278" class="note">资源输入变化或文件损坏 → 正常重建</text>
+<path d="M739 244H785" class="link"/>
+<rect x="795" y="182" width="337" height="126" rx="12" fill="#234157"/>
+<text x="815" y="216" class="body">按当前代码绑定 → 正式 Ready</text><text x="815" y="249" class="note">新句柄、新工厂、新运行时模板</text><text x="815" y="278" class="note">MOD 注册与最终引用校验继续</text>
+<text x="68" y="345" class="body">普通玩法代码编译后，源资源缓存继续可用；DTO 格式或解析器变更会使输入缓存失效。</text>
+<text x="68" y="379" class="note">只有完整资源加载成功才写缓存；失败或中断丢弃本轮暂存。普通游戏入口沿用原加载方式。</text>
+<rect x="40" y="436" width="1120" height="304" rx="18" class="box"/>
+<text x="65" y="473" class="head">② 地面 ⇄ 太空切换 · 同一存档、同一次 PlayMode 内复用表现</text>
+<rect x="68" y="501" width="290" height="147" rx="12" fill="#29472d"/>
+<text x="89" y="534" class="body">离开地面：保留 9 个区块壳</text><text x="89" y="568" class="note">解除旧数据、导航和表现租约</text><text x="89" y="599" class="note">移入持久池，关闭对象</text><text x="89" y="630" class="note">回来时绑定当前世界数据</text>
+<path d="M358 562H424" class="link"/><path d="M428 605H364" class="link"/>
+<rect x="436" y="501" width="296" height="147" rx="12" fill="#344467"/>
+<text x="457" y="534" class="body">离开太空：保留 2 个星区</text><text x="457" y="568" class="note">星体根关闭，场景正常卸载</text><text x="457" y="599" class="note">回来复用星体、刷新当前姿态</text><text x="457" y="630" class="note">超过容量淘汰最久未用的内容</text>
+<path d="M732 578H785" class="link"/>
+<rect x="795" y="501" width="337" height="147" rx="12" fill="#544229"/>
+<text x="815" y="534" class="body">飞船表现也有独立复用池</text><text x="815" y="568" class="note">船根和部件有数量上限</text><text x="815" y="599" class="note">关闭碰撞与交互，返回重新绑定</text><text x="815" y="630" class="note">权威船体与宇宙时钟照常推进</text>
+<text x="68" y="684" class="body">退出存档、结束会话或资源版本变动时释放缓存，避免把旧对象带进新的世界。</text>
+<text x="68" y="718" class="note">地面区块壳复用省掉实例化；地形数据恢复、流送、导航和物理收尾仍遵循正式入口。</text>
+<text x="48" y="784" class="head">本轮自动回归：38 系统 · 39 快速规则 · 51 PlayMode 案例</text>
+<text x="48" y="821" class="body">GameRes：冷 41.2 s → 编译后热 13.6 s；场景往返检查真实实例复用与世界就绪。</text>
+<text x="48" y="850" class="note">性能报告分别记录资源阶段与整场测试耗时；自动回归提供证据，玩法与画面由用户验收。</text>
+</svg>

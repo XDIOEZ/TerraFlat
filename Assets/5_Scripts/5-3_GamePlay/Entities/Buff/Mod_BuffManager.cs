@@ -343,7 +343,7 @@ public partial class Mod_BuffManager : Module
         for (int currentTier = 1; currentTier <= BloodLossBuffIds.MaxTier; currentTier++)
         {
             string currentId = BloodLossBuffIds.GetIdForTier(currentTier);
-            if (!HasBuff(currentId))
+            if (!ActiveBuffs.ContainsKey(currentId))
                 continue;
 
             highestActiveTier = currentTier;
@@ -370,8 +370,13 @@ public partial class Mod_BuffManager : Module
 
     public bool HasBuff(string buffId)
     {
-        return !string.IsNullOrWhiteSpace(buffId) &&
-               ActiveBuffs.ContainsKey(buffId);
+        if (string.IsNullOrWhiteSpace(buffId)) return false;
+        if (ActiveBuffs.ContainsKey(buffId)) return true;
+        // 来源键负责实例归属，表现查询仍按同一个定义身份判断是否存在。
+        foreach (BuffInstance runtime in ActiveBuffs.Values)
+            if (runtime != null && !string.IsNullOrEmpty(runtime.SourceKey) &&
+                ActiveBuffs.Comparer.Equals(runtime.DefinitionId, buffId)) return true;
+        return false;
     }
 
     public bool TryGetBuff(string buffId, out BuffInstance runtime)

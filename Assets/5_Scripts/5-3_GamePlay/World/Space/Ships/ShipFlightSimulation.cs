@@ -381,7 +381,7 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             passenger.IsInSpace = true; passenger.SurfaceDescending = passenger.LandingResolved = passenger.LandingSelected = false;
             bool began = DimensionManager.Instance.TryBeginPlanetLanding(player, WorldAddress.FromWorldKey(SpaceSectorCoordinates.SceneKey(GetPassengerPosition(passenger).Sector)), player.transform.position);
-            if (began) ReleaseViews();
+            if (began) SuspendViews();
             while (began && DimensionManager.Instance.IsTransitioning) yield return null;
             if (IsSpaceView)
             {
@@ -413,7 +413,7 @@ namespace FlatWorld.Spaceflight
             if (player == null) { transitionRunning = false; yield break; }
             SpacePassengerState passenger = GetPassenger(player);
             passenger.IsInSpace = false;
-            ReleaseViews();
+            SuspendViews();
             bool began = DimensionManager.Instance.TryBeginPlanetLanding(player, WorldAddress.FromWorldKey(world), position);
             while (began && DimensionManager.Instance.IsTransitioning) yield return null;
             if (began && SceneManager.GetActiveScene().name == world) RestorePassengerPose(ItemMgr.Instance?.User_Player);

@@ -6,12 +6,22 @@ test.runtime("survival", "temperature_conditions", {}, function(data)
     assert(type(data.actualAmbient) == "number", "没有读取真实所在地环境温度")
     assert(math.abs(data.beforeExhaustion - .25) < .0001 and not data.coldBeforeExhaustion,
         "危险温度缓冲没有逐步消耗或疾病提前出现")
+    assert(data.coldTemperature < data.safeMinimum,
+        "耗尽冷缓冲时角色体温没有处于正式危险范围")
     assert(data.afterExhaustion == 0 and data.coldAfterExhaustion and not data.hotWhileCold,
         "低温缓冲耗尽后没有得到真实冻伤 Buff")
+    assert(data.coldConditionSourceKey == "temperature:hypothermia" and
+        data.coldConditionDefinitionId == "低温冻伤", "冻伤 Buff 的正式来源或定义不匹配")
+    assert(data.hotTemperature > data.safeMaximum,
+        "切换高温后角色体温没有处于正式危险范围")
     assert(data.hotAfterSwitch and not data.coldAfterSwitch and data.bufferAfterSwitch == 0,
         "冷热切换重置共用缓冲或保留相反疾病")
+    assert(data.hotConditionSourceKey == "temperature:heatstroke" and
+        data.hotConditionDefinitionId == "热射病", "热射病 Buff 的正式来源或定义不匹配")
     assert(not data.coldAfterSafe and not data.hotAfterSafe and
         math.abs(data.bufferAfterSafe - .5) < .0001, "回到安全体温后疾病未移除或缓冲未逐步恢复")
+    assert(data.safeTemperature >= data.safeMinimum and data.safeTemperature <= data.safeMaximum,
+        "回温后角色体温仍在危险范围")
     assert(data.maximumBuffer > data.bufferAfterSafe and data.restoredInitialized and
         data.restoredGuid == data.expectedGuid and math.abs(data.restoredBuffer - data.bufferAfterSafe) < .0001,
         "生物快照重新加载把剩余缓冲补满或改变身份")

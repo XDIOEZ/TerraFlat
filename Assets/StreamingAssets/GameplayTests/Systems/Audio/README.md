@@ -1,5 +1,7 @@
 # 音频
 
+2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
+
 快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle`。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
@@ -12,4 +14,4 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `audio/voice_l
 
 关键流程待补：设备实际听感、测量最终声压/立体声方向、淡入淡出时间推进、并发拒绝/抢占优先级、Mixer 路由、监听器解绑/重绑与场景迁移、声音设备缺失和暂停恢复。线性衰减参数和远声坐标断言不能证明硬件上实际响度正确。
 
-本轮仅静态编写，未编译、未播放测试录音；听感和最终验收由用户执行。
+本轮已编译并执行声源与句柄断言，未验收测试声音；听感和最终验收由用户执行。

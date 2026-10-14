@@ -741,7 +741,8 @@
         "sector_rules",
         "ship_rules",
         "space_gameplay",
-        "ship_damage_gameplay"
+        "ship_damage_gameplay",
+        "presentation_cache"
       ],
       "rulesCoverage": "partial"
     },
@@ -1173,7 +1174,8 @@
       "coverageDocument": "GameplayTests/Systems/Testing/README.md",
       "integrationCaseIds": [
         "testing_queue_gameplay",
-        "testing_cleanup_gameplay"
+        "testing_cleanup_gameplay",
+        "testing_resource_cache_gameplay"
       ],
       "rulesCoverage": "partial"
     }

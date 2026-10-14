@@ -50,3 +50,4 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - 最终逐小步经 Navigation.CanStep；圆心线段到阻挡 AABB 的扫掠处理身体净空，软液体成本仅按中心判定。Steering 不将中心推入更贵地形，飞行态不受地面水流推动。
 - 未知格阻挡，转弯净空不足先对齐格心；允许短暂视觉重叠，近战名额由战斗 Engagement Slot 控制。Native Unreachable 延迟重试与 GO 完整总代价拒绝是不同能力。
 - 连续 Steering/密度默认开启，GM 关闭时仍保留 Flow/地形扫掠，不启用单格预约。
+- `Mod_Mover_AI.StopMovement` 是明确取消目标和路径；模拟范围休眠仍用独立 Pause 语义保留恢复条件。AI 真实推进 Lua 用自有同阵营生物隔离玩家避让，并检查到达后结束和取消后无目标/路径。

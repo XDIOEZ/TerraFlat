@@ -82,13 +82,17 @@ public static partial class GameplayTestPresentationRuntimeProbe
             service.SetMasterVolume(.8f, false);
             service.SetBusVolume(loop.Bus, .75f, false);
             service.SetMuted(false, false);
+            yield return null;
             var alreadyPlaying = new HashSet<AudioSource>(service.GetComponentsInChildren<AudioSource>(true).Where(value => value.isPlaying));
+            int nearPlayFrame = Time.frameCount;
             AudioHandle handle = fixture.Play(loop, AudioPlayOptions.Attached(player.transform));
             if (!handle.IsValid) throw new InvalidOperationException("正式角色循环声音没有取得播放句柄。");
             AudioSource source = service.GetComponentsInChildren<AudioSource>(true)
                 .SingleOrDefault(value => value.loop && loop.Clips.Contains(value.clip) && value.isPlaying && !alreadyPlaying.Contains(value));
             if (source == null) throw new InvalidOperationException("播放句柄没有对应真正播放录音的 AudioSource。");
-            yield return null;
+            // Play 已同步定位声源；同帧比较听者，避免协程先于下一次 LateUpdate 读取移动中的旧坐标。
+            Vector3 nearOffset = source.transform.position - listener.transform.position;
+            int nearSampleFrame = Time.frameCount;
             float originalVolume = source.volume;
             service.SetVolumeScale(handle, .5f);
             float scaledVolume = source.volume;
@@ -101,20 +105,20 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool retainedWhenMuted = handle.IsPlaying;
             service.SetMuted(false, false);
             float unmutedVolume = source.volume;
-            Vector3 nearOffset = source.transform.position - listener.transform.position;
             int beforeFarShort = service.ActiveVoiceCount;
             AudioHandle farShort = fixture.Play(shortCue,
                 AudioPlayOptions.At(player.transform.position + Vector3.right * (shortCue.MaxDistance + 2f)));
             int afterFarShort = service.ActiveVoiceCount;
             Vector3 farPosition = player.transform.position + Vector3.right * (loop.MaxDistance + 2f);
             var beforeFarLoop = new HashSet<AudioSource>(service.GetComponentsInChildren<AudioSource>(true).Where(value => value.isPlaying));
+            int farPlayFrame = Time.frameCount;
             AudioHandle farLoop = fixture.Play(loop, AudioPlayOptions.At(farPosition));
             AudioSource[] loopSources = service.GetComponentsInChildren<AudioSource>(true)
                 .Where(value => value.loop && loop.Clips.Contains(value.clip) && value.isPlaying && !beforeFarLoop.Contains(value)).ToArray();
             if (loopSources.Length != 1) throw new InvalidOperationException("远处循环没有对应唯一的正式空间音源。");
             AudioSource farSource = loopSources[0];
-            yield return null;
             Vector3 farOffset = farSource.transform.position - listener.transform.position;
+            int farSampleFrame = Time.frameCount;
             bool nearPlaying = source.isPlaying && handle.IsPlaying;
             bool nearSpatial = source.spatialBlend == 1f && source.rolloffMode == AudioRolloffMode.Linear;
             bool distancePreserved = source.minDistance == loop.MinDistance && source.maxDistance == loop.MaxDistance;
@@ -131,6 +135,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["clipSamples"] = source.clip != null ? source.clip.samples : 0,
                 ["playing"] = nearPlaying, ["spatialLinear"] = nearSpatial, ["cueDistancesPreserved"] = distancePreserved,
                 ["sourceUnmuted"] = !source.mute,
+                ["nearPlayFrame"] = nearPlayFrame, ["nearSampleFrame"] = nearSampleFrame,
+                ["farPlayFrame"] = farPlayFrame, ["farSampleFrame"] = farSampleFrame,
                 ["nearOffsetX"] = nearOffset.x, ["nearOffsetY"] = nearOffset.y, ["nearOffsetZ"] = nearOffset.z,
                 ["initialVolume"] = originalVolume, ["scaledVolume"] = scaledVolume,
                 ["masterVolume"] = masterVolume, ["busVolume"] = busVolume,

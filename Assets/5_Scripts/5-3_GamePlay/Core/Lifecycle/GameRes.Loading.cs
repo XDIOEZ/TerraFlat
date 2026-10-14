@@ -156,9 +156,16 @@ public partial class GameRes
     /// <summary>先释放旧会话，再执行声明式计划；任何失败都清空目录并保持不可进入世界。</summary>
     private IEnumerator RunResourceSession()
     {
+        try { yield return RunResourceSessionCore(); }
+        finally { GameplayTestResourceCache.Complete(false); }
+    }
+
+    private IEnumerator RunResourceSessionCore()
+    {
         Exception prepareError = null;
         try
         {
+            GameplayTestResourceCache.Begin();
             ItemMgr.GetInstance()?.ClearResourcePools();
             ClearResourceSession();
             resourceAssets = new ResourceAssetScope();
@@ -178,6 +185,7 @@ public partial class GameRes
             yield break;
         }
         LoadState = ResourceLoadState.Ready;
+        GameplayTestResourceCache.Complete(true);
         RestoreBackgroundLoadingPolicy();
         IsStartupReady = true;
         loadCoroutine = null;
@@ -190,6 +198,7 @@ public partial class GameRes
     /// <summary>保留原始异常与阶段，清理异常作为附加原因记录，不覆盖首个失败。</summary>
     private void FailResourceSession(string stage, Exception exception)
     {
+        GameplayTestResourceCache.Complete(false);
         try { ClearResourceSession(); }
         catch (Exception cleanupError) { exception = new AggregateException(exception, cleanupError); }
         LoadState = ResourceLoadState.Failed;
@@ -206,6 +215,7 @@ public partial class GameRes
     private void DisposeResourceSession()
     {
         if (instance != this) return;
+        GameplayTestResourceCache.Complete(false);
         if (inGameReloadCoroutine != null) StopCoroutine(inGameReloadCoroutine);
         cancelInPlaceReload?.Invoke();
         if (reloadWorldOwner != null)
@@ -396,7 +406,7 @@ public partial class GameRes
             string prefabKey = StartupPrefabKeys[i];
             Debug.Log($"[GameRes] 启动 UI 加载：{prefabKey} ({location.PrimaryKey})");
 
-            var handle = resourceAssets.Own(Addressables.LoadAssetAsync<GameObject>(location));
+            var handle = resourceAssets.Load<GameObject>(location);
             while (!handle.IsDone)
             {
                 float itemProgress = (i + handle.PercentComplete) / selected.Count;
@@ -504,7 +514,7 @@ public partial class GameRes
             var batch = new List<AsyncOperationHandle<T>>(count);
             for (int i = 0; i < count; i++)
             {
-                batch.Add(resourceAssets.Own(Addressables.LoadAssetAsync<T>(locations[start + i])));
+                batch.Add(resourceAssets.Load<T>(locations[start + i]));
                 if (ShouldYieldResourceWork()) yield return null;
             }
             while (batch.Any(handle => !handle.IsDone))
@@ -518,7 +528,7 @@ public partial class GameRes
                 if (ShouldYieldResourceWork()) yield return null;
             }
             loadPipeline.Report(0.8f * (start + count) / locations.Count);
-            yield return null;
+            if (!GameplayTestResourceCache.Active || ShouldYieldResourceWork()) yield return null;
         }
     }
 

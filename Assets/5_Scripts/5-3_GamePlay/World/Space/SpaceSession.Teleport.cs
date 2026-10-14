@@ -61,7 +61,7 @@ namespace FlatWorld.Spaceflight
                 SetTerrainSuppression(player, false);
                 if (!IsSpaceView)
                 {
-                    ReleaseViews();
+                    SuspendViews();
                     migrationStarted = DimensionManager.Instance.TryBeginPlanetLanding(player,
                         WorldAddress.FromWorldKey(SpaceSectorCoordinates.SceneKey(motion.Sector)), Vector2.zero);
                     if (!migrationStarted) yield break;

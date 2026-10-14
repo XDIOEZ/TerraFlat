@@ -5,6 +5,8 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 
 # Buff
 
+`Mod_BuffManager.HasBuff(definitionId)` 查询常规及独立来源实例，比较沿用 ActiveBuffs 的身份语义；`TryGetBuff`/续期/普通出血等级操作仍只取常规键，来源实例用 EnsureSourceBuff/RemoveSourceBuff 的归属接口。对应现场 Lua 在 Buff/gameplay.lua，覆盖同定义双来源、删一保留、删完消失与常规出血共存。
+
 ## 入口
 
 - `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/`：`Mod_BuffManager/BuffInstance` 生命周期；`Stacks/Rain` 水体/淋雨时钟；`BuffDefinition/Dto/Factory` 定义；`BuffEffectDispatcher/BuffEffectTypeIds` 效果注册。

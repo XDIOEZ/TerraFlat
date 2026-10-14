@@ -33,15 +33,17 @@ internal sealed class ResourceLoadPipeline : IDisposable
     private Step currentStep;
     private bool disposed;
     private readonly Func<bool> isInteractive;
+    private readonly Func<double?> workBudget;
     private int workFrame = -1;
     private long workStarted;
     public string CurrentStage => currentStep?.Id ?? "plan";
     public Exception Failure { get; private set; }
 
-    public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null)
+    public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null, Func<double?> workBudget = null)
     {
         this.report = report;
         this.isInteractive = isInteractive;
+        this.workBudget = workBudget;
     }
 
     /// <summary>所有嵌套阶段共用同帧预算，菜单显示后累计工作超过 1ms 就让出下一帧。</summary>
@@ -53,7 +55,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
             workFrame = frame;
             workStarted = Stopwatch.GetTimestamp();
         }
-        double budget = isInteractive?.Invoke() == true ? 1 : 4;
+        double budget = workBudget?.Invoke() ?? (isInteractive?.Invoke() == true ? 1 : 4);
         return (Stopwatch.GetTimestamp() - workStarted) * 1000.0 / Stopwatch.Frequency >= budget;
     }
 

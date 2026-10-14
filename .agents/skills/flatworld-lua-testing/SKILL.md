@@ -27,6 +27,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 - 场景：`Assets/3_Scenes/Development/GameplayTestScene.unity`。
 - Editor：`Assets/Editor/FlatWorld/GameplayMCP/GameplayTestPipelineCoordinator.cs` 串联 Test Framework；`GameplayTestDashboardWindow.cs` 是测试中心，`GameplayTestPipelineTool.cs` 提供 MCP 入口。
 - CLI：`Tools/GameplayTesting/run_suite.py`；安全前置与集成测试分别在 `Assets/Tests/FlatWorld/{EditMode,PlayMode}/`。
+- Lua 专用资源缓存：`GameplayTestResourceCache.cs` + Editor `GameplayTestResourceCacheStore.cs`，仅测试入口启用，保存源资产与解析 DTO 到 `Library/FlatWorldGameplayTests/GameResCache/`；普通玩法 C# 编译可复用，资源/解析契约/平台变化失效。菜单 `FlatWorld/测试/清理Lua测试GameRes缓存` 可冷建；`testing/resource_cache` 报告实际命中和完整资源阶段耗时，工厂、模块绑定及最终校验仍按当前 C# 重建。
 - 清单与 Lua：`Assets/StreamingAssets/GameplayTests/`。命令、清单字段及运行选项见 [通用说明](../../../Assets/StreamingAssets/GameplayTests/README.md)；领域覆盖见 [系统索引](../../../Assets/StreamingAssets/GameplayTests/系统索引.md)、[太空](../../../Assets/StreamingAssets/GameplayTests/Systems/Space/Gameplay/README.md)、[气液](../../../Assets/StreamingAssets/GameplayTests/Systems/IndustrialFluids/Gameplay/README.md)。
 - 默认 `all-systems-rules.json` 只跑各系统的快速规则，各系统在 `Systems/<系统>/`；现有机械、气液、太空专项保留并迁入相应系统目录。`systems.catalog.json` 登记代码归属、依赖、规则案例、现场入口及覆盖说明；目前均为部分覆盖，不将存在入口当成全覆盖。
 

@@ -14,7 +14,15 @@
       "id": "testing_cleanup_gameplay",
       "name": "Lua跨用例同步与跨帧收尾核对（需前置）",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-cleanup.lua",
-      "dependsOn": ["testing_queue_gameplay"],
+      "dependsOn": [
+        "testing_queue_gameplay"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "testing_resource_cache_gameplay",
+      "name": "Lua专用GameRes跨编译缓存与正式目录",
+      "luaPath": "GameplayTests/Systems/Testing/gameplay-resource-cache.lua",
       "enabled": true
     }
   ]

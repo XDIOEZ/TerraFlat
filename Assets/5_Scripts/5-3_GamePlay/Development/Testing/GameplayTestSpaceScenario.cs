@@ -17,7 +17,32 @@ using RuntimeAddress = FlatWorld.WorldModel.WorldAddress;
 public sealed partial class GameplayTestSpaceScenario : IDisposable
 {
     #region 操作契约与隔离状态
-    public static bool IsMigrationExpected { get; private set; }
+    private static bool scenarioMigrationExpected;
+    private static int externalMigrationLeases;
+    public static bool IsMigrationExpected
+    {
+        get => scenarioMigrationExpected || externalMigrationLeases > 0 && GameManager.Instance?.IsInGameWorld == true;
+        private set => scenarioMigrationExpected = value;
+    }
+
+    public static IDisposable BeginExpectedMigration(Player player)
+    {
+        // 独立隔离探针共用迁移租约，正常维度退出不会被误判为测试世界关闭。
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        externalMigrationLeases++;
+        return new ExpectedMigrationLease();
+    }
+
+    private sealed class ExpectedMigrationLease : IDisposable
+    {
+        private bool released;
+        public void Dispose()
+        {
+            if (released) return;
+            released = true;
+            externalMigrationLeases--;
+        }
+    }
     private readonly CancellationTokenSource cancellation = new();
     private readonly List<ChunkLease> leases = new();
     private SpaceSession session;
@@ -323,6 +348,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             bool entered = session.EnterConsole(CurrentPlayer(), console);
             if (!entered) throw new InvalidOperationException("正式控制台拒绝进入驾驶。");
             JObject landed = ShipSnapshot(ship);
+            JObject surfaceViews = ShipViewSnapshot(ship);
             if (!ShipFixedStructureBuilder.TryRefill(CurrentPlayer(), templates, out reason))
                 throw new InvalidOperationException(reason);
             JObject filled = ShipSnapshot(ship);
@@ -334,6 +360,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             IsMigrationExpected = false;
             ProtectCurrentPlayer();
             JObject cruising = ShipSnapshot(ship);
+            JObject cruisingViews = ShipViewSnapshot(ship);
             session.ExitConsole(CurrentPlayer());
             controlledConsole = console;
             session.SetControl(console, Vector2.up, 0f);
@@ -363,6 +390,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 90d, "飞船未完成正式降落。");
             IsMigrationExpected = false;
             JObject landedAgain = ShipSnapshot(ship);
+            JObject returnedViews = ShipViewSnapshot(ship);
             results.Add(new JObject { ["templateId"] = template.Id, ["enteredConsole"] = entered,
                 ["landed"] = landed, ["filled"] = filled, ["lifting"] = lifting, ["cruising"] = cruising,
                 ["thrust"] = thrust, ["coast"] = coast, ["turned"] = turned, ["navigated"] = navigated,
@@ -370,11 +398,30 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 ["arrivalDistance"] = SpaceGameplaySettings.Current.NavigationArrivalDistanceMeters,
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
                 ["shipTransition"] = shipTransition,
-                ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain });
+                ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain,
+                ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returnedViews } });
             // 最后一艘保留正式降落现场，供紧随其后的 Lua 截图使用。
             if (index + 1 < ships.Count) yield return ReturnHome();
         }
         completed(new JObject { ["scope"] = "live-ship-flight", ["ships"] = results });
+    }
+
+    private JObject ShipViewSnapshot(ShipState ship)
+    {
+        // 仅采样本用例船体的真实表现，其他船的旧命中不能代替它的往返复用。
+        JObject result = session.ShipViewCacheSnapshot();
+        var pieceIds = new HashSet<string>();
+        foreach (ShipPieceState piece in ship.Pieces) pieceIds.Add(piece.PieceId);
+        var pieces = new JArray();
+        foreach (JObject row in (JArray)result["pieces"])
+            if (pieceIds.Contains(row.Value<string>("id"))) pieces.Add(row.DeepClone());
+        var presenters = new JArray();
+        foreach (JObject row in (JArray)result["presenters"])
+            if (row.Value<string>("id") == ship.ShipId) presenters.Add(row.DeepClone());
+        result["pieces"] = pieces;
+        result["presenters"] = presenters;
+        result["scene"] = SceneManager.GetActiveScene().name;
+        return result;
     }
 
     private IEnumerator CoastOwnedShip(ShipState ship, Action<JObject> completed)

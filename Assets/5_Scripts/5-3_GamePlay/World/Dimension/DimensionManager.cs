@@ -403,7 +403,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         SaveDataMgr.Instance.Save_And_WriteToDisk();
 
         ItemMgr.Instance.ReleasePlayerForWorldTransition(sourcePlayer);
-        ChunkMgr.ExistingInstance?.OnSceneChange();
+        ChunkMgr.ExistingInstance?.OnSceneChange(
+            SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(targetAddress.WorldKey));
         yield return null;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在创建目标维度…", 0.48f);
@@ -513,7 +514,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         if (currentPlayer != null)
             ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);
-        ChunkMgr.ExistingInstance?.OnSceneChange();
+        ChunkMgr.ExistingInstance?.OnSceneChange(
+            SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) || SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name));
 
         Scene previousScene = SceneManager.GetActiveScene();
         Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);

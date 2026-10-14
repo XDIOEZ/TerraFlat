@@ -29,6 +29,8 @@
 | 测试 | [PlayMode组合现场测试](测试/PlayMode组合现场测试.svg) | 20 个原缺入口系统共用 12 套组合现场，正式采样、Lua断言与失败收尾，以及尚未验收的覆盖边界。 |
 | 测试 | [同进程联机假人Lua测试](测试/同进程联机假人Lua测试.svg) | 独立 Mirror 假连接经过正式收发与服务端处理，Lua 检查入世、身份、输入、重连、拾取租约和失败收尾。 |
 
+| 测试 | [Lua与场景切换缓存](测试/Lua与场景切换缓存.svg) | Lua 专用 GameRes 跨编译输入缓存，以及地面区块、星体和飞船表现的有界复用与释放边界。 |
+
 创建说明：[flatworld-mechanics-svg](../.agents/skills/flatworld-mechanics-svg/SKILL.md)。
 
 风力规则来源：[WindEnvironmentRules.cs](../Assets/5_Scripts/5-3_GamePlay/World/Environment/WindEnvironmentRules.cs)。图示用于解释规则，玩法效果由用户验收。

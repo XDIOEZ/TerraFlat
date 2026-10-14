@@ -2,11 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
+using FlatWorld.Networking;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class SpaceMgr : SingletonAutoMono<SpaceMgr>
+public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
 {
     #region 星区场景资源租约
     private sealed class SectorView
@@ -14,9 +15,14 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
         public SpaceSectorId Sector;
         public Scene Scene;
         public Transform Root;
-        public bool Wanted, Unloading;
+        public bool Wanted, Unloading, PresentationReady;
         public Coroutine Loading;
         public readonly List<Planet> Planets = new();
+        public SpaceSessionState SessionState;
+        public UniverseState Data;
+        public GameRes ResourceOwner;
+        public ulong ResourceRevision;
+        public long LastCached;
     }
     public List<Planet> RuntimePlanets = new();
     private readonly Dictionary<string, Planet> runtimePlanetDict = new(StringComparer.Ordinal);
@@ -34,6 +40,7 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     {
         base.Awake();
         if (instance != this) return;
+        if (!GameNetwork.IsOnline) DontDestroyOnLoad(transform.root.gameObject);
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
     private void Start()
@@ -55,17 +62,29 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
             eventOwner.Event_GameWorldExit -= OnWorldExit;
         }
         LocalSpacePresentationActive = false;
+        ClearRetainedSectors();
         base.OnDestroy();
     }
     private void OnActiveSceneChanged(Scene before, Scene after) => UpdateVisibility();
-    private void OnWorldExit() { Debug_ClearRuntimePlanets(); UpdateVisibility(); }
+    private void OnWorldExit()
+    {
+        bool retain = SectorPresentationCachingEnabled && !GameNetwork.IsOnline && GameManager.Instance?.IsInGameWorld == true;
+        if (!retain) ClearRetainedSectors();
+        releaseScratch.Clear(); releaseScratch.AddRange(sectors.Values);
+        foreach (SectorView view in releaseScratch)
+            if (!view.Unloading) StartCoroutine(ReleaseSector(view, retain));
+        presentationLoaded = false;
+        UpdateVisibility();
+    }
     private void UpdateVisibility()
     {
         string sceneName = SceneManager.GetActiveScene().name;
         bool visible = IsSpaceScene(sceneName);
         if (visible) EnsureSpaceSceneTime(sceneName);
         LocalSpacePresentationActive = visible;
-        foreach (SectorView view in sectors.Values) if (view.Root != null) view.Root.gameObject.SetActive(visible);
+        foreach (SectorView view in sectors.Values)
+            if (view.Root != null)
+                view.Root.gameObject.SetActive(visible && (GameNetwork.IsOnline || view.Wanted && !view.Unloading));
         if (starfield != null) starfield.gameObject.SetActive(visible);
     }
     private void EnsureBackground()
@@ -89,11 +108,20 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
         string key = SpaceSectorCoordinates.SceneKey(sector);
         Scene scene = SceneManager.GetSceneByName(key);
         if (!scene.IsValid() || !scene.isLoaded) scene = SceneManager.CreateScene(key);
+        if (TryRestoreRetainedSector(session, sector, scene, out SectorView restored))
+        {
+            sectors.Add(sector, restored);
+            return restored;
+        }
         GameObject root = new("星区资源_" + key);
         SceneManager.MoveGameObjectToScene(root, scene);
-        var view = new SectorView { Sector = sector, Scene = scene, Root = root.transform, Wanted = true };
+        var view = new SectorView { Sector = sector, Scene = scene, Root = root.transform, Wanted = true,
+            SessionState = session.State, Data = data.State, ResourceOwner = GameRes.ExistingInstance,
+            ResourceRevision = GameRes.ExistingInstance?.ItemDefinitionRevision ?? 0 };
         sectors.Add(sector, view);
+        SectorPresentationCreatedCount++;
         view.Loading = StartCoroutine(LoadSectorPresentation(session, view, data.State));
+        if (view.PresentationReady) view.Loading = null;
         return view;
     }
 
@@ -147,13 +175,18 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
                 }
                 yield return null;
             }
-            if (!pending) break;
+            if (!pending || !GameNetwork.IsOnline && IsSectorPresentationComplete(view))
+            {
+                view.PresentationReady = IsSectorPresentationComplete(view);
+                break;
+            }
             for (int frame = 0; frame < 120 && view.Wanted && !view.Unloading; frame++) yield return null;
         }
         view.Loading = null;
     }
     public void UpdateSectorLeases(SpaceSession session, IReadOnlyCollection<SpaceSectorId> required)
     {
+        PruneRetainedSectors(session);
         foreach (SectorView view in sectors.Values) view.Wanted = false;
         foreach (SpaceSectorId sector in required) EnsureSectorScene(session, sector);
         Player player = ItemMgr.Instance?.User_Player;
@@ -173,7 +206,7 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
         foreach (SectorView view in releaseScratch) StartCoroutine(ReleaseSector(view));
         UpdateVisibility();
     }
-    private IEnumerator ReleaseSector(SectorView view)
+    private IEnumerator ReleaseSector(SectorView view, bool allowRetention = true)
     {
         view.Unloading = true;
         // 高速跳过多个区时先保护真实玩家，资源卸载不能顺带销毁角色。
@@ -182,16 +215,24 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
                 if (player != null && player.gameObject.scene == view.Scene)
                 { player.transform.SetParent(null, true); DontDestroyOnLoad(player.gameObject); }
         if (view.Loading != null) StopCoroutine(view.Loading);
+        bool retain = allowRetention && TryRetainSector(view);
+        view.Loading = null;
         foreach (Planet planet in view.Planets)
             if (planet != null) { RuntimePlanets.Remove(planet); runtimePlanetDict.Remove(planet.planetData.BodyId); }
-        view.Planets.Clear();
-        if (view.Root != null) Destroy(view.Root.gameObject);
+        if (!retain)
+        {
+            view.Planets.Clear();
+            if (view.Root != null) Destroy(view.Root.gameObject);
+        }
         if (view.Scene.IsValid() && view.Scene.isLoaded)
         {
             AsyncOperation unload = SceneManager.UnloadSceneAsync(view.Scene);
             if (unload != null) yield return unload;
         }
-        sectors.Remove(view.Sector);
+        if (sectors.TryGetValue(view.Sector, out SectorView current) && ReferenceEquals(current, view))
+            sectors.Remove(view.Sector);
+        view.Unloading = false;
+        view.Scene = default;
     }
     public void MovePresentationToSector(GameObject item, SpaceSectorId sector)
     {
@@ -298,8 +339,9 @@ public class SpaceMgr : SingletonAutoMono<SpaceMgr>
     [FoldoutGroup("调试"), Button("清空运行时星区")]
     public void Debug_ClearRuntimePlanets()
     {
+        ClearRetainedSectors();
         releaseScratch.Clear(); releaseScratch.AddRange(sectors.Values);
-        foreach (SectorView view in releaseScratch) if (!view.Unloading) StartCoroutine(ReleaseSector(view));
+        foreach (SectorView view in releaseScratch) if (!view.Unloading) StartCoroutine(ReleaseSector(view, false));
         presentationLoaded = false;
     }
     [FoldoutGroup("调试"), Button("读取当前星区")] public void Debug_CreateSolarSystem() => Load();

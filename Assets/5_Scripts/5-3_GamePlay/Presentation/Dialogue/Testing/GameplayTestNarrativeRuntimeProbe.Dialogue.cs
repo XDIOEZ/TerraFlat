@@ -37,7 +37,7 @@ namespace FlatWorld.Dialogue
             {
                 if (disposed) return;
                 disposed = true;
-                if (Player != null && Presenter != null && ReadBubble(Player)?.GetComponentInChildren<TMP_Text>(true)?.text == OwnText)
+                if (Player != null && Presenter != null && ReadBubble()?.GetComponentInChildren<TMP_Text>(true)?.text == OwnText)
                     Presenter.HideImmediate();
                 if (ReferenceEquals(current, this)) current = null;
             }
@@ -45,10 +45,11 @@ namespace FlatWorld.Dialogue
         #endregion
 
         #region 实际气泡优先级与非交互性
-        private static Transform ReadBubble(Player player)
+        private static Transform ReadBubble()
         {
             UIManager manager = UIManager.ExistingInstance;
-            Transform root = manager?.GetPanelRootFor(player.transform);
+            // 正式 Presenter 将气泡挂在常驻 PanelRoot，角色所在场景的 UI 根并非气泡宿主。
+            Transform root = manager?.panelRoot;
             return root == null ? null : root.GetComponentsInChildren<RectTransform>(true)
                 .FirstOrDefault(value => value.name == RuntimeUIPrefabKeys.CharacterSpeechBubble && value.gameObject.activeInHierarchy);
         }
@@ -81,7 +82,7 @@ namespace FlatWorld.Dialogue
                 result["priorityAfterLower"] = (int)presenter.VisiblePriority;
                 result["blankAccepted"] = controller.Say("   ", CharacterSpeechPriority.Emergency, 15f, "lua-narrative");
                 result["equalAccepted"] = controller.Say(OwnText, CharacterSpeechPriority.Emergency, 15f, "lua-narrative");
-                Transform bubble = ReadBubble(player);
+                Transform bubble = ReadBubble();
                 TMP_Text text = bubble?.GetComponentInChildren<TMP_Text>(true);
                 CanvasGroup group = bubble?.GetComponent<CanvasGroup>();
                 result["actualText"] = text?.text;
