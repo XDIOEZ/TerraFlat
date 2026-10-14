@@ -201,6 +201,7 @@ namespace FlatWorld.Spaceflight
                 if (visual.transform.localPosition != local) visual.transform.localPosition = local;
             }
             SynchronizeDoorVisual();
+            SynchronizeAirSupplyIndicator();
             SynchronizePassageCollider();
         }
         public void OnInteractStart(Item actor)

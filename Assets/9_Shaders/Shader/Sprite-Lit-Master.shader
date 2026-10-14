@@ -6,6 +6,8 @@ Shader "Game/2D/Sprite-Lit-Master"
         [HideInInspector] _ConveyorAnimation("Conveyor Animation", Vector) = (0,0,0,0)
         [HideInInspector] _ConveyorSurface("Conveyor Surface", Vector) = (0,1,0,1)
         [HideInInspector] _ConveyorRegion("Conveyor Region", Vector) = (0,0,1,1)
+        [HideInInspector] _DeviceIndicatorRect("Device Indicator Local Rect", Vector) = (0,0,0,0)
+        [HideInInspector] _DeviceIndicatorTint("Device Indicator Tint", Color) = (1,1,1,0)
         _MaskTex("Mask", 2D) = "white" {}
         _NormalMap("Normal Map", 2D) = "bump" {}
 
@@ -84,6 +86,19 @@ Shader "Game/2D/Sprite-Lit-Master"
         HLSLINCLUDE
         #include "ConveyorSurface.hlsl"
         float4 _ConveyorAnimation, _ConveyorSurface, _ConveyorRegion;
+        float4 _DeviceIndicatorRect, _DeviceIndicatorTint;
+
+        // 指示灯只在指定本地矩形内重染，透明度为零时保留原图绿蓝色。
+        float4 ApplyDeviceIndicatorTint(float4 source, float2 localPosition)
+        {
+            if (_DeviceIndicatorTint.a <= 0.0) return source;
+            float2 inside = step(_DeviceIndicatorRect.xy, localPosition) *
+                step(localPosition, _DeviceIndicatorRect.zw);
+            float brightness = max(source.r, max(source.g, source.b));
+            source.rgb = lerp(source.rgb, brightness * _DeviceIndicatorTint.rgb,
+                inside.x * inside.y * saturate(_DeviceIndicatorTint.a));
+            return source;
+        }
         float _PlayerOccluder;
         float _PlayerOcclusionEnabled;
         float4 _PlayerOcclusionCenter;
@@ -246,6 +261,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             {
                 float2 conveyorUv = ConveyorSurfaceUv(i.uv.xy, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
                 half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
+                main = ApplyDeviceIndicatorTint(main, float2(i.uv.w, i.uv.z));
                 const half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, i.uv.xy);
 
                 // === 下半身剔除：根据 _BodyMinV/_BodyMaxV (实际传入 Local Y) 和 _BodyClip 控制 ===
@@ -528,6 +544,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             {
                 float2 conveyorUv = ConveyorSurfaceUv(i.uv, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
                 float4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
+                mainTex = ApplyDeviceIndicatorTint(mainTex, float2(i.localX, i.localY));
 
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);
