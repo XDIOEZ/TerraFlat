@@ -77,7 +77,23 @@ public sealed class ChunkEnvironmentRenderer : MonoBehaviour, IChunkViewRenderer
             changed.Kind == TerrainChangeKind.Environment && !changed.AffectsEnvironmentLayer(environmentLayerId) ||
             tile == null || material == null)
             return;
-        RefreshCellFromTerrain(changed.LocalCell.X, changed.LocalCell.Y);
+        if (!changed.IsBatch)
+        {
+            RefreshCellFromTerrain(changed.LocalCell.X, changed.LocalCell.Y);
+            return;
+        }
+        // 跨过显示阈值的格子也合并上传，土壤批次不会逐格提交显卡数据。
+        ChunkBatchRendererGroupService.BeginBulkSubmit();
+        try
+        {
+            int width = boundChunk.Terrain.Width;
+            foreach (int index in changed.GetCellIndices(width))
+                RefreshCellFromTerrain(index % width, index / width);
+        }
+        finally
+        {
+            ChunkBatchRendererGroupService.EndBulkSubmit();
+        }
     }
 
     private void RefreshCellFromTerrain(int x, int y)

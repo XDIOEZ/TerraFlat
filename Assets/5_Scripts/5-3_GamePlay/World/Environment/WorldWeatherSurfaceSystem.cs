@@ -14,6 +14,7 @@ public static class WorldWeatherSurfaceSystem
     private static SnowCoverConfig snowConfig;
     private static float[] ambientTemperatures = Array.Empty<float>();
     private static int[] activeCells = Array.Empty<int>();
+    private static SurfaceWaterSupply[] waterSupplies = Array.Empty<SurfaceWaterSupply>();
     private static readonly ProfilerMarker AdvanceChunkMarker = new("FlatWorld.Weather.SurfaceChunk");
     private static readonly ProfilerMarker ExposureMarker = new("FlatWorld.Weather.SurfaceExposure");
     private static readonly ProfilerMarker TemperatureMarker = new("FlatWorld.Weather.SurfaceTemperatures");
@@ -49,6 +50,7 @@ public static class WorldWeatherSurfaceSystem
         {
             ambientTemperatures = new float[terrain.CellCount];
             activeCells = new int[terrain.CellCount];
+            waterSupplies = new SurfaceWaterSupply[terrain.CellCount];
         }
         int activeCount;
         using (ExposureMarker.Auto())
@@ -63,6 +65,7 @@ public static class WorldWeatherSurfaceSystem
         SnowChanged.Clear();
         try
         {
+            int waterSupplyCount = 0;
             for (int i = 0; i < activeCount; i++)
             {
                 int index = activeCells[i];
@@ -72,14 +75,10 @@ public static class WorldWeatherSurfaceSystem
                 bool edited = terrain.TryGetEnvironmentValue(WorldSnowInteraction.EditedLayer, x, y,
                     out float editedValue) && editedValue > 0f;
                 terrain.TryGetEnvironmentValue(WorldSnowInteraction.DepthLayer, x, y, out float playerDepth);
-                var world = new Int2(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
                 float currentTemperature = ambientTemperatures[index];
                 if (!float.IsFinite(currentTemperature))
                     continue;
 
-                var local = new Vector2Int(x, y);
-                var sample = new RuntimeTerrainTileSample(chunk.Address, terrain,
-                    new Vector2Int(world.X, world.Y), local, terrain.GetCell(x, y), terrain.GetTopTileId(x, y));
                 float nextWeatherSnow = previousWeatherSnow;
                 float waterPoints = 0f;
                 bool snowChanged = false;
@@ -120,13 +119,16 @@ public static class WorldWeatherSurfaceSystem
                 if (snowChanged)
                     SnowChanged.Add(index);
                 if (waterPoints > 0f)
-                    using (WaterMarker.Auto())
-                        if (FarmlandSystem.SupplySurfaceWater(sample, waterPoints, false))
-                            SoilChanged.Add(index);
+                    waterSupplies[waterSupplyCount++] = new SurfaceWaterSupply(index, waterPoints);
             }
+            if (waterSupplyCount > 0)
+                using (WaterMarker.Auto())
+                    FarmlandSystem.SupplySurfaceWaterBatch(chunk, waterSupplies.AsSpan(0, waterSupplyCount), SoilChanged, true);
             if (SoilChanged.Count > 0 || SnowChanged.Count > 0)
                 using (PersistMarker.Auto())
                     SaveDataMgr.Instance.RecordWeatherSurfaceChunk(chunk, SoilChanged, SnowChanged);
+            if (waterSupplyCount > 0)
+                FarmlandSystem.PublishSurfaceWaterBatch(terrain);
         }
         finally
         {

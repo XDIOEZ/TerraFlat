@@ -42,8 +42,13 @@ public sealed class ChunkNavigationBinder : MonoBehaviour, IChunkViewRenderer
             !changed.AffectsEnvironmentLayer(TerrainSupportLayer.CostLayer))
             return;
         if (boundChunk != null && changed.Kind != TerrainChangeKind.Grass)
-            WorldNavigationManager.ExistingInstance?.UpdateChunkRuntimeCell(
-                boundChunk, changed.LocalCell.X, changed.LocalCell.Y);
+        {
+            WorldNavigationManager manager = WorldNavigationManager.ExistingInstance;
+            if (changed.IsBatch)
+                manager?.UpdateChunkRuntimeCells(boundChunk, changed.CellIndices.Span);
+            else
+                manager?.UpdateChunkRuntimeCell(boundChunk, changed.LocalCell.X, changed.LocalCell.Y);
+        }
     }
 
     private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)

@@ -629,6 +629,7 @@ namespace FlatWorld.WorldModel
             ThrowIfDisposed();
             if (string.IsNullOrWhiteSpace(layerId))
                 throw new ArgumentException("Environment layer id is required.", nameof(layerId));
+            EnsureEnvironmentWriteAllowed(layerId);
             int index = GetIndex(x, y);
             if (!_environmentLayers.TryGetValue(layerId, out float[] values))
             {
@@ -731,6 +732,8 @@ namespace FlatWorld.WorldModel
         /// <summary>清空并释放这份地形占用的内存，同时取消所有变化通知。</summary>
         public void Dispose()
         {
+            if (publishingEnvironmentBatches)
+                throw new InvalidOperationException("环境批次回调期间不能释放地形数据。");
             liquid.Dispose();
             liquidBaselines.Clear();
             if (_cells != null)
@@ -768,6 +771,7 @@ namespace FlatWorld.WorldModel
             }
             Changed = null;
             LiquidBatchChanged = null;
+            ClearEnvironmentBatches();
         }
 
         private int GetIndex(int x, int y)
@@ -862,9 +866,22 @@ namespace FlatWorld.WorldModel
             Kind = kind;
             Revision = revision;
             EnvironmentLayerId = kind == TerrainChangeKind.Environment ? environmentLayerId : null;
+            CellIndices = default;
         }
 
-        /// <summary>区块里的哪个格子变了。</summary>
+        /// <summary>整个环境层的一批真实变化；格索引内存只在同步回调期间借用。</summary>
+        public ChunkTerrainChanged(ReadOnlyMemory<int> cellIndices, long revision, string environmentLayerId)
+        {
+            if (cellIndices.IsEmpty)
+                throw new ArgumentException("环境批次必须包含变化格。", nameof(cellIndices));
+            LocalCell = default;
+            Kind = TerrainChangeKind.Environment;
+            Revision = revision;
+            EnvironmentLayerId = environmentLayerId;
+            CellIndices = cellIndices;
+        }
+
+        /// <summary>单格通知的局部坐标，批量通知应使用 GetCellIndices。</summary>
         public Int2 LocalCell { get; }
         /// <summary>改的是地形、叠层、草地还是环境数据。</summary>
         public TerrainChangeKind Kind { get; }
@@ -872,6 +889,12 @@ namespace FlatWorld.WorldModel
         public long Revision { get; }
         /// <summary>环境变化的具体层；未指定时保持整个环境层可能变化的通知语义。</summary>
         public string EnvironmentLayerId { get; }
+        /// <summary>批量变化的借用索引；观察者不得跨回调保存。</summary>
+        public ReadOnlyMemory<int> CellIndices { get; }
+        public bool IsBatch => !CellIndices.IsEmpty;
+
+        /// <summary>统一无分配遍历单格与批量变化，单格使用所在区块的真实宽度。</summary>
+        public TerrainChangedCellIndices GetCellIndices(int width) => new(LocalCell, CellIndices, width);
 
         /// <summary>消费者只响应自己读取的环境层，未标明层名的通知仍会命中。</summary>
         public bool AffectsEnvironmentLayer(string layerId) => Kind == TerrainChangeKind.Environment &&

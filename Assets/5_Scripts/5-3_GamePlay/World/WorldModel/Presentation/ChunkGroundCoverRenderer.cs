@@ -172,7 +172,11 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IIncrementalChunkV
             return;
         if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack ||
             changed.Kind == TerrainChangeKind.Environment || changed.Kind == TerrainChangeKind.Liquid)
-            RefreshCell(new Vector3Int(changed.LocalCell.X, changed.LocalCell.Y, 0));
+        {
+            int width = boundChunk.Terrain.Width;
+            foreach (int index in changed.GetCellIndices(width))
+                RefreshCell(new Vector3Int(index % width, index / width, 0));
+        }
     }
 
     /// <summary>批量液体变化结束后再刷新受影响格，不逐格监听流动过程。</summary>

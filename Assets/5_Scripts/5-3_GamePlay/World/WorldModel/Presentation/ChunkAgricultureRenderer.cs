@@ -330,7 +330,11 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             return;
         if (change.Kind == TerrainChangeKind.Cell || change.Kind == TerrainChangeKind.TileStack ||
             change.Kind == TerrainChangeKind.Environment)
-            RefreshCell(new Vector2Int(change.LocalCell.X, change.LocalCell.Y));
+        {
+            int width = chunk.Terrain.Width;
+            foreach (int index in change.GetCellIndices(width))
+                RefreshCell(new Vector2Int(index % width, index / width));
+        }
     }
 
     private void Update()

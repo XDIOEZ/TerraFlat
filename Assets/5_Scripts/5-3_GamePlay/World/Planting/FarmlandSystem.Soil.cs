@@ -26,12 +26,18 @@ public static partial class FarmlandSystem
 
     /// <summary>耕地已有液体覆盖时仍允许结算土壤，供九宫格灌溉吸收自身格液体。</summary>
     private static bool CanUseSoilCell(RuntimeTerrainTileSample sample) =>
-        sample.Terrain != null && !sample.Terrain.IsDisposed &&
-        TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) == 0 &&
-        sample.Cell.GroundTileId != 0 && sample.Cell.BackTileId == 0 && sample.Cell.BlockingTileId == 0 &&
-        (sample.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
-        sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 1 &&
-        !BuildingOccupancyRegistry.IsOccupied(sample.WorldCell);
+        CanUseSoilCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, sample.Cell,
+            sample.WorldCell, false);
+
+    private static bool CanUseSoilCell(ChunkTerrainData terrain, int x, int y, TerrainCell cell,
+        Vector2Int worldCell, bool normalizedWorldCell) =>
+        terrain != null && !terrain.IsDisposed &&
+        TerrainSupportLayer.GetTileId(terrain, x, y) == 0 &&
+        cell.GroundTileId != 0 && cell.BackTileId == 0 && cell.BlockingTileId == 0 &&
+        (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
+        terrain.GetTileLayerCount(x, y) == 1 &&
+        !(normalizedWorldCell ? BuildingOccupancyRegistry.IsOccupiedNormalized(worldCell) :
+            BuildingOccupancyRegistry.IsOccupied(worldCell));
 
     /// <summary>普通土地尚无农业差量时，读取生成环境；已有浇水、施肥或耕作则保留当前值。</summary>
     public static TileData_Farmland ReadSoilSnapshot(RuntimeTerrainTileSample sample)

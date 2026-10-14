@@ -38,6 +38,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `WeatherMgr.Audio` 通过 AudioService 播放当地雨/风循环并平滑更新句柄音量；雨声读实时雨雪分流。雷声只订阅新 LightningOccurred，沿用雷光事件落点，按环绕最短距离选近/远音色和传播延迟，以空间 Cue 衰减；LateUpdate 将落点映射到玩家最近副本并经 SetWorldPosition 更新方位，首次推进不补播，退出/抑制天气维度清空待播和句柄。
 - 地表每块只接收一个降水积分，不再逐格查询或插值邻区天气；晴天无天气雪/玩家雪直接跳过。筛实际地面/待融雪格后 TrySampleAmbientChunk 同批冻结温度，按当地温度分雨雪，不跨帧借数组。
 - 土壤水量照常结算；`ChunkEnvironmentRenderer` 按每格最终显隐状态跳过重复 BRG 提交与清除，只在提交成功后缓存可见状态。重新绑定、Owner 表现重建或配置变化后重采权威数据，液体覆盖和抽干仍更新显隐。
+- 雨水/融雪由 `SupplySurfaceWaterBatch` 按块复用目录与水肥只读视图，满水先跳过，规范格直接查占地；水量和湿度等层先批写、记录存档及权威差量、再通知，湿地实际显隐变化合并 BRG 上传。`SurfaceWater` 按区块计时，内部 Prepare/Compute/Write/Notify 分别定位准备、计算、写回和通知，不把调用次数变化当成性能验收。
 
 ## 地理温度、热源与生存
 

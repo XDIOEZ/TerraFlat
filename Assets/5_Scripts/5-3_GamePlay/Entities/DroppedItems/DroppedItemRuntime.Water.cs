@@ -60,13 +60,17 @@ internal sealed partial class DroppedItemRuntime
         if (change.Kind == TerrainChangeKind.Environment &&
             !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
             return;
-        Vector2Int cell = watch.Origin + new Vector2Int(change.LocalCell.X, change.LocalCell.Y);
-        if (!spatial.TryGetValue(SpatialCell((Vector2)cell + Vector2.one * 0.5f), out HashSet<int> bucket)) return;
-        foreach (int id in bucket)
+        int width = watch.Terrain.Width;
+        foreach (int index in change.GetCellIndices(width))
         {
-            LightweightDroppedBody body = simulation.Get(id);
-            if (Mathf.FloorToInt(body.Position.x) == cell.x && Mathf.FloorToInt(body.Position.y) == cell.y)
-                QueueEnvironment(id);
+            Vector2Int cell = watch.Origin + new Vector2Int(index % width, index / width);
+            if (!spatial.TryGetValue(SpatialCell((Vector2)cell + Vector2.one * 0.5f), out HashSet<int> bucket)) continue;
+            foreach (int id in bucket)
+            {
+                LightweightDroppedBody body = simulation.Get(id);
+                if (Mathf.FloorToInt(body.Position.x) == cell.x && Mathf.FloorToInt(body.Position.y) == cell.y)
+                    QueueEnvironment(id);
+            }
         }
     }
 

@@ -105,13 +105,17 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
             return;
 
-        int x = change.LocalCell.X;
-        int y = change.LocalCell.Y;
-        Refresh(x, y);
-        Refresh(x - 1, y);
-        Refresh(x + 1, y);
-        Refresh(x, y - 1);
-        Refresh(x, y + 1);
+        int width = chunk.Terrain.Width;
+        foreach (int index in change.GetCellIndices(width))
+        {
+            int x = index % width;
+            int y = index / width;
+            Refresh(x, y);
+            Refresh(x - 1, y);
+            Refresh(x + 1, y);
+            Refresh(x, y - 1);
+            Refresh(x, y + 1);
+        }
     }
 
     /// <summary>批量液深变化只更新本格的平台水上阴影，不依赖其他环境写入唤醒。</summary>
@@ -355,26 +359,19 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         if (chunk?.Terrain == null || !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
             return;
 
-        if (offsetX < 0)
+        foreach (int index in change.GetCellIndices(neighbourTerrain.Width))
         {
-            if (change.LocalCell.X == neighbourTerrain.Width - 1)
-                Refresh(0, change.LocalCell.Y);
-            return;
+            int x = index % neighbourTerrain.Width;
+            int y = index / neighbourTerrain.Width;
+            if (offsetX < 0 && x == neighbourTerrain.Width - 1)
+                Refresh(0, y);
+            else if (offsetX > 0 && x == 0)
+                Refresh(chunk.Terrain.Width - 1, y);
+            else if (offsetY < 0 && y == neighbourTerrain.Height - 1)
+                Refresh(x, 0);
+            else if (offsetY > 0 && y == 0)
+                Refresh(x, chunk.Terrain.Height - 1);
         }
-        if (offsetX > 0)
-        {
-            if (change.LocalCell.X == 0)
-                Refresh(chunk.Terrain.Width - 1, change.LocalCell.Y);
-            return;
-        }
-        if (offsetY < 0)
-        {
-            if (change.LocalCell.Y == neighbourTerrain.Height - 1)
-                Refresh(change.LocalCell.X, 0);
-            return;
-        }
-        if (offsetY > 0 && change.LocalCell.Y == 0)
-            Refresh(change.LocalCell.X, chunk.Terrain.Height - 1);
     }
 
     private void RefreshVerticalEdge(int x)

@@ -92,7 +92,9 @@ public sealed class ChunkTileDamageCrackRenderer : MonoBehaviour, IChunkViewRend
             return;
         }
 
-        RefreshCell(new Vector2Int(changed.LocalCell.X, changed.LocalCell.Y));
+        int width = boundChunk.Terrain.Width;
+        foreach (int index in changed.GetCellIndices(width))
+            RefreshCell(new Vector2Int(index % width, index / width));
     }
 
     /// <summary>区块载入或读档后按权威损伤层恢复全部裂缝。</summary>

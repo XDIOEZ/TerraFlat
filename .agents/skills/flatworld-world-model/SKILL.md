@@ -24,6 +24,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 正式 Chunk/Map/冷地表与出生查询通过 `GameRes.RequireWorldLiquidTypes` 取得 Ready 后的完整表；ChunkMgr Awake 只绑定宿主，首次请求才建世界，换场景释放旧生成器，不能把启动空目录冻结成 BuiltIn 表。
 - `WriteCell` 同步数据、固定 LOS 遮挡位与版本，建筑/机械叠独立动态位。`TerrainSupportLayer.GetSurfaceCell` 投影平台有效表面，不改底材/底液。
 - `ChunkTerrainChanged.EnvironmentLayerId/AffectsEnvironmentLayer` 表达真实变化层；液体变化影响当前及八邻区岸线/四角液深/导航。`SetLiquidBatch` 索引唯一递增，跨块先全部写回再 Publish，仅发 `LiquidBatchChanged`；借用索引限同步回调内使用。
+- `SetEnvironmentBatch` 按层接受唯一递增格索引，各层先写后 `PublishEnvironmentBatches`，每个真实变化层只发一次 `Changed`；消费者先筛层，再用 `GetCellIndices(width)` 兼容单格/批量。只读层和通知索引只借用于同步阶段；同层待发或回调中禁止写入，发布失败保留未发层供重试，土壤层不改变液体版本。
 - `WorldTopologyDomain` 是 noEngine 的纯坐标真源，Jobs 使用主线程冻结副本；`WorldTopologyRuntime` 仍读取存档，仅主线程。`ChunkRuntime.Address/ChunkOrigin` 永远是规范坐标，View Transform 由 `WorldLocalPresentation` 选本地镜像；HUD 经 `ToLogical` 还原。连续曲线用 double 和显式半周期符号策略。
 - `ChunkMgr` 常驻 DDOL；View/自然物挂当前世界 Scene 根，不挂管理器。Prefab 直接装配并引用 NaturalItems/LightOccluders 表现组件。
 - 居民、ECS 掉落和 MachineWorld 独立于 View；解绑只撤显示。自然散落点成功生成 ECS 掉落后才移除基线 GUID，失败回滚；树/矿点/建筑不是散落点。机器连通组全量恢复后 Tick、全量快照后休眠。

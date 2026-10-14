@@ -54,3 +54,107 @@ test.system("environment", "weather", {}, function(data)
     near(data.wind9Probability, 0.03, "九级风附加概率倍率错误")
     near(data.wind10Probability, 0.012, "十级风附加概率倍率错误")
 end, "区域天气共享、冻结气候、事件到期与强风概率")
+
+local function values_equal(actual, expected, message)
+    assert(#actual == #expected, message .. "：数量错误")
+    for index, value in ipairs(expected) do
+        near(actual[index], value, message .. "：第" .. index .. "项")
+    end
+end
+
+local function layer_equal(actual, expected, message)
+    assert(actual.exists and actual.length == #expected, message .. "：只读层长度或身份错误")
+    values_equal(actual.values, expected, message)
+end
+
+test.system("environment", "environment_batch", {}, function(data)
+    assert(data.immediateChanges == 2, "批次真实变化数包含了不变格")
+    layer_equal(data.afterImmediate, {0.3, 0.4, 0.8, 0, 0.9, 0}, "即时批写数值")
+    assert(data.immediateRevision == data.initialRevision + 1, "同层批写逐格递增了版本")
+    assert(data.unchangedChanges == 0 and data.emptyChanges == 0, "不变或空批仍报告变化")
+    assert(not data.emptyLayer.exists and data.emptyLayer.length == 0, "空批创建了无用环境层")
+    assert(data.afterNoopNotices == 1 and data.afterNoopRevision == data.immediateRevision,
+        "不变或空批仍广播通知或递增版本")
+    assert(data.waterChanges == 2 and data.moistureChanges == 3, "延迟批写真正变化格计数错误")
+    assert(data.beforePublishNotices == 1, "多层数据写完前提前广播")
+    layer_equal(data.beforePublishMoisture, {0.7, 0.4, 0.9, 0, 0.9, 0.5}, "发布前湿度可读")
+    layer_equal(data.beforePublishWater, {30, 40, 80, 0, 90, 0}, "发布前水量可读")
+    assert(data.afterPublishNotices == 3 and data.afterRepublishNotices == 3,
+        "多层发布没有每层一次或重复发布再次通知")
+    assert(data.afterPublishRevision == data.immediateRevision + 2, "延迟发布额外修改版本")
+    assert(#data.notices == 4, "批量和后续单格通知数量错误")
+    local immediate, water, moisture, single = data.notices[1], data.notices[2], data.notices[3], data.notices[4]
+    assert(immediate.kind == "Environment" and immediate.layer == "moisture" and immediate.isBatch,
+        "即时批次通知层或类型错误")
+    values_equal(immediate.indices, {0, 4}, "即时批次只通知真实变化格")
+    assert(immediate.borrowedIndexCount == 2, "批次借用索引长度错误")
+    assert(water.layer == "agriculture.water" and moisture.layer == "moisture", "发布顺序未按层写入顺序")
+    values_equal(water.indices, {0, 4}, "水量批次变化索引")
+    values_equal(moisture.indices, {0, 2, 5}, "湿度批次变化索引")
+    for _, notice in ipairs({water, moisture}) do
+        assert(notice.isBatch and notice.kind == "Environment", "延迟通知没有保留批次身份")
+        layer_equal(notice.water, {30, 40, 80, 0, 90, 0}, "通知回调读取完整水量")
+        layer_equal(notice.moisture, {0.7, 0.4, 0.9, 0, 0.9, 0.5}, "通知回调读取完整湿度")
+    end
+    assert(not single.isBatch and single.borrowedIndexCount == 0 and single.layer == "moisture",
+        "单格通知被改成了借用批次")
+    values_equal(single.indices, {5}, "统一索引枚举保留单格真实区块宽度")
+    assert(data.blockingRevision == 0 and data.surfaceLiquidRevision == 0, "普通土壤写入污染遮挡或液体版本")
+end, "土壤环境批写、真实变化格、延迟合并通知与单格兼容")
+
+test.system("environment", "environment_batch_rejection", {}, function(data)
+    assert(#data.rejected == 10, "非法输入采样不完整")
+    for _, rejected in ipairs(data.rejected) do
+        assert(rejected.exception == "ArgumentException", rejected.name .. "没有整批拒绝")
+        layer_equal(rejected.before, {0.2, 0.3, 0.4, 0.5}, rejected.name .. "前置数据")
+        layer_equal(rejected.after, {0.2, 0.3, 0.4, 0.5}, rejected.name .. "留下部分写入")
+        assert(rejected.afterRevision == rejected.beforeRevision and rejected.afterNotices == rejected.beforeNotices,
+            rejected.name .. "拒绝后改变版本或通知")
+    end
+    assert(not data.rejectedLayer.exists, "非法新层批次留下了环境层")
+    assert(data.recoveredChanges == 2 and data.noticesAfterRecovery == 1, "拒绝后的批次对象不能继续正常使用")
+    layer_equal(data.recovered, {0.6, 0.3, 0.4, 0.7}, "失败后有效写回")
+    assert(data.surfaceLiquidRevision == 0, "失败或普通土壤写入影响液体缓存版本")
+end, "批次非法层名、越界、重复、逆序和非有限值整体拒绝")
+
+test.system("environment", "environment_batch_lifecycle", {}, function(data)
+    assert(data.firstPublish == "InvalidOperationException" and data.afterFailedNotices == 1,
+        "观察者故障没有停止当前发布并暴露失败")
+    assert(data.overwritePending == "InvalidOperationException" and data.singleOverwritePending == "InvalidOperationException",
+        "未发布完成的同层批次被覆盖")
+    layer_equal(data.afterFailedMoisture, {0.7, 0, 0, 0}, "发布失败后的正式数据")
+    assert(data.retryPublish == "" and data.afterRetryNotices == 3, "失败层和后续层未保留或无法重试")
+    assert(data.afterRepublishNotices == 3 and data.afterRetryRevision == data.beforePublishRevision,
+        "重新发布再次发送成功层或改变数据版本")
+    assert(data.reusedChanges == 1 and data.afterReuseNotices == 4, "重试完成后同层无法继续使用")
+    assert(#data.notices == 4 and data.notices[1].layer == "moisture" and data.notices[2].layer == "moisture"
+        and data.notices[3].layer == "agriculture.water", "失败保留后的通知顺序错误")
+    values_equal(data.notices[1].indices, {0}, "故障时变化格")
+    values_equal(data.notices[2].indices, {0}, "重试保留故障层变化格")
+    values_equal(data.notices[3].indices, {1}, "重试保留后续层变化格")
+    values_equal(data.notices[4].indices, {3}, "复用后的变化格")
+    layer_equal(data.notices[1].moisture, {0.7, 0, 0, 0}, "先前通知的独立采样副本")
+    layer_equal(data.notices[4].moisture, {0.7, 0, 0, 0.8}, "复用后的正式湿度")
+    for _, notice in ipairs(data.notices) do
+        assert(notice.nestedWrite == "InvalidOperationException" and notice.nestedSingleWrite == "InvalidOperationException",
+            "回调期间允许改写借用批次")
+        assert(notice.nestedPublish == "InvalidOperationException" and notice.nestedDispose == "InvalidOperationException",
+            "回调期间允许嵌套发布或释放借用数据")
+    end
+    assert(data.disposed and data.afterDisposeNotices == data.afterReuseNotices, "释放时错误发布待发队列")
+    assert(data.disposedWrite == "ObjectDisposedException" and data.disposedRead == "ObjectDisposedException"
+        and data.disposedPublish == "ObjectDisposedException", "已释放地形仍允许批写、借用读取或发布")
+end, "批次观察者故障重试、回调重入保护和释放边界")
+
+test.system("environment", "environment_batch_revision", {}, function(data)
+    assert(data.soilChanges == 2 and data.soilRevision == data.initialRevision, "土壤水量湿度使液体缓存失效")
+    assert(data.costRevision == data.initialRevision, "仅支撑通行代价使液体缓存失效")
+    assert(data.supportChanges == 2 and data.supportRevision == data.initialRevision + 1,
+        "支撑面身份批量变化没有仅递增一次液体版本")
+    assert(data.supportNoopChanges == 0 and data.supportNoopRevision == data.supportRevision,
+        "支撑面身份不变仍使液体缓存失效")
+    assert(data.liquidChanged and data.liquidRevision == data.supportRevision + 1, "真实液体变化未使缓存失效")
+    assert(not data.repeatedLiquidChanged and data.repeatedLiquidRevision == data.liquidRevision,
+        "液体深度身份不变仍使缓存失效")
+    assert(data.blockingRevision == 0, "环境和液体写入错误改变视线遮挡版本")
+end, "土壤、支撑成本、支撑身份和真实液体版本分离")

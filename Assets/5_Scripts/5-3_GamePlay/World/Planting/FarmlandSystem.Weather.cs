@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using FlatWorld.Networking;
+using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 
 public static partial class FarmlandSystem
@@ -27,8 +31,7 @@ public static partial class FarmlandSystem
         var template = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate;
         float maximum = Mathf.Max(0.01f, template.maxWater);
         float water = hasSoil ? Read(sample.Terrain, sample.LocalCell, WaterLayer) : Mathf.Clamp01(moisture) * maximum;
-        float nextWater = Mathf.Min(maximum, water + waterPoints);
-        if (nextWater <= water)
+        if (!TryCalculateSurfaceWater(water, waterPoints, maximum, out float nextWater))
             return false;
 
         float fertility = hasSoil ? Read(sample.Terrain, sample.LocalCell, FertilityLayer) : template.Fertility;
@@ -49,5 +52,162 @@ public static partial class FarmlandSystem
         return true;
     }
 
+    #endregion
+
+    #region 区块批量补水
+
+    private static EnvironmentCellUpdate[] surfaceSourceUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] surfaceFertilityUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] surfaceWaterUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] surfaceMoistureUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static EnvironmentCellUpdate[] surfaceGeneratedFertilityUpdates = Array.Empty<EnvironmentCellUpdate>();
+    private static bool advancingSurfaceWaterBatch;
+    private static readonly ProfilerMarker SurfaceWaterPrepareMarker = new("FlatWorld.Soil.SurfaceWater.Prepare");
+    private static readonly ProfilerMarker SurfaceWaterComputeMarker = new("FlatWorld.Soil.SurfaceWater.Compute");
+    private static readonly ProfilerMarker SurfaceWaterWriteMarker = new("FlatWorld.Soil.SurfaceWater.Write");
+    private static readonly ProfilerMarker SurfaceWaterNotifyMarker = new("FlatWorld.Soil.SurfaceWater.Notify");
+
+    // 区块地址本来就是规范坐标，批次共享目录和环境数组，先写完所有层再通知观察者。
+    public static int SupplySurfaceWaterBatch(ChunkRuntime chunk, ReadOnlySpan<SurfaceWaterSupply> supplies,
+        List<int> changedCells, bool deferNotification = false)
+    {
+        if (changedCells == null) throw new ArgumentNullException(nameof(changedCells));
+        if (advancingSurfaceWaterBatch)
+            throw new InvalidOperationException("地表批量补水不允许重入。");
+        if (!GameNetwork.HasStateAuthority || supplies.IsEmpty || chunk?.Terrain == null ||
+            chunk.Terrain.IsDisposed || chunk.DataStatus != ChunkDataStatus.Ready)
+            return 0;
+
+        ChunkTerrainData terrain = chunk.Terrain;
+        int previousIndex = -1;
+        foreach (SurfaceWaterSupply supply in supplies)
+        {
+            if ((uint)supply.CellIndex >= (uint)terrain.CellCount || supply.CellIndex <= previousIndex)
+                throw new ArgumentException("地表补水格索引必须在区块范围内且严格递增。", nameof(supplies));
+            previousIndex = supply.CellIndex;
+        }
+
+        advancingSurfaceWaterBatch = true;
+        try
+        {
+            terrain.PublishEnvironmentBatches();
+            GameRes resources;
+            RuntimeTileDefinition farmland;
+            TileData_Farmland template;
+            ReadOnlyMemory<float> sources, waters, moistures, fertilities, generatedFertilities;
+            using (SurfaceWaterPrepareMarker.Auto())
+            {
+                resources = GameRes.ExistingInstance;
+                farmland = RequireFarmlandDefinition();
+                template = (TileData_Farmland)farmland.TileDataTemplate;
+                if (surfaceWaterUpdates.Length < supplies.Length)
+                {
+                    int capacity = terrain.CellCount;
+                    surfaceSourceUpdates = new EnvironmentCellUpdate[capacity];
+                    surfaceFertilityUpdates = new EnvironmentCellUpdate[capacity];
+                    surfaceWaterUpdates = new EnvironmentCellUpdate[capacity];
+                    surfaceMoistureUpdates = new EnvironmentCellUpdate[capacity];
+                    surfaceGeneratedFertilityUpdates = new EnvironmentCellUpdate[capacity];
+                }
+                terrain.TryGetEnvironmentLayer(SourceLayer, out sources);
+                terrain.TryGetEnvironmentLayer(WaterLayer, out waters);
+                terrain.TryGetEnvironmentLayer("moisture", out moistures);
+                terrain.TryGetEnvironmentLayer(FertilityLayer, out fertilities);
+                terrain.TryGetEnvironmentLayer("fertility", out generatedFertilities);
+            }
+
+            float maximum = Mathf.Max(0.01f, template.maxWater);
+            int newSoilCount = 0, waterCount = 0, cachedTileId = -1;
+            bool cachedPlantable = false;
+            using (SurfaceWaterComputeMarker.Auto())
+            foreach (SurfaceWaterSupply supply in supplies)
+            {
+                if (!float.IsFinite(supply.WaterPoints) || supply.WaterPoints <= 0f)
+                    continue;
+                int index = supply.CellIndex;
+                bool hasSoil = !sources.IsEmpty && sources.Span[index] > 0f;
+                float moisture = moistures.IsEmpty ? 0f : moistures.Span[index];
+                float water = hasSoil ? (waters.IsEmpty ? 0f : waters.Span[index]) : Mathf.Clamp01(moisture) * maximum;
+                if (!TryCalculateSurfaceWater(water, supply.WaterPoints, maximum, out float nextWater))
+                    continue;
+
+                int x = index % terrain.Width, y = index / terrain.Width;
+                TerrainCell cell = terrain.GetCell(x, y);
+                if (!hasSoil)
+                {
+                    if (cachedTileId != cell.GroundTileId)
+                    {
+                        cachedTileId = cell.GroundTileId;
+                        cachedPlantable = resources.TryGetTileDefinition(cachedTileId,
+                            out RuntimeTileDefinition definition) && definition.NaturalPlantable;
+                    }
+                    if (!cachedPlantable || (moistures.IsEmpty && cell.GroundTileId != farmland.RuntimeTileId))
+                        continue;
+                }
+                var worldCell = new Vector2Int(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
+                if (!CanUseSoilCell(terrain, x, y, cell, worldCell, true))
+                    continue;
+
+                float fertility = hasSoil ? (fertilities.IsEmpty ? 0f : fertilities.Span[index]) :
+                    generatedFertilities.IsEmpty ? template.Fertility : generatedFertilities.Span[index];
+                if (!float.IsFinite(nextWater) || !float.IsFinite(fertility))
+                    throw new InvalidOperationException("地表水肥批次包含非有限数值。");
+                if (!hasSoil)
+                {
+                    surfaceSourceUpdates[newSoilCount] = new EnvironmentCellUpdate(index, cell.GroundTileId);
+                    surfaceFertilityUpdates[newSoilCount++] = new EnvironmentCellUpdate(index, fertility);
+                }
+                surfaceWaterUpdates[waterCount] = new EnvironmentCellUpdate(index, nextWater);
+                surfaceMoistureUpdates[waterCount] = new EnvironmentCellUpdate(index, Mathf.Clamp01(nextWater / maximum));
+                surfaceGeneratedFertilityUpdates[waterCount++] = new EnvironmentCellUpdate(index,
+                    Mathf.Clamp(fertility, 0f, template.maxFertility));
+                changedCells.Add(index);
+            }
+            if (waterCount == 0) return 0;
+
+            using (SurfaceWaterWriteMarker.Auto())
+            {
+                terrain.SetEnvironmentBatch(SourceLayer, surfaceSourceUpdates.AsSpan(0, newSoilCount), true);
+                terrain.SetEnvironmentBatch(FertilityLayer, surfaceFertilityUpdates.AsSpan(0, newSoilCount), true);
+                terrain.SetEnvironmentBatch(WaterLayer, surfaceWaterUpdates.AsSpan(0, waterCount), true);
+                terrain.SetEnvironmentBatch("moisture", surfaceMoistureUpdates.AsSpan(0, waterCount), true);
+                terrain.SetEnvironmentBatch("fertility", surfaceGeneratedFertilityUpdates.AsSpan(0, waterCount), true);
+            }
+            if (!deferNotification) PublishSurfaceWaterBatch(terrain);
+            return waterCount;
+        }
+        finally
+        {
+            advancingSurfaceWaterBatch = false;
+        }
+    }
+
+    public static void PublishSurfaceWaterBatch(ChunkTerrainData terrain)
+    {
+        using (SurfaceWaterNotifyMarker.Auto())
+            terrain.PublishEnvironmentBatches();
+    }
+
+    // 单格和批量来源共用容量规则，测试直接读取正式计算结果。
+    public static bool TryCalculateSurfaceWater(float water, float waterPoints, float maximum,
+        out float nextWater)
+    {
+        nextWater = water;
+        if (!float.IsFinite(waterPoints) || waterPoints <= 0f) return false;
+        nextWater = Mathf.Min(Mathf.Max(0.01f, maximum), water + waterPoints);
+        return nextWater > water;
+    }
+
+    #endregion
+}
+
+/// <summary>来源方给某个区块格子的水量，土壤补水服务统一处理资格和容量。</summary>
+public readonly struct SurfaceWaterSupply
+{
+    #region 补水输入
+    public readonly int CellIndex;
+    public readonly float WaterPoints;
+    public SurfaceWaterSupply(int cellIndex, float waterPoints)
+    { CellIndex = cellIndex; WaterPoints = waterPoints; }
     #endregion
 }

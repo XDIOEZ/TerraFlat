@@ -315,7 +315,9 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         if (!EnsureBatchPresentationForIncrementalRefresh("TerrainChanged"))
             return;
         // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
-        RefreshBatchArea(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y, 1);
+        int width = boundChunk.Terrain.Width;
+        foreach (int index in changed.GetCellIndices(width))
+            RefreshBatchArea(boundChunk.Terrain, index % width, index / width, 1);
     }
 
     /// <summary>基础地形只读取高度、水流和风向，土壤与雪层不重提地形网格。</summary>
@@ -615,18 +617,19 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRend
         if (!AffectsBaseTerrainEnvironment(changed))
             return;
 
-        bool touchesSharedX = offsetX == 0 || (offsetX < 0
-            ? changed.LocalCell.X == neighbourTerrain.Width - 1
-            : changed.LocalCell.X == 0);
-        bool touchesSharedY = offsetY == 0 || (offsetY < 0
-            ? changed.LocalCell.Y == neighbourTerrain.Height - 1
-            : changed.LocalCell.Y == 0);
-        if (touchesSharedX && touchesSharedY)
+        foreach (int index in changed.GetCellIndices(neighbourTerrain.Width))
         {
+            int x = index % neighbourTerrain.Width;
+            int y = index / neighbourTerrain.Width;
+            bool touchesSharedX = offsetX == 0 || (offsetX < 0
+                ? x == neighbourTerrain.Width - 1 : x == 0);
+            bool touchesSharedY = offsetY == 0 || (offsetY < 0
+                ? y == neighbourTerrain.Height - 1 : y == 0);
+            if (!touchesSharedX || !touchesSharedY)
+                continue;
             if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourTerrainChanged"))
                 return;
-            RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY,
-                changed.LocalCell.X, changed.LocalCell.Y);
+            RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY, x, y);
         }
     }
 

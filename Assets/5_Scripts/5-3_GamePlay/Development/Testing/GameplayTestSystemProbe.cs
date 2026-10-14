@@ -17,6 +17,7 @@ public static partial class GameplayTestSystemProbe
         RegisterServiceOperations(result);
         RegisterInteractionOperations(result);
         RegisterNavigationOperations(result);
+        RegisterEnvironmentBatchOperations(result);
         RegisterTestingOperations(result);
         return result;
     }
