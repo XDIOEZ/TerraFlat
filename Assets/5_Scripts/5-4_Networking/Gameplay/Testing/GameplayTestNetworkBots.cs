@@ -67,8 +67,14 @@ namespace FlatWorld.Networking.Gameplay
             result["players"] = players;
             result["independentData"] = players.Count == count &&
                 Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data).Distinct().Count() == count;
-            result["independentInventories"] = Enumerable.Range(31, count)
-                .Select(id => world.Core(id).CorePlayer.Data._inventoryData).Distinct().Count() == count;
+            var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data.ModuleDataDic.Values
+                .OfType<Inventory_ModuleData>().ToArray()).ToArray();
+            Inventory_ModuleData[] native = inventories.SelectMany(value => value).ToArray();
+            result["nativeInventoryModuleCounts"] = new JArray(inventories.Select(value => value.Length));
+            // 正式库存由模块状态持有，禁止用已不承载运行库存的旧玩家字典作独立性证据。
+            result["independentInventories"] = inventories.All(value => value.Length > 0) &&
+                native.All(value => value.Data != null) && native.Distinct().Count() == native.Length &&
+                native.Select(value => value.Data).Distinct().Count() == native.Length;
             // 实际主角使用长稳定 ID，另准备短名角色来确保覆盖真实的档案名冲突。
             string occupiedProfile = world.Prefix + "occupied";
             world.PlaceSpawn(occupiedProfile, local.Data.transform.position);

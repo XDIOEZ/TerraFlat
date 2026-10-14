@@ -40,6 +40,10 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
             "入世快照的真实种子或生成协议与服务器不一致")
     end
     assert(data.independentData and data.independentInventories, "多个假人共享了同一份实际玩家数据或库存容器")
+    assert(#data.nativeInventoryModuleCounts == 4, "没有读取四名假人的正式库存模块")
+    for _, count in ipairs(data.nativeInventoryModuleCounts) do
+        assert(count > 0, "库存模块缺失时不能用空集合证明独立")
+    end
     local collision = data.localNameCollision
     assert(collision.profileBound and collision.indexed and collision.ready and collision.authenticated
         and not collision.sameAsLocal and not collision.isLocalProfile,
