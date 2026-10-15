@@ -319,7 +319,6 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             string playerName = MakeUniquePlayerName(SanitizePlayerName(request.PlayerName), connection.connectionId);
-            pendingPlayerNames[connection.connectionId] = playerName;
 
             CaptureLoadedChunks();
             SpaceSession.Capture(SaveDataMgr.Instance?.SaveData);
@@ -345,6 +344,8 @@ namespace FlatWorld.Networking.Gameplay
                 transferId = unchecked(++nextSnapshotTransferId);
 
             int chunkCount = Mathf.CeilToInt(snapshot.Length / (float)NetworkGameplayProtocol.SnapshotChunkBytes);
+            // 快照准备成功后再占用 Join 名额，避免打包异常让本连接无法重试。
+            pendingPlayerNames[connection.connectionId] = playerName;
             connection.Send(new NetworkWorldSnapshotBegin
             {
                 TransferId = transferId,
