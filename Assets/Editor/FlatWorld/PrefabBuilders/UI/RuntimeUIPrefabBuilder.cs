@@ -828,7 +828,7 @@ public static partial class RuntimeUIPrefabBuilder
         rootRect.anchorMax = new Vector2(0f, 0.5f);
         rootRect.pivot = new Vector2(0f, 0f);
         rootRect.anchoredPosition = new Vector2(32f, 60f);
-        rootRect.sizeDelta = new Vector2(160f, 31f);
+        rootRect.sizeDelta = new Vector2(230f, 42f);
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
@@ -839,8 +839,12 @@ public static partial class RuntimeUIPrefabBuilder
         RectTransform scrollRect = scrollRoot.GetComponent<RectTransform>();
         Stretch(scrollRect);
 
-        GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
+        GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D), typeof(Image));
         Stretch(viewport.GetComponent<RectTransform>());
+        // 只有 Buff 超过可见行数时允许在透明视口滚动，其余时间 HUD 仍不拦截输入。
+        Image scrollHitArea = viewport.GetComponent<Image>();
+        scrollHitArea.color = Color.clear;
+        scrollHitArea.raycastTarget = true;
 
         GameObject content = CreateUIObject("Content", viewport.transform);
         RectTransform contentRect = content.GetComponent<RectTransform>();
@@ -851,7 +855,7 @@ public static partial class RuntimeUIPrefabBuilder
         contentRect.sizeDelta = Vector2.zero;
 
         VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
-        contentLayout.spacing = 7f;
+        contentLayout.spacing = 6f;
         contentLayout.childControlWidth = true;
         contentLayout.childControlHeight = true;
         contentLayout.childForceExpandWidth = true;
@@ -878,7 +882,7 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(Image),
             typeof(BuffStatusRowView));
         LayoutElement rowElement = root.AddComponent<LayoutElement>();
-        rowElement.preferredHeight = 31f;
+        rowElement.preferredHeight = 42f;
 
         Image background = root.GetComponent<Image>();
         // 状态 HUD 保持透明，只保留动态内容。
@@ -886,38 +890,39 @@ public static partial class RuntimeUIPrefabBuilder
         background.raycastTarget = false;
 
         HorizontalLayoutGroup rowLayout = root.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.padding = new RectOffset(5, 5, 4, 4);
-        rowLayout.spacing = 5f;
+        rowLayout.padding = new RectOffset(5, 5, 5, 5);
+        rowLayout.spacing = 7f;
         rowLayout.childAlignment = TextAnchor.MiddleLeft;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
         rowLayout.childForceExpandWidth = false;
         rowLayout.childForceExpandHeight = false;
 
-        GameObject iconObject = CreateUIObject("占位图标", root.transform, typeof(Image));
+        GameObject iconObject = CreateUIObject("状态符号底板", root.transform, typeof(Image));
         LayoutElement iconElement = iconObject.AddComponent<LayoutElement>();
-        iconElement.preferredWidth = 23f;
-        iconElement.preferredHeight = 23f;
+        iconElement.preferredWidth = 29f;
+        iconElement.preferredHeight = 29f;
         Image icon = iconObject.GetComponent<Image>();
-        icon.color = new Color(0.26f, 0.61f, 0.57f, 0.85f);
+        icon.color = SurfaceRaised;
         icon.raycastTarget = false;
-        AddOutline(icon, new Color(0.95f, 0.91f, 0.81f, 0.42f));
+        AddOutline(icon, Border);
 
-        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, string.Empty, 13f, Cream);
+        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, "·", 15f, Cream);
         placeholder.fontStyle = FontStyles.Bold;
         placeholder.alignment = TextAlignmentOptions.Center;
         placeholder.enableWordWrapping = false;
+        placeholder.overflowMode = TextOverflowModes.Ellipsis;
         Stretch(placeholder.rectTransform);
 
         GameObject stackBadge = CreateUIObject("层数徽标", iconObject.transform, typeof(Image));
         RectTransform stackBadgeRect = stackBadge.GetComponent<RectTransform>();
-        SetBottomRight(stackBadgeRect, -2f, -2f, 13f, 13f);
+        SetBottomRight(stackBadgeRect, -2f, -2f, 15f, 15f);
         Image stackBadgeImage = stackBadge.GetComponent<Image>();
         stackBadgeImage.color = new Color(0.10f, 0.10f, 0.10f, 0.96f);
         stackBadgeImage.raycastTarget = false;
         AddOutline(stackBadgeImage, new Color(0.92f, 0.92f, 0.92f, 0.34f));
 
-        TextMeshProUGUI stackText = CreateText("层数文本", stackBadge.transform, "1", 8f, Cream);
+        TextMeshProUGUI stackText = CreateText("层数文本", stackBadge.transform, "1", 9f, Cream);
         stackText.fontStyle = FontStyles.Bold;
         stackText.alignment = TextAlignmentOptions.Center;
         stackText.enableWordWrapping = false;
@@ -939,16 +944,22 @@ public static partial class RuntimeUIPrefabBuilder
         infoLayout.childForceExpandWidth = true;
         infoLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI name = CreateText("状态名称", info.transform, "Buff", 10f, Cream);
+        TextMeshProUGUI name = CreateText("状态名称", info.transform, "Buff", 14f, Cream);
         name.fontStyle = FontStyles.Bold;
+        name.enableAutoSizing = true;
+        name.fontSizeMin = 12f;
+        name.fontSizeMax = 14f;
         name.enableWordWrapping = false;
         name.overflowMode = TextOverflowModes.Ellipsis;
-        name.gameObject.AddComponent<LayoutElement>().preferredHeight = 13f;
+        name.gameObject.AddComponent<LayoutElement>().preferredHeight = 17f;
 
-        TextMeshProUGUI remaining = CreateText("剩余时间", info.transform, "剩余 30s", 8f, Muted);
+        TextMeshProUGUI remaining = CreateText("剩余时间", info.transform, "剩余 30s", 12f, Muted);
+        remaining.enableAutoSizing = true;
+        remaining.fontSizeMin = 10f;
+        remaining.fontSizeMax = 12f;
         remaining.enableWordWrapping = false;
         remaining.overflowMode = TextOverflowModes.Ellipsis;
-        remaining.gameObject.AddComponent<LayoutElement>().preferredHeight = 10f;
+        remaining.gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
 
         return root;
     }

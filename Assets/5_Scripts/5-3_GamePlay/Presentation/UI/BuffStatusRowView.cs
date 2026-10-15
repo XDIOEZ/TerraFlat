@@ -1,3 +1,5 @@
+using System;
+using System.Globalization;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
@@ -13,11 +15,13 @@ public sealed class BuffStatusRowView : MonoBehaviour
 
     private const string NameNodeName = "状态名称";
     private const string RemainingNodeName = "剩余时间";
+    private const string IconInitialNodeName = "占位符文本";
     private const string StackBadgeNodeName = "层数徽标";
     private const string StackTextNodeName = "层数文本";
 
     private TextMeshProUGUI nameText;
     private TextMeshProUGUI remainingText;
+    private TextMeshProUGUI iconInitialText;
     private GameObject stackBadge;
     private TextMeshProUGUI stackText;
     private string buffId;
@@ -46,13 +50,21 @@ public sealed class BuffStatusRowView : MonoBehaviour
         }
 
         buffId = runtime.DefinitionId;
-        if (nameText != null)
-        {
-            string displayName = runtime.Definition.DisplayName;
-            string resolvedName = string.IsNullOrWhiteSpace(displayName)
-                ? runtime.DefinitionId
-                : displayName;
+        string displayName = runtime.Definition.DisplayName;
+        string resolvedName = string.IsNullOrWhiteSpace(displayName)
+            ? runtime.DefinitionId
+            : displayName;
+        if (nameText != null && !string.Equals(nameText.text, resolvedName, StringComparison.Ordinal))
             nameText.text = resolvedName;
+
+        // Buff 没有专属图标时用名称首字作标记，避免显示一块空白色块。
+        if (iconInitialText != null)
+        {
+            string initial = string.IsNullOrWhiteSpace(resolvedName)
+                ? "·"
+                : StringInfo.GetNextTextElement(resolvedName.TrimStart());
+            if (!string.Equals(iconInitialText.text, initial, StringComparison.Ordinal))
+                iconInitialText.text = initial;
         }
 
         RefreshStackLevel(runtime);
@@ -73,7 +85,11 @@ public sealed class BuffStatusRowView : MonoBehaviour
             stackBadge.SetActive(visible);
 
         if (visible && stackText != null)
-            stackText.text = Mathf.Max(1, runtime.StackCount).ToString();
+        {
+            string value = Mathf.Max(1, runtime.StackCount).ToString();
+            if (!string.Equals(stackText.text, value, StringComparison.Ordinal))
+                stackText.text = value;
+        }
     }
 
     /// <summary>刷新剩余时间文本；由显式时长变化或整秒倒计时事件驱动。</summary>
@@ -90,14 +106,18 @@ public sealed class BuffStatusRowView : MonoBehaviour
 
         if (runtime.Definition.IsPermanent)
         {
-            remainingText.text = FlatWorldLocalizationService.GetUiText("永久");
+            string permanent = FlatWorldLocalizationService.GetUiText("永久");
+            if (!string.Equals(remainingText.text, permanent, StringComparison.Ordinal))
+                remainingText.text = permanent;
             return;
         }
 
         int remainingSeconds = Mathf.CeilToInt(Mathf.Max(0f, runtime.RemainingDurationSeconds));
-        remainingText.text = FlatWorldLocalizationService.GetUiFormat(
+        string durationText = FlatWorldLocalizationService.GetUiFormat(
             "剩余 {0}s",
             remainingSeconds);
+        if (!string.Equals(remainingText.text, durationText, StringComparison.Ordinal))
+            remainingText.text = durationText;
     }
 
     /// <summary>清理对象池行，避免 Buff 移除后继续显示旧数据。</summary>
@@ -108,6 +128,8 @@ public sealed class BuffStatusRowView : MonoBehaviour
             nameText.text = string.Empty;
         if (remainingText != null)
             remainingText.text = string.Empty;
+        if (iconInitialText != null)
+            iconInitialText.text = string.Empty;
         if (stackText != null)
             stackText.text = string.Empty;
         if (stackBadge != null)
@@ -122,6 +144,7 @@ public sealed class BuffStatusRowView : MonoBehaviour
     {
         nameText ??= FindChildText(NameNodeName);
         remainingText ??= FindChildText(RemainingNodeName);
+        iconInitialText ??= FindChildText(IconInitialNodeName);
         stackBadge ??= FindChild(StackBadgeNodeName)?.gameObject;
         stackText ??= FindChildText(StackTextNodeName);
     }

@@ -8,6 +8,7 @@ using UnityEngine.UI;
 /// 为本地玩家维护屏幕左侧中部的 Buff 条目列表。
 /// 只实例化 UI_BuffStatus 与 UI_BuffStatusItem Prefab；通过 Mod_BuffManager 生命周期与整秒倒计时事件刷新，
 /// HUD 容器本身不绘制背景或静态标题，只显示动态 Buff 条目；没有 Buff 时整体隐藏。
+/// 列表超过安全区可容纳高度时仅在列表区域允许滚动，普通状态下完全输入透明。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -18,8 +19,10 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     public const string ViewName = "PlayerBuffStatusHUD";
 
     private const string ContentNodeName = "Content";
-    private const float RowHeight = 31f;
-    private const float RowSpacing = 7f;
+    private const float RowHeight = 42f;
+    private const float RowSpacing = 6f;
+    private const int MaxVisibleRows = 6;
+    private const float TopSafeMargin = 16f;
 
     private Player player;
     private Mod_BuffManager buffManager;
@@ -29,6 +32,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private RectTransform contentRect;
     private CanvasGroup viewCanvasGroup;
     private bool missingPrefabLogged;
+    private UIManager subscribedUIManager;
 
     private readonly List<BuffStatusRowView> rowViews = new(8);
     private readonly List<BuffInstance> buffSnapshot = new(8);
@@ -61,6 +65,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             player.ProfileContextChanged -= HandleProfileContextChanged;
 
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        UnbindUiManager();
         UnbindBuffManager();
         SetViewActive(false);
     }
@@ -68,6 +73,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private void OnDestroy()
     {
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        UnbindUiManager();
         if (viewObject != null)
             Destroy(viewObject);
     }
@@ -203,17 +209,27 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         RebuildDynamicLayout(buffSnapshot.Count);
     }
 
-    /// <summary>按实际 Buff 数量收缩或增长透明列表容器，不保留额外标题或背景高度。</summary>
+    /// <summary>按安全区容纳最多六行，超过时保留完整 Content 供局部滚动。</summary>
     private void RebuildDynamicLayout(int visibleRowCount)
     {
         if (viewRect == null || contentRect == null || visibleRowCount <= 0)
             return;
 
         float rowsHeight = visibleRowCount * RowHeight + Mathf.Max(0, visibleRowCount - 1) * RowSpacing;
+        float maxRowsHeight = MaxVisibleRows * RowHeight + (MaxVisibleRows - 1) * RowSpacing;
+        RectTransform safeArea = viewRect.parent as RectTransform;
+        float availableHeight = safeArea != null
+            ? Mathf.Max(RowHeight, safeArea.rect.height * (1f - viewRect.anchorMax.y) -
+                                     viewRect.anchoredPosition.y - TopSafeMargin)
+            : maxRowsHeight;
+        float visibleHeight = Mathf.Min(rowsHeight, maxRowsHeight, availableHeight);
         viewRect.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Vertical,
-            rowsHeight);
+            visibleHeight);
 
+        // 只在条目溢出时开放该小块区域的滚动射线，避免普通 HUD 抢世界输入。
+        if (viewCanvasGroup != null)
+            viewCanvasGroup.blocksRaycasts = rowsHeight > visibleHeight + 0.5f;
         LayoutRebuilder.MarkLayoutForRebuild(contentRect);
         LayoutRebuilder.MarkLayoutForRebuild(viewRect);
     }
@@ -266,8 +282,8 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     private bool EnsureView()
     {
-        Transform panelRoot = UIManager.Instance?.panelRoot;
-        RectTransform rootRect = panelRoot as RectTransform ?? panelRoot?.GetComponent<RectTransform>();
+        UIManager manager = UIManager.Instance;
+        RectTransform rootRect = manager?.SafeAreaRoot;
         if (rootRect == null)
             return false;
 
@@ -276,6 +292,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             if (viewRect != null && viewRect.parent != rootRect)
                 viewRect.SetParent(rootRect, false);
 
+            BindUiManager(manager);
             PlaceBelowInteractivePanels();
             return viewRect != null && contentRect != null && itemPrefab != null;
         }
@@ -319,6 +336,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
         viewCanvasGroup.interactable = false;
         viewCanvasGroup.blocksRaycasts = false;
+        BindUiManager(manager);
         PlaceBelowInteractivePanels();
         SetViewActive(false);
         return true;
@@ -332,7 +350,8 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         if (viewCanvasGroup != null)
         {
             viewCanvasGroup.interactable = false;
-            viewCanvasGroup.blocksRaycasts = false;
+            if (!active)
+                viewCanvasGroup.blocksRaycasts = false;
         }
 
         if (viewObject.activeSelf != active)
@@ -346,6 +365,34 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             return;
 
         viewRect.SetSiblingIndex(Mathf.Min(1, viewRect.parent.childCount - 1));
+    }
+
+    #endregion
+
+    #region 安全区响应
+
+    private void BindUiManager(UIManager manager)
+    {
+        if (ReferenceEquals(subscribedUIManager, manager))
+            return;
+
+        UnbindUiManager();
+        subscribedUIManager = manager;
+        if (subscribedUIManager != null)
+            subscribedUIManager.InteractionSurfaceChanged += HandleSafeAreaChanged;
+    }
+
+    private void UnbindUiManager()
+    {
+        if (!ReferenceEquals(subscribedUIManager, null))
+            subscribedUIManager.InteractionSurfaceChanged -= HandleSafeAreaChanged;
+        subscribedUIManager = null;
+    }
+
+    private void HandleSafeAreaChanged()
+    {
+        if (viewObject != null && viewObject.activeSelf)
+            RebuildDynamicLayout(buffSnapshot.Count);
     }
 
     #endregion
