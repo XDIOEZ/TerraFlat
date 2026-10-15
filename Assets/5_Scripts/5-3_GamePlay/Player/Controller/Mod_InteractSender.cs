@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Unity.Profiling;
 
 public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 {
@@ -37,6 +38,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     // 交互是纯查询通道，不再创建或启用任何 Trigger；该缓冲区只服务 Physics2D Overlap 查询。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
     private readonly List<IInteractable> spatialCandidates = new(); // 纯空间目标共用选择规则。
+    private static readonly ProfilerMarker PointerQueryMarker = new("FlatWorld.Interaction.PointerQuery");
+    private static readonly ProfilerMarker RadiusQueryMarker = new("FlatWorld.Interaction.RadiusQuery");
     private Mod_HotBar hotBar;
 
     protected override void OnLoad()
@@ -231,8 +234,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>按用途选择空间目标，物理落点和距离校验保持一致。</summary>
     private IInteractable FindReceiverAtPointerCore(Vector2 pointerWorld, bool requirePointerPermission, bool previewOnly)
     {
+        using var queryScope = PointerQueryMarker.Auto();
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
+        Vector3 origin = item.transform.position;
         IInteractable selectedReceiver = null;
         float closestDistance = float.MaxValue;
         for (int i = 0; i < count; i++)
@@ -248,7 +253,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
             if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
                 continue;
-            float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
+            float distance = WorldTopologyRuntime.Distance(origin, targetPosition);
             if (distance > maxInteractDistance || distance >= closestDistance)
                 continue;
 
@@ -266,7 +271,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!IsInteractionCandidate(candidate, candidate as Component) ||
                 !TryGetInteractionPosition(candidate, out Vector3 targetPosition)) continue;
             if (requirePointerPermission && !candidate.CanPointerInteract(item)) continue;
-            float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
+            float distance = WorldTopologyRuntime.Distance(origin, targetPosition);
             if (distance >= closestDistance) continue;
             closestDistance = distance;
             selectedReceiver = candidate;
@@ -345,11 +350,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (item == null || !item.gameObject.activeInHierarchy)
             return null;
 
+        bool syncedByPointerQuery = false;
         if (TryGetInteractionPointer(out Vector2 pointer))
         {
             IInteractable pointedReceiver = collectReceivers
                 ? FindReceiverAtPointer(pointer)
                 : FindPreviewReceiverAtPointer(pointer);
+            syncedByPointerQuery = true;
             if (pointedReceiver != null) return pointedReceiver;
             // 水面交互严格服从光标落点；未命中木筏时交给喝水等环境动作。
             if (IsPointerOverWater(pointer)) return null;
@@ -359,7 +366,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (InteractionUserSettings.PreciseInteraction)
             return null;
 
-        Physics2D.SyncTransforms();
+        using var queryScope = RadiusQueryMarker.Auto();
+        // 光标命中查询已经同步过本帧物理变换，半径兜底直接复用。
+        if (!syncedByPointerQuery)
+            Physics2D.SyncTransforms();
         int count = Physics2D.OverlapCircleNonAlloc(
             item.transform.position,
             Mathf.Max(0.01f, maxInteractDistance),

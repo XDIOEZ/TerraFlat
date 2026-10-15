@@ -334,7 +334,7 @@ namespace FlatWorld.Spaceflight
             if (!IsInPresentationWorld(ship)) return false;
             if (!IsSpaceView) return true;
             Player player = ItemMgr.Instance?.User_Player;
-            SpacePassengerState observer = player != null ? State.Passengers.Find(value => value.ProfileId == player.ProfileName) : null;
+            SpacePassengerState observer = player != null ? FindPassenger(player.ProfileName) : null;
             if (observer != null && observer.Supported && observer.ShipId == ship.ShipId) return true;
             // 浮动原点只保障坐标精度，可见距离必须围绕当前乘员的权威位置计算。
             SpaceSectorPosition focus = observer != null ? GetPassengerPosition(observer) : new SpaceSectorPosition(ViewSector, ViewOrigin);
