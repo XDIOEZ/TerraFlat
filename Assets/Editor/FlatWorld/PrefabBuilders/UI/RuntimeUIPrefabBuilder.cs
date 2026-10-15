@@ -1138,7 +1138,9 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(CanvasGroup),
             typeof(CanvasRenderer),
             typeof(Image));
-        Stretch(root.GetComponent<RectTransform>());
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Stretch(rootRect);
+        rootRect.localScale = Vector3.one;
 
         Canvas canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -1160,8 +1162,14 @@ public static partial class RuntimeUIPrefabBuilder
         blocker.color = new Color(0.005f, 0.012f, 0.018f, 0.42f);
         blocker.raycastTarget = true;
 
-        GameObject card = CreateUIObject("资源加载内容", root.transform, typeof(Image), typeof(Shadow));
-        SetCentered(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(760f, 340f));
+        // 全屏遮罩保留原样，卡片单独适配安全区和窄屏。
+        GameObject safeArea = CreateUIObject("资源加载安全区", root.transform, typeof(SafeAreaRectController));
+        Stretch(safeArea.GetComponent<RectTransform>());
+
+        GameObject card = CreateUIObject("资源加载内容", safeArea.transform, typeof(Image), typeof(Shadow));
+        SetCentered(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(760f, 372f));
+        RectTransform cardRect = card.GetComponent<RectTransform>();
+        safeArea.AddComponent<SafeAreaScaleGroup>().Configure(cardRect, new[] { cardRect }, new Vector2(32f, 32f));
         Image cardImage = card.GetComponent<Image>();
         cardImage.color = new Color(0.025f, 0.043f, 0.058f, 0.98f);
         cardImage.raycastTarget = true;
@@ -1182,10 +1190,18 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI title = CreateText(GameRes.ResourceLoadingTitleKey, card.transform, "正在准备游戏", 28f, Cream);
         title.fontStyle = FontStyles.Bold;
         title.alignment = TextAlignmentOptions.Center;
+        title.enableAutoSizing = true;
+        title.fontSizeMin = 20f;
+        title.fontSizeMax = 28f;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
         title.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
 
         TextMeshProUGUI status = CreateText(GameRes.ResourceLoadingStatusKey, card.transform, "正在加载资源…", 18f, Muted);
         status.alignment = TextAlignmentOptions.Center;
+        status.enableAutoSizing = true;
+        status.fontSizeMin = 15f;
+        status.fontSizeMax = 18f;
         status.enableWordWrapping = true;
         status.overflowMode = TextOverflowModes.Ellipsis;
         LayoutElement statusLayout = status.gameObject.AddComponent<LayoutElement>();
@@ -1207,8 +1223,13 @@ public static partial class RuntimeUIPrefabBuilder
         percent.alignment = TextAlignmentOptions.Center;
         percent.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
 
-        TextMeshProUGUI hint = CreateText("资源加载提示", card.transform, "若加载失败，这里会显示完整原因。", 14f, Muted);
+        TextMeshProUGUI hint = CreateText("资源加载提示", card.transform, "若加载失败，这里会显示完整原因。", 16f, Muted);
         hint.alignment = TextAlignmentOptions.Center;
+        hint.enableAutoSizing = true;
+        hint.fontSizeMin = 14f;
+        hint.fontSizeMax = 16f;
+        hint.enableWordWrapping = false;
+        hint.overflowMode = TextOverflowModes.Ellipsis;
         hint.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         return root;
     }
@@ -1225,7 +1246,9 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(CanvasGroup),
             typeof(CanvasRenderer),
             typeof(Image));
-        Stretch(root.GetComponent<RectTransform>());
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Stretch(rootRect);
+        rootRect.localScale = Vector3.one;
 
         Canvas canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -1308,7 +1331,9 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(CanvasGroup),
             typeof(CanvasRenderer),
             typeof(Image));
-        Stretch(root.GetComponent<RectTransform>());
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Stretch(rootRect);
+        rootRect.localScale = Vector3.one;
 
         Canvas canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -1345,8 +1370,14 @@ public static partial class RuntimeUIPrefabBuilder
         shade.raycastTarget = false;
         Stretch(shade.rectTransform);
 
-        GameObject card = CreateUIObject("维度加载内容", root.transform, typeof(Image), typeof(Shadow));
+        // 背景仍铺满屏幕，仅让中央卡片跟随设备安全区等比收缩。
+        GameObject safeArea = CreateUIObject("维度加载安全区", root.transform, typeof(SafeAreaRectController));
+        Stretch(safeArea.GetComponent<RectTransform>());
+
+        GameObject card = CreateUIObject("维度加载内容", safeArea.transform, typeof(Image), typeof(Shadow));
         SetCentered(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(720f, 560f));
+        RectTransform cardRect = card.GetComponent<RectTransform>();
+        safeArea.AddComponent<SafeAreaScaleGroup>().Configure(cardRect, new[] { cardRect }, new Vector2(32f, 32f));
         Image cardImage = card.GetComponent<Image>();
         cardImage.color = new Color(0.025f, 0.03f, 0.035f, 0.94f);
         cardImage.raycastTarget = false;
@@ -1357,6 +1388,11 @@ public static partial class RuntimeUIPrefabBuilder
 
         TextMeshProUGUI eyebrow = CreateText("维度加载标题", card.transform, "维度跃迁", 17f, Muted);
         eyebrow.alignment = TextAlignmentOptions.Center;
+        eyebrow.enableAutoSizing = true;
+        eyebrow.fontSizeMin = 14f;
+        eyebrow.fontSizeMax = 17f;
+        eyebrow.enableWordWrapping = false;
+        eyebrow.overflowMode = TextOverflowModes.Ellipsis;
         SetCentered(eyebrow.rectTransform, new Vector2(0f, 218f), new Vector2(620f, 34f));
 
         Image iconFrame = CreateImage("维度图标边框", card.transform, new Color(0.08f, 0.085f, 0.09f, 1f));
@@ -1374,11 +1410,21 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI dimensionName = CreateText(GameManager.DimensionLoadingNameKey, card.transform, "地下矿洞", 34f, Amber);
         dimensionName.fontStyle = FontStyles.Bold;
         dimensionName.alignment = TextAlignmentOptions.Center;
+        dimensionName.enableAutoSizing = true;
+        dimensionName.fontSizeMin = 22f;
+        dimensionName.fontSizeMax = 34f;
+        dimensionName.enableWordWrapping = false;
+        dimensionName.overflowMode = TextOverflowModes.Ellipsis;
         SetCentered(dimensionName.rectTransform, new Vector2(0f, 18f), new Vector2(620f, 56f));
 
         TextMeshProUGUI status = CreateText(GameManager.DimensionLoadingStatusKey, card.transform, "正在创建目标维度…", 18f, Cream);
         status.alignment = TextAlignmentOptions.Center;
-        SetCentered(status.rectTransform, new Vector2(0f, -38f), new Vector2(620f, 34f));
+        status.enableAutoSizing = true;
+        status.fontSizeMin = 15f;
+        status.fontSizeMax = 18f;
+        status.enableWordWrapping = true;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        SetCentered(status.rectTransform, new Vector2(0f, -38f), new Vector2(620f, 44f));
 
         Slider progress = InstantiateSharedControl<Slider>("UI_ProgressBar", GameManager.DimensionLoadingProgressKey, card.transform);
         progress.interactable = false;
@@ -1393,8 +1439,13 @@ public static partial class RuntimeUIPrefabBuilder
         SetCentered(percent.rectTransform, new Vector2(0f, -133f), new Vector2(180f, 28f));
 
         TextMeshProUGUI hint = CreateText(GameManager.DimensionLoadingHintKey, card.transform,
-            "维度稳定后将自动抵达。", 14f, Muted);
+            "维度稳定后将自动抵达。", 16f, Muted);
         hint.alignment = TextAlignmentOptions.Center;
+        hint.enableAutoSizing = true;
+        hint.fontSizeMin = 14f;
+        hint.fontSizeMax = 16f;
+        hint.enableWordWrapping = false;
+        hint.overflowMode = TextOverflowModes.Ellipsis;
         SetCentered(hint.rectTransform, new Vector2(0f, -192f), new Vector2(620f, 30f));
 
         Image lowerLine = CreateImage("底部像素强调线", card.transform, Amber);
