@@ -31,7 +31,7 @@ namespace FlatWorld.Spaceflight
             if (isAirSupply)
             {
                 bool powered;
-                using (MachineWorld.UseScope("ship:" + shipId))
+                using (MachineWorld.UseScope(machineScopeKey))
                     powered = MachineWorld.GetById(TargetGuid)?.ElectricalSuppliedWatts > 0f;
                 tint = !powered ? AirSupplyOffTint : airSupplyIndicatorFault ? AirSupplyFaultTint : Color.clear;
 

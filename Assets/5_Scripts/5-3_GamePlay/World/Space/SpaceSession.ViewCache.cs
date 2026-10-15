@@ -234,9 +234,9 @@ namespace FlatWorld.Spaceflight
                 presenters.Add(PresenterViewIdentity(pair.Key, pair.Value.Presenter, true));
             var pieces = new JArray();
             foreach (var pair in views)
-                pieces.Add(ViewIdentity(pair.Key, pair.Value != null ? pair.Value.gameObject : null, false));
+                pieces.Add(PieceViewIdentity(pair.Key, pair.Value, false));
             foreach (var pair in pooledPieceViews)
-                pieces.Add(ViewIdentity(pair.Key, pair.Value.View != null ? pair.Value.View.gameObject : null, true));
+                pieces.Add(PieceViewIdentity(pair.Key, pair.Value.View, true));
             return new JObject
             {
                 ["poolCount"] = pooledPieceViews.Count + pooledShipPresenters.Count,
@@ -268,6 +268,15 @@ namespace FlatWorld.Spaceflight
             result["activeBodies"] = presenter.ActiveBodyCount;
             result["activeBlockers"] = presenter.ActiveBlockerCount;
             result["groundBlockers"] = presenter.GroundBlockerCount;
+            return result;
+        }
+
+        /// <summary>仅测试快照读取缓存身份，验证实际船件复用后绑定的船与部件未串号。</summary>
+        private static JObject PieceViewIdentity(string id, ShipPieceView view, bool pooled)
+        {
+            JObject result = ViewIdentity(id, view != null ? view.gameObject : null, pooled);
+            result["machineScope"] = view?.BoundMachineScopeKey;
+            result["targetGuid"] = view?.TargetGuid ?? 0;
             return result;
         }
         #endregion

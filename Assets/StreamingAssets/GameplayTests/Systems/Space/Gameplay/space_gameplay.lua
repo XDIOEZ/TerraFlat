@@ -214,6 +214,13 @@ do
             for _, snapshot in ipairs({cache.surface, cache.space, cache.returned}) do
                 assert(snapshot.presenterPoolCount <= snapshot.presenterLimit and
                     snapshot.piecePoolCount <= snapshot.pieceLimit, "船表现缓存超过容量：" .. label)
+                for _, view in ipairs(snapshot.pieces) do
+                    if view.active and not view.pooled then
+                        assert(view.machineScope == "ship:" .. ship.cruising.id and
+                            view.targetGuid == (tonumber(view.id) or 0),
+                            "船件恢复或换场景后机器作用域/GUID 缓存错误：" .. label)
+                    end
+                end
             end
         end
         return "真实起飞、氢氧消耗、惯性、旋转、导航、船体跨区与降落：" .. #data.ships .. " 个船型"

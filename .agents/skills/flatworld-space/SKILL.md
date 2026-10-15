@@ -84,6 +84,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。
 - ShipColliderPresenter 保留稳定根与部件身份；地表 Landed/Floating 使用按部件独立的静态 BoxCollider2D，仅活且 BlocksPassage 的部件阻挡。Lifting/Cruising/SurfaceDescending 或太空归属启用 FlightBody 的一个表现刚体和共享 CustomCollider2D，同时关闭逐件碰撞，落地再恢复。门/结构变化更新阻挡，休眠不启用共享刚体；ShipPieceView 只留贴图/交互，不挂逐件刚体或地板 Trigger，不复制库存或重新登记机器，太空维修仍可用。跨区只迁移稳定根，卸载或结束释放。
 - 船体升空排序和共享 Collider 偏移在 ShipColliderPresenter 每船只更新一次，ShipPieceView 不重复操作整船根；静止舱门不重复写两扇门的 Renderer 属性，开关与 Rebind 仍正常刷新。
+- ShipPieceView 在创建、休眠恢复或换船时缓存 MachineWorld 的稳定 ship 作用域键，部件数字 GUID 只在身份绑定时解析；灯光、管线与交互热查询不再逐次拼键或解析数字。
 - 船体支撑查询经 `ShipAtmosphereService.TryGetFloor` 复用结构修订索引，按格返回首个活地板，不再遍历部件或构建 Footprint 迭代器；结构变更后同步失效。
 - 太空表现由 SpaceSession.Presentation 与 SpacePresentationPose 共用前后固定步姿态和一个渲染进度，物理仍为50Hz；船格原点、乘员本地位置和驾驶中心统一插值，表现刚体关闭原生二次插值。屏幕选格按表现姿态反算，支撑/丢弃/存档读权威位置；联机样本按本地收包时间插值，远端乘员在统一表现同步事件后投影。传送、归属切换和会话结束重置历史，普通跨区与浮动原点保留双精度连续性。
 - 太空驾驶通过 `Mod_Cam.FollowMode.PresentationLocked` 直接跟随同一插值中心，关闭镜头额外 XY 阻尼/前探并固定 LateUpdate；地表驾驶仍用玩家设置，释放恢复原更新方式与最新偏好，不靠降船速或缩宇宙掩盖屏幕漂移。
