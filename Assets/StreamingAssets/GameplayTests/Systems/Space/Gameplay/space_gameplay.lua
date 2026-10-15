@@ -186,6 +186,17 @@ do
             assert(not ship.landedAgain.spaceView and ship.landedAgain.height <= 0.001, "降落后仍在太空或半空：" .. label)
             assert(ship.landedAgain.id == ship.landed.id, "降落重建了错误的飞船身份：" .. label)
             local cache = ship.viewCache
+            local function check_body_mode(snapshot, whole, stage)
+                assert(#snapshot.presenters == 1, "当前船体缺少唯一表现根：" .. label .. "/" .. stage)
+                local view = snapshot.presenters[1]
+                assert(view.wholeShipBody == whole and view.activeBodies == (whole and 1 or 0) and
+                    view.activeBlockers == (whole and 1 or 0), "停泊逐件与飞行整船碰撞未互斥：" .. label .. "/" .. stage)
+                assert(whole and view.groundBlockers == 0 or not whole and view.groundBlockers > 0,
+                    "地表逐件阻挡未随起降切换：" .. label .. "/" .. stage)
+            end
+            check_body_mode(cache.surface, false, "起飞前停泊")
+            check_body_mode(cache.space, true, "太空航行")
+            check_body_mode(cache.returned, false, "落地停稳")
             local function reused(before, after, group)
                 local ids, matches = {}, 0
                 for _, view in ipairs(before[group]) do ids[view.id] = view.instanceId end

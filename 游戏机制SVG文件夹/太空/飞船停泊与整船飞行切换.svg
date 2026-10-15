@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1180" viewBox="0 0 1480 1180" role="img" aria-labelledby="title desc">
+  <title id="title">飞船停泊与整船飞行切换</title>
+  <desc id="desc">停泊时按会阻挡的船件分别碰撞，从起飞开始直到下降都按整船运动。部件身份、库存和机器状态沿用原数据。落地停稳后清零速度并回到停泊；船体受损断开后按连通块分别运动。这是机制示意图，不是运行画面。</desc>
+  <defs>
+    <style>
+      text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#eaf1fb}
+      .title{font-size:34px;font-weight:700}.subtitle{font-size:18px;fill:#a8bad2}
+      .heading{font-size:26px;font-weight:700}.body{font-size:20px}.small{font-size:17px;fill:#b7c6db}
+      .tiny{font-size:15px;fill:#a6bad2}.chip{font-size:17px;font-weight:700}.part{font-size:14px;fill:#f1f5fa;text-anchor:middle}
+      .panel{fill:#162638;stroke:#30475f;stroke-width:1.5}.slot{fill:#35495f;stroke:#7c93aa;stroke-width:1.5}
+      .cyan{fill:#72dfdd}.gold{fill:#ffd07a}.green{fill:#8ee6b4}
+      .arrow{fill:none;stroke:#8da4bc;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
+      .route{fill:none;stroke:#54708d;stroke-width:2;stroke-dasharray:8 10}
+      .pulse{animation:pulse 2.6s ease-in-out infinite}.flame{animation:flame .7s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center top}
+      .drift{animation:drift 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+      .travel{stroke-dasharray:12 13;animation:travel 1.8s linear infinite}
+      @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+      @keyframes flame{from{transform:scaleY(.7);opacity:.6}to{transform:scaleY(1);opacity:1}}
+      @keyframes drift{0%,100%{transform:translateY(3px)}50%{transform:translateY(-5px)}}
+      @keyframes travel{to{stroke-dashoffset:-50}}
+      @media(prefers-reduced-motion:reduce){.pulse,.flame,.drift,.travel{animation:none}}
+    </style>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101c2c"/><stop offset="1" stop-color="#0b1521"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8" fill="#8da4bc"/></marker>
+    <g id="ship">
+      <rect x="0" y="0" width="62" height="62" rx="5" class="slot"/>
+      <rect x="66" y="0" width="62" height="62" rx="5" class="slot"/>
+      <rect x="132" y="0" width="62" height="62" rx="5" class="slot"/>
+      <rect x="0" y="66" width="62" height="62" rx="5" class="slot"/>
+      <rect x="66" y="66" width="62" height="62" rx="5" fill="#2e5c68" stroke="#86bfc8" stroke-width="1.5"/>
+      <rect x="132" y="66" width="62" height="62" rx="5" fill="#705b3f" stroke="#cfb480" stroke-width="1.5"/>
+      <rect x="0" y="132" width="62" height="62" rx="5" class="slot"/>
+      <rect x="66" y="132" width="62" height="62" rx="5" fill="#665246" stroke="#c5a28a" stroke-width="1.5"/>
+      <rect x="132" y="132" width="62" height="62" rx="5" class="slot"/>
+      <path d="M9 17H53M9 25H53M75 17H119M75 25H119M141 17H185M141 25H185" stroke="#9eafbf" stroke-width="4"/>
+      <circle cx="97" cy="91" r="12" fill="#8edbd1"/><path d="M86 112V107Q97 98 108 107V112" fill="#c4f2e6"/>
+      <path d="M141 83H185V110H141Z M141 91H185M163 83V110" fill="none" stroke="#e6cc9b" stroke-width="2"/>
+      <path d="M82 143H112V165H82ZM88 165V176H106V165" fill="#bacbd8" stroke="#e0eaf3" stroke-width="1.5"/>
+      <text x="31" y="48" class="part">墙</text><text x="97" y="48" class="part">墙</text><text x="163" y="48" class="part">墙</text>
+      <text x="31" y="103" class="part">地板</text><text x="97" y="124" class="part">驾驶位</text><text x="163" y="124" class="part">箱子</text>
+      <text x="31" y="170" class="part">地板</text><text x="97" y="189" class="part">引擎</text><text x="163" y="170" class="part">地板</text>
+    </g>
+    <g id="pieceOutlines" fill="none" stroke="#72dfdd" stroke-width="3">
+      <rect x="-3" y="-3" width="68" height="68" rx="7"/><rect x="63" y="-3" width="68" height="68" rx="7"/>
+      <rect x="129" y="-3" width="68" height="68" rx="7"/><rect x="129" y="63" width="68" height="68" rx="7"/>
+      <rect x="63" y="129" width="68" height="68" rx="7"/>
+    </g>
+  </defs>
+
+  <rect width="1480" height="1180" fill="url(#bg)"/>
+  <rect x="40" y="36" width="6" height="72" rx="3" fill="#72dfdd"/>
+  <text x="66" y="68" class="title">地面一块块搭，起飞后一整艘飞</text>
+  <text x="66" y="101" class="subtitle">飞船停泊与整船飞行切换 · 机制示意图，不是游戏运行画面</text>
+  <rect x="1250" y="45" width="182" height="39" rx="19" fill="#203c43"/>
+  <text x="1341" y="71" text-anchor="middle" class="chip cyan">同一艘船 · 两种状态</text>
+
+  <rect x="40" y="136" width="650" height="423" rx="20" class="panel"/>
+  <rect x="790" y="136" width="650" height="423" rx="20" class="panel"/>
+  <text x="66" y="181" class="heading cyan">① 停泊：按部件阻挡</text>
+  <text x="66" y="212" class="small">地面落稳 / 海面停泊 · Landed / Floating</text>
+  <g transform="translate(82 247)"><use href="#ship"/><use href="#pieceOutlines" class="pulse"/></g>
+  <path d="M64 463H308" stroke="#71b9bd" stroke-width="4"/>
+  <path d="M66 478Q83 467 100 478T134 478T168 478T202 478T236 478T270 478T304 478" fill="none" stroke="#4c8499" stroke-width="2"/>
+  <text x="337" y="281" class="body">墙、箱子等阻挡部件</text>
+  <text x="337" y="313" class="body cyan">各自负责静态碰撞</text>
+  <text x="337" y="361" class="small">地板不会被补成实心墙</text>
+  <text x="337" y="394" class="small">整船表现刚体停止模拟</text>
+  <rect x="66" y="504" width="598" height="34" rx="9" fill="#203a44"/>
+  <text x="365" y="527" text-anchor="middle" class="small" style="fill:#bfe8e7">照常逐块建造、拆除、维修和操作</text>
+
+  <text x="816" y="181" class="heading gold">② 飞行：按整船运动</text>
+  <text x="816" y="212" class="small">开始起飞 → 太空巡航 → 地表下降，都用整船方式</text>
+  <g transform="translate(833 251)">
+    <g class="drift">
+      <use href="#ship"/>
+      <path d="M-3-3H197V131H129V65H-3Z M63 129H131V197H63Z" fill="none" stroke="#ffd07a" stroke-width="4" stroke-linejoin="round" class="pulse"/>
+      <path d="M77 201Q97 263 117 201Q97 225 77 201" fill="#f6ab5b" class="flame"/>
+      <path d="M87 201Q97 241 107 201Z" fill="#ffe6a4" class="flame"/>
+    </g>
+  </g>
+  <text x="1084" y="281" class="body">一艘船一个表现刚体</text>
+  <text x="1084" y="313" class="body gold">共享整船的碰撞形状</text>
+  <text x="1084" y="361" class="small">部件随船一起平移、转动</text>
+  <text x="1084" y="394" class="small">逐件碰撞关闭，避免重复挡路</text>
+  <rect x="816" y="504" width="598" height="34" rx="9" fill="#3d342b"/>
+  <text x="1115" y="527" text-anchor="middle" class="small" style="fill:#f6ddb1">太空计算沿用原来的独立物理场景和动态刚体</text>
+
+  <path d="M704 291H776" class="arrow"/>
+  <text x="740" y="266" text-anchor="middle" class="tiny">开始起飞</text>
+  <path d="M776 424H704" class="arrow"/>
+  <text x="740" y="457" text-anchor="middle" class="tiny">落地停稳</text>
+
+  <rect x="40" y="583" width="1400" height="144" rx="18" fill="#182b3d" stroke="#35506a" stroke-width="1.5"/>
+  <text x="66" y="621" class="body" style="font-weight:700">切换时机</text>
+  <path d="M278 646H1284" class="route travel"/>
+  <rect x="222" y="626" width="184" height="42" rx="21" fill="#254e57"/>
+  <rect x="473" y="626" width="184" height="42" rx="21" fill="#59462f"/>
+  <rect x="724" y="626" width="184" height="42" rx="21" fill="#59462f"/>
+  <rect x="975" y="626" width="184" height="42" rx="21" fill="#59462f"/>
+  <rect x="1226" y="626" width="184" height="42" rx="21" fill="#254e57"/>
+  <text x="314" y="654" text-anchor="middle" class="chip cyan">停泊</text>
+  <text x="565" y="654" text-anchor="middle" class="chip gold">起飞 Lifting</text>
+  <text x="816" y="654" text-anchor="middle" class="chip gold">巡航 Cruising</text>
+  <text x="1067" y="654" text-anchor="middle" class="chip gold">地表下降</text>
+  <text x="1318" y="654" text-anchor="middle" class="chip cyan">停泊</text>
+  <text x="314" y="700" text-anchor="middle" class="tiny">逐件静态阻挡</text>
+  <path d="M475 691H1158" stroke="#ffd07a" stroke-width="2"/>
+  <text x="816" y="713" text-anchor="middle" class="tiny" style="fill:#f3d6a4">从起飞那一刻开始，连续按整船运动</text>
+  <text x="1318" y="700" text-anchor="middle" class="tiny">停稳、清零速度</text>
+
+  <rect x="40" y="751" width="1400" height="150" rx="18" class="panel"/>
+  <text x="66" y="793" class="heading green">运动方式变了，船上的东西还是原来那些</text>
+  <g transform="translate(71 828)">
+    <rect width="286" height="44" rx="11" fill="#263e44"/><text x="143" y="29" text-anchor="middle" class="body">部件身份保留</text>
+    <rect x="323" width="286" height="44" rx="11" fill="#263e44"/><text x="466" y="29" text-anchor="middle" class="body">库存沿用，不复制</text>
+    <rect x="646" width="286" height="44" rx="11" fill="#263e44"/><text x="789" y="29" text-anchor="middle" class="body">机器状态继续保留</text>
+    <rect x="969" width="370" height="44" rx="11" fill="#263e44"/><text x="1154" y="29" text-anchor="middle" class="body">太空里仍可施工和维修</text>
+  </g>
+
+  <rect x="40" y="925" width="1400" height="194" rx="18" class="panel"/>
+  <text x="66" y="967" class="heading">被打断后：按还连着的部分，拆成几个运动整体</text>
+  <g transform="translate(72 994)">
+    <rect width="42" height="42" rx="4" class="slot"/><rect x="46" width="42" height="42" rx="4" class="slot"/>
+    <rect x="92" width="42" height="42" rx="4" class="slot"/><rect x="138" width="42" height="42" rx="4" class="slot"/>
+    <rect x="184" width="42" height="42" rx="4" class="slot"/><rect x="230" width="42" height="42" rx="4" class="slot"/>
+    <rect x="-5" y="-5" width="282" height="52" rx="8" fill="none" stroke="#ffd07a" stroke-width="3"/>
+    <path d="M136-12 124 10 143 20 129 51" fill="none" stroke="#ff8d84" stroke-width="4"/>
+    <text x="136" y="82" text-anchor="middle" class="small">船体连接被破坏</text>
+  </g>
+  <path d="M380 1016H465" class="arrow"/>
+  <g transform="translate(501 991) rotate(-5 44 21)">
+    <rect width="42" height="42" rx="4" class="slot"/><rect x="46" width="42" height="42" rx="4" class="slot"/>
+    <rect x="-5" y="-5" width="98" height="52" rx="8" fill="none" stroke="#72dfdd" stroke-width="3"/>
+  </g>
+  <g transform="translate(645 1017) rotate(7 44 21)">
+    <rect width="42" height="42" rx="4" class="slot"/><rect x="46" width="42" height="42" rx="4" class="slot"/>
+    <rect x="-5" y="-5" width="98" height="52" rx="8" fill="none" stroke="#8ee6b4" stroke-width="3"/>
+  </g>
+  <g transform="translate(788 987) rotate(-10 21 21)">
+    <rect width="42" height="42" rx="4" class="slot"/>
+    <rect x="-5" y="-5" width="52" height="52" rx="8" fill="none" stroke="#c4a8ff" stroke-width="3"/>
+  </g>
+  <text x="962" y="1016" class="body">分裂沿用原来的受损规则</text>
+  <text x="962" y="1051" class="small">每块残骸保留自己的部件和状态</text>
+  <text x="962" y="1084" class="small">碰撞形状跟着剩余结构更新</text>
+  <text x="40" y="1154" class="small">读图提示：青色 = 停泊逐件阻挡　金色 = 飞行整船运动　方块内的内容始终按各自职责管理。</text>
+</svg>

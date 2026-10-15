@@ -82,7 +82,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。
-- ShipColliderPresenter 每船一个表现刚体和一个阻挡 CustomCollider2D；ShipPieceView 是其子节点，只留贴图/交互，交互范围读局部矩形，不挂逐件刚体或地板 Trigger。移动整船根节点，跨区只迁移该根；卸载或结束释放。
+- ShipColliderPresenter 保留稳定根与部件身份；地表 Landed/Floating 使用按部件独立的静态 BoxCollider2D，仅活且 BlocksPassage 的部件阻挡。Lifting/Cruising/SurfaceDescending 或太空归属启用 FlightBody 的一个表现刚体和共享 CustomCollider2D，同时关闭逐件碰撞，落地再恢复。门/结构变化更新阻挡，休眠不启用共享刚体；ShipPieceView 只留贴图/交互，不挂逐件刚体或地板 Trigger，不复制库存或重新登记机器，太空维修仍可用。跨区只迁移稳定根，卸载或结束释放。
 - 船体升空排序和共享 Collider 偏移在 ShipColliderPresenter 每船只更新一次，ShipPieceView 不重复操作整船根；静止舱门不重复写两扇门的 Renderer 属性，开关与 Rebind 仍正常刷新。
 - 船体支撑查询经 `ShipAtmosphereService.TryGetFloor` 复用结构修订索引，按格返回首个活地板，不再遍历部件或构建 Footprint 迭代器；结构变更后同步失效。
 - 太空表现由 SpaceSession.Presentation 与 SpacePresentationPose 共用前后固定步姿态和一个渲染进度，物理仍为50Hz；船格原点、乘员本地位置和驾驶中心统一插值，表现刚体关闭原生二次插值。屏幕选格按表现姿态反算，支撑/丢弃/存档读权威位置；联机样本按本地收包时间插值，远端乘员在统一表现同步事件后投影。传送、归属切换和会话结束重置历史，普通跨区与浮动原点保留双精度连续性。

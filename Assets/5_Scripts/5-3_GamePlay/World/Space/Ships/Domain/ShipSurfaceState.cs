@@ -7,6 +7,11 @@ namespace FlatWorld.Spaceflight
         #region 地表升高与空地受击规则
         public const double AirborneVisualRise = 1d;
 
+        // 停泊保留逐块阻挡，开始起飞后直到落地都由整船承载运动。
+        public static bool UsesWholeShipBody(ShipState ship, ShipFlightState flight) => ship != null &&
+            (ship.PlatformKind == ShipPlatformKind.Space || flight != null &&
+                flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.Cruising or ShipFlightPhase.SurfaceDescending);
+
         // 起降高度统一换算成贴图在世界 Y 轴上的升高距离。
         public static double VisualRise(ShipFlightState flight) =>
             flight != null && flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending

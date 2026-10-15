@@ -229,9 +229,9 @@ namespace FlatWorld.Spaceflight
         {
             var presenters = new JArray();
             foreach (var pair in shipColliderPresenters)
-                presenters.Add(ViewIdentity(pair.Key, pair.Value.Root, false));
+                presenters.Add(PresenterViewIdentity(pair.Key, pair.Value, false));
             foreach (var pair in pooledShipPresenters)
-                presenters.Add(ViewIdentity(pair.Key, pair.Value.Presenter.Root, true));
+                presenters.Add(PresenterViewIdentity(pair.Key, pair.Value.Presenter, true));
             var pieces = new JArray();
             foreach (var pair in views)
                 pieces.Add(ViewIdentity(pair.Key, pair.Value != null ? pair.Value.gameObject : null, false));
@@ -259,6 +259,17 @@ namespace FlatWorld.Spaceflight
             ["scene"] = root != null ? root.scene.name : string.Empty,
             ["parentId"] = root != null && root.transform.parent != null ? root.transform.parent.gameObject.GetInstanceID() : 0
         };
+
+        // 模式诊断只采样当前实际启用的碰撞，不把休眠组件算成正在工作的整船刚体。
+        private static JObject PresenterViewIdentity(string id, ShipColliderPresenter presenter, bool pooled)
+        {
+            JObject result = ViewIdentity(id, presenter.Root, pooled);
+            result["wholeShipBody"] = presenter.WholeShipBody;
+            result["activeBodies"] = presenter.ActiveBodyCount;
+            result["activeBlockers"] = presenter.ActiveBlockerCount;
+            result["groundBlockers"] = presenter.GroundBlockerCount;
+            return result;
+        }
         #endregion
     }
 }

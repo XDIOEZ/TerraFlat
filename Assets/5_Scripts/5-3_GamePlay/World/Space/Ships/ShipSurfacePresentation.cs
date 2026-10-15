@@ -101,6 +101,8 @@ namespace FlatWorld.Spaceflight
 
         private void SynchronizeSurfacePresentation(Vector3 visualLiftOffset)
         {
+            // 整船根同时管理停泊和飞行表现，船件不再通过父刚体猜测归属。
+            if (session?.HasShipColliderPresenter(shipId) == true) return;
             if (surfaceCollider == null)
             {
                 Rigidbody2D rigidbody = GetComponentInParent<Rigidbody2D>();

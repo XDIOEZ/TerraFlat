@@ -73,7 +73,7 @@ do
 end
 
 do
-    -- 点火、起降和太空阶段调用正式空地规则；真实贴图、碰撞和联机由现场验收。
+    -- 停泊、起降和太空平台调用正式整体与空地规则；真实碰撞组件由现场采样。
     test.system("space", "ship_surface_state", {}, function(data)
         local function near(actual, expected, label)
             assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) <= 0.0000001, label)
@@ -81,17 +81,20 @@ do
         assert(data.operation == "ship_surface_state" and data.scope == "production-domain", "缺少正式飞船空地结果")
         near(data.airborneVisualRise, 1, "空中阈值必须是贴图升高 1 Unity 单位")
         local expected = {
-            ["no-flight"] = {0, false, false}, landed = {0, false, false},
-            ["landed-stale-height"] = {0, false, false}, floating = {0, false, false},
-            ["ignited-ground"] = {0, false, true}, ["lifting-negative"] = {0, false, true},
-            ["lifting-zero"] = {0, false, true}, ["lifting-below"] = {.99996, false, true},
-            ["lifting-threshold"] = {1, true, true}, ["lifting-above"] = {1.00004, true, true},
-            ["lifting-unpowered"] = {1, true, true}, ["descending-above"] = {1.00004, true, true},
-            ["descending-threshold"] = {1, true, true}, ["descending-below"] = {.99996, false, true},
-            ["descending-zero"] = {0, false, true}, cruising = {0, true, true},
-            ["cruising-unpowered"] = {0, true, true}
+            ["no-flight"] = {0, false, false, false}, landed = {0, false, false, false},
+            ["landed-stale-height"] = {0, false, false, false}, floating = {0, false, false, false},
+            ["ignited-ground"] = {0, false, true, false}, ["lifting-negative"] = {0, false, true, true},
+            ["lifting-zero"] = {0, false, true, true}, ["lifting-below"] = {.99996, false, true, true},
+            ["lifting-threshold"] = {1, true, true, true}, ["lifting-above"] = {1.00004, true, true, true},
+            ["lifting-unpowered"] = {1, true, true, true}, ["descending-above"] = {1.00004, true, true, true},
+            ["descending-threshold"] = {1, true, true, true}, ["descending-below"] = {.99996, false, true, true},
+            ["descending-zero"] = {0, false, true, true}, cruising = {0, true, true, true},
+            ["cruising-unpowered"] = {0, true, true, true}, ["lifting-unpowered-zero"] = {0, false, true, true},
+            ["ocean-no-flight"] = {0, false, false, false}, ["space-no-flight"] = {0, false, false, true},
+            ["space-stale-landed"] = {0, false, false, true}, ["space-stale-floating"] = {0, false, false, true},
+            ["no-ship-cruising"] = {0, true, true, false}
         }
-        assert(type(data.samples) == "table" and #data.samples == 17, "空地边界与阶段样本不完整")
+        assert(type(data.samples) == "table" and #data.samples == 23, "整体运动、空地边界与阶段样本不完整")
         local seen = {}
         for _, sample in ipairs(data.samples) do
             local value = expected[sample.name]
@@ -100,6 +103,7 @@ do
             near(sample.visualRise, value[1], "贴图升高错误：" .. sample.name)
             assert(sample.airborne == value[2], "空地模式错误：" .. sample.name)
             assert(sample.elevated == value[3], "点火或起降排序资格错误：" .. sample.name)
+            assert(sample.wholeShipBody == value[4], "停泊逐件与飞行整船模式错误：" .. sample.name)
             local damage, airborne = sample.damage, value[2]
             assert(type(damage) == "table", "缺少投送资格矩阵：" .. sample.name)
             assert(damage.melee == not airborne, "普通近战空地资格错误：" .. sample.name)
@@ -115,8 +119,8 @@ do
                 "缺少空中命中能力的空中限定攻击必须拒绝：" .. sample.name)
         end
         assert(type(data.limitations) == "string" and #data.limitations > 0, "空地结果必须保留覆盖边界")
-        return "覆盖点火排序资格、1 单位阈值两侧、降落恢复、熄火和太空阶段，以及全部八种投送能力组合。"
-    end, "飞船点火排序与空地伤害模式")
+        return "覆盖停泊逐件、起飞即整船、失动力不拆散、太空平台缺失或延迟飞行记录、船体缺失保护、空地阈值和八种投送能力。"
+    end, "飞船停泊逐件、飞行整体与空地伤害模式")
 end
 
 do
