@@ -22,6 +22,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
         operations.Add("player/movement_cost", EntityMovementCost);
+        operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("combat/physical", EntityPhysicalDamage);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
@@ -94,6 +95,77 @@ public static partial class GameplayTestSystemProbe
             ["moveConfiguration"] = rule.moveNutritionConsumeMultiplier,
             ["runConfiguration"] = rule.runNutritionConsumeMultiplier
         };
+    }
+
+    private static JObject EntityTraumaModifiers(JObject args)
+    {
+        return WithEntityProbeItem(first => WithEntityProbeItem(second =>
+        {
+            var definition = new BuffDefinition { Id = "test:trauma_cache" };
+            BuffInstance Make(Item receiver)
+            {
+                var runtime = new BuffInstance();
+                if (!runtime.Initialize(definition, receiver))
+                    throw new InvalidOperationException("创伤缓存测试 Buff 初始化失败。");
+                return runtime;
+            }
+            static void Set(BuffInstance runtime, string type, float value, bool stop = false) =>
+                BodyTraumaBuffEffects.Apply(new BuffEffectDefinition
+                {
+                    TypeId = type, Phase = stop ? BuffEffectPhase.Stop : BuffEffectPhase.Start, Value = value
+                }, runtime);
+            static JObject Snapshot(Item receiver)
+            {
+                Vector2 input = BodyTraumaBuffEffects.TransformMoveInput(receiver, new Vector2(2f, -3f), 1f);
+                return new JObject
+                {
+                    ["attack"] = BodyTraumaBuffEffects.GetAttackMultiplier(receiver),
+                    ["moveX"] = input.x, ["moveY"] = input.y
+                };
+            }
+
+            BuffInstance one = Make(first), two = Make(first), other = Make(second);
+            try
+            {
+                JObject baseline = Snapshot(first);
+                Set(one, BodyTraumaBuffEffects.Attack, 1.5f);
+                Set(one, BodyTraumaBuffEffects.Confusion, 2f);
+                Set(two, BodyTraumaBuffEffects.Attack, .5f);
+                Set(two, BodyTraumaBuffEffects.Confusion, .5f);
+                Set(other, BodyTraumaBuffEffects.Attack, 1.8f);
+                Set(other, BodyTraumaBuffEffects.Confusion, 1f);
+                JObject stacked = Snapshot(first), isolated = Snapshot(second);
+                Set(one, BodyTraumaBuffEffects.Confusion, 0f, true);
+                JObject oneConfusionRemoved = Snapshot(first);
+                Set(two, BodyTraumaBuffEffects.Confusion, 0f, true);
+                JObject bothConfusionsRemoved = Snapshot(first);
+                Set(one, BodyTraumaBuffEffects.Attack, 0f, true);
+                JObject oneAttackRemoved = Snapshot(first);
+                Set(two, BodyTraumaBuffEffects.Attack, .8f);
+                JObject replacedAttack = Snapshot(first), otherUnchanged = Snapshot(second);
+                Set(two, BodyTraumaBuffEffects.Attack, 0f, true);
+                Set(other, BodyTraumaBuffEffects.Confusion, 0f, true);
+                Set(other, BodyTraumaBuffEffects.Attack, 0f, true);
+                return new JObject
+                {
+                    ["baseline"] = baseline, ["stacked"] = stacked, ["isolated"] = isolated,
+                    ["oneConfusionRemoved"] = oneConfusionRemoved,
+                    ["bothConfusionsRemoved"] = bothConfusionsRemoved,
+                    ["oneAttackRemoved"] = oneAttackRemoved, ["replacedAttack"] = replacedAttack,
+                    ["otherUnchanged"] = otherUnchanged, ["cleared"] = Snapshot(first),
+                    ["otherCleared"] = Snapshot(second),
+                    ["nullAttack"] = BodyTraumaBuffEffects.GetAttackMultiplier(null)
+                };
+            }
+            finally
+            {
+                foreach (BuffInstance runtime in new[] { one, two, other })
+                {
+                    Set(runtime, BodyTraumaBuffEffects.Attack, 0f, true);
+                    Set(runtime, BodyTraumaBuffEffects.Confusion, 0f, true);
+                }
+            }
+        }));
     }
 
     private static JObject EntityAiStateMachine(JObject args)
