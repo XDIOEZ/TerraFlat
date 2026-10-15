@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Gameplay.InventoryFeedback;
 using MemoryPack;
 using UnityEngine;
 
@@ -510,6 +511,10 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
         var previousItemData = cached_ItemDatas[index];
         bool slotItemChanged = !ReferenceEquals(previousItemData, LocalSlot.itemData);
+        bool equipmentIdentityChanged = slotItemChanged &&
+            (previousItemData == null || LocalSlot.itemData == null ||
+             previousItemData.Guid == 0 || previousItemData.Guid != LocalSlot.itemData.Guid ||
+             !string.Equals(previousItemData.IDName, LocalSlot.itemData.IDName, StringComparison.Ordinal));
 
         // 槽位物品发生变化：先把旧物品对应实例卸下并写回旧物品自身的存储模块
         if (slotItemChanged)
@@ -537,6 +542,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             cached_ItemDatas[index] = null;
             item?.MarkModuleScheduleDirty();
             EquipmentChanged?.Invoke();
+            if (equipmentIdentityChanged && previousItemData != null && item is Player removingPlayer)
+                EquipmentAudioFeedbackEvents.Publish(removingPlayer, false);
             return;
         }
 
@@ -559,6 +566,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
         item?.MarkModuleScheduleDirty();
         EquipmentChanged?.Invoke();
+        if (equipmentIdentityChanged && item is Player equippingPlayer)
+            EquipmentAudioFeedbackEvents.Publish(equippingPlayer, true);
     }
 
     private static Ex_ModData_MemoryPackable FindEquipmentStoreData(ItemData itemData)

@@ -10,6 +10,8 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         assert(cue.loaded and cue.variants == cue.expectedVariants and cue.validClips and cue.spatial,
             cue.id .. " 未正确导入 LMMS 音频或缺少声源限流")
     end
+    assert(data.inventoryUiCueCount == 75 and data.inventoryUiCuesValid,
+        "72 个 LMMS 取放音效及 3 种交换/装备 Cue 未完整导入 Unity UI 总线")
     assert(data.scope == "live-isolated-world" and data.formalCatalog and data.clipCount > 0 and data.clipSamples > 0, "正式录音或目录没有真实加载")
     assert(data.playing and data.spatialLinear and data.cueDistancesPreserved and data.sourceUnmuted, "角色附着声音没有按正式空间参数播放")
     assert(data.nearPlayFrame == data.nearSampleFrame and data.farPlayFrame == data.farSampleFrame,

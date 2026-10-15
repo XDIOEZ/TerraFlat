@@ -69,6 +69,20 @@ namespace FlatWorld.Audio.Editor
                 cues.Add(cue);
             }
 
+            // 独立 LMMS 库存素材不在 Generated 自动扫描目录，重建时保留已有 Cue。
+            HashSet<string> includedIds = new HashSet<string>(
+                cues.Select(cue => cue.Id), StringComparer.OrdinalIgnoreCase);
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioCue", new[] { CueFolder }))
+            {
+                AudioCue existing = AssetDatabase.LoadAssetAtPath<AudioCue>(
+                    AssetDatabase.GUIDToAssetPath(guid));
+                if (existing != null && !string.IsNullOrWhiteSpace(existing.Id) &&
+                    includedIds.Add(existing.Id))
+                    cues.Add(existing);
+            }
+            cues.Sort((left, right) =>
+                string.Compare(left.Id, right.Id, StringComparison.OrdinalIgnoreCase));
+
             AudioCatalog catalog = AssetDatabase.LoadAssetAtPath<AudioCatalog>(CatalogPath);
             if (catalog == null)
             {

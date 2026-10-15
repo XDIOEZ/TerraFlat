@@ -123,6 +123,30 @@ public static partial class GameplayTestPresentationRuntimeProbe
                                    cue.MaxInstances == (isFootstep ? 2 : 3)
                 });
             }
+            int inventoryUiCueCount = 0;
+            bool inventoryUiCuesValid = true;
+            foreach (string action in new[] { "pickup", "backpack", "chest" })
+            foreach (string material in new[] { "soft", "wood", "stone", "metal" })
+            foreach (string weight in new[] { "light", "medium", "heavy" })
+            foreach (string volume in new[] { "compact", "bulky" })
+            {
+                string id = $"ui.inventory.{action}.{material}.{weight}.{volume}";
+                bool loaded = service.TryGetCue(id, out AudioCue cue);
+                inventoryUiCueCount++;
+                inventoryUiCuesValid &= loaded && cue.Bus == AudioBus.UI &&
+                    cue.SpatialBlend == 0f && !cue.Loop && cue.Clips.Count == 1 &&
+                    cue.Clips[0] != null && cue.Clips[0].channels == 1 &&
+                    cue.Clips[0].frequency == 48000 && cue.Clips[0].samples > 0;
+            }
+            foreach (string id in new[] { "ui.inventory.swap", "ui.equipment.equip", "ui.equipment.unequip" })
+            {
+                bool loaded = service.TryGetCue(id, out AudioCue cue);
+                inventoryUiCueCount++;
+                inventoryUiCuesValid &= loaded && cue.Bus == AudioBus.UI &&
+                    cue.SpatialBlend == 0f && cue.Clips.Count == 2 &&
+                    cue.Clips.All(clip => clip != null && clip.channels == 1 &&
+                                          clip.frequency == 48000 && clip.samples > 0);
+            }
             AudioListener[] listeners = UnityEngine.Object.FindObjectsOfType<AudioListener>()
                 .Where(value => value.isActiveAndEnabled).ToArray();
             if (listeners.Length != 1) throw new InvalidOperationException("真实现场需要唯一启用的 AudioListener。");
@@ -181,6 +205,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             {
                 ["feedbackCues"] = feedbackCues,
                 ["movementCues"] = movementCues,
+                ["inventoryUiCueCount"] = inventoryUiCueCount,
+                ["inventoryUiCuesValid"] = inventoryUiCuesValid,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,
                 ["clipSamples"] = source.clip != null ? source.clip.samples : 0,
                 ["playing"] = nearPlaying, ["spatialLinear"] = nearSpatial, ["cueDistancesPreserved"] = distancePreserved,

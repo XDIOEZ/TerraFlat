@@ -193,6 +193,9 @@ namespace FlatWorld.Audio
         public const string UiHover = "ui.hover";
         public const string UiConfirm = "ui.confirm";
         public const string UiCancel = "ui.cancel";
+        public const string UiInventorySwap = "ui.inventory.swap";
+        public const string UiEquipmentEquip = "ui.equipment.equip";
+        public const string UiEquipmentUnequip = "ui.equipment.unequip";
         public const string ItemAct = "item.act";
         public const string ItemPickup = "item.pickup";
         public const string ItemDrop = "item.drop";

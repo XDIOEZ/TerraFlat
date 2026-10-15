@@ -1,0 +1,50 @@
+[
+  {
+    "cue": "ui.inventory.swap",
+    "name": "物品交换双段落位",
+    "variant": 1,
+    "startSeconds": 0.125,
+    "seconds": 0.3,
+    "file": "Assets/Audio/Generated/ui.inventory.swap__01.wav"
+  },
+  {
+    "cue": "ui.inventory.swap",
+    "name": "物品交换双段落位",
+    "variant": 2,
+    "startSeconds": 2.125,
+    "seconds": 0.3,
+    "file": "Assets/Audio/Generated/ui.inventory.swap__02.wav"
+  },
+  {
+    "cue": "ui.equipment.equip",
+    "name": "装备扣紧与布料摩擦",
+    "variant": 1,
+    "startSeconds": 4.125,
+    "seconds": 0.41,
+    "file": "Assets/Audio/Generated/ui.equipment.equip__01.wav"
+  },
+  {
+    "cue": "ui.equipment.equip",
+    "name": "装备扣紧与布料摩擦",
+    "variant": 2,
+    "startSeconds": 6.125,
+    "seconds": 0.41,
+    "file": "Assets/Audio/Generated/ui.equipment.equip__02.wav"
+  },
+  {
+    "cue": "ui.equipment.unequip",
+    "name": "卸下装备的松扣收尾",
+    "variant": 1,
+    "startSeconds": 8.125,
+    "seconds": 0.39,
+    "file": "Assets/Audio/Generated/ui.equipment.unequip__01.wav"
+  },
+  {
+    "cue": "ui.equipment.unequip",
+    "name": "卸下装备的松扣收尾",
+    "variant": 2,
+    "startSeconds": 10.125,
+    "seconds": 0.39,
+    "file": "Assets/Audio/Generated/ui.equipment.unequip__02.wav"
+  }
+]

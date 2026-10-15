@@ -38,3 +38,23 @@ for _, row in ipairs({
             "地表脚步优先级/浅水深水边界错误：" .. tostring(row.expected))
     end, "脚步材质：" .. (row.expected == "" and "深水静音" or row.expected))
 end
+
+-- 按本次转移数量独立计算千克和升，素材类别允许用稳定 AudioMaterial Tag 显式覆写。
+for _, row in ipairs({
+    { action = "Pickup", tags = { "Wood" }, kg = .3, liters = 1, amount = 1, expected = "ui.inventory.pickup.wood.light.compact" },
+    { action = "Backpack", tags = { "Metal" }, kg = .9, liters = 3.9, amount = 1, expected = "ui.inventory.backpack.metal.light.compact" },
+    { action = "Backpack", tags = { "Metal" }, kg = .9, liters = 3.9, amount = 2, expected = "ui.inventory.backpack.metal.medium.bulky" },
+    { action = "Chest", tags = { "Stone" }, kg = 2, liters = 1, amount = 4, expected = "ui.inventory.chest.stone.heavy.bulky" },
+    { action = "Chest", tags = { "Wood" }, kg = 7.99, liters = 3.99, amount = 1, expected = "ui.inventory.chest.wood.medium.compact" },
+    { action = "Chest", tags = { "Wood" }, kg = 8, liters = 4, amount = 1, expected = "ui.inventory.chest.wood.heavy.bulky" },
+    { action = "Pickup", itemId = "CopperPlate", kg = 1, liters = 1, expected = "ui.inventory.pickup.metal.medium.compact" },
+    { action = "Pickup", tags = { "AudioMaterial.Soft", "Metal" }, kg = 5, liters = 6, expected = "ui.inventory.pickup.soft.medium.bulky" },
+    { action = "Swap", kg = 0, liters = 0, amount = 1, expected = "ui.inventory.swap" },
+    { action = "Backpack", kg = 1, liters = 1, amount = 0, expected = "" },
+    { action = "Backpack", kg = -1, liters = 1, amount = 1, expected = "" }
+}) do
+    test.system("audio", "inventory_cue", row, function(data)
+        assert(data.cue == row.expected and data.valid == (row.expected ~= ""),
+            "物品材质/重量/体积/数量音效映射错误：" .. tostring(row.expected))
+    end, "物品取放音效：" .. (row.expected == "" and "无效参数" or row.expected))
+end
