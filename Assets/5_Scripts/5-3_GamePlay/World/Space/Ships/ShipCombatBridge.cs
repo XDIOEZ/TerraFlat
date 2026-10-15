@@ -12,6 +12,27 @@ namespace FlatWorld.Spaceflight
     {
         #region 船体本地结构的战斗适配
         public static readonly ShipCombatBridge Instance = new();
+        private readonly HitOrder hitOrder = new();
+
+        private sealed class HitOrder : IComparer<CombatColliderHit2D>
+        {
+            public Vector2 SweepStart;
+            public int Compare(CombatColliderHit2D left, CombatColliderHit2D right)
+            {
+                int order = left.Fraction.CompareTo(right.Fraction);
+                if (order != 0) return order;
+                order = (left.Point - SweepStart).sqrMagnitude.CompareTo((right.Point - SweepStart).sqrMagnitude);
+                return order != 0 ? order : left.CandidateId.CompareTo(right.CandidateId);
+            }
+        }
+
+        // 所有查询使用同一稳定命中顺序；测试探针也复用此入口，不复制排序算法。
+        internal void SortContacts(List<CombatColliderHit2D> contacts, Vector2 sweepStart)
+        {
+            hitOrder.SweepStart = sweepStart;
+            contacts.Sort(hitOrder);
+        }
+
         public bool TryGetIdentity(Item item, out CombatIdentity identity)
         {
             identity = default;
@@ -68,8 +89,7 @@ namespace FlatWorld.Spaceflight
                         float radius = Mathf.Sqrt(width * width + height * height);
                         if (Math.Abs(anchor.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + radius ||
                             Math.Abs(anchor.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + radius) continue;
-                        // 先按命中范围裁剪，再查物品定义，避免近战每帧反复解析远处船件。
-                        if (!GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out _)) continue;
+                        // 物品定义只在实际接触后读取，避免每次挥砍对同一部件重复查表。
                         PerceptionShape2D local = PerceptionShape2D.Aabb(new float2((width - (float)ship.CellSizeMeters) * .5f, (height - (float)ship.CellSizeMeters) * .5f), new float2(width * .5f, height * .5f));
                         double angle = ship.AngleRadians;
                         ShipGeometry.Rotate(local.Center.x, local.Center.y, angle, out double offsetX, out double offsetY);
@@ -101,7 +121,8 @@ namespace FlatWorld.Spaceflight
                     }
                 physics.Query(shape, hits);
             }
-            hits.Sort((left, right) => left.Fraction.CompareTo(right.Fraction));
+            // 重叠目标优先离攻击起点最近者，比较器复用，避免排序闭包带来每次挥砍的 GC。
+            SortContacts(hits, (Vector2)(shape.Center - shape.SweepDelta));
             foreach (CombatColliderHit2D contact in hits)
             {
                 var target = candidates[contact.CandidateId];

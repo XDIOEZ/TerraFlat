@@ -10,7 +10,12 @@ test.space("ship_ground_combat_projection", function(data)
     assert(data.afterAirborne == data.beforeHealth, "升空飞船错误地受到近战伤害")
     assert(data.afterHit >= 0 and data.afterHit < data.beforeHealth, "真实青铜斧没有扣除落地船体的权威血量")
     assert(data.afterRepeated == data.afterHit, "同一攻击窗口重复扣除了同一飞船部件的血量")
-    return "真实青铜斧伤害盒命中落地船体扣血，错世界、升空近战和重复命中均被拒绝。"
+    assert(data.afterNextAttack >= 0 and data.afterNextAttack < data.afterRepeated,
+        "下一次挥砍没有重置命中预约，飞船部件无法再次受伤")
+    assert(#data.orderedContacts == 4 and data.orderedContacts[1] == 3 and data.orderedContacts[2] == 4 and
+        data.orderedContacts[3] == 1 and data.orderedContacts[4] == 2,
+        "船体命中排序应先比扫掠时间，再按距离和身份稳定选择目标")
+    return "青铜斧命中飞船可连续挥砍，错世界、升空近战与同窗重复扣血均被拒绝。"
 end, "地表青铜斧与飞船权威血量真实结算")
 
 local function near(actual, expected, label)

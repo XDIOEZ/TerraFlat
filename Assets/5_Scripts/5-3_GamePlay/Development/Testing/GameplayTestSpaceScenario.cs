@@ -200,6 +200,20 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             double afterHit = piece.Health;
             damage.QueryProjectileSweep(Vector2.zero);
             double afterRepeated = piece.Health;
+            // 下一次正式挥砍必须清空上一次的目标预约，才能再次命中同一个船件。
+            damage.StopAttack();
+            damage.StartAttack();
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterNextAttack = piece.Health;
+            // 测试相同首次接触比例时优先最近位置，再以候选身份稳定破同距。
+            var contacts = new List<CombatColliderHit2D>
+            {
+                new(1, 0f, new Vector2(12f, 10f)),
+                new(2, .2f, new Vector2(10f, 10f)),
+                new(4, 0f, new Vector2(11f, 10f)),
+                new(3, 0f, new Vector2(11f, 10f))
+            };
+            ShipCombatBridge.Instance.SortContacts(contacts, new Vector2(10f, 10f));
             completed(new JObject
             {
                 ["scope"] = "live-ground-ship-weapon-hit", ["world"] = world,
@@ -210,6 +224,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 ["beforeHealth"] = before, ["afterMiss"] = afterMiss,
                 ["afterWrongWorld"] = afterWrongWorld, ["afterAirborne"] = afterAirborne,
                 ["afterHit"] = afterHit, ["afterRepeated"] = afterRepeated,
+                ["afterNextAttack"] = afterNextAttack,
+                ["orderedContacts"] = new JArray(contacts[0].CandidateId, contacts[1].CandidateId,
+                    contacts[2].CandidateId, contacts[3].CandidateId),
                 ["limitations"] = "真实青铜斧模块经正式武器查询和船件权威结算，尚未验证动画挥砍时序或多人客户端表现。"
             });
         }
