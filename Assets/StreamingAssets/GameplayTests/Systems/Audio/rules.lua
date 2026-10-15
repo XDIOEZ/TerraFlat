@@ -18,3 +18,23 @@ for _, row in ipairs({ { first = "probe.first", second = "probe.second", errors 
         assert(data.found and data.resolvedFirst and not data.emptyAccepted, "目录索引重建、去首尾空格或不区分大小写查询错误")
     end, "音频目录装配、重复校验和缓存重建")
 end
+
+-- 地表优先级：深水静音 > 浅水 > 积雪 > 人工支撑/石地 > 沙滩 > 草被 > 泥土。
+for _, row in ipairs({
+    { biome = 4, grass = 2, expected = "player.footstep.grass" },
+    { biome = 4, expected = "player.footstep.dirt" },
+    { biome = 2, grass = 2, expected = "player.footstep.sand" },
+    { biome = 3, expected = "player.footstep.sand" },
+    { biome = 7, expected = "player.footstep.stone" },
+    { biome = 4, support = true, grass = 2, expected = "player.footstep.stone" },
+    { biome = 4, snow = 0.1, grass = 2, expected = "player.footstep.snow" },
+    { biome = 4, water = 0.25, snow = 0.8, expected = "player.footstep.water" },
+    { biome = 4, water = 0.55, grass = 2, expected = "player.footstep.water" },
+    { biome = 4, water = 0.56, grass = 2, expected = "" },
+    { biome = 4, water = 0.8, snow = 1, expected = "" }
+}) do
+    test.system("audio", "footstep_surface", row, function(data)
+        assert(data.cue == row.expected and data.silent == (row.expected == ""),
+            "地表脚步优先级/浅水深水边界错误：" .. tostring(row.expected))
+    end, "脚步材质：" .. (row.expected == "" and "深水静音" or row.expected))
+end

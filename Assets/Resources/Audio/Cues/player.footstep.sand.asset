@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
+  m_Name: player.footstep.sand
+  m_EditorClassIdentifier:
+  id: player.footstep.sand
+  bus: 1
+  clips:
+  - {fileID: 8300000, guid: faf44dfc04d84c229ce5f11882fb85e9, type: 3}
+  - {fileID: 8300000, guid: 3b82548c8f7b41828bede5c56376e1a5, type: 3}
+  - {fileID: 8300000, guid: baf457e721564e3e99217e6e74598a04, type: 3}
+  selection: 0
+  loop: 0
+  volume:
+    Min: 0.85
+    Max: 0.98
+  pitch:
+    Min: 0.98
+    Max: 1.02
+  spatialBlend: 1
+  minDistance: 1.5
+  maxDistance: 14
+  priority: 128
+  cooldown: 0.13
+  maxInstances: 2
+  concurrencyPolicy: 1
+  rolloffMode: 1
+  outputOverride: {fileID: 0}

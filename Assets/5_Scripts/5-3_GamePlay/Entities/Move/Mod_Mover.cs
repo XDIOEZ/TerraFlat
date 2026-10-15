@@ -239,6 +239,7 @@ public partial class Mod_Mover : Module
         }
 
         InitializeWetClothesAudio();
+        InitializeFootstepAudio();
 
         // 先恢复基础数据，再通过统一入口重建奔跑倍率与动画状态。
         if (persistedRunState)
@@ -261,6 +262,8 @@ public partial class Mod_Mover : Module
             ExternalVelocity = ResolveExternalVelocity();
             rb.velocity = DrivenVelocity + ExternalVelocity;
         }
+
+        TickFootstepAudio();
 
         if (WorldUnitChanged == null)
             return;

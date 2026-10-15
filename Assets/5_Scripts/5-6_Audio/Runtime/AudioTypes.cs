@@ -231,6 +231,20 @@ namespace FlatWorld.Audio
 
         #endregion
 
+        #region 脚步与钓鱼
+
+        public const string FootstepDirt = "player.footstep.dirt";
+        public const string FootstepGrass = "player.footstep.grass";
+        public const string FootstepSand = "player.footstep.sand";
+        public const string FootstepStone = "player.footstep.stone";
+        public const string FootstepSnow = "player.footstep.snow";
+        public const string FootstepWater = "player.footstep.water";
+        public const string FishingCast = "fishing.cast";
+        public const string FishingHook = "fishing.hook";
+        public const string FishingReel = "fishing.reel";
+
+        #endregion
+
         #region 天气音效
 
         public const string WeatherRainLoop = "weather.rain.loop";

@@ -1,0 +1,242 @@
+[
+  {
+    "cue": "player.footstep.dirt",
+    "name": "泥土脚步",
+    "variant": 1,
+    "seconds": 0.23,
+    "peakDb": -17,
+    "rmsDb": -32,
+    "startSeconds": 0.125,
+    "file": "Assets/Audio/Generated/player.footstep.dirt__01.wav"
+  },
+  {
+    "cue": "player.footstep.dirt",
+    "name": "泥土脚步",
+    "variant": 2,
+    "seconds": 0.23,
+    "peakDb": -17,
+    "rmsDb": -32,
+    "startSeconds": 2.125,
+    "file": "Assets/Audio/Generated/player.footstep.dirt__02.wav"
+  },
+  {
+    "cue": "player.footstep.dirt",
+    "name": "泥土脚步",
+    "variant": 3,
+    "seconds": 0.23,
+    "peakDb": -17,
+    "rmsDb": -32,
+    "startSeconds": 4.125,
+    "file": "Assets/Audio/Generated/player.footstep.dirt__03.wav"
+  },
+  {
+    "cue": "player.footstep.grass",
+    "name": "草地脚步",
+    "variant": 1,
+    "seconds": 0.27,
+    "peakDb": -18,
+    "rmsDb": -33,
+    "startSeconds": 6.125,
+    "file": "Assets/Audio/Generated/player.footstep.grass__01.wav"
+  },
+  {
+    "cue": "player.footstep.grass",
+    "name": "草地脚步",
+    "variant": 2,
+    "seconds": 0.27,
+    "peakDb": -18,
+    "rmsDb": -33,
+    "startSeconds": 8.125,
+    "file": "Assets/Audio/Generated/player.footstep.grass__02.wav"
+  },
+  {
+    "cue": "player.footstep.grass",
+    "name": "草地脚步",
+    "variant": 3,
+    "seconds": 0.27,
+    "peakDb": -18,
+    "rmsDb": -33,
+    "startSeconds": 10.125,
+    "file": "Assets/Audio/Generated/player.footstep.grass__03.wav"
+  },
+  {
+    "cue": "player.footstep.sand",
+    "name": "沙地脚步",
+    "variant": 1,
+    "seconds": 0.3,
+    "peakDb": -17,
+    "rmsDb": -32,
+    "startSeconds": 12.125,
+    "file": "Assets/Audio/Generated/player.footstep.sand__01.wav"
+  },
+  {
+    "cue": "player.footstep.sand",
+    "name": "沙地脚步",
+    "variant": 2,
+    "seconds": 0.3,
+    "peakDb": -17,
+    "rmsDb": -32,
+    "startSeconds": 14.125,
+    "file": "Assets/Audio/Generated/player.footstep.sand__02.wav"
+  },
+  {
+    "cue": "player.footstep.sand",
+    "name": "沙地脚步",
+    "variant": 3,
+    "seconds": 0.3,
+    "peakDb": -17,
+    "rmsDb": -32,
+    "startSeconds": 16.125,
+    "file": "Assets/Audio/Generated/player.footstep.sand__03.wav"
+  },
+  {
+    "cue": "player.footstep.stone",
+    "name": "石地脚步",
+    "variant": 1,
+    "seconds": 0.21,
+    "peakDb": -16,
+    "rmsDb": -31,
+    "startSeconds": 18.125,
+    "file": "Assets/Audio/Generated/player.footstep.stone__01.wav"
+  },
+  {
+    "cue": "player.footstep.stone",
+    "name": "石地脚步",
+    "variant": 2,
+    "seconds": 0.21,
+    "peakDb": -16,
+    "rmsDb": -31,
+    "startSeconds": 20.125,
+    "file": "Assets/Audio/Generated/player.footstep.stone__02.wav"
+  },
+  {
+    "cue": "player.footstep.stone",
+    "name": "石地脚步",
+    "variant": 3,
+    "seconds": 0.21,
+    "peakDb": -16,
+    "rmsDb": -31,
+    "startSeconds": 22.125,
+    "file": "Assets/Audio/Generated/player.footstep.stone__03.wav"
+  },
+  {
+    "cue": "player.footstep.snow",
+    "name": "雪地脚步",
+    "variant": 1,
+    "seconds": 0.32,
+    "peakDb": -18,
+    "rmsDb": -32,
+    "startSeconds": 24.125,
+    "file": "Assets/Audio/Generated/player.footstep.snow__01.wav"
+  },
+  {
+    "cue": "player.footstep.snow",
+    "name": "雪地脚步",
+    "variant": 2,
+    "seconds": 0.32,
+    "peakDb": -18,
+    "rmsDb": -32,
+    "startSeconds": 26.125,
+    "file": "Assets/Audio/Generated/player.footstep.snow__02.wav"
+  },
+  {
+    "cue": "player.footstep.snow",
+    "name": "雪地脚步",
+    "variant": 3,
+    "seconds": 0.32,
+    "peakDb": -18,
+    "rmsDb": -32,
+    "startSeconds": 28.125,
+    "file": "Assets/Audio/Generated/player.footstep.snow__03.wav"
+  },
+  {
+    "cue": "player.footstep.water",
+    "name": "浅水脚步",
+    "variant": 1,
+    "seconds": 0.37,
+    "peakDb": -15,
+    "rmsDb": -30,
+    "startSeconds": 30.125,
+    "file": "Assets/Audio/Generated/player.footstep.water__01.wav"
+  },
+  {
+    "cue": "player.footstep.water",
+    "name": "浅水脚步",
+    "variant": 2,
+    "seconds": 0.37,
+    "peakDb": -15,
+    "rmsDb": -30,
+    "startSeconds": 32.125,
+    "file": "Assets/Audio/Generated/player.footstep.water__02.wav"
+  },
+  {
+    "cue": "player.footstep.water",
+    "name": "浅水脚步",
+    "variant": 3,
+    "seconds": 0.37,
+    "peakDb": -15,
+    "rmsDb": -30,
+    "startSeconds": 34.125,
+    "file": "Assets/Audio/Generated/player.footstep.water__03.wav"
+  },
+  {
+    "cue": "fishing.cast",
+    "name": "抛竿甩线",
+    "variant": 1,
+    "seconds": 0.45,
+    "peakDb": -10,
+    "rmsDb": -26,
+    "startSeconds": 36.125,
+    "file": "Assets/Audio/Generated/fishing.cast__01.wav"
+  },
+  {
+    "cue": "fishing.cast",
+    "name": "抛竿甩线",
+    "variant": 2,
+    "seconds": 0.45,
+    "peakDb": -10,
+    "rmsDb": -26,
+    "startSeconds": 38.125,
+    "file": "Assets/Audio/Generated/fishing.cast__02.wav"
+  },
+  {
+    "cue": "fishing.hook",
+    "name": "鱼儿咬钩",
+    "variant": 1,
+    "seconds": 0.49,
+    "peakDb": -11,
+    "rmsDb": -27,
+    "startSeconds": 40.125,
+    "file": "Assets/Audio/Generated/fishing.hook__01.wav"
+  },
+  {
+    "cue": "fishing.hook",
+    "name": "鱼儿咬钩",
+    "variant": 2,
+    "seconds": 0.49,
+    "peakDb": -11,
+    "rmsDb": -27,
+    "startSeconds": 42.125,
+    "file": "Assets/Audio/Generated/fishing.hook__02.wav"
+  },
+  {
+    "cue": "fishing.reel",
+    "name": "钓线收轮咔嗒",
+    "variant": 1,
+    "seconds": 0.35,
+    "peakDb": -14,
+    "rmsDb": -29,
+    "startSeconds": 44.125,
+    "file": "Assets/Audio/Generated/fishing.reel__01.wav"
+  },
+  {
+    "cue": "fishing.reel",
+    "name": "钓线收轮咔嗒",
+    "variant": 2,
+    "seconds": 0.35,
+    "peakDb": -14,
+    "rmsDb": -29,
+    "startSeconds": 46.125,
+    "file": "Assets/Audio/Generated/fishing.reel__02.wav"
+  }
+]

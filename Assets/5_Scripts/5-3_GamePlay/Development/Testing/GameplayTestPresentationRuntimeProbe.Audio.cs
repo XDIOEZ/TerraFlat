@@ -97,6 +97,32 @@ public static partial class GameplayTestPresentationRuntimeProbe
                                    feedback.Bus == AudioBus.Sfx && feedback.Cooldown > 0f
                 });
             }
+            JArray movementCues = new JArray();
+            foreach (string cueId in new[]
+                     {
+                         AudioEventIds.FootstepDirt, AudioEventIds.FootstepGrass,
+                         AudioEventIds.FootstepSand, AudioEventIds.FootstepStone,
+                         AudioEventIds.FootstepSnow, AudioEventIds.FootstepWater,
+                         AudioEventIds.FishingCast, AudioEventIds.FishingHook,
+                         AudioEventIds.FishingReel
+                     })
+            {
+                bool loaded = service.TryGetCue(cueId, out AudioCue cue);
+                bool isFootstep = cueId.StartsWith("player.footstep.", StringComparison.Ordinal);
+                movementCues.Add(new JObject
+                {
+                    ["id"] = cueId,
+                    ["loaded"] = loaded,
+                    ["expectedVariants"] = isFootstep ? 3 : 2,
+                    ["variants"] = loaded ? cue.Clips.Count : 0,
+                    ["validClips"] = loaded && cue.Clips.All(
+                        clip => clip != null && clip.channels == 1 &&
+                                clip.frequency == 48000 && clip.samples > 0),
+                    ["spatial"] = loaded && cue.SpatialBlend == 1f &&
+                                   cue.Bus == AudioBus.Sfx && cue.Cooldown > 0f &&
+                                   cue.MaxInstances == (isFootstep ? 2 : 3)
+                });
+            }
             AudioListener[] listeners = UnityEngine.Object.FindObjectsOfType<AudioListener>()
                 .Where(value => value.isActiveAndEnabled).ToArray();
             if (listeners.Length != 1) throw new InvalidOperationException("真实现场需要唯一启用的 AudioListener。");
@@ -154,6 +180,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             result = new JObject
             {
                 ["feedbackCues"] = feedbackCues,
+                ["movementCues"] = movementCues,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,
                 ["clipSamples"] = source.clip != null ? source.clip.samples : 0,
                 ["playing"] = nearPlaying, ["spatialLinear"] = nearSpatial, ["cueDistancesPreserved"] = distancePreserved,

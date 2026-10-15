@@ -17,6 +17,8 @@ namespace FlatWorld.Gameplay.Presentation.Audio
             GameplayProgressEvents.SignalPublished += OnProgress;
             BuildingPlacementFeedbackEvents.PlacementRejected -= OnPlacementRejected;
             BuildingPlacementFeedbackEvents.PlacementRejected += OnPlacementRejected;
+            Mod_FishingRod.SoundRequested -= OnFishingSound;
+            Mod_FishingRod.SoundRequested += OnFishingSound;
         }
 
         private static void OnProgress(GameplayProgressSignal signal)
@@ -43,6 +45,22 @@ namespace FlatWorld.Gameplay.Presentation.Audio
         {
             if (actor != null && actor.IsLocalProfile)
                 AudioService.Instance.PlayAt(AudioEventIds.BuildingReject, actor.transform.position);
+        }
+
+        private static void OnFishingSound(Player actor, FishingSoundAction action)
+        {
+            if (actor == null || !actor.IsLocalProfile)
+                return;
+
+            string cueId = action switch
+            {
+                FishingSoundAction.Cast => AudioEventIds.FishingCast,
+                FishingSoundAction.Hook => AudioEventIds.FishingHook,
+                FishingSoundAction.Reel => AudioEventIds.FishingReel,
+                _ => null
+            };
+            if (cueId != null)
+                AudioService.Instance.PlayAt(cueId, actor.transform.position);
         }
 
         #endregion

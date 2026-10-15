@@ -19,9 +19,13 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--list-tools", action="store_true")
     parser.add_argument("--render", action="store_true")
+    parser.add_argument("--project", type=Path, default=ROOT / "Gameplay_Feedback.mmp")
+    parser.add_argument("--output", type=Path, default=ROOT / "renders" / "Gameplay_Feedback_raw.wav")
     args = parser.parse_args()
 
-    env = dict(os.environ, LMMS_EXECUTABLE=LMMS, LMMS_PROJECTS_DIR=str(ROOT))
+    project = args.project.resolve()
+    output = args.output.resolve()
+    env = dict(os.environ, LMMS_EXECUTABLE=LMMS, LMMS_PROJECTS_DIR=str(project.parent))
     server = StdioServerParameters(command=sys.executable, args=["-m", "lmms_mcp"], env=env)
     async with stdio_client(server) as (reader, writer):
         async with ClientSession(reader, writer) as session:
@@ -33,8 +37,6 @@ async def main():
                 return
             if not args.render:
                 parser.error("Specify --list-tools or --render")
-            project = ROOT / "Gameplay_Feedback.mmp"
-            output = ROOT / "renders" / "Gameplay_Feedback_raw.wav"
             if not project.is_file():
                 raise FileNotFoundError(project)
             output.parent.mkdir(exist_ok=True)
