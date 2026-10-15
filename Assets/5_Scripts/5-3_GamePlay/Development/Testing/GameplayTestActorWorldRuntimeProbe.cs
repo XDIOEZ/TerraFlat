@@ -516,17 +516,25 @@ public static class GameplayTestActorWorldRuntimeProbe
         bool registered = NaturalEntityEcsService.TryRegister(resourceDefinition, resourceData.Guid, center,
             26f, 0f, sample.Address.DimensionId, resourceData, out own.Resource);
         if (!registered) throw new InvalidOperationException("真实自然资源 ECS 入口没有建立自有树木。");
-        if (ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out var view))
-            NaturalEntityEcsService.BindPresentation(own.Resource, view.GetComponentInChildren<ChunkTilemapRenderer>(true));
+        if (!ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out var view) ||
+            view == null || !view.IsBaseTerrainPresented)
+            throw new InvalidOperationException("真实资源所在区块尚未完成基础地形表现绑定。");
+        ChunkTilemapRenderer owner = view.GetComponentInChildren<ChunkTilemapRenderer>(true);
+        if (owner == null || !owner.IsBatchPresentationRegistered)
+            throw new InvalidOperationException("真实资源没有可登记的区块表现 Owner。");
+        int visualsBefore = owner.DepthMeshPartCount;
+        NaturalEntityEcsService.BindPresentation(own.Resource, owner);
+        int visualsWithTree = owner.DepthMeshPartCount;
         bool readBlocked = navigation.TryGetCell(center, out _, out bool blockedWalkable);
         bool captured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData snapshot);
         bool removed = NaturalEntityEcsService.TryTakeSnapshotAndRemove(own.Resource, out ItemData removedSnapshot);
+        int visualsAfterRemoval = owner.DepthMeshPartCount;
         bool walkableAfter = navigation.TryGetCell(center, out _, out bool after) && after;
         bool remains = NaturalEntityEcsService.Contains(own.Resource);
         bool restoredEntity = NaturalEntityEcsService.TryRegister(resourceDefinition, resourceData.Guid, center,
             26f, 0f, sample.Address.DimensionId, removedSnapshot, out own.Resource);
-        if (restoredEntity && view != null)
-            NaturalEntityEcsService.BindPresentation(own.Resource, view.GetComponentInChildren<ChunkTilemapRenderer>(true));
+        if (restoredEntity) NaturalEntityEcsService.BindPresentation(own.Resource, owner);
+        int visualsAfterRestore = owner.DepthMeshPartCount;
         bool recaptured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData recovered);
         return new JObject
         {
@@ -548,6 +556,8 @@ public static class GameplayTestActorWorldRuntimeProbe
             ["entityId"] = snapshot?.IDName, ["walkableBefore"] = walkableBefore,
             ["blockedCellRead"] = readBlocked, ["walkableWithTree"] = blockedWalkable,
             ["entityRemoved"] = removed, ["entityRemainsAfterRemoval"] = remains,
+            ["visualsBefore"] = visualsBefore, ["visualsWithTree"] = visualsWithTree,
+            ["visualsAfterRemoval"] = visualsAfterRemoval, ["visualsAfterRestore"] = visualsAfterRestore,
             ["walkableAfterRemoval"] = walkableAfter, ["removedGuid"] = removedSnapshot?.Guid,
             ["entityRestored"] = restoredEntity, ["entityRecaptured"] = recaptured,
             ["restoredGuid"] = recovered?.Guid, ["restoredId"] = recovered?.IDName,

@@ -13,6 +13,9 @@ test.runtime("terrain", "cover_resource_lifecycle", {}, function(data)
     assert(data.liquidAfter == data.liquidBefore, "覆盖 Ground 错误修改独立 Liquid 层")
     assert(data.entityRegistered and data.entityCaptured and data.entityGuid == data.expectedGuid and
         data.entityId == "Tree_Pine", "正式资源 ECS 入口没有创建和采样真实松树")
+    assert(data.visualsWithTree > data.visualsBefore and data.visualsAfterRemoval == data.visualsBefore
+        and data.visualsAfterRestore > data.visualsAfterRemoval,
+        "松树未实际进入区块行网格，或移除、恢复时表现槽位未同步更新")
     assert(data.walkableBefore and data.blockedCellRead and not data.walkableWithTree,
         "自有松树未登记到实际世界导航占地")
     assert(data.entityRemoved and not data.entityRemainsAfterRemoval and data.walkableAfterRemoval and
