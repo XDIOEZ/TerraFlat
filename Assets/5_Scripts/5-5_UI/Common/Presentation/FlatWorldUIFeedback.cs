@@ -59,13 +59,12 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     {
         selectable = GetComponent<Selectable>();
         ConfigureSelectedColor();
-        EnsureSelectionOutline();
     }
 
     private void OnEnable()
     {
         transform.localScale = Vector3.one;
-        selected = EventSystem.current != null &&
+        selected = EventSystemGuard.IsGamepadMode && EventSystem.current != null &&
                    EventSystem.current.currentSelectedGameObject == gameObject;
         SetSelectionVisual(selected);
         AnimateToCurrentState();
@@ -107,12 +106,18 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
 
     public void OnPointerDown(PointerEventData eventData)
     {
+        if (eventData == null || eventData.button != PointerEventData.InputButton.Left)
+            return;
+
         pressed = true;
         AnimateToCurrentState();
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
+        if (eventData == null || eventData.button != PointerEventData.InputButton.Left)
+            return;
+
         pressed = false;
         AnimateToCurrentState();
     }
@@ -273,7 +278,9 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     /// </summary>
     private void SetSelectionVisual(bool isSelected)
     {
-        EnsureSelectionOutline();
+        // 只在手柄真正选中时创建描边，避免所有闲置按钮额外生成 Outline。
+        if (isSelected)
+            EnsureSelectionOutline();
         if (selectionOutline == null || !outlineBaselineCaptured)
             return;
 

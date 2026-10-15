@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Localization;
@@ -10,6 +11,9 @@ using UnityEngine.UI;
 public sealed class InventoryItemTooltip : MonoBehaviour
 {
     #region 配置
+
+    private const float ScreenEdgeMargin = 8f;
+    private static readonly WaitForSeconds RefreshInterval = new WaitForSeconds(1f);
 
     [SerializeField] private RectTransform panelRect;
     [SerializeField] private TMP_Text titleText;
@@ -33,6 +37,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private Vector2 pointerScreenPosition;
     private Coroutine refreshRoutine;
     private bool visible;
+    private Vector2 lastContainerSize;
 
     public static void Show(ItemSlot_UI slot, GameObject prefab, Vector2 screenPosition)
     {
@@ -93,7 +98,9 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         if (rootCanvas == null)
             return null;
 
-        GameObject instance = Instantiate(prefab, rootCanvas.transform, false);
+        // 提示框属于交互内容，跟随安全区而不是全屏装饰层。
+        RectTransform parent = UIManager.Instance.SafeAreaRoot ?? (RectTransform)rootCanvas.transform;
+        GameObject instance = Instantiate(prefab, parent, false);
         instance.name = prefab.name;
         current = instance.GetComponent<InventoryItemTooltip>();
         if (current == null)
@@ -160,7 +167,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     {
         while (visible)
         {
-            yield return new WaitForSeconds(1f);
+            yield return RefreshInterval;
             if (!visible)
                 break;
             RefreshContent();
@@ -201,7 +208,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         GameRes resources = GameRes.ExistingInstance;
         resources?.TryGetItemDefinition(itemData.IDName, out definition);
 
-        titleText.text = definition?.DisplayName ??
+        string title = definition?.DisplayName ??
             (!string.IsNullOrWhiteSpace(itemData.GameName) ? itemData.GameName : itemData.IDName);
 
         var parameters = new List<string>(8);
@@ -210,12 +217,19 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
         string description = definition?.Description?.Trim() ?? string.Empty;
         string parameterText = string.Join("\n", parameters);
-        bodyText.text = string.IsNullOrEmpty(description)
+        string body = string.IsNullOrEmpty(description)
             ? parameterText
             : string.IsNullOrEmpty(parameterText)
                 ? description
                 : description + "\n\n" + parameterText;
 
+        // 动态属性未变化时不重排整个提示框，避免周期刷新造成布局抖动。
+        if (string.Equals(titleText.text, title, StringComparison.Ordinal) &&
+            string.Equals(bodyText.text, body, StringComparison.Ordinal))
+            return;
+
+        titleText.text = title;
+        bodyText.text = body;
         RebuildLayout();
     }
 
@@ -307,13 +321,24 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         if (panelRect == null || titleText == null || bodyText == null)
             return;
 
-        float innerWidth = Mathf.Max(1f, panelWidth - contentPadding * 2f);
-        float bodyHeight = Mathf.Max(
+        RectTransform container = panelRect.parent as RectTransform;
+        Rect bounds = container != null ? container.rect : panelRect.rect;
+        lastContainerSize = bounds.size;
+        float width = Mathf.Min(panelWidth, Mathf.Max(1f, bounds.width - ScreenEdgeMargin * 2f));
+        float innerWidth = Mathf.Max(1f, width - contentPadding * 2f);
+        float preferredBodyHeight = Mathf.Max(
             22f,
             bodyText.GetPreferredValues(bodyText.text, innerWidth, 0f).y);
+        float chromeHeight = contentPadding * 2f + titleHeight + sectionGap;
+        float availableHeight = Mathf.Max(1f, bounds.height - ScreenEdgeMargin * 2f);
+        float bodyHeight = Mathf.Min(preferredBodyHeight, Mathf.Max(1f, availableHeight - chromeHeight));
         float panelHeight = contentPadding + titleHeight + sectionGap + bodyHeight + contentPadding;
 
-        panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, panelWidth);
+        // 极长的说明至少显示截断标记，不再让文字溢出屏幕边界。
+        bodyText.overflowMode = bodyHeight < preferredBodyHeight - 0.5f
+            ? TextOverflowModes.Ellipsis
+            : TextOverflowModes.Overflow;
+        panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
         panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, panelHeight);
 
         RectTransform titleRect = titleText.rectTransform;
@@ -342,10 +367,13 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         if (!visible || panelRect == null)
             return;
 
-        Canvas rootCanvas = UIManager.Instance?.RootCanvas;
-        RectTransform rootRect = rootCanvas != null ? rootCanvas.transform as RectTransform : null;
-        if (rootRect == null)
+        Canvas rootCanvas = UIManager.ExistingInstance?.RootCanvas;
+        RectTransform rootRect = panelRect.parent as RectTransform;
+        if (rootCanvas == null || rootRect == null)
             return;
+
+        if (lastContainerSize != rootRect.rect.size)
+            RebuildLayout();
 
         Camera camera = rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : rootCanvas.worldCamera;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -360,16 +388,23 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         float width = panelRect.rect.width;
         float height = panelRect.rect.height;
         Rect bounds = rootRect.rect;
+        float left = bounds.xMin + ScreenEdgeMargin;
+        float right = bounds.xMax - ScreenEdgeMargin;
+        float top = bounds.yMax - ScreenEdgeMargin;
+        float bottom = bounds.yMin + ScreenEdgeMargin;
 
         float x = localPoint.x + pointerOffset;
-        if (x + width > bounds.xMax)
+        if (x + width > right)
             x = localPoint.x - pointerOffset - width;
-        x = Mathf.Clamp(x, bounds.xMin, Mathf.Max(bounds.xMin, bounds.xMax - width));
+        x = Mathf.Clamp(x, left, Mathf.Max(left, right - width));
 
         float y = localPoint.y - pointerOffset;
-        y = Mathf.Clamp(y, Mathf.Min(bounds.yMax, bounds.yMin + height), bounds.yMax);
+        y = Mathf.Clamp(y, Mathf.Min(top, bottom + height), top);
 
-        panelRect.anchoredPosition = new Vector2(x, y);
+        Vector2 anchor = new Vector2(
+            Mathf.Lerp(bounds.xMin, bounds.xMax, panelRect.anchorMin.x),
+            Mathf.Lerp(bounds.yMin, bounds.yMax, panelRect.anchorMin.y));
+        panelRect.anchoredPosition = new Vector2(x, y) - anchor;
     }
 
     #endregion
