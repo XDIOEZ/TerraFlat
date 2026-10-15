@@ -35,6 +35,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
             throw new InvalidOperationException("工业正式面板缺少配置控件。");
         input = logic.PortableTank ?? logic.FilterMaterial; output = logic.Residue;
         view.SetProcessingVisible(false);
+        view.SetGasCapacityVisible(logic.Behavior.IsSharedStorage);
         SetSection(view.InputSlot, input != null); SetSection(view.OutputSlot, output != null);
         Bind(input, view.InputSlot); Bind(output, view.OutputSlot);
         view.ActionButton.onClick.AddListener(Act); view.CloseButton.onClick.AddListener(Close);
@@ -97,9 +98,18 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     public void Refresh()
     {
         if (!IsOpen) return;
+        using var nodeScope = MachineWorld.UseNodeScope(logic.Entity);
         view.Title.text = FlatWorldLocalizationService.Get(FlatWorldLocalizationService.GetItemLabelKey(logic.Entity.Definition.Id),
             logic.Entity.Definition.Content?.Definition.DisplayName ?? logic.Entity.Definition.Id);
         view.Status.text = logic.Status;
+        if (logic.Behavior.IsSharedStorage)
+        {
+            // 组合罐使用整组库存和容积，船上读取也保持在设备所属作用域。
+            FluidInventory inventory = MachineWorld.GetFluidInventory(logic.Entity, "main");
+            double pressure = inventory.GetPressureKPa(MachineWorld.GetFluidVolumeLiters(logic.Entity),
+                MachineWorld.GetFluidMinimumGasSpaceLiters(logic.Entity));
+            view.SetGasCapacity((float)(pressure / logic.Definition.MaxSafePressureKPa));
+        }
         string caption = logic.ActionLabel;
         view.SetActionVisible(!string.IsNullOrEmpty(caption));
         view.ActionButton.interactable = logic.LiquidResiduePort == null || logic.CanTransferLiquidResidueTo(HeldLiquidVessel, actor);

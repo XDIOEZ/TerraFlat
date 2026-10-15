@@ -190,13 +190,20 @@ public static class PortableFluidPanel
         {
             panel?.Dispose();
             sessions[tank.itemData.Guid] = panel = new MechanicalPanelSession("UI_FluidTank", tank, null, null,
-                () => Status(tank.itemData, actor), () => "", refreshStatusPeriodically: true);
+                () => Status(tank.itemData, actor), () => "", refreshStatusPeriodically: true,
+                gasCapacity01: () => GasCapacity01(tank.itemData));
         }
         panel.Toggle(actor);
     }
     public static void Close(Item tank)
     {
         if (tank != null && sessions.TryGetValue(tank.itemData.Guid, out var panel)) { panel.Dispose(); sessions.Remove(tank.itemData.Guid); }
+    }
+    // 容量占比使用真实气压与安全耐压，破裂气罐按空罐显示。
+    private static float GasCapacity01(ItemData data)
+    {
+        if (!FluidTankStorage.TryGet(data, out var inventory, out var config)) return 0f;
+        return (float)(inventory.GetPressureKPa(config.VolumeLiters, config.MinimumGasSpaceLiters) / config.MaxSafePressureKPa);
     }
     public static string Status(ItemData data, Item actor)
     {

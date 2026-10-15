@@ -55,6 +55,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 死亡界面 `UI_Death` 的主标题由 `Mod_PlayerDeathState.DeathMessage` 消费权威 `DeathCauseRecord`，通过 `DeathMessageCatalog` 与 `GameConfig/Combat/death-messages.json` 组合死因；来源缺失不编造名称。动态标题关闭静态 Binder，语言切换保留 Variant；正式 Prefab 与 `GameUIPrefabRebuilder.BuildDeathScreen` 同步多行自动字号布局。
 - `MachinePanelFactoryRegistry` 按 LogicId 注册租约；通用会话管生命周期、库存绑定、权威请求，具体会话管专属控件。`IInstanceUI.IsPanelOpen` 来自真实面板，模块列表按创建/展开/操作事件刷新。
 - 电池在 `UI_Mechanical.prefab` 内持有 `BatteryCharge/BatteryPercentage` 正式引用，竖向 Slider 禁交互/导航、从下向上填充；`MechanicalPanelSession` 接收储能比例读取函数，仅电池显示并在状态刷新时同步，正文右侧留出控件空间。修改外观同步 `MechanicalContentBuilder.EnsureBatteryGauge`。
+- 气罐在 `UI_IndustrialFluid/UI_FluidTank.prefab` 持有 `GasCapacity/GasPercentage`，按实际气压/安全上限自下而上填充；超压填充封顶、百分比保留真实值并标红。工业页仅储罐显示，组合罐在节点作用域读取整组库存与容积；便携罐通过 `MechanicalPanelSession` 注入读数。布局同步 `RuntimeUIPrefabBuilder.EnsureGasCapacityGauge`。
 - 热栏外观由 `Common/Controls/UI_SelectBox.prefab` 与 Inventory_HotBar.SelectBoxPrefab 持有；选中框归属当前槽位。附属提示 ignoreLayout 且输入透明，Inventory.InitUI 按真实 ItemSlot_UI 计槽；手持名称读取装备热栏物品。
 - 普通合成使用 `Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable.prefab`，参考尺寸 1344×756；正式输入/输出/配方模板按真实容量复用。工业流体/宇航服/气罐使用 MechanicalPanelView 与 PreservePrefabLayout，宇航服入口共用 SpacesuitPanelSession 的真实供氧槽。
 - 飞船 ShipPanelSession 的命令行/按钮共用执行入口，反馈历史有上限，查看历史不被消息置底。FuelInteraction 仅绑定通用模块，标题来自定义。任务/教程阅读入口为书籍/UI_ReadableBook。
