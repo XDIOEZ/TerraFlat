@@ -40,6 +40,7 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
             "入世快照的真实种子或生成协议与服务器不一致")
     end
     assert(data.independentData and data.independentInventories, "多个假人共享了同一份实际玩家数据或库存容器")
+    assert(data.authorityInitialized, "未实际加载假人的服务端权威背包模块")
     local replay = data.replayedHandshake
     assert(replay and replay.snapshotsBefore == 1 and replay.snapshotsAfter == 1
         and replay.notSpawnedBeforeReady and replay.originalProfilePreserved,

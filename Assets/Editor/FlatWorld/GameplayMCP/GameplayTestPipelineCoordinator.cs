@@ -6,8 +6,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEditor.TestTools.TestRunner.Api;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FlatWorld.GameplayMCP
 {
@@ -17,7 +19,9 @@ namespace FlatWorld.GameplayMCP
     {
         #region 文件与生命周期
         private const string SessionRunKey = "FlatWorld.GameplayTestPipeline.ActiveRun";
+        private const string PlayModeEnteredKey = "FlatWorld.GameplayTestPipeline.PlayModeEnteredRun";
         private const string PlayModeExitKey = "FlatWorld.GameplayTestPipeline.PlayModeExitUtc";
+        private const string PlayModeLostKey = "FlatWorld.GameplayTestPipeline.PlayModeLostUtc";
         private const string EditAssembly = "FlatWorld.Gameplay.EditModeTests";
         private const string PlayAssembly = "FlatWorld.Gameplay.PlayModeTests";
         private static TestRunnerApi api;
@@ -196,9 +200,14 @@ namespace FlatWorld.GameplayMCP
 
         private static void OnPlayModeStateChanged(PlayModeStateChange change)
         {
-            if (change != PlayModeStateChange.ExitingPlayMode) return;
             PipelineReport report = LoadCurrent();
-            if (report?.Status == "running" && report.Phase == "playmode")
+            if (report?.Status != "running" || report.Phase != "playmode") return;
+            if (change == PlayModeStateChange.EnteredPlayMode)
+            {
+                SessionState.SetString(PlayModeEnteredKey, report.RunId);
+                SessionState.SetString(PlayModeLostKey, string.Empty);
+            }
+            else if (change == PlayModeStateChange.ExitingPlayMode)
                 SessionState.SetString(PlayModeExitKey, DateTime.UtcNow.ToString("O"));
         }
 
@@ -213,19 +222,30 @@ namespace FlatWorld.GameplayMCP
             {
                 if (!string.IsNullOrEmpty(exitText))
                     SessionState.SetString(PlayModeExitKey, string.Empty);
+                SessionState.SetString(PlayModeEnteredKey, string.Empty);
+                SessionState.SetString(PlayModeLostKey, string.Empty);
                 return;
             }
+            // 启动阶段可能因首次编译耗时数分钟，不得在真正 EnteredPlayMode 前判断超时。
+            if (SessionState.GetString(PlayModeEnteredKey, string.Empty) != report.RunId) return;
             bool knownExit = DateTime.TryParse(exitText, out DateTime exitedAt);
-            // 异常重编译可能丢掉退出事件；超时后仍要自动清掉僵死运行状态。
-            DateTime.TryParse(report.StartedUtc, out DateTime startedAt);
-            bool stale = !knownExit && startedAt != default &&
-                         DateTime.UtcNow - startedAt.ToUniversalTime() > TimeSpan.FromMinutes(4);
-            if (knownExit &&
-                DateTime.UtcNow - exitedAt.ToUniversalTime() < TimeSpan.FromSeconds(12) || !knownExit && !stale)
-                return;
+            if (knownExit)
+            {
+                if (DateTime.UtcNow - exitedAt.ToUniversalTime() < TimeSpan.FromSeconds(12)) return;
+            }
+            else
+            {
+                // 域重载可能丢失 ExitingPlayMode，连续确认离开状态后再清理任务。
+                string lostText = SessionState.GetString(PlayModeLostKey, string.Empty);
+                if (!DateTime.TryParse(lostText, out DateTime lostAt))
+                {
+                    SessionState.SetString(PlayModeLostKey, DateTime.UtcNow.ToString("O"));
+                    return;
+                }
+                if (DateTime.UtcNow - lostAt.ToUniversalTime() < TimeSpan.FromSeconds(12)) return;
+            }
             if (report.Status == "running")
                 Finish(report, "interrupted", "PlayMode 已退出，但 Test Framework 未返回最终结果；请查看场景报告与 Unity Console。");
-            SessionState.SetString(PlayModeExitKey, string.Empty);
         }
 
         private static void ResumeQueuedPhase()
@@ -367,6 +387,52 @@ namespace FlatWorld.GameplayMCP
         #endregion
 
         #region 分阶段调度
+        private static bool EnsureRestorableEditorScene(out string error)
+        {
+            error = null;
+            SceneSetup[] setup = EditorSceneManager.GetSceneManagerSetup();
+            bool staleBootstrap = false;
+            foreach (SceneSetup scene in setup)
+                if (scene.isLoaded && IsTestRunnerBootstrapScene(scene.path))
+                {
+                    staleBootstrap = true;
+                    break;
+                }
+            if (!staleBootstrap) return true;
+
+            // Unity 测试器删除临时引导场景后，下一轮不能继续把它作为恢复目标。
+            for (int index = 0; index < SceneManager.sceneCount; index++)
+            {
+                Scene scene = SceneManager.GetSceneAt(index);
+                if (scene.isDirty && !IsTestRunnerBootstrapScene(scene.path))
+                {
+                    error = "当前 Editor 场景有未保存修改，拒绝自动替换临时测试场景。";
+                    return false;
+                }
+            }
+
+            const string stableScene = "Assets/3_Scenes/Development/GameplayTestScene.unity";
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(stableScene) == null)
+            {
+                error = "缺少可用于恢复编辑器状态的正式测试场景：" + stableScene;
+                return false;
+            }
+            EditorSceneManager.OpenScene(stableScene, OpenSceneMode.Single);
+            Debug.Log("[GameplayTestPipeline] 清理上轮遗留的临时 InitTestScene，改用正式测试场景作为恢复入口。");
+            return true;
+        }
+
+        private static bool IsTestRunnerBootstrapScene(string path)
+        {
+            const string prefix = "Assets/InitTestScene";
+            const string suffix = ".unity";
+            return !string.IsNullOrEmpty(path) &&
+                   path.StartsWith(prefix, StringComparison.Ordinal) &&
+                   path.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
+                   Guid.TryParseExact(path.Substring(prefix.Length, path.Length - prefix.Length - suffix.Length),
+                       "D", out _);
+        }
+
         private static void RunPhase(string runId, TestMode mode)
         {
             PipelineReport report = LoadCurrent();
@@ -383,6 +449,11 @@ namespace FlatWorld.GameplayMCP
             }
             try
             {
+                if (mode == TestMode.PlayMode && !EnsureRestorableEditorScene(out string sceneError))
+                {
+                    Finish(report, "interrupted", sceneError);
+                    return;
+                }
                 EnsureCallbacks();
                 report.Phase = mode == TestMode.EditMode ? "editmode" : "playmode";
                 if (mode == TestMode.EditMode) report.EditMode.Status = "running";
@@ -412,7 +483,9 @@ namespace FlatWorld.GameplayMCP
             FinalizeArtifacts(report);
             Write(report);
             GameplayTestSelection.ClearSuite(report.RunId);
+            SessionState.SetString(PlayModeEnteredKey, string.Empty);
             SessionState.SetString(PlayModeExitKey, string.Empty);
+            SessionState.SetString(PlayModeLostKey, string.Empty);
             CurrentRunId = string.Empty;
             Debug.Log($"[GameplayTestPipeline] {report.Status}：{report.Reason}，报告：{report.ReportPath}，测试包：{report.PackagePath}");
         }

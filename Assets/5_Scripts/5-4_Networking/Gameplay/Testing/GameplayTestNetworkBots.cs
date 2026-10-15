@@ -34,12 +34,15 @@ namespace FlatWorld.Networking.Gameplay
             GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_reconnect", CaptureReconnect);
         }
 
-        private static IEnumerator Wait(Func<bool> ready, string label, double seconds = 12d)
+        private static IEnumerator Wait(Func<bool> ready, string label, double seconds = 12d,
+            Func<string> diagnostic = null)
         {
             double deadline = Time.realtimeSinceStartupAsDouble + seconds;
             while (!ready())
             {
-                if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException("假人联机等待超时：" + label);
+                if (Time.realtimeSinceStartupAsDouble >= deadline)
+                    throw new TimeoutException("假人联机等待超时：" + label +
+                        (diagnostic == null ? string.Empty : "；" + diagnostic()));
                 yield return null;
             }
         }
@@ -72,6 +75,15 @@ namespace FlatWorld.Networking.Gameplay
             result["replayedHandshake"] = world.ReplayedHandshake;
             result["independentData"] = players.Count == count &&
                 Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data).Distinct().Count() == count;
+            // 地表远端默认只加载轻量表现；先走正式服务器权威启用再核验真正的库存容器。
+            for (int i = 0; i < count; i++)
+            {
+                Player bot = world.Core(31 + i).CorePlayer;
+                ItemMgr.Instance.InitializeNetworkAuthorityPlayer(bot);
+                yield return Wait(() => bot.IsInitialized, "假人权威库存模块加载");
+            }
+            result["authorityInitialized"] = Enumerable.Range(31, count)
+                .All(id => world.Core(id).CorePlayer.IsInitialized);
             var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data.ModuleDataDic.Values
                 .OfType<Inventory_ModuleData>().ToArray()).ToArray();
             Inventory_ModuleData[] native = inventories.SelectMany(value => value).ToArray();

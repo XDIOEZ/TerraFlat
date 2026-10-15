@@ -116,7 +116,15 @@ namespace FlatWorld.Networking.Gameplay
             bool attacking = weapon.TryRequestAttack(false);
             // 不手动打开伤害盒，等真实 Animator 曲线驱动伤害窗口开启及关闭。
             if (attacking)
-                yield return Wait(() => damage.IsDamageEnabled(), "武器动画开启伤害窗口", 2d);
+                yield return Wait(() => damage.IsDamageEnabled(), "武器动画开启伤害窗口", 2d, () =>
+                {
+                    Animator animator = weapon.animator;
+                    AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+                    return $"武器激活={held.gameObject.activeInHierarchy}，持有={held.InHand}，" +
+                        $"Animator激活={animator.isActiveAndEnabled}，Culling={animator.cullingMode}，" +
+                        $"Speed={animator.speed}，状态={state.shortNameHash}，进度={state.normalizedTime:F3}，" +
+                        $"伤害窗口={damage.IsDamageEnabled()}";
+                });
             bool activeDamage = damage.IsDamageEnabled();
             if (attacking)
                 yield return Wait(() => !damage.IsDamageEnabled(), "武器动画关闭伤害窗口", 2d);
