@@ -216,9 +216,10 @@ public partial class Mod_Mover : Module
 
         // 动物不含玩家输入与体力模块，按可选依赖安静解析。
         Mod_GameController controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        inputController = controller;
+        moveAction = null;
         if (controller != null)
         {
-            inputController = controller;
             moveAction = controller._inputActions.Win10.Move_Player;
             BindRunActions(
                 controller._inputActions.Win10.Shift,
@@ -229,10 +230,11 @@ public partial class Mod_Mover : Module
         stamina = item.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         animationController = item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
 
+        UnbindMoveAnimationCallbacks();
         if (animationController != null)
         {
-            OnMoveStart += () => animationController.SetBool(AnimationText.Move, true);
-            OnMoveEnd += () => animationController.SetBool(AnimationText.Move, false);
+            OnMoveStart += OnMoveAnimationStarted;
+            OnMoveEnd += OnMoveAnimationEnded;
             animationController.SetBool(AnimationText.Run, false);
         }
 
@@ -312,10 +314,9 @@ public partial class Mod_Mover : Module
             return;
         }
 
-        if (item != null)
+        if (inputController != null)
         {
-            Mod_GameController controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-            if (controller != null && controller.IsGameplayInputLocked)
+            if (inputController.IsGameplayInputLocked)
             {
                 StopImmediately();
                 // 输入锁定只停止位移，奔跑开关作为存档状态保留，解锁后继续沿用。
@@ -562,6 +563,23 @@ public partial class Mod_Mover : Module
         _wasMoving = isActuallyMoving;
     }
 
+    // 对象池重复加载不会累积动画事件订阅，旧加载周期结束后立即解绑。
+    private void OnMoveAnimationStarted()
+    {
+        if (animationController != null) animationController.SetBool(AnimationText.Move, true);
+    }
+
+    private void OnMoveAnimationEnded()
+    {
+        if (animationController != null) animationController.SetBool(AnimationText.Move, false);
+    }
+
+    private void UnbindMoveAnimationCallbacks()
+    {
+        OnMoveStart -= OnMoveAnimationStarted;
+        OnMoveEnd -= OnMoveAnimationEnded;
+    }
+
     #endregion
 
     #region 环境推动
@@ -635,6 +653,7 @@ public partial class Mod_Mover : Module
     {
         ReleaseCarrierLease();
         UnbindRunActions();
+        UnbindMoveAnimationCallbacks();
         DisposeWetClothesAudio();
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();

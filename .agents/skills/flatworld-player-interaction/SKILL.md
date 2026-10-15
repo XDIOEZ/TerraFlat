@@ -47,6 +47,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 移动、承载与镜头
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
+- Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
