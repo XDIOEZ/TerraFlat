@@ -60,7 +60,13 @@ public static class GameplayTestResourceCache
         double beforeWrite = timer.Elapsed.TotalSeconds;
         try
         {
-            if (success) { Backend.Flush(); Status = AssetHits > 0 ? "hit" : "cold"; }
+            if (success)
+            {
+                Backend.Flush();
+                // 资产与解析文档只命中一类时应单独报告，避免误报完整热命中。
+                Status = AssetHits > 0 && DocumentHits > 0 ? "hit" :
+                    AssetHits > 0 || DocumentHits > 0 ? "partial" : "cold";
+            }
             else { Backend.AbortSession(); Status = "failed"; }
         }
         catch (Exception error) { Status = "write_failed"; Debug.Log("[Lua GameRes缓存] 保存失败，不影响本轮正式目录：" + error.Message); }

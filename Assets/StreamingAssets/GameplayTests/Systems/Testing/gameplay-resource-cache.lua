@@ -10,8 +10,8 @@ end
 
 test.runtime("testing", "resource_cache", {}, function(data)
     assert(data.scope == "live-isolated-world", "资源缓存采样没有进入本轮真实隔离世界")
-    assert(data.status == "cold" or data.status == "hit",
-        "资源缓存没有完成可用的冷加载或热命中：" .. tostring(data.status))
+    assert(data.status == "cold" or data.status == "hit" or data.status == "partial",
+        "资源缓存没有完成可用的冷加载或缓存命中：" .. tostring(data.status))
     assert(data.ready == true, "缓存状态已完成，但正式 GameRes 尚未就绪")
     assert_nonnegative(data.items, "实际物品目录数量", true)
     assert(data.items > 0, "缓存加载没有重建本轮正式物品目录")
@@ -26,5 +26,11 @@ test.runtime("testing", "resource_cache", {}, function(data)
     if data.status == "hit" then
         assert(data.assetHits > 0, "报告热命中，但没有实际复用源资产")
         assert(data.documentHits > 0, "报告热命中，但没有实际复用解析文档")
+    elseif data.status == "partial" then
+        assert((data.assetHits > 0) ~= (data.documentHits > 0),
+            "报告部分命中，但实际两类缓存都命中或都未命中")
+    else
+        assert(data.assetHits == 0 and data.documentHits == 0,
+            "报告冷加载，但实际上复用了缓存")
     end
 end, "Lua专用 GameRes 缓存：实际目录、冷热状态、资产及文档命中诊断")
