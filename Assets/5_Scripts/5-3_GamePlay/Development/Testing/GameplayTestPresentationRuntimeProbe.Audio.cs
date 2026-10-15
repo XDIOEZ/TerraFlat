@@ -75,6 +75,28 @@ public static partial class GameplayTestPresentationRuntimeProbe
             AudioService service = fixture.Service;
             AudioCue loop = fixture.CloneCue(AudioEventIds.PlayerWetClothesMoveLoop);
             AudioCue shortCue = fixture.CloneCue(AudioEventIds.DoorOpen);
+            JArray feedbackCues = new JArray();
+            foreach (string cueId in new[]
+                     {
+                         AudioEventIds.BuildingPlace, AudioEventIds.BuildingReject,
+                         AudioEventIds.CraftComplete, AudioEventIds.SmeltComplete,
+                         AudioEventIds.FireSeed, AudioEventIds.FurnaceIgnite
+                     })
+            {
+                // 读取 Unity 实际导入的音频，避免只检查磁盘有文件却遗漏可播放的 Cue。
+                bool exists = service.TryGetCue(cueId, out AudioCue feedback);
+                feedbackCues.Add(new JObject
+                {
+                    ["id"] = cueId,
+                    ["loaded"] = exists,
+                    ["variants"] = exists ? feedback.Clips.Count : 0,
+                    ["validClips"] = exists && feedback.Clips.All(
+                        clip => clip != null && clip.channels == 1 &&
+                                clip.frequency == 48000 && clip.samples > 0),
+                    ["spatial"] = exists && feedback.SpatialBlend == 1f &&
+                                   feedback.Bus == AudioBus.Sfx && feedback.Cooldown > 0f
+                });
+            }
             AudioListener[] listeners = UnityEngine.Object.FindObjectsOfType<AudioListener>()
                 .Where(value => value.isActiveAndEnabled).ToArray();
             if (listeners.Length != 1) throw new InvalidOperationException("真实现场需要唯一启用的 AudioListener。");
@@ -131,6 +153,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool replacementSurvivedOldStop = replacement.IsPlaying && source.isPlaying;
             result = new JObject
             {
+                ["feedbackCues"] = feedbackCues,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,
                 ["clipSamples"] = source.clip != null ? source.clip.samples : 0,
                 ["playing"] = nearPlaying, ["spatialLinear"] = nearSpatial, ["cueDistancesPreserved"] = distancePreserved,

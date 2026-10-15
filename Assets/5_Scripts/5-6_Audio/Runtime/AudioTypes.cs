@@ -220,6 +220,17 @@ namespace FlatWorld.Audio
         public const string FoodDrink = "food.drink";
         public const string PlayerWetClothesMoveLoop = "player.wet_clothes.move.loop";
 
+        #region 玩法事务反馈
+
+        public const string BuildingPlace = "building.place";
+        public const string BuildingReject = "building.reject";
+        public const string CraftComplete = "craft.complete";
+        public const string SmeltComplete = "smelt.complete";
+        public const string FireSeed = "fire.seed";
+        public const string FurnaceIgnite = "furnace.ignite";
+
+        #endregion
+
         #region 天气音效
 
         public const string WeatherRainLoop = "weather.rain.loop";

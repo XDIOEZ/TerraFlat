@@ -154,7 +154,12 @@ namespace FlatWorld.Audio.Editor
                               eventId.StartsWith("item.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("combat.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("food.", StringComparison.OrdinalIgnoreCase) ||
-                              eventId.StartsWith("player.", StringComparison.OrdinalIgnoreCase);
+                              eventId.StartsWith("player.", StringComparison.OrdinalIgnoreCase) ||
+                              eventId.StartsWith("building.", StringComparison.OrdinalIgnoreCase) ||
+                              eventId.StartsWith("craft.", StringComparison.OrdinalIgnoreCase) ||
+                              eventId.StartsWith("smelt.", StringComparison.OrdinalIgnoreCase) ||
+                              eventId.StartsWith("fire.", StringComparison.OrdinalIgnoreCase) ||
+                              eventId.StartsWith("furnace.", StringComparison.OrdinalIgnoreCase);
 
             cueObject.FindProperty("spatialBlend").floatValue = isWorldSfx || isThunder ? 1f : 0f;
             cueObject.FindProperty("rolloffMode").enumValueIndex = (int)AudioRolloffMode.Linear;

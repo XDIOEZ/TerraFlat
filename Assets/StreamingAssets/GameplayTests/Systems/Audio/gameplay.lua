@@ -1,5 +1,10 @@
 -- 已入世 AudioService 播放正式录音；Cue 只隔离测试 ID，播放、池与用户音量均走正式实现。
 test.runtime("audio", "voice_lifecycle", {}, function(data)
+    assert(#data.feedbackCues == 6, "未读取全部玩法反馈音效")
+    for _, cue in ipairs(data.feedbackCues) do
+        assert(cue.loaded and cue.variants == 2 and cue.validClips and cue.spatial,
+            cue.id .. " 没有正确导入双变体单声道空间 Cue")
+    end
     assert(data.scope == "live-isolated-world" and data.formalCatalog and data.clipCount > 0 and data.clipSamples > 0, "正式录音或目录没有真实加载")
     assert(data.playing and data.spatialLinear and data.cueDistancesPreserved and data.sourceUnmuted, "角色附着声音没有按正式空间参数播放")
     assert(data.nearPlayFrame == data.nearSampleFrame and data.farPlayFrame == data.farSampleFrame,

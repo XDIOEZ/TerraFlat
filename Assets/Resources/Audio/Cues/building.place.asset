@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
+  m_Name: building.place
+  m_EditorClassIdentifier:
+  id: building.place
+  bus: 1
+  clips:
+  - {fileID: 8300000, guid: 791b57da4e364aeeb4ecc6ba275f8d4f, type: 3}
+  - {fileID: 8300000, guid: 02500398648d422e933f99fa0ddf5230, type: 3}
+  selection: 0
+  loop: 0
+  volume:
+    Min: 0.85
+    Max: 0.98
+  pitch:
+    Min: 0.98
+    Max: 1.02
+  spatialBlend: 1
+  minDistance: 1.5
+  maxDistance: 14
+  priority: 128
+  cooldown: 0.065
+  maxInstances: 3
+  concurrencyPolicy: 1
+  rolloffMode: 1
+  outputOverride: {fileID: 0}

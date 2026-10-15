@@ -8,6 +8,8 @@
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `audio/voice_lifecycle`。
 
+玩法事务新增 6 种 LMMS 反馈 Cue（放置成功/失败、制作、熔炼、引火、点炉）；真实场景音频规则检查 12 个 WAV 均已导入、48kHz 单声道、配置完整空间混音及独立 SFX 冷却。事务与音效桥接在 `Presentation/Audio/GameplayFeedbackAudioBridge.cs`，监听正式进度信号，不在预览阶段发声。
+
 真实流程覆盖：使用已入世世界的现有 AudioService/唯一启用监听器，播放正式湿衣循环和开门录音。仅复制 Cue 并改测试 ID 隔离冷却/并发身份，录音、总线、距离及播放池规则保留原值；拒绝抢占满池中其他来源的声音。检查真实 AudioSource 正在播放且有采样、完整空间混音/线性衰减参数、角色到监听器平面的投影、句柄倍率/主音量/总线音量即时生效、静音保留句柄及恢复、范围外短音不占池、范围外循环保留与实际位置、即时停止、复用同一声源以及旧句柄不能误停新声音。结束或失败仅停止本轮句柄，恢复原用户音量/静音，不写音频 PlayerPrefs。声音没有可解释的画面变化且操作已清理，因此本组 0 张截图。
 
 设置保存/放弃与真实音量控件由 [UISettings 共用现场](../UISettings/gameplay-suite.json) 补充；本组集中检查音源运行链。
