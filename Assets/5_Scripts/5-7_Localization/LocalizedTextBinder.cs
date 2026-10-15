@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -19,6 +20,10 @@ namespace FlatWorld.Localization
         [SerializeField, TextArea(2, 5)]
         private string fallback;
 
+        private Func<string> runtimeTextProvider;
+        private bool preserveRuntimeText;
+        private string lastBoundText;
+
         #endregion
 
         #region Unity 生命周期
@@ -34,7 +39,7 @@ namespace FlatWorld.Localization
                 return;
 
             FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
-            Refresh();
+            RefreshCore(true);
         }
 
         private void OnDisable()
@@ -50,6 +55,11 @@ namespace FlatWorld.Localization
         [ContextMenu("Refresh Localized Text")]
         public void Refresh()
         {
+            RefreshCore(false);
+        }
+
+        private void RefreshCore(bool languageRefresh)
+        {
             if (!HasBinding)
                 return;
 
@@ -57,11 +67,21 @@ namespace FlatWorld.Localization
             if (target == null)
                 return;
 
-            target.text = FlatWorldLocalizationService.Get(key, fallback, tableName);
+            // 自动绑定不可在切语言时覆盖被业务系统更新的动态文字。
+            if (preserveRuntimeText && languageRefresh && lastBoundText != null &&
+                !string.Equals(target.text, lastBoundText, StringComparison.Ordinal))
+                return;
+
+            string localized = runtimeTextProvider != null
+                ? runtimeTextProvider() ?? string.Empty
+                : FlatWorldLocalizationService.Get(key, fallback, tableName);
+            target.text = localized;
+            lastBoundText = localized;
         }
 
         /// <summary>由 UI 自动本地化器配置运行时绑定，不改变 Prefab 的布局结构。</summary>
-        public void Configure(string localizedTableName, string localizedKey, string sourceFallback)
+        public void Configure(string localizedTableName, string localizedKey, string sourceFallback,
+            bool preserveOverriddenText = false)
         {
             bool wasEnabled = isActiveAndEnabled && HasBinding;
             if (wasEnabled)
@@ -70,6 +90,9 @@ namespace FlatWorld.Localization
             tableName = string.IsNullOrWhiteSpace(localizedTableName)
                 ? FlatWorldLocalizationService.DefaultTable
                 : localizedTableName;
+            runtimeTextProvider = null;
+            preserveRuntimeText = preserveOverriddenText;
+            lastBoundText = null;
             key = localizedKey;
             fallback = sourceFallback;
             target ??= GetComponent<TMP_Text>();
@@ -81,12 +104,29 @@ namespace FlatWorld.Localization
             }
         }
 
-        /// <summary>已有明确绑定的文本不再由静态 UI 扫描器重新推断 key。</summary>
-        public bool HasBinding => !string.IsNullOrWhiteSpace(key);
+        /// <summary>绑定包含动态数据的界面标题，语言变化时重新读取业务名称。</summary>
+        public void ConfigureRuntime(Func<string> textProvider)
+        {
+            if (isActiveAndEnabled && HasBinding)
+                FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+
+            key = string.Empty;
+            runtimeTextProvider = textProvider;
+            preserveRuntimeText = false;
+            lastBoundText = null;
+            target ??= GetComponent<TMP_Text>();
+            if (isActiveAndEnabled && HasBinding)
+            {
+                FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+                Refresh();
+            }
+        }
+
+        public bool HasBinding => runtimeTextProvider != null || !string.IsNullOrWhiteSpace(key);
 
         private void HandleLanguageChanged(string _)
         {
-            Refresh();
+            RefreshCore(true);
         }
 
         #endregion

@@ -88,6 +88,22 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
 
     #region 显示与生命周期
 
+    private void OnEnable()
+    {
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+    }
+
+    private void OnDisable()
+    {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+    }
+
+    private void HandleLanguageChanged(string _)
+    {
+        if (panel != null && panel.IsOpen() && interaction != null)
+            Refresh();
+    }
+
     private void Update()
     {
         if (panel == null || !panel.IsOpen())

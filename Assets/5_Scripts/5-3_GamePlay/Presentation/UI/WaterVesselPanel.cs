@@ -542,6 +542,19 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         ResetPourGesture(true);
         vessel = null; actor = null;
     }
-    private void OnDisable() => ResetPourGesture(true);
+    private void OnEnable()
+    {
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+    }
+    private void OnDisable()
+    {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        ResetPourGesture(true);
+    }
+    private void HandleLanguageChanged(string _)
+    {
+        if (panel != null && panel.IsOpen() && vessel != null)
+            Refresh();
+    }
     private void OnDestroy() { ClearTarget(); if (panel != null) panel.Closed -= ClearTarget; }
 }

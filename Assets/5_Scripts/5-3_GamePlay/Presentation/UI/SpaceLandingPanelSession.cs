@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using FlatWorld.Localization;
 using FlatWorld.Spaceflight;
 using TMPro;
 using UnityEngine;
@@ -19,6 +20,12 @@ public sealed class SpaceLandingPanelSession : IDisposable
     private string bodyId, eventKey;
     private Vector2 origin, selected;
     private float nextMapRefresh;
+    private string landingHeaderTemplate;
+    private string mapHintTemplate;
+    private string coordinatesTemplate;
+    private string landingSafetyText;
+    private string waterLandingText;
+    private string landLandingText;
     private const int MapSize = 33;
     private SpaceLandingPanelSession()
     {
@@ -27,6 +34,9 @@ public sealed class SpaceLandingPanelSession : IDisposable
         panel = UIManager.Instance.CreatePanelFromGameObject(prefab);
         panel.SetGameplayInputBlocking(false); panel.PrepareForGamepadNavigation(closeOnCancel: true);
         status = panel.GetComponentsInChildren<TMP_Text>(true).First(t => t.name == "FWUI_LandingStatus");
+        if (status.TryGetComponent(out LocalizedTextBinder binder)) binder.enabled = false;
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+        HandleLanguageChanged(null);
         map = panel.GetComponentsInChildren<RawImage>(true).First(t => t.name == "FWUI_LandingMap");
         texture = new Texture2D(MapSize, MapSize, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
         map.texture = texture;
@@ -57,10 +67,10 @@ public sealed class SpaceLandingPanelSession : IDisposable
         double g = body.SurfaceGravity;
         double seconds = g > 0d ? (velocity + Math.Sqrt(velocity * velocity + 2d * g * Math.Max(0d, height))) / g : double.PositiveInfinity;
         var ground = SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, current.selected);
-        current.status.text = $"目标星体：{body.DisplayName}\n剩余高度 {height:0.0} m · 下落速度 {-velocity:0.0} m/s · 预计触地 {seconds:0.0} s\n" +
-            $"点击地图选择附近落点（半径 {SpaceGameplaySettings.Current.LandingChoiceRadiusMeters:0.#} m）。橙色是落点中心。\n" +
-            $"中心坐标 ({current.selected.x:0.#}, {current.selected.y:0.#}) · {(ground.IsWater ? "海上平台" : "陆地平台")}\n" +
-            "独自下落期间停止宇航服推进，触地时由宇航服先承受冲击。";
+        current.status.text = string.Format(current.landingHeaderTemplate, body.DisplayName, height, -velocity, seconds) + "\n" +
+            string.Format(current.mapHintTemplate, SpaceGameplaySettings.Current.LandingChoiceRadiusMeters) + "\n" +
+            string.Format(current.coordinatesTemplate, current.selected.x, current.selected.y, ground.IsWater ? current.waterLandingText : current.landLandingText) + "\n" +
+            current.landingSafetyText;
         if (Time.unscaledTime >= current.nextMapRefresh)
         { current.nextMapRefresh = Time.unscaledTime + .5f; current.DrawMap(body.PlanetId); }
     }
@@ -85,8 +95,19 @@ public sealed class SpaceLandingPanelSession : IDisposable
         }
         texture.Apply(false);
     }
+    private void HandleLanguageChanged(string _)
+    {
+        // 模板仅在语言切换时读取，实时下落数值刷新不反复查表。
+        landingHeaderTemplate = FlatWorldLocalizationService.GetUiText("目标星体：{0}\n剩余高度 {1:0.0} m · 下落速度 {2:0.0} m/s · 预计触地 {3:0.0} s");
+        mapHintTemplate = FlatWorldLocalizationService.GetUiText("点击地图选择附近落点（半径 {0:0.#} m）。橙色是落点中心。");
+        coordinatesTemplate = FlatWorldLocalizationService.GetUiText("中心坐标 ({0:0.#}, {1:0.#}) · {2}");
+        landingSafetyText = FlatWorldLocalizationService.GetUiText("独自下落期间停止宇航服推进，触地时由宇航服先承受冲击。");
+        waterLandingText = FlatWorldLocalizationService.GetUiText("海上平台");
+        landLandingText = FlatWorldLocalizationService.GetUiText("陆地平台");
+    }
     public void Dispose()
     {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         if (panel != null) UnityEngine.Object.Destroy(panel.gameObject);
         if (texture != null) UnityEngine.Object.Destroy(texture);
         if (ReferenceEquals(current, this)) current = null;

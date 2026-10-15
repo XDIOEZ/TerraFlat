@@ -1,3 +1,4 @@
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -72,6 +73,10 @@ public partial class GameRes
     /// <summary>上一次呈现的加载文案。</summary>
     private string lastPresentedStatus = string.Empty;
 
+    private bool resourceLoadingLanguageDirty = true;
+
+    private string resourceLoadingFailureStage;
+
     #endregion
 
     #region 生命周期
@@ -79,12 +84,19 @@ public partial class GameRes
     /// <summary>创建启动加载界面；视觉资源通过 Prefab 直接引用，不经过 GameRes 资源字典。</summary>
     private void InitializeResourceLoadingPresentation()
     {
+        FlatWorldLocalizationService.LanguageChanged += OnResourceLoadingLanguageChanged;
         EnsureResourceLoadingView();
+    }
+
+    private void OnResourceLoadingLanguageChanged(string _)
+    {
+        resourceLoadingLanguageDirty = true;
     }
 
     /// <summary>销毁加载界面并释放单例引用。</summary>
     protected override void OnDestroy()
     {
+        FlatWorldLocalizationService.LanguageChanged -= OnResourceLoadingLanguageChanged;
         DisposeResourceSession();
         DisposeResourceLoadingPresentation();
         base.OnDestroy();
@@ -118,19 +130,21 @@ public partial class GameRes
         resourceLoadingCanvasGroup.interactable = true;
         resourceLoadingCanvasGroup.blocksRaycasts = true;
 
-        if (!stateChanged && !progressChanged && !statusChanged)
+        if (!stateChanged && !progressChanged && !statusChanged && !resourceLoadingLanguageDirty)
             return;
 
         Color accent = resourceLoadFailed
             ? new Color(0.76f, 0.33f, 0.29f, 1f)
             : new Color(0.26f, 0.61f, 0.57f, 1f);
-        resourceLoadingTitle.text = resourceLoadFailed ? "资源加载失败" : "正在准备游戏";
+        resourceLoadingTitle.text = FlatWorldLocalizationService.GetUiText(resourceLoadFailed ? "资源加载失败" : "正在准备游戏");
         resourceLoadingTitle.color = resourceLoadFailed
             ? new Color(1f, 0.72f, 0.65f, 1f)
             : new Color(0.95f, 0.91f, 0.81f, 1f);
-        resourceLoadingStatus.text = string.IsNullOrWhiteSpace(loadingText)
-            ? "正在加载资源…"
-            : loadingText;
+        resourceLoadingStatus.text = resourceLoadFailed && !string.IsNullOrWhiteSpace(resourceLoadingFailureStage)
+            ? FlatWorldLocalizationService.GetUiFormat(
+                "资源加载失败（{0}），修正配置后可按 Alt+R 重试",
+                FlatWorldLocalizationService.GetUiText(resourceLoadingFailureStage))
+            : FlatWorldLocalizationService.GetUiText(string.IsNullOrWhiteSpace(loadingText) ? "正在加载资源…" : loadingText);
         resourceLoadingProgress.value = Mathf.Clamp01(loadingProgress);
         resourceLoadingProgressText.text = $"{Mathf.RoundToInt(loadingProgress * 100f)}%";
         resourceLoadingProgressText.color = accent;
@@ -139,6 +153,7 @@ public partial class GameRes
         lastPresentedFailure = resourceLoadFailed;
         lastPresentedProgress = loadingProgress;
         lastPresentedStatus = loadingText ?? string.Empty;
+        resourceLoadingLanguageDirty = false;
     }
 
     /// <summary>实例化并校验资源加载 Prefab 的控件命名契约。</summary>
@@ -174,6 +189,7 @@ public partial class GameRes
         }
 
         DontDestroyOnLoad(resourceLoadingView);
+        resourceLoadingLanguageDirty = true;
         resourceLoadingConfigurationErrorLogged = false;
         return true;
     }

@@ -1,6 +1,7 @@
 // AI-Context: 联机控制器的会话逻辑分部；UI 组合与动态界面构建位于同一控制器的 UI partial。
 
 using System;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -40,6 +41,7 @@ namespace FlatWorld.Networking.Gameplay
             ReleaseSessionBindings();
             networkManager = manager;
             networkManager.GameplayStatusChanged += SetStatus;
+            FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
             subscribedSession = GameNetwork.Session;
             subscribedSession.StateChanged += OnSessionStateChanged;
             subscribedSession.Error += SetStatus;
@@ -60,6 +62,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (networkManager != null)
                 networkManager.GameplayStatusChanged -= SetStatus;
+
+            FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
 
             if (subscribedSession != null)
             {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -54,6 +55,7 @@ public class MachinePanelSession : IMachinePanelSession
                 }
             }
             Logic.Changed += Refresh;
+            FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
         }
         catch { Dispose(); throw; }
     }
@@ -132,6 +134,8 @@ public class MachinePanelSession : IMachinePanelSession
         if (actionButton != null) actionButton.interactable = Logic.CanAct;
     }
 
+    private void HandleLanguageChanged(string _) => Refresh();
+
     protected virtual void RefreshPresentation() { }
     protected virtual void OnOpened() { }
     protected virtual void DisposePresentation() { }
@@ -166,6 +170,7 @@ public class MachinePanelSession : IMachinePanelSession
         disposed = true;
         Close();
         Logic.Changed -= Refresh;
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         DisposePresentation();
         if (actionButton != null) actionButton.onClick.RemoveListener(Act);
         foreach (var binding in inventoryPanels)

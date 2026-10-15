@@ -37,6 +37,21 @@ public sealed class InventorySortButton : MonoBehaviour
 
     #region 绑定
 
+    private void OnEnable()
+    {
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+    }
+
+    private void OnDisable()
+    {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+    }
+
+    private void HandleLanguageChanged(string _)
+    {
+        RefreshSortButtonLabel(SortModes[currentSortModeIndex]);
+    }
+
     /// <summary>为使用 UI_Bag 的库存面板接入独立排序与整理按钮。</summary>
     public static void EnsureFor(Inventory targetInventory)
     {
@@ -82,6 +97,8 @@ public sealed class InventorySortButton : MonoBehaviour
         sortButton = targetSortButton;
         organizeButton = targetOrganizeButton;
         sortButtonLabel = sortButton.GetComponentInChildren<TMP_Text>(true);
+        if (sortButtonLabel != null && sortButtonLabel.TryGetComponent(out LocalizedTextBinder staticBinder))
+            staticBinder.enabled = false;
 
         sortButton.onClick.RemoveListener(HandleSort);
         sortButton.onClick.AddListener(HandleSort);
@@ -144,7 +161,7 @@ public sealed class InventorySortButton : MonoBehaviour
 
         string sortText = FlatWorldLocalizationService.GetUiText("排序");
         string modeText = FlatWorldLocalizationService.GetUiText(GetSortModeName(mode));
-        sortButtonLabel.text = $"{sortText}（{modeText}）";
+        sortButtonLabel.text = FlatWorldLocalizationService.GetUiFormat("{0}（{1}）", sortText, modeText);
     }
 
     /// <summary>返回排序规则的玩家可见名称。</summary>

@@ -9,6 +9,7 @@
         "FlatWorld.WorldModel",
         "UI",
         "FlatWorld.Utilities",
+        "FlatWorld.Localization",
         "Mirror",
         "Mirror.Components",
         "Mirror.Transports",

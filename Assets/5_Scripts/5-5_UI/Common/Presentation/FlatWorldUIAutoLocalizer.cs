@@ -42,7 +42,8 @@ public static class FlatWorldUIAutoLocalizer
             binder.Configure(
                 FlatWorldLocalizationService.UiTable,
                 FlatWorldLocalizationService.GetUiTextKey(text.text),
-                text.text);
+                text.text,
+                preserveOverriddenText: true);
         }
     }
 
