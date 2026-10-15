@@ -13,6 +13,7 @@
       "lines": [
         "先看看身上的背包吧，得知道自己还缺些什么。"
       ],
+      "localizedLines": { "en": ["I should check my backpack first and see what I'm missing."] },
       "duration": 4.2,
       "cooldown": 45,
       "once": true,
@@ -31,6 +32,7 @@
       "lines": [
         "三根木棍、三块原木，再找一片树叶……这些应该够我把火生起来。"
       ],
+      "localizedLines": { "en": ["Three sticks, three logs, and a leaf... That should be enough to get a fire going."] },
       "duration": 5.2,
       "cooldown": 45,
       "once": true,
@@ -49,6 +51,7 @@
       "lines": [
         "木棍和原木能做个钻木取火器，先把它合成出来。"
       ],
+      "localizedLines": { "en": ["I can make a fire drill from sticks and logs. I'll craft one first."] },
       "duration": 4.5,
       "cooldown": 45,
       "once": true,
@@ -67,6 +70,7 @@
       "lines": [
         "找块平整的地方，把钻木取火器安置下来。"
       ],
+      "localizedLines": { "en": ["I need a flat spot to set up the fire drill."] },
       "duration": 4.0,
       "cooldown": 45,
       "once": true,
@@ -85,6 +89,7 @@
       "lines": [
         "把树叶当作火绒，多摩擦几次，应该就能得到火种。"
       ],
+      "localizedLines": { "en": ["I can use the leaf as tinder. A few more rubs should make an ember."] },
       "duration": 4.6,
       "cooldown": 45,
       "once": true,
@@ -103,6 +108,7 @@
       "lines": [
         "火种有了，再用剩下的木棍和原木搭一个火堆。"
       ],
+      "localizedLines": { "en": ["I've got an ember. Now I'll build a campfire with the remaining sticks and logs."] },
       "duration": 4.4,
       "cooldown": 45,
       "once": true,
@@ -121,6 +127,7 @@
       "lines": [
         "把火堆放在安全又方便照看的地方。"
       ],
+      "localizedLines": { "en": ["I'll place the campfire somewhere safe where I can keep an eye on it."] },
       "duration": 3.9,
       "cooldown": 45,
       "once": true,
@@ -139,6 +146,7 @@
       "lines": [
         "把火种放进火堆的燃料槽，再亲手点燃它。"
       ],
+      "localizedLines": { "en": ["Put the ember in the campfire's fuel slot, then light it myself."] },
       "duration": 4.3,
       "cooldown": 45,
       "once": true,
@@ -158,6 +166,7 @@
       "lines": [
         "火终于生起来了。接下来，我得靠自己在这里活下去。"
       ],
+      "localizedLines": { "en": ["The fire is finally burning. From here on, I'll have to survive on my own."] },
       "duration": 5.0,
       "cooldown": 45,
       "once": true,

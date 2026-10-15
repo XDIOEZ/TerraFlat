@@ -12,6 +12,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/`：`Mod_BuffManager/BuffInstance` 生命周期；`Stacks/Rain` 水体/淋雨时钟；`BuffDefinition/Dto/Factory` 定义；`BuffEffectDispatcher/BuffEffectTypeIds` 效果注册。
 - `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json` 及分包：内容真源。
 - `Assets/StreamingAssets/ItemWiki/{buffs.js,buff_validation.py,wiki_server.py}`：展示、校验、文件指纹/备份/原子写回。
+- Buff HUD 通过 `BuffStatusRowView` 和 `FlatWorldUI` 翻译 `DisplayName`，语言切换由 `PlayerBuffStatusHUD` 刷新；定义 ID 不参与翻译。
 
 ## 定义与状态
 

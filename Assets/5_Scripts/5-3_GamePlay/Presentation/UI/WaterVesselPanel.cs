@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
@@ -203,8 +204,29 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
         status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
             liquidName, vessel.Data.Amount.ToString("0.######"),
-            vessel.Capacity, vessel.Data.ProcessingSeconds) + "\n" + MixedLiquidContents.Describe(vessel.Data);
+            vessel.Capacity, vessel.Data.ProcessingSeconds) + "\n" + DescribeMixture(vessel.Data);
         drink.interactable = LiquidVesselOperations.CanDrink(vessel);
+    }
+
+    /// <summary>混合液体的组分明细由 UI 翻译，物质库存只负责真实数量。</summary>
+    private static string DescribeMixture(LiquidContainerState state)
+    {
+        if (state?.Composition == null || state.Composition.Count == 0)
+            return string.Empty;
+
+        var ids = new List<string>(state.Composition.Keys);
+        ids.Sort(StringComparer.Ordinal);
+        var lines = new List<string>(ids.Count);
+        foreach (string id in ids)
+        {
+            float amount = state.Composition[id];
+            string originalName = GameRes.ExistingInstance?.GetLiquidDefinition(id)?.DisplayName ?? id;
+            string name = FlatWorldLocalizationService.GetUiText(originalName);
+            float percentage = state.Amount > 0f ? amount / state.Amount * 100f : 0f;
+            lines.Add(FlatWorldLocalizationService.GetUiFormat("{0}：{1:0.###} 份（{2:0.#}%）",
+                name, amount, percentage));
+        }
+        return string.Join("\n", lines);
     }
     /// <summary>完成一次饮水并即时更新余量。</summary>
     private void Drink() { vessel.Drink(actor); Refresh(); }

@@ -4822,6 +4822,174 @@ MonoBehaviour:
     m_Localized: "Item Description"
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740550
+    m_Localized: "The item is outside placement range."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740551
+    m_Localized: "Mixed Liquid"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740552
+    m_Localized: "{0}: {1:0.###} servings ({2:0.#}%)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740553
+    m_Localized: "Molten Glass"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740554
+    m_Localized: "Molten Copper"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740555
+    m_Localized: "Molten Tin"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740556
+    m_Localized: "Molten Iron"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740557
+    m_Localized: "Caustic Solution"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740558
+    m_Localized: "This brine contains so much salt that drinking it would dehydrate me."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740559
+    m_Localized: "This seawater contains so much salt that drinking it would dehydrate me."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740560
+    m_Localized: "Running"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740561
+    m_Localized: "Rooted (99)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740562
+    m_Localized: "Speed I"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740563
+    m_Localized: "Overburdened"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740564
+    m_Localized: "Wet"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740565
+    m_Localized: "Night Vision"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740566
+    m_Localized: "Head Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740567
+    m_Localized: "Chest Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740568
+    m_Localized: "Abdomen Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740569
+    m_Localized: "Pelvis Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740570
+    m_Localized: "Left Hand Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740571
+    m_Localized: "Right Hand Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740572
+    m_Localized: "Left Leg Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740573
+    m_Localized: "Right Leg Splint Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740574
+    m_Localized: "Concussion"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740575
+    m_Localized: "Leg Fracture"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740576
+    m_Localized: "Arm Fracture / Dislocation"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740577
+    m_Localized: "Damage Reduction"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740578
+    m_Localized: "Spicy"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740579
+    m_Localized: "Bleeding I"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740580
+    m_Localized: "Bleeding II"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740581
+    m_Localized: "Bleeding III"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740582
+    m_Localized: "Burning"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740583
+    m_Localized: "Infection"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740584
+    m_Localized: "Radiance"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740585
+    m_Localized: "Health Regeneration (1)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740586
+    m_Localized: "Herbal Recovery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740587
+    m_Localized: "Hydrated"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740588
+    m_Localized: "Dehydrated"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740589
+    m_Localized: "Fusion Exposure"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740590
+    m_Localized: "Frostbite"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740591
+    m_Localized: "Heatstroke"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

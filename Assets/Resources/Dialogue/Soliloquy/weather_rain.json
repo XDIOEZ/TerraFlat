@@ -20,6 +20,7 @@
         "云压得很低，天气要变了",
         "得赶紧把外面的事收个尾"
       ],
+      "localizedLines": { "en": ["Those clouds are hanging low. The weather's about to turn.", "I'd better finish up what I'm doing outside."] },
       "duration": 3.5,
       "cooldown": 75,
       "once": false,
@@ -50,6 +51,7 @@
         "雨水太冷了，我得找个火源",
         "再淋下去体温会撑不住"
       ],
+      "localizedLines": { "en": ["This rain is freezing. I need to find a fire.", "If I stay out in this rain, I'll get dangerously cold."] },
       "duration": 3.8,
       "cooldown": 45,
       "once": false,
@@ -80,6 +82,7 @@
         "雨势变大了，现在不适合远行",
         "这场雨越来越急了"
       ],
+      "localizedLines": { "en": ["The rain's getting heavier. This is no time for a long trip.", "This downpour keeps getting worse."] },
       "duration": 3.6,
       "cooldown": 60,
       "once": false,
@@ -110,6 +113,7 @@
         "靠着火暖一会儿，体温正在恢复",
         "火还燃着，先在这里避避雨"
       ],
+      "localizedLines": { "en": ["I'll warm up by the fire for a while.", "The fire's still burning. I'll shelter here until the rain eases."] },
       "duration": 3.5,
       "cooldown": 70,
       "once": false,
@@ -135,6 +139,7 @@
         "雨停了，空气还很凉",
         "雨势过去了，可以重新安排外出了"
       ],
+      "localizedLines": { "en": ["The rain has stopped, but the air is still chilly.", "The storm has passed. I can head out again."] },
       "duration": 3.4,
       "cooldown": 80,
       "once": false,
@@ -165,6 +170,7 @@
         "雪越下越冷，我得找个火源",
         "积雪开始变厚了，得准备好保暖和食物"
       ],
+      "localizedLines": { "en": ["It's getting colder as the snow falls. I need a fire.", "The snow is piling up. I should prepare warm clothes and food."] },
       "duration": 3.8,
       "cooldown": 45,
       "once": false,

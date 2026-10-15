@@ -110,7 +110,11 @@ public sealed class SpacesuitPanelSession : IDisposable
     private void Refresh()
     {
         binding = SpacesuitSystem.GetBinding(suit, actor);
-        view.Title.text = FlatWorldLocalizationService.GetUiFormat("{0} · 宇航服", suit.GameName);
+        string suitName = GameRes.ExistingInstance != null &&
+                          GameRes.ExistingInstance.TryGetItemDefinition(suit.IDName, out RuntimeItemDefinition definition)
+            ? definition.DisplayName
+            : suit.GameName;
+        view.Title.text = FlatWorldLocalizationService.GetUiFormat("{0} · 宇航服", suitName);
         decimal standardLiters = 0m;
         if (FluidTankStorage.TryGet(binding.Tank, out FluidInventory inventory, out _)) standardLiters = FluidUnits.MolToStandardLiters(inventory.GetGasMoles(FluidIds.Oxygen));
         decimal propulsionLiters = FluidTankStorage.TryGet(binding.PropulsionTank, out FluidInventory propulsionInventory, out _)

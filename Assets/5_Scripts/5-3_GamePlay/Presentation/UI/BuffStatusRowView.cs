@@ -53,7 +53,7 @@ public sealed class BuffStatusRowView : MonoBehaviour
         string displayName = runtime.Definition.DisplayName;
         string resolvedName = string.IsNullOrWhiteSpace(displayName)
             ? runtime.DefinitionId
-            : displayName;
+            : FlatWorldLocalizationService.GetUiText(displayName);
         if (nameText != null && !string.Equals(nameText.text, resolvedName, StringComparison.Ordinal))
             nameText.text = resolvedName;
 

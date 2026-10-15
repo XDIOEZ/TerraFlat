@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -253,10 +254,13 @@ public static class GroundTileHarvestSystem
         {
             string layerFeedback = !hasPlayerCover && rule.NaturalLayerCount > 1
                 ? previousLayers.ExcavatedLayers + 1 >= rule.NaturalLayerCount
-                    ? " 已露出无法开采的基岩。"
-                    : $" 下方还剩 {rule.NaturalLayerCount - previousLayers.ExcavatedLayers - 1} 层。"
+                    ? FlatWorldLocalizationService.GetUiText(" 已露出无法开采的基岩。")
+                    : FlatWorldLocalizationService.GetUiFormat(" 下方还剩 {0} 层。",
+                        rule.NaturalLayerCount - previousLayers.ExcavatedLayers - 1)
                 : string.Empty;
-            ItemActionFeedback.Show(tool.item.Owner, $"挖掘完成，获得{product.DisplayName} ×{rule.Amount}。{layerFeedback}");
+            ItemActionFeedback.Show(tool.item.Owner, FlatWorldLocalizationService.GetUiFormat(
+                "挖掘完成，获得{0} ×{1}。{2}",
+                FlatWorldLocalizationService.GetUiText(product.DisplayName), rule.Amount, layerFeedback));
         }
         return true;
     }
