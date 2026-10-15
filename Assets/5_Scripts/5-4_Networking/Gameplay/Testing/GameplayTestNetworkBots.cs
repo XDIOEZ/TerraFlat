@@ -73,11 +73,15 @@ namespace FlatWorld.Networking.Gameplay
             var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data.ModuleDataDic.Values
                 .OfType<Inventory_ModuleData>().ToArray()).ToArray();
             Inventory_ModuleData[] native = inventories.SelectMany(value => value).ToArray();
+            Inventory_Data[][] containers = inventories.Select(modules => modules
+                .SelectMany(module => module.Data?.Values ?? Enumerable.Empty<Inventory_Data>()).ToArray()).ToArray();
             result["nativeInventoryModuleCounts"] = new JArray(inventories.Select(value => value.Length));
+            result["nativeInventoryContainerCounts"] = new JArray(containers.Select(value => value.Length));
             // 正式库存由模块状态持有，禁止用已不承载运行库存的旧玩家字典作独立性证据。
             result["independentInventories"] = inventories.All(value => value.Length > 0) &&
                 native.All(value => value.Data != null) && native.Distinct().Count() == native.Length &&
-                native.Select(value => value.Data).Distinct().Count() == native.Length;
+                native.Select(value => value.Data).Distinct().Count() == native.Length &&
+                HaveSeparateInventoryContainers(containers);
             // 实际主角使用长稳定 ID，另准备短名角色来确保覆盖真实的档案名冲突。
             string occupiedProfile = world.Prefix + "occupied";
             world.PlaceSpawn(occupiedProfile, local.Data.transform.position);
@@ -97,6 +101,25 @@ namespace FlatWorld.Networking.Gameplay
             yield return null;
             result["cleanup"] = world.CleanupSample();
             completed(result);
+        }
+
+        private static bool HaveSeparateInventoryContainers(Inventory_Data[][] players)
+        {
+            // 外层字典独立不代表内部容器和可变槽位没有被不同玩家共享。
+            if (players.Any(inventories => inventories.Length == 0 ||
+                inventories.Any(value => value?.itemSlots == null))) return false;
+            for (int i = 0; i < players.Length; i++)
+            {
+                for (int j = i + 1; j < players.Length; j++)
+                    foreach (Inventory_Data left in players[i])
+                        foreach (Inventory_Data right in players[j])
+                        {
+                            if (ReferenceEquals(left, right) || ReferenceEquals(left.itemSlots, right.itemSlots)) return false;
+                            foreach (ItemSlot slot in left.itemSlots)
+                                if (slot != null && right.itemSlots.Any(other => ReferenceEquals(slot, other))) return false;
+                        }
+            }
+            return true;
         }
 
         private static JObject BotSample(NetworkWorldPlayer bot, Player local) => new()

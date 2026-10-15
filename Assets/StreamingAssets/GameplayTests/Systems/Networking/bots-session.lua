@@ -48,6 +48,10 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
     for _, count in ipairs(data.nativeInventoryModuleCounts) do
         assert(count > 0, "库存模块缺失时不能用空集合证明独立")
     end
+    assert(#data.nativeInventoryContainerCounts == 4, "没有读取四名假人的实际库存容器")
+    for _, count in ipairs(data.nativeInventoryContainerCounts) do
+        assert(count > 0, "库存模块不包含真实容器，不能证明玩家库存独立")
+    end
     local collision = data.localNameCollision
     assert(collision.profileBound and collision.indexed and collision.ready and collision.authenticated
         and not collision.sameAsLocal and not collision.isLocalProfile,
