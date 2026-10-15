@@ -130,6 +130,8 @@ if __name__ == "__main__":
     parser.add_argument("--plan", action="store_true", help="只显示系统选择和覆盖缺口，不向 Editor 提交请求")
     args = parser.parse_args()
     try:
+        if args.playmode_only and args.integration:
+            raise ValueError("--playmode-only 已直接运行场景案例，不能再同时指定 --integration")
         if args.list_systems:
             for system in load_catalog():
                 print(f"{system['id']}: {system['name']} | {system['rulesSuite']} | 场景={','.join(system.get('integrationSuites', [])) or '暂无'}")
