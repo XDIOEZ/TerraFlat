@@ -60,7 +60,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         error = null;
         bool supported = GameplayTestUniverseProbe.Supports(operation) || GameplayTestShipProbe.Supports(operation) ||
-            operation is "session" or "ship_templates" or "ship_flight" or "ship_collision" or "ship_damage_live" or "sector_transition" or "space_visit";
+            operation is "session" or "ship_templates" or "ship_flight" or "ship_collision" or "ship_damage_live" or
+                "ship_ground_combat_projection" or "sector_transition" or "space_visit";
         if (!supported) error = "未开放的太空测试操作：" + operation;
         else if (operation == "sector_transition")
         {
@@ -92,6 +93,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             "ship_flight" => FlyTemplates(value => sample = value),
             "ship_collision" => CollideProductionFloors(value => sample = value),
             "ship_damage_live" => DamageProductionLongShip(value => sample = value),
+            "ship_ground_combat_projection" => ProbeGroundCombatProjection(value => sample = value),
             "space_visit" => VisitConfiguredSectors(value => sample = value),
             "sector_transition" => CrossSector(argument, value => sample = value),
             _ => throw new ArgumentException("操作不是会话测试：" + operation)
@@ -118,6 +120,44 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             if (homeChanged && Application.isPlaying) yield return ReturnHome();
         }
         finally { Dispose(); }
+    }
+    #endregion
+
+    #region 地表武器对飞船受击位置回归
+    private IEnumerator ProbeGroundCombatProjection(Action<JObject> completed)
+    {
+        if (session.IsSpaceView) throw new InvalidOperationException("地表飞船攻击投影必须在地表测试世界验证。");
+        Player player = CurrentPlayer();
+        SpacePassengerState passenger = session.GetPassenger(player);
+        if (passenger.Supported) throw new InvalidOperationException("投影测试玩家必须在船外自由移动。");
+        string world = SceneManager.GetActiveScene().name;
+        Vector2 attackCenter = (Vector2)player.transform.position + Vector2.right * 1.5f;
+        Vector2 logical = WorldLocalPresentation.ToLogical(attackCenter);
+        SpaceVector2 originalPosition = passenger.FreeMotion.PositionMeters;
+        string originalWorld = passenger.LandingWorldKey;
+        try
+        {
+            // 模拟玩家走远后乘员快照未更新，实际武器命中点仍应落在当前攻击位置。
+            passenger.FreeMotion.PositionMeters = originalPosition + new SpaceVector2(40d, 25d);
+            passenger.LandingWorldKey = null;
+            bool resolved = SpaceSession.TryGetCombatWorldKey(player, out string resolvedWorld);
+            Vector2 hitPoint = SpaceSession.ProjectSurfaceCombatPoint(player, world, logical, attackCenter);
+            Vector2 expected = WorldLocalPresentation.ProjectPosition(logical, attackCenter);
+            completed(new JObject
+            {
+                ["scope"] = "live-ground-combat-projection", ["world"] = world,
+                ["worldResolved"] = resolved, ["resolvedWorld"] = resolvedWorld ?? string.Empty,
+                ["hitError"] = Vector2.Distance(hitPoint, expected),
+                ["staleOffset"] = (passenger.FreeMotion.PositionMeters - originalPosition).Magnitude,
+                ["limitations"] = "验证实际地表玩家与过期乘员位置下的飞船命中坐标；不替代真实武器动画和碰撞验收。"
+            });
+        }
+        finally
+        {
+            passenger.FreeMotion.PositionMeters = originalPosition;
+            passenger.LandingWorldKey = originalWorld;
+        }
+        yield break;
     }
     #endregion
 

@@ -31,6 +31,10 @@ namespace FlatWorld.Spaceflight
             worldKey = source?.GetComponentInChildren<Mod_Projectile>(true)?.NetworkSurfaceWorldKey;
             if (!string.IsNullOrEmpty(worldKey)) return true;
             Player player = CombatPlayer(source);
+            // 本地地表战斗以当前场景为准，避免保存在乘员快照中的旧世界误筛飞船。
+            string activeWorld = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (player != null && player == ItemMgr.Instance?.User_Player && !SpaceMgr.IsSpaceScene(activeWorld))
+            { worldKey = activeWorld; return !string.IsNullOrEmpty(worldKey); }
             if (player != null && Current != null && Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace)
             { worldKey = observer.WorldKey; return !string.IsNullOrEmpty(worldKey); }
             worldKey = source != null ? source.gameObject.scene.name : null;
@@ -41,10 +45,9 @@ namespace FlatWorld.Spaceflight
             Mod_Projectile projectile = source?.GetComponentInChildren<Mod_Projectile>(true);
             if (projectile?.NetworkSurfaceWorldKey == worldKey)
                 return projectile.NetworkSurfacePresentationOrigin + PressureExplosionQueue.DeltaInWorld(worldKey, projectile.NetworkSurfaceCanonicalOrigin, logical);
-            Player player = CombatPlayer(source);
-            if (player != null && Current != null && Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace)
-                return (Vector2)player.transform.position + PressureExplosionQueue.DeltaInWorld(worldKey, observer.Position.LocalMeters.ToVector2(), logical);
-            return WorldLocalPresentation.ProjectPosition(logical, fallbackAnchor);
+            // 地表武器只以实际伤害盒为锚点，按目标世界环绕规则求最近镜像，不依赖可能过期的乘员位置。
+            return fallbackAnchor + PressureExplosionQueue.DeltaInWorld(worldKey,
+                PressureExplosionQueue.NormalizeInWorld(worldKey, fallbackAnchor), logical);
         }
         public bool ExecuteNetworkAttack(string profile, int action, SpaceSectorPosition aim, out string reason)
         {

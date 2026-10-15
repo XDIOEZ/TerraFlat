@@ -1,4 +1,12 @@
 -- 使用正式放置/伤害/固定步，验证真实残骸 Item 与冷库存；没有直接调用分裂算法。
+test.space("ship_ground_combat_projection", function(data)
+    assert(data.scope == "live-ground-combat-projection" and type(data.limitations) == "string", "未采样真实地表武器投影")
+    assert(data.worldResolved and data.resolvedWorld == data.world, "乘员快照缺少世界键时，地表武器没有使用当前场景")
+    assert(data.staleOffset > 40, "没有构造乘员位置过期的回归现场")
+    assert(data.hitError < 0.001, "地表飞船命中坐标错误地跟随过期的乘员快照")
+    return "船外移动后的武器命中点与真实攻击位置一致，缺失乘员世界键也不丢失地表目标。"
+end, "地表武器命中飞船的坐标与世界匹配")
+
 local function near(actual, expected, label)
     assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) < 0.0001, label)
 end
