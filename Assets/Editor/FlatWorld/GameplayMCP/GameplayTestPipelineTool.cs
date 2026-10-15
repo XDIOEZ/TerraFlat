@@ -8,7 +8,7 @@ namespace FlatWorld.GameplayMCP
 {
     /// <summary>AI 只发一次启动命令，再读取整体结果，不按逐帧玩法 MCP 反复操作。</summary>
     [McpForUnityTool("gameplay_test_pipeline",
-        Description = "Run targeted FlatWorld Lua rules without starting a world, or explicit gameplay suites via EditMode then PlayMode. Actions: run, status, report, catalog. Optional systemIds selects fast rules; suitePath selects an explicit suite. Never interrupts active PlayMode.",
+        Description = "Run targeted FlatWorld Lua rules or gameplay suites. Set playModeOnly=true to run only PlayMode Lua without EditMode preflight. Actions: run, status, report, catalog. systemIds selects fast rules; suitePath selects a suite. Never interrupts active PlayMode.",
         Group = "core")]
     public static class GameplayTestPipelineTool
     {
@@ -18,7 +18,7 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("run | status | report | catalog", Required = true)]
             public string action { get; set; }
 
-            [ToolParameter("StreamingAssets-relative suite path; default GameplayTests/all-systems-rules.json.", Required = false)]
+            [ToolParameter("StreamingAssets-relative suite path; defaults to all-systems-gameplay when playModeOnly=true, otherwise all-systems-rules.", Required = false)]
             public string suitePath { get; set; }
 
             [ToolParameter("Optional list of selected Lua case IDs; all enabled cases run when omitted.", Required = false)]
@@ -26,6 +26,9 @@ namespace FlatWorld.GameplayMCP
 
             [ToolParameter("Optional registered system IDs, such as ai, mechanical, terrain. Selects fast rules; cannot combine with suitePath/caseIds.", Required = false)]
             public string[] systemIds { get; set; }
+
+            [ToolParameter("Run gameplay suites in PlayMode only, skipping EditMode tests. Not valid with systemIds/rules suites.", Required = false)]
+            public bool playModeOnly { get; set; }
         }
 
         public static object HandleCommand(JObject parameters)
@@ -43,10 +46,15 @@ namespace FlatWorld.GameplayMCP
             {
                 if (parameters?["caseIds"] != null && parameters["caseIds"] is not JArray)
                     throw new ArgumentException("caseIds 必须是数组。");
+                if (parameters?["playModeOnly"] != null && parameters["playModeOnly"].Type != JTokenType.Boolean)
+                    throw new ArgumentException("playModeOnly 必须是布尔值。");
+                bool playModeOnly = parameters?.Value<bool?>("playModeOnly") == true;
+                if (playModeOnly && action != "run")
+                    throw new ArgumentException("playModeOnly 仅用于 run。");
                 string suitePath = parameters?.Value<string>("suitePath");
                 if (parameters?["systemIds"] != null)
                 {
-                    if (action != "run" || parameters["systemIds"] is not JArray systemIds || selectedIds != null || suitePath != null)
+                    if (action != "run" || playModeOnly || parameters["systemIds"] is not JArray systemIds || selectedIds != null || suitePath != null)
                         throw new ArgumentException("systemIds 仅用于 run，且不能与 suitePath/caseIds 混用。");
                     var selectedSystems = new List<string>();
                     foreach (JToken systemId in systemIds)
@@ -59,7 +67,7 @@ namespace FlatWorld.GameplayMCP
                 }
                 result = action switch
                 {
-                    "run" => GameplayTestPipelineCoordinator.Start(suitePath, selectedIds),
+                    "run" => GameplayTestPipelineCoordinator.Start(suitePath, selectedIds, playModeOnly),
                     "status" => GameplayTestPipelineCoordinator.Status(false),
                     "report" => GameplayTestPipelineCoordinator.Status(true),
                     "catalog" => new JObject { ["ok"] = true, ["catalog"] = GameplayTestSystemCatalog.Read(),

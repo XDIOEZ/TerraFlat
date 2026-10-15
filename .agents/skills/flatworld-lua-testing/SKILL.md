@@ -7,6 +7,8 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 
 系统代码修改后应按本Skill选择回归范围；用于编写、调整、执行 `GameplayTests/*.json` 与 Lua 测试，或修改测试夹具、截图、报告和测试中心。手动游玩与 MCP 输入控制转 [flatworld-gameplay-mcp](../flatworld-gameplay-mcp/SKILL.md)，业务根因转对应领域 Skill；测试夹具调用正式接口，不替生产代码重算规则。
 
+**明确指定 PlayMode Lua 时优先遵循用户范围**：用户说“测试/启动 PlayMode Lua 测试集”“只测 PlayMode”等，**仅执行 gameplay 清单的 PlayMode Lua**，不自动运行 EditMode 测试、安全前置测试或编辑态快速 Lua 规则。完整入口用 `python Tools/GameplayTesting/run_suite.py --playmode-only`；指定系统用 `--systems <系统ID> --playmode-only`；MCP 用 `gameplay_test_pipeline(action="run", suitePath="GameplayTests/all-systems-gameplay.json", playModeOnly=true)`。**不要**误用不带该标志的 gameplay 清单（默认会先执行 EditMode），也不要换成 `--systems ... --integration`（默认先跑规则）。只有用户明确要求规则、EditMode 或完整多阶段回归时才运行它们；跳过前置不等于它们通过。
+
 ## 导航
 
 以 `Assets/5_Scripts/5-3_GamePlay/Development/Testing/` 为测试代码根：
@@ -37,7 +39,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、显式�
 - `test.system(system,operation,args,validator,label)` 调用独立规则；`test.runtime(...)` 只用于正式隔离世界。每个回调必须实际调用assert，无断言即失败。参数排队时冻结，回调不能追加命令。
 - 气液 PlayMode 的选择器、相态、组主、设备容量、液碱端口和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。
 - 联机假人专项在 `Systems/Networking/gameplay-suite.json`，`test.runtime("networking","bots_*",...)` 接正式 Mirror 内存传输/独立连接和服务端处理；检查实际回复、权威状态及收尾，不将传输送达或服务端删物当成真实 Client 库存接收。
-- 规则模式只允许system/log且至少一个system；不进入Test Framework/PlayMode，不建资源/存档世界。场景模式复用原EditMode→PlayMode流程。
+- 规则模式只允许system/log且至少一个system；不进入Test Framework/PlayMode，不建资源/存档世界。场景模式默认 EditMode→PlayMode；显式 `--playmode-only` 则直接进入 PlayMode，保留清单预检与 Lua 断言但不启动 EditMode 测试。
 - `gameplay` 清单若跨 Lua 依赖前置现场，在案例上声明 `dependsOn`（只引用更早且启用的用例）；多选/单选自动补齐前置，不能依赖列表相邻的隐含状态。
 - 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；不要用固定 `test.wait` 代替实际结果断言。
 - 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。
@@ -67,6 +69,11 @@ test.screenshot("向右跨区并折返后的太空现场")
 ## 执行与范围
 
 ```powershell
+# 用户明确说“PlayMode Lua 测试集”时使用，不运行 Editor 测试集
+python Tools/GameplayTesting/run_suite.py --playmode-only
+python Tools/GameplayTesting/run_suite.py --systems ai navigation --playmode-only
+
+# 仅当用户要求规则或多阶段回归时使用以下入口
 python Tools/GameplayTesting/run_suite.py --systems ai navigation
 python Tools/GameplayTesting/run_suite.py --changed Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetwork.cs
 python Tools/GameplayTesting/run_suite.py --systems space --integration
@@ -74,7 +81,7 @@ python Tools/GameplayTesting/run_suite.py --list-systems
 ```
 
 - 复用已打开且未处于 PlayMode 的 Editor；测试中心 `FlatWorld/测试/测试中心（多选案例）` 或 `gameplay_test_pipeline(run/status/report)` 也可执行。用户正在玩的 PlayMode 不停止、不暂停，只静态修改并说明本轮未运行。
-- `gameplay` 清单的 EditMode 对 FlatWorld 测试程序集全量做安全前置；全部通过后只进入一次 PlayMode，在同一隔离世界顺序执行选中 Lua。`--cases` 只筛玩法案例，原清单不改；`buildShowroom: false` 跳过全陈列。
+- `gameplay` 清单**默认**对 FlatWorld EditMode 测试程序集做安全前置，再进入一次 PlayMode；`--playmode-only` 或 MCP 的 `playModeOnly=true` **跳过整个 EditMode 阶段和快速规则阶段**，直接在同一隔离世界执行选中 Lua，报告中的 EditMode 为 `not_requested`，不记作通过。`--cases` 只筛玩法案例，原清单不改；`buildShowroom: false` 跳过全陈列。
 - 一份 Lua 一个沙箱与控制租约，世界、背包和玩家位置通常延续；前置条件自行准备。隔离保存租约覆盖首次、自动和退出保存，退出写盘并返回菜单后才恢复正式存档目录，不写正式玩家档案。
 - 太空迁移恢复会重建玩家；宿主的`player_ready`按本轮同档案和隔离存档边界重绑ItemMgr当前本地玩家。截图后的非截图命令先恢复现场，再显式检查world/player，保证后续Lua不因旧对象引用被跳过。
 - 失败先看首个失败步骤、原始采样及堆栈，再修复并重跑相关范围；用户要求循环时逐轮推进，不以删除、禁用或放宽断言换取通过。未执行、环境阻塞和视觉/联机未验收应如实区分。

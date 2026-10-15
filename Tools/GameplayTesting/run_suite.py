@@ -63,7 +63,7 @@ def wait_json(path: Path, deadline: float):
     raise TimeoutError(f"等待 Unity Editor 报告超时：{path}")
 
 
-def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
+def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None, playmode_only=False):
     request_id = uuid.uuid4().hex
     inbox = PIPELINE / "inbox"
     outbox = PIPELINE / "outbox"
@@ -75,6 +75,8 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
     request_data = {"suitePath": suite}
     if case_ids is not None:
         request_data["caseIds"] = case_ids
+    if playmode_only:
+        request_data["playModeOnly"] = True
     temporary.write_text(json.dumps(request_data), encoding="utf-8")
     os.replace(temporary, request)
     try:
@@ -102,7 +104,8 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None):
         "runDirectory": report.get("runDirectory"), "summaryPath": report.get("summaryPath"),
         "packagePath": report.get("packagePath"), "screenshotPaths": report.get("screenshotPaths", []),
         "artifactError": report.get("artifactError"),
-        "executionMode": report.get("executionMode"), "rules": report.get("rules"),
+        "executionMode": report.get("executionMode"), "playModeOnly": report.get("playModeOnly"),
+        "rules": report.get("rules"),
         "editMode": report.get("editMode"), "playMode": report.get("playMode")
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -122,6 +125,8 @@ if __name__ == "__main__":
     parser.add_argument("--changed", nargs="+", metavar="PATH", help="根据修改文件路径选择系统及使用它的系统")
     parser.add_argument("--list-systems", action="store_true", help="列出系统、规则清单和场景入口，不启动测试")
     parser.add_argument("--integration", action="store_true", help="系统规则通过后再执行所选系统的真实场景清单")
+    parser.add_argument("--playmode-only", action="store_true",
+                        help="只运行 PlayMode Lua，跳过快速规则及 EditMode 安全前置；默认选择全部场景案例")
     parser.add_argument("--plan", action="store_true", help="只显示系统选择和覆盖缺口，不向 Editor 提交请求")
     args = parser.parse_args()
     try:
@@ -141,14 +146,24 @@ if __name__ == "__main__":
                                       for case_id in system.get("integrationCaseIds", [])))
             missing = [system["id"] for system in chosen if not system.get("integrationCaseIds")]
             if args.plan:
-                print(json.dumps({"rulesSuite": RULES_SUITE, "ruleCaseIds": selected_cases,
+                print(json.dumps({"playModeOnly": args.playmode_only, "rulesSuite": RULES_SUITE,
+                                  "ruleCaseIds": [] if args.playmode_only else selected_cases,
                                   "integrationSuite": GAMEPLAY_SUITE, "integrationCaseIds": selected_live_cases,
                                   "systemsWithoutIntegration": missing,
                                   "coverageDocuments": [system["coverageDocument"] for system in chosen]},
                                  ensure_ascii=False, indent=2))
                 sys.exit(0)
-            code = run(RULES_SUITE, args.editor_timeout, args.run_timeout, selected_cases)
-            if code == 0 and args.integration:
+            if args.playmode_only:
+                if not selected_live_cases:
+                    raise ValueError("选中系统没有 PlayMode Lua 案例，未运行任何测试。")
+                code = run(GAMEPLAY_SUITE, args.editor_timeout, args.run_timeout,
+                           selected_live_cases, playmode_only=True)
+                if missing:
+                    print("[FlatWorld] 以下系统没有场景清单：" + ", ".join(missing), file=sys.stderr)
+                    code = code or 4
+            else:
+                code = run(RULES_SUITE, args.editor_timeout, args.run_timeout, selected_cases)
+            if not args.playmode_only and code == 0 and args.integration:
                 if selected_live_cases:
                     # 所有现场案例合并到一轮隔离世界，避免逐系统重建资源与地形。
                     code = run(GAMEPLAY_SUITE, args.editor_timeout, args.run_timeout, selected_live_cases)
@@ -160,7 +175,9 @@ if __name__ == "__main__":
             raise ValueError("--integration 需要配合 --systems 或 --changed")
         if args.plan:
             raise ValueError("--plan 需要配合 --systems 或 --changed")
-        sys.exit(run(args.suite or RULES_SUITE, args.editor_timeout, args.run_timeout, args.cases))
+        suite = args.suite or (GAMEPLAY_SUITE if args.playmode_only else RULES_SUITE)
+        sys.exit(run(suite, args.editor_timeout, args.run_timeout, args.cases,
+                     playmode_only=args.playmode_only))
     except (TimeoutError, OSError, KeyError, ValueError) as failure:
         print(f"[FlatWorld] {failure}", file=sys.stderr)
         sys.exit(3)

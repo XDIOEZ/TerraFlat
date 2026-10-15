@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace FlatWorld.GameplayMCP
 {
-    /// <summary>一个 Unity Editor 内按清单执行 Lua 规则或 EditMode → PlayMode，统一保存报告。</summary>
+    /// <summary>一个 Unity Editor 内按清单执行 Lua 规则、仅 PlayMode 或 EditMode → PlayMode，统一保存报告。</summary>
     [InitializeOnLoad]
     internal static partial class GameplayTestPipelineCoordinator
     {
@@ -51,6 +51,7 @@ namespace FlatWorld.GameplayMCP
             public string RunId;
             public string SuitePath;
             public string ExecutionMode = "gameplay";
+            public bool PlayModeOnly;
             public List<string> SelectedCaseIds = new();
             public string ReportPath;
             public string RunDirectory;
@@ -172,7 +173,10 @@ namespace FlatWorld.GameplayMCP
                         selectedIds[i] = ids[i].Value<string>();
                     }
                 }
-                response = Start(command.Value<string>("suitePath"), selectedIds);
+                if (command["playModeOnly"] != null && command["playModeOnly"].Type != JTokenType.Boolean)
+                    throw new InvalidDataException("playModeOnly 必须是布尔值。");
+                response = Start(command.Value<string>("suitePath"), selectedIds,
+                    command.Value<bool?>("playModeOnly") == true);
             }
             catch (Exception exception)
             {
@@ -241,18 +245,23 @@ namespace FlatWorld.GameplayMCP
         #endregion
 
         #region AI 和菜单入口
-        internal static JObject Start(string suitePath, IReadOnlyCollection<string> selectedCaseIds = null)
+        internal static JObject Start(string suitePath, IReadOnlyCollection<string> selectedCaseIds = null,
+            bool playModeOnly = false)
         {
             PipelineReport active = LoadCurrent();
             if (active != null && active.Status == "running")
                 return Reply(false, active, "已有一轮测试正在执行，请读取状态，不要重复启动。");
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 return Reply(false, null, "当前 Unity 处于 PlayMode 或正在切换，不会打断你的游戏现场。");
-            suitePath = string.IsNullOrWhiteSpace(suitePath) ? GameplayTestSelection.DefaultSuitePath : suitePath;
+            suitePath = string.IsNullOrWhiteSpace(suitePath)
+                ? (playModeOnly ? "GameplayTests/all-systems-gameplay.json" : GameplayTestSelection.DefaultSuitePath)
+                : suitePath;
             try
             {
                 string path = GameplayTestSelection.GetAbsoluteSuitePath(suitePath);
                 GameplayTestSuite suite = GameplayTestSuite.Parse(File.ReadAllText(path, Encoding.UTF8));
+                if (playModeOnly && suite.ExecutionMode != "gameplay")
+                    throw new InvalidDataException("仅 PlayMode 模式只接受 gameplay 清单，不能运行 rules 清单。");
                 if (selectedCaseIds != null)
                     GameplayTestSelection.FilterCases(suite, selectedCaseIds);
                 var casesToRun = new List<string>();
@@ -270,10 +279,12 @@ namespace FlatWorld.GameplayMCP
                                Guid.NewGuid().ToString("N").Substring(0, 8);
                 var report = new PipelineReport
                 {
-                    RunId = runId, SuitePath = suitePath, ExecutionMode = suite.ExecutionMode, StartedUtc = DateTime.UtcNow.ToString("O"),
+                    RunId = runId, SuitePath = suitePath, ExecutionMode = suite.ExecutionMode, PlayModeOnly = playModeOnly,
+                    Phase = playModeOnly ? "playmode_queued" : "queued", StartedUtc = DateTime.UtcNow.ToString("O"),
                     SelectedCaseIds = casesToRun,
                     RunDirectory = GameplayTestArtifacts.GetRunDirectory(runId)
                 };
+                if (playModeOnly) report.EditMode.Status = "not_requested";
                 report.SummaryPath = Path.Combine(report.RunDirectory, "report.md");
                 report.PackagePath = report.RunDirectory;
                 Directory.CreateDirectory(report.RunDirectory);
@@ -286,7 +297,9 @@ namespace FlatWorld.GameplayMCP
                 // 让本次 MCP 请求先返回，测试在 Editor 后续更新中自行跑完。
                 EditorApplication.delayCall += ResumeQueuedPhase;
                 return Reply(true, report, suite.ExecutionMode == "rules" ?
-                    "已排队执行编辑态 Lua 规则，不启动世界或 PlayMode。" : "已排队执行 EditMode 测试，全部通过后才进入 PlayMode。");
+                    "已排队执行编辑态 Lua 规则，不启动世界或 PlayMode。" : playModeOnly ?
+                    "已排队直接执行 PlayMode Lua 测试，不运行 EditMode 安全前置。" :
+                    "已排队执行 EditMode 测试，全部通过后才进入 PlayMode。");
             }
             catch (Exception exception)
             {
@@ -333,6 +346,7 @@ namespace FlatWorld.GameplayMCP
                 ["phase"] = report?.Phase,
                 ["suitePath"] = report?.SuitePath,
                 ["executionMode"] = report?.ExecutionMode,
+                ["playModeOnly"] = report?.PlayModeOnly,
                 ["rules"] = report == null ? null : JObject.FromObject(report.Rules, serializer),
                 ["selectedCaseIds"] = report == null ? null : new JArray(report.SelectedCaseIds),
                 ["reportPath"] = report?.ReportPath,
@@ -655,7 +669,9 @@ namespace FlatWorld.GameplayMCP
                     EditorApplication.delayCall += () => RunPhase(id, TestMode.PlayMode);
                 }
                 else
-                    Finish(report, "passed", "EditMode 全部通过，PlayMode 全部通过。");
+                    Finish(report, "passed", report.PlayModeOnly ?
+                        "PlayMode 全部通过；本轮未运行 EditMode 测试。" :
+                        "EditMode 全部通过，PlayMode 全部通过。");
             }
         }
         #endregion

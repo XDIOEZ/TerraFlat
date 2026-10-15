@@ -12,6 +12,12 @@
 # 查看统计；只读文件，不启动测试
 python Tools/GameplayTesting/run_suite.py --list-systems
 
+# 明确要求“PlayMode Lua 测试集”：仅执行已启用的场景 Lua，不启动 EditMode 测试或快速规则
+python Tools/GameplayTesting/run_suite.py --playmode-only
+
+# 仅跑某些系统的 PlayMode Lua（不补跑编辑态测试）
+python Tools/GameplayTesting/run_suite.py --systems ai navigation --playmode-only
+
 # 修改哪个系统，通常只跑它的规则；系统 ID 见索引
 python Tools/GameplayTesting/run_suite.py --systems ai
 python Tools/GameplayTesting/run_suite.py --systems mechanical electrical
@@ -29,7 +35,7 @@ python Tools/GameplayTesting/run_suite.py --systems mechanical industrial_fluids
 python Tools/GameplayTesting/run_suite.py
 ```
 
-`--systems` 精确选择系统。`--changed` 按 `sourcePaths` 选直接归属，再沿 `dependsOn` 找使用这些规则的系统；测试基础设施改动会选择全部规则。两者可联合使用；不能再混用位置清单或 `--cases`。`--integration` 根据 `integrationCaseIds` 去重后，只提交一次 `all-systems-gameplay.json`，减少重复建世界。
+`--systems` 精确选择系统。`--changed` 按 `sourcePaths` 选直接归属，再沿 `dependsOn` 找使用这些规则的系统；测试基础设施改动会选择全部规则。两者可联合使用；不能再混用位置清单或 `--cases`。`--integration` 根据 `integrationCaseIds` 去重后，只提交一次 `all-systems-gameplay.json`，减少重复建世界。**用户仅要求 PlayMode Lua 时必须使用 `--playmode-only`**，不自动加跑 EditMode 或快速规则；未执行的阶段不算通过。
 
 单个 `gameplay` 清单的案例还可填写 `dependsOn: ["前置案例ID"]`：多选或 `--cases` 单独选择后续案例时，会自动启用前置案例并按清单原顺序运行。依赖必须声明在后续案例前且已启用，缺失、重复、循环或禁用依赖会直接拒绝清单；此字段不同于 `systems.catalog.json` 的系统级依赖。
 
@@ -42,7 +48,7 @@ Python 仅在 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 写本地请求�
 | 清单模式 | 执行方式 | 适用断言 |
 | --- | --- | --- |
 | `rules` | Editor 更新循环直接执行 Lua，不进入 Test Framework/PlayMode，不启动 GameRes 或建立存档世界 | 正式规则、独立对象事务、状态机、边界、拒绝、回滚 |
-| `gameplay` | EditMode 安全前置通过后，一次 PlayMode、一套正式资源和隔离世界 | 实际入世、移动、生命、Buff、库存、农业/建造、机器/气液/太空及存档流程 |
+| `gameplay` | 默认 EditMode 安全前置→PlayMode；带 `--playmode-only` 时直接 PlayMode，跳过 EditMode | 实际入世、移动、生命、Buff、库存、农业/建造、机器/气液/太空及存档流程 |
 
 规则夹具只调用登记的生产 API，不在测试里重新算一套业务结果。部分规则使用独立且不激活的 Unity 对象，结束时销毁；纯规则没有玩家控制租约。所有场景操作只允许隔离测试玩家，正式存档目录不会被现场探针使用。
 
@@ -164,6 +170,7 @@ MCP同样支持：
 ```text
 gameplay_test_pipeline(action="catalog")
 gameplay_test_pipeline(action="run", systemIds=["ai","navigation"])
+gameplay_test_pipeline(action="run", suitePath="GameplayTests/all-systems-gameplay.json", playModeOnly=true)
 gameplay_test_pipeline(action="run", suitePath="GameplayTests/fluid-suite.json", caseIds=["fluid_transport","fluid_tanks"])
 gameplay_test_pipeline(action="status")
 gameplay_test_pipeline(action="report")
