@@ -85,7 +85,7 @@ public static class WorldMotionSystem
 
     #region 散落物风推动
 
-    private sealed class LooseWindRegistration
+    private struct LooseWindRegistration
     {
         public Mod_Building Building;
         public WorldItemWaterRuntime WaterRuntime;
@@ -118,7 +118,11 @@ public static class WorldMotionSystem
     public static void BindLooseWindWaterRuntime(Item item, WorldItemWaterRuntime runtime)
     {
         if (item != null && looseWindItems.TryGetValue(item, out LooseWindRegistration registration))
+        {
+            // 值类型缓存修改后写回字典，避免每个散落物额外分配对象。
             registration.WaterRuntime = runtime;
+            looseWindItems[item] = registration;
+        }
     }
 
     /// <summary>沿风移动散落物并更新区块归属，完全沉没或仍在抛掷轨迹中时不受风。</summary>
