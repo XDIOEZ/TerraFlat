@@ -240,6 +240,26 @@ public static class GameplayTestShipProbe
         var rotatedCells = new JArray();
         foreach (ShipCell cell in ShipGeometry.Footprint(rotated))
             rotatedCells.Add(new JObject { ["x"] = cell.X, ["y"] = cell.Y });
+        var floorIndexShip = NewShip("floor-index");
+        floorIndexShip.Pieces.Add(rotated);
+        bool indexedRotated = ShipAtmosphereService.TryGetFloor(floorIndexShip, 0, -2, out ShipPieceState indexed) &&
+            ReferenceEquals(indexed, rotated) && ShipAtmosphereService.HasFloor(floorIndexShip, 0, -2);
+        bool indexedOutsideRejected = !ShipAtmosphereService.TryGetFloor(floorIndexShip, 1, -2, out _) &&
+            !ShipAtmosphereService.HasFloor(floorIndexShip, 1, -2);
+        var overlapping = Piece("overlapping-index-floor", ShipPieceKind.Floor, -2, -3);
+        floorIndexShip.Pieces.Add(overlapping);
+        floorIndexShip.NotifyStructureChanged();
+        bool firstFloorWins = ShipAtmosphereService.TryGetFloor(floorIndexShip, -2, -3, out indexed) &&
+            ReferenceEquals(indexed, rotated);
+        floorIndexShip.Pieces.Remove(rotated);
+        floorIndexShip.NotifyStructureChanged();
+        bool floorIndexRebuilt = ShipAtmosphereService.TryGetFloor(floorIndexShip, -2, -3, out indexed) &&
+            ReferenceEquals(indexed, overlapping) &&
+            !ShipAtmosphereService.TryGetFloor(floorIndexShip, 0, -2, out _);
+        floorIndexShip.Pieces.Clear();
+        floorIndexShip.NotifyStructureChanged();
+        bool floorIndexCleared = !ShipAtmosphereService.TryGetFloor(floorIndexShip, -2, -3, out _) &&
+            !ShipAtmosphereService.HasFloor(floorIndexShip, -2, -3);
         var stripped = NewShip("stripped");
         var orphan = Piece("orphan-console", ShipPieceKind.Console, 0, 0);
         stripped.Pieces.Add(orphan);
@@ -250,7 +270,10 @@ public static class GameplayTestShipProbe
             ["detached"] = detached, ["unsupportedDestroyed"] = unsupported.Destroyed,
             ["removeAccepted"] = removed, ["split"] = ShipReadings(split),
             ["bridgeDestroyed"] = bridge.Destroyed, ["originalId"] = ship.ShipId,
-            ["rotatedFootprint"] = rotatedCells, ["noFloorGroups"] = empty.Count,
+            ["rotatedFootprint"] = rotatedCells, ["indexedRotated"] = indexedRotated,
+            ["indexedOutsideRejected"] = indexedOutsideRejected, ["firstFloorWins"] = firstFloorWins,
+            ["floorIndexRebuilt"] = floorIndexRebuilt, ["floorIndexCleared"] = floorIndexCleared,
+            ["noFloorGroups"] = empty.Count,
             ["noFloorWreck"] = stripped.IsWreck, ["noFloorOrphanDestroyed"] = orphan.Destroyed
         };
     }

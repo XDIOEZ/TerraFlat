@@ -330,7 +330,7 @@ namespace FlatWorld.Spaceflight
             private ulong structureRevision;
             private int roomCount, pieceCount;
             public readonly Dictionary<(int X, int Y), ShipCompartmentState> Rooms = new();
-            public readonly HashSet<(int X, int Y)> Floors = new();
+            public readonly Dictionary<(int X, int Y), ShipPieceState> Floors = new();
             public void Ensure(ShipState ship)
             {
                 if (ReferenceEquals(rooms, ship.Compartments) && ReferenceEquals(pieces, ship.Pieces) &&
@@ -344,7 +344,8 @@ namespace FlatWorld.Spaceflight
                     int width = Math.Max(1, piece.Width), height = Math.Max(1, piece.Height);
                     if ((piece.QuarterTurns & 1) != 0) { int swap = width; width = height; height = swap; }
                     for (int y = 0; y < height; y++)
-                        for (int x = 0; x < width; x++) Floors.Add((piece.CellX + x, piece.CellY + y));
+                        for (int x = 0; x < width; x++)
+                            Floors.TryAdd((piece.CellX + x, piece.CellY + y), piece);
                 }
                 rooms = ship.Compartments; pieces = ship.Pieces;
                 roomCount = rooms.Count; pieceCount = pieces.Count; structureRevision = ship.StructureRevision;
@@ -377,7 +378,14 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool HasFloor(ShipState ship, int cellX, int cellY)
-            => ship != null && GetGeometryIndex(ship).Floors.Contains((cellX, cellY));
+            => ship != null && GetGeometryIndex(ship).Floors.ContainsKey((cellX, cellY));
+
+        /// <summary>使用已有结构版本索引定位具体地板，避免每次环境查询扫描整船部件。</summary>
+        public static bool TryGetFloor(ShipState ship, int cellX, int cellY, out ShipPieceState floor)
+        {
+            floor = null;
+            return ship != null && GetGeometryIndex(ship).Floors.TryGetValue((cellX, cellY), out floor);
+        }
 
         public static ShipCompartmentState FindCompartment(ShipState ship, int cellX, int cellY)
         {

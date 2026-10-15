@@ -27,6 +27,9 @@ do
             assert(not cells[key], "旋转占地出现重复格")
             cells[key] = true
         end
+        assert(data.indexedRotated and data.indexedOutsideRejected and data.firstFloorWins and
+            data.floorIndexRebuilt and data.floorIndexCleared,
+            "船体地板索引在旋转、越界、重叠优先级或结构修订后与实际占地不一致")
         assert(data.noFloorGroups == 0 and data.noFloorWreck == true and data.noFloorOrphanDestroyed == true,
             "失去全部地板后应回收孤立设备并结束船体归属")
         return "覆盖领域四邻支撑、无支撑设备、毁桥分裂、身份保留、全部失支撑与旋转占地。"

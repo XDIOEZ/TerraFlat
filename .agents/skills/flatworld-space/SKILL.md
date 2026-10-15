@@ -83,6 +83,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。
 - ShipColliderPresenter 每船一个表现刚体和一个阻挡 CustomCollider2D；ShipPieceView 是其子节点，只留贴图/交互，交互范围读局部矩形，不挂逐件刚体或地板 Trigger。移动整船根节点，跨区只迁移该根；卸载或结束释放。
 - 船体升空排序和共享 Collider 偏移在 ShipColliderPresenter 每船只更新一次，ShipPieceView 不重复操作整船根；静止舱门不重复写两扇门的 Renderer 属性，开关与 Rebind 仍正常刷新。
+- 船体支撑查询经 `ShipAtmosphereService.TryGetFloor` 复用结构修订索引，按格返回首个活地板，不再遍历部件或构建 Footprint 迭代器；结构变更后同步失效。
 - 太空表现由 SpaceSession.Presentation 与 SpacePresentationPose 共用前后固定步姿态和一个渲染进度，物理仍为50Hz；船格原点、乘员本地位置和驾驶中心统一插值，表现刚体关闭原生二次插值。屏幕选格按表现姿态反算，支撑/丢弃/存档读权威位置；联机样本按本地收包时间插值，远端乘员在统一表现同步事件后投影。传送、归属切换和会话结束重置历史，普通跨区与浮动原点保留双精度连续性。
 - 散落物只有地表升降时叠加贴图高度，太空掉落不继承船体残留地表高度；偏移保留原局部位置，触地、拾取和卸载时恢复。
 - 玩家须在实际 Console 的交互半径内开 UI_Ship，离开关闭；自动导航器仅经光纤供能力，线路/地板/墙不作控制台入口。飞船面板会话互斥，CanOpenShipPanel 共用打开/切换/刷新校验。

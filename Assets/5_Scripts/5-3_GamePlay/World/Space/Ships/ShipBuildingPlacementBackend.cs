@@ -59,9 +59,7 @@ namespace FlatWorld.Spaceflight
                 if (IsSpaceView && presentation) PresentationWorldToLocal(value, new SpaceSectorPosition(ViewSector, position), out x, out y);
                 else ShipGeometry.WorldToLocal(value, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out x, out y);
                 int cellX = (int)Math.Floor(x / value.CellSizeMeters), cellY = (int)Math.Floor(y / value.CellSizeMeters);
-                ShipPieceState found = value.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Floor &&
-                    ContainsCell(piece, cellX, cellY));
-                if (found == null) continue;
+                if (!ShipAtmosphereService.TryGetFloor(value, cellX, cellY, out ShipPieceState found)) continue;
                 ship = value; floor = found; local = new Vector2((float)x, (float)y); return true;
             }
             ship = null; floor = null; local = default; return false;
