@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 
 public partial class MonsterSpawnerManager
 {
+    private static readonly ProfilerMarker TreeCandidatesMarker = new("FlatWorld.MonsterSpawner.TreeCandidates");
+
     #region 配置索引
 
     /// <summary>资源会话内配置固定，条目所属关系和后端路由只在进入世界时建立。</summary>
@@ -69,10 +72,13 @@ public partial class MonsterSpawnerManager
         cached.Until = Time.unscaledTime + 2f;
         cached.Positions.Clear();
         if (_itemManager == null) return cached.Positions;
-        IReadOnlyList<Vector2> trees = _treeHabitatIndex.GetActivePositions(_itemManager.PlayerInSceneName);
-        for (int i = 0; i < trees.Count; i++)
-            if (IsEligibleHabitatTree(config, trees[i]))
-                cached.Positions.Add(trees[i]);
+        using (TreeCandidatesMarker.Auto())
+        {
+            IReadOnlyList<Vector2> trees = _treeHabitatIndex.GetActivePositions(_itemManager.PlayerInSceneName);
+            for (int i = 0; i < trees.Count; i++)
+                if (IsEligibleHabitatTree(config, trees[i]))
+                    cached.Positions.Add(trees[i]);
+        }
         return cached.Positions;
     }
 

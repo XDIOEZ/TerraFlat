@@ -68,6 +68,8 @@ public static class GameplayTestActorWorldRuntimeProbe
             result["terrainRestored"] = terrain.Sample.Terrain.GetCell(terrain.Sample.LocalCell.x, terrain.Sample.LocalCell.y).Equals(terrain.Original);
             result["layersRestored"] = GroundTileLayerSystem.Capture(terrain.Sample.Terrain, terrain.Sample.LocalCell).Covers.Count == terrain.OriginalLayers.Covers.Count;
             result["resourceRemoved"] = !NaturalEntityEcsService.Contains(terrain.Resource);
+            result["habitatCleaned"] = CountTreeHabitatAt(new Vector2(terrain.Sample.WorldCell.x + .5f,
+                terrain.Sample.WorldCell.y + .5f)) == terrain.OriginalHabitatTreeCount;
             result["grassRestored"] = terrain.Sample.Terrain.GetGrass(terrain.Sample.LocalCell.x, terrain.Sample.LocalCell.y) == terrain.OriginalLayers.SurfaceGrass;
         }
         return result;
@@ -435,12 +437,24 @@ public static class GameplayTestActorWorldRuntimeProbe
     #endregion
 
     #region 真实地表覆盖与自然实体占地
+    private static int CountTreeHabitatAt(Vector2 position)
+    {
+        var positions = new List<Vector2>();
+        NaturalEntityEcsService.AppendTreeHabitatPositions(positions);
+        int count = 0;
+        for (int i = 0; i < positions.Count; i++)
+            if (WorldTopologyRuntime.SqrDistance(position, positions[i]) < 0.01f)
+                count++;
+        return count;
+    }
+
     private sealed class TerrainFixture : IDisposable
     {
         public readonly RuntimeTerrainTileSample Sample;
         public readonly TerrainCell Original;
         public readonly GroundLayerCellSaveData OriginalLayers;
         public readonly float OriginalDamage, OriginalLiquidDepth;
+        public readonly int OriginalHabitatTreeCount;
         public NaturalEntityHandle Resource;
         private readonly Player player;
         private readonly IDisposable lease;
@@ -457,6 +471,7 @@ public static class GameplayTestActorWorldRuntimeProbe
                 throw new InvalidOperationException("地形生态测试要求天然空地，拒绝覆盖先前案例的地层修改。");
             OriginalDamage = GroundTileHarvestSystem.ReadProgress(sample);
             OriginalLiquidDepth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
+            OriginalHabitatTreeCount = CountTreeHabitatAt(new Vector2(sample.WorldCell.x + .5f, sample.WorldCell.y + .5f));
             grassDelta = SaveDataMgr.TestExistingInstance.CaptureTestRuntimeGrassDelta(player, sample);
             lease = ChunkMgr.ExistingInstance.AcquireChunkLease(sample.Address, ChunkLeaseKind.Simulation);
         }
@@ -516,15 +531,18 @@ public static class GameplayTestActorWorldRuntimeProbe
         bool registered = NaturalEntityEcsService.TryRegister(resourceDefinition, resourceData.Guid, center,
             26f, 0f, sample.Address.DimensionId, resourceData, out own.Resource);
         if (!registered) throw new InvalidOperationException("真实自然资源 ECS 入口没有建立自有树木。");
+        int habitatAfterRegister = CountTreeHabitatAt(center);
         if (ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out var view))
             NaturalEntityEcsService.BindPresentation(own.Resource, view.GetComponentInChildren<ChunkTilemapRenderer>(true));
         bool readBlocked = navigation.TryGetCell(center, out _, out bool blockedWalkable);
         bool captured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData snapshot);
         bool removed = NaturalEntityEcsService.TryTakeSnapshotAndRemove(own.Resource, out ItemData removedSnapshot);
+        int habitatAfterRemove = CountTreeHabitatAt(center);
         bool walkableAfter = navigation.TryGetCell(center, out _, out bool after) && after;
         bool remains = NaturalEntityEcsService.Contains(own.Resource);
         bool restoredEntity = NaturalEntityEcsService.TryRegister(resourceDefinition, resourceData.Guid, center,
             26f, 0f, sample.Address.DimensionId, removedSnapshot, out own.Resource);
+        int habitatAfterRestore = CountTreeHabitatAt(center);
         if (restoredEntity && view != null)
             NaturalEntityEcsService.BindPresentation(own.Resource, view.GetComponentInChildren<ChunkTilemapRenderer>(true));
         bool recaptured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData recovered);
@@ -551,6 +569,10 @@ public static class GameplayTestActorWorldRuntimeProbe
             ["walkableAfterRemoval"] = walkableAfter, ["removedGuid"] = removedSnapshot?.Guid,
             ["entityRestored"] = restoredEntity, ["entityRecaptured"] = recaptured,
             ["restoredGuid"] = recovered?.Guid, ["restoredId"] = recovered?.IDName,
+            ["habitatBefore"] = own.OriginalHabitatTreeCount,
+            ["habitatRegistered"] = habitatAfterRegister,
+            ["habitatRemoved"] = habitatAfterRemove,
+            ["habitatRestored"] = habitatAfterRestore,
             ["cleanupRegistered"] = true
         };
     }

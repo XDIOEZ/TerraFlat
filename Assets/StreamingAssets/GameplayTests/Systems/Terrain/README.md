@@ -11,6 +11,7 @@
 `gameplay-suite.json` / `gameplay.lua` 与自然生态共用一套现场：选取真实已加载的干燥空地，经 `GroundTileLayerSystem.TryApplyPlayerCover` 连续覆盖土/草两层。Lua 核对实际 Ground、隐藏下层的先后顺序、独立 Liquid 未改，以及正式 `SaveDataMgr` 区块差量中保存了两层覆盖栈。
 
 同一地格经 `NaturalEntityEcsService` 正式注册自有松树、绑定实际区块表现，Lua 检查实体身份快照、真实导航占地从可走变阻挡，快照移除后恢复可走，随后用保存的同一身份恢复正式资源实体。恢复后的地表/松树现场显式截图。
+同时断言 ECS 树木栖息地索引在创建时加一、移除时恢复、同身份重建时再加一，最终清理后无残留。
 
 结束通过正式差量入口恢复该格原地表、草、进度、覆盖栈并删除自有资源实体；自有区块持有模拟租约，失败/中断也由 Lua 级收尾执行。 [Ecology](../Ecology/README.md) 共用本清单，不复制案例。
 

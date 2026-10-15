@@ -6,6 +6,7 @@ using FlatWorld.Geometry;
 using FlatWorld.Networking;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace FlatWorld.NaturalEntities
@@ -37,6 +38,8 @@ namespace FlatWorld.NaturalEntities
         }
 
         private static readonly Dictionary<Vector2Int, HashSet<int>> spatialCells = new();
+        private static readonly HashSet<Record> habitatTreeRecords = new();
+        private static readonly ProfilerMarker TreeHabitatMarker = new("NaturalEntityRuntime.TreeHabitat");
         private static readonly Stack<List<Record>> queryLists = new();
         private static ulong spatialQuerySequence;
         public enum PhysicsBodyChangeReason : byte { Registered, Removed, VisualRevision, SnapshotRefresh }
@@ -109,15 +112,31 @@ namespace FlatWorld.NaturalEntities
             return false;
         }
 
+        #region 树木栖息地查询
+
+        /// <summary>树木身份在注册、卸载和定义刷新时维护，查询不再遍历所有自然资源。</summary>
+        private static void UpdateTreeHabitatIndex(Record record)
+        {
+            if (record.Profile?.Definition?.HasTag(Tag.Tree) == true)
+                habitatTreeRecords.Add(record);
+            else
+                habitatTreeRecords.Remove(record);
+        }
+
         /// <summary>给低频鸟类栖息地快照追加当前世界仍存活的 ECS 树木，不创建 Item 代理。</summary>
         public static void AppendTreeHabitatPositions(List<Vector2> destination)
         {
             if (destination == null) throw new ArgumentNullException(nameof(destination));
             if (simulation == null) return;
-            foreach (Record record in records.Values)
-                if (record.Profile.Definition.HasTag(Tag.Tree) && record.IsValid)
-                    destination.Add(record.Snapshot.transform.position);
+            using (TreeHabitatMarker.Auto())
+            {
+                foreach (Record record in habitatTreeRecords)
+                    if (record.IsValid)
+                        destination.Add(record.Snapshot.transform.position);
+            }
         }
+
+        #endregion
 
         public static bool TryFindForage(Vector2 origin, float radius, string tag, Func<Vector2, bool> canReach,
             out Vector2 position, out int guid)

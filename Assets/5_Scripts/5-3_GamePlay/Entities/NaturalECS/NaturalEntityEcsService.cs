@@ -123,6 +123,7 @@ namespace FlatWorld.NaturalEntities
                 ReleasePresentation(record);
             }
             records.Clear();
+            habitatTreeRecords.Clear();
             ClearContactDamageSources();
             pendingPublications.Clear();
             publicationBatch.Clear();
@@ -207,6 +208,7 @@ namespace FlatWorld.NaturalEntities
                 body.Suspended = (byte)(GameNetwork.HasStateAuthority ? 0 : 1);
                 simulation.Create(profile, runtimeId, body, health, growth, climate, harvest);
                 records.Add(runtimeId, record);
+                UpdateTreeHabitatIndex(record);
                 InstallPlantModules(record, persistedData, plantedCell.HasValue);
                 InstallExtensionModules(record, plantedCell.HasValue);
                 FreezeEnvironment(record);
@@ -245,6 +247,7 @@ namespace FlatWorld.NaturalEntities
                 Vector2Int cell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y));
                 if (cultivatedCells.TryGetValue(cell, out int occupant) && occupant == handle.Id) cultivatedCells.Remove(cell);
             }
+            habitatTreeRecords.Remove(record);
             records.Remove(handle.Id);
             simulation?.Remove(handle.Id);
         }
@@ -330,12 +333,14 @@ namespace FlatWorld.NaturalEntities
             try
             {
                 ApplySnapshot(handle, snapshot, baseline);
+                UpdateTreeHabitatIndex(record);
                 profiles.Remove(previous.Definition);
                 return true;
             }
             catch (Exception exception)
             {
                 record.Profile = previous;
+                UpdateTreeHabitatIndex(record);
                 ApplySnapshot(handle, snapshot, baseline, rebaseCurrentDefinition: false);
                 Debug.LogError($"[NaturalEntities] {definition.Id} 刷新失败，已恢复原实体状态：{exception}");
                 return false;
