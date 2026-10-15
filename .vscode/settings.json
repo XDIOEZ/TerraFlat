@@ -55,9 +55,7 @@
         "Temp/": true,
         "UserSettings/": true
     },
-    "<<<<<<<HEADdotnet.defaultSolution": "FlatWorld.sln",
-    "=======dotnet.defaultSolution": "TerraFlat-master.sln",
-    ">>>>>>>origin/masterdotnet.preferCSharpExtension": true,
+    "dotnet.preferCSharpExtension": true,
     "workbench.editorAssociations": {
         "*.md": "cweijan.markdownViewer",
         "*.markdown": "cweijan.markdownViewer",
