@@ -95,7 +95,7 @@ public static class GameplayTestMechanicalPlant
         Vector2 dimensions = ChunkMgr.GetChunkSize();
         int width = Mathf.RoundToInt(dimensions.x), height = Mathf.RoundToInt(dimensions.y);
         if (width < 14 || height < 16)
-        { message = "机械工厂需要至少 14×16 的已加载区块。"; return false; }
+        { message = "机械工厂需要至少 14×16 的已加载区块。"; Reset(); return false; }
         // 工厂仅在远离主角的已加载区块搭建，避免机器碰撞与测试水流推走玩家。
         if (!TryFindSafeAnchor(player.transform.position, width, height, out anchor))
         { message = "附近没有远离主角的已加载区块，拒绝在主角身边搭建测试工厂。"; Reset(); return false; }

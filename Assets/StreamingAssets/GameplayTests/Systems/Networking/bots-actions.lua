@@ -16,7 +16,8 @@ test.runtime("networking", "bots_actions", {}, function(data)
         math.abs(movement.bodyY - movement.authoritativeY) < 0.5,
         "服务端角色实体没有跟随权威移动位置")
     local attack = data.attack
-    assert(attack.weapon == "Knife_Flint" and attack.started and attack.damageWindowOpened
+    assert(attack.weapon == "Knife_Flint" and attack.started and attack.damageWindowInitiallyClosed
+        and attack.damageWindowOpened
         and attack.damageWindowClosed, "联网假人没有真正举刀攻击并关闭伤害窗口")
     local pickup = data.pickup
     assert(pickup.worldItemBefore and pickup.responseGranted and pickup.receivedItem == "Ore_Copper"

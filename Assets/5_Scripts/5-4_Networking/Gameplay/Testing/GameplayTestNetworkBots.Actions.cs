@@ -112,15 +112,18 @@ namespace FlatWorld.Networking.Gameplay
             Mod_Weapon_AnimationAction weapon = held.GetComponentInChildren<Mod_Weapon_AnimationAction>(true);
             Mod_Damage damage = held.GetComponentInChildren<Mod_Damage>(true);
             if (weapon == null || damage == null) throw new InvalidOperationException("假人武器缺少正式武器动作或伤害模块。");
+            bool idleDamageClosed = !damage.IsDamageEnabled();
             bool attacking = weapon.TryRequestAttack(false);
-            // 由正式武器播放挥击，命中窗口复用攻击事件实际使用的伤害模块入口。
-            if (attacking) damage.StartAttack();
+            // 不手动打开伤害盒，等真实 Animator 曲线驱动伤害窗口开启及关闭。
+            if (attacking)
+                yield return Wait(() => damage.IsDamageEnabled(), "武器动画开启伤害窗口", 2d);
             bool activeDamage = damage.IsDamageEnabled();
-            yield return null;
-            damage.StopAttack();
+            if (attacking)
+                yield return Wait(() => !damage.IsDamageEnabled(), "武器动画关闭伤害窗口", 2d);
             result["attack"] = new JObject
             {
                 ["weapon"] = held.itemData.IDName, ["started"] = attacking,
+                ["damageWindowInitiallyClosed"] = idleDamageClosed,
                 ["damageWindowOpened"] = activeDamage, ["damageWindowClosed"] = !damage.IsDamageEnabled()
             };
 
