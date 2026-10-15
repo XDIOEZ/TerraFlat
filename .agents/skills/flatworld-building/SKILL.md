@@ -43,5 +43,6 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 
 - 通用本体为 Item/表现/根查询碰撞，能力由 JSON 组合，交互由独立 IInteractable 模块。门/帐篷等为 GameObject 建筑；机器/设施为 MachineWorld 数据节点，其求解与端口表现由机器系统负责。
 - 预览从 RuntimeItemDefinition 创建无模块轻量视觉，sourceRoot/sourceRenderer 同层级，不创建刚体或碰撞。rendererLocalPosition/Scale、状态图与最终表现共用定义。
+- 机器扩展在预览子图层应用安装朝向，BuildingShadow.ResolvePlacementRootRotation 让根只叠船角；无扩展船件由根应用完整朝向，移出船体也必须刷新根旋转。
 - LightOcclusion 配置在 Mod_Building.LightOcclusion：Automatic 随真实 Light2D 裁自身光源以上轮廓，熄灯恢复；FullSilhouette/None 为完整/无轮廓。OwnLightClearance 默认0.0625，配置不入快照，更新接收层经 RefreshLightOcclusion。
 - 动态建筑完整 ItemData 进入区块 ChangedItems，数据就绪后恢复；格墙 ID/损伤进入 RuntimeTileDeltas，平台进入 SupportCells。地块生成可冻结，玩家建造映射读取当前内容目录，建筑关系权威配置在模块 data.BitData。

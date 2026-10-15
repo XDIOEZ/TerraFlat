@@ -43,6 +43,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 动力源分别提供扭矩与 RPM；同速有效源累加扭矩，异速冲突停转。用力器是输入终点，不转送扭矩，按最近可达源距离分配固定 TorqueLoad，同距按稳定 ID；不足完整需求才停该用力器。传动件不限制通过量，TorqueCapacity 不参与求解。
 - 效率为 SpeedRpm/RequiredRpm，不封顶。齿轮箱按局部输入侧换算：左大轮输入 RPM×2/扭矩×0.5，右小轮反向；负载按侧倍率折算。水车由真实水流和半径算 RPM，供给强度由基础扭矩决定。
 - CrossShaft 占 Layer1，要求同格 Layer0 下穿节点，但 A/B 只接相邻 Layer0，不把同格节点接入上层网。手持朝向是临时状态，世界端口/预览/动画共用 RotationQuarterTurns。
+- `PlacementRotationSteps` 可显式声明 2/4 个放置朝向，普通与 GM 飞船引擎声明 4；轮换统一调用 MachineDefinition.NextPlacementQuarterTurns，不按具体物品身份加旋转特例。
 - 手推设备声明 ManualDriveTorque/Rpm/SecondsPerPress；CanManualDrive 先排除手推检查整网外源，外源存在则禁手推。加工器仍按节点最终 RPM 工作。风箱朝向相邻炉体，通过 Airflow 提交，20 RPM 对应最多 500℃上限增量。
 - 电网与机械网共用节点但拓扑独立；线为独立覆盖层，cell 接同格，方向接旋转后的邻格。W=功率、J=储能，电压负责兼容、电流=P/V；当前无逐段压降求解。
 - 发电节点可声明 `UnlimitedGeneration`，按兼容负载及电池充电缺口无限供电，不用巨额储能或无穷数；多个无限源分担本步出力，仍遵守端口、电压与线缆规则。`Creative_Power_Source` 为120V创造电源，通过创造背包召唤器放置，测试船只保留一台。

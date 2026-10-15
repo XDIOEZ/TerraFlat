@@ -258,9 +258,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     public void RotatePlacement()
     {
         if (!CanRotatePlacement) return;
-        int rotationSteps = Definition.Kind == "gear" || Definition.Kind == "gearbox" ||
-                            Definition.Kind == "bellows" || Definition.Kind == "converter" ? 4 : 2;
-        PlacementQuarterTurns = (PlacementQuarterTurns + 1) % rotationSteps;
+        PlacementQuarterTurns = Definition.NextPlacementQuarterTurns(PlacementQuarterTurns);
         var building = item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
         ApplyPreview(building?.GhostShadow);
     }

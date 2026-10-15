@@ -666,8 +666,64 @@ public static class GameplayTestShipProbe
             ["cardinal"] = cardinal, ["centerAllowed"] = centerAllowed, ["centerReason"] = centerReason,
             ["exhaustObstacleAllowed"] = obstacleAllowed, ["exhaustObstacleReason"] = obstacleReason,
             ["pipeAllowed"] = pipeAllowed, ["unsupportedAllowed"] = unsupportedAllowed,
-            ["unsupportedReason"] = unsupportedReason
+            ["unsupportedReason"] = unsupportedReason, ["rotation"] = CaptureEngineRotation()
         };
+    }
+
+    // 读取正式引擎配置并采样同一轮换和预览姿态入口，不操作当前手持物或船体。
+    private static JObject CaptureEngineRotation()
+    {
+        TextAsset asset = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
+        if (asset == null) throw new InvalidOperationException("缺少机械目录，无法采样引擎旋转。");
+        MachineCatalogDocument catalog = JsonConvert.DeserializeObject<MachineCatalogDocument>(asset.text);
+        var engines = new JArray();
+        foreach (string id in new[] { "ShipChemicalEngine", "ShipChemicalEngine_GM" })
+        {
+            MachineDefinition definition = catalog.Nodes.Find(value => value?.Id == id)
+                ?? throw new InvalidOperationException("机械目录缺少引擎：" + id);
+            definition.Validate();
+            engines.Add(new JObject { ["id"] = id, ["rotatable"] = definition.Rotatable,
+                ["steps"] = definition.PlacementRotationSteps, ["cycle"] = CaptureRotationCycle(definition) });
+        }
+
+        var previews = new JArray();
+        foreach (float shipAngle in new[] { 0f, 37f, -123f })
+            for (int quarterTurns = 0; quarterTurns < 4; quarterTurns++)
+            {
+                Quaternion child = Quaternion.Euler(0f, 0f, quarterTurns * 90f);
+                float installedAngle = shipAngle + quarterTurns * 90f;
+                Quaternion root = BuildingShadow.ResolvePlacementRootRotation(installedAngle, quarterTurns);
+                Quaternion groundRoot = BuildingShadow.ResolvePlacementRootRotation(quarterTurns * 90f, quarterTurns);
+                Quaternion plainRoot = BuildingShadow.ResolvePlacementRootRotation(installedAngle, 0);
+                previews.Add(new JObject { ["shipAngle"] = shipAngle, ["quarterTurns"] = quarterTurns,
+                    ["worldAngle"] = (root * child).eulerAngles.z,
+                    ["rootAngle"] = root.eulerAngles.z, ["groundRootAngle"] = groundRoot.eulerAngles.z,
+                    ["plainWorldAngle"] = plainRoot.eulerAngles.z });
+            }
+
+        var rejected = new JArray();
+        foreach (int steps in new[] { -1, 0, 1, 3, 5 })
+        {
+            string exception = string.Empty;
+            try { new MachineDefinition { Id = "rotation-invalid", PlacementRotationSteps = steps }.Validate(); }
+            catch (ArgumentException error) { exception = error.GetType().Name; }
+            rejected.Add(new JObject { ["steps"] = steps, ["exception"] = exception });
+        }
+        return new JObject { ["engines"] = engines, ["previews"] = previews, ["rejected"] = rejected,
+            ["shaftCycle"] = CaptureRotationCycle(new MachineDefinition { Kind = "shaft" }),
+            ["gearCycle"] = CaptureRotationCycle(new MachineDefinition { Kind = "gear" }) };
+    }
+
+    private static JArray CaptureRotationCycle(MachineDefinition definition)
+    {
+        var values = new JArray(0);
+        int quarterTurns = 0;
+        for (int press = 0; press < 4; press++)
+        {
+            quarterTurns = definition.NextPlacementQuarterTurns(quarterTurns);
+            values.Add(quarterTurns);
+        }
+        return values;
     }
 
     private static JObject CaptureOptical()

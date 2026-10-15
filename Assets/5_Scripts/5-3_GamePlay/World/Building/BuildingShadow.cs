@@ -16,6 +16,12 @@ public class BuildingShadow : MonoBehaviour
     private bool isBlocked;
     private float visibility = 1f;
 
+    #region 放置旋转
+    /// <summary>子图层已应用安装角时，根节点只补足船体朝向，避免同一角度重复旋转。</summary>
+    public static Quaternion ResolvePlacementRootRotation(float worldAngleDegrees, int childQuarterTurns)
+        => Quaternion.Euler(0f, 0f, worldAngleDegrees - (childQuarterTurns & 3) * 90f);
+    #endregion
+
     private void OnDestroy()
     {
         transform.DOKill();

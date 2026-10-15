@@ -1300,6 +1300,7 @@
     {
       "Id": "ShipChemicalEngine",
       "Kind": "consumer",
+      "PlacementRotationSteps": 4,
       "Ports": "none",
       "LogicId": "ship-device",
       "BlocksMovement": true,
@@ -1332,6 +1333,7 @@
     {
       "Id": "ShipChemicalEngine_GM",
       "Kind": "consumer",
+      "PlacementRotationSteps": 4,
       "Ports": "none",
       "LogicId": "ship-device",
       "BlocksMovement": true,

@@ -1775,9 +1775,15 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
         GhostShadow.transform.position = WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
-        BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item.itemData, mouse, GetLocalPlacementQuarterTurns(), out _, out float angle) == true)
-            GhostShadow.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        IBuildingPlacementExtension extension = BuildingPlacementLifecycle.GetExtension(item);
+        extension?.ApplyPreview(GhostShadow);
+        int quarterTurns = GetLocalPlacementQuarterTurns();
+        float angle = quarterTurns * 90f;
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item.itemData, mouse, quarterTurns, out _, out float snappedAngle) == true)
+            angle = snappedAngle;
+        // 机械扩展负责子图层安装角，预览根只承担船角；无船体时也清除上一帧的船角。
+        GhostShadow.transform.rotation = BuildingShadow.ResolvePlacementRootRotation(angle,
+            extension is IBuildingPreviewRotation ? quarterTurns : 0);
         ApplyHorizontalMirrorPreview();
         GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, out _));
     }

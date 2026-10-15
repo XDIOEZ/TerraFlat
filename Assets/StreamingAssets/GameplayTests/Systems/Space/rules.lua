@@ -430,6 +430,37 @@ do
     -- 真实安装预检验证四向外缘、喷口通道和地板支撑，实际建造由场景流程覆盖。
     test.system("space", "ship_engine_placement", {}, function(data)
         assert(data.operation == "ship_engine_placement" and data.scope == "production-domain", "缺少正式引擎安装领域结果")
+        local rotation = data.rotation
+        assert(type(rotation) == "table" and #rotation.engines == 2, "普通和 GM 引擎旋转采样不完整")
+        local engineIds = {ShipChemicalEngine = true, ShipChemicalEngine_GM = true}
+        for _, engine in ipairs(rotation.engines) do
+            assert(engineIds[engine.id] and engine.rotatable and engine.steps == 4, "引擎没有声明四向旋转：" .. tostring(engine.id))
+            engineIds[engine.id] = nil
+            assert(#engine.cycle == 5, "引擎缺少连续四次旋转的结果")
+            for index, expected in ipairs({0, 1, 2, 3, 0}) do
+                assert(engine.cycle[index] == expected, "按 R 未依次到达四个方向：" .. engine.id)
+            end
+        end
+        for name, expected in pairs({shaftCycle = {0, 1, 0, 1, 0}, gearCycle = {0, 1, 2, 3, 0}}) do
+            assert(#rotation[name] == #expected, "轴或齿轮的原有旋转档数采样缺失")
+            for index, value in ipairs(expected) do assert(rotation[name][index] == value, "改变了轴或齿轮的旋转规则") end
+        end
+        local function nearAngle(actual, expected, label)
+            local difference = (actual - expected + 180) % 360 - 180
+            assert(math.abs(difference) <= 0.0001, label)
+        end
+        assert(#rotation.previews == 12, "船身角度与四向预览组合不完整")
+        for _, sample in ipairs(rotation.previews) do
+            local installedAngle = sample.shipAngle + sample.quarterTurns * 90
+            nearAngle(sample.worldAngle, installedAngle, "引擎虚影和实际安装方向不一致")
+            nearAngle(sample.rootAngle, sample.shipAngle, "机械虚影根重复叠加了安装角度")
+            nearAngle(sample.groundRootAngle, 0, "离开船体后的预览根仍残留船角")
+            nearAngle(sample.plainWorldAngle, installedAngle, "无机械扩展的船件丢失安装方向")
+        end
+        assert(#rotation.rejected == 5, "非法旋转档数采样不完整")
+        for _, sample in ipairs(rotation.rejected) do
+            assert(sample.exception == "ArgumentException", "非法旋转档数没有被配置校验拒绝")
+        end
         assert(#data.cardinal == 4, "四个外缘安装方向结果不完整")
         local directions = {}
         for _, sample in ipairs(data.cardinal) do
@@ -446,7 +477,7 @@ do
         assert(data.pipeAllowed == true, "管道不应被当作阻挡喷口的结构层")
         assert(data.unsupportedAllowed == false and type(data.unsupportedReason) == "string" and #data.unsupportedReason > 0,
             "缺少地板支撑的引擎必须被拒绝")
-        return "覆盖四向边缘安装、内部喷口拒绝、后续阻挡拒绝、管道例外和缺少支撑拒绝。"
+        return "覆盖两款引擎四向轮换、预览角度单次叠加、默认档数和非法配置，以及边缘安装、净空和支撑。"
     end, "引擎安装与喷口净空")
 end
 

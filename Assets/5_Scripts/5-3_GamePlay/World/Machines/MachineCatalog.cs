@@ -227,6 +227,7 @@ public sealed class MachineDefinition
     public float PlayerMoveSpeedMultiplier = 1f; // 可通行机械占格对玩家主动移速的倍率。
     public bool? CastVisualShadows; // MOD 可覆盖用力器与发力器的默认两类世界阴影。
     public int PlacementLayer = -1; // -1 沿用机械默认层；电线等覆盖层可显式使用独立层。
+    public int? PlacementRotationSteps; // 显式声明两向或四向，未声明时沿用机器类型的旋转规则。
     public MechanicalAxisPortVisualDefinition AxisPortVisual; // 标准连接杆端口由目录统一控制。
     public MachineTransportDefinition Transport; // 输送能力独立于物品名称，MOD 可以配置自己的传送设备。
     public FluidMachineDefinition Fluid; // 气液统一覆盖层和工业腔体能力。
@@ -240,6 +241,13 @@ public sealed class MachineDefinition
     public bool IsConverter => Electrical?.IsConverter == true;
     public bool IsConnectionLine => Electrical?.IsWire == true || Fluid?.Kind == "pipe"; // 自动接邻格的线路与设备主体分层显示。
     public bool Rotatable => !IsConnectionLine && (Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0));
+    /// <summary>放置输入按定义轮换朝向，具体设备通过配置声明自己的旋转档数。</summary>
+    public int NextPlacementQuarterTurns(int current)
+    {
+        int steps = PlacementRotationSteps ??
+            (Kind == "gear" || Kind == "gearbox" || Kind == "bellows" || Kind == "converter" ? 4 : 2);
+        return ((current & 3) + 1) % steps;
+    }
     /// <summary>动力源、加工设备与机械风箱默认投影；传动件保持原有无影表现。</summary>
     public bool ShouldCastVisualShadows()
         => CastVisualShadows ?? (Kind == "source" || Kind == "consumer" || Kind == "bellows" ||
@@ -280,6 +288,7 @@ public sealed class MachineDefinition
             !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||
             !NonNegative(ManualDriveTorque) || !NonNegative(ManualDriveRpm) || !NonNegative(ManualDriveSecondsPerPress) ||
             PlacementLayer < -1 || PlacementLayer > 15 ||
+            (PlacementRotationSteps.HasValue && PlacementRotationSteps != 2 && PlacementRotationSteps != 4) ||
             Ratios == null || Ratios.Length == 0 ||
             (ReverseSpeedRatio != 0 && !Positive(ReverseSpeedRatio)) ||
             !Positive(ForwardTorqueRatio) || !Positive(ReverseTorqueRatio))
