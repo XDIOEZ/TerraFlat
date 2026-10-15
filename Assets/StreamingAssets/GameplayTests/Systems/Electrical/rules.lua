@@ -125,3 +125,22 @@ test.system("electrical", "unlimited_supply", { sourceConnection = "right" }, fu
     finite_sample(sample)
     near(sample.suppliedWatts, 12000, "创造电源正确朝向邻格电线后没有供电")
 end, "创造电源通过正式方向端口接入邻格电线")
+
+for _, kind in ipairs({ "nan", "positive_infinity", "negative_infinity" }) do
+    local invalid = kind
+    test.system("electrical", "unlimited_supply", { providerFactorKind = invalid }, function(data)
+        local sample = data.samples[1]
+        finite_sample(sample)
+        near(sample.voltage, 0, "非法发电系数仍产生虚假电压：" .. invalid)
+        near(sample.generatedWatts, 0, "非法发电系数仍产生功率：" .. invalid)
+        near(sample.suppliedWatts, 0, "非法发电系数仍给负载供电：" .. invalid)
+    end, "无限电源拒绝非法发电系数：" .. invalid)
+
+    test.system("electrical", "unlimited_supply", { demandFactorKind = invalid }, function(data)
+        local sample = data.samples[1]
+        finite_sample(sample)
+        near(sample.demandWatts, 0, "非法负载系数污染需求：" .. invalid)
+        near(sample.generatedWatts, 0, "非法负载系数引起无效发电：" .. invalid)
+        near(sample.suppliedWatts, 0, "非法负载系数给负载供电：" .. invalid)
+    end, "无限电源拒绝非法负载系数：" .. invalid)
+end

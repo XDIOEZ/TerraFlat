@@ -527,8 +527,20 @@ public static partial class GameplayTestSystemProbe
         int sourceCount = Mathf.Clamp((int)Number(args, "sources", 1d), 1, 2);
         int steps = Mathf.Clamp((int)Number(args, "steps", 1d), 1, 100);
         float seconds = (float)Number(args, "seconds", .5d);
-        float providerFactor = (float)Number(args, "providerFactor", 1d);
-        float demandFactor = (float)Number(args, "demandFactor", 1d);
+        float ReadFactor(string key)
+        {
+            // Lua 用字符串描述非有限系数，不向 JSON 写入非法数值。
+            return Text(args, key + "Kind", "number") switch
+            {
+                "number" => (float)Number(args, key, 1d),
+                "nan" => float.NaN,
+                "positive_infinity" => float.PositiveInfinity,
+                "negative_infinity" => float.NegativeInfinity,
+                _ => throw new ArgumentException("未知电网系数类型：" + key)
+            };
+        }
+        float providerFactor = ReadFactor("providerFactor");
+        float demandFactor = ReadFactor("demandFactor");
         bool commitStorage = Flag(args, "commitStorage", true);
         var nodes = new List<MachineEntity>();
         var sources = new List<MachineEntity>();
@@ -588,6 +600,7 @@ public static partial class GameplayTestSystemProbe
                 sourceJoules.Add(source.ElectricalStoredJoules);
             }
             samples.Add(new JObject { ["generatedWatts"] = connectedNetwork.GeneratedWatts,
+                ["voltage"] = connectedNetwork.Voltage,
                 ["deliveredWatts"] = connectedNetwork.DeliveredWatts, ["demandWatts"] = connectedNetwork.DemandWatts,
                 ["chargingWatts"] = connectedNetwork.ChargingWatts, ["dischargingWatts"] = connectedNetwork.DischargingWatts,
                 ["wastedWatts"] = connectedNetwork.WastedWatts, ["currentAmps"] = connectedNetwork.CurrentAmps,

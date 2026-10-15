@@ -197,6 +197,20 @@ SolveElectrical(creativeNetwork);
 Check(creativeNetwork.Overloaded && creativeNetwork.CurrentAmps == 100f &&
     heavyConsumer.ElectricalSuppliedWatts == 12000f, "无限源仍应根据实际电流标记电线过载");
 
+// 动态 provider 返回非有限数值时，不能让无实际供电的电网保留虚假电压。
+creativeNetwork = ElectricalGraph(creative, heavyConsumer);
+foreach (float invalid in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
+{
+    SolveElectrical(creativeNetwork, factor: invalid);
+    Check(creativeNetwork.Voltage == 0f && creativeNetwork.GeneratedWatts == 0f &&
+        creativeNetwork.DeliveredWatts == 0f && heavyConsumer.ElectricalSuppliedWatts == 0f &&
+        FiniteElectrical(creativeNetwork), "非法发电系数未安全关停无限电源");
+    SolveElectrical(creativeNetwork, demand: invalid);
+    Check(creativeNetwork.DemandWatts == 0f && creativeNetwork.GeneratedWatts == 0f &&
+        heavyConsumer.ElectricalRequestedWatts == 0f && FiniteElectrical(creativeNetwork),
+        "非法负载系数污染电网功率读数");
+}
+
 var disconnectedWireA = ElectricalNode(306, "wire");
 var disconnectedWireB = ElectricalNode(307, "wire"); disconnectedWireB.Cell = new(2, 0);
 heavyConsumer.Cell = new(2, 0);

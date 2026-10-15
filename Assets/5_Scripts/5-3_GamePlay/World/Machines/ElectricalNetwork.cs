@@ -168,7 +168,7 @@ public sealed class ElectricalNetworkGraph
         // 同一次电网解算只采样一次发电条件，电压和功率使用同一份真实出力。
         foreach (MachineEntity node in network.Nodes)
             node.SampledElectricalGeneration = node.IsElectricalGenerator
-                ? Mathf.Clamp01(generatorFactor?.Invoke(node) ?? 1f) : 0f;
+                ? NormalizePowerFactor(generatorFactor?.Invoke(node) ?? 1f) : 0f;
 
         float voltage = ResolveVoltage(network, out bool sourceConflict);
         network.Voltage = voltage;
@@ -202,7 +202,7 @@ public sealed class ElectricalNetworkGraph
             }
             else if (node.IsElectricalConsumer)
             {
-                float factor = Mathf.Clamp01(demandFactor?.Invoke(node) ?? 1f);
+                float factor = NormalizePowerFactor(demandFactor?.Invoke(node) ?? 1f);
                 float request = electrical.PowerWatts * factor;
                 node.ElectricalRequestedWatts = request;
                 network.DemandWatts += request;
@@ -293,6 +293,10 @@ public sealed class ElectricalNetworkGraph
             node.ElectricalPowerRatio = 0f;
         }
     }
+
+    // 动态发电或需求来源可能返回 NaN/Infinity，非法数值统一视为停用，禁止污染电压与功率。
+    private static float NormalizePowerFactor(float value)
+        => float.IsFinite(value) ? Mathf.Clamp01(value) : 0f;
 
     private static float ResolveVoltage(ElectricalNetwork network, out bool conflict)
     {
