@@ -363,7 +363,9 @@ namespace FlatWorld.NaturalEntities
         /// <summary>外部能力修改生命、位置或外观后通知桥接，只提交该实体的变化。</summary>
         public static void NotifyChanged(NaturalEntityHandle handle)
         {
-            if (Contains(handle)) QueuePublication(handle.Id);
+            if (!Contains(handle)) return;
+            RefreshInputIndexes(records[handle.Id]);
+            QueuePublication(handle.Id);
         }
 
         private static void ValidateOutputDefinitions(NaturalEntityEcsProfile profile)

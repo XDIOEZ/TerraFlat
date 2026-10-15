@@ -22,11 +22,20 @@ test.runtime("terrain", "cover_resource_lifecycle", {}, function(data)
     assert(data.habitatRegistered == data.habitatBefore + 1 and
         data.habitatRemoved == data.habitatBefore and data.habitatRestored == data.habitatBefore + 1,
         "ECS树木栖息地索引未随创建、移除和恢复同步")
+    local indexes = data.inputIndexes
+    assert(indexes.registered.environment == indexes.before.environment + 1 and
+        indexes.registered.navigation == indexes.before.navigation + 1 and
+        indexes.registered.soil == indexes.before.soil, "野生松树没有按能力登记天气、导航与土壤输入")
+    for _, field in ipairs({"environment", "navigation", "soil"}) do
+        assert(indexes.removed[field] == indexes.before[field] and
+            indexes.restored[field] == indexes.registered[field],
+            "自然资源" .. field .. "输入索引移除或恢复后不一致")
+    end
     assert(data.cleanupRegistered, "地格与资源未登记失败时的收尾")
 end, "真实地表覆盖栈、保存差量、松树占地和实体快照恢复")
 test.screenshot("两层地表覆盖上恢复自有松树的真实现场")
 test.runtime("terrain", "cleanup", {}, function(data)
     assert(data.hadFixture and data.released and data.terrainRestored and data.layersRestored and
-        data.grassRestored and data.resourceRemoved and data.habitatCleaned,
+        data.grassRestored and data.resourceRemoved and data.habitatCleaned and data.inputIndexesCleaned,
         "自有地表、草、覆盖栈、资源实体或树木栖息地索引未清理")
 end, "恢复自有空地与地层差量并删除松树")

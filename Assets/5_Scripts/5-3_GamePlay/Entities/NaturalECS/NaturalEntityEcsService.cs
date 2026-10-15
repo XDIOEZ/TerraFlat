@@ -45,10 +45,17 @@ namespace FlatWorld.NaturalEntities
 
         private static NaturalEntitySimulation simulation;
         private static readonly Dictionary<int, Record> records = new();
+        // 运行时增量维护不同输入需求，避免每次生态 Tick 扫描全部静态资源。
+        private static readonly HashSet<Record> environmentInputRecords = new();
+        private static readonly HashSet<Record> soilInputRecords = new();
+        private static readonly HashSet<Record> navigationInputRecords = new();
         private static readonly Dictionary<RuntimeItemDefinition, CompileCacheEntry> profiles = new();
         private static readonly List<Vector2Int> navigationCells = new(8);
         private const float SimulationInterval = 0.25f;
         private static readonly ProfilerMarker FreezeInputsMarker = new("NaturalEntityRuntime.FreezeInputs");
+        private static readonly ProfilerMarker FreezeNavigationMarker = new("NaturalEntityRuntime.FreezeNavigation");
+        private static readonly ProfilerMarker FreezeEnvironmentMarker = new("NaturalEntityRuntime.FreezeEnvironment");
+        private static readonly ProfilerMarker FreezeSoilMarker = new("NaturalEntityRuntime.FreezeSoil");
         private static readonly ProfilerMarker PublishMarker = new("NaturalEntityRuntime.Publish");
         private static readonly ProfilerMarker ContactDamageMarker = new("NaturalEntityRuntime.ContactDamage");
         private static int nextRuntimeId = 1;
@@ -99,18 +106,65 @@ namespace FlatWorld.NaturalEntities
             pendingSimulationSeconds = 0f;
             using (FreezeInputsMarker.Auto())
             {
-                bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
                 WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
-                foreach (Record record in records.Values)
+                using (FreezeNavigationMarker.Auto())
                 {
-                    if (record.NavigationOwner != navigation)
-                        UnregisterNavigation(record);
-                    if (!record.NavigationRegistered) TryRegisterNavigation(record);
-                    FreezeEnvironment(record, hasBounds, bounds);
-                    FreezeSoil(record);
+                    foreach (Record record in navigationInputRecords)
+                    {
+                        if (record.NavigationOwner != navigation)
+                            UnregisterNavigation(record);
+                        if (!record.NavigationRegistered) TryRegisterNavigation(record);
+                    }
+                }
+                if (environmentInputRecords.Count > 0)
+                {
+                    using (FreezeEnvironmentMarker.Auto())
+                    {
+                        bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
+                        foreach (Record record in environmentInputRecords)
+                            FreezeEnvironment(record, hasBounds, bounds);
+                    }
+                }
+                if (soilInputRecords.Count > 0)
+                {
+                    using (FreezeSoilMarker.Auto())
+                    {
+                        foreach (Record record in soilInputRecords)
+                            FreezeSoil(record);
+                    }
                 }
             }
         }
+
+        /// <summary>实体配置和种植状态变化时更新三个独立的运行时输入索引。</summary>
+        private static void RefreshInputIndexes(Record record)
+        {
+            if (record.Profile.HasGrowth || record.Profile.HasClimate)
+                environmentInputRecords.Add(record);
+            else
+                environmentInputRecords.Remove(record);
+
+            if (record.Profile.Definition.WorldGridOccupancy.Count > 0)
+                navigationInputRecords.Add(record);
+            else
+                navigationInputRecords.Remove(record);
+
+            if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0)
+                soilInputRecords.Add(record);
+            else
+                soilInputRecords.Remove(record);
+        }
+
+        private static void RemoveInputIndexes(Record record)
+        {
+            environmentInputRecords.Remove(record);
+            soilInputRecords.Remove(record);
+            navigationInputRecords.Remove(record);
+        }
+
+        /// <summary>只读索引计数供隔离回归验证，不触发资源扫描或补建。</summary>
+        internal static (int Environment, int Soil, int Navigation) GetInputIndexCounts() =>
+            (environmentInputRecords.Count, soilInputRecords.Count, navigationInputRecords.Count);
 
         public static void ReleaseWorld()
         {
@@ -123,6 +177,9 @@ namespace FlatWorld.NaturalEntities
                 ReleasePresentation(record);
             }
             records.Clear();
+            environmentInputRecords.Clear();
+            soilInputRecords.Clear();
+            navigationInputRecords.Clear();
             habitatTreeRecords.Clear();
             ClearContactDamageSources();
             pendingPublications.Clear();
@@ -211,6 +268,7 @@ namespace FlatWorld.NaturalEntities
                 UpdateTreeHabitatIndex(record);
                 InstallPlantModules(record, persistedData, plantedCell.HasValue);
                 InstallExtensionModules(record, plantedCell.HasValue);
+                RefreshInputIndexes(record);
                 FreezeEnvironment(record);
                 FreezeSoil(record);
                 TryRegisterNavigation(record);
@@ -242,6 +300,7 @@ namespace FlatWorld.NaturalEntities
             canopySources.Remove(record);
             pendingPublications.Remove(handle.Id);
             ReleasePresentation(record);
+            RemoveInputIndexes(record);
             if (simulation.TryGet(handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0)
             {
                 Vector2Int cell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y));
@@ -306,6 +365,7 @@ namespace FlatWorld.NaturalEntities
             else simulation.RemoveComponent<NaturalEntityHarvest>(handle.Id);
             InstallPlantModules(record, snapshot, false);
             InstallExtensionModules(record, false);
+            RefreshInputIndexes(record);
             MarkPresentationDirty(record);
 
             if (nextBody.Suspended == 0)

@@ -65,4 +65,5 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 轻量掉落与稳定漂浮的完整 Item 保留 0.5s 水流推进；两种后端共用 `WorldItemWaterRules.DriftInterpolation`，只把显示偏移匀速收敛到已确认的逻辑位置。轻量表现仅给可见视图留插值态；完整 Item 偏移 Sprite 子节点并保留原局部位置，水线逐帧跟随。循环接缝用最短位移，离水、拾取和回池清理偏移，不改空间索引或存档坐标。
 - 原生 AI 使用完整 Item。`entityRuntime: resource` 的树、矿点、作物按组合冷编译到共享 `WorldEntityRuntime`，不创建资源 Item 或运行 Module Tick；通用配置集合采用 Replace。能力扩展由 `ResourceEntityCapabilityRegistry` 注册，DLL 状态使用 context.SetState/GetState。
 - 自然实体独立维护导航、空间交互与接触几何，命中经 `GameplayCombatBridge`。植物生命周期只由 `EntityPlantModuleSystem` 推进；区块解绑保存释放，死亡/一次收获才删来源。终端解绑转交快照所有权，仍运行的快照才克隆；句柄包含 World 代际。
+- `NaturalEntityEcsService` 为天气/耐候、已种植土壤和导航占地维护独立输入索引，注册、卸载、恢复和配置刷新时增量更新；Profiler `NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil` 分别记录耗时。
 - 自然资源表现按 Dirty/Event 更新，几何版本与外观版本独立；TreeSortingVisual 用根镜像 SortingGroup 与玩家混排，主体不重复 BRG。客户端不推进权威植物 Job，采集命令/增量同步有独立接入点。旧 `DroppedItems/Core` ECS 实现仅为 Editor 学习参考。
