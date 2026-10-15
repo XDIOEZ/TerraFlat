@@ -93,19 +93,21 @@ namespace FlatWorld.WorldModel
                 Array.Clear(values, 0, CellCount);
                 _environmentLayers.Add(layerId, values);
             }
-            if (!environmentBatches.TryGetValue(layerId, out EnvironmentBatchState state))
-            {
-                state = new EnvironmentBatchState(CellCount);
-                environmentBatches.Add(layerId, state);
-            }
+            environmentBatches.TryGetValue(layerId, out EnvironmentBatchState state);
             for (int i = 0; i < updates.Length; i++)
             {
                 EnvironmentCellUpdate update = updates[i];
                 if (values[update.CellIndex].Equals(update.Value)) continue;
+                // 首次真实变化才分配整层脏索引，纯零值初始化不会白留一份 int 数组。
+                if (state == null)
+                {
+                    state = new EnvironmentBatchState(CellCount);
+                    environmentBatches.Add(layerId, state);
+                }
                 values[update.CellIndex] = update.Value;
                 state.DirtyIndices[state.Count++] = update.CellIndex;
             }
-            int count = state.Count;
+            int count = state?.Count ?? 0;
             if (count > 0)
             {
                 state.Revision = ++_revision;

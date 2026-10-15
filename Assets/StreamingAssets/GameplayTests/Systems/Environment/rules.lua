@@ -73,21 +73,27 @@ test.system("environment", "environment_batch", {}, function(data)
     assert(data.immediateRevision == data.initialRevision + 1, "同层批写逐格递增了版本")
     assert(data.unchangedChanges == 0 and data.emptyChanges == 0, "不变或空批仍报告变化")
     assert(not data.emptyLayer.exists and data.emptyLayer.length == 0, "空批创建了无用环境层")
-    assert(data.afterNoopNotices == 1 and data.afterNoopRevision == data.immediateRevision,
+    assert(data.zeroChanges == 0 and data.firstRealChange == 1,
+        "全零新层应保持无变化，首次非零写入必须正常触发")
+    layer_equal(data.zeroLayer, {0, 0, 0, 0, 0, 0}, "全零新层仍应保留原有可读语义")
+    layer_equal(data.afterFirstRealChange, {0, 0, 0.5, 0, 0, 0}, "首次真实变化应从原零层写入")
+    assert(data.afterNoopNotices == 2 and data.afterNoopRevision == data.immediateRevision + 1,
         "不变或空批仍广播通知或递增版本")
     assert(data.waterChanges == 2 and data.moistureChanges == 3, "延迟批写真正变化格计数错误")
-    assert(data.beforePublishNotices == 1, "多层数据写完前提前广播")
+    assert(data.beforePublishNotices == 2, "多层数据写完前提前广播")
     layer_equal(data.beforePublishMoisture, {0.7, 0.4, 0.9, 0, 0.9, 0.5}, "发布前湿度可读")
     layer_equal(data.beforePublishWater, {30, 40, 80, 0, 90, 0}, "发布前水量可读")
-    assert(data.afterPublishNotices == 3 and data.afterRepublishNotices == 3,
+    assert(data.afterPublishNotices == 4 and data.afterRepublishNotices == 4,
         "多层发布没有每层一次或重复发布再次通知")
-    assert(data.afterPublishRevision == data.immediateRevision + 2, "延迟发布额外修改版本")
-    assert(#data.notices == 4, "批量和后续单格通知数量错误")
-    local immediate, water, moisture, single = data.notices[1], data.notices[2], data.notices[3], data.notices[4]
+    assert(data.afterPublishRevision == data.immediateRevision + 3, "延迟发布额外修改版本")
+    assert(#data.notices == 5, "批量和后续单格通知数量错误")
+    local immediate, initial, water, moisture, single = data.notices[1], data.notices[2], data.notices[3], data.notices[4], data.notices[5]
     assert(immediate.kind == "Environment" and immediate.layer == "moisture" and immediate.isBatch,
         "即时批次通知层或类型错误")
     values_equal(immediate.indices, {0, 4}, "即时批次只通知真实变化格")
     assert(immediate.borrowedIndexCount == 2, "批次借用索引长度错误")
+    assert(initial.layer == "probe.zero" and initial.isBatch, "零值新层首次变化未收到正式通知")
+    values_equal(initial.indices, {2}, "零值新层首次真实变化格")
     assert(water.layer == "agriculture.water" and moisture.layer == "moisture", "发布顺序未按层写入顺序")
     values_equal(water.indices, {0, 4}, "水量批次变化索引")
     values_equal(moisture.indices, {0, 2, 5}, "湿度批次变化索引")

@@ -82,6 +82,13 @@ public static partial class GameplayTestSystemProbe
         int unchangedChanges = terrain.SetEnvironmentBatch("moisture", immediate);
         int emptyChanges = terrain.SetEnvironmentBatch("probe.empty", Array.Empty<EnvironmentCellUpdate>());
         JObject emptyLayer = EnvironmentBatchLayer(terrain, "probe.empty");
+        int zeroChanges = terrain.SetEnvironmentBatch("probe.zero", new[]
+        {
+            new EnvironmentCellUpdate(0, 0f), new EnvironmentCellUpdate(2, 0f)
+        });
+        JObject zeroLayer = EnvironmentBatchLayer(terrain, "probe.zero");
+        int firstRealChange = terrain.SetEnvironmentBatch("probe.zero", new[] { new EnvironmentCellUpdate(2, .5f) });
+        JObject afterFirstRealChange = EnvironmentBatchLayer(terrain, "probe.zero");
         int afterNoopNotices = notices.Count;
         long afterNoopRevision = terrain.Revision;
         int waterChanges = terrain.SetEnvironmentBatch("agriculture.water", new[]
@@ -107,7 +114,9 @@ public static partial class GameplayTestSystemProbe
             ["initialRevision"] = initialRevision, ["immediateChanges"] = immediateChanges,
             ["immediateRevision"] = immediateRevision, ["afterImmediate"] = afterImmediate,
             ["unchangedChanges"] = unchangedChanges, ["emptyChanges"] = emptyChanges,
-            ["emptyLayer"] = emptyLayer, ["afterNoopNotices"] = afterNoopNotices,
+            ["emptyLayer"] = emptyLayer, ["zeroChanges"] = zeroChanges, ["zeroLayer"] = zeroLayer,
+            ["firstRealChange"] = firstRealChange, ["afterFirstRealChange"] = afterFirstRealChange,
+            ["afterNoopNotices"] = afterNoopNotices,
             ["afterNoopRevision"] = afterNoopRevision, ["waterChanges"] = waterChanges,
             ["moistureChanges"] = moistureChanges, ["beforePublishNotices"] = beforePublishNotices,
             ["beforePublishMoisture"] = beforePublishMoisture, ["beforePublishWater"] = beforePublishWater,
