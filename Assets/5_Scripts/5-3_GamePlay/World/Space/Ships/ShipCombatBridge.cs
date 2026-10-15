@@ -27,6 +27,10 @@ namespace FlatWorld.Spaceflight
             bool spaceCombat = SpaceSession.TryGetCombatFrame(weapon.item, out SpaceSectorPosition canonicalOrigin, out Vector2 presentationOrigin);
             string surfaceWorld = null;
             bool hasSurfaceWorld = !spaceCombat && SpaceSession.TryGetCombatWorldKey(weapon.item, out surfaceWorld);
+            if (!spaceCombat && !hasSurfaceWorld) return;
+            SpaceSession.SurfaceCombatProjection surfaceProjection = hasSurfaceWorld
+                ? SpaceSession.CaptureSurfaceCombatProjection(weapon.item, surfaceWorld, (Vector2)shape.Center)
+                : default;
             var candidates = new List<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor, Mod_DamageReceiver Receiver)>();
             var hits = new List<CombatColliderHit2D>();
             using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
@@ -41,21 +45,18 @@ namespace FlatWorld.Spaceflight
                     if (!ShipSurfaceState.AllowsDamage(flight, context.DeliveryCapabilities)) continue;
                     foreach (ShipPieceState piece in ship.Pieces)
                     {
-                        if (!piece.IsAlive || !GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition)) continue;
+                        if (!piece.IsAlive) continue;
+                        ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
+                            (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
                         Vector2 anchor;
                         if (spaceCombat)
                         {
-                            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
-                                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
                             anchor = presentationOrigin + SpaceSectorCoordinates.Difference(
                                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y)), canonicalOrigin).ToVector2();
                         }
                         else
                         {
-                            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
-                                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
-                            anchor = SpaceSession.ProjectSurfaceCombatPoint(weapon.item, surfaceWorld,
-                                new Vector2((float)x, (float)y), (Vector2)shape.Center)
+                            anchor = surfaceProjection.Project(new Vector2((float)x, (float)y))
                                 + Vector2.up * (float)ShipSurfaceState.VisualRise(flight);
                         }
                         float width = (float)((piece.QuarterTurns % 2 == 0 ? piece.Width : piece.Height) * ship.CellSizeMeters);
@@ -63,6 +64,8 @@ namespace FlatWorld.Spaceflight
                         float radius = Mathf.Sqrt(width * width + height * height);
                         if (Math.Abs(anchor.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + radius ||
                             Math.Abs(anchor.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + radius) continue;
+                        // 先按命中范围裁剪，再查物品定义，避免近战每帧反复解析远处船件。
+                        if (!GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out _)) continue;
                         PerceptionShape2D local = PerceptionShape2D.Aabb(new float2((width - (float)ship.CellSizeMeters) * .5f, (height - (float)ship.CellSizeMeters) * .5f), new float2(width * .5f, height * .5f));
                         double angle = ship.AngleRadians;
                         ShipGeometry.Rotate(local.Center.x, local.Center.y, angle, out double offsetX, out double offsetY);

@@ -40,15 +40,40 @@ namespace FlatWorld.Spaceflight
             worldKey = source != null ? source.gameObject.scene.name : null;
             return !string.IsNullOrEmpty(worldKey) && !SpaceMgr.IsSpaceScene(worldKey);
         }
-        public static Vector2 ProjectSurfaceCombatPoint(Item source, string worldKey, Vector2 logical, Vector2 fallbackAnchor)
+        internal readonly struct SurfaceCombatProjection
+        {
+            private readonly string worldKey;
+            private readonly Vector2 origin;
+            private readonly Vector2 canonicalOrigin;
+
+            public SurfaceCombatProjection(string worldKey, Vector2 origin, Vector2 canonicalOrigin)
+            { this.worldKey = worldKey; this.origin = origin; this.canonicalOrigin = canonicalOrigin; }
+
+            public Vector2 Project(Vector2 logical) => origin +
+                PressureExplosionQueue.DeltaInWorld(worldKey, canonicalOrigin, logical);
+        }
+
+        // 每次武器 Pulse 只读取一次投射状态与乘员权威坐标，船件逐块只做坐标差运算。
+        internal static SurfaceCombatProjection CaptureSurfaceCombatProjection(Item source, string worldKey, Vector2 fallbackAnchor)
         {
             Mod_Projectile projectile = source?.GetComponentInChildren<Mod_Projectile>(true);
             if (projectile?.NetworkSurfaceWorldKey == worldKey)
-                return projectile.NetworkSurfacePresentationOrigin + PressureExplosionQueue.DeltaInWorld(worldKey, projectile.NetworkSurfaceCanonicalOrigin, logical);
-            // 地表武器只以实际伤害盒为锚点，按目标世界环绕规则求最近镜像，不依赖可能过期的乘员位置。
-            return fallbackAnchor + PressureExplosionQueue.DeltaInWorld(worldKey,
-                PressureExplosionQueue.NormalizeInWorld(worldKey, fallbackAnchor), logical);
+                return new SurfaceCombatProjection(worldKey, projectile.NetworkSurfacePresentationOrigin, projectile.NetworkSurfaceCanonicalOrigin);
+            Player player = CombatPlayer(source);
+            if (player != null && player != ItemMgr.Instance?.User_Player && Current != null &&
+                Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace &&
+                string.Equals(observer.WorldKey, worldKey, StringComparison.Ordinal))
+            {
+                // 远端玩家可能不在主机当前地表，必须保留其独立世界的权威位置作为投影原点。
+                return new SurfaceCombatProjection(worldKey, player.transform.position, observer.Position.LocalMeters.ToVector2());
+            }
+            // 本地地表武器按实际伤害盒和环绕规则投影，避免过期的乘员快照引起错位。
+            return new SurfaceCombatProjection(worldKey, fallbackAnchor,
+                PressureExplosionQueue.NormalizeInWorld(worldKey, fallbackAnchor));
         }
+
+        public static Vector2 ProjectSurfaceCombatPoint(Item source, string worldKey, Vector2 logical, Vector2 fallbackAnchor) =>
+            CaptureSurfaceCombatProjection(source, worldKey, fallbackAnchor).Project(logical);
         public bool ExecuteNetworkAttack(string profile, int action, SpaceSectorPosition aim, out string reason)
         {
             reason = "玩家或手持武器尚未准备好";

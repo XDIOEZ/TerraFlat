@@ -128,34 +128,96 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         if (session.IsSpaceView) throw new InvalidOperationException("地表飞船攻击投影必须在地表测试世界验证。");
         Player player = CurrentPlayer();
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         SpacePassengerState passenger = session.GetPassenger(player);
         if (passenger.Supported) throw new InvalidOperationException("投影测试玩家必须在船外自由移动。");
         string world = SceneManager.GetActiveScene().name;
-        Vector2 attackCenter = (Vector2)player.transform.position + Vector2.right * 1.5f;
-        Vector2 logical = WorldLocalPresentation.ToLogical(attackCenter);
         SpaceVector2 originalPosition = passenger.FreeMotion.PositionMeters;
         string originalWorld = passenger.LandingWorldKey;
+        ShipState ship = null;
+        ShipPieceState piece = null;
+        ShipFlightState flight = null;
+        ShipFlightPhase originalPhase = default;
+        double originalHeight = 0d;
+        string originalFlightWorld = null;
+        GameObject holder = null;
+        Item axe = null;
         try
         {
-            // 模拟玩家走远后乘员快照未更新，实际武器命中点仍应落在当前攻击位置。
+            // 使用正式放置和真实青铜斧伤害盒，让命中最终提交到船件权威血量。
+            var existingShips = new HashSet<string>(StringComparer.Ordinal);
+            foreach (ShipState existing in session.State.Ships) existingShips.Add(existing.ShipId);
+            Vector2 site = WorldLocalPresentation.ProjectPosition(
+                WorldLocalPresentation.ToLogical((Vector2)player.transform.position + Vector2.right * 12f),
+                player.transform.position);
+            piece = session.AddPiece(GameRes.ExistingInstance.CreateItemData("ShipFloor_Iron"), site, 0, out ship);
+            if (existingShips.Contains(ship.ShipId)) throw new InvalidOperationException("测试地板错误地连接到已有飞船。");
+            session.CommitPiece(ship, piece);
+            flight = session.GetFlight(ship.ShipId) ?? throw new InvalidOperationException("测试飞船缺少地表飞行状态。");
+            originalPhase = flight.Phase; originalHeight = flight.HeightMeters; originalFlightWorld = flight.SurfaceWorldKey;
+            if (flight.Phase != ShipFlightPhase.Landed || flight.SurfaceWorldKey != world)
+                throw new InvalidOperationException("测试飞船不是当前地表世界的已降落船体。");
+            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
+                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
+            Vector2 logical = new((float)x, (float)y);
+            Vector2 target = WorldLocalPresentation.ProjectPosition(logical, player.transform.position);
+            holder = new GameObject("Lua飞船攻击_独立手持挂点");
+            holder.transform.position = target + Vector2.right * 4f;
+            axe = ItemMgr.Instance.InstantiateHeldItem(GameRes.ExistingInstance.CreateItemData("Axe_Bronze"), player, holder.transform);
+            axe.Load();
+            Mod_Damage damage = axe.GetComponentInChildren<Mod_Damage>(true);
+            BoxCollider2D hitbox = damage?.GetComponent<BoxCollider2D>();
+            if (hitbox == null) throw new InvalidOperationException("真实青铜斧没有加载 Mod_Damage 的命中盒。");
+            hitbox.enabled = true;
+            double before = piece.Health;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterMiss = piece.Health;
+            holder.transform.position += (Vector3)(target - (Vector2)hitbox.transform.TransformPoint(hitbox.offset));
+
+            // 故意令乘员自由坐标和世界键过期，验证攻击始终使用当前武器姿态。
             passenger.FreeMotion.PositionMeters = originalPosition + new SpaceVector2(40d, 25d);
             passenger.LandingWorldKey = null;
-            bool resolved = SpaceSession.TryGetCombatWorldKey(player, out string resolvedWorld);
-            Vector2 hitPoint = SpaceSession.ProjectSurfaceCombatPoint(player, world, logical, attackCenter);
-            Vector2 expected = WorldLocalPresentation.ProjectPosition(logical, attackCenter);
+            bool resolved = SpaceSession.TryGetCombatWorldKey(axe, out string resolvedWorld);
+            Vector2 hitPoint = SpaceSession.ProjectSurfaceCombatPoint(axe, world, logical,
+                (Vector2)hitbox.transform.TransformPoint(hitbox.offset));
+
+            flight.SurfaceWorldKey = "other-world-test-only";
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterWrongWorld = piece.Health;
+            flight.SurfaceWorldKey = originalFlightWorld;
+            flight.Phase = ShipFlightPhase.Lifting; flight.HeightMeters = 25d;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterAirborne = piece.Health;
+            flight.Phase = originalPhase; flight.HeightMeters = originalHeight;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterHit = piece.Health;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterRepeated = piece.Health;
             completed(new JObject
             {
-                ["scope"] = "live-ground-combat-projection", ["world"] = world,
+                ["scope"] = "live-ground-ship-weapon-hit", ["world"] = world,
                 ["worldResolved"] = resolved, ["resolvedWorld"] = resolvedWorld ?? string.Empty,
-                ["hitError"] = Vector2.Distance(hitPoint, expected),
+                ["hitError"] = Vector2.Distance(hitPoint, target),
                 ["staleOffset"] = (passenger.FreeMotion.PositionMeters - originalPosition).Magnitude,
-                ["limitations"] = "验证实际地表玩家与过期乘员位置下的飞船命中坐标；不替代真实武器动画和碰撞验收。"
+                ["weapon"] = axe.itemData.IDName, ["piece"] = piece.ItemId,
+                ["beforeHealth"] = before, ["afterMiss"] = afterMiss,
+                ["afterWrongWorld"] = afterWrongWorld, ["afterAirborne"] = afterAirborne,
+                ["afterHit"] = afterHit, ["afterRepeated"] = afterRepeated,
+                ["limitations"] = "真实青铜斧模块经正式武器查询和船件权威结算，尚未验证动画挥砍时序或多人客户端表现。"
             });
         }
         finally
         {
             passenger.FreeMotion.PositionMeters = originalPosition;
             passenger.LandingWorldKey = originalWorld;
+            if (flight != null)
+            { flight.Phase = originalPhase; flight.HeightMeters = originalHeight; flight.SurfaceWorldKey = originalFlightWorld; }
+            try { if (axe != null) ItemMgr.Instance.DespawnItem(axe, saveData: false); }
+            finally
+            {
+                if (holder != null) UnityEngine.Object.Destroy(holder);
+                if (piece != null && ship != null) session.RollbackPiece(ship, piece);
+            }
         }
         yield break;
     }
