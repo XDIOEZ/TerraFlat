@@ -2,6 +2,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using FlatWorld.Spaceflight;
 using Mirror;
@@ -138,18 +140,41 @@ namespace FlatWorld.Networking.Gameplay
         {
             NetworkWorldSnapshotBegin begin = transport.Read<NetworkWorldSnapshotBegin>(id).Last();
             var chunks = transport.Read<NetworkWorldSnapshotChunk>(id).Where(value => value.TransferId == begin.TransferId).ToArray();
-            byte[] payload = chunks.OrderBy(value => value.ChunkIndex).SelectMany(value => value.Data).ToArray();
+            byte[] payload = chunks.OrderBy(value => value.ChunkIndex)
+                .SelectMany(value => value.Data ?? Array.Empty<byte>()).ToArray();
+            bool chunkSizesValid = chunks.All(value => value.ChunkIndex >= 0 && value.ChunkIndex < begin.ChunkCount &&
+                value.Data != null && value.Data.Length == Math.Min(NetworkGameplayProtocol.SnapshotChunkBytes,
+                    begin.CompressedBytes - value.ChunkIndex * NetworkGameplayProtocol.SnapshotChunkBytes));
             return new JObject
             {
                 ["begins"] = transport.Count<NetworkWorldSnapshotBegin>(id),
                 ["declaredChunks"] = begin.ChunkCount, ["receivedChunks"] = chunks.Length,
                 ["uniqueIndices"] = chunks.Select(value => value.ChunkIndex).Distinct().Count(),
+                ["chunkSizesValid"] = chunkSizesValid,
                 ["declaredBytes"] = begin.CompressedBytes, ["receivedBytes"] = payload.Length,
                 ["declaredHash"] = begin.PayloadHash, ["actualHash"] = NetworkGameplayProtocol.CalculatePayloadHash(payload),
                 ["gzip"] = payload.Length > 2 && payload[0] == 0x1f && payload[1] == 0x8b,
+                ["gzipDecodedBytes"] = CountDecompressedSnapshotBytes(payload),
                 ["seed"] = begin.Seed, ["expectedSeed"] = SaveDataMgr.Instance.SaveData.Seed,
                 ["generationProtocol"] = begin.GenerationProtocol, ["expectedGenerationProtocol"] = NetworkMapGenerationProtocol.CurrentVersion
             };
+        }
+
+        private static long CountDecompressedSnapshotBytes(byte[] payload)
+        {
+            // 只流式验证 GZip 数据及校验尾，不替换正式存档；损坏流交给 Lua 报告断言失败。
+            try
+            {
+                using var input = new MemoryStream(payload, false);
+                using var gzip = new GZipStream(input, CompressionMode.Decompress);
+                byte[] buffer = new byte[65536];
+                long bytes = 0;
+                int read;
+                while ((read = gzip.Read(buffer, 0, buffer.Length)) > 0) bytes += read;
+                return bytes;
+            }
+            catch (InvalidDataException) { return 0; }
+            catch (IOException) { return 0; }
         }
         #endregion
 

@@ -30,11 +30,11 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
         assert(not player.spawnedBeforeReady, "完成 Join 后仍能用 Mirror AddPlayer 越过 WorldReady 提前出生")
         local snapshot = player.snapshot
         assert(snapshot.begins == 1 and snapshot.declaredChunks > 0
-            and snapshot.receivedChunks == snapshot.declaredChunks and snapshot.uniqueIndices == snapshot.declaredChunks,
-            "正式入世快照缺分片、重复分片或重复启动传输")
+            and snapshot.receivedChunks == snapshot.declaredChunks and snapshot.uniqueIndices == snapshot.declaredChunks
+            and snapshot.chunkSizesValid, "正式入世快照缺分片、分片长度错误或重复启动传输")
         assert(snapshot.declaredBytes > 0 and snapshot.receivedBytes == snapshot.declaredBytes
-            and snapshot.actualHash == snapshot.declaredHash and snapshot.gzip,
-            "正式收包后的压缩快照字节数、校验和或格式错误")
+            and snapshot.actualHash == snapshot.declaredHash and snapshot.gzip and snapshot.gzipDecodedBytes > 0,
+            "正式收包后的压缩快照字节数、校验和或 GZip 解压错误")
         assert(snapshot.seed == snapshot.expectedSeed
             and snapshot.generationProtocol == snapshot.expectedGenerationProtocol,
             "入世快照的真实种子或生成协议与服务器不一致")
