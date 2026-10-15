@@ -31,6 +31,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     [Header("门贴图")]
     public Sprite CloseSprite;
     public Sprite OpenSprite;
+    public bool UseItemSprite;
     #endregion
 
     #region 运行时缓存
@@ -42,6 +43,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     [Tooltip("专用于交互检测的 Trigger。为空时会在运行时自动创建，不参与物理阻挡。")]
     public BoxCollider2D InteractionCollider;
     private bool loaded;
+    private Sprite itemClosedSprite;
     #endregion
 
     #region 生命周期
@@ -60,10 +62,11 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     protected override void OnLoad()
     {
         EnsureData();
-        CacheReferences();
-
         DoorData.ReadData(ref Data);
         loaded = true;
+        if (!CanInteract(null)) return;
+        CacheReferences();
+        itemClosedSprite = UseItemSprite ? DoorRenderer?.sprite : null;
         ApplyDoorState();
         SpatialInteractionRegistry.Register(this, 0.75f);
     }
@@ -73,16 +76,24 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     {
         loaded = false;
         SpatialInteractionRegistry.Unregister(this);
+        if (UseItemSprite && DoorRenderer != null && itemClosedSprite != null)
+        {
+            DoorRenderer.sprite = itemClosedSprite;
+            DoorRenderer.enabled = true;
+        }
+        itemClosedSprite = null;
         base.OnUnload();
     }
 
     private void OnDisable() => SpatialInteractionRegistry.Unregister(this);
-    private void OnEnable() { if (loaded) SpatialInteractionRegistry.Register(this, 0.75f); }
+    private void OnEnable() { if (loaded && CanInteract(null)) SpatialInteractionRegistry.Register(this, 0.75f); }
 
     /// <summary>安装流程会统一开启建筑碰撞，提交后按门的真实状态重新同步。</summary>
     public void OnBuildingPlacementCommitted()
     {
         CacheReferences();
+        if (!CanInteract(null)) return;
+        if (UseItemSprite && itemClosedSprite == null) itemClosedSprite = DoorRenderer?.sprite;
         ApplyDoorState();
         SpatialInteractionRegistry.Register(this, 0.75f);
     }
@@ -194,7 +205,13 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
             return;
         }
 
-        DoorRenderer.sprite = Data.IsOpen ? OpenSprite : CloseSprite;
+        if (UseItemSprite)
+        {
+            // 单张门图复用同一开关状态，打开后隐藏主体而保留正式交互和占格。
+            DoorRenderer.sprite = itemClosedSprite;
+            DoorRenderer.enabled = !Data.IsOpen;
+        }
+        else DoorRenderer.sprite = Data.IsOpen ? OpenSprite : CloseSprite;
 
         // Trigger 在部分移动/寻路检测中仍会被视为可碰撞目标，不能作为“打开门”的唯一实现。
         // 阻挡碰撞体彻底关闭；独立的 InteractionCollider 保持 Trigger，以支持从门两侧再次交互。
@@ -241,7 +258,8 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         }
 
         InteractionCollider.size = DoorCollider.size;
-        InteractionCollider.offset = DoorCollider.offset;
+        InteractionCollider.offset = transform.InverseTransformPoint(
+            DoorCollider.transform.TransformPoint(DoorCollider.offset));
         InteractionCollider.isTrigger = true;
     }
     #endregion

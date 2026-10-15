@@ -26,6 +26,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 召唤器/手持保留 Item，落地设施经 Place/SpawnGenerated/RestoreMachine 创建数据节点；Mod_MachineAuthoring 保存配置，不驱动落地 Load/Tick。普通 Ports=none 设施共用格索引，不产生扭矩网络。
 - 模拟不依赖 ChunkView，网络整体恢复后才 Tick，快照后才休眠；无端口设施按玩家窗口休眠。世界时间由调用方传入，有界补算保留余量，手摇倒计时先于领域分派。
 - 移动船使用 `UseScope(GetShipScopeKey(ShipId))/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。ScopeLease 为值类型，按单一 using 生命周期释放；面板/延迟回调通过 UseNodeScope 进入节点所在作用域。分裂以 TransferShipNodes 整批移交，真实库存先拆分，每个作用域整批结束才重建拓扑。
+- 起飞/落地复用 TransferScopeNodes 在普通 worldKey 与 ship:key 间整批交接真实节点、加工器和共享罐份额，调用者给出最终 Cell/位置/绝对朝向；先全量校验，再提交归属与地表通知。不能用 Remove/Place 代替迁移，Remove 会执行储罐拆除排放；落地机器直接加入普通管电网络。
 - 船上无机械端口的设施与机械网、流体网一样持续模拟，不用地表玩家区块决定休眠；`ship:` 作用域不是场景名，不能因场景匹配不到玩家而释放电池、培育仓等设备的交互对象和面板。
 - SpaceSession 以游戏时钟调用 TickBackgroundWorlds，档案中的非活动地表作用域只恢复数据网络并持续推进加工/燃料/气液；活动地表由 ItemMgr 调度，避免重复。冷环境按自己的 WorldKey/冻结拓扑查询，不发布到当前场景 TemperatureMgr；炉吸燃料与带面交付经 DroppedItemService.ColdWorld 按世界查询实物、去重和原子扣量，不借用眼前世界掉落物。退出游戏后不补算。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。

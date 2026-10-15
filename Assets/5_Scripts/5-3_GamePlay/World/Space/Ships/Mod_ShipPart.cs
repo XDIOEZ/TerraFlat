@@ -1,11 +1,13 @@
 using System;
+using FlatWorld.Spaceflight;
 using Newtonsoft.Json;
 using UnityEngine;
 
-public sealed class Mod_ShipPart : Module
+public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy
 {
     #region 显式船体能力
     public const string ModuleId = "船体部件模块";
+    public const int GroundFloorLayer = 6;
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public Ex_ModData_MemoryPackable ModData = new() { ID = ModuleId };
@@ -18,6 +20,37 @@ public sealed class Mod_ShipPart : Module
     protected override void OnLoad() { }
     protected override void OnSave() { }
     protected override void OnUnload() { }
+
+    // 地面地板使用独立占地层，普通设备和管电线路仍归各自的正式建筑层。
+    public int OccupancyLayer => Configuration.Kind == ShipPieceKind.Floor ? GroundFloorLayer :
+        MechanicalExtension?.OccupancyLayer ?? Configuration.Layer;
+    public bool BlocksMovement => Configuration.Kind != ShipPieceKind.Floor &&
+        (MechanicalExtension?.BlocksMovement ?? Configuration.BlocksMovement ?? true);
+    public float PlayerMoveSpeedMultiplier => MechanicalExtension?.PlayerMoveSpeedMultiplier ?? 1f;
+    private Mod_MechanicalNode MechanicalExtension
+    {
+        get
+        {
+            if (Configuration.Kind == ShipPieceKind.Floor || item?.itemMods == null) return null;
+            Mod_Building.TryReadBuildingData(item.itemData, out _, out Mod_Building.Building_Data building);
+            string placedId = string.IsNullOrWhiteSpace(building?.BuildingPrefabId) ? item.itemData.IDName : building.BuildingPrefabId;
+            return MachineCatalog.Get(placedId) != null
+                ? item.itemMods.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId) : null;
+        }
+    }
+
+    public bool ValidatePlacement(Vector2Int cell, out string reason)
+    {
+        Mod_MechanicalNode mechanical = MechanicalExtension;
+        if (mechanical != null) return mechanical.ValidatePlacement(cell, out reason);
+        bool clear = !BuildingOccupancyRegistry.IsOccupied(cell, layer: OccupancyLayer);
+        reason = clear ? null : "当前建筑层已占用";
+        return clear;
+    }
+
+    public void PreparePlacedData(ItemData data) => MechanicalExtension?.PreparePlacedData(data);
+    public void PrepareRepackedSnapshot(ItemData snapshot) => MechanicalExtension?.PrepareRepackedSnapshot(snapshot);
+    public void ApplyPreview(BuildingShadow shadow) => MechanicalExtension?.ApplyPreview(shadow);
 
     public static FlatWorld.Spaceflight.ShipPartConfiguration Read(ItemData data)
     {

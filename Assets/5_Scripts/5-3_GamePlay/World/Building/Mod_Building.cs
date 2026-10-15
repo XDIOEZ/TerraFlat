@@ -138,7 +138,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     #region 建筑空间层
     [Tooltip("地板层设施允许同格放置实体建筑，不阻挡通行或视线。")]
     public BuildingPlacementLayer PlacementLayer = BuildingPlacementLayer.Structure;
-    public bool IsGroundFacility => BuildingOccupancyRegistry.GetPlacementLayer(this) == (int)BuildingPlacementLayer.Ground;
+    public bool IsGroundFacility
+    {
+        get
+        {
+            int layer = BuildingOccupancyRegistry.GetPlacementLayer(this);
+            return layer == (int)BuildingPlacementLayer.Ground || layer == Mod_ShipPart.GroundFloorLayer;
+        }
+    }
     public bool BlocksMovement => !IsGroundFacility && (BuildingPlacementLifecycle.GetTraversalPolicy(item)?.BlocksMovement ?? true);
     #endregion
 
@@ -275,6 +282,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public override void OnResourcesReloaded()
     {
         if (!_isLoaded || item == null) return;
+        RefreshInstalledOrientationSources();
         EnsureRuntimeReferences();
         SyncRuntimeState();
         SyncNavigationOccupancy();
@@ -915,7 +923,11 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         item.transform.position = WorldLocalPresentation.ProjectPosition(logicalPlacement);
         if (item.itemData?.transform != null)
             item.itemData.transform.position = logicalPlacement;
-        item.transform.rotation = Quaternion.identity;
+        // 安装只读取候选数据中已确认的格子朝向，手持表现的旋转不会迁移到建筑。
+        int placedQuarterTurns = Mathf.RoundToInt((item.itemData?.transform?.rotation ?? Quaternion.identity).eulerAngles.z / 90f) & 3;
+        item.transform.rotation = Quaternion.Euler(0f, 0f, placedQuarterTurns * 90f);
+        if (item.itemData?.transform != null) item.itemData.transform.rotation = item.transform.rotation;
+        ApplyInstalledOrientation();
         item.transform.localScale = Vector3.one;
         item.SetInHand(false);
 
@@ -1679,6 +1691,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
 
     private void SyncRuntimeState()
     {
+        ApplyInstalledOrientation();
         ApplyHorizontalMirrorVisual();
         if (Data.Role == BuildingRole.Summoner)
         {
@@ -2137,8 +2150,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     /// <summary>枚举建筑实际占用的世界格，所有格均按世界拓扑独立归一化。</summary>
     private IEnumerable<Vector2Int> GetFootprintCells(Vector2Int anchorCell)
     {
-        int width = Mathf.Clamp(Data?.FootprintWidth ?? 1, 1, 8);
-        int height = Mathf.Clamp(Data?.FootprintHeight ?? 1, 1, 8);
+        GetUnrotatedFootprintSize(out int width, out int height);
+        Mod_ShipPart part = item?.itemMods?.GetMod_ByID<Mod_ShipPart>(Mod_ShipPart.ModuleId);
+        int quarterTurns = Data?.Role == BuildingRole.PlacedBuilding
+            ? Mathf.RoundToInt((item?.itemData?.transform?.rotation ?? Quaternion.identity).eulerAngles.z / 90f) & 3
+            : part != null ? GetLocalPlacementQuarterTurns() : 0;
+        if ((quarterTurns & 1) != 0) (width, height) = (height, width);
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
                 yield return WorldTopologyRuntime.NormalizeCell(new Vector2Int(anchorCell.x + x, anchorCell.y + y));

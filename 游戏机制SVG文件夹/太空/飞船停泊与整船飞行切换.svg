@@ -1,147 +1,123 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="1180" viewBox="0 0 1480 1180" role="img" aria-labelledby="title desc">
-  <title id="title">飞船停泊与整船飞行切换</title>
-  <desc id="desc">停泊时按会阻挡的船件分别碰撞，从起飞开始直到下降都按整船运动。部件身份、库存和机器状态沿用原数据。落地停稳后清零速度并回到停泊；船体受损断开后按连通块分别运动。这是机制示意图，不是运行画面。</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="1160" viewBox="0 0 1520 1160" role="img" aria-labelledby="title desc">
+  <title id="title">普通地面建筑、点火装配与落地恢复</title>
+  <desc id="desc">GM生成和玩家手放都创建普通独立建筑，地面没有ShipView、ParkedPieces或活动ShipState。打开控制台不装配，点火ignite时才收集控制台脚下四邻连通地板及其完整承载建筑，移交真实机器和库存，断开外部地面网络并整船起飞。落地停稳后整船统一吸附最近格线和九十度朝向，恢复普通Items与地表机器网络，保留Guid、耐久和库存。补给依赖端口、方向、阀门与实际设备供给，裸管不保证产生流动。本图为机制示意图，非游戏运行画面。</desc>
   <defs>
     <style>
-      text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#eaf1fb}
-      .title{font-size:34px;font-weight:700}.subtitle{font-size:18px;fill:#a8bad2}
-      .heading{font-size:26px;font-weight:700}.body{font-size:20px}.small{font-size:17px;fill:#b7c6db}
-      .tiny{font-size:15px;fill:#a6bad2}.chip{font-size:17px;font-weight:700}.part{font-size:14px;fill:#f1f5fa;text-anchor:middle}
-      .panel{fill:#162638;stroke:#30475f;stroke-width:1.5}.slot{fill:#35495f;stroke:#7c93aa;stroke-width:1.5}
-      .cyan{fill:#72dfdd}.gold{fill:#ffd07a}.green{fill:#8ee6b4}
-      .arrow{fill:none;stroke:#8da4bc;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}
-      .route{fill:none;stroke:#54708d;stroke-width:2;stroke-dasharray:8 10}
-      .pulse{animation:pulse 2.6s ease-in-out infinite}.flame{animation:flame .7s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center top}
-      .drift{animation:drift 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
-      .travel{stroke-dasharray:12 13;animation:travel 1.8s linear infinite}
-      @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
-      @keyframes flame{from{transform:scaleY(.7);opacity:.6}to{transform:scaleY(1);opacity:1}}
-      @keyframes drift{0%,100%{transform:translateY(3px)}50%{transform:translateY(-5px)}}
-      @keyframes travel{to{stroke-dashoffset:-50}}
-      @media(prefers-reduced-motion:reduce){.pulse,.flame,.drift,.travel{animation:none}}
+      text{font-family:'Microsoft YaHei','Noto Sans CJK SC',sans-serif;fill:#edf4ff}
+      .title{font-size:34px;font-weight:700}.heading{font-size:25px;font-weight:700}
+      .body{font-size:20px}.small{font-size:17px;fill:#b6c8dd}.tiny{font-size:14px;fill:#9fb5cd}
+      .tag{font-size:16px;font-weight:700;text-anchor:middle}.part{font-size:13px;text-anchor:middle;fill:#edf4ff}
+      .panel{fill:#17283b;stroke:#30475e;stroke-width:1.5}.box{fill:#243c50;stroke:#88a4bd;stroke-width:1.5}
+      .teal{fill:#77dfd0}.gold{fill:#ffd080}.blue{fill:#94c9ff}.muted{fill:#b6c8dd}
+      .arrow{fill:none;stroke:#8eabc6;stroke-width:3;marker-end:url(#arrow)}
+      .pipe{fill:none;stroke:#77dfd0;stroke-width:7;stroke-linejoin:round}
+      .power{fill:none;stroke:#ffd080;stroke-width:3;stroke-dasharray:7 5}
+      .grid{fill:none;stroke:#2d455e;stroke-width:1}
     </style>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101c2c"/><stop offset="1" stop-color="#0b1521"/></linearGradient>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8" fill="#8da4bc"/></marker>
-    <g id="ship">
-      <rect x="0" y="0" width="62" height="62" rx="5" class="slot"/>
-      <rect x="66" y="0" width="62" height="62" rx="5" class="slot"/>
-      <rect x="132" y="0" width="62" height="62" rx="5" class="slot"/>
-      <rect x="0" y="66" width="62" height="62" rx="5" class="slot"/>
-      <rect x="66" y="66" width="62" height="62" rx="5" fill="#2e5c68" stroke="#86bfc8" stroke-width="1.5"/>
-      <rect x="132" y="66" width="62" height="62" rx="5" fill="#705b3f" stroke="#cfb480" stroke-width="1.5"/>
-      <rect x="0" y="132" width="62" height="62" rx="5" class="slot"/>
-      <rect x="66" y="132" width="62" height="62" rx="5" fill="#665246" stroke="#c5a28a" stroke-width="1.5"/>
-      <rect x="132" y="132" width="62" height="62" rx="5" class="slot"/>
-      <path d="M9 17H53M9 25H53M75 17H119M75 25H119M141 17H185M141 25H185" stroke="#9eafbf" stroke-width="4"/>
-      <circle cx="97" cy="91" r="12" fill="#8edbd1"/><path d="M86 112V107Q97 98 108 107V112" fill="#c4f2e6"/>
-      <path d="M141 83H185V110H141Z M141 91H185M163 83V110" fill="none" stroke="#e6cc9b" stroke-width="2"/>
-      <path d="M82 143H112V165H82ZM88 165V176H106V165" fill="#bacbd8" stroke="#e0eaf3" stroke-width="1.5"/>
-      <text x="31" y="48" class="part">墙</text><text x="97" y="48" class="part">墙</text><text x="163" y="48" class="part">墙</text>
-      <text x="31" y="103" class="part">地板</text><text x="97" y="124" class="part">驾驶位</text><text x="163" y="124" class="part">箱子</text>
-      <text x="31" y="170" class="part">地板</text><text x="97" y="189" class="part">引擎</text><text x="163" y="170" class="part">地板</text>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#101e2d"/><stop offset="1" stop-color="#0a1421"/></linearGradient>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="#8eabc6"/></marker>
+    <g id="floor">
+      <rect width="46" height="46" rx="4" fill="#31485d" stroke="#91a8bd" stroke-width="1.5"/>
+      <path d="M6 35H40M6 40H40" stroke="#5d758c" stroke-width="1"/>
     </g>
-    <g id="pieceOutlines" fill="none" stroke="#72dfdd" stroke-width="3">
-      <rect x="-3" y="-3" width="68" height="68" rx="7"/><rect x="63" y="-3" width="68" height="68" rx="7"/>
-      <rect x="129" y="-3" width="68" height="68" rx="7"/><rect x="129" y="63" width="68" height="68" rx="7"/>
-      <rect x="63" y="129" width="68" height="68" rx="7"/>
+    <g id="parts">
+      <use href="#floor"/><use href="#floor" x="50"/><use href="#floor" x="100"/><use href="#floor" x="150"/>
+      <use href="#floor" y="50"/><use href="#floor" x="50" y="50"/><use href="#floor" x="100" y="50"/><use href="#floor" x="150" y="50"/>
+      <use href="#floor" y="100"/><use href="#floor" x="50" y="100"/><use href="#floor" x="100" y="100"/><use href="#floor" x="150" y="100"/>
+      <rect x="55" y="55" width="36" height="31" rx="5" fill="#3e7398" stroke="#a9d8ff" stroke-width="1.5"/>
+      <rect x="61" y="60" width="24" height="13" rx="2" fill="#b8edfa"/><text x="73" y="98" class="part">控制台</text>
+      <rect x="105" y="55" width="36" height="37" rx="8" fill="#326b67" stroke="#95e7db" stroke-width="1.5"/>
+      <path d="M111 65H135M111 72H135" stroke="#95e7db" stroke-width="2"/><text x="123" y="87" class="part">罐</text>
+      <rect x="155" y="55" width="36" height="37" rx="4" fill="#786143" stroke="#e4c590" stroke-width="1.5"/>
+      <path d="M158 70H188M173 58V89" stroke="#e4c590" stroke-width="2"/><text x="173" y="108" class="part">箱子</text>
+      <rect x="56" y="105" width="34" height="29" rx="3" fill="#a37244" stroke="#f5ce9a" stroke-width="1.5"/>
+      <path d="M63 134V145H83V134" fill="#d2d8db"/><text x="123" y="130" class="part">地板</text>
+      <path d="M6 10H40M6 17H40M56 10H90M56 17H90M106 10H140M106 17H140M156 10H190M156 17H190" stroke="#becbd7" stroke-width="4"/>
     </g>
+    <g id="valve"><circle r="12" fill="#173d3c" stroke="#77dfd0" stroke-width="2"/><path d="M-7 0H7M0-7V7" stroke="#a9efe5" stroke-width="2"/></g>
   </defs>
-
-  <rect width="1480" height="1180" fill="url(#bg)"/>
-  <rect x="40" y="36" width="6" height="72" rx="3" fill="#72dfdd"/>
-  <text x="66" y="68" class="title">地面一块块搭，起飞后一整艘飞</text>
-  <text x="66" y="101" class="subtitle">飞船停泊与整船飞行切换 · 机制示意图，不是游戏运行画面</text>
-  <rect x="1250" y="45" width="182" height="39" rx="19" fill="#203c43"/>
-  <text x="1341" y="71" text-anchor="middle" class="chip cyan">同一艘船 · 两种状态</text>
-
-  <rect x="40" y="136" width="650" height="423" rx="20" class="panel"/>
-  <rect x="790" y="136" width="650" height="423" rx="20" class="panel"/>
-  <text x="66" y="181" class="heading cyan">① 停泊：按部件阻挡</text>
-  <text x="66" y="212" class="small">地面落稳 / 海面停泊 · Landed / Floating</text>
-  <g transform="translate(82 247)"><use href="#ship"/><use href="#pieceOutlines" class="pulse"/></g>
-  <path d="M64 463H308" stroke="#71b9bd" stroke-width="4"/>
-  <path d="M66 478Q83 467 100 478T134 478T168 478T202 478T236 478T270 478T304 478" fill="none" stroke="#4c8499" stroke-width="2"/>
-  <text x="337" y="281" class="body">墙、箱子等阻挡部件</text>
-  <text x="337" y="313" class="body cyan">各自负责静态碰撞</text>
-  <text x="337" y="361" class="small">地板不会被补成实心墙</text>
-  <text x="337" y="394" class="small">整船表现刚体停止模拟</text>
-  <rect x="66" y="504" width="598" height="34" rx="9" fill="#203a44"/>
-  <text x="365" y="527" text-anchor="middle" class="small" style="fill:#bfe8e7">照常逐块建造、拆除、维修和操作</text>
-
-  <text x="816" y="181" class="heading gold">② 飞行：按整船运动</text>
-  <text x="816" y="212" class="small">开始起飞 → 太空巡航 → 地表下降，都用整船方式</text>
-  <g transform="translate(833 251)">
-    <g class="drift">
-      <use href="#ship"/>
-      <path d="M-3-3H197V131H129V65H-3Z M63 129H131V197H63Z" fill="none" stroke="#ffd07a" stroke-width="4" stroke-linejoin="round" class="pulse"/>
-      <path d="M77 201Q97 263 117 201Q97 225 77 201" fill="#f6ab5b" class="flame"/>
-      <path d="M87 201Q97 241 107 201Z" fill="#ffe6a4" class="flame"/>
-    </g>
+  <rect width="1520" height="1160" fill="url(#background)"/>
+  <rect x="40" y="36" width="6" height="76" rx="3" fill="#77dfd0"/>
+  <text x="65" y="72" class="title">地面各自独立，点火才装成飞船</text>
+  <text x="65" y="106" class="small">GM 创建与玩家手放走同一套普通建筑规则；起飞、落地交接同一批真实部件。</text>
+  <rect x="1175" y="43" width="305" height="40" rx="20" fill="#20384b"/>
+  <text x="1327" y="69" class="tag muted">机制示意图 · 非游戏运行画面</text>
+  <rect x="40" y="147" width="440" height="590" rx="20" class="panel"/>
+  <rect x="540" y="147" width="440" height="590" rx="20" class="panel"/>
+  <rect x="1040" y="147" width="440" height="590" rx="20" class="panel"/>
+  <text x="65" y="192" class="heading teal">① 地面：普通独立建筑</text>
+  <text x="565" y="192" class="heading gold">② 点火：收集并装配</text>
+  <text x="1065" y="192" class="heading blue">③ 落地：还原普通建筑</text>
+  <text x="65" y="223" class="small">GM 生成 = 玩家一块块放下</text>
+  <text x="565" y="223" class="small">执行 ignite，成功后开始升空</text>
+  <text x="1065" y="223" class="small">停稳后，整船一次对齐再拆开</text>
+  <g transform="translate(65 265)">
+    <use href="#parts"/>
+    <rect x="264" y="11" width="100" height="98" rx="10" fill="#244f50" stroke="#77dfd0" stroke-width="2"/>
+    <text x="314" y="41" class="tag teal">地面</text><text x="314" y="66" class="tag teal">加油站</text>
+    <path d="M264 84H222V75H196" class="pipe"/><use href="#valve" x="224" y="84"/>
+    <path d="M264 113H240V149H196" class="power"/>
+    <text x="297" y="143" class="tiny">普通管道 / 电线</text>
+    <path d="M-2 163H387" stroke="#68849d" stroke-width="3"/>
   </g>
-  <text x="1084" y="281" class="body">一艘船一个表现刚体</text>
-  <text x="1084" y="313" class="body gold">共享整船的碰撞形状</text>
-  <text x="1084" y="361" class="small">部件随船一起平移、转动</text>
-  <text x="1084" y="394" class="small">逐件碰撞关闭，避免重复挡路</text>
-  <rect x="816" y="504" width="598" height="34" rx="9" fill="#3d342b"/>
-  <text x="1115" y="527" text-anchor="middle" class="small" style="fill:#f6ddb1">太空计算沿用原来的独立物理场景和动态刚体</text>
-
-  <path d="M704 291H776" class="arrow"/>
-  <text x="740" y="266" text-anchor="middle" class="tiny">开始起飞</text>
-  <path d="M776 424H704" class="arrow"/>
-  <text x="740" y="457" text-anchor="middle" class="tiny">落地停稳</text>
-
-  <rect x="40" y="583" width="1400" height="144" rx="18" fill="#182b3d" stroke="#35506a" stroke-width="1.5"/>
-  <text x="66" y="621" class="body" style="font-weight:700">切换时机</text>
-  <path d="M278 646H1284" class="route travel"/>
-  <rect x="222" y="626" width="184" height="42" rx="21" fill="#254e57"/>
-  <rect x="473" y="626" width="184" height="42" rx="21" fill="#59462f"/>
-  <rect x="724" y="626" width="184" height="42" rx="21" fill="#59462f"/>
-  <rect x="975" y="626" width="184" height="42" rx="21" fill="#59462f"/>
-  <rect x="1226" y="626" width="184" height="42" rx="21" fill="#254e57"/>
-  <text x="314" y="654" text-anchor="middle" class="chip cyan">停泊</text>
-  <text x="565" y="654" text-anchor="middle" class="chip gold">起飞 Lifting</text>
-  <text x="816" y="654" text-anchor="middle" class="chip gold">巡航 Cruising</text>
-  <text x="1067" y="654" text-anchor="middle" class="chip gold">地表下降</text>
-  <text x="1318" y="654" text-anchor="middle" class="chip cyan">停泊</text>
-  <text x="314" y="700" text-anchor="middle" class="tiny">逐件静态阻挡</text>
-  <path d="M475 691H1158" stroke="#ffd07a" stroke-width="2"/>
-  <text x="816" y="713" text-anchor="middle" class="tiny" style="fill:#f3d6a4">从起飞那一刻开始，连续按整船运动</text>
-  <text x="1318" y="700" text-anchor="middle" class="tiny">停稳、清零速度</text>
-
-  <rect x="40" y="751" width="1400" height="150" rx="18" class="panel"/>
-  <text x="66" y="793" class="heading green">运动方式变了，船上的东西还是原来那些</text>
-  <g transform="translate(71 828)">
-    <rect width="286" height="44" rx="11" fill="#263e44"/><text x="143" y="29" text-anchor="middle" class="body">部件身份保留</text>
-    <rect x="323" width="286" height="44" rx="11" fill="#263e44"/><text x="466" y="29" text-anchor="middle" class="body">库存沿用，不复制</text>
-    <rect x="646" width="286" height="44" rx="11" fill="#263e44"/><text x="789" y="29" text-anchor="middle" class="body">机器状态继续保留</text>
-    <rect x="969" width="370" height="44" rx="11" fill="#263e44"/><text x="1154" y="29" text-anchor="middle" class="body">太空里仍可施工和维修</text>
+  <text x="65" y="466" class="body">地板、墙、箱子、设备各自存在</text>
+  <text x="65" y="500" class="small">分别建造、拆除、受损、保存</text>
+  <text x="65" y="531" class="small">机器直接接入所在世界的管电网</text>
+  <rect x="65" y="553" width="390" height="64" rx="11" fill="#204441"/>
+  <text x="83" y="579" class="body teal">打开控制台只打开面板</text>
+  <text x="83" y="603" class="small">查看、检查期间仍是普通地面建筑</text>
+  <text x="65" y="653" class="tiny">地面归普通建筑系统管理</text>
+  <text x="65" y="677" class="tiny">无 ShipView / ParkedPieces / 活动 ShipState</text>
+  <text x="65" y="706" class="small teal">自然连到附近的普通地面设施</text>
+  <g transform="translate(624 265)">
+    <rect x="-12" y="-12" width="220" height="170" rx="13" fill="#433d2e" stroke="#ffd080" stroke-width="3"/>
+    <use href="#parts"/>
+    <path d="M61 148Q73 196 85 148Z" fill="#ffba6e"/><path d="M67 148Q73 176 79 148Z" fill="#fff0b0"/>
+    <path d="M232 76H259M284 76H312" class="pipe"/>
+    <path d="M266 64 279 87M279 64 266 87" stroke="#ff9b8e" stroke-width="3"/>
+    <text x="273" y="113" class="tiny" text-anchor="middle">断开</text>
   </g>
-
-  <rect x="40" y="925" width="1400" height="194" rx="18" class="panel"/>
-  <text x="66" y="967" class="heading">被打断后：按还连着的部分，拆成几个运动整体</text>
-  <g transform="translate(72 994)">
-    <rect width="42" height="42" rx="4" class="slot"/><rect x="46" width="42" height="42" rx="4" class="slot"/>
-    <rect x="92" width="42" height="42" rx="4" class="slot"/><rect x="138" width="42" height="42" rx="4" class="slot"/>
-    <rect x="184" width="42" height="42" rx="4" class="slot"/><rect x="230" width="42" height="42" rx="4" class="slot"/>
-    <rect x="-5" y="-5" width="282" height="52" rx="8" fill="none" stroke="#ffd07a" stroke-width="3"/>
-    <path d="M136-12 124 10 143 20 129 51" fill="none" stroke="#ff8d84" stroke-width="4"/>
-    <text x="136" y="82" text-anchor="middle" class="small">船体连接被破坏</text>
+  <text x="565" y="466" class="body">从控制台脚下的地板开始收集</text>
+  <text x="565" y="500" class="small">沿四邻连通的地板找到船体范围</text>
+  <text x="565" y="531" class="small">只收集被完整承载的建筑与设备</text>
+  <text x="565" y="575" class="body gold">真实机器和库存一起移交</text>
+  <text x="565" y="609" class="small">创建活动船体，整船移动与旋转</text>
+  <text x="565" y="653" class="small">起飞后与地面加油站、电网分离</text>
+  <text x="565" y="685" class="small">飞行中由船内的正式网络工作</text>
+  <text x="565" y="716" class="tiny">点火条件不通过：地面建筑保持原状</text>
+  <g transform="translate(1065 263)">
+    <path d="M0 0H390M0 50H390M0 100H390M0 150H390M0 200H390M0 0V200M50 0V200M100 0V200M150 0V200M200 0V200M250 0V200M300 0V200M350 0V200" class="grid"/>
+    <g transform="translate(92 10) rotate(12 98 73)" opacity=".35"><use href="#parts"/></g>
+    <g transform="translate(100 50)"><use href="#parts"/></g>
+    <path d="M41 77V151H84" class="arrow"/>
+    <text x="39" y="48" class="tiny">统一吸附</text>
   </g>
-  <path d="M380 1016H465" class="arrow"/>
-  <g transform="translate(501 991) rotate(-5 44 21)">
-    <rect width="42" height="42" rx="4" class="slot"/><rect x="46" width="42" height="42" rx="4" class="slot"/>
-    <rect x="-5" y="-5" width="98" height="52" rx="8" fill="none" stroke="#72dfdd" stroke-width="3"/>
-  </g>
-  <g transform="translate(645 1017) rotate(7 44 21)">
-    <rect width="42" height="42" rx="4" class="slot"/><rect x="46" width="42" height="42" rx="4" class="slot"/>
-    <rect x="-5" y="-5" width="98" height="52" rx="8" fill="none" stroke="#8ee6b4" stroke-width="3"/>
-  </g>
-  <g transform="translate(788 987) rotate(-10 21 21)">
-    <rect width="42" height="42" rx="4" class="slot"/>
-    <rect x="-5" y="-5" width="52" height="52" rx="8" fill="none" stroke="#c4a8ff" stroke-width="3"/>
-  </g>
-  <text x="962" y="1016" class="body">分裂沿用原来的受损规则</text>
-  <text x="962" y="1051" class="small">每块残骸保留自己的部件和状态</text>
-  <text x="962" y="1084" class="small">碰撞形状跟着剩余结构更新</text>
-  <text x="40" y="1154" class="small">读图提示：青色 = 停泊逐件阻挡　金色 = 飞行整船运动　方块内的内容始终按各自职责管理。</text>
+  <text x="1065" y="500" class="body">最近格线 + 最近的 90° 朝向</text>
+  <text x="1065" y="531" class="small">全船一次取整，保留部件相对位置</text>
+  <text x="1065" y="575" class="body blue">恢复普通 Item 和地表机器</text>
+  <text x="1065" y="609" class="small">结束活动船体，再次逐块建造操作</text>
+  <text x="1065" y="653" class="small">真实机器重新接入所在世界网络</text>
+  <text x="1065" y="685" class="small">地面端口对齐后，按普通规则补给</text>
+  <text x="1065" y="716" class="tiny">落地后继续沿用普通地面保存方式</text>
+  <path d="M492 361H526" class="arrow"/>
+  <text x="510" y="336" class="tiny" text-anchor="middle">ignite</text>
+  <path d="M992 361H1026" class="arrow"/>
+  <text x="1010" y="336" class="tiny" text-anchor="middle">停稳</text>
+  <rect x="40" y="766" width="1440" height="193" rx="18" class="panel"/>
+  <text x="65" y="807" class="heading teal">地面加油站怎么接？沿用普通补给规则</text>
+  <rect x="67" y="837" width="175" height="63" rx="10" fill="#244f50" stroke="#77dfd0"/>
+  <text x="154" y="875" class="body" text-anchor="middle">地面供给设备</text>
+  <path d="M242 868H430" class="pipe"/><use href="#valve" x="333" y="868"/>
+  <path d="M380 859 393 868 380 877" fill="none" stroke="#d3fff4" stroke-width="2"/>
+  <rect x="431" y="837" width="175" height="63" rx="10" fill="#244f50" stroke="#77dfd0"/>
+  <text x="518" y="875" class="body" text-anchor="middle">落地后的储罐</text>
+  <text x="646" y="855" class="body">端口实际连通 · 管道方向正确 · 阀门允许通过</text>
+  <text x="646" y="887" class="small">满足普通机器的实际供给、驱动和流体条件后，才会发生输送。</text>
+  <text x="67" y="934" class="small">起飞时拆开外部连接；落地对齐后由普通网络重建连接。仅仅有一根裸管，不保证产生流动。</text>
+  <rect x="40" y="987" width="1440" height="123" rx="18" fill="#18322f" stroke="#345b50"/>
+  <text x="65" y="1028" class="heading teal">两次交接，始终是原来的那批东西</text>
+  <text x="65" y="1069" class="body">保留 Guid 身份</text>
+  <text x="374" y="1069" class="body">保留耐久与受损状态</text>
+  <text x="781" y="1069" class="body">移交真实库存、储能与流体</text>
+  <text x="40" y="1140" class="tiny">青色：普通地面建筑与网络　金色：装配后的活动飞船　蓝色：落地对齐并恢复普通建筑</text>
 </svg>

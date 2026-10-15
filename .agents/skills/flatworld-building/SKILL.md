@@ -33,6 +33,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - 占地来自 FootprintWidth/Height，吸附格为左下锚点；逐格按拓扑归一化并登记/注销。visual.collider 是实体物理范围，health.collider 是独立受击范围，均不决定建造/导航格。
 - BuildingOccupancyRegistry 是放置、通行、移速和动态 LOS 来源；Revision/CellChanged 驱动脏区，视线刷新不只看最终可走值。相邻格 Collider 接触不互斥，同格按层拒绝。
 - 普通建筑通行由 IBuildingTraversalPolicy，机器读目录 BlocksMovement/PlayerMoveSpeedMultiplier；机器接触几何由区块合并静态 Collider 投影。机械通过 IBuildingPlacementExtension 声明层/候选/快照，IBuildingPlacementCommitted 后才登记世界副作用。
+- 普通船地板由 Mod_ShipPart 声明独立占地层6和通行规则，可与管线/设备共格；船门复用正式 Door 模块。安装朝向来自候选数据，预览/占地按同一四向尺寸计算；Mod_Building.Orientation 补偿多格贴图和碰撞，卸载恢复，不继承手持旋转。
 - 门绑定所属主 Sprite/根碰撞体，开门保留交互与占格，经 SetPassable 改通行；安装后再同步状态。模块碰撞体引用运行时绑定 Item 根，不额外叠加模块 Collider。
 - PlacementLayer=Ground 占 Layer2，允许与 Layer0 共格；Trigger、不阻导航/LOS、无三类阴影。排序为 ground-building，Queue2991 位于地表覆盖后、Blocking2992 前。
 - requiredGroundSupport 为当前定义配置，各格比较有效表面 loadCapacity，等值可放；支撑覆盖优先，其次液面 worldWater，再次干地 Tile。

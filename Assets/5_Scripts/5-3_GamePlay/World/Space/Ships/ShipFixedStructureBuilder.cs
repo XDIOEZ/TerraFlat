@@ -24,16 +24,10 @@ namespace FlatWorld.Spaceflight
             public bool IsFloor;
         }
 
-        private readonly struct AddedPiece
+        public static bool TryBuild(Player player, FixedStructureDefinition template,
+            out IReadOnlyList<ShipGroundBuildingStore.Entry> buildings, out string reason)
         {
-            public readonly ShipState Ship;
-            public readonly ShipPieceState Piece;
-            public AddedPiece(ShipState ship, ShipPieceState piece) { Ship = ship; Piece = piece; }
-        }
-
-        public static bool TryBuild(Player player, FixedStructureDefinition template, out ShipState ship, out string reason)
-        {
-            ship = null;
+            buildings = null;
             reason = null;
             SpaceSession session = SpaceSession.Current;
             ChunkMgr chunks = ChunkMgr.ExistingInstance;
@@ -42,9 +36,7 @@ namespace FlatWorld.Spaceflight
                 !chunks.IsWorldModelRuntimeActive || chunks.ActiveGenerationProfile?.Settings.Mode != ChunkGenerationMode.Surface)
             { reason = "请在单机地表世界就绪后生成飞船。"; return false; }
 
-            var added = new List<AddedPiece>();
-            var originalShips = new HashSet<string>();
-            foreach (ShipState existing in session.State.Ships) originalShips.Add(existing.ShipId);
+            var added = new List<ShipGroundBuildingStore.Entry>();
             try
             {
                 if (template == null || !string.Equals(template.Kind, "ship", StringComparison.OrdinalIgnoreCase))
@@ -58,31 +50,26 @@ namespace FlatWorld.Spaceflight
                     if (!TryFindSite(player, template, chunks, session, out origin))
                     { reason = "附近没有已加载、干燥且无障碍的完整空地，请移到更开阔的位置。"; return false; }
 
+                string instanceId = Guid.NewGuid().ToString("N");
+                string world = SceneManager.GetActiveScene().name;
                 foreach (PreparedMember entry in members)
                 {
-                    Vector2 position = WorldLocalPresentation.ProjectPosition(new Vector2(origin.x + entry.Member.X + .5f,
-                        origin.y + entry.Member.Y + .5f));
-                    ShipPieceState piece = session.AddPiece(entry.Data, position, entry.Member.QuarterTurns, out ShipState owner);
-                    added.Add(new AddedPiece(owner, piece));
-                    if (originalShips.Contains(owner.ShipId)) throw new InvalidOperationException("生成位置与已有飞船相邻，请重新选址。" );
-                    ship ??= owner;
-                    if (!ReferenceEquals(ship, owner)) throw new InvalidOperationException("模板地板必须连接成一艘完整飞船。" );
-                    if (MachineCatalog.Get(entry.Data.IDName) != null)
+                    JObject special = ItemSpecialDataJsonStore.ReadRoot(entry.Data.ItemSpecialData);
+                    special[TemplateMarker]["instanceId"] = instanceId;
+                    entry.Data.ItemSpecialData = special.ToString(Formatting.None);
+                    ShipGroundBuildingStore.Entry placed = ShipGroundBuildingStore.Place(entry.Data,
+                        origin + new Vector2Int(entry.Member.X, entry.Member.Y), entry.Member.QuarterTurns, world);
+                    added.Add(placed);
+                    if (placed.Machine != null)
                     {
-                        using (MachineWorld.UseScope("ship:" + ship.ShipId))
+                        using (MachineWorld.UseNodeScope(placed.Machine))
                         {
-                            MachineEntity node = MachineWorld.GetById(entry.Data.Guid);
-                            if (node == null) throw new InvalidOperationException("生成的船上机器没有登记。" );
-                            FixedStructureResourceInitializer.ApplyInventories(node, entry.Member.Resources);
-                            CaptureMachinePiece(session, piece, node);
+                            FixedStructureResourceInitializer.ApplyInventories(placed.Machine, entry.Member.Resources);
                         }
                     }
                 }
-                if (ship == null) throw new InvalidOperationException("模板没有可生成的船体。" );
-                session.CommitPiece(ship, added[added.Count - 1].Piece);
-                FillCabins(ship, template.CabinGas);
-                ShipDockingService.SynchronizePorts(ship);
-                reason = "已生成“" + template.DisplayName + "”，可直接进入船舱测试。";
+                buildings = added;
+                reason = "已逐件生成“" + template.DisplayName + "”的普通地面建筑，操作控制台点火后才装配起飞。";
                 return true;
             }
             catch (Exception error)
@@ -90,9 +77,9 @@ namespace FlatWorld.Spaceflight
                 // 候选按相反顺序撤销，失败时不拆除现场已有的部件。
                 var failures = new List<string>();
                 for (int i = added.Count - 1; i >= 0; i--)
-                    try { if (!session.RollbackPiece(added[i].Ship, added[i].Piece)) failures.Add(added[i].Piece.PieceId); }
+                    try { ShipGroundBuildingStore.RollbackCreated(added[i]); }
                     catch (Exception rollback) { failures.Add(rollback.Message); }
-                ship = null;
+                buildings = null;
                 reason = "生成失败：" + error.Message;
                 if (failures.Count > 0) reason += "；部分候选撤销失败：" + string.Join("；", failures);
                 return false;
@@ -111,7 +98,10 @@ namespace FlatWorld.Spaceflight
                 Mod_Building.SetInstalledDataState(data);
                 FixedStructureResourceInitializer.Prepare(data, member.Resources);
                 JObject special = ItemSpecialDataJsonStore.ReadRoot(data.ItemSpecialData);
-                special[TemplateMarker] = new JObject { ["templateId"] = template.Id, ["memberId"] = member.MemberId };
+                var marker = new JObject { ["templateId"] = template.Id, ["memberId"] = member.MemberId };
+                if (template.CabinGas != null && Mod_ShipPart.Read(data)?.Kind == ShipPieceKind.Console)
+                    marker["initialCabinGas"] = JObject.FromObject(template.CabinGas);
+                special[TemplateMarker] = marker;
                 data.ItemSpecialData = special.ToString(Formatting.None);
                 members.Add(new PreparedMember { Member = member, Data = data,
                     IsFloor = Mod_ShipPart.Read(data)?.Kind == ShipPieceKind.Floor });
@@ -174,14 +164,6 @@ namespace FlatWorld.Spaceflight
             session.CaptureMachinePieceSnapshot(piece, node);
         }
 
-        private static void FillCabins(ShipState ship, FixedStructureGas gas)
-        {
-            if (gas == null) return;
-            if (ship.Compartments.Count == 0) throw new InvalidOperationException("模板配置了舱气，但船体没有密闭舱。" );
-            foreach (ShipCompartmentState room in ship.Compartments)
-                room.Gas = FixedStructureResourceInitializer.CreateFluidState(gas, null, room.VolumeLiters,
-                    ShipAtmosphereService.MinimumCabinGasSpaceLiters, double.MaxValue);
-        }
         #endregion
 
         #region 地表空地选址
@@ -263,6 +245,8 @@ namespace FlatWorld.Spaceflight
         #region 模板资源补充
         public static bool TryRefill(Player player, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
         {
+            if (player != null && !SpaceMgr.IsSpaceScene(player.gameObject.scene.name))
+                return TryRefillGround(player, templates, out reason);
             reason = null;
             SpaceSession session = SpaceSession.Current;
             if (GameNetwork.IsOnline || GameManager.Instance?.IsGameplayReady != true || player == null || session?.State == null)
@@ -327,6 +311,50 @@ namespace FlatWorld.Spaceflight
 
         private static JObject ReadMarker(ItemData data)
             => data == null ? null : ItemSpecialDataJsonStore.ReadRoot(data.ItemSpecialData)[TemplateMarker] as JObject;
+
+        // 停泊补给和普通设施共用地表作用域，旁边管道也会按同一张真实网络供料。
+        private static bool TryRefillGround(Player player, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
+        {
+            reason = "24 米内没有由固定模板生成的地面建筑。";
+            if (GameNetwork.IsOnline || !GameNetwork.HasStateAuthority || templates == null) return false;
+            try
+            {
+                List<ShipGroundBuildingStore.Entry> all = ShipGroundBuildingStore.Collect(player.gameObject.scene.name);
+                ShipGroundBuildingStore.Entry nearest = null;
+                double distance = 24d * 24d;
+                foreach (ShipGroundBuildingStore.Entry entry in all)
+                {
+                    if (ReadMarker(entry.Data) == null) continue;
+                    Vector2 position = WorldLocalPresentation.ProjectPosition(new Vector2(entry.Cell.x + .5f, entry.Cell.y + .5f));
+                    double sqr = ((Vector2)player.transform.position - position).sqrMagnitude;
+                    if (sqr < distance) { distance = sqr; nearest = entry; }
+                }
+                if (nearest == null) return false;
+                string instance = (string)ReadMarker(nearest.Data)["instanceId"];
+                using var scope = MachineWorld.UseScope(player.gameObject.scene.name);
+                var resources = new Dictionary<int, FixedStructureResources>();
+                var entries = new List<(MachineEntity Node, FixedStructureResources Resources)>();
+                foreach (ShipGroundBuildingStore.Entry entry in all)
+                {
+                    JObject marker = ReadMarker(entry.Data);
+                    if (entry.Machine == null || marker == null || (string)marker["instanceId"] != instance) continue;
+                    FixedStructureDefinition template = null;
+                    foreach (FixedStructureDefinition candidate in templates)
+                        if (candidate.Id == (string)marker["templateId"]) { template = candidate; break; }
+                    FixedStructureMember member = template?.Members.Find(value => value.MemberId == (string)marker["memberId"]);
+                    if (member == null || member.ItemId != entry.Data.IDName) throw new InvalidOperationException("建筑与当前模板不匹配。");
+                    if (member.Resources == null) continue;
+                    entries.Add((entry.Machine, member.Resources)); resources.Add(entry.Guid, member.Resources);
+                }
+                var groups = new List<MachineWorld.FluidTankGroup>();
+                MachineWorld.CollectFluidTankGroups(groups);
+                FixedStructureResourceInitializer.ValidateSharedResources(groups, resources);
+                var filled = new HashSet<FluidInventory>();
+                foreach (var entry in entries) FixedStructureResourceInitializer.Refill(entry.Node, entry.Resources, filled);
+                reason = "已补充附近普通地面设施的电量、流体和测试库存。"; return true;
+            }
+            catch (Exception error) { reason = "补充未完成：" + error.Message; return false; }
+        }
         #endregion
     }
 

@@ -267,7 +267,6 @@ namespace FlatWorld.Spaceflight
             result["wholeShipBody"] = presenter.WholeShipBody;
             result["activeBodies"] = presenter.ActiveBodyCount;
             result["activeBlockers"] = presenter.ActiveBlockerCount;
-            result["groundBlockers"] = presenter.GroundBlockerCount;
             return result;
         }
 

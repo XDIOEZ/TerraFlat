@@ -6,6 +6,8 @@
 
 Lua 编写、截图上限和通用执行/报告契约统一见 [flatworld-lua-testing 导航 Skill](../../../../../../.agents/skills/flatworld-lua-testing/SKILL.md)。
 
+2026-10-16：`live_flight` 改为 GM 逐件创建普通建筑、点火才装配、落地按格线/90°恢复普通建筑；检查同 Guid、普通地表作用域、撤销船记录和 ShipView/ParkedPieces。落地后再邻接创建普通源气罐→管道→定向出气口，等待正式世界 Tick，断言目标燃料增加、来源减少和全链 mol 守恒；没有直接给目标灌油。尚未覆盖预建加油站的精确驾驶落点、跨客户端还原或未加载地表立即物化。本轮用户正在 PlayMode，仅补代码与断言，未编译或运行。
+
 ```powershell
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json
 python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases universe_content sector_rules

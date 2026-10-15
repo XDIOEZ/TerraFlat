@@ -460,32 +460,42 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         {
             FixedStructureDefinition template = ships[index];
             yield return PrepareSite(template);
-            if (!ShipFixedStructureBuilder.TryBuild(CurrentPlayer(), template, out ShipState ship, out string reason))
+            string groundWorld = SceneManager.GetActiveScene().name;
+            JObject beforeBuild = GroundBuildingSnapshot(Array.Empty<int>());
+            if (!ShipFixedStructureBuilder.TryBuild(CurrentPlayer(), template,
+                    out IReadOnlyList<ShipGroundBuildingStore.Entry> buildings, out string reason))
                 throw new InvalidOperationException(reason);
             homeChanged = true;
-            double deadline = Time.realtimeSinceStartupAsDouble + 10d;
-            string console = null;
-            while (console == null && Time.realtimeSinceStartupAsDouble < deadline)
-            { console = session.ResolveConsole(ship.ShipId); yield return null; }
-            if (console == null) throw new InvalidOperationException("真实模板船的控制台未获得供电。");
-            ShipPieceState consolePiece = ship.Pieces.Find(piece => piece.PieceId == console);
+            var groundIds = new HashSet<int>();
+            ShipGroundBuildingStore.Entry consoleEntry = null;
+            foreach (ShipGroundBuildingStore.Entry entry in buildings)
+            {
+                groundIds.Add(entry.Guid);
+                if (SpaceSession.ResolvePartConfiguration(entry.Data)?.Kind == ShipPieceKind.Console) consoleEntry ??= entry;
+            }
+            if (consoleEntry?.Machine == null) throw new InvalidOperationException("普通地面船型缺少机器控制台。");
+            string console = consoleEntry.Guid.ToString(CultureInfo.InvariantCulture);
             Player player = CurrentPlayer();
             Camera camera = Camera.main ?? throw new InvalidOperationException("测试玩家没有镜头。");
-            Vector2 position = session.DisplayPoint(ship, consolePiece.CellX + .5d, consolePiece.CellY + .5d);
+            Vector2 position = WorldLocalPresentation.ProjectPosition(consoleEntry.Machine.Snapshot.transform.position);
             Mod_PlayerTraits traits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
             if (traits == null || !traits.TryTeleportToScreenPosition(camera.WorldToScreenPoint(position)))
                 throw new InvalidOperationException("正式 GM 入口无法准备控制台旁的玩家。");
-            yield return Wait(.25d);
-            bool entered = session.EnterConsole(CurrentPlayer(), console);
-            if (!entered) throw new InvalidOperationException("正式控制台拒绝进入驾驶。");
-            JObject landed = ShipSnapshot(ship);
-            JObject surfaceViews = ShipViewSnapshot(ship);
+            yield return WaitUntil(() => ShipGroundAssembly.TryGetGroundConsole(CurrentPlayer(), consoleEntry.Guid,
+                    out MachineEntity node) && node.ElectricalPowerRatio >= .999f,
+                10d, "普通地面控制台未获得供电。");
+            JObject landed = GroundBuildingSnapshot(groundIds);
+            JObject surfaceViews = GroundViewSnapshot(groundIds, null);
             if (!ShipFixedStructureBuilder.TryRefill(CurrentPlayer(), templates, out reason))
                 throw new InvalidOperationException(reason);
-            JObject filled = ShipSnapshot(ship);
+            JObject filled = GroundBuildingSnapshot(groundIds);
             IsMigrationExpected = true;
-            if (!session.ToggleIgnition(console)) throw new InvalidOperationException("真实模板船点火被拒绝。");
+            if (!ShipGroundAssembly.TryLaunch(CurrentPlayer(), consoleEntry.Guid, out ShipState ship, out reason))
+                throw new InvalidOperationException(reason);
+            bool entered = session.EnterConsole(CurrentPlayer(), console);
+            if (!entered) throw new InvalidOperationException("正式控制台拒绝进入已装配飞船的驾驶位。");
             JObject lifting = ShipSnapshot(ship);
+            JObject liftingGround = GroundBuildingSnapshot(groundIds);
             yield return WaitUntil(() => session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising && Ready(),
                 90d, "飞船没有完成正式起飞和太空迁移。");
             IsMigrationExpected = false;
@@ -517,12 +527,19 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             bool landingAccepted = session.RequestLanding(console);
             if (!landingAccepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
             IsMigrationExpected = true;
-            yield return WaitUntil(() => (session.GetFlight(ship.ShipId)?.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating) && Ready(),
-                90d, "飞船未完成正式降落。");
+            yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null &&
+                    GroundBuildingsRestored(groundIds, groundWorld),
+                90d, "飞船未完成正式降落及普通地面建筑移交。");
             IsMigrationExpected = false;
-            JObject landedAgain = ShipSnapshot(ship);
+            JObject landedAgain = GroundBuildingSnapshot(groundIds);
+            landedAgain["flightRemoved"] = session.GetFlight(ship.ShipId) == null;
+            landedAgain["shipRemoved"] = session.GetShip(ship.ShipId) == null;
+            landedAgain["supported"] = session.GetPassenger(CurrentPlayer()).Supported;
             JObject returnedViews = ShipViewSnapshot(ship);
+            JObject autoRefuel = null;
+            yield return RefuelLandedBuildings(groundIds, value => autoRefuel = value);
             results.Add(new JObject { ["templateId"] = template.Id, ["enteredConsole"] = entered,
+                ["beforeBuild"] = beforeBuild, ["liftingGround"] = liftingGround,
                 ["landed"] = landed, ["filled"] = filled, ["lifting"] = lifting, ["cruising"] = cruising,
                 ["thrust"] = thrust, ["coast"] = coast, ["turned"] = turned, ["navigated"] = navigated,
                 ["navigationAccepted"] = navigationAccepted, ["navigationDistance"] = distance,
@@ -530,6 +547,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
                 ["shipTransition"] = shipTransition,
                 ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain,
+                ["autoRefuel"] = autoRefuel,
                 ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returnedViews } });
             // 最后一艘保留正式降落现场，供紧随其后的 Lua 截图使用。
             if (index + 1 < ships.Count) yield return ReturnHome();
@@ -539,20 +557,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
 
     private JObject ShipViewSnapshot(ShipState ship)
     {
-        // 仅采样本用例船体的真实表现，其他船的旧命中不能代替它的往返复用。
-        JObject result = session.ShipViewCacheSnapshot();
-        var pieceIds = new HashSet<string>();
-        foreach (ShipPieceState piece in ship.Pieces) pieceIds.Add(piece.PieceId);
-        var pieces = new JArray();
-        foreach (JObject row in (JArray)result["pieces"])
-            if (pieceIds.Contains(row.Value<string>("id"))) pieces.Add(row.DeepClone());
-        var presenters = new JArray();
-        foreach (JObject row in (JArray)result["presenters"])
-            if (row.Value<string>("id") == ship.ShipId) presenters.Add(row.DeepClone());
-        result["pieces"] = pieces;
-        result["presenters"] = presenters;
-        result["scene"] = SceneManager.GetActiveScene().name;
-        return result;
+        var pieceIds = new HashSet<int>();
+        foreach (ShipPieceState piece in ship.Pieces) pieceIds.Add(int.Parse(piece.PieceId, CultureInfo.InvariantCulture));
+        return GroundViewSnapshot(pieceIds, ship.ShipId);
     }
 
     private IEnumerator CoastOwnedShip(ShipState ship, Action<JObject> completed)
@@ -781,11 +788,14 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         decimal hydrogen = 0m, oxygen = 0m;
         var inventories = new HashSet<FluidInventory>();
         var nodes = new List<MachineEntity>();
+        var machines = new JArray();
         using (MachineWorld.UseScope("ship:" + ship.ShipId))
         {
             MachineWorld.CollectNodes(nodes);
             foreach (MachineEntity node in nodes)
             {
+                machines.Add(new JObject { ["guid"] = node.Id, ["scope"] = node.ScopeKey,
+                    ["itemId"] = node.Snapshot.IDName });
                 if (node.Definition.Fluid?.Kind != "tank") continue;
                 FluidInventory inventory = MachineWorld.GetFluidInventory(node);
                 if (inventory == null || !inventories.Add(inventory)) continue;
@@ -794,13 +804,19 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             }
         }
         double output = 0d;
-        foreach (ShipPieceState piece in ship.Pieces) output += session.GetEngineOutput(piece.PieceId);
+        var pieces = new JArray();
+        foreach (ShipPieceState piece in ship.Pieces)
+        {
+            output += session.GetEngineOutput(piece.PieceId);
+            pieces.Add(new JObject { ["id"] = piece.PieceId, ["itemId"] = piece.ItemId, ["alive"] = piece.IsAlive });
+        }
         return new JObject { ["id"] = ship.ShipId, ["phase"] = flight?.Phase.ToString(),
             ["sector"] = Sector(ship.Sector), ["position"] = Vector(new SpaceVector2(ship.PositionX, ship.PositionY)),
             ["velocity"] = Vector(new SpaceVector2(ship.VelocityX, ship.VelocityY)), ["angle"] = ship.AngleRadians,
             ["mass"] = ship.MassKg, ["pieceCount"] = ship.Pieces.Count, ["height"] = flight?.HeightMeters,
             ["hydrogen"] = (double)hydrogen, ["oxygen"] = (double)oxygen, ["engineOutput"] = output,
-            ["spaceView"] = session.IsSpaceView, ["surfaceWorld"] = flight?.SurfaceWorldKey };
+            ["spaceView"] = session.IsSpaceView, ["surfaceWorld"] = flight?.SurfaceWorldKey,
+            ["pieces"] = pieces, ["machines"] = machines };
     }
 
     private static bool Contains(IReadOnlyCollection<SpaceSectorId> values, SpaceSectorId sector)
@@ -822,6 +838,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         if (!string.IsNullOrEmpty(controlledConsole)) session?.ClearControl(controlledConsole);
         var cleanupErrors = new List<Exception>();
         try { CleanupDamageFixtures(); }
+        catch (Exception exception) { cleanupErrors.Add(exception); }
+        try { CleanupGroundFuelFixtures(); }
         catch (Exception exception) { cleanupErrors.Add(exception); }
         for (int index = contactFixtures.Count - 1; index >= 0; index--)
         {

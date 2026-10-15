@@ -121,6 +121,8 @@ namespace FlatWorld.Gameplay.Building
         {
             if (ItemMgr.Instance == null) throw new InvalidOperationException("物品管理器尚未就绪");
             ItemData data = BuildingPlacementCandidate.Create(request, out bool restoredSnapshot);
+            if (request.RotationQuarterTurns.HasValue)
+                data.transform.rotation = Quaternion.Euler(0f, 0f, (request.RotationQuarterTurns.Value & 3) * 90f);
             Item candidate = null;
             try
             {

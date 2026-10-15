@@ -10,7 +10,7 @@ internal static class MachinePanelBuiltIns
     internal static void Register()
     {
         MachinePanelFactoryRegistry.AddBuiltIn("cultivator", entity => new CultivatorPanelSession(entity));
-        MachinePanelFactoryRegistry.AddBuiltIn("ship-device", entity => new ShipPanelSession(entity));
+        MachinePanelFactoryRegistry.AddBuiltIn("ship-device", CreateShipDevice);
         MachinePanelFactoryRegistry.AddBuiltIn("workbench", entity => new WorkbenchMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("furnace", entity => new FurnaceMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("mortar", entity => new MortarMachinePanelSession(entity));
@@ -23,6 +23,16 @@ internal static class MachinePanelBuiltIns
             new MechanicalPanelSession(entity.Definition.Heating.PanelId, entity, null, null,
                 () => entity.Logic.Status, () => entity.Logic.ActionLabel, () => entity.Logic.CanAct,
                 refreshStatusPeriodically: true));
+    }
+
+    private static IMachinePanelSession CreateShipDevice(MachineEntity entity)
+    {
+        // 地面只有控制台打开船控，其余设备沿用普通机器状态面板。
+        if (entity.ScopeKey?.StartsWith("ship:", StringComparison.Ordinal) == true ||
+            FlatWorld.Spaceflight.SpaceSession.ResolvePartConfiguration(entity.Snapshot)?.Kind == FlatWorld.Spaceflight.ShipPieceKind.Console)
+            return new ShipPanelSession(entity);
+        return new MechanicalPanelSession("UI_Mechanical", entity, null, null,
+            () => entity.Logic.Status, () => string.Empty, () => false, refreshStatusPeriodically: true);
     }
 
     private static IMachinePanelSession CreateManualProcessing(MachineEntity entity)

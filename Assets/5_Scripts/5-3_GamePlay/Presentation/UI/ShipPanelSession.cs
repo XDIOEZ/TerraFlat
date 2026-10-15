@@ -15,10 +15,11 @@ public sealed class ShipPanelSession : IMachinePanelSession
     #region 控制台会话与绑定
     private const int LogCapacity = 100;
     private static readonly List<ShipPanelSession> sessions = new();
-    private readonly SpaceSession session;
+    private SpaceSession session;
     private readonly string pieceId;
     private readonly List<TerminalEntry> entries = new();
     private string shipId;
+    private int groundConsoleGuid;
     private BasePanel panel;
     private Player actor;
     private TextMeshProUGUI status, output;
@@ -27,6 +28,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private Button landingButton;
     private Coroutine scrollRoutine;
     private bool outputDirty, observed, followCommand;
+    private bool driveAfterLaunch, transferringGroundConsole;
     private float nextRefreshTime;
     private ShipFlightPhase observedPhase;
     private bool observedIgnited, observedDriving, observedPowered;
@@ -44,13 +46,17 @@ public sealed class ShipPanelSession : IMachinePanelSession
     public bool IsOpen => IsAlive && panel.IsOpen();
 
     public ShipPanelSession(MachineEntity entity)
-        : this(SpaceSession.Current, entity.ScopeKey.Substring(5), entity.Id.ToString(CultureInfo.InvariantCulture)) { }
+        : this(SpaceSession.Current,
+            entity.ScopeKey?.StartsWith("ship:", StringComparison.Ordinal) == true ? entity.ScopeKey.Substring(5) : null,
+            entity.Id.ToString(CultureInfo.InvariantCulture),
+            entity.ScopeKey?.StartsWith("ship:", StringComparison.Ordinal) == true ? 0 : entity.Id) { }
 
-    private ShipPanelSession(SpaceSession session, string shipId, string pieceId)
+    private ShipPanelSession(SpaceSession session, string shipId, string pieceId, int groundConsoleGuid = 0)
     {
         this.session = session;
         this.shipId = shipId;
         this.pieceId = pieceId;
+        this.groundConsoleGuid = groundConsoleGuid;
         GameObject prefab = GameRes.Instance.GetPrefab("UI_Ship", false);
         if (prefab == null) throw new InvalidOperationException("飞船正式面板缺失。");
         panel = UIManager.Instance.CreatePanelFromGameObject(prefab);
@@ -64,7 +70,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         yField = FindField("FWUI_ShipY");
         pressureField = FindField("FWUI_ShipPressure");
         commandField = FindField("FWUI_ShipCommand");
-        pressureField.SetTextWithoutNotify((session.GetDevice(pieceId)?.TargetPressureKPa ?? 101.325d).ToString(CultureInfo.InvariantCulture));
+        pressureField.SetTextWithoutNotify((session?.GetDevice(pieceId)?.TargetPressureKPa ?? 101.325d).ToString(CultureInfo.InvariantCulture));
         commandField.characterLimit = 160;
         commandField.onSubmit.AddListener(SubmitCommand);
         status.richText = false;
@@ -105,7 +111,10 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
         Player nearbyPlayer = player as Player;
-        if (session == null || !session.CanOpenShipPanel(nearbyPlayer, shipId, pieceId))
+        bool valid = groundConsoleGuid != 0
+            ? ShipGroundAssembly.TryGetGroundConsole(nearbyPlayer, groundConsoleGuid, out _)
+            : session != null && session.CanOpenShipPanel(nearbyPlayer, shipId, pieceId);
+        if (!valid)
         { Dispose(); return; }
         // 每个玩家同时只保留一个船控窗口，切换部件时销毁旧实例而非叠加面板。
         foreach (ShipPanelSession other in sessions.ToArray())
@@ -169,6 +178,12 @@ public sealed class ShipPanelSession : IMachinePanelSession
         {
             Append("拒绝", "参数数量不正确。输入 help 查看命令格式。");
             RenderOutput();
+            return;
+        }
+        if (groundConsoleGuid != 0)
+        {
+            ExecuteGround(command);
+            Refresh();
             return;
         }
         string console = session.ResolveConsole(shipId, pieceId);
@@ -249,6 +264,68 @@ public sealed class ShipPanelSession : IMachinePanelSession
                 break;
         }
         Refresh();
+    }
+
+    private void ExecuteGround(string command)
+    {
+        switch (command)
+        {
+            case "help":
+                Append("系统", "地面控制台连接普通建筑。ignite：检查连通地板上的建筑并装配起飞；drive：预约起飞后驾驶；exit：取消驾驶预约；status：查看状态；clear：清空反馈。管道、电线和设备在点火前继续按普通建筑工作。");
+                break;
+            case "status":
+                Append("系统", status.text, literal: true);
+                break;
+            case "clear":
+                entries.Clear();
+                Append("系统", "反馈记录已清空。");
+                break;
+            case "drive":
+                driveAfterLaunch = true;
+                Append("完成", "已预约驾驶，请点火起飞；地面建筑会在点火时装配成船。");
+                break;
+            case "exit":
+                driveAfterLaunch = false;
+                Append("完成", "已取消起飞后的驾驶预约。");
+                break;
+            case "ignite":
+                LaunchFromGround();
+                break;
+            default:
+                Append("拒绝", "地面建筑尚未装配成船，请先点火起飞；输入 help 查看地面命令。");
+                break;
+        }
+    }
+
+    private void LaunchFromGround()
+    {
+        bool launched;
+        ShipState ship;
+        string reason;
+        // 移交普通机器会同步释放旧交互代理，此时让当前面板随控制台一起转交给飞船会话。
+        transferringGroundConsole = true;
+        try { launched = ShipGroundAssembly.TryLaunch(actor, groundConsoleGuid, out ship, out reason); }
+        finally { transferringGroundConsole = false; }
+        if (!launched)
+        {
+            Append("拒绝", string.IsNullOrWhiteSpace(reason) ? "点火失败：请检查地板、供电、航空燃料和升空推力。" : reason, literal: true);
+            return;
+        }
+        session = SpaceSession.Current;
+        shipId = ship.ShipId;
+        groundConsoleGuid = 0;
+        observed = false;
+        Append("完成", "地面建筑已装配成船，点火升空。");
+        if (!driveAfterLaunch) return;
+        driveAfterLaunch = false;
+        if (session != null && session.EnterConsole(actor, pieceId))
+        {
+            Append("完成", "已进入驾驶位，Esc 离开驾驶。");
+            RenderOutput();
+            Close();
+        }
+        else
+            Append("拒绝", "已点火起飞，进入驾驶失败；请靠近已供电的控制台重新进入。");
     }
 
     private bool TryCoordinates(string[] parts, out Vector2 point)
@@ -384,10 +461,15 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private void RefreshScreens(bool immediate)
     {
         if (!IsOpen) return;
-        if (session.State == null) { Close(); return; }
         if (!immediate && Time.unscaledTime < nextRefreshTime) return;
         nextRefreshTime = Time.unscaledTime + .2f;
         actor = ItemMgr.Instance?.User_Player ?? actor;
+        if (groundConsoleGuid != 0)
+        {
+            RefreshGroundConsole();
+            return;
+        }
+        if (session?.State == null) { Close(); return; }
         if (!session.FindPiece(pieceId, out ShipState ship, out _)) { Close(); return; }
         shipId = ship.ShipId;
         if (!session.CanOpenShipPanel(actor, shipId, pieceId)) { Close(); return; }
@@ -460,18 +542,43 @@ public sealed class ShipPanelSession : IMachinePanelSession
         RenderOutput();
     }
 
+    private void RefreshGroundConsole()
+    {
+        if (!ShipGroundAssembly.TryGetGroundConsole(actor, groundConsoleGuid, out MachineEntity console))
+        { Close(); return; }
+        landingButton.interactable = false;
+        bool powered = console.ElectricalPowerRatio >= .999f;
+        if (observed && observedPowered != powered)
+            Append("系统", powered ? "控制台供电已恢复。" : "控制台未供电，驾驶与点火指令不可用。");
+        observed = true;
+        observedPowered = powered;
+        var text = new StringBuilder();
+        text.AppendLine(Text("飞行阶段  已落地"));
+        text.AppendLine(Text("当前为普通地面建筑，尚未装配成船。"));
+        text.AppendLine(Format("控制台  {0}", Text(powered ? "已供电" : "缺少电力")));
+        text.AppendLine(Text("引擎  已停机"));
+        text.AppendLine(Text(driveAfterLaunch ? "驾驶  已预约，点火后进入驾驶位" : "驾驶  未预约"));
+        text.AppendLine();
+        text.AppendLine(Text("管道、电线和设备继续使用普通地面网络。"));
+        text.AppendLine(Text("点火时检查连通地板上的建筑，装配成功后开始升空。"));
+        string snapshot = text.ToString();
+        if (status.text != snapshot) status.text = snapshot;
+        RenderOutput();
+    }
+
     public static void RefreshOpen(SpaceSession session)
     {
         for (int i = sessions.Count - 1; i >= 0; i--)
         {
             ShipPanelSession value = sessions[i];
             if (!value.IsAlive) value.Dispose();
-            else if (value.session == session) value.RefreshScreens(false);
+            else if (value.session == session || value.groundConsoleGuid != 0) value.RefreshScreens(false);
         }
     }
 
     public void Dispose()
     {
+        if (transferringGroundConsole) return;
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         sessions.Remove(this);
         if (panel != null)

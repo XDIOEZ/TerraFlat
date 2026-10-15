@@ -264,6 +264,7 @@ namespace FlatWorld.Spaceflight
             FlushShipDamageFeedback();
             // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
+            RestoreLandedBuildings();
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();
             PresentationSynchronized?.Invoke();

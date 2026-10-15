@@ -19,7 +19,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 生命周期：`Core/Lifecycle/GameManager.Space.cs`、`World/Dimension/DimensionManager.cs`；面板：`Presentation/UI/{ShipPanelSession,SpaceLandingPanelSession}.cs`。
 - SpaceMgr 激活/维护星区时登记时间与采光，全部星区引用 `SpaceScene` 的统一时间源；跨区不重置昼夜，也不依赖重建玩家触发世界进入事件。UI 根由持久 UIManager 持有，星区卸载不销毁 HUD。
 - PlanetData 是太空目录与 `World/Map/Data/PlanetData.cs` 的 partial；场景/Prefab 在 `Assets/3_Scenes/SpaceScene.unity`、`Assets/2_Prefabs/World/Space/`。
-- 内容：`GameConfig/Space/solar-system.json` 的主目录在 `(0,0)`、`sectorSystems` 扩展其他星区，默认 `(-1,0)` 为天狼星，其余为空域；`Resources/Config/Space/space-gameplay.json`、Items/shells/space_ships.json 和 space_devices.json 配置玩法。固定船型在 `GameConfig/Structures/fixed-structures.json`，由 ShipFixedStructureBuilder 复用 AddPiece/CommitPiece/RollbackPiece。
+- 内容：`GameConfig/Space/solar-system.json` 的主目录在 `(0,0)`、`sectorSystems` 扩展其他星区，默认 `(-1,0)` 为天狼星，其余为空域；`Resources/Config/Space/space-gameplay.json`、Items/shells/space_ships.json 和 space_devices.json 配置玩法。固定船型在 `GameConfig/Structures/fixed-structures.json`，ShipFixedStructureBuilder 经 ShipGroundBuildingStore 逐件生成普通地面建筑，不提前创建飞船。
 - 功能规划来源：`开发文档文件夹/01_世界生成与环境/太空场景开发待办.md`，未完成项与运行系统分开。
 
 ## 时钟、坐标与接触
@@ -43,6 +43,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 ## 船体、导航与乘员
 
+- 地面船件与手放建筑共用 Item/地表机器、占地、管电网和存档；打开控制台不装船，ShipGroundAssembly 在点火时收集四邻连通地板和完整承载建筑，批量移交真实机器后复用 AddPiece/起飞。落地按最近格线和90°统一变换，恢复普通建筑并撤销船记录，地面无 ShipView/ParkedPieces。外部管路按正式端口/阀门供料，不新增自动灌油规则；未加载地表延迟到场景就绪再物化，落点冲突保留整船阻挡并报告。
 - 四邻接地板定义船体，普通接触/补地板/光纤不形成对接。独立船通过墙类接口和双方控制台确认形成整体；断开清双方确认，按剩余连接重算成员，保留身份/库存/分离速度。
 - ShipAssemblyCache 复用拓扑，质量/运动每步更新；模拟与即时查询使用独立缓存。机器/库存按船本地格子作用域运行，分裂后满足控制台/电力/燃料/引擎条件即可驾驶。
 - 对接整体只保留最新导航任务，手动接管/到点结束；断电、停机或缺燃料保留任务与平移惯性，恢复动力后续航，不能无燃料自动制动。导航保留玩家选择的真实目标，可到星体画面上方或穿过星体，不自动改为外侧停靠或触发降落。真实剩余燃料限制速度变化，光纤查询检查实际连接。航空燃料为罐内近2:1氢氧气相用途，按真实 mol 原子扣量，不另造燃料物质。
@@ -77,12 +78,12 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 地表升高共用 ShipLandingGuidance.SurfaceVisualRise，不限制最高显示距离；船体、玩家、散落物与驾驶镜头保持一致。迁移前捕获船体外观，ShipTakeoffLoadingPresentation 在维度加载页按非缩放时间持续滚动起飞气流，场景准备完成/失败后随加载页释放。
 - ShipSurfaceShadowPresenter 每船合并去重占地 Mesh，复用 ActorBlobShadow 材质与 ground-shadow 排序；地面位置不加升高偏移，真实高度控制缩小/淡出，日照和柔化沿用共享阴影设置，结构或柔化变化才重建，离开地表/会话结束释放。
 - 星球/星空场景对象仅在太空Scene内生成；SpaceMgr按星区租约分帧准备资源，地表初次进太空仍等待 PreparePresentationForCamera 预建星空并完成一帧。SpaceStarfield用两次SectorPosition之差算视差，不受换区/浮动原点影响；常规地面视野不绘制宇宙背景，权威会话及无人船仍继续运行。
-- 单机表现复用：`SpaceMgr.PresentationCache` 最多保留2个完成星体装配的星区根，禁用后移入持久根，旧场景卸载完成再恢复；State/资源代际改变或 EndSession 清理。`SpaceSession.ViewCache` 保留16船根/2048部件，迁移期间休眠不发布旧视图，返回重绑当前机器/外观/几何；联机沿用释放语义。Lua `presentation_cache` 和 `space_gameplay` 用本轮实例 ID 验证复用与回程。
+- 单机表现复用：`SpaceMgr.PresentationCache` 最多保留2个完成星体装配的星区根，禁用后移入持久根，旧场景卸载完成再恢复；State/资源代际改变或 EndSession 清理。`SpaceSession.ViewCache` 保留16船根/2048部件，已装配船跨场景时休眠复用，正式落地交回普通建筑后清理本船视图；联机沿用释放语义。Lua 分别检查太空表现复用与普通建筑起降交接。
 - 地表拉远的 UniverseOverviewRendererFeature 是独立观察画面：与地表云层共用 SurfaceZoomTransition，先满屏云，再在 60～90 交接当前星球局部；缩近先回满屏云，再从四周退开。90 时画面高度为星球直径的 30%，之后倍率拉远才露出整球与宇宙；读真实星体时钟/位置和原 Prefab 外观，未进入星区只建表现目录副本，不调场景租约、玩家迁移或权威 GetUniverse；驾驶覆盖和洞穴不使用此观察画面。
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。
-- ShipColliderPresenter 保留稳定根与部件身份；地表 Landed/Floating 使用按部件独立的静态 BoxCollider2D，仅活且 BlocksPassage 的部件阻挡。Lifting/Cruising/SurfaceDescending 或太空归属启用 FlightBody 的一个表现刚体和共享 CustomCollider2D，同时关闭逐件碰撞，落地再恢复。门/结构变化更新阻挡，休眠不启用共享刚体；ShipPieceView 只留贴图/交互，不挂逐件刚体或地板 Trigger，不复制库存或重新登记机器，太空维修仍可用。跨区只迁移稳定根，卸载或结束释放。
+- ShipColliderPresenter 只服务仍归 SpaceSession 的已装配船，使用一个表现刚体与共享 CustomCollider2D；待移交的落地船也保留阻挡。ShipPieceView 只留贴图/交互，地面还原成功即清理船表现；太空维修仍可用，跨区只迁移整船根。
 - 船体升空排序和共享 Collider 偏移在 ShipColliderPresenter 每船只更新一次，ShipPieceView 不重复操作整船根；静止舱门不重复写两扇门的 Renderer 属性，开关与 Rebind 仍正常刷新。
 - ShipPieceView 在创建、休眠恢复或换船时缓存 MachineWorld 的稳定 ship 作用域键，部件数字 GUID 只在身份绑定时解析；灯光、管线与交互热查询不再逐次拼键或解析数字。
 - 船体支撑查询经 `ShipAtmosphereService.TryGetFloor` 复用结构修订索引，按格返回首个活地板，不再遍历部件或构建 Footprint 迭代器；结构变更后同步失效。

@@ -18,6 +18,8 @@ public sealed class ShipDeviceLogic : MachineLogic
     public override void Capture() { }
     public override bool Execute(string operation, string argument, Player actor)
     {
+        if (Entity.ScopeKey?.StartsWith("ship:", System.StringComparison.Ordinal) != true)
+            return operation == "ignite" && ShipGroundAssembly.TryLaunch(actor, Entity.Id, out _, out _);
         SpaceSession session = SpaceSession.Current;
         if (session == null) return false;
         string pieceId = Entity.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);

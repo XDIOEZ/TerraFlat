@@ -146,18 +146,6 @@
             "CastSunShadow": false
           }
         },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
-          }
-        },
         "ship-part": {
           "id": "船体部件模块",
           "prefab": "Module_ShipPart",
@@ -331,18 +319,6 @@
           "parameters": {
             "LightOcclusionMode": "None",
             "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
           }
         },
         "ship-part": {
@@ -520,18 +496,6 @@
             "CastSunShadow": false
           }
         },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
-          }
-        },
         "ship-part": {
           "id": "船体部件模块",
           "prefab": "Module_ShipPart",
@@ -707,18 +671,6 @@
             "CastSunShadow": false
           }
         },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
-          }
-        },
         "ship-part": {
           "id": "船体部件模块",
           "prefab": "Module_ShipPart",
@@ -798,13 +750,20 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipDoor\",\"SummonerPrefabId\":\"ShipDoor_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ShipDoor\",\"SummonerPrefabId\":\"ShipDoor_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1,\"SharedModuleIds\":[\"Door\"]}",
             "Type": 0
           },
           "parameters": {
             "LightOcclusionMode": "None",
             "CastSunShadow": false
           }
+        },
+        "Door": {
+          "prefab": "BuildingFeature_Door_Stone_Mod_Door",
+          "id": "Door",
+          "enabled": true,
+          "data": { "BitData": "", "Type": 0 },
+          "parameters": { "UseItemSprite": true }
         },
         "ship-part": {
           "id": "船体部件模块",
@@ -886,7 +845,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipDoor\",\"SummonerPrefabId\":\"ShipDoor_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipDoor\",\"SummonerPrefabId\":\"ShipDoor_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1,\"SharedModuleIds\":[\"Door\"]}",
             "Type": 0
           },
           "parameters": {
@@ -894,17 +853,12 @@
             "CastSunShadow": false
           }
         },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
+        "Door": {
+          "prefab": "BuildingFeature_Door_Stone_Mod_Door",
+          "id": "Door",
           "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
-          }
+          "data": { "BitData": "", "Type": 0 },
+          "parameters": { "UseItemSprite": true }
         },
         "ship-part": {
           "id": "船体部件模块",
@@ -1091,18 +1045,6 @@
           "parameters": {
             "LightOcclusionMode": "None",
             "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
           }
         },
         "ship-part": {
@@ -1302,7 +1244,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidPipe"
+            "DefinitionId": "ShipConsole"
           }
         },
         "ship-part": {
@@ -1764,7 +1706,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidPipe"
+            "DefinitionId": "ShipGravityGenerator"
           }
         },
         "ship-part": {
@@ -1963,7 +1905,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidPipe"
+            "DefinitionId": "ShipNavigation"
           }
         },
         "ship-part": {
@@ -2160,7 +2102,7 @@
             "Type": 0
           },
           "parameters": {
-            "DefinitionId": "FluidPipe"
+            "DefinitionId": "ShipAirSupply"
           }
         },
         "ship-part": {
@@ -2346,18 +2288,6 @@
           "parameters": {
             "LightOcclusionMode": "None",
             "CastSunShadow": false
-          }
-        },
-        "机械扭矩模块": {
-          "prefab": "Module_MechanicalNode",
-          "id": "机械扭矩模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "DefinitionId": "FluidPipe"
           }
         },
         "ship-part": {
