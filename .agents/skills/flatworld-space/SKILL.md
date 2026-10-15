@@ -100,7 +100,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 ## 载荷读取与离线检查
 
-- 宇宙与太空回归使用 `GameplayTests/universe-suite.json`，按宇宙内容、星区规则、飞船规则、真实玩法四组 Lua 多选。编写、现场截图与执行契约见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，组 ID、覆盖矩阵与夹具边界见 `Assets/StreamingAssets/GameplayTests/Systems/Space/Gameplay/README.md`。`test.space` 返回的巨大星区编号按字符串比较；领域结果不等于场景/联机/视觉验收，普通跨区应保持玩家连续且不触发维度加载。
+- 宇宙与太空回归使用 `GameplayTests/universe-suite.json`，七个主题可多选；`--cases ship_landing_gameplay` 单独复用正式 GM、起降和普通管路加油，跳过完整航行的导航/跨区。编写、现场截图与执行契约见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，覆盖边界见 `Assets/StreamingAssets/GameplayTests/Systems/Space/Gameplay/README.md`。`test.space` 返回的巨大星区编号按字符串比较；领域结果不等于场景/联机/视觉验收，普通跨区应保持玩家连续且不触发维度加载。
 
 - 太空冷散落物的刚体质量按 Snapshot 变化解码更新，代理和形状复用；地表散落物仍先筛空间、高度与扫掠范围，再读真实质量。ShipGeometry.HasFloor 直接检查旋转矩形，无格子/迭代器分配。原生碰撞、场景重建、跨区连续性与性能需要 Unity 验收，离线数学参考及地表接触回归不能代替原生物理运行验证。
 - 方块引擎严格占一格、默认喷口朝本地 -Y；ShipEnginePlacement 共用放置预览/提交/可用引擎收集的船体外缘与喷射净空检查，后续建造也不能堵喷口。气密边界只读 SealsAtmosphere 能力，边缘引擎可替代舱壁；固定船型同步调整引擎、舱壁和同格电线。

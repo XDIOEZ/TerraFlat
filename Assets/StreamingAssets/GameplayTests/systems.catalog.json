@@ -741,6 +741,7 @@
         "sector_rules",
         "ship_rules",
         "space_gameplay",
+        "ship_landing_gameplay",
         "ship_damage_gameplay",
         "presentation_cache"
       ],

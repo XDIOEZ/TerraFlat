@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using FlatWorld.Gameplay.Progress;
 using FlatWorld.Networking;
 using FlatWorld.Structures;
 using Newtonsoft.Json.Linq;

@@ -128,6 +128,41 @@ public sealed partial class GameplayTestSpaceScenario
     #endregion
 
     #region 落地后的正式普通管路自动加油
+    private bool TemplateShipPresentationReady(ShipState ship)
+    {
+        string scene = SceneManager.GetActiveScene().name;
+        foreach (JObject row in (JArray)session.ShipViewCacheSnapshot()["presenters"])
+            if (row.Value<string>("id") == ship.ShipId && row.Value<bool>("active") &&
+                !row.Value<bool>("pooled") && row.Value<string>("scene") == scene) return true;
+        return false;
+    }
+
+    private IEnumerator LandTemplateAndRefuel(ShipState ship, string console, HashSet<int> ids,
+        string expectedWorld, Action<JObject> completed)
+    {
+        session.ClearControl(console);
+        bool accepted = session.RequestLanding(console);
+        if (!accepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
+        IsMigrationExpected = true;
+        yield return WaitUntil(() => Ready() && session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.SurfaceDescending &&
+                TemplateShipPresentationReady(ship),
+            90d, "正式降落请求没有进入地表下降阶段。");
+        JObject descending = ShipSnapshot(ship), descendingViews = ShipViewSnapshot(ship);
+        yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null &&
+                GroundBuildingsRestored(ids, expectedWorld),
+            90d, "飞船未完成正式降落及普通地面建筑移交。");
+        IsMigrationExpected = false;
+        JObject landed = GroundBuildingSnapshot(ids);
+        landed["flightRemoved"] = session.GetFlight(ship.ShipId) == null;
+        landed["shipRemoved"] = session.GetShip(ship.ShipId) == null;
+        landed["supported"] = session.GetPassenger(CurrentPlayer()).Supported;
+        JObject returnedViews = ShipViewSnapshot(ship), refuel = null;
+        yield return RefuelLandedBuildings(ids, value => refuel = value);
+        completed(new JObject { ["landingAccepted"] = accepted, ["descending"] = descending,
+            ["descendingViews"] = descendingViews, ["landedAgain"] = landed,
+            ["returnedViews"] = returnedViews, ["autoRefuel"] = refuel });
+    }
+
     private IEnumerator RefuelLandedBuildings(HashSet<int> shipIds, Action<JObject> completed)
     {
         string world = SceneManager.GetActiveScene().name;

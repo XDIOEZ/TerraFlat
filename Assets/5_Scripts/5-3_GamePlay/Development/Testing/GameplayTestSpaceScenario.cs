@@ -60,7 +60,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         error = null;
         bool supported = GameplayTestUniverseProbe.Supports(operation) || GameplayTestShipProbe.Supports(operation) ||
-            operation is "session" or "ship_templates" or "ship_flight" or "ship_collision" or "ship_damage_live" or
+            operation is "session" or "ship_templates" or "ship_flight" or "ship_landing" or "ship_collision" or "ship_damage_live" or
                 "ship_ground_combat_projection" or "sector_transition" or "space_visit";
         if (!supported) error = "未开放的太空测试操作：" + operation;
         else if (operation == "sector_transition")
@@ -91,6 +91,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             "session" => ObserveSession(value => sample = value),
             "ship_templates" => ReadTemplates(value => sample = value),
             "ship_flight" => FlyTemplates(value => sample = value),
+            "ship_landing" => FlyTemplates(value => sample = value, landingOnly: true),
             "ship_collision" => CollideProductionFloors(value => sample = value),
             "ship_damage_live" => DamageProductionLongShip(value => sample = value),
             "ship_ground_combat_projection" => ProbeGroundCombatProjection(value => sample = value),
@@ -444,7 +445,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     #endregion
 
     #region 模板飞船起飞与导航降落
-    private IEnumerator FlyTemplates(Action<JObject> completed)
+    private IEnumerator FlyTemplates(Action<JObject> completed, bool landingOnly = false)
     {
         if (session.IsSpaceView) throw new InvalidOperationException("模板起飞测试必须从隔离地表世界开始。");
         ProtectPlayer();
@@ -500,10 +501,26 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 90d, "飞船没有完成正式起飞和太空迁移。");
             IsMigrationExpected = false;
             ProtectCurrentPlayer();
+            yield return WaitUntil(() => TemplateShipPresentationReady(ship), 15d, "起飞后的整船表现没有完成场景绑定。");
             JObject cruising = ShipSnapshot(ship);
             JObject cruisingViews = ShipViewSnapshot(ship);
             session.ExitConsole(CurrentPlayer());
             controlledConsole = console;
+            if (landingOnly)
+            {
+                // 落地专项复用相同的正式起飞准备，省去惯性、导航和跨区的无关迁移。
+                JObject landing = null;
+                yield return LandTemplateAndRefuel(ship, console, groundIds, groundWorld, value => landing = value);
+                landing["templateId"] = template.Id; landing["enteredConsole"] = entered;
+                landing["beforeBuild"] = beforeBuild; landing["landed"] = landed; landing["filled"] = filled;
+                landing["lifting"] = lifting; landing["liftingGround"] = liftingGround; landing["cruising"] = cruising;
+                landing["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews,
+                    ["descending"] = landing["descendingViews"].DeepClone(), ["returned"] = landing["returnedViews"].DeepClone() };
+                landing.Remove("descendingViews"); landing.Remove("returnedViews");
+                results.Add(landing);
+                if (index + 1 < ships.Count) yield return ReturnHome();
+                continue;
+            }
             session.SetControl(console, Vector2.up, 0f);
             yield return Wait(.5d);
             JObject thrust = ShipSnapshot(ship);
@@ -524,20 +541,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)), target).Magnitude;
             JObject shipTransition = null;
             yield return CrossOwnedShip(ship, value => shipTransition = value);
-            bool landingAccepted = session.RequestLanding(console);
-            if (!landingAccepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
-            IsMigrationExpected = true;
-            yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null &&
-                    GroundBuildingsRestored(groundIds, groundWorld),
-                90d, "飞船未完成正式降落及普通地面建筑移交。");
-            IsMigrationExpected = false;
-            JObject landedAgain = GroundBuildingSnapshot(groundIds);
-            landedAgain["flightRemoved"] = session.GetFlight(ship.ShipId) == null;
-            landedAgain["shipRemoved"] = session.GetShip(ship.ShipId) == null;
-            landedAgain["supported"] = session.GetPassenger(CurrentPlayer()).Supported;
-            JObject returnedViews = ShipViewSnapshot(ship);
-            JObject autoRefuel = null;
-            yield return RefuelLandedBuildings(groundIds, value => autoRefuel = value);
+            JObject returned = null;
+            yield return LandTemplateAndRefuel(ship, console, groundIds, groundWorld, value => returned = value);
             results.Add(new JObject { ["templateId"] = template.Id, ["enteredConsole"] = entered,
                 ["beforeBuild"] = beforeBuild, ["liftingGround"] = liftingGround,
                 ["landed"] = landed, ["filled"] = filled, ["lifting"] = lifting, ["cruising"] = cruising,
@@ -546,13 +551,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 ["arrivalDistance"] = SpaceGameplaySettings.Current.NavigationArrivalDistanceMeters,
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
                 ["shipTransition"] = shipTransition,
-                ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain,
-                ["autoRefuel"] = autoRefuel,
-                ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returnedViews } });
+                ["landingAccepted"] = returned["landingAccepted"], ["landedAgain"] = returned["landedAgain"],
+                ["autoRefuel"] = returned["autoRefuel"],
+                ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returned["returnedViews"] } });
             // 最后一艘保留正式降落现场，供紧随其后的 Lua 截图使用。
             if (index + 1 < ships.Count) yield return ReturnHome();
         }
-        completed(new JObject { ["scope"] = "live-ship-flight", ["ships"] = results });
+        completed(new JObject { ["scope"] = landingOnly ? "live-ship-landing" : "live-ship-flight", ["ships"] = results });
     }
 
     private JObject ShipViewSnapshot(ShipState ship)
