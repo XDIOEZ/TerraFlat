@@ -18,7 +18,10 @@ public static class GameplayTestSpacePresentationProbe
             Sample("current", SpacePresentationPose.Interpolate(previous, current, 1d)),
             Sample("middle", SpacePresentationPose.Interpolate(previous, current, .5d)),
             Sample("clamp-low", SpacePresentationPose.Interpolate(previous, current, -1d)),
-            Sample("clamp-high", SpacePresentationPose.Interpolate(previous, current, 2d))
+            Sample("clamp-high", SpacePresentationPose.Interpolate(previous, current, 2d)),
+            Sample("nan", SpacePresentationPose.Interpolate(previous, current, double.NaN)),
+            Sample("negative-infinity", SpacePresentationPose.Interpolate(previous, current, double.NegativeInfinity)),
+            Sample("positive-infinity", SpacePresentationPose.Interpolate(previous, current, double.PositiveInfinity))
         };
         var wrappedPrevious = Pose(0, 0, 0d, 0d, Math.PI - .1d);
         var wrappedCurrent = Pose(0, 0, 0d, 0d, -Math.PI + .1d);

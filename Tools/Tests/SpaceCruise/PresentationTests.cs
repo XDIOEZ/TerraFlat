@@ -11,6 +11,13 @@ internal static partial class Program
         AssertPresentationPose(current, SpacePresentationPose.Interpolate(previous, current, 1d), "one alpha retains current pose");
         AssertPresentationPose(previous, SpacePresentationPose.Interpolate(previous, current, -5d), "negative alpha cannot predict past previous pose");
         AssertPresentationPose(current, SpacePresentationPose.Interpolate(previous, current, 7d), "large alpha cannot predict future motion");
+        // 非法进度不能把 NaN 传播到船体、乘员或星区坐标，退回当前权威姿态。
+        AssertPresentationPose(current, SpacePresentationPose.Interpolate(previous, current, double.NaN),
+            "NaN alpha returns current authoritative pose");
+        AssertPresentationPose(previous, SpacePresentationPose.Interpolate(previous, current, double.NegativeInfinity),
+            "negative infinite alpha clamps to previous pose");
+        AssertPresentationPose(current, SpacePresentationPose.Interpolate(previous, current, double.PositiveInfinity),
+            "positive infinite alpha clamps to current pose");
         var midpoint = SpacePresentationPose.Interpolate(previous, current, .5d);
         Near(20d, midpoint.Position.LocalMeters.X, "midpoint x");
         Near(40d, midpoint.Position.LocalMeters.Y, "midpoint y");

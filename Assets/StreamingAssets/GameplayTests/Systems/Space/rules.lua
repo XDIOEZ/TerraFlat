@@ -20,9 +20,11 @@ do
             "缺少正式飞船表现插值结果")
         local expected = {
             previous = {10, 20, 0}, current = {14, 28, math.pi / 2}, middle = {12, 24, math.pi / 4},
-            ["clamp-low"] = {10, 20, 0}, ["clamp-high"] = {14, 28, math.pi / 2}
+            ["clamp-low"] = {10, 20, 0}, ["clamp-high"] = {14, 28, math.pi / 2},
+            nan = {14, 28, math.pi / 2},
+            ["negative-infinity"] = {10, 20, 0}, ["positive-infinity"] = {14, 28, math.pi / 2}
         }
-        assert(type(data.interpolation) == "table" and #data.interpolation == 5, "插值端点、中点和越界样本不完整")
+        assert(type(data.interpolation) == "table" and #data.interpolation == 8, "插值端点、中点和非法进度样本不完整")
         local seen = {}
         for _, sample in ipairs(data.interpolation) do
             local value = expected[sample.name]
@@ -68,7 +70,7 @@ do
             pose(track[key], 1000, -500, .3, "重置后不拖尾：" .. key)
         end
         assert(type(data.limitations) == "string" and #data.limitations > 0, "插值采样必须说明场景覆盖边界")
-        return "覆盖端点、中点、越界限制、最短旋转、极大星区跨界、质量原点稳定、共同变换和重置不拖尾。"
+        return "覆盖端点、中点、非法进度、最短旋转、极大星区跨界、质量原点稳定、共同变换和重置不拖尾。"
     end, "飞船前后物理姿态插值与共同坐标变换")
 end
 

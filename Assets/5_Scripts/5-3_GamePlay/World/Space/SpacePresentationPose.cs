@@ -26,6 +26,8 @@ namespace FlatWorld.Spaceflight
 
         public static SpacePresentationPose Interpolate(SpacePresentationPose previous, SpacePresentationPose current, double alpha)
         {
+            // 非法插值进度退回当前权威姿态，避免 NaN 坐标进入星区归一化。
+            if (double.IsNaN(alpha)) return current;
             alpha = Math.Clamp(alpha, 0d, 1d);
             if (alpha <= 0d) return previous;
             if (alpha >= 1d) return current;
