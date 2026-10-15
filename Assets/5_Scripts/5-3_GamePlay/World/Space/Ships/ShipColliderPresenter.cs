@@ -53,6 +53,15 @@ namespace FlatWorld.Spaceflight
             }
         }
 
+        /// <summary>整船只同步一次升空排序和共享阻挡体，不随部件数量重复查询组件。</summary>
+        public void SynchronizeSurfaceState(ShipFlightState flight, Vector2 visualRise)
+        {
+            ShipSurfacePresentation.SetElevated(Root, ShipSurfaceState.IsElevated(flight),
+                ShipSurfacePresentation.VehicleCategory);
+            ShipSurfacePresentation.SetColliderState(blocker, visualRise,
+                ShipSurfaceState.IsAirborne(flight), true);
+        }
+
         public void Dispose()
         {
             if (body != null) body.simulated = false;

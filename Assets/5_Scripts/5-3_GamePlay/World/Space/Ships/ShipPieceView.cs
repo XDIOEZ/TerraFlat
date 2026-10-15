@@ -128,6 +128,7 @@ namespace FlatWorld.Spaceflight
             boundShip = ship; boundPiece = piece; boundWidth = width; boundHeight = height;
             boundQuarterTurns = piece.QuarterTurns; boundCellSize = ship.CellSizeMeters;
             boundCellX = piece.CellX; boundCellY = piece.CellY;
+            doorVisualDirty = true;
             shipId = ship.ShipId;
             Vector2 size = new((float)Math.Max(.001d, width * ship.CellSizeMeters - .05d),
                 (float)Math.Max(.001d, height * ship.CellSizeMeters - .05d));
@@ -411,6 +412,7 @@ namespace FlatWorld.Spaceflight
                 float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
                 float radians = angle * Mathf.Deg2Rad;
                 Vector3 visualLiftOffset = new(Mathf.Sin(radians) * rise, Mathf.Cos(radians) * rise, 0f);
+                presenter?.SynchronizeSurfaceState(flight, visualLiftOffset);
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (!piece.IsAlive) { RemovePieceView(piece.PieceId); continue; }
