@@ -2,7 +2,7 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-- 调用 `ThermalRuntime` 检查升降温、结算步长、非法输入和目标限速；调用 `ThermalInfluenceRuntime` 检查距离衰减及重叠；调用 `WindEnvironmentRules` 检查风级/质量/重力门槛。
+- 调用 `ThermalRuntime` 检查升降温、结算步长、非法输入和目标限速；调用 `ThermalInfluenceRuntime` 检查距离衰减及重叠；调用 `WindEnvironmentRules` 检查风级/质量/重力门槛、四区混合、超重零风速及零权重边界。
 - 在独立 `RegionalWeatherEngine` 内另覆盖区域成员共享、冻结代表气候、负坐标分区、降雨事件到期及统一/强风分段概率。
 - `environment_batch、environment_batch_rejection、environment_batch_lifecycle、environment_batch_revision` 调用正式 `ChunkTerrainData` 批写接口，覆盖真实变化格与通知索引、空批/不变写、跨层先写后发、非法输入整批拒绝、故障后继续使用、观察者抛错后的待发队列重试、回调内写入/嵌套发布/释放拒绝，以及普通土壤、支撑面和液体缓存版本边界。批量索引和只读层在同步采样内复制成报告数值，不能跨回调或跨帧持有借用内存。
 - 不登记热源、不改变真实天气。未覆盖随机抽签序列、真实天气保存/网络复制、地表雨雪积累、雷击伤害、湿度缓存、污染变化和玩家生存反馈。

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>质量和星球重力决定起吹等级，达到等级后按档位增加推动速度。</summary>
@@ -51,6 +53,27 @@ public static class WindEnvironmentRules
         if (equivalentMass < minimumMass + bandWidth) return MinimumPushWindLevel;
         if (equivalentMass < minimumMass + bandWidth * 2d) return MinimumPushWindLevel + 1;
         return MaximumWindLevel;
+    }
+
+    /// <summary>先裁定各风区是否达到物品起吹等级，再按空间权重混合，不改变风区边缘的推动规则。</summary>
+    public static Vector2 ResolveBlendedPushVelocity(in RegionalWindBlend blend, int requiredWindLevel)
+    {
+        if (requiredWindLevel < MinimumPushWindLevel || requiredWindLevel > MaximumWindLevel)
+            return Vector2.zero;
+
+        return Vector2.Lerp(
+            Vector2.Lerp(ResolveSourceVelocity(blend.Origin, requiredWindLevel),
+                ResolveSourceVelocity(blend.Horizontal, requiredWindLevel), blend.HorizontalWeight),
+            Vector2.Lerp(ResolveSourceVelocity(blend.Vertical, requiredWindLevel),
+                ResolveSourceVelocity(blend.Diagonal, requiredWindLevel), blend.HorizontalWeight),
+            blend.VerticalWeight);
+    }
+
+    private static Vector2 ResolveSourceVelocity(float3 wind, int requiredWindLevel)
+    {
+        float speed = ResolvePushSpeed(wind.z, requiredWindLevel);
+        if (speed <= 0f) return Vector2.zero;
+        return new Vector2(wind.x, wind.y).normalized * speed;
     }
 
     #endregion

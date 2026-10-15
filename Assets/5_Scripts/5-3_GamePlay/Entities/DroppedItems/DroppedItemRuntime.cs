@@ -251,7 +251,9 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     private void TickWind(float seconds)
     {
-        if (!WorldMotionSystem.HasWindPush) return;
+        if (!WorldMotionSystem.HasWindPush ||
+            !WorldMotionSystem.TryCreateWindSamplingContext(out WorldMotionSystem.WindSamplingContext context))
+            return;
         windScratch.Clear();
         windScratch.AddRange(simulation.Ids);
         foreach (int id in windScratch)
@@ -259,7 +261,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) continue;
             LightweightDroppedBody body = simulation.Get(id);
             if (body.Pickable == 0 || body.LiquidDepth >= 0.995f) continue;
-            Vector2 velocity = WorldMotionSystem.SampleWindVelocity(body.Position, payloads[id].Stack.CurrentWeight);
+            Vector2 velocity = context.Sample(body.Position, payloads[id].Stack.CurrentWeight);
             if (velocity.sqrMagnitude <= 0f) continue;
             Vector2 destination = WorldMotionSystem.ResolveLooseWindPosition(body.Position, velocity * seconds);
             if (WorldTopologyRuntime.ShortestDelta(body.Position, destination).sqrMagnitude <= 0.00000001f) continue;

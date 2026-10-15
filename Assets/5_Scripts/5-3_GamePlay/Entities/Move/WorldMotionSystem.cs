@@ -21,6 +21,46 @@ public static class WorldMotionSystem
 {
     #region 环境速度
     public static bool HasWindPush => WeatherMgr.ExistingInstance?.HasWindPush == true;
+
+    /// <summary>同一批物品共用质量目录与星球重力，风区和重量仍按每个物品单独结算。</summary>
+    public readonly struct WindSamplingContext
+    {
+        private readonly WeatherMgr weather;
+        private readonly double surfaceGravity;
+        private readonly float minimumMass;
+        private readonly float maximumMass;
+
+        internal WindSamplingContext(WeatherMgr weather, double surfaceGravity, float minimumMass, float maximumMass)
+        {
+            this.weather = weather;
+            this.surfaceGravity = surfaceGravity;
+            this.minimumMass = minimumMass;
+            this.maximumMass = maximumMass;
+        }
+
+        public Vector2 Sample(Vector2 position, float mass)
+        {
+            int required = WindEnvironmentRules.ResolveRequiredWindLevel(
+                mass, surfaceGravity, minimumMass, maximumMass);
+            // 沉重物品不用再查所在天气区域，也不进行不必要的坐标投影。
+            if (required > WindEnvironmentRules.MaximumWindLevel ||
+                !weather.TryGetWindBlendAt(WorldLocalPresentation.ToLogical(position), out var blend))
+                return Vector2.zero;
+            return WindEnvironmentRules.ResolveBlendedPushVelocity(in blend, required);
+        }
+    }
+
+    public static bool TryCreateWindSamplingContext(out WindSamplingContext context)
+    {
+        context = default;
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        if (weather == null || !WindEnvironmentRules.TryGetMassRange(out float minimumMass, out float maximumMass) ||
+            !weather.TryGetWindSurfaceGravity(out double surfaceGravity))
+            return false;
+        context = new WindSamplingContext(weather, surfaceGravity, minimumMass, maximumMass);
+        return true;
+    }
+
     /// <summary>角色和载具共用有效表面流场；河流按权威流量区分快慢，平台与静水返回零速度。</summary>
     public static Vector2 SampleWaterVelocity(Vector2 position, float speed)
     {
@@ -38,68 +78,72 @@ public static class WorldMotionSystem
     /// <summary>按当地风级、物体总质量与星球重力读取分档推动速度。</summary>
     public static Vector2 SampleWindVelocity(Vector2 position, float mass)
     {
-        if (!WindEnvironmentRules.TryGetMassRange(out float minimumMass, out float maximumMass))
-            return Vector2.zero;
-        WeatherMgr weather = WeatherMgr.ExistingInstance;
-        if (weather == null || !weather.TryGetWindSurfaceGravity(out double surfaceGravity))
-            return Vector2.zero;
-        int requiredWindLevel = WindEnvironmentRules.ResolveRequiredWindLevel(mass, surfaceGravity, minimumMass, maximumMass);
-        if (requiredWindLevel > WindEnvironmentRules.MaximumWindLevel ||
-            !weather.TryGetWindBlendAt(WorldLocalPresentation.ToLogical(position), out var sample))
-            return Vector2.zero;
-
-        // 每区先按自身风级裁定能否推动，再沿空间边缘混合速度向量。
-        Vector2 ResolveSourceVelocity(Unity.Mathematics.float3 wind)
-        {
-            Vector2 vector = new(wind.x, wind.y);
-            float speed = WindEnvironmentRules.ResolvePushSpeed(wind.z, requiredWindLevel);
-            return vector.normalized * speed;
-        }
-
-        return Vector2.Lerp(
-            Vector2.Lerp(ResolveSourceVelocity(sample.Origin), ResolveSourceVelocity(sample.Horizontal), sample.HorizontalWeight),
-            Vector2.Lerp(ResolveSourceVelocity(sample.Vertical), ResolveSourceVelocity(sample.Diagonal), sample.HorizontalWeight),
-            sample.VerticalWeight);
+        return TryCreateWindSamplingContext(out WindSamplingContext context)
+            ? context.Sample(position, mass) : Vector2.zero;
     }
     #endregion
 
     #region 散落物风推动
 
-    private static readonly HashSet<Item> looseWindItems = new();
+    private sealed class LooseWindRegistration
+    {
+        public Mod_Building Building;
+        public WorldItemWaterRuntime WaterRuntime;
+    }
+
+    private static readonly Dictionary<Item, LooseWindRegistration> looseWindItems = new();
     private static readonly List<Item> looseWindScratch = new();
 
     /// <summary>完整散落物登记一次，移动模块和固定建筑不重复接管。</summary>
     public static void RegisterLooseWindItem(Item item)
     {
-        if (item != null && item.PersistenceOwner == null &&
-            item.GetComponentInChildren<Mod_Mover>(true) == null &&
-            item.GetComponentInChildren<Mod_Carrier>(true) == null &&
-            item.GetComponentInChildren<Mod_Building>(true)?.IsInstalled() != true)
-            looseWindItems.Add(item);
+        if (item == null || looseWindItems.ContainsKey(item) || item.PersistenceOwner != null ||
+            item.GetComponentInChildren<Mod_Mover>(true) != null ||
+            item.GetComponentInChildren<Mod_Carrier>(true) != null)
+            return;
+
+        Mod_Building building = item.GetComponentInChildren<Mod_Building>(true);
+        if (building?.IsInstalled() == true) return;
+        // 物品组件在注册时绑定，风中每帧不再反复查找通常不存在的 MonoBehaviour。
+        looseWindItems.Add(item, new LooseWindRegistration
+        {
+            Building = building,
+            WaterRuntime = item.GetComponent<WorldItemWaterRuntime>()
+        });
     }
 
     public static void UnregisterLooseWindItem(Item item) => looseWindItems.Remove(item);
 
+    /// <summary>入水运行态按需创建时更新引用，避免复用物品持有旧水态。</summary>
+    public static void BindLooseWindWaterRuntime(Item item, WorldItemWaterRuntime runtime)
+    {
+        if (item != null && looseWindItems.TryGetValue(item, out LooseWindRegistration registration))
+            registration.WaterRuntime = runtime;
+    }
+
     /// <summary>沿风移动散落物并更新区块归属，完全沉没或仍在抛掷轨迹中时不受风。</summary>
     public static void TickLooseItemWind(float seconds)
     {
-        if (!GameNetwork.HasStateAuthority || seconds <= 0f || looseWindItems.Count == 0 || !HasWindPush)
+        if (!GameNetwork.HasStateAuthority || seconds <= 0f || looseWindItems.Count == 0 || !HasWindPush ||
+            !TryCreateWindSamplingContext(out WindSamplingContext context))
             return;
         looseWindScratch.Clear();
-        looseWindScratch.AddRange(looseWindItems);
+        looseWindScratch.AddRange(looseWindItems.Keys);
         foreach (Item item in looseWindScratch)
         {
+            if (!looseWindItems.TryGetValue(item, out LooseWindRegistration registration))
+                continue;
             if (item == null || item.DestructionHandled || item.itemData?.Stack == null || item.itemData.inHand ||
-                !item.itemData.Stack.CanBePickedUp || item.GetComponentInChildren<Mod_Building>(true)?.IsInstalled() == true)
+                !item.itemData.Stack.CanBePickedUp || registration.Building?.IsInstalled() == true)
             {
                 looseWindItems.Remove(item);
                 continue;
             }
             if (!item.isActiveAndEnabled || Mod_Droping.IsDropInProgress(item) ||
-                item.GetComponent<WorldItemWaterRuntime>()?.IsSubmerged == true)
+                registration.WaterRuntime?.IsSubmerged == true)
                 continue;
             Vector2 position = item.transform.position;
-            Vector2 velocity = SampleWindVelocity(position, item.itemData.Stack.CurrentWeight);
+            Vector2 velocity = context.Sample(position, item.itemData.Stack.CurrentWeight);
             if (velocity.sqrMagnitude <= 0f) continue;
             Vector2 destination = ResolveLooseWindPosition(position, velocity * seconds);
             if (WorldTopologyRuntime.ShortestDelta(position, destination).sqrMagnitude <= 0.00000001f) continue;

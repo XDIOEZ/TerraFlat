@@ -155,6 +155,7 @@ public static class WorldItemWaterSystem
         WorldItemWaterRuntime runtime = item.GetComponent<WorldItemWaterRuntime>();
         if (runtime == null)
             runtime = item.gameObject.AddComponent<WorldItemWaterRuntime>();
+        WorldMotionSystem.BindLooseWindWaterRuntime(item, runtime);
         runtime.Activate(item);
     }
 

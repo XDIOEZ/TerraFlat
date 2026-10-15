@@ -61,6 +61,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 单机掉落经 `DroppedItemService.Spawn/SpawnLoot`：passive 使用纯 C# 轻量数据和近镜头池化 Sprite；interactive 保留完整 Item。两种新生掉落都复制独立载荷并分配新 GUID，完整 Item 在注册前清零载荷 GUID，来源库存/手持物身份保持不变。需要模块飞行效果的物品使用 interactive 与 `IDroppedItemSpawnContextReceiver`。普通世界掉落缩放 0.5，精确落点由 destination 指定；联机沿用 Item 权威链。
 - 世界散落物温湿推进共用 `WorldItemMatterRules`，普通环境温差每游戏秒缩小 1%，统一调用 `ThermalRuntime.AdvanceAmbient`；完整 Item 在注册/加载时建立时间基线，两种后端按逐件累计间隔分帧推进。高温液体接触仍以液体自身 `temperature/contactHeatingPerSecond` 固定传热，达到当前定义 `matter.ignitionTemperature` 才点燃；设备可显式传入专属速率，airExposure 只调普通环境下的干燥。已有 `Mod_Combustion` 时复用模块且不再扣材料堆数；两种后端共用材料火焰粒子。
 - 完整 Item 的浮沉/漂流由 `WorldItemWaterSystem` 按最终位置派生，轻量掉落复用 `WorldItemWaterRules`。水体状态不入库存；轨迹结束后交回水系统，先移除 Mod_Droping 再允许拾取。河流加速按总重量，浮沉按单件重量/体积玩法比值；转换表现用 `IWaterEntryTransformEffect` 在回收前脱离源物。
+- 完整散落物的风推动登记时缓存建筑与水态组件引用；水态由 `WorldItemWaterSystem.ActivateExistingItem` 更新引用，注销随物品回收。轻量掉落物与完整物品通过 `WorldMotionSystem.WindSamplingContext` 共用每批固定的质量范围和星球重力。
 - 轻量掉落与稳定漂浮的完整 Item 保留 0.5s 水流推进；两种后端共用 `WorldItemWaterRules.DriftInterpolation`，只把显示偏移匀速收敛到已确认的逻辑位置。轻量表现仅给可见视图留插值态；完整 Item 偏移 Sprite 子节点并保留原局部位置，水线逐帧跟随。循环接缝用最短位移，离水、拾取和回池清理偏移，不改空间索引或存档坐标。
 - 原生 AI 使用完整 Item。`entityRuntime: resource` 的树、矿点、作物按组合冷编译到共享 `WorldEntityRuntime`，不创建资源 Item 或运行 Module Tick；通用配置集合采用 Replace。能力扩展由 `ResourceEntityCapabilityRegistry` 注册，DLL 状态使用 context.SetState/GetState。
 - 自然实体独立维护导航、空间交互与接触几何，命中经 `GameplayCombatBridge`。植物生命周期只由 `EntityPlantModuleSystem` 推进；区块解绑保存释放，死亡/一次收获才删来源。终端解绑转交快照所有权，仍运行的快照才克隆；句柄包含 World 代际。
