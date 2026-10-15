@@ -142,6 +142,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         string originalFlightWorld = null;
         GameObject holder = null;
         Item axe = null;
+        Mod_Damage damage = null;
         try
         {
             // 使用正式放置和真实青铜斧伤害盒，让命中最终提交到船件权威血量。
@@ -150,7 +151,10 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             Vector2 site = WorldLocalPresentation.ProjectPosition(
                 WorldLocalPresentation.ToLogical((Vector2)player.transform.position + Vector2.right * 12f),
                 player.transform.position);
-            piece = session.AddPiece(GameRes.ExistingInstance.CreateItemData("ShipFloor_Iron"), site, 0, out ship);
+            ItemData floorData = GameRes.ExistingInstance.CreateItemData("ShipFloor_Iron");
+            floorData.Stack.Amount = 1f;
+            Mod_Building.SetInstalledDataState(floorData);
+            piece = session.AddPiece(floorData, site, 0, out ship);
             if (existingShips.Contains(ship.ShipId)) throw new InvalidOperationException("测试地板错误地连接到已有飞船。");
             session.CommitPiece(ship, piece);
             flight = session.GetFlight(ship.ShipId) ?? throw new InvalidOperationException("测试飞船缺少地表飞行状态。");
@@ -165,10 +169,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             holder.transform.position = target + Vector2.right * 4f;
             axe = ItemMgr.Instance.InstantiateHeldItem(GameRes.ExistingInstance.CreateItemData("Axe_Bronze"), player, holder.transform);
             axe.Load();
-            Mod_Damage damage = axe.GetComponentInChildren<Mod_Damage>(true);
-            BoxCollider2D hitbox = damage?.GetComponent<BoxCollider2D>();
-            if (hitbox == null) throw new InvalidOperationException("真实青铜斧没有加载 Mod_Damage 的命中盒。");
-            hitbox.enabled = true;
+            damage = axe.GetComponentInChildren<Mod_Damage>(true);
+            BoxCollider2D hitbox = damage?.DamageCollider as BoxCollider2D;
+            if (hitbox == null || axe.Sprite?.sprite == null)
+                throw new InvalidOperationException("真实青铜斧没有加载伤害盒或武器 Sprite。");
+            // 使用正式武器起手入口建立攻击窗口和命中预约，不能直接打开碰撞盒假冒挥砍。
+            damage.BindToWeaponRenderer(axe.Sprite);
+            damage.StartAttack();
             double before = piece.Health;
             damage.QueryProjectileSweep(Vector2.zero);
             double afterMiss = piece.Health;
@@ -212,7 +219,11 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             passenger.LandingWorldKey = originalWorld;
             if (flight != null)
             { flight.Phase = originalPhase; flight.HeightMeters = originalHeight; flight.SurfaceWorldKey = originalFlightWorld; }
-            try { if (axe != null) ItemMgr.Instance.DespawnItem(axe, saveData: false); }
+            try
+            {
+                try { if (damage != null && damage.IsDamageEnabled()) damage.StopAttack(); }
+                finally { if (axe != null) ItemMgr.Instance.DespawnItem(axe, saveData: false); }
+            }
             finally
             {
                 if (holder != null) UnityEngine.Object.Destroy(holder);

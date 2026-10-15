@@ -31,8 +31,12 @@ namespace FlatWorld.Spaceflight
             SpaceSession.SurfaceCombatProjection surfaceProjection = hasSurfaceWorld
                 ? SpaceSession.CaptureSurfaceCombatProjection(weapon.item, surfaceWorld, (Vector2)shape.Center)
                 : default;
-            var candidates = new List<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor, Mod_DamageReceiver Receiver)>();
-            var hits = new List<CombatColliderHit2D>();
+            // 攻击窗口内的三份临时名单统一租用池，连续挥砍不再反复分配托管数组。
+            using var candidatesLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor,
+                Mod_DamageReceiver Receiver)>.Get(out var candidates);
+            using var hitsLease = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out var hits);
+            using var resolvedLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
+                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>.Get(out var resolvedHits);
             using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
             {
                 foreach (ShipState ship in session.State.Ships)
@@ -98,8 +102,6 @@ namespace FlatWorld.Spaceflight
                 physics.Query(shape, hits);
             }
             hits.Sort((left, right) => left.Fraction.CompareTo(right.Fraction));
-            var resolvedHits = new List<(ShipState Ship, ShipPieceState Piece, RuntimeItemDefinition Definition,
-                Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>();
             foreach (CombatColliderHit2D contact in hits)
             {
                 var target = candidates[contact.CandidateId];
