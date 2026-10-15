@@ -373,6 +373,15 @@ public static class GameplayTestShipProbe
         bool addOxygen = ShipAtmosphereService.TryAddGas(ship, 2, 2, Gas(FluidIds.Oxygen, plannedMoles * .21m));
         bool addNitrogen = ShipAtmosphereService.TryAddGas(ship, 2, 2, Gas(FluidIds.Nitrogen, plannedMoles * .79m));
         ShipEnvironmentSnapshot filled = ShipAtmosphereService.GetEnvironment(ship, 2, 2);
+        ShipEnvironmentSnapshot sealedOutside = filled.WithOutside(PlanetShipAtmosphereSource.Vacuum);
+        ShipEnvironmentSnapshot openFloor = ShipAtmosphereService.GetEnvironment(ship, 0, 0);
+        ShipEnvironmentSnapshot openVacuum = openFloor.WithOutside(PlanetShipAtmosphereSource.Vacuum);
+        ShipEnvironmentSnapshot openWarm = openFloor.WithOutside(new PlanetShipAtmosphereSource(null, 12d));
+        bool sealedOutsideIgnored = sealedOutside.IsSealed &&
+            sealedOutside.PressureKPa == filled.PressureKPa &&
+            sealedOutside.OxygenPartialPressureKPa == filled.OxygenPartialPressureKPa &&
+            sealedOutside.TemperatureCelsius == filled.TemperatureCelsius;
+        bool emptyVacuumTake = PlanetShipAtmosphereSource.Vacuum.TakeGas(1m).Count == 0;
         decimal beforeTake = roomCount > 0 ? ShipAtmosphereService.TotalMoles(ship.Compartments[0].Gas) : 0m;
         bool take = ShipAtmosphereService.TryTakeGas(ship, 2, 2, FluidIds.Oxygen, 10m, out FluidBatch taken);
         var supplyInventory = new FluidInventory();
@@ -399,17 +408,44 @@ public static class GameplayTestShipProbe
         ship.Pieces.Add(repaired); ship.NotifyStructureChanged();
         ShipAtmosphereService.RebuildCompartments(ship, exhaust);
         decimal repairedMoles = ship.Compartments.Count > 0 ? ShipAtmosphereService.TotalMoles(ship.Compartments[0].Gas) : 0m;
+        // 同一压力模式反复切换外界温压，验证复用的资格委托始终读取本轮压力。
+        var pressureShip = NewShip("pressure-pattern");
+        var pressureWall = Piece("pressure-wall", ShipPieceKind.Wall, 0, 0);
+        pressureWall.Health = pressureWall.MaxHealth = 200d;
+        pressureWall.MinimumPressureKPa = 80d;
+        pressureWall.MaximumPressureKPa = 120d;
+        pressureWall.PressureDamagePerKPaSecond = 1d;
+        pressureWall.MinimumTemperatureCelsius = -500d;
+        pressureWall.MaximumTemperatureCelsius = 500d;
+        pressureShip.Pieces.Add(pressureWall);
+        bool safeInitiallyChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 100d, 20d, .5d);
+        double healthAfterSafe = pressureWall.Health;
+        bool lowChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 20d, 20d, .5d);
+        double healthAfterLow = pressureWall.Health;
+        bool highChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 200d, 20d, .25d);
+        double healthAfterHigh = pressureWall.Health;
+        bool safeAgainChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 100d, 20d, 1d);
         return new JObject
         {
             ["rooms"] = roomCount, ["volumeLiters"] = volume, ["plannedMoles"] = plannedMoles,
             ["oxygenAdded"] = addOxygen, ["nitrogenAdded"] = addNitrogen, ["filled"] = Environment(filled),
+            ["sealedOutsideIgnored"] = sealedOutsideIgnored,
+            ["openVacuum"] = Environment(openVacuum), ["openWarm"] = Environment(openWarm),
+            ["emptyVacuumTake"] = emptyVacuumTake,
             ["beforeTakeMoles"] = beforeTake, ["takeAccepted"] = take, ["takenMoles"] = taken.GasMoles,
             ["supplyPrepared"] = prepareSupply, ["supplyAccepted"] = supplied, ["receivedMoles"] = received,
             ["sourceBeforeMoles"] = sourceBefore, ["sourceAfterMoles"] = sourceAfter,
             ["blocksPassageClosed"] = blockedClosed, ["blocksPassageOpen"] = door?.BlocksPassage == true,
             ["doorOpenEnvironment"] = Environment(opened), ["breachAccepted"] = broken,
             ["beforeLeakMoles"] = beforeLeak, ["breachedRooms"] = breachedRooms, ["releasedMoles"] = leaked,
-            ["repairedRooms"] = ship.Compartments.Count, ["repairedMoles"] = repairedMoles
+            ["repairedRooms"] = ship.Compartments.Count, ["repairedMoles"] = repairedMoles,
+            ["pressurePattern"] = new JObject
+            {
+                ["safeInitiallyChanged"] = safeInitiallyChanged, ["afterSafe"] = healthAfterSafe,
+                ["lowChanged"] = lowChanged, ["afterLow"] = healthAfterLow,
+                ["highChanged"] = highChanged, ["afterHigh"] = healthAfterHigh,
+                ["safeAgainChanged"] = safeAgainChanged, ["afterSafeAgain"] = pressureWall.Health
+            }
         };
     }
 

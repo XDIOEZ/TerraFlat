@@ -7,6 +7,7 @@ namespace FlatWorld.Spaceflight
     public sealed class PlanetShipAtmosphereSource : IShipAtmosphereSource
     {
         #region 真实星球大气适配
+        public static PlanetShipAtmosphereSource Vacuum { get; } = new(null, -270d);
         private readonly AtmosphereState atmosphere;
         private readonly double temperature;
         public PlanetShipAtmosphereSource(AtmosphereState state, double temperatureCelsius)
@@ -15,9 +16,9 @@ namespace FlatWorld.Spaceflight
         public double TemperatureCelsius => temperature;
         public IReadOnlyList<FluidBatch> TakeGas(decimal maximumMoles)
         {
-            var batches = new List<FluidBatch>();
             decimal total = atmosphere?.CurrentMoles ?? 0m;
-            if (total <= 0m || maximumMoles <= 0m) return batches;
+            if (total <= 0m || maximumMoles <= 0m) return Array.Empty<FluidBatch>();
+            var batches = new List<FluidBatch>();
             decimal amount = Math.Min(maximumMoles, total);
             decimal remaining = amount;
             for (int index = 0; index < atmosphere.Gases.Count; index++)
@@ -68,10 +69,10 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is ShipFlightPhase.Cruising)
-                return new PlanetShipAtmosphereSource(null, -270d);
+                return PlanetShipAtmosphereSource.Vacuum;
             BodyState body = FindSurfaceBody(flight.SurfaceWorldKey);
             if (body == null || !owner.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))
-                return new PlanetShipAtmosphereSource(null, -270d);
+                return PlanetShipAtmosphereSource.Vacuum;
             Vector2 position = new((float)ship.PositionX, (float)ship.PositionY);
             // 本地已加载地表优先读取实时温度，冷世界才调用离线地表生成查询。
             double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == flight.SurfaceWorldKey &&
@@ -88,7 +89,7 @@ namespace FlatWorld.Spaceflight
                 int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
                 ShipEnvironmentSnapshot environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
                 if (!environment.IsSealed)
-                    environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetOutside(ship));
+                    environment = environment.WithOutside(GetOutside(ship));
                 bool breathe = environment.CanBreathe;
                 if (!environment.IsSealed && !IsSpaceView && AtmosphereService.TryGetForWorld(item.gameObject.scene.name, out AtmosphereState atmosphere))
                     breathe = AtmosphereService.CanBreathe(atmosphere);

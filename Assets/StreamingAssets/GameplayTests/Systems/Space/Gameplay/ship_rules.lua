@@ -71,6 +71,14 @@ do
         near(data.filled.pressure, 101.325, "充气后的实际总压强错误")
         near(data.filled.oxygenPressure, data.filled.pressure * 0.21, "实际氧分压错误")
         near(data.filled.carbonDioxidePressure, 0, "样本没有二氧化碳却出现二氧化碳分压")
+        assert(data.sealedOutsideIgnored and data.emptyVacuumTake,
+            "密闭舱外界隔离或真空取气规则错误")
+        assert(data.openVacuum.floor and not data.openVacuum.sealed and not data.openVacuum.canBreathe,
+            "开放但有地板的区域丢失支撑或错误判定为密闭")
+        near(data.openVacuum.pressure, 0, "真空外界压强错误")
+        near(data.openVacuum.temperature, -270, "真空外界温度错误")
+        near(data.openWarm.pressure, 0, "外界温度变化不应生成气体压强")
+        near(data.openWarm.temperature, 12, "开放区域没有读取新的外部温度")
         near(data.beforeTakeMoles, data.plannedMoles, "氮氧入舱的气量没有守恒")
         assert(data.takeAccepted == true, "内舱真实抽氧失败")
         near(data.takenMoles, 10, "抽氧必须返回实际扣除的气量")
@@ -85,6 +93,13 @@ do
         near(data.releasedMoles, data.beforeLeakMoles, "破舱释放没有交回实际气体库存")
         assert(data.repairedRooms == 1, "修补边界后没有恢复密闭拓扑")
         near(data.repairedMoles, 0, "曾经密闭的区域修补后不能免费生成舱气")
+        local pattern = data.pressurePattern
+        assert(not pattern.safeInitiallyChanged and pattern.lowChanged and pattern.highChanged and
+            not pattern.safeAgainChanged, "持续压力伤害判定没有随本轮外界压强切换")
+        near(pattern.afterSafe, 200, "正常压强不应损伤船壁")
+        near(pattern.afterLow, 170, "低压差损伤计算错误")
+        near(pattern.afterHigh, 150, "高压差损伤计算错误")
+        near(pattern.afterSafeAgain, 150, "压力恢复安全后仍在持续造成伤害")
         return "覆盖真实充气、分压、呼吸条件、抽氧与供气守恒、门通行、破舱释放和修补不生成气体。"
     end, "密闭舱真实气量与舱门")
 end
