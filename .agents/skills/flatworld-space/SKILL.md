@@ -86,6 +86,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 船体升空排序和共享 Collider 偏移在 ShipColliderPresenter 每船只更新一次，ShipPieceView 不重复操作整船根；静止舱门不重复写两扇门的 Renderer 属性，开关与 Rebind 仍正常刷新。
 - 船体支撑查询经 `ShipAtmosphereService.TryGetFloor` 复用结构修订索引，按格返回首个活地板，不再遍历部件或构建 Footprint 迭代器；结构变更后同步失效。
 - 太空表现由 SpaceSession.Presentation 与 SpacePresentationPose 共用前后固定步姿态和一个渲染进度，物理仍为50Hz；船格原点、乘员本地位置和驾驶中心统一插值，表现刚体关闭原生二次插值。屏幕选格按表现姿态反算，支撑/丢弃/存档读权威位置；联机样本按本地收包时间插值，远端乘员在统一表现同步事件后投影。传送、归属切换和会话结束重置历史，普通跨区与浮动原点保留双精度连续性。
+- 太空驾驶通过 `Mod_Cam.FollowMode.PresentationLocked` 直接跟随同一插值中心，关闭镜头额外 XY 阻尼/前探并固定 LateUpdate；地表驾驶仍用玩家设置，释放恢复原更新方式与最新偏好，不靠降船速或缩宇宙掩盖屏幕漂移。
 - 散落物只有地表升降时叠加贴图高度，太空掉落不继承船体残留地表高度；偏移保留原局部位置，触地、拾取和卸载时恢复。
 - 玩家须在实际 Console 的交互半径内开 UI_Ship，离开关闭；自动导航器仅经光纤供能力，线路/地板/墙不作控制台入口。飞船面板会话互斥，CanOpenShipPanel 共用打开/切换/刷新校验。
 - 船上设备 UI 只由交互键打开，ShipPieceView 拒绝鼠标点选；Esc 优先取消导航选点，再退出驾驶，右键只使用手持物。

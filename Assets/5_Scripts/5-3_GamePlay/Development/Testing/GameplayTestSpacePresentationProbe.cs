@@ -1,7 +1,9 @@
 using System;
 using System.Globalization;
+using Cinemachine;
 using FlatWorld.Spaceflight;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 /// <summary>独立姿态样本只调用正式表现插值，断言由 Lua 负责。</summary>
 public static class GameplayTestSpacePresentationProbe
@@ -110,6 +112,125 @@ public static class GameplayTestSpacePresentationProbe
     private static JObject Sample(string name, SpacePresentationPose value) => new()
     {
         ["name"] = name, ["position"] = Position(value.Position), ["angle"] = value.AngleRadians
+    };
+
+    #endregion
+
+    #region 太空驾驶镜头租约采样
+
+    public static JObject CaptureCameraOverride(Player player)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        string[] keys = { "FlatWorld.Camera.Lookahead", "FlatWorld.Camera.LookaheadSmoothing", "FlatWorld.Camera.LookaheadZoomInfluence" };
+        bool[] existed = { PlayerPrefs.HasKey(keys[0]), PlayerPrefs.HasKey(keys[1]), PlayerPrefs.HasKey(keys[2]) };
+        float[] preferences = { CameraUserSettings.Lookahead, CameraUserSettings.LookaheadSmoothing, CameraUserSettings.LookaheadZoomInfluence };
+        float[] storedPreferences = { PlayerPrefs.GetFloat(keys[0]), PlayerPrefs.GetFloat(keys[1]), PlayerPrefs.GetFloat(keys[2]) };
+        var root = new GameObject("太空驾驶镜头租约测试夹具");
+        root.SetActive(false);
+        Mod_Cam module = null;
+        Transform first = null, second = null;
+        try
+        {
+            // 独立且禁用输出的组件只采正式设置契约，不接管隔离角色的实际镜头。
+            Camera camera = root.AddComponent<Camera>();
+            camera.enabled = false;
+            CinemachineBrain brain = root.AddComponent<CinemachineBrain>();
+            brain.enabled = false;
+            brain.m_UpdateMethod = CinemachineBrain.UpdateMethod.SmartUpdate;
+            brain.m_BlendUpdateMethod = CinemachineBrain.BrainUpdateMethod.FixedUpdate;
+            var virtualRoot = new GameObject("独立虚拟镜头");
+            virtualRoot.transform.SetParent(root.transform, false);
+            CinemachineVirtualCamera virtualCamera = virtualRoot.AddComponent<CinemachineVirtualCamera>();
+            virtualCamera.enabled = false;
+            CinemachineFramingTransposer framing = virtualCamera.AddCinemachineComponent<CinemachineFramingTransposer>();
+            framing.m_XDamping = .12f;
+            framing.m_YDamping = .24f;
+            module = root.AddComponent<Mod_Cam>();
+            module.vcam = virtualCamera;
+            module.ControllerCamera = camera;
+            first = new GameObject("驾驶目标一").transform;
+            first.SetParent(root.transform, false);
+            second = new GameObject("驾驶目标二").transform;
+            second.SetParent(root.transform, false);
+            root.SetActive(true);
+
+            CameraUserSettings.SetLookahead(-.4f);
+            CameraUserSettings.SetLookaheadSmoothing(2f);
+            CameraUserSettings.SetLookaheadZoomInfluence(0f);
+            module.SetOrthographicSize(10f);
+            JObject baseline = CameraOverrideSample(module, framing, brain, null);
+            module.SetFollowOverride(first, 120000f, 1.25f, Mod_Cam.FollowMode.PresentationLocked);
+            module.SetOrthographicSize(30f);
+            JObject locked = CameraOverrideSample(module, framing, brain, first);
+            for (int index = 0; index < 3; index++)
+                module.SetFollowOverride(first, 120000f, 1.25f, Mod_Cam.FollowMode.PresentationLocked);
+            JObject repeated = CameraOverrideSample(module, framing, brain, first);
+
+            CameraUserSettings.SetLookahead(.6f);
+            CameraUserSettings.SetLookaheadSmoothing(3.4f);
+            CameraUserSettings.SetLookaheadZoomInfluence(.5f);
+            JObject changedSettings = CameraOverrideSample(module, framing, brain, first);
+            module.SetOrthographicSize(240f);
+            module.ChangeCameraView(-2f);
+            JObject zoomed = CameraOverrideSample(module, framing, brain, first);
+            module.ClearFollowOverride(second);
+            JObject wrongRelease = CameraOverrideSample(module, framing, brain, first);
+
+            module.SetFollowOverride(first, 120000f, 1.25f);
+            JObject playerMode = CameraOverrideSample(module, framing, brain, first);
+            module.SetFollowOverride(first, 120000f, 1.25f, Mod_Cam.FollowMode.PresentationLocked);
+            JObject relocked = CameraOverrideSample(module, framing, brain, first);
+            module.SetFollowOverride(second, 120000f, 1.25f, Mod_Cam.FollowMode.PresentationLocked);
+            module.ClearFollowOverride(first);
+            JObject staleRelease = CameraOverrideSample(module, framing, brain, second);
+            module.ClearFollowOverride(second);
+            JObject released = CameraOverrideSample(module, framing, brain, null);
+            module.ClearFollowOverride(second);
+            JObject repeatedRelease = CameraOverrideSample(module, framing, brain, null);
+
+            return new JObject
+            {
+                ["scope"] = "isolated-camera-components", ["baseline"] = baseline, ["locked"] = locked,
+                ["repeated"] = repeated, ["changedSettings"] = changedSettings, ["zoomed"] = zoomed,
+                ["wrongRelease"] = wrongRelease, ["playerMode"] = playerMode, ["relocked"] = relocked,
+                ["staleRelease"] = staleRelease, ["released"] = released, ["repeatedRelease"] = repeatedRelease,
+                ["limitations"] = "仅检查正式镜头租约、设置通知、缩放与恢复；独立组件禁用输出，不证明实际高速航行画面的平滑度。"
+            };
+        }
+        finally
+        {
+            if (module != null)
+            {
+                module.ClearFollowOverride(first);
+                module.ClearFollowOverride(second);
+            }
+            root.SetActive(false);
+            UnityEngine.Object.Destroy(root);
+            // 正式 setter 恢复缓存与事件，原本不存在的偏好键同时恢复为不存在。
+            CameraUserSettings.SetLookahead(preferences[0]);
+            CameraUserSettings.SetLookaheadSmoothing(preferences[1]);
+            CameraUserSettings.SetLookaheadZoomInfluence(preferences[2]);
+            for (int index = 0; index < keys.Length; index++)
+            {
+                if (existed[index]) PlayerPrefs.SetFloat(keys[index], storedPreferences[index]);
+                else PlayerPrefs.DeleteKey(keys[index]);
+            }
+            PlayerPrefs.Save();
+        }
+    }
+
+    private static JObject CameraOverrideSample(Mod_Cam module, CinemachineFramingTransposer framing,
+        CinemachineBrain brain, Transform expectedTarget) => new()
+    {
+        ["hasOverride"] = module.HasFollowOverride, ["followsExpected"] = module.Vcam.Follow == expectedTarget,
+        ["xDamping"] = framing.m_XDamping, ["yDamping"] = framing.m_YDamping,
+        ["lookahead"] = framing.m_LookaheadTime, ["smoothing"] = framing.m_LookaheadSmoothing,
+        ["updateMethod"] = brain.m_UpdateMethod.ToString(), ["blendUpdateMethod"] = brain.m_BlendUpdateMethod.ToString(),
+        ["size"] = module.CurrentOrthographicSize, ["maximumSize"] = module.EffectiveMaxPovValue,
+        ["proportionalZoom"] = module.UsesProportionalZoom,
+        ["userLookahead"] = CameraUserSettings.Lookahead,
+        ["userSmoothing"] = CameraUserSettings.LookaheadSmoothing,
+        ["userZoomInfluence"] = CameraUserSettings.LookaheadZoomInfluence
     };
 
     #endregion

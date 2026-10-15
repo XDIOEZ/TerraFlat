@@ -10,7 +10,57 @@ do
         assert(data.savedVersion == data.after.version, "正式捕获的快照版本不一致")
         assert(data.savedTime >= data.before.seconds and data.savedTime <= data.after.seconds, "快照时钟不属于本次采样")
         assert(data.savedSectorCount == data.after.sectorCount and data.savedSectorCount > 0, "快照遗漏星区")
-        return "真实固定步、会话身份和正式捕获快照已检查"
+        local camera = data.cameraOverride
+        local function near(actual, expected, label)
+            assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) < .0001, label)
+        end
+        local function brain_restored(sample, label)
+            assert(sample.updateMethod == "SmartUpdate" and sample.blendUpdateMethod == "FixedUpdate",
+                label .. "没有恢复借用前的 Brain 更新方式")
+        end
+        local function player_settings(sample, label)
+            assert(sample.followsExpected, label .. "跟随目标错误")
+            brain_restored(sample, label)
+            near(sample.xDamping, .12, label .. "没有恢复基础 X 阻尼")
+            near(sample.yDamping, .24, label .. "没有恢复基础 Y 阻尼")
+            near(sample.lookahead, .9, label .. "没有应用驾驶中更新的前探与缩放偏好")
+            near(sample.smoothing, 3.4, label .. "没有恢复驾驶中更新的平滑偏好")
+        end
+        assert(type(camera) == "table" and camera.scope == "isolated-camera-components", "缺少独立正式镜头租约采样")
+        assert(not camera.baseline.hasOverride and camera.baseline.followsExpected, "镜头夹具基线已有外部租约")
+        brain_restored(camera.baseline, "基线")
+        near(camera.baseline.xDamping, .52, "基线负前探没有增加 X 惯性")
+        near(camera.baseline.yDamping, .64, "基线负前探没有增加 Y 惯性")
+        near(camera.baseline.lookahead, 0, "负前探仍启用预测")
+        near(camera.baseline.smoothing, 2, "基线偏好未应用")
+        for _, key in ipairs({"locked", "repeated", "changedSettings", "zoomed", "wrongRelease", "relocked", "staleRelease"}) do
+            local sample = camera[key]
+            assert(sample.hasOverride and sample.followsExpected, key .. "丢失当前驾驶目标")
+            assert(sample.updateMethod == "LateUpdate" and sample.blendUpdateMethod == "LateUpdate",
+                key .. "没有使用 LateUpdate 更新镜头")
+            near(sample.xDamping, 0, key .. "重新叠加了 X 阻尼")
+            near(sample.yDamping, 0, key .. "重新叠加了 Y 阻尼")
+            near(sample.lookahead, 0, key .. "重新叠加了镜头前探")
+            near(sample.smoothing, 0, key .. "重新叠加了预测平滑")
+            near(sample.maximumSize, 120000, key .. "丢失驾驶视野上限")
+            assert(sample.proportionalZoom, key .. "丢失驾驶比例缩放")
+        end
+        near(camera.locked.size, 30, "进入驾驶时正交尺寸错误")
+        near(camera.changedSettings.userLookahead, .6, "驾驶模式改写了玩家前探偏好")
+        near(camera.changedSettings.userSmoothing, 3.4, "驾驶模式改写了玩家平滑偏好")
+        near(camera.changedSettings.userZoomInfluence, .5, "驾驶模式改写了玩家缩放偏好")
+        near(camera.zoomed.size, 153.6, "锁定驾驶镜头未保留正式比例缩放")
+        assert(camera.playerMode.hasOverride, "同目标切回玩家设置不应释放跟随目标")
+        player_settings(camera.playerMode, "同目标切回玩家设置")
+        for _, key in ipairs({"released", "repeatedRelease"}) do
+            local sample = camera[key]
+            assert(not sample.hasOverride and not sample.proportionalZoom, key .. "退出后残留驾驶租约")
+            player_settings(sample, key)
+            near(sample.size, 40, key .. "退出后没有恢复普通视野范围")
+            near(sample.maximumSize, 40, key .. "退出后残留太空视野上限")
+        end
+        assert(type(camera.limitations) == "string" and #camera.limitations > 0, "镜头采样必须说明覆盖边界")
+        return "真实固定步、会话快照，以及镜头锁定、重复租约、设置与缩放保持、错误释放和恢复已检查"
     end, "真实宇宙会话与固定步时钟")
 end
 

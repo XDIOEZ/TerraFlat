@@ -227,7 +227,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         SpaceSessionState restored = SaveDataMgr.DeserializeSpaceState(SaveDataMgr.Instance.SaveData.SpaceStateJson);
         completed(new JObject { ["scope"] = "live-session", ["before"] = before,
             ["after"] = SessionSnapshot(), ["savedVersion"] = restored.Version,
-            ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count });
+            ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count,
+            ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()) });
     }
 
     private IEnumerator ReadTemplates(Action<JObject> completed)

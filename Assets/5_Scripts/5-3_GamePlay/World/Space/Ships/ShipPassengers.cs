@@ -298,7 +298,8 @@ namespace FlatWorld.Spaceflight
             SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
             camera.SetFollowOverride(drivingCameraTarget,
                 IsSpaceView ? settings.DrivingCameraMaxSize : 0f,
-                IsSpaceView ? settings.DrivingCameraZoomMultiplier : 1f);
+                IsSpaceView ? settings.DrivingCameraZoomMultiplier : 1f,
+                IsSpaceView ? Mod_Cam.FollowMode.PresentationLocked : Mod_Cam.FollowMode.PlayerSettings);
         }
 
         private void ReleaseDrivingCamera()
