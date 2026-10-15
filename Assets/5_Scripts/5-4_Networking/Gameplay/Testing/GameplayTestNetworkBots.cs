@@ -27,6 +27,8 @@ namespace FlatWorld.Networking.Gameplay
             GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_rejection", CaptureRejection);
             GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_input", CaptureInput);
             GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_pickup", CapturePickup);
+            GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_actions", CaptureActions);
+            GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_actions_cleanup", CaptureActionsCleanup);
             GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_reconnect", CaptureReconnect);
         }
 

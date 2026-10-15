@@ -135,6 +135,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
         function test.wait(seconds)
             enqueue({name='wait', seconds=duration(seconds)})
         end
+        function test.await_check(name, timeout, label)
+            name = text(name, 'check name')
+            assert(timeout ~= nil and timeout > 0, 'await_check 超时必须大于零')
+            enqueue({name='await_check', text=name, seconds=duration(timeout),
+                label=label == nil and name or text(label, 'label')})
+        end
         function test.move(x, y, seconds)
             finite(x, 'x'); finite(y, 'y')
             assert(x ~= 0 or y ~= 0, 'move 需要非零方向')
@@ -552,6 +558,26 @@ public sealed class GameplayTestLuaRunner : IDisposable
             case "check":
                 command.Success = check(command.Text);
                 command.Message = command.Success ? $"检查通过：{command.Text}" : $"检查失败：{command.Text}";
+                break;
+            case "await_check":
+                // 生产状态一旦达标立即进入下一步，不再强制耗尽固定等待时间。
+                double checkDeadline = Time.realtimeSinceStartupAsDouble + command.Seconds;
+                while (true)
+                {
+                    if (!TryEnsureContext(out command.Message)) yield break;
+                    if (check(command.Text))
+                    {
+                        command.Success = true;
+                        command.Message = $"状态已达标：{command.Text}";
+                        break;
+                    }
+                    if (Time.realtimeSinceStartupAsDouble >= checkDeadline)
+                    {
+                        command.Message = $"等待 {command.Text} 超过 {command.Seconds:0.###} 秒仍未达标。";
+                        break;
+                    }
+                    yield return null;
+                }
                 break;
             case "fluid":
                 command.Success = GameplayTestFluids.Run(command.Text, record, out command.Message);

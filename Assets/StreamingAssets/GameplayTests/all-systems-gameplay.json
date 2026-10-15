@@ -275,6 +275,12 @@
       "enabled": true
     },
     {
+      "id": "networking_bots_actions",
+      "name": "联机假人：实际移动、攻击、拾取与丢弃",
+      "luaPath": "GameplayTests/Systems/Networking/bots-actions.lua",
+      "enabled": true
+    },
+    {
       "id": "ui_localization_gameplay",
       "name": "正式设置窗口、保存放弃与中英文切换",
       "luaPath": "GameplayTests/Systems/UISettings/gameplay.lua",

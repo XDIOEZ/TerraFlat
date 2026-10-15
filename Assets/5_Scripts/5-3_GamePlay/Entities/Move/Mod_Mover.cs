@@ -76,6 +76,7 @@ public partial class Mod_Mover : Module
     private Mod_GameController inputController;
     private readonly List<IWaterCurrentExposure> waterCurrentExposures = new(); // 离地模块控制表层水流接触。
     private readonly List<IWindMotionOwner> windMotionOwners = new();
+    private int windSuppressionLeases;
     public Rigidbody2D rb;
 
     // 输入判定、到达判定与过渡时间的稳定下限。
@@ -564,6 +565,25 @@ public partial class Mod_Mover : Module
     #endregion
 
     #region 环境推动
+    /// <summary>受保护区域可暂时屏蔽风力推动，租约释放后自然恢复环境移动。</summary>
+    public System.IDisposable SuppressWindMotion()
+    {
+        windSuppressionLeases++;
+        return new WindSuppressionLease(this);
+    }
+
+    private sealed class WindSuppressionLease : System.IDisposable
+    {
+        private Mod_Mover owner;
+        public WindSuppressionLease(Mod_Mover owner) => this.owner = owner;
+        public void Dispose()
+        {
+            if (owner == null) return;
+            owner.windSuppressionLeases = Mathf.Max(0, owner.windSuppressionLeases - 1);
+            owner = null;
+        }
+    }
+
     private Vector2 ResolveExternalVelocity()
     {
         Vector2 velocity = inputController?.IsGameplayInputLocked == true
@@ -576,7 +596,7 @@ public partial class Mod_Mover : Module
             bool windOwned = false;
             foreach (IWindMotionOwner owner in windMotionOwners)
                 windOwned |= owner.OwnsWindMotion;
-            if (!windOwned)
+            if (!windOwned && windSuppressionLeases == 0)
                 velocity += WorldMotionSystem.SampleWindVelocity(rb.position, item.itemData.Stack.CurrentWeight);
             if (item is Player player && player.IsLocalProfile && item.gameObject.scene.name == MachineWorld.WorldKey)
                 velocity += MachineWorld.SampleConveyorVelocity(rb.position, Time.fixedDeltaTime);

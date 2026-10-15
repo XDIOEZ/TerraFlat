@@ -66,6 +66,8 @@ public static class GameplayTestMechanicalPlant
     private static readonly Dictionary<string, MachineEntity> parts = new(StringComparer.Ordinal);
     private static readonly List<int> owned = new();
     private static Player owner;
+    private static Vector3 ownerStart;
+    private static IDisposable ownerWindShield;
     private static Vector2Int anchor;
     private static Vector2Int waterCell;
     private static string originalLiquid;
@@ -88,13 +90,15 @@ public static class GameplayTestMechanicalPlant
         if (built) { message = "机械工厂已经创建。"; return true; }
         Reset();
         owner = player;
+        ownerStart = player.transform.position;
+        ownerWindShield = player.GetComponentInChildren<Mod_Mover>(true)?.SuppressWindMotion();
         Vector2 dimensions = ChunkMgr.GetChunkSize();
         int width = Mathf.RoundToInt(dimensions.x), height = Mathf.RoundToInt(dimensions.y);
         if (width < 14 || height < 16)
         { message = "机械工厂需要至少 14×16 的已加载区块。"; return false; }
-        Vector2Int cell = MachineWorld.CellOf(player.transform.position);
-        anchor = new Vector2Int(Mathf.FloorToInt((float)cell.x / width) * width + 4,
-            Mathf.FloorToInt((float)cell.y / height) * height + 2);
+        // 工厂仅在远离主角的已加载区块搭建，避免机器碰撞与测试水流推走玩家。
+        if (!TryFindSafeAnchor(player.transform.position, width, height, out anchor))
+        { message = "附近没有远离主角的已加载区块，拒绝在主角身边搭建测试工厂。"; Reset(); return false; }
         waterCell = anchor + new Vector2Int(0, 4);
         try
         {
@@ -103,6 +107,7 @@ public static class GameplayTestMechanicalPlant
             if (weather != null)
             {
                 originalWind = weather.CurrentWindStrength;
+                // 风机接受完整真实风力，主角通过独立可释放防风租约避免被试验强风推走。
                 weather.SetWindStrength(1f);
                 windChanged = true;
             }
@@ -123,6 +128,31 @@ public static class GameplayTestMechanicalPlant
             Reset();
             return false;
         }
+    }
+
+    private static bool TryFindSafeAnchor(Vector3 position, int width, int height, out Vector2Int result)
+    {
+        Vector2Int cell = MachineWorld.CellOf(position);
+        int chunkX = Mathf.FloorToInt((float)cell.x / width);
+        int chunkY = Mathf.FloorToInt((float)cell.y / height);
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        for (int radius = 1; radius <= 4; radius++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) != radius) continue;
+                Vector2Int candidate = new((chunkX + dx) * width + 4, (chunkY + dy) * height + 2);
+                Vector2 factoryCenter = new(candidate.x + 1.5f, candidate.y + 5.5f);
+                if (WorldTopologyRuntime.Distance(position, factoryCenter) < 20f) continue;
+                if (chunks == null || !chunks.TryGetRuntimeTerrainTile(
+                        new Vector2(candidate.x + .5f, candidate.y + 4.5f), out _)) continue;
+                result = candidate;
+                return true;
+            }
+        }
+        result = default;
+        return false;
     }
 
     private static void Place(Part part)
@@ -219,7 +249,8 @@ public static class GameplayTestMechanicalPlant
         }
         if (windChanged && WeatherMgr.ExistingInstance != null)
             WeatherMgr.ExistingInstance.SetWindStrength(originalWind);
-        owner = null; built = false; windChanged = false; environmentChanged = false;
+        ownerWindShield?.Dispose(); ownerWindShield = null;
+        owner = null; ownerStart = default; built = false; windChanged = false; environmentChanged = false;
         lastError = string.Empty;
     }
 
@@ -326,6 +357,9 @@ public static class GameplayTestMechanicalPlant
         if (!built) return name.StartsWith("mechanical_", StringComparison.Ordinal);
         switch (name)
         {
+            case "mechanical_player_stationary":
+                passed = owner != null && WorldTopologyRuntime.Distance(ownerStart, owner.transform.position) < .25f;
+                return true;
             case "mechanical_catalog_coverage":
                 TextAsset catalog = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
                 if (catalog == null) return true;

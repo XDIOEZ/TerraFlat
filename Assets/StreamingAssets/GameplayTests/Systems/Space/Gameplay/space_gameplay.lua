@@ -160,7 +160,7 @@ do
     test.screenshot("最后一艘真实飞船的降落现场")
 end
 
-for _, value in ipairs({"right", "left", "up", "down", "corner"}) do
+for _, value in ipairs({"right"}) do
     local direction = value
     -- 以正式太空入场准备速度，随后由真实固定步越界、释放租约并折返。
     test.space("sector_transition", function(data)

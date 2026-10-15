@@ -408,7 +408,16 @@ namespace FlatWorld.Networking.Gameplay
                 ApplyRemoteVisualState(visualState);
             }
             else
+            {
                 transform.position = requestedPosition;
+                if (!isOwned)
+                {
+                    // 独立服务器同样推进远端角色本体，否则权威坐标变化但实体仍留在出生点。
+                    SyncCorePlayerPosition(WorldLocalPresentation.ProjectPosition(requestedPosition));
+                    ApplyRemoteFacing(facingLeft);
+                    ApplyRemoteVisualState(visualState);
+                }
+            }
         }
 
         private void OnAuthoritativePositionChanged(Vector3 oldPosition, Vector3 newPosition)
@@ -796,6 +805,9 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (coreBody != null)
                 {
+                    // 远端服务端假人使用不参与物理模拟的刚体，必须同步 Transform 才能真正移动实体。
+                    if (!coreBody.simulated)
+                        corePlayer.transform.position = position;
                     coreBody.position = position;
                     coreBody.velocity = remoteVelocity;
                 }

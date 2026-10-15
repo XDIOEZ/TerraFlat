@@ -5,3 +5,5 @@
 - 使用独立 `MachineEntity` 和 `MechanicalNetworkGraph`，检查扭矩完整分配/近处优先、供给增加与断供、齿轮反转和异速源冲突。
 - 不注册 `MachineWorld`。真实全目录组装、风力/水流源、手推、跨轴/离合器、加工/输送及场景表现仍由既有 `mechanical-suite.json` 集成专项覆盖。
 - 此处是快速规则组，不能替代专项的真实世界链路；无截图。
+
+PlayMode 的 `mechanical_processing.lua` 对加工产物使用 `test.await_check` 提前结束，不再空等固定的 27+16 秒；正式风车仍使用完整区域风力，试验主角通过可释放防风租约避免强风将其推走。夹具优先放在远离主角的已加载区块，结束自动恢复风力与玩家风力推动。生产结果与主角位置都由 Lua 断言核对。

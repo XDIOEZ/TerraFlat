@@ -1002,6 +1002,7 @@
         "networking_bots_session",
         "networking_bots_input",
         "networking_bots_pickup",
+        "networking_bots_actions",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"

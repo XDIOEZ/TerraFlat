@@ -397,6 +397,17 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
     public void DropItemByCount(ItemSlot slot, int count, Vector2? screenPosition)
     {
+        DropItemByCountCore(slot, count, screenPosition, null);
+    }
+
+    /// <summary>无本地鼠标的联机玩家也能使用正式丢弃事务，目标采用世界坐标。</summary>
+    public void DropItemByCountAtWorldPosition(ItemSlot slot, int count, Vector2 destination)
+    {
+        DropItemByCountCore(slot, count, null, destination);
+    }
+
+    private void DropItemByCountCore(ItemSlot slot, int count, Vector2? screenPosition, Vector2? worldPosition)
+    {
         if (count <= 0 || slot == null || slot.Amount <= 0)
         {
             Debug.LogWarning("丢弃数量非法或物品槽为空！");
@@ -418,9 +429,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
             {
                 // 掉落态直接进入 ECS；只在生成成功后扣减库存。
                 Vector2 startPos = transform.position;
-                Vector2 endPos = screenPosition.HasValue
+                Vector2 endPos = worldPosition ?? (screenPosition.HasValue
                     ? Mod_GameController.GetMouseWorldPosition(screenPosition.Value)
-                    : DropPos;
+                    : DropPos);
                 float distance = WorldTopologyRuntime.Distance(startPos, endPos);
                 float animTime = baseDropDuration + distance * distanceSensitivity;
                 newDrop = DroppedItemService.Spawn(newItemData, startPos, endPos, animTime,

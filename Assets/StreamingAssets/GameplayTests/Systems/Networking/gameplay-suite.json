@@ -21,6 +21,12 @@
       "name": "联机假人：权威拾取租约与提交",
       "luaPath": "GameplayTests/Systems/Networking/bots-pickup.lua",
       "enabled": true
+    },
+    {
+      "id": "networking_bots_actions",
+      "name": "联机假人：实际移动、攻击、拾取与丢弃",
+      "luaPath": "GameplayTests/Systems/Networking/bots-actions.lua",
+      "enabled": true
     }
   ]
 }
