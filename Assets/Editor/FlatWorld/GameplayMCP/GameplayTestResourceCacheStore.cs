@@ -497,6 +497,8 @@ namespace FlatWorld.GameplayMCP
         private static bool IsResourcePath(string path)
         {
             if (!path.StartsWith("Assets/", StringComparison.Ordinal) ||
+                // 串流会话在进入/退出 PlayMode 时自动更新，不影响 GameRes 源资源和 DTO。
+                path == "Assets/Settings/FlatWorldRenderStreamingSettings.asset" ||
                 path.StartsWith("Assets/StreamingAssets/GameplayTests/", StringComparison.Ordinal) ||
                 path.StartsWith("Assets/Screenshots/", StringComparison.Ordinal) ||
                 path.StartsWith("Assets/Tests/", StringComparison.Ordinal) ||

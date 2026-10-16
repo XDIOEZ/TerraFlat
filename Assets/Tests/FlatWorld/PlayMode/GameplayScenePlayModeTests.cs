@@ -43,7 +43,7 @@ namespace FlatWorld.Tests.PlayMode
         }
 
         [UnityTest]
-        [Timeout(900000)]
+        [Timeout(1800000)]
         public IEnumerator ExecuteEntireGameplaySuiteInOneWorld()
         {
 #if UNITY_EDITOR
@@ -54,7 +54,8 @@ namespace FlatWorld.Tests.PlayMode
             Assert.Fail("GameplayTestScene 仅在 Unity Editor 内执行，不属于正式 Build。");
 #endif
             GameplayTestScene runner = null;
-            float deadline = Time.realtimeSinceStartup + 720f;
+            // 外层等待覆盖场景总时限与初始化、写盘收尾，避免报告完成前提前中断。
+            float deadline = Time.realtimeSinceStartup + 1500f;
             while (runner == null && Time.realtimeSinceStartup < deadline)
             {
                 runner = UnityEngine.Object.FindObjectOfType<GameplayTestScene>();

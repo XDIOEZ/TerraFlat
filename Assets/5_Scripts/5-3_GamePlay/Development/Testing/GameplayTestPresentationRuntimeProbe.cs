@@ -232,6 +232,12 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool cleanAfterClose = !SettingsProviderRegistry.HasEditSessionChanges();
             manager.OpenMainMenuSettings();
             yield return WaitForPanel(panel);
+            float reopenedAt = Time.realtimeSinceStartup;
+            // 放弃修改后语言资源可能异步就绪，等正式 Binder 恢复译文而不是立即读取旧字。
+            while (saveText != null && saveText.text != expectedEn &&
+                   Time.realtimeSinceStartup - reopenedAt < 8f)
+                yield return null;
+            bool reopenedEnglishReady = saveText != null && saveText.text == expectedEn;
 
             int opens = 0, closes = 0;
             Action onOpen = () => opens++;
@@ -266,6 +272,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["invalidLocaleAccepted"] = invalidLocale,
                 ["currentLocale"] = FlatWorldLocalizationService.CurrentLocaleCode,
                 ["reopenedEnglish"] = saveText.text,
+                ["reopenedEnglishReady"] = reopenedEnglishReady,
+                ["reopenedEnglishWaitSeconds"] = Time.realtimeSinceStartup - reopenedAt,
                 ["fallback"] = FlatWorldLocalizationService.Get("lua.missing.translation", "Lua 缺项回退", FlatWorldLocalizationService.UiTable),
                 ["currentVolume"] = fixture.Audio.UserSettings.Master
             };

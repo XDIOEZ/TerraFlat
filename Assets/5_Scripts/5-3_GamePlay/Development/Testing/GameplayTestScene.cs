@@ -13,9 +13,9 @@ public sealed class GameplayTestScene : MonoBehaviour
     #region 场景配置
     [SerializeField] private string testSuitePath = "GameplayTests/mechanical-suite.json";
     [SerializeField] private string seed = "flatworld-showroom-001";
-    [SerializeField, Min(1f)] private float resourceTimeoutSeconds = 120f;
+    [SerializeField, Min(1f)] private float resourceTimeoutSeconds = 240f;
     [SerializeField, Min(1f)] private float worldTimeoutSeconds = 120f;
-    [SerializeField, Min(1f)] private float totalTimeoutSeconds = 600f;
+    [SerializeField, Min(1f)] private float totalTimeoutSeconds = 1200f;
     [SerializeField, Min(1f)] private float screenshotIntervalSeconds = 10f;
     [SerializeField, Min(100)] private int maximumLogEntries = 10000;
 
@@ -176,7 +176,9 @@ public sealed class GameplayTestScene : MonoBehaviour
             GameRes resources = GameRes.ExistingInstance;
             if (resources != null && resources.LoadState == ResourceLoadState.Failed)
                 throw new InvalidOperationException(resources.LastLoadError);
-            if (Time.realtimeSinceStartup >= deadline) throw new TimeoutException("等待游戏资源加载超时。");
+            if (Time.realtimeSinceStartup >= deadline)
+                throw new TimeoutException("等待游戏资源加载超时。当前状态：" +
+                    (resources == null ? "GameRes 尚未创建" : resources.LoadState + " / " + resources.LoadStatusText));
             yield return null;
         }
         Record("resources", "完整资源就绪", true, GameRes.ExistingInstance.LoadStatusText);

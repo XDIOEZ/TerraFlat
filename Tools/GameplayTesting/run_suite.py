@@ -129,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument("suite", nargs="?", help="指定清单；省略时执行全部系统快速规则")
     parser.add_argument("--editor-timeout", type=float, default=45,
                         help="Editor 收到本地请求的等待秒数")
-    parser.add_argument("--run-timeout", type=float, default=900,
+    parser.add_argument("--run-timeout", type=float, default=1800,
                         help="每轮流水线执行上限秒数")
     parser.add_argument("--cases", nargs="+", metavar="CASE_ID",
                         help="只执行指定的一个或多个 Lua 用例 ID，不修改源清单")

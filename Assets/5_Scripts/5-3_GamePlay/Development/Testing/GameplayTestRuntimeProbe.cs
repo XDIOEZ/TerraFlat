@@ -17,6 +17,10 @@ public static partial class GameplayTestRuntimeProbe
         ["core_lifecycle/live_entry"] = CaptureLiveEntry,
         ["inventory/creative_snapshot"] = CaptureCreativeInventory,
         ["inventory/slot_bounds"] = CaptureInventorySlotBounds,
+        ["inventory/creative_begin"] = BeginCreativeInventoryScope,
+        ["inventory/creative_restore"] = RestoreCreativeInventoryScope,
+        ["inventory/direct_drag"] = CaptureInventoryDirectDrag,
+        ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
         ["world_streaming/live_window"] = CaptureLiveWindow,
         ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,
         ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
@@ -124,6 +128,232 @@ public static partial class GameplayTestRuntimeProbe
             ["beyondRejected"] = data.GetItemSlot(data.itemSlots.Count) == null,
             ["emptyRejected"] = empty.GetItemSlot(0) == null
         };
+    }
+
+    private static CreativeInventoryScope activeCreativeInventoryScope;
+
+    // 创造背包会给角色增加数百种物品，必须在本 Lua 结束前归还原库存，避免虚增后续飞船载荷。
+    private sealed class CreativeInventoryScope : IDisposable
+    {
+        private readonly Player player;
+        private readonly Inventory inventory;
+        private readonly Inventory_Data data;
+        private readonly InventoryInstanceSnapshot snapshot;
+        private readonly string playerSpecialData;
+        private readonly bool originalSlots, originalCarry, originalStack;
+        public readonly int OriginalSlotCount;
+        public readonly float OriginalWeight;
+        public bool Restored { get; private set; }
+
+        public CreativeInventoryScope(Player player, Inventory inventory)
+        {
+            this.player = player;
+            this.inventory = inventory;
+            data = inventory.Data ?? throw new InvalidOperationException("创造背包现场缺少原始库存数据。");
+            snapshot = InventoryInstanceSnapshot.Capture(data);
+            playerSpecialData = player.Data.ItemSpecialData;
+            originalSlots = data.HasUnlimitedSlots;
+            originalCarry = data.HasUnlimitedCarryCapacity;
+            originalStack = data.HasUnlimitedStackSize;
+            OriginalSlotCount = data.itemSlots.Count;
+            OriginalWeight = data.CurrentCarryWeight;
+        }
+
+        public void Dispose()
+        {
+            if (Restored) return;
+            try
+            {
+                if (player == null || inventory == null || !ReferenceEquals(inventory.Data, data))
+                    throw new InvalidOperationException("创造背包测试期间原库存引用被替换。");
+                data.SetUnlimitedSlots(false);
+                snapshot.RestoreTo(data, item => item.SharedConfiguration == null
+                    ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, item) : item);
+                if (data.itemSlots.Count > OriginalSlotCount)
+                    data.itemSlots.RemoveRange(OriginalSlotCount, data.itemSlots.Count - OriginalSlotCount);
+                player.Data.ItemSpecialData = playerSpecialData;
+                data.SetUnlimitedCarryCapacity(originalCarry);
+                data.SetUnlimitedStackSize(originalStack);
+                data.SetUnlimitedSlots(originalSlots);
+                data.NotifySlotsChanged();
+                inventory.RefreshUI();
+                Restored = true;
+            }
+            finally
+            {
+                if (ReferenceEquals(activeCreativeInventoryScope, this)) activeCreativeInventoryScope = null;
+            }
+        }
+
+        public JObject Result() => new()
+        {
+            ["restored"] = Restored,
+            ["slotCount"] = data.itemSlots?.Count ?? 0,
+            ["originalSlotCount"] = OriginalSlotCount,
+            ["weight"] = data.CurrentCarryWeight,
+            ["originalWeight"] = OriginalWeight,
+            ["capacityRestored"] = data.HasUnlimitedSlots == originalSlots &&
+                data.HasUnlimitedCarryCapacity == originalCarry && data.HasUnlimitedStackSize == originalStack,
+            ["playerStateRestored"] = player.Data.ItemSpecialData == playerSpecialData
+        };
+    }
+
+    private static JObject BeginCreativeInventoryScope(Player player, JObject args)
+    {
+        if (activeCreativeInventoryScope != null)
+            throw new InvalidOperationException("同一 Lua 用例重复登记创造背包现场。");
+        Inventory inventory = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.GetDefaultTargetInventory();
+        if (inventory?.Data == null || inventory.Data.itemSlots == null)
+            throw new InvalidOperationException("正式玩家背包尚未加载。");
+        var scope = new CreativeInventoryScope(player, inventory);
+        RegisterCleanup(scope);
+        activeCreativeInventoryScope = scope;
+        return new JObject { ["registered"] = true, ["originalSlotCount"] = scope.OriginalSlotCount,
+            ["originalWeight"] = scope.OriginalWeight };
+    }
+
+    private static JObject RestoreCreativeInventoryScope(Player player, JObject args)
+    {
+        CreativeInventoryScope scope = activeCreativeInventoryScope ??
+            throw new InvalidOperationException("创造背包测试没有登记恢复现场。");
+        scope.Dispose();
+        return scope.Result();
+    }
+
+    #endregion
+
+    #region 正式库存拖拽与装备接收现场
+
+    // 独立测试库存使用正式物品定义和正式拖拽入口，不改动隔离玩家的背包及装备。
+    private static Inventory CreateDragInventory(string name, params ItemData[] items)
+    {
+        var slots = new List<ItemSlot>(items.Length);
+        for (int i = 0; i < items.Length; i++)
+            slots.Add(new ItemSlot(i) { itemData = items[i] });
+        return new Inventory { Data = new Inventory_Data(slots, name) };
+    }
+
+    private static ItemData CreateDragItem(string id, float amount = 1f)
+    {
+        ItemData item = GameRes.ExistingInstance.CreateItemData(id);
+        if (item?.Stack == null) throw new InvalidOperationException("拖拽测试缺少正式物品堆叠：" + id);
+        item.Stack.Amount = amount;
+        return item;
+    }
+
+    private static JObject CaptureDragSlot(Inventory inventory, int index)
+    {
+        ItemData item = inventory.Data.GetItemSlot(index)?.itemData;
+        return new JObject
+        {
+            ["id"] = item?.IDName ?? string.Empty,
+            ["guid"] = item?.Guid ?? 0,
+            ["amount"] = item?.Stack?.Amount ?? 0f
+        };
+    }
+
+    private static JObject CaptureInventoryDirectDrag(Player player, JObject args)
+    {
+        Inventory source = CreateDragInventory("lua.drag.source", CreateDragItem("Twine", 6),
+            CreateDragItem("Rope", 2), CreateDragItem("Twine", 3), CreateDragItem("Twine", 2));
+        Inventory target = CreateDragInventory("lua.drag.target", null, CreateDragItem("Twine", 4), null, null);
+        target.Data.itemSlots[2].CanAcceptTags.Add(EquipmentSlotCatalog.HeadTag);
+        target.Data.itemSlots[3].SlotMaxVolume = 1f;
+
+        var direct = new JObject { ["sourceBefore"] = CaptureDragSlot(source, 0) };
+        InventoryDragTransaction move = source.OnMouseDragBegin(0);
+        direct["dragStarted"] = move != null;
+        direct["lockedBefore"] = source.IsSlotBeingDragged(0);
+        direct["negativeAccepted"] = target.OnMouseDragDrop(-1, move);
+        direct["afterNegative"] = CaptureDragSlot(source, 0);
+        direct["moved"] = target.OnMouseDragDrop(0, move);
+        direct["sourceAfter"] = CaptureDragSlot(source, 0);
+        direct["targetAfter"] = CaptureDragSlot(target, 0);
+        direct["reusedAccepted"] = target.OnMouseDragDrop(1, move);
+        move?.Complete(false);
+        direct["lockedAfter"] = source.HasActiveSlotDrag;
+
+        InventoryDragTransaction merge = source.OnMouseDragBegin(2);
+        var merged = new JObject { ["targetBefore"] = CaptureDragSlot(target, 1),
+            ["sourceBefore"] = CaptureDragSlot(source, 2),
+            ["accepted"] = target.OnMouseDragDrop(1, merge) };
+        merge?.Complete(false);
+        merged["targetAfter"] = CaptureDragSlot(target, 1);
+        merged["sourceAfter"] = CaptureDragSlot(source, 2);
+
+        InventoryDragTransaction rejected = source.OnMouseDragBegin(1);
+        var blocked = new JObject { ["sourceBefore"] = CaptureDragSlot(source, 1),
+            ["accepted"] = target.OnMouseDragDrop(2, rejected),
+            ["lockedDuring"] = source.IsSlotBeingDragged(1) };
+        rejected?.Complete(false);
+        blocked["sourceAfter"] = CaptureDragSlot(source, 1);
+        blocked["targetAfter"] = CaptureDragSlot(target, 2);
+        blocked["lockedAfter"] = source.HasActiveSlotDrag;
+
+        InventoryDragTransaction partialDrag = source.OnMouseDragBegin(3);
+        var partial = new JObject { ["sourceBefore"] = CaptureDragSlot(source, 3),
+            ["accepted"] = target.OnMouseDragDrop(3, partialDrag) };
+        partialDrag?.Complete(false);
+        partial["sourceAfter"] = CaptureDragSlot(source, 3);
+        partial["targetAfter"] = CaptureDragSlot(target, 3);
+
+        InventoryDragTransaction staleDrag = source.OnMouseDragBegin(1);
+        source.Data.SetOne_ItemData(1, CreateDragItem("Ore_Stone", 1));
+        var stale = new JObject { ["accepted"] = target.OnMouseDragDrop(0, staleDrag) };
+        staleDrag?.Complete(false);
+        stale["sourceAfter"] = CaptureDragSlot(source, 1);
+        stale["targetAfter"] = CaptureDragSlot(target, 0);
+        stale["lockedAfter"] = source.HasActiveSlotDrag;
+
+        return new JObject { ["direct"] = direct, ["merged"] = merged,
+            ["blocked"] = blocked, ["partial"] = partial, ["stale"] = stale };
+    }
+
+    private static JObject CaptureInventoryEquipmentDrag(Player player, JObject args)
+    {
+        Inventory source = CreateDragInventory("lua.gear.source", CreateDragItem("Spacesuit_Head"),
+            CreateDragItem("Spacesuit_Torso"), CreateDragItem("Spacesuit_Head"));
+        var equipment = new Inventory_Equipment();
+        equipment.EnsureSlotSchema();
+        int head = equipment.GetSlotIndex(EquipmentSlotCatalog.Head);
+        int torso = equipment.GetSlotIndex(EquipmentSlotCatalog.TorsoOuter);
+        var result = new JObject
+        {
+            ["headIndex"] = head, ["torsoIndex"] = torso,
+            ["headAllowed"] = equipment.CanEquipAt(head, source.Data.GetItemSlot(0)?.itemData),
+            ["torsoAllowedAtHead"] = equipment.CanEquipAt(head, source.Data.GetItemSlot(1)?.itemData),
+            ["headAllowedAtTorso"] = equipment.CanEquipAt(torso, source.Data.GetItemSlot(0)?.itemData),
+            ["headBefore"] = CaptureDragSlot(source, 0)
+        };
+
+        InventoryDragTransaction wrong = source.OnMouseDragBegin(1);
+        result["wrongAccepted"] = equipment.OnMouseDragDrop(head, wrong);
+        wrong?.Complete(false);
+        result["wrongSourceAfter"] = CaptureDragSlot(source, 1);
+        result["wrongTargetAfter"] = CaptureDragSlot(equipment, head);
+
+        InventoryDragTransaction valid = source.OnMouseDragBegin(0);
+        result["equipAccepted"] = equipment.OnMouseDragDrop(head, valid);
+        valid?.Complete(false);
+        result["headAfterEquip"] = CaptureDragSlot(equipment, head);
+        result["sourceAfterEquip"] = CaptureDragSlot(source, 0);
+
+        source.Data.itemSlots[2].CanAcceptTags.Add(EquipmentSlotCatalog.TorsoOuterTag);
+        InventoryDragTransaction swap = source.OnMouseDragBegin(2);
+        result["reverseSwapAccepted"] = equipment.OnMouseDragDrop(head, swap);
+        swap?.Complete(false);
+        result["headAfterSwap"] = CaptureDragSlot(equipment, head);
+        result["swapSourceAfter"] = CaptureDragSlot(source, 2);
+
+        result["invalidIndexAccepted"] = source.TryMoveSlotTo(1, equipment, -1);
+        InventoryDragTransaction unequip = equipment.OnMouseDragBegin(head);
+        result["unequipAccepted"] = source.OnMouseDragDrop(0, unequip);
+        unequip?.Complete(false);
+        result["sourceAfterUnequip"] = CaptureDragSlot(source, 0);
+        result["headAfterUnequip"] = CaptureDragSlot(equipment, head);
+        result["sourceDragReleased"] = !source.HasActiveSlotDrag;
+        result["equipmentDragReleased"] = !equipment.HasActiveSlotDrag;
+        return result;
     }
 
     #endregion

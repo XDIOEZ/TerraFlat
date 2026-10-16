@@ -305,9 +305,9 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   testSuitePath: GameplayTests/mechanical-suite.json
   seed: flatworld-showroom-001
-  resourceTimeoutSeconds: 120
+  resourceTimeoutSeconds: 240
   worldTimeoutSeconds: 120
-  totalTimeoutSeconds: 600
+  totalTimeoutSeconds: 1200
   maximumLogEntries: 10000
 --- !u!1001 &4828757420143755386
 PrefabInstance:

@@ -383,6 +383,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)), target).Magnitude;
             JObject shipTransition = null;
             yield return CrossOwnedShip(ship, value => shipTransition = value);
+            JObject beforeLanding = ShipSnapshot(ship);
             bool landingAccepted = session.RequestLanding(console);
             if (!landingAccepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
             IsMigrationExpected = true;
@@ -390,6 +391,10 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 90d, "飞船未完成正式降落。");
             IsMigrationExpected = false;
             JObject landedAgain = ShipSnapshot(ship);
+            // Ready 是入世状态，不等于本帧 LateUpdate 已恢复全部船件表现；有界等待真实绑定。
+            yield return WaitUntil(() => Ready() && ShipPresentationReady(ship), 8d,
+                "降落后的飞船部件表现未恢复到当前世界。",
+                () => ShipViewSnapshot(ship).ToString(Newtonsoft.Json.Formatting.None));
             JObject returnedViews = ShipViewSnapshot(ship);
             results.Add(new JObject { ["templateId"] = template.Id, ["enteredConsole"] = entered,
                 ["landed"] = landed, ["filled"] = filled, ["lifting"] = lifting, ["cruising"] = cruising,
@@ -397,7 +402,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 ["navigationAccepted"] = navigationAccepted, ["navigationDistance"] = distance,
                 ["arrivalDistance"] = SpaceGameplaySettings.Current.NavigationArrivalDistanceMeters,
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
-                ["shipTransition"] = shipTransition,
+                ["shipTransition"] = shipTransition, ["beforeLanding"] = beforeLanding,
                 ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain,
                 ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returnedViews } });
             // 最后一艘保留正式降落现场，供紧随其后的 Lua 截图使用。
@@ -422,6 +427,25 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         result["presenters"] = presenters;
         result["scene"] = SceneManager.GetActiveScene().name;
         return result;
+    }
+
+    private bool ShipPresentationReady(ShipState ship)
+    {
+        if (ship == null || !session.IsVisible(ship)) return false;
+        JObject view = ShipViewSnapshot(ship);
+        int aliveCount = 0;
+        foreach (ShipPieceState piece in ship.Pieces) if (piece.IsAlive) aliveCount++;
+        var pieces = (JArray)view["pieces"];
+        var presenters = (JArray)view["presenters"];
+        if (pieces.Count != aliveCount || presenters.Count == 0) return false;
+        string scene = SceneManager.GetActiveScene().name;
+        foreach (JObject piece in pieces)
+            if (piece.Value<bool>("pooled") || !piece.Value<bool>("active") || piece.Value<string>("scene") != scene)
+                return false;
+        foreach (JObject presenter in presenters)
+            if (presenter.Value<bool>("pooled") || !presenter.Value<bool>("active") || presenter.Value<string>("scene") != scene)
+                return false;
+        return true;
     }
 
     private IEnumerator CoastOwnedShip(ShipState ship, Action<JObject> completed)
@@ -668,6 +692,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["sector"] = Sector(ship.Sector), ["position"] = Vector(new SpaceVector2(ship.PositionX, ship.PositionY)),
             ["velocity"] = Vector(new SpaceVector2(ship.VelocityX, ship.VelocityY)), ["angle"] = ship.AngleRadians,
             ["mass"] = ship.MassKg, ["pieceCount"] = ship.Pieces.Count, ["height"] = flight?.HeightMeters,
+            ["impactSpeed"] = flight?.ImpactSpeed, ["landingResolved"] = flight?.LandingResolved,
+            ["poweredDescent"] = flight?.PoweredDescent,
             ["hydrogen"] = (double)hydrogen, ["oxygen"] = (double)oxygen, ["engineOutput"] = output,
             ["spaceView"] = session.IsSpaceView, ["surfaceWorld"] = flight?.SurfaceWorldKey };
     }

@@ -41,7 +41,7 @@ python Tools/GameplayTesting/run_suite.py
 
 系统没有现场案例时，`--integration` 仍运行已有案例，但返回 **4** 并列出缺口。已有现场入口也只是部分覆盖，仍须看 README。其余退出码：0 全部所选案例通过，1 测试失败，2 Editor 拒绝，3 请求/文件/等待错误。只选规则不检查完整 PlayMode、联机或设备行为。
 
-Python 仅在 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 写本地请求；Editor 自动接单、执行和回报，不启动新 Unity 进程。接单默认45秒、CLI执行上限默认900秒，可用 `--editor-timeout` / `--run-timeout` 修改。快速规则调度另有120秒上限。
+Python 仅在 `Library/FlatWorldGameplayTests/Pipeline/inbox/` 写本地请求；Editor 自动接单、执行和回报，不启动新 Unity 进程。接单默认45秒、CLI执行上限默认1800秒，可用 `--editor-timeout` / `--run-timeout` 修改。快速规则调度另有120秒上限。
 
 ## 为什么快：规则和真实世界分层
 

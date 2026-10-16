@@ -12,7 +12,8 @@ test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     assert(data.discardedToCommittedLocale and math.abs(data.discardedToCommittedVolume - 0.4) < 0.0001 and data.cleanAfterClose, "关闭没有放弃保存之后的语言与音量修改")
     assert(data.duplicateOpenEvents == 0 and data.unexpectedCloseEvents == 0, "重复打开触发了额外业务事件")
     assert(not data.invalidLocaleAccepted and data.currentLocale == "en", "非法语言改变了有效 Locale")
-    assert(data.fallback == "Lua 缺项回退" and data.reopenedEnglish == data.expectedEnglish, "缺项回退或关闭重开后的正式译文错误")
+    assert(data.fallback == "Lua 缺项回退" and data.reopenedEnglishReady
+        and data.reopenedEnglish == data.expectedEnglish, "缺项回退或关闭重开后的正式译文错误")
     assert(math.abs(data.currentVolume - 0.4) < 0.0001, "正式音量滑块写入或保存后的恢复丢失")
 end, "真实设置控件、保存放弃、正式翻译表与 TMP 动态绑定")
 -- 夹具显式关闭英语窗口；自动截图并行采集，失败时由本 Lua 的清理租约恢复。

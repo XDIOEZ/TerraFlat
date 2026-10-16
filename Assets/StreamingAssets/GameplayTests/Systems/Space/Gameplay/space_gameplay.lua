@@ -134,6 +134,11 @@ do
             assert(ship.landingAccepted and ship.landedAgain.phase == "Landed", "没有完成受控陆地降落：" .. label)
             assert(not ship.landedAgain.spaceView and ship.landedAgain.height <= 0.001, "降落后仍在太空或半空：" .. label)
             assert(ship.landedAgain.id == ship.landed.id, "降落重建了错误的飞船身份：" .. label)
+            assert(ship.beforeLanding.pieceCount == ship.landed.pieceCount,
+                "空域导航和跨区提前丢失了船体部件：" .. label)
+            assert(ship.landedAgain.pieceCount == ship.beforeLanding.pieceCount and
+                ship.landedAgain.landingResolved and ship.landedAgain.impactSpeed <= 0.001,
+                "受控降落发生真实撞击或丢失部件，需检查载荷、动力与跨测试库存污染：" .. label)
             local cache = ship.viewCache
             local function reused(before, after, group)
                 local ids, matches = {}, 0

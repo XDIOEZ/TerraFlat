@@ -60,6 +60,7 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
         private TransportState _state = TransportState.Disconnected(TransportDisplayName, "Transport not started");
         private string _apiKey;
         private bool _disposed;
+        private bool _serverUnavailableLogged;
 
         public WebSocketTransportClient(IToolDiscoveryService toolDiscoveryService = null)
         {
@@ -292,10 +293,14 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
             if (connectedEndpoint == null)
             {
                 string errorMsg = "Connection failed. Check that the server URL is correct, the server is running, and your API key (if required) is valid.";
-                McpLog.Error($"[WebSocket] {errorMsg} (Detail: {lastConnectError?.Message ?? "Unknown error"})");
+                // 后台断线重试属于连接状态，不应以 Unity Error 中断无关的 PlayMode 测试。
+                if (!_serverUnavailableLogged)
+                    McpLog.Warn($"[WebSocket] {errorMsg} (Detail: {lastConnectError?.Message ?? "Unknown error"})");
+                _serverUnavailableLogged = true;
                 _state = TransportState.Disconnected(TransportDisplayName, errorMsg);
                 return false;
             }
+            _serverUnavailableLogged = false;
 
             if (!string.Equals(connectedEndpoint.Host, originalEndpoint.Host, StringComparison.OrdinalIgnoreCase))
             {
