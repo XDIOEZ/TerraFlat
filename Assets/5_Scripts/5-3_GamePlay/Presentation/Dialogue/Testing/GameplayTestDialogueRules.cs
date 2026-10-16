@@ -23,6 +23,7 @@ namespace FlatWorld.Dialogue
         {
             GameplayTestSystemProbe.Register("dialogue", "condition", CaptureCondition);
             GameplayTestSystemProbe.Register("dialogue", "config", CaptureConfiguration);
+            GameplayTestSystemProbe.Register("dialogue", "builtin_locales", CaptureBuiltinLocales);
         }
 
         #endregion
@@ -54,6 +55,58 @@ namespace FlatWorld.Dialogue
             var ids = new JArray();
             foreach (CharacterSpeechConfigEntry entry in loaded.Entries) ids.Add(entry.Id);
             return new JObject { ["ids"] = ids, ["count"] = loaded.Entries.Count, ["issues"] = loaded.Issues.Count };
+        }
+
+        /// <summary>核对正式台词资源是否为每句中文提供了可用的英文译文。</summary>
+        private static JObject CaptureBuiltinLocales(JObject args)
+        {
+            CharacterSpeechConfigLoadResult loaded = CharacterSpeechConfigLoader.LoadFromResources(logIssues: false);
+            var incompleteIds = new JArray();
+            int translated = 0;
+            int lines = 0;
+            foreach (CharacterSpeechConfigEntry entry in loaded.Entries)
+            {
+                lines += entry.Lines.Count;
+                List<string> english = null;
+                bool complete = entry.LocalizedLines != null &&
+                    entry.LocalizedLines.TryGetValue("en", out english) &&
+                    english != null &&
+                    english.Count == entry.Lines.Count;
+                if (complete)
+                {
+                    for (int i = 0; i < english.Count; i++)
+                    {
+                        if (string.IsNullOrWhiteSpace(english[i]))
+                        {
+                            complete = false;
+                            break;
+                        }
+                        foreach (char character in english[i])
+                        {
+                            if (character >= '\u4e00' && character <= '\u9fff')
+                            {
+                                complete = false;
+                                break;
+                            }
+                        }
+                        if (!complete)
+                            break;
+                    }
+                }
+                if (complete)
+                    translated += english.Count;
+                else
+                    incompleteIds.Add(entry.Id);
+            }
+
+            return new JObject
+            {
+                ["entries"] = loaded.Entries.Count,
+                ["lines"] = lines,
+                ["translatedLines"] = translated,
+                ["issues"] = loaded.Issues.Count,
+                ["incompleteIds"] = incompleteIds
+            };
         }
 
         #endregion

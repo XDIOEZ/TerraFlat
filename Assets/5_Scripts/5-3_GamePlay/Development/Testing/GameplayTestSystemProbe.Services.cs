@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using FlatWorld.Audio;
+using FlatWorld.Gameplay.InventoryFeedback;
+using FlatWorld.Gameplay.Presentation.Audio;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
@@ -42,6 +44,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
         operations.Add("audio/bus_volume", ServiceAudioVolume);
         operations.Add("audio/catalog_lifecycle", ServiceAudioCatalog);
+        operations.Add("audio/footstep_surface", ServiceFootstepSurface);
+        operations.Add("audio/inventory_cue", ServiceAudioInventoryCue);
         operations.Add("localization/stable_identity", ServiceLocalizationIdentity);
         operations.Add("rendering/fog_config", ServiceFogConfiguration);
         operations.Add("rendering/universe_view_config", ServiceUniverseViewConfiguration);
@@ -537,6 +541,36 @@ public static partial class GameplayTestSystemProbe
             ["positionedHasPosition"] = positioned.HasWorldPosition, ["x"] = positioned.WorldPosition.x,
             ["y"] = positioned.WorldPosition.y, ["volume"] = positioned.VolumeScale, ["pitch"] = positioned.PitchScale
         };
+    }
+
+    private static JObject ServiceFootstepSurface(JObject args)
+    {
+        // 合成边界输入交给正式选音规则，Lua 自行断言深水不发脚步等语义。
+        string cueId = Mod_Mover.ResolveFootstepCue(
+            (int)Number(args, "biome", 4),
+            (float)Number(args, "water", 0),
+            (float)Number(args, "snow", 0),
+            Flag(args, "support", false),
+            (byte)Math.Clamp((int)Number(args, "grass", 0), 0, 255));
+        return new JObject { ["cue"] = cueId ?? string.Empty, ["silent"] = cueId == null };
+    }
+
+    private static JObject ServiceAudioInventoryCue(JObject args)
+    {
+        if (!Enum.TryParse(Text(args, "action", "Pickup"), true, out InventoryAudioAction action))
+            throw new ArgumentException("未知的库存音效操作");
+
+        var tags = new List<string>();
+        if (args["tags"] is JArray values)
+            foreach (JToken value in values)
+                if (value.Type == JTokenType.String)
+                    tags.Add(value.Value<string>());
+        string cue = InventoryInteractionAudio.ResolveCue(action,
+            Text(args, "itemId", ""), tags,
+            (float)Number(args, "kg", 0f),
+            (float)Number(args, "liters", 0f),
+            (float)Number(args, "amount", 1f));
+        return new JObject { ["cue"] = cue ?? string.Empty, ["valid"] = cue != null };
     }
 
     [Serializable]

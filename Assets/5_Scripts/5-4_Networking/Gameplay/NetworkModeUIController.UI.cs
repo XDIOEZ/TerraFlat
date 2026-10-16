@@ -1,6 +1,8 @@
 // AI-Context: NetworkModeUIController 的 UI 状态与生命周期分部；直接持有 BasePanel 并绑定联机控件。
 
 using System.Collections;
+using System;
+using FlatWorld.Localization;
 using Mirror;
 using TMPro;
 using UnityEngine;
@@ -40,6 +42,9 @@ namespace FlatWorld.Networking.Gameplay
         private Button mainMenuMultiplayerButton;
         private UIManager subscribedUIManager;
         private Coroutine ensureUICoroutine;
+        private string lastStatusTemplate;
+        private object[] lastStatusArguments = Array.Empty<object>();
+        private int lastDisplayedPlayerCount = -1;
 
         #endregion
 
@@ -143,6 +148,9 @@ namespace FlatWorld.Networking.Gameplay
             portInput = panel.GetInputField(PortInputKey);
             statusText = panel.GetText(StatusTextKey);
             playerCountText = panel.GetText(PlayerCountTextKey);
+            // 实时状态由业务更新，停用 Prefab 静态文本绑定，避免切语言时覆盖动态内容。
+            DisableStaticBinding(statusText);
+            DisableStaticBinding(playerCountText);
             hostButton = panel.GetButton(HostButtonKey);
             joinButton = panel.GetButton(JoinButtonKey);
             disconnectButton = panel.GetButton(DisconnectButtonKey);
@@ -160,7 +168,11 @@ namespace FlatWorld.Networking.Gameplay
             if (closeButton != null)
                 closeButton.onClick.AddListener(I_ClosePanel);
 
-            SetStatus("离线：可创建主机，或粘贴好友提供的 UDP 穿透地址");
+            if (string.IsNullOrEmpty(lastStatusTemplate))
+                SetStatus("离线：可创建主机，或粘贴好友提供的 UDP 穿透地址");
+            else
+                RefreshLocalizedStatus();
+            lastDisplayedPlayerCount = -1;
             RefreshInteractableState();
         }
 
@@ -206,8 +218,11 @@ namespace FlatWorld.Networking.Gameplay
             else if (NetworkClient.active)
                 playerCount = NetworkClient.spawned.Count;
 
-            if (playerCountText != null)
-                playerCountText.text = $"玩家：{playerCount} / 2";
+            if (playerCountText != null && lastDisplayedPlayerCount != playerCount)
+            {
+                lastDisplayedPlayerCount = playerCount;
+                playerCountText.text = FlatWorldLocalizationService.GetUiFormat("玩家：{0} / {1}", playerCount, 2);
+            }
 
         }
 
@@ -254,8 +269,33 @@ namespace FlatWorld.Networking.Gameplay
 
         private void SetStatus(string message)
         {
-            if (statusText != null)
-                statusText.text = message;
+            SetStatus(message, Array.Empty<object>());
+        }
+
+        private void SetStatus(string template, object[] arguments)
+        {
+            lastStatusTemplate = template;
+            lastStatusArguments = arguments ?? Array.Empty<object>();
+            RefreshLocalizedStatus();
+        }
+
+        private void RefreshLocalizedStatus()
+        {
+            if (statusText == null || string.IsNullOrEmpty(lastStatusTemplate))
+                return;
+            statusText.text = FlatWorldLocalizationService.GetUiFormat(lastStatusTemplate, lastStatusArguments);
+        }
+
+        private void HandleLanguageChanged(string _)
+        {
+            RefreshLocalizedStatus();
+            lastDisplayedPlayerCount = -1;
+        }
+
+        private static void DisableStaticBinding(TMP_Text text)
+        {
+            if (text != null && text.TryGetComponent(out LocalizedTextBinder binder))
+                binder.enabled = false;
         }
 
         private void ReleaseUIBindings()
@@ -286,6 +326,7 @@ namespace FlatWorld.Networking.Gameplay
             portInput = null;
             statusText = null;
             playerCountText = null;
+            lastDisplayedPlayerCount = -1;
             hostButton = null;
             joinButton = null;
             disconnectButton = null;

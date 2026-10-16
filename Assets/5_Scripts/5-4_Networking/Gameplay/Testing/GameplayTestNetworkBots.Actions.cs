@@ -72,11 +72,15 @@ namespace FlatWorld.Networking.Gameplay
         {
             public readonly BotWorld World;
             public readonly List<int> OwnedItemGuids = new();
+            private readonly IDisposable localWindSuppression;
             private bool disposed;
 
-            public BotActionScene(BotWorld world)
+            public BotActionScene(BotWorld world, Player local)
             {
                 World = world;
+                // 假人碰撞验证只排除测试主角受天气风力推动，保留真实物理碰撞。
+                localWindSuppression = local.GetComponentInChildren<Mod_Mover>(true)?.SuppressWindMotion()
+                    ?? throw new InvalidOperationException("测试主角缺少用于隔离风推动的移动模块。");
                 GameplayTestRuntimeProbe.RegisterCleanup(this);
             }
 
@@ -84,13 +88,20 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (disposed) return;
                 disposed = true;
-                foreach (int guid in OwnedItemGuids)
+                try
                 {
-                    Item item = ItemMgr.GetInstance()?.GetItemByGuid(guid);
-                    if (item != null) ItemMgr.GetInstance().DespawnItem(item, saveData: false);
+                    foreach (int guid in OwnedItemGuids)
+                    {
+                        Item item = ItemMgr.GetInstance()?.GetItemByGuid(guid);
+                        if (item != null) ItemMgr.GetInstance().DespawnItem(item, saveData: false);
+                    }
+                    World.Dispose();
                 }
-                World.Dispose();
-                if (ReferenceEquals(activeActionScene, this)) activeActionScene = null;
+                finally
+                {
+                    localWindSuppression.Dispose();
+                    if (ReferenceEquals(activeActionScene, this)) activeActionScene = null;
+                }
             }
         }
 
@@ -104,7 +115,7 @@ namespace FlatWorld.Networking.Gameplay
             yield return Wait(() => localIsolation.IsStable, "本地主角输入与环境推动稳定",
                 3d, () => localIsolation.Diagnostic);
             var world = new BotWorld(local);
-            var scene = new BotActionScene(world);
+            var scene = new BotActionScene(world, local);
             activeActionScene = scene;
             Vector3 localStart = WorldLocalPresentation.ToLogical(local.transform.position);
             if (!GameManager.Instance.TryGetNearestLandSpawnPosition(localStart + Vector3.right * 8f, out Vector3 botSpawn) ||

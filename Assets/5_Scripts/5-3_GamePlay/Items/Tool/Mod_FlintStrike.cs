@@ -212,7 +212,10 @@ public class Mod_FlintStrike : Module, IInteractable
         var strikeText = StrikeButton.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
         if (strikeText != null)
         {
-            strikeText.text = "打火";
+            var binder = strikeText.GetComponent<FlatWorld.Localization.LocalizedTextBinder>() ??
+                         strikeText.gameObject.AddComponent<FlatWorld.Localization.LocalizedTextBinder>();
+            binder.Configure(FlatWorld.Localization.FlatWorldLocalizationService.UiTable,
+                FlatWorld.Localization.FlatWorldLocalizationService.GetUiTextKey("打火"), "打火");
         }
 
         CloseButton = basePanel.GetButton("关闭");

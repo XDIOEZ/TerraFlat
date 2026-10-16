@@ -183,7 +183,7 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
         if (node.Definition.Electrical != null && electrical != null)
         {
             if (node.Definition.IsConverter)
-                status += " · " + (node.ConversionMode switch
+                status += " · " + FlatWorldLocalizationService.GetUiText(node.ConversionMode switch
                 {
                     ElectricalConversionMode.Motor => node.ElectricalSuppliedWatts > 0f
                         ? "电力输入 → 机械输出" : "等待电力输入",
@@ -193,7 +193,7 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
             status += FlatWorldLocalizationService.GetUiFormat(
                 " · 电网 {0:0.#}V {1:0.#}A · 功率 {2:0.#}/{3:0.#}W · {4}",
                 electrical.Voltage, electrical.CurrentAmps, electrical.DeliveredWatts,
-                electrical.DemandWatts, electrical.Status);
+                electrical.DemandWatts, FlatWorldLocalizationService.GetUiText(electrical.Status));
         }
         // 储能属于电池本身，未接入电网时也必须显示真实余量。
         if (node.Definition.Electrical?.IsBattery == true)

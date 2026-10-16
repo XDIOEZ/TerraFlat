@@ -231,7 +231,10 @@ public class Mod_FireDrill : Module, IInteractable
         var frictionText = FrictionButton.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
         if (frictionText != null)
         {
-            frictionText.text = "摩擦";
+            var binder = frictionText.GetComponent<FlatWorld.Localization.LocalizedTextBinder>() ??
+                         frictionText.gameObject.AddComponent<FlatWorld.Localization.LocalizedTextBinder>();
+            binder.Configure(FlatWorld.Localization.FlatWorldLocalizationService.UiTable,
+                FlatWorld.Localization.FlatWorldLocalizationService.GetUiTextKey("摩擦"), "摩擦");
         }
 
         CloseButton = basePanel.GetButton("关闭");

@@ -148,7 +148,7 @@ namespace FlatWorld.Spaceflight
         {
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is ShipFlightPhase.Cruising)
-                return new PlanetShipAtmosphereSource(null, -270d);
+                return PlanetShipAtmosphereSource.Vacuum;
             string world = flight.SurfaceWorldKey ?? ship.WorldAddress;
             ShipGeometry.LocalToWorld(ship, localPosition.x, localPosition.y, out double x, out double y);
             Vector2 position = PressureExplosionQueue.NormalizeInWorld(world, new Vector2((float)x, (float)y));

@@ -10,7 +10,57 @@ do
         assert(data.savedVersion == data.after.version, "正式捕获的快照版本不一致")
         assert(data.savedTime >= data.before.seconds and data.savedTime <= data.after.seconds, "快照时钟不属于本次采样")
         assert(data.savedSectorCount == data.after.sectorCount and data.savedSectorCount > 0, "快照遗漏星区")
-        return "真实固定步、会话身份和正式捕获快照已检查"
+        local camera = data.cameraOverride
+        local function near(actual, expected, label)
+            assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) < .0001, label)
+        end
+        local function brain_restored(sample, label)
+            assert(sample.updateMethod == "SmartUpdate" and sample.blendUpdateMethod == "FixedUpdate",
+                label .. "没有恢复借用前的 Brain 更新方式")
+        end
+        local function player_settings(sample, label)
+            assert(sample.followsExpected, label .. "跟随目标错误")
+            brain_restored(sample, label)
+            near(sample.xDamping, .12, label .. "没有恢复基础 X 阻尼")
+            near(sample.yDamping, .24, label .. "没有恢复基础 Y 阻尼")
+            near(sample.lookahead, .9, label .. "没有应用驾驶中更新的前探与缩放偏好")
+            near(sample.smoothing, 3.4, label .. "没有恢复驾驶中更新的平滑偏好")
+        end
+        assert(type(camera) == "table" and camera.scope == "isolated-camera-components", "缺少独立正式镜头租约采样")
+        assert(not camera.baseline.hasOverride and camera.baseline.followsExpected, "镜头夹具基线已有外部租约")
+        brain_restored(camera.baseline, "基线")
+        near(camera.baseline.xDamping, .52, "基线负前探没有增加 X 惯性")
+        near(camera.baseline.yDamping, .64, "基线负前探没有增加 Y 惯性")
+        near(camera.baseline.lookahead, 0, "负前探仍启用预测")
+        near(camera.baseline.smoothing, 2, "基线偏好未应用")
+        for _, key in ipairs({"locked", "repeated", "changedSettings", "zoomed", "wrongRelease", "relocked", "staleRelease"}) do
+            local sample = camera[key]
+            assert(sample.hasOverride and sample.followsExpected, key .. "丢失当前驾驶目标")
+            assert(sample.updateMethod == "LateUpdate" and sample.blendUpdateMethod == "LateUpdate",
+                key .. "没有使用 LateUpdate 更新镜头")
+            near(sample.xDamping, 0, key .. "重新叠加了 X 阻尼")
+            near(sample.yDamping, 0, key .. "重新叠加了 Y 阻尼")
+            near(sample.lookahead, 0, key .. "重新叠加了镜头前探")
+            near(sample.smoothing, 0, key .. "重新叠加了预测平滑")
+            near(sample.maximumSize, 120000, key .. "丢失驾驶视野上限")
+            assert(sample.proportionalZoom, key .. "丢失驾驶比例缩放")
+        end
+        near(camera.locked.size, 30, "进入驾驶时正交尺寸错误")
+        near(camera.changedSettings.userLookahead, .6, "驾驶模式改写了玩家前探偏好")
+        near(camera.changedSettings.userSmoothing, 3.4, "驾驶模式改写了玩家平滑偏好")
+        near(camera.changedSettings.userZoomInfluence, .5, "驾驶模式改写了玩家缩放偏好")
+        near(camera.zoomed.size, 153.6, "锁定驾驶镜头未保留正式比例缩放")
+        assert(camera.playerMode.hasOverride, "同目标切回玩家设置不应释放跟随目标")
+        player_settings(camera.playerMode, "同目标切回玩家设置")
+        for _, key in ipairs({"released", "repeatedRelease"}) do
+            local sample = camera[key]
+            assert(not sample.hasOverride and not sample.proportionalZoom, key .. "退出后残留驾驶租约")
+            player_settings(sample, key)
+            near(sample.size, 40, key .. "退出后没有恢复普通视野范围")
+            near(sample.maximumSize, 40, key .. "退出后残留太空视野上限")
+        end
+        assert(type(camera.limitations) == "string" and #camera.limitations > 0, "镜头采样必须说明覆盖边界")
+        return "真实固定步、会话快照，以及镜头锁定、重复租约、设置与缩放保持、错误释放和恢复已检查"
     end, "真实宇宙会话与固定步时钟")
 end
 
@@ -83,14 +133,65 @@ do
         assert(data.scope == "live-ship-flight" and #data.ships > 0, "没有完成任何真实船型流程")
         local function magnitude(v) return math.sqrt(v.x * v.x + v.y * v.y) end
         local function difference(a, b) return magnitude({x = a.x - b.x, y = a.y - b.y}) end
+        local function ground_members(snapshot, label)
+            assert(snapshot.phase == "GroundBuildings" and not snapshot.spaceView, "没有恢复普通地面建筑：" .. label)
+            local ids, count = {}, 0
+            for _, building in ipairs(snapshot.buildings) do
+                assert(not ids[building.id] and building.guid == tonumber(building.id) and
+                    building.snapshotGuid == building.guid, "普通建筑 Guid 重复或快照串号：" .. label)
+                assert(building.installed and building.scope == snapshot.world, "落地建筑没有接入普通世界作用域：" .. label)
+                assert(building.quarterTurns >= 0 and building.quarterTurns <= 3 and
+                    building.cell.x % 1 == 0 and building.cell.y % 1 == 0, "普通建筑没有对齐格子或朝向：" .. label)
+                ids[building.id], count = building, count + 1
+            end
+            assert(count == snapshot.pieceCount and count > 0, "普通地面成员采样不完整：" .. label)
+            return ids
+        end
+        local function same_ground_members(before, after, label)
+            local expected, actual = ground_members(before, label .. "/之前"), ground_members(after, label .. "/之后")
+            assert(before.pieceCount == after.pieceCount, "起降或补给丢失普通建筑：" .. label)
+            for id, building in pairs(expected) do
+                assert(actual[id] and actual[id].itemId == building.itemId and actual[id].machine == building.machine,
+                    "起降没有保留部件身份或普通建筑类型：" .. label .. "/" .. id)
+            end
+            return expected
+        end
         for _, ship in ipairs(data.ships) do
             local label = ship.templateId
             assert(ship.enteredConsole, "进入控制台失败：" .. label)
-            assert(ship.landed.phase == "Landed", "生成后不是地面停靠状态：" .. label)
+            local groundIds = same_ground_members(ship.landed, ship.filled, label .. "/地面补给")
+            assert(ship.landed.activeShipCount == ship.beforeBuild.activeShipCount and
+                ship.landed.totalBuildings >= ship.beforeBuild.totalBuildings + ship.landed.pieceCount,
+                "GM 生成提前创建了整船，或没有逐件创建普通建筑：" .. label)
             assert(ship.filled.hydrogen > 0 and ship.filled.oxygen > 0, "真实燃料罐为空：" .. label)
             assert(ship.lifting.phase == "Lifting", "点火没有进入升空：" .. label)
+            assert(ship.liftingGround.pieceCount == 0 and
+                ship.liftingGround.activeShipCount == ship.beforeBuild.activeShipCount + 1,
+                "点火装配没有唯一移交普通建筑到活动飞船：" .. label)
             assert(ship.cruising.phase == "Cruising" and ship.cruising.spaceView, "起飞未进入真实太空：" .. label)
-            assert(ship.cruising.id == ship.landed.id and ship.cruising.pieceCount == ship.landed.pieceCount, "起飞丢失船体或部件：" .. label)
+            assert(ship.cruising.id == ship.lifting.id and ship.cruising.pieceCount == ship.landed.pieceCount,
+                "起飞丢失船体或部件：" .. label)
+            local expectedMachines = 0
+            for _, building in pairs(groundIds) do
+                if building.machine then expectedMachines = expectedMachines + 1 end
+            end
+            for _, flight in ipairs({ship.lifting, ship.cruising}) do
+                assert(#flight.pieces == ship.landed.pieceCount, "装配或迁移丢失部件：" .. label)
+                local seenPieces, seenMachines = {}, {}
+                for _, piece in ipairs(flight.pieces) do
+                    assert(not seenPieces[piece.id] and groundIds[piece.id] and groundIds[piece.id].itemId == piece.itemId and piece.alive,
+                        "装配没有沿用原普通建筑 Guid 或定义：" .. label)
+                    seenPieces[piece.id] = true
+                end
+                assert(#flight.machines == expectedMachines, "装配或迁移丢失普通机器节点：" .. label)
+                for _, node in ipairs(flight.machines) do
+                    local id = string.format("%.0f", node.guid)
+                    assert(not seenMachines[node.guid] and groundIds[id] and groundIds[id].machine and
+                        node.itemId == groundIds[id].itemId and
+                        node.scope == "ship:" .. flight.id, "机器没有移交至本船作用域：" .. label)
+                    seenMachines[node.guid] = true
+                end
+            end
             assert(ship.thrust.engineOutput > 0, "真实推进没有引擎出力：" .. label)
             assert(ship.thrust.hydrogen < ship.filled.hydrogen and ship.thrust.oxygen < ship.filled.oxygen, "飞行未消耗真实氢氧：" .. label)
             assert(difference(ship.thrust.velocity, ship.cruising.velocity) > 0.01, "推进没有改变速度：" .. label)
@@ -131,35 +232,64 @@ do
             assert(crossing.before.playerInstance == crossing.crossed.playerInstance and not crossing.crossed.dimensionTransitioning, "船体跨区重建玩家或触发维度迁移：" .. label)
             assert(crossing.before.cameraReady and crossing.crossed.cameraReady and crossing.settled.cameraReady and
                 crossing.before.cameraInstance == crossing.settled.cameraInstance, "船体跨区丢失或重建玩家相机：" .. label)
-            assert(ship.landingAccepted and ship.landedAgain.phase == "Landed", "没有完成受控陆地降落：" .. label)
-            assert(not ship.landedAgain.spaceView and ship.landedAgain.height <= 0.001, "降落后仍在太空或半空：" .. label)
-            assert(ship.landedAgain.id == ship.landed.id, "降落重建了错误的飞船身份：" .. label)
             assert(ship.beforeLanding.pieceCount == ship.landed.pieceCount,
                 "空域导航和跨区提前丢失了船体部件：" .. label)
             assert(ship.landedAgain.pieceCount == ship.beforeLanding.pieceCount and
-                ship.landedAgain.landingResolved and ship.landedAgain.impactSpeed <= 0.001,
+                ship.landedAgain.landingResolved and ship.landedAgain.height <= 0.001 and
+                ship.landedAgain.impactSpeed <= 0.001,
                 "受控降落发生真实撞击或丢失部件，需检查载荷、动力与跨测试库存污染：" .. label)
+            assert(ship.landingAccepted and ship.landedAgain.phase == "GroundBuildings", "没有完成受控降落及普通建筑移交：" .. label)
+            assert(ship.landedAgain.shipRemoved and ship.landedAgain.flightRemoved and not ship.landedAgain.supported and
+                not ship.landedAgain.spaceView, "降落后仍有特殊船体、飞行记录或乘员绑定：" .. label)
+            assert(ship.landedAgain.world == ship.landed.world and
+                ship.landedAgain.activeShipCount == ship.beforeBuild.activeShipCount,
+                "降落建筑没有回到原普通世界或残留活动船体：" .. label)
+            same_ground_members(ship.landed, ship.landedAgain, label .. "/落地")
             local cache = ship.viewCache
-            local function reused(before, after, group)
-                local ids, matches = {}, 0
-                for _, view in ipairs(before[group]) do ids[view.id] = view.instanceId end
-                for _, view in ipairs(after[group]) do
-                    if ids[view.id] == view.instanceId and view.instanceId ~= 0 then matches = matches + 1 end
-                    assert(not view.pooled and view.active and view.scene == after.scene,
-                        "当前船体表现没有重新激活到正确场景：" .. label)
-                end
-                return matches
+            local function ground_views(snapshot, stage)
+                assert(#snapshot.presenters == 0 and #snapshot.pieces == 0 and snapshot.parkedPieces == 0,
+                    "普通地面建筑残留 ShipView、船件表现缓存或 ParkedPieces：" .. label .. "/" .. stage)
             end
-            assert(reused(cache.surface, cache.space, "presenters") > 0 and
-                reused(cache.surface, cache.space, "pieces") > 0, "起飞重建了本船表现而未复用：" .. label)
-            assert(reused(cache.space, cache.returned, "presenters") > 0 and
-                reused(cache.space, cache.returned, "pieces") > 0, "降落重建了本船表现而未复用：" .. label)
+            ground_views(cache.surface, "GM 生成后")
+            ground_views(cache.returned, "落地移交后")
+            do
+                local snapshot = cache.space
+                assert(#snapshot.presenters == 1 and #snapshot.pieces == ship.landed.pieceCount and snapshot.parkedPieces == 0,
+                    "空中船体缺少唯一整体或完整部件：" .. label)
+                local view = snapshot.presenters[1]
+                assert(view.wholeShipBody and view.activeBodies == 1 and view.activeBlockers == 1 and
+                    view.active and not view.pooled and view.scene == snapshot.scene,
+                    "空中没有使用唯一启用的整船刚体与阻挡：" .. label)
+            end
             for _, snapshot in ipairs({cache.surface, cache.space, cache.returned}) do
                 assert(snapshot.presenterPoolCount <= snapshot.presenterLimit and
                     snapshot.piecePoolCount <= snapshot.pieceLimit, "船表现缓存超过容量：" .. label)
+                for _, view in ipairs(snapshot.pieces) do
+                    if view.active and not view.pooled then
+                        assert(view.machineScope == "ship:" .. ship.cruising.id and
+                            view.targetGuid == (tonumber(view.id) or 0),
+                            "船件恢复或换场景后机器作用域/GUID 缓存错误：" .. label)
+                    end
+                end
+            end
+            local refuel = ship.autoRefuel
+            assert(refuel.fixtureSetup == "landed-world-pipe-outlet-source-tank" and not refuel.targetDirectRefill,
+                "自动加油没有使用正式普通管道、定向出气口和独立源罐：" .. label)
+            assert(refuel.world == ship.landedAgain.world and refuel.sourceScope == refuel.world and
+                refuel.pipeScope == refuel.world and refuel.outletScope == refuel.world and refuel.targetScope == refuel.world,
+                "落地加油仍依赖特殊船体作用域：" .. label)
+            assert(refuel.pipeMask == 5 or refuel.pipeMask == 10, "普通加油管道没有两端连通：" .. label)
+            assert(refuel.simulationSeconds > 0, "自动加油没有等待真实固定步：" .. label)
+            for _, fluid in ipairs({"hydrogen", "oxygen"}) do
+                assert(refuel.targetsAfter[fluid] > refuel.targetsBefore[fluid] + 0.000001 and
+                    refuel.sourceAfter[fluid] < refuel.sourceBefore[fluid] - 0.000001,
+                    "落地燃料罐没有从普通源罐接收真实" .. fluid .. "：" .. label)
+                local before, after = refuel.totalBefore[fluid], refuel.totalAfter[fluid]
+                assert(math.abs(after - before) <= 0.0000001 * math.max(1, before),
+                    "普通地面自动加油没有守恒真实" .. fluid .. "：" .. label)
             end
         end
-        return "真实起飞、氢氧消耗、惯性、旋转、导航、船体跨区与降落：" .. #data.ships .. " 个船型"
+        return "普通建筑生成、点火装配、真实航行、落地还原及普通管道自动加油：" .. #data.ships .. " 个船型"
     end, "所有船型的真实起飞航行降落")
 end
 

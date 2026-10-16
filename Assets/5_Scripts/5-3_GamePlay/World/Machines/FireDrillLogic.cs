@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
@@ -24,7 +25,7 @@ public class FireDrillLogic : MachineLogic
     public override GameObject PanelPrefab { get; }
     public override float TickInterval => .1f;
     public override float Progress01 => Heater.Progress01;
-    public override string ActionLabel => "摩擦";
+    public override string ActionLabel => FlatWorldLocalizationService.GetUiText("摩擦");
     public override string Status => Heater.Status;
     public override bool CanAct => Heater.CanRub;
 
@@ -123,12 +124,12 @@ public sealed class MaterialHeatingProcessor
         get
         {
             ItemData material = Material;
-            if (material == null) return $"放入材料，点击摩擦升温 · 供热上限 {SourceTemperature:0}°C";
+            if (material == null) return FlatWorldLocalizationService.GetUiFormat("放入材料，点击摩擦升温 · 供热上限 {0:0}°C", SourceTemperature);
             string current = material.MatterState?.Initialized == true
-                ? $"{material.MatterState.TemperatureCelsius:0.#}°C" : "待测温";
+                ? $"{material.MatterState.TemperatureCelsius:0.#}°C" : FlatWorldLocalizationService.GetUiText("待测温");
             RuntimeItemMatterTransition transition = ItemMatterRuntime.GetHeatingTransition(material);
-            string target = transition == null ? "" : $" / 转化 {transition.MinTemperature:0}°C";
-            return $"材料 {current}{target} · 供热上限 {SourceTemperature:0}°C";
+            string target = transition == null ? "" : FlatWorldLocalizationService.GetUiFormat(" / 转化 {0:0}°C", transition.MinTemperature);
+            return FlatWorldLocalizationService.GetUiFormat("材料 {0}{1} · 供热上限 {2:0}°C", current, target, SourceTemperature);
         }
     }
 

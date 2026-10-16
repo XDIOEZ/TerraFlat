@@ -44,7 +44,7 @@ namespace FlatWorld.Networking.Gameplay
         public string CurrentPlanetName => currentPlanetName;
         public int LastSnapshotBytes { get; private set; }
 
-        public event Action<string> GameplayStatusChanged;
+        public event Action<string, object[]> GameplayStatusChanged;
 
         public void PrepareLocalPlayer(string playerName)
         {
@@ -100,7 +100,7 @@ namespace FlatWorld.Networking.Gameplay
             // 快照和生成设置哈希必须使用同一份已冻结的生态配置。
             ChunkMgr.Instance?.EnsureActiveEcologyConfiguration();
 
-            SetGameplayStatus($"主机世界已准备：{currentPlanetName} / Seed {saveData.Seed}");
+            SetGameplayStatus("主机世界已准备：{0} / Seed {1}", currentPlanetName, saveData.Seed);
         }
 
         public override void OnStartServer()
@@ -194,7 +194,7 @@ namespace FlatWorld.Networking.Gameplay
                         NetworkServer.AddPlayerForConnection(connection, playerObject);
                         if (!spaceSpawn && player.CorePlayer?.Data != null)
                             player.CorePlayer.Data.CurrentSceneName = ResolveCurrentPlanetName();
-                        SetGameplayStatus($"玩家已进入：{playerName}（{(spaceSpawn ? "太空恢复" : "陆地出生")} {spawnPosition}）");
+                        SetGameplayStatus(spaceSpawn ? "玩家已进入：{0}（太空恢复 {1}）" : "玩家已进入：{0}（陆地出生 {1}）", playerName, spawnPosition);
                         yield break;
                     }
 
@@ -231,7 +231,7 @@ namespace FlatWorld.Networking.Gameplay
                 worldReadyConnections.Remove(connection.connectionId);
             }
             base.OnServerDisconnect(connection);
-            SetGameplayStatus($"玩家已断开（当前 {NetworkServer.connections.Count} 人）");
+            SetGameplayStatus("玩家已断开（当前 {0} 人）", NetworkServer.connections.Count);
         }
 
         public override void OnStopClient()
@@ -378,7 +378,7 @@ namespace FlatWorld.Networking.Gameplay
                 });
             }
 
-            SetGameplayStatus($"正在向 {playerName} 同步地图（{snapshot.Length / 1024f:0.0} KB）");
+            SetGameplayStatus("正在向 {0} 同步地图（{1:0.0} KB）", playerName, snapshot.Length / 1024f);
         }
 
         private IEnumerator DisconnectProtocolMismatchAfterSend(NetworkConnectionToClient connection)
@@ -399,7 +399,10 @@ namespace FlatWorld.Networking.Gameplay
             string reason = string.IsNullOrWhiteSpace(rejected.Reason)
                 ? $"联机协议不匹配：服务器={rejected.ServerVersion}，客户端={rejected.ClientVersion}"
                 : rejected.Reason;
-            SetGameplayStatus(reason);
+            if (string.IsNullOrWhiteSpace(rejected.Reason))
+                SetGameplayStatus("联机协议不匹配：服务器={0}，客户端={1}", rejected.ServerVersion, rejected.ClientVersion);
+            else
+                SetGameplayStatus(reason);
             Debug.LogError($"[联机] {reason}", this);
         }
 
@@ -410,8 +413,8 @@ namespace FlatWorld.Networking.Gameplay
                 begin.CompressedBytes > NetworkGameplayProtocol.MaxSnapshotBytes ||
                 begin.ChunkCount <= 0 || begin.ChunkCount != expectedChunks)
             {
-                FailIncomingSnapshot(
-                    $"世界快照头无效：bytes={begin.CompressedBytes}, chunks={begin.ChunkCount}, expected={expectedChunks}");
+                FailIncomingSnapshot("世界快照头无效：bytes={0}, chunks={1}, expected={2}",
+                    begin.CompressedBytes, begin.ChunkCount, expectedChunks);
                 return;
             }
 
@@ -436,7 +439,7 @@ namespace FlatWorld.Networking.Gameplay
                 }
             };
 
-            SetGameplayStatus($"正在接收世界快照：{begin.CompressedBytes / 1024f:0.0} KB / {begin.ChunkCount} 片");
+            SetGameplayStatus("正在接收世界快照：{0:0.0} KB / {1} 片", begin.CompressedBytes / 1024f, begin.ChunkCount);
         }
 
         private void OnClientWorldSnapshotChunk(NetworkWorldSnapshotChunk chunk)
@@ -447,7 +450,7 @@ namespace FlatWorld.Networking.Gameplay
 
             if (chunk.ChunkIndex < 0 || chunk.ChunkIndex >= incoming.Chunks.Length || chunk.Data == null)
             {
-                FailIncomingSnapshot($"世界快照分片无效：index={chunk.ChunkIndex}");
+                FailIncomingSnapshot("世界快照分片无效：index={0}", chunk.ChunkIndex);
                 return;
             }
 
@@ -457,8 +460,8 @@ namespace FlatWorld.Networking.Gameplay
                 incoming.CompressedBytes - offset);
             if (chunk.Data.Length != expectedBytes)
             {
-                FailIncomingSnapshot(
-                    $"世界快照分片长度错误：index={chunk.ChunkIndex}, actual={chunk.Data.Length}, expected={expectedBytes}");
+                FailIncomingSnapshot("世界快照分片长度错误：index={0}, actual={1}, expected={2}",
+                    chunk.ChunkIndex, chunk.Data.Length, expectedBytes);
                 return;
             }
 
@@ -483,9 +486,8 @@ namespace FlatWorld.Networking.Gameplay
             if (writeOffset != incoming.CompressedBytes || actualHash != incoming.PayloadHash ||
                 compressedData.Length < 2 || compressedData[0] != 0x1F || compressedData[1] != 0x8B)
             {
-                FailIncomingSnapshot(
-                    $"世界快照完整性校验失败：bytes={writeOffset}/{incoming.CompressedBytes}, " +
-                    $"hash={actualHash:X8}/{incoming.PayloadHash:X8}");
+                FailIncomingSnapshot("世界快照完整性校验失败：bytes={0}/{1}, hash={2:X8}/{3:X8}",
+                    writeOffset, incoming.CompressedBytes, actualHash, incoming.PayloadHash);
                 return;
             }
 
@@ -495,10 +497,11 @@ namespace FlatWorld.Networking.Gameplay
             OnClientWorldSnapshot(completed);
         }
 
-        private void FailIncomingSnapshot(string reason)
+        private void FailIncomingSnapshot(string reasonTemplate, params object[] arguments)
         {
             incomingWorldSnapshot = null;
-            SetGameplayStatus(reason);
+            SetGameplayStatus(reasonTemplate, arguments);
+            string reason = arguments.Length == 0 ? reasonTemplate : string.Format(reasonTemplate, arguments);
             Debug.LogError($"[联机] {reason}", this);
             if (NetworkClient.active)
                 NetworkClient.Disconnect();
@@ -523,7 +526,7 @@ namespace FlatWorld.Networking.Gameplay
             SaveDataMgr.Instance.CurrentContrrolPlayerName = localPlayerName;
             currentPlanetName = snapshot.PlanetName;
             LastSnapshotBytes = snapshot.CompressedSaveData?.Length ?? 0;
-            SetGameplayStatus($"地图同步完成，正在进入 {currentPlanetName}");
+            SetGameplayStatus("地图同步完成，正在进入 {0}", currentPlanetName);
 
             if (!GameManager.Instance.IsInGameWorld)
             {
@@ -537,7 +540,7 @@ namespace FlatWorld.Networking.Gameplay
                 NetworkClient.Send(new NetworkWorldReady());
 
             worldEnterCoroutine = null;
-            SetGameplayStatus($"世界已就绪：{currentPlanetName} / Seed {snapshot.Seed}");
+            SetGameplayStatus("世界已就绪：{0} / Seed {1}", currentPlanetName, snapshot.Seed);
         }
 
         private bool TryApplySynchronizedSnapshot(NetworkWorldSnapshot snapshot)
@@ -552,7 +555,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 string reason = $"世界快照应用失败：{exception.Message}";
                 worldEnterCoroutine = null;
-                SetGameplayStatus(reason);
+                SetGameplayStatus("世界快照应用失败：{0}", exception.Message);
                 Debug.LogError($"[联机] {reason}\n{exception}", this);
                 if (NetworkClient.active)
                     NetworkClient.Disconnect();
@@ -823,11 +826,12 @@ namespace FlatWorld.Networking.Gameplay
         }
         #endregion
 
-        private void SetGameplayStatus(string status)
+        private void SetGameplayStatus(string statusTemplate, params object[] arguments)
         {
-            GameplayStatus = status;
-            GameplayStatusChanged?.Invoke(status);
-            Debug.Log($"[联机] {status}", this);
+            // 保留原始模板供界面按当前语言格式化，日志仍记录实际数值。
+            GameplayStatus = arguments.Length == 0 ? statusTemplate : string.Format(statusTemplate, arguments);
+            GameplayStatusChanged?.Invoke(statusTemplate, arguments);
+            Debug.Log($"[联机] {GameplayStatus}", this);
         }
     }
 }

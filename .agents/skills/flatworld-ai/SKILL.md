@@ -29,6 +29,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - GO 保存 ItemData/休眠快照；蜂巢独占所属蜜蜂 GUID/BeeState；停用 ECS 保留 EntitiesResidents 冷快照，不转换为 GO。`IsCreated` 判断 World 有效性，快照先采全再替换，失效保留冷快照，清理可重复。
 - F5 换玩家撤旧代理，无玩家暂停模拟，新玩家重绑而保留居民；开发 Playground 与正式生态只推进一个 World。GamePlay 与 AIECS 通过独立桥/接口协作，延迟命中核对身份和绑定代际。
 - 资源 ECS 独立于 AI 后端，蜜蜂采蜜查 `NaturalEntityEcsService`，栖息地合并 GO/ECS 树，不恢复完整资源 Item。Lua Actor 不要求 ECS 能力声明。
+- 树木栖息地 ECS 记录在注册、移除与定义刷新时增量维护，两秒快照只遍历存活树；Profiler `NaturalEntityRuntime.TreeHabitat` / `FlatWorld.MonsterSpawner.TreeCandidates` 观察峰值。
 - ECS 用 60Hz 基础时钟与距离脉冲，恢复不追补全部离线 Tick；移动前快照用于感知、移动后用于命中。决策选意图，Active 再确认目标/朝向/LOS，前摇/Active/后摇时钟独立。
 - 风推动由 `WorldMotionSystem` 共用完整物品目录的质量规则；ECS 模板/居民保存当前定义的 `CurrentWeight`，资源发布后同步。世界桥采当地风速，Burst 只消费被动 `WindVelocity` 并扫掠通行；不写入主动速度/动画，无风时不扫描居民，风停当次清残留。
 - GO 鸟/蜜蜂空中通过 `IWindMotionOwner` 独占风位移，地面交给 Mover；悬停也受风且风不改变主动飞行朝向。幽灵直追与无 Mover 导航分别叠风；鱼仅离水受风，正在蹦跳时同步平移起点，入水或被携带/钓住后停止。
@@ -40,6 +41,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 温度避险不记录/回退安全点；记最多 8 个危险锚点 30 秒，以危险点指向角色的向量引导分段随机离开。陆地普通目标保留距离衰减偏置，线路接近危险记录则保持强偏置并走局部随机段；同一段目标缓存。安全环境持续 2 秒且距危险记录至少 3 格后才解除强制避险，体温未恢复则等待。
 - 雪地专属白兔/雪豹在 `snow-actors.json` 配置初始体表 -10℃，安全范围分别 -30～20℃/-30～25℃。新增物种按栖息地与玩法定位配安全范围与初始体温，不在通用温度模块堆物种特例。
 - `AI_DebugOverlayRenderer` 集中绘头顶信息；实时读 `_currentState`，`AI_Chicken.Data.State` 只在加载/保存同步。小鸡只缓存所属 Scene.handle 名称，时间实时读取；受伤禁睡保存绝对游戏日截止，逃跑记忆与睡眠警戒独立。
+- GO AI 状态评估回调在实例内复用，不在每次判定时分配委托；调试头顶标签仅在 IMGUI Repaint 绘制并复用 GUIContent。
 - 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持搜索最后可见位置，到点等待，重见重计时；夜间归巢不抢占追击，蜂巢销毁后无领地巡逻。
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。
 - 鸟离地撤实体阻挡，仅留感知/受击 Trigger；`BirdLift` 下独立运动学刚体承接受击盒，按当前 Sprite/镜像/动画姿态同步，卸载恢复配置。空中死亡先收视觉高度，再统一生命/掉落流程。

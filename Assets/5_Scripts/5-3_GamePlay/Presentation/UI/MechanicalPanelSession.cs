@@ -19,6 +19,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     private readonly Func<bool> actionAvailable; // 操作资格由机械域判断，面板只呈现按钮禁用态。
     private readonly bool refreshStatusPeriodically;
     private readonly Func<float> batteryCharge01;
+    private readonly Func<float> gasCapacity01;
     private readonly CraftingOutputPreview preview;
     private Player actor;
     private bool disposed;
@@ -27,16 +28,18 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
 
     public MechanicalPanelSession(string prefabId, Item owner, RecipeProcessor processor, Action<Player> action,
         Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
-        bool refreshStatusPeriodically = false, Func<float> batteryCharge01 = null)
+        bool refreshStatusPeriodically = false, Func<float> batteryCharge01 = null, Func<float> gasCapacity01 = null)
     {
         this.owner = owner; this.processor = processor; this.action = action; this.status = status;
         this.actionLabel = actionLabel; this.actionAvailable = actionAvailable;
         this.refreshStatusPeriodically = refreshStatusPeriodically;
         this.batteryCharge01 = batteryCharge01;
+        this.gasCapacity01 = gasCapacity01;
         panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(prefabId));
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException(prefabId + " 缺少正式视图绑定。");
         view.SetProcessingVisible(processor != null);
         view.SetBatteryVisible(batteryCharge01 != null);
+        view.SetGasCapacityVisible(gasCapacity01 != null);
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panel.Dragger != null ? panel.Dragger.rectTransform : panel.rectTransform);
         view.ActionButton.onClick.AddListener(OnAction);
         view.CloseButton.onClick.AddListener(Close);
@@ -57,8 +60,8 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     /// <summary>纯数据机械节点使用相同面板，不需要对应世界 Item。</summary>
     public MechanicalPanelSession(string prefabId, MachineEntity owner, RecipeProcessor processor,
         Action<Player> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
-        bool refreshStatusPeriodically = false, Func<float> batteryCharge01 = null)
-        : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable, refreshStatusPeriodically, batteryCharge01)
+        bool refreshStatusPeriodically = false, Func<float> batteryCharge01 = null, Func<float> gasCapacity01 = null)
+        : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable, refreshStatusPeriodically, batteryCharge01, gasCapacity01)
     {
         mechanicalOwner = owner;
         // 世界设备面板不能锁住自身交互，否则发送器会立即取消交互并关窗。
@@ -172,6 +175,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         string text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
         if (view.Status.text != text) view.Status.text = text;
         if (batteryCharge01 != null) view.SetBatteryCharge(batteryCharge01());
+        if (gasCapacity01 != null) view.SetGasCapacity(gasCapacity01());
     }
 
     private void StopStatusRefresh()

@@ -206,6 +206,7 @@ public partial class GameRes
         resourceLoadFailed = true;
         loadCoroutine = null;
         LastLoadError = $"阶段 {stage} 失败：{exception.Message}";
+        resourceLoadingFailureStage = stage;
         loadingText = $"资源加载失败（{stage}），修正配置后可按 Alt+R 重试";
         showLoadingGUI = true;
         Debug.LogError($"[GameRes] {LastLoadError}\n{exception}", this);

@@ -1,0 +1,151 @@
+{
+  "engine": "LMMS 1.2.2 via MCP",
+  "sampleRate": 48000,
+  "channels": 1,
+  "sounds": [
+    {
+      "cue": "building.place",
+      "name": "搭建落位",
+      "variant": 1,
+      "seconds": 0.42,
+      "peakDb": -9.0,
+      "rmsDb": -25.76,
+      "startSeconds": 0.125,
+      "file": "Assets/Audio/Generated/building.place__01.wav",
+      "guid": "791b57da4e364aeeb4ecc6ba275f8d4f",
+      "sha256": "190516f3426536beae7301132f268864d86dca27af360b38dd364e43325b7ec1"
+    },
+    {
+      "cue": "building.place",
+      "name": "搭建落位",
+      "variant": 2,
+      "seconds": 0.42,
+      "peakDb": -9.0,
+      "rmsDb": -25.53,
+      "startSeconds": 2.125,
+      "file": "Assets/Audio/Generated/building.place__02.wav",
+      "guid": "02500398648d422e933f99fa0ddf5230",
+      "sha256": "bde671fe546db495552b9500c311ae68b3a19954ad959487f499cf269d95854a"
+    },
+    {
+      "cue": "building.reject",
+      "name": "无效位置提示",
+      "variant": 1,
+      "seconds": 0.29,
+      "peakDb": -15.0,
+      "rmsDb": -29.95,
+      "startSeconds": 4.125,
+      "file": "Assets/Audio/Generated/building.reject__01.wav",
+      "guid": "9061d8b5fdbf4ab587a99e4bb2c0ec3b",
+      "sha256": "e095143a3099e6f67617999f63617f37eff6fc06080ed51d4e51674ab14b415b"
+    },
+    {
+      "cue": "building.reject",
+      "name": "无效位置提示",
+      "variant": 2,
+      "seconds": 0.29,
+      "peakDb": -15.0,
+      "rmsDb": -29.75,
+      "startSeconds": 6.125,
+      "file": "Assets/Audio/Generated/building.reject__02.wav",
+      "guid": "f7e647105c8b4ae2bd9e308b3ddf00fa",
+      "sha256": "9c2ba8dcbc7cb7e451c331edfa2b0461c5febf1f5bf4ea609ac912faf42200c2"
+    },
+    {
+      "cue": "craft.complete",
+      "name": "手工制作完成",
+      "variant": 1,
+      "seconds": 0.34,
+      "peakDb": -13.18,
+      "rmsDb": -27.0,
+      "startSeconds": 8.125,
+      "file": "Assets/Audio/Generated/craft.complete__01.wav",
+      "guid": "4f74b853e3864977bd6a567467ba3c43",
+      "sha256": "39b948297c1b0575524b39c0e6b5dc97aaa71f826bdbb7950e7da276d0978c01"
+    },
+    {
+      "cue": "craft.complete",
+      "name": "手工制作完成",
+      "variant": 2,
+      "seconds": 0.34,
+      "peakDb": -13.13,
+      "rmsDb": -27.0,
+      "startSeconds": 10.125,
+      "file": "Assets/Audio/Generated/craft.complete__02.wav",
+      "guid": "879145c6ff64490ebf2f79b89da486a2",
+      "sha256": "037a69b7a27bb843f3768cefe3dd6d4bac06136b56611874a485535c29e55f01"
+    },
+    {
+      "cue": "smelt.complete",
+      "name": "熔炼出炉金属轻鸣",
+      "variant": 1,
+      "seconds": 0.53,
+      "peakDb": -14.29,
+      "rmsDb": -28.0,
+      "startSeconds": 12.125,
+      "file": "Assets/Audio/Generated/smelt.complete__01.wav",
+      "guid": "8646fd394b1a4110ba9e8f2d89abe8f1",
+      "sha256": "003e0da503b948e9430715b19ef346b610be021c41f86e3ba05e2bd0954e6c51"
+    },
+    {
+      "cue": "smelt.complete",
+      "name": "熔炼出炉金属轻鸣",
+      "variant": 2,
+      "seconds": 0.53,
+      "peakDb": -14.25,
+      "rmsDb": -28.0,
+      "startSeconds": 14.125,
+      "file": "Assets/Audio/Generated/smelt.complete__02.wav",
+      "guid": "10354bbf074149cb9b658953b45d0318",
+      "sha256": "7daceee21adc820af3f34543c5ee58b9cc2465fa17a5ebb108c8a146bf60f895"
+    },
+    {
+      "cue": "fire.seed",
+      "name": "引火火星",
+      "variant": 1,
+      "seconds": 0.44,
+      "peakDb": -13.0,
+      "rmsDb": -29.15,
+      "startSeconds": 16.125,
+      "file": "Assets/Audio/Generated/fire.seed__01.wav",
+      "guid": "15b410a8a3984ae39a8e173a4dd2170e",
+      "sha256": "70381278d06dfaa6265072c0b1f70684fb8feb58c7de6abc83d72714965e971a"
+    },
+    {
+      "cue": "fire.seed",
+      "name": "引火火星",
+      "variant": 2,
+      "seconds": 0.44,
+      "peakDb": -13.0,
+      "rmsDb": -29.94,
+      "startSeconds": 18.125,
+      "file": "Assets/Audio/Generated/fire.seed__02.wav",
+      "guid": "0b591c90499e4c148ced5096022fe1be",
+      "sha256": "7bfe313d25bd57e28e8b1c77bae4c9a1a214cd7ec0c5d4f825b6204e24db2d5a"
+    },
+    {
+      "cue": "furnace.ignite",
+      "name": "炉火点燃",
+      "variant": 1,
+      "seconds": 0.69,
+      "peakDb": -11.26,
+      "rmsDb": -26.0,
+      "startSeconds": 20.125,
+      "file": "Assets/Audio/Generated/furnace.ignite__01.wav",
+      "guid": "ea5e16c81fc147ae8c129a054af48db3",
+      "sha256": "cf0bf33fcaae97670562714850476a1976dfb5f26f049f3c79687231f8f40b02"
+    },
+    {
+      "cue": "furnace.ignite",
+      "name": "炉火点燃",
+      "variant": 2,
+      "seconds": 0.69,
+      "peakDb": -10.83,
+      "rmsDb": -26.0,
+      "startSeconds": 22.125,
+      "file": "Assets/Audio/Generated/furnace.ignite__02.wav",
+      "guid": "80e4f74993cf491a9e61778eb97f4a39",
+      "sha256": "d1f45e0c320cf44d3d5963680dd9f553ba9c4b5df26f8822e68404983c554115"
+    }
+  ]
+}

@@ -1761,6 +1761,8 @@ public static class GameUIPrefabRebuilder
         PlaceTopLeft(panel, "Button_Close", 24f, 298f, 276f, 40f);
     }
 
+    #region 角色生存状态 HUD
+
     private static void BuildNutritionHud(GameObject root)
     {
         Transform panel = FindTransform(root.transform, "Panel");
@@ -1801,10 +1803,35 @@ public static class GameUIPrefabRebuilder
                 Slider sliderComponent = slider.GetComponent<Slider>();
                 if (sliderComponent != null)
                     sliderComponent.interactable = false;
+                ConfigureNutritionRowTexts(slider);
             }
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+    }
+
+    /// <summary>左右分栏对齐状态名称和数值，防止数值越出状态条边缘。</summary>
+    private static void ConfigureNutritionRowTexts(RectTransform row)
+    {
+        TextMeshProUGUI[] texts = row.GetComponentsInChildren<TextMeshProUGUI>(true);
+        foreach (TextMeshProUGUI text in texts)
+        {
+            bool isValue = text.name.StartsWith("DataText_", StringComparison.Ordinal);
+            RectTransform rect = text.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(isValue ? 1f : 0f, 0.5f);
+            rect.pivot = new Vector2(isValue ? 1f : 0f, 0.5f);
+            rect.anchoredPosition = new Vector2(isValue ? -12f : 12f, 0f);
+            rect.sizeDelta = new Vector2(isValue ? 130f : 112f, 24f);
+
+            text.alignment = isValue ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
+            text.fontSize = 18f;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 14f;
+            text.fontSizeMax = 18f;
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.raycastTarget = false;
+        }
     }
 
     /// <summary>
@@ -1902,6 +1929,8 @@ public static class GameUIPrefabRebuilder
             }
         }
     }
+
+    #endregion
 
     private static void BuildSleepHud(GameObject root)
     {

@@ -1,3 +1,4 @@
+using FlatWorld.Localization;
 using UnityEngine;
 
 /// <summary>维度入口功能模块；可由自然入口或通用建筑本体 Shell 复用。</summary>
@@ -152,7 +153,7 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
         RefreshBlockedState();
         if (IsBlockedExit)
         {
-            ItemActionFeedback.Show(player, "外面的矿洞被堵住了");
+            ItemActionFeedback.Show(player, FlatWorldLocalizationService.GetUiText("外面的矿洞被堵住了"));
             return;
         }
         if (string.IsNullOrWhiteSpace(targetDimensionId))

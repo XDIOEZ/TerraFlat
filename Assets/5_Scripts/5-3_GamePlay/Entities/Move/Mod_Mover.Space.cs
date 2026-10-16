@@ -22,10 +22,10 @@ public partial class Mod_Mover
                 if (enabled) { beforeSpaceSimulated = rb.simulated; rb.simulated = false; }
                 else rb.simulated = beforeSpaceSimulated;
             }
-            // 只固定玩家本体，左右翻面和手持物瞄准仍由各自模块处理。
+            // 模式切换时才同步镜头设置，避免普通地面移动每帧重复查找相机模块。
             item?.itemMods.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody)?.SetMirroringEnabled(true);
+            item?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetFollowTargetRotation(!enabled);
         }
-        item?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetFollowTargetRotation(!enabled);
         if (!enabled || item == null) return;
         // 太空里固定玩家与镜头朝上，鼠标仍可控制左右朝向与手持物瞄准。
         item.transform.rotation = Quaternion.identity;

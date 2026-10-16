@@ -65,4 +65,5 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - LightLayerMgr 热路径只读缓存 Light2D 成员并实时采强度/位置；成员集合低频刷新。风玩法按自身格查询，PlanetData.WindStrength/GPU 风只是镜头投影。
 - 风区边缘由 `WindTransitionWidth` 控制空间过渡总宽（默认 32 格，边界内外各 16 格）；`TryGetWindBlend` 按连续坐标 SmoothStep 混合最多四区，支持拐角、环绕和客户端副本，缺失区视为无风且不创建状态。风声/设施读混合风向量，移动先按各区原强度换算推速再混合，避免跌过 8 级门槛突然停住。
 - 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档不插值；邻风区各自分档后仍按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风。HasWindPush 每帧只读检查一次所有登记天气区（含客户端副本），不能以镜头区判断全世界。
+- 大批散落物风推动使用 `WorldMotionSystem.TryCreateWindSamplingContext` 每批冻结一次目录质量范围和星球重力；每件仍按实际质量与当地四区风场采样。单件 `SampleWindVelocity` 与批量共用 `WindEnvironmentRules.ResolveBlendedPushVelocity`。
 - 单机散落物水态走 DroppedItemRuntime.Water；陆地静物订所在地格变化，未知格限量重试，水中低频查流。水态替换先备载荷/共享视觉再提交整组数量，水花归实际世界 Scene；浮力阈值与视觉浸没分开。

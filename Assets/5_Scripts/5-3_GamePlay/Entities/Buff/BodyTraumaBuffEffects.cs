@@ -38,6 +38,16 @@ public static class BodyTraumaBuffEffects
         public TraumaScreenEffect Screen;
     }
     private static readonly Dictionary<BuffInstance, Dictionary<string, Entry>> Sources = new();
+    private readonly struct ReceiverModifiers
+    {
+        public readonly float Attack, Confusion;
+        public ReceiverModifiers(float attack, float confusion)
+        {
+            Attack = attack;
+            Confusion = confusion;
+        }
+    }
+    private static readonly Dictionary<Item, ReceiverModifiers> receiverModifiers = new();
 
     public static void Apply(BuffEffectDefinition effect, BuffInstance runtime)
     {
@@ -59,6 +69,8 @@ public static class BodyTraumaBuffEffects
             ScreenPostProcessManager.Instance.RegisterEffect(entry.Screen);
         }
         entries.Add(effect.TypeId, entry);
+        if (effect.TypeId == Attack || effect.TypeId == Confusion)
+            RefreshReceiverModifiers(runtime.Receiver);
     }
 
     private static void Remove(BuffInstance runtime, string type)
@@ -67,26 +79,37 @@ public static class BodyTraumaBuffEffects
         if (entry.Speed != null) entry.Speed.MultiplicativeModifier /= entry.Value;
         if (entry.Screen != null) ScreenPostProcessManager.ExistingInstance?.UnregisterEffect(entry.Screen);
         if (entries.Count == 0) Sources.Remove(runtime);
+        if (type == Attack || type == Confusion)
+            RefreshReceiverModifiers(runtime.Receiver);
     }
 
-    public static float GetAttackMultiplier(Item owner) => GetMultiplier(owner, Attack);
-
-    private static float GetMultiplier(Item owner, string type)
+    /// <summary>Buff 生效或结束时重算拥有者汇总，移动和武器热路径只做一次字典查询。</summary>
+    private static void RefreshReceiverModifiers(Item owner)
     {
-        float result = 1f;
+        if (ReferenceEquals(owner, null)) return;
+        float attack = 1f, confusion = 0f;
         foreach (var pair in Sources)
-            if (pair.Key.Receiver == owner && pair.Value.TryGetValue(type, out Entry entry)) result *= entry.Value;
-        return result;
+        {
+            if (!ReferenceEquals(pair.Key.Receiver, owner)) continue;
+            if (pair.Value.TryGetValue(Attack, out Entry attackEntry)) attack *= attackEntry.Value;
+            if (pair.Value.TryGetValue(Confusion, out Entry confusionEntry)) confusion += confusionEntry.Value;
+        }
+        if (attack == 1f && confusion <= 0f)
+            receiverModifiers.Remove(owner);
+        else
+            receiverModifiers[owner] = new ReceiverModifiers(attack, confusion);
     }
+
+    public static float GetAttackMultiplier(Item owner) =>
+        !ReferenceEquals(owner, null) && receiverModifiers.TryGetValue(owner, out ReceiverModifiers values)
+            ? values.Attack : 1f;
 
     /// <summary>在输入源仲裁之后反转移动；不累加反转次数，零输入和 UI/输入锁语义保持不变。</summary>
     public static Vector2 TransformMoveInput(Item owner, Vector2 input, float time)
     {
-        float strength = 0f;
-        foreach (var pair in Sources)
-            if (pair.Key.Receiver == owner && pair.Value.TryGetValue(Confusion, out Entry entry)) strength += entry.Value;
-        if (strength <= 0f) return input;
-        return -input;
+        return !ReferenceEquals(owner, null) &&
+            receiverModifiers.TryGetValue(owner, out ReceiverModifiers values) && values.Confusion > 0f
+            ? -input : input;
     }
     #endregion
 

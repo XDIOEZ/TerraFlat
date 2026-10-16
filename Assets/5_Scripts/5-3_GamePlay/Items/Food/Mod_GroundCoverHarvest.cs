@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using UnityEngine;
 
@@ -120,7 +121,8 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         else if (GroundCoverSystem.TryHarvest(target))
         {
             targetOutline?.Hide();
-            ItemActionFeedback.Show(item.Owner, $"已采集{target.Definition.DisplayName}。");
+            ItemActionFeedback.Show(item.Owner, FlatWorldLocalizationService.GetUiFormat(
+                "已采集{0}。", FlatWorldLocalizationService.GetUiText(target.Definition.DisplayName)));
         }
     }
 

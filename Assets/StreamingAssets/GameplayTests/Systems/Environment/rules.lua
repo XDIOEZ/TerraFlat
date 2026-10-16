@@ -38,6 +38,12 @@ test.system("environment", "wind", {}, function(data)
     assert(data.lightMassLevel == 8 and data.cutoffMassLevel == 11 and data.invalidMassLevel == 11,
         "质量边界或非法质量没有影响起吹资格")
     assert(data.zeroGravityLevel == 8, "零重力下起吹资格仍按地球重量计算")
+    near(data.blendedPushX, -0.1125, "风区边缘混合速度X与原分档规则不一致")
+    near(data.blendedPushY, -0.0075, "风区边缘混合速度Y与原分档规则不一致")
+    near(data.unreachablePushX, 0, "超重物体不应有水平风速")
+    near(data.unreachablePushY, 0, "超重物体不应有垂直风速")
+    near(data.originPushX, 0.2, "零空间过渡权重未保留当前风区速度")
+    near(data.originPushY, 0, "零空间过渡权重引入侧向风")
 end, "风级、质量与重力推动门槛")
 
 test.system("environment", "weather", {}, function(data)

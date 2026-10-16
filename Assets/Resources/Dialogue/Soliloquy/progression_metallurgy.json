@@ -24,6 +24,7 @@
       "lines": [
         "第一块粗铁锭成了。备好木柄和绳子，就能制作粗铁铁镐。"
       ],
+      "localizedLines": { "en": ["My first crude iron ingot! With a wooden handle and some rope, I can make a crude iron pickaxe."] },
       "duration": 5.2,
       "cooldown": 60,
       "once": true,
@@ -48,6 +49,7 @@
       "lines": [
         "粗铁铁镐到手了。先备好食物和饮水，再去寻找铜锡或废弃矿工营地。"
       ],
+      "localizedLines": { "en": ["I've got a crude iron pickaxe. I'll pack food and water before searching for copper, tin, or an abandoned mining camp."] },
       "duration": 5.0,
       "cooldown": 60,
       "once": true,

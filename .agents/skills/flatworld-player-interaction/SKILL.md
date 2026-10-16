@@ -40,12 +40,14 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 右键只使用当前快捷栏中由本玩家持有的 `Item`，经 `Item.Act/OnAct` 分发；F 只交互世界建筑、工作台、设备、门、入口和载具。`CanPointerInteract` 默认 false，仅采集等左键动作显式允许；F 的指针选目标和描边不受点选权限影响。
 - `PreciseInteraction` 默认关闭：光标命中优先，空命中按朝向/距离回退；开启后仅认落点。全部选择受距离约束，鼠标始终精确；手持 `Item.InHand` 排除于候选，包括同时实现世界目标接口的组件。手持建筑放置由右键使用提交，不阻断 F 交互和世界描边；放置态只暂停左键采集。
 - 发送器使用 Physics2D 查询，无交互 Trigger，`Module_Hand` 无 Collider2D，查询跳过伤害专用 Collider。无 Collider 目标及机器由 `SpatialInteractionRegistry.Query` 提供；逐帧描边只用 `QueryPreview` 的注册视觉，机械视觉以同一目标接入 `IWorldInteractionPreview`。
+- 光标未命中后同轮半径兜底复用已完成的 `Physics2D.SyncTransforms`，显式点选仍独立同步；Profiler 区分 `FlatWorld.Interaction.PointerQuery/RadiusQuery`。
 - 环境输入只转发按下/持续/松开，环境定义由 `EnvironmentInteractionRunner` 建独立实例；玩家状态不存于共享地块定义。
 - 载具按键交互和描边共享落点查询，上下船均要求实际命中；无邻近陆地时允许安全水面落点，未命中载具的可触及水面仍可交给环境动作。
 
 ## 移动、承载与镜头
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
+- Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
@@ -57,4 +59,5 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 高视野的星球柔边云团与外圈浓云由 ZoomCloudRendererFeature 在最终环绕补绘后叠加；SurfaceZoomTransition 共用逻辑视野进度，拉远从四周靠近并盖满后再交接宇宙，拉近反向退开。实际相机尺寸独立驱动外圈黑边保护，风只控制漂移；正常太空和禁天气维度不叠地表云，HUD 不被覆盖。
 - `CameraZoomExtensions` 注册通用缩放策略；地表宇宙观察把逻辑尺寸与实际相机尺寸分开，`CurrentOrthographicSize` 在这种策略下读逻辑尺寸，其余模式仍读 lens。滚轮/双指共用线性→倍率的连续步坐标，手机滑条通过 GetViewSliderValue/SetViewSliderValue 使用稳定分段映射；驾驶跟随覆盖优先，观察不改变玩家位置、听音或区块加载距离。
 - `Mod_Cam.SetFollowOverride/ClearFollowOverride` 供临时驾驶覆盖跟随目标并同步环绕副本，释放回玩家，不改变听音主体；可随跟随租约传入最大视野与缩放倍率，`EffectiveMaxPovValue/UsesProportionalZoom` 供 UI 同步。太空驾驶上限为 120000、滚轮乘/除 1.25，双指共用比例缩放、手机滑条使用对数映射；退出租约清除临时范围，普通地表在宇宙观察起点前按原尺寸增减，缩放不改变区块加载距离。飞船驾驶目标由 SpaceSession 投影整船中心，镜头固定朝上，下降触地/退出恢复原视野。相机根实例进入持久场景，由 Mod_Cam 卸载/销毁时释放并清订阅与引用，普通星区卸载不销毁或重建相机。
+- 已插值目标可传 `FollowMode.PresentationLocked`：XY 阻尼、前探与预判平滑归零，Brain 固定 LateUpdate 跟随；缩放/设置变更不解除锁定，释放或目标销毁后恢复最新玩家设置和进入前的 Brain 更新方式。太空驾驶使用此模式，地表驾驶沿用普通设置。
 - 开发快捷键：Ctrl+F1 管理员，F1 录制 UI 隐藏，F2 创造背包（主背包打开不拦截，其它模态/加载锁拦截），T 与 GM 点选共用 `Mod_PlayerTraits.TryTeleportToScreenPosition`；太空先经 `SpaceSession.UnprojectPosition` 还原宇宙坐标，再调用 `TryTeleportPlayerToSpace`，地表传送先复用中立乘员重置解除乘船/下降，再写拓扑规范坐标并刷新区块。

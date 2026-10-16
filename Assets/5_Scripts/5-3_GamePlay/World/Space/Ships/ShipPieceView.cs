@@ -9,6 +9,8 @@ namespace FlatWorld.Spaceflight
         public Item Item { get; private set; }
         private SpaceSession session;
         private string shipId, pieceId;
+        private string machineScopeKey;
+        private int targetGuid;
         private MachineInteractionTarget machineTarget;
         private MachineDefinition machineDefinition;
         private SpriteRenderer visual;
@@ -28,7 +30,8 @@ namespace FlatWorld.Spaceflight
         private bool registeredForInteraction;
         private ShipEngineExhaustPresenter engineExhaust;
         public Vector3 WorldPosition => transform.position;
-        public int TargetGuid => int.TryParse(pieceId, out int id) ? id : 0;
+        public int TargetGuid => targetGuid;
+        internal string BoundMachineScopeKey => machineScopeKey;
         public bool IsValid => isActiveAndEnabled && session != null && session.FindPiece(pieceId, out _, out _);
         public bool IsInteractionHighlighted { get; private set; }
         public event Action<bool> InteractionHighlightChanged;
@@ -57,6 +60,9 @@ namespace FlatWorld.Spaceflight
         public void Initialize(SpaceSession owner, ShipState ship, ShipPieceState piece, Item instance)
         {
             session = owner; shipId = ship.ShipId; pieceId = piece.PieceId; Item = instance;
+            // 船件身份在绑定时解析，逐帧表现与交互复用稳定的机器作用域和 GUID。
+            machineScopeKey = MachineWorld.GetShipScopeKey(shipId);
+            targetGuid = int.TryParse(pieceId, out int id) ? id : 0;
             visual = GetComponentInChildren<SpriteRenderer>();
             baseVisualPosition = visual != null ? visual.transform.localPosition : Vector3.zero;
             Rebind(ship, piece);
@@ -76,6 +82,7 @@ namespace FlatWorld.Spaceflight
             engineExhaust?.Bind(null, null, null);
             session = null; boundShip = null; boundPiece = null;
             machineTarget = null; machineDefinition = null;
+            machineScopeKey = null;
             surfaceCollider = null; surfaceSortingBound = false;
             pendingMachineBinding = true;
         }
@@ -83,6 +90,8 @@ namespace FlatWorld.Spaceflight
         internal void ResumeView(SpaceSession owner, ShipState ship, ShipPieceState piece, ItemData data)
         {
             session = owner; shipId = ship.ShipId; pieceId = piece.PieceId;
+            machineScopeKey = MachineWorld.GetShipScopeKey(shipId);
+            targetGuid = int.TryParse(pieceId, out int id) ? id : 0;
             tankMask = pipeMask = -1;
             surfaceCollider = null; surfaceSortingBound = false;
             RefreshDefinitionVisual(piece, data);
@@ -128,6 +137,9 @@ namespace FlatWorld.Spaceflight
             boundShip = ship; boundPiece = piece; boundWidth = width; boundHeight = height;
             boundQuarterTurns = piece.QuarterTurns; boundCellSize = ship.CellSizeMeters;
             boundCellX = piece.CellX; boundCellY = piece.CellY;
+            doorVisualDirty = true;
+            if (machineScopeKey == null || shipId != ship.ShipId)
+                machineScopeKey = MachineWorld.GetShipScopeKey(ship.ShipId);
             shipId = ship.ShipId;
             Vector2 size = new((float)Math.Max(.001d, width * ship.CellSizeMeters - .05d),
                 (float)Math.Max(.001d, height * ship.CellSizeMeters - .05d));
@@ -150,7 +162,7 @@ namespace FlatWorld.Spaceflight
             machineDefinition = MachineCatalog.Get(piece.ItemId);
             pendingMachineBinding = false;
             if (machineDefinition != null)
-                using (MachineWorld.UseScope("ship:" + shipId))
+                using (MachineWorld.UseScope(machineScopeKey))
                 {
                     MachineEntity node = MachineWorld.GetById(TargetGuid);
                     pendingMachineBinding = node == null;
@@ -231,7 +243,7 @@ namespace FlatWorld.Spaceflight
         internal void SynchronizePipeVisual(MachineEntity node)
         {
             if (visual == null || node?.Definition.Fluid?.Kind != "pipe" || boundPiece?.IsAlive != true ||
-                node.ScopeKey != "ship:" + shipId) return;
+                node.ScopeKey != machineScopeKey) return;
             using var nodeScope = MachineWorld.UseNodeScope(node);
             int mask = MachineWorld.GetFluidPipeConnectionMask(node);
             GameRes resources = GameRes.ExistingInstance;
@@ -265,7 +277,7 @@ namespace FlatWorld.Spaceflight
             { ShipPanelSession.Open(session, player, shipId, pieceId); return; }
             if (piece.Kind == ShipPieceKind.Door)
             { session.TryToggleDoor(pieceId); return; }
-            using (MachineWorld.UseScope("ship:" + shipId))
+            using (MachineWorld.UseScope(machineScopeKey))
             {
                 // 休眠会释放旧交互对象，实际操作时从本船节点重新取得当前对象。
                 MachineEntity node = MachineWorld.GetById(TargetGuid);
@@ -276,16 +288,16 @@ namespace FlatWorld.Spaceflight
         public void OnInteractUpdate(Item actor)
         {
             if (machineTarget == null) return;
-            using (MachineWorld.UseScope("ship:" + shipId))
+            using (MachineWorld.UseScope(machineScopeKey))
                 if (machineTarget.IsValid) machineTarget.OnInteractUpdate(actor);
         }
         public void OnInteractEnd(Item actor)
         {
             if (machineTarget == null) return;
-            using (MachineWorld.UseScope("ship:" + shipId))
+            using (MachineWorld.UseScope(machineScopeKey))
                 if (machineTarget.IsValid) machineTarget.OnInteractEnd(actor);
         }
-        public void OnInteractCancel(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope("ship:" + shipId)) machineTarget.OnInteractCancel(actor); }
+        public void OnInteractCancel(Item actor) { if (machineTarget != null) using (MachineWorld.UseScope(machineScopeKey)) machineTarget.OnInteractCancel(actor); }
         private void OnDestroy()
         {
             SpatialInteractionRegistry.Unregister(this); InteractionHighlightChanged = null;
@@ -411,6 +423,7 @@ namespace FlatWorld.Spaceflight
                 float rise = (float)ShipLandingGuidance.SurfaceVisualRise(height);
                 float radians = angle * Mathf.Deg2Rad;
                 Vector3 visualLiftOffset = new(Mathf.Sin(radians) * rise, Mathf.Cos(radians) * rise, 0f);
+                presenter?.SynchronizeSurfaceState(flight, visualLiftOffset);
                 foreach (ShipPieceState piece in ship.Pieces)
                 {
                     if (!piece.IsAlive) { RemovePieceView(piece.PieceId); continue; }

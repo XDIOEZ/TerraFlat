@@ -136,7 +136,7 @@ namespace FlatWorld.Spaceflight
         private Vector2 GetPlayerAuthoritativeDisplayPosition(Player player)
         {
             if (!IsSpaceView || State == null) return player.transform.position;
-            SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            SpacePassengerState passenger = FindPassenger(player.ProfileName);
             return passenger == null ? (Vector2)player.transform.position : ProjectPosition(GetPassengerPosition(passenger));
         }
 
@@ -144,7 +144,7 @@ namespace FlatWorld.Spaceflight
         {
             position = default;
             if (!IsSpaceView || State == null) return false;
-            SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profileId);
+            SpacePassengerState passenger = FindPassenger(profileId);
             if (passenger == null || passenger.SurfaceDescending) return false;
             ShipState ship = GetShip(passenger.ShipId);
             if (passenger.Supported ? ship == null || !IsInPresentationWorld(ship) : !passenger.IsInSpace || passenger.LandingResolved) return false;

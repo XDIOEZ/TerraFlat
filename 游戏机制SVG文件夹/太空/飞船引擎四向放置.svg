@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1110" viewBox="0 0 1440 1110" role="img" aria-labelledby="title desc">
+  <title id="title">飞船引擎四向放置与预览朝向修复</title>
+  <desc id="desc">R 每次逆时针旋转九十度。零朝向喷口向下，燃料口与推力向上；依次旋转后喷口向右、向上、向左。引擎必须安装在船体外缘的地板上，喷口朝船外并保留净空。修复将预览中的安装角从重复两次改为只计算一次。本图是规则示意，不是运行截图。</desc>
+  <defs>
+    <style>
+      text{font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#e8eef7}
+      .muted{fill:#a8b8ce}.small{font-size:19px}.body{font-size:23px}.card-title{font-size:25px;font-weight:700}
+      .mono{font-family:Consolas,monospace}.cyan{fill:#67dfed}.orange{fill:#ffb76a}.green{fill:#89e5af}
+      .card{fill:#18263a;stroke:#31465f;stroke-width:2}.line{stroke:#d6e0ec;stroke-width:2}
+    </style>
+    <marker id="thrust-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L8 4 L0 8 Z" fill="#67dfed"/></marker>
+    <marker id="exhaust-arrow" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 5 L0 10 Z" fill="#ffb76a"/></marker>
+    <g id="deck">
+      <rect x="-81" y="-81" width="162" height="162" rx="4" fill="#34465f" stroke="#90a3ba" stroke-width="3"/>
+      <path d="M-27 -81V81 M27 -81V81 M-81 -27H81 M-81 27H81" stroke="#687d97" stroke-width="2"/>
+      <rect x="-17" y="-16" width="34" height="32" rx="4" fill="#23334a"/>
+      <circle cx="0" cy="0" r="5" fill="#67dfed"/>
+    </g>
+    <g id="engine">
+      <rect x="-24" y="-24" width="48" height="48" rx="5" fill="#72839a" stroke="#d1dce8" stroke-width="2"/>
+      <path d="M-13 -8H13V12H-13Z" fill="#42536a"/>
+      <rect x="-8" y="-26" width="16" height="7" rx="2" fill="#67dfed"/>
+      <path d="M-12 13H12L18 25H-18Z" fill="#142236" stroke="#ffb76a" stroke-width="2"/>
+    </g>
+    <g id="working-engine">
+      <use href="#engine"/>
+      <path d="M0 -34V-68" fill="none" stroke="#67dfed" stroke-width="4" marker-end="url(#thrust-arrow)"/>
+      <path d="M0 33V73" fill="none" stroke="#ffb76a" stroke-width="6" marker-end="url(#exhaust-arrow)"/>
+    </g>
+  </defs>
+
+  <rect width="1440" height="1110" fill="#0d1728"/>
+  <text x="44" y="57" font-size="38" font-weight="700">飞船引擎：四个方向，都能正确预览和放置</text>
+  <text x="44" y="98" class="body muted">按 R，每次逆时针转 90°。蓝色小口是燃料口，蓝箭头是推力，橙箭头是喷射。</text>
+
+  <g transform="translate(44 142)">
+    <rect width="320" height="460" rx="16" class="card"/>
+    <text x="24" y="43" class="card-title">默认方向</text>
+    <text x="24" y="76" class="small muted mono">q0 · 0°</text>
+    <use href="#deck" transform="translate(160 235)"/>
+    <use href="#working-engine" transform="translate(160 289)"/>
+    <text x="160" y="391" text-anchor="middle" class="body orange">喷口：↓ 朝船外</text>
+    <text x="160" y="422" text-anchor="middle" class="body cyan">燃料口 / 推力：↑</text>
+    <text x="160" y="450" text-anchor="middle" class="small muted">装在下缘地板</text>
+  </g>
+  <g transform="translate(388 142)">
+    <rect width="320" height="460" rx="16" class="card"/>
+    <text x="24" y="43" class="card-title">按 1 次 R</text>
+    <text x="24" y="76" class="small muted mono">q1 · 90°</text>
+    <use href="#deck" transform="translate(160 235)"/>
+    <use href="#working-engine" transform="translate(214 235) rotate(-90)"/>
+    <text x="160" y="391" text-anchor="middle" class="body orange">喷口：→ 朝船外</text>
+    <text x="160" y="422" text-anchor="middle" class="body cyan">燃料口 / 推力：←</text>
+    <text x="160" y="450" text-anchor="middle" class="small muted">装在右缘地板</text>
+  </g>
+  <g transform="translate(732 142)">
+    <rect width="320" height="460" rx="16" class="card"/>
+    <text x="24" y="43" class="card-title">按 2 次 R</text>
+    <text x="24" y="76" class="small muted mono">q2 · 180°</text>
+    <use href="#deck" transform="translate(160 235)"/>
+    <use href="#working-engine" transform="translate(160 181) rotate(180)"/>
+    <text x="160" y="391" text-anchor="middle" class="body orange">喷口：↑ 朝船外</text>
+    <text x="160" y="422" text-anchor="middle" class="body cyan">燃料口 / 推力：↓</text>
+    <text x="160" y="450" text-anchor="middle" class="small muted">装在上缘地板</text>
+  </g>
+  <g transform="translate(1076 142)">
+    <rect width="320" height="460" rx="16" class="card"/>
+    <text x="24" y="43" class="card-title">按 3 次 R</text>
+    <text x="24" y="76" class="small muted mono">q3 · 270°</text>
+    <use href="#deck" transform="translate(160 235)"/>
+    <use href="#working-engine" transform="translate(106 235) rotate(-270)"/>
+    <text x="160" y="391" text-anchor="middle" class="body orange">喷口：← 朝船外</text>
+    <text x="160" y="422" text-anchor="middle" class="body cyan">燃料口 / 推力：→</text>
+    <text x="160" y="450" text-anchor="middle" class="small muted">装在左缘地板</text>
+  </g>
+
+  <g transform="translate(44 630)">
+    <rect width="652" height="332" rx="16" class="card"/>
+    <text x="25" y="44" class="card-title" fill="#ff9a9a">修复前：预览把安装角叠了两次</text>
+    <text x="25" y="80" class="body muted">例：船体 0°，引擎安装 q1（90°）</text>
+    <use href="#engine" transform="translate(178 162) rotate(180) scale(1.35)"/>
+    <use href="#engine" transform="translate(474 162) rotate(-90) scale(1.35)"/>
+    <text x="178" y="226" text-anchor="middle" class="body orange">预览 180° · 喷口 ↑</text>
+    <text x="474" y="226" text-anchor="middle" class="body cyan">实际 90° · 喷口 →</text>
+    <text x="326" y="170" text-anchor="middle" font-size="32" fill="#ff9a9a">≠</text>
+    <text x="25" y="275" class="small muted">预览根 90° + 子图层 90° = 180°。</text>
+    <text x="25" y="308" class="small muted">画面朝向和放置检查、实际部件对不上。</text>
+  </g>
+  <g transform="translate(720 630)">
+    <rect width="676" height="332" rx="16" fill="#142b2c" stroke="#35615b" stroke-width="2"/>
+    <text x="25" y="44" class="card-title green">修复后：船角 + 安装角，只算一次</text>
+    <text x="25" y="80" class="body muted">同一例子：预览与实际都为 90°。</text>
+    <use href="#engine" transform="translate(182 162) rotate(-90) scale(1.35)"/>
+    <use href="#engine" transform="translate(484 162) rotate(-90) scale(1.35)"/>
+    <text x="182" y="226" text-anchor="middle" class="body cyan">预览 90° · 喷口 →</text>
+    <text x="484" y="226" text-anchor="middle" class="body cyan">实际 90° · 喷口 →</text>
+    <text x="334" y="170" text-anchor="middle" font-size="32" class="green">=</text>
+    <text x="25" y="275" class="small muted">预览根负责船角，子图层负责安装角。</text>
+    <text x="25" y="308" class="small muted">四向轮换：0 → 1 → 2 → 3 → 0。</text>
+  </g>
+
+  <rect x="44" y="990" width="1352" height="62" rx="12" fill="#302b24" stroke="#756048"/>
+  <text x="68" y="1029" class="body orange">放置条件：引擎占一格，下面有外缘地板；喷口朝船外，整条喷射方向不能被船体挡住。</text>
+  <text x="44" y="1086" class="small muted">规则示意，非运行截图。方向相对飞船本地坐标；船体转动时，引擎、燃料口、喷焰和推力一起转。</text>
+</svg>

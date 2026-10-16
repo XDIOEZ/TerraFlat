@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using FlatWorld.Spaceflight;
 using MemoryPack;
@@ -377,15 +378,18 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         {
             using var scope = MachineWorld.UseNodeScope(Entity);
             var text = new StringBuilder();
-            text.AppendFormat("供电 {0:0.#}/{1:0.#} W · 可灌溉水 {2:0.###} L\n肥料加速剩余 {3:0.#} 秒\n",
-                Entity.ElectricalSuppliedWatts, Entity.Definition.Electrical.PowerWatts, IrrigationLiters(), State.FertilizerSeconds);
+            text.Append(FlatWorldLocalizationService.GetUiFormat(
+                "供电 {0:0.#}/{1:0.#} W · 可灌溉水 {2:0.###} L\n肥料加速剩余 {3:0.#} 秒\n",
+                Entity.ElectricalSuppliedWatts, Entity.Definition.Electrical.PowerWatts, IrrigationLiters(), State.FertilizerSeconds));
             for (int i = 0; i < State.Plots.Count; i++)
             {
                 CultivatorPlotState plot = State.Plots[i];
-                string name = plot.CropId != null && GameRes.Instance.TryGetItemDefinition(plot.CropId, out var definition) ? definition.DisplayName : "空槽";
+                string name = plot.CropId != null && GameRes.Instance.TryGetItemDefinition(plot.CropId, out var definition)
+                    ? definition.DisplayName : FlatWorldLocalizationService.GetUiText("空槽");
                 string status = plot.CropId == null ? "等待种子（树木不支持）" : plot.Growth >= 1f ? "成熟，等待收获" :
                     Entity.ElectricalSuppliedWatts <= 0f ? "缺电，已暂停" : IrrigationLiters() <= 0m ? "缺水，已暂停" : "正在生长";
-                text.AppendFormat("{0}：{1} {2:0.#}% · {3}\n", i + 1, name, plot.Growth * 100f, status);
+                text.Append(FlatWorldLocalizationService.GetUiFormat("{0}：{1} {2:0.#}% · {3}\n",
+                    i + 1, name, plot.Growth * 100f, FlatWorldLocalizationService.GetUiText(status)));
             }
             return text.ToString();
         }

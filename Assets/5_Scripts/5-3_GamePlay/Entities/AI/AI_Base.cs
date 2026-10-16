@@ -152,6 +152,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	protected string _lastPlayedAnimation;
 	protected static GUIStyle _debugStateStyle;
 	protected AIStateMachine<TState> _stateMachine;
+	private Func<TState> evaluateNextStateCallback;
+	private Action<TState> switchStateCallback;
+	private Func<TState, bool> canTransitionCallback;
+	private readonly GUIContent debugStateContent = new();
 	private readonly List<AIFleeStateNode<TState>> _fleeStateNodes = new List<AIFleeStateNode<TState>>(); // 受击重选目标时查找当前逃离节点。
 	private TState _locomotionIdleState;
 	private bool _hasLocomotionIdleState;
@@ -296,6 +300,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		BindCommonModules();
 		_animalSkills.ResetRuntime();
 		OnResetRuntimeState();
+		// 行为回调在实例生命周期内复用，避免周期性状态评估反复创建委托。
+		evaluateNextStateCallback ??= EvaluateNextState;
+		switchStateCallback ??= SwitchState;
+		canTransitionCallback ??= CanTransitionTo;
 		BuildStateMachine();
 		if (IsIdleState(_currentState))
 		{
@@ -337,10 +345,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 			AI_StateMachineRunner.EvaluateAndTick(
 				_stateMachine,
 				_currentState,
-				EvaluateNextState,
-				SwitchState,
+				evaluateNextStateCallback,
+				switchStateCallback,
 				deltaTime,
-				CanTransitionTo);
+				canTransitionCallback);
 		}
 		else
 		{
@@ -1213,8 +1221,8 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		}
 
 		string extra = GetDebugExtraInfo() + GetDebugBuffInfo();
-		string text = $"状态: {GetStateTextCN(_currentState)}{extra}";
-		Vector2 size = _debugStateStyle.CalcSize(new GUIContent(text));
+		debugStateContent.text = $"状态: {GetStateTextCN(_currentState)}{extra}";
+		Vector2 size = _debugStateStyle.CalcSize(debugStateContent);
 		float width = Mathf.Max(120f, size.x + 14f);
 		float height = 28f;
 		Rect rect = new Rect(
@@ -1223,7 +1231,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 			width,
 			height);
 
-		GUI.Box(rect, text, _debugStateStyle);
+		GUI.Box(rect, debugStateContent, _debugStateStyle);
 	}
 #endregion
 }

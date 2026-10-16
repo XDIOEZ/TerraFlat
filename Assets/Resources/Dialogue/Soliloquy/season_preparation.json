@@ -18,6 +18,7 @@
       "lines": [
         "天渐渐热了，得备好陶罐、饮水和一点腌肉。"
       ],
+      "localizedLines": { "en": ["It's getting warmer. I'll need clay jars, drinking water, and some cured meat."] },
       "duration": 4,
       "cooldown": 120,
       "once": false,
@@ -41,6 +42,7 @@
       "lines": [
         "快到秋天了，趁天气合适多种些粮食和药草。"
       ],
+      "localizedLines": { "en": ["Autumn is almost here. I'd better grow more crops and medicinal herbs while the weather holds."] },
       "duration": 4,
       "cooldown": 120,
       "once": false,
@@ -64,6 +66,7 @@
       "lines": [
         "冬天快到了，食物、药材和来年的种子都得留一份。"
       ],
+      "localizedLines": { "en": ["Winter is coming. I need to set aside food, medicine, and seeds for next year."] },
       "duration": 4,
       "cooldown": 120,
       "once": false,
@@ -87,6 +90,7 @@
       "lines": [
         "天要回暖了，等融雪后用留下的种子重新播种。"
       ],
+      "localizedLines": { "en": ["It'll warm up soon. Once the snow melts, I can plant the seeds I saved."] },
       "duration": 4,
       "cooldown": 120,
       "once": false,

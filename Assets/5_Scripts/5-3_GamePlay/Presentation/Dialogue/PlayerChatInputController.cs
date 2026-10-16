@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -356,7 +357,7 @@ namespace FlatWorld.Dialogue
                     if (!string.IsNullOrWhiteSpace(result.Feedback))
                     {
                         speechController.Present(new CharacterSpeechRequest(
-                            result.Feedback.Trim(),
+                            FlatWorldLocalizationService.GetUiText(result.Feedback.Trim()),
                             CommandTopic,
                             result.FeedbackPriority)
                         {

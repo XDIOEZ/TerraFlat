@@ -1,11 +1,13 @@
+using System;
 using FlatWorld.Combat;
 using FlatWorld.Spaceflight;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 /// <summary>独立飞行状态调用正式空地规则，断言由 Lua 负责。</summary>
 public static class GameplayTestShipSurfaceProbe
 {
-    #region 飞船点火排序与空地受击采样
+    #region 飞船整体运动模式与空地受击采样
 
     public static JObject Capture()
     {
@@ -27,22 +29,53 @@ public static class GameplayTestShipSurfaceProbe
             Sample("descending-below", Flight(ShipFlightPhase.SurfaceDescending, 24.999d)),
             Sample("descending-zero", Flight(ShipFlightPhase.SurfaceDescending, 0d)),
             Sample("cruising", Flight(ShipFlightPhase.Cruising, 0d, true)),
-            Sample("cruising-unpowered", Flight(ShipFlightPhase.Cruising, 0d))
+            Sample("cruising-unpowered", Flight(ShipFlightPhase.Cruising, 0d)),
+            Sample("lifting-unpowered-zero", Flight(ShipFlightPhase.Lifting, 0d)),
+            Sample("ocean-no-flight", null, ShipPlatformKind.Ocean),
+            Sample("space-no-flight", null, ShipPlatformKind.Space),
+            Sample("space-stale-landed", Flight(ShipFlightPhase.Landed, 100d), ShipPlatformKind.Space),
+            Sample("space-stale-floating", Flight(ShipFlightPhase.Floating, 100d), ShipPlatformKind.Space),
+            Sample("no-ship-cruising", Flight(ShipFlightPhase.Cruising, 0d), hasShip: false),
+            Sample("ordinary-ground", null, hasShip: false)
         };
         return new JObject
         {
             ["operation"] = "ship_surface_state", ["scope"] = "production-domain",
             ["airborneVisualRise"] = ShipSurfaceState.AirborneVisualRise, ["samples"] = samples,
-            ["limitations"] = "只采样正式排序资格、视觉升高与投送资格；不创建碰撞组件，也不证明真实远程命中、层级或联机。"
+            ["groundAssembly"] = GroundAssemblySamples(),
+            ["limitations"] = "只采样正式整体运动模式、排序资格、视觉升高与投送资格；不创建碰撞组件，也不证明真实远程命中、层级或联机。"
         };
+    }
+
+    private static JObject GroundAssemblySamples()
+    {
+        var angles = new JArray();
+        foreach (double degrees in new[] { 0d, 44.999d, 45d, 45.001d, 89.999d, 135d, 179.999d,
+            225d, 315d, 359.999d, -44.999d, -45d, -135d, -225d, -315d, 765d })
+            angles.Add(new JObject { ["degrees"] = degrees,
+                ["quarterTurns"] = ShipGroundAssembly.SnapQuarterTurns(degrees / 180d * Math.PI) });
+        var anchors = new JArray();
+        foreach (var rectangle in new[] { (Name: "negative-x", X: -3, Y: 2, Width: 2, Height: 3),
+            (Name: "negative-y", X: 2, Y: -4, Width: 3, Height: 2) })
+        for (int turns = 0; turns < 4; turns++)
+        {
+            Vector2Int cell = ShipGroundAssembly.RotateAnchor(rectangle.X, rectangle.Y,
+                rectangle.Width, rectangle.Height, turns);
+            anchors.Add(new JObject { ["name"] = rectangle.Name, ["quarterTurns"] = turns,
+                ["x"] = cell.x, ["y"] = cell.y,
+                ["negativeOriginX"] = cell.x - 10, ["negativeOriginY"] = cell.y - 20 });
+        }
+        return new JObject { ["angles"] = angles, ["anchors"] = anchors };
     }
 
     private static ShipFlightState Flight(ShipFlightPhase phase, double height, bool ignited = false) =>
         new() { Phase = phase, HeightMeters = height, Ignited = ignited };
 
     // 只调用正式规则，不在夹具中复制阈值、阶段或伤害资格算法。
-    private static JObject Sample(string name, ShipFlightState flight)
+    private static JObject Sample(string name, ShipFlightState flight,
+        ShipPlatformKind platform = ShipPlatformKind.Land, bool hasShip = true)
     {
+        ShipState ship = hasShip ? new ShipState { PlatformKind = platform } : null;
         var damage = new JObject();
         Add("melee", CombatDeliveryCapabilities.None);
         Add("projectile-without-airborne", CombatDeliveryCapabilities.Projectile);
@@ -57,7 +90,9 @@ public static class GameplayTestShipSurfaceProbe
         return new JObject
         {
             ["name"] = name, ["phase"] = flight?.Phase.ToString() ?? "none",
+            ["platform"] = ship?.PlatformKind.ToString() ?? "none",
             ["heightMeters"] = flight?.HeightMeters ?? 0d, ["ignited"] = flight?.Ignited ?? false,
+            ["wholeShipBody"] = ShipSurfaceState.UsesWholeShipBody(ship, flight),
             ["visualRise"] = ShipSurfaceState.VisualRise(flight),
             ["airborne"] = ShipSurfaceState.IsAirborne(flight),
             ["elevated"] = ShipSurfaceState.IsElevated(flight), ["damage"] = damage

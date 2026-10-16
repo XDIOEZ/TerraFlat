@@ -1,0 +1,67 @@
+{
+  "engine": "LMMS 1.2.2 via MCP",
+  "sampleRate": 48000,
+  "channels": 1,
+  "sounds": [
+    {
+      "cue": "ui.inventory.swap",
+      "name": "物品交换双段落位",
+      "variant": 1,
+      "startSeconds": 0.125,
+      "seconds": 0.3,
+      "file": "Assets/Audio/Generated/ui.inventory.swap__01.wav",
+      "guid": "6bf173c9587f4a06bd61758022f69e3d",
+      "sha256": "a8b4e65acf98345a17235cdf9bfa60c9bcb1c9eb15ba32c02c79471c5046ba15"
+    },
+    {
+      "cue": "ui.inventory.swap",
+      "name": "物品交换双段落位",
+      "variant": 2,
+      "startSeconds": 2.125,
+      "seconds": 0.3,
+      "file": "Assets/Audio/Generated/ui.inventory.swap__02.wav",
+      "guid": "caa77cc123d441bc88453c422e63eb14",
+      "sha256": "f8dc1f017e1ff09c7e70c122b6abe75747f6c182ae768df4fcad6199461f4b01"
+    },
+    {
+      "cue": "ui.equipment.equip",
+      "name": "装备扣紧与布料摩擦",
+      "variant": 1,
+      "startSeconds": 4.125,
+      "seconds": 0.41,
+      "file": "Assets/Audio/Generated/ui.equipment.equip__01.wav",
+      "guid": "cc25d344a5ba45309904b2ddcd6d4514",
+      "sha256": "36c62a522baf26241291888fe2cdc09d5b6adc7fe6470536f8c7b8b8b131ee7e"
+    },
+    {
+      "cue": "ui.equipment.equip",
+      "name": "装备扣紧与布料摩擦",
+      "variant": 2,
+      "startSeconds": 6.125,
+      "seconds": 0.41,
+      "file": "Assets/Audio/Generated/ui.equipment.equip__02.wav",
+      "guid": "4faabd5b17664f69b0e056943fbf8337",
+      "sha256": "4fa55dd3ce8af23b3784324d1820bdff24f17aac31f1da9fbe00a1d5d6420e4f"
+    },
+    {
+      "cue": "ui.equipment.unequip",
+      "name": "卸下装备的松扣收尾",
+      "variant": 1,
+      "startSeconds": 8.125,
+      "seconds": 0.39,
+      "file": "Assets/Audio/Generated/ui.equipment.unequip__01.wav",
+      "guid": "05bbf4d201c84d06bcb6cc293f109f66",
+      "sha256": "8cbe9b6eabfbfa0ab19b0f63f801291e842c483225cd1a7c6742b7188ed89c50"
+    },
+    {
+      "cue": "ui.equipment.unequip",
+      "name": "卸下装备的松扣收尾",
+      "variant": 2,
+      "startSeconds": 10.125,
+      "seconds": 0.39,
+      "file": "Assets/Audio/Generated/ui.equipment.unequip__02.wav",
+      "guid": "2694cfb0f11944d8bd8d4cdcb66b6f34",
+      "sha256": "486a1f6bd680fdd84d47f4128c9c0a14b29fe63617adbc3690ad5b3803bc61c3"
+    }
+  ]
+}

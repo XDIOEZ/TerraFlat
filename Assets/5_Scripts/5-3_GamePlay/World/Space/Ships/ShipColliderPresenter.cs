@@ -13,6 +13,9 @@ namespace FlatWorld.Spaceflight
         private readonly ShipColliderGeometry geometry = new();
         private readonly PhysicsShapeGroup2D shapes = new();
         private double cellSize;
+        public bool WholeShipBody { get; private set; }
+        public int ActiveBodyCount => body != null && body.simulated && body.gameObject.activeInHierarchy ? 1 : 0;
+        public int ActiveBlockerCount => blocker != null && blocker.enabled && ActiveBodyCount > 0 ? 1 : 0;
 
         public ShipColliderPresenter(string shipId)
         {
@@ -22,14 +25,16 @@ namespace FlatWorld.Spaceflight
             body = Root.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0f;
             body.useFullKinematicContacts = true; body.interpolation = RigidbodyInterpolation2D.None;
+            body.simulated = false;
             blocker = Root.AddComponent<CustomCollider2D>();
             blocker.enabled = false;
         }
 
-        public void Synchronize(ShipState ship, Vector2 position, float degrees)
+        public void Synchronize(ShipState ship, ShipFlightState flight, Vector2 position, float degrees)
         {
-            bool changed = geometry.Synchronize(ship);
-            if (changed || cellSize != ship.CellSizeMeters)
+            WholeShipBody = ShipSurfaceState.UsesWholeShipBody(ship, flight);
+            bool changed = geometry.Synchronize(ship) || cellSize != ship.CellSizeMeters;
+            if (changed)
             {
                 cellSize = ship.CellSizeMeters; shapes.Clear();
                 foreach (ShipCollisionRect rectangle in geometry.Rectangles)
@@ -37,14 +42,14 @@ namespace FlatWorld.Spaceflight
                     if (!rectangle.BlocksPassage) continue;
                     Vector2 center = new((float)((rectangle.X + rectangle.Width * .5d) * cellSize),
                         (float)((rectangle.Y + rectangle.Height * .5d) * cellSize));
-                    // 合并矩形使用完整占地，避免相邻矩形缩边后留下能穿过的细缝。
-                    Vector2 size = new((float)(rectangle.Width * cellSize),
-                        (float)(rectangle.Height * cellSize));
-                    shapes.AddBox(center, size);
+                    shapes.AddBox(center, new Vector2((float)(rectangle.Width * cellSize), (float)(rectangle.Height * cellSize)));
                 }
-                if (shapes.shapeCount == 0) { blocker.enabled = false; blocker.ClearCustomShapes(); }
-                else { blocker.SetCustomShapes(shapes); blocker.enabled = true; }
+                if (shapes.shapeCount == 0) blocker.ClearCustomShapes();
+                else blocker.SetCustomShapes(shapes);
             }
+            bool blocking = WholeShipBody && shapes.shapeCount > 0;
+            if (blocker.enabled != blocking) blocker.enabled = blocking;
+            if (body.simulated != WholeShipBody) body.simulated = WholeShipBody;
             if (body.position != position || Mathf.Abs(Mathf.DeltaAngle(body.rotation, degrees)) > .001f ||
                 (Vector2)Root.transform.position != position)
             {
@@ -53,10 +58,22 @@ namespace FlatWorld.Spaceflight
             }
         }
 
+        public bool OwnsCollider(Collider2D collider) => collider != null && Root != null &&
+            collider.transform.IsChildOf(Root.transform);
+
+        /// <summary>整船只同步一次升空排序和共享阻挡体，不随部件数量重复查询组件。</summary>
+        public void SynchronizeSurfaceState(ShipFlightState flight, Vector2 visualRise)
+        {
+            ShipSurfacePresentation.SetElevated(Root, ShipSurfaceState.IsElevated(flight),
+                ShipSurfacePresentation.VehicleCategory);
+            ShipSurfacePresentation.SetColliderState(blocker, visualRise,
+                ShipSurfaceState.IsAirborne(flight), true);
+        }
+
         public void Dispose()
         {
             if (body != null) body.simulated = false;
-            if (Root != null) UnityEngine.Object.Destroy(Root);
+            if (Root != null) { Root.SetActive(false); UnityEngine.Object.Destroy(Root); }
         }
 
         public void Suspend(Transform owner)
@@ -69,7 +86,7 @@ namespace FlatWorld.Spaceflight
         public void Resume()
         {
             if (!Root.activeSelf) Root.SetActive(true);
-            if (!body.simulated) body.simulated = true;
+            if (body.simulated != WholeShipBody) body.simulated = WholeShipBody;
         }
         #endregion
     }
@@ -116,7 +133,7 @@ namespace FlatWorld.Spaceflight
                     UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(presenter.Root, scene);
                 }
             }
-            presenter.Synchronize(ship, DisplayPresentationPoint(ship, 0d, 0d), angle);
+            presenter.Synchronize(ship, GetFlight(ship.ShipId), DisplayPresentationPoint(ship, 0d, 0d), angle);
             presenter.Resume();
             return presenter;
         }
@@ -124,13 +141,15 @@ namespace FlatWorld.Spaceflight
         internal void RefreshShipPassageGeometry(ShipState ship)
         {
             if (ship != null && shipColliderPresenters.TryGetValue(ship.ShipId, out ShipColliderPresenter presenter) && presenter.Root != null)
-                presenter.Synchronize(ship, DisplayPresentationPoint(ship, 0d, 0d), (float)(GetShipPresentationPose(ship).AngleRadians * Mathf.Rad2Deg));
+                presenter.Synchronize(ship, GetFlight(ship.ShipId), DisplayPresentationPoint(ship, 0d, 0d), (float)(GetShipPresentationPose(ship).AngleRadians * Mathf.Rad2Deg));
         }
+
+        internal bool HasShipColliderPresenter(string shipId) => shipId != null && shipColliderPresenters.ContainsKey(shipId);
 
         private bool IsShipPresentationCollider(Collider2D collider)
         {
             foreach (ShipColliderPresenter presenter in shipColliderPresenters.Values)
-                if (presenter.Root != null && collider.attachedRigidbody?.gameObject == presenter.Root) return true;
+                if (presenter.OwnsCollider(collider)) return true;
             return false;
         }
 

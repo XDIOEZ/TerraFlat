@@ -1,5 +1,7 @@
 # 太空纯规则回归
 
+可单选落地专项 `ship_landing_gameplay` 在 `universe-suite.json` 中：复用正式 GM 普通建筑、供电补给和起飞，只跑真实降落、同 Guid 普通建筑移交及普通源罐→管道→定向出气口自动加油。保留氢氧增减和全链守恒断言，显式截图落地加油现场；不跑完整航行中的惯性、导航、跨区。命令：`python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases ship_landing_gameplay --run-timeout 300`。2026-10-16 首轮已通过相关快速规则 4/4、专项 EditMode 13/13 和 PlayMode 1/1，真实世界 82.29 秒且 Error/Warning 为 0；报告与覆盖边界见 [玩法说明](Gameplay/README.md)。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 - `ship_damage_rules.lua` 通过 `GameplayTestShipDamageProbe` 调用正式防御/耐久、命中部位、损伤线和四邻拆分入口，覆盖引擎防御 1、两发 20 实际各扣 19、瘫痪留形与零耐久停工、上层设备同发不溢出地板、100 点预算先均分再抵消防御，以及长船腰部截断、船首保留动力、尾部残骸递归拆分、各部位耐久和库存快照保留。独立数据规则不证明实际武器接触、真实残骸 Item 创建、原生碰撞器数量、联机权威或库存恢复已经通过。
@@ -8,8 +10,9 @@
 - `ship_collider_batch` 读取正式 `ShipColliderGeometry` 的矩形和重建次数，Lua 核对 12×8 地板 96→1、同格去重、阻挡优先、洞/缺角、斜角/分离岛、负坐标旋转、管道与排除部件、门开关失效、结构拆除/摧毁通知，以及稳定帧/位姿/质量变化复用。规则断言不代表 Unity 实际组件合批、物理碰撞或性能已经验证。
 - 所有夹具均为独立领域对象，不登记当前 `SpaceSession`。未运行原生 `PhysicsScene2D`、真实起飞/降落、跨区场景与相机/UI、机器供电管网整链、联机与视觉验收；这些仍保留在既有 `universe-suite.json` 集成专项。
 - 不调用 `surface` 全星体冷生成和任何真实会话操作。领域结果不是场景验收，没有截图。
-- `ship_surface_state` 直接采样 `ShipSurfaceState`：点火立即获得高层排序资格；贴图升高到 1 Unity 单位切空中，降落低于阈值恢复地面，太空航行阶段也属于空中。17 个状态样本检查空地边界、熄火和非起降阶段的残留高度，并逐一断言八种投送能力组合。普通近战只能打地面船；同时带 `Projectile` 与 `AirborneTargets` 的远程投射物可打空中船，只有一位能力时拒绝；`AirborneOnly` 仍遵守只打空中的限制。
-- 本轮空地新增规则已运行；组件是否跟随贴图、实际地面阻挡、整船排序与 UI 关系、远程武器命中及联机权威伤害仍由用户验收。
+- `rules.lua` 与 `Gameplay/ship_rules.lua` 的引擎安装断言还读取正式机械 JSON，检查普通/GM 引擎连续四次方向轮换、轴与齿轮默认档数、非法档数拒绝，以及三种船角下四向预览姿态计算只叠一次安装角和地面预览根角归零。本轮因用户正在 PlayMode，仅补断言，未执行；不包含真实 R 输入、完整预览组件调用链或 Game View 验收。
+- `ship_surface_state` 直接采样正式空地与所有权规则：普通地面无 ShipState，仍持有 ShipState 的已装配船（含待移交的落地阶段）保持整体阻挡；24 个样本保留点火排序、1单位空中阈值、残留高度和八种投送能力检查。另采样16个朝向吸附边界与8个四向多格/负坐标落点，验证统一格线和90°旋转。
+- 2026-10-16 普通地面建筑→点火装配→落地还原已由独立专项执行通过，现场检查普通地表scope、Guid与库存保留、无ShipView/ParkedPieces，并接普通管路等待真实燃料输送。自动化结果不覆盖预建站精准驾驶、存档重载、联机或完整航行；画面和手感由用户验收。
 
 - PlayMode `space_gameplay.lua` 真实跨星区只沿 `right` 一次越界并返回，保留租约、场景、相机、角色、时钟及光照完整断言；其它方向仍由快速规则 `sector_rules.lua` 覆盖，避免同一现场重复迁移。单方向集成不能等价于所有方向的实景覆盖。
 - `presentation_interpolation` 只调用正式 `SpacePresentationPose` / `SpacePresentationTrack`，Lua 断言前后端点、中点、越界限制、跨正负 π 最短旋转、极大星区跨界精度、质量中心变化时船格原点稳定、船件/乘员/镜头共同局部变换和重置不拖尾。物理固定步仍为每秒 50 次；本轮已运行 Lua 规则与登记的 PlayMode 回归，实际飞行画面由用户验收。

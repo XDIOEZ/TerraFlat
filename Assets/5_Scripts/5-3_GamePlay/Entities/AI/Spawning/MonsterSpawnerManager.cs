@@ -1180,6 +1180,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _availableEntries.Clear();
         _presentationItems.Clear();
         Array.Clear(_eventCameras, 0, _eventCameras.Length);
+        _eventCameraFrame = -1;
+        _eventCameraCount = 0;
         _remainingSearchAttempts.Clear();
         _nextResidentWakeAttempt.Clear();
         _monsterManager?.ResetWorld();

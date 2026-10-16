@@ -6,9 +6,23 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 乘员支撑与惯性
+        /// <summary>太空热路径按身份读取既有乘员，不为 List.Find 创建捕获委托。</summary>
+        private SpacePassengerState FindPassenger(string profileId)
+        {
+            var passengers = State?.Passengers;
+            if (passengers == null) return null;
+            for (int i = 0; i < passengers.Count; i++)
+            {
+                SpacePassengerState passenger = passengers[i];
+                if (passenger != null && passenger.ProfileId == profileId)
+                    return passenger;
+            }
+            return null;
+        }
+
         public SpacePassengerState GetPassenger(Player player)
         {
-            SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            SpacePassengerState passenger = FindPassenger(player.ProfileName);
             if (passenger != null) return passenger;
             SpaceSectorPosition position = IsSpaceView ? UnprojectSectorPosition(player.transform.position)
                 : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(player.transform.position)));
@@ -284,7 +298,8 @@ namespace FlatWorld.Spaceflight
             SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
             camera.SetFollowOverride(drivingCameraTarget,
                 IsSpaceView ? settings.DrivingCameraMaxSize : 0f,
-                IsSpaceView ? settings.DrivingCameraZoomMultiplier : 1f);
+                IsSpaceView ? settings.DrivingCameraZoomMultiplier : 1f,
+                IsSpaceView ? Mod_Cam.FollowMode.PresentationLocked : Mod_Cam.FollowMode.PlayerSettings);
         }
 
         private void ReleaseDrivingCamera()

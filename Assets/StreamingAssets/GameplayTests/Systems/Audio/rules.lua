@@ -18,3 +18,43 @@ for _, row in ipairs({ { first = "probe.first", second = "probe.second", errors 
         assert(data.found and data.resolvedFirst and not data.emptyAccepted, "目录索引重建、去首尾空格或不区分大小写查询错误")
     end, "音频目录装配、重复校验和缓存重建")
 end
+
+-- 地表优先级：深水静音 > 浅水 > 积雪 > 人工支撑/石地 > 沙滩 > 草被 > 泥土。
+for _, row in ipairs({
+    { biome = 4, grass = 2, expected = "player.footstep.grass" },
+    { biome = 4, expected = "player.footstep.dirt" },
+    { biome = 2, grass = 2, expected = "player.footstep.sand" },
+    { biome = 3, expected = "player.footstep.sand" },
+    { biome = 7, expected = "player.footstep.stone" },
+    { biome = 4, support = true, grass = 2, expected = "player.footstep.stone" },
+    { biome = 4, snow = 0.1, grass = 2, expected = "player.footstep.snow" },
+    { biome = 4, water = 0.25, snow = 0.8, expected = "player.footstep.water" },
+    { biome = 4, water = 0.55, grass = 2, expected = "player.footstep.water" },
+    { biome = 4, water = 0.56, grass = 2, expected = "" },
+    { biome = 4, water = 0.8, snow = 1, expected = "" }
+}) do
+    test.system("audio", "footstep_surface", row, function(data)
+        assert(data.cue == row.expected and data.silent == (row.expected == ""),
+            "地表脚步优先级/浅水深水边界错误：" .. tostring(row.expected))
+    end, "脚步材质：" .. (row.expected == "" and "深水静音" or row.expected))
+end
+
+-- 按本次转移数量独立计算千克和升，素材类别允许用稳定 AudioMaterial Tag 显式覆写。
+for _, row in ipairs({
+    { action = "Pickup", tags = { "Wood" }, kg = .3, liters = 1, amount = 1, expected = "ui.inventory.pickup.wood.light.compact" },
+    { action = "Backpack", tags = { "Metal" }, kg = .9, liters = 3.9, amount = 1, expected = "ui.inventory.backpack.metal.light.compact" },
+    { action = "Backpack", tags = { "Metal" }, kg = .9, liters = 3.9, amount = 2, expected = "ui.inventory.backpack.metal.medium.bulky" },
+    { action = "Chest", tags = { "Stone" }, kg = 2, liters = 1, amount = 4, expected = "ui.inventory.chest.stone.heavy.bulky" },
+    { action = "Chest", tags = { "Wood" }, kg = 7.99, liters = 3.99, amount = 1, expected = "ui.inventory.chest.wood.medium.compact" },
+    { action = "Chest", tags = { "Wood" }, kg = 8, liters = 4, amount = 1, expected = "ui.inventory.chest.wood.heavy.bulky" },
+    { action = "Pickup", itemId = "CopperPlate", kg = 1, liters = 1, expected = "ui.inventory.pickup.metal.medium.compact" },
+    { action = "Pickup", tags = { "AudioMaterial.Soft", "Metal" }, kg = 5, liters = 6, expected = "ui.inventory.pickup.soft.medium.bulky" },
+    { action = "Swap", kg = 0, liters = 0, amount = 1, expected = "ui.inventory.swap" },
+    { action = "Backpack", kg = 1, liters = 1, amount = 0, expected = "" },
+    { action = "Backpack", kg = -1, liters = 1, amount = 1, expected = "" }
+}) do
+    test.system("audio", "inventory_cue", row, function(data)
+        assert(data.cue == row.expected and data.valid == (row.expected ~= ""),
+            "物品材质/重量/体积/数量音效映射错误：" .. tostring(row.expected))
+    end, "物品取放音效：" .. (row.expected == "" and "无效参数" or row.expected))
+end

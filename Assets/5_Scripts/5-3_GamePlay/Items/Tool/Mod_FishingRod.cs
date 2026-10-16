@@ -5,6 +5,9 @@ using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
+/// <summary>钓鱼声效动作，只通知实际发生的抛饵、咬钩和首次收线。</summary>
+public enum FishingSoundAction { Cast, Hook, Reel }
+
 /// <summary>独立钓具模块：左键投出挂载的一份食物，右键配置鱼钩与单份鱼饵。</summary>
 public sealed partial class Mod_FishingRod : Module
 {
@@ -58,12 +61,14 @@ public sealed partial class Mod_FishingRod : Module
     private readonly Vector3[] linePoints = new Vector3[2];
     private static readonly HashSet<Mod_FishingRod> activeRods = new();
     public static event Action<Item, string> FeedbackRequested;
+    public static event Action<Player, FishingSoundAction> SoundRequested;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeLines()
     {
         activeRods.Clear();
         FeedbackRequested = null;
+        SoundRequested = null;
     }
 
     public Inventory_Data RigData => rig?.Data;
@@ -189,7 +194,11 @@ public sealed partial class Mod_FishingRod : Module
             controller.IsGameplayInputLocked || (panel != null && panel.IsOpen())) return;
         if (hookedFish != null)
         {
-            reeling = true;
+            if (!reeling)
+            {
+                reeling = true;
+                RaiseSound(FishingSoundAction.Reel);
+            }
             return;
         }
         if (hasCast) { CancelLine(); return; }
@@ -239,6 +248,7 @@ public sealed partial class Mod_FishingRod : Module
         ShowFeedback("鱼饵已抛出；小鱼吃饵后，左键收线。");
         Save();
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        RaiseSound(FishingSoundAction.Cast);
     }
 
     private static bool HasFoodPayload(ItemData data)
@@ -261,6 +271,7 @@ public sealed partial class Mod_FishingRod : Module
             rod.hookedFish = fish;
             rod.castBait = default;
             rod.ShowFeedback("小鱼咬钩了！左键将它拉近。");
+            rod.RaiseSound(FishingSoundAction.Hook);
             return;
         }
     }
@@ -318,6 +329,18 @@ public sealed partial class Mod_FishingRod : Module
         activeRods.Remove(this);
         if (fishingLine != null) fishingLine.enabled = false;
         // 抛出的食物已经属于世界。换工具、回池、存档都不会把它复制回鱼饵槽。
+    }
+
+    // 音效订阅方失败不影响已经完成的鱼饵、鱼钩和收线状态。
+    private void RaiseSound(FishingSoundAction action)
+    {
+        if (item?.Owner is not Player player || SoundRequested == null)
+            return;
+        foreach (Delegate callback in SoundRequested.GetInvocationList())
+        {
+            try { ((Action<Player, FishingSoundAction>)callback)(player, action); }
+            catch (Exception exception) { Debug.LogException(exception); }
+        }
     }
     #endregion
 

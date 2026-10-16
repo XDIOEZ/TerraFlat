@@ -27,6 +27,9 @@ do
             assert(not cells[key], "旋转占地出现重复格")
             cells[key] = true
         end
+        assert(data.indexedRotated and data.indexedOutsideRejected and data.firstFloorWins and
+            data.floorIndexRebuilt and data.floorIndexCleared,
+            "船体地板索引在旋转、越界、重叠优先级或结构修订后与实际占地不一致")
         assert(data.noFloorGroups == 0 and data.noFloorWreck == true and data.noFloorOrphanDestroyed == true,
             "失去全部地板后应回收孤立设备并结束船体归属")
         return "覆盖领域四邻支撑、无支撑设备、毁桥分裂、身份保留、全部失支撑与旋转占地。"
@@ -68,6 +71,14 @@ do
         near(data.filled.pressure, 101.325, "充气后的实际总压强错误")
         near(data.filled.oxygenPressure, data.filled.pressure * 0.21, "实际氧分压错误")
         near(data.filled.carbonDioxidePressure, 0, "样本没有二氧化碳却出现二氧化碳分压")
+        assert(data.sealedOutsideIgnored and data.emptyVacuumTake,
+            "密闭舱外界隔离或真空取气规则错误")
+        assert(data.openVacuum.floor and not data.openVacuum.sealed and not data.openVacuum.canBreathe,
+            "开放但有地板的区域丢失支撑或错误判定为密闭")
+        near(data.openVacuum.pressure, 0, "真空外界压强错误")
+        near(data.openVacuum.temperature, -270, "真空外界温度错误")
+        near(data.openWarm.pressure, 0, "外界温度变化不应生成气体压强")
+        near(data.openWarm.temperature, 12, "开放区域没有读取新的外部温度")
         near(data.beforeTakeMoles, data.plannedMoles, "氮氧入舱的气量没有守恒")
         assert(data.takeAccepted == true, "内舱真实抽氧失败")
         near(data.takenMoles, 10, "抽氧必须返回实际扣除的气量")
@@ -82,6 +93,13 @@ do
         near(data.releasedMoles, data.beforeLeakMoles, "破舱释放没有交回实际气体库存")
         assert(data.repairedRooms == 1, "修补边界后没有恢复密闭拓扑")
         near(data.repairedMoles, 0, "曾经密闭的区域修补后不能免费生成舱气")
+        local pattern = data.pressurePattern
+        assert(not pattern.safeInitiallyChanged and pattern.lowChanged and pattern.highChanged and
+            not pattern.safeAgainChanged, "持续压力伤害判定没有随本轮外界压强切换")
+        near(pattern.afterSafe, 200, "正常压强不应损伤船壁")
+        near(pattern.afterLow, 170, "低压差损伤计算错误")
+        near(pattern.afterHigh, 150, "高压差损伤计算错误")
+        near(pattern.afterSafeAgain, 150, "压力恢复安全后仍在持续造成伤害")
         return "覆盖真实充气、分压、呼吸条件、抽氧与供气守恒、门通行、破舱释放和修补不生成气体。"
     end, "密闭舱真实气量与舱门")
 end
@@ -229,6 +247,37 @@ do
     -- 真实安装预检验证四向外缘、喷口通道和地板支撑，实际建造由场景流程覆盖。
     test.space("ship_engine_placement", function(data)
         assert(data.operation == "ship_engine_placement" and data.scope == "production-domain", "缺少正式引擎安装领域结果")
+        local rotation = data.rotation
+        assert(type(rotation) == "table" and #rotation.engines == 2, "普通和 GM 引擎旋转采样不完整")
+        local engineIds = {ShipChemicalEngine = true, ShipChemicalEngine_GM = true}
+        for _, engine in ipairs(rotation.engines) do
+            assert(engineIds[engine.id] and engine.rotatable and engine.steps == 4, "引擎没有声明四向旋转：" .. tostring(engine.id))
+            engineIds[engine.id] = nil
+            assert(#engine.cycle == 5, "引擎缺少连续四次旋转的结果")
+            for index, expected in ipairs({0, 1, 2, 3, 0}) do
+                assert(engine.cycle[index] == expected, "按 R 未依次到达四个方向：" .. engine.id)
+            end
+        end
+        for name, expected in pairs({shaftCycle = {0, 1, 0, 1, 0}, gearCycle = {0, 1, 2, 3, 0}}) do
+            assert(#rotation[name] == #expected, "轴或齿轮的原有旋转档数采样缺失")
+            for index, value in ipairs(expected) do assert(rotation[name][index] == value, "改变了轴或齿轮的旋转规则") end
+        end
+        local function nearAngle(actual, expected, label)
+            local difference = (actual - expected + 180) % 360 - 180
+            assert(math.abs(difference) <= 0.0001, label)
+        end
+        assert(#rotation.previews == 12, "船身角度与四向预览组合不完整")
+        for _, sample in ipairs(rotation.previews) do
+            local installedAngle = sample.shipAngle + sample.quarterTurns * 90
+            nearAngle(sample.worldAngle, installedAngle, "引擎虚影和实际安装方向不一致")
+            nearAngle(sample.rootAngle, sample.shipAngle, "机械虚影根重复叠加了安装角度")
+            nearAngle(sample.groundRootAngle, 0, "离开船体后的预览根仍残留船角")
+            nearAngle(sample.plainWorldAngle, installedAngle, "无机械扩展的船件丢失安装方向")
+        end
+        assert(#rotation.rejected == 5, "非法旋转档数采样不完整")
+        for _, sample in ipairs(rotation.rejected) do
+            assert(sample.exception == "ArgumentException", "非法旋转档数没有被配置校验拒绝")
+        end
         assert(#data.cardinal == 4, "四个外缘安装方向结果不完整")
         local directions = {}
         for _, sample in ipairs(data.cardinal) do
@@ -245,7 +294,7 @@ do
         assert(data.pipeAllowed == true, "管道不应被当作阻挡喷口的结构层")
         assert(data.unsupportedAllowed == false and type(data.unsupportedReason) == "string" and #data.unsupportedReason > 0,
             "缺少地板支撑的引擎必须被拒绝")
-        return "覆盖四向边缘安装、内部喷口拒绝、后续阻挡拒绝、管道例外和缺少支撑拒绝。"
+        return "覆盖两款引擎四向轮换、预览角度单次叠加、默认档数和非法配置，以及边缘安装、净空和支撑。"
     end, "引擎安装与喷口净空")
 end
 

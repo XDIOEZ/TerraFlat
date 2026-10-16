@@ -19,6 +19,8 @@ public class Mod_Cam : Module
     }
 
     #region 字段声明
+    public enum FollowMode { PlayerSettings, PresentationLocked }
+
     // 模板读取早于 Awake，能力 ID 必须在装配前确定。
     public override string CanonicalModuleId => ModText.Camera;
 
@@ -40,6 +42,7 @@ public class Mod_Cam : Module
     public Mod_GameController GameController;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
     private CinemachineFramingTransposer _framingTransposer;
+    private CinemachineBrain _cameraBrain;
     private CameraFollowRotation _rotationFollower;
     private float _baseXDamping;
     private float _baseYDamping;
@@ -47,6 +50,10 @@ public class Mod_Cam : Module
     private Transform _followOverride;
     private float _followOverrideMaxPov;
     private float _followOverrideZoomMultiplier = 1f;
+    private FollowMode _followOverrideMode;
+    private CinemachineBrain.UpdateMethod _savedCameraUpdateMethod;
+    private CinemachineBrain.BrainUpdateMethod _savedCameraBlendUpdateMethod;
+    private bool _cameraUpdateOverrideApplied;
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
@@ -67,6 +74,7 @@ public class Mod_Cam : Module
     private float _adminFiniteViewMaxOverride; // GM 可临时扩展有限视野，不改普通玩法上限。
 
     public bool HasFollowOverride => _followOverride != null;
+    private bool UsesPresentationLockedFollow => HasFollowOverride && _followOverrideMode == FollowMode.PresentationLocked;
     public float EffectiveMaxPovValue => Mathf.Max(
         Mathf.Max(MaxPovValue, HasFollowOverride ? _followOverrideMaxPov : 0f),
         GetZoomProfile().MaximumSize);
@@ -127,6 +135,13 @@ public class Mod_Cam : Module
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         ClearWorldAudioListener();
+    }
+
+    private void LateUpdate()
+    {
+        // 临时目标被外部销毁时释放租约，避免镜头继续保留驾驶更新方式。
+        if (!ReferenceEquals(_followOverride, null) && _followOverride == null)
+            ClearFollowOverride(_followOverride);
     }
 
     // 在Load方法中实例化相机逻辑
@@ -215,6 +230,7 @@ public class Mod_Cam : Module
     {
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         ClearWorldAudioListener();
+        RestoreCameraUpdateMode();
 
         // 注销事件
         if (GameController != null && GameController._inputActions != null)
@@ -235,11 +251,13 @@ public class Mod_Cam : Module
         vcam = null;
         _wrappedWorldRenderer = null;
         _framingTransposer = null;
+        _cameraBrain = null;
         _rotationFollower = null;
         _cameraFollowDefaultsCaptured = false;
         _followOverride = null;
         _followOverrideMaxPov = 0f;
         _followOverrideZoomMultiplier = 1f;
+        _followOverrideMode = FollowMode.PlayerSettings;
     }
     #endregion
 
@@ -287,16 +305,49 @@ public class Mod_Cam : Module
         if (Vcam == null)
             return;
 
+        ApplyCameraUpdateMode();
         CacheCameraFollowDefaults();
         if (_framingTransposer == null || !_cameraFollowDefaultsCaptured)
             return;
 
-        float lookahead = GetZoomAdjustedLookahead();
+        bool locked = UsesPresentationLockedFollow;
+        float lookahead = locked ? 0f : GetZoomAdjustedLookahead();
         float inertia = Mathf.Max(0f, -lookahead);
         _framingTransposer.m_LookaheadTime = Mathf.Max(0f, lookahead);
-        _framingTransposer.m_LookaheadSmoothing = CameraUserSettings.LookaheadSmoothing;
-        _framingTransposer.m_XDamping = Mathf.Clamp(_baseXDamping + inertia, 0f, 20f);
-        _framingTransposer.m_YDamping = Mathf.Clamp(_baseYDamping + inertia, 0f, 20f);
+        _framingTransposer.m_LookaheadSmoothing = locked ? 0f : CameraUserSettings.LookaheadSmoothing;
+        _framingTransposer.m_XDamping = locked ? 0f : Mathf.Clamp(_baseXDamping + inertia, 0f, 20f);
+        _framingTransposer.m_YDamping = locked ? 0f : Mathf.Clamp(_baseYDamping + inertia, 0f, 20f);
+    }
+
+    private void ApplyCameraUpdateMode()
+    {
+        if (_cameraBrain == null && ControllerCamera != null)
+            _cameraBrain = ControllerCamera.GetComponent<CinemachineBrain>();
+        if (_cameraBrain == null) return;
+        if (!UsesPresentationLockedFollow)
+        {
+            RestoreCameraUpdateMode();
+            return;
+        }
+        if (!_cameraUpdateOverrideApplied)
+        {
+            _savedCameraUpdateMethod = _cameraBrain.m_UpdateMethod;
+            _savedCameraBlendUpdateMethod = _cameraBrain.m_BlendUpdateMethod;
+            _cameraUpdateOverrideApplied = true;
+        }
+        // 已插值目标只在表现完成后的 LateUpdate 跟随，不再让镜头选择物理时钟。
+        _cameraBrain.m_UpdateMethod = CinemachineBrain.UpdateMethod.LateUpdate;
+        _cameraBrain.m_BlendUpdateMethod = CinemachineBrain.BrainUpdateMethod.LateUpdate;
+    }
+
+    private void RestoreCameraUpdateMode()
+    {
+        if (_cameraUpdateOverrideApplied && _cameraBrain != null)
+        {
+            _cameraBrain.m_UpdateMethod = _savedCameraUpdateMethod;
+            _cameraBrain.m_BlendUpdateMethod = _savedCameraBlendUpdateMethod;
+        }
+        _cameraUpdateOverrideApplied = false;
     }
 
     /// <summary>按当前拉远进度应用缩放影响系数，并保证负系数不会反转前探方向。</summary>
@@ -323,16 +374,19 @@ public class Mod_Cam : Module
 
     #region 相机控制
     // 临时驾驶等模式借用跟随目标，结束后回到玩家且不改变听音主体。
-    public void SetFollowOverride(Transform target, float maximumPov = 0f, float zoomMultiplier = 1f)
+    public void SetFollowOverride(Transform target, float maximumPov = 0f, float zoomMultiplier = 1f,
+        FollowMode followMode = FollowMode.PlayerSettings)
     {
         float maximum = target != null ? Mathf.Max(0f, maximumPov) : 0f;
         float multiplier = target != null ? Mathf.Max(1f, zoomMultiplier) : 1f;
+        FollowMode mode = target != null ? followMode : FollowMode.PlayerSettings;
         if (_followOverride == target && _followOverrideMaxPov == maximum &&
-            _followOverrideZoomMultiplier == multiplier) return;
+            _followOverrideZoomMultiplier == multiplier && _followOverrideMode == mode) return;
         bool targetChanged = _followOverride != target;
         _followOverride = target;
         _followOverrideMaxPov = maximum;
         _followOverrideZoomMultiplier = multiplier;
+        _followOverrideMode = mode;
         if (targetChanged) ApplyFollowTarget();
         if (Vcam != null) SetOrthographicSize(povValue);
     }
@@ -343,6 +397,7 @@ public class Mod_Cam : Module
         _followOverride = null;
         _followOverrideMaxPov = 0f;
         _followOverrideZoomMultiplier = 1f;
+        _followOverrideMode = FollowMode.PlayerSettings;
         ApplyFollowTarget();
         if (Vcam != null) SetOrthographicSize(povValue);
     }

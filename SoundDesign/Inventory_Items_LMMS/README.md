@@ -56,12 +56,14 @@ python '.\SoundDesign\Inventory_Items_LMMS\build_inventory_audio.py' --masters '
 
 脚本复用 `SoundDesign/UI_Click_LMMS/build_preview.py` 的 LMMS 音量包络、WAV 读写和短尾处理。3 个 `.mmp` 本身没有外部采样或第三方插件依赖。
 
-## 后续按游戏数据选音效
+## 运行时接入
 
-目前只完成音效素材、试听与 Unity 入库，没有接入自动播放。索引提供 `action/material/weightBand/volumeBand` 和建议 `ui.inventory.*` Cue ID。
+现已通过 `install_runtime_cues.py install` 将 72 个 LMMS WAV 注册为正式 `ui.inventory.*` Cue。游戏 `Inventory` 在成功的点击、滚轮、Shift 快速转移、触屏轻触/长按、拖拽放入后发布音频反馈；拖拽开始单独播放拿起声。独立的 `InventoryInteractionAudio` 决定播放哪个 Cue，统一使用 UI 总线，绝不修改物品事务结果。
 
-项目 `ItemStack.Weight` 是单件 kg，`ItemStack.Volume` 是单件 L。后续应使用本次实际转移的数量计算重量、体积，不能直接拿整个来源堆叠的总量替代点击一件的数量。材质与容器类型通过稳定标签或配置扩展；轻中重、小大阈值由后续接入配置决定，本次没有修改游戏物品数据。
+项目 `ItemStack.Weight` 是单件 kg，`ItemStack.Volume` 是单件 L；当前用本次真实转移数量计算总重和总体积，轻/中/重的边界为 1/8kg，小/大体积边界为 4L。物品优先识别显式 `AudioMaterial.Metal/Stone/Wood/Soft` 标签，未声明时根据现有英文稳定标签和 ID 识别，未命中则用柔软类。背包/快捷栏用背包声，其它物品容器用箱子声。
 
-点击拿起与开始拖拽共用一次拿起反馈；只有库存事务真正提交成功才播放目标容器的放入音。取消、失败、放回原槽不应播放成功放入音，也不能为了发声改动移动、合并、拆分和交换语义。
+点击拿起与开始拖拽共用拿起反馈；只有库存事务真正提交成功且目标槽位变化才播放放入音。取消、失败、放回原槽不播放成功放入声；跨槽异类交换使用新 LMMS `ui.inventory.swap` Cue。装备栏由独立的装备穿脱事件播放，避免重复。音效回调异常不撤销物品交易。
+
+`python SoundDesign/Inventory_Items_LMMS/install_runtime_cues.py verify` 可离线检查 72 条索引、Cue 与 GUID。新增交换和装备工程在 `SoundDesign/Inventory_UI_Feedback_LMMS/`。音频规则 Lua 覆盖重量、体积及材质选音；真实音频播放与事务操作仍需在非现有 PlayMode 的隔离场景中复测。
 
 合成方式参考 [LMMS 官方 TripleOscillator 文档](https://docs.lmms.io/user-manual/instruments/triple-oscillator)，Unity 导入设置参考 [Unity 2022.3 Audio Clip 文档](https://docs.unity3d.com/2022.3/Documentation/Manual/class-AudioClip.html)。

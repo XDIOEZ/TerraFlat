@@ -19,6 +19,9 @@ namespace Meryel.UnityCodeAssist.Editor
 {
     internal static partial class UnityClassExtensions
     {
+        #region 对象身份与层级
+        const string NullObjectId = "GlobalObjectId_V1-0-00000000000000000000000000000000-0-0";
+
         static GameObject? GetParentGO(GameObject go)
         {
             if (!go)
@@ -34,10 +37,20 @@ namespace Meryel.UnityCodeAssist.Editor
 
         static string GetId(UnityEngine.Object? obj)
         {
+            if (!obj)
+                return NullObjectId;
+
+            if (!EditorUtility.IsPersistent(obj))
+            {
+                var sceneObject = obj as GameObject ?? (obj as Component)?.gameObject;
+                // 运行时及未保存场景的对象使用实例身份，避免取文件身份时触发跨场景序列化检查。
+                if (EditorApplication.isPlayingOrWillChangePlaymode || sceneObject == null ||
+                    !sceneObject.scene.IsValid() || string.IsNullOrEmpty(sceneObject.scene.path))
+                    return $"InstanceID_{obj.GetInstanceID()}";
+            }
+
             try
             {
-                // obj can be null
-
                 var globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(obj);
                 var objectGuid = globalObjectId.ToString();
                 return objectGuid;
@@ -46,9 +59,10 @@ namespace Meryel.UnityCodeAssist.Editor
             {
                 // OnBeforeSerialize of user scripts may raise exception
                 Serilog.Log.Warning(ex, "GetGlobalObjectIdSlow failed for obj {Obj}", obj);
-                return "GlobalObjectId_V1-0-00000000000000000000000000000000-0-0";
+                return NullObjectId;
             }
         }
+        #endregion
 
         public static Synchronizer.Model.Component_Animation? ToSyncModelOfComponentAnimation(this GameObject go)
         {

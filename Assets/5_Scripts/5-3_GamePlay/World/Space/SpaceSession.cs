@@ -264,6 +264,7 @@ namespace FlatWorld.Spaceflight
             FlushShipDamageFeedback();
             // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
+            RestoreLandedBuildings();
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();
             PresentationSynchronized?.Invoke();
@@ -334,7 +335,7 @@ namespace FlatWorld.Spaceflight
             if (!IsInPresentationWorld(ship)) return false;
             if (!IsSpaceView) return true;
             Player player = ItemMgr.Instance?.User_Player;
-            SpacePassengerState observer = player != null ? State.Passengers.Find(value => value.ProfileId == player.ProfileName) : null;
+            SpacePassengerState observer = player != null ? FindPassenger(player.ProfileName) : null;
             if (observer != null && observer.Supported && observer.ShipId == ship.ShipId) return true;
             // 浮动原点只保障坐标精度，可见距离必须围绕当前乘员的权威位置计算。
             SpaceSectorPosition focus = observer != null ? GetPassengerPosition(observer) : new SpaceSectorPosition(ViewSector, ViewOrigin);

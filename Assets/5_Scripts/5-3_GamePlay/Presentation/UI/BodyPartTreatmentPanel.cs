@@ -26,6 +26,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
     private Mod_DamageReceiver receiver;
     private BodyPartTreatmentSession session;
     private float nextRefresh;
+    private string lastStatusSource;
 
     #endregion
 
@@ -57,6 +58,28 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
         Progress.interactable = false;
     }
 
+    private void OnEnable()
+    {
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+    }
+
+    private void HandleLanguageChanged(string _)
+    {
+        if (Title != null)
+            Title.text = FlatWorldLocalizationService.GetUiText("选择治疗部位");
+        // 进度中的数值交给 Update 刷新，其余消息保留原文用于切语言后重译。
+        if (Status != null && session?.IsRunning != true && !string.IsNullOrEmpty(lastStatusSource))
+            Status.text = FlatWorldLocalizationService.GetUiText(lastStatusSource);
+        RefreshButtons();
+    }
+
+    private void SetStatusSource(string source)
+    {
+        lastStatusSource = source;
+        if (Status != null)
+            Status.text = FlatWorldLocalizationService.GetUiText(source);
+    }
+
     private void Bind(Mod_BodyPartTreatment target, Item owner)
     {
         ClearTarget();
@@ -69,6 +92,9 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
             if (part == null) continue;
             BodyPartType type = part.Part;
             Button button = Instantiate(PartTemplate, PartRoot, false);
+            TextMeshProUGUI partLabel = button.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (partLabel != null && partLabel.TryGetComponent(out LocalizedTextBinder labelBinder))
+                labelBinder.enabled = false;
             button.name = "部位_" + type;
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => Begin(type));
@@ -76,15 +102,21 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
             buttons.Add(button);
             parts.Add(type);
         }
+        if (Status != null && Status.TryGetComponent(out LocalizedTextBinder staticBinder))
+            staticBinder.enabled = false;
         Title.text = FlatWorldLocalizationService.GetUiText("选择治疗部位");
-        Status.text = FlatWorldLocalizationService.GetUiText("选择受伤部位；关闭窗口或切换用品将取消引导，不消耗物品。");
+        SetStatusSource("选择受伤部位；关闭窗口或切换用品将取消引导，不消耗物品。");
         Progress.value = 0f;
         panel.Open();
         if (controller != null) controller.AcquireGameplayInputLock(this);
         RefreshButtons();
     }
 
-    private void OnDisable() => ClearTarget();
+    private void OnDisable()
+    {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        ClearTarget();
+    }
 
     private void OnDestroy()
     {
@@ -102,6 +134,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
         receiver = null;
         treatment = null;
         session = null;
+        lastStatusSource = null;
         foreach (Button button in buttons)
             if (button != null)
             {
@@ -121,7 +154,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
         if (session?.IsRunning == true || treatment == null) return;
         if (!treatment.TryBeginTreatment(actor, part, out string reason))
         {
-            Status.text = FlatWorldLocalizationService.GetUiText(reason);
+            SetStatusSource(reason);
             return;
         }
         session = treatment.TreatmentSession;
@@ -138,7 +171,7 @@ public sealed class BodyPartTreatmentPanel : MonoBehaviour
                 panel.Close();
                 return;
             }
-            Status.text = FlatWorldLocalizationService.GetUiText(session.Reason ?? "治疗已取消");
+            SetStatusSource(session.Reason ?? "治疗已取消");
             Progress.value = 0f;
             session = null;
             RefreshButtons();

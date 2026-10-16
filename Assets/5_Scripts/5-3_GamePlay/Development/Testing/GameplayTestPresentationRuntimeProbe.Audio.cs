@@ -75,6 +75,78 @@ public static partial class GameplayTestPresentationRuntimeProbe
             AudioService service = fixture.Service;
             AudioCue loop = fixture.CloneCue(AudioEventIds.PlayerWetClothesMoveLoop);
             AudioCue shortCue = fixture.CloneCue(AudioEventIds.DoorOpen);
+            JArray feedbackCues = new JArray();
+            foreach (string cueId in new[]
+                     {
+                         AudioEventIds.BuildingPlace, AudioEventIds.BuildingReject,
+                         AudioEventIds.CraftComplete, AudioEventIds.SmeltComplete,
+                         AudioEventIds.FireSeed, AudioEventIds.FurnaceIgnite
+                     })
+            {
+                // 读取 Unity 实际导入的音频，避免只检查磁盘有文件却遗漏可播放的 Cue。
+                bool exists = service.TryGetCue(cueId, out AudioCue feedback);
+                feedbackCues.Add(new JObject
+                {
+                    ["id"] = cueId,
+                    ["loaded"] = exists,
+                    ["variants"] = exists ? feedback.Clips.Count : 0,
+                    ["validClips"] = exists && feedback.Clips.All(
+                        clip => clip != null && clip.channels == 1 &&
+                                clip.frequency == 48000 && clip.samples > 0),
+                    ["spatial"] = exists && feedback.SpatialBlend == 1f &&
+                                   feedback.Bus == AudioBus.Sfx && feedback.Cooldown > 0f
+                });
+            }
+            JArray movementCues = new JArray();
+            foreach (string cueId in new[]
+                     {
+                         AudioEventIds.FootstepDirt, AudioEventIds.FootstepGrass,
+                         AudioEventIds.FootstepSand, AudioEventIds.FootstepStone,
+                         AudioEventIds.FootstepSnow, AudioEventIds.FootstepWater,
+                         AudioEventIds.FishingCast, AudioEventIds.FishingHook,
+                         AudioEventIds.FishingReel
+                     })
+            {
+                bool loaded = service.TryGetCue(cueId, out AudioCue cue);
+                bool isFootstep = cueId.StartsWith("player.footstep.", StringComparison.Ordinal);
+                movementCues.Add(new JObject
+                {
+                    ["id"] = cueId,
+                    ["loaded"] = loaded,
+                    ["expectedVariants"] = isFootstep ? 3 : 2,
+                    ["variants"] = loaded ? cue.Clips.Count : 0,
+                    ["validClips"] = loaded && cue.Clips.All(
+                        clip => clip != null && clip.channels == 1 &&
+                                clip.frequency == 48000 && clip.samples > 0),
+                    ["spatial"] = loaded && cue.SpatialBlend == 1f &&
+                                   cue.Bus == AudioBus.Sfx && cue.Cooldown > 0f &&
+                                   cue.MaxInstances == (isFootstep ? 2 : 3)
+                });
+            }
+            int inventoryUiCueCount = 0;
+            bool inventoryUiCuesValid = true;
+            foreach (string action in new[] { "pickup", "backpack", "chest" })
+            foreach (string material in new[] { "soft", "wood", "stone", "metal" })
+            foreach (string weight in new[] { "light", "medium", "heavy" })
+            foreach (string volume in new[] { "compact", "bulky" })
+            {
+                string id = $"ui.inventory.{action}.{material}.{weight}.{volume}";
+                bool loaded = service.TryGetCue(id, out AudioCue cue);
+                inventoryUiCueCount++;
+                inventoryUiCuesValid &= loaded && cue.Bus == AudioBus.UI &&
+                    cue.SpatialBlend == 0f && !cue.Loop && cue.Clips.Count == 1 &&
+                    cue.Clips[0] != null && cue.Clips[0].channels == 1 &&
+                    cue.Clips[0].frequency == 48000 && cue.Clips[0].samples > 0;
+            }
+            foreach (string id in new[] { "ui.inventory.swap", "ui.equipment.equip", "ui.equipment.unequip" })
+            {
+                bool loaded = service.TryGetCue(id, out AudioCue cue);
+                inventoryUiCueCount++;
+                inventoryUiCuesValid &= loaded && cue.Bus == AudioBus.UI &&
+                    cue.SpatialBlend == 0f && cue.Clips.Count == 2 &&
+                    cue.Clips.All(clip => clip != null && clip.channels == 1 &&
+                                          clip.frequency == 48000 && clip.samples > 0);
+            }
             AudioListener[] listeners = UnityEngine.Object.FindObjectsOfType<AudioListener>()
                 .Where(value => value.isActiveAndEnabled).ToArray();
             if (listeners.Length != 1) throw new InvalidOperationException("真实现场需要唯一启用的 AudioListener。");
@@ -131,6 +203,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool replacementSurvivedOldStop = replacement.IsPlaying && source.isPlaying;
             result = new JObject
             {
+                ["feedbackCues"] = feedbackCues,
+                ["movementCues"] = movementCues,
+                ["inventoryUiCueCount"] = inventoryUiCueCount,
+                ["inventoryUiCuesValid"] = inventoryUiCuesValid,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,
                 ["clipSamples"] = source.clip != null ? source.clip.samples : 0,
                 ["playing"] = nearPlaying, ["spatialLinear"] = nearSpatial, ["cueDistancesPreserved"] = distancePreserved,

@@ -7,6 +7,9 @@ public sealed class AI_DebugOverlayRenderer : MonoBehaviour
 
     private void OnGUI()
     {
+        // 头顶标签只用绝对坐标绘制，非 Repaint 事件不重复计算文字或分配 GUI 内容。
+        if (Event.current.type != EventType.Repaint)
+            return;
         AI_DebugOverlay.Draw();
     }
 

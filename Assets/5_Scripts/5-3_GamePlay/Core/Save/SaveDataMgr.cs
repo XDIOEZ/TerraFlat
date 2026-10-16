@@ -1778,6 +1778,27 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         string key = BuildChunkKey(planetName, ToChunkName(address));
         runtimeBuildingDirtyChunks.Add(key);
         runtimeBuildingDirtyAddresses[key] = address;
+        if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord current))
+            current.RemovedItemGuids?.Remove(buildingItem.itemData.Guid);
+    }
+
+    /// <summary>建筑交给其它世界所有者前立即撤掉地面记录，避免保存之前重载区块又生成同一实例。</summary>
+    public void RemoveRuntimeBuildingRecord(Item buildingItem)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null || !IsRuntimeBuildingChangeSource(buildingItem)) return;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || !manager.IsWorldModelRuntimeActive) return;
+        RecordRuntimeBuildingChange(buildingItem);
+        string planetName = ResolveRuntimePlanetName();
+        RuntimeWorldAddress address = manager.ResolveWorldAddress(buildingItem.transform.position);
+        string key = BuildChunkKey(planetName, ToChunkName(address));
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
+            chunkDeltas[key] = record = CreateRuntimeChunkDelta(planetName, address);
+        int guid = buildingItem.itemData.Guid;
+        record.ChangedItems?.RemoveAll(data => data?.Guid == guid);
+        record.RemovedItemGuids ??= new List<int>();
+        if (!record.RemovedItemGuids.Contains(guid)) record.RemovedItemGuids.Add(guid);
+        record.RemovedItemGuids.Sort();
     }
 
     /// <summary>保存新版 WorldModel 中所有动态建筑，而不是只保存某一种建筑预制体。</summary>

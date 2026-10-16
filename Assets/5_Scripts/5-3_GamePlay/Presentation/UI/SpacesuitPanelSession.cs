@@ -110,7 +110,11 @@ public sealed class SpacesuitPanelSession : IDisposable
     private void Refresh()
     {
         binding = SpacesuitSystem.GetBinding(suit, actor);
-        view.Title.text = FlatWorldLocalizationService.GetUiFormat("{0} · 宇航服", suit.GameName);
+        string suitName = GameRes.ExistingInstance != null &&
+                          GameRes.ExistingInstance.TryGetItemDefinition(suit.IDName, out RuntimeItemDefinition definition)
+            ? definition.DisplayName
+            : suit.GameName;
+        view.Title.text = FlatWorldLocalizationService.GetUiFormat("{0} · 宇航服", suitName);
         decimal standardLiters = 0m;
         if (FluidTankStorage.TryGet(binding.Tank, out FluidInventory inventory, out _)) standardLiters = FluidUnits.MolToStandardLiters(inventory.GetGasMoles(FluidIds.Oxygen));
         decimal propulsionLiters = FluidTankStorage.TryGet(binding.PropulsionTank, out FluidInventory propulsionInventory, out _)
@@ -190,13 +194,20 @@ public static class PortableFluidPanel
         {
             panel?.Dispose();
             sessions[tank.itemData.Guid] = panel = new MechanicalPanelSession("UI_FluidTank", tank, null, null,
-                () => Status(tank.itemData, actor), () => "", refreshStatusPeriodically: true);
+                () => Status(tank.itemData, actor), () => "", refreshStatusPeriodically: true,
+                gasCapacity01: () => GasCapacity01(tank.itemData));
         }
         panel.Toggle(actor);
     }
     public static void Close(Item tank)
     {
         if (tank != null && sessions.TryGetValue(tank.itemData.Guid, out var panel)) { panel.Dispose(); sessions.Remove(tank.itemData.Guid); }
+    }
+    // 容量占比使用真实气压与安全耐压，破裂气罐按空罐显示。
+    private static float GasCapacity01(ItemData data)
+    {
+        if (!FluidTankStorage.TryGet(data, out var inventory, out var config)) return 0f;
+        return (float)(inventory.GetPressureKPa(config.VolumeLiters, config.MinimumGasSpaceLiters) / config.MaxSafePressureKPa);
     }
     public static string Status(ItemData data, Item actor)
     {

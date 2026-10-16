@@ -16,6 +16,7 @@ namespace FlatWorld.Spaceflight
                 ship = FindAdjacentShip(point, config.FootprintWidth, config.FootprintHeight, quarterTurns, out local);
             if (ship == null)
             {
+                if (!IsSpaceView) return false;
                 if (config?.Kind != ShipPieceKind.Floor) return false;
                 snapped = new Vector2(Mathf.Floor(point.x) + .5f, Mathf.Floor(point.y) + .5f);
                 angle = quarterTurns * 90f; return true;
@@ -36,6 +37,7 @@ namespace FlatWorld.Spaceflight
                 ship = FindAdjacentShip(point, config.FootprintWidth, config.FootprintHeight, quarterTurns, out local);
             if (ship == null)
             {
+                if (!IsSpaceView) return false;
                 if (config?.Kind == ShipPieceKind.Floor) { valid = true; return true; }
                 if (config?.Kind == ShipPieceKind.Engine)
                 { reason = "引擎需要安装在飞船边缘的地板上。"; return true; }

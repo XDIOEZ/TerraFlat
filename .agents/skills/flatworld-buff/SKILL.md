@@ -12,6 +12,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/`：`Mod_BuffManager/BuffInstance` 生命周期；`Stacks/Rain` 水体/淋雨时钟；`BuffDefinition/Dto/Factory` 定义；`BuffEffectDispatcher/BuffEffectTypeIds` 效果注册。
 - `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json` 及分包：内容真源。
 - `Assets/StreamingAssets/ItemWiki/{buffs.js,buff_validation.py,wiki_server.py}`：展示、校验、文件指纹/备份/原子写回。
+- Buff HUD 通过 `BuffStatusRowView` 和 `FlatWorldUI` 翻译 `DisplayName`，语言切换由 `PlayerBuffStatusHUD` 刷新；定义 ID 不参与翻译。
 
 ## 定义与状态
 
@@ -21,6 +22,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - `add_stacks` 改单实例 StackCount 并续期，不重放 Start/Stop 或重置 Tick 相位；登记倍率仅一份，`scaleWithStacks` 显式按层。恢复层数归一到 `1..MaxStacks`，表现订 `BuffStacksChanged`。
 - 可清 Buff 表达潮湿/感染/中毒等角色状态；环境内被动能力/可执行动作由环境运行器负责。`ActiveBuffs` 是只读表现入口。
 - 正式重生在 `Mod_PlayerDeathState.CompleteRespawnState` 收口 `ClearAllBuffs`，同世界/跨维度一致。
+- `BodyTraumaBuffEffects` 在 Start/Stop 时按角色刷新攻速与混乱汇总；逐帧输入及武器读取只查角色索引，不扫描全体 Buff，最后一个来源移除时清掉该角色缓存。
 - 出血互斥 `出血1/2/3`，`ApplyBleedingTier` 低等级续期高等级、高等级替换低等级。
 - Wiki 写目标由 BuffManifest 白名单限定，校验与 Factory 同步；公开模式只读，文件保存与 GameRes 重载是两个阶段。
 

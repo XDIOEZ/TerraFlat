@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
@@ -205,7 +206,8 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
             {
                 float moved = LiquidVesselOperations.FillFromWorld(this, actor, target);
                 if (moved > AmountEpsilon)
-                    ItemActionFeedback.Show(actor, $"已装入{target.Liquid.DisplayName}。");
+                    ItemActionFeedback.Show(actor, FlatWorldLocalizationService.GetUiFormat(
+                        "已装入{0}。", FlatWorldLocalizationService.GetUiText(target.Liquid.DisplayName)));
             }
             return;
         }

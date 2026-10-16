@@ -182,14 +182,5 @@ public static class MixedLiquidContents
         return new LiquidDefinition("display:mixture", "混合液体", string.Empty, "mixture", "filled", color, viscosity,
             false, 0f, null, null);
     }
-    public static string Describe(LiquidContainerState state)
-    {
-        Ensure(state); var lines = new List<string>();
-        var ids = new List<string>(state.Composition.Keys); ids.Sort(StringComparer.Ordinal);
-        foreach (string id in ids)
-        { float amount = state.Composition[id]; string name = GameRes.ExistingInstance?.GetLiquidDefinition(id)?.DisplayName ?? id;
-          lines.Add($"{name}：{amount:0.###} 份（{(state.Amount > 0f ? amount / state.Amount * 100f : 0f):0.#}%）"); }
-        return string.Join("\n", lines);
-    }
     #endregion
 }

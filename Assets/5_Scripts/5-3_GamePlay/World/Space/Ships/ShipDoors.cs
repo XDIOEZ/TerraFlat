@@ -66,6 +66,7 @@ namespace FlatWorld.Spaceflight
         private SpriteRenderer[] doorLeaves;
         private Vector3[] doorClosedOffsets;
         private float doorSlide;
+        private bool doorVisualDirty = true;
 
         private void SynchronizeDoorVisual()
         {
@@ -96,8 +97,15 @@ namespace FlatWorld.Spaceflight
                         (half.center.y - rect.y - doorSource.pivot.y) / doorSource.pixelsPerUnit);
                 }
             }
+            float targetSlide = boundPiece.DoorOpen ? 1f : 0f;
+            // 舱门静止且外观未变化时，不再每帧写入两扇门的渲染属性和变换。
+            if (!doorVisualDirty && doorSlide == targetSlide &&
+                doorLeaves[0].sharedMaterial == visual.sharedMaterial && doorLeaves[0].color == visual.color &&
+                doorLeaves[0].sortingLayerID == visual.sortingLayerID &&
+                doorLeaves[0].sortingOrder == visual.sortingOrder)
+                return;
             // 两扇门沿自身横轴滑开，旋转安装和船体运动都沿用父节点变换。
-            doorSlide = Mathf.MoveTowards(doorSlide, boundPiece.DoorOpen ? 1f : 0f, Time.deltaTime / DoorSlideSeconds);
+            doorSlide = Mathf.MoveTowards(doorSlide, targetSlide, Time.deltaTime / DoorSlideSeconds);
             float travel = (float)(boundPiece.Width * boundCellSize * .55d) / Mathf.Max(.001f, Mathf.Abs(visual.transform.localScale.x));
             float easedSlide = Mathf.SmoothStep(0f, 1f, doorSlide);
             for (int side = 0; side < doorLeaves.Length; side++)
@@ -108,6 +116,7 @@ namespace FlatWorld.Spaceflight
                 leaf.transform.localPosition = doorClosedOffsets[side] + Vector3.right * ((side == 0 ? -1f : 1f) * travel * easedSlide);
             }
             visual.enabled = false;
+            doorVisualDirty = false;
         }
 
         private void ReleaseDoorVisual()
@@ -116,6 +125,7 @@ namespace FlatWorld.Spaceflight
                 foreach (SpriteRenderer leaf in doorLeaves)
                     if (leaf != null) { Destroy(leaf.sprite); Destroy(leaf.gameObject); }
             doorLeaves = null; doorClosedOffsets = null; doorSource = null;
+            doorVisualDirty = true;
         }
         #endregion
     }

@@ -30,6 +30,11 @@ namespace FlatWorld.Spaceflight
             IsSealed = sealedRegion; HasFloorSupport = floor; PressureKPa = pressure; TemperatureCelsius = temperature;
             OxygenPartialPressureKPa = oxygen; CarbonDioxidePartialPressureKPa = carbonDioxide; CompartmentId = compartmentId;
         }
+
+        /// <summary>敞开舱室只替换外部温压，保留已查询的地板支撑，不重复查结构索引。</summary>
+        public ShipEnvironmentSnapshot WithOutside(IShipAtmosphereSource outside) =>
+            IsSealed ? this : new ShipEnvironmentSnapshot(false, HasFloorSupport,
+                outside?.PressureKPa ?? 0d, outside?.TemperatureCelsius ?? -270d, 0d, 0d, null);
     }
     #endregion
 
@@ -318,8 +323,19 @@ namespace FlatWorld.Spaceflight
             public bool HasLine;
             public ShipDamageLine Line;
             public readonly List<ShipPieceState> Pieces = new();
+            public double OutsidePressureKPa;
+            public readonly Predicate<ShipPieceState> Eligible;
+
+            public PressureDamagePattern() => Eligible = IsEligible;
+
+            // 外界压力每轮更新，资格判断委托随船缓存而不在固定步反复分配。
+            private bool IsEligible(ShipPieceState piece) => piece?.IsAlive == true &&
+                (piece.Kind is ShipPieceKind.Wall or ShipPieceKind.Door or ShipPieceKind.DockingPort) &&
+                piece.PressureDamagePerKPaSecond > 0d &&
+                OutOfRange(OutsidePressureKPa, piece.MinimumPressureKPa, piece.MaximumPressureKPa) > 0d;
         }
         private static readonly ConditionalWeakTable<ShipState, PressureDamagePattern> pressurePatterns = new();
+        private static readonly ConditionalWeakTable<ShipState, PressureDamagePattern>.CreateValueCallback pressurePatternFactory = _ => new();
         private static readonly Random pressurePatternRandom = new();
 
         #region 舱室与支撑格子索引
@@ -330,7 +346,7 @@ namespace FlatWorld.Spaceflight
             private ulong structureRevision;
             private int roomCount, pieceCount;
             public readonly Dictionary<(int X, int Y), ShipCompartmentState> Rooms = new();
-            public readonly HashSet<(int X, int Y)> Floors = new();
+            public readonly Dictionary<(int X, int Y), ShipPieceState> Floors = new();
             public void Ensure(ShipState ship)
             {
                 if (ReferenceEquals(rooms, ship.Compartments) && ReferenceEquals(pieces, ship.Pieces) &&
@@ -344,7 +360,8 @@ namespace FlatWorld.Spaceflight
                     int width = Math.Max(1, piece.Width), height = Math.Max(1, piece.Height);
                     if ((piece.QuarterTurns & 1) != 0) { int swap = width; width = height; height = swap; }
                     for (int y = 0; y < height; y++)
-                        for (int x = 0; x < width; x++) Floors.Add((piece.CellX + x, piece.CellY + y));
+                        for (int x = 0; x < width; x++)
+                            Floors.TryAdd((piece.CellX + x, piece.CellY + y), piece);
                 }
                 rooms = ship.Compartments; pieces = ship.Pieces;
                 roomCount = rooms.Count; pieceCount = pieces.Count; structureRevision = ship.StructureRevision;
@@ -362,8 +379,11 @@ namespace FlatWorld.Spaceflight
         public static ShipEnvironmentSnapshot GetEnvironment(ShipState ship, int cellX, int cellY,
             IShipAtmosphereSource outside = null)
         {
-            bool support = HasFloor(ship, cellX, cellY);
-            ShipCompartmentState room = FindCompartment(ship, cellX, cellY);
+            // 同一格的地板与舱室共用一次拓扑索引读取。
+            GeometryIndex geometry = ship == null ? null : GetGeometryIndex(ship);
+            bool support = geometry != null && geometry.Floors.ContainsKey((cellX, cellY));
+            ShipCompartmentState room = null;
+            if (geometry != null) geometry.Rooms.TryGetValue((cellX, cellY), out room);
             if (room == null)
                 return new ShipEnvironmentSnapshot(false, support, outside?.PressureKPa ?? 0d,
                     outside?.TemperatureCelsius ?? -270d, 0d, 0d, null);
@@ -377,7 +397,14 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool HasFloor(ShipState ship, int cellX, int cellY)
-            => ship != null && GetGeometryIndex(ship).Floors.Contains((cellX, cellY));
+            => ship != null && GetGeometryIndex(ship).Floors.ContainsKey((cellX, cellY));
+
+        /// <summary>使用已有结构版本索引定位具体地板，避免每次环境查询扫描整船部件。</summary>
+        public static bool TryGetFloor(ShipState ship, int cellX, int cellY, out ShipPieceState floor)
+        {
+            floor = null;
+            return ship != null && GetGeometryIndex(ship).Floors.TryGetValue((cellX, cellY), out floor);
+        }
 
         public static ShipCompartmentState FindCompartment(ShipState ship, int cellX, int cellY)
         {
@@ -390,11 +417,9 @@ namespace FlatWorld.Spaceflight
         {
             if (ship == null || !FluidUnits.IsFinite(seconds) || seconds <= 0d || !FluidUnits.IsFinite(pressureKPa) || pressureKPa < 0d ||
                 !FluidUnits.IsFinite(temperatureCelsius)) return false;
-            Predicate<ShipPieceState> pressureEligible = piece => piece?.IsAlive == true &&
-                (piece.Kind == ShipPieceKind.Wall || piece.Kind == ShipPieceKind.Door || piece.Kind == ShipPieceKind.DockingPort) &&
-                piece.PressureDamagePerKPaSecond > 0d &&
-                OutOfRange(pressureKPa, piece.MinimumPressureKPa, piece.MaximumPressureKPa) > 0d;
-            PressureDamagePattern pattern = pressurePatterns.GetValue(ship, _ => new PressureDamagePattern());
+            PressureDamagePattern pattern = pressurePatterns.GetValue(ship, pressurePatternFactory);
+            pattern.OutsidePressureKPa = pressureKPa;
+            Predicate<ShipPieceState> pressureEligible = pattern.Eligible;
             bool lineStillLoaded = false;
             if (pattern.HasLine)
                 foreach (ShipPieceState piece in ship.Pieces)

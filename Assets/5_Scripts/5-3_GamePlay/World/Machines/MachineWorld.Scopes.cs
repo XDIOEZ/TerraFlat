@@ -2,6 +2,19 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+#region 机器跨作用域落点
+// 转移方一次给出绝对格、位置和朝向，机器世界不再叠加船体旋转。
+public readonly struct MachineScopePlacement
+{
+    public readonly Vector2Int Cell;
+    public readonly Vector3 Position;
+    public readonly int QuarterTurns;
+
+    public MachineScopePlacement(Vector2Int cell, Vector3 position, int quarterTurns)
+    { Cell = cell; Position = position; QuarterTurns = quarterTurns & 3; }
+}
+#endregion
+
 public static partial class MachineWorld
 {
     #region 独立本地格作用域
@@ -147,74 +160,232 @@ public static partial class MachineWorld
         return key;
     }
 
-    // 分裂先剥离一批节点的真实库存，整批移交完成后才各重建一次网络。
     public static void TransferShipNodes(string fromShip, string toShip, IReadOnlyList<int> ids)
     {
         if (fromShip == toShip || ids == null || ids.Count == 0) return;
-        var candidates = new List<MachineEntity>(ids.Count);
-        var transferred = new List<FluidMachineState>(ids.Count);
+        TransferScopeNodes(GetShipScopeKey(fromShip), GetShipScopeKey(toShip), ids);
+    }
+
+    #region 真实节点批量移交
+    private sealed class ScopeNodeTransfer
+    {
+        public MachineEntity Node;
+        public MachineScopePlacement Original, Placement;
+        public FluidMachineState Fluid;
+        public bool Detached;
+    }
+
+    // 先冻结并校验整批落点，再交接真实节点和加工器，库存不经过拆除或重新放置。
+    public static void TransferScopeNodes(string fromKey, string toKey, IReadOnlyList<int> ids,
+        Func<MachineEntity, MachineScopePlacement> placement = null)
+    {
+        if (string.IsNullOrWhiteSpace(fromKey)) throw new ArgumentException("源机器作用域为空。", nameof(fromKey));
+        if (string.IsNullOrWhiteSpace(toKey)) throw new ArgumentException("目标机器作用域为空。", nameof(toKey));
+        if (ids == null || ids.Count == 0 || fromKey == toKey && placement == null) return;
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
+            throw new InvalidOperationException("只有权威端可以移交机器节点。");
+        bool sameScope = string.Equals(fromKey, toKey, StringComparison.Ordinal);
+        var candidates = new List<ScopeNodeTransfer>(ids.Count);
         var identities = new HashSet<int>();
-        using (UseScope(GetShipScopeKey(fromShip)))
+        using (UseScope(fromKey))
         {
             RebuildGraphsIfDirty();
             for (int i = 0; i < ids.Count; i++)
             {
                 if (!identities.Add(ids[i])) throw new ArgumentException("批量转移包含重复机器身份。", nameof(ids));
-                if (nodes.TryGetValue(ids[i], out MachineEntity node)) candidates.Add(node);
+                if (!nodes.TryGetValue(ids[i], out MachineEntity node)) continue;
+                if (node.Snapshot?.transform == null || node.Definition == null || node.ScopeKey != fromKey)
+                    throw new InvalidOperationException("待转移机器状态无效：" + node.Id);
+                var original = new MachineScopePlacement(node.Cell, node.Snapshot.transform.position, node.RotationQuarterTurns);
+                candidates.Add(new ScopeNodeTransfer { Node = node, Original = original,
+                    Placement = placement != null ? placement(node) : original });
             }
         }
         if (candidates.Count == 0) return;
-        using (UseScope(GetShipScopeKey(toShip)))
+        using (UseScope(toKey))
         {
             RebuildGraphsIfDirty();
-            foreach (MachineEntity node in candidates)
-                if (nodes.ContainsKey(node.Id)) throw new InvalidOperationException("目标船体已经包含待转移的机器：" + node.Id);
+            var occupied = new HashSet<Vector3Int>();
+            foreach (ScopeNodeTransfer candidate in candidates)
+            {
+                MachineEntity node = candidate.Node;
+                if (nodes.TryGetValue(node.Id, out MachineEntity existing) && (!sameScope || !ReferenceEquals(existing, node)))
+                    throw new InvalidOperationException("目标作用域已经包含待转移的机器：" + node.Id);
+                MachineScopePlacement target = candidate.Placement;
+                if (!FluidUnits.IsFinite(target.Position.x) || !FluidUnits.IsFinite(target.Position.y) || !FluidUnits.IsFinite(target.Position.z))
+                    throw new InvalidOperationException("机器转移落点不是有限坐标：" + node.Id);
+                Vector2Int cell = graph.NormalizeCell(target.Cell);
+                if (CellOf(target.Position) != cell)
+                    throw new InvalidOperationException("机器转移的世界格与位置不一致：" + node.Id);
+                Vector2Int rawCell = new(Mathf.FloorToInt(target.Position.x), Mathf.FloorToInt(target.Position.y));
+                Vector3 position = target.Position + new Vector3(cell.x - (float)rawCell.x, cell.y - (float)rawCell.y, 0f);
+                candidate.Placement = new MachineScopePlacement(cell, position, target.QuarterTurns);
+                if (!occupied.Add(new Vector3Int(cell.x, cell.y, node.Definition.Layer)))
+                    throw new InvalidOperationException("同一批机器转移到重复的格子和层：" + cell);
+                MachineEntity occupant = graph.At(cell, node.Definition.Layer);
+                if (occupant != null && !(sameScope && identities.Contains(occupant.Id)))
+                    throw new InvalidOperationException("机器转移落点的机械层已经占用：" + cell);
+                if (!sameScope && !IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name &&
+                    BuildingOccupancyRegistry.IsOccupiedNormalized(cell, layer: node.Definition.Layer))
+                    throw new InvalidOperationException("机器转移落点的建筑层已经占用：" + cell);
+            }
         }
-        using (UseScope(GetShipScopeKey(fromShip)))
+
+        using (UseScope(fromKey))
         {
-            foreach (MachineEntity node in candidates) CaptureNode(node);
+            foreach (ScopeNodeTransfer candidate in candidates)
+            {
+                if (!nodes.TryGetValue(candidate.Node.Id, out MachineEntity current) || !ReferenceEquals(current, candidate.Node))
+                    throw new InvalidOperationException("预检后源机器身份发生变化：" + candidate.Node.Id);
+                CaptureNode(candidate.Node);
+            }
+        }
+        try
+        {
+            DetachScopeTransferNodes(fromKey, candidates);
+            AttachScopeTransferNodes(toKey, candidates, restoreOriginal: false);
+        }
+        catch
+        {
+            // 交接中断时先收回目标节点，再按原坐标恢复，通知只在完整提交后发布。
+            RollbackScopeTransfer(fromKey, toKey, candidates);
+            throw;
+        }
+        RebuildTransferredScope(fromKey);
+        if (!sameScope) RebuildTransferredScope(toKey);
+        PublishScopeTransferChanges(fromKey, toKey, candidates);
+    }
+
+    private static void DetachScopeTransferNodes(string key, List<ScopeNodeTransfer> candidates)
+    {
+        using (UseScope(key))
+        {
             ScopeState source = scope;
             source.TopologyMutationDepth++;
             try
             {
                 var groups = new HashSet<FluidTankGroup>();
-                foreach (MachineEntity node in candidates)
-                    if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group)) groups.Add(group);
+                foreach (ScopeNodeTransfer candidate in candidates)
+                    if (fluidTankOwners.TryGetValue(candidate.Node.Id, out FluidTankGroup group)) groups.Add(group);
+                dirty = true;
                 foreach (FluidTankGroup group in groups) PartitionFluidGroupForScopeTransfer(group);
-                foreach (MachineEntity node in candidates)
+                foreach (ScopeNodeTransfer candidate in candidates)
                 {
-                    FluidMachineState contents = null;
+                    MachineEntity node = candidate.Node;
                     if (node.Definition.Fluid != null)
-                    { DisposeMachineRuntime(node); contents = DetachFluidNodeForScopeTransfer(node); }
+                    {
+                        candidate.Fluid = MachinePersistence.Clone(GetFluidState(node));
+                        DisposeMachineRuntime(node);
+                        candidate.Fluid = DetachFluidNodeForScopeTransfer(node);
+                    }
                     else if (interactions.Remove(node.Id, out MachineInteractionTarget target)) target.Dispose();
-                    transferred.Add(contents);
+                    RemoveView(node);
                     nodes.Remove(node.Id); dirty = true;
+                    candidate.Detached = true;
                     if (node.Processor != null) processorOwners.Remove(node.Processor);
                 }
             }
-            finally { source.TopologyMutationDepth--; RebuildGraphsIfDirty(); }
+            finally { source.TopologyMutationDepth--; }
         }
-        using (UseScope(GetShipScopeKey(toShip)))
+    }
+
+    private static void AttachScopeTransferNodes(string key, List<ScopeNodeTransfer> candidates, bool restoreOriginal)
+    {
+        using (UseScope(key))
         {
             ScopeState destination = scope;
             destination.TopologyMutationDepth++;
             try
             {
-                for (int i = 0; i < candidates.Count; i++)
+                foreach (ScopeNodeTransfer candidate in candidates)
                 {
-                    MachineEntity node = candidates[i];
+                    MachineEntity node = candidate.Node;
+                    MachineScopePlacement target = restoreOriginal ? candidate.Original : candidate.Placement;
                     node.ScopeKey = worldKey;
-                    nodes.Add(node.Id, node); dirty = true;
+                    node.Cell = target.Cell;
+                    node.Snapshot.transform.position = target.Position;
+                    node.State ??= ReadMachineState(node.Snapshot);
+                    node.State.RotationQuarterTurns = target.QuarterTurns;
+                    CopyTopology(node);
+                    WriteMachineState(node.Snapshot, node.State);
+                    if (!nodes.ContainsKey(node.Id)) nodes.Add(node.Id, node);
+                    dirty = true;
                     if (node.Processor != null) processorOwners[node.Processor] = node;
-                    if (transferred[i] == null) continue;
-                    ForgetFluidNodeInventoryCaches(node.Id);
-                    fluidStates[node.Id] = transferred[i];
+                    if (candidate.Fluid != null)
+                    {
+                        ForgetFluidNodeInventoryCaches(node.Id);
+                        fluidStates[node.Id] = candidate.Fluid;
+                    }
                     EnsureProcessor(node);
                 }
             }
-            finally { destination.TopologyMutationDepth--; RebuildGraphsIfDirty(); }
+            finally { destination.TopologyMutationDepth--; }
         }
     }
+
+    private static void RollbackScopeTransfer(string fromKey, string toKey, List<ScopeNodeTransfer> candidates)
+    {
+        using (UseScope(toKey))
+        {
+            foreach (ScopeNodeTransfer candidate in candidates)
+            {
+                MachineEntity node = candidate.Node;
+                if (!candidate.Detached || !nodes.TryGetValue(node.Id, out MachineEntity current) || !ReferenceEquals(current, node)) continue;
+                if (node.Definition.Fluid != null)
+                {
+                    try { DisposeMachineRuntime(node); }
+                    catch (Exception error) { Debug.LogException(error); }
+                    candidate.Fluid = DetachFluidNodeForScopeTransfer(node);
+                }
+                nodes.Remove(node.Id);
+                if (node.Processor != null) processorOwners.Remove(node.Processor);
+                dirty = true;
+            }
+        }
+        AttachScopeTransferNodes(fromKey, candidates, restoreOriginal: true);
+        RebuildTransferredScope(fromKey);
+        if (fromKey != toKey) RebuildTransferredScope(toKey);
+    }
+
+    // 所有权已整批提交，表现或自定义拓扑回调异常只留下脏标记，不能让调用者重复迁移。
+    private static void RebuildTransferredScope(string key)
+    {
+        try { using (UseScope(key)) RebuildGraphsIfDirty(); }
+        catch (Exception error)
+        {
+            if (scopes.TryGetValue(key, out ScopeState value)) value.Dirty = true;
+            Debug.LogException(error);
+        }
+    }
+
+    private static void PublishScopeTransferChanges(string fromKey, string toKey, List<ScopeNodeTransfer> candidates)
+    {
+        using (UseScope(fromKey))
+        {
+            foreach (ScopeNodeTransfer candidate in candidates)
+            {
+                NotifyScopeTransferChange(() => NotifySurfaceMechanicalChanged(candidate.Original.Cell));
+                NotifyScopeTransferChange(() => NotifySurfaceCellChanged(candidate.Original.Cell));
+                if (fromKey != toKey) NotifyScopeTransferChange(() => NodeRemoved?.Invoke(candidate.Node.Id));
+            }
+        }
+        using (UseScope(toKey))
+        {
+            foreach (ScopeNodeTransfer candidate in candidates)
+            {
+                NotifyScopeTransferChange(() => NotifySurfaceMechanicalChanged(candidate.Placement.Cell));
+                NotifyScopeTransferChange(() => NotifySurfaceCellChanged(candidate.Placement.Cell));
+                NotifyScopeTransferChange(() => NodeStateChanged?.Invoke(candidate.Node));
+            }
+        }
+    }
+
+    private static void NotifyScopeTransferChange(Action notification)
+    {
+        try { notification(); }
+        catch (Exception error) { Debug.LogException(error); }
+    }
+    #endregion
 
     // 回收只取该部件的真实份额，其他成员保留剩余库存并重建自己的网络。
     public static ItemData RemoveShipPieceForRecovery(MachineEntity node)

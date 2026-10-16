@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using FlatWorld.Gameplay.InventoryFeedback;
 using FlatWorld.Gameplay.Progress;
 using TMPro;
 using UnityEngine.InputSystem;
@@ -1170,6 +1171,61 @@ public class Inventory
 
     #region 鼠标事件处理
 
+    #region 库存音效事务边界
+
+    // 只发布用户动作已成功的结果；独立的表现桥负责判断本地玩家和实际音色。
+    private static void PublishInventoryAudio(Inventory source, Inventory target,
+        ItemData movedItem, float amount, bool swapped = false)
+    {
+        if (source == null || target == null ||
+            source is Inventory_Equipment || target is Inventory_Equipment)
+            return;
+
+        InventoryAudioAction action = swapped ? InventoryAudioAction.Swap :
+            target.IsHandInventory() ? InventoryAudioAction.Pickup :
+            target.IsHotBarInventory() || target.IsPlayerBagInventory()
+                ? InventoryAudioAction.Backpack : InventoryAudioAction.Chest;
+        InventoryAudioFeedbackEvents.Publish(movedItem, amount, action);
+    }
+
+    private static float GetCommittedTransferAmount(ItemSlot sourceSlot, ItemData originalItem, float before)
+    {
+        float after = ReferenceEquals(sourceSlot?.itemData, originalItem)
+            ? sourceSlot.itemData?.Stack?.Amount ?? 0f : 0f;
+        return Mathf.Max(0f, before - after);
+    }
+
+    private static bool WasSlotChanged(ItemSlot slot, ItemData oldItem, float oldAmount)
+        => !ReferenceEquals(slot?.itemData, oldItem) ||
+           !Mathf.Approximately(slot?.itemData?.Stack?.Amount ?? 0f, oldAmount);
+
+    // 挂在玩家主动操作入口，保留原有库存事务实现且支持容器把放置重定向到已有堆叠。
+    private bool TryDropSlotWithAudio(ItemSlot sourceSlot, ItemData draggedItem,
+        Inventory target, int targetIndex, bool alreadyPickedUpByDrag = false)
+    {
+        ItemData sourceItem = ResolveCurrentDragSource(sourceSlot, draggedItem);
+        if (sourceItem?.Stack == null || target?.Data?.itemSlots == null ||
+            targetIndex < 0 || targetIndex >= target.Data.itemSlots.Count)
+            return false;
+        int resolvedIndex = target.ResolveIncomingSlotIndex(sourceSlot, targetIndex);
+        if (resolvedIndex < 0 || resolvedIndex >= target.Data.itemSlots.Count)
+            return false;
+
+        ItemSlot targetSlot = target.Data.itemSlots[resolvedIndex];
+        ItemData targetBefore = targetSlot?.itemData;
+        float oldAmount = targetBefore?.Stack?.Amount ?? 0f;
+        float sourceBefore = sourceItem.Stack.Amount;
+        bool swapped = targetBefore != null && !targetBefore.CanStackWith(sourceItem);
+        bool committed = TryDropSlotTo(sourceSlot, draggedItem, target, targetIndex);
+        if (committed && WasSlotChanged(targetSlot, targetBefore, oldAmount) &&
+            !(alreadyPickedUpByDrag && target.IsHandInventory()))
+            PublishInventoryAudio(this, target, sourceItem,
+                GetCommittedTransferAmount(sourceSlot, sourceItem, sourceBefore), swapped);
+        return committed;
+    }
+
+    #endregion
+
     /// <summary>
     /// 解析外部物品真正应进入的目标槽位。普通库存严格使用玩家命中的槽位；
     /// 具备“整块投放区域”的专用容器可覆盖此入口，优先把同类物品并入已有堆叠。
@@ -1196,12 +1252,18 @@ public class Inventory
         }
 
         // 滚轮只在当前槽与鼠标携带槽间转移，并分别通知两个库存，不能借用快捷栏目标。
+        ItemSlot sourceSlot = direction > 0f ? handSlot : localSlot;
+        ItemData sourceItem = sourceSlot.itemData;
+        float before = sourceItem?.Stack?.Amount ?? 0f;
         bool transferred = direction > 0f
             ? handInventory.TryTransferQuickQuantity(handSlot, this, localSlot, 1)
             : TryTransferQuickQuantity(localSlot, handInventory, handSlot, 1);
         if (!transferred)
             return;
 
+        PublishInventoryAudio(direction > 0f ? handInventory : this,
+            direction > 0f ? this : handInventory,
+            sourceItem, GetCommittedTransferAmount(sourceSlot, sourceItem, before));
         _touchTapFlow = !HasHeldItem(handInventory)
             ? TouchTapFlow.None
             : direction < 0f ? TouchTapFlow.Pickup : TouchTapFlow.PutDown;
@@ -1228,6 +1290,8 @@ public class Inventory
         bool requestedSlotSameType = requestedSlotHadItem && !handWasEmpty &&
                                      localSlot.itemData.CanStackWith(handSlot.itemData);
         bool preferPickupSameType = _touchTapFlow == TouchTapFlow.Pickup && requestedSlotSameType;
+        ItemData localBefore = localSlot.itemData;
+        ItemData handBefore = handSlot.itemData;
 
         // 点击空白投放区域时语义仍然是“放下”；专用容器只替换真正写入的槽位，
         // 不能因为重定向到已有同类堆叠而误切回连续拿取方向。
@@ -1244,11 +1308,21 @@ public class Inventory
         if (handSlot.itemData != null && !CanAcceptQuickTransfer(handSlot, localSlot))
             return;
 
+        ItemData effectiveTargetBefore = localSlot.itemData;
+        bool swapsDifferentItems = handBefore != null && effectiveTargetBefore != null &&
+                                   !effectiveTargetBefore.CanStackWith(handBefore);
         if (!Data.TouchTapItem(localSlot, handInventory.Data, handSlot, preferPickupSameType))
             return;
 
         RefreshUI(index);
         handInventory.RefreshUI(handSlot.Index);
+
+        bool pickedUp = handWasEmpty || preferPickupSameType;
+        PublishInventoryAudio(pickedUp ? this : handInventory,
+            pickedUp ? handInventory : this,
+            pickedUp ? localBefore : handBefore,
+            swapsDifferentItems ? Mathf.Max(0f, handBefore?.Stack?.Amount ?? 0f) : 1f,
+            swapsDifferentItems);
 
         if (!HasHeldItem(handInventory))
         {
@@ -1316,11 +1390,15 @@ public class Inventory
             (localSlot.itemData != null && !localSlot.itemData.CanStackWith(handSlot.itemData)))
             return false;
 
+        ItemData sourceItem = handSlot.itemData;
+        float before = sourceItem.Stack.Amount;
         if (!Data.DropDraggedItem(localSlot, handInventory.Data, handSlot))
             return false;
 
         RefreshUI(index);
         handInventory.RefreshUI(handSlot.Index);
+        PublishInventoryAudio(handInventory, this, sourceItem,
+            GetCommittedTransferAmount(handSlot, sourceItem, before));
 
         if (this is Mod_HotBar.HotBarRuntimeInventory hotBarInventory)
             hotBarInventory.SyncHeldItemImmediately();
@@ -1346,11 +1424,15 @@ public class Inventory
         DefaultTarget_Inventory = handInventory;
         int sourceAmount = Inventory_Data.GetWholeStackAmount(localSlot.itemData.Stack.Amount);
         int halfAmount = Mathf.Max(1, Mathf.CeilToInt(sourceAmount * 0.5f));
+        ItemData sourceItem = localSlot.itemData;
+        float originalAmount = sourceItem.Stack.Amount;
         if (!Data.TransferItemQuantityTo(localSlot, handInventory.Data, handSlot, halfAmount))
             return null;
 
         RefreshUI(index);
         handInventory.RefreshUI(handSlot.Index);
+        PublishInventoryAudio(this, handInventory, sourceItem,
+            GetCommittedTransferAmount(localSlot, sourceItem, originalAmount));
         _touchTapFlow = HasHeldItem(handInventory)
             ? TouchTapFlow.PutDown
             : TouchTapFlow.None;
@@ -1359,7 +1441,8 @@ public class Inventory
         return new InventoryDragTransaction(
             draggedItem.Stack.Amount,
             (targetInventory, targetIndex) =>
-                handInventory.TryDropSlotTo(handSlot, draggedItem, targetInventory, targetIndex),
+                handInventory.TryDropSlotWithAudio(handSlot, draggedItem,
+                    targetInventory, targetIndex, true),
             null,
             null,
             false,
@@ -1380,9 +1463,9 @@ public class Inventory
 
         // 点击与拖放共用整组事务，统一校验容量、双向接收规则并同步快捷栏手持物。
         if (handSlot.itemData != null)
-            handInventory.TryDropSlotTo(handSlot, handSlot.itemData, this, index);
+            handInventory.TryDropSlotWithAudio(handSlot, handSlot.itemData, this, index);
         else if (localSlot.itemData != null)
-            TryDropSlotTo(localSlot, localSlot.itemData, handInventory, handSlot.Index);
+            TryDropSlotWithAudio(localSlot, localSlot.itemData, handInventory, handSlot.Index);
     }
 
     /// <summary>判断当前库存是否存在可继续执行单件取放的手持物品。</summary>
@@ -1423,11 +1506,13 @@ public class Inventory
         ItemData fallbackItem = null;
 
         BeginSlotDrag(sourceSlot);
+        PublishInventoryAudio(this, GetPlayerHandInventory(), draggedItem,
+            draggedItem.Stack.Amount);
 
         return new InventoryDragTransaction(
             draggedItem.Stack.Amount,
             (targetInventory, targetIndex) =>
-                TryDropSlotTo(sourceSlot, draggedItem, targetInventory, targetIndex),
+                TryDropSlotWithAudio(sourceSlot, draggedItem, targetInventory, targetIndex, true),
             () => TryMoveDraggedSlotToHand(
                 sourceSlot,
                 draggedItem,
@@ -1436,7 +1521,8 @@ public class Inventory
                 out fallbackItem),
             (targetInventory, targetIndex) =>
                 fallbackInventory != null &&
-                fallbackInventory.TryDropSlotTo(fallbackSlot, fallbackItem, targetInventory, targetIndex),
+                fallbackInventory.TryDropSlotWithAudio(fallbackSlot, fallbackItem,
+                    targetInventory, targetIndex, true),
             true,
             sourceItemProvider: () => ResolveCurrentDragSource(sourceSlot, draggedItem),
             onCompleted: () => EndSlotDrag(sourceSlot));
@@ -1653,9 +1739,9 @@ public class Inventory
         ItemSlot targetSlot = DefaultTarget_Inventory.Data.itemSlots[targetIndex];
         bool changed = false;
         if (localSlot?.itemData != null)
-            changed = TryDropSlotTo(localSlot, localSlot.itemData, DefaultTarget_Inventory, targetIndex);
+            changed = TryDropSlotWithAudio(localSlot, localSlot.itemData, DefaultTarget_Inventory, targetIndex);
         else if (targetSlot?.itemData != null)
-            changed = DefaultTarget_Inventory.TryDropSlotTo(targetSlot, targetSlot.itemData, this, index);
+            changed = DefaultTarget_Inventory.TryDropSlotWithAudio(targetSlot, targetSlot.itemData, this, index);
 
         if (!changed)
             return;
@@ -1812,7 +1898,15 @@ public class Inventory
         if (!IsValidQuickTransferTarget(targetInventory) || targetInventory == this)
             return false;
 
-        return TryQuickMoveSlotToInventory(index, targetInventory);
+        ItemSlot sourceSlot = Data?.itemSlots != null && index >= 0 && index < Data.itemSlots.Count
+            ? Data.itemSlots[index] : null;
+        ItemData sourceItem = sourceSlot?.itemData;
+        float before = sourceItem?.Stack?.Amount ?? 0f;
+        bool moved = TryQuickMoveSlotToInventory(index, targetInventory);
+        if (moved)
+            PublishInventoryAudio(this, targetInventory, sourceItem,
+                GetCommittedTransferAmount(sourceSlot, sourceItem, before));
+        return moved;
     }
 
     private Inventory ResolveShiftQuickTransferTarget()

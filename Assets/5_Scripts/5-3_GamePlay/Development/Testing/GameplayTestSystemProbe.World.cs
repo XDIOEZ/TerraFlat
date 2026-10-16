@@ -220,6 +220,15 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject WorldWind(JObject args)
     {
+        // 轻量掉落物批量采样与单件采样共用真实风区混合规则。
+        var blend = new RegionalWindBlend(
+            new float3(1f, 0f, .9f), new float3(0f, 1f, .79f),
+            new float3(-1f, 0f, 1f), new float3(0f, -1f, .8f), .25f, .5f);
+        Vector2 blendedVelocity = WindEnvironmentRules.ResolveBlendedPushVelocity(in blend, 8);
+        Vector2 unreachableVelocity = WindEnvironmentRules.ResolveBlendedPushVelocity(in blend, 11);
+        var originOnly = new RegionalWindBlend(blend.Origin, blend.Horizontal, blend.Vertical,
+            blend.Diagonal, 0f, 0f);
+        Vector2 originVelocity = WindEnvironmentRules.ResolveBlendedPushVelocity(in originOnly, 8);
         return new JObject
         {
             ["belowLevel"] = WindEnvironmentRules.ResolveWindLevel(.799f),
@@ -232,7 +241,10 @@ public static partial class GameplayTestSystemProbe
             ["lightMassLevel"] = WindEnvironmentRules.ResolveRequiredWindLevel(1f, 9.81d, 1f, 19f),
             ["cutoffMassLevel"] = WindEnvironmentRules.ResolveRequiredWindLevel(10f, 9.81d, 1f, 19f),
             ["zeroGravityLevel"] = WindEnvironmentRules.ResolveRequiredWindLevel(19f, 0d, 1f, 19f),
-            ["invalidMassLevel"] = WindEnvironmentRules.ResolveRequiredWindLevel(-1f, 9.81d, 1f, 19f)
+            ["invalidMassLevel"] = WindEnvironmentRules.ResolveRequiredWindLevel(-1f, 9.81d, 1f, 19f),
+            ["blendedPushX"] = blendedVelocity.x, ["blendedPushY"] = blendedVelocity.y,
+            ["unreachablePushX"] = unreachableVelocity.x, ["unreachablePushY"] = unreachableVelocity.y,
+            ["originPushX"] = originVelocity.x, ["originPushY"] = originVelocity.y
         };
     }
 

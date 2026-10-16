@@ -1,4 +1,23 @@
 -- 使用正式放置/伤害/固定步，验证真实残骸 Item 与冷库存；没有直接调用分裂算法。
+test.space("ship_ground_combat_projection", function(data)
+    assert(data.scope == "live-ground-ship-weapon-hit" and type(data.limitations) == "string", "未采样真实地表武器命中")
+    assert(data.weapon == "Axe_Bronze" and data.piece == "ShipFloor_Iron", "未使用正式青铜斧与飞船铁地板")
+    assert(data.worldResolved and data.resolvedWorld == data.world, "乘员快照缺少世界键时，地表武器没有使用当前场景")
+    assert(data.staleOffset > 40, "没有构造乘员位置过期的回归现场")
+    assert(data.hitError < 0.001, "地表飞船命中坐标错误地跟随过期的乘员快照")
+    assert(data.beforeHealth > 0 and data.afterMiss == data.beforeHealth, "未接触飞船的武器错误地扣血")
+    assert(data.afterWrongWorld == data.beforeHealth, "其他世界的飞船错误地被当前攻击伤害")
+    assert(data.afterAirborne == data.beforeHealth, "升空飞船错误地受到近战伤害")
+    assert(data.afterHit >= 0 and data.afterHit < data.beforeHealth, "真实青铜斧没有扣除落地船体的权威血量")
+    assert(data.afterRepeated == data.afterHit, "同一攻击窗口重复扣除了同一飞船部件的血量")
+    assert(data.afterNextAttack >= 0 and data.afterNextAttack < data.afterRepeated,
+        "下一次挥砍没有重置命中预约，飞船部件无法再次受伤")
+    assert(#data.orderedContacts == 4 and data.orderedContacts[1] == 3 and data.orderedContacts[2] == 4 and
+        data.orderedContacts[3] == 1 and data.orderedContacts[4] == 2,
+        "船体命中排序应先比扫掠时间，再按距离和身份稳定选择目标")
+    return "青铜斧命中飞船可连续挥砍，错世界、升空近战与同窗重复扣血均被拒绝。"
+end, "地表青铜斧与飞船权威血量真实结算")
+
 local function near(actual, expected, label)
     assert(type(actual) == "number" and actual == actual and math.abs(actual - expected) < 0.0001, label)
 end

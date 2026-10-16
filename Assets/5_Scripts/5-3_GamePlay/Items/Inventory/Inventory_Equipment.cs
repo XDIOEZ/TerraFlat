@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -249,9 +250,21 @@ public class Inventory_Equipment : Inventory
 
         if (basePanel.TryGetText("窗口信息", out TextMeshProUGUI title))
         {
-            string ownerName = item?.itemData?.GameName;
-            title.text = string.IsNullOrWhiteSpace(ownerName) ? "装备" : $"{ownerName} · 装备";
+            var binder = title.GetComponent<LocalizedTextBinder>() ?? title.gameObject.AddComponent<LocalizedTextBinder>();
+            binder.ConfigureRuntime(GetEquipmentTitle);
         }
+    }
+
+    private string GetEquipmentTitle()
+    {
+        string ownerName = item?.itemData?.GameName;
+        if (item?.itemData != null && GameRes.ExistingInstance != null &&
+            GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
+            ownerName = definition.DisplayName;
+
+        return string.IsNullOrWhiteSpace(ownerName)
+            ? FlatWorldLocalizationService.GetUiText("装备")
+            : FlatWorldLocalizationService.GetUiFormat("{0} · 装备", ownerName);
     }
 
     private void RefreshOwnerPortrait()
@@ -309,7 +322,9 @@ public class Inventory_Equipment : Inventory
                 label.name = rule.LabelObjectName;
             }
 
-            label.text = rule.DisplayName;
+            var binder = label.GetComponent<LocalizedTextBinder>() ?? label.gameObject.AddComponent<LocalizedTextBinder>();
+            binder.Configure(FlatWorldLocalizationService.UiTable,
+                FlatWorldLocalizationService.GetUiTextKey(rule.DisplayName), rule.DisplayName);
             RectTransform rect = label.rectTransform;
             rect.anchoredPosition = rule.UiPosition + new Vector2(0f, -58f);
             rect.sizeDelta = new Vector2(132f, 24f);

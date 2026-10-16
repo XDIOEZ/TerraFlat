@@ -229,14 +229,14 @@ namespace FlatWorld.Spaceflight
         {
             var presenters = new JArray();
             foreach (var pair in shipColliderPresenters)
-                presenters.Add(ViewIdentity(pair.Key, pair.Value.Root, false));
+                presenters.Add(PresenterViewIdentity(pair.Key, pair.Value, false));
             foreach (var pair in pooledShipPresenters)
-                presenters.Add(ViewIdentity(pair.Key, pair.Value.Presenter.Root, true));
+                presenters.Add(PresenterViewIdentity(pair.Key, pair.Value.Presenter, true));
             var pieces = new JArray();
             foreach (var pair in views)
-                pieces.Add(ViewIdentity(pair.Key, pair.Value != null ? pair.Value.gameObject : null, false));
+                pieces.Add(PieceViewIdentity(pair.Key, pair.Value, false));
             foreach (var pair in pooledPieceViews)
-                pieces.Add(ViewIdentity(pair.Key, pair.Value.View != null ? pair.Value.View.gameObject : null, true));
+                pieces.Add(PieceViewIdentity(pair.Key, pair.Value.View, true));
             return new JObject
             {
                 ["poolCount"] = pooledPieceViews.Count + pooledShipPresenters.Count,
@@ -259,6 +259,25 @@ namespace FlatWorld.Spaceflight
             ["scene"] = root != null ? root.scene.name : string.Empty,
             ["parentId"] = root != null && root.transform.parent != null ? root.transform.parent.gameObject.GetInstanceID() : 0
         };
+
+        // 模式诊断只采样当前实际启用的碰撞，不把休眠组件算成正在工作的整船刚体。
+        private static JObject PresenterViewIdentity(string id, ShipColliderPresenter presenter, bool pooled)
+        {
+            JObject result = ViewIdentity(id, presenter.Root, pooled);
+            result["wholeShipBody"] = presenter.WholeShipBody;
+            result["activeBodies"] = presenter.ActiveBodyCount;
+            result["activeBlockers"] = presenter.ActiveBlockerCount;
+            return result;
+        }
+
+        /// <summary>仅测试快照读取缓存身份，验证实际船件复用后绑定的船与部件未串号。</summary>
+        private static JObject PieceViewIdentity(string id, ShipPieceView view, bool pooled)
+        {
+            JObject result = ViewIdentity(id, view != null ? view.gameObject : null, pooled);
+            result["machineScope"] = view?.BoundMachineScopeKey;
+            result["targetGuid"] = view?.TargetGuid ?? 0;
+            return result;
+        }
         #endregion
     }
 }

@@ -16,8 +16,8 @@ namespace FlatWorld.Spaceflight
         {
             SpaceSession session = SpaceSession.Current;
             ShipPartConfiguration config = Mod_ShipPart.Read(request.SourceData);
-            return config?.Kind is ShipPieceKind.Floor or ShipPieceKind.Engine ||
-                session != null && session.TryGetSupport(request.Position, out _, out _, out _);
+            return session != null && (session.IsSpaceView && config?.Kind is (ShipPieceKind.Floor or ShipPieceKind.Engine) ||
+                session.TryGetSupport(request.Position, out _, out _, out _));
         }
         public BuildingPlacementResult Place(BuildingPlacementRequest request)
         {
@@ -59,15 +59,13 @@ namespace FlatWorld.Spaceflight
                 if (IsSpaceView && presentation) PresentationWorldToLocal(value, new SpaceSectorPosition(ViewSector, position), out x, out y);
                 else ShipGeometry.WorldToLocal(value, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out x, out y);
                 int cellX = (int)Math.Floor(x / value.CellSizeMeters), cellY = (int)Math.Floor(y / value.CellSizeMeters);
-                ShipPieceState found = value.Pieces.Find(piece => piece.IsAlive && piece.Kind == ShipPieceKind.Floor &&
-                    ContainsCell(piece, cellX, cellY));
-                if (found == null) continue;
+                if (!ShipAtmosphereService.TryGetFloor(value, cellX, cellY, out ShipPieceState found)) continue;
                 ship = value; floor = found; local = new Vector2((float)x, (float)y); return true;
             }
             ship = null; floor = null; local = default; return false;
         }
 
-        public ShipPieceState AddPiece(ItemData data, Vector2 displayPosition, int quarterTurns, out ShipState ship)
+        public ShipPieceState AddPiece(ItemData data, Vector2 displayPosition, int quarterTurns, out ShipState ship, bool registerMachine = true)
         {
             ShipPartConfiguration config = ResolvePartConfiguration(data);
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
@@ -118,7 +116,7 @@ namespace FlatWorld.Spaceflight
                 if (contents.ContainsKey(piece.PieceId)) throw new InvalidOperationException("部件真实身份已登记到另一艘飞船。");
                 data.transform.position = new Vector3((float)((cellX + .5d) * ship.CellSizeMeters),
                     (float)((cellY + .5d) * ship.CellSizeMeters), 0f);
-                if (machine != null)
+                if (machine != null && registerMachine)
                 {
                     var state = MachineWorld.ReadMachineState(data); state.RotationQuarterTurns = quarterTurns & 3;
                     state.Hp = (float)piece.Health;

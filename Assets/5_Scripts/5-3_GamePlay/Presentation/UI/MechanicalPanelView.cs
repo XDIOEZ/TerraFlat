@@ -17,6 +17,8 @@ public sealed class MechanicalPanelView : MonoBehaviour
     public RectTransform InnerField; // 加工内容底板，随面板模式同步缩放。
     public Slider BatteryCharge; // 电池专用的自下而上只读电量条。
     public TMP_Text BatteryPercentage;
+    public Slider GasCapacity; // 气罐以实际气压相对安全上限显示只读容量。
+    public TMP_Text GasPercentage;
     public Button ActionButton;
     public Button DismantleButton; // 已安装组件的拆回入口。
     public Button CloseButton;
@@ -135,6 +137,43 @@ public sealed class MechanicalPanelView : MonoBehaviour
         if (displayedBatteryPercentage == percentage) return;
         displayedBatteryPercentage = percentage;
         BatteryPercentage.SetText("{0}%", percentage);
+    }
+    #endregion
+
+    #region 气罐容量显示
+    private int displayedGasPercentage = -1;
+
+    public void SetGasCapacityVisible(bool visible)
+    {
+        if (GasCapacity == null)
+        {
+            if (visible) throw new System.InvalidOperationException(name + " 缺少正式气罐容量控件。");
+            return;
+        }
+        if (visible && GasPercentage == null)
+            throw new System.InvalidOperationException(name + " 缺少正式气罐百分比文字。");
+        GasCapacity.gameObject.SetActive(visible);
+        if (!visible) return;
+
+        var statusRect = (RectTransform)StatusScroll.transform;
+        statusRect.anchorMin = Vector2.zero;
+        statusRect.anchorMax = Vector2.one;
+        statusRect.pivot = new Vector2(.5f, .5f);
+        statusRect.offsetMin = new Vector2(StatusPadding, StatusPadding);
+        statusRect.offsetMax = new Vector2(-272, -StatusPadding);
+    }
+
+    // 填充最多占满罐体，超压仍保留真实百分比并标红。
+    public void SetGasCapacity(float pressureRatio)
+    {
+        pressureRatio = Mathf.Max(0, pressureRatio);
+        GasCapacity.SetValueWithoutNotify(Mathf.Clamp01(pressureRatio));
+        GasCapacity.targetGraphic.color = pressureRatio > 1f
+            ? new Color(.85f, .25f, .2f, 1) : new Color(.18f, .58f, .35f, 1);
+        int percentage = Mathf.RoundToInt(pressureRatio * 100f);
+        if (displayedGasPercentage == percentage) return;
+        displayedGasPercentage = percentage;
+        GasPercentage.SetText("{0}%", percentage);
     }
     #endregion
 }

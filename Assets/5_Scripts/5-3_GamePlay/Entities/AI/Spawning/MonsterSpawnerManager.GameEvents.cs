@@ -11,6 +11,8 @@ public partial class MonsterSpawnerManager
 
     /// <summary>事件候选重试共用相机缓冲；相机数量增加时完整扩容，不截断视野查询。</summary>
     private Camera[] _eventCameras = Array.Empty<Camera>();
+    private int _eventCameraFrame = -1;
+    private int _eventCameraCount;
     private float _nextEventSearchTime;
 
     public int GetEventSpawnPlayerCount(string worldKey)
@@ -126,10 +128,15 @@ public partial class MonsterSpawnerManager
     private bool IsVisibleByAnyActiveCamera(Vector3 worldPosition, float padding = 0.05f)
     {
         int required = Camera.allCamerasCount;
-        if (_eventCameras.Length < required)
-            Array.Resize(ref _eventCameras, Mathf.NextPowerOfTwo(Mathf.Max(4, required)));
-        int count = Camera.GetAllCameras(_eventCameras);
-        for (int i = 0; i < count; i++)
+        // 同一帧复用相机列表，减少多只生物休眠判定时重复访问 Unity 相机目录。
+        if (_eventCameraFrame != Time.frameCount || required != _eventCameraCount)
+        {
+            if (_eventCameras.Length < required)
+                Array.Resize(ref _eventCameras, Mathf.NextPowerOfTwo(Mathf.Max(4, required)));
+            _eventCameraCount = Camera.GetAllCameras(_eventCameras);
+            _eventCameraFrame = Time.frameCount;
+        }
+        for (int i = 0; i < _eventCameraCount; i++)
         {
             Camera camera = _eventCameras[i];
             if (camera == null || !camera.isActiveAndEnabled)

@@ -240,6 +240,26 @@ public static class GameplayTestShipProbe
         var rotatedCells = new JArray();
         foreach (ShipCell cell in ShipGeometry.Footprint(rotated))
             rotatedCells.Add(new JObject { ["x"] = cell.X, ["y"] = cell.Y });
+        var floorIndexShip = NewShip("floor-index");
+        floorIndexShip.Pieces.Add(rotated);
+        bool indexedRotated = ShipAtmosphereService.TryGetFloor(floorIndexShip, 0, -2, out ShipPieceState indexed) &&
+            ReferenceEquals(indexed, rotated) && ShipAtmosphereService.HasFloor(floorIndexShip, 0, -2);
+        bool indexedOutsideRejected = !ShipAtmosphereService.TryGetFloor(floorIndexShip, 1, -2, out _) &&
+            !ShipAtmosphereService.HasFloor(floorIndexShip, 1, -2);
+        var overlapping = Piece("overlapping-index-floor", ShipPieceKind.Floor, -2, -3);
+        floorIndexShip.Pieces.Add(overlapping);
+        floorIndexShip.NotifyStructureChanged();
+        bool firstFloorWins = ShipAtmosphereService.TryGetFloor(floorIndexShip, -2, -3, out indexed) &&
+            ReferenceEquals(indexed, rotated);
+        floorIndexShip.Pieces.Remove(rotated);
+        floorIndexShip.NotifyStructureChanged();
+        bool floorIndexRebuilt = ShipAtmosphereService.TryGetFloor(floorIndexShip, -2, -3, out indexed) &&
+            ReferenceEquals(indexed, overlapping) &&
+            !ShipAtmosphereService.TryGetFloor(floorIndexShip, 0, -2, out _);
+        floorIndexShip.Pieces.Clear();
+        floorIndexShip.NotifyStructureChanged();
+        bool floorIndexCleared = !ShipAtmosphereService.TryGetFloor(floorIndexShip, -2, -3, out _) &&
+            !ShipAtmosphereService.HasFloor(floorIndexShip, -2, -3);
         var stripped = NewShip("stripped");
         var orphan = Piece("orphan-console", ShipPieceKind.Console, 0, 0);
         stripped.Pieces.Add(orphan);
@@ -250,7 +270,10 @@ public static class GameplayTestShipProbe
             ["detached"] = detached, ["unsupportedDestroyed"] = unsupported.Destroyed,
             ["removeAccepted"] = removed, ["split"] = ShipReadings(split),
             ["bridgeDestroyed"] = bridge.Destroyed, ["originalId"] = ship.ShipId,
-            ["rotatedFootprint"] = rotatedCells, ["noFloorGroups"] = empty.Count,
+            ["rotatedFootprint"] = rotatedCells, ["indexedRotated"] = indexedRotated,
+            ["indexedOutsideRejected"] = indexedOutsideRejected, ["firstFloorWins"] = firstFloorWins,
+            ["floorIndexRebuilt"] = floorIndexRebuilt, ["floorIndexCleared"] = floorIndexCleared,
+            ["noFloorGroups"] = empty.Count,
             ["noFloorWreck"] = stripped.IsWreck, ["noFloorOrphanDestroyed"] = orphan.Destroyed
         };
     }
@@ -350,6 +373,15 @@ public static class GameplayTestShipProbe
         bool addOxygen = ShipAtmosphereService.TryAddGas(ship, 2, 2, Gas(FluidIds.Oxygen, plannedMoles * .21m));
         bool addNitrogen = ShipAtmosphereService.TryAddGas(ship, 2, 2, Gas(FluidIds.Nitrogen, plannedMoles * .79m));
         ShipEnvironmentSnapshot filled = ShipAtmosphereService.GetEnvironment(ship, 2, 2);
+        ShipEnvironmentSnapshot sealedOutside = filled.WithOutside(PlanetShipAtmosphereSource.Vacuum);
+        ShipEnvironmentSnapshot openFloor = ShipAtmosphereService.GetEnvironment(ship, 0, 0);
+        ShipEnvironmentSnapshot openVacuum = openFloor.WithOutside(PlanetShipAtmosphereSource.Vacuum);
+        ShipEnvironmentSnapshot openWarm = openFloor.WithOutside(new PlanetShipAtmosphereSource(null, 12d));
+        bool sealedOutsideIgnored = sealedOutside.IsSealed &&
+            sealedOutside.PressureKPa == filled.PressureKPa &&
+            sealedOutside.OxygenPartialPressureKPa == filled.OxygenPartialPressureKPa &&
+            sealedOutside.TemperatureCelsius == filled.TemperatureCelsius;
+        bool emptyVacuumTake = PlanetShipAtmosphereSource.Vacuum.TakeGas(1m).Count == 0;
         decimal beforeTake = roomCount > 0 ? ShipAtmosphereService.TotalMoles(ship.Compartments[0].Gas) : 0m;
         bool take = ShipAtmosphereService.TryTakeGas(ship, 2, 2, FluidIds.Oxygen, 10m, out FluidBatch taken);
         var supplyInventory = new FluidInventory();
@@ -376,17 +408,44 @@ public static class GameplayTestShipProbe
         ship.Pieces.Add(repaired); ship.NotifyStructureChanged();
         ShipAtmosphereService.RebuildCompartments(ship, exhaust);
         decimal repairedMoles = ship.Compartments.Count > 0 ? ShipAtmosphereService.TotalMoles(ship.Compartments[0].Gas) : 0m;
+        // 同一压力模式反复切换外界温压，验证复用的资格委托始终读取本轮压力。
+        var pressureShip = NewShip("pressure-pattern");
+        var pressureWall = Piece("pressure-wall", ShipPieceKind.Wall, 0, 0);
+        pressureWall.Health = pressureWall.MaxHealth = 200d;
+        pressureWall.MinimumPressureKPa = 80d;
+        pressureWall.MaximumPressureKPa = 120d;
+        pressureWall.PressureDamagePerKPaSecond = 1d;
+        pressureWall.MinimumTemperatureCelsius = -500d;
+        pressureWall.MaximumTemperatureCelsius = 500d;
+        pressureShip.Pieces.Add(pressureWall);
+        bool safeInitiallyChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 100d, 20d, .5d);
+        double healthAfterSafe = pressureWall.Health;
+        bool lowChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 20d, 20d, .5d);
+        double healthAfterLow = pressureWall.Health;
+        bool highChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 200d, 20d, .25d);
+        double healthAfterHigh = pressureWall.Health;
+        bool safeAgainChanged = ShipAtmosphereService.StepStructureEnvironment(pressureShip, 100d, 20d, 1d);
         return new JObject
         {
             ["rooms"] = roomCount, ["volumeLiters"] = volume, ["plannedMoles"] = plannedMoles,
             ["oxygenAdded"] = addOxygen, ["nitrogenAdded"] = addNitrogen, ["filled"] = Environment(filled),
+            ["sealedOutsideIgnored"] = sealedOutsideIgnored,
+            ["openVacuum"] = Environment(openVacuum), ["openWarm"] = Environment(openWarm),
+            ["emptyVacuumTake"] = emptyVacuumTake,
             ["beforeTakeMoles"] = beforeTake, ["takeAccepted"] = take, ["takenMoles"] = taken.GasMoles,
             ["supplyPrepared"] = prepareSupply, ["supplyAccepted"] = supplied, ["receivedMoles"] = received,
             ["sourceBeforeMoles"] = sourceBefore, ["sourceAfterMoles"] = sourceAfter,
             ["blocksPassageClosed"] = blockedClosed, ["blocksPassageOpen"] = door?.BlocksPassage == true,
             ["doorOpenEnvironment"] = Environment(opened), ["breachAccepted"] = broken,
             ["beforeLeakMoles"] = beforeLeak, ["breachedRooms"] = breachedRooms, ["releasedMoles"] = leaked,
-            ["repairedRooms"] = ship.Compartments.Count, ["repairedMoles"] = repairedMoles
+            ["repairedRooms"] = ship.Compartments.Count, ["repairedMoles"] = repairedMoles,
+            ["pressurePattern"] = new JObject
+            {
+                ["safeInitiallyChanged"] = safeInitiallyChanged, ["afterSafe"] = healthAfterSafe,
+                ["lowChanged"] = lowChanged, ["afterLow"] = healthAfterLow,
+                ["highChanged"] = highChanged, ["afterHigh"] = healthAfterHigh,
+                ["safeAgainChanged"] = safeAgainChanged, ["afterSafeAgain"] = pressureWall.Health
+            }
         };
     }
 
@@ -607,8 +666,64 @@ public static class GameplayTestShipProbe
             ["cardinal"] = cardinal, ["centerAllowed"] = centerAllowed, ["centerReason"] = centerReason,
             ["exhaustObstacleAllowed"] = obstacleAllowed, ["exhaustObstacleReason"] = obstacleReason,
             ["pipeAllowed"] = pipeAllowed, ["unsupportedAllowed"] = unsupportedAllowed,
-            ["unsupportedReason"] = unsupportedReason
+            ["unsupportedReason"] = unsupportedReason, ["rotation"] = CaptureEngineRotation()
         };
+    }
+
+    // 读取正式引擎配置并采样同一轮换和预览姿态入口，不操作当前手持物或船体。
+    private static JObject CaptureEngineRotation()
+    {
+        TextAsset asset = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
+        if (asset == null) throw new InvalidOperationException("缺少机械目录，无法采样引擎旋转。");
+        MachineCatalogDocument catalog = JsonConvert.DeserializeObject<MachineCatalogDocument>(asset.text);
+        var engines = new JArray();
+        foreach (string id in new[] { "ShipChemicalEngine", "ShipChemicalEngine_GM" })
+        {
+            MachineDefinition definition = catalog.Nodes.Find(value => value?.Id == id)
+                ?? throw new InvalidOperationException("机械目录缺少引擎：" + id);
+            definition.Validate();
+            engines.Add(new JObject { ["id"] = id, ["rotatable"] = definition.Rotatable,
+                ["steps"] = definition.PlacementRotationSteps, ["cycle"] = CaptureRotationCycle(definition) });
+        }
+
+        var previews = new JArray();
+        foreach (float shipAngle in new[] { 0f, 37f, -123f })
+            for (int quarterTurns = 0; quarterTurns < 4; quarterTurns++)
+            {
+                Quaternion child = Quaternion.Euler(0f, 0f, quarterTurns * 90f);
+                float installedAngle = shipAngle + quarterTurns * 90f;
+                Quaternion root = BuildingShadow.ResolvePlacementRootRotation(installedAngle, quarterTurns);
+                Quaternion groundRoot = BuildingShadow.ResolvePlacementRootRotation(quarterTurns * 90f, quarterTurns);
+                Quaternion plainRoot = BuildingShadow.ResolvePlacementRootRotation(installedAngle, 0);
+                previews.Add(new JObject { ["shipAngle"] = shipAngle, ["quarterTurns"] = quarterTurns,
+                    ["worldAngle"] = (root * child).eulerAngles.z,
+                    ["rootAngle"] = root.eulerAngles.z, ["groundRootAngle"] = groundRoot.eulerAngles.z,
+                    ["plainWorldAngle"] = plainRoot.eulerAngles.z });
+            }
+
+        var rejected = new JArray();
+        foreach (int steps in new[] { -1, 0, 1, 3, 5 })
+        {
+            string exception = string.Empty;
+            try { new MachineDefinition { Id = "rotation-invalid", PlacementRotationSteps = steps }.Validate(); }
+            catch (ArgumentException error) { exception = error.GetType().Name; }
+            rejected.Add(new JObject { ["steps"] = steps, ["exception"] = exception });
+        }
+        return new JObject { ["engines"] = engines, ["previews"] = previews, ["rejected"] = rejected,
+            ["shaftCycle"] = CaptureRotationCycle(new MachineDefinition { Kind = "shaft" }),
+            ["gearCycle"] = CaptureRotationCycle(new MachineDefinition { Kind = "gear" }) };
+    }
+
+    private static JArray CaptureRotationCycle(MachineDefinition definition)
+    {
+        var values = new JArray(0);
+        int quarterTurns = 0;
+        for (int press = 0; press < 4; press++)
+        {
+            quarterTurns = definition.NextPlacementQuarterTurns(quarterTurns);
+            values.Add(quarterTurns);
+        }
+        return values;
     }
 
     private static JObject CaptureOptical()

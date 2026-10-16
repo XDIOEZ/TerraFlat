@@ -667,5 +667,100 @@ internal static class GameplayTestFluidNetworks
             ["secondGas"] = second.GasMoles, ["secondLiquid"] = second.LiquidMoles
         };
     }
+
+    // 正式地表与船本地格往返只采样真实引用、坐标和库存，业务判断交给 Lua。
+    internal static JObject CaptureGroundScopeRoundtrip(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var f = new GameplayFluidScope(surface: true);
+        string groundKey = f.Key, shipKey = GetShipScopeKey(f.NewShip());
+        MachineEntity a = f.Add("GasTankBlock_Iron", rotation: 0);
+        MachineEntity b = f.Add("GasTankBlock_Iron", 1, rotation: 1);
+        MachineEntity pipe = f.Add("FluidPipe", 2, rotation: 2);
+        MachineEntity mill = f.Add("Millstone", 2, rotation: 3);
+        RecipeProcessor processor = mill.Processor ?? throw new InvalidOperationException("石磨夹具没有创建正式加工器。");
+        MachineEntity[] members = { a, b, pipe, mill };
+        MachineEntity[] fluidMembers = { a, b, pipe };
+        int[] ids = members.Select(node => node.Id).ToArray();
+        var ground = members.ToDictionary(node => node.Id,
+            node => new MachineScopePlacement(node.Cell, node.Snapshot.transform.position, node.RotationQuarterTurns));
+        var local = new Dictionary<int, MachineScopePlacement>
+        {
+            [a.Id] = new(new Vector2Int(0, 0), new Vector3(.5f, .5f), 3),
+            [b.Id] = new(new Vector2Int(1, 0), new Vector3(1.5f, .5f), 2),
+            [pipe.Id] = new(new Vector2Int(2, 0), new Vector3(2.5f, .5f), 1),
+            [mill.Id] = new(new Vector2Int(2, 0), new Vector3(2.5f, .5f), 0)
+        };
+        f.Rebuild();
+        Fill(a, FluidIds.Oxygen, 4m); Fill(a, FluidIds.PureWater, 0m, 40m);
+        Fill(pipe, FluidIds.Oxygen, .1m);
+
+        JObject Sample(string key)
+        {
+            using var lease = UseScope(key);
+            var total = Total(fluidMembers);
+            var nodes = new JArray();
+            foreach (MachineEntity node in members)
+            {
+                MachineState saved = ReadMachineState(node.Snapshot);
+                nodes.Add(new JObject
+                {
+                    ["id"] = node.Id, ["scopeKey"] = node.ScopeKey, ["owned"] = Contains(node),
+                    ["sameNode"] = ReferenceEquals(node, GetAt(node.Cell, node.Definition.Layer)),
+                    ["cellX"] = node.Cell.x, ["cellY"] = node.Cell.y,
+                    ["positionX"] = node.Snapshot.transform.position.x, ["positionY"] = node.Snapshot.transform.position.y,
+                    ["quarterTurns"] = node.RotationQuarterTurns,
+                    ["stateQuarterTurns"] = node.State?.RotationQuarterTurns,
+                    ["savedQuarterTurns"] = saved.RotationQuarterTurns
+                });
+            }
+            return new JObject
+            {
+                ["nodes"] = nodes, ["processorPresent"] = mill.Processor != null,
+                ["sameProcessor"] = ReferenceEquals(processor, mill.Processor),
+                ["gas"] = total.Gas, ["liquid"] = total.Liquid, ["energy"] = total.Energy,
+                ["tanksShared"] = ReferenceEquals(GetFluidInventory(a), GetFluidInventory(b)),
+                ["pipeGas"] = GetFluidInventory(pipe).GasMoles
+            };
+        }
+
+        int OwnedIn(string key)
+        {
+            using var lease = UseScope(key);
+            return members.Count(Contains);
+        }
+
+        JObject initial = Sample(groundKey);
+        TransferScopeNodes(groundKey, shipKey, ids, node => local[node.Id]);
+        JObject flight = Sample(shipKey);
+        flight["groundOwnedCount"] = OwnedIn(groundKey);
+
+        MachineEntity blocker;
+        using (UseScope(groundKey)) blocker = f.Add("GasTankBlock_Steel");
+        bool rejected = false;
+        string rejection = null;
+        try { TransferScopeNodes(shipKey, groundKey, ids, node => ground[node.Id]); }
+        catch (InvalidOperationException error) { rejected = true; rejection = error.Message; }
+        JObject afterRejected = Sample(shipKey);
+        afterRejected["rejected"] = rejected;
+        afterRejected["reason"] = rejection;
+        afterRejected["groundOwnedCount"] = OwnedIn(groundKey);
+        using (UseScope(groundKey))
+        {
+            afterRejected["sameBlocker"] = ReferenceEquals(blocker, GetAt(blocker.Cell, blocker.Definition.Layer));
+            DiscardPlacementCandidate(blocker.Id);
+            f.ForgetDetached(blocker);
+        }
+
+        TransferScopeNodes(shipKey, groundKey, ids, node => ground[node.Id]);
+        JObject landed = Sample(groundKey);
+        landed["shipOwnedCount"] = OwnedIn(shipKey);
+        return new JObject
+        {
+            ["groundKey"] = groundKey, ["shipKey"] = shipKey,
+            ["initial"] = initial, ["flight"] = flight,
+            ["afterRejected"] = afterRejected, ["landed"] = landed
+        };
+    }
     #endregion
 }

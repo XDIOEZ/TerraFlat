@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Localization;
 using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
@@ -478,14 +479,17 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             float current = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, match, Data.Temperature);
             // 当前燃料的温度上限不足时明确提示换燃料，避免一直等待。
             float maximum = CalculateMaximumTemperature(AcceptsAirflow ? Entity.Airflow : 0f);
-            string action = !IsBurning ? "补充燃料并点火" : maximum < activeReaction.MinTemperature
-                ? $"当前燃料最高 {maximum:0}°C · 需要更高温燃料或鼓风"
-                : "正在加热";
-            return $"材料 {current:0}°C / 需要 {activeReaction.MinTemperature:0}°C · " +
-                action;
+            string action = !IsBurning ? FlatWorldLocalizationService.GetUiText("补充燃料并点火")
+                : maximum < activeReaction.MinTemperature
+                    ? FlatWorldLocalizationService.GetUiFormat("当前燃料最高 {0:0}°C · 需要更高温燃料或鼓风", maximum)
+                    : FlatWorldLocalizationService.GetUiText("正在加热");
+            return FlatWorldLocalizationService.GetUiFormat(
+                "材料 {0:0}°C / 需要 {1:0}°C · {2}", current, activeReaction.MinTemperature, action);
         }
-        if (!preview.Success) return preview.Message;
-        return IsBurning ? "正在加工 · 等待产出" : "材料就绪 · 补充燃料并点火";
+        if (!preview.Success) return string.IsNullOrWhiteSpace(preview.Message)
+            ? string.Empty : FlatWorldLocalizationService.GetUiText(preview.Message);
+        return FlatWorldLocalizationService.GetUiText(IsBurning
+            ? "正在加工 · 等待产出" : "材料就绪 · 补充燃料并点火");
     }
 
     private CraftingResult PreviewSmelting()

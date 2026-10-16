@@ -23,6 +23,7 @@ public static partial class RuntimeUIPrefabBuilder
             try
             {
                 ConfigureIndustrialPanel(root, name);
+                if (name != "UI_Spacesuit") EnsureGasCapacityGauge(root.GetComponent<MechanicalPanelView>());
                 string path = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/" + name + ".prefab";
                 PrefabUtility.SaveAsPrefabAsset(root, path); EnsureRuntimePrefabAddressable(path);
             }
@@ -44,6 +45,7 @@ public static partial class RuntimeUIPrefabBuilder
         root.name = name;
         var view = root.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("机械基础面板缺少正式视图。");
         view.PreservePrefabLayout = true;
+        view.SetBatteryVisible(false);
         ((RectTransform)root.transform).sizeDelta = new Vector2(760, name == "UI_IndustrialFluid" ? 680 : 600);
         view.ProcessingVisuals = root.GetComponentsInChildren<Transform>(true)
             .Where(child => child.name.Contains("INPUT", StringComparison.Ordinal) || (name == "UI_IndustrialFluid" || name == "UI_Spacesuit") && child.name.Contains("OUTPUT", StringComparison.Ordinal))
@@ -91,5 +93,74 @@ public static partial class RuntimeUIPrefabBuilder
     }
     private static void LayoutIndustrialControl(RectTransform control, Vector2 position, Vector2 size, Vector2 anchor, Vector2 pivot)
     { control.anchorMin = control.anchorMax = anchor; control.pivot = pivot; control.anchoredPosition = position; control.sizeDelta = size; }
+    #endregion
+
+    #region 气罐容量正式控件
+    // 只有气罐页面持有罐体控件，业务会话决定显隐和真实气压比例。
+    private static void EnsureGasCapacityGauge(MechanicalPanelView view)
+    {
+        if (view.GasCapacity != null && view.GasPercentage != null) return;
+        var gaugeObject = new GameObject("FWUI_GasCapacity", typeof(RectTransform), typeof(Slider));
+        gaugeObject.layer = view.InnerField.gameObject.layer;
+        var gauge = (RectTransform)gaugeObject.transform;
+        gauge.SetParent(view.InnerField, false);
+        gauge.anchorMin = new Vector2(1, 0); gauge.anchorMax = Vector2.one;
+        gauge.anchoredPosition = new Vector2(-148, 0);
+        gauge.sizeDelta = new Vector2(200, -64);
+
+        Color border = new Color(.78f, .78f, .78f, 1);
+        Color background = new Color(.2f, .2f, .2f, 1);
+        Image body = AddGasCapacityImage("Body", gauge, border, Vector2.zero, Vector2.zero);
+        body.rectTransform.anchorMax = new Vector2(1, .76f);
+        AddGasCapacityImage("Background", body.transform, background, new Vector2(3, 3), new Vector2(-3, -3));
+        Image neck = AddGasCapacityImage("Neck", gauge, border, Vector2.zero, Vector2.zero);
+        neck.rectTransform.anchorMin = new Vector2(.17f, .76f);
+        neck.rectTransform.anchorMax = new Vector2(.83f, 1);
+        AddGasCapacityImage("Background", neck.transform, background, new Vector2(3, 3), new Vector2(-3, -3));
+
+        var fillAreaObject = new GameObject("FillArea", typeof(RectTransform));
+        fillAreaObject.layer = gaugeObject.layer;
+        var fillArea = (RectTransform)fillAreaObject.transform;
+        fillArea.SetParent(body.transform, false);
+        fillArea.anchorMin = Vector2.zero; fillArea.anchorMax = Vector2.one;
+        fillArea.offsetMin = new Vector2(6, 6); fillArea.offsetMax = new Vector2(-6, -6);
+        Image fill = AddGasCapacityImage("Fill", fillArea, new Color(.18f, .58f, .35f, 1), Vector2.zero, Vector2.zero);
+
+        var labelObject = new GameObject("Percentage", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        labelObject.layer = gaugeObject.layer;
+        labelObject.transform.SetParent(body.transform, false);
+        var label = labelObject.GetComponent<TextMeshProUGUI>();
+        label.font = view.Status.font; label.fontSharedMaterial = view.Status.fontSharedMaterial;
+        label.fontSize = 32; label.enableAutoSizing = true;
+        label.fontSizeMin = 18; label.fontSizeMax = 32;
+        label.alignment = TextAlignmentOptions.Center;
+        label.enableWordWrapping = false; label.overflowMode = TextOverflowModes.Truncate;
+        label.color = Color.white; label.raycastTarget = false;
+        label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
+        label.rectTransform.offsetMin = new Vector2(4, 4); label.rectTransform.offsetMax = new Vector2(-4, -4);
+        label.text = "50%";
+
+        var slider = gaugeObject.GetComponent<Slider>();
+        slider.fillRect = fill.rectTransform; slider.targetGraphic = fill;
+        slider.direction = Slider.Direction.BottomToTop;
+        slider.minValue = 0; slider.maxValue = 1;
+        slider.interactable = false; slider.transition = Selectable.Transition.None;
+        slider.navigation = new Navigation { mode = Navigation.Mode.None };
+        slider.SetValueWithoutNotify(.5f);
+        view.GasCapacity = slider; view.GasPercentage = label;
+        gaugeObject.SetActive(false);
+    }
+
+    private static Image AddGasCapacityImage(string name, Transform parent, Color color, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        var child = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        child.layer = parent.gameObject.layer;
+        child.transform.SetParent(parent, false);
+        var image = child.GetComponent<Image>();
+        image.color = color; image.raycastTarget = false;
+        image.rectTransform.anchorMin = Vector2.zero; image.rectTransform.anchorMax = Vector2.one;
+        image.rectTransform.offsetMin = offsetMin; image.rectTransform.offsetMax = offsetMax;
+        return image;
+    }
     #endregion
 }

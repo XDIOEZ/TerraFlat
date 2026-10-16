@@ -16,6 +16,7 @@
       "lines": [
         "我有点饿了"
       ],
+      "localizedLines": { "en": ["I'm getting a little hungry."] },
       "duration": 3.2,
       "cooldown": 50,
       "once": false,
@@ -37,6 +38,7 @@
       "lines": [
         "我快饿扁了"
       ],
+      "localizedLines": { "en": ["I'm starving. I need food soon."] },
       "duration": 3.5,
       "cooldown": 35,
       "once": false,
@@ -58,6 +60,7 @@
       "lines": [
         "我撑不了多久"
       ],
+      "localizedLines": { "en": ["I can't keep going much longer without food."] },
       "duration": 3.8,
       "cooldown": 22,
       "once": false,

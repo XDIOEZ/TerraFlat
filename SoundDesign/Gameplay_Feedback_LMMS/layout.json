@@ -1,0 +1,122 @@
+[
+  {
+    "cue": "building.place",
+    "name": "搭建落位",
+    "variant": 1,
+    "seconds": 0.42,
+    "peakDb": -9,
+    "rmsDb": -24,
+    "startSeconds": 0.125,
+    "file": "Assets/Audio/Generated/building.place__01.wav"
+  },
+  {
+    "cue": "building.place",
+    "name": "搭建落位",
+    "variant": 2,
+    "seconds": 0.42,
+    "peakDb": -9,
+    "rmsDb": -24,
+    "startSeconds": 2.125,
+    "file": "Assets/Audio/Generated/building.place__02.wav"
+  },
+  {
+    "cue": "building.reject",
+    "name": "无效位置提示",
+    "variant": 1,
+    "seconds": 0.29,
+    "peakDb": -15,
+    "rmsDb": -29,
+    "startSeconds": 4.125,
+    "file": "Assets/Audio/Generated/building.reject__01.wav"
+  },
+  {
+    "cue": "building.reject",
+    "name": "无效位置提示",
+    "variant": 2,
+    "seconds": 0.29,
+    "peakDb": -15,
+    "rmsDb": -29,
+    "startSeconds": 6.125,
+    "file": "Assets/Audio/Generated/building.reject__02.wav"
+  },
+  {
+    "cue": "craft.complete",
+    "name": "手工制作完成",
+    "variant": 1,
+    "seconds": 0.34,
+    "peakDb": -12,
+    "rmsDb": -27,
+    "startSeconds": 8.125,
+    "file": "Assets/Audio/Generated/craft.complete__01.wav"
+  },
+  {
+    "cue": "craft.complete",
+    "name": "手工制作完成",
+    "variant": 2,
+    "seconds": 0.34,
+    "peakDb": -12,
+    "rmsDb": -27,
+    "startSeconds": 10.125,
+    "file": "Assets/Audio/Generated/craft.complete__02.wav"
+  },
+  {
+    "cue": "smelt.complete",
+    "name": "熔炼出炉金属轻鸣",
+    "variant": 1,
+    "seconds": 0.53,
+    "peakDb": -11,
+    "rmsDb": -28,
+    "startSeconds": 12.125,
+    "file": "Assets/Audio/Generated/smelt.complete__01.wav"
+  },
+  {
+    "cue": "smelt.complete",
+    "name": "熔炼出炉金属轻鸣",
+    "variant": 2,
+    "seconds": 0.53,
+    "peakDb": -11,
+    "rmsDb": -28,
+    "startSeconds": 14.125,
+    "file": "Assets/Audio/Generated/smelt.complete__02.wav"
+  },
+  {
+    "cue": "fire.seed",
+    "name": "引火火星",
+    "variant": 1,
+    "seconds": 0.44,
+    "peakDb": -13,
+    "rmsDb": -28,
+    "startSeconds": 16.125,
+    "file": "Assets/Audio/Generated/fire.seed__01.wav"
+  },
+  {
+    "cue": "fire.seed",
+    "name": "引火火星",
+    "variant": 2,
+    "seconds": 0.44,
+    "peakDb": -13,
+    "rmsDb": -28,
+    "startSeconds": 18.125,
+    "file": "Assets/Audio/Generated/fire.seed__02.wav"
+  },
+  {
+    "cue": "furnace.ignite",
+    "name": "炉火点燃",
+    "variant": 1,
+    "seconds": 0.69,
+    "peakDb": -10,
+    "rmsDb": -26,
+    "startSeconds": 20.125,
+    "file": "Assets/Audio/Generated/furnace.ignite__01.wav"
+  },
+  {
+    "cue": "furnace.ignite",
+    "name": "炉火点燃",
+    "variant": 2,
+    "seconds": 0.69,
+    "peakDb": -10,
+    "rmsDb": -26,
+    "startSeconds": 22.125,
+    "file": "Assets/Audio/Generated/furnace.ignite__02.wav"
+  }
+]

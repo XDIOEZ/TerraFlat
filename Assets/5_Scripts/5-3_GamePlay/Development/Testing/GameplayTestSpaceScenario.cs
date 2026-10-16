@@ -60,7 +60,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     {
         error = null;
         bool supported = GameplayTestUniverseProbe.Supports(operation) || GameplayTestShipProbe.Supports(operation) ||
-            operation is "session" or "ship_templates" or "ship_flight" or "ship_collision" or "ship_damage_live" or "sector_transition" or "space_visit";
+            operation is "session" or "ship_templates" or "ship_flight" or "ship_landing" or "ship_collision" or "ship_damage_live" or
+                "ship_ground_combat_projection" or "sector_transition" or "space_visit";
         if (!supported) error = "未开放的太空测试操作：" + operation;
         else if (operation == "sector_transition")
         {
@@ -90,8 +91,10 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             "session" => ObserveSession(value => sample = value),
             "ship_templates" => ReadTemplates(value => sample = value),
             "ship_flight" => FlyTemplates(value => sample = value),
+            "ship_landing" => FlyTemplates(value => sample = value, landingOnly: true),
             "ship_collision" => CollideProductionFloors(value => sample = value),
             "ship_damage_live" => DamageProductionLongShip(value => sample = value),
+            "ship_ground_combat_projection" => ProbeGroundCombatProjection(value => sample = value),
             "space_visit" => VisitConfiguredSectors(value => sample = value),
             "sector_transition" => CrossSector(argument, value => sample = value),
             _ => throw new ArgumentException("操作不是会话测试：" + operation)
@@ -118,6 +121,134 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             if (homeChanged && Application.isPlaying) yield return ReturnHome();
         }
         finally { Dispose(); }
+    }
+    #endregion
+
+    #region 地表武器对飞船受击位置回归
+    private IEnumerator ProbeGroundCombatProjection(Action<JObject> completed)
+    {
+        if (session.IsSpaceView) throw new InvalidOperationException("地表飞船攻击投影必须在地表测试世界验证。");
+        Player player = CurrentPlayer();
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        SpacePassengerState passenger = session.GetPassenger(player);
+        if (passenger.Supported) throw new InvalidOperationException("投影测试玩家必须在船外自由移动。");
+        string world = SceneManager.GetActiveScene().name;
+        SpaceVector2 originalPosition = passenger.FreeMotion.PositionMeters;
+        string originalWorld = passenger.LandingWorldKey;
+        ShipState ship = null;
+        ShipPieceState piece = null;
+        ShipFlightState flight = null;
+        ShipFlightPhase originalPhase = default;
+        double originalHeight = 0d;
+        string originalFlightWorld = null;
+        GameObject holder = null;
+        Item axe = null;
+        Mod_Damage damage = null;
+        try
+        {
+            // 使用正式放置和真实青铜斧伤害盒，让命中最终提交到船件权威血量。
+            var existingShips = new HashSet<string>(StringComparer.Ordinal);
+            foreach (ShipState existing in session.State.Ships) existingShips.Add(existing.ShipId);
+            Vector2 site = WorldLocalPresentation.ProjectPosition(
+                WorldLocalPresentation.ToLogical((Vector2)player.transform.position + Vector2.right * 12f),
+                player.transform.position);
+            ItemData floorData = GameRes.ExistingInstance.CreateItemData("ShipFloor_Iron");
+            floorData.Stack.Amount = 1f;
+            Mod_Building.SetInstalledDataState(floorData);
+            piece = session.AddPiece(floorData, site, 0, out ship);
+            if (existingShips.Contains(ship.ShipId)) throw new InvalidOperationException("测试地板错误地连接到已有飞船。");
+            session.CommitPiece(ship, piece);
+            flight = session.GetFlight(ship.ShipId) ?? throw new InvalidOperationException("测试飞船缺少地表飞行状态。");
+            originalPhase = flight.Phase; originalHeight = flight.HeightMeters; originalFlightWorld = flight.SurfaceWorldKey;
+            if (flight.Phase != ShipFlightPhase.Landed || flight.SurfaceWorldKey != world)
+                throw new InvalidOperationException("测试飞船不是当前地表世界的已降落船体。");
+            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
+                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
+            Vector2 logical = new((float)x, (float)y);
+            Vector2 target = WorldLocalPresentation.ProjectPosition(logical, player.transform.position);
+            holder = new GameObject("Lua飞船攻击_独立手持挂点");
+            holder.transform.position = target + Vector2.right * 4f;
+            axe = ItemMgr.Instance.InstantiateHeldItem(GameRes.ExistingInstance.CreateItemData("Axe_Bronze"), player, holder.transform);
+            axe.Load();
+            damage = axe.GetComponentInChildren<Mod_Damage>(true);
+            BoxCollider2D hitbox = damage?.DamageCollider as BoxCollider2D;
+            if (hitbox == null || axe.Sprite?.sprite == null)
+                throw new InvalidOperationException("真实青铜斧没有加载伤害盒或武器 Sprite。");
+            // 使用正式武器起手入口建立攻击窗口和命中预约，不能直接打开碰撞盒假冒挥砍。
+            damage.BindToWeaponRenderer(axe.Sprite);
+            damage.StartAttack();
+            double before = piece.Health;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterMiss = piece.Health;
+            holder.transform.position += (Vector3)(target - (Vector2)hitbox.transform.TransformPoint(hitbox.offset));
+
+            // 故意令乘员自由坐标和世界键过期，验证攻击始终使用当前武器姿态。
+            passenger.FreeMotion.PositionMeters = originalPosition + new SpaceVector2(40d, 25d);
+            passenger.LandingWorldKey = null;
+            bool resolved = SpaceSession.TryGetCombatWorldKey(axe, out string resolvedWorld);
+            Vector2 hitPoint = SpaceSession.ProjectSurfaceCombatPoint(axe, world, logical,
+                (Vector2)hitbox.transform.TransformPoint(hitbox.offset));
+
+            flight.SurfaceWorldKey = "other-world-test-only";
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterWrongWorld = piece.Health;
+            flight.SurfaceWorldKey = originalFlightWorld;
+            flight.Phase = ShipFlightPhase.Lifting; flight.HeightMeters = 25d;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterAirborne = piece.Health;
+            flight.Phase = originalPhase; flight.HeightMeters = originalHeight;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterHit = piece.Health;
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterRepeated = piece.Health;
+            // 下一次正式挥砍必须清空上一次的目标预约，才能再次命中同一个船件。
+            damage.StopAttack();
+            damage.StartAttack();
+            damage.QueryProjectileSweep(Vector2.zero);
+            double afterNextAttack = piece.Health;
+            // 测试相同首次接触比例时优先最近位置，再以候选身份稳定破同距。
+            var contacts = new List<CombatColliderHit2D>
+            {
+                new(1, 0f, new Vector2(12f, 10f)),
+                new(2, .2f, new Vector2(10f, 10f)),
+                new(4, 0f, new Vector2(11f, 10f)),
+                new(3, 0f, new Vector2(11f, 10f))
+            };
+            ShipCombatBridge.Instance.SortContacts(contacts, new Vector2(10f, 10f));
+            completed(new JObject
+            {
+                ["scope"] = "live-ground-ship-weapon-hit", ["world"] = world,
+                ["worldResolved"] = resolved, ["resolvedWorld"] = resolvedWorld ?? string.Empty,
+                ["hitError"] = Vector2.Distance(hitPoint, target),
+                ["staleOffset"] = (passenger.FreeMotion.PositionMeters - originalPosition).Magnitude,
+                ["weapon"] = axe.itemData.IDName, ["piece"] = piece.ItemId,
+                ["beforeHealth"] = before, ["afterMiss"] = afterMiss,
+                ["afterWrongWorld"] = afterWrongWorld, ["afterAirborne"] = afterAirborne,
+                ["afterHit"] = afterHit, ["afterRepeated"] = afterRepeated,
+                ["afterNextAttack"] = afterNextAttack,
+                ["orderedContacts"] = new JArray(contacts[0].CandidateId, contacts[1].CandidateId,
+                    contacts[2].CandidateId, contacts[3].CandidateId),
+                ["limitations"] = "真实青铜斧模块经正式武器查询和船件权威结算，尚未验证动画挥砍时序或多人客户端表现。"
+            });
+        }
+        finally
+        {
+            passenger.FreeMotion.PositionMeters = originalPosition;
+            passenger.LandingWorldKey = originalWorld;
+            if (flight != null)
+            { flight.Phase = originalPhase; flight.HeightMeters = originalHeight; flight.SurfaceWorldKey = originalFlightWorld; }
+            try
+            {
+                try { if (damage != null && damage.IsDamageEnabled()) damage.StopAttack(); }
+                finally { if (axe != null) ItemMgr.Instance.DespawnItem(axe, saveData: false); }
+            }
+            finally
+            {
+                if (holder != null) UnityEngine.Object.Destroy(holder);
+                if (piece != null && ship != null) session.RollbackPiece(ship, piece);
+            }
+        }
+        yield break;
     }
     #endregion
 
@@ -187,7 +318,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         SpaceSessionState restored = SaveDataMgr.DeserializeSpaceState(SaveDataMgr.Instance.SaveData.SpaceStateJson);
         completed(new JObject { ["scope"] = "live-session", ["before"] = before,
             ["after"] = SessionSnapshot(), ["savedVersion"] = restored.Version,
-            ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count });
+            ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count,
+            ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()) });
     }
 
     private IEnumerator ReadTemplates(Action<JObject> completed)
@@ -313,7 +445,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     #endregion
 
     #region 模板飞船起飞与导航降落
-    private IEnumerator FlyTemplates(Action<JObject> completed)
+    private IEnumerator FlyTemplates(Action<JObject> completed, bool landingOnly = false)
     {
         if (session.IsSpaceView) throw new InvalidOperationException("模板起飞测试必须从隔离地表世界开始。");
         ProtectPlayer();
@@ -329,40 +461,66 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         {
             FixedStructureDefinition template = ships[index];
             yield return PrepareSite(template);
-            if (!ShipFixedStructureBuilder.TryBuild(CurrentPlayer(), template, out ShipState ship, out string reason))
+            string groundWorld = SceneManager.GetActiveScene().name;
+            JObject beforeBuild = GroundBuildingSnapshot(Array.Empty<int>());
+            if (!ShipFixedStructureBuilder.TryBuild(CurrentPlayer(), template,
+                    out IReadOnlyList<ShipGroundBuildingStore.Entry> buildings, out string reason))
                 throw new InvalidOperationException(reason);
             homeChanged = true;
-            double deadline = Time.realtimeSinceStartupAsDouble + 10d;
-            string console = null;
-            while (console == null && Time.realtimeSinceStartupAsDouble < deadline)
-            { console = session.ResolveConsole(ship.ShipId); yield return null; }
-            if (console == null) throw new InvalidOperationException("真实模板船的控制台未获得供电。");
-            ShipPieceState consolePiece = ship.Pieces.Find(piece => piece.PieceId == console);
+            var groundIds = new HashSet<int>();
+            ShipGroundBuildingStore.Entry consoleEntry = null;
+            foreach (ShipGroundBuildingStore.Entry entry in buildings)
+            {
+                groundIds.Add(entry.Guid);
+                if (SpaceSession.ResolvePartConfiguration(entry.Data)?.Kind == ShipPieceKind.Console) consoleEntry ??= entry;
+            }
+            if (consoleEntry?.Machine == null) throw new InvalidOperationException("普通地面船型缺少机器控制台。");
+            string console = consoleEntry.Guid.ToString(CultureInfo.InvariantCulture);
             Player player = CurrentPlayer();
             Camera camera = Camera.main ?? throw new InvalidOperationException("测试玩家没有镜头。");
-            Vector2 position = session.DisplayPoint(ship, consolePiece.CellX + .5d, consolePiece.CellY + .5d);
+            Vector2 position = WorldLocalPresentation.ProjectPosition(consoleEntry.Machine.Snapshot.transform.position);
             Mod_PlayerTraits traits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
             if (traits == null || !traits.TryTeleportToScreenPosition(camera.WorldToScreenPoint(position)))
                 throw new InvalidOperationException("正式 GM 入口无法准备控制台旁的玩家。");
-            yield return Wait(.25d);
-            bool entered = session.EnterConsole(CurrentPlayer(), console);
-            if (!entered) throw new InvalidOperationException("正式控制台拒绝进入驾驶。");
-            JObject landed = ShipSnapshot(ship);
-            JObject surfaceViews = ShipViewSnapshot(ship);
+            yield return WaitUntil(() => ShipGroundAssembly.TryGetGroundConsole(CurrentPlayer(), consoleEntry.Guid,
+                    out MachineEntity node) && node.ElectricalPowerRatio >= .999f,
+                10d, "普通地面控制台未获得供电。");
+            JObject landed = GroundBuildingSnapshot(groundIds);
+            JObject surfaceViews = GroundViewSnapshot(groundIds, null);
             if (!ShipFixedStructureBuilder.TryRefill(CurrentPlayer(), templates, out reason))
                 throw new InvalidOperationException(reason);
-            JObject filled = ShipSnapshot(ship);
+            JObject filled = GroundBuildingSnapshot(groundIds);
             IsMigrationExpected = true;
-            if (!session.ToggleIgnition(console)) throw new InvalidOperationException("真实模板船点火被拒绝。");
+            if (!ShipGroundAssembly.TryLaunch(CurrentPlayer(), consoleEntry.Guid, out ShipState ship, out reason))
+                throw new InvalidOperationException(reason);
+            bool entered = session.EnterConsole(CurrentPlayer(), console);
+            if (!entered) throw new InvalidOperationException("正式控制台拒绝进入已装配飞船的驾驶位。");
             JObject lifting = ShipSnapshot(ship);
+            JObject liftingGround = GroundBuildingSnapshot(groundIds);
             yield return WaitUntil(() => session.GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising && Ready(),
                 90d, "飞船没有完成正式起飞和太空迁移。");
             IsMigrationExpected = false;
             ProtectCurrentPlayer();
+            yield return WaitUntil(() => ShipPresentationReady(ship), 15d, "起飞后的整船与部件表现没有完成场景绑定。");
             JObject cruising = ShipSnapshot(ship);
             JObject cruisingViews = ShipViewSnapshot(ship);
             session.ExitConsole(CurrentPlayer());
             controlledConsole = console;
+            if (landingOnly)
+            {
+                // 落地专项复用相同的正式起飞准备，省去惯性、导航和跨区的无关迁移。
+                JObject landing = null;
+                yield return LandTemplateAndRefuel(ship, console, groundIds, groundWorld, value => landing = value);
+                landing["templateId"] = template.Id; landing["enteredConsole"] = entered;
+                landing["beforeBuild"] = beforeBuild; landing["landed"] = landed; landing["filled"] = filled;
+                landing["lifting"] = lifting; landing["liftingGround"] = liftingGround; landing["cruising"] = cruising;
+                landing["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews,
+                    ["descending"] = landing["descendingViews"].DeepClone(), ["returned"] = landing["returnedViews"].DeepClone() };
+                landing.Remove("descendingViews"); landing.Remove("returnedViews");
+                results.Add(landing);
+                if (index + 1 < ships.Count) yield return ReturnHome();
+                continue;
+            }
             session.SetControl(console, Vector2.up, 0f);
             yield return Wait(.5d);
             JObject thrust = ShipSnapshot(ship);
@@ -384,49 +542,37 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             JObject shipTransition = null;
             yield return CrossOwnedShip(ship, value => shipTransition = value);
             JObject beforeLanding = ShipSnapshot(ship);
-            bool landingAccepted = session.RequestLanding(console);
-            if (!landingAccepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
-            IsMigrationExpected = true;
-            yield return WaitUntil(() => (session.GetFlight(ship.ShipId)?.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating) && Ready(),
-                90d, "飞船未完成正式降落。");
-            IsMigrationExpected = false;
-            JObject landedAgain = ShipSnapshot(ship);
-            // Ready 是入世状态，不等于本帧 LateUpdate 已恢复全部船件表现；有界等待真实绑定。
-            yield return WaitUntil(() => Ready() && ShipPresentationReady(ship), 8d,
-                "降落后的飞船部件表现未恢复到当前世界。",
-                () => ShipViewSnapshot(ship).ToString(Newtonsoft.Json.Formatting.None));
-            JObject returnedViews = ShipViewSnapshot(ship);
+            ShipFlightState landingFlight = session.GetFlight(ship.ShipId) ??
+                throw new InvalidOperationException("降落前缺少正式飞行记录。");
+            JObject returned = null;
+            yield return LandTemplateAndRefuel(ship, console, groundIds, groundWorld, value => returned = value);
+            // 普通建筑移交会注销飞行记录，保留原引用读取正式触地结算的最终冲击。
+            JObject landedAgain = (JObject)returned["landedAgain"];
+            landedAgain["landingResolved"] = landingFlight.LandingResolved;
+            landedAgain["impactSpeed"] = landingFlight.ImpactSpeed;
+            landedAgain["height"] = landingFlight.HeightMeters;
             results.Add(new JObject { ["templateId"] = template.Id, ["enteredConsole"] = entered,
+                ["beforeBuild"] = beforeBuild, ["liftingGround"] = liftingGround,
                 ["landed"] = landed, ["filled"] = filled, ["lifting"] = lifting, ["cruising"] = cruising,
                 ["thrust"] = thrust, ["coast"] = coast, ["turned"] = turned, ["navigated"] = navigated,
                 ["navigationAccepted"] = navigationAccepted, ["navigationDistance"] = distance,
                 ["arrivalDistance"] = SpaceGameplaySettings.Current.NavigationArrivalDistanceMeters,
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
                 ["shipTransition"] = shipTransition, ["beforeLanding"] = beforeLanding,
-                ["landingAccepted"] = landingAccepted, ["landedAgain"] = landedAgain,
-                ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returnedViews } });
-            // 最后一艘保留正式降落现场，供紧随其后的 Lua 截图使用。
+                ["landingAccepted"] = returned["landingAccepted"], ["landedAgain"] = landedAgain,
+                ["autoRefuel"] = returned["autoRefuel"],
+                ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returned["returnedViews"] } });
+            // 最后一艘保留正式降落现场，由宿主自动采集截图。
             if (index + 1 < ships.Count) yield return ReturnHome();
         }
-        completed(new JObject { ["scope"] = "live-ship-flight", ["ships"] = results });
+        completed(new JObject { ["scope"] = landingOnly ? "live-ship-landing" : "live-ship-flight", ["ships"] = results });
     }
 
     private JObject ShipViewSnapshot(ShipState ship)
     {
-        // 仅采样本用例船体的真实表现，其他船的旧命中不能代替它的往返复用。
-        JObject result = session.ShipViewCacheSnapshot();
-        var pieceIds = new HashSet<string>();
-        foreach (ShipPieceState piece in ship.Pieces) pieceIds.Add(piece.PieceId);
-        var pieces = new JArray();
-        foreach (JObject row in (JArray)result["pieces"])
-            if (pieceIds.Contains(row.Value<string>("id"))) pieces.Add(row.DeepClone());
-        var presenters = new JArray();
-        foreach (JObject row in (JArray)result["presenters"])
-            if (row.Value<string>("id") == ship.ShipId) presenters.Add(row.DeepClone());
-        result["pieces"] = pieces;
-        result["presenters"] = presenters;
-        result["scene"] = SceneManager.GetActiveScene().name;
-        return result;
+        var pieceIds = new HashSet<int>();
+        foreach (ShipPieceState piece in ship.Pieces) pieceIds.Add(int.Parse(piece.PieceId, CultureInfo.InvariantCulture));
+        return GroundViewSnapshot(pieceIds, ship.ShipId);
     }
 
     private bool ShipPresentationReady(ShipState ship)
@@ -674,11 +820,14 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         decimal hydrogen = 0m, oxygen = 0m;
         var inventories = new HashSet<FluidInventory>();
         var nodes = new List<MachineEntity>();
+        var machines = new JArray();
         using (MachineWorld.UseScope("ship:" + ship.ShipId))
         {
             MachineWorld.CollectNodes(nodes);
             foreach (MachineEntity node in nodes)
             {
+                machines.Add(new JObject { ["guid"] = node.Id, ["scope"] = node.ScopeKey,
+                    ["itemId"] = node.Snapshot.IDName });
                 if (node.Definition.Fluid?.Kind != "tank") continue;
                 FluidInventory inventory = MachineWorld.GetFluidInventory(node);
                 if (inventory == null || !inventories.Add(inventory)) continue;
@@ -687,7 +836,12 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             }
         }
         double output = 0d;
-        foreach (ShipPieceState piece in ship.Pieces) output += session.GetEngineOutput(piece.PieceId);
+        var pieces = new JArray();
+        foreach (ShipPieceState piece in ship.Pieces)
+        {
+            output += session.GetEngineOutput(piece.PieceId);
+            pieces.Add(new JObject { ["id"] = piece.PieceId, ["itemId"] = piece.ItemId, ["alive"] = piece.IsAlive });
+        }
         return new JObject { ["id"] = ship.ShipId, ["phase"] = flight?.Phase.ToString(),
             ["sector"] = Sector(ship.Sector), ["position"] = Vector(new SpaceVector2(ship.PositionX, ship.PositionY)),
             ["velocity"] = Vector(new SpaceVector2(ship.VelocityX, ship.VelocityY)), ["angle"] = ship.AngleRadians,
@@ -695,7 +849,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["impactSpeed"] = flight?.ImpactSpeed, ["landingResolved"] = flight?.LandingResolved,
             ["poweredDescent"] = flight?.PoweredDescent,
             ["hydrogen"] = (double)hydrogen, ["oxygen"] = (double)oxygen, ["engineOutput"] = output,
-            ["spaceView"] = session.IsSpaceView, ["surfaceWorld"] = flight?.SurfaceWorldKey };
+            ["spaceView"] = session.IsSpaceView, ["surfaceWorld"] = flight?.SurfaceWorldKey,
+            ["pieces"] = pieces, ["machines"] = machines };
     }
 
     private static bool Contains(IReadOnlyCollection<SpaceSectorId> values, SpaceSectorId sector)
@@ -717,6 +872,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         if (!string.IsNullOrEmpty(controlledConsole)) session?.ClearControl(controlledConsole);
         var cleanupErrors = new List<Exception>();
         try { CleanupDamageFixtures(); }
+        catch (Exception exception) { cleanupErrors.Add(exception); }
+        try { CleanupGroundFuelFixtures(); }
         catch (Exception exception) { cleanupErrors.Add(exception); }
         for (int index = contactFixtures.Count - 1; index >= 0; index--)
         {

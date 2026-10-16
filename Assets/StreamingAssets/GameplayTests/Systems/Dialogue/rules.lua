@@ -26,3 +26,10 @@ for _, json in ipairs({ "{}", "{", (string.gsub(valid, "weather.isRaining", "pro
         assert(data.count == 0 and data.issues > 0, "错误台词配置未隔离或未报告问题")
     end, "台词配置拒绝错误 schema、Fact 或 JSON")
 end
+
+test.system("dialogue", "builtin_locales", {}, function(data)
+    assert(data.entries > 0 and data.lines > 0, "没有加载到正式自言自语资源")
+    assert(data.issues == 0, "正式自言自语资源存在无效配置")
+    assert(#data.incompleteIds == 0 and data.translatedLines == data.lines,
+        "正式台词仍缺英文或中英文句数不一致：" .. table.concat(data.incompleteIds, ", "))
+end, "正式角色台词完整覆盖中英文")

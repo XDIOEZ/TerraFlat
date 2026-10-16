@@ -327,14 +327,17 @@ namespace FlatWorld.Localization
         public static string GetUiFormat(string sourceTemplate, params object[] arguments)
         {
             string localizedTemplate = GetUiText(sourceTemplate);
+            if (arguments == null || arguments.Length == 0)
+                return localizedTemplate;
             try
             {
-                return string.Format(localizedTemplate, arguments ?? Array.Empty<object>());
+                return string.Format(localizedTemplate, arguments);
             }
             catch (FormatException)
             {
-                // 翻译表模板损坏时保留原模板，避免运行时 UI 直接报错。
-                return string.Format(sourceTemplate ?? string.Empty, arguments ?? Array.Empty<object>());
+                // 译文占位符异常时回退原文；原文也异常则直接显示原文，不能让提示打断玩法。
+                try { return string.Format(sourceTemplate ?? string.Empty, arguments); }
+                catch (FormatException) { return sourceTemplate ?? string.Empty; }
             }
         }
 

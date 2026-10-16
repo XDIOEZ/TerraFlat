@@ -14,7 +14,7 @@ description: "FlatWorld 角色台词、Facts、请求调度、冷却、一次性
 | `ScreenSpaceSpeechBubblePresenter` | 气泡显示 |
 | `SeasonSpeechContextContributor` | 比例化季节预告 Fact |
 
-台词 JSON 位于 `Assets/StreamingAssets/GameConfig/`；气泡 Prefab 位于 `Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/`。
+本体自言自语 JSON 位于 `Assets/Resources/Dialogue/Soliloquy/`；每个 `lines` 数组配同句数的 `localizedLines.en`，由 `dialogue/builtin_locales` 快速规则查漏。气泡 Prefab 位于 `Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/`。
 
 - 玩家台词仅由 `Player.IsLocalProfile` 调度；一次性标记存入 `ItemSpecialDataJsonStore` 命名空间并保留其他系统字段。
 - Provider 产请求，调度器管理时序，Presenter 显示。玩法语义事件由 `FlatWorld.Dialogue` 独立桥接筛选本地玩家、完成本地化并 `Say`；GamePlay 无 Dialogue 反向依赖。

@@ -251,7 +251,7 @@ public sealed partial class GameplayTestSpaceScenario
                 ["flightCount"] = includeViews ? CountDamageFlights(ship.ShipId) : 0,
                 ["wreckViewCount"] = wreckCount, ["wreckGuid"] = ship.WreckGuid, ["shellGuid"] = shellGuid,
                 ["presentationBodies"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<Rigidbody2D>(true).Length,
-                ["presentationColliders"] = viewRoot == null ? 0 : viewRoot.GetComponents<CustomCollider2D>().Length,
+                ["presentationColliders"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<CustomCollider2D>(true).Length,
                 ["presentationItems"] = viewRoot == null ? 0 : viewRoot.GetComponentsInChildren<Item>(true).Length,
                 ["physicsBodies"] = physicsBodies, ["physicsColliders"] = physicsColliders
             });

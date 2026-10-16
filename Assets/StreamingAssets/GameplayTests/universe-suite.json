@@ -28,6 +28,12 @@
       "enabled": true
     },
     {
+      "id": "ship_landing_gameplay",
+      "name": "飞船普通建筑起降与落地管路自动加油专项",
+      "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_landing_gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "ship_damage_gameplay",
       "name": "真实长船局部截断与冷残骸继续破碎",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_damage_gameplay.lua",

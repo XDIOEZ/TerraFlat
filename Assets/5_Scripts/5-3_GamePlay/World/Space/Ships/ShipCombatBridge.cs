@@ -12,6 +12,27 @@ namespace FlatWorld.Spaceflight
     {
         #region 船体本地结构的战斗适配
         public static readonly ShipCombatBridge Instance = new();
+        private readonly HitOrder hitOrder = new();
+
+        private sealed class HitOrder : IComparer<CombatColliderHit2D>
+        {
+            public Vector2 SweepStart;
+            public int Compare(CombatColliderHit2D left, CombatColliderHit2D right)
+            {
+                int order = left.Fraction.CompareTo(right.Fraction);
+                if (order != 0) return order;
+                order = (left.Point - SweepStart).sqrMagnitude.CompareTo((right.Point - SweepStart).sqrMagnitude);
+                return order != 0 ? order : left.CandidateId.CompareTo(right.CandidateId);
+            }
+        }
+
+        // 所有查询使用同一稳定命中顺序；测试探针也复用此入口，不复制排序算法。
+        internal void SortContacts(List<CombatColliderHit2D> contacts, Vector2 sweepStart)
+        {
+            hitOrder.SweepStart = sweepStart;
+            contacts.Sort(hitOrder);
+        }
+
         public bool TryGetIdentity(Item item, out CombatIdentity identity)
         {
             identity = default;
@@ -27,8 +48,16 @@ namespace FlatWorld.Spaceflight
             bool spaceCombat = SpaceSession.TryGetCombatFrame(weapon.item, out SpaceSectorPosition canonicalOrigin, out Vector2 presentationOrigin);
             string surfaceWorld = null;
             bool hasSurfaceWorld = !spaceCombat && SpaceSession.TryGetCombatWorldKey(weapon.item, out surfaceWorld);
-            var candidates = new List<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor, Mod_DamageReceiver Receiver)>();
-            var hits = new List<CombatColliderHit2D>();
+            if (!spaceCombat && !hasSurfaceWorld) return;
+            SpaceSession.SurfaceCombatProjection surfaceProjection = hasSurfaceWorld
+                ? SpaceSession.CaptureSurfaceCombatProjection(weapon.item, surfaceWorld, (Vector2)shape.Center)
+                : default;
+            // 攻击窗口内的三份临时名单统一租用池，连续挥砍不再反复分配托管数组。
+            using var candidatesLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor,
+                Mod_DamageReceiver Receiver)>.Get(out var candidates);
+            using var hitsLease = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out var hits);
+            using var resolvedLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
+                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>.Get(out var resolvedHits);
             using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
             {
                 foreach (ShipState ship in session.State.Ships)
@@ -41,21 +70,18 @@ namespace FlatWorld.Spaceflight
                     if (!ShipSurfaceState.AllowsDamage(flight, context.DeliveryCapabilities)) continue;
                     foreach (ShipPieceState piece in ship.Pieces)
                     {
-                        if (!piece.IsAlive || !GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition)) continue;
+                        if (!piece.IsAlive) continue;
+                        ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
+                            (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
                         Vector2 anchor;
                         if (spaceCombat)
                         {
-                            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
-                                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
                             anchor = presentationOrigin + SpaceSectorCoordinates.Difference(
                                 new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y)), canonicalOrigin).ToVector2();
                         }
                         else
                         {
-                            ShipGeometry.LocalToWorld(ship, (piece.CellX + .5d) * ship.CellSizeMeters,
-                                (piece.CellY + .5d) * ship.CellSizeMeters, out double x, out double y);
-                            anchor = SpaceSession.ProjectSurfaceCombatPoint(weapon.item, surfaceWorld,
-                                new Vector2((float)x, (float)y), (Vector2)shape.Center)
+                            anchor = surfaceProjection.Project(new Vector2((float)x, (float)y))
                                 + Vector2.up * (float)ShipSurfaceState.VisualRise(flight);
                         }
                         float width = (float)((piece.QuarterTurns % 2 == 0 ? piece.Width : piece.Height) * ship.CellSizeMeters);
@@ -63,6 +89,7 @@ namespace FlatWorld.Spaceflight
                         float radius = Mathf.Sqrt(width * width + height * height);
                         if (Math.Abs(anchor.x - shape.BoundsCenter.x) > shape.BoundsExtents.x + radius ||
                             Math.Abs(anchor.y - shape.BoundsCenter.y) > shape.BoundsExtents.y + radius) continue;
+                        // 物品定义只在实际接触后读取，避免每次挥砍对同一部件重复查表。
                         PerceptionShape2D local = PerceptionShape2D.Aabb(new float2((width - (float)ship.CellSizeMeters) * .5f, (height - (float)ship.CellSizeMeters) * .5f), new float2(width * .5f, height * .5f));
                         double angle = ship.AngleRadians;
                         ShipGeometry.Rotate(local.Center.x, local.Center.y, angle, out double offsetX, out double offsetY);
@@ -94,9 +121,8 @@ namespace FlatWorld.Spaceflight
                     }
                 physics.Query(shape, hits);
             }
-            hits.Sort((left, right) => left.Fraction.CompareTo(right.Fraction));
-            var resolvedHits = new List<(ShipState Ship, ShipPieceState Piece, RuntimeItemDefinition Definition,
-                Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>();
+            // 重叠目标优先离攻击起点最近者，比较器复用，避免排序闭包带来每次挥砍的 GC。
+            SortContacts(hits, (Vector2)(shape.Center - shape.SweepDelta));
             foreach (CombatColliderHit2D contact in hits)
             {
                 var target = candidates[contact.CandidateId];

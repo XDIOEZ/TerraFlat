@@ -193,6 +193,9 @@ namespace FlatWorld.Audio
         public const string UiHover = "ui.hover";
         public const string UiConfirm = "ui.confirm";
         public const string UiCancel = "ui.cancel";
+        public const string UiInventorySwap = "ui.inventory.swap";
+        public const string UiEquipmentEquip = "ui.equipment.equip";
+        public const string UiEquipmentUnequip = "ui.equipment.unequip";
         public const string ItemAct = "item.act";
         public const string ItemPickup = "item.pickup";
         public const string ItemDrop = "item.drop";
@@ -219,6 +222,31 @@ namespace FlatWorld.Audio
         public const string FoodCrunch = "food.crunch";
         public const string FoodDrink = "food.drink";
         public const string PlayerWetClothesMoveLoop = "player.wet_clothes.move.loop";
+
+        #region 玩法事务反馈
+
+        public const string BuildingPlace = "building.place";
+        public const string BuildingReject = "building.reject";
+        public const string CraftComplete = "craft.complete";
+        public const string SmeltComplete = "smelt.complete";
+        public const string FireSeed = "fire.seed";
+        public const string FurnaceIgnite = "furnace.ignite";
+
+        #endregion
+
+        #region 脚步与钓鱼
+
+        public const string FootstepDirt = "player.footstep.dirt";
+        public const string FootstepGrass = "player.footstep.grass";
+        public const string FootstepSand = "player.footstep.sand";
+        public const string FootstepStone = "player.footstep.stone";
+        public const string FootstepSnow = "player.footstep.snow";
+        public const string FootstepWater = "player.footstep.water";
+        public const string FishingCast = "fishing.cast";
+        public const string FishingHook = "fishing.hook";
+        public const string FishingReel = "fishing.reel";
+
+        #endregion
 
         #region 天气音效
 
