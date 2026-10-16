@@ -31,6 +31,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 绑定实际槽内 ItemData 的 MassChanged，供船载质量缓存使用。新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
 - 携带量统计主背包与快捷栏，超重状态由库存数据事件更新。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。
 - 物品修改经 `TryConsumeFromSlot/TrySetSlotItemAmount` 等事务。`InventoryContextResolver` 以 ItemData 引用/Guid 找真实所属库存；快捷栏修改后按真实槽索引刷新。`BindController/UnbindController` 只管理输入，数据/UI 监听由 `UnbindRuntimeDataEvents` 清理。
+- `Inventory_Data.GetItemSlot` 对空槽表或越界索引返回 null，不得回退第0格；库存 UI 的删除、装备和书籍输入调用链必须检查有效槽。
 - 服务器远端玩家的 Hotbar/Bag 加载真实数据和手持物，不创建 UI 或绑定本机输入；视觉副本用 `ApplyRemoteNetworkData`，权威手持用 `ApplyNetworkAuthorityData`，不能混用。太空拾取 commit 同时走服务器真实库存事务，Host 共享库存只入包一次；客户端选择请求不能改库存数量。
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
 - 长按触屏的整组放置在进度完成时提交并消费手势；进度先缓冲 0.2 秒再显示，原总时长不延长。空槽起手才交 ScrollRect。拖拽来源允许同槽、同非零 Guid、同定义的事务替换实例；持续加工在被拖槽上暂缓。

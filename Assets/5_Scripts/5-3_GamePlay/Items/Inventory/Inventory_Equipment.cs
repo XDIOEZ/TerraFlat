@@ -167,7 +167,9 @@ public class Inventory_Equipment : Inventory
 
     public override void OnLeftClick(int index)
     {
-        ItemSlot slot = Data.GetItemSlot(index);
+        // 过期的装备 UI 点击不得映射到其他槽位或触发库存越界错误。
+        if (Data?.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
+            return;
 
         if (DefaultTarget_Inventory?.Data?.itemSlots == null || DefaultTarget_Inventory.Data.itemSlots.Count == 0)
         {

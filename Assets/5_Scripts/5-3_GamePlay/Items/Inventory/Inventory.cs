@@ -824,6 +824,8 @@ public class Inventory
             {
                 int targetIndex = index < 0 ? fixedIndex : index;
                 ItemSlot targetSlot = Data.GetItemSlot(targetIndex);
+                // 虚拟化槽位的旧回调不得误删第0格，也不能对无效槽执行扣除。
+                if (targetSlot == null) return;
                 Data.RemoveItemAll(targetSlot, targetIndex);
             });
 

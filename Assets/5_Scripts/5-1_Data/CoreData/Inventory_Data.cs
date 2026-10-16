@@ -178,8 +178,9 @@ public partial class Inventory_Data
 
     public ItemSlot GetItemSlot(int index)
     {
-        if (index < 0 || index >= itemSlots.Count)
-            return itemSlots[0];
+        // 无效下标不能回退到首格，否则书籍等双槽功能可能误读或误扣第一格物品。
+        if (itemSlots == null || index < 0 || index >= itemSlots.Count)
+            return null;
         return itemSlots[index];
     }
 

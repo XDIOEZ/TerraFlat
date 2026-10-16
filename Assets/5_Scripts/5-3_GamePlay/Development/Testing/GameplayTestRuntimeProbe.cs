@@ -15,6 +15,8 @@ public static partial class GameplayTestRuntimeProbe
     {
         ["testing/resource_cache"] = (_, _) => GameplayTestResourceCache.Sample(),
         ["core_lifecycle/live_entry"] = CaptureLiveEntry,
+        ["inventory/creative_snapshot"] = CaptureCreativeInventory,
+        ["inventory/slot_bounds"] = CaptureInventorySlotBounds,
         ["world_streaming/live_window"] = CaptureLiveWindow,
         ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,
         ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
@@ -66,6 +68,62 @@ public static partial class GameplayTestRuntimeProbe
                     throw new ArgumentException("测试操作 ID 含非法字符。");
         }
         return system + "/" + operation;
+    }
+
+    #endregion
+
+    #region 正式玩家背包采样
+
+    // 只读取隔离玩家的正式背包状态，由 Lua 检查动态槽位及重复填充后的物品守恒。
+    private static JObject CaptureCreativeInventory(Player player, JObject args)
+    {
+        Inventory_Data data = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)
+            ?.GetDefaultTargetInventory()?.Data;
+        if (data?.itemSlots == null)
+            throw new InvalidOperationException("正式玩家背包尚未加载，无法采样创造背包。");
+
+        var items = new JArray();
+        for (int i = 0; i < data.itemSlots.Count; i++)
+        {
+            ItemData item = data.itemSlots[i]?.itemData;
+            if (item == null) continue;
+            items.Add(new JObject
+            {
+                ["slot"] = i,
+                ["id"] = item.IDName,
+                ["guid"] = item.Guid,
+                ["hasStack"] = item.Stack != null,
+                ["amount"] = item.Stack?.Amount ?? 0f,
+                ["canBePickedUp"] = item.Stack?.CanBePickedUp ?? false
+            });
+        }
+
+        return new JObject
+        {
+            ["slotCount"] = data.itemSlots.Count,
+            ["unlimitedSlots"] = data.HasUnlimitedSlots,
+            ["unlimitedCarry"] = data.HasUnlimitedCarryCapacity,
+            ["unlimitedStack"] = data.HasUnlimitedStackSize,
+            ["items"] = items
+        };
+    }
+
+    private static JObject CaptureInventorySlotBounds(Player player, JObject args)
+    {
+        Inventory_Data data = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)
+            ?.GetDefaultTargetInventory()?.Data;
+        if (data?.itemSlots == null || data.itemSlots.Count == 0)
+            throw new InvalidOperationException("缺少已加载的正式玩家背包槽位。");
+
+        var empty = new Inventory_Data(new List<ItemSlot>(), "lua-inventory-empty");
+        return new JObject
+        {
+            ["validIndexPreserved"] = data.itemSlots[0] != null &&
+                ReferenceEquals(data.GetItemSlot(0), data.itemSlots[0]),
+            ["negativeRejected"] = data.GetItemSlot(-1) == null,
+            ["beyondRejected"] = data.GetItemSlot(data.itemSlots.Count) == null,
+            ["emptyRejected"] = empty.GetItemSlot(0) == null
+        };
     }
 
     #endregion
