@@ -5,6 +5,8 @@ description: "针对已知 FlatWorld Bug 的复现、根因修复与循环复测
 
 # FlatWorld 已知 Bug 修复
 
+用户同时要求“启动 Lua 测试 + Debug 循环”时，按 [GameDeveloperLoop 的 Lua 测试驱动模式](../game-developer-loop/SKILL.md) 执行：以 Lua 测试报告复现、修复、补强断言并循环复测，**不通过 GamePlayMCP 让 AI 游玩**。以下 MCP 现场取证仅用于其他调试模式。
+
 ## 复现与证据
 
 最小现场包括原复现步骤、动作参数、前后权威状态、相关 Console 堆栈及必要截图。逻辑证据来自生产代码和 GamePlayMCP，视觉证据来自实际 Game View。编译和无报错不等于问题已消失。

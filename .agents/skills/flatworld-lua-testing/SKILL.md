@@ -9,6 +9,8 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 
 **明确指定 PlayMode Lua 时优先遵循用户范围**：用户说“测试/启动 PlayMode Lua 测试集”“只测 PlayMode”等，**仅执行 gameplay 清单的 PlayMode Lua**，不自动运行 EditMode 测试、安全前置测试或编辑态快速 Lua 规则。完整入口用 `python Tools/GameplayTesting/run_suite.py --playmode-only`；指定系统用 `--systems <系统ID> --playmode-only`；MCP 用 `gameplay_test_pipeline(action="run", suitePath="GameplayTests/all-systems-gameplay.json", playModeOnly=true)`。**不要**误用不带该标志的 gameplay 清单（默认会先执行 EditMode），也不要换成 `--systems ... --integration`（默认先跑规则）。只有用户明确要求规则、EditMode 或完整多阶段回归时才运行它们；跳过前置不等于它们通过。
 
+**Lua 测试 + Debug 循环模式**：当用户同时要求两者时，本 Skill 的测试集是发现、复现和验收 Bug 的主链路，**不转 GamePlayMCP 让 AI 游玩**。循环执行“选择 Lua 测试 → 运行并读报告 → 修复生产 Bug → 检查覆盖盲区并补强 Lua 断言 → 重跑及扩大关联回归”，即使已有用例通过也要补强必要的边界测试，直到目标范围测试全部通过且相关报错消除；不把跳过、未覆盖或运行受阻当成无 Bug。测试流水线 MCP 可负责启动和查询自动测试，但不得代替 Lua 断言或进行玩家操作。模式入口见 [GameDeveloperLoop](../game-developer-loop/SKILL.md)。
+
 ## 导航
 
 以 `Assets/5_Scripts/5-3_GamePlay/Development/Testing/` 为测试代码根：
