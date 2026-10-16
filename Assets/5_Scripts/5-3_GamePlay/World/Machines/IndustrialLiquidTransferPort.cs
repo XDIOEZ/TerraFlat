@@ -58,7 +58,10 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
     private bool Describe(string id, decimal moles, out LiquidTransferBatch batch)
     {
         FluidDefinition fluid = Inventory.Catalog.Find(id);
-        batch = new LiquidTransferBatch(fluid.LiquidId, AvailableServings(fluid, moles), (float)(Inventory.GetTemperatureKelvin() - 273.15));
+        float available = AvailableServings(fluid, moles);
+        if (!float.IsFinite(available) || available <= 0f)
+        { batch = default; return false; }
+        batch = new LiquidTransferBatch(fluid.LiquidId, available, (float)(Inventory.GetTemperatureKelvin() - 273.15));
         return moles > 0 && fluid.AllowIndustrialTransport && !string.IsNullOrEmpty(fluid.LiquidId);
     }
     // 对外份数向下取到可回转的浮点值，保留真实尾量而不预览超过库存的液体。
@@ -66,6 +69,7 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
     {
         if (moles <= 0m) return 0f;
         float servings = (float)FluidUnits.MolToServings(fluid, moles);
+        if (!float.IsFinite(servings)) return 0f;
         while (servings > 0f && FluidUnits.ServingsToMol(fluid, (decimal)servings) > moles)
             servings = BitConverter.Int32BitsToSingle(BitConverter.SingleToInt32Bits(servings) - 1);
         return servings;

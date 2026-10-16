@@ -18,6 +18,7 @@ internal static class GameplayTestFluidDevices
         ["device_portable_fill"] = PortableFill,
         ["device_electrical_compressor"] = ElectricalCompressor,
         ["device_filter"] = Filter,
+        ["device_residue_capacity"] = ResidueCapacity,
         ["device_filter_blocked"] = FilterBlocked,
         ["device_electrolysis_recipes"] = ElectrolysisRecipes,
         ["device_electrolysis_blocked"] = ElectrolysisBlocked,
@@ -292,6 +293,24 @@ internal static class GameplayTestFluidDevices
         Check(report, "残渣槽存放实际定义物品", residue != null && residue.IDName == reaction.SolidResidueItemId && residueAmount >= 1d);
     }
 
+    private static void ResidueCapacity(Action<string, bool, string> report)
+    {
+        using var fixture = new MachineWorld.GameplayFluidScope();
+        MachineEntity node = fixture.Add("FluidFilter"); fixture.Begin();
+        FluidMachineReactionDefinition reaction = node.Definition.Fluid.Reactions[0];
+        FluidMachineLogic logic = Logic(report, node);
+        AddFluid(report, node, reaction.Inputs[0].FluidId, 0m, 10m, reaction.Inputs[0].Chamber);
+        double available = FluidDeviceOperations.GetReactionOutputExtent(node, reaction);
+        Check(report, "空残渣槽的大整数容量不会溢出", double.IsFinite(available) && available > 0d,
+            "实际反应输出上限：" + available);
+
+        SetItem(report, logic.Residue, node.Definition.Fluid.FilterMaterialItemId);
+        double rejected = FluidDeviceOperations.GetReactionOutputExtent(node, reaction);
+        Check(report, "残渣槽被异类物品占据时拒绝反应", rejected == 0d,
+            "实际反应输出上限：" + rejected);
+        Check(report, "容量预检不消耗原料", Inventory(node, reaction.Inputs[0].Chamber).LiquidMoles == 10m);
+    }
+
     private static void FilterBlocked(Action<string, bool, string> report)
     {
         using var fixture = new MachineWorld.GameplayFluidScope();
@@ -402,8 +421,10 @@ internal static class GameplayTestFluidDevices
         decimal amount = Inventory(node, byproduct.Chamber).LiquidMoles;
         decimal gas = Inventory(node, "output").GasMoles;
         var context = new ContainerTransferContext(node.Position, scene, ContainerAccessKind.Mod, "流体测试副产物原子转移");
+        ContainerTransferResult preview = ContainerTransferService.PreviewLiquid(source, receiver, context, 1f);
         ContainerTransferResult result = ContainerTransferService.TransferLiquid(source, receiver, context, 1f);
-        Check(report, "正式端口事务可以取出真实液碱", result.Success && Inventory(target).GetLiquidMoles(byproduct.FluidId) > 0m, result.Failure.ToString());
+        Check(report, "正式端口事务可以取出真实液碱", result.Success && Inventory(target).GetLiquidMoles(byproduct.FluidId) > 0m,
+            $"预览 {preview.Failure} / {preview.LiquidServings} 份，提交 {result.Failure}，源 {amount} mol，目标 {Inventory(target).LiquidMoles} mol");
         Check(report, "副产物取液前后物质量守恒", Near((double)(Inventory(node, byproduct.Chamber).LiquidMoles + Inventory(target).LiquidMoles), (double)amount));
         Check(report, "取液碱不扣混气出口", Inventory(node, "output").GasMoles == gas);
     }
