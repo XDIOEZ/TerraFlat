@@ -20,10 +20,15 @@ end, "真实物品加载、跨帧存活、卸载和再次加载")
 test.runtime("modding", "live_lua_module", {}, function(d)
     assert(d.maximum > 0, "正式小刀耐久不足以完成生命周期夹具")
     assert(d.mainLoaded == "loaded" and d.mainState == "restored:probe.event", "MOD主Lua加载/恢复/事件/保存链错误")
+    assert(d.mainAfterReplacement == "restored:probe.event:replacement:probe.second",
+        "MOD主Lua热替换回调后仍调用旧函数")
     assert(math.abs(d.afterLoad - (d.maximum * .8)) < .0001, "MOD物品OnLoad未实际扣耐久")
     assert(math.abs(d.afterUpdate - (d.maximum * .7)) < .0001, "MOD物品OnUpdate未使用传入步长")
-    assert(math.abs(d.afterUnload - (d.maximum * .75)) < .0001, "MOD物品OnUnload未恢复耐久")
-    assert(d.state == "loaded:Knife_Flint:updated:unloaded", "物品Lua状态未按顺序传递")
+    assert(math.abs(d.afterReplacedUpdate - (d.maximum * .65)) < .0001,
+        "MOD物品Lua替换OnUpdate后没有调用最新函数")
+    assert(d.missingHandlerState == "unchanged", "MOD缺失函数改写了原状态")
+    assert(math.abs(d.afterUnload - (d.maximum * .7)) < .0001, "MOD物品OnUnload未恢复耐久")
+    assert(d.state == "loaded:Knife_Flint:updated:updated_again:unloaded", "物品Lua状态未按顺序传递")
     assert(d.registeredAfterCallbacks and d.packageRemoved, "Lua生命周期破坏了实例登记或残留测试包")
 end, "MOD Lua实际调用正式物品API并传递生命周期状态")
 

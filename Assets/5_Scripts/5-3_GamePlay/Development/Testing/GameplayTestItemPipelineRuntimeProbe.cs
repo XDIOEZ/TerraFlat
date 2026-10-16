@@ -130,18 +130,30 @@ public static class GameplayTestItemPipelineRuntimeProbe
         {
             File.WriteAllText(Path.Combine(directory, "main.lua"), @"
 local value = 'new'
-return {
-  OnLoad = function(api) value = 'loaded' end,
-  OnLoadSave = function(api, state) value = state end,
-  OnEvent = function(api, name, payload) value = value .. ':' .. name end,
-  OnSave = function(api, previous) return value end
-}");
+local callbacks = {}
+callbacks.OnLoad = function(api) value = 'loaded' end
+callbacks.OnLoadSave = function(api, state) value = state end
+callbacks.OnEvent = function(api, name, payload)
+  value = value .. ':' .. name
+  callbacks.OnEvent = function(api, nextName, nextPayload)
+    value = value .. ':replacement:' .. nextName
+  end
+end
+callbacks.OnSave = function(api, previous) return value end
+return callbacks");
             File.WriteAllText(Path.Combine(directory, "module.lua"), @"
-return {
-  OnLoad = function(item, state, dt, api) item:AddDurability(-item.MaxDurability * .2); return 'loaded:' .. item.Id end,
-  OnUpdate = function(item, state, dt, api) item:AddDurability(-item.MaxDurability * dt); return state .. ':updated' end,
-  OnUnload = function(item, state, dt, api) item:AddDurability(item.MaxDurability * .05); return state .. ':unloaded' end
-}");
+local callbacks = {}
+callbacks.OnLoad = function(item, state, dt, api) item:AddDurability(-item.MaxDurability * .2); return 'loaded:' .. item.Id end
+callbacks.OnUpdate = function(item, state, dt, api)
+  item:AddDurability(-item.MaxDurability * dt)
+  callbacks.OnUpdate = function(nextItem, nextState, nextDt, nextApi)
+    nextItem:AddDurability(-nextItem.MaxDurability * nextDt * .5)
+    return nextState .. ':updated_again'
+  end
+  return state .. ':updated'
+end
+callbacks.OnUnload = function(item, state, dt, api) item:AddDurability(item.MaxDurability * .05); return state .. ':unloaded' end
+return callbacks");
             item = Spawn(player);
             item.itemData.Durability = item.itemData.MaxDurability;
             result["maximum"] = item.itemData.MaxDurability;
@@ -151,10 +163,15 @@ return {
             runtime.RestoreGlobalState("restored");
             runtime.InvokeEvent("probe.event", "{}");
             result["mainState"] = runtime.CaptureGlobalState("");
+            runtime.InvokeEvent("probe.second", "{}");
+            result["mainAfterReplacement"] = runtime.CaptureGlobalState("");
             string state = runtime.InvokeModule("module.lua", "OnLoad", item, "");
             result["afterLoad"] = item.itemData.Durability;
             state = runtime.InvokeModule("module.lua", "OnUpdate", item, state, .1f);
             result["afterUpdate"] = item.itemData.Durability;
+            state = runtime.InvokeModule("module.lua", "OnUpdate", item, state, .1f);
+            result["afterReplacedUpdate"] = item.itemData.Durability;
+            result["missingHandlerState"] = runtime.InvokeModule("module.lua", "OnUnused", item, "unchanged");
             state = runtime.InvokeModule("module.lua", "OnUnload", item, state);
             result["afterUnload"] = item.itemData.Durability;
             result["state"] = state;
