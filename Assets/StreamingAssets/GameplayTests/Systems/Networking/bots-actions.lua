@@ -28,6 +28,7 @@ test.runtime("networking", "bots_actions", {}, function(data)
     local drop = data.drop
     assert(drop.slotCleared and drop.worldItemExists and drop.itemId == "Ore_Copper" and drop.nearBot,
         "假人未从背包扣除物品并在角色身边生成真实掉落物")
+    assert(data.localMotionIsolated, "假人现场未隔离本地主角原有的环境推动")
     assert(data.localUnmoved, "假人操作意外推动了本地主角")
 end, "联网假人真实动作：移动、挥刀、拾取、丢弃")
 

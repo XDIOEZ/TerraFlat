@@ -70,11 +70,20 @@ end, "四假人正式加入：独立档案、快照分片、重复就绪与本�
 test.runtime("networking", "bots_rejection", {}, function(data)
     local required = { no_join = true, version = true, mod_api = true, mod_set = true,
         hello_only = true, stale_rejection = true }
-    local seen = {}
-    assert(#data.samples == 6, "协议拒绝流程没有覆盖六种正式入口")
+    local seen, rounds = {}, {version = 0, mod_api = 0, mod_set = 0}
+    assert(#data.samples == 12, "协议拒绝流程没有覆盖三轮版本与MOD拒绝、未加入和连接复用")
     for _, sample in ipairs(data.samples) do
-        assert(required[sample.kind] and not seen[sample.kind], "协议拒绝样本重复或出现未知前提")
-        seen[sample.kind] = true
+        assert(required[sample.kind], "协议拒绝出现未知前提")
+        if rounds[sample.kind] then
+            assert(type(sample.round) == "number" and sample.round >= 1 and sample.round <= 3
+                and sample.round == math.floor(sample.round), "协议拒绝轮次无效")
+            seen[sample.kind] = seen[sample.kind] or {}
+            assert(not seen[sample.kind][sample.round], "协议拒绝轮次重复")
+            seen[sample.kind][sample.round] = true
+        else
+            assert(not seen[sample.kind], "协议拒绝样本重复")
+            seen[sample.kind] = true
+        end
         if sample.kind == "stale_rejection" then
             assert(sample.connected and not sample.spawned and sample.snapshots == 1,
                 "旧连接的延迟踢出误伤了复用 ID 的正常连接")
@@ -82,12 +91,18 @@ test.runtime("networking", "bots_rejection", {}, function(data)
             assert(not sample.spawned and sample.snapshots == 0, sample.kind .. "越过入世检查生成角色或发送了存档快照")
         end
         if sample.kind == "version" or sample.kind == "mod_api" or sample.kind == "mod_set" then
+            rounds[sample.kind] = rounds[sample.kind] + 1
             assert(not sample.connected and sample.rejections == 1
                 and type(sample.reason) == "string" and #sample.reason > 0,
                 sample.kind .. "没有通过正式回复说明拒绝原因并断开连接")
         end
     end
-    for kind in pairs(required) do assert(seen[kind], "缺少协议拒绝样本：" .. kind) end
+    for kind in pairs(required) do
+        if rounds[kind] then
+            assert(rounds[kind] == 3, "协议拒绝重复轮数不足：" .. kind)
+            for round = 1, 3 do assert(seen[kind] and seen[kind][round], "缺少拒绝轮次：" .. kind) end
+        else assert(seen[kind], "缺少协议拒绝样本：" .. kind) end
+    end
     assert_cleanup(data)
 end, "未经加入、仅握手、脚本版本及 MOD 环境不符均不能入世")
 

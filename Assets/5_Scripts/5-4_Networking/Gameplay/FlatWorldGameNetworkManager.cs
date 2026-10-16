@@ -298,7 +298,7 @@ namespace FlatWorld.Networking.Gameplay
                     ClientVersion = hello.Version,
                     Reason = "联机脚本版本不一致，请在两个 Unity 编辑器中按 Ctrl+R 刷新后重试。"
                 });
-                StartCoroutine(DisconnectProtocolMismatchNextFrame(connection));
+                StartCoroutine(DisconnectProtocolMismatchAfterSend(connection));
                 return;
             }
 
@@ -314,7 +314,7 @@ namespace FlatWorld.Networking.Gameplay
                     ClientVersion = hello.Version,
                     Reason = $"MOD 环境不一致。主机：{serverSummary}；客户端：{hello.ModSummary ?? "<空>"}"
                 });
-                StartCoroutine(DisconnectProtocolMismatchNextFrame(connection));
+                StartCoroutine(DisconnectProtocolMismatchAfterSend(connection));
                 return;
             }
 
@@ -381,8 +381,13 @@ namespace FlatWorld.Networking.Gameplay
             SetGameplayStatus($"正在向 {playerName} 同步地图（{snapshot.Length / 1024f:0.0} KB）");
         }
 
-        private IEnumerator DisconnectProtocolMismatchNextFrame(NetworkConnectionToClient connection)
+        private IEnumerator DisconnectProtocolMismatchAfterSend(NetworkConnectionToClient connection)
         {
+            // Mirror 的可靠消息按发送周期批量刷新，一帧后直接断开可能丢失拒绝原因。
+            double sendDeadline = NetworkTime.localTime + NetworkServer.sendInterval;
+            do { yield return null; }
+            while (NetworkServer.active && NetworkTime.localTime < sendDeadline);
+            // 给 NetworkLateUpdate 一次实际刷新机会，再断开原连接。
             yield return null;
             // 延迟拒绝只影响原连接，不得误踢复用了连接 ID 的新玩家。
             if (connection != null && NetworkServer.connections.TryGetValue(connection.connectionId, out var current) &&

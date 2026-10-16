@@ -18,6 +18,56 @@ namespace FlatWorld.Networking.Gameplay
 
         private static BotActionScene activeActionScene;
 
+        private sealed class LocalPlayerMotionIsolation : IDisposable
+        {
+            private readonly Mod_GameController controller;
+            private readonly Mod_Mover mover;
+            private readonly Rigidbody2D body;
+            private readonly Vector2 priorVelocity;
+            private readonly IDisposable windLease;
+            private bool disposed;
+
+            public LocalPlayerMotionIsolation(Player local)
+            {
+                controller = local.GetComponentInChildren<Mod_GameController>(true) ??
+                    throw new InvalidOperationException("本地主角缺少正式输入控制器。");
+                mover = local.GetComponentInChildren<Mod_Mover>(true) ??
+                    throw new InvalidOperationException("本地主角缺少正式移动模块。");
+                body = local.GetComponent<Rigidbody2D>() ??
+                    throw new InvalidOperationException("本地主角缺少正式物理刚体。");
+                priorVelocity = body.velocity;
+                // 测试期间屏蔽玩家设备输入、风和水流，仍保留动态刚体检测假人误碰撞。
+                controller.AcquireGameplayInputLock(this);
+                try
+                {
+                    windLease = mover.SuppressWindMotion();
+                    body.velocity = Vector2.zero;
+                }
+                catch
+                {
+                    controller.ReleaseGameplayInputLock(this);
+                    throw;
+                }
+            }
+
+            public bool IsStable => controller != null && controller.IsGameplayInputLocked &&
+                mover != null && mover.DrivenVelocity.sqrMagnitude < .0001f &&
+                mover.ExternalVelocity.sqrMagnitude < .0001f &&
+                body != null && body.velocity.sqrMagnitude < .01f;
+
+            public string Diagnostic => $"主动={mover?.DrivenVelocity}，环境={mover?.ExternalVelocity}，刚体={body?.velocity}";
+
+            public void Dispose()
+            {
+                if (disposed) return;
+                disposed = true;
+                windLease?.Dispose();
+                if (controller != null) controller.ReleaseGameplayInputLock(this);
+                if (body != null && body.simulated && body.bodyType == RigidbodyType2D.Dynamic)
+                    body.velocity = priorVelocity;
+            }
+        }
+
         private sealed class BotActionScene : IDisposable
         {
             public readonly BotWorld World;
@@ -49,6 +99,10 @@ namespace FlatWorld.Networking.Gameplay
             if (activeActionScene != null)
                 throw new InvalidOperationException("上一份联机假人动作现场尚未清理。");
 
+            var localIsolation = new LocalPlayerMotionIsolation(local);
+            GameplayTestRuntimeProbe.RegisterCleanup(localIsolation);
+            yield return Wait(() => localIsolation.IsStable, "本地主角输入与环境推动稳定",
+                3d, () => localIsolation.Diagnostic);
             var world = new BotWorld(local);
             var scene = new BotActionScene(world);
             activeActionScene = scene;
@@ -184,6 +238,7 @@ namespace FlatWorld.Networking.Gameplay
                 ["nearBot"] = WorldTopologyRuntime.Distance(actor.AuthoritativeLogicalPosition,
                     WorldLocalPresentation.ToLogical(thrown.transform.position)) < 4f
             };
+            result["localMotionIsolated"] = localIsolation.IsStable;
             result["localUnmoved"] = WorldTopologyRuntime.Distance(localStart,
                 WorldLocalPresentation.ToLogical(local.transform.position)) < .25f;
             completed(result);

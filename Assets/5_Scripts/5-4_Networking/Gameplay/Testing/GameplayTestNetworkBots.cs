@@ -201,9 +201,11 @@ namespace FlatWorld.Networking.Gameplay
             yield return null;
             samples.Add(new JObject { ["kind"] = "no_join", ["spawned"] = world.Core(51) != null,
                 ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(51) });
+            // 连续三轮快速拒绝覆盖 Mirror 发送批次边界，不能只观察断线而漏掉拒绝原因。
+            for (int round = 1; round <= 3; round++)
             for (int i = 0; i < 3; i++)
             {
-                int id = 52 + i;
+                int id = 52 + (round - 1) * 3 + i;
                 world.Transport.ConnectBot(id);
                 NetworkProtocolHello hello = Hello();
                 if (i == 0) hello.Version--;
@@ -216,31 +218,32 @@ namespace FlatWorld.Networking.Gameplay
                 yield return Wait(() => !NetworkServer.connections.ContainsKey(id), "拒绝连接断开");
                 var replies = world.Transport.Read<NetworkProtocolRejected>(id);
                 samples.Add(new JObject { ["kind"] = i == 0 ? "version" : i == 1 ? "mod_api" : "mod_set",
+                    ["round"] = round,
                     ["connected"] = world.Transport.IsBotConnected(id), ["spawned"] = world.Core(id) != null,
                     ["rejections"] = replies.Count, ["reason"] = replies.Count > 0 ? replies[0].Reason : "",
                     ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(id) });
             }
             // Hello 不能代替 Join；就绪请求也不能自行通过版本检查。
-            world.Transport.ConnectBot(55);
-            world.Transport.Receive(55, Hello());
-            world.Transport.Receive(55, new NetworkWorldReady());
+            world.Transport.ConnectBot(61);
+            world.Transport.Receive(61, Hello());
+            world.Transport.Receive(61, new NetworkWorldReady());
             yield return null;
-            samples.Add(new JObject { ["kind"] = "hello_only", ["spawned"] = world.Core(55) != null,
-                ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(55) });
+            samples.Add(new JObject { ["kind"] = "hello_only", ["spawned"] = world.Core(61) != null,
+                ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(61) });
             // 旧连接的延迟拒绝回调不得踢掉复用同一连接 ID 的新合法连接。
-            world.Transport.ConnectBot(56);
+            world.Transport.ConnectBot(62);
             NetworkProtocolHello invalid = Hello();
             invalid.Version--;
-            world.Transport.Receive(56, invalid);
-            world.Transport.Receive(56, new NetworkJoinRequest { PlayerName = world.Prefix + "stale" });
-            world.Transport.ServerDisconnect(56);
-            world.Transport.ConnectBot(56);
-            world.Transport.Receive(56, Hello());
-            world.Transport.Receive(56, new NetworkJoinRequest { PlayerName = world.Prefix + "fresh" });
-            yield return Wait(() => world.Transport.Count<NetworkWorldSnapshotBegin>(56) == 1, "复用连接正常获取世界快照");
+            world.Transport.Receive(62, invalid);
+            world.Transport.Receive(62, new NetworkJoinRequest { PlayerName = world.Prefix + "stale" });
+            world.Transport.ServerDisconnect(62);
+            world.Transport.ConnectBot(62);
+            world.Transport.Receive(62, Hello());
+            world.Transport.Receive(62, new NetworkJoinRequest { PlayerName = world.Prefix + "fresh" });
+            yield return Wait(() => world.Transport.Count<NetworkWorldSnapshotBegin>(62) == 1, "复用连接正常获取世界快照");
             yield return null;
-            samples.Add(new JObject { ["kind"] = "stale_rejection", ["connected"] = world.Transport.IsBotConnected(56),
-                ["spawned"] = world.Core(56) != null, ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(56) });
+            samples.Add(new JObject { ["kind"] = "stale_rejection", ["connected"] = world.Transport.IsBotConnected(62),
+                ["spawned"] = world.Core(62) != null, ["snapshots"] = world.Transport.Count<NetworkWorldSnapshotBegin>(62) });
             world.Dispose();
             yield return null;
             completed(new JObject { ["samples"] = samples, ["cleanup"] = world.CleanupSample() });

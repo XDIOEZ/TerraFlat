@@ -28,13 +28,13 @@
 
 | Lua | 现场和断言 |
 | --- | --- |
-| [bots-session.lua](bots-session.lua) | 四假人同名加入、独立角色/数据/库存容器、完整世界快照分片/字节/校验和、提前 AddPlayer 拒绝、重复就绪、已占用短名和本地主角名字申请；未加入/仅 Hello/版本/MOD API/MOD 集合不符拒绝；同档案三轮重连及连接 ID 复用 |
+| [bots-session.lua](bots-session.lua) | 四假人同名加入、独立角色/数据/库存容器、完整世界快照分片/字节/校验和、提前 AddPlayer 拒绝、重复就绪、已占用短名和本地主角名字申请；未加入/仅 Hello，版本/MOD API/MOD 集合不符各连续三轮并检查拒绝回复确实送达；同档案三轮重连及连接 ID 复用 |
 | [bots-input.lua](bots-input.lua) | 连接绑定的真实乘员输入，重复/旧/零序号、NaN/越界、未就绪拒绝；两连接独立序号和真实意图拒绝回复；失联清零、断线清输入和运行实例且保留重连档案 |
 | [bots-pickup.lua](bots-pickup.lua) | 正式地表拾取请求与提交，授权租约独占、他人或错误令牌提交拒绝、拒收恢复、重新授权和合法提交删除掉落物 |
 | [bots-actions.lua](bots-actions.lua) | 两名真实服务器假人入世，Mirror 移动命令驱动权威坐标与角色位置；正式武器动画与伤害窗口；拾取授权、测试背包收货、正式丢弃世界物与现场截图；清理全部自有网络对象 |
 
 夹具在 `Assets/5_Scripts/5-4_Networking/Gameplay/Testing/GameplayTestNetworkBots*.cs` 与 `GameplayTestBotTransport.cs`，仅 Editor/Development Build 编译；正式 Lua 入口仍要求 Editor PlayMode 的 Library 隔离存档。每个操作用 finally 收尾，Lua 另断言服务器/连接/网络对象/自有档案/乘员无残留，本地主角和场景不变，原传输器恢复。正常断线保留玩家存档用于重连，整份测试结束才移除自有测试档案。
 
-库存独立性读取正式 `Inventory_ModuleData` 模块状态及其存储字典，逐假人断言模块确实存在，且状态和字典引用不共享；不使用已不承载运行库存的旧玩家字典。原有三份协议 Lua 合计 146 条业务断言，新动作现场为第四份，历史执行记录仍按当时的三份统计。
+库存独立性读取正式 `Inventory_ModuleData` 模块状态及其存储字典，逐假人断言模块确实存在，且状态和字典引用不共享；不使用已不承载运行库存的旧玩家字典。正式拒绝回复按 Mirror 网络发送周期刷新后断开，避免异步批次尚未发送便丢失原因。原有三份协议 Lua 的历史断言统计只代表当时版本，新动作现场为第四份。
 
 PlayMode 的 `bots-actions.lua` 及其余偏协议 Lua 都由宿主自动定时截图并在收尾补拍；协议正确性仍须看 Lua 断言。行动假人启用正式服务端战斗模块，其拾取物载荷由测试夹具写入假人库存，不代表真实 Client 已经接收。该组仍不覆盖独立真实 NetworkClient 的本地背包/攻击输入、KCP/LAN、跨进程时延/丢包、设备差异、Host 本地连接、远端插值表现、真实角色受击和太空兴趣分片。当前现场快照为单片，超过 24 KiB 的大世界多片边界与缺片重传仍待补。
