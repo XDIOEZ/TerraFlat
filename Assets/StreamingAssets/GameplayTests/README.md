@@ -143,11 +143,10 @@ end, "隔离存档写入和读回")
 | `test.look_at(x,y)` / `test.interact()` / `test.select_hotbar(index)` / `test.use()` | 正式交互与手持入口，具体效果仍须断言 |
 | `test.wait(seconds)` | 真实时间等待，规则模式禁止 |
 | `test.await_check(name,timeout,label)` | 在真实世界轮询既有白名单检查，达标即结束，超时失败；规则模式禁止 |
-| `test.screenshot(label)` | 实际现场图，每Lua可0～3次，规则模式禁止 |
 
 Lua 沙箱不开放 `CS`、`require`、文件或网络；单次编排/断言有100万条指令预算。每Lua最多256个展开步骤，单步等待/移动最多30秒，累计动作180秒。超过限制会拒绝或失败，不能靠无界循环等条件。
 
-场景脚本通常共用世界、背包、位置和机器状态，必须自备条件、只清理自己的夹具。截图由AI在有意义的现场明确插入，不自动补结尾或失败图。真实 `test.space` 若需要截图，紧接采样命令排截图，下一条非截图命令才恢复现场；同步 `test.runtime` 已清理的事务不再拍空地充当现场。详见 [气液专项](Systems/IndustrialFluids/Gameplay/README.md) 与 [太空专项](Systems/Space/Gameplay/README.md)。
+场景脚本通常共用世界、背包、位置和机器状态，必须自备条件、只清理自己的夹具。**PlayMode 宿主按固定 10 秒间隔截图（场景参数可调），每个实际执行的 Lua 在结束时保证至少一次有效截图，否则用例失败**；Lua 不再编排截图命令。跨场景时定时采集不改变 `test.space` 的正式恢复逻辑。详见 [气液专项](Systems/IndustrialFluids/Gameplay/README.md) 与 [太空专项](Systems/Space/Gameplay/README.md)。
 
 ## 清单格式和编辑器入口
 
@@ -192,8 +191,10 @@ Library/FlatWorldGameplayTests/
 ├─ Pipeline/<runId>.json             阶段报告
 ├─ Runs/<runId>/report.md / report.json / pipeline.json
 │  └─ cases/<caseId>/report.json      输入、原始采样、独立标签和错误位置
-│      screenshot-01.png …           仅实际执行截图命令后生成
+│      screenshot-01.png …           定时生成；短用例结束时补拍
+│  visual-review.json / visual-review.md
+│  visual-contact-sheet-01.png …    全部截图统一总览（CLI 检查后生成）
 └─ Saves/<runId>/                    场景隔离档；规则模式不建世界存档
 ```
 
-总报告及每Lua用例区分pending/running/passed/failed/interrupted/skipped/disabled；原始步骤保留失败，任意失败断言或采集到的Unity Error/Exception/Assert使整轮失败，Warning单独计数。新截图报告schemaVersion5，每图保留标签、序号、时间、位置、路径或取图错误；没有执行就没有图片。结果文件夹就是测试包，保留最近十轮，不另建ZIP或复用上轮证据。
+总报告及每Lua用例区分pending/running/passed/failed/interrupted/skipped/disabled；原始步骤保留失败，任意失败断言或采集到的Unity Error/Exception/Assert使整轮失败，Warning单独计数。新截图报告schemaVersion5，每图保留标签、序号、时间、位置、路径或取图错误。`run_suite.py` 在玩法测试结束后自动执行统一图像初检，发现坏图、黑屏、纯色或缺图会返回失败；运行 MCP / 测试中心后可执行 `python Tools/GameplayTesting/visual_review.py <本轮Runs/report.json>` 生成总览。**AI 必须实际阅读全部总览图和异常原图，确认布局、角色、HUD、遮挡、光照等问题并修复重跑；像素初检不代表语义视觉通过。**结果文件夹就是测试包，保留最近十轮，不另建ZIP或复用上轮证据。

@@ -13,15 +13,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
     #region 测试上下文与限制
 
     private const int MaximumSteps = 256;
-    public const int MaximumScreenshots = 3;
     private const int MaximumSourceCharacters = 1024 * 1024;
     private const float MaximumStepSeconds = 30f;
     private const float MaximumTotalSeconds = 180f;
     private Player player;
     private readonly Func<string, bool> check;
     private readonly Action<string, string, bool, string> record;
-    private readonly Func<string, IEnumerator> captureScreenshot;
-    private int capturedScreenshotCount;
     private GameplayTestSpaceScenario activeSpaceScenario;
     private Mod_GameController controller;
     private Mod_Mover mover;
@@ -63,12 +60,11 @@ public sealed class GameplayTestLuaRunner : IDisposable
     public bool Succeeded { get; private set; }
 
     public GameplayTestLuaRunner(Player player, Func<string, bool> check,
-        Action<string, string, bool, string> record, Func<string, IEnumerator> captureScreenshot = null)
+        Action<string, string, bool, string> record)
     {
         this.player = player;
         this.check = check ?? throw new ArgumentNullException(nameof(check));
         this.record = record ?? throw new ArgumentNullException(nameof(record));
-        this.captureScreenshot = captureScreenshot;
     }
 
     /// <summary>EditMode 共用正式 Lua 解析和限额检查，但不获取玩家也不执行任何玩法动作。</summary>
@@ -91,7 +87,6 @@ public sealed class GameplayTestLuaRunner : IDisposable
         local totalSeconds = 0
         local instructionCount = 0
         local assertionCount = 0
-        local screenshotCount = 0
         local scheduling = true
         local function finite(value, name)
             assert(type(value) == 'number' and value == value
@@ -124,13 +119,6 @@ public sealed class GameplayTestLuaRunner : IDisposable
         end
         function test.log(message)
             enqueue({name='log', text=text(message, 'log text')})
-        end
-        function test.screenshot(label)
-            label = text(label, 'screenshot label')
-            assert(string.find(label, '%S'), '截图说明不能为空白')
-            screenshotCount = screenshotCount + 1
-            assert(screenshotCount <= 3, '每个 Lua 最多安排 3 次截图')
-            enqueue({name='screenshot', label=label})
         end
         function test.wait(seconds)
             enqueue({name='wait', seconds=duration(seconds)})
@@ -272,7 +260,6 @@ public sealed class GameplayTestLuaRunner : IDisposable
             finally { DisposeLuaResults(result); }
 
             float totalSeconds = 0f;
-            int screenshotCount = 0;
             for (int index = 1; index <= MaximumSteps + 1; index++)
             {
                 queue.Get(index, out LuaTable queuedStep);
@@ -292,9 +279,6 @@ public sealed class GameplayTestLuaRunner : IDisposable
                     Index = checked((int)ReadNumber(step, "index"))
                 };
                 totalSeconds += command.Seconds;
-                if (command.Name == "screenshot" && (++screenshotCount > MaximumScreenshots ||
-                    string.IsNullOrWhiteSpace(command.Label)))
-                    throw new InvalidOperationException("每个 Lua 最多安排 3 次截图，且需要非空现场说明。");
                 if (command.Seconds < 0f || command.Seconds > MaximumStepSeconds ||
                     totalSeconds > MaximumTotalSeconds)
                     throw new InvalidOperationException("测试时间超过单步 30 秒或累计 180 秒限制。");
@@ -454,7 +438,6 @@ public sealed class GameplayTestLuaRunner : IDisposable
 
         running = true;
         Succeeded = false;
-        capturedScreenshotCount = 0;
         try
         {
             runtimeScope = GameplayTestRuntimeProbe.BeginCaseScope();
@@ -504,8 +487,8 @@ public sealed class GameplayTestLuaRunner : IDisposable
         bool fluidFailed = false;
         foreach (Command command in commands)
         {
-            // 连续截图保留太空现场，下一条玩法命令前才恢复隔离世界。
-            if (activeSpaceScenario != null && command.Name != "screenshot")
+            // 太空现场在下一条玩法命令前恢复，截图由测试宿主独立定时采集。
+            if (activeSpaceScenario != null)
             {
                 bool restored = false;
                 yield return RestoreSpaceScene(value => restored = value);
@@ -546,15 +529,6 @@ public sealed class GameplayTestLuaRunner : IDisposable
     {
         switch (command.Name)
         {
-            case "screenshot":
-                if (++capturedScreenshotCount > MaximumScreenshots)
-                    throw new InvalidOperationException("每个 Lua 最多执行 3 次截图。");
-                if (captureScreenshot == null)
-                    throw new InvalidOperationException("测试宿主未提供截图接口。");
-                yield return captureScreenshot(command.Label);
-                command.Success = true;
-                command.Message = command.Label;
-                break;
             case "check":
                 command.Success = check(command.Text);
                 command.Message = command.Success ? $"检查通过：{command.Text}" : $"检查失败：{command.Text}";

@@ -108,8 +108,20 @@ def run(suite: str, editor_timeout: float, run_timeout: float, case_ids=None, pl
         "rules": report.get("rules"),
         "editMode": report.get("editMode"), "playMode": report.get("playMode")
     }
+    if report.get("executionMode") == "gameplay" and report.get("gameplayReportPath"):
+        # 所有玩法案例结束后一次性核查本轮图片，不混用上轮截图。
+        try:
+            from visual_review import review_images
+            visual = review_images(Path(report["gameplayReportPath"]))
+            summary["visualReview"] = {"status": visual["status"], "imageCount": visual["imageCount"],
+                                       "issues": visual["issues"], "contactSheets": visual["contactSheets"],
+                                       "semanticReviewComplete": visual["semanticReviewComplete"]}
+        except (ImportError, OSError, ValueError) as failure:
+            summary["visualReview"] = {"status": "unavailable", "error": str(failure)}
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0 if report.get("status") == "passed" else 1
+    return 0 if report.get("status") == "passed" and (
+        "visualReview" not in summary or summary["visualReview"]["status"] not in
+        ("issues_found", "unavailable")) else 1
 
 
 if __name__ == "__main__":

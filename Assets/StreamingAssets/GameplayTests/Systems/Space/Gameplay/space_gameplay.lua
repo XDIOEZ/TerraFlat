@@ -75,7 +75,6 @@ do
         end
         return "实际访问 " .. #data.visits .. " 个配置星区、" .. count .. " 个真实星体表现"
     end, "所有配置星区与星体场景表现")
-    test.screenshot("配置星区入场后的玩家与相机现场")
 end
 
 do
@@ -157,7 +156,6 @@ do
         end
         return "真实起飞、氢氧消耗、惯性、旋转、导航、船体跨区与降落：" .. #data.ships .. " 个船型"
     end, "所有船型的真实起飞航行降落")
-    test.screenshot("最后一艘真实飞船的降落现场")
 end
 
 for _, value in ipairs({"right"}) do
@@ -197,9 +195,6 @@ for _, value in ipairs({"right"}) do
         assert(data.returned.seconds > data.before.seconds, "过渡期间宇宙时钟没有继续推进")
         return direction .. "：真实越界、双侧场景、租约清退、玩家连续性与折返"
     end, "真实星区 " .. direction .. " 过渡", direction)
-    if direction == "right" then
-        test.screenshot("向右跨区并折返后的太空现场")
-    end
 end
 
 do

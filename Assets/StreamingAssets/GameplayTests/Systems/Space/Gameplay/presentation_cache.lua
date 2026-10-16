@@ -144,5 +144,3 @@ test.runtime("space", "presentation_cache_roundtrip", { cacheEnabled = true }, f
         control.rounds[1].wallSeconds, first.wallSeconds, second.wallSeconds,
         control.rounds[1].wallSeconds - second.wallSeconds)
 end, "开启表现缓存的两轮真实复用与耗时对照")
-
-test.screenshot("三轮太空往返后重新就绪的地表现场")

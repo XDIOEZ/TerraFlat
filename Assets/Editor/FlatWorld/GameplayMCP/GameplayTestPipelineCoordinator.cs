@@ -529,7 +529,7 @@ namespace FlatWorld.GameplayMCP
                                 Message = entry.Reason, DurationSeconds = entry.DurationSeconds });
                 }
                 gameplay.Write();
-                // 对外按 Lua 和命令顺序返回已落盘的关键现场截图。
+                // 对外按 Lua 用例和自动截图顺序返回本轮已落盘的现场图片。
                 report.ScreenshotPaths.Clear();
                 foreach (GameplayTestCaseReport testCase in gameplay.Cases)
                     foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
@@ -604,7 +604,7 @@ namespace FlatWorld.GameplayMCP
                 testCase.ReportPath = GameplayTestArtifacts.CaseReportPath(gameplay, testCase.Id);
                 foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
                     if (!File.Exists(screenshot.Path) && string.IsNullOrEmpty(screenshot.Error))
-                        screenshot.Error = "截图命令已开始执行，但报告收尾时未找到截图文件。";
+                        screenshot.Error = "自动截图已开始，但报告收尾时未找到截图文件。";
                 if (testCase.Status == "passed") gameplay.PassedCaseCount++;
                 if (testCase.Status == "failed") gameplay.FailedCaseCount++;
                 if (testCase.Status == "skipped") gameplay.SkippedCaseCount++;

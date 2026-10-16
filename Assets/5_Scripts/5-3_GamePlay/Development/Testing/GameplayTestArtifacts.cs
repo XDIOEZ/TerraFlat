@@ -33,8 +33,7 @@ public static class GameplayTestArtifacts
 
     public static string CaseScreenshotPath(GameplayTestReport report, string caseId, int index)
     {
-        if (index < 1 || index > GameplayTestLuaRunner.MaximumScreenshots)
-            throw new ArgumentOutOfRangeException(nameof(index), "每个 Lua 最多执行三次截图命令。");
+        if (index < 1) throw new ArgumentOutOfRangeException(nameof(index));
         return Path.Combine(CaseDirectory(report, caseId), "screenshot-" + index.ToString("D2", CultureInfo.InvariantCulture) + ".png");
     }
 
@@ -133,11 +132,11 @@ public static class GameplayTestArtifacts
         foreach (GameplayTestCaseReport testCase in report.Cases)
         {
             if (testCase.Screenshots.Count == 0) continue;
-            // 按 Lua 和命令顺序展示现场，缺图也保留对应命令的错误信息。
+            // 按测试用例和自动采集顺序展示现场，缺图也保留对应的错误信息。
             if (!screenshotHeadingWritten)
             {
                 text.AppendLine();
-                text.AppendLine("## Lua 关键现场截图");
+                text.AppendLine("## Lua 定时现场截图（待统一视觉复核）");
                 screenshotHeadingWritten = true;
             }
             text.AppendLine();
@@ -162,7 +161,7 @@ public static class GameplayTestArtifacts
                 if (!string.IsNullOrEmpty(screenshot.Error))
                     text.AppendLine("截图错误：" + Markdown(screenshot.Error));
                 else if (string.IsNullOrEmpty(screenshot.Path) || !File.Exists(screenshot.Path))
-                    text.AppendLine("截图错误：截图命令已执行，但截图文件未生成。");
+                    text.AppendLine("截图错误：自动采集已执行，但截图文件未生成。");
                 text.AppendLine();
             }
         }
@@ -178,7 +177,7 @@ public static class GameplayTestArtifacts
     {
         if (testCase.Screenshots.Count == 0)
             return testCase.Status == "skipped" || testCase.Status == "pending"
-                ? "用例未执行；无截图（非错误）" : "未执行截图命令（非错误）";
+                ? "用例未执行；无截图（非错误）" : "未生成有效自动截图（需要检查）";
         var text = new StringBuilder();
         foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
         {

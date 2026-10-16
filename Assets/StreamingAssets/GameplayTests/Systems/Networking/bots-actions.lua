@@ -31,7 +31,6 @@ test.runtime("networking", "bots_actions", {}, function(data)
     assert(data.localUnmoved, "假人操作意外推动了本地主角")
 end, "联网假人真实动作：移动、挥刀、拾取、丢弃")
 
-test.screenshot("联机假人完成移动攻击及拾取丢弃后的真实现场")
 
 test.runtime("networking", "bots_actions_cleanup", {}, function(data)
     local cleanup = data.cleanup

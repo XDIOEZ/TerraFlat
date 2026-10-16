@@ -138,6 +138,5 @@ test.space("ship_damage_live", function(data)
     end
     return "正式固定步完成尾锚长船截断、索引移交、冷残骸再拆、无地板冷货物、最后地板清理，以及真实库存/血量/身份保存。"
 end, "真实长船截断、单 Item 冷残骸与递归分裂")
-test.screenshot("可用船首、独立无地板冷货物和最后地板清理后的残骸")
 test.check("world_ready", "残骸现场恢复后世界就绪")
 test.check("player_ready", "残骸现场恢复后测试玩家重新绑定并就绪")

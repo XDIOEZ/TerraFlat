@@ -24,7 +24,6 @@ test.runtime("terrain", "cover_resource_lifecycle", {}, function(data)
         data.restoredId == "Tree_Pine", "真实资源快照无法恢复原实体身份")
     assert(data.cleanupRegistered, "地格与资源未登记失败时的收尾")
 end, "真实地表覆盖栈、保存差量、松树占地和实体快照恢复")
-test.screenshot("两层地表覆盖上恢复自有松树的真实现场")
 test.runtime("terrain", "cleanup", {}, function(data)
     assert(data.hadFixture and data.released and data.terrainRestored and data.layersRestored and
         data.grassRestored and data.resourceRemoved, "自有地表、草、覆盖栈或资源实体未清理")

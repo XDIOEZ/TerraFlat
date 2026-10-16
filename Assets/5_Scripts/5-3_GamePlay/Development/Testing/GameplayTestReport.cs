@@ -101,8 +101,8 @@ public sealed class GameplayTestCaseReport
 [Serializable]
 public sealed class GameplayTestScreenshotRecord
 {
-    #region 关键现场截图
-    // 每条记录对应 Lua 显式执行的一次截图命令，失败时保留现场和原因。
+    #region 定时现场截图
+    // 每条记录对应宿主自动发起的一次截图，失败时保留现场和原因。
     public int Index;
     public string Label;
     public string Path;

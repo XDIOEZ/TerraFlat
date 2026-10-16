@@ -109,22 +109,18 @@ namespace FlatWorld.Tests.EditMode
         }
         #endregion
 
-        #region Lua 截图限额
-        [TestCase("test.log('纯数据检查无需截图')")]
-        [TestCase("test.screenshot('入场'); test.screenshot('操作后'); test.screenshot('结果')")]
-        public void Lua_ScreenshotCommandsAllowZeroOrThree(string source)
+        #region Lua 自动截图契约
+        [Test]
+        public void Lua_NoLongerRequiresScreenshotCommands()
         {
-            Assert.DoesNotThrow(() => GameplayTestLuaRunner.ValidateScript(source, "@screenshot-limit.lua"));
+            Assert.DoesNotThrow(() => GameplayTestLuaRunner.ValidateScript("test.log('截图由宿主定时采集')", "@automatic-screenshot.lua"));
         }
 
-        [TestCase("test.screenshot('一'); test.screenshot('二'); test.screenshot('三'); test.screenshot('四')")]
-        [TestCase("for i = 1, 4 do test.screenshot('循环现场 ' .. i) end")]
-        [TestCase("test.screenshot('')")]
-        [TestCase("test.screenshot('   ')")]
-        public void Lua_ScreenshotCommandsRejectOverflowOrEmptyLabel(string source)
+        [Test]
+        public void Lua_RejectsRemovedScreenshotCommand()
         {
             Assert.Throws<InvalidOperationException>(() =>
-                GameplayTestLuaRunner.ValidateScript(source, "@screenshot-limit.lua"));
+                GameplayTestLuaRunner.ValidateScript("test.screenshot('旧截图命令')", "@automatic-screenshot.lua"));
         }
         #endregion
     }

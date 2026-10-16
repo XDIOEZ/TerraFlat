@@ -16,6 +16,7 @@ public sealed class GameplayTestScene : MonoBehaviour
     [SerializeField, Min(1f)] private float resourceTimeoutSeconds = 120f;
     [SerializeField, Min(1f)] private float worldTimeoutSeconds = 120f;
     [SerializeField, Min(1f)] private float totalTimeoutSeconds = 600f;
+    [SerializeField, Min(1f)] private float screenshotIntervalSeconds = 10f;
     [SerializeField, Min(100)] private int maximumLogEntries = 10000;
 
     public string ReportPath => report?.ReportPath;
@@ -53,6 +54,9 @@ public sealed class GameplayTestScene : MonoBehaviour
     private int capturedLogCount;
     private int pendingOmittedCount;
     private int pendingOmittedWarnings;
+    private bool periodicScreenshotsEnabled;
+    private bool screenshotCapturing;
+    private double nextScreenshotAt;
 
     private sealed class CapturedLog
     {
@@ -105,6 +109,13 @@ public sealed class GameplayTestScene : MonoBehaviour
         if (GameManager.Instance?.IsGameplayReady == true && ItemMgr.Instance?.User_Player != null)
             player = ItemMgr.Instance.User_Player;
         lock (reportLock) DrainCapturedLogs();
+        if (periodicScreenshotsEnabled && !screenshotCapturing && !worldExited &&
+            activeCase?.Status == "running" && Time.realtimeSinceStartupAsDouble >= nextScreenshotAt &&
+            TryGetScreenshotPresentation(out _))
+        {
+            nextScreenshotAt = Time.realtimeSinceStartupAsDouble + Mathf.Max(1f, screenshotIntervalSeconds);
+            StartCoroutine(CaptureAutomaticScreenshot(activeCase, "定时截图"));
+        }
         if (worldExited || clock.Elapsed.TotalSeconds > totalTimeoutSeconds)
         {
             if (!interruptionRequested)
@@ -391,15 +402,26 @@ public sealed class GameplayTestScene : MonoBehaviour
             playerStart = player.transform.position;
             testCase.PlayerStart = new GameplayTestPosition(playerStart);
         }
+        nextScreenshotAt = Time.realtimeSinceStartupAsDouble + Mathf.Max(1f, screenshotIntervalSeconds);
+        periodicScreenshotsEnabled = true;
         bool succeeded = false;
         try
         {
             // 每个用例自己捕获异常，读取失败或 Lua 报错不会截断整个测试清单。
             yield return AdvanceGuarded(ExecuteCase(testCase));
             succeeded = luaRunner?.Succeeded == true;
+            periodicScreenshotsEnabled = false;
+            // 定时取图先写盘；短用例和提前失败的用例在收尾时也必须留一张有效图。
+            while (screenshotCapturing && !interruptionRequested) yield return null;
+            if (!interruptionRequested && !HasValidScreenshot(testCase))
+                yield return CaptureAutomaticScreenshot(testCase, "用例结束补拍");
+            if (!interruptionRequested && !HasValidScreenshot(testCase))
+                Record("screenshot_coverage", "每个已执行用例至少一张截图", false,
+                    "自动截图失败，请查看本用例 screenshots 中的采集错误。");
         }
         finally
         {
+            periodicScreenshotsEnabled = false;
             ReleaseLuaRunner();
             CompleteCase(testCase, succeeded, interruptionRequested);
         }
@@ -412,17 +434,37 @@ public sealed class GameplayTestScene : MonoBehaviour
         yield return LoadText(testCase.LuaPath, text => script = text);
         Record("load_lua", "读取测试 Lua", true, testCase.LuaPath);
         Stage("case." + testCase.Id + ".lua");
-        luaRunner = new GameplayTestLuaRunner(player, Check, Record, CaptureLuaScreenshot);
+        luaRunner = new GameplayTestLuaRunner(player, Check, Record);
         yield return luaRunner.Run(script, "@" + testCase.LuaPath);
     }
 
-    private IEnumerator CaptureLuaScreenshot(string label)
+    #region 定时截图
+    private static bool HasValidScreenshot(GameplayTestCaseReport testCase)
+        => testCase.Screenshots.Exists(image => string.IsNullOrEmpty(image.Error) && File.Exists(image.Path));
+
+    private IEnumerator CaptureAutomaticScreenshot(GameplayTestCaseReport testCase, string label)
     {
-        GameplayTestCaseReport testCase;
+        screenshotCapturing = true;
+        int firstNewScreenshot = testCase.Screenshots.Count;
+        try
+        {
+            yield return GameplayTestLuaRunner.Advance(CaptureScreenshotForCase(testCase, label), error =>
+            {
+                if (testCase.Screenshots.Count > firstNewScreenshot)
+                    testCase.Screenshots[testCase.Screenshots.Count - 1].Error ??= error.ToString();
+                else
+                    Record("auto_screenshot", label, false, error.ToString());
+            });
+        }
+        finally { screenshotCapturing = false; }
+    }
+
+    private IEnumerator CaptureScreenshotForCase(GameplayTestCaseReport testCase, string label)
+    {
         GameplayTestScreenshotRecord screenshot;
         lock (reportLock)
         {
-            testCase = activeCase ?? throw new InvalidOperationException("没有正在执行的 Lua 用例。");
+            if (activeCase != testCase) yield break;
             int index = testCase.Screenshots.Count + 1;
             screenshot = new GameplayTestScreenshotRecord
             {
@@ -436,7 +478,6 @@ public sealed class GameplayTestScene : MonoBehaviour
             // 先记录请求，捕获中断时报告仍能说明哪个现场没有保存成功。
             testCase.Screenshots.Add(screenshot);
         }
-        Stage("case." + testCase.Id + ".screenshot." + screenshot.Index);
         // 相机已创建不代表主角已经入镜，以连续渲染帧的真实可见状态作为取图前提。
         double deadline = Time.realtimeSinceStartupAsDouble + 8d;
         int readyFrames = 0;
@@ -447,8 +488,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             readyFrames = TryGetScreenshotPresentation(out presentation) ? readyFrames + 1 : 0;
             if (Time.realtimeSinceStartupAsDouble < deadline || readyFrames >= 2) continue;
             screenshot.Error = "截图现场未就绪：" + presentation;
-            Record("screenshot_ready", "截图现场可见性", false, screenshot.Error);
-            throw new InvalidOperationException(screenshot.Error);
+            yield break;
         }
         lock (reportLock)
         {
@@ -457,12 +497,12 @@ public sealed class GameplayTestScene : MonoBehaviour
             screenshot.ElapsedSeconds = clock.Elapsed.TotalSeconds;
             screenshot.PlayerPosition = new GameplayTestPosition(ItemMgr.Instance.User_Player.transform.position);
         }
-        Record("screenshot_ready", "截图现场可见性", true, presentation);
         yield return GameplayTestArtifacts.CaptureScreenshot(this, screenshot.Path,
             error => screenshot.Error = error);
-        if (!string.IsNullOrEmpty(screenshot.Error)) throw new IOException(screenshot.Error);
-        Stage("case." + testCase.Id + ".lua");
+        if (string.IsNullOrEmpty(screenshot.Error))
+            Record("auto_screenshot", label, true, screenshot.Path);
     }
+    #endregion
 
     private bool TryGetScreenshotPresentation(out string reason)
     {
@@ -674,7 +714,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             {
                 foreach (GameplayTestScreenshotRecord screenshot in testCase.Screenshots)
                     if (!File.Exists(screenshot.Path) && string.IsNullOrEmpty(screenshot.Error))
-                        screenshot.Error = "截图命令被中断，现场图片未保存。";
+                        screenshot.Error = "自动截图被中断，现场图片未保存。";
                 if (testCase.Status == "running")
                 {
                     testCase.Status = interrupted ? "interrupted" : "failed";

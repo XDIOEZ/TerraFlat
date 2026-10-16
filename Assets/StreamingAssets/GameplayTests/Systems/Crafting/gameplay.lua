@@ -16,7 +16,6 @@ test.runtime("crafting", "handcraft_clicks", {}, function(data)
         "满输出槽位仍扣除材料、覆盖原物品或产生部分产物")
     assert(data.cleanupRegistered, "制作自有材料没有登记失败时的收尾")
 end, "真实手工按钮点击、产出扣料及满输出拒绝")
-test.screenshot("手工制作真实面板在满输出槽时保留材料的现场")
 test.runtime("crafting", "cleanup", {}, function(data)
     assert(data.hadFixture and data.released and data.inputEmpty and data.outputEmpty,
         "自有制作材料或输出物未清理")
