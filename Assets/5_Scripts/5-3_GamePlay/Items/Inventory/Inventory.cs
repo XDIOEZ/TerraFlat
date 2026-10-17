@@ -180,6 +180,8 @@ public class Inventory
     // 玩家行囊或受限容器的容量显示节点；正式节点由 UI_Bag Prefab 提供。
     private TextMeshProUGUI _carryWeightValueText;
     private TextMeshProUGUI _carryVolumeValueText;
+    private UnityEngine.UI.Slider _carryWeightProgress;
+    private UnityEngine.UI.Slider _carryVolumeProgress;
     [NonSerialized, FastCloner.Code.FastClonerIgnore] private List<Inventory_Data> _linkedCarryUsageData;
     private Inventory_Data _overweightObservedData; // 当前绑定超重监听的数据源，用于安全解绑旧引用。
 
@@ -394,6 +396,8 @@ public class Inventory
         _quickTransferOwnerPanel = null;
         _carryWeightValueText = null;
         _carryVolumeValueText = null;
+        _carryWeightProgress = null;
+        _carryVolumeProgress = null;
         if (ReferenceEquals(LastOpenedContainer, this))
             LastOpenedContainer = null;
     }
@@ -1116,16 +1120,22 @@ public class Inventory
 
     #region 库存重量与体积容量显示
 
-    /// <summary>绑定库存面板中的重量/体积数值节点，并监听其它随身库存变化。</summary>
+    /// <summary>绑定库存面板中的重量/体积数值和进度条，并监听其它随身库存变化。</summary>
     private void BindCarryCapacityUI()
     {
         _carryWeightValueText = null;
         _carryVolumeValueText = null;
+        _carryWeightProgress = null;
+        _carryVolumeProgress = null;
         if ((!IsPlayerBagInventory() && Data?.HasCarryCapacity != true) || basePanel == null)
             return;
 
         basePanel.TryGetText("FWUI_CarryWeightValue", out _carryWeightValueText);
         basePanel.TryGetText("FWUI_CarryVolumeValue", out _carryVolumeValueText);
+        if (_carryWeightValueText != null)
+            _carryWeightProgress = basePanel.GetSlider("FWUI_CarryWeightProgress");
+        if (_carryVolumeValueText != null)
+            _carryVolumeProgress = basePanel.GetSlider("FWUI_CarryVolumeProgress");
         BindCarryCapacityLinkedInventory();
         RefreshCarryCapacityUI();
     }
@@ -1180,6 +1190,8 @@ public class Inventory
 
         float currentWeight;
         float currentVolume;
+        float weightLimit;
+        float volumeLimit;
         string maxWeight;
         string maxVolume;
 
@@ -1188,6 +1200,8 @@ public class Inventory
         {
             currentWeight = snapshot.CurrentWeight;
             currentVolume = snapshot.CurrentVolume;
+            weightLimit = snapshot.IsUnlimited ? float.PositiveInfinity : snapshot.MaxWeight;
+            volumeLimit = snapshot.IsUnlimited ? float.PositiveInfinity : snapshot.MaxVolume;
             maxWeight = snapshot.IsUnlimited ? "INF" : snapshot.MaxWeight.ToString("0.##");
             maxVolume = snapshot.IsUnlimited
                 ? "INF"
@@ -1197,6 +1211,8 @@ public class Inventory
         {
             currentWeight = Data.CurrentCarryWeight;
             currentVolume = Data.CurrentCarryVolume;
+            weightLimit = Data.HasUnlimitedCarryCapacity ? float.PositiveInfinity : Data.MaxCarryWeight;
+            volumeLimit = Data.HasUnlimitedCarryCapacity ? float.PositiveInfinity : Data.MaxCarryVolume;
             maxWeight = Data.MaxCarryWeight.ToString("0.##");
             maxVolume = Data.MaxCarryVolume.ToString("0.##");
         }
@@ -1209,6 +1225,12 @@ public class Inventory
             _carryWeightValueText.text = $"{currentWeight:0.##} / {maxWeight} kg";
         if (_carryVolumeValueText != null)
             _carryVolumeValueText.text = $"{currentVolume:0.##} / {maxVolume} L";
+
+        // 进度条复用同一份权威容量读数，超量只封顶填充，数值继续保留真实携带量。
+        if (_carryWeightProgress != null)
+            _carryWeightProgress.SetValueWithoutNotify(weightLimit > 0f ? Mathf.Clamp01(currentWeight / weightLimit) : 0f);
+        if (_carryVolumeProgress != null)
+            _carryVolumeProgress.SetValueWithoutNotify(volumeLimit > 0f ? Mathf.Clamp01(currentVolume / volumeLimit) : 0f);
     }
 
     #endregion

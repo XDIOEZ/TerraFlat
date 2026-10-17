@@ -828,16 +828,19 @@ public static class GameUIPrefabRebuilder
 
         TMP_Text carryWeightLabel = FindRect(root.transform, "FWUI_CarryWeightLabel")?.GetComponent<TMP_Text>();
         if (carryWeightLabel != null)
-            carryWeightLabel.color = Muted;
+            carryWeightLabel.color = Color.black;
         TMP_Text carryWeightValue = FindRect(root.transform, "FWUI_CarryWeightValue")?.GetComponent<TMP_Text>();
         if (carryWeightValue != null)
-            carryWeightValue.color = ModularBagText;
+            carryWeightValue.color = Color.black;
         TMP_Text carryVolumeLabel = FindRect(root.transform, "FWUI_CarryVolumeLabel")?.GetComponent<TMP_Text>();
         if (carryVolumeLabel != null)
-            carryVolumeLabel.color = Muted;
+            carryVolumeLabel.color = Color.black;
         TMP_Text carryVolumeValue = FindRect(root.transform, "FWUI_CarryVolumeValue")?.GetComponent<TMP_Text>();
         if (carryVolumeValue != null)
-            carryVolumeValue.color = ModularBagText;
+            carryVolumeValue.color = Color.black;
+
+        ConfigureFooterCapacityProgress(FindRect(root.transform, "FWUI_CarryWeightProgress"), 22f);
+        ConfigureFooterCapacityProgress(FindRect(root.transform, "FWUI_CarryVolumeProgress"), 246f);
 
         ConfigureModularBagButton(root.transform, "关闭", null, ModularBagText, false);
         ConfigureModularBagButton(root.transform, "整理", null, ModularBagText, false);
@@ -903,6 +906,8 @@ public static class GameUIPrefabRebuilder
             label.color = textColor;
     }
 
+    #region 行囊容量进度条
+
     /// <summary>固定行囊 Footer 容量文字的位置，保留右侧整理按钮的触控空间。</summary>
     private static void SetFooterCapacityText(RectTransform rect, float x, float width)
     {
@@ -916,7 +921,7 @@ public static class GameUIPrefabRebuilder
         rect.sizeDelta = new Vector2(width, 30f);
     }
 
-    /// <summary>在不改变 Footer 自身与其它兄弟节点的前提下重建四个容量文本节点。</summary>
+    /// <summary>在 Footer 左侧重建两条容量进度条，黑色文字位于填充层上方。</summary>
     private static void EnsureBagCarryCapacityFooter(Transform root)
     {
         RectTransform footer = FindRect(root, "FWUI_Footer");
@@ -927,47 +932,100 @@ public static class GameUIPrefabRebuilder
         DestroyGeneratedElement(footer, "FWUI_CarryWeightValue");
         DestroyGeneratedElement(footer, "FWUI_CarryVolumeLabel");
         DestroyGeneratedElement(footer, "FWUI_CarryVolumeValue");
+        DestroyGeneratedElement(footer, "FWUI_CarryWeightProgress");
+        DestroyGeneratedElement(footer, "FWUI_CarryVolumeProgress");
+
+        CreateFooterCapacityProgress("FWUI_CarryWeightProgress", footer, 22f);
+        CreateFooterCapacityProgress("FWUI_CarryVolumeProgress", footer, 246f);
 
         TextMeshProUGUI weightLabel = CreateText(
             "FWUI_CarryWeightLabel",
             footer,
             "重量",
             16f,
-            Muted,
+            Color.black,
             FontStyles.Normal,
             TextAlignmentOptions.Left);
-        SetFooterCapacityText(weightLabel.rectTransform, 22f, 52f);
+        SetFooterCapacityText(weightLabel.rectTransform, 32f, 42f);
 
         TextMeshProUGUI weightValue = CreateText(
             "FWUI_CarryWeightValue",
             footer,
             "-- / -- kg",
             16f,
-            ModularBagText,
+            Color.black,
             FontStyles.Normal,
             TextAlignmentOptions.Left);
-        SetFooterCapacityText(weightValue.rectTransform, 76f, 150f);
+        SetFooterCapacityText(weightValue.rectTransform, 78f, 148f);
 
         TextMeshProUGUI volumeLabel = CreateText(
             "FWUI_CarryVolumeLabel",
             footer,
             "体积",
             16f,
-            Muted,
+            Color.black,
             FontStyles.Normal,
             TextAlignmentOptions.Left);
-        SetFooterCapacityText(volumeLabel.rectTransform, 246f, 52f);
+        SetFooterCapacityText(volumeLabel.rectTransform, 256f, 42f);
 
         TextMeshProUGUI volumeValue = CreateText(
             "FWUI_CarryVolumeValue",
             footer,
             "-- / -- L",
             16f,
-            ModularBagText,
+            Color.black,
             FontStyles.Normal,
             TextAlignmentOptions.Left);
-        SetFooterCapacityText(volumeValue.rectTransform, 300f, 150f);
+        SetFooterCapacityText(volumeValue.rectTransform, 302f, 148f);
     }
+
+    private static void CreateFooterCapacityProgress(string objectName, Transform footer, float x)
+    {
+        Image background = CreateImage(objectName, footer, Color.white);
+        RectTransform fillArea = CreateRect(objectName + "FillArea", background.transform);
+        Image fill = CreateImage(objectName + "Fill", fillArea, FlatWorldUITheme.StatusBarDefault);
+        Stretch(fill.rectTransform);
+
+        Slider progress = background.gameObject.AddComponent<Slider>();
+        progress.targetGraphic = background;
+        progress.fillRect = fill.rectTransform;
+        progress.handleRect = null;
+        progress.direction = Slider.Direction.LeftToRight;
+        progress.minValue = 0f;
+        progress.maxValue = 1f;
+        progress.wholeNumbers = false;
+        progress.interactable = false;
+        progress.transition = Selectable.Transition.None;
+        progress.navigation = new Navigation { mode = Navigation.Mode.None };
+        progress.SetValueWithoutNotify(0f);
+        ConfigureFooterCapacityProgress(background.rectTransform, x);
+    }
+
+    private static void ConfigureFooterCapacityProgress(RectTransform rect, float x)
+    {
+        if (rect == null)
+            return;
+
+        // 浅色轨道由行囊持有，主题重建后恢复满高填充区，运行时无需补建视觉节点。
+        SetFooterCapacityText(rect, x, 210f);
+        rect.sizeDelta = new Vector2(210f, 34f);
+        ApplyModularBagSurface(rect.GetComponent<Image>(), new Color32(230, 230, 222, 255));
+
+        Slider progress = rect.GetComponent<Slider>();
+        if (progress == null || progress.fillRect == null)
+            return;
+
+        RectTransform fillArea = progress.fillRect.parent as RectTransform;
+        if (fillArea != null)
+        {
+            Stretch(fillArea);
+            fillArea.offsetMin = new Vector2(2f, 2f);
+            fillArea.offsetMax = new Vector2(-2f, -2f);
+        }
+        ApplyModularBagSurface(progress.fillRect.GetComponent<Image>(), FlatWorldUITheme.StatusBarDefault);
+    }
+
+    #endregion
 
     /// <summary>删除当前生成框架中的指定节点，供专用面板裁掉不需要的装饰文案。</summary>
     private static void DestroyGeneratedElement(Transform root, string objectName)
