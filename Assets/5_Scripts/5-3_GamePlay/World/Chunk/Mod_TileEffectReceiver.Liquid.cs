@@ -40,6 +40,9 @@ public partial class Mod_TileEffectReceiver
 
     /// <summary>正在深水中消耗游泳储备维持上浮，只暂停 Ground Behaviour。</summary>
     public bool LiquidFloating { get; private set; }
+    /// <summary>表现只读取可用接触；承载抑制、卸载和换世界期间不能补播液体声音。</summary>
+    public bool WaterContactPresentationAvailable => Enabled && IsRuntimeLoaded &&
+        effectSuppressors.Count == 0 && !isPreparedForWorldTransition;
     public float LiquidDepth => activeLiquid != null && !activeLiquidEdge ? activeLiquidContact.Sample.LiquidDepth : 0f;
     /// <summary>真实脚下液体的稳定身份；岸边交互或平台覆盖不视为入水。</summary>
     public string LiquidId => LiquidDepth > 0f ? activeLiquid.Id : string.Empty;

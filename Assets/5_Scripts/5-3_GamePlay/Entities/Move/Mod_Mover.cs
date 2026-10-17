@@ -240,6 +240,7 @@ public partial class Mod_Mover : Module
 
         InitializeWetClothesAudio();
         InitializeFootstepAudio();
+        InitializeSwimmingAudio();
 
         // 先恢复基础数据，再通过统一入口重建奔跑倍率与动画状态。
         if (persistedRunState)
@@ -264,6 +265,7 @@ public partial class Mod_Mover : Module
         }
 
         TickFootstepAudio();
+        TickSwimmingAudio();
 
         if (WorldUnitChanged == null)
             return;
@@ -658,6 +660,7 @@ public partial class Mod_Mover : Module
         UnbindRunActions();
         UnbindMoveAnimationCallbacks();
         DisposeWetClothesAudio();
+        DisposeSwimmingAudio();
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();
         RunStateChanged = null;

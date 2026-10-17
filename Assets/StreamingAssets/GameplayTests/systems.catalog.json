@@ -1074,6 +1074,8 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover.FootstepAudio.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover.SwimmingAudio.cs",
         "Assets/5_Scripts/5-6_Audio/*",
         "Assets/Audio/*",
         "Assets/Resources/Audio/*",

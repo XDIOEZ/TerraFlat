@@ -10,6 +10,23 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         assert(cue.loaded and cue.variants == cue.expectedVariants and cue.validClips and cue.spatial,
             cue.id .. " 未正确导入 LMMS 音频或缺少声源限流")
     end
+    assert(#data.swimmingCues == 3, "未读取全部入水、划水和出水 Cue")
+    local swimmingIds = { ["player.swim.enter"] = true, ["player.swim.stroke"] = true, ["player.swim.exit"] = true }
+    for _, cue in ipairs(data.swimmingCues) do
+        assert(swimmingIds[cue.id], "游泳 Cue 重复或出现未知 ID：" .. tostring(cue.id))
+        swimmingIds[cue.id] = nil
+        assert(cue.loaded and #cue.clips == 3 and cue.bus == "Sfx" and cue.spatialBlend == 1 and not cue.loop,
+            cue.id .. " 没有正确导入三变体世界空间短音")
+        assert(cue.cooldown > 0 and cue.maxInstances > 0 and cue.minDistance >= 0 and cue.maxDistance > cue.minDistance,
+            cue.id .. " 缺少有效限流或空间范围")
+        if cue.id == "player.swim.stroke" then
+            assert(cue.cooldown <= 0.20001, "划水 Cue 冷却会吞掉正常游泳节奏")
+        end
+        for _, clip in ipairs(cue.clips) do
+            assert(clip.loaded and clip.channels == 1 and clip.frequency == 48000 and clip.samples > 0,
+                cue.id .. " 未完整导入 48kHz 单声道 LMMS 音频")
+        end
+    end
     assert(data.inventoryUiCueCount == 75 and data.inventoryUiCuesValid,
         "72 个 LMMS 取放音效及 3 种交换/装备 Cue 未完整导入 Unity UI 总线")
     assert(data.scope == "live-isolated-world" and data.formalCatalog and data.clipCount > 0 and data.clipSamples > 0, "正式录音或目录没有真实加载")

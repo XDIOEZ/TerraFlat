@@ -248,6 +248,15 @@ namespace FlatWorld.Audio
 
         #endregion
 
+        #region 游泳
+
+        // 入水、主动划水和出水分别使用独立事件，避免水格之间移动时重复播放水花。
+        public const string SwimEnter = "player.swim.enter";
+        public const string SwimStroke = "player.swim.stroke";
+        public const string SwimExit = "player.swim.exit";
+
+        #endregion
+
         #region 天气音效
 
         public const string WeatherRainLoop = "weather.rain.loop";

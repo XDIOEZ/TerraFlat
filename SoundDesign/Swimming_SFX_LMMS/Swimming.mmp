@@ -1,0 +1,677 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.2" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="42" masterpitch="0" />
+  <song>
+    <trackcontainer type="song">
+      <track muted="0" type="0" name="入水水花 / 1 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="45" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="2050" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.05291502622129181" dec="0.17888543819998318" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.05291502622129181" dec="0.17888543819998318" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.05291502622129181" dec="0.17888543819998318" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="player.swim.enter">
+          <note pos="12" key="57" len="19" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 1 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="1.2" ftype="2" fcut="790" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07483314773547883" dec="0.2" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07483314773547883" dec="0.2" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07483314773547883" dec="0.2" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="player.swim.enter">
+          <note pos="14" key="57" len="24" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 1 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="29" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.2" ftype="2" fcut="2750" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.07071067811865475" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.07071067811865475" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.07071067811865475" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="player.swim.enter">
+          <note pos="17" key="57" len="5" vol="78" pan="0" />
+          <note pos="26" key="57" len="5" vol="48" pan="0" />
+          <note pos="40" key="57" len="5" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 1 / water layer 4" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="34" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.4" ftype="2" fcut="1080" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="0" name="player.swim.enter">
+          <note pos="21" key="57" len="6" vol="78" pan="0" />
+          <note pos="32" key="57" len="6" vol="52" pan="0" />
+          <note pos="46" key="57" len="6" vol="30" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 2 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="45" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="2203.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.05291502622129181" dec="0.1854723699099141" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.05291502622129181" dec="0.1854723699099141" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.05291502622129181" dec="0.1854723699099141" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="player.swim.enter">
+          <note pos="12" key="57" len="20" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 2 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="1.2" ftype="2" fcut="849.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07483314773547883" dec="0.2073644135332772" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07483314773547883" dec="0.2073644135332772" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07483314773547883" dec="0.2073644135332772" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="player.swim.enter">
+          <note pos="15" key="57" len="26" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 2 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="29" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.2" ftype="2" fcut="2956.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.07331439149307589" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.07331439149307589" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.07331439149307589" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="player.swim.enter">
+          <note pos="18" key="57" len="5" vol="78" pan="0" />
+          <note pos="27" key="57" len="5" vol="48" pan="0" />
+          <note pos="40" key="57" len="5" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 2 / water layer 4" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="34" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.4" ftype="2" fcut="1161.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08294576541331088" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08294576541331088" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08294576541331088" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="192" name="player.swim.enter">
+          <note pos="22" key="57" len="6" vol="78" pan="0" />
+          <note pos="33" key="57" len="6" vol="52" pan="0" />
+          <note pos="47" key="57" len="6" vol="30" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 3 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="45" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1916.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.05291502622129181" dec="0.17297398648351722" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.05291502622129181" dec="0.17297398648351722" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.05291502622129181" dec="0.17297398648351722" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="player.swim.enter">
+          <note pos="12" key="57" len="18" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 3 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="1.2" ftype="2" fcut="738.6500000000001" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07483314773547883" dec="0.19339079605813717" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07483314773547883" dec="0.19339079605813717" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07483314773547883" dec="0.19339079605813717" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="player.swim.enter">
+          <note pos="14" key="57" len="23" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 3 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="29" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.2" ftype="2" fcut="2571.25" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.06837397165588671" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.06837397165588671" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.06837397165588671" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="player.swim.enter">
+          <note pos="17" key="57" len="5" vol="78" pan="0" />
+          <note pos="26" key="57" len="5" vol="48" pan="0" />
+          <note pos="39" key="57" len="5" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="入水水花 / 3 / water layer 4" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="34" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.4" ftype="2" fcut="1009.8000000000001" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07735631842325487" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07735631842325487" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07735631842325487" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="384" name="player.swim.enter">
+          <note pos="20" key="57" len="6" vol="78" pan="0" />
+          <note pos="32" key="57" len="6" vol="52" pan="0" />
+          <note pos="46" key="57" len="6" vol="30" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 1 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1480" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.1" dec="0.1816590212458495" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.1" dec="0.1816590212458495" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.1" dec="0.1816590212458495" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="player.swim.stroke">
+          <note pos="12" key="57" len="23" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 1 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="29" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="1.4" ftype="2" fcut="720" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.06928203230275509" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.06928203230275509" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.06928203230275509" dec="0.161245154965971" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="player.swim.stroke">
+          <note pos="16" key="57" len="17" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 1 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="27" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.1" ftype="2" fcut="2250" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.08717797887081347" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.08717797887081347" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.08717797887081347" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="player.swim.stroke">
+          <note pos="23" key="57" len="7" vol="78" pan="0" />
+          <note pos="35" key="57" len="7" vol="34" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 1 / water layer 4" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="31" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.1" ftype="2" fcut="980" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07348469228349534" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="576" name="player.swim.stroke">
+          <note pos="27" key="57" len="5" vol="78" pan="0" />
+          <note pos="41" key="57" len="5" vol="40" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 2 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1591.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.1" dec="0.18834808201837364" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.1" dec="0.18834808201837364" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.1" dec="0.18834808201837364" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="player.swim.stroke">
+          <note pos="12" key="57" len="24" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 2 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="29" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="1.4" ftype="2" fcut="774.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.06928203230275509" dec="0.16718253497300486" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.06928203230275509" dec="0.16718253497300486" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.06928203230275509" dec="0.16718253497300486" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="player.swim.stroke">
+          <note pos="17" key="57" len="18" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 2 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="27" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.1" ftype="2" fcut="2418.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.09038805230781334" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.09038805230781334" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.09038805230781334" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="player.swim.stroke">
+          <note pos="24" key="57" len="7" vol="78" pan="0" />
+          <note pos="36" key="57" len="7" vol="34" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 2 / water layer 4" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="31" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.1" ftype="2" fcut="1053.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07619055059520176" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07619055059520176" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07619055059520176" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="768" name="player.swim.stroke">
+          <note pos="28" key="57" len="6" vol="78" pan="0" />
+          <note pos="43" key="57" len="6" vol="40" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 3 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="42" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1383.8000000000002" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.1" dec="0.17565591364938443" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.1" dec="0.17565591364938443" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.1" dec="0.17565591364938443" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="player.swim.stroke">
+          <note pos="12" key="57" len="22" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 3 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="29" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="1.4" ftype="2" fcut="673.2" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.06928203230275509" dec="0.1559166443969341" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.06928203230275509" dec="0.1559166443969341" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.06928203230275509" dec="0.1559166443969341" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="player.swim.stroke">
+          <note pos="16" key="57" len="16" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 3 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="27" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.1" ftype="2" fcut="2103.75" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.03162277660168379" dec="0.08429709366283039" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.03162277660168379" dec="0.08429709366283039" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.03162277660168379" dec="0.08429709366283039" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="player.swim.stroke">
+          <note pos="22" key="57" len="6" vol="78" pan="0" />
+          <note pos="35" key="57" len="6" vol="34" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="游泳划水 / 3 / water layer 4" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="31" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.1" ftype="2" fcut="916.3000000000001" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07105631569396206" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07105631569396206" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.0282842712474619" dec="0.07105631569396206" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="960" name="player.swim.stroke">
+          <note pos="26" key="57" len="5" vol="78" pan="0" />
+          <note pos="41" key="57" len="5" vol="40" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 1 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1580" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07071067811865475" dec="0.15165750888103102" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07071067811865475" dec="0.15165750888103102" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07071067811865475" dec="0.15165750888103102" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="player.swim.exit">
+          <note pos="12" key="57" len="16" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 1 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="25" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.4" ftype="2" fcut="2380" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.06928203230275509" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="player.swim.exit">
+          <note pos="17" key="57" len="5" vol="78" pan="0" />
+          <note pos="31" key="57" len="5" vol="48" pan="0" />
+          <note pos="45" key="57" len="5" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 1 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="32" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.6" ftype="2" fcut="1120" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07874007874011811" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07874007874011811" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07874007874011811" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1152" name="player.swim.exit">
+          <note pos="22" key="57" len="6" vol="78" pan="0" />
+          <note pos="38" key="57" len="6" vol="44" pan="0" />
+          <note pos="50" key="57" len="6" vol="23" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 2 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1698.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07071067811865475" dec="0.15724185193516388" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07071067811865475" dec="0.15724185193516388" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07071067811865475" dec="0.15724185193516388" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="player.swim.exit">
+          <note pos="12" key="57" len="17" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 2 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="25" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.4" ftype="2" fcut="2558.5" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.07183313998427188" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.07183313998427188" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.07183313998427188" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="player.swim.exit">
+          <note pos="17" key="57" len="5" vol="78" pan="0" />
+          <note pos="32" key="57" len="5" vol="48" pan="0" />
+          <note pos="46" key="57" len="5" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 2 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="32" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.6" ftype="2" fcut="1204.0" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08163945124754331" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08163945124754331" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.024494897427831782" dec="0.08163945124754331" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1344" name="player.swim.exit">
+          <note pos="22" key="57" len="6" vol="78" pan="0" />
+          <note pos="39" key="57" len="6" vol="44" pan="0" />
+          <note pos="50" key="57" len="6" vol="23" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 3 / water layer 1" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.8" ftype="0" fcut="1477.3000000000002" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.07071067811865475" dec="0.14664583185348298" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.07071067811865475" dec="0.14664583185348298" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.07071067811865475" dec="0.14664583185348298" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="player.swim.exit">
+          <note pos="12" key="57" len="15" vol="78" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 3 / water layer 2" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="25" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.4" ftype="2" fcut="2225.3" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.02" dec="0.06699253689777691" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.02" dec="0.06699253689777691" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.02" dec="0.06699253689777691" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="player.swim.exit">
+          <note pos="17" key="57" len="5" vol="78" pan="0" />
+          <note pos="31" key="57" len="5" vol="48" pan="0" />
+          <note pos="45" key="57" len="5" vol="27" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="出水滴水 / 3 / water layer 3" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="32" fxch="0">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" userwavefile0="" modalgo1="2" vol1="0" wavetype1="0" coarse1="17" finel1="23" finer1="23" pan1="0" phoffset1="0" stphdetun1="0" userwavefile1="" modalgo2="2" vol2="0" wavetype2="0" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" userwavefile2="" modalgo3="2" />
+          </instrument>
+          <eldata fres="4.6" ftype="2" fcut="1047.2" fwet="1">
+            <elvol pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07613803254615921" rel="0.07071067811865475" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07613803254615921" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" hold="0.0" att="0.024494897427831782" dec="0.07613803254615921" rel="0.07071067811865475" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+        </instrumenttrack>
+        <pattern type="1" steps="16" len="192" pos="1536" name="player.swim.exit">
+          <note pos="21" key="57" len="5" vol="78" pan="0" />
+          <note pos="38" key="57" len="5" vol="44" pan="0" />
+          <note pos="49" key="57" len="5" vol="23" pan="0" />
+        </pattern>
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="1728" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

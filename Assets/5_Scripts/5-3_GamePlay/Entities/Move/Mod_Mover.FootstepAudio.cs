@@ -14,7 +14,7 @@ public partial class Mod_Mover
     private const float FootstepFrequencyMultiplier = 1.6f;
     private const float FootstepVolumeMultiplier = 0.6f;
     private const float MaximumStepDisplacement = 1.6f;
-    private const float DeepWaterThreshold = 0.55f;
+    private const float DeepWaterThreshold = WaterEnvironmentRules.SwimmingDepthThreshold;
 
     private bool footstepAudioEnabled;
     private Vector2 footstepPreviousPosition;

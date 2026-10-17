@@ -123,6 +123,33 @@ public static partial class GameplayTestPresentationRuntimeProbe
                                    cue.MaxInstances == (isFootstep ? 2 : 3)
                 });
             }
+            JArray swimmingCues = new JArray();
+            foreach (string cueId in new[] { "player.swim.enter", "player.swim.stroke", "player.swim.exit" })
+            {
+                // 只读取正式目录和导入结果，变体、格式与限流要求交给 Lua 断言。
+                bool loaded = service.TryGetCue(cueId, out AudioCue cue);
+                JArray clips = new JArray();
+                if (loaded)
+                    foreach (AudioClip clip in cue.Clips)
+                        clips.Add(new JObject
+                        {
+                            ["loaded"] = clip != null,
+                            ["channels"] = clip != null ? clip.channels : 0,
+                            ["frequency"] = clip != null ? clip.frequency : 0,
+                            ["samples"] = clip != null ? clip.samples : 0
+                        });
+                swimmingCues.Add(new JObject
+                {
+                    ["id"] = cueId, ["loaded"] = loaded, ["clips"] = clips,
+                    ["bus"] = loaded ? cue.Bus.ToString() : string.Empty,
+                    ["spatialBlend"] = loaded ? cue.SpatialBlend : 0f,
+                    ["loop"] = loaded && cue.Loop,
+                    ["cooldown"] = loaded ? cue.Cooldown : 0f,
+                    ["maxInstances"] = loaded ? cue.MaxInstances : 0,
+                    ["minDistance"] = loaded ? cue.MinDistance : 0f,
+                    ["maxDistance"] = loaded ? cue.MaxDistance : 0f
+                });
+            }
             int inventoryUiCueCount = 0;
             bool inventoryUiCuesValid = true;
             foreach (string action in new[] { "pickup", "backpack", "chest" })
@@ -205,6 +232,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             {
                 ["feedbackCues"] = feedbackCues,
                 ["movementCues"] = movementCues,
+                ["swimmingCues"] = swimmingCues,
                 ["inventoryUiCueCount"] = inventoryUiCueCount,
                 ["inventoryUiCuesValid"] = inventoryUiCuesValid,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,

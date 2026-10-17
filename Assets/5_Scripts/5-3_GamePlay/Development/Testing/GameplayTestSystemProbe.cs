@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
         RegisterEntityOperations(result);
         RegisterWorldOperations(result);
         RegisterServiceOperations(result);
+        RegisterSwimmingAudioOperations(result);
         RegisterInteractionOperations(result);
         RegisterNavigationOperations(result);
         RegisterEnvironmentBatchOperations(result);

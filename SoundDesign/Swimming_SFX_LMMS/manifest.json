@@ -1,0 +1,117 @@
+{
+  "engine": "LMMS 1.2.2 via MCP",
+  "instrument": "TripleOscillator noise with native filters/envelopes",
+  "masterSha256": "542f5c9c459088191415c44553767221d314f92cecc6d848f5886160689fbb84",
+  "sampleRate": 48000,
+  "channels": 1,
+  "sounds": [
+    {
+      "cue": "player.swim.enter",
+      "name": "入水水花",
+      "variant": 1,
+      "seconds": 0.65,
+      "peakDb": -13.0,
+      "rmsDb": -34.97,
+      "startSeconds": 0.125,
+      "file": "Assets/Audio/Generated/player.swim.enter__01.wav",
+      "guid": "54848eb4a8574c06bd338aa27e7861a7",
+      "sha256": "7a4af1d8ad64890df253527a19591cb436a094bbca4a61c0cff7b45076393c64"
+    },
+    {
+      "cue": "player.swim.enter",
+      "name": "入水水花",
+      "variant": 2,
+      "seconds": 0.65,
+      "peakDb": -13.0,
+      "rmsDb": -33.25,
+      "startSeconds": 2.125,
+      "file": "Assets/Audio/Generated/player.swim.enter__02.wav",
+      "guid": "cf596012cead4de4ab28fa5b81c8afee",
+      "sha256": "1da3361b0aebd0133a2c0508e262a723f54fdb844590c61246abc3f9a6b62874"
+    },
+    {
+      "cue": "player.swim.enter",
+      "name": "入水水花",
+      "variant": 3,
+      "seconds": 0.65,
+      "peakDb": -13.0,
+      "rmsDb": -35.39,
+      "startSeconds": 4.125,
+      "file": "Assets/Audio/Generated/player.swim.enter__03.wav",
+      "guid": "f1620a3c4e9f4b8cad12fd536638915f",
+      "sha256": "8acddc32c728ee79ffd61ccb177733e3b87c379b42f7495e37d48cd7fe7f4ecf"
+    },
+    {
+      "cue": "player.swim.stroke",
+      "name": "游泳划水",
+      "variant": 1,
+      "seconds": 0.6,
+      "peakDb": -17.0,
+      "rmsDb": -37.91,
+      "startSeconds": 6.125,
+      "file": "Assets/Audio/Generated/player.swim.stroke__01.wav",
+      "guid": "15592e05a4fe4a15bbf0a76feaa134aa",
+      "sha256": "1c5cd8661692eb39e92e1cb2b703b000e31033eac7d99239d1857185249046f6"
+    },
+    {
+      "cue": "player.swim.stroke",
+      "name": "游泳划水",
+      "variant": 2,
+      "seconds": 0.6,
+      "peakDb": -17.0,
+      "rmsDb": -35.84,
+      "startSeconds": 8.125,
+      "file": "Assets/Audio/Generated/player.swim.stroke__02.wav",
+      "guid": "de8698b8c59f4bbaa2411d97a168bd0a",
+      "sha256": "d185853112f10f425b912f0a3f2cd0b608e2312037f1e853e2bb8ad6ecd69383"
+    },
+    {
+      "cue": "player.swim.stroke",
+      "name": "游泳划水",
+      "variant": 3,
+      "seconds": 0.6,
+      "peakDb": -17.0,
+      "rmsDb": -37.97,
+      "startSeconds": 10.125,
+      "file": "Assets/Audio/Generated/player.swim.stroke__03.wav",
+      "guid": "9edf4a6729c44ef190d56fb651f0918e",
+      "sha256": "9e5c73ced9d4774d4a0483d5641ff36845cf59f7b65e8f02ce3034ffeea81ab1"
+    },
+    {
+      "cue": "player.swim.exit",
+      "name": "出水滴水",
+      "variant": 1,
+      "seconds": 0.55,
+      "peakDb": -18.0,
+      "rmsDb": -40.93,
+      "startSeconds": 12.125,
+      "file": "Assets/Audio/Generated/player.swim.exit__01.wav",
+      "guid": "a74c133ee8a7432d87f70b4223e8c1ec",
+      "sha256": "928b1d95344655488fd5041277cd76ab28715443629afd9d2ab8e333636beba0"
+    },
+    {
+      "cue": "player.swim.exit",
+      "name": "出水滴水",
+      "variant": 2,
+      "seconds": 0.55,
+      "peakDb": -18.0,
+      "rmsDb": -41.55,
+      "startSeconds": 14.125,
+      "file": "Assets/Audio/Generated/player.swim.exit__02.wav",
+      "guid": "760b63987d254cb38fbf1c6986431f64",
+      "sha256": "33d9dfce4d4a0e1aa394fd48533fec6a5470935dcc6fee6b9b87dc109501ade6"
+    },
+    {
+      "cue": "player.swim.exit",
+      "name": "出水滴水",
+      "variant": 3,
+      "seconds": 0.55,
+      "peakDb": -18.0,
+      "rmsDb": -39.15,
+      "startSeconds": 16.125,
+      "file": "Assets/Audio/Generated/player.swim.exit__03.wav",
+      "guid": "fdd8e027e11f4bd3986d6e4596267c46",
+      "sha256": "0fa8faae4b8d7fa5de73f856bff56ff1a9f800e617ec218df5eae652c4782a74"
+    }
+  ]
+}

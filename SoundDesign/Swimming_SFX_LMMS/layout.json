@@ -1,0 +1,92 @@
+[
+  {
+    "cue": "player.swim.enter",
+    "name": "入水水花",
+    "variant": 1,
+    "seconds": 0.65,
+    "peakDb": -13,
+    "rmsDb": -29,
+    "startSeconds": 0.125,
+    "file": "Assets/Audio/Generated/player.swim.enter__01.wav"
+  },
+  {
+    "cue": "player.swim.enter",
+    "name": "入水水花",
+    "variant": 2,
+    "seconds": 0.65,
+    "peakDb": -13,
+    "rmsDb": -29,
+    "startSeconds": 2.125,
+    "file": "Assets/Audio/Generated/player.swim.enter__02.wav"
+  },
+  {
+    "cue": "player.swim.enter",
+    "name": "入水水花",
+    "variant": 3,
+    "seconds": 0.65,
+    "peakDb": -13,
+    "rmsDb": -29,
+    "startSeconds": 4.125,
+    "file": "Assets/Audio/Generated/player.swim.enter__03.wav"
+  },
+  {
+    "cue": "player.swim.stroke",
+    "name": "游泳划水",
+    "variant": 1,
+    "seconds": 0.6,
+    "peakDb": -17,
+    "rmsDb": -31,
+    "startSeconds": 6.125,
+    "file": "Assets/Audio/Generated/player.swim.stroke__01.wav"
+  },
+  {
+    "cue": "player.swim.stroke",
+    "name": "游泳划水",
+    "variant": 2,
+    "seconds": 0.6,
+    "peakDb": -17,
+    "rmsDb": -31,
+    "startSeconds": 8.125,
+    "file": "Assets/Audio/Generated/player.swim.stroke__02.wav"
+  },
+  {
+    "cue": "player.swim.stroke",
+    "name": "游泳划水",
+    "variant": 3,
+    "seconds": 0.6,
+    "peakDb": -17,
+    "rmsDb": -31,
+    "startSeconds": 10.125,
+    "file": "Assets/Audio/Generated/player.swim.stroke__03.wav"
+  },
+  {
+    "cue": "player.swim.exit",
+    "name": "出水滴水",
+    "variant": 1,
+    "seconds": 0.55,
+    "peakDb": -18,
+    "rmsDb": -32,
+    "startSeconds": 12.125,
+    "file": "Assets/Audio/Generated/player.swim.exit__01.wav"
+  },
+  {
+    "cue": "player.swim.exit",
+    "name": "出水滴水",
+    "variant": 2,
+    "seconds": 0.55,
+    "peakDb": -18,
+    "rmsDb": -32,
+    "startSeconds": 14.125,
+    "file": "Assets/Audio/Generated/player.swim.exit__02.wav"
+  },
+  {
+    "cue": "player.swim.exit",
+    "name": "出水滴水",
+    "variant": 3,
+    "seconds": 0.55,
+    "peakDb": -18,
+    "rmsDb": -32,
+    "startSeconds": 16.125,
+    "file": "Assets/Audio/Generated/player.swim.exit__03.wav"
+  }
+]

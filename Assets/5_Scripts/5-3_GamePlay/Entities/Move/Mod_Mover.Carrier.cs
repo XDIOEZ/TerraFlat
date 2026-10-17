@@ -35,6 +35,7 @@ public partial class Mod_Mover
         carrierSimulated = rb.simulated;
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         CarrierSource = source;
+        ResetSwimmingAudio();
         carrierTileEffects.SetEffectsSuppressed(this, true);
         carrierHealth.DeathStarted += HandleCarrierRiderDeath;
         carrierGame = GameManager.Instance;
@@ -151,6 +152,7 @@ public partial class Mod_Mover
         carrierSafeChunkLease = null;
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         UpdateMovementState();
+        ResetSwimmingAudio();
     }
 
     /// <summary>生命周期释放回登船陆地，不覆盖已经发生的传送。</summary>
@@ -176,7 +178,7 @@ public partial class Mod_Mover
         ExternalVelocity = CarrierSource.CurrentVelocity;
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
-    private void OnDisable() { ReleaseSpaceInput(); ReleaseCarrierLease(); }
-    protected override void OnUnload() { ReleaseSpaceInput(); ReleaseCarrierLease(); UnbindMoveAnimationCallbacks(); }
+    private void OnDisable() { ResetSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); }
+    protected override void OnUnload() { DisposeSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); UnbindMoveAnimationCallbacks(); }
     #endregion
 }

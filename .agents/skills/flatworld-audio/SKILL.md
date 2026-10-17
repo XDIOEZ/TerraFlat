@@ -5,6 +5,10 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 
 # FlatWorld 音频
 
+## 音效创作约定
+
+- 今后新建音效统一使用 **LMMS MCP** 创作、编排和渲染，保留可编辑 `.mmp` 工程到 `SoundDesign/` 对应目录。外部脚本只负责裁切、循环接缝、增益整理、文件检查和 Unity 接入，不直接合成音效替代 LMMS MCP。
+
 ## 入口
 
 - 核心：`Assets/5_Scripts/5-6_Audio/Runtime/` 的 `AudioService`、`AudioCatalog`、`AudioCue`、`AudioRuntimeConfig`、`AudioTypes`。
@@ -14,6 +18,7 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - 玩法音效：`SoundDesign/Gameplay_SFX_LMMS/` 保存攻击、材质命中和交互三组工程；30 个现有 Cue 绑定 88 个单声道变体，`build_sfx.py build/finalize` 负责编排与母带整理。旧 C# 默认音效生成器已删除，避免覆盖 LMMS 成品。
 - 事务反馈：`SoundDesign/Gameplay_Feedback_LMMS/` 的 6 类 Cue/12 个 LMMS MCP 变体覆盖建造成功/失败、合成、熔炼、火种和点炉；`GameplayFeedbackAudioBridge` 只订阅真实提交与主动拒绝事件，工程通过 `build_feedback.py build → lmms_mcp_render.py --render → finalize/verify` 重做。
 - 脚步与钓鱼：`SoundDesign/Player_Fishing_SFX_LMMS/` 包含 6 类地表脚步和 3 类钓鱼声、共 24 个 LMMS 变体；`Mod_Mover.FootstepAudio` 以本地角色实际距离计步，`Mod_FishingRod.SoundRequested` 经表现桥接只在成功抛竿、咬钩、首次收线时发声。共用的 `lmms_mcp_render.py` 支持 `--project/--output` 指向不同 LMMS 工程。
+- 游泳：`SoundDesign/Swimming_SFX_LMMS/` 保存入水、划水、出水共 3 类/9 个 LMMS 变体及重导脚本；`Mod_Mover.SwimmingAudio` 按本机角色脚下真实 `WaterContact` 液体与主动位移触发，水格间移动不重复入出水，浅水继续用涉水脚步。
 - 库存取放：`SoundDesign/Inventory_Items_LMMS/install_runtime_cues.py` 将原有 72 个 LMMS 候选音效接入 `ui.inventory.*` UI Cue；`SoundDesign/Inventory_UI_Feedback_LMMS/` 的新工程经 LMMS MCP 生成交换、装备、卸装共 6 个变体。事件入口为 `InventoryAudioFeedbackEvents/EquipmentAudioFeedbackEvents`，由 `InventoryInteractionAudio` 选择材质、转移重量/体积并过滤非本机音效；重建 Catalog 会保留不在 Generated 内的外部 Cue。
 - 候选素材/工程：`Assets/Audio/UI/{LMMS_Clicks,InventoryItems_LMMS}/`、`SoundDesign/{UI_Click_LMMS,Inventory_Items_LMMS}/`。
 
@@ -24,6 +29,7 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
 - 玩法短音采用 48 kHz 单声道 PCM、预加载、关闭导入归一化；旧 `__01` WAV 和 Cue 保留 GUID，新变体必须写 `.meta` 并加入现有 Cue。按工程分组经 LMMS MCP 渲染后再执行 `build_sfx.py finalize`，脚本仅裁切、接缝、增益和绑定，不合成替代 LMMS 声源；临时 WAV 完整写好后原子替换，避免 Unity 导入半个文件。
 - 脚步的步频和单次音量倍率集中在 `Mod_Mover.FootstepAudio`；六类脚步 Cue 的冷却为 0.08 秒，与 `Player_Fishing_SFX_LMMS/build_sfx.py` 保持同步，避免更快的计步被音频冷却吞掉。
+- 涉水脚步与游泳共用 `WaterEnvironmentRules.SwimmingDepthThreshold`（0.3）分界；游泳首次加载和载具、太空、传送、换世界重建时静默，停步或完全淹没不划水，状态由角色持有，不放入共享液体定义。
 - 取放音索引按操作、材质、重量 kg、体积 L 选择；重量/体积按实际转移数量独立划档，背包/箱子区分接触音色。拿起在点击取物或开始拖拽时播放一次，放入跟随成功事务；候选索引与运行时 Cue 接入独立。
 - 服务直接实现 `ISettingsProvider`，经 `SettingsProviderRegistry` 暴露音量/静音；`FlatWorld.Audio` 只依赖 Data 设置契约。六路滑块使用 `UI_SliderControl`，绑定名为 `MasterVolume/MusicVolume/SfxVolume/UIVolume/AmbientVolume/VoiceVolume` 及对应 `_数值`。
 - `AudioService.SetVolumeScale` 调整调用方音量，保留 Cue 随机增益、淡入淡出与用户设置；`SetWorldPosition` 更新非附着空间声源。`WeatherMgr.Audio` 管雨风循环及雷声落点/近远选音/延迟，并通过 `GetLightningDistanceAttenuation` 让雷光共用当前雷声 Cue 的距离与线性衰减，通用服务不识别天气和拓扑；近远雷 Cue 均完整空间混音、线性衰减 8–192 格，使用单声道真实录音，来源见 `SoundDesign/Weather_LMMS/sources.json`。LMMS 雨声不再由默认生成器覆盖。

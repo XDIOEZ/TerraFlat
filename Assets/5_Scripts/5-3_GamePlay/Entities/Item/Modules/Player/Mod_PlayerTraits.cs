@@ -448,6 +448,7 @@ public class Mod_PlayerTraits : Module
         // 地表传送先解除乘船与下降状态，避免权威船内位置把玩家拉回原船。
         session?.ResetPassengerForRespawn(target);
         Rigidbody2D body = target.GetComponent<Rigidbody2D>();
+        target.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.ResetSwimmingAudio();
         body.velocity = Vector2.zero;
         body.angularVelocity = 0f;
         body.position = presentationDestination;
