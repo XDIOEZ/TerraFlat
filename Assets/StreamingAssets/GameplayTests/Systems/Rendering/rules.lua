@@ -310,3 +310,123 @@ test.system("rendering", "ship_part_placement_state", {}, function(data)
     assert(data.floor.layer == 6 and not data.floor.blocks and data.floor.speed == 1,
         "船地板没有绕开无关建筑JSON并保持可通行规则")
 end, "船件建筑状态实时来源与稳定查询零分配")
+
+-- 采样正式世界半径轨迹，起雾与散雾都按完整真实秒计时。
+for _, args in ipairs({ { strength = 1, radius = 5 }, { strength = 0.1, radius = 50 } }) do
+    test.system("rendering", "fog_transition", { steps = {
+        { target = args.strength }, { target = args.strength, seconds = 15 },
+        { target = args.strength, seconds = 14.9 }, { target = args.strength, seconds = 0.1 },
+        { target = 0 }, { target = 0, seconds = 15 },
+        { target = 0, seconds = 14.9 }, { target = 0, seconds = 0.1 }
+    } }, function(data)
+        local s = data.samples
+        assert(data.validConfig and data.defaultDuration == 30, "天气雾没有使用 30 秒正式配置")
+        assert(data.defaultClearRadius == 5 and data.defaultOpaqueRadius == 25,
+            "天气雾柔边没有从 10 格精确加倍到 20 格，或改变了满强度清晰范围")
+        assert(s[1].hasValue and not s[1].visible and s[1].clearRadius == 200,
+            "首次起雾直接跳到目标，未从画面外围开始")
+        assert(s[2].visible and s[2].clearRadius > args.radius and s[2].clearRadius < s[1].clearRadius,
+            "起雾没有从外围向内聚拢")
+        assert(s[3].transitioning and s[3].clearRadius > args.radius,
+            "起雾在完整 30 秒之前到达目标，小雾不能缩短时间")
+        assert(not s[4].transitioning and math.abs(s[4].clearRadius - args.radius) < 0.0001,
+            "起雾满 30 秒后没有到达所在地浓度对应半径")
+        assert(s[5].clearRadius == s[4].clearRadius and s[5].visible,
+            "开始散雾时半径发生跳变")
+        assert(s[6].visible and s[6].clearRadius > s[5].clearRadius and s[6].clearRadius < 200,
+            "散雾没有从当前位置缓慢退向外围")
+        assert(s[7].transitioning and s[7].visible, "散雾在完整 30 秒前提前关闭")
+        assert(not s[8].transitioning and not s[8].visible and s[8].clearRadius == 200,
+            "散雾满 30 秒后仍保留遮挡")
+        for _, sample in ipairs(s) do
+            assert(math.abs(sample.opaqueRadius - sample.clearRadius - 20) < 0.0001,
+                "起雾或散雾途中改变了加倍后的柔边宽度")
+        end
+    end, "天气雾大小强度均用完整 30 秒聚拢与散开：" .. args.strength)
+end
+
+test.system("rendering", "fog_transition", { steps = {
+    { target = 1 }, { target = 1, seconds = 29 }, { target = 0.5 },
+    { target = 0.5, seconds = 1 }, { target = 0.5, seconds = 28.9 },
+    { target = 0.5, seconds = 0.1 }, { target = 1, seconds = 10 },
+    { target = 0 }, { target = 0, seconds = 29.9 }, { target = 0, seconds = 0.1 }
+} }, function(data)
+    local s = data.samples
+    assert(s[2].clearRadius == s[3].clearRadius and s[3].progress == 0,
+        "跨到另一浓度的雾区时没有从当前半径重新接续")
+    assert(s[4].transitioning and s[4].clearRadius < 10 and s[5].transitioning,
+        "临近完成时换雾区沿用旧时钟，把新过渡压缩到最后一秒")
+    assert(not s[6].transitioning and math.abs(s[6].clearRadius - 10) < 0.0001,
+        "新雾区目标没有在自己的完整 30 秒后收敛")
+    assert(s[7].visible and s[7].clearRadius > 5 and s[7].clearRadius < 10,
+        "重新起浓雾没有从现有雾半径接续")
+    assert(s[7].clearRadius == s[8].clearRadius and s[8].progress == 0,
+        "起雾中途转为散雾时画面跳变")
+    assert(s[9].transitioning and s[9].visible and not s[10].visible,
+        "中途反向散雾没有重新使用完整 30 秒")
+end, "天气雾跨浓度区与起散反向从当前状态接续")
+
+test.system("rendering", "fog_transition", { steps = {
+    { target = 1 }, { target = 1, seconds = 10 }, { target = 1 },
+    { target = 1, seconds = -1 }, { target = 1, seconds = 20 }, { reset = true },
+    { target = 1 }, { target = 1, seconds = 30 }
+} }, function(data)
+    local s = data.samples
+    assert(s[2].clearRadius == s[3].clearRadius and s[3].clearRadius == s[4].clearRadius,
+        "零或负真实时间推进了天气雾")
+    assert(not s[5].transitioning and s[5].clearRadius == 5,
+        "重复采样同一目标重启了过渡计时")
+    assert(not s[6].hasValue and not s[6].visible, "重置后遗留了旧玩家或旧场景的雾状态")
+    assert(s[7].clearRadius == 200 and not s[7].visible and s[8].clearRadius == 5,
+        "重置后首次采样未重新从画面外聚拢")
+end, "天气雾零负时间、重复采样和生命周期重置")
+
+test.system("rendering", "fog_transition", { duration = 0, steps = {
+    { target = 0.1 }, { target = 0 }
+} }, function(data)
+    local s = data.samples
+    assert(data.validConfig and s[1].visible and not s[1].transitioning and s[1].clearRadius == 50,
+        "零时长天气雾没有立即到达目标")
+    assert(not s[2].visible and not s[2].transitioning, "零时长散雾没有立即结束")
+end, "天气雾零时长配置立即收敛")
+
+for _, args in ipairs({
+    { expectedRadius = 5.01 },
+    { originX = -1, expectedRadius = math.sqrt(41) + 0.01 },
+    { originX = -12, rightX = 24, expectedRadius = math.sqrt(160) + 0.01 }
+}) do
+    test.system("rendering", "fog_transition", args, function(data)
+        assert(math.abs(data.screenClearRadius - args.expectedRadius) < 0.0001,
+            "天气雾屏外起点没有覆盖实际横竖比例或偏心投影的最远角")
+    end, "天气雾屏外起点覆盖实际投影四角")
+end
+
+test.system("rendering", "fog_transition", { steps = {
+    { target = 1, seconds = 12 }, { target = 1, seconds = 29.9 },
+    { target = 1, seconds = 0.1 }, { reset = true },
+    { target = 1 }, { target = 1, seconds = 15 }, { target = 0 },
+    { target = 0, seconds = 10 }, { target = 0, outside = 300 },
+    { target = 0, outside = 300, seconds = 20 },
+    { target = 0.01, outside = 50, seconds = 30 }, { target = 1, outside = 50 },
+    { target = 1, outside = 50, seconds = 15 }, { target = 1, outside = 50, seconds = 15 }
+} }, function(data)
+    local s = data.samples
+    assert(s[1].clearRadius == 200 and s[1].progress == 0 and not s[1].visible,
+        "加载首帧的大真实时间吞掉了起雾过渡")
+    assert(s[2].transitioning and s[2].clearRadius > 5 and
+        not s[3].transitioning and s[3].clearRadius == 5,
+        "加载完成后没有重新使用完整 30 秒聚拢")
+    assert(s[6].clearRadius == s[7].clearRadius and s[7].progress == 0,
+        "起雾半途转为散雾时当前半径跳变")
+    assert(s[8].clearRadius == s[9].clearRadius and s[8].progress == s[9].progress,
+        "零时间改变视口端点时雾边跳变或重启了散雾计时")
+    assert(not s[10].transitioning and not s[10].visible and s[10].clearRadius == 300,
+        "视口改变后没有按原本完整 30 秒在新画面外围结束散雾")
+    assert(not s[11].visible and s[11].clearRadius == 50,
+        "完全位于画面外的弱雾仍保留了多余的物理半径")
+    assert(s[12].clearRadius == 50 and s[12].progress == 0 and
+        s[13].visible and s[13].clearRadius < 50 and s[13].clearRadius > 5,
+        "屏外弱雾转强雾没有从当前视口外围接续，浪费了可见过渡时间")
+    assert(not s[14].transitioning and s[14].clearRadius == 5,
+        "屏外弱雾转强雾满 30 秒后没有达到目标")
+end, "天气雾加载首帧、视口端点改变与屏外弱雾接续")

@@ -6,6 +6,8 @@
 
 快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、zoom_cloud_transition、universe_view_config、universe_view_transition、group_projection`。
 
+2026-10-18 天气雾过渡补充但未执行：`rendering/fog_transition` 直接推进正式 `DenseFogPresentationTransition`，Lua 检查首次从画面外围聚拢、大小雾均用完整 30 真实秒起雾与散雾、柔边从 10 格加倍到 20 格、跨浓度区与起散反向从当前半径重新计时，以及重复目标、零/负时间、零时长、归零关闭和重置；屏外起点还采样正式四角计算，覆盖偏心镜头与宽屏，并检查加载首帧大时间、零时间视口改变和屏外弱雾接续。保留用户 PlayMode，本轮仅静态修改，未编译、未运行；位置天气仍由正式渲染器读取玩家所在位置，本规则不创建真实天气世界或执行 GPU 合成，移动采样、真实时间源与最终画面由用户验收。
+
 2026-10-17 阴影性能补充但未执行：`rendering/building_capability_cache` 检查正式能力查询的空结果、模块增删/重加失效、首个匹配顺序、实时占地/通行属性和预热后重复查询的托管分配；`rendering/shadow_proxy_changes` 检查正式太阳阴影代理的静态复用、透明度/脚点变化、重复镜像、绘制模式切换和归池失效。只创建独立禁用物品与渲染节点，不代表阴影画面、光照变化、相机裁剪或最终帧耗时已验收。
 
 2026-10-17 新增但未执行：`universe_view_transition` 直接采正式手动缩放约束，覆盖过渡终点封顶、滚轮与大步输入、连续拉远不积攒、完成后新输入放行、过渡中拉近、同帧折返、已有远景、零时长及配置终点变化。本轮仅静态修改，未编译、未运行；真实滚轮、手机双指/滑条及最终淡入画面由用户验收。

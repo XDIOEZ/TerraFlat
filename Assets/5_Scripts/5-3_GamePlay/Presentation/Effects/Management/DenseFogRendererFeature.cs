@@ -1,4 +1,5 @@
 using UnityEngine;
+using FlatWorld.WorldModel;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
@@ -13,17 +14,20 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
     private FogPass pass;
     private Player localPlayer;
     private Mod_Cam cameraModule;
-    private bool hasWeatherSample;
-    private float visibleStrength;
+    private readonly DenseFogPresentationTransition transition = new();
+    private WorldRuntime presentationWorld;
+    private long presentationEpoch;
+    private int worldSceneHandle;
     private int sampledFrame = -1;
-    private const float MinimumVisibleStrength = 0.0005f;
 
     private void ResetPresentation()
     {
         localPlayer = null;
         cameraModule = null;
-        hasWeatherSample = false;
-        visibleStrength = 0f;
+        transition.Reset();
+        presentationWorld = null;
+        presentationEpoch = 0;
+        worldSceneHandle = 0;
         sampledFrame = -1;
     }
 
@@ -71,10 +75,20 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             return;
         }
 
-        if (player != localPlayer)
+        WorldRuntime world = ChunkMgr.ExistingInstance?.WorldRuntime;
+        if (world == null)
+        {
+            ResetPresentation();
+            return;
+        }
+        if (player != localPlayer || player.gameObject.scene.handle != worldSceneHandle ||
+            !ReferenceEquals(world, presentationWorld) || world.Epoch != presentationEpoch)
         {
             ResetPresentation();
             localPlayer = player;
+            worldSceneHandle = player.gameObject.scene.handle;
+            presentationWorld = world;
+            presentationEpoch = world.Epoch;
         }
         if (cameraModule == null)
             cameraModule = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
@@ -85,23 +99,39 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             return;
 
         // 雾独立读取玩家所在地浓度，允许与雨雪和强风同时存在。
-        float target = weather.TryGetWeatherAt(player.transform.position, out var localWeather)
+        Vector2 logicalPosition = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+        float target = weather.TryGetWeatherAt(logicalPosition, out var localWeather)
             ? Mathf.Clamp01(localWeather.FogDensity) : 0f;
+        if (target <= 0f && !transition.HasValue)
+            return;
         WorldRenderingConfig.RenderingDenseFog config = WorldRenderingConfigCatalog.Default.denseFog;
+        ResolveWorldViewport(sourceCamera, cameraData.IsCameraProjectionMatrixFlipped(), player.transform.position,
+            out Vector3 origin, out Vector3 right, out Vector3 up);
         if (sampledFrame != Time.frameCount)
         {
-            // 雾中读档、入房或重生直接显示现有浓度，不先暴露一帧远处玩家。
-            visibleStrength = !hasWeatherSample || config.transitionSeconds <= 0f
-                ? target
-                : Mathf.MoveTowards(visibleStrength, target, Time.deltaTime / config.transitionSeconds);
-            hasWeatherSample = true;
+            float outsideRadius = DenseFogPresentationTransition.ResolveOutsideRadius(origin, right, up);
+            transition.Step(target, Time.unscaledDeltaTime, outsideRadius, config);
             sampledFrame = Time.frameCount;
         }
-        if (visibleStrength <= MinimumVisibleStrength || !config.TryResolveRadii(visibleStrength, out Vector2 radii))
+        if (target <= 0f && !transition.IsTransitioning)
+            transition.Reset();
+        if (!transition.IsVisible)
             return;
 
-        pass.Setup(material, sourceCamera, player.transform.position, radii, config);
+        pass.Setup(material, origin, right, up, logicalPosition, transition.Radii, config);
         renderer.EnqueuePass(pass);
+    }
+
+    private static void ResolveWorldViewport(Camera source, bool projectionFlipped, Vector3 playerPosition,
+        out Vector3 origin, out Vector3 right, out Vector3 up)
+    {
+        // 起雾端点与 Shader 共用实际 GPU 投影，兼容偏心镜头、缩放和环绕补绘。
+        Matrix4x4 projection = GL.GetGPUProjectionMatrix(source.projectionMatrix, projectionFlipped);
+        Matrix4x4 inverse = (projection * source.worldToCameraMatrix).inverse;
+        Vector3 bottomLeft = inverse.MultiplyPoint(new Vector3(-1f, -1f, 0f));
+        right = inverse.MultiplyPoint(new Vector3(1f, -1f, 0f)) - bottomLeft;
+        up = inverse.MultiplyPoint(new Vector3(-1f, 1f, 0f)) - bottomLeft;
+        origin = bottomLeft - playerPosition;
     }
 
     private static bool IsLocalStackCamera(Camera source, Camera candidate)
@@ -138,8 +168,10 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         private static readonly int NoiseId = Shader.PropertyToID("_FogNoise");
         private readonly ProfilingSampler sampler = new ProfilingSampler("FlatWorld Dense Fog");
         private Material passMaterial;
-        private Camera sourceCamera;
-        private Vector3 playerPosition;
+        private Vector3 viewportOrigin;
+        private Vector3 viewportRight;
+        private Vector3 viewportUp;
+        private Vector2 logicalPlayerPosition;
         private Vector2 radii;
         private WorldRenderingConfig.RenderingDenseFog settings;
 
@@ -149,37 +181,31 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
         }
 
-        public void Setup(Material target, Camera source, Vector3 center, Vector2 visibilityRadii,
+        public void Setup(Material target, Vector3 origin, Vector3 right, Vector3 up, Vector2 logicalCenter,
+            Vector2 visibilityRadii,
             WorldRenderingConfig.RenderingDenseFog config)
         {
             passMaterial = target;
-            sourceCamera = source;
-            playerPosition = center;
+            viewportOrigin = origin;
+            viewportRight = right;
+            viewportUp = up;
+            logicalPlayerPosition = logicalCenter;
             radii = visibilityRadii;
             settings = config;
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            if (passMaterial == null || sourceCamera == null)
+            if (passMaterial == null)
                 return;
-
-            // 由实际 GPU 投影恢复世界 XY，兼容渲染纹理翻转、宽高比、缩放与环绕补绘。
-            Matrix4x4 projection = GL.GetGPUProjectionMatrix(sourceCamera.projectionMatrix,
-                renderingData.cameraData.IsCameraProjectionMatrixFlipped());
-            Matrix4x4 inverse = (projection * sourceCamera.worldToCameraMatrix).inverse;
-            Vector3 bottomLeft = inverse.MultiplyPoint(new Vector3(-1f, -1f, 0f));
-            Vector3 right = inverse.MultiplyPoint(new Vector3(1f, -1f, 0f)) - bottomLeft;
-            Vector3 up = inverse.MultiplyPoint(new Vector3(-1f, 1f, 0f)) - bottomLeft;
-            Vector3 origin = bottomLeft - playerPosition;
 
             CommandBuffer cmd = CommandBufferPool.Get();
             using (new ProfilingScope(cmd, sampler))
             {
-                passMaterial.SetVector(OriginId, new Vector4(origin.x, origin.y, 0f, 0f));
-                passMaterial.SetVector(RightId, new Vector4(right.x, right.y, 0f, 0f));
-                passMaterial.SetVector(UpId, new Vector4(up.x, up.y, 0f, 0f));
-                passMaterial.SetVector(CenterId, new Vector4(playerPosition.x, playerPosition.y, 0f, 0f));
+                passMaterial.SetVector(OriginId, new Vector4(viewportOrigin.x, viewportOrigin.y, 0f, 0f));
+                passMaterial.SetVector(RightId, new Vector4(viewportRight.x, viewportRight.y, 0f, 0f));
+                passMaterial.SetVector(UpId, new Vector4(viewportUp.x, viewportUp.y, 0f, 0f));
+                passMaterial.SetVector(CenterId, new Vector4(logicalPlayerPosition.x, logicalPlayerPosition.y, 0f, 0f));
                 passMaterial.SetVector(RadiiId,
                     new Vector4(radii.x, radii.y, 0f, 0f));
                 passMaterial.SetColor(ColorId, settings.color);
