@@ -9,7 +9,7 @@
           <instrument name="tripleoscillator">
             <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
           </instrument>
-          <eldata fres="0.707" ftype="0" fcut="5500" fwet="1">
+          <eldata fres="0.707" ftype="0" fcut="2200" fwet="1">
             <elvol pdel="0" att="0.18973665961010275" hold="0" dec="0.1414213562373095" rel="0.2449489742783178" sustain="1" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
             <elcut pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
             <elres pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
@@ -18,18 +18,18 @@
           <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
           <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
           <fxchain numofeffects="0" enabled="0" />
-          <vol id="10001" value="43" scale_type="linear" />
+          <vol id="10001" value="12" scale_type="linear" />
         </instrumenttrack>
         <pattern len="3840" muted="0" name="Rain - diffuse surface wash" steps="16" pos="0" type="1">
           <note len="3840" key="57" vol="90" pos="0" pan="0" />
         </pattern>
       </track>
       <track muted="0" type="0" name="Rain - mid splash" solo="0">
-        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="38" fxch="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="8" fxch="0">
           <instrument name="tripleoscillator">
             <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
           </instrument>
-          <eldata fres="0.58" ftype="2" fcut="1400" fwet="1">
+          <eldata fres="0.58" ftype="2" fcut="1100" fwet="1">
             <elvol pdel="0" att="0.161245154965971" hold="0" dec="0.1414213562373095" rel="0.22360679774997896" sustain="1" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
             <elcut pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
             <elres pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
@@ -44,11 +44,11 @@
         </pattern>
       </track>
       <track muted="0" type="0" name="Rain - sparse droplets" solo="0">
-        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="20" fxch="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57" vol="26" fxch="0">
           <instrument name="tripleoscillator">
             <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
           </instrument>
-          <eldata fres="0.9" ftype="2" fcut="3400" fwet="1">
+          <eldata fres="0.65" ftype="2" fcut="2600" fwet="1">
             <elvol pdel="0" att="0.017320508075688773" hold="0" dec="0.09486832980505137" rel="0.04" sustain="0" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
             <elcut pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
             <elres pdel="0" att="0.0" hold="0" dec="0.1" rel="0.044721359549995794" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
@@ -60,483 +60,173 @@
         </instrumenttrack>
         <pattern len="3817" muted="0" name="Rain - sparse droplets" steps="16" pos="0" type="1">
           <note len="8" key="57" vol="21" pos="8" pan="-22" />
-          <note len="8" key="57" vol="54" pos="13" pan="-32" />
-          <note len="8" key="57" vol="52" pos="19" pan="-68" />
           <note len="8" key="57" vol="68" pos="32" pan="16" />
-          <note len="8" key="57" vol="64" pos="45" pan="-8" />
-          <note len="8" key="57" vol="50" pos="53" pan="-56" />
           <note len="8" key="57" vol="47" pos="66" pan="-39" />
-          <note len="8" key="57" vol="25" pos="80" pan="-7" />
-          <note len="8" key="57" vol="52" pos="86" pan="-47" />
           <note len="8" key="57" vol="77" pos="97" pan="-28" />
-          <note len="8" key="57" vol="52" pos="106" pan="15" />
-          <note len="8" key="57" vol="24" pos="118" pan="-6" />
           <note len="8" key="57" vol="41" pos="127" pan="18" />
-          <note len="8" key="57" vol="25" pos="137" pan="-29" />
-          <note len="8" key="57" vol="64" pos="141" pan="-38" />
           <note len="8" key="57" vol="62" pos="143" pan="40" />
-          <note len="8" key="57" vol="32" pos="152" pan="48" />
-          <note len="8" key="57" vol="41" pos="166" pan="17" />
           <note len="8" key="57" vol="49" pos="178" pan="-16" />
-          <note len="8" key="57" vol="40" pos="183" pan="-64" />
-          <note len="8" key="57" vol="59" pos="193" pan="13" />
           <note len="8" key="57" vol="56" pos="207" pan="-46" />
-          <note len="8" key="57" vol="48" pos="220" pan="-7" />
-          <note len="8" key="57" vol="36" pos="231" pan="-51" />
           <note len="8" key="57" vol="77" pos="233" pan="64" />
-          <note len="8" key="57" vol="75" pos="239" pan="46" />
-          <note len="8" key="57" vol="25" pos="243" pan="1" />
           <note len="8" key="57" vol="27" pos="248" pan="17" />
-          <note len="8" key="57" vol="54" pos="260" pan="31" />
-          <note len="8" key="57" vol="61" pos="262" pan="-63" />
           <note len="8" key="57" vol="25" pos="274" pan="-1" />
-          <note len="8" key="57" vol="60" pos="284" pan="-11" />
-          <note len="8" key="57" vol="52" pos="298" pan="-48" />
           <note len="8" key="57" vol="63" pos="303" pan="-4" />
-          <note len="8" key="57" vol="35" pos="314" pan="66" />
-          <note len="8" key="57" vol="65" pos="327" pan="38" />
           <note len="8" key="57" vol="73" pos="334" pan="21" />
-          <note len="8" key="57" vol="58" pos="336" pan="-19" />
-          <note len="8" key="57" vol="21" pos="350" pan="39" />
           <note len="8" key="57" vol="23" pos="353" pan="28" />
-          <note len="8" key="57" vol="61" pos="358" pan="-28" />
-          <note len="8" key="57" vol="56" pos="362" pan="6" />
           <note len="8" key="57" vol="22" pos="374" pan="-50" />
-          <note len="8" key="57" vol="37" pos="377" pan="-2" />
-          <note len="8" key="57" vol="44" pos="389" pan="15" />
           <note len="8" key="57" vol="22" pos="396" pan="-49" />
-          <note len="8" key="57" vol="65" pos="410" pan="-63" />
-          <note len="8" key="57" vol="59" pos="419" pan="52" />
           <note len="8" key="57" vol="33" pos="421" pan="6" />
-          <note len="8" key="57" vol="26" pos="429" pan="-25" />
-          <note len="8" key="57" vol="28" pos="438" pan="53" />
           <note len="8" key="57" vol="31" pos="443" pan="68" />
-          <note len="8" key="57" vol="20" pos="451" pan="53" />
-          <note len="8" key="57" vol="25" pos="461" pan="35" />
           <note len="8" key="57" vol="60" pos="475" pan="12" />
-          <note len="8" key="57" vol="29" pos="483" pan="-45" />
-          <note len="8" key="57" vol="25" pos="490" pan="7" />
           <note len="8" key="57" vol="64" pos="497" pan="0" />
-          <note len="8" key="57" vol="42" pos="510" pan="-51" />
-          <note len="8" key="57" vol="41" pos="516" pan="-16" />
           <note len="8" key="57" vol="41" pos="525" pan="-33" />
-          <note len="8" key="57" vol="50" pos="528" pan="47" />
-          <note len="8" key="57" vol="46" pos="536" pan="40" />
           <note len="8" key="57" vol="52" pos="541" pan="3" />
-          <note len="8" key="57" vol="75" pos="546" pan="44" />
-          <note len="8" key="57" vol="76" pos="551" pan="19" />
           <note len="8" key="57" vol="20" pos="564" pan="-30" />
-          <note len="8" key="57" vol="22" pos="569" pan="-47" />
-          <note len="8" key="57" vol="68" pos="578" pan="25" />
           <note len="8" key="57" vol="74" pos="592" pan="45" />
-          <note len="8" key="57" vol="54" pos="606" pan="2" />
-          <note len="8" key="57" vol="60" pos="612" pan="7" />
           <note len="8" key="57" vol="72" pos="615" pan="63" />
-          <note len="8" key="57" vol="46" pos="629" pan="59" />
-          <note len="8" key="57" vol="57" pos="637" pan="41" />
           <note len="8" key="57" vol="67" pos="639" pan="-9" />
-          <note len="8" key="57" vol="52" pos="648" pan="26" />
-          <note len="8" key="57" vol="68" pos="657" pan="-2" />
           <note len="8" key="57" vol="57" pos="667" pan="54" />
-          <note len="8" key="57" vol="42" pos="671" pan="18" />
-          <note len="8" key="57" vol="53" pos="685" pan="-58" />
           <note len="8" key="57" vol="33" pos="687" pan="-37" />
-          <note len="8" key="57" vol="36" pos="697" pan="21" />
-          <note len="8" key="57" vol="64" pos="699" pan="-66" />
           <note len="8" key="57" vol="23" pos="710" pan="-34" />
-          <note len="8" key="57" vol="24" pos="718" pan="66" />
-          <note len="8" key="57" vol="31" pos="732" pan="20" />
           <note len="8" key="57" vol="71" pos="734" pan="12" />
-          <note len="8" key="57" vol="56" pos="739" pan="-18" />
-          <note len="8" key="57" vol="34" pos="753" pan="15" />
           <note len="8" key="57" vol="69" pos="758" pan="-35" />
-          <note len="8" key="57" vol="51" pos="762" pan="-9" />
-          <note len="8" key="57" vol="24" pos="773" pan="-1" />
           <note len="8" key="57" vol="23" pos="779" pan="-59" />
-          <note len="8" key="57" vol="62" pos="792" pan="-56" />
-          <note len="8" key="57" vol="33" pos="797" pan="-35" />
           <note len="8" key="57" vol="43" pos="801" pan="-9" />
-          <note len="8" key="57" vol="42" pos="808" pan="43" />
-          <note len="8" key="57" vol="68" pos="812" pan="53" />
           <note len="8" key="57" vol="55" pos="825" pan="-5" />
-          <note len="8" key="57" vol="56" pos="833" pan="-19" />
-          <note len="8" key="57" vol="38" pos="845" pan="54" />
           <note len="8" key="57" vol="36" pos="851" pan="25" />
-          <note len="8" key="57" vol="64" pos="863" pan="49" />
-          <note len="8" key="57" vol="20" pos="869" pan="-70" />
           <note len="8" key="57" vol="38" pos="875" pan="-9" />
-          <note len="8" key="57" vol="46" pos="886" pan="31" />
-          <note len="8" key="57" vol="50" pos="897" pan="44" />
           <note len="8" key="57" vol="50" pos="907" pan="25" />
-          <note len="8" key="57" vol="68" pos="911" pan="19" />
-          <note len="8" key="57" vol="70" pos="920" pan="57" />
           <note len="8" key="57" vol="62" pos="924" pan="-45" />
-          <note len="8" key="57" vol="59" pos="929" pan="9" />
-          <note len="8" key="57" vol="57" pos="943" pan="-35" />
           <note len="8" key="57" vol="72" pos="952" pan="0" />
-          <note len="8" key="57" vol="34" pos="954" pan="-12" />
-          <note len="8" key="57" vol="25" pos="961" pan="58" />
           <note len="8" key="57" vol="59" pos="968" pan="70" />
-          <note len="8" key="57" vol="70" pos="979" pan="-53" />
-          <note len="8" key="57" vol="68" pos="991" pan="15" />
           <note len="8" key="57" vol="44" pos="998" pan="-67" />
-          <note len="8" key="57" vol="63" pos="1003" pan="37" />
-          <note len="8" key="57" vol="34" pos="1008" pan="18" />
           <note len="8" key="57" vol="50" pos="1012" pan="9" />
-          <note len="8" key="57" vol="39" pos="1025" pan="-33" />
-          <note len="8" key="57" vol="52" pos="1037" pan="16" />
           <note len="8" key="57" vol="76" pos="1045" pan="21" />
-          <note len="8" key="57" vol="72" pos="1048" pan="55" />
-          <note len="8" key="57" vol="20" pos="1059" pan="4" />
           <note len="8" key="57" vol="30" pos="1073" pan="-40" />
-          <note len="8" key="57" vol="26" pos="1081" pan="58" />
-          <note len="8" key="57" vol="44" pos="1083" pan="57" />
           <note len="8" key="57" vol="29" pos="1094" pan="29" />
-          <note len="8" key="57" vol="50" pos="1107" pan="60" />
-          <note len="8" key="57" vol="31" pos="1117" pan="2" />
           <note len="8" key="57" vol="62" pos="1129" pan="39" />
-          <note len="8" key="57" vol="38" pos="1137" pan="-32" />
-          <note len="8" key="57" vol="54" pos="1142" pan="48" />
           <note len="8" key="57" vol="39" pos="1153" pan="49" />
-          <note len="8" key="57" vol="63" pos="1158" pan="-43" />
-          <note len="8" key="57" vol="36" pos="1160" pan="-66" />
           <note len="8" key="57" vol="55" pos="1172" pan="-15" />
-          <note len="8" key="57" vol="53" pos="1184" pan="43" />
-          <note len="8" key="57" vol="63" pos="1195" pan="-4" />
           <note len="8" key="57" vol="69" pos="1204" pan="-13" />
-          <note len="8" key="57" vol="35" pos="1214" pan="-7" />
-          <note len="8" key="57" vol="36" pos="1218" pan="-2" />
           <note len="8" key="57" vol="62" pos="1220" pan="58" />
-          <note len="8" key="57" vol="24" pos="1222" pan="-53" />
-          <note len="8" key="57" vol="63" pos="1233" pan="59" />
           <note len="8" key="57" vol="57" pos="1238" pan="6" />
-          <note len="8" key="57" vol="77" pos="1246" pan="49" />
-          <note len="8" key="57" vol="62" pos="1258" pan="69" />
           <note len="8" key="57" vol="28" pos="1263" pan="-28" />
-          <note len="8" key="57" vol="24" pos="1277" pan="48" />
-          <note len="8" key="57" vol="53" pos="1289" pan="21" />
           <note len="8" key="57" vol="75" pos="1300" pan="-52" />
-          <note len="8" key="57" vol="48" pos="1312" pan="28" />
-          <note len="8" key="57" vol="68" pos="1322" pan="-54" />
           <note len="8" key="57" vol="75" pos="1324" pan="8" />
-          <note len="8" key="57" vol="71" pos="1333" pan="70" />
-          <note len="8" key="57" vol="50" pos="1336" pan="-28" />
           <note len="8" key="57" vol="51" pos="1343" pan="47" />
-          <note len="8" key="57" vol="33" pos="1350" pan="-24" />
-          <note len="8" key="57" vol="21" pos="1355" pan="44" />
           <note len="8" key="57" vol="21" pos="1360" pan="-31" />
-          <note len="8" key="57" vol="55" pos="1374" pan="-28" />
-          <note len="8" key="57" vol="58" pos="1388" pan="48" />
           <note len="8" key="57" vol="55" pos="1397" pan="-8" />
-          <note len="8" key="57" vol="27" pos="1402" pan="7" />
-          <note len="8" key="57" vol="20" pos="1415" pan="53" />
           <note len="8" key="57" vol="30" pos="1426" pan="-36" />
-          <note len="8" key="57" vol="22" pos="1433" pan="49" />
-          <note len="8" key="57" vol="21" pos="1437" pan="-68" />
           <note len="8" key="57" vol="45" pos="1446" pan="43" />
-          <note len="8" key="57" vol="55" pos="1456" pan="-31" />
-          <note len="8" key="57" vol="46" pos="1461" pan="-2" />
           <note len="8" key="57" vol="22" pos="1474" pan="-53" />
-          <note len="8" key="57" vol="23" pos="1477" pan="61" />
-          <note len="8" key="57" vol="31" pos="1481" pan="55" />
           <note len="8" key="57" vol="58" pos="1492" pan="-22" />
-          <note len="8" key="57" vol="71" pos="1504" pan="43" />
-          <note len="8" key="57" vol="51" pos="1507" pan="-10" />
           <note len="8" key="57" vol="20" pos="1510" pan="-38" />
-          <note len="8" key="57" vol="39" pos="1521" pan="22" />
-          <note len="8" key="57" vol="68" pos="1530" pan="-36" />
           <note len="8" key="57" vol="64" pos="1540" pan="-42" />
-          <note len="8" key="57" vol="38" pos="1545" pan="17" />
-          <note len="8" key="57" vol="76" pos="1557" pan="-35" />
           <note len="8" key="57" vol="54" pos="1560" pan="-60" />
-          <note len="8" key="57" vol="50" pos="1570" pan="33" />
-          <note len="8" key="57" vol="70" pos="1572" pan="-44" />
           <note len="8" key="57" vol="22" pos="1577" pan="-51" />
-          <note len="8" key="57" vol="55" pos="1582" pan="31" />
-          <note len="8" key="57" vol="28" pos="1585" pan="-22" />
           <note len="8" key="57" vol="63" pos="1591" pan="-53" />
-          <note len="8" key="57" vol="46" pos="1600" pan="63" />
-          <note len="8" key="57" vol="23" pos="1603" pan="-40" />
           <note len="8" key="57" vol="66" pos="1614" pan="-26" />
-          <note len="8" key="57" vol="34" pos="1616" pan="54" />
-          <note len="8" key="57" vol="25" pos="1627" pan="-58" />
           <note len="8" key="57" vol="39" pos="1635" pan="28" />
-          <note len="8" key="57" vol="23" pos="1646" pan="-35" />
-          <note len="8" key="57" vol="73" pos="1650" pan="26" />
           <note len="8" key="57" vol="30" pos="1661" pan="52" />
-          <note len="8" key="57" vol="32" pos="1669" pan="-39" />
-          <note len="8" key="57" vol="60" pos="1681" pan="17" />
           <note len="8" key="57" vol="56" pos="1687" pan="-41" />
-          <note len="8" key="57" vol="61" pos="1695" pan="-68" />
-          <note len="8" key="57" vol="72" pos="1699" pan="39" />
           <note len="8" key="57" vol="28" pos="1709" pan="-12" />
-          <note len="8" key="57" vol="51" pos="1714" pan="-30" />
-          <note len="8" key="57" vol="32" pos="1728" pan="-48" />
           <note len="8" key="57" vol="48" pos="1740" pan="20" />
-          <note len="8" key="57" vol="57" pos="1743" pan="-27" />
-          <note len="8" key="57" vol="30" pos="1753" pan="70" />
           <note len="8" key="57" vol="42" pos="1765" pan="-28" />
-          <note len="8" key="57" vol="60" pos="1771" pan="-22" />
-          <note len="8" key="57" vol="50" pos="1780" pan="44" />
           <note len="8" key="57" vol="67" pos="1791" pan="2" />
-          <note len="8" key="57" vol="56" pos="1803" pan="-11" />
-          <note len="8" key="57" vol="71" pos="1816" pan="59" />
           <note len="8" key="57" vol="70" pos="1826" pan="-40" />
-          <note len="8" key="57" vol="34" pos="1835" pan="8" />
-          <note len="8" key="57" vol="48" pos="1840" pan="19" />
           <note len="8" key="57" vol="58" pos="1854" pan="-27" />
-          <note len="8" key="57" vol="37" pos="1861" pan="-11" />
-          <note len="8" key="57" vol="50" pos="1868" pan="-31" />
           <note len="8" key="57" vol="45" pos="1881" pan="4" />
-          <note len="8" key="57" vol="58" pos="1884" pan="67" />
-          <note len="8" key="57" vol="28" pos="1895" pan="51" />
           <note len="8" key="57" vol="70" pos="1909" pan="-63" />
-          <note len="8" key="57" vol="44" pos="1914" pan="25" />
-          <note len="8" key="57" vol="26" pos="1922" pan="-52" />
           <note len="8" key="57" vol="67" pos="1924" pan="-40" />
-          <note len="8" key="57" vol="44" pos="1933" pan="-23" />
-          <note len="8" key="57" vol="34" pos="1946" pan="-5" />
           <note len="8" key="57" vol="53" pos="1951" pan="-49" />
-          <note len="8" key="57" vol="33" pos="1956" pan="0" />
-          <note len="8" key="57" vol="33" pos="1958" pan="27" />
           <note len="8" key="57" vol="70" pos="1963" pan="21" />
-          <note len="8" key="57" vol="70" pos="1970" pan="-56" />
-          <note len="8" key="57" vol="67" pos="1981" pan="41" />
           <note len="8" key="57" vol="50" pos="1988" pan="18" />
-          <note len="8" key="57" vol="67" pos="2000" pan="-29" />
-          <note len="8" key="57" vol="60" pos="2012" pan="-15" />
           <note len="8" key="57" vol="28" pos="2022" pan="36" />
-          <note len="8" key="57" vol="43" pos="2030" pan="32" />
-          <note len="8" key="57" vol="51" pos="2041" pan="-59" />
           <note len="8" key="57" vol="28" pos="2045" pan="-68" />
-          <note len="8" key="57" vol="42" pos="2050" pan="4" />
-          <note len="8" key="57" vol="47" pos="2058" pan="-9" />
           <note len="8" key="57" vol="39" pos="2063" pan="-56" />
-          <note len="8" key="57" vol="56" pos="2069" pan="52" />
-          <note len="8" key="57" vol="33" pos="2080" pan="47" />
           <note len="8" key="57" vol="72" pos="2094" pan="-35" />
-          <note len="8" key="57" vol="29" pos="2101" pan="9" />
-          <note len="8" key="57" vol="73" pos="2112" pan="-53" />
           <note len="8" key="57" vol="59" pos="2124" pan="-30" />
-          <note len="8" key="57" vol="21" pos="2136" pan="-20" />
-          <note len="8" key="57" vol="57" pos="2146" pan="-58" />
           <note len="8" key="57" vol="54" pos="2148" pan="34" />
-          <note len="8" key="57" vol="27" pos="2153" pan="-34" />
-          <note len="8" key="57" vol="49" pos="2166" pan="49" />
           <note len="8" key="57" vol="61" pos="2168" pan="10" />
-          <note len="8" key="57" vol="70" pos="2176" pan="-18" />
-          <note len="8" key="57" vol="49" pos="2184" pan="34" />
           <note len="8" key="57" vol="54" pos="2196" pan="-57" />
-          <note len="8" key="57" vol="22" pos="2207" pan="22" />
-          <note len="8" key="57" vol="64" pos="2211" pan="-11" />
           <note len="8" key="57" vol="46" pos="2224" pan="-43" />
-          <note len="8" key="57" vol="23" pos="2235" pan="69" />
-          <note len="8" key="57" vol="24" pos="2240" pan="-15" />
           <note len="8" key="57" vol="71" pos="2246" pan="-70" />
-          <note len="8" key="57" vol="60" pos="2258" pan="-45" />
-          <note len="8" key="57" vol="66" pos="2263" pan="-70" />
           <note len="8" key="57" vol="34" pos="2277" pan="16" />
-          <note len="8" key="57" vol="43" pos="2285" pan="68" />
-          <note len="8" key="57" vol="36" pos="2290" pan="-24" />
           <note len="8" key="57" vol="35" pos="2294" pan="-25" />
-          <note len="8" key="57" vol="72" pos="2304" pan="-62" />
-          <note len="8" key="57" vol="26" pos="2311" pan="-11" />
           <note len="8" key="57" vol="32" pos="2318" pan="65" />
-          <note len="8" key="57" vol="26" pos="2329" pan="7" />
-          <note len="8" key="57" vol="63" pos="2342" pan="-17" />
           <note len="8" key="57" vol="42" pos="2347" pan="-70" />
-          <note len="8" key="57" vol="53" pos="2360" pan="-23" />
-          <note len="8" key="57" vol="61" pos="2365" pan="29" />
           <note len="8" key="57" vol="76" pos="2376" pan="-17" />
-          <note len="8" key="57" vol="55" pos="2378" pan="-12" />
-          <note len="8" key="57" vol="38" pos="2384" pan="-6" />
           <note len="8" key="57" vol="54" pos="2387" pan="-1" />
-          <note len="8" key="57" vol="45" pos="2389" pan="-25" />
-          <note len="8" key="57" vol="43" pos="2394" pan="21" />
           <note len="8" key="57" vol="36" pos="2408" pan="46" />
-          <note len="8" key="57" vol="66" pos="2413" pan="-58" />
-          <note len="8" key="57" vol="52" pos="2426" pan="-67" />
           <note len="8" key="57" vol="52" pos="2433" pan="25" />
-          <note len="8" key="57" vol="30" pos="2436" pan="13" />
-          <note len="8" key="57" vol="58" pos="2448" pan="59" />
           <note len="8" key="57" vol="52" pos="2453" pan="-56" />
-          <note len="8" key="57" vol="60" pos="2460" pan="-57" />
-          <note len="8" key="57" vol="39" pos="2464" pan="68" />
           <note len="8" key="57" vol="66" pos="2477" pan="-44" />
-          <note len="8" key="57" vol="46" pos="2491" pan="22" />
-          <note len="8" key="57" vol="76" pos="2503" pan="12" />
           <note len="8" key="57" vol="59" pos="2507" pan="67" />
-          <note len="8" key="57" vol="72" pos="2519" pan="-56" />
-          <note len="8" key="57" vol="76" pos="2526" pan="-54" />
           <note len="8" key="57" vol="37" pos="2535" pan="-33" />
-          <note len="8" key="57" vol="42" pos="2539" pan="19" />
-          <note len="8" key="57" vol="76" pos="2546" pan="-67" />
           <note len="8" key="57" vol="21" pos="2560" pan="-46" />
-          <note len="8" key="57" vol="22" pos="2573" pan="-16" />
-          <note len="8" key="57" vol="62" pos="2584" pan="2" />
           <note len="8" key="57" vol="74" pos="2592" pan="-52" />
-          <note len="8" key="57" vol="61" pos="2599" pan="67" />
-          <note len="8" key="57" vol="74" pos="2610" pan="53" />
           <note len="8" key="57" vol="45" pos="2624" pan="-69" />
-          <note len="8" key="57" vol="64" pos="2629" pan="-47" />
-          <note len="8" key="57" vol="63" pos="2640" pan="63" />
           <note len="8" key="57" vol="20" pos="2650" pan="21" />
-          <note len="8" key="57" vol="50" pos="2663" pan="26" />
-          <note len="8" key="57" vol="49" pos="2669" pan="-15" />
           <note len="8" key="57" vol="72" pos="2679" pan="-64" />
-          <note len="8" key="57" vol="43" pos="2682" pan="41" />
-          <note len="8" key="57" vol="33" pos="2694" pan="59" />
           <note len="8" key="57" vol="21" pos="2703" pan="59" />
-          <note len="8" key="57" vol="76" pos="2706" pan="-46" />
-          <note len="8" key="57" vol="56" pos="2716" pan="68" />
           <note len="8" key="57" vol="60" pos="2718" pan="-30" />
-          <note len="8" key="57" vol="38" pos="2725" pan="51" />
-          <note len="8" key="57" vol="77" pos="2731" pan="-56" />
           <note len="8" key="57" vol="52" pos="2738" pan="27" />
-          <note len="8" key="57" vol="47" pos="2750" pan="20" />
-          <note len="8" key="57" vol="39" pos="2764" pan="-40" />
           <note len="8" key="57" vol="25" pos="2773" pan="-35" />
-          <note len="8" key="57" vol="28" pos="2785" pan="-49" />
-          <note len="8" key="57" vol="23" pos="2794" pan="44" />
           <note len="8" key="57" vol="36" pos="2804" pan="-47" />
-          <note len="8" key="57" vol="29" pos="2817" pan="65" />
-          <note len="8" key="57" vol="68" pos="2826" pan="-62" />
           <note len="8" key="57" vol="70" pos="2836" pan="-32" />
-          <note len="8" key="57" vol="40" pos="2838" pan="-16" />
-          <note len="8" key="57" vol="71" pos="2841" pan="-32" />
           <note len="8" key="57" vol="71" pos="2843" pan="-4" />
-          <note len="8" key="57" vol="44" pos="2848" pan="-23" />
-          <note len="8" key="57" vol="53" pos="2861" pan="1" />
           <note len="8" key="57" vol="34" pos="2868" pan="-33" />
-          <note len="8" key="57" vol="42" pos="2870" pan="-4" />
-          <note len="8" key="57" vol="73" pos="2879" pan="21" />
           <note len="8" key="57" vol="32" pos="2883" pan="31" />
-          <note len="8" key="57" vol="36" pos="2895" pan="2" />
-          <note len="8" key="57" vol="42" pos="2902" pan="-4" />
           <note len="8" key="57" vol="77" pos="2912" pan="-68" />
-          <note len="8" key="57" vol="69" pos="2926" pan="-19" />
-          <note len="8" key="57" vol="68" pos="2936" pan="-37" />
           <note len="8" key="57" vol="59" pos="2947" pan="-40" />
-          <note len="8" key="57" vol="57" pos="2950" pan="57" />
-          <note len="8" key="57" vol="25" pos="2960" pan="44" />
           <note len="8" key="57" vol="45" pos="2964" pan="-64" />
-          <note len="8" key="57" vol="22" pos="2966" pan="61" />
-          <note len="8" key="57" vol="61" pos="2974" pan="-54" />
           <note len="8" key="57" vol="53" pos="2980" pan="-63" />
-          <note len="8" key="57" vol="62" pos="2993" pan="13" />
-          <note len="8" key="57" vol="67" pos="2995" pan="-45" />
           <note len="8" key="57" vol="20" pos="2997" pan="-1" />
-          <note len="8" key="57" vol="60" pos="3010" pan="42" />
-          <note len="8" key="57" vol="21" pos="3012" pan="-20" />
           <note len="8" key="57" vol="45" pos="3020" pan="-39" />
-          <note len="8" key="57" vol="43" pos="3028" pan="16" />
-          <note len="8" key="57" vol="35" pos="3037" pan="-65" />
           <note len="8" key="57" vol="61" pos="3044" pan="-10" />
-          <note len="8" key="57" vol="32" pos="3054" pan="-51" />
-          <note len="8" key="57" vol="31" pos="3064" pan="50" />
           <note len="8" key="57" vol="72" pos="3070" pan="-28" />
-          <note len="8" key="57" vol="75" pos="3074" pan="-61" />
-          <note len="8" key="57" vol="28" pos="3087" pan="59" />
           <note len="8" key="57" vol="59" pos="3100" pan="-22" />
-          <note len="8" key="57" vol="76" pos="3112" pan="-57" />
-          <note len="8" key="57" vol="55" pos="3123" pan="-34" />
           <note len="8" key="57" vol="22" pos="3137" pan="-36" />
-          <note len="8" key="57" vol="62" pos="3145" pan="10" />
-          <note len="8" key="57" vol="44" pos="3150" pan="-33" />
           <note len="8" key="57" vol="41" pos="3152" pan="31" />
-          <note len="8" key="57" vol="21" pos="3154" pan="35" />
-          <note len="8" key="57" vol="61" pos="3167" pan="34" />
           <note len="8" key="57" vol="59" pos="3181" pan="-32" />
-          <note len="8" key="57" vol="59" pos="3191" pan="70" />
-          <note len="8" key="57" vol="23" pos="3195" pan="58" />
           <note len="8" key="57" vol="39" pos="3206" pan="-49" />
-          <note len="8" key="57" vol="53" pos="3214" pan="12" />
-          <note len="8" key="57" vol="70" pos="3227" pan="11" />
           <note len="8" key="57" vol="36" pos="3232" pan="55" />
-          <note len="8" key="57" vol="65" pos="3245" pan="-52" />
-          <note len="8" key="57" vol="70" pos="3251" pan="28" />
           <note len="8" key="57" vol="41" pos="3265" pan="-49" />
-          <note len="8" key="57" vol="30" pos="3270" pan="69" />
-          <note len="8" key="57" vol="59" pos="3276" pan="-22" />
           <note len="8" key="57" vol="22" pos="3283" pan="4" />
-          <note len="8" key="57" vol="32" pos="3287" pan="9" />
-          <note len="8" key="57" vol="73" pos="3300" pan="2" />
           <note len="8" key="57" vol="56" pos="3302" pan="8" />
-          <note len="8" key="57" vol="24" pos="3306" pan="-53" />
-          <note len="8" key="57" vol="31" pos="3318" pan="64" />
           <note len="8" key="57" vol="43" pos="3320" pan="-38" />
-          <note len="8" key="57" vol="75" pos="3326" pan="-68" />
-          <note len="8" key="57" vol="63" pos="3334" pan="69" />
           <note len="8" key="57" vol="28" pos="3338" pan="-44" />
-          <note len="8" key="57" vol="65" pos="3340" pan="26" />
-          <note len="8" key="57" vol="59" pos="3354" pan="-40" />
           <note len="8" key="57" vol="50" pos="3361" pan="-16" />
-          <note len="8" key="57" vol="34" pos="3375" pan="14" />
-          <note len="8" key="57" vol="49" pos="3382" pan="-58" />
           <note len="8" key="57" vol="27" pos="3385" pan="13" />
-          <note len="8" key="57" vol="70" pos="3391" pan="7" />
-          <note len="8" key="57" vol="59" pos="3398" pan="11" />
           <note len="8" key="57" vol="34" pos="3407" pan="8" />
-          <note len="8" key="57" vol="21" pos="3410" pan="-11" />
-          <note len="8" key="57" vol="72" pos="3420" pan="10" />
           <note len="8" key="57" vol="58" pos="3432" pan="11" />
-          <note len="8" key="57" vol="29" pos="3435" pan="48" />
-          <note len="8" key="57" vol="26" pos="3447" pan="-62" />
           <note len="8" key="57" vol="57" pos="3451" pan="-20" />
-          <note len="8" key="57" vol="59" pos="3455" pan="10" />
-          <note len="8" key="57" vol="41" pos="3462" pan="58" />
           <note len="8" key="57" vol="33" pos="3471" pan="-51" />
-          <note len="8" key="57" vol="22" pos="3475" pan="-61" />
-          <note len="8" key="57" vol="60" pos="3483" pan="-69" />
           <note len="8" key="57" vol="56" pos="3492" pan="69" />
-          <note len="8" key="57" vol="66" pos="3505" pan="5" />
-          <note len="8" key="57" vol="56" pos="3518" pan="41" />
           <note len="8" key="57" vol="55" pos="3527" pan="48" />
-          <note len="8" key="57" vol="56" pos="3532" pan="62" />
-          <note len="8" key="57" vol="76" pos="3546" pan="-58" />
           <note len="8" key="57" vol="67" pos="3551" pan="-11" />
-          <note len="8" key="57" vol="73" pos="3554" pan="-57" />
-          <note len="8" key="57" vol="28" pos="3565" pan="-70" />
           <note len="8" key="57" vol="65" pos="3572" pan="-10" />
-          <note len="8" key="57" vol="59" pos="3576" pan="69" />
-          <note len="8" key="57" vol="66" pos="3585" pan="-51" />
           <note len="8" key="57" vol="39" pos="3595" pan="-11" />
-          <note len="8" key="57" vol="44" pos="3606" pan="-12" />
-          <note len="8" key="57" vol="21" pos="3614" pan="64" />
           <note len="8" key="57" vol="67" pos="3628" pan="13" />
-          <note len="8" key="57" vol="59" pos="3640" pan="-20" />
-          <note len="8" key="57" vol="76" pos="3654" pan="-61" />
           <note len="8" key="57" vol="28" pos="3667" pan="-52" />
-          <note len="8" key="57" vol="72" pos="3675" pan="3" />
-          <note len="8" key="57" vol="41" pos="3689" pan="-48" />
           <note len="8" key="57" vol="53" pos="3699" pan="56" />
-          <note len="8" key="57" vol="38" pos="3713" pan="-31" />
-          <note len="8" key="57" vol="58" pos="3725" pan="-19" />
           <note len="8" key="57" vol="39" pos="3729" pan="57" />
-          <note len="8" key="57" vol="74" pos="3731" pan="-66" />
-          <note len="8" key="57" vol="29" pos="3736" pan="12" />
           <note len="8" key="57" vol="59" pos="3743" pan="32" />
-          <note len="8" key="57" vol="65" pos="3747" pan="34" />
-          <note len="8" key="57" vol="34" pos="3754" pan="33" />
           <note len="8" key="57" vol="36" pos="3762" pan="4" />
-          <note len="8" key="57" vol="63" pos="3770" pan="-67" />
-          <note len="8" key="57" vol="45" pos="3782" pan="2" />
           <note len="8" key="57" vol="34" pos="3793" pan="59" />
-          <note len="8" key="57" vol="74" pos="3802" pan="46" />
-          <note len="8" key="57" vol="25" pos="3809" pan="8" />
         </pattern>
       </track>
       <track muted="0" type="5" name="Rain soft density drift" solo="0">
         <automationtrack />
         <automationpattern pos="0" len="3841" name="Rain soft density drift" prog="1" tens="1.0" mute="0" off="0" autoresize="1">
-          <time pos="0" value="41.0" outValue="41.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="576" value="45.0" outValue="45.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="1152" value="40.0" outValue="40.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="1728" value="44.0" outValue="44.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="2304" value="42.0" outValue="42.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="2880" value="46.0" outValue="46.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="3456" value="41.0" outValue="41.0" inTan="0" outTan="0" lockedTan="0" />
-          <time pos="3840" value="42.0" outValue="42.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="0" value="11.48" outValue="11.48" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="576" value="12.6" outValue="12.6" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1152" value="11.2" outValue="11.2" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1728" value="12.32" outValue="12.32" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2304" value="11.76" outValue="11.76" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2880" value="12.88" outValue="12.88" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3456" value="11.48" outValue="11.48" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3840" value="11.76" outValue="11.76" inTan="0" outTan="0" lockedTan="0" />
           <object id="10001" />
         </automationpattern>
       </track>

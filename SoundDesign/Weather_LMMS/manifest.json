@@ -8,10 +8,10 @@
       "sampleRate": 48000,
       "channels": 2,
       "loop": true,
-      "peakDb": -3.0,
-      "rmsDb": -15.8,
-      "seamStep": 0.14207352203973228,
-      "rawPeak": 0.265045166015625
+      "peakDb": -6.0,
+      "rmsDb": -22.09,
+      "seamStep": 0.022147603039170766,
+      "rawPeak": 0.070465087890625
     },
     {
       "file": "Assets/Audio/Generated/weather.wind.loop__01.wav",

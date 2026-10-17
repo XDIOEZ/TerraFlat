@@ -27,14 +27,17 @@ def read_wav(path):
 
 
 def write_wav(path, data):
-    with path.open("r+b" if path.exists() else "w+b") as stream:
-        stream.seek(0)
-        stream.truncate()
-        with wave.open(stream, "wb") as writer:
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    # 完整写好母带后再替换，避免 Unity 导入半个 WAV。
+    try:
+        with wave.open(str(temporary), "wb") as writer:
             writer.setnchannels(data.shape[1])
             writer.setsampwidth(2)
             writer.setframerate(RATE)
             writer.writeframes(np.rint(np.clip(data, -1, 1) * 32767).astype("<i2").tobytes())
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def make_loop(data, start, end, crossfade=.3):
@@ -77,12 +80,12 @@ AudioImporter:
 """, encoding="utf-8")
 
 
-def finalize(only_thunder=False):
+def finalize(only_thunder=False, only_rain=False):
     manifest = ROOT / "manifest.json"
-    entries = [entry for entry in json.loads(manifest.read_text(encoding="utf-8"))["sounds"]
-               if not Path(entry["file"]).name.startswith("weather.thunder") ] if only_thunder else []
+    selected = {"Rain"} if only_rain else {"Thunder", "Thunder_Far"} if only_thunder else None
+    entries = json.loads(manifest.read_text(encoding="utf-8"))["sounds"] if selected else []
     inputs = [
-        ("Rain", "weather.rain.loop__01.wav", 4, 36, True, -12, -3),
+        ("Rain", "weather.rain.loop__01.wav", 4, 36, True, -20, -6),
         ("Wind", "weather.wind.loop__01.wav", 4, 48, True, -17, -5),
         ("Thunder", "weather.thunder__01.wav", 0, 17, False, -24, -3),
         ("Thunder", "weather.thunder__02.wav", 24, 41, False, -24, -3),
@@ -93,7 +96,7 @@ def finalize(only_thunder=False):
     ]
     cache = {}
     for project, filename, start, end, looping, rms_db, peak_db in inputs:
-        if only_thunder and project in ("Rain", "Wind"):
+        if selected and project not in selected:
             continue
         if project not in cache:
             cache[project] = read_wav(ROOT / "renders" / f"Weather_{project}_raw.wav")
@@ -137,11 +140,15 @@ def finalize(only_thunder=False):
         peak = float(np.max(np.abs(data)))
         rms = float(np.sqrt(np.mean(data**2)))
         seam = float(np.max(np.abs(data[0] - data[-1]))) if looping else None
-        entries.append(dict(file=str(output.relative_to(PROJECT)).replace("\\", "/"),
+        relative_path = str(output.relative_to(PROJECT)).replace("\\", "/")
+        entries = [entry for entry in entries if entry["file"] != relative_path]
+        entries.append(dict(file=relative_path,
                             project=f"Weather_{project}.mmp", seconds=round(len(data)/RATE, 3),
                             sampleRate=RATE, channels=data.shape[1], loop=looping,
                             peakDb=round(20*math.log10(peak), 2), rmsDb=round(20*math.log10(rms), 2),
                             seamStep=seam, rawPeak=raw_peak))
+    order = {entry[1]: index for index, entry in enumerate(inputs)}
+    entries.sort(key=lambda entry: order[Path(entry["file"]).name])
     (ROOT / "manifest.json").write_text(json.dumps(dict(engine="LMMS 1.2.2 via MCP", sounds=entries), ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(json.dumps(entries, indent=2))
 
@@ -164,6 +171,8 @@ def relink():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["finalize", "relink"])
-    parser.add_argument("--only-thunder", action="store_true")
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--only-thunder", action="store_true")
+    selection.add_argument("--only-rain", action="store_true")
     args = parser.parse_args()
-    relink() if args.command == "relink" else finalize(args.only_thunder)
+    relink() if args.command == "relink" else finalize(args.only_thunder, args.only_rain)
