@@ -2,24 +2,49 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.DroppedItems;
 using FlatWorld.Networking;
+using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public static partial class DroppedItemService
 {
     #region 明确世界身份的后台机器实物事务
-    private readonly struct WorldDrop
+    internal readonly struct WorldDrop
     {
         public readonly string World;
         public readonly DroppedItemSaveRecord Record;
         public readonly Item Legacy;
-        public WorldDrop(string world, DroppedItemSaveRecord record, Item legacy = null)
-        { World = world; Record = record; Legacy = legacy; }
+        private readonly List<DroppedItemSaveRecord> sourceRecords;
+        private readonly int recordIndex;
+        public WorldDrop(string world, DroppedItemSaveRecord record, Item legacy = null,
+            List<DroppedItemSaveRecord> records = null, int index = -1)
+        { World = world; Record = record; Legacy = legacy; sourceRecords = records; recordIndex = index; }
         public ItemData Data => Legacy != null ? Legacy.itemData : Record?.Data;
         public Vector2 Position => Legacy != null ? Legacy.itemData.transform.position : Record.Position;
         public bool Valid => Legacy != null ? IsLoosePickable(Legacy) : Record?.Data?.Stack?.Amount >= 1f &&
-            Record.Data.Stack.CanBePickedUp && !Record.HasFlight && WorldRecords(World)?.Contains(Record) == true;
+            Record.Data.Stack.CanBePickedUp && !Record.HasFlight && IsCurrentRecord(WorldRecords(World));
+
+        // 原下标仍匹配时直接确认身份，扩展回调移动列表后才回退查找。
+        internal bool IsCurrentRecord(List<DroppedItemSaveRecord> records)
+            => records != null && ReferenceEquals(records, sourceRecords) &&
+               ((uint)recordIndex < (uint)records.Count && ReferenceEquals(records[recordIndex], Record) || records.Contains(Record));
     }
+
+    internal readonly struct ColdFuelCandidate
+    {
+        internal readonly WorldDrop Drop;
+        internal readonly float DistanceSquared;
+        internal ColdFuelCandidate(WorldDrop drop, float distanceSquared)
+        { Drop = drop; DistanceSquared = distanceSquared; }
+    }
+
+    private static readonly List<ColdFuelCandidate> coldFuelCandidates = new();
+    private static readonly Comparison<ColdFuelCandidate> compareColdFuelDistance =
+        (left, right) => left.DistanceSquared.CompareTo(right.DistanceSquared);
+    private static readonly ProfilerMarker coldFuelCollectMarker = new("DroppedItemService.ColdFuel.Collect");
+    private static readonly ProfilerMarker coldFuelSortMarker = new("DroppedItemService.ColdFuel.Sort");
+    private static readonly ProfilerMarker coldFuelTransferMarker = new("DroppedItemService.ColdFuel.Transfer");
     private static readonly List<WorldDrop> worldDrops = new();
     private static readonly HashSet<int> worldDropIdentities = new();
     private static readonly Dictionary<string, uint> coldTransportSteps = new(StringComparer.Ordinal);
@@ -100,40 +125,112 @@ public static partial class DroppedItemService
         if (ownerWorld == world && runtime != null) return;
         List<DroppedItemSaveRecord> records = WorldRecords(world);
         if (records == null) return;
-        foreach (DroppedItemSaveRecord record in records)
+        for (int index = 0; index < records.Count; index++)
+        {
+            DroppedItemSaveRecord record = records[index];
             if (record?.Data != null && worldDropIdentities.Add(record.Data.Guid))
             {
                 if (coldRebasedData.Add(record.Data)) ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, record.Data);
-                worldDrops.Add(new WorldDrop(world, record));
+                worldDrops.Add(new WorldDrop(world, record, records: records, index: index));
             }
+        }
     }
 
     public static void AbsorbWorldFuel(MachineEntity furnace, Inventory_Data inventory)
     {
         if (!GameNetwork.HasStateAuthority || furnace == null || inventory?.itemSlots == null) return;
         string world = furnace.ScopeKey;
-        Vector2 center = (Vector2)furnace.Cell + Vector2.one * .5f;
-        CollectWorldDrops(world);
-        worldDrops.Sort((left, right) => PressureExplosionQueue.DeltaInWorld(world, center, left.Position).sqrMagnitude
-            .CompareTo(PressureExplosionQueue.DeltaInWorld(world, center, right.Position).sqrMagnitude));
-        foreach (WorldDrop drop in worldDrops)
+        WorldTopologyDomain topology = ColdFuelTopology(world);
+        try
         {
-            if (!drop.Valid || drop.Data.Tags?.Contains(Tag.CombustionFuel) != true || MachineWorld.CellOf(drop.Position) != furnace.Cell ||
-                !Mod_Fuel.TryResolveItemData(drop.Data, out FuelData fuel) || !MachineDefinition.Positive(fuel.Fuel.x)) continue;
-            ItemData moved = ItemInstanceDataFactory.CloneRuntime(drop.Data);
-            if (!inventory.TryAddItem(moved, false, out float available)) continue;
-            int amount = Mathf.FloorToInt(Mathf.Min(moved.Stack.Amount, available) + .0001f);
-            if (amount <= 0) continue;
-            if (amount < drop.Data.Stack.Amount) { int id; do id = Guid.NewGuid().GetHashCode(); while (id == 0 || id == moved.Guid); moved.Guid = id; }
-            moved.Stack.Amount = amount;
-            // 库存只扣实际已接纳的数量，满槽或扩展回调拒绝不会吞掉原实物。
-            if (inventory.TryAddItem(moved, true, out float added) || added > 0f)
+            using (coldFuelCollectMarker.Auto()) CollectWorldFuelCandidates(world, furnace.Cell, topology);
+            if (coldFuelCandidates.Count == 0) return;
+            using (coldFuelSortMarker.Auto()) SortColdFuelCandidates(coldFuelCandidates);
+            using (coldFuelTransferMarker.Auto())
+            foreach (ColdFuelCandidate candidate in coldFuelCandidates)
             {
-                drop.Data.Stack.Amount -= Mathf.Min(amount, added);
-                PublishWorldDrop(drop);
+                WorldDrop drop = candidate.Drop;
+                if (!drop.Valid || ColdFuelCell(drop.Position, topology) != furnace.Cell ||
+                    drop.Data.Tags?.Contains(Tag.CombustionFuel) != true ||
+                    !Mod_Fuel.TryResolveItemData(drop.Data, out FuelData fuel) || !MachineDefinition.Positive(fuel.Fuel.x)) continue;
+                if (TransferColdFuel(drop.Data, inventory) > 0f) PublishWorldDrop(drop);
             }
         }
-        worldDrops.Clear();
+        finally { coldFuelCandidates.Clear(); }
+    }
+
+    // 同格筛选在补配置和排序之前完成，远处掉落物不会进入炉子的候选工作区。
+    private static void CollectWorldFuelCandidates(string world, Vector2Int cell, WorldTopologyDomain topology)
+    {
+        BindColdWorldSave();
+        coldFuelCandidates.Clear(); worldDropIdentities.Clear();
+        float2 center = new(cell.x + .5f, cell.y + .5f);
+        if (ItemMgr.Instance != null)
+            foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
+            {
+                if (item == null || item.gameObject.scene.name != world || !IsLoosePickable(item) ||
+                    !worldDropIdentities.Add(item.itemData.Guid)) continue;
+                Vector2 position = item.itemData.transform.position;
+                if (ColdFuelCell(position, topology) == cell)
+                    coldFuelCandidates.Add(new ColdFuelCandidate(new WorldDrop(world, null, item),
+                        topology.SqrDistance(center, new float2(position.x, position.y))));
+            }
+        if (ownerWorld == world && runtime != null) return;
+        int firstCold = coldFuelCandidates.Count;
+        CollectColdFuelCandidates(WorldRecords(world), world, cell, topology, worldDropIdentities, coldFuelCandidates);
+        for (int index = firstCold; index < coldFuelCandidates.Count; index++)
+        {
+            ItemData data = coldFuelCandidates[index].Drop.Data;
+            if (coldRebasedData.Add(data)) ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data);
+        }
+    }
+
+    internal static void CollectColdFuelCandidates(List<DroppedItemSaveRecord> records, string world,
+        Vector2Int cell, WorldTopologyDomain topology, HashSet<int> identities, List<ColdFuelCandidate> result)
+    {
+        if (records == null) return;
+        float2 center = new(cell.x + .5f, cell.y + .5f);
+        for (int index = 0; index < records.Count; index++)
+        {
+            DroppedItemSaveRecord record = records[index];
+            if (record?.Data == null || !identities.Add(record.Data.Guid) ||
+                ColdFuelCell(record.Position, topology) != cell || record.HasFlight ||
+                record.Data.Stack == null || record.Data.Stack.Amount < 1f || !record.Data.Stack.CanBePickedUp) continue;
+            result.Add(new ColdFuelCandidate(new WorldDrop(world, record, records: records, index: index),
+                topology.SqrDistance(center, new float2(record.Position.x, record.Position.y))));
+        }
+    }
+
+    internal static void SortColdFuelCandidates(List<ColdFuelCandidate> candidates) => candidates.Sort(compareColdFuelDistance);
+
+    internal static Vector2Int ColdFuelCell(Vector2 position, WorldTopologyDomain topology)
+    {
+        int2 cell = topology.Normalize(new int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
+        return new Vector2Int(cell.x, cell.y);
+    }
+
+    private static WorldTopologyDomain ColdFuelTopology(string world)
+    {
+        var planets = SaveDataMgr.Instance?.SaveData?.PlanetData_Dict;
+        if (planets == null || string.IsNullOrWhiteSpace(world) || world.StartsWith("ship:", StringComparison.Ordinal)) return default;
+        if (!planets.TryGetValue(world, out PlanetData planet))
+            planets.TryGetValue(WorldAddress.FromWorldKey(world).PlanetId, out planet);
+        return WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
+    }
+
+    internal static float TransferColdFuel(ItemData source, Inventory_Data inventory)
+    {
+        ItemData moved = ItemInstanceDataFactory.CloneRuntime(source);
+        if (!inventory.TryAddItem(moved, false, out float available)) return 0f;
+        int amount = Mathf.FloorToInt(Mathf.Min(moved.Stack.Amount, available) + .0001f);
+        if (amount <= 0) return 0f;
+        if (amount < source.Stack.Amount) { int id; do id = Guid.NewGuid().GetHashCode(); while (id == 0 || id == moved.Guid); moved.Guid = id; }
+        moved.Stack.Amount = amount;
+        // 库存只扣实际已接纳的数量，满槽或扩展回调拒绝不会吞掉原实物。
+        if (!inventory.TryAddItem(moved, true, out float added) && added <= 0f) return 0f;
+        float transferred = Mathf.Min(amount, added);
+        source.Stack.Amount -= transferred;
+        return transferred;
     }
 
     public static void TransportWorldDrops(MachineEntity belt, float seconds)

@@ -17,3 +17,5 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/pla
 关键流程待补：最终 URP/BRG/Shader 画面、Y 轴视觉遮挡、阴影和水面、全部特效池类型及延迟回收、GPU 后端兼容、相机切换、性能和图像对比。真实组件/共享材质/MPB/粒子池状态正确仍不代表画面与性能已验收。
 
 2026-10-15 的通过记录仅覆盖当时已有断言；后续补充项按各自日期记录执行状态，实际画面和最终验收由用户执行。
+
+2026-10-17 新增但未执行：`rendering/cave_shadow_spheres` 直接采样正式 `ChunkLightOccluderVisibilityScheduler.SpheresIntersect`，由 Lua 断言近光/远光、相切、保守边界余量、Z 轴相交与分离、零半径和对称性。本组不创建渲染器、不调用渲染调度，不代表 URP 灯注册表、逐灯阴影启停、墙体漏光或最终帧率已验收。

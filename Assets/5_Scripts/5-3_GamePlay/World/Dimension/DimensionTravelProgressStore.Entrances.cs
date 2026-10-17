@@ -32,27 +32,23 @@ public static partial class DimensionTravelProgressStore
             worlds[surface.WorldKey] = cells;
             data[EntranceStatesKey] = worlds;
             ItemSpecialDataJsonStore.WriteNamespace(player, NamespaceKey, data);
+            InvalidatePlayerReadCache(player);
             EntranceStateRevision++;
         }
     }
 
     /// <summary>状态与实体加载无关：地表入口所在区块卸载后，矿洞仍能判断出口是否被封堵。</summary>
     public static bool IsSurfaceEntranceBlocked(GameSaveData save, WorldAddress surface, Vector2 position) =>
-        HasSurfaceEntranceFlag(save, surface, position, "blocked");
+        HasSurfaceEntranceFlag(save, surface, position, EntranceReadFlags.Blocked);
 
     public static bool WasGeneratedSurfaceEntrance(GameSaveData save, WorldAddress surface, Vector2 position) =>
-        HasSurfaceEntranceFlag(save, surface, position, "generated");
+        HasSurfaceEntranceFlag(save, surface, position, EntranceReadFlags.Generated);
 
-    private static bool HasSurfaceEntranceFlag(GameSaveData save, WorldAddress surface, Vector2 position, string flag)
+    private static bool HasSurfaceEntranceFlag(GameSaveData save, WorldAddress surface, Vector2 position,
+        EntranceReadFlags flag)
     {
         if (save?.PlayerData_Dict == null) return false;
-        string key = EntranceCellKey(position);
-        foreach (Data_Player player in save.PlayerData_Dict.Values)
-        {
-            JObject data = ItemSpecialDataJsonStore.ReadNamespace(player, NamespaceKey);
-            if (data[EntranceStatesKey]?[surface.WorldKey]?[key]?.Value<bool?>(flag) == true) return true;
-        }
-        return false;
+        return GetSaveReadCache(save).HasEntranceFlag(surface.WorldKey, Vector2Int.FloorToInt(position), flag);
     }
 
     private static string EntranceCellKey(Vector2 position)
@@ -71,19 +67,9 @@ public static partial class DimensionTravelProgressStore
         if (exit == null || cave.DimensionId != WorldAddress.CaveDimensionId) return false;
         if (generated)
             return IsSurfaceEntranceBlocked(save, cave.WithDimension(WorldAddress.SurfaceDimensionId), exit.transform.position);
-        if (save?.PlayerData_Dict == null) return false;
-        foreach (Data_Player player in save.PlayerData_Dict.Values)
-        {
-            JObject data = ItemSpecialDataJsonStore.ReadNamespace(player, NamespaceKey);
-            if (data[PortalAnchorsKey] is not JObject anchors) continue;
-            foreach (JProperty property in anchors.Properties())
-            {
-                DimensionPortalAnchor anchor = ParseAnchor(property.Name, property.Value as JObject);
-                if (anchor != null && anchor.CaveWorldKey == cave.WorldKey && anchor.CaveExitGuid == exit.itemData.Guid)
-                    return IsSurfaceEntranceBlocked(save, WorldAddress.FromWorldKey(anchor.SurfaceWorldKey), anchor.SurfaceEntrancePosition);
-            }
-        }
-        return false;
+        if (save?.PlayerData_Dict == null || exit.itemData == null) return false;
+        SaveReadCache cache = GetSaveReadCache(save);
+        return cache.IsCaveExitBlocked(cave.WorldKey, exit.itemData.Guid);
     }
 
     /// <summary>采光由已保存出口和确定性天然出口共同决定；手工出口不用保持远处区块加载。</summary>
@@ -91,42 +77,7 @@ public static partial class DimensionTravelProgressStore
     {
         if (save?.PlayerData_Dict == null || result == null ||
             cave.DimensionId != WorldAddress.CaveDimensionId) return;
-        var seenCells = new HashSet<Vector2Int>();
-        foreach (Data_Player player in save.PlayerData_Dict.Values)
-        {
-            JObject data = ItemSpecialDataJsonStore.ReadNamespace(player, NamespaceKey);
-            if (data[PortalAnchorsKey] is JObject anchors)
-            {
-                foreach (JProperty property in anchors.Properties())
-                {
-                    DimensionPortalAnchor anchor = ParseAnchor(property.Name, property.Value as JObject);
-                    if (anchor == null || anchor.CaveWorldKey != cave.WorldKey ||
-                        IsSurfaceEntranceBlocked(save, WorldAddress.FromWorldKey(anchor.SurfaceWorldKey),
-                            anchor.SurfaceEntrancePosition))
-                    {
-                        continue;
-                    }
-
-                    Vector2 position = anchor.CaveExitPosition;
-                    if (seenCells.Add(Vector2Int.FloorToInt(position))) result.Add(position);
-                }
-            }
-
-            // 天然入口不创建旧锚点，但与洞穴出口严格同格；入口状态已经保存地表格坐标。
-            WorldAddress surface = cave.WithDimension(WorldAddress.SurfaceDimensionId);
-            if (data[EntranceStatesKey]?[surface.WorldKey] is not JObject naturalCells) continue;
-            foreach (JProperty property in naturalCells.Properties())
-            {
-                if (property.Value is not JObject state || state.Value<bool?>("generated") != true ||
-                    state.Value<bool?>("blocked") == true ||
-                    !TryParseEntranceCellKey(property.Name, out Vector2Int cell) || !seenCells.Add(cell))
-                {
-                    continue;
-                }
-
-                result.Add(new Vector2(cell.x + 0.5f, cell.y + 0.5f));
-            }
-        }
+        GetSaveReadCache(save).CollectOpenCaveExitPositions(cave.WorldKey, result);
     }
 
     private static bool TryParseEntranceCellKey(string key, out Vector2Int cell)

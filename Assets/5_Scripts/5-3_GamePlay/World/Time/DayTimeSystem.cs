@@ -50,11 +50,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
     private string appliedPresentationProfileId = string.Empty;
     private string appliedPresentationSceneName = string.Empty;
     private int appliedPresentationConfigVersion = -1;
-    private readonly List<Vector2> caveExitLightPositions = new();
-    private string cachedCaveExitLightWorldKey = string.Empty;
-    private float nextCaveExitLightRefreshTime;
-    private const float CaveExitAmbientFadeDistance = 100f;
-    private const float CaveExitAmbientRefreshInterval = 0.25f;
+    private readonly CaveExitAmbientLightCache caveExitAmbientCache = new();
     // 仅影响本地画面的最低环境亮度；真实世界光照仍使用昼夜系统原值。
     private readonly Dictionary<object, float> localPresentationLightingFloors = new();
     private float localPresentationLightingFloor;
@@ -155,9 +151,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         appliedPresentationProfileId = string.Empty;
         appliedPresentationSceneName = string.Empty;
         appliedPresentationConfigVersion = -1;
-        caveExitLightPositions.Clear();
-        cachedCaveExitLightWorldKey = string.Empty;
-        nextCaveExitLightRefreshTime = 0f;
+        caveExitAmbientCache.Clear();
         cachedActiveSceneHandle = int.MinValue;
         cachedActiveSceneName = string.Empty;
     }
@@ -522,28 +516,8 @@ private void TimeRun(string sceneName, float deltaTime)
         if (player == null || save == null)
             return 1f;
 
-        if (!string.Equals(cachedCaveExitLightWorldKey, manager.ActiveAddress.WorldKey,
-                StringComparison.Ordinal) || Time.unscaledTime >= nextCaveExitLightRefreshTime)
-        {
-            caveExitLightPositions.Clear();
-            DimensionTravelProgressStore.CollectOpenCaveExitPositions(
-                save, manager.ActiveAddress, caveExitLightPositions);
-            cachedCaveExitLightWorldKey = manager.ActiveAddress.WorldKey;
-            nextCaveExitLightRefreshTime = Time.unscaledTime + CaveExitAmbientRefreshInterval;
-        }
-
-        if (caveExitLightPositions.Count == 0)
-            return 0f;
-
-        Vector2 position = player.position;
-        float nearest = float.PositiveInfinity;
-        for (int index = 0; index < caveExitLightPositions.Count; index++)
-        {
-            nearest = Mathf.Min(nearest,
-                WorldTopologyRuntime.Distance(position, caveExitLightPositions[index]));
-        }
-
-        return Mathf.Clamp01(1f - nearest / CaveExitAmbientFadeDistance);
+        return caveExitAmbientCache.Evaluate(
+            save, manager.ActiveAddress, player.position, WorldTopologyRuntime.GetActiveDomain());
     }
 
     private float GetMoonlightIntensity(TimeData timeData)

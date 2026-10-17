@@ -50,6 +50,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - SunShadowSampling.hlsl 由普通 Sprite/AIECS/资源 BRG 共用；采样使用当前帧 UV 边界和世界 PPU，图集外沿透明，半埋裁剪进入采样。透明外沿几何与 CPU 包围盒一致；太阳高度先 Clamp01 再幂运算，投影范围有限且排除 NaN/Infinity。
 - 地表高度分层由 Chunk-BRG-Contact-Lit 共享公式处理：分层→接触阴影→Light2D，同层无边，低侧暗边优先；ElevationStrength=0 只旁路高度效果。GroundElevationShadowSettings 更新批次材质，不重建实例。
 - Blocking 静态墙共用 ChunkLightOccluderRenderer/selfShadows；局部体积光同时使用有效 volumetricShadows。selfShadows 会影响墙区重叠 Lit Sprite，自发光区域由独立 Unlit/Emissive 的 Max 混合保颜色下限。
+- 静态墙阴影由 `ChunkLightOccluderVisibilityScheduler` 在渲染前按 URP 已登记局部投影光筛选，灯/墙/变换不变时复用结果；候选矩形与 `EnabledOccluderCount` 分开。Point 使用含 Z 的保守球相交，非 Point 或适配失败保留全部，恢复当帧补 `ShadowCaster2D.Update`。
+- 洞口环境采光由 `DimensionTravelProgressStore.ReadCache` 和 `CaveExitAmbientLightCache` 维护；入口/锚点变化才更新出口集合，玩家位置/拓扑变化才重算距离，不定时解析角色 JSON。
 - 动态 PlacedBuilding 的 Sprite 节点持 ShadowCaster2D，投影路径来自 Sprite fallback physics shape；手持/召唤器态关闭。内嵌发光避让使用裁剪投影并关闭 useRendererSilhouette，使自阴影也采用裁剪网格。
 - Light2DSortingLayerUtility 适配 URP 14 接收层：光源空列表保留 Prefab，建筑空列表接收全部；镜像光同步集合。接收层过滤不表达物理高度或逐灯 Owner 排除。
 

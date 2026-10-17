@@ -6,6 +6,10 @@
 - 地址结果不代表实际迁移成功。未覆盖传送门配对、场景准备、完整保存/退出/恢复、失败回滚、洞穴入口和联机限制。
 - 不调用 `DimensionManager`，不改变场景或存档，不截图。
 
+2026-10-17 新增但未执行：`cave_exit_cache_natural/manual/players/sources/identity/distance` 在独立 `GameSaveData/Data_Player` 上调用正式旅行进度和 `CaveExitAmbientLightCache`。覆盖单/多角色天然出口去重、手工锚点、入口即时封堵/恢复、正式更新锚点位置、同量替换/增删角色、相同版本的不同存档、外部 JSON 改写、无关命名空间与最后位置改写，以及站立 100 次不增加出口集合刷新和距离计算。移动、环绕开关、原点、跨度变化只重新采距离；显式清理后重新取得出口。手工入口使用禁用的独立 Item 夹具，经正式锚点 API 写入后销毁；不创建正式世界、不切场景、不注册到真实物品管理器。
+
+这些新增 Lua 持有断言，C# probe 只驱动正式 API 并返回出口位置、采光系数、进度版本与真实缓存计数。此轮未运行 Unity 编译或测试，不代表实际洞穴画面、帧率和玩法已验收。
+
 ## PlayMode 现场集
 
 - `gameplay-suite.json` / `gameplay.lua`：创建自有正式 `MineEntrance`，由 `DimensionTravelProgressStore` 配对，实际调用 `DimensionManager.TryBeginTransition` 进入洞穴，再从迁移正式创建的 `CaveExit` 返回地表。

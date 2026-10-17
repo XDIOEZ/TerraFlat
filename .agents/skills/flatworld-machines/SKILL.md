@@ -29,6 +29,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 起飞/落地复用 TransferScopeNodes 在普通 worldKey 与 ship:key 间整批交接真实节点、加工器和共享罐份额，调用者给出最终 Cell/位置/绝对朝向；先全量校验，再提交归属与地表通知。不能用 Remove/Place 代替迁移，Remove 会执行储罐拆除排放；落地机器直接加入普通管电网络。
 - 船上无机械端口的设施与机械网、流体网一样持续模拟，不用地表玩家区块决定休眠；`ship:` 作用域不是场景名，不能因场景匹配不到玩家而释放电池、培育仓等设备的交互对象和面板。
 - SpaceSession 以游戏时钟调用 TickBackgroundWorlds，档案中的非活动地表作用域只恢复数据网络并持续推进加工/燃料/气液；活动地表由 ItemMgr 调度，避免重复。冷环境按自己的 WorldKey/冻结拓扑查询，不发布到当前场景 TemperatureMgr；炉吸燃料与带面交付经 DroppedItemService.ColdWorld 按世界查询实物、去重和原子扣量，不借用眼前世界掉落物。退出游戏后不补算。
+- 后台炉吸燃料先用本世界冻结拓扑筛同格候选，再仅对候选计算距离、排序和补配置，禁止为同格查询排序全世界掉落物；记录身份优先核对原列表/下标，列表被回调挪动时才回退查找。Profiler 分 `ColdFuel.Collect/Sort/Transfer`。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
 - FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
 - CultivatorLogic 保存每槽作物、水、肥、电力和待收产量；断供/满输出保留状态。显示读取真实种植槽，空槽隐藏，不为客户端或休眠显示创建业务逻辑。

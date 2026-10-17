@@ -45,3 +45,20 @@ for _, args in ipairs({ { start = 0 }, { opaque = 10 }, { maximum = 19 }, { zoom
         assert(not data.valid, "宇宙视野接受非法层次、缩放或过渡参数")
     end, "宇宙视野配置拒绝非法边界")
 end
+
+for _, args in ipairs({
+    { bx = 3, expected = true, label = "相交近光" },
+    { bx = 10, expected = false, label = "远光" },
+    { bx = 4, expected = true, label = "相切边界" },
+    { bx = 4.0005, expected = true, label = "边界保守余量" },
+    { bx = 4.01, expected = false, label = "超出边界余量" },
+    { bz = 3, expected = true, label = "Z轴仍相交" },
+    { bz = 5, expected = false, label = "Z轴分离" },
+    { ar = 0, br = 0, expected = true, label = "同点零半径" },
+    { ar = 0, br = 0, bx = 1, expected = false, label = "分离零半径" }
+}) do
+    test.system("rendering", "cave_shadow_spheres", args, function(data)
+        assert(data.intersects == args.expected, "洞穴墙阴影球形筛选错误：" .. args.label)
+        assert(data.reverseIntersects == data.intersects, "洞穴墙阴影球形筛选不满足对称性：" .. args.label)
+    end, "洞穴墙阴影保守球形筛选：" .. args.label)
+end

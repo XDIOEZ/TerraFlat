@@ -45,24 +45,7 @@ public static partial class DimensionTravelProgressStore
         if (playerData == null || !address.IsValid)
             return false;
 
-        JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
-        if (dimensionData[LastPositionsKey] is not JObject positions ||
-            positions[address.WorldKey] is not JObject storedPosition)
-        {
-            return false;
-        }
-
-        float? x = storedPosition.Value<float?>("x");
-        float? y = storedPosition.Value<float?>("y");
-        float? z = storedPosition.Value<float?>("z");
-        if (!x.HasValue || !y.HasValue || !z.HasValue ||
-            !IsFinite(x.Value) || !IsFinite(y.Value) || !IsFinite(z.Value))
-        {
-            return false;
-        }
-
-        position = new Vector3(x.Value, y.Value, z.Value);
-        return true;
+        return GetPlayerReadCache(playerData).LastPositions.TryGetValue(address.WorldKey, out position);
     }
 
     public static void SetLastPosition(Data_Player playerData, WorldAddress address, Vector3 position)
@@ -80,6 +63,7 @@ public static partial class DimensionTravelProgressStore
         };
         dimensionData[LastPositionsKey] = positions;
         ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
+        InvalidatePlayerReadCache(playerData);
     }
 
     #endregion
@@ -134,6 +118,7 @@ public static partial class DimensionTravelProgressStore
         dimensionData[PortalAnchorsKey] = anchors;
         dimensionData[ActivePortalAnchorKey] = anchorId;
         ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
+        InvalidatePlayerReadCache(playerData);
         return anchor;
     }
 
@@ -165,6 +150,7 @@ public static partial class DimensionTravelProgressStore
             dimensionData[PortalAnchorsKey] = anchors;
             dimensionData[ActivePortalAnchorKey] = property.Name;
             ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
+            InvalidatePlayerReadCache(playerData);
             anchor = candidate;
             return true;
         }
@@ -185,6 +171,7 @@ public static partial class DimensionTravelProgressStore
         dimensionData[PortalAnchorsKey] = anchors;
         dimensionData[ActivePortalAnchorKey] = anchor.AnchorId;
         ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
+        InvalidatePlayerReadCache(playerData);
     }
 
     private static string BuildAnchorId(string surfaceWorldKey, int entranceGuid)

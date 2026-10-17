@@ -26,6 +26,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/weather", WorldWeather);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
         operations.Add("dimension/address", WorldDimensionAddress);
+        RegisterCavePerformanceOperations(operations);
+        RegisterColdDropProbes(operations);
         operations.Add("building/support_layer", WorldSupportLayer);
         operations.Add("building/shared_state", WorldBuildingState);
         operations.Add("agriculture/soil", WorldSoil);
