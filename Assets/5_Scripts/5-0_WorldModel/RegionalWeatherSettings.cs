@@ -33,6 +33,8 @@ namespace FlatWorld.WorldModel
         public float MinimumDurationSeconds;
         public float MaximumDurationSeconds;
         public WeatherProbabilityBand[] ProbabilityBands = Array.Empty<WeatherProbabilityBand>();
+        public float RecoveryProbabilityMultiplier = 0.2f;
+        public float RecoverySeconds = 300f; // 自然事件结束后暂时降低再次抽中的机会，再按游戏秒线性恢复。
 
         public WeatherElementRule Clone()
         {
@@ -66,6 +68,7 @@ namespace FlatWorld.WorldModel
                 !Unit(MinimumIntensity) || !Unit(MaximumIntensity) || MaximumIntensity < MinimumIntensity ||
                 !NonNegative(MinimumDurationSeconds) || MinimumDurationSeconds <= 0f ||
                 !NonNegative(MaximumDurationSeconds) || MaximumDurationSeconds < MinimumDurationSeconds ||
+                !Unit(RecoveryProbabilityMultiplier) || !NonNegative(RecoverySeconds) ||
                 ProbabilityBands == null)
                 throw new ArgumentOutOfRangeException(nameof(WeatherElementRule), "区块天气要素参数超出有限配置范围。");
             float previousIntensity = -1f;
@@ -177,12 +180,41 @@ namespace FlatWorld.WorldModel
 
         /// <summary>区域抽签时应用当前配置，区块冻结的基础气候概率保持独立。</summary>
         public float ResolveActivationProbability(WeatherElementProfile profile)
+            => ResolveActivationProbability(profile, 0d, 0d);
+
+        /// <summary>各区域要素按自己的恢复完成时刻调节概率，近期历史不改变基础气候。</summary>
+        public float ResolveActivationProbability(WeatherElementProfile profile, double now, double naturalRecoveryEndTime)
         {
+            if (!Finite(now) || now < 0d)
+                throw new ArgumentOutOfRangeException(nameof(now), "天气概率采样时刻须为非负有限游戏秒。");
+            if (!Finite(naturalRecoveryEndTime) || naturalRecoveryEndTime < 0d)
+                throw new ArgumentOutOfRangeException(nameof(naturalRecoveryEndTime), "天气恢复完成时刻须为非负有限游戏秒。");
             float probability = profile.Probability * NaturalEventProbabilityMultiplier;
             foreach (WeatherElementRule rule in Elements)
+            {
                 if (string.Equals(rule.Id, profile.Id, StringComparison.Ordinal))
-                    return probability * rule.ResolveProbabilityMultiplier(profile.Intensity);
+                {
+                    double remaining = Math.Max(0d, naturalRecoveryEndTime - now);
+                    float recovering = rule.RecoverySeconds > 0f
+                        ? (float)Math.Min(1d, remaining / rule.RecoverySeconds) : 0f;
+                    float recoveryMultiplier = 1f - (1f - rule.RecoveryProbabilityMultiplier) * recovering;
+                    return probability * rule.ResolveProbabilityMultiplier(profile.Intensity) * recoveryMultiplier;
+                }
+            }
             return probability;
+        }
+
+        /// <summary>恢复从自然事件计划结束后开始，记录完成时刻可保留回拨后的剩余恢复量。</summary>
+        public double ResolveNaturalRecoveryEndTime(string elementId, double eventEndTime)
+        {
+            if (string.IsNullOrWhiteSpace(elementId))
+                throw new ArgumentException("天气要素标识不能为空。", nameof(elementId));
+            if (!Finite(eventEndTime) || eventEndTime < 0d)
+                throw new ArgumentOutOfRangeException(nameof(eventEndTime), "天气事件结束时刻须为非负有限游戏秒。");
+            foreach (WeatherElementRule rule in Elements)
+                if (string.Equals(rule.Id, elementId, StringComparison.Ordinal))
+                    return eventEndTime + (double)rule.RecoverySeconds;
+            return eventEndTime;
         }
 
         public WeatherElementProfile SampleNaturalEvent(WeatherElementProfile profile, float first, float second, float third)
@@ -229,6 +261,7 @@ namespace FlatWorld.WorldModel
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+        private static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
         #endregion
     }
 }

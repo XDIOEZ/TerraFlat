@@ -176,7 +176,8 @@ namespace FlatWorld.WorldModel
             foreach (WeatherElementProfile profile in state.Profile.Elements)
             {
                 WeatherElementState element = GetOrCreateElement(state, profile.Id);
-                float probability = settings.ResolveActivationProbability(profile);
+                float probability = settings.ResolveActivationProbability(profile, state.LastStepTime,
+                    element.NaturalRecoveryEndTime);
                 if (element.Intensity > 0f || profile.Intensity <= 0f || probability <= 0f ||
                     Random01(state.Region, state.CheckIndex, profile.Id) >= probability)
                     continue;
@@ -185,6 +186,7 @@ namespace FlatWorld.WorldModel
                     Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.2"),
                     Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.3"));
                 BeginElement(state, element, state.LastStepTime, sampled.Intensity, sampled.DurationSeconds);
+                element.NaturalRecoveryEndTime = settings.ResolveNaturalRecoveryEndTime(profile.Id, element.EndTime);
             }
         }
 
@@ -311,6 +313,8 @@ namespace FlatWorld.WorldModel
                 {
                     element.StartedTime = ShiftTime(element.StartedTime, deltaSeconds);
                     element.EndTime = ShiftTime(element.EndTime, deltaSeconds);
+                    if (element.NaturalRecoveryEndTime > 0d)
+                        element.NaturalRecoveryEndTime = Math.Max(0d, element.NaturalRecoveryEndTime + deltaSeconds);
                 }
                 if (state.NextLightningTime > 0d)
                     state.NextLightningTime = ShiftTime(state.NextLightningTime, deltaSeconds);
@@ -699,7 +703,8 @@ namespace FlatWorld.WorldModel
             {
                 if (element == null || string.IsNullOrWhiteSpace(element.Id) || !ids.Add(element.Id) ||
                     !Finite(element.StartedTime) || element.StartedTime < 0d ||
-                    !Finite(element.EndTime) || element.EndTime < element.StartedTime || !Unit(element.Intensity))
+                    !Finite(element.EndTime) || element.EndTime < element.StartedTime || !Unit(element.Intensity) ||
+                    !Finite(element.NaturalRecoveryEndTime) || element.NaturalRecoveryEndTime < 0d)
                     throw new ArgumentException("区块天气事件包含非法标识、时段或强度。", nameof(state));
             }
         }

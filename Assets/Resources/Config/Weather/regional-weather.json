@@ -19,6 +19,8 @@
       "MaximumIntensity": 0.85,
       "MinimumDurationSeconds": 45.0,
       "MaximumDurationSeconds": 180.0,
+      "RecoveryProbabilityMultiplier": 0.2,
+      "RecoverySeconds": 300.0,
       "PrecipitationWeight": 1.0
     },
     {
@@ -36,6 +38,8 @@
       ],
       "MinimumDurationSeconds": 45.0,
       "MaximumDurationSeconds": 180.0,
+      "RecoveryProbabilityMultiplier": 0.2,
+      "RecoverySeconds": 300.0,
       "PrecipitationWeight": 0.0
     },
     {
@@ -48,6 +52,8 @@
       "MaximumIntensity": 0.8,
       "MinimumDurationSeconds": 15.0,
       "MaximumDurationSeconds": 60.0,
+      "RecoveryProbabilityMultiplier": 0.2,
+      "RecoverySeconds": 300.0,
       "PrecipitationWeight": 0.7
     },
     {
@@ -63,6 +69,8 @@
       "MaximumIntensity": 1.0,
       "MinimumDurationSeconds": 60.0,
       "MaximumDurationSeconds": 240.0,
+      "RecoveryProbabilityMultiplier": 0.2,
+      "RecoverySeconds": 300.0,
       "WindWeight": 0.0,
       "PrecipitationWeight": 0.0
     }

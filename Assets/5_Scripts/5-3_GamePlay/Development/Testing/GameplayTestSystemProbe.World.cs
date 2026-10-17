@@ -29,6 +29,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/natural_fog_distribution", WorldNaturalFogDistribution);
         operations.Add("environment/natural_fog_lifecycle", WorldNaturalFogLifecycle);
         operations.Add("environment/natural_fog_validation", WorldNaturalFogValidation);
+        RegisterWeatherRecoveryOperations(operations);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
         operations.Add("dimension/address", WorldDimensionAddress);
         RegisterCavePerformanceOperations(operations);

@@ -12,6 +12,7 @@ namespace FlatWorld.WorldModel
         public double StartedTime;
         public double EndTime;
         public float Intensity;
+        public double NaturalRecoveryEndTime; // 仅自然事件更新，零表示没有待恢复的概率抑制。
         public WeatherElementState Clone() => (WeatherElementState)MemberwiseClone();
         #endregion
     }

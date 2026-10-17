@@ -99,6 +99,130 @@ test.system("environment", "natural_fog_validation", {}, function(data)
         "天气规则接受了无效温度区间或负权重")
 end, "自然雾气候权重、温度区间和随机样本校验")
 
+for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
+    local element_id = id
+    test.system("environment", "natural_recovery_probability", {id = element_id}, function(data)
+        near(data.floor, 0.2, "自然天气刚结束的概率倍率改变")
+        near(data.seconds, 300, "自然天气恢复时长不是300游戏秒")
+        near(data.defaultFloor, data.floor, "代码默认恢复倍率和正式配置不同")
+        near(data.defaultSeconds, data.seconds, "代码默认恢复时长和正式配置不同")
+        near(data.checkSeconds, 30, "自我调节改变了原30秒检查间隔")
+        near(data.recoveryEnd, 1300, "恢复完成时刻没有从事件结束后计时")
+        near(data.basis, 0.12, "自我调节改写了冻结基础概率或统一倍率")
+        near(data.initial, data.basis, "初次没有自然历史时被抑制")
+        near(data.beforeEnd, data.basis * 0.2, "长事件尚未结束时提前恢复概率")
+        near(data.atEnd, data.basis * 0.2, "自然天气结束时没有压到原概率20%")
+        near(data.halfway, data.basis * 0.6, "150游戏秒时没有线性恢复到60%")
+        near(data.recovered, data.basis, "300游戏秒时没有完全恢复")
+        near(data.later, data.basis, "完全恢复后概率继续增大")
+        near(data.high, data.low * 4, "相同历史和强度下基础概率比例没有保留")
+        assert(data.high > data.low, "相同恢复进度时高概率没有保持更高")
+        near(data.maximumAtEnd, data.maximumBasis * 0.2, "强度概率分段与恢复倍率没有叠加")
+        if element_id == "wind" then near(data.maximumAtEnd, 0.0024, "十级风分段概率被自我调节覆盖") end
+    end, "自然天气概率自我调节、默认配置和完整恢复：" .. element_id)
+
+    test.system("environment", "natural_recovery_lifecycle", {id = element_id}, function(data)
+        near(data.before.intensity, 0, "首次检查前出现自然事件")
+        near(data.before.recoveryEnd, 0, "首次检查前已有自然恢复历史")
+        near(data.first.started, 30, "首次自然事件没有走正式30秒检查")
+        near(data.first.intensity, 0.5, "正式自然抽签没有启动要素")
+        near(data.first["end"], 33, "非对齐事件结束时刻被改成天气步长")
+        near(data.first.recoveryEnd, 333, "恢复完成时刻没有绑定本次自然结束时刻")
+        near(data.neighbor.recoveryEnd, 333, "同一区域成员没有共享自然历史")
+        near(data.otherRegion.recoveryEnd, 0, "自然历史串到了另一个区域")
+        for _, sample in ipairs(data.otherElements) do
+            near(sample.recoveryEnd, 0, "某要素触发后抑制了本区域另一要素")
+        end
+        near(data.stillActive.intensity, 0.5, "事件在实际结束前提前消散")
+        near(data.expired.intensity, 0, "事件到期后仍持续")
+        near(data.expired.recoveryEnd, 333, "发现到期的步长推迟了实际恢复起点")
+        near(data.expired.probability, 0.2 + 0.8 / 300, "非对齐结束后经过1秒的概率恢复错误")
+        near(data.restored.recoveryEnd, data.expired.recoveryEnd, "正式存档记录转换或Restore丢失自然历史")
+        near(data.restored.probability, data.expired.probability, "正式恢复改变了当前概率")
+        near(data.cloneChanged, 999, "深复制夹具没有改到复制对象")
+        near(data.sourceAfterClone, 333, "Clone共享了可写自然历史")
+        near(data.engineAfterExport, 333, "导出快照泄漏了内部可写自然历史")
+    end, "自然天气结束计时、区域要素独立及保存克隆：" .. element_id)
+
+    test.system("environment", "natural_recovery_draw", {id = element_id}, function(data)
+        local regulated_count, low_count, high_count = 0, 0, 0
+        assert(#data.trials == 64, "配对自然抽签样本缺失")
+        for _, trial in ipairs(data.trials) do
+            near(trial.history, 333, "配对抽签没有从同一自然历史开始")
+            near(trial.basisIntensity, 0.5, "无历史的概率一对照没有成功触发")
+            if trial.lowIntensity > 0 then
+                low_count = low_count + 1
+                assert(trial.highIntensity > 0, "相同抽样和历史时高概率漏掉了低概率的成功事件")
+            end
+            if trial.highIntensity > 0 then high_count = high_count + 1 end
+            if trial.renewed.intensity > 0 then
+                regulated_count = regulated_count + 1
+                near(trial.renewed.started, 60, "恢复期间的成功没有走新检查时刻")
+                near(trial.renewed["end"], 63, "恢复期间再次成功改变了原持续时长")
+                near(trial.renewed.recoveryEnd, 363, "再次成功没有按新结束时刻重新开始恢复")
+                near(trial.afterEnd.probability, 0.2 + 0.8 / 300, "第二次事件结束后没有重新从低概率恢复")
+            else
+                near(trial.renewed.recoveryEnd, 333, "失败抽签重新开始了恢复期")
+            end
+            near(trial.afterEnd.intensity, 0, "配对抽样的第二次事件没有到期")
+        end
+        assert(regulated_count > 0 and regulated_count < #data.trials, "正式自然抽签没有消费概率抑制或禁止了所有再次触发")
+        assert(high_count > low_count, "相同历史、强度和时长下较高基础概率没有带来更多触发")
+    end, "正式自然抽签消费抑制、恢复期重触发和基础概率单调：" .. element_id)
+end
+
+test.system("environment", "natural_recovery_lifecycle", {id = "rain", temperature = -10}, function(data)
+    near(data.rain, 0, "寒冷自然降水没有分流为雪")
+    near(data.snow, 0.5, "自然降雪没有复用降水事件")
+    near(data.first.recoveryEnd, 333, "自然降雪没有复用rain的恢复历史")
+end, "自然降雪共用降水恢复历史")
+
+test.system("environment", "natural_recovery_clock", {}, function(data)
+    near(data.started["end"], 1030, "长事件结束时刻错误")
+    near(data.longActive.intensity, 0.5, "长事件在300秒前后被提前终止")
+    near(data.longActive.recoveryEnd, 1330, "长事件按起始时刻提前消耗了恢复期")
+    near(data.ended.probability, 0.2, "长事件刚结束时没有完整抑制")
+    near(data.partlyRecovered.probability, 0.2 + 0.8 * 200 / 300, "长事件结束后恢复进度错误")
+    near(data.nearZero.time, 0, "深回拨没有落在零时刻")
+    near(data.nearZero["end"], 0, "深回拨夹具没有跨越旧事件结束时刻")
+    near(data.nearZero.recoveryEnd, 100, "深回拨丢掉剩余恢复时间")
+    near(data.nearZero.probability, data.partlyRecovered.probability, "回拨越过旧结束时刻后重启或消除了剩余抑制")
+    near(data.beforeZero.recoveryEnd, 0, "恢复完成时刻回拨到零后没有归零")
+    near(data.beforeZero.probability, 1, "恢复完成时刻到零后仍抑制")
+    near(data.beforeRewind.probability, 1, "长事件恢复完成后仍抑制")
+    near(data.afterRewind.probability, 1, "已完全恢复的历史在回拨后重新产生抑制")
+    near(data.jumped.time, 5000, "大跳时没有推进到目标时刻")
+    near(data.jumped.intensity, 0, "大跳时保留已结束天气")
+    near(data.jumped.probability, 1, "大跳时按到达时间重启了旧事件恢复期")
+end, "长事件、有限补算大跳时、回拨越零及已恢复历史")
+
+test.system("environment", "natural_recovery_manual", {}, function(data)
+    assert(#data.elements == 4, "手动天气夹具缺少自然要素")
+    for _, sample in ipairs(data.elements) do
+        near(sample.active.intensity, 0.5, "手动天气未生效：" .. sample.id)
+        near(sample.active.recoveryEnd, 0, "手动天气开始时产生自然历史：" .. sample.id)
+        near(sample.expired.recoveryEnd, 0, "手动天气结束时产生自然历史：" .. sample.id)
+    end
+    near(data.snowIntensity, 0.5, "手动雪夹具未生效")
+    near(data.snowHistory, 0, "手动降雪产生自然历史")
+    for _, history in ipairs(data.overrideHistories) do near(history, 0, "表现覆盖、手动雷击或清除产生自然历史") end
+    near(data.replaced.recoveryEnd, 333, "手动替换改写了已有自然历史")
+    near(data.manualEnded.recoveryEnd, 333, "手动事件结束后延长了已有自然恢复期")
+    near(data.cleared.recoveryEnd, 333, "清天气入口改写了已有自然历史")
+end, "手动天气、雪、雷击和清除不产生自然恢复历史")
+
+test.system("environment", "natural_recovery_validation", {}, function(data)
+    for _, name in ipairs({"negativeMultiplier", "largeMultiplier", "nanMultiplier", "infiniteMultiplier",
+        "negativeSeconds", "nanSeconds", "infiniteSeconds"}) do
+        assert(data[name] == "ArgumentOutOfRangeException", "接受非法自然恢复配置：" .. name)
+    end
+    for _, name in ipairs({"negativeHistory", "nanHistory", "infiniteHistory"}) do
+        assert(data[name] == "ArgumentException", "恢复入口接受非法历史：" .. name)
+    end
+    assert(data.zeroSecondsValidation == "", "关闭恢复期的零时长配置被拒绝")
+    near(data.zeroSecondsProbability, 1, "零恢复时长配置仍然抑制概率")
+end, "自然恢复配置有限值、时长边界及保存历史拒绝")
+
 for _, sample in ipairs({{current = 20, ambient = 120, seconds = 10},
     {current = 120, ambient = 20, seconds = 10}, {current = 20, ambient = -80, seconds = 10}}) do
     local input = sample
