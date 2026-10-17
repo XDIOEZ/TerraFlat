@@ -2,9 +2,11 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`rendering/fog_config、universe_view_config、group_projection`。
+快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、universe_view_config、universe_view_transition、group_projection`。
 
 已编写的规则覆盖：正式 WorldRenderingConfig 的雾半径/噪声/颜色约束和宇宙视野层次/缩放/过渡约束；停用独立 SpriteRenderer/SortingGroup 的外部代理排序键投影，以及分组停用后的逐级回退。
+
+2026-10-17 补充但未执行：高视野云圈使用正式 Shader 参数提交，在不同正交尺寸、横竖屏宽高比及投影翻转下检查固定世界半径 8/28、世界云纹尺寸、实际投影和玩家圆心；宇宙画面在 60～90 直接淡入的边界。此轮仅静态修改，未编译、未运行，不代表 GPU 画面已通过。
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/player_external_effects`。
 
@@ -14,4 +16,4 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/pla
 
 关键流程待补：最终 URP/BRG/Shader 画面、Y 轴视觉遮挡、阴影和水面、全部特效池类型及延迟回收、GPU 后端兼容、相机切换、性能和图像对比。真实组件/共享材质/MPB/粒子池状态正确仍不代表画面与性能已验收。
 
-本轮已编译并执行登记断言；实际画面、表现和最终验收由用户执行。
+2026-10-15 的通过记录仅覆盖当时已有断言；后续补充项按各自日期记录执行状态，实际画面和最终验收由用户执行。

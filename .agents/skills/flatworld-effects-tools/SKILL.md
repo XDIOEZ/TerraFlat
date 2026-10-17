@@ -37,8 +37,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - WorldPostProcessQuality 从渲染 JSON 建世界 Volume，绑定 GameManager 进出世界事件并释放自建 Profile/组件；画质只改泛光采样。ScreenPostProcessManager 在优先级 100 合成状态，质量接口声明最低档位；可选质量档均持有效 URP 资产。
 - 打包时 `UberPostShaderVariantStripper` 仅剔除当前未启用的畸变、色差、胶片颗粒和 Bloom 脏镜头组合；新增这些效果时先更新剔除表，再检查构建中的变体数量和实际画面。动态创建 Volume，不能直接启用 URP 的「剔除未使用后处理变体」。
 - 低血量强度交给 LowHealthRedEdgeRendererFeature，在最终相机 resolveFinalTarget 且强度>0 时 Alpha Blend 全屏红边；普通 Vignette 为乘法压暗。
-- 高视野云层由 ZoomCloudRendererFeature 与 Resources/Shaders/ZoomClouds 合成：复用 Shader/PlanetCloudCommon.hlsl 的星球三层噪声与柔边云团，叠加不透明外圈浓云挡住未加载黑边；运行时不再使用离线云数据图。SurfaceZoomTransition 在同帧提供两层共用的缩放进度：默认 20 开始从四周靠近、40 外圈最浓、55 满屏云、60～90 交接宇宙，缩近反向退开；快速跨阶段也至少保留一帧满屏云。黑边保护直接跟随实际镜头，风只积分连续漂移，玩家/场景变化重建表现进度，禁天气/退出清云状态；天气大雾仍由 DenseFog 独立负责。
-- `UniverseOverviewRendererFeature` 在云层后、红边前合成独立宇宙观察；`universeView` 默认 60 起、90 完全、每步 ×1.25，地表真实镜头封顶 60。`entryPlanetRadiusMultiplier=0.3` 表示过渡完成时画面高度为星球直径的 30%，先看局部，再继续拉远看整球与宇宙；合法倍数只要求大于零。星体复用 Planet 外观和 PlanetSurface 的 PlanetUnlit Pass，位置来自会话，未进入的配置星区只建目录副本；一张无深度 RT 供整体淡入，退出/换玩家/换世界释放，不迁移角色或加载太空场景。
+- 地表云圈由 ZoomCloudRendererFeature 与 Resources/Shaders/ZoomClouds 合成，复用 Shader/PlanetCloudCommon.hlsl 的星球噪声与柔边云团，不透明外圈遮住未加载黑边。clearRadius=8、opaqueRadius=28 始终使用玩家周围的世界距离；拉远只使雾区自然占更多屏幕，不改变半径、浓度或沿径向推进云纹。风只积分连续漂移，driftTransitionSeconds=2 独立平滑风速变化；玩家/场景变化重建漂移状态，正常太空、禁天气维度和退出时清云。天气大雾仍由 DenseFog 独立负责。
+- `UniverseOverviewRendererFeature` 在云层后、红边前合成独立宇宙观察；`SurfaceZoomTransition` 只平滑宇宙画面直接淡入淡出，不强制满屏云。`universeView` 默认 60 起、90 完全、每步 ×1.25，地表真实镜头封顶 60。`entryPlanetRadiusMultiplier=0.3` 表示过渡完成时画面高度为星球直径的 30%，先看局部，再继续拉远看整球与宇宙；合法倍数只要求大于零。星体复用 Planet 外观和 PlanetSurface 的 PlanetUnlit Pass，位置来自会话，未进入的配置星区只建目录副本；一张无深度 RT 供整体淡入，退出/换玩家/换世界释放，不迁移角色或加载太空场景。
 - 自定义 Blitter 后处理的像素采样步长由调用方按源 RTHandle 纹理尺寸显式传入；URP 14 的 `Blit.hlsl` 不声明 `_BlitTexture_TexelSize`。
 
 ## 阴影与遮光

@@ -56,7 +56,9 @@ public static partial class GameplayTestSystemProbe
         operations.Add("audio/inventory_cue", ServiceAudioInventoryCue);
         operations.Add("localization/stable_identity", ServiceLocalizationIdentity);
         operations.Add("rendering/fog_config", ServiceFogConfiguration);
+        operations.Add("rendering/zoom_cloud_mask", ServiceZoomCloudMask);
         operations.Add("rendering/universe_view_config", ServiceUniverseViewConfiguration);
+        operations.Add("rendering/universe_view_transition", ServiceUniverseViewTransition);
         operations.Add("rendering/group_projection", ServiceGroupProjection);
     }
 
@@ -864,6 +866,57 @@ public static partial class GameplayTestSystemProbe
             entryPlanetRadiusMultiplier = (float)Number(args, "entry", 2), minimumBodyPixels = (float)Number(args, "pixels", 0)
         };
         return new JObject { ["valid"] = config.IsValid };
+    }
+
+    private static JObject ServiceZoomCloudMask(JObject args)
+    {
+        Shader shader = Shader.Find("Hidden/FlatWorld/ZoomClouds");
+        if (shader == null) throw new InvalidOperationException("缺少正式高视野云圈 Shader。");
+        var root = new GameObject("[LuaCloudMaskProbe]");
+        root.SetActive(false);
+        root.hideFlags = HideFlags.HideAndDontSave;
+        Material material = null;
+        try
+        {
+            material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+            Camera camera = root.AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = (float)Number(args, "size", 20);
+            camera.aspect = (float)Number(args, "aspect", 1);
+            Vector3 player = new Vector3(13f, -7f, 0f);
+            root.transform.position = player + Vector3.back * 10f;
+            var settings = WorldRenderingConfigCatalog.Default.zoomClouds;
+            // 与真实绘制共用参数提交，采样不同镜头下 Shader 实际收到的世界半径与投影。
+            ZoomCloudMaterialParameters.Apply(material, camera, args.Value<bool?>("flipped") ?? false,
+                player, player, Vector2.zero, settings);
+            Vector4 radii = material.GetVector("_CloudRadii");
+            Vector4 origin = material.GetVector("_CloudViewportOrigin");
+            Vector4 right = material.GetVector("_CloudViewportRight");
+            Vector4 up = material.GetVector("_CloudViewportUp");
+            Vector2 center = new Vector2(origin.x + 0.5f * (right.x + up.x), origin.y + 0.5f * (right.y + up.y));
+            return new JObject
+            {
+                ["clearRadius"] = radii.x, ["opaqueRadius"] = radii.y,
+                ["noiseScale"] = material.GetVector("_CloudShape").x, ["expectedNoiseScale"] = settings.noiseScale,
+                ["viewportHeight"] = new Vector2(up.x, up.y).magnitude,
+                ["viewportWidth"] = new Vector2(right.x, right.y).magnitude,
+                ["expectedHeight"] = camera.orthographicSize * 2f,
+                ["expectedWidth"] = camera.orthographicSize * 2f * camera.aspect,
+                ["centerAligned"] = center.sqrMagnitude < 0.000001f
+            };
+        }
+        finally
+        {
+            if (material != null) UnityEngine.Object.DestroyImmediate(material);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    private static JObject ServiceUniverseViewTransition(JObject args)
+    {
+        float opacity = SurfaceZoomTransition.ResolveOpacity((float)Number(args, "size", 60),
+            WorldRenderingConfigCatalog.Default.universeView);
+        return new JObject { ["opacity"] = opacity };
     }
 
     private static JObject ServiceGroupProjection(JObject args)

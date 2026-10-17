@@ -1126,6 +1126,7 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/*",
+        "Assets/9_Shaders/*",
         "Assets/5_Scripts/Shader/*",
         "Assets/6_Art/*",
         "Assets/Shaders/*",

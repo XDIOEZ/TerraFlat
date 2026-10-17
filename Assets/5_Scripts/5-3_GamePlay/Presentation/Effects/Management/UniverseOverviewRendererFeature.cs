@@ -119,8 +119,8 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
         }
         var config = WorldRenderingConfigCatalog.Default.universeView;
         float size = camera.CurrentOrthographicSize;
-        // 与云层共用同一份表现进度，先满屏云再交接，缩近时按相同顺序反向返回。
-        opacity = SurfaceZoomTransition.Sample(camera).UniverseOpacity;
+        // 与地表云层共用淡入淡出进度，切换宇宙时不收缩玩家周围的固定雾圈。
+        opacity = SurfaceZoomTransition.Sample(camera);
         if (opacity <= 0.0005f)
         {
             pass.ReleaseTexture();

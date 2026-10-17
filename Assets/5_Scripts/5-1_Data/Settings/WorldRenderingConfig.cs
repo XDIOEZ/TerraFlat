@@ -140,11 +140,9 @@ public sealed class WorldRenderingConfig
     [Serializable]
     public sealed class RenderingZoomClouds
     {
-        public float startOrthographicSize;
-        public float opaqueOrthographicSize;
-        public float transitionSeconds;
         public float clearRadius;
         public float opaqueRadius;
+        public float driftTransitionSeconds;
         public float noiseScale;
         public float minimumDriftSpeed;
         public float maximumDriftSpeed;
@@ -152,13 +150,11 @@ public sealed class WorldRenderingConfig
         public Color color;
         public float shadowStrength;
 
-        // 拉远阈值读取实际正交尺寸，风速参数只负责控制云层移动。
+        // 雾圈半径固定为世界距离，风速和缓动只负责云纹漂移。
         public bool IsValid =>
-            IsFinite(startOrthographicSize) && startOrthographicSize > 0f &&
-            IsFinite(opaqueOrthographicSize) && opaqueOrthographicSize > startOrthographicSize &&
-            IsFinite(transitionSeconds) && transitionSeconds >= 0f &&
             IsFinite(clearRadius) && clearRadius >= 0f &&
             IsFinite(opaqueRadius) && opaqueRadius > clearRadius &&
+            IsFinite(driftTransitionSeconds) && driftTransitionSeconds >= 0f &&
             IsFinite(noiseScale) && noiseScale > 0f &&
             IsFinite(minimumDriftSpeed) && minimumDriftSpeed >= 0f &&
             IsFinite(maximumDriftSpeed) && maximumDriftSpeed >= minimumDriftSpeed &&
@@ -347,7 +343,6 @@ public static class WorldRenderingConfigCatalog
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
         if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.universeView.IsValid ||
-            config.universeView.startOrthographicSize <= config.zoomClouds.opaqueOrthographicSize ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 2 ||

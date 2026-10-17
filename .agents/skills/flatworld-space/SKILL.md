@@ -79,7 +79,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - ShipSurfaceShadowPresenter 每船合并去重占地 Mesh，复用 ActorBlobShadow 材质与 ground-shadow 排序；地面位置不加升高偏移，真实高度控制缩小/淡出，日照和柔化沿用共享阴影设置，结构或柔化变化才重建，离开地表/会话结束释放。
 - 星球/星空场景对象仅在太空Scene内生成；SpaceMgr按星区租约分帧准备资源，地表初次进太空仍等待 PreparePresentationForCamera 预建星空并完成一帧。SpaceStarfield用两次SectorPosition之差算视差，不受换区/浮动原点影响；常规地面视野不绘制宇宙背景，权威会话及无人船仍继续运行。
 - 单机表现复用：`SpaceMgr.PresentationCache` 最多保留2个完成星体装配的星区根，禁用后移入持久根，旧场景卸载完成再恢复；State/资源代际改变或 EndSession 清理。`SpaceSession.ViewCache` 保留16船根/2048部件，已装配船跨场景时休眠复用，正式落地交回普通建筑后清理本船视图；联机沿用释放语义。Lua 分别检查太空表现复用与普通建筑起降交接。
-- 地表拉远的 UniverseOverviewRendererFeature 是独立观察画面：与地表云层共用 SurfaceZoomTransition，先满屏云，再在 60～90 交接当前星球局部；缩近先回满屏云，再从四周退开。90 时画面高度为星球直径的 30%，之后倍率拉远才露出整球与宇宙；读真实星体时钟/位置和原 Prefab 外观，未进入星区只建表现目录副本，不调场景租约、玩家迁移或权威 GetUniverse；驾驶覆盖和洞穴不使用此观察画面。
+- 地表拉远的 UniverseOverviewRendererFeature 是独立观察画面：SurfaceZoomTransition 只平滑 60～90 的直接淡入淡出，不等待满屏云；地表云圈始终固定玩家周围的世界半径。90 时画面高度为星球直径的 30%，之后倍率拉远才露出整球与宇宙；读真实星体时钟/位置和原 Prefab 外观，未进入星区只建表现目录副本，不调场景租约、玩家迁移或权威 GetUniverse；驾驶覆盖和洞穴不使用此观察画面。
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。
 - 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。

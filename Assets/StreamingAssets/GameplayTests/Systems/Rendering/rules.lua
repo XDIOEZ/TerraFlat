@@ -8,6 +8,29 @@ for _, args in ipairs({ { clearRadius = 0 }, { opaqueRadius = 10 }, { transition
     end, "大雾配置拒绝非法边界")
 end
 
+for _, args in ipairs({
+    { size = 5, aspect = 1 }, { size = 20, aspect = 2.2 },
+    { size = 40, aspect = 0.6, flipped = true }, { size = 55, aspect = 1.8 },
+    { size = 60, aspect = 2.2 }, { size = 90, aspect = 1 }
+}) do
+    test.system("rendering", "zoom_cloud_mask", args, function(data)
+        assert(data.clearRadius == 8 and data.opaqueRadius == 28, "拉远或改变宽高比后雾圈世界半径变化")
+        assert(data.noiseScale == data.expectedNoiseScale, "缩放改变了云纹的世界尺寸")
+        assert(math.abs(data.viewportHeight - data.expectedHeight) < 0.001, "云圈没有使用实际镜头世界投影")
+        assert(math.abs(data.viewportWidth - data.expectedWidth) < 0.001, "宽高比改变了雾圈世界距离")
+        assert(data.centerAligned, "雾圈圆心没有跟随玩家")
+    end, "雾圈固定世界半径并随实际镜头投影")
+end
+
+for _, args in ipairs({
+    { size = 20, expected = 0 }, { size = 55, expected = 0 }, { size = 60, expected = 0 },
+    { size = 75, expected = 0.5 }, { size = 90, expected = 1 }, { size = 200, expected = 1 }
+}) do
+    test.system("rendering", "universe_view_transition", args, function(data)
+        assert(math.abs(data.opacity - args.expected) < 0.0001, "宇宙画面没有在原视野区间直接淡入")
+    end, "固定雾圈后的宇宙视图直接淡入")
+end
+
 test.system("rendering", "group_projection", { outerOrder = 77, innerOrder = 50, spriteOrder = 31 }, function(data)
     assert(data.outerOrder == 77 and data.outerLayerMatches, "代理没有继承最外层启用分组的排序键")
     assert(data.innerOrder == 50 and data.innerLayerMatches, "外层分组停用后没有使用内层排序键")

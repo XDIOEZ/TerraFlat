@@ -62,11 +62,9 @@
     "noiseStrength": 0.04
   },
   "zoomClouds": {
-    "startOrthographicSize": 20.0,
-    "opaqueOrthographicSize": 40.0,
-    "transitionSeconds": 2.0,
     "clearRadius": 8.0,
     "opaqueRadius": 28.0,
+    "driftTransitionSeconds": 2.0,
     "noiseScale": 0.055,
     "minimumDriftSpeed": 0.08,
     "maximumDriftSpeed": 6.0,

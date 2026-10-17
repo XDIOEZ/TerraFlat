@@ -25,8 +25,7 @@ Shader "Hidden/FlatWorld/ZoomClouds"
                 float4 _CloudViewportUp;
                 float4 _CloudWorldCenter;
                 float4 _CloudDriftOffset;
-                float4 _CloudRadiiStrength;
-                float4 _CloudProtection;
+                float4 _CloudRadii;
                 float4 _CloudColor;
                 float4 _CloudShape;
             CBUFFER_END
@@ -60,21 +59,14 @@ Shader "Hidden/FlatWorld/ZoomClouds"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float distanceFromPlayer = length(input.playerOffset);
-                float2 direction = input.playerOffset / max(distanceFromPlayer, 0.001);
-                // 拉远时把外侧云形向玩家推进，拉近时同一偏移反向退回，中心保持连续。
-                float travel = _CloudShape.z * smoothstep(_CloudProtection.x, _CloudProtection.y, distanceFromPlayer);
-                float2 worldPosition = input.playerOffset + direction * travel + _CloudWorldCenter.xy;
+                float2 worldPosition = input.playerOffset + _CloudWorldCenter.xy;
                 float3 cloudCoords = float3((worldPosition - _CloudDriftOffset.xy) * _CloudShape.x, 0.71) + 137.0;
                 float clouds = PlanetFractal(cloudCoords);
-                float feather = _CloudRadiiStrength.y - _CloudRadiiStrength.x;
-                float edgeOffset = (clouds - 0.5) * feather * 0.3 * _CloudRadiiStrength.w;
-                float incoming = smoothstep(_CloudRadiiStrength.x, _CloudRadiiStrength.y,
-                    distanceFromPlayer + edgeOffset);
-                float protection = smoothstep(_CloudProtection.x, _CloudProtection.y, distanceFromPlayer);
-                float strength = saturate(_CloudRadiiStrength.z);
-                // 第一版外圈浓云填住空隙，星球共用柔边云团叠在上面，满屏时连中心也完全遮挡。
-                float veilAlpha = saturate(max(protection * _CloudProtection.z, incoming * strength));
-                float cloudAlpha = PlanetCloudOpacity(clouds) * incoming * strength;
+                float radial = smoothstep(_CloudRadii.x, _CloudRadii.y, distanceFromPlayer);
+                float incoming = saturate(radial + (clouds - 0.5) * 0.3 * radial * (1.0 - radial));
+                // 云纹只扰动过渡带，固定清晰内圈和不透明外圈不随镜头缩放变化。
+                float veilAlpha = radial;
+                float cloudAlpha = PlanetCloudOpacity(clouds) * incoming;
                 half3 veilColor = _CloudColor.rgb * (1.0 - (1.0 - clouds) * _CloudShape.y);
                 float alpha = cloudAlpha + veilAlpha * (1.0 - cloudAlpha);
                 half3 premultiplied = _CloudColor.rgb * cloudAlpha + veilColor * veilAlpha * (1.0 - cloudAlpha);
