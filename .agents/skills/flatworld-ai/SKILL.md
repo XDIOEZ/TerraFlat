@@ -23,6 +23,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 ## 后端与生命周期
 
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。GO 使用真实模块/Mod_Mover/Animator，由 ItemMgr 分级 Tick 和池化；`ecs` 是可选后端配置。
+- 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。
 - `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。同物种单一后端，`TrySpawnDirect` 统一 GM/事件/技能/MOD 生成；GO 返回前完成 Item.Load 并核对 IAIActor。
 - Actor 合并定义的移动/检测/朝向模块须启用；`ModuleData.Enabled` 决定 Load/Tick，`Data.isRunning` 是奔跑。飞行能力 ID 为 `AI_Bird`，`prefab=Mod_AI_Bird` 仅指实现；内容错误码 `FWC-ACTORJSON-004/005` 对应基础模块开关/飞行 ID。
 - `WorldEntityRuntime` 独占共享 ECS World；AI 停用不影响树/作物。居民独立于 ChunkView，BRG 只显示已绑定 View 内居民，解绑不删除居民。
@@ -40,6 +41,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 食性使用稳定数据 Tag `Carnivore/Herbivore/Omnivore`；玩家独立为威胁。当前动物继承 `Module_Temperature`，安全范围在 Actor 配置；`ITemperatureSafetyMovement` 优先于追击/觅食/游荡，陆地由 Mod_Mover_AI、鸟/鱼由自定义移动实现。
 - 温度避险不记录/回退安全点；记最多 8 个危险锚点 30 秒，以危险点指向角色的向量引导分段随机离开。陆地普通目标保留距离衰减偏置，线路接近危险记录则保持强偏置并走局部随机段；同一段目标缓存。安全环境持续 2 秒且距危险记录至少 3 格后才解除强制避险，体温未恢复则等待。
 - 雪地专属白兔/雪豹在 `snow-actors.json` 配置初始体表 -10℃，安全范围分别 -30～20℃/-30～25℃。新增物种按栖息地与玩法定位配安全范围与初始体温，不在通用温度模块堆物种特例。
+- 小鱼在 `fish-actors.json` 单独配置安全体表 -26.5～63.5℃，以初始 36.5℃ 为基准将冷热容差都翻倍；不改变其他动物的通用温度规则。
 - `AI_DebugOverlayRenderer` 集中绘头顶信息；实时读 `_currentState`，`AI_Chicken.Data.State` 只在加载/保存同步。小鸡只缓存所属 Scene.handle 名称，时间实时读取；受伤禁睡保存绝对游戏日截止，逃跑记忆与睡眠警戒独立。
 - GM 动物、蜜蜂和蜂巢头顶诊断共用 `AI_DebugOverlay.CanDrawWorldLabels`，正式背包/制作/设置等交互面板或手机抽屉打开时暂时让位，关闭后仍保留 GM 开关状态。
 - GO AI 状态评估回调在实例内复用，不在每次判定时分配委托；调试头顶标签仅在 IMGUI Repaint 绘制并复用 GUIContent。

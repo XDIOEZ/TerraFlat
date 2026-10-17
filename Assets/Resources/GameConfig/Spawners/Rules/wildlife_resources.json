@@ -37,6 +37,7 @@
         "prefabName": "Chicken",
         "runtimeBackend": "gameObject",
         "probability": 2.5,
+        "spawnChance": 0.5,
         "ecologyCost": 1,
         "speciesAliveLimit": 8,
         "initialization": {

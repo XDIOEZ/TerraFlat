@@ -21,6 +21,9 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/attack_window", EntityAiAttackWindow);
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
+        operations.Add("ai/ecology_config", EntityEcologyConfig);
+        operations.Add("ai/spawn_chance", EntitySpawnChance);
+        operations.Add("ai/spawn_attempt", EntitySpawnAttempt);
         operations.Add("player/movement_cost", EntityMovementCost);
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("combat/physical", EntityPhysicalDamage);
@@ -49,6 +52,55 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region AI 与移动消耗
+
+    // 读取正式目录并调用正式概率与队列规则，测试不重新计算业务逻辑。
+    private static JObject EntityEcologyConfig(JObject args)
+    {
+        SpawnerConfigCatalog catalog = SpawnerConfigCatalogLoader.LoadBuiltIn();
+        SpawnerConfigDefinition config = catalog.Configs.Find(value => value.Id == "wildlife_resources");
+        SpawnerConfig.SpawnEntry chicken = config.SpawnEntries.Find(value => value.PrefabName == "Chicken").CreateRuntimeEntry();
+        SpawnerConfig.SpawnEntry boar = config.SpawnEntries.Find(value => value.PrefabName == "WildBoar").CreateRuntimeEntry();
+        SpawnerConfigDefinition fishSpawns = catalog.Configs.Find(value => value.Id == "small_fish_ecology");
+        var fishPackage = JObject.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(
+            Application.streamingAssetsPath, "GameConfig/Actors/definitions/fish-actors.json")));
+        JObject fish = null;
+        foreach (JObject actor in (JArray)fishPackage["actors"])
+            if (actor.Value<string>("id") == "SmallFish") fish = actor;
+        if (fish == null) throw new InvalidOperationException("正式小鱼配置缺失。");
+        JToken temperature = fish["modules"]["temperature"]["parameters"]["Data"];
+        return new JObject
+        {
+            ["chickenChance"] = chicken.SpawnChance, ["chickenWeight"] = chicken.Probability,
+            ["boarChance"] = boar.SpawnChance, ["boarWeight"] = boar.Probability,
+            ["defaultChance"] = new SpawnerConfig.SpawnEntry().SpawnChance,
+            ["fishSpawnsPerDay"] = fishSpawns.SpawnsPerDay, ["fishSpawnCount"] = fishSpawns.SpawnCount,
+            ["fishWaterOnly"] = fishSpawns.WaterOnly,
+            ["fishSafeMin"] = temperature["SafeTemperatureMin"], ["fishSafeMax"] = temperature["SafeTemperatureMax"]
+        };
+    }
+
+    private static JObject EntitySpawnChance(JObject args)
+    {
+        var entry = new SpawnerConfig.SpawnEntry { SpawnChance = (float)Number(args, "chance", .5d) };
+        return new JObject { ["accepted"] = entry.PassesSpawnChance((float)Number(args, "sample", 0d)) };
+    }
+
+    private static JObject EntitySpawnAttempt(JObject args)
+    {
+        bool replacement = Flag(args, "replacement", false);
+        var state = new SpawnerProgressSaveData
+        {
+            PendingSpawnCount = replacement ? 0 : 2, PendingReplacementCount = 2,
+            LifetimeSpawnCount = 4, AvailableBudget = 7, LastSpawnDay = 10
+        };
+        state.CompleteSpawnAttempt(Flag(args, "spawned", false), 12);
+        return new JObject
+        {
+            ["pending"] = state.PendingSpawnCount, ["replacement"] = state.PendingReplacementCount,
+            ["lifetime"] = state.LifetimeSpawnCount, ["budget"] = state.AvailableBudget,
+            ["lastDay"] = state.LastSpawnDay
+        };
+    }
 
     private static JObject EntityEggSchedule(JObject args)
     {

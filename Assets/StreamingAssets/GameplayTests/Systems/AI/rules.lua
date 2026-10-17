@@ -1,3 +1,36 @@
+-- 自然刷新读取正式目录，独立概率落空也要消耗排队机会。
+test.system("ai", "ecology_config", {}, function(data)
+    assert(data.fishSafeMin == -26.5 and data.fishSafeMax == 63.5, "鱼的冷热安全范围没有按确认值扩大")
+    assert(data.fishWaterOnly, "小鱼自然生成不再限制水域")
+    assert(data.chickenChance == .5 and data.chickenWeight == 2.5, "小鸡减半概率改变了原物种权重")
+    assert(data.boarChance == 1 and math.abs(data.boarWeight - .2631579) < .000001,
+        "小鸡减半影响了野猪默认概率或原权重")
+    assert(data.defaultChance == 1, "未配置独立概率的物种没有保持全通过")
+end, "自然刷新：小鸡独立机会减半，野猪与权重保持原样")
+for _, case in ipairs({
+    {chance = .5, sample = 0, accepted = true}, {chance = .5, sample = .4999, accepted = true},
+    {chance = .5, sample = .5, accepted = false}, {chance = .5, sample = 1, accepted = false},
+    {chance = 0, sample = 0, accepted = false}, {chance = 0, sample = 1, accepted = false},
+    {chance = 1, sample = 0, accepted = true}, {chance = 1, sample = 1, accepted = true}
+}) do
+    test.system("ai", "spawn_chance", {chance = case.chance, sample = case.sample}, function(data)
+        assert(data.accepted == case.accepted, "正式独立概率判定边界错误")
+    end, "自然刷新概率边界：" .. case.chance .. "/" .. case.sample)
+end
+for _, case in ipairs({
+    {replacement = false, spawned = false, pending = 1, replacements = 2, lifetime = 4},
+    {replacement = true, spawned = false, pending = 0, replacements = 1, lifetime = 4},
+    {replacement = false, spawned = true, pending = 1, replacements = 2, lifetime = 5},
+    {replacement = true, spawned = true, pending = 0, replacements = 1, lifetime = 4}
+}) do
+    test.system("ai", "spawn_attempt", {replacement = case.replacement, spawned = case.spawned}, function(data)
+        assert(data.pending == case.pending and data.replacement == case.replacements,
+            "生成机会结束后没有消耗对应普通队列或补员队列")
+        assert(data.lifetime == case.lifetime and data.budget == 7 and data.lastDay == 12,
+            "概率落空计入出生数、误扣预算或未记录处理日期")
+    end, "自然刷新队列：补员=" .. tostring(case.replacement) .. "，出生=" .. tostring(case.spawned))
+end
+
 -- 调用真实动物产蛋日历，不把离线时间变成积压产蛋。
 local cases = {
     {name = "最短两天", args = {day = 10, minimum = 0, delay = 0, checkDay = 11.99}, deadline = 12, due = false, next = 13.99},

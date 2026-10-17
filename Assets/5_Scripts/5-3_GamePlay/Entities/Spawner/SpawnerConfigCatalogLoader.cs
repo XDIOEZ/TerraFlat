@@ -211,6 +211,8 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException($"物种 {entry.PrefabName} 的 runtimeBackend 不受支持：{entry.RuntimeBackend}");
         if (!IsFinite(entry.Probability) || entry.Probability <= 0f)
             throw new InvalidDataException($"物种 {entry.PrefabName} 的 probability 无效：{entry.Probability}");
+        if (!IsFinite(entry.SpawnChance) || entry.SpawnChance < 0f || entry.SpawnChance > 1f)
+            throw new InvalidDataException($"物种 {entry.PrefabName} 的 spawnChance 无效：{entry.SpawnChance}");
         if (entry.EcologyCost < 1 || entry.SpeciesAliveLimit < 0)
             throw new InvalidDataException($"物种 {entry.PrefabName} 的生态参数无效");
 

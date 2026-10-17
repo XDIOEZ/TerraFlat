@@ -158,8 +158,8 @@
           "enabled": true,
           "parameters": {
             "Data": {
-              "SafeTemperatureMin": 5.0,
-              "SafeTemperatureMax": 50.0
+              "SafeTemperatureMin": -26.5,
+              "SafeTemperatureMax": 63.5
             }
           }
         },

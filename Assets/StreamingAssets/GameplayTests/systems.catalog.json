@@ -10,6 +10,8 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/AI/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Spawner/*",
+        "Assets/Resources/GameConfig/Spawners/*",
+        "Assets/StreamingAssets/GameConfig/Actors/*",
         "Assets/StreamingAssets/GameplayTests/Systems/AI/*",
         "Assets/5_Scripts/Shared/Utilities/Geometry/PerceptionShape2D.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MonsterSpawnerSaveData.cs"

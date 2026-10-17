@@ -662,7 +662,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             !UsesEntityPopulation(config))
             return false;
 
-        if (!TrySpawnOne(config, state))
+        bool spawned = TrySpawnOne(config, state, out bool skippedByChance);
+        if (!spawned && !skippedByChance)
         {
             int remaining = _remainingSearchAttempts.TryGetValue(config, out int value)
                 ? value - 1 : Mathf.Max(1, config.SpawnSearchRetryCount) - 1;
@@ -681,22 +682,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _remainingSearchAttempts.Remove(config);
         _nextSpawnRetryTime[key] = now + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
 
-        if (state.PendingSpawnCount > 0)
-        {
-            state.PendingSpawnCount--;
-            state.LifetimeSpawnCount++;
-        }
-        else
-        {
-            state.PendingReplacementCount = Mathf.Max(0, state.PendingReplacementCount - 1);
-        }
-
-        state.LastSpawnDay = Mathf.Max(state.LastSpawnDay, currentDay);
+        state.CompleteSpawnAttempt(spawned, currentDay);
         return true;
     }
 
-    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state)
+    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, out bool skippedByChance)
     {
+        skippedByChance = false;
         int globalLimit = GameDifficultyService.ScaleCount(
             _settings.GlobalAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
@@ -718,6 +710,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         if (!IsWithinLocalSpeciesLimit(config, entry, spawnPosition))
             return false;
+
+        // 概率落空是已完成的机会，不能按找不到地点重试到最终必定生成。
+        if (entry.SpawnChance < 1f && !entry.PassesSpawnChance(UnityEngine.Random.value))
+        {
+            skippedByChance = true;
+            return false;
+        }
 
         // 即使资源初始化失败，昂贵的创建尝试也不能在同一短时间窗内反复执行。
         _nextCreatureBirthTime = Time.unscaledTime + Mathf.Max(0.1f, _settings.EcologyTickInterval);
@@ -1469,7 +1468,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
 
         SpawnerProgressSaveData state = GetOrCreateState(config);
-        if (!TrySpawnOne(config, state))
+        if (!TrySpawnOne(config, state, out _))
         {
             Debug.LogWarning("[MonsterSpawnerManager] 幽灵生成失败，请确认玩家附近存在已加载、可行走的完全黑暗格。", this);
         }

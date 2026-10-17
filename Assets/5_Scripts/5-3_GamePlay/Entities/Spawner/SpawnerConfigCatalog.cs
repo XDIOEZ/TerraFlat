@@ -187,6 +187,8 @@ public sealed class SpawnerSpawnEntryDefinition
     public string RuntimeBackend = "gameObject";
     [JsonProperty(Required = Required.Always)]
     public float Probability = 0.5f;
+    [JsonProperty(Required = Required.Default)]
+    public float SpawnChance = 1f;
     [JsonProperty(Required = Required.Always)]
     public int EcologyCost = 1;
     [JsonProperty(Required = Required.Always)]
@@ -200,6 +202,7 @@ public sealed class SpawnerSpawnEntryDefinition
             PrefabName = PrefabName,
             RuntimeBackend = ParseRuntimeBackend(RuntimeBackend),
             Probability = Probability,
+            SpawnChance = SpawnChance,
             EcologyCost = EcologyCost,
             SpeciesAliveLimit = SpeciesAliveLimit,
             Initialization = new SpawnerConfig.SpawnerSpawnInitialization

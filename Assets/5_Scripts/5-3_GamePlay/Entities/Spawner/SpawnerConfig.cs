@@ -55,6 +55,14 @@ public class SpawnerConfig : ScriptableObject
         [MinValue(0f)]
         public float Probability = 0.5f;
 
+        [LabelText("独立生成概率"), Range(0f, 1f)]
+        [Tooltip("抽中该物种且地点有效后再判定；未通过会消耗本次机会，不重抽或替换成其它物种。")]
+        public float SpawnChance = 1f;
+
+        /// <summary>独立概率不参与物种权重归一化，默认全通过且无需消耗额外随机数。</summary>
+        public bool PassesSpawnChance(float sample)
+            => SpawnChance >= 1f || (SpawnChance > 0f && sample >= 0f && sample < SpawnChance);
+
         [LabelText("生态成本")]
         [Tooltip("每生成一只该生物消耗的生态预算")]
         [MinValue(1)]

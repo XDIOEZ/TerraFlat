@@ -34,6 +34,8 @@ public partial class AiecsResidentSaveData
 [Serializable]
 public partial class SpawnerProgressSaveData
 {
+    #region 生成队列进度
+
     public float LastProcessedTotalTime = -1f;
     public int LastSpawnDay = -999;
 
@@ -44,4 +46,21 @@ public partial class SpawnerProgressSaveData
     public int ProcessedGrowthMilestones;
     public int PendingSpawnCount;
     public int LifetimeSpawnCount;
+
+    /// <summary>独立概率落空也消耗一次排队机会，只有真正出生才累计出生数量。</summary>
+    public void CompleteSpawnAttempt(bool spawned, int currentDay)
+    {
+        if (PendingSpawnCount > 0)
+        {
+            PendingSpawnCount--;
+            if (spawned) LifetimeSpawnCount++;
+        }
+        else
+        {
+            PendingReplacementCount = Math.Max(0, PendingReplacementCount - 1);
+        }
+        LastSpawnDay = Math.Max(LastSpawnDay, currentDay);
+    }
+
+    #endregion
 }

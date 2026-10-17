@@ -1,8 +1,11 @@
 # AI 生物测试
 
+2026-10-17：小鱼配置采样新增安全体表 -26.5～63.5℃与仅水域生成断言；直接读取独立本体 JSON，不刷新正在运行的 Actor 目录缓存。本轮未运行，真实天气/水体温度、游动和自然死亡仍由用户验收。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 - `rules.lua`：直接调用 `AnimalEggLayingSchedule`。覆盖首次无资格、两天最小冷却、随机延迟上下界、配置提高冷却、成功后从实际日期重计时、非有限参数拒绝。
+- 自然刷新规则通过 `SpawnerConfigCatalogLoader.LoadBuiltIn` 读取正式目录，检查小鸡独立机会为 0.5、野猪默认机会为 1 且原权重均保留；直接调用独立概率的 0/0.5/1 边界与 `CompleteSpawnAttempt`，检查普通/补员队列在落空和出生时的扣减、出生累计与预算不误扣。本轮只补静态回归，未运行；不覆盖真实选点、全局预算扣除或随机长期分布。
 - 同脚本直接调用 GO 主路径的 `AIStateMachine/AI_StateMachineRunner`、`AIAdvanceStateNode`、`AI_AttackController`、`AIBehaviorGraphBlackboard`、`Mod_ItemDetector.CalculateEffectiveDetectionRadius`。覆盖节点退出/切换/进入顺序、切换拦截、重复/缺失身份保护、Reset复用、失效目标停车、到达去重与重入、前摇/伤害窗口/后摇/冷却、受击事实和来源记忆、世界计时独立及体型感知范围。
 - 夹具：独立日历、状态机、攻击控制器、行为图黑板和局部回调，不生成动物、不改当前世界居民。攻击探针检查正式窗口时钟，没有伤害目标或动画器。
 - `gameplay-suite.json` / `gameplay.lua`：与导航共用一套现场链。正式隔离世界中的 `Zombie` 经 `AiRuntimeBackendService.TrySpawnDirect` 完成真实 AI/移动模块加载；正式导航管理器异步请求先检查严格代价上限拒绝，再经 `TrySetAdvanceCommand` 驱动生物实际 Tick、获得路径、沿已加载可走格移动三格、到达清命令和取消旧路径。
