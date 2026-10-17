@@ -2,11 +2,13 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`dialogue/condition、config、builtin_locales、carry_weight_command`。
+快速入口：`rules.lua`；操作：`dialogue/condition、config、builtin_locales、carry_weight_command、help_catalog、help_command`。
 
 已编写的规则覆盖：CharacterSpeechConditionEvaluator 数值/文本/缺失Fact条件；CharacterSpeechConfigLoader 的 JSON/schema/Fact 校验与无效条目隔离；正式 Resources 自言自语资源的有效性与英文译文逐句齐全。
 
 `carry_weight_command` 调用正式 `/carryweight`（kg）和 `/carryvolume`（L）处理器，共用数字/小数解析、缺参/多参/非正/非有限值拒绝、无玩家/无实际背包时拒绝且两种容量不变，以及不吞掉其它命令。新增体积命令断言尚未执行；实际成功设置并保留另一容量、入世/重建后的命令装配、超重 Buff/UI 更新和联网/创造状态拒绝尚未覆盖，用户自行在游戏中验收。
+
+`help_catalog` 调用正式中立目录和书页生成：覆盖提供方替换/撤销、重复去除、稳定排序、三条聊天命令登记、简介及每条一页、完整保留用法与条件，并核对容量单位及边界说明。`help_command` 覆盖无玩家/多参数拒绝及其它命令透传。新增断言未执行；实际发放、背包容量拒绝、保存重读、目录中 F4/快捷键的内容完整性与书页实际排版仍需用户在游戏中验收。
 
 规则集未覆盖：本地玩家筛选、实际 Provider 冷却、一次性完成只能在成功显示后写入和语言切换；正式气泡与调度优先级见下方 PlayMode 共享入口。叶子程序集登记入口，GamePlay 不反向引用 Dialogue。
 

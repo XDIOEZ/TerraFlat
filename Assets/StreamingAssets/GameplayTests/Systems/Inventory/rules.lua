@@ -1,3 +1,39 @@
+test.system("inventory", "readable_book_snapshot", {}, function(data)
+    assert(data.written and data.failure == "", "初始书页没有写入正式模块载荷")
+    assert(data.addedPages == 2 and #data.pages == 3 and data.materialSlots == 2,
+        "超过静态页数的书页或空材料槽没有保存")
+    assert(data.guid == 101 and not data.noPlayerAccepted, "书籍库存快照丢失身份或接受未就绪玩家")
+    assert(not data.emptyAccepted and not data.nullPageAccepted and data.rejectedUnchanged,
+        "无效内容被接受或覆盖了已写入的书页")
+    local expected = {
+        {title = "聊天命令", body = "/carryweight 5000\n/carryvolume 5000"},
+        {title = "管理员操作", body = "F4：打开 GM 面板。"},
+        {title = "说明", body = "中文与换行\n完整保留。"}
+    }
+    for index, page in ipairs(data.pages) do
+        assert(page.index == index - 1 and page.title == expected[index].title and page.body == expected[index].body
+            and page.customTitle and page.customBody, "书籍快照往返丢失顺序、标题、正文或覆盖标记")
+    end
+    assert(data.independentBody == expected[1].body, "调用方或另一本书改动污染了本书内容")
+end, "命令手册：独立书页、扩页状态和正式库存快照往返")
+
+for _, mode in ipairs({"success", "full", "weight", "volume", "deposit", "tags", "slot_limit", "pending"}) do
+    test.system("inventory", "readable_book_grant", {mode = mode}, function(data)
+        local accepted = mode == "success"
+        assert(data.inserted == accepted and data.received == (accepted and 1 or 0),
+            "发书没有严格按空槽、完整携带容量、入库门禁或联机等待状态决定是否提交")
+        assert(data.existingUnchanged and data.slotsUnchanged and data.amount == 1,
+            "发书修改了已有物品、扩容或改变了一本书的数量")
+        if accepted then
+            assert(data.sameBook and not data.pickable and data.changed == 1 and data.refreshed == 1,
+                "发书没有通过真实库存事务移动该本物品并刷新状态")
+        else
+            assert(data.failure ~= "" and data.pickable and data.changed == 0 and data.refreshed == 0,
+                "拒绝发书仍修改源物品、发布库存事件或没有失败原因")
+        end
+    end, "命令手册发放边界：" .. mode)
+end
+
 local pickup_cases = {
     {name = "开关关闭保持原数量", args = {enabled = false}, first = 3, second = 0, remaining = 0, accepted = true},
     {name = "材料入包十倍", args = {}, first = 30, second = 0, remaining = 0, accepted = true},

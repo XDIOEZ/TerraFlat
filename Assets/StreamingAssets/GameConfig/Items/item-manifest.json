@@ -157,6 +157,11 @@
       "enabled": true
     },
     {
+      "id": "command_manual",
+      "path": "shells/command_manual.json",
+      "enabled": true
+    },
+    {
       "id": "floors",
       "path": "shells/floors.json",
       "enabled": true

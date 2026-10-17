@@ -34,6 +34,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 世界拾取先用独立候选和去重目标生成只读容量计划，普通原木等按完整整数能收多少收多少，快捷栏余量继续进入背包；成功回执区分原堆扣减量与实际入包量，GM 倍率仍按完整原份结算。轻量掉落的 `body.Amount` 是唯一权威，物态推进先以它给冷载荷播种，不能让旧载荷数量复活余物；随身库存质量事件和倍率实际变化只标记拾取修订号，下次接触查询再重试，不在入包事件里递归拾取。
 - 物品修改经 `TryConsumeFromSlot/TrySetSlotItemAmount` 等事务。`InventoryContextResolver` 以 ItemData 引用/Guid 找真实所属库存；快捷栏修改后按真实槽索引刷新。`BindController/UnbindController` 只管理输入，数据/UI 监听由 `UnbindRuntimeDataEvents` 清理。
 - `Inventory_Data.GetItemSlot` 对空槽表或越界索引返回 null，不得回退第0格；库存 UI 的删除、装备和书籍输入调用链必须检查有效槽。
+- 带初始内容的读物经 `Items/Readable/ReadableBookGrantService` 创建真实物品数据；独立书页保存为 `ReadableBookInstanceSnapshot` 的 `AddedPageCount/PageContents/InputInventory`，发放复用完整随身容量、槽接收策略与待确认库存事务门禁，不生成世界 Item 或改共享静态页。
 - 服务器远端玩家的 Hotbar/Bag 加载真实数据和手持物，不创建 UI 或绑定本机输入；视觉副本用 `ApplyRemoteNetworkData`，权威手持用 `ApplyNetworkAuthorityData`，不能混用。太空拾取 commit 同时走服务器真实库存事务，Host 共享库存只入包一次；客户端选择请求不能改库存数量。
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
 - 仅有源库存界面时通过 `HasVisibleFlickTarget/HasFlickTarget` 关闭判定，快速拖出仍按普通拖拽拿到手部。目标可见性复用 `InventoryFlickTargets.HasVisibleTarget`，排除自己、相同数据、手部、输出、关闭/隐藏/禁用或无有效槽映射的界面；不按容量关闭开关，已满但打开的目标仍走拒绝留源。

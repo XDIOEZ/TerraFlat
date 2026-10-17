@@ -25,6 +25,8 @@ namespace FlatWorld.Dialogue
             GameplayTestSystemProbe.Register("dialogue", "config", CaptureConfiguration);
             GameplayTestSystemProbe.Register("dialogue", "builtin_locales", CaptureBuiltinLocales);
             GameplayTestSystemProbe.Register("dialogue", "carry_weight_command", CaptureCarryWeightCommand);
+            GameplayTestSystemProbe.Register("dialogue", "help_catalog", CaptureHelpCatalog);
+            GameplayTestSystemProbe.Register("dialogue", "help_command", CaptureHelpCommand);
         }
 
         #endregion
@@ -147,6 +149,75 @@ namespace FlatWorld.Dialogue
                 try { player.PrepareForDespawn(saveData: false); }
                 finally { UnityEngine.Object.DestroyImmediate(root); }
             }
+        }
+
+        #endregion
+
+        #region 命令手册规则采样
+
+        /// <summary>收集正式聊天说明，并用临时提供方采样注册替换、排序、去重与完整书页。</summary>
+        private static JObject CaptureHelpCatalog(JObject args)
+        {
+            PlayerHelpChatCommand.RegisterHelpEntries();
+            PlayerCarryWeightChatCommand.RegisterHelpEntries();
+            const string firstProvider = "dialogue.rule.help.first";
+            const string secondProvider = "dialogue.rule.help.second";
+            const string category = "__dialogue_help_rule";
+            List<string> probeUsages = new();
+            try
+            {
+                PlayerHelpCatalog.RegisterProvider(firstProvider,
+                    () => new[] { new PlayerHelpEntry(category, "旧条目", "/old", "应被替换。") });
+                PlayerHelpCatalog.RegisterProvider(firstProvider,
+                    () => new[] { new PlayerHelpEntry(category, "后项", "/z", "完整说明 Z。") });
+                PlayerHelpCatalog.RegisterProvider(secondProvider, () => new[]
+                {
+                    new PlayerHelpEntry(category, "后项", "/z", "完整说明 Z。"),
+                    new PlayerHelpEntry(category, "前项", "/a", "完整说明 A。")
+                });
+                foreach (PlayerHelpEntry entry in PlayerHelpCatalog.Collect())
+                    if (entry.Category == category)
+                        probeUsages.Add(entry.Usage);
+            }
+            finally
+            {
+                PlayerHelpCatalog.UnregisterProvider(firstProvider);
+                PlayerHelpCatalog.UnregisterProvider(secondProvider);
+            }
+
+            IReadOnlyList<PlayerHelpEntry> entries = PlayerHelpCatalog.Collect();
+            IReadOnlyList<ReadableBookPageContent> pages = PlayerHelpChatCommand.BuildPages(entries);
+            JArray entryData = new();
+            JArray pageData = new();
+            foreach (PlayerHelpEntry entry in entries)
+                entryData.Add(new JObject
+                {
+                    ["category"] = entry.Category, ["title"] = entry.Title,
+                    ["usage"] = entry.Usage, ["description"] = entry.Description
+                });
+            foreach (ReadableBookPageContent page in pages)
+                pageData.Add(new JObject
+                {
+                    ["index"] = page.PageIndex, ["title"] = page.Title, ["body"] = page.Body,
+                    ["customTitle"] = page.HasCustomTitle, ["customBody"] = page.HasCustomBody
+                });
+            return new JObject { ["probeUsages"] = new JArray(probeUsages), ["entries"] = entryData, ["pages"] = pageData };
+        }
+
+        /// <summary>只检查正式帮助命令的参数与无玩家拒绝，不加载资源或执行发书事务。</summary>
+        private static JObject CaptureHelpCommand(JObject args)
+        {
+            GameObject root = new("帮助命令规则采样") { hideFlags = HideFlags.HideAndDontSave };
+            root.SetActive(false);
+            try
+            {
+                PlayerHelpChatCommand command = root.AddComponent<PlayerHelpChatCommand>();
+                PlayerChatCommandResult result = command.Execute(new PlayerChatCommandContext(null, null, string.Empty,
+                    GameplayTestSystemProbe.Text(args, "command", PlayerHelpChatCommand.CommandName),
+                    args["arguments"] is JArray tokens ? tokens.ToObject<string[]>() : Array.Empty<string>()));
+                return new JObject { ["handled"] = result.Handled, ["feedback"] = result.Feedback };
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
         #endregion
