@@ -1,0 +1,14 @@
+{
+  "title": "Campfire.wav",
+  "author": "Defaultv",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "sourcePage": "https://freesound.org/people/Defaultv/sounds/536935/",
+  "downloadUrl": "https://screentail.com/audio/campfire.wav",
+  "mirrorAttributionPage": "https://screentail.com/campfire-sounds",
+  "downloadSha256": "94123da582dbfb154ef12be3ea3810db3b2853d47efb6354bc96728462540b7e",
+  "sourceFile": "Sources/Campfire_Defaultv.wav",
+  "project": "Fire_Burning.mmp",
+  "processing": "LMMS MCP sample track, master 80%, track 90%; rendered 48 kHz; keep seconds 1-22; 70-9500 Hz bandpass; 99th-percentile transient gain compression; one second linear overlap; peak 0.65; 20 second mono PCM16 loop",
+  "verifiedDate": "2026-10-17"
+}

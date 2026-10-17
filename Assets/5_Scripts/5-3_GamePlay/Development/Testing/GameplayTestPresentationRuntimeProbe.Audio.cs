@@ -65,6 +65,35 @@ public static partial class GameplayTestPresentationRuntimeProbe
         }
     }
 
+    // 只返回正式 Cue 和篝火配置原值，资源契约由 Lua 断言。
+    private static JObject CaptureFireCue(AudioService service)
+    {
+        bool loaded = service.TryGetCue("fire.burning.loop", out AudioCue cue);
+        MachineModuleConfiguration config = MachineCatalog.Get("Bonfire")?.Content?.Find<Mod_Furnace>();
+        string configured = config?.Authoring is Mod_Furnace source
+            ? config.Value("burningLoopCueId", source.burningLoopCueId) : null;
+        var clips = new JArray();
+        if (loaded)
+            foreach (AudioClip clip in cue.Clips)
+                clips.Add(new JObject
+                {
+                    ["channels"] = clip != null ? clip.channels : 0,
+                    ["frequency"] = clip != null ? clip.frequency : 0,
+                    ["samples"] = clip != null ? clip.samples : 0
+                });
+        return new JObject
+        {
+            ["configured"] = configured, ["loaded"] = loaded, ["clips"] = clips,
+            ["loop"] = loaded && cue.Loop,
+            ["bus"] = loaded ? cue.Bus.ToString() : string.Empty,
+            ["spatialBlend"] = loaded ? cue.SpatialBlend : 0f,
+            ["rolloff"] = loaded ? cue.RolloffMode.ToString() : string.Empty,
+            ["cooldown"] = loaded ? cue.Cooldown : -1f,
+            ["minDistance"] = loaded ? cue.MinDistance : 0f,
+            ["maxDistance"] = loaded ? cue.MaxDistance : 0f
+        };
+    }
+
     private static IEnumerator CaptureAudio(Player player, JObject args, Action<JObject> complete)
     {
         var fixture = new AudioFixture(player);
@@ -246,6 +275,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["feedbackCues"] = feedbackCues,
                 ["movementCues"] = movementCues,
                 ["swimmingCues"] = swimmingCues,
+                ["fireCue"] = CaptureFireCue(service),
                 ["inventoryUiCueCount"] = inventoryUiCueCount,
                 ["inventoryUiCuesValid"] = inventoryUiCuesValid,
                 ["formalCatalog"] = service.Catalog != null, ["clipCount"] = loop.Clips.Count,
