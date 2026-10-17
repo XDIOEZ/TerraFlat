@@ -3534,7 +3534,7 @@ MonoBehaviour:
   Duration: 0.4
   SpeedMultiplier: 2
   ColliderScale: 0.5
-  Cooldown: 0.6
+  Cooldown: 0
   StaminaCost: 10
   visualRoot: {fileID: 9100000000000000403}
   bodyColliders:

@@ -15,7 +15,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     [Min(.01f)] public float Duration = .4f;
     [Min(0f)] public float SpeedMultiplier = 2f;
     [Range(.01f, 1f)] public float ColliderScale = .5f;
-    [Min(0f)] public float Cooldown = .6f;
+    [Min(0f)] public float Cooldown = 0f;
     [Min(0f)] public float StaminaCost = 10f;
     public Transform visualRoot;
     public Collider2D[] bodyColliders = Array.Empty<Collider2D>();

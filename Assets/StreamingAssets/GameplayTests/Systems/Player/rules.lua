@@ -52,7 +52,7 @@ end, "翻滚输入：默认空格、可重绑、按住不连续触发")
 for _, running in ipairs({false, true}) do
     test.system("player", "roll_action", {running = running, duplicateBody = true, steps = {
         {action = "start", x = 3, y = 4}, {action = "start"}, {seconds = .2}, {seconds = .2},
-        {action = "start"}, {seconds = .61}, {action = "start"}, {action = "cancel"}
+        {action = "start"}, {action = "cancel"}
     }}, function(data)
         local s = data.samples
         assert(s[1].accepted and s[1].rolling and s[1].invulnerable and s[1].motionLease, "正式翻滚没有同时建立移动和无敌")
@@ -68,11 +68,11 @@ for _, running in ipairs({false, true}) do
         roll_near(s[3].rootAngle, 0, "贴图旋转污染角色物理根节点")
         assert(s[3].spriteFacing < 0 and s[3].invulnerable, "贴图翻面丢失或无敌提前结束")
         roll_restored(s[4])
-        roll_near(s[4].cooldown, .6, "冷却没有从动作结束开始")
-        assert(not s[5].accepted and s[5].transactions == 1, "冷却中按键扣费或发动")
-        assert(s[7].accepted and s[7].transactions == 2, "冷却结束后无法再次发动")
-        roll_restored(s[8])
-    end, "翻滚正式动作：尺寸、旋转、无敌、体力、防重入、冷却和奔跑隔离")
+        roll_near(s[4].cooldown, 0, "翻滚结束后仍有冷却")
+        assert(s[5].accepted and s[5].transactions == 2 and s[5].invulnerable and s[5].motionLease,
+            "上一轮结束后不能立即再次翻滚，或没有独立支付体力和建立租约")
+        roll_restored(s[6])
+    end, "翻滚正式动作：尺寸、旋转、无敌、体力、防重入、零冷却接续和奔跑隔离")
 end
 
 for _, args in ipairs({{stamina = 0}, {missingBody = true}, {triggerOnly = true}}) do

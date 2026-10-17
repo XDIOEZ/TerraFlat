@@ -106,23 +106,18 @@ namespace FlatWorld.Networking.Gameplay
             result["physicalOwnershipUnchanged"] = mover.IsLock == originalMoveLock && body.bodyType == originalBodyType &&
                 body.simulated == originalSimulation;
             byte[] paidBaseline = ItemNetworkStateSerialization.Capture(player, true);
-            SendRollCommand(world, actor, botId, 2, Vector2.left, paidBaseline);
-            result["cooldownRejected"] = !roll.IsRolling && roll.Sequence == sequence;
-            result["staminaAfterCooldownReject"] = stamina.CurrentValue;
-            yield return Wait(() => roll.CooldownRemaining <= 0f, "服务器翻滚冷却完成", 2d);
-
-            SendRollCommand(world, actor, botId, 3, new Vector2(float.NaN, 0f), paidBaseline);
+            SendRollCommand(world, actor, botId, 2, new Vector2(float.NaN, 0f), paidBaseline);
             result["nonFiniteRejected"] = !roll.IsRolling && roll.Sequence == sequence;
             stamina.CurrentValue = 0f;
             stamina.modData.WriteData(stamina.Data);
             byte[] emptyBaseline = ItemNetworkStateSerialization.Capture(player, true);
-            SendRollCommand(world, actor, botId, 4, Vector2.left, emptyBaseline);
+            SendRollCommand(world, actor, botId, 3, Vector2.left, emptyBaseline);
             result["emptyStaminaRejected"] = !roll.IsRolling && !health.IsTemporarilyInvulnerable && stamina.CurrentValue == 0f;
             stamina.CurrentValue = paid;
             stamina.modData.WriteData(stamina.Data);
             byte[] nextBaseline = ItemNetworkStateSerialization.Capture(player, true);
-            SendRollCommand(world, actor, botId, 5, Vector2.left, nextBaseline);
-            yield return Wait(() => roll.IsRolling, "冷却结束后的第二轮合法翻滚", 2d);
+            SendRollCommand(world, actor, botId, 4, Vector2.left, nextBaseline);
+            yield return Wait(() => roll.IsRolling, "上一轮结束后立即开始第二轮合法翻滚", 2d);
             result["secondStarted"] = roll.IsRolling && roll.Sequence != sequence && roll.Direction.x < 0f;
             result["secondPaidStamina"] = stamina.CurrentValue;
             float secondPaid = stamina.CurrentValue;
@@ -133,7 +128,7 @@ namespace FlatWorld.Networking.Gameplay
             SendRollItemState(world, actor, botId, nextBaseline);
             result["rebindProtectedStamina"] = stamina.modData.GetData<Mod_Stamina.StaminaData>().CurrentStamina;
             result["rebindInvulnerabilityCleared"] = !health.IsTemporarilyInvulnerable;
-            SendRollStaminaAck(world, actor, botId, 5, secondPaid);
+            SendRollStaminaAck(world, actor, botId, 4, secondPaid);
             world.Transport.ServerDisconnect(botId);
             yield return null;
             result["disconnectedRuntimeRemoved"] = !ItemMgr.Instance.Player_DIC.ContainsKey(actor.DisplayName);
