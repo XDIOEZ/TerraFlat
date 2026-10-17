@@ -20,6 +20,7 @@ public static partial class GameplayTestRuntimeProbe
         ["inventory/creative_begin"] = BeginCreativeInventoryScope,
         ["inventory/creative_restore"] = RestoreCreativeInventoryScope,
         ["inventory/direct_drag"] = CaptureInventoryDirectDrag,
+        ["inventory/flick_transfer"] = CaptureInventoryFlickTransfer,
         ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
         ["inventory/equipment_configuration"] = CaptureEquipmentConfiguration,
         ["world_streaming/live_window"] = CaptureLiveWindow,
@@ -309,6 +310,35 @@ public static partial class GameplayTestRuntimeProbe
 
         return new JObject { ["direct"] = direct, ["merged"] = merged,
             ["blocked"] = blocked, ["partial"] = partial, ["stale"] = stale };
+    }
+
+    // 使用自有库存验证甩动的来源校验和正式快速转移，不改隔离玩家物品。
+    private static JObject CaptureInventoryFlickTransfer(Player player, JObject args)
+    {
+        Inventory source = CreateDragInventory("lua.flick.source", CreateDragItem("Twine", 6));
+        Inventory target = CreateDragInventory("lua.flick.target", new ItemData[1]);
+        target.Data.itemSlots[0].SlotMaxVolume = (float)GameplayTestSystemProbe.Number(args, "capacity", 10d);
+        InventoryDragTransaction drag = source.OnMouseDragBegin(0);
+        int attempts = 0;
+        bool moved = false;
+        try
+        {
+            if (GameplayTestSystemProbe.Flag(args, "stale", false))
+                source.Data.SetOne_ItemData(0, CreateDragItem("Ore_Stone"));
+            bool consumed = drag.TryConsumeSourceItem(item =>
+            {
+                if (!ReferenceEquals(source.Data.itemSlots[0].itemData, item)) return false;
+                attempts++;
+                moved = source.ExecuteMachineTransfer(0, target, -1, "quick", 0);
+                return true;
+            });
+            bool reused = drag.TryConsumeSourceItem(_ => { attempts++; return true; });
+            drag.Complete(false);
+            return new JObject { ["consumed"] = consumed, ["moved"] = moved, ["attempts"] = attempts,
+                ["source"] = CaptureDragSlot(source, 0), ["target"] = CaptureDragSlot(target, 0),
+                ["reused"] = reused, ["dragLocked"] = source.HasActiveSlotDrag };
+        }
+        finally { drag?.Complete(false); }
     }
 
     private static JObject CaptureInventoryEquipmentDrag(Player player, JObject args)

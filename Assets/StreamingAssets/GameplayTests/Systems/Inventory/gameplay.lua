@@ -1,5 +1,26 @@
 -- 复用正式创造背包填充与快捷栏切换；容量和扣料细节在独立规则用例检查。
 test.check("player_ready", "真实玩家就绪")
+local flickTransfers = {
+    {name = "整组转移", capacity = 10, source = 0, target = 6, moved = true, attempts = 1},
+    {name = "只接收放得下的数量", capacity = 2, source = 4, target = 2, moved = true, attempts = 1},
+    {name = "满槽仍留原位", capacity = 0, source = 6, target = 0, moved = false, attempts = 1},
+    {name = "来源换物拒绝旧甩动", capacity = 10, stale = true, source = 1, target = 0, moved = false, attempts = 0}
+}
+for _, case in ipairs(flickTransfers) do
+    test.runtime("inventory", "flick_transfer", case, function(data)
+        assert(data.moved == case.moved and data.attempts == case.attempts,
+            "甩动未调用正式快速转移或错误消费陈旧来源")
+        assert(data.consumed == (not case.stale), "甩动事务没有正确区分有效来源和陈旧来源")
+        assert(data.source.amount == case.source and data.target.amount == case.target,
+            "甩动数量错误或失败后物品未留原槽")
+        assert(not data.reused and not data.dragLocked, "甩动重复提交或未释放来源拖拽占用")
+        if case.stale then
+            assert(data.source.id == "Ore_Stone", "陈旧甩动改变了替换进来的物品")
+        else
+            assert(data.source.amount + data.target.amount == 6, "甩动物品数量不守恒")
+        end
+    end, "甩动复用库存事务：" .. case.name)
+end
 test.runtime("inventory", "creative_begin", {}, function(data)
     assert(data.registered and data.originalSlotCount > 0 and data.originalWeight >= 0,
         "创造背包没有先登记原始玩家库存的恢复租约")

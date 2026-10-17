@@ -39,6 +39,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/thermal", EntityTemperature);
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
+        operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
         operations.Add("crafting/transaction", EntityCraftingTransaction);
         operations.Add("containers/composition", EntityContainerComposition);
@@ -618,6 +619,20 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 独立库存与材料分配
+
+    // Lua 提供轨迹和期望，采样只调用正式甩动识别器。
+    private static JObject EntityInventoryFlickGesture(JObject args)
+    {
+        var points = (JArray)args["points"];
+        var gesture = new InventoryFlickGesture();
+        Vector2 Position(JToken point) => new(point[1].Value<float>(), point[2].Value<float>());
+        gesture.Begin(Position(points[0]), points[0][0].Value<double>(), (float)Number(args, "scale", 1d));
+        for (int i = 1; i < points.Count; i++)
+            gesture.Record(Position(points[i]), points[i][0].Value<double>());
+        if (Flag(args, "cancel", false)) gesture.Reset();
+        JToken last = points[points.Count - 1];
+        return new JObject { ["accepted"] = gesture.IsFlick(Position(last), last[0].Value<double>()) };
+    }
 
     private static JObject EntityInventoryTransactions(JObject args)
     {

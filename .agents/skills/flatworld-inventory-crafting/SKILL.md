@@ -34,6 +34,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - `Inventory_Data.GetItemSlot` 对空槽表或越界索引返回 null，不得回退第0格；库存 UI 的删除、装备和书籍输入调用链必须检查有效槽。
 - 服务器远端玩家的 Hotbar/Bag 加载真实数据和手持物，不创建 UI 或绑定本机输入；视觉副本用 `ApplyRemoteNetworkData`，权威手持用 `ApplyNetworkAuthorityData`，不能混用。太空拾取 commit 同时走服务器真实库存事务，Host 共享库存只入包一次；客户端选择请求不能改库存数量。
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
+- 触屏快速甩动由 `InventoryFlickGesture` 检查净位移、末段速度与轨迹方向；无正式拖放目标时经当前拖拽事务 `TryConsumeSourceItem` 校验来源，再调用同一 `OnShiftQuickTransfer`。甩动失败或部分接收均关闭手部回退，余物留原槽；单击不增加等待，半组拖拽保留原语义。
 - 库存短音只通过 `InventoryAudioFeedbackEvents` 观察用户点击/滚轮/拖拽/快速转移成功事务，开始拖拽仅播拿起；交换有独立提示，装备槽由 `EquipmentAudioFeedbackEvents` 在真实物品更替时播穿脱声。全部选音与 UI 播放在 `InventoryInteractionAudio`，业务不操作 AudioService。
 - 长按触屏的整组放置在进度完成时提交并消费手势；进度先缓冲 0.2 秒再显示，原总时长不延长。空槽起手才交 ScrollRect。拖拽来源允许同槽、同非零 Guid、同定义的事务替换实例；持续加工在被拖槽上暂缓。
 - `UI_Hand/InventoryDragGhost` 使用顶层 Canvas 且不拦射线；触屏位置取本次 PointerEventData，抬起后保留，桌面明确接管才改用 Pointer.current。`MobileHeldItemDropSurface` 只操作手部携带槽，丢弃经 Mod_DiscardItem，成功生成世界物后才扣源槽。
