@@ -1,7 +1,13 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.InventoryFeedback;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 public static partial class GameplayTestRuntimeProbe
 {
@@ -101,7 +107,7 @@ public static partial class GameplayTestRuntimeProbe
                 if (selected == null || ReferenceEquals(selected, right) || ReferenceEquals(selected, down))
                 {
                     if (mode == "pc") source.OnShiftQuickTransfer(0);
-                    else source.OnTouchFlickTransfer(0, origin, direction);
+                    else source.OnFlickTransfer(0, origin, direction);
                     moved = (source.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f) < 6f;
                 }
                 return true;
@@ -128,6 +134,124 @@ public static partial class GameplayTestRuntimeProbe
                 if (registered != null) registered.enabled = true;
             Inventory.LastOpenedContainer = previousLast;
             Object.Destroy(root);
+        }
+    }
+    #endregion
+
+    #region 跨设备甩动指针现场
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void RegisterFlickPointerRuntime() => RegisterFlickPointer();
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoadMethod]
+    private static void RegisterFlickPointerEditor() => RegisterFlickPointer();
+#endif
+    private static void RegisterFlickPointer() => RegisterAsync("inventory", "flick_pointer", CaptureFlickPointer);
+
+    // 派发正式指针与拖拽事件，仅使用自有槽位和手部库存，Lua 检查结果。
+    private static IEnumerator CaptureFlickPointer(Player player, JObject args, Action<JObject> completed)
+    {
+        string mode = GameplayTestSystemProbe.Text(args, "mode", "mouse_fast");
+        var scope = new FlickPointerScope();
+        RegisterCleanup(scope);
+        JObject result;
+        try
+        {
+            if (EventSystem.current == null) throw new InvalidOperationException("甩动指针测试缺少 EventSystem。");
+            foreach (InventoryFlickTargets panel in scope.PreviousPanels) if (panel != null) panel.enabled = false;
+            Inventory source = CreateDragInventory("lua.pointer.source", CreateDragItem("Twine", 6));
+            Inventory target = CreateDragInventory("lua.pointer.target", new ItemData[1]);
+            Inventory hand = CreateDragInventory(ModText.Hand, new ItemData[1]);
+            Inventory_Hand.PlayerHand = hand;
+            scope.Root = new GameObject("LuaFlickPointer", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            Canvas canvas = scope.Root.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32760;
+            Canvas.ForceUpdateCanvases();
+            var targetRoot = new GameObject("target", typeof(RectTransform), typeof(BasePanel));
+            targetRoot.transform.SetParent(scope.Root.transform, false);
+            BasePanel targetPanel = targetRoot.GetComponent<BasePanel>();
+            targetPanel.SetGameplayInputBlocking(false);
+            targetPanel.Init();
+            GameObject prefab = GameRes.ExistingInstance.GetPrefab("UI_Slot", false);
+            ItemSlot_UI MakeSlot(Inventory inventory, Transform parent, Vector2 position)
+            {
+                GameObject instance = Object.Instantiate(prefab, parent, false);
+                RectTransform rect = instance.GetComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(100f, 100f);
+                rect.position = position;
+                Image hit = instance.GetComponent<Image>() ?? instance.AddComponent<Image>();
+                hit.raycastTarget = true;
+                ItemSlot_UI slot = instance.GetComponent<ItemSlot_UI>();
+                inventory.BindSlotUI(slot, 0);
+                return slot;
+            }
+            Vector2 origin = new(-4000f, -4000f);
+            ItemSlot_UI sourceSlot = MakeSlot(source, scope.Root.transform, origin);
+            Vector2 targetPosition = new(Screen.width * .8f, Screen.height * .5f);
+            MakeSlot(target, targetRoot.transform, targetPosition);
+            target.SyncQuickTransferTarget(targetPanel);
+            Canvas.ForceUpdateCanvases();
+            int flicks = 0, taps = 0;
+            Vector2 release = Vector2.zero;
+            sourceSlot.OnFlickTransfer = (index, start, direction) =>
+            {
+                flicks++;
+                release = start + direction;
+                if (!ReferenceEquals(InventoryFlickTargets.Resolve(source, index, start, direction), target))
+                    throw new InvalidOperationException("甩动指针夹具只能转入自有目标。");
+                source.OnFlickTransfer(index, start, direction);
+            };
+            sourceSlot.OnDesktopTap = _ => taps++;
+            sourceSlot.OnTouchTap = _ => taps++;
+            var pointer = new ExtendedPointerEventData(EventSystem.current)
+            {
+                pointerId = 918274, pointerType = mode == "touch_fast" ? UIPointerType.Touch : UIPointerType.MouseOrPen,
+                button = PointerEventData.InputButton.Left, position = origin
+            };
+            sourceSlot.OnPointerDown(pointer);
+            double started = Time.unscaledTimeAsDouble;
+            while (Time.unscaledTimeAsDouble - started < .02d) yield return null;
+            pointer.position = origin + Vector2.right * 4f;
+            sourceSlot.OnBeginDrag(pointer);
+            while (Time.unscaledTimeAsDouble - started < .12d) yield return null;
+            pointer.position = mode == "mouse_drop" ? targetPosition :
+                origin + Vector2.right * (mode == "mouse_short" ? 20f : 2000f);
+            sourceSlot.OnDrag(pointer);
+            if (mode == "mouse_stopped")
+            {
+                double stopped = Time.unscaledTimeAsDouble;
+                while (Time.unscaledTimeAsDouble - stopped < .16d) yield return null;
+            }
+            sourceSlot.OnPointerUp(pointer);
+            sourceSlot.OnEndDrag(pointer);
+            sourceSlot.OnEndDrag(pointer);
+            result = new JObject { ["flicks"] = flicks, ["taps"] = taps,
+                ["releaseMatched"] = Vector2.Distance(release, pointer.position) < .01f,
+                ["sourceAmount"] = source.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
+                ["targetAmount"] = target.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
+                ["handAmount"] = hand.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
+                ["dragLocked"] = source.HasActiveSlotDrag };
+        }
+        finally { scope.Dispose(); }
+        result["handRestored"] = ReferenceEquals(Inventory_Hand.PlayerHand, scope.PreviousHand);
+        completed(result);
+    }
+
+    private sealed class FlickPointerScope : IDisposable
+    {
+        public readonly Inventory PreviousHand = Inventory_Hand.PlayerHand;
+        public readonly Inventory PreviousLast = Inventory.LastOpenedContainer;
+        public readonly InventoryFlickTargets[] PreviousPanels = InventoryFlickTargets.GetActivePanels();
+        public GameObject Root;
+        private bool disposed;
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            if (Root != null) { Root.SetActive(false); Object.Destroy(Root); }
+            Inventory_Hand.PlayerHand = PreviousHand;
+            Inventory.LastOpenedContainer = PreviousLast;
+            foreach (InventoryFlickTargets panel in PreviousPanels) if (panel != null) panel.enabled = true;
         }
     }
     #endregion

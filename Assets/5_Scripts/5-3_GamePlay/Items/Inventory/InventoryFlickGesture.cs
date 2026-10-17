@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>只识别触屏甩动轨迹，物品转移继续交给库存事务。</summary>
+/// <summary>识别鼠标与触屏的甩动轨迹，物品转移继续交给库存事务。</summary>
 public sealed class InventoryFlickGesture
 {
     #region 轨迹与阈值

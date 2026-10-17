@@ -64,8 +64,8 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
-    /// <summary>手机甩动传递屏幕起点和净方向，与桌面固定目标入口分开。</summary>
-    public System.Action<int, Vector2, Vector2> OnTouchFlickTransfer { get; set; }
+    /// <summary>鼠标与触屏甩动共用屏幕起点和净方向，与 Shift 固定目标入口分开。</summary>
+    public System.Action<int, Vector2, Vector2> OnFlickTransfer { get; set; }
 
     /// <summary>鼠标或触屏拖拽开始时，创建保留来源槽的拖拽事务。</summary>
     public System.Func<int, InventoryDragTransaction> OnMouseDragBegin { get; set; }
@@ -192,12 +192,13 @@ public class ItemSlot_UI : MonoBehaviour,
     private Vector2 touchWorldPointerPosition;
     private readonly List<RaycastResult> touchRaycastResults = new List<RaycastResult>(8);
 
-    [Header("手机甩动快速转移")]
+    [Header("甩动快速转移")]
     [SerializeField, Min(1f), Tooltip("甩动最小净位移，单位为 Canvas 缩放前的参考像素。")]
     private float touchFlickMinimumDistance = InventoryFlickGesture.DefaultMinimumDistance;
     [SerializeField, Min(1f), Tooltip("松手前 0.1 秒的最低平均速度，单位为参考像素/秒。")]
     private float touchFlickMinimumSpeed = InventoryFlickGesture.DefaultMinimumSpeed;
     private readonly InventoryFlickGesture touchFlickGesture = new();
+    private readonly InventoryFlickGesture mouseFlickGesture = new();
 
     [Header("手机长按物品介绍")]
     [SerializeField, Min(0.1f)] private float touchTooltipSeconds = 1f;
@@ -230,7 +231,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnLeftClick.Clear();
         OnGamepadSubmit.Clear();
         OnShiftQuickTransfer.Clear();
-        OnTouchFlickTransfer = null;
+        OnFlickTransfer = null;
         OnMouseDragBegin = null;
         OnMouseDragDrop = null;
         ItemAddedAtPointer = null;
@@ -263,6 +264,7 @@ public class ItemSlot_UI : MonoBehaviour,
         if (!focused)
         {
             touchFlickGesture.Reset();
+            mouseFlickGesture.Reset();
             CancelTouchTooltipHold();
             InventoryItemTooltip.Hide(this);
         }
@@ -273,6 +275,7 @@ public class ItemSlot_UI : MonoBehaviour,
         if (paused)
         {
             touchFlickGesture.Reset();
+            mouseFlickGesture.Reset();
             CancelTouchTooltipHold();
             InventoryItemTooltip.Hide(this);
         }
@@ -448,6 +451,9 @@ public class ItemSlot_UI : MonoBehaviour,
             mousePressStartedWithItem = !IsItemSlotEmpty(GetSlotData());
             mouseDragActive = false;
             suppressDesktopTapAfterDrag = false;
+            Canvas mouseCanvas = GetComponentInParent<Canvas>();
+            mouseFlickGesture.Begin(eventData.position, Time.unscaledTimeAsDouble,
+                mouseCanvas != null ? mouseCanvas.scaleFactor : 1f);
         }
 
         if (eventData.button == PointerEventData.InputButton.Left && IsShiftPressed())
@@ -522,6 +528,12 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnPointerUp(PointerEventData eventData)
     {
         RememberPointer(eventData);
+        if (eventData.button == PointerEventData.InputButton.Left && !IsTouchPointer(eventData))
+        {
+            // 鼠标抬起先于 EndDrag，保留最后一段速度到实际落点判定完成。
+            if (mouseDragActive) mouseFlickGesture.Record(eventData.position, Time.unscaledTimeAsDouble);
+            else mouseFlickGesture.Reset();
+        }
         if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
         {
             bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered && !touchTooltipTriggered;
@@ -566,6 +578,8 @@ public class ItemSlot_UI : MonoBehaviour,
         ReportPointerToHandVisual(eventData);
         if (eventData != null && !IsTouchPointer(eventData) && !eventData.dragging)
             InventoryItemTooltip.Move(this, eventData.position);
+        if (eventData != null && !IsTouchPointer(eventData) && mousePressStartedWithItem)
+            mouseFlickGesture.Record(eventData.position, Time.unscaledTimeAsDouble);
         if (eventData == null || eventData.pointerId != touchPointerId)
             return;
         touchFlickGesture.Record(eventData.position, Time.unscaledTimeAsDouble);
@@ -650,6 +664,7 @@ public class ItemSlot_UI : MonoBehaviour,
         }
 
         SetSourceContentHidden(activeDragTransaction.HideSourceVisual);
+        mouseFlickGesture.Record(eventData.position, Time.unscaledTimeAsDouble);
         CreateMouseDragGhost(draggedSprite, eventData.position);
         UpdateMouseDragHover(eventData);
     }
@@ -676,6 +691,7 @@ public class ItemSlot_UI : MonoBehaviour,
         if (!mouseDragActive)
             return;
 
+        mouseFlickGesture.Record(eventData.position, Time.unscaledTimeAsDouble);
         PositionMouseDragGhost(eventData.position);
         UpdateMouseDragHover(eventData);
     }
@@ -700,21 +716,7 @@ public class ItemSlot_UI : MonoBehaviour,
                         activeDragTransaction,
                         eventData.position,
                         eventData.pressEventCamera ?? eventData.enterEventCamera);
-                bool flick = !hasTouchTarget && touchGameplayTarget == null &&
-                    activeDragTransaction?.HideSourceVisual == true &&
-                    touchFlickGesture.IsFlick(eventData.position, Time.unscaledTimeAsDouble,
-                        touchFlickMinimumDistance, touchFlickMinimumSpeed);
-                if (flick)
-                {
-                    // 先验证原拖拽来源，再按甩动方向选择库存；失败仍留原槽。
-                    activeDragTransaction?.TryConsumeSourceItem(sourceItem =>
-                    {
-                        if (!ReferenceEquals(GetSlotData()?.itemData, sourceItem)) return false;
-                        Vector2 origin = touchFlickGesture.ScreenOrigin;
-                        OnTouchFlickTransfer?.Invoke(slotIndex, origin, eventData.position - origin);
-                        return true;
-                    });
-                }
+                bool flick = TryCompleteFlick(eventData, touchFlickGesture, hasTouchTarget || touchGameplayTarget != null);
                 CompleteActiveDrag(!hasTouchTarget && touchGameplayTarget == null && !flick);
                 touchItemDragActive = false;
                 touchPressStartedWithItem = false;
@@ -745,12 +747,29 @@ public class ItemSlot_UI : MonoBehaviour,
                 activeDragTransaction,
                 eventData.position,
                 eventData.pressEventCamera ?? eventData.enterEventCamera);
-        CompleteActiveDrag(!hasTarget && gameplayTarget == null);
+        bool mouseFlick = TryCompleteFlick(eventData, mouseFlickGesture, hasTarget || gameplayTarget != null);
+        CompleteActiveDrag(!hasTarget && gameplayTarget == null && !mouseFlick);
         mousePressStartedWithItem = false;
         mouseDragActive = false;
         suppressDesktopTapAfterDrag = true;
         EndMouseDragVisual();
         EventSystemGuard.SetGamepadMode(false);
+    }
+
+    // 两种指针共用来源校验、方向转移和失败留源，正式拖放目标始终优先。
+    private bool TryCompleteFlick(PointerEventData eventData, InventoryFlickGesture gesture, bool hasDropTarget)
+    {
+        if (hasDropTarget || OnFlickTransfer == null || activeDragTransaction?.HideSourceVisual != true ||
+            !gesture.IsFlick(eventData.position, Time.unscaledTimeAsDouble, touchFlickMinimumDistance, touchFlickMinimumSpeed))
+            return false;
+        activeDragTransaction.TryConsumeSourceItem(sourceItem =>
+        {
+            if (!ReferenceEquals(GetSlotData()?.itemData, sourceItem)) return false;
+            Vector2 origin = gesture.ScreenOrigin;
+            OnFlickTransfer(slotIndex, origin, eventData.position - origin);
+            return true;
+        });
+        return true;
     }
 
     private IEnumerator WaitForTouchLongPress()
@@ -1282,6 +1301,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private void EndMouseDragVisual()
     {
+        mouseFlickGesture.Reset();
         SetMouseDragHover(mouseDragHoverSlot, false);
         mouseDragHoverSlot = null;
         if (mouseDragGhost != null)

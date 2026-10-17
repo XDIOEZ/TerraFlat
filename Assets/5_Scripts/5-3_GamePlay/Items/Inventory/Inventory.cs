@@ -790,7 +790,7 @@ public class Inventory
             itemSlotUI.OnGamepadSubmit.Clear();
             itemSlotUI._OnScroll.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
-            itemSlotUI.OnTouchFlickTransfer = null;
+            itemSlotUI.OnFlickTransfer = null;
             itemSlotUI.OnMouseDragBegin = null;
             itemSlotUI.OnMouseDragDrop = null;
             itemSlotUI.OnTouchTap = null;
@@ -806,7 +806,7 @@ public class Inventory
             itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
-            itemSlotUI.OnTouchFlickTransfer = OnTouchFlickTransfer;
+            itemSlotUI.OnFlickTransfer = OnFlickTransfer;
             itemSlotUI.OnMouseDragBegin = OnMouseDragBegin;
             itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
             itemSlotUI.OnTouchTap = OnTouchTap;
@@ -874,7 +874,7 @@ public class Inventory
         slotUI.OnGamepadSubmit.Clear();
         slotUI._OnScroll.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
-        slotUI.OnTouchFlickTransfer = null;
+        slotUI.OnFlickTransfer = null;
         slotUI.OnMouseDragBegin = null;
         slotUI.OnMouseDragDrop = null;
         slotUI.OnTouchTap = null;
@@ -890,7 +890,7 @@ public class Inventory
         slotUI.OnGamepadSubmit += OnGamepadSubmit;
         slotUI._OnScroll += OnScroll;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
-        slotUI.OnTouchFlickTransfer = OnTouchFlickTransfer;
+        slotUI.OnFlickTransfer = OnFlickTransfer;
         slotUI.OnMouseDragBegin = OnMouseDragBegin;
         slotUI.OnMouseDragDrop = OnMouseDragDrop;
         slotUI.OnTouchTap = OnTouchTap;
@@ -1955,13 +1955,13 @@ public class Inventory
         return TryQuickTransferTo(index, targetInventory);
     }
 
-    /// <summary>手机甩动以手指起点和方向选面板，复用正式转移、音频与逐格反馈。</summary>
-    public virtual void OnTouchFlickTransfer(int index, Vector2 origin, Vector2 direction)
+    /// <summary>鼠标与触屏甩动以指针起点和方向选面板，复用正式转移、音频与逐格反馈。</summary>
+    public virtual void OnFlickTransfer(int index, Vector2 origin, Vector2 direction)
     {
-        TryTouchFlickTransfer(index, origin, direction);
+        TryFlickTransfer(index, origin, direction);
     }
 
-    protected bool TryTouchFlickTransfer(int index, Vector2 origin, Vector2 direction)
+    protected bool TryFlickTransfer(int index, Vector2 origin, Vector2 direction)
     {
         Inventory hotbar = GetPlayerHotBarInventory();
         hotbar?.RegisterFlickTarget(hotbar.basePanel, true);

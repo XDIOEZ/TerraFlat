@@ -63,6 +63,17 @@ for _, mode in ipairs({"valid", "touch_origin", "duplicate", "invalid_slot", "wr
             "回执表现回放修改了已经确认的真实库存数量")
     end, "快速转移权威回执回放：" .. mode)
 end
+for _, mode in ipairs({"mouse_fast", "touch_fast", "mouse_stopped", "mouse_short", "mouse_drop"}) do
+    test.runtime("inventory", "flick_pointer", {mode = mode}, function(data)
+        local fast = mode == "mouse_fast" or mode == "touch_fast"
+        local target = fast or mode == "mouse_drop"
+        assert(data.flicks == (fast and 1 or 0) and data.taps == 0, "鼠标/触屏甩动重复触发、误变点击或抢走普通拖放")
+        assert(not fast or data.releaseMatched, "甩动没有保留当前指针的真实松手位置")
+        assert(data.sourceAmount == 0 and data.targetAmount == (target and 6 or 0)
+            and data.handAmount == (target and 0 or 6), "快速甩动、普通拖放或手部回退结果错误")
+        assert(data.handRestored and not data.dragLocked, "甩动夹具没有恢复手部引用或释放来源占用")
+    end, "鼠标与触屏共用甩动指针流程：" .. mode)
+end
 local directionalFlicks = {
     {mode = "right", selected = "right", source = 0, right = 6, down = 0},
     {mode = "pc", selected = "right", receipt = "down", source = 0, right = 0, down = 6},

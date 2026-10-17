@@ -131,9 +131,9 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         }
 
         /// <summary>甩出快捷栏物品后立即同步当前手持物和网络状态。</summary>
-        public override void OnTouchFlickTransfer(int index, Vector2 origin, Vector2 direction)
+        public override void OnFlickTransfer(int index, Vector2 origin, Vector2 direction)
         {
-            if (TryTouchFlickTransfer(index, origin, direction))
+            if (TryFlickTransfer(index, origin, direction))
                 Owner?.OnInventoryShiftQuickTransfer(index);
         }
 
