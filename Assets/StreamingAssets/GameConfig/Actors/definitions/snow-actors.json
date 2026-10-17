@@ -25,6 +25,11 @@
         "flipX": false
       },
       "modules": {
+        "animator": {
+          "parameters": {
+            "visualMode": 1
+          }
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",
@@ -418,6 +423,11 @@
         "flipX": false
       },
       "modules": {
+        "animator": {
+          "parameters": {
+            "visualMode": 1
+          }
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",

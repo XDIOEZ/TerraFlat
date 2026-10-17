@@ -146,7 +146,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         health = modules.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
         food = modules.RequireSingleModById<Mod_Food>(ModText.Food);
         threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
-        if (liftRoot == null || liftRoot.parent == null || birdAnimator == null)
+        animationBody = modules.RequireSingleModById<Mod_AnimatorController>(ModText.AnimatorReceiver);
+        if (liftRoot == null || liftRoot.parent == null || (!animationBody.IsSingleSpriteMode && birdAnimator == null))
             throw new InvalidOperationException("鸟外壳缺少 LiftRoot、Animator 或根刚体，请运行鸟资源定向构建菜单。");
         liftOrigin = liftRoot.localPosition;
     }
@@ -178,6 +179,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         if (state.Stamina <= 0f) state.MustRecoverStamina = true;
         threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
         loaded = true;
+        animationFlightDisplacement = Vector2.zero;
+        animationFlightSeconds = 0f;
         stoppedForDeath = false;
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
@@ -206,6 +209,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     protected override void OnUnload()
     {
         loaded = false;
+        animationFlightDisplacement = Vector2.zero;
+        animationFlightSeconds = 0f;
         if (health != null)
         {
             health.OnDamageReceived -= HandleBirdDamage;
@@ -230,6 +235,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     #region 阶段推进
     public override void ModUpdate(float deltaTime)
     {
+        animationFlightDisplacement = Vector2.zero;
+        animationFlightSeconds = Mathf.Max(0f, deltaTime);
         if (!loaded)
             return;
         EnsureFlightSolidColliders();
@@ -632,6 +639,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         liftRoot.localPosition = liftOrigin + Vector3.up * visualHeight;
         RefreshFlightHitbox();
         staminaDisplay?.Refresh();
+        if (animationBody != null && animationBody.IsSingleSpriteMode)
+            return;
         // 对象池先 Load 后激活；激活后以 Animator 的真实状态为准，避免重绑或外部播放造成飞行时残留步行动画。
         if (!birdAnimator.isActiveAndEnabled)
             return;
@@ -1097,10 +1106,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         ref ChunkMgr.RuntimeTerrainPresenceQuery query)
     {
         Vector2 position = body.position;
+        Vector2 activeDisplacement = Vector2.ClampMagnitude(direction, speed * deltaTime);
         Vector2 next = query.NormalizePosition(
-            position + Vector2.ClampMagnitude(direction, speed * deltaTime));
+            position + activeDisplacement);
         if (!flightNavigation.CanTraverse(position, next, ref query)) return false;
         body.position = next;
+        animationFlightDisplacement += activeDisplacement;
         if (direction.sqrMagnitude > 0.0001f)
         {
             Vector2 forward = direction.normalized;
@@ -1184,7 +1195,10 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
             flightSpriteBounds.Add(sprite, bounds);
         }
         Bounds localBounds = default;
-        Matrix4x4 spriteToHitbox = flightHitbox.transform.worldToLocalMatrix * renderer.transform.localToWorldMatrix;
+        Matrix4x4 spriteMatrix = renderer.transform.localToWorldMatrix;
+        if (animationBody != null && animationBody.TryGetBaseVisualMatrix(renderer.transform, out Matrix4x4 baseMatrix))
+            spriteMatrix = baseMatrix;
+        Matrix4x4 spriteToHitbox = flightHitbox.transform.worldToLocalMatrix * spriteMatrix;
         for (int corner = 0; corner < 4; corner++)
         {
             Vector3 point = new((corner & 1) == 0 ? bounds.min.x : bounds.max.x,

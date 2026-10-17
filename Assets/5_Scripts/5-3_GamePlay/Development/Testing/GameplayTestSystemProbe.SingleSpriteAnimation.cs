@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
         var root = new GameObject("[LuaSingleSpriteAnimation]") { hideFlags = HideFlags.HideAndDontSave };
         root.SetActive(false);
         Mod_AnimatorController animation = null;
+        GameplayTestAnimationMotionSource motionSource = null;
         try
         {
             root.transform.position = new Vector3(11f, -7f, 0f);
@@ -32,6 +33,12 @@ public static partial class GameplayTestSystemProbe
             mover.rb = body;
             mover.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
             item.itemMods.AddMod(mover);
+            if (Flag(args, "withMotionSource", false))
+            {
+                motionSource = root.AddComponent<GameplayTestAnimationMotionSource>();
+                motionSource.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = "test:animation_motion", Enabled = true });
+                item.itemMods.AddMod(motionSource);
+            }
 
             var visual = new GameObject("Sprite");
             visual.transform.SetParent(root.transform, false);
@@ -57,6 +64,7 @@ public static partial class GameplayTestSystemProbe
             Animator sourceAnimator = Flag(args, "withAnimator", false) ? root.AddComponent<Animator>() : null;
             animation.animator = sourceAnimator;
             root.SetActive(true);
+            if (motionSource != null) motionSource.Load();
             animation.Load();
 
             bool network = Flag(args, "network", false), moving = false, running = false;
@@ -71,6 +79,23 @@ public static partial class GameplayTestSystemProbe
                 running = Flag(step, "running", running);
                 mover.IsMoving = moving;
                 mover.IsRunning = running;
+                if (step["source"] is JObject source)
+                {
+                    if (motionSource == null) throw new ArgumentException("单图采样没有创建主动表现信号模块。");
+                    motionSource.Available = Flag(source, "available", true);
+                    motionSource.Motion = new ActorAnimationMotion
+                    {
+                        IsMoving = Flag(source, "moving", false), IsRunning = Flag(source, "running", false),
+                        WorldOffset = new Vector3((float)Number(source, "x", 0d), (float)Number(source, "y", 0d), 0f),
+                        RollDegrees = (float)Number(source, "roll", 0d)
+                    };
+                }
+                if (step["sourceEnabled"] != null && motionSource != null)
+                {
+                    bool sourceEnabled = Flag(step, "sourceEnabled", true);
+                    motionSource.SetEnabled(sourceEnabled);
+                    if (sourceEnabled) motionSource.Load();
+                }
                 if (step["velocityX"] != null || step["velocityY"] != null)
                     body.velocity = new Vector2((float)Number(step, "velocityX", 0d), (float)Number(step, "velocityY", 0d));
                 animation.SetNetworkPresentation(network, moving, running);
@@ -96,6 +121,10 @@ public static partial class GameplayTestSystemProbe
                     animation.PlayAttack(new Vector2((float)Number(step, "x", 1d), (float)Number(step, "y", 0d)));
                 if (Flag(step, "jump", false)) animation.PlayJump();
                 if (Flag(step, "hit", false)) animation.PlayHitReaction(.3f, .05f);
+                bool legacyStateAccepted = step["legacyState"] != null &&
+                    animation.ForcePlayAnimation(Text(step, "legacyState", string.Empty));
+                bool legacyMoveAccepted = step["legacyMove"] != null &&
+                    animation.SetBool(AnimationText.Move, Flag(step, "legacyMove", false));
                 if (Flag(step, "reset", false)) animation.ResetPresentation();
                 switch (Text(step, "lifecycle", string.Empty))
                 {
@@ -110,6 +139,13 @@ public static partial class GameplayTestSystemProbe
                     animation.AdvancePresentation((float)Number(step, "deltaTime", .08d));
 
                 Vector3 offset = visual.transform.position - visualPosition;
+                bool hasBaseMatrix = animation.TryGetBaseVisualMatrix(visual.transform, out Matrix4x4 baseMatrix);
+                Matrix4x4 expectedBaseMatrix = root.transform.localToWorldMatrix *
+                    Matrix4x4.TRS(visualLocalPosition, visualLocalRotation, visualLocalScale);
+                float baseMatrixError = 0f;
+                if (hasBaseMatrix)
+                    for (int index = 0; index < 16; index++)
+                        baseMatrixError = Mathf.Max(baseMatrixError, Mathf.Abs(baseMatrix[index] - expectedBaseMatrix[index]));
                 samples.Add(new JObject
                 {
                     ["x"] = offset.x, ["y"] = offset.y, ["z"] = offset.z,
@@ -129,6 +165,11 @@ public static partial class GameplayTestSystemProbe
                     ["attacking"] = animation.IsAttackPlaying,
                     ["componentEnabled"] = animation.enabled,
                     ["bodyAnimatorEnabled"] = sourceAnimator != null && sourceAnimator.enabled,
+                    ["legacyStateAccepted"] = legacyStateAccepted,
+                    ["legacyMoveAccepted"] = legacyMoveAccepted,
+                    ["hasBaseMatrix"] = hasBaseMatrix,
+                    ["basePositionError"] = hasBaseMatrix ? Vector3.Distance(visualPosition, baseMatrix.MultiplyPoint3x4(Vector3.zero)) : -1f,
+                    ["baseMatrixError"] = hasBaseMatrix ? baseMatrixError : -1f,
                     ["loaded"] = animation.IsRuntimeLoaded
                 });
             }
@@ -136,10 +177,27 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
-            try { if (animation != null) animation.Unload(); }
+            try
+            {
+                try { if (animation != null) animation.Unload(); }
+                finally { if (motionSource != null) motionSource.Unload(); }
+            }
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
     }
 
+    #endregion
+}
+
+internal sealed class GameplayTestAnimationMotionSource : Module, IActorAnimationMotionSource
+{
+    #region 独立主动表现信号
+    private Ex_ModData_MemoryPackable data = new();
+    public override ModuleData _Data { get => data; set => data = (Ex_ModData_MemoryPackable)value; }
+    public bool Available;
+    public ActorAnimationMotion Motion;
+    public bool TryGetAnimationMotion(out ActorAnimationMotion motion) { motion = Motion; return Available; }
+    protected override void OnLoad() { }
+    protected override void OnSave() { }
     #endregion
 }

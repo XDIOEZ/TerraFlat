@@ -29,6 +29,13 @@ local function checkAnimationBoundary(data)
             "单图动作修改了物品根旋转或缩放")
         assert(sample.localPositionError < .00001 and sample.localRotationError < .001 and sample.localScaleError < .00001,
             "单图表现覆盖了原贴图节点的局部姿态")
+        if not sample.parentRestored then
+            assert(sample.hasBaseMatrix, "活动单图层没有提供基础几何矩阵")
+        end
+        if sample.hasBaseMatrix then
+            assert(sample.basePositionError < .0002 and sample.baseMatrixError < .0002,
+                "单图基础几何矩阵仍含程序姿态，或丢失原贴图与外部父层变换")
+        end
         for _, field in ipairs({"x", "y", "z", "angle", "scaleX", "scaleY"}) do
             assert(type(sample[field]) == "number" and sample[field] == sample[field] and math.abs(sample[field]) < math.huge,
                 "单图姿态含无效数值：" .. field)
@@ -155,3 +162,40 @@ test.system("item_runtime", "single_sprite_animation", {withAnimator = true, ste
     assert(data.samples[5].componentEnabled and data.samples[5].attacking and data.samples[5].x > .04,
         "重新启用动画组件后无法正常播放新攻击")
 end, "单图组件停用拒绝攻击跳跃受击且恢复身体Animator")
+
+local motionSteps = {{moving = true, source = {y = .3, roll = 12},
+    legacyState = "Walk", legacyMove = true, deltaTime = .08}}
+for index = 2, 21 do motionSteps[index] = {moving = false, source = {moving = true}, deltaTime = .08} end
+for index = 22, 37 do motionSteps[index] = {velocityX = 4, source = {moving = false}, deltaTime = .08} end
+motionSteps[38] = {source = {available = false}, deltaTime = .08}
+motionSteps[39] = {source = {moving = true, y = .3, roll = 12}, sourceEnabled = false, deltaTime = .08}
+motionSteps[40] = {sourceEnabled = true, deltaTime = .08}
+test.system("item_runtime", "single_sprite_animation", {withMotionSource = true, withAnimator = true, steps = motionSteps}, function(data)
+    checkAnimationBoundary(data)
+    local first = data.samples[1]
+    assert(math.abs(first.y - .3) < .0001 and math.abs(first.angle - 12) < .005,
+        "特殊移动信号没有优先于Mover，或已有高度倾角没有交给共用表现层")
+    assert(first.hasBaseMatrix and first.basePositionError < .0002 and first.baseMatrixError < .0002,
+        "特殊视觉偏移改变了提供给物理系统的基础几何位置")
+    assert(first.legacyStateAccepted and first.legacyMoveAccepted and not first.bodyAnimatorEnabled,
+        "单图通用旧状态入口没有被接管或重新启用了身体Animator")
+    local left, right = false, false
+    for index = 2, 21 do
+        left = left or data.samples[index].angle < -.1
+        right = right or data.samples[index].angle > .1
+    end
+    assert(left and right, "飞行或游动主动信号没有驱动共用左右摆动")
+    for _, index in ipairs({37, 38, 39}) do
+        assert(data.samples[index].bodySpeed > 3, "被动风速夹具没有保留真实刚体速度")
+        checkAnimationRest(data.samples[index])
+    end
+    assert(data.samples[40].y > .3, "重新启用主动表现信号后没有恢复共用动画")
+end, "特殊主动信号、旧状态接管、被动风速拒绝与来源启停")
+
+test.system("item_runtime", "single_sprite_animation", {network = true, withMotionSource = true, steps = {
+    {moving = false, source = {moving = true, y = .3, roll = 12}, deltaTime = .08},
+    {moving = false, deltaTime = .08}
+}}, function(data)
+    checkAnimationBoundary(data)
+    for _, sample in ipairs(data.samples) do checkAnimationRest(sample) end
+end, "单图远端显式状态优先于本地特殊来源")

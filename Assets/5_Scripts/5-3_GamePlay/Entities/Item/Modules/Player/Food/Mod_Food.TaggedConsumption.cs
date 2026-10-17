@@ -48,9 +48,13 @@ public partial class Mod_Food
                 if (data is ModData_FoodData candidate) { food = candidate; break; }
         if (food?.EnsureFoodData()?.nutrition == null) return false;
         Nutrition gain = ScaleNutrition(snapshot, food.EnsureFoodData().nutrition);
+        Vector2 direction = DroppedItemService.TryGetPickablePosition(handle, out Vector2 foodPosition)
+            ? WorldTopologyRuntime.ShortestDelta(item.transform.position, foodPosition) : Vector2.zero;
         if (!DroppedItemService.TryConsumeTagged(handle, item.transform.position, reach, tag, 1)) return false;
         Data.nutrition = Data.nutrition + gain;
         NotifyStateChanged();
+        if (item != null && !item.DestructionHandled)
+            item.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver)?.PlayAttack(direction);
         return true;
     }
 

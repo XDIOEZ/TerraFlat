@@ -364,6 +364,8 @@ public sealed partial class Mod_BeeBehavior
         }
         if (stingRemaining > 0f)
             return;
+        item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver)?.PlayAttack(
+            WorldTopologyRuntime.ShortestDelta(item.transform.position, position));
         receiver.Hurt(this);
         stingRemaining = StingInterval;
     }

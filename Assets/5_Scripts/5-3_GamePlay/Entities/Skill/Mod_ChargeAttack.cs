@@ -225,6 +225,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
         LockMoverTarget();
         _mover.SetDestination(_rushEndPosition, true);
         SetHitboxEnabled(true);
+        _animator?.PlayAttack(_rushDirection);
         PlayPhaseAnimation(_definition.RushAnimation);
         ScanCurrentOverlapsAndApplyDamage();
     }

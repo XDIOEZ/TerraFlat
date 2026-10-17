@@ -90,6 +90,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     public Vector2 Destination => destination;
     public Vector2 ResolvedDestination => resolvedDestination;
     public Vector2 Velocity => body != null ? body.velocity : fallbackVelocity;
+    public Vector2 DrivenVelocity => fallbackVelocity; // 动画等表现只读取主动导航速度，不把环境推动算作迈步。
     public int PathRevision => pathRevision;
     public WorldNavigationDestinationResult DestinationResult { get; private set; }
 

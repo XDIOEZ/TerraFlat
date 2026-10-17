@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1001}
+  - component: {fileID: 1002}
+  m_Layer: 0
+  m_Name: Module_SingleSpriteController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4e8bb15551ea6f4fb256384eee0f13b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    StableName: animator
+    ModuleId: "\u52A8\u753B\u63A5\u6536\u6A21\u5757"
+    enabled: 1
+    Type: 0
+    BitData:
+  animator: {fileID: 0}
+  visualMode: 1
+  targetSpriteRenderer: {fileID: 0}
+  spriteVisualRoot: {fileID: 0}
+  additionalVisualRoots: []
+  targetRb: {fileID: 0}
+  walkSwingAngle: 8
+  walkSwingSpeed: 12
+  walkBobAmount: 0.04
+  walkReturnSpeed: 12
+  runSwingMultiplier: 1.2
+  runSpeedMultiplier: 1.5
+  idleBreathAmount: 0.008
+  attackDashDistance: 0.22
+  attackDashForwardTime: 0.06
+  attackDashBackTime: 0.12
+  autoAttackDirection: 1
+  attackDirection: {x: 1, y: 0}
+  jumpHeight: 0.32
+  jumpDuration: 0.42
+  jumpSquash: 0.08

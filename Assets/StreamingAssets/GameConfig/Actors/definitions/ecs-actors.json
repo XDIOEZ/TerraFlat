@@ -29,6 +29,11 @@
         "animatorControllerAddress": "flatworld.actor.animator.zombie"
       },
       "modules": {
+        "animator": {
+          "parameters": {
+            "visualMode": 1
+          }
+        },
         "pressure": {
           "enabled": false
         },

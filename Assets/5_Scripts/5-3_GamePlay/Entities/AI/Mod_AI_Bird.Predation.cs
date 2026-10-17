@@ -224,6 +224,7 @@ public sealed partial class Mod_AI_Bird : IAquaticPredatorThreat
                 fishPredationDamageOverride = Mathf.Min(Mathf.Max(0f, fishDiveDamage), Mathf.Max(0f, receiver.Hp - 0.01f));
                 try
                 {
+                    PlayPredationAnimation(fishHuntTarget.ActorItem);
                     receiver.Hurt((IDamageSender)this);
                 }
                 finally
@@ -326,6 +327,7 @@ public sealed partial class Mod_AI_Bird : IAquaticPredatorThreat
         if (fishHuntTimer > 0f) return true;
         fishHuntTimer = Mathf.Max(0.1f, fishFinishAttackInterval);
         Mod_DamageReceiver receiver = fishHuntTarget.ActorItem.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (receiver != null) PlayPredationAnimation(fishHuntTarget.ActorItem);
         receiver?.Hurt((IDamageSender)this);
         if (!fishHuntTarget.IsAlive)
             BeginFishMeatSearch(body.position);

@@ -52,6 +52,18 @@
         }
       },
       "modules": {
+        "animator": {
+          "prefab": "Module_SingleSpriteController",
+          "id": "动画接收模块",
+          "enabled": true,
+          "parameters": {
+            "visualMode": 1,
+            "walkSwingAngle": 5.0,
+            "walkSwingSpeed": 10.0,
+            "walkBobAmount": 0.0,
+            "idleBreathAmount": 0.004
+          }
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",

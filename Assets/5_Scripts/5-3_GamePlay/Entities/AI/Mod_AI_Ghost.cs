@@ -25,7 +25,7 @@ public partial class GhostAISaveData
 /// 幽灵自身所在位置的亮度严格大于 0.5 时持续添加“光耀” Buff，亮度小于等于 0.5 时移除；视觉子节点以低幅度正弦曲线上下浮动，
 /// 浮动只作用于 Sprite，不改变根物体、碰撞体、寻路位置和伤害判定。
 /// </summary>
-public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
+public partial class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
 {
     public const string ModuleId = "Mod_AI_Ghost";
     private const string RadianceBuffId = "光耀";
@@ -138,6 +138,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         _hasMoveTarget = Data.HasWanderTarget;
         _state = GhostState.Wander;
         _decisionTimer = 0f;
+        BindGhostPresentation();
     }
 
     private void EnsureNavigationAgent()
@@ -164,6 +165,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
 
     public override void ModUpdate(float deltaTime)
     {
+        _animationDrivenVelocity = Vector2.zero;
         if (item == null ||
             item.itemData == null ||
             GameManager.Instance == null ||
@@ -328,6 +330,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         Vector2 nextPosition = distance <= stepDistance
             ? targetPresentation
             : currentPosition + delta / distance * stepDistance;
+        _animationDrivenVelocity = deltaTime > 0f ? (nextPosition - currentPosition) / deltaTime : Vector2.zero;
         // 幽灵直追不经导航刚体速度，仍须叠加与其它生物相同的表层水流位移。
         Vector2 currentVelocity = WorldMotionSystem.SampleWaterVelocity(
             item.transform.position, WaterCurrentPushConfigService.ResolvePushSpeed(item));
@@ -355,6 +358,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
 
     private void StopMoving()
     {
+        _animationDrivenVelocity = Vector2.zero;
         _pathAgent?.Stop();
     }
 
@@ -363,6 +367,7 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
     /// <summary>由 ItemMgr 越界回调撤销旧路径和物理速度。</summary>
     public void OnSimulationRangePaused()
     {
+        _animationDrivenVelocity = Vector2.zero;
         _pathAgent?.Stop();
         if (_rigidbody != null) _rigidbody.velocity = Vector2.zero;
     }
@@ -492,6 +497,11 @@ public class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
     {
         if (visualTransform == null)
             return;
+        if (_animationBody != null && _animationBody.IsSingleSpriteMode)
+        {
+            visualTransform.localPosition = _visualBaseLocalPosition;
+            return;
+        }
 
         float angle = Time.time * Mathf.Max(0f, bobFrequency) * Mathf.PI * 2f + _bobPhase;
         float offset = Mathf.Sin(angle) * Mathf.Max(0f, bobHeight);

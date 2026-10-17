@@ -109,7 +109,7 @@
             "Type": 0
           },
           "parameters": {
-            "visualMode": 0,
+            "visualMode": 1,
             "moveDetectSpeed": 0.05,
             "walkSwingAngle": 8.0,
             "walkSwingSpeed": 12.0,
@@ -1412,7 +1412,7 @@
             "Type": 0
           },
           "parameters": {
-            "visualMode": 0,
+            "visualMode": 1,
             "moveDetectSpeed": 0.05,
             "walkSwingAngle": 8.0,
             "walkSwingSpeed": 12.0,
@@ -2099,7 +2099,7 @@
             "Type": 0
           },
           "parameters": {
-            "visualMode": 0,
+            "visualMode": 1,
             "moveDetectSpeed": 0.05,
             "walkSwingAngle": 8.0,
             "walkSwingSpeed": 12.0,
@@ -2296,6 +2296,18 @@
         "animatorControllerAddress": "flatworld.actor.animator.ghost"
       },
       "modules": {
+        "animator": {
+          "prefab": "Module_SingleSpriteController",
+          "id": "动画接收模块",
+          "enabled": true,
+          "parameters": {
+            "visualMode": 1,
+            "walkSwingAngle": 6.0,
+            "walkSwingSpeed": 10.0,
+            "walkBobAmount": 0.035,
+            "idleBreathAmount": 0.008
+          }
+        },
         "damage": {
           "prefab": "Mod_Damage",
           "id": "Ghost",

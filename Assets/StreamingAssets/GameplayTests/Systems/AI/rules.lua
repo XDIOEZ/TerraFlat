@@ -1,3 +1,38 @@
+-- 所有正式物种都要在最终继承配置中启用单图，新增控制器只提供能力而不额外画身体。
+test.system("ai", "single_sprite_catalog", {}, function(data)
+    assert(#data.actors >= 12, "正式 Actor Manifest 缺少已有物种")
+    local ghost, fish = false, false
+    for _, actor in ipairs(data.actors) do
+        assert(actor.hasAnimatorModule and actor.hasControllerPrototype and actor.enabled and actor.visualMode == 1,
+            "正式物种没有启用可装配的单图动画：" .. actor.id)
+        if actor.id == "Ghost" or actor.id == "SmallFish" then
+            assert(actor.bodyRendererCount == 1 and actor.moduleRendererCount == 0,
+                "幽灵或鱼的新增动画模块重复创建了身体 Renderer：" .. actor.id)
+            assert(actor.moduleColliderCount == 0 and actor.moduleBodyCount == 0,
+                "纯动画控制器带入了额外碰撞体或刚体：" .. actor.id)
+            ghost = ghost or actor.id == "Ghost"
+            fish = fish or actor.id == "SmallFish"
+        end
+    end
+    assert(ghost and fish, "单图动画目录缺少幽灵或小鱼")
+end, "正式全物种单图模式与幽灵小鱼纯控制器")
+
+test.system("ai", "single_sprite_aquatic", {}, function(data)
+    for _, sample in ipairs({data.swimming, data.stranded, data.carried}) do
+        assert(sample.singleSprite and sample.positionError < .00001 and sample.rotationError < .001,
+            "鱼单图接管后旧游动或搁浅表现仍直接叠加原节点姿态")
+        assert(sample.rootPositionError < .00001, "鱼外观表现改动了权威根位置")
+    end
+    assert(data.swimming.swimming and data.swimming.height == 0 and data.swimming.roll == 0,
+        "真实水生游动没有提供主动动画信号")
+    assert(not data.stranded.swimming and math.abs(data.stranded.height - .24) < .00001 and data.stranded.roll == 18,
+        "搁浅的已有高度倾角没有交给共用动画")
+    assert(not data.carried.swimming and math.abs(data.carried.height - .4) < .00001 and data.carried.roll == 0,
+        "被携带的鱼误播游动或丢失已有外观高度")
+    assert(not data.animatorSwimming.singleSprite and data.animatorSwimming.swimming and data.animatorSwimming.rotationError > .1,
+        "鱼切回原模式后独立游动表现没有恢复")
+end, "鱼单图接管不双叠旧摆动且保留搁浅携带信号")
+
 test.system("ai", "line_of_sight_batch", {}, function(data)
     assert(not data.unknownSameCell and data.loadedSameCell and data.blockedEndpointsIgnored,
         "视线起终点加载资格或同格/端点阻挡豁免改变")

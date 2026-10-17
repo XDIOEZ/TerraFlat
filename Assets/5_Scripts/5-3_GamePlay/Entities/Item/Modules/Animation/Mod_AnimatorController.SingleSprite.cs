@@ -49,6 +49,8 @@ public partial class Mod_AnimatorController
     private Mod_Mover _presentationMover;
     private Mod_FocusPoint _presentationFocus;
     private Mod_TurnBack _presentationTurn;
+    private Mod_DamageReceiver _presentationHealth;
+    private IActorAnimationMotionSource _presentationMotionSource;
     private Item _presentationOwner;
     private bool _sourcesCached;
     private Animator _suppressedAnimator;
@@ -126,9 +128,16 @@ public partial class Mod_AnimatorController
             return;
         }
         if (!PreparePresentation()) return;
+        if (_presentationHealth != null && _presentationHealth.Hp <= 0f)
+        {
+            ResetPresentation();
+            return;
+        }
 
         float step = Mathf.Max(0f, deltaTime);
-        ResolveLocomotion(out bool moving, out bool running);
+        ActorAnimationMotion motion = ResolveAnimationMotion();
+        bool moving = motion.IsMoving;
+        bool running = moving && motion.IsRunning;
         bool fullBodyAction = _attackElapsed >= 0f || _jumpElapsed >= 0f;
         _walkBlend = Mathf.MoveTowards(_walkBlend, moving && !fullBodyAction ? 1f : 0f,
             step * Mathf.Max(0.01f, walkReturnSpeed));
@@ -140,8 +149,8 @@ public partial class Mod_AnimatorController
 
         float swing = Mathf.Sin(_walkPhase * Mathf.Max(0f, walkSwingSpeed));
         float walkStrength = _walkBlend * (running ? runSwingMultiplier : 1f);
-        float angle = swing * walkSwingAngle * walkStrength;
-        Vector3 worldOffset = Vector3.up * (Mathf.Abs(swing) * walkBobAmount * walkStrength);
+        float angle = motion.RollDegrees + swing * walkSwingAngle * walkStrength;
+        Vector3 worldOffset = motion.WorldOffset + Vector3.up * (Mathf.Abs(swing) * walkBobAmount * walkStrength);
         float breath = !moving && !fullBodyAction ? Mathf.Sin(_idlePhase) * idleBreathAmount : 0f;
         Vector3 scale = new Vector3(1f - breath * 0.5f, 1f + breath, 1f);
 
@@ -213,6 +222,15 @@ public partial class Mod_AnimatorController
         _presentationMover = item?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         _presentationFocus = item?.itemMods?.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
         _presentationTurn = item?.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
+        _presentationHealth = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        _presentationMotionSource = null;
+        if (item?.itemMods != null)
+            foreach (Module module in item.itemMods.Mods.Values)
+                if (module is IActorAnimationMotionSource source)
+                {
+                    _presentationMotionSource = source;
+                    break;
+                }
     }
 
     private void ClearPresentationSources()
@@ -223,6 +241,8 @@ public partial class Mod_AnimatorController
         _presentationMover = null;
         _presentationFocus = null;
         _presentationTurn = null;
+        _presentationHealth = null;
+        _presentationMotionSource = null;
     }
 
     private bool CanStartSingleSpriteAction() =>
@@ -251,10 +271,12 @@ public partial class Mod_AnimatorController
 
         // 只暂停当前角色明确绑定的 Animator，武器与子物品动画保持自己的时序。
         if (animator == null) animator = GetComponent<Animator>();
+        if (animator == null) animator = targetSpriteRenderer.GetComponent<Animator>();
         _suppressedAnimator = animator;
         if (_suppressedAnimator != null)
         {
             _animatorWasEnabled = _suppressedAnimator.enabled;
+            SampleInitialSingleSpriteFrame();
             _suppressedAnimator.enabled = false;
         }
         _bodyLayer = new SingleSpriteVisualLayer(spriteVisualRoot);
@@ -275,6 +297,44 @@ public partial class Mod_AnimatorController
             }
         }
         return true;
+    }
+
+    private void SampleInitialSingleSpriteFrame()
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || item?.itemData == null ||
+            !resources.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
+            !definition.IsActor || string.IsNullOrWhiteSpace(definition.Visual?.AnimationState) ||
+            !_suppressedAnimator.gameObject.activeInHierarchy || _suppressedAnimator.runtimeAnimatorController == null)
+            return;
+
+        // 外壳可被多物种共用，激活后只采正式初态图片一次，再保留 JSON 与朝向模块的姿态。
+        Transform visual = targetSpriteRenderer.transform;
+        Vector3 position = visual.localPosition;
+        Quaternion rotation = visual.localRotation;
+        Vector3 scale = visual.localScale;
+        Color color = targetSpriteRenderer.color;
+        bool flipX = targetSpriteRenderer.flipX, flipY = targetSpriteRenderer.flipY;
+        _suppressedAnimator.enabled = true;
+        try
+        {
+            if (!_suppressedAnimator.isInitialized) _suppressedAnimator.Rebind();
+            RefreshControllerCache();
+            if (!TryResolveState(definition.Visual.AnimationState, 0, out int layer, out int stateHash))
+                throw new InvalidOperationException($"生物 {definition.Id} 无法采样初始动画 {definition.Visual.AnimationState}。");
+            _suppressedAnimator.Play(stateHash, layer, 0f);
+            _suppressedAnimator.Update(0f);
+        }
+        finally
+        {
+            visual.localPosition = position;
+            visual.localRotation = rotation;
+            visual.localScale = scale;
+            targetSpriteRenderer.color = color;
+            targetSpriteRenderer.flipX = flipX;
+            targetSpriteRenderer.flipY = flipY;
+            _suppressedAnimator.enabled = _animatorWasEnabled;
+        }
     }
 
     private bool IsVisualOnlyRoot(Transform root)
@@ -348,20 +408,58 @@ public partial class Mod_AnimatorController
         }
         return false;
     }
+
+    public bool TryGetBaseVisualMatrix(Transform visual, out Matrix4x4 localToWorld)
+    {
+        localToWorld = default;
+        if (visual == null) return false;
+        SingleSpriteVisualLayer layer = _bodyLayer;
+        if (layer == null || !layer.IsBound || (visual != layer.Root && !visual.IsChildOf(layer.Root)))
+        {
+            layer = null;
+            for (int i = 0; i < _additionalLayers.Count; i++)
+            {
+                SingleSpriteVisualLayer candidate = _additionalLayers[i];
+                if (candidate.IsBound && (visual == candidate.Root || visual.IsChildOf(candidate.Root)))
+                {
+                    layer = candidate;
+                    break;
+                }
+            }
+        }
+        if (layer == null) return false;
+        // 需要贴图几何的物理系统读取基础矩阵，程序摇摆与前探不会改变命中范围。
+        Matrix4x4 parentMatrix = layer.PoseRoot.parent != null ? layer.PoseRoot.parent.localToWorldMatrix : Matrix4x4.identity;
+        localToWorld = parentMatrix * layer.PoseRoot.worldToLocalMatrix * visual.localToWorldMatrix;
+        return true;
+    }
     #endregion
 
     #region 动作信号与采样
     private void ResolveLocomotion(out bool moving, out bool running)
     {
+        ActorAnimationMotion motion = ResolveAnimationMotion();
+        moving = motion.IsMoving;
+        running = moving && motion.IsRunning;
+    }
+
+    private ActorAnimationMotion ResolveAnimationMotion()
+    {
         if (_networkPresentationActive)
-        {
-            moving = _networkIsMoving;
-            running = moving && _networkIsRunning;
-            return;
-        }
-        moving = _presentationMover is Mod_Mover_AI aiMover ? aiMover.IsActuallyMoving :
+            return new ActorAnimationMotion { IsMoving = _networkIsMoving, IsRunning = _networkIsRunning };
+        bool sourceAlive = _presentationMotionSource != null &&
+            !(_presentationMotionSource is UnityEngine.Object unitySource && unitySource == null);
+        if (sourceAlive && _presentationMotionSource is Module sourceModule)
+            sourceAlive = sourceModule.IsRuntimeLoaded && sourceModule.Enabled && sourceModule.isActiveAndEnabled;
+        if (sourceAlive && _presentationMotionSource.TryGetAnimationMotion(out ActorAnimationMotion motion))
+            return motion;
+        bool moving = _presentationMover is Mod_Mover_AI aiMover ? aiMover.IsActuallyMoving :
             _presentationMover != null ? _presentationMover.IsMoving : _requestedMoving;
-        running = moving && (_presentationMover != null ? _presentationMover.IsRunning : _requestedRunning);
+        return new ActorAnimationMotion
+        {
+            IsMoving = moving,
+            IsRunning = moving && (_presentationMover != null ? _presentationMover.IsRunning : _requestedRunning)
+        };
     }
 
     private Vector2 ResolveAttackDirection()

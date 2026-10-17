@@ -51,7 +51,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 非 Actor 定义须显式提供或继承正数 `weight/volume` 与明确的 `stackable`；冷载荷表现外壳也遵守此契约。
 - `ModuleJsonConfigurator` 对 Item/Actor 参数采用严格契约；向量 JSON 显式写 x/y/z，Unity Vector 的计算属性不能交给 `JToken.FromObject`。显示名 gameName 属于具体定义；业务 id、翻译键和 `formerIds` 别名各自独立。
 - `GameRes.ResourceAssets` 持有 Sprite/材质/动画/外壳句柄。Shell 使用 Sprite Pivot 排序，子装饰以根 SortingGroup 保持整体深度；材质池复用恢复配置值或外壳默认值。通用占位图为 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，标签 ItemSprite。
-- 生物动画共用 `Entities/Item/Modules/Animation/Mod_AnimatorController`：`visualMode` 选择 Animator 或 SingleSprite，单图只驱动显式视觉子节点；移动使用主动状态，水流、承载等被动位移不算迈步。攻击、跳跃分别调用 `PlayAttack(worldDirection)`、`PlayJump()`，动画不负责伤害、位移或跳跃物理。
+- 生物动画共用 `Entities/Item/Modules/Animation/Mod_AnimatorController`：`visualMode` 选择 Animator 或 SingleSprite，单图只驱动显式视觉子节点。移动优先级为远端显式状态→已加载且启用的 `IActorAnimationMotionSource`→Mover；来源报告主动移动及外观 `WorldOffset/RollDegrees`，被动位移不算迈步。攻击、跳跃调用 `PlayAttack(worldDirection)`、`PlayJump()`，动画不负责伤害或物理。
 - 单图动作通过独立父层组合，不改原视觉 localPose、Item 根或刚体；只暂停身体 Animator，附加视觉拒绝刚体/碰撞体，手持武器沿正式命中姿态链。切模式/卸载恢复父级与同级顺序并保留最新翻面；停用组件拒绝新动作，停用 GO 先归零表现层，正式卸载再解除。回归归属 `item_runtime/single_sprite_animation`，独立规则不代表动作观感已验收。
 - F5 `RefreshLiveConfiguration` 原位更新改变的显式参数和仍受定义控制的视觉，不替换 ItemData/模块集合或重新 Load；结构与删除参数后的默认值应用于新实例。`ApplyResourceConfiguration/OnResourcesReloaded` 保留进度并更新缓存/订阅。发布时清闲置池并禁用活跃旧实例回池。
 - 恢复先重建当前定义，再按稳定模块名合并实例状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配保留时间、次数和初始化标记。制作耐久倍率进入实例堆叠身份。

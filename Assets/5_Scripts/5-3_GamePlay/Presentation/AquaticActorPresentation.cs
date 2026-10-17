@@ -20,6 +20,7 @@ public sealed class AquaticActorPresentation : IDisposable
     private readonly Material originalMaterial;
     private readonly Material underwaterMaterial;
     private readonly WorldSortingMember sorting;
+    private readonly Mod_AnimatorController animationBody;
     private bool? isUnderwater;
     private Vector2 lastPosition;
     private float swimSwayPhase;
@@ -28,6 +29,12 @@ public sealed class AquaticActorPresentation : IDisposable
     private float carriedVisualHeight;
     private float strandedHopHeight;
     private float strandedHopTilt;
+    private bool presentationUnderwater;
+    public bool UseSingleSpriteAnimation => animationBody != null && animationBody.IsSingleSpriteMode;
+    public bool IsSwimming { get; private set; }
+    public Vector3 VisualWorldOffset => owner.transform.TransformVector(Vector3.up *
+        (carried ? carriedVisualHeight : presentationUnderwater ? 0f : strandedHopHeight));
+    public float VisualRollDegrees => presentationUnderwater || carried ? 0f : strandedHopTilt;
     #endregion
 
     #region 初始化
@@ -35,6 +42,7 @@ public sealed class AquaticActorPresentation : IDisposable
     {
         this.owner = owner;
         this.renderer = renderer;
+        animationBody = owner.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
         visualTransform = renderer.transform;
         originalLocalPosition = visualTransform.localPosition;
         originalLocalRotation = visualTransform.localRotation;
@@ -75,10 +83,11 @@ public sealed class AquaticActorPresentation : IDisposable
     #region 水下排序与游动表现
     public void Tick(bool underwater, float deltaTime)
     {
+        presentationUnderwater = underwater && !carried;
         SetUnderwater(underwater && !carried);
         if (visualTransform != null)
-            visualTransform.localPosition = originalLocalPosition + Vector3.up *
-                (carried ? carriedVisualHeight : underwater ? 0f : strandedHopHeight);
+            visualTransform.localPosition = originalLocalPosition + (UseSingleSpriteAnimation ? Vector3.zero : Vector3.up *
+                (carried ? carriedVisualHeight : underwater ? 0f : strandedHopHeight));
         UpdateSwimMotion(underwater && !carried, deltaTime);
     }
 
@@ -118,6 +127,14 @@ public sealed class AquaticActorPresentation : IDisposable
             renderer.flipX = movement.x < 0f ? !originalFlipX : originalFlipX;
 
         bool moving = underwater && movement.sqrMagnitude >= MovingThresholdSqr && deltaTime > 0f;
+        IsSwimming = moving;
+        if (UseSingleSpriteAnimation)
+        {
+            // 游动与离水翻摆交给共同表现层，水生表现只保留朝向、材质和已有高度信号。
+            swimSwayPhase = currentSwayDegrees = 0f;
+            visualTransform.localRotation = originalLocalRotation;
+            return;
+        }
         if (moving)
         {
             swimSwayPhase = Mathf.Repeat(swimSwayPhase + deltaTime * SwimSwayCyclesPerSecond, 1f);
@@ -138,6 +155,7 @@ public sealed class AquaticActorPresentation : IDisposable
     #region 释放
     public void Dispose()
     {
+        IsSwimming = false;
         if (renderer != null)
         {
             renderer.sharedMaterial = originalMaterial;
@@ -149,7 +167,11 @@ public sealed class AquaticActorPresentation : IDisposable
             visualTransform.localPosition = originalLocalPosition;
         }
         if (sorting != null && renderer != null) sorting.Bind(WorldSortingManager.CreatureCategory, renderer, owner);
-        if (underwaterMaterial != null) UnityEngine.Object.Destroy(underwaterMaterial);
+        if (underwaterMaterial != null)
+        {
+            if (Application.isPlaying) UnityEngine.Object.Destroy(underwaterMaterial);
+            else UnityEngine.Object.DestroyImmediate(underwaterMaterial);
+        }
     }
     #endregion
 }

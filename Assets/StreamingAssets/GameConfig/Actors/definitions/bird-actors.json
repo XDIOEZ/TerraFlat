@@ -45,6 +45,15 @@
         }
       },
       "modules": {
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "walkSwingAngle": 6.0,
+            "walkSwingSpeed": 10.0,
+            "walkBobAmount": 0.025,
+            "idleBreathAmount": 0.006
+          }
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",
@@ -164,6 +173,11 @@
       "gameName": "海鸥",
       "description": "仅在沙滩群系生态生成的鸟类变体。",
       "modules": {
+        "animator": {
+          "parameters": {
+            "visualMode": 1
+          }
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",
@@ -235,6 +249,15 @@
         }
       },
       "modules": {
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "walkSwingAngle": 5.0,
+            "walkSwingSpeed": 14.0,
+            "walkBobAmount": 0.015,
+            "idleBreathAmount": 0.004
+          }
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",
