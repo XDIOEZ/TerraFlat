@@ -123,31 +123,34 @@
     "cue": "player.footstep.snow",
     "name": "雪地脚步",
     "variant": 1,
-    "seconds": 0.32,
-    "peakDb": -18,
-    "rmsDb": -32,
+    "seconds": 0.45,
+    "peakDb": -7.0,
+    "rmsDb": -21.63,
     "startSeconds": 24.125,
-    "file": "Assets/Audio/Generated/player.footstep.snow__01.wav"
+    "file": "Assets/Audio/Generated/player.footstep.snow__01.wav",
+    "externalManifest": "SoundDesign/Snow_Footsteps/manifest.json"
   },
   {
     "cue": "player.footstep.snow",
     "name": "雪地脚步",
     "variant": 2,
-    "seconds": 0.32,
-    "peakDb": -18,
-    "rmsDb": -32,
+    "seconds": 0.51,
+    "peakDb": -8.15,
+    "rmsDb": -22.81,
     "startSeconds": 26.125,
-    "file": "Assets/Audio/Generated/player.footstep.snow__02.wav"
+    "file": "Assets/Audio/Generated/player.footstep.snow__02.wav",
+    "externalManifest": "SoundDesign/Snow_Footsteps/manifest.json"
   },
   {
     "cue": "player.footstep.snow",
     "name": "雪地脚步",
     "variant": 3,
-    "seconds": 0.32,
-    "peakDb": -18,
-    "rmsDb": -32,
+    "seconds": 0.49,
+    "peakDb": -7.72,
+    "rmsDb": -22.44,
     "startSeconds": 28.125,
-    "file": "Assets/Audio/Generated/player.footstep.snow__03.wav"
+    "file": "Assets/Audio/Generated/player.footstep.snow__03.wav",
+    "externalManifest": "SoundDesign/Snow_Footsteps/manifest.json"
   },
   {
     "cue": "player.footstep.water",

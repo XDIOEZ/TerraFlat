@@ -588,13 +588,21 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceFootstepSurface(JObject args)
     {
         // 合成边界输入交给正式选音规则，Lua 自行断言深水不发脚步等语义。
+        float waterDepth = (float)Number(args, "water", 0);
+        float snowDepth = (float)Number(args, "snow", 0);
         string cueId = Mod_Mover.ResolveFootstepCue(
             (int)Number(args, "biome", 4),
-            (float)Number(args, "water", 0),
-            (float)Number(args, "snow", 0),
+            waterDepth,
+            snowDepth,
             Flag(args, "support", false),
             (byte)Math.Clamp((int)Number(args, "grass", 0), 0, 255));
-        return new JObject { ["cue"] = cueId ?? string.Empty, ["silent"] = cueId == null };
+        return new JObject
+        {
+            ["cue"] = cueId ?? string.Empty,
+            ["silent"] = cueId == null,
+            ["volume"] = Mod_Mover.ResolveFootstepDepthVolume(cueId, waterDepth, snowDepth),
+            ["pitch"] = Mod_Mover.ResolveFootstepDepthPitch(cueId, snowDepth)
+        };
     }
 
     private static JObject ServiceAudioInventoryCue(JObject args)

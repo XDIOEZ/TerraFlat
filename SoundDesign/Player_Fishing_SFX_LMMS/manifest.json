@@ -1,5 +1,5 @@
 {
-  "engine": "LMMS 1.2.2 via MCP",
+  "engine": "LMMS 1.2.2 via MCP; snow: CC0 field recording",
   "sampleRate": 48000,
   "channels": 1,
   "sounds": [
@@ -151,37 +151,43 @@
       "cue": "player.footstep.snow",
       "name": "雪地脚步",
       "variant": 1,
-      "seconds": 0.32,
-      "peakDb": -18.0,
-      "rmsDb": -38.36,
+      "seconds": 0.45,
+      "peakDb": -7.0,
+      "rmsDb": -21.63,
       "startSeconds": 24.125,
       "file": "Assets/Audio/Generated/player.footstep.snow__01.wav",
       "guid": "d99f18f551404a52a6b684ed78863b38",
-      "sha256": "9bec294ec0b21d5d4925896ed4de30662ec05dba927ff55d02e2a41bf0a637b9"
+      "sha256": "8cb11af28111a89e0d4ee8a8d7f423951aa2502b1df39bb4ed3bf8a8a59588ab",
+      "sourceFile": "Sources/snow_step_dry-01.flac",
+      "externalManifest": "SoundDesign/Snow_Footsteps/manifest.json"
     },
     {
       "cue": "player.footstep.snow",
       "name": "雪地脚步",
       "variant": 2,
-      "seconds": 0.32,
-      "peakDb": -18.0,
-      "rmsDb": -38.81,
+      "seconds": 0.51,
+      "peakDb": -8.15,
+      "rmsDb": -22.81,
       "startSeconds": 26.125,
       "file": "Assets/Audio/Generated/player.footstep.snow__02.wav",
       "guid": "4f6a53468d524e43b7dda013defe8100",
-      "sha256": "ec3af2309f93c16d9fd9e9ddde7ae51ad0b66b28fded5c1e57095f1c20b5b743"
+      "sha256": "df566129f7f94867f80e15f99fc8700a9b4656f407857d3fcd52fbf3e364b987",
+      "sourceFile": "Sources/snow_step_dry-03.flac",
+      "externalManifest": "SoundDesign/Snow_Footsteps/manifest.json"
     },
     {
       "cue": "player.footstep.snow",
       "name": "雪地脚步",
       "variant": 3,
-      "seconds": 0.32,
-      "peakDb": -18.0,
-      "rmsDb": -37.71,
+      "seconds": 0.49,
+      "peakDb": -7.72,
+      "rmsDb": -22.44,
       "startSeconds": 28.125,
       "file": "Assets/Audio/Generated/player.footstep.snow__03.wav",
       "guid": "d7527b3370c34aebbb423af65b3d367e",
-      "sha256": "e295d122a020a63b19a0a09eb2b5b455b246f8490be3ad1d5de534fc937e75f2"
+      "sha256": "dc51b6847509c312babbb65a311907c237f48ed4ceadfeb84bb94e335e281735",
+      "sourceFile": "Sources/snow_step_dry-04.flac",
+      "externalManifest": "SoundDesign/Snow_Footsteps/manifest.json"
     },
     {
       "cue": "player.footstep.water",

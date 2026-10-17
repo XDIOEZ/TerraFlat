@@ -326,3 +326,54 @@ for _, row in ipairs({
             "物品材质/重量/体积/数量音效映射错误：" .. tostring(row.expected))
     end, "物品取放音效：" .. (row.expected == "" and "无效参数" or row.expected))
 end
+
+-- 十档只采样正式脚步规则，Lua 检查逐级加重和边界，不重算插值算法。
+local previous_snow_volume = 0
+local previous_snow_pitch = 2
+for layer = 1, 10 do
+    test.system("audio", "footstep_surface", { snow = layer / 10, grass = 2 }, function(data)
+        assert(data.cue == "player.footstep.snow" and not data.silent, "第 " .. layer .. " 层未选雪地脚步")
+        assert(data.volume > previous_snow_volume and data.pitch < previous_snow_pitch,
+            "积雪加深时响度未逐档增强或压雪声未逐档变厚：" .. layer)
+        assert(data.volume >= 0.44999 and data.volume <= 1.60001 and data.pitch >= 0.85999 and data.pitch <= 1.10001,
+            "雪地脚步倍率越出浅雪与深雪范围")
+        if layer == 1 then
+            assert(math.abs(data.volume - 0.45) < 0.00001 and math.abs(data.pitch - 1.10) < 0.00001,
+                "一层雪没有使用轻、短的脚步参数")
+        elseif layer == 10 then
+            assert(math.abs(data.volume - 1.60) < 0.00001 and math.abs(data.pitch - 0.86) < 0.00001,
+                "十层雪没有使用更响、更厚的压雪参数")
+        end
+        previous_snow_volume = data.volume
+        previous_snow_pitch = data.pitch
+    end, "雪深逐层增强：" .. layer .. " 层")
+end
+
+for _, row in ipairs({
+    { snow = -1, grass = 2, cue = "player.footstep.grass", volume = 1, pitch = 1 },
+    { snow = 0, grass = 2, cue = "player.footstep.grass", volume = 1, pitch = 1 },
+    { snow = 0.05, grass = 2, cue = "player.footstep.grass", volume = 1, pitch = 1 },
+    { snow = 0.0501, grass = 2, cue = "player.footstep.snow", volume = 0.45, pitch = 1.10 },
+    { snow = 0.0999, cue = "player.footstep.snow", volume = 0.45, pitch = 1.10 },
+    { snow = 0.1001, cue = "player.footstep.snow", volume = 0.57777778, pitch = 1.07333333 },
+    { snow = 0.1999, cue = "player.footstep.snow", volume = 0.57777778, pitch = 1.07333333 },
+    { snow = 1.0001, cue = "player.footstep.snow", volume = 1.60, pitch = 0.86 },
+    { snow = 2, cue = "player.footstep.snow", volume = 1.60, pitch = 0.86 },
+    { snow = 1000, cue = "player.footstep.snow", volume = 1.60, pitch = 0.86 },
+    { biome = 2, snow = 0, grass = 2, cue = "player.footstep.sand", volume = 1, pitch = 1 },
+    { biome = 3, snow = 0, cue = "player.footstep.sand", volume = 1, pitch = 1 },
+    { biome = 7, snow = 0, cue = "player.footstep.stone", volume = 1, pitch = 1 },
+    { snow = 0, support = true, grass = 2, cue = "player.footstep.stone", volume = 1, pitch = 1 },
+    { snow = 0, cue = "player.footstep.dirt", volume = 1, pitch = 1 },
+    { snow = 0.1, support = true, cue = "player.footstep.snow", volume = 0.45, pitch = 1.10 },
+    { water = 0.0301, snow = 1, cue = "player.footstep.water", volume = 0.1, pitch = 1 },
+    { water = 0.3, snow = 2, cue = "player.footstep.water", volume = 0.72222222, pitch = 1 },
+    { water = 0.3001, snow = 2, cue = "", volume = 1, pitch = 1 },
+    { water = 0.55, snow = 1, cue = "", volume = 1, pitch = 1 }
+}) do
+    test.system("audio", "footstep_surface", row, function(data)
+        assert(data.cue == row.cue and data.silent == (row.cue == ""), "雪声改变了无雪或地表材质优先级")
+        assert(math.abs(data.volume - row.volume) < 0.00001, "雪层量化、声音封顶或原材质音量错误")
+        assert(math.abs(data.pitch - row.pitch) < 0.00001, "雪层音高或非雪脚步原音高错误")
+    end, "雪声量化与材质隔离：雪=" .. tostring(row.snow) .. "，水=" .. tostring(row.water or 0))
+end

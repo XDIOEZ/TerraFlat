@@ -1,0 +1,54 @@
+{
+  "title": "4 dry snow steps",
+  "author": "Iwan \"qubodup\" Gabovitch",
+  "pageUrl": "https://opengameart.org/content/4-dry-snow-steps",
+  "retrievedOn": "2026-10-18",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "downloadUrl": "https://opengameart.org/sites/default/files/qubodup-snow_steps_dry_0.7z",
+  "archiveSha256": "44b2ead054a341bfa80842fdee85d2fc8a2da1ee202daf4ef114ca7a944fd329",
+  "licenseEvidence": "Sources/info.txt",
+  "originalFormat": "44.1 kHz stereo FLAC; original files preserved unchanged",
+  "usage": "Adapted recording used by player.footstep.snow, not merely a style reference",
+  "processing": {
+    "sampleRate": 48000,
+    "highpassHz": 55,
+    "transientPercentile": 90,
+    "transientRatio": 3,
+    "transientWindowSeconds": 0.002,
+    "transientSmoothSeconds": 0.001,
+    "commonGainDb": 25.5,
+    "peakCeilingDb": -7,
+    "headFadeSeconds": 0.002,
+    "tailFadeSeconds": 0.02
+  },
+  "segments": [
+    {
+      "variant": 1,
+      "sourceFile": "Sources/snow_step_dry-01.flac",
+      "sourceSha256": "9a9d7f3ae42f4eeaf075a505c36f299ae4759cb3f9ba4792d6bc08e4b0a9c0e4",
+      "startSeconds": 0,
+      "seconds": 0.45,
+      "file": "Assets/Audio/Generated/player.footstep.snow__01.wav",
+      "guid": "d99f18f551404a52a6b684ed78863b38"
+    },
+    {
+      "variant": 2,
+      "sourceFile": "Sources/snow_step_dry-03.flac",
+      "sourceSha256": "411173d7a0a4a6a3ac357a4fefb54566cfbefc19e1e15e00b6d0d975dcc20f7e",
+      "startSeconds": 0,
+      "seconds": 0.51,
+      "file": "Assets/Audio/Generated/player.footstep.snow__02.wav",
+      "guid": "4f6a53468d524e43b7dda013defe8100"
+    },
+    {
+      "variant": 3,
+      "sourceFile": "Sources/snow_step_dry-04.flac",
+      "sourceSha256": "d023bf389904b3063251441e327d0bb5b5f8292ecd8361b3297734b80256a236",
+      "startSeconds": 0,
+      "seconds": 0.49,
+      "file": "Assets/Audio/Generated/player.footstep.snow__03.wav",
+      "guid": "d7527b3370c34aebbb423af65b3d367e"
+    }
+  ]
+}

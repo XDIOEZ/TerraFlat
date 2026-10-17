@@ -55,11 +55,8 @@ def specs():
                      noise(3900, .001, .038, volume=45),
                      tone(key=52, levels=(41, 17, 6), decay=.032,
                           cutoff=3600, volume=19, delay=.025)]),
-        dict(cue="player.footstep.snow", name="雪地脚步", seconds=.32, variants=3, peakDb=-18, rmsDb=-32,
-             layers=[noise(1600, .014, .11, volume=46),
-                     noise(4050, .007, .065, volume=39,
-                           repeats=((.049, .2),)),
-                     tone(key=31, levels=(52, 16, 6), decay=.075, cutoff=1100, volume=19)]),
+        dict(cue="player.footstep.snow", name="雪地脚步", seconds=.51, variants=3, peakDb=-7, rmsDb=-22,
+             externalManifest="SoundDesign/Snow_Footsteps/manifest.json"),
         dict(cue="player.footstep.water", name="浅水脚步", seconds=.37, variants=3, peakDb=-15, rmsDb=-30,
              layers=[tone(key=38, levels=(62, 14, 8), coarse=(0, 8, 17),
                           fine=(0, -17, 27), decay=.092, cutoff=1150, volume=34),
@@ -89,6 +86,20 @@ def specs():
 
 
 # region LMMS 原生编排
+def external_sound(cue, variant):
+    sound = next((entry for entry in specs() if entry["cue"] == cue), {})
+    if "externalManifest" not in sound:
+        return None
+    path = PROJECT / sound["externalManifest"]
+    assert path.is_file(), f"Run SoundDesign/Snow_Footsteps/prepare_snow.py prepare first: {path}"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    entry = next(entry for entry in manifest["sounds"] if entry["cue"] == cue and entry["variant"] == variant)
+    asset = PROJECT / entry["file"]
+    assert asset.is_file() and hashlib.sha256(asset.read_bytes()).hexdigest() == entry["sha256"], \
+        f"Rebuild external recorded sound before finalizing: {asset}"
+    return entry
+
+
 def build():
     tree = ET.parse(SFX_ROOT / "MCP_Base.mmp")
     template = tree.find(".//track")
@@ -100,10 +111,18 @@ def build():
     slot = 0
     for sound in specs():
         for variant in range(1, sound["variants"] + 1):
-            layout.append(dict(cue=sound["cue"], name=sound["name"], variant=variant,
-                               seconds=sound["seconds"], peakDb=sound["peakDb"],
-                               rmsDb=sound["rmsDb"], startSeconds=slot * 2 + .125,
-                               file=f"Assets/Audio/Generated/{sound['cue']}__{variant:02}.wav"))
+            entry = dict(cue=sound["cue"], name=sound["name"], variant=variant,
+                         seconds=sound["seconds"], peakDb=sound["peakDb"],
+                         rmsDb=sound["rmsDb"], startSeconds=slot * 2 + .125,
+                         file=f"Assets/Audio/Generated/{sound['cue']}__{variant:02}.wav")
+            external = external_sound(sound["cue"], variant)
+            if external:
+                # 实录成品独立重建，保留槽位防止后续钓鱼片段偏移。
+                entry.update({key: external[key] for key in ("seconds", "peakDb", "rmsDb", "externalManifest")})
+                layout.append(entry)
+                slot += 1
+                continue
+            layout.append(entry)
             # 草地使用实录鞋底压草和草叶摩擦，重建工程时也保留真实采样。
             if "recording" in sound:
                 sample = ROOT / "Sources" / f"{sound['recording']}_{variant:02}.wav"
@@ -144,7 +163,9 @@ def build():
     tree.write(ROOT / "Player_Fishing.mmp", encoding="utf-8", xml_declaration=True)
     (ROOT / "layout.json").write_text(json.dumps(layout, ensure_ascii=False, indent=2) + "\n",
                                       encoding="utf-8")
-    print(f"Prepared {len(layout)} LMMS events across {len(specs())} Cues")
+    external_count = sum("externalManifest" in entry for entry in layout)
+    print(f"Prepared {len(layout) - external_count} LMMS events and {external_count} external recordings "
+          f"across {len(specs())} Cues; all {len(layout)} slots retained")
 # endregion
 
 
@@ -158,6 +179,11 @@ def finalize(only_grass=False):
     assert len(raw) >= round(max(x["startSeconds"] + x["seconds"] for x in layout) * RATE)
     manifest, clips = [], {}
     for entry in layout:
+        external = external_sound(entry["cue"], entry["variant"])
+        if external:
+            # 连旧母带也只复用已核验的实录雪声，不覆盖正式素材。
+            manifest.append(dict(entry, **external))
+            continue
         start, end = (round(time * RATE) for time in
                       (entry["startSeconds"], entry["startSeconds"] + entry["seconds"]))
         audio = raw[start:end].mean(axis=1)
@@ -212,9 +238,9 @@ def finalize(only_grass=False):
                                   np.zeros(round(.16 * RATE))))
     sfx.write_wave(ROOT / "Preview_Grass.wav", np.concatenate(grass_preview * 2))
     (ROOT / "manifest.json").write_text(json.dumps(dict(
-        engine="LMMS 1.2.2 via MCP", sampleRate=RATE, channels=1, sounds=manifest),
+        engine="LMMS 1.2.2 via MCP; snow: CC0 field recording", sampleRate=RATE, channels=1, sounds=manifest),
         ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Updated {len(cue_guids)} Cues and {len(layout)} LMMS clips")
+    print(f"Finalized {len(layout)} clips; updated {len(cue_guids)} LMMS Cues and retained external recordings")
 
 
 def verify():
