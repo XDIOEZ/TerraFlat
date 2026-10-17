@@ -68,7 +68,7 @@ internal sealed class WorkbenchMachinePanelSession : MachinePanelSession
             var logic = (WorkbenchLogic)Logic;
             BasePanel panel = CreatePanel(logic.PanelPrefab);
             BindSlots(panel, logic.Input, "输入");
-            BindSlots(panel, logic.Output, "输出");
+            BindSlots(panel, logic.Output, "输出", allowDirectionalDeposit: false);
             controller = new CraftingStationController(panel, logic.Input, logic.Output,
                 logic.Processor.Capabilities, () => logic.RequiredClicks, () => Actor,
                 authoritativeProcessor: logic.Processor,
@@ -101,7 +101,7 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
             furnace = (FurnaceLogic)Logic;
             BasePanel panel = CreatePanel(furnace.PanelPrefab);
             BindSlots(panel, furnace.Input, "输入");
-            BindSlots(panel, furnace.Output, "输出");
+            BindSlots(panel, furnace.Output, "输出", allowDirectionalDeposit: false);
             BindSlots(panel, furnace.FuelInventory, "燃料");
             BindActionButton(panel.GetButton("合成按钮")
                 ?? throw new InvalidOperationException("熔炉面板缺少合成按钮。"));
@@ -186,7 +186,7 @@ internal sealed class FireDrillMachinePanelSession : MachinePanelSession
             fireDrill = (FireDrillLogic)Logic;
             BasePanel panel = CreatePanel(fireDrill.PanelPrefab);
             BindSlots(panel, fireDrill.Heater.Input, "输入");
-            BindSlots(panel, fireDrill.Heater.Output, "输出");
+            BindSlots(panel, fireDrill.Heater.Output, "输出", allowDirectionalDeposit: false);
             BindActionButton(panel.GetButton("合成按钮")
                 ?? throw new InvalidOperationException("取火面板缺少摩擦按钮。"));
             preview = CraftingOutputPreview.Attach(panel, fireDrill.Heater.Output.itemSlot_UI[0]);

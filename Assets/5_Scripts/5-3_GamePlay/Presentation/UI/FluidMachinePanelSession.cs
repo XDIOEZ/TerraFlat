@@ -66,7 +66,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         MachineWorld.RequestOperation(logic.Entity, "begin-interaction", "", actor);
         panel.GetComponent<BuildingPanelActions>()?.BindMechanical(logic.Entity);
         if (input != null) { input.DefaultTarget_Inventory = hand; input.SyncQuickTransferTarget(panel); input.RefreshUI(); }
-        if (output != null) { output.DefaultTarget_Inventory = hand; output.SyncQuickTransferTarget(panel); output.RefreshUI(); }
+        if (output != null) { output.DefaultTarget_Inventory = hand; output.SyncQuickTransferTarget(panel, allowDirectionalDeposit: false); output.RefreshUI(); }
         bool probe = logic.Definition.Kind is "mechanical-probe" or "electronic-probe";
         bool settings = probe || logic.Definition.Kind is "selector" or "compressor";
         primary.gameObject.SetActive(settings); secondary.gameObject.SetActive(probe); apply.gameObject.SetActive(settings);
@@ -124,7 +124,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         if (refresh != null && panel != null) panel.StopCoroutine(refresh); refresh = null;
         actor = null;
         if (input != null) { input.DefaultTarget_Inventory = null; input.SyncQuickTransferTarget(null); }
-        if (output != null) { output.DefaultTarget_Inventory = null; output.SyncQuickTransferTarget(null); }
+        if (output != null) { output.DefaultTarget_Inventory = null; output.SyncQuickTransferTarget(null, allowDirectionalDeposit: false); }
     }
     public void Close() { OnClosed(); if (panel != null) panel.Close(); }
     public void Dispose()

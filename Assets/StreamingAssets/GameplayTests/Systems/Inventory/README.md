@@ -4,6 +4,8 @@
 
 - `rules.lua`：调用真实 `Inventory_Data` 扣除和跨库存转移，覆盖整堆/分堆、外来槽拒绝、超扣拒绝、入库门禁、槽上限、数量质量守恒、重量/体积约束、玩家宽限、创造容量、品质/特殊载荷堆叠身份及大数量转换。
 - `rules.lua` 的甩动轨迹：调用正式 `InventoryFlickGesture`，覆盖距离/速度门槛、快拖后停住、轻微抖动、来回划动、负向/斜向、按住后再甩、Canvas 缩放、同帧跳变和取消清理。
+- `rules.lua` 的方向与预检：调用正式 `InventoryFlickTargets.SelectClosestDirection` 检查右/下/斜向、角度优先于距离、非零起点、同角度稳定顺序、零方向及非有限输入拒绝；原事务用例增加 `GetTransferableQuantityTo` 与实际收货数量一致、预检不改物品/不发刷新事件及外来槽拒绝。
+- `gameplay.lua` 的方向甩动：临时正式 Canvas/BasePanel 与独立正式物品库存通过 `SyncQuickTransferTarget → InventoryFlickTargets.Resolve → 拖拽来源校验 → OnTouchFlickTransfer`，检查右/下/斜向、满格/入库门禁/标签/承载受限跳过、全部满格时留源、部分接收余物留源、关闭/隐藏/禁用/释放/陈旧绑定排除、显式输出排除、同面板两个独立库存，以及实际收货动画反馈和数量守恒；另验证 PC Shift 保持原最近容器目标。夹具同步期间临时禁用已有候选组件，finally 恢复，提交前仅允许自有目标，不污染玩家库存。采样不派发触屏事件，不替代手机手感、真实布局、Hotbar 手持同步和联机收发验收。
 - `gameplay.lua` 的甩动事务：通过独立正式库存的 `OnMouseDragBegin → TryConsumeSourceItem → ExecuteMachineTransfer(quick)`，检查整组/部分接收、满槽拒绝时余物留原槽、换物后的陈旧来源拒绝、数量守恒、重复提交及来源占用清理；不替代 EventSystem 与手机实机手势验收。
 - `gameplay.lua` 的快速转移反馈：经正式 `ExecuteMachineTransfer(quick)`，采集 `InventoryQuickTransferFeedbackEvents`，检查先合并旧堆再填空槽的每个实际目标/数量、提交时两端状态已生效、失败和越界不发成功反馈、来源剩余和总数量守恒；另检查远端执行表现抑制范围仍发布精确回执且禁止 Host 本地播放。此项检查事务与反馈契约，不验证 0.24 秒飞行动画的屏幕路径、遮罩或手机显示，也未覆盖远端 token/快照回执收发。
 - `gameplay.lua` 的权威回执回放：网络程序集 `GameplayTestQuickTransferFeedback` 注册 `inventory/quick_transfer_receipts`，直接调用正式 `PublishQuickTransferReceipts`，检查有效两目标回放，以及重复槽、越界、GUID 不符、数量超额、非有限数、超过 256 条时整批静默；回放不修改库存。此项不启动 Host/Client，不验证消息传输、token 或快照实际应用。
@@ -14,3 +16,4 @@
 - 当前状态：2026-10-15 既有规则与初始化关键流程曾执行通过；2026-10-17 新增的装备配置回归尚未编译或运行，遵循用户自行验收及不中断正在使用的 PlayMode 的要求。
 - 2026-10-17 新增甩动识别规则与库存事务回归尚未编译或运行，按用户要求留待自行验收；真实指针派发、松手目标优先级、长按拆半互斥与手机手感仍需实机确认。
 - 2026-10-17 新增逐格快速转移反馈断言尚未编译或运行；动画显示、关闭/虚拟化清理和联机精确回执需用户验收。
+- 2026-10-17 新增方向甩动候选与只读预检回归尚未编译或运行，遵循用户自行验收；遮罩裁剪、实际手机窗口位置变化和多窗口层级遮挡仍需实机确认。

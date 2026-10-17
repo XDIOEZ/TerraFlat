@@ -21,6 +21,7 @@ public static partial class GameplayTestRuntimeProbe
         ["inventory/creative_restore"] = RestoreCreativeInventoryScope,
         ["inventory/direct_drag"] = CaptureInventoryDirectDrag,
         ["inventory/flick_transfer"] = CaptureInventoryFlickTransfer,
+        ["inventory/directional_flick"] = CaptureInventoryDirectionalFlick,
         ["inventory/quick_transfer_feedback"] = CaptureInventoryQuickTransferFeedback,
         ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
         ["inventory/equipment_configuration"] = CaptureEquipmentConfiguration,

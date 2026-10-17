@@ -64,6 +64,9 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
+    /// <summary>手机甩动传递屏幕起点和净方向，与桌面固定目标入口分开。</summary>
+    public System.Action<int, Vector2, Vector2> OnTouchFlickTransfer { get; set; }
+
     /// <summary>鼠标或触屏拖拽开始时，创建保留来源槽的拖拽事务。</summary>
     public System.Func<int, InventoryDragTransaction> OnMouseDragBegin { get; set; }
 
@@ -219,6 +222,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnLeftClick.Clear();
         OnGamepadSubmit.Clear();
         OnShiftQuickTransfer.Clear();
+        OnTouchFlickTransfer = null;
         OnMouseDragBegin = null;
         OnMouseDragDrop = null;
         ItemAddedAtPointer = null;
@@ -673,11 +677,12 @@ public class ItemSlot_UI : MonoBehaviour,
                         touchFlickMinimumDistance, touchFlickMinimumSpeed);
                 if (flick)
                 {
-                    // 复用 PC 快速转移，并让原拖拽事务验证来源；失败仍留原槽，不回退手部槽。
+                    // 先验证原拖拽来源，再按甩动方向选择库存；失败仍留原槽。
                     activeDragTransaction?.TryConsumeSourceItem(sourceItem =>
                     {
                         if (!ReferenceEquals(GetSlotData()?.itemData, sourceItem)) return false;
-                        OnShiftQuickTransfer.Invoke(slotIndex);
+                        Vector2 origin = touchFlickGesture.ScreenOrigin;
+                        OnTouchFlickTransfer?.Invoke(slotIndex, origin, eventData.position - origin);
                         return true;
                     });
                 }

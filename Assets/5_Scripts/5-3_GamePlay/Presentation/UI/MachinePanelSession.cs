@@ -24,7 +24,7 @@ public class MachinePanelSession : IMachinePanelSession
 {
     #region 面板绑定
     private readonly List<BasePanel> panels = new();
-    private readonly List<(Inventory Inventory, BasePanel Panel)> inventoryPanels = new();
+    private readonly List<(Inventory Inventory, BasePanel Panel, bool AllowDirectionalDeposit)> inventoryPanels = new();
     private Button actionButton;
     private bool disposed;
     protected MachineEntity Entity { get; }
@@ -74,9 +74,9 @@ public class MachinePanelSession : IMachinePanelSession
         return panel;
     }
 
-    protected void BindSlots(BasePanel panel, Inventory inventory, string prefix)
+    protected void BindSlots(BasePanel panel, Inventory inventory, string prefix, bool allowDirectionalDeposit = true)
     {
-        TrackInventory(inventory, panel);
+        TrackInventory(inventory, panel, allowDirectionalDeposit);
         inventory.itemSlot_UI.Clear();
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
@@ -89,7 +89,8 @@ public class MachinePanelSession : IMachinePanelSession
     }
 
     // 各专属绑定器登记同一真实库存，关闭只解除交互引用。
-    protected void TrackInventory(Inventory inventory, BasePanel panel) => inventoryPanels.Add((inventory, panel));
+    protected void TrackInventory(Inventory inventory, BasePanel panel, bool allowDirectionalDeposit = true) =>
+        inventoryPanels.Add((inventory, panel, allowDirectionalDeposit));
 
     protected void BindActionButton(Button button)
     {
@@ -117,7 +118,7 @@ public class MachinePanelSession : IMachinePanelSession
         foreach (var binding in inventoryPanels)
         {
             binding.Inventory.DefaultTarget_Inventory = hand;
-            binding.Inventory.SyncQuickTransferTarget(binding.Panel);
+            binding.Inventory.SyncQuickTransferTarget(binding.Panel, binding.AllowDirectionalDeposit);
             binding.Inventory.RefreshUI();
         }
         Refresh();
@@ -153,7 +154,7 @@ public class MachinePanelSession : IMachinePanelSession
         foreach (var binding in inventoryPanels)
         {
             binding.Inventory.DefaultTarget_Inventory = null;
-            binding.Inventory.SyncQuickTransferTarget(null);
+            binding.Inventory.SyncQuickTransferTarget(null, binding.AllowDirectionalDeposit);
         }
         Actor = null;
     }

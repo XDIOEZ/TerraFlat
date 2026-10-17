@@ -37,6 +37,42 @@ for _, mode in ipairs({"valid", "duplicate", "invalid_slot", "wrong_guid", "over
             "回执表现回放修改了已经确认的真实库存数量")
     end, "快速转移权威回执回放：" .. mode)
 end
+local directionalFlicks = {
+    {mode = "right", selected = "right", source = 0, right = 6, down = 0},
+    {mode = "pc", selected = "right", receipt = "down", source = 0, right = 0, down = 6},
+    {mode = "down", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "diagonal", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "partial", selected = "right", source = 4, right = 2, down = 0},
+    {mode = "none", selected = "none", source = 6, right = 0, down = 0},
+    {mode = "full", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "blocked", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "tag", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "capacity", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "closed", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "hidden", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "disabled", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "output", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "released", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "stale_mapping", selected = "down", source = 0, right = 0, down = 6},
+    {mode = "same_panel", selected = "down", source = 0, right = 0, down = 6}
+}
+for _, case in ipairs(directionalFlicks) do
+    test.runtime("inventory", "directional_flick", case, function(data)
+        assert(data.selected == case.selected and data.unchangedAfterSelection,
+            "候选方向/实际容量/可见性筛选错误，或选目标时提前修改了库存")
+        assert(data.consumed and data.moved == (case.selected ~= "none") and not data.dragLocked,
+            "方向甩动未走真实事务、无目标时错误转移或未释放来源")
+        assert(data.source.amount == case.source and data.right.amount == case.right and data.down.amount == case.down
+            and data.source.amount + data.right.amount + data.down.amount == 6,
+            "目标收货错误、余物继续散入其他库存或数量不守恒")
+        if case.selected == "none" then
+            assert(data.receipts == 0 and data.receiptTarget == "", "无接收面板时错误发布动画")
+        else
+            assert(data.receipts == 1 and data.receiptTarget == (case.receipt or case.selected),
+                "动画反馈不是实际收货格子，或 PC 固定目标被方向候选改变")
+        end
+    end, "按方向选择真实库存：" .. case.mode)
+end
 local flickTransfers = {
     {name = "整组转移", capacity = 10, source = 0, target = 6, moved = true, attempts = 1},
     {name = "只接收放得下的数量", capacity = 2, source = 4, target = 2, moved = true, attempts = 1},

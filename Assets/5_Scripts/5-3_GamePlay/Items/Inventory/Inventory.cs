@@ -166,6 +166,7 @@ public class Inventory
 
     // 快捷转移只用所属面板判断容器是否开放，不参与库存槽位 UI 的创建。
     private BasePanel _quickTransferOwnerPanel;
+    [NonSerialized, FastCloner.Code.FastClonerIgnore] private InventoryFlickTargets _flickTargets;
 
     // 拖拽期间保留来源槽；加工器可据此暂缓消费正在被玩家移动的物品。
     [NonSerialized] private Dictionary<ItemSlot, int> _activeDragSourceCounts;
@@ -371,6 +372,8 @@ public class Inventory
     /// <summary>库存退出运行时由拥有者销毁自己的面板，防止旧玩家 UI 留在跨场景根节点。</summary>
     public void ReleaseRuntimePanel()
     {
+        if (_flickTargets != null) _flickTargets.Unbind(this);
+        _flickTargets = null;
         BasePanel panel = basePanel;
         basePanel = null;
         if (panel != null)
@@ -711,6 +714,7 @@ public class Inventory
     /// <summary>统一完成库存面板的容量、搜索、排序和手柄导航绑定。</summary>
     private void CompleteUIInitialization(bool syncData)
     {
+        RegisterFlickTarget(basePanel, !IsHandInventory());
         BindCarryCapacityUI();
         if (syncData)
             SyncData();
@@ -786,6 +790,7 @@ public class Inventory
             itemSlotUI.OnGamepadSubmit.Clear();
             itemSlotUI._OnScroll.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
+            itemSlotUI.OnTouchFlickTransfer = null;
             itemSlotUI.OnMouseDragBegin = null;
             itemSlotUI.OnMouseDragDrop = null;
             itemSlotUI.OnTouchTap = null;
@@ -800,6 +805,7 @@ public class Inventory
             itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
+            itemSlotUI.OnTouchFlickTransfer = OnTouchFlickTransfer;
             itemSlotUI.OnMouseDragBegin = OnMouseDragBegin;
             itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
             itemSlotUI.OnTouchTap = OnTouchTap;
@@ -866,6 +872,7 @@ public class Inventory
         slotUI.OnGamepadSubmit.Clear();
         slotUI._OnScroll.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
+        slotUI.OnTouchFlickTransfer = null;
         slotUI.OnMouseDragBegin = null;
         slotUI.OnMouseDragDrop = null;
         slotUI.OnTouchTap = null;
@@ -880,6 +887,7 @@ public class Inventory
         slotUI.OnGamepadSubmit += OnGamepadSubmit;
         slotUI._OnScroll += OnScroll;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
+        slotUI.OnTouchFlickTransfer = OnTouchFlickTransfer;
         slotUI.OnMouseDragBegin = OnMouseDragBegin;
         slotUI.OnMouseDragDrop = OnMouseDragDrop;
         slotUI.OnTouchTap = OnTouchTap;
@@ -1930,6 +1938,25 @@ public class Inventory
     protected bool TryShiftQuickTransfer(int index)
     {
         Inventory targetInventory = ResolveShiftQuickTransferTarget();
+        return TryQuickTransferTo(index, targetInventory);
+    }
+
+    /// <summary>手机甩动以手指起点和方向选面板，复用正式转移、音频与逐格反馈。</summary>
+    public virtual void OnTouchFlickTransfer(int index, Vector2 origin, Vector2 direction)
+    {
+        TryTouchFlickTransfer(index, origin, direction);
+    }
+
+    protected bool TryTouchFlickTransfer(int index, Vector2 origin, Vector2 direction)
+    {
+        Inventory hotbar = GetPlayerHotBarInventory();
+        hotbar?.RegisterFlickTarget(hotbar.basePanel, true);
+        Inventory target = InventoryFlickTargets.Resolve(this, index, origin, direction);
+        return TryQuickTransferTo(index, target);
+    }
+
+    private bool TryQuickTransferTo(int index, Inventory targetInventory)
+    {
         if (!IsValidQuickTransferTarget(targetInventory) || targetInventory == this)
             return false;
 
@@ -1942,6 +1969,21 @@ public class Inventory
             PublishInventoryAudio(this, targetInventory, sourceItem,
                 GetCommittedTransferAmount(sourceSlot, sourceItem, before));
         return moved;
+    }
+
+    /// <summary>只读判断是否至少能收下一件，全部槽位复用正式接收策略和转移数量计算。</summary>
+    public bool CanQuickTransferTo(int sourceIndex, Inventory target)
+    {
+        ItemSlot source = Data?.GetItemSlot(sourceIndex);
+        if (source?.itemData?.Stack == null || target?.Data?.itemSlots == null ||
+            ReferenceEquals(Data, target.Data) || target.Data.IsDepositBlocked) return false;
+        foreach (ItemSlot destination in target.Data.itemSlots)
+        {
+            if (destination == null || !target.CanAcceptQuickTransfer(source, destination) ||
+                destination.itemData != null && !destination.itemData.CanStackWith(source.itemData)) continue;
+            if (Data.GetTransferableQuantityTo(source, target.Data, destination, int.MaxValue) > 0) return true;
+        }
+        return false;
     }
 
     private Inventory ResolveShiftQuickTransferTarget()
@@ -2157,9 +2199,10 @@ public class Inventory
     /// 将当前容器同步为快捷栏 Shift+左键的目标。
     /// 组合式面板（合成台、熔炉等）应把真正接收物品的输入 Inventory 传入此统一入口。
     /// </summary>
-    public void SyncQuickTransferTarget(BasePanel ownerPanel = null)
+    public void SyncQuickTransferTarget(BasePanel ownerPanel = null, bool allowDirectionalDeposit = true)
     {
         _quickTransferOwnerPanel = ownerPanel != null ? ownerPanel : basePanel;
+        RegisterFlickTarget(_quickTransferOwnerPanel, allowDirectionalDeposit && !IsHandInventory());
 
         if (IsHotBarInventory() || IsHandInventory())
             return;
@@ -2172,6 +2215,19 @@ public class Inventory
 
         if (LastOpenedContainer == this)
             LastOpenedContainer = null;
+    }
+
+    private void RegisterFlickTarget(BasePanel owner, bool allowed)
+    {
+        if (_flickTargets != null && (!allowed || owner == null || _flickTargets.gameObject != owner.gameObject))
+        {
+            _flickTargets.Unbind(this);
+            _flickTargets = null;
+        }
+        if (!allowed || owner == null) return;
+        _flickTargets = owner.GetComponent<InventoryFlickTargets>();
+        if (_flickTargets == null) _flickTargets = owner.gameObject.AddComponent<InventoryFlickTargets>();
+        _flickTargets.Bind(this, owner);
     }
 
     private bool IsHotBarInventory()

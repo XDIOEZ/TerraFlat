@@ -11,7 +11,27 @@ for _, case in ipairs(cases) do
         assert(not data.excessiveAccepted and not data.foreignAccepted, "超额或外来槽扣料被接受")
         assert(data.transferred == case.transferred and data.sourceAmount == case.source and data.targetAmount == case.target, "转移结果错误")
         assert(data.sourceAmount + data.targetAmount == 3 and data.totalWeight == 3, "跨库存数量或质量不守恒")
+        assert(data.preflightUnchanged and data.preflight == case.target and data.foreignPreflight == 0,
+            "只读预检改变数量/发布事件，或容量结果与正式转移不一致/接受外来槽")
     end, "库存事务：" .. case.name)
+end
+local directions = {
+    {name = "向右选右侧输入", origin = {0, 0}, direction = {1, 0}, targets = {{100, 0}, {0, -100}}, selected = 0},
+    {name = "向下选快捷栏", origin = {0, 0}, direction = {0, -1}, targets = {{100, 0}, {0, -100}}, selected = 1},
+    {name = "斜下更近下方夹角", origin = {0, 0}, direction = {0.3, -1}, targets = {{100, 0}, {0, -100}}, selected = 1},
+    {name = "角度优先于距离", origin = {0, 0}, direction = {1, 0}, targets = {{1000, 0}, {1, -1}}, selected = 0},
+    {name = "使用按下位置而非屏幕原点", origin = {800, 600}, direction = {0, -1}, targets = {{1200, 600}, {800, 100}}, selected = 1},
+    {name = "同角度保留稳定顺序", origin = {0, 0}, direction = {1, 0}, targets = {{1000, 0}, {10, 0}}, selected = 0},
+    {name = "只有背向目标也按夹角选择", origin = {0, 0}, direction = {1, 0}, targets = {{-100, 0}}, selected = 0},
+    {name = "零方向拒绝", origin = {0, 0}, direction = {0, 0}, targets = {{100, 0}}, selected = -1},
+    {name = "目标与起点重合拒绝", origin = {0, 0}, direction = {1, 0}, targets = {{0, 0}}, selected = -1},
+    {name = "非有限方向拒绝", invalid = "nan", origin = {0, 0}, direction = {1, 0}, targets = {{100, 0}}, selected = -1},
+    {name = "非有限起点拒绝", invalid = "infinity", origin = {0, 0}, direction = {1, 0}, targets = {{100, 0}}, selected = -1}
+}
+for _, case in ipairs(directions) do
+    test.system("inventory", "flick_direction", case, function(data)
+        assert(data.selected == case.selected and not data.nullSourceAccepted, "方向夹角排序或无效输入拒绝错误")
+    end, "手机甩动方向：" .. case.name)
 end
 local flicks = {
     {name = "快速甩动", points = {{0, 0, 0}, {0.04, 48, 0}, {0.08, 96, 0}}, accepted = true},

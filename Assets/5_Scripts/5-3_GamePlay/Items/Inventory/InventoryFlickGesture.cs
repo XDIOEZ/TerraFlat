@@ -13,6 +13,7 @@ public sealed class InventoryFlickGesture
     private readonly List<(Vector2 Position, double Time)> samples = new(32);
     private Vector2 origin;
     private float scale;
+    public Vector2 ScreenOrigin => origin * scale;
     #endregion
 
     #region 手势生命周期

@@ -774,43 +774,43 @@ public partial class Inventory_Data
         return true;
     }
 
+    /// <summary>只读预检复用正式转移的数量、堆叠及承载限制，不扣物品或发送事件。</summary>
+    public int GetTransferableQuantityTo(ItemSlot slotFrom, Inventory_Data targetInventory, ItemSlot slotTo, int upToCount)
+    {
+        if (slotFrom == null || targetInventory == null || slotTo == null || slotFrom == slotTo || upToCount <= 0 ||
+            itemSlots == null || targetInventory.itemSlots == null ||
+            !itemSlots.Contains(slotFrom) || !targetInventory.itemSlots.Contains(slotTo) ||
+            !ReferenceEquals(this, targetInventory) && targetInventory.IsDepositBlocked)
+            return 0;
+        ItemData from = slotFrom.itemData, to = slotTo.itemData;
+        if (from?.Stack == null || from.Stack.Amount < 1f || to != null &&
+            (to.Stack == null || !to.HasSameStackIdentity(from))) return 0;
+        if (!from.Stack.Stackable)
+            return to == null && (ReferenceEquals(this, targetInventory) ||
+                targetInventory.GetCapacityLimitedAmount(from, 1f) + .0001f >= 1f) ? 1 : 0;
+        int count = Mathf.Min(upToCount, GetWholeStackAmount(from.Stack.Amount));
+        count = Mathf.Min(count, GetWholeStackAmount(Mathf.Max(0f,
+            slotTo.SlotMaxVolume - (to?.Stack?.Amount ?? 0f)) + .0001f));
+        if (!ReferenceEquals(this, targetInventory))
+            count = Mathf.Min(count, GetWholeStackAmount(targetInventory.GetCapacityLimitedAmount(from, count) + .0001f));
+        return count;
+    }
+
     private bool TryTransferItemQuantityCore(
         ItemSlot slotFrom,
         Inventory_Data targetInventory,
         ItemSlot slotTo,
         int upToCount)
     {
-        if (slotFrom == null || targetInventory == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
-            return false;
-
-        if (!ReferenceEquals(this, targetInventory) && targetInventory.IsDepositBlocked)
-            return false;
-
+        int transferCount = GetTransferableQuantityTo(slotFrom, targetInventory, slotTo, upToCount);
+        if (transferCount <= 0) return false;
         var dataFrom = slotFrom.itemData;
-        if (dataFrom?.Stack == null || dataFrom.Stack.Amount < 1f)
-            return false;
-
         var dataTo = slotTo.itemData;
-        if (dataTo != null && dataTo.Stack == null)
-            return false;
-
-        // 若目标槽位已有物品，需确保ID与特殊数据一致
-        if (dataTo != null && !dataTo.HasSameStackIdentity(dataFrom))
-            return false;
 
         // 不可堆叠物品只能直接移动单件到空槽。
         if (!dataFrom.Stack.Stackable)
         {
-            // 非空槽位不能接收不可堆叠物品
-            if (dataTo != null)
-                return false;
-
-            if (!ReferenceEquals(this, targetInventory) &&
-                targetInventory.GetCapacityLimitedAmount(dataFrom, 1f) + 0.0001f < 1f)
-                return false;
-
             // 只允许转移一个
-            var singleData = dataFrom;
             if (dataFrom.Stack.Amount == 1)
             {
                 // 直接搬迁引用，不用 Clone（减少 GC）
@@ -833,20 +833,6 @@ public partial class Inventory_Data
 
         // 堆叠逻辑处理
         int availableSourceCount = GetWholeStackAmount(dataFrom.Stack.Amount);
-        int transferCount = Mathf.Min(upToCount, availableSourceCount);
-        if (transferCount <= 0)
-            return false;
-
-        float currentTargetAmount = dataTo?.Stack?.Amount ?? 0f;
-        int targetCapacity = GetWholeStackAmount(Mathf.Max(0f, slotTo.SlotMaxVolume - currentTargetAmount) + 0.0001f);
-        transferCount = Mathf.Min(transferCount, targetCapacity);
-        if (!ReferenceEquals(this, targetInventory))
-        {
-            float capacityAmount = targetInventory.GetCapacityLimitedAmount(dataFrom, transferCount);
-            transferCount = Mathf.Min(transferCount, GetWholeStackAmount(capacityAmount + 0.0001f));
-        }
-        if (transferCount <= 0)
-            return false;
 
         // 整堆移入空槽时直接搬迁引用，避免无意义克隆及重复实例标识。
         if (dataTo == null &&

@@ -40,6 +40,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
         operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
+        operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
         operations.Add("crafting/transaction", EntityCraftingTransaction);
         operations.Add("containers/composition", EntityContainerComposition);
@@ -621,6 +622,21 @@ public static partial class GameplayTestSystemProbe
     #region 独立库存与材料分配
 
     // Lua 提供轨迹和期望，采样只调用正式甩动识别器。
+    private static JObject EntityInventoryFlickDirection(JObject args)
+    {
+        Vector2 Read(JToken point) => new(point[0].Value<float>(), point[1].Value<float>());
+        Vector2 origin = Read(args["origin"]), direction = Read(args["direction"]);
+        if (Text(args, "invalid", "") == "nan") direction.x = float.NaN;
+        if (Text(args, "invalid", "") == "infinity") origin.y = float.PositiveInfinity;
+        JArray targets = (JArray)args["targets"];
+        var positions = new List<Vector2>(targets.Count);
+        for (int i = 0; i < targets.Count; i++)
+            positions.Add(Read(targets[i]));
+        int selected = InventoryFlickTargets.SelectClosestDirection(origin, direction, positions);
+        return new JObject { ["selected"] = selected,
+            ["nullSourceAccepted"] = InventoryFlickTargets.Resolve(null, 0, origin, direction) != null };
+    }
+
     private static JObject EntityInventoryFlickGesture(JObject args)
     {
         var points = (JArray)args["points"];
@@ -650,12 +666,21 @@ public static partial class GameplayTestSystemProbe
         float afterConsume = sourceSlot.itemData?.Stack.Amount ?? 0f;
         bool excessiveAccepted = source.TryConsumeFromSlot(sourceSlot, 1000, out _);
         bool foreignAccepted = source.TryConsumeFromSlot(destinationSlot, 1, out _);
+        int refreshes = 0;
+        source.Event_RefreshUI += _ => refreshes++;
+        destination.Event_RefreshUI += _ => refreshes++;
+        int preflight = source.GetTransferableQuantityTo(sourceSlot, destination, destinationSlot,
+            (int)Number(args, "transfer", 3d));
+        bool preflightUnchanged = sourceSlot.itemData?.Stack.Amount == afterConsume &&
+            destinationSlot.itemData == null && refreshes == 0;
+        int foreignPreflight = source.GetTransferableQuantityTo(destinationSlot, destination, sourceSlot, 1);
         bool transferred = source.TransferItemQuantityTo(sourceSlot, destination, destinationSlot, (int)Number(args, "transfer", 3d));
         float sourceAmount = sourceSlot.itemData?.Stack.Amount ?? 0f, targetAmount = destinationSlot.itemData?.Stack.Amount ?? 0f;
         return new JObject
         {
             ["consumed"] = consumed, ["afterConsume"] = afterConsume, ["excessiveAccepted"] = excessiveAccepted,
             ["foreignAccepted"] = foreignAccepted, ["transferred"] = transferred,
+            ["preflight"] = preflight, ["preflightUnchanged"] = preflightUnchanged, ["foreignPreflight"] = foreignPreflight,
             ["sourceAmount"] = sourceAmount, ["targetAmount"] = targetAmount,
             ["sourceEmpty"] = sourceSlot.itemData == null,
             ["totalWeight"] = source.CurrentCarryWeight + destination.CurrentCarryWeight
