@@ -449,13 +449,19 @@ public sealed class InputBindingService : IDisposable
             return;
 
         CancelActiveRebind();
-        inputAsset.RemoveAllBindingOverrides();
-        if (!string.IsNullOrWhiteSpace(settingsEditSessionBaselineJson))
-            inputAsset.LoadBindingOverridesFromJson(settingsEditSessionBaselineJson);
+        // 取消重绑后的覆盖没有变化时，直接结束会话，避免重解析输入和重建按键列表。
+        bool hasChanges = HasSettingsEditSessionChanges;
+        if (hasChanges)
+        {
+            inputAsset.RemoveAllBindingOverrides();
+            if (!string.IsNullOrWhiteSpace(settingsEditSessionBaselineJson))
+                inputAsset.LoadBindingOverridesFromJson(settingsEditSessionBaselineJson);
+        }
 
         settingsEditSessionActive = false;
         settingsEditSessionBaselineJson = null;
-        BindingsChanged?.Invoke();
+        if (hasChanges)
+            BindingsChanged?.Invoke();
     }
 
     #endregion

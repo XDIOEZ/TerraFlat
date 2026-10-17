@@ -45,6 +45,11 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ui_settings/navigation_policy", ServiceNavigationPolicy);
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
         operations.Add("ui_settings/dropdown_layout", ServiceDropdownLayout);
+        operations.Add("ui_settings/edit_session_values", ServiceSettingsSessionValues);
+        operations.Add("ui_settings/edit_session_commit", ServiceSettingsSessionCommit);
+        operations.Add("ui_settings/edit_session_participants", ServiceSettingsSessionParticipants);
+        operations.Add("ui_settings/edit_session_errors", ServiceSettingsSessionErrors);
+        operations.Add("ui_settings/input_binding_session", ServiceInputBindingEditSession);
         operations.Add("audio/bus_volume", ServiceAudioVolume);
         operations.Add("audio/catalog_lifecycle", ServiceAudioCatalog);
         operations.Add("audio/footstep_surface", ServiceFootstepSurface);

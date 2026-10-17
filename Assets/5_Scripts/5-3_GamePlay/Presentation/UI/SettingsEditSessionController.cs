@@ -113,7 +113,7 @@ public sealed class SettingsEditSessionController : MonoBehaviour
         BeginSession();
     }
 
-    /// <summary>关闭面板时放弃未保存修改并恢复运行时表现。</summary>
+    /// <summary>关闭面板时只还原发生变化的设置，未修改的会话不重复写盘。</summary>
     private void HandlePanelClosed()
     {
         CloseUnsavedConfirmation();
@@ -131,8 +131,12 @@ public sealed class SettingsEditSessionController : MonoBehaviour
                 this);
         }
 
-        bool restored = SettingsProviderRegistry.DiscardEditSession(out string error);
-        PlayerPrefs.Save();
+        bool restored = SettingsProviderRegistry.DiscardEditSession(
+            out string error,
+            out bool restoreAttempted);
+        // 按键放弃只恢复内存覆盖；只有设置恢复可能写入偏好时才同步保存。
+        if (restoreAttempted)
+            PlayerPrefs.Save();
         sessionActive = false;
         if (!restored && !string.IsNullOrEmpty(error))
         {

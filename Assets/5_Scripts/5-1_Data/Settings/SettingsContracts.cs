@@ -391,6 +391,13 @@ namespace FlatWorld.Settings
         /// <summary>恢复会话基线并收集无法还原的设置项错误。</summary>
         public static bool DiscardEditSession(out string error)
         {
+            return DiscardEditSession(out error, out _);
+        }
+
+        /// <summary>只恢复偏离基线的设置，并报告是否尝试过可能写入偏好的恢复动作。</summary>
+        public static bool DiscardEditSession(out string error, out bool restoreAttempted)
+        {
+            restoreAttempted = false;
             if (editSessionSnapshots == null)
             {
                 error = null;
@@ -401,7 +408,7 @@ namespace FlatWorld.Settings
             editSessionSnapshots = null;
             List<string> errors = new List<string>();
             for (int index = 0; index < snapshots.Count; index++)
-                RestoreProviderSnapshot(snapshots[index], errors);
+                RestoreProviderSnapshot(snapshots[index], errors, ref restoreAttempted);
 
             error = errors.Count == 0 ? null : string.Join("\n", errors);
             return errors.Count == 0;
@@ -541,16 +548,22 @@ namespace FlatWorld.Settings
             return snapshot;
         }
 
-        /// <summary>恢复一个 Provider 的全部控件和补充状态，同时继续处理后续字段。</summary>
+        /// <summary>恢复一个 Provider 的已改控件和补充状态，同时继续处理后续字段。</summary>
         private static void RestoreProviderSnapshot(
             ProviderEditSessionSnapshot snapshot,
-            List<string> errors)
+            List<string> errors,
+            ref bool restoreAttempted)
         {
             for (int index = 0; index < snapshot.Settings.Count; index++)
             {
                 SettingRestoreAction setting = snapshot.Settings[index];
                 try
                 {
+                    // 未修改的字段不再重复写偏好、切画质或广播运行时刷新。
+                    if (setting.HasChanged != null && !setting.HasChanged())
+                        continue;
+
+                    restoreAttempted = true;
                     string error = setting.Restore();
                     if (!string.IsNullOrEmpty(error))
                         errors.Add($"{snapshot.Provider.ProviderId}/{setting.Key}: {error}");
@@ -570,6 +583,13 @@ namespace FlatWorld.Settings
 
             try
             {
+                if (snapshot.Provider is ISettingsEditSessionChangeTracker changeTracker &&
+                    !changeTracker.HasSettingsEditSessionChanges(snapshot.ParticipantState))
+                {
+                    return;
+                }
+
+                restoreAttempted = true;
                 participant.RestoreSettingsEditSessionState(snapshot.ParticipantState);
             }
             catch (Exception exception)

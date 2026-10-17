@@ -42,6 +42,94 @@ test.system("ui_settings", "panel_lifecycle", { alpha = 0.75 }, function(data)
     assert(not data.inactiveBlocksGameplay, "停用测试面板仍锁定玩法")
 end, "独立面板初始化、开关幂等与交互状态")
 
+-- 独立内存 Provider 走正式注册与会话，只采样恢复调用及结果，不操作玩家窗口。
+local function assert_control_calls(data, toggle, slider, dropdown, switch)
+    assert(data.toggleCalls == toggle and data.sliderCalls == slider
+        and data.dropdownCalls == dropdown and data.switchCalls == switch,
+        "设置会话恢复了未改字段或漏掉已改字段")
+end
+
+for _, mode in ipairs({ "unchanged", "changed", "roundtrip", "mixed" }) do
+    test.system("ui_settings", "edit_session_values", { mode = mode }, function(data)
+        local dirty = mode == "changed" or mode == "mixed"
+        assert(data.nestedSessionRejected, "重复开始覆盖了已有会话")
+        assert(data.changed == dirty and data.attempted == dirty, "无变化关闭或改后改回仍执行恢复")
+        assert(data.restored and data.error == nil and not data.toggle and data.slider == 0
+            and data.dropdown == 0 and data.switch == 0, "关闭没有恢复打开时的基线")
+        assert_control_calls(data, dirty and 1 or 0, mode == "changed" and 1 or 0,
+            dirty and 1 or 0, mode == "changed" and 1 or 0)
+        assert(data.secondDiscardSucceeded and not data.secondAttempted, "重复关闭再次触发恢复")
+    end, "设置会话按变化字段恢复：" .. mode)
+end
+
+for _, modify in ipairs({ false, true }) do
+    test.system("ui_settings", "edit_session_commit", { modifyAfterCommit = modify }, function(data)
+        local count = modify and 1 or 0
+        assert(data.committedProviders >= 1 and data.cleanAfterCommit, "保存未更新设置会话基线")
+        assert(data.restored and data.attempted == modify and data.error == nil and data.toggle
+            and data.slider == 2 and data.dropdown == 1 and data.switch == 1 and data.hidden == 7,
+            "关闭没有恢复到最近保存的控件与补充状态，或保存后无修改仍执行恢复")
+        assert_control_calls(data, count, count, count, count)
+        assert(data.participantCalls == count, "保存后的补充状态恢复次数错误")
+    end, "保存建立新基线后关闭：继续修改=" .. tostring(modify))
+end
+
+for _, mode in ipairs({ "unchanged", "changed", "untracked" }) do
+    test.system("ui_settings", "edit_session_participants", { mode = mode }, function(data)
+        local restore = mode ~= "unchanged"
+        assert(data.changed == (mode == "changed") and data.attempted == restore,
+            "补充状态变化检测或无检测器的保守恢复错误")
+        assert(data.restored and data.error == nil and data.hidden == 3
+            and data.participantCalls == (restore and 1 or 0), "补充状态恢复次数或结果错误")
+        assert_control_calls(data, 0, 0, 0, 0)
+    end, "补充状态按检测能力恢复：" .. mode)
+end
+
+for _, mode in ipairs({ "write", "read", "tracker" }) do
+    test.system("ui_settings", "edit_session_errors", { mode = mode }, function(data)
+        assert(not data.restored and data.attempted and data.sessionEnded and data.error ~= nil,
+            "恢复失败没有报告尝试写入、收集错误或结束会话")
+        assert(data.broken.slider == 0 and data.broken.switch == 0 and data.broken.switchCalls == 1,
+            "前序字段异常阻止了后续字段恢复")
+        assert(not data.survivor.toggle and data.survivor.toggleCalls == 1,
+            "前序 Provider 异常阻止了后续 Provider 恢复")
+        if mode == "write" then
+            assert(string.find(data.error, "probe-toggle", 1, true)
+                and string.find(data.error, "probe-dropdown", 1, true)
+                and string.find(data.error, "probe-participant", 1, true), "未收集多处恢复失败")
+            assert(data.broken.participantCalls == 1, "字段失败后遗漏补充状态恢复")
+        elseif mode == "read" then
+            assert(string.find(data.error, "probe-getter", 1, true)
+                and data.broken.toggleCalls == 0 and data.broken.participantCalls == 1,
+                "变化读取异常被吞掉或阻止补充状态恢复")
+        else
+            assert(string.find(data.error, "probe-tracker", 1, true)
+                and data.broken.participantCalls == 0 and data.broken.hidden == 9,
+                "补充状态检测异常没有收集或仍执行了未确认的恢复")
+        end
+    end, "设置恢复异常后继续收集与恢复：" .. mode)
+end
+
+-- 真实输入资产和内存存储覆盖默认绑定、已有覆盖两种打开基线。
+for _, existing in ipairs({ false, true }) do
+    for _, mode in ipairs({ "unchanged", "modified", "reverted", "committed" }) do
+        test.system("ui_settings", "input_binding_session", { mode = mode, existingOverride = existing }, function(data)
+            local dirty = mode == "modified"
+            local edits = mode == "unchanged" and 0 or (mode == "reverted" and 2 or 1)
+            assert(data.existingOverride == existing and data.mode == mode
+                and data.hasChangesBeforeDiscard == dirty, "按键会话变化检测或基线场景错误")
+            assert(data.finalJson == data.baselineJson and not data.hasChangesAfterDiscard
+                and not data.sessionActiveAfterDiscard, "关闭没有恢复最近保存的按键覆盖或结束会话")
+            assert(data.persistedJson == data.baselineJson, "放弃修改污染了最近保存的按键覆盖")
+            assert(data.editNotificationCount == edits and data.discardNotificationCount == (dirty and 1 or 0)
+                and data.repeatedDiscardNotificationCount == 0, "按键未改、改回或重复关闭仍广播重建")
+            assert(data.loadCount == 1 and data.saveCount + data.clearCount == (mode == "committed" and 1 or 0)
+                and data.discardStoreCallCount == 0 and data.repeatedDiscardStoreCallCount == 0,
+                "放弃按键修改重复访问存储或保存未按正式提交路径执行")
+        end, "按键会话跳过无变化恢复：" .. tostring(existing) .. "/" .. mode)
+    end
+end
+
 for _, row in ipairs({
     { kind = "button", root = "ProbePanel", excluded = false },
     { kind = "scrollbar", root = "ProbePanel", excluded = true },
