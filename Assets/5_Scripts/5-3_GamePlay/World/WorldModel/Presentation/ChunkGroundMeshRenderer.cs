@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -215,6 +216,17 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
     #endregion
 
     #region 纹理批次
+
+    // 只在纹理批次构造和整批上传时采样，保留逐格写入原样。
+    private static readonly ProfilerMarker GroupCreateMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.Create");
+    private static readonly ProfilerMarker GroupVerticesMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.VertexArray");
+    private static readonly ProfilerMarker GroupCellsMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.CellArray");
+    private static readonly ProfilerMarker GroupBufferMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.GraphicsBuffer");
+    private static readonly ProfilerMarker GroupUploadMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.UploadAll");
+    private static readonly ProfilerMarker GroupCellUploadMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.UploadAll.CellBuffer");
+    private static readonly ProfilerMarker GroupGeometryMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.UploadAll.Geometry");
+    private static readonly ProfilerMarker GroupVertexUploadMarker = new("FlatWorld.ChunkStreaming.Bind.MeshGroup.UploadAll.Vertices");
+
     private sealed class Group : IDisposable
     {
         private readonly GameObject root;
@@ -233,6 +245,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             Material sourceMaterial, Texture texture,
             ChunkBatchRendererGroupService.VisualLayer layer, bool singleQuad)
         {
+            using var createScope = GroupCreateMarker.Auto();
             this.width = width;
             this.height = height;
             this.singleQuad = singleQuad;
@@ -240,7 +253,8 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             mesh = new Mesh { name = $"Chunk_{layer}_{texture.name}", hideFlags = HideFlags.HideAndDontSave };
             mesh.MarkDynamic();
             int vertexCount = singleQuad ? 4 : cellCount * 4;
-            vertices = new Vertex[vertexCount];
+            using (GroupVerticesMarker.Auto())
+                vertices = new Vertex[vertexCount];
             mesh.SetVertexBufferParams(vertexCount,
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
                 new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4),
@@ -257,9 +271,11 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 ushort[] indices = { 0, 2, 1, 1, 2, 3 };
                 mesh.SetIndexBufferParams(indices.Length, IndexFormat.UInt16);
                 mesh.SetIndexBufferData(indices, 0, 0, indices.Length, UploadFlags);
-                groundCells = new GroundCellData[cellCount];
-                groundCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellCount,
-                    Marshal.SizeOf<GroundCellData>());
+                using (GroupCellsMarker.Auto())
+                    groundCells = new GroundCellData[cellCount];
+                using (GroupBufferMarker.Auto())
+                    groundCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellCount,
+                        Marshal.SizeOf<GroundCellData>());
                 root = new GameObject($"{layer}Mesh_{texture.name}");
                 root.SetActive(false);
             }
@@ -473,15 +489,19 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
 
         public void UploadAll()
         {
+            using var uploadScope = GroupUploadMarker.Auto();
             if (singleQuad)
             {
-                groundCellBuffer.SetData(groundCells);
+                using (GroupCellUploadMarker.Auto())
+                    groundCellBuffer.SetData(groundCells);
                 geometryDirty = true;
-                UpdateSingleQuadGeometry();
+                using (GroupGeometryMarker.Auto())
+                    UpdateSingleQuadGeometry();
             }
             else
             {
-                mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length, 0, UploadFlags);
+                using (GroupVertexUploadMarker.Auto())
+                    mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length, 0, UploadFlags);
             }
             Dirty = false;
         }

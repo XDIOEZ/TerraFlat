@@ -14,6 +14,11 @@ public partial class MonsterSpawnerManager
     // 固定名称标记不构造逐帧字符串；创建与管理 Tick 分开，避免把实例初始化当成稳定态。
     private static readonly ProfilerMarker TickMarker = new("FlatWorld.MonsterSpawner.Tick");
     private static readonly ProfilerMarker CreationMarker = new("FlatWorld.MonsterSpawner.Create");
+    // 创建分段区分后端、实例装配、模块加载与初始状态，便于追查出生当帧的耗时。
+    private static readonly ProfilerMarker EntityCreationMarker = new("FlatWorld.MonsterSpawner.Create.Entities");
+    private static readonly ProfilerMarker InstantiateItemMarker = new("FlatWorld.MonsterSpawner.Create.InstantiateItem");
+    private static readonly ProfilerMarker LoadCreatedItemMarker = new("FlatWorld.MonsterSpawner.Create.ItemLoad");
+    private static readonly ProfilerMarker SpawnInitializationMarker = new("FlatWorld.MonsterSpawner.Create.ApplyInitialization");
     private static readonly ProfilerMarker DormancyMarker = new("FlatWorld.MonsterSpawner.Dormancy");
 
     private void Update()

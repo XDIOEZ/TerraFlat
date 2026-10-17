@@ -88,6 +88,24 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
 
     #endregion
 
+    #region 初绑性能分段
+
+    // 只标记当前同步步骤，所有分段都在让帧前结束。
+    private static readonly ProfilerMarker BindCleanupMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Cleanup");
+    private static readonly ProfilerMarker BindPrepareMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Prepare");
+    private static readonly ProfilerMarker BindRebuildMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Rebuild");
+    private static readonly ProfilerMarker BindScanMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.ScanBatch");
+    private static readonly ProfilerMarker BindDirtyMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.DirtyBatch");
+    private static readonly ProfilerMarker BindGroundUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadGround");
+    private static readonly ProfilerMarker BindWaterUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadWater");
+    private static readonly ProfilerMarker BindBackUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadBack");
+    private static readonly ProfilerMarker BindBlockingUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadBlocking");
+    private static readonly ProfilerMarker BindLiquidGlowMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Complete.LiquidGlow");
+    private static readonly ProfilerMarker BindMechanicalMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Complete.Mechanical");
+    private static readonly ProfilerMarker BindNotifyMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Complete.Notify");
+
+    #endregion
+
     #region 绑定与生命周期
 
     /// <summary>注入当前世界，用于计算跨 Chunk 的接触方向与连续水深边界。</summary>
@@ -119,27 +137,31 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         if (ReferenceEquals(boundChunk, chunk))
             yield break;
 
-        Unbind();
+        using (BindCleanupMarker.Auto())
+            Unbind();
         int version = batchBindingVersion;
         bool completed = false;
         batchBindingInProgress = true;
         BaseTerrainBindingCellWrites = 0;
         try
         {
-            boundChunk = chunk;
-            SubscribeNeighbourChunkEvents();
-            RecreateBaseMeshes(chunk.Terrain);
-            boundResources = GameRes.ExistingInstance;
-            if (boundResources != null) boundResources.ResourcesReloaded += HandleResourcesReloaded;
-            WaterVisualSettings.Changed += HandleWaterVisualStyleChanged;
+            using (BindPrepareMarker.Auto())
+            {
+                boundChunk = chunk;
+                SubscribeNeighbourChunkEvents();
+                RecreateBaseMeshes(chunk.Terrain);
+                boundResources = GameRes.ExistingInstance;
+                if (boundResources != null) boundResources.ResourcesReloaded += HandleResourcesReloaded;
+                WaterVisualSettings.Changed += HandleWaterVisualStyleChanged;
 
-            boundChunk.Terrain.Changed += HandleTerrainChanged;
-            boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
-            WorldLiquidFlowExperiment.FlowChanged += HandleLiquidFlowChanged;
-            RefreshNeighbourTerrainSubscriptions();
-            batchPresentationComplete = false;
-            ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(chunk.Terrain));
-            BeginBaseMeshUpdate();
+                boundChunk.Terrain.Changed += HandleTerrainChanged;
+                boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
+                WorldLiquidFlowExperiment.FlowChanged += HandleLiquidFlowChanged;
+                RefreshNeighbourTerrainSubscriptions();
+                batchPresentationComplete = false;
+                ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(chunk.Terrain));
+                BeginBaseMeshUpdate();
+            }
             yield return null;
             int cursor = 0;
             while (true)
@@ -147,6 +169,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
                 if (bindingVisualsInvalidated || !ChunkBatchRendererGroupService.IsOwnerRegistered(this))
                 {
+                    using var rebuildScope = BindRebuildMarker.Auto();
                     bindingVisualsInvalidated = false;
                     ClearDepthPresentation();
                     RecreateBaseMeshes(chunk.Terrain);
@@ -157,16 +180,20 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 if (cursor >= chunk.Terrain.CellCount && liquidVisualDirty.Count == 0)
                 {
                     // 每层上传分开放行，上传间隙的新通知会回到扫描预算，不能提前宣布就绪。
-                    groundMesh?.EndBulkUpdate();
+                    using (BindGroundUploadMarker.Auto())
+                        groundMesh?.EndBulkUpdate();
                     yield return null;
                     if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
-                    waterMesh?.EndBulkUpdate();
+                    using (BindWaterUploadMarker.Auto())
+                        waterMesh?.EndBulkUpdate();
                     yield return null;
                     if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
-                    backMesh?.EndBulkUpdate();
+                    using (BindBackUploadMarker.Auto())
+                        backMesh?.EndBulkUpdate();
                     yield return null;
                     if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
-                    blockingMesh?.EndBulkUpdate();
+                    using (BindBlockingUploadMarker.Auto())
+                        blockingMesh?.EndBulkUpdate();
                     if (!bindingVisualsInvalidated && liquidVisualDirty.Count == 0 &&
                         ChunkBatchRendererGroupService.IsOwnerRegistered(this)) break;
                     BeginBaseMeshUpdate();
@@ -177,6 +204,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 {
                     if (cursor < chunk.Terrain.CellCount)
                     {
+                        using var scanScope = BindScanMarker.Auto();
                         int end = Math.Min(chunk.Terrain.CellCount, cursor + BaseCellsPerStep);
                         for (; cursor < end; cursor++)
                         {
@@ -187,6 +215,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                     }
                     else
                     {
+                        using var dirtyScope = BindDirtyMarker.Auto();
                         bindingDirtyScratch.Clear();
                         foreach (int index in liquidVisualDirty)
                         {
@@ -205,12 +234,15 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 finally { bindingCellWrite = false; }
                 yield return null;
             }
-            RefreshLiquidGlowLights(chunk.Terrain);
+            using (BindLiquidGlowMarker.Auto())
+                RefreshLiquidGlowLights(chunk.Terrain);
             liquidGlowDirty = false;
             batchPresentationComplete = true;
             batchBindingInProgress = false;
-            BindMechanicalPresentation();
-            BatchPresentationRebuilt?.Invoke();
+            using (BindMechanicalMarker.Auto())
+                BindMechanicalPresentation();
+            using (BindNotifyMarker.Auto())
+                BatchPresentationRebuilt?.Invoke();
             completed = true;
         }
         finally
@@ -220,7 +252,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 batchBindingInProgress = false;
                 bindingCellWrite = false;
                 bindingDirtyScratch.Clear();
-                if (!completed) Unbind();
+                if (!completed)
+                {
+                    using (BindCleanupMarker.Auto())
+                        Unbind();
+                }
             }
         }
     }

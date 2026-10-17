@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
@@ -229,6 +230,12 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     #region Grid registration
 
+    // 格构造包含原有同步变更通知，批结束只按实际网格收尾计时。
+    private static readonly ProfilerMarker RegisterChunkMarker = new("FlatWorld.Navigation.RegisterChunk.Total");
+    private static readonly ProfilerMarker RegisterChunkRemoveMarker = new("FlatWorld.Navigation.RegisterChunk.RemovePrevious");
+    private static readonly ProfilerMarker RegisterChunkPopulateMarker = new("FlatWorld.Navigation.RegisterChunk.PopulateCells");
+    private static readonly ProfilerMarker RegisterChunkEndMarker = new("FlatWorld.Navigation.RegisterChunk.EndBatch");
+
     public void RegisterMap(Map map)
     {
         if (map?.chunk == null || ChunkMgr.Instance == null)
@@ -253,11 +260,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             ReferenceEquals(existing.Chunk, chunk))
             return;
 
-        UnregisterChunkRuntime(chunk.Address);
+        using var registrationScope = RegisterChunkMarker.Auto();
+        using (RegisterChunkRemoveMarker.Auto())
+            UnregisterChunkRuntime(chunk.Address);
         ChunkTerrainData terrain = chunk.Terrain;
         grid.BeginBatchUpdate();
         try
         {
+            using var populateScope = RegisterChunkPopulateMarker.Auto();
             for (int y = 0; y < terrain.Height; y++)
             {
                 for (int x = 0; x < terrain.Width; x++)
@@ -281,7 +291,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         }
         finally
         {
-            grid.EndBatchUpdate();
+            using (RegisterChunkEndMarker.Auto())
+                grid.EndBatchUpdate();
         }
     }
 

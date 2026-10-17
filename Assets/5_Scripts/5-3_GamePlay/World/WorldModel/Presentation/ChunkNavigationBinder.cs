@@ -1,8 +1,14 @@
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 
 public sealed class ChunkNavigationBinder : MonoBehaviour, IChunkViewRenderer
 {
+    #region 导航绑定
+
+    // 区分绑定订阅准备与正式导航注册，不对单格增加采样。
+    private static readonly ProfilerMarker BindPrepareMarker = new("FlatWorld.ChunkStreaming.Bind.Navigation.Prepare");
+    private static readonly ProfilerMarker BindRegisterMarker = new("FlatWorld.ChunkStreaming.Bind.Navigation.Register");
     private ChunkRuntime boundChunk;
 
     public void Bind(ChunkRuntime chunk)
@@ -11,12 +17,16 @@ public sealed class ChunkNavigationBinder : MonoBehaviour, IChunkViewRenderer
             throw new System.ArgumentNullException(nameof(chunk));
         if (ReferenceEquals(boundChunk, chunk))
             return;
-        Unbind();
-        boundChunk = chunk;
-        boundChunk.Terrain.Changed += HandleTerrainChanged;
-        boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
-        boundChunk.Occupancy.Changed += HandleOccupancyChanged;
-        WorldNavigationManager.Instance?.RegisterChunkRuntime(chunk);
+        using (BindPrepareMarker.Auto())
+        {
+            Unbind();
+            boundChunk = chunk;
+            boundChunk.Terrain.Changed += HandleTerrainChanged;
+            boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
+            boundChunk.Occupancy.Changed += HandleOccupancyChanged;
+        }
+        using (BindRegisterMarker.Auto())
+            WorldNavigationManager.Instance?.RegisterChunkRuntime(chunk);
     }
 
     public void Unbind()
@@ -32,6 +42,8 @@ public sealed class ChunkNavigationBinder : MonoBehaviour, IChunkViewRenderer
             WorldNavigationManager.ExistingInstance?.UnregisterChunkRuntime(boundChunk);
         boundChunk = null;
     }
+
+    #endregion
 
     #region 增量导航同步
     private void HandleTerrainChanged(ChunkTerrainChanged changed)

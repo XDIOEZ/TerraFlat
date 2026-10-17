@@ -920,26 +920,34 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     {
         if (AiRuntimeBackendService.UsesEntities(entry))
         {
-            SpawnerConfig owner = FindConfigForEntry(entry);
-            return AiRuntimeBackendService.UseEntities &&
-                   owner != null && AiRuntimeBackendService.Ecology != null &&
-                   AiRuntimeBackendService.Ecology.TrySpawn(owner, entry, spawnPosition);
+            using (EntityCreationMarker.Auto())
+            {
+                SpawnerConfig owner = FindConfigForEntry(entry);
+                return AiRuntimeBackendService.UseEntities &&
+                       owner != null && AiRuntimeBackendService.Ecology != null &&
+                       AiRuntimeBackendService.Ecology.TrySpawn(owner, entry, spawnPosition);
+            }
         }
 
         Item spawnedItem = null;
         try
         {
-            spawnedItem = _itemManager.InstantiateItem(
-                entry.PrefabName,
-                spawnPosition,
-                Quaternion.identity,
-                Vector3.one);
+            using (InstantiateItemMarker.Auto())
+            {
+                spawnedItem = _itemManager.InstantiateItem(
+                    entry.PrefabName,
+                    spawnPosition,
+                    Quaternion.identity,
+                    Vector3.one);
+            }
 
             if (spawnedItem == null)
                 return false;
 
-            spawnedItem.Load();
-            ApplySpawnInitialization(spawnedItem, entry);
+            using (LoadCreatedItemMarker.Auto())
+                spawnedItem.Load();
+            using (SpawnInitializationMarker.Auto())
+                ApplySpawnInitialization(spawnedItem, entry);
             return true;
         }
         catch (Exception ex)
