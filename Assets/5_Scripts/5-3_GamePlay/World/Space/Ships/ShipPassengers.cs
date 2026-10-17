@@ -167,7 +167,11 @@ namespace FlatWorld.Spaceflight
             => player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver)?.SetEffectsSuppressed(this, value);
         public bool EnterConsole(Player player, string pieceId)
         {
-            if (SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.EnterConsole, PieceId = pieceId })) return true;
+            if (SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.EnterConsole, PieceId = pieceId }))
+            {
+                NotifyLocalManualConsoleEntry(player, pieceId);
+                return true;
+            }
             if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) || piece.Kind != ShipPieceKind.Console ||
                 !IsPowered(ship, piece) || GetFlight(ship.ShipId).Phase == ShipFlightPhase.Floating) return false;
             if (Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(player), DisplayPoint(ship, piece.CellX + .5d, piece.CellY + .5d)) > 3f) return false;
@@ -182,6 +186,7 @@ namespace FlatWorld.Spaceflight
             Mod_Cam camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
             if (!alreadyDriving) passenger.SavedCameraSize = camera?.CurrentOrthographicSize ?? 10f;
             camera?.SetOrthographicSize(SpaceGameplaySettings.Current.DrivingCameraSize);
+            NotifyLocalManualConsoleEntry(player, pieceId);
             return true;
         }
         private void BindConsoleControl(SpacePassengerState passenger, ShipState ship, ShipPieceState console,

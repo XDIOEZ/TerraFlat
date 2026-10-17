@@ -65,6 +65,14 @@ test.space("ship_landing", function(data)
             end
         end
         local restored, restoredMachines = ground(ship.landedAgain, label .. "/落地移交")
+        local hudBefore, hudAfter = ship.descending.flightHud, ship.landedAgain.flightHud
+        assert(hudBefore.found and hudBefore.phase == "SurfaceDescending" and hudAfter.found and
+            not hudAfter.driving and hudAfter.shipId == "", "落地清船后正式 HUD 只读接口丢失乘员：" .. label)
+        assert(hudAfter.receipt.valid and hudAfter.receipt.shipId == ship.lifting.id and
+            hudAfter.receipt.worldKey == ship.landedAgain.world and hudAfter.receipt.eventId ~= "" and
+            hudAfter.receipt.eventId ~= hudBefore.receipt.eventId and
+            hudAfter.receipt.time >= hudBefore.simulationSeconds,
+            "普通建筑移交后没有发布本船本世界的新落地凭证，或复用了历史触地：" .. label)
         assert(ship.landedAgain.world == ship.landed.world and restoredMachines == machineCount and
             ship.landedAgain.pieceCount == ship.landed.pieceCount and
             ship.landedAgain.activeShipCount == ship.beforeBuild.activeShipCount and

@@ -1062,10 +1062,12 @@
         "Assets/5_Scripts/5-3_GamePlay/Development/Diagnostics/RuntimeDebugOverlayPreferences.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.Performance.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.Device.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.PerformanceDebug.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.PerformanceDebug.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ShipFlightHud.cs"
       ],
       "dependsOn": [
-        "localization"
+        "localization",
+        "space"
       ],
       "ruleCaseIds": [
         "ui_settings_rules"

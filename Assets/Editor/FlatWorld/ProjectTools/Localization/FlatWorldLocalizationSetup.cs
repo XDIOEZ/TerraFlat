@@ -132,6 +132,11 @@ namespace FlatWorld.Localization.Editor
                 { "当前帧数上限：60 FPS", "Current frame rate limit: 60 FPS" },
                 { "选择自定义后输入整数，按回车或移开焦点即可应用。", "Choose Custom, enter a whole number, then press Enter or leave the field to apply." },
                 { "帧数上限不保证实际帧数；手机还会受到屏幕刷新率限制。", "Actual frame rate depends on performance. Mobile devices are also limited by display refresh rate." },
+                // 起降高度尺的动态读数与触地提醒同步两种语言。
+                { "飞行高度", "FLIGHT ALTITUDE" },
+                { "{0} m", "{0} m" },
+                { "即将触地，着陆后飞船将固定", "Near touchdown. The ship will be fixed in place after landing." },
+                { "已着陆，飞船已固定", "Landed. The ship is fixed in place." },
                 // 飞船双屏终端保留命令原文，其状态模板与反馈消息同步两种语言。
                 { "飞船控制台", "Ship Console" },
                 { "飞船状态", "Ship Status" },

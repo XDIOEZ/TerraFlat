@@ -287,3 +287,168 @@ for _, row in ipairs({
         assert(data.excluded == row.excluded, "正式手柄导航策略没有区分设置、显示控件与 HUD")
     end, "UI 手柄焦点策略：" .. row.root .. "/" .. row.kind)
 end
+
+-- 高度尺的数值与位置直接采样正式展示规则，严格正高度不能提前舍入为 0。
+for _, row in ipairs({
+    {height = 0.00000001, text = "<0.01"},
+    {height = 0.0049, text = "<0.01"}, {height = 0.01, text = "0.01"},
+    {height = 0.1, text = "0.10"}, {height = 1, text = "1.0"}, {height = 10, text = "10"},
+    {height = 0, touchdown = true, text = "0"},
+    {height = -1, invalid = true, text = "--"},
+    {heightMode = "nan", invalid = true, text = "--"},
+    {heightMode = "positive_infinity", invalid = true, text = "--"},
+    {heightMode = "negative_infinity", invalid = true, text = "--"}
+}) do
+    test.system("ui_settings", "ship_flight_hud_height", row, function(data)
+        assert(data.usable == not row.invalid and data.number == row.text, "高度读数提前归零或无效数值没有安全处理")
+        assert(data.normalized >= 0 and data.normalized <= 1, "高度指示超出固定刻度或出现非有限位置")
+        if row.touchdown then
+            assert(data.normalized == 0, "正式触地后的 0 没有位于刻度底部")
+        elseif not row.invalid then
+            assert(data.normalized > 0, "未经落地凭证确认，高度指示提前压在 0 刻度")
+        end
+    end, "起降高度尺数字边界：" .. (row.heightMode or tostring(row.height)) .. "/" .. tostring(row.touchdown))
+end
+
+test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+    {time = 0, driving = true, height = 0, verticalSpeed = 0},
+    {time = 1, driving = true, height = 0.00000001, verticalSpeed = 2},
+    {time = 2, driving = true, height = 5, verticalSpeed = -1}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].visible and s[1].groundContact and s[1].number == "0" and s[1].normalized == 0 and
+        not s[1].touchdown and not s[1].nearGround, "起飞地面初态没有显示真实 0，或被误报为新落地完成")
+    assert(s[2].visible and not s[2].groundContact and s[2].number == "<0.01" and s[2].normalized > 0,
+        "离地后的严格正高度仍停留在 0")
+    assert(s[3].visible and s[3].nearGround and not s[3].touchdown, "升空失速下降时没有显示近地提醒")
+end, "起飞初始 0、实际离地及升空失速下坠的真实读数")
+
+test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+    {time = 0, driving = true, phase = "SurfaceDescending", height = 4},
+    {time = 1, manualExitShip = "hud-ship", driving = true, phase = "SurfaceDescending", height = 4},
+    {time = 1000, driving = true, phase = "SurfaceDescending", height = 3},
+    {time = 1001, phase = "Landed", ship = "", receipt = {event = "cancelled-flight-landing"}},
+    {time = 1002, driving = true, height = 1, verticalSpeed = 2}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].visible and not s[2].visible and not s[3].visible and not s[4].visible and not s[4].touchdown,
+        "主动退出后，延迟驾驶快照或紧随其后的落地凭证重新打开了 HUD")
+    assert(s[5].visible and not s[5].touchdown, "退出状态确认后重新驾驶仍被旧取消状态屏蔽")
+end, "联网主动退出后旧驾驶快照与落地凭证不重放，重新驾驶可恢复")
+
+test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+    {time = 0, driving = true, phase = "SurfaceDescending", height = 4},
+    {time = 1, manualExitShip = "hud-ship", driving = true, phase = "SurfaceDescending", height = 4},
+    {time = 2, manualEnterShip = "other-ship", driving = true, phase = "SurfaceDescending", height = 3},
+    {time = 3, manualEnterShip = "hud-ship", driving = true, phase = "SurfaceDescending", height = 3},
+    {time = 4, driving = true, phase = "SurfaceDescending", height = 2},
+    {time = 5, phase = "Landed", ship = "", receipt = {event = "resumed-flight-landing"}}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].visible and not s[2].visible and not s[3].visible,
+        "主动退出后，其他船的重新驾驶通知错误解除了同船旧快照屏蔽")
+    assert(s[4].visible and s[5].visible and not s[4].touchdown and s[5].height == 2,
+        "明确重新驾驶本船后没有立即接受驾驶快照，或仍依赖退出快照/超时才能恢复")
+    assert(s[6].visible and s[6].touchdown, "恢复本次驾驶后仍拒绝真实的新落地凭证")
+end, "主动退出后明确重新驾驶本船立即恢复，其他船通知不能解锁")
+
+test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+    {time = 0, phase = "Landed", receipt = {event = "old-landing"}},
+    {time = 1, driving = true, height = 1, verticalSpeed = 2},
+    {time = 2, driving = true, height = 25, verticalSpeed = 2},
+    {time = 3, driving = true, phase = "SurfaceDescending", height = 20},
+    {time = 4, driving = true, phase = "SurfaceDescending", height = 10},
+    {time = 5, driving = true, phase = "SurfaceDescending", height = 0.0049},
+    {time = 6, driving = true, phase = "SurfaceDescending", height = 0},
+    {time = 6.5, phase = "Landed", landed = true, height = 0},
+    {time = 7, phase = "Landed", ship = "", receipt = {event = "new-landing"}},
+    {time = 8, phase = "Landed", ship = ""},
+    {time = 9.1, phase = "Landed", ship = ""},
+    {time = 10, phase = "Landed", ship = ""}
+}}, function(data)
+    local s = data.samples
+    assert(#s == 12 and not s[1].visible, "首次观察重放了历史落地提示")
+    assert(s[2].visible and s[3].visible and not s[2].touchdown and not s[3].nearGround,
+        "起飞时没有显示高度尺或错误显示近地下降警告")
+    assert(s[2].maximum == 10 and s[3].maximum == 50 and s[4].maximum == 50 and s[7].maximum == 50,
+        "同一次起降的量程没有扩容或在下降时不断收缩")
+    assert(s[3].normalized == 0.5 and s[4].normalized == 0.4 and s[5].normalized == 0.2,
+        "固定上高下低的刻度没有随着下降向下移动")
+    assert(not s[4].nearGround and s[5].nearGround and s[6].nearGround,
+        "下降进入低空时没有按正式阈值提示")
+    assert(s[6].number == "<0.01" and s[7].number == "<0.01" and not s[7].touchdown and s[7].normalized > 0,
+        "高度很小或刚到 0 时提前宣告地面建筑已经完成移交")
+    assert(s[8].visible and s[8].groundContact and not s[8].touchdown and s[8].number == "0" and s[8].normalized == 0,
+        "真实触地等待建筑移交时没有显示 0，或提前提示飞船已经固定")
+    assert(s[9].visible and s[9].touchdown and s[9].height == 0 and s[9].normalized == 0 and s[9].number == "0",
+        "清船后的同船新落地凭证没有显示底部 0 与已固定提示")
+    assert(s[10].visible and s[10].touchdown and not s[11].visible and not s[12].visible,
+        "真实落地提示没有短暂保留后隐藏，或重复凭证重新触发提示")
+end, "起飞到下降、同船正式落地、短暂 0 提示与超时隐藏的完整展示状态")
+
+for _, row in ipairs({
+    {name = "退出驾驶", interruption = {time = 1, phase = "SurfaceDescending", height = 4}},
+    {name = "死亡", interruption = {time = 1, phase = "Landed", alive = false, receipt = {event = "dead-landing"}}},
+    {name = "进入太空", interruption = {time = 1, phase = "Cruising", driving = true, height = 200}},
+    {name = "跨世界", interruption = {time = 1, phase = "Landed", world = "other-world"}},
+    {name = "组件重新启用", interruption = {time = 1, phase = "Landed", reset = true}}
+}) do
+    test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+        {time = 0, driving = true, phase = "SurfaceDescending", height = 4},
+        row.interruption,
+        {time = 2, phase = "Landed", ship = "", receipt = {event = "after-interruption"}},
+        {time = 3, phase = "Landed", ship = ""}
+    }}, function(data)
+        local s = data.samples
+        assert(s[1].visible and s[1].nearGround and not s[2].visible,
+            "退出、死亡、太空或展示重建后仍残留驾驶高度尺")
+        assert(not s[2].touchdown and not s[3].visible and not s[4].visible,
+            "驾驶跟踪失效后，迟到凭证被误报为本次正式着陆")
+    end, "高度 HUD 中断不冒充触地：" .. row.name)
+end
+
+for _, row in ipairs({
+    {name = "旧事件", receipt = {event = "old-landing"}},
+    {name = "其他飞船", receipt = {event = "new-landing", ship = "other-ship"}},
+    {name = "其他世界", receipt = {event = "new-landing", world = "other-world"}},
+    {name = "缺少事件身份", receipt = {event = ""}}
+}) do
+    test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+        {time = 0, driving = true, phase = "SurfaceDescending", height = 4, receipt = {event = "old-landing"}},
+        {time = 1, phase = "Landed", ship = "", receipt = row.receipt}
+    }}, function(data)
+        assert(data.samples[1].visible and not data.samples[2].touchdown and not data.samples[2].visible,
+            "旧事件、非本船或本世界之外的凭证被误报为地面固定")
+    end, "高度 HUD 落地凭证拒绝：" .. row.name)
+end
+
+test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+    {time = 0, driving = true, phase = "SurfaceDescending", height = 4},
+    {time = 1, phase = "Floating", ship = "", receipt = {event = "water-landing", water = true}}
+}}, function(data)
+    assert(data.samples[1].visible and data.samples[2].visible and data.samples[2].touchdown and data.samples[2].number == "0",
+        "海面完成同样的普通建筑移交后没有显示正式落地提示")
+end, "海面成功移交普通建筑后的正式落地提示")
+
+for _, heightMode in ipairs({"nan", "positive_infinity", "negative_infinity"}) do
+    test.system("ui_settings", "ship_flight_hud_sequence", {steps = {
+        {time = 0, driving = true, phase = "SurfaceDescending", height = 4},
+        {time = 1, driving = true, phase = "SurfaceDescending", heightMode = heightMode}
+    }}, function(data)
+        assert(data.samples[1].visible and not data.samples[2].visible and not data.samples[2].touchdown,
+            "非有限高度没有隐藏读数或被误报为已触地")
+    end, "高度 HUD 拒绝非有限高度：" .. heightMode)
+end
+
+for _, water in ipairs({false, true}) do
+    test.system("ui_settings", "ship_flight_hud_receipt_memory", {
+        ship = "hud-memory-ship", event = "hud-memory-landing", world = "hud-memory-world", water = water, time = 123.5
+    }, function(data)
+        assert(data.shipCount == 0 and data.flightCount == 0 and data.passengerCount == 1 and
+            data.profileId == "hud-memory-fixture", "清理飞船记录后，正式会话没有保留独立乘员")
+        assert(data.valid and data.shipId == "hud-memory-ship" and data.eventId == "hud-memory-landing" and
+            data.worldKey == "hud-memory-world" and data.water == water and data.time == 123.5,
+            "真实会话 JSON 往返丢失落地凭证的船、事件、世界或落地终态")
+        assert(data.stableRoundtrip, "落地凭证在第二次会话快照中发生变化")
+    end, "清船后的正式乘员落地凭证 JSON 往返：海面=" .. tostring(water))
+end

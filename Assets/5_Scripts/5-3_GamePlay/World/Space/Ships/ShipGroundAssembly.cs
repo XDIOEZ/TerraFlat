@@ -300,6 +300,7 @@ namespace FlatWorld.Spaceflight
                 });
                 transferred = true;
                 ship.PositionX = origin.x; ship.PositionY = origin.y; ship.AngleRadians = turns * Math.PI * .5d;
+                RecordShipLandingCompletion(ship, GetFlight(ship.ShipId), world);
                 // 数据交接成功先撤销船体所有权，后续表现通知异常不能再次创建落地建筑。
                 foreach (ShipPieceState piece in ship.Pieces)
                 {

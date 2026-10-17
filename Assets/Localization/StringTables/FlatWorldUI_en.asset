@@ -5040,6 +5040,22 @@ MonoBehaviour:
     m_Localized: "Each click has a {0:0}% chance to produce tinder."
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740592
+    m_Localized: "FLIGHT ALTITUDE"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740593
+    m_Localized: "{0} m"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740594
+    m_Localized: "Near touchdown. The ship will be fixed in place after landing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740595
+    m_Localized: "Landed. The ship is fixed in place."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

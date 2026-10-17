@@ -201,6 +201,7 @@ public static partial class RuntimeUIPrefabBuilder
         SaveNewPrefab(LoadingRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
         SaveDimensionLoadingPrefab();
         SavePlayerWorldCoordinatePrefab();
+        SaveShipFlightHudPrefab();
         SaveSaveStatusPrefab();
         SaveBuffStatusPrefabs();
         SaveMobileControlsPrefab();
@@ -213,6 +214,7 @@ public static partial class RuntimeUIPrefabBuilder
         UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerShipFlightHUD);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerMobileControlsHUD);
 
         AssetDatabase.SaveAssets();

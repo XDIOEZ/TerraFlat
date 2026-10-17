@@ -77,6 +77,26 @@ public sealed partial class GameplayTestSpaceScenario
         return result;
     }
 
+    private JObject FlightHudSnapshot()
+    {
+        // 正式只读接口在清船前后采同一乘员凭证，不从测试状态推断已经完成着陆。
+        bool found = session.TryGetShipFlightHudSnapshot(CurrentPlayer(), out ShipFlightHudSnapshot snapshot);
+        ShipLandingReceipt receipt = snapshot.LastLanding;
+        return new JObject
+        {
+            ["found"] = found, ["driving"] = snapshot.IsDrivingSurfaceFlight,
+            ["landed"] = snapshot.HasLandedSurfaceFlight, ["shipId"] = snapshot.ShipId ?? string.Empty,
+            ["phase"] = snapshot.Phase.ToString(), ["height"] = snapshot.HeightMeters,
+            ["simulationSeconds"] = session.State.SimulationSeconds,
+            ["receipt"] = new JObject
+            {
+                ["valid"] = receipt.IsValid, ["shipId"] = receipt.ShipId ?? string.Empty,
+                ["eventId"] = receipt.EventId ?? string.Empty, ["worldKey"] = receipt.WorldKey ?? string.Empty,
+                ["water"] = receipt.IsWater, ["time"] = receipt.SimulationSeconds
+            }
+        };
+    }
+
     private JObject GroundViewSnapshot(ICollection<int> ids, string shipId)
     {
         JObject result = session.ShipViewCacheSnapshot();
@@ -148,6 +168,7 @@ public sealed partial class GameplayTestSpaceScenario
                 TemplateShipPresentationReady(ship),
             90d, "正式降落请求没有进入地表下降阶段。");
         JObject descending = ShipSnapshot(ship), descendingViews = ShipViewSnapshot(ship);
+        descending["flightHud"] = FlightHudSnapshot();
         yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null &&
                 GroundBuildingsRestored(ids, expectedWorld),
             90d, "飞船未完成正式降落及普通地面建筑移交。");
@@ -156,6 +177,7 @@ public sealed partial class GameplayTestSpaceScenario
         landed["flightRemoved"] = session.GetFlight(ship.ShipId) == null;
         landed["shipRemoved"] = session.GetShip(ship.ShipId) == null;
         landed["supported"] = session.GetPassenger(CurrentPlayer()).Supported;
+        landed["flightHud"] = FlightHudSnapshot();
         JObject returnedViews = ShipViewSnapshot(ship), refuel = null;
         yield return RefuelLandedBuildings(ids, value => refuel = value);
         completed(new JObject { ["landingAccepted"] = accepted, ["descending"] = descending,

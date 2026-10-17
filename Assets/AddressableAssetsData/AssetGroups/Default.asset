@@ -4318,6 +4318,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1193eb67f5c34164b10743b5d47a600a
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/HUD/UI_ShipFlightHUD.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

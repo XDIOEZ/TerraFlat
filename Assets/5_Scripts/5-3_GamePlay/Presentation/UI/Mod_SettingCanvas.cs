@@ -76,7 +76,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         // 先取消导航选点，再退出驾驶，右键始终留给手持物使用。
         FlatWorld.Spaceflight.SpaceSession spaceSession = FlatWorld.Spaceflight.SpaceSession.Current;
         if (spaceSession?.TryCancelNavigationPicking(item as Player) == true ||
-            spaceSession?.ExitConsole(item as Player) == true)
+            spaceSession?.RequestConsoleExit(item as Player) == true)
         {
             uiManager.NotifyCancelHandled();
             return;

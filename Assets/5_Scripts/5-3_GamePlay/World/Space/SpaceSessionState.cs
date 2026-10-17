@@ -123,6 +123,7 @@ namespace FlatWorld.Spaceflight
         public double SurfaceHeight, SurfaceVerticalSpeed, WalkVelocityX, WalkVelocityY, SavedCameraSize;
         public double SurfaceHorizontalSpeed;
         public ulong LandingRandomState = 1;
+        public ShipLandingReceipt LastShipLanding;
 
         // 步行只替换自己的速度分量，继承的船速与外部碰撞冲量保持不变。
         public void UpdateFreeWalkVelocity(SpaceVector2 velocity)
@@ -131,6 +132,27 @@ namespace FlatWorld.Spaceflight
             FreeWalkVelocity = velocity;
         }
     }
+
+    [Serializable]
+    public readonly struct ShipLandingReceipt
+    {
+        #region 普通建筑移交完成凭证
+        // 完成凭证随乘员快照保留，船记录移除和客户端换快照后仍能确认本次落地。
+        public readonly string ShipId, EventId, WorldKey;
+        public readonly bool IsWater;
+        public readonly double SimulationSeconds;
+        [JsonIgnore] public bool IsValid => !string.IsNullOrWhiteSpace(ShipId) &&
+            !string.IsNullOrWhiteSpace(EventId) && !string.IsNullOrWhiteSpace(WorldKey);
+
+        [JsonConstructor]
+        public ShipLandingReceipt(string shipId, string eventId, string worldKey, bool isWater, double simulationSeconds)
+        {
+            ShipId = shipId; EventId = eventId; WorldKey = worldKey;
+            IsWater = isWater; SimulationSeconds = simulationSeconds;
+        }
+        #endregion
+    }
+
     [Serializable]
     public sealed class ShipNavigationState
     {

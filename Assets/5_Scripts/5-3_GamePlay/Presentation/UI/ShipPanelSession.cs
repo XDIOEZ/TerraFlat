@@ -210,7 +210,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
                 Append("拒绝", "驾驶失败：请靠近已供电的有效控制台；海面浮船无法驾驶。");
                 break;
             case "exit":
-                Report(session.ExitConsole(actor), "已退出驾驶。", "当前未处于驾驶状态。");
+                Report(session.RequestConsoleExit(actor), "已退出驾驶。", "当前未处于驾驶状态。");
                 break;
             case "ignite":
                 if (!session.ToggleIgnition(console))

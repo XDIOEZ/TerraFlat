@@ -4989,6 +4989,22 @@ MonoBehaviour:
     m_Localized: "每次点击有 {0:0}% 概率产生火种"
     m_Metadata:
       m_Items: []
+  - m_Id: 17033120237740592
+    m_Localized: "\u98de\u884c\u9ad8\u5ea6"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740593
+    m_Localized: "{0} m"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740594
+    m_Localized: "\u5373\u5c06\u89e6\u5730\uff0c\u7740\u9646\u540e\u98de\u8239\u5c06\u56fa\u5b9a"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033120237740595
+    m_Localized: "\u5df2\u7740\u9646\uff0c\u98de\u8239\u5df2\u56fa\u5b9a"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

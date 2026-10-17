@@ -72,6 +72,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 普通合成使用 `Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable.prefab`，参考尺寸 1344×756；正式输入/输出/配方模板按真实容量复用。工业流体/宇航服/气罐使用 MechanicalPanelView 与 PreservePrefabLayout，宇航服入口共用 SpacesuitPanelSession 的真实供氧槽。
 - 装备页只保留 `FWUI_ConfigureEquipment` 通用入口，由 `EquipmentConfigurationButton` 收集可配置装备；一件直接打开，多件用公共下拉选择，没有则禁用。`Mod_Equipment` 只通过 `IEquipmentConfiguration` 分发并复核当前装备身份，具体装备效果拥有配置页面；不在装备 UI 或工业面板重建中添加具体装备分支。
 - 飞船 ShipPanelSession 的命令行/按钮共用执行入口，反馈历史有上限，查看历史不被消息置底。FuelInteraction 仅绑定通用模块，标题来自定义。任务/教程阅读入口为书籍/UI_ReadableBook。
+- 飞船起降高度尺由 PlayerShipFlightHUD 读取 SpaceSession 的只读快照和正式落地凭证，独立 UI_ShipFlightHUD 与构建器同步；纯展示 Tracker 处理驾驶/退出/重进/完成短提示，正高度不舍入为零，SafeAreaRoot 中避开坐标、Buff 与实际手机摇杆。
 - PlayerWorldCoordinateHUD 地表读取 WorldLocalPresentation 逻辑坐标，太空读取乘员双精度宇宙位置（支撑船姿态 + 本地位置 / FreeMotion），显示千米与米级精度，不随 ViewOrigin 改变；坐标行宽 560、下方温度/气压与季节行独立。环境温度采样独立于移动、显示按最终精度去重；FoodUIModule 仅为 IsLocalProfile 玩家持有角色 HUD。PlayerBuffStatusHUD 重建容器时清旧行缓存，玩家卸载期间撤绑定，不由 Buff 清理回调重建视图；Buff 列表使用 SafeAreaRoot，最多显示六行，溢出时仅视口可滚动；`状态图标` 同步读取目录预载 Sprite，缺图显示名称首字，与底板和层数徽标独立。
 - MOD 条目拖拽由共同父节点接收，来源为文件夹身份；跨页行复用保留来源，预览/落点线输入透明，关闭取消。
 
