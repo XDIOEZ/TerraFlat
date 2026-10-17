@@ -41,6 +41,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 温度避险不记录/回退安全点；记最多 8 个危险锚点 30 秒，以危险点指向角色的向量引导分段随机离开。陆地普通目标保留距离衰减偏置，线路接近危险记录则保持强偏置并走局部随机段；同一段目标缓存。安全环境持续 2 秒且距危险记录至少 3 格后才解除强制避险，体温未恢复则等待。
 - 雪地专属白兔/雪豹在 `snow-actors.json` 配置初始体表 -10℃，安全范围分别 -30～20℃/-30～25℃。新增物种按栖息地与玩法定位配安全范围与初始体温，不在通用温度模块堆物种特例。
 - `AI_DebugOverlayRenderer` 集中绘头顶信息；实时读 `_currentState`，`AI_Chicken.Data.State` 只在加载/保存同步。小鸡只缓存所属 Scene.handle 名称，时间实时读取；受伤禁睡保存绝对游戏日截止，逃跑记忆与睡眠警戒独立。
+- GM 动物、蜜蜂和蜂巢头顶诊断共用 `AI_DebugOverlay.CanDrawWorldLabels`，正式背包/制作/设置等交互面板或手机抽屉打开时暂时让位，关闭后仍保留 GM 开关状态。
 - GO AI 状态评估回调在实例内复用，不在每次判定时分配委托；调试头顶标签仅在 IMGUI Repaint 绘制并复用 GUIContent。
 - 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持搜索最后可见位置，到点等待，重见重计时；夜间归巢不抢占追击，蜂巢销毁后无领地巡逻。
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。

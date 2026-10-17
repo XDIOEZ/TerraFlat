@@ -151,6 +151,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     public void DestroyPanel()
     {
         GameObject panelInstance = readPanelInstance?.Invoke();
+        BasePanel registeredPanel = readPanel?.Invoke();
         StopStatusBarTransitions();
         ClearPanelBindings();
         writePanel?.Invoke(null);
@@ -158,6 +159,13 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
         if (panelInstance == null)
             return;
+
+        // 常驻营养 HUD 退出世界时同样注销面板身份，避免 Manager 持有上一轮玩家 UI。
+        if (Application.isPlaying && registeredPanel != null && UIManager.ExistingInstance != null)
+        {
+            UIManager.ExistingInstance.DestroyPanel(registeredPanel);
+            return;
+        }
 
         if (Application.isPlaying)
             UnityEngine.Object.Destroy(panelInstance);

@@ -1444,13 +1444,19 @@ namespace FlatWorld.GameplayMCP
         internal static async Task<JObject> AttackAsync(JObject parameters, Player player, Mod_GameController controller)
         {
             int targetGuid = GetInt(parameters, "targetGuid", 0);
+            Vector3? aimedPosition = null;
             if (targetGuid != 0)
             {
                 Item target = FindRuntimeItem(targetGuid);
                 if (target == null)
                     return BuildActionError("target_not_found", $"找不到运行时实体 Guid={targetGuid}。", false);
-                controller.TrySetExternalAimWorldPosition(ControlOwner, target.transform.position);
-                await WaitEditorSecondsAsync(0.02f);
+                // 鸟类/蜜蜂的根节点留在地面，真正受击盒随飞行 Sprite 上升，必须瞄准受击盒而不是根节点。
+                Vector3 aimPoint = ResolveActorAimPoint(target);
+                if (!controller.TrySetExternalAimWorldPosition(ControlOwner, aimPoint))
+                    return BuildActionError("aim_rejected", "当前外部控制租约无法设置攻击目标。", false);
+                aimedPosition = aimPoint;
+                if (!await WaitEditorSecondsAsync(0.02f))
+                    return BuildActionError("play_mode_ended", "设置攻击目标期间 Play Mode 已结束。", false);
             }
 
             float seconds = Mathf.Clamp(GetFloat(parameters, "seconds", 0.2f), 0.02f, 5f);
@@ -1470,8 +1476,30 @@ namespace FlatWorld.GameplayMCP
             return BuildActionSuccess("attack", player, new JObject
             {
                 ["targetGuid"] = targetGuid == 0 ? JValue.CreateNull() : new JValue(targetGuid),
+                ["aimPoint"] = aimedPosition.HasValue
+                    ? (JToken)new JArray(Round(aimedPosition.Value.x), Round(aimedPosition.Value.y))
+                    : JValue.CreateNull(),
                 ["seconds"] = Round(seconds)
             });
+        }
+
+        /// <summary>瞄准可受击的真实 Collider，缺失时才退回实体根坐标；不绕过正常命中与防御。</summary>
+        private static Vector3 ResolveActorAimPoint(Item target)
+        {
+            Mod_DamageReceiver receiver = target.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            if (receiver != null)
+            {
+                Collider2D[] colliders = receiver.GetComponents<Collider2D>();
+                foreach (Collider2D collider in colliders)
+                {
+                    if (collider == null || !collider.enabled || !collider.gameObject.activeInHierarchy ||
+                        !CombatPhysicsChannels.IsDamageReceiverCollider(collider) ||
+                        collider.bounds.size.sqrMagnitude <= 0f)
+                        continue;
+                    return collider.bounds.center;
+                }
+            }
+            return target.transform.position;
         }
 
         /// <summary>调用当前真实手持物的 Act 入口。</summary>

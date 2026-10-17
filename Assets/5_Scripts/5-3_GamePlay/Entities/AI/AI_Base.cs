@@ -38,6 +38,19 @@ public static class AI_DebugOverlay
 	private static AI_DebugOverlayRenderer renderer;
 	public static bool Visible { get; private set; }
 
+	/// <summary>游戏面板打开时暂避让头顶调试文字，关闭面板后自动恢复原开关。</summary>
+	public static bool CanDrawWorldLabels
+	{
+		get
+		{
+			UIManager manager = UIManager.ExistingInstance;
+			return manager == null ||
+			    (!manager.HasOpenGamepadNavigationPanel() &&
+			     !manager.HasOpenGameplayInputBlockingPanel() &&
+			     !PlayerMobileControlsHUD.IsActiveDrawerOpen);
+		}
+	}
+
 	public static void SetVisible(bool visible)
 	{
 		Visible = visible;
@@ -77,7 +90,7 @@ public static class AI_DebugOverlay
 
 	public static void Draw()
 	{
-		if (!Visible || !Application.isPlaying)
+		if (!Visible || !Application.isPlaying || !CanDrawWorldLabels)
 			return;
 		Camera camera = Camera.main;
 		if (camera == null)

@@ -83,7 +83,7 @@ public sealed partial class Mod_HiveColony : Module
         // 调试文字只在实际绘制时计算，跳过 IMGUI 的布局与输入事件。
         if (Event.current.type != EventType.Repaint)
             return;
-        if (!HiveColonyDebugOverlay.Visible || !Application.isPlaying || item == null)
+        if (!HiveColonyDebugOverlay.Visible || !Application.isPlaying || !AI_DebugOverlay.CanDrawWorldLabels || item == null)
             return;
 
         Camera camera = Camera.main;

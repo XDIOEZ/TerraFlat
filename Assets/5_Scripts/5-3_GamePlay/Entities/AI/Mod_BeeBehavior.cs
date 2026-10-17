@@ -303,7 +303,9 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
     /// <summary>接入动物参数总开关，显示蜜蜂当前行为、饱食、愤怒、目标与蜂巢库存。</summary>
     private void OnGUI()
     {
-        if (!AI_DebugOverlay.Visible || !Application.isPlaying || item == null)
+        if (Event.current.type != EventType.Repaint)
+            return;
+        if (!AI_DebugOverlay.Visible || !Application.isPlaying || !AI_DebugOverlay.CanDrawWorldLabels || item == null)
             return;
 
         Camera camera = Camera.main;

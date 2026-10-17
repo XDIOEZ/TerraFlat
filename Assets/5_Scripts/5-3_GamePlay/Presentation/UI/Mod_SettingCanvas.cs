@@ -309,8 +309,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
 
     #endregion
 
-    // 对象销毁时取消事件绑定
-    private void OnDestroy()
+    /// <summary>玩家退出世界时对称释放输入、暂停与常驻设置面板。</summary>
+    protected override void OnUnload()
     {
         if (playerInputActions != null)
         {
@@ -327,7 +327,25 @@ public class Mod_SettingCanvas : Module, IInstanceUI
 
         ReleasePanelInputLock();
         ReleaseSettingsPause();
+
+        BasePanel ownedPanel = basePanel;
+        basePanel = null;
+        if (ownedPanel != null)
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            if (manager != null) manager.DestroyPanel(ownedPanel);
+            else Destroy(ownedPanel.gameObject);
+        }
+
+        exitConfirmation = null;
+        returnToMainMenuButton = null;
+        returnToDesktopButton = null;
+        playerInputActions = null;
+        gameController = null;
+        playerDeathState = null;
     }
+
+    private void OnDestroy() => Unload();
 
     #region 单机设置暂停
 

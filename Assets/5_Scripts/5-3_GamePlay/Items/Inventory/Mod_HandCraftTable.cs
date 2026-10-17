@@ -248,8 +248,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         _craftingController?.Dispose();
         _craftingController = null;
-        inputInventory?.UnbindSlotDataEvents();
-        outputInventory?.UnbindSlotDataEvents();
+        inputInventory?.UnbindRuntimeDataEvents();
+        outputInventory?.UnbindRuntimeDataEvents();
 
         if (_toggleAction != null && _toggleCallback != null)
             _toggleAction.performed -= _toggleCallback;
@@ -261,6 +261,23 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         }
 
         ReleasePanelInputLock();
+        // 制作窗口归模块所有，跨世界卸载时必须释放其常驻面板和全部材料槽位 UI。
+        BasePanel ownedPanel = basePanel;
+        basePanel = null;
+        if (ownedPanel != null)
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            if (manager != null) manager.DestroyPanel(ownedPanel);
+            else Destroy(ownedPanel.gameObject);
+        }
+        inputInventory?.ReleaseRuntimePanel();
+        outputInventory?.ReleaseRuntimePanel();
+        if (inputInventory != null) inputInventory.DefaultTarget_Inventory = null;
+        if (outputInventory != null) outputInventory.DefaultTarget_Inventory = null;
+        _toggleAction = null;
+        _toggleCallback = null;
+        _inputController = null;
+        workButton = null;
     }
 
     private void EnsureInventoryPanelPrefabAssigned()

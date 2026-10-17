@@ -931,6 +931,7 @@ public class UIManager : MonoBehaviour
             {
                 if (panelList[i] != null && panelList[i].PanelName == panelName)
                 {
+                    panelList[i].gameObject.SetActive(false);
                     Destroy(panelList[i].gameObject);
                     panelList.RemoveAt(i);
                     NotifyInteractionSurfaceChanged();
@@ -947,6 +948,8 @@ public class UIManager : MonoBehaviour
         // 面板归属按实例注销，避免重命名或跨世界注册变化导致旧 UI 漏销毁。
         foreach (List<BasePanel> panelList in panels.Values)
             panelList.Remove(panel);
+        // Unity 延迟销毁时先移出交互层，避免同一帧的新玩家被旧窗口夺取射线。
+        panel.gameObject.SetActive(false);
         Destroy(panel.gameObject);
         NotifyInteractionSurfaceChanged();
     }
@@ -959,6 +962,7 @@ public class UIManager : MonoBehaviour
             {
                 if (panelList[i] != null && panelList[i].gameObject != null)
                 {
+                    panelList[i].gameObject.SetActive(false);
                     Destroy(panelList[i].gameObject);
                 }
             }

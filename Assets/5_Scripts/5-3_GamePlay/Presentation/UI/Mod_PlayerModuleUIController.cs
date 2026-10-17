@@ -47,6 +47,9 @@ public class Mod_PlayerModuleUIController : Module
     {
     }
 
+    /// <summary>移除玩家时同步清理手动生成的模块入口，不能把旧界面留给下个世界。</summary>
+    protected override void OnUnload() => ClearButtons();
+
 #endregion
 
 #region UI控制器生成
@@ -80,7 +83,12 @@ public class Mod_PlayerModuleUIController : Module
         if (_buttonListInstance != null)
         {
             if (_buttonListPanel != null)
-                UIManager.Instance.DestroyPanel(_buttonListPanel);
+            {
+                if (UIManager.ExistingInstance != null)
+                    UIManager.ExistingInstance.DestroyPanel(_buttonListPanel);
+                else
+                    Destroy(_buttonListPanel.gameObject);
+            }
             else
                 Destroy(_buttonListInstance);
 

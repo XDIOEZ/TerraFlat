@@ -254,6 +254,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["registered"] = fixture.Ui.GetAllPanelsOfType(GameManager.MainMenuSettingsPanelKey).Contains(panel),
                 ["open"] = panel.IsOpen(), ["blocking"] = panel.IsGameplayInputBlocking,
                 ["managerBlocking"] = fixture.Ui.HasOpenGameplayInputBlockingPanel(),
+                ["debugWorldLabelsSuppressed"] = !AI_DebugOverlay.CanDrawWorldLabels,
                 ["navigationPrepared"] = panel.IsGamepadNavigationPrepared,
                 ["interactive"] = group != null && group.interactable && group.blocksRaycasts && group.alpha > .99f,
                 ["expectedChinese"] = expectedZh, ["observedChinese"] = observedZh,

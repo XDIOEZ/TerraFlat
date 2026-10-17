@@ -2,6 +2,7 @@
 test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     assert(data.scope == "live-isolated-world" and data.formalWindow and data.registered and data.open, "正式窗口没有创建、绑定或登记")
     assert(data.blocking and data.managerBlocking and data.navigationPrepared and data.interactive, "打开设置后没有接管玩法交互或可取消导航")
+    assert(data.debugWorldLabelsSuppressed, "打开正常设置窗口时，头顶 AI 调试标签仍会覆盖可交互控件")
     assert(data.expectedChinese == "保存" and data.observedChinese == data.expectedChinese, "正式中文字符串表或 TMP Binder 没有刷新")
     assert(data.expectedEnglish ~= nil and #data.expectedEnglish > 0 and data.expectedEnglish ~= data.expectedChinese, "英文正式表缺项或仍是中文回退")
     assert(data.chineseSwitch.completed and data.englishSwitch.completed and data.discardedChineseSwitch.completed, "正式语言事件或 TMP 刷新没有在有界等待内完成")
