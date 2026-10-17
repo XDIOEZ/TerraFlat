@@ -104,6 +104,7 @@ public partial class ChunkMgr
     private readonly Dictionary<RuntimeWorldAddress, RuntimeChunkBinding> activeRuntimeBindings = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeWindowTargets = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeReadyTargets = new();
+    private readonly HashSet<RuntimeWorldAddress> retiringRuntimeBindings = new();
     private readonly List<RuntimeWorldAddress> runtimeWindowRemovalBuffer = new();
     private readonly List<RuntimeWorldAddress> runtimePresentationQueue = new();
     private readonly List<RuntimeWorldAddress> runtimePresentationContinuationQueue = new();
@@ -115,6 +116,8 @@ public partial class ChunkMgr
     private bool runtimeWindowUsesLocalPresentation;
     private Rect runtimeActiveWindowBounds;
     private Rect runtimePresentationWindowBounds;
+    private readonly ChunkWindowPresentationTransition runtimeWindowTransition = new();
+    private int runtimeWindowTransitionFrame = -1;
     private string runtimeWindowDimensionId;
     private Vector2 runtimePresentationPriorityCenter;
     private Vector2Int runtimePresentationInterestOrigin;
@@ -216,18 +219,21 @@ public partial class ChunkMgr
 
     #region 窗口刷新
 
-    /// <summary>读取实际提交的本地加载窗口，表现队列重排不会提前移动这两个边界。</summary>
+    /// <summary>默认读取正式加载窗口，云雾可选择平滑表现窗口；队列重排不改变加载目标。</summary>
     public bool TryGetRuntimeWindowBounds(Vector2 presentationAnchor,
-        out Rect activeBounds, out Rect presentationBounds)
+        out Rect activeBounds, out Rect presentationBounds, bool usePresentedBounds = false)
     {
         activeBounds = presentationBounds = default;
         if (!IsSurfaceStreamingScene || !runtimeWindowUsesLocalPresentation ||
             runtimeWindowTargets.Count == 0 || runtimeWindowDimensionId != ResolveCurrentDimensionId())
             return false;
 
-        activeBounds = ProjectRuntimeWindowBounds(runtimeActiveWindowBounds, presentationAnchor);
-        presentationBounds = new Rect(activeBounds.center - runtimePresentationWindowBounds.size * 0.5f,
-            runtimePresentationWindowBounds.size);
+        Rect active = usePresentedBounds && runtimeWindowTransition.IsInitialized
+            ? runtimeWindowTransition.ActiveBounds : runtimeActiveWindowBounds;
+        Rect presentation = usePresentedBounds && runtimeWindowTransition.IsInitialized
+            ? runtimeWindowTransition.PresentationBounds : runtimePresentationWindowBounds;
+        activeBounds = ProjectRuntimeWindowBounds(active, presentationAnchor);
+        presentationBounds = new Rect(activeBounds.center - presentation.size * 0.5f, presentation.size);
         return true;
     }
 
@@ -416,10 +422,13 @@ public partial class ChunkMgr
         runtimePresentationInterestOrigin = centerOrigin;
         runtimePresentationInterestDistance = resolvedPresentation;
         runtimePresentationInterestDimensionId = dimensionId;
+        if (runtimeWindowDimensionId != dimensionId || !includeLocalPresentation)
+            runtimeWindowTransition.Reset();
         Vector2Int chunkSize = new Vector2Int(stepX, stepY);
         runtimeActiveWindowBounds = CalculateRuntimeWindowBounds(centerOrigin, chunkSize, activeDistance);
         runtimePresentationWindowBounds = CalculateRuntimeWindowBounds(centerOrigin, chunkSize, resolvedPresentation);
         runtimeWindowDimensionId = dimensionId;
+        SampleRuntimeWindowTransition();
 
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
@@ -444,6 +453,7 @@ public partial class ChunkMgr
                 }
 
                 binding.WantsPresentation = includeLocalPresentation;
+                retiringRuntimeBindings.Remove(address);
             }
         }
 
@@ -454,9 +464,9 @@ public partial class ChunkMgr
                 runtimeWindowRemovalBuffer.Add(pair.Key);
         }
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
-            DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i]);
+            RetireRuntimeBinding(runtimeWindowRemovalBuffer[i]);
 
-        // 先归还离开窗口的表现租约，纯模型随后才能真正逐出最外圈缓存。
+        // 雾内旧画面暂留表现租约，完全被遮住后再归还并允许纯模型逐出。
         runtimeChunkManager.RefreshWindow(new ChunkWindowRequest(centerAddress,
             new Int2(activeDistance.x, activeDistance.y),
             new Int2(destroyDistance.x, destroyDistance.y),
@@ -471,7 +481,7 @@ public partial class ChunkMgr
             resolvedPrefetch, stepX, stepY, profile, seed, topology);
     }
 
-    /// <summary>玩家跨区块时立刻撤销旧视野表现，并重排仍有效的表现任务。</summary>
+    /// <summary>玩家跨区块时取消未出画面的旧任务，已呈现的旧地面等待雾交接后回收。</summary>
     public void RetargetRuntimePresentationQueue(Vector2 center, Vector2Int presentationDistance)
     {
         runtimePresentationPriorityCenter = center;
@@ -506,7 +516,7 @@ public partial class ChunkMgr
         }
 
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
-            DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i]);
+            RetireRuntimeBinding(runtimeWindowRemovalBuffer[i]);
         runtimeWindowRemovalBuffer.Clear();
         runtimePresentationInterestOrigin = centerOrigin;
         runtimePresentationInterestDistance = presentationDistance;
@@ -554,6 +564,70 @@ public partial class ChunkMgr
         profile = AttachCavePortalPairing(profile, baseSeed);
         activeGenerationSnapshot = profile;
         return profile;
+    }
+
+    #endregion
+
+    #region 加载窗口表现交接
+
+    private void SampleRuntimeWindowTransition()
+    {
+        if (!runtimeWindowUsesLocalPresentation)
+        {
+            runtimeWindowTransition.Reset();
+            return;
+        }
+
+        Rect active = runtimeActiveWindowBounds;
+        Rect presentation = runtimePresentationWindowBounds;
+        if (runtimeWindowTransition.IsInitialized)
+        {
+            // 连续窗口先选同一世界镜像，环绕接缝不会把雾横扫整个地图。
+            active = ProjectRuntimeWindowBounds(active, runtimeWindowTransition.ActiveBounds.center);
+            presentation = new Rect(active.center - presentation.size * 0.5f, presentation.size);
+        }
+        float seconds = runtimeWindowTransitionFrame == Time.frameCount ? 0f : Mathf.Max(0f, Time.deltaTime);
+        runtimeWindowTransition.Sample(active, presentation, seconds,
+            WorldRenderingConfigCatalog.Default.zoomClouds.windowTransitionSeconds);
+        runtimeWindowTransitionFrame = Time.frameCount;
+    }
+
+    private bool KeepRuntimeBindingForTransition(RuntimeWorldAddress address, RuntimeChunkBinding binding)
+    {
+        if (!runtimeWindowUsesLocalPresentation || !runtimeWindowTransition.IsInitialized ||
+            address.DimensionId != runtimeWindowDimensionId || binding.View == null ||
+            (!binding.View.IsBound && !binding.View.IsBaseTerrainPresented))
+            return false;
+        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile;
+        Rect chunkBounds = new Rect(address.ChunkOrigin.X, address.ChunkOrigin.Y, profile.Width, profile.Height);
+        chunkBounds = ProjectRuntimeWindowBounds(chunkBounds, runtimeWindowTransition.PresentationBounds.center);
+        return runtimeWindowTransition.IntersectsPresentation(chunkBounds);
+    }
+
+    private void RetireRuntimeBinding(RuntimeWorldAddress address)
+    {
+        if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+            return;
+        if (KeepRuntimeBindingForTransition(address, binding))
+            retiringRuntimeBindings.Add(address);
+        else
+            DeactivateRuntimeBinding(address);
+    }
+
+    private void ReleaseRetiredRuntimeBindings()
+    {
+        if (retiringRuntimeBindings.Count == 0)
+            return;
+        runtimeWindowRemovalBuffer.Clear();
+        foreach (RuntimeWorldAddress address in retiringRuntimeBindings)
+        {
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) ||
+                !KeepRuntimeBindingForTransition(address, binding))
+                runtimeWindowRemovalBuffer.Add(address);
+        }
+        for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
+            DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i]);
+        runtimeWindowRemovalBuffer.Clear();
     }
 
     #endregion
@@ -1042,11 +1116,15 @@ public partial class ChunkMgr
         using var reconcileTiming = WorldRuntime != null
             ? WorldRuntime.StreamingDiagnostics.Measure("window.reconcile") : default;
         MaintainRuntimeChunkViewPool();
+        SampleRuntimeWindowTransition();
+        ReleaseRetiredRuntimeBindings();
         if (runtimeChunkManager == null || activeRuntimeBindings.Count == 0)
             return;
         foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
         {
             RuntimeChunkBinding binding = pair.Value;
+            if (retiringRuntimeBindings.Contains(pair.Key))
+                continue;
             if (!runtimeChunkManager.TryGetChunk(pair.Key, out ChunkRuntime current) ||
                 current.DataStatus != ChunkDataStatus.Ready || current.Terrain == null)
                 continue;
@@ -1225,6 +1303,7 @@ public partial class ChunkMgr
     /// <summary>先移除区块登记；正常流送回池，整个窗口关闭时直接销毁 View。</summary>
     private void DeactivateRuntimeBinding(RuntimeWorldAddress address, bool recycleView = true)
     {
+        retiringRuntimeBindings.Remove(address);
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
             return;
         if (binding.RestoredTerrainChunk != null)
@@ -1273,8 +1352,11 @@ public partial class ChunkMgr
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
+        retiringRuntimeBindings.Clear();
         runtimeWindowUsesLocalPresentation = false;
         runtimeActiveWindowBounds = runtimePresentationWindowBounds = default;
+        runtimeWindowTransition.Reset();
+        runtimeWindowTransitionFrame = -1;
         runtimeWindowDimensionId = null;
         runtimePresentationInterestDimensionId = null;
         runtimePresentationQueue.Clear();
@@ -1291,6 +1373,64 @@ public partial class ChunkMgr
         else DestroyRuntimeChunkViewPool();
         ChunkBatchRendererGroupService.ReleaseUnusedBackend();
     }
+
+    #endregion
+}
+
+/// <summary>加载目标与可见窗口分离，雾边平滑交接期间保留仍会露出的旧画面。</summary>
+public sealed class ChunkWindowPresentationTransition
+{
+    #region 窗口交接状态
+
+    public bool IsInitialized { get; private set; }
+    public Rect ActiveBounds { get; private set; }
+    public Rect PresentationBounds { get; private set; }
+    private Rect startActive;
+    private Rect startPresentation;
+    private Rect targetActive;
+    private Rect targetPresentation;
+    private float elapsedSeconds;
+
+    public void Reset()
+    {
+        IsInitialized = false;
+        ActiveBounds = PresentationBounds = startActive = startPresentation =
+            targetActive = targetPresentation = default;
+        elapsedSeconds = 0f;
+    }
+
+    public void Sample(Rect active, Rect presentation, float deltaSeconds, float transitionSeconds)
+    {
+        if (!IsInitialized || transitionSeconds <= 0f || !PresentationBounds.Overlaps(presentation))
+        {
+            ActiveBounds = startActive = targetActive = active;
+            PresentationBounds = startPresentation = targetPresentation = presentation;
+            elapsedSeconds = transitionSeconds;
+            IsInitialized = true;
+            return;
+        }
+        if (targetActive != active || targetPresentation != presentation)
+        {
+            // 折返或再次跨块从当前雾边接续，起点不退回上一次的区块边界。
+            startActive = ActiveBounds;
+            startPresentation = PresentationBounds;
+            targetActive = active;
+            targetPresentation = presentation;
+            elapsedSeconds = 0f;
+            return;
+        }
+
+        elapsedSeconds = Mathf.Min(transitionSeconds, elapsedSeconds + Mathf.Max(0f, deltaSeconds));
+        float progress = Mathf.SmoothStep(0f, 1f, elapsedSeconds / transitionSeconds);
+        ActiveBounds = Interpolate(startActive, targetActive, progress);
+        PresentationBounds = Interpolate(startPresentation, targetPresentation, progress);
+    }
+
+    public bool IntersectsPresentation(Rect chunkBounds)
+        => IsInitialized && PresentationBounds.Overlaps(chunkBounds);
+
+    private static Rect Interpolate(Rect from, Rect to, float progress)
+        => new Rect(Vector2.Lerp(from.position, to.position, progress), Vector2.Lerp(from.size, to.size, progress));
 
     #endregion
 }

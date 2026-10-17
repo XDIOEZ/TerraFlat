@@ -179,7 +179,7 @@ public class Mod_ChunkLoader : Module
 
     #region 外部接口
 
-    /// <summary>表现层只读正式加载窗口，改设置提交新窗口后随之更新。</summary>
+    /// <summary>表现层只读加载窗口的平滑交接状态，旧画面由区块系统保留到雾外。</summary>
     public bool TryGetLoadingWindowBounds(out Rect activeBounds, out Rect presentationBounds)
     {
         activeBounds = presentationBounds = default;
@@ -187,7 +187,8 @@ public class Mod_ChunkLoader : Module
         if (!CanStreamSurface || chunkManager == null)
             return false;
         if (!_externalStreamingManaged)
-            return chunkManager.TryGetRuntimeWindowBounds(transform.position, out activeBounds, out presentationBounds);
+            return chunkManager.TryGetRuntimeWindowBounds(transform.position, out activeBounds, out presentationBounds,
+                usePresentedBounds: true);
 
         // 旧联机流送只保证活动窗的画面，不把数据预取圈误当成可见地形。
         Vector2Int chunkSize = Vector2Int.RoundToInt(ChunkMgr.GetChunkSize());

@@ -34,8 +34,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 ## 流送与生成
 
 - 模拟圈、完整表现预加载圈、数据保留圈分别维护；就绪只检查活动圈，关闭释放全部表现需求。Mod_ChunkLoader 按玩家持久化加载距离提交窗口，相机缩放不改距离；距离 d 包含中心块，窗口边长是 (2d-1) 个区块。
-- ChunkMgr.TryGetRuntimeWindowBounds 只读已提交的活动窗与表现窗；边界共用正式窗口几何和实际 Profile 宽高，队列 retarget 不提前移动它。Mod_ChunkLoader.TryGetLoadingWindowBounds 对外统一提供本地镜像矩形，旧联机按本机加载设置退回仅活动窗，表现消费者不得反向改流送。
-- 离开窗口的 pending/后台请求取消，保留请求按玩家现位置重排；同区块移动只更新优先级。`Mod_ChunkLoader` 窗口与 `RetargetRuntimePresentationQueue` 共用预加载距离。
+- ChunkMgr.TryGetRuntimeWindowBounds 默认读取已提交窗口，usePresentedBounds 选择 ChunkWindowPresentationTransition 的平滑表现窗；正式目标不延迟，云雾和旧 View 回收共用同一状态。边界按实际 Profile 宽高，队列 retarget 不提前移动目标；Mod_ChunkLoader 对外整体投影本地镜像，旧联机退回仅活动窗，表现消费者不得反向改流送。
+- 离开窗口的 pending/后台请求取消，已有地面的旧 View/表现租约保留到平滑雾窗外才解绑；重入目标复用，换维度/关闭窗口清理。折返、连续跨块不重置到旧边界，规则见 Rendering/zoom_cloud_transition。保留请求按玩家现位置重排，同区块移动只改优先级；Mod_ChunkLoader 与 RetargetRuntimePresentationQueue 共用预加载距离。
 - 基础地形跨 Chunk 优先，草/碰撞/导航/自然物后续轮转；续步骤先取基础未完成块，再按当前距离选择，单块每帧最多一步。`ChunkTilemapRenderer` 初绑每步最多64格，网格批写跨步、每层上传分别让帧，全部完成才发布基础就绪/重建事件；绑定间的地形/邻区脏格合并重扫，资源变化重启扫描，取消按绑定版本释放。`IIncrementalChunkViewRenderer` 扫描跳过项也计预算，自然物先宿主后伴生，完成初绑后再季节补位。单项装配仍可能超时。
 - 差量在基础绑定前恢复，同一 Runtime 不因窗口刷新重复恢复。外圈预取只等待可见数据/基础地形，不等全部后续表现。
 - `WorldManager.prefab` 序列化提交/基础/后续预算覆盖源码默认值。GM 可调数量与毫秒上限；`StreamingDiagnostics` 分开记录排队、生成、提交、恢复、renderer 步骤与等待，读取诊断不推进世界。

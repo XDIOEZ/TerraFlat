@@ -152,6 +152,7 @@ public sealed class WorldRenderingConfig
     [Serializable]
     public sealed class RenderingZoomClouds
     {
+        public float windowTransitionSeconds;
         public float driftTransitionSeconds;
         public float noiseScale;
         public float minimumDriftSpeed;
@@ -160,8 +161,9 @@ public sealed class WorldRenderingConfig
         public Color color;
         public float shadowStrength;
 
-        // 方形边界由正式加载窗口提供，风速和缓动只负责云纹漂移。
+        // 窗口交接与云纹漂移分别缓动，加载范围仍由区块系统决定。
         public bool IsValid =>
+            IsFinite(windowTransitionSeconds) && windowTransitionSeconds >= 0f &&
             IsFinite(driftTransitionSeconds) && driftTransitionSeconds >= 0f &&
             IsFinite(noiseScale) && noiseScale > 0f &&
             IsFinite(minimumDriftSpeed) && minimumDriftSpeed >= 0f &&

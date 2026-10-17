@@ -111,6 +111,78 @@ test.system("rendering", "zoom_cloud_mask", { distance = 1, chunkWidth = 1, chun
     assert(data.featherX == 0.5 and data.featherY == 0.5, "极小窗口的柔边退化为零宽度")
 end, "极小雾窗保持有限柔边")
 
+-- 直接采样正式窗口交接，覆盖雾边连续移动和旧画面释放的几何条件。
+test.system("rendering", "zoom_cloud_transition", { duration = 0.8, steps = {
+    { x = 16 }, { x = 16, seconds = 0.2 }, { x = 16, seconds = 0.2 },
+    { x = 16, seconds = 0.4 }, { x = 16, seconds = 1 }
+} }, function(data)
+    local s = data.samples
+    assert(data.validDuration and s[1].centerX == 0, "跨块当帧雾窗瞬移")
+    assert(math.abs(s[2].centerX - 2.5) < 0.001 and math.abs(s[3].centerX - 8) < 0.001,
+        "雾窗没有按时间平滑退去并在另一侧出现")
+    assert(s[4].centerX == 16 and s[5].centerX == 16, "雾窗未按配置时长收敛或完成后继续移动")
+    assert(s[1].leftChunkRetained and s[3].leftChunkRetained and not s[4].leftChunkRetained,
+        "旧区块在雾盖住之前被释放，或完全遮住后仍被保留")
+    assert(s[3].opaqueMinX == -48 and s[3].opaqueMaxX == 64 and s[3].clearWidth == 80,
+        "渐变改变了窗口宽度或只移动了一侧边缘")
+end, "区块雾窗渐退渐现和旧画面遮挡后释放")
+
+test.system("rendering", "zoom_cloud_transition", { duration = 0.8, steps = {
+    { x = 16 }, { x = 16, seconds = 0.4 }, { x = -16 },
+    { x = -16, seconds = 0.4 }, { x = -16, seconds = 0.4 }
+} }, function(data)
+    local s = data.samples
+    assert(s[2].centerX == 8 and s[3].centerX == 8, "折返时雾窗跳回原区块")
+    assert(s[4].centerX == -4 and s[5].centerX == -16, "折返没有从当前进度继续缓动")
+    assert(s[4].rightChunkRetained and not s[5].rightChunkRetained, "折返后右侧旧画面释放条件错误")
+end, "雾窗跨块中途折返不断层")
+
+test.system("rendering", "zoom_cloud_transition", { duration = 0.8, steps = {
+    { x = 16 }, { x = 16, seconds = 0.4 }, { x = 32, y = 16 },
+    { x = 32, y = 16, seconds = 0.4 }, { x = 32, y = 16, seconds = 0.4 }
+} }, function(data)
+    local s = data.samples
+    assert(s[3].centerX == 8 and s[3].centerY == 0, "连续跨块重置了可见雾窗")
+    assert(s[4].centerX == 20 and s[4].centerY == 8 and s[5].centerX == 32 and s[5].centerY == 16,
+        "连续跨块或斜向移动没有平滑接续")
+end, "雾窗连续跨块与斜向交接")
+
+test.system("rendering", "zoom_cloud_transition", { duration = 0.8, steps = {
+    { width = 144, height = 48 }, { width = 144, height = 48, seconds = 0.4 },
+    { width = 144, height = 48, seconds = 0.4 }, { width = 16, height = 16 },
+    { width = 16, height = 16, seconds = 0.8 }
+} }, function(data)
+    local s = data.samples
+    assert(s[1].clearWidth == 80 and s[2].clearWidth == 112 and s[2].clearHeight == 64,
+        "加载距离或长方形窗口变化直接跳变")
+    assert(s[3].clearWidth == 144 and s[4].clearWidth == 144 and s[5].clearWidth == 16,
+        "扩大或缩小雾窗没有按配置时长完成")
+    assert(s[2].opaqueWidth - s[2].clearWidth == 32 and s[5].opaqueWidth == 48,
+        "窗口大小渐变破坏了柔雾带")
+end, "加载距离和非正方形雾窗平滑变化")
+
+test.system("rendering", "zoom_cloud_transition", { duration = 0.8, steps = {
+    { x = 16 }, { x = 16, seconds = -1 }, { x = 16, seconds = 0 }, { x = 16, seconds = 5 },
+    { x = 1000 }, { x = -16, reset = true }
+} }, function(data)
+    local s = data.samples
+    assert(s[2].centerX == 0 and s[3].centerX == 0, "暂停或负时间推动了雾边")
+    assert(s[4].centerX == 16, "长帧没有完成交接")
+    assert(s[5].centerX == 1000 and not s[5].leftChunkRetained and not s[5].rightChunkRetained,
+        "不重叠的传送仍让雾扫过整张地图或保留远处旧画面")
+    assert(s[6].centerX == -16, "换世界后仍沿用上个窗口的交接状态")
+end, "雾窗暂停、长帧、传送与重置边界")
+
+for _, duration in ipairs({ 0, -1 }) do
+    test.system("rendering", "zoom_cloud_transition", { duration = duration, steps = { { x = 16 } } }, function(data)
+        assert(data.validDuration == (duration == 0), "雾窗时间没有接受零值或拒绝负数")
+        if duration == 0 then
+            assert(data.samples[1].centerX == 16 and not data.samples[1].leftChunkRetained,
+                "关闭渐变后仍延迟移动或保留旧画面")
+        end
+    end, "雾窗渐变时长边界：" .. duration)
+end
+
 for _, args in ipairs({
     { size = 20, expected = 0 }, { size = 55, expected = 0 }, { size = 60, expected = 0 },
     { size = 75, expected = 0.5 }, { size = 90, expected = 1 }, { size = 200, expected = 1 }

@@ -4,6 +4,8 @@
 
 快速入口：`rules.lua`；操作：`world_streaming/chunk_leases、generation_lifecycle、commit_snapshot`。真实入口：`gameplay.lua` / `world_streaming/live_window`。
 
+2026-10-17 雾边交接：加载目标仍立即提交，ChunkMgr 单独缓动表现窗口，已有地面的旧 View 在离开平滑窗口后才解绑；重新进入目标窗口直接复用，未呈现地面的过期任务仍取消，清空窗口或换维度立即清理。共享几何断言见 Rendering 的 `zoom_cloud_transition`；该规则不替代真实 View、租约回收、环绕与连续移动现场，本轮未编译、未运行，由用户验收。
+
 2026-10-17 新增但未执行：`world_streaming/base_presentation_steps` 在独立 WorldRuntime 和禁用表现组件上实走空地形的正式 `BindIncremental`，检查每次最多 64 格、初绑/部分扫描不提前发布就绪、邻块提交与逐出/改格/视觉失效后的重扫、初绑期间不走同步修复、完成事件只发一次、取消释放 Owner，以及旧枚举器不破坏后续重绑。空地形夹具不验证真实 Sprite、材质、水面接缝、碰撞、实际资源重载或改善后的帧率。本轮保留用户暂停现场，未编译、未运行规则或场景验收。
 
 已编写的规则覆盖：独立 WorldRuntime 的模拟、表现、寻路租约，以及重复归还和逐出保护；生成失败消息的请求版本、取消和世界 Epoch 失效保护；真正 Commit 的唯一所有权移交、旧结果拒绝释放、地形修改和逐出后快照保持冻结。真实场景只读正式窗口、脚下区块数据、ChunkView和租约。

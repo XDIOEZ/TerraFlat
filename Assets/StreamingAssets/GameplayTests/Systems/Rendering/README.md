@@ -2,7 +2,7 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、universe_view_config、universe_view_transition、group_projection`。
+快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、zoom_cloud_transition、universe_view_config、universe_view_transition、group_projection`。
 
 2026-10-17 阴影性能补充但未执行：`rendering/building_capability_cache` 检查正式能力查询的空结果、模块增删/重加失效、首个匹配顺序、实时占地/通行属性和预热后重复查询的托管分配；`rendering/shadow_proxy_changes` 检查正式太阳阴影代理的静态复用、透明度/脚点变化、重复镜像、绘制模式切换和归池失效。只创建独立禁用物品与渲染节点，不代表阴影画面、光照变化、相机裁剪或最终帧耗时已验收。
 
@@ -15,6 +15,8 @@
 2026-10-17 补充但未执行：高视野云层通过正式 Mod_ChunkLoader 改加载范围，再共用 ChunkMgr 窗口几何与 Shader 参数提交，检查方形清晰窗覆盖 (2d-1) 个活动区块、额外表现圈作为柔雾带、无额外圈时内收一格及极小窗；覆盖范围扩大/缩小、最小值、正负坐标、区块内移动与跨块、非正方形区块。不同正交尺寸、横竖屏及投影翻转只改实际投影，保留世界云纹尺寸；宇宙画面仍在 60～90 直接淡入。此轮仅静态修改，未编译、未运行；实际窗口提交时序、环绕世界接缝、旧联机回退、异步加载中的画面及 GPU 柔边仍由用户验收。
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/player_external_effects`。
+
+2026-10-17 雾窗交接补充但未执行：`rendering/zoom_cloud_transition` 直接采正式 `ChunkWindowPresentationTransition`，Lua 检查 0.8 秒缓入缓出、两侧同时移动、中途折返、连续跨块/斜向交接、窗口扩大缩小、长方形窗口、暂停/负时间/长帧、零时长/非法时长、不重叠传送与重置，以及旧区块仅在离开不透明外边界后释放的几何条件。ChunkMgr 持有同一表现窗口，暂留雾边内已有地面的 View 和租约，离开雾边后回收；正式加载目标不延迟。用户自行验收，本轮未编译、未运行 Lua；真实 View 回收/重入、异步生成、世界环绕、联机及最终 GPU 渐变画面未验收。
 
 2026-10-17 新增但未执行：`rendering/combat_effect_prewarm` 采正式石斧引用的伤害数字/切割动画，检查完整资源阶段已准备三个独立空闲实例、重复预热不扩容、并发取出复用池、回收及重复回收幂等、不改变游戏随机数。此轮保留冻结 PlayMode，仅静态修改；该断言不代表首击耗时、全部 Mono.JIT 或画面已验收。
 

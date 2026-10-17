@@ -63,6 +63,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("localization/stable_identity", ServiceLocalizationIdentity);
         operations.Add("rendering/fog_config", ServiceFogConfiguration);
         operations.Add("rendering/zoom_cloud_mask", ServiceZoomCloudMask);
+        operations.Add("rendering/zoom_cloud_transition", ServiceZoomCloudTransition);
         operations.Add("rendering/universe_view_config", ServiceUniverseViewConfiguration);
         operations.Add("rendering/universe_view_transition", ServiceUniverseViewTransition);
         operations.Add("rendering/group_projection", ServiceGroupProjection);
@@ -964,6 +965,41 @@ public static partial class GameplayTestSystemProbe
             if (material != null) UnityEngine.Object.DestroyImmediate(material);
             UnityEngine.Object.DestroyImmediate(root);
         }
+    }
+
+    private static JObject ServiceZoomCloudTransition(JObject args)
+    {
+        var transition = new ChunkWindowPresentationTransition();
+        var samples = new JArray();
+        float duration = (float)Number(args, "duration", WorldRenderingConfigCatalog.Default.zoomClouds.windowTransitionSeconds);
+        transition.Sample(new Rect(-40f, -40f, 80f, 80f), new Rect(-56f, -56f, 112f, 112f), 0f, duration);
+        if (args["steps"] is JArray steps)
+        {
+            foreach (JObject step in steps)
+            {
+                if (Flag(step, "reset", false)) transition.Reset();
+                var center = new Vector2((float)Number(step, "x", 0), (float)Number(step, "y", 0));
+                var clearSize = new Vector2((float)Number(step, "width", 80), (float)Number(step, "height", 80));
+                var opaqueSize = clearSize + Vector2.one * 32f;
+                transition.Sample(new Rect(center - clearSize * 0.5f, clearSize),
+                    new Rect(center - opaqueSize * 0.5f, opaqueSize), (float)Number(step, "seconds", 0), duration);
+                Rect active = transition.ActiveBounds;
+                Rect presentation = transition.PresentationBounds;
+                samples.Add(new JObject
+                {
+                    ["centerX"] = active.center.x, ["centerY"] = active.center.y,
+                    ["clearWidth"] = active.width, ["clearHeight"] = active.height,
+                    ["opaqueMinX"] = presentation.xMin, ["opaqueMaxX"] = presentation.xMax,
+                    ["opaqueWidth"] = presentation.width,
+                    ["leftChunkRetained"] = transition.IntersectsPresentation(new Rect(-56f, -8f, 16f, 16f)),
+                    ["rightChunkRetained"] = transition.IntersectsPresentation(new Rect(40f, -8f, 16f, 16f))
+                });
+            }
+        }
+        var settings = JsonUtility.FromJson<WorldRenderingConfig.RenderingZoomClouds>(
+            JsonUtility.ToJson(WorldRenderingConfigCatalog.Default.zoomClouds));
+        settings.windowTransitionSeconds = duration;
+        return new JObject { ["samples"] = samples, ["validDuration"] = settings.IsValid };
     }
 
     private static JObject ServiceUniverseViewTransition(JObject args)
