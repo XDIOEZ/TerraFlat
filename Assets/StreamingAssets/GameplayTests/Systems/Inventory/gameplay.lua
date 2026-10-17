@@ -105,7 +105,8 @@ for _, mode in ipairs({"mouse_fast", "touch_fast", "mouse_stopped", "mouse_short
         assert(not fast or data.releaseMatched, "甩动没有保留当前指针的真实松手位置")
         assert(data.sourceAmount == 0 and data.targetAmount == (target and 6 or 0)
             and data.handAmount == (target and 0 or 6), "快速甩动、普通拖放或手部回退结果错误")
-        assert(data.handRestored and not data.dragLocked, "甩动夹具没有恢复手部引用或释放来源占用")
+        assert(data.handRestored and data.preferencesRestored and not data.dragLocked,
+            "甩动夹具没有恢复手部、玩家偏好或来源占用")
     end, "鼠标与触屏共用甩动指针流程：" .. mode)
 end
 for _, mode in ipairs({"mouse_no_target", "touch_no_target", "mouse_self_only", "mouse_hand_only", "mouse_output_only",
@@ -137,6 +138,33 @@ for _, mode in ipairs({"mouse_wrong_way", "touch_wrong_way", "mouse_sideways", "
         assert(data.handRestored and not data.dragLocked, "角度回退夹具没有恢复手部或释放来源")
     end, "鼠标触屏甩动角度及普通拿起：" .. mode)
 end
+for _, mode in ipairs({"mouse_wrong_way", "touch_wrong_way", "mouse_sideways", "touch_sideways",
+    "mouse_no_target", "touch_no_target", "mouse_full_wrong_way", "mouse_drop"}) do
+    test.runtime("inventory", "flick_pointer", {mode = mode, angleLimit = false}, function(data)
+        local missing = mode == "mouse_no_target" or mode == "touch_no_target"
+        local full = mode == "mouse_full_wrong_way"
+        local direct = mode == "mouse_drop"
+        local flick = not missing and not direct
+        assert(data.hasTargetBeforeRelease == not missing and data.hasTargetInDirection == not missing,
+            "关闭角度限制后仍拦截有效方向，或错误允许无目标库存")
+        assert(data.flicks == (flick and 1 or 0) and data.taps == 0,
+            "方向开关没有接入正式鼠标/触屏释放，或抢走直接槽位拖放")
+        assert(data.sourceAmount == (full and 6 or 0) and data.targetAmount == ((not missing and not full) and 6 or 0)
+            and data.handAmount == (missing and 6 or 0), "关闭角度后改变了满槽留源或无目标拿到手部规则")
+        assert(data.handRestored and data.preferencesRestored and not data.dragLocked,
+            "关闭角度夹具未还原手部、用户偏好或拖拽占用")
+    end, "关闭方向限制只绕过目标角度：" .. mode)
+end
+
+test.runtime("inventory", "directional_flick", {mode = "full_outside_fallback", angleLimit = false}, function(data)
+    assert(data.selected == "down" and data.moved and data.source.amount == 0 and data.down.amount == 6
+        and data.right.amount == 0 and data.receiptTarget == "down", "关闭角度限制后没有跳过满库存选下一个方向")
+end, "关闭方向限制仍跳过满库存并按夹角选可用目标")
+test.runtime("inventory", "directional_flick", {mode = "pc", angleLimit = false, speedPercent = 200, distancePercent = 200}, function(data)
+    assert(data.moved and data.receiptTarget == "down" and data.source.amount == 0 and data.down.amount == 6
+        and data.right.amount == 0 and not data.hasScreenOrigin, "甩动设置改变了 PC Shift 原目标或反馈起点")
+end, "甩动三个偏好不改变 PC Shift 快速转移")
+
 local directionalFlicks = {
     {mode = "right", selected = "right", source = 0, right = 6, down = 0},
     {mode = "pc", selected = "right", receipt = "down", source = 0, right = 0, down = 6},

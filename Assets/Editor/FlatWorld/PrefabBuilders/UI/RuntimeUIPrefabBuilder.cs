@@ -1962,8 +1962,7 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject root = CreateFixedSettingsPageRoot(RuntimeUIPrefabKeys.InputBindingSettings);
         Transform content = root.transform;
 
-        // 固定区预算：上下边距 24 + 顶栏 56 + 设备栏 36 + 底栏 42 + 三段间距 24 = 182；
-        // 列表最小高度 180，总需求 362，窄屏仍优先保住玩家实际修改按键的区域。
+        // 固定区共 182，列表最小 180；操作选项与按键行共用滚动内容，新增设置不挤占窄屏高度。
         VerticalLayoutGroup pageLayout = root.GetComponent<VerticalLayoutGroup>();
         pageLayout.padding = new RectOffset(20, 20, 12, 12);
         pageLayout.spacing = 8f;
@@ -1982,9 +1981,72 @@ public static partial class RuntimeUIPrefabBuilder
         CreateButton("手柄分页按钮", deviceTabs.transform, "手柄", 132f, 34f, false);
         CreateButton("触屏布局按钮", deviceTabs.transform, "触屏布局", 150f, 34f, false);
 
-        CreateBindingScrollView(content);
+        Transform bindingContent = CreateBindingScrollView(content);
+        CreateGameplayInputOptions(bindingContent);
         CreateCompactInputBindingFooter(content);
         return root;
+    }
+
+    /// <summary>通用操作选项放在绑定列表顶部，长页面由同一个滚动区域承载。</summary>
+    private static void CreateGameplayInputOptions(Transform parent)
+    {
+        GameObject options = CreateUIObject("操作选项", parent);
+        VerticalLayoutGroup layout = options.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(4, 4, 4, 4);
+        layout.spacing = 8f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        GameObject preciseRow = CreateRow("精确交互行", options.transform, 60f);
+        preciseRow.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(4, 4, 0, 0);
+        TextMeshProUGUI preciseLabel = CreateText(
+            "精确交互标签", preciseRow.transform, "精确交互（需光标命中）", 17f, Cream);
+        LayoutElement preciseLabelLayout = preciseLabel.gameObject.AddComponent<LayoutElement>();
+        preciseLabelLayout.minWidth = 200f;
+        preciseLabelLayout.flexibleWidth = 1f;
+        Toggle preciseToggle = CreateToggle("精确交互", preciseRow.transform);
+        preciseToggle.GetComponent<LayoutElement>().preferredHeight = 60f;
+        preciseToggle.isOn = false;
+
+        CreateFlickThresholdRow(options.transform, "甩动转移速度");
+        CreateFlickThresholdRow(options.transform, "甩动转移距离");
+
+        GameObject angleRow = CreateRow("甩动方向限制行", options.transform, 60f);
+        angleRow.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset(4, 4, 0, 0);
+        TextMeshProUGUI angleLabel = CreateText(
+            "甩动方向限制标签", angleRow.transform, "甩动方向限制", 17f, Cream);
+        LayoutElement angleLabelLayout = angleLabel.gameObject.AddComponent<LayoutElement>();
+        angleLabelLayout.minWidth = 200f;
+        angleLabelLayout.flexibleWidth = 1f;
+        Toggle angleToggle = CreateToggle("甩动方向限制", angleRow.transform);
+        angleToggle.GetComponent<LayoutElement>().preferredHeight = 60f;
+        angleToggle.isOn = InventoryFlickUserSettings.DefaultAngleLimitEnabled;
+
+        TextMeshProUGUI hint = CreateText(
+            "甩动设置说明", options.transform,
+            "速度和距离：25%～200%，100% 为默认；数值越低越容易触发。\n开启方向限制时需朝目标容器甩动，关闭后仍按方向优先选择目标。",
+            17f, Muted);
+        hint.enableWordWrapping = true;
+        hint.overflowMode = TextOverflowModes.Overflow;
+        hint.gameObject.AddComponent<LayoutElement>().minHeight = 52f;
+    }
+
+    /// <summary>复用正式滑条样式并显示玩家选择的百分比。</summary>
+    private static void CreateFlickThresholdRow(Transform parent, string name)
+    {
+        GameObject row = CreateRow(name + "行", parent, 60f);
+        CreateRowLabel(row.transform, name, 196f);
+        Slider slider = CreateSlider(name, row.transform);
+        slider.minValue = InventoryFlickUserSettings.MinimumThresholdPercent;
+        slider.maxValue = InventoryFlickUserSettings.MaximumThresholdPercent;
+        slider.wholeNumbers = true;
+        slider.value = InventoryFlickUserSettings.DefaultThresholdPercent;
+        slider.GetComponent<LayoutElement>().preferredHeight = 60f;
+        TextMeshProUGUI value = CreateText(name + "_数值", row.transform, "100%", 17f, Amber);
+        value.alignment = TextAlignmentOptions.MidlineRight;
+        value.gameObject.AddComponent<LayoutElement>().preferredWidth = 64f;
     }
 
     /// <summary>标题、单行说明与控制方式共用一条横向顶栏，避免文字各占一整行。</summary>
@@ -4247,7 +4309,7 @@ public static partial class RuntimeUIPrefabBuilder
         description.rectTransform.offsetMax = new Vector2(-18f, 42f);
     }
 
-    private static void CreateBindingScrollView(Transform parent)
+    private static Transform CreateBindingScrollView(Transform parent)
     {
         GameObject scrollRoot = CreateUIObject("绑定列表", parent, typeof(Image), typeof(ItemStepScrollRect));
         LayoutElement scrollElement = scrollRoot.AddComponent<LayoutElement>();
@@ -4304,6 +4366,7 @@ public static partial class RuntimeUIPrefabBuilder
         scroll.verticalScrollbar = scrollbar;
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
         scroll.verticalScrollbarSpacing = 4f;
+        return content.transform;
     }
 
     private static Transform CreateFooter(Transform parent)

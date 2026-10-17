@@ -35,11 +35,20 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private BasePanel parentPanel;
     private RectTransform pageRect;
     private Transform content;
+    private Transform gameplayOptions;
     private GameObject rowPrefab;
     private TextMeshProUGUI statusText;
     private TMP_Dropdown controlModeDropdown;
     private Toggle preciseInteractionToggle;
     private ISettingsToggle preciseInteractionSetting;
+    private Slider flickSpeedSlider;
+    private Slider flickDistanceSlider;
+    private Toggle flickAngleLimitToggle;
+    private TextMeshProUGUI flickSpeedValue;
+    private TextMeshProUGUI flickDistanceValue;
+    private ISettingsSlider flickSpeedSetting;
+    private ISettingsSlider flickDistanceSetting;
+    private ISettingsToggle flickAngleLimitSetting;
     private Button keyboardMouseTabButton;
     private Button gamepadTabButton;
     private Button touchLayoutButton;
@@ -133,11 +142,13 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             ? bindingList.GetComponent<ScrollRect>()
             : null;
         content = bindingScrollRect != null ? bindingScrollRect.content : null;
+        gameplayOptions = content != null ? content.Find("操作选项") : null;
         statusText = FindText(transform, "状态文本");
         controlModeDropdown = FindDropdown(transform, "控制模式下拉列表");
         preciseInteractionToggle = FindComponent<Toggle>(transform, "精确交互");
         preciseInteractionSetting = InteractionUserSettings.SettingsProvider.GetToggle(
             InteractionUserSettings.PreciseInteractionSettingKey);
+        BindFlickSettings();
         keyboardMouseTabButton = FindButton(transform, "键鼠分页按钮");
         gamepadTabButton = FindButton(transform, "手柄分页按钮");
         touchLayoutButton = FindButton(transform, "触屏布局按钮");
@@ -154,6 +165,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         if (bindingList == null || bindingScrollRect == null || content == null ||
             statusText == null || controlModeDropdown == null ||
             preciseInteractionToggle == null || preciseInteractionSetting == null ||
+            gameplayOptions == null || flickSpeedSlider == null || flickDistanceSlider == null ||
+            flickAngleLimitToggle == null || flickSpeedValue == null || flickDistanceValue == null ||
+            flickSpeedSetting == null || flickDistanceSetting == null || flickAngleLimitSetting == null ||
             keyboardMouseTabButton == null || gamepadTabButton == null || touchLayoutButton == null ||
             resetButton == null)
         {
@@ -187,6 +201,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         RebuildRows();
         RefreshControlModeDropdown();
         RefreshPreciseInteractionToggle();
+        RefreshFlickSettings();
         SetStatus(GetDevicePageHint());
         RequestLocalLayoutRebuild();
     }
@@ -224,7 +239,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             row.Entry = entry;
             row.Root.name =
                 $"绑定项_{currentDeviceGroup}_{entry.Action?.name ?? i.ToString()}_{entry.BindingIndex}";
-            row.Root.transform.SetSiblingIndex(i);
+            row.Root.transform.SetSiblingIndex(i + (gameplayOptions != null ? 1 : 0));
             row.Label.text = FlatWorldLocalizationService.GetUiText(entry.DisplayName);
             row.BindingText.text = bindingService.GetBindingDisplayString(entry);
             row.Root.SetActive(true);
@@ -326,6 +341,77 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
     #region 分页与绑定操作
 
+    #region 甩动物品设置
+
+    /// <summary>通过设置能力绑定甩动选项，主菜单与游戏内共用相同偏好。</summary>
+    private void BindFlickSettings()
+    {
+        ISettingsProvider provider = InventoryFlickUserSettings.SettingsProvider;
+        flickSpeedSetting = provider.GetSlider(InventoryFlickUserSettings.SpeedPercentSettingKey);
+        flickDistanceSetting = provider.GetSlider(InventoryFlickUserSettings.DistancePercentSettingKey);
+        flickAngleLimitSetting = provider.GetToggle(InventoryFlickUserSettings.AngleLimitSettingKey);
+        flickSpeedSlider = FindComponent<Slider>(transform, "甩动转移速度");
+        flickDistanceSlider = FindComponent<Slider>(transform, "甩动转移距离");
+        flickAngleLimitToggle = FindComponent<Toggle>(transform, "甩动方向限制");
+        flickSpeedValue = FindText(transform, "甩动转移速度_数值");
+        flickDistanceValue = FindText(transform, "甩动转移距离_数值");
+        ConfigureFlickSlider(flickSpeedSlider, flickSpeedSetting);
+        ConfigureFlickSlider(flickDistanceSlider, flickDistanceSetting);
+        flickSpeedSlider?.onValueChanged.AddListener(HandleFlickSpeedChanged);
+        flickDistanceSlider?.onValueChanged.AddListener(HandleFlickDistanceChanged);
+        flickAngleLimitToggle?.onValueChanged.AddListener(HandleFlickAngleLimitChanged);
+    }
+
+    /// <summary>滑条范围和整数步进由所属设置提供者决定。</summary>
+    private static void ConfigureFlickSlider(Slider slider, ISettingsSlider setting)
+    {
+        if (slider == null || setting == null)
+            return;
+
+        slider.minValue = setting.MinValue;
+        slider.maxValue = setting.MaxValue;
+        slider.wholeNumbers = setting.Step >= 1f;
+        slider.SetValueWithoutNotify(setting.Value);
+    }
+
+    /// <summary>回填当前值时不重复触发设置写入。</summary>
+    private void RefreshFlickSettings()
+    {
+        if (flickSpeedSlider != null && flickSpeedSetting != null)
+            flickSpeedSlider.SetValueWithoutNotify(flickSpeedSetting.Value);
+        if (flickDistanceSlider != null && flickDistanceSetting != null)
+            flickDistanceSlider.SetValueWithoutNotify(flickDistanceSetting.Value);
+        if (flickAngleLimitToggle != null && flickAngleLimitSetting != null)
+            flickAngleLimitToggle.SetIsOnWithoutNotify(flickAngleLimitSetting.Value);
+        if (flickSpeedValue != null && flickSpeedSetting != null)
+            flickSpeedValue.text = FlatWorldLocalizationService.GetUiFormat("{0:0}%", flickSpeedSetting.Value);
+        if (flickDistanceValue != null && flickDistanceSetting != null)
+            flickDistanceValue.text = FlatWorldLocalizationService.GetUiFormat("{0:0}%", flickDistanceSetting.Value);
+    }
+
+    /// <summary>调整需要达到的甩动速度百分比并显示已应用值。</summary>
+    private void HandleFlickSpeedChanged(float value)
+    {
+        flickSpeedSetting?.SetValue(value);
+        RefreshFlickSettings();
+    }
+
+    /// <summary>调整需要达到的甩动距离百分比并显示已应用值。</summary>
+    private void HandleFlickDistanceChanged(float value)
+    {
+        flickDistanceSetting?.SetValue(value);
+        RefreshFlickSettings();
+    }
+
+    /// <summary>开关只改变甩动方向限制，其他快速转移规则保持原样。</summary>
+    private void HandleFlickAngleLimitChanged(bool enabled)
+    {
+        flickAngleLimitSetting?.SetValue(enabled);
+        RefreshFlickSettings();
+    }
+
+    #endregion
+
     /// <summary>按持久化偏好回填目标选择开关。</summary>
     private void RefreshPreciseInteractionToggle()
     {
@@ -388,6 +474,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private void HandleLanguageChanged(string localeCode)
     {
         RefreshControlModeDropdown();
+        RefreshFlickSettings();
     }
 
     /// <summary>切换到键鼠绑定页。</summary>
@@ -550,7 +637,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         bindingService.ResetToDefaults(currentDeviceGroup);
         InteractionUserSettings.ResetToDefault();
+        InventoryFlickUserSettings.ResetToDefault();
         RefreshPreciseInteractionToggle();
+        RefreshFlickSettings();
         RefreshRows();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
@@ -566,7 +655,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         bindingService.ResetToDefaults();
         InteractionUserSettings.ResetToDefault();
+        InventoryFlickUserSettings.ResetToDefault();
         RefreshPreciseInteractionToggle();
+        RefreshFlickSettings();
         RefreshRows();
         SetStatus(FlatWorldLocalizationService.GetUiText("全部按键绑定已恢复默认值。"));
     }
@@ -590,6 +681,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     public void DiscardSettingsEditSession()
     {
         bindingService?.DiscardSettingsEditSession();
+        RefreshPreciseInteractionToggle();
+        RefreshFlickSettings();
     }
 
     /// <summary>刷新所有已显示行的绑定文本。</summary>
@@ -629,6 +722,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             controlModeDropdown.interactable = interactable;
         if (preciseInteractionToggle != null)
             preciseInteractionToggle.interactable = interactable;
+        if (flickSpeedSlider != null)
+            flickSpeedSlider.interactable = interactable;
+        if (flickDistanceSlider != null)
+            flickDistanceSlider.interactable = interactable;
+        if (flickAngleLimitToggle != null)
+            flickAngleLimitToggle.interactable = interactable;
         if (resetButton != null)
             resetButton.interactable = interactable;
     }
@@ -687,6 +786,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         resetButton?.onClick.RemoveListener(ResetToDefaults);
         controlModeDropdown?.onValueChanged.RemoveListener(HandleControlModeChanged);
         preciseInteractionToggle?.onValueChanged.RemoveListener(HandlePreciseInteractionChanged);
+        flickSpeedSlider?.onValueChanged.RemoveListener(HandleFlickSpeedChanged);
+        flickDistanceSlider?.onValueChanged.RemoveListener(HandleFlickDistanceChanged);
+        flickAngleLimitToggle?.onValueChanged.RemoveListener(HandleFlickAngleLimitChanged);
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
 
         standaloneBindingService?.Dispose();

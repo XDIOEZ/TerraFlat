@@ -188,6 +188,57 @@ for _, row in ipairs(held_drop_panels) do
 end
 
 -- 独立内存 Provider 走正式注册与会话，只采样恢复调用及结果，不操作玩家窗口。
+-- 三个甩动控件通过正式 Provider 与设置会话写入，采样结束恢复玩家偏好。
+for _, row in ipairs({
+    {speedPercent = 25, distancePercent = 200, speed = 25, distance = 200},
+    {speedPercent = 10, distancePercent = 999, speed = 25, distance = 200},
+    {speedPercent = 73.6, distancePercent = 124.4, speed = 74, distance = 124}
+}) do
+    test.system("ui_settings", "flick_settings_provider", row, function(data)
+        assert(data.providerId == "inventory_flick" and data.registered and data.sliderCount == 2
+            and data.toggleCount == 1, "甩动 Provider 未正确注册两个滑条和一个开关")
+        assert(data.speed.key == "inventory_flick.speedPercent" and data.distance.key == "inventory_flick.distancePercent"
+            and data.angleKey == "inventory_flick.angleLimit" and data.angleDefault,
+            "甩动设置的稳定键或默认角度开关错误")
+        for _, slider in ipairs({data.speed, data.distance}) do
+            assert(slider.kind == "Slider" and slider.category == "controls" and slider.value == 100
+                and slider.min == 25 and slider.max == 200 and slider.step == 1,
+                "甩动滑条默认、范围、步长或操作页元数据错误")
+        end
+        assert(data.afterSpeed.speedPercent == row.speed and data.afterSpeed.distancePercent == 100
+            and data.afterSpeed.angleLimit, "速度滑条影响了距离或角度偏好")
+        assert(data.afterDistance.speedPercent == row.speed and data.afterDistance.distancePercent == row.distance
+            and data.afterDistance.angleLimit, "距离滑条未独立应用或改变角度偏好")
+        assert(data.afterAngle.speedPercent == row.speed and data.afterAngle.distancePercent == row.distance
+            and not data.afterAngle.angleLimit and data.persisted.speedPercent == row.speed
+            and data.persisted.distancePercent == row.distance and not data.persisted.angleLimit,
+            "关闭角度限制改变了其他门槛或没有写入正式持久化偏好")
+        assert(data.reset.speedPercent == 100 and data.reset.distancePercent == 100 and data.reset.angleLimit
+            and data.preferencesRestored, "恢复默认或测试偏好清理没有完成")
+    end, "甩动 Provider 三项独立写入：" .. row.speedPercent .. "/" .. row.distancePercent)
+end
+
+for _, mode in ipairs({"unchanged", "roundtrip", "cancel", "commit", "reset"}) do
+    test.system("ui_settings", "flick_settings_session", {mode = mode}, function(data)
+        local dirty = mode == "cancel" or mode == "commit" or mode == "reset"
+        local saved = mode == "commit" or mode == "reset"
+        local speed = saved and 25 or 100
+        local distance = saved and 200 or 100
+        assert(data.changed == dirty and data.attempted == dirty and data.discarded and data.error == nil,
+            "甩动设置会话没有区分无变化、改回、保存、放弃或恢复默认")
+        assert(data.afterDiscard.speedPercent == speed and data.afterDiscard.distancePercent == distance
+            and data.afterDiscard.angleLimit == not saved, "放弃修改没有恢复最近保存的三项甩动偏好")
+        assert(data.persisted.speedPercent == speed and data.persisted.distancePercent == distance
+            and data.persisted.angleLimit == not saved, "设置会话回滚没有同步正式持久偏好")
+        assert(data.secondDiscard and not data.secondAttempted and data.preferencesRestored,
+            "重复放弃仍写入，或夹具未恢复玩家原始偏好")
+        if mode == "reset" then
+            assert(data.beforeDiscard.speedPercent == 100 and data.beforeDiscard.distancePercent == 100
+                and data.beforeDiscard.angleLimit, "恢复默认没有把三个控件还原为 100%、100%、开启")
+        end
+    end, "甩动设置保存与放弃：" .. mode)
+end
+
 local function assert_control_calls(data, toggle, slider, dropdown, switch)
     assert(data.toggleCalls == toggle and data.sliderCalls == slider
         and data.dropdownCalls == dropdown and data.switchCalls == switch,

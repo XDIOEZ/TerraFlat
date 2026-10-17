@@ -4967,6 +4967,30 @@ MonoBehaviour:
     m_Key: ui.text.16E538F2
     m_Metadata:
       m_Items: []
+  - m_Id: 17033886000000000
+    m_Key: ui.text.BEEF171C
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000001
+    m_Key: ui.text.8B6A5375
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000002
+    m_Key: ui.text.FA08F180
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000003
+    m_Key: ui.text.E7E10853
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000004
+    m_Key: ui.text.B8035DAA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000005
+    m_Key: ui.text.613F907F
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

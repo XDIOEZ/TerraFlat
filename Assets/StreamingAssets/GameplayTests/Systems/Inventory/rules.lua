@@ -207,6 +207,48 @@ for _, case in ipairs(flicks) do
             "甩动灵敏度没有按原阈值除以1.5")
     end, "触屏甩动：" .. case.name)
 end
+-- 玩家门槛以现有手感为 100%，纯净化不写偏好，轨迹通过正式偏好和识别器。
+for _, row in ipairs({
+    {value = -10, expected = 25}, {value = 25, expected = 25},
+    {value = 100, expected = 100}, {value = 200, expected = 200},
+    {value = 500, expected = 200}, {value = 73.4, expected = 73},
+    {value = 73.6, expected = 74}, {invalid = "nan", expected = 100},
+    {invalid = "positive_infinity", expected = 100}, {invalid = "negative_infinity", expected = 100}
+}) do
+    test.system("inventory", "flick_settings_normalize", row, function(data)
+        assert(data.value == row.expected, "甩动门槛净化没有限制到整数百分比或非有限值未回默认")
+        assert(data.minimum == 25 and data.maximum == 200 and data.default == 100 and data.step == 1
+            and data.defaultAngleLimit, "甩动选项的范围、默认值或步长偏离约定")
+    end, "甩动百分比净化：" .. (row.invalid or tostring(row.value)))
+end
+
+for _, row in ipairs({
+    {speedPercent = 25, distancePercent = 25, distance = 20, time = 0.1, accepted = true},
+    {speedPercent = 100, distancePercent = 25, distance = 20, time = 0.1, accepted = false},
+    {speedPercent = 25, distancePercent = 100, distance = 20, time = 0.1, accepted = false},
+    {speedPercent = 25, distancePercent = 100, distance = 50, time = 0.2, accepted = true},
+    {speedPercent = 100, distancePercent = 100, distance = 60, time = 0.1, accepted = true},
+    {speedPercent = 200, distancePercent = 100, distance = 60, time = 0.1, accepted = false},
+    {speedPercent = 100, distancePercent = 200, distance = 60, time = 0.1, accepted = false},
+    {speedPercent = 200, distancePercent = 200, distance = 120, time = 0.1, accepted = true},
+    {speedPercent = 25, distancePercent = 200, distance = 90, time = 0.4, accepted = true}
+}) do
+    local args = {speedPercent = row.speedPercent, distancePercent = row.distancePercent,
+        points = {{0, 0, 0}, {row.time / 2, row.distance / 2, 0}, {row.time, row.distance, 0}}}
+    test.system("inventory", "flick_settings_gesture", args, function(data)
+        assert(data.accepted == row.accepted, "速度与距离滑条未独立影响正式甩动判定")
+        assert(math.abs(data.minimumSpeed - (800 / 1.5) * row.speedPercent / 100) < 0.001
+            and math.abs(data.minimumDistance - (64 / 1.5) * row.distancePercent / 100) < 0.001,
+            "玩家百分比没有基于现有默认手感缩放")
+        assert(data.preferencesRestored, "甩动设置轨迹夹具未恢复玩家缓存或偏好键")
+    end, "甩动滑条独立生效：速度" .. row.speedPercent .. "%/距离" .. row.distancePercent .. "%/位移" .. row.distance)
+end
+
+test.system("inventory", "flick_settings_gesture", {speedPercent = 25, distancePercent = 25,
+    points = {{0, 0, 0}, {0.05, 20, 0}, {0.25, 20, 0}}}, function(data)
+    assert(not data.accepted and data.preferencesRestored, "低门槛绕过了松手前停住规则或留下测试偏好")
+end, "低门槛仍拒绝快速拖动后停住")
+
 local capacities = {
     {name = "容器由体积限制", args = {}, allowed = 3, weight = 10, same = true, stack = true},
     {name = "整数物品不能塞半件", args = {currentVolume = 9}, allowed = 0, weight = 10, same = true, stack = true},

@@ -23,3 +23,25 @@ test.runtime("ui_settings", "settings_locale_close", {}, function(data)
     assert(data.inputBlockingRestored, "窗口关闭后残留玩法输入阻断")
     assert(data.localeRestored and data.volumeRestored and data.preferencesRestored, "测试改变的语言、音量或 PlayerPrefs 原值未恢复")
 end, "真实窗口清理和原语言、音量、偏好恢复")
+
+test.runtime("ui_settings", "flick_settings_controls", {}, function(data)
+    assert(data.active and data.scrollContainsOptions and data.wholeNumbers
+        and data.speedMin == 25 and data.speedMax == 200 and data.distanceMin == 25 and data.distanceMax == 200,
+        "游戏操作页缺少正式可滚动滑条/开关，或范围与整数步进错误")
+    assert(data.initial.speed == 100 and data.initial.distance == 100 and data.initial.angle
+        and data.initial.speedText == "100%" and data.initial.distanceText == "100%",
+        "正式操作页没有回填两个默认百分比和方向开关")
+    assert(data.applied.speedPercent == 25 and data.applied.distancePercent == 200 and not data.applied.angleLimit
+        and data.editedControls.speedText == "25%" and data.editedControls.distanceText == "200%",
+        "操作页真实控件未写入正式甩动偏好或百分比文字未更新")
+    assert(data.dirtyBeforeSave and data.cleanAfterSave and data.dirtyAfterSave,
+        "甩动控件没有接入保存按钮与后续未保存修改检测")
+    assert(data.persisted.speedPercent == 25 and data.persisted.distancePercent == 200 and not data.persisted.angleLimit
+        and data.afterClose.speedPercent == 25 and data.afterClose.distancePercent == 200 and not data.afterClose.angleLimit,
+        "保存未写入偏好，或关闭没有恢复最近保存的三项值")
+    assert(data.reopenedControls.speed == 25 and data.reopenedControls.distance == 200 and not data.reopenedControls.angle
+        and data.reopenedControls.speedText == "25%" and data.reopenedControls.distanceText == "200%",
+        "放弃修改后重开操作页仍显示未保存的旧控件值")
+    assert(data.preferencesRestored and data.inputPreferenceRestored and data.panelUnregistered,
+        "设置控件夹具没有恢复甩动/按键偏好原值或销毁自有窗口")
+end, "游戏操作页甩动滑条、开关、保存放弃与重开回填")

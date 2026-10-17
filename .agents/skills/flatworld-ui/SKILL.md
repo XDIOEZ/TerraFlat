@@ -53,6 +53,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 ## 设置数据
 
 - Data 契约仅含元数据/读写能力；功能管理器实现 `ISettingsProvider` 及 Toggle/Slider/Dropdown/Switch 能力，在自身生命周期注册。UI 按稳定 ProviderId/Key 绑定；选项身份为 SettingOption.Id，写入返回校验结果。
+- 游戏操作页的甩动速度/距离滑条与方向限制开关由 `InputBindingPanelLauncher` 绑定 `InventoryFlickUserSettings` Provider（`inventory_flick`）；百分比滑条范围25～200、步长1、默认100，方向默认开启，显示/保存/放弃/恢复默认复用现有会话。固定操作项放在滚动 Content 的首项 `操作选项`，动态按键行从其后复用，不回收固定控件。
 - `SettingsEditSessionController` 持有保存基线；非控件偏好由 `ISettingsEditSessionParticipant` 快照/还原，按键绑定单独编辑会话。Provider 不创建视觉，分页器收集子页 `ISettingsPageLifecycle`。
 - 关闭编辑会话只恢复偏离基线的控件值；扩展状态通过 `ISettingsEditSessionChangeTracker` 跳过无变化恢复，未提供检测的 Participant 保留恢复。注册表返回是否尝试恢复，关闭控制器仅在可能写回偏好时保存；按键放弃仅在实际覆盖改变时重载并通知，避免无修改关闭重复切画质、写盘和重建输入。
 - 模拟半径为设备级 PlayerPrefs 偏好，三半径整组校验严格递增，Item/AIECS 共用；镜头缩放独立。视觉特效默认/范围来自 default-rendering.json，玩家值由 Provider 保存；太阳投影关闭不关闭脚底阴影。

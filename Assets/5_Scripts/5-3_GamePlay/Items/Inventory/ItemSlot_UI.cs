@@ -198,11 +198,7 @@ public class ItemSlot_UI : MonoBehaviour,
     private Vector2 touchWorldPointerPosition;
     private readonly List<RaycastResult> touchRaycastResults = new List<RaycastResult>(8);
 
-    [Header("甩动快速转移")]
-    [SerializeField, Min(1f), Tooltip("甩动最小净位移，单位为 Canvas 缩放前的参考像素。")]
-    private float touchFlickMinimumDistance = InventoryFlickGesture.DefaultMinimumDistance;
-    [SerializeField, Min(1f), Tooltip("松手前 0.1 秒的最低平均速度，单位为参考像素/秒。")]
-    private float touchFlickMinimumSpeed = InventoryFlickGesture.DefaultMinimumSpeed;
+    // 两种指针统一读取玩家偏好，槽位不再保留隐藏的独立门槛。
     private readonly InventoryFlickGesture touchFlickGesture = new();
     private readonly InventoryFlickGesture mouseFlickGesture = new();
 
@@ -787,7 +783,8 @@ public class ItemSlot_UI : MonoBehaviour,
         Vector2 origin = gesture.ScreenOrigin, direction = eventData.position - origin;
         if (hasDropTarget || OnFlickTransfer == null || activeDragTransaction?.HideSourceVisual != true ||
             HasFlickTarget?.Invoke(origin, direction) != true ||
-            !gesture.IsFlick(eventData.position, Time.unscaledTimeAsDouble, touchFlickMinimumDistance, touchFlickMinimumSpeed))
+            !gesture.IsFlick(eventData.position, Time.unscaledTimeAsDouble,
+                InventoryFlickUserSettings.MinimumDistance, InventoryFlickUserSettings.MinimumSpeed))
             return false;
         activeDragTransaction.TryConsumeSourceItem(sourceItem =>
         {

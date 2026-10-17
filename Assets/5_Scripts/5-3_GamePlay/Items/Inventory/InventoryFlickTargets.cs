@@ -93,7 +93,7 @@ public sealed class InventoryFlickTargets : MonoBehaviour
     public static Inventory Resolve(Inventory source, int sourceIndex, Vector2 origin, Vector2 direction)
     {
         if (source?.Data?.GetItemSlot(sourceIndex)?.itemData == null || !Finite(origin) ||
-            !Finite(direction) || direction.sqrMagnitude < .0001f) return null;
+            !Finite(direction) || float.IsInfinity(direction.sqrMagnitude) || direction.sqrMagnitude < .0001f) return null;
         var candidates = new List<Inventory>();
         var centers = new List<Vector2>();
         foreach (InventoryFlickTargets owner in active)
@@ -128,7 +128,8 @@ public sealed class InventoryFlickTargets : MonoBehaviour
     // 角度资格不看容量，方向内已满的目标仍消费甩动并把物品留在原槽。
     public static bool HasTargetInDirection(Inventory source, Vector2 origin, Vector2 direction)
     {
-        if (source?.Data == null) return false;
+        if (source?.Data == null || !Finite(origin) || !Finite(direction) ||
+            float.IsInfinity(direction.sqrMagnitude) || direction.sqrMagnitude < .0001f) return false;
         foreach (InventoryFlickTargets owner in active)
         {
             if (owner == null) continue;
@@ -150,6 +151,8 @@ public sealed class InventoryFlickTargets : MonoBehaviour
 
     private bool IsWithinTargetDirection(Inventory inventory, Rect slotBounds, Vector2 origin, Vector2 direction)
     {
+        // 关闭角度限制只放行方向资格，可见目标、容量和最近夹角排序仍由原流程检查。
+        if (!InventoryFlickUserSettings.AngleLimitEnabled) return true;
         bool hasWindow = false;
         foreach (UIWindowDragSurface surface in windowSurfaces)
         {

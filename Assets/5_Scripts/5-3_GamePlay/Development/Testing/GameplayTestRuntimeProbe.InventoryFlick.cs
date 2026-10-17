@@ -17,6 +17,8 @@ public static partial class GameplayTestRuntimeProbe
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "right");
         if (mode.StartsWith("window_", StringComparison.Ordinal)) return CaptureInventoryFlickWindow(mode);
+        using var settings = new GameplayTestInventoryFlickSettingsScope();
+        settings.Apply(args);
         var root = new GameObject("LuaDirectionalFlick", typeof(RectTransform), typeof(Canvas));
         root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         var panels = new List<BasePanel>();
@@ -144,6 +146,7 @@ public static partial class GameplayTestRuntimeProbe
         var scope = new FlickPointerScope();
         try
         {
+            scope.Settings.Apply(new JObject());
             foreach (InventoryFlickTargets registered in scope.PreviousPanels)
                 if (registered != null) registered.enabled = false;
             Inventory source = CreateDragInventory("lua.window.source", CreateDragItem("Twine", 6));
@@ -259,6 +262,7 @@ public static partial class GameplayTestRuntimeProbe
         JObject result;
         try
         {
+            scope.Settings.Apply(args);
             if (EventSystem.current == null) throw new InvalidOperationException("甩动指针测试缺少 EventSystem。");
             foreach (InventoryFlickTargets panel in scope.PreviousPanels) if (panel != null) panel.enabled = false;
             Inventory source = CreateDragInventory("lua.pointer.source", CreateDragItem("Twine", 6));
@@ -361,11 +365,13 @@ public static partial class GameplayTestRuntimeProbe
         }
         finally { scope.Dispose(); }
         result["handRestored"] = ReferenceEquals(Inventory_Hand.PlayerHand, scope.PreviousHand);
+        result["preferencesRestored"] = scope.Settings.IsRestored;
         completed(result);
     }
 
     private sealed class FlickPointerScope : IDisposable
     {
+        public readonly GameplayTestInventoryFlickSettingsScope Settings = new();
         public readonly Inventory PreviousHand = Inventory_Hand.PlayerHand;
         public readonly Inventory PreviousLast = Inventory.LastOpenedContainer;
         public readonly InventoryFlickTargets[] PreviousPanels = InventoryFlickTargets.GetActivePanels();
@@ -375,10 +381,14 @@ public static partial class GameplayTestRuntimeProbe
         {
             if (disposed) return;
             disposed = true;
-            if (Root != null) { Root.SetActive(false); Object.Destroy(Root); }
-            Inventory_Hand.PlayerHand = PreviousHand;
-            Inventory.LastOpenedContainer = PreviousLast;
-            foreach (InventoryFlickTargets panel in PreviousPanels) if (panel != null) panel.enabled = true;
+            try
+            {
+                if (Root != null) { Root.SetActive(false); Object.Destroy(Root); }
+                Inventory_Hand.PlayerHand = PreviousHand;
+                Inventory.LastOpenedContainer = PreviousLast;
+                foreach (InventoryFlickTargets panel in PreviousPanels) if (panel != null) panel.enabled = true;
+            }
+            finally { Settings.Dispose(); }
         }
     }
     #endregion

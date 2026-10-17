@@ -5056,6 +5056,30 @@ MonoBehaviour:
     m_Localized: "Landed. The ship is fixed in place."
     m_Metadata:
       m_Items: []
+  - m_Id: 17033886000000000
+    m_Localized: "Flick Transfer Speed"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000001
+    m_Localized: "Flick Transfer Distance"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000002
+    m_Localized: "Flick Direction Limit"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000003
+    m_Localized: "Speed and distance: 25%-200%, with 100% as the default. Lower values make flick transfers easier.\nWith the direction limit on, flick toward a target container. With it off, direction still determines the preferred target."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000004
+    m_Localized: "{0:0}%"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000005
+    m_Localized: "Flick Quick Transfer"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

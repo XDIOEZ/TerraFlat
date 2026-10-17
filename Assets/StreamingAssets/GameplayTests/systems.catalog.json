@@ -197,6 +197,7 @@
       "group": "生存与生产",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInventoryFlickSettingsProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/EquipmentConfigurationButton.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Readable/*",
@@ -1053,6 +1054,7 @@
       "group": "共享支撑",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInventoryFlickSettingsProbe.cs",
         "Assets/5_Scripts/5-5_UI/*",
         "Assets/Resources/UI/*",
         "Assets/3_Prefabs/*UI*",
