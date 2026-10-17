@@ -490,7 +490,8 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "surface_fluids_rules"
+        "surface_fluids_rules",
+        "surface_fluids_replenishment"
       ],
       "rulesSuite": "GameplayTests/Systems/SurfaceFluids/rules-suite.json",
       "integrationSuites": [

@@ -9,6 +9,12 @@
       "name": "地表水体规则与边界",
       "luaPath": "GameplayTests/Systems/SurfaceFluids/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "surface_fluids_replenishment",
+      "name": "取水后的四邻补水规则",
+      "luaPath": "GameplayTests/Systems/SurfaceFluids/replenishment.lua",
+      "enabled": true
     }
   ]
 }

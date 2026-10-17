@@ -101,6 +101,12 @@
       "enabled": true
     },
     {
+      "id": "surface_fluids_replenishment",
+      "name": "取水后的四邻补水规则",
+      "luaPath": "GameplayTests/Systems/SurfaceFluids/replenishment.lua",
+      "enabled": true
+    },
+    {
       "id": "dimension_rules",
       "name": "维度迁移规则与边界",
       "luaPath": "GameplayTests/Systems/Dimension/rules.lua",
