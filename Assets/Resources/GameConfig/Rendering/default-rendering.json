@@ -54,7 +54,7 @@
   },
   "denseFog": {
     "clearRadius": 5.0,
-    "opaqueRadius": 10.0,
+    "opaqueRadius": 15.0,
     "transitionSeconds": 2.0,
     "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
     "noiseScale": 0.22,
