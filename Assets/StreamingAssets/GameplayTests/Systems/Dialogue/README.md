@@ -6,7 +6,7 @@
 
 已编写的规则覆盖：CharacterSpeechConditionEvaluator 数值/文本/缺失Fact条件；CharacterSpeechConfigLoader 的 JSON/schema/Fact 校验与无效条目隔离；正式 Resources 自言自语资源的有效性与英文译文逐句齐全。
 
-`carry_weight_command` 调用正式 `/carryweight` 处理器，覆盖公斤数解析、缺参/多参/非正/非有限值拒绝、无玩家/无实际背包时拒绝且容量不变，以及不吞掉其它命令。新增断言尚未执行；实际成功设置、入世/重建后的命令装配、超重 Buff/UI 更新和联网/创造状态拒绝尚未覆盖，用户自行在游戏中验收。
+`carry_weight_command` 调用正式 `/carryweight`（kg）和 `/carryvolume`（L）处理器，共用数字/小数解析、缺参/多参/非正/非有限值拒绝、无玩家/无实际背包时拒绝且两种容量不变，以及不吞掉其它命令。新增体积命令断言尚未执行；实际成功设置并保留另一容量、入世/重建后的命令装配、超重 Buff/UI 更新和联网/创造状态拒绝尚未覆盖，用户自行在游戏中验收。
 
 规则集未覆盖：本地玩家筛选、实际 Provider 冷却、一次性完成只能在成功显示后写入和语言切换；正式气泡与调度优先级见下方 PlayMode 共享入口。叶子程序集登记入口，GamePlay 不反向引用 Dialogue。
 

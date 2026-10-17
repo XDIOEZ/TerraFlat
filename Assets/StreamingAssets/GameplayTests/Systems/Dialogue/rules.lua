@@ -34,38 +34,41 @@ test.system("dialogue", "builtin_locales", {}, function(data)
         "正式台词仍缺英文或中英文句数不一致：" .. table.concat(data.incompleteIds, ", "))
 end, "正式角色台词完整覆盖中英文")
 
--- 直接调用正式负重命令，非法输入、未就绪玩家与无背包时均不能改玩家容量。
-for _, row in ipairs({
-    { arguments = { "5000" }, parsed = true, weight = 5000 },
-    { arguments = { "100.5" }, parsed = true, weight = 100.5 },
-    { arguments = {}, parsed = false },
-    { arguments = { "5000", "kg" }, parsed = false },
-    { arguments = { "0" }, parsed = false },
-    { arguments = { "-1" }, parsed = false },
-    { arguments = { "NaN" }, parsed = false },
-    { arguments = { "Infinity" }, parsed = false },
-    { arguments = { "1e10000" }, parsed = false },
-    { arguments = { "五千" }, parsed = false }
-}) do
-    test.system("dialogue", "carry_weight_command", row, function(data)
-        assert(data.parsed == row.parsed, "负重命令的合法数字判断错误")
-        if row.parsed then
-            assert(data.weight == row.weight, "负重命令未按 kg 解析数值")
-            assert(data.feedback == "当前本地玩家尚未就绪。", "缺少玩家时未明确拒绝")
-        else
-            assert(string.find(data.feedback, "/carryweight 5000", 1, true), "非法参数未返回输入示例")
-        end
-        assert(data.handled and data.playerWeight == 100 and data.playerVolume == 100,
-            "拒绝命令后仍修改了玩家重量或体积")
-    end, "负重命令参数与未就绪拒绝：" .. (row.arguments[1] or "缺参"))
+-- 两种正式容量命令共用边界案例，拒绝时重量和体积均保持原值。
+for _, command in ipairs({ "carryweight", "carryvolume" }) do
+    for _, row in ipairs({
+        { arguments = { "5000" }, parsed = true, capacity = 5000 },
+        { arguments = { "100.5" }, parsed = true, capacity = 100.5 },
+        { arguments = {}, parsed = false },
+        { arguments = { "5000", "kg" }, parsed = false },
+        { arguments = { "0" }, parsed = false },
+        { arguments = { "-1" }, parsed = false },
+        { arguments = { "NaN" }, parsed = false },
+        { arguments = { "Infinity" }, parsed = false },
+        { arguments = { "1e10000" }, parsed = false },
+        { arguments = { "五千" }, parsed = false }
+    }) do
+        row.command = command
+        test.system("dialogue", "carry_weight_command", row, function(data)
+            assert(data.parsed == row.parsed, "容量命令的合法数字判断错误：" .. command)
+            if row.parsed then
+                assert(data.capacity == row.capacity, "容量命令未按原数值解析：" .. command)
+                assert(data.feedback == "当前本地玩家尚未就绪。", "缺少玩家时未明确拒绝")
+            else
+                assert(string.find(data.feedback, "/" .. command .. " 5000", 1, true), "非法参数未返回对应命令示例")
+            end
+            assert(data.handled and data.playerWeight == 100 and data.playerVolume == 100,
+                "拒绝命令后仍修改了玩家重量或体积")
+        end, command .. " 参数与未就绪拒绝：" .. (row.arguments[1] or "缺参"))
+    end
+
+    test.system("dialogue", "carry_weight_command", { command = command, arguments = { "5000" }, withPlayer = true }, function(data)
+        assert(data.handled and data.feedback == "玩家主背包尚未初始化。", "缺少真实背包时未明确拒绝")
+        assert(data.playerWeight == 100 and data.playerVolume == 100, "背包未就绪时提前改了玩家容量")
+    end, command .. " 拒绝未初始化的主背包")
 end
 
-test.system("dialogue", "carry_weight_command", { arguments = { "5000" }, withPlayer = true }, function(data)
-    assert(data.handled and data.feedback == "玩家主背包尚未初始化。", "缺少真实背包时未明确拒绝")
-    assert(data.playerWeight == 100 and data.playerVolume == 100, "背包未就绪时提前改了玩家容量")
-end, "负重命令拒绝未初始化的主背包")
-
 test.system("dialogue", "carry_weight_command", { command = "other", arguments = { "5000" } }, function(data)
-    assert(not data.handled, "负重处理器误处理了其它命令")
+    assert(not data.handled, "容量处理器误处理了其它命令")
     assert(data.playerWeight == 100 and data.playerVolume == 100, "其它命令修改了玩家容量")
-end, "负重命令保留其它处理器入口")
+end, "容量命令保留其它处理器入口")

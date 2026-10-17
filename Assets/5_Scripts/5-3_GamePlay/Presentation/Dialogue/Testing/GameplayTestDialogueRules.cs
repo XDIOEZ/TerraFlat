@@ -112,7 +112,7 @@ namespace FlatWorld.Dialogue
 
         #endregion
 
-        #region 负重命令规则采样
+        #region 携带容量命令规则采样
 
         /// <summary>调用正式解析与处理器，只构造未加载模块的临时玩家并采样拒绝后的原值。</summary>
         private static JObject CaptureCarryWeightCommand(JObject args)
@@ -120,8 +120,8 @@ namespace FlatWorld.Dialogue
             string[] arguments = args["arguments"] is JArray tokens
                 ? tokens.ToObject<string[]>()
                 : Array.Empty<string>();
-            bool parsed = PlayerCarryWeightChatCommand.TryParseWeight(arguments, out float weight);
-            GameObject root = new("负重命令规则采样") { hideFlags = HideFlags.HideAndDontSave };
+            bool parsed = PlayerCarryWeightChatCommand.TryParseCapacity(arguments, out float capacity);
+            GameObject root = new("携带容量命令规则采样") { hideFlags = HideFlags.HideAndDontSave };
             root.SetActive(false);
             Player player = root.AddComponent<Player>();
             try
@@ -135,7 +135,7 @@ namespace FlatWorld.Dialogue
                 return new JObject
                 {
                     ["parsed"] = parsed,
-                    ["weight"] = parsed ? weight : 0f,
+                    ["capacity"] = parsed ? capacity : 0f,
                     ["handled"] = result.Handled,
                     ["feedback"] = result.Feedback,
                     ["playerWeight"] = player.Data.MaxCarryWeight,

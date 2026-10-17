@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace FlatWorld.Dialogue
 {
-    /// <summary>在本地玩家聊天框中显式调整随身负重上限。</summary>
+    /// <summary>在本地玩家聊天框中显式调整随身重量与体积上限。</summary>
     [DisallowMultipleComponent]
     public sealed class PlayerCarryWeightChatCommand : MonoBehaviour, IPlayerChatCommandHandler
     {
@@ -38,33 +38,43 @@ namespace FlatWorld.Dialogue
 
         #endregion
 
-        #region 负重命令
+        #region 携带容量命令
 
         public PlayerChatCommandResult Execute(PlayerChatCommandContext context)
         {
-            if (!string.Equals(context.CommandName, "carryweight", StringComparison.OrdinalIgnoreCase))
+            bool setWeight = string.Equals(context.CommandName, "carryweight", StringComparison.OrdinalIgnoreCase);
+            bool setVolume = string.Equals(context.CommandName, "carryvolume", StringComparison.OrdinalIgnoreCase);
+            if (!setWeight && !setVolume)
                 return PlayerChatCommandResult.NotHandled();
 
-            if (!TryParseWeight(context.Arguments, out float maxWeight))
-                return PlayerChatCommandResult.HandledWith("用法：/carryweight 5000，重量必须是大于 0 的有限数字，单位 kg。");
+            string label = setWeight ? "负重" : "体积";
+            string unit = setWeight ? "kg" : "L";
+            if (!TryParseCapacity(context.Arguments, out float capacity))
+                return PlayerChatCommandResult.HandledWith(setWeight
+                    ? "用法：/carryweight 5000，重量必须是大于 0 的有限数字，单位 kg。"
+                    : "用法：/carryvolume 5000，体积必须是大于 0 的有限数字，单位 L（升）。");
 
             if (context.Sender == null || context.Sender != GetComponent<Player>())
                 return PlayerChatCommandResult.HandledWith("当前本地玩家尚未就绪。");
 
-            if (!PlayerCarryCapacityUtility.TrySetMaxWeight(context.Sender, maxWeight, out string failureReason))
+            string failureReason;
+            bool changed = setWeight
+                ? PlayerCarryCapacityUtility.TrySetMaxWeight(context.Sender, capacity, out failureReason)
+                : PlayerCarryCapacityUtility.TrySetMaxVolume(context.Sender, capacity, out failureReason);
+            if (!changed)
                 return PlayerChatCommandResult.HandledWith(failureReason);
 
             return PlayerChatCommandResult.HandledWith(
-                $"负重上限已设为 {maxWeight.ToString("0.##", CultureInfo.InvariantCulture)} kg。");
+                $"{label}上限已设为 {capacity.ToString("0.##", CultureInfo.InvariantCulture)} {unit}。");
         }
 
-        /// <summary>使用固定小数点解析公斤数，拒绝缺参、多参和非正非有限值。</summary>
-        internal static bool TryParseWeight(string[] arguments, out float maxWeight)
+        /// <summary>使用固定小数点解析容量数值，拒绝缺参、多参和非正非有限值。</summary>
+        internal static bool TryParseCapacity(string[] arguments, out float capacity)
         {
-            maxWeight = 0f;
+            capacity = 0f;
             return arguments != null && arguments.Length == 1 &&
-                   float.TryParse(arguments[0], NumberStyles.Float, CultureInfo.InvariantCulture, out maxWeight) &&
-                   maxWeight > 0f && !float.IsNaN(maxWeight) && !float.IsInfinity(maxWeight);
+                   float.TryParse(arguments[0], NumberStyles.Float, CultureInfo.InvariantCulture, out capacity) &&
+                   capacity > 0f && !float.IsNaN(capacity) && !float.IsInfinity(capacity);
         }
 
         #endregion

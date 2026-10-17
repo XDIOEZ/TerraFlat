@@ -123,14 +123,23 @@ public static class PlayerCarryCapacityUtility
 
     #endregion
 
-    #region 本地负重上限调整
+    #region 本地携带容量上限调整
 
     /// <summary>仅为本地权威玩家更新实际负重策略，保留体积、槽位和创造状态。</summary>
     public static bool TrySetMaxWeight(Player player, float maxWeight, out string failureReason)
+        => TrySetCarryCapacity(player, maxWeight, setWeight: true, out failureReason);
+
+    /// <summary>仅为本地权威玩家更新实际体积上限，保留重量、槽位和创造状态。</summary>
+    public static bool TrySetMaxVolume(Player player, float maxVolume, out string failureReason)
+        => TrySetCarryCapacity(player, maxVolume, setWeight: false, out failureReason);
+
+    /// <summary>重量与体积共用资格检查，每次仅替换指定容量并按真实重量刷新超重状态。</summary>
+    private static bool TrySetCarryCapacity(Player player, float capacity, bool setWeight, out string failureReason)
     {
-        if (float.IsNaN(maxWeight) || float.IsInfinity(maxWeight) || maxWeight <= 0f)
+        string label = setWeight ? "负重" : "体积";
+        if (float.IsNaN(capacity) || float.IsInfinity(capacity) || capacity <= 0f)
         {
-            failureReason = "负重上限必须是大于 0 的有限数字。";
+            failureReason = $"{label}上限必须是大于 0 的有限数字。";
             return false;
         }
 
@@ -142,7 +151,7 @@ public static class PlayerCarryCapacityUtility
 
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
         {
-            failureReason = "该命令仅支持单机或主机的本地玩家，联机客户端不能修改负重上限。";
+            failureReason = $"该命令仅支持单机或主机的本地玩家，联机客户端不能修改{label}上限。";
             return false;
         }
 
@@ -155,12 +164,17 @@ public static class PlayerCarryCapacityUtility
 
         if (bag.Data.HasUnlimitedCarryCapacity)
         {
-            failureReason = "当前背包处于创造状态，负重已经无限；未修改负重上限。";
+            failureReason = $"当前背包处于创造状态，{label}已经无限；未修改{label}上限。";
             return false;
         }
 
-        player.Data.MaxCarryWeight = maxWeight;
-        bag.Data.SetCarryCapacity(maxWeight, bag.Data.MaxCarryVolume);
+        if (setWeight)
+            player.Data.MaxCarryWeight = capacity;
+        else
+            player.Data.MaxCarryVolume = capacity;
+        bag.Data.SetCarryCapacity(
+            setWeight ? capacity : bag.Data.MaxCarryWeight,
+            setWeight ? bag.Data.MaxCarryVolume : capacity);
         RefreshOverweightSlowdown(player);
         bag.RefreshUI();
         failureReason = string.Empty;
