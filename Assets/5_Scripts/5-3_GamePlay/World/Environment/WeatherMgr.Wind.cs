@@ -7,6 +7,43 @@ using UnityEngine;
 /// </summary>
 public partial class WeatherMgr
 {
+    #region 全区域风推动过渡
+
+    private readonly RegionalWindPushField regionalWindPush = new();
+    private int windPushFieldFrame = -1;
+    private ulong windPushFieldRevision = ulong.MaxValue;
+
+    private void MaintainWindPushField()
+    {
+        if (!_weatherRuntimeAllowed || !isActiveAndEnabled || regionalEngine == null)
+        {
+            ResetWindPushField();
+            return;
+        }
+        if (windPushFieldFrame == Time.frameCount && windPushFieldRevision == regionalEngine.WindQueryRevision)
+            return;
+        // 秒轴不随游戏日历跳时，同帧新天气用版本号补同步，所有物体共用同一批结果。
+        regionalWindPush.Synchronize(regionalEngine, Time.timeAsDouble, _weatherTransitionSeconds);
+        windPushFieldFrame = Time.frameCount;
+        windPushFieldRevision = regionalEngine.WindQueryRevision;
+    }
+
+    /// <summary>按物体自身起吹档位采样当地推动，不借本机镜头或风声表现强度。</summary>
+    public Vector2 SampleWindPushVelocityAt(Vector2 position, int requiredWindLevel)
+    {
+        MaintainWindPushField();
+        return regionalWindPush.Sample(new Unity.Mathematics.double2(position.x, position.y), requiredWindLevel);
+    }
+
+    private void ResetWindPushField()
+    {
+        regionalWindPush.Reset();
+        windPushFieldFrame = -1;
+        windPushFieldRevision = ulong.MaxValue;
+    }
+
+    #endregion
+
     #region 区域风与风浪表现
 
     private static readonly int GlobalWindStrengthShaderId = Shader.PropertyToID("_GlobalWindStrength");

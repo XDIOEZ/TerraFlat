@@ -361,7 +361,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
 #region 天气表现过渡
 
-    [SerializeField, Min(0.01f), Tooltip("风和云层从零到满强度的表现过渡秒数。")]
+    [SerializeField, Min(0.01f), Tooltip("风与云层表现从零到满强度的过渡秒数，同时用于风推动从当前值到目标值的完整过渡。")]
     private float _weatherTransitionSeconds = 3f;
     [SerializeField, Min(0f), Tooltip("雨雪从当前雨量到目标雨量的完整过渡秒数，小雨同样走完整段过渡。")]
     private float _precipitationTransitionSeconds = 12f;

@@ -96,6 +96,7 @@ public partial class WeatherMgr
     {
         SubscribeTimeSystem();
         AdvanceRegionalWeather();
+        MaintainWindPushField();
         MaintainSurfaceWork();
         UpdateLocalWeatherProjection();
         MaintainWeatherPresentation(Time.deltaTime);

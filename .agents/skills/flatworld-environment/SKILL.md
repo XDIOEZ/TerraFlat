@@ -72,7 +72,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 太阳/接触阴影透明度读纯 GetSunLighting，时间仅算轨迹；月相基于 TotalDays+CurrentTime/DayLength，月光作夜间下限后叠采光率/维度上限。MoonlightIntensity 与 MoonAppearance 分别表达亮度和出现进度，退出清 Shader 参数。
 - LightLayerMgr 按查询直接读取 URP 活跃光源登记表，环绕代理分类与 Transform 用弱引用缓存；没有玩法查询时不再定时扫全场景，点光参数仍逐次实时读取，单次查询共用一份拓扑域。URP 适配失败才按需低频回退扫描；规则 `environment/light_registry、light_sampling` 覆盖登记生命周期、代理排除、动态值、环绕距离与无分配热路径。风玩法按自身格查询，PlanetData.WindStrength/GPU 风只是镜头投影。
 - 风区边缘由 `WindTransitionWidth` 控制空间过渡总宽（默认 32 格，边界内外各 16 格）；`TryGetWindBlend` 按连续坐标 SmoothStep 混合最多四区，支持拐角、环绕和客户端副本，缺失区视为无风且不创建状态。风声/设施读混合风向量，移动先按各区原强度换算推速再混合，避免跌过 8 级门槛突然停住。
-- 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档不插值；邻风区各自分档后仍按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风。HasWindPush 每帧只读检查一次所有登记天气区（含客户端副本），不能以镜头区判断全世界。
-- 大批散落物风推动使用 `WorldMotionSystem.TryCreateWindSamplingContext` 每批冻结一次目录质量范围和星球重力；每件仍按实际质量与当地四区风场采样。单件 `SampleWindVelocity` 与批量共用 `WindEnvironmentRules.ResolveBlendedPushVelocity`。
-- 风采样直接读取区域风字段，与完整天气快照共用 `BuildWind`；全区起吹检查只读风强，不组装雨雷快照。每批风推动冻结活动拓扑域与 ChunkMgr，逐小步阻挡和移动后的环境检测仍实时执行。
+- `RegionalWindPushField` 每个规范天气区分别平滑三种起吹档位的推动向量，起风、停风、改档和反向都从当前推速用完整 `_weatherTransitionSeconds`（默认 3 秒）SmoothStep 续接；再按四区空间权重混合，跨界不重置时间。秒轴用 `Time.timeAsDouble`，不随游戏日历跳时，暂停冻结；普通客户端消费快照走同一力场，原始天气/设施/声音查询不被改写。每帧共用一批结果，同帧区域变更以 `WindQueryRevision` 补同步；世界/代际/拓扑重建或天气禁用清空，首次强风从零渐入，停风尾段仍保留 HasWindPush。规则 `environment/wind_push_transition` 覆盖连续性。
+- 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级目标速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档目标不插值；邻风区各自分档并平滑响应后按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风，不能以镜头区判断全世界。
+- 大批散落物风推动使用 `WorldMotionSystem.TryCreateWindSamplingContext` 每批冻结一次目录质量范围和星球重力；每件仍按实际质量与当地四区风场采样。单件 `SampleWindVelocity` 与批量共用区域推动场，稳态目标和空间混合仍由 `WindEnvironmentRules` 统一裁定。
+- 风采样直接读取区域风字段，与完整天气快照共用 `BuildWind`；风源同步只读风字段，不组装雨雷快照。每批风推动冻结活动拓扑域与 ChunkMgr，逐小步阻挡和移动后的环境检测仍实时执行。
 - 单机散落物水态走 DroppedItemRuntime.Water；陆地静物订所在地格变化，未知格限量重试，水中低频查流。水态替换先备载荷/共享视觉再提交整组数量，水花归实际世界 Scene；浮力阈值与视觉浸没分开。

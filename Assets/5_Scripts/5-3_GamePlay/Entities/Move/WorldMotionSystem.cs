@@ -45,10 +45,9 @@ public static class WorldMotionSystem
             int required = WindEnvironmentRules.ResolveRequiredWindLevel(
                 mass, surfaceGravity, minimumMass, maximumMass);
             // 沉重物品不用再查所在天气区域，也不进行不必要的坐标投影。
-            if (required > WindEnvironmentRules.MaximumWindLevel ||
-                !weather.TryGetWindBlendAt(topology.Normalize(position), out var blend))
+            if (required > WindEnvironmentRules.MaximumWindLevel)
                 return Vector2.zero;
-            return WindEnvironmentRules.ResolveBlendedPushVelocity(in blend, required);
+            return weather.SampleWindPushVelocityAt(topology.Normalize(position), required);
         }
     }
 

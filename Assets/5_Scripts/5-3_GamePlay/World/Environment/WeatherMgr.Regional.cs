@@ -76,21 +76,13 @@ public partial class WeatherMgr
         applySurfaceWork ??= ApplySurfaceWork;
 
     // 状态只在推进入口创建；查询不抽随机数，也不生成地形。
-    private int windPushQueryFrame = -1;
-    private bool hasWindPush;
-
-    /// <summary>每帧只扫描一次天气区域，跨区物体不能用镜头所在区的风力裁定。</summary>
+    /// <summary>整批共用区域推动状态，包含停风后逐渐归零的尾段。</summary>
     public bool HasWindPush
     {
         get
         {
-            if (!_weatherRuntimeAllowed || regionalEngine == null) return false;
-            if (windPushQueryFrame != Time.frameCount)
-            {
-                windPushQueryFrame = Time.frameCount;
-                hasWindPush = regionalEngine.HasWindStrengthAtLeast(WindEnvironmentRules.PushStartStrength);
-            }
-            return hasWindPush;
+            MaintainWindPushField();
+            return regionalWindPush.HasWindPush;
         }
     }
 
@@ -214,6 +206,7 @@ public partial class WeatherMgr
         Vector2Int chunkSize = PlanetData.NormalizeChunkSize(planet.ChunkSize);
         regionalEngine = new RegionalWeatherEngine(regionalSettings, GetDeterministicSeed(), domain,
             chunkSize.x, chunkSize.y);
+        ResetWindPushField();
         ResetWeatherAudioBaseline();
         regionalSaveIndices.Clear();
         lightningSeen.Clear();

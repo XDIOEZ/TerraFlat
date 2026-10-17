@@ -92,9 +92,14 @@ namespace FlatWorld.WorldModel
         public readonly float3 Diagonal;
         public readonly float HorizontalWeight;
         public readonly float VerticalWeight;
+        public readonly Int2 OriginRegion;
+        public readonly Int2 HorizontalRegion;
+        public readonly Int2 VerticalRegion;
+        public readonly Int2 DiagonalRegion;
 
         public RegionalWindBlend(float3 origin, float3 horizontal, float3 vertical, float3 diagonal,
-            float horizontalWeight, float verticalWeight)
+            float horizontalWeight, float verticalWeight, Int2 originRegion = default,
+            Int2 horizontalRegion = default, Int2 verticalRegion = default, Int2 diagonalRegion = default)
         {
             Origin = origin;
             Horizontal = horizontal;
@@ -102,6 +107,10 @@ namespace FlatWorld.WorldModel
             Diagonal = diagonal;
             HorizontalWeight = horizontalWeight;
             VerticalWeight = verticalWeight;
+            OriginRegion = originRegion;
+            HorizontalRegion = horizontalRegion;
+            VerticalRegion = verticalRegion;
+            DiagonalRegion = diagonalRegion;
         }
 
         public float2 Wind => math.lerp(math.lerp(Origin.xy, Horizontal.xy, HorizontalWeight),

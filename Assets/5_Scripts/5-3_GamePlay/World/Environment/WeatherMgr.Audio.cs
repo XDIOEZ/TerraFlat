@@ -125,7 +125,11 @@ public partial class WeatherMgr
             ActivateWeatherAudio();
     }
 
-    private void OnDisable() => DeactivateWeatherAudio();
+    private void OnDisable()
+    {
+        DeactivateWeatherAudio();
+        ResetWindPushField();
+    }
 
     #endregion
 

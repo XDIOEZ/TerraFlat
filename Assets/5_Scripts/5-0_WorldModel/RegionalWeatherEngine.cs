@@ -17,6 +17,7 @@ namespace FlatWorld.WorldModel
         private readonly Dictionary<Int2, RegionalWeatherSnapshot> replicas = new();
         private readonly List<RegionalWeatherState> recentLightning = new();
         private bool replicaMode;
+        public ulong WindQueryRevision { get; private set; }
 
         public RegionalWeatherEngine(RegionalWeatherSettings settings, int worldSeed,
             WorldTopologyDomain domain, int chunkWidth, int chunkHeight)
@@ -94,6 +95,7 @@ namespace FlatWorld.WorldModel
                 CheckIndex = GetCheckIndex(initialTime), Revision = 1
             };
             states.Add(region, state);
+            WindQueryRevision++;
             return state;
         }
 
@@ -394,8 +396,28 @@ namespace FlatWorld.WorldModel
                 found |= TryReadWind(new Int2(neighborX, neighborY), out diagonal);
             else if (xWeight > 0f) diagonal = horizontal;
             else if (yWeight > 0f) diagonal = vertical;
-            blend = new RegionalWindBlend(own, horizontal, vertical, diagonal, xWeight, yWeight);
+            Int2 horizontalRegion = ResolveRegion(new Int2(neighborX, region.Y));
+            Int2 verticalRegion = ResolveRegion(new Int2(region.X, neighborY));
+            Int2 diagonalRegion = ResolveRegion(new Int2(neighborX, neighborY));
+            blend = new RegionalWindBlend(own, horizontal, vertical, diagonal, xWeight, yWeight,
+                region, horizontalRegion, verticalRegion, diagonalRegion);
             return found;
+        }
+
+        /// <summary>按规范区域枚举只读风源，不克隆存档状态或组装完整天气快照。</summary>
+        public void VisitWindSources(Action<Int2, float3> visitor)
+        {
+            if (visitor == null) throw new ArgumentNullException(nameof(visitor));
+            if (replicaMode)
+            {
+                foreach (RegionalWeatherSnapshot snapshot in replicas.Values)
+                    visitor(snapshot.Region, new float3(snapshot.WindX, snapshot.WindY, snapshot.WindStrength));
+            }
+            else
+            {
+                foreach (RegionalWeatherState state in states.Values)
+                    visitor(state.Region, BuildWind(state));
+            }
         }
 
         private bool TryReadWind(Int2 region, out float3 wind)
@@ -565,6 +587,7 @@ namespace FlatWorld.WorldModel
             RegionalWeatherState copy = state.Clone();
             copy.Region = ResolveRegion(copy.Region);
             states[copy.Region] = copy;
+            WindQueryRevision++;
             for (int i = recentLightning.Count - 1; i >= 0; i--)
                 if (recentLightning[i].Region.Equals(copy.Region))
                     recentLightning.RemoveAt(i);
@@ -590,6 +613,7 @@ namespace FlatWorld.WorldModel
                  snapshot.Revision == previous.Revision && snapshot.SampleTime < previous.SampleTime))
                 return;
             replicas[snapshot.Region] = snapshot;
+            WindQueryRevision++;
         }
         #endregion
 
@@ -724,8 +748,11 @@ namespace FlatWorld.WorldModel
             int quotient = value / divisor;
             return value % divisor < 0 ? quotient - 1 : quotient;
         }
-        private static void IncrementRevision(RegionalWeatherState state)
-            => state.Revision = state.Revision == int.MaxValue ? 1 : state.Revision + 1;
+        private void IncrementRevision(RegionalWeatherState state)
+        {
+            state.Revision = state.Revision == int.MaxValue ? 1 : state.Revision + 1;
+            WindQueryRevision++;
+        }
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
         private static bool Unit(float value) => Finite(value) && value >= 0f && value <= 1f;

@@ -61,15 +61,18 @@ public static class WindEnvironmentRules
         if (requiredWindLevel < MinimumPushWindLevel || requiredWindLevel > MaximumWindLevel)
             return Vector2.zero;
 
-        return Vector2.Lerp(
-            Vector2.Lerp(ResolveSourceVelocity(blend.Origin, requiredWindLevel),
-                ResolveSourceVelocity(blend.Horizontal, requiredWindLevel), blend.HorizontalWeight),
-            Vector2.Lerp(ResolveSourceVelocity(blend.Vertical, requiredWindLevel),
-                ResolveSourceVelocity(blend.Diagonal, requiredWindLevel), blend.HorizontalWeight),
-            blend.VerticalWeight);
+        return BlendPushVelocities(in blend, ResolveSourceVelocity(blend.Origin, requiredWindLevel),
+            ResolveSourceVelocity(blend.Horizontal, requiredWindLevel),
+            ResolveSourceVelocity(blend.Vertical, requiredWindLevel),
+            ResolveSourceVelocity(blend.Diagonal, requiredWindLevel));
     }
 
-    private static Vector2 ResolveSourceVelocity(float3 wind, int requiredWindLevel)
+    internal static Vector2 BlendPushVelocities(in RegionalWindBlend blend,
+        Vector2 origin, Vector2 horizontal, Vector2 vertical, Vector2 diagonal)
+        => Vector2.Lerp(Vector2.Lerp(origin, horizontal, blend.HorizontalWeight),
+            Vector2.Lerp(vertical, diagonal, blend.HorizontalWeight), blend.VerticalWeight);
+
+    internal static Vector2 ResolveSourceVelocity(float3 wind, int requiredWindLevel)
     {
         float speed = ResolvePushSpeed(wind.z, requiredWindLevel);
         if (speed <= 0f) return Vector2.zero;
