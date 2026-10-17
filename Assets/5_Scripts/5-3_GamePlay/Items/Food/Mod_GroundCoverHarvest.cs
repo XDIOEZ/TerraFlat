@@ -140,11 +140,9 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         if (!actionAnimation.TryRequestAction(queueIfBusy: false))
             return;
 
+        // 未完成时只累计有效挥动，不把采集次数当作角色台词。
         if (!workProgress.Advance(requiredUses))
-        {
-            ItemActionFeedback.Show(item.Owner, $"{workProgress.CompletedUses}/{requiredUses}");
             return;
-        }
 
         if (cuttingGrass)
         {
