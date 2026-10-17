@@ -29,6 +29,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - 分帧采集后后台处理不可变快照，旧任务不能覆盖新手动/退出保存。保存完成后才释放 MachineWorld/掉落运行态；旧生产者移交早于区块快照。
 - PlayerData_Dict 用不可变角色 ID，Name_User 仅显示名。改档名同时更新 saveName、磁盘名与退出元数据；特殊 JSON 状态按命名空间保留未知根属性，未来版本扩展拒绝写回。
 - 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
+- 保存退出先在世界退出事件/输入解绑之前执行 `ItemMgr.SavePlayer`，世界事件结算后再写盘；`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 返回实际成功状态，退出回到菜单不能代替写盘成功。
 
 ## 区块与世界数据
 

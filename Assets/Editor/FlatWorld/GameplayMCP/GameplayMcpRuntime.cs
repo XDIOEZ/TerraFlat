@@ -440,13 +440,15 @@ namespace FlatWorld.GameplayMCP
                        string.Equals(SceneManager.GetActiveScene().name, "GameStartScene", StringComparison.Ordinal)),
                 timeoutSeconds);
 
+            bool saved = finished && gameManager.LastExitSaveSucceeded == true;
+
             return new JObject
             {
-                ["ok"] = finished,
-                ["saved"] = finished,
+                ["ok"] = saved,
+                ["saved"] = saved,
                 ["save"] = saveName,
                 ["scene"] = SceneManager.GetActiveScene().name,
-                ["code"] = finished ? "saved_and_exited" : "exit_timeout"
+                ["code"] = !finished ? "exit_timeout" : saved ? "saved_and_exited" : "save_write_failed"
             };
         }
 

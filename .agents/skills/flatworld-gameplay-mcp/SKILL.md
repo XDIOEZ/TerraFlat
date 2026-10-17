@@ -20,6 +20,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 - `continue_save(isolated=true)` 默认复制最近正式存档到 `Library/FlatWorldGameplayMCP/Saves/`；`create_world(isolated=true)` 的首次及后续保存也在隔离目录。正式存档写入仅限明确授权。
 - 入世等待默认 60 秒、最长 120 秒；已进入加载过程时查询状态，不重复建世界或切存档目录。`world_entry_timeout` 可能只是等待超时。`save_exit` 调用生产保存退出协程。
 - `continue_save/create_world` 首次成功入世通过生命公开接口把本地玩家当前/上限初始化为 20000，仅一次；已有世界、状态查询、获取租约和普通菜单启动不改血量。
+- `session(save_exit)` 的 `saved=true` 必须以本轮退出保存的真实写盘成功为条件，返回主菜单但写盘失败时返回 `save_write_failed`；续档前后位置、库存仍需通过 `observe` 实际对照。
 - `control(acquire)` 建立唯一外部控制租约；脚本重编译、Domain Reload、退出或重进世界后重新执行 `status → acquire → observe`。结束控制用 `act(stop) → control(release)`。
 - 无玩家的启动资源失败可用 `session(reload_resources)`，调用 `GameRes.RequestResourceReload`，不依赖租约，也不保存退出。
 - 用户正在使用的 Play Mode 按项目规则保持运行；上述启动/退出链用于已授权的测试会话。

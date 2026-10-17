@@ -283,28 +283,29 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>
     /// 保存当前游戏状态，并记录玩家退出该存档的现实时间。
     /// </summary>
-    public void Save_And_WriteToDiskAndRecordExitTime()
+    public bool Save_And_WriteToDiskAndRecordExitTime()
     {
-        SaveCurrentToDisk(recordExitTime: true);
+        return SaveCurrentToDisk(recordExitTime: true);
     }
 
-    private void SaveCurrentToDisk(bool recordExitTime)
+    private bool SaveCurrentToDisk(bool recordExitTime)
     {
         if (SaveData == null)
         {
             Debug.LogError("❌ SaveData为null，无法保存");
-            return;
+            return false;
         }
 
         PrepareLoadedChunksForSave();
         if (!SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
-            return;
+            return false;
 
         if (recordExitTime)
         {
             string fullPath = GetSaveFilePath(UserSavePath, SaveData.saveName);
             RecordLastExitTimeUtc(fullPath, DateTime.UtcNow);
         }
+        return true;
     }
 
     /// <summary>

@@ -31,6 +31,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// <summary>最近一次手动保存结果；保存进行中为 null。</summary>
     public bool? LastSaveSucceeded { get; private set; }
 
+    /// <summary>最近一次退出世界的真实写盘结果；不把返回主菜单等同于存档成功。</summary>
+    public bool? LastExitSaveSucceeded { get; private set; }
+
 
 
     #endregion
@@ -139,6 +142,20 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         bool saveCurrentGame = true)
     {
         Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
+        LastExitSaveSucceeded = null;
+
+        // 先检查依赖并采集玩家状态；世界退出事件可能撤除载具、输入与 MOD 会话。
+        if (ItemMgr.Instance == null || ChunkMgr.Instance == null || SaveDataMgr.Instance == null)
+        {
+            Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
+            onComplete?.Invoke();
+            yield break;
+        }
+        if (saveCurrentGame)
+        {
+            ItemMgr.Instance.CleanupNullItems();
+            ItemMgr.Instance.SavePlayer();
+        }
 
         // 记录退出前的动态世界场景；LoadSceneMode.Single 理论上会卸载它，
         // 后续仍会显式核验，防止异常路径留下同名空场景阻塞下一次进入。
@@ -156,15 +173,6 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         Event_GameWorldExit?.Invoke();
         ChunkGenerator_River.ClearHydrologyCache();
 
-        // 安全检查：确保核心管理器已初始化
-        if (ItemMgr.Instance == null || ChunkMgr.Instance == null ||
-            SaveDataMgr.Instance == null)
-        {
-            Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
-            onComplete?.Invoke(); // 即使失败也调用回调
-            yield break;
-        }
-
         // 触发退出开始事件
         BackToHelloScene_Event_Start?.Invoke();
 
@@ -178,13 +186,19 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         if (saveCurrentGame)
         {
-            // 提前保存玩家数据（在销毁逻辑执行前）
-            Debug.Log("[ExitGame] 开始保存玩家数据...");
-            ItemMgr.Instance.SavePlayer();
-
-            // SaveDataMgr 在写盘前统一保存全部已加载区块，避免同一批区块被扫描两次。
+            // 玩家位置和模块快照已经在世界退出通知之前采集，磁盘仍在退出事件结算后写入。
             Debug.Log("[ExitGame] 写入存档文件...");
-            SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
+            try
+            {
+                LastExitSaveSucceeded = SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
+            }
+            catch (Exception exception)
+            {
+                LastExitSaveSucceeded = false;
+                Debug.LogException(exception);
+            }
+            if (LastExitSaveSucceeded != true)
+                Debug.LogError("[ExitGame] 退出存档写盘失败，当前世界未成功保存。");
         }
         else
         {
