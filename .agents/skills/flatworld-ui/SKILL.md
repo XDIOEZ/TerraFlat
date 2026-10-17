@@ -42,6 +42,8 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 安全区先确认属于当前屏幕，再归一化并在 Canvas 绘制前补更新；`SafeAreaScaleGroup` 对固定卡片只缩不放，presentationScale 在安全区适配后生效。快捷栏负底部间距保留为偏好，最终矩形避让强制手势区。
 - 主菜单模态共用 SharedModalCardSize；MainMenuResponsiveLayout 以原位置和安全区共同限幅品牌/菜单/设置入口。移动端交互高度≥60、正文≥17 逻辑像素；内容增长由 ScrollRect 承载。
 - 列表使用 `ItemStepScrollRect`，滚轮按 scrollDeltaPerTick 还原刻度，再按条目/网格行移动；单段长文本使用 fixedWheelStep。显式迁移只换 MonoScript GUID，保留组件 fileID/引用。
+- 存档列表用 `SaveSelectionFileCatalog` 每档案采样一次退出时间后内存排序，面板显式打开负责刷新，Start 只作未刷新的兜底；首行同步准备，其余条目由 `SaveDataManager_UI.Update` 每帧最多四行、约 2ms 补足，关闭暂停补建，完整身份列表不裁剪，批选与改名恢复不依赖已生成行数。
+- 新游戏窗口由正式根 `UI_NewGame` 和 `UI_NewGameWorldContent/UI_NewGameDifficultyContent` 三个 Prefab 组成，与 `NewGamePrefabBuilder` 同步维护；隐藏页按需实例化一次，创建世界请求直接读取尚未打开页面的默认配置，不为取值生成页面。
 - 标准 TMP/Legacy 下拉模板由 `DropdownListLayout` 在每次展开前按实际行高准备，最多显示 5 行，少于等于 5 项全部显示；`BasePanel` 收集组件时接入，公共构建器同步。条目与 Content 排布归原生 Dropdown，模板关闭竞争的 LayoutGroup/ContentSizeFitter，Viewport 不保留垂直内缩，避免末行被裁。
 - `BasePanel → BaseUIAnimation → UIAnimationManager → JSON` 单向依赖，每面板最多一个动画组件，Opened/Closed 是同步业务事件。正式面板以 `ScaleUIAnimation/panel.scale` 绕 MotionRoot 可见中心缩放，动画不争写布局/安全区目标。
 - 动画配置保存 Duration/相对 Offset/Scale/Ease，CanvasScaler 管分辨率；全局播放倍率只作用本系统根 Tween，热重载保留当前行程快照，反向开关保留进度，结束/禁用恢复姿态。

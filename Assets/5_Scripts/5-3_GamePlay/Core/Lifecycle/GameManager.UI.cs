@@ -1264,23 +1264,7 @@ public partial class GameManager
             ReadyPlanetData.SpatialDistanceScale);
         ReadyPlanetData.ChunkSize = PlanetData.NormalizeChunkSize(ReadyPlanetData.ChunkSize);
 
-        TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
-        TMP_InputField spatialDistanceScaleInput = panel.GetInputField(NewGameSpatialDistanceScaleInputKey);
-        TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);
-        TMP_InputField chunkHeightInput = panel.GetInputField(NewGameChunkHeightInputKey);
-        Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
-        radiusInput?.SetTextWithoutNotify(ReadyPlanetData.Radius.ToString(CultureInfo.InvariantCulture));
-        spatialDistanceScaleInput?.SetTextWithoutNotify(
-            ReadyPlanetData.SpatialDistanceScale.ToString("0.##", CultureInfo.InvariantCulture));
         ApplyNewWorldChunkDefaults(panel);
-        radiusInput?.onValueChanged.AddListener(OnPlanetRadiusChanged);
-        spatialDistanceScaleInput?.onValueChanged.AddListener(OnPlanetSpatialDistanceScaleChanged);
-        chunkWidthInput?.onValueChanged.AddListener(OnPlanetChunkWidthChanged);
-        chunkHeightInput?.onValueChanged.AddListener(OnPlanetChunkHeightChanged);
-        topologyToggle?.SetIsOnWithoutNotify(pendingNewWorldTopology == WorldTopologyMode.Wrapped);
-        if (radiusInput != null)
-            radiusInput.interactable = pendingNewWorldTopology == WorldTopologyMode.Wrapped;
-        topologyToggle?.onValueChanged.AddListener(isOn => OnWorldTopologyChanged(panel, isOn));
         ReadyPlanetData.TopologyMode = pendingNewWorldTopology;
         BindNewGameDifficultyControls(panel);
         BindNewGamePageControls(panel);
@@ -1292,6 +1276,10 @@ public partial class GameManager
     private void ApplyNewWorldChunkDefaults(BasePanel panel)
     {
         Vector2Int chunkSize = NewWorldUserSettings.DefaultChunkSize;
+        ReadyPlanetData ??= new PlanetData();
+        ReadyPlanetData.ChunkSize = chunkSize;
+        if (!HasNewGameWorldContent(panel))
+            return;
         panel.GetInputField(NewGameChunkWidthInputKey)?.SetTextWithoutNotify(
             chunkSize.x.ToString(CultureInfo.InvariantCulture));
         panel.GetInputField(NewGameChunkHeightInputKey)?.SetTextWithoutNotify(
@@ -1301,9 +1289,14 @@ public partial class GameManager
     #region 新世界内容分页
 
     /// <summary>名称页和世界页复用同一面板，切页只改变显隐，不重建或清空输入框。</summary>
-    private static void BindNewGamePageControls(BasePanel panel)
+    private void BindNewGamePageControls(BasePanel panel)
     {
-        panel.SetButtonOnClick(NewGameWorldSettingsButtonKey, () => ShowNewGamePage(panel, true, true));
+        panel.SetButtonOnClick(NewGameWorldSettingsButtonKey, () =>
+        {
+            EnsureNewGameWorldContent(panel);
+            if (HasNewGameWorldContent(panel))
+                ShowNewGamePage(panel, true, true);
+        });
         panel.SetButtonOnClick(NewGameIdentityButtonKey, () => ShowNewGamePage(panel, false, true));
         panel.Opened += () => ShowNewGamePage(panel, false, false);
         panel.CancelOverride = eventData =>
@@ -1427,7 +1420,8 @@ public partial class GameManager
         UIManager.Instance?.TryGetPanel(NewGamePanelKey, out panel);
         string saveName = panel?.GetInputField(NewGameSaveInputKey)?.text;
         string playerName = panel?.GetInputField(NewGamePlayerInputKey)?.text;
-        string worldSeed = panel?.GetInputField(NewGameSeedInputKey)?.text;
+        bool hasWorldContent = HasNewGameWorldContent(panel);
+        string worldSeed = hasWorldContent ? panel.GetInputField(NewGameSeedInputKey)?.text : string.Empty;
 
         if (panel == null)
         {
@@ -1435,23 +1429,24 @@ public partial class GameManager
             return false;
         }
 
-        TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
-        TMP_InputField spatialDistanceScaleInput = panel.GetInputField(NewGameSpatialDistanceScaleInputKey);
-        TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);
-        TMP_InputField chunkHeightInput = panel.GetInputField(NewGameChunkHeightInputKey);
-        Toggle topologyToggle = panel.GetToggle(NewGameTopologyToggleKey);
+        TMP_InputField radiusInput = hasWorldContent ? panel.GetInputField(NewGameRadiusInputKey) : null;
+        TMP_InputField spatialDistanceScaleInput = hasWorldContent ? panel.GetInputField(NewGameSpatialDistanceScaleInputKey) : null;
+        TMP_InputField chunkWidthInput = hasWorldContent ? panel.GetInputField(NewGameChunkWidthInputKey) : null;
+        TMP_InputField chunkHeightInput = hasWorldContent ? panel.GetInputField(NewGameChunkHeightInputKey) : null;
+        Toggle topologyToggle = hasWorldContent ? panel.GetToggle(NewGameTopologyToggleKey) : null;
         WorldTopologyMode topologyMode = topologyToggle != null
             ? (topologyToggle.isOn ? WorldTopologyMode.Wrapped : WorldTopologyMode.Infinite)
             : pendingNewWorldTopology;
         int radius = Mathf.Max(1, ReadyPlanetData?.Radius ?? PlanetData.DefaultRadius);
-        if (topologyMode == WorldTopologyMode.Wrapped &&
+        if (hasWorldContent && topologyMode == WorldTopologyMode.Wrapped &&
             !TryParsePlanetRadius(radiusInput?.text, out radius))
         {
             Debug.LogWarning($"[GameManager] 星球半径无效：{radiusInput?.text}。请输入大于 0 的整数。");
             return false;
         }
 
-        if (!TryParseSpatialDistanceScale(spatialDistanceScaleInput?.text, out float spatialDistanceScale))
+        float spatialDistanceScale = PlanetData.NormalizeSpatialDistanceScale(ReadyPlanetData?.SpatialDistanceScale ?? 1f);
+        if (hasWorldContent && !TryParseSpatialDistanceScale(spatialDistanceScaleInput?.text, out spatialDistanceScale))
         {
             Debug.LogWarning(
                 $"[GameManager] 空间距离倍率无效：{spatialDistanceScaleInput?.text}。请输入 {PlanetData.MinSpatialDistanceScale} 到 {PlanetData.MaxSpatialDistanceScale} 之间的数值。");
@@ -1519,23 +1514,15 @@ public partial class GameManager
         pendingCustomDifficultyRules = new GameDifficultyRuleValues();
 
         panel.SetButtonOnClick(NewGameDifficultyButtonKey, () => OpenNewGameDifficultyPanel(panel));
-        panel.SetButtonOnClick(NewGameDifficultyCloseButtonKey, () => CloseNewGameDifficultyPanel(panel));
-        panel.SetButtonOnClick(NewGameDifficultyConfirmButtonKey, () => ConfirmNewGameDifficulty(panel));
-        for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
-        {
-            GameDifficultyId difficulty = GameDifficultyCatalog.All[i].Id;
-            panel.SetButtonOnClick(
-                GetNewGameDifficultyPresetButtonKey(difficulty),
-                () => SelectNewGameDifficulty(panel, difficulty));
-        }
-
         CloseNewGameDifficultyPanel(panel);
-        RefreshNewGameDifficultyDetails(panel);
         RefreshNewGameDifficultySummary(panel);
     }
 
     private void OpenNewGameDifficultyPanel(BasePanel panel)
     {
+        EnsureNewGameDifficultyContent(panel);
+        if (panel.GetComponent<NewGameDeferredContent>()?.HasDifficultyContent != true)
+            return;
         SetNewGameDifficultyPanelVisible(panel, true);
         RefreshNewGameDifficultyDetails(panel);
     }

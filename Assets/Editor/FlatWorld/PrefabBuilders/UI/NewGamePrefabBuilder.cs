@@ -10,6 +10,8 @@ using UnityEngine.UI;
 public static class NewGamePrefabBuilder
 {
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab";
+    private const string WorldContentPath = "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGameWorldContent.prefab";
+    private const string DifficultyContentPath = "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGameDifficultyContent.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
     private static Color Ink => FlatWorldUITheme.Canvas;
@@ -52,6 +54,7 @@ public static class NewGamePrefabBuilder
             ConfigureResponsiveScale(root, card.rectTransform, difficultyDialog);
 
             FlatWorldUITheme.Apply(root.transform);
+            ConfigureDeferredContent(root, card.transform.Find(GameManager.NewGameWorldPageKey), difficultyDialog);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
@@ -90,6 +93,41 @@ public static class NewGamePrefabBuilder
         AssetDatabase.Refresh();
         Debug.Log("[NewGameUI] 新世界创建界面已重建。");
     }
+
+    #region 隐藏页面正式资源
+
+    private static void ConfigureDeferredContent(GameObject root, Transform worldPage, Transform difficultyDialog)
+    {
+        GameObject worldPrefab = SaveDeferredChildren(worldPage, WorldContentPath);
+        GameObject difficultyPrefab = SaveDeferredChildren(difficultyDialog, DifficultyContentPath);
+        NewGameDeferredContent deferred = root.GetComponent<NewGameDeferredContent>();
+        if (deferred == null)
+            deferred = root.AddComponent<NewGameDeferredContent>();
+        deferred.Configure(worldPrefab, worldPage, difficultyPrefab, difficultyDialog);
+    }
+
+    private static GameObject SaveDeferredChildren(Transform parent, string path)
+    {
+        // 正式容器保留安全区和动画引用，只有尚不可见的内容迁到独立资源。
+        GameObject content = new GameObject(System.IO.Path.GetFileNameWithoutExtension(path), typeof(RectTransform));
+        content.layer = parent.gameObject.layer;
+        content.SetActive(false);
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.SetParent(parent, false);
+        Stretch(contentRect);
+        var children = new List<Transform>();
+        foreach (Transform child in parent)
+            if (child != contentRect)
+                children.Add(child);
+        foreach (Transform child in children)
+            child.SetParent(contentRect, false);
+        content.SetActive(true);
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(content, path);
+        Object.DestroyImmediate(content);
+        return prefab;
+    }
+
+    #endregion
 
     private static void ConfigureRoot(GameObject root)
     {

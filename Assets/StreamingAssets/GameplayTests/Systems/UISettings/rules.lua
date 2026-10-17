@@ -1,4 +1,37 @@
 -- 调用偏好正式净化规则，不写 PlayerPrefs 或改变当前 UI。
+test.system("ui_settings", "new_game_deferred_content", {}, function(data)
+    assert(data.initialWorldChildren == 0 and data.initialDifficultyChildren == 0,
+        "名称页首次显示前已经实例化隐藏世界或难度内容")
+    assert(not data.initialHasWorld and not data.initialHasDifficulty, "未访问页面错误登记为已创建")
+    assert(data.firstWorldCreated and data.difficultyStillUncreated, "世界页首次访问没有单独创建自己的内容")
+    assert(not data.repeatWorldCreated and data.worldInstancePreserved and data.worldStatePreserved,
+        "世界页重复访问重建实例或丢失已有控件状态")
+    assert(data.firstDifficultyCreated and not data.repeatDifficultyCreated,
+        "难度页没有遵循首次创建、以后复用的规则")
+    assert(data.worldChildren == 1 and data.difficultyChildren == 1,
+        "隐藏页面重复创建了内容")
+    assert(data.cachedWorldButtonPreserved and data.difficultyButtonRegistered,
+        "动态页面没有刷新所属面板的控件缓存或替换了已绑定控件")
+    assert(data.instancesOwnedByPanel and data.childrenDestroyedWithPanel,
+        "按需内容脱离所属面板或面板销毁后残留")
+end, "新世界隐藏页面首次按需创建、重复复用与面板释放")
+
+for _, row in ipairs({
+    {mode = "empty", count = 0, max = 0, ticks = 0, names = {}},
+    {mode = "mixed", count = 4, max = 1, ticks = 300, names = {"Newest", "Middle", "Old", "Missing"}},
+    {mode = "ties", count = 4, max = 1, ticks = 200, names = {"Alpha", "beta", "Gamma", "zeta"}}
+}) do
+    test.system("ui_settings", "save_file_catalog", {mode = row.mode}, function(data)
+        assert(data.count == row.count and data.readCount == row.count and data.maxReadsPerPath == row.max,
+            "存档列表排序重复读取了同一文件的元数据")
+        assert(data.firstTicks == row.ticks and #data.names == #row.names,
+            "存档列表元数据缺失或条目数量错误")
+        for index, name in ipairs(row.names) do
+            assert(data.names[index] == name, "存档列表没有按时间倒序及同时间名称顺序排列")
+        end
+    end, "存档目录一次采样后排序：" .. row.mode)
+end
+
 for _, row in ipairs({ { size = -1, expected = 0.5 }, { size = 0.5, expected = 0.5 }, { size = 1.25, expected = 1.25 }, { size = 8, expected = 2 }, { nan = true, expected = 1 }, { infinity = true, expected = 1 } }) do
     test.system("ui_settings", "mobile_size", row, function(data)
         assert(data.size == row.expected, "移动控件倍率没有按正式范围或异常默认值处理")

@@ -17,6 +17,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     private const string SaveItemNamePrefix = "存档条目_";
     private const string PlayerItemNamePrefix = "角色条目_";
+    private const int RowsPerFrame = 4;
+    private const double RowBudgetMilliseconds = 2d;
 
     /// <summary>缓存动态条目的组件引用；复用时只替换业务数据和父容器。</summary>
     private sealed class SelectionRow
@@ -54,6 +56,16 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     private readonly Dictionary<GameObject, SelectionRow> rowsByObject =
         new Dictionary<GameObject, SelectionRow>();
     private readonly List<string> playerNameBuffer = new List<string>();
+    private readonly Dictionary<string, System.DateTime> saveExitTimes =
+        new Dictionary<string, System.DateTime>(System.StringComparer.OrdinalIgnoreCase);
+    private readonly System.Diagnostics.Stopwatch rowWorkTimer = new System.Diagnostics.Stopwatch();
+    private int rowWorkFrame = -1;
+    private int preparedRowsThisFrame;
+    private bool hasRefreshed;
+    private bool pendingSaveRows;
+    private bool pendingPlayerRows;
+    private string pendingRenamedSave;
+    private string pendingRenamedPlayer;
     private SelectionRow selectedSaveRow;
     private SelectionRow selectedPlayerRow;
     private readonly HashSet<string> batchSelectedSaveNames =
@@ -108,10 +120,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     private void Start()
     {
         saveAndLoad = SaveDataMgr.Instance;
-        if (TryGetSavePanel(out BasePanel panel) && panel.IsOpen())
+        // 正式打开入口已刷新过时，Start 不再重复读盘和重建列表。
+        if (!hasRefreshed && TryGetSavePanel(out BasePanel panel) && panel.IsOpen())
             RefreshForGamepadOpen();
-        else
-            Refresh();
     }
 
     #endregion
@@ -135,6 +146,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     public void LoadSaveFileNames()
     {
         saves.Clear();
+        saveExitTimes.Clear();
 
         if (!Directory.Exists(PathToSaveFolder))
         {
@@ -142,24 +154,12 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
         }
 
-        string[] files = Directory.GetFiles(PathToSaveFolder, "*.bytes");
-        System.Array.Sort(files, (left, right) =>
+        List<SaveSelectionFileCatalog.Entry> entries = SaveSelectionFileCatalog.Load(
+            Directory.GetFiles(PathToSaveFolder, "*.bytes"), SaveDataMgr.GetLastExitTimeUtc);
+        foreach (SaveSelectionFileCatalog.Entry entry in entries)
         {
-            System.DateTime leftExitTime = SaveDataMgr.GetLastExitTimeUtc(left);
-            System.DateTime rightExitTime = SaveDataMgr.GetLastExitTimeUtc(right);
-            int timeComparison = rightExitTime.CompareTo(leftExitTime);
-            if (timeComparison != 0)
-                return timeComparison;
-
-            return System.StringComparer.OrdinalIgnoreCase.Compare(
-                Path.GetFileNameWithoutExtension(left),
-                Path.GetFileNameWithoutExtension(right));
-        });
-
-        foreach (string file in files)
-        {
-            string fileName = Path.GetFileNameWithoutExtension(file);
-            saves.Add(fileName);
+            saves.Add(entry.Name);
+            saveExitTimes[entry.Name] = entry.LastExitTimeUtc;
         }
     }
     #endregion
@@ -180,6 +180,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         ClearSelectedRow(ref selectedPlayerRow);
 
         // 刷新存档时不保留旧世界的角色列表，避免焦点和数据同时指向过期条目。
+        pendingSaveRows = false;
+        pendingPlayerRows = false;
         bool playerStructureChanged = ReleaseRows(playerRows);
         bool saveStructureChanged = SyncRows(
             saveRows,
@@ -187,6 +189,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             saves,
             true,
             out bool createdRow);
+        pendingSaveRows = saveRows.Count < saves.Count;
 
         CommitDynamicListChanges(
             saveStructureChanged,
@@ -207,6 +210,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         }
 
         ClearSelectedRow(ref selectedPlayerRow);
+        pendingPlayerRows = false;
         playerNameBuffer.Clear();
         if (saveAndLoad?.SaveData?.PlayerData_Dict != null)
         {
@@ -220,6 +224,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             playerNameBuffer,
             false,
             out bool createdRow);
+        pendingPlayerRows = playerRows.Count < playerNameBuffer.Count;
         CommitDynamicListChanges(false, playerStructureChanged, createdRow);
     }
     #endregion
@@ -299,6 +304,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// <summary>手动输入代表新角色；已有角色仍只能按已选条目的稳定 ID 进入。</summary>
     public void OnPlayerNameInputChanged(string displayName)
     {
+        pendingRenamedPlayer = null;
         ClearSelectedRow(ref selectedPlayerRow);
         if (saveAndLoad != null)
             saveAndLoad.CurrentContrrolPlayerName = string.Empty;
@@ -363,21 +369,17 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     {
         string selectedProfileId = selectedPlayerRow?.Value;
         Refresh();
-        SelectionRow row = FindRow(saveRows, saveName, null);
-        if (row != null)
-            OnClick_List_Save_Button(saveName, row.Root);
-        SelectionRow playerRow = FindRow(playerRows, selectedProfileId, null);
-        if (playerRow != null)
-            OnClick_List_PlayerName_Button(selectedProfileId, playerRow.Root);
+        pendingRenamedSave = saveName;
+        pendingRenamedPlayer = selectedProfileId;
+        RestoreRenamedSelection();
     }
 
     /// <summary>角色改名后仍按原 ID 选择同一角色。</summary>
     public void RefreshAfterPlayerRename(string profileId)
     {
         GeneratePlayerButtons();
-        SelectionRow row = FindRow(playerRows, profileId, null);
-        if (row != null)
-            OnClick_List_PlayerName_Button(profileId, row.Root);
+        pendingRenamedPlayer = profileId;
+        RestoreRenamedSelection();
     }
 
     /// <summary>
@@ -410,6 +412,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void Refresh()
     {
+        saveAndLoad ??= SaveDataMgr.Instance;
+        hasRefreshed = true;
+        pendingRenamedSave = null;
+        pendingRenamedPlayer = null;
         LoadSaveFileNames();
         GenerateSaveButtons();
     }
@@ -518,6 +524,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
 
         isBatchDeleteMode = true;
+        pendingRenamedSave = null;
+        pendingRenamedPlayer = null;
+        pendingPlayerRows = false;
         isBatchDeleteConfirmationOpen = false;
         pendingSingleDeleteSaveName = null;
         batchSelectedSaveNames.Clear();
@@ -774,6 +783,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void ClearSaveSelection()
     {
+        pendingRenamedSave = null;
+        pendingRenamedPlayer = null;
+        pendingPlayerRows = false;
         ClearSelectedRow(ref selectedSaveRow);
         ClearSelectedRow(ref selectedPlayerRow);
         bool playerStructureChanged = ReleaseRows(playerRows);
@@ -876,8 +888,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (panel == null)
             return;
 
-        string fullPath = Path.Combine(PathToSaveFolder, (saveName ?? string.Empty) + ".bytes");
-        System.DateTime saveTimeUtc = SaveDataMgr.GetLastExitTimeUtc(fullPath);
+        saveExitTimes.TryGetValue(saveName ?? string.Empty, out System.DateTime saveTimeUtc);
         if (saveTimeUtc == System.DateTime.MinValue)
         {
             ClearSelectedSaveTime(panel);
@@ -1000,6 +1011,64 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     #region 动态列表辅助
 
+    /// <summary>面板打开时按帧补足条目，关闭后保留行池和进度，重新刷新直接替换目标数据。</summary>
+    private void Update()
+    {
+        if ((!pendingSaveRows && !pendingPlayerRows) ||
+            !TryGetSavePanel(out BasePanel panel) || !panel.IsOpen())
+            return;
+
+        rowWorkTimer.Restart();
+        int remainingRows = RowsPerFrame;
+        bool createdRow = false;
+        bool saveChanged = false;
+        bool playerChanged = false;
+        if (pendingSaveRows)
+        {
+            saveChanged = AppendRows(saveRows, SaveSelectButton_Parent_Content, saves, true,
+                ref remainingRows, ref createdRow, out pendingSaveRows);
+        }
+        if (pendingPlayerRows && remainingRows > 0 && rowWorkTimer.Elapsed.TotalMilliseconds < RowBudgetMilliseconds)
+        {
+            playerChanged = AppendRows(playerRows, Player_SelectButton_Parent_Content, playerNameBuffer, false,
+                ref remainingRows, ref createdRow, out pendingPlayerRows);
+        }
+        rowWorkTimer.Stop();
+        CommitDynamicListChanges(saveChanged, playerChanged, createdRow, panel);
+        RestoreRenamedSelection();
+    }
+
+    /// <summary>改名后的身份恢复等待对应条目补建完成，不捕获旧刷新中的条目引用。</summary>
+    private void RestoreRenamedSelection()
+    {
+        if (!string.IsNullOrEmpty(pendingRenamedSave))
+        {
+            SelectionRow save = FindRow(saveRows, pendingRenamedSave, null);
+            if (save == null)
+            {
+                if (!pendingSaveRows)
+                {
+                    pendingRenamedSave = null;
+                    pendingRenamedPlayer = null;
+                }
+                return;
+            }
+            pendingRenamedSave = null;
+            OnClick_List_Save_Button(save.Value, save.Root);
+        }
+        if (!string.IsNullOrEmpty(pendingRenamedPlayer))
+        {
+            SelectionRow player = FindRow(playerRows, pendingRenamedPlayer, null);
+            if (player != null)
+            {
+                pendingRenamedPlayer = null;
+                OnClick_List_PlayerName_Button(player.Value, player.Root);
+            }
+            else if (!pendingPlayerRows)
+                pendingRenamedPlayer = null;
+        }
+    }
+
     /// <summary>按索引复用条目；只有历史容量不足时才实例化新的 Prefab。</summary>
     private bool SyncRows(
         List<SelectionRow> activeRows,
@@ -1020,21 +1089,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             activeRows.RemoveAt(index);
         }
 
-        for (int index = 0; index < values.Count; index++)
+        int reusableCount = Mathf.Min(activeRows.Count, values.Count);
+        for (int index = 0; index < reusableCount; index++)
         {
-            SelectionRow row;
-            if (index < activeRows.Count)
-            {
-                row = activeRows[index];
-            }
-            else
-            {
-                row = AcquireRow(parent, ref createdRow);
-                if (row == null)
-                    continue;
-                activeRows.Add(row);
-            }
-
+            SelectionRow row = activeRows[index];
             ConfigureRow(row, values[index], isSave, index);
             if (row.Root.transform.parent != parent)
                 row.Root.transform.SetParent(parent, false);
@@ -1049,7 +1107,47 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             activeRows.RemoveAt(index);
         }
 
+        // 首行同步准备，手柄能立即取得默认焦点；其余新行留给 Update 的统一预算。
+        rowWorkTimer.Restart();
+        int firstRowBudget = activeRows.Count == 0 ? 1 : 0;
+        AppendRows(activeRows, parent, values, isSave, ref firstRowBudget, ref createdRow, out _);
+        rowWorkTimer.Stop();
         return true;
+    }
+
+    private bool AppendRows(List<SelectionRow> rows, Transform parent, IReadOnlyList<string> values,
+        bool isSave, ref int remainingRows, ref bool createdRow, out bool pending)
+    {
+        if (rowWorkFrame != Time.frameCount)
+        {
+            rowWorkFrame = Time.frameCount;
+            preparedRowsThisFrame = 0;
+        }
+        bool changed = false;
+        while (parent != null && rows.Count < values.Count && remainingRows > 0 &&
+               preparedRowsThisFrame < RowsPerFrame)
+        {
+            int index = rows.Count;
+            SelectionRow row = AcquireRow(parent, ref createdRow);
+            if (row == null)
+            {
+                pending = false;
+                return changed;
+            }
+            ConfigureRow(row, values[index], isSave, index);
+            if (row.Root.transform.parent != parent)
+                row.Root.transform.SetParent(parent, false);
+            row.Root.transform.SetSiblingIndex(index);
+            row.Root.SetActive(true);
+            rows.Add(row);
+            remainingRows--;
+            preparedRowsThisFrame++;
+            changed = true;
+            if (rowWorkTimer.Elapsed.TotalMilliseconds >= RowBudgetMilliseconds)
+                break;
+        }
+        pending = parent != null && rows.Count < values.Count;
+        return changed;
     }
 
     private SelectionRow AcquireRow(Transform parent, ref bool createdRow)
@@ -1112,7 +1210,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         row.IsSave = isSave;
         row.Root.name = (isSave ? SaveItemNamePrefix : PlayerItemNamePrefix) + (index + 1);
         row.Label.text = isSave ? row.Value : GetPlayerDisplayName(row.Value);
-        row.Button.interactable = true;
+        row.Button.interactable = !IsDeleteConfirmationOpen;
         if (row.EditButton != null)
             row.EditButton.gameObject.SetActive(!isSave);
         if (row.Info != null)
@@ -1123,7 +1221,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
                 : string.Empty;
         }
 
-        SetRowVisual(row, false);
+        SetRowVisual(row, isSave && isBatchDeleteMode && batchSelectedSaveNames.Contains(row.Value));
     }
 
     private string GetPlayerDisplayName(string profileId)
@@ -1178,6 +1276,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (row?.Root == null || !row.Root.activeInHierarchy)
             return;
 
+        pendingRenamedSave = null;
+        pendingRenamedPlayer = null;
         if (row.IsSave)
             OnClick_List_Save_Button(row.Value, row.Root);
         else

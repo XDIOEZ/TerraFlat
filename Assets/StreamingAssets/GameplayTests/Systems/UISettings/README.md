@@ -1,5 +1,9 @@
 # UI与设置
 
+2026-10-17 卡顿修复新增 `new_game_deferred_content` 与 `save_file_catalog` 规则，尚未编译或执行。新世界使用独立停用面板和内存控件模板，调用正式 `NewGameDeferredContent`，检查首次访问前无内容、世界与难度分别首次创建、重复访问保留实例与控件状态、动态内容注册到 `BasePanel`、内容归属及随面板销毁；不注册到用户 UIManager、不操作现场。正式 `UI_NewGame` 保留名称页和空容器，世界与难度子树分为两个显式引用的正式 Prefab，构建器同步。此规则不覆盖正式 Prefab 导入、未访问世界页直接生成世界的完整请求、区块默认偏好回填、真实键鼠/手柄切页、首次访问难度的耗时或最终画面，这些仍由用户验收。
+
+存档目录规则向正式 `SaveSelectionFileCatalog.Load` 注入只读内存元数据，覆盖空目录、新旧时间与缺失时间混合、时间相同的名称排序；检查每条路径只采样一次，再按时间倒序和不区分大小写的名称排序。此处不触碰磁盘档案或用户 UI，不代表真实大目录分帧预算或取消/重开流程已验收。
+
 2026-10-15：当时登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增的下拉布局、设置会话规则尚未编译或执行，不属于该历史通过范围；本轮只做静态修改，保留用户当前 PlayMode，最终画面验收由用户进行。
 
 快速入口：`rules.lua`；操作：`ui_settings/mobile_size、navigation_policy、panel_lifecycle、held_item_world_drop、held_item_world_drop_position、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session`。
