@@ -1,6 +1,6 @@
 # 篝火燃烧循环
 
-`Fire_Burning.mmp` 通过 LMMS MCP 编排真实木柴燃烧录音，保留小幅底声起伏和不规则噼啪声。原始素材及 CC0 来源见 `sources.json`。
+`Fire_Burning.mmp` 通过 LMMS MCP 编排真实木柴燃烧录音，保留小幅底声起伏和不规则噼啪声。温和版削弱 120 Hz 以下的轰鸣和 4.8 kHz 以上的尖锐声，加强爆点压低，母带 RMS 上限 0.045、峰值上限 0.30，让小篝火更安静温馨。原始素材及 CC0 来源见 `sources.json`。
 
 在项目根目录重渲染（先建立 `.codex-tmp/fire` 目录）：
 

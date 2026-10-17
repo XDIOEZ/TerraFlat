@@ -9,6 +9,6 @@
   "downloadSha256": "94123da582dbfb154ef12be3ea3810db3b2853d47efb6354bc96728462540b7e",
   "sourceFile": "Sources/Campfire_Defaultv.wav",
   "project": "Fire_Burning.mmp",
-  "processing": "LMMS MCP sample track, master 80%, track 90%; rendered 48 kHz; keep seconds 1-22; 70-9500 Hz bandpass; 99th-percentile transient gain compression; one second linear overlap; peak 0.65; 20 second mono PCM16 loop",
+  "processing": "LMMS MCP sample track, master 80%, track 72%; rendered 48 kHz; keep seconds 1-22; 120-4800 Hz bandpass; 98.5th-percentile transient gain compression with exponent -0.95; one second linear overlap; RMS cap 0.045 and peak cap 0.30; 20 second mono PCM16 loop",
   "verifiedDate": "2026-10-17"
 }

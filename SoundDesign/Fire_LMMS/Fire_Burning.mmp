@@ -5,7 +5,7 @@
   <song>
     <trackcontainer type="song" visible="1" width="600" height="300" x="5" y="5" maximized="0" minimized="0">
       <track muted="0" type="2" name="Wood fire - close crackle" solo="0">
-        <sampletrack pan="0" vol="90">
+        <sampletrack pan="0" vol="72">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
         <sampleclip pos="0" len="2374" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Fire_LMMS/Sources/Campfire_Defaultv.wav" muted="0" off="0" />
