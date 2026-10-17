@@ -55,18 +55,17 @@ public static class BuildingPlacementLifecycle
     public static IBuildingPlacementExtension GetExtension(Item item)
     {
         if (item?.itemMods == null) return null;
-        foreach (Module module in item.itemMods.Mods.Values)
-            if (module is IBuildingPlacementExtension extension) return extension;
-        return null;
+        // 能力缓存随模块增删自动失效，逐帧占地查询不再创建只读字典枚举器。
+        var matches = item.itemMods.GetCapabilities<IBuildingPlacementExtension>();
+        return matches.Count > 0 ? matches[0] : null;
     }
 
     /// <summary>读取可选通行策略；未声明时保持普通建筑的阻挡语义。</summary>
     public static IBuildingTraversalPolicy GetTraversalPolicy(Item item)
     {
         if (item?.itemMods == null) return null;
-        foreach (Module module in item.itemMods.Mods.Values)
-            if (module is IBuildingTraversalPolicy policy) return policy;
-        return null;
+        var matches = item.itemMods.GetCapabilities<IBuildingTraversalPolicy>();
+        return matches.Count > 0 ? matches[0] : null;
     }
 
     #endregion

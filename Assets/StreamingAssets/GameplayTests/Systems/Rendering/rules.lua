@@ -8,6 +8,26 @@ for _, args in ipairs({ { clearRadius = 0 }, { opaqueRadius = 10 }, { transition
     end, "大雾配置拒绝非法边界")
 end
 
+test.system("rendering", "building_capability_cache", {}, function(data)
+    assert(data.empty and data.emptyAgain, "建筑能力空结果缓存失效错误")
+    assert(data.addInvalidated and data.removeInvalidated and data.readdInvalidated, "模块增删后仍然使用旧建筑能力")
+    assert(data.firstPreserved, "能力缓存改变了多个匹配模块的原先首个选择顺序")
+    assert(data.floorLayer == 6 and not data.floorBlocks, "船地板能力规则错误")
+    assert(data.changedLayer == 3 and not data.changedBlocks and data.liveBlocks, "能力缓存冻结了模块的实时占地或通行属性")
+    assert(data.allocated == 0, "预热后的建筑能力查询仍有线程托管分配")
+end, "建筑能力缓存保留结构失效与动态属性")
+
+test.system("rendering", "shadow_proxy_changes", {}, function(data)
+    assert(data.initialSource and data.initialProperties, "太阳阴影首帧没有提交")
+    assert(not data.repeatedSource and not data.repeatedProperties, "相同阴影仍重复提交源帧或属性")
+    assert(data.frameChanged and data.frameProperties and data.frameSprite and data.frameMesh, "太阳阴影动画换帧没有同步Sprite、共享网格和属性")
+    assert(data.alphaUpdated and math.abs(data.alpha - 0.25) < 0.0001, "阴影透明度变化未提交")
+    assert(data.mirroredScale == -2 and data.repeatedScale == -2, "阴影重复同步造成翻转来回切换")
+    assert(data.movedFootUpdated and data.foot == 7, "阴影脚点变化未提交")
+    assert(data.slicedVisible and data.meshVisible, "阴影绘制模式切换后显示节点错误")
+    assert(data.recycledSource and data.recycledProperties, "阴影归池后没有重新提交源与属性")
+end, "太阳阴影静态复用与动态变化")
+
 for _, args in ipairs({
     { strength = 1, clear = 10, opaque = 20 },
     { strength = 0.5, clear = 20, opaque = 30 },
@@ -154,3 +174,22 @@ for _, args in ipairs({
         assert(data.reverseIntersects == data.intersects, "洞穴墙阴影球形筛选不满足对称性：" .. args.label)
     end, "洞穴墙阴影保守球形筛选：" .. args.label)
 end
+
+-- 船件建筑状态热查询：正式能力读取活模块，未装配时才读取持久状态。
+test.system("rendering", "ship_part_placement_state", {}, function(data)
+    assert(data.liveOrdinary.layer == 9 and data.liveOrdinary.blocks and data.liveOrdinary.speed == 1,
+        "活建筑状态没有覆盖尚未保存的旧机械身份")
+    assert(data.liveMechanical.layer == 0 and not data.liveMechanical.blocks and math.abs(data.liveMechanical.speed - 0.7) < 0.0001,
+        "活建筑切换机械身份后没有复用正式机械通行能力")
+    assert(data.liveChanged.layer == 9 and data.liveChanged.blocks and data.liveChanged.speed == 1,
+        "运行建筑身份变化被旧查询缓存阻断")
+    assert(data.allocated == 0 and data.layerSum == 0, "船件稳定通行查询仍然反复解析或分配建筑状态")
+    assert(data.beforeBuildingLoad.layer == 0 and not data.beforeBuildingLoad.blocks and math.abs(data.beforeBuildingLoad.speed - 0.7) < 0.0001,
+        "建筑模块尚未加载身份时没有沿用持久状态")
+    assert(data.storedFallback.layer == 0 and not data.storedFallback.blocks and math.abs(data.storedFallback.speed - 0.7) < 0.0001,
+        "缺少活建筑模块时没有使用持久建筑状态")
+    assert(data.mechanicalRemoved.layer == 9 and data.mechanicalRemoved.blocks and data.mechanicalRemoved.speed == 1,
+        "机械模块移除后船件没有恢复自身配置")
+    assert(data.floor.layer == 6 and not data.floor.blocks and data.floor.speed == 1,
+        "船地板没有绕开无关建筑JSON并保持可通行规则")
+end, "船件建筑状态实时来源与稳定查询零分配")

@@ -48,6 +48,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - ActorShadowManager 按完整 RuntimeItemRegistered/Unregistered 与结构事件维护注册，旧 Item 椭圆由 ContactShadowBatchRenderer 合批；根植植物通过 Tree/Plant 或 IPlantableCrop 接入，尺寸来自根 Collider 与可见 Sprite。`Shadow.prefab` 是 ShadowCaster2D，与可见脚底阴影独立。
 - 玩家位于实际 SpaceScene 时，接触阴影和太阳投影都跳过，舱内人工重力不恢复阴影；保留注册绑定，返回地表继续按原光照规则显示。
 - 太阳投影独立持有注册与 SunShadowCaster 覆盖；接触/太阳共用 IVisualGroundOffset 地面折算、光照/晨昏透明度和 `_WorldSunShadowColor`，柔化共用 `_WorldSunShadowBlur`，关闭太阳投影保留接触阴影通道。
+- 太阳阴影代理按源帧/姿态/脚点值变化提交 Renderer 与 MPB，太阳全局参数和投影裁剪盒仍逐帧更新；归池重置缓存。建筑能力查询复用 ItemMods.GetCapabilities 缓存，模块结构变化失效，能力属性仍实时读取，避免逐阴影遍历只读字典分配。
 - 世界物品 `visual.shadows.contactWidth/footLocalPosition/footOverlap` 持有底座/落地点；ShadowFootprintResolver 限定可见底边内缩，AIECS 取待机帧固定 VisibleRect。落点不随攻击/奔跑帧伸缩。
 - SunShadowSampling.hlsl 由普通 Sprite/AIECS/资源 BRG 共用；采样使用当前帧 UV 边界和世界 PPU，图集外沿透明，半埋裁剪进入采样。透明外沿几何与 CPU 包围盒一致；太阳高度先 Clamp01 再幂运算，投影范围有限且排除 NaN/Infinity。
 - 地表高度分层由 Chunk-BRG-Contact-Lit 共享公式处理：分层→接触阴影→Light2D，同层无边，低侧暗边优先；ElevationStrength=0 只旁路高度效果。GroundElevationShadowSettings 更新批次材质，不重建实例。

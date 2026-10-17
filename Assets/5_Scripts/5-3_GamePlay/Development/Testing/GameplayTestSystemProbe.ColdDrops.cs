@@ -11,6 +11,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("processing/cold_fuel_candidates", ColdFuelCandidates);
         operations.Add("processing/cold_fuel_transfer", ColdFuelTransfer);
+        operations.Add("processing/cold_motion_workspace", ColdMotionWorkspace);
     }
 
     private static DroppedItemSaveRecord ColdFuelRecord(int id, float x, float y, float amount = 1f)
@@ -92,6 +93,73 @@ public static partial class GameplayTestSystemProbe
             ["splitIdentity"] = splitIdentity, ["full"] = full, ["sourceAfterFull"] = sourceAfterFull,
             ["resumed"] = resumed, ["finalSource"] = source.Stack.Amount,
             ["finalTarget"] = inventory.itemSlots[0].itemData?.Stack.Amount ?? 0f
+        };
+    }
+    #endregion
+
+    #region 后台掉落物复用工作区采样
+    private static DroppedItemSaveRecord ColdMotionRecord(int id, float start, float end, float duration)
+    {
+        DroppedItemSaveRecord record = ColdFuelRecord(id, start, 0f);
+        record.Scale = Vector2.one;
+        record.HasFlight = true;
+        record.FlightStart = record.Position;
+        record.FlightEnd = new Vector2(end, 0f);
+        record.FlightControl = (record.FlightStart + record.FlightEnd) * .5f;
+        record.FlightDuration = duration;
+        return record;
+    }
+
+    // 只调用正式冷物推进，跨世界、异常回收和真实状态判断交给 Lua。
+    private static JObject ColdMotionWorkspace(JObject args)
+    {
+        var first = new List<DroppedItemSaveRecord> { ColdMotionRecord(1, 0f, 2f, 1f) };
+        var second = new List<DroppedItemSaveRecord> { ColdMotionRecord(1, 8f, 12f, 2f) };
+        DroppedItemService.StepColdDropMotion(first, .25f, default);
+        float firstPosition = first[0].Position.x, firstElapsed = first[0].FlightElapsed;
+        bool flyingPickable = first[0].Data.Stack.CanBePickedUp;
+        DroppedItemService.StepColdDropMotion(second, .5f, default);
+        float secondPosition = second[0].Position.x;
+        float firstAfterSecond = first[0].Position.x;
+        DroppedItemService.StepColdDropMotion(first, .75f, default);
+        bool landed = !first[0].HasFlight && first[0].Data.Stack.CanBePickedUp;
+        var floating = new List<DroppedItemSaveRecord> { ColdFuelRecord(2, 0f, 0f) };
+        floating[0].WaterKind = 1; floating[0].HasWaterTransition = true;
+        floating[0].WaterStart = 0f; floating[0].WaterTarget = .5f; floating[0].WaterDuration = 1f;
+        DroppedItemService.StepColdDropMotion(floating, .5f, default);
+        float middleDepth = floating[0].LiquidDepth;
+        DroppedItemService.StepColdDropMotion(floating, .5f, default);
+        float finalDepth = floating[0].LiquidDepth;
+        bool floatingTransition = floating[0].HasWaterTransition;
+        var sinking = new List<DroppedItemSaveRecord> { ColdFuelRecord(3, 0f, 0f) };
+        sinking[0].WaterKind = 2; sinking[0].HasWaterTransition = true;
+        sinking[0].WaterDuration = .1f; sinking[0].WaterTarget = 1f;
+        sinking[0].WaterElapsed = .1f + WorldItemWaterRules.SubmergedRecedeDuration - .01f;
+        DroppedItemService.StepColdDropMotion(sinking, .02f, default);
+        string duplicateError = "";
+        try
+        {
+            DroppedItemService.StepColdDropMotion(new List<DroppedItemSaveRecord>
+                { ColdMotionRecord(4, 0f, 2f, 1f), ColdMotionRecord(4, 0f, 2f, 1f) }, .25f, default);
+        }
+        catch (ArgumentException error) { duplicateError = error.GetType().Name; }
+        var recovered = new List<DroppedItemSaveRecord> { ColdMotionRecord(4, 0f, 2f, 1f) };
+        DroppedItemService.StepColdDropMotion(recovered, .25f, default);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 32; i++)
+        {
+            recovered[0].FlightElapsed = 0f;
+            DroppedItemService.StepColdDropMotion(recovered, .25f, default);
+        }
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        return new JObject
+        {
+            ["firstPosition"] = firstPosition, ["firstElapsed"] = firstElapsed, ["flyingPickable"] = flyingPickable,
+            ["secondPosition"] = secondPosition, ["firstAfterSecond"] = firstAfterSecond,
+            ["landed"] = landed, ["landedPosition"] = first[0].Position.x,
+            ["middleDepth"] = middleDepth, ["finalDepth"] = finalDepth, ["floatingTransition"] = floatingTransition,
+            ["sinkingCount"] = sinking.Count, ["duplicateError"] = duplicateError,
+            ["recoveredPosition"] = recovered[0].Position.x, ["repeatedMotionBytes"] = allocated
         };
     }
     #endregion

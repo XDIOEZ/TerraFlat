@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -24,6 +25,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     private static readonly int UvBoundsId = Shader.PropertyToID("_SunShadowUvBounds");
     private static readonly int AlphaTextureId = Shader.PropertyToID("_AlphaTex");
     private static readonly int ExternalAlphaId = Shader.PropertyToID("_EnableExternalAlpha");
+    private static readonly ProfilerMarker ItemSyncMarker = new("WorldSunShadows.ItemSync");
+    private static readonly ProfilerMarker MechanicalSyncMarker = new("WorldSunShadows.MechanicalSync");
 
     private static WorldRenderingConfig.RenderingShadows Defaults => WorldRenderingConfigCatalog.Default.shadows;
 
@@ -72,28 +75,45 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     }
 
     /// <summary>普通 Sprite 用共享四边形柔化，九宫格或平铺 Sprite 保留原绘制模式。</summary>
-    private sealed class ShadowProxy
+    internal sealed class ShadowProxy
     {
         private static readonly int RendererColorId = Shader.PropertyToID("_RendererColor");
         internal readonly SpriteRenderer SpriteRenderer;
         internal readonly MeshRenderer MeshRenderer;
         private readonly MeshFilter meshFilter;
         private readonly GameObject root;
+        private Sprite sourceSprite;
+        private SpriteDrawMode sourceDrawMode;
+        private Vector2 sourceSize;
+        private bool sourceFlipX, sourceFlipY, hasSource, visible;
+        private float sourceAlpha;
+        private bool propertiesDirty = true, hasBounds, hasPose;
+        private Bounds lastBounds;
+        private Vector4 lastCaster;
+        private Vector3 lastPosition, lastScale;
+        private Quaternion lastRotation;
         internal GameObject gameObject => root;
         internal Transform transform => root.transform;
         internal bool enabled
         {
-            get => SpriteRenderer.enabled || MeshRenderer.enabled;
+            get => visible;
             set
             {
-                bool simple = SpriteRenderer.drawMode == SpriteDrawMode.Simple;
-                SpriteRenderer.enabled = value && !simple;
-                MeshRenderer.enabled = value && simple;
+                if (visible == value) return;
+                visible = value;
+                ApplyVisibility();
             }
         }
         internal Bounds bounds
         {
-            set { SpriteRenderer.bounds = value; MeshRenderer.bounds = value; }
+            set
+            {
+                if (hasBounds && lastBounds.Equals(value)) return;
+                lastBounds = value;
+                hasBounds = true;
+                SpriteRenderer.bounds = value;
+                MeshRenderer.bounds = value;
+            }
         }
         internal Material sharedMaterial
         {
@@ -136,24 +156,88 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
 
         /// <summary>代理只读取主体帧和姿态，翻转作用于阴影网格而不改动本体。</summary>
-        internal void SetSource(Sprite sprite, SpriteDrawMode drawMode, Vector2 size,
+        internal bool SetSource(Sprite sprite, SpriteDrawMode drawMode, Vector2 size,
             bool flipX, bool flipY, float alpha)
         {
+            if (hasSource && sourceSprite == sprite && sourceDrawMode == drawMode &&
+                sourceSize.Equals(size) && sourceFlipX == flipX && sourceFlipY == flipY && sourceAlpha.Equals(alpha))
+                return false;
+            bool geometryChanged = !hasSource || sourceSprite != sprite || sourceDrawMode != drawMode;
+            sourceSprite = sprite;
+            sourceDrawMode = drawMode;
+            sourceSize = size;
+            sourceFlipX = flipX;
+            sourceFlipY = flipY;
+            sourceAlpha = alpha;
+            hasSource = true;
+            propertiesDirty = true;
             SpriteRenderer.sprite = sprite;
             SpriteRenderer.drawMode = drawMode;
             SpriteRenderer.size = size;
             SpriteRenderer.flipX = flipX;
             SpriteRenderer.flipY = flipY;
             SpriteRenderer.color = new Color(1f, 1f, 1f, alpha);
-            meshFilter.sharedMesh = drawMode == SpriteDrawMode.Simple
-                ? SharedSpriteMeshCache.GetSunShadowGeometry(sprite).Mesh : null;
-            if (drawMode == SpriteDrawMode.Simple)
-                transform.localScale = Vector3.Scale(transform.localScale,
-                    new Vector3(flipX ? -1f : 1f, flipY ? -1f : 1f, 1f));
+            if (geometryChanged)
+                meshFilter.sharedMesh = drawMode == SpriteDrawMode.Simple
+                    ? SharedSpriteMeshCache.GetSunShadowGeometry(sprite).Mesh : null;
+            ApplyVisibility();
+            return true;
         }
 
-        internal void ResetSource() { SpriteRenderer.sprite = null; meshFilter.sharedMesh = null; }
-        internal void ResetBounds() { SpriteRenderer.ResetBounds(); MeshRenderer.ResetBounds(); }
+        // 相同姿态不重复跨越 Unity 原生边界，翻转始终从本帧源缩放计算。
+        internal void SetPose(Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+            if (sourceDrawMode == SpriteDrawMode.Simple)
+                scale = Vector3.Scale(scale, new Vector3(sourceFlipX ? -1f : 1f, sourceFlipY ? -1f : 1f, 1f));
+            if (!hasPose || !lastPosition.Equals(position) || !lastRotation.Equals(rotation))
+                transform.SetPositionAndRotation(position, rotation);
+            if (!hasPose || !lastScale.Equals(scale)) transform.localScale = scale;
+            lastPosition = position;
+            lastRotation = rotation;
+            lastScale = scale;
+            hasPose = true;
+        }
+
+        private void ApplyVisibility()
+        {
+            bool simple = sourceDrawMode == SpriteDrawMode.Simple;
+            SpriteRenderer.enabled = visible && !simple;
+            MeshRenderer.enabled = visible && simple;
+        }
+
+        internal void ResetSource()
+        {
+            SpriteRenderer.sprite = null;
+            meshFilter.sharedMesh = null;
+            sourceSprite = null;
+            hasSource = hasPose = false;
+            propertiesDirty = true;
+        }
+        internal void ResetBounds()
+        {
+            hasBounds = false;
+            SpriteRenderer.ResetBounds();
+            MeshRenderer.ResetBounds();
+        }
+
+        // 太阳方向只影响全局参数与裁剪盒，源帧和脚点不变时复用已提交的属性块。
+        internal bool UpdateProperties(MaterialPropertyBlock block, Vector4 caster, Vector4 uvBounds, float texelScale)
+        {
+            if (!propertiesDirty && lastCaster.Equals(caster)) return false;
+            block.Clear();
+            Texture2D texture = sourceSprite.texture;
+            block.SetTexture(MainTextureId, texture);
+            block.SetVector(TexelSizeId, new Vector4(1f / texture.width, 1f / texture.height, texelScale, 0f));
+            block.SetVector(UvBoundsId, uvBounds);
+            block.SetVector(CasterId, caster);
+            Texture2D alphaTexture = sourceSprite.associatedAlphaSplitTexture;
+            block.SetFloat(ExternalAlphaId, alphaTexture != null ? 1f : 0f);
+            if (alphaTexture != null) block.SetTexture(AlphaTextureId, alphaTexture);
+            SetPropertyBlock(block);
+            lastCaster = caster;
+            propertiesDirty = false;
+            return true;
+        }
         internal void SetPropertyBlock(MaterialPropertyBlock block)
         {
             if (block != null)
@@ -239,7 +323,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             Binding binding = entry.Value;
             if (binding.Owner == null) { staleItems.Add(entry.Key); continue; }
             if (Time.unscaledTime < binding.NextCheck) continue;
-            SynchronizeCaster(binding);
+            using (ItemSyncMarker.Auto()) SynchronizeCaster(binding);
             if (binding.Proxy != null && binding.Proxy.gameObject != null && binding.Proxy.enabled) VisibleCount++;
         }
         foreach (Item item in staleItems) UnregisterCaster(item);
@@ -431,7 +515,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
                 }
                 binding.Seen = true;
                 if (Time.unscaledTime >= binding.NextCheck)
-                    SynchronizeMechanicalCaster(part, binding);
+                    using (MechanicalSyncMarker.Auto()) SynchronizeMechanicalCaster(part, binding);
                 if (binding.Proxy != null && binding.Proxy.gameObject != null && binding.Proxy.enabled) VisibleCount++;
             }
         }
@@ -476,20 +560,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             binding.NextCheck = 0f;
             return;
         }
-        proxy.transform.SetPositionAndRotation(position, rotation);
-        proxy.transform.localScale = part.Scale;
         proxy.SetSource(part.Sprite, SpriteDrawMode.Simple, Vector2.one, false, false, 1f);
-        properties.Clear();
-        Texture2D texture = part.Sprite.texture;
-        properties.SetTexture(MainTextureId, texture);
-        properties.SetVector(TexelSizeId, new Vector4(1f / texture.width, 1f / texture.height, 0f, 0f));
-        properties.SetVector(UvBoundsId, GetSpriteUvBounds(part.Sprite));
-        properties.SetVector(CasterId, new Vector4(footY, 1f, height, 1f));
-        properties.SetFloat(BatchedId, 0f);
-        Texture2D alphaTexture = part.Sprite.associatedAlphaSplitTexture;
-        properties.SetFloat(ExternalAlphaId, alphaTexture != null ? 1f : 0f);
-        if (alphaTexture != null) properties.SetTexture(AlphaTextureId, alphaTexture);
-        proxy.SetPropertyBlock(properties);
+        proxy.SetPose(position, rotation, part.Scale);
+        proxy.UpdateProperties(properties, new Vector4(footY, 1f, height, 1f), GetSpriteUvBounds(part.Sprite), 0f);
         proxy.bounds = projected;
         proxy.enabled = true;
         binding.Revision = part.Revision;
@@ -522,7 +595,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         Item owner = binding.Owner;
         // 场景切换只隐藏太空玩家的投影，回到地表后沿现有绑定恢复。
-        if (owner is Player && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
+        if (owner is Player && SpaceMgr.IsSpaceScene(activeSceneName))
         {
             ReleaseProxy(binding);
             binding.NextCheck = 0f;
@@ -568,23 +641,12 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
 
         if (binding.Proxy == null || binding.Proxy.gameObject == null) binding.Proxy = AcquireProxy(binding);
         ShadowProxy proxy = binding.Proxy;
-        proxy.transform.SetPositionAndRotation(source.transform.position - visualOffset, source.transform.rotation);
-        proxy.transform.localScale = source.transform.lossyScale;
         proxy.SetSource(source.sprite, source.drawMode, source.size, source.flipX, source.flipY, source.color.a);
-        properties.Clear();
-        Texture2D texture = source.sprite.texture;
+        proxy.SetPose(source.transform.position - visualOffset, source.transform.rotation, source.transform.lossyScale);
         float texelScale = source.drawMode == SpriteDrawMode.Simple
             ? SharedSpriteMeshCache.GetSunShadowGeometry(source.sprite).TexelScale : 1f;
-        properties.SetTexture(MainTextureId, texture);
-        properties.SetVector(TexelSizeId, new Vector4(1f / texture.width,
-            1f / texture.height, texelScale, 0f));
-        properties.SetVector(UvBoundsId, GetSpriteUvBounds(source.sprite));
-        properties.SetVector(CasterId, new Vector4(footY, heightScale, height, 1f));
-        properties.SetFloat(BatchedId, 0f);
-        Texture2D alphaTexture = source.sprite.associatedAlphaSplitTexture;
-        properties.SetFloat(ExternalAlphaId, alphaTexture != null ? 1f : 0f);
-        if (alphaTexture != null) properties.SetTexture(AlphaTextureId, alphaTexture);
-        proxy.SetPropertyBlock(properties);
+        proxy.UpdateProperties(properties, new Vector4(footY, heightScale, height, 1f),
+            GetSpriteUvBounds(source.sprite), texelScale);
         // Shader 顶点投影超出原始 Sprite，显式扩大世界包围盒以免相机提前裁掉长阴影。
         proxy.bounds = projected;
         proxy.enabled = true;

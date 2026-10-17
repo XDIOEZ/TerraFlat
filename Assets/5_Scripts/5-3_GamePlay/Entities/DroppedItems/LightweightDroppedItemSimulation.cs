@@ -193,10 +193,18 @@ namespace FlatWorld.DroppedItems
             }
         }
 
+        #region 模拟工作区生命周期
         public void Dispose()
         {
             if (disposed) return;
+            Clear();
             disposed = true;
+        }
+
+        // 冷世界逐次重填工作区，保留容量但不保留上个世界的物品和轨迹。
+        public void Clear()
+        {
+            ThrowIfDisposed();
             bodies.Clear();
             flights.Clear();
             waters.Clear();
@@ -208,5 +216,6 @@ namespace FlatWorld.DroppedItems
         {
             if (disposed) throw new ObjectDisposedException(nameof(LightweightDroppedItemSimulation));
         }
+        #endregion
     }
 }

@@ -113,6 +113,7 @@ namespace FlatWorld.Spaceflight
         private static readonly Dictionary<string, SurfaceCache> caches = new(StringComparer.Ordinal);
         private static readonly Dictionary<PlanetData, ChunkGenerationProfileSnapshot> frozenProfiles = new();
         private static GameRes resourceOwner;
+        private static DimensionCatalogSO generationCatalog;
 
         private sealed class SurfaceCache : IDisposable
         {
@@ -179,15 +180,18 @@ namespace FlatWorld.Spaceflight
             float liquidDepth = terrain.GetLiquidDepth(localX, localY);
             int support = TerrainSupportLayer.GetTileId(terrain, localX, localY);
             // 冷缓存保存生成基线，每次读取最新差量，建筑损毁后不会返回旧状态。
-            if (!loaded && saves.TryGetChunkDelta(planetId, new Vector2Int(originX, originY).ToString(), out ChunkSaveRecord delta))
+            if (!loaded && saves.TryGetChunkDelta(planetId, new Vector2Int(originX, originY), out ChunkSaveRecord delta))
             {
                 var local = new Vector2Int(localX, localY);
-                foreach (RuntimeTileCellSaveDelta tile in delta.RuntimeTileDeltas ?? new List<RuntimeTileCellSaveDelta>())
+                if (delta.RuntimeTileDeltas != null)
+                foreach (RuntimeTileCellSaveDelta tile in delta.RuntimeTileDeltas)
                     if (tile.LocalPosition == local) cell = new TerrainCell(tile.GroundTileId, tile.BackTileId, tile.BlockingTileId,
                         tile.BiomeId, tile.NavigationCost, tile.Flags);
-                foreach (LiquidCellSaveData liquid in delta.LiquidCells ?? new List<LiquidCellSaveData>())
+                if (delta.LiquidCells != null)
+                foreach (LiquidCellSaveData liquid in delta.LiquidCells)
                     if (liquid.LocalPosition == local) { liquidId = liquid.LiquidId; liquidDepth = liquid.LiquidDepth; }
-                foreach (SupportCellSaveData floor in delta.SupportCells ?? new List<SupportCellSaveData>())
+                if (delta.SupportCells != null)
+                foreach (SupportCellSaveData floor in delta.SupportCells)
                     if (floor.LocalPosition == local) support = floor.TileId;
             }
             bool water = support == 0 && liquidDepth > 0f && GameRes.ExistingInstance != null &&
@@ -292,8 +296,9 @@ namespace FlatWorld.Spaceflight
 
         private static int GetGenerationSeed(int baseSeed, string planetId)
         {
-            DimensionCatalogSO catalog = Resources.Load<DimensionCatalogSO>("Config/DimensionCatalog_Default");
-            int salt = catalog?.Find(WorldAddress.SurfaceDimensionId)?.SeedSalt ?? 0;
+            // 同一资源会话复用目录引用，仍即时读取目录里的种子盐。
+            if (generationCatalog == null) generationCatalog = Resources.Load<DimensionCatalogSO>("Config/DimensionCatalog_Default");
+            int salt = generationCatalog?.Find(WorldAddress.SurfaceDimensionId)?.SeedSalt ?? 0;
             unchecked
             {
                 uint hash = (uint)(baseSeed == 0 ? 1 : baseSeed);
@@ -306,7 +311,7 @@ namespace FlatWorld.Spaceflight
         public static void Reset()
         {
             foreach (SurfaceCache cache in caches.Values) cache.Dispose();
-            caches.Clear(); frozenProfiles.Clear(); owner = null;
+            caches.Clear(); frozenProfiles.Clear(); owner = null; generationCatalog = null;
             if (resourceOwner != null) resourceOwner.ResourcesReloaded -= Reset;
             resourceOwner = null;
         }

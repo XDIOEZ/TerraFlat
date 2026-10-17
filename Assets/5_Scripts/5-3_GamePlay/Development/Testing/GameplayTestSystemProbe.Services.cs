@@ -66,6 +66,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/universe_view_config", ServiceUniverseViewConfiguration);
         operations.Add("rendering/universe_view_transition", ServiceUniverseViewTransition);
         operations.Add("rendering/group_projection", ServiceGroupProjection);
+        RegisterShadowPerformanceOperations(operations);
     }
 
     #endregion

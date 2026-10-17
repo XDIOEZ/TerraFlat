@@ -60,6 +60,12 @@ public static partial class DroppedItemService
     private static List<DroppedItemSaveRecord> WorldRecords(string world)
         => SaveDataMgr.Instance?.SaveData?.DroppedItems?.Worlds.TryGetValue(world, out var records) == true ? records : null;
 
+    private static readonly LightweightDroppedItemSimulation coldMotion = new();
+    private static readonly List<LightweightDroppedChange> coldMotionChanges = new();
+    private static readonly HashSet<int> coldLanded = new();
+    private static readonly ProfilerMarker coldWorldMotionMarker = new("DroppedItemService.ColdWorld.Motion");
+    private static readonly ProfilerMarker coldWorldWaterMarker = new("DroppedItemService.ColdWorld.Water");
+
     public static void TickColdWorld(string world, float seconds)
     {
         List<DroppedItemSaveRecord> records = WorldRecords(world);
@@ -70,47 +76,65 @@ public static partial class DroppedItemService
         GameSaveData save = SaveDataMgr.Instance.SaveData;
         WorldTopologyDomain domain = save.PlanetData_Dict.TryGetValue(world, out PlanetData planet) &&
             WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
-        using var simulation = new LightweightDroppedItemSimulation();
-        foreach (DroppedItemSaveRecord record in records)
-        {
-            if (record?.Data?.Stack == null || !(record.HasFlight || record.HasWaterTransition || record.WaterKind != 0)) continue;
-            var body = new LightweightDroppedBody { Id = record.Data.Guid, Amount = record.Data.Stack.Amount,
-                Position = record.Position, Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
-                LiquidDepth = record.LiquidDepth, WaterKind = record.WaterKind };
-            LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight { Start = record.FlightStart,
-                End = record.FlightEnd, Control = record.FlightControl, Duration = record.FlightDuration,
-                Elapsed = record.FlightElapsed, ArcHeight = record.ArcHeight, RotationSpeed = record.RotationSpeed } : null;
-            LightweightDroppedWaterTransition? water = record.HasWaterTransition ? new LightweightDroppedWaterTransition {
-                StartDepth = record.WaterStart, TargetDepth = record.WaterTarget, Duration = record.WaterDuration,
-                Elapsed = record.WaterElapsed, RecedeDuration = record.WaterKind == 2 ? WorldItemWaterRules.SubmergedRecedeDuration : 0f } : null;
-            simulation.Create(body, flight, water);
-        }
-        simulation.Step(seconds, domain, new List<LightweightDroppedChange>());
+        using (coldWorldMotionMarker.Auto()) StepColdDropMotion(records, seconds, domain);
+        using var waterSample = coldWorldWaterMarker.Auto();
         for (int index = records.Count - 1; index >= 0; index--)
         {
             DroppedItemSaveRecord record = records[index];
-            if (record?.Data == null || !(record.HasFlight || record.HasWaterTransition || record.WaterKind != 0)) continue;
-            bool wasFlying = record.HasFlight;
-            if (!simulation.Contains(record.Data.Guid)) { records.RemoveAt(index); continue; }
-            LightweightDroppedBody body = simulation.Get(record.Data.Guid);
-            record.Position = body.Position; record.Rotation = body.Rotation; record.VisualHeight = body.VisualHeight;
-            record.LiquidDepth = body.LiquidDepth; record.WaterKind = body.WaterKind;
-            record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
-            record.HasFlight = simulation.TryGetFlight(body.Id, out LightweightDroppedFlight flight);
-            if (record.HasFlight) record.FlightElapsed = flight.Elapsed;
-            record.HasWaterTransition = simulation.TryGetWater(body.Id, out LightweightDroppedWaterTransition water);
-            if (record.HasWaterTransition) record.WaterElapsed = water.Elapsed;
-            record.Data.Stack.CanBePickedUp = !record.HasFlight;
-            if (record.WaterKind == 2 && !record.HasWaterTransition) { records.RemoveAt(index); continue; }
+            if (record?.Data == null || !(record.HasFlight || record.HasWaterTransition || record.WaterKind != 0 || coldLanded.Contains(record.Data.Guid))) continue;
             if (record.WaterKind != 0 && FlatWorld.Spaceflight.SpaceSurfaceQuery.TryGetWaterCurrent(world, record.Position, out RuntimeWaterCurrentSample current))
             {
                 float speed = WorldItemWaterRules.ResolveDriftSpeed(current.Kind, current.Flow, record.Data.Stack);
                 Vector2 destination = PressureExplosionQueue.NormalizeInWorld(world, record.Position + current.Direction * (speed * Mathf.Min(seconds, 1f)));
                 if (FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleLiquid(world, destination, out _, out _)) record.Position = destination;
             }
-            if (record.WaterKind != 0 || wasFlying && !record.HasFlight) RefreshColdWater(world, record);
+            if (record.WaterKind != 0 || coldLanded.Contains(record.Data.Guid)) RefreshColdWater(world, record);
             record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
         }
+    }
+
+    // 每次从真实档案重填并写回，复用容量不形成第二份长期权威状态。
+    internal static void StepColdDropMotion(List<DroppedItemSaveRecord> records, float seconds, WorldTopologyDomain domain)
+    {
+        coldLanded.Clear();
+        coldMotion.Clear();
+        try
+        {
+            foreach (DroppedItemSaveRecord record in records)
+            {
+                if (record?.Data?.Stack == null || !(record.HasFlight || record.HasWaterTransition || record.WaterKind != 0)) continue;
+                var body = new LightweightDroppedBody { Id = record.Data.Guid, Amount = record.Data.Stack.Amount,
+                    Position = record.Position, Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
+                    LiquidDepth = record.LiquidDepth, WaterKind = record.WaterKind };
+                LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight { Start = record.FlightStart,
+                    End = record.FlightEnd, Control = record.FlightControl, Duration = record.FlightDuration,
+                    Elapsed = record.FlightElapsed, ArcHeight = record.ArcHeight, RotationSpeed = record.RotationSpeed } : null;
+                LightweightDroppedWaterTransition? water = record.HasWaterTransition ? new LightweightDroppedWaterTransition {
+                    StartDepth = record.WaterStart, TargetDepth = record.WaterTarget, Duration = record.WaterDuration,
+                    Elapsed = record.WaterElapsed, RecedeDuration = record.WaterKind == 2 ? WorldItemWaterRules.SubmergedRecedeDuration : 0f } : null;
+                coldMotion.Create(body, flight, water);
+            }
+            coldMotion.Step(seconds, domain, coldMotionChanges);
+            for (int index = records.Count - 1; index >= 0; index--)
+            {
+                DroppedItemSaveRecord record = records[index];
+                if (record?.Data == null || !(record.HasFlight || record.HasWaterTransition || record.WaterKind != 0)) continue;
+                bool wasFlying = record.HasFlight;
+                if (!coldMotion.Contains(record.Data.Guid)) { records.RemoveAt(index); continue; }
+                LightweightDroppedBody body = coldMotion.Get(record.Data.Guid);
+                record.Position = body.Position; record.Rotation = body.Rotation; record.VisualHeight = body.VisualHeight;
+                record.LiquidDepth = body.LiquidDepth; record.WaterKind = body.WaterKind;
+                record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
+                record.HasFlight = coldMotion.TryGetFlight(body.Id, out LightweightDroppedFlight flight);
+                if (record.HasFlight) record.FlightElapsed = flight.Elapsed;
+                record.HasWaterTransition = coldMotion.TryGetWater(body.Id, out LightweightDroppedWaterTransition water);
+                if (record.HasWaterTransition) record.WaterElapsed = water.Elapsed;
+                record.Data.Stack.CanBePickedUp = !record.HasFlight;
+                if (record.WaterKind == 2 && !record.HasWaterTransition) { records.RemoveAt(index); continue; }
+                if (wasFlying && !record.HasFlight) coldLanded.Add(record.Data.Guid);
+            }
+        }
+        finally { coldMotion.Clear(); coldMotionChanges.Clear(); }
     }
 
     private static void CollectWorldDrops(string world)
@@ -276,11 +300,12 @@ public static partial class DroppedItemService
     private static void RefreshColdWater(string world, DroppedItemSaveRecord record)
     {
         if (record.HasFlight || !WorldAddress.FromWorldKey(world).IsSurface) return;
-        if (!FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleLiquid(world, record.Position, out LiquidDefinition liquid, out _) ||
-            FlatWorld.Spaceflight.SpaceSurfaceQuery.GetLandingSurface(world, record.Position).SupportTileId != 0)
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !FlatWorld.Spaceflight.SpaceSurfaceQuery.TryGetLandingSurface(world, record.Position, out var surface) ||
+            surface.LiquidDepth <= 0f || surface.SupportTileId != 0 ||
+            !resources.TryGetLiquidDefinition(surface.LiquidId, out LiquidDefinition liquid) || liquid.WorldWater == null)
         { record.WaterKind = 0; record.LiquidDepth = 0f; record.HasWaterTransition = false; return; }
         bool entering = record.WaterKind == 0;
-        GameRes resources = GameRes.ExistingInstance;
         if (entering && liquid.WorldWater?.WaterContact == true && resources.TryGetItemDefinition(record.Data.IDName, out RuntimeItemDefinition definition) &&
             !string.IsNullOrWhiteSpace(definition.WaterEntryTransformItemId))
         {

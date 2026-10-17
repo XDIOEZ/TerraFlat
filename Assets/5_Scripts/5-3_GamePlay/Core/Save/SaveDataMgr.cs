@@ -1370,6 +1370,22 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return chunkDeltas.TryGetValue(BuildChunkKey(planetName, chunkName), out delta);
     }
 
+    #region 冷地表差量热查询
+    private readonly Dictionary<(string Planet, Vector2Int Origin), string> chunkDeltaLookupKeys = new();
+
+    // 只复用查询键，差量仍每次读取当前档案，扩展探索时有界释放旧键。
+    public bool TryGetChunkDelta(string planetName, Vector2Int chunkOrigin, out ChunkSaveRecord delta)
+    {
+        var lookup = (planetName, chunkOrigin);
+        if (!chunkDeltaLookupKeys.TryGetValue(lookup, out string key))
+        {
+            if (chunkDeltaLookupKeys.Count >= 256) chunkDeltaLookupKeys.Clear();
+            chunkDeltaLookupKeys.Add(lookup, key = BuildChunkKey(planetName, chunkOrigin.ToString()));
+        }
+        return chunkDeltas.TryGetValue(key, out delta);
+    }
+    #endregion
+
     #region Runtime terrain persistence
 
     /// <summary>

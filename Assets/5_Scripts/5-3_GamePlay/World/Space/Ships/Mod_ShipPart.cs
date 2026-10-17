@@ -32,7 +32,11 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
         get
         {
             if (Configuration.Kind == ShipPieceKind.Floor || item?.itemMods == null) return null;
-            Mod_Building.TryReadBuildingData(item.itemData, out _, out Mod_Building.Building_Data building);
+            // 活模块已经持有当前建筑状态，表现热查询不再重复解析同一份存档 JSON。
+            Mod_Building runtimeBuilding = item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
+            Mod_Building.Building_Data building = runtimeBuilding != null ? runtimeBuilding.Data : null;
+            if (string.IsNullOrWhiteSpace(building?.BuildingPrefabId))
+                Mod_Building.TryReadBuildingData(item.itemData, out _, out building);
             string placedId = string.IsNullOrWhiteSpace(building?.BuildingPrefabId) ? item.itemData.IDName : building.BuildingPrefabId;
             return MachineCatalog.Get(placedId) != null
                 ? item.itemMods.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId) : null;

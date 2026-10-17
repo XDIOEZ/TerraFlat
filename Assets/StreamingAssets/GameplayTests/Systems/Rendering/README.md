@@ -4,6 +4,8 @@
 
 快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、universe_view_config、universe_view_transition、group_projection`。
 
+2026-10-17 阴影性能补充但未执行：`rendering/building_capability_cache` 检查正式能力查询的空结果、模块增删/重加失效、首个匹配顺序、实时占地/通行属性和预热后重复查询的托管分配；`rendering/shadow_proxy_changes` 检查正式太阳阴影代理的静态复用、透明度/脚点变化、重复镜像、绘制模式切换和归池失效。只创建独立禁用物品与渲染节点，不代表阴影画面、光照变化、相机裁剪或最终帧耗时已验收。
+
 2026-10-17 新增但未执行：`universe_view_transition` 直接采正式手动缩放约束，覆盖过渡终点封顶、滚轮与大步输入、连续拉远不积攒、完成后新输入放行、过渡中拉近、同帧折返、已有远景、零时长及配置终点变化。本轮仅静态修改，未编译、未运行；真实滚轮、手机双指/滑条及最终淡入画面由用户验收。
 
 已编写的规则覆盖：正式 WorldRenderingConfig 的雾半径/噪声/颜色约束和宇宙视野层次/缩放/过渡约束；停用独立 SpriteRenderer/SortingGroup 的外部代理排序键投影，以及分组停用后的逐级回退。
@@ -25,3 +27,5 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/pla
 2026-10-15 的通过记录仅覆盖当时已有断言；后续补充项按各自日期记录执行状态，实际画面和最终验收由用户执行。
 
 2026-10-17 新增但未执行：`rendering/cave_shadow_spheres` 直接采样正式 `ChunkLightOccluderVisibilityScheduler.SpheresIntersect`，由 Lua 断言近光/远光、相切、保守边界余量、Z 轴相交与分离、零半径和对称性。本组不创建渲染器、不调用渲染调度，不代表 URP 灯注册表、逐灯阴影启停、墙体漏光或最终帧率已验收。
+
+2026-10-17 船件热查询补充但未执行：`rendering/ship_part_placement_state` 装配禁用独立 Item 的真实建筑/机械/船件模块，Lua 检查活建筑状态优先于旧持久数据、运行身份切换即时生效、缺活模块的持久状态回退、机械模块移除和地板短路，并采样预热后 256 轮正式通行查询的线程分配。保留用户暂停现场，本轮未编译、未运行；未覆盖建筑行网格最终画面、实时 MPB 显示或改善后的帧率。
