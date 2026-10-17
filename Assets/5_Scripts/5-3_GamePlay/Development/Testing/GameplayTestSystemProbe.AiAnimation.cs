@@ -51,18 +51,66 @@ public static partial class GameplayTestSystemProbe
             sample["moduleBodyCount"] = controllerPrefab != null ? controllerPrefab.GetComponentsInChildren<Rigidbody2D>(true).Length : -1;
             if (prototype is not Mod_AnimatorController) continue;
 
-            var root = new GameObject("[LuaActorAnimationConfiguration]") { hideFlags = HideFlags.HideAndDontSave };
-            root.SetActive(false);
+            JObject registration = CaptureAiAnimationRegistration(definition, configured, prototype, configured.Id);
+            foreach (JProperty property in registration.Properties()) sample[property.Name] = property.Value.DeepClone();
+            sample["declaredPrefabId"] = configured.Prefab;
+            sample["wrongIdRegistration"] = CaptureAiAnimationRegistration(definition, configured, prototype, "test:wrong_animation");
+        }
+        return new JObject { ["actors"] = actors, ["requiredAnimationId"] = ModText.AnimatorReceiver };
+    }
+
+    // 先按显式 JSON 身份绑定再初始化注册，避免 Canonical 默认值把错误 ID 悄悄纠正。
+    private static JObject CaptureAiAnimationRegistration(ItemDefinitionDto definition,
+        ItemModuleDefinitionDto configured, Module prototype, string moduleId)
+    {
+        var root = new GameObject("[LuaActorAnimationRegistration]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            GameItem item = root.AddComponent<GameItem>();
+            item.BindData(EntityProbeData("test:actor_animation_identity:" + definition.Id, 1f));
+            item.itemMods.BindOwner(item);
+            ModuleData data = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+            if (data == null || data.GetType() != prototype._Data.GetType())
+                throw new InvalidOperationException("生物动画身份采样缺少同类型的独立模块数据。");
+            if (configured.Enabled.HasValue) data.Enabled = configured.Enabled.Value;
+            Module instance = (Module)root.AddComponent(prototype.GetType());
+            instance._Data = data;
+            instance.BindRuntimeIdentity("animator", moduleId, configured.Prefab);
+            ModuleJsonConfigurator.Apply(instance, definition.Id, "animator", configured.Id,
+                configured.Parameters?.ToString());
+            item.itemData.ModuleDataDic["animator"] = data;
+            instance.ModuleInit(item, data);
+            item.itemMods.AddMod(instance);
+
+            bool requiredRejected = false, requiredSameInstance = false;
+            string requiredError = string.Empty;
             try
             {
-                Module instance = (Module)root.AddComponent(prototype.GetType());
-                ModuleJsonConfigurator.Apply(instance, definition.Id, "animator", configured.Id,
-                    configured.Parameters?.ToString());
-                sample["visualMode"] = (int)((Mod_AnimatorController)instance).visualMode;
+                requiredSameInstance = ReferenceEquals(instance,
+                    item.itemMods.RequireSingleModById<Mod_AnimatorController>(ModText.AnimatorReceiver));
             }
-            finally { UnityEngine.Object.DestroyImmediate(root); }
+            catch (InvalidOperationException exception)
+            {
+                requiredRejected = true;
+                requiredError = exception.Message;
+            }
+            return new JObject
+            {
+                ["visualMode"] = (int)((Mod_AnimatorController)instance).visualMode,
+                ["enabled"] = instance.Enabled,
+                ["stableName"] = instance.StableName, ["moduleId"] = instance.ResolvedModuleId,
+                ["prefabId"] = instance.PrefabId,
+                ["requiredCount"] = item.itemMods.GetModList_ByID(ModText.AnimatorReceiver)?.Count ?? 0,
+                ["registeredIdCount"] = item.itemMods.GetModList_ByID(moduleId)?.Count ?? 0,
+                ["requiredSameInstance"] = requiredSameInstance, ["requiredRejected"] = requiredRejected,
+                ["requiredError"] = requiredError,
+                ["slotSameInstance"] = ReferenceEquals(item.itemMods.GetMod_ByName("animator"), instance) &&
+                    ReferenceEquals(item.itemData.ModuleDataDic["animator"], instance._Data),
+                ["dataBoundToItem"] = ReferenceEquals(instance.Item_Data, item.itemData)
+            };
         }
-        return new JObject { ["actors"] = actors };
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     #endregion

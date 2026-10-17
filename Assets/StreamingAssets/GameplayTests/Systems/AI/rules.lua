@@ -5,6 +5,18 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
     for _, actor in ipairs(data.actors) do
         assert(actor.hasAnimatorModule and actor.hasControllerPrototype and actor.enabled and actor.visualMode == 1,
             "正式物种没有启用可装配的单图动画：" .. actor.id)
+        assert(actor.stableName == "animator" and actor.moduleId == data.requiredAnimationId and actor.prefabId == actor.declaredPrefabId,
+            "动画槽位、能力ID或具体Prefab身份不符合正式依赖契约：" .. actor.id)
+        assert(actor.requiredCount == 1 and actor.registeredIdCount == 1 and actor.requiredSameInstance and not actor.requiredRejected,
+            "动画能力真实注册后无法被RequireSingle唯一取到：" .. actor.id)
+        assert(actor.slotSameInstance and actor.dataBoundToItem, "动画数据或稳定槽位没有绑定真实临时Item：" .. actor.id)
+        local wrong = actor.wrongIdRegistration
+        assert(wrong.moduleId == "test:wrong_animation" and wrong.stableName == "animator" and wrong.prefabId == actor.declaredPrefabId,
+            "显式错误ID被Canonical自动纠正，身份反例失去作用：" .. actor.id)
+        assert(wrong.requiredCount == 0 and wrong.registeredIdCount == 1 and wrong.requiredRejected and not wrong.requiredSameInstance,
+            "错误动画能力ID仍被RequireSingle接纳：" .. actor.id)
+        assert(wrong.slotSameInstance and wrong.dataBoundToItem and wrong.requiredError ~= "",
+            "错误ID反例未完成真实绑定注册或缺少精确查询拒绝：" .. actor.id)
         if actor.id == "Ghost" or actor.id == "SmallFish" then
             assert(actor.bodyRendererCount == 1 and actor.moduleRendererCount == 0,
                 "幽灵或鱼的新增动画模块重复创建了身体 Renderer：" .. actor.id)

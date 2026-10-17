@@ -1103,6 +1103,32 @@ public static class FlatWorldContentValidator
                         prototype);
                 }
 
+                // 动画能力沿继承后的正式 ID 绑定，不能用实现名或禁用模块满足依赖。
+                if (prototype is Mod_AnimatorController)
+                {
+                    if (!string.Equals(moduleId, ModText.AnimatorReceiver, StringComparison.Ordinal))
+                    {
+                        AddError(
+                            report,
+                            "FWC-ACTORJSON-006",
+                            ActorManifestAssetPath,
+                            $"{actorField}.modules[{pair.Key}].id",
+                            $"生物动画能力 ID 必须为 '{ModText.AnimatorReceiver}'，实际为 '{moduleId}'；prefab 继续使用具体实现地址。",
+                            prototype);
+                    }
+
+                    if (!(pair.Value.Enabled ?? prototype.Enabled))
+                    {
+                        AddError(
+                            report,
+                            "FWC-ACTORJSON-006",
+                            ActorManifestAssetPath,
+                            $"{actorField}.modules[{pair.Key}].enabled",
+                            "生物动画模块必须启用，禁用时不会加载单图表现或动画事件。",
+                            prototype);
+                    }
+                }
+
                 ValidateModuleJsonParameters(
                     context,
                     report,

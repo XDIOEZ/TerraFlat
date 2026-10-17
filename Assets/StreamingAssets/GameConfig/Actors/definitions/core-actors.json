@@ -102,7 +102,7 @@
         },
         "animator": {
           "prefab": "Module_Animator_AI",
-          "id": "Module_Animator_AI",
+          "id": "动画接收模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1405,7 +1405,7 @@
         },
         "animator": {
           "prefab": "Module_Animator_AI",
-          "id": "Module_Animator_AI",
+          "id": "动画接收模块",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -2092,7 +2092,7 @@
         },
         "animator": {
           "prefab": "Module_Animator_AI",
-          "id": "AI动画模块",
+          "id": "动画接收模块",
           "enabled": true,
           "data": {
             "BitData": [],

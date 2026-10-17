@@ -2,6 +2,8 @@
 
 2026-10-18 全物种单图动画补充，**仅编写，未编译、未运行**：`ai/single_sprite_catalog` 复用正式 Actor Manifest/继承加载器，通过 `ResourceReloadContext` 候选上下文隔离目录缓存，并将最终参数交给正式 `ModuleJsonConfigurator.Apply`，检查全部正式物种的动画模块启用且为 SingleSprite；Ghost/SmallFish 原外壳保持一个 SpriteRenderer，新纯动画控制器没有 Renderer、碰撞体或刚体。通用主动信号组合规则在 [ItemRuntime](../ItemRuntime/README.md)，真实物种行为、风场、飞行/水下/搁浅观感与联机仍由用户验收。
 
+补强动画身份注册：此前原型类型与 `visualMode` 检查没有注册 `ItemMods`，会漏掉 JSON 把 `Module_Animator_AI/AI动画模块` 当能力 ID 的错误。现在对全部正式物种先把最终显式 `animator` 槽位身份交给生产 `BindRuntimeIdentity`，再调用 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，检查 `StableName/ModuleId/PrefabId`、启用态、唯一能力组和数据绑定；每种还按同一链注册显式错误 ID，只在精确查询处捕获拒绝，保证错误不会被 Canonical 默认值掩盖。临时 Item 使用 `test:...` 身份，避免读取当前正式 Actor 的旧配置。本次只编写，未编译、未运行；此为身份注册链检查，没有执行完整 Bird/Bee 的 `Item.Load`、依赖绑定或生成流程。
+
 `ai/single_sprite_aquatic` 在独立停用 Item 上，以正式小鱼材质调用真实 `AquaticActorPresentation.Tick/SetStrandedHop/SetCarried`，检查游动信号、单图模式下原节点不再叠加旧摇摆/高度、搁浅和携带的高度倾角输出，以及切回 Animator 后旧游动路径仍可用。没有加载鱼 AI、液体或世界，也没有推进共用动画模块；两者组合由 ItemRuntime 的真实接口与共用层规则覆盖，实际鱼完整行为未运行。
 
 `ai/line_of_sight_batch` 在独立 `WorldRuntime` 中调用正式整数格视线查询，检查同轮跨射线共用区块寻址且预热后不分配托管内存；建筑和地形阻挡仍逐格读取当前权威值。覆盖同格/端点规则、任一对角侧格遮挡、未知端点/途中区块、区块卸载重绑/地形替换、观察者位置变化、维度/世界代际、环绕最短路/等价坐标、自定义矩形区块与负坐标，以及查询/世界释放。本轮已通过外部 C# 编译，Lua 未运行，实际玩法未验收；不代表真实生物感知、候选代际全链路或 60 帧已验收。
