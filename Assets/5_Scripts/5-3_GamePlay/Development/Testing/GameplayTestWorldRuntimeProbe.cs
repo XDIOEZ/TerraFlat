@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>真实世界探针只修改自己选中的空格与自有物品，并通过正式事务采集实际效果。</summary>
-public static class GameplayTestWorldRuntimeProbe
+public static partial class GameplayTestWorldRuntimeProbe
 {
     #region 操作登记
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -19,6 +19,7 @@ public static class GameplayTestWorldRuntimeProbe
     private static void Register()
     {
         GameplayTestRuntimeProbe.Register("agriculture", "tillage_irrigation", CaptureTillage);
+        GameplayTestRuntimeProbe.Register("agriculture", "planting_target", CapturePlantingTarget);
         GameplayTestRuntimeProbe.Register("building", "placement", CapturePlacement);
         GameplayTestRuntimeProbe.Register("fishing", "rig_roundtrip", CaptureFishingRig);
     }

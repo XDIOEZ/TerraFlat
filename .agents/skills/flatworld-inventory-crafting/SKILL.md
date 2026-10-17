@@ -71,7 +71,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 农业
 
-- `Mod_Plantable → CreateEntityCrop → 扣真实种子`，失败 RollbackEntityCrop；resource 作物不临时物化 Item。有效耕地优先种植，否则动作让给食用。
+- `Mod_Plantable → CreateEntityCrop → 扣真实种子`，失败 RollbackEntityCrop；resource 作物不临时物化 Item。空耕地播种不检查水肥，水肥只影响后续成长；范围内的种植基质保留播种意图，作物占格或播种失败不回退食用，离开基质才让食用接管。
 - FarmlandSystem 操作 ChunkTerrainData；未完成锄地仅为会话进度，停工 10 秒后恢复，完成才写 Tile_Farmland。水肥快照修改经 CommitSoil；工具结算等待 IWeaponActionAnimation 确认真实挥动。
 - 播种作物句柄归 ChunkAgricultureRenderer，快照进 AgricultureCells；天然资源使用生态 GUID/差量。解绑不表示死亡；一次收获先生成全部产物再删除来源，持续采果只扣库存，植株/产物保持不同 ID。
 - 植物保存绝对游戏秒，通过 IWorldTimePlant/PlantClimateTimeline 补算冻结历史；成长器统一结算气候、水肥、天气与难度倍率，游标未追上不收获。雨雪由 WorldWeatherSurfaceSystem 供水，植物不重复加雨。

@@ -53,7 +53,7 @@ public sealed class Mod_Plantable : Module
     private PlantingSummoner plantingSummoner;
     private Mod_GameController ownerController;
 
-    /// <summary>当前指向有效耕地时，本模块保留这次使用动作，供食物等并存模块做优先级仲裁。</summary>
+    /// <summary>当前目标能否实际播种，预览与外部查询共用同一套资格规则。</summary>
     public bool IsPlantingActionAvailable
     {
         get
@@ -62,9 +62,28 @@ public sealed class Mod_Plantable : Module
                 return false;
             if (!TryResolveOwnerController(out Mod_GameController controller))
                 return false;
-            return TryResolvePlantingTarget(controller.GetMouseWorldPosition(), out _, out _);
+            return CanPlantAt(controller.GetMouseWorldPosition());
         }
     }
+
+    /// <summary>范围内的种植基质保留播种意图，避免播种后已有作物又回退成食用。</summary>
+    public bool ShouldPrioritizePlanting
+    {
+        get
+        {
+            if (!TryResolveOwnerController(out Mod_GameController controller))
+                return false;
+            return ShouldPrioritizePlantingAt(controller.GetMouseWorldPosition());
+        }
+    }
+
+    public bool CanPlantAt(Vector3 pointerWorldPosition) =>
+        GameNetwork.HasStateAuthority && item != null && item.InHand && item.Owner != null &&
+        TryResolvePlantingTarget(pointerWorldPosition, out _, out _);
+
+    public bool ShouldPrioritizePlantingAt(Vector3 pointerWorldPosition) =>
+        GameNetwork.HasStateAuthority && item != null && item.InHand && item.Owner != null &&
+        TryResolvePlantingSurface(pointerWorldPosition, out _, out _);
 
     #endregion
 
@@ -147,8 +166,9 @@ public sealed class Mod_Plantable : Module
         Vector3 pointerWorldPosition = controller.GetMouseWorldPosition();
         if (!TryResolvePlantingTarget(pointerWorldPosition, out PlantingTarget target, out string reason))
         {
-            // 同一物品既是食物又是种子时，无效耕地应让食用动作自然接管，避免每次进食都刷种植警告。
-            if (item.itemMods?.GetMod_ByID(ModText.Food) is not Mod_Food)
+            // 播种意图明确时报告失败，只有离开种植基质才让食用接管。
+            if (ShouldPrioritizePlantingAt(pointerWorldPosition) ||
+                item.itemMods?.GetMod_ByID(ModText.Food) is not Mod_Food)
                 Debug.LogWarning($"[种植] {reason}", item);
             return;
         }
@@ -261,46 +281,19 @@ public sealed class Mod_Plantable : Module
             return false;
         }
 
-        if (ChunkMgr.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointerWorldPosition, out var sample) ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out ChunkView view) ||
-            !FarmlandSystem.IsOpen(sample))
+        if (!TryResolvePlantingSurface(pointerWorldPosition, out RuntimeTerrainTileSample sample, out reason))
+            return false;
+
+        if (!FarmlandSystem.IsOpen(sample) ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out ChunkView view))
         {
             reason = "目标地块未加载或被建筑占用";
             return false;
         }
         Vector2Int tilePosition = sample.WorldCell;
         Vector3 worldCenter = new(tilePosition.x + 0.5f, tilePosition.y + 0.5f, 0f);
-        if (!IsSupportedSubstrate(sample))
-        {
-            reason = "请先把地块锄成耕地";
-            return false;
-        }
-        TileData_Farmland farmland = FarmlandSystem.ReadSoilSnapshot(sample);
-        farmland.NormalizeValues();
-        if (farmland.waterValue <= 0f)
-        {
-            reason = $"地块 {tilePosition} 缺水，无法种植";
-            return false;
-        }
 
-        if (farmland.Fertility <= 0f)
-        {
-            reason = $"地块 {tilePosition} 缺肥，无法种植";
-            return false;
-        }
-
-        if (!TryResolveOwnerController(out Mod_GameController controller) || controller == null || item.Owner == null)
-        {
-            reason = "种植者控制器尚未就绪";
-            return false;
-        }
-
-        if (!FarmlandSystem.IsWithinReach(item.Owner.transform.position, tilePosition, maxPlantingDistance))
-        {
-            reason = "目标地块超出种植范围";
-            return false;
-        }
+        // 水肥由成长模块结算，不阻止空耕地播种。
 
         if (FarmlandSystem.HasWorldPlant(tilePosition))
         {
@@ -315,6 +308,31 @@ public sealed class Mod_Plantable : Module
             return false;
         }
         target = new PlantingTarget(tilePosition, worldCenter, agriculture);
+        return true;
+    }
+
+    private bool TryResolvePlantingSurface(Vector3 pointerWorldPosition,
+        out RuntimeTerrainTileSample sample, out string reason)
+    {
+        sample = default;
+        reason = null;
+        if (ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointerWorldPosition, out sample))
+        {
+            reason = "目标地块未加载";
+            return false;
+        }
+        if (!IsSupportedSubstrate(sample))
+        {
+            reason = "请先把地块锄成耕地";
+            return false;
+        }
+        if (item?.Owner == null || !FarmlandSystem.IsWithinReach(
+                item.Owner.transform.position, sample.WorldCell, maxPlantingDistance))
+        {
+            reason = "目标地块超出种植范围";
+            return false;
+        }
         return true;
     }
 

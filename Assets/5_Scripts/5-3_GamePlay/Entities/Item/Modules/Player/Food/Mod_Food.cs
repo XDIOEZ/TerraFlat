@@ -206,9 +206,9 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
         if (building != null && (building.IsPlacementPending || building.IsPlacementActionAvailable))
             return;
 
-        // 同时具备食用与种植能力的物品：指向有效耕地时让种植动作优先，否则才按食物处理。
+        // 指向种植基质就保留播种意图，不能因刚种下作物或播种失败再吃掉种子。
         Mod_Plantable plantable = item.itemMods?.GetMod_ByID<Mod_Plantable>(ModText.Plantable);
-        if (plantable != null && plantable.IsPlantingActionAvailable)
+        if (plantable != null && plantable.ShouldPrioritizePlanting)
             return;
 
         Item owner = item?.Owner;
