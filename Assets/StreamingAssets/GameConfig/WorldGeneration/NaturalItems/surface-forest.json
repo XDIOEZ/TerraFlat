@@ -191,7 +191,7 @@
       "ruleId": "surface.forest.twine",
       "itemId": "TwineCrop",
       "itemCount": 1,
-      "spawnChance": 0.00028125,
+      "spawnChance": 0.00168125,
       "spawnChanceMultiplier": 1,
       "distributionMode": 0,
       "patchSpacing": 24,
