@@ -397,7 +397,7 @@
       "canBePickedUp": false,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item302.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/TwineCrop/TwineCrop_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: fed2b12358df4c1e9a40562af9548bde
+    m_Address: Assets/6_Art/Generated/Environment/TwineCrop/TwineCrop_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 42f724342d0e3f7469f7dbb65f10d656
     m_Address: Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png
     m_ReadOnly: 0
