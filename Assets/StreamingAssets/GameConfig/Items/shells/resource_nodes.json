@@ -260,7 +260,8 @@
               "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
-            "hurtAudioCueId": "",
+            "hurtAudioCueId": "combat.impact.tree",
+            "playHurtAudioOnBlockedHit": true,
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,
             "hitSlowDuration": 0.35,
@@ -583,7 +584,8 @@
               "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
-            "hurtAudioCueId": "",
+            "hurtAudioCueId": "combat.impact.tree",
+            "playHurtAudioOnBlockedHit": true,
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,
             "hitSlowDuration": 0.35,
@@ -1941,7 +1943,8 @@
               "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
-            "hurtAudioCueId": "",
+            "hurtAudioCueId": "combat.impact.tree",
+            "playHurtAudioOnBlockedHit": true,
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,
             "hitSlowDuration": 0.35,

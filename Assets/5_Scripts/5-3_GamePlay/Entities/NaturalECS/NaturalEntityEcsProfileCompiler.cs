@@ -16,6 +16,9 @@ namespace FlatWorld.NaturalEntities
         public string GrowthModuleName;
         public string ClimateModuleName;
         public Mod_DamageReceiver.DamageReceiver_SaveData HealthDefaults;
+        public CombatImpactMaterial ImpactAudioMaterial;
+        public string HurtAudioCueId;
+        public bool PlayHurtAudioOnBlockedHit;
         public GrowData GrowthDefaults;
         public float[] GrowthHealthRatios;
         public float MatureMaxHealth;
@@ -249,6 +252,10 @@ namespace FlatWorld.NaturalEntities
             profile.HealthDefaults = data;
             profile.HealthModuleName = module.StableName;
             profile.HealthParameters = parameters;
+            // 静态音效配置与生命模板一起冷编译，命中时不重复解析 JSON。
+            profile.ImpactAudioMaterial = (CombatImpactMaterial)(parameters.Value<int?>("impactAudioMaterial") ?? 0);
+            profile.HurtAudioCueId = parameters.Value<string>("hurtAudioCueId")?.Trim();
+            profile.PlayHurtAudioOnBlockedHit = parameters.Value<bool?>("playHurtAudioOnBlockedHit") ?? false;
             profile.Capabilities |= NaturalEntityCapability.Health;
             return true;
         }

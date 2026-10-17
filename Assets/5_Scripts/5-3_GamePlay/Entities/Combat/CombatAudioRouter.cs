@@ -88,47 +88,68 @@ public static class CombatAudioRouter
         AudioService.Instance.PlayAttached(cueId, origin);
     }
 
+    #region 命中音效路由
+
     public static void PlayImpact(Mod_DamageReceiver receiver, DamageReceiverDamageInfo damageInfo)
     {
         if (receiver == null ||
             damageInfo == null ||
-            damageInfo.DamageSender == null ||
-            damageInfo.DamageValue <= 0f)
+            damageInfo.Context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment ||
+            (damageInfo.DamageSender == null &&
+             (string.IsNullOrWhiteSpace(receiver.HurtAudioCueId) || !damageInfo.Context.Attack.Source.IsValid)))
         {
             return;
         }
-
-        CombatImpactMaterial material = ResolveImpactMaterial(receiver);
-        if (material == CombatImpactMaterial.None)
-            return;
 
         Mod_Damage sender = damageInfo.DamageSender as Mod_Damage;
         CombatWeaponAudioClass weaponClass = sender != null
             ? ResolveWeaponClass(sender)
             : ResolveWeaponClass(damageInfo.Attacker);
-
-        string cueId = null;
-        if (sender != null)
-            sender.TryGetImpactAudioOverride(material, out cueId);
-
-        if (string.IsNullOrWhiteSpace(cueId))
-            cueId = receiver.HurtAudioCueId;
-
-        if (string.IsNullOrWhiteSpace(cueId))
-            cueId = GetBuiltInPairCue(weaponClass, material);
-
-        if (string.IsNullOrWhiteSpace(cueId))
-            cueId = GetMaterialImpactCue(material);
-
-        if (string.IsNullOrWhiteSpace(cueId))
-            return;
-
         Vector3 hitPosition = damageInfo.HitPosition;
         if (receiver.item != null)
             hitPosition = receiver.item.transform.position;
 
-        AudioService.Instance.PlayAt(cueId.Trim(), hitPosition);
+        PlayImpact(receiver.item?.itemData, receiver.ImpactAudioMaterial, receiver.HurtAudioCueId,
+            damageInfo.DamageValue, hitPosition, sender, weaponClass, receiver.PlayHurtAudioOnBlockedHit);
     }
+
+    // 无外壳资源在权威生命提交后复用同一选音，不要求创建受击模块或依赖树的具体类型。
+    internal static void PlayImpact(ItemData target, CombatImpactMaterial configuredMaterial, string targetCueId,
+        float actualDamage, Vector3 hitPosition, Mod_Damage sender = null,
+        CombatWeaponAudioClass weaponClass = CombatWeaponAudioClass.Generic, bool playOnBlockedHit = false)
+    {
+        CombatImpactMaterial material = ResolveImpactMaterial(target, configuredMaterial);
+        string weaponCueId = null;
+        if (sender != null)
+        {
+            weaponClass = ResolveWeaponClass(sender);
+            sender.TryGetImpactAudioOverride(material, out weaponCueId);
+        }
+
+        string cueId = ResolveImpactCue(weaponClass, material, actualDamage, targetCueId, weaponCueId, playOnBlockedHit);
+        if (!string.IsNullOrWhiteSpace(cueId))
+            AudioService.Instance.PlayAt(cueId, hitPosition);
+    }
+
+    /// <summary>全部后端共用已结算命中的选音，保留武器覆盖、对象覆盖和内置材质的顺序。</summary>
+    internal static string ResolveImpactCue(CombatWeaponAudioClass weaponClass, CombatImpactMaterial material,
+        float actualDamage, string targetCueId = null, string weaponCueId = null, bool playOnBlockedHit = false)
+    {
+        if (!float.IsFinite(actualDamage) || actualDamage < 0f ||
+            (actualDamage == 0f && !playOnBlockedHit) || material == CombatImpactMaterial.None)
+            return null;
+
+        string cueId = weaponCueId;
+        if (string.IsNullOrWhiteSpace(cueId))
+            cueId = targetCueId;
+        if (string.IsNullOrWhiteSpace(cueId))
+            cueId = GetBuiltInPairCue(weaponClass, material);
+        if (string.IsNullOrWhiteSpace(cueId))
+            cueId = GetMaterialImpactCue(material);
+        return string.IsNullOrWhiteSpace(cueId) ? null : cueId.Trim();
+    }
+
+    #endregion
 
     private static CombatWeaponAudioClass ResolveWeaponClass(Mod_Damage sender)
     {
@@ -154,12 +175,12 @@ public static class CombatAudioRouter
         return CombatWeaponAudioClass.Generic;
     }
 
-    private static CombatImpactMaterial ResolveImpactMaterial(Mod_DamageReceiver receiver)
+    internal static CombatImpactMaterial ResolveImpactMaterial(ItemData target,
+        CombatImpactMaterial configuredMaterial = CombatImpactMaterial.Auto)
     {
-        if (receiver.ImpactAudioMaterial != CombatImpactMaterial.Auto)
-            return receiver.ImpactAudioMaterial;
+        if (configuredMaterial != CombatImpactMaterial.Auto)
+            return configuredMaterial;
 
-        Item target = receiver.item;
         if (ContainsAny(target, "bush", "shrub", "grass", "leaf", "foliage", "plant", "vine", "fern", "flower", "灌木", "草", "叶"))
             return CombatImpactMaterial.Foliage;
 
@@ -232,17 +253,20 @@ public static class CombatAudioRouter
     }
 
     private static bool ContainsAny(Item item, params string[] tokens)
+        => ContainsAny(item?.itemData, tokens);
+
+    private static bool ContainsAny(ItemData item, params string[] tokens)
     {
-        if (item == null || item.itemData == null || tokens == null)
+        if (item == null || tokens == null)
             return false;
 
-        if (ContainsAny(item.itemData.IDName, tokens) ||
-            ContainsAny(item.itemData.GameName, tokens))
+        if (ContainsAny(item.IDName, tokens) ||
+            ContainsAny(item.GameName, tokens))
         {
             return true;
         }
 
-        List<string> tags = item.itemData.Tags;
+        List<string> tags = item.Tags;
         if (tags == null)
             return false;
 
@@ -272,9 +296,9 @@ public static class CombatAudioRouter
         return false;
     }
 
-    private static bool HasTag(Item item, string expectedTag)
+    private static bool HasTag(ItemData item, string expectedTag)
     {
-        List<string> tags = item?.itemData?.Tags;
+        List<string> tags = item?.Tags;
         if (tags == null || string.IsNullOrWhiteSpace(expectedTag))
             return false;
 

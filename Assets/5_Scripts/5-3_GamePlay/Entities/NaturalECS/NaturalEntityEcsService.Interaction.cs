@@ -422,15 +422,16 @@ namespace FlatWorld.NaturalEntities
             var target = new CombatIdentity { Backend = CombatBackend.Entity, Value = (1UL << 63) | (uint)record.Handle.Id,
                 Generation = (uint)record.Handle.Generation, World = context.Attack.Source.World, Dimension = context.Attack.Source.Dimension };
             if (!weapon.TryReserveExternalTarget(target)) return;
-            float damage = ApplyDamage(record.Handle, context);
+            float damage = ApplyDamage(record.Handle, context, weapon);
             if (damage >= 0f && weapon != null) weapon.PublishExternalDamage(context, damage);
         }
 
         /// <summary>生命只写回同一 Entity，MOD 可修补这个命令边界；不会创建 Mod_DamageReceiver。</summary>
-        public static float ApplyDamage(NaturalEntityHandle handle, in CombatDamageContext context)
-            => ApplyDamageInternal(handle, context, false);
+        public static float ApplyDamage(NaturalEntityHandle handle, in CombatDamageContext context, Mod_Damage sender = null)
+            => ApplyDamageInternal(handle, context, false, sender);
 
-        private static float ApplyDamageInternal(NaturalEntityHandle handle, in CombatDamageContext context, bool environmentalDamage)
+        private static float ApplyDamageInternal(NaturalEntityHandle handle, in CombatDamageContext context, bool environmentalDamage,
+            Mod_Damage sender = null)
         {
             if (!GameNetwork.HasStateAuthority || !Contains(handle) || !context.Attack.Source.IsValid ||
                 !math.all(math.isfinite(context.Damage)) || !math.isfinite(context.Clock.Time)) return -1f;
@@ -462,7 +463,14 @@ namespace FlatWorld.NaturalEntities
             simulation.Set(handle.Id, vital);
             record.FlashUntil = Time.time + 0.15f;
             RefreshPresentation(handle);
-            return previous - vital.Hp;
+            float actualDamage = previous - vital.Hp;
+            // 显式声明的声音跟随有效命中发声，零伤按配置处理，致命命中也在移除前播放一次。
+            if (!environmentalDamage && context.Attack.Source.Backend != CombatBackend.Environment &&
+                !string.IsNullOrWhiteSpace(record.Profile.HurtAudioCueId))
+                CombatAudioRouter.PlayImpact(record.Snapshot, record.Profile.ImpactAudioMaterial,
+                    record.Profile.HurtAudioCueId, actualDamage, record.WorldPosition, sender,
+                    playOnBlockedHit: record.Profile.PlayHurtAudioOnBlockedHit);
+            return actualDamage;
         }
 
         public static bool CanHarvest(NaturalEntityHandle handle)

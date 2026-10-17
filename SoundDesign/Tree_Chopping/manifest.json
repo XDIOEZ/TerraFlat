@@ -1,0 +1,41 @@
+{
+  "engine": "Real axe chopping recording; offline trim and gain only",
+  "cueId": "combat.impact.tree",
+  "sampleRate": 48000,
+  "channels": 1,
+  "subtype": "PCM_16",
+  "sourcesFile": "sources.json",
+  "commonAppliedGainDb": -6.564991,
+  "sounds": [
+    {
+      "variant": 1,
+      "file": "Assets/Audio/Trees/combat.impact.tree__01.wav",
+      "guid": "668b859b33e544229af67eae159ce1fd",
+      "sha256": "a9d056280205184a1aaacacac5f1cacfb22676aa72ae47ddbcbca412aef1270e",
+      "seconds": 0.36,
+      "sourceStartSeconds": 0.265,
+      "peakDb": -7.036,
+      "rmsDb": -29.845
+    },
+    {
+      "variant": 2,
+      "file": "Assets/Audio/Trees/combat.impact.tree__02.wav",
+      "guid": "4ef7da5489344f7f8190ec25ed57b30b",
+      "sha256": "707468cb58018ebd81555365ebe733891a498eb18e01eb203deab2fa120678b3",
+      "seconds": 0.37,
+      "sourceStartSeconds": 1.831,
+      "peakDb": -7.001,
+      "rmsDb": -27.863
+    },
+    {
+      "variant": 3,
+      "file": "Assets/Audio/Trees/combat.impact.tree__03.wav",
+      "guid": "70cdaee42fb04ab5bf921bf27183ec73",
+      "sha256": "d3a2ea96b216738b525f76292c9f10c04cc9a6845d9f4af7606032a737483f32",
+      "seconds": 0.39,
+      "sourceStartSeconds": 3.419,
+      "peakDb": -7.414,
+      "rmsDb": -28.683
+    }
+  ]
+}

@@ -25,6 +25,7 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 
 ## 职责与契约
 
+- 树木受击使用独立 `combat.impact.tree` 三个真实砍木变体，成品在 `Assets/Audio/Trees/`，`SoundDesign/Tree_Chopping/` 保留来源、署名和裁切重建脚本；原生资源与 GO 共用 `health.hurtAudioCueId` / `playHurtAudioOnBlockedHit`，仅正式接受的攻击命中后播放，后者默认关闭、树配置开启后零掉血也响，拒绝命中与环境扣血不触发。
 - 篝火燃烧循环在 `SoundDesign/Fire_LMMS/`：CC0 木柴实录经 LMMS MCP 渲染、`finalize.py` 整理成 20 秒单声道循环；`fire.burning.loop` 绑定在 Bonfire 的 `Mod_Furnace.burningLoopCueId`。`MechanicalDepthVisual.Audio` 读取真实燃烧状态控制空间循环，熄灭、禁用与卸载释放句柄；新增设备通过该字段选择 Cue，不在音频服务识别建筑类型。
 - 动物待机声由 `Mod_AnimalAmbientAudio` 读取 Actor 的 `animalAudio` 模块配置，`animal.<species>.idle` 走附着动物的单声道空间短音；`AnimalAmbientAudioSchedule` 使用独立随机时钟错峰、拒播后等待完整间隔，不改玩法随机。行为模块通过 `IAnimalAmbientAudioActivity` 提供平静状态资格，死亡、休眠、禁用和卸载停声；声音资源位于 `Assets/Audio/Animals/`，避免 Generated 重建改变空间设置。第三方素材统一登记于 `开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md`，详细采样证据仍留各组来源账。
 

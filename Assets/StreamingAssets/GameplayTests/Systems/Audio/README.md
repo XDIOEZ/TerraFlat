@@ -1,5 +1,7 @@
 # 音频
 
+2026-10-18 新增树木命中声音（仅静态编写，未编译或运行）：苹果树、椰树和松树的生命配置声明 `combat.impact.tree` 与 `playHurtAudioOnBlockedHit`，桃树、橙树、柳树、橡树沿用正式继承。GO 和无外壳资源在权威接受命中后共用 `CombatAudioRouter`；零伤命中按开关发声，负值拒绝、环境伤害及加载快照不触发砍木声，致命命中在资源移除前播放一次。`audio/combat_impact` 检查专用 Cue、武器覆盖优先、零伤开关、负伤/非有限值拒播、None 静音及门木材/树叶原有路由；`audio/tree_impact_configuration` 读取正式继承解析后的全部树木生命参数。规则不播放声音，不证明 GO/资源真实碰撞、冷却去重、最后一击的运行接线或实际录音听感；本轮不新增独立 Client 网络声音消息，验收由用户完成。
+
 2026-10-18 新增八级狂风切换（本轮未编译或运行）：`audio/wind_sequence` 直接连续采样正式 `WeatherMgr.WindAudioState`，覆盖 0.5 起声阈值、7/8/9/10 级、越界、原 0.4 满风音量曲线、0.8 秒双路交叉淡化、短暂反向续接、初进强风时不先响普通风、三秒风强过渡、停风归零与 Reset 清理。正式入口以本机玩家位置读取 `TryGetWeatherAt` 的混合风场；音色按实际完整风级选择，响度独立平滑同一玩家风强，不跟随相机跨区漂移。规则不创建 AudioService 或声源，不证明 Cue 实际播放、句柄回收时序或主观听感；由用户在编译后试听 7→8→9→7 级及退出世界。
 
 2026-10-18 新增动物待机叫声回归（仅静态编写，未编译或运行）：`audio/animal_idle_sequence` 直接驱动正式 `AnimalAmbientAudioSchedule`，检查首次延迟、独立错峰、随机间隔、禁声资格/声源占用抑制、一次播放机会后的完整等待、Clear 重建、负时间/卡帧不补叫，并检查不消耗玩法全局随机。`audio/voice_lifecycle` 同一现场读取 Chicken、WildBoar、Wolf、Bird、Seagull、Bee、Sheep、Rabbit、SnowLeopard、SmallFish 的实际 Actor 模块参数及正式 Cue/Clip，Lua 检查种类绑定、非循环 SFX、完整空间混音、线性衰减、有效距离及 48kHz 单声道资源。禁声规则不等于睡眠/死亡/未激活的实际组件接线已运行；实际声像、远近响度、群体听感、真实并发拒播和对象池内正在播放声音的回收仍由用户自行验收。本轮不打断现有 PlayMode，也不启动测试。
@@ -10,7 +12,7 @@
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、combat_impact、tree_impact_configuration、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 

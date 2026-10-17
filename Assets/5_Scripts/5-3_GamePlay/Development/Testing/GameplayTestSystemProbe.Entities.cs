@@ -32,6 +32,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("combat/physical", EntityPhysicalDamage);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
+        RegisterCombatAudioOperations(operations);
         operations.Add("buff/lifecycle", EntityBuffLifecycle);
         operations.Add("buff/infection_attributes", EntityInfectionAttributes);
         operations.Add("buff/attribute_validation", EntityBuffAttributeValidation);

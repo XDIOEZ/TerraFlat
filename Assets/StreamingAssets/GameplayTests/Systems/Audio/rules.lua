@@ -12,6 +12,45 @@ for _, row in ipairs({ { volume = -1, master = -1, expected = 0 }, { volume = 0.
     end, "音频总线范围与空间参数：" .. row.expected)
 end
 
+-- 命中声音只读取正式选音规则，树允许零伤命中，拒绝结果与其他对象原有静音规则保持独立。
+for _, row in ipairs({
+    { itemId = "AppleTree", damage = 1, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
+    { itemId = "AppleTree", weapon = "Axe", damage = 1, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
+    { itemId = "Tree_Pine", weapon = "Axe", damage = 0, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
+    { itemId = "Tree_Pine", weapon = "Axe", damage = -1, targetCue = "combat.impact.tree", blocked = true, expected = "" },
+    { itemId = "Tree_Pine", damage = 0, targetCue = "combat.impact.tree", blocked = false, expected = "" },
+    { itemId = "Tree_Pine", damage = 1, targetCue = "  combat.impact.tree  ", expected = "combat.impact.tree" },
+    { itemId = "Tree_Pine", weapon = "Axe", targetCue = "combat.impact.tree", weaponCue = " probe.weapon.override ", expected = "probe.weapon.override" },
+    { itemId = "Tree_Pine", material = "None", targetCue = "combat.impact.tree", blocked = true, expected = "" },
+    { itemId = "WoodenDoor", damage = 0, expected = "" },
+    { itemId = "WoodenDoor", damage = 1, expected = "combat.impact.wood" },
+    { itemId = "WoodenDoor", weapon = "Axe", damage = 1, expected = "combat.impact.axe.wood" },
+    { itemId = "Bush", weapon = "Knife", expected = "combat.impact.knife.foliage" },
+    { itemId = "Tree_Pine", invalidDamage = "NaN", targetCue = "combat.impact.tree", blocked = true, expected = "" },
+    { itemId = "Tree_Pine", invalidDamage = "Infinity", targetCue = "combat.impact.tree", blocked = true, expected = "" }
+}) do
+    test.system("audio", "combat_impact", row, function(data)
+        assert(data.cue == row.expected and data.silent == (row.expected == ""),
+            "命中音效未遵守真实命中、对象覆盖、武器覆盖或材质规则：" .. row.itemId)
+    end, "命中声音：" .. row.itemId .. " / " .. tostring(row.damage or row.invalidDamage or 1) .. " / " .. row.expected)
+end
+
+test.system("audio", "tree_impact_configuration", {}, function(data)
+    local seen = {}
+    assert(#data.trees >= 7, "正式树木生命定义采样缺失")
+    for _, tree in ipairs(data.trees) do
+        assert(not seen[tree.id], "树木存在重复生命模块：" .. tree.id)
+        seen[tree.id] = true
+        assert(tree.cue == "combat.impact.tree" and tree.blocked and tree.material == "Wood",
+            "树木未继承砍木声音或零伤命中配置：" .. tree.id)
+        assert(tree.normalCue == tree.cue and tree.axeCue == tree.cue and tree.blockedCue == tree.cue,
+            "树木普通攻击、斧砍或零伤命中没有使用专用声音：" .. tree.id)
+    end
+    for _, id in ipairs({ "AppleTree", "PeachTree", "OrangeTree", "Tree_Coconut", "Tree_Pine", "Tree_Willow", "Tree_Oak" }) do
+        assert(seen[id], "遗漏正式树木或继承定义：" .. id)
+    end
+end, "树木定义继承与普通攻击、斧砍、零伤选音")
+
 -- 每个槽位持有独立正式时钟，Lua 只检查返回的发声机会与剩余时间。
 local function animal_idle_sequence(label, steps, validate)
     test.system("audio", "animal_idle_sequence", { steps = steps }, function(data)

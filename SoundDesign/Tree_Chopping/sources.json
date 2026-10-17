@@ -1,0 +1,53 @@
+{
+  "title": "Axe chopping wood",
+  "author": "xkeril",
+  "sourcePage": "https://freesound.org/people/xkeril/sounds/753925/",
+  "retrievedOn": "2026-10-18",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "licenseProof": "Licenses/xkeril_753925.md",
+  "downloadUrl": "https://cdn.freesound.org/previews/753/753925_13504080-hq.mp3",
+  "sourceFile": "Originals/xkeril_753925_hq.mp3",
+  "sourceSha256": "1aa502981c70e32ce1d7853f1148938ebd6fa0a70b2232e8a86f4988cd0c6111",
+  "sourceFormat": "Public HQ MP3 preview, decoded as 48000 Hz mono, 12.923 seconds. This is not the original 24-bit WAV described on the author page.",
+  "authorDescription": "Small axe striking a large dry wooden branch; outdoor mono recording, cleaned and equalized by the original author.",
+  "usage": "Adapted recording used by combat.impact.tree for tree damage and chopping, not merely a style reference.",
+  "cue": {
+    "id": "combat.impact.tree",
+    "file": "Assets/Resources/Audio/Cues/combat.impact.tree.asset",
+    "guid": "ecf38a0d5caf42b7bb78497e4b626a0e"
+  },
+  "processing": {
+    "sampleRate": 48000,
+    "channels": 1,
+    "subtype": "PCM_16",
+    "removeDC": true,
+    "commonPeakCeilingDb": -7,
+    "headFadeSeconds": 0.002,
+    "tailFadeSeconds": 0.035,
+    "modifications": "Three individual recorded strikes trimmed from the public HQ preview; remove DC, apply one common gain preserving differences, short edge fades, and export 48 kHz mono PCM16 WAV. No synthesized layers, time stretching, pitch alteration, or LMMS rendering."
+  },
+  "segments": [
+    {
+      "variant": 1,
+      "startSeconds": 0.265,
+      "seconds": 0.36,
+      "file": "Assets/Audio/Trees/combat.impact.tree__01.wav",
+      "guid": "668b859b33e544229af67eae159ce1fd"
+    },
+    {
+      "variant": 2,
+      "startSeconds": 1.831,
+      "seconds": 0.37,
+      "file": "Assets/Audio/Trees/combat.impact.tree__02.wav",
+      "guid": "4ef7da5489344f7f8190ec25ed57b30b"
+    },
+    {
+      "variant": 3,
+      "startSeconds": 3.419,
+      "seconds": 0.39,
+      "file": "Assets/Audio/Trees/combat.impact.tree__03.wav",
+      "guid": "70cdaee42fb04ab5bf921bf27183ec73"
+    }
+  ]
+}

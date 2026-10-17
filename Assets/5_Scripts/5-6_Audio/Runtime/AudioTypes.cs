@@ -211,6 +211,7 @@ namespace FlatWorld.Audio
         public const string CombatImpactDefault = "combat.impact.default";
         public const string CombatImpactFoliage = "combat.impact.foliage";
         public const string CombatImpactWood = "combat.impact.wood";
+        public const string CombatImpactTree = "combat.impact.tree";
         public const string CombatImpactStone = "combat.impact.stone";
         public const string CombatImpactMetal = "combat.impact.metal";
         public const string CombatImpactFlesh = "combat.impact.flesh";
