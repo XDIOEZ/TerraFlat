@@ -56,6 +56,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 体温是最外层体表；角色与普通物品的环境传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，按 `0.99^seconds` 指数结算，温差小于 0.0001℃收敛。冷热不分速率，不读物品传热率或潮湿/附近火源倍率；`AdvanceTowards` 仅保留给入水、岩浆接触和设备专属传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。
+- `TemperatureWarningPresentationRules` 供 `FoodUIModule` 体温条与 `TemperatureScreenRendererFeature` 共用，读取最终体温和装备修正后的安全线；条在安全线前 3℃渐蓝/红（窄范围取四分之一宽度），屏幕越线后 10℃到满强，真实秒平滑渐入/退去，冷热有符号强度保证互斥。只改表现，不改危险缓冲/Buff；规则归 `survival/temperature_presentation*`，最终画面由用户验收。
 - 冷热共用 RemainingTemperatureBufferSeconds：危险扣 1/s、安全默认补 1/s、容量默认 60；短暂安全/冷热切换/清 Buff 不重置，保存剩余量，RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点并向远离方向随机引导，不再记录或回退安全点；普通陆地移动也保留短期方向偏置。
 - Mod_Oxygen 只管耗氧/缺氧，公开 CanReceiveOxygen/GetOxygenSupplyAmount/SupplyOxygen；Mod_AtmosphericOxygenSupply 每 0.2s 查询实际 O₂/CO₂ 分压、水体呼吸阻塞和装备隔离后供氧。呼吸阻塞按实际供给与基础耗氧比较。
 - SpacesuitSupport 解析当前插槽气罐，先扣真实氧量再供给；IAmbientOxygenBlocker 报密封，空罐仍隔离。耐压按来源注册，Mod_Pressure 不识别装备；低压/高压/缺氧各自伤害时钟，危险解除/死亡清债务。

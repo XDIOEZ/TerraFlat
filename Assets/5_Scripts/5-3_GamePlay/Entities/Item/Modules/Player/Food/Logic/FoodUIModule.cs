@@ -46,6 +46,9 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private Slider vitaminsSlider;
     private Slider healthSlider;
     private Slider temperatureSlider;
+    private Graphic temperatureFillGraphic;
+    private Color temperatureNormalColor;
+    private float temperatureColorSeverity;
     private TMPro.TextMeshProUGUI carbohydratesText;
     private TMPro.TextMeshProUGUI fatText;
     private TMPro.TextMeshProUGUI proteinText;
@@ -54,6 +57,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private TMPro.TextMeshProUGUI healthText;
     private TMPro.TextMeshProUGUI temperatureText;
     private Mod_Temperature temperatureModule;
+    private uint temperatureModuleStructureVersion;
+    private uint temperatureModuleGeneration;
     private DisplayedRange carbohydratesDisplay;
     private DisplayedRange fatDisplay;
     private DisplayedRange proteinDisplay;
@@ -258,6 +263,12 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         vitaminsSlider = panel.GetSlider("维生素");
         healthSlider = FindSliderOnce(panel, "血量");
         temperatureSlider = panel.GetSlider("体温");
+        if (temperatureSlider != null && temperatureSlider.fillRect != null)
+        {
+            temperatureFillGraphic = temperatureSlider.fillRect.GetComponent<Graphic>();
+            if (temperatureFillGraphic != null)
+                temperatureNormalColor = temperatureFillGraphic.color;
+        }
         panel.TryGetText("DataText_碳水", out carbohydratesText);
         panel.TryGetText("DataText_脂肪", out fatText);
         panel.TryGetText("DataText_蛋白质", out proteinText);
@@ -265,7 +276,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         panel.TryGetText("DataText_维生素", out vitaminsText);
         panel.TryGetText("DataText_血量", out healthText);
         panel.TryGetText("DataText_体温", out temperatureText);
-        temperatureModule = context.Item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+        ResolveTemperatureModule();
         statusBarTransitionCoroutine = panel.StartCoroutine(AdvanceStatusBarTransitionsCoroutine(panel));
     }
 
@@ -292,6 +303,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             boundPanel.StopCoroutine(statusBarTransitionCoroutine);
         statusBarTransitionCoroutine = null;
         StopStatusBarTransitions();
+        ResetTemperatureWarningColor();
         boundPanel = null;
         carbohydratesSlider = null;
         fatSlider = null;
@@ -308,6 +320,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         healthText = null;
         temperatureText = null;
         temperatureModule = null;
+        temperatureModuleStructureVersion = 0;
+        temperatureModuleGeneration = 0;
         carbohydratesDisplay = default;
         fatDisplay = default;
         proteinDisplay = default;
@@ -433,9 +447,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     /// <summary>存在体温模块时刷新体温显示，否则显示空值。</summary>
     private void UpdateTemperatureUI(BasePanel panel)
     {
-        if (temperatureModule == null)
-            temperatureModule = context.Item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
-        Mod_Temperature temperature = temperatureModule;
+        Mod_Temperature temperature = ResolveTemperatureModule();
         Slider slider = temperatureSlider;
         TMPro.TextMeshProUGUI dataText = temperatureText;
         if (temperature?.Data == null)
@@ -450,8 +462,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             return;
         }
 
-        float coldStart = temperature.SafeTemperatureMin;
-        float hotStart = Mathf.Max(coldStart + 1f, temperature.SafeTemperatureMax);
+        temperature.GetSafeTemperatureRange(out float coldStart, out float safeMaximum);
+        float hotStart = Mathf.Max(coldStart + 1f, safeMaximum);
         float buffer = Mathf.Max(2f, (hotStart - coldStart) * 0.2f);
         if (slider != null)
             SetStatusBarValue(
@@ -471,6 +483,71 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             }
         }
     }
+
+    #region 体温预警颜色
+
+    /// <summary>仅在模块增删、卸载或换代时定点重取，避免原位重装后保留旧体温模块。</summary>
+    private Mod_Temperature ResolveTemperatureModule()
+    {
+        ItemMods modules = context.Item != null ? context.Item.itemMods : null;
+        if (modules == null)
+        {
+            temperatureModule = null;
+            temperatureModuleStructureVersion = 0;
+            temperatureModuleGeneration = 0;
+            return null;
+        }
+
+        if (temperatureModule == null || !temperatureModule.IsRuntimeLoaded ||
+            temperatureModuleStructureVersion != modules.StructureVersion ||
+            temperatureModuleGeneration != temperatureModule.RuntimeGeneration)
+        {
+            temperatureModule = modules.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+            temperatureModuleStructureVersion = modules.StructureVersion;
+            temperatureModuleGeneration = temperatureModule != null ? temperatureModule.RuntimeGeneration : 0;
+        }
+
+        return temperatureModule;
+    }
+
+    /// <summary>逐帧读取最终体温与装备修正后的安全线，让填充色平滑靠近蓝色或红色。</summary>
+    private void AdvanceTemperatureWarningColor(float unscaledDeltaTime)
+    {
+        if (temperatureFillGraphic == null)
+            return;
+        Mod_Temperature temperature = ResolveTemperatureModule();
+        if (context.Item is not Player player || player == null || !player.IsLocalProfile ||
+            player.DestructionHandled || player.IsUnloadingModules ||
+            (damageReceiver != null && damageReceiver.Hp <= 0f) ||
+            temperature == null || !temperature.IsRuntimeLoaded || temperature.Data == null)
+        {
+            temperatureColorSeverity = 0f;
+            temperatureFillGraphic.color = temperatureNormalColor;
+            return;
+        }
+
+        temperature.GetSafeTemperatureRange(out float minimum, out float maximum);
+        TemperatureWarningPresentationSample sample = TemperatureWarningPresentationRules.Evaluate(
+            temperature.Data.CurrentTemperature, minimum, maximum);
+        temperatureColorSeverity = TemperatureWarningPresentationRules.AdvanceScreenSeverity(
+            temperatureColorSeverity, sample.SignedWarning, unscaledDeltaTime, StatusBarTransitionDuration);
+        Color nextColor = TemperatureWarningPresentationRules.ResolveBarColor(
+            temperatureColorSeverity, temperatureNormalColor);
+        if (temperatureFillGraphic.color != nextColor)
+            temperatureFillGraphic.color = nextColor;
+    }
+
+    /// <summary>解绑时恢复正常色并释放引用，避免旧玩家的预警色带进下一轮绑定。</summary>
+    private void ResetTemperatureWarningColor()
+    {
+        if (temperatureFillGraphic != null)
+            temperatureFillGraphic.color = temperatureNormalColor;
+        temperatureFillGraphic = null;
+        temperatureNormalColor = default;
+        temperatureColorSeverity = 0f;
+    }
+
+    #endregion
 
     #region 状态条过渡
 
@@ -563,6 +640,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         while (owner != null && boundPanel == owner)
         {
             AdvanceStatusBarTransitions(Time.unscaledDeltaTime);
+            AdvanceTemperatureWarningColor(Time.unscaledDeltaTime);
             yield return null;
         }
     }

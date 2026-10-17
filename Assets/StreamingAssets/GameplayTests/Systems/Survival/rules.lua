@@ -57,6 +57,137 @@ for _, case in ipairs(temperatureCases) do
         assert(data.invalidSecondsNext == case.restored and data.savedTemperature == case.restored and data.saveIsIndependent, "非法时间或临时增温污染基础快照")
     end, "角色体温：" .. case.name)
 end
+
+local temperaturePresentationCases = {
+    {name = "正常体温保持原色", temperature = 36.5, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温预警起点", temperature = 8, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温预警四分之一", temperature = 7.25, coldWarning = .15625, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温预警一半", temperature = 6.5, coldWarning = .5, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温预警四分之三", temperature = 5.75, coldWarning = .84375, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温安全线只变蓝不结冰", temperature = 5, coldWarning = 1, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温刚越界无强度跳变", temperature = 4.999, coldWarning = 1, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "结冰四分之一", temperature = 2.5, coldWarning = 1, heatWarning = 0, coldDanger = .15625, heatDanger = 0},
+    {name = "结冰一半", temperature = 0, coldWarning = 1, heatWarning = 0, coldDanger = .5, heatDanger = 0},
+    {name = "结冰四分之三", temperature = -2.5, coldWarning = 1, heatWarning = 0, coldDanger = .84375, heatDanger = 0},
+    {name = "结冰满强度", temperature = -5, coldWarning = 1, heatWarning = 0, coldDanger = 1, heatDanger = 0},
+    {name = "极冷强度钳制", temperature = -100, coldWarning = 1, heatWarning = 0, coldDanger = 1, heatDanger = 0},
+    {name = "高温预警起点", temperature = 37, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "高温预警四分之一", temperature = 37.75, coldWarning = 0, heatWarning = .15625, coldDanger = 0, heatDanger = 0},
+    {name = "高温预警一半", temperature = 38.5, coldWarning = 0, heatWarning = .5, coldDanger = 0, heatDanger = 0},
+    {name = "高温预警四分之三", temperature = 39.25, coldWarning = 0, heatWarning = .84375, coldDanger = 0, heatDanger = 0},
+    {name = "高温安全线只变红无热浪", temperature = 40, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 0},
+    {name = "高温刚越界无强度跳变", temperature = 40.001, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 0},
+    {name = "热浪四分之一", temperature = 42.5, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .15625},
+    {name = "热浪一半", temperature = 45, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .5},
+    {name = "热浪四分之三", temperature = 47.5, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .84375},
+    {name = "热浪满强度", temperature = 50, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 1},
+    {name = "极热强度钳制", temperature = 100, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 1}
+}
+for _, sample in ipairs(temperaturePresentationCases) do
+    local input = sample
+    test.system("survival", "temperature_presentation", {temperature = input.temperature}, function(data)
+        for _, key in ipairs({"coldWarning", "heatWarning", "coldDanger", "heatDanger"}) do
+            near(data[key], input[key], "体温表现强度：" .. key)
+            assert(data[key] >= 0 and data[key] <= 1, "体温表现强度没有钳制到零至一")
+        end
+        near(data.signedWarning, data.heatWarning - data.coldWarning, "体温条冷热方向")
+        near(data.signedDanger, data.heatDanger - data.coldDanger, "屏幕冷热方向")
+        assert(data.coldWarning * data.heatWarning == 0 and data.coldDanger * data.heatDanger == 0,
+            "同一体温同时生成冷热预警")
+    end, "体温条与屏幕边缘：" .. input.name)
+end
+
+for _, sample in ipairs({
+    {name = "窄安全区中间不变色", args = {minimum = 10, maximum = 12, temperature = 11}, cold = 0, hot = 0},
+    {name = "窄安全区低温渐变缩至四分之一宽度", args = {minimum = 10, maximum = 12, temperature = 10.25}, cold = .5, hot = 0},
+    {name = "窄安全区高温渐变缩至四分之一宽度", args = {minimum = 10, maximum = 12, temperature = 11.75}, cold = 0, hot = .5},
+    {name = "零宽安全线仍安全", args = {minimum = 10, maximum = 10, temperature = 10}, cold = 0, hot = 0},
+    {name = "零宽安全线低温不同时变红", args = {minimum = 10, maximum = 10, temperature = 9}, cold = 1, hot = 0},
+    {name = "零宽安全线高温不同时变蓝", args = {minimum = 10, maximum = 10, temperature = 11}, cold = 0, hot = 1}
+}) do
+    local input = sample
+    test.system("survival", "temperature_presentation", input.args, function(data)
+        near(data.coldWarning, input.cold, "窄安全区低温预警")
+        near(data.heatWarning, input.hot, "窄安全区高温预警")
+        assert(data.coldDanger * data.heatDanger == 0, "窄安全区冷热屏幕效果冲突")
+    end, "体温表现边界：" .. input.name)
+end
+
+for _, sample in ipairs({
+    {name = "倒置安全线", args = {minimum = 40, maximum = 5}},
+    {name = "非数体温", args = {invalid = "temperature_nan"}},
+    {name = "无穷体温", args = {invalid = "temperature_infinity"}},
+    {name = "非数低温安全线", args = {invalid = "minimum_nan"}},
+    {name = "无穷高温安全线", args = {invalid = "maximum_infinity"}}
+}) do
+    local input = sample
+    test.system("survival", "temperature_presentation", input.args, function(data)
+        for _, key in ipairs({"coldWarning", "heatWarning", "coldDanger", "heatDanger", "signedWarning", "signedDanger"}) do
+            near(data[key], 0, "非法体温表现输入归零：" .. key)
+        end
+    end, "体温表现保护：" .. input.name)
+end
+
+test.system("survival", "temperature_presentation_range", {}, function(data)
+    near(data.initial.minimum, 5, "默认耐寒下限")
+    near(data.initial.maximum, 40, "默认耐热上限")
+    near(data.initial.cold.coldDanger, .028, "默认安全线下的结冰强度")
+    near(data.initial.hot.heatDanger, .352, "默认安全线上的热浪强度")
+    near(data.equipped.minimum, -5, "装备耐寒修正")
+    near(data.equipped.maximum, 50, "装备耐热修正")
+    near(data.equipped.cold.signedWarning, 0, "耐寒装备后体温条归正常色")
+    near(data.equipped.cold.signedDanger, 0, "耐寒装备后屏幕结冰目标归零")
+    near(data.equipped.hot.signedWarning, 0, "耐热装备后体温条归正常色")
+    near(data.equipped.hot.signedDanger, 0, "耐热装备后屏幕热浪目标归零")
+    near(data.restored.minimum, 5, "卸下装备后恢复耐寒线")
+    near(data.restored.maximum, 40, "卸下装备后恢复耐热线")
+    near(data.restored.cold.coldDanger, data.initial.cold.coldDanger, "卸装后结冰目标恢复")
+    near(data.restored.hot.heatDanger, data.initial.hot.heatDanger, "卸装后热浪目标恢复")
+end, "体温表现读取正式装备安全范围修正与撤销")
+
+local temperatureTransitionCases = {
+    {name = "半秒渐入一秒到满", args = {steps = {{target = -1, seconds = .5}, {target = -1, seconds = .5}}}, expected = {-.5, -1}},
+    {name = "分帧不改变真实时间进度", args = {steps = {{target = -1}, {target = -1}, {target = -1}, {target = -1}}}, expected = {-.25, -.5, -.75, -1}},
+    {name = "恢复安全后平滑退去", args = {current = 1, steps = {{target = 0, seconds = .5}, {target = 0, seconds = .5}}}, expected = {.5, 0}},
+    {name = "冷热切换经过零点", args = {current = -1, steps = {{target = 1, seconds = .5}, {target = 1, seconds = .5}, {target = 1, seconds = .5}, {target = 1, seconds = .5}}}, expected = {-.5, 0, .5, 1}},
+    {name = "过渡中反向从当前值续接", args = {steps = {{target = 1, seconds = .4}, {target = -1, seconds = .2}}}, expected = {.4, .2}},
+    {name = "零负时间不推进", args = {current = .5, steps = {{target = 1, seconds = 0}, {target = -1, seconds = -1}}}, expected = {.5, .5}},
+    {name = "长帧不越过目标", args = {steps = {{target = .3, seconds = 10}}}, expected = {.3}},
+    {name = "零时长立即落到合法目标", args = {duration = 0, steps = {{target = 3}}}, expected = {1}},
+    {name = "强度上下限", args = {current = -5, steps = {{target = -3}, {target = 3, seconds = 5}}}, expected = {-1, 1}},
+    {name = "非法旧强度从零恢复", args = {invalid = "current_nan", steps = {{target = 1}}}, expected = {.25}},
+    {name = "非法目标平滑退回零", args = {current = 1, invalid = "target_infinity", steps = {{target = 1}}}, expected = {.75}},
+    {name = "非法时间不推进", args = {current = .5, invalid = "seconds_nan", steps = {{target = 1}}}, expected = {.5}},
+    {name = "非法时长采用立即落点", args = {invalid = "duration_nan", steps = {{target = -1}}}, expected = {-1}}
+}
+for _, sample in ipairs(temperatureTransitionCases) do
+    local input = sample
+    test.system("survival", "temperature_presentation_transition", input.args, function(data)
+        assert(#data.samples == #input.expected, "体温表现过渡采样缺失")
+        for index, expected in ipairs(input.expected) do
+            near(data.samples[index], expected, "真实秒体温表现过渡：" .. index)
+            assert(data.samples[index] >= -1 and data.samples[index] <= 1, "冷热有符号强度越界")
+        end
+        near(data.final, input.expected[#input.expected], "体温表现过渡终点")
+    end, "体温表现时间渐变：" .. input.name)
+end
+
+test.system("survival", "temperature_presentation_color", {}, function(data)
+    local expected = {
+        normal = {.8, .7, .6, .35}, coldHalf = {.52, .655, .785, .35}, coldFull = {.24, .61, .97, .35},
+        heatHalf = {.9, .5, .4, .35}, heatFull = {1, .3, .2, .35}
+    }
+    for name, channels in pairs(expected) do
+        for index, value in ipairs(channels) do near(data[name][index], value, "体温条颜色：" .. name .. "/" .. index) end
+    end
+    assert(data.coldFull[3] > data.coldFull[1] and data.heatFull[1] > data.heatFull[3], "低温没有变蓝或高温没有变红")
+    for index = 1, 4 do
+        near(data.coldClamped[index], data.coldFull[index], "过冷颜色封顶")
+        near(data.heatClamped[index], data.heatFull[index], "过热颜色封顶")
+        near(data.invalid[index], data.normal[index], "非法颜色强度恢复原主题色")
+    end
+end, "体温条主题正常色、蓝红渐变、透明度保留和强度钳制")
+
 local treatmentCases = {
     {name = "等待完成仅提交一次", args = {}, began = true, first = "Running", state = "Completed", commits = 1},
     {name = "主动取消不提交", args = {cancel = true}, began = true, first = "Running", state = "Cancelled", commits = 0},

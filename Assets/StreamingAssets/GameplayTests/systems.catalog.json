@@ -163,6 +163,8 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Oxygen*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Pressure*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Temperature*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/TemperatureWarningPresentationRules.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.TemperaturePresentation.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Stamina*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Sanity*",
         "Assets/StreamingAssets/GameplayTests/Systems/Survival/*",
@@ -1138,6 +1140,7 @@
       "name": "渲染光影与特效",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/URP/DefualtURP2D_Renderer.asset",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/*",
         "Assets/9_Shaders/*",
         "Assets/5_Scripts/Shader/*",

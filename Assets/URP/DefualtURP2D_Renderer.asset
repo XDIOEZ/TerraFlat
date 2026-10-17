@@ -19,8 +19,9 @@ MonoBehaviour:
   - {fileID: 6792246138593207564}
   - {fileID: 6119732469843578001}
   - {fileID: 7551732469843578124}
+  - {fileID: 8629541376652089314}
   - {fileID: 8357198432651427101}
-  m_RendererFeatureMap: 0ce5dd4de0e7425e914c73f141a8ed540c4dcfa7ab24cd681dbda337b2bbfa73
+  m_RendererFeatureMap: 0ce5dd4de0e7425e914c73f141a8ed540c4dcfa7ab24cd68e217e229294ac2771dbda337b2bbfa73
   m_UseNativeRenderPass: 0
   m_TransparencySortMode: 3
   m_TransparencySortAxis: {x: 0, y: 1, z: 0}
@@ -107,6 +108,20 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   overviewShader: {fileID: 4800000, guid: 9d84a266e0deb9944b29b9aaf9fbc3c0, type: 3}
   planetSurfaceMaterial: {fileID: 2100000, guid: d94f50a722c44d9b91b5fbc04dfecc9b, type: 2}
+  m_Active: 1
+--- !u!114 &8629541376652089314
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01dbcad6147c408cbe084b08a2cda9c4, type: 3}
+  m_Name: Temperature Screen Edges
+  m_EditorClassIdentifier:
+  temperatureShader: {fileID: 4800000, guid: a000498ec82e44b8b863d55e1803f871, type: 3}
   m_Active: 1
 --- !u!114 &8357198432651427101
 MonoBehaviour:
