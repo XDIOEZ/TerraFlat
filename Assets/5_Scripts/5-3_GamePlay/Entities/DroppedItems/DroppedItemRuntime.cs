@@ -248,27 +248,44 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     #region 风推动掉落物
 
     private readonly List<int> windScratch = new();
+    private static readonly ProfilerMarker WindPrepareMarker = new("DroppedItems.Wind.Prepare");
+    private static readonly ProfilerMarker WindSampleMarker = new("DroppedItems.Wind.Sample");
+    private static readonly ProfilerMarker WindResolveMarker = new("DroppedItems.Wind.ResolvePosition");
+    private static readonly ProfilerMarker WindCommitMarker = new("DroppedItems.Wind.Commit");
 
     private void TickWind(float seconds)
     {
-        if (!WorldMotionSystem.HasWindPush ||
-            !WorldMotionSystem.TryCreateWindSamplingContext(out WorldMotionSystem.WindSamplingContext context))
-            return;
-        windScratch.Clear();
-        windScratch.AddRange(simulation.Ids);
+        WorldMotionSystem.WindSamplingContext context;
+        ChunkMgr chunks;
+        using (WindPrepareMarker.Auto())
+        {
+            if (!WorldMotionSystem.HasWindPush ||
+                !WorldMotionSystem.TryCreateWindSamplingContext(out context))
+                return;
+            windScratch.Clear();
+            windScratch.AddRange(simulation.Ids);
+            chunks = ChunkMgr.ExistingInstance;
+        }
         foreach (int id in windScratch)
         {
             if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) continue;
             LightweightDroppedBody body = simulation.Get(id);
             if (body.Pickable == 0 || body.LiquidDepth >= 0.995f) continue;
-            Vector2 velocity = context.Sample(body.Position, payloads[id].Stack.CurrentWeight);
+            Vector2 velocity;
+            using (WindSampleMarker.Auto())
+                velocity = context.Sample(body.Position, payloads[id].Stack.CurrentWeight);
             if (velocity.sqrMagnitude <= 0f) continue;
-            Vector2 destination = WorldMotionSystem.ResolveLooseWindPosition(body.Position, velocity * seconds);
-            if (WorldTopologyRuntime.ShortestDelta(body.Position, destination).sqrMagnitude <= 0.00000001f) continue;
-            body.Position = destination;
-            simulation.Set(body);
-            UpdatePlacement(id);
-            CheckEnvironment(id);
+            Vector2 destination;
+            using (WindResolveMarker.Auto())
+                destination = WorldMotionSystem.ResolveLooseWindPosition(body.Position, velocity * seconds, domain, chunks);
+            if (((Vector2)domain.ShortestDelta(body.Position, destination)).sqrMagnitude <= 0.00000001f) continue;
+            using (WindCommitMarker.Auto())
+            {
+                body.Position = destination;
+                simulation.Set(body);
+                UpdatePlacement(id);
+                CheckEnvironment(id);
+            }
         }
         windScratch.Clear();
     }

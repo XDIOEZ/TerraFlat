@@ -61,6 +61,99 @@ test.system("environment", "weather", {}, function(data)
     near(data.wind10Probability, 0.012, "十级风附加概率倍率错误")
 end, "区域天气共享、冻结气候、事件到期与强风概率")
 
+test.system("environment", "wind_read_path", {}, function(data)
+    local function same_wind(actual, expected, label)
+        near(actual.x, expected.x, label .. "：水平分量")
+        near(actual.y, expected.y, label .. "：垂直分量")
+        near(actual.strength, expected.strength, label .. "：原始强度")
+    end
+    local function same_blend(actual, expected, label)
+        assert(actual.found == expected.found, label .. "：存在状态")
+        for _, name in ipairs({"origin", "horizontal", "vertical", "diagonal"}) do
+            same_wind(actual[name], expected[name], label .. "：" .. name)
+        end
+        near(actual.horizontalWeight, expected.horizontalWeight, label .. "：横向权重")
+        near(actual.verticalWeight, expected.verticalWeight, label .. "：纵向权重")
+    end
+    assert(data.event.found and data.eventSnapshot.found, "活动风事件采样缺失")
+    same_wind(data.event.origin, data.eventSnapshot, "活动风单项/完整快照一致")
+    near(data.event.origin.x, .54, "非单位气候风向未归一化")
+    near(data.event.origin.y, .72, "非单位气候风向垂直分量错误")
+    near(data.event.origin.strength, .9, "风事件强度错误")
+    same_wind(data.forcedZero.origin, data.forcedZeroSnapshot, "强制零风单项/完整快照一致")
+    near(data.forcedZero.origin.strength, 0, "强制零风未覆盖活动事件")
+    assert(not data.forcedZeroHasPush and data.restoredHasPush, "零风覆盖及到期恢复未影响推动资格")
+    same_wind(data.restored.origin, data.restoredSnapshot, "覆盖到期单项/完整快照一致")
+    same_wind(data.restored.origin, data.event.origin, "覆盖到期未恢复原风事件")
+    same_wind(data.fallback.origin, data.fallbackSnapshot, "无气候方向回退单项/完整快照一致")
+    same_blend(data.fallback, data.fallbackRepeated, "随机回退方向未保持稳定")
+    near(data.fallback.origin.x ^ 2 + data.fallback.origin.y ^ 2, .8 ^ 2, "随机回退方向未保留原始风强")
+
+    for _, name in ipairs({"fourRegions", "wrapped"}) do
+        local group = data[name]
+        assert(group.authority.found and group.replica.found and #group.snapshots == 4, name .. "四区状态缺失")
+        assert(group.authority.horizontalWeight > 0 and group.authority.horizontalWeight < .5
+            and group.authority.verticalWeight > 0 and group.authority.verticalWeight < .5,
+            name .. "边缘四区混合权重无效")
+        for index, field in ipairs({"origin", "horizontal", "vertical", "diagonal"}) do
+            assert(group.snapshots[index].found, name .. "完整天气快照缺失")
+            same_wind(group.authority[field], group.snapshots[index], name .. "四区单项/完整快照一致：" .. field)
+        end
+        same_blend(group.replica, group.authority, name .. "客户端副本保留原始风字段和权重")
+    end
+    same_blend(data.wrapped.wrappedEquivalent, data.wrapped.authority, "世界环绕等价位置")
+    assert(data.missingNeighbor.found and not data.missingSnapshot.found, "缺少邻区的风查询创建了天气状态")
+    near(data.missingNeighbor.horizontal.strength, 0, "未加载邻区没有按无风处理")
+    assert(not data.invalidPosition.found, "非有限位置仍返回风采样")
+end, "单项风读取与完整快照一致、零风覆盖、四区、副本和环绕")
+
+test.system("environment", "thermal_point_path", {}, function(data)
+    assert(data.wrappedReady, "环绕热场夹具边界创建失败")
+    for name, sample in pairs(data.localField) do
+        near(sample.point, sample.batch, "局部热源单格/批量一致：" .. name)
+    end
+    near(data.localField.initial.point, 100, "局部热源中心目标温度")
+    near(data.localField.targetChanged.point, 80, "原位目标温度更新没有立即生效")
+    near(data.localField.strengthChanged.point, 50, "原位来源强度更新没有立即生效")
+    assert(data.localField.movedOld.point < data.localField.strengthChanged.point, "来源移动后旧位置未衰减")
+    near(data.localField.movedNew.point, 50, "来源移动后新中心强度错误")
+    near(data.localField.radiusChanged.point, 20, "缩小半径后范围外仍有热量")
+    near(data.localField.removed.point, 20, "移除局部来源后仍有热量")
+    near(data.localField.cooling.point, -20, "制冷来源没有降低环境温度")
+    near(data.localField.heatingOnly.point, 20, "普通热源错误降低更暖环境")
+    assert(data.localField.wrapped.point > 20 and data.localField.wrapped.point < 100, "局部热源未跨环绕缝衰减")
+
+    local liquid = data.liquid
+    for _, name in ipairs({"initial", "sameRevisionRebound", "sameRevisionRestored", "soilChanged", "covered", "uncovered",
+        "cleared", "unloaded", "rebound", "wrapped", "disposed"}) do
+        local sample = liquid[name]
+        assert(#sample.point == 16 and #sample.batch == 16, "液体采样未覆盖完整夹具：" .. name)
+        for index, point in ipairs(sample.point) do
+            near(point, sample.batch[index], "液体单格/批量一致：" .. name .. "格" .. index)
+            assert(point >= 20 and point <= 100, "液体加热越过环境与目标边界：" .. name)
+        end
+    end
+    near(liquid.initial.point[1], 100, "液体热源中心温度错误")
+    assert(liquid.initial.point[2] < 100, "重叠同温液体热源被相加")
+    assert(liquid.soilRevision == liquid.initialRevision, "普通土壤更新使液体热场版本失效")
+    assert(liquid.replacementRevision == liquid.initialRevision, "同版本地形重绑夹具版本不相同")
+    near(liquid.sameRevisionRebound.point[1], 20, "相同版本地形替换后仍使用旧来源")
+    near(liquid.sameRevisionRebound.point[16], 100, "相同版本地形替换后未读取新来源")
+    assert(liquid.coveredRevision > liquid.soilRevision, "地表支撑身份未使液体热场失效")
+    for index, initial in ipairs(liquid.initial.point) do
+        near(liquid.soilChanged.point[index], initial, "普通土壤更新改变热场")
+        near(liquid.sameRevisionRestored.point[index], initial, "相同版本地形换回后未恢复来源")
+        near(liquid.uncovered.point[index], initial, "移除支撑后没有恢复液面热源")
+        near(liquid.cleared.point[index], 20, "抽干热液后仍有热量或普通水错误发热")
+        near(liquid.unloaded.point[index], 20, "卸载液体来源后仍有热量")
+        near(liquid.disposed.point[index], 20, "地形释放后仍有缓存热量")
+    end
+    assert(liquid.covered.point[1] < liquid.initial.point[1], "支撑遮住液面后旧热源仍在")
+    near(liquid.rebound.point[1], 20, "同位置重绑地形后沿用了旧热源")
+    near(liquid.rebound.point[16], 100, "同位置重绑地形后新热源缺失")
+    assert(liquid.wrapped.point[13] > 20, "液体热源未跨环绕缝影响单格")
+end, "局部与液体热源单格/批量一致、来源变化、地表版本和环绕")
+
 local function values_equal(actual, expected, message)
     assert(#actual == #expected, message .. "：数量错误")
     for index, value in ipairs(expected) do

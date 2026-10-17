@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FlatWorld.DroppedItems;
 using UnityEngine;
+using Unity.Profiling;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 /// <summary>轻量掉落物低频推进温度与含水率；不为每个掉落物创建 Module 或 Update。</summary>
@@ -10,6 +11,9 @@ internal sealed partial class DroppedItemRuntime
     private const float MatterTickInterval = 1f;
     private const int MatterItemsPerStep = 64;
     private static readonly long MatterStepBudgetTicks = System.Math.Max(1L, Stopwatch.Frequency / 1000L);
+    private static readonly ProfilerMarker MatterEnvironmentMarker = new("DroppedItems.Matter.Environment");
+    private static readonly ProfilerMarker MatterCombustionMarker = new("DroppedItems.Matter.Combustion");
+    private static readonly ProfilerMarker MatterTransitionMarker = new("DroppedItems.Matter.Transition");
     private readonly List<int> matterScratch = new();
     private readonly Dictionary<int, double> lastMatterTimes = new();
     private double matterTime;
@@ -40,9 +44,13 @@ internal sealed partial class DroppedItemRuntime
             lastMatterTimes[id] = matterTime;
             if (seconds <= 0f) continue;
             LightweightDroppedBody body = simulation.Get(id);
-            bool changed = WorldItemMatterRules.Advance(data, body.Position, seconds,
-                liquidContact: body.WaterKind != 0 && !simulation.TryGetFlight(id, out _), out bool waterContact);
-            changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact, out bool consumedAll);
+            bool changed, waterContact, consumedAll;
+            // 分开记录单件环境、燃烧和物态替换，定位时间预算无法截断的长调用。
+            using (MatterEnvironmentMarker.Auto())
+                changed = WorldItemMatterRules.Advance(data, body.Position, seconds,
+                    liquidContact: body.WaterKind != 0 && !simulation.TryGetFlight(id, out _), out waterContact);
+            using (MatterCombustionMarker.Auto())
+                changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact, out consumedAll);
             if (changed)
                 presentation.Changed(id);
             if (consumedAll)
@@ -57,7 +65,11 @@ internal sealed partial class DroppedItemRuntime
                 UpdatePlacement(id);
             }
 
-            if (!ItemMatterRuntime.TryCreateSolidTransitionReplacement(data, out ItemData replacement))
+            bool replaced;
+            ItemData replacement;
+            using (MatterTransitionMarker.Auto())
+                replaced = ItemMatterRuntime.TryCreateSolidTransitionReplacement(data, out replacement);
+            if (!replaced)
                 continue;
             if (!GameRes.ExistingInstance.TryGetItemDefinition(replacement.IDName, out RuntimeItemDefinition target) ||
                 !target.UsesLightweightWorldDrop)

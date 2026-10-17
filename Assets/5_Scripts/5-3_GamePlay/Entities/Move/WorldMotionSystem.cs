@@ -29,6 +29,7 @@ public static class WorldMotionSystem
         private readonly double surfaceGravity;
         private readonly float minimumMass;
         private readonly float maximumMass;
+        private readonly WorldTopologyDomain topology;
 
         internal WindSamplingContext(WeatherMgr weather, double surfaceGravity, float minimumMass, float maximumMass)
         {
@@ -36,6 +37,7 @@ public static class WorldMotionSystem
             this.surfaceGravity = surfaceGravity;
             this.minimumMass = minimumMass;
             this.maximumMass = maximumMass;
+            topology = WorldTopologyRuntime.GetActiveDomain();
         }
 
         public Vector2 Sample(Vector2 position, float mass)
@@ -44,7 +46,7 @@ public static class WorldMotionSystem
                 mass, surfaceGravity, minimumMass, maximumMass);
             // 沉重物品不用再查所在天气区域，也不进行不必要的坐标投影。
             if (required > WindEnvironmentRules.MaximumWindLevel ||
-                !weather.TryGetWindBlendAt(WorldLocalPresentation.ToLogical(position), out var blend))
+                !weather.TryGetWindBlendAt(topology.Normalize(position), out var blend))
                 return Vector2.zero;
             return WindEnvironmentRules.ResolveBlendedPushVelocity(in blend, required);
         }
@@ -133,6 +135,8 @@ public static class WorldMotionSystem
             return;
         looseWindScratch.Clear();
         looseWindScratch.AddRange(looseWindItems.Keys);
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
         foreach (Item item in looseWindScratch)
         {
             if (!looseWindItems.TryGetValue(item, out LooseWindRegistration registration))
@@ -149,8 +153,8 @@ public static class WorldMotionSystem
             Vector2 position = item.transform.position;
             Vector2 velocity = context.Sample(position, item.itemData.Stack.CurrentWeight);
             if (velocity.sqrMagnitude <= 0f) continue;
-            Vector2 destination = ResolveLooseWindPosition(position, velocity * seconds);
-            if (WorldTopologyRuntime.ShortestDelta(position, destination).sqrMagnitude <= 0.00000001f) continue;
+            Vector2 destination = ResolveLooseWindPosition(position, velocity * seconds, topology, chunks);
+            if (((Vector2)topology.ShortestDelta(position, destination)).sqrMagnitude <= 0.00000001f) continue;
             Rigidbody2D body = item.GetComponent<Rigidbody2D>();
             if (body != null) body.position = destination;
             else item.transform.position = new Vector3(destination.x, destination.y, item.transform.position.z);
@@ -163,14 +167,19 @@ public static class WorldMotionSystem
 
     /// <summary>散落物按小步检查已加载地形与建筑阻挡，不因风推动请求新地形。</summary>
     public static Vector2 ResolveLooseWindPosition(Vector2 position, Vector2 displacement)
+        => ResolveLooseWindPosition(position, displacement,
+            WorldTopologyRuntime.GetActiveDomain(), ChunkMgr.ExistingInstance);
+
+    internal static Vector2 ResolveLooseWindPosition(Vector2 position, Vector2 displacement,
+        WorldTopologyDomain topology, ChunkMgr chunks)
     {
         int steps = Mathf.Max(1, Mathf.CeilToInt(displacement.magnitude / 0.2f));
         Vector2 step = displacement / steps;
-        ChunkMgr chunks = ChunkMgr.ExistingInstance;
         if (chunks == null) return position;
         for (int index = 0; index < steps; index++)
         {
-            Vector2 next = WorldTopologyRuntime.NormalizePosition(position + step);
+            // 同一批风推动沿用冻结的拓扑域，逐小步仍检查真实地形与建筑占地。
+            Vector2 next = topology.Normalize(position + step);
             if (!chunks.TryGetRuntimeTerrainTile(next, out RuntimeTerrainTileSample sample) ||
                 !BuildingOccupancyRegistry.GetEffectiveWalkable(sample.WorldCell, sample.Cell.IsWalkable))
                 break;

@@ -161,6 +161,35 @@ internal sealed class LocalTemperatureField
         return bucket.Influences;
     }
 
+    // 单格只计算来源到本格的距离，不为一个掉落物重建整块权重。
+    public void AccumulateAtPoint(Vector2Int cell, float ambient,
+        ref float strongestHeating, ref float strongestCooling)
+    {
+        Vector2Int origin = new(
+            Mathf.FloorToInt((float)cell.x / width) * width,
+            Mathf.FloorToInt((float)cell.y / height) * height);
+        if (bounds.IsWrapped)
+            origin = bounds.NormalizeChunkOrigin(origin);
+        if (!buckets.TryGetValue(origin, out Bucket bucket))
+            return;
+        if (!bucket.Dirty)
+        {
+            int index = (cell.y - origin.y) * width + cell.x - origin.x;
+            Accumulate(bucket.Influences, index, ambient, ref strongestHeating, ref strongestCooling);
+            return;
+        }
+        Vector2 center = new(cell.x + 0.5f, cell.y + 0.5f);
+        foreach (Source source in bucket.Sources)
+        {
+            Vector2 delta = bounds.IsWrapped
+                ? bounds.ShortestDelta(source.Center, center) : center - source.Center;
+            float weight = ThermalInfluenceRuntime.DistanceWeight(delta.sqrMagnitude,
+                source.Radius * source.Radius) * source.Strength;
+            ThermalInfluenceRuntime.Accumulate(ambient, source.TargetTemperature, weight,
+                ref strongestHeating, ref strongestCooling, source.Cooling);
+        }
+    }
+
     public static void Accumulate(ReadOnlySpan<Influence> influences, int index, float ambient,
         ref float strongestHeating, ref float strongestCooling)
     {
@@ -208,6 +237,7 @@ internal sealed class LiquidTemperatureField
     #region 分区缓存
 
     private static readonly ProfilerMarker RebuildMarker = new("FlatWorld.Temperature.RebuildRadiantLiquidChunk");
+    private static readonly ProfilerMarker PointMarker = new("FlatWorld.Temperature.SampleRadiantLiquidPoint");
 
     private readonly struct Dependency
     {
@@ -237,6 +267,8 @@ internal sealed class LiquidTemperatureField
     }
 
     private readonly Dictionary<Vector2Int, Bucket> buckets = new();
+    private readonly Dictionary<Vector2Int, SourceChunk> sourceChunks = new();
+    private readonly HashSet<Vector2Int> pointOrigins = new();
     private readonly ChunkMgr chunkManager;
     private readonly string dimensionId;
     private readonly int width;
@@ -257,6 +289,94 @@ internal sealed class LiquidTemperatureField
 
     #endregion
 
+    #region 稀疏液体热源
+
+    internal sealed class SourceChunk
+    {
+        private readonly struct Source
+        {
+            public readonly Vector2 LocalCenter;
+            public readonly float RadiusSquared;
+            public readonly float Temperature;
+            public Source(Vector2 center, float radius, float temperature)
+            {
+                LocalCenter = center;
+                RadiusSquared = radius * radius;
+                Temperature = temperature;
+            }
+        }
+
+        private readonly List<Source> sources = new();
+        private ChunkTerrainData terrain;
+        private long revision = -1;
+
+        public void Refresh(ChunkTerrainData current, IReadOnlyDictionary<string, LiquidDefinition> definitions)
+        {
+            if (current?.IsDisposed == true)
+                current = null;
+            long currentRevision = current?.SurfaceLiquidRevision ?? -1;
+            if (ReferenceEquals(current, terrain) && currentRevision == revision)
+                return;
+            terrain = current;
+            revision = currentRevision;
+            sources.Clear();
+            if (current == null || current.IsDisposed)
+                return;
+            for (int y = 0; y < current.Height; y++)
+            for (int x = 0; x < current.Width; x++)
+            {
+                if (WorldLiquidSystem.GetSurfaceDepth(current, x, y) <= 0f)
+                    continue;
+                string id = current.GetLiquidId(x, y);
+                if (string.IsNullOrWhiteSpace(id) || !definitions.TryGetValue(id.Trim(), out LiquidDefinition liquid))
+                    continue;
+                WorldLiquidSettings settings = liquid.WorldWater;
+                if (settings?.RadiantHeatRadius > 0f)
+                    sources.Add(new Source(new Vector2(x + 0.5f, y + 0.5f),
+                        settings.RadiantHeatRadius, settings.RadiantTargetTemperature));
+            }
+        }
+
+        public void AccumulateAtPoint(Vector2Int origin, Vector2 center, WorldTopologyBounds bounds,
+            float ambient, ref float strongestHeating, ref float strongestCooling)
+        {
+            foreach (Source source in sources)
+            {
+                Vector2 sourceCenter = (Vector2)origin + source.LocalCenter;
+                Vector2 delta = bounds.IsWrapped ? bounds.ShortestDelta(sourceCenter, center) : center - sourceCenter;
+                float weight = ThermalInfluenceRuntime.DistanceWeight(delta.sqrMagnitude, source.RadiusSquared);
+                ThermalInfluenceRuntime.Accumulate(ambient, source.Temperature, weight,
+                    ref strongestHeating, ref strongestCooling);
+            }
+        }
+
+        public void AccumulateChunk(Vector2Int sourceOrigin, Vector2Int targetOrigin, int width, int height,
+            WorldTopologyBounds bounds, Dictionary<float, float[]> weightsByTemperature)
+        {
+            foreach (Source source in sources)
+            {
+                if (!weightsByTemperature.TryGetValue(source.Temperature, out float[] weights))
+                {
+                    weights = new float[width * height];
+                    weightsByTemperature.Add(source.Temperature, weights);
+                }
+                Vector2 sourceCenter = (Vector2)sourceOrigin + source.LocalCenter;
+                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                {
+                    Vector2 center = new(targetOrigin.x + x + 0.5f, targetOrigin.y + y + 0.5f);
+                    Vector2 delta = bounds.IsWrapped ? bounds.ShortestDelta(sourceCenter, center) : center - sourceCenter;
+                    float weight = ThermalInfluenceRuntime.DistanceWeight(delta.sqrMagnitude, source.RadiusSquared);
+                    int index = y * width + x;
+                    if (weight > weights[index])
+                        weights[index] = weight;
+                }
+            }
+        }
+    }
+
+    #endregion
+
     #region 查询与重建
 
     public ReadOnlySpan<Influence> Sample(Vector2Int cell)
@@ -268,18 +388,8 @@ internal sealed class LiquidTemperatureField
     // 一次同步批次只验证一次邻区液体版本，单格查询继续实时验证。
     public ReadOnlySpan<Influence> GetChunkInfluences(Vector2Int origin)
     {
-        GameRes resources = GameRes.ExistingInstance;
-        if (chunkManager == null || resources == null)
+        if (!PrepareResources(out _))
             return ReadOnlySpan<Influence>.Empty;
-
-        // 液体配置原位重载后丢弃旧热量缓存，不长期订阅资源会话事件。
-        if (!ReferenceEquals(cachedResources, resources) ||
-            cachedResourceReloadVersion != resources.ResourceReloadVersion)
-        {
-            buckets.Clear();
-            cachedResources = resources;
-            cachedResourceReloadVersion = resources.ResourceReloadVersion;
-        }
 
         if (bounds.IsWrapped)
             origin = bounds.NormalizeChunkOrigin(origin);
@@ -295,6 +405,74 @@ internal sealed class LiquidTemperatureField
         }
 
         return bucket.Influences;
+    }
+
+    public void AccumulateAtPoint(Vector2Int cell, float ambient,
+        ref float strongestHeating, ref float strongestCooling)
+    {
+        using (PointMarker.Auto())
+        {
+            if (!PrepareResources(out GameRes resources))
+                return;
+            Vector2Int targetOrigin = ResolveChunkOrigin(cell);
+            if (buckets.TryGetValue(targetOrigin, out Bucket bucket))
+            {
+                if (DependenciesAreCurrent(bucket))
+                {
+                    // 已有完整有效权重时直接复用，冷查询才读取稀疏源。
+                    int index = (cell.y - targetOrigin.y) * width + cell.x - targetOrigin.x;
+                    Accumulate(bucket.Influences, index, ambient, ref strongestHeating, ref strongestCooling);
+                    return;
+                }
+                buckets.Remove(targetOrigin);
+            }
+            int radius = Mathf.CeilToInt(WorldLiquidSettings.MaximumRadiantHeatRadius);
+            int minX = Mathf.FloorToInt((float)(cell.x - radius) / width) * width;
+            int minY = Mathf.FloorToInt((float)(cell.y - radius) / height) * height;
+            int maxX = Mathf.FloorToInt((float)(cell.x + radius) / width) * width;
+            int maxY = Mathf.FloorToInt((float)(cell.y + radius) / height) * height;
+            Vector2 center = new(cell.x + 0.5f, cell.y + 0.5f);
+            pointOrigins.Clear();
+            for (int y = minY; y <= maxY; y += height)
+            for (int x = minX; x <= maxX; x += width)
+            {
+                Vector2Int origin = new(x, y);
+                if (bounds.IsWrapped)
+                    origin = bounds.NormalizeChunkOrigin(origin);
+                if (!pointOrigins.Add(origin))
+                    continue;
+                GetSources(origin, ResolveTerrain(origin), resources).AccumulateAtPoint(origin, center, bounds,
+                    ambient, ref strongestHeating, ref strongestCooling);
+            }
+        }
+    }
+
+    private bool PrepareResources(out GameRes resources)
+    {
+        resources = GameRes.ExistingInstance;
+        if (chunkManager == null || resources == null)
+            return false;
+        // 资源重载同时废弃源列表和目标块权重，下一次读取直接使用新定义。
+        if (!ReferenceEquals(cachedResources, resources) ||
+            cachedResourceReloadVersion != resources.ResourceReloadVersion)
+        {
+            buckets.Clear();
+            sourceChunks.Clear();
+            cachedResources = resources;
+            cachedResourceReloadVersion = resources.ResourceReloadVersion;
+        }
+        return true;
+    }
+
+    private SourceChunk GetSources(Vector2Int origin, ChunkTerrainData terrain, GameRes resources)
+    {
+        if (!sourceChunks.TryGetValue(origin, out SourceChunk source))
+        {
+            source = new SourceChunk();
+            sourceChunks.Add(origin, source);
+        }
+        source.Refresh(terrain, resources.LiquidDefinitions);
+        return source;
     }
 
     public static void Accumulate(ReadOnlySpan<Influence> influences, int index, float ambient,
@@ -342,52 +520,13 @@ internal sealed class LiquidTemperatureField
                 ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
                 bucket.Dependencies.Add(new Dependency(sourceOrigin, terrain));
                 if (terrain != null)
-                    AccumulateTerrain(targetOrigin, sourceOrigin, terrain, weightsByTemperature);
+                    GetSources(sourceOrigin, terrain, cachedResources).AccumulateChunk(sourceOrigin, targetOrigin,
+                        width, height, bounds, weightsByTemperature);
             }
             bucket.Influences = new Influence[weightsByTemperature.Count];
             int influenceIndex = 0;
             foreach (KeyValuePair<float, float[]> pair in weightsByTemperature)
                 bucket.Influences[influenceIndex++] = new Influence(pair.Key, pair.Value);
-        }
-    }
-
-    private void AccumulateTerrain(Vector2Int targetOrigin, Vector2Int sourceOrigin,
-        ChunkTerrainData terrain, Dictionary<float, float[]> weightsByTemperature)
-    {
-        GameRes resources = GameRes.ExistingInstance;
-        for (int sourceY = 0; sourceY < terrain.Height; sourceY++)
-        for (int sourceX = 0; sourceX < terrain.Width; sourceX++)
-        {
-            if (WorldLiquidSystem.GetSurfaceDepth(terrain, sourceX, sourceY) <= 0f ||
-                !resources.TryGetLiquidDefinition(terrain.GetLiquidId(sourceX, sourceY), out LiquidDefinition liquid))
-                continue;
-
-            WorldLiquidSettings settings = liquid.WorldWater;
-            if (settings == null || settings.RadiantHeatRadius <= 0f)
-                continue;
-
-            if (!weightsByTemperature.TryGetValue(settings.RadiantTargetTemperature, out float[] weights))
-            {
-                weights = new float[width * height];
-                weightsByTemperature.Add(settings.RadiantTargetTemperature, weights);
-            }
-            Vector2 sourceCenter = new(sourceOrigin.x + sourceX + 0.5f, sourceOrigin.y + sourceY + 0.5f);
-            float radiusSquared = settings.RadiantHeatRadius * settings.RadiantHeatRadius;
-            for (int targetY = 0; targetY < height; targetY++)
-            for (int targetX = 0; targetX < width; targetX++)
-            {
-                Vector2 targetCenter = new(targetOrigin.x + targetX + 0.5f, targetOrigin.y + targetY + 0.5f);
-                Vector2 delta = bounds.IsWrapped
-                    ? bounds.ShortestDelta(sourceCenter, targetCenter)
-                    : targetCenter - sourceCenter;
-                if (delta.sqrMagnitude >= radiusSquared)
-                    continue;
-
-                float weight = ThermalInfluenceRuntime.DistanceWeight(delta.sqrMagnitude, radiusSquared);
-                int index = targetY * width + targetX;
-                if (weight > weights[index])
-                    weights[index] = weight;
-            }
         }
     }
 

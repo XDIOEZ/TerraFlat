@@ -392,9 +392,21 @@ namespace FlatWorld.WorldModel
 
         private bool TryReadWind(Int2 region, out float3 wind)
         {
-            bool found = TryGetRegionSnapshot(region, out RegionalWeatherSnapshot snapshot);
-            wind = found ? new float3(snapshot.WindX, snapshot.WindY, snapshot.WindStrength) : float3.zero;
-            return found;
+            region = ResolveRegion(region);
+            if (replicaMode)
+            {
+                bool found = replicas.TryGetValue(region, out RegionalWeatherSnapshot snapshot);
+                wind = found ? new float3(snapshot.WindX, snapshot.WindY, snapshot.WindStrength) : float3.zero;
+                return found;
+            }
+            if (states.TryGetValue(region, out RegionalWeatherState state))
+            {
+                // 风采样只读风状态，不重复组装雨雪、雷电与剩余时长的整份天气快照。
+                wind = BuildWind(state);
+                return true;
+            }
+            wind = float3.zero;
+            return false;
         }
 
         private static int ResolveWindNeighbor(double position, int origin, int size, float halfWidth,
@@ -421,7 +433,7 @@ namespace FlatWorld.WorldModel
             else
             {
                 foreach (RegionalWeatherState state in states.Values)
-                    if (BuildSnapshot(state).WindStrength >= threshold) return true;
+                    if (ResolveWindStrength(state) >= threshold) return true;
             }
             return false;
         }
@@ -478,25 +490,10 @@ namespace FlatWorld.WorldModel
         private RegionalWeatherSnapshot BuildSnapshot(RegionalWeatherState state)
         {
             float precipitation = ActiveIntensity(state, WeatherElementIds.Rain);
-            float wind = ActiveIntensity(state, WeatherElementIds.Wind);
+            float3 wind = BuildWind(state);
             float thunder = ActiveIntensity(state, WeatherElementIds.Thunder);
             bool hasOverride = state.LastStepTime < state.ForcedElementsEndTime;
-            if (hasOverride && state.ForcedWindStrength >= 0f)
-                wind = state.ForcedWindStrength;
             ChunkWeatherClimate climate = state.Profile?.Climate ?? default;
-            float directionLength = Length(climate.WindX, climate.WindY);
-            float directionX, directionY;
-            if (directionLength > 0.00001f)
-            {
-                directionX = climate.WindX / directionLength;
-                directionY = climate.WindY / directionLength;
-            }
-            else
-            {
-                double angle = Random01(state.Region, 0L, WeatherElementIds.Wind) * Math.PI * 2d;
-                directionX = (float)Math.Cos(angle);
-                directionY = (float)Math.Sin(angle);
-            }
             bool snow = state.ForcedSnow || state.Profile != null &&
                 climate.TemperatureCelsius <= settings.FreezingTemperature;
             float remainingSeconds = 0f;
@@ -511,7 +508,7 @@ namespace FlatWorld.WorldModel
                 AirHumidity = climate.AirHumidity, HumidityDeficit = 0f, CoolingOffsetCelsius = 0f,
                 RainIntensity = snow ? 0f : precipitation, SnowIntensity = snow ? precipitation : 0f,
                 PrecipitationIntensity = precipitation,
-                WindX = directionX * wind, WindY = directionY * wind, WindStrength = wind,
+                WindX = wind.x, WindY = wind.y, WindStrength = wind.z,
                 CloudCoverage = hasOverride && state.ForcedCloudCoverage >= 0f
                     ? state.ForcedCloudCoverage : Math.Max(precipitation, thunder),
                 FogDensity = hasOverride && state.ForcedFogDensity >= 0f ? state.ForcedFogDensity : 0f,
@@ -520,6 +517,22 @@ namespace FlatWorld.WorldModel
                 RemainingSeconds = remainingSeconds,
                 Revision = state.Revision
             };
+        }
+
+        private static float ResolveWindStrength(RegionalWeatherState state)
+            => state.LastStepTime < state.ForcedElementsEndTime && state.ForcedWindStrength >= 0f
+                ? state.ForcedWindStrength : ActiveIntensity(state, WeatherElementIds.Wind);
+
+        private float3 BuildWind(RegionalWeatherState state)
+        {
+            float strength = ResolveWindStrength(state);
+            ChunkWeatherClimate climate = state.Profile?.Climate ?? default;
+            float directionLength = Length(climate.WindX, climate.WindY);
+            if (directionLength > 0.00001f)
+                return new float3(climate.WindX / directionLength * strength,
+                    climate.WindY / directionLength * strength, strength);
+            double angle = Random01(state.Region, 0L, WeatherElementIds.Wind) * Math.PI * 2d;
+            return new float3((float)Math.Cos(angle) * strength, (float)Math.Sin(angle) * strength, strength);
         }
         #endregion
 

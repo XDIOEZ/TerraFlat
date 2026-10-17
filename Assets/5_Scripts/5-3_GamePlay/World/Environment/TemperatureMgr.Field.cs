@@ -1,5 +1,6 @@
 using System;
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
@@ -22,6 +23,7 @@ public partial class TemperatureMgr
     private int fieldChunkWidth;
     private int fieldChunkHeight;
     private int fieldContextVersion;
+    private static readonly ProfilerMarker PointTemperatureMarker = new("FlatWorld.Temperature.SamplePoint");
 
     /// <summary>世界或维度切换时递增，显示任务据此丢弃旧世界尚未完成的采样。</summary>
     public int FieldContextVersion
@@ -182,11 +184,19 @@ public partial class TemperatureMgr
             !terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
             return false;
         climateBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
-        temperature = includeTransient
-            ? ComposeAmbientTemperature(position, baseline, y * terrain.Width + x,
-                localTemperatureField.Sample(cell),
-                liquidTemperatureField != null ? liquidTemperatureField.Sample(cell) : ReadOnlySpan<LiquidTemperatureField.Influence>.Empty)
-            : baseline + (includePlanetOffset ? fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f);
+        if (includeTransient)
+        {
+            using (PointTemperatureMarker.Auto())
+            {
+                float ambient = CalculateAmbientBaseline(position, baseline);
+                float heating = 0f, cooling = 0f;
+                localTemperatureField.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
+                liquidTemperatureField?.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
+                temperature = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
+            }
+        }
+        else
+            temperature = baseline + (includePlanetOffset ? fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature : 0f);
         return true;
     }
 
@@ -195,16 +205,21 @@ public partial class TemperatureMgr
         ReadOnlySpan<LocalTemperatureField.Influence> localSources,
         ReadOnlySpan<LiquidTemperatureField.Influence> liquidSources)
     {
-        float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(fieldBounds, position);
-        float physicalBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
-        float seasonOffset = seasonTiltOffsetAtPole * poleProximity +
-                             Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalTemperatureFactor;
-        float ambient = baseline + ambientFieldOffset + seasonOffset +
-                        (WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f);
+        float ambient = CalculateAmbientBaseline(position, baseline);
         float heating = 0f, cooling = 0f;
         LocalTemperatureField.Accumulate(localSources, index, ambient, ref heating, ref cooling);
         LiquidTemperatureField.Accumulate(liquidSources, index, ambient, ref heating, ref cooling);
         return ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
+    }
+
+    private float CalculateAmbientBaseline(Vector2 position, float baseline)
+    {
+        float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(fieldBounds, position);
+        float physicalBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
+        float seasonOffset = seasonTiltOffsetAtPole * poleProximity +
+                             Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalTemperatureFactor;
+        return baseline + ambientFieldOffset + seasonOffset +
+               (WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f);
     }
 
     #endregion
