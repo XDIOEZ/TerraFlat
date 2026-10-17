@@ -13,7 +13,9 @@ using FlatWorld.WorldModel;
 using MemoryPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
 
@@ -42,6 +44,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/navigation_policy", ServiceNavigationPolicy);
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
+        operations.Add("ui_settings/dropdown_layout", ServiceDropdownLayout);
         operations.Add("audio/bus_volume", ServiceAudioVolume);
         operations.Add("audio/catalog_lifecycle", ServiceAudioCatalog);
         operations.Add("audio/footstep_surface", ServiceFootstepSurface);
@@ -672,6 +675,147 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
+    #region 下拉列表正式控件采样
+
+    private static JObject ServiceDropdownLayout(JObject args)
+    {
+        string kind = Text(args, "kind", "tmp");
+        if (kind != "tmp" && kind != "legacy")
+            throw new ArgumentException("未知的下拉控件类型：" + kind);
+        JArray counts = args["counts"] as JArray ?? new JArray((int)Number(args, "count", 3));
+        if (counts.Count == 0 || counts.Count > 16)
+            throw new ArgumentException("下拉夹具必须提供 1 至 16 次展开的选项数量。");
+        foreach (JToken count in counts)
+            if (count.Type != JTokenType.Integer || count.Value<int>() < 1 || count.Value<int>() > 32)
+                throw new ArgumentException("下拉夹具选项数量必须为 1 至 32 的整数。");
+
+        EventSystem originalEvents = EventSystem.current;
+        GameObject originalSelection = originalEvents != null ? originalEvents.currentSelectedGameObject : null;
+        var root = new GameObject("[LuaDropdownProbe]", typeof(RectTransform));
+        root.SetActive(false);
+        root.hideFlags = HideFlags.HideAndDontSave;
+        var result = new JObject { ["kind"] = kind, ["samples"] = new JArray() };
+        try
+        {
+            Canvas canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.enabled = false;
+            ((RectTransform)root.transform).sizeDelta = new Vector2(4096f, 4096f);
+            RectTransform eventsRoot = ServiceDropdownRect("EventSystem", root.transform);
+            EventSystem probeEvents = eventsRoot.gameObject.AddComponent<GameplayTestDropdownEventSystem>();
+            RectTransform control = ServiceDropdownRect("Control", root.transform);
+            control.sizeDelta = new Vector2(240f, 64f);
+            RectTransform template = ServiceDropdownRect("Template", control);
+            template.gameObject.SetActive(false);
+            template.anchorMin = Vector2.zero;
+            template.anchorMax = new Vector2(1f, 0f);
+            template.pivot = new Vector2(0.5f, 1f);
+            template.sizeDelta = new Vector2(0f, 360f);
+            ItemStepScrollRect scroll = template.gameObject.AddComponent<ItemStepScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.inertia = false;
+            RectTransform viewport = ServiceDropdownRect("Viewport", template);
+            viewport.anchorMin = Vector2.zero;
+            viewport.anchorMax = Vector2.one;
+            viewport.offsetMin = new Vector2(3f, 3f);
+            viewport.offsetMax = new Vector2(-3f, -3f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            RectTransform content = ServiceDropdownRect("Content", viewport);
+            content.gameObject.AddComponent<VerticalLayoutGroup>();
+            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            RectTransform item = ServiceDropdownRect("Item", content);
+            item.sizeDelta = new Vector2(100f, 100f);
+            item.gameObject.AddComponent<Toggle>();
+            item.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
+            scroll.viewport = viewport;
+            scroll.content = content;
+            TMP_Dropdown tmp = kind == "tmp" ? control.gameObject.AddComponent<GameplayTestTmpDropdownControl>() : null;
+            Dropdown legacy = kind == "legacy" ? control.gameObject.AddComponent<GameplayTestLegacyDropdownControl>() : null;
+            if (tmp != null) tmp.template = template;
+            if (legacy != null) legacy.template = template;
+            DropdownListLayout.EnsureFor(template);
+            DropdownListLayout.EnsureFor(template);
+            root.SetActive(true);
+            // 独立事件系统接收原生 Show 的选择事件，当前界面的焦点从始至终留在原事件系统中。
+            EventSystem.current = probeEvents;
+            if (tmp is GameplayTestTmpDropdownControl tmpControl) tmpControl.InitializeForRules();
+            if (legacy is GameplayTestLegacyDropdownControl legacyControl) legacyControl.InitializeForRules();
+            foreach (JToken count in counts)
+            {
+                control.gameObject.SetActive(false);
+                var labels = new List<string>();
+                for (int index = 0; index < count.Value<int>(); index++) labels.Add("Option " + index);
+                if (tmp != null) { tmp.ClearOptions(); tmp.AddOptions(labels); }
+                if (legacy != null) { legacy.ClearOptions(); legacy.AddOptions(labels); }
+                control.gameObject.SetActive(true);
+                // 编辑态不依赖普通 MonoBehaviour 回调，显式调用正式准备入口后仍由原生 Show 创建列表。
+                template.GetComponent<DropdownListLayout>().PrepareForOpen();
+                if (tmp != null) tmp.Show(); else legacy.Show();
+                Transform popup = control.Find("Dropdown List");
+                if (popup == null) throw new InvalidOperationException("正式下拉 Show 没有创建列表。");
+                ScrollRect actualScroll = popup.GetComponent<ScrollRect>();
+                actualScroll.Rebuild(CanvasUpdate.Prelayout);
+                actualScroll.Rebuild(CanvasUpdate.PostLayout);
+                actualScroll.verticalNormalizedPosition = 1f;
+                Toggle[] rows = actualScroll.content.GetComponentsInChildren<Toggle>(false);
+                if (rows.Length == 0) throw new InvalidOperationException("正式下拉没有生成活动选项。");
+                RectTransform first = (RectTransform)rows[0].transform;
+                RectTransform last = (RectTransform)rows[rows.Length - 1].transform;
+                bool allRowsSameHeight = true;
+                foreach (Toggle row in rows)
+                    allRowsSameHeight &= Mathf.Abs(((RectTransform)row.transform).rect.height - first.rect.height) < 0.01f;
+                var sample = new JObject
+                {
+                    ["optionCount"] = count.Value<int>(), ["activeItemCount"] = rows.Length,
+                    ["rowHeight"] = first.rect.height, ["allRowsSameHeight"] = allRowsSameHeight,
+                    ["viewportHeight"] = actualScroll.viewport.rect.height,
+                    ["contentHeight"] = actualScroll.content.rect.height,
+                    ["firstFullyVisible"] = ServiceDropdownContains(actualScroll.viewport, first),
+                    ["lastInitiallyVisible"] = ServiceDropdownContains(actualScroll.viewport, last),
+                    ["layoutDisabled"] = !actualScroll.content.GetComponent<VerticalLayoutGroup>().enabled,
+                    ["fitterDisabled"] = !actualScroll.content.GetComponent<ContentSizeFitter>().enabled
+                };
+                actualScroll.verticalNormalizedPosition = 0f;
+                sample["lastVisibleAtBottom"] = ServiceDropdownContains(actualScroll.viewport, last);
+                ((JArray)result["samples"]).Add(sample);
+            }
+            result["layoutComponentCount"] = template.GetComponents<DropdownListLayout>().Length;
+        }
+        finally
+        {
+            try
+            {
+                root.SetActive(false);
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+            finally { if (originalEvents != null) EventSystem.current = originalEvents; }
+        }
+        result["originalSelectionPreserved"] = originalEvents == null || originalEvents.currentSelectedGameObject == originalSelection;
+        return result;
+    }
+
+    private static RectTransform ServiceDropdownRect(string name, Transform parent)
+    {
+        var child = new GameObject(name, typeof(RectTransform));
+        child.transform.SetParent(parent, false);
+        return (RectTransform)child.transform;
+    }
+
+    private static bool ServiceDropdownContains(RectTransform viewport, RectTransform item)
+    {
+        var corners = new Vector3[4];
+        item.GetWorldCorners(corners);
+        foreach (Vector3 corner in corners)
+        {
+            float y = viewport.InverseTransformPoint(corner).y;
+            if (y < viewport.rect.yMin - 0.01f || y > viewport.rect.yMax + 0.01f) return false;
+        }
+        return true;
+    }
+
+    #endregion
+
     private static JObject ServiceLocalizationIdentity(JObject args)
     {
         string tag = Text(args, "tag", "resource.wood");
@@ -760,3 +904,33 @@ public static partial class GameplayTestSystemProbe
 
     #endregion
 }
+
+/// <summary>同步规则只补齐原生下拉的 Start，并立即清理独立弹出对象。</summary>
+[AddComponentMenu("")]
+public sealed class GameplayTestTmpDropdownControl : TMP_Dropdown
+{
+    #region 独立夹具生命周期
+
+    public void InitializeForRules() { alphaFadeSpeed = 0f; base.Start(); }
+    protected override void DestroyDropdownList(GameObject dropdownList) => DestroyImmediate(dropdownList);
+    protected override void DestroyBlocker(GameObject blocker) => DestroyImmediate(blocker);
+
+    #endregion
+}
+
+/// <summary>Legacy 下拉复用正式 Show，仅把编辑态收尾改为同步销毁。</summary>
+[AddComponentMenu("")]
+public sealed class GameplayTestLegacyDropdownControl : Dropdown
+{
+    #region 独立夹具生命周期
+
+    public void InitializeForRules() { alphaFadeSpeed = 0f; base.Start(); }
+    protected override void DestroyDropdownList(GameObject dropdownList) => DestroyImmediate(dropdownList);
+    protected override void DestroyBlocker(GameObject blocker) => DestroyImmediate(blocker);
+
+    #endregion
+}
+
+/// <summary>无输入模块的临时事件系统只承接独立控件的选择事件。</summary>
+[ExecuteAlways, AddComponentMenu("")]
+public sealed class GameplayTestDropdownEventSystem : EventSystem { }

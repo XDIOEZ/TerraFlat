@@ -292,6 +292,11 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         if (component == null)
             return;
 
+        if (component is TMP_Dropdown dropdown)
+            DropdownListLayout.EnsureFor(dropdown.template);
+        if (component is Dropdown legacyDropdown)
+            DropdownListLayout.EnsureFor(legacyDropdown.template);
+
         if (component is Button button)
         {
             cachedButtons.Add(button);

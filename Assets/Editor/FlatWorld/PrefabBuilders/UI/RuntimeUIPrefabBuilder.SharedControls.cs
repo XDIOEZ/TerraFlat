@@ -183,7 +183,7 @@ public static partial class RuntimeUIPrefabBuilder
             dropdown.itemText.text = string.Empty;
             dropdown.itemText.transform.parent.GetComponent<LayoutElement>().preferredHeight = 60f;
             ((RectTransform)dropdown.itemText.transform.parent).sizeDelta = new Vector2(0f, 60f);
-            dropdown.template.sizeDelta = new Vector2(0f, 360f);
+            dropdown.template.sizeDelta = new Vector2(0f, DropdownListLayout.MaxVisibleItems * 60f);
         }
     }
 

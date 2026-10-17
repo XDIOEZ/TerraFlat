@@ -4106,15 +4106,15 @@ public static partial class RuntimeUIPrefabBuilder
         templateRect.anchorMax = new Vector2(1f, 0f);
         templateRect.pivot = new Vector2(0.5f, 1f);
         templateRect.anchoredPosition = new Vector2(0f, -3f);
-        templateRect.sizeDelta = new Vector2(0f, 224f);
+        templateRect.sizeDelta = new Vector2(0f, DropdownListLayout.MaxVisibleItems * 31f);
         template.GetComponent<Image>().color = Surface;
         AddOutline(template.GetComponent<Image>(), Border);
 
         GameObject viewport = CreateUIObject("Viewport", template.transform, typeof(RectMask2D));
         RectTransform viewportRect = viewport.GetComponent<RectTransform>();
         Stretch(viewportRect);
-        viewportRect.offsetMin = new Vector2(3f, 3f);
-        viewportRect.offsetMax = new Vector2(-3f, -3f);
+        viewportRect.offsetMin = new Vector2(3f, 0f);
+        viewportRect.offsetMax = new Vector2(-3f, 0f);
 
         GameObject content = CreateUIObject("Content", viewport.transform);
         RectTransform contentRect = content.GetComponent<RectTransform>();
@@ -4122,12 +4122,6 @@ public static partial class RuntimeUIPrefabBuilder
         contentRect.anchorMax = new Vector2(1f, 1f);
         contentRect.pivot = new Vector2(0.5f, 1f);
         contentRect.sizeDelta = Vector2.zero;
-        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
-        contentLayout.childControlWidth = true;
-        contentLayout.childControlHeight = true;
-        contentLayout.childForceExpandWidth = true;
-        contentLayout.childForceExpandHeight = false;
-        content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         GameObject item = CreateUIObject("Item", content.transform, typeof(Image), typeof(Toggle));
         RectTransform itemRect = item.GetComponent<RectTransform>();
@@ -4162,6 +4156,7 @@ public static partial class RuntimeUIPrefabBuilder
         dropdown.template = templateRect;
         dropdown.itemText = itemLabel;
         template.SetActive(false);
+        DropdownListLayout.EnsureFor(templateRect);
         return dropdown;
     }
 
@@ -4179,7 +4174,7 @@ public static partial class RuntimeUIPrefabBuilder
         RectTransform itemRect = item as RectTransform;
         if (itemRect != null)
             itemRect.sizeDelta = new Vector2(itemRect.sizeDelta.x, 60f);
-        dropdown.template.sizeDelta = new Vector2(0f, 360f);
+        dropdown.template.sizeDelta = new Vector2(0f, DropdownListLayout.MaxVisibleItems * 60f);
     }
 
     private static void CreateDifficultyOption(Transform parent, GameDifficultyDefinition definition, bool selected)
