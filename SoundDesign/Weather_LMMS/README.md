@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | `weather.rain.loop` | `Assets/Audio/Generated/weather.rain.loop__01.wav` | 31.7 秒；轻薄雨幕、弱化持续溅水底噪，约每秒 3.9 次的不规则雨滴 |
 | `weather.wind.loop` | `Assets/Audio/Generated/weather.wind.loop__01.wav` | 43.7 秒；低频风体、较亮的空气与枝叶层，缓慢变化的阵风 |
+| `weather.wind.gale.loop` | `Assets/Audio/Generated/weather.wind.gale.loop__01.wav` | 49 秒；CC0 呼啸风实录、低频湍流风体、高处啸声与两组不规则阵风自动化，8 级起切换 |
 | `weather.thunder` | `Assets/Audio/Generated/weather.thunder__01.wav` 至 `__03.wav` | 17、17、23 秒单声道；真实近处炸雷与滚雷 |
 | `weather.thunder.far` | `Assets/Audio/Generated/weather.thunder.far__01.wav` 至 `__03.wav` | 18.2、23、23 秒单声道；真实远处滚雷 |
 
@@ -32,3 +33,9 @@ python SoundDesign/Weather_LMMS/process_weather.py finalize --only-thunder
 游戏接入在 `WeatherMgr.Audio.cs`：雨风按本地强度平滑调音量，64 格内选近雷，64–192 格选远雷。雷声位置与雷光共用事件落点，传播延迟为最短环绕距离 / 64 秒；两组 Cue 均完整空间混音，8 格内不衰减，之后线性衰减至 192 格静音。播放期间每帧用 `WorldLocalPresentation.ProjectPosition` 映射落点，再用通用 `AudioService.SetWorldPosition` 更新，避免地图边界造成方位跳错。所有天气声走 Ambient 音量；读档不补播旧雷，退出世界或抑制天气的维度清理循环、等待和活动雷声。
 
 素材生成时只核对文件格式、电平和资源引用；实际音色、雨风过渡、循环听感、雷声与闪电的配合由玩家在游戏中验收。
+
+狂风工程为 `Weather_Wind_Gale.mmp`：LMMS MCP 创建三层音轨、编排 54 秒采样和持续风声、两组音量自动化，再由 LMMS 1.2.2 渲染为 48 kHz WAV。实录来自 juryduty 的 [howling_wind.wav](https://freesound.org/people/juryduty/sounds/185070/)，原页面核对 CC0 1.0；使用公开 HQ MP3 预览，保留裁切后的 `Sources/gale_howling_01.wav`。另两层由 TripleOscillator 白噪声分别经过 260 Hz 低通与 1050 Hz 共振带通，形成低沉持续阵风和较高的风啸。LMMS 中的动态处理和软尖峰处理控制突然的峰值；新增工程使用 LMMS 1.2.2 正式读取的 `fxmixer/fxchannel` 标签，采样轨保留自己的效果链。
+
+重做狂风时先运行 `python SoundDesign/Weather_LMMS/process_gale.py prepare` 重建实录采样（需 numpy、scipy、soundfile，沿用 `.codex-tmp/audio-python` 时会自动载入）；移动项目后运行同脚本 `relink`。通过 MCP `load_project` 加载工程，再调用 `render_project` 输出 `renders/Weather_Wind_Gale_raw.wav`（48 kHz WAV），最后运行 `python SoundDesign/Weather_LMMS/process_gale.py finalize`，只写狂风 WAV、首次导入 meta 与独立 `gale_manifest.json`。脚本取母带 2～52 秒并做 1 秒等功率接缝，得到 49 秒立体声 PCM16；沿用普通风的 -17 dBFS RMS 目标和 -5 dBFS 峰值上限，最终实际 RMS 受峰值上限约束，准确值见清单。现有普通风、雨声和雷声均不覆盖。
+
+狂风来源、下载散列、使用方式和成品/Cue 对应保存在 `gale_sources.json`，总索引为 `sources.json`；可随游戏发布的作者致谢在 `CREDITS.md`。运行时复用正式风级：0～7 级保持普通风，8 级起在 0.8 秒内交叉换为狂风；音量仍沿用现有风声强度曲线。`Generated/weather.wind.gale.loop__01.wav` 遵循 Catalog 自动扫描命名，重新构建 Catalog 会保留其 Ambient 循环、零冷却和单实例设置。

@@ -1,12 +1,14 @@
 # 音频
 
+2026-10-18 新增八级狂风切换（本轮未编译或运行）：`audio/wind_sequence` 直接连续采样正式 `WeatherMgr.WindAudioState`，覆盖 0.5 起声阈值、7/8/9/10 级、越界、原 0.4 满风音量曲线、0.8 秒双路交叉淡化、短暂反向续接、初进强风时不先响普通风、三秒风强过渡、停风归零与 Reset 清理。正式入口以本机玩家位置读取 `TryGetWeatherAt` 的混合风场；音色按实际完整风级选择，响度独立平滑同一玩家风强，不跟随相机跨区漂移。规则不创建 AudioService 或声源，不证明 Cue 实际播放、句柄回收时序或主观听感；由用户在编译后试听 7→8→9→7 级及退出世界。
+
 2026-10-17 新增篝火燃烧循环资源回归（本轮未运行）：`audio/voice_lifecycle` 读取正式 Bonfire 炉体的 `burningLoopCueId`、目录 Cue 和实际导入的 Clip，Lua 检查 `fire.burning.loop`、20 秒/48kHz/单声道、SFX 总线、循环/零冷却及 1.5～14 格线性衰减。此断言不覆盖真实篝火的点燃/熄灭、添柴、卸载或声音听感；这些由用户在退出当前 PlayMode、编译后验收。
 
 2026-10-17 新增启动预热回归（本轮未运行）：正式音频现场在已有服务上重复调用 PreloadAsync，检查实例、目录和用户设置不被替换，并检查 ui.click 的音频数据已预加载。此断言覆盖幂等及就绪状态，不证明冷启动耗时、首次主菜单点击听感或磁盘冷缓存峰值。
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、wind_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 

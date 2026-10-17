@@ -38,4 +38,4 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - 取放音索引按操作、材质、重量 kg、体积 L 选择；重量/体积按实际转移数量独立划档，背包/箱子区分接触音色。拿起在点击取物或开始拖拽时播放一次，放入跟随成功事务；候选索引与运行时 Cue 接入独立。
 - 服务直接实现 `ISettingsProvider`，经 `SettingsProviderRegistry` 暴露音量/静音；`FlatWorld.Audio` 只依赖 Data 设置契约。六路滑块使用 `UI_SliderControl`，绑定名为 `MasterVolume/MusicVolume/SfxVolume/UIVolume/AmbientVolume/VoiceVolume` 及对应 `_数值`。
 - `AudioService.SetVolumeScale` 调整调用方音量，保留 Cue 随机增益、淡入淡出与用户设置；`SetWorldPosition` 更新非附着空间声源。`WeatherMgr.Audio` 管雨风循环及雷声落点/近远选音/延迟，并通过 `GetLightningDistanceAttenuation` 让雷光共用当前雷声 Cue 的距离与线性衰减，通用服务不识别天气和拓扑；近远雷 Cue 均完整空间混音、线性衰减 8–192 格，使用单声道真实录音，来源见 `SoundDesign/Weather_LMMS/sources.json`。LMMS 雨声不再由默认生成器覆盖。
-- 风声仅在表现风力超过 `0.5` 后逐渐出现，剩余强度重映射到 0～1 后走 1.5 次方音量曲线；满风调用方音量为 `0.4`，阈值只影响声音。
+- 风声以本机玩家位置读取正式混合风场，实际完整风级复用 `WindEnvironmentRules.ResolveWindLevel`：0～7 级为 `weather.wind.loop`，8 级起为 `weather.wind.gale.loop`，两路按 0.8 秒交叉淡化，失效路回收，退出/禁用天气同时停止。`WindAudioState` 独立平滑同一玩家风强，沿用天气过渡时长、超过 `0.5` 才起声、1.5 次方曲线和满风调用方音量 `0.4`，不受相机跨风区影响；Lua `audio/wind_sequence` 采样边界、续接和重置，阈值只影响声音。

@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.0" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="70" masterpitch="0" />
+  <song>
+    <trackcontainer type="song" visible="1" width="600" height="300" x="5" y="5" maximized="0" minimized="0">
+      <track muted="0" type="2" name="Gale - real storm howl and surging air" solo="0">
+        <sampletrack pan="0" vol="95">
+          <fxchain numofeffects="2" enabled="1">
+            <effect on="1" wet="1.0" autoquit="1" autoquit_denominator="4" autoquit_numerator="4" syncmode="0" name="dynamicsprocessor">
+              <dynamicsprocessor_controls inputGain="1" outputGain="2" attack="1" release="300" stereoMode="0" waveShape="CtejOwrXIzyPwnU8TSiCPAYZiDztJo08UpKRPPqClTxPE5k81FWcPAtYnzwhJKI89sGkPMM3pzyLiqk8Z76rPLzWrTxl1q88zL+xPAKVszzPV7U8wQm3PDGsuDxSQLo8Mse7PMFBvTzXsL48NRXAPIhvwTxuwMI8dgjEPCJIxTzpf8Y8OLDHPHPZyDz2+8k8FxjLPCMuzDxkPs08HknOPJBOzzz0TtA8gkrRPGxB0jzkM9M8FSLUPCwM1TxO8tU8o9TWPE2z1zxvjtg8J2bZPJU62jzTC9s8/tnbPC6l3Dx9bd08ATPePND13jz/td88o3PgPM8u4TyT5+E8A57iPC9S4zwnBOQ8+rPkPLZh5TxqDeY8JLfmPO9e5zzaBOg876joPDpL6TzG6+k8n4rqPM0n6zxcw+s8VF3sPL/17DymjO08ESLuPAm27jyVSO88vtnvPItp8DwD+PA8LYXxPBAR8jyym/I8GyXzPE+t8zxWNPQ8NLr0PPA+9TyPwvU8F0X2PIzG9jzzRvc8Usb3PK5E+DwKwvg8az75PNa5+TxPNPo82a36PHom+zw1nvs8DhX8PAiL/DwnAP08b3T9POPn/TyHWv48Xcz+PGk9/zyvrf88mA4APflFAD36fAA9nrMAPeXpAD3SHwE9ZVUBPaCKAT2FvwE9E/QBPU0oAj00XAI9yI8CPQzDAj3/9QI9pCgDPftaAz0GjQM9xL4DPTjwAz1iIQQ9RFIEPd6CBD0wswQ9PeMEPQUTBT2IQgU9yHEFPcagBT2CzwU9/P0FPTcsBj0yWgY974cGPW61Bj2w4gY9tQ8HPX48Bz0NaQc9YZUHPXzBBz1d7Qc9BhkIPXhECD2ybwg9tpoIPYPFCD0c8Ag9gBoJPa9ECT2rbgk9dJgJPQrCCT1v6wk9ohQKPaQ9Cj11Zgo9F48KPYm3Cj3M3wo94QcLPcgvCz2BVws9DX8LPW2mCz2gzQs9p/QLPYMbDD01Qgw9u2gMPRiPDD1LtQw9VNsMPTUBDT3tJg09fUwNPeVxDT0mlw09QLwNPTPhDT3/BQ49pioOPSdPDj0=" />
+            </effect>
+            <effect on="1" wet="1" autoquit="1" name="waveshaper">
+              <waveshaper_controls inputGain="1" outputGain="1" clipInput="0" waveShape="yKSjO94OIzzGI3M83cOgPJLexjyGqus8T3wHPV1RGD3yRSg9G1A3PStqRT1cklI9YspePekWaj0Qf3Q96At+Pftjgz1mX4c9S/6KPe1Gjj2PP5E9Xu6TPVlZlj1Ahpg9iHqaPVQ7nD1zzZ09WDWfPSF3oD2WlqE9LJeiPQx8oz0RSKQ91f2kPbGfpT3CL6Y98K+mPfEhpz1Ph6c9aeGnPXsxqD2feKg90LeoPfDvqD3HIak9B06pPVB1qT0vmKk9I7epPZvSqT386qk9ngCqPdATqj3YJKo99TOqPV1Bqj1CTao90FeqPSxhqj16aao92HCqPWF3qj0tfao9UYKqPeGGqj3siqo9g46qPbKRqj2FlKo9BpeqPT6Zqj02m6o99pyqPYKeqj3in6o9GqGqPS+iqj0lo6o9/6OqPcCkqj1rpao9A6aqPYqmqj0Bp6o9a6eqPcmnqj0dqKo9Z6iqPaioqj3iqKo9FqmqPUSpqj1sqao9kKmqPbCpqj3Nqao95qmqPfypqj0Qqqo9IaqqPTGqqj0/qqo9S6qqPVaqqj1fqqo9aKqqPW+qqj12qqo9fKqqPYGqqj2Gqqo9iqqqPY6qqj2Rqqo9lKqqPZeqqj2Zqqo9m6qqPZ2qqj2eqqo9oKqqPaGqqj2iqqo9o6qqPaSqqj2lqqo9paqqPaaqqj2mqqo9p6qqPaeqqj2oqqo9qKqqPaiqqj2pqqo9qaqqPamqqj2pqqo9qaqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj0=" />
+            </effect>
+          </fxchain>
+        </sampletrack>
+        <sampleclip pos="0" len="5184" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Weather_LMMS/Sources/gale_howling_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="0" name="Gale - deep turbulent gust body" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
+          </instrument>
+          <eldata fres="0.75" ftype="0" fcut="260" fwet="1">
+            <elvol pdel="0" att="0.15" hold="0" dec="0.1" rel="0.15" sustain="1" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0" hold="0" dec="0.1" rel="0.15" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0" hold="0" dec="0.1" rel="0.15" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+          <vol id="10001" value="55" scale_type="linear" />
+        </instrumenttrack>
+        <pattern len="5184" muted="0" name="Gale - deep turbulent gust body" steps="16" pos="0" type="1">
+          <note len="5184" key="57" vol="88" pos="0" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="0" name="Gale - upper whistling gusts" solo="0">
+        <instrumenttrack pan="0" mixch="0" usemasterpitch="1" pitchrange="1" pitch="0" basenote="57">
+          <instrument name="tripleoscillator">
+            <tripleoscillator vol0="100" wavetype0="6" coarse0="0" finel0="0" finer0="0" pan0="0" phoffset0="0" stphdetun0="0" modalgo1="2" vol1="0" wavetype1="6" coarse1="0" finel1="0" finer1="0" pan1="0" phoffset1="0" stphdetun1="0" modalgo2="2" vol2="0" wavetype2="6" coarse2="0" finel2="0" finer2="0" pan2="0" phoffset2="0" stphdetun2="0" modalgo3="2" />
+          </instrument>
+          <eldata fres="2.8" ftype="2" fcut="1050" fwet="1">
+            <elvol pdel="0" att="0.15" hold="0" dec="0.1" rel="0.15" sustain="1" amt="1" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elcut pdel="0" att="0" hold="0" dec="0.1" rel="0.15" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+            <elres pdel="0" att="0" hold="0" dec="0.1" rel="0.15" sustain="0" amt="0" lamt="0" lspd="0.1" lshp="0" lpdel="0" latt="0" x100="0" ctlenvamt="0" />
+          </eldata>
+          <chordcreator chord="0" chordrange="1" chord-enabled="0" />
+          <arpeggiator arp="0" arp-enabled="0" arpcenter="0" arpdir="0" arprange="1" arpspeed="4" arpType="0" />
+          <midiport inputcontroller="0" fixedoutputvelocity="-1" inputchannel="0" outputcontroller="0" writable="0" outputchannel="1" fixedinputvelocity="-1" fixedoutputnote="-1" outputprogram="1" basevelocity="63" readable="0" />
+          <fxchain numofeffects="0" enabled="0" />
+          <vol id="10002" value="11" scale_type="linear" />
+        </instrumenttrack>
+        <pattern len="5184" muted="0" name="Gale - upper whistling gusts" steps="16" pos="0" type="1">
+          <note len="5184" key="57" vol="90" pos="0" pan="0" />
+        </pattern>
+      </track>
+      <track muted="0" type="5" name="Gale low gusts - irregular surges" solo="0">
+        <automationtrack />
+        <automationpattern pos="0" len="5185" name="Gale low gusts - irregular surges" prog="1" tens="1.0" mute="0" off="0" autoresize="1">
+          <time pos="0" value="67.5" outValue="67.5" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="307" value="90.0" outValue="90.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="653" value="114.0" outValue="114.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="902" value="63.0" outValue="63.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1325" value="102.0" outValue="102.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1594" value="126.0" outValue="126.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2016" value="75.0" outValue="75.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2323" value="115.5" outValue="115.5" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2630" value="87.0" outValue="87.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2995" value="130.5" outValue="130.5" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3341" value="78.0" outValue="78.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3802" value="112.5" outValue="112.5" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="4070" value="66.0" outValue="66.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="4493" value="121.5" outValue="121.5" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="4800" value="90.0" outValue="90.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="5184" value="67.5" outValue="67.5" inTan="0" outTan="0" lockedTan="0" />
+          <object id="10001" />
+        </automationpattern>
+      </track>
+      <track muted="0" type="5" name="Gale whistle follows rushing gusts" solo="0">
+        <automationtrack />
+        <automationpattern pos="0" len="5185" name="Gale whistle follows rushing gusts" prog="1" tens="1.0" mute="0" off="0" autoresize="1">
+          <time pos="0" value="4.0" outValue="4.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="422" value="10.0" outValue="10.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="749" value="18.0" outValue="18.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1037" value="5.0" outValue="5.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1363" value="11.0" outValue="11.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="1709" value="20.0" outValue="20.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2112" value="6.0" outValue="6.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2438" value="16.0" outValue="16.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="2746" value="8.0" outValue="8.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3149" value="23.0" outValue="23.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3494" value="7.0" outValue="7.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="3917" value="17.0" outValue="17.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="4224" value="5.0" outValue="5.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="4608" value="19.0" outValue="19.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="4954" value="10.0" outValue="10.0" inTan="0" outTan="0" lockedTan="0" />
+          <time pos="5184" value="4.0" outValue="4.0" inTan="0" outTan="0" lockedTan="0" />
+          <object id="10002" />
+        </automationpattern>
+      </track>
+    </trackcontainer>
+    <fxmixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <fxchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="2" enabled="1">
+          <effect on="1" wet="1.0" autoquit="1" autoquit_denominator="4" autoquit_numerator="4" syncmode="0" name="dynamicsprocessor">
+            <dynamicsprocessor_controls inputGain="1" outputGain="2" attack="1" release="300" stereoMode="0" waveShape="CtejOwrXIzyPwnU8TSiCPAYZiDztJo08UpKRPPqClTxPE5k81FWcPAtYnzwhJKI89sGkPMM3pzyLiqk8Z76rPLzWrTxl1q88zL+xPAKVszzPV7U8wQm3PDGsuDxSQLo8Mse7PMFBvTzXsL48NRXAPIhvwTxuwMI8dgjEPCJIxTzpf8Y8OLDHPHPZyDz2+8k8FxjLPCMuzDxkPs08HknOPJBOzzz0TtA8gkrRPGxB0jzkM9M8FSLUPCwM1TxO8tU8o9TWPE2z1zxvjtg8J2bZPJU62jzTC9s8/tnbPC6l3Dx9bd08ATPePND13jz/td88o3PgPM8u4TyT5+E8A57iPC9S4zwnBOQ8+rPkPLZh5TxqDeY8JLfmPO9e5zzaBOg876joPDpL6TzG6+k8n4rqPM0n6zxcw+s8VF3sPL/17DymjO08ESLuPAm27jyVSO88vtnvPItp8DwD+PA8LYXxPBAR8jyym/I8GyXzPE+t8zxWNPQ8NLr0PPA+9TyPwvU8F0X2PIzG9jzzRvc8Usb3PK5E+DwKwvg8az75PNa5+TxPNPo82a36PHom+zw1nvs8DhX8PAiL/DwnAP08b3T9POPn/TyHWv48Xcz+PGk9/zyvrf88mA4APflFAD36fAA9nrMAPeXpAD3SHwE9ZVUBPaCKAT2FvwE9E/QBPU0oAj00XAI9yI8CPQzDAj3/9QI9pCgDPftaAz0GjQM9xL4DPTjwAz1iIQQ9RFIEPd6CBD0wswQ9PeMEPQUTBT2IQgU9yHEFPcagBT2CzwU9/P0FPTcsBj0yWgY974cGPW61Bj2w4gY9tQ8HPX48Bz0NaQc9YZUHPXzBBz1d7Qc9BhkIPXhECD2ybwg9tpoIPYPFCD0c8Ag9gBoJPa9ECT2rbgk9dJgJPQrCCT1v6wk9ohQKPaQ9Cj11Zgo9F48KPYm3Cj3M3wo94QcLPcgvCz2BVws9DX8LPW2mCz2gzQs9p/QLPYMbDD01Qgw9u2gMPRiPDD1LtQw9VNsMPTUBDT3tJg09fUwNPeVxDT0mlw09QLwNPTPhDT3/BQ49pioOPSdPDj0=" />
+          </effect>
+          <effect on="1" wet="1" autoquit="1" name="waveshaper">
+            <waveshaper_controls inputGain="1" outputGain="1" clipInput="0" waveShape="yKSjO94OIzzGI3M83cOgPJLexjyGqus8T3wHPV1RGD3yRSg9G1A3PStqRT1cklI9YspePekWaj0Qf3Q96At+Pftjgz1mX4c9S/6KPe1Gjj2PP5E9Xu6TPVlZlj1Ahpg9iHqaPVQ7nD1zzZ09WDWfPSF3oD2WlqE9LJeiPQx8oz0RSKQ91f2kPbGfpT3CL6Y98K+mPfEhpz1Ph6c9aeGnPXsxqD2feKg90LeoPfDvqD3HIak9B06pPVB1qT0vmKk9I7epPZvSqT386qk9ngCqPdATqj3YJKo99TOqPV1Bqj1CTao90FeqPSxhqj16aao92HCqPWF3qj0tfao9UYKqPeGGqj3siqo9g46qPbKRqj2FlKo9BpeqPT6Zqj02m6o99pyqPYKeqj3in6o9GqGqPS+iqj0lo6o9/6OqPcCkqj1rpao9A6aqPYqmqj0Bp6o9a6eqPcmnqj0dqKo9Z6iqPaioqj3iqKo9FqmqPUSpqj1sqao9kKmqPbCpqj3Nqao95qmqPfypqj0Qqqo9IaqqPTGqqj0/qqo9S6qqPVaqqj1fqqo9aKqqPW+qqj12qqo9fKqqPYGqqj2Gqqo9iqqqPY6qqj2Rqqo9lKqqPZeqqj2Zqqo9m6qqPZ2qqj2eqqo9oKqqPaGqqj2iqqo9o6qqPaSqqj2lqqo9paqqPaaqqj2mqqo9p6qqPaeqqj2oqqo9qKqqPaiqqj2pqqo9qaqqPamqqj2pqqo9qaqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2qqqo9qqqqPaqqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj2rqqo9q6qqPauqqj0=" />
+          </effect>
+        </fxchain>
+      </fxchannel>
+    </fxmixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

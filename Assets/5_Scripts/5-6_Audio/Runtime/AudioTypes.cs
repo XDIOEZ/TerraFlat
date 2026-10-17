@@ -261,6 +261,7 @@ namespace FlatWorld.Audio
 
         public const string WeatherRainLoop = "weather.rain.loop";
         public const string WeatherWindLoop = "weather.wind.loop";
+        public const string WeatherWindGaleLoop = "weather.wind.gale.loop";
         public const string WeatherThunder = "weather.thunder";
         public const string WeatherThunderFar = "weather.thunder.far";
 

@@ -19,6 +19,74 @@ for _, row in ipairs({ { first = "probe.first", second = "probe.second", errors 
     end, "音频目录装配、重复校验和缓存重建")
 end
 
+-- 使用玩家当地风强直接驱动正式风声状态，不建世界或播放声音。
+local function wind_sequence(label, steps)
+    test.system("audio", "wind_sequence", { steps = steps }, function(data)
+        assert(#data.samples == #steps, "风声没有返回完整连续采样")
+        for i, sample in ipairs(data.samples) do
+            local step = steps[i]
+            local expectedCue = step.gale and "weather.wind.gale.loop" or "weather.wind.loop"
+            assert(sample.gale == (step.gale == true) and sample.cue == expectedCue,
+                label .. "，第 " .. i .. " 步八级风选音边界错误")
+            local volume = sample.normalVolume + sample.galeVolume
+            assert(sample.normalVolume >= 0 and sample.galeVolume >= 0 and volume <= 0.40001,
+                label .. "，第 " .. i .. " 步交叉淡化超出原风音量上限")
+            if step.volume ~= nil then
+                assert(math.abs(volume - step.volume) < 0.00001,
+                    label .. "，第 " .. i .. " 步原风音量曲线或停止错误")
+            end
+            if step.galeRatio ~= nil then
+                assert(volume > 0 and math.abs(sample.galeVolume / volume - step.galeRatio) < 0.00001,
+                    label .. "，第 " .. i .. " 步切换未从当前音量平滑续接")
+            end
+            if step.presented ~= nil then
+                assert(math.abs(sample.presentedStrength - step.presented) < 0.00001,
+                    label .. "，第 " .. i .. " 步玩家风强平滑或清理错误")
+            end
+        end
+    end, "风声音效：" .. label)
+end
+
+for _, row in ipairs({
+    { strength = -1, volume = 0 },
+    { strength = 0, volume = 0 },
+    { strength = 0.5, volume = 0 },
+    { strength = 0.7, volume = 0.101192885, galeRatio = 0 },
+    { strength = 0.7999, volume = 0.185810257, galeRatio = 0 },
+    { strength = 0.8, gale = true, volume = 0.185903201, galeRatio = 1 },
+    { strength = 0.9, gale = true, volume = 0.286216701, galeRatio = 1 },
+    { strength = 1, gale = true, volume = 0.4, galeRatio = 1 },
+    { strength = 2, gale = true, volume = 0.4, galeRatio = 1 }
+}) do
+    wind_sequence("弱风静音与七/八/九/十级边界：" .. row.strength, { row })
+end
+
+wind_sequence("七级升八级交叉淡化，短暂降级再升回不从头切换", {
+    { strength = 0.7, volume = 0.101192885, galeRatio = 0 },
+    { strength = 0.8, deltaTime = 0.4, gale = true, volume = 0.185903201, galeRatio = 0.5 },
+    { strength = 0.8, deltaTime = 0.4, gale = true, volume = 0.185903201, galeRatio = 1 },
+    { strength = 0.7, deltaTime = 0.2, galeRatio = 0.75 },
+    { strength = 0.8, deltaTime = 0.2, gale = true, volume = 0.185903201, galeRatio = 1 },
+    { strength = 0.7, deltaTime = 0.8, volume = 0.101192885, galeRatio = 0 }
+})
+
+wind_sequence("初进八级风立即选狂风且保留三秒风强过渡，停风归零", {
+    { strength = 0.8, deltaTime = 0, gale = true, volume = 0, presented = 0 },
+    { strength = 0.8, deltaTime = 1.5, gale = true, volume = 0, presented = 0.5 },
+    { strength = 0.8, deltaTime = 0.9, gale = true, volume = 0.185903201, galeRatio = 1, presented = 0.8 },
+    { strength = 0, volume = 0, presented = 0 }
+})
+
+wind_sequence("退出重置清除双路包络，新世界按当前风级重新选音", {
+    { strength = 0.9, gale = true, volume = 0.286216701, galeRatio = 1 },
+    { reset = true, volume = 0, presented = 0 },
+    { strength = 0.7, volume = 0.101192885, galeRatio = 0 },
+    { reset = true, volume = 0, presented = 0 },
+    { strength = 0.8, deltaTime = -1, gale = true, volume = 0, presented = 0 },
+    { strength = 1, deltaTime = 100, gale = true, volume = 0.4, galeRatio = 1 },
+    { strength = 0, volume = 0, presented = 0 }
+})
+
 -- 地表优先级：深水静音 > 浅水 > 积雪 > 人工支撑/石地 > 沙滩 > 草被 > 泥土。
 for _, row in ipairs({
     { biome = 4, grass = 2, expected = "player.footstep.grass" },

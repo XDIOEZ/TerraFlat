@@ -10,17 +10,49 @@ public partial class WeatherMgr
     private const float WeatherAudioThreshold = 0.001f;
     private const float WindAudioStartStrength = 0.5f;
     private const float WindAudioMaximumVolume = 0.4f;
+    private const float WindAudioCrossFadeSeconds = 0.8f;
     private const float ThunderNearRadius = 64f;
     private const float ThunderPropagationSpeed = 64f;
     private const int MaximumPendingThunder = 8;
     private AudioHandle rainAudioHandle;
     private AudioHandle windAudioHandle;
+    private AudioHandle galeAudioHandle;
     private float rainAudioVolume;
-    private float windAudioVolume;
+    private WindAudioState windAudioState;
     private bool weatherAudioSubscribed;
     private bool weatherAudioBaselineReady;
     private readonly List<PendingWeatherThunder> pendingWeatherThunder = new(8);
     private readonly List<ActiveWeatherThunder> weatherThunderHandles = new(6);
+
+    internal struct WindAudioState
+    {
+        public bool IsGale { get; private set; }
+        public float PresentedStrength { get; private set; }
+        public float NormalVolume { get; private set; }
+        public float GaleVolume { get; private set; }
+        private float totalVolume;
+        private float galeBlend;
+
+        public void Advance(float windStrength, float deltaTime, float transitionSeconds)
+        {
+            float strength = float.IsFinite(windStrength) ? Mathf.Clamp01(windStrength) : 0f;
+            float elapsed = float.IsFinite(deltaTime) ? Mathf.Max(0f, deltaTime) : 0f;
+            float transition = float.IsFinite(transitionSeconds) ? Mathf.Max(0.01f, transitionSeconds) : 3f;
+            IsGale = WindEnvironmentRules.ResolveWindLevel(strength) >= WindEnvironmentRules.MinimumPushWindLevel;
+            // 选音和响度共用玩家脚下风场，风级立即裁定，响度保留原有平滑曲线。
+            PresentedStrength = Mathf.MoveTowards(PresentedStrength, strength, elapsed / transition);
+            float audibleWind = Mathf.InverseLerp(WindAudioStartStrength, 1f, PresentedStrength);
+            float targetVolume = WindAudioMaximumVolume * Mathf.Pow(audibleWind, 1.5f);
+            if (totalVolume <= WeatherAudioThreshold)
+                galeBlend = IsGale ? 1f : 0f;
+            totalVolume = Mathf.MoveTowards(totalVolume, targetVolume, elapsed * 0.75f);
+            galeBlend = Mathf.MoveTowards(galeBlend, IsGale ? 1f : 0f, elapsed / WindAudioCrossFadeSeconds);
+            NormalVolume = totalVolume * (1f - galeBlend);
+            GaleVolume = totalVolume * galeBlend;
+        }
+
+        public void Reset() => this = default;
+    }
 
     private readonly struct PendingWeatherThunder
     {
@@ -81,8 +113,10 @@ public partial class WeatherMgr
         ResetWeatherAudioBaseline();
         rainAudioHandle.Stop(0.5f);
         windAudioHandle.Stop(0.5f);
-        rainAudioHandle = windAudioHandle = AudioHandle.Invalid;
-        rainAudioVolume = windAudioVolume = 0f;
+        galeAudioHandle.Stop(0.5f);
+        rainAudioHandle = windAudioHandle = galeAudioHandle = AudioHandle.Invalid;
+        rainAudioVolume = 0f;
+        windAudioState.Reset();
     }
 
     private void OnEnable()
@@ -102,16 +136,41 @@ public partial class WeatherMgr
         if (!_weatherRuntimeAllowed || !weatherAudioSubscribed)
             return;
 
-        // 雨风声音消费同一份表现过渡，进入和离开区块都从当前音量继续变化。
+        // 雨声沿用雨量表现，风声独立跟随本机玩家脚下的真实风场。
         float rain = _presentedRainIntensity;
-        float wind = _presentedWindStrength;
         UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, 0.9f * rain,
             ref rainAudioHandle, ref rainAudioVolume, followPresentation: true);
-        // 弱风保持安静，风力超过一半才逐渐出声，满风音量降低一半。
-        float audibleWind = Mathf.InverseLerp(WindAudioStartStrength, 1f, wind);
-        UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, WindAudioMaximumVolume * Mathf.Pow(audibleWind, 1.5f),
-            ref windAudioHandle, ref windAudioVolume);
+        float wind = 0f;
+        if (TryGetWeatherAudioPlayer(out Player player))
+        {
+            Vector2 position = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+            if (TryGetWeatherAt(position, out var weather))
+                wind = weather.WindStrength;
+        }
+        windAudioState.Advance(wind, Time.unscaledDeltaTime, _weatherTransitionSeconds);
+        UpdateWindLoop(AudioEventIds.WeatherWindLoop, windAudioState.NormalVolume, ref windAudioHandle);
+        UpdateWindLoop(AudioEventIds.WeatherWindGaleLoop, windAudioState.GaleVolume, ref galeAudioHandle);
         PlayPendingWeatherThunder();
+    }
+
+    private static void UpdateWindLoop(string cueId, float volume, ref AudioHandle handle)
+    {
+        if (volume <= WeatherAudioThreshold)
+        {
+            // 包络已完成淡出，立即回收，快速切回时不会碰到仍在停止的旧循环。
+            handle.Stop();
+            handle = AudioHandle.Invalid;
+            return;
+        }
+
+        if (!handle.IsPlaying)
+        {
+            AudioPlayOptions options = AudioPlayOptions.Global(volume);
+            options.OverrideLoop = true;
+            options.Loop = true;
+            handle = AudioService.Instance.Play(cueId, options);
+        }
+        AudioService.Instance.SetVolumeScale(handle, volume);
     }
 
     private static void UpdateWeatherLoop(string cueId, float targetVolume,

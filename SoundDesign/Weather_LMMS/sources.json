@@ -1,4 +1,5 @@
 {
+  "additionalSourceLists": ["gale_sources.json"],
   "sources": [
     {
       "file": "Sources/near_01.wav",

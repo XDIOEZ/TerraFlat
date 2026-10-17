@@ -1,0 +1,28 @@
+{
+  "sources": [
+    {
+      "file": "Sources/gale_howling_01.wav",
+      "soundId": 185070,
+      "title": "howling_wind.wav",
+      "author": "juryduty",
+      "sourcePage": "https://freesound.org/people/juryduty/sounds/185070/",
+      "previewUrl": "https://cdn.freesound.org/previews/185/185070_3279921-hq.mp3",
+      "previewSha256": "b7f5e055ac7e4b0caad3b956fca34fd2f1f81fa783d719008da454a6170c87b3",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "verifiedDate": "2026-10-18",
+      "outputFile": "Assets/Audio/Generated/weather.wind.gale.loop__01.wav",
+      "cueId": "weather.wind.gale.loop",
+      "usage": "Sampled and adapted; mixed in LMMS with two synthesized wind layers.",
+      "modifications": "HQ MP3 decode, trim 4-58 seconds, 48 kHz conversion, DC removal and gain adjustment; LMMS dynamics, soft peak shaping and gust-layer mix; final 2-52 second crop and 1 second equal-power loop crossfade.",
+      "sourceStart": 4,
+      "sourceEnd": 58,
+      "processing": {
+        "sampleRate": 48000,
+        "channels": 2,
+        "peakCeiling": 0.6
+      },
+      "sourceNote": "Public HQ MP3 preview decoded and trimmed; the original lossless download requires login. No original-download claim is made."
+    }
+  ]
+}
