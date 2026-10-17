@@ -62,7 +62,6 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         foreach (PartVisual part in parts) RemoveUntouched(part);
         foreach (PartVisual part in facilityParts) RemoveUntouched(part);
         if (!facilityCombustionTouched) facilityCombustion?.SetCombustionActive(false);
-        if (!facilityCombustionTouched) ReleaseFacilityAudio();
         EndLightingUpdate();
     }
     internal void SetPartTint(int index, Color tint)
@@ -108,7 +107,6 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnEnable()
     {
-        if (burningAudioEntity != null) UpdateFacilityAudio(burningAudioEntity);
         if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(true);
         SubscribeCultivator();
         if (cultivatorEntity != null) RefreshCultivatorSprites();
@@ -121,7 +119,6 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
     }
     private void OnDisable()
     {
-        StopFacilityAudio();
         if (facilityCombustion != null) facilityCombustion.gameObject.SetActive(false);
         if (poweredEmission != null) poweredEmission.enabled = false;
         if (poweredLightEntity != null && facilityLight != null) facilityLight.enabled = false;

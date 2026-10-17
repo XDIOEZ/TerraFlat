@@ -280,7 +280,6 @@
           "parameters": {
             "absorbDroppedFuel": true,
             "publishCellTemperature": true,
-            "burningLoopCueId": "fire.burning.loop",
             "neighborTargetTemperature": 40.0,
             "fuelByproductRules": [
               {

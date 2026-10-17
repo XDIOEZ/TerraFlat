@@ -42,11 +42,8 @@ def specs():
                           decay=.065, cutoff=1350, volume=36),
                      noise(1250, .006, .07, volume=47),
                      noise(3300, .002, .025, volume=29, delay=.019)]),
-        dict(cue="player.footstep.grass", name="草地脚步", seconds=.27, variants=3, peakDb=-18, rmsDb=-33,
-             layers=[noise(4700, .016, .095, volume=38,
-                           repeats=((.042, .32),)),
-                     noise(1450, .004, .06, volume=42),
-                     tone(key=34, levels=(48, 10, 5), decay=.049, cutoff=1100, volume=22)]),
+        dict(cue="player.footstep.grass", name="草地脚步", seconds=.42, variants=3,
+             peakDb=-17, rmsDb=-31, recording="grass"),
         dict(cue="player.footstep.sand", name="沙地脚步", seconds=.3, variants=3, peakDb=-17, rmsDb=-32,
              layers=[noise(3600, .009, .105, volume=43,
                            repeats=((.052, .21),)),
@@ -107,6 +104,19 @@ def build():
                                seconds=sound["seconds"], peakDb=sound["peakDb"],
                                rmsDb=sound["rmsDb"], startSeconds=slot * 2 + .125,
                                file=f"Assets/Audio/Generated/{sound['cue']}__{variant:02}.wav"))
+            # 草地使用实录鞋底压草和草叶摩擦，重建工程时也保留真实采样。
+            if "recording" in sound:
+                sample = ROOT / "Sources" / f"{sound['recording']}_{variant:02}.wav"
+                assert sample.is_file(), f"Run prepare_grass.py first: {sample}"
+                track = ET.SubElement(container, "track", muted="0", type="2",
+                                      name=f"{sound['name']} / {variant}", solo="0")
+                sample_track = ET.SubElement(track, "sampletrack", pan="0", vol="80")
+                ET.SubElement(sample_track, "fxchain", numofeffects="0", enabled="0")
+                ET.SubElement(track, "sampleclip", pos=str(slot * 192 + 12),
+                              len=str(math.ceil(sound["seconds"] / sfx.TICK_SECONDS)),
+                              src=sample.as_posix(), muted="0", off="0")
+                slot += 1
+                continue
             for layer_index, original in enumerate(sound["layers"]):
                 patch = copy.deepcopy(original)
                 shift = (0, .055, -.045)[variant - 1]
@@ -139,12 +149,14 @@ def build():
 
 
 # region LMMS 母带分切与 Unity 绑定
-def finalize():
+def finalize(only_grass=False):
     layout = json.loads((ROOT / "layout.json").read_text(encoding="utf-8"))
+    if only_grass:
+        layout = [entry for entry in layout if entry["cue"] == "player.footstep.grass"]
     raw = sfx.read_wave(ROOT / "renders" / "Player_Fishing_raw.wav")
     assert np.max(np.abs(raw)) < .9999, "LMMS mother track clipped"
     assert len(raw) >= round(max(x["startSeconds"] + x["seconds"] for x in layout) * RATE)
-    manifest, clips, preview = [], {}, []
+    manifest, clips = [], {}
     for entry in layout:
         start, end = (round(time * RATE) for time in
                       (entry["startSeconds"], entry["startSeconds"] + entry["seconds"]))
@@ -166,8 +178,6 @@ def finalize():
                              sha256=hashlib.sha256(asset.read_bytes()).hexdigest(),
                              peakDb=round(20 * math.log10(np.max(np.abs(audio))), 2),
                              rmsDb=round(20 * math.log10(np.sqrt(np.mean(audio ** 2))), 2)))
-        if entry["variant"] == 1:
-            preview.extend((audio, np.zeros(round(.24 * RATE))))
     cue_guids = {id: feedback.add_cue(id, variants) for id, variants in clips.items()}
     # 高频脚步仅保留两个重叠音源，所有新 Cue 仍由正式 Catalog 和总线统一管理。
     for id in cue_guids:
@@ -185,11 +195,26 @@ def finalize():
         if line not in text:
             text = text.rstrip() + "\n" + line + "\n"
     catalog.write_text(text, encoding="utf-8")
+    if only_grass:
+        previous = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
+        replacements = {entry["file"]: entry for entry in manifest}
+        manifest = [replacements.get(entry["file"], entry) for entry in previous["sounds"]]
+    preview = []
+    for entry in manifest:
+        if entry["variant"] == 1:
+            preview.extend((sfx.read_wave(PROJECT / entry["file"]).mean(axis=1),
+                            np.zeros(round(.24 * RATE))))
     sfx.write_wave(ROOT / "Preview_Player_Fishing.wav", np.concatenate(preview))
+    grass_preview = []
+    for entry in manifest:
+        if entry["cue"] == "player.footstep.grass":
+            grass_preview.extend((sfx.read_wave(PROJECT / entry["file"]).mean(axis=1),
+                                  np.zeros(round(.16 * RATE))))
+    sfx.write_wave(ROOT / "Preview_Grass.wav", np.concatenate(grass_preview * 2))
     (ROOT / "manifest.json").write_text(json.dumps(dict(
         engine="LMMS 1.2.2 via MCP", sampleRate=RATE, channels=1, sounds=manifest),
         ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Bound {len(cue_guids)} new Cues and {len(manifest)} LMMS clips")
+    print(f"Updated {len(cue_guids)} Cues and {len(layout)} LMMS clips")
 
 
 def verify():
@@ -221,5 +246,9 @@ def verify():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=("build", "finalize", "verify"))
+    parser.add_argument("--only-grass", action="store_true", help="仅替换草地脚步，保留其他音效")
     args = parser.parse_args()
-    {"build": build, "finalize": finalize, "verify": verify}[args.command]()
+    if args.command == "finalize":
+        finalize(only_grass=args.only_grass)
+    else:
+        {"build": build, "verify": verify}[args.command]()

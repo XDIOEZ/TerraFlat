@@ -1,0 +1,24 @@
+{
+  "title": "Hiking Boot Footsteps on Grass",
+  "author": "Fission9",
+  "pageUrl": "https://freesound.org/people/Fission9/sounds/521587/",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "downloadUrl": "https://cdn.freesound.org/previews/521/521587_9395330-hq.mp3",
+  "sha256": "13657d6ebcce7616163ff2aae46c8f55bf337ea92e7ce8f1d710a5b2c4a96f36",
+  "processing": {
+    "sampleRate": 48000,
+    "highpassHz": 130,
+    "lowpassHz": 7800,
+    "transientPercentile": 90,
+    "transientRatio": 3,
+    "peak": 0.7,
+    "headFadeSeconds": 0.002,
+    "tailFadeSeconds": 0.035
+  },
+  "segments": [
+    {"startSeconds": 0.095, "seconds": 0.42, "file": "grass_01.wav"},
+    {"startSeconds": 0.795, "seconds": 0.42, "file": "grass_02.wav"},
+    {"startSeconds": 3.04, "seconds": 0.42, "file": "grass_03.wav"}
+  ]
+}

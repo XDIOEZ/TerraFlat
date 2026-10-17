@@ -26,8 +26,6 @@ public class Mod_Furnace : Mod_MachineAuthoring
     public bool absorbDroppedFuel;
     [Tooltip("是否让炉心使用真实炉温，并以独立目标温度温暖相邻地块。")]
     public bool publishCellTemperature;
-    [Tooltip("燃烧时播放的空间循环 Cue；留空时不播放燃烧声。")]
-    public string burningLoopCueId;
     [Tooltip("炉体周围的目标环境温度。")]
     public float neighborTargetTemperature = 40f;
     public List<FurnaceFuelByproductRule> fuelByproductRules = new();

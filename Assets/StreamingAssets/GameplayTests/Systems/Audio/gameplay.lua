@@ -1,13 +1,5 @@
 -- 已入世 AudioService 播放正式录音；Cue 只隔离测试 ID，播放、池与用户音量均走正式实现。
 test.runtime("audio", "voice_lifecycle", {}, function(data)
-    local fire = data.fireCue
-    assert(fire.configured == "fire.burning.loop" and fire.loaded and fire.loop and #fire.clips == 1,
-        "篝火没有绑定正式燃烧循环或音频未导入")
-    assert(fire.bus == "Sfx" and fire.spatialBlend == 1 and fire.rolloff == "Linear" and fire.cooldown == 0,
-        "篝火燃烧声未使用无冷却的世界 SFX 线性衰减")
-    assert(fire.minDistance == 1.5 and fire.maxDistance == 14, "篝火声音距离范围改变")
-    assert(fire.clips[1].channels == 1 and fire.clips[1].frequency == 48000
-        and fire.clips[1].samples == 960000, "篝火素材不是 20 秒 48kHz 单声道循环")
     assert(data.startupServiceStable and data.startupCatalogStable and data.startupSettingsStable,
         "重复预热替换了音频服务、目录或覆盖用户设置")
     assert(data.startupUiCueReady, "正式点击音没有完成音频数据预加载")

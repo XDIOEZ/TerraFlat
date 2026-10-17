@@ -43,37 +43,37 @@
       "cue": "player.footstep.grass",
       "name": "草地脚步",
       "variant": 1,
-      "seconds": 0.27,
-      "peakDb": -18.0,
-      "rmsDb": -36.89,
+      "seconds": 0.42,
+      "peakDb": -17.0,
+      "rmsDb": -33.87,
       "startSeconds": 6.125,
       "file": "Assets/Audio/Generated/player.footstep.grass__01.wav",
       "guid": "d276610294124c55b04b9e2b5738c0a9",
-      "sha256": "b82e4e85d891bfc8d70fc72d87f93d8b6dfa55ba48711996fd0496785cf0232a"
+      "sha256": "3c2e993ebf2a6d8312313349de42129e983249b8a6eaf544f73b4f1ddd4397eb"
     },
     {
       "cue": "player.footstep.grass",
       "name": "草地脚步",
       "variant": 2,
-      "seconds": 0.27,
-      "peakDb": -18.0,
-      "rmsDb": -34.98,
+      "seconds": 0.42,
+      "peakDb": -17.0,
+      "rmsDb": -35.13,
       "startSeconds": 8.125,
       "file": "Assets/Audio/Generated/player.footstep.grass__02.wav",
       "guid": "6b15d57c367e4a2baf5d5b13d8711613",
-      "sha256": "217c92c6cab293d02091093f7aa573068496bb2741f91458ee9a1ab9329d1d18"
+      "sha256": "fd79883a9f03c1840ffcc7e13ed45d4288f482cf64e758571d63759ad78aeecb"
     },
     {
       "cue": "player.footstep.grass",
       "name": "草地脚步",
       "variant": 3,
-      "seconds": 0.27,
-      "peakDb": -18.0,
-      "rmsDb": -38.44,
+      "seconds": 0.42,
+      "peakDb": -17.0,
+      "rmsDb": -35.0,
       "startSeconds": 10.125,
       "file": "Assets/Audio/Generated/player.footstep.grass__03.wav",
       "guid": "6b95181fe8a842bc8be2a404c70dd542",
-      "sha256": "dd2c2750f102fb45f001b5980bd1e214ccf4e827913585d76dfade81e87d5ae4"
+      "sha256": "dbceae0c7661c324dea4137d3fc41065c333874bbcd399aaec7e31bc383397e5"
     },
     {
       "cue": "player.footstep.sand",

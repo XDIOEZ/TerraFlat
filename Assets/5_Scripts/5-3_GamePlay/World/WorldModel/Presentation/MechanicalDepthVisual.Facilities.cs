@@ -20,7 +20,6 @@ public sealed partial class MechanicalDepthVisual
         UpdateBatterySprites(entity);
         UpdatePoweredLight(entity);
         bool burning = IsFacilityBurning(entity);
-        UpdateFacilityAudio(entity);
         if (entity.Definition.Lighting == null && entity.Definition.Content?.Find<Mod_Fuel>() != null)
             UpdateCombustionLight(entity, burning);
         UpdateCombustionVisual(entity, burning);
@@ -143,7 +142,6 @@ public sealed partial class MechanicalDepthVisual
 
     private void ReleaseFacilityCombustion()
     {
-        ReleaseFacilityAudio();
         if (facilityCombustion != null)
         {
             facilityCombustion.SetCombustionActive(false);
