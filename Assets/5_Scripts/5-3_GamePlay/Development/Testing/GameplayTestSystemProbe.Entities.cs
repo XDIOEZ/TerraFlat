@@ -631,7 +631,12 @@ public static partial class GameplayTestSystemProbe
             gesture.Record(Position(points[i]), points[i][0].Value<double>());
         if (Flag(args, "cancel", false)) gesture.Reset();
         JToken last = points[points.Count - 1];
-        return new JObject { ["accepted"] = gesture.IsFlick(Position(last), last[0].Value<double>()) };
+        return new JObject
+        {
+            ["accepted"] = gesture.IsFlick(Position(last), last[0].Value<double>()),
+            ["minimumDistance"] = InventoryFlickGesture.DefaultMinimumDistance,
+            ["minimumSpeed"] = InventoryFlickGesture.DefaultMinimumSpeed
+        };
     }
 
     private static JObject EntityInventoryTransactions(JObject args)

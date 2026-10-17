@@ -12,7 +12,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `Core/NetworkConnectionEndpoint.cs`：原始地址明确填写的端口必须在 1～65535；只在缺省时使用备用端口。IPv6 方括号内的冒号不是端口分隔符，不用 `Uri.IsDefaultPort` 判断用户是否显式填写端口。
 - `Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`：启动、连接与玩家。
 - `Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`：区块、物品、天气复制。
-- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 17。
+- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 18。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
@@ -40,6 +40,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 状态与位姿分别复制：普通世界状态包不带位姿，`NetworkItemPoseMessage` 独立递增版本；出生/完整包带当前姿态版本，客户端拒绝旧位姿。DTO 协议号由 `NetworkGameplayProtocol` 管理。
 - 天气雷击复制同时携带最新 LightningCell、LightningStrength 和序号，客户端只播放同落点的视觉/雷声，不重算落点或伤害；初始同步只建基线。
 - 机器走 `MachineWorld` 快照、删除消息和转速增量，不进普通 Item 状态流。完整重同步清空旧节点；拆除先发布召唤器再删节点；客户端库存交互只发命令。
+- 机器快速转移成功回执携带同次源/目标库存快照及最多 256 个精确收货槽/数量/目标 GUID，客户端仅匹配未超时 token、Accepted 且两端快照成功应用后发布动画反馈；不从加工/其他玩家引起的数量增量猜收货，远端请求服务端执行范围抑制 Host 本地动画。新增消息字段须同步提升 Gameplay 协议。
 
 ## UI 生命周期
 

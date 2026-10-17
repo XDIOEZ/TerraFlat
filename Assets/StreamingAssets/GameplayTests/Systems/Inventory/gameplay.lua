@@ -1,5 +1,42 @@
 -- 复用正式创造背包填充与快捷栏切换；容量和扣料细节在独立规则用例检查。
 test.check("player_ready", "真实玩家就绪")
+test.runtime("inventory", "quick_transfer_feedback", {}, function(data)
+    assert(data.moved and not data.fullAccepted and not data.invalidAccepted,
+        "快速转移成功、满槽或无效来源的返回值错误")
+    assert(data.countAfterSuccess == 2 and data.countAfterFull == 2 and #data.receipts == 2,
+        "没有按实际收货槽发布反馈，或失败操作也发布了成功动画")
+    local first, second = data.receipts[1], data.receipts[2]
+    assert(first.sourceIndex == 0 and first.targetIndex == 0 and first.amount == 1
+        and second.sourceIndex == 0 and second.targetIndex == 1 and second.amount == 2,
+        "先合并再填空槽的实际收货位置或数量错误")
+    assert(first.targetMatched and second.targetMatched and first.itemId == "Twine" and second.itemId == "Twine",
+        "反馈没有保留真实库存或物品身份")
+    assert(first.allowLocalPresentation and second.allowLocalPresentation and data.remoteMoved
+        and #data.suppressedReceipts == 1 and not data.suppressedReceipts[1].allowLocalPresentation
+        and data.suppressedReceipts[1].amount == 2,
+        "远端服务端执行没有保留精确回执，或错误允许Host播放本地动画")
+    assert(first.sourceAtEvent.amount == 5 and first.targetAtEvent.amount == 4
+        and second.sourceAtEvent.amount == 3 and second.targetAtEvent.amount == 2,
+        "动画反馈在真实库存事务提交之前触发")
+    assert(data.source.amount == 3 and data.first.amount == 4 and data.second.amount == 2
+        and data.third.amount == 0 and data.source.amount + data.first.amount + data.second.amount == 9,
+        "反馈改变了转移数量、漏扣或生成额外物品")
+end, "快速转移按实际收货槽反馈、提交后发布与拒绝静默")
+for _, mode in ipairs({"valid", "duplicate", "invalid_slot", "wrong_guid", "over_amount", "non_finite", "too_many"}) do
+    test.runtime("inventory", "quick_transfer_receipts", {mode = mode}, function(data)
+        if mode == "valid" then
+            assert(#data.events == 2 and data.events[1].sourceIndex == 0 and data.events[2].sourceIndex == 0
+                and data.events[1].targetIndex == 0 and data.events[1].amount == 1
+                and data.events[2].targetIndex == 1 and data.events[2].amount == 2
+                and data.events[1].targetMatched and data.events[2].targetMatched,
+                "权威回执没有按精确收货槽和实际数量回放")
+        else
+            assert(#data.events == 0, "无效回执没有整批拒绝，错误播放了部分成功动画：" .. mode)
+        end
+        assert(data.sourceAmount == 3 and data.firstAmount == 4 and data.secondAmount == 2,
+            "回执表现回放修改了已经确认的真实库存数量")
+    end, "快速转移权威回执回放：" .. mode)
+end
 local flickTransfers = {
     {name = "整组转移", capacity = 10, source = 0, target = 6, moved = true, attempts = 1},
     {name = "只接收放得下的数量", capacity = 2, source = 4, target = 2, moved = true, attempts = 1},

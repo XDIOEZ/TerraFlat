@@ -187,6 +187,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
+            if (pendingQuickTransfer.HasValue && Time.unscaledTime > machineTransferDeadline)
+                pendingQuickTransfer = null;
             TickFluidNetwork();
             ProcessPickupTimeouts();
             ProcessBuildingTimeouts();

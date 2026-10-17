@@ -5,6 +5,7 @@ using FlatWorld.Spaceflight;
 using Newtonsoft.Json;
 using Mirror;
 using UnityEngine;
+using FlatWorld.Gameplay.InventoryFeedback;
 
 namespace FlatWorld.Networking.Gameplay
 {
@@ -42,6 +43,14 @@ namespace FlatWorld.Networking.Gameplay
         public MachineInventoryAddress Target;
         public byte[] SourceInventory;
         public byte[] TargetInventory;
+        public NetworkQuickTransferReceipt[] QuickTransfers;
+    }
+
+    public struct NetworkQuickTransferReceipt
+    {
+        public int TargetSlot;
+        public int TargetGuid;
+        public float Amount;
     }
 
     public sealed partial class NetworkItemStateCoordinator
@@ -49,6 +58,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 机器命令与库存事务
         private uint machineCommandToken;
         private uint pendingMachineTransfer;
+        private InventoryQuickTransferSignal? pendingQuickTransfer;
         private float machineTransferDeadline;
         private uint lastMachineOperationInventory;
         private readonly Dictionary<int, (NetworkConnectionToClient Connection, uint Token)> machineTokens = new();
@@ -87,6 +97,7 @@ namespace FlatWorld.Networking.Gameplay
             MachineInventoryCommands.RemoteTransferRequested -= SendMachineTransfer;
             NetworkClient.UnregisterHandler<NetworkMachineTransferResponse>();
             pendingMachineTransfer = 0;
+            pendingQuickTransfer = null;
             lastMachineOperationInventory = 0;
             machineTransferDeadline = 0f;
         }
@@ -190,6 +201,8 @@ namespace FlatWorld.Networking.Gameplay
             if (item == null) return false;
             ItemData destination = targetIndex >= 0 && targetIndex < target.Data.itemSlots.Count ? target.Data.itemSlots[targetIndex].itemData : null;
             pendingMachineTransfer = NextMachineToken();
+            pendingQuickTransfer = operation == "quick"
+                ? new InventoryQuickTransferSignal(source, sourceIndex, target, -1, item, item.Stack.Amount) : null;
             machineTransferDeadline = Time.unscaledTime + 8f;
             NetworkClient.Send(new NetworkMachineTransferRequest
             {
@@ -227,7 +240,26 @@ namespace FlatWorld.Networking.Gameplay
                 (to?.Guid ?? 0) == request.ExpectedTargetGuid && (to?.IDName ?? "") == request.ExpectedTargetId;
             if (from?.Guid == request.ExpectedSourceGuid && from?.IDName == request.ExpectedSourceId && targetValid &&
                 request.Amount >= 0 && request.Amount <= 1000000000)
-                response.Accepted = source.ExecuteMachineTransfer(request.SourceSlot, target, request.TargetSlot, request.Operation, request.Amount);
+            {
+                // 从正式提交事件取得精确收货槽，不能把加工或其他玩家的入库量猜成本次转移。
+                var receipts = new List<NetworkQuickTransferReceipt>();
+                void CaptureReceipt(InventoryQuickTransferSignal signal)
+                {
+                    if (request.Operation != "quick" || receipts.Count >= 256 ||
+                        !ReferenceEquals(signal.Source, source) || !ReferenceEquals(signal.Target, target) ||
+                        signal.SourceIndex != request.SourceSlot) return;
+                    receipts.Add(new NetworkQuickTransferReceipt { TargetSlot = signal.TargetIndex,
+                        TargetGuid = target.Data.GetItemSlot(signal.TargetIndex)?.itemData?.Guid ?? 0, Amount = signal.Amount });
+                }
+                InventoryQuickTransferFeedbackEvents.Committed += CaptureReceipt;
+                try
+                {
+                    using (InventoryQuickTransferFeedbackEvents.SuppressLocalPresentation())
+                        response.Accepted = source.ExecuteMachineTransfer(request.SourceSlot, target, request.TargetSlot, request.Operation, request.Amount);
+                }
+                finally { InventoryQuickTransferFeedbackEvents.Committed -= CaptureReceipt; }
+                if (response.Accepted && request.Operation == "quick") response.QuickTransfers = receipts.ToArray();
+            }
             if (MachineInventoryCommands.IsPrivateInventoryAddress(request.Source))
                 response.SourceInventory = MemoryPackSerializer.Serialize(source.Data);
             else if (request.Source.MachineId != 0) SendMechanicalSnapshot(connection, MachineWorld.GetById(request.Source.MachineId));
@@ -236,6 +268,12 @@ namespace FlatWorld.Networking.Gameplay
                 response.TargetInventory = MemoryPackSerializer.Serialize(target.Data);
             else if (request.Target.MachineId != 0) SendMechanicalSnapshot(connection, MachineWorld.GetById(request.Target.MachineId));
             else response.TargetInventory = MemoryPackSerializer.Serialize(target.Data);
+            // 快速转移回执自带同次事务快照，客户端动画不依赖另一条机器快照的到达顺序。
+            if (response.QuickTransfers != null)
+            {
+                response.SourceInventory = MemoryPackSerializer.Serialize(source.Data);
+                response.TargetInventory = MemoryPackSerializer.Serialize(target.Data);
+            }
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
             connection.Send(response);
         }
@@ -243,6 +281,7 @@ namespace FlatWorld.Networking.Gameplay
         private void ApplyMachineTransfer(NetworkMachineTransferResponse response)
         {
             if (NetworkServer.active) return;
+            InventoryQuickTransferSignal? quick = null;
             if (response.OperationUpdate)
             {
                 if (response.Token == 0 || unchecked((int)(response.Token - lastMachineOperationInventory)) <= 0) return;
@@ -251,11 +290,18 @@ namespace FlatWorld.Networking.Gameplay
             else
             {
                 if (response.Token != pendingMachineTransfer) return;
+                if (Time.unscaledTime <= machineTransferDeadline) quick = pendingQuickTransfer;
+                pendingQuickTransfer = null;
                 pendingMachineTransfer = 0;
             }
             Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-            ApplyPlayerInventory(actor, response.Source, response.SourceInventory);
-            ApplyPlayerInventory(actor, response.Target, response.TargetInventory);
+            bool allowMachine = quick.HasValue && response.Accepted;
+            bool sourceApplied = ApplyPlayerInventory(actor, response.Source, response.SourceInventory, allowMachine);
+            bool targetApplied = ApplyPlayerInventory(actor, response.Target, response.TargetInventory, allowMachine);
+            if (quick.HasValue && response.Accepted && sourceApplied && targetApplied &&
+                ReferenceEquals(MachineInventoryCommands.Resolve(actor, response.Source), quick.Value.Source) &&
+                ReferenceEquals(MachineInventoryCommands.Resolve(actor, response.Target), quick.Value.Target))
+                PublishQuickTransferReceipts(quick.Value, response.QuickTransfers);
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
         }
 
@@ -278,15 +324,35 @@ namespace FlatWorld.Networking.Gameplay
             return true;
         }
 
-        private static void ApplyPlayerInventory(Player actor, MachineInventoryAddress address, byte[] payload)
+        private static bool ApplyPlayerInventory(Player actor, MachineInventoryAddress address, byte[] payload, bool allowMachine = false)
         {
-            if (address.MachineId != 0 && !MachineInventoryCommands.IsPrivateInventoryAddress(address) ||
-                payload == null || payload.Length == 0 || payload.Length > 8 * 1024 * 1024) return;
+            if (!allowMachine && address.MachineId != 0 && !MachineInventoryCommands.IsPrivateInventoryAddress(address) ||
+                payload == null || payload.Length == 0 || payload.Length > 8 * 1024 * 1024) return false;
             Inventory inventory = MachineInventoryCommands.Resolve(actor, address);
-            if (inventory == null) return;
+            if (inventory == null) return false;
             MachineInventory.ApplySnapshot(inventory, MemoryPackSerializer.Deserialize<Inventory_Data>(payload));
             Mod_HotBar hotbar = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotbar != null && ReferenceEquals(hotbar.RuntimeInventory, inventory)) hotbar.RefreshUI();
+            return true;
+        }
+
+        internal static void PublishQuickTransferReceipts(InventoryQuickTransferSignal quick, NetworkQuickTransferReceipt[] receipts)
+        {
+            if (receipts == null || receipts.Length > 256) return;
+            float remaining = quick.Amount;
+            var seen = new HashSet<int>();
+            // 先完整检查回执，再发布动画，异常回执不能先播放半段成功反馈。
+            foreach (NetworkQuickTransferReceipt receipt in receipts)
+            {
+                ItemData item = quick.Target.Data?.GetItemSlot(receipt.TargetSlot)?.itemData;
+                if (!seen.Add(receipt.TargetSlot) || item == null || item.Guid != receipt.TargetGuid ||
+                    item.IDName != quick.Item.IDName || !float.IsFinite(receipt.Amount) || receipt.Amount <= 0f ||
+                    item.Stack == null || receipt.Amount > item.Stack.Amount + 0.001f || receipt.Amount > remaining + 0.001f) return;
+                remaining -= receipt.Amount;
+            }
+            foreach (NetworkQuickTransferReceipt receipt in receipts)
+                InventoryQuickTransferFeedbackEvents.Publish(quick.Source, quick.SourceIndex, quick.Target,
+                    receipt.TargetSlot, quick.Item, receipt.Amount);
         }
         #endregion
     }

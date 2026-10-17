@@ -21,6 +21,7 @@ public static partial class GameplayTestRuntimeProbe
         ["inventory/creative_restore"] = RestoreCreativeInventoryScope,
         ["inventory/direct_drag"] = CaptureInventoryDirectDrag,
         ["inventory/flick_transfer"] = CaptureInventoryFlickTransfer,
+        ["inventory/quick_transfer_feedback"] = CaptureInventoryQuickTransferFeedback,
         ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
         ["inventory/equipment_configuration"] = CaptureEquipmentConfiguration,
         ["world_streaming/live_window"] = CaptureLiveWindow,
@@ -339,6 +340,54 @@ public static partial class GameplayTestRuntimeProbe
                 ["reused"] = reused, ["dragLocked"] = source.HasActiveSlotDrag };
         }
         finally { drag?.Complete(false); }
+    }
+
+    // 只采集正式快速转移的提交反馈，Lua检查分堆、失败和数据守恒。
+    private static JObject CaptureInventoryQuickTransferFeedback(Player player, JObject args)
+    {
+        Inventory source = CreateDragInventory("lua.quick.feedback.source", CreateDragItem("Twine", 6));
+        Inventory target = CreateDragInventory("lua.quick.feedback.target", CreateDragItem("Twine", 3), null, null);
+        target.Data.itemSlots[0].SlotMaxVolume = 4;
+        target.Data.itemSlots[1].SlotMaxVolume = 2;
+        target.Data.itemSlots[2].SlotMaxVolume = 0;
+        var receipts = new JArray();
+        var suppressedReceipts = new JArray();
+        Inventory remoteSource = CreateDragInventory("lua.quick.feedback.remote", CreateDragItem("Twine", 2));
+        Inventory remoteTarget = CreateDragInventory("lua.quick.feedback.remote-target", new ItemData[1]);
+        void Capture(FlatWorld.Gameplay.InventoryFeedback.InventoryQuickTransferSignal signal)
+        {
+            if (ReferenceEquals(signal.Source, remoteSource))
+            {
+                suppressedReceipts.Add(new JObject { ["allowLocalPresentation"] = signal.AllowLocalPresentation,
+                    ["amount"] = signal.Amount });
+                return;
+            }
+            if (!ReferenceEquals(signal.Source, source)) return;
+            receipts.Add(new JObject { ["sourceIndex"] = signal.SourceIndex, ["targetIndex"] = signal.TargetIndex,
+                ["amount"] = signal.Amount, ["targetMatched"] = ReferenceEquals(signal.Target, target),
+                ["itemId"] = signal.Item.IDName, ["allowLocalPresentation"] = signal.AllowLocalPresentation,
+                ["sourceAtEvent"] = CaptureDragSlot(source, 0),
+                ["targetAtEvent"] = CaptureDragSlot(target, signal.TargetIndex) });
+        }
+        FlatWorld.Gameplay.InventoryFeedback.InventoryQuickTransferFeedbackEvents.Committed += Capture;
+        try
+        {
+            bool moved = source.ExecuteMachineTransfer(0, target, -1, "quick", 0);
+            int countAfterSuccess = receipts.Count;
+            bool fullAccepted = source.ExecuteMachineTransfer(0, target, -1, "quick", 0);
+            int countAfterFull = receipts.Count;
+            bool invalidAccepted = source.ExecuteMachineTransfer(-1, target, -1, "quick", 0);
+            bool remoteMoved;
+            using (FlatWorld.Gameplay.InventoryFeedback.InventoryQuickTransferFeedbackEvents.SuppressLocalPresentation())
+                remoteMoved = remoteSource.ExecuteMachineTransfer(0, remoteTarget, -1, "quick", 0);
+            return new JObject { ["moved"] = moved, ["fullAccepted"] = fullAccepted,
+                ["remoteMoved"] = remoteMoved, ["suppressedReceipts"] = suppressedReceipts,
+                ["invalidAccepted"] = invalidAccepted, ["receipts"] = receipts,
+                ["countAfterSuccess"] = countAfterSuccess, ["countAfterFull"] = countAfterFull,
+                ["source"] = CaptureDragSlot(source, 0), ["first"] = CaptureDragSlot(target, 0),
+                ["second"] = CaptureDragSlot(target, 1), ["third"] = CaptureDragSlot(target, 2) };
+        }
+        finally { FlatWorld.Gameplay.InventoryFeedback.InventoryQuickTransferFeedbackEvents.Committed -= Capture; }
     }
 
     private static JObject CaptureInventoryEquipmentDrag(Player player, JObject args)

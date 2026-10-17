@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 17;
+        public const int CurrentVersion = 18;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 

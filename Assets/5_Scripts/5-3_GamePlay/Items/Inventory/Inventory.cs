@@ -2000,7 +2000,7 @@ public class Inventory
             if (transferCount <= 0)
                 break;
 
-            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount))
+            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount, true))
                 moved = true;
         }
 
@@ -2025,7 +2025,7 @@ public class Inventory
             if (transferCount <= 0)
                 break;
 
-            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount))
+            if (TryTransferQuickQuantity(sourceSlot, targetInventory, targetSlot, transferCount, true))
                 moved = true;
         }
 
@@ -2036,7 +2036,8 @@ public class Inventory
         ItemSlot sourceSlot,
         Inventory targetInventory,
         ItemSlot targetSlot,
-        int transferCount)
+        int transferCount,
+        bool quickTransferFeedback = false)
     {
         if (!ReferenceEquals(this, targetInventory) && targetInventory?.Data?.IsDepositBlocked == true)
             return false;
@@ -2046,11 +2047,19 @@ public class Inventory
 
         if (MachineInventoryCommands.TryRoute(this, Data.itemSlots.IndexOf(sourceSlot), targetInventory,
                 targetInventory.Data.itemSlots.IndexOf(targetSlot), "quantity", transferCount, out bool routed)) return routed;
-        return Data.TransferItemQuantityTo(
+        ItemData movedItem = sourceSlot.itemData;
+        float targetBefore = targetSlot.itemData?.Stack?.Amount ?? 0f;
+        bool moved = Data.TransferItemQuantityTo(
             sourceSlot,
             targetInventory.Data,
             targetSlot,
             transferCount);
+        // 仅在真实事务成功后按实际接收槽发布表现，网络请求已发送不算成功。
+        if (moved && quickTransferFeedback)
+            InventoryQuickTransferFeedbackEvents.Publish(this, Data.itemSlots.IndexOf(sourceSlot),
+                targetInventory, targetInventory.Data.itemSlots.IndexOf(targetSlot), movedItem,
+                (targetSlot.itemData?.Stack?.Amount ?? 0f) - targetBefore);
+        return moved;
     }
 
     /// <summary>服务端的已校验请求复用完整拖拽与数量转移规则。</summary>

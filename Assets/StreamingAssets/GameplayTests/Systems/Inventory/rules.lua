@@ -15,9 +15,16 @@ for _, case in ipairs(cases) do
 end
 local flicks = {
     {name = "快速甩动", points = {{0, 0, 0}, {0.04, 48, 0}, {0.08, 96, 0}}, accepted = true},
-    {name = "距离不足", points = {{0, 0, 0}, {0.02, 24, 0}, {0.04, 48, 0}}, accepted = false},
-    {name = "距离刚过阈值", points = {{0, 0, 0}, {0.04, 65, 0}}, accepted = true},
-    {name = "速度不足", points = {{0, 0, 0}, {0.08, 48, 0}, {0.16, 96, 0}}, accepted = false},
+    {name = "距离不足", points = {{0, 0, 0}, {0.02, 20, 0}, {0.04, 40, 0}}, accepted = false},
+    {name = "距离刚低于新阈值", points = {{0, 0, 0}, {0.04, 42, 0}}, accepted = false},
+    {name = "距离刚过新阈值", points = {{0, 0, 0}, {0.04, 43, 0}}, accepted = true},
+    {name = "原短距离现可甩动", points = {{0, 0, 0}, {0.02, 24, 0}, {0.04, 48, 0}}, accepted = true},
+    {name = "原中速动作现可甩动", points = {{0, 0, 0}, {0.08, 48, 0}, {0.16, 96, 0}}, accepted = true},
+    {name = "速度不足", points = {{0, 0, 0}, {0.08, 40, 0}, {0.16, 80, 0}}, accepted = false},
+    {name = "速度刚低于新阈值", points = {{0, 0, 0}, {0.1, 53, 0}}, accepted = false},
+    {name = "速度刚过新阈值", points = {{0, 0, 0}, {0.1, 54, 0}}, accepted = true},
+    {name = "末段速度不足仍拒绝", points = {{0, 0, 0}, {0.04, 50, 0}, {0.08, 60, 0}}, accepted = false},
+    {name = "末段速度同步降低", points = {{0, 0, 0}, {0.04, 50, 0}, {0.08, 61, 0}}, accepted = true},
     {name = "长距离慢拖", points = {{0, 0, 0}, {0.5, 100, 0}, {1, 200, 0}}, accepted = false},
     {name = "快速移动后停住", points = {{0, 0, 0}, {0.04, 96, 0}, {0.12, 96, 0}}, accepted = false},
     {name = "手指轻微移动不冒充继续甩动", points = {{0, 0, 0}, {0.04, 96, 0}, {0.13, 97, 0}}, accepted = false},
@@ -27,13 +34,15 @@ local flicks = {
     {name = "斜向甩动", points = {{0, 0, 0}, {0.04, 36, 36}, {0.08, 72, 72}}, accepted = true},
     {name = "按住后再甩", points = {{0, 0, 0}, {0.5, 0, 0}, {0.54, 48, 0}, {0.58, 96, 0}}, accepted = true},
     {name = "缩放两倍仍识别相同动作", scale = 2, points = {{0, 0, 0}, {0.04, 96, 0}, {0.08, 192, 0}}, accepted = true},
-    {name = "放大界面不放宽距离", scale = 2, points = {{0, 0, 0}, {0.02, 48, 0}, {0.04, 96, 0}}, accepted = false},
+    {name = "放大界面不放宽距离", scale = 2, points = {{0, 0, 0}, {0.02, 40, 0}, {0.04, 80, 0}}, accepted = false},
     {name = "同帧跳变", points = {{0, 0, 0}, {0, 96, 0}}, accepted = false},
     {name = "取消后不残留", cancel = true, points = {{0, 0, 0}, {0.04, 48, 0}, {0.08, 96, 0}}, accepted = false}
 }
 for _, case in ipairs(flicks) do
     test.system("inventory", "flick_gesture", case, function(data)
         assert(data.accepted == case.accepted, "甩动距离、末段速度或取消规则错误")
+        assert(math.abs(data.minimumDistance - 64 / 1.5) < 0.001 and math.abs(data.minimumSpeed - 800 / 1.5) < 0.001,
+            "甩动灵敏度没有按原阈值除以1.5")
     end, "触屏甩动：" .. case.name)
 end
 local capacities = {

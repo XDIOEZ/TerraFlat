@@ -5,8 +5,9 @@ using UnityEngine;
 public sealed class InventoryFlickGesture
 {
     #region 轨迹与阈值
-    public const float DefaultMinimumDistance = 64f;
-    public const float DefaultMinimumSpeed = 800f;
+    // 灵敏度提高 50%：距离与速度门槛按原值除以 1.5，末段门槛同步派生。
+    public const float DefaultMinimumDistance = 64f / 1.5f;
+    public const float DefaultMinimumSpeed = 800f / 1.5f;
     private const double VelocityWindow = 0.1d;
     private const double ReleaseWindow = 0.04d;
     private readonly List<(Vector2 Position, double Time)> samples = new(32);
