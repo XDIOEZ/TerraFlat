@@ -62,6 +62,8 @@ public static class GameplayTestActorWorldRuntimeProbe
             result["inputEmpty"] = crafting.Table.inputInventory.Data.itemSlots.All(slot => slot.itemData == null);
             result["outputEmpty"] = crafting.Table.outputInventory.Data.itemSlots.All(slot => slot.itemData == null);
             result["panelClosed"] = !crafting.Table.IsPanelOpen;
+            result["carryBefore"] = crafting.CarryBefore.DeepClone();
+            result["carryAfterCleanup"] = CaptureHandcraftCarry(crafting.Player, crafting.Table);
         }
         if (fixture is TerrainFixture terrain)
         {
@@ -340,6 +342,8 @@ public static class GameplayTestActorWorldRuntimeProbe
     private sealed class CraftingFixture : IDisposable
     {
         public readonly Mod_HandCraftTable Table;
+        public readonly Player Player;
+        public readonly JObject CarryBefore;
         private readonly bool wasOpen;
         private readonly Inventory inputTarget, outputTarget;
         private bool disposed;
@@ -355,6 +359,8 @@ public static class GameplayTestActorWorldRuntimeProbe
             wasOpen = Table.IsPanelOpen;
             inputTarget = Table.inputInventory.DefaultTarget_Inventory;
             outputTarget = Table.outputInventory.DefaultTarget_Inventory;
+            Player = player;
+            CarryBefore = CaptureHandcraftCarry(player, Table);
         }
 
         public void Dispose()
@@ -382,6 +388,20 @@ public static class GameplayTestActorWorldRuntimeProbe
     private static float Count(Inventory inventory, string id) => inventory.Data.itemSlots
         .Where(slot => slot.itemData?.IDName == id).Sum(slot => slot.itemData.Stack.Amount);
 
+    /// <summary>只采样正式随身容量和真实制作库存，统计口径由 Lua 对照各阶段断言。</summary>
+    private static JObject CaptureHandcraftCarry(Player player, Mod_HandCraftTable table)
+    {
+        bool available = PlayerCarryCapacityUtility.TryGetSnapshot(player, out var carry);
+        return new JObject
+        {
+            ["available"] = available, ["weight"] = carry.CurrentWeight, ["volume"] = carry.CurrentVolume,
+            ["inputWeight"] = table.inputInventory.Data.CurrentCarryWeight,
+            ["inputVolume"] = table.inputInventory.Data.CurrentCarryVolume,
+            ["outputWeight"] = table.outputInventory.Data.CurrentCarryWeight,
+            ["outputVolume"] = table.outputInventory.Data.CurrentCarryVolume
+        };
+    }
+
     private static JObject CaptureHandcraft(Player player, JObject args)
     {
         var own = new CraftingFixture(player);
@@ -399,16 +419,23 @@ public static class GameplayTestActorWorldRuntimeProbe
         {
             ["materialInserted"] = inserted, ["panelOpen"] = table.IsPanelOpen,
             ["recipeId"] = recipe.Id, ["buttonInteractable"] = table.workButton.interactable,
-            ["inputBefore"] = Count(table.inputInventory, "Twine"), ["outputBefore"] = Count(table.outputInventory, "Rope")
+            ["inputBefore"] = Count(table.inputInventory, "Twine"), ["outputBefore"] = Count(table.outputInventory, "Rope"),
+            ["carryBefore"] = own.CarryBefore.DeepClone(), ["carryWithInput"] = CaptureHandcraftCarry(player, table)
         };
+        table.I_ClosePanel();
+        result["carryWhileClosed"] = CaptureHandcraftCarry(player, table);
+        result["closedForCarrySample"] = !table.IsPanelOpen;
+        table.I_ShowPanel();
         int required = table.GetRequiredClickCount();
         for (int click = 1; click < required; click++) table.workButton.onClick.Invoke();
         result["requiredClicks"] = required;
         result["inputBeforeFinalClick"] = Count(table.inputInventory, "Twine");
         result["outputBeforeFinalClick"] = Count(table.outputInventory, "Rope");
+        result["carryBeforeFinalClick"] = CaptureHandcraftCarry(player, table);
         table.workButton.onClick.Invoke();
         result["inputAfterCraft"] = Count(table.inputInventory, "Twine");
         result["outputAfterCraft"] = Count(table.outputInventory, "Rope");
+        result["carryAfterCraft"] = CaptureHandcraftCarry(player, table);
         result["expectedOutput"] = GameDifficultyService.ScaleCount(1,
             GameDifficultyService.Current.Production.CraftingOutputMultiplier, 1);
 
@@ -432,6 +459,7 @@ public static class GameplayTestActorWorldRuntimeProbe
         result["outputAfterFull"] = Count(table.outputInventory, "Rope");
         result["fullOutputSlots"] = table.outputInventory.Data.itemSlots.Count;
         result["fullButtonInteractable"] = table.workButton.interactable;
+        result["carryWithFullOutput"] = CaptureHandcraftCarry(player, table);
         result["cleanupRegistered"] = true;
         return result;
     }

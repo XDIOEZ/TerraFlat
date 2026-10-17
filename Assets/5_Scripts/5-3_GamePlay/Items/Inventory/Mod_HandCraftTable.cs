@@ -46,6 +46,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public int minClickCount = 1;
 
     private CraftingStationController _craftingController;
+    private Inventory_Data _carryInputData;
+    private Inventory_Data _carryOutputData;
     private Mod_GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
@@ -246,6 +248,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     protected override void OnUnload()
     {
+        UnbindCarryWeightEvents();
         _craftingController?.Dispose();
         _craftingController = null;
         inputInventory?.UnbindRuntimeDataEvents();
@@ -299,6 +302,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         outputInventory.Data.SetUnlimitedSlots(false);
         InitializeInventoryData(inputInventory, nameof(inputInventory));
         InitializeInventoryData(outputInventory, nameof(outputInventory));
+        BindCarryWeightEvents();
     }
 
     public void InitUI()
@@ -474,6 +478,41 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return;
 
         Debug.Log($"[Mod_HandCraftTable][Debug] {message}");
+    }
+
+#endregion
+
+#region 随身制作负重
+
+    /// <summary>玩家制作库存独立于面板开关监听，取放材料和完成合成后同步超重状态。</summary>
+    private void BindCarryWeightEvents()
+    {
+        UnbindCarryWeightEvents();
+        if (item is not Player player)
+            return;
+
+        _carryInputData = inputInventory.Data;
+        _carryOutputData = outputInventory.Data;
+        _carryInputData.Event_OnDataChanged += HandleCarryWeightChanged;
+        if (!ReferenceEquals(_carryOutputData, _carryInputData))
+            _carryOutputData.Event_OnDataChanged += HandleCarryWeightChanged;
+        PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
+    }
+
+    private void UnbindCarryWeightEvents()
+    {
+        if (_carryInputData != null)
+            _carryInputData.Event_OnDataChanged -= HandleCarryWeightChanged;
+        if (_carryOutputData != null && !ReferenceEquals(_carryOutputData, _carryInputData))
+            _carryOutputData.Event_OnDataChanged -= HandleCarryWeightChanged;
+        _carryInputData = null;
+        _carryOutputData = null;
+    }
+
+    private void HandleCarryWeightChanged(ItemSlot _)
+    {
+        if (item is Player player)
+            PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
     }
 
 #endregion

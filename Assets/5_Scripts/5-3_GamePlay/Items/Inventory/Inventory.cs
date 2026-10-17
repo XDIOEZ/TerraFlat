@@ -179,7 +179,7 @@ public class Inventory
     // 玩家行囊或受限容器的容量显示节点；正式节点由 UI_Bag Prefab 提供。
     private TextMeshProUGUI _carryWeightValueText;
     private TextMeshProUGUI _carryVolumeValueText;
-    private Inventory_Data _linkedCarryUsageData;
+    [NonSerialized, FastCloner.Code.FastClonerIgnore] private List<Inventory_Data> _linkedCarryUsageData;
     private Inventory_Data _overweightObservedData; // 当前绑定超重监听的数据源，用于安全解绑旧引用。
 
     // 输入绑定缓存，便于之后解除绑定
@@ -1099,7 +1099,7 @@ public class Inventory
 
     #region 库存重量与体积容量显示
 
-    /// <summary>绑定库存面板中的重量/体积数值节点；玩家行囊额外监听快捷栏占用变化。</summary>
+    /// <summary>绑定库存面板中的重量/体积数值节点，并监听其它随身库存变化。</summary>
     private void BindCarryCapacityUI()
     {
         _carryWeightValueText = null;
@@ -1113,21 +1113,21 @@ public class Inventory
         RefreshCarryCapacityUI();
     }
 
-    /// <summary>玩家快捷栏与行囊共用携带上限，因此快捷栏变化也要刷新行囊 Footer。</summary>
+    /// <summary>快捷栏和手工制作库存变化时，也要刷新行囊的携带量显示。</summary>
     private void BindCarryCapacityLinkedInventory()
     {
         UnbindCarryCapacityLinkedInventory();
-        if (!IsPlayerBagInventory())
+        if (!IsPlayerBagInventory() || item is not Player player)
             return;
 
-        Inventory hotbar = GetPlayerHotBarInventory();
-        Inventory_Data hotbarData = hotbar?.Data;
-        if (hotbarData == null || ReferenceEquals(hotbarData, Data))
-            return;
-
-        _linkedCarryUsageData = hotbarData;
-        _linkedCarryUsageData.Event_OnDataChanged += HandleLinkedCarryDataChanged;
-        _linkedCarryUsageData.Event_RefreshUI += HandleLinkedCarryUIRefresh;
+        _linkedCarryUsageData ??= new List<Inventory_Data>();
+        PlayerCarryCapacityUtility.CollectCarriedInventories(player, _linkedCarryUsageData);
+        _linkedCarryUsageData.Remove(Data);
+        foreach (Inventory_Data data in _linkedCarryUsageData)
+        {
+            data.Event_OnDataChanged += HandleLinkedCarryDataChanged;
+            data.Event_RefreshUI += HandleLinkedCarryUIRefresh;
+        }
     }
 
     private void UnbindCarryCapacityLinkedInventory()
@@ -1135,9 +1135,12 @@ public class Inventory
         if (_linkedCarryUsageData == null)
             return;
 
-        _linkedCarryUsageData.Event_OnDataChanged -= HandleLinkedCarryDataChanged;
-        _linkedCarryUsageData.Event_RefreshUI -= HandleLinkedCarryUIRefresh;
-        _linkedCarryUsageData = null;
+        foreach (Inventory_Data data in _linkedCarryUsageData)
+        {
+            data.Event_OnDataChanged -= HandleLinkedCarryDataChanged;
+            data.Event_RefreshUI -= HandleLinkedCarryUIRefresh;
+        }
+        _linkedCarryUsageData.Clear();
     }
 
     private void HandleLinkedCarryDataChanged(ItemSlot _)
@@ -1150,7 +1153,7 @@ public class Inventory
         RefreshCarryCapacityUI();
     }
 
-    /// <summary>刷新“当前 / 上限”的重量与体积；玩家行囊显示合并快捷栏后的值，容器显示自身库存值。</summary>
+    /// <summary>刷新“当前 / 上限”的重量与体积；行囊显示全部随身库存，容器显示自身库存。</summary>
     private void RefreshCarryCapacityUI()
     {
         if (_carryWeightValueText == null && _carryVolumeValueText == null)

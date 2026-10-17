@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Pool;
 
 /// <summary>
 /// 玩家随身携带容量快照。
-/// 当前将主背包与快捷栏视为同一份随身携带空间；装备栏、世界容器和制作输入输出不计入。
+/// 主背包、快捷栏和玩家手工制作的实际输入输出共用随身携带空间。
 /// </summary>
 public readonly struct PlayerCarryCapacitySnapshot
 {
@@ -61,10 +63,12 @@ public readonly struct PlayerCarryCapacitySnapshot
 }
 
 /// <summary>
-/// 统一解析玩家“主背包 + 快捷栏”的随身容量，避免拾取提示和背包 UI 各自维护一套统计口径。
+/// 统一解析玩家随身库存的容量，供拾取提示、背包 UI 和超重状态共用。
 /// </summary>
 public static class PlayerCarryCapacityUtility
 {
+    #region 随身库存与容量统计
+
     private const string OverweightBuffId = "背包超重";
     private const string OverweightBuffSource = "inventory.overweight";
 
@@ -81,22 +85,47 @@ public static class PlayerCarryCapacityUtility
         if (bagData == null)
             return false;
 
-        float totalWeight = bagData.CurrentCarryWeight;
-        float totalVolume = bagData.CurrentCarryVolume;
-
-        Mod_HotBar hotbarModule = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
-        Inventory_Data hotbarData = hotbarModule?.RuntimeInventory?.Data;
-        if (hotbarData != null && !ReferenceEquals(hotbarData, bagData))
+        using var lease = ListPool<Inventory_Data>.Get(out var inventories);
+        CollectCarriedInventories(player, inventories);
+        float totalWeight = 0f;
+        float totalVolume = 0f;
+        foreach (Inventory_Data data in inventories)
         {
-            totalWeight += hotbarData.CurrentCarryWeight;
-            totalVolume += hotbarData.CurrentCarryVolume;
+            totalWeight += data.CurrentCarryWeight;
+            totalVolume += data.CurrentCarryVolume;
         }
 
         snapshot = new PlayerCarryCapacitySnapshot(bagData, totalWeight, totalVolume);
         return true;
     }
 
-    /// <summary>依据玩家背包与快捷栏总重量维护来源型超重 Buff；体积超限不触发减速。</summary>
+    /// <summary>收集实际随身库存并按数据引用去重，不把配方预览或世界工作台计入。</summary>
+    public static void CollectCarriedInventories(Player player, List<Inventory_Data> inventories)
+    {
+        inventories.Clear();
+        if (player == null || player.itemMods == null)
+            return;
+
+        Add(player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.GetDefaultTargetInventory()?.Data);
+        Add(player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.RuntimeInventory?.Data);
+        foreach (Mod_HandCraftTable table in player.itemMods.GetCapabilities<Mod_HandCraftTable>())
+        {
+            Add(table.inputInventory?.Data);
+            Add(table.outputInventory?.Data);
+        }
+
+        void Add(Inventory_Data data)
+        {
+            if (data != null && !inventories.Contains(data))
+                inventories.Add(data);
+        }
+    }
+
+    #endregion
+
+    #region 超重状态
+
+    /// <summary>依据玩家全部随身库存总重量维护来源型超重 Buff；体积超限不触发减速。</summary>
     public static void RefreshOverweightSlowdown(Player player)
     {
         if (player == null || player.itemMods == null)
@@ -125,4 +154,6 @@ public static class PlayerCarryCapacityUtility
         Mod_BuffManager buffManager = player.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         buffManager?.RemoveSourceBuff(OverweightBuffSource);
     }
+
+    #endregion
 }
