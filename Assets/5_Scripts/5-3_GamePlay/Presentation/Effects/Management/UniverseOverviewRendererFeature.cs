@@ -53,6 +53,13 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
         return true;
     }
 
+    public float ClampInputSize(Mod_Cam camera, float currentSize, float requestedSize)
+    {
+        if (!TryResolveAnchor(camera, out _, out _)) return requestedSize;
+        return SurfaceZoomTransition.ClampInputSize(currentSize, requestedSize,
+            SurfaceZoomTransition.Sample(camera), WorldRenderingConfigCatalog.Default.universeView);
+    }
+
     private static bool TryResolveAnchor(Mod_Cam camera, out SpaceSession session, out BodyState body)
     {
         session = SpaceSession.Current;

@@ -6,6 +6,7 @@ public interface ICameraZoomPolicy
     #region 缩放策略契约
 
     bool TryGetProfile(Mod_Cam camera, out CameraZoomProfile profile);
+    float ClampInputSize(Mod_Cam camera, float currentSize, float requestedSize);
 
     #endregion
 }
@@ -111,6 +112,19 @@ public static class CameraZoomExtensions
                 return profile;
         }
         return default;
+    }
+
+    // 手动缩放共用策略约束，不影响读档、GM 或其它系统直接设置镜头。
+    public static float ClampInputSize(Mod_Cam camera, float currentSize, float requestedSize)
+    {
+        if (camera == null || camera.HasFollowOverride) return requestedSize;
+        for (int index = registrations.Count - 1; index >= 0; index--)
+        {
+            ICameraZoomPolicy policy = registrations[index].Policy;
+            if (policy.TryGetProfile(camera, out CameraZoomProfile profile) && profile.IsValid)
+                return policy.ClampInputSize(camera, currentSize, requestedSize);
+        }
+        return requestedSize;
     }
 
     private sealed class Registration : IDisposable

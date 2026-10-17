@@ -29,6 +29,18 @@ public static class SurfaceZoomTransition
             settings.startOrthographicSize, settings.opaqueOrthographicSize, orthographicSize));
     }
 
+    // 淡入完成前最多拉到星球局部视野，拉近随时放行，超出的输入直接丢弃。
+    public static float ClampInputSize(float currentSize, float requestedSize, float opacity,
+        WorldRenderingConfig.RenderingUniverseView settings)
+    {
+        if (requestedSize <= currentSize || settings.transitionSeconds <= 0f)
+            return requestedSize;
+        float entrySize = settings.opaqueOrthographicSize;
+        return currentSize >= entrySize && opacity >= 1f
+            ? requestedSize
+            : Mathf.Min(requestedSize, Mathf.Max(currentSize, entrySize));
+    }
+
     public static float Sample(Mod_Cam camera)
     {
         if (camera == null || camera.Player == null)

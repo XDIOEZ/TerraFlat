@@ -4,6 +4,8 @@
 
 快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、universe_view_config、universe_view_transition、group_projection`。
 
+2026-10-17 新增但未执行：`universe_view_transition` 直接采正式手动缩放约束，覆盖过渡终点封顶、滚轮与大步输入、连续拉远不积攒、完成后新输入放行、过渡中拉近、同帧折返、已有远景、零时长及配置终点变化。本轮仅静态修改，未编译、未运行；真实滚轮、手机双指/滑条及最终淡入画面由用户验收。
+
 已编写的规则覆盖：正式 WorldRenderingConfig 的雾半径/噪声/颜色约束和宇宙视野层次/缩放/过渡约束；停用独立 SpriteRenderer/SortingGroup 的外部代理排序键投影，以及分组停用后的逐级回退。
 
 2026-10-17 天气雾补充但未执行：`rendering/fog_config` 直接采正式 `RenderingDenseFog.TryResolveRadii`，检查满强度沿用配置半径、减弱时清晰圆按强度反比扩大、柔边宽度固定、超上限钳制及零/负强度关闭。Shader 圈外始终完全遮挡，强度不再参与透明度；用户自行验收，本轮未编译、未运行规则或画面测试。

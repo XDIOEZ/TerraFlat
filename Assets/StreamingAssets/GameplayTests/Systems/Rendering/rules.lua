@@ -100,6 +100,29 @@ for _, args in ipairs({
     end, "动态加载雾窗下的宇宙视图直接淡入")
 end
 
+for _, args in ipairs({
+    { current = 20, requested = 40, presentedOpacity = 0, expected = 40, label = "普通地表缩放" },
+    { current = 60, requested = 75, presentedOpacity = 0, expected = 75, label = "过渡区内拉远" },
+    { current = 60, requested = 5000000, presentedOpacity = 0, expected = 90, label = "滑条或双指一步越过过渡" },
+    { current = 75, requested = 93.75, presentedOpacity = 0.5, expected = 90, label = "滚轮跨过终点" },
+    { current = 90, requested = 112.5, presentedOpacity = 0.999, expected = 90, label = "淡入未完成仍拦截" },
+    { current = 90, requested = 112.5, presentedOpacity = 1, expected = 112.5, label = "淡入完成恢复拉远" },
+    { current = 90, requested = 60, presentedOpacity = 0.5, expected = 60, label = "过渡中允许拉近取消" },
+    { current = 60, requested = 5000000, presentedOpacity = 1, expected = 90, label = "拉近后同帧重新拉远不能跳过过渡" },
+    { current = 200, requested = 250, presentedOpacity = 0.5, expected = 200, label = "已有远景不强行拉近" },
+    { current = 200, requested = 100, presentedOpacity = 0.5, expected = 100, label = "已有远景允许拉近" },
+    { current = 60, requested = 5000000, presentedOpacity = 0, transitionSeconds = 0, expected = 5000000, label = "无过渡时立即放行" },
+    { current = 90, requested = 5000000, presentedOpacity = 0.5, entrySize = 120, expected = 120, label = "终点跟随正式配置" }
+}) do
+    test.system("rendering", "universe_view_transition", args, function(data)
+        assert(math.abs(data.clampedSize - args.expected) < 0.0001, "宇宙过渡缩放约束错误：" .. args.label)
+        if args.expected == 90 and args.presentedOpacity < 1 then
+            assert(data.repeatedSize == 90, "过渡期间连续拉远突破终点")
+            assert(data.releasedSize == 90, "过渡结束后补算了先前被丢弃的输入")
+        end
+    end, "宇宙过渡期间的手动缩放：" .. args.label)
+end
+
 test.system("rendering", "group_projection", { outerOrder = 77, innerOrder = 50, spriteOrder = 31 }, function(data)
     assert(data.outerOrder == 77 and data.outerLayerMatches, "代理没有继承最外层启用分组的排序键")
     assert(data.innerOrder == 50 and data.innerLayerMatches, "外层分组停用后没有使用内层排序键")

@@ -58,6 +58,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 环绕副本使用 URP Overlay，`WrappedWorldCameraRenderer` 唯一管理相机后处理开关：有副本仅最后活动相机启用，无副本/解绑恢复主相机；`ScreenPostProcessManager` 只合成 Volume 参数。
 - 地表柔边云团与外圈浓云由 ZoomCloudRendererFeature 在最终环绕补绘后叠加；清晰区对齐玩家设置的实际方形加载窗，额外表现预加载圈形成柔雾带，缺少外圈时在已加载窗内收一格柔边。窗口随加载设置与跨区块提交变化，缩放只改变屏幕投影；风只控制漂移，SurfaceZoomTransition 独立平滑 60～90 的宇宙画面直接淡入淡出，正常太空和禁天气维度不叠地表云，HUD 不被覆盖。
 - `CameraZoomExtensions` 注册通用缩放策略；地表宇宙观察把逻辑尺寸与实际相机尺寸分开，`CurrentOrthographicSize` 在这种策略下读逻辑尺寸，其余模式仍读 lens。滚轮/双指共用线性→倍率的连续步坐标，手机滑条通过 GetViewSliderValue/SetViewSliderValue 使用稳定分段映射；驾驶跟随覆盖优先，观察不改变玩家位置、听音或区块加载距离。
+- 手动缩放统一经策略 `ClampInputSize` 约束；地表宇宙淡入完成前最多拉到过渡终点，多余输入丢弃，拉近随时可用。完成后新输入恢复拉远；直接设置镜头、实际太空与驾驶不受该过渡约束。
 - `Mod_Cam.SetFollowOverride/ClearFollowOverride` 供临时驾驶覆盖跟随目标并同步环绕副本，释放回玩家，不改变听音主体；可随跟随租约传入最大视野与缩放倍率，`EffectiveMaxPovValue/UsesProportionalZoom` 供 UI 同步。太空驾驶上限为 120000、滚轮乘/除 1.25，双指共用比例缩放、手机滑条使用对数映射；退出租约清除临时范围，普通地表在宇宙观察起点前按原尺寸增减，缩放不改变区块加载距离。飞船驾驶目标由 SpaceSession 投影整船中心，镜头固定朝上，下降触地/退出恢复原视野。相机根实例进入持久场景，由 Mod_Cam 卸载/销毁时释放并清订阅与引用，普通星区卸载不销毁或重建相机。
 - 已插值目标可传 `FollowMode.PresentationLocked`：XY 阻尼、前探与预判平滑归零，Brain 固定 LateUpdate 跟随；缩放/设置变更不解除锁定，释放或目标销毁后恢复最新玩家设置和进入前的 Brain 更新方式。太空驾驶使用此模式，地表驾驶沿用普通设置。
 - 开发快捷键：Ctrl+F1 管理员，F1 录制 UI 隐藏，F2 创造背包（主背包打开不拦截，其它模态/加载锁拦截），T 与 GM 点选共用 `Mod_PlayerTraits.TryTeleportToScreenPosition`；太空先经 `SpaceSession.UnprojectPosition` 还原宇宙坐标，再调用 `TryTeleportPlayerToSpace`，地表传送先复用中立乘员重置解除乘船/下降，再写拓扑规范坐标并刷新区块。

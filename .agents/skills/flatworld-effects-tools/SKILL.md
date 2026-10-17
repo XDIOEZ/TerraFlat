@@ -41,6 +41,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 地表云层由 ZoomCloudRendererFeature 与 Resources/Shaders/ZoomClouds 合成，复用 PlanetCloudCommon.hlsl 的噪声；通过 Mod_ChunkLoader.TryGetLoadingWindowBounds 只读正式方形活动窗和表现预加载窗。活动窗内清晰，额外表现圈柔和过渡，外边完全不透明；无额外表现圈时内收一格柔边。范围随玩家加载设置及跨区块提交变化，缩放只改屏幕投影；窗口整体按本地镜像投影，不能逐角归一化。风只积分连续云纹漂移，driftTransitionSeconds=2 平滑风速；玩家/场景变化重建，正常太空、禁天气维度和退出清云。天气大雾仍由 DenseFog 独立负责。
 - `UniverseOverviewRendererFeature` 在云层后、红边前合成独立宇宙观察；`SurfaceZoomTransition` 只平滑宇宙画面直接淡入淡出，不强制满屏云。`universeView` 默认 60 起、90 完全、每步 ×1.25，地表真实镜头封顶 60。`entryPlanetRadiusMultiplier=0.3` 表示过渡完成时画面高度为星球直径的 30%，先看局部，再继续拉远看整球与宇宙；合法倍数只要求大于零。星体复用 Planet 外观和 PlanetSurface 的 PlanetUnlit Pass，位置来自会话，未进入的配置星区只建目录副本；一张无深度 RT 供整体淡入，退出/换玩家/换世界释放，不迁移角色或加载太空场景。
 - 自定义 Blitter 后处理的像素采样步长由调用方按源 RTHandle 纹理尺寸显式传入；URP 14 的 `Blit.hlsl` 不声明 `_BlitTexture_TexelSize`。
+- 地表宇宙观察的手动缩放由 `SurfaceZoomTransition.ClampInputSize` 按共用淡入进度限制：淡入完成前最多到 opaqueOrthographicSize，丢弃超额拉远输入，拉近放行；过渡时长为零直接放行。
 
 ## 阴影与遮光
 

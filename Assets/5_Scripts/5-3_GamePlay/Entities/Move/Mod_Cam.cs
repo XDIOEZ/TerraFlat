@@ -448,10 +448,14 @@ public class Mod_Cam : Module
             return;
         }
         CameraZoomProfile profile = GetZoomProfile();
-        SetOrthographicSize(profile.Enabled
+        SetInputOrthographicSize(profile.Enabled
             ? profile.Step(CurrentOrthographicSize, delta)
             : CurrentOrthographicSize + delta);
     }
+
+    // 滚轮、双指与滑条只提交本次允许的尺寸，过渡期间多余的输入不积攒。
+    private void SetInputOrthographicSize(float value)
+        => SetOrthographicSize(CameraZoomExtensions.ClampInputSize(this, CurrentOrthographicSize, value));
 
     /// <summary>设置相机正交视野；区块加载窗口由区块配置独立控制。</summary>
     public void SetOrthographicSize(float value)
@@ -492,7 +496,7 @@ public class Mod_Cam : Module
         float maximum = Mathf.Max(minimum + .001f, EffectiveMaxPovValue);
         float value = Mathf.Clamp01(normalized);
         CameraZoomProfile profile = GetZoomProfile();
-        SetOrthographicSize(profile.Enabled
+        SetInputOrthographicSize(profile.Enabled
             ? profile.FromSliderValue(value, minimum, maximum)
             : (HasFollowOverride && _followOverrideZoomMultiplier > 1f
                 ? minimum * Mathf.Pow(maximum / minimum, value)

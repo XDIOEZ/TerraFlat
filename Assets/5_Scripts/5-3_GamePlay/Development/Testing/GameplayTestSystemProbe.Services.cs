@@ -966,9 +966,25 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject ServiceUniverseViewTransition(JObject args)
     {
+        var defaults = WorldRenderingConfigCatalog.Default.universeView;
+        var settings = new WorldRenderingConfig.RenderingUniverseView
+        {
+            opaqueOrthographicSize = (float)Number(args, "entrySize", defaults.opaqueOrthographicSize),
+            transitionSeconds = (float)Number(args, "transitionSeconds", defaults.transitionSeconds)
+        };
         float opacity = SurfaceZoomTransition.ResolveOpacity((float)Number(args, "size", 60),
-            WorldRenderingConfigCatalog.Default.universeView);
-        return new JObject { ["opacity"] = opacity };
+            defaults);
+        float current = (float)Number(args, "current", 60);
+        float requested = (float)Number(args, "requested", 60);
+        float presentedOpacity = (float)Number(args, "presentedOpacity", 0);
+        float clamped = SurfaceZoomTransition.ClampInputSize(current, requested, presentedOpacity, settings);
+        return new JObject
+        {
+            ["opacity"] = opacity,
+            ["clampedSize"] = clamped,
+            ["repeatedSize"] = SurfaceZoomTransition.ClampInputSize(clamped, requested, presentedOpacity, settings),
+            ["releasedSize"] = SurfaceZoomTransition.ClampInputSize(clamped, clamped, 1f, settings)
+        };
     }
 
     private static JObject ServiceGroupProjection(JObject args)
