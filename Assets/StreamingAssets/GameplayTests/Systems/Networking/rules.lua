@@ -33,3 +33,23 @@ test.system("networking", "item_payload", { guid = 143, amount = 3 }, function(d
     assert(not data.corruptedAccepted and not data.emptyAccepted, "网络协议接受损坏或空负载")
     assert(data.sourceAmount == 3, "网络捕获修改了源物品")
 end, "网络实例身份与协议头拒绝")
+
+test.system("networking", "roll_snapshot", {}, function(data)
+    assert(data.protocol >= 19 and data.roundtrip and data.remainingBytes == 0, "翻滚协议版本或动作快照往返错误")
+    assert(math.abs(data.delayedElapsed - 0.25) < 0.00001, "远端没有按服务器 double 时标补齐动作进度")
+    assert(math.abs(data.pastEndElapsed - 0.4) < 0.00001, "过期动作快照延长了翻滚")
+    assert(math.abs(data.futureSampleElapsed - 0.1) < 0.00001 and math.abs(data.pausedElapsed - 0.1) < 0.00001,
+        "未来时标或暂停状态错误推进了翻滚")
+    assert(data.invalidElapsed == 0, "非法动作进度进入表现")
+end, "联机翻滚：正式协议、延迟补偿、到期与暂停")
+
+test.system("networking", "roll_stamina_handoff", {}, function(data)
+    assert(data.started and data.protected and data.protectedCurrent == 90, "旧客户端快照覆盖了服务器翻滚扣费")
+    assert(data.missingRejected and data.duplicateBeginRejected, "体力交接接受缺失模块或重入事务")
+    assert(data.wrongRequestRejected and data.wrongAmountRejected and data.pendingAfterBadAck,
+        "错误体力回执提前撤销扣费保护")
+    assert(data.acknowledged and not data.pendingAfterAck and data.duplicateAckRejected,
+        "合法体力回执未完成交接或被重复接受")
+    assert(data.reducedCapacityAcknowledged and not data.reducedCapacityPending,
+        "接收端体力上限降低后的合法钳制回执卡死了翻滚")
+end, "联机翻滚：扣费快照保护与合法回执")

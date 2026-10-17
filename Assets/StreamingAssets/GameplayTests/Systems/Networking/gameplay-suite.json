@@ -27,6 +27,12 @@
       "name": "联机假人：实际移动、攻击、拾取与丢弃",
       "luaPath": "GameplayTests/Systems/Networking/bots-actions.lua",
       "enabled": true
+    },
+    {
+      "id": "networking_bots_roll",
+      "name": "联机假人：翻滚许可、体力扣费与无敌收尾",
+      "luaPath": "GameplayTests/Systems/Networking/bots-roll.lua",
+      "enabled": true
     }
   ]
 }

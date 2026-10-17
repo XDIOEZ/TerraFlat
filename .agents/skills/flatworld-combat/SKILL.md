@@ -27,6 +27,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - Heal 查询 IHealingCostPolicy 可恢复额度，按实际恢复量支付，无策略免费；普通回血不复活，启用部位生命时只分配给存活部位，重生/满血赋值才恢复耗尽部位。
 - 掉落以稳定物品 ID 定义，实体顶层 lootTableId 展开到唯一接收器；LootPrefabName 实为 Item.itemData.IDName，非外壳名。引用在目录加载时校验。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。
+- 临时无敌由调用方持有 `AcquireTemporaryInvulnerability()` 的 `IDisposable` 租约，多来源独立释放；普通/上下文/环境/生存/结构损伤均拦截且不耗受击冷却，卸载、停用、死亡和回池作废旧租约，直接权威设置生命仍生效。
 - Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御，旧比例只用于表现。工具弱点防御后乘 2、未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明；Tile RequiredTool 同规则。
 - 难度 0 的怪物攻击玩家在防御后乘 0.5，由 `CreatureCombatDifficultyRules.ResolveReceivedDamageMultiplier` 接入 GO 接收器（含 ECS 转交的玩家命中）；环境伤害、玩家攻击和非玩家目标不应用该减伤，其余难度不变。
 - 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。

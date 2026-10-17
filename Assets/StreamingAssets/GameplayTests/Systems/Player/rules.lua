@@ -16,6 +16,111 @@ for _, case in ipairs(cases) do
     end, "移动消耗：" .. case.name)
 end
 
+-- 翻滚采样实走模块的发动、体力事务、碰撞缩放和收尾，不推进场景物理。
+local function roll_near(actual, expected, label)
+    assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label)
+end
+local function roll_restored(sample)
+    assert(not sample.rolling and not sample.invulnerable and not sample.motionLease, "翻滚结束后仍残留动作或租约")
+    roll_near(sample.width, .4, "身体宽度没有恢复")
+    roll_near(sample.height, .3, "身体高度没有恢复")
+    roll_near(sample.visualAngle, 0, "贴图旋转没有归零")
+    roll_near(sample.offsetY, -.07, "翻滚改动了碰撞偏移")
+end
+
+for _, case in ipairs({
+    {args = {x = 3, y = 4}, x = .6, y = .8},
+    {args = {facingX = -1}, x = -1, y = 0},
+    {args = {x = 0, y = -1, facingX = -1}, x = 0, y = -1},
+    {args = {facingX = 0}, x = 1, y = 0}
+}) do
+    test.system("player", "roll_direction", case.args, function(data)
+        roll_near(data.x, case.x, "翻滚横向没有采用输入或朝向")
+        roll_near(data.y, case.y, "翻滚纵向没有采用输入或朝向")
+    end, "翻滚方向：移动优先、无输入按朝向、对角归一化")
+end
+
+test.system("player", "roll_input", {}, function(data)
+    assert(data.path == "<Keyboard>/space" and data.actionType == "Button", "翻滚默认空格按钮没有接入输入资产")
+    assert(data.editableCount == 1 and not data.initialStateCheck, "翻滚按键未进入重绑或会在启用时重复触发")
+end, "翻滚输入：默认空格、可重绑、按住不连续触发")
+
+for _, running in ipairs({false, true}) do
+    test.system("player", "roll_action", {running = running, duplicateBody = true, steps = {
+        {action = "start", x = 3, y = 4}, {action = "start"}, {seconds = .2}, {seconds = .2},
+        {action = "start"}, {seconds = .61}, {action = "start"}, {action = "cancel"}
+    }}, function(data)
+        local s = data.samples
+        assert(s[1].accepted and s[1].rolling and s[1].invulnerable and s[1].motionLease, "正式翻滚没有同时建立移动和无敌")
+        roll_near(s[1].requestedCost, 10, "翻滚基础体力消耗不是10")
+        assert(s[1].transactions == 1 and s[1].costSource == "flatworld.movement.roll", "翻滚体力没有使用独立来源事务")
+        roll_near(s[1].drivenSpeed, 20, "翻滚没有按步行两倍速度，不应叠加奔跑倍率")
+        roll_near(s[1].width, .2, "碰撞宽度没有缩为50%或重复缩放")
+        roll_near(s[1].height, .15, "碰撞高度没有缩为50%")
+        assert(not s[1].isWalking and not s[1].bodySimulated, "翻滚冒充步行或开启了夹具物理")
+        assert(not s[2].accepted and s[2].stamina == s[1].stamina and s[2].transactions == 1, "重复按键扣费或重开了动作")
+        roll_near(s[3].visualAngle, 180, "翻滚中点贴图没有转半圈")
+        roll_near(s[3].directionX, .6, "中途输入改变了翻滚方向")
+        roll_near(s[3].rootAngle, 0, "贴图旋转污染角色物理根节点")
+        assert(s[3].spriteFacing < 0 and s[3].invulnerable, "贴图翻面丢失或无敌提前结束")
+        roll_restored(s[4])
+        roll_near(s[4].cooldown, .6, "冷却没有从动作结束开始")
+        assert(not s[5].accepted and s[5].transactions == 1, "冷却中按键扣费或发动")
+        assert(s[7].accepted and s[7].transactions == 2, "冷却结束后无法再次发动")
+        roll_restored(s[8])
+    end, "翻滚正式动作：尺寸、旋转、无敌、体力、防重入、冷却和奔跑隔离")
+end
+
+for _, args in ipairs({{stamina = 0}, {missingBody = true}, {triggerOnly = true}}) do
+    args.steps = {{action = "start"}}
+    test.system("player", "roll_action", args, function(data)
+        local s = data.samples[1]
+        assert(not s.accepted and s.transactions == 0 and s.cooldown == 0, "拒绝翻滚仍然扣费或进入冷却")
+        roll_restored(s)
+    end, "翻滚拒绝：体力不足或缺少真实身体碰撞")
+end
+
+for _, action in ipairs({"cancel", "disable", "unload", "locked", "dead"}) do
+    test.system("player", "roll_action", {steps = {{action = "start"}, {action = action}}}, function(data)
+        assert(data.samples[1].accepted, "取消边界夹具未能发动")
+        roll_restored(data.samples[2])
+    end, "翻滚中断立即还原：" .. action)
+end
+
+test.system("player", "roll_action", {serverRemote = true, reentrant = true, steps = {
+    {action = "start"}, {seconds = .4}
+}}, function(data)
+    local first = data.samples[1]
+    assert(first.accepted and first.invulnerable and not first.motionLease, "服务端远端动作没有保持生命权威与位置归属")
+    assert(first.moverLocked and not first.bodySimulated and first.transactions == 1 and not first.reentrantAccepted,
+        "服务端远端动作改了移动锁/物理或允许扣费回调重入")
+    roll_restored(data.samples[2])
+end, "翻滚联机权威：远端不加载本地模块，不接管刚体，事务回调不能重入")
+
+test.system("player", "roll_action", {steps = {
+    {action = "presentation", sequence = 2}, {action = "presentation", active = false, sequence = 1},
+    {action = "presentation", active = false, sequence = 2}, {action = "presentation", sequence = 2}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].rolling and not s[1].invulnerable and s[1].transactions == 0 and not s[1].motionLease,
+        "远端视觉错误扣费或建立本地移动/无敌")
+    assert(s[2].rolling, "旧停止包取消了新翻滚")
+    roll_restored(s[3])
+    roll_restored(s[4])
+end, "翻滚远端表现：绝对进度、不叠缩放、旧包拒绝、停止后不复活")
+
+test.system("player", "roll_action", {stamina = 0, steps = {
+    {action = "owned", sequence = 8, elapsed = .2}, {action = "owned", sequence = 8, elapsed = .1},
+    {seconds = .2}, {action = "owned", sequence = 8, elapsed = .1}
+}}, function(data)
+    local s = data.samples
+    assert(s[1].rolling and s[1].motionLease and s[1].invulnerable and s[1].stamina == 0 and s[1].transactions == 0,
+        "服务器许可没有使用正式移动，或客户端重复扣费")
+    roll_near(s[2].elapsed, .2, "同序号快照倒退或重开动作")
+    roll_restored(s[3])
+    roll_restored(s[4])
+end, "翻滚客户端许可：复用移动租约，不重复扣费，同序号不能续无敌")
+
 test.system("player", "interaction_query_context", {}, function(data)
     assert(data.wrapped == 1 and data.infinite == 0, "交互空间查询没有复用正确拓扑或循环重复了同一目标")
     assert(data.pointerHit == 1 and data.pointerMiss == 0, "空间交互的精确落点范围改变")

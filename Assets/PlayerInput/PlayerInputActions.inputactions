@@ -15,6 +15,15 @@
                     "initialStateCheck": true
                 },
                 {
+                    "name": "Roll",
+                    "type": "Button",
+                    "id": "6807b249-978c-4efb-915c-bc78cc6c191f",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "RotateBuilding",
                     "type": "Button",
                     "id": "18c3b730-067e-4b7e-b8b2-a16a3299d582",
@@ -223,6 +232,17 @@
                 }
             ],
             "bindings": [
+                {
+                    "name": "",
+                    "id": "9c985ba8-1ac3-4448-a0b6-066888589ee8",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Roll",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
                 {
                     "name": "",
                     "id": "ba960d2d-fd16-49d5-9548-0bc24f9064fb",

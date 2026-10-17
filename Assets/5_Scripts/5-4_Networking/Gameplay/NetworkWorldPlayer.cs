@@ -148,6 +148,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            UnbindNetworkRoll(endSession: true);
             ItemNetworkStateSerialization.RuntimeStateChanged -= OnRuntimeItemStateChanged;
             WorldTopologyRuntime.LocalPlayerWrapped -= HandleLocalPresentationWrap;
             NetworkChunkStreamingCoordinator.Unregister(transform);
@@ -182,6 +183,7 @@ namespace FlatWorld.Networking.Gameplay
                 PublishServerPlayerState();
             }
             UpdateNetworkCombat();
+            UpdateNetworkRoll();
             if (!NetworkClient.active)
                 return;
 
@@ -337,6 +339,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
 
+            if (!ProtectPendingRollStamina(ref payload)) return;
             if (corePlayer == null) return;
             if (!IsInSpace && !authoritativeGroundCombatPending)
             {
@@ -723,6 +726,7 @@ namespace FlatWorld.Networking.Gameplay
                 coreTurnBack = corePlayer.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
                 coreAnimator = corePlayer.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
                 coreAnimatorReceiver = coreAnimator as Mod_AnimatorController_Receiver;
+                BindNetworkRoll();
                 if (coreAvatarIsLocal)
                     coreAnimator?.SetNetworkPresentation(false, false);
                 if (!coreAvatarIsLocal && !isServer && coreTurnBack != null)

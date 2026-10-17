@@ -1015,6 +1015,7 @@
         "networking_bots_input",
         "networking_bots_pickup",
         "networking_bots_actions",
+        "networking_bots_roll",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"

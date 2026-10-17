@@ -178,7 +178,7 @@ public partial class Mod_Mover
         ExternalVelocity = CarrierSource.CurrentVelocity;
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
-    private void OnDisable() { ResetSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); }
-    protected override void OnUnload() { DisposeSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); UnbindMoveAnimationCallbacks(); }
+    private void OnDisable() { ClearDrivenMotion(); ResetSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); }
+    protected override void OnUnload() { ClearDrivenMotion(); DisposeSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); UnbindMoveAnimationCallbacks(); }
     #endregion
 }

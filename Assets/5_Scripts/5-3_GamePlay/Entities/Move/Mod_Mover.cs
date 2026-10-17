@@ -193,6 +193,7 @@ public partial class Mod_Mover : Module
 
     protected override void OnLoad()
     {
+        ClearDrivenMotion();
         ModDataMemoryPack.ReadData(ref Data);
         bool persistedRunState = Data.isRunning;
         Data.isRunning = false;
@@ -307,6 +308,11 @@ public partial class Mod_Mover : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (HasDrivenMotion)
+        {
+            if (IsSurfaceMotionAvailable && inputController?.IsGameplayInputLocked != true) { ApplyDrivenMotion(); return; }
+            ClearDrivenMotion();
+        }
         if (UpdateSpaceMotion(deltaTime)) return;
         if (UpdateCarrierMotion(deltaTime)) return;
         if (moveAction == null)
@@ -554,7 +560,7 @@ public partial class Mod_Mover : Module
     private void UpdateMovementState()
     {
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
-        bool isActuallyMoving = CarrierSource == null && rb != null &&
+        bool isActuallyMoving = !HasDrivenMotion && CarrierSource == null && rb != null &&
                                 DrivenVelocity.sqrMagnitude > stopThreshold * stopThreshold;
         IsMoving = isActuallyMoving;
 
@@ -657,6 +663,7 @@ public partial class Mod_Mover : Module
     }
     public void OnDestroy()
     {
+        ClearDrivenMotion();
         ReleaseCarrierLease();
         UnbindRunActions();
         UnbindMoveAnimationCallbacks();

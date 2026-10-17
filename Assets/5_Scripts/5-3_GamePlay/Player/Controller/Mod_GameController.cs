@@ -103,6 +103,7 @@ public partial class Mod_GameController : Module
     public event Action AttackStarted;
     public event Action AttackEnded;
     public event Action BuildingRotationRequested; // 当前手持建筑的临时朝向切换。
+    public event Action RollRequested; // 翻滚只通过中央输入仲裁进入玩法。
     public float AimDeadZone => Mathf.Clamp01(GamepadCursorDeadZone); // 手机和手柄共用的准星死区
 
     [Header("手柄适配")]
@@ -295,6 +296,7 @@ public partial class Mod_GameController : Module
         ActiveInputDeviceChanged = null;
         AttackStarted = null;
         AttackEnded = null;
+        RollRequested = null;
         LeftClick.Clear();
         LeftClickUp.Clear();
         RightClick.Clear();
@@ -614,6 +616,7 @@ public partial class Mod_GameController : Module
 
     private void RegisterInputCallbacks() /// 注册输入监听
     {
+        _inputActions.Win10.Roll.performed += HandleRollInput;
         _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed += HandleBuildingRotation;
         _inputActions.Win10.LeftClick.performed += LeftClickAction;
         _inputActions.Win10.LeftClick.canceled += LeftClickUpAction;
@@ -651,6 +654,7 @@ public partial class Mod_GameController : Module
 
     private void UnregisterInputCallbacks() /// 取消输入监听
     {
+        _inputActions.Win10.Roll.performed -= HandleRollInput;
         _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed -= HandleBuildingRotation;
         _inputActions.Win10.LeftClick.performed -= LeftClickAction;
         _inputActions.Win10.LeftClick.canceled -= LeftClickUpAction;

@@ -287,6 +287,12 @@
       "enabled": true
     },
     {
+      "id": "networking_bots_roll",
+      "name": "联机假人：翻滚许可、体力扣费与无敌收尾",
+      "luaPath": "GameplayTests/Systems/Networking/bots-roll.lua",
+      "enabled": true
+    },
+    {
       "id": "ui_localization_gameplay",
       "name": "正式设置窗口、保存放弃与中英文切换",
       "luaPath": "GameplayTests/Systems/UISettings/gameplay.lua",

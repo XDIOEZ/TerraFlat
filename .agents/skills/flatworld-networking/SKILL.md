@@ -12,7 +12,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `Core/NetworkConnectionEndpoint.cs`：原始地址明确填写的端口必须在 1～65535；只在缺省时使用备用端口。IPv6 方括号内的冒号不是端口分隔符，不用 `Uri.IsDefaultPort` 判断用户是否显式填写端口。
 - `Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`：启动、连接与玩家。
 - `Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`：区块、物品、天气复制。
-- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 18。
+- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 19。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
@@ -20,6 +20,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 ## 权威与坐标
 
 - 服务端结算生成、伤害、死亡、建筑及持久状态；远程视觉副本不进入本地 Item Tick、AI 感知、教程、对话或存档索引。只有 owned 玩家驱动本地输入、导航窗口和 HUD；玩家加载、提升和远程配置显式设置 ProfileContext。
+- 地表翻滚经 `NetworkWorldPlayer.Roll.cs` 请求服务器，校验角色状态、冷却与体力后才启用无敌；远端服务器只推进动作态，不获取 Mover 物理租约或解除远端移动锁。owned 收到许可后推进剩余移动，其他副本按同一 double 时标旋转与恢复碰撞；网络动作序号在 NetworkIdentity 内保持递增。扣费交接期间保护 Stamina 模块，确认 applied 回执后恢复既有地表状态流；普通地表整体体力/生命仍受原客户端状态模型限制。
 - 出生集中检查当前连接引用、认证、已通过版本/MOD 的 Join 和本连接的 WorldReady；Mirror AddPlayerMessage 不能提前出生。远端名字分配同时避开现有 Player_DIC 档案，本地主机可以接管自己的离线角色。
 - 断线清理须核对连接对象身份：复用相同 connectionId 后，旧连接的延迟回调不得删除新连接握手、出生预约或太空输入/攻击状态。
 - 协议、存档和权威判定使用规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是服务端玩家位置；Host 中远端 Transform 可能已是本机镜像。`WorldLocalPresentation` 在各客户端选择 owned 玩家附近的表现镜像，远端插值先保存逻辑目标。区块流送消费 `ObserverLogicalPosition`，按观察者并集加载。

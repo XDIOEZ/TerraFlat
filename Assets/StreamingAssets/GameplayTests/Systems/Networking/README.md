@@ -2,9 +2,11 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`networking/endpoint、item_payload`。
+快速入口：`rules.lua`；操作：`networking/endpoint、item_payload、roll_snapshot、roll_stamina_handoff`。
 
 已编写的规则覆盖：NetworkConnectionEndpoint 的 IPv4/IPv6/域名端点、显式端口优先、缺省端口回退和非法输入拒绝；显式0、空端口、超范围及非数字端口不得被Uri默认端口语义吞掉；正式 FWI1 物品网络负载、身份和损坏头拒绝。
+
+2026-10-18：翻滚新增服务器许可、动作快照和体力扣费交接，随 Gameplay 协议升级发布。规则采样正式 Mirror 快照往返、double 时标补偿、到期/暂停进度及旧客户端状态覆盖保护；假人专项补服务器真实请求、重复/冷却拒绝、体力扣费与无敌收尾。仅已编写，未编译、未运行；真实 owned Client 请求回程、延迟下的移动手感、远端贴图和两端伤害仍由用户验收。
 
 关键流程待补：真实 Host + Client 的入世、重连、断线；权威拾取/建造/战斗；跨星区兴趣管理；消息分片/旧序号拒绝和远端表现。快速结果不表示多人验收通过。
 

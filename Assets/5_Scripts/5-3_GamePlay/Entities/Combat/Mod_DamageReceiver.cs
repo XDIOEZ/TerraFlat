@@ -341,6 +341,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     protected override void OnLoad()
     {
+        ClearTemporaryInvulnerability();
         CombatPhysicsChannels.AssignDamageReceiver(this);
         ClearBodyPartPenalties();
         ClearHitSlowdown();
@@ -374,6 +375,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
+        if (Hp <= 0f) ClearTemporaryInvulnerability();
         if (previousHp <= 0f && Hp > 0f)
             ResetDeathResolution();
         if (item?.itemData != null && !string.IsNullOrEmpty(modData.Name))
@@ -481,8 +483,17 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         _hideUiCoroutine = null;
     }
 
-    public void OnItemTakenFromPool() => ReleaseWorldHealthPanel();
-    public void OnItemReturnedToPool() => ReleaseWorldHealthPanel();
+    public void OnItemTakenFromPool()
+    {
+        ClearTemporaryInvulnerability();
+        ReleaseWorldHealthPanel();
+    }
+
+    public void OnItemReturnedToPool()
+    {
+        ClearTemporaryInvulnerability();
+        ReleaseWorldHealthPanel();
+    }
 
     #endregion
 
@@ -605,18 +616,21 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     private void OnDestroy()
     {
+        ClearTemporaryInvulnerability();
         Unload();
         ReleaseWorldHealthPanel();
     }
 
     private void OnDisable()
     {
+        ClearTemporaryInvulnerability();
         // Unity 停用对象会中止协程，同步清除句柄以便再次受伤时重新计时。
         HidePanel();
     }
 
     protected override void OnUnload()
     {
+        ClearTemporaryInvulnerability();
         incomingDamageRules.Clear();
         resolvingHealing = false;
         ClearBodyPartPenalties();
@@ -657,7 +671,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     /// <summary>定向部位入口；null 使用随机部位，仍通过阵营、受击规则及统一结算。</summary>
     public virtual float Hurt(IDamageSender damageSender, BodyPartType? targetPart)
     {
-        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
+        if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
         if (!FactionRelationService.CanAttack(damageSender.attacker, item)) return -1;
         var context = GameplayCombatBridge.Context(damageSender, new FlatWorld.Combat.CombatClock {
             Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
@@ -682,7 +696,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     /// <summary>共享上下文的定向部位入口。</summary>
     public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context, BodyPartType? targetPart)
     {
-        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
+        if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
         var target = GameplayCombatBridge.Identity(item);
         if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension) return -1f;
         if (context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment)
@@ -738,6 +752,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     /// <summary>新旧攻击共享间隔、物理伤害、难度、归因和原有生命提交/反馈链。</summary>
     private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false)
     {
+        if (IsTemporarilyInvulnerable) return -1f;
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
         if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
@@ -795,6 +810,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         List<BodyPartDamageInfo> preparedHits = null,
         DeathCauseRecord deathCause = null)
     {
+        if (IsTemporarilyInvulnerable) return -1f;
         if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
             throw new ArgumentOutOfRangeException(nameof(damage), "伤害必须是有限非负数。");
 
@@ -973,7 +989,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     public virtual float ForceHurt(float damage, DeathCauseRecord deathCause)
     {
-        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0) return -1;
+        if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0) return -1;
         damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
         damage *= Mathf.Max(0f, damageTakenMultiplier);
         if (damage <= 0f) return Hp;
@@ -1263,6 +1279,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (!CanMutateBodyState()) return;
         Data.MaxHp = value;
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, value);
+        if (Data.Hp <= 0f) ClearTemporaryInvulnerability();
         NotifyBodyStateChanged();
     }
 
@@ -1270,6 +1287,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     {
         if (float.IsNaN(value) || float.IsInfinity(value)) throw new ArgumentOutOfRangeException(nameof(value));
         Data.Hp = Mathf.Clamp(value, 0f, Data.MaxHp);
+        if (Data.Hp <= 0f) ClearTemporaryInvulnerability();
         bodyPenaltiesDirty = true;
     }
 
@@ -1474,6 +1492,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     /// <summary>新实例加载或显式复活时取消上一轮延迟销毁，开启新的死亡结算周期。</summary>
     private void ResetDeathResolution()
     {
+        ClearTemporaryInvulnerability();
         _deathHandled = false;
         if (Hp > 0f && Data != null) Data.DeathCause = null;
         if (_deathCoroutine != null)
@@ -1489,6 +1508,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             return;
 
         _deathHandled = true;
+        ClearTemporaryInvulnerability();
         _deathConsumedByExternalHandler = false;
         try
         {

@@ -43,6 +43,7 @@ namespace FlatWorld.Networking.Gameplay
         }
         public override void OnStopServer()
         {
+            UnbindNetworkRoll(endSession: true);
             SpaceSessionForNetwork?.RemoveNetworkPassengerInput(displayName);
             SpaceSessionForNetwork?.EndNetworkAttack(displayName);
             if (corePlayer != null && ItemMgr.Instance != null)
@@ -294,6 +295,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnDisable()
         {
+            UnbindNetworkRoll();
             if (spacePresentationSession != null) spacePresentationSession.PresentationSynchronized -= SynchronizeSpacePresentation;
             spacePresentationSession = null;
         }

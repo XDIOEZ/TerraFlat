@@ -45,3 +45,34 @@ end
 test.system("combat", "identity", {changePulse = true}, function(data)
     assert(data.sameIdentity and not data.sameAttack, "不同脉冲被当成同一攻击")
 end, "同一来源不同脉冲独立结算")
+
+test.system("combat", "temporary_invulnerability", {}, function(data)
+    assert(not data.initiallyImmune, "普通生命实例不应自带临时无敌")
+    assert(data.twoSourcesImmune and data.oneSourceImmune, "释放一个来源误撤销另一个来源的无敌")
+    assert(not data.releasedImmune, "最后一个来源释放后仍然无敌")
+    assert(not data.unloadedImmune and data.oldDisposeKeptNew and not data.reloadReleasedImmune,
+        "卸载后旧租约泄漏或误撤销重新加载的无敌")
+    assert(not data.returnedImmune and data.poolOldDisposeKeptNew and not data.takenImmune,
+        "对象池生命周期没有隔离无敌来源")
+    assert(not data.deadImmune and data.deadAcquireRejected, "死亡后仍保留或取得无敌租约")
+    assert(data.deadDisposeKeptRevival and not data.revivalReleasedImmune, "死亡旧租约影响复活后的无敌来源")
+end, "临时无敌：多来源独立释放、卸载换代、池化与死亡清理")
+
+test.system("combat", "invulnerability_damage", {}, function(data)
+    for _, key in ipairs({"legacyRejected", "targetedLegacyRejected", "contextRejected", "targetedContextRejected",
+        "forceRejected", "environmentRejected", "pressureRejected", "legacyZeroImmuneRejected"}) do
+        near(data[key], -1, key .. "无敌拒绝")
+    end
+    near(data.structuralBlocked, 0, "结构损伤拦截")
+    near(data.immuneHp, 100, "无敌期间生命")
+    near(data.immuneCallbacks, 0, "无敌期间伤害回调")
+    near(data.sameTimeZeroHit, 0, "免疫拒绝不消耗普通受击冷却")
+    near(data.nextZeroHitCooldown, -1, "有效零伤命中仍消耗普通受击冷却")
+    near(data.zeroHitCallbacks, 0, "有效零伤不发布扣血回调")
+    near(data.zeroEnvironmentHit, 0, "环境零伤仍可绕过普通受击冷却")
+    near(data.forceHpAfterRelease, 95, "无敌解除后的生存伤害")
+    near(data.structuralLossAfterRelease, 5, "无敌解除后的结构损伤")
+    near(data.releasedHp, 90, "无敌解除后的总生命")
+    near(data.releasedCallbacks, 2, "无敌解除后的实际扣血回调")
+    near(data.legacyZeroHit, 0, "普通攻击零伤是有效命中")
+end, "临时无敌：正式伤害入口、无副作用拒绝与零伤命中区别")

@@ -8,7 +8,7 @@ public partial class Mod_DamageReceiver
     #region 环境结构损伤与范围命中
     public float ApplyStructuralDamage(float damage)
     {
-        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f) return 0f;
+        if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f) return 0f;
         if (!float.IsFinite(damage) || damage < 0f) throw new ArgumentOutOfRangeException(nameof(damage));
         // 罐壁自身超压直接扣真实生命，库存与世界载体使用同一数值。
         return ResolveDamage(damage, null, 0f);
@@ -19,6 +19,7 @@ public partial class Mod_DamageReceiver
     /// <summary>中立环境命中保留防御、部位生命和死亡链，不占用普通攻击冷却。</summary>
     public float HurtEnvironmentalDamage(ulong eventId, Vector2 logicalOrigin, float physicalDamage, string deathCauseId = "unknown")
     {
+        if (IsTemporarilyInvulnerable) return -1f;
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null) return 0f;
         if (eventId == 0) throw new ArgumentOutOfRangeException(nameof(eventId));
         if (!float.IsFinite(physicalDamage) || physicalDamage < 0f) throw new ArgumentOutOfRangeException(nameof(physicalDamage));
