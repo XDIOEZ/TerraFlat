@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -13,6 +14,14 @@ namespace FlatWorld.Navigation
     /// </summary>
     public sealed partial class FlowNavigationCache : IDisposable
     {
+        #region 性能分段
+        // 主线程只记录准备、调度和等待，不能把等待时间当成工作线程 CPU 时间。
+        private static readonly PerformanceDebugPoint ReadMarker = new("FlatWorld.Navigation.Flow.Read");
+        private static readonly PerformanceDebugPoint ReadersCompleteMarker = new("FlatWorld.Navigation.Flow.CompleteReaders");
+        private static readonly PerformanceDebugPoint FieldsBuildMarker = new("FlatWorld.Navigation.Flow.FieldsBuild");
+        private static readonly PerformanceDebugPoint FieldsCompleteMarker = new("FlatWorld.Navigation.Flow.FieldsBuild.Complete");
+        #endregion
+
         #region 所有权与共享缓存
         private static uint nextEpoch;
         private readonly IFlowGridSource source;
@@ -132,9 +141,14 @@ namespace FlatWorld.Navigation
         public FlowNavigationSnapshot Read()
         {
             if (disposed) throw new ObjectDisposedException(nameof(FlowNavigationCache));
+            using var readScope = ReadMarker.Measure();
             if (resetPending) ResetWorld();
+            ReadMarker.AddWork(dirty.Count);
+            ReadMarker.SetGauge(dirty.Count);
             if (dirty.Count == 0 && !goalsChanged && nativeChunks.IsCreated) return Snapshot();
-            readers.Complete(); readers = default;
+            using (ReadersCompleteMarker.Measure())
+                readers.Complete();
+            readers = default;
             bool graphChanged = !nativeChunks.IsCreated;
             changedChunks.Clear();
             builds.Clear();
@@ -326,6 +340,8 @@ namespace FlatWorld.Navigation
         private void BuildFields()
         {
             int count = builds.Count;
+            using var buildScope = FieldsBuildMarker.Measure(count);
+            FieldsBuildMarker.SetGauge(chunks.Count);
             int cellCount = checked(count * 256);
             EnsureWorkspace(ref integrationCells, cellCount);
             EnsureWorkspace(ref integrationRequests, count);
@@ -343,9 +359,11 @@ namespace FlatWorld.Navigation
                 requests[i] = new FlowIntegrationRequest { CellStart = i * 256, Seed = build.Seed };
                 NativeArray<int>.Copy(build.Cells, 0, cells, i * 256, 256);
             }
-            new FlowIntegrationJob { Cells = cells, Requests = requests, Costs = costs, Directions = directions,
+            JobHandle fieldJob = new FlowIntegrationJob { Cells = cells, Requests = requests, Costs = costs, Directions = directions,
                 HeapNodes = integrationNodes.GetSubArray(0, cellCount),
-                HeapPositions = integrationPositions.GetSubArray(0, cellCount) }.Schedule(count, 1).Complete();
+                HeapPositions = integrationPositions.GetSubArray(0, cellCount) }.Schedule(count, 1);
+            using (FieldsCompleteMarker.Measure(count))
+                fieldJob.Complete();
             for (int i = 0; i < count; i++)
             {
                 NativeArray<int>.Copy(costs, i * 256, builds[i].Field.Costs, 0, 256);

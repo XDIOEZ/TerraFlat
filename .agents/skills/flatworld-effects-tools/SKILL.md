@@ -96,6 +96,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## 编辑器与调试工具
 
+- 关键性能点共用 Utilities 的 `PerformanceDebugPoint/Registry`；统计与慢摘要默认关闭，在 GM「设备数据」按需开启、设阈值、输出/清空。固定 Marker、struct 作用域不跨 yield，后台只记有界数字并由主线程合并日志；点位单位及 Total/Self、冷暖路径边界见 [关键性能DEBUG点位说明](../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。
+
 - 自动资源刷新合并外部变化，Windows 用 ReadDirectoryChangesW 事件通知，禁止 Mono DefaultWatcher 递归扫描 Assets；Play/切换期间保留请求、编辑模式静默后处理，通知溢出补一次全量刷新。Unity 保存独立于全库刷新。内容工坊只写 JSON 差异。
 - 动态 SceneManager.CreateScene 不触发 sceneLoaded；Hierarchy 工具结合卸载/hierarchyChanged 定向解析保存记录，GlobalObjectId 仅解析已加载所属场景。
 - GameLogManager 业务日志接口为 `[WORK]`；定时刷盘线程池最多一个请求，共享日志流锁且无 Unity API，暂停/退出/错误/显式 Flush 同步落盘。

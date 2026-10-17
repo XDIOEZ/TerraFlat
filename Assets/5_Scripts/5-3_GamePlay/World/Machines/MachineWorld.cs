@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
+using FlatWorld.Diagnostics;
 using MemoryPack;
 using Unity.Mathematics;
-using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -557,10 +557,13 @@ public static partial class MachineWorld
     #endregion
 
     #region 调度与休眠
-    private static readonly ProfilerMarker MachineTickMarker = new("MachineWorld.Tick");
-    private static readonly ProfilerMarker MachineFluidBeginMarker = new("MachineWorld.Fluid.Begin");
-    private static readonly ProfilerMarker MachineLogicMarker = new("MachineWorld.Logic.Advance");
-    private static readonly ProfilerMarker MachineFluidCompleteMarker = new("MachineWorld.Fluid.Complete");
+    #region 性能分段
+    // 沿正式循环汇总规模，不为诊断额外遍历机器或端口。
+    private static readonly PerformanceDebugPoint MachineTickMarker = new("MachineWorld.Tick");
+    private static readonly PerformanceDebugPoint MachineFluidBeginMarker = new("MachineWorld.Fluid.Begin");
+    private static readonly PerformanceDebugPoint MachineLogicMarker = new("MachineWorld.Logic.Advance");
+    private static readonly PerformanceDebugPoint MachineFluidCompleteMarker = new("MachineWorld.Fluid.Complete");
+    #endregion
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Tick(float deltaTime)
     {
@@ -569,16 +572,18 @@ public static partial class MachineWorld
         elapsed += Mathf.Max(0, deltaTime);
         float step = MachineCatalog.Settings.TickSeconds;
         if (elapsed < step) return;
-        using var tickSample = MachineTickMarker.Auto();
+        using var tickSample = MachineTickMarker.Measure();
         RebuildGraphsIfDirty();
+        MachineTickMarker.SetGauge(nodes.Count);
         CollectPlayerChunks();
         // 帧内补算有上限，余量留到后续帧；暂停和时间缩放仍服从传入的世界时间。
         int catchUpSteps = Mathf.Min(MaxCatchUpStepsPerFrame, Mathf.FloorToInt(elapsed / step));
+        MachineTickMarker.AddWork(catchUpSteps);
         for (int tick = 0; tick < catchUpSteps; tick++)
         {
             TransportStep++;
             elapsed -= step;
-            using (MachineFluidBeginMarker.Auto()) BeginFluidStep(step);
+            using (MachineFluidBeginMarker.Measure(fluidGraph?.Components.Count ?? 0)) BeginFluidStep(step);
             RebuildGraphsIfDirty();
             foreach (var network in graph.Networks)
             {
@@ -602,16 +607,27 @@ public static partial class MachineWorld
                 foreach (var node in network.Nodes) UpdateVisualSpeed(node);
             }
             // 所有网络先完成转速分配，再推进设施，风箱跨网供风不读上一轮结果。
-            using (MachineLogicMarker.Auto())
+            using (MachineLogicMarker.Measure())
             {
+                int simulatedNodes = 0;
                 foreach (var network in graph.Networks)
                 {
                     if (!network.Active) continue;
-                    foreach (var node in network.Nodes) SimulateNode(node, step);
+                    foreach (var node in network.Nodes)
+                    {
+                        SimulateNode(node, step);
+                        simulatedNodes++;
+                    }
                 }
                 AdvanceFacilities(step);
+                MachineLogicMarker.AddWork(simulatedNodes);
+                MachineLogicMarker.SetGauge(graph.Networks.Count);
             }
-            using (MachineFluidCompleteMarker.Auto()) CompleteFluidStep(step);
+            using (MachineFluidCompleteMarker.Measure(fluidGraph?.Edges.Count ?? 0))
+            {
+                CompleteFluidStep(step);
+                MachineFluidCompleteMarker.SetGauge(fluidStepStock.Count);
+            }
             PressureExplosionQueue.Tick(step);
         }
     }

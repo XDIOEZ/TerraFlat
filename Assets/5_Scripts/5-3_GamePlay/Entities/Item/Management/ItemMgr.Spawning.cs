@@ -2,10 +2,21 @@ using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
+using FlatWorld.Diagnostics;
 using UnityEngine;
 
 public partial class ItemMgr
 {
+    #region 物品生成性能诊断
+    // 冷工厂与最终数据装配分开，保留原有两轮配置供诊断对照。
+    private static readonly PerformanceDebugPoint SpawnRuntimeDebug = new("FlatWorld.ItemSpawn.InstantiateRuntime");
+    private static readonly PerformanceDebugPoint SpawnFinalConfigureDebug = new("FlatWorld.ItemSpawn.ConfigureFinalData");
+    private static readonly PerformanceDebugPoint SpawnColdFactoryDebug = new("FlatWorld.ItemSpawn.ColdFactoryWithInitialConfigure");
+    private static readonly PerformanceDebugPoint SpawnRegisterDebug = new("FlatWorld.ItemSpawn.Register");
+    private static readonly PerformanceDebugPoint SpawnAttachDebug = new("FlatWorld.ItemSpawn.AttachWorld");
+    private static readonly PerformanceDebugPoint SpawnCallbacksDebug = new("FlatWorld.ItemSpawn.InstantiatedCallbacks");
+    #endregion
+
     #region Runtime Registry
 
     private readonly ItemRuntimeRegistry _runtimeRegistry = new();
@@ -72,6 +83,7 @@ public partial class ItemMgr
         {
             throw new ArgumentException("ItemData.IDName 不能为空", nameof(itemData));
         }
+        using var spawnDebug = SpawnRuntimeDebug.Measure(1, itemData.IDName);
         if (itemData.SharedConfiguration == null)
             itemData = ItemDefinitionRuntime.RebasePersistedData(GameRes.Instance, itemData);
         if (itemData.Guid != 0 && _runtimeItemReplacements.ContainsKey(itemData.Guid))
@@ -96,7 +108,10 @@ public partial class ItemMgr
             item.BindData(itemData);
             item.Owner = owner;
             if (GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+            {
+                using var configureDebug = SpawnFinalConfigureDebug.Measure(1, itemData.IDName);
                 ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, itemData);
+            }
             // JSON 模块装配完成后才固定池内层级；首次外壳结构并不是可复用的最终结构。
             item.PoolMarker.CaptureBaseline();
             itemObj.name = itemData.IDName;
@@ -110,10 +125,13 @@ public partial class ItemMgr
             itemObj.transform.localScale = scale;
             itemObj.SetActive(true);
 
-            RegisterRuntimeItem(item, itemData.IDName, out registrationToken);
-            ItemWorldPlacement.Attach(item, itemObj, logicalPosition, parent);
+            using (SpawnRegisterDebug.Measure(1, itemData.IDName))
+                RegisterRuntimeItem(item, itemData.IDName, out registrationToken);
+            using (SpawnAttachDebug.Measure(1, itemData.IDName))
+                ItemWorldPlacement.Attach(item, itemObj, logicalPosition, parent);
             EnsureSpawnRegistrationCurrent(item, itemData, registrationToken);
-            RuntimeItemInstantiated?.Invoke(item);
+            using (SpawnCallbacksDebug.Measure(1, itemData.IDName))
+                RuntimeItemInstantiated?.Invoke(item);
             EnsureSpawnRegistrationCurrent(item, itemData, registrationToken);
             WorldItemWaterSystem.ScheduleSpawnCheck(item);
             return item;
@@ -410,6 +428,7 @@ public partial class ItemMgr
 
     private GameObject SpawnItemObject(string itemId)
     {
+        using var coldFactoryDebug = SpawnColdFactoryDebug.Measure(1, itemId);
         GameObject obj = GameRes.Instance.InstantiatePrefab(itemId);
         if (obj == null) throw new InvalidOperationException($"InstantiatePrefab 失败: {itemId}");
         return obj;

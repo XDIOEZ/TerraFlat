@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FlatWorld.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -10,6 +11,15 @@ using UnityEngine.Pool;
 /// <summary>把运行时定义应用到共享外壳实例。</summary>
 public static class ItemDefinitionRuntime
 {
+    #region 定义装配性能诊断
+    // 同一 Configure 点通过冷工厂或最终装配父节点区分来源。
+    private static readonly PerformanceDebugPoint ConfigureInstanceDebug = new("FlatWorld.ItemDefinition.ConfigureInstance");
+    private static readonly PerformanceDebugPoint ConfigureVisualDebug = new("FlatWorld.ItemDefinition.ApplyVisual");
+    private static readonly PerformanceDebugPoint ConfigureModulesDebug = new("FlatWorld.ItemDefinition.EnsureModules");
+    private static readonly PerformanceDebugPoint ReusedModulesDebug = new("FlatWorld.ItemDefinition.ReusedModules");
+    private static readonly PerformanceDebugPoint DataOnlyModulesDebug = new("FlatWorld.ItemDefinition.DataOnlyModules");
+    #endregion
+
     #region 原位配置更新
 
     /// <summary>
@@ -69,11 +79,14 @@ public static class ItemDefinitionRuntime
         if (gameRes == null || definition == null || item == null || itemData == null)
             return;
 
+        using var configureDebug = ConfigureInstanceDebug.Measure(1, definition.Id);
         item.BindData(itemData);
         item.gameObject.name = definition.Id;
-        ApplyVisual(definition, item);
+        using (ConfigureVisualDebug.Measure(1, definition.Id))
+            ApplyVisual(definition, item);
         // 只按定义显式声明的模块装配能力，普通实体不会自动获得装备交互。
-        EnsureModuleComponents(gameRes, definition, item, itemData);
+        using (ConfigureModulesDebug.Measure(definition.ModuleAssemblies?.Count ?? 0, definition.Id))
+            EnsureModuleComponents(gameRes, definition, item, itemData);
     }
 
     /// <summary>
@@ -357,13 +370,17 @@ public static class ItemDefinitionRuntime
             if (!string.Equals(moduleData.ModuleId, assembly.ModuleId, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 状态能力身份不匹配。");
             if (assembly.IsDataOnly)
+            {
+                DataOnlyModulesDebug.AddWork(1);
                 continue;
+            }
 
             Module module;
             if (boundByName.TryGetValue(assembly.StableName, out module))
             {
                 if (!assembly.MatchesBoundModule(module) && !assembly.TryRestoreRuntimeIdentity(module, item.transform))
                     throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 复用实例实现不符合当前定义。");
+                ReusedModulesDebug.AddWork(1);
             }
             else
             {
@@ -371,6 +388,7 @@ public static class ItemDefinitionRuntime
                 if (module != null && !string.IsNullOrWhiteSpace(module.PrefabId) &&
                     !string.Equals(module.PrefabId, assembly.PrefabId, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"物品 {itemData.IDName} 的外壳模块 {assembly.StableName} 已绑定另一具体 Prefab。");
+                if (module != null) ReusedModulesDebug.AddWork(1);
                 module ??= assembly.InstantiateModule(item.transform);
             }
             if (!consumed.Add(module))

@@ -1,5 +1,6 @@
 using System;
 using FlatWorld.WorldModel;
+using FlatWorld.Diagnostics;
 using Unity.Profiling;
 using UnityEngine;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
@@ -24,6 +25,11 @@ public partial class TemperatureMgr
     private int fieldChunkHeight;
     private int fieldContextVersion;
     private static readonly ProfilerMarker PointTemperatureMarker = new("FlatWorld.Temperature.SamplePoint");
+
+    #region 性能分段
+    // 只在区块冻结边界计时，不给逐格温度循环新增时间戳。
+    private static readonly PerformanceDebugPoint CaptureTemperatureMarker = new("FlatWorld.Temperature.CaptureAmbientChunk");
+    #endregion
 
     /// <summary>世界或维度切换时递增，显示任务据此丢弃旧世界尚未完成的采样。</summary>
     public int FieldContextVersion
@@ -225,6 +231,8 @@ public partial class TemperatureMgr
             return false;
         Vector2Int origin = new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
         Vector2 samplePosition = (Vector2)origin + Vector2.one * 0.5f;
+        using var captureScope = CaptureTemperatureMarker.Measure(1);
+        CaptureTemperatureMarker.SetGauge(chunk.Terrain.CellCount);
         snapshot = new AmbientChunkSnapshot(chunk, fieldBounds, ambientFieldOffset,
             fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
             orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(samplePosition) ?? 0f,

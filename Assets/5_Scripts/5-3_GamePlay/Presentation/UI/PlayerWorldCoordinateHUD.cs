@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using FlatWorld.Localization;
+using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
 using TMPro;
 using UnityEngine;
@@ -13,6 +14,13 @@ using UnityEngine;
 [RequireComponent(typeof(Player))]
 public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 {
+    #region 性能分段
+    // HUD 只在真实刷新与读数边界计时，协程等待不进入性能作用域。
+    private static readonly PerformanceDebugPoint HudSampleMarker = new("FlatWorld.HUD.Sample");
+    private static readonly PerformanceDebugPoint TemperatureSampleMarker = new("FlatWorld.HUD.TemperatureSample");
+    private static readonly PerformanceDebugPoint PressureFormatMarker = new("FlatWorld.HUD.PressureFormat");
+    #endregion
+
     #region 常量与运行时状态
 
     public const string ViewName = "PlayerWorldCoordinateHUD";
@@ -116,6 +124,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     /// <summary>仅本地玩家创建并显示左上角信息 HUD，远端玩家不会重复生成界面。</summary>
     private void RefreshVisibility()
     {
+        using var refreshScope = HudSampleMarker.Measure(1);
         ResolvePlayer();
         if (!CanDisplay())
         {
@@ -226,7 +235,10 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     /// <summary>复用热力图的逐格温度入口，未加载时显示空读数；四舍五入到 0.1℃ 后去重刷新。</summary>
     private void RefreshAmbientTemperatureText()
     {
-        bool available = TemperatureMgr.Instance.TryGetAmbientTemperature(player.transform.position, out float temperature);
+        bool available;
+        float temperature;
+        using (TemperatureSampleMarker.Measure(1))
+            available = TemperatureMgr.Instance.TryGetAmbientTemperature(player.transform.position, out temperature);
         int tenths = available ? Mathf.RoundToInt(temperature * 10f) : int.MinValue;
         string pressurePresentation = BuildPressurePresentation();
         if (temperatureDisplayInitialized && tenths == lastTemperatureTenths && pressurePresentation == lastPressurePresentation)
@@ -241,6 +253,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
     private string BuildPressurePresentation()
     {
+        using var pressureScope = PressureFormatMarker.Measure(1);
         if (player == null || player.itemMods.GetMod_ByID<Mod_Pressure>(Mod_Pressure.ModuleId) is not Mod_Pressure pressure) return "";
         pressure.GetSafePressureRange(out float min, out float max);
         double current = AtmosphereService.TryGetForWorld(player.gameObject.scene.name, out var atmosphere) ? AtmosphereService.PressureKPa(atmosphere) : 0d;

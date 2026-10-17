@@ -1,9 +1,17 @@
 using System;
+using FlatWorld.Diagnostics;
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>雪球通过正式物品使用入口铺设一层雪。</summary>
 public sealed class Mod_Snowball : Module
 {
+    #region 选格性能诊断
+    // 目标解析与轮廓显示分段，首次建框由通用表现点记录。
+    private static readonly PerformanceDebugPoint TargetResolveDebug = new("FlatWorld.Snowball.ResolveTarget");
+    private static readonly PerformanceDebugPoint OutlineShowDebug = new("FlatWorld.Snowball.ShowOutline");
+    #endregion
+
     #region 配置
     public const string ModuleId = "Mod_Snowball";
     public Ex_ModData ModData = new();
@@ -66,13 +74,18 @@ public sealed class Mod_Snowball : Module
     }
     private void LateUpdate()
     {
-        if (!WorldSnowInteraction.TryResolveTarget(item, reach, out var sample, out _))
+        bool resolved;
+        RuntimeTerrainTileSample sample;
+        using (TargetResolveDebug.Measure(1, item?.itemData?.IDName))
+            resolved = WorldSnowInteraction.TryResolveTarget(item, reach, out sample, out _);
+        if (!resolved)
         {
             outline?.Hide();
             return;
         }
         outline ??= WorldTileTargetOutline.Create("Snowball Target Outline");
-        outline.Show(sample.WorldCell);
+        using (OutlineShowDebug.Measure(1, item?.itemData?.IDName))
+            outline.Show(sample.WorldCell);
     }
     #endregion
 }

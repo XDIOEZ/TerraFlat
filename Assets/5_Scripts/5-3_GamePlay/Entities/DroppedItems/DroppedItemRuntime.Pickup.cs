@@ -1,10 +1,21 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using FlatWorld.DroppedItems;
 using UnityEngine;
 
 internal sealed partial class DroppedItemRuntime
 {
+    #region 拾取性能诊断
+    // 按真实掉落记录统计事务，不把堆叠数量当成实例数。
+    private static readonly PerformanceDebugPoint PickupBatchDebug = new("FlatWorld.Pickup.DroppedBatch");
+    private static readonly PerformanceDebugPoint PickupTransactionDebug = new("FlatWorld.Pickup.DroppedTransaction");
+    private static readonly PerformanceDebugPoint PickupCloneDebug = new("FlatWorld.Pickup.PayloadClone");
+    private static readonly PerformanceDebugPoint PickupFeedbackDebug = new("FlatWorld.Pickup.DroppedFeedback");
+    private static readonly PerformanceDebugPoint PickupCommittedDebug = new("FlatWorld.Pickup.DroppedCommittedStacks");
+    private static readonly PerformanceDebugPoint PickupRejectedDebug = new("FlatWorld.Pickup.DroppedRejectedStacks");
+    #endregion
+
     private readonly Dictionary<Mod_ItemPicker, HashSet<int>> pickupAttempts = new();
     private readonly HashSet<int> nearby = new();
     private readonly HashSet<int> pickupReservations = new();
@@ -20,6 +31,7 @@ internal sealed partial class DroppedItemRuntime
         pickupClock += deltaTime;
         if (pickupClock < 0.1f) return;
         pickupClock = 0f;
+        using var batchDebug = PickupBatchDebug.Measure();
         pickerScratch.Clear(); pickerScratch.AddRange(pickers);
         foreach (Mod_ItemPicker picker in pickerScratch)
         {
@@ -44,6 +56,7 @@ internal sealed partial class DroppedItemRuntime
             attempted.RemoveWhere(id => !nearby.Contains(id));
             pickupScratch.Clear(); pickupScratch.AddRange(nearby);
             pickupScratch.Sort();
+            PickupBatchDebug.AddWork(pickupScratch.Count);
             foreach (int id in pickupScratch)
                 if (attempted.Add(id)) TryPickup(picker, id);
         }
@@ -57,17 +70,30 @@ internal sealed partial class DroppedItemRuntime
         {
             LightweightDroppedBody body = simulation.Get(id);
             if (body.Pickable == 0 || body.Amount <= 0f) return;
-            ItemData candidate = FastCloner.FastCloner.DeepClone(payloads[id]);
+            ItemData payload = payloads[id];
+            using var transactionDebug = PickupTransactionDebug.Measure(1, payload.IDName);
+            ItemData candidate;
+            using (PickupCloneDebug.Measure(1, payload.IDName))
+                candidate = FastCloner.FastCloner.DeepClone(payload);
             candidate.Stack.Amount = body.Amount; candidate.Stack.CanBePickedUp = true;
-            if (!picker.TryAcceptDroppedPickup(candidate)) return;
+            if (!picker.TryAcceptDroppedPickup(candidate))
+            {
+                PickupRejectedDebug.AddWork(1);
+                return;
+            }
             float remaining = candidate.Stack.CanBePickedUp ? candidate.Stack.Amount : 0f;
             remaining = Mathf.Clamp(remaining, 0f, body.Amount);
             if (remaining >= body.Amount) return;
             DroppedItemVisual visual = visuals[id];
             body.Amount = remaining;
             if (remaining <= 0f) Remove(id); else simulation.Set(body);
+            PickupCommittedDebug.AddWork(1);
             // 数量提交先于表现；声音或短期动画失败不能复活已入包的物品。
-            try { picker.PlayDroppedPickupFeedback(visual, body); }
+            try
+            {
+                using var feedbackDebug = PickupFeedbackDebug.Measure(1, payload.IDName);
+                picker.PlayDroppedPickupFeedback(visual, body);
+            }
             catch (Exception exception) { Debug.LogWarning($"[DroppedItems] 拾取已提交，表现失败：{exception.Message}"); }
         }
         finally { pickupReservations.Remove(id); }

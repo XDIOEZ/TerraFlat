@@ -45,6 +45,7 @@ public sealed partial class GMReflectionConsole
             GmTextSecondary);
         deviceInfo.enableWordWrapping = true;
         deviceInfo.gameObject.AddComponent<LayoutElement>().preferredHeight = 112f;
+        BuildPerformanceDebugControls(page.Content);
     }
 
     // 不进入设备数据页时不采样，避免诊断功能影响正常游戏帧率。
@@ -59,6 +60,7 @@ public sealed partial class GMReflectionConsole
 
     private void RefreshDevicePage()
     {
+        RefreshPerformanceDebugControls();
         if (deviceMemoryText == null)
             return;
 

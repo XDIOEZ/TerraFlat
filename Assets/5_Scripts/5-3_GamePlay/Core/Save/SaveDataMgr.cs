@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
+using FlatWorld.Diagnostics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using MemoryPack;
@@ -17,6 +18,27 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
+    #region 保存性能诊断
+    private static readonly PerformanceDebugPoint SaveCapturePoint = new("FlatWorld.Save.Capture.Sync");
+    private static readonly PerformanceDebugPoint SaveCaptureSlicePoint = new("FlatWorld.Save.Capture.Slice");
+    private static readonly PerformanceDebugPoint SavePayloadSlicePoint = new("FlatWorld.Save.Encode.Slice");
+    private static readonly PerformanceDebugPoint SaveEncodePoint = new("FlatWorld.Save.Encode.Sync");
+    private static readonly PerformanceDebugPoint SaveBackgroundEncodePoint = new("FlatWorld.Save.Encode.BackgroundEnvelope");
+    private static readonly PerformanceDebugPoint SaveCoreCapturePoint = new("FlatWorld.Save.Capture.Core");
+    private static readonly PerformanceDebugPoint SaveCoreEncodePoint = new("FlatWorld.Save.Encode.Core");
+    private static readonly PerformanceDebugPoint SaveChunkEncodePoint = new("FlatWorld.Save.Encode.Chunks");
+    private static readonly PerformanceDebugPoint SaveWritePoint = new("FlatWorld.Save.Write.Atomic");
+    private static readonly PerformanceDebugPoint SaveWriteBytesPoint = new("FlatWorld.Save.Write.BytesAndFlush");
+    private static readonly PerformanceDebugPoint SaveSnapshotCompressPoint = new("FlatWorld.Save.NetworkSnapshot.GZip");
+
+    // 协程只计每次同步推进，不能把 yield 等待时间算成 CPU 采集耗时。
+    private static bool MoveSaveSlice(IEnumerator routine, PerformanceDebugPoint point)
+    {
+        using var sample = point.Measure(1);
+        return routine.MoveNext();
+    }
+    #endregion
+
     private const int CompactSaveVersion = 30; // 区块改为独立字节快照，旧档在解析核心数据前拒绝。
     private const int ModdedSaveVersion = 14;
     private const string TemporarySaveSuffix = ".tmp";
@@ -160,6 +182,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             MachineInventoryCommands.PublicSpecialData);
         byte[] rawData = BuildCompactSavePayload(SaveData);
         using MemoryStream output = new MemoryStream();
+        using var compressionSample = SaveSnapshotCompressPoint.Measure(rawData.LongLength);
         using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
             gzip.Write(rawData, 0, rawData.Length);
         return output.ToArray();
@@ -276,7 +299,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 exception => captureFailure = exception);
             try
             {
-                while (CanCapture() && captureRoutine.MoveNext())
+                while (CanCapture() && MoveSaveSlice(captureRoutine, SaveCaptureSlicePoint))
                 {
                     if (!CanCapture())
                         break;
@@ -307,7 +330,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 exception => captureFailure = exception);
             try
             {
-                while (CanCapture() && payloadRoutine.MoveNext())
+                while (CanCapture() && MoveSaveSlice(payloadRoutine, SavePayloadSlicePoint))
                 {
                     if (!CanCapture())
                         break;
@@ -925,6 +948,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         long saveRevision,
         bool discardIfSuperseded)
     {
+        using var writeSample = SaveWritePoint.Measure();
+        writeSample.SetGauge(dataBytes?.LongLength ?? 0);
         string temporaryPath = GetTemporarySavePath(fullPath);
         string backupPath = GetBackupSavePath(fullPath);
 
@@ -947,7 +972,9 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     4096,
                     FileOptions.WriteThrough))
                 {
+                    using var bytesSample = SaveWriteBytesPoint.Measure();
                     stream.Write(dataBytes, 0, dataBytes.Length);
+                    bytesSample.AddWork(dataBytes.LongLength);
                     stream.Flush(true);
                 }
 
@@ -1723,6 +1750,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private void PrepareLoadedChunksForSave()
     {
+        using var captureSample = SaveCapturePoint.Measure();
+        SaveCapturePoint.SetGauge(chunkDeltas.Count);
         WeatherMgr.ExistingInstance?.FlushSurfaceWork();
         DroppedItemService.PrepareForSave();
         CaptureRuntimeTerrainStates();
@@ -1735,7 +1764,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             {
                 Chunk chunk = chunks[i];
                 if (chunk != null)
+                {
                     chunk.SaveChunk();
+                    SaveCapturePoint.AddWork(1);
+                }
             }
         }
 
@@ -2636,6 +2668,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private byte[] BuildCompactSavePayload(GameSaveData saveData)
     {
+        using var encodeSample = SaveEncodePoint.Measure();
         ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
         if (modRuntime == null || !modRuntime.IsReady)
             throw new InvalidOperationException("MOD 框架尚未完成加载，无法保存世界");
@@ -2652,6 +2685,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         byte[] payload = new byte[ModdedSaveMagic.Length + body.Length];
         Buffer.BlockCopy(ModdedSaveMagic, 0, payload, 0, ModdedSaveMagic.Length);
         Buffer.BlockCopy(body, 0, payload, ModdedSaveMagic.Length, body.Length);
+        SaveEncodePoint.AddWork(payload.LongLength);
+        SaveEncodePoint.SetGauge(payload.LongLength);
         return payload;
     }
 
@@ -2662,10 +2697,15 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         spawnerManager?.CaptureSaveData(saveData);
 
         // 先捕获所有移动作用域，再序列化核心数据，避免船体和设备库存落在不同时间点。
-        byte[] machines = MachineWorld.CaptureArchive(saveData);
-        FlatWorld.Spaceflight.SpaceSession.Capture(saveData);
-        byte[] coreSaveData = SerializeCoreDataWithoutChunks(saveData);
-        byte[] droppedItems = DroppedItemService.CaptureArchive(saveData);
+        byte[] machines, coreSaveData, droppedItems;
+        using (SaveCoreCapturePoint.Measure())
+        {
+            machines = MachineWorld.CaptureArchive(saveData);
+            FlatWorld.Spaceflight.SpaceSession.Capture(saveData);
+            coreSaveData = SerializeCoreDataWithoutChunks(saveData);
+            droppedItems = DroppedItemService.CaptureArchive(saveData);
+            SaveCoreCapturePoint.AddWork((machines?.LongLength ?? 0) + (coreSaveData?.LongLength ?? 0) + (droppedItems?.LongLength ?? 0));
+        }
         List<ChunkSaveRecord> records = new();
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
@@ -2678,14 +2718,19 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         records.Sort(CompareChunkSaveRecords);
         List<byte[]> chunkRecords = new(records.Count);
-        foreach (ChunkSaveRecord record in records)
-            chunkRecords.Add(MemoryPackSerializer.Serialize(record));
+        using (SaveChunkEncodePoint.Measure(records.Count))
+        {
+            foreach (ChunkSaveRecord record in records)
+                chunkRecords.Add(MemoryPackSerializer.Serialize(record));
+            SaveChunkEncodePoint.SetGauge(records.Count);
+        }
 
         return BuildCompactSaveEnvelopePayload(coreSaveData, chunkRecords, machines, droppedItems);
     }
 
     private static byte[] SerializeCoreDataWithoutChunks(GameSaveData saveData)
     {
+        using var coreSample = SaveCoreEncodePoint.Measure();
         List<(PlanetData planet, Dictionary<string, MapSave> maps)> backups = new();
         if (saveData.PlanetData_Dict != null)
         {
@@ -2701,7 +2746,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         try
         {
-            return MemoryPackSerializer.Serialize(saveData);
+            byte[] payload = MemoryPackSerializer.Serialize(saveData);
+            SaveCoreEncodePoint.AddWork(payload.LongLength);
+            SaveCoreEncodePoint.SetGauge(payload.LongLength);
+            return payload;
         }
         finally
         {

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Audio;
+using FlatWorld.Diagnostics;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -12,6 +13,17 @@ using UnityEngine.Rendering;
 /// </summary>
 public class Mod_ItemPicker : Module
 {
+    #region 拾取性能诊断
+    // 数量快照与事务次数分开记录，整堆入包不等于逐件创建。
+    private static readonly PerformanceDebugPoint PickupAcceptDebug = new("FlatWorld.Pickup.AcceptTransaction");
+    private static readonly PerformanceDebugPoint PickupInventoryAddDebug = new("FlatWorld.Pickup.InventoryAdd");
+    private static readonly PerformanceDebugPoint PickupRefreshDebug = new("FlatWorld.Pickup.InventoryRefresh");
+    private static readonly PerformanceDebugPoint PickupNotifyDebug = new("FlatWorld.Pickup.NotifyCommitted");
+    private static readonly PerformanceDebugPoint PickupSourceWholeUnitsDebug = new("FlatWorld.Pickup.SourceStackWholeUnits");
+    private static readonly PerformanceDebugPoint PickupAddedWholeUnitsDebug = new("FlatWorld.Pickup.AcceptedWholeUnits");
+    private static readonly PerformanceDebugPoint PickupCapacityRejectedDebug = new("FlatWorld.Pickup.CapacityRejectedTransactions");
+    private static readonly PerformanceDebugPoint PickupInventoryRejectedDebug = new("FlatWorld.Pickup.InventoryRejectedTransactions");
+    #endregion
 
     private const float InventoryFullPromptCooldownSeconds = 600f;
 
@@ -366,11 +378,13 @@ public class Mod_ItemPicker : Module
         if (itemData == null || itemData.Stack == null)
             return false;
 
+        using var pickupDebug = PickupAcceptDebug.Measure(1, itemData.IDName);
         float sourceAmount = itemData.Stack.Amount;
         int multiplier = itemData.Stack.Stackable && GameNetwork.HasStateAuthority ? PickupAmountMultiplier : 1;
         float requestedAmount = sourceAmount * multiplier;
         if (float.IsNaN(requestedAmount) || float.IsInfinity(requestedAmount) || requestedAmount <= 0f)
             return false;
+        PickupSourceWholeUnitsDebug.SetGauge((long)Mathf.Min(sourceAmount, int.MaxValue));
 
         ItemData pickupData = multiplier > 1 ? FastCloner.FastCloner.DeepClone(itemData) : itemData;
         float pickupCapacityAmount = GetPickupCapacityLimitedAmount(itemData, requestedAmount);
@@ -378,7 +392,10 @@ public class Mod_ItemPicker : Module
             pickupCapacityAmount = Mathf.Floor(pickupCapacityAmount + 0.0001f);
         if (pickupCapacityAmount <= 0.0001f ||
             !allowPartial && pickupCapacityAmount + 0.0001f < requestedAmount)
+        {
+            PickupCapacityRejectedDebug.AddWork(1);
             return false;
+        }
 
         float targetAmount = Mathf.Min(requestedAmount, pickupCapacityAmount);
         if (multiplier > 1)
@@ -401,13 +418,20 @@ public class Mod_ItemPicker : Module
                 continue;
             }
 
-            if (!targetInventory.Data.TryAddItem(pickupData, true, out float addedAmount) ||
-                addedAmount <= 0f)
+            bool added;
+            float addedAmount;
+            using (PickupInventoryAddDebug.Measure(1, itemData.IDName))
+                added = targetInventory.Data.TryAddItem(pickupData, true, out addedAmount);
+            if (!added || addedAmount <= 0f)
                 continue;
 
             // 快捷栏只能容纳一部分时，余量继续进入主背包，不能提前结束此次拾取。
             remainingAmount = Mathf.Max(0f, remainingAmount - addedAmount);
-            try { targetInventory.RefreshUI(); }
+            try
+            {
+                using var refreshDebug = PickupRefreshDebug.Measure(1, itemData.IDName);
+                targetInventory.RefreshUI();
+            }
             catch (System.Exception exception) { Debug.LogWarning($"[Mod_ItemPicker] 入包已提交，界面刷新失败：{exception.Message}"); }
             if (remainingAmount <= 0.0001f)
                 break;
@@ -416,9 +440,11 @@ public class Mod_ItemPicker : Module
         float totalAddedAmount = targetAmount - remainingAmount;
         if (totalAddedAmount <= 0f)
         {
+            PickupInventoryRejectedDebug.AddWork(1);
             itemData.Stack.Amount = sourceAmount;
             return false;
         }
+        PickupAddedWholeUnitsDebug.SetGauge((long)Mathf.Min(totalAddedAmount, int.MaxValue));
 
         float worldRemainingAmount = Mathf.Max(0f, sourceAmount - totalAddedAmount / multiplier);
         bool fullyAdded = worldRemainingAmount <= 0.0001f;
@@ -426,6 +452,7 @@ public class Mod_ItemPicker : Module
         itemData.Stack.CanBePickedUp = !fullyAdded;
         try
         {
+            using var notifyDebug = PickupNotifyDebug.Measure(1, itemData.IDName);
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
             DimensionManager dimensionManager = DimensionManager.ExistingInstance;
             string dimensionId = dimensionManager != null && dimensionManager.ActiveAddress.IsValid

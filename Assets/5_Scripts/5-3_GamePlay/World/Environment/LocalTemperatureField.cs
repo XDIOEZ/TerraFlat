@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
+using FlatWorld.Diagnostics;
 using UnityEngine;
 using Unity.Profiling;
 
@@ -13,7 +14,10 @@ using Unity.Profiling;
 internal sealed class LocalTemperatureField
 {
     public const float MaximumSourceRadius = 64f;
-    private static readonly ProfilerMarker RebuildMarker = new("FlatWorld.Temperature.RebuildLocalChunk");
+    #region 性能分段
+    // 工作量是来源与目标格的配对次数，当前值是本地热源总数。
+    private static readonly PerformanceDebugPoint RebuildMarker = new("FlatWorld.Temperature.RebuildLocalChunk");
+    #endregion
 
     #region 空间数据
 
@@ -201,8 +205,9 @@ internal sealed class LocalTemperatureField
 
     private void Rebuild(Vector2Int origin, Bucket bucket)
     {
-        using (RebuildMarker.Auto())
+        using (RebuildMarker.Measure((long)bucket.Sources.Count * width * height))
         {
+            RebuildMarker.SetGauge(sources.Count);
             var influences = new Influence[bucket.Sources.Count];
             for (int sourceIndex = 0; sourceIndex < bucket.Sources.Count; sourceIndex++)
             {
@@ -236,7 +241,14 @@ internal sealed partial class LiquidTemperatureField
 {
     #region 分区缓存
 
-    private static readonly ProfilerMarker RebuildMarker = new("FlatWorld.Temperature.RebuildRadiantLiquidChunk");
+    #region 性能分段
+    // 命中与未命中只累加次数，几何重建仅在整个区块边界计时。
+    private static readonly PerformanceDebugPoint RebuildMarker = new("FlatWorld.Temperature.RebuildRadiantLiquidChunk");
+    private static readonly PerformanceDebugPoint CacheHitCounter = new("FlatWorld.Temperature.RadiantCache.Hit");
+    private static readonly PerformanceDebugPoint CacheMissCounter = new("FlatWorld.Temperature.RadiantCache.Miss");
+    private static readonly PerformanceDebugPoint WeightEvaluationCounter = new("FlatWorld.Temperature.RadiantWeightEvaluations");
+    private static readonly PerformanceDebugPoint SourceCacheGauge = new("FlatWorld.Temperature.RadiantSourceCache");
+    #endregion
     private static readonly ProfilerMarker PointMarker = new("FlatWorld.Temperature.SampleRadiantLiquidPoint");
 
     private readonly struct Dependency
@@ -315,6 +327,7 @@ internal sealed partial class LiquidTemperatureField
         private long revision = -1;
 
         public bool HasSources => sources.Count > 0;
+        public int SourceCount => sources.Count;
 
         public void Refresh(ChunkTerrainData current, IReadOnlyDictionary<string, LiquidDefinition> definitions)
         {
@@ -401,15 +414,23 @@ internal sealed partial class LiquidTemperatureField
             origin = bounds.NormalizeChunkOrigin(origin);
         if (!buckets.TryGetValue(origin, out Bucket bucket))
         {
+            CacheMissCounter.AddWork(1);
             bucket = new Bucket();
             buckets.Add(origin, bucket);
             Rebuild(origin, bucket);
         }
         else if (!DependenciesAreCurrent(bucket))
         {
+            CacheMissCounter.AddWork(1);
             Rebuild(origin, bucket);
         }
+        else
+        {
+            CacheHitCounter.AddWork(1);
+        }
 
+        RebuildMarker.SetGauge(buckets.Count);
+        SourceCacheGauge.SetGauge(sourceChunks.Count);
         return bucket.Influences;
     }
 
@@ -473,6 +494,8 @@ internal sealed partial class LiquidTemperatureField
         {
             buckets.Clear();
             sourceChunks.Clear();
+            RebuildMarker.SetGauge(0);
+            SourceCacheGauge.SetGauge(0);
             cachedResources = resourceIdentity;
             cachedDefinitions = definitions;
             cachedResourceReloadVersion = reloadVersion;
@@ -487,6 +510,7 @@ internal sealed partial class LiquidTemperatureField
         {
             source = new SourceChunk();
             sourceChunks.Add(origin, source);
+            SourceCacheGauge.SetGauge(sourceChunks.Count);
         }
         source.Refresh(terrain, cachedDefinitions);
         return source;
@@ -514,10 +538,11 @@ internal sealed partial class LiquidTemperatureField
 
     private void Rebuild(Vector2Int targetOrigin, Bucket bucket)
     {
-        using (RebuildMarker.Auto())
+        using (RebuildMarker.Measure())
         {
             var weightsByTemperature = new Dictionary<float, float[]>();
             bucket.Dependencies.Clear();
+            long sourceCount = 0;
 
             int radius = Mathf.CeilToInt(WorldLiquidSettings.MaximumRadiantHeatRadius);
             int minOriginX = Mathf.FloorToInt((float)(targetOrigin.x - radius) / width) * width;
@@ -537,13 +562,19 @@ internal sealed partial class LiquidTemperatureField
                 ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
                 bucket.Dependencies.Add(new Dependency(sourceOrigin, terrain));
                 if (terrain != null)
-                    GetSources(sourceOrigin, terrain).AccumulateChunk(sourceOrigin, targetOrigin,
+                {
+                    SourceChunk source = GetSources(sourceOrigin, terrain);
+                    sourceCount += source.SourceCount;
+                    source.AccumulateChunk(sourceOrigin, targetOrigin,
                         width, height, bounds, weightsByTemperature);
+                }
             }
             bucket.Influences = new Influence[weightsByTemperature.Count];
             int influenceIndex = 0;
             foreach (KeyValuePair<float, float[]> pair in weightsByTemperature)
                 bucket.Influences[influenceIndex++] = new Influence(pair.Key, pair.Value);
+            RebuildMarker.AddWork(sourceCount);
+            WeightEvaluationCounter.AddWork(sourceCount * width * height);
         }
     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
 using Mirror;
 using UnityEngine;
@@ -12,6 +13,18 @@ namespace FlatWorld.Networking.Gameplay
     [DisallowMultipleComponent]
     public sealed partial class NetworkSpaceStateCoordinator : MonoBehaviour
     {
+        #region 太空复制性能诊断
+        private static readonly PerformanceDebugPoint SnapshotBatchPoint = new("FlatWorld.Space.Network.Batch");
+        private static readonly PerformanceDebugPoint SnapshotSendPoint = new("FlatWorld.Space.Network.Send");
+        private static readonly PerformanceDebugPoint SnapshotUtf8Point = new("FlatWorld.Space.Network.Utf8");
+        private static readonly PerformanceDebugPoint SnapshotCompressPoint = new("FlatWorld.Space.Network.GZip");
+        private static readonly PerformanceDebugPoint SnapshotFragmentPoint = new("FlatWorld.Space.Network.FragmentSend");
+        private static readonly PerformanceDebugPoint SnapshotBytesPoint = new("FlatWorld.Space.Network.PayloadBytes");
+        private static readonly PerformanceDebugPoint SnapshotAssemblePoint = new("FlatWorld.Space.Network.Assemble");
+        private static readonly PerformanceDebugPoint SnapshotExpandPoint = new("FlatWorld.Space.Network.Expand");
+        private static readonly PerformanceDebugPoint SnapshotApplyPoint = new("FlatWorld.Space.Network.Apply");
+        #endregion
+
         #region 生命周期与连接身份
         public const double ObserverRangeMeters = 8192d;
         private const float SnapshotInterval = .2f;
@@ -193,6 +206,8 @@ namespace FlatWorld.Networking.Gameplay
             }
             if (serverStarted && NetworkServer.active && Time.unscaledTime >= nextServerSnapshot)
             {
+                using var batchSample = SnapshotBatchPoint.Measure();
+                SnapshotBatchPoint.SetGauge(NetworkServer.connections.Count);
                 nextServerSnapshot = Time.unscaledTime + SnapshotInterval;
                 foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
                 {
@@ -200,6 +215,7 @@ namespace FlatWorld.Networking.Gameplay
                     if (state.InputTime > 0f && Time.unscaledTime - state.InputTime > .5f)
                     { SpaceSession.Current?.SubmitPassengerInput(state.Profile, default); state.InputTime = 0f; }
                     SendSnapshot(connection, state.Profile);
+                    SnapshotBatchPoint.AddWork(1);
                 }
             }
             if (!clientStarted || !NetworkClient.ready || NetworkServer.active) return;
@@ -218,29 +234,52 @@ namespace FlatWorld.Networking.Gameplay
         private void SendSnapshot(NetworkConnectionToClient connection, string profile)
         {
             if (SpaceSession.Current?.State == null || connection is LocalConnectionToClient) return;
+            using var sendSample = SnapshotSendPoint.Measure(1);
             SendProjectilePoses(connection, profile);
             string json = SpaceSession.Current.CaptureNetworkSnapshot(profile, ObserverRangeMeters);
             if (string.IsNullOrEmpty(json)) return;
-            byte[] expanded = Encoding.UTF8.GetBytes(json);
+            byte[] expanded;
+            using (SnapshotUtf8Point.Measure(json.Length))
+                expanded = Encoding.UTF8.GetBytes(json);
+            SnapshotUtf8Point.SetGauge(expanded.LongLength);
             if (expanded.Length > MaxExpandedBytes) throw new InvalidOperationException("太空同步快照超过未压缩数据限额。");
             byte[] compressed;
+            using (SnapshotCompressPoint.Measure(expanded.LongLength))
             using (var stream = new MemoryStream())
             {
                 using (var gzip = new GZipStream(stream, System.IO.Compression.CompressionLevel.Fastest, true)) gzip.Write(expanded, 0, expanded.Length);
                 compressed = stream.ToArray();
             }
             if (compressed.Length > MaxCompressedBytes) throw new InvalidOperationException("太空同步快照超过压缩数据限额。");
+            SnapshotCompressPoint.SetGauge(compressed.LongLength);
             if (++snapshotSequence == 0) ++snapshotSequence;
             int parts = (compressed.Length + NetworkGameplayProtocol.SnapshotChunkBytes - 1) / NetworkGameplayProtocol.SnapshotChunkBytes;
-            connection.Send(new NetworkSpaceSnapshotBegin { Sequence = snapshotSequence, CompressedBytes = compressed.Length,
-                ExpandedBytes = expanded.Length, ChunkCount = parts, Hash = NetworkGameplayProtocol.CalculatePayloadHash(compressed) });
-            for (int i = 0; i < parts; i++)
+            long sentBytes = 0;
+            int sentParts = 0;
+            using (SnapshotFragmentPoint.Measure())
             {
-                int offset = i * NetworkGameplayProtocol.SnapshotChunkBytes;
-                byte[] part = new byte[Math.Min(NetworkGameplayProtocol.SnapshotChunkBytes, compressed.Length - offset)];
-                Buffer.BlockCopy(compressed, offset, part, 0, part.Length);
-                connection.Send(new NetworkSpaceSnapshotChunk { Sequence = snapshotSequence, Index = i, Data = part });
+                try
+                {
+                    connection.Send(new NetworkSpaceSnapshotBegin { Sequence = snapshotSequence, CompressedBytes = compressed.Length,
+                        ExpandedBytes = expanded.Length, ChunkCount = parts, Hash = NetworkGameplayProtocol.CalculatePayloadHash(compressed) });
+                    for (int i = 0; i < parts; i++)
+                    {
+                        int offset = i * NetworkGameplayProtocol.SnapshotChunkBytes;
+                        byte[] part = new byte[Math.Min(NetworkGameplayProtocol.SnapshotChunkBytes, compressed.Length - offset)];
+                        Buffer.BlockCopy(compressed, offset, part, 0, part.Length);
+                        connection.Send(new NetworkSpaceSnapshotChunk { Sequence = snapshotSequence, Index = i, Data = part });
+                        sentBytes += part.LongLength;
+                        sentParts++;
+                    }
+                }
+                finally
+                {
+                    SnapshotBytesPoint.AddWork(sentBytes);
+                    SnapshotFragmentPoint.AddWork(sentParts);
+                }
             }
+            SnapshotFragmentPoint.SetGauge(parts);
+            SnapshotBytesPoint.SetGauge(compressed.LongLength);
         }
         private void OnSnapshotBegin(NetworkSpaceSnapshotBegin header)
         {
@@ -263,13 +302,15 @@ namespace FlatWorld.Networking.Gameplay
             if (++value.Received != value.Parts.Length) return;
             incoming = null;
             byte[] compressed = new byte[value.Header.CompressedBytes];
-            for (int i = 0; i < value.Parts.Length; i++)
-                Buffer.BlockCopy(value.Parts[i], 0, compressed, i * NetworkGameplayProtocol.SnapshotChunkBytes, value.Parts[i].Length);
+            using (SnapshotAssemblePoint.Measure(compressed.LongLength))
+                for (int i = 0; i < value.Parts.Length; i++)
+                    Buffer.BlockCopy(value.Parts[i], 0, compressed, i * NetworkGameplayProtocol.SnapshotChunkBytes, value.Parts[i].Length);
             if (NetworkGameplayProtocol.CalculatePayloadHash(compressed) != value.Header.Hash)
             { RejectSnapshot("太空快照校验失败"); return; }
             byte[] expanded = new byte[value.Header.ExpandedBytes];
             try
             {
+                using (SnapshotExpandPoint.Measure(compressed.LongLength))
                 using (var source = new MemoryStream(compressed, false))
                 using (var gzip = new GZipStream(source, CompressionMode.Decompress))
                 {
@@ -283,7 +324,8 @@ namespace FlatWorld.Networking.Gameplay
                     if (offset != expanded.Length || gzip.ReadByte() != -1)
                     { RejectSnapshot("太空快照解压长度不一致"); return; }
                 }
-                SpaceSession.EnsureLoaded().ApplyNetworkSnapshot(new UTF8Encoding(false, true).GetString(expanded));
+                using (SnapshotApplyPoint.Measure(expanded.LongLength))
+                    SpaceSession.EnsureLoaded().ApplyNetworkSnapshot(new UTF8Encoding(false, true).GetString(expanded));
                 lastAppliedSequence = value.Header.Sequence;
                 needsSnapshot = false;
             }

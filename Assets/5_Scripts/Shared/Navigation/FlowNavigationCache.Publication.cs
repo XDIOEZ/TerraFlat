@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -7,6 +8,16 @@ namespace FlatWorld.Navigation
 {
     public sealed partial class FlowNavigationCache
     {
+        #region 性能分段
+        // 全量与原位发布独立统计，路线阶段的 CPU 标记只覆盖调度或同步边界。
+        private static readonly PerformanceDebugPoint FullPublishMarker = new("FlatWorld.Navigation.Flow.PublishChunks.Full");
+        private static readonly PerformanceDebugPoint PatchPublishMarker = new("FlatWorld.Navigation.Flow.PublishChunks.Patch");
+        private static readonly PerformanceDebugPoint GoalsPublishMarker = new("FlatWorld.Navigation.Flow.PublishGoals");
+        private static readonly PerformanceDebugPoint RouteScheduleMarker = new("FlatWorld.Navigation.Flow.Routes.Schedule");
+        private static readonly PerformanceDebugPoint ExitScheduleMarker = new("FlatWorld.Navigation.Flow.SelectExit.Schedule");
+        private static readonly PerformanceDebugPoint GoalsCompleteMarker = new("FlatWorld.Navigation.Flow.PublishGoals.Complete");
+        #endregion
+
         #region 发布数据所有权
         private NativeParallelHashMap<int2, int> nativeChunkLookup;
         private NativeList<FlowChunkHeader> nativeChunks;
@@ -30,6 +41,8 @@ namespace FlatWorld.Navigation
         {
             if (CanPatchChunks(changed))
             {
+                using var patchScope = PatchPublishMarker.Measure(changed.Count);
+                PatchPublishMarker.SetGauge(nativePortals.Length);
                 foreach (ChunkPublication change in changed)
                 {
                     nativeChunkLookup.TryGetValue(change.Coordinate, out int index);
@@ -45,6 +58,7 @@ namespace FlatWorld.Navigation
                 return;
             }
 
+            using var fullScope = FullPublishMarker.Measure(chunks.Count);
             FullTablePublications++;
             coordinates.Clear(); coordinates.AddRange(chunks.Keys);
             coordinates.Sort((a, b) => a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
@@ -60,6 +74,7 @@ namespace FlatWorld.Navigation
                 nextPortal += chunk.Portals.Count;
             }
             PairPortals();
+            FullPublishMarker.SetGauge(nativePortals.Length);
         }
 
         /// <summary>块集合与每块出口数量相同时，原有紧凑索引可以原位覆盖。</summary>
@@ -158,6 +173,8 @@ namespace FlatWorld.Navigation
         /// <summary>目标表按形状复用容量；图变化时重新计算路线，表层水变化不进入此流程。</summary>
         private void PublishGoals(bool graphChanged)
         {
+            using var goalsScope = GoalsPublishMarker.Measure(goals.Count,
+                graphChanged ? "graph" : "goals");
             int goalCellCount = checked(goals.Count * 256);
             int routeLength = checked(goals.Count * nativePortals.Length);
             int selectedLength = checked(goals.Count * nativeChunks.Length * 256);
@@ -211,21 +228,33 @@ namespace FlatWorld.Navigation
                 goal.RootMask = mask; goal.RoutedChunk = coordinate;
                 goal.TargetDirty = goal.RouteDirty = false;
             }
+            GoalsPublishMarker.SetGauge(routeSlots.Count);
             if (routeSlots.Count == 0) return;
             EnsureWorkspace(ref routeSlotsWorkspace, routeSlots.Count);
             EnsureWorkspace(ref routeNodesWorkspace, nativeRoutes.Length);
             EnsureWorkspace(ref routePositionsWorkspace, nativeRoutes.Length);
             NativeArray<int> slots = routeSlotsWorkspace.GetSubArray(0, routeSlots.Count);
             for (int i = 0; i < routeSlots.Count; i++) slots[i] = routeSlots[i];
-            JobHandle handle = new FlowPortalRouteJob { GoalSlots = slots, Goals = nativeGoals.AsArray(), Chunks = nativeChunks.AsArray(),
-                Portals = nativePortals.AsArray(), Cells = nativeCells.AsArray(), ExitCosts = nativeExitCosts.AsArray(), TargetCosts = nativeTargetCosts.AsArray(),
-                Routes = nativeRoutes.AsArray(), HeapNodes = routeNodesWorkspace.GetSubArray(0, nativeRoutes.Length),
-                HeapPositions = routePositionsWorkspace.GetSubArray(0, nativeRoutes.Length) }.Schedule(slots.Length, 1);
+            JobHandle handle;
+            using (RouteScheduleMarker.Measure(slots.Length))
+            {
+                RouteScheduleMarker.SetGauge(nativePortals.Length);
+                handle = new FlowPortalRouteJob { GoalSlots = slots, Goals = nativeGoals.AsArray(), Chunks = nativeChunks.AsArray(),
+                    Portals = nativePortals.AsArray(), Cells = nativeCells.AsArray(), ExitCosts = nativeExitCosts.AsArray(), TargetCosts = nativeTargetCosts.AsArray(),
+                    Routes = nativeRoutes.AsArray(), HeapNodes = routeNodesWorkspace.GetSubArray(0, nativeRoutes.Length),
+                    HeapPositions = routePositionsWorkspace.GetSubArray(0, nativeRoutes.Length) }.Schedule(slots.Length, 1);
+            }
             if (nativeChunks.Length > 0)
-                handle = new FlowSelectExitJob { GoalSlots = slots, Chunks = nativeChunks.AsArray(), Portals = nativePortals.AsArray(),
-                    Cells = nativeCells.AsArray(), ExitCosts = nativeExitCosts.AsArray(), Routes = nativeRoutes.AsArray(), SelectedExits = nativeSelectedExits.AsArray() }
-                    .Schedule(slots.Length * nativeChunks.Length, 1, handle);
-            handle.Complete(); HighLevelRouteBuilds += routeSlots.Count;
+                using (ExitScheduleMarker.Measure((long)slots.Length * nativeChunks.Length))
+                {
+                    ExitScheduleMarker.SetGauge(nativeChunks.Length);
+                    handle = new FlowSelectExitJob { GoalSlots = slots, Chunks = nativeChunks.AsArray(), Portals = nativePortals.AsArray(),
+                        Cells = nativeCells.AsArray(), ExitCosts = nativeExitCosts.AsArray(), Routes = nativeRoutes.AsArray(), SelectedExits = nativeSelectedExits.AsArray() }
+                        .Schedule(slots.Length * nativeChunks.Length, 1, handle);
+                }
+            using (GoalsCompleteMarker.Measure(routeSlots.Count))
+                handle.Complete();
+            HighLevelRouteBuilds += routeSlots.Count;
         }
 
         /// <summary>只在发布边界更新 NativeList 视图，逐帧读取不重复创建安全别名。</summary>

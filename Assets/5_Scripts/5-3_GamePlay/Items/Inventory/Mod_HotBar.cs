@@ -2,6 +2,7 @@
 
 using DG.Tweening;
 using MemoryPack;
+using FlatWorld.Diagnostics;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,24 @@ using UnityEngine.InputSystem;
 public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 {
     private const int FirstHotbarSlotIndex = 0;
+
+#region 手持性能诊断
+    // 脏通知、同步决策与真实建壳分别统计，避免把数量刷新误判为重建。
+    private static readonly PerformanceDebugPoint HeldSyncDebug = new("FlatWorld.Hotbar.SyncHeld");
+    private static readonly PerformanceDebugPoint HeldLoadDebug = new("FlatWorld.Hotbar.LoadHeld");
+    private static readonly PerformanceDebugPoint HeldUnloadDebug = new("FlatWorld.Hotbar.UnloadHeld");
+    private static readonly PerformanceDebugPoint HeldConfigureDebug = new("FlatWorld.Hotbar.ConfigureHeld");
+    private static readonly PerformanceDebugPoint HeldDirtyLoadDebug = new("FlatWorld.Hotbar.Dirty.OnLoad");
+    private static readonly PerformanceDebugPoint HeldDirtyBindingDebug = new("FlatWorld.Hotbar.Dirty.InventoryBinding");
+    private static readonly PerformanceDebugPoint HeldDirtyDataDebug = new("FlatWorld.Hotbar.Dirty.InventoryChanged");
+    private static readonly PerformanceDebugPoint HeldDirtyUiDebug = new("FlatWorld.Hotbar.Dirty.InventoryRefresh");
+    private static readonly PerformanceDebugPoint HeldDirtyReentryDebug = new("FlatWorld.Hotbar.Dirty.Reentrant");
+    private static readonly PerformanceDebugPoint HeldDirtyDestroyedDebug = new("FlatWorld.Hotbar.Dirty.HeldDestroyed");
+    private static readonly PerformanceDebugPoint HeldMissingDebug = new("FlatWorld.Hotbar.Decision.CreateMissingHeld");
+    private static readonly PerformanceDebugPoint HeldReferenceChangedDebug = new("FlatWorld.Hotbar.Decision.ReplaceDataReference");
+    private static readonly PerformanceDebugPoint HeldSameReferenceDebug = new("FlatWorld.Hotbar.Decision.ReuseDataReference");
+    private static readonly PerformanceDebugPoint HeldEmptySlotDebug = new("FlatWorld.Hotbar.Decision.EmptySlot");
+#endregion
 
 #region 基础参数
 
@@ -218,6 +237,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         runtimeUnloading = false;
         heldItemSyncPending = true;
+        HeldDirtyLoadDebug.AddWork(1);
         EnsureRuntimeInventoryBinding();
 
         // 实例快照恢复到当前快捷栏布局，不替换已绑定的库存与物品引用。
@@ -545,6 +565,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         observedHeldInventory.Event_OnDataChanged += HandleHeldInventoryChanged;
         observedHeldInventory.Event_RefreshUI += HandleHeldInventoryRefresh;
         heldItemSyncPending = true;
+        HeldDirtyBindingDebug.AddWork(1);
     }
 
     private void UnbindHeldInventoryEvents()
@@ -560,13 +581,19 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (runtimeUnloading || Data?.itemSlots == null || MaxIndex == 0) return;
         if (slot == null || ReferenceEquals(slot, CurrentSelectItemSlot) ||
             ReferenceEquals(slot, Data.itemSlots[NormalizeIndex(CurrentIndex)]))
+        {
             heldItemSyncPending = true;
+            HeldDirtyDataDebug.AddWork(1);
+        }
     }
 
     private void HandleHeldInventoryRefresh(int index)
     {
         if (!runtimeUnloading && (index < 0 || index == CurrentIndex))
+        {
             heldItemSyncPending = true;
+            HeldDirtyUiDebug.AddWork(1);
+        }
     }
 
     private void EnsureHotBarSlots()
@@ -937,6 +964,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         ItemData data = slot.itemData;
 
+        using var loadDebug = HeldLoadDebug.Measure(1, data.IDName);
         bool previousInHand = data.inHand;
         Item itemInstance = ItemMgr.Instance.InstantiateHeldItem(data, item, spawnLocation);
         try
@@ -970,6 +998,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         currentObject = null;
         if (previous == null) return;
 
+        using var unloadDebug = HeldUnloadDebug.Measure(1, previous.itemData?.IDName);
         previous.OnUIRefresh -= RefreshUI;
         previous.OnItemDestroy -= OnDestroyCurrentObject;
         actorRenderEffects?.UnregisterExternalRenderers(previous.transform);
@@ -1004,6 +1033,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void ConfigureItemInstance(Item itemInstance, ItemData data, ItemSlot slot)
     {
+        using var configureDebug = HeldConfigureDebug.Measure(1, data?.IDName);
         // 快捷栏挂点是角色的最后一个表现节点，确保世界手持物绘制在角色其它模块之后。
         if (spawnLocation != null)
             spawnLocation.SetAsLastSibling();
@@ -1152,6 +1182,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         UnloadCurrentItem();
         heldItemSyncPending = !runtimeUnloading;
+        if (heldItemSyncPending) HeldDirtyDestroyedDebug.AddWork(1);
         NotifyOwnerNetworkStateChanged();
     }
 
@@ -1161,8 +1192,10 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (heldItemTransitionInProgress)
         {
             heldItemSyncPending = true;
+            HeldDirtyReentryDebug.AddWork(1);
             return;
         }
+        using var syncDebug = HeldSyncDebug.Measure(1, item?.itemData?.IDName);
         heldItemSyncPending = false;
         heldItemTransitionInProgress = true;
         try
@@ -1207,6 +1240,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         if (slotData == null)
         {
+            HeldEmptySlotDebug.AddWork(1);
             if (CurentSelectItem != null)
             {
                 UnloadCurrentItem();
@@ -1219,6 +1253,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         if (CurentSelectItem == null)
         {
+            HeldMissingDebug.AddWork(1);
             LoadItemFromSlot(CurrentIndex);
             if (!StillCurrent()) return;
             if (notifyOwner) NotifyOwnerNetworkStateChanged();
@@ -1227,12 +1262,15 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         if (!ReferenceEquals(CurentSelectItem.itemData, slotData))
         {
+            HeldReferenceChangedDebug.AddWork(1);
             UnloadCurrentItem();
             if (!StillCurrent()) return;
             LoadItemFromSlot(CurrentIndex);
             if (!StillCurrent()) return;
             if (notifyOwner) NotifyOwnerNetworkStateChanged();
         }
+        else
+            HeldSameReferenceDebug.AddWork(1);
     }
 
     /// <summary>槽位交换后通知拥有者同步快捷栏运行时状态。</summary>

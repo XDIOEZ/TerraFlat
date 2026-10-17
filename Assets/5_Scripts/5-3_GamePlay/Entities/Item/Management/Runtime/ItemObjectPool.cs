@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using FlatWorld.Diagnostics;
 using UnityEngine;
 
 /// <summary>
@@ -8,6 +9,27 @@ using UnityEngine;
 /// </summary>
 internal sealed class ItemObjectPool
 {
+    #region 对象池性能诊断
+    // 拒收原因只记录计数，不改变回收资格和生命周期顺序。
+    private static readonly PerformanceDebugPoint AcquireDebug = new("FlatWorld.ItemPool.Acquire");
+    private static readonly PerformanceDebugPoint ReturnDebug = new("FlatWorld.ItemPool.Return");
+    private static readonly PerformanceDebugPoint HitDebug = new("FlatWorld.ItemPool.Hits");
+    private static readonly PerformanceDebugPoint MissDebug = new("FlatWorld.ItemPool.Misses");
+    private static readonly PerformanceDebugPoint DeadEntryDebug = new("FlatWorld.ItemPool.DeadEntries");
+    private static readonly PerformanceDebugPoint AvailableDebug = new("FlatWorld.ItemPool.AvailableInstances");
+    private static readonly PerformanceDebugPoint AcceptedReturnDebug = new("FlatWorld.ItemPool.AcceptedReturns");
+    private static readonly PerformanceDebugPoint AlreadyPooledDebug = new("FlatWorld.ItemPool.Rejected.AlreadyPooled");
+    private static readonly PerformanceDebugPoint DisabledReturnDebug = new("FlatWorld.ItemPool.Rejected.PoolingDisabled");
+    private static readonly PerformanceDebugPoint HierarchyReturnDebug = new("FlatWorld.ItemPool.Rejected.HierarchyChanged");
+    private static readonly PerformanceDebugPoint IdentityReturnDebug = new("FlatWorld.ItemPool.Rejected.MissingKey");
+    private static readonly PerformanceDebugPoint TotalCapacityReturnDebug = new("FlatWorld.ItemPool.Rejected.TotalCapacity");
+    private static readonly PerformanceDebugPoint TypeCapacityReturnDebug = new("FlatWorld.ItemPool.Rejected.TypeCapacity");
+    private static readonly PerformanceDebugPoint RuntimeReturnDebug = new("FlatWorld.ItemPool.Rejected.RuntimeOrRootType");
+    private static readonly PerformanceDebugPoint LoadedModuleReturnDebug = new("FlatWorld.ItemPool.Rejected.LoadedModule");
+    private static readonly PerformanceDebugPoint UnsafeTypeReturnDebug = new("FlatWorld.ItemPool.Rejected.UnsafeComponent");
+    private static readonly PerformanceDebugPoint ValidateComponentsDebug = new("FlatWorld.ItemPool.ValidateComponents");
+    #endregion
+
     #region 池状态
 
     public Dictionary<string, Queue<Item>> Pools { get; } = new();
@@ -34,20 +56,24 @@ internal sealed class ItemObjectPool
             }
         Pools.Clear();
         TotalCount = 0;
+        AvailableDebug.SetGauge(TotalCount);
         if (poolRoot != null) UnityEngine.Object.Destroy(poolRoot.gameObject);
         poolRoot = null;
     }
 
     public GameObject Acquire(string itemId, Func<string, GameObject> spawn)
     {
+        using var acquireDebug = AcquireDebug.Measure(1, itemId);
         if (Pools.TryGetValue(itemId, out Queue<Item> pool))
         {
             while (pool.Count > 0)
             {
                 Item pooledItem = pool.Dequeue();
                 TotalCount = Mathf.Max(0, TotalCount - 1);
+                AvailableDebug.SetGauge(TotalCount);
                 if (pooledItem == null)
                 {
+                    DeadEntryDebug.AddWork(1);
                     continue;
                 }
 
@@ -57,6 +83,7 @@ internal sealed class ItemObjectPool
                     pooledMarker.InPool = false;
                     pooledMarker.RestoreBaseline();
                     pooledItem.transform.SetParent(null, false);
+                    HitDebug.AddWork(1);
                     return pooledItem.gameObject;
                 }
                 catch
@@ -67,6 +94,7 @@ internal sealed class ItemObjectPool
             }
         }
 
+        MissDebug.AddWork(1);
         GameObject itemObject = spawn(itemId);
         Item newItem = itemObject.GetComponent<Item>();
         if (newItem == null)
@@ -83,16 +111,34 @@ internal sealed class ItemObjectPool
 
     public bool TryReturn(Item item, Transform owner, int maxPerItem, int maxTotal)
     {
+        using var returnDebug = ReturnDebug.Measure(1, item.itemData?.IDName);
         PooledItemMarker marker = item.PoolMarker;
-        if (marker.InPool || marker.PoolingDisabled ||
-            !marker.HasOriginalHierarchy() || !CanPool(item))
+        if (marker.InPool)
         {
+            AlreadyPooledDebug.AddWork(1);
             return false;
         }
+        if (marker.PoolingDisabled)
+        {
+            DisabledReturnDebug.AddWork(1);
+            return false;
+        }
+        if (!marker.HasOriginalHierarchy())
+        {
+            HierarchyReturnDebug.AddWork(1);
+            return false;
+        }
+        if (!CanPool(item)) return false;
 
         string poolKey = string.IsNullOrEmpty(marker.PoolKey) ? item.itemData?.IDName : marker.PoolKey;
-        if (string.IsNullOrEmpty(poolKey) || TotalCount >= Mathf.Max(1, maxTotal))
+        if (string.IsNullOrEmpty(poolKey))
         {
+            IdentityReturnDebug.AddWork(1);
+            return false;
+        }
+        if (TotalCount >= Mathf.Max(1, maxTotal))
+        {
+            TotalCapacityReturnDebug.AddWork(1);
             return false;
         }
 
@@ -104,6 +150,7 @@ internal sealed class ItemObjectPool
 
         if (pool.Count >= Mathf.Max(1, maxPerItem))
         {
+            TypeCapacityReturnDebug.AddWork(1);
             return false;
         }
 
@@ -113,6 +160,8 @@ internal sealed class ItemObjectPool
         item.transform.SetParent(GetPoolRoot(owner), false);
         pool.Enqueue(item);
         TotalCount++;
+        AcceptedReturnDebug.AddWork(1);
+        AvailableDebug.SetGauge(TotalCount);
         return true;
     }
 
@@ -120,10 +169,13 @@ internal sealed class ItemObjectPool
     {
         if (item == null || item.IsRuntimeTransitioning || item is Player || item is Map)
         {
+            RuntimeReturnDebug.AddWork(1);
             return false;
         }
 
+        using var validationDebug = ValidateComponentsDebug.Measure(context: item.itemData?.IDName);
         item.GetComponentsInChildren(true, poolComponents);
+        ValidateComponentsDebug.AddWork(poolComponents.Count);
         for (int i = 0; i < poolComponents.Count; i++)
         {
             MonoBehaviour behaviour = poolComponents[i];
@@ -134,6 +186,7 @@ internal sealed class ItemObjectPool
 
             if (behaviour is Module module && (module.IsRuntimeLoaded || module.IsRuntimeTransitioning))
             {
+                LoadedModuleReturnDebug.AddWork(1);
                 poolComponents.Clear();
                 return false;
             }
@@ -142,6 +195,7 @@ internal sealed class ItemObjectPool
             Type type = behaviour.GetType();
             if (!IsPoolSafe(type))
             {
+                UnsafeTypeReturnDebug.AddWork(1);
                 poolComponents.Clear();
                 return false;
             }

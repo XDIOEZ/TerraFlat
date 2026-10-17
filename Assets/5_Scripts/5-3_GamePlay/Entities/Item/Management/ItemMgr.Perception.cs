@@ -5,9 +5,9 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Profiling;
 using UnityEngine;
 using FlatWorld.Geometry;
+using FlatWorld.Diagnostics;
 
 public partial class ItemMgr
 {
@@ -49,11 +49,23 @@ public partial class ItemMgr
     #region 并行感知调度
 
     // 按批次和检测器划分采样，避免每个候选都打点干扰实际成本。
-    private static readonly ProfilerMarker PerceptionJobCompleteMarker = new("ItemMgr.Perception.JobComplete");
-    private static readonly ProfilerMarker PerceptionApplyMarker = new("ItemMgr.Perception.Apply");
-    private static readonly ProfilerMarker PerceptionFilterCandidatesMarker = new("ItemMgr.Perception.FilterCandidates");
-    private static readonly ProfilerMarker PerceptionDetectorApplyMarker = new("ItemMgr.Perception.DetectorApply");
-    private static readonly ProfilerMarker PerceptionClearMarker = new("ItemMgr.Perception.Clear");
+    private static readonly PerformanceDebugPoint PerceptionJobCompleteMarker = new("ItemMgr.Perception.JobComplete");
+    private static readonly PerformanceDebugPoint PerceptionApplyMarker = new("ItemMgr.Perception.Apply");
+    private static readonly PerformanceDebugPoint PerceptionFilterCandidatesMarker = new("ItemMgr.Perception.FilterCandidates");
+    private static readonly PerformanceDebugPoint PerceptionDetectorApplyMarker = new("ItemMgr.Perception.DetectorApply");
+    private static readonly PerformanceDebugPoint PerceptionClearMarker = new("ItemMgr.Perception.Clear");
+    // 批次末汇总工作量，验证与 Bridge 仍保留在原 Filter 计时内。
+    private static readonly PerformanceDebugPoint PerceptionRawCandidatesDebug = new("FlatWorld.Perception.RawCandidates");
+    private static readonly PerformanceDebugPoint PerceptionValidCandidatesDebug = new("FlatWorld.Perception.ValidCandidates");
+    private static readonly PerformanceDebugPoint PerceptionInvalidCandidatesDebug = new("FlatWorld.Perception.InvalidCandidates");
+    private static readonly PerformanceDebugPoint PerceptionDuplicateCandidatesDebug = new("FlatWorld.Perception.DuplicateCandidates");
+    private static readonly PerformanceDebugPoint PerceptionBridgeChecksDebug = new("FlatWorld.Perception.BridgeChecks");
+    private static readonly PerformanceDebugPoint PerceptionBridgeRejectedDebug = new("FlatWorld.Perception.BridgeRejected");
+    private static readonly PerformanceDebugPoint PerceptionLosChecksDebug = new("FlatWorld.Perception.LOSChecks");
+    private static readonly PerformanceDebugPoint PerceptionLosRejectedDebug = new("FlatWorld.Perception.LOSRejected");
+    private static readonly PerformanceDebugPoint PerceptionFilteredResultsDebug = new("FlatWorld.Perception.FilteredResults");
+    private static readonly PerformanceDebugPoint PerceptionMissingDetectorDebug = new("FlatWorld.Perception.MissingDetectorCandidates");
+    private static readonly PerformanceDebugPoint PerceptionStaleDetectorDebug = new("FlatWorld.Perception.StaleDetectorBatches");
 
     private const int PerceptionJobBatchSize = 8;
 
@@ -529,15 +541,15 @@ public partial class ItemMgr
         if (!_perceptionJobScheduled)
             return;
 
-        using (PerceptionJobCompleteMarker.Auto())
+        using (PerceptionJobCompleteMarker.Measure())
             _perceptionJobHandle.Complete();
         if (applyResults)
         {
-            using (PerceptionApplyMarker.Auto())
+            using (PerceptionApplyMarker.Measure(_inFlightDetectors.Count))
                 ApplyPerceptionBatchResults();
         }
 
-        using (PerceptionClearMarker.Auto())
+        using (PerceptionClearMarker.Measure())
         {
             _perceptionJobScheduled = false;
             DisposePerceptionResultStream();
@@ -555,45 +567,94 @@ public partial class ItemMgr
     private void ApplyPerceptionBatchResults()
     {
         NativeStream.Reader reader = _inFlightResults.AsReader();
-        for (int queryIndex = 0; queryIndex < _inFlightDetectors.Count; queryIndex++)
+        long raw = 0, valid = 0, invalid = 0, duplicate = 0, bridgeChecks = 0, bridgeRejected = 0;
+        long losChecks = 0, losRejected = 0, filteredResults = 0, missingDetector = 0, staleDetector = 0;
+        try
         {
-            Mod_ItemDetector detector = _inFlightDetectors[queryIndex];
-            DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
-            int candidateCount = reader.BeginForEachIndex(queryIndex);
-            _detectorApplyBuffer.Clear();
-            _perceptionResultItemSet.Clear();
-
-            using (PerceptionFilterCandidatesMarker.Auto())
+            for (int queryIndex = 0; queryIndex < _inFlightDetectors.Count; queryIndex++)
             {
-                using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
-                    ? detector.BeginLineOfSightQuery() : null;
-                for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
+                Mod_ItemDetector detector = _inFlightDetectors[queryIndex];
+                DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
+                int candidateCount = reader.BeginForEachIndex(queryIndex);
+                raw += candidateCount;
+                _detectorApplyBuffer.Clear();
+                _perceptionResultItemSet.Clear();
+
+                using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
-                    int snapshotIndex = reader.Read<int>();
-                    if ((uint)snapshotIndex >= (uint)_perceptionSnapshotItems.Count)
-                        continue;
+                    using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
+                        ? detector.BeginLineOfSightQuery() : null;
+                    for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
+                    {
+                        int snapshotIndex = reader.Read<int>();
+                        if ((uint)snapshotIndex >= (uint)_perceptionSnapshotItems.Count)
+                        {
+                            invalid++;
+                            continue;
+                        }
 
-                    Item candidate = _perceptionSnapshotItems[snapshotIndex];
-                    PerceptionItemSnapshot snapshot = _inFlightItemSnapshots[snapshotIndex];
-                    if (!IsSnapshotItemStillValid(candidate, snapshot))
-                        continue;
+                        Item candidate = _perceptionSnapshotItems[snapshotIndex];
+                        PerceptionItemSnapshot snapshot = _inFlightItemSnapshots[snapshotIndex];
+                        if (!IsSnapshotItemStillValid(candidate, snapshot))
+                        {
+                            invalid++;
+                            continue;
+                        }
+                        valid++;
 
-                    if (!_perceptionResultItemSet.Add(candidate) ||
-                        (snapshot.ShapeCount == 0 && !PassesBridgePerceptionFilter(candidate, query, snapshot)) ||
-                        detector == null ||
-                        !detector.HasLineOfSight(candidate, lineOfSight))
-                        continue;
+                        if (!_perceptionResultItemSet.Add(candidate))
+                        {
+                            duplicate++;
+                            continue;
+                        }
+                        if (snapshot.ShapeCount == 0)
+                        {
+                            bridgeChecks++;
+                            if (!PassesBridgePerceptionFilter(candidate, query, snapshot))
+                            {
+                                bridgeRejected++;
+                                continue;
+                            }
+                        }
+                        if (detector == null)
+                        {
+                            missingDetector++;
+                            continue;
+                        }
+                        losChecks++;
+                        if (!detector.HasLineOfSight(candidate, lineOfSight))
+                        {
+                            losRejected++;
+                            continue;
+                        }
 
-                    _detectorApplyBuffer.Add(candidate);
+                        _detectorApplyBuffer.Add(candidate);
+                        filteredResults++;
+                    }
+                }
+
+                reader.EndForEachIndex();
+                if (detector != null)
+                {
+                    if (detector.RequestedVersion != _inFlightDetectorVersions[queryIndex]) staleDetector++;
+                    using (PerceptionDetectorApplyMarker.Measure(_detectorApplyBuffer.Count))
+                        detector.ApplyDetectorResults(_inFlightDetectorVersions[queryIndex], _detectorApplyBuffer);
                 }
             }
-
-            reader.EndForEachIndex();
-            if (detector != null)
-            {
-                using (PerceptionDetectorApplyMarker.Auto())
-                    detector.ApplyDetectorResults(_inFlightDetectorVersions[queryIndex], _detectorApplyBuffer);
-            }
+        }
+        finally
+        {
+            PerceptionRawCandidatesDebug.AddWork(raw);
+            PerceptionValidCandidatesDebug.AddWork(valid);
+            PerceptionInvalidCandidatesDebug.AddWork(invalid);
+            PerceptionDuplicateCandidatesDebug.AddWork(duplicate);
+            PerceptionBridgeChecksDebug.AddWork(bridgeChecks);
+            PerceptionBridgeRejectedDebug.AddWork(bridgeRejected);
+            PerceptionLosChecksDebug.AddWork(losChecks);
+            PerceptionLosRejectedDebug.AddWork(losRejected);
+            PerceptionFilteredResultsDebug.AddWork(filteredResults);
+            PerceptionMissingDetectorDebug.AddWork(missingDetector);
+            PerceptionStaleDetectorDebug.AddWork(staleDetector);
         }
     }
 

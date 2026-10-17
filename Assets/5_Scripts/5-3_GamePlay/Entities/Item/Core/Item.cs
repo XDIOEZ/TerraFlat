@@ -5,6 +5,7 @@ using Sirenix.OdinInspector;
 using System;
 using FastCloner.Code;
 using UnityEngine.Pool;
+using FlatWorld.Diagnostics;
 
 
 /// <summary>
@@ -13,6 +14,15 @@ using UnityEngine.Pool;
 /// </summary>
 public abstract class Item : MonoBehaviour
 {
+    #region 物品加载性能诊断
+    // 生命周期仍只执行一次，按整轮记录数据初始化、依赖与模块运行态。
+    private static readonly PerformanceDebugPoint LoadRuntimeDebug = new("FlatWorld.Item.Load");
+    private static readonly PerformanceDebugPoint LoadModuleLayoutDebug = new("FlatWorld.Item.LoadModuleLayout");
+    private static readonly PerformanceDebugPoint InitializeModulesDebug = new("FlatWorld.Item.ModuleInitBatch");
+    private static readonly PerformanceDebugPoint BindDependenciesDebug = new("FlatWorld.Item.BindModuleDependenciesBatch");
+    private static readonly PerformanceDebugPoint LoadModulesDebug = new("FlatWorld.Item.LoadModulesBatch");
+    #endregion
+
     #region 核心属性
 
     /// <summary>
@@ -211,6 +221,7 @@ public abstract class Item : MonoBehaviour
     public virtual void Load()
     {
         if (lifecycleTransition || modulesLoading || modulesUnloading || IsInitialized || destructionHandled) return;
+        using var loadDebug = LoadRuntimeDebug.Measure(1, itemData?.IDName);
         lifecycleTransition = true;
         RuntimeGeneration = ++runtimeGenerationSequence;
         if (RuntimeGeneration == 0) RuntimeGeneration = ++runtimeGenerationSequence;
@@ -567,6 +578,7 @@ public abstract class Item : MonoBehaviour
 
     private void LoadModuleLayout()
     {
+        using var layoutDebug = LoadModuleLayoutDebug.Measure(1, itemData?.IDName);
         ModuleUnload();
         if (itemData == null) throw new InvalidOperationException($"物品 {name} 缺少实例数据。");
         using var mutation = itemMods.BeginMutation();
@@ -624,16 +636,21 @@ public abstract class Item : MonoBehaviour
             }
 
             // 全部注册后先绑定数据与配置，再解析依赖，最后建立运行态。
-            foreach (Module module in toInitialize) module.ModuleInit(this, module._Data);
-            foreach (Module module in toInitialize) BindModuleDependencies(module);
+            using (InitializeModulesDebug.Measure(toInitialize.Count, itemData?.IDName))
+                foreach (Module module in toInitialize) module.ModuleInit(this, module._Data);
+            using (BindDependenciesDebug.Measure(toInitialize.Count, itemData?.IDName))
+                foreach (Module module in toInitialize) BindModuleDependencies(module);
             uint generation = RuntimeGeneration;
-            foreach (Module module in toInitialize)
+            using (LoadModulesDebug.Measure(toInitialize.Count, itemData?.IDName))
             {
-                if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
-                    throw new InvalidOperationException($"物品 {name} 在装配期间被回收，已终止加载。");
-                if (itemMods.HasMod(module)) module.LoadRuntime();
-                if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
-                    throw new InvalidOperationException($"物品 {name} 在模块加载回调中被回收，已终止加载。");
+                foreach (Module module in toInitialize)
+                {
+                    if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                        throw new InvalidOperationException($"物品 {name} 在装配期间被回收，已终止加载。");
+                    if (itemMods.HasMod(module)) module.LoadRuntime();
+                    if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                        throw new InvalidOperationException($"物品 {name} 在模块加载回调中被回收，已终止加载。");
+                }
             }
         }
         catch (Exception loadError)

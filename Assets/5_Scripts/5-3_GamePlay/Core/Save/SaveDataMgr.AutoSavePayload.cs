@@ -138,6 +138,7 @@ public partial class SaveDataMgr
         byte[] droppedItems,
         byte[] modMetadata)
     {
+        using var encodeSample = SaveBackgroundEncodePoint.Measure();
         byte[] corePayload = BuildCompactSaveEnvelopePayload(
             coreSaveData, chunkRecords, mechanicalNetworks, droppedItems);
         ModdedSaveEnvelope envelope = new()
@@ -146,7 +147,10 @@ public partial class SaveDataMgr
             CoreSavePayload = corePayload,
             ModMetadata = modMetadata
         };
-        return AddSaveHeader(MemoryPackSerializer.Serialize(envelope), ModdedSaveMagic);
+        byte[] payload = AddSaveHeader(MemoryPackSerializer.Serialize(envelope), ModdedSaveMagic);
+        encodeSample.AddWork(payload.LongLength);
+        encodeSample.SetGauge(payload.LongLength);
+        return payload;
     }
 
     private static byte[] BuildCompactSaveEnvelopePayload(

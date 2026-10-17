@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
+using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,6 +11,12 @@ using Stopwatch = System.Diagnostics.Stopwatch;
 
 public partial class ChunkMgr
 {
+    #region 性能分段
+    // 只包本帧的启动和续步批次，不把协程等待时间计入绑定耗时。
+    private static readonly PerformanceDebugPoint PresentationStartMarker = new("FlatWorld.ChunkStreaming.PresentationStartBatch");
+    private static readonly PerformanceDebugPoint PresentationStepMarker = new("FlatWorld.ChunkStreaming.PresentationStepBatch");
+    #endregion
+
     private sealed class RuntimeChunkBinding
     {
         public ChunkView View;
@@ -797,12 +804,19 @@ public partial class ChunkMgr
             int startBudget = RuntimeChunkPresentationStartBudget;
             long startDeadline = Stopwatch.GetTimestamp() + (long)(
                 Stopwatch.Frequency * (double)RuntimeChunkPresentationStartMillisecondsBudget / 1000d);
-            while (startBudget-- > 0 &&
-                   TryDequeueRuntimePresentation(out RuntimeWorldAddress address))
+            using (PresentationStartMarker.Measure())
             {
-                StartRuntimeChunkPresentation(address);
-                if (Stopwatch.GetTimestamp() >= startDeadline)
-                    break;
+                int startedChunks = 0;
+                while (startBudget-- > 0 &&
+                       TryDequeueRuntimePresentation(out RuntimeWorldAddress address))
+                {
+                    StartRuntimeChunkPresentation(address);
+                    startedChunks++;
+                    if (Stopwatch.GetTimestamp() >= startDeadline)
+                        break;
+                }
+                PresentationStartMarker.AddWork(startedChunks);
+                PresentationStartMarker.SetGauge(runtimePresentationQueue.Count);
             }
 
             int continuationBudget = RuntimeChunkPresentationContinuationBudget;
@@ -813,23 +827,30 @@ public partial class ChunkMgr
             }
             long continuationDeadline = Stopwatch.GetTimestamp() + (long)(
                 Stopwatch.Frequency * (double)RuntimeChunkPresentationContinuationMillisecondsBudget / 1000d);
-            runtimePresentationRescheduleBuffer.Clear();
-            while (continuationBudget-- > 0 && Stopwatch.GetTimestamp() < continuationDeadline &&
-                   TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress continuationAddress))
+            using (PresentationStepMarker.Measure())
             {
-                if (AdvanceRuntimeChunkPresentation(continuationAddress))
-                    runtimePresentationRescheduleBuffer.Add(continuationAddress);
+                int advancedChunks = 0;
+                runtimePresentationRescheduleBuffer.Clear();
+                while (continuationBudget-- > 0 && Stopwatch.GetTimestamp() < continuationDeadline &&
+                       TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress continuationAddress))
+                {
+                    if (AdvanceRuntimeChunkPresentation(continuationAddress))
+                        runtimePresentationRescheduleBuffer.Add(continuationAddress);
+                    advancedChunks++;
+                }
+                // 本帧执行过的区块下帧才重入队列，防止一个耗时表现器连续吃满全部步骤。
+                for (int i = 0; i < runtimePresentationRescheduleBuffer.Count; i++)
+                {
+                    RuntimeWorldAddress continuationAddress = runtimePresentationRescheduleBuffer[i];
+                    if (activeRuntimeBindings.TryGetValue(continuationAddress, out RuntimeChunkBinding binding) &&
+                        binding.PresentationInProgress && binding.PresentationRoutine != null &&
+                        binding.WantsPresentation && binding.View != null)
+                        runtimePresentationContinuationQueue.Add(continuationAddress);
+                }
+                runtimePresentationRescheduleBuffer.Clear();
+                PresentationStepMarker.AddWork(advancedChunks);
+                PresentationStepMarker.SetGauge(runtimePresentationContinuationQueue.Count);
             }
-            // 本帧执行过的区块下帧才重入队列，防止一个耗时表现器连续吃满全部步骤。
-            for (int i = 0; i < runtimePresentationRescheduleBuffer.Count; i++)
-            {
-                RuntimeWorldAddress continuationAddress = runtimePresentationRescheduleBuffer[i];
-                if (activeRuntimeBindings.TryGetValue(continuationAddress, out RuntimeChunkBinding binding) &&
-                    binding.PresentationInProgress && binding.PresentationRoutine != null &&
-                    binding.WantsPresentation && binding.View != null)
-                    runtimePresentationContinuationQueue.Add(continuationAddress);
-            }
-            runtimePresentationRescheduleBuffer.Clear();
 
             // 即使本轮刚好清空也保留到下一帧，防止同帧晚到结果重新启动协程绕过预算。
             if (runtimePresentationContinuationQueue.Count > 0)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using FlatWorld.Networking;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -8,6 +9,12 @@ namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
+        #region 观察者快照性能诊断
+        private static readonly PerformanceDebugPoint NetworkCapturePoint = new("FlatWorld.Space.Network.CaptureContents");
+        private static readonly PerformanceDebugPoint NetworkFilterPoint = new("FlatWorld.Space.Network.Filter");
+        private static readonly PerformanceDebugPoint NetworkJsonPoint = new("FlatWorld.Space.Network.Json");
+        #endregion
+
         #region 连接身份与权威输入
         private readonly Dictionary<string, SpacePassengerInput> passengerInputs = new(StringComparer.Ordinal);
         private static Player FindNetworkPlayer(string profile)
@@ -164,46 +171,62 @@ namespace FlatWorld.Spaceflight
         public string CaptureNetworkSnapshot(string profile, double rangeMeters)
         {
             if (!TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return null;
-            CaptureContents(); CaptureLooseItems();
-            var snapshot = new SpaceSessionState { SimulationSeconds = State.SimulationSeconds, NavigationSequence = State.NavigationSequence };
-            var includedShips = new HashSet<string>(StringComparer.Ordinal);
-            var includedSectors = new HashSet<SpaceSectorId> { observer.Position.Sector };
-            var includedPieces = new HashSet<string>(StringComparer.Ordinal);
-            foreach (ShipState ship in State.Ships)
+            using (NetworkCapturePoint.Measure())
             {
-                ShipFlightState flight = GetFlight(ship.ShipId);
-                bool visible = observer.InSpace ? flight?.Phase == ShipFlightPhase.Cruising &&
-                    SpaceSectorCoordinates.Difference(new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)), observer.Position).Magnitude <= rangeMeters + CalculateShipContactRadius(ship)
-                    : flight?.SurfaceWorldKey == observer.WorldKey;
-                if (visible || ship.ShipId == observer.ShipId) includedShips.Add(ship.ShipId);
+                CaptureContents(); CaptureLooseItems();
+                NetworkCapturePoint.SetGauge(contents.Count + looseData.Count);
             }
-            // 一条已对接的船组必须整组复制，客户端不重建缺成员的组。
-            foreach (ShipAssemblyState assembly in queryAssemblies.Refresh(State.Ships, State.Docking))
+            SpaceSessionState snapshot;
+            using (NetworkFilterPoint.Measure(State.Ships.Count + State.Devices.Count + State.Passengers.Count +
+                       State.LooseItems.Count + State.Navigation.Count + State.Docking.Count))
             {
-                bool included = assembly.MemberShipIds.Exists(id => includedShips.Contains(id));
-                if (included) foreach (string id in assembly.MemberShipIds) includedShips.Add(id);
-            }
-            foreach (ShipState ship in State.Ships)
-                if (includedShips.Contains(ship.ShipId))
+                snapshot = new SpaceSessionState { SimulationSeconds = State.SimulationSeconds, NavigationSequence = State.NavigationSequence };
+                var includedShips = new HashSet<string>(StringComparer.Ordinal);
+                var includedSectors = new HashSet<SpaceSectorId> { observer.Position.Sector };
+                var includedPieces = new HashSet<string>(StringComparer.Ordinal);
+                foreach (ShipState ship in State.Ships)
                 {
-                    snapshot.Ships.Add(ship); snapshot.Flights.Add(GetFlight(ship.ShipId)); includedSectors.Add(ship.Sector);
-                    foreach (ShipPieceState piece in ship.Pieces) includedPieces.Add(piece.PieceId);
+                    ShipFlightState flight = GetFlight(ship.ShipId);
+                    bool visible = observer.InSpace ? flight?.Phase == ShipFlightPhase.Cruising &&
+                        SpaceSectorCoordinates.Difference(new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)), observer.Position).Magnitude <= rangeMeters + CalculateShipContactRadius(ship)
+                        : flight?.SurfaceWorldKey == observer.WorldKey;
+                    if (visible || ship.ShipId == observer.ShipId) includedShips.Add(ship.ShipId);
                 }
-            foreach (ShipDeviceState device in State.Devices) if (includedPieces.Contains(device.PieceId)) snapshot.Devices.Add(device);
-            foreach (SpacePassengerState passenger in State.Passengers)
-                if (passenger.ProfileId == profile || TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver remote) &&
-                    remote.InSpace == observer.InSpace && (observer.InSpace
-                        ? SpaceSectorCoordinates.Difference(remote.Position, observer.Position).Magnitude <= rangeMeters
-                        : remote.WorldKey == observer.WorldKey))
-                { snapshot.Passengers.Add(passenger); includedSectors.Add(GetPassengerPosition(passenger).Sector); }
-            foreach (SpaceLooseItemState loose in State.LooseItems)
-                if (loose.InSpace == observer.InSpace && (observer.InSpace
-                    ? SpaceSectorCoordinates.Difference(new SpaceSectorPosition(loose.Motion.Sector, loose.Motion.PositionMeters), observer.Position).Magnitude <= rangeMeters
-                    : loose.WorldKey == observer.WorldKey)) snapshot.LooseItems.Add(loose);
-            foreach (ShipNavigationState task in State.Navigation) if (includedShips.Contains(task.ShipId)) snapshot.Navigation.Add(task);
-            foreach (ShipDockingPairState pair in State.Docking) if (includedShips.Contains(pair.ShipAId) && includedShips.Contains(pair.ShipBId)) snapshot.Docking.Add(pair);
-            foreach (SpaceSectorId sector in includedSectors) snapshot.Sectors.Add(GetUniverse(sector).State);
-            return JsonConvert.SerializeObject(snapshot);
+                // 一条已对接的船组必须整组复制，客户端不重建缺成员的组。
+                foreach (ShipAssemblyState assembly in queryAssemblies.Refresh(State.Ships, State.Docking))
+                {
+                    bool included = assembly.MemberShipIds.Exists(id => includedShips.Contains(id));
+                    if (included) foreach (string id in assembly.MemberShipIds) includedShips.Add(id);
+                }
+                foreach (ShipState ship in State.Ships)
+                    if (includedShips.Contains(ship.ShipId))
+                    {
+                        snapshot.Ships.Add(ship); snapshot.Flights.Add(GetFlight(ship.ShipId)); includedSectors.Add(ship.Sector);
+                        foreach (ShipPieceState piece in ship.Pieces) includedPieces.Add(piece.PieceId);
+                    }
+                foreach (ShipDeviceState device in State.Devices) if (includedPieces.Contains(device.PieceId)) snapshot.Devices.Add(device);
+                foreach (SpacePassengerState passenger in State.Passengers)
+                    if (passenger.ProfileId == profile || TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver remote) &&
+                        remote.InSpace == observer.InSpace && (observer.InSpace
+                            ? SpaceSectorCoordinates.Difference(remote.Position, observer.Position).Magnitude <= rangeMeters
+                            : remote.WorldKey == observer.WorldKey))
+                    { snapshot.Passengers.Add(passenger); includedSectors.Add(GetPassengerPosition(passenger).Sector); }
+                foreach (SpaceLooseItemState loose in State.LooseItems)
+                    if (loose.InSpace == observer.InSpace && (observer.InSpace
+                        ? SpaceSectorCoordinates.Difference(new SpaceSectorPosition(loose.Motion.Sector, loose.Motion.PositionMeters), observer.Position).Magnitude <= rangeMeters
+                        : loose.WorldKey == observer.WorldKey)) snapshot.LooseItems.Add(loose);
+                foreach (ShipNavigationState task in State.Navigation) if (includedShips.Contains(task.ShipId)) snapshot.Navigation.Add(task);
+                foreach (ShipDockingPairState pair in State.Docking) if (includedShips.Contains(pair.ShipAId) && includedShips.Contains(pair.ShipBId)) snapshot.Docking.Add(pair);
+                foreach (SpaceSectorId sector in includedSectors) snapshot.Sectors.Add(GetUniverse(sector).State);
+                NetworkFilterPoint.SetGauge(includedShips.Count);
+            }
+            using (NetworkJsonPoint.Measure(snapshot.Ships.Count + snapshot.Devices.Count +
+                       snapshot.Passengers.Count + snapshot.LooseItems.Count))
+            {
+                string json = JsonConvert.SerializeObject(snapshot);
+                NetworkJsonPoint.SetGauge(json.Length);
+                return json;
+            }
         }
         public void ApplyNetworkSnapshot(string json)
         {

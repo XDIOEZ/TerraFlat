@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using FlatWorld.Networking;
+using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using Unity.Profiling;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 public readonly struct RegionalLightningEvent
@@ -63,8 +63,12 @@ public partial class WeatherMgr
     private int surfaceWorkFrame = -1;
     private Action<ChunkRuntime, float, float, TemperatureMgr.AmbientChunkSnapshot> applySurfaceWork;
     private const double SurfaceMillisecondsPerFrame = 2d;
-    private static readonly ProfilerMarker RegionalAdvanceMarker = new("FlatWorld.Weather.AdvanceRegions");
-    private static readonly ProfilerMarker SurfaceAdvanceMarker = new("FlatWorld.Weather.AdvanceSurface");
+    #region 性能分段
+    // 准备与出队分别计时，避免把入队前的温度重建漏在预算外。
+    private static readonly PerformanceDebugPoint RegionalAdvanceMarker = new("FlatWorld.Weather.AdvanceRegions");
+    private static readonly PerformanceDebugPoint SurfaceAdvanceMarker = new("FlatWorld.Weather.AdvanceSurface");
+    private static readonly PerformanceDebugPoint SurfacePrepareMarker = new("FlatWorld.Weather.SurfacePrepare");
+    #endregion
     private LightningEffectController lightningEffect;
 
     // 缓存委托，正常排队和逐帧结算不产生闭包。
@@ -284,7 +288,7 @@ public partial class WeatherMgr
             if (regionalExposure.TryAdd(region, default)) regionalWork.Add(region);
         }
         regionalWork.Sort((a, b) => a.Y == b.Y ? a.X.CompareTo(b.X) : a.Y.CompareTo(b.Y));
-        using (RegionalAdvanceMarker.Auto())
+        using (RegionalAdvanceMarker.Measure(regionalWork.Count))
         foreach (Int2 region in regionalWork)
         {
             if (!lightningSeen.ContainsKey(region) && regionalEngine.TryGetRegionSnapshot(region, out var baseline))
@@ -298,19 +302,28 @@ public partial class WeatherMgr
         // 未加载期间只补天气状态，地块只接收本次已实际加载时间内的降水。
         float elapsed = double.IsNegativeInfinity(lastRegionalAdvance) ? 0f :
             (float)Math.Min(now - lastRegionalAdvance, regionalSettings.StepSeconds * regionalSettings.MaximumCatchUpSteps);
-        if (elapsed > 0f)
-            foreach (var pair in surfaceChunksThisStep)
-                if (surfaceChunksLastStep.TryGetValue(pair.Key, out var previous) && ReferenceEquals(previous, pair.Value))
-                {
-                    float precipitation = Mathf.Min(regionalEngine.SamplePrecipitationExposureAt(
-                        pair.Key.ChunkOrigin, regionalExposure),
-                        elapsed);
-                    if (WorldWeatherSurfaceSystem.HasSurfaceWork(pair.Value.Terrain, precipitation,
-                            surfaceWork.HasPending(pair.Value)) &&
-                        TemperatureMgr.Instance != null &&
-                        TemperatureMgr.Instance.TryCaptureAmbientChunk(pair.Value, out var temperature))
-                        surfaceWork.Enqueue(pair.Value, elapsed, precipitation, temperature);
-                }
+        int enqueuedChunks = 0;
+        using (SurfacePrepareMarker.Measure())
+        {
+            if (elapsed > 0f)
+                foreach (var pair in surfaceChunksThisStep)
+                    if (surfaceChunksLastStep.TryGetValue(pair.Key, out var previous) && ReferenceEquals(previous, pair.Value))
+                    {
+                        float precipitation = Mathf.Min(regionalEngine.SamplePrecipitationExposureAt(
+                            pair.Key.ChunkOrigin, regionalExposure),
+                            elapsed);
+                        if (WorldWeatherSurfaceSystem.HasSurfaceWork(pair.Value.Terrain, precipitation,
+                                surfaceWork.HasPending(pair.Value)) &&
+                            TemperatureMgr.Instance != null &&
+                            TemperatureMgr.Instance.TryCaptureAmbientChunk(pair.Value, out var temperature))
+                        {
+                            surfaceWork.Enqueue(pair.Value, elapsed, precipitation, temperature);
+                            enqueuedChunks++;
+                        }
+                    }
+            SurfacePrepareMarker.AddWork(enqueuedChunks);
+            SurfacePrepareMarker.SetGauge(surfaceWork.Count);
+        }
         surfaceChunksLastStep.Clear();
         foreach (var pair in surfaceChunksThisStep) surfaceChunksLastStep[pair.Key] = pair.Value;
         lastRegionalAdvance = now;
@@ -348,9 +361,12 @@ public partial class WeatherMgr
             surfaceWork.Dispose();
             return;
         }
-        using var scope = SurfaceAdvanceMarker.Auto();
+        using var scope = SurfaceAdvanceMarker.Measure(context: "budget");
+        int pendingBefore = surfaceWork.Count;
         // 完整区块事务至少执行一次，毫秒预算只决定是否继续下一块。
         surfaceWork.DrainSlice(SurfaceWorkHandler, SurfaceMillisecondsPerFrame);
+        SurfaceAdvanceMarker.AddWork(pendingBefore - surfaceWork.Count);
+        SurfaceAdvanceMarker.SetGauge(surfaceWork.Count);
     }
 
     /// <summary>保存、回拨和解绑前结清已有地表积分；失效世界只释放旧队列。</summary>
@@ -363,11 +379,14 @@ public partial class WeatherMgr
             surfaceWork.Dispose();
             return;
         }
-        using var scope = SurfaceAdvanceMarker.Auto();
+        using var scope = SurfaceAdvanceMarker.Measure(context: "flush");
+        int pendingBefore = surfaceWork.Count;
         if (chunk != null)
             surfaceWork.DrainChunk(chunk, SurfaceWorkHandler);
         else
             while (surfaceWork.DrainNext(SurfaceWorkHandler)) { }
+        SurfaceAdvanceMarker.AddWork(pendingBefore - surfaceWork.Count);
+        SurfaceAdvanceMarker.SetGauge(surfaceWork.Count);
     }
 
     /// <summary>自动保存只等待开始时已有的账目，后续天气继续按普通帧预算处理。</summary>
@@ -382,8 +401,12 @@ public partial class WeatherMgr
                 yield break;
             }
             bool applied;
-            using (SurfaceAdvanceMarker.Auto())
+            using (SurfaceAdvanceMarker.Measure(context: "autosave"))
+            {
                 applied = surfaceWork.DrainNext(SurfaceWorkHandler, throughSequence);
+                SurfaceAdvanceMarker.AddWork(applied ? 1 : 0);
+                SurfaceAdvanceMarker.SetGauge(surfaceWork.Count);
+            }
             if (!applied)
                 yield break;
             if (budget.ShouldYield())

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
+using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using Unity.Profiling;
 
 public static class WorldWeatherSurfaceSystem
 {
@@ -15,11 +15,16 @@ public static class WorldWeatherSurfaceSystem
     private static float[] ambientTemperatures = Array.Empty<float>();
     private static int[] activeCells = Array.Empty<int>();
     private static SurfaceWaterSupply[] waterSupplies = Array.Empty<SurfaceWaterSupply>();
-    private static readonly ProfilerMarker AdvanceChunkMarker = new("FlatWorld.Weather.SurfaceChunk");
-    private static readonly ProfilerMarker ExposureMarker = new("FlatWorld.Weather.SurfaceExposure");
-    private static readonly ProfilerMarker TemperatureMarker = new("FlatWorld.Weather.SurfaceTemperatures");
-    private static readonly ProfilerMarker WaterMarker = new("FlatWorld.Weather.SurfaceWater");
-    private static readonly ProfilerMarker PersistMarker = new("FlatWorld.Weather.PersistSurfaceChunk");
+    #region 性能分段
+    // 工作量按实际批次汇总，保留已有 Profiler 名称便于前后对照。
+    private static readonly PerformanceDebugPoint AdvanceChunkMarker = new("FlatWorld.Weather.SurfaceChunk");
+    private static readonly PerformanceDebugPoint ExposureMarker = new("FlatWorld.Weather.SurfaceExposure");
+    private static readonly PerformanceDebugPoint TemperatureMarker = new("FlatWorld.Weather.SurfaceTemperatures");
+    private static readonly PerformanceDebugPoint WaterMarker = new("FlatWorld.Weather.SurfaceWater");
+    private static readonly PerformanceDebugPoint PersistMarker = new("FlatWorld.Weather.PersistSurfaceChunk");
+    private static readonly PerformanceDebugPoint CommitMarker = new("FlatWorld.Weather.SurfaceCommit");
+    private static readonly PerformanceDebugPoint NotifyMarker = new("FlatWorld.Weather.SurfaceNotify");
+    #endregion
 
     // 整个区块共享降水积分，地块只负责实际浇水、积雪和融雪。
     public static void AdvanceChunk(ChunkRuntime chunk, WeatherMgr weather, float seconds,
@@ -37,7 +42,7 @@ public static class WorldWeatherSurfaceSystem
             ChunkMgr.ExistingInstance?.IsTerrainRestoredForEnvironment(chunk) != true)
             return;
 
-        using var profilerScope = AdvanceChunkMarker.Auto();
+        using var profilerScope = AdvanceChunkMarker.Measure(1);
         ChunkTerrainData terrain = chunk.Terrain;
         // 未产生过天气雪或玩家雪的晴天区块无需逐格结算。
         if (!HasSurfaceWork(terrain, precipitationSeconds))
@@ -55,12 +60,12 @@ public static class WorldWeatherSurfaceSystem
             waterSupplies = new SurfaceWaterSupply[terrain.CellCount];
         }
         int activeCount;
-        using (ExposureMarker.Auto())
+        using (ExposureMarker.Measure(terrain.CellCount))
             activeCount = CollectActiveCells(chunk, precipitationSeconds);
         if (activeCount == 0)
             return;
         // 修改土壤和雪层前统一冻结当地温度，邻区热源依赖每块只检查一次。
-        using (TemperatureMarker.Auto())
+        using (TemperatureMarker.Measure(activeCount))
             if (!(temperatureSnapshot != null
                 ? temperatureSnapshot.TrySample(chunk, activeCells.AsSpan(0, activeCount), ambientTemperatures)
                 : temperature.TrySampleAmbientChunk(chunk, activeCells.AsSpan(0, activeCount), ambientTemperatures)))
@@ -70,6 +75,7 @@ public static class WorldWeatherSurfaceSystem
         try
         {
             int waterSupplyCount = 0;
+            using (CommitMarker.Measure(activeCount))
             for (int i = 0; i < activeCount; i++)
             {
                 int index = activeCells[i];
@@ -126,13 +132,14 @@ public static class WorldWeatherSurfaceSystem
                     waterSupplies[waterSupplyCount++] = new SurfaceWaterSupply(index, waterPoints);
             }
             if (waterSupplyCount > 0)
-                using (WaterMarker.Auto())
+                using (WaterMarker.Measure(waterSupplyCount))
                     FarmlandSystem.SupplySurfaceWaterBatch(chunk, waterSupplies.AsSpan(0, waterSupplyCount), SoilChanged, true);
             if (SoilChanged.Count > 0 || SnowChanged.Count > 0)
-                using (PersistMarker.Auto())
+                using (PersistMarker.Measure(SoilChanged.Count + SnowChanged.Count))
                     SaveDataMgr.Instance.RecordWeatherSurfaceChunk(chunk, SoilChanged, SnowChanged);
             if (waterSupplyCount > 0)
-                FarmlandSystem.PublishSurfaceWaterBatch(terrain);
+                using (NotifyMarker.Measure(waterSupplyCount))
+                    FarmlandSystem.PublishSurfaceWaterBatch(terrain);
         }
         finally
         {

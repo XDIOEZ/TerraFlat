@@ -1,10 +1,17 @@
 using UnityEngine;
+using FlatWorld.Diagnostics;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>共用星球柔边云团，以玩家实际加载窗口为边界遮住远处未加载区域。</summary>
 public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 {
+    #region 性能分段
+    // 此处只量 CPU 准备和命令录制，GPU 耗时仍看原有渲染采样器。
+    private static readonly PerformanceDebugPoint PassSetupMarker = new("FlatWorld.Rendering.ZoomClouds.PassSetupCPU");
+    private static readonly PerformanceDebugPoint CommandRecordMarker = new("FlatWorld.Rendering.ZoomClouds.RecordCommandsCPU");
+    #endregion
+
     #region 本地云层状态
 
     [SerializeField] private Shader cloudShader;
@@ -92,6 +99,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             !cameraData.resolveFinalTarget || !IsLocalStackCamera(sourceCamera, cameraData.camera))
             return;
 
+        using var setupScope = PassSetupMarker.Measure(1);
         WorldRenderingConfig.RenderingZoomClouds config = WorldRenderingConfigCatalog.Default.zoomClouds;
         float universeOpacity = SurfaceZoomTransition.Sample(cameraModule);
         if (sampledFrame != Time.frameCount)
@@ -190,6 +198,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             if (passMaterial == null || sourceCamera == null)
                 return;
 
+            using var recordScope = CommandRecordMarker.Measure(1);
             CommandBuffer cmd = CommandBufferPool.Get();
             using (new ProfilingScope(cmd, sampler))
             {

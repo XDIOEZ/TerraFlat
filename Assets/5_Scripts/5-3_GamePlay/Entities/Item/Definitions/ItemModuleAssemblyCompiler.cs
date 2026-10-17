@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using FlatWorld.Diagnostics;
 using FlatWorld.NaturalEntities;
 using UnityEngine;
 using UnityEngine.Pool;
@@ -8,6 +9,12 @@ using UnityEngine.Pool;
 /// <summary>当前定义独占的模块装配计划，实例只绑定状态，不重复查资源或推测组件类型。</summary>
 public sealed class RuntimeItemModuleAssemblyPlan
 {
+    #region 模块创建性能诊断
+    // 统计独立模块外壳创建次数，与物品堆叠量无关。
+    private static readonly PerformanceDebugPoint InstantiateModuleDebug = new("FlatWorld.ItemModuleAssembly.InstantiateModule");
+    private static readonly PerformanceDebugPoint InstantiateModuleObjectDebug = new("FlatWorld.ItemModuleAssembly.InstantiatePrefab");
+    #endregion
+
     #region 共享装配配置
 
     private readonly string itemId;
@@ -85,12 +92,15 @@ public sealed class RuntimeItemModuleAssemblyPlan
     /// <summary>从已持有的具体 Prefab 实例化模块，不再进入字符串资源查询。</summary>
     public Module InstantiateModule(Transform parent)
     {
+        using var moduleDebug = InstantiateModuleDebug.Measure(1, PrefabId);
         if (IsDataOnly)
             throw new InvalidOperationException($"物品 {itemId} 的模块 {StableName} 是纯数据能力，不能实例化 GameObject。");
         if (ModulePrefab == null || prefabLocation == null)
             throw new InvalidOperationException($"物品 {itemId} 的模块 {StableName} 仅内置于外壳，缺失后不能独立重建。");
 
-        GameObject instance = UnityEngine.Object.Instantiate(ModulePrefab, parent, false);
+        GameObject instance;
+        using (InstantiateModuleObjectDebug.Measure(1, PrefabId))
+            instance = UnityEngine.Object.Instantiate(ModulePrefab, parent, false);
         try
         {
             instance.name = PrefabId;

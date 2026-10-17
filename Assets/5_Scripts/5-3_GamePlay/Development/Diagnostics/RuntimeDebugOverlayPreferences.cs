@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using FlatWorld.Settings;
 using UnityEngine;
 
@@ -16,6 +17,9 @@ public static class RuntimeDebugOverlayPreferences
     public const bool DefaultOverlayEnabled = true;
     public const string SettingsProviderId = "runtime-debug";
     public const string OverlayEnabledSettingKey = "runtimeDebug.overlayEnabled";
+    public const string PerformanceStatisticsSettingKey = "runtimeDebug.performanceStatistics";
+    public const string PerformanceSlowSummarySettingKey = "runtimeDebug.performanceSlowSummary";
+    public const string PerformanceThresholdSettingKey = "runtimeDebug.performanceThresholdMs";
 
     private static bool initialized;
     private static bool overlayEnabled = DefaultOverlayEnabled;
@@ -59,7 +63,33 @@ public static class RuntimeDebugOverlayPreferences
     }
 
     /// <summary>恢复默认行为：启动日志悬浮窗。</summary>
-    public static void ResetToDefault() => SetOverlayEnabled(DefaultOverlayEnabled);
+    public static void ResetToDefault()
+    {
+        SetOverlayEnabled(DefaultOverlayEnabled);
+        SetPerformanceStatistics(false);
+        SetPerformanceSlowSummary(false);
+        SetPerformanceThreshold((float)PerformanceDebugRegistry.DefaultSlowThresholdMilliseconds);
+    }
+
+    /// <summary>性能开关只影响本次会话，避免下次启动自动承担诊断成本。</summary>
+    public static void SetPerformanceStatistics(bool enabled)
+    {
+        PerformanceDebugRegistry.SetStatisticsEnabled(enabled);
+        Changed?.Invoke();
+    }
+
+    public static void SetPerformanceSlowSummary(bool enabled)
+    {
+        PerformanceDebugRegistry.SetSlowSummaryEnabled(enabled);
+        PerformanceDebugLogPump.ApplyEnabled(enabled);
+        Changed?.Invoke();
+    }
+
+    public static void SetPerformanceThreshold(float milliseconds)
+    {
+        PerformanceDebugRegistry.SlowThresholdMilliseconds = milliseconds;
+        Changed?.Invoke();
+    }
 
     #endregion
 
@@ -91,6 +121,7 @@ public static class RuntimeDebugOverlayPreferences
     private sealed class DebugSettingsProvider : ISettingsProvider
     {
         private readonly IReadOnlyList<ISettingsToggle> toggles;
+        private readonly IReadOnlyList<ISettingsSlider> sliders;
 
         public DebugSettingsProvider()
         {
@@ -104,7 +135,20 @@ public static class RuntimeDebugOverlayPreferences
                         "debug",
                         order: 0),
                     () => OverlayEnabled,
-                    SetOverlayEnabled)
+                    SetOverlayEnabled),
+                new SettingsToggle(new SettingDescriptor(PerformanceStatisticsSettingKey,
+                    "性能次数统计", SettingControlType.Toggle, "debug", order: 10),
+                    () => PerformanceDebugRegistry.StatisticsEnabled, SetPerformanceStatistics),
+                new SettingsToggle(new SettingDescriptor(PerformanceSlowSummarySettingKey,
+                    "性能慢操作摘要", SettingControlType.Toggle, "debug", order: 11),
+                    () => PerformanceDebugRegistry.SlowSummaryEnabled, SetPerformanceSlowSummary)
+            };
+            sliders = new ISettingsSlider[]
+            {
+                new SettingsSlider(new SettingDescriptor(PerformanceThresholdSettingKey,
+                    "性能慢操作阈值（ms）", SettingControlType.Slider, "debug", order: 12),
+                    .1f, 10000f, .1f, () => (float)PerformanceDebugRegistry.SlowThresholdMilliseconds,
+                    SetPerformanceThreshold)
             };
         }
 
@@ -112,7 +156,7 @@ public static class RuntimeDebugOverlayPreferences
         public string DisplayName => "调试";
         public int Order => 90;
         public IReadOnlyList<ISettingsToggle> ToggleSettings => toggles;
-        public IReadOnlyList<ISettingsSlider> SliderSettings => Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings => sliders;
         public IReadOnlyList<ISettingsDropdown> DropdownSettings => Array.Empty<ISettingsDropdown>();
         public IReadOnlyList<ISettingsSwitch> SwitchSettings => Array.Empty<ISettingsSwitch>();
         public void ResetToDefaults() => ResetToDefault();

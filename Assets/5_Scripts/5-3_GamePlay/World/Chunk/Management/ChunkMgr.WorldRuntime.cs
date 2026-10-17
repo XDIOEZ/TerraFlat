@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FlatWorld.WorldModel;
+using FlatWorld.Diagnostics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using RuntimeChunkMgr = FlatWorld.WorldModel.ChunkMgr;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
-using Unity.Profiling;
 
 public partial class ChunkMgr
 {
@@ -15,8 +15,11 @@ public partial class ChunkMgr
     public const float MinRuntimeChunkWorkMillisecondsPerFrame = 0.5f;
     public const float MaxRuntimeChunkWorkMillisecondsPerFrame = 16f;
 
-    private static readonly ProfilerMarker WorldRuntimeAdvanceMarker =
+    #region 性能分段
+    // 保留原推进标记并观察剩余提交队列，生成线程耗时仍由流送诊断负责。
+    private static readonly PerformanceDebugPoint WorldRuntimeAdvanceMarker =
         new("FlatWorld.ChunkStreaming.CommitAndTick");
+    #endregion
     [Header("无头世界模型")]
     [SerializeField] private ChunkGenerationProfileSO defaultGenerationProfile;
     [SerializeField, Min(1)] private int backgroundGenerationConcurrency = 2;
@@ -261,10 +264,11 @@ public partial class ChunkMgr
             return;
 
         RecordStreamingAdvance();
-        using (WorldRuntimeAdvanceMarker.Auto())
+        using (WorldRuntimeAdvanceMarker.Measure())
         {
             runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
                 RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
+            WorldRuntimeAdvanceMarker.SetGauge(runtimeChunkManager?.PendingCommitCount ?? 0);
         }
         ReconcileRuntimeWindowBindings();
         AdvanceLiquidFlowExperiment(deltaSeconds);

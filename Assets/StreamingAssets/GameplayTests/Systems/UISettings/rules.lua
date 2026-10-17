@@ -1,3 +1,23 @@
+-- 用正式诊断接口检查计数与代际，不执行玩法或写入玩家偏好。
+test.system("ui_settings", "performance_debug", {}, function(data)
+    assert(data.disabled.calls == 0 and data.disabled.work == 0 and not data.disabled.hasGauge,
+        "关闭性能统计时仍收集次数、工作量或规模")
+    assert(data.aggregated.calls == 3 and data.aggregated.work == 14,
+        "嵌套、异常退出或批次追加的次数与工作量没有真实聚合")
+    assert(data.aggregated.gauge == 2 and data.aggregated.peakGauge == 5,
+        "当前规模与峰值规模混成了累计工作量")
+    assert(data.aggregated.totalMs >= data.aggregated.maxMs and data.aggregated.maxMs >= 0,
+        "包含式计时聚合非法")
+    assert(data.cleared.calls == 0 and data.cleared.work == 0 and not data.cleared.hasGauge,
+        "清空前开始的作用域污染了清空后的数据")
+    assert(data.afterClear.calls == 1 and data.afterClear.work == 1,
+        "清空统计错误关闭了当前开关或丢失点位")
+    assert(data.resetDisabled and data.staleReset.calls == 0 and data.staleReset.work == 0 and not data.staleReset.hasGauge,
+        "会话重置没有关闭开关或接收了旧作用域")
+    assert(data.registrationRetained and data.background.calls == 2 and data.background.work == 12,
+        "重置丢失静态点位或后台计数不完整")
+end, "性能诊断关闭旁路、嵌套异常聚合、当前与峰值规模、跨清空与重置的旧作用域和后台计数")
+
 -- 调用偏好正式净化规则，不写 PlayerPrefs 或改变当前 UI。
 for _, row in ipairs({
     {text = "1", valid = true, value = 1, custom = 1, target = 1},
