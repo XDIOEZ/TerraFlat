@@ -16,6 +16,36 @@ for _, case in ipairs(cases) do
     end, "移动消耗：" .. case.name)
 end
 
+-- 手机准线必须使用有限距离，零力度、推满和异常数值都不能生成无效坐标。
+local cursorCases = {
+    {name = "普通交互回中", args = {strength = 0}, distance = 0},
+    {name = "普通交互半推", args = {strength = .5}, distance = 1},
+    {name = "普通交互推满", args = {}, distance = 2},
+    {name = "建筑放置推满", args = {maximum = 4}, distance = 4},
+    {name = "较大有限距离半推", args = {maximum = 24, strength = .5}, distance = 12},
+    {name = "最大距离正无穷", args = {invalid = "maximum_infinity"}, distance = 10},
+    {name = "最大距离负无穷", args = {invalid = "maximum_negative_infinity"}, distance = 10},
+    {name = "最大距离非数", args = {invalid = "maximum_nan"}, distance = 10},
+    {name = "无穷距离回中", args = {invalid = "maximum_infinity", strength = 0}, distance = 0},
+    {name = "最小距离无穷", args = {invalid = "minimum_infinity"}, distance = 2},
+    {name = "最小距离非数", args = {invalid = "minimum_nan"}, distance = 2},
+    {name = "力度非数", args = {invalid = "strength_nan"}, distance = 0},
+    {name = "力度超出上限", args = {strength = 2}, distance = 2},
+    {name = "负力度", args = {strength = -1}, distance = 0},
+    {name = "负距离", args = {minimum = -1, maximum = -2}, distance = 0},
+    {name = "最小距离大于最大距离", args = {minimum = 3, maximum = 2}, distance = 3},
+    {name = "零方向回退", args = {zeroDirection = true}, distance = 2}
+}
+for _, case in ipairs(cursorCases) do
+    test.system("player", "aim_cursor", case.args, function(data)
+        assert(data.finite, "手机准线产生了无效世界坐标")
+        assert(type(data.distance) == "number" and math.abs(data.distance - case.distance) < .00001,
+            "手机准线没有遵守当前距离与力度")
+        assert(math.abs(data.x - case.distance) < .00001 and data.y == 0 and data.z == 0,
+            "手机准线方向或二维平面坐标错误")
+    end, "手机准线距离：" .. case.name)
+end
+
 test.system("player", "trauma_modifiers", {}, function(data)
     local function check(sample, attack, inverted, label)
         assert(type(sample.attack) == "number" and math.abs(sample.attack - attack) < .00001,

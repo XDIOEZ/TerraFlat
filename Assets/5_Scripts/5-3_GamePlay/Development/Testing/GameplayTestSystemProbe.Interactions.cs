@@ -12,8 +12,45 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterInteractionOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("player/physics_source", InteractionPhysicsSource);
+        operations.Add("player/aim_cursor", InteractionAimCursor);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
+    }
+
+    #endregion
+
+    #region 手机准线距离规则
+
+    // 只调用正式准线计算并返回坐标采样，有限性和距离断言交给 Lua。
+    private static JObject InteractionAimCursor(JObject args)
+    {
+        float minimum = (float)Number(args, "minimum", 0d);
+        float maximum = (float)Number(args, "maximum", 2d);
+        float strength = (float)Number(args, "strength", 1d);
+        switch (Text(args, "invalid", string.Empty))
+        {
+            case "maximum_infinity": maximum = float.PositiveInfinity; break;
+            case "maximum_negative_infinity": maximum = float.NegativeInfinity; break;
+            case "maximum_nan": maximum = float.NaN; break;
+            case "minimum_infinity": minimum = float.PositiveInfinity; break;
+            case "minimum_nan": minimum = float.NaN; break;
+            case "strength_nan": strength = float.NaN; break;
+        }
+
+        var cursor = new PlayerAimCursorSystem();
+        Vector2 direction = Flag(args, "zeroDirection", false) ? Vector2.zero : Vector2.right;
+        Vector3 position = cursor.CalculateRadialWorldPosition(Vector3.zero, direction, strength, minimum, maximum);
+        bool finite = !float.IsNaN(position.x) && !float.IsInfinity(position.x) &&
+                      !float.IsNaN(position.y) && !float.IsInfinity(position.y);
+        var result = new JObject { ["finite"] = finite };
+        if (finite)
+        {
+            result["distance"] = WorldTopologyRuntime.ShortestDelta(Vector2.zero, (Vector2)position).magnitude;
+            result["x"] = position.x;
+            result["y"] = position.y;
+            result["z"] = position.z;
+        }
+        return result;
     }
 
     #endregion

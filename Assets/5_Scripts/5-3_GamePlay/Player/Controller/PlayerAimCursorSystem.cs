@@ -48,9 +48,16 @@ public sealed class PlayerAimCursorSystem
         float minWorldDistance,
         float maxWorldDistance)
     {
-        float minDistance = Mathf.Max(0f, minWorldDistance);
-        float maxDistance = Mathf.Max(minDistance, maxWorldDistance);
-        float distance = Mathf.Lerp(minDistance, maxDistance, Mathf.Clamp01(strength));
+        // 非有限距离必须先回退到正常范围，避免无穷大参与插值后把准线坐标变成 NaN。
+        float minDistance = float.IsNaN(minWorldDistance) || float.IsInfinity(minWorldDistance)
+            ? DefaultMinWorldDistance
+            : Mathf.Max(0f, minWorldDistance);
+        float maxDistance = Mathf.Max(minDistance,
+            float.IsNaN(maxWorldDistance) || float.IsInfinity(maxWorldDistance)
+                ? DefaultMaxWorldDistance
+                : maxWorldDistance);
+        float normalizedStrength = float.IsNaN(strength) ? 0f : Mathf.Clamp01(strength);
+        float distance = Mathf.Lerp(minDistance, maxDistance, normalizedStrength);
         Vector2 normalizedDirection = direction.sqrMagnitude > DirectionEpsilonSqr
             ? direction.normalized
             : Vector2.right;

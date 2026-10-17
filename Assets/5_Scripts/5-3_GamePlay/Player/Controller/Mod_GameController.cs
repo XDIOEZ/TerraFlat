@@ -1080,7 +1080,8 @@ public partial class Mod_GameController : Module
 
         Item heldItem = _playerHotBar?.CurentSelectItem;
         Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
-        if (building != null && building.IsItemInInventory && building.Data != null)
+        // 便携容器只有真正进入放置模式才使用建造距离，普通使用沿用交互距离。
+        if (building != null && building.IsItemInInventory && building.IsPlacementModeActive)
         {
             float placementDistance = building.GetMaxPlacementDistance();
             if (!float.IsPositiveInfinity(placementDistance))

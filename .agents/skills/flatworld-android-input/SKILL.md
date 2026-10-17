@@ -39,4 +39,4 @@ description: "FlatWorld 移动触控、虚拟输入设备、摇杆/指向/攻击
 - 控制根平时位于常驻 HUD 后，模态时沉底；抽屉仅无正式模态时置顶。快捷栏为玩法层兄弟，在背包/容器下保持拖放；模态时独立 Canvas 临时 overrideSorting，关闭后恢复。槽内选中框归属当前槽位并按内部兄弟顺序置底。
 - `BasePanel` 的 GameplayInputBlocking 与手柄导航资格独立，常驻 HUD 显式关闭阻断，模态接管玩法输入。
 - Android `mandatorySystemGestures` 补齐 safeArea 未覆盖的底部边距；强制系统手势区不可被 exclusionRects 屏蔽。
-- 手机准线使用 Prefab 的非交互 `GamepadCursorGraphic`，HUD 在 `Canvas.willRenderCanvases` 按最终玩家/相机位置投影；普通距离来自交互模块，建筑来自放置距离，入世按 `Mod_TurnBack.currentDirection` 初始化，HUD 对缺失准线节点有一次性补齐路径。
+- 手机准线使用 Prefab 的非交互 `GamepadCursorGraphic`，HUD 在 `Canvas.willRenderCanvases` 按最终玩家/相机位置投影；普通距离来自交互模块，只有实际进入 `IsPlacementModeActive` 的建筑才用放置距离，木桶等便携容器未放置时沿用普通范围。无限建造映射为有限视野距离，`PlayerAimCursorSystem` 在插值前过滤非有限距离/力度；入世按 `Mod_TurnBack.currentDirection` 初始化，HUD 对缺失准线节点有一次性补齐路径。
