@@ -2,6 +2,7 @@ using System;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
 using MemoryPack;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>允许空中捕食者暂时接管水生猎物的位置；生命与死亡仍由猎物自身 DamageReceiver 负责。</summary>
@@ -31,6 +32,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     public const string ModuleId = "Mod_AI_Fish";
     private enum Behaviour { Swim, Forage, Flee, Stranded, Hooked }
     private static readonly float[] FleeAngles = { 0f, 30f, -30f, 60f, -60f, 90f, -90f, 135f, -135f, 180f };
+    private static readonly ProfilerMarker FindFoodMarker = new("FlatWorld.Fish.FindFood");
+    private static readonly ProfilerMarker PlanFleeMarker = new("FlatWorld.Fish.PlanFlee");
     [Min(0.01f)] public float swimSpeed = 1.1f;
     [Min(0.1f)] public float wanderRadius = 3f;
     [Min(0.1f)] public float forageRadius = 8f;
@@ -85,6 +88,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private readonly AIStateMachine<Behaviour> machine = new();
     private DroppedItemHandle target;
     private string targetTag;
+    private Func<Vector2, bool> reachableFoodFilter;
     private Vector2 destination;
     private bool hasDestination, loaded, nodesRegistered;
     private float scanRemaining, eatElapsed, idleRemaining;
@@ -125,6 +129,8 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     protected override void OnLoad()
     {
+        // 回池重用同一筛选委托，停用外壳加载时也不依赖 Awake 的执行顺序。
+        reachableFoodFilter ??= IsReachableFood;
         if (fishRenderer == null) fishRenderer = item.Sprite;
         if (fishRenderer == null) throw new InvalidOperationException("小鱼外壳缺少独立的水下 SpriteRenderer。");
         state = Data.GetData<LifeState>() ?? new LifeState();
@@ -292,6 +298,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
 
     private void FindFood(float searchRadius)
     {
+        using var marker = FindFoodMarker.Auto();
         DroppedItemHandle previous = target;
         target = default;
         targetTag = null;
@@ -300,7 +307,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         foreach (string tag in edibleTags)
         {
             if (!DroppedItemService.TryFindNearestTagged(item.transform.position, radius, tag,
-                    out DroppedItemHandle candidate, IsReachableFood) ||
+                    out DroppedItemHandle candidate, reachableFoodFilter) ||
                 !DroppedItemService.TryGetPickablePosition(candidate, out Vector2 position)) continue;
             float distance = WorldTopologyRuntime.SqrDistance(item.transform.position, position);
             if (distance > bestDistance) continue;
@@ -585,8 +592,9 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
         if (candidate.itemData?.Tags?.ContainsTag(Tag.Carnivore) == true) return true;
         if (candidate.itemMods?.Mods == null) return false;
 
-        foreach (Module module in candidate.itemMods.Mods.Values)
-            if (module is IAquaticPredatorThreat aquaticPredator && aquaticPredator.ThreatensAquaticPrey(item))
+        var predators = candidate.itemMods.GetCapabilities<IAquaticPredatorThreat>();
+        for (int index = 0; index < predators.Count; index++)
+            if (predators[index].ThreatensAquaticPrey(item))
                 return true;
         return false;
     }
@@ -654,6 +662,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     /// <summary>优先沿背离威胁的方向选取仍完全处于连续水域中的逃生点。</summary>
     private bool TryPlanFleeDestination(Vector2 threatPosition, out Vector2 planned)
     {
+        using var marker = PlanFleeMarker.Auto();
         Vector2 origin = item.transform.position;
         Vector2 away = WorldTopologyRuntime.ShortestDelta(threatPosition, origin);
         Vector2 preferred = away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.right;

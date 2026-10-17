@@ -1,3 +1,46 @@
+test.system("ai", "hive_resident_schedule", {}, function(data)
+    assert(data.preparedCount == 3 and #data.intended == 3, "分帧前没有保存完整的三名初始成员意图")
+    for index, guid in ipairs({101, 102, 103}) do
+        assert(data.intended[index].guid == guid and data.intended[index].pending, "成员意图缺少唯一身份或待初始化状态")
+    end
+    assert(data.generatedCount == 5 and data.originalHoney == 6, "重复维护重新分配了初始成员或重抽蜂蜜")
+    local expected = {true, false, true, true, false, true}
+    for index, accepted in ipairs(expected) do
+        assert(data.admissions[index] == accepted, "普通出巢没有按帧限额或护巢被限额阻止")
+    end
+    assert(data.pendingAfterReload and data.sleepingAfterReload and data.firstGuidAfterReload == 101 and data.resumedCount == 3,
+        "创建未完成时保存重载丢失成员意图、睡眠状态或身份")
+    assert(data.failedAttemptAdmitted and not data.sameFrameRetry and data.nextFrameRetry,
+        "失败尝试在同帧重复执行或不能在下帧重试")
+    assert(not data.completedPending and not data.completedSleeping and data.completedSatiety == 321 and data.secondStillPending,
+        "成功提交没有清待生成/睡眠状态或误改其它待出巢成员")
+    assert(data.remainingCount == 2 and data.survivors[1] == 102 and data.survivors[2] == 103,
+        "已登记初始成员死亡后被免费补足或改变剩余成员身份")
+end, "蜂巢分帧出巢的持久意图、配额与即时护巢")
+
+-- 正式水生线路保持原小段采样，连续相同液体格只查询一次。
+for _, case in ipairs({
+    { name = "同格移动", args = { targetX = .9 }, accepted = true, cells = {{x=0,y=0}} },
+    { name = "跨三格连续水域", args = {}, accepted = true, cells = {{x=0,y=0},{x=1,y=0},{x=2,y=0}} },
+    { name = "不能跳过岸边或未知格", args = { blockedCells = {{x=1,y=0}} }, accepted = false, cells = {{x=0,y=0},{x=1,y=0}} },
+    { name = "起点未知立即拒绝", args = { blockedCells = {{x=0,y=0}} }, accepted = false, cells = {{x=0,y=0}} },
+    { name = "负坐标向下取格", args = { originX = -.9, targetX = -.1 }, accepted = true, cells = {{x=-1,y=0}} },
+    { name = "负坐标跨零格", args = { originX = -.1, targetX = .1 }, accepted = true, cells = {{x=-1,y=0},{x=0,y=0}} },
+    { name = "零距离仍读起点", args = { targetX = .1 }, accepted = true, cells = {{x=0,y=0}} },
+    { name = "环绕接缝取最短水路", args = { originX = 3.8, targetX = -3.8, wrapped = true }, accepted = true, cells = {{x=3,y=0},{x=-4,y=0}} },
+    { name = "环绕接缝不能穿未知水格", args = { originX = 3.8, targetX = -3.8, wrapped = true, blockedCells = {{x=-4,y=0}} }, accepted = false, cells = {{x=3,y=0},{x=-4,y=0}} },
+    { name = "镜像起点归一化", args = { originX = 8.1, targetX = 8.9, wrapped = true }, accepted = true, cells = {{x=0,y=0}} }
+}) do
+    test.system("ai", "aquatic_traversal", case.args, function(data)
+        assert(data.accepted == case.accepted, "水生线路可达结果错误：" .. case.name)
+        assert(data.queries == #case.cells and #data.visits == #case.cells, "水生线路重复查询同格或漏查跨格：" .. case.name)
+        for index, cell in ipairs(case.cells) do
+            assert(data.visits[index].x == cell.x and data.visits[index].y == cell.y, "水生线路采样规范格错误：" .. case.name)
+        end
+        assert(not data.acceptedAfterChange and data.queriesAfterChange > 0, "水域变化后仍复用上一次线路缓存：" .. case.name)
+    end, "水生线路查询去重：" .. case.name)
+end
+
 -- 自然刷新读取正式目录，独立概率落空也要消耗排队机会。
 test.system("ai", "ecology_config", {}, function(data)
     assert(data.fishSafeMin == -26.5 and data.fishSafeMax == 63.5, "鱼的冷热安全范围没有按确认值扩大")

@@ -45,11 +45,13 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `AI_DebugOverlayRenderer` 集中绘头顶信息；实时读 `_currentState`，`AI_Chicken.Data.State` 只在加载/保存同步。小鸡只缓存所属 Scene.handle 名称，时间实时读取；受伤禁睡保存绝对游戏日截止，逃跑记忆与睡眠警戒独立。
 - GM 动物、蜜蜂和蜂巢头顶诊断共用 `AI_DebugOverlay.CanDrawWorldLabels`，正式背包/制作/设置等交互面板或手机抽屉打开时暂时让位，关闭后仍保留 GM 开关状态。
 - GO AI 状态评估回调在实例内复用，不在每次判定时分配委托；调试头顶标签仅在 IMGUI Repaint 绘制并复用 GUIContent。
+- 蜂巢首次先登记完整成员意图及稳定 GUID，普通首次/恢复/日出/繁殖共用每巢每帧一只的实例化配额；未完成意图和睡眠状态随存档保留，成功创建后才提交，死亡不重补初始成员。受击护巢绕过配额立即出巢，卸载不继续推进待生成工作。
 - 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持搜索最后可见位置，到点等待，重见重计时；夜间归巢不抢占追击，蜂巢销毁后无领地巡逻。
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。
 - 鸟离地撤实体阻挡，仅留感知/受击 Trigger；`BirdLift` 下独立运动学刚体承接受击盒，按当前 Sprite/镜像/动画姿态同步，卸载恢复配置。空中死亡先收视觉高度，再统一生命/掉落流程。
 - `EggLaying/AnimalEggLayingSchedule` 保存绝对日，成功产蛋后冷却至少两天，不追补；Bird 无鸡生产模块、Bee 关产蛋。产物/延迟来自 Actor，只有权威端生成。
 - `ContainerFeeding` 经允许 Animal 的种子端口交易一件真实物品，完整种子快照随鸟保存，死亡掉落成功后才清空。`Predation` 锁水中 Fish，走 DamageReceiver 后由 `IAquaticPredatorCarryTarget` 携到陆地，再攻击/吃 Meat；携带不保存，受惊/避险/疲劳/卸载释放。
 - 水生 AI 的 `AquaticHabitat` 读真实 Liquid 和整段线路，不读平台投影液深；未知格不是干地。鱼共享 Buff 潮湿计时，缺水阈值 `minimumWetStacks=3`；逃离 Carnivore、玩家和 `IAquaticPredatorThreat`，线路须全程水域可达。
+- 水生线路保留每 0.2 米采样，只合并同次调用中连续相同规范格的查询；每次重新读取水态，不跨帧缓存。鱼觅食筛选委托和捕食能力列表复用，模块结构变化仍自动失效。
 - 鱼饱食低于 90% 吃近物、低于 70% 主动觅食，先筛水域后选最近；`eatRange` 共用于扫描/计时/消费。Stranded 间歇蹦跳回水，起跳期间推进地面位移，逐段检查阻挡/未知格；离水回水优先温度游动，钓线/携带接管清蹦跳。
 - 鱼用 `underwater-creature` 整身染色，无实体阻挡/半身裁切，保留受击 Trigger；水平侧视只镜像视觉节点，不旋根/碰撞体，视觉摆动由 AquaticActorPresentation 处理。无阴影物种在 `visual.shadows.enabled` 配置。

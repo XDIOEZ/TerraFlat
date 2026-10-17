@@ -24,6 +24,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/ecology_config", EntityEcologyConfig);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
         operations.Add("ai/spawn_attempt", EntitySpawnAttempt);
+        operations.Add("ai/aquatic_traversal", EntityAquaticTraversal);
+        operations.Add("ai/hive_resident_schedule", EntityHiveResidentSchedule);
         operations.Add("player/movement_cost", EntityMovementCost);
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("combat/physical", EntityPhysicalDamage);

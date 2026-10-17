@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using FlatWorld.Networking;
+using Unity.Profiling;
 using UnityEngine;
 
 public static partial class MachineWorld
@@ -374,6 +375,10 @@ public static partial class MachineWorld
     #endregion
 
     #region 整网活动与每轮库存预算
+    private static readonly ProfilerMarker fluidTransportMarker = new("MachineWorld.Fluid.Complete.Transport");
+    private static readonly ProfilerMarker fluidPhaseMarker = new("MachineWorld.Fluid.Complete.Phase");
+    private static readonly ProfilerMarker fluidTankMarker = new("MachineWorld.Fluid.Complete.Tanks");
+    private static readonly ProfilerMarker fluidAppearanceMarker = new("MachineWorld.Fluid.Complete.Appearance");
     private static void BeginFluidStep(float seconds)
     {
         if (fluidGraph == null) return;
@@ -445,12 +450,14 @@ public static partial class MachineWorld
         if (fluidGraph == null) return;
         int count = fluidGraph.Edges.Count;
         int start = count == 0 ? 0 : (int)(TransportStep % (uint)count);
+        using (fluidTransportMarker.Auto())
         for (int index = 0; index < count; index++)
         {
             FluidNetworkGraph.Edge edge = fluidGraph.Edges[(start + index) % count];
             if (!IsFluidActive(edge.Source) || edge.Target != null && !IsFluidActive(edge.Target) || !fluidGraph.CanRoute(edge)) continue;
             TryMoveFluidEdge(edge, seconds);
         }
+        using (fluidPhaseMarker.Auto())
         foreach (MachineEntity node in nodes.Values)
         {
             if (node.Definition.Fluid == null || !IsFluidActive(node) || GetFluidDeviceBehavior(node).IsSharedStorage) continue;
@@ -463,8 +470,9 @@ public static partial class MachineWorld
                 if (phase.ConvertedMoles > 0) StateChanged(node);
             }
         }
-        AdvanceFluidTankPressure(seconds);
+        using (fluidTankMarker.Auto()) AdvanceFluidTankPressure(seconds);
         SaveFluidGroups();
+        using (fluidAppearanceMarker.Auto())
         foreach (MachineEntity node in nodes.Values)
         {
             if (node.Definition.Fluid == null || !IsFluidActive(node)) continue;

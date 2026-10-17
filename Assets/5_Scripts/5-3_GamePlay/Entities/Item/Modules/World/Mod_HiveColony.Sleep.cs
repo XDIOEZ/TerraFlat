@@ -69,18 +69,17 @@ public sealed partial class Mod_HiveColony
         }
     }
 
-    /// <summary>日出或蜂巢受击时恢复巢内成员；护巢目标存在时立即覆盖普通睡眠行为。</summary>
-    private void WakeSleepingResidents(Item defenseTarget)
+    /// <summary>普通日出逐帧恢复巢内成员，护巢则立即恢复全部待出巢成员。</summary>
+    private void WakeSleepingResidents(Item defenseTarget, bool immediate = false)
     {
         bool nightTime = !IsDayTime();
         for (int index = 0; index < state.Residents.Count; index++)
         {
             ResidentState member = state.Residents[index];
-            if (!member.SleepingInHive)
+            if (!member.SleepingInHive && (!immediate || residents.ContainsKey(member.Guid)))
                 continue;
 
-            member.SleepingInHive = false;
-            SpawnResident(index, member);
+            if (!TrySpawnResident(index, member, immediate)) break;
             if (!residents.TryGetValue(member.Guid, out Item resident) || resident == null)
                 continue;
             Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
@@ -93,13 +92,13 @@ public sealed partial class Mod_HiveColony
     }
 
     /// <summary>蜂巢受击专用唤醒入口。</summary>
-    private void WakeSleepingResidentsForDefense(Item attacker) => WakeSleepingResidents(attacker);
+    private void WakeSleepingResidentsForDefense(Item attacker) => WakeSleepingResidents(attacker, immediate: true);
 
     /// <summary>当前场景六点到十八点视作活动时段；时钟不可用时保守保持清醒。</summary>
     private bool IsDayTime()
     {
         DayTimeSystem clock = DayTimeSystem.Instance;
-        if (clock == null || !clock.TryGetResolvedTimeData(item.gameObject.scene.name, out _, out TimeData time) ||
+        if (clock == null || !clock.TryGetResolvedTimeData(GetWorldSceneName(), out _, out TimeData time) ||
             time == null)
             return true;
 

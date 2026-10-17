@@ -43,6 +43,22 @@ test.system("industrial_fluids", "phase_change", {}, function(data)
     assert(data.kelvin > 0 and data.kelvin < 300, "蒸发没有消费潜热或温度无效")
 end, "两相变换的真实物质量与内能守恒")
 
+test.system("industrial_fluids", "cold_temperature_path", {}, function(data)
+    assert(#data.groups == 4, "没有采样普通、新旧气候及两类星体覆盖")
+    for _, group in ipairs(data.groups) do
+        assert(group.committed and #group.samples == 16, "独立完整地表生成失败：" .. group.mode)
+        for _, sample in ipairs(group.samples) do
+            assert(sample.found, "完整地表缺少真实温度层：" .. group.mode)
+            near(sample.point, sample.full, "冷机器点读偏离完整地表温度：" .. group.mode, .0001)
+            near(sample.wrapped, sample.point, "跨环绕查询改变温度：" .. group.mode, .0001)
+            if group.mode == "space" or group.mode == "uniform" then
+                assert(sample.point >= -57 and sample.point <= -23, "星体点读没有使用覆盖温度和波动范围")
+            end
+        end
+        assert(group.pointReadBytes == 0, "冷机器点温度仍创建区块或生成工作数据：" .. group.mode)
+    end
+end, "冷机器正式地理温度、星体覆盖、环绕与完整生成一致且点读无分配")
+
 test.system("industrial_fluids", "portable_tank_cache", {}, function(data)
     assert(data.found and data.wrapperReused and data.wrapsOwnedContents, "便携气罐没有复用真实内容的库存包装")
     assert(data.configCopies and data.itemsIsolated, "便携气罐把可变配置或真实库存共享给不同调用或物品")

@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 using RuntimeAddress = FlatWorld.WorldModel.WorldAddress;
 
@@ -114,6 +115,10 @@ namespace FlatWorld.Spaceflight
         private static readonly Dictionary<PlanetData, ChunkGenerationProfileSnapshot> frozenProfiles = new();
         private static GameRes resourceOwner;
         private static DimensionCatalogSO generationCatalog;
+        private static readonly Dictionary<(ChunkGenerationProfileSnapshot Profile, int Seed, int X, int Y,
+            bool Wrapped, Int2 Min, Int2 Span), float> temperatureSamples = new();
+        private static readonly ProfilerMarker coldChunkGenerationMarker = new("SpaceSurfaceQuery.ColdChunk.Generate");
+        private static readonly ProfilerMarker coldTemperatureMarker = new("SpaceSurfaceQuery.Temperature.Sample");
 
         private sealed class SurfaceCache : IDisposable
         {
@@ -167,6 +172,7 @@ namespace FlatWorld.Spaceflight
                 }
                 if (!cache.World.TryGetChunkTerrain(address, out terrain))
                 {
+                    using var generationSample = coldChunkGenerationMarker.Auto();
                     ChunkGenerationRequest request = cache.World.BeginChunkGeneration(address, seed, profile, topology);
                     using ChunkGenerationResult generated = cache.Generator.Generate(request, CancellationToken.None);
                     if (!cache.World.TryCommit(generated, out string reason)) throw new InvalidDataException($"降落地表生成失败：{reason}");
@@ -216,6 +222,51 @@ namespace FlatWorld.Spaceflight
             sample = GetLandingSurface(planetId, position);
             return true;
         }
+
+        #region 无需生成区块的地理温度查询
+        public static bool TryGetAmbientTemperature(string worldKey, Vector2 position, out float temperature)
+        {
+            temperature = 0f;
+            if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
+            global::WorldAddress world = global::WorldAddress.FromWorldKey(worldKey);
+            GameSaveData save = SaveDataMgr.Instance?.SaveData;
+            if (!world.IsSurface || save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(world.PlanetId, out PlanetData planet)) return false;
+            if (!ReferenceEquals(owner, save)) { Reset(); owner = save; }
+            BindResourceReload();
+            ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
+            ChunkGenerationTopologySnapshot topology = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
+                ? new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y), new Int2(bounds.Span.x, bounds.Span.y)) : default;
+            int cellX = topology.NormalizeX(Mathf.FloorToInt(position.x)), cellY = topology.NormalizeY(Mathf.FloorToInt(position.y));
+            int originX = (int)Math.Floor(cellX / (double)profile.Width) * profile.Width;
+            int originY = (int)Math.Floor(cellY / (double)profile.Height) * profile.Height;
+            var address = new RuntimeAddress(WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
+            ChunkTerrainData terrain = GetLoadedTerrain(world.PlanetId, address);
+            int seed = GetGenerationSeed(save.Seed, world.PlanetId);
+            if (terrain == null && caches.TryGetValue(world.PlanetId, out SurfaceCache cache) &&
+                cache.Fingerprint == profile.GenerationFingerprint && cache.Seed == seed)
+                cache.World.TryGetChunkTerrain(address, out terrain);
+            float geographic;
+            if (terrain == null || !terrain.TryGetEnvironmentValue("temperature.celsius", cellX - originX, cellY - originY, out geographic))
+            {
+                var key = (profile, seed, cellX, cellY, topology.IsWrapped, topology.Min, topology.Span);
+                if (!temperatureSamples.TryGetValue(key, out geographic))
+                {
+                    using var temperatureSample = coldTemperatureMarker.Auto();
+                    var request = new ChunkGenerationRequest(1, address, seed, 1, profile, topology);
+                    geographic = SampleGeneratedTemperature(request, cellX, cellY);
+                    if (temperatureSamples.Count >= 512) temperatureSamples.Clear();
+                    temperatureSamples.Add(key, geographic);
+                }
+            }
+            temperature = (float)((double)geographic + planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature);
+            return true;
+        }
+
+        // 冷查询只复用正式温度公式，地表覆盖层和全局调温仍按各自真实来源生效。
+        internal static float SampleGeneratedTemperature(ChunkGenerationRequest request, int x, int y)
+            => SpaceSurfaceTerrain.TrySampleTemperature(request, x, y, out float celsius, out _)
+                ? celsius : DeterministicChunkGenerator.SampleGeographicTemperature(request, x, y);
+        #endregion
 
         // 无人地表机器从自己的冷地形和最新差量取环境，不借用本地玩家所在世界。
         public static bool TrySampleEnvironmentValue(string worldKey, Vector2 position, string key, out float value)
@@ -311,7 +362,7 @@ namespace FlatWorld.Spaceflight
         public static void Reset()
         {
             foreach (SurfaceCache cache in caches.Values) cache.Dispose();
-            caches.Clear(); frozenProfiles.Clear(); owner = null; generationCatalog = null;
+            caches.Clear(); frozenProfiles.Clear(); temperatureSamples.Clear(); owner = null; generationCatalog = null;
             if (resourceOwner != null) resourceOwner.ResourcesReloaded -= Reset;
             resourceOwner = null;
         }

@@ -710,7 +710,7 @@ public partial class ChunkMgr
     }
 
     /// <summary>
-    /// 两阶段推进区块表现：先按距离启动新区块并立即绑定基础地形，再轮转补齐其它表现器。
+    /// 两阶段推进区块表现：先按距离启动新区块，再优先分步补齐基础地形和其它表现器。
     /// 这样高视距下不会因为单个区块的草地、导航、自然物等后续工作，长期阻塞其它已生成区块的地面显示。
     /// </summary>
     private IEnumerator ProcessRuntimePresentationQueue()
@@ -860,7 +860,7 @@ public partial class ChunkMgr
         runtimePresentationInProgressCount++;
         WorldRuntime.StreamingDiagnostics.Count("view.started");
 
-        // 第一次 MoveNext 会完成最高优先级的基础地形绑定后才 yield。
+        // 第一次 MoveNext 建立基础地形绑定；扫描和上传继续使用同一个有界步骤队列。
         // 后续表现器按玩家实时距离继续推进，避免旧位置任务占住预算。
         if (AdvanceRuntimeChunkPresentation(address))
             runtimePresentationContinuationQueue.Add(address);
@@ -931,16 +931,20 @@ public partial class ChunkMgr
 
         int bestIndex = -1;
         float bestPriority = float.MaxValue;
+        bool bestNeedsBase = false;
         ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile;
         for (int i = 0; i < runtimePresentationContinuationQueue.Count; i++)
         {
             RuntimeWorldAddress candidate = runtimePresentationContinuationQueue[i];
+            bool needsBase = !activeRuntimeBindings[candidate].View.IsBaseTerrainPresented;
             float priority = GetRuntimePresentationPriority(runtimePresentationPriorityCenter,
                 candidate, profile.Width, profile.Height);
-            if (priority < bestPriority)
+            // 基础地形拆步后仍先补地面，再让已完成地面的区块继续草地、导航和自然物。
+            if (bestIndex < 0 || needsBase && !bestNeedsBase || needsBase == bestNeedsBase && priority < bestPriority)
             {
                 bestIndex = i;
                 bestPriority = priority;
+                bestNeedsBase = needsBase;
             }
         }
 

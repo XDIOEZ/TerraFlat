@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using FlatWorld.Spaceflight;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -15,6 +18,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
+        Register("industrial_fluids", "cold_temperature_path", WorldColdTemperaturePath);
     }
 
     // 独立物品使用不存在于目录的身份，规则采样不加载或改写当前资源会话。
@@ -142,5 +146,60 @@ public static partial class GameplayTestSystemProbe
         return result;
     }
 
+    #endregion
+
+    #region 冷机器地理温度的正式点采样
+    // 点读与完整生成都调用生产入口，只返回真实环境层及查询值给 Lua 对照。
+    private static JObject WorldColdTemperaturePath(JObject args)
+    {
+        var groups = new JArray();
+        foreach (string mode in new[] { "simple", "legacy", "space", "uniform" })
+        {
+            var numbers = new Dictionary<string, double>
+            {
+                ["river.enabled"] = 0d, ["airHumidity.radiusTiles"] = 1d,
+                ["airHumidity.waterContribution"] = 0d, ["climate.temperature.blendRadius"] = 2d
+            };
+            var texts = new Dictionary<string, string> { ["climate.algorithm"] = mode == "legacy" ? "legacy" : "simple" };
+            if (mode is "space" or "uniform")
+            {
+                texts["space.bodyId"] = "system-probe:cold-body";
+                numbers[mode == "space" ? "space.climateOverride" : "space.uniformSurface"] = 1d;
+                numbers["space.surfaceTemperatureCelsius"] = -40d;
+                numbers["space.temperatureVariationCelsius"] = 17d;
+            }
+            var profile = new ChunkGenerationProfileSnapshot("system-probe:cold-temperature-" + mode, 1, 4, 4,
+                numbers, texts, ecologyGlobalMultiplier: 0d);
+            var topology = new ChunkGenerationTopologySnapshot(new Int2(-16, -16), new Int2(32, 32));
+            var address = new FlatWorld.WorldModel.WorldAddress(global::WorldAddress.SurfaceDimensionId, new Int2(12, -16));
+            using var world = new WorldRuntime("system-probe:cold-temperature-" + mode, 1);
+            var request = world.BeginChunkGeneration(address, 17413, profile, topology);
+            var generator = new DeterministicChunkGenerator(terrainDecorator: SpaceSurfaceTerrain.Apply);
+            using var generated = generator.Generate(request, CancellationToken.None);
+            bool committed = world.TryCommit(generated, out string reason);
+            var samples = new JArray();
+            if (committed && world.TryGetChunkTerrain(address, out ChunkTerrainData terrain))
+                for (int y = 0; y < 4; y++)
+                for (int x = 0; x < 4; x++)
+                {
+                    int worldX = address.ChunkOrigin.X + x, worldY = address.ChunkOrigin.Y + y;
+                    bool found = terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float full);
+                    samples.Add(new JObject
+                    {
+                        ["found"] = found, ["full"] = full,
+                        ["point"] = SpaceSurfaceQuery.SampleGeneratedTemperature(request, worldX, worldY),
+                        ["wrapped"] = SpaceSurfaceQuery.SampleGeneratedTemperature(request, worldX + 32, worldY - 32)
+                    });
+                }
+            SpaceSurfaceQuery.SampleGeneratedTemperature(request, 12, -16);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 32; i++) SpaceSurfaceQuery.SampleGeneratedTemperature(request, 12, -16);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            groups.Add(new JObject { ["mode"] = mode, ["committed"] = committed, ["reason"] = reason,
+                ["samples"] = samples, ["pointReadBytes"] = allocated });
+            generator.BeginNewWorldHydrologyEpoch(1);
+        }
+        return new JObject { ["groups"] = groups };
+    }
     #endregion
 }

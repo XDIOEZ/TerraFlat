@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>蜂巢头顶调试参数的独立总开关，由 GM 面板控制并持久化。</summary>
@@ -25,12 +26,14 @@ public static class HiveColonyDebugOverlay
 public sealed partial class Mod_HiveColony : Module
 {
     #region 配置与存档
+    private static readonly ProfilerMarker SpawnResidentMarker = new("FlatWorld.Hive.SpawnResident");
     [Serializable]
     public sealed class ResidentState
     {
         public int Guid; // 成员的稳定身份。
         public Mod_BeeBehavior.BeeState Bee = new(); // 该蜂的行为快照。
         public bool SleepingInHive; // 夜间已回到蜂巢并卸载本体。
+        public bool NeedsInitialState; // 已登记的新成员第一次出巢时才初始化随机饱食度。
         public float SleepDrainPerSecond = 1f; // 入睡时记录该蜂正常饱食消耗，睡眠按倍率推进。
     }
 
@@ -61,6 +64,10 @@ public sealed partial class Mod_HiveColony : Module
     private readonly Dictionary<int, Item> residents = new(10); // 本轮装载成员。
     private ItemMgr itemManager; // 绑定加载蜂巢时的管理器，卸载阶段不再重新查找单例。
     private float reconcileRemaining; // 下次成员维护的现实帧间隔。
+    private bool pendingResidentSpawns; // 恢复和首次出巢沿现有 Tick 逐帧推进。
+    private int lastNormalSpawnFrame = -1; // 日出和成员维护共用每帧一次的创建配额。
+    private int worldSceneHandle = int.MinValue;
+    private string worldSceneName = string.Empty;
     private bool alarmClockReady; // 本轮警戒时钟是否已校准。
     private double lastAlarmGameTime; // 上次警戒检查的世界绝对时间。
     public override string CanonicalModuleId => "Mod_HiveColony";
@@ -172,9 +179,13 @@ public sealed partial class Mod_HiveColony : Module
         residents.Clear();
         ClearTerritoryAlarm();
         reconcileRemaining = 0f;
+        pendingResidentSpawns = true;
+        lastNormalSpawnFrame = -1;
+        worldSceneHandle = int.MinValue;
         alarmClockReady = false;
         hiveDestroyed = false;
         BindHiveDamageEvents();
+        if (GameNetwork.HasStateAuthority) EnsureInitialResidentIntents();
     }
 
     /// <summary>先同步成员的饱食度与愤怒值，再保存蜂巢唯一的权威快照。</summary>
@@ -204,6 +215,7 @@ public sealed partial class Mod_HiveColony : Module
         residents.Clear();
         ClearTerritoryAlarm();
         itemManager = null;
+        pendingResidentSpawns = false;
     }
 
     public override void ModUpdate(float deltaTime)
@@ -212,6 +224,7 @@ public sealed partial class Mod_HiveColony : Module
             return;
         if (hiveDestroyed)
             return;
+        EnsureInitialResidentIntents();
         float step = Mathf.Max(0f, deltaTime);
         if (TryAdvanceAlarmClock(out float alarmSeconds))
         {
@@ -225,7 +238,7 @@ public sealed partial class Mod_HiveColony : Module
         }
         TickSleepCycle(step);
         reconcileRemaining -= step;
-        if (reconcileRemaining > 0f)
+        if (reconcileRemaining > 0f && !pendingResidentSpawns)
             return;
         reconcileRemaining = ReconcileInterval;
         ReconcileResidents();
@@ -238,18 +251,77 @@ public sealed partial class Mod_HiveColony : Module
     private void ReconcileResidents()
     {
         PruneDeadResidents();
-        for (int index = 0; index < state.Residents.Count; index++)
+        try
         {
-            ResidentState member = state.Residents[index];
-            if (!member.SleepingInHive && !residents.ContainsKey(member.Guid))
-                SpawnResident(index, member);
+            for (int index = 0; index < state.Residents.Count; index++)
+            {
+                ResidentState member = state.Residents[index];
+                if (!member.SleepingInHive && !residents.ContainsKey(member.Guid) &&
+                    !TrySpawnResident(index, member, immediate: false))
+                    break;
+            }
         }
-        if (state.InitialResidentsCreated)
-            return;
-        state.Honey = UnityEngine.Random.Range(1, 11); // 新蜂巢初始携带 1~10 点蜂蜜，仅首次创建成员时随机一次。
-        while (state.Residents.Count < MinimumResidents)
-            SpawnResident(state.Residents.Count, null);
-        state.InitialResidentsCreated = true;
+        finally
+        {
+            pendingResidentSpawns = false;
+            foreach (ResidentState member in state.Residents)
+                if (!member.SleepingInHive && !residents.ContainsKey(member.Guid))
+                {
+                    pendingResidentSpawns = true;
+                    break;
+                }
+        }
+    }
+
+    // 先保存完整成员意图，分帧期间保存、卸载或死亡都不能重新补足初始数量。
+    private void EnsureInitialResidentIntents()
+    {
+        if (state.InitialResidentsCreated) return;
+        PrepareInitialResidentIntents(state, MinimumResidents, UnityEngine.Random.Range(1, 11), itemManager.GenerateGuid);
+        pendingResidentSpawns = true;
+    }
+
+    internal static void PrepareInitialResidentIntents(ColonyState colony, int minimumResidents,
+        int initialHoney, Func<int> generateGuid)
+    {
+        if (colony.InitialResidentsCreated) return;
+        while (colony.Residents.Count < minimumResidents)
+        {
+            int guid;
+            bool duplicate;
+            do
+            {
+                guid = generateGuid();
+                duplicate = guid == 0;
+                foreach (ResidentState member in colony.Residents)
+                    if (member.Guid == guid) { duplicate = true; break; }
+            } while (duplicate);
+            colony.Residents.Add(new ResidentState { Guid = guid, NeedsInitialState = true });
+        }
+        colony.Honey = initialHoney;
+        colony.InitialResidentsCreated = true;
+    }
+
+    internal static bool TryReserveResidentSpawnFrame(ref int lastFrame, int frame, bool immediate)
+    {
+        if (immediate) return true;
+        if (lastFrame == frame) return false;
+        lastFrame = frame;
+        return true;
+    }
+
+    internal static void CompleteResidentSpawn(ResidentState member, Mod_BeeBehavior.BeeState snapshot)
+    {
+        member.Bee = snapshot;
+        member.NeedsInitialState = false;
+        member.SleepingInHive = false;
+    }
+
+    private bool TrySpawnResident(int slot, ResidentState saved, bool immediate)
+    {
+        if (!TryReserveResidentSpawnFrame(ref lastNormalSpawnFrame, Time.frameCount, immediate)) return false;
+        SpawnResident(slot, saved);
+        return true;
     }
 
     /// <summary>死亡成员永久离巢；尚未重建的存档成员保持原 GUID。</summary>
@@ -284,6 +356,7 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>按存档 GUID 或新身份创建成员，并绑定蜂巢与行为快照。</summary>
     private void SpawnResident(int slot, ResidentState saved)
     {
+        using var marker = SpawnResidentMarker.Auto();
         ItemMgr manager = itemManager;
         if (manager == null)
             throw new InvalidOperationException("蜂巢成员生成时 ItemMgr 不可用。");
@@ -301,6 +374,7 @@ public sealed partial class Mod_HiveColony : Module
             data.Guid = saved.Guid;
         }
         Item resident = manager.InstantiateItem(data, position);
+        int registeredGuid = 0;
         try
         {
             resident.Load();
@@ -310,16 +384,22 @@ public sealed partial class Mod_HiveColony : Module
             if (bird == null || !bird.permanentFlight || bee == null)
                 throw new InvalidOperationException($"蜂巢物种 {ActorId} 必须组合常驻飞行与蜜蜂行为模块。");
             bird.SetColonyHome(item.itemData.Guid, home);
-            bee.BindColony(this, saved?.Bee);
+            bee.BindColony(this, saved != null && !saved.NeedsInitialState ? saved.Bee : null);
             int guid = resident.itemData.Guid;
             if (guid == 0 || (saved != null && guid != saved.Guid) || residents.ContainsKey(guid))
                 throw new InvalidOperationException($"蜂巢生成了无效或重复的成员 GUID：{guid}。");
+            Mod_BeeBehavior.BeeState snapshot = bee.CaptureState();
             residents.Add(guid, resident);
-            if (saved == null)
-                state.Residents.Add(new ResidentState { Guid = guid, Bee = bee.CaptureState() });
+            registeredGuid = guid;
+            if (saved != null)
+                CompleteResidentSpawn(saved, snapshot);
+            else
+                state.Residents.Add(new ResidentState { Guid = guid, Bee = snapshot });
         }
         catch
         {
+            // 创建失败撤销运行登记，待出巢意图留给下一帧或下次加载重试。
+            if (registeredGuid != 0) residents.Remove(registeredGuid);
             if (!resident.DestructionHandled)
                 manager.DespawnItem(resident, saveData: false);
             throw;
@@ -354,7 +434,7 @@ public sealed partial class Mod_HiveColony : Module
         if (state.Residents.Count >= MaximumResidents || state.Honey != state.HoneyCapacity ||
             now - state.LastBirthTime <= dayLength * 3d)
             return;
-        SpawnResident(state.Residents.Count, null);
+        if (!TrySpawnResident(state.Residents.Count, null, immediate: false)) return;
         state.Honey -= 5;
         state.HoneyCapacity++;
         state.LastBirthTime = now;
@@ -366,11 +446,22 @@ public sealed partial class Mod_HiveColony : Module
         now = 0d;
         dayLength = 0f;
         DayTimeSystem clock = DayTimeSystem.Instance;
-        if (clock == null || !clock.TryGetResolvedTimeData(item.gameObject.scene.name, out _, out TimeData time))
+        if (clock == null || !clock.TryGetResolvedTimeData(GetWorldSceneName(), out _, out TimeData time))
             return false;
         dayLength = time.DayLength;
         now = time.TotalDays * (double)dayLength + time.CurrentTime;
         return true;
+    }
+
+    private string GetWorldSceneName()
+    {
+        var scene = item.gameObject.scene;
+        if (worldSceneHandle != scene.handle)
+        {
+            worldSceneHandle = scene.handle;
+            worldSceneName = scene.name;
+        }
+        return worldSceneName;
     }
 
     /// <summary>蜂巢警戒与蜜蜂使用同一游戏时间单位。</summary>

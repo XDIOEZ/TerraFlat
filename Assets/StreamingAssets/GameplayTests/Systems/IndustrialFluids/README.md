@@ -12,3 +12,5 @@
 - `portable_tank_cache` 通过独立空罐读取正式 `FluidTankStorage`，检查同一真实内容复用包装、对外配置副本隔离、Contents/二进制载荷/模块对象换代，以及无变化不重新序列化、超压计时与破裂状态正确保存。
 - `portable_tank_payload` 使用独立物性目录和正式流体库存，经 `TryAdd`、`Write`、`TryTakeExact`、`Flush` 与正式二进制解码，检查气液数量、温度、压力和守恒，不修改 `FluidCatalog.Default`。
 - 此处没有加载真实物品目录，不覆盖含料气罐热路径的目录更换/配置重载、库存 Tick 的 UI 通知次数或真实超压损伤；这些边界不能由本组替代验收。
+
+- `cold_temperature_path` 为 2026-10-17 新增且尚未执行：在独立 WorldRuntime 完整生成 4×4 地表，对照普通/旧版气候、星体气候覆盖及均一星体的正式点读温度、环绕等价和点读分配。不覆盖真实跨星球切换、资源重载、最新全局调温或现场帧耗时。

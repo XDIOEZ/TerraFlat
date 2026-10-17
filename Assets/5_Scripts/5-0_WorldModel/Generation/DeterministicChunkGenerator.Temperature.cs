@@ -231,6 +231,11 @@ namespace FlatWorld.WorldModel
         #endregion
 
         #region 群系温度过渡
+        // 温度只依赖同一地理窗口，冷机器读取不需要生成水文和生态。
+        public static float SampleGeographicTemperature(ChunkGenerationRequest request, int worldX, int worldY)
+            => (float)SampleBlendedBiomeTemperature(request, request.Profile.Settings,
+                request.Topology.NormalizeX(worldX), request.Topology.NormalizeY(worldY));
+
         private static SurfaceBiomeKind ResolveSurfaceBiome(ChunkGenerationSettingsSnapshot settings,
             SurfaceClimateSample sample, double moisture, bool river, double? blendedCelsius = null)
         {

@@ -31,3 +31,21 @@ test.system("world_streaming", "commit_snapshot", { tile = 23, depth = 0.25, cha
     assert(data.snapshotLiquid == "probe:water" and data.snapshotDepth == 0.25, "快照没有保存独立的稳定液体身份与深度")
     assert(not data.oldEpochAccepted and data.epochDisposed, "旧世界结果被发布或丢弃后未释放")
 end, "生成结果提交、快照冻结和唯一所有权释放")
+
+test.system("world_streaming", "base_presentation_steps", {}, function(data)
+    assert(data.firstYield and data.secondYield and data.initRegistered, "基础地形没有按初始化和扫描步骤推进")
+    assert(not data.initReady and not data.partialReady and data.earlyEvents == 0,
+        "基础地形尚未扫描/上传完成却提前发布就绪或重建事件")
+    assert(data.firstSliceWrites == 64 and data.maxStepWrites <= 64 and data.fullWrites >= 320,
+        "基础地形首步预算、每步上限或失效后的真实重扫错误")
+    assert(data.uploadInvalidated and not data.uploadEarlyReady,
+        "分层上传期间的视觉失效、Owner丢失或改格没有重新进入有界重扫")
+    assert(data.neighbourEvicted and data.invalidated and not data.repairWhileBinding,
+        "绑定期间邻区/资源失效被同步恢复绕过预算")
+    assert(data.steps > 3 and data.completed and data.completedEvents == 1 and not data.completedInvalidation,
+        "完整提交没有只发布一次就绪，或初绑失效请求污染已完成状态")
+    assert(data.unbound and data.cancelledReleased and data.cancelledEvents == 1,
+        "解绑或取消没有释放Owner，或取消仍然发布了完成事件")
+    assert(data.replacementSurvived and data.replacementCompleted and data.finalEvents == 2,
+        "旧枚举器清理破坏了新绑定，或重绑未正常完成")
+end, "基础地形分步预算、脏格重扫和取消所有权")

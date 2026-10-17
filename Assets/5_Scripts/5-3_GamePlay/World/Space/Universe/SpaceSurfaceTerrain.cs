@@ -42,10 +42,9 @@ namespace FlatWorld.Spaceflight
                     }
                     if (climate)
                     {
-                        double regional = SmoothRegion(request, worldX, worldY, 96d);
-                        double celsius = temperature + (regional * 2d - 1d) * variation;
-                        terrain.SetEnvironmentValue("temperature.celsius", x, y, (float)celsius);
-                        terrain.SetEnvironmentValue("temperature", x, y, (float)Math.Clamp((regional + 0.25d) / 1.5d, 0d, 1d));
+                        SampleTemperature(request, worldX, worldY, temperature, variation, out float celsius, out float normalized);
+                        terrain.SetEnvironmentValue("temperature.celsius", x, y, celsius);
+                        terrain.SetEnvironmentValue("temperature", x, y, normalized);
                         terrain.SetEnvironmentValue("precipitation", x, y, 0f);
                         terrain.SetEnvironmentValue("basePrecipitation", x, y, 0f);
                         terrain.SetEnvironmentValue("moisture", x, y, 0f);
@@ -69,6 +68,28 @@ namespace FlatWorld.Spaceflight
                             uniform ? TerrainCellFlags.Walkable : original.Flags));
                 }
             }
+        }
+
+        // 整块写入和单点环境查询复用星体覆盖，避免冷世界为了读温度重建全块。
+        internal static bool TrySampleTemperature(ChunkGenerationRequest request, int worldX, int worldY,
+            out float celsius, out float normalized)
+        {
+            celsius = 0f; normalized = 0f;
+            ChunkGenerationProfileSnapshot profile = request.Profile;
+            if (profile.Settings.Mode != ChunkGenerationMode.Surface || !profile.TextParameters.ContainsKey("space.bodyId") ||
+                Number(profile, "space.climateOverride", 0d) <= 0d && Number(profile, "space.uniformSurface", 0d) <= 0d) return false;
+            SampleTemperature(request, worldX, worldY, Number(profile, "space.surfaceTemperatureCelsius", 26d),
+                Number(profile, "space.temperatureVariationCelsius", 0d), out celsius, out normalized);
+            return true;
+        }
+
+        private static void SampleTemperature(ChunkGenerationRequest request, int worldX, int worldY,
+            double temperature, double variation, out float celsius, out float normalized)
+        {
+            worldX = request.Topology.NormalizeX(worldX); worldY = request.Topology.NormalizeY(worldY);
+            double regional = SmoothRegion(request, worldX, worldY, 96d);
+            celsius = (float)(temperature + (regional * 2d - 1d) * variation);
+            normalized = (float)Math.Clamp((regional + 0.25d) / 1.5d, 0d, 1d);
         }
         #endregion
 

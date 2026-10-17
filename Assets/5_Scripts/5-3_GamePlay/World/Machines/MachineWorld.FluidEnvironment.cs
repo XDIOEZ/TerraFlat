@@ -20,7 +20,7 @@ public static partial class MachineWorld
         if (SceneManager.GetActiveScene().name == worldKey && TemperatureMgr.Instance != null &&
             TemperatureMgr.Instance.TryGetAmbientTemperature(node.Position, out temperature)) return true;
         if (WorldAddress.FromWorldKey(worldKey).IsSurface && owner?.PlanetData_Dict.ContainsKey(worldKey) == true)
-        { temperature = (float)SpaceSurfaceQuery.GetLandingSurface(worldKey, node.Position).TemperatureCelsius; return true; }
+            return SpaceSurfaceQuery.TryGetAmbientTemperature(worldKey, node.Position, out temperature);
         return false;
     }
 
