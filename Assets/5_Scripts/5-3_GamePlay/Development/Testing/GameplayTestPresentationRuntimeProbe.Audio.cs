@@ -275,6 +275,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["feedbackCues"] = feedbackCues,
                 ["movementCues"] = movementCues,
                 ["swimmingCues"] = swimmingCues,
+                ["animalIdleCues"] = CaptureAnimalIdleCues(service),
                 ["fireCue"] = CaptureFireCue(service),
                 ["inventoryUiCueCount"] = inventoryUiCueCount,
                 ["inventoryUiCuesValid"] = inventoryUiCuesValid,

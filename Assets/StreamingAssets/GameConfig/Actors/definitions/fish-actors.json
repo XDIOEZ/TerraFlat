@@ -52,6 +52,19 @@
         }
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.smallfish.idle",
+            "intervalMinSeconds": 25.0,
+            "intervalMaxSeconds": 45.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 45.0,
+            "volumeScale": 1.0
+          }
+        },
         "pressure": {
           "prefab": "Module_Pressure",
           "id": "气压生存模块",

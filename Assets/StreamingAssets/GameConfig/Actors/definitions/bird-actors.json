@@ -45,6 +45,19 @@
         }
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.bird.idle",
+            "intervalMinSeconds": 6.0,
+            "intervalMaxSeconds": 15.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 15.0,
+            "volumeScale": 1.0
+          }
+        },
         "detector": {
           "enabled": true,
           "parameters": { "DetectionRadius": 20.0 }
@@ -150,6 +163,21 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Seagull.prefab",
       "gameName": "海鸥",
       "description": "仅在沙滩群系生态生成的鸟类变体。",
+      "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.seagull.idle",
+            "intervalMinSeconds": 10.0,
+            "intervalMaxSeconds": 22.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 22.0,
+            "volumeScale": 1.0
+          }
+        }
+      },
       "tags": [
         "Bird",
         "Seagull",
@@ -207,6 +235,19 @@
         }
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.bee.idle",
+            "intervalMinSeconds": 5.0,
+            "intervalMaxSeconds": 11.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 11.0,
+            "volumeScale": 1.0
+          }
+        },
         "detector": { "parameters": { "DetectionRadius": 6.0 } },
         "ai": {
           "parameters": {

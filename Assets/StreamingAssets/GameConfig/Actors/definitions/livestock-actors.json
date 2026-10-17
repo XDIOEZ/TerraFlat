@@ -21,6 +21,19 @@
         "flipX": false
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.sheep.idle",
+            "intervalMinSeconds": 10.0,
+            "intervalMaxSeconds": 24.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 24.0,
+            "volumeScale": 1.0
+          }
+        },
         "ai": {
           "prefab": "Module_AI_BehaviorGraph",
           "id": "Module_AI_BehaviorGraph",

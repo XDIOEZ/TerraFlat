@@ -13,6 +13,7 @@ public partial class GameRes
         RegisterIndustrialModule<Mod_FluidTank>("Module_FluidTank");
         RegisterIndustrialModule<Mod_Spacesuit>("Module_Spacesuit");
         RegisterIndustrialModule<Mod_AtmosphericOxygenSupply>("Module_AtmosphericOxygenSupply");
+        RegisterIndustrialModule<Mod_AnimalAmbientAudio>(Mod_AnimalAmbientAudio.ModuleId);
     }
     private void RegisterIndustrialModule<T>(string key) where T : Module
     {

@@ -122,7 +122,7 @@ public static class AI_DebugOverlay
 ///
 /// 子类只需实现差异化的状态评估、帧逻辑和配置即可。
 /// </summary>
-public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, Enum
+public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioActivity where TState : struct, Enum
 {
     /// <summary>只要 GameObject Actor 被实例化，其 AI 就正常运行；后端选择由生成路由负责。</summary>
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
@@ -137,6 +137,8 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	public Item ActorItem => item;
 	public bool IsAlive => _hp != null && _hp.Hp > 0f;
+	// 环境叫声只跟随平静待机和游荡，睡眠、逃跑与攻击交给各状态原有表现。
+	public bool AllowsAmbientAudio => _isReady && IsAmbientAudioState(_currentState);
 #endregion
 
 #region RuntimeState
@@ -239,6 +241,9 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	/// <summary>判断是否为睡眠状态，供统一睡眠表现同步。</summary>
 	protected virtual bool IsSleepState(TState state) => false;
+
+	/// <summary>平静发声与移动动画语义独立，追击也使用移动动画的物种可单独覆写。</summary>
+	protected virtual bool IsAmbientAudioState(TState state) => IsIdleState(state) || IsMoveState(state);
 
 	/// <summary>当前睡眠是否已被有效伤害打断，睡眠状态条件应优先消费此标记。</summary>
 	protected bool SleepInterruptedByDamage => _sleepInterruptedByDamage;

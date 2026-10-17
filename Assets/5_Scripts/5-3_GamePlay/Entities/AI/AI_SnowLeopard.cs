@@ -123,6 +123,8 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
     protected override bool IsMoveState(SnowLeopardState state) =>
         state == SnowLeopardState.Move || state == SnowLeopardState.Chase;
     protected override bool IsIdleState(SnowLeopardState state) => state == SnowLeopardState.Idle;
+    protected override bool IsAmbientAudioState(SnowLeopardState state) =>
+        state == SnowLeopardState.Idle || state == SnowLeopardState.Move;
 
     #endregion
 

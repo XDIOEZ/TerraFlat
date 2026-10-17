@@ -73,6 +73,19 @@
         }
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.chicken.idle",
+            "intervalMinSeconds": 8.0,
+            "intervalMaxSeconds": 18.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 18.0,
+            "volumeScale": 1.0
+          }
+        },
         "pressure": {
           "prefab": "Module_Pressure",
           "id": "气压生存模块",
@@ -794,6 +807,19 @@
         }
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.wildboar.idle",
+            "intervalMinSeconds": 10.0,
+            "intervalMaxSeconds": 22.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 22.0,
+            "volumeScale": 1.0
+          }
+        },
         "pressure": {
           "prefab": "Module_Pressure",
           "id": "气压生存模块",
@@ -1551,6 +1577,19 @@
         }
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.wolf.idle",
+            "intervalMinSeconds": 18.0,
+            "intervalMaxSeconds": 35.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 35.0,
+            "volumeScale": 1.0
+          }
+        },
         "pressure": {
           "prefab": "Module_Pressure",
           "id": "气压生存模块",

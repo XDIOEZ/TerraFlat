@@ -12,6 +12,84 @@ for _, row in ipairs({ { volume = -1, master = -1, expected = 0 }, { volume = 0.
     end, "音频总线范围与空间参数：" .. row.expected)
 end
 
+-- 每个槽位持有独立正式时钟，Lua 只检查返回的发声机会与剩余时间。
+local function animal_idle_sequence(label, steps, validate)
+    test.system("audio", "animal_idle_sequence", { steps = steps }, function(data)
+        assert(#data.samples == #steps, "动物待机叫声没有返回完整连续采样")
+        assert(data.randomUnchanged, "动物叫声消耗了玩法的全局随机状态")
+        for i, sample in ipairs(data.samples) do
+            local step = steps[i]
+            assert(sample.slot == (step.slot or 1), label .. "，第 " .. i .. " 步串用了其他动物的时钟")
+            assert(sample.due == (step.expectedDue == true), label .. "，第 " .. i .. " 步发声机会错误")
+            assert(sample.initialized == (step.expectedInitialized ~= false),
+                label .. "，第 " .. i .. " 步初始化或清理状态错误")
+            assert(sample.remaining >= 0, label .. "，第 " .. i .. " 步时钟出现负剩余时间")
+            if step.expectedRemaining ~= nil then
+                assert(math.abs(sample.remaining - step.expectedRemaining) < 0.0001,
+                    label .. "，第 " .. i .. " 步间隔错误：" .. tostring(sample.remaining))
+            end
+        end
+        if validate then validate(data.samples) end
+    end, "动物待机叫声：" .. label)
+end
+
+animal_idle_sequence("首次延迟、到期抑制、拒播等待和清理重建", {
+    { reset = true, seed = 55, expectedRemaining = 5 },
+    { deltaTime = 0, expectedRemaining = 5 },
+    { deltaTime = 4.5, expectedRemaining = 0.5 },
+    { untilDue = true, expectedDue = true, expectedRemaining = 10 },
+    { deltaTime = 0, expectedRemaining = 10 },
+    { deltaTime = 0.25, expectedRemaining = 9.75 },
+    { untilDue = true, alreadyPlaying = true, expectedRemaining = 10 },
+    { deltaTime = 0.25, expectedRemaining = 9.75 },
+    { untilDue = true, eligible = false, expectedRemaining = 10 },
+    { deltaTime = 0.25, eligible = false, expectedRemaining = 9.75 },
+    { untilDue = true, expectedDue = true, expectedRemaining = 10 },
+    { clear = true, expectedInitialized = false, expectedRemaining = 0 },
+    { deltaTime = 100, expectedInitialized = false, expectedRemaining = 0 },
+    { reset = true, seed = 99, initialDelayMinSeconds = 2, initialDelayMaxSeconds = 2, expectedRemaining = 2 },
+    { deltaTime = 0.25, expectedRemaining = 1.75 },
+    { untilDue = true, expectedDue = true, expectedRemaining = 10 }
+})
+
+animal_idle_sequence("同种独立错峰、随机间隔和局部随机状态", {
+    { slot = 1, reset = true, seed = 123, intervalMinSeconds = 2, intervalMaxSeconds = 6, initialDelayMinSeconds = 1, initialDelayMaxSeconds = 5 },
+    { slot = 2, reset = true, seed = 456, intervalMinSeconds = 2, intervalMaxSeconds = 6, initialDelayMinSeconds = 1, initialDelayMaxSeconds = 5 },
+    { slot = 3, reset = true, seed = 123, intervalMinSeconds = 2, intervalMaxSeconds = 6, initialDelayMinSeconds = 1, initialDelayMaxSeconds = 5 },
+    { slot = 1, untilDue = true, expectedDue = true },
+    { slot = 2, deltaTime = 0 },
+    { slot = 3, deltaTime = 0 },
+    { slot = 3, untilDue = true, expectedDue = true },
+    { slot = 1, untilDue = true, expectedDue = true },
+    { slot = 3, untilDue = true, expectedDue = true },
+    { slot = 2, untilDue = true, expectedDue = true },
+    { slot = 1, clear = true, expectedInitialized = false, expectedRemaining = 0 },
+    { slot = 2, deltaTime = 0 }
+}, function(samples)
+    for i = 1, 3 do
+        assert(samples[i].remaining >= 1 and samples[i].remaining <= 5, "动物首播延迟越出配置范围")
+    end
+    assert(samples[1].remaining == samples[3].remaining, "相同种子的独立时钟初始结果不一致")
+    assert(math.abs(samples[1].remaining - samples[2].remaining) > 0.0001, "不同动物首播挤在同一时刻")
+    assert(samples[2].remaining == samples[5].remaining and samples[3].remaining == samples[6].remaining,
+        "推进一只动物时修改了其他动物的时钟")
+    assert(samples[4].remaining == samples[7].remaining and samples[8].remaining == samples[9].remaining,
+        "独立动物相互消费了随机序列")
+    for _, i in ipairs({ 4, 7, 8, 9, 10 }) do
+        assert(samples[i].remaining >= 2 and samples[i].remaining <= 6, "动物重复叫声间隔越出配置范围")
+    end
+    assert(samples[10].remaining == samples[12].remaining, "清理一只动物重置了其他动物的叫声")
+end)
+
+animal_idle_sequence("卡帧不追补齐叫、负时间不倒退", {
+    { reset = true, initialDelayMinSeconds = 2, initialDelayMaxSeconds = 2, expectedRemaining = 2 },
+    { deltaTime = 1000, expectedDue = true, expectedRemaining = 10 },
+    { deltaTime = 0, expectedRemaining = 10 },
+    { deltaTime = -100, expectedRemaining = 10 },
+    { deltaTime = 0.25, expectedRemaining = 9.75 },
+    { clear = true, expectedInitialized = false, expectedRemaining = 0 }
+})
+
 for _, row in ipairs({ { first = "probe.first", second = "probe.second", errors = 0 }, { first = "probe.first", second = "PROBE.FIRST", errors = 1 } }) do
     test.system("audio", "catalog_lifecycle", row, function(data)
         assert(data.cueCount == 2 and data.errors == row.errors, "独立音频目录没有报告重复稳定事件 ID")

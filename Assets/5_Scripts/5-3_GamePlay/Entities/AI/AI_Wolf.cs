@@ -241,6 +241,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	protected override bool IsMoveState(WolfState state) =>
 		state == WolfState.Move || state == WolfState.Advance;
 	protected override bool IsIdleState(WolfState state) => state == WolfState.Idle;
+	protected override bool IsAmbientAudioState(WolfState state) =>
+		state == WolfState.Idle || state == WolfState.Move;
 #endregion
 
 #region Lifecycle

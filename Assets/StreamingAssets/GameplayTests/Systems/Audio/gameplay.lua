@@ -1,5 +1,36 @@
 -- 已入世 AudioService 播放正式录音；Cue 只隔离测试 ID，播放、池与用户音量均走正式实现。
 test.runtime("audio", "voice_lifecycle", {}, function(data)
+    local animalDistances = {
+        Chicken = 10, WildBoar = 12, Wolf = 18, Bird = 14, Seagull = 16,
+        Bee = 6, Sheep = 14, Rabbit = 10, SnowLeopard = 12, SmallFish = 8
+    }
+    assert(#data.animalIdleCues == 10, "没有采样全部十种动物的待机声音")
+    for _, cue in ipairs(data.animalIdleCues) do
+        local distance = animalDistances[cue.actorId]
+        assert(distance ~= nil, "动物声音资源重复或出现未知物种：" .. tostring(cue.actorId))
+        animalDistances[cue.actorId] = nil
+        local expectedId = "animal." .. string.lower(cue.actorId) .. ".idle"
+        local config = cue.parameters
+        assert(cue.actorLoaded and cue.isActor and cue.moduleCount == 1 and cue.moduleEnabled,
+            cue.actorId .. " 没有启用唯一的动物环境音模块")
+        assert(cue.stableName == "animalAudio" and cue.implementation == "Mod_AnimalAmbientAudio",
+            cue.actorId .. " 动物声音模块没有装配正式通用实现")
+        assert(config.cueId == expectedId and cue.loaded and cue.cueId == expectedId,
+            cue.actorId .. " 未绑定本物种正式待机 Cue")
+        assert(config.intervalMinSeconds >= 0.25 and config.intervalMaxSeconds >= config.intervalMinSeconds,
+            cue.actorId .. " 缺少有效的随机叫声间隔")
+        assert(config.initialDelayMinSeconds > 0 and config.initialDelayMaxSeconds >= config.initialDelayMinSeconds
+            and config.volumeScale > 0, cue.actorId .. " 初次加载会立刻齐叫或音量配置无效")
+        assert(cue.bus == "Sfx" and not cue.loop and cue.spatialBlend == 1 and cue.rolloff == "Linear",
+            expectedId .. " 没有使用单次世界 SFX 和完整空间线性衰减")
+        assert(cue.minDistance == 1.5 and cue.maxDistance == distance and cue.maxInstances == 3
+            and math.abs(cue.cooldown - 0.2) < 0.00001, expectedId .. " 距离或群体并发限流配置错误")
+        assert(#cue.clips >= 2, expectedId .. " 缺少不同实录片段变体")
+        for _, clip in ipairs(cue.clips) do
+            assert(clip.loaded and clip.channels == 1 and clip.frequency == 48000 and clip.samples > 0,
+                expectedId .. " 没有完整导入 48kHz 单声道动物录音")
+        end
+    end
     local fire = data.fireCue
     assert(fire.configured == "fire.burning.loop" and fire.loaded and fire.loop and #fire.clips == 1,
         "篝火没有绑定正式燃烧循环或音频未导入")

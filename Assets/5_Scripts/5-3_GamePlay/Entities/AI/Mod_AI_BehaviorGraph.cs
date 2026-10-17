@@ -331,7 +331,7 @@ public sealed class AIBehaviorGraphContext
 #region JSON 行为图模块
 
 /// <summary>将 JSON 行为图绑定到标准 AI Prefab 模块，并交给通用状态机执行。</summary>
-public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IAIActor
+public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator, IAIActor, IAnimalAmbientAudioActivity
 {
     [Serializable]
     private sealed class SaveData
@@ -365,6 +365,7 @@ public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator
 
     public Item ActorItem => item;
     public bool IsAlive => _context?.Health == null || _context.Health.Hp > 0f;
+    public bool AllowsAmbientAudio => _isLoaded && _runtime?.AllowsAmbientAudio == true;
 
     private AIBehaviorGraphContext _context; // 本轮 Load 绑定的 Actor 能力。
     private AIBehaviorGraphRuntime _runtime; // 已编译的通用行为图。

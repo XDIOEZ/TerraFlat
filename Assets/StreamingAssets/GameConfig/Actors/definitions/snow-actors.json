@@ -25,6 +25,19 @@
         "flipX": false
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.rabbit.idle",
+            "intervalMinSeconds": 22.0,
+            "intervalMaxSeconds": 42.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 42.0,
+            "volumeScale": 1.0
+          }
+        },
         "ai": {
           "prefab": "Module_AI_BehaviorGraph",
           "id": "Module_AI_BehaviorGraph",
@@ -405,6 +418,19 @@
         "flipX": false
       },
       "modules": {
+        "animalAudio": {
+          "prefab": "Mod_AnimalAmbientAudio",
+          "id": "Mod_AnimalAmbientAudio",
+          "enabled": true,
+          "parameters": {
+            "cueId": "animal.snowleopard.idle",
+            "intervalMinSeconds": 20.0,
+            "intervalMaxSeconds": 38.0,
+            "initialDelayMinSeconds": 1.0,
+            "initialDelayMaxSeconds": 38.0,
+            "volumeScale": 1.0
+          }
+        },
         "ai": {
           "prefab": "Module_AI_SnowLeopard",
           "id": "Module_AI_SnowLeopard",

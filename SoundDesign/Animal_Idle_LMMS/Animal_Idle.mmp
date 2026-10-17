@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<!DOCTYPE lmms-project>
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.0" type="song">
+  <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="75" masterpitch="0" />
+  <song>
+    <trackcontainer type="song" visible="1" width="600" height="300" x="5" y="5" maximized="0" minimized="0">
+      <track muted="0" type="2" name="animal.chicken.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="12" len="164" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/chicken_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.chicken.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="396" len="168" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/chicken_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.chicken.idle / 3" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="780" len="125" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/chicken_03.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.wildboar.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="972" len="341" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/wildboar_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.wildboar.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="1356" len="175" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/wildboar_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.wolf.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="1740" len="615" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/wolf_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.wolf.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="2508" len="788" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/wolf_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.bird.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="3468" len="212" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/bird_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.bird.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="3852" len="202" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/bird_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.bird.idle / 3" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="4236" len="250" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/bird_03.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.seagull.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="4620" len="221" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/seagull_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.seagull.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="5004" len="240" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/seagull_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.bee.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="5388" len="240" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/bee_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.bee.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="5772" len="288" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/bee_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.sheep.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="6156" len="197" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/sheep_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.sheep.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="6540" len="183" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/sheep_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.sheep.idle / 3" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="6924" len="202" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/sheep_03.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.rabbit.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="7308" len="125" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/rabbit_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.rabbit.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="7500" len="140" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/rabbit_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.smallfish.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="7692" len="63" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/smallfish_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.smallfish.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="7884" len="77" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/smallfish_02.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.snowleopard.idle / 1" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="8076" len="164" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/snowleopard_01.wav" muted="0" off="0" />
+      </track>
+      <track muted="0" type="2" name="animal.snowleopard.idle / 2" solo="0">
+        <sampletrack pan="0" vol="80">
+          <fxchain numofeffects="0" enabled="0" />
+        </sampletrack>
+        <sampleclip pos="8460" len="164" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Animal_Idle_LMMS/Sources/snowleopard_02.wav" muted="0" off="0" />
+      </track>
+    </trackcontainer>
+    <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
+      <mixerchannel num="0" muted="0" volume="1" name="Master" soloed="0">
+        <fxchain numofeffects="0" enabled="0" />
+      </mixerchannel>
+    </mixer>
+    <ControllerRackView visible="1" width="258" height="142" x="836" y="407" maximized="0" minimized="0" />
+    <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
+    <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
+    <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
+    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <controllers />
+  </song>
+</lmms-project>

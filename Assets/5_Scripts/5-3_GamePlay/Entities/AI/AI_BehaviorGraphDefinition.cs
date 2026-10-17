@@ -322,6 +322,12 @@ public sealed class AIBehaviorGraphRuntime
 
     public string CurrentState => _stateMachine.IsInitialized ? _stateMachine.CurrentState : null;
     public float StateElapsed => _context.StateElapsed;
+    // 按平静节点语义放行环境声，JSON 可以自由命名当前状态。
+    public bool AllowsAmbientAudio => CurrentState != null &&
+        _states.TryGetValue(CurrentState, out CompiledState state) &&
+        (string.Equals(state.Definition.Node, "wander", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(state.Definition.Node, "forage", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(state.Definition.Node, "idle", StringComparison.OrdinalIgnoreCase));
 
     public AIBehaviorGraphRuntime(
         AIBehaviorGraphDefinition definition,
