@@ -107,6 +107,7 @@
     {
       "id": "Tile_Bedrock",
       "runtimeTileId": 31,
+      "minimumSurfaceDepth": 5,
       "loadCapacity": 10,
       "displayName": "基岩",
       "tileAsset": "Tile_Bedrock",

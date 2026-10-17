@@ -51,7 +51,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 太阳阴影代理按源帧/姿态/脚点值变化提交 Renderer 与 MPB，太阳全局参数和投影裁剪盒仍逐帧更新；归池重置缓存。建筑能力查询复用 ItemMods.GetCapabilities 缓存，模块结构变化失效，能力属性仍实时读取，避免逐阴影遍历只读字典分配。
 - 世界物品 `visual.shadows.contactWidth/footLocalPosition/footOverlap` 持有底座/落地点；ShadowFootprintResolver 限定可见底边内缩，AIECS 取待机帧固定 VisibleRect。落点不随攻击/奔跑帧伸缩。
 - SunShadowSampling.hlsl 由普通 Sprite/AIECS/资源 BRG 共用；采样使用当前帧 UV 边界和世界 PPU，图集外沿透明，半埋裁剪进入采样。透明外沿几何与 CPU 包围盒一致；太阳高度先 Clamp01 再幂运算，投影范围有限且排除 NaN/Infinity。
-- 地表高度分层由 Chunk-BRG-Contact-Lit 共享公式处理：分层→接触阴影→Light2D，同层无边，低侧暗边优先；ElevationStrength=0 只旁路高度效果。GroundElevationShadowSettings 更新批次材质，不重建实例。
+- 地块高低阴影只由 `TerrainHeightShadowManager` 提交：读取 `TerrainSurfaceHeightLayer` 的有效表面与邻格顶部，高侧投到低侧，同高无边；地形、墙脚、地板和平台共用 `TerrainHeightShadow` BRG 层、一张格子网格和材质，角上取最大值。`GroundElevationShadowSettings` 统一控制显隐与宽度；生成高度保留，角色/太阳阴影仍独立。
 - Blocking 静态墙共用 ChunkLightOccluderRenderer/selfShadows；局部体积光同时使用有效 volumetricShadows。selfShadows 会影响墙区重叠 Lit Sprite，自发光区域由独立 Unlit/Emissive 的 Max 混合保颜色下限。
 - 静态墙阴影由 `ChunkLightOccluderVisibilityScheduler` 在渲染前按 URP 已登记局部投影光筛选，灯/墙/变换不变时复用结果；候选矩形与 `EnabledOccluderCount` 分开。Point 使用含 Z 的保守球相交，非 Point 或适配失败保留全部，恢复当帧补 `ShadowCaster2D.Update`。
 - 洞口环境采光由 `DimensionTravelProgressStore.ReadCache` 和 `CaveExitAmbientLightCache` 维护；入口/锚点变化才更新出口集合，玩家位置/拓扑变化才重算距离，不定时解析角色 JSON。
@@ -71,7 +71,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - WaterVisualSettings 切换风格化、写实、Unity 风格水三种材质，保留水深 MPB/地形实例；第三种使用 `FLATWORLD_WATER_UNITY_STYLIZED/UnityStylizedWaterSurface.hlsl`，河流与海洋均走四向法线、碎光、指数深浅色与泡沫。`ChunkView.unityStylizedWaterMaterial` 直接引用材质；线性 Repeat/Mipmap 数据贴图由 `Tools/Rendering/generate_unity_stylized_water_patterns.py` 生成，改编代码 BSD-3-Clause 许可见 ThirdPartyNotices/UnityStylizedWater-LICENSE.txt。
 - 水体三种本地关键字使用 `multi_compile_local_fragment` 保留运行时切换变体；不能依赖源 Tilemap 材质为 Shader.Find 创建的 Mesh/BRG 材质保留变体。
 - ActorWaterCommon.hlsl 共用于 Sprite-Lit-Master/AIECS；旋转附属物共享角色世界水线坐标。视觉读取 Mod_TileEffectReceiver 的有效淹没，独立权威 LiquidDepth 不被漂浮改写；边缘邻格容错仅用于交互，液体接触独立于 Ground，液体身份变化才 Exit/Enter。
-- 季节雪为 `_SnowCoverage` MPB 通道；SnowFootprintTrail 的历史按自身寿命消退，动态创建时解析专用资源。ChunkSnowCoverRenderer/ChunkSupportSurfaceRenderer 只读对应层并释放自身表现；支撑面 Data0 RGBA 编码四向外露边，相邻边为零。
+- 季节雪为 `_SnowCoverage` MPB 通道；SnowFootprintTrail 的历史按自身寿命消退，动态创建时解析专用资源。ChunkSnowCoverRenderer/ChunkSupportSurfaceRenderer 只读对应层并释放自身本体表现；支撑面不再自行计算或绘制阴影。地形 Mesh 与 BRG 共读排序 JSON，高低阴影在地面/支撑/雪之上、墙体之下。
 - 掉落沉没先浸没再远离，SubmergedProgress 仅缩表现矩阵，质量/体积/原 Scale 保留；WaterElapsed 延续进度，结束销毁由权威层提交，离水/拾取/回池恢复姿态。
 
 ## 特效池与反馈

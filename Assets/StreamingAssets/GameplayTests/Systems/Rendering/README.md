@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-17 地表高低阴影补充但未执行：`rendering/terrain_height` 采样正式 `TerrainSurfaceHeightLayer`，覆盖地板齐平、同高异材质、逐层采挖、基岩最低深度、成片低地无内缝、高侧向低侧投影、填土、平台、水面、墙脚与洞穴基准。`terrain_height_save` 检查独立于石头产量的表面深度、MemoryPack 保存恢复、非法负深度及生成高度不变；`terrain_height_neighbours` 通过正式管理器查询邻区加载、采挖、卸载和重载。当前用户 PlayMode 保留，未编译、未运行；未覆盖最终 Shader 画面、BRG GPU 提交、环绕接缝视觉、真实采挖操作及性能，验收由用户执行。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`rendering/fog_config、zoom_cloud_mask、zoom_cloud_transition、universe_view_config、universe_view_transition、group_projection`。

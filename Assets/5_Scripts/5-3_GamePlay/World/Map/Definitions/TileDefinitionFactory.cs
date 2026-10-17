@@ -36,6 +36,8 @@ public static class TileDefinitionFactory
         ValidateId(dto.TileAsset, $"{dto.Id}.tileAsset");
         if (dto.RuntimeTileId < 0) throw new InvalidDataException($"地块 {dto.Id} 的 runtimeTileId 不能为负数。");
         if (dto.LoadCapacity < 0) throw new InvalidDataException($"地块 {dto.Id} 的 loadCapacity 不能为负数。");
+        if (dto.MinimumSurfaceDepth < 0 || dto.MinimumSurfaceDepth > 100)
+            throw new InvalidDataException($"地块 {dto.Id} 的 minimumSurfaceDepth 必须在 0～100 层之间。");
         if (dto.Behaviours == null || dto.Behaviours.Count > 64)
             throw new InvalidDataException($"地块 {dto.Id} 的 behaviours 必须是最多 64 项的数组。");
         if (dto.DamageProfile == null) throw new InvalidDataException($"地块 {dto.Id} 的 damageProfile 不能为空。");

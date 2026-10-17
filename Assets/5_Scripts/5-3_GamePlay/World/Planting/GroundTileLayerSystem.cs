@@ -49,6 +49,7 @@ public static class GroundTileLayerSystem
         if (layers == null || layers.Count == 0)
             throw new InvalidOperationException("目标地格没有玩家覆盖层。");
         layers.RemoveAt(layers.Count - 1);
+        TerrainSurfaceHeightLayer.SetCoverLevels(terrain, local.x, local.y, layers.Count);
         if (layers.Count == 0 && covers.TryGetValue(terrain, out var cells))
             cells.Remove(CellKey(terrain, local));
     }
@@ -91,6 +92,13 @@ public static class GroundTileLayerSystem
         });
         try
         {
+            // 先固化原底材的最低深度，填土换材质后仍从原坑底逐层回填。
+            if (GameRes.ExistingInstance.TryGetTileDefinition(sample.Cell.GroundTileId,
+                    out RuntimeTileDefinition original))
+                TerrainSurfaceHeightLayer.SetExcavatedLevels(sample.Terrain, local.x, local.y,
+                    Math.Max(previousLayers.ExcavatedSurfaceLevels, original.MinimumSurfaceDepth));
+            TerrainSurfaceHeightLayer.SetCoverLevels(sample.Terrain, local.x, local.y,
+                GetCovers(sample.Terrain, local, false).Count);
             sample.Terrain.SetGrass(local.x, local.y, 0);
             sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, local.x, local.y, 0f);
             sample.Terrain.SetCell(local.x, local.y, new TerrainCell(target.RuntimeTileId, 0, 0,
@@ -124,6 +132,7 @@ public static class GroundTileLayerSystem
         {
             LocalPosition = local,
             ExcavatedLayers = ReadDepth(terrain, local),
+            ExcavatedSurfaceLevels = TerrainSurfaceHeightLayer.GetExcavatedLevels(terrain, local.x, local.y),
             SurfaceGrass = terrain.GetGrass(local.x, local.y)
         };
         var layers = GetCovers(terrain, local, false);
@@ -136,7 +145,7 @@ public static class GroundTileLayerSystem
     {
         Vector2Int local = snapshot.LocalPosition;
         if ((uint)local.x >= (uint)terrain.Width || (uint)local.y >= (uint)terrain.Height ||
-            snapshot.ExcavatedLayers < 0 || snapshot.ExcavatedLayers > 100)
+            snapshot.ExcavatedLayers < 0 || snapshot.ExcavatedLayers > 100 || snapshot.ExcavatedSurfaceLevels < 0)
             throw new InvalidOperationException("地层快照的坐标或天然采挖层数无效。");
         // 未覆盖的天然地格不创建覆盖栈；先校验全部下层，再替换现有运行态。
         if (snapshot.Covers != null)
@@ -153,6 +162,8 @@ public static class GroundTileLayerSystem
         if ((layers == null || layers.Count == 0) && covers.TryGetValue(terrain, out var cells))
             cells.Remove(CellKey(terrain, local));
         WriteDepth(terrain, local, snapshot.ExcavatedLayers);
+        TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, local.x, local.y, snapshot.ExcavatedSurfaceLevels);
+        TerrainSurfaceHeightLayer.SetCoverLevels(terrain, local.x, local.y, layers?.Count ?? 0);
         terrain.SetGrass(local.x, local.y, snapshot.SurfaceGrass);
     }
 

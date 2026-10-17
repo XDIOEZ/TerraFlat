@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2005}
   - component: {fileID: 2002}
   - component: {fileID: 2006}
+  - component: {fileID: 2010}
   - component: {fileID: 2007}
   - component: {fileID: 2008}
   - component: {fileID: 2009}
@@ -496,3 +497,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c980299f0c2aea84f818bb361ce61441, type: 3}
   m_Name:
   m_EditorClassIdentifier:
+--- !u!114 &2010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57e016dc7d6f45fbbd7fa14625baac88, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  material: {fileID: 2100000, guid: c9d4b0f1ee4b4d7aa2e6e79b85ec7f42, type: 2}

@@ -44,6 +44,7 @@ public sealed class TileDefinitionDto
     [JsonProperty("tileAsset", Required = Required.Always)] public string TileAsset;
     // 地表可承受的建筑等级；旧 MOD 地块未配置时按普通泥土的 8 点处理。
     [JsonProperty("loadCapacity")] public int LoadCapacity = 8;
+    [JsonProperty("minimumSurfaceDepth")] public int MinimumSurfaceDepth; // 该底材露出时至少位于地表下多少层。
     // 自然作物可以把该地块视为可生长基质；生态规则只依赖这个能力，不写死具体地块 ID。
     [JsonProperty("naturalPlantable")] public bool NaturalPlantable;
     [JsonProperty("data", Required = Required.Always)] public TileComponentDefinitionDto Data;

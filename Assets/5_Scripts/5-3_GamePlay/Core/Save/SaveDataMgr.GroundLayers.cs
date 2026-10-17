@@ -16,7 +16,7 @@ public partial class SaveDataMgr
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
         record.GroundLayerCells ??= new List<GroundLayerCellSaveData>();
         record.GroundLayerCells.RemoveAll(cell => cell.LocalPosition == sample.LocalCell);
-        if (state.ExcavatedLayers != 0 || state.Covers.Count != 0)
+        if (state.ExcavatedLayers != 0 || state.ExcavatedSurfaceLevels != 0 || state.Covers.Count != 0)
             record.GroundLayerCells.Add(state);
     }
 
@@ -42,6 +42,7 @@ public partial class GroundLayerCellSaveData
     #region 地层快照
     public Vector2Int LocalPosition;
     public int ExcavatedLayers;
+    public int ExcavatedSurfaceLevels; // 地表实际降低的层数，包含土层且不影响五层石头的产量。
     public byte SurfaceGrass;
     public List<GroundCoverLayerSaveData> Covers = new();
     #endregion

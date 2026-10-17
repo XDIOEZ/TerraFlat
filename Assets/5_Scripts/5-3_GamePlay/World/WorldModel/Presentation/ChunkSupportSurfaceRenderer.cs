@@ -1,411 +1,79 @@
 using System;
-using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
-/// <summary>
-/// 地表覆盖经共享 BRG Owner 表现；只读取权威层，不改写底层地形数据。
-/// 平台/地板接触阴影通过实例 Data0 RGBA 编码左、右、下、上四个外露方向，
-/// 水上平台把阴影投到覆盖面外侧，陆地地板保留内侧接触阴影，并支持跨 Chunk 连续铺设。
-/// </summary>
-public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
+/// <summary>只绘制地板与平台本体，高低阴影统一交给 TerrainHeightShadowManager。</summary>
+public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRenderer
 {
-    #region 配置与状态
+    #region 覆盖面绑定
 
-    private const float WaterPlatformShadowExtent = 0.12f;
-
-    [SerializeField] private ChunkTilePaletteSO palette; // 材料到地块的映射。
-    [SerializeField] private Material material; // 平台专用接触阴影材质。
-
-    private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(4);
-    private WorldRuntime boundWorld;
+    [SerializeField] private ChunkTilePaletteSO palette;
+    [SerializeField] private Material material;
     private ChunkRuntime chunk;
     private ChunkTilemapRenderer owner;
-    private readonly List<IDisposable> neighbourChunkSubscriptions = new(4);
 
-    #endregion
-
-    #region 绑定与生命周期
-
-    /// <summary>注入当前世界，用于读取跨 Chunk 的相邻覆盖面。</summary>
-    public void SetWorld(WorldRuntime worldRuntime)
-    {
-        if (ReferenceEquals(boundWorld, worldRuntime))
-            return;
-
-        ClearNeighbourChunkSubscriptions();
-        boundWorld = worldRuntime;
-        SubscribeNeighbourChunkEvents();
-        RefreshNeighbourTerrainSubscriptions();
-    }
-
-    /// <summary>绑定区块并从持久化覆盖层重建表现。</summary>
     public void Bind(ChunkRuntime value)
     {
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
-        if (value.Terrain == null)
-            throw new InvalidOperationException("Cannot bind support rendering before terrain data is ready.");
-
         Unbind();
+        chunk = value ?? throw new ArgumentNullException(nameof(value));
         owner = GetComponent<ChunkTilemapRenderer>();
-        chunk = value;
-        SubscribeNeighbourChunkEvents();
+        if (chunk.Terrain == null || owner == null)
+            throw new InvalidOperationException("覆盖面缺少权威地形或 BRG Owner。");
         chunk.Terrain.Changed += HandleChanged;
-        chunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
-        owner.BatchPresentationRebuilt += HandleBatchPresentationRebuilt;
-        RefreshNeighbourTerrainSubscriptions();
+        owner.BatchPresentationRebuilt += RefreshAll;
         RefreshAll();
     }
 
-    /// <summary>取消订阅并清除回池区块的旧覆盖面。</summary>
     public void Unbind()
     {
-        if (chunk?.Terrain != null)
-        {
-            chunk.Terrain.Changed -= HandleChanged;
-            chunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
-        }
-        ClearNeighbourTerrainSubscriptions();
-        ClearNeighbourChunkSubscriptions();
+        if (chunk?.Terrain != null) chunk.Terrain.Changed -= HandleChanged;
         if (owner != null)
         {
-            owner.BatchPresentationRebuilt -= HandleBatchPresentationRebuilt;
-            if (chunk?.Terrain != null && owner.IsBatchPresentationRegistered)
-                for (int y = 0; y < chunk.Terrain.Height; y++)
-                for (int x = 0; x < chunk.Terrain.Width; x++)
-                {
-                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
-                    owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
-                }
+            owner.BatchPresentationRebuilt -= RefreshAll;
+            ChunkBatchRendererGroupService.ClearOwnerLayer(owner, ChunkBatchRendererGroupService.VisualLayer.Support);
         }
         chunk = null;
+        owner = null;
     }
 
-    private void OnDestroy()
-    {
-        Unbind();
-        ClearNeighbourChunkSubscriptions();
-        boundWorld = null;
-    }
+    private void OnDestroy() => Unbind();
 
     #endregion
 
-    #region 覆盖面绘制
+    #region 本体绘制
 
-    /// <summary>BRG Owner 重建后补回平台覆盖。</summary>
-    private void HandleBatchPresentationRebuilt() => RefreshAll();
-
-    /// <summary>支撑层改变时同步自身和四邻格的外轮廓。</summary>
     private void HandleChanged(ChunkTerrainChanged change)
     {
-        if ((change.Kind != TerrainChangeKind.Environment && change.Kind != TerrainChangeKind.Liquid) ||
-            chunk?.Terrain == null ||
-            change.Kind == TerrainChangeKind.Environment &&
-            !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
-            return;
-
+        if (!change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer)) return;
         int width = chunk.Terrain.Width;
-        foreach (int index in change.GetCellIndices(width))
-        {
-            int x = index % width;
-            int y = index / width;
-            Refresh(x, y);
-            Refresh(x - 1, y);
-            Refresh(x + 1, y);
-            Refresh(x, y - 1);
-            Refresh(x, y + 1);
-        }
+        foreach (int index in change.GetCellIndices(width)) Refresh(index % width, index / width);
     }
 
-    /// <summary>批量液深变化只更新本格的平台水上阴影，不依赖其他环境写入唤醒。</summary>
-    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged change)
-    {
-        if (chunk?.Terrain == null || !ReferenceEquals(change.Terrain, chunk.Terrain))
-            return;
-        foreach (int index in change.CellIndices.Span)
-            Refresh(index % change.Terrain.Width, index / change.Terrain.Width);
-    }
-
-    /// <summary>重建当前 Chunk 的覆盖面和外露边缘遮罩。</summary>
     private void RefreshAll()
     {
-        if (chunk?.Terrain == null)
-            return;
-
-        for (int y = 0; y < chunk.Terrain.Height; y++)
+        if (chunk?.Terrain == null) return;
+        ChunkBatchRendererGroupService.BeginBulkSubmit();
+        try
+        {
+            for (int y = 0; y < chunk.Terrain.Height; y++)
             for (int x = 0; x < chunk.Terrain.Width; x++)
                 Refresh(x, y);
+        }
+        finally { ChunkBatchRendererGroupService.EndBulkSubmit(); }
     }
 
-    /// <summary>按稳定地块 ID 选择覆盖外观，并只保留整体外围的接触阴影。</summary>
     private void Refresh(int x, int y)
     {
-        if (chunk?.Terrain == null ||
-            x < 0 || x >= chunk.Terrain.Width || y < 0 || y >= chunk.Terrain.Height)
-        {
-            return;
-        }
-
         int id = TerrainSupportLayer.GetTileId(chunk.Terrain, x, y);
-        if (id == 0 || !palette.TryGetVisual(id, out Sprite sprite, out Color color,
-                out Matrix4x4 tileTransform))
+        if (id == 0 || !palette.TryGetVisual(id, out Sprite sprite, out Color color, out Matrix4x4 transform))
         {
-            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
             owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y);
             return;
         }
-
         Int2 origin = chunk.Address.ChunkOrigin;
-        float centerX = origin.X + x + 0.5f;
-        float centerY = origin.Y + y + 0.5f;
-        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(centerX, centerY)) * tileTransform;
-        Color mask = BuildPerimeterMask(chunk.Terrain, x, y);
-        bool isWaterPlatform = chunk.Terrain.GetLiquidDepth(x, y) > 0.001f;
-        Vector4 bodyMask = isWaterPlatform
-            ? Vector4.zero
-            : new Vector4(mask.r, mask.g, mask.b, mask.a);
+        Matrix4x4 matrix = Matrix4x4.Translate(new Vector3(origin.X + x + .5f, origin.Y + y + .5f)) * transform;
         owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.Support, x, y,
-            sprite, material, matrix, color, bodyMask, Vector4.zero);
-
-        if (!isWaterPlatform)
-        {
-            owner.ClearLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y);
-            return;
-        }
-
-        Matrix4x4 shadowMatrix = matrix;
-        float shadowScale = 1f + WaterPlatformShadowExtent * 2f;
-        shadowMatrix.m00 *= shadowScale;
-        shadowMatrix.m01 *= shadowScale;
-        shadowMatrix.m10 *= shadowScale;
-        shadowMatrix.m11 *= shadowScale;
-        owner.SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer.SupportShadow, x, y,
-            sprite, material, shadowMatrix, Color.white,
-            new Vector4(mask.r, mask.g, mask.b, mask.a),
-            new Vector4(centerX, centerY, WaterPlatformShadowExtent, 0f));
-    }
-
-    /// <summary>RGBA 分别表示左、右、下、上是否属于平台整体的外露边缘。</summary>
-    private Color BuildPerimeterMask(ChunkTerrainData terrain, int x, int y)
-    {
-        return new Color(
-            HasSupport(terrain, x - 1, y) ? 0f : 1f,
-            HasSupport(terrain, x + 1, y) ? 0f : 1f,
-            HasSupport(terrain, x, y - 1) ? 0f : 1f,
-            HasSupport(terrain, x, y + 1) ? 0f : 1f);
-    }
-
-    /// <summary>任意覆盖地块都视为同一高度的连接面，不在材质交界处制造凹陷阴影。</summary>
-    private bool HasSupport(ChunkTerrainData terrain, int x, int y)
-    {
-        return TryGetSupportTileId(terrain, x, y, out int tileId) && tileId != 0;
-    }
-
-    /// <summary>读取本 Chunk 或正交相邻 Chunk 的覆盖层。</summary>
-    private bool TryGetSupportTileId(ChunkTerrainData terrain, int x, int y, out int tileId)
-    {
-        tileId = 0;
-        if (x >= 0 && x < terrain.Width && y >= 0 && y < terrain.Height)
-        {
-            tileId = TerrainSupportLayer.GetTileId(terrain, x, y);
-            return true;
-        }
-
-        if (boundWorld == null || chunk == null)
-            return false;
-
-        Int2 origin = chunk.Address.ChunkOrigin;
-        int targetOriginX = origin.X;
-        int targetOriginY = origin.Y;
-        int localX = x;
-        int localY = y;
-        if (x < 0)
-            targetOriginX -= terrain.Width;
-        else if (x >= terrain.Width)
-            targetOriginX += terrain.Width;
-        if (y < 0)
-            targetOriginY -= terrain.Height;
-        else if (y >= terrain.Height)
-            targetOriginY += terrain.Height;
-
-        var address = new FlatWorld.WorldModel.WorldAddress(
-            chunk.Address.DimensionId, new Int2(targetOriginX, targetOriginY));
-        if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
-            return false;
-
-        if (localX < 0)
-            localX += neighbourTerrain.Width;
-        else if (localX >= terrain.Width)
-            localX -= terrain.Width;
-        if (localY < 0)
-            localY += neighbourTerrain.Height;
-        else if (localY >= terrain.Height)
-            localY -= terrain.Height;
-        if (localX < 0 || localX >= neighbourTerrain.Width ||
-            localY < 0 || localY >= neighbourTerrain.Height)
-        {
-            return false;
-        }
-
-        tileId = TerrainSupportLayer.GetTileId(neighbourTerrain, localX, localY);
-        return true;
-    }
-
-    #endregion
-
-    #region 相邻 Chunk 同步
-
-    /// <summary>相邻 Chunk 就绪后重新建立边界订阅并刷新共享边。</summary>
-    private void HandleChunkCommitted(ChunkCommitted committed)
-    {
-        if (chunk?.Terrain == null ||
-            !string.Equals(committed.Address.DimensionId, chunk.Address.DimensionId, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        ChunkTerrainData terrain = chunk.Terrain;
-        Int2 origin = chunk.Address.ChunkOrigin;
-        Int2 changed = committed.Address.ChunkOrigin;
-        Vector2Int delta = WorldTopologyRuntime.ShortestDelta(
-            new Vector2Int(origin.X, origin.Y), new Vector2Int(changed.X, changed.Y));
-        int deltaX = delta.x;
-        int deltaY = delta.y;
-        bool orthogonalNeighbour =
-            (Math.Abs(deltaX) == terrain.Width && deltaY == 0) ||
-            (Math.Abs(deltaY) == terrain.Height && deltaX == 0);
-        if (!orthogonalNeighbour)
-            return;
-
-        RefreshNeighbourTerrainSubscriptions();
-        if (deltaX < 0)
-            RefreshVerticalEdge(0);
-        else if (deltaX > 0)
-            RefreshVerticalEdge(terrain.Width - 1);
-        else if (deltaY < 0)
-            RefreshHorizontalEdge(0);
-        else
-            RefreshHorizontalEdge(terrain.Height - 1);
-    }
-
-    private void SubscribeNeighbourChunkEvents()
-    {
-        ClearNeighbourChunkSubscriptions();
-        if (boundWorld == null || chunk?.Terrain == null) return;
-        Int2 origin = chunk.Address.ChunkOrigin;
-        var unique = new HashSet<FlatWorld.WorldModel.WorldAddress>();
-        Vector2Int[] offsets =
-        {
-            new(-chunk.Terrain.Width, 0), new(chunk.Terrain.Width, 0),
-            new(0, -chunk.Terrain.Height), new(0, chunk.Terrain.Height)
-        };
-        foreach (Vector2Int offset in offsets)
-        {
-            Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(
-                new Vector2Int(origin.X + offset.x, origin.Y + offset.y));
-            var address = new FlatWorld.WorldModel.WorldAddress(chunk.Address.DimensionId,
-                new Int2(canonical.x, canonical.y));
-            if (address == chunk.Address || !unique.Add(address)) continue;
-            neighbourChunkSubscriptions.Add(boundWorld.Events.SubscribeChunkCommitted(
-                address, HandleChunkCommitted));
-        }
-    }
-
-    private void ClearNeighbourChunkSubscriptions()
-    {
-        for (int i = 0; i < neighbourChunkSubscriptions.Count; i++)
-            neighbourChunkSubscriptions[i].Dispose();
-        neighbourChunkSubscriptions.Clear();
-    }
-
-    /// <summary>订阅四个正交相邻区块，覆盖面变化时同步共享边阴影。</summary>
-    private void RefreshNeighbourTerrainSubscriptions()
-    {
-        ClearNeighbourTerrainSubscriptions();
-        if (boundWorld == null || chunk?.Terrain == null)
-            return;
-
-        ChunkTerrainData terrain = chunk.Terrain;
-        SubscribeNeighbourTerrain(-terrain.Width, 0);
-        SubscribeNeighbourTerrain(terrain.Width, 0);
-        SubscribeNeighbourTerrain(0, -terrain.Height);
-        SubscribeNeighbourTerrain(0, terrain.Height);
-    }
-
-    private void SubscribeNeighbourTerrain(int offsetX, int offsetY)
-    {
-        Int2 origin = chunk.Address.ChunkOrigin;
-        Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
-            origin.X + offsetX, origin.Y + offsetY));
-        var address = new FlatWorld.WorldModel.WorldAddress(chunk.Address.DimensionId,
-            new Int2(canonical.x, canonical.y));
-        if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
-            return;
-
-        Action<ChunkTerrainChanged> handler = change =>
-            HandleNeighbourTerrainChanged(neighbourTerrain, offsetX, offsetY, change);
-        neighbourTerrain.Changed += handler;
-        neighbourTerrainSubscriptions.Add(new NeighbourTerrainSubscription(neighbourTerrain, handler));
-    }
-
-    /// <summary>邻区共享边支撑状态改变时，只刷新当前 Chunk 对应的一个边缘格。</summary>
-    private void HandleNeighbourTerrainChanged(
-        ChunkTerrainData neighbourTerrain,
-        int offsetX,
-        int offsetY,
-        ChunkTerrainChanged change)
-    {
-        if (chunk?.Terrain == null || !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
-            return;
-
-        foreach (int index in change.GetCellIndices(neighbourTerrain.Width))
-        {
-            int x = index % neighbourTerrain.Width;
-            int y = index / neighbourTerrain.Width;
-            if (offsetX < 0 && x == neighbourTerrain.Width - 1)
-                Refresh(0, y);
-            else if (offsetX > 0 && x == 0)
-                Refresh(chunk.Terrain.Width - 1, y);
-            else if (offsetY < 0 && y == neighbourTerrain.Height - 1)
-                Refresh(x, 0);
-            else if (offsetY > 0 && y == 0)
-                Refresh(x, chunk.Terrain.Height - 1);
-        }
-    }
-
-    private void RefreshVerticalEdge(int x)
-    {
-        for (int y = 0; y < chunk.Terrain.Height; y++)
-            Refresh(x, y);
-    }
-
-    private void RefreshHorizontalEdge(int y)
-    {
-        for (int x = 0; x < chunk.Terrain.Width; x++)
-            Refresh(x, y);
-    }
-
-    private void ClearNeighbourTerrainSubscriptions()
-    {
-        for (int i = 0; i < neighbourTerrainSubscriptions.Count; i++)
-        {
-            NeighbourTerrainSubscription subscription = neighbourTerrainSubscriptions[i];
-            subscription.Terrain.Changed -= subscription.Handler;
-        }
-        neighbourTerrainSubscriptions.Clear();
-    }
-
-    private readonly struct NeighbourTerrainSubscription
-    {
-        public NeighbourTerrainSubscription(ChunkTerrainData terrain, Action<ChunkTerrainChanged> handler)
-        {
-            Terrain = terrain;
-            Handler = handler;
-        }
-
-        public ChunkTerrainData Terrain { get; }
-        public Action<ChunkTerrainChanged> Handler { get; }
+            sprite, material, matrix, color);
     }
 
     #endregion

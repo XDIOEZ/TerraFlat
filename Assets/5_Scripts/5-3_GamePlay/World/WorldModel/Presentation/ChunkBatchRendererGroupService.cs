@@ -26,7 +26,7 @@ internal static class ChunkBatchRendererGroupService
         Back,
         Ground,
         Water,
-        SupportShadow,
+        TerrainHeightShadow,
         Support,
         Environment,
         Snow,
@@ -126,6 +126,17 @@ internal static class ChunkBatchRendererGroupService
     /// <summary>草花与区块共用本机镜像，避免由后续补绘相机覆盖已绘制的角色。</summary>
     internal static void RefreshOwnerProjection(ChunkTilemapRenderer owner)
         => backend?.RefreshOwnerProjection(owner);
+
+    /// <summary>地形 Mesh 与扩展 BRG 使用相同队列，阴影始终位于覆盖面和雪之上、墙体之下。</summary>
+    internal static int GetLayerRenderQueue(VisualLayer layer)
+    {
+        WorldRenderingConfig config = WorldRenderingConfigCatalog.Default;
+        string name = layer.ToString();
+        foreach (WorldRenderingConfig.BatchSortingProfile profile in config.sorting.batchProfiles)
+            if (profile != null && string.Equals(profile.visualLayer, name, StringComparison.Ordinal))
+                return config.sorting.batchRenderQueueBase + profile.renderQueueOffset;
+        throw new InvalidOperationException($"世界渲染配置缺少 BRG 图层 {name} 的排序配置。");
+    }
 
     /// <summary>
     /// 世界窗口彻底关闭后再释放空闲后端。
@@ -258,7 +269,7 @@ internal static class ChunkBatchRendererGroupService
         private readonly HashSet<int> warnedMissingOwnerIds = new();
         private readonly Material spriteTemplate;
         private readonly Material contactTemplate;
-        private readonly Material supportShadowTemplate;
+        private readonly Material terrainHeightShadowTemplate;
         private readonly Material waterTemplate;
         private long cullingCallbackCount;
         private int lastCullingCommandCount;
@@ -270,7 +281,7 @@ internal static class ChunkBatchRendererGroupService
             ValidateBatchSortingProfiles();
             spriteTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
             contactTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Contact-Lit");
-            supportShadowTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Support-Shadow");
+            terrainHeightShadowTemplate = LoadTemplate("Config/WorldModel/BRG/TerrainHeightShadow");
             waterTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Water-Lit");
             rendererGroup = new BatchRendererGroup(OnPerformCulling, IntPtr.Zero);
             GroundElevationShadowSettings.Changed += ApplyGroundElevationPreference;
@@ -352,7 +363,8 @@ internal static class ChunkBatchRendererGroupService
         }
 
         private static bool UsesOwnerProjection(VisualLayer layer)
-            => layer == VisualLayer.Grass || layer == VisualLayer.GroundCover;
+            => layer == VisualLayer.Grass || layer == VisualLayer.GroundCover ||
+               layer == VisualLayer.TerrainHeightShadow || layer == VisualLayer.Support;
 
         public bool IsOwnerRegistered(ChunkTilemapRenderer owner)
         {
@@ -646,7 +658,7 @@ internal static class ChunkBatchRendererGroupService
             Material template = layer switch
             {
                 VisualLayer.Ground or VisualLayer.Support => contactTemplate,
-                VisualLayer.SupportShadow => supportShadowTemplate,
+                VisualLayer.TerrainHeightShadow => terrainHeightShadowTemplate,
                 VisualLayer.Water => waterTemplate,
                 _ => spriteTemplate
             };
@@ -680,7 +692,7 @@ internal static class ChunkBatchRendererGroupService
             if (layer == VisualLayer.NaturalStatic || layer == VisualLayer.NaturalShadow)
                 runtimeMaterial.EnableKeyword("_CHUNK_RESOURCE");
             else runtimeMaterial.DisableKeyword("_CHUNK_RESOURCE");
-            if (layer == VisualLayer.Ground)
+            if (layer == VisualLayer.TerrainHeightShadow)
                 ApplyGroundElevationPreference(runtimeMaterial);
             BatchMaterialID id = rendererGroup.RegisterMaterial(runtimeMaterial);
             registration = new MaterialRegistration(runtimeMaterial, id, layer);
@@ -695,7 +707,7 @@ internal static class ChunkBatchRendererGroupService
             {
                 foreach (MaterialRegistration registration in materials.Values)
                 {
-                    if (registration.Layer == VisualLayer.Ground)
+                    if (registration.Layer == VisualLayer.TerrainHeightShadow)
                         ApplyGroundElevationPreference(registration.Material);
                 }
             }

@@ -1,4 +1,49 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+for _, row in ipairs({
+    { args = {}, level = 11, neighbour = 11, inner = 0, outer = 0, label = "同高异材质不画边" },
+    { args = { support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "木地板与普通地面齐平" },
+    { args = { depth = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "挖掉第一层后向内凹" },
+    { args = { depth = 2 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "每挖一层继续降低" },
+    { args = { depth = 6 }, level = 5, neighbour = 11, inner = 6, outer = 0, label = "五层石头及土层采尽后基岩最低" },
+    { args = { minimumDepth = 5 }, level = 6, neighbour = 11, inner = 5, outer = 0, label = "基岩底材至少向内凹五层" },
+    { args = { depth = 6, neighbourDepth = 6 }, level = 5, neighbour = 5, inner = 0, outer = 0, label = "成片基岩内部没有接缝阴影" },
+    { args = { neighbourDepth = 1 }, level = 11, neighbour = 10, inner = 0, outer = 1, label = "较高地块只向外侧投影" },
+    { args = { depth = 6, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "地板跨过挖坑回到地面齐平" },
+    { args = { depth = 2, covers = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "填土只回填一层" },
+    { args = { covers = 1 }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "额外填高后向外投影" },
+    { args = { liquid = true }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "岸边只向较低水面投影" },
+    { args = { liquid = true, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "水上平台表面仍与岸边齐平" },
+    { args = { depth = 1, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴忽略生成海拔但保留采挖高差" },
+    { args = { missingHeight = true }, level = 0, neighbour = 0, inner = 0, outer = 0, label = "缺失高度回退平地" },
+    { args = { height = 1 }, level = 19, neighbour = 19, inner = 0, outer = 0, label = "最高生成高度不会溢出档位" }
+}) do
+    test.system("rendering", "terrain_height", row.args, function(data)
+        assert(data.level == row.level and data.neighbour == row.neighbour, "统一表面高度错误")
+        assert(data.inner == row.inner and data.outer == row.outer, "阴影没有只落在较低一侧")
+        assert(not data.outside, "未知邻格被伪造成有效高度")
+        if row.args.liquid then assert(data.waterLevel == 5, "高度查询改变了权威水量") end
+    end, "地表高低阴影：" .. row.label)
+end
+
+test.system("rendering", "terrain_height", { wall = true }, function(data)
+    assert(data.top == 12 and data.inner == 1, "墙脚没有通过统一顶部高度向周围投影")
+    assert(not data.neighbourReceiver and data.outer == 0, "墙体错误接收贴地阴影")
+end, "墙脚接入同一套高低阴影规则")
+
+test.system("rendering", "terrain_height_save", {}, function(data)
+    assert(data.resourceDepth == 5 and data.surfaceDepth == 6 and data.savedDepth == 6,
+        "地表深度与五层石头产量混用，或保存恢复丢失新高度层")
+    assert(data.level == 5 and math.abs(data.rawHeight - 0.55) < 0.0001, "采挖高差污染生成高度")
+    assert(data.negativeRejected, "非法负采挖深度没有被拒绝")
+end, "地表高低层保存恢复且不改生成高度和石头产量")
+
+test.system("rendering", "terrain_height_neighbours", {}, function(data)
+    assert(not data.missing and data.available and data.initial == 0, "缺失或刚加载的邻区高度查询错误")
+    assert(data.changed and data.lowered == -3, "跨区块查询没有立即读取新的采挖深度")
+    assert(data.evicted and not data.afterEviction, "邻区卸载后仍返回旧高度")
+    assert(data.reloaded and data.restored == 0, "邻区重载后复用了旧高度缓存")
+end, "跨区块高低查询跟随邻区加载、采挖、卸载与重载")
+
 test.system("rendering", "fog_config", {}, function(data)
     assert(data.valid, "合法雾配置被拒绝")
 end, "大雾合法配置")

@@ -218,6 +218,8 @@ public static class GroundTileHarvestSystem
             }
             else
             {
+                TerrainSurfaceHeightLayer.SetExcavatedLevels(sample.Terrain, local.x, local.y,
+                    Math.Max(previousLayers.ExcavatedSurfaceLevels, definition.MinimumSurfaceDepth) + 1);
                 if (rule.NaturalLayerCount > 1)
                     GroundTileLayerSystem.WriteDepth(sample.Terrain, local, previousLayers.ExcavatedLayers + 1);
                 sample.Terrain.SetCell(local.x, local.y, new TerrainCell(

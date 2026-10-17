@@ -508,7 +508,8 @@ public static class GameplayTestActorWorldRuntimeProbe
             Sample = sample;
             Original = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
             OriginalLayers = GroundTileLayerSystem.Capture(sample.Terrain, sample.LocalCell);
-            if (OriginalLayers.Covers.Count != 0 || OriginalLayers.ExcavatedLayers != 0)
+            if (OriginalLayers.Covers.Count != 0 || OriginalLayers.ExcavatedLayers != 0 ||
+                OriginalLayers.ExcavatedSurfaceLevels != 0)
                 throw new InvalidOperationException("地形生态测试要求天然空地，拒绝覆盖先前案例的地层修改。");
             OriginalDamage = GroundTileHarvestSystem.ReadProgress(sample);
             OriginalLiquidDepth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);

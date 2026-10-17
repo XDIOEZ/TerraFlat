@@ -15,6 +15,7 @@ public static class SharedSpriteMeshCache
     private static readonly Dictionary<Sprite, Mesh> meshes = new();
     private static readonly Dictionary<Sprite, Geometry> geometries = new();
     private static readonly Dictionary<Sprite, SunShadowGeometry> sunShadowGeometries = new();
+    private static Sprite terrainShadowCell;
     internal const float SunShadowPaddingPixels = 5f; // 覆盖最大四像素模糊半径与半像素线性过滤边界。
     private const float SunShadowReferencePixelsPerUnit = 16f; // 阴影柔化按世界像素密度归一，避免高分辨率 Sprite 变成硬边。
 
@@ -58,6 +59,18 @@ public static class SharedSpriteMeshCache
     internal static bool IsSessionEnding => sessionEnding;
     /// <summary>当前会话已构造的唯一网格数。</summary>
     public static int Count => meshes.Count;
+
+    /// <summary>所有地块阴影共用一张完整格子，材质和网格不随地块贴图分批。</summary>
+    internal static Sprite GetTerrainShadowCell()
+    {
+        if (terrainShadowCell != null) return terrainShadowCell;
+        Texture2D texture = Texture2D.whiteTexture;
+        terrainShadowCell = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
+            new Vector2(.5f, .5f), texture.width, 0, SpriteMeshType.FullRect);
+        terrainShadowCell.name = "TerrainHeightShadowCell";
+        terrainShadowCell.hideFlags = HideFlags.HideAndDontSave;
+        return terrainShadowCell;
+    }
 
     /// <summary>命中时不读取 Sprite 数组；未预热的动态 Sprite 在此构造一次。</summary>
     public static Mesh GetOrCreate(Sprite sprite)
@@ -228,7 +241,20 @@ public static class SharedSpriteMeshCache
             meshes.Clear();
             geometries.Clear();
             sunShadowGeometries.Clear();
-            clearing = false;
+            try
+            {
+                if (terrainShadowCell != null)
+                {
+                    if (immediate || !Application.isPlaying) UnityEngine.Object.DestroyImmediate(terrainShadowCell);
+                    else UnityEngine.Object.Destroy(terrainShadowCell);
+                }
+            }
+            catch (Exception exception) { Debug.LogException(exception); }
+            finally
+            {
+                terrainShadowCell = null;
+                clearing = false;
+            }
         }
     }
 

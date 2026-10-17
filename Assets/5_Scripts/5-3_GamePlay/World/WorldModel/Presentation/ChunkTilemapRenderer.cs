@@ -46,8 +46,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private ChunkGroundMeshRenderer backMesh;
     private ChunkGroundMeshRenderer blockingMesh;
     private readonly List<IDisposable> neighbourChunkEventSubscriptions = new(16);
-    private bool renderGroundElevation; // 只有使用 Surface 生成语义的维度显示高度。
-    private bool caveContactShadows; // 区块维度在绑定时固定，逐格阴影不重复查询目录。
     private bool batchPresentationComplete;
     private bool batchBindingInProgress;
     private const int BaseCellsPerStep = 64;
@@ -134,8 +132,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             boundResources = GameRes.ExistingInstance;
             if (boundResources != null) boundResources.ResourcesReloaded += HandleResourcesReloaded;
             WaterVisualSettings.Changed += HandleWaterVisualStyleChanged;
-            renderGroundElevation = IsSurfaceDimension(chunk.Address.DimensionId);
-            caveContactShadows = IsCaveDimension(chunk.Address.DimensionId);
+
             boundChunk.Terrain.Changed += HandleTerrainChanged;
             boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
             WorldLiquidFlowExperiment.FlowChanged += HandleLiquidFlowChanged;
@@ -292,8 +289,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         blockingMesh = null;
         using (BatchOwnerUnregisterMarker.Auto())
             ChunkBatchRendererGroupService.UnregisterOwner(this);
-        renderGroundElevation = false;
-        caveContactShadows = false;
+
         boundChunk = null;
     }
 
@@ -301,8 +297,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private void HandleResourcesReloaded()
     {
         if (boundChunk?.Terrain == null) return;
-        renderGroundElevation = IsSurfaceDimension(boundChunk.Address.DimensionId);
-        caveContactShadows = IsCaveDimension(boundChunk.Address.DimensionId);
+
         if (InvalidateBindingVisuals()) { ResetMechanicalVisualCache(); return; }
         if (!batchPresentationComplete) return;
         ClearDepthPresentation();
@@ -889,7 +884,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         {
             SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
                 cell.GroundTileId, groundMaterial,
-                BuildBatchGroundContactMask(terrain, x, y, cell), Vector4.zero);
+                Vector4.zero, Vector4.zero);
         }
         else
         {
@@ -979,17 +974,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         };
         if (mesh == null)
             throw new InvalidOperationException($"基础地形 {layer} 的 Chunk Mesh 未创建。");
-        float height = -1f;
-        Vector4 neighbours = Vector4.zero;
-        if (layer == ChunkBatchRendererGroupService.VisualLayer.Ground)
-        {
-            var elevation = default(ChunkBatchRendererGroupService.InstanceData);
-            SetGroundElevationData(terrain, x, y, ref elevation);
-            height = elevation.Transform0.w;
-            neighbours = elevation.Data1;
-        }
         if (!mesh.TrySetCell(x, y, sprite, tileColor, tileTransform,
-                data0, height, neighbours))
+                data0, -1f, Vector4.zero))
             throw new InvalidOperationException($"基础地形 {layer} 不能提交非四角 Sprite：{sprite.name}");
     }
 
@@ -1279,21 +1265,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
 
     #endregion
 
-    private Vector4 BuildBatchGroundContactMask(ChunkTerrainData terrain, int x, int y, TerrainCell cell)
-    {
-        if (caveContactShadows)
-        {
-            bool receivesShadow = !IsBlocking(cell) && terrain.GetLiquidDepth(x, y) <= 0f;
-            return receivesShadow ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Wall) : Vector4.zero;
-        }
-
-        if (terrain.GetLiquidDepth(x, y) > 0f)
-            return (Vector4)BuildContactMask(terrain, x, y, ContactKind.Land);
-        return !IsStone(cell)
-            ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Stone)
-            : Vector4.zero;
-    }
-
     /// <summary>RGBA 依次保存左下、右下、左上、右上格角的连续水深。</summary>
     private Vector4 BuildLiquidDepthCorners(ChunkTerrainData terrain, int x, int y)
     {
@@ -1318,55 +1289,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     #endregion
 
     #region BRG Shader 数据
-
-    #region 地表高度分层
-
-    /// <summary>当前高度放 Transform0.w，左、右、下、上邻高放 Data1，保持实例布局与 Contact 数据不变。</summary>
-    private void SetGroundElevationData(ChunkTerrainData terrain, int x, int y,
-        ref ChunkBatchRendererGroupService.InstanceData instanceData)
-    {
-        instanceData.Transform0.w = -1f;
-        instanceData.Data1 = Vector4.zero;
-        if (!renderGroundElevation || !TryGetGroundHeight(terrain, x, y, out float height))
-            return;
-
-        instanceData.Transform0.w = height;
-        instanceData.Data1 = new Vector4(
-            ResolveNeighbourGroundHeight(terrain, x - 1, y, height),
-            ResolveNeighbourGroundHeight(terrain, x + 1, y, height),
-            ResolveNeighbourGroundHeight(terrain, x, y - 1, height),
-            ResolveNeighbourGroundHeight(terrain, x, y + 1, height));
-    }
-
-    /// <summary>缺失邻区、无地面、无合法高度或有液体时回退到当前高度，避免假悬崖与重复水岸边。</summary>
-    private float ResolveNeighbourGroundHeight(ChunkTerrainData terrain, int x, int y, float currentHeight)
-    {
-        return TryResolveTerrainCell(terrain, x, y, out ChunkTerrainData neighbour,
-                   out int neighbourX, out int neighbourY, out _) &&
-               TryGetGroundHeight(neighbour, neighbourX, neighbourY, out float height)
-            ? height : currentHeight;
-    }
-
-    /// <summary>只读取真实干燥 Ground 的有限 0～1 高度；不按 Tile ID 或旧 Water 标记推断水格。</summary>
-    private static bool TryGetGroundHeight(ChunkTerrainData terrain, int x, int y, out float height)
-    {
-        height = -1f;
-        return terrain.GetCell(x, y).GroundTileId != 0 && terrain.GetLiquidDepth(x, y) <= 0f &&
-               terrain.TryGetEnvironmentValue("height", x, y, out height) &&
-               !float.IsNaN(height) && !float.IsInfinity(height) && height >= 0f && height <= 1f;
-    }
-
-    /// <summary>通过维度目录支持 MOD 的 Surface 维度；未知维度只有正式 surface 标识可启用。</summary>
-    private static bool IsSurfaceDimension(string dimensionId)
-    {
-        if (DimensionManager.Instance != null &&
-            DimensionManager.Instance.TryGetDefinition(dimensionId, out DimensionDefinition definition))
-            return definition.GenerationMode == DimensionGenerationMode.Surface;
-
-        return string.Equals(dimensionId, WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
 
     /// <summary>共享格角插值维持弯道与 Chunk 接缝连续；只上传实例数据，不创建水格对象。</summary>
     private void SetWaterCurrentData(ChunkTerrainData terrain, int x, int y,
@@ -1538,16 +1460,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         return terrain.GetLiquidDepth(x, y);
     }
 
-    /// <summary>RGBA 分别表示左、右、下、上是否需要绘制接触阴影。</summary>
-    private Color BuildContactMask(ChunkTerrainData terrain, int x, int y, ContactKind kind)
-    {
-        return new Color(
-            IsContactNeighbour(terrain, x - 1, y, kind) ? 1f : 0f,
-            IsContactNeighbour(terrain, x + 1, y, kind) ? 1f : 0f,
-            IsContactNeighbour(terrain, x, y - 1, kind) ? 1f : 0f,
-            IsContactNeighbour(terrain, x, y + 1, kind) ? 1f : 0f);
-    }
-
     private bool IsContactNeighbour(ChunkTerrainData terrain, int x, int y, ContactKind kind)
     {
         if (!TryResolveTerrainCell(terrain, x, y, out ChunkTerrainData neighbourTerrain,
@@ -1555,9 +1467,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return false;
         return kind switch
         {
-            ContactKind.Wall => IsBlocking(neighbour),
             ContactKind.Land => neighbourTerrain.GetLiquidDepth(neighbourX, neighbourY) <= 0f,
-            ContactKind.Stone => IsStone(neighbour),
             _ => false
         };
     }
@@ -1618,31 +1528,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         return true;
     }
 
-    private static bool IsCaveDimension(string dimensionId)
-    {
-        if (DimensionManager.Instance != null &&
-            DimensionManager.Instance.TryGetDefinition(dimensionId,
-                out DimensionDefinition definition))
-        {
-            return definition.GenerationMode == DimensionGenerationMode.Cave;
-        }
-
-        return string.Equals(dimensionId, "cave", StringComparison.OrdinalIgnoreCase);
-    }
-
-
     private static bool IsBlocking(TerrainCell cell) =>
         cell.BlockingTileId != 0 && (cell.Flags & TerrainCellFlags.Blocking) != 0;
 
-    /// <summary>通过稳定群系编号识别地表石地，避免依赖可变的 TileId 配置。</summary>
-    private static bool IsStone(TerrainCell cell) =>
-        cell.BiomeId == (int)SurfaceBiomeKind.Stone;
-
     private enum ContactKind
     {
-        Wall,
-        Land,
-        Stone
+        Land
     }
 
     private readonly struct NeighbourTerrainSubscription

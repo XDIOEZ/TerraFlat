@@ -61,8 +61,6 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             ? "FlatWorld/2D/Chunk Mesh Water Lit"
             : "FlatWorld/2D/Chunk Mesh Contact Lit");
         cellGroups = new Group[width * height];
-        if (layer == ChunkBatchRendererGroupService.VisualLayer.Ground)
-            GroundElevationShadowSettings.Changed += RefreshElevationMaterials;
     }
 
     public bool IsAvailable => shader != null &&
@@ -130,8 +128,6 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         if (groups.TryGetValue(key, out Group existing)) return existing;
         var group = new Group(parent, width, height, shader, material, texture, layer, singleQuad);
         groups.Add(key, group);
-        if (layer == ChunkBatchRendererGroupService.VisualLayer.Ground)
-            ApplyElevationMaterial(group.Material);
         return group;
     }
 
@@ -208,21 +204,8 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         public bool Valid => Corners != null && Uvs != null;
     }
 
-    private void RefreshElevationMaterials()
-    {
-        foreach (Group group in groups.Values)
-            ApplyElevationMaterial(group.Material);
-    }
-
-    private static void ApplyElevationMaterial(Material material)
-    {
-        material.SetFloat("_ElevationStrength", GroundElevationShadowSettings.Enabled ? 1f : 0f);
-        material.SetFloat("_ElevationEdgeWidth", GroundElevationShadowSettings.Width);
-    }
-
     public void Dispose()
     {
-        GroundElevationShadowSettings.Changed -= RefreshElevationMaterials;
         foreach (Group group in groups.Values) group.Dispose();
         groups.Clear();
         quads.Clear();
@@ -325,16 +308,9 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 mesh.bounds = new Bounds(new Vector3(width * 0.5f, height * 0.5f),
                     new Vector3(width + 6f, height + 6f, 2f));
             }
-            int renderPriority = layer switch
-            {
-                ChunkBatchRendererGroupService.VisualLayer.Back => -1,
-                ChunkBatchRendererGroupService.VisualLayer.Water => 1,
-                ChunkBatchRendererGroupService.VisualLayer.Snow => 3,
-                ChunkBatchRendererGroupService.VisualLayer.Blocking => 4,
-                _ => 0
-            };
+            int renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(layer);
             Material = new Material(shader) { name = $"Chunk_{layer}_{texture.name}",
-                hideFlags = HideFlags.HideAndDontSave, renderQueue = 2988 + renderPriority };
+                hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue };
             Material.CopyPropertiesFromMaterial(sourceMaterial);
             Material.shaderKeywords = sourceMaterial.shaderKeywords;
             Material.SetTexture("_MainTex", texture);
@@ -345,7 +321,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 Material.EnableKeyword("FLATWORLD_CHUNK_CELL_BUFFER");
                 Material.SetBuffer("_ChunkCellData", groundCellBuffer);
             }
-            Material.renderQueue = 2988 + renderPriority;
+            Material.renderQueue = renderQueue;
             root ??= new GameObject($"{layer}Mesh_{texture.name}");
             root.transform.SetParent(parent, false);
             root.AddComponent<MeshFilter>().sharedMesh = mesh;

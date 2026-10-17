@@ -21,6 +21,7 @@ public static partial class GameplayTestSystemProbe
         RegisterNavigationOperations(result);
         RegisterEnvironmentBatchOperations(result);
         RegisterTestingOperations(result);
+        RegisterTerrainHeightShadowOperations(result);
         return result;
     }
 

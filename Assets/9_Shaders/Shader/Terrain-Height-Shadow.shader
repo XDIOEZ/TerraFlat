@@ -1,10 +1,14 @@
-// 水上平台使用扩大后的同一 Sprite 网格，只在原格子外侧绘制接触水面的阴影。
-Shader "FlatWorld/2D/Chunk BRG Support Shadow"
+// 所有地表高差只在较低一侧绘制，共享完整格子网格与同一份四向层差。
+Shader "FlatWorld/2D/Terrain Height Shadow"
 {
     Properties
     {
         [PerRendererData] _MainTex("Sprite Texture", 2D) = "white" {}
-        _ShadowColor("Shadow Color", Color) = (0.02, 0.025, 0.03, 0.58)
+        _ShadowColor("Shadow Color", Color) = (0.035, 0.022, 0.015, 1)
+        _ElevationStrength("Enabled", Range(0, 1)) = 1
+        _ElevationEdgeWidth("Width", Range(0.01, 0.45)) = 0.2
+        _ShadowStrength("Strength", Range(0, 1)) = 0.72
+        _DeltaForMaxStrength("Delta For Max Strength", Float) = 2
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
     }
@@ -12,7 +16,8 @@ Shader "FlatWorld/2D/Chunk BRG Support Shadow"
     SubShader
     {
         Tags { "Queue"="Transparent" "RenderType"="Transparent" "RenderPipeline"="UniversalPipeline" }
-        Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
+        // 乘到已受光的地表颜色上，夜里不会把暗地面反而染亮。
+        Blend DstColor Zero, Zero One
         Cull Off
         ZWrite Off
 
@@ -34,7 +39,6 @@ Shader "FlatWorld/2D/Chunk BRG Support Shadow"
             float2 uv : TEXCOORD0;
             float2 positionWS : TEXCOORD1;
             nointerpolation half4 edgeMask : TEXCOORD2;
-            nointerpolation float3 shadowData : TEXCOORD3;
             half4 tint : COLOR;
             UNITY_VERTEX_INPUT_INSTANCE_ID
         };
@@ -44,6 +48,10 @@ Shader "FlatWorld/2D/Chunk BRG Support Shadow"
             float4 _Color;
             float4 _RendererColor;
             float4 _ShadowColor;
+            float _ElevationStrength;
+            float _ElevationEdgeWidth;
+            float _ShadowStrength;
+            float _DeltaForMaxStrength;
         CBUFFER_END
 
         #if defined(UNITY_DOTS_INSTANCING_ENABLED)
@@ -65,7 +73,6 @@ Shader "FlatWorld/2D/Chunk BRG Support Shadow"
             output.uv = input.uv;
             output.positionWS = positionWS.xy;
             output.edgeMask = data.data0;
-            output.shadowData = data.data1.xyz;
             output.tint = input.color * data.tint;
             UNITY_TRANSFER_INSTANCE_ID(input, output);
             return output;
@@ -73,24 +80,13 @@ Shader "FlatWorld/2D/Chunk BRG Support Shadow"
 
         half4 ShadeShadow(Varyings input)
         {
-            float2 delta = input.positionWS - input.shadowData.xy;
-            float2 outside = abs(delta) - 0.5;
-            float outsideDistance = max(outside.x, outside.y);
-            clip(outsideDistance - 0.0001);
-
-            half sideMask = 0.0h;
-            if (outside.x > 0.0)
-                sideMask = max(sideMask, delta.x < 0.0 ? input.edgeMask.r : input.edgeMask.g);
-            if (outside.y > 0.0)
-                sideMask = max(sideMask, delta.y < 0.0 ? input.edgeMask.b : input.edgeMask.a);
-            clip(sideMask - 0.001h);
-
-            half sourceAlpha = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).a;
-            float extent = max(input.shadowData.z, 0.001);
-            half fade = 1.0h - smoothstep(0.0, extent, outsideDistance);
-            half alpha = sourceAlpha * input.tint.a * _Color.a * _RendererColor.a *
-                _ShadowColor.a * sideMask * fade;
-            return half4(_ShadowColor.rgb, alpha);
+            float4 distances = float4(input.uv.x, 1.0 - input.uv.x, input.uv.y, 1.0 - input.uv.y);
+            float4 edges = (1.0 - smoothstep(0.0, max(_ElevationEdgeWidth, 0.001), distances)) *
+                saturate(input.edgeMask / max(_DeltaForMaxStrength, 1.0));
+            half shadow = max(max(edges.x, edges.y), max(edges.z, edges.w));
+            half alpha = saturate(shadow * _ShadowStrength * _ElevationStrength) * input.tint.a *
+                _Color.a * _RendererColor.a * _ShadowColor.a;
+            return half4(lerp(half3(1, 1, 1), _ShadowColor.rgb, alpha), 0);
         }
         ENDHLSL
 

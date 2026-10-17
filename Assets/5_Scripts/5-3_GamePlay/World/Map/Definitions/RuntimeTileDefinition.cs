@@ -17,6 +17,7 @@ public sealed class RuntimeTileDefinition
     public string TileAssetId { get; }
     /// <summary>当前地表允许放置的最低承重需求上限。</summary>
     public int LoadCapacity { get; }
+    public int MinimumSurfaceDepth { get; }
     /// <summary>自然作物是否允许把该地块作为生长基质。</summary>
     public bool NaturalPlantable { get; }
     public TileBase TileBase { get; }
@@ -35,6 +36,7 @@ public sealed class RuntimeTileDefinition
         DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? dto.Id : dto.DisplayName;
         TileAssetId = dto.TileAsset;
         LoadCapacity = dto.LoadCapacity;
+        MinimumSurfaceDepth = dto.MinimumSurfaceDepth;
         NaturalPlantable = dto.NaturalPlantable;
         TileBase = tile;
         TileDataTemplate = template;
