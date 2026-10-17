@@ -24,6 +24,7 @@ namespace FlatWorld.Dialogue
             GameplayTestSystemProbe.Register("dialogue", "condition", CaptureCondition);
             GameplayTestSystemProbe.Register("dialogue", "config", CaptureConfiguration);
             GameplayTestSystemProbe.Register("dialogue", "builtin_locales", CaptureBuiltinLocales);
+            GameplayTestSystemProbe.Register("dialogue", "carry_weight_command", CaptureCarryWeightCommand);
         }
 
         #endregion
@@ -107,6 +108,45 @@ namespace FlatWorld.Dialogue
                 ["issues"] = loaded.Issues.Count,
                 ["incompleteIds"] = incompleteIds
             };
+        }
+
+        #endregion
+
+        #region 负重命令规则采样
+
+        /// <summary>调用正式解析与处理器，只构造未加载模块的临时玩家并采样拒绝后的原值。</summary>
+        private static JObject CaptureCarryWeightCommand(JObject args)
+        {
+            string[] arguments = args["arguments"] is JArray tokens
+                ? tokens.ToObject<string[]>()
+                : Array.Empty<string>();
+            bool parsed = PlayerCarryWeightChatCommand.TryParseWeight(arguments, out float weight);
+            GameObject root = new("负重命令规则采样") { hideFlags = HideFlags.HideAndDontSave };
+            root.SetActive(false);
+            Player player = root.AddComponent<Player>();
+            try
+            {
+                player.BindData(new Data_Player());
+                player.SetProfileContext(true, false, "carry_weight_rule");
+                PlayerCarryWeightChatCommand command = root.AddComponent<PlayerCarryWeightChatCommand>();
+                PlayerChatCommandResult result = command.Execute(new PlayerChatCommandContext(
+                    GameplayTestSystemProbe.Flag(args, "withPlayer", false) ? player : null,
+                    null, string.Empty, GameplayTestSystemProbe.Text(args, "command", "carryweight"), arguments));
+                return new JObject
+                {
+                    ["parsed"] = parsed,
+                    ["weight"] = parsed ? weight : 0f,
+                    ["handled"] = result.Handled,
+                    ["feedback"] = result.Feedback,
+                    ["playerWeight"] = player.Data.MaxCarryWeight,
+                    ["playerVolume"] = player.Data.MaxCarryVolume
+                };
+            }
+            finally
+            {
+                try { player.PrepareForDespawn(saveData: false); }
+                finally { UnityEngine.Object.DestroyImmediate(root); }
+            }
         }
 
         #endregion

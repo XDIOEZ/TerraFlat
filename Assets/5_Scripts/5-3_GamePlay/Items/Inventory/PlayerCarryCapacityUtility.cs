@@ -123,6 +123,52 @@ public static class PlayerCarryCapacityUtility
 
     #endregion
 
+    #region 本地负重上限调整
+
+    /// <summary>仅为本地权威玩家更新实际负重策略，保留体积、槽位和创造状态。</summary>
+    public static bool TrySetMaxWeight(Player player, float maxWeight, out string failureReason)
+    {
+        if (float.IsNaN(maxWeight) || float.IsInfinity(maxWeight) || maxWeight <= 0f)
+        {
+            failureReason = "负重上限必须是大于 0 的有限数字。";
+            return false;
+        }
+
+        if (player == null || !player.IsLocalProfile || player.Data == null)
+        {
+            failureReason = "当前本地玩家尚未就绪。";
+            return false;
+        }
+
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
+        {
+            failureReason = "该命令仅支持单机或主机的本地玩家，联机客户端不能修改负重上限。";
+            return false;
+        }
+
+        Inventory bag = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.GetDefaultTargetInventory();
+        if (bag?.Data == null || bag.item != player || !bag.Data.HasCarryCapacity)
+        {
+            failureReason = "玩家主背包尚未初始化。";
+            return false;
+        }
+
+        if (bag.Data.HasUnlimitedCarryCapacity)
+        {
+            failureReason = "当前背包处于创造状态，负重已经无限；未修改负重上限。";
+            return false;
+        }
+
+        player.Data.MaxCarryWeight = maxWeight;
+        bag.Data.SetCarryCapacity(maxWeight, bag.Data.MaxCarryVolume);
+        RefreshOverweightSlowdown(player);
+        bag.RefreshUI();
+        failureReason = string.Empty;
+        return true;
+    }
+
+    #endregion
+
     #region 超重状态
 
     /// <summary>依据玩家全部随身库存总重量维护来源型超重 Buff；体积超限不触发减速。</summary>
