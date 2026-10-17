@@ -403,12 +403,14 @@ MonoBehaviour:
   - surface.forest.twine
   - surface.forest.berry
   - surface.forest.stone
+  - surface.forest.oreStone
   - surface.forest.log
   - surface.forest.stick
   - surface.forest.leaf
   - surface.grassland.berry
   - surface.grassland.radish
   - surface.grassland.stick
+  - surface.grassland.oreStone
   - surface.grassland.stone
   - surface.river.oreStone
   - surface.grassland.flower
