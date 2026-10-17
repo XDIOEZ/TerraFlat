@@ -39,5 +39,12 @@ public sealed class CombatImpactEffectSet : ScriptableObject
         return null;
     }
 
+    /// <summary>资源预热只读取明确配置的特效，按 Prefab 去重。</summary>
+    public void CollectPrefabs(System.Collections.Generic.ISet<GameEffect> prefabs)
+    {
+        foreach (Entry entry in entries)
+            if (entry.Prefab != null) prefabs.Add(entry.Prefab);
+    }
+
     #endregion
 }

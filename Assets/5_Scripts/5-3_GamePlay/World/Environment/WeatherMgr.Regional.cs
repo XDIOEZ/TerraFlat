@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -56,10 +57,19 @@ public partial class WeatherMgr
     private readonly Dictionary<Int2, int> lightningSeen = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksLastStep = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksThisStep = new();
-    private float surfaceStepSeconds;
+    private readonly WeatherSurfaceWorkQueue surfaceWork = new();
+    private WorldRuntime surfaceWorkWorld;
+    private long surfaceWorkEpoch;
+    private int surfaceWorkFrame = -1;
+    private Action<ChunkRuntime, float, float, TemperatureMgr.AmbientChunkSnapshot> applySurfaceWork;
+    private const double SurfaceMillisecondsPerFrame = 2d;
     private static readonly ProfilerMarker RegionalAdvanceMarker = new("FlatWorld.Weather.AdvanceRegions");
     private static readonly ProfilerMarker SurfaceAdvanceMarker = new("FlatWorld.Weather.AdvanceSurface");
     private LightningEffectController lightningEffect;
+
+    // 缓存委托，正常排队和逐帧结算不产生闭包。
+    private Action<ChunkRuntime, float, float, TemperatureMgr.AmbientChunkSnapshot> SurfaceWorkHandler =>
+        applySurfaceWork ??= ApplySurfaceWork;
 
     // 状态只在推进入口创建；查询不抽随机数，也不生成地形。
     private int windPushQueryFrame = -1;
@@ -184,10 +194,16 @@ public partial class WeatherMgr
         if (!_weatherRuntimeAllowed || planet == null) return false;
         WorldTopologyDomain domain = WorldTopologyRuntime.GetActiveDomain();
         if (regionalEngine != null && ReferenceEquals(planet, regionalPlanet) &&
+            ReferenceEquals(ChunkMgr.ExistingInstance?.WorldRuntime, surfaceWorkWorld) &&
+            surfaceWorkWorld?.Epoch == surfaceWorkEpoch &&
             domain.IsWrapped == regionalDomain.IsWrapped &&
             domain.Min.Equals(regionalDomain.Min) && domain.Span.Equals(regionalDomain.Span))
             return true;
 
+        FlushSurfaceWork();
+        surfaceWork.Dispose();
+        surfaceWorkWorld = ChunkMgr.ExistingInstance?.WorldRuntime;
+        surfaceWorkEpoch = surfaceWorkWorld?.Epoch ?? 0;
         regionalSettings = ChunkWeatherConfiguration.Load();
         regionalPlanet = planet;
         regionalDomain = domain;
@@ -226,11 +242,14 @@ public partial class WeatherMgr
     // 就绪区块共用区域事件，每个天气区只推进一次并向所有成员分发降水。
     private void AdvanceRegionalWeather()
     {
+        if (surfaceWork.IsAdvanceBlocked)
+            return;
         if (!PrepareRegionalContext() || !GameNetwork.HasStateAuthority ||
             !TryGetCurrentTimeData(out TimeData clock)) return;
         double now = GetRegionalStepTime(clock);
         if (now < lastRegionalAdvance)
         {
+            FlushSurfaceWork();
             regionalEngine.RebaseTime(now - lastRegionalAdvance);
             lastRegionalAdvance = double.NegativeInfinity;
             surfaceChunksLastStep.Clear();
@@ -238,6 +257,10 @@ public partial class WeatherMgr
         if (now - lastRegionalAdvance < regionalSettings.StepSeconds) return;
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
         if (chunks?.WorldRuntime == null) return;
+        // 极端加速先等待积压消费，不推进区域时钟或集中冲刷旧账。
+        long maximumPending = (long)Math.Max(1, chunks.Chunks.Count) * regionalSettings.MaximumCatchUpSteps;
+        if (surfaceWork.Count + (long)chunks.Chunks.Count > maximumPending)
+            return;
 
         regionalWork.Clear();
         regionalChunks.Clear();
@@ -275,16 +298,18 @@ public partial class WeatherMgr
         // 未加载期间只补天气状态，地块只接收本次已实际加载时间内的降水。
         float elapsed = double.IsNegativeInfinity(lastRegionalAdvance) ? 0f :
             (float)Math.Min(now - lastRegionalAdvance, regionalSettings.StepSeconds * regionalSettings.MaximumCatchUpSteps);
-        surfaceStepSeconds = elapsed;
-        using (SurfaceAdvanceMarker.Auto())
         if (elapsed > 0f)
             foreach (var pair in surfaceChunksThisStep)
                 if (surfaceChunksLastStep.TryGetValue(pair.Key, out var previous) && ReferenceEquals(previous, pair.Value))
                 {
                     float precipitation = Mathf.Min(regionalEngine.SamplePrecipitationExposureAt(
                         pair.Key.ChunkOrigin, regionalExposure),
-                        surfaceStepSeconds);
-                    WorldWeatherSurfaceSystem.AdvanceChunk(pair.Value, this, elapsed, precipitation);
+                        elapsed);
+                    if (WorldWeatherSurfaceSystem.HasSurfaceWork(pair.Value.Terrain, precipitation,
+                            surfaceWork.HasPending(pair.Value)) &&
+                        TemperatureMgr.Instance != null &&
+                        TemperatureMgr.Instance.TryCaptureAmbientChunk(pair.Value, out var temperature))
+                        surfaceWork.Enqueue(pair.Value, elapsed, precipitation, temperature);
                 }
         surfaceChunksLastStep.Clear();
         foreach (var pair in surfaceChunksThisStep) surfaceChunksLastStep[pair.Key] = pair.Value;
@@ -294,6 +319,81 @@ public partial class WeatherMgr
             if (regionalEngine.TryGetState(region, out var state)) PersistRegionalState(state);
         UpdateLocalWeatherProjection();
     }
+
+    #endregion
+
+    #region 地表结算分帧
+
+    private bool IsSurfaceWorkCurrent => GameNetwork.HasStateAuthority && surfaceWorkWorld != null &&
+        ReferenceEquals(ChunkMgr.ExistingInstance?.WorldRuntime, surfaceWorkWorld) &&
+        surfaceWorkWorld.Epoch == surfaceWorkEpoch &&
+        ReferenceEquals(GetActivePlanetData(), regionalPlanet);
+
+    private void ApplySurfaceWork(ChunkRuntime chunk, float seconds, float precipitationSeconds,
+        TemperatureMgr.AmbientChunkSnapshot temperature) =>
+        WorldWeatherSurfaceSystem.AdvanceChunk(chunk, this, seconds, precipitationSeconds, temperature);
+
+    /// <summary>冻结保存载荷期间只阻止新天气步，时间与地表队列消费照常运行。</summary>
+    public IDisposable BeginSurfaceSaveCapture() => surfaceWork.BeginAdvanceBarrier();
+
+    private void MaintainSurfaceWork()
+    {
+        if (surfaceWorkFrame == Time.frameCount)
+            return;
+        surfaceWorkFrame = Time.frameCount;
+        if (surfaceWork.Count == 0)
+            return;
+        if (!IsSurfaceWorkCurrent)
+        {
+            surfaceWork.Dispose();
+            return;
+        }
+        using var scope = SurfaceAdvanceMarker.Auto();
+        // 完整区块事务至少执行一次，毫秒预算只决定是否继续下一块。
+        surfaceWork.DrainSlice(SurfaceWorkHandler, SurfaceMillisecondsPerFrame);
+    }
+
+    /// <summary>保存、回拨和解绑前结清已有地表积分；失效世界只释放旧队列。</summary>
+    public void FlushSurfaceWork(ChunkRuntime chunk = null)
+    {
+        if (surfaceWork.Count == 0)
+            return;
+        if (!IsSurfaceWorkCurrent)
+        {
+            surfaceWork.Dispose();
+            return;
+        }
+        using var scope = SurfaceAdvanceMarker.Auto();
+        if (chunk != null)
+            surfaceWork.DrainChunk(chunk, SurfaceWorkHandler);
+        else
+            while (surfaceWork.DrainNext(SurfaceWorkHandler)) { }
+    }
+
+    /// <summary>自动保存只等待开始时已有的账目，后续天气继续按普通帧预算处理。</summary>
+    public IEnumerator FlushSurfaceWorkForAutoSave(AutoSaveWorkBudget budget)
+    {
+        long throughSequence = surfaceWork.LastSequence;
+        while (surfaceWork.Count > 0)
+        {
+            if (!IsSurfaceWorkCurrent)
+            {
+                surfaceWork.Dispose();
+                yield break;
+            }
+            bool applied;
+            using (SurfaceAdvanceMarker.Auto())
+                applied = surfaceWork.DrainNext(SurfaceWorkHandler, throughSequence);
+            if (!applied)
+                yield break;
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
+        }
+    }
+
+    #endregion
+
+    #region 区域状态保存与手动天气
 
     private void PersistRegionalStates()
     {
@@ -354,7 +454,7 @@ public partial class WeatherMgr
     // 调试雷击与自然雷击共用落点、伤害和复制链，只允许已加载地表。
     public bool StrikeLightningAt(Vector2 logicalPosition, float strength = 1f)
     {
-        if (!GameNetwork.HasStateAuthority || !PrepareRegionalContext() ||
+        if (surfaceWork.IsAdvanceBlocked || !GameNetwork.HasStateAuthority || !PrepareRegionalContext() ||
             !TryGetCurrentTimeData(out var clock) || !float.IsFinite(logicalPosition.x) ||
             !float.IsFinite(logicalPosition.y) || !float.IsFinite(strength) || strength <= 0f ||
             ChunkMgr.ExistingInstance?.TryGetRestoredTerrainForEnvironment(logicalPosition, out var tile) != true ||
@@ -375,6 +475,11 @@ public partial class WeatherMgr
     [Sirenix.OdinInspector.Button("玩家上方三格雷击（有真实伤害）")]
     public void StrikeLightningDebug()
     {
+        if (surfaceWork.IsAdvanceBlocked)
+        {
+            Debug.LogWarning("[WeatherMgr] 正在冻结存档天气，雷击操作请稍后重试。");
+            return;
+        }
         Player player = ItemMgr.GetInstance()?.User_Player;
         if (player != null && player.gameObject.activeInHierarchy)
             StrikeLightningAt(WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + Vector2.up * 3f);
@@ -392,7 +497,8 @@ public partial class WeatherMgr
 
     private bool ForceRegionalWeather(WeatherType weather, float intensity, float durationSeconds)
     {
-        if (!GameNetwork.HasStateAuthority || !PrepareRegionalContext() || !TryGetCurrentTimeData(out var clock)) return false;
+        if (surfaceWork.IsAdvanceBlocked || !GameNetwork.HasStateAuthority ||
+            !PrepareRegionalContext() || !TryGetCurrentTimeData(out var clock)) return false;
         AdvanceRegionalWeather();
         Camera camera = Camera.main;
         Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;

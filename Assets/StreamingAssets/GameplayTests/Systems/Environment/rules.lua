@@ -327,3 +327,60 @@ test.system("environment", "environment_batch_revision", {}, function(data)
         "液体深度身份不变仍使缓存失效")
     assert(data.blockingRevision == 0, "环境和液体写入错误改变视线遮挡版本")
 end, "土壤、支撑成本、支撑身份和真实液体版本分离")
+
+test.system("environment", "surface_work_queue", {}, function(data)
+    assert(data.initialCount == 3 and data.initialFirstLeases == 2,
+        "跨步地表积分未逐条入队或未保护待结算区块")
+    assert(not data.dryBeforePending and data.dryWhilePending and not data.dryAfterFlush,
+        "前笔降雪尚未写回时，后续晴暖融雪步被无雪快筛丢弃")
+    assert(data.initialSimulation == "Dormant" and not data.evictedWhilePending,
+        "待结算租约错误激活模拟或允许提前释放区块")
+    assert(not data.nestedDrain, "正式结算回调中发生重入消费")
+    assert(data.afterSliceCount == 2 and data.afterSliceApplied == 1 and data.afterSliceFirstLeases == 1,
+        "零预算没有至少完成一块，或继续集中消费了所有区块")
+    assert(data.afterSaveBoundaryCount == 1 and data.afterSaveBoundaryApplied == 3,
+        "保存边界漏结旧账或等待了保存开始后新增的天气")
+    assert(data.afterUnloadCount == 2 and data.afterUnloadFirstLeases == 0 and data.evictedAfterFlush,
+        "卸载冲刷未结清指定块，或误消费其他区块")
+    assert(data.failure == "InvalidOperationException" and data.afterFailureCount == 1
+        and data.afterFailureSecondLeases == 1,
+        "故障未报告、已执行事务重复留队或短租约泄漏")
+    assert(data.afterDisposeCount == 0 and data.afterDisposeSecondLeases == 0 and data.evictedAfterDispose,
+        "退出清理未释放剩余区块短租约")
+    assert(data.oldTerrainDisposed and data.staleApplied == 0 and data.reboundLeases == 0,
+        "同地址替换地形后旧积分污染了新地形")
+    assert(data.rejected == 6 and data.afterRejectedCount == 0,
+        "非法秒数或超出本步的降水积分进入队列")
+    assert(data.disposedWorldApplied == 0 and data.finalCount == 0,
+        "已释放世界仍应用旧天气或遗留队列")
+    assert(data.saveBarrierActive and data.saveBarrierNested and data.saveBarrierReleased
+        and data.saveBarrierAfterFailure,
+        "保存屏障未保持嵌套状态，或取消/异常后仍阻止天气推进")
+    local expected = {{0, 2, 1}, {2, 4, 3}, {0, 6, 2}, {0, 10, 5}, {2, 8, 4}}
+    assert(#data.applied == #expected, "地表积分回调次数丢失或重复")
+    for index, wanted in ipairs(expected) do
+        local actual = data.applied[index]
+        assert(actual.x == wanted[1], "分帧或卸载后同块结算顺序错误")
+        near(actual.seconds, wanted[2], "分帧丢失或合并了本步游戏时间")
+        near(actual.precipitation, wanted[3], "分帧丢失或缩减了本步降水积分")
+    end
+end, "天气地表分帧预算、保存边界、卸载保护、异常与世界释放")
+
+test.system("environment", "surface_temperature_snapshot", {}, function(data)
+    assert(#data.samples == 4, "跨帧温度快照采样不完整")
+    local cold, warm, changed = data.samples[1], data.samples[2], data.samples[3]
+    assert(cold.sampled and warm.sampled and changed.sampled, "天气队列未携带可用的冻结温度上下文")
+    near(cold.first, -15, "入队后的调温把原本降雪改成了雨")
+    near(cold.second, -15, "无热源的冷快照被后来的热源污染")
+    near(warm.first, 40, "热源变温、降功率、移动或移除改变了已入队目标温度")
+    near(warm.second, 33.9453125, "热源几何权重重建破坏了旧快照")
+    near(changed.first, 52.5, "新入队快照没有独立冻结全局调温、天气和来源强度")
+    assert(cold.first <= 0 and warm.first > 0, "延迟结算改变了本笔降水的雨雪相态")
+    near(data.afterSourceRemoved, 25, "移除热源后的新快照没有读取当前环境")
+    assert(data.samples[4].sampled, "液体温度快照未采样")
+    near(data.samples[4].first, 17.5, "液体来源替换改变旧快照的目标值或距离权重")
+    near(data.samples[4].second, 45, "液体来源旧快照未保留第二格权重")
+    near(cold.seconds, 2, "冷快照丢失游戏时间")
+    near(cold.precipitation, 1, "冷快照丢失降水积分")
+    near(warm.precipitation, 3, "暖快照丢失降水积分")
+end, "天气地表冻结温度、跨冷热变化、热源值与几何权重独立")

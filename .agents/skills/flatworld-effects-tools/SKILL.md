@@ -13,6 +13,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 编辑器：`Assets/Editor/FlatWorld/`，内容工坊为 `ContentTools/ContentWorkshop/`。
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/{Debug,Diagnostics}/`；AIECS 表现：`Entities/AIECS/Presentation/`。
 - 程序集单向依赖：Effect 不反向引用 GamePlay 的管理器，生产程序集不引用 FlatWorld.Gameplay.Debug；Debug 使用 GameNetwork 时显式引用 Networking.Core。
+- 完整 GameRes 目录的 `combat-prewarm` 阶段按正式武器引用去重，每个命中 GameEffect 分帧准备三个空闲实例；`PrepareForPool` 只准备缓存，不播放、不消费随机数。完整资源会话释放、退出世界释放热更新旧代之前先清表现池；原位更新候选跳过预热。
 
 ## 世界排序与坐标
 

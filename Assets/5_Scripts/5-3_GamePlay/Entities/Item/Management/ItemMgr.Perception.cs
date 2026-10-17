@@ -5,6 +5,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 using FlatWorld.Geometry;
 
@@ -46,6 +47,13 @@ public partial class ItemMgr
     [ShowInInspector, Sirenix.OdinInspector.ReadOnly] private int PerceptionCellCount => _perceptionCells.Count;
 
     #region 并行感知调度
+
+    // 按批次和检测器划分采样，避免每个候选都打点干扰实际成本。
+    private static readonly ProfilerMarker PerceptionJobCompleteMarker = new("ItemMgr.Perception.JobComplete");
+    private static readonly ProfilerMarker PerceptionApplyMarker = new("ItemMgr.Perception.Apply");
+    private static readonly ProfilerMarker PerceptionFilterCandidatesMarker = new("ItemMgr.Perception.FilterCandidates");
+    private static readonly ProfilerMarker PerceptionDetectorApplyMarker = new("ItemMgr.Perception.DetectorApply");
+    private static readonly ProfilerMarker PerceptionClearMarker = new("ItemMgr.Perception.Clear");
 
     private const int PerceptionJobBatchSize = 8;
 
@@ -521,19 +529,26 @@ public partial class ItemMgr
         if (!_perceptionJobScheduled)
             return;
 
-        _perceptionJobHandle.Complete();
+        using (PerceptionJobCompleteMarker.Auto())
+            _perceptionJobHandle.Complete();
         if (applyResults)
-            ApplyPerceptionBatchResults();
+        {
+            using (PerceptionApplyMarker.Auto())
+                ApplyPerceptionBatchResults();
+        }
 
-        _perceptionJobScheduled = false;
-        DisposePerceptionResultStream();
-        _inFlightDetectors.Clear();
-        _inFlightDetectorVersions.Clear();
-        _perceptionQueryData.Clear();
-        _perceptionSnapshotItems.Clear();
-        _perceptionSnapshotData.Clear();
-        _perceptionShapeData.Clear();
-        _perceptionSnapshotItemSet.Clear();
+        using (PerceptionClearMarker.Auto())
+        {
+            _perceptionJobScheduled = false;
+            DisposePerceptionResultStream();
+            _inFlightDetectors.Clear();
+            _inFlightDetectorVersions.Clear();
+            _perceptionQueryData.Clear();
+            _perceptionSnapshotItems.Clear();
+            _perceptionSnapshotData.Clear();
+            _perceptionShapeData.Clear();
+            _perceptionSnapshotItemSet.Clear();
+        }
     }
 
     /// <summary>接受 Burst 的 Actor 几何结果，仅旧目标补充 Bridge 精筛；所有目标继续经过原有格子 LOS。</summary>
@@ -548,29 +563,35 @@ public partial class ItemMgr
             _detectorApplyBuffer.Clear();
             _perceptionResultItemSet.Clear();
 
-            for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
+            using (PerceptionFilterCandidatesMarker.Auto())
             {
-                int snapshotIndex = reader.Read<int>();
-                if ((uint)snapshotIndex >= (uint)_perceptionSnapshotItems.Count)
-                    continue;
+                for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
+                {
+                    int snapshotIndex = reader.Read<int>();
+                    if ((uint)snapshotIndex >= (uint)_perceptionSnapshotItems.Count)
+                        continue;
 
-                Item candidate = _perceptionSnapshotItems[snapshotIndex];
-                PerceptionItemSnapshot snapshot = _inFlightItemSnapshots[snapshotIndex];
-                if (!IsSnapshotItemStillValid(candidate, snapshot))
-                    continue;
+                    Item candidate = _perceptionSnapshotItems[snapshotIndex];
+                    PerceptionItemSnapshot snapshot = _inFlightItemSnapshots[snapshotIndex];
+                    if (!IsSnapshotItemStillValid(candidate, snapshot))
+                        continue;
 
-                if (!_perceptionResultItemSet.Add(candidate) ||
-                    (snapshot.ShapeCount == 0 && !PassesBridgePerceptionFilter(candidate, query, snapshot)) ||
-                    detector == null ||
-                    !detector.HasLineOfSight(candidate))
-                    continue;
+                    if (!_perceptionResultItemSet.Add(candidate) ||
+                        (snapshot.ShapeCount == 0 && !PassesBridgePerceptionFilter(candidate, query, snapshot)) ||
+                        detector == null ||
+                        !detector.HasLineOfSight(candidate))
+                        continue;
 
-                _detectorApplyBuffer.Add(candidate);
+                    _detectorApplyBuffer.Add(candidate);
+                }
             }
 
             reader.EndForEachIndex();
             if (detector != null)
-                detector.ApplyDetectorResults(_inFlightDetectorVersions[queryIndex], _detectorApplyBuffer);
+            {
+                using (PerceptionDetectorApplyMarker.Auto())
+                    detector.ApplyDetectorResults(_inFlightDetectorVersions[queryIndex], _detectorApplyBuffer);
+            }
         }
     }
 

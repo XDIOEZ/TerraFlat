@@ -1223,6 +1223,8 @@ public partial class ChunkMgr
     {
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
             return;
+        if (binding.RestoredTerrainChunk != null)
+            WeatherMgr.ExistingInstance?.FlushSurfaceWork(binding.RestoredTerrainChunk);
         FinishRuntimeChunkPresentation(binding);
         activeRuntimeBindings.Remove(address);
         binding.PresentationQueued = false;

@@ -10,6 +10,8 @@
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/player_external_effects`。
 
+2026-10-17 新增但未执行：`rendering/combat_effect_prewarm` 采正式石斧引用的伤害数字/切割动画，检查完整资源阶段已准备三个独立空闲实例、重复预热不扩容、并发取出复用池、回收及重复回收幂等、不改变游戏随机数。此轮保留冻结 PlayMode，仅静态修改；该断言不代表首击耗时、全部 Mono.JIT 或画面已验收。
+
 真实流程覆盖：ItemMgr 加载正式石斧并接入真实世界排序，实际已入世玩家的 ActorRenderEffectController 注册外部 Renderer，等待正式跨帧 LateUpdate 提交 MPB。检查正式分类排序键、重复绑定单次登记、复用玩家共享材质、Sprite 身体范围提交并保留外部原有属性，随后解除并核对原材质与完整 MPB 恢复。正式 WetStatusEffect Prefab 经真实 VisualEffectManager 播放、Owner 非叠加复用、真实粒子材质、解绑/回池停粒子清空、缩放恢复和重复回收幂等；结束、失败和中止清理自有物品与粒子。操作提交前已清理，内部 MPB/池状态没有保留现场，因此本组 0 张截图。
 
 世界排序单独采真实散落石斧的同帧状态并立即正式回收；跨帧 MPB 使用 InstantiateHeldItem 创建独立挂点的自有石斧，核对物品/Renderer 实例与代际连续、最后销毁挂点，不占用玩家现有手持物。

@@ -11,6 +11,8 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
 {
     #region Pool State
 
+    public static VisualEffectManager ExistingInstance => instance;
+
     private sealed class PooledVisualState
     {
         public ParticleSystem[] ParticleSystems;
@@ -176,13 +178,8 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         }
 
         if (effect == null)
-        {
-            effect = Instantiate(prefab);
-            effect.SetPoolReturnCallback(null);
-        }
+            effect = CreateGameEffect(prefab);
 
-        GameEffect capturedEffect = effect;
-        effect.SetPoolReturnCallback(() => ReturnGameEffectToPool(prefab, capturedEffect));
         effect.transform.SetParent(null, false);
         if (!effect.gameObject.activeSelf)
             effect.gameObject.SetActive(true);
@@ -190,6 +187,50 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
         activeGameEffects.Add(effect);
         gameEffectPrefabs[effect] = prefab;
         return effect;
+    }
+
+    /// <summary>每次最多补一个空闲实例，调用方可在实例之间让出加载帧。</summary>
+    public bool PrewarmGameEffect(GameEffect prefab, int minimumInactiveCount)
+    {
+        if (prefab == null || minimumInactiveCount <= GetInactiveGameEffectCount(prefab))
+            return false;
+
+        EnsurePoolParent();
+        GameEffect effect = CreateGameEffect(prefab);
+        activeGameEffects.Add(effect);
+        gameEffectPrefabs[effect] = prefab;
+        try
+        {
+            if (!effect.gameObject.activeSelf) effect.gameObject.SetActive(true);
+            effect.OnSpawnedFromPool();
+            effect.PrepareForPool();
+        }
+        finally { ReturnGameEffectToPool(prefab, effect); }
+        return true;
+    }
+
+    /// <summary>读取可复用的真实空闲实例数，预热重复调用不会扩容。</summary>
+    public int GetInactiveGameEffectCount(GameEffect prefab)
+    {
+        if (prefab == null || !gameEffectPool.TryGetValue(prefab, out Queue<GameEffect> queue)) return 0;
+        int count = 0;
+        foreach (GameEffect effect in queue) if (effect != null) count++;
+        return count;
+    }
+
+    /// <summary>实例独占回收委托，反复播放不再为同一个特效分配闭包。</summary>
+    private GameEffect CreateGameEffect(GameEffect prefab)
+    {
+        GameEffect effect = Instantiate(prefab, effectPoolParent, false);
+        effect.SetPoolReturnCallback(() => ReturnGameEffectToPool(prefab, effect));
+        return effect;
+    }
+
+    /// <summary>调用方取消表现时仍走同一回收路径，不留下激活登记。</summary>
+    public void ReturnGameEffectToPool(GameEffect effect)
+    {
+        if (effect != null && gameEffectPrefabs.TryGetValue(effect, out GameEffect prefab))
+            ReturnGameEffectToPool(prefab, effect);
     }
 
     /// <summary>回收 GameEffect；特效自身通过 ReturnToPoolOrDestroy 触发此路径。</summary>

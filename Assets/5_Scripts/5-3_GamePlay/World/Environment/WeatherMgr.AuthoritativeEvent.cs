@@ -96,6 +96,7 @@ public partial class WeatherMgr
     {
         SubscribeTimeSystem();
         AdvanceRegionalWeather();
+        MaintainSurfaceWork();
         UpdateLocalWeatherProjection();
         MaintainWeatherPresentation(Time.deltaTime);
         RefreshWeatherFeedbackIfChanged();
@@ -105,6 +106,7 @@ public partial class WeatherMgr
     private void ShutdownWeatherEventSystem()
     {
         UnsubscribeTimeSystem();
+        FlushSurfaceWork();
         PersistRegionalStates();
         lightningEffect?.Shutdown();
         LightningStrikeSystem.Reset();
@@ -189,6 +191,11 @@ public partial class WeatherMgr
 
     private void SetAuthoritativeWeather(WeatherType weatherType, float intensity)
     {
+        if (surfaceWork.IsAdvanceBlocked)
+        {
+            Debug.LogWarning("[WeatherMgr] 正在冻结存档天气，修改天气请稍后重试。");
+            return;
+        }
         if (!GameNetwork.HasStateAuthority)
         {
             if (EnableDebugLog)

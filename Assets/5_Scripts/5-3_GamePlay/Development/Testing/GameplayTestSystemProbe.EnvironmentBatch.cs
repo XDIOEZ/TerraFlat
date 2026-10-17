@@ -12,6 +12,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/environment_batch_rejection", EnvironmentBatchRejection);
         operations.Add("environment/environment_batch_lifecycle", EnvironmentBatchLifecycle);
         operations.Add("environment/environment_batch_revision", EnvironmentBatchRevision);
+        operations.Add("environment/surface_work_queue", EnvironmentSurfaceWorkQueue);
+        operations.Add("environment/surface_temperature_snapshot", EnvironmentSurfaceTemperatureSnapshot);
         operations.Add("agriculture/surface_water_rule", AgricultureSurfaceWaterRule);
     }
 
@@ -289,5 +291,178 @@ public static partial class GameplayTestSystemProbe
         return new JObject { ["changed"] = changed, ["nextWater"] = nextWater,
             ["water"] = water, ["maximum"] = maximum, ["supplyKind"] = supplyKind };
     }
+    #endregion
+
+    #region 天气地表分帧队列采样
+
+    private static ChunkRuntime EnvironmentSurfaceQueueChunk(WorldRuntime world, int x)
+    {
+        var address = new FlatWorld.WorldModel.WorldAddress("surface_queue", new Int2(x, 0));
+        var profile = new ChunkGenerationProfileSnapshot("surface_queue", 1, 2, 2);
+        ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
+        using var buffer = new ChunkTerrainBuffer(2, 2);
+        using var result = new ChunkGenerationResult(request, buffer);
+        if (!world.TryCommit(result, out string reason) || !world.TryGetChunk(address, out ChunkRuntime chunk))
+            throw new InvalidOperationException("天气队列夹具创建失败：" + reason);
+        return chunk;
+    }
+
+    // 只调正式排队、预算消费、卸载冲刷和序号边界接口，Lua 持有顺序与守恒断言。
+    private static JObject EnvironmentSurfaceWorkQueue(JObject args)
+    {
+        using var world = new WorldRuntime("surface_queue", 1);
+        ChunkRuntime first = EnvironmentSurfaceQueueChunk(world, 0);
+        ChunkRuntime second = EnvironmentSurfaceQueueChunk(world, 2);
+        using var queue = new WeatherSurfaceWorkQueue();
+        var applied = new JArray();
+        var sample = new JObject();
+        sample["dryBeforePending"] = WorldWeatherSurfaceSystem.HasSurfaceWork(first.Terrain, 0f, queue.HasPending(first));
+        Action<ChunkRuntime, float, float, TemperatureMgr.AmbientChunkSnapshot> apply =
+            (chunk, seconds, precipitation, temperature) => applied.Add(new JObject
+        {
+            ["x"] = chunk.Address.ChunkOrigin.X,
+            ["seconds"] = seconds,
+            ["precipitation"] = precipitation
+        });
+        queue.Enqueue(first, 2f, 1f);
+        queue.Enqueue(second, 4f, 3f);
+        queue.Enqueue(first, 6f, 2f);
+        sample["dryWhilePending"] = WorldWeatherSurfaceSystem.HasSurfaceWork(first.Terrain, 0f, queue.HasPending(first));
+        sample["initialCount"] = queue.Count;
+        sample["initialFirstLeases"] = first.NavigationLeaseCount;
+        sample["initialSimulation"] = first.SimulationStatus.ToString();
+        sample["evictedWhilePending"] = world.EvictChunk(first.Address);
+        bool nestedDrain = true;
+        queue.DrainSlice((chunk, seconds, precipitation, temperature) =>
+        {
+            nestedDrain = queue.DrainNext(apply);
+            apply(chunk, seconds, precipitation, temperature);
+        }, 0d);
+        sample["nestedDrain"] = nestedDrain;
+        sample["afterSliceCount"] = queue.Count;
+        sample["afterSliceApplied"] = applied.Count;
+        sample["afterSliceFirstLeases"] = first.NavigationLeaseCount;
+        long saveBoundary = queue.LastSequence;
+        queue.Enqueue(second, 8f, 4f);
+        while (queue.DrainNext(apply, saveBoundary)) { }
+        sample["afterSaveBoundaryCount"] = queue.Count;
+        sample["afterSaveBoundaryApplied"] = applied.Count;
+        queue.Enqueue(first, 10f, 5f);
+        queue.Enqueue(second, 12f, 6f);
+        queue.DrainChunk(first, apply);
+        sample["afterUnloadCount"] = queue.Count;
+        sample["afterUnloadFirstLeases"] = first.NavigationLeaseCount;
+        sample["dryAfterFlush"] = WorldWeatherSurfaceSystem.HasSurfaceWork(first.Terrain, 0f, queue.HasPending(first));
+        sample["evictedAfterFlush"] = world.EvictChunk(first.Address);
+        string failure = string.Empty;
+        try
+        {
+            queue.DrainNext((chunk, seconds, precipitation, temperature) =>
+            {
+                apply(chunk, seconds, precipitation, temperature);
+                throw new InvalidOperationException("队列观察者故障");
+            });
+        }
+        catch (InvalidOperationException exception) { failure = exception.GetType().Name; }
+        sample["failure"] = failure;
+        sample["afterFailureCount"] = queue.Count;
+        sample["afterFailureSecondLeases"] = second.NavigationLeaseCount;
+        queue.Dispose();
+        queue.Dispose();
+        sample["afterDisposeCount"] = queue.Count;
+        sample["afterDisposeSecondLeases"] = second.NavigationLeaseCount;
+        sample["evictedAfterDispose"] = world.EvictChunk(second.Address);
+
+        ChunkRuntime rebound = EnvironmentSurfaceQueueChunk(world, 4);
+        queue.Enqueue(rebound, 3f, 2f);
+        ChunkTerrainData oldTerrain = rebound.Terrain;
+        EnvironmentSurfaceQueueChunk(world, 4);
+        int beforeStale = applied.Count;
+        queue.DrainNext(apply);
+        sample["oldTerrainDisposed"] = oldTerrain.IsDisposed;
+        sample["staleApplied"] = applied.Count - beforeStale;
+        sample["reboundLeases"] = rebound.NavigationLeaseCount;
+
+        int rejected = 0;
+        foreach (var invalid in new[] { (float.NaN, 0f), (0f, 0f), (-1f, 0f),
+                     (1f, -1f), (1f, float.PositiveInfinity), (1f, 2f) })
+            try { queue.Enqueue(rebound, invalid.Item1, invalid.Item2); }
+            catch (ArgumentOutOfRangeException) { rejected++; }
+        sample["rejected"] = rejected;
+        sample["afterRejectedCount"] = queue.Count;
+        IDisposable firstBarrier = queue.BeginAdvanceBarrier();
+        IDisposable secondBarrier = queue.BeginAdvanceBarrier();
+        sample["saveBarrierActive"] = queue.IsAdvanceBlocked;
+        firstBarrier.Dispose();
+        firstBarrier.Dispose();
+        sample["saveBarrierNested"] = queue.IsAdvanceBlocked;
+        secondBarrier.Dispose();
+        sample["saveBarrierReleased"] = !queue.IsAdvanceBlocked;
+        try
+        {
+            using IDisposable failingCapture = queue.BeginAdvanceBarrier();
+            throw new InvalidOperationException("保存取消");
+        }
+        catch (InvalidOperationException) { }
+        sample["saveBarrierAfterFailure"] = !queue.IsAdvanceBlocked;
+        queue.Enqueue(rebound, 1f, 0f);
+        world.Dispose();
+        int beforeDisposed = applied.Count;
+        queue.DrainNext(apply);
+        sample["disposedWorldApplied"] = applied.Count - beforeDisposed;
+        sample["finalCount"] = queue.Count;
+        sample["applied"] = applied;
+        return sample;
+    }
+
+    private static JObject EnvironmentSurfaceTemperatureSnapshot(JObject args)
+    {
+        using var world = new WorldRuntime("surface_queue", 1);
+        ChunkRuntime chunk = EnvironmentSurfaceQueueChunk(world, 0);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 0, 0, -10f);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 1, 0, -10f);
+        var local = new LocalTemperatureField(2, 2, default);
+        object owner = new();
+        var origin = UnityEngine.Vector2Int.zero;
+        var emptyLiquid = ReadOnlySpan<LiquidTemperatureField.Influence>.Empty;
+        var cold = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, -5f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        local.SetSource(owner, new UnityEngine.Vector2(0.5f, 0.5f), 4f, 40f);
+        var warm = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, 0f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        local.SetSource(owner, new UnityEngine.Vector2(0.5f, 0.5f), 4f, 80f, false, 0.5f);
+        var changed = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 30f, 30f, 0f, 0f, 5f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        local.SetSource(owner, new UnityEngine.Vector2(1.5f, 0.5f), 1f, -40f, true);
+        local.GetChunkInfluences(origin);
+        local.RemoveSource(owner);
+        var liquidInfluences = new[]
+        {
+            new LiquidTemperatureField.Influence(100f, new[] { 0.25f, 0.5f, 0f, 0f })
+        };
+        var liquidSnapshot = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, 0f,
+            local.GetChunkInfluences(origin), liquidInfluences);
+        liquidInfluences[0] = new LiquidTemperatureField.Influence(200f, new float[4]);
+        using var queue = new WeatherSurfaceWorkQueue();
+        queue.Enqueue(chunk, 2f, 1f, cold);
+        queue.Enqueue(chunk, 4f, 3f, warm);
+        queue.Enqueue(chunk, 6f, 2f, changed);
+        queue.Enqueue(chunk, 8f, 4f, liquidSnapshot);
+        var samples = new JArray();
+        while (queue.DrainNext((target, seconds, precipitation, snapshot) =>
+        {
+            int[] indices = { 0, 1 };
+            var temperatures = new float[4];
+            bool sampled = snapshot.TrySample(target, indices, temperatures);
+            samples.Add(new JObject { ["sampled"] = sampled, ["seconds"] = seconds,
+                ["precipitation"] = precipitation, ["first"] = temperatures[0], ["second"] = temperatures[1] });
+        })) { }
+        var after = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 30f, 30f, 0f, 0f, 5f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        var afterTemperatures = new float[4];
+        after.TrySample(chunk, new[] { 0, 1 }, afterTemperatures);
+        return new JObject { ["samples"] = samples, ["afterSourceRemoved"] = afterTemperatures[0] };
+    }
+
     #endregion
 }

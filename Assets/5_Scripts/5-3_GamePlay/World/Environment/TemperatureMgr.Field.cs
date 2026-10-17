@@ -97,6 +97,96 @@ public partial class TemperatureMgr
 
     #region 统一逐格采样
 
+    internal sealed class AmbientChunkSnapshot
+    {
+        private readonly ChunkTerrainData terrain;
+        private readonly Vector2Int origin;
+        private readonly WorldTopologyBounds bounds;
+        private readonly float ambientOffset, globalOffset, seasonOffset, orbitalFactor, weatherOffset;
+        private readonly FrozenInfluence[] influences;
+
+        private readonly struct FrozenInfluence
+        {
+            public readonly float Target, Strength;
+            public readonly bool Cooling;
+            public readonly float[] Weights;
+            public FrozenInfluence(float target, float strength, bool cooling, float[] weights)
+            { Target = target; Strength = strength; Cooling = cooling; Weights = weights; }
+        }
+
+        // 来源数值复制，几何权重只在缓存重建时替换，因此旧数组可由快照安全持有。
+        internal AmbientChunkSnapshot(ChunkRuntime chunk, WorldTopologyBounds bounds, float ambientOffset,
+            float globalOffset, float seasonOffset, float orbitalFactor, float weatherOffset,
+            ReadOnlySpan<LocalTemperatureField.Influence> local, ReadOnlySpan<LiquidTemperatureField.Influence> liquid)
+        {
+            terrain = chunk.Terrain;
+            origin = new Vector2Int(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+            this.bounds = bounds;
+            this.ambientOffset = ambientOffset;
+            this.globalOffset = globalOffset;
+            this.seasonOffset = seasonOffset;
+            this.orbitalFactor = orbitalFactor;
+            this.weatherOffset = weatherOffset;
+            influences = local.Length + liquid.Length == 0 ? Array.Empty<FrozenInfluence>() :
+                new FrozenInfluence[local.Length + liquid.Length];
+            for (int i = 0; i < local.Length; i++)
+                influences[i] = new FrozenInfluence(local[i].Source.TargetTemperature,
+                    local[i].Source.Strength, local[i].Source.Cooling, local[i].Weights);
+            for (int i = 0; i < liquid.Length; i++)
+                influences[local.Length + i] = new FrozenInfluence(liquid[i].TargetTemperature, 1f, false, liquid[i].Weights);
+        }
+
+        internal bool TrySample(ChunkRuntime chunk, ReadOnlySpan<int> indices, Span<float> temperatures)
+        {
+            if (terrain.IsDisposed || !ReferenceEquals(chunk?.Terrain, terrain))
+                return false;
+            if (temperatures.Length < terrain.CellCount)
+                throw new ArgumentException("区块温度缓冲区小于格子数量。", nameof(temperatures));
+            foreach (int index in indices)
+            {
+                if ((uint)index >= (uint)terrain.CellCount)
+                    throw new ArgumentOutOfRangeException(nameof(indices));
+                int x = index % terrain.Width, y = index / terrain.Width;
+                if (!terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
+                {
+                    temperatures[index] = float.NaN;
+                    continue;
+                }
+                Vector2 position = new(origin.x + x + 0.5f, origin.y + y + 0.5f);
+                if (bounds.IsWrapped)
+                    position = bounds.NormalizePosition(position);
+                float ambient = CalculateAmbientBaseline(bounds, position, baseline, ambientOffset, globalOffset,
+                    seasonOffset, orbitalFactor, weatherOffset);
+                float heating = 0f, cooling = 0f;
+                foreach (FrozenInfluence influence in influences)
+                    ThermalInfluenceRuntime.Accumulate(ambient, influence.Target,
+                        influence.Weights[index] * influence.Strength, ref heating, ref cooling, influence.Cooling);
+                temperatures[index] = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
+            }
+            return true;
+        }
+    }
+
+    internal bool TryCaptureAmbientChunk(ChunkRuntime chunk, out AmbientChunkSnapshot snapshot)
+    {
+        snapshot = null;
+        PrepareFieldContext();
+        if (localTemperatureField == null || fieldChunkManager == null || chunk?.Terrain == null ||
+            chunk.Terrain.IsDisposed || chunk.DataStatus != ChunkDataStatus.Ready ||
+            chunk.Address.DimensionId != fieldDimension || chunk.Terrain.Width != fieldChunkWidth ||
+            chunk.Terrain.Height != fieldChunkHeight ||
+            !fieldChunkManager.TryGetChunkRuntime(chunk.Address, out ChunkRuntime current) || !ReferenceEquals(current, chunk))
+            return false;
+        Vector2Int origin = new(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
+        Vector2 samplePosition = (Vector2)origin + Vector2.one * 0.5f;
+        snapshot = new AmbientChunkSnapshot(chunk, fieldBounds, ambientFieldOffset,
+            fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
+            orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(samplePosition) ?? 0f,
+            localTemperatureField.GetChunkInfluences(origin), liquidTemperatureField != null
+                ? liquidTemperatureField.GetChunkInfluences(origin) : ReadOnlySpan<LiquidTemperatureField.Influence>.Empty);
+        return true;
+    }
+
     /// <summary>只读生成时确定的地理温度，不叠加星球调温、季节、天气或局部热源。</summary>
     public bool TryGetGeographicTemperature(Vector2 worldPosition, out float temperature)
         => TrySampleTemperature(worldPosition, false, out temperature, false);
@@ -214,12 +304,18 @@ public partial class TemperatureMgr
 
     private float CalculateAmbientBaseline(Vector2 position, float baseline)
     {
-        float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(fieldBounds, position);
-        float physicalBaseline = baseline + fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature;
-        float seasonOffset = seasonTiltOffsetAtPole * poleProximity +
-                             Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalTemperatureFactor;
-        return baseline + ambientFieldOffset + seasonOffset +
-               (WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f);
+        return CalculateAmbientBaseline(fieldBounds, position, baseline, ambientFieldOffset,
+            fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature, seasonTiltOffsetAtPole,
+            orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(position) ?? 0f);
+    }
+
+    private static float CalculateAmbientBaseline(WorldTopologyBounds bounds, Vector2 position, float baseline,
+        float ambientOffset, float globalOffset, float seasonTilt, float orbitalFactor, float weatherOffset)
+    {
+        float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position);
+        float physicalBaseline = baseline + globalOffset;
+        float seasonOffset = seasonTilt * poleProximity + Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalFactor;
+        return baseline + ambientOffset + seasonOffset + weatherOffset;
     }
 
     #endregion

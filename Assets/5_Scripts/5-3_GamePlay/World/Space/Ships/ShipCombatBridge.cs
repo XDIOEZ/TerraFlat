@@ -14,6 +14,16 @@ namespace FlatWorld.Spaceflight
         public static readonly ShipCombatBridge Instance = new();
         private readonly HitOrder hitOrder = new();
 
+        /// <summary>只初始化实际使用的临时名单池，避免第一轮攻击触发泛型池冷启动。</summary>
+        internal static void PrewarmQueryPools()
+        {
+            using var candidates = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece, Vector2 Anchor,
+                Mod_DamageReceiver Receiver)>.Get(out _);
+            using var hits = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out _);
+            using var resolved = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
+                RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, CombatColliderHit2D Contact)>.Get(out _);
+        }
+
         private sealed class HitOrder : IComparer<CombatColliderHit2D>
         {
             public Vector2 SweepStart;

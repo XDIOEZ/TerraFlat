@@ -96,6 +96,8 @@ public partial class GameRes
         plan.Add("world-liquids", "加载世界液体外观", 2, LoadWorldLiquidResources, "validate-final");
         plan.Add("brg-sprite-mesh-prewarm", "预构造地形共享网格", 3,
             PrewarmTerrainSpriteMeshes, "world-liquids");
+        plan.Add("combat-prewarm", "预备命中特效与战斗缓存", 2,
+            PrewarmCombatResources, "brg-sprite-mesh-prewarm");
         return plan;
     }
 

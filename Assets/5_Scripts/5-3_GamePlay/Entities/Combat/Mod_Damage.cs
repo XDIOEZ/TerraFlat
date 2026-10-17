@@ -12,6 +12,16 @@ public enum WeaponHitboxRegion
 public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemTooltipInfoProvider
 {
     #region 伤害相关数据
+
+    private static readonly Unity.Profiling.ProfilerMarker HitEffectsMarker = new("FlatWorld.Combat.HitEffects");
+
+    /// <summary>只收集当前武器真实配置的特效引用，不实例化武器或触发伤害。</summary>
+    public void CollectHitEffectPrefabs(ISet<GameEffect> prefabs)
+    {
+        impactEffectSet?.CollectPrefabs(prefabs);
+        if (AttackEffects == null) return;
+        foreach (GameEffect prefab in AttackEffects) if (prefab != null) prefabs.Add(prefab);
+    }
     [Header("攻击特效")]
     [SerializeField, Tooltip("按攻击的命中表现标签播放特效，标签不参与防御结算。")]
     private CombatImpactEffectSet impactEffectSet;
@@ -772,6 +782,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>有效命中播放一个主伤害类型特效，再播放独立的数字等通用反馈。</summary>
     private void SpawnEffect(Vector2 hitPoint, float damage)
     {
+        using var marker = HitEffectsMarker.Auto();
         VisualEffectManager effectManager = VisualEffectManager.Instance;
         CombatDamageKind kind = ResolveDamageValues().DominantKind;
         if (impactEffectSet != null)

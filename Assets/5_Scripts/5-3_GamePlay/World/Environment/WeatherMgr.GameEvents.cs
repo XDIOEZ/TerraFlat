@@ -28,9 +28,9 @@ public partial class WeatherMgr
             _gameEventWeatherOwnerId,
             ownerEventId,
             StringComparison.Ordinal);
+        if (!ForceRegionalWeather(weatherType, intensity, Mathf.Max(0.1f, endTotalTime - currentTotalTime)))
+            return false;
         _gameEventWeatherOwnerId = ownerEventId;
-
-        ForceRegionalWeather(weatherType, intensity, Mathf.Max(0.1f, endTotalTime - currentTotalTime));
         if (newOwner)
             planetData.WeatherEventSequence = Mathf.Max(1, planetData.WeatherEventSequence + 1);
 
@@ -46,8 +46,9 @@ public partial class WeatherMgr
             return false;
         }
 
+        if (!ForceRegionalWeather(WeatherType.Clear, 0f, 1f))
+            return false;
         _gameEventWeatherOwnerId = null;
-        SetAuthoritativeWeather(WeatherType.Clear, 0f);
         return true;
     }
 }

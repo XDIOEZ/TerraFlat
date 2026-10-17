@@ -41,6 +41,11 @@ public partial class WeatherMgr
     /// <summary>由状态权威限时覆盖观察区域风力。</summary>
     public void SetWindStrength(float strength)
     {
+        if (surfaceWork.IsAdvanceBlocked)
+        {
+            Debug.LogWarning("[WeatherMgr] 正在冻结存档天气，修改风力请稍后重试。");
+            return;
+        }
         if (!GameNetwork.HasStateAuthority)
         {
             if (EnableDebugLog)

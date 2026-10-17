@@ -139,6 +139,18 @@ public sealed class DamageTextEffect : GameEffect
 
     #region Pool Lifecycle
 
+    public override void PrepareForPool()
+    {
+        if (!CacheText())
+            return;
+
+        // 提前准备数字字形和文本几何，首击不再承担 TMP 冷初始化。
+        string originalText = TMP_text.text;
+        TMP_text.SetText("0123456789-.");
+        TMP_text.ForceMeshUpdate();
+        TMP_text.SetText(originalText);
+    }
+
     public override void OnSpawnedFromPool()
     {
         CacheText();

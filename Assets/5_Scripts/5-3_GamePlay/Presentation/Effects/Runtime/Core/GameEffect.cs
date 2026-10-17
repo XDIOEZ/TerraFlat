@@ -13,6 +13,11 @@ public abstract class GameEffect : MonoBehaviour
 
     private Action returnToPool;
 
+    /// <summary>加载阶段只准备表现缓存，不播放特效或消费游戏随机数。</summary>
+    public virtual void PrepareForPool()
+    {
+    }
+
     /// <summary>由对象池在取出实例时调用，子类可在这里清理上一次播放状态。</summary>
     public virtual void OnSpawnedFromPool()
     {

@@ -1707,6 +1707,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private void PrepareLoadedChunksForSave()
     {
+        WeatherMgr.ExistingInstance?.FlushSurfaceWork();
         DroppedItemService.PrepareForSave();
         CaptureRuntimeTerrainStates();
         // 新 WorldModel 的自然物挂在 ChunkView，不属于旧 Chunk.RunTimeItems；先捕获其状态。

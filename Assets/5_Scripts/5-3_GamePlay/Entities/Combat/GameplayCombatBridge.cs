@@ -37,6 +37,8 @@ internal interface IGameplayPhysicsDamageTarget
 /// <summary>旧对象与纯值战斗的单向适配；不引用 AIECS，任意数据后端均可接入。</summary>
 public static class GameplayCombatBridge
 {
+    private static readonly Unity.Profiling.ProfilerMarker ContextMarker = new("FlatWorld.Combat.Context");
+    private static readonly Unity.Profiling.ProfilerMarker QueryMarker = new("FlatWorld.Combat.QueryWeaponPulse");
     private static readonly List<IGameplayCombatBridge> Bridges = new List<IGameplayCombatBridge>();
 
     #region 物理碰撞目标映射
@@ -105,6 +107,7 @@ public static class GameplayCombatBridge
     /// <summary>真实 Item 发送端适配为纯上下文；武器身份与持有者击杀归因分开保存。</summary>
     public static CombatDamageContext Context(IDamageSender sender, CombatClock clock)
     {
+        using var marker = ContextMarker.Auto();
         Item item = sender.attacker; var slow = sender as IHitSlowdownSource;
         Item credit = item;
         for (int depth = 0; credit?.Owner != null && credit.Owner != credit && depth < 8; depth++)
@@ -148,6 +151,7 @@ public static class GameplayCombatBridge
     /// <summary>一次实际攻击 Pulse 分发给少量注册后端；不因 Collider 每帧启用而反复扫描。</summary>
     public static void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
     {
+        using var marker = QueryMarker.Auto();
         for (int i = 0; i < Bridges.Count; i++) Bridges[i].QueryWeaponPulse(weapon, shape, context);
     }
 
