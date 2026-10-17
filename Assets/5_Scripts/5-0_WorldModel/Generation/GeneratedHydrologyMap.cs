@@ -69,6 +69,9 @@ namespace FlatWorld.WorldModel
         /// <summary>外圈天然淡水只供生成期距离采样，不提交到邻区。</summary>
         internal IEnumerable<KeyValuePair<Int2, GeneratedHydrologyCell>> WaterCells => cells;
 
+        /// <summary>只读枚举已有冲积格，湖泊合成只复制实际存在的数据。</summary>
+        internal IEnumerable<KeyValuePair<Int2, double>> FloodplainCells => floodplainCells;
+
         internal GeneratedHydrologyMap(
             IReadOnlyDictionary<Int2, GeneratedHydrologyCell> cells,
             IReadOnlyDictionary<Int2, double> floodplainCells)

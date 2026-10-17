@@ -17,6 +17,7 @@ namespace FlatWorld.WorldModel
             public double[] Terminals;
             public int[] Downstream;
             public bool[] Visible;
+            public int[] PrimaryUpstream;
             public int Count => Positions.Length;
         }
 
@@ -192,11 +193,14 @@ namespace FlatWorld.WorldModel
                     current = downstream[current];
                 }
             }
-            return new MacroHydrologyRegion
+            var region = new MacroHydrologyRegion
             {
                 Positions = positions.ToArray(), Heights = heights, Flows = flows,
                 Terminals = terminals, Downstream = downstream, Visible = visible
             };
+            // 区域发布后不再改变主支流关系，所有区块复用同一份确定性选择。
+            region.PrimaryUpstream = ResolvePrimaryUpstream(region);
+            return region;
         }
 
         private static int CompareWorldPosition(Int2 a, Int2 b)

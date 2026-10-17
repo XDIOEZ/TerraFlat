@@ -42,6 +42,7 @@ namespace FlatWorld.WorldModel
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             HydrologySamplingContext sampling,
+            HydrologyOutputWindow outputWindow,
             IReadOnlyDictionary<Int2, double> terminalFlowByCell,
             Dictionary<Int2, GeneratedHydrologyCell> riverCells,
             CancellationToken cancellationToken)
@@ -97,7 +98,7 @@ namespace FlatWorld.WorldModel
                     continue;
                 foreach (Int2 lakePosition in basin)
                 {
-                    if (!ContainsHydrologyOutput(request, lakePosition) ||
+                    if (!outputWindow.Contains(lakePosition) ||
                         sampling.Height(lakePosition) <= settings.SeaLevel)
                         continue;
                     double depthT = Clamp01((sinkHeight + settings.RiverMaxLakeLevelRise -

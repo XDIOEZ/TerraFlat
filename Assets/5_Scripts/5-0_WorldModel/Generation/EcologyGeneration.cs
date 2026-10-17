@@ -626,6 +626,40 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
+        /// <summary>先检查种子坐标和概率，完全没有宿主候选时无需生成邻区地形。</summary>
+        public static bool MayHaveHostTagInChunk(ChunkGenerationRequest request,
+            double globalMultiplier, IReadOnlyList<EcologySpawnRuleSnapshot> rules,
+            string tag, CancellationToken cancellationToken)
+        {
+            if (globalMultiplier <= 0d || rules == null)
+                return false;
+
+            int startX = request.Address.ChunkOrigin.X;
+            int startY = request.Address.ChunkOrigin.Y;
+            for (int ruleIndex = 0; ruleIndex < rules.Count; ruleIndex++)
+            {
+                EcologySpawnRuleSnapshot rule = rules[ruleIndex];
+                if (rule == null || rule.CompanionOnly || !RuleProvidesTag(rule, tag))
+                    continue;
+                for (int y = 0; y < request.Profile.Height; y++)
+                for (int x = 0; x < request.Profile.Width; x++)
+                {
+                    if (((y * request.Profile.Width + x) & 63) == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+                    int worldX = request.Topology.NormalizeX(startX + x);
+                    int worldY = request.Topology.NormalizeY(startY + y);
+                    double distributionWeight = GetDistributionWeight(request, worldX, worldY, rule);
+                    if (distributionWeight <= 0d)
+                        continue;
+                    double chance = Clamp01(globalMultiplier * rule.SpawnChance *
+                        rule.SpawnChanceMultiplier * distributionWeight);
+                    if (PassesChance(request, worldX, worldY, rule, chance, PlacementSalt))
+                        return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>对邻区复用正式宿主判定，找到第一朵天然花后立即停止扫描。</summary>
         public static bool HasHostTagInChunk(ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain, double globalMultiplier,

@@ -4,6 +4,8 @@
 
 - 在独立 4×4 `ChunkTerrainBuffer` 上调用 `ChunkEcologyGenerator.Generate`，检查稳定非零身份、位置唯一、气候边界、群系掩码、地块阻挡和零倍率。
 - 规则夹具不物化 Item，不写生态差量。
+- 邻区标签缓存规则经正式 `DeterministicChunkGenerator.HasHostTagInChunk` 和地形扩展计数，检查正负结果复用、标签大小写/任务版本复用，以及世界种子、纪元、区块地址、Profile 和环绕拓扑隔离。生成中取消必须不写缓存，重试后可复用；世界退出后旧纪元拒绝查询，新纪元重新生成。
+- 独立 `WorldRuntime` 正式执行 `Generate→TryCommit`，检查现成地形能预填蜂巢所需花朵标签，冷暖生成的完整生态身份、位置、偏移、宿主和规则不变。2026-10-17 新增规则的相关 C# 已通过外部编译，按用户要求未执行测试。
 - PlayMode 与地形共用 [Terrain/gameplay-suite.json](../Terrain/gameplay-suite.json)，不建立重复案例：在真实已加载空地上经 `NaturalEntityEcsService.TryRegister` 装配自有 `Tree_Pine` 资源实体，绑定正式区块表现，并采集真实身份/存档快照与导航占地。
 - Lua 检查登记实体时该格从可走变阻挡、`TryTakeSnapshotAndRemove` 返回原身份且释放占地、同一快照重新登记后身份保持。地表覆盖栈与正式存档差量在同一条链检查，宿主自动定时截图。
 - 只生成自有树木，经模拟租约和 Lua 级收尾清理，失败/中断同样恢复原地格，不删自然生成的既有资源。

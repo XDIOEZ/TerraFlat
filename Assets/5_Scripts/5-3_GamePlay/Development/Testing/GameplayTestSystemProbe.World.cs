@@ -16,6 +16,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/noise", WorldNoise);
         operations.Add("terrain/biome", WorldBiome);
         operations.Add("ecology/generation", WorldEcology);
+        operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
+        operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
         operations.Add("time/calendar", WorldCalendar);
         operations.Add("environment/thermal", WorldThermal);
         operations.Add("environment/heat_sources", WorldHeatSources);

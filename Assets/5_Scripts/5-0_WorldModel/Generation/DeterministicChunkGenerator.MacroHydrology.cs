@@ -14,15 +14,17 @@ namespace FlatWorld.WorldModel
         {
             var sampling = new HydrologySamplingContext(request, settings);
             var centers = new Dictionary<Int2, ChannelCenterSample>();
+            var outputWindow = new HydrologyOutputWindow(request);
             int margin = settings.RiverMaxWidth + settings.RiverFloodplainMaxRadius +
-                         settings.RiverRunoffCellSize / 3 + 3 + GetHydrologyOutputPadding(request);
+                         settings.RiverRunoffCellSize / 3 + 3 + outputWindow.Padding;
             int minX = request.Address.ChunkOrigin.X - margin;
             int minY = request.Address.ChunkOrigin.Y - margin;
             int maxX = request.Address.ChunkOrigin.X + request.Profile.Width + margin;
             int maxY = request.Address.ChunkOrigin.Y + request.Profile.Height + margin;
             int chunkCenterX = request.Address.ChunkOrigin.X + request.Profile.Width / 2;
             int chunkCenterY = request.Address.ChunkOrigin.Y + request.Profile.Height / 2;
-            int[] primaryUpstream = ResolvePrimaryUpstream(region);
+            int[] primaryUpstream = region.PrimaryUpstream;
+            WorldTopologyDomain domain = request.Topology.ToDomain();
 
             for (int i = 0; i < region.Count; i++)
             {
@@ -35,7 +37,7 @@ namespace FlatWorld.WorldModel
                     request.Topology.IsWrapped ? request.Topology.Span.X : 0);
                 int sourceY = ShiftNearChunk(source.Y, chunkCenterY,
                     request.Topology.IsWrapped ? request.Topology.Span.Y : 0);
-                int2 delta = request.Topology.ToDomain().ShortestDelta(
+                int2 delta = domain.ShortestDelta(
                     new int2(source.X, source.Y), new int2(target.X, target.Y));
                 double endX = sourceX + delta.x;
                 double endY = sourceY + delta.y;
@@ -118,7 +120,7 @@ namespace FlatWorld.WorldModel
             var riverCells = new Dictionary<Int2, GeneratedHydrologyCell>();
             var floodplainCells = new Dictionary<Int2, double>();
             int maximumRadius = Math.Max(0, (settings.RiverMaxWidth - 1) / 2);
-            RenderMacroCenters(request, settings, sampling, centers, maximumRadius,
+            RenderMacroCenters(settings, sampling, outputWindow, centers, maximumRadius,
                 riverCells, floodplainCells, cancellationToken);
 
             if (settings.RiverLakeChance > 0d)
@@ -129,7 +131,7 @@ namespace FlatWorld.WorldModel
                     if (region.Terminals[i] >= settings.RiverLakeMinFlow)
                         terminals[region.Positions[i]] = region.Terminals[i];
                 }
-                AddHeightDrivenTerminalLakes(request, settings, sampling, terminals,
+                AddHeightDrivenTerminalLakes(request, settings, sampling, outputWindow, terminals,
                     riverCells, cancellationToken);
             }
             return new GeneratedHydrologyMap(riverCells, floodplainCells);
@@ -316,8 +318,8 @@ namespace FlatWorld.WorldModel
             return position;
         }
 
-        private static void RenderMacroCenters(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, HydrologySamplingContext sampling,
+        private static void RenderMacroCenters(ChunkGenerationSettingsSnapshot settings,
+            HydrologySamplingContext sampling, HydrologyOutputWindow outputWindow,
             IReadOnlyDictionary<Int2, ChannelCenterSample> centers, int maximumRadius,
             Dictionary<Int2, GeneratedHydrologyCell> riverCells,
             Dictionary<Int2, double> floodplainCells, CancellationToken cancellationToken)
@@ -342,19 +344,22 @@ namespace FlatWorld.WorldModel
                     if (offsetX * offsetX + offsetY * offsetY > radius * radius + 1) continue;
                     Int2 water = sampling.Normalize(new Int2(center.X + offsetX,
                         center.Y + offsetY));
-                    if (!ContainsHydrologyOutput(request, water) || sampling.Height(water) <= settings.SeaLevel)
+                    if (!outputWindow.Contains(water))
+                        continue;
+                    double height = sampling.Height(water);
+                    if (height <= settings.SeaLevel)
                         continue;
                     double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
                     double edgeStrength = radius == 0 ? 1d :
                         1d - Clamp01(distance / (radius + 0.5d));
                     double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                     SetRiverCell(riverCells, water, new GeneratedHydrologyCell(
-                        GeneratedHydrologyKind.River, sample.Flow, depth, sampling.Height(water) + depth * settings.RiverMaxLakeLevelRise,
+                        GeneratedHydrologyKind.River, sample.Flow, depth, height + depth * settings.RiverMaxLakeLevelRise,
                         sample.DirectionX, sample.DirectionY, edgeStrength,
                         sample.BedEdgeDeposit));
                 }
-                AddFloodplain(request, settings, sampling, center, sample.Flow,
-                    radius, floodplainCells, GetHydrologyOutputPadding(request));
+                AddFloodplain(settings, sampling, outputWindow, center, sample.Flow,
+                    radius, floodplainCells);
             }
         }
 
@@ -365,14 +370,32 @@ namespace FlatWorld.WorldModel
                     request.Profile.Settings.PrecipitationChunkHeight) * 2d +
                 request.Profile.Settings.PeatStoneBoundaryRadius));
 
-        private static bool ContainsHydrologyOutput(ChunkGenerationRequest request, Int2 position)
+        /// <summary>每块只冻结一次输出边界，水格和冲积格不再反复解析相同配置。</summary>
+        private readonly struct HydrologyOutputWindow
         {
-            int padding = GetHydrologyOutputPadding(request);
-            int x = ShiftNearChunk(position.X, request.Address.ChunkOrigin.X + request.Profile.Width / 2,
-                request.Topology.IsWrapped ? request.Topology.Span.X : 0) - request.Address.ChunkOrigin.X;
-            int y = ShiftNearChunk(position.Y, request.Address.ChunkOrigin.Y + request.Profile.Height / 2,
-                request.Topology.IsWrapped ? request.Topology.Span.Y : 0) - request.Address.ChunkOrigin.Y;
-            return x >= -padding && y >= -padding && x < request.Profile.Width + padding && y < request.Profile.Height + padding;
+            private readonly int originX, originY, centerX, centerY, spanX, spanY, maximumX, maximumY;
+
+            internal HydrologyOutputWindow(ChunkGenerationRequest request)
+            {
+                Padding = GetHydrologyOutputPadding(request);
+                originX = request.Address.ChunkOrigin.X;
+                originY = request.Address.ChunkOrigin.Y;
+                centerX = originX + request.Profile.Width / 2;
+                centerY = originY + request.Profile.Height / 2;
+                spanX = request.Topology.IsWrapped ? request.Topology.Span.X : 0;
+                spanY = request.Topology.IsWrapped ? request.Topology.Span.Y : 0;
+                maximumX = request.Profile.Width + Padding;
+                maximumY = request.Profile.Height + Padding;
+            }
+
+            internal int Padding { get; }
+
+            internal bool Contains(Int2 position)
+            {
+                int x = ShiftNearChunk(position.X, centerX, spanX) - originX;
+                int y = ShiftNearChunk(position.Y, centerY, spanY) - originY;
+                return x >= -Padding && y >= -Padding && x < maximumX && y < maximumY;
+            }
         }
         #endregion
     }

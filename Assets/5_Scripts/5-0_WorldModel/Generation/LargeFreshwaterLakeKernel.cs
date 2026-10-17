@@ -24,30 +24,94 @@ namespace FlatWorld.WorldModel
             var cells = new Dictionary<Int2, GeneratedHydrologyCell>();
             var floodplains = new Dictionary<Int2, double>();
             WorldTopologyDomain domain = request.Topology.ToDomain();
-            for (int y = -outputPadding; y < request.Profile.Height + outputPadding; y++)
-            for (int x = -outputPadding; x < request.Profile.Width + outputPadding; x++)
+            var output = new LakeOutputBounds(request, outputPadding);
+            int visited = 0;
+            if (rivers != null)
             {
-                if (((y * request.Profile.Width + x) & 63) == 0) cancellation.ThrowIfCancellationRequested();
-                var position = new Int2(request.Topology.NormalizeX(request.Address.ChunkOrigin.X + x),
-                    request.Topology.NormalizeY(request.Address.ChunkOrigin.Y + y));
-                bool hasWater = rivers != null && rivers.TryGet(position.X, position.Y, out _);
-                GeneratedHydrologyCell cell = default;
-                if (hasWater) rivers.TryGet(position.X, position.Y, out cell);
-                foreach (Basin basin in basins)
+                foreach (var pair in rivers.WaterCells)
                 {
-                    if (!basin.TrySample(domain, position, out double depth, out bool island)) continue;
-                    // 自然陆地岛不能再被旧汇流小水潭覆盖；盆地外保留原河流及冲积层。
-                    if (island) { hasWater = false; break; }
-                    if (heightSampler(position) <= settings.SeaLevel + 0.01d) continue;
-                    hasWater = true;
-                    cell = new GeneratedHydrologyCell(GeneratedHydrologyKind.Lake, 0d, depth, basin.SurfaceLevel);
-                    break;
+                    if ((visited++ & 63) == 0) cancellation.ThrowIfCancellationRequested();
+                    if (output.Contains(pair.Key)) cells[pair.Key] = pair.Value;
                 }
-                if (hasWater) cells[position] = cell;
-                double floodplain = rivers?.GetFloodplainStrength(position.X, position.Y) ?? 0d;
-                if (floodplain > 0d) floodplains[position] = floodplain;
+                foreach (var pair in rivers.FloodplainCells)
+                {
+                    if ((visited++ & 63) == 0) cancellation.ThrowIfCancellationRequested();
+                    if (pair.Value > 0d && output.Contains(pair.Key)) floodplains[pair.Key] = pair.Value;
+                }
+            }
+
+            // 按原候选顺序处理包围框，同格首个有效湖泊或岛屿仍遮断后续盆地。
+            var resolved = new HashSet<Int2>();
+            foreach (Basin basin in basins)
+            {
+                double reach = basin.Reach;
+                output.GetImages(basin.Center, reach, out int minImageX, out int maxImageX,
+                    out int minImageY, out int maxImageY);
+                for (int imageY = minImageY; imageY <= maxImageY; imageY++)
+                for (int imageX = minImageX; imageX <= maxImageX; imageX++)
+                {
+                    double centerX = basin.Center.x + imageX * (double)output.SpanX;
+                    double centerY = basin.Center.y + imageY * (double)output.SpanY;
+                    int minX = Math.Max(output.MinX, (int)Math.Floor(centerX - reach) - 1);
+                    int minY = Math.Max(output.MinY, (int)Math.Floor(centerY - reach) - 1);
+                    int maxX = Math.Min(output.MaxX, (int)Math.Ceiling(centerX + reach) + 1);
+                    int maxY = Math.Min(output.MaxY, (int)Math.Ceiling(centerY + reach) + 1);
+                    for (int y = minY; y < maxY; y++)
+                    for (int x = minX; x < maxX; x++)
+                    {
+                        if ((visited++ & 63) == 0) cancellation.ThrowIfCancellationRequested();
+                        var position = new Int2(request.Topology.NormalizeX(x), request.Topology.NormalizeY(y));
+                        if (resolved.Contains(position) ||
+                            !basin.TrySample(domain, position, out double depth, out bool island)) continue;
+                        // 自然陆地岛不能再被旧汇流小水潭覆盖；盆地外保留原河流及冲积层。
+                        if (island)
+                        {
+                            cells.Remove(position);
+                            resolved.Add(position);
+                            continue;
+                        }
+                        if (heightSampler(position) <= settings.SeaLevel + 0.01d) continue;
+                        cells[position] = new GeneratedHydrologyCell(GeneratedHydrologyKind.Lake,
+                            0d, depth, basin.SurfaceLevel);
+                        resolved.Add(position);
+                    }
+                }
             }
             return new GeneratedHydrologyMap(cells, floodplains);
+        }
+
+        /// <summary>环绕外圈只保留一份规范坐标，并为盆地枚举与输出相交的镜像。</summary>
+        private readonly struct LakeOutputBounds
+        {
+            internal readonly int MinX, MinY, MaxX, MaxY, SpanX, SpanY;
+
+            internal LakeOutputBounds(ChunkGenerationRequest request, int padding)
+            {
+                MinX = request.Address.ChunkOrigin.X - padding;
+                MinY = request.Address.ChunkOrigin.Y - padding;
+                SpanX = request.Topology.IsWrapped ? request.Topology.Span.X : 0;
+                SpanY = request.Topology.IsWrapped ? request.Topology.Span.Y : 0;
+                int width = request.Profile.Width + padding * 2;
+                int height = request.Profile.Height + padding * 2;
+                MaxX = MinX + (SpanX > 0 ? Math.Min(width, SpanX) : width);
+                MaxY = MinY + (SpanY > 0 ? Math.Min(height, SpanY) : height);
+            }
+
+            internal bool Contains(Int2 position)
+            {
+                int x = SpanX > 0 ? PositiveModulo(position.X - MinX, SpanX) : position.X - MinX;
+                int y = SpanY > 0 ? PositiveModulo(position.Y - MinY, SpanY) : position.Y - MinY;
+                return x >= 0 && y >= 0 && x < MaxX - MinX && y < MaxY - MinY;
+            }
+
+            internal void GetImages(double2 center, double reach,
+                out int minX, out int maxX, out int minY, out int maxY)
+            {
+                minX = SpanX > 0 ? (int)Math.Ceiling((MinX - center.x - reach - 1d) / SpanX) : 0;
+                maxX = SpanX > 0 ? (int)Math.Floor((MaxX - center.x + reach + 1d) / SpanX) : 0;
+                minY = SpanY > 0 ? (int)Math.Ceiling((MinY - center.y - reach - 1d) / SpanY) : 0;
+                maxY = SpanY > 0 ? (int)Math.Floor((MaxY - center.y + reach + 1d) / SpanY) : 0;
+            }
         }
 
         #endregion
@@ -143,6 +207,8 @@ namespace FlatWorld.WorldModel
             private readonly double cosine, sine, phase;
             private readonly double3[] islands; // 盆地局部归一化坐标 x/y 与岛屿半径。
             internal double SurfaceLevel { get; }
+            internal double2 Center => center;
+            internal double Reach => radius * 1.55d;
 
             internal Basin(double2 center, double radius, double height, int seed, int x, int y, double islandChance)
             {

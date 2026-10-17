@@ -47,6 +47,7 @@ namespace FlatWorld.WorldModel
                 new CancellationTokenSource());
             previous.Cancel();
             heightDrivenRegionCache.Clear();
+            ClearEcologyHostTagCache();
             precipitationCache.Clear();
             while (precipitationCacheOrder.TryDequeue(out _)) { }
             oceanChunkCache.Clear();
@@ -99,6 +100,8 @@ namespace FlatWorld.WorldModel
                 bool cave = IsCaveGeneration(request);
                 PopulateTerrain(request, terrain, cave, cancellationToken, timing);
                 cancellationToken.ThrowIfCancellationRequested();
+                using (timing?.MeasureStage("ecology.host_tags") ?? default)
+                    CacheEcologyHostTags(request, terrain, cancellationToken);
                 using (timing?.MeasureStage("terrain.weather_profile") ?? default)
                     terrain.InitializeWeatherProfile(weatherSettings);
                 ChunkEcologyData ecology;
@@ -137,19 +140,37 @@ namespace FlatWorld.WorldModel
 
         #region 自然物邻区查询
 
-        /// <summary>仅重算邻区地形并查询天然宿主标签，不依赖邻区是否加载，也不会递归生成伴生物。</summary>
+        /// <summary>优先复用天然宿主标签，候选存在且缓存未命中时才重建邻区地形，不递归生成伴生物。</summary>
         public bool HasHostTagInChunk(ChunkGenerationRequest request, string tag,
             CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            ThrowIfEcologyEpochRetired(request);
+            var cacheKey = new EcologyHostTagKey(request, tag);
+            if (ecologyHostTagCache.TryGetValue(cacheKey, out bool cached))
+            {
+                ThrowIfEcologyEpochRetired(request);
+                return cached;
+            }
+            if (!ChunkEcologyGenerator.MayHaveHostTagInChunk(request,
+                    request.Profile.EcologyGlobalMultiplier, request.Profile.EcologyRules,
+                    tag, cancellationToken))
+            {
+                StoreEcologyHostTag(cacheKey, false, cancellationToken);
+                return false;
+            }
             var terrain = new ChunkTerrainBuffer(request.Profile.Width,
                 request.Profile.Height, liquidTypes);
             try
             {
-                PopulateTerrain(request, terrain, IsCaveGeneration(request),
-                    cancellationToken, null);
-                return ChunkEcologyGenerator.HasHostTagInChunk(request, terrain,
+                using (ChunkGenerationTiming.CurrentOnThread?.MeasureStage("ecology.neighbor_terrain", accumulate: true) ?? default)
+                    PopulateTerrain(request, terrain, IsCaveGeneration(request),
+                        cancellationToken, null);
+                bool found = ChunkEcologyGenerator.HasHostTagInChunk(request, terrain,
                     request.Profile.EcologyGlobalMultiplier, request.Profile.EcologyRules,
                     tag, cancellationToken);
+                StoreEcologyHostTag(cacheKey, found, cancellationToken);
+                return found;
             }
             finally { terrain.Dispose(); }
         }
@@ -1421,14 +1442,13 @@ namespace FlatWorld.WorldModel
 
         /// <summary>只在低坡且已有明显汇流的主河两侧生成宽缓冲积带。</summary>
         private static void AddFloodplain(
-            ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             HydrologySamplingContext sampling,
+            HydrologyOutputWindow outputWindow,
             Int2 center,
             double flow,
             int channelRadius,
-            Dictionary<Int2, double> floodplainCells,
-            int outputPadding = 0)
+            Dictionary<Int2, double> floodplainCells)
         {
             if (settings.RiverFloodplainMaxRadius <= channelRadius ||
                 flow < settings.RiverFloodplainStartFlow)
@@ -1466,7 +1486,7 @@ namespace FlatWorld.WorldModel
                     Int2 position = sampling.Normalize(new Int2(
                         center.X + offsetX,
                         center.Y + offsetY));
-                    if (!(outputPadding > 0 ? ContainsHydrologyOutput(request, position) : ContainsChunk(request, position)) ||
+                    if (!outputWindow.Contains(position) ||
                         sampling.Height(position) <= settings.SeaLevel)
                     {
                         continue;

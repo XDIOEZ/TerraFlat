@@ -43,6 +43,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `WorldGenerationRuntimeHooks` 的 Profile Hook 在主线程冻结参数；`WorldModelTerrainDecorator` 在生成器创建时捕获委托，正式流送与出生查询共用。地形回调只能读请求中的冻结值并修改纯地形缓冲，不访问 Unity 对象或当前单例；测试平地等临时规则由订阅者退出时撤销。
 - Tile 外观查询优先 JSON 的 `runtimeTileId/tileAsset`，再回退 Palette；地形身份按冻结 Profile → 当前 Profile → JSON 目录解析，玩家新建筑用当前目录，稳定数字 ID 与冻结映射不冲突。
 - 流送计时是单调墙钟，父子阶段重叠不能相加；暂停跨越请求单独记录。宏观 Lazy 执行时间归实际执行者，get 包含等待，local_refine 只计本块。
+- 生态邻区宿主标签在 `DeterministicChunkGenerator.EcologyCache` 按纪元/地址/种子/Profile/拓扑/标签有界缓存；正式地形预填，冷查询先筛纯坐标候选，取消不写结果，换世界清空。`ecology.neighbor_terrain` 累计本请求冷邻区重建时间。
 
 ## 表现与资源会话
 

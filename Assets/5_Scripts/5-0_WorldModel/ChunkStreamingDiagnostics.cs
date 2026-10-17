@@ -186,24 +186,29 @@ namespace FlatWorld.WorldModel
             private readonly ChunkGenerationTiming timing;
             private readonly string stage;
             private readonly long started;
+            private readonly bool accumulate;
 
-            internal StageMeasurement(ChunkGenerationTiming timing, string stage)
+            internal StageMeasurement(ChunkGenerationTiming timing, string stage, bool accumulate)
             {
                 this.timing = timing;
                 this.stage = stage;
+                this.accumulate = accumulate;
                 started = Stopwatch.GetTimestamp();
             }
 
-            public void Dispose() => timing?.RecordStageDuration(stage, ChunkStreamingDiagnostics.ElapsedMs(started));
+            public void Dispose() => timing?.RecordStageDuration(stage, ChunkStreamingDiagnostics.ElapsedMs(started), accumulate);
         }
 
         /// <summary>在阶段边界开始计时，结果随请求时间线一起交给主线程。</summary>
-        public StageMeasurement MeasureStage(string stage) => new StageMeasurement(this, stage);
+        public StageMeasurement MeasureStage(string stage, bool accumulate = false) => new StageMeasurement(this, stage, accumulate);
 
         /// <summary>把循环内累计的采样耗时合并为一次阶段记录。</summary>
-        internal void RecordStageDuration(string stage, double milliseconds)
+        internal void RecordStageDuration(string stage, double milliseconds, bool accumulate = false)
         {
-            lock (gate) stageMilliseconds[stage] = milliseconds;
+            // 同一请求可能查询多个冷邻区，合并耗时才能看到这轮重建的总开销。
+            lock (gate)
+                stageMilliseconds[stage] = accumulate && stageMilliseconds.TryGetValue(stage, out double previous)
+                    ? previous + milliseconds : milliseconds;
             owner.Record("generation.stage." + stage, milliseconds);
         }
 

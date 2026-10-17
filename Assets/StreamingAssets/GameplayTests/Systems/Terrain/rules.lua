@@ -26,6 +26,29 @@ test.system("terrain", "biome", {}, function(data)
     assert(data.outside == 255 and data.empty == 255, "未匹配群系未保留独立标记")
 end, "群系区间边界、优先顺序与未匹配")
 
+-- 使用紧凑水文预算采样真正生成并提交的地形，覆盖冷暖缓存与跨区生成顺序。
+for _, case in ipairs({
+    {seed = 17413, origin = 0, wrapped = false, label = "正坐标"},
+    {seed = 8321, origin = -32, wrapped = true, label = "负坐标环绕世界"}
+}) do
+    test.system("terrain", "cached_generation", case, function(data)
+        local cold = data.cold
+        assert(cold.cellCount == 1024 and cold.environmentValues == cold.cellCount and
+            #cold.heightBits == cold.cellCount, "地形采样未包含完整的真实高度环境层")
+        assert(cold.waterCells > 0 and cold.riverCells + cold.lakeCells > 0,
+            "水文夹具没有真实河湖，空地形不能证明河湖生成稳定")
+        for _, name in ipairs({"warmed", "independent"}) do
+            local repeated = data[name]
+            assert(cold.terrainHash == repeated.terrainHash and cold.waterCells == repeated.waterCells and
+                cold.riverCells == repeated.riverCells and cold.lakeCells == repeated.lakeCells,
+                "冷缓存、邻区预热后的缓存或独立生成器改变了正式地形：" .. name)
+            for index, height in ipairs(cold.heightBits) do
+                assert(height == repeated.heightBits[index], "高度原始值随缓存或生成顺序改变：" .. name)
+            end
+        end
+    end, "河湖正式生成的冷暖缓存、独立实例与顺序稳定：" .. case.label)
+end
+
 local harvestCases = {
     {name = "一级普通工具", args = {}, tool = true, rule = true, uses = 6},
     {name = "三级品质提高工作量", args = {tier = 3}, tool = true, rule = true, uses = 3},

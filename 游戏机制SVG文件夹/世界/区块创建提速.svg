@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1010" viewBox="0 0 1440 1010" role="img" aria-labelledby="title desc">
+  <title id="title">区块创建提速：减少重复计算</title>
+  <desc id="desc">根据慢区块日志，解释生态邻区查询、河流局部细化和大型湖泊的优化。图中耗时均为修改前日志，不代表优化后的实测结果。</desc>
+  <defs>
+    <style>
+      text { font-family: 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif; }
+      .title { font-size: 36px; font-weight: 700; fill: #eff6ff; }
+      .sub { font-size: 19px; fill: #b8c8df; }
+      .head { font-size: 25px; font-weight: 700; fill: #f2f7ff; }
+      .body { font-size: 20px; fill: #dce7f6; }
+      .small { font-size: 18px; fill: #b8c8df; }
+      .good { fill: #85e4c0; }
+      .warn { fill: #ffce85; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7d9bbd"/></marker>
+  </defs>
+  <rect width="1440" height="1010" fill="#0c1728"/>
+  <text x="58" y="67" class="title">区块创建提速：把反复重算的工作省下来</text>
+  <text x="58" y="104" class="sub">保留地图生成规则、河流细节与生态条件；具体速度由重新编译后的真实游玩确认。</text>
+
+  <rect x="48" y="136" width="1344" height="152" rx="16" fill="#18273d" stroke="#304664"/>
+  <text x="74" y="174" class="head">日志中的时间要分开看</text>
+  <text x="76" y="218" class="body">排队：最高约 14 秒</text>
+  <path d="M 330 210 H 385" stroke="#7d9bbd" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="410" y="218" class="body">后台工作：约 2～13 秒</text>
+  <path d="M 710 210 H 765" stroke="#7d9bbd" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="792" y="218" class="body">主线程提交 → 画面逐步出现</text>
+  <text x="76" y="258" class="small">生态尖峰约 10.3 秒；河流细化约 1.5～2 秒；大湖约 0.4 秒。均为修改前样本。</text>
+
+  <rect x="48" y="312" width="1344" height="184" rx="16" fill="#16283a" stroke="#33556c"/>
+  <text x="76" y="352" class="head">① 生态：蜂巢只是查附近有没有花，却连带重建邻区</text>
+  <text x="76" y="394" class="body warn">原来：检查邻区标签 → 完整地形 / 河流 / 湖泊 → 下一个邻区继续重算</text>
+  <text x="76" y="434" class="body good">现在：先筛掉不可能出现的候选；复用已生成地形与有界标签缓存</text>
+  <text x="76" y="471" class="small">仍按正式宿主规则判定；取消、异常不留下错误结果；切换世界清缓存。</text>
+
+  <rect x="48" y="518" width="1344" height="184" rx="16" fill="#16283a" stroke="#33556c"/>
+  <text x="76" y="558" class="head">② 河流：输出范围内，每个格子反复读取同一组配置</text>
+  <text x="76" y="600" class="body warn">原来：水格 / 冲积带循环 → 反复计算外圈宽度和配置；每块再算主上游</text>
+  <text x="76" y="640" class="body good">现在：每块提前确定外圈宽度；区域共享主上游结果</text>
+  <text x="76" y="677" class="small">保留曲线采样、宽度、水深、流向和稳定遍历顺序，不缩小降水所需的水文外圈。</text>
+
+  <rect x="48" y="724" width="1344" height="164" rx="16" fill="#16283a" stroke="#33556c"/>
+  <text x="76" y="764" class="head">③ 湖泊：减少大面积无效扫描</text>
+  <text x="76" y="806" class="body good">复用稀疏河流 / 冲积数据，只在可能受湖盆影响的位置计算湖岸。</text>
+  <text x="76" y="848" class="small">保持盆地重叠顺序、岛屿清水、环绕世界和区块外圈的原有结果。</text>
+
+  <rect x="48" y="910" width="1344" height="66" rx="13" fill="#243148"/>
+  <text x="76" y="951" class="body">代码修改不会进入当前已运行的旧程序集；本轮不暂停 Play Mode，实际效果由用户验收。</text>
+</svg>

@@ -25,6 +25,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 主链：配置 → 地形/气候/水文 → `ChunkTerrainData` → 结构/生态 → 差量 → 表现。Chunk 生命周期由 WorldModel 管理。
 
+生成热路径：河流每块冻结 `HydrologyOutputWindow`，宏观区域共享 `PrimaryUpstream`；湖泊按稀疏河格和湖盆范围合成。优化须保留环绕、外圈、盆地优先级和稳定取整，不能靠缩短降水影响距离提速。
+
 ## 地块与液体
 
 - JSON 构建 `RuntimeTileDefinition` 和共享 Behaviour；`TileBehaviourRegistry` 按显式 `type` 工厂解析，未知字段/非法数值失败。`TileData.ID/Name` 来自定义，位置/进度属于实例，`CreateTileData/Clone` 产生单格副本。`TileDefinitionEditorCatalog` 保存 JSON，`GameRes.GetTileBlock` 返回运行时定义。
