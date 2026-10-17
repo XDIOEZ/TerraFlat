@@ -97,7 +97,7 @@ namespace FlatWorld.WorldModel
                 }
 
                 // 与正式地格使用同一液深量化、零下结冰和石地岩浆覆盖规则。
-                depth = QuantizeGeneratedLiquidDepth(depth);
+                depth = LiquidCellValue.ToNormalizedDepth(QuantizeGeneratedLiquidLevel(depth));
                 if (depth > 0f && (GetBlendedTemperature(source) < 0f || IsLavaCovered(source, climate)))
                     depth = 0f;
                 float strength = AirHumidityKernel.GetWaterSourceStrength(depth > 0f, depth, humiditySettings);

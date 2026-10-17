@@ -13,10 +13,10 @@ public class Tile_Farmland : TileBlockBehaviour
     public float waterMultiplierMax = 1.2f; // 水分充足时的最高倍率
 
     [Tooltip("耕地每秒自然蒸发的水分"), Min(0f)]
-    public float waterEvaporationPerSecond = 0.03f; // 地块水分自然流失
+    public float waterEvaporationPerSecond = 0.003f; // 地块水分自然流失
 
     [Tooltip("作物每秒消耗的耕地水分"), Min(0f)]
-    public float cropWaterConsumePerSecond = 0.1f; // 作物生长时消耗水分
+    public float cropWaterConsumePerSecond = 0.01f; // 作物生长时消耗水分
 
 #endregion
 
@@ -44,7 +44,7 @@ public class Tile_Farmland : TileBlockBehaviour
             Mathf.Clamp01(waterMultiplierMin));
     }
 
-    public void Irrigate(TileData tileData, float waterAmount) // 灌溉地块
+    public void Irrigate(TileData tileData, int waterAmount) // 灌溉地块
     {
         if (waterAmount < 0f)
             throw new System.ArgumentOutOfRangeException(nameof(waterAmount), "灌溉水量不能小于 0");
@@ -53,7 +53,7 @@ public class Tile_Farmland : TileBlockBehaviour
         farmlandData.AddWater(waterAmount);
     }
 
-    public void ConsumeWater(TileData tileData, float waterAmount) // 消耗地块水分
+    public void ConsumeWater(TileData tileData, int waterAmount) // 消耗地块水分
     {
         if (waterAmount < 0f)
             throw new System.ArgumentOutOfRangeException(nameof(waterAmount), "消耗水量不能小于 0");
@@ -107,7 +107,7 @@ public class Tile_Farmland : TileBlockBehaviour
             Mathf.Clamp01(waterMultiplierMin));
     }
 
-    private static void ConsumeWater(TileData_Farmland farmlandData, float waterAmount)
+    private static void ConsumeWater(TileData_Farmland farmlandData, int waterAmount)
     {
         if (waterAmount < 0f)
             throw new System.ArgumentOutOfRangeException(nameof(waterAmount), "消耗水量不能小于 0");

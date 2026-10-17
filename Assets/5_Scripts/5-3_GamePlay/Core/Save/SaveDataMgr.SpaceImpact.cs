@@ -150,19 +150,19 @@ public partial class SaveDataMgr
         return result;
     }
 
-    public void RecordSpaceLiquidChange(string worldKey, Vector2Int cell, string liquidId, float depth,
-        string generatedLiquidId, float generatedDepth)
+    public void RecordSpaceLiquidChange(string worldKey, Vector2Int cell, string liquidId, int level,
+        string generatedLiquidId, int generatedLevel)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null) return;
         if (!SaveData.PlanetData_Dict.TryGetValue(worldKey, out PlanetData planet)) throw new KeyNotFoundException(worldKey);
-        if (!float.IsFinite(depth) || depth < 0f || depth > 1f || (depth == 0f) != string.IsNullOrEmpty(liquidId))
-            throw new ArgumentOutOfRangeException(nameof(depth));
+        if (level < 0 || level > LiquidCellValue.MaximumLevel || (level == 0) != string.IsNullOrEmpty(liquidId))
+            throw new ArgumentOutOfRangeException(nameof(level));
         ChunkSaveRecord record = GetImpactRecord(planet, new Vector3(cell.x, cell.y, 0f));
         var local = cell - record.ChunkPosition;
         record.LiquidCells ??= new List<LiquidCellSaveData>();
         record.LiquidCells.RemoveAll(value => value.LocalPosition == local);
-        if (depth != generatedDepth || !string.Equals(liquidId, generatedLiquidId, StringComparison.Ordinal))
-            record.LiquidCells.Add(new LiquidCellSaveData { LocalPosition = local, LiquidId = liquidId, LiquidDepth = depth });
+        if (level != generatedLevel || !string.Equals(liquidId, generatedLiquidId, StringComparison.Ordinal))
+            record.LiquidCells.Add(new LiquidCellSaveData { LocalPosition = local, LiquidId = liquidId, LiquidLevel = level });
         record.LiquidCells.Sort(CompareLiquidCell);
     }
     #endregion

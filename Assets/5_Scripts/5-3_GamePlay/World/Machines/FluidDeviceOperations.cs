@@ -168,29 +168,33 @@ public static class FluidDeviceOperations
         // 工业输入只由管网按本轮起始库存搬运，泵不能旁路抽取或继续抽同格地表。
         if (industrialInput) { state.Status = "等待管网输入"; return; }
         Vector2 intake = (Vector2)(node.Cell + MechanicalNetworkGraph.Directions[(rotation + 2) & 3]) + Vector2.one * .5f;
-        if (!TrySampleFluidEnvironmentLiquid(intake, out string sourceWorld, out Vector2 sourcePosition, out LiquidDefinition sourceLiquid, out float sourceDepth) ||
+        if (!TrySampleFluidEnvironmentLiquid(intake, out string sourceWorld, out Vector2 sourcePosition, out LiquidDefinition sourceLiquid, out int sourceLevel) ||
             !FluidCatalog.Default.TryFromLiquidId(sourceLiquid.Id, out FluidDefinition substance) || !substance.AllowIndustrialTransport)
         { state.Status = "入口没有可抽取的液体"; return; }
         double freeLiters = definition.VolumeLiters - definition.MinimumGasSpaceLiters - buffer.GetLiquidLiters();
-        double liters = Math.Min(freeLiters, Math.Min(definition.ThroughputLitersPerSecond * seconds, work / definition.WorkJoulesPerStandardLiter));
-        decimal servings = FluidUnits.MolToServings(substance, FluidUnits.LiquidLitersToMol(substance, (decimal)Math.Max(0, liters)));
-        float requestedDepth = Mathf.Min(sourceDepth, (float)servings * sourceLiquid.WorldWater.DepthPerServing);
-        if (requestedDepth <= .0000001f) { state.Status = "液体空间已满"; return; }
-        decimal plannedMoles = FluidUnits.ServingsToMol(substance, (decimal)(requestedDepth / sourceLiquid.WorldWater.DepthPerServing));
+        double servingLiters = (double)FluidUnits.MolToLiquidLiters(substance, FluidUnits.ServingsToMol(substance, 1m));
+        if (freeLiters < servingLiters) { state.Status = "液体空间不足一份"; return; }
+        double increment = Math.Max(0, Math.Min(definition.ThroughputLitersPerSecond * seconds, work / definition.WorkJoulesPerStandardLiter));
+        state.WorldLiquidPumpLiters = Math.Min(servingLiters * 10d, state.WorldLiquidPumpLiters + increment);
+        int requestedLevel = (int)Math.Min(sourceLevel, Math.Floor(Math.Min(freeLiters, state.WorldLiquidPumpLiters) / servingLiters));
+        if (requestedLevel <= 0) { state.Status = "正在累计整份抽液"; return; }
+        decimal plannedMoles = FluidUnits.ServingsToMol(substance, requestedLevel);
         FluidBatch planned = FluidInventory.CreateBatch(substance, 0, plannedMoles, AmbientTemperatureKelvin(node));
         if (!buffer.CanAdd(planned, definition.VolumeLiters, definition.MinimumGasSpaceLiters, true, true))
         { state.Status = "液相槽里还有其他物质"; return; }
-        if (!TryPumpFluidEnvironmentLiquid(sourceWorld, sourcePosition, requestedDepth, out string liquidId, out float removedDepth)) return;
-        decimal actualMoles = FluidUnits.ServingsToMol(substance, (decimal)(removedDepth / sourceLiquid.WorldWater.DepthPerServing));
+        if (!TryPumpFluidEnvironmentLiquid(sourceWorld, sourcePosition, requestedLevel, out string liquidId, out int removedLevel)) return;
+        decimal actualMoles = FluidUnits.ServingsToMol(substance, removedLevel);
         FluidBatch actual = FluidInventory.CreateBatch(substance, 0, actualMoles, AmbientTemperatureKelvin(node));
         if (!buffer.TryAdd(actual, definition.VolumeLiters, definition.MinimumGasSpaceLiters, true, true))
         {
-            if (ReleaseFluidEnvironmentLiquid(sourceWorld, sourcePosition, liquidId, removedDepth) + .0000001f < removedDepth)
+            if (ReleaseFluidEnvironmentLiquid(sourceWorld, sourcePosition, liquidId, removedLevel) < removedLevel)
                 throw new InvalidOperationException("世界液体抽取回滚无法恢复已扣液体。");
             throw new InvalidOperationException("世界液体抽取与泵缓冲提交失败。");
         }
         state.Status = "正在抽液体";
-        state.DissipatedHeatJoules += (double)FluidUnits.MolToLiquidLiters(substance, actualMoles) * definition.WorkJoulesPerStandardLiter;
+        double consumedLiters = (double)FluidUnits.MolToLiquidLiters(substance, actualMoles);
+        state.WorldLiquidPumpLiters = Math.Max(0, state.WorldLiquidPumpLiters - consumedLiters);
+        state.DissipatedHeatJoules += consumedLiters * definition.WorkJoulesPerStandardLiter;
     }
 
     public static void AdvanceCompressor(MachineEntity node, float seconds)

@@ -209,7 +209,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 tile.Initialize_Env(Map.Data.EnvironmentLayers, localX, localY);
                 tile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
                 if (biome.BiomeId == "ocean")
-                    Map.SetGeneratedLiquid(worldPosition, LiquidIds.SeaWater, 1f - Mathf.Pow(Mathf.Clamp01(environment.w / 0.5f), 2f));
+                    Map.SetGeneratedLiquid(worldPosition, LiquidIds.SeaWater,
+                        FlatWorld.WorldModel.LiquidCellValue.FromGeneratedDepth(1f - Mathf.Pow(Mathf.Clamp01(environment.w / 0.5f), 2f)));
                 if (!Map.Data.SetBaseTile(worldPosition, tile))
                     throw new InvalidOperationException($"无法写入基础地形：{worldPosition}");
 

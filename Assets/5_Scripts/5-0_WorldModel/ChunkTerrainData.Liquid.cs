@@ -4,22 +4,25 @@ using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>一格液体的纯运行时值；深度范围 0～1，编号不参与持久化。</summary>
+    /// <summary>一格液体的纯运行时值；0～10 整数等级，一份液体就是一级。</summary>
     public readonly struct LiquidCellValue : IEquatable<LiquidCellValue>
     {
         #region 格子值
-        public const float DepthEpsilon = 0.000001f;
+        public const int MaximumLevel = 10;
         public readonly int LiquidTypeIndex;
-        public readonly float LiquidDepth;
-        public LiquidCellValue(int typeIndex, float depth) { LiquidTypeIndex = typeIndex; LiquidDepth = depth; }
-        public bool Equals(LiquidCellValue other) => LiquidTypeIndex == other.LiquidTypeIndex && LiquidDepth.Equals(other.LiquidDepth);
+        public readonly int LiquidLevel;
+        public LiquidCellValue(int typeIndex, int level) { LiquidTypeIndex = typeIndex; LiquidLevel = level; }
+        public bool Equals(LiquidCellValue other) => LiquidTypeIndex == other.LiquidTypeIndex && LiquidLevel == other.LiquidLevel;
 
-        public static float NormalizeDepth(float depth)
+        public static int NormalizeLevel(int level) => Math.Clamp(level, 0, MaximumLevel);
+        // 浮点深度只在表现和比例采样时派生，不作为第二份权威水量。
+        public static float ToNormalizedDepth(int level) => NormalizeLevel(level) / (float)MaximumLevel;
+        public static int FromGeneratedDepth(double depth)
         {
-            if (float.IsNaN(depth) || float.IsInfinity(depth)) throw new ArgumentOutOfRangeException(nameof(depth));
-            depth = Math.Clamp(depth, 0f, 1f);
-            // 统一清除计算尾数，避免几乎抽干的格子仍保留整格水面。
-            return depth <= DepthEpsilon ? 0f : depth;
+            if (!double.IsFinite(depth)) throw new ArgumentOutOfRangeException(nameof(depth));
+            // 生成器也会传入 float，十分位的二进制误差不能凭空多升一级。
+            return depth <= 0d ? 0 : Math.Clamp((int)Math.Ceiling(Math.Clamp(depth, 0d, 1d) *
+                MaximumLevel - 0.000001d), 1, MaximumLevel);
         }
         #endregion
     }
@@ -29,33 +32,33 @@ namespace FlatWorld.WorldModel
     {
         #region 数组所有权
         internal readonly LiquidTypeCatalog Types;
-        internal float[] Depth;
+        internal int[] Level;
         internal int[] TypeIndex;
         internal readonly int Count;
         internal LiquidCellStorage(int count, LiquidTypeCatalog types)
         {
             Count = count;
             Types = types ?? LiquidTypeCatalog.BuiltIn;
-            Depth = ArrayPool<float>.Shared.Rent(count);
+            Level = ArrayPool<int>.Shared.Rent(count);
             TypeIndex = ArrayPool<int>.Shared.Rent(count);
-            Array.Clear(Depth, 0, count);
+            Array.Clear(Level, 0, count);
             Array.Clear(TypeIndex, 0, count);
         }
-        internal LiquidCellValue Read(int index) => new(TypeIndex[index], Depth[index]);
-        internal LiquidCellValue Normalize(int typeIndex, float depth)
+        internal LiquidCellValue Read(int index) => new(TypeIndex[index], Level[index]);
+        internal LiquidCellValue Normalize(int typeIndex, int level)
         {
-            depth = LiquidCellValue.NormalizeDepth(depth);
+            level = LiquidCellValue.NormalizeLevel(level);
             Types.GetId(typeIndex);
-            if (depth > 0f && typeIndex == 0) throw new ArgumentException("非零液深必须具有液体身份。");
-            return new LiquidCellValue(depth > 0f ? typeIndex : 0, depth);
+            if (level > 0 && typeIndex == 0) throw new ArgumentException("非零液体等级必须具有液体身份。");
+            return new LiquidCellValue(level > 0 ? typeIndex : 0, level);
         }
-        internal void Write(int index, LiquidCellValue value) { Depth[index] = value.LiquidDepth; TypeIndex[index] = value.LiquidTypeIndex; }
+        internal void Write(int index, LiquidCellValue value) { Level[index] = value.LiquidLevel; TypeIndex[index] = value.LiquidTypeIndex; }
         public void Dispose()
         {
-            if (Depth == null) return;
-            ArrayPool<float>.Shared.Return(Depth, true);
+            if (Level == null) return;
+            ArrayPool<int>.Shared.Return(Level, true);
             ArrayPool<int>.Shared.Return(TypeIndex, true);
-            Depth = null;
+            Level = null;
             TypeIndex = null;
         }
         #endregion
@@ -66,13 +69,14 @@ namespace FlatWorld.WorldModel
         #region 生成液体层
         private LiquidCellStorage liquid;
         public LiquidTypeCatalog LiquidTypes => liquid.Types;
-        public float GetLiquidDepth(int x, int y) { ThrowIfUnavailable(); return liquid.Depth[GetIndex(x, y)]; }
+        public int GetLiquidLevel(int x, int y) { ThrowIfUnavailable(); return liquid.Level[GetIndex(x, y)]; }
+        public float GetLiquidDepth(int x, int y) => LiquidCellValue.ToNormalizedDepth(GetLiquidLevel(x, y));
         /// <summary>生成阶段同时确定底部地块和液体；此接口只写液体数组。</summary>
-        public void SetLiquid(int x, int y, int liquidTypeIndex, float liquidDepth)
+        public void SetLiquid(int x, int y, int liquidTypeIndex, int liquidLevel)
         {
             ThrowIfUnavailable();
             int index = GetIndex(x, y);
-            LiquidCellValue value = liquid.Normalize(liquidTypeIndex, liquidDepth);
+            LiquidCellValue value = liquid.Normalize(liquidTypeIndex, liquidLevel);
             liquid.Write(index, value);
         }
         #endregion
@@ -88,18 +92,19 @@ namespace FlatWorld.WorldModel
         /// <summary>只随真实液体身份或深度变化递增，环境层修改不让水体派生缓存失效。</summary>
         public long LiquidRevision => liquidRevision;
         public LiquidTypeCatalog LiquidTypes => liquid.Types;
-        public ReadOnlySpan<float> LiquidDepth { get { ThrowIfDisposed(); return liquid.Depth.AsSpan(0, CellCount); } }
+        public ReadOnlySpan<int> LiquidLevel { get { ThrowIfDisposed(); return liquid.Level.AsSpan(0, CellCount); } }
         public ReadOnlySpan<int> LiquidTypeIndex { get { ThrowIfDisposed(); return liquid.TypeIndex.AsSpan(0, CellCount); } }
-        public float GetLiquidDepth(int x, int y) { ThrowIfDisposed(); return liquid.Depth[GetIndex(x, y)]; }
+        public int GetLiquidLevel(int x, int y) { ThrowIfDisposed(); return liquid.Level[GetIndex(x, y)]; }
+        public float GetLiquidDepth(int x, int y) => LiquidCellValue.ToNormalizedDepth(GetLiquidLevel(x, y));
         public int GetLiquidTypeIndex(int x, int y) { ThrowIfDisposed(); return liquid.TypeIndex[GetIndex(x, y)]; }
         public string GetLiquidId(int x, int y) => LiquidTypes.GetId(GetLiquidTypeIndex(x, y));
 
         /// <summary>统一纯数据写入口；只改变液体，原 GroundTileId 和地块通行成本始终不变。</summary>
-        public bool SetLiquid(int x, int y, int liquidTypeIndex, float liquidDepth)
+        public bool SetLiquid(int x, int y, int liquidTypeIndex, int liquidLevel)
         {
             ThrowIfDisposed();
             int index = GetIndex(x, y);
-            LiquidCellValue next = liquid.Normalize(liquidTypeIndex, liquidDepth);
+            LiquidCellValue next = liquid.Normalize(liquidTypeIndex, liquidLevel);
             LiquidCellValue previous = liquid.Read(index);
             if (previous.Equals(next)) return false;
             if (!liquidBaselines.ContainsKey(index)) liquidBaselines.Add(index, previous);

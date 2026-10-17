@@ -12,6 +12,8 @@ public partial class FluidMachineState
     public Dictionary<string, string> PhaseWarnings = new(StringComparer.Ordinal);
     public double PumpProgress;
     public double PumpStoredWorkJoules;
+    public double WorldLiquidPumpLiters; // 地表抽液累计真实吞吐和做功预算，攒够一份才抽一级。
+    public Dictionary<string, double> WorldLiquidOutputLiters = new(StringComparer.Ordinal); // 地表出口按端口保存已攒的吞吐预算。
     public double DissipatedHeatJoules;
     public double FilterRemainingWork;
     public Dictionary<string, double> ResidueProgress = new(StringComparer.Ordinal);

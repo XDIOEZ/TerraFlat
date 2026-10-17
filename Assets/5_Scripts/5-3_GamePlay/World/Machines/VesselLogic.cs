@@ -82,7 +82,8 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
         if (GameNetwork.HasStateAuthority) return LiquidVesselOperations.PourToGround(this, actor, amount);
         if (!CanOperate(actor) || !MachineDefinition.Positive(amount) || Time.unscaledTime < nextRemotePour) return 0f;
         nextRemotePour = Time.unscaledTime + .1f;
-        float value = Mathf.Min(amount, Data.Amount);
+        int value = LiquidVesselOperations.GetWholeWorldServings(amount, Data.Amount);
+        if (value == 0) return 0f;
         return MachineWorld.RequestOperation(Entity, "vessel.pour", value.ToString(CultureInfo.InvariantCulture), actor as Player) ? value : 0f;
     }
     public bool TransferFromInventoryItem(ItemData source, Item actor, float maximumItemAmount = float.PositiveInfinity)

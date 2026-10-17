@@ -152,7 +152,9 @@ public static class ContainerTransferCommands
             if (intent.Operation == "world-fill")
             {
                 if (!WorldLiquidSourceResolver.TryResolve(new Vector2(intent.WorldCellX + .5f, intent.WorldCellY + .5f), out var source)) return new(ContainerTransferFailure.Empty);
-                var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, context.SceneHandle, Mathf.CeilToInt(intent.Amount), 3f), target as ILiquidTransferPort, context, intent.Amount);
+                int requested = LiquidVesselOperations.GetWholeWorldServings(intent.Amount, vessel.Capacity - vessel.Data.Amount);
+                if (requested == 0) return new(ContainerTransferFailure.Full, unit: "servings");
+                var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, context.SceneHandle, requested, 3f), target as ILiquidTransferPort, context, requested);
                 return result;
             }
             ItemData item = ResolveColdItem(actor, intent.Source, out _);

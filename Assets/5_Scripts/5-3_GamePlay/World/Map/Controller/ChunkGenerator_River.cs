@@ -334,7 +334,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         TileData bed = riverTileBlock.tileDataTemplate.Clone();
         bed.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
         Map.Data.ReplaceStack(worldPosition, bed);
-        Map.SetGeneratedLiquid(worldPosition, LiquidIds.DirtyWater, depth);
+        Map.SetGeneratedLiquid(worldPosition, LiquidIds.DirtyWater, FlatWorld.WorldModel.LiquidCellValue.FromGeneratedDepth(depth));
     }
 
     private static WorldAddress NormalizeAddress(WorldAddress address)

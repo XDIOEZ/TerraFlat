@@ -43,33 +43,33 @@ public partial class SaveDataMgr
     #endregion
 }
 
-/// <summary>只持久化位置、稳定 LiquidId 和 LiquidDepth；禁止追加会话数字编号。</summary>
+/// <summary>只持久化位置、稳定 LiquidId 和整数 LiquidLevel；禁止追加会话数字编号。</summary>
 [Serializable, MemoryPackable]
 public partial class LiquidCellSaveData
 {
     #region 持久化字段
     public Vector2Int LocalPosition;
     public string LiquidId;
-    public float LiquidDepth;
+    public int LiquidLevel;
     #endregion
 
     #region 捕获与恢复
     public static LiquidCellSaveData Capture(ChunkTerrainData terrain, int x, int y) => new()
     {
-        LocalPosition = new Vector2Int(x, y), LiquidId = terrain.GetLiquidId(x, y), LiquidDepth = terrain.GetLiquidDepth(x, y)
+        LocalPosition = new Vector2Int(x, y), LiquidId = terrain.GetLiquidId(x, y), LiquidLevel = terrain.GetLiquidLevel(x, y)
     };
     public void Validate(ChunkTerrainData terrain)
     {
         if ((uint)LocalPosition.x >= (uint)terrain.Width || (uint)LocalPosition.y >= (uint)terrain.Height ||
-            !float.IsFinite(LiquidDepth) || LiquidDepth < 0f || LiquidDepth > 1f ||
-            (LiquidDepth == 0f) != string.IsNullOrEmpty(LiquidId))
+            LiquidLevel < 0 || LiquidLevel > LiquidCellValue.MaximumLevel ||
+            (LiquidLevel == 0) != string.IsNullOrEmpty(LiquidId))
             throw new InvalidDataException("液体差量坐标、身份或深度无效。");
         terrain.LiquidTypes.GetIndex(LiquidId);
     }
     public void Apply(ChunkTerrainData terrain)
     {
         Validate(terrain);
-        terrain.SetLiquid(LocalPosition.x, LocalPosition.y, terrain.LiquidTypes.GetIndex(LiquidId), LiquidDepth);
+        terrain.SetLiquid(LocalPosition.x, LocalPosition.y, terrain.LiquidTypes.GetIndex(LiquidId), LiquidLevel);
     }
     #endregion
 }

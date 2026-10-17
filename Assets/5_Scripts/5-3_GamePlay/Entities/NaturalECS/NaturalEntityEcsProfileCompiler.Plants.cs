@@ -141,7 +141,7 @@ namespace FlatWorld.NaturalEntities
         {
             MinimumWaterMultiplier = p.Value<float?>("minimumWaterGrowthMultiplier") ?? 0.5f,
             MinimumFertilityMultiplier = p.Value<float?>("minimumFertilityGrowthMultiplier") ?? 0.5f,
-            WaterPerSecond = p.Value<float?>("waterConsumePerSecond") ?? 0.02f,
+            WaterPerSecond = p.Value<float?>("waterConsumePerSecond") ?? 0.002f,
             FertilityPerSecond = p.Value<float?>("fertilityConsumePerSecond") ?? 0.00035f
         };
 

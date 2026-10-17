@@ -20,6 +20,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     {
         GameplayTestRuntimeProbe.Register("agriculture", "tillage_irrigation", CaptureTillage);
         GameplayTestRuntimeProbe.Register("agriculture", "planting_target", CapturePlantingTarget);
+        GameplayTestRuntimeProbe.Register("agriculture", "pour_absorption", CapturePourAbsorption);
         GameplayTestRuntimeProbe.Register("building", "placement", CapturePlacement);
         GameplayTestRuntimeProbe.Register("fishing", "rig_roundtrip", CaptureFishingRig);
     }
@@ -35,6 +36,7 @@ public static partial class GameplayTestWorldRuntimeProbe
         public readonly Vector3 Authority;
         private readonly Player player;
         private readonly GrassCellState? originalGrassDelta;
+        private readonly bool originalLiquidChanged;
         private readonly Dictionary<string, float> environment = new(StringComparer.Ordinal);
 
         public Site(Player player, RuntimeTerrainTileSample sample, ChunkRuntime chunk, Vector3 authority)
@@ -42,9 +44,11 @@ public static partial class GameplayTestWorldRuntimeProbe
             this.player = player;
             Sample = sample; Chunk = chunk; Authority = authority;
             originalGrassDelta = SaveDataMgr.TestExistingInstance.CaptureTestRuntimeGrassDelta(player, sample);
+            originalLiquidChanged = sample.Terrain.IsLiquidChanged(sample.LocalCell.x, sample.LocalCell.y);
             Original = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
             Center = new Vector3(sample.WorldCell.x + .5f, sample.WorldCell.y + .5f);
             foreach (string layer in new[] { FarmlandSystem.SourceLayer, FarmlandSystem.WaterLayer,
+                         FarmlandSystem.WaterSupplyRemainderLayer, FarmlandSystem.WaterConsumptionRemainderLayer,
                          FarmlandSystem.FertilityLayer, "moisture", "fertility", TileBuildingSystem.RuntimeDamageLayerId })
             {
                 sample.Terrain.TryGetEnvironmentValue(layer, sample.LocalCell.x, sample.LocalCell.y, out float value);
@@ -64,6 +68,8 @@ public static partial class GameplayTestWorldRuntimeProbe
                 saves.GetAgricultureCells(Sample.Address).Any(value => value.LocalPosition == Sample.LocalCell && value.Crop != null))
                 throw new InvalidOperationException("测试空格出现其他来源的建筑或作物，拒绝覆盖非自有状态。");
             FarmlandSystem.ClearTillingProgress(Sample.Address, Sample.LocalCell);
+            WorldLiquidSystem.TrySet(Sample, null, 0);
+            saves.RecordLiquidChange(Sample);
             terrain.SetCell(Sample.LocalCell.x, Sample.LocalCell.y, Original);
             foreach (var entry in environment)
                 terrain.SetEnvironmentValue(entry.Key, Sample.LocalCell.x, Sample.LocalCell.y, entry.Value);
@@ -80,6 +86,8 @@ public static partial class GameplayTestWorldRuntimeProbe
         public bool IsRestored() => Sample.Terrain.GetCell(Sample.LocalCell.x, Sample.LocalCell.y).Equals(Original) &&
             environment.All(entry => ReadEnvironment(Sample, entry.Key) == entry.Value) &&
             SaveDataMgr.TestExistingInstance.CaptureTestRuntimeGrassDelta(player, Sample) == originalGrassDelta &&
+            Sample.Terrain.GetLiquidLevel(Sample.LocalCell.x, Sample.LocalCell.y) == 0 &&
+            Sample.Terrain.IsLiquidChanged(Sample.LocalCell.x, Sample.LocalCell.y) == originalLiquidChanged &&
             !SaveDataMgr.TestExistingInstance.GetAgricultureCells(Sample.Address).Any(value => value.LocalPosition == Sample.LocalCell);
     }
 
@@ -141,11 +149,13 @@ public static partial class GameplayTestWorldRuntimeProbe
             soil.ConsumeWater(soil.maxWater);
             FarmlandSystem.CommitSoil(soil);
             var behavior = new Tile_Farmland();
-            behavior.Irrigate(soil, 30f);
+            behavior.Irrigate(soil, 3);
             FarmlandSystem.CommitSoil(soil);
             FarmlandSystem.TryReadSoil(site.Sample.WorldCell, out TileData_Farmland watered);
             float afterIrrigation = watered?.waterValue ?? -1f;
-            behavior.ConsumeWater(watered, 5f);
+            behavior.ConsumeWater(watered, 1);
+            watered.AccumulateWaterSupply(.25f);
+            watered.AccumulateWaterConsumption(.5f);
             FarmlandSystem.CommitSoil(watered);
             FarmlandSystem.TryReadSoil(site.Sample.WorldCell, out TileData_Farmland consumed);
             AgricultureCellSaveData saved = SaveDataMgr.TestExistingInstance.GetAgricultureCells(site.Sample.Address)
@@ -156,6 +166,10 @@ public static partial class GameplayTestWorldRuntimeProbe
             result["groundAfter"] = FarmlandSystem.GetBlockId(site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).GroundTileId);
             result["afterIrrigation"] = afterIrrigation; result["afterConsumption"] = consumed?.waterValue;
             result["savedWater"] = saved?.Water; result["savedSource"] = saved?.SourceTileId;
+            result["savedSupplyRemainder"] = saved?.WaterSupplyRemainder;
+            result["savedConsumptionRemainder"] = saved?.WaterConsumptionRemainder;
+            result["supplyRemainder"] = consumed?.waterSupplyRemainder;
+            result["consumptionRemainder"] = consumed?.waterConsumptionRemainder;
             result["currentSource"] = ReadEnvironment(site.Sample, FarmlandSystem.SourceLayer);
             result["savedCropAbsent"] = saved != null && saved.Crop == null;
             return result;
@@ -164,6 +178,68 @@ public static partial class GameplayTestWorldRuntimeProbe
         {
             site.Dispose();
             result["restored"] = site.IsRestored();
+        }
+    }
+
+    // 两格各自保留独立现场，倒水时只让目标格吸收，其余有水耕地保持不变。
+    private static JObject CapturePourAbsorption(Player player, JObject args)
+    {
+        static bool TillingSource(RuntimeTerrainTileSample sample) =>
+            FarmlandSystem.GetBlockId(sample.Cell.GroundTileId) is "Tile_Grass" or "Tile_Soil";
+        Site targetSite = FindSite(player, TillingSource);
+        Site untouchedSite = null;
+        var result = new JObject();
+        try
+        {
+            untouchedSite = FindSite(player, sample => sample.WorldCell != targetSite.Sample.WorldCell && TillingSource(sample));
+            RuntimeTerrainTileSample Prepare(Site site)
+            {
+                if (!FarmlandSystem.TryTill(site.Center, site.Authority, 16f, 1f, out bool completed) || !completed ||
+                    !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(site.Center, out RuntimeTerrainTileSample sample))
+                    throw new InvalidOperationException("倒水回归没有生成正式耕地。");
+                TileData_Farmland soil = FarmlandSystem.ReadSoilSnapshot(sample);
+                soil.ConsumeWater(soil.maxWater);
+                FarmlandSystem.CommitSoil(soil);
+                return sample;
+            }
+            RuntimeTerrainTileSample target = Prepare(targetSite);
+            RuntimeTerrainTileSample untouched = Prepare(untouchedSite);
+            if (!WorldLiquidSystem.TrySet(untouched, "core:pure_water", 2))
+                throw new InvalidOperationException("无法给不应触发吸收的对照格放水。");
+            result["targetPourAccepted"] = WorldLiquidSystem.TryPour(targetSite.Center, "core:pure_water", 3, out int firstAdded);
+            result["firstAdded"] = firstAdded;
+            result["targetWater"] = FarmlandSystem.ReadWaterLevel(target.Terrain, target.LocalCell);
+            result["targetLiquid"] = target.LiquidLevel;
+            result["untouchedWater"] = FarmlandSystem.ReadWaterLevel(untouched.Terrain, untouched.LocalCell);
+            result["untouchedLiquid"] = untouched.LiquidLevel;
+
+            TileData_Farmland nearlyFull = FarmlandSystem.ReadSoilSnapshot(target);
+            nearlyFull.waterValue = 9;
+            FarmlandSystem.CommitSoil(nearlyFull);
+            result["overflowPourAccepted"] = WorldLiquidSystem.TryPour(targetSite.Center, "core:pure_water", 3, out int overflowAdded);
+            result["overflowAdded"] = overflowAdded;
+            result["fullWater"] = FarmlandSystem.ReadWaterLevel(target.Terrain, target.LocalCell);
+            result["overflowLiquid"] = target.LiquidLevel;
+            result["fullPourAccepted"] = WorldLiquidSystem.TryPour(targetSite.Center, "core:pure_water", 1, out int fullAdded);
+            result["fullAdded"] = fullAdded;
+            result["fullWaterAfterExtra"] = FarmlandSystem.ReadWaterLevel(target.Terrain, target.LocalCell);
+            result["extraLiquid"] = target.LiquidLevel;
+
+            WorldLiquidSystem.TrySet(target, null, 0);
+            TileData_Farmland dry = FarmlandSystem.ReadSoilSnapshot(target);
+            dry.ConsumeWater(dry.maxWater);
+            FarmlandSystem.CommitSoil(dry);
+            result["lavaPourAccepted"] = WorldLiquidSystem.TryPour(targetSite.Center, "core:lava", 1, out int lavaAdded);
+            result["lavaAdded"] = lavaAdded;
+            result["waterAfterLava"] = FarmlandSystem.ReadWaterLevel(target.Terrain, target.LocalCell);
+            result["lavaLiquid"] = target.LiquidLevel;
+            return result;
+        }
+        finally
+        {
+            untouchedSite?.Dispose();
+            targetSite.Dispose();
+            result["restored"] = targetSite.IsRestored() && (untouchedSite == null || untouchedSite.IsRestored());
         }
     }
     #endregion

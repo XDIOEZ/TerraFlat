@@ -23,7 +23,8 @@ namespace FlatWorld.AIECS
     /// <summary>主线程冻结耕地输入，Job 只输出本次消耗，提交时不覆盖其它系统的土壤修改。</summary>
     public struct EntityPlantSoil : IComponentData
     {
-        public float Water, MaxWater, Fertility, MaxFertility;
+        public int Water, MaxWater;
+        public float WaterConsumptionRemainder, Fertility, MaxFertility;
         public float MinimumWaterMultiplier, MinimumFertilityMultiplier;
         public float WaterPerSecond, FertilityPerSecond;
         public float UsedWater, UsedFertility, AddedWater;
@@ -56,6 +57,10 @@ namespace FlatWorld.AIECS
 
     public static class EntityPlantRules
     {
+        /// <summary>冻结输入只允许消费当时存在的水，不能把后续补水算进旧时间片。</summary>
+        public static float CalculateWaterConsumption(int water, float remainder, float rate, float seconds) =>
+            math.min(math.max(0f, water - remainder), math.max(0f, rate * seconds));
+
         /// <summary>独立耐候与植物生命周期共用冷热暴露数值核。</summary>
         public static float AdvanceClimate(ref EntityClimate climate, float temperature, float seconds, float dayLength)
         {
@@ -195,16 +200,22 @@ namespace FlatWorld.AIECS
                     if (suitability <= 0f) { plant.Status = EntityPlantGrowthStatus.TemperatureStress; continue; }
                     if (soil.Water <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsWater; continue; }
                     if (soil.Fertility <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsFertility; continue; }
-                    float multiplier = math.lerp(soil.MinimumWaterMultiplier, 1f, math.saturate(soil.Water / math.max(0.01f, soil.MaxWater))) *
+                    float multiplier = math.lerp(soil.MinimumWaterMultiplier, 1f, math.saturate((float)soil.Water / math.max(1, soil.MaxWater))) *
                         math.lerp(soil.MinimumFertilityMultiplier, 1f, math.saturate(soil.Fertility / math.max(0.01f, soil.MaxFertility)));
                     float weather = historical ? 1f : localWeather.GrowthMultiplier *
                         (1f + localWeather.RainIntensity * growth.RainGrowthBonus);
                     float increment = seconds * growth.Speed * multiplier * suitability * weather * math.max(0f, Difficulty);
                     if (increment <= 0f) continue;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + increment);
-                    float usedWater = math.min(soil.Water, soil.WaterPerSecond * seconds);
+                    float usedWater = EntityPlantRules.CalculateWaterConsumption(soil.Water,
+                        soil.WaterConsumptionRemainder, soil.WaterPerSecond, seconds);
                     float usedFertility = math.min(soil.Fertility, soil.FertilityPerSecond * seconds);
-                    soil.Water -= usedWater; soil.UsedWater += usedWater;
+                    // Job 使用同一格的耗水进度决定整级扣除，提交时仍合并真实连续消耗。
+                    float pendingWater = soil.WaterConsumptionRemainder + usedWater;
+                    int consumedLevels = pendingWater >= soil.Water ? soil.Water : (int)math.floor(pendingWater);
+                    soil.Water -= consumedLevels;
+                    soil.WaterConsumptionRemainder = soil.Water <= 0 ? 0f : pendingWater - consumedLevels;
+                    soil.UsedWater += usedWater;
                     soil.Fertility -= usedFertility; soil.UsedFertility += usedFertility;
                     plant.Status = EntityPlantGrowthStatus.Growing;
                 }

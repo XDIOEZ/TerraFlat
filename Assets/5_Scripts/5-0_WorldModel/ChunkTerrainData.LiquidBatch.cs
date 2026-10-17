@@ -2,15 +2,15 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>一次液体写入；局部格索引按行递增，深度沿用权威层的 0～1 单位。</summary>
+    /// <summary>一次液体写入；局部格索引按行递增，等级沿用权威层的 0～10 整数。</summary>
     public readonly struct LiquidCellUpdate
     {
         #region 写入值
         public readonly int CellIndex; // y * Width + x。
         public readonly int TypeIndex; // 当前资源会话编号。
-        public readonly float Depth; // 新的权威液深。
-        public LiquidCellUpdate(int cellIndex, int typeIndex, float depth)
-        { CellIndex = cellIndex; TypeIndex = typeIndex; Depth = depth; }
+        public readonly int Level; // 新的权威液体等级。
+        public LiquidCellUpdate(int cellIndex, int typeIndex, int level)
+        { CellIndex = cellIndex; TypeIndex = typeIndex; Level = level; }
         #endregion
     }
 
@@ -47,7 +47,7 @@ namespace FlatWorld.WorldModel
                 LiquidCellUpdate update = updates[i];
                 if ((uint)update.CellIndex >= (uint)CellCount || update.CellIndex <= previousIndex)
                     throw new ArgumentException("液体批次索引必须在区块范围内且严格递增。", nameof(updates));
-                liquid.Normalize(update.TypeIndex, update.Depth);
+                liquid.Normalize(update.TypeIndex, update.Level);
                 previousIndex = update.CellIndex;
             }
             if (updates.Length == 0) return 0;
@@ -55,7 +55,7 @@ namespace FlatWorld.WorldModel
             for (int i = 0; i < updates.Length; i++)
             {
                 LiquidCellUpdate update = updates[i];
-                LiquidCellValue next = liquid.Normalize(update.TypeIndex, update.Depth);
+                LiquidCellValue next = liquid.Normalize(update.TypeIndex, update.Level);
                 LiquidCellValue previous = liquid.Read(update.CellIndex);
                 if (previous.Equals(next)) continue;
                 if (!liquidBaselines.ContainsKey(update.CellIndex))

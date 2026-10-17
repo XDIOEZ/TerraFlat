@@ -5,12 +5,34 @@ end
 test.system("surface_fluids", "liquid_layer", {}, function(data)
     assert(data.added and not data.repeated and data.repeatedRevisionStable, "液深重复写入错误地产生变更")
     assert(data.wetChanged and data.wetId == "core:dirty_water", "液体独立身份或差量未保存")
-    near(data.wetDepth, 0.6, "液深写入错误")
+    assert(data.wetLevel == 6, "权威水量不是整数六级")
+    near(data.wetDepth, 0.6, "表现液深没有按等级派生")
     assert(data.ground == 17 and data.cost == 5, "写液体篡改底层地形或导航成本")
-    assert(data.cleared and data.dryType == 0 and not data.dryChanged, "极小液深没有归零或恢复基线后仍有差量")
-    near(data.dryDepth, 0, "抽干后残留液深")
-    near(data.negativeDepth, 0, "负液深没有归零")
-    near(data.excessDepth, 1, "超额液深没有封顶")
-    assert(data.missingId == "ArgumentException" and data.invalidDepth == "ArgumentOutOfRangeException",
-        "无身份液体或非有限液深没有拒绝")
-end, "独立液体层、变更版本、抽干与基线恢复")
+    assert(data.cleared and data.dryType == 0 and not data.dryChanged, "抽干后身份未清除或恢复基线仍有差量")
+    assert(data.dryLevel == 0 and data.negativeLevel == 0 and data.excessLevel == 10, "水量没有限制在零到十级")
+    assert(data.restoredLevel == 6 and data.restoredId == data.wetId, "存档序列化和恢复丢失了整数水量或身份")
+    assert(data.minimumGeneratedLevel == 1 and data.roundedGeneratedLevel == 3, "生成水量没有向上取完整等级")
+    assert(data.exactGeneratedLevels[1] == 1 and data.exactGeneratedLevels[2] == 6, "生成器的浮点边界误差多升了一级水量")
+    assert(data.missingId == "ArgumentException" and data.invalidGeneratedDepth == "ArgumentOutOfRangeException",
+        "无身份液体或非法生成深度没有拒绝")
+    local flow = data.flow
+    assert(#flow.samples > 1, "整数流动没有推进")
+    for _, step in ipairs(flow.samples) do
+        local total = 0
+        for _, level in ipairs(step.levels) do
+            assert(level >= 0 and level <= 10 and level == math.floor(level), "流动写出了碎份或越界水量")
+            total = total + level
+        end
+        assert(total == 8, "整数流动丢水或造水")
+    end
+    local final = flow.samples[#flow.samples]
+    assert(final.transfers == 0, "整数均衡后仍来回震荡")
+    for index = 2, #final.levels do
+        assert(math.abs(final.levels[1] - final.levels[index]) <= 1, "整数液面没有达到允许的一层误差")
+    end
+    assert(flow.blocked.left == 10 and flow.blocked.right == 0 and flow.blocked.transfers == 0, "阻挡边界漏水")
+    assert(flow.foreign.left == 10 and flow.foreign.right == 2 and flow.foreign.rightType == 2, "不同液体被混入")
+    assert(flow.full.left == 10 and flow.full.right == 10, "满格溢出十级")
+    assert(flow.single.left == 1 and flow.single.right == 0 and flow.single.transfers == 0, "单份水被拆开或来回移动")
+    assert(flow.edge.left < 6 and flow.edge.right > 0 and flow.edge.left + flow.edge.right == 6, "有效邻边没有整份转移")
+end, "整数十级液体、存档恢复、守恒流动与边界停稳")

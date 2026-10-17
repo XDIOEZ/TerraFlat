@@ -34,8 +34,8 @@ public partial class WeatherMgr
     #region 区域运行时
 
     private RegionalWeatherSettings regionalSettings;
-    [SerializeField, Min(0f)] private float surfaceRainWaterPerSecond = 0.2f;
-    [SerializeField, Min(0f)] private float meltWaterPerSnowDepth = 50f;
+    [SerializeField, Min(0f)] private float surfaceRainWaterPerSecond = 0.02f;
+    [SerializeField, Min(0f)] private float meltWaterPerSnowDepth = 5f;
     [SerializeField, Min(0f), Tooltip("雷击落点的伤害半径，边缘衰减到零。")]
     private float lightningDamageRadius = 1.5f;
     [SerializeField, Min(0f), Tooltip("满强度雷击中心的物理伤害，仍计算目标防御。")]

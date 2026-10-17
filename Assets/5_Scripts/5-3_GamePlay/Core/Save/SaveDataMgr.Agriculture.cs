@@ -37,7 +37,11 @@ public partial class SaveDataMgr
             record.AgricultureCells.Add(cell);
         }
         cell.SourceTileId = (int)FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer);
-        cell.Water = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.WaterLayer);
+        cell.Water = FarmlandSystem.ReadWaterLevel(sample.Terrain, sample.LocalCell);
+        cell.WaterSupplyRemainder = FarmlandSystem.Read(sample.Terrain, sample.LocalCell,
+            FarmlandSystem.WaterSupplyRemainderLayer);
+        cell.WaterConsumptionRemainder = FarmlandSystem.Read(sample.Terrain, sample.LocalCell,
+            FarmlandSystem.WaterConsumptionRemainderLayer);
         cell.Fertility = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.FertilityLayer);
     }
 
@@ -98,6 +102,9 @@ public partial class SaveDataMgr
             int y = cell.LocalPosition.y;
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, x, y, cell.SourceTileId);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
+            chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterSupplyRemainderLayer, x, y, cell.WaterSupplyRemainder);
+            chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterConsumptionRemainderLayer, x, y,
+                cell.WaterConsumptionRemainder);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
             if (cell.SourceTileId != 0)
                 FarmlandSystem.SyncSoilEnvironment(chunk.Terrain, x, y, cell.Water, cell.Fertility);
@@ -113,7 +120,9 @@ public partial class AgricultureCellSaveData
 {
     public Vector2Int LocalPosition; // 区块内格坐标
     public int SourceTileId; // 水肥状态关联的当前地表
-    public float Water; // 当前水分
+    public int Water; // 当前水分只保存 0～10 整级。
+    public float WaterSupplyRemainder; // 连续降水尚未满一份的进度。
+    public float WaterConsumptionRemainder; // 连续耗水尚未满一份的进度。
     public float Fertility; // 当前肥力
     public ItemData Crop; // 唯一作物快照
 }

@@ -59,7 +59,7 @@ namespace FlatWorld.Spaceflight
                     if (uniform)
                     {
                         ground = uniformTile;
-                        terrain.SetLiquid(x, y, 0, 0f);
+                        terrain.SetLiquid(x, y, 0, 0);
                     }
                     if (climate || uniform || craters || bands)
                         terrain.SetCell(x, y, new TerrainCell(ground, uniform ? 0 : original.BackTileId,

@@ -452,34 +452,85 @@ public static partial class GameplayTestSystemProbe
         buffer.SetCell(0, 0, new TerrainCell(17, 0, 0, 2, 5, TerrainCellFlags.Walkable));
         using ChunkTerrainData terrain = buffer.Seal();
         int water = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        bool added = terrain.SetLiquid(0, 0, water, .6f);
+        bool added = terrain.SetLiquid(0, 0, water, 6);
         long wetRevision = terrain.LiquidRevision;
-        bool repeated = terrain.SetLiquid(0, 0, water, .6f);
+        bool repeated = terrain.SetLiquid(0, 0, water, 6);
         bool wetChanged = terrain.IsLiquidChanged(0, 0);
         string wetId = terrain.GetLiquidId(0, 0);
         bool repeatedRevisionStable = terrain.LiquidRevision == wetRevision;
         float wetDepth = terrain.GetLiquidDepth(0, 0);
-        string missingId = WorldException(() => terrain.SetLiquid(0, 0, 0, .5f));
-        bool cleared = terrain.SetLiquid(0, 0, water, .0000001f);
+        int wetLevel = terrain.GetLiquidLevel(0, 0);
+        LiquidCellSaveData saved = LiquidCellSaveData.Capture(terrain, 0, 0);
+        saved = MemoryPack.MemoryPackSerializer.Deserialize<LiquidCellSaveData>(MemoryPack.MemoryPackSerializer.Serialize(saved));
+        string missingId = WorldException(() => terrain.SetLiquid(0, 0, 0, 5));
+        bool cleared = terrain.SetLiquid(0, 0, water, 0);
+        int dryLevel = terrain.GetLiquidLevel(0, 0);
+        bool dryChanged = terrain.IsLiquidChanged(0, 0);
+        int dryType = terrain.GetLiquidTypeIndex(0, 0);
+        saved.Apply(terrain);
+        int restoredLevel = terrain.GetLiquidLevel(0, 0);
+        string restoredId = terrain.GetLiquidId(0, 0);
+        terrain.SetLiquid(0, 0, water, 0);
         return new JObject
         {
             ["added"] = added, ["repeated"] = repeated, ["repeatedRevisionStable"] = repeatedRevisionStable,
-            ["wetChanged"] = wetChanged, ["wetId"] = wetId, ["wetDepth"] = wetDepth,
+            ["wetChanged"] = wetChanged, ["wetId"] = wetId, ["wetDepth"] = wetDepth, ["wetLevel"] = wetLevel,
             ["ground"] = terrain.GetCell(0, 0).GroundTileId, ["cost"] = terrain.GetCell(0, 0).NavigationCost,
-            ["cleared"] = cleared, ["dryDepth"] = terrain.GetLiquidDepth(0, 0),
-            ["dryType"] = terrain.GetLiquidTypeIndex(0, 0), ["dryChanged"] = terrain.IsLiquidChanged(0, 0),
+            ["cleared"] = cleared, ["dryLevel"] = dryLevel,
+            ["dryType"] = dryType, ["dryChanged"] = dryChanged,
+            ["restoredLevel"] = restoredLevel, ["restoredId"] = restoredId,
             ["missingId"] = missingId,
-            ["negativeDepth"] = LiquidCellValue.NormalizeDepth(-1f),
-            ["excessDepth"] = LiquidCellValue.NormalizeDepth(2f),
-            ["invalidDepth"] = WorldException(() => LiquidCellValue.NormalizeDepth(float.NaN))
+            ["negativeLevel"] = LiquidCellValue.NormalizeLevel(-1),
+            ["excessLevel"] = LiquidCellValue.NormalizeLevel(20),
+            ["minimumGeneratedLevel"] = LiquidCellValue.FromGeneratedDepth(.000001),
+            ["roundedGeneratedLevel"] = LiquidCellValue.FromGeneratedDepth(.21),
+            ["exactGeneratedLevels"] = new JArray(LiquidCellValue.FromGeneratedDepth(.1f), LiquidCellValue.FromGeneratedDepth(.6f)),
+            ["invalidGeneratedDepth"] = WorldException(() => LiquidCellValue.FromGeneratedDepth(double.NaN)),
+            ["flow"] = WorldIntegerLiquidFlow()
         };
+    }
+
+    private static JObject WorldIntegerLiquidFlow()
+    {
+        // 只返回生产求解器的逐步原始采样，守恒与停稳判断交给 Lua。
+        var settings = new LiquidFlowSettings();
+        var solver = new LiquidFlowSolver();
+        int[] neighbours = { 1, 2, 3, 4, -1, 0, -1, -1, 0, -1, -1, -1, -1, -1, -1, 0, -1, -1, 0, -1 };
+        var cells = new List<LiquidFlowCell>();
+        for (int i = 0; i < 5; i++) cells.Add(new LiquidFlowCell(0f, i == 0 ? 8 : 0,
+            i == 0 ? 1 : 0, i == 0 ? "probe:water" : string.Empty, false, true));
+        var samples = new JArray();
+        for (int tick = 0; tick < 32; tick++)
+        {
+            solver.Calculate(cells, neighbours, settings);
+            var levels = new JArray();
+            for (int i = 0; i < cells.Count; i++)
+            {
+                levels.Add(solver.ResultLevel[i]);
+                cells[i] = new LiquidFlowCell(0f, solver.ResultLevel[i], solver.ResultType[i],
+                    solver.ResultType[i] == 0 ? string.Empty : "probe:water", false, true);
+            }
+            samples.Add(new JObject { ["levels"] = levels, ["transfers"] = solver.TransferCount });
+            if (solver.TransferCount == 0) break;
+        }
+        int[] pair = { -1, 1, -1, -1, 0, -1, -1, -1 };
+        JObject Pair(int a, int b, bool blocked, int otherType, float height = 0f)
+        {
+            solver.Calculate(new[] { new LiquidFlowCell(height, a, 1, "probe:water", false, true),
+                new LiquidFlowCell(0f, b, b == 0 ? 0 : otherType, "probe:other", blocked, true) }, pair, settings);
+            return new JObject { ["left"] = solver.ResultLevel[0], ["right"] = solver.ResultLevel[1],
+                ["leftType"] = solver.ResultType[0], ["rightType"] = solver.ResultType[1], ["transfers"] = solver.TransferCount };
+        }
+        return new JObject { ["samples"] = samples, ["blocked"] = Pair(10, 0, true, 1),
+            ["foreign"] = Pair(10, 2, false, 2), ["full"] = Pair(10, 10, false, 1, 1f),
+            ["single"] = Pair(1, 0, false, 1), ["edge"] = Pair(6, 0, false, 1) };
     }
 
     private static JObject WorldSupportLayer(JObject args)
     {
         using var buffer = new ChunkTerrainBuffer(1, 1);
         buffer.SetCell(0, 0, new TerrainCell(17, 0, 0, 2, 25, TerrainCellFlags.None));
-        buffer.SetLiquid(0, 0, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), .6f);
+        buffer.SetLiquid(0, 0, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 6);
         using ChunkTerrainData terrain = buffer.Seal();
         TerrainSupportLayer.Set(terrain, 0, 0, 90, 2);
         TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, 0, 0);
@@ -553,21 +604,46 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject WorldSoil(JObject args)
     {
-        var soil = new TileData_Farmland { waterValue = 25f, fertilityValue = new GameValue_float(.5f) };
-        soil.AddWater(200f); soil.AddFertility(2f);
+        var soil = new TileData_Farmland { waterValue = 2, fertilityValue = new GameValue_float(.5f) };
+        soil.AddWater(200); soil.AddFertility(2f);
         float fullWater = soil.waterValue, fullFertility = soil.Fertility;
         var clone = (TileData_Farmland)soil.Clone();
-        clone.ConsumeWater(1000f); clone.ConsumeFertility(5f);
+        clone.ConsumeWater(1000); clone.ConsumeFertility(5f);
         float sourceWaterAfterClone = soil.waterValue, sourceFertilityAfterClone = soil.Fertility;
-        soil.ConsumeWater(1000f); soil.ConsumeFertility(5f);
+        soil.ConsumeWater(1000); soil.ConsumeFertility(5f);
+        var progress = new TileData_Farmland { waterValue = 2 };
+        progress.AccumulateWaterSupply(.25f);
+        int waterAfterPartialSupply = progress.waterValue;
+        float partialSupply = progress.waterSupplyRemainder;
+        for (int i = 0; i < 3; i++) progress.AccumulateWaterSupply(.25f);
+        int waterAfterWholeSupply = progress.waterValue;
+        progress.AccumulateWaterConsumption(.25f);
+        int waterAfterPartialConsumption = progress.waterValue;
+        float partialConsumption = progress.waterConsumptionRemainder;
+        for (int i = 0; i < 3; i++) progress.AccumulateWaterConsumption(.25f);
+        int waterAfterWholeConsumption = progress.waterValue;
+        progress.AddWater(100);
+        progress.AccumulateWaterSupply(.75f);
+        progress.ConsumeWater(100);
+        progress.AccumulateWaterConsumption(.75f);
         return new JObject
         {
             ["fullWater"] = fullWater, ["fullFertility"] = fullFertility,
             ["sourceWaterAfterClone"] = sourceWaterAfterClone, ["sourceFertilityAfterClone"] = sourceFertilityAfterClone,
             ["emptyWater"] = soil.waterValue, ["emptyFertility"] = soil.Fertility,
             ["cloneWater"] = clone.waterValue, ["cloneFertility"] = clone.Fertility,
-            ["negativeAddWater"] = WorldException(() => soil.AddWater(-1f)),
-            ["negativeConsumeWater"] = WorldException(() => soil.ConsumeWater(-1f)),
+            ["waterAfterPartialSupply"] = waterAfterPartialSupply, ["partialSupply"] = partialSupply,
+            ["waterAfterWholeSupply"] = waterAfterWholeSupply,
+            ["waterAfterPartialConsumption"] = waterAfterPartialConsumption, ["partialConsumption"] = partialConsumption,
+            ["waterAfterWholeConsumption"] = waterAfterWholeConsumption,
+            ["fullSupplyRemainder"] = progress.waterSupplyRemainder,
+            ["emptyConsumptionRemainder"] = progress.waterConsumptionRemainder,
+            ["frozenConsumptionBudget"] = FlatWorld.AIECS.EntityPlantRules.CalculateWaterConsumption(2, .75f, 100f, 30f),
+            ["emptyConsumptionBudget"] = FlatWorld.AIECS.EntityPlantRules.CalculateWaterConsumption(0, 0f, 100f, 30f),
+            ["halfWaterMultiplier"] = Mod_Grow.CalculateFarmlandGrowthMultiplier(
+                new TileData_Farmland { waterValue = 5, fertilityValue = new GameValue_float(1f) }, 0f, 0f),
+            ["negativeAddWater"] = WorldException(() => soil.AddWater(-1)),
+            ["negativeConsumeWater"] = WorldException(() => soil.ConsumeWater(-1)),
             ["negativeAddFertility"] = WorldException(() => soil.AddFertility(-1f)),
             ["negativeConsumeFertility"] = WorldException(() => soil.ConsumeFertility(-1f))
         };

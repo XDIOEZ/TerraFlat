@@ -28,7 +28,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
 
     public const string ModuleId = "Mod_WaterVessel";
     public const int DefaultCapacity = 8;
-    public const float AmountStep = 1f; // 每批最多一份，最后不足一份的真实余量继续保留并转移。
+    public const int AmountStep = 1; // 玩家向地表倒液只按整份结算，小数尾量留在容器内。
     public const float AmountEpsilon = 0.0001f;
     public Ex_ModData_MemoryPackable ModData = new(); // 容器独立持久化载体。
     public LiquidContainerState Data = new(); // 液体 ID、数量、温度与加工进度。

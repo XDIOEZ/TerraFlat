@@ -395,7 +395,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private void AppendLiquidSummary(RuntimeTerrainTileSample sample)
     {
         displayLines.Add(
-            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  深度 {sample.LiquidDepth:G9}  类型索引 {sample.LiquidTypeIndex}");
+            $"液体: {(string.IsNullOrWhiteSpace(sample.LiquidId) ? "无" : sample.LiquidId)}  水量 {sample.LiquidLevel}/10  类型索引 {sample.LiquidTypeIndex}");
 
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager != null &&
@@ -420,12 +420,12 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             return;
 
         TileData_Farmland soil = FarmlandSystem.ReadSoilSnapshot(sample);
-        float waterPercent = soil.maxWater > 0f ? soil.waterValue / soil.maxWater * 100f : 0f;
+        float waterPercent = soil.maxWater > 0 ? (float)soil.waterValue / soil.maxWater * 100f : 0f;
         float fertilityPercent = soil.maxFertility > 0f ? soil.Fertility / soil.maxFertility * 100f : 0f;
 
         displayLines.Add("<b>农业状态</b>");
         displayLines.Add($"耕地: {isFarmland}  水肥状态地块ID: {Mathf.RoundToInt(sourceTileId)}");
-        displayLines.Add($"水分: {soil.waterValue:F2}/{soil.maxWater:F2} ({waterPercent:F1}%)");
+        displayLines.Add($"水分: {soil.waterValue}/{soil.maxWater} ({waterPercent:F1}%)");
         displayLines.Add($"肥力: {soil.Fertility:F4}/{soil.maxFertility:F4} ({fertilityPercent:F1}%)");
     }
 
@@ -564,7 +564,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             rawDataLines.Add($"TileStack[{i}]: {FormatTile(terrain.GetTileIdAt(local.x, local.y, i))}");
 
         rawDataLines.Add(
-            $"Liquid: id={sample.LiquidId ?? "none"}  type={sample.LiquidTypeIndex}  depth={sample.LiquidDepth:F4}");
+            $"Liquid: id={sample.LiquidId ?? "none"}  type={sample.LiquidTypeIndex}  level={sample.LiquidLevel}/10");
         rawDataLines.Add($"环境层数量: {environmentLayerIds.Count}");
 
         for (int i = 0; i < environmentLayerIds.Count; i++)

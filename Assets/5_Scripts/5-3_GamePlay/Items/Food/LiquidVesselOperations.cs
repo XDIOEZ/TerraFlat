@@ -28,6 +28,17 @@ public static class LiquidVesselOperations
     public static bool SameLiquid(string left, string right) => string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
     public static float Quantize(float amount) => float.IsFinite(amount) && amount > Mod_WaterVessel.AmountEpsilon
         ? Mathf.Max(0f, Mathf.Floor(amount + Mod_WaterVessel.AmountEpsilon)) : 0f;
+    // 地表只接受完整份数，工业组分的小数尾量仍保留在原容器。
+    public static int GetWholeWorldServings(float requested, float available)
+    {
+        if (!float.IsFinite(requested) || !float.IsFinite(available) || requested < 1f || available < 1f) return 0;
+        return (int)Math.Min(int.MaxValue, Math.Floor(Math.Min((double)requested, available)));
+    }
+    public static int GetWholeSpillServings(float amount, int capacity, float retainedFraction)
+    {
+        if (capacity < 1 || !float.IsFinite(retainedFraction)) return 0;
+        return GetWholeWorldServings(amount, amount - capacity * Mathf.Clamp01(retainedFraction));
+    }
     public static void AddState(ILiquidVessel target, string id, float amount, float temperature = 0f)
     { MixedLiquidContents.Add(target.Data, id.Trim(), amount, temperature); Mod_WaterVessel.Validate(target.Data, target.Capacity); }
     public static void RemoveState(LiquidContainerState state, float amount)
@@ -81,10 +92,10 @@ public static class LiquidVesselOperations
     public static float FillFromWorld(ILiquidVessel target, Item actor, WorldLiquidSourceTarget source)
     {
         if (target == null || !target.CanOperate(actor)) return 0f;
-        float requested = Mathf.Max(0f, target.Capacity - target.Data.Amount);
+        int requested = GetWholeWorldServings(target.Capacity, target.Capacity - target.Data.Amount);
         if (requested <= 0) return 0f;
         if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "world-fill", requested, source.WorldCell) ? requested : 0f;
-        var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, actor.gameObject.scene.handle, Mathf.CeilToInt(requested), 3f),
+        var result = ContainerTransferService.TransferLiquid(new WorldLiquidTransferPort(source, actor.gameObject.scene.handle, requested, 3f),
             Port(target, ContainerPortDirection.Input), new ContainerTransferContext(actor, ContainerAccessKind.Manual, "fill-world-liquid"), requested);
         return result.LiquidServings;
     }
@@ -112,29 +123,30 @@ public static class LiquidVesselOperations
     public static float PourToGround(ILiquidVessel target, Item actor, float amount, int horizontalCellOffset, string portId = null)
     {
         if (target == null || !target.CanOperate(actor) || !float.IsFinite(amount) || amount <= 0f) return 0f;
-        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "pour", amount, horizontalCellOffset: horizontalCellOffset, portId: portId) ? Mathf.Min(amount, target.Data.Amount) : 0f;
+        int remaining = GetWholeWorldServings(amount, target.Data.Amount);
+        if (remaining == 0) return 0f;
+        if (!GameNetwork.HasStateAuthority) return ContainerTransferCommands.RequestVesselAction(target, actor, "pour", remaining, horizontalCellOffset: horizontalCellOffset, portId: portId) ? remaining : 0f;
         var port = Port(target, ContainerPortDirection.Output, portId);
         if (port == null || !port.CanAccess(new ContainerTransferContext(actor, ContainerAccessKind.Manual, "pour"), out _)) return 0f;
         Vector2 position = actor.transform.position;
         if (horizontalCellOffset < 0) position += Vector2.left;
         else if (horizontalCellOffset > 0) position += Vector2.right;
-        float removed = 0f, remaining = Mathf.Min(amount, target.Data.Amount);
-        while (remaining > 0f)
+        int removed = 0;
+        while (remaining >= Mod_WaterVessel.AmountStep)
         {
-            if (!port.ReserveLiquid(out var batch) || !port.Configuration.AllowsLiquid(batch.LiquidId)) break;
-            float servings = Mathf.Min(remaining, batch.Servings);
-            if (port.Configuration.WholeBatch && servings < Mathf.Min(1f, remaining)) break;
+            LiquidTransferBatch batch;
+            bool reserved = port is IWholeLiquidOutputPort whole
+                ? whole.ReserveWholeLiquid(out batch)
+                : port.ReserveLiquid(out batch);
+            if (!reserved || batch.Servings < Mod_WaterVessel.AmountStep || !port.Configuration.AllowsLiquid(batch.LiquidId)) break;
             LiquidDefinition liquid = GameRes.ExistingInstance.GetLiquidDefinition(batch.LiquidId);
-            if (liquid?.WorldWater == null || ChunkMgr.ExistingInstance == null ||
-                !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out var sample)) break;
-            float beforeDepth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
-            string beforeId = sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y);
-            float requestedDepth = liquid.WorldWater.DepthPerServing * servings;
-            if (!WorldLiquidSystem.TryPour(position, liquid.Id, requestedDepth, out float added) ||
-                Mathf.Abs(added - requestedDepth) > .000001f) break;
-            if (!port.ExtractLiquid(batch, servings))
-            { WorldLiquidSystem.TrySet(sample, beforeId, beforeDepth); break; }
-            removed += servings; remaining -= servings; port.PublishState();
+            if (liquid?.WorldWater == null) break;
+            object before = port.CaptureState();
+            // 先扣容器再提交落地，地表拒收就恢复容器，吸水通知只看已扣款的真实一份。
+            if (!port.ExtractLiquid(batch, Mod_WaterVessel.AmountStep) ||
+                !WorldLiquidSystem.TryPour(position, liquid.Id, Mod_WaterVessel.AmountStep, out int added) || added != Mod_WaterVessel.AmountStep)
+            { port.RestoreState(before); break; }
+            removed += Mod_WaterVessel.AmountStep; remaining -= Mod_WaterVessel.AmountStep; port.PublishState();
         }
         return removed;
     }

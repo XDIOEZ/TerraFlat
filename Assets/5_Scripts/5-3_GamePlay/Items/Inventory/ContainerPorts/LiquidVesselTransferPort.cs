@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using FlatWorld.Networking;
 
 /// <summary>完整液体容器与冷库存载荷共享真实组分、每口预留和提交刷新。</summary>
-public sealed class LiquidVesselTransferPort : ContainerPortBase, ILiquidTransferPort
+public sealed class LiquidVesselTransferPort : ContainerPortBase, ILiquidTransferPort, IWholeLiquidOutputPort
 {
     #region 液体适配
     private readonly ILiquidVessel vessel;
@@ -28,13 +28,15 @@ public sealed class LiquidVesselTransferPort : ContainerPortBase, ILiquidTransfe
     public override long StateVersion => vessel.Data.Revision;
     public bool PeekLiquid(out LiquidTransferBatch batch)
     { batch = default; return IsValid && MixedLiquidContents.Peek(vessel.Data, Reference.PortId, out batch); }
-    public bool ReserveLiquid(out LiquidTransferBatch batch)
+    public bool ReserveLiquid(out LiquidTransferBatch batch) => ReserveLiquid(out batch, 0f);
+    public bool ReserveWholeLiquid(out LiquidTransferBatch batch) => ReserveLiquid(out batch, Mod_WaterVessel.AmountStep);
+    private bool ReserveLiquid(out LiquidTransferBatch batch, float minimumServings)
     {
         batch = default;
         if (!IsValid || !GameNetwork.HasStateAuthority) return false;
-        bool existing = vessel.Data.PendingOutputs?.ContainsKey(Reference.PortId) == true;
-        bool result = MixedLiquidContents.Reserve(vessel.Data, Reference.PortId, out batch);
-        if (result && !existing) vessel.CommitVessel();
+        long beforeRevision = vessel.Data.Revision;
+        bool result = MixedLiquidContents.Reserve(vessel.Data, Reference.PortId, out batch, minimumServings);
+        if (result && vessel.Data.Revision != beforeRevision) vessel.CommitVessel();
         return result;
     }
     public float GetReceivableServings(string id, float requested)

@@ -848,7 +848,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                     settings.DefaultNavigationCost,
                     TerrainCellFlags.Walkable);
                 sample.Terrain.SetCell(sample.LocalCell.x, sample.LocalCell.y, carved);
-                if (isGroundwater) WorldLiquidSystem.TrySet(sample, string.Empty, 0f);
+                if (isGroundwater) WorldLiquidSystem.TrySet(sample, string.Empty, 0);
 
                 if (!chunkManager.TryGetChunkRuntime(sample.Address, out RuntimeChunk runtimeChunk))
                     throw new InvalidOperationException($"矿洞出口区域所在 Chunk 已失效：{worldCell}。");

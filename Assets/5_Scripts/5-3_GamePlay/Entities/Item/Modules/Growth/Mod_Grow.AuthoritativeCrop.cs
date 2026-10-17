@@ -59,7 +59,7 @@ public partial class Mod_Grow
     [Header("耕地成长配置")]
     [SerializeField, Range(0f, 1f)] private float minimumWaterGrowthMultiplier = 0.5f;
     [SerializeField, Range(0f, 1f)] private float minimumFertilityGrowthMultiplier = 0.5f;
-    [SerializeField, Min(0f)] private float waterConsumePerSecond = 0.02f;
+    [SerializeField, Min(0f)] private float waterConsumePerSecond = 0.002f;
     [SerializeField, Min(0f)] private float fertilityConsumePerSecond = 0.00035f;
     [SerializeField, Range(0f, 1f)] private float rainGrowthBonus = 0.15f;
 
@@ -316,7 +316,7 @@ public partial class Mod_Grow
 
             if (growthDelta > 0f)
             {
-                farmlandData.ConsumeWater(waterConsumePerSecond * deltaTime);
+                farmlandData.AccumulateWaterConsumption(waterConsumePerSecond * deltaTime);
                 farmlandData.ConsumeFertility(fertilityConsumePerSecond * deltaTime);
                 FarmlandSystem.CommitSoil(farmlandData);
             }
@@ -370,7 +370,7 @@ public partial class Mod_Grow
         if (farmlandData.waterValue <= 0f || farmlandData.Fertility <= 0f)
             return 0f;
 
-        float waterRatio = Mathf.Clamp01(farmlandData.waterValue / farmlandData.maxWater);
+        float waterRatio = Mathf.Clamp01((float)farmlandData.waterValue / farmlandData.maxWater);
         float fertilityRatio = Mathf.Clamp01(farmlandData.Fertility / farmlandData.maxFertility);
         float waterMultiplier = Mathf.Lerp(Mathf.Clamp01(minimumWaterMultiplier), 1f, waterRatio);
         float fertilityMultiplier = Mathf.Lerp(Mathf.Clamp01(minimumFertilityMultiplier), 1f, fertilityRatio);

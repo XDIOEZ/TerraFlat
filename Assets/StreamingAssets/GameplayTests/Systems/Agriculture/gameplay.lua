@@ -6,10 +6,13 @@ test.runtime("agriculture", "tillage_irrigation", {}, function(data)
         "未完成耕作提前改变正式地形")
     assert(data.completionAccepted and data.tillCompleted and data.groundAfter == "Tile_Farmland",
         "完成耕作没有提交正式耕地")
-    assert(math.abs(data.afterIrrigation - 30) < 0.0001 and math.abs(data.afterConsumption - 25) < 0.0001,
+    assert(data.afterIrrigation == 3 and data.afterConsumption == 2,
         "正式土壤灌溉与消耗没有提交到真实区块")
     assert(data.savedSource > 0 and data.savedSource == data.currentSource and data.savedCropAbsent
         and math.abs(data.savedWater - data.afterConsumption) < 0.0001, "农业独立差量与真实水肥不一致")
+    assert(data.savedSupplyRemainder == 0.25 and data.supplyRemainder == 0.25
+        and data.savedConsumptionRemainder == 0.5 and data.consumptionRemainder == 0.5,
+        "不足一份的连续补水或耗水进度没有随同一格保存并读回")
     assert(data.restored, "农业现场或自有农业差量没有恢复")
 end, "真实分段耕作、灌溉提交与农业差量")
 
@@ -37,3 +40,17 @@ for _, row in ipairs({
         assert(data.restored, "播种资格现场的土壤、作物或农业差量没有恢复")
     end, "真实播种资格和食用优先级：" .. input.label)
 end
+
+test.runtime("agriculture", "pour_absorption", {}, function(data)
+    assert(data.targetPourAccepted and data.firstAdded == 3 and data.targetWater == 3 and data.targetLiquid == 0,
+        "没有作物的耕地未立即按一份水加一级吸收倒入水")
+    assert(data.untouchedWater == 0 and data.untouchedLiquid == 2,
+        "向目标格倒水触发了其他耕地的吸水检测")
+    assert(data.overflowPourAccepted and data.overflowAdded == 3 and data.fullWater == 10 and data.overflowLiquid == 2,
+        "耕地达到十级后没有把剩余整数份水留在地表")
+    assert(data.fullPourAccepted and data.fullAdded == 1 and data.fullWaterAfterExtra == 10 and data.extraLiquid == 3,
+        "已满水的耕地吞掉了继续倒入的整份水")
+    assert(data.lavaPourAccepted and data.lavaAdded == 1 and data.waterAfterLava == 0 and data.lavaLiquid == 1,
+        "非水类液体被错误当成耕地水分吸收")
+    assert(data.restored, "倒水吸收现场的液体、土壤或农业差量没有恢复")
+end, "裸耕地即时吸水、十级容量、余水守恒与目标格隔离")

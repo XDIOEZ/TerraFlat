@@ -360,7 +360,7 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
             WorldLiquidFlowObstacles.IsBlocked(cell);
         nodeIndices.Add(cell, cells.Count);
         locations.Add(new Location(state, index, cell));
-        cells.Add(new LiquidFlowCell(state.GroundHeightCache[index], state.Terrain.GetLiquidDepth(x, y),
+        cells.Add(new LiquidFlowCell(state.GroundHeightCache[index], state.Terrain.GetLiquidLevel(x, y),
             state.Terrain.GetLiquidTypeIndex(x, y), state.Terrain.GetLiquidId(x, y), blocked, state.ActiveCells[index]));
     }
 
@@ -372,8 +372,8 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
             Location location = locations[i]; State state = location.State;
             Vector2 flow = new(solver.FlowX[i], solver.FlowY[i]);
             if (state.Flow[location.Index] != flow) { state.Flow[location.Index] = flow; state.FlowDirty = true; }
-            if (solver.ResultDepth[i] == cells[i].Depth && solver.ResultType[i] == cells[i].TypeIndex) continue;
-            state.Updates[state.UpdateCount++] = new LiquidCellUpdate(location.Index, solver.ResultType[i], solver.ResultDepth[i]);
+            if (solver.ResultLevel[i] == cells[i].Level && solver.ResultType[i] == cells[i].TypeIndex) continue;
+            state.Updates[state.UpdateCount++] = new LiquidCellUpdate(location.Index, solver.ResultType[i], solver.ResultLevel[i]);
             WakeCross(location.WorldCell);
         }
         applying = true;

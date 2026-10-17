@@ -51,5 +51,5 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
-  waterAmount: 25
+  waterAmount: 3
   fertilityAmount: 0.35

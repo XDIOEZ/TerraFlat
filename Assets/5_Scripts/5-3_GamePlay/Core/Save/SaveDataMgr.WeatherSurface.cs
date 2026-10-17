@@ -48,7 +48,10 @@ public partial class SaveDataMgr
                         record.AgricultureCells.Add(cell);
                     }
                     cell.SourceTileId = (int)FarmlandSystem.Read(terrain, local, FarmlandSystem.SourceLayer);
-                    cell.Water = FarmlandSystem.Read(terrain, local, FarmlandSystem.WaterLayer);
+                    cell.Water = FarmlandSystem.ReadWaterLevel(terrain, local);
+                    cell.WaterSupplyRemainder = FarmlandSystem.Read(terrain, local, FarmlandSystem.WaterSupplyRemainderLayer);
+                    cell.WaterConsumptionRemainder = FarmlandSystem.Read(terrain, local,
+                        FarmlandSystem.WaterConsumptionRemainderLayer);
                     cell.Fertility = FarmlandSystem.Read(terrain, local, FarmlandSystem.FertilityLayer);
                     if (publish)
                         CaptureWeatherSoil(GetWeatherSurfaceDelta(index, local), terrain, local);
@@ -159,6 +162,9 @@ public partial class SaveDataMgr
             {
                 terrain.SetEnvironmentValue(FarmlandSystem.SourceLayer, x, y, cell.SoilSourceTileId);
                 terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
+                terrain.SetEnvironmentValue(FarmlandSystem.WaterSupplyRemainderLayer, x, y, cell.WaterSupplyRemainder);
+                terrain.SetEnvironmentValue(FarmlandSystem.WaterConsumptionRemainderLayer, x, y,
+                    cell.WaterConsumptionRemainder);
                 terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
                 FarmlandSystem.SyncSoilEnvironment(terrain, x, y, cell.Water, cell.Fertility);
             }
@@ -206,7 +212,10 @@ public partial class SaveDataMgr
     {
         result.SoilChanged = true;
         result.SoilSourceTileId = (int)FarmlandSystem.Read(terrain, local, FarmlandSystem.SourceLayer);
-        result.Water = FarmlandSystem.Read(terrain, local, FarmlandSystem.WaterLayer);
+        result.Water = FarmlandSystem.ReadWaterLevel(terrain, local);
+        result.WaterSupplyRemainder = FarmlandSystem.Read(terrain, local, FarmlandSystem.WaterSupplyRemainderLayer);
+        result.WaterConsumptionRemainder = FarmlandSystem.Read(terrain, local,
+            FarmlandSystem.WaterConsumptionRemainderLayer);
         result.Fertility = FarmlandSystem.Read(terrain, local, FarmlandSystem.FertilityLayer);
     }
 
@@ -279,7 +288,10 @@ public partial class WeatherSurfaceDelta
         {
             if (cell == null || (uint)cell.LocalPosition.x >= (uint)width ||
                 (uint)cell.LocalPosition.y >= (uint)height || !seen.Add(cell.LocalPosition) ||
-                !float.IsFinite(cell.Water) || cell.Water < 0f || cell.SoilSourceTileId < 0 ||
+                cell.Water < 0 || cell.Water > TileData_Farmland.MaxWaterLevel || cell.SoilSourceTileId < 0 ||
+                !float.IsFinite(cell.WaterSupplyRemainder) || cell.WaterSupplyRemainder < 0f || cell.WaterSupplyRemainder >= 1f ||
+                !float.IsFinite(cell.WaterConsumptionRemainder) || cell.WaterConsumptionRemainder < 0f ||
+                cell.WaterConsumptionRemainder >= 1f ||
                 !float.IsFinite(cell.Fertility) || cell.Fertility < 0f ||
                 !float.IsFinite(cell.WeatherDepth) || cell.WeatherDepth < 0f || cell.WeatherDepth > 1f ||
                 !float.IsFinite(cell.Depth) || cell.Depth < 0f ||
@@ -297,7 +309,9 @@ public partial class WeatherSurfaceCellDelta
     public Vector2Int LocalPosition;
     public bool SoilChanged;
     public int SoilSourceTileId;
-    public float Water;
+    public int Water;
+    public float WaterSupplyRemainder;
+    public float WaterConsumptionRemainder;
     public float Fertility;
     public bool SnowChanged;
     public float WeatherDepth;

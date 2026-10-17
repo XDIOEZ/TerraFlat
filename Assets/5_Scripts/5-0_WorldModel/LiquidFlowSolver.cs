@@ -11,7 +11,6 @@ namespace FlatWorld.WorldModel
         public float TickRate = 5f; // 独立液体时钟，最高 10Hz。
         public float FlowSpeed = 0.5f; // 每 Tick 液面差转移倍率。
         public float SurfaceEpsilon = 0.0005f; // 液面接近平衡时停止。
-        public float MinimumTransfer = 0.00001f; // 小流量不参与交换，残值清理只使用统一液深精度。
         public int SleepTicks = 3; // 连续无变化后休眠。
         public float DenseThreshold = 0.5f; // 活动格占比达到此值时扫描全块。
         public int RegionRadiusChunks = 2; // 外部修改点周围最多两圈区块。
@@ -27,7 +26,6 @@ namespace FlatWorld.WorldModel
             if (!float.IsFinite(TickRate) || TickRate < 1f || TickRate > 10f ||
                 !float.IsFinite(FlowSpeed) || FlowSpeed <= 0f || FlowSpeed > 1f ||
                 !float.IsFinite(SurfaceEpsilon) || SurfaceEpsilon <= 0f || SurfaceEpsilon >= 1f ||
-                !float.IsFinite(MinimumTransfer) || MinimumTransfer <= 0f || MinimumTransfer >= 1f ||
                 !float.IsFinite(DenseThreshold) || DenseThreshold <= 0f || DenseThreshold > 1f ||
                 SleepTicks < 1 || SleepTicks > 255 || RegionRadiusChunks < 1 || RegionRadiusChunks > 8 ||
                 MaxActiveChunks < 1 || MaxActiveChunks > 256 || MaxPendingLoads < 1 || MaxPendingLoads > MaxActiveChunks)
@@ -41,29 +39,29 @@ namespace FlatWorld.WorldModel
     {
         #region 输入快照
         public readonly float GroundHeight;
-        public readonly float Depth;
+        public readonly int Level;
         public readonly int TypeIndex;
         public readonly string LiquidId;
         public readonly bool Blocked;
         public readonly bool Active;
-        public LiquidFlowCell(float groundHeight, float depth, int typeIndex, string liquidId, bool blocked, bool active)
-        { GroundHeight = groundHeight; Depth = depth; TypeIndex = typeIndex; LiquidId = liquidId; Blocked = blocked; Active = active; }
+        public LiquidFlowCell(float groundHeight, int level, int typeIndex, string liquidId, bool blocked, bool active)
+        { GroundHeight = groundHeight; Level = LiquidCellValue.NormalizeLevel(level); TypeIndex = typeIndex; LiquidId = liquidId; Blocked = blocked; Active = active; }
         #endregion
     }
 
     /// <summary>
-    /// 无 Unity 依赖的四邻格实验求解器。先冻结候选边，再同时限制来源总流出和目标总流入，最后生成写回值。
-    /// 复用缓冲；不持有世界权威数据、不调用渲染或存档。结果使用权威层的统一液深精度清理计算尾数。
+    /// 无 Unity 依赖的四邻格实验求解器。先冻结候选边，再按整数份分配来源和目标容量。
+    /// 复用缓冲；不持有世界权威数据、不调用渲染或存档，每次交换都同量扣源和增加目标。
     /// </summary>
     public sealed class LiquidFlowSolver
     {
         #region 复用缓冲
         private readonly List<Transfer> transfers = new();
-        private double[] outgoing = Array.Empty<double>();
-        private double[] incoming = Array.Empty<double>();
-        private double[] delta = Array.Empty<double>();
+        private int[] outgoing = Array.Empty<int>();
+        private int[] incoming = Array.Empty<int>();
+        private int[] delta = Array.Empty<int>();
         private int[] selectedSource = Array.Empty<int>();
-        public float[] ResultDepth { get; private set; } = Array.Empty<float>();
+        public int[] ResultLevel { get; private set; } = Array.Empty<int>();
         public int[] ResultType { get; private set; } = Array.Empty<int>();
         public float[] FlowX { get; private set; } = Array.Empty<float>();
         public float[] FlowY { get; private set; } = Array.Empty<float>();
@@ -72,9 +70,10 @@ namespace FlatWorld.WorldModel
         private readonly struct Transfer
         {
             public readonly int From, To, X, Y;
-            public readonly double Amount;
-            public Transfer(int from, int to, int x, int y, double amount)
-            { From = from; To = to; X = x; Y = y; Amount = amount; }
+            public readonly int Amount;
+            public readonly double Head;
+            public Transfer(int from, int to, int x, int y, int amount, double head)
+            { From = from; To = to; X = x; Y = y; Amount = amount; Head = head; }
         }
         #endregion
 
@@ -93,13 +92,13 @@ namespace FlatWorld.WorldModel
             Array.Clear(FlowY, 0, cells.Count);
             for (int i = 0; i < cells.Count; i++) selectedSource[i] = -1;
             BuildTransfers(cells, neighbours, settings);
-            AccumulateCapacity(cells);
+            transfers.Sort(CompareTransfers);
             ApplyTransfers(cells, settings);
             for (int i = 0; i < cells.Count; i++)
             {
-                ResultDepth[i] = LiquidCellValue.NormalizeDepth((float)Math.Clamp(cells[i].Depth + delta[i], 0d, 1d));
-                ResultType[i] = ResultDepth[i] == 0f ? 0 : cells[i].TypeIndex;
-                if (ResultType[i] == 0 && ResultDepth[i] > 0f && selectedSource[i] >= 0)
+                ResultLevel[i] = cells[i].Level + delta[i];
+                ResultType[i] = ResultLevel[i] == 0 ? 0 : cells[i].TypeIndex;
+                if (ResultType[i] == 0 && ResultLevel[i] > 0 && selectedSource[i] >= 0)
                     ResultType[i] = cells[selectedSource[i]].TypeIndex;
             }
         }
@@ -114,35 +113,30 @@ namespace FlatWorld.WorldModel
                 if (j <= i || j >= cells.Count) continue;
                 LiquidFlowCell a = cells[i], b = cells[j];
                 if ((!a.Active && !b.Active) || a.Blocked || b.Blocked ||
-                    (a.Depth > 0f && b.Depth > 0f && a.TypeIndex != b.TypeIndex)) continue;
-                double head = (double)a.GroundHeight + a.Depth - b.GroundHeight - b.Depth;
-                if (Math.Abs(head) <= settings.SurfaceEpsilon) continue;
+                    (a.Level > 0 && b.Level > 0 && a.TypeIndex != b.TypeIndex)) continue;
+                double head = (double)a.GroundHeight + LiquidCellValue.ToNormalizedDepth(a.Level) -
+                    b.GroundHeight - LiquidCellValue.ToNormalizedDepth(b.Level);
+                if (Math.Abs(head) <= 1d / LiquidCellValue.MaximumLevel + settings.SurfaceEpsilon) continue;
                 int from = head > 0d ? i : j, to = head > 0d ? j : i;
-                if (cells[from].Depth <= 0f || cells[to].Depth >= 1f) continue;
-                // 四个方向共享松弛预算；避免棋盘高低液面在相邻 Tick 之间整体交换而永不休眠。
-                double amount = Math.Min(Math.Abs(head) * 0.5d * settings.FlowSpeed / 4d,
-                    Math.Min(cells[from].Depth, 1d - cells[to].Depth));
-                if (amount < settings.MinimumTransfer) continue;
+                if (cells[from].Level <= 0 || cells[to].Level >= LiquidCellValue.MaximumLevel) continue;
+                // 有足够液面差时至少转移一整份，小速率不会被每 Tick 取整永久卡住。
+                int amount = Math.Max(1, (int)Math.Floor(Math.Abs(head) * LiquidCellValue.MaximumLevel * .5d * settings.FlowSpeed / 4d));
+                amount = Math.Min(amount, Math.Min(cells[from].Level, LiquidCellValue.MaximumLevel - cells[to].Level));
                 int sign = head > 0d ? 1 : -1;
                 int dx = direction == 0 ? -sign : direction == 1 ? sign : 0;
                 int dy = direction == 2 ? -sign : direction == 3 ? sign : 0;
-                transfers.Add(new Transfer(from, to, dx, dy, amount));
-                if (cells[to].Depth == 0f && (selectedSource[to] < 0 ||
+                transfers.Add(new Transfer(from, to, dx, dy, amount, Math.Abs(head)));
+                if (cells[to].Level == 0 && (selectedSource[to] < 0 ||
                     string.CompareOrdinal(cells[from].LiquidId, cells[selectedSource[to]].LiquidId) < 0))
                     selectedSource[to] = from;
             }
         }
 
-        /// <summary>累计整格需求；不能只逐边限量，否则四个邻格会同时透支来源或灌满同一空格。</summary>
-        private void AccumulateCapacity(IReadOnlyList<LiquidFlowCell> cells)
+        private static int CompareTransfers(Transfer left, Transfer right)
         {
-            for (int i = 0; i < transfers.Count; i++)
-            {
-                Transfer edge = transfers[i];
-                if (!AcceptTransfer(cells, edge)) continue;
-                outgoing[edge.From] += edge.Amount;
-                incoming[edge.To] += edge.Amount;
-            }
+            int head = right.Head.CompareTo(left.Head);
+            int source = left.From.CompareTo(right.From);
+            return head != 0 ? head : source != 0 ? source : left.To.CompareTo(right.To);
         }
 
         /// <summary>使用同一个最终转移量扣源增目标，流向来自真实交换量，单位为格子液深/秒。</summary>
@@ -152,13 +146,19 @@ namespace FlatWorld.WorldModel
             {
                 Transfer edge = transfers[i];
                 if (!AcceptTransfer(cells, edge)) continue;
-                double scale = Math.Min(1d, Math.Min(cells[edge.From].Depth / outgoing[edge.From],
-                    (1d - cells[edge.To].Depth) / incoming[edge.To]));
-                double amount = edge.Amount * scale;
-                if (amount < settings.MinimumTransfer) continue;
+                int source = cells[edge.From].Level - outgoing[edge.From];
+                int capacity = LiquidCellValue.MaximumLevel - cells[edge.To].Level - incoming[edge.To];
+                double head = (double)cells[edge.From].GroundHeight - cells[edge.To].GroundHeight +
+                    (cells[edge.From].Level + delta[edge.From] - cells[edge.To].Level - delta[edge.To]) / (double)LiquidCellValue.MaximumLevel;
+                if (head <= 1d / LiquidCellValue.MaximumLevel + settings.SurfaceEpsilon) continue;
+                int balance = (int)Math.Floor((head * LiquidCellValue.MaximumLevel + 1d - settings.SurfaceEpsilon) * .5d);
+                int amount = Math.Min(edge.Amount, Math.Min(balance, Math.Min(source, capacity)));
+                if (amount <= 0) continue;
+                outgoing[edge.From] += amount;
+                incoming[edge.To] += amount;
                 delta[edge.From] -= amount;
                 delta[edge.To] += amount;
-                float flux = (float)(amount * settings.TickRate);
+                float flux = LiquidCellValue.ToNormalizedDepth(amount) * settings.TickRate;
                 FlowX[edge.From] += edge.X * flux; FlowX[edge.To] += edge.X * flux;
                 FlowY[edge.From] += edge.Y * flux; FlowY[edge.To] += edge.Y * flux;
                 TransferCount++;
@@ -167,17 +167,17 @@ namespace FlatWorld.WorldModel
 
         /// <summary>一个原本为空的格子，同一 Tick 只能接收一种液体。</summary>
         private bool AcceptTransfer(IReadOnlyList<LiquidFlowCell> cells, Transfer edge) =>
-            cells[edge.To].Depth > 0f || selectedSource[edge.To] >= 0 &&
+            cells[edge.To].Level > 0 || selectedSource[edge.To] >= 0 &&
             cells[selectedSource[edge.To]].TypeIndex == cells[edge.From].TypeIndex;
 
         /// <summary>只在容量增长时分配，稳定范围内的 Tick 复用所有数组。</summary>
         private void EnsureCapacity(int count)
         {
-            if (ResultDepth.Length >= count) return;
-            int capacity = Math.Max(count, Math.Max(256, ResultDepth.Length * 2));
-            outgoing = new double[capacity]; incoming = new double[capacity]; delta = new double[capacity];
+            if (ResultLevel.Length >= count) return;
+            int capacity = Math.Max(count, Math.Max(256, ResultLevel.Length * 2));
+            outgoing = new int[capacity]; incoming = new int[capacity]; delta = new int[capacity];
             selectedSource = new int[capacity];
-            ResultDepth = new float[capacity]; ResultType = new int[capacity];
+            ResultLevel = new int[capacity]; ResultType = new int[capacity];
             FlowX = new float[capacity]; FlowY = new float[capacity];
         }
         #endregion

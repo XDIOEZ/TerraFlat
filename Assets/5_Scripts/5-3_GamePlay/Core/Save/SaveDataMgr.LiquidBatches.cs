@@ -33,7 +33,7 @@ public partial class SaveDataMgr
             {
                 LiquidCellSaveData cell = record.LiquidCells[existing];
                 cell.LiquidId = terrain.GetLiquidId(x, y);
-                cell.LiquidDepth = terrain.GetLiquidDepth(x, y);
+                cell.LiquidLevel = terrain.GetLiquidLevel(x, y);
             }
         }
         record.LiquidCells.Sort(LiquidBatchComparison);

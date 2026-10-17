@@ -25,6 +25,7 @@ public static partial class GameplayTestRuntimeProbe
         ["inventory/quick_transfer_feedback"] = CaptureInventoryQuickTransferFeedback,
         ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
         ["inventory/equipment_configuration"] = CaptureEquipmentConfiguration,
+        ["containers/whole_pour"] = CaptureVesselWholePour,
         ["world_streaming/live_window"] = CaptureLiveWindow,
         ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,
         ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
@@ -35,7 +36,8 @@ public static partial class GameplayTestRuntimeProbe
         ["industrial_fluids/residue_transfer"] = GameplayTestFluidDevices.CaptureResidueTransfer,
         ["industrial_fluids/liquid_pump_flow"] = GameplayTestFluidDevices.CaptureLiquidPump,
         ["industrial_fluids/surface_pump_flow"] = GameplayTestFluidSurface.CapturePumpFlow,
-        ["industrial_fluids/surface_outlet_flow"] = GameplayTestFluidSurface.CaptureOutletFlow
+        ["industrial_fluids/surface_outlet_flow"] = GameplayTestFluidSurface.CaptureOutletFlow,
+        ["industrial_fluids/surface_outlet_rate"] = GameplayTestFluidSurface.CaptureOutletRate
     };
 
     public static void Register(string systemId, string operationId, Func<Player, JObject, JObject> handler)

@@ -47,6 +47,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("crafting/transaction", EntityCraftingTransaction);
         operations.Add("crafting/plank_tool", EntityCraftingPlankTool);
         operations.Add("containers/composition", EntityContainerComposition);
+        operations.Add("containers/whole_world_transfer", EntityContainerWholeWorldTransfer);
+        operations.Add("containers/whole_batch", EntityContainerWholeBatch);
         operations.Add("quests/signal_progress", EntityQuestSignal);
         operations.Add("quests/reward_plan", EntityQuestRewardPlan);
         operations.Add("quests/inventory_objective", EntityQuestInventoryObjective);
@@ -866,6 +868,41 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 容器、任务信号与事件日历
+
+    private static JObject EntityContainerWholeWorldTransfer(JObject args)
+    {
+        float amount = (float)Number(args, "amount", 8d);
+        int capacity = (int)Number(args, "capacity", 8d);
+        float retainedFraction = (float)Number(args, "retainedFraction", 0d);
+        return new JObject
+        {
+            ["transfer"] = LiquidVesselOperations.GetWholeWorldServings((float)Number(args, "requested", 1d), amount),
+            ["spill"] = LiquidVesselOperations.GetWholeSpillServings(amount, capacity, retainedFraction),
+            ["fill"] = LiquidVesselOperations.GetWholeWorldServings(capacity, capacity - amount)
+        };
+    }
+
+    private static JObject EntityContainerWholeBatch(JObject args)
+    {
+        var state = new LiquidContainerState { RandomState = 12345, Temperature = 20f };
+        state.Composition["test:water"] = (float)Number(args, "water", 2.5d);
+        state.Composition["test:oil"] = .5f;
+        state.PendingOutputs["test-output"] = new LiquidPendingBatch { LiquidId = "test:oil", Servings = .5f };
+        if (Flag(args, "reservedElsewhere", false))
+            state.PendingOutputs["other-output"] = new LiquidPendingBatch { LiquidId = "test:water", Servings = 1f };
+        MixedLiquidContents.SynchronizeAmounts(state);
+        var samples = new JArray();
+        for (int index = 0; index < 4; index++)
+        {
+            bool reserved = MixedLiquidContents.Reserve(state, "test-output", out var batch, 1f);
+            bool consumed = reserved && MixedLiquidContents.ConsumeBatch(state, "test-output", batch, 1f);
+            samples.Add(new JObject { ["reserved"] = reserved, ["consumed"] = consumed,
+                ["liquidId"] = batch.LiquidId, ["servings"] = batch.Servings, ["remaining"] = state.Amount });
+        }
+        return new JObject { ["samples"] = samples, ["water"] = MixedLiquidContents.GetAmount(state, "test:water"),
+            ["oil"] = MixedLiquidContents.GetAmount(state, "test:oil"), ["remaining"] = state.Amount,
+            ["otherReserved"] = state.PendingOutputs.TryGetValue("other-output", out var other) ? other.Servings : 0f };
+    }
 
     private static JObject EntityContainerComposition(JObject args)
     {

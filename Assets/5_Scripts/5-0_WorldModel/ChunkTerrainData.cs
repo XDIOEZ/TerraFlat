@@ -171,7 +171,7 @@ namespace FlatWorld.WorldModel
         public ChunkTerrainData Seal()
         {
             ThrowIfUnavailable();
-            // 保留生成时的 height 供地表高度分层读取，随区块统一释放；液体仍只认独立 LiquidDepth。
+            // 保留生成时的 height 供地表高度分层读取，随区块统一释放；液体只认独立整数 LiquidLevel。
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
                 _extendedTileStacks, liquid, WeatherProfile);
@@ -693,7 +693,7 @@ namespace FlatWorld.WorldModel
                 Hash(ref hash, cell.NavigationCost, prime);
                 Hash(ref hash, (byte)cell.Flags, prime);
                 Hash(ref hash, _grass[i], prime);
-                Hash(ref hash, BitConverter.SingleToInt32Bits(liquid.Depth[i]), prime);
+                Hash(ref hash, liquid.Level[i], prime);
                 foreach (char character in liquid.Types.GetId(liquid.TypeIndex[i]))
                     Hash(ref hash, character, prime);
                 Hash(ref hash, 0, prime);

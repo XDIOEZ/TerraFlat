@@ -21,12 +21,12 @@ public partial class Map
         using var buffer = new ChunkTerrainBuffer(Data.Width, Data.Height, liquidTypes);
         generatedLiquidTerrain = buffer.Seal();
     }
-    public void SetGeneratedLiquid(Vector2Int worldCell, string liquidId, float depth)
+    public void SetGeneratedLiquid(Vector2Int worldCell, string liquidId, int level)
     {
         if (generatedLiquidTerrain == null || generatedLiquidTerrain.Width != Data.Width || generatedLiquidTerrain.Height != Data.Height)
             ResetGeneratedLiquids();
         Vector2Int local = worldCell - Data.position;
-        generatedLiquidTerrain.SetLiquid(local.x, local.y, generatedLiquidTerrain.LiquidTypes.GetIndex(liquidId), depth);
+        generatedLiquidTerrain.SetLiquid(local.x, local.y, generatedLiquidTerrain.LiquidTypes.GetIndex(liquidId), level);
     }
     public float GetGeneratedLiquidDepth(Vector2Int worldCell)
     {

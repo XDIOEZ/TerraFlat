@@ -65,14 +65,15 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 食物机制由目录与消费物上的 IFoodMechanic 组合；咬痕由 EatingProgress 和 GUID 重建。宇航服的独立单槽气罐保存为 InventoryInstanceSnapshot，接收单只适配纯氧气罐；两相变化后停止供氧。装备效果读实际罐扣量再 SupplyOxygen，供氧/耐压来源不属于氧气模块。
 - 液体只有容器/机器组分和世界 Liquid 层，无独立库存原料。LiquidContainerState.Composition 保存稳定 LiquidId 的真实份数，MixedLiquidContents 派生总量/比例；容量共用，小数尾量、随机态和各口 PendingOutputs 持久化。
 - 转液经 ILiquidTransferPort 原子事务，投料反应由 ingredientReactions 声明并事务扣真实槽。Mod_VesselContents 独立保存木桶六格固体库存，关闭面板只解绑视觉；热加工由 IInventoryHeatTreatment 读取 LiquidDefinition.HeatProcess，先提交产物再消耗液体。
-- 世界装液由 WorldLiquidSourceResolver/WorldLiquidSystem.TryPump 读稳定身份；1 份=0.1 液深，先世界提交再写容器。具有 worldWater 的液体倾倒到干地/同种液面写独立 Liquid 层，不改农业字段。
-- PourToGround 按真实余量、开口、倾角持续计流，每批最多 1 份；90° 可完全倒空，容量不决定流速。UI 以独立 pointerId、未旋转父级坐标解释手势，右侧负 Z、左侧正 Z；WaterVesselPourGraphic 只显示流，不反扣数据。
+- 世界装液由 WorldLiquidSourceResolver/WorldLiquidSystem.TryPump 读稳定身份；地表权威为 0～10 整数级，1 份=1 级，容器空位向下取整后先世界提交再写容器。具有 worldWater 的液体倾倒到干地/同种液面写独立 Liquid 层；成功后发布本格通知，由农业自行吸水。
+- PourToGround 按开口、倾角持续计时，每批严格 1 份，可溢出不足一份时不扣液；90° 可倒尽完整份，工业混液小数尾量留桶，整份出口跳过尾量且尊重其它口预约。先扣源再写地表，拒收恢复容器快照；容量不决定流速。UI 以独立 pointerId、未旋转父级坐标解释手势，右侧负 Z、左侧正 Z；WaterVesselPourGraphic 按帧连续显示流，不反扣数据。
 - 饮水只取 Drinkable 和余量，满水分仍可主动饮用；drinkEffects 由 LiquidDrinkEffectProcessor 统一结算。容器图标经 ItemDataPresentationResolverRegistry/GameRes.TryGetItemPresentation 状态重绘，Sprite 保留物理轮廓；手持内部状态改变同时通知真实库存与 Item.OnUIRefresh。
 
 ## 农业
 
 - `Mod_Plantable → CreateEntityCrop → 扣真实种子`，失败 RollbackEntityCrop；resource 作物不临时物化 Item。空耕地播种不检查水肥，水肥只影响后续成长；范围内的种植基质保留播种意图，作物占格或播种失败不回退食用，离开基质才让食用接管。
 - FarmlandSystem 操作 ChunkTerrainData；未完成锄地仅为会话进度，停工 10 秒后恢复，完成才写 Tile_Farmland。水肥快照修改经 CommitSoil；工具结算等待 IWeaponActionAnimation 确认真实挥动。
+- 耕地 `waterValue` 为 `int 0～10`，一份世界水只增加一级；`WorldLiquidSystem.SurfaceLiquidAdded` 只通知倒入本格吸水，不遍历全部耕地，作物读取时保留九宫格灌溉。天气和作物速率使用级/秒，不足一份的补水/耗水进度独立随农业差量保存，所有消费源共用地块进度；湿润度比例计算必须显式转浮点。
 - 播种作物句柄归 ChunkAgricultureRenderer，快照进 AgricultureCells；天然资源使用生态 GUID/差量。解绑不表示死亡；一次收获先生成全部产物再删除来源，持续采果只扣库存，植株/产物保持不同 ID。
 - 植物保存绝对游戏秒，通过 IWorldTimePlant/PlantClimateTimeline 补算冻结历史；成长器统一结算气候、水肥、天气与难度倍率，游标未追上不收获。雨雪由 WorldWeatherSurfaceSystem 供水，植物不重复加雨。
 - seedling/growing/mature 三图由 normalizedGrowth 派生，不增加存档阶段。BodyClip 材质的 BodyMinV/BodyMaxV 是本地 Y，主体与描边保留 DisableBatching。伴生物通过 HostGuid 和 INaturalCompanionHostCondition 门禁生成。

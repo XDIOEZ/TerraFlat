@@ -159,7 +159,7 @@
         "parameters": {
           "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true,
           "fertilityValue": { "baseValue": 1, "baseAdditive": 0, "additiveModifier": 0, "multiplicativeModifier": 1, "finalAdditive": 0 },
-          "waterValue": 40, "maxWater": 100
+          "waterValue": 4
         }
       },
       "behaviours": [ { "type": "farmland", "parameters": {} } ],

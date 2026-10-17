@@ -287,6 +287,8 @@ namespace FlatWorld.Networking.Gameplay
                     previous.SoilChanged = true;
                     previous.SoilSourceTileId = cell.SoilSourceTileId;
                     previous.Water = cell.Water;
+                    previous.WaterSupplyRemainder = cell.WaterSupplyRemainder;
+                    previous.WaterConsumptionRemainder = cell.WaterConsumptionRemainder;
                     previous.Fertility = cell.Fertility;
                 }
                 if (cell.SnowChanged)

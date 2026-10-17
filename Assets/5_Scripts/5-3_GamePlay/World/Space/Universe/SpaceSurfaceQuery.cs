@@ -18,7 +18,8 @@ namespace FlatWorld.Spaceflight
         public int BlockingTileId;
         public int SupportTileId;
         public string LiquidId;
-        public float LiquidDepth;
+        public int LiquidLevel;
+        public float LiquidDepth => LiquidCellValue.ToNormalizedDepth(LiquidLevel);
         public int BiomeId;
         public double TemperatureCelsius;
         public double PressureKPa;
@@ -40,19 +41,19 @@ namespace FlatWorld.Spaceflight
             => ApplyStructureDamageInRadius(worldKey, center, radius, peak, true, eventId);
 
         // 冷地表也按真实格容量接纳液体，调用者只扣除返回的实际泄出量。
-        public static float ReleaseLiquidInWorld(string worldKey, Vector2 center, string liquidId, float depth)
+        public static int ReleaseLiquidInWorld(string worldKey, Vector2 center, string liquidId, int level)
         {
-            if (!GameNetwork.HasStateAuthority || !float.IsFinite(depth) || depth <= 0f || string.IsNullOrWhiteSpace(worldKey) ||
+            if (!GameNetwork.HasStateAuthority || level <= 0 || string.IsNullOrWhiteSpace(worldKey) ||
                 worldKey.StartsWith("ship:", StringComparison.Ordinal) ||
                 !global::WorldAddress.FromWorldKey(worldKey).IsSurface || GameRes.ExistingInstance == null ||
                 !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition definition) || definition.WorldWater == null)
-                return 0f;
+                return 0;
             LandingSurfaceSample sample = GetLandingSurface(worldKey, center);
             if (sample.BlockingTileId != 0 || sample.SupportTileId != 0 ||
-                (sample.LiquidDepth > 0f && !string.Equals(sample.LiquidId, liquidId, StringComparison.OrdinalIgnoreCase))) return 0f;
-            float next = Mathf.Min(1f, sample.LiquidDepth + depth);
-            float accepted = next - sample.LiquidDepth;
-            if (accepted <= 0f) return 0f;
+                (sample.LiquidLevel > 0 && !string.Equals(sample.LiquidId, liquidId, StringComparison.OrdinalIgnoreCase))) return 0;
+            int accepted = Math.Min(level, LiquidCellValue.MaximumLevel - sample.LiquidLevel);
+            int next = sample.LiquidLevel + accepted;
+            if (accepted <= 0) return 0;
             PlanetData planet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[worldKey];
             Vector2Int size = PlanetData.NormalizeChunkSize(planet.ChunkSize);
             int originX = (int)Math.Floor(sample.Cell.x / (double)size.x) * size.x;
@@ -60,32 +61,32 @@ namespace FlatWorld.Spaceflight
             var address = new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
             ChunkTerrainData loaded = GetLoadedTerrain(worldKey, address);
             if (loaded != null)
-                return WorldLiquidSystem.TrySet(new Vector2(sample.Cell.x + .5f, sample.Cell.y + .5f), liquidId, next) ? accepted : 0f;
+                return WorldLiquidSystem.TryPour(new Vector2(sample.Cell.x + .5f, sample.Cell.y + .5f), liquidId, accepted, out int added) ? added : 0;
             if (!caches.TryGetValue(worldKey, out SurfaceCache cache) || !cache.World.TryGetChunkTerrain(address, out ChunkTerrainData baseline))
                 throw new InvalidOperationException("冷液体写回前缺少地表生成基线");
             int x = sample.Cell.x - originX, y = sample.Cell.y - originY;
             SaveDataMgr.Instance.RecordSpaceLiquidChange(worldKey, sample.Cell, liquidId, next,
-                baseline.GetLiquidId(x, y), baseline.GetLiquidDepth(x, y));
+                baseline.GetLiquidId(x, y), baseline.GetLiquidLevel(x, y));
             return accepted;
         }
 
-        public static bool TrySampleLiquid(string worldKey, Vector2 point, out LiquidDefinition liquid, out float depth)
+        public static bool TrySampleLiquid(string worldKey, Vector2 point, out LiquidDefinition liquid, out int level)
         {
-            liquid = null; depth = 0f;
+            liquid = null; level = 0;
             if (string.IsNullOrWhiteSpace(worldKey) || worldKey.StartsWith("ship:", StringComparison.Ordinal) ||
                 !global::WorldAddress.FromWorldKey(worldKey).IsSurface || !float.IsFinite(point.x) || !float.IsFinite(point.y) ||
                 GameRes.ExistingInstance == null || !TryGetLandingSurface(worldKey, point, out LandingSurfaceSample sample) ||
                 sample.LiquidDepth <= 0f || !GameRes.ExistingInstance.TryGetLiquidDefinition(sample.LiquidId, out liquid) || liquid.WorldWater == null)
             { liquid = null; return false; }
-            depth = sample.LiquidDepth;
+            level = sample.LiquidLevel;
             return true;
         }
 
         // 抽取冷世界真实有限库存，平台只遮断浸水而不复制或删除底部液体。
-        public static bool TryPumpLiquidInWorld(string worldKey, Vector2 point, float requestedDepth, out string liquidId, out float removedDepth)
+        public static bool TryPumpLiquidInWorld(string worldKey, Vector2 point, int requestedLevel, out string liquidId, out int removedLevel)
         {
-            liquidId = null; removedDepth = 0f;
-            if (!GameNetwork.HasStateAuthority || !float.IsFinite(requestedDepth) || requestedDepth <= 0f ||
+            liquidId = null; removedLevel = 0;
+            if (!GameNetwork.HasStateAuthority || requestedLevel <= 0 ||
                 !TrySampleLiquid(worldKey, point, out LiquidDefinition liquid, out _)) return false;
             LandingSurfaceSample sample = GetLandingSurface(worldKey, point);
             PlanetData planet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[worldKey];
@@ -94,16 +95,16 @@ namespace FlatWorld.Spaceflight
             int originY = (int)Math.Floor(sample.Cell.y / (double)size.y) * size.y;
             var address = new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
             if (GetLoadedTerrain(worldKey, address) != null)
-                return WorldLiquidSystem.TryPump(new Vector2(sample.Cell.x + .5f, sample.Cell.y + .5f), requestedDepth, out liquidId, out removedDepth);
+                return WorldLiquidSystem.TryPump(new Vector2(sample.Cell.x + .5f, sample.Cell.y + .5f), requestedLevel, out liquidId, out removedLevel);
             if (!caches.TryGetValue(worldKey, out SurfaceCache cache) || !cache.World.TryGetChunkTerrain(address, out ChunkTerrainData baseline))
                 throw new InvalidOperationException("冷液体抽取前缺少地表生成基线");
-            float next = LiquidCellValue.NormalizeDepth(sample.LiquidDepth - requestedDepth);
-            removedDepth = sample.LiquidDepth - next;
-            if (removedDepth <= 0f) return false;
+            removedLevel = Math.Min(requestedLevel, sample.LiquidLevel);
+            int next = sample.LiquidLevel - removedLevel;
+            if (removedLevel <= 0) return false;
             liquidId = sample.LiquidId;
-            SaveDataMgr.Instance.RecordSpaceLiquidChange(worldKey, sample.Cell, next > 0f ? liquidId : null, next,
+            SaveDataMgr.Instance.RecordSpaceLiquidChange(worldKey, sample.Cell, next > 0 ? liquidId : null, next,
                 baseline.GetLiquidId(sample.Cell.x - originX, sample.Cell.y - originY),
-                baseline.GetLiquidDepth(sample.Cell.x - originX, sample.Cell.y - originY));
+                baseline.GetLiquidLevel(sample.Cell.x - originX, sample.Cell.y - originY));
             return true;
         }
         #endregion
@@ -183,7 +184,7 @@ namespace FlatWorld.Spaceflight
             }
             TerrainCell cell = terrain.GetCell(localX, localY);
             string liquidId = terrain.GetLiquidId(localX, localY);
-            float liquidDepth = terrain.GetLiquidDepth(localX, localY);
+            int liquidLevel = terrain.GetLiquidLevel(localX, localY);
             int support = TerrainSupportLayer.GetTileId(terrain, localX, localY);
             // 冷缓存保存生成基线，每次读取最新差量，建筑损毁后不会返回旧状态。
             if (!loaded && saves.TryGetChunkDelta(planetId, new Vector2Int(originX, originY), out ChunkSaveRecord delta))
@@ -195,12 +196,12 @@ namespace FlatWorld.Spaceflight
                         tile.BiomeId, tile.NavigationCost, tile.Flags);
                 if (delta.LiquidCells != null)
                 foreach (LiquidCellSaveData liquid in delta.LiquidCells)
-                    if (liquid.LocalPosition == local) { liquidId = liquid.LiquidId; liquidDepth = liquid.LiquidDepth; }
+                    if (liquid.LocalPosition == local) { liquidId = liquid.LiquidId; liquidLevel = liquid.LiquidLevel; }
                 if (delta.SupportCells != null)
                 foreach (SupportCellSaveData floor in delta.SupportCells)
                     if (floor.LocalPosition == local) support = floor.TileId;
             }
-            bool water = support == 0 && liquidDepth > 0f && GameRes.ExistingInstance != null &&
+            bool water = support == 0 && liquidLevel > 0 && GameRes.ExistingInstance != null &&
                 GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition liquidDefinition) &&
                 liquidDefinition.WorldWater?.WaterContact == true;
             terrain.TryGetEnvironmentValue("temperature.celsius", localX, localY, out float geographicTemperature);
@@ -208,7 +209,7 @@ namespace FlatWorld.Spaceflight
             return new LandingSurfaceSample
             {
                 IsWater = water, GroundTileId = cell.GroundTileId, BlockingTileId = cell.BlockingTileId, SupportTileId = support,
-                LiquidId = liquidId, LiquidDepth = liquidDepth, BiomeId = cell.BiomeId, Cell = new Vector2Int(cellX, cellY),
+                LiquidId = liquidId, LiquidLevel = liquidLevel, BiomeId = cell.BiomeId, Cell = new Vector2Int(cellX, cellY),
                 TemperatureCelsius = geographicTemperature + planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature,
                 PressureKPa = AtmosphereService.PressureKPa(planet.Atmosphere)
             };

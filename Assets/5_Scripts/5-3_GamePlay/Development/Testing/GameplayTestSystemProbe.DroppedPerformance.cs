@@ -172,11 +172,11 @@ public static partial class GameplayTestSystemProbe
         for (int x = 0; x < 4; x++)
             buffer.SetCell(x, y, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
         int lava = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId);
-        buffer.SetLiquid(replacement ? 3 : 0, replacement ? 3 : 0, lava, .6f);
+        buffer.SetLiquid(replacement ? 3 : 0, replacement ? 3 : 0, lava, 6);
         if (!replacement)
         {
-            buffer.SetLiquid(2, 0, lava, .6f);
-            buffer.SetLiquid(0, 3, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), .6f);
+            buffer.SetLiquid(2, 0, lava, 6);
+            buffer.SetLiquid(0, 3, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 6);
         }
         return buffer.Seal();
     }
@@ -216,8 +216,8 @@ public static partial class GameplayTestSystemProbe
         TerrainSupportLayer.Set(first, 0, 0, 0, 2);
         source.Refresh(first, definitions);
         result["uncovered"] = DroppedLiquidChunk(source, Vector2Int.zero, Vector2Int.zero, default);
-        first.SetLiquid(0, 0, 0, 0f);
-        first.SetLiquid(2, 0, 0, 0f);
+        first.SetLiquid(0, 0, 0, 0);
+        first.SetLiquid(2, 0, 0, 0);
         source.Refresh(first, definitions);
         result["cleared"] = DroppedLiquidChunk(source, Vector2Int.zero, Vector2Int.zero, default);
         source.Refresh(null, definitions);

@@ -102,6 +102,10 @@ public interface ILiquidTransferPort : IContainerPort
     bool ExtractLiquid(LiquidTransferBatch batch, float servings);
     bool InsertLiquid(LiquidTransferBatch batch, float servings);
 }
+public interface IWholeLiquidOutputPort
+{
+    bool ReserveWholeLiquid(out LiquidTransferBatch batch);
+}
 public readonly struct ContainerTransferResult
 {
     public readonly ContainerTransferFailure Failure;

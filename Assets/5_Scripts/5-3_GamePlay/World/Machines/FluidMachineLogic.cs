@@ -72,7 +72,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
         FluidDeviceBehavior behavior = Behavior;
         // 内置设备没有实际变化就不推送整台状态，自定义策略仍保留原来的显式调度通知。
         if (!behavior.UsesObservedTickState) { behavior.Advance(Entity, seconds); NotifyChanged(); return; }
-        var before = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.DissipatedHeatJoules,
+        var before = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.WorldLiquidPumpLiters, State.DissipatedHeatJoules,
             State.FilterRemainingWork, State.RandomState);
         tickContents.Clear();
         foreach (string chamber in State.Chambers.Keys)
@@ -81,7 +81,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
             tickContents.Add((chamber, contents, contents.StateRevision));
         }
         behavior.Advance(Entity, seconds);
-        var after = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.DissipatedHeatJoules,
+        var after = (State.Status, State.PumpProgress, State.PumpStoredWorkJoules, State.WorldLiquidPumpLiters, State.DissipatedHeatJoules,
             State.FilterRemainingWork, State.RandomState);
         bool changed = before != after || tickContents.Count != State.Chambers.Count;
         if (!changed)

@@ -13,7 +13,7 @@ namespace FlatWorld.WorldModel
         private readonly TerrainCell[] terrainCells;
         private readonly Dictionary<string, float[]> environmentLayers;
         private readonly byte[] grass;
-        private readonly float[] liquidDepth;
+        private readonly int[] liquidLevel;
         private readonly string[] liquidIds;
         private readonly IReadOnlyDictionary<int, int[]> extendedTileStacks;
         private readonly IReadOnlyDictionary<Int2, int> occupancy;
@@ -23,7 +23,7 @@ namespace FlatWorld.WorldModel
             TerrainCell[] terrainCells, Dictionary<string, float[]> environmentLayers,
             byte[] grass, IReadOnlyDictionary<int, int[]> extendedTileStacks,
             IReadOnlyDictionary<Int2, int> occupancy,
-            NaturalItemPlacement[] ecologyPlacements, float[] liquidDepth, string[] liquidIds, ulong stableHash)
+            NaturalItemPlacement[] ecologyPlacements, int[] liquidLevel, string[] liquidIds, ulong stableHash)
         {
             Address = address;
             Width = width;
@@ -34,7 +34,7 @@ namespace FlatWorld.WorldModel
             this.extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
             this.occupancy = occupancy ?? new Dictionary<Int2, int>();
             this.ecologyPlacements = ecologyPlacements ?? Array.Empty<NaturalItemPlacement>();
-            this.liquidDepth = liquidDepth;
+            this.liquidLevel = liquidLevel;
             this.liquidIds = liquidIds;
             StableHash = stableHash;
         }
@@ -52,7 +52,7 @@ namespace FlatWorld.WorldModel
         /// <summary>每个格子的草地数据。</summary>
         public IReadOnlyList<byte> Grass => grass;
         /// <summary>液深和稳定身份的副本；快照不能暴露临时液体编号。</summary>
-        public IReadOnlyList<float> LiquidDepth => liquidDepth;
+        public IReadOnlyList<int> LiquidLevel => liquidLevel;
         public IReadOnlyList<string> LiquidIds => liquidIds;
         /// <summary>一个格子里地块层数很多时，这里保存完整的上下叠放顺序。</summary>
         public IReadOnlyDictionary<int, int[]> ExtendedTileStacks => extendedTileStacks;
@@ -84,7 +84,7 @@ namespace FlatWorld.WorldModel
                 chunk.Ecology?.Placements == null
                     ? Array.Empty<NaturalItemPlacement>()
                     : new List<NaturalItemPlacement>(chunk.Ecology.Placements).ToArray(),
-                terrain.LiquidDepth.ToArray(), ids, terrain.ComputeStableHash());
+                terrain.LiquidLevel.ToArray(), ids, terrain.ComputeStableHash());
         }
     }
 

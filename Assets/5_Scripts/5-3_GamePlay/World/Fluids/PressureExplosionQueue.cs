@@ -250,8 +250,10 @@ public static class PressureExplosionQueue
             if (SpaceMgr.IsSpaceScene(spill.WorldKey)) continue;
             FluidDefinition definition = FluidCatalog.Default.Find(spill.FluidId);
             if (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetLiquidDefinition(definition.LiquidId, out LiquidDefinition liquid) ||
-                liquid.WorldWater == null || liquid.WorldWater.DepthPerServing <= 0f) continue;
-            while (spillCellsThisFrame < SpillCellChecksPerFrame && CanAdvanceLiquidSpill(spill))
+                liquid.WorldWater == null) continue;
+            // 不足一份的真实余量留在队列，不能拆级，也不消耗整片溢流格扫描预算。
+            while (spillCellsThisFrame < SpillCellChecksPerFrame && CanAdvanceLiquidSpill(spill) &&
+                   FluidUnits.MolToServings(definition, spill.LiquidMoles) >= 1m)
             {
                 int index = spill.NextCellIndex++;
                 spillCellsThisFrame++;
@@ -259,15 +261,14 @@ public static class PressureExplosionQueue
                 Vector2 point = index == 0 ? spill.Center : new Vector2(Mathf.Floor(spill.Center.x) + offset.x + .5f,
                     Mathf.Floor(spill.Center.y) + offset.y + .5f);
                 decimal servings = FluidUnits.MolToServings(definition, spill.LiquidMoles);
-                float depth = (float)Math.Min(1m, servings * (decimal)liquid.WorldWater.DepthPerServing);
-                float accepted = 0f;
+                int level = (int)Math.Min(FlatWorld.WorldModel.LiquidCellValue.MaximumLevel, decimal.Floor(servings));
+                int accepted = 0;
                 if (WorldAddress.FromWorldKey(spill.WorldKey).IsSurface)
-                    accepted = FlatWorld.Spaceflight.SpaceSurfaceQuery.ReleaseLiquidInWorld(spill.WorldKey, point, liquid.Id, depth);
+                    accepted = FlatWorld.Spaceflight.SpaceSurfaceQuery.ReleaseLiquidInWorld(spill.WorldKey, point, liquid.Id, level);
                 else if (SceneManager.GetActiveScene().name == spill.WorldKey)
-                    WorldLiquidSystem.TryPour(point, liquid.Id, depth, out accepted);
-                if (accepted <= 0f) continue;
-                decimal moles = Math.Min(spill.LiquidMoles, FluidUnits.ServingsToMol(definition,
-                    (decimal)accepted / (decimal)liquid.WorldWater.DepthPerServing));
+                    WorldLiquidSystem.TryPour(point, liquid.Id, level, out accepted);
+                if (accepted <= 0) continue;
+                decimal moles = Math.Min(spill.LiquidMoles, FluidUnits.ServingsToMol(definition, accepted));
                 double fraction = (double)(moles / spill.LiquidMoles);
                 spill.LiquidMoles -= moles; spill.InternalEnergyJoules *= 1d - fraction;
             }

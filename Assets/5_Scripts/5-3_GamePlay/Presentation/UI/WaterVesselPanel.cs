@@ -43,6 +43,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     private Image vesselImage, interiorImage; // 已绑定的剖面和内腔图像。
     private float activeMouthWidthMultiplier = 1f; // 当前开口相对默认容器开口的宽度倍率。
     private float pourAmountAccumulator; // 连续液流的计时累计；达到一份后才离散结算一次。
+    private bool pourStreamCommitted; // 真实倒出第一份后才维持连续液流，拒收立即停止续流。
 
     /// <summary>切换容器时一次性应用完整外观，避免复用面板残留上一个容器的遮罩或出水位置。</summary>
     private void ApplyAppearance(string itemId)
@@ -396,17 +397,18 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         if (vessel == null || !vessel.CanOperate(actor) || Mod_WaterVessel.IsEmptyAmount(vessel.Data.Amount))
         {
             pourAmountAccumulator = 0f;
+            pourStreamCommitted = false;
             return;
         }
 
         float physicalTilt = Mathf.Abs(Mathf.DeltaAngle(0f, vesselTiltDegrees));
         float retainedFraction = Mathf.Clamp01(1f - physicalTilt / FullEmptyTiltDegrees);
-        float maxRetainedAmount = vessel.Capacity * retainedFraction;
-        float maximumSpillAmount = Mathf.Max(0f, vessel.Data.Amount - maxRetainedAmount);
-        if (maximumSpillAmount <= 0f ||
+        int maximumSpillAmount = LiquidVesselOperations.GetWholeSpillServings(vessel.Data.Amount, vessel.Capacity, retainedFraction);
+        if (maximumSpillAmount < Mod_WaterVessel.AmountStep ||
             activeMouthWidthMultiplier <= 0f)
         {
             pourAmountAccumulator = 0f;
+            pourStreamCommitted = false;
             return;
         }
 
@@ -417,32 +419,30 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         float amountPerSecond = baseAmountPerSecond * (liquid?.PourRateMultiplier ?? 1f);
         float normalizedFlow = Mathf.Clamp01(0.45f + 0.55f * amountPerSecond /
             (BasePourAmountPerSecond * HorizontalPourSpeedMultiplier));
-        pourGraphic.Emit(
-            normalizedFlow,
-            Liquid.CurrentBodyColor,
-            Liquid.CurrentSurfaceColor,
-            Liquid.CurrentDetailColor,
-            Liquid.CurrentMurkiness,
-            Liquid.CurrentViscosity);
-        Liquid.AddAgitation(Mathf.Clamp01(0.3f + normalizedFlow * 0.7f));
-
         pourAmountAccumulator = Mathf.Min(
             Mod_WaterVessel.AmountStep,
             pourAmountAccumulator + amountPerSecond * deltaTime);
-        float requested = Mathf.Min(Mod_WaterVessel.AmountStep, maximumSpillAmount);
-        if (pourAmountAccumulator + Mod_WaterVessel.AmountEpsilon < requested)
-            return;
-
-        int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
-        float removed = vessel.Item?.InHand == true
-            ? LiquidVesselOperations.PourToGround(vessel, actor, requested, horizontalCellOffset)
-            : vessel.PourToGround(actor, requested);
-        if (removed <= 0f)
-            return;
-        pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
-
-        // 倒液只更新目标水位，不重置正在传播的液面波。
-        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid);
+        const int requested = Mod_WaterVessel.AmountStep;
+        if (pourAmountAccumulator >= requested)
+        {
+            int horizontalCellOffset = vesselTiltDegrees > 0f ? -1 : 1;
+            float removed = vessel.Item?.InHand == true
+                ? LiquidVesselOperations.PourToGround(vessel, actor, requested, horizontalCellOffset)
+                : vessel.PourToGround(actor, requested);
+            if (removed <= 0f)
+            {
+                pourAmountAccumulator = 0f; pourStreamCommitted = false;
+                pourGraphic.Clear(false); return;
+            }
+            pourAmountAccumulator = Mathf.Max(0f, pourAmountAccumulator - removed);
+            pourStreamCommitted = true;
+            // 倒液只更新目标水位，不重置正在传播的液面波。
+            Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid);
+        }
+        if (!pourStreamCommitted) return;
+        pourGraphic.Emit(normalizedFlow, Liquid.CurrentBodyColor, Liquid.CurrentSurfaceColor,
+            Liquid.CurrentDetailColor, Liquid.CurrentMurkiness, Liquid.CurrentViscosity);
+        Liquid.AddAgitation(Mathf.Clamp01(0.3f + normalizedFlow * 0.7f));
     }
 
     /// <summary>来回快速改变倾角会显著放大水面波纹，慢速单向倾倒只产生轻微扰动。</summary>
@@ -539,6 +539,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         targetVesselTiltDegrees = 0f;
         pourReleaseSettling = false;
         pourAmountAccumulator = 0f;
+        pourStreamCommitted = false;
         pourGraphic?.Clear(immediate);
         if (!immediate)
             return;

@@ -314,8 +314,8 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceCommitSnapshot(JObject args)
     {
         int tile = (int)Number(args, "tile", 23);
-        float depth = (float)Number(args, "depth", 0.25);
-        float changedDepth = (float)Number(args, "changedDepth", 0.75);
+        int level = (int)Number(args, "level", 3);
+        int changedLevel = (int)Number(args, "changedLevel", 8);
         using var world = new WorldRuntime("probe", 1);
         var address = new FlatWorld.WorldModel.WorldAddress("probe", new Int2(-8, 8));
         var profile = new ChunkGenerationProfileSnapshot("probe", 1, 2, 2);
@@ -327,14 +327,14 @@ public static partial class GameplayTestSystemProbe
         bool staleAccepted = world.TryCommit(stale, out string staleReason);
         using var buffer = new ChunkTerrainBuffer(2, 2, liquids);
         buffer.SetCell(0, 0, new TerrainCell(tile, 0, 0, 1, 1, TerrainCellFlags.Walkable));
-        buffer.SetLiquid(0, 0, liquids.GetIndex("probe:water"), depth);
+        buffer.SetLiquid(0, 0, liquids.GetIndex("probe:water"), level);
         using var generated = new ChunkGenerationResult(current, buffer);
         bool committed = world.TryCommit(generated, out string reason);
         world.TryGetChunk(address, out ChunkRuntime chunk);
         WorldRuntimeSnapshot snapshot = world.CaptureSnapshot();
         chunk.Terrain.SetCell(0, 0, new TerrainCell(tile + 1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
-        chunk.Terrain.SetLiquid(0, 0, liquids.GetIndex("probe:water"), changedDepth);
-        float actualChangedDepth = chunk.Terrain.GetLiquidDepth(0, 0);
+        chunk.Terrain.SetLiquid(0, 0, liquids.GetIndex("probe:water"), changedLevel);
+        int actualChangedLevel = chunk.Terrain.GetLiquidLevel(0, 0);
         bool repeatedAccepted = world.TryCommit(generated, out string repeatedReason);
         ChunkTerrainData terrain = chunk.Terrain;
         bool evicted = world.EvictChunk(address);
@@ -350,8 +350,8 @@ public static partial class GameplayTestSystemProbe
             ["resultDisposed"] = generated.IsDisposed, ["repeatedAccepted"] = repeatedAccepted,
             ["evicted"] = evicted, ["terrainDisposed"] = terrain.IsDisposed,
             ["snapshotChunks"] = snapshot.Chunks.Count, ["snapshotGround"] = snapshot.Chunks[0].TerrainCells[0].GroundTileId,
-            ["snapshotLiquid"] = snapshot.Chunks[0].LiquidIds[0], ["snapshotDepth"] = snapshot.Chunks[0].LiquidDepth[0],
-            ["changedDepth"] = actualChangedDepth,
+            ["snapshotLiquid"] = snapshot.Chunks[0].LiquidIds[0], ["snapshotLevel"] = snapshot.Chunks[0].LiquidLevel[0],
+            ["changedLevel"] = actualChangedLevel,
             ["oldEpochAccepted"] = oldEpochAccepted, ["epochDisposed"] = epochResult.IsDisposed && epochBuffer.IsDisposed
         };
     }

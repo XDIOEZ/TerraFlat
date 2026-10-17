@@ -25,3 +25,35 @@ test.system("containers", "composition", {water = .5, oil = 0}, function(data)
     assert(data.reserved and data.consumed and data.initial == .5 and data.afterConsume == 0, "小数尾量无法真实消费")
     assert(data.pendingAfter == 0 and data.restored == .5 and data.restoredBatchServings == .5, "小数尾量或预约快照丢失")
 end, "小数尾量能够预约消费并完整恢复")
+
+local whole_cases = {
+    {name = "每次只倒完整一份", args = {amount = 8, requested = 1, retainedFraction = .75}, transfer = 1, spill = 2, fill = 0},
+    {name = "不足一份的倾斜不扣液", args = {amount = 8, retainedFraction = .95}, transfer = 1, spill = 0, fill = 0},
+    {name = "分数请求不落地", args = {amount = 8, requested = .5}, transfer = 0, spill = 8, fill = 0},
+    {name = "分数尾量留桶", args = {amount = .5}, transfer = 0, spill = 0, fill = 7},
+    {name = "混液空位只装整份", args = {amount = 6.5, requested = 20}, transfer = 6, spill = 6, fill = 1},
+    {name = "桶内半份空位不抽地表", args = {amount = 7.5}, transfer = 1, spill = 7, fill = 0},
+    {name = "倒置可以倒尽完整份", args = {amount = 8, retainedFraction = -1}, transfer = 1, spill = 8, fill = 0}
+}
+for _, case in ipairs(whole_cases) do
+    test.system("containers", "whole_world_transfer", case.args, function(data)
+        assert(data.transfer == case.transfer and data.spill == case.spill and data.fill == case.fill,
+            "地表倒液、倾角或装液产生了分数份，或丢失可移动的完整份")
+    end, "世界容器整份边界：" .. case.name)
+end
+for _, reserved in ipairs({false, true}) do
+    test.system("containers", "whole_batch", {reservedElsewhere = reserved}, function(data)
+        local count = reserved and 1 or 2
+        for index, sample in ipairs(data.samples) do
+            assert(sample.reserved == (index <= count) and sample.consumed == (index <= count),
+                "整份出口被其他组分尾量卡住，或超用了别的出口预约")
+            if index <= count then
+                assert(sample.liquidId == "test:water" and sample.servings == 1,
+                    "整份出口把不足一份的组分倒进了世界")
+            end
+        end
+        assert(data.water == (reserved and 1.5 or .5) and data.oil == .5
+            and data.remaining == (reserved and 2 or 1) and data.otherReserved == (reserved and 1 or 0),
+            "整份预约或消费丢弃了小数尾量，或修改了其他出口的真实预约")
+    end, reserved and "整份倾倒尊重其它端口预约" or "半份尾量不阻塞完整组分并保留所有尾量")
+end

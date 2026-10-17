@@ -19,7 +19,7 @@ public class Mod_FarmlandSupply : Module
     }
 
     [Header("单次补给量")]
-    [SerializeField, Min(0f)] private float waterAmount = 25f;
+    [SerializeField, Min(0)] private int waterAmount = 3;
     [SerializeField, Min(0f)] private float fertilityAmount = 0.35f;
 
     private bool _isActBound;
@@ -80,12 +80,12 @@ public class Mod_FarmlandSupply : Module
         }
 
         farmlandData.NormalizeValues();
-        float previousWater = farmlandData.waterValue;
+        int previousWater = farmlandData.waterValue;
         float previousFertility = farmlandData.Fertility;
         farmlandData.AddWater(waterAmount);
         farmlandData.AddFertility(fertilityAmount);
 
-        if (Mathf.Approximately(previousWater, farmlandData.waterValue) &&
+        if (previousWater == farmlandData.waterValue &&
             Mathf.Approximately(previousFertility, farmlandData.Fertility))
         {
             Debug.Log($"[Mod_FarmlandSupply] 地块 {tilePos} 的水分和肥力已经充足，未消耗物品", item);
@@ -98,7 +98,7 @@ public class Mod_FarmlandSupply : Module
         item.itemData.Stack.Amount--;
         item.OnUIRefresh?.Invoke();
         Debug.Log(
-            $"[Mod_FarmlandSupply] 地块 {tilePos} 补给完成：水分 {previousWater:F1}→{farmlandData.waterValue:F1}，" +
+            $"[Mod_FarmlandSupply] 地块 {tilePos} 补给完成：水分 {previousWater}→{farmlandData.waterValue}，" +
             $"肥力 {previousFertility:F2}→{farmlandData.Fertility:F2}",
             item);
 

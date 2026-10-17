@@ -492,7 +492,7 @@ namespace FlatWorld.WorldModel
                         cancellationToken.ThrowIfCancellationRequested();
                     SurfaceCellOutput output = batch.Output[index];
                     terrain.SetCell(x, y, output.Cell);
-                    terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
+                    terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidLevel);
                     terrain.SetGrass(x, y, output.Grass);
                     layers.Write(index, output);
                 }
@@ -518,7 +518,7 @@ namespace FlatWorld.WorldModel
         {
             public TerrainCell Cell;
             public int LiquidTypeIndex;
-            public float LiquidDepth;
+            public int LiquidLevel;
             public float SnowDepth;
             public byte Grass;
             public float Height;
@@ -786,7 +786,7 @@ namespace FlatWorld.WorldModel
             SurfaceCellOutput output = SampleSurfaceCellOutput(request, settings, riverMap,
                 x, y, worldX, worldY, terrain.LiquidTypes);
             terrain.SetCell(x, y, output.Cell);
-            terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidDepth);
+            terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidLevel);
             terrain.SetGrass(x, y, output.Grass);
             new SurfaceEnvironmentWriter(terrain).Write(y * terrain.Width + x, output);
         }
@@ -813,7 +813,7 @@ namespace FlatWorld.WorldModel
             if (terrainDecorator == null) return output;
             // 单格查询同样调用纯地形扩展，出生与群系定位不能看到扩展前的地表。
             using var sample = new ChunkTerrainBuffer(1, 1, types);
-            sample.SetCell(0, 0, output.Cell); sample.SetLiquid(0, 0, output.LiquidTypeIndex, output.LiquidDepth);
+            sample.SetCell(0, 0, output.Cell); sample.SetLiquid(0, 0, output.LiquidTypeIndex, output.LiquidLevel);
             sample.SetGrass(0, 0, output.Grass); new SurfaceEnvironmentWriter(sample).Write(0, output);
             var cellRequest = new ChunkGenerationRequest(request.WorldEpoch,
                 new WorldAddress(request.Address.DimensionId, new Int2(worldX, worldY)), request.WorldSeed,
@@ -821,7 +821,7 @@ namespace FlatWorld.WorldModel
             terrainDecorator(cellRequest, sample, CancellationToken.None);
             using ChunkTerrainData decorated = sample.Seal();
             output.Cell = decorated.GetCell(0, 0); output.Grass = decorated.GetGrass(0, 0);
-            output.LiquidTypeIndex = decorated.GetLiquidTypeIndex(0, 0); output.LiquidDepth = decorated.GetLiquidDepth(0, 0);
+            output.LiquidTypeIndex = decorated.GetLiquidTypeIndex(0, 0); output.LiquidLevel = decorated.GetLiquidLevel(0, 0);
             if (decorated.TryGetEnvironmentValue("height", 0, 0, out float height)) output.Height = height;
             if (decorated.TryGetEnvironmentValue("temperature", 0, 0, out float temperature)) output.Temperature = temperature;
             if (decorated.TryGetEnvironmentValue("temperature.celsius", 0, 0, out float celsius)) output.TemperatureCelsius = celsius;
@@ -998,13 +998,13 @@ namespace FlatWorld.WorldModel
                     if (!river && initialLiquidDepth <= 0f) lavaShore = Math.Max(lavaShore, shore);
                 }
             }
-            initialLiquidDepth = QuantizeGeneratedLiquidDepth(initialLiquidDepth);
+            int initialLiquidLevel = QuantizeGeneratedLiquidLevel(initialLiquidDepth);
 
             // 海水同样按零下基温结冰，岩浆不参加水体结冰规则。
-            if (!lavaCell && initialLiquidDepth > 0f && temperatureCelsius < 0f)
+            if (!lavaCell && initialLiquidLevel > 0 && temperatureCelsius < 0f)
             {
                 groundTileId = settings.IceTileId;
-                initialLiquidDepth = 0f;
+                initialLiquidLevel = 0;
                 snowDepth = 0f;
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, settings.DefaultNavigationCost + 1);
@@ -1026,7 +1026,7 @@ namespace FlatWorld.WorldModel
                 height <= settings.GrassMaximumHeight;
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
                          (groundTileId == settings.GroundTileId || settings.IsNaturalPlantableGround(groundTileId)) &&
-                         initialLiquidDepth <= 0f &&
+                         initialLiquidLevel == 0 &&
                          grassClimateSuitable &&
                          Hash01(request.WorldSeed, worldX, worldY, 0x165667b1u) <
                          grassDensity * rainfallDensity * (0.55d + moisture * 0.75d);
@@ -1034,9 +1034,9 @@ namespace FlatWorld.WorldModel
             {
                 Cell = new TerrainCell(groundTileId, 0, 0, biomeId,
                     navigationCost, flags),
-                LiquidTypeIndex = initialLiquidDepth > 0f
+                LiquidTypeIndex = initialLiquidLevel > 0
                     ? lavaCell ? lava : ocean ? seaWater : dirtyWater : 0,
-                LiquidDepth = initialLiquidDepth,
+                LiquidLevel = initialLiquidLevel,
                 SnowDepth = snowDepth,
                 Grass = grass ? GrassPresent : GrassEmpty,
                 Height = (float)height,
@@ -1818,8 +1818,8 @@ namespace FlatWorld.WorldModel
                 : 0d;
             bool groundwater = groundliquidDepth > 0d;
             bool river = caveRiver.IsRiver;
-            float liquidDepth = QuantizeGeneratedLiquidDepth(Math.Max(groundliquidDepth, caveRiver.Depth));
-            bool water = liquidDepth > 0f;
+            int liquidLevel = QuantizeGeneratedLiquidLevel(Math.Max(groundliquidDepth, caveRiver.Depth));
+            bool water = liquidLevel > 0;
             bool dirtWall = open && !water && CaveLayoutKernel.ShouldPlaceDirtWall(
                 request, settings, worldX, worldY);
             TerrainCellFlags flags = !open || dirtWall
@@ -1836,7 +1836,7 @@ namespace FlatWorld.WorldModel
                 blockingTileId, 100,
                 navigationCost, flags));
             terrain.SetLiquid(x, y, water ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId) : 0,
-                liquidDepth);
+                liquidLevel);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
@@ -2036,16 +2036,8 @@ namespace FlatWorld.WorldModel
         private static double Smooth(double value) => value * value * (3d - 2d * value);
         /// <summary>按比例计算两个数之间的中间值。</summary>
         private static double Lerp(double left, double right, double t) => left + (right - left) * t;
-        /// <summary>天然液深统一向上量化为十分位；只要原始值大于零就至少保留 0.1。</summary>
-        private static float QuantizeGeneratedLiquidDepth(double depth)
-        {
-            if (depth <= 0d)
-                return 0f;
-
-            double clamped = Clamp01(depth);
-            double roundedUp = Math.Ceiling(clamped * 10d - 0.000000001d) / 10d;
-            return (float)Math.Max(0.1d, roundedUp);
-        }
+        /// <summary>天然水体只写十个整数等级，正深度至少保留一级。</summary>
+        private static int QuantizeGeneratedLiquidLevel(double depth) => LiquidCellValue.FromGeneratedDepth(depth);
 
         /// <summary>把数值限制在 0 到 1 之间。</summary>
         private static double Clamp01(double value) => value < 0d ? 0d : value > 1d ? 1d : value;

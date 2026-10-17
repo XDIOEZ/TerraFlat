@@ -19,8 +19,7 @@
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
-        "followWaterVisualStyle": true,
-        "depthPerServing": 0.1
+        "followWaterVisualStyle": true
       }
     },
     {
@@ -43,8 +42,7 @@
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
-        "followWaterVisualStyle": true,
-        "depthPerServing": 0.1
+        "followWaterVisualStyle": true
       }
     },
     {
@@ -70,8 +68,7 @@
         "contactHeatingPerSecond": 12.0,
         "contactDamagePerSecond": 30.0,
         "radiantHeatRadius": 6.0,
-        "radiantTargetTemperature": 180.0,
-        "depthPerServing": 0.1
+        "radiantTargetTemperature": 180.0
       }
     },
     {
@@ -309,8 +306,7 @@
         "navigationCost": 20000,
         "shallowMoveSpeedMultiplier": 0.5,
         "deepMoveSpeedMultiplier": 0.2,
-        "followWaterVisualStyle": true,
-        "depthPerServing": 0.1
+        "followWaterVisualStyle": true
       }
     }
   ]

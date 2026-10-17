@@ -225,11 +225,11 @@ namespace FlatWorld.WorldModel
             ChunkTerrainData terrain = source.Terrain;
             if (terrain == null)
                 return;
-            ReadOnlySpan<float> depths = terrain.LiquidDepth;
+            ReadOnlySpan<int> levels = terrain.LiquidLevel;
             ReadOnlySpan<int> types = terrain.LiquidTypeIndex;
             for (int i = 0; i < terrain.CellCount; i++)
             {
-                if (depths[i] <= 0f)
+                if (levels[i] <= 0)
                     continue;
                 string id = terrain.LiquidTypes.GetId(types[i]);
                 if (!liquidHumidity.TryGetValue(id, out bool supplies))
@@ -237,7 +237,7 @@ namespace FlatWorld.WorldModel
                     supplies = suppliesHumidity(id);
                     liquidHumidity.Add(id, supplies);
                 }
-                float strength = AirHumidityKernel.GetWaterSourceStrength(supplies, depths[i], settings);
+                float strength = AirHumidityKernel.GetWaterSourceStrength(supplies, LiquidCellValue.ToNormalizedDepth(levels[i]), settings);
                 if (strength > 0f)
                     source.Sources.Add(new WaterSource(new Int2(origin.X + i % terrain.Width,
                         origin.Y + i / terrain.Width), strength));

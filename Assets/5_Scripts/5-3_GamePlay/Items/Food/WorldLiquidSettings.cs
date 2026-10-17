@@ -4,13 +4,12 @@ using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>
-/// 液体在世界中的资源与接触规则；液深统一为 0～1，默认寻路成本 20000。
+/// 液体在世界中的资源与接触规则；一份液体固定增加一个整数等级，默认寻路成本 20000。
 /// 容器专用液体可以不声明 worldWater；声明后的本体与 MOD 液体共用渲染和角色生存链。
 /// </summary>
 public sealed class WorldLiquidSettings
 {
     public const float MaximumRadiantHeatRadius = 8f;
-    public const float UnifiedDepthPerServing = 0.1f;
 
     #region JSON 配置
     [JsonProperty("spriteAddress")] public string SpriteAddress;
@@ -36,7 +35,6 @@ public sealed class WorldLiquidSettings
     [JsonProperty("contactDamagePerSecond")] public float ContactDamagePerSecond;
     [JsonProperty("radiantHeatRadius")] public float RadiantHeatRadius;
     [JsonProperty("radiantTargetTemperature")] public float RadiantTargetTemperature = 20f;
-    [JsonProperty("depthPerServing")] public float DepthPerServing = UnifiedDepthPerServing;
     #endregion
 
     #region 会话资源与校验
@@ -57,7 +55,6 @@ public sealed class WorldLiquidSettings
             !NonNegative(Temperature) || !NonNegative(ContactHeatingPerSecond) ||
             !NonNegative(ContactDamagePerSecond) || !NonNegative(RadiantHeatRadius) ||
             RadiantHeatRadius > MaximumRadiantHeatRadius || !float.IsFinite(RadiantTargetTemperature) ||
-            !Positive(DepthPerServing) || Mathf.Abs(DepthPerServing - UnifiedDepthPerServing) > 0.000001f ||
             float.IsNaN(DrinkHoldSeconds) || float.IsInfinity(DrinkHoldSeconds) || DrinkHoldSeconds < 0f)
             throw new InvalidDataException($"液体 {id} 的世界玩法参数无效。");
     }

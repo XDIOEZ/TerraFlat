@@ -15,6 +15,8 @@ public static partial class FarmlandSystem
     public const string TileBlockId = "Tile_Farmland";
     public const string SourceLayer = "flatworld.agriculture.source";
     public const string WaterLayer = "flatworld.agriculture.water";
+    public const string WaterSupplyRemainderLayer = "flatworld.agriculture.water-supply-progress";
+    public const string WaterConsumptionRemainderLayer = "flatworld.agriculture.water-consumption-progress";
     public const string FertilityLayer = "flatworld.agriculture.fertility";
     public const float TillingRecoveryDelaySeconds = 10f;
     public const float TillingRecoveryDurationSeconds = 2.5f;
@@ -255,6 +257,10 @@ public static partial class FarmlandSystem
             sample.Terrain.SetEnvironmentValue(SourceLayer, sample.LocalCell.x, sample.LocalCell.y,
                 sample.Cell.GroundTileId);
         sample.Terrain.SetEnvironmentValue(WaterLayer, sample.LocalCell.x, sample.LocalCell.y, soil.waterValue);
+        sample.Terrain.SetEnvironmentValue(WaterSupplyRemainderLayer, sample.LocalCell.x, sample.LocalCell.y,
+            soil.waterSupplyRemainder);
+        sample.Terrain.SetEnvironmentValue(WaterConsumptionRemainderLayer, sample.LocalCell.x, sample.LocalCell.y,
+            soil.waterConsumptionRemainder);
         sample.Terrain.SetEnvironmentValue(FertilityLayer, sample.LocalCell.x, sample.LocalCell.y, soil.Fertility);
         SyncSoilEnvironment(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, soil.waterValue, soil.Fertility);
         SaveDataMgr.Instance.RecordAgricultureCell(sample);

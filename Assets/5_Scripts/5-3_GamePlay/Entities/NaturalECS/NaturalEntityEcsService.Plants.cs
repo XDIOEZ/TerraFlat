@@ -277,6 +277,7 @@ namespace FlatWorld.NaturalEntities
             if (FarmlandSystem.TryReadSoil(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y), out TileData_Farmland source))
             {
                 soil.Available = 1; soil.Water = source.waterValue; soil.MaxWater = source.maxWater;
+                soil.WaterConsumptionRemainder = source.waterConsumptionRemainder;
                 soil.Fertility = source.Fertility; soil.MaxFertility = source.maxFertility;
             }
             simulation.Set(record.Handle.Id, soil, notifyChanged: false);
@@ -289,7 +290,7 @@ namespace FlatWorld.NaturalEntities
             if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) &&
                 FarmlandSystem.TryReadSoil(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y), out TileData_Farmland target))
             {
-                target.AddWater(soil.AddedWater); target.ConsumeWater(soil.UsedWater);
+                target.AccumulateWaterSupply(soil.AddedWater); target.AccumulateWaterConsumption(soil.UsedWater);
                 target.ConsumeFertility(soil.UsedFertility); FarmlandSystem.CommitSoil(target);
             }
             soil.AddedWater = soil.UsedWater = soil.UsedFertility = 0f;

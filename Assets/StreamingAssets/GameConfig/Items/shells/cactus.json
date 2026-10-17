@@ -105,7 +105,7 @@
           "parameters": {
             "growthDurationSeconds": 900.0,
             "minimumWaterGrowthMultiplier": 0.9,
-            "waterConsumePerSecond": 0.002,
+            "waterConsumePerSecond": 0.0002,
             "fertilityConsumePerSecond": 0.0001,
             "rainGrowthBonus": 0.05
           }

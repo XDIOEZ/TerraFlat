@@ -4,12 +4,14 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 世界液体的权威玩法入口。泵、倾倒和 MOD 均在这里修改 0～1 液深；
+/// 世界液体的权威玩法入口。泵、倾倒和 MOD 均在这里修改 0～10 整数等级；
 /// 修改后立即记录稳定 LiquidId 差量，地面与水文数据完全不变。
 /// </summary>
 public static class WorldLiquidSystem
 {
     #region 查询
+    public static event Action<RuntimeTerrainTileSample> SurfaceLiquidAdded;
+    public static event Action<RuntimeTerrainTileSample> SurfaceLiquidPumped;
     public static bool TryGetDefinition(RuntimeTerrainTileSample sample, out LiquidDefinition definition)
     {
         definition = null;
@@ -20,7 +22,10 @@ public static class WorldLiquidSystem
 
     /// <summary>仅有效支撑面可以遮断浸水；真实液体仍保存在底部并可被抽取。</summary>
     public static float GetSurfaceDepth(ChunkTerrainData terrain, int x, int y) =>
-        TerrainSupportLayer.GetTileId(terrain, x, y) == 0 ? terrain.GetLiquidDepth(x, y) : 0f;
+        LiquidCellValue.ToNormalizedDepth(GetSurfaceLevel(terrain, x, y));
+
+    public static int GetSurfaceLevel(ChunkTerrainData terrain, int x, int y) =>
+        TerrainSupportLayer.GetTileId(terrain, x, y) == 0 ? terrain.GetLiquidLevel(x, y) : 0;
 
     /// <summary>寻路读取当前液体定义的高成本，抽干后自动恢复 Ground 原成本。</summary>
     public static uint GetNavigationCost(ChunkTerrainData terrain, int x, int y, uint groundCost)
@@ -36,71 +41,89 @@ public static class WorldLiquidSystem
 
     #region 权威修改
     /// <summary>只向可接收的世界格加入同种液体，满格、平台和异种液体均不吞掉余量。</summary>
-    public static bool TryPour(Vector2 worldPosition, string liquidId, float requestedDepth, out float addedDepth)
+    public static bool TryPour(Vector2 worldPosition, string liquidId, int requestedLevel, out int addedLevel)
     {
-        addedDepth = 0f;
-        if (!GameNetwork.HasStateAuthority || !float.IsFinite(requestedDepth) || requestedDepth <= 0f ||
+        addedLevel = 0;
+        if (!GameNetwork.HasStateAuthority || requestedLevel <= 0 ||
             ChunkMgr.ExistingInstance == null ||
             !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample) ||
             sample.Terrain == null || sample.Terrain.IsDisposed || sample.Cell.BlockingTileId != 0 ||
             TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0)
             return false;
         int x = sample.LocalCell.x, y = sample.LocalCell.y;
-        float current = sample.Terrain.GetLiquidDepth(x, y);
-        if (current > 0f && !string.Equals(sample.Terrain.GetLiquidId(x, y), liquidId, StringComparison.OrdinalIgnoreCase))
+        int current = sample.Terrain.GetLiquidLevel(x, y);
+        if (current > 0 && !string.Equals(sample.Terrain.GetLiquidId(x, y), liquidId, StringComparison.OrdinalIgnoreCase))
             return false;
-        float accepted = Mathf.Min(requestedDepth, Mathf.Max(0f, 1f - current));
-        // 调用者预先按容器最小份数量化，不能只收下一部分后破坏份数守恒。
-        if (accepted <= 0f || accepted + 0.000001f < requestedDepth || !TrySet(sample, liquidId, current + accepted))
+        // 整批接收才能成功，一份液体始终只增加一级。
+        if (requestedLevel > LiquidCellValue.MaximumLevel - current || !TrySet(sample, liquidId, current + requestedLevel))
             return false;
-        addedDepth = accepted;
+        addedLevel = requestedLevel;
+        NotifySurfaceLiquidAdded(sample);
         return true;
     }
 
-    public static bool TrySet(Vector2 worldPosition, string liquidId, float liquidDepth)
+    private static void NotifySurfaceLiquidAdded(RuntimeTerrainTileSample sample)
+        => PublishSurfaceLiquidEvent(SurfaceLiquidAdded, sample);
+
+    /// <summary>抽水事务全部提交后发布，取水后的派生规则不得提前改变回滚现场。</summary>
+    public static void PublishSurfaceLiquidPumped(RuntimeTerrainTileSample sample)
     {
-        if (!GameNetwork.HasStateAuthority || ChunkMgr.ExistingInstance == null ||
-            float.IsNaN(liquidDepth) || float.IsInfinity(liquidDepth) ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample)) return false;
-        return TrySet(sample, liquidId, liquidDepth);
+        if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed) return;
+        PublishSurfaceLiquidEvent(SurfaceLiquidPumped, sample);
     }
 
-    public static bool TrySet(RuntimeTerrainTileSample sample, string liquidId, float liquidDepth)
+    private static void PublishSurfaceLiquidEvent(Action<RuntimeTerrainTileSample> handlers, RuntimeTerrainTileSample sample)
     {
-        if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed ||
-            float.IsNaN(liquidDepth) || float.IsInfinity(liquidDepth)) return false;
-        float depth = LiquidCellValue.NormalizeDepth(liquidDepth);
-        if (depth > 0f && (GameRes.ExistingInstance == null ||
+        if (handlers == null) return;
+        // 接收方异常不能把已写入的水变成失败事务，让来源重复恢复同一份水。
+        foreach (Action<RuntimeTerrainTileSample> handler in handlers.GetInvocationList())
+        {
+            try { handler(sample); }
+            catch (Exception exception) { Debug.LogException(exception); }
+        }
+    }
+
+    public static bool TrySet(Vector2 worldPosition, string liquidId, int liquidLevel)
+    {
+        if (!GameNetwork.HasStateAuthority || ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample)) return false;
+        return TrySet(sample, liquidId, liquidLevel);
+    }
+
+    public static bool TrySet(RuntimeTerrainTileSample sample, string liquidId, int liquidLevel)
+    {
+        if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed) return false;
+        int level = LiquidCellValue.NormalizeLevel(liquidLevel);
+        if (level > 0 && (GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out var definition) || definition.WorldWater == null)) return false;
-        int index = depth > 0f ? sample.Terrain.LiquidTypes.GetIndex(liquidId) : 0;
-        if (!sample.Terrain.SetLiquid(sample.LocalCell.x, sample.LocalCell.y, index, depth)) return false;
+        int index = level > 0 ? sample.Terrain.LiquidTypes.GetIndex(liquidId) : 0;
+        if (!sample.Terrain.SetLiquid(sample.LocalCell.x, sample.LocalCell.y, index, level)) return false;
         SaveDataMgr.Instance?.RecordLiquidChange(sample);
         return true;
     }
 
     /// <summary>抽取有限液深，返回实际抽取量；没有水时不造水、不改变底部 Ground。</summary>
-    public static bool TryPump(Vector2 worldPosition, float requestedDepth, out string liquidId, out float removedDepth)
+    public static bool TryPump(Vector2 worldPosition, int requestedLevel, out string liquidId, out int removedLevel)
     {
         liquidId = null;
-        removedDepth = 0f;
-        if (!GameNetwork.HasStateAuthority || !float.IsFinite(requestedDepth) || requestedDepth <= 0f ||
+        removedLevel = 0;
+        if (!GameNetwork.HasStateAuthority || requestedLevel <= 0 ||
             ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample)) return false;
-        return TryPump(sample, requestedDepth, out liquidId, out removedDepth);
+        return TryPump(sample, requestedLevel, out liquidId, out removedLevel);
     }
 
     /// <summary>持有区块采样的机械节点复用此入口，减少重复查询；校验仍由统一修改接口负责。</summary>
-    public static bool TryPump(RuntimeTerrainTileSample sample, float requestedDepth, out string liquidId, out float removedDepth)
+    public static bool TryPump(RuntimeTerrainTileSample sample, int requestedLevel, out string liquidId, out int removedLevel)
     {
-        liquidId = null; removedDepth = 0f;
+        liquidId = null; removedLevel = 0;
         if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed ||
-            !float.IsFinite(requestedDepth) || requestedDepth <= 0f) return false;
-        float depth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
-        if (depth <= 0f) return false;
+            requestedLevel <= 0) return false;
+        int level = sample.Terrain.GetLiquidLevel(sample.LocalCell.x, sample.LocalCell.y);
+        if (level <= 0) return false;
         liquidId = sample.Terrain.GetLiquidId(sample.LocalCell.x, sample.LocalCell.y);
-        float removed = Mathf.Min(requestedDepth, depth);
-        if (!TrySet(sample, liquidId, depth - removed)) return false;
-        // 返回权威层实际扣除量，包含一并清掉的浮点尾数。
-        removedDepth = depth - sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
+        int removed = Math.Min(requestedLevel, level);
+        if (!TrySet(sample, liquidId, level - removed)) return false;
+        removedLevel = removed;
         return true;
     }
     #endregion

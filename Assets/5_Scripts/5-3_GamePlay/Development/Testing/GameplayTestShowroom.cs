@@ -154,7 +154,7 @@ public sealed class GameplayTestShowroom : IDisposable
                 int tile = ((squareX + squareY) & 1) == 0 ? baseTile : alternateTile;
                 terrain.SetCell(x, y, new TerrainCell(tile, 0, 0, (int)SurfaceBiomeKind.Grassland,
                     1000, TerrainCellFlags.Walkable));
-                terrain.SetLiquid(x, y, 0, 0f);
+                terrain.SetLiquid(x, y, 0, 0);
                 terrain.SetGrass(x, y, ChunkTerrainData.GrassEmpty);
                 terrain.SetEnvironmentValue("height", x, y, .5f);
                 terrain.SetEnvironmentValue("temperature", x, y, .5f);

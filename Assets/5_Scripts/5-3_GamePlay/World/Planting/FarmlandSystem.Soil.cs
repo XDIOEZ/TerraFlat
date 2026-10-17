@@ -46,13 +46,15 @@ public static partial class FarmlandSystem
         soil.position = (Vector3Int)sample.WorldCell;
         if (HasSoilState(sample))
         {
-            soil.waterValue = Read(sample.Terrain, sample.LocalCell, WaterLayer);
+            soil.waterValue = ReadWaterLevel(sample.Terrain, sample.LocalCell);
+            soil.waterSupplyRemainder = Read(sample.Terrain, sample.LocalCell, WaterSupplyRemainderLayer);
+            soil.waterConsumptionRemainder = Read(sample.Terrain, sample.LocalCell, WaterConsumptionRemainderLayer);
             soil.fertilityValue = new GameValue_float(Read(sample.Terrain, sample.LocalCell, FertilityLayer));
         }
         else
         {
             if (sample.Terrain.TryGetEnvironmentValue("moisture", sample.LocalCell.x, sample.LocalCell.y, out float moisture))
-                soil.waterValue = Mathf.Clamp01(moisture) * soil.maxWater;
+                soil.waterValue = Mathf.RoundToInt(Mathf.Clamp01(moisture) * soil.maxWater);
             if (sample.Terrain.TryGetEnvironmentValue("fertility", sample.LocalCell.x, sample.LocalCell.y, out float fertility))
                 soil.fertilityValue = new GameValue_float(fertility);
         }
@@ -68,60 +70,84 @@ public static partial class FarmlandSystem
         int x = sample.LocalCell.x, y = sample.LocalCell.y;
         sample.Terrain.SetEnvironmentValue(SourceLayer, x, y, sample.Cell.GroundTileId);
         sample.Terrain.SetEnvironmentValue(WaterLayer, x, y, soil.waterValue);
+        sample.Terrain.SetEnvironmentValue(WaterSupplyRemainderLayer, x, y, soil.waterSupplyRemainder);
+        sample.Terrain.SetEnvironmentValue(WaterConsumptionRemainderLayer, x, y, soil.waterConsumptionRemainder);
         sample.Terrain.SetEnvironmentValue(FertilityLayer, x, y, soil.Fertility);
         SaveDataMgr.Instance.RecordAgricultureCell(sample);
     }
 
-    /// <summary>普通土地的湿润度继续使用生成环境的 0～1 单位；农业水量为 0～100 点。</summary>
-    public static void SyncSoilEnvironment(ChunkTerrainData terrain, int x, int y, float water, float fertility)
+    /// <summary>农业水分只读写 0～10 整级，生成湿润度继续使用 0～1 比例。</summary>
+    public static int ReadWaterLevel(ChunkTerrainData terrain, Vector2Int local) =>
+        Mathf.Clamp(Mathf.RoundToInt(Read(terrain, local, WaterLayer)), 0, TileData_Farmland.MaxWaterLevel);
+
+    public static void SyncSoilEnvironment(ChunkTerrainData terrain, int x, int y, int water, float fertility)
     {
         var template = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate;
-        terrain.SetEnvironmentValue("moisture", x, y, Mathf.Clamp01(water / Mathf.Max(0.01f, template.maxWater)));
+        terrain.SetEnvironmentValue("moisture", x, y, Mathf.Clamp01((float)water / template.maxWater));
         terrain.SetEnvironmentValue("fertility", x, y, Mathf.Clamp(fertility, 0f, template.maxFertility));
     }
 
     #endregion
 
-    #region 九宫格液体灌溉
+    #region 本格倒水与九宫格灌溉
 
-    /// <summary>农田从自身及周围八格的世界水体吸水，一份世界液体对应一点土壤水分。</summary>
+    // 桶和机器只发布真实倒水位置，农业订阅后只处理这一格。
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void BindSurfaceLiquidAdded()
+    {
+        WorldLiquidSystem.SurfaceLiquidAdded -= NotifySurfaceLiquidAdded;
+        WorldLiquidSystem.SurfaceLiquidAdded += NotifySurfaceLiquidAdded;
+    }
+
+    public static void NotifySurfaceLiquidAdded(RuntimeTerrainTileSample source)
+    {
+        if (!GameNetwork.HasStateAuthority || source.Terrain == null || source.Terrain.IsDisposed)
+            return;
+        TerrainCell current = source.Terrain.GetCell(source.LocalCell.x, source.LocalCell.y);
+        if (!IsFarmland(current) || !CanUseSoilCell(source.Terrain, source.LocalCell.x, source.LocalCell.y,
+                current, source.WorldCell, false))
+            return;
+        var farmland = new RuntimeTerrainTileSample(source.Address, source.Terrain, source.WorldCell,
+            source.LocalCell, current, source.TopTileId);
+        TileData_Farmland soil = ReadSoilSnapshot(farmland);
+        if (TryAbsorbLiquid(farmland, soil))
+            CommitSoil(soil);
+    }
+
+    /// <summary>作物读取时保留九宫格灌溉，每份地表水只兑换一级耕地水分。</summary>
     private static bool TryAbsorbNearbyLiquid(RuntimeTerrainTileSample farmland, TileData_Farmland soil)
     {
         if (!GameNetwork.HasStateAuthority || soil == null || ChunkMgr.ExistingInstance == null)
             return false;
 
         soil.NormalizeValues();
-        float missingWater = Mathf.Max(0f, soil.maxWater - soil.waterValue);
-        if (missingWater <= 0.0001f) return false;
+        if (soil.waterValue >= soil.maxWater) return false;
 
         bool absorbedAny = false;
         Vector2Int center = WorldTopologyRuntime.NormalizeCell(farmland.WorldCell);
-        for (int dy = -1; dy <= 1 && missingWater > 0.0001f; dy++)
-        for (int dx = -1; dx <= 1 && missingWater > 0.0001f; dx++)
+        for (int dy = -1; dy <= 1 && soil.waterValue < soil.maxWater; dy++)
+        for (int dx = -1; dx <= 1 && soil.waterValue < soil.maxWater; dx++)
         {
             Vector2Int cell = WorldTopologyRuntime.NormalizeCell(center + new Vector2Int(dx, dy));
             if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
                     new Vector2(cell.x + 0.5f, cell.y + 0.5f), out RuntimeTerrainTileSample source) ||
-                source.Terrain == null || source.Terrain.IsDisposed ||
-                !WorldLiquidSystem.TryGetDefinition(source, out LiquidDefinition liquid) ||
-                !string.Equals(liquid.Category, "water", StringComparison.OrdinalIgnoreCase))
+                source.Terrain == null || source.Terrain.IsDisposed)
                 continue;
-
-            float depth = source.Terrain.GetLiquidDepth(source.LocalCell.x, source.LocalCell.y);
-            float depthPerServing = liquid.WorldWater.DepthPerServing;
-            float servings = Mathf.Min(missingWater, depth / depthPerServing);
-            if (servings <= 0.0001f ||
-                !WorldLiquidSystem.TryPump(source, servings * depthPerServing, out _, out float removedDepth))
-                continue;
-
-            float absorbed = removedDepth / depthPerServing;
-            if (absorbed <= 0f) continue;
-            soil.AddWater(absorbed);
-            missingWater = Mathf.Max(0f, soil.maxWater - soil.waterValue);
-            absorbedAny = true;
+            absorbedAny |= TryAbsorbLiquid(source, soil);
         }
 
         return absorbedAny;
+    }
+
+    private static bool TryAbsorbLiquid(RuntimeTerrainTileSample source, TileData_Farmland soil)
+    {
+        int requested = Mathf.Min(soil.maxWater - soil.waterValue, source.LiquidLevel);
+        if (requested <= 0 || !WorldLiquidSystem.TryGetDefinition(source, out LiquidDefinition liquid) ||
+            !string.Equals(liquid.Category, "water", StringComparison.OrdinalIgnoreCase) ||
+            !WorldLiquidSystem.TryPump(source, requested, out _, out int removed) || removed <= 0)
+            return false;
+        soil.AddWater(removed);
+        return true;
     }
 
     #endregion

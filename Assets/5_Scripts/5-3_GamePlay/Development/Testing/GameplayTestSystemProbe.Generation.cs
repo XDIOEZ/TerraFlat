@@ -39,7 +39,7 @@ public static partial class GameplayTestSystemProbe
             for (int x = 0; x < terrain.Width; x++)
             {
                 terrain.SetCell(x, y, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
-                terrain.SetLiquid(x, y, 0, 0f);
+                terrain.SetLiquid(x, y, 0, 0);
                 terrain.SetEnvironmentValue("temperature", x, y, warm ? .5f : .1f);
                 terrain.SetEnvironmentValue("precipitation", x, y, .5f);
                 terrain.SetEnvironmentValue("height", x, y, .5f);

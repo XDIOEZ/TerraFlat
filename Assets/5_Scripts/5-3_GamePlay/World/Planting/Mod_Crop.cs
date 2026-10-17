@@ -102,7 +102,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
     [Header("耕地消耗")]
     [SerializeField, Min(0f)]
-    private float waterConsumePerSecond = 0.02f;
+    private float waterConsumePerSecond = 0.002f;
 
     [SerializeField, Min(0f)]
     private float fertilityConsumePerSecond = 0.00035f;
@@ -338,7 +338,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         if (growthDelta <= 0f)
             return;
 
-        farmlandData.ConsumeWater(waterConsumePerSecond * safeDeltaTime);
+        farmlandData.AccumulateWaterConsumption(waterConsumePerSecond * safeDeltaTime);
         farmlandData.ConsumeFertility(fertilityConsumePerSecond * safeDeltaTime);
         FarmlandSystem.CommitSoil(farmlandData);
         SetGrowthStatus(CropGrowthStatus.Growing);
@@ -355,7 +355,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
     private float CalculateFarmlandGrowthMultiplier(TileData_Farmland farmlandData)
     {
         farmlandData.NormalizeValues();
-        float waterRatio = Mathf.Clamp01(farmlandData.waterValue / farmlandData.maxWater);
+        float waterRatio = Mathf.Clamp01((float)farmlandData.waterValue / farmlandData.maxWater);
         float fertilityRatio = Mathf.Clamp01(farmlandData.Fertility / farmlandData.maxFertility);
         float waterMultiplier = Mathf.Lerp(minimumWaterGrowthMultiplier, 1f, waterRatio);
         float fertilityMultiplier = Mathf.Lerp(minimumFertilityGrowthMultiplier, 1f, fertilityRatio);

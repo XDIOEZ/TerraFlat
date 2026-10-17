@@ -2,6 +2,30 @@
 test.check("world_ready")
 test.check("player_ready")
 
+test.runtime("containers", "whole_pour", {}, function(data)
+    assert(data.blockedRemoved == 0 and data.blocked.level == 10 and data.blocked.amount == 3
+        and data.blocked.water == 2.5 and data.blocked.salt == .5,
+        "满地表格拒收后容器没有完整回滚真实混合组分")
+    assert(data.fractionRemoved == 0 and data.fraction.level == 0 and data.fraction.amount == 3,
+        "半份请求被写进了世界，或被提前扣离容器")
+    assert(data.firstRemoved == 1 and data.first.level == 1 and data.first.amount == 2,
+        "第一次倒水没有按整一份增加一级并扣除一份")
+    assert(data.secondRemoved == 1 and data.second.level == 2 and data.second.amount == 1
+        and data.second.water == .5 and data.second.salt == .5,
+        "多个完整份输出没有尊重真实组分，或把不同组分尾量拼成了一份")
+    assert(data.tailRemoved == 0 and data.tail.level == 2 and data.tail.amount == 1,
+        "不足一份的组分被丢弃或生成零碎地表水")
+    assert(data.halfSpaceFilled == 0 and data.halfSpace.level == 2
+        and data.halfSpace.amount == data.capacity - .5,
+        "桶内只有半份空位时仍从地表抽取了零碎液体")
+    assert(data.wholeSpaceFilled == 1 and data.wholeSpace.level == 1
+        and data.wholeSpace.amount == data.capacity - .5,
+        "地表装液没有一份对应一级，或填入了分数份")
+    assert(data.restoredLevel == data.originalLevel
+        and (data.originalLevel == 0 or data.restoredId == data.originalId),
+        "容器落地测试没有归还原地表格")
+end, "桶整份倒水：满格回滚、尾量保留、逐份落地和整份装液")
+
 local scenarios = {
     {"environment_atmosphere", "有限大气抽排与逸散"},
     {"environment_outlet_vent", "环境排气与管段显式放气"},
@@ -50,7 +74,7 @@ local function assert_world_balance(data, before, after, label)
     local emitted_gas = after.outlet.emittedGasMoles - before.outlet.emittedGasMoles
     local removed_moles = water_moles(before.outlet) - water_moles(after.outlet) - emitted_gas
     local inventory_depth = removed_moles / data.molesPerServing * data.depthPerServing
-    -- 世界液深使用 float，守恒误差按一个液深存储刻度检查，库存内部仍按严格 mol 检查。
+    -- 世界权威水位是整级；液深只是等级派生的表现比例，库存内部仍按严格 mol 检查。
     assert(near(after.cell.depth - before.cell.depth, inventory_depth, 0.00000012),
         label .. "库存实扣量与世界实际接纳深度不守恒")
     assert(after.outlet.emittedGasMoles == before.outlet.emittedGasMoles, label .. "选择排液后仍沿出口漏出气相")
@@ -96,6 +120,11 @@ test.runtime("industrial_fluids", "surface_pump_flow", {}, function(data)
     end
     assert(off.cell.depth == before.cell.depth and water_moles(off.pump) == 0
         and water_moles(off.tank) == 0 and off.pump.energy == 0, "断电液泵扣了地表水或凭空进料")
+    assert(data.chargingSteps > 1 and data.accumulated.cell.level == before.cell.level
+        and water_moles(data.accumulated.pump) == 0 and data.accumulated.pump.worldPumpLiters > 0,
+        "不足一份的泵吞吐没有累计预算，或提前抽走了零碎地表水")
+    assert(pumped.cell.level == before.cell.level - 1,
+        "液泵没有在预算攒够后恰好抽取一份对应的一级地表水")
     assert(pumped.pump.suppliedWatts > 0 and pumped.cell.depth < before.cell.depth
         and pumped.pump.waterLiquidMoles > 0 and water_moles(pumped.tank) == 0,
         "供电后液泵没有真实抽水，或在输送阶段之前直接送入水罐")
@@ -132,9 +161,17 @@ test.runtime("industrial_fluids", "surface_outlet_flow", {}, function(data)
     local before_retry, retried = data.beforeRetry, data.retried
     for _, stage in ipairs({before, emitted, before_blocked, blocked, before_partial, partial, before_retry, retried}) do
         assert_inventory(stage.outlet, data.waterId, "地表液体出口")
+        assert(stage.cell.level == math.floor(stage.cell.level) and stage.cell.level >= 0 and stage.cell.level <= 10,
+            "地表出口产生了非整数或越界水位")
         assert(stage.outlet.outletPhase == "liquid", "测试排液阶段没有保留真实出口相位选择")
         assert(stage.cell.ground == before.cell.ground, "排液改变了地面身份")
     end
+    local accrued = 0
+    for _, value in pairs(data.accumulated.outlet.worldOutputLiters) do accrued = accrued + value end
+    assert(data.accumulated.cell.level == before.cell.level
+        and water_moles(data.accumulated.outlet) == water_moles(before.outlet) and accrued > 0,
+        "低吞吐出口没有攒整份预算，或累计时提前扣掉真实液体")
+    assert(emitted.cell.level == before.cell.level + 1, "出口攒够预算后没有按整一份增加一级")
     assert(emitted.cell.depth > before.cell.depth and water_moles(emitted.outlet) < water_moles(before.outlet),
         "出口没有把真实液体放入世界 Liquid 层")
     assert_world_balance(data, before, emitted, "初次排液")
@@ -150,6 +187,8 @@ test.runtime("industrial_fluids", "surface_outlet_flow", {}, function(data)
     assert(partial.cell.depth > before_partial.cell.depth and partial.cell.depth <= 1
         and water_moles(partial.outlet) > 0 and water_moles(partial.outlet) < water_moles(before_partial.outlet),
         "仅腾出少量空间后没有按真实接纳量部分提交，或把整批库存直接丢掉")
+    assert(before_partial.cell.level == 9 and partial.cell.level == 10,
+        "只剩一级空间时没有恰好排出整一份液体")
     assert_world_balance(data, before_partial, partial, "部分接纳")
     assert(next(partial.outlet.blockedPorts) == nil, "部分接纳成功后仍保留旧的端口拒收状态")
     assert(retried.cell.depth > before_retry.cell.depth
@@ -201,3 +240,26 @@ test.runtime("industrial_fluids", "surface_outlet_flow", {}, function(data)
         "切相全链路的库存水、世界接纳水和实际排气量不守恒")
     assert_restored(data)
 end, "真实排液：拒收守恒、部分提交、原批次续送及动态切相")
+
+test.runtime("industrial_fluids", "surface_outlet_rate", {}, function(data)
+    local expected = {0, 1, 2, 3, 4, 4, 5, 6, 7, 8}
+    assert(near(data.seconds, .1) and data.normalRate == 2 and #data.ticks == 10,
+        "整份速率回归没有保持0.1秒步长和2升每秒的正式液泵速率")
+    for index, stage in ipairs(data.ticks) do
+        assert(stage.cell.level == expected[index],
+            "整份出口丢失跨步尾预算或每步只排一份导致吞吐下降：第" .. index .. "步")
+        assert(near((water_moles(data.before.outlet) - water_moles(stage.outlet)) / data.molesPerServing,
+            stage.cell.level - data.before.cell.level), "跨步速率累计没有保持库存与地表整数级守恒")
+    end
+    local second_credit = 0
+    for _, value in pairs(data.ticks[2].outlet.worldOutputLiters) do second_credit = second_credit + value end
+    assert(near(second_credit, .15), "第二步排一份后丢失了剩余0.15升吞吐预算")
+    assert(data.highRate == 5 and data.high.cell.level == 2,
+        "高吞吐出口被限制为每口每步一份，或没有在同一步利用剩余共享预算")
+    assert(near((water_moles(data.beforeHigh.outlet) - water_moles(data.high.outlet)) / data.molesPerServing, 2),
+        "现有出口5升每秒没有在同一步恰好扣除两个完整份")
+    assert(data.blocked.cell.level == 10
+        and near(water_moles(data.blocked.outlet), water_moles(data.beforeBlocked.outlet)),
+        "高吞吐满格拒收后没有完整保留剩余真实库存")
+    assert_restored(data)
+end, "整份吞吐：2升每秒尾预算持续保留、高吞吐同步多批次和满格回滚")

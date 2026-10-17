@@ -28,6 +28,8 @@ public readonly struct RuntimeTerrainTileSample
     public Vector2Int LocalCell { get; }
     public TerrainCell Cell { get; }
     public int TopTileId { get; }
+    public int LiquidLevel => Terrain == null || Terrain.IsDisposed ? 0 :
+        WorldLiquidSystem.GetSurfaceLevel(Terrain, LocalCell.x, LocalCell.y);
     /// <summary>有效表面的液深；平台遮断接触，底部原始液体仍由 Terrain 查询。</summary>
     public float LiquidDepth => Terrain == null || Terrain.IsDisposed ? 0f :
         WorldLiquidSystem.GetSurfaceDepth(Terrain, LocalCell.x, LocalCell.y);

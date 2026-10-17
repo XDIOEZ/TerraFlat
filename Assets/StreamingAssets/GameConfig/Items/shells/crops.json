@@ -38,7 +38,7 @@
             "growthDurationSeconds": 500.0,
             "minimumWaterGrowthMultiplier": 0.5,
             "minimumFertilityGrowthMultiplier": 0.5,
-            "waterConsumePerSecond": 0.02,
+            "waterConsumePerSecond": 0.002,
             "fertilityConsumePerSecond": 0.00035,
             "rainGrowthBonus": 0.15
           }
@@ -344,7 +344,7 @@
           "parameters": {
             "growthDurationSeconds": 420.0,
             "minimumWaterGrowthMultiplier": 0.35,
-            "waterConsumePerSecond": 0.012,
+            "waterConsumePerSecond": 0.0012,
             "fertilityConsumePerSecond": 0.00025
           }
         },
@@ -748,7 +748,7 @@
             "growthDurationSeconds": 650.0,
             "minimumWaterGrowthMultiplier": 0.65,
             "minimumFertilityGrowthMultiplier": 0.5,
-            "waterConsumePerSecond": 0.028,
+            "waterConsumePerSecond": 0.0028,
             "fertilityConsumePerSecond": 0.0004,
             "rainGrowthBonus": 0.18
           }

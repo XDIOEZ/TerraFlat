@@ -61,6 +61,6 @@ MonoBehaviour:
   growthDurationSeconds: 500
   minimumWaterGrowthMultiplier: 0.5
   minimumFertilityGrowthMultiplier: 0.5
-  waterConsumePerSecond: 0.02
+  waterConsumePerSecond: 0.002
   fertilityConsumePerSecond: 0.00035
   rainGrowthBonus: 0.15

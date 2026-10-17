@@ -71,7 +71,7 @@ public static class GameplayTestMechanicalPlant
     private static Vector2Int anchor;
     private static Vector2Int waterCell;
     private static string originalLiquid;
-    private static float originalLiquidDepth;
+    private static int originalLiquidLevel;
     private static float[] originalRiver;
     private static bool environmentChanged;
     private static float originalWind;
@@ -184,12 +184,12 @@ public static class GameplayTestMechanicalPlant
         if (manager == null || !manager.TryGetRuntimeTerrainTile(target, out RuntimeTerrainTileSample sample))
             throw new InvalidOperationException("水车位置的权威地块尚未加载。");
         originalLiquid = sample.LiquidId;
-        originalLiquidDepth = sample.LiquidDepth;
+        originalLiquidLevel = sample.LiquidLevel;
         string[] names = { "riverKind", "riverFlowX", "riverFlowY", "riverFlow" };
         originalRiver = new float[names.Length];
         for (int i = 0; i < names.Length; i++)
             sample.Terrain.TryGetEnvironmentValue(names[i], sample.LocalCell.x, sample.LocalCell.y, out originalRiver[i]);
-        if (!WorldLiquidSystem.TrySet(sample, "core:pure_water", 1f))
+        if (!WorldLiquidSystem.TrySet(sample, "core:pure_water", 10) && sample.Terrain.GetLiquidLevel(sample.LocalCell.x, sample.LocalCell.y) != 10)
             throw new InvalidOperationException("GM 无法通过正式液体 API 建立测试水道。");
         environmentChanged = true;
         float[] values = { 1f, 1f, 0f, 3f };
@@ -245,7 +245,7 @@ public static class GameplayTestMechanicalPlant
             string[] names = { "riverKind", "riverFlowX", "riverFlowY", "riverFlow" };
             for (int i = 0; i < names.Length; i++)
                 sample.Terrain.SetEnvironmentValue(names[i], sample.LocalCell.x, sample.LocalCell.y, originalRiver[i]);
-            WorldLiquidSystem.TrySet(sample, originalLiquid, originalLiquidDepth);
+            WorldLiquidSystem.TrySet(sample, originalLiquid, originalLiquidLevel);
         }
         if (windChanged && WeatherMgr.ExistingInstance != null)
             WeatherMgr.ExistingInstance.SetWindStrength(originalWind);

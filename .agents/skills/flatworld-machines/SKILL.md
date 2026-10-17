@@ -61,6 +61,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 - 工业气液专项清单为 `GameplayTests/fluid-suite.json`，按功能组织 9 个 Lua 分组、保留 52 项检查；通用分组、截图和报告规则见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，覆盖矩阵见 `Assets/StreamingAssets/GameplayTests/Systems/IndustrialFluids/Gameplay/README.md`。子案独立清理，失败继续收集同组报告，整组仍失败，未运行不得报告通过。
 - 固定步长冻结库存与吞吐预算；方向由端口输入/输出决定，不按压差自然输送，新料不在同轮穿透无限管格。管层2、机械/电子测压层4/5；测压探针切断真实动力边。
+- 工业组分仍按 decimal 连续计量，地表边界一份对应一级整数水位。地表液泵把已供电的有效升数预算存在 `WorldLiquidPumpLiters`，攒够整份再抽；地表出口按端口保存 `WorldLiquidOutputLiters`，累计时先扣本轮共享吞吐，实际落地才扣真实一份，尾量留在工业库存。容器间和管内传输继续连续计量。
 - StockCache 冻结工作区只复制组分数量，不复制端口预留；共享罐只在拓扑变化时绑定库存，Capture 同步目标组。FluidInventoryState 的组分原位改量通知 MassChanged，热量/预留只改状态版本；观察绑定与事件不进序列化/克隆。UsesObservedTickState 策略若改未观察字段，须主动通知或关闭该能力。
 - FluidDeviceBehavior 经 RegisterFluidDevice 注册能力策略，具体事务在 FluidDeviceOperations；注册租约管理生灭，策略变更使拓扑/能力缓存失效。管网成员始终走正式图边，普通容器仅通过 IContainerPortProvider/ILiquidTransferPort 转移。
 - `receiver` 为按需接收端，不接普通随机单物质推送；需求方经正式有向供给图检查全部所需物质，原子扣源库存与路径各段共享吞吐，同一共享罐去重。基础管道及铁/钢气罐显式配置1000 L/s，普通管道召唤器可在背包数量堆叠。

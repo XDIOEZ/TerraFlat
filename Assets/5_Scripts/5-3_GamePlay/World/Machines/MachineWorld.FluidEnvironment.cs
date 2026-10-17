@@ -59,14 +59,14 @@ public static partial class MachineWorld
 
     #region 明确世界地址的地表液体事务
     internal static bool TrySampleFluidEnvironmentLiquid(Vector2 localPosition, out string world, out Vector2 position,
-        out LiquidDefinition liquid, out float depth)
+        out LiquidDefinition liquid, out int level)
     {
-        liquid = null; depth = 0f;
+        liquid = null; level = 0;
         if (TryResolveFluidSurfacePoint(localPosition, out world, out position))
-            return SpaceSurfaceQuery.TrySampleLiquid(world, position, out liquid, out depth);
+            return SpaceSurfaceQuery.TrySampleLiquid(world, position, out liquid, out level);
         if (IsShipScope || worldKey != SceneManager.GetActiveScene().name || !WorldLiquidSourceResolver.TryResolve(localPosition, out WorldLiquidSourceTarget source))
             return false;
-        world = worldKey; position = localPosition; liquid = source.Liquid; depth = source.Sample.LiquidDepth; return true;
+        world = worldKey; position = localPosition; liquid = source.Liquid; level = source.Sample.LiquidLevel; return true;
     }
 
     internal static bool IsFluidEnvironmentSubmerged(MachineEntity node)
@@ -82,19 +82,19 @@ public static partial class MachineWorld
             TerrainSupportLayer.GetTileId(source.Sample.Terrain, source.Sample.LocalCell.x, source.Sample.LocalCell.y) == 0;
     }
 
-    internal static bool TryPumpFluidEnvironmentLiquid(string world, Vector2 position, float requestedDepth,
-        out string liquidId, out float removedDepth)
+    internal static bool TryPumpFluidEnvironmentLiquid(string world, Vector2 position, int requestedLevel,
+        out string liquidId, out int removedLevel)
     {
-        liquidId = null; removedDepth = 0f;
+        liquidId = null; removedLevel = 0;
         if (WorldAddress.FromWorldKey(world).IsSurface)
-            return SpaceSurfaceQuery.TryPumpLiquidInWorld(world, position, requestedDepth, out liquidId, out removedDepth);
-        return world == SceneManager.GetActiveScene().name && WorldLiquidSystem.TryPump(position, requestedDepth, out liquidId, out removedDepth);
+            return SpaceSurfaceQuery.TryPumpLiquidInWorld(world, position, requestedLevel, out liquidId, out removedLevel);
+        return world == SceneManager.GetActiveScene().name && WorldLiquidSystem.TryPump(position, requestedLevel, out liquidId, out removedLevel);
     }
 
-    internal static float ReleaseFluidEnvironmentLiquid(string world, Vector2 position, string liquidId, float depth)
+    internal static int ReleaseFluidEnvironmentLiquid(string world, Vector2 position, string liquidId, int level)
     {
-        if (WorldAddress.FromWorldKey(world).IsSurface) return SpaceSurfaceQuery.ReleaseLiquidInWorld(world, position, liquidId, depth);
-        return world == SceneManager.GetActiveScene().name && WorldLiquidSystem.TryPour(position, liquidId, depth, out float accepted) ? accepted : 0f;
+        if (WorldAddress.FromWorldKey(world).IsSurface) return SpaceSurfaceQuery.ReleaseLiquidInWorld(world, position, liquidId, level);
+        return world == SceneManager.GetActiveScene().name && WorldLiquidSystem.TryPour(position, liquidId, level, out int accepted) ? accepted : 0;
     }
     #endregion
 }

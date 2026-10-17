@@ -258,9 +258,9 @@ public static partial class GameplayTestSystemProbe
         int supportNoopChanges = terrain.SetEnvironmentBatch(TerrainSupportLayer.TileIdLayer, support);
         long supportNoopRevision = terrain.SurfaceLiquidRevision;
         int water = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
-        bool liquidChanged = terrain.SetLiquid(0, 0, water, .6f);
+        bool liquidChanged = terrain.SetLiquid(0, 0, water, 6);
         long liquidRevision = terrain.SurfaceLiquidRevision;
-        bool repeatedLiquidChanged = terrain.SetLiquid(0, 0, water, .6f);
+        bool repeatedLiquidChanged = terrain.SetLiquid(0, 0, water, 6);
         return new JObject
         {
             ["initialRevision"] = initialRevision, ["soilChanges"] = soilChanges, ["soilRevision"] = soilRevision,
@@ -276,20 +276,22 @@ public static partial class GameplayTestSystemProbe
     #region 地表补水共用数值规则
     private static JObject AgricultureSurfaceWaterRule(JObject args)
     {
-        float water = (float)Number(args, "water", 20d);
-        float maximum = (float)Number(args, "maximum", 100d);
+        int water = (int)Number(args, "water", 2d);
+        float remainder = (float)Number(args, "remainder", 0d);
         string supplyKind = Text(args, "supplyKind", "number");
         float supply = supplyKind switch
         {
-            "number" => (float)Number(args, "supply", 5d),
+            "number" => (float)Number(args, "supply", 1d),
             "nan" => float.NaN,
             "positive_infinity" => float.PositiveInfinity,
             "negative_infinity" => float.NegativeInfinity,
             _ => throw new ArgumentException("未登记的补水测试输入：" + supplyKind)
         };
-        bool changed = FarmlandSystem.TryCalculateSurfaceWater(water, supply, maximum, out float nextWater);
-        return new JObject { ["changed"] = changed, ["nextWater"] = nextWater,
-            ["water"] = water, ["maximum"] = maximum, ["supplyKind"] = supplyKind };
+        bool changed = FarmlandSystem.TryCalculateSurfaceWater(water, remainder, supply,
+            out int nextWater, out float nextRemainder);
+        return new JObject { ["changed"] = changed, ["nextWater"] = nextWater, ["nextRemainder"] = nextRemainder,
+            ["water"] = water, ["remainder"] = remainder, ["maximum"] = TileData_Farmland.MaxWaterLevel,
+            ["supplyKind"] = supplyKind };
     }
     #endregion
 
