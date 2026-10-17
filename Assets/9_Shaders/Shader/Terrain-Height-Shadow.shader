@@ -8,7 +8,6 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
         _ElevationStrength("Enabled", Range(0, 1)) = 1
         _ElevationEdgeWidth("Width", Range(0.01, 0.45)) = 0.2
         _ShadowStrength("Strength", Range(0, 1)) = 0.72
-        _DeltaForMaxStrength("Delta For Max Strength", Float) = 2
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
     }
@@ -51,7 +50,6 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
             float _ElevationStrength;
             float _ElevationEdgeWidth;
             float _ShadowStrength;
-            float _DeltaForMaxStrength;
         CBUFFER_END
 
         #if defined(UNITY_DOTS_INSTANCING_ENABLED)
@@ -81,8 +79,9 @@ Shader "FlatWorld/2D/Terrain Height Shadow"
         half4 ShadeShadow(Varyings input)
         {
             float4 distances = float4(input.uv.x, 1.0 - input.uv.x, input.uv.y, 1.0 - input.uv.y);
+            // 整数层差只决定该边是否投影，所有正高差共用相同深浅与宽度。
             float4 edges = (1.0 - smoothstep(0.0, max(_ElevationEdgeWidth, 0.001), distances)) *
-                saturate(input.edgeMask / max(_DeltaForMaxStrength, 1.0));
+                step(1.0, input.edgeMask);
             half shadow = max(max(edges.x, edges.y), max(edges.z, edges.w));
             half alpha = saturate(shadow * _ShadowStrength * _ElevationStrength) * input.tint.a *
                 _Color.a * _RendererColor.a * _ShadowColor.a;
