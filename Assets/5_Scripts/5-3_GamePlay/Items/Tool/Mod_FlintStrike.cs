@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using DG.Tweening;
+using FlatWorld.Localization;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Mod_FlintStrike : Module, IInteractable
 {
-    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
-    public override float FixedTickInterval => 0.1f;
-
 #region 基础参数
+
+    public const float DefaultSuccessChancePerClick = 0.1f;
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
     public Ex_ModData_MemoryPackable ModSaveData;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -33,18 +33,10 @@ public class Mod_FlintStrike : Module, IInteractable
     public string FireSeedItemID = "FireSeed"; // 产出火种物品ID
     public List<string> TinderItemIds = new List<string> { "Leaf", "FireTinder" }; // 允许作为火绒的物品ID
     public List<string> TinderTags = new List<string> { "火绒", "树叶" }; // 允许作为火绒的标签
-    public int RequiredClickCount = 10; // 视觉进度需要的点击次数
-    public float ClickIncrement = 1f; // 每次点击增加的进度值
-    public float SuccessChancePerClick = 0.18f; // 每次点击的点火概率
-    public float DecayRatePerSecond = 0.5f; // 每秒自动衰减的进度值
-    public float SuccessFillDuration = 0.35f; // 成功时进度条补满动画时长
+    [Range(0f, 1f)] public float SuccessChancePerClick = DefaultSuccessChancePerClick; // 每次点击独立判定，不累计保底进度。
 
-    float _progress; // 当前进度值（0 ~ RequiredClickCount）
     bool _isActBound; // 是否已绑定右键触发
-    bool _isResolvingSuccess; // 是否正在播放成功动画
-    Tween _progressTween; // 进度条动画
-    ItemSlot _pendingTinderSlot; // 待消耗的火绒槽位
-    int _pendingTinderIndex = -1; // 待消耗的火绒索引
+    bool _isCommitting;
     CraftingOutputPreview _outputPreview;
 
 #endregion
@@ -53,10 +45,8 @@ public class Mod_FlintStrike : Module, IInteractable
 
     private void OnValidate()
     {
-        if (_Data != null)
-        {
-            _Data.ID = "打火石模块";
-        }
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        ModSaveData.ID = "打火石模块";
     }
 
     protected override void OnLoad()
@@ -79,22 +69,15 @@ public class Mod_FlintStrike : Module, IInteractable
         UnbindItemActEvent();
         UnbindInteractEvents();
         if (InputInventory?.Data != null)
-            InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+            InputInventory.Data.Event_OnDataChanged -= OnInventoryChanged;
+        if (OutputInventory?.Data != null)
+            OutputInventory.Data.Event_OnDataChanged -= OnInventoryChanged;
         DestroyUI();
     }
 
     private void OnDestroy()
     {
         Unload();
-    }
-
-    public override void ModUpdate(float deltaTime)
-    {
-        if (_isResolvingSuccess)
-            return;
-
-        _progress = Mathf.Max(0f, _progress - (DecayRatePerSecond * deltaTime));
-        UpdateOutputPreviewProgress();
     }
 
 #endregion
@@ -135,7 +118,6 @@ public class Mod_FlintStrike : Module, IInteractable
         if (basePanel == null)
             return;
 
-        CancelSuccessAnimation();
         ClosePanelAndClearTransferContext();
     }
 
@@ -143,15 +125,19 @@ public class Mod_FlintStrike : Module, IInteractable
     {
         if (UI_Prefab == null)
         {
-            UI_Prefab = GameRes.Instance.GetPrefab("UI_FlintStrike") ?? GameRes.Instance.GetPrefab("UI_FireDrill");
+            UI_Prefab = GameRes.Instance.GetPrefab("UI_FireDrill");
         }
 
         if (UI_Prefab == null)
         {
-            throw new InvalidOperationException("[Mod_FlintStrike] 未配置 UI_Prefab，且无法通过名称 UI_FlintStrike 或 UI_FireDrill 自动获取。请在组件中指定 UI。");
+            throw new InvalidOperationException("[Mod_FlintStrike] 无法获取共用取火面板 UI_FireDrill。");
         }
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(UI_Prefab);
+        RectTransform panelRect = basePanel.Dragger != null
+            ? basePanel.Dragger.rectTransform
+            : basePanel.rectTransform;
+        InventoryPanelLayout.ApplyDefaultCraftingPosition(panelRect);
         EnsureUIBindingsOnOpen();
 
         InputInventory.SyncData();
@@ -165,8 +151,6 @@ public class Mod_FlintStrike : Module, IInteractable
 
     private void DestroyUI()
     {
-        CancelSuccessAnimation();
-
         if (basePanel == null)
             return;
 
@@ -192,7 +176,7 @@ public class Mod_FlintStrike : Module, IInteractable
         OutputSlotUI = FindSlotUI("输出_1", "输出 1");
         if (InputSlotUI == null || OutputSlotUI == null)
         {
-            throw new InvalidOperationException("[Mod_FlintStrike] 缺少输入/输出槽位，请检查 UI_FlintStrike 或 UI_FireDrill 中输入_1 和 输出_1 的命名。");
+            throw new InvalidOperationException("[Mod_FlintStrike] 共用取火面板缺少输入_1 或 输出_1 槽位。");
         }
 
         InputInventory.itemSlot_UI.Clear();
@@ -209,14 +193,15 @@ public class Mod_FlintStrike : Module, IInteractable
         StrikeButton.onClick.RemoveListener(OnStrikeButtonClick);
         StrikeButton.onClick.AddListener(OnStrikeButtonClick);
 
-        var strikeText = StrikeButton.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
-        if (strikeText != null)
-        {
-            var binder = strikeText.GetComponent<FlatWorld.Localization.LocalizedTextBinder>() ??
-                         strikeText.gameObject.AddComponent<FlatWorld.Localization.LocalizedTextBinder>();
-            binder.Configure(FlatWorld.Localization.FlatWorldLocalizationService.UiTable,
-                FlatWorld.Localization.FlatWorldLocalizationService.GetUiTextKey("打火"), "打火");
-        }
+        BindText(StrikeButton.GetComponentInChildren<TMPro.TMP_Text>(true),
+            () => FlatWorldLocalizationService.GetUiText("打火"));
+        BindText(basePanel.GetText("FWUI_标题"),
+            () => FlatWorldLocalizationService.GetUiText("燧石取火"));
+        BindText(basePanel.GetText("FWUI_眉题"), () => "FIRECRAFT / SPARK");
+        BindText(basePanel.GetText("FWUI_FooterHint"), () => FlatWorldLocalizationService.GetUiFormat(
+            "每次点击有 {0:0}% 概率产生火种", Mathf.Clamp01(SuccessChancePerClick) * 100f));
+        // 共用建筑面板时按真实物品能力隐藏放置、拆除操作。
+        basePanel.GetComponent<BuildingPanelActions>()?.Bind(item);
 
         CloseButton = basePanel.GetButton("关闭");
         if (CloseButton != null)
@@ -225,6 +210,14 @@ public class Mod_FlintStrike : Module, IInteractable
             CloseButton.onClick.AddListener(OnCloseButtonClick);
         }
 
+        RefreshOutputPreview();
+    }
+
+    private static void BindText(TMPro.TMP_Text text, Func<string> provider)
+    {
+        if (text == null) return;
+        var binder = text.GetComponent<LocalizedTextBinder>() ?? text.gameObject.AddComponent<LocalizedTextBinder>();
+        binder.ConfigureRuntime(provider);
     }
 
     private ItemSlot_UI FindSlotUI(params string[] names)
@@ -245,7 +238,6 @@ public class Mod_FlintStrike : Module, IInteractable
 
     private void OnCloseButtonClick()
     {
-        CancelSuccessAnimation();
         ClosePanelAndClearTransferContext();
     }
 
@@ -300,136 +292,44 @@ public class Mod_FlintStrike : Module, IInteractable
 
     private void OnStrikeButtonClick()
     {
-        if (_isResolvingSuccess)
+        if (_isCommitting ||
+            MachineInventory.IsBeingDragged(InputInventory) || MachineInventory.IsBeingDragged(OutputInventory))
             return;
 
-        if (!TryGetTinderSlot(out ItemSlot tinderSlot, out int tinderIndex))
+        if (!TryGetTinderSlot(out _, out int tinderIndex))
         {
             Debug.LogWarning("[Mod_FlintStrike] 打火失败：输入槽中没有可用火绒。请先通过游戏合成系统获得打火石本体，再在本模块放入火绒。");
             return;
         }
 
-        _progress = Mathf.Min(_progress + ClickIncrement, RequiredClickCount);
-        UpdateOutputPreviewProgress();
-
-        if (UnityEngine.Random.value > SuccessChancePerClick)
+        if (!IsSuccessfulRoll(UnityEngine.Random.value, SuccessChancePerClick))
             return;
-
-        BeginSuccessSequence(tinderSlot, tinderIndex);
-    }
-
-    private void BeginSuccessSequence(ItemSlot tinderSlot, int tinderIndex)
-    {
-        if (_isResolvingSuccess)
-            return;
-
-        if (OutputInventory == null || OutputInventory.Data == null)
-            throw new InvalidOperationException("[Mod_FlintStrike] 输出容器为空，无法生成火种。");
-
-        if (!HasOutputSpaceForFireSeed())
-        {
-            Debug.LogWarning("[Mod_FlintStrike] 输出槽空间不足，无法完成打火。");
-            return;
-        }
-
-        _isResolvingSuccess = true;
-        _pendingTinderSlot = tinderSlot;
-        _pendingTinderIndex = tinderIndex;
-
-        StrikeButton.interactable = false;
-        CancelProgressTween();
-
-        if (_outputPreview == null || SuccessFillDuration <= 0f)
-        {
-            _outputPreview?.SetProgress(1f);
-            CompleteSuccessSequence();
-            return;
-        }
-
-        float previewProgress = GetProgress01();
-        _progressTween = DOTween.To(
-            () => previewProgress,
-            value =>
-            {
-                previewProgress = value;
-                _outputPreview.SetProgress(value);
-            },
-            1f,
-            SuccessFillDuration)
-            .SetEase(Ease.OutCubic)
-            .OnComplete(CompleteSuccessSequence);
-    }
-
-    private void CompleteSuccessSequence()
-    {
-        if (_pendingTinderSlot == null)
-        {
-            Debug.LogError("[Mod_FlintStrike] 成功结算时，火绒槽位已失效。");
-            ResetAfterFailure();
-            return;
-        }
 
         ItemData fireSeedData = CreateFireSeedData();
-        if (!OutputInventory.Data.TryAddItem(fireSeedData, false))
+        var match = new CraftingRecipeMatch(new RuntimeRecipe { Id = "flint-strike" }, false,
+            new[] { new CraftingConsumption(tinderIndex, 1f) });
+        _isCommitting = true;
+        try
         {
-            Debug.LogWarning("[Mod_FlintStrike] 输出槽在结算前被占满，已取消本次打火。");
-            ResetAfterFailure();
-            return;
+            // 成功后用正式制作事务一次提交扣料与产物，满输出时整笔拒绝。
+            if (!CraftingTransaction.TryCreate(InputInventory, OutputInventory, match, new[] { fireSeedData }, false,
+                    out CraftingTransaction transaction, out _) || !transaction.Commit(out _))
+                return;
+            transaction.Complete();
+            InputInventory.RefreshUI();
+            OutputInventory.RefreshUI();
+            _outputPreview?.PlaySuccess();
         }
-
-        ConsumeOneMaterial(_pendingTinderSlot, _pendingTinderIndex);
-        OutputInventory.Data.TryAddItem(fireSeedData, true);
-        InputInventory.RefreshUI();
-        OutputInventory.RefreshUI();
-
-        Debug.Log($"[Mod_FlintStrike] 打火成功：已生成火种 {FireSeedItemID}，进度={_progress:F1}/{RequiredClickCount}");
-        ResetAfterSuccess();
-        _outputPreview?.PlaySuccess();
-    }
-
-    private void ResetAfterSuccess()
-    {
-        _isResolvingSuccess = false;
-        _pendingTinderSlot = null;
-        _pendingTinderIndex = -1;
-        _progress = 0f;
-        RefreshOutputPreview();
-        if (StrikeButton != null)
+        finally
         {
-            StrikeButton.interactable = true;
+            _isCommitting = false;
+            RefreshOutputPreview();
         }
     }
 
-    private void ResetAfterFailure()
+    internal static bool IsSuccessfulRoll(float roll, float successChance)
     {
-        _isResolvingSuccess = false;
-        _pendingTinderSlot = null;
-        _pendingTinderIndex = -1;
-        _progress = 0f;
-        RefreshOutputPreview();
-        if (StrikeButton != null)
-        {
-            StrikeButton.interactable = true;
-        }
-    }
-
-    private void CancelSuccessAnimation()
-    {
-        CancelProgressTween();
-        _isResolvingSuccess = false;
-        if (StrikeButton != null)
-        {
-            StrikeButton.interactable = true;
-        }
-    }
-
-    private void CancelProgressTween()
-    {
-        if (_progressTween == null)
-            return;
-
-        _progressTween.Kill();
-        _progressTween = null;
+        return successChance >= 1f || roll < Mathf.Clamp01(successChance);
     }
 
     private bool TryGetTinderSlot(out ItemSlot tinderSlot, out int tinderIndex)
@@ -443,7 +343,7 @@ public class Mod_FlintStrike : Module, IInteractable
         for (int i = 0; i < InputInventory.Data.itemSlots.Count; i++)
         {
             var current = InputInventory.Data.itemSlots[i];
-            if (current?.itemData == null)
+            if (current?.itemData?.Stack == null || current.itemData.Stack.Amount < 1f)
                 continue;
 
             if (!IsValidTinder(current.itemData))
@@ -476,12 +376,6 @@ public class Mod_FlintStrike : Module, IInteractable
         return itemData.Tags.ContainsAnyTag(tags);
     }
 
-    private bool HasOutputSpaceForFireSeed()
-    {
-        ItemData fireSeedData = CreateFireSeedData();
-        return OutputInventory.Data.TryAddItem(fireSeedData, false);
-    }
-
     private ItemData CreateFireSeedData()
     {
         var prefab = GameRes.Instance.GetPrefab(FireSeedItemID);
@@ -503,32 +397,21 @@ public class Mod_FlintStrike : Module, IInteractable
         return fireSeedData;
     }
 
-    private void ConsumeOneMaterial(ItemSlot slot, int index)
-    {
-        if (slot == null || slot.itemData == null)
-            throw new InvalidOperationException("[Mod_FlintStrike] 尝试消耗材料时，目标槽位为空。");
-
-        slot.itemData.Stack.Amount -= 1;
-        if (slot.itemData.Stack.Amount <= 0)
-        {
-            InputInventory.Data.RemoveItemAll(slot, index);
-        }
-    }
-
     private void BindOutputPreview()
     {
         _outputPreview = CraftingOutputPreview.Attach(basePanel, OutputSlotUI);
-        InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
-        InputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
+        InputInventory.Data.Event_OnDataChanged -= OnInventoryChanged;
+        InputInventory.Data.Event_OnDataChanged += OnInventoryChanged;
+        OutputInventory.Data.Event_OnDataChanged -= OnInventoryChanged;
+        OutputInventory.Data.Event_OnDataChanged += OnInventoryChanged;
         RefreshOutputPreview();
     }
 
-    private void OnInputSlotChanged(ItemSlot _)
+    private void OnInventoryChanged(ItemSlot _)
     {
-        if (_isResolvingSuccess)
+        if (_isCommitting)
             return;
 
-        _progress = 0f;
         RefreshOutputPreview();
     }
 
@@ -540,20 +423,9 @@ public class Mod_FlintStrike : Module, IInteractable
         if (TryGetTinderSlot(out _, out _) &&
             CreateFireSeedData() is ItemData fireSeedData &&
             OutputInventory.Data.TryAddItem(fireSeedData, false))
-            _outputPreview.Show(fireSeedData, GetProgress01());
+            _outputPreview.Show(fireSeedData);
         else
             _outputPreview.Clear();
-    }
-
-    private void UpdateOutputPreviewProgress()
-    {
-        if (!_isResolvingSuccess)
-            _outputPreview?.SetProgress(GetProgress01());
-    }
-
-    private float GetProgress01()
-    {
-        return RequiredClickCount <= 0 ? 0f : Mathf.Clamp01(_progress / RequiredClickCount);
     }
 
 #endregion

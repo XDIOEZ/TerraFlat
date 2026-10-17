@@ -4985,6 +4985,10 @@ MonoBehaviour:
     m_Localized: "\u5E27\u6570\u4E0A\u9650\u4E0D\u4FDD\u8BC1\u5B9E\u9645\u5E27\u6570\uFF1B\u624B\u673A\u8FD8\u4F1A\u53D7\u5230\u5C4F\u5E55\u5237\u65B0\u7387\u9650\u5236\u3002"
     m_Metadata:
       m_Items: []
+  - m_Id: 8109452098048002
+    m_Localized: "每次点击有 {0:0}% 概率产生火种"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

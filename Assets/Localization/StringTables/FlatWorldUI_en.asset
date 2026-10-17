@@ -5036,6 +5036,10 @@ MonoBehaviour:
       limited by display refresh rate.
     m_Metadata:
       m_Items: []
+  - m_Id: 8109452098048002
+    m_Localized: "Each click has a {0:0}% chance to produce tinder."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

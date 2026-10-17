@@ -738,6 +738,7 @@ namespace FlatWorld.Localization.Editor
                 { "预期产物", "Expected Output" },
                 { "执行", "Execute" },
                 { "燧石取火", "Start Fire with Flint" },
+                { "每次点击有 {0:0}% 概率产生火种", "Each click has a {0:0}% chance to produce tinder." },
                 { "MODULES  /  界面模块", "MODULES  /  INTERFACE MODULES" },
                 { "UI菜单下拉列表", "UI Menu Dropdown" },
                 { "手工制作", "Handcrafting" },

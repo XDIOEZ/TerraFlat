@@ -2,6 +2,21 @@ local function near(a, b, message)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
 end
 
+for _, input in ipairs({
+    { roll = 0, expected = true },
+    { roll = 0.0999, expected = true },
+    { roll = 0.1, expected = false },
+    { roll = 1, expected = false },
+    { roll = 0, chance = 0, expected = false, hits = 0 },
+    { roll = 1, chance = 1, expected = true, hits = 100 },
+}) do
+    test.system("processing", "flint_strike", input, function(data)
+        near(data.chance, input.chance or 0.1, "打火石默认成功率不是百分之十")
+        assert(data.accepted == input.expected, "打火石单次概率判定边界错误")
+        assert(data.hits == (input.hits or 10), "打火石连续判定改变概率或出现点击累积保底")
+    end, string.format("打火石独立概率与端点：抽样值 %g", input.roll))
+end
+
 test.system("processing", "recipe_selection", {}, function(data)
     near(data.sameProgress, 4, "重复绑定同配方清除了真实加工进度")
     near(data.sameRatio, 0.4, "加工进度比例错误")

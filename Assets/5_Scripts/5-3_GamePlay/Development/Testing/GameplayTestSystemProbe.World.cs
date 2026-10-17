@@ -50,6 +50,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/atomic_output", WorldProcessingAtomicOutput);
         operations.Add("processing/fuel_absorption", WorldFuelAbsorption);
         operations.Add("processing/material_heat", WorldProcessingMaterialHeat);
+        operations.Add("processing/flint_strike", WorldProcessingFlintStrike);
         foreach (string operation in new[] { "ship_structure", "ship_docking", "ship_mass",
                      "ship_propulsion", "ship_contacts", "ship_snapshots", "ship_engine_placement", "ship_optical",
                      "ship_collider_batch" })
@@ -1000,6 +1001,21 @@ public static partial class GameplayTestSystemProbe
             ["changed"] = changed, ["next"] = next,
             ["second"] = material.MatterState.TemperatureCelsius,
             ["split"] = split.MatterState.TemperatureCelsius, ["amount"] = material.Stack.Amount
+        };
+    }
+
+    private static JObject WorldProcessingFlintStrike(JObject args)
+    {
+        float chance = (float)Number(args, "chance", Mod_FlintStrike.DefaultSuccessChancePerClick);
+        float roll = (float)Number(args, "roll", .5d);
+        int hits = 0;
+        // 固定采样正式概率入口，避免随机测试偶然通过或失败。
+        for (int i = 0; i < 100; i++)
+            if (Mod_FlintStrike.IsSuccessfulRoll((i + .5f) / 100f, chance)) hits++;
+        return new JObject
+        {
+            ["chance"] = chance, ["accepted"] = Mod_FlintStrike.IsSuccessfulRoll(roll, chance),
+            ["hits"] = hits
         };
     }
 
