@@ -31,7 +31,7 @@ def specs():
     # 保留实录的宽频水花与水流主体，不再用窄带白噪声冒充水声。
     return [
         dict(cue="player.swim.enter", name="实录入水水花", seconds=1.05, peakDb=-9, rmsDb=-24),
-        dict(cue="player.swim.stroke", name="实录游泳划水", seconds=.72, peakDb=-11, rmsDb=-26),
+        dict(cue="player.swim.stroke", name="实录连续游泳", seconds=6, crossfadeSeconds=.5, peakDb=-11, rmsDb=-26),
         dict(cue="player.swim.exit", name="实录出水滴水", seconds=1.0, peakDb=-14, rmsDb=-29)
     ]
 
@@ -55,7 +55,8 @@ def build():
         for variant in range(1, 4):
             layout.append(dict(cue=sound["cue"], name=sound["name"], variant=variant,
                                seconds=sound["seconds"], peakDb=sound["peakDb"],
-                               rmsDb=sound["rmsDb"], startSeconds=slot * 2 + .125,
+                               rmsDb=sound["rmsDb"], crossfadeSeconds=sound.get("crossfadeSeconds", 0),
+                               startSeconds=slot * 2 + .125,
                                file=f"Assets/Audio/Generated/{sound['cue']}__{variant:02}.wav"))
             sample = ROOT / "Sources" / f"{sound['cue'].split('.')[-1]}_{variant:02}.wav"
             assert sample.is_file(), f"Prepare recorded sources first: {sample}"
@@ -66,7 +67,7 @@ def build():
             ET.SubElement(track, "sampleclip", pos=str(slot * 192 + 12),
                           len=str(math.ceil(sound["seconds"] / sfx.TICK_SECONDS)),
                           src=sample.as_posix(), muted="0", off="0")
-            slot += 1
+            slot += math.ceil((sound["seconds"] + .125) / 2)
     tree.find(".//timeline").set("lp1pos", str(slot * 192))
     ET.indent(tree, space="  ")
     atomic_text(PROJECT_FILE, ET.tostring(tree.getroot(), encoding="unicode", xml_declaration=True) + "\n")
@@ -94,6 +95,8 @@ def bind_cue(cue, clip_guids):
     text, count = re.subn(r"  clips:\n(?:  - [^\n]*\n)+", lambda _: clips, text)
     assert count == 1
     text = re.sub(r"  cooldown: [^\n]+", "  cooldown: 0.12", text)
+    if cue == "player.swim.stroke":
+        text = text.replace("  loop: 0", "  loop: 1").replace("  cooldown: 0.12", "  cooldown: 0")
     text = re.sub(r"  maxInstances: [^\n]+", f"  maxInstances: {2 if cue.endswith('.stroke') else 3}", text)
     atomic_text(path, text)
     meta = (PROJECT / "Assets/Resources/Audio/Cues/player.footstep.water.asset.meta").read_text(encoding="utf-8")
@@ -101,7 +104,7 @@ def bind_cue(cue, clip_guids):
     return guid
 
 
-def finalize():
+def finalize(only_stroke=False):
     layout = json.loads((ROOT / "layout.json").read_text(encoding="utf-8"))
     samples = [ROOT / "Sources" / f"{entry['cue'].split('.')[-1]}_{entry['variant']:02}.wav" for entry in layout]
     latest_input = max(path.stat().st_mtime for path in [PROJECT_FILE, ROOT / "sources.json", *samples])
@@ -110,13 +113,28 @@ def finalize():
     assert np.max(np.abs(raw)) < .9999, "Clipped LMMS master"
     assert len(raw) >= round(max(x["startSeconds"] + x["seconds"] for x in layout) * RATE)
     manifest, cue_clips, preview = [], {}, []
+    previous = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8")) if only_stroke else None
     for entry in layout:
+        if only_stroke and entry["cue"] != "player.swim.stroke":
+            kept = next(x for x in previous["sounds"] if x["file"] == entry["file"])
+            manifest.append(dict(kept, masterSha256=kept.get("masterSha256", previous["masterSha256"])))
+            if entry["variant"] == 1:
+                preview.extend((sfx.read_wave(PROJECT / entry["file"]).mean(axis=1), np.zeros(round(.35 * RATE))))
+            continue
         start = round(entry["startSeconds"] * RATE)
         data = raw[start:start + round(entry["seconds"] * RATE)].mean(axis=1)
         data -= data.mean()
-        fade_in, fade_out = round(.002 * RATE), round(.035 * RATE)
-        data[:fade_in] *= np.linspace(0, 1, fade_in)
-        data[-fade_out:] *= np.linspace(1, 0, fade_out)
+        crossfade = round(entry.get("crossfadeSeconds", 0) * RATE)
+        if crossfade:
+            # 把尾部与头部等功率交叠，循环边界落在实录内部，不在每轮末尾淡到静音。
+            angle = np.linspace(0, np.pi / 2, crossfade)
+            seam = data[-crossfade:] * np.cos(angle) + data[:crossfade] * np.sin(angle)
+            data = np.concatenate((data[crossfade:-crossfade], seam))
+            data -= data.mean()
+        else:
+            fade_in, fade_out = round(.002 * RATE), round(.035 * RATE)
+            data[:fade_in] *= np.linspace(0, 1, fade_in)
+            data[-fade_out:] *= np.linspace(1, 0, fade_out)
         peak, rms = float(np.max(np.abs(data))), float(np.sqrt(np.mean(data ** 2)))
         assert peak > .0001 and rms > .00001 and np.isfinite(data).all(), entry["cue"]
         data *= min(10 ** (entry["peakDb"] / 20) / peak, 10 ** (entry["rmsDb"] / 20) / rms)
@@ -129,7 +147,7 @@ def finalize():
         atomic_text(meta_path, template.replace("LMMS_MCP_Gameplay", "LMMS_MCP_Swimming"))
         cue_clips.setdefault(entry["cue"], []).append(guid)
         sample = ROOT / "Sources" / f"{entry['cue'].split('.')[-1]}_{entry['variant']:02}.wav"
-        manifest.append(dict(entry, guid=guid, sha256=hashlib.sha256(asset.read_bytes()).hexdigest(),
+        manifest.append(dict(entry, seconds=len(data) / RATE, guid=guid, sha256=hashlib.sha256(asset.read_bytes()).hexdigest(),
                              sourceSha256=hashlib.sha256(sample.read_bytes()).hexdigest(),
                              peakDb=round(20 * math.log10(np.max(np.abs(data))), 2),
                              rmsDb=round(20 * math.log10(np.sqrt(np.mean(data ** 2))), 2)))
@@ -165,7 +183,10 @@ def verify():
         peak, rms = np.max(np.abs(data)), np.sqrt(np.mean(data ** 2))
         assert .0001 < peak < .9999 and rms > .00001 and np.isfinite(data).all(), asset
         assert 20 * math.log10(peak / rms) < 22, f"Water body hidden by isolated peaks: {asset}"
-        assert abs(data[0, 0]) <= 1 / 32768 and abs(data[-1, 0]) <= 1 / 32768, asset
+        if entry.get("crossfadeSeconds", 0):
+            assert abs(data[0, 0] - data[-1, 0]) <= np.max(np.abs(np.diff(data[:, 0]))) + 1 / 32768, asset
+        else:
+            assert abs(data[0, 0]) <= 1 / 32768 and abs(data[-1, 0]) <= 1 / 32768, asset
         assert hashlib.sha256(asset.read_bytes()).hexdigest() == entry["sha256"]
         sample = ROOT / "Sources" / f"{entry['cue'].split('.')[-1]}_{entry['variant']:02}.wav"
         assert hashlib.sha256(sample.read_bytes()).hexdigest() == entry["sourceSha256"]
@@ -174,6 +195,7 @@ def verify():
         config = cue.read_text(encoding="utf-8")
         assert f"id: {entry['cue']}" in config and f"guid: {entry['guid']}" in config
         assert "spatialBlend: 1" in config and "bus: 1" in config and "rolloffMode: 1" in config
+        assert f"  loop: {1 if entry['cue'] == 'player.swim.stroke' else 0}\n" in config
         assert float(re.search(r"  cooldown: ([^\n]+)", config)[1]) <= .2
         cue_guid = guid_for(Path(str(cue) + ".meta"))
         assert f"guid: {cue_guid}, type: 2" in catalog
@@ -188,5 +210,9 @@ def verify():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=("build", "finalize", "verify"))
+    parser.add_argument("--only-stroke", action="store_true", help="仅替换连续游泳素材，保留现有入出水成品")
     args = parser.parse_args()
-    {"build": build, "finalize": finalize, "verify": verify}[args.command]()
+    if args.command == "finalize":
+        finalize(args.only_stroke)
+    else:
+        {"build": build, "verify": verify}[args.command]()

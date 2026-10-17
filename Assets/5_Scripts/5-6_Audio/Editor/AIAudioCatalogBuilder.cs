@@ -163,7 +163,8 @@ namespace FlatWorld.Audio.Editor
             bool isWeatherAmbient = eventId.StartsWith("weather.", StringComparison.OrdinalIgnoreCase);
             bool isThunder = string.Equals(eventId, AudioEventIds.WeatherThunder, StringComparison.OrdinalIgnoreCase) ||
                              string.Equals(eventId, AudioEventIds.WeatherThunderFar, StringComparison.OrdinalIgnoreCase);
-            bool isLooping = eventId.EndsWith(".loop", StringComparison.OrdinalIgnoreCase);
+            bool isLooping = eventId.EndsWith(".loop", StringComparison.OrdinalIgnoreCase) ||
+                             string.Equals(eventId, AudioEventIds.SwimStroke, StringComparison.OrdinalIgnoreCase);
             bool isFootstep = eventId.StartsWith("player.footstep.", StringComparison.OrdinalIgnoreCase);
             bool isWorldSfx = eventId.StartsWith("door.", StringComparison.OrdinalIgnoreCase) ||
                               eventId.StartsWith("item.", StringComparison.OrdinalIgnoreCase) ||

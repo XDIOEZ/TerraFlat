@@ -58,11 +58,17 @@ def prepare():
         gain = np.minimum(1, (np.maximum(envelope, threshold) / threshold) ** (1 / settings["transientRatio"] - 1))
         gain = gaussian_filter1d(gain, sigma=max(1, settings["gainSmoothingMilliseconds"] * target_rate / 1000))
         data *= gain
+        if segment["file"].startswith("Sources/stroke_"):
+            # 适度抬起实录划水间的水流底声，保留起伏但不让循环听成孤立水花。
+            rms = np.sqrt(gaussian_filter1d(data * data, sigma=.12 * target_rate))
+            body = max(float(np.percentile(rms, 60)), 1e-6)
+            data *= np.clip(body / np.maximum(rms, 1e-6), .6, 3)
         # 只淡化裁切边缘，保留实录水花的宽频冲击、水流主体和自然水滴。
         head = round(settings["headFadeSeconds"] * target_rate)
         tail = round(settings["tailFadeSeconds"] * target_rate)
-        data[:head] *= np.linspace(0, 1, head)
-        data[-tail:] *= np.linspace(1, 0, tail)
+        if not segment["file"].startswith("Sources/stroke_"):
+            data[:head] *= np.linspace(0, 1, head)
+            data[-tail:] *= np.linspace(1, 0, tail)
         assert np.isfinite(data).all() and np.max(np.abs(data)) > .0001
         data *= settings["peak"] / np.max(np.abs(data))
         path = ROOT / segment["file"]

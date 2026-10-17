@@ -3,16 +3,16 @@ using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
-/// <summary>本机角色复用真实液体接触和主动位移，播放入水、划水与出水短音。</summary>
+/// <summary>本机角色复用真实液体接触和主动位移，播放入出水短音与连续游泳水声。</summary>
 public partial class Mod_Mover
 {
     #region 游泳音效
 
     private const float SwimmingContactDepth = 0.03f;
-    private const float SwimmingStrokeDistance = 1.4f;
-    private const float SwimmingStrokeInterval = 0.5f;
     private const float SwimmingSubmergedImmersion = 0.95f;
-    private const float SwimmingAudioFadeSeconds = 0.06f;
+    private const float SwimmingAudioFadeInSeconds = 0.25f;
+    private const float SwimmingAudioFadeOutSeconds = 0.35f;
+    private const float SwimmingTransitionFadeSeconds = 0.06f;
 
     private bool swimmingAudioEnabled;
     private Vector2 swimmingAudioPreviousPosition;
@@ -24,13 +24,13 @@ public partial class Mod_Mover
     private AudioHandle swimmingStrokeHandle = AudioHandle.Invalid;
     private AudioHandle swimmingTransitionHandle = AudioHandle.Invalid;
 
-    /// <summary>状态只属于本角色；接触身份变化和划水节奏共用生产入口。</summary>
+    /// <summary>状态只属于本角色；游动控制循环目标音量，不再按格子重复触发。</summary>
     internal struct SwimmingAudioState
     {
         public bool HasBaseline { get; private set; }
         public bool InWater { get; private set; }
-        public float StrokeDistance { get; private set; }
-        public float StrokeElapsed { get; private set; }
+        public bool ShouldPlayLoop { get; private set; }
+        public float LoopVolume { get; private set; }
 
         public string Advance(float liquidDepth, float effectiveImmersion, bool waterContact,
             bool activelyMoving, float travelledDistance, float deltaTime)
@@ -44,38 +44,19 @@ public partial class Mod_Mover
                 return null;
             }
 
-            if (InWater != inWater)
-            {
-                InWater = inWater;
-                ResetStroke();
-                return moving ? (inWater ? AudioEventIds.SwimEnter : AudioEventIds.SwimExit) : null;
-            }
-
-            if (!inWater || liquidDepth <= WaterEnvironmentRules.SwimmingDepthThreshold ||
-                !float.IsFinite(effectiveImmersion) || effectiveImmersion >= SwimmingSubmergedImmersion || !moving)
-            {
-                ResetStroke();
-                return null;
-            }
-
-            StrokeDistance += travelledDistance;
-            StrokeElapsed += float.IsFinite(deltaTime) ? Mathf.Max(0f, deltaTime) : 0f;
-            if (StrokeDistance < SwimmingStrokeDistance || StrokeElapsed < SwimmingStrokeInterval)
-                return null;
-
-            // 每次最多发一划，避免高速或卡帧后挤出连续水声。
-            StrokeDistance = Mathf.Min(StrokeDistance - SwimmingStrokeDistance, SwimmingStrokeDistance);
-            StrokeElapsed = 0f;
-            return AudioEventIds.SwimStroke;
+            bool changedWater = InWater != inWater;
+            InWater = inWater;
+            ShouldPlayLoop = !changedWater && inWater &&
+                             liquidDepth > WaterEnvironmentRules.SwimmingDepthThreshold &&
+                             float.IsFinite(effectiveImmersion) && effectiveImmersion < SwimmingSubmergedImmersion && moving;
+            float elapsed = float.IsFinite(deltaTime) ? Mathf.Max(0f, deltaTime) : 0f;
+            float fadeSeconds = ShouldPlayLoop ? SwimmingAudioFadeInSeconds : SwimmingAudioFadeOutSeconds;
+            // 淡出期间保留同一条循环，快速停走时从当前音量续上，避免接缝和重叠水花。
+            LoopVolume = Mathf.MoveTowards(LoopVolume, ShouldPlayLoop ? 1f : 0f, elapsed / fadeSeconds);
+            return changedWater && moving ? (inWater ? AudioEventIds.SwimEnter : AudioEventIds.SwimExit) : null;
         }
 
         public void Reset() => this = default;
-
-        private void ResetStroke()
-        {
-            StrokeDistance = 0f;
-            StrokeElapsed = 0f;
-        }
     }
 
     private void InitializeSwimmingAudio()
@@ -135,23 +116,21 @@ public partial class Mod_Mover
             swimmingAudioTileEffects.CurrentWaterImmersion, waterContact,
             activelyMoving, drivenDistance, Time.fixedDeltaTime);
 
-        bool canStroke = waterContact && liquidDepth > WaterEnvironmentRules.SwimmingDepthThreshold &&
-                         swimmingAudioTileEffects.CurrentWaterImmersion < SwimmingSubmergedImmersion &&
-                         activelyMoving && drivenDistance > 0f;
-        if (!canStroke)
-            StopSwimmingStroke();
+        if (swimmingAudioState.LoopVolume > 0f)
+        {
+            float volume = 0.5f * swimmingAudioState.LoopVolume;
+            if (!swimmingStrokeHandle.IsPlaying)
+                swimmingStrokeHandle = AudioService.Instance.PlayAttached(AudioEventIds.SwimStroke, item.transform, volume);
+            else
+                AudioService.Instance.SetVolumeScale(swimmingStrokeHandle, volume);
+        }
+        else
+            StopSwimmingStroke(0f);
+
         if (cueId == null)
             return;
 
-        if (cueId == AudioEventIds.SwimStroke)
-        {
-            StopSwimmingStroke();
-            swimmingStrokeHandle = AudioService.Instance.PlayAttached(cueId, item.transform, 0.5f);
-            return;
-        }
-
-        StopSwimmingStroke();
-        swimmingTransitionHandle.Stop(SwimmingAudioFadeSeconds);
+        swimmingTransitionHandle.Stop(SwimmingTransitionFadeSeconds);
         swimmingTransitionHandle = AudioService.Instance.PlayAttached(cueId, item.transform, 0.55f);
     }
 
@@ -160,7 +139,7 @@ public partial class Mod_Mover
     {
         swimmingAudioState.Reset();
         StopSwimmingStroke();
-        swimmingTransitionHandle.Stop(SwimmingAudioFadeSeconds);
+        swimmingTransitionHandle.Stop(SwimmingTransitionFadeSeconds);
         swimmingTransitionHandle = AudioHandle.Invalid;
         swimmingAudioPreviousPosition = rb != null
             ? WorldTopologyRuntime.NormalizePosition(rb.position)
@@ -177,9 +156,9 @@ public partial class Mod_Mover
         swimmingAudioHealth = null;
     }
 
-    private void StopSwimmingStroke()
+    private void StopSwimmingStroke(float fadeSeconds = SwimmingAudioFadeOutSeconds)
     {
-        swimmingStrokeHandle.Stop(SwimmingAudioFadeSeconds);
+        swimmingStrokeHandle.Stop(fadeSeconds);
         swimmingStrokeHandle = AudioHandle.Invalid;
     }
 

@@ -6,6 +6,7 @@
     "seconds": 1.05,
     "peakDb": -9,
     "rmsDb": -24,
+    "crossfadeSeconds": 0,
     "startSeconds": 0.125,
     "file": "Assets/Audio/Generated/player.swim.enter__01.wav"
   },
@@ -16,6 +17,7 @@
     "seconds": 1.05,
     "peakDb": -9,
     "rmsDb": -24,
+    "crossfadeSeconds": 0,
     "startSeconds": 2.125,
     "file": "Assets/Audio/Generated/player.swim.enter__02.wav"
   },
@@ -26,37 +28,41 @@
     "seconds": 1.05,
     "peakDb": -9,
     "rmsDb": -24,
+    "crossfadeSeconds": 0,
     "startSeconds": 4.125,
     "file": "Assets/Audio/Generated/player.swim.enter__03.wav"
   },
   {
     "cue": "player.swim.stroke",
-    "name": "实录游泳划水",
+    "name": "实录连续游泳",
     "variant": 1,
-    "seconds": 0.72,
+    "seconds": 6,
     "peakDb": -11,
     "rmsDb": -26,
+    "crossfadeSeconds": 0.5,
     "startSeconds": 6.125,
     "file": "Assets/Audio/Generated/player.swim.stroke__01.wav"
   },
   {
     "cue": "player.swim.stroke",
-    "name": "实录游泳划水",
+    "name": "实录连续游泳",
     "variant": 2,
-    "seconds": 0.72,
+    "seconds": 6,
     "peakDb": -11,
     "rmsDb": -26,
-    "startSeconds": 8.125,
+    "crossfadeSeconds": 0.5,
+    "startSeconds": 14.125,
     "file": "Assets/Audio/Generated/player.swim.stroke__02.wav"
   },
   {
     "cue": "player.swim.stroke",
-    "name": "实录游泳划水",
+    "name": "实录连续游泳",
     "variant": 3,
-    "seconds": 0.72,
+    "seconds": 6,
     "peakDb": -11,
     "rmsDb": -26,
-    "startSeconds": 10.125,
+    "crossfadeSeconds": 0.5,
+    "startSeconds": 22.125,
     "file": "Assets/Audio/Generated/player.swim.stroke__03.wav"
   },
   {
@@ -66,7 +72,8 @@
     "seconds": 1.0,
     "peakDb": -14,
     "rmsDb": -29,
-    "startSeconds": 12.125,
+    "crossfadeSeconds": 0,
+    "startSeconds": 30.125,
     "file": "Assets/Audio/Generated/player.swim.exit__01.wav"
   },
   {
@@ -76,7 +83,8 @@
     "seconds": 1.0,
     "peakDb": -14,
     "rmsDb": -29,
-    "startSeconds": 14.125,
+    "crossfadeSeconds": 0,
+    "startSeconds": 32.125,
     "file": "Assets/Audio/Generated/player.swim.exit__02.wav"
   },
   {
@@ -86,7 +94,8 @@
     "seconds": 1.0,
     "peakDb": -14,
     "rmsDb": -29,
-    "startSeconds": 16.125,
+    "crossfadeSeconds": 0,
+    "startSeconds": 34.125,
     "file": "Assets/Audio/Generated/player.swim.exit__03.wav"
   }
 ]

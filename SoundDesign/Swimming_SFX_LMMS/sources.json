@@ -47,9 +47,9 @@
     { "file": "Sources/enter_01.wav", "recording": "close_pool_splash", "startSeconds": 0.40, "seconds": 1.05 },
     { "file": "Sources/enter_02.wav", "recording": "lake_entry", "startSeconds": 0.22, "seconds": 1.05 },
     { "file": "Sources/enter_03.wav", "recording": "close_pool_splash", "startSeconds": 1.12, "seconds": 1.05 },
-    { "file": "Sources/stroke_01.wav", "recording": "pool_swimming", "startSeconds": 6.20, "seconds": 0.72 },
-    { "file": "Sources/stroke_02.wav", "recording": "pool_swimming", "startSeconds": 7.10, "seconds": 0.72 },
-    { "file": "Sources/stroke_03.wav", "recording": "pool_swimming", "startSeconds": 8.34, "seconds": 0.72 },
+    { "file": "Sources/stroke_01.wav", "recording": "pool_swimming", "startSeconds": 4.00, "seconds": 6.00 },
+    { "file": "Sources/stroke_02.wav", "recording": "pool_swimming", "startSeconds": 6.00, "seconds": 6.00 },
+    { "file": "Sources/stroke_03.wav", "recording": "pool_swimming", "startSeconds": 8.00, "seconds": 6.00 },
     { "file": "Sources/exit_01.wav", "recording": "close_pool_splash", "startSeconds": 1.55, "seconds": 1.00 },
     { "file": "Sources/exit_02.wav", "recording": "close_pool_splash", "startSeconds": 2.20, "seconds": 1.00 },
     { "file": "Sources/exit_03.wav", "recording": "close_pool_splash", "startSeconds": 3.15, "seconds": 1.00 }

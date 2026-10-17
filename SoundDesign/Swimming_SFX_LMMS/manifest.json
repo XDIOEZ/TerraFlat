@@ -1,7 +1,7 @@
 {
   "engine": "LMMS 1.2.2 via MCP",
   "instrument": "Recorded swimming, splashes and trickles through LMMS sample tracks",
-  "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75",
+  "masterSha256": "c79a4bccb0cacb58538fd8246ee519ed4565a3a028186360a9798e642c9c26a3",
   "sourcesFile": "sources.json",
   "sampleRate": 48000,
   "channels": 1,
@@ -17,7 +17,8 @@
       "file": "Assets/Audio/Generated/player.swim.enter__01.wav",
       "guid": "54848eb4a8574c06bd338aa27e7861a7",
       "sha256": "a66edf11f12b3f29989dc0b4a887487a5dfcac5230737676b0421ba5172a7154",
-      "sourceSha256": "3bb72bb99ca442461cb0d8f7d543f702d4f9f64634fb70ab82526899d5c1dc47"
+      "sourceSha256": "3bb72bb99ca442461cb0d8f7d543f702d4f9f64634fb70ab82526899d5c1dc47",
+      "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75"
     },
     {
       "cue": "player.swim.enter",
@@ -30,7 +31,8 @@
       "file": "Assets/Audio/Generated/player.swim.enter__02.wav",
       "guid": "cf596012cead4de4ab28fa5b81c8afee",
       "sha256": "79dd2d02e6d92d8093883b6cc02bed3d13a78f0b2be8450c739be6f7f3db8e5d",
-      "sourceSha256": "3d8b40730a400f263c5ce06579f417414ba665748fab33cfeb16b6d901605f52"
+      "sourceSha256": "3d8b40730a400f263c5ce06579f417414ba665748fab33cfeb16b6d901605f52",
+      "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75"
     },
     {
       "cue": "player.swim.enter",
@@ -43,46 +45,50 @@
       "file": "Assets/Audio/Generated/player.swim.enter__03.wav",
       "guid": "f1620a3c4e9f4b8cad12fd536638915f",
       "sha256": "9484e24fa46f2310000ab1ef9a53641e7fb8338a2e011dc26fc7cd6b3a6c3706",
-      "sourceSha256": "04dd0ae6127c97cbf1b99889311bebaef86617a6a0902ce602462b1a372c8b79"
+      "sourceSha256": "04dd0ae6127c97cbf1b99889311bebaef86617a6a0902ce602462b1a372c8b79",
+      "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75"
     },
     {
       "cue": "player.swim.stroke",
-      "name": "实录游泳划水",
+      "name": "实录连续游泳",
       "variant": 1,
-      "seconds": 0.72,
+      "seconds": 5.5,
       "peakDb": -11.0,
-      "rmsDb": -27.55,
+      "rmsDb": -30.04,
+      "crossfadeSeconds": 0.5,
       "startSeconds": 6.125,
       "file": "Assets/Audio/Generated/player.swim.stroke__01.wav",
       "guid": "15592e05a4fe4a15bbf0a76feaa134aa",
-      "sha256": "eb5de995ce0f415e5303fbb7c16016a9cffbcacf4f2295e5ee27a03ecaa22c57",
-      "sourceSha256": "d1bac7babb396b259efbf085fc3c26ee6db9bc77e230042f59b17a6c1df51b27"
+      "sha256": "e5f6d8b12532696058418350aac1cbb50118f95b2ec0b152c4802818fd591584",
+      "sourceSha256": "aa6a86db19570b4642b9d8cdc745602ac0e37d4a26656a4eea022e4c11947893"
     },
     {
       "cue": "player.swim.stroke",
-      "name": "实录游泳划水",
+      "name": "实录连续游泳",
       "variant": 2,
-      "seconds": 0.72,
-      "peakDb": -11.09,
-      "rmsDb": -26.0,
-      "startSeconds": 8.125,
+      "seconds": 5.5,
+      "peakDb": -11.0,
+      "rmsDb": -28.1,
+      "crossfadeSeconds": 0.5,
+      "startSeconds": 14.125,
       "file": "Assets/Audio/Generated/player.swim.stroke__02.wav",
       "guid": "de8698b8c59f4bbaa2411d97a168bd0a",
-      "sha256": "c42575746485abe09d229e08b0568f76c93e85b4a7c5f76fd3b371688ef3972a",
-      "sourceSha256": "c176274467e58dbec3665d7cfcb8f43f7fdca5b7ff0797bc25edd07843acd5f0"
+      "sha256": "11b73c57af9f8bac14ab818f41640f008a54cfc65daaf35727fb401ec5fee5cd",
+      "sourceSha256": "466877bc7a440027a68ed274628fa823b29df17a813b631fe78565a475ed1cda"
     },
     {
       "cue": "player.swim.stroke",
-      "name": "实录游泳划水",
+      "name": "实录连续游泳",
       "variant": 3,
-      "seconds": 0.72,
+      "seconds": 5.5,
       "peakDb": -11.0,
-      "rmsDb": -27.96,
-      "startSeconds": 10.125,
+      "rmsDb": -29.49,
+      "crossfadeSeconds": 0.5,
+      "startSeconds": 22.125,
       "file": "Assets/Audio/Generated/player.swim.stroke__03.wav",
       "guid": "9edf4a6729c44ef190d56fb651f0918e",
-      "sha256": "3c18c3cf9b2530533ce306c8afefd0b344edac9f99199c88091ec95f8f28bcc2",
-      "sourceSha256": "000af14f78630d0e7bd4644500680fb0c396f8287c13bb25421acb8e9b4443ef"
+      "sha256": "5209b75f33d9b73b16d7be640d9e0ee0beb3f450fcd675a4472282ac39dd861c",
+      "sourceSha256": "5bc3badb057daae93f03ad968a9c819732125437347406182ba9834b9dfbf112"
     },
     {
       "cue": "player.swim.exit",
@@ -95,7 +101,8 @@
       "file": "Assets/Audio/Generated/player.swim.exit__01.wav",
       "guid": "a74c133ee8a7432d87f70b4223e8c1ec",
       "sha256": "bee7bddd87731b35349acb66323de2e0d744aefa143edb0fbf00e526e363e758",
-      "sourceSha256": "c689494d3ce1ec1272740b1bfd1d5e50032b30c5495fd4a547296a5b673caf18"
+      "sourceSha256": "c689494d3ce1ec1272740b1bfd1d5e50032b30c5495fd4a547296a5b673caf18",
+      "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75"
     },
     {
       "cue": "player.swim.exit",
@@ -108,7 +115,8 @@
       "file": "Assets/Audio/Generated/player.swim.exit__02.wav",
       "guid": "760b63987d254cb38fbf1c6986431f64",
       "sha256": "079fed8fa3b8a27bd1684d73dd51e62282972a93708897283e2d9f27492c47f1",
-      "sourceSha256": "a51694dc9a4cbdf0e3e2d5d4fe4234f21d2a158e658c0ecbb3ff1d40b7b1be2e"
+      "sourceSha256": "a51694dc9a4cbdf0e3e2d5d4fe4234f21d2a158e658c0ecbb3ff1d40b7b1be2e",
+      "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75"
     },
     {
       "cue": "player.swim.exit",
@@ -121,7 +129,8 @@
       "file": "Assets/Audio/Generated/player.swim.exit__03.wav",
       "guid": "fdd8e027e11f4bd3986d6e4596267c46",
       "sha256": "e83d47d6c5429bc9bf030d3afbf93d14cc240d6402ea89789c6023d4fb6b9398",
-      "sourceSha256": "29e70059501ab4755cfbc76e5fd210313c340c4ee268c920d88b77cd6c0aed54"
+      "sourceSha256": "29e70059501ab4755cfbc76e5fd210313c340c4ee268c920d88b77cd6c0aed54",
+      "masterSha256": "76ce753ab3963387a64e5e6cc9d4770b9fa9d7462010d8299c1a786c65359c75"
     }
   ]
 }

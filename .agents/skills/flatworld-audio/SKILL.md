@@ -18,13 +18,13 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - 玩法音效：`SoundDesign/Gameplay_SFX_LMMS/` 保存攻击、材质命中和交互三组工程；30 个现有 Cue 绑定 88 个单声道变体，`build_sfx.py build/finalize` 负责编排与母带整理。旧 C# 默认音效生成器已删除，避免覆盖 LMMS 成品。
 - 事务反馈：`SoundDesign/Gameplay_Feedback_LMMS/` 的 6 类 Cue/12 个 LMMS MCP 变体覆盖建造成功/失败、合成、熔炼、火种和点炉；`GameplayFeedbackAudioBridge` 只订阅真实提交与主动拒绝事件，工程通过 `build_feedback.py build → lmms_mcp_render.py --render → finalize/verify` 重做。
 - 脚步与钓鱼：`SoundDesign/Player_Fishing_SFX_LMMS/` 包含 6 类地表脚步和 3 类钓鱼声、共 24 个 LMMS 变体；`Mod_Mover.FootstepAudio` 以本地角色实际距离计步，`Mod_FishingRod.SoundRequested` 经表现桥接只在成功抛竿、咬钩、首次收线时发声。共用的 `lmms_mcp_render.py` 支持 `--project/--output` 指向不同 LMMS 工程。
-- 游泳：`SoundDesign/Swimming_SFX_LMMS/` 用真实游泳/近录水花，经 LMMS MCP Sample Track 编排渲染入水、划水、出水共 3 类/9 个变体；来源许可和裁切在 `sources.json`，保留 `Sources/` 采样，先 `prepare_sources.py` 再 build/render/finalize，拒绝旧母带。`Mod_Mover.SwimmingAudio` 按本机角色脚下真实 `WaterContact` 液体与主动位移触发，水格间不重复入出水，浅水沿用涉水脚步。
+- 游泳：`SoundDesign/Swimming_SFX_LMMS/` 用真实游泳/近录水花，经 LMMS MCP Sample Track 编排渲染入水、划水、出水共 3 类/9 个变体；来源许可和裁切在 `sources.json`，保留 `Sources/` 采样，先 `prepare_sources.py` 再 build/render/finalize，拒绝旧母带。`Mod_Mover.SwimmingAudio` 按本机角色脚下真实 `WaterContact` 液体与主动位移控制；`player.swim.stroke` 为三变体 5.5 秒循环（保留稳定 ID），0.25 秒淡入、0.35 秒淡出，短暂停走保留句柄和播放进度；入出水为单次短音，水格间不重复，浅水沿用涉水脚步。素材用 6 秒实录经 LMMS 渲染、0.5 秒首尾交叠，`finalize --only-stroke` 可保留入出水成品。
 - 库存取放：`SoundDesign/Inventory_Items_LMMS/install_runtime_cues.py` 将原有 72 个 LMMS 候选音效接入 `ui.inventory.*` UI Cue；`SoundDesign/Inventory_UI_Feedback_LMMS/` 的新工程经 LMMS MCP 生成交换、装备、卸装共 6 个变体。事件入口为 `InventoryAudioFeedbackEvents/EquipmentAudioFeedbackEvents`，由 `InventoryInteractionAudio` 选择材质、转移重量/体积并过滤非本机音效；重建 Catalog 会保留不在 Generated 内的外部 Cue。
 - 候选素材/工程：`Assets/Audio/UI/{LMMS_Clicks,InventoryItems_LMMS}/`、`SoundDesign/{UI_Click_LMMS,Inventory_Items_LMMS}/`。
 
 ## 职责与契约
 
-- 业务通过稳定 Cue ID 发声；`AudioService` 持有跨场景生命周期、声源池、并发优先级、淡入淡出及音量。循环 Cue 的句柄由调用方停止/回收；生成音效 ID 的 `.loop` 后缀表示循环，`player.*` 属于世界 SFX。
+- 业务通过稳定 Cue ID 发声；`AudioService` 持有跨场景生命周期、声源池、并发优先级、淡入淡出及音量。循环 Cue 的句柄由调用方停止/回收；生成音效 ID 的 `.loop` 后缀表示循环，历史 `player.swim.stroke` 由 Cue 显式标记循环，`player.*` 属于世界 SFX。
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
 - 正式 GameRes 启动在开放主菜单前等待 AudioService.PreloadAsync，以 Resources.LoadAsync 预热 Config/Catalog/Cue/Clip 强引用图，再创建服务、目录索引与声源池；重复预热复用实例，不在首个点击中同步加载整库。异步请求仍有主线程接入成本，同步入口仅保留给绕过正式启动流程的调用。

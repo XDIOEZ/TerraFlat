@@ -23,7 +23,7 @@ public static partial class GameplayTestSystemProbe
             if (value is not JObject step)
                 throw new ArgumentException("游泳音效采样步骤必须是对象。");
 
-            // 连续驱动正式状态机并只返回原始结果，入出水和划水规则由 Lua 断言。
+            // 连续驱动正式状态机并返回原始结果，入出水和循环包络由 Lua 断言。
             string cue = null;
             if (Flag(step, "reset", false))
                 state.Reset();
@@ -40,8 +40,8 @@ public static partial class GameplayTestSystemProbe
                 ["cue"] = cue ?? string.Empty,
                 ["hasBaseline"] = state.HasBaseline,
                 ["inWater"] = state.InWater,
-                ["strokeDistance"] = state.StrokeDistance,
-                ["strokeElapsed"] = state.StrokeElapsed
+                ["shouldPlayLoop"] = state.ShouldPlayLoop,
+                ["loopVolume"] = state.LoopVolume
             });
         }
         return new JObject { ["samples"] = samples };

@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <!DOCTYPE lmms-project>
-<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.0" type="song">
+<lmms-project version="1.0" creator="LMMS MCP Server" creatorversion="1.2.2" type="song">
   <head timesig_numerator="4" timesig_denominator="4" bpm="120" mastervol="75" masterpitch="0" />
   <song>
-    <trackcontainer type="song" visible="1" width="600" height="300" x="5" y="5" maximized="0" minimized="0">
+    <trackcontainer type="song">
       <track muted="0" type="2" name="实录入水水花 / 1" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
@@ -22,41 +22,41 @@
         </sampletrack>
         <sampleclip pos="396" len="101" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/enter_03.wav" muted="0" off="0" />
       </track>
-      <track muted="0" type="2" name="实录游泳划水 / 1" solo="0">
+      <track muted="0" type="2" name="实录连续游泳 / 1" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
-        <sampleclip pos="588" len="69" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/stroke_01.wav" muted="0" off="0" />
+        <sampleclip pos="588" len="576" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/stroke_01.wav" muted="0" off="0" />
       </track>
-      <track muted="0" type="2" name="实录游泳划水 / 2" solo="0">
+      <track muted="0" type="2" name="实录连续游泳 / 2" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
-        <sampleclip pos="780" len="69" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/stroke_02.wav" muted="0" off="0" />
+        <sampleclip pos="1356" len="576" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/stroke_02.wav" muted="0" off="0" />
       </track>
-      <track muted="0" type="2" name="实录游泳划水 / 3" solo="0">
+      <track muted="0" type="2" name="实录连续游泳 / 3" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
-        <sampleclip pos="972" len="69" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/stroke_03.wav" muted="0" off="0" />
+        <sampleclip pos="2124" len="576" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/stroke_03.wav" muted="0" off="0" />
       </track>
       <track muted="0" type="2" name="实录出水滴水 / 1" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
-        <sampleclip pos="1164" len="96" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/exit_01.wav" muted="0" off="0" />
+        <sampleclip pos="2892" len="96" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/exit_01.wav" muted="0" off="0" />
       </track>
       <track muted="0" type="2" name="实录出水滴水 / 2" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
-        <sampleclip pos="1356" len="96" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/exit_02.wav" muted="0" off="0" />
+        <sampleclip pos="3084" len="96" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/exit_02.wav" muted="0" off="0" />
       </track>
       <track muted="0" type="2" name="实录出水滴水 / 3" solo="0">
         <sampletrack pan="0" vol="80">
           <fxchain numofeffects="0" enabled="0" />
         </sampletrack>
-        <sampleclip pos="1548" len="96" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/exit_03.wav" muted="0" off="0" />
+        <sampleclip pos="3276" len="96" src="D:/_Unity/_UnityProject/FlatWorld/SoundDesign/Swimming_SFX_LMMS/Sources/exit_03.wav" muted="0" off="0" />
       </track>
     </trackcontainer>
     <mixer visible="1" width="561" height="332" x="5" y="310" maximized="0" minimized="0">
@@ -68,7 +68,7 @@
     <pianoroll visible="0" width="640" height="480" x="1" y="1" maximized="0" minimized="0" />
     <automationeditor visible="0" width="640" height="400" x="56" y="255" maximized="0" minimized="0" />
     <projectnotes visible="0" width="640" height="400" x="1" y="1" maximized="0" minimized="0" />
-    <timeline lp0pos="0" lp1pos="192" lpstate="0" />
+    <timeline lp0pos="0" lp1pos="3456" lpstate="0" />
     <controllers />
   </song>
 </lmms-project>

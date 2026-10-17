@@ -19,7 +19,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: de8698b8c59f4bbaa2411d97a168bd0a, type: 3}
   - {fileID: 8300000, guid: 9edf4a6729c44ef190d56fb651f0918e, type: 3}
   selection: 0
-  loop: 0
+  loop: 1
   volume:
     Min: 0.85
     Max: 0.98
@@ -30,7 +30,7 @@ MonoBehaviour:
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.12
+  cooldown: 0
   maxInstances: 2
   concurrencyPolicy: 1
   rolloffMode: 1

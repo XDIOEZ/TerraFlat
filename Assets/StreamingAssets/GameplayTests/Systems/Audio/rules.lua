@@ -42,96 +42,89 @@ for _, row in ipairs({
     end, "脚步材质：" .. (row.expected == "" and "深水静音" or row.expected))
 end
 
--- 连续采样正式状态机，覆盖静默建基线、真实进出水和划水节奏，不创建世界或播放声音。
+-- 连续驱动正式状态机，断言循环目标与音量包络，不播放声音。
 local function swimming_sequence(label, steps)
     test.system("audio", "swimming_sequence", { steps = steps }, function(data)
         assert(#data.samples == #steps, "游泳音效没有返回完整连续采样")
         for i, sample in ipairs(data.samples) do
             local step = steps[i]
-            assert(sample.cue == step.expected, label .. "，第 " .. i .. " 步选音错误：" .. tostring(sample.cue))
+            assert(sample.cue == (step.expected or ""), label .. "，第 " .. i .. " 步入出水选音错误")
             assert(sample.hasBaseline == (not step.reset) and sample.inWater == step.wet,
                 label .. "，第 " .. i .. " 步水态或基线错误")
-            assert(sample.strokeDistance >= 0 and sample.strokeElapsed >= 0, "划水距离或计时出现负数")
-            if step.cleared then
-                assert(sample.strokeDistance == 0 and sample.strokeElapsed == 0,
-                    label .. "，第 " .. i .. " 步没有清除旧划水累计")
-            end
-            if step.maxDistance then
-                assert(sample.strokeDistance <= step.maxDistance and sample.strokeElapsed == 0,
-                    "卡帧后的划水余量或计时没有限制")
-            end
+            assert(sample.shouldPlayLoop == (step.loop == true), label .. "，第 " .. i .. " 步循环目标错误")
+            assert(math.abs(sample.loopVolume - step.volume) < 0.00001,
+                label .. "，第 " .. i .. " 步淡入淡出音量错误：" .. tostring(sample.loopVolume))
         end
     end, "游泳音效：" .. label)
 end
 
-swimming_sequence("入水边界、浅水静默和同水体连续移动", {
-    { depth = 0, expected = "", wet = false, cleared = true },
-    { depth = 0.03, moving = true, distance = 0.2, expected = "", wet = false, cleared = true },
-    { depth = 0.0301, moving = true, distance = 0.2, expected = "player.swim.enter", wet = true, cleared = true },
-    { depth = 0.3, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0.3001, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "player.swim.stroke", wet = true },
-    { depth = 0.0301, moving = true, distance = 0.2, expected = "", wet = true, cleared = true },
-    { depth = 0.03, moving = true, distance = 0.2, expected = "player.swim.exit", wet = false, cleared = true }
+swimming_sequence("真实入出水只响一次，深浅水格切换不重复入水", {
+    { depth = 0, wet = false, volume = 0 },
+    { depth = 0.03, moving = true, distance = 0.2, wet = false, volume = 0 },
+    { depth = 0.0301, moving = true, distance = 0.2, expected = "player.swim.enter", wet = true, volume = 0 },
+    { depth = 0.3, moving = true, distance = 1, wet = true, volume = 0 },
+    { depth = 0.3001, moving = true, distance = 0.001, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
+    { depth = 0.8, moving = true, distance = 3, deltaTime = 1, wet = true, loop = true, volume = 1 },
+    { depth = 0.03, moving = true, distance = 0.2, deltaTime = 0.175, expected = "player.swim.exit", wet = false, volume = 0.5 },
+    { depth = 0, deltaTime = 0.175, wet = false, volume = 0 }
 })
 
-swimming_sequence("深水加载静默且划水必须同时达到距离与时间", {
-    { depth = 0.8, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0.8, moving = true, distance = 1.5, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0.01, deltaTime = 0.25, expected = "player.swim.stroke", wet = true },
-    { depth = 0.8, expected = "", wet = true, cleared = true },
-    { depth = 0.8, moving = true, distance = 0.1, deltaTime = 1, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 1.31, deltaTime = 0.1, expected = "player.swim.stroke", wet = true }
+swimming_sequence("深水加载静默，低速游动无需走满一格，持续游动不重触发短音", {
+    { depth = 0.8, moving = true, distance = 1, wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.0001, deltaTime = 0.1, wet = true, loop = true, volume = 0.4 },
+    { depth = 0.8, moving = true, distance = 0.0001, deltaTime = 0.15, wet = true, loop = true, volume = 1 },
+    { depth = 0.8, moving = true, distance = 5, deltaTime = 5, wet = true, loop = true, volume = 1 },
+    { depth = 0.9, moving = true, distance = 0.01, wet = true, loop = true, volume = 1 }
 })
 
-swimming_sequence("入水当帧不叠划水，之后重新累计", {
-    { depth = 0, expected = "", wet = false },
-    { depth = 0.8, moving = true, distance = 1.5, deltaTime = 1, expected = "player.swim.enter", wet = true, cleared = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "player.swim.stroke", wet = true }
+swimming_sequence("入水后淡入，停下平滑淡出，短暂停走从当前音量恢复", {
+    { depth = 0, wet = false, volume = 0 },
+    { depth = 0.8, moving = true, distance = 1, expected = "player.swim.enter", wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
+    { depth = 0.8, deltaTime = 0.175, wet = true, volume = 0.5 },
+    { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.05, wet = true, loop = true, volume = 0.7 },
+    { depth = 0.8, deltaTime = 0.35, wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.1, wet = true, loop = true, volume = 0.4 }
 })
 
-swimming_sequence("停步、零位移和被动水流不划水也不补旧累计", {
-    { depth = 0.8, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, distance = 1.5, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0, distance = 0.4, expected = "", wet = false, cleared = true },
-    { depth = 0.8, distance = 0.4, expected = "", wet = true, cleared = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "player.swim.stroke", wet = true }
+swimming_sequence("零位移、被动水流和浅水不维持游泳循环", {
+    { depth = 0.8, wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
+    { depth = 0.8, moving = true, distance = 0, deltaTime = 0.35, wet = true, volume = 0 },
+    { depth = 0.8, distance = 1.5, deltaTime = 1, wet = true, volume = 0 },
+    { depth = 0.3, moving = true, distance = 2, wet = true, volume = 0 }
 })
 
-swimming_sequence("完全下沉停止划水，重新浮起后重新累计", {
-    { depth = 0.8, immersion = 0.5, expected = "", wet = true },
-    { depth = 0.8, immersion = 0.9499, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, immersion = 0.95, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0.8, immersion = 1, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0.8, immersion = 0.9499, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { depth = 0.8, immersion = 0.9499, moving = true, distance = 0.7, deltaTime = 0.25, expected = "player.swim.stroke", wet = true }
+swimming_sequence("完全下沉淡出，重新浮起淡入", {
+    { depth = 0.8, wet = true, volume = 0 },
+    { depth = 0.8, immersion = 0.9499, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
+    { depth = 0.8, immersion = 0.95, moving = true, distance = 0.1, deltaTime = 0.175, wet = true, volume = 0.5 },
+    { depth = 0.8, immersion = 1, moving = true, distance = 0.1, deltaTime = 0.175, wet = true, volume = 0 },
+    { depth = 0.8, immersion = 0.9, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 }
 })
 
 swimming_sequence("非 WaterContact 液体不冒充水体", {
-    { depth = 0, waterContact = false, expected = "", wet = false },
-    { depth = 0.8, waterContact = false, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = false, cleared = true },
-    { depth = 1, waterContact = false, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = false, cleared = true }
+    { depth = 0, wet = false, volume = 0 },
+    { depth = 0.8, waterContact = false, moving = true, distance = 2, deltaTime = 1, wet = false, volume = 0 },
+    { depth = 0.8, waterContact = false, wet = false, volume = 0 }
 })
 
-swimming_sequence("重置后不把迁移或重建补播成入出水", {
-    { depth = 0.8, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 0.7, deltaTime = 0.25, expected = "", wet = true },
-    { reset = true, expected = "", wet = false, cleared = true },
-    { depth = 0.8, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = true, cleared = true },
-    { depth = 0.8, moving = true, distance = 1.4, deltaTime = 0.5, expected = "player.swim.stroke", wet = true },
-    { reset = true, expected = "", wet = false, cleared = true },
-    { depth = 0, moving = true, distance = 1.5, deltaTime = 1, expected = "", wet = false, cleared = true }
+swimming_sequence("传送或重建清除循环音量并静默建立新基线", {
+    { depth = 0.8, wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
+    { reset = true, wet = false, volume = 0 },
+    { depth = 0.8, moving = true, distance = 5, wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
+    { reset = true, wet = false, volume = 0 },
+    { depth = 0, wet = false, volume = 0 }
 })
 
-swimming_sequence("单次卡帧最多一划且不连续补播", {
-    { depth = 0.8, expected = "", wet = true },
-    { depth = 0.8, moving = true, distance = 5, deltaTime = 5, expected = "player.swim.stroke", wet = true, maxDistance = 1.4 },
-    { depth = 0.8, moving = true, distance = 0.01, deltaTime = 0.01, expected = "", wet = true }
+swimming_sequence("负时间不倒退包络，卡帧音量限制在零至一", {
+    { depth = 0.8, wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 0.1, deltaTime = -1, wet = true, loop = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 5, deltaTime = 5, wet = true, loop = true, volume = 1 },
+    { depth = 0.8, deltaTime = -1, wet = true, volume = 1 },
+    { depth = 0.8, deltaTime = 5, wet = true, volume = 0 }
 })
 
 -- 按本次转移数量独立计算千克和升，素材类别允许用稳定 AudioMaterial Tag 显式覆写。
