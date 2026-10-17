@@ -21,8 +21,8 @@ namespace FlatWorld.Spaceflight
         public static void SetElevated(GameObject root, bool elevated, string category, int orderOffset = 0)
         {
             if (root == null) return;
-            ShipSurfacePresentation presenter = root.GetComponent<ShipSurfacePresentation>();
-            if (presenter == null && !elevated) return;
+            // 地表玩家通常没有升空表现组件，保留缺失即返回且避免编辑器逐帧分配。
+            if (!root.TryGetComponent(out ShipSurfacePresentation presenter) && !elevated) return;
             if (presenter == null) presenter = root.AddComponent<ShipSurfacePresentation>();
             presenter.ApplySorting(elevated, category, orderOffset);
         }

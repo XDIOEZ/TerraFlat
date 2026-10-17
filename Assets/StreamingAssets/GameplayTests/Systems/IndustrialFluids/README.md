@@ -6,3 +6,9 @@
 - 不修改 `FluidCatalog.Default`。自有物性定义作为明确领域输入，算法来自生产 `FluidInventory`/`FluidThermodynamics`。
 - 未覆盖真实管道有向供给、共享吞吐、组合罐拆分、测压器、电解/压缩/发动机设备、超压爆炸和场景操作；这些仍保留在现有 `fluid-suite.json` 集成专项。
 - 本快速组没有截图，不能把通过写成全部工业链路通过。
+
+2026-10-17 增加便携气罐缓存回归，已通过外部 C# 编译；当前 Play Mode 保持运行，尚未执行规则或现场测试：
+
+- `portable_tank_cache` 通过独立空罐读取正式 `FluidTankStorage`，检查同一真实内容复用包装、对外配置副本隔离、Contents/二进制载荷/模块对象换代，以及无变化不重新序列化、超压计时与破裂状态正确保存。
+- `portable_tank_payload` 使用独立物性目录和正式流体库存，经 `TryAdd`、`Write`、`TryTakeExact`、`Flush` 与正式二进制解码，检查气液数量、温度、压力和守恒，不修改 `FluidCatalog.Default`。
+- 此处没有加载真实物品目录，不覆盖含料气罐热路径的目录更换/配置重载、库存 Tick 的 UI 通知次数或真实超压损伤；这些边界不能由本组替代验收。

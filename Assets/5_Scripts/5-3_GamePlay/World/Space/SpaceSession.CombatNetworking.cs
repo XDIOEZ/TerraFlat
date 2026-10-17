@@ -143,8 +143,8 @@ namespace FlatWorld.Spaceflight
             canonical = default; presentation = default;
             if (source == null || Current == null) return false;
             if (!string.IsNullOrEmpty(source.GetComponentInChildren<Mod_Projectile>(true)?.NetworkSurfaceWorldKey)) return false;
-            SpaceCombatFrame projectile = source.GetComponent<SpaceCombatFrame>();
-            if (projectile != null && projectile.Active)
+            // 普通武器没有投射坐标组件，失败查询不应在编辑器中逐帧产生分配。
+            if (source.TryGetComponent(out SpaceCombatFrame projectile) && projectile.Active)
             { canonical = projectile.CanonicalOrigin; presentation = projectile.PresentationOrigin; return true; }
             Player player = CombatPlayer(source);
             if (player == null || !Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) || !observer.InSpace) return false;

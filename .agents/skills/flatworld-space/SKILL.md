@@ -35,6 +35,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - ViewSector/ViewOrigin 只影响显示；LateUpdate 先更新玩家投影，换区保持同一显示平面，离原点4096米才整体平移并通知镜头。创建自由物用 UnprojectSectorPosition，投影视图传 SectorPosition；地表坐标/镜像经 WorldLocalPresentation，不交太空坐标给 Chunk 或 NormalizePosition。
 - 太空船的可见距离围绕本地乘员权威位置计算，不围绕浮动原点；支撑乘员姿态和驾驶镜头按船的当前世界归属更新，不能因美术裁剪解除驾驶或回退到旧 FreeMotion 坐标。
 - 飞船可见性、乘员投影和 `GetPassenger` 热查询共用无捕获分配的 `FindPassenger`；只读路径不创建乘员，正式 `GetPassenger` 仍可补建。
+- 武器坐标与乘员升空表现的可选组件热查询用 `TryGetComponent`，缺失仍按原规则回退；不缓存缺失，保留运行时添加组件的生效时机。
 - SpaceSessionState 版本2保存 Sectors 与 SimulationSeconds，Universe 只是主星区运行别名；所有目录由同一个固定时钟推进。BodyId/PlanetId使用全局实例身份，TemplateBodyId用于所属区模板查询；主地球PlanetId沿用当前存档主世界名，其余星体不能复用本地earth/moon身份。
 - 星体按配置的半长轴、偏心率、近日点方向和恒星周期做 Kepler 椭圆公转，默认天文时钟加速720倍；父星先更新，正常固定步复用前后位置与速度，自转读权威时钟。会话载入由 SpaceCatalog.RebindUniverse 应用当前目录，保留身份、种子、初始相位与时钟，不迁移船体坐标。
 - SpaceGravity 按半径和表面重力推导质量，W半径按质量立方根缩放，边界释放的基准中心速度按质量平方根缩放，参考速度默认8米/秒（原80的10%）；W 内只选质量最大的一颗，星体自身仍按目录公转。游戏代码只给原生刚体施加中心引力、相对大气阻力和公转随动；AtmosphereThickness 为玩法厚度，0 无阻尼，正值加速衰减且保持欠阻尼，近中心低速时停止相对漂移。离开 W 取消引力与阻力，不随自转、不依赖父子节点。参数在 space-gameplay.json、solar-system.json，随会话重建缓存；解析运动函数只作离线数学参考，不参与运行时。

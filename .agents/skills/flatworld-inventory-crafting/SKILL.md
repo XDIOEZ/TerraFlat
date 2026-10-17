@@ -51,6 +51,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 石臼提供 grind，材料 work 决定有效手势数；MortarState 保存配方与进度，切换清零，输出失败保留已完成进度。固定库存默认 6 格，手持/落地/未物化热加工保持同一库存；槽位视觉不拥有库存。
 - 手钻/手动设备复用 RecipeProcessor 与 AdvanceManually、CraftingService；SharedModuleIds 转移库存和进度。固定转换不应用难度增产。`CraftingOutputRules` 共用预检/提交，防腐寿命来自实际扣料计划的最差余量；耐久品质保存 CraftedDurabilityMultiplier，手钻读取实际矿锭 DrillDurability Tag。
 - Save 只保存，Unload 才解绑制作监听。库存冷 Tick 由 ModuleDataRuleRegistry/InventoryModuleDataScheduler 按规则和宿主代际推进；结构变化重建，数值变化不重建，跨库存共享状态扣除重叠时间而不补暂停。
+- 便携气罐按不可变模块声明缓存配置解析，对外配置仍是独立副本；流体包装随真实 Contents、二进制载荷或目录换代重建，稳定 Tick 不重复序列化或刷新槽位。保存比较 StateRevision、超压时钟和破裂状态，界面比较实际内容与生命变化。
 
 ## 装备、食物与容器
 
