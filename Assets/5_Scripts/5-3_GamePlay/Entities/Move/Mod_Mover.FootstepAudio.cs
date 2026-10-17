@@ -55,14 +55,15 @@ public partial class Mod_Mover
             return;
 
         footstepDistance -= stride;
-        string cueId = SampleFootstepCue(currentPosition);
+        string cueId = SampleFootstepCue(currentPosition, out float depthVolume);
         if (cueId != null)
             AudioService.Instance.PlayAttached(
-                cueId, item.transform, (IsRunning ? 0.55f : 0.42f) * FootstepVolumeMultiplier);
+                cueId, item.transform, (IsRunning ? 0.55f : 0.42f) * FootstepVolumeMultiplier * depthVolume);
     }
 
-    private static string SampleFootstepCue(Vector2 position)
+    private static string SampleFootstepCue(Vector2 position, out float depthVolume)
     {
+        depthVolume = 1f;
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
         if (chunks == null || !chunks.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample))
             return null;
@@ -80,8 +81,14 @@ public partial class Mod_Mover
         }
         bool onSupport = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0;
         byte grass = sample.Terrain.GetGrass(sample.LocalCell.x, sample.LocalCell.y);
-        return ResolveFootstepCue(sample.Cell.BiomeId, waterDepth, snowDepth, onSupport, grass);
+        string cueId = ResolveFootstepCue(sample.Cell.BiomeId, waterDepth, snowDepth, onSupport, grass);
+        depthVolume = ResolveFootstepDepthVolume(cueId, waterDepth);
+        return cueId;
     }
+
+    // 只有涉水脚步跟随水量，草地等其他脚步保持原音量。
+    internal static float ResolveFootstepDepthVolume(string cueId, float waterDepth) =>
+        cueId == AudioEventIds.FootstepWater ? ResolveWaterAudioVolume(waterDepth) : 1f;
 
     // 纯地表选择规则与声源播放分开，可由 Lua 规则直接校验边界。
     internal static string ResolveFootstepCue(

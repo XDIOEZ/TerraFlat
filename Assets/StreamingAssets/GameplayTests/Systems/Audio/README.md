@@ -6,7 +6,7 @@
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、footstep_surface、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 
@@ -18,7 +18,9 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `audio/voice_l
 
 第三轮把原有 72 个 LMMS 物品取放候选接入正式 UI 总线，再由 LMMS MCP 制作交换、穿戴和卸下装备 3 类/6 变体。快速规则 `audio/inventory_cue` 验证材质与明确 AudioMaterial 标签、按实际份数计算重量/体积的边界及无效参数；PlayMode 音频夹具检查全部 75 个 Cue 的导入、音轨与格式。不同输入方式在真实库存事务中的单次发声和失败静音需玩家在可运行场景中验收。
 
-2026-10-17 游泳改为连续水声：入水、连续游泳、出水三类 LMMS MCP 音效仍各 3 个变体；游泳素材为 5.5 秒首尾交叠循环。快速规则 `audio/swimming_sequence` 直接驱动正式 `Mod_Mover.SwimmingAudioState`，8 组连续步骤覆盖初始加载静默、0.03 入水与 0.3 深浅边界、同水体不重复入出、低速移动立即淡入、持续游动不重触发短音、0.25 秒淡入/0.35 秒淡出、短暂停走从当前音量恢复、停步/零位移/被动水流、0.95 完全浸没、非 WaterContact 液体、Reset 清包络和静默重建，以及负时间和卡帧音量钳制。浅水继续使用已有涉水脚步。
+2026-10-17 游泳改为连续水声：入水、连续游泳、出水三类 LMMS MCP 音效仍各 3 个变体；游泳素材为 5.5 秒首尾交叠循环。快速规则 `audio/swimming_sequence` 直接驱动正式 `Mod_Mover.SwimmingAudioState`，连续步骤覆盖初始加载静默、0.03 入水与 0.3 深浅边界、同水体不重复入出、低速移动立即淡入、持续游动不重触发短音、0.25 秒淡入/0.35 秒淡出、短暂停走从当前音量恢复、停步/零位移/被动水流、0.95 完全浸没、非 WaterContact 液体、Reset 清包络和静默重建，以及负时间和卡帧音量钳制。浅水继续使用已有涉水脚步。
+
+水声音量统一读取脚下真实 `LiquidDepth`（0～1 对应 0～10 份水），不读取角色浮力修正后的浸没值。`audio/water_depth_volume` 采样正式音量规则：1 份和 10 份为原音量的 10%，5.5 份为 100%，其间按倒抛物线连续变化；少于 1 份保留 10%，无水为零。入水、出水、游泳循环与浅水脚步共用，其他材质脚步不变。游泳循环水量倍率以 0.2 秒满幅变化速度平滑，离水保留当前倍率完成尾声；出水短音使用离开前最后一个真实水格的曲线倍率。Lua 补充十档、峰值、越界、非水脚步及跨帧音量/离水取值断言，本轮尚未编译或运行。
 
 PlayMode `audio/voice_lifecycle` 检查三类游泳 Cue 的 ID、各 3 个变体、48kHz 单声道、完整世界 SFX 空间混音和有效距离；游泳必须为零冷却循环且素材不少于 5 秒，入出水必须为有限流的单次短音。状态规则不代表真实水格采样、载具/太空/死亡/传送接线与 AudioSource 跨帧复用已现场验证，也不证明主观听感；本轮按用户要求静态修改，不打断现有 PlayMode、不编译或运行验收。
 

@@ -13,6 +13,7 @@ public partial class Mod_Mover
     private const float SwimmingAudioFadeInSeconds = 0.25f;
     private const float SwimmingAudioFadeOutSeconds = 0.35f;
     private const float SwimmingTransitionFadeSeconds = 0.06f;
+    private const float WaterAudioDepthChangeSeconds = 0.2f;
 
     private bool swimmingAudioEnabled;
     private Vector2 swimmingAudioPreviousPosition;
@@ -24,6 +25,16 @@ public partial class Mod_Mover
     private AudioHandle swimmingStrokeHandle = AudioHandle.Invalid;
     private AudioHandle swimmingTransitionHandle = AudioHandle.Invalid;
 
+    // 一至十份水共用低高低曲线，两端保留一成音量，五点五份达到原音量。
+    internal static float ResolveWaterAudioVolume(float liquidDepth)
+    {
+        if (!float.IsFinite(liquidDepth) || liquidDepth <= 0f)
+            return 0f;
+
+        float depth = Mathf.InverseLerp(0.1f, 1f, liquidDepth);
+        return Mathf.Lerp(0.1f, 1f, 4f * depth * (1f - depth));
+    }
+
     /// <summary>状态只属于本角色；游动控制循环目标音量，不再按格子重复触发。</summary>
     internal struct SwimmingAudioState
     {
@@ -31,25 +42,40 @@ public partial class Mod_Mover
         public bool InWater { get; private set; }
         public bool ShouldPlayLoop { get; private set; }
         public float LoopVolume { get; private set; }
+        public float WaterVolume { get; private set; }
+        public float TransitionVolume { get; private set; }
+        private float previousWaterVolume;
 
         public string Advance(float liquidDepth, float effectiveImmersion, bool waterContact,
             bool activelyMoving, float travelledDistance, float deltaTime)
         {
             bool inWater = waterContact && float.IsFinite(liquidDepth) && liquidDepth > SwimmingContactDepth;
             bool moving = activelyMoving && float.IsFinite(travelledDistance) && travelledDistance > 0f;
+            float depthVolume = inWater ? ResolveWaterAudioVolume(liquidDepth) : 0f;
+            TransitionVolume = 0f;
             if (!HasBaseline)
             {
                 HasBaseline = true;
                 InWater = inWater;
+                WaterVolume = depthVolume;
+                previousWaterVolume = depthVolume;
                 return null;
             }
 
             bool changedWater = InWater != inWater;
+            if (changedWater && moving)
+                TransitionVolume = inWater ? depthVolume : previousWaterVolume;
             InWater = inWater;
             ShouldPlayLoop = !changedWater && inWater &&
                              liquidDepth > WaterEnvironmentRules.SwimmingDepthThreshold &&
                              float.IsFinite(effectiveImmersion) && effectiveImmersion < SwimmingSubmergedImmersion && moving;
             float elapsed = float.IsFinite(deltaTime) ? Mathf.Max(0f, deltaTime) : 0f;
+            if (inWater)
+            {
+                previousWaterVolume = depthVolume;
+                WaterVolume = Mathf.MoveTowards(WaterVolume, depthVolume, elapsed / WaterAudioDepthChangeSeconds);
+            }
+            // 离水保留最后的水量倍率，让循环尾声继续淡出，出水声也取离开前的水格。
             float fadeSeconds = ShouldPlayLoop ? SwimmingAudioFadeInSeconds : SwimmingAudioFadeOutSeconds;
             // 淡出期间保留同一条循环，快速停走时从当前音量续上，避免接缝和重叠水花。
             LoopVolume = Mathf.MoveTowards(LoopVolume, ShouldPlayLoop ? 1f : 0f, elapsed / fadeSeconds);
@@ -118,7 +144,7 @@ public partial class Mod_Mover
 
         if (swimmingAudioState.LoopVolume > 0f)
         {
-            float volume = 0.5f * swimmingAudioState.LoopVolume;
+            float volume = 0.5f * swimmingAudioState.LoopVolume * swimmingAudioState.WaterVolume;
             if (!swimmingStrokeHandle.IsPlaying)
                 swimmingStrokeHandle = AudioService.Instance.PlayAttached(AudioEventIds.SwimStroke, item.transform, volume);
             else
@@ -131,7 +157,8 @@ public partial class Mod_Mover
             return;
 
         swimmingTransitionHandle.Stop(SwimmingTransitionFadeSeconds);
-        swimmingTransitionHandle = AudioService.Instance.PlayAttached(cueId, item.transform, 0.55f);
+        swimmingTransitionHandle = AudioService.Instance.PlayAttached(
+            cueId, item.transform, 0.55f * swimmingAudioState.TransitionVolume);
     }
 
     /// <summary>传送、换世界与承载切换静默清基线，不补播旧位置的入水或出水。</summary>

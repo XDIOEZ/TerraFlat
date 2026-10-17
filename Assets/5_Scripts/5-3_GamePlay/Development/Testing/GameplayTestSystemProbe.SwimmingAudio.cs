@@ -9,6 +9,18 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterSwimmingAudioOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("audio/swimming_sequence", ServiceSwimmingSequence);
+        operations.Add("audio/water_depth_volume", ServiceWaterDepthVolume);
+    }
+
+    private static JObject ServiceWaterDepthVolume(JObject args)
+    {
+        float depth = (float)Number(args, "depth", 0);
+        return new JObject
+        {
+            ["volume"] = Mod_Mover.ResolveWaterAudioVolume(depth),
+            ["wetFootstepVolume"] = Mod_Mover.ResolveFootstepDepthVolume(FlatWorld.Audio.AudioEventIds.FootstepWater, depth),
+            ["dryFootstepVolume"] = Mod_Mover.ResolveFootstepDepthVolume(FlatWorld.Audio.AudioEventIds.FootstepGrass, depth)
+        };
     }
 
     private static JObject ServiceSwimmingSequence(JObject args)
@@ -41,7 +53,9 @@ public static partial class GameplayTestSystemProbe
                 ["hasBaseline"] = state.HasBaseline,
                 ["inWater"] = state.InWater,
                 ["shouldPlayLoop"] = state.ShouldPlayLoop,
-                ["loopVolume"] = state.LoopVolume
+                ["loopVolume"] = state.LoopVolume,
+                ["waterVolume"] = state.WaterVolume,
+                ["transitionVolume"] = state.TransitionVolume
             });
         }
         return new JObject { ["samples"] = samples };

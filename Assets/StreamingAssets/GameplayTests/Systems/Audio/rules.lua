@@ -42,6 +42,24 @@ for _, row in ipairs({
     end, "脚步材质：" .. (row.expected == "" and "深水静音" or row.expected))
 end
 
+-- 十份水共用倒抛物线，零水量静音，其他材质脚步不受影响。
+for _, row in ipairs({
+    { depth = -1, expected = 0 }, { depth = 0, expected = 0 },
+    { depth = 0.01, expected = 0.1 },
+    { depth = 0.1, expected = 0.1 }, { depth = 0.2, expected = 0.45555556 },
+    { depth = 0.3, expected = 0.72222222 }, { depth = 0.4, expected = 0.9 },
+    { depth = 0.5, expected = 0.98888889 }, { depth = 0.55, expected = 1 },
+    { depth = 0.6, expected = 0.98888889 }, { depth = 0.7, expected = 0.9 },
+    { depth = 0.8, expected = 0.72222222 }, { depth = 0.9, expected = 0.45555556 },
+    { depth = 1, expected = 0.1 }, { depth = 2, expected = 0.1 }
+}) do
+    test.system("audio", "water_depth_volume", { depth = row.depth }, function(data)
+        assert(math.abs(data.volume - row.expected) < 0.00001, "水量音量曲线错误：" .. row.depth)
+        assert(math.abs(data.wetFootstepVolume - row.expected) < 0.00001, "涉水脚步未共用水量曲线")
+        assert(data.dryFootstepVolume == 1, "水量曲线误改了非水材质脚步")
+    end, "水量与水声音量：" .. row.depth)
+end
+
 -- 连续驱动正式状态机，断言循环目标与音量包络，不播放声音。
 local function swimming_sequence(label, steps)
     test.system("audio", "swimming_sequence", { steps = steps }, function(data)
@@ -54,6 +72,11 @@ local function swimming_sequence(label, steps)
             assert(sample.shouldPlayLoop == (step.loop == true), label .. "，第 " .. i .. " 步循环目标错误")
             assert(math.abs(sample.loopVolume - step.volume) < 0.00001,
                 label .. "，第 " .. i .. " 步淡入淡出音量错误：" .. tostring(sample.loopVolume))
+            if step.waterVolume ~= nil then
+                assert(math.abs(sample.waterVolume - step.waterVolume) < 0.00001, "水量音量平滑或离水保留错误")
+            end
+            assert(math.abs(sample.transitionVolume - (step.transitionVolume or 0)) < 0.00001,
+                "入出水声音未按对应水格的水量取音量")
         end
     end, "游泳音效：" .. label)
 end
@@ -61,11 +84,11 @@ end
 swimming_sequence("真实入出水只响一次，深浅水格切换不重复入水", {
     { depth = 0, wet = false, volume = 0 },
     { depth = 0.03, moving = true, distance = 0.2, wet = false, volume = 0 },
-    { depth = 0.0301, moving = true, distance = 0.2, expected = "player.swim.enter", wet = true, volume = 0 },
+    { depth = 0.0301, moving = true, distance = 0.2, expected = "player.swim.enter", wet = true, volume = 0, transitionVolume = 0.1 },
     { depth = 0.3, moving = true, distance = 1, wet = true, volume = 0 },
     { depth = 0.3001, moving = true, distance = 0.001, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
     { depth = 0.8, moving = true, distance = 3, deltaTime = 1, wet = true, loop = true, volume = 1 },
-    { depth = 0.03, moving = true, distance = 0.2, deltaTime = 0.175, expected = "player.swim.exit", wet = false, volume = 0.5 },
+    { depth = 0.03, moving = true, distance = 0.2, deltaTime = 0.175, expected = "player.swim.exit", wet = false, volume = 0.5, transitionVolume = 0.72222222 },
     { depth = 0, deltaTime = 0.175, wet = false, volume = 0 }
 })
 
@@ -79,7 +102,7 @@ swimming_sequence("深水加载静默，低速游动无需走满一格，持续�
 
 swimming_sequence("入水后淡入，停下平滑淡出，短暂停走从当前音量恢复", {
     { depth = 0, wet = false, volume = 0 },
-    { depth = 0.8, moving = true, distance = 1, expected = "player.swim.enter", wet = true, volume = 0 },
+    { depth = 0.8, moving = true, distance = 1, expected = "player.swim.enter", wet = true, volume = 0, transitionVolume = 0.72222222 },
     { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
     { depth = 0.8, deltaTime = 0.175, wet = true, volume = 0.5 },
     { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.05, wet = true, loop = true, volume = 0.7 },
@@ -117,6 +140,17 @@ swimming_sequence("传送或重建清除循环音量并静默建立新基线", {
     { depth = 0.8, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1 },
     { reset = true, wet = false, volume = 0 },
     { depth = 0, wet = false, volume = 0 }
+})
+
+swimming_sequence("入出水取真实水格音量，深浅水音量平滑且离水保留尾声", {
+    { depth = 0, wet = false, volume = 0, waterVolume = 0 },
+    { depth = 0.55, moving = true, distance = 0.1, deltaTime = 0.02, expected = "player.swim.enter", wet = true, volume = 0, waterVolume = 0.1, transitionVolume = 1 },
+    { depth = 0.55, moving = true, distance = 0.1, deltaTime = 0.25, wet = true, loop = true, volume = 1, waterVolume = 1 },
+    { depth = 1, moving = true, distance = 0.1, deltaTime = 0.02, wet = true, loop = true, volume = 1, waterVolume = 0.9 },
+    { depth = 1, moving = true, distance = 0.1, deltaTime = 0.2, wet = true, loop = true, volume = 1, waterVolume = 0.1 },
+    { depth = 0, moving = true, distance = 0.1, deltaTime = 0.175, expected = "player.swim.exit", wet = false, volume = 0.5, waterVolume = 0.1, transitionVolume = 0.1 },
+    { depth = 0, deltaTime = 0.175, wet = false, volume = 0, waterVolume = 0.1 },
+    { reset = true, wet = false, volume = 0, waterVolume = 0 }
 })
 
 swimming_sequence("负时间不倒退包络，卡帧音量限制在零至一", {
