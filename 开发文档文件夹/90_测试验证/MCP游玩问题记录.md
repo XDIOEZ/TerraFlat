@@ -151,3 +151,61 @@
 
 - 仅完成代码与 Lua 断言的静态修改；Unity 当前正处于 **Play Mode 的 `GameStartScene` 菜单**，按项目规则未退出、暂停或再次进入隔离世界，因此尚无新的运行时测试结论。
 - 待允许重建/重新游玩时：保存于非原点 → 退出 → 续档确认位置；重复 2 次跨世界切换确认 UI 数量始终为 1；最后将材料从当前快捷栏拖入手工制作格并检查库存实际变化。
+
+## 第 3 轮：2026-10-17（续档复查、蜂巢战斗、战利品拾取）
+
+### 现场与验证边界
+
+- **入口**：通过 HomePC2 的 GamePlayMCP，在已有的 Unity Editor **同一个 Play Mode** 中，从 `GameStartScene` 续入 `MCP_Playtest_20261017_R2`；`continue_save(isolated=true)` 返回 `resumedIsolated=true / ready=true`。没有碰正式存档。
+- **重要环境限制**：本次 Play Mode 从上轮一直保持运行，进入前主菜单已经有 **4 个 `UI_HotBar`、4 个 `UI_Hand`** 的历史残留。上一轮针对问题 04/05 的源代码修改可能仍未经过 Editor 退出 Play Mode 后重新编译与生命周期重建；**本轮复现不等于证明最新提交 `6c6ba954a` 已生效后仍有 Bug**。本轮只进行游玩和记录，不进行代码修改、暂停或重启 Unity。
+- **记录方法**：正式 `gameplay_control(acquire)` 租约、`gameplay_act` 移动/攻击/选择/按键、`gameplay_query` 读取实体与 ECS 掉落物、`gameplay_ui(tree/click/drag)` 对照实际操作效果，配合 GameView 截图与 Console 抽查。当前 GameView 仍约 `1286×262`，仅作本视口视觉证据。
+
+### 问题 04 复查：坐标归零再次出现（旧运行会话）
+
+- **结论：在未重载的 Play Mode 中仍能复现｜最新修复状态：待新 Play Mode 验证。**
+- `gameplay_act(move_to)` 从 `(0,0)` 导航到 `(2.5,22.5)`，再前往 `(22.2,26.2)`，均报告 `reached=true`。保存退出前 `gameplay_observe.player.position=(22.813,25.806)`、库存 `Ore_Stone×2 + Stick_Wood×1`、选中槽 `1`。
+- 依次执行 `act(stop) → control(release) → session(save_exit)`，返回 `saved=true / saved_and_exited`；再 `session(continue_save, saveName="MCP_Playtest_20261017_R2", isolated=true)` 返回 `ready=true / resumedIsolated=true`，但 `player.position=(0,0)`。石头、木棍及选中槽均正确保留。
+- 这再次证明**当前运行环境**的续档路径仍未恢复非原点坐标；不能区分未应用新程序集与新修复本身失败。下轮必须允许退出并重新进入 Play Mode 后复测，且保留一个保存前非原点、带库存的隔离档做严格对照。
+
+### 问题 05 复查：旧 HUD 继续阻挡新玩家（旧运行会话）
+
+- **结论：当前运行环境继续复现｜优先级 P1｜最新修复状态：待新 Play Mode 验证。**
+- UI 数量实际为：本轮主菜单开始时 `HotBar=4/Hand=4`；首次续档后 `5/5`；本轮再次保存退出后菜单仍 `5/5`；再次续档后变成 `6/6`；最终安全保存退出返回菜单时仍为 `6/6`。当前玩家快捷栏归属 `.../UI_MobileControls/快捷栏锚点/UI_HotBar_5`，旧 `UI_HotBar_4` 仍接收上层射线。
+- **拖放复现**：打开 `UI_HandCraftTable_2`，把当前快捷栏第 0 格石头拖至 `输入_1`，`gameplay_ui(drag, deltaX=-0.77, dragDeltaY=132.73)` 返回 `ui_target_not_draggable`，顶层命中 `UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)`；库存石头仍为 2 个，制作输入未被实际转移。
+- **额外验证**：点击当前快捷栏第 2 格蜂蜡时 `gameplay_ui(click)` 返回 `ui_target_blocked`，顶层同样命中旧 `UI_HotBar_4/Slot_UI(Clone)`。而 `gameplay_act(select_hotbar,index=2)` 可让当前玩家正确装备 `Beeswax`，证明问题集中在旧 UI 的射线遮挡，而非权威库存选择。
+- **证据**：[续档后六份 HUD](截图/MCP_20261017_R3_02_6hud.png)、[制作拖拽场景](截图/MCP_20261017_R3_03_craft-drag.png)、[完整 6 份 HUD 语义树](截图/MCP_20261017_R3_UI-tree-6hotbars.json)。
+
+### 观察 06：近身木棍攻击蜜蜂，没有实际扣血
+
+- **状态：疑似战斗命中问题，尚未确认是否属于飞行单位设计｜暂定 P2。**
+- 在蜂巢 `(13.197,-14.521)` 附近、玩家约 `(13.806,-14.667)` 时，3 只 `Bee`（GUID `-1309954476`、`1880599708`、`862583764`）贴近玩家，距离约 `0.729～0.733`，初始 HP 全为 `6/6`。
+- 持有正式动画近战武器 `Stick_Wood`，先对 `targetGuid=-1309954476` 执行一次 `gameplay_act(attack,seconds=0.5)`，再重复 4 次约 `0.53s` 的攻击；MCP 均返回动作 `ok=true`，玩家体力发生变化，但 3 只蜜蜂的 HP 始终为 `6/6`。
+- **正向对照**：同一木棍对约 `2.232` 单位外的 `Beehive` 执行正式 `attack(targetGuid=1994862324)`，蜂巢 HP 逐次稳定减少 `2`，最终从 `40/40` 降至摧毁。因此武器/攻击链总体可工作，但不证明对所有飞行目标有效。
+- **待查**：蜜蜂 Actor 配置为飞行高度 `0.8`、微型 Trigger Collider；需要用正常武器近战、投射物和空中目标碰撞/伤害层做对照。可能只是有意的飞行单位命中限制，不应在没有对照时宣称“蜜蜂无敌”。
+- **证据**：[蜂群战斗画面](截图/MCP_20261017_R3_05_bee-combat.png)。
+
+### 观察 07：世界内 AI 调试标签遮挡物品与背包 UI
+
+- **状态：视觉观察，需确认是否启用了开发诊断开关｜暂定 P3。**
+- 蜂群追击时，GameView 显示大块黑色诊断标签，例如“状态：巢毁复仇 / 饱食 / 愤怒 / 目标 Player / 蜂巢 GUID”；打开背包后标签覆盖在背包中段，明显影响阅读。
+- **复现**：当前测试视口靠近蜂巢并攻击后打开背包，可观察多个 AI 诊断条遮挡游戏 UI；截图见 [蜂蜡入包与诊断标签](截图/MCP_20261017_R3_04_beeswax-inventory.png)、[蜂群追击 HUD](截图/MCP_20261017_R3_05_bee-combat.png)。
+- **待查**：这些文字可能是开发阶段主动启用的 GM/AI 调试显示；必须先确认正式玩家模式默认是否启用，不能直接把有意调试表现归类为发布版本 Bug。窄 GameView 放大了遮挡。
+
+### 观察 08：入世过程出现脚下区块显示等待超过 12 秒
+
+- **状态：性能线索，尚未独立复测｜暂定 P2。**
+- `read_console` 抽查得到两条 `[GameManager] 玩家脚下区块表现超过 12 秒，继续保持加载页` 警告，分别报告区块 `Generating/terrain=null` 和 `Ready/terrain=ready` 但 `binding.queued=true/pendingChunk=true/view=none`，地址均为 `surface:0,0`。同一隔离存档的 `continue_save` 最终仍 `ready=true`。
+- **待查**：要在冷启动与热续档分别测资源准备、TerrainReady 到 ChunkView 实际创建的时间，不以完整 MCP 往返时间代替帧耗；当前 Editor/调试与极窄 GameView 不能代表打包版加载性能。仅此两条日志不能证明永久卡死。
+
+### 本轮真实通过的玩法
+
+- **导航**：在草地区移动，`move_to` 从 `(0,0)` 到 `(2.5,22.5)` 再到 `(22.2,26.2)` 均 `reached=true`；追逐野猪时实体会移动，不把“目标走开”误判为导航失败。
+- **蜂巢战斗**：`Stick_Wood` 正式攻击每次造成 2 点蜂巢伤害；20 次左右连续命中后摧毁 `40 HP` 蜂巢。蜜蜂受到攻击后追击并蜇刺玩家，玩家生命实际下降，说明 AI 敌对/伤害至少部分正常。
+- **战利品**：蜂巢死亡生成 3 份 ECS `Beeswax`。刚落地时 `pickable=false`，等待约 3 秒后均 `pickable=true`；靠近后先捡到 1 份，再捡到 2 份；库存最终 `Beeswax×3 / Ore_Stone×2 / Stick_Wood×1`，ECS 蜂蜡掉落数量变为零。**短暂不可拾取有正常时间窗，不判为 Bug。**
+- **输入/库存**：背包按钮、制作按钮正常打开各自 UI；背包按 `B` 能正常关闭；在 UI 树总量 138 个节点时关闭按钮出现在 `offset=128` 的第二页，属于工具分页而非按钮丢失。当前玩家通过权威 `select_hotbar` 切换槽位可正常更新装备。
+- **未完成/不可结论**：制作合成实际产出仍因问题 05 无法执行正常拖拽；蜜蜂能否由合法空中武器伤害、其他武器战斗、建造、联机、太空以及冷重启后的续档仍未验收。
+
+### 收尾
+
+- 本轮只修改了**本 Markdown 记录及证据文件**，未修改游戏生产代码或 Skill。保存退出前隔离玩家约 `(0.676,0.309)`、HP `18690/20000`、库存 `Beeswax×3 / Ore_Stone×2 / Stick_Wood×1`；执行 `act(stop) → control(release) → session(save_exit)` 后返回 `saved=true / code=saved_and_exited`，Unity 保留在 **Play Mode 主菜单**。
+- 下轮若要判断问题 04/05 的最新修复是否真正生效，**必须在用户允许时重建 Play Mode** 再复测，旧运行状态下重复续档只能证明本会话继续异常，不是可靠的新提交回归结论。
