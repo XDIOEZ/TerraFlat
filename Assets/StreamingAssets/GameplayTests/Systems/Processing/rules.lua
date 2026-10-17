@@ -60,6 +60,23 @@ for _, input in ipairs({
     end, string.format("材料温差百分比传热：%g℃→%g℃，%g秒", input.current, input.furnace, input.seconds))
 end
 
+test.system("processing", "fuel_absorption", {}, function(data)
+    assert(not data.premature and data.beforeAmount == 3, "燃料遮罩长满前提前扣了物品")
+    near(data.beforeProgress, 2.9 / 3, "燃料遮罩未按三秒一份推进")
+    near(data.unchangedElapsed, 2.9, "同一份燃料被观察时重置了进度")
+    assert(data.completed and data.consumedId == "test:absorption-fuel" and data.afterAmount == 2,
+        "吸收完成后没有通过真实库存准确扣掉一份燃料")
+    assert(data.afterProgress == 0 and not data.duplicate, "完成后残留进度或重复扣料")
+    assert(not data.removedConsumed and data.returnedElapsed == 0, "中途拿走燃料后仍扣料，或放回后继承了进度")
+    assert(data.replacedElapsed == 0 and not data.staleConsumed and data.replacementAmount == 4,
+        "同种燃料更换实例后沿用了旧进度，或完成时错误消费了替换物")
+    assert(data.invalidElapsed == 0, "零、负数或非有限时间仍推进燃料吸收")
+    assert(data.restoredElapsed == 1.5 and data.restoredMatches and data.restoredConsumed,
+        "燃料吸收状态序列化后丢进度、槽位身份或无法完成扣料")
+    assert(data.clampedProgress == 1 and data.longStepConsumed and data.finalAmount == 0 and data.finalSlotEmpty,
+        "单份进度越界，或长步完成后未按真实余量清空槽位")
+end, "三秒吸收、完成才扣一份、中途取回与换料重置、重复扣料拒绝与状态保存")
+
 test.system("processing", "cold_fuel_candidates", {}, function(data)
     assert(data.sourceCount == 834 and #data.candidateIds == 2, "后台炉体把全世界掉落物送去排序，或漏掉本格候选")
     assert(data.candidateIds[1] == 2 and data.candidateIds[2] == 1, "本格燃料未按近先顺序，或飞行、邻格、重复身份和不可拾取记录混入候选")

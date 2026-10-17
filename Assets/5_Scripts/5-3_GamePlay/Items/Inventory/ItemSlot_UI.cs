@@ -43,6 +43,9 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("显示当前物体的图标")]
     public Image image;
 
+    [SerializeField, Tooltip("槽内加工的通用半透明进度层，由底部向上展开且不接收输入。")]
+    private RectTransform processingProgress;
+
     [Tooltip("可选的选中描边图形；透明槽位指定物品图标，避免描边绘出整块透明背景")]
     public Graphic selectionGraphic;
 
@@ -288,6 +291,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// </summary>
     public void InitializeSlot(int index, System.Func<int, ItemSlot> getSlotFunc, System.Action<int> clearAction)
     {
+        SetProcessingProgress(0f);
         CancelTouchTooltipHold();
         InventoryItemTooltip.Hide(this);
         slotIndex = index;
@@ -301,7 +305,22 @@ public class ItemSlot_UI : MonoBehaviour,
         return GetSlotData();
     }
 
+    /// <summary>只显示外部提供的真实加工进度，不在界面计时或扣物品。</summary>
+    public void SetProcessingProgress(float normalizedProgress)
+    {
+        if (processingProgress == null) return;
+        float value = Mathf.Clamp01(normalizedProgress);
+        processingProgress.localScale = new Vector3(1f, value, 1f);
+        processingProgress.gameObject.SetActive(value > 0f && !hideSourceContentWhileDragging);
+    }
+
 #if UNITY_EDITOR
+    public void ConfigureProcessingProgress(RectTransform progress)
+    {
+        processingProgress = progress;
+        SetProcessingProgress(0f);
+    }
+
     /// <summary>编辑器构建器绑定正式 Prefab 内的长按进度视觉。</summary>
     public void ConfigureTouchLongPressProgressVisuals(
         GameObject progressRoot,
@@ -352,6 +371,8 @@ public class ItemSlot_UI : MonoBehaviour,
 
         UpdateItemAmount();
         UpdateItemIcon();
+        if (GetSlotData()?.itemData == null || hideSourceContentWhileDragging)
+            SetProcessingProgress(0f);
         if (hideSourceContentWhileDragging)
             HideSlotContent();
         if (isPointerOver)

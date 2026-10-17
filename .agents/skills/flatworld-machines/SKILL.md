@@ -34,6 +34,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 冷机器温度优先读已加载/冷缓存真实环境层，缺块时经 `SpaceSurfaceQuery.TryGetAmbientTemperature` 复用正式地理温度与星体覆盖公式，禁止为了取温度同步生成水文/生态整块；全局调温每次读取，资源/存档切换清理有界点样本。规则见 IndustrialFluids 的 `cold_temperature_path`。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
 - FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
+- 炉体点火后逐份吸收槽内燃料，`fuelAbsorptionSeconds` 默认3秒；`FuelAbsorptionState` 保存槽位/物品身份和进度，完成才事务扣一份、增加燃值并记录副产物。取走/换实例清零，满显示容量暂停，后台长步按吸收/燃烧边界分段；面板只读进度。
 - 炉体批量加热自己的输入时，温度状态通知不重复选配方，整批末尾再按真实材料正式匹配；外部库存变动仍即时匹配，不按上次温度缓存生产资格。
 - CultivatorLogic 保存每槽作物、水、肥、电力和待收产量；断供/满输出保留状态。显示读取真实种植槽，空槽隐藏，不为客户端或休眠显示创建业务逻辑。
 - 初始化库存/战利品只执行一次，随机空结果也算完成。最大生命由当前定义及 CraftedDurabilityMultiplier 派生，受损生命不重复叠乘；MachineCombatBridge 消费真实武器窗口并 PublishExternalDamage 回传实际损失。

@@ -32,7 +32,7 @@ public sealed partial class MechanicalDepthVisual
         bool burning = entity.Logic?.IsBurning == true;
         if (entity.Logic == null && entity.Definition.LogicId == "furnace")
             burning = MachinePersistence.Read<FurnaceRuntimeState>(entity.Snapshot, "furnace") is FurnaceRuntimeState saved &&
-                saved.Smelting.IsSmelting && saved.Fuel.Fuel.x > .01f;
+                saved.Smelting.IsSmelting && !saved.AwaitingIgnition && saved.Fuel.Fuel.x > .01f;
         return burning;
     }
 

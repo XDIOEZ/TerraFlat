@@ -14,6 +14,8 @@ public partial class FurnaceRuntimeState
     public ModSmeltingData Smelting = new();
     public FuelData Fuel = new();
     public RecipeProcessingState Processing = new();
+    public FuelAbsorptionState Absorption = new();
+    public bool AwaitingIgnition;
     #endregion
 }
 
@@ -30,7 +32,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public RecipeProcessor Processor { get; }
     public bool AcceptsAirflow { get; }
     public float FuelRatio => Fuel.Fuel.y > 0f ? Mathf.Clamp01(Fuel.Fuel.x / Fuel.Fuel.y) : 0f;
-    public override bool IsBurning => Data.IsSmelting && Fuel.Fuel.x > .01f;
+    public override bool IsBurning => Data.IsSmelting && !State.AwaitingIgnition && Fuel.Fuel.x > .01f;
     public override float TickInterval => .1f;
     public override float Progress01 => Processor.Progress01;
     public override GameObject PanelPrefab { get; }
@@ -39,6 +41,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public override string Status => FurnaceTemperatureFeedback.GetDisplayedTemperature(Data.Temperature);
 
     private readonly float burnSpeed;
+    private readonly float fuelAbsorptionSeconds;
     private readonly bool absorbDroppedFuel;
     private readonly Predicate<Vector2> fuelCellFilter;
     private readonly List<FurnaceFuelByproductRule> byproducts;
@@ -85,6 +88,10 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         // x 保存真实燃值，可高于 y；y 只作为面板显示容量和自动补充阈值。
         Fuel.Fuel = new Vector2(Mathf.Max(0f, Fuel.Fuel.x), configuredFuel.Fuel.y);
         burnSpeed = fuelConfig.Value("burnSpeedMultiplier", fuelAuthoring.burnSpeedMultiplier);
+        fuelAbsorptionSeconds = config.Value("fuelAbsorptionSeconds", authoring.fuelAbsorptionSeconds);
+        if (!MachineDefinition.Positive(fuelAbsorptionSeconds))
+            throw new InvalidOperationException("燃料吸收时长必须大于零。");
+        State.Absorption ??= new FuelAbsorptionState();
         AcceptsAirflow = config.Value("acceptsMechanicalBellows", authoring.acceptsMechanicalBellows);
         absorbDroppedFuel = config.Value("absorbDroppedFuel", authoring.absorbDroppedFuel);
         fuelCellFilter = IsFuelInSameCell;
@@ -164,37 +171,47 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     [MethodImpl(MethodImplOptions.NoInlining)]
     public override void Tick(float seconds)
     {
+        if (!MachineDefinition.Positive(seconds)) return;
         if (absorbDroppedFuel) AbsorbDroppedFuelFromCell();
         bool wasBurning = IsBurning;
-        if (Data.IsSmelting)
+        float remaining = seconds;
+        while (remaining > .00001f)
         {
-            RefillFuelToVisibleCapacity();
-            float remaining = seconds;
-            int refills = 0;
-            while (remaining > .00001f && refills < 64)
+            if (!Data.IsSmelting)
             {
-                if (Fuel.Fuel.x <= .01f)
-                {
-                    RefillFuelToVisibleCapacity();
-                    if (Fuel.Fuel.x <= .01f) { Data.IsSmelting = false; break; }
-                    refills++;
-                }
-                float rate = Mathf.Max(0f, burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
-                float step = rate > 0f ? Mathf.Min(remaining, Fuel.Fuel.x / rate) : remaining;
-                if (step <= 0f) break;
-                HeatAndProcess(step);
-                ConsumeFuel(step);
+                State.Absorption.Reset();
+                State.AwaitingIgnition = false;
+                Cool(remaining);
+                break;
+            }
+
+            ItemSlot source = PrepareFuelAbsorption();
+            if (!IsBurning && source == null)
+            {
+                Data.IsSmelting = false;
+                continue;
+            }
+
+            float rate = Mathf.Max(0f, burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier);
+            float step = remaining;
+            if (source != null) step = Mathf.Min(step, State.Absorption.RemainingSeconds(fuelAbsorptionSeconds));
+            if (IsBurning && rate > 0f)
+            {
+                step = Mathf.Min(step, Fuel.Fuel.x / rate);
+                // 隐藏储备烧回显示容量后就开始下一份吸收，后台长步也按同一时间线推进。
+                if (source == null && Fuel.Fuel.y > 0f && Fuel.Fuel.x + .01f >= Fuel.Fuel.y)
+                    step = Mathf.Min(step, (Fuel.Fuel.x - Fuel.Fuel.y + .02f) / rate);
+            }
+            if (step > 0f)
+            {
+                if (IsBurning) { HeatAndProcess(step); ConsumeFuel(step); }
+                else Cool(step);
+                if (source != null) State.Absorption.Advance(step, fuelAbsorptionSeconds);
                 remaining -= step;
             }
-            if (Data.IsSmelting)
-            {
-                // 每个 Tick 结束前重新补到显示上限以上，避免燃料条归零和火光闪灭。
-                RefillFuelToVisibleCapacity();
-                if (Fuel.Fuel.x <= .01f) Data.IsSmelting = false;
-            }
-            if (!Data.IsSmelting && remaining > 0f) Cool(remaining);
+            if (source != null && State.Absorption.RemainingSeconds(fuelAbsorptionSeconds) <= .00001f)
+                CompleteFuelAbsorption(source);
         }
-        else Cool(seconds);
         FurnaceFuelByproductProcessor.TryFlushPendingOutputs(FuelInventory.Data, byproducts, Data, GameRes.Instance);
         PublishTemperature();
         NotifyChanged(wasBurning != IsBurning);
@@ -222,15 +239,47 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         Fuel.Fuel.x = Mathf.Max(0f, Fuel.Fuel.x - consumed);
     }
 
-    /// <summary>燃值低于显示容量时持续补料，最后一份燃料允许完整越过容量并作为隐藏储备保留。</summary>
-    private void RefillFuelToVisibleCapacity()
+    public float GetFuelAbsorptionProgress(int slotIndex)
+        => slotIndex == State.Absorption.SlotIndex && CurrentAbsorptionSlot() != null
+            ? State.Absorption.Progress01(fuelAbsorptionSeconds) : 0f;
+
+    private ItemSlot CurrentAbsorptionSlot()
     {
-        if (Fuel.Fuel.y <= 0f) return;
-        int safety = 0;
-        while (Fuel.Fuel.x + .01f < Fuel.Fuel.y && safety++ < 4096)
+        int index = State.Absorption.SlotIndex;
+        if (index < 0 || index >= FuelInventory.Data.itemSlots.Count || FuelInventory.IsSlotBeingDragged(index)) return null;
+        ItemSlot slot = FuelInventory.Data.itemSlots[index];
+        return State.Absorption.Matches(slot) ? slot : null;
+    }
+
+    private ItemSlot PrepareFuelAbsorption()
+    {
+        if (!State.AwaitingIgnition && (Fuel.Fuel.y <= 0f || Fuel.Fuel.x + .01f >= Fuel.Fuel.y))
+        { State.Absorption.Reset(); return null; }
+        ItemSlot source = CurrentAbsorptionSlot();
+        if (source != null) return source;
+        State.Absorption.Reset();
+        if (State.AwaitingIgnition) return null;
+        if (!TryFindFuelSlot(false, out source) && !TryFindFuelSlot(true, out source)) return null;
+        State.Absorption.Observe(source);
+        return source;
+    }
+
+    private void CompleteFuelAbsorption(ItemSlot source)
+    {
+        bool igniting = State.AwaitingIgnition;
+        if (CurrentAbsorptionSlot() != source || !TryResolveFuel(source.itemData, out float value, out float limit) ||
+            !State.Absorption.TryConsumeCompleted(FuelInventory.Data, fuelAbsorptionSeconds, out ItemData consumed))
         {
-            if (!TryFeedFuel(false, null)) break;
+            State.Absorption.Reset();
+            if (igniting) { State.AwaitingIgnition = false; Data.IsSmelting = false; }
+            return;
         }
+        Fuel.Fuel.x += value;
+        Data.MaxTemperature = limit;
+        State.AwaitingIgnition = false;
+        FurnaceFuelByproductProcessor.RecordConsumedFuel(consumed, byproducts, Data);
+        FurnaceFuelByproductProcessor.TryFlushPendingOutputs(FuelInventory.Data, byproducts, Data, GameRes.Instance);
+        if (igniting) GameplayProgressEvents.PublishFurnaceIgnited(productionActor, Entity.Definition.Id);
     }
 
     /// <summary>把落在炉体同一格的有效燃料转入燃料库存，供自动补燃逻辑继续消费。</summary>
@@ -284,49 +333,34 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual bool Ignite(Player actor)
     {
-        if (!GameNetwork.HasStateAuthority || Data.IsSmelting || !TryFeedFuel(true, actor)) return false;
+        if (!GameNetwork.HasStateAuthority || Data.IsSmelting) return false;
+        if (!TryFindFuelSlot(true, out ItemSlot source) &&
+            (!HasHeldIgnition(actor) || !TryFindFuelSlot(false, out source))) return false;
+        State.Absorption.Reset();
+        State.Absorption.Observe(source);
+        State.AwaitingIgnition = true;
         Data.IsSmelting = true;
         productionActor = actor;
         PublishTemperature();
         NotifyChanged(true);
-        GameplayProgressEvents.PublishFurnaceIgnited(actor, Entity.Definition.Id);
         return true;
     }
 
-    private bool TryFeedFuel(bool requireIgnition, Player actor)
+    private bool TryResolveFuel(ItemData item, out float value, out float limit)
     {
-        ItemSlot slot;
-        FuelData offered;
-        bool tinder;
-        if (requireIgnition)
-        {
-            if (!TryFindFuelSlot(true, out slot, out offered))
-            {
-                if (!HasHeldIgnition(actor) || !TryFindFuelSlot(false, out slot, out offered)) return false;
-            }
-        }
-        else if (!TryFindFuelSlot(false, out slot, out offered) && !TryFindFuelSlot(true, out slot, out offered))
-        {
-            return false;
-        }
-
-        tinder = IsIgnitionFuel(slot.itemData);
-        float value = tinder ? Mathf.Min(offered.Fuel.x, ignitionFuel) : offered.Fuel.x;
-        float limit = tinder ? Mathf.Min(offered.MaxTemperature, ignitionTemperature) : offered.MaxTemperature;
-        if (!MachineDefinition.Positive(value) || !MachineDefinition.Positive(limit) || Fuel.Fuel.y <= 0f) return false;
-        if (!FuelInventory.Data.TryConsumeFromSlot(slot, 1, out ItemData consumed)) return false;
-        Fuel.Fuel.x += value;
-        Data.MaxTemperature = limit;
-        FurnaceFuelByproductProcessor.RecordConsumedFuel(consumed, byproducts, Data);
-        FurnaceFuelByproductProcessor.TryFlushPendingOutputs(FuelInventory.Data, byproducts, Data, GameRes.Instance);
-        return true;
+        value = limit = 0f;
+        if (item?.Stack == null || item.Stack.Amount < 1f || item.Tags?.ContainsTag(Tag.CombustionFuel) != true ||
+            !Mod_Fuel.TryResolveItemData(item, out FuelData offered)) return false;
+        bool tinder = IsIgnitionFuel(item);
+        value = tinder ? Mathf.Min(offered.Fuel.x, ignitionFuel) : offered.Fuel.x;
+        limit = tinder ? Mathf.Min(offered.MaxTemperature, ignitionTemperature) : offered.MaxTemperature;
+        return MachineDefinition.Positive(value) && MachineDefinition.Positive(limit) && Fuel.Fuel.y > 0f;
     }
 
     /// <summary>燃料槽按语义挑选，避免槽位顺序决定点火是否成功。</summary>
-    private bool TryFindFuelSlot(bool ignitionFuelOnly, out ItemSlot selected, out FuelData offered)
+    private bool TryFindFuelSlot(bool ignitionFuelOnly, out ItemSlot selected)
     {
         selected = null;
-        offered = null;
         if (FuelInventory?.Data?.itemSlots == null) return false;
 
         for (int i = 0; i < FuelInventory.Data.itemSlots.Count; i++)
@@ -336,13 +370,12 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             if (item == null || FuelInventory.IsSlotBeingDragged(i) ||
                 item.Tags?.ContainsTag(Tag.CombustionFuel) != true ||
                 IsIgnitionFuel(item) != ignitionFuelOnly ||
-                !Mod_Fuel.TryResolveItemData(slot.itemData, out FuelData candidate))
+                !TryResolveFuel(item, out _, out _))
             {
                 continue;
             }
 
             selected = slot;
-            offered = candidate;
             return true;
         }
 
@@ -527,7 +560,12 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 
     public override bool Execute(string operation, string argument, Player actor) => operation == "work" && Ignite(actor);
     protected override void OnInventoryChanged(ItemSlot slot)
-    { if (!notifyingInputMatter) RefreshRecipe(); base.OnInventoryChanged(slot); }
+    {
+        if (State.Absorption.SlotIndex >= 0 && CurrentAbsorptionSlot() == null)
+            State.Absorption.Reset();
+        if (!notifyingInputMatter) RefreshRecipe();
+        base.OnInventoryChanged(slot);
+    }
     private void OnProgressChanged() => NotifyChanged();
     #endregion
 }

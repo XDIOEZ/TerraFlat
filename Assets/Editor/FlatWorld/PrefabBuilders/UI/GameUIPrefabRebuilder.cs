@@ -1275,11 +1275,39 @@ public static class GameUIPrefabRebuilder
         }
 
         PlaceActionButton(root.transform, "合成按钮", width, height, bonfire ? "开始处理" : "启动熔炼");
+        foreach (ItemSlot_UI slot in root.GetComponentsInChildren<ItemSlot_UI>(true))
+            if (slot.name.StartsWith("燃料_", StringComparison.Ordinal) || slot.name.StartsWith("燃料 ", StringComparison.Ordinal))
+                EnsureSlotProcessingProgress(slot);
 
         // 交互控件必须压在装饰层与业务槽位之上，关闭按钮最后置顶。
         FindDirectRect(root.transform, "合成按钮")?.SetAsLastSibling();
         FindDirectRect(root.transform, "关闭")?.SetAsLastSibling();
     }
+
+    #region 槽内加工进度
+    private static void EnsureSlotProcessingProgress(ItemSlot_UI slot)
+    {
+        const string nodeName = "Slot Processing Progress";
+        Transform existing = slot.transform.Find(nodeName);
+        GameObject layer = existing != null ? existing.gameObject :
+            new GameObject(nodeName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        layer.transform.SetParent(slot.transform, false);
+        layer.transform.SetAsLastSibling();
+        Image image = layer.GetComponent<Image>();
+        image.sprite = null;
+        image.type = Image.Type.Simple;
+        image.color = new Color(.8f, .8f, .8f, .45f);
+        image.raycastTarget = false;
+        RectTransform rect = image.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(.5f, 0f);
+        rect.offsetMin = new Vector2(2f, 2f);
+        rect.offsetMax = new Vector2(-2f, -2f);
+        // 无 Sprite 的纯色 Image 直接缩放矩形，避免 Filled 模式无法裁切白色遮罩。
+        slot.ConfigureProcessingProgress(rect);
+    }
+    #endregion
 
     /// <summary>移除熔炉旧版整块遮挡图和重复标签；这些节点不属于运行时绑定契约。</summary>
     private static void RemoveLegacyFurnaceVisuals(Transform root)

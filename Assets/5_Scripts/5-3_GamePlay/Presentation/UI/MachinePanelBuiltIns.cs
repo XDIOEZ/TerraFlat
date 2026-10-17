@@ -119,6 +119,8 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
         if (fuel != null) fuel.value = furnace.FuelRatio;
         if (temperature != null) temperature.text = furnace.Status;
         if (hint != null) hint.text = furnace.GetProcessingHint();
+        for (int i = 0; i < furnace.FuelInventory.itemSlot_UI.Count; i++)
+            furnace.FuelInventory.itemSlot_UI[i]?.SetProcessingProgress(furnace.GetFuelAbsorptionProgress(i));
     }
 
     #endregion

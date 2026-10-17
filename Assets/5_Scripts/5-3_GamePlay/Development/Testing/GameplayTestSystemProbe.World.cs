@@ -48,6 +48,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/recipe_selection", WorldProcessingSelection);
         operations.Add("processing/slot_identity", WorldProcessingIdentity);
         operations.Add("processing/atomic_output", WorldProcessingAtomicOutput);
+        operations.Add("processing/fuel_absorption", WorldFuelAbsorption);
         operations.Add("processing/material_heat", WorldProcessingMaterialHeat);
         foreach (string operation in new[] { "ship_structure", "ship_docking", "ship_mass",
                      "ship_propulsion", "ship_contacts", "ship_snapshots", "ship_engine_placement", "ship_optical",
