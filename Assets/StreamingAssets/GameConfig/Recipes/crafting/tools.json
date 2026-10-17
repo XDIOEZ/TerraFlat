@@ -12,6 +12,28 @@
         {
           "match": "exact_item",
           "itemId": "Twine",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:纤维=绳子",
+      "displayName": "纤维=绳子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Fiber",
           "amount": 3
         }
       ],

@@ -999,6 +999,13 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
+      "processing": {
+        "weave": {
+          "inputAmount": 3,
+          "work": 3,
+          "outputs": [{ "itemId": "Rope", "amount": 1 }]
+        }
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Fiber/Fiber_Icon.png",
         "rendererLocalPosition": {
