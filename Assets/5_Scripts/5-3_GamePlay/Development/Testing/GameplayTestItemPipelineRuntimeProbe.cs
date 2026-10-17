@@ -18,6 +18,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
     private static void Register()
     {
         GameplayTestRuntimeProbe.RegisterAsync("item_runtime", "loaded_lifecycle", CaptureLifecycle);
+        GameplayTestRuntimeProbe.RegisterAsync("combat", "held_weapon_action", CaptureHeldWeaponAction);
         GameplayTestRuntimeProbe.Register("modding", "live_lua_module", CaptureLuaModule);
         GameplayTestRuntimeProbe.Register("networking", "live_replica", CaptureReplica);
     }
@@ -111,6 +112,63 @@ public static class GameplayTestItemPipelineRuntimeProbe
             try { Despawn(ref second); }
             finally { Despawn(ref first); }
         }
+    }
+    #endregion
+
+    #region 打制石器正式装配与动画伤害窗口
+    private static IEnumerator CaptureHeldWeaponAction(Player player, JObject args, Action<JObject> completed)
+    {
+        Item weapon = null;
+        Mod_Stamina stamina = player.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+        float originalStamina = stamina != null ? stamina.CurrentValue : 0f;
+        var result = new JObject();
+        try
+        {
+            if (stamina != null) stamina.CurrentValue = stamina.MaxValue;
+            // 使用正式手持工厂和公开动作接口，避免绕过定义装配或手动打开伤害盒。
+            weapon = SpawnHeld(player, GameRes.ExistingInstance.CreateItemData("ChippedTool"));
+            Mod_Weapon_AnimationAction animation = weapon.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
+            Mod_Damage damage = weapon.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage");
+            result["weaponId"] = weapon.itemData.IDName;
+            result["held"] = State(weapon, player);
+            result["animationRegistered"] = animation != null;
+            result["animationLoaded"] = animation != null && animation.IsRuntimeLoaded;
+            result["damageRegistered"] = damage != null;
+            result["damageLoaded"] = damage != null && damage.IsRuntimeLoaded;
+            result["initialWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+
+            bool requested = animation is IWeaponActionAnimation action && action.TryRequestAction();
+            bool sawAttackState = false, sawOpenWindow = false, returnedToIdle = false;
+            int sampledFrames = 0;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (requested && Time.realtimeSinceStartup < deadline)
+            {
+                Animator animator = animation.animator;
+                if (animator != null)
+                {
+                    AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+                    sawAttackState |= state.IsName("Attack_1");
+                    returnedToIdle = sawAttackState && state.IsName("Idle_0");
+                }
+                sawOpenWindow |= damage != null && damage.IsDamageEnabled();
+                sampledFrames++;
+                if (returnedToIdle && damage != null && !damage.IsDamageEnabled()) break;
+                yield return null;
+            }
+            result["actionRequested"] = requested;
+            result["sawAttackState"] = sawAttackState;
+            result["sawOpenWindow"] = sawOpenWindow;
+            result["returnedToIdle"] = returnedToIdle;
+            result["finalWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+            result["sampledFrames"] = sampledFrames;
+            result["limitations"] = "正式手持装配、公开动作入口和真实动画伤害窗；未覆盖手机摇杆输入、命中结算或画面手感。";
+        }
+        finally
+        {
+            try { Despawn(ref weapon); }
+            finally { if (stamina != null) stamina.CurrentValue = originalStamina; }
+        }
+        completed(result);
     }
     #endregion
 

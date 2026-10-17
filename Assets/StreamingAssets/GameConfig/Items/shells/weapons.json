@@ -960,6 +960,22 @@
               "ImpactKind": 1
             }
           }
+        },
+        "animation": {
+          "prefab": "Module_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "parameters": {
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_1"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 1.5
+          }
         }
       }
     },
