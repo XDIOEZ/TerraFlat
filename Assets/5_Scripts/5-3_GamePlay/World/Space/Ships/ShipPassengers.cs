@@ -52,8 +52,7 @@ namespace FlatWorld.Spaceflight
             UpdateDescentControl(player, passenger, ship);
             if (passenger.SurfaceDescending)
             {
-                Vector2 position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
-                player.transform.position = position;
+                PlaceDescendingPassenger(player, passenger);
                 return true;
             }
             if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId))
@@ -106,6 +105,7 @@ namespace FlatWorld.Spaceflight
             if (!IsSpaceView)
             {
                 passenger.Supported = false; passenger.ShipId = null; passenger.ConsolePieceId = null;
+                RestorePassengerSurface(player);
                 SetTerrainSuppression(player, false); return false;
             }
             passenger.IsInSpace = true;
@@ -158,18 +158,10 @@ namespace FlatWorld.Spaceflight
             Vector2 position = presentation ? GetPassengerPresentationPosition(passenger, ship) : authoritativePosition;
             const float heading = 0f;
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-            // 视觉起飞时玩家物理位置未变，不重复触发物品空间索引和物理同步。
-            if (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Lifting &&
-                ((Vector2)player.transform.position - position).sqrMagnitude < .000001f &&
-                Mathf.Abs(Mathf.DeltaAngle(player.transform.eulerAngles.z, heading)) < .001f &&
-                (mover?.rb == null || ((mover.rb.position - position).sqrMagnitude < .000001f &&
-                    Mathf.Abs(Mathf.DeltaAngle(mover.rb.rotation, heading)) < .001f)))
-                return;
-            player.transform.position = new Vector3(position.x, position.y, player.transform.position.z);
+            float rise = (float)ShipSurfaceState.VisualRise(GetFlight(ship.ShipId));
             player.transform.rotation = Quaternion.Euler(0f, 0f, heading);
-            if (mover?.rb != null) { mover.rb.position = position; mover.rb.rotation = heading; }
-            player.itemData.transform.position = new Vector3(authoritativePosition.x, authoritativePosition.y, player.transform.position.z);
-            ItemMgr.Instance.NotifyRuntimeItemMoved(player);
+            if (mover?.rb != null) mover.rb.rotation = heading;
+            SetPassengerSurfacePose(player, position, authoritativePosition, rise, ShipSurfaceState.IsElevated(GetFlight(ship.ShipId)));
         }
         private void SetTerrainSuppression(Player player, bool value)
             => player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver)?.SetEffectsSuppressed(this, value);
@@ -182,7 +174,7 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             bool alreadyDriving = !string.IsNullOrWhiteSpace(passenger.ConsolePieceId);
             SpaceSectorPosition position = IsSpaceView ? GetPassengerPosition(passenger)
-                : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(player.transform.position)));
+                : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(GetPlayerAuthoritativeDisplayPosition(player))));
             BindConsoleControl(passenger, ship, piece, position, IsSpaceView);
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
@@ -328,6 +320,7 @@ namespace FlatWorld.Spaceflight
                     passenger.SurfaceHeight = 0d; passenger.SurfaceDescending = false; passenger.LandingResolved = true;
                     if (player != null && player.ProfileName == passenger.ProfileId)
                     {
+                        RestorePassengerSurface(player);
                         float damage = (float)(Math.Max(0d, -passenger.SurfaceVerticalSpeed / SpaceGameplaySettings.Current.ImpactStoppingSeconds + body.SurfaceGravity) *
                             Math.Max(1d, player.itemData.Stack.CurrentWeight) / SpaceGameplaySettings.Current.ImpactForcePerDurability);
                         damage += (float)(.5d * Math.Max(1d, player.itemData.Stack.CurrentWeight) * passenger.SurfaceHorizontalSpeed * passenger.SurfaceHorizontalSpeed /
@@ -363,10 +356,11 @@ namespace FlatWorld.Spaceflight
             if (IsSpaceView)
                 { SpaceSectorPosition position = GetPassengerPosition(passenger); ViewSector = position.Sector; ViewOrigin = position.LocalMeters; }
             if (passenger.Supported && IsInPresentationWorld(ship)) PlacePassenger(player, passenger, ship);
-            else if (passenger.SurfaceDescending && !IsSpaceView && passenger.LandingWorldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)
-                player.transform.position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
+            else if (IsPassengerSurfaceDescendingHere(passenger))
+                PlaceDescendingPassenger(player, passenger);
             else if (!passenger.Supported && IsSpaceView && passenger.IsInSpace)
             {
+                RestorePassengerSurface(player);
                 player.transform.position = ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
                 player.transform.rotation = Quaternion.identity;
             }

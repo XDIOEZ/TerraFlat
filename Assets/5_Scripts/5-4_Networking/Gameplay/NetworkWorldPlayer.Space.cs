@@ -276,14 +276,16 @@ namespace FlatWorld.Networking.Gameplay
 
         private void SynchronizeSpacePresentation()
         {
-            if (!IsInSpace || !networkVisible || spacePresentationSession == null) return;
+            if (!networkVisible || spacePresentationSession == null) return;
             if (isOwned)
             {
                 if (corePlayer != null) transform.position = corePlayer.transform.position;
                 return;
             }
-            Vector2 projected = spacePresentationSession.ProjectPosition(AuthoritativeSpacePosition);
+            Vector2 projected;
             if (spacePresentationSession.TryGetPassengerPresentationPosition(displayName, out Vector2 presentation)) projected = presentation;
+            else if (IsInSpace) projected = spacePresentationSession.ProjectPosition(AuthoritativeSpacePosition);
+            else return;
             if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y)) return;
             transform.position = projected;
             SyncCorePlayerPosition(projected);

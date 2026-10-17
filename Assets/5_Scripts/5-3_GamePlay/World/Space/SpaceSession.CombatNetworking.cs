@@ -65,7 +65,8 @@ namespace FlatWorld.Spaceflight
                 string.Equals(observer.WorldKey, worldKey, StringComparison.Ordinal))
             {
                 // 远端玩家可能不在主机当前地表，必须保留其独立世界的权威位置作为投影原点。
-                return new SurfaceCombatProjection(worldKey, player.transform.position, observer.Position.LocalMeters.ToVector2());
+                return new SurfaceCombatProjection(worldKey,
+                    ShipSurfacePresentation.GroundPosition(player.gameObject, player.transform.position), observer.Position.LocalMeters.ToVector2());
             }
             // 本地地表武器按实际伤害盒和环绕规则投影，避免过期的乘员快照引起错位。
             return new SurfaceCombatProjection(worldKey, fallbackAnchor,

@@ -128,6 +128,12 @@ namespace FlatWorld.Spaceflight
             Player player = FindDroppedItemSourcePlayer(source, context.Start);
             SpacePassengerState passenger = player == null ? null : GetPassenger(player);
             ShipState carrier = passenger?.Supported == true ? GetShip(passenger.ShipId) : null;
+            if (!IsSpaceView && passenger != null && !inherited && (passenger.Supported || passenger.SurfaceDescending))
+            {
+                // 手持物已经随玩家根节点升高，掉落运动只保存去掉高度后的地面起点。
+                Vector3 ground = ShipSurfacePresentation.GroundPosition(player.gameObject, context.Start);
+                state.Motion.PositionMeters = SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(ground));
+            }
             if (IsSpaceView && passenger != null && !inherited)
             {
                 // 丢弃起点保留手持物的局部偏移，但映射回当前权威姿态。

@@ -52,13 +52,16 @@ public static class SpatialInteractionRegistry
         {
             Component target = entry.Key;
             IInteractable interaction = entry.Value.Interaction;
-            if (target == null || !target.gameObject.activeInHierarchy ||
+            if (target == null) continue;
+            Vector3 position = target is IWorldInteractionTarget worldTarget ? worldTarget.WorldPosition
+                : target.transform.position;
+            if (!target.gameObject.activeInHierarchy ||
                 target.gameObject.scene != actor.gameObject.scene || interaction == null ||
-                !interaction.CanInteract(actor) || WorldTopologyRuntime.Distance(actor.transform.position, target.transform.position) > radius)
+                !interaction.CanInteract(actor) || WorldTopologyRuntime.Distance(actor.transform.position, position) > radius)
                 continue;
             if (pointer.HasValue && (target is ISpatialInteractionShape shape
                 ? !shape.ContainsInteractionPoint(pointer.Value)
-                : WorldTopologyRuntime.Distance(pointer.Value, target.transform.position) > entry.Value.Radius)) continue;
+                : WorldTopologyRuntime.Distance(pointer.Value, position) > entry.Value.Radius)) continue;
             if (!results.Contains(interaction)) results.Add(interaction);
         }
     }

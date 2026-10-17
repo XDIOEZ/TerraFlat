@@ -1,6 +1,7 @@
 // AI-Context: Mirror 玩家网络聚合器；负责运动、全模块快照、转身、动画与远程手持物，严禁远程副本获得本地输入权。
 
 using System.Collections.Generic;
+using FlatWorld.Spaceflight;
 using Mirror;
 using TMPro;
 using UnityEngine;
@@ -207,7 +208,8 @@ namespace FlatWorld.Networking.Gameplay
             }
             if (corePlayer != null)
             {
-                Vector3 itemPosition = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
+                Vector3 itemPosition = WorldTopologyRuntime.NormalizePosition(
+                    ShipSurfacePresentation.GroundPosition(corePlayer.gameObject, corePlayer.transform.position));
                 if (IsValidPosition(itemPosition))
                     transform.position = itemPosition;
             }
@@ -242,7 +244,8 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             if (!IsInSpace && corePlayer.Data?.transform != null)
-                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
+                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
+                    ShipSurfacePresentation.GroundPosition(corePlayer.gameObject, corePlayer.transform.position));
 
             itemStateSendTimer -= Time.deltaTime;
             if (!itemStateDirty && itemStateSendTimer > 0f)
@@ -492,6 +495,15 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
             SetNetworkVisibility(true);
+            if (SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetPassengerPresentationPosition(displayName, out Vector2 passengerPosition))
+            {
+                transform.position = passengerPosition;
+                SyncCorePlayerPosition(passengerPosition);
+                ApplyRemoteFacing(authoritativeFacingLeft);
+                ApplyRemoteVisualState(authoritativeVisualState);
+                coreTurnBack?.ModUpdate(Time.deltaTime);
+                return;
+            }
             if (!IsValidPosition(remoteTargetPosition))
                 return;
 
@@ -816,7 +828,9 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             if (!IsInSpace && corePlayer.Data != null)
-                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(position);
+                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
+                    SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetPassengerSurfacePosition(displayName, out Vector2 ground)
+                        ? (Vector3)ground : position);
         }
 
         /// <summary>本机锚点跨周时只重选远端玩家的显示镜像，服务器 SyncVar 逻辑坐标保持不变。</summary>

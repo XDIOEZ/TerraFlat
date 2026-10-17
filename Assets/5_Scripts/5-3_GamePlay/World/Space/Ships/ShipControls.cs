@@ -25,7 +25,7 @@ namespace FlatWorld.Spaceflight
                     (piece.CellY + .5d) * ship.CellSizeMeters);
                 float distance = IsSpaceView
                     ? Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(player), center)
-                    : WorldTopologyRuntime.Distance(player.transform.position, center);
+                    : WorldTopologyRuntime.Distance(GetPlayerAuthoritativeDisplayPosition(player), center);
                 if (distance > closestDistance) continue;
                 closestDistance = distance;
                 consoleId = piece.PieceId;

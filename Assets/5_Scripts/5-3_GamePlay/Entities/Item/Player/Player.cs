@@ -84,6 +84,15 @@ public class Player : Item
 
     #region 生命周期
 
+    public override void Save()
+    {
+        base.Save();
+        // 起降高度属于临时物理位姿，玩家地面存档只保存脚下对应的位置。
+        if (!SpaceMgr.IsSpaceScene(gameObject.scene.name))
+            itemData.transform.position = WorldLocalPresentation.ToLogical(
+                FlatWorld.Spaceflight.ShipSurfacePresentation.GroundPosition(gameObject, transform.position));
+    }
+
     public override void Act()
     {
         // 玩家行为由输入控制器和功能模块驱动，不参与普通物品的 Act/OnAct 使用链。

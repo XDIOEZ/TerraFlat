@@ -63,8 +63,6 @@ namespace FlatWorld.Spaceflight
             foreach (string id in new List<string>(shipColliderPresenters.Keys)) SuspendShipColliderPresenter(id);
             visibleShipColliderPresenters.Clear();
             visibleShipPieceIds.Clear();
-            if (passengerVisual != null) passengerVisual.transform.localPosition = passengerVisualPosition;
-            passengerVisual = null;
             viewBindingsDirty = true;
         }
 

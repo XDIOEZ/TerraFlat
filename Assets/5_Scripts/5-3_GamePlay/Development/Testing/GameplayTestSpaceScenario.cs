@@ -319,7 +319,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         completed(new JObject { ["scope"] = "live-session", ["before"] = before,
             ["after"] = SessionSnapshot(), ["savedVersion"] = restored.Version,
             ["savedTime"] = restored.SimulationSeconds, ["savedSectorCount"] = restored.Sectors.Count,
-            ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()) });
+            ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()),
+            ["passengerPose"] = GameplayTestSpacePresentationProbe.CapturePassengerPose(CurrentPlayer()) });
     }
 
     private IEnumerator ReadTemplates(Action<JObject> completed)

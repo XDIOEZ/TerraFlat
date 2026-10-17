@@ -55,6 +55,7 @@ namespace FlatWorld.Spaceflight
                 if (value.IsWreck || !IsVisible(value)) continue;
                 SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, position, value.Sector) : position;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)value.PositionX, (float)value.PositionY));
+                if (!IsSpaceView && presentation) ground.y -= (float)ShipSurfaceState.VisualRise(GetFlight(value.ShipId));
                 double x, y;
                 if (IsSpaceView && presentation) PresentationWorldToLocal(value, new SpaceSectorPosition(ViewSector, position), out x, out y);
                 else ShipGeometry.WorldToLocal(value, IsSpaceView ? relative.X : ground.x, IsSpaceView ? relative.Y : ground.y, out x, out y);
@@ -188,6 +189,7 @@ namespace FlatWorld.Spaceflight
                 if (!IsVisible(candidate)) continue;
                 SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, absolute, candidate.Sector) : absolute;
                 Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
+                if (!IsSpaceView) ground.y -= (float)ShipSurfaceState.VisualRise(GetFlight(candidate.ShipId));
                 double x, y;
                 if (IsSpaceView) PresentationWorldToLocal(candidate, new SpaceSectorPosition(ViewSector, absolute), out x, out y);
                 else ShipGeometry.WorldToLocal(candidate, ground.x, ground.y, out x, out y);

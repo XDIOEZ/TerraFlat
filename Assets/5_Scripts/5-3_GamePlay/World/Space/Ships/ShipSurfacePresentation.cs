@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using System.Collections.Generic;
 
 namespace FlatWorld.Spaceflight
 {
@@ -88,7 +89,77 @@ namespace FlatWorld.Spaceflight
             if (collider.isTrigger != trigger) collider.isTrigger = trigger;
         }
 
-        private void OnDisable() => RestoreSorting();
+        private void OnDisable()
+        {
+            RestorePassenger();
+            RestoreSorting();
+        }
+        #endregion
+
+        #region 乘员整体高度与碰撞恢复
+        private float passengerRise;
+        private Rigidbody2D passengerBody;
+        private readonly List<Collider2D> passengerColliders = new();
+        private readonly HashSet<Collider2D> passengerBlockingColliders = new();
+
+        public static Vector3 GroundPosition(GameObject root, Vector3 position)
+            => root != null && root.TryGetComponent(out ShipSurfacePresentation presenter)
+                ? position - Vector3.up * presenter.passengerRise : position;
+
+        // 从未升高的基准坐标整体摆放，重复同步不会把高度累加到玩家身上。
+        public static void SetPassengerPose(GameObject root, Rigidbody2D body, Vector2 groundPosition, float rise)
+        {
+            if (root == null) return;
+            if (!root.TryGetComponent(out ShipSurfacePresentation presenter) && rise <= 0f)
+            {
+                root.transform.position = new Vector3(groundPosition.x, groundPosition.y, root.transform.position.z);
+                if (body != null) body.position = groundPosition;
+                return;
+            }
+            if (presenter == null) presenter = root.AddComponent<ShipSurfacePresentation>();
+            presenter.passengerBody = body;
+            presenter.passengerRise = Mathf.Max(0f, rise);
+            Vector2 position = groundPosition + Vector2.up * presenter.passengerRise;
+            root.transform.position = new Vector3(position.x, position.y, root.transform.position.z);
+            if (body != null) body.position = position;
+            if (presenter.passengerRise > 0f)
+            {
+                root.GetComponentsInChildren(true, presenter.passengerColliders);
+                foreach (Collider2D collider in presenter.passengerColliders)
+                {
+                    if (collider.attachedRigidbody != body || collider.usedByComposite || collider.isTrigger) continue;
+                    presenter.passengerBlockingColliders.Add(collider);
+                    collider.isTrigger = true;
+                }
+            }
+            else presenter.RestorePassengerCollisions();
+        }
+
+        public static void ClearPassenger(GameObject root)
+        {
+            if (root != null && root.TryGetComponent(out ShipSurfacePresentation presenter))
+                presenter.RestorePassenger();
+        }
+
+        private void RestorePassengerCollisions()
+        {
+            foreach (Collider2D collider in passengerBlockingColliders)
+                if (collider != null) collider.isTrigger = false;
+            passengerBlockingColliders.Clear();
+            passengerColliders.Clear();
+        }
+
+        private void RestorePassenger()
+        {
+            if (passengerRise > 0f)
+            {
+                transform.position -= Vector3.up * passengerRise;
+                if (passengerBody != null) passengerBody.position = transform.position;
+            }
+            passengerRise = 0f;
+            passengerBody = null;
+            RestorePassengerCollisions();
+        }
         #endregion
     }
 
@@ -131,8 +202,8 @@ namespace FlatWorld.Spaceflight
 
     public sealed partial class SpaceSession
     {
-        #region 船上远端乘员高度与排序恢复
-        private readonly System.Collections.Generic.Dictionary<Player, (SpriteRenderer Renderer, Vector3 Position)> remoteSurfaceVisuals = new();
+        #region 乘员整体高度与排序恢复
+        private readonly System.Collections.Generic.HashSet<Player> surfacePassengers = new();
         private readonly System.Collections.Generic.HashSet<Player> visibleSurfacePassengers = new();
         private readonly System.Collections.Generic.List<Player> expiredSurfacePassengers = new();
 
@@ -142,41 +213,58 @@ namespace FlatWorld.Spaceflight
             foreach (SpacePassengerState passenger in State.Passengers)
             {
                 Player player = FindNetworkPlayer(passenger.ProfileId);
-                if (player == null || player == ItemMgr.Instance?.User_Player || !passenger.Supported) continue;
+                if (player == null || player == ItemMgr.Instance?.User_Player) continue;
                 ShipState ship = GetShip(passenger.ShipId);
-                if (!IsInPresentationWorld(ship) || player.Sprite == null || player.Sprite.transform == player.transform) continue;
+                if (passenger.Supported && IsInPresentationWorld(ship))
+                    PlacePassenger(player, passenger, ship, true);
+                else if (IsPassengerSurfaceDescendingHere(passenger))
+                    PlaceDescendingPassenger(player, passenger);
+                else continue;
                 visibleSurfacePassengers.Add(player);
-                if (!remoteSurfaceVisuals.TryGetValue(player, out var baseline) || baseline.Renderer != player.Sprite)
-                {
-                    RestoreRemotePassengerSurfaceVisual(player);
-                    baseline = (player.Sprite, player.Sprite.transform.localPosition);
-                    remoteSurfaceVisuals[player] = baseline;
-                }
-                ShipFlightState flight = GetFlight(ship.ShipId);
-                // 远端乘员与本地乘员共用高度，不能被升空后的地板遮住。
-                baseline.Renderer.transform.localPosition = baseline.Position + baseline.Renderer.transform.parent.InverseTransformVector(
-                    Vector3.up * (float)ShipSurfaceState.VisualRise(flight));
-                ShipSurfacePresentation.SetElevated(player.gameObject, ShipSurfaceState.IsElevated(flight), ShipSurfacePresentation.PassengerCategory);
             }
             expiredSurfacePassengers.Clear();
-            foreach (Player player in remoteSurfaceVisuals.Keys)
-                if (player == null || !visibleSurfacePassengers.Contains(player)) expiredSurfacePassengers.Add(player);
-            foreach (Player player in expiredSurfacePassengers) RestoreRemotePassengerSurfaceVisual(player);
+            foreach (Player player in surfacePassengers)
+                if (player != ItemMgr.Instance?.User_Player &&
+                    (player == null || !visibleSurfacePassengers.Contains(player))) expiredSurfacePassengers.Add(player);
+            foreach (Player player in expiredSurfacePassengers) RestorePassengerSurface(player);
         }
 
-        private void RestoreRemotePassengerSurfaceVisual(Player player)
+        private void RestorePassengerSurface(Player player)
         {
-            if (!remoteSurfaceVisuals.Remove(player, out var baseline)) return;
-            if (baseline.Renderer != null) baseline.Renderer.transform.localPosition = baseline.Position;
+            surfacePassengers.Remove(player);
+            ShipSurfacePresentation.ClearPassenger(player != null ? player.gameObject : null);
             if (player != null) ShipSurfacePresentation.SetElevated(player.gameObject, false, ShipSurfacePresentation.PassengerCategory);
         }
 
         private void ReleasePassengerSurfacePresentation()
         {
-            expiredSurfacePassengers.Clear(); expiredSurfacePassengers.AddRange(remoteSurfaceVisuals.Keys);
-            foreach (Player player in expiredSurfacePassengers) RestoreRemotePassengerSurfaceVisual(player);
+            expiredSurfacePassengers.Clear(); expiredSurfacePassengers.AddRange(surfacePassengers);
+            foreach (Player player in expiredSurfacePassengers) RestorePassengerSurface(player);
             visibleSurfacePassengers.Clear(); expiredSurfacePassengers.Clear();
             ShipSurfacePresentation.SetElevated(ItemMgr.Instance?.User_Player?.gameObject, false, ShipSurfacePresentation.PassengerCategory);
+        }
+
+        private bool IsPassengerSurfaceDescendingHere(SpacePassengerState passenger) => passenger.SurfaceDescending && !IsSpaceView &&
+            passenger.LandingWorldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+        private void PlaceDescendingPassenger(Player player, SpacePassengerState passenger)
+        {
+            Vector2 ground = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
+            SetPassengerSurfacePose(player, ground, ground,
+                (float)ShipLandingGuidance.SurfaceVisualRise(passenger.SurfaceHeight), passenger.SurfaceHeight > 0d);
+        }
+
+        private void SetPassengerSurfacePose(Player player, Vector2 position, Vector2 authoritativePosition, float rise, bool elevated)
+        {
+            Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+            ShipSurfacePresentation.SetPassengerPose(player.gameObject, mover?.rb, position, rise);
+            Vector3 savedPosition = IsSpaceView ? authoritativePosition : WorldLocalPresentation.ToLogical(authoritativePosition);
+            savedPosition.z = player.transform.position.z;
+            player.itemData.transform.position = savedPosition;
+            ShipSurfacePresentation.SetElevated(player.gameObject, elevated, ShipSurfacePresentation.PassengerCategory);
+            if (rise > 0f || elevated) surfacePassengers.Add(player);
+            else surfacePassengers.Remove(player);
+            ItemMgr.Instance.NotifyRuntimeItemMoved(player);
         }
         #endregion
     }

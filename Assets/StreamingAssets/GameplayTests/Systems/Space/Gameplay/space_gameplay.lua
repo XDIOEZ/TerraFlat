@@ -60,7 +60,29 @@ do
             near(sample.maximumSize, 40, key .. "退出后残留太空视野上限")
         end
         assert(type(camera.limitations) == "string" and #camera.limitations > 0, "镜头采样必须说明覆盖边界")
-        return "真实固定步、会话快照，以及镜头锁定、重复租约、设置与缩放保持、错误释放和恢复已检查"
+        local passenger = data.passengerPose
+        assert(passenger.scope == "production-components" and #passenger.samples == 10, "缺少正式乘员整体位姿采样")
+        local expected = {ground = 0, lift = 4, ["repeat"] = 4, descending = 1, landed = 0,
+            ["lift-again"] = 4, clear = 0, ["repeat-clear"] = 0, ["late-collider"] = 4, disabled = 0}
+        local seen = {}
+        for _, sample in ipairs(passenger.samples) do
+            local rise = expected[sample.name]
+            assert(rise ~= nil and not seen[sample.name], "未知或重复乘员位姿：" .. sample.name)
+            seen[sample.name] = true
+            near(sample.rootX, 10, "升高不能改变玩家 X")
+            near(sample.rootY, 20 + rise, "玩家根节点没有整体升高或重复累加")
+            near(sample.bodyY, sample.rootY, "刚体没有跟随玩家根节点")
+            near(sample.groundY, 20, "高度混入了地面权威坐标")
+            near(sample.handY, 22 + rise, "手持物没有整体跟随")
+            near(sample.handLocalY, 2, "升高改坏了手持物局部位置")
+            assert(sample.solidTrigger == (rise > 0) and sample.childTrigger == (rise > 0),
+                "实体阻挡没有在离地时取消、落地或释放后恢复")
+            assert(sample.sensorTrigger and sample.solidEnabled, "原有 Trigger 或碰撞查询被关闭")
+            assert(not sample.independentTrigger, "错误改动了独立刚体的碰撞")
+            assert(sample.lateTrigger == (sample.name == "late-collider"), "动态新增碰撞体没有接管或恢复")
+        end
+        assert(type(passenger.limitations) == "string" and #passenger.limitations > 0, "乘员采样缺少覆盖边界")
+        return "真实固定步、会话快照、镜头租约，以及乘员整体抬升、重复同步、下降和碰撞恢复已检查"
     end, "真实宇宙会话与固定步时钟")
 end
 

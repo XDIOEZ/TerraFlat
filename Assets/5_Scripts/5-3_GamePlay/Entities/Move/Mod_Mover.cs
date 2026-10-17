@@ -270,7 +270,8 @@ public partial class Mod_Mover : Module
         if (WorldUnitChanged == null)
             return;
 
-        Vector2 position = WorldTopologyRuntime.NormalizePosition(rb.position);
+        Vector2 position = WorldTopologyRuntime.NormalizePosition(
+            FlatWorld.Spaceflight.ShipSurfacePresentation.GroundPosition(item.gameObject, rb.position));
         var currentWorldUnit = new Vector2Int(
             Mathf.FloorToInt(position.x),
             Mathf.FloorToInt(position.y));

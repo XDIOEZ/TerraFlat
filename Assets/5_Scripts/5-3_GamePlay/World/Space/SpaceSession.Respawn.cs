@@ -54,6 +54,7 @@ namespace FlatWorld.Spaceflight
         public void ResetPassengerForRespawn(Player player)
         {
             if (State == null || player == null) return;
+            RestorePassengerSurface(player);
             SpacePassengerState previous = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
             if (!string.IsNullOrWhiteSpace(previous?.ConsolePieceId))
             {

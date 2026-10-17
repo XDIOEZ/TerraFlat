@@ -321,6 +321,7 @@ namespace FlatWorld.Spaceflight
                     passenger.LandingWorldKey = world; passenger.LandingX = display.x; passenger.LandingY = display.y;
                     if (ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player) && player != null)
                     {
+                        RestorePassengerSurface(player);
                         player.transform.position = display;
                         Mod_Mover mover = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
                         if (mover?.rb != null) { mover.rb.position = display; mover.rb.velocity = Vector2.zero; }

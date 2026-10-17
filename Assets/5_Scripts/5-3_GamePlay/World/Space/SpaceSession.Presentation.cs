@@ -135,7 +135,10 @@ namespace FlatWorld.Spaceflight
 
         private Vector2 GetPlayerAuthoritativeDisplayPosition(Player player)
         {
-            if (!IsSpaceView || State == null) return player.transform.position;
+            if (!IsSpaceView)
+                return TryGetPassengerSurfacePosition(player.ProfileName, out Vector2 ground) ? ground
+                    : ShipSurfacePresentation.GroundPosition(player.gameObject, player.transform.position);
+            if (State == null) return player.transform.position;
             SpacePassengerState passenger = FindPassenger(player.ProfileName);
             return passenger == null ? (Vector2)player.transform.position : ProjectPosition(GetPassengerPosition(passenger));
         }
@@ -143,12 +146,38 @@ namespace FlatWorld.Spaceflight
         public bool TryGetPassengerPresentationPosition(string profileId, out Vector2 position)
         {
             position = default;
-            if (!IsSpaceView || State == null) return false;
+            if (State == null) return false;
             SpacePassengerState passenger = FindPassenger(profileId);
-            if (passenger == null || passenger.SurfaceDescending) return false;
+            if (passenger == null) return false;
+            if (IsPassengerSurfaceDescendingHere(passenger))
+            {
+                position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY)) +
+                    Vector2.up * (float)ShipLandingGuidance.SurfaceVisualRise(passenger.SurfaceHeight);
+                return true;
+            }
+            if (passenger.SurfaceDescending) return false;
             ShipState ship = GetShip(passenger.ShipId);
             if (passenger.Supported ? ship == null || !IsInPresentationWorld(ship) : !passenger.IsInSpace || passenger.LandingResolved) return false;
-            position = GetPassengerPresentationPosition(passenger, ship);
+            position = GetPassengerPresentationPosition(passenger, ship) +
+                Vector2.up * (float)ShipSurfaceState.VisualRise(ship != null ? GetFlight(ship.ShipId) : null);
+            return true;
+        }
+
+        // 地表权威坐标不含起降高度，供存档、联机和控制台距离校验共用。
+        public bool TryGetPassengerSurfacePosition(string profileId, out Vector2 position)
+        {
+            position = default;
+            if (IsSpaceView || State == null) return false;
+            SpacePassengerState passenger = FindPassenger(profileId);
+            if (passenger == null) return false;
+            if (IsPassengerSurfaceDescendingHere(passenger))
+            {
+                position = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
+                return true;
+            }
+            ShipState ship = GetShip(passenger.ShipId);
+            if (!passenger.Supported || !IsInPresentationWorld(ship)) return false;
+            position = DisplayPoint(ship, passenger.LocalX, passenger.LocalY);
             return true;
         }
 

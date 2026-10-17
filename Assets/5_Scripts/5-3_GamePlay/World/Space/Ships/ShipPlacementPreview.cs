@@ -24,6 +24,7 @@ namespace FlatWorld.Spaceflight
             double x = (Math.Floor(local.x / ship.CellSizeMeters) + .5d) * ship.CellSizeMeters;
             double y = (Math.Floor(local.y / ship.CellSizeMeters) + .5d) * ship.CellSizeMeters;
             snapped = DisplayPresentationPoint(ship, x, y);
+            if (!IsSpaceView) snapped.y += (float)ShipSurfaceState.VisualRise(GetFlight(ship.ShipId));
             if (!IsSpaceView) snapped = WorldLocalPresentation.ToLogical(snapped);
             angle = (float)(GetShipPresentationPose(ship).AngleRadians * 180d / Math.PI) + quarterTurns * 90f;
             return true;

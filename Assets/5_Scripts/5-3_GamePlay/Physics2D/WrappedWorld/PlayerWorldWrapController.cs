@@ -42,7 +42,7 @@ public sealed class PlayerWorldWrapController : MonoBehaviour
             return false;
         }
 
-        Vector2 current = body.position;
+        Vector2 current = FlatWorld.Spaceflight.ShipSurfacePresentation.GroundPosition(gameObject, body.position);
         if (!IsFinite(current))
             return false;
 

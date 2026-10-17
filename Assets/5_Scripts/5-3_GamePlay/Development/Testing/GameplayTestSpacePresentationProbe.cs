@@ -119,6 +119,69 @@ public static class GameplayTestSpacePresentationProbe
 
     #endregion
 
+    #region 乘员整体高度与碰撞恢复采样
+
+    public static JObject CapturePassengerPose(Player player)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var root = new GameObject("乘员高度独立夹具");
+        try
+        {
+            var body = root.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Kinematic;
+            var solid = root.AddComponent<CircleCollider2D>();
+            var hand = new GameObject("手持物");
+            hand.transform.SetParent(root.transform, false);
+            hand.transform.localPosition = new Vector3(1f, 2f);
+            var childSolid = hand.AddComponent<BoxCollider2D>();
+            var sensor = hand.AddComponent<CircleCollider2D>();
+            sensor.isTrigger = true;
+            var independent = new GameObject("独立刚体");
+            independent.transform.SetParent(root.transform, false);
+            independent.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            var independentCollider = independent.AddComponent<CircleCollider2D>();
+            Collider2D late = null;
+            var samples = new JArray();
+            Pose("ground", 0f);
+            Pose("lift", 4f);
+            Pose("repeat", 4f);
+            Pose("descending", 1f);
+            Pose("landed", 0f);
+            Pose("lift-again", 4f);
+            ShipSurfacePresentation.ClearPassenger(root);
+            Sample("clear");
+            ShipSurfacePresentation.ClearPassenger(root);
+            Sample("repeat-clear");
+            ShipSurfacePresentation.SetPassengerPose(root, body, new Vector2(10f, 20f), 4f);
+            late = hand.AddComponent<CapsuleCollider2D>();
+            Pose("late-collider", 4f);
+            root.SetActive(false);
+            Sample("disabled");
+            return new JObject { ["scope"] = "production-components", ["samples"] = samples,
+                ["limitations"] = "同步调用正式乘员位姿组件，检查根节点、刚体、手持物与碰撞恢复；不推进物理场景，不代表树木接触、完整起降或双客户端验收。" };
+
+            void Pose(string name, float rise)
+            {
+                ShipSurfacePresentation.SetPassengerPose(root, body, new Vector2(10f, 20f), rise);
+                Sample(name);
+            }
+            void Sample(string name)
+            {
+                Vector3 ground = ShipSurfacePresentation.GroundPosition(root, root.transform.position);
+                samples.Add(new JObject { ["name"] = name,
+                    ["rootX"] = root.transform.position.x, ["rootY"] = root.transform.position.y,
+                    ["bodyY"] = body.position.y, ["groundY"] = ground.y,
+                    ["handY"] = hand.transform.position.y, ["handLocalY"] = hand.transform.localPosition.y,
+                    ["solidTrigger"] = solid.isTrigger, ["childTrigger"] = childSolid.isTrigger,
+                    ["sensorTrigger"] = sensor.isTrigger, ["independentTrigger"] = independentCollider.isTrigger,
+                    ["solidEnabled"] = solid.enabled, ["lateTrigger"] = late != null && late.isTrigger });
+            }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    #endregion
+
     #region 太空驾驶镜头租约采样
 
     public static JObject CaptureCameraOverride(Player player)

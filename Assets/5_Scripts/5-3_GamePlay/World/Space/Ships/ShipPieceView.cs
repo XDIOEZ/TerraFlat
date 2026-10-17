@@ -16,6 +16,7 @@ namespace FlatWorld.Spaceflight
         private SpriteRenderer visual;
         private Vector3 baseVisualPosition;
         private Rect interactionBounds;
+        private Vector3 interactionLift;
         private SpriteRenderer[] tankParts;
         private Sprite tankSource;
         private int tankMask = -1;
@@ -29,7 +30,7 @@ namespace FlatWorld.Spaceflight
         private bool pendingMachineBinding;
         private bool registeredForInteraction;
         private ShipEngineExhaustPresenter engineExhaust;
-        public Vector3 WorldPosition => transform.position;
+        public Vector3 WorldPosition => transform.position + transform.TransformVector(interactionLift);
         public int TargetGuid => targetGuid;
         internal string BoundMachineScopeKey => machineScopeKey;
         public bool IsValid => isActiveAndEnabled && session != null && session.FindPiece(pieceId, out _, out _);
@@ -52,7 +53,8 @@ namespace FlatWorld.Spaceflight
         }
         // 船上设备和舱门统一由交互键操作，鼠标左键不打开面板。
         public bool CanPointerInteract(Item actor) => false;
-        public bool ContainsInteractionPoint(Vector2 point) => interactionBounds.Contains((Vector2)transform.InverseTransformPoint(point));
+        public bool ContainsInteractionPoint(Vector2 point) => interactionBounds.Contains(
+            (Vector2)transform.InverseTransformPoint(point - (Vector2)transform.TransformVector(interactionLift)));
         public void SetInteractionHighlighted(bool highlighted)
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);
@@ -260,6 +262,7 @@ namespace FlatWorld.Spaceflight
         }
         public void SetVisualLift(Vector3 visualLiftOffset)
         {
+            interactionLift = visualLiftOffset;
             if (visual != null)
             {
                 Vector3 local = baseVisualPosition + visualLiftOffset;
@@ -490,21 +493,20 @@ namespace FlatWorld.Spaceflight
             Player player = ItemMgr.Instance?.User_Player;
             if (player == null) return;
             SpacePassengerState passenger = GetPassenger(player);
-            SetTerrainSuppression(player, IsSpaceView || passenger.Supported);
+            SetTerrainSuppression(player, IsSpaceView || passenger.Supported || passenger.SurfaceDescending);
             ShipState carrier = GetShip(passenger.ShipId);
             // 支撑乘员始终跟随当前世界的船体，不能因美术裁剪改读旧自由漂浮坐标。
             if (passenger.Supported && IsInPresentationWorld(carrier)) PlacePassenger(player, passenger, carrier, true);
+            else if (IsPassengerSurfaceDescendingHere(passenger)) PlaceDescendingPassenger(player, passenger);
             else if (!passenger.Supported && IsSpaceView && passenger.IsInSpace && !passenger.LandingResolved)
             {
+                RestorePassengerSurface(player);
                 Vector2 position = GetPassengerPresentationPosition(passenger, null);
                 player.transform.position = new Vector3(position.x, position.y, 0f);
                 Rigidbody2D playerBody = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.rb;
                 if (playerBody != null) playerBody.position = position;
             }
-            ShipFlightState carryingFlight = carrier != null ? GetFlight(carrier.ShipId) : null;
-            double visualHeight = passenger.SurfaceDescending ? passenger.SurfaceHeight :
-                carryingFlight != null && carryingFlight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending ? carryingFlight.HeightMeters : 0d;
-            ApplyPassengerHeightVisual(player, visualHeight);
+            else RestorePassengerSurface(player);
             UpdateDrivingCamera(player, passenger, carrier);
         }
         private void RemovePieceView(string id)
@@ -523,20 +525,6 @@ namespace FlatWorld.Spaceflight
             if (State != null) ReleaseLooseViews();
             foreach (string id in new System.Collections.Generic.List<string>(views.Keys)) RemovePieceView(id);
             ReleaseShipColliderPresenters();
-            if (passengerVisual != null) passengerVisual.transform.localPosition = passengerVisualPosition;
-            passengerVisual = null;
-        }
-        private SpriteRenderer passengerVisual;
-        private Vector3 passengerVisualPosition;
-        private void ApplyPassengerHeightVisual(Player player, double height)
-        {
-            if (passengerVisual != player.Sprite)
-            { passengerVisual = player.Sprite; if (passengerVisual != null) passengerVisualPosition = passengerVisual.transform.localPosition; }
-            if (passengerVisual != null)
-                passengerVisual.transform.localPosition = passengerVisualPosition + passengerVisual.transform.parent.InverseTransformVector(Vector3.up * (float)ShipLandingGuidance.SurfaceVisualRise(height));
-            ShipState ship = GetShip(GetPassenger(player).ShipId);
-            ShipSurfacePresentation.SetElevated(player.gameObject, ShipSurfaceState.IsElevated(ship != null ? GetFlight(ship.ShipId) : null),
-                ShipSurfacePresentation.PassengerCategory);
         }
 
         public void CollectAssemblyPresentationRenderers(string shipId, System.Collections.Generic.List<SpriteRenderer> renderers)
