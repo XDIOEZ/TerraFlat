@@ -1,7 +1,32 @@
--- 纯噪声和群系选择，不生成当前世界，也不截图。
+-- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
 local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.00001), message)
 end
+
+test.system("terrain", "ground_cover_work", {}, function(data)
+    assert(not data.unselectedCompleted and data.unselectedUses == 0, "未选中植被也累计了采集次数")
+    assert(data.scissorsCompleted and data.scissorsUses == 1, "剪刀没有一次完成植被采集")
+    for index, completed in ipairs(data.stoneCompleted) do
+        assert(completed == (index == 4) and data.stoneUses[index] == index,
+            "石器未按同一目标累计四次后完成：" .. index)
+    end
+    assert(#data.stoneCompleted == 4, "石器没有采样完整四次交互")
+    assert(data.retryCompleted and data.retryUses == 4, "已完成进度重试时没有保持四次封顶")
+    for _, sample in ipairs(data.targetChanges) do
+        assert(sample.before == 1 and sample.afterSelect == 0 and sample.afterWork == 1 and not sample.completed,
+            "更换目标身份继承了上一目标进度：" .. sample.kind)
+    end
+    assert(#data.targetChanges == 5, "未覆盖地格、草花、花朵身份和地形更换")
+    assert(data.resetUses == 0 and not data.resetCompleted and data.afterResetUses == 0,
+        "重置没有清除进度和目标身份")
+    assert(data.zeroUsesRejected and data.negativeUsesRejected and data.afterInvalidUses == 0,
+        "无效交互次数未拒绝或改变了进度")
+    assert(not data.disposedCompleted and data.disposedUses == 1, "已释放地形仍能累计采集进度")
+    assert(not data.emptyGrassConsumed and data.emptyGrassState == data.expectedEmptyGrass,
+        "空草层被当成可采草消费")
+    assert(data.presentGrassConsumed and not data.repeatGrassConsumed and
+        data.consumedGrassState == data.expectedEmptyGrass, "真实草层没有只被消费一次")
+end, "剪刀一次与石器四次植被工作、目标隔离和草层一次性消费")
 
 for _, sample in ipairs({{height = 0.75, strength = 1, seed = 17413}, {height = 0.25, strength = 1, seed = 8321}}) do
     local input = sample

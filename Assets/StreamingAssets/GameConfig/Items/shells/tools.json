@@ -30,7 +30,7 @@
           "prefab": "Module_GroundCoverHarvest",
           "id": "Mod_GroundCoverHarvest",
           "enabled": true,
-          "parameters": { "reach": 2.0, "grassYieldItemId": "Fiber", "grassYieldAmount": 2 }
+          "parameters": { "reach": 2.0, "grassYieldItemId": "Fiber", "grassYieldAmount": 2, "requiredUses": 1 }
         }
       }
     },

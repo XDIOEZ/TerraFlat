@@ -942,7 +942,7 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab",
       "shellPrefab": "ChippedTool",
       "gameName": "打制石器",
-      "description": "由石料打制而成的简易工具。",
+      "description": "由石料打制而成的简易工具。对准附近草层或野花，右键或点击使用；对同一目标完成4次采集，可获得1份植物纤维或采下野花。",
       "weight": 0.2,
       "volume": 0.25,
       "stackable": true,
@@ -975,6 +975,17 @@
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
             "staminaCostPerAttack": 1.5
+          }
+        },
+        "groundCoverHarvest": {
+          "prefab": "Module_GroundCoverHarvest",
+          "id": "Mod_GroundCoverHarvest",
+          "enabled": true,
+          "parameters": {
+            "reach": 2.0,
+            "grassYieldItemId": "Fiber",
+            "grassYieldAmount": 1,
+            "requiredUses": 4
           }
         }
       }

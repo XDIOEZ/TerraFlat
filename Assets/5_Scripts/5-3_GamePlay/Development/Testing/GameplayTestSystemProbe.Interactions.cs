@@ -13,6 +13,98 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("player/physics_source", InteractionPhysicsSource);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
+        operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
+    }
+
+    #endregion
+
+    #region 植被交互次数与目标身份
+
+    private static JObject InteractionGroundCoverWork(JObject args)
+    {
+        using var firstBuffer = new ChunkTerrainBuffer(2, 2);
+        using ChunkTerrainData first = firstBuffer.Seal();
+        using var secondBuffer = new ChunkTerrainBuffer(2, 2);
+        using ChunkTerrainData second = secondBuffer.Seal();
+        var work = new GroundCoverHarvestProgress();
+        bool unselectedCompleted = work.Advance(4);
+        int unselectedUses = work.CompletedUses;
+        work.SelectTarget(first, Vector2Int.zero, 0, true);
+        bool scissorsCompleted = work.Advance(1);
+        int scissorsUses = work.CompletedUses;
+        work.Reset();
+        var stoneCompleted = new JArray();
+        var stoneUses = new JArray();
+        for (int i = 0; i < 4; i++)
+        {
+            // 每次重新解析同一目标，进度仍由正式生产状态累积。
+            work.SelectTarget(first, Vector2Int.zero, 0, true);
+            stoneCompleted.Add(work.Advance(4));
+            stoneUses.Add(work.CompletedUses);
+        }
+        bool retryCompleted = work.Advance(4);
+        int retryUses = work.CompletedUses;
+        work.Reset();
+        int resetUses = work.CompletedUses;
+        bool resetCompleted = work.Advance(4);
+        int afterResetUses = work.CompletedUses;
+        bool zeroUsesRejected = false, negativeUsesRejected = false;
+        try { work.Advance(0); }
+        catch (ArgumentOutOfRangeException) { zeroUsesRejected = true; }
+        try { work.Advance(-1); }
+        catch (ArgumentOutOfRangeException) { negativeUsesRejected = true; }
+        int afterInvalidUses = work.CompletedUses;
+
+        var identityWork = new GroundCoverHarvestProgress();
+        identityWork.SelectTarget(first, Vector2Int.zero, 0, true);
+        identityWork.Advance(4);
+        JObject SelectChangedTarget(string kind, ChunkTerrainData terrain, Vector2Int cell, int guid, bool cuttingGrass)
+        {
+            int before = identityWork.CompletedUses;
+            identityWork.SelectTarget(terrain, cell, guid, cuttingGrass);
+            int afterSelect = identityWork.CompletedUses;
+            bool completed = identityWork.Advance(4);
+            return new JObject
+            {
+                ["kind"] = kind, ["before"] = before, ["afterSelect"] = afterSelect,
+                ["completed"] = completed, ["afterWork"] = identityWork.CompletedUses
+            };
+        }
+        Vector2Int otherCell = Vector2Int.right;
+        var targetChanges = new JArray
+        {
+            SelectChangedTarget("cell", first, otherCell, 0, true),
+            SelectChangedTarget("grass_to_flower", first, otherCell, 0, false),
+            SelectChangedTarget("flower_guid", first, otherCell, 101, false),
+            SelectChangedTarget("flower_to_grass", first, otherCell, 101, true),
+            SelectChangedTarget("terrain", second, otherCell, 101, true)
+        };
+
+        first.SetGrass(0, 0, ChunkTerrainData.GrassEmpty);
+        bool emptyGrassConsumed = first.TryConsumeGrass(0, 0);
+        byte emptyGrassState = first.GetGrass(0, 0);
+        first.SetGrass(0, 0, ChunkTerrainData.GrassPresent);
+        bool presentGrassConsumed = first.TryConsumeGrass(0, 0);
+        bool repeatGrassConsumed = first.TryConsumeGrass(0, 0);
+        byte consumedGrassState = first.GetGrass(0, 0);
+        second.Dispose();
+        bool disposedCompleted = identityWork.Advance(4);
+
+        return new JObject
+        {
+            ["unselectedCompleted"] = unselectedCompleted, ["unselectedUses"] = unselectedUses,
+            ["scissorsCompleted"] = scissorsCompleted, ["scissorsUses"] = scissorsUses,
+            ["stoneCompleted"] = stoneCompleted, ["stoneUses"] = stoneUses,
+            ["retryCompleted"] = retryCompleted, ["retryUses"] = retryUses,
+            ["targetChanges"] = targetChanges, ["resetUses"] = resetUses,
+            ["resetCompleted"] = resetCompleted, ["afterResetUses"] = afterResetUses,
+            ["zeroUsesRejected"] = zeroUsesRejected, ["negativeUsesRejected"] = negativeUsesRejected,
+            ["afterInvalidUses"] = afterInvalidUses, ["disposedCompleted"] = disposedCompleted,
+            ["disposedUses"] = identityWork.CompletedUses, ["emptyGrassConsumed"] = emptyGrassConsumed,
+            ["emptyGrassState"] = emptyGrassState, ["expectedEmptyGrass"] = ChunkTerrainData.GrassEmpty,
+            ["presentGrassConsumed"] = presentGrassConsumed, ["repeatGrassConsumed"] = repeatGrassConsumed,
+            ["consumedGrassState"] = consumedGrassState
+        };
     }
 
     #endregion

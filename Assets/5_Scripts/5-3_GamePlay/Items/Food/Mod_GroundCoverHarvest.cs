@@ -1,6 +1,7 @@
 using System;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
@@ -18,9 +19,12 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
     [Tooltip("可选草层产物 ID；留空的工具只采集花朵等独立植被。")]
     public string grassYieldItemId = "";
     [Min(1)] public int grassYieldAmount = 2;
+    [Min(1), Tooltip("完成同一目标采集所需的有效挥动次数。")]
+    public int requiredUses = 1;
     private WorldTileTargetOutline targetOutline; // 仅当前本地手持工具拥有的白色目标框。
     private IWeaponActionAnimation actionAnimation; // 剪取前通过动作接口复用挥动表现。
     private bool actBound; // 防止重复 Load 订阅同一使用事件。
+    private GroundCoverHarvestProgress workProgress; // 仅当前手持工具和目标之间的临时进度。
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public override ModuleData _Data
@@ -46,15 +50,29 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         actionAnimation = modules.RequireSingleCapability<IWeaponActionAnimation>();
     }
 
-    /// <summary>绑定工具使用入口；采集状态由世界持有，不在工具中恢复。</summary>
+    /// <summary>绑定工具使用入口；世界保存采集结果，未完成次数只属于当前手持会话。</summary>
     protected override void OnLoad()
     {
-        if (reach <= 0f || float.IsNaN(reach) || float.IsInfinity(reach))
-            throw new InvalidOperationException("地表植被采集距离必须是有限正数。");
+        ValidateConfiguration();
+        workProgress.Reset();
         BindAct();
     }
 
-    /// <summary>本模块无独立运行态，自动保存不解除输入监听。</summary>
+    public override void OnResourcesReloaded()
+    {
+        base.OnResourcesReloaded();
+        ValidateConfiguration();
+    }
+
+    private void ValidateConfiguration()
+    {
+        if (reach <= 0f || float.IsNaN(reach) || float.IsInfinity(reach))
+            throw new InvalidOperationException("地表植被采集距离必须是有限正数。");
+        if (requiredUses < 1 || grassYieldAmount < 1)
+            throw new InvalidOperationException("地表植被采集次数和草层产量必须至少为一。");
+    }
+
+    /// <summary>不保存临时采集次数，自动保存不解除输入监听。</summary>
     protected override void OnSave() { }
 
     /// <summary>换手、回池或卸载时解除动作绑定并释放白框。</summary>
@@ -63,6 +81,7 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         if (actBound && item != null) item.OnAct -= Act;
         actBound = false;
         actionAnimation = null;
+        workProgress.Reset();
         ReleaseOutline();
     }
 
@@ -82,15 +101,21 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
     {
         if (!TryResolveTarget(out GroundCoverTarget target, out RuntimeTerrainTileSample grass, out bool cuttingGrass))
         {
+            workProgress.Reset();
             targetOutline?.Hide();
             return;
         }
+        SelectWorkTarget(target, grass, cuttingGrass);
         targetOutline ??= WorldTileTargetOutline.Create("Ground Cover Target Outline");
         targetOutline.Show(cuttingGrass ? grass.WorldCell : target.WorldCell);
     }
 
     /// <summary>禁用期间不保留独立于手持物的目标框。</summary>
-    private void OnDisable() => ReleaseOutline();
+    private void OnDisable()
+    {
+        workProgress.Reset();
+        ReleaseOutline();
+    }
 
     /// <summary>销毁路径与回池路径使用同一清理入口。</summary>
     private void OnDestroy() => Unload();
@@ -103,27 +128,50 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
     public override void Act()
     {
         if (!TryResolveTarget(out GroundCoverTarget target, out RuntimeTerrainTileSample grass, out bool cuttingGrass))
+        {
+            workProgress.Reset();
             return;
+        }
+
+        SelectWorkTarget(target, grass, cuttingGrass);
 
         // 和锄头一致：只有本次挥动动画真正开始，才结算这一剪。
         actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionAnimation>();
         if (!actionAnimation.TryRequestAction(queueIfBusy: false))
             return;
 
+        if (!workProgress.Advance(requiredUses))
+        {
+            ItemActionFeedback.Show(item.Owner, $"{workProgress.CompletedUses}/{requiredUses}");
+            return;
+        }
+
         if (cuttingGrass)
         {
             // 先准备真实掉落，再消费草层；失败不清草，连续使用也不会重复出货。
             DroppedItemHandle product = DroppedItemService.SpawnLoot(grassYieldItemId,
                 (Vector2)grass.WorldCell + Vector2.one * 0.5f, grassYieldAmount);
-            if (!RuntimeGrassClearing.Clear(grass)) DroppedItemService.Remove(product);
+            if (!RuntimeGrassClearing.Clear(grass))
+            {
+                DroppedItemService.Remove(product);
+                return;
+            }
+            workProgress.Reset();
             targetOutline?.Hide();
         }
         else if (GroundCoverSystem.TryHarvest(target))
         {
+            workProgress.Reset();
             targetOutline?.Hide();
             ItemActionFeedback.Show(item.Owner, FlatWorldLocalizationService.GetUiFormat(
                 "已采集{0}。", FlatWorldLocalizationService.GetUiText(target.Definition.DisplayName)));
         }
+    }
+
+    private void SelectWorkTarget(GroundCoverTarget target, RuntimeTerrainTileSample grass, bool cuttingGrass)
+    {
+        workProgress.SelectTarget(cuttingGrass ? grass.Terrain : target.Chunk.Terrain,
+            cuttingGrass ? grass.WorldCell : target.WorldCell, cuttingGrass ? 0 : target.Placement.Guid, cuttingGrass);
     }
 
     /// <summary>白框与实际采集共用手持、存活、输入锁、UI 遮挡、地格和环绕距离判定。</summary>
@@ -145,7 +193,8 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         Vector2 pointer = controller.GetMouseWorldPosition();
         if (!string.IsNullOrWhiteSpace(grassYieldItemId) && ChunkMgr.ExistingInstance != null &&
             ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointer, out grass) &&
-            FarmlandSystem.IsOpen(grass) && grass.Terrain.GetGrass(grass.LocalCell.x, grass.LocalCell.y) > 0 &&
+            FarmlandSystem.IsOpen(grass) &&
+            grass.Terrain.GetGrass(grass.LocalCell.x, grass.LocalCell.y) == ChunkTerrainData.GrassPresent &&
             FarmlandSystem.IsWithinReach(actor.transform.position, grass.WorldCell, reach))
         {
             cuttingGrass = true;
@@ -164,6 +213,42 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         Destroy(targetOutline.gameObject);
         targetOutline = null;
     }
+
+    #endregion
+}
+
+/// <summary>按地形实例、地格和植被身份累计有效挥动，目标变化后重新计数。</summary>
+internal struct GroundCoverHarvestProgress
+{
+    #region 目标与有效次数
+
+    private ChunkTerrainData terrain;
+    private Vector2Int cell;
+    private int placementGuid;
+    private bool cuttingGrass;
+    public int CompletedUses { get; private set; }
+
+    public void SelectTarget(ChunkTerrainData terrain, Vector2Int cell, int placementGuid, bool cuttingGrass)
+    {
+        if (ReferenceEquals(this.terrain, terrain) && this.cell == cell &&
+            this.placementGuid == placementGuid && this.cuttingGrass == cuttingGrass)
+            return;
+        this.terrain = terrain;
+        this.cell = cell;
+        this.placementGuid = placementGuid;
+        this.cuttingGrass = cuttingGrass;
+        CompletedUses = 0;
+    }
+
+    public bool Advance(int requiredUses)
+    {
+        if (requiredUses < 1) throw new ArgumentOutOfRangeException(nameof(requiredUses));
+        if (terrain == null || terrain.IsDisposed) return false;
+        if (CompletedUses < requiredUses) CompletedUses++;
+        return CompletedUses >= requiredUses;
+    }
+
+    public void Reset() => this = default;
 
     #endregion
 }

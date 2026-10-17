@@ -14,10 +14,10 @@ public static class RuntimeGrassClearing
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed)
             return false;
         int x = sample.LocalCell.x, y = sample.LocalCell.y;
-        bool existed = sample.Terrain.GetGrass(x, y) != 0;
-        sample.Terrain.SetGrass(x, y, 0);
+        if (!sample.Terrain.TryConsumeGrass(x, y))
+            return false;
         SaveDataMgr.Instance.RecordRuntimeGrassRemoved(sample);
-        return existed;
+        return true;
     }
 
     #endregion
