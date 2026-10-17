@@ -538,7 +538,7 @@ namespace FlatWorld.WorldModel
             LavaLakeMinimumHeight = Clamp01(GetDouble(numbers, "lake.lava.minimumHeight", 0.74d));
             LavaLakeShoreWidth = ScaleDistance(GetDouble(numbers, "lake.lava.shoreWidth", 2.5d),
                 WorldSpatialDistanceScale, 0.25d, 24d);
-            GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
+            GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.072d));
             GrassMinimumCelsius = Finite(GetDouble(numbers, "grass.minimumCelsius", -10d), -10d);
             GrassMaximumCelsius = Math.Max(GrassMinimumCelsius,
                 Finite(GetDouble(numbers, "grass.maximumCelsius", 50d), 50d));

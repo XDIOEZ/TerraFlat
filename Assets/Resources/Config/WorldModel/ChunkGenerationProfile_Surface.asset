@@ -214,7 +214,7 @@ MonoBehaviour:
   - Id: lake.lava.shoreWidth
     Value: 2.5
   - Id: grass.density
-    Value: 0.24
+    Value: 0.072
   - Id: grass.minimumCelsius
     Value: -10
   - Id: grass.maximumCelsius
