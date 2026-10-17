@@ -1,3 +1,34 @@
+local function near(actual, expected, label)
+    assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
+end
+
+for level = 0, 20 do
+    local expectedDrain = level == 0 and .5 or 1 + level * .04
+    local expectedReceived = level == 0 and .5 or 1
+    test.system("core_lifecycle", "difficulty_rules", {level = level}, function(data)
+        near(data.hungerDrain, expectedDrain, "食物与水分共用的消耗倍率")
+        near(data.received, expectedReceived, "怪物攻击玩家的受伤倍率")
+        near(data.environmentalDamage, 1 + level * .04, "环境伤害倍率保持原规则")
+        near(data.creatureAttack, 1 + level * .06, "怪物自身攻击倍率保持原规则")
+        near(data.playerAttack, 1 - level * .0175, "玩家攻击倍率保持原规则")
+        near(data.damage, 7 * expectedReceived, "受伤减半在扣除防御之后")
+    end, "预设难度生存与战斗倍率：" .. level)
+end
+
+for _, case in ipairs({
+    {name = "玩家攻击", args = {sourcePlayer = true}, damage = 7, received = 1},
+    {name = "非玩家目标", args = {targetPlayer = false}, damage = 7, received = 1},
+    {name = "环境攻击", args = {environmental = true}, damage = 7, received = 1},
+    {name = "未破防", args = {defense = 12}, damage = 0, received = .5},
+    {name = "自定义难度", args = {custom = true}, damage = 7, received = 1}
+}) do
+    test.system("core_lifecycle", "difficulty_rules", case.args, function(data)
+        near(data.received, case.received, "受伤倍率适用范围")
+        near(data.damage, case.damage, "难度减伤与防御边界")
+        if case.args.custom then near(data.hungerDrain, 1, "自定义消耗保持原规则") end
+    end, "难度 0 减伤边界：" .. case.name)
+end
+
 -- 只执行独立资源计划，阶段依赖和失败清理由生产管线处理。
 test.system("core_lifecycle", "resource_plan", { mode = "ordered" }, function(data)
     assert(data.failure == nil, "合法资源依赖被拒绝")

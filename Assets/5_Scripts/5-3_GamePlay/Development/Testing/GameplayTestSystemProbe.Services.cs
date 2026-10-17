@@ -28,6 +28,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
         operations.Add("core_lifecycle/resource_candidate", ServiceResourceCandidate);
+        operations.Add("core_lifecycle/difficulty_rules", ServiceDifficultyRules);
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
         operations.Add("item_runtime/clone_runtime", ServiceCloneRuntime);
         operations.Add("world_streaming/chunk_leases", ServiceChunkLeases);
@@ -60,6 +61,29 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/universe_view_config", ServiceUniverseViewConfiguration);
         operations.Add("rendering/universe_view_transition", ServiceUniverseViewTransition);
         operations.Add("rendering/group_projection", ServiceGroupProjection);
+    }
+
+    #endregion
+
+    #region 难度规则
+
+    private static JObject ServiceDifficultyRules(JObject args)
+    {
+        GameDifficultyDefinition definition = Flag(args, "custom", false)
+            ? GameDifficultyCatalog.CreateCustom(new GameDifficultyRuleValues())
+            : GameDifficultyCatalog.Get((GameDifficultyId)(int)Number(args, "level", 0d));
+        float received = definition.CreatureCombat.ResolveReceivedDamageMultiplier(
+            Flag(args, "sourcePlayer", false), Flag(args, "targetPlayer", true), Flag(args, "environmental", false));
+        return new JObject
+        {
+            ["hungerDrain"] = definition.PlayerSurvival.HungerDrainMultiplier,
+            ["environmentalDamage"] = definition.PlayerSurvival.EnvironmentalDamageMultiplier,
+            ["creatureAttack"] = definition.CreatureCombat.AttackMultiplier,
+            ["playerAttack"] = definition.CreatureCombat.PlayerAttackMultiplier,
+            ["received"] = received,
+            ["damage"] = FlatWorld.Combat.CombatRules.ResolvePhysical(
+                (float)Number(args, "attack", 10d), (float)Number(args, "defense", 3d), 1f, received)
+        };
     }
 
     #endregion

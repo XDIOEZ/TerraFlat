@@ -2,7 +2,9 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`core_lifecycle/resource_plan、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、resource_plan、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+
+2026-10-17 新增难度规则回归（本轮按用户要求未运行）：难度 0 的食物/水分共用消耗倍率为 0.5，怪物攻击玩家在防御后减半；覆盖 1～20 级原倍率、环境伤害、玩家攻击、非玩家目标、未破防和自定义默认规则。这里只采样正式目录与伤害计算，不代替真实玩家跨帧消耗和 GO/ECS 实际命中验收。
 
 已编写的规则覆盖：正式 ResourceLoadPipeline 的依赖顺序、缺失依赖、循环依赖、进度不倒退、异常清理；ResourceReloadContext 的跨帧恢复、候选释放、失败不发布和完成后提交。真实场景观察正式 Ready、玩家生命周期、入世闸门以及脚下和可见窗口表现，并检查本地玩家快捷栏/手部 UI 均仅有一份且绑定当前玩家。
 

@@ -717,7 +717,12 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
         if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         if (!ignoreInterval) lastDamageTime = context.Clock.Time;
-        float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
+        bool targetIsPlayer = GameDifficultyService.IsPlayer(item);
+        float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, targetIsPlayer);
+        // 怪物攻击玩家的难度减伤放在防御后，部位伤害和命中反馈共用同一倍率。
+        rules *= GameDifficultyService.Current.CreatureCombat.ResolveReceivedDamageMultiplier(
+            context.SourceIsPlayer != 0, targetIsPlayer,
+            context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment);
         if (context.IsTrueDamage == 0 && context.Attack.Source.Backend != FlatWorld.Combat.CombatBackend.Environment)
             rules *= Mod_ResourceHarvest.ResolveAffinityMultiplier(weakTool, 1,
                 (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);

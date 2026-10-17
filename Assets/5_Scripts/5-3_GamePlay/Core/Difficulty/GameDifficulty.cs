@@ -68,19 +68,30 @@ public sealed class PlayerSurvivalDifficultyRules
 /// </summary>
 public sealed class CreatureCombatDifficultyRules
 {
+    #region 生物战斗倍率
+
     public float PlayerAttackMultiplier { get; }
     public float AttackMultiplier { get; }
     public float MaxHealthMultiplier { get; }
+    public float PlayerDamageTakenMultiplier { get; }
 
     public CreatureCombatDifficultyRules(
         float playerAttackMultiplier,
         float attackMultiplier,
-        float maxHealthMultiplier)
+        float maxHealthMultiplier,
+        float playerDamageTakenMultiplier = 1f)
     {
         PlayerAttackMultiplier = playerAttackMultiplier;
         AttackMultiplier = attackMultiplier;
         MaxHealthMultiplier = maxHealthMultiplier;
+        PlayerDamageTakenMultiplier = playerDamageTakenMultiplier;
     }
+
+    /// <summary>仅对生物攻击玩家应用防御后的受伤倍率，环境和玩家攻击保持原规则。</summary>
+    public float ResolveReceivedDamageMultiplier(bool sourceIsPlayer, bool targetIsPlayer, bool environmental)
+        => !sourceIsPlayer && targetIsPlayer && !environmental ? Mathf.Max(0f, PlayerDamageTakenMultiplier) : 1f;
+
+    #endregion
 }
 
 /// <summary>昼夜推进、生物生态与战利品规则。</summary>
@@ -248,6 +259,8 @@ public static class GameDifficultyCatalog
             : Mathf.Clamp((int)id, MinLevel, MaxLevel);
     }
 
+    #region 预设难度规则
+
     private static IReadOnlyList<GameDifficultyDefinition> BuildDefinitions()
     {
         var definitions = new GameDifficultyDefinition[MaxLevel - MinLevel + 1];
@@ -257,7 +270,7 @@ public static class GameDifficultyCatalog
         return definitions;
     }
 
-    /// <summary>难度等级使用同一条连续曲线生成规则，避免维护 21 份重复配置。</summary>
+    /// <summary>难度 0 单独减轻生存与受伤压力，其余等级沿用连续曲线。</summary>
     private static GameDifficultyDefinition CreateLevelDefinition(int level)
     {
         level = Mathf.Clamp(level, MinLevel, MaxLevel);
@@ -269,7 +282,7 @@ public static class GameDifficultyCatalog
             GetLevelDescription(level),
             new PlayerDeathDifficultyRules(dropAllCarriedItems: level >= 10),
             new PlayerSurvivalDifficultyRules(
-                Mathf.Lerp(1f, 1.8f, t),
+                level == 0 ? 0.5f : Mathf.Lerp(1f, 1.8f, t),
                 Mathf.Lerp(1f, 1.7f, t),
                 Mathf.Lerp(1f, 0.65f, t),
                 Mathf.Lerp(1f, 0.70f, t),
@@ -277,7 +290,8 @@ public static class GameDifficultyCatalog
             new CreatureCombatDifficultyRules(
                 Mathf.Lerp(1f, 0.65f, t),
                 Mathf.Lerp(1f, 2.2f, t),
-                Mathf.Lerp(1f, 2.5f, t)),
+                Mathf.Lerp(1f, 2.5f, t),
+                playerDamageTakenMultiplier: level == 0 ? 0.5f : 1f),
             new WorldDifficultyRules(
                 Mathf.Lerp(1f, 1.25f, t),
                 Mathf.Lerp(1f, 1.8f, t),
@@ -293,7 +307,7 @@ public static class GameDifficultyCatalog
     private static string GetLevelDescription(int level)
     {
         if (level <= 0)
-            return "基础规则，适合熟悉世界与系统。";
+            return "食物与水分消耗减半，怪物攻击伤害减半，适合熟悉世界与系统。";
         if (level <= 4)
             return "轻度挑战，敌人与生存压力小幅提升。";
         if (level <= 9)
@@ -305,6 +319,8 @@ public static class GameDifficultyCatalog
 
         return "极限挑战，适合已经熟悉全部系统的玩家。";
     }
+
+    #endregion
 
     public static GameDifficultyDefinition CreateCustom(GameDifficultyRuleValues values)
     {
