@@ -39,7 +39,12 @@ public class Mod_Hand : Module
             Inventory_Hand.PlayerHand = null;
 
         if (HandInventory != null)
+        {
+            HandInventory.UnbindController();
+            HandInventory.UnbindRuntimeDataEvents();
+            HandInventory.ReleaseRuntimePanel();
             HandInventory.item = null;
+        }
     }
     #endregion
 

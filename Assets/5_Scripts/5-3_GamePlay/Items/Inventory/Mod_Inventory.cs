@@ -179,6 +179,7 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
             currentInventory.UnbindPlayerCarryWeightEvents();
             currentInventory.UnbindController();
             currentInventory.UnbindRuntimeDataEvents();
+            currentInventory.ReleaseRuntimePanel();
             currentInventory.item = null;
         }
 

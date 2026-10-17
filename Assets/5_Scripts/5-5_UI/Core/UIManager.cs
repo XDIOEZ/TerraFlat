@@ -944,23 +944,11 @@ public class UIManager : MonoBehaviour
     {
         if (panel == null)
             return;
-        string baseName = panel.PanelName;
-        // 移除后缀以获取基础名称
-        int underscoreIndex = baseName.LastIndexOf('_');
-        if (underscoreIndex > 0 && int.TryParse(baseName.Substring(underscoreIndex + 1), out _))
-        {
-            baseName = baseName.Substring(0, underscoreIndex);
-        }
-
-        if (panels.TryGetValue(baseName, out List<BasePanel> panelList))
-        {
+        // 面板归属按实例注销，避免重命名或跨世界注册变化导致旧 UI 漏销毁。
+        foreach (List<BasePanel> panelList in panels.Values)
             panelList.Remove(panel);
-            if (panel != null && panel.gameObject != null)
-            {
-                Destroy(panel.gameObject);
-            }
-            NotifyInteractionSurfaceChanged();
-        }
+        Destroy(panel.gameObject);
+        NotifyInteractionSurfaceChanged();
     }
 
     public void DestroyAllPanelsOfType(string baseName)

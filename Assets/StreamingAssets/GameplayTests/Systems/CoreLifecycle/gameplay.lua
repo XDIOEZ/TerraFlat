@@ -4,4 +4,7 @@ test.runtime("core_lifecycle", "live_entry", {}, function(data)
     assert(data.inWorld and data.gameplayReady and not data.entryInProgress, "正式入世闸门尚未释放")
     assert(data.localProfile and data.playerInitialized and data.playerActive and data.profile ~= nil, "本地测试角色未完成生命周期")
     assert(data.footViewReady and data.windowReady, "输入已解锁但脚下或可见区块表现未就绪")
+    assert(data.hotbarCount == 1 and data.handCount == 1
+        and data.currentHotbarRegistered and data.currentHandRegistered,
+        "旧世界的快捷栏/手持面板残留，或当前玩家 HUD 未正确注册")
 end, "正式入世、玩家生命周期和表现就绪")

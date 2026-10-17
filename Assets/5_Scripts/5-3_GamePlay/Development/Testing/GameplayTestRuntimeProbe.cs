@@ -402,6 +402,14 @@ public static partial class GameplayTestRuntimeProbe
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
         bool footReady = chunks != null && chunks.TryGetRuntimeChunkView(player.transform.position, out var foot) &&
             foot != null && foot.gameObject.activeInHierarchy;
+        RectTransform uiRoot = UIManager.ExistingInstance?.SafeAreaRoot;
+        BasePanel[] runtimePanels = uiRoot != null ? uiRoot.GetComponentsInChildren<BasePanel>(true) : Array.Empty<BasePanel>();
+        int hotbarCount = runtimePanels.Count(panel => panel != null &&
+            (panel.PanelName == "UI_HotBar" || panel.PanelName?.StartsWith("UI_HotBar_", StringComparison.Ordinal) == true));
+        int handCount = runtimePanels.Count(panel => panel != null &&
+            (panel.PanelName == "UI_Hand" || panel.PanelName?.StartsWith("UI_Hand_", StringComparison.Ordinal) == true));
+        Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+        Mod_Hand hand = player.GetComponentInChildren<Mod_Hand>(true);
         return new JObject
         {
             ["resourceState"] = resources?.LoadState.ToString(), ["startupReady"] = resources != null && resources.IsStartupReady,
@@ -410,6 +418,11 @@ public static partial class GameplayTestRuntimeProbe
             ["profile"] = player.ProfileName, ["playerInitialized"] = player.IsInitialized,
             ["playerActive"] = player.gameObject.activeInHierarchy, ["footViewReady"] = footReady,
             ["windowReady"] = chunks != null && chunks.AreRuntimeWindowPresentationsReady,
+            ["hotbarCount"] = hotbarCount, ["handCount"] = handCount,
+            ["currentHotbarRegistered"] = hotbar?.RuntimeInventory?.basePanel != null &&
+                runtimePanels.Contains(hotbar.RuntimeInventory.basePanel),
+            ["currentHandRegistered"] = hand?.HandInventory?.basePanel != null &&
+                runtimePanels.Contains(hand.HandInventory.basePanel),
             ["guid"] = player.itemData.Guid, ["isolationRoot"] = RequireIsolatedSaveRoot(player)
         };
     }
@@ -466,6 +479,8 @@ public static partial class GameplayTestRuntimeProbe
             Stack = new ItemStack { Amount = amount }, ItemSpecialData = "{\"roundtrip\":true}"
         };
         var marker = new Data_Player { IDName = "Player", Guid = 910144, Name_User = "Lua隔离恢复", ItemSpecialData = "{\"probe\":1}" };
+        Vector3 savedPosition = new(101.423f, -460.583f, 0f);
+        marker.transform.position = savedPosition;
         marker._inventoryData["probe"] = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = item } }, "probe");
         copy.PlayerData_Dict.Add(markerProfile, marker);
         string directory = Path.Combine(root, "Roundtrips", Guid.NewGuid().ToString("N"));
@@ -512,6 +527,8 @@ public static partial class GameplayTestRuntimeProbe
             ["firstId"] = firstItem.IDName, ["secondId"] = secondItem.IDName,
             ["firstSpecial"] = first.PlayerData_Dict[markerProfile].ItemSpecialData,
             ["secondSpecial"] = second.PlayerData_Dict[markerProfile].ItemSpecialData,
+            ["firstPositionPreserved"] = Vector3.Distance(first.PlayerData_Dict[markerProfile].transform.position, savedPosition) < 0.001f,
+            ["secondPositionPreserved"] = Vector3.Distance(second.PlayerData_Dict[markerProfile].transform.position, savedPosition) < 0.001f,
             ["firstPlayers"] = first.PlayerData_Dict.Count, ["secondPlayers"] = second.PlayerData_Dict.Count,
             ["expectedPlayers"] = originalPlayers + 1,
             ["activeSaveReferencePreserved"] = ReferenceEquals(saves.SaveData, original),

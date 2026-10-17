@@ -366,6 +366,37 @@ public class Inventory
 
     #endregion
 
+    #region 运行时面板归属
+
+    /// <summary>库存退出运行时由拥有者销毁自己的面板，防止旧玩家 UI 留在跨场景根节点。</summary>
+    public void ReleaseRuntimePanel()
+    {
+        BasePanel panel = basePanel;
+        basePanel = null;
+        if (panel != null)
+        {
+            panel.Opened -= AcquirePanelInputLock;
+            panel.Closed -= ReleasePanelInputLock;
+            UIManager manager = UIManager.ExistingInstance;
+            if (manager != null)
+                manager.DestroyPanel(panel);
+            else
+                UnityEngine.Object.Destroy(panel.gameObject);
+        }
+
+        itemSlot_UI.Clear();
+        ItemSlot_Prefab = null;
+        ItemSlot_Parent = null;
+        _virtualizedSlotGrid = null;
+        _quickTransferOwnerPanel = null;
+        _carryWeightValueText = null;
+        _carryVolumeValueText = null;
+        if (ReferenceEquals(LastOpenedContainer, this))
+            LastOpenedContainer = null;
+    }
+
+    #endregion
+
     #region 面板开关
     public virtual void SwitchUI()
     {

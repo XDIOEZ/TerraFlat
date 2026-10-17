@@ -29,6 +29,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 手机菜单/返回位于独立常驻层，返回顺序为顶层可取消面板→抽屉→设置。主菜单 CancelShortcutOverride 打开退出确认；嵌套危险确认先消费取消。存档删除统一由 `SaveDataManager_UI` 确认层提交并锁定目标身份。
 - 文本通过 FlatWorldUI 表与 GetUiText/GetUiFormat，节点名不翻译；手柄焦点限定顶层面板，TMP 输入确认后进入虚拟键盘。鼠标按下焦点与列表业务选中状态分离，完整点击才提交选择。
 - 面板可能先于模块销毁，Unity `!= null` 判断存活；即使面板已销毁仍释放锁/快捷转移引用。场景卸载清理失效注册并刷新交互缓存；输入查询覆盖当前场景与常驻根。资源重载清空两类根下的运行时 UI 与注册缓存，保留 UIRoot/SafeAreaRoot，再由当前 GameRes/Player 重建。
+- 库存、快捷栏与手部面板随所属模块卸载调用 `Inventory.ReleaseRuntimePanel`，同时注销 `UIManager` 注册；仅解除输入与数据绑定不会自动销毁跨场景面板。
 - `UI_WorldLoading` 为不透明黑幕与独立内容 CanvasGroup：进世界前覆盖并绘制一帧，区块表现就绪后内容→黑幕淡出→释放输入；同场景重生为单段淡出。
 - 角色世界状态条使用高于 Water 的 Sorting Layer；直接挂普通 Transform 的 RectTransform 偏移以 anchoredPosition 为准。
 - 玩家体力条由 `Mod_Stamina` 按真实快捷栏矩形的上沿动态避让，不改通用 `UI_Slider` Prefab；手机安全区、快捷栏缩放和底部间距改变后保持不重叠。

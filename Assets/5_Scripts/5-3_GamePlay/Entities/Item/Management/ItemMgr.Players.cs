@@ -426,12 +426,23 @@ public partial class ItemMgr
 
     private Player CreatePlayer(Data_Player data)
     {
-        Player newPlayer = (Player)ItemMgr.Instance.InstantiateItem(data, Vector3.zero, Quaternion.identity, Vector3.one, new GameObject("Players"));
-
-        // ✅ 将父对象设置为空（放到场景根节点下）
-        newPlayer.transform.SetParent(null, true);
-
-        return newPlayer;
+        // 已有角色必须以存档坐标创建刚体，不能先在原点注册后再由加载流程纠正。
+        ItemTransform savedTransform = data?.transform ??
+            throw new InvalidOperationException("玩家数据缺少保存位置，无法恢复角色。");
+        GameObject temporaryParent = new("Players");
+        try
+        {
+            Player newPlayer = (Player)ItemMgr.Instance.InstantiateItem(data,
+                WorldLocalPresentation.ProjectPosition(savedTransform.position),
+                savedTransform.rotation, savedTransform.scale, temporaryParent);
+            newPlayer.transform.SetParent(null, true);
+            return newPlayer;
+        }
+        finally
+        {
+            // 临时父节点不能在每次续档后遗留一个空的 Players 对象。
+            Destroy(temporaryParent);
+        }
     }
 
     private PlayerCreationTemplateConfig ResolveDefaultPlayerCreationTemplate()

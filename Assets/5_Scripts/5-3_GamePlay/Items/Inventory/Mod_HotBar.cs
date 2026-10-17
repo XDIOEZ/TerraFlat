@@ -272,6 +272,7 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         RuntimeInventory?.UnbindPlayerCarryWeightEvents();
         RuntimeInventory?.UnbindController();
         RuntimeInventory?.UnbindRuntimeDataEvents();
+        RuntimeInventory?.ReleaseRuntimePanel();
         if (RuntimeInventory != null)
         {
             RuntimeInventory.item = null;

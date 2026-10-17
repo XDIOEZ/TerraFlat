@@ -132,3 +132,22 @@
 - **暂未覆盖**：正常武器伤害、建筑放置、复杂配方、联机、太空、深水游泳及跨程序冷启动后的存档恢复。问题 04 目前证明了同一 Play Mode 的保存/续档异常，尚未做 Editor 重启后的同一坐标对照。
 - **下一轮优先级**：先处理问题 04 的位置恢复与问题 05 的旧 HUD 清理；解决后重新验证旧场景存档、物品拖入制作面板及各类 HUD 输入。
 - **收尾状态**：`control(status)` 返回 `owned=false`，`gameplay_session(save_exit)` 返回 `saved=true / code=saved_and_exited`。Unity 保留在原有 Play Mode 的 `GameStartScene` 菜单，未停止或暂停 Editor；隔离存档和全部问题截图已保留。
+
+## 修复记录：2026-10-17（问题 04 / 05）
+
+### 问题 04：续档坐标回到原点
+
+- **处理状态：已修改代码，待真实续档复测。** `ItemMgr.CreatePlayer` 原先把已保存的玩家数据也在 `(0,0)` 实例化，后续 `Player.Load` 才修改 Transform；这使刚体或运行时注册阶段存在以原点位置覆盖存档的风险。
+- **修复**：实例化前读取 `Data_Player.transform`，按 `WorldLocalPresentation.ProjectPosition` 投影至当前世界，再作为正式 `ItemMgr.InstantiateItem` 初始位置；`Player.Load` 同时同步 Rigidbody2D 的位置和零初速度，保证物理投影不以原点写回。玩家创建时留下的临时 `Players` 空对象也对称销毁。
+- **回归断言**：`save/isolated_roundtrip` 新增非原点玩家坐标的正式磁盘备份和当前版本一致性校验。该断言只能证明写盘/读取的坐标保持；**实际 `save_exit → continue_save` 的场景重建仍须单独复测**。
+
+### 问题 05：旧快捷栏和手部库存 UI 跨世界堆积
+
+- **处理状态：已修改代码，待真实跨世界复测。** `Mod_HotBar`、`Mod_Hand`、`Mod_Inventory` 原本仅解绑输入/数据，未释放 `Inventory.basePanel` 创建的跨场景 UI。
+- **修复**：在 `Inventory` 建立统一、可重复调用的 `ReleaseRuntimePanel`，由三个所属模块的 `OnUnload` 调用，清理面板与运行时 UI 引用；`UIManager.DestroyPanel(BasePanel)` 统一按实际实例注销并销毁，不依赖命名后缀能否正确反查注册项。不处理其他玩家面板，不用隐藏或禁止射线掩盖旧 UI。
+- **回归断言**：`core_lifecycle/live_entry` 现在检查当前 UI 根仅有一个 `UI_HotBar` 和一个 `UI_Hand`，且它们确实属于当前本地玩家；仍需通过连续两次存档切换复验，不将单次进世界断言当成全部通过。
+
+### 本次验证边界
+
+- 仅完成代码与 Lua 断言的静态修改；Unity 当前正处于 **Play Mode 的 `GameStartScene` 菜单**，按项目规则未退出、暂停或再次进入隔离世界，因此尚无新的运行时测试结论。
+- 待允许重建/重新游玩时：保存于非原点 → 退出 → 续档确认位置；重复 2 次跨世界切换确认 UI 数量始终为 1；最后将材料从当前快捷栏拖入手工制作格并检查库存实际变化。

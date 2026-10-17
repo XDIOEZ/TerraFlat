@@ -97,9 +97,16 @@ public class Player : Item
             return;
         }
 
-        transform.position = itemData.transform.position;
+        transform.position = WorldLocalPresentation.ProjectPosition(itemData.transform.position);
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
+        // 初始化移动模块前同步刚体，避免首个物理帧把原点回写为角色存档位置。
+        Rigidbody2D body = GetComponent<Rigidbody2D>();
+        if (body != null)
+        {
+            body.position = transform.position;
+            body.velocity = Vector2.zero;
+        }
         PrepareCameraModuleState();
         base.Load();
         // 所有模块加载完成后校准一次，覆盖初始背包数据早于 BuffManager 加载的情况。
