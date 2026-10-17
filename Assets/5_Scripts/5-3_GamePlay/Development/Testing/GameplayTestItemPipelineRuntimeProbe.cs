@@ -185,10 +185,11 @@ public static class GameplayTestItemPipelineRuntimeProbe
     }
     #endregion
 
-    #region 打制石器正式装配与动画伤害窗口
+    #region 手持武器正式装配与动画伤害窗口
     private static IEnumerator CaptureHeldWeaponAction(Player player, JObject args, Action<JObject> completed)
     {
         Item weapon = null;
+        string weaponId = args.Value<string>("weaponId") ?? "ChippedTool";
         Mod_Stamina stamina = player.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         float originalStamina = stamina != null ? stamina.CurrentValue : 0f;
         var result = new JObject();
@@ -196,10 +197,21 @@ public static class GameplayTestItemPipelineRuntimeProbe
         {
             if (stamina != null) stamina.CurrentValue = stamina.MaxValue;
             // 使用正式手持工厂和公开动作接口，避免绕过定义装配或手动打开伤害盒。
-            weapon = SpawnHeld(player, GameRes.ExistingInstance.CreateItemData("ChippedTool"));
+            weapon = SpawnHeld(player, GameRes.ExistingInstance.CreateItemData(weaponId));
             Mod_Weapon_AnimationAction animation = weapon.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
             Mod_Damage damage = weapon.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage");
             result["weaponId"] = weapon.itemData.IDName;
+            // 只返回正式装配后的配置和即时精力，比例与期望值由 Lua 判断。
+            result["physicalDamage"] = damage?.DamageValues?.Physical ?? 0f;
+            result["impactKind"] = (int)(damage?.DamageValues?.ImpactKind ?? CombatDamageKind.None);
+            result["staminaCostPerAttack"] = animation != null ? animation.StaminaCostPerAttack : 0f;
+            result["attackSpeedMultiplier"] = animation != null ? animation.AttackSpeedMultiplier : 0f;
+            if (GameRes.ExistingInstance.TryGetItemDefinition(weaponId, out RuntimeItemDefinition definition))
+            {
+                result["shellPrefabId"] = definition.ShellPrefabId;
+                result["rendererPath"] = definition.RendererPath;
+                result["hasKnifeTag"] = definition.HasTag("Knife");
+            }
             result["held"] = State(weapon, player);
             result["animationRegistered"] = animation != null;
             result["animationLoaded"] = animation != null && animation.IsRuntimeLoaded;
@@ -207,7 +219,9 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["damageLoaded"] = damage != null && damage.IsRuntimeLoaded;
             result["initialWindowClosed"] = damage != null && !damage.IsDamageEnabled();
 
+            result["staminaBeforeAction"] = stamina != null ? stamina.CurrentValue : 0f;
             bool requested = animation is IWeaponActionAnimation action && action.TryRequestAction();
+            result["staminaAfterAction"] = stamina != null ? stamina.CurrentValue : 0f;
             bool sawAttackState = false, sawOpenWindow = false, returnedToIdle = false;
             int sampledFrames = 0;
             float deadline = Time.realtimeSinceStartup + 10f;

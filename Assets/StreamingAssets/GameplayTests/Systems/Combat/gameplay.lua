@@ -15,16 +15,41 @@ test.check("gm_invincibility_disabled", "无敌状态关闭")
 test.check("gm_damage_normal", "伤害倍率恢复正常")
 
 -- 走真实定义、手持工厂和公开动作接口，业务断言留在 Lua；不直接打开伤害碰撞体。
-test.runtime("combat", "held_weapon_action", {}, function(data)
-    assert(data.weaponId == "ChippedTool", "未使用真实打制石器定义")
-    assert(data.held.inHand and data.held.ownedByPlayer and data.held.registered and data.held.indexed, "打制石器没有完成正式手持装配")
-    assert(data.animationRegistered and data.animationLoaded, "打制石器攻击动作模块未注册或未加载")
-    assert(data.damageRegistered and data.damageLoaded, "打制石器伤害模块未注册或未加载")
-    assert(data.initialWindowClosed, "打制石器待机时伤害窗未关闭")
-    assert(data.actionRequested and data.sawAttackState, "打制石器公开动作入口没有启动攻击动画")
-    assert(data.sawOpenWindow, "打制石器攻击动画未打开真实伤害窗")
-    assert(data.returnedToIdle and data.finalWindowClosed, "打制石器单次攻击后未回待机或未关闭伤害窗")
-end, "打制石器正式手持装配与动画伤害窗")
+local referenceWeapon = nil
+local function nearWeapon(actual, expected, label)
+    assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
+end
+for _, weaponCase in ipairs({
+    {id = "ChippedTool", name = "打制石器", physical = 6},
+    {id = "Obsidian", name = "黑曜石", physical = 9}
+}) do
+    local case = weaponCase
+    test.runtime("combat", "held_weapon_action", {weaponId = case.id}, function(data)
+        assert(data.weaponId == case.id, "未使用真实" .. case.name .. "定义")
+        assert(data.held.inHand and data.held.ownedByPlayer and data.held.registered and data.held.indexed, case.name .. "没有完成正式手持装配")
+        assert(data.animationRegistered and data.animationLoaded, case.name .. "攻击动作模块未注册或未加载")
+        assert(data.damageRegistered and data.damageLoaded, case.name .. "伤害模块未注册或未加载")
+        assert(data.shellPrefabId == "ChippedTool" and data.hasKnifeTag, case.name .. "没有复用打制石器外壳或缺少小刀类别")
+        nearWeapon(data.physicalDamage, case.physical, case.name .. "物理攻击力")
+        nearWeapon(data.staminaCostPerAttack, 1.5, case.name .. "每次基础精力消耗")
+        assert(data.impactKind == 1, case.name .. "没有使用切割伤害类型")
+        assert(data.initialWindowClosed, case.name .. "待机时伤害窗未关闭")
+        assert(data.actionRequested and data.sawAttackState, case.name .. "公开动作入口没有启动攻击动画")
+        assert(data.sawOpenWindow, case.name .. "攻击动画未打开真实伤害窗")
+        assert(data.returnedToIdle and data.finalWindowClosed, case.name .. "单次攻击后未回待机或未关闭伤害窗")
+        if case.id == "ChippedTool" then
+            referenceWeapon = data
+        else
+            assert(referenceWeapon ~= nil, "缺少打制石器的真实参考采样")
+            assert(data.rendererPath == "Render/Render_1", "黑曜石贴图没有绑定武器的实际渲染节点")
+            nearWeapon(data.physicalDamage, referenceWeapon.physicalDamage * 1.5, "黑曜石相对打制石器的伤害倍率")
+            nearWeapon(data.staminaCostPerAttack, referenceWeapon.staminaCostPerAttack, "两件武器的基础精力一致性")
+            nearWeapon(data.attackSpeedMultiplier, referenceWeapon.attackSpeedMultiplier, "两件武器的攻击速度一致性")
+            nearWeapon(data.staminaBeforeAction - data.staminaAfterAction,
+                referenceWeapon.staminaBeforeAction - referenceWeapon.staminaAfterAction, "同一玩家两件武器的即时精力扣除一致性")
+        end
+    end, case.name .. "正式手持装配、数值与动画伤害窗")
+end
 
 test.runtime("combat", "world_health_panel_lifecycle", {}, function(data)
     assert(data.initiallyVisible, "正式动物血条未显示")

@@ -4,19 +4,50 @@
     {
       "id": "Obsidian",
       "parent": "BasicItem_Base",
+      "shellPrefab": "ChippedTool",
       "gameName": "黑曜石",
-      "description": "散落在山顶岩浆湖岸边的黑色石料，也可开采黑曜石矿山获得，可制作黑曜石小刀和长矛。",
+      "description": "散落在山顶岩浆湖岸边的锋利黑色石料，拿在手里可直接当小刀攻击，也可制作黑曜石小刀和长矛。",
       "weight": 1.2,
       "volume": 0.5,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Mineral", "Obsidian"],
+      "tags": ["Mineral", "Obsidian", "Knife"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Obsidian/Obsidian_Icon.png",
+        "rendererPath": "Render/Render_1",
+        "rendererLocalPosition": { "x": 0, "y": 0, "z": 0 },
+        "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
+        "flipX": false,
         "rendererLocalScale": { "x": 0.6, "y": 0.6, "z": 1 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
-      "modules": {}
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {
+              "Physical": 9,
+              "ImpactKind": 1
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Module_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "parameters": {
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": ["Attack_1"],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 1.5
+          }
+        }
+      }
     },
     {
       "id": "Mine_Obsidian",
