@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
-using WorldAddress = FlatWorld.WorldModel.WorldAddress;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>地块高低阴影的唯一表现入口；按区块登记脏格，共享一个 BRG 阴影图层。</summary>
 public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRenderer,
@@ -104,7 +104,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
     }
 
     /// <summary>以已加载区块为起点查询邻格，跨区块和环绕边界共用绘制时的解析入口。</summary>
-    public static bool TryGetSurfaceHeight(WorldRuntime world, WorldAddress address, Int2 local,
+    public static bool TryGetSurfaceHeight(WorldRuntime world, RuntimeWorldAddress address, Int2 local,
         out TerrainSurfaceHeight surface)
     {
         surface = default;
@@ -118,7 +118,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         if (DimensionManager.Instance != null &&
             DimensionManager.Instance.TryGetDefinition(dimensionId, out DimensionDefinition definition))
             return definition.GenerationMode == DimensionGenerationMode.Surface;
-        return string.Equals(dimensionId, WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(dimensionId, global::WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
     }
 
     private void FlushDirty()
@@ -170,7 +170,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
     private bool TrySample(int x, int y, out TerrainSurfaceHeight surface)
         => TryResolveSurface(world, chunk.Address, chunk.Terrain, x, y, useGeneratedHeight, out surface);
 
-    private static bool TryResolveSurface(WorldRuntime world, WorldAddress address, ChunkTerrainData terrain,
+    private static bool TryResolveSurface(WorldRuntime world, RuntimeWorldAddress address, ChunkTerrainData terrain,
         int x, int y, bool useGeneratedHeight, out TerrainSurfaceHeight surface)
     {
         if ((uint)x < (uint)terrain.Width && (uint)y < (uint)terrain.Height)
@@ -179,7 +179,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         if (world == null) return false;
         int offsetX = x < 0 ? -terrain.Width : x >= terrain.Width ? terrain.Width : 0;
         int offsetY = y < 0 ? -terrain.Height : y >= terrain.Height ? terrain.Height : 0;
-        WorldAddress neighbourAddress = NeighbourAddress(address, offsetX, offsetY);
+        RuntimeWorldAddress neighbourAddress = NeighbourAddress(address, offsetX, offsetY);
         return world.TryGetChunkTerrain(neighbourAddress, out ChunkTerrainData neighbour) &&
             ReadSurface(neighbour, x - offsetX, y - offsetY,
                 useGeneratedHeight, out surface);
@@ -229,29 +229,29 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
 
     #region 跨区块边界与回收
 
-    private WorldAddress NeighbourAddress(int x, int y)
+    private RuntimeWorldAddress NeighbourAddress(int x, int y)
         => NeighbourAddress(chunk.Address, x, y);
 
-    private static WorldAddress NeighbourAddress(WorldAddress address, int x, int y)
+    private static RuntimeWorldAddress NeighbourAddress(RuntimeWorldAddress address, int x, int y)
     {
         Int2 origin = address.ChunkOrigin;
         Vector2Int canonical = WorldTopologyRuntime.NormalizeCell(new Vector2Int(origin.X + x, origin.Y + y));
-        return new WorldAddress(address.DimensionId, new Int2(canonical.x, canonical.y));
+        return new RuntimeWorldAddress(address.DimensionId, new Int2(canonical.x, canonical.y));
     }
 
     private void SubscribeNeighbours()
     {
         ClearSubscriptions();
         if (world == null || chunk?.Terrain == null) return;
-        var seen = new HashSet<WorldAddress>();
+        var seen = new HashSet<RuntimeWorldAddress>();
         int width = chunk.Terrain.Width, height = chunk.Terrain.Height;
         Subscribe(-width, 0, seen); Subscribe(width, 0, seen);
         Subscribe(0, -height, seen); Subscribe(0, height, seen);
     }
 
-    private void Subscribe(int offsetX, int offsetY, HashSet<WorldAddress> seen)
+    private void Subscribe(int offsetX, int offsetY, HashSet<RuntimeWorldAddress> seen)
     {
-        WorldAddress address = NeighbourAddress(offsetX, offsetY);
+        RuntimeWorldAddress address = NeighbourAddress(offsetX, offsetY);
         if (address != chunk.Address && seen.Add(address))
         {
             chunkSubscriptions.Add(world.Events.SubscribeChunkCommitted(address, _ => NeighboursChanged()));
