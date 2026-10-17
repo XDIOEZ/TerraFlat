@@ -21,6 +21,7 @@ public static partial class GameplayTestSystemProbe
     {
         Vector2 result = Mod_Roll.ResolveDirection(
             new Vector2((float)Number(args, "x", 0d), (float)Number(args, "y", 0d)),
+            new Vector2((float)Number(args, "cursorX", 0d), (float)Number(args, "cursorY", 0d)),
             new Vector2((float)Number(args, "facingX", 1d), (float)Number(args, "facingY", 0d)));
         return new JObject { ["x"] = result.x, ["y"] = result.y };
     }

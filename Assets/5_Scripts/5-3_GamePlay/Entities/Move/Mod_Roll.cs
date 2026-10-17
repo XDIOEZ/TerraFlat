@@ -107,7 +107,11 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
         Vector2 input = controller != null ? controller.ReadMoveInput(controller._inputActions.Win10.Move_Player) : Vector2.zero;
         if (controller?._mainCamera != null) input = controller._mainCamera.transform.TransformDirection(input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
-        Vector2 direction = ResolveDirection(input, facing != null ? facing.currentDirection : Vector2.right);
+        // 方向输入优先，静止时朝鼠标、手柄或手机共用的世界准星翻滚。
+        Vector2 cursorDirection = Vector2.zero;
+        if (controller != null && controller.TryGetMouseWorldPosition(out Vector3 cursorPosition))
+            cursorDirection = WorldTopologyRuntime.ShortestDelta(item.transform.position, cursorPosition);
+        Vector2 direction = ResolveDirection(input, cursorDirection, facing != null ? facing.currentDirection : Vector2.right);
         return NetworkRollRequest != null ? NetworkRollRequest(direction) : TryStartRoll(direction);
     }
     public bool TryStartRoll() => RequestRoll();
@@ -195,6 +199,9 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
         motionLease?.Dispose(); motionLease = null;
         RestorePresentation();
     }
+    public static Vector2 ResolveDirection(Vector2 moveInput, Vector2 cursorDirection, Vector2 facingDirection)
+        => ResolveDirection(moveInput, ResolveDirection(cursorDirection, facingDirection));
+
     public static Vector2 ResolveDirection(Vector2 moveInput, Vector2 facingDirection)
     {
         if (FiniteDirection(moveInput) && moveInput.sqrMagnitude > .0001f) return moveInput.normalized;

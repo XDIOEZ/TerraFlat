@@ -30,14 +30,18 @@ end
 
 for _, case in ipairs({
     {args = {x = 3, y = 4}, x = .6, y = .8},
+    {args = {x = 1, cursorX = -1, facingX = -1}, x = 1, y = 0},
+    {args = {x = 0, y = -1, cursorY = 1}, x = 0, y = -1},
+    {args = {cursorX = 3, cursorY = 4, facingX = -1}, x = .6, y = .8},
+    {args = {cursorY = -1}, x = 0, y = -1},
     {args = {facingX = -1}, x = -1, y = 0},
     {args = {x = 0, y = -1, facingX = -1}, x = 0, y = -1},
     {args = {facingX = 0}, x = 1, y = 0}
 }) do
     test.system("player", "roll_direction", case.args, function(data)
-        roll_near(data.x, case.x, "翻滚横向没有采用输入或朝向")
-        roll_near(data.y, case.y, "翻滚纵向没有采用输入或朝向")
-    end, "翻滚方向：移动优先、无输入按朝向、对角归一化")
+        roll_near(data.x, case.x, "翻滚横向没有遵循移动、准星、朝向的优先级")
+        roll_near(data.y, case.y, "翻滚纵向没有遵循移动、准星、朝向的优先级")
+    end, "翻滚方向：移动优先、静止朝准星、准星重合回退朝向、对角归一化")
 end
 
 test.system("player", "roll_input", {}, function(data)
