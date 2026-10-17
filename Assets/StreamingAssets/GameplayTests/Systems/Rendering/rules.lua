@@ -14,13 +14,62 @@ for _, args in ipairs({
     { size = 60, aspect = 2.2 }, { size = 90, aspect = 1 }
 }) do
     test.system("rendering", "zoom_cloud_mask", args, function(data)
-        assert(data.clearRadius == 8 and data.opaqueRadius == 28, "拉远或改变宽高比后雾圈世界半径变化")
+        assert(data.clearWidth == 80 and data.clearHeight == 80, "镜头缩放或宽高比改变了三圈活动区块的方形清晰窗")
+        assert(data.opaqueWidth == 112 and data.opaqueHeight == 112, "不透明边界没有落在额外表现预加载圈外沿")
+        assert(data.clearMinX == -32 and data.clearMaxX == 48 and data.clearMinY == -48 and data.clearMaxY == 32,
+            "清晰窗没有对齐玩家所在区块的实际格边")
+        assert(data.windowCenterOffsetX == -5 and data.windowCenterOffsetY == -1, "方窗中心错误地锁在玩家脚下而没有对齐区块")
         assert(data.noiseScale == data.expectedNoiseScale, "缩放改变了云纹的世界尺寸")
         assert(math.abs(data.viewportHeight - data.expectedHeight) < 0.001, "云圈没有使用实际镜头世界投影")
         assert(math.abs(data.viewportWidth - data.expectedWidth) < 0.001, "宽高比改变了雾圈世界距离")
-        assert(data.centerAligned, "雾圈圆心没有跟随玩家")
-    end, "雾圈固定世界半径并随实际镜头投影")
+        assert(data.playerProjectionCentered, "雾层世界投影中点没有对齐玩家位置")
+    end, "方形雾边界随加载窗口变化并独立于镜头缩放")
 end
+
+for _, args in ipairs({
+    { playerX = 15.75, playerY = -0.25, minX = -32, maxX = 48, minY = -48, maxY = 32 },
+    { playerX = -0.25, playerY = -16.25, minX = -48, maxX = 32, minY = -64, maxY = 16 },
+    { playerX = 16, playerY = 0, minX = -16, maxX = 64, minY = -32, maxY = 48 }
+}) do
+    test.system("rendering", "zoom_cloud_mask", args, function(data)
+        assert(data.clearMinX == args.minX and data.clearMaxX == args.maxX and
+            data.clearMinY == args.minY and data.clearMaxY == args.maxY, "区块内移动、负坐标或跨区块后雾窗边界错位")
+        assert(data.clearWidth == 80 and data.clearHeight == 80, "移动改变了玩家设置的窗口大小")
+    end, "方形雾窗对齐正负坐标区块边界")
+end
+
+for _, args in ipairs({
+    { distance = 3, nextDistance = 5, initial = 80, clear = 144, opaque = 176, expectedDistance = 5 },
+    { distance = 5, nextDistance = 2, initial = 144, clear = 48, opaque = 80, expectedDistance = 2 },
+    { distance = 2, nextDistance = 1, initial = 48, clear = 16, opaque = 48, expectedDistance = 1 },
+    { distance = 0, initial = 16, clear = 16, opaque = 48, expectedDistance = 1 }
+}) do
+    test.system("rendering", "zoom_cloud_mask", args, function(data)
+        assert(data.initialWidth == args.initial and data.loadDistance == args.expectedDistance, "正式加载器没有应用范围设置或最小一圈约束")
+        assert(data.clearWidth == args.clear and data.clearHeight == args.clear, "修改加载范围后清晰方窗没有同步扩大或缩小")
+        assert(data.opaqueWidth == args.opaque and data.opaqueHeight == args.opaque, "修改加载范围后柔雾外边界没有同步")
+        assert(data.featherX == 16 and data.featherY == 16, "柔雾带没有复用额外预绑定的一圈")
+    end, "玩家加载范围动态扩大缩小与最小值")
+end
+
+test.system("rendering", "zoom_cloud_mask", { distance = 2, chunkWidth = 32, chunkHeight = 8 }, function(data)
+    assert(data.clearWidth == 96 and data.clearHeight == 24 and data.opaqueWidth == 160 and data.opaqueHeight == 40,
+        "非正方形区块没有按实际宽高生成加载窗和柔雾带")
+    assert(data.clearMinX == -32 and data.clearMaxX == 64 and data.clearMinY == -16 and data.clearMaxY == 8,
+        "非正方形区块边界错位")
+end, "雾窗兼容非正方形区块")
+
+test.system("rendering", "zoom_cloud_mask", { distance = 3, preload = false }, function(data)
+    assert(data.opaqueWidth == 80 and data.opaqueHeight == 80, "没有表现预加载圈时暴露了窗口外未加载地形")
+    assert(data.clearWidth == 78 and data.clearHeight == 78 and data.featherX == 1 and data.featherY == 1,
+        "没有表现预加载圈时未在已加载窗口内保留一格柔边")
+end, "雾窗缺少额外表现圈时安全内收柔边")
+
+test.system("rendering", "zoom_cloud_mask", { distance = 1, chunkWidth = 1, chunkHeight = 1, preload = false }, function(data)
+    assert(data.clearWidth == 0 and data.clearHeight == 0 and data.opaqueWidth == 1 and data.opaqueHeight == 1,
+        "极小窗口产生负数清晰区或越出已加载范围")
+    assert(data.featherX == 0.5 and data.featherY == 0.5, "极小窗口的柔边退化为零宽度")
+end, "极小雾窗保持有限柔边")
 
 for _, args in ipairs({
     { size = 20, expected = 0 }, { size = 55, expected = 0 }, { size = 60, expected = 0 },
@@ -28,7 +77,7 @@ for _, args in ipairs({
 }) do
     test.system("rendering", "universe_view_transition", args, function(data)
         assert(math.abs(data.opacity - args.expected) < 0.0001, "宇宙画面没有在原视野区间直接淡入")
-    end, "固定雾圈后的宇宙视图直接淡入")
+    end, "动态加载雾窗下的宇宙视图直接淡入")
 end
 
 test.system("rendering", "group_projection", { outerOrder = 77, innerOrder = 50, spriteOrder = 31 }, function(data)

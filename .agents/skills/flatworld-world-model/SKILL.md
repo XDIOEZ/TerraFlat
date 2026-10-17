@@ -33,7 +33,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 流送与生成
 
-- 模拟圈、完整表现预加载圈、数据保留圈分别维护；就绪只检查活动圈，关闭释放全部表现需求。窗口按相机真实 X/Y 半幅计算，管理员视野与普通上限分开。
+- 模拟圈、完整表现预加载圈、数据保留圈分别维护；就绪只检查活动圈，关闭释放全部表现需求。Mod_ChunkLoader 按玩家持久化加载距离提交窗口，相机缩放不改距离；距离 d 包含中心块，窗口边长是 (2d-1) 个区块。
+- ChunkMgr.TryGetRuntimeWindowBounds 只读已提交的活动窗与表现窗；边界共用正式窗口几何和实际 Profile 宽高，队列 retarget 不提前移动它。Mod_ChunkLoader.TryGetLoadingWindowBounds 对外统一提供本地镜像矩形，旧联机按本机加载设置退回仅活动窗，表现消费者不得反向改流送。
 - 离开窗口的 pending/后台请求取消，保留请求按玩家现位置重排；同区块移动只更新优先级。`Mod_ChunkLoader` 窗口与 `RetargetRuntimePresentationQueue` 共用预加载距离。
 - 基础地形跨 Chunk 优先，草/碰撞/导航/自然物后续轮转；取队按当前距离，单块后续每帧最多一步。`IIncrementalChunkViewRenderer` 扫描跳过项也计预算，自然物先宿主后伴生，完成初绑后再季节补位。单项装配仍可能超时。
 - 差量在基础绑定前恢复，同一 Runtime 不因窗口刷新重复恢复。外圈预取只等待可见数据/基础地形，不等全部后续表现。

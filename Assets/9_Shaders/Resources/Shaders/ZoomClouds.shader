@@ -25,7 +25,8 @@ Shader "Hidden/FlatWorld/ZoomClouds"
                 float4 _CloudViewportUp;
                 float4 _CloudWorldCenter;
                 float4 _CloudDriftOffset;
-                float4 _CloudRadii;
+                float4 _CloudWindow;
+                float4 _CloudFeather;
                 float4 _CloudColor;
                 float4 _CloudShape;
             CBUFFER_END
@@ -58,14 +59,15 @@ Shader "Hidden/FlatWorld/ZoomClouds"
             half4 Frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                float distanceFromPlayer = length(input.playerOffset);
+                float2 distanceFromWindow = abs(input.playerOffset - _CloudWindow.xy) - _CloudWindow.zw;
+                float2 edgeProgress = distanceFromWindow / max(_CloudFeather.xy, 0.0001);
                 float2 worldPosition = input.playerOffset + _CloudWorldCenter.xy;
                 float3 cloudCoords = float3((worldPosition - _CloudDriftOffset.xy) * _CloudShape.x, 0.71) + 137.0;
                 float clouds = PlanetFractal(cloudCoords);
-                float radial = smoothstep(_CloudRadii.x, _CloudRadii.y, distanceFromPlayer);
-                float incoming = saturate(radial + (clouds - 0.5) * 0.3 * radial * (1.0 - radial));
-                // 云纹只扰动过渡带，固定清晰内圈和不透明外圈不随镜头缩放变化。
-                float veilAlpha = radial;
+                float edgeFade = smoothstep(0.0, 1.0, max(edgeProgress.x, edgeProgress.y));
+                float incoming = saturate(edgeFade + (clouds - 0.5) * 0.3 * edgeFade * (1.0 - edgeFade));
+                // 云纹只扰动方形窗口的柔边带，已加载清晰区和不透明外边界只随加载范围变化。
+                float veilAlpha = edgeFade;
                 float cloudAlpha = PlanetCloudOpacity(clouds) * incoming;
                 half3 veilColor = _CloudColor.rgb * (1.0 - (1.0 - clouds) * _CloudShape.y);
                 float alpha = cloudAlpha + veilAlpha * (1.0 - cloudAlpha);

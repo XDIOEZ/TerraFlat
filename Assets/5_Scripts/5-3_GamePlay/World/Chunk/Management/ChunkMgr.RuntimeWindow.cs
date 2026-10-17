@@ -113,6 +113,9 @@ public partial class ChunkMgr
     private readonly Queue<PooledChunkViewEntry> chunkViewPool = new();
     private Transform runtimeChunkViewRoot;
     private bool runtimeWindowUsesLocalPresentation;
+    private Rect runtimeActiveWindowBounds;
+    private Rect runtimePresentationWindowBounds;
+    private string runtimeWindowDimensionId;
     private Vector2 runtimePresentationPriorityCenter;
     private Vector2Int runtimePresentationInterestOrigin;
     private Vector2Int runtimePresentationInterestDistance;
@@ -212,6 +215,41 @@ public partial class ChunkMgr
     }
 
     #region 窗口刷新
+
+    /// <summary>读取实际提交的本地加载窗口，表现队列重排不会提前移动这两个边界。</summary>
+    public bool TryGetRuntimeWindowBounds(Vector2 presentationAnchor,
+        out Rect activeBounds, out Rect presentationBounds)
+    {
+        activeBounds = presentationBounds = default;
+        if (!IsSurfaceStreamingScene || !runtimeWindowUsesLocalPresentation ||
+            runtimeWindowTargets.Count == 0 || runtimeWindowDimensionId != ResolveCurrentDimensionId())
+            return false;
+
+        activeBounds = ProjectRuntimeWindowBounds(runtimeActiveWindowBounds, presentationAnchor);
+        presentationBounds = new Rect(activeBounds.center - runtimePresentationWindowBounds.size * 0.5f,
+            runtimePresentationWindowBounds.size);
+        return true;
+    }
+
+    /// <summary>距离包含中心区块，窗口边长因此是 (2d-1) 个区块。</summary>
+    public static Rect CalculateRuntimeWindowBounds(Vector2Int centerOrigin,
+        Vector2Int chunkSize, Vector2Int distance)
+    {
+        Vector2Int radius = GetRuntimeWindowChunkRadius(distance);
+        Vector2 size = new Vector2(Mathf.Max(1, chunkSize.x), Mathf.Max(1, chunkSize.y));
+        Vector2 min = (Vector2)centerOrigin - Vector2.Scale(radius, size);
+        return new Rect(min, Vector2.Scale(radius * 2 + Vector2Int.one, size));
+    }
+
+    /// <summary>整体投影窗口中心，跨世界接缝时不分别投影四角而把矩形翻转。</summary>
+    public static Rect ProjectRuntimeWindowBounds(Rect logicalBounds, Vector2 presentationAnchor)
+    {
+        Vector2 center = WorldLocalPresentation.ProjectPosition(logicalBounds.center, presentationAnchor);
+        return new Rect(center - logicalBounds.size * 0.5f, logicalBounds.size);
+    }
+
+    private static Vector2Int GetRuntimeWindowChunkRadius(Vector2Int distance) => new Vector2Int(
+        Mathf.Max(0, distance.x - 1), Mathf.Max(0, distance.y - 1));
 
     /// <summary>尝试找到指定区块当前正在使用的画面对象。</summary>
     public bool TryGetRuntimeChunkView(RuntimeWorldAddress address, out ChunkView view)
@@ -378,11 +416,16 @@ public partial class ChunkMgr
         runtimePresentationInterestOrigin = centerOrigin;
         runtimePresentationInterestDistance = resolvedPresentation;
         runtimePresentationInterestDimensionId = dimensionId;
+        Vector2Int chunkSize = new Vector2Int(stepX, stepY);
+        runtimeActiveWindowBounds = CalculateRuntimeWindowBounds(centerOrigin, chunkSize, activeDistance);
+        runtimePresentationWindowBounds = CalculateRuntimeWindowBounds(centerOrigin, chunkSize, resolvedPresentation);
+        runtimeWindowDimensionId = dimensionId;
 
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
-        int radiusX = resolvedPresentation.x - 1;
-        int radiusY = resolvedPresentation.y - 1;
+        Vector2Int radius = GetRuntimeWindowChunkRadius(resolvedPresentation);
+        int radiusX = radius.x;
+        int radiusY = radius.y;
         for (int dx = -radiusX; dx <= radiusX; dx++)
         {
             for (int dy = -radiusY; dy <= radiusY; dy++)
@@ -1225,6 +1268,8 @@ public partial class ChunkMgr
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
         runtimeWindowUsesLocalPresentation = false;
+        runtimeActiveWindowBounds = runtimePresentationWindowBounds = default;
+        runtimeWindowDimensionId = null;
         runtimePresentationInterestDimensionId = null;
         runtimePresentationQueue.Clear();
         runtimePresentationContinuationQueue.Clear();

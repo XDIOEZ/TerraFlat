@@ -140,8 +140,6 @@ public sealed class WorldRenderingConfig
     [Serializable]
     public sealed class RenderingZoomClouds
     {
-        public float clearRadius;
-        public float opaqueRadius;
         public float driftTransitionSeconds;
         public float noiseScale;
         public float minimumDriftSpeed;
@@ -150,10 +148,8 @@ public sealed class WorldRenderingConfig
         public Color color;
         public float shadowStrength;
 
-        // 雾圈半径固定为世界距离，风速和缓动只负责云纹漂移。
+        // 方形边界由正式加载窗口提供，风速和缓动只负责云纹漂移。
         public bool IsValid =>
-            IsFinite(clearRadius) && clearRadius >= 0f &&
-            IsFinite(opaqueRadius) && opaqueRadius > clearRadius &&
             IsFinite(driftTransitionSeconds) && driftTransitionSeconds >= 0f &&
             IsFinite(noiseScale) && noiseScale > 0f &&
             IsFinite(minimumDriftSpeed) && minimumDriftSpeed >= 0f &&

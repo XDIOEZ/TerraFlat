@@ -62,8 +62,6 @@
     "noiseStrength": 0.04
   },
   "zoomClouds": {
-    "clearRadius": 8.0,
-    "opaqueRadius": 28.0,
     "driftTransitionSeconds": 2.0,
     "noiseScale": 0.055,
     "minimumDriftSpeed": 0.08,

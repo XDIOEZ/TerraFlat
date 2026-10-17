@@ -92,6 +92,7 @@ public class Mod_ChunkLoader : Module
     public int CurrentUnActiveChunkDistance => Mathf.Max(EffectivePrefetchDistance.x, EffectivePrefetchDistance.y);
     public int CurrentDestroyChunkDistance => Mathf.Max(EffectiveDestroyDistance.x, EffectiveDestroyDistance.y);
     public Vector2Int CurrentLoadChunkDistanceXY => EffectiveLoadDistance;
+    public Vector2Int CurrentPresentationChunkDistanceXY => GetPresentationPreloadDistance();
     public Vector2Int CurrentUnActiveChunkDistanceXY => EffectivePrefetchDistance;
     public Vector2Int CurrentDestroyChunkDistanceXY => EffectiveDestroyDistance;
 
@@ -160,9 +161,10 @@ public class Mod_ChunkLoader : Module
         if (_externalStreamingManaged)
             return;
 
-        // 完整窗口刷新由 Mod_Mover 的跨区块事件驱动；圈内移动只更新表现队列的精确距离优先级。
-        ChunkMgr.ExistingInstance?.RetargetRuntimePresentationQueue(
-            transform.position, GetPresentationPreloadDistance());
+        // 距离修改尚未正式提交时保留旧表现窗，避免先撤画面而雾边界仍停在旧窗口。
+        if (!needsChunkUpdate)
+            ChunkMgr.ExistingInstance?.RetargetRuntimePresentationQueue(
+                transform.position, GetPresentationPreloadDistance());
 
         // 滑条连续修改区块距离时轻量节流，避免每一档都立即重建窗口。
         if (needsChunkUpdate && Time.unscaledTime - _lastChunkUpdateTime >= chunkUpdateMinInterval)
@@ -176,6 +178,25 @@ public class Mod_ChunkLoader : Module
     #endregion
 
     #region 外部接口
+
+    /// <summary>表现层只读正式加载窗口，改设置提交新窗口后随之更新。</summary>
+    public bool TryGetLoadingWindowBounds(out Rect activeBounds, out Rect presentationBounds)
+    {
+        activeBounds = presentationBounds = default;
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (!CanStreamSurface || chunkManager == null)
+            return false;
+        if (!_externalStreamingManaged)
+            return chunkManager.TryGetRuntimeWindowBounds(transform.position, out activeBounds, out presentationBounds);
+
+        // 旧联机流送只保证活动窗的画面，不把数据预取圈误当成可见地形。
+        Vector2Int chunkSize = Vector2Int.RoundToInt(ChunkMgr.GetChunkSize());
+        Vector2 logicalPosition = WorldLocalPresentation.ToLogical((Vector2)transform.position);
+        Vector2Int origin = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(logicalPosition, chunkSize));
+        Rect logicalBounds = ChunkMgr.CalculateRuntimeWindowBounds(origin, chunkSize, CurrentLoadChunkDistanceXY);
+        activeBounds = presentationBounds = ChunkMgr.ProjectRuntimeWindowBounds(logicalBounds, transform.position);
+        return true;
+    }
 
     /// <summary>
     /// 联机模式由 NetworkChunkStreamingCoordinator 按所有玩家位置联合管理区块。

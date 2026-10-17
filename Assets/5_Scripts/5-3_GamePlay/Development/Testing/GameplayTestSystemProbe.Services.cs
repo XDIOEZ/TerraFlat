@@ -909,26 +909,45 @@ public static partial class GameplayTestSystemProbe
             camera.orthographic = true;
             camera.orthographicSize = (float)Number(args, "size", 20);
             camera.aspect = (float)Number(args, "aspect", 1);
-            Vector3 player = new Vector3(13f, -7f, 0f);
+            Vector3 player = new Vector3((float)Number(args, "playerX", 13), (float)Number(args, "playerY", -7), 0f);
             root.transform.position = player + Vector3.back * 10f;
+            Mod_ChunkLoader loader = root.AddComponent<Mod_ChunkLoader>();
+            loader.SetLoadChunkDistance((int)Number(args, "distance", 3));
+            Vector2Int chunkSize = new Vector2Int((int)Number(args, "chunkWidth", 16), (int)Number(args, "chunkHeight", 16));
+            Vector2Int chunkOrigin = Chunk.GetChunkPosition(player, chunkSize);
+            Rect activeBounds = ChunkMgr.CalculateRuntimeWindowBounds(chunkOrigin, chunkSize, loader.CurrentLoadChunkDistanceXY);
+            float initialWidth = activeBounds.width;
+            if (args["nextDistance"] != null)
+                loader.SetLoadChunkDistance((int)Number(args, "nextDistance", 3));
+            activeBounds = ChunkMgr.CalculateRuntimeWindowBounds(chunkOrigin, chunkSize, loader.CurrentLoadChunkDistanceXY);
+            Rect presentationBounds = ChunkMgr.CalculateRuntimeWindowBounds(chunkOrigin, chunkSize,
+                Flag(args, "preload", true) ? loader.CurrentPresentationChunkDistanceXY : loader.CurrentLoadChunkDistanceXY);
             var settings = WorldRenderingConfigCatalog.Default.zoomClouds;
-            // 与真实绘制共用参数提交，采样不同镜头下 Shader 实际收到的世界半径与投影。
+            // 通过正式加载器改范围并共用窗口几何与材质提交，采样 Shader 实际收到的世界边界。
             ZoomCloudMaterialParameters.Apply(material, camera, args.Value<bool?>("flipped") ?? false,
-                player, player, Vector2.zero, settings);
-            Vector4 radii = material.GetVector("_CloudRadii");
+                player, player, Vector2.zero, activeBounds, presentationBounds, settings);
+            Vector4 window = material.GetVector("_CloudWindow");
+            Vector4 feather = material.GetVector("_CloudFeather");
             Vector4 origin = material.GetVector("_CloudViewportOrigin");
             Vector4 right = material.GetVector("_CloudViewportRight");
             Vector4 up = material.GetVector("_CloudViewportUp");
             Vector2 center = new Vector2(origin.x + 0.5f * (right.x + up.x), origin.y + 0.5f * (right.y + up.y));
             return new JObject
             {
-                ["clearRadius"] = radii.x, ["opaqueRadius"] = radii.y,
+                ["loadDistance"] = loader.CurrentLoadChunkDistance,
+                ["initialWidth"] = initialWidth,
+                ["clearWidth"] = window.z * 2f, ["clearHeight"] = window.w * 2f,
+                ["opaqueWidth"] = (window.z + feather.x) * 2f, ["opaqueHeight"] = (window.w + feather.y) * 2f,
+                ["clearMinX"] = player.x + window.x - window.z, ["clearMaxX"] = player.x + window.x + window.z,
+                ["clearMinY"] = player.y + window.y - window.w, ["clearMaxY"] = player.y + window.y + window.w,
+                ["windowCenterOffsetX"] = window.x, ["windowCenterOffsetY"] = window.y,
+                ["featherX"] = feather.x, ["featherY"] = feather.y,
                 ["noiseScale"] = material.GetVector("_CloudShape").x, ["expectedNoiseScale"] = settings.noiseScale,
                 ["viewportHeight"] = new Vector2(up.x, up.y).magnitude,
                 ["viewportWidth"] = new Vector2(right.x, right.y).magnitude,
                 ["expectedHeight"] = camera.orthographicSize * 2f,
                 ["expectedWidth"] = camera.orthographicSize * 2f * camera.aspect,
-                ["centerAligned"] = center.sqrMagnitude < 0.000001f
+                ["playerProjectionCentered"] = center.sqrMagnitude < 0.000001f
             };
         }
         finally
