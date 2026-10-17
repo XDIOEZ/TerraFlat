@@ -60,7 +60,8 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
     private void OnValidate()
     {
-        _Data.ID = ModText.ItemDorper;
+        if (_Data != null)
+            _Data.ID = ModText.ItemDorper;
     }
     protected override void OnLoad()
     {
@@ -119,17 +120,14 @@ public class Mod_DiscardItem : Mod_BaseDroper
             dropButtonPressTime = 0f;
             lastDropTime = 0f;
         }
-
-        // 更新当前鼠标悬停的槽位
-        UpdateHoveredSlot();
     }
 
-    private void UpdateHoveredSlot()
+    /// <summary>真正丢弃时才读取当前悬停，空闲帧不再重复遍历所有 UI 射线目标。</summary>
+    private ItemSlot_UI QueryHoveredSlot(bool topHitOnly)
     {
-        hoveredSlot = null;
         EventSystem eventSystem = EventSystem.current;
-        if (Mouse.current == null || eventSystem == null)
-            return;
+        if (eventSystem == null || (!topHitOnly && Mouse.current == null))
+            return null;
 
         // 同一事件系统复用查询对象，切换场景时重新绑定。
         if (hoveredEventSystem != eventSystem || hoveredPointerEventData == null)
@@ -138,21 +136,24 @@ public class Mod_DiscardItem : Mod_BaseDroper
             hoveredPointerEventData = new PointerEventData(eventSystem);
         }
         hoveredPointerEventData.Reset();
-        hoveredPointerEventData.position = Mouse.current.position.ReadValue();
+        hoveredPointerEventData.position = !topHitOnly
+            ? Mouse.current.position.ReadValue()
+            : Mod_GameController != null ? Mod_GameController.GetPointerScreenPosition()
+            : Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
         hoveredRaycastResults.Clear();
         eventSystem.RaycastAll(hoveredPointerEventData, hoveredRaycastResults);
 
-        foreach (RaycastResult result in hoveredRaycastResults)
+        int count = topHitOnly ? Mathf.Min(1, hoveredRaycastResults.Count) : hoveredRaycastResults.Count;
+        for (int index = 0; index < count; index++)
         {
-            if (result.gameObject.TryGetComponent(out ItemSlot_UI slot))
-            {
-                hoveredSlot = slot;
-                break;
-            }
+            GameObject target = hoveredRaycastResults[index].gameObject;
+            if (target != null && target.TryGetComponent(out ItemSlot_UI slot))
+                return slot;
         }
+        return null;
     }
 
-    private void HandleRepeatDrop()
+    internal void HandleRepeatDrop()
     {
         // 检查手上是否有物品
         ItemSlot handSlot = GetHandSlot();
@@ -197,7 +198,8 @@ public class Mod_DiscardItem : Mod_BaseDroper
             }
         }
 
-        // 只有当手上和快捷栏都没有物品时，才处理UI悬停的物品
+        // 手部与快捷栏都没有物品时，才按当前位置查询 UI 悬停槽位。
+        hoveredSlot = QueryHoveredSlot(topHitOnly: false);
         if (hoveredSlot != null)
         {
             ItemSlot hoveredSlotData = hoveredSlot.GetBoundSlotData();
@@ -552,61 +554,17 @@ public class Mod_DiscardItem : Mod_BaseDroper
     [Button("快速丢弃")]
     public void FastDropItem(int count = 1)
     {
-        Vector2 mousePosition = Mod_GameController != null
-            ? Mod_GameController.GetPointerScreenPosition()
-            : Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
-
-        List<RaycastResult> results = new List<RaycastResult>();
-        PointerEventData pointerEventData = new PointerEventData(EventSystem.current)
-        {
-            position = mousePosition
-        };
-
-        EventSystem.current.RaycastAll(pointerEventData, results);
-
-        if (results.Count > 0)
-        {
-            var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
-
-            if (uiItemSlot != null)
-            {
-                ItemSlot slotData = uiItemSlot.GetBoundSlotData();
-                if (slotData != null)
-                {
-                    DropItemByCount(slotData, count);
-                }
-            }
-        }
+        ItemSlot slotData = QueryHoveredSlot(topHitOnly: true)?.GetBoundSlotData();
+        if (slotData != null)
+            DropItemByCount(slotData, count);
     }
 
     [Button("快速丢弃整组")]
     public void FastDropStack()
     {
-        Vector2 mousePosition = Mod_GameController != null
-            ? Mod_GameController.GetPointerScreenPosition()
-            : Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
-
-        List<RaycastResult> results = new List<RaycastResult>();
-        PointerEventData pointerEventData = new PointerEventData(EventSystem.current)
-        {
-            position = mousePosition
-        };
-
-        EventSystem.current.RaycastAll(pointerEventData, results);
-
-        if (results.Count > 0)
-        {
-            var uiItemSlot = results[0].gameObject.GetComponent<ItemSlot_UI>();
-
-            if (uiItemSlot != null)
-            {
-                ItemSlot slotData = uiItemSlot.GetBoundSlotData();
-                if (slotData != null)
-                {
-                    DropItemByCount(slotData, slotData.Amount);
-                }
-            }
-        }
+        ItemSlot slotData = QueryHoveredSlot(topHitOnly: true)?.GetBoundSlotData();
+        if (slotData != null)
+            DropItemByCount(slotData, slotData.Amount);
     }
 
     #endregion

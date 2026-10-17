@@ -232,7 +232,7 @@ internal sealed class LocalTemperatureField
 }
 
 /// <summary>把液面按液体目标温度分组，缓存各组最大距离权重，避免岩浆湖逐格重复叠热。</summary>
-internal sealed class LiquidTemperatureField
+internal sealed partial class LiquidTemperatureField
 {
     #region 分区缓存
 
@@ -269,18 +269,22 @@ internal sealed class LiquidTemperatureField
     private readonly Dictionary<Vector2Int, Bucket> buckets = new();
     private readonly Dictionary<Vector2Int, SourceChunk> sourceChunks = new();
     private readonly HashSet<Vector2Int> pointOrigins = new();
-    private readonly ChunkMgr chunkManager;
+    private readonly WorldRuntime world;
+    private readonly long worldEpoch;
     private readonly string dimensionId;
     private readonly int width;
     private readonly int height;
     private readonly WorldTopologyBounds bounds;
-    private GameRes cachedResources;
+    private object cachedResources;
+    private IReadOnlyDictionary<string, LiquidDefinition> cachedDefinitions;
     private int cachedResourceReloadVersion = -1;
+    private int resourceGeneration;
 
-    public LiquidTemperatureField(ChunkMgr chunkManager, string dimensionId,
+    public LiquidTemperatureField(WorldRuntime world, string dimensionId,
         int width, int height, WorldTopologyBounds bounds)
     {
-        this.chunkManager = chunkManager;
+        this.world = world;
+        worldEpoch = world?.Epoch ?? 0;
         this.dimensionId = dimensionId;
         this.width = width;
         this.height = height;
@@ -309,6 +313,8 @@ internal sealed class LiquidTemperatureField
         private readonly List<Source> sources = new();
         private ChunkTerrainData terrain;
         private long revision = -1;
+
+        public bool HasSources => sources.Count > 0;
 
         public void Refresh(ChunkTerrainData current, IReadOnlyDictionary<string, LiquidDefinition> definitions)
         {
@@ -412,7 +418,7 @@ internal sealed class LiquidTemperatureField
     {
         using (PointMarker.Auto())
         {
-            if (!PrepareResources(out GameRes resources))
+            if (!PrepareResources(out _))
                 return;
             Vector2Int targetOrigin = ResolveChunkOrigin(cell);
             if (buckets.TryGetValue(targetOrigin, out Bucket bucket))
@@ -441,8 +447,10 @@ internal sealed class LiquidTemperatureField
                     origin = bounds.NormalizeChunkOrigin(origin);
                 if (!pointOrigins.Add(origin))
                     continue;
-                GetSources(origin, ResolveTerrain(origin), resources).AccumulateAtPoint(origin, center, bounds,
-                    ambient, ref strongestHeating, ref strongestCooling);
+                ChunkTerrainData terrain = ResolveTerrain(origin);
+                if (terrain != null)
+                    GetSources(origin, terrain).AccumulateAtPoint(origin, center, bounds,
+                        ambient, ref strongestHeating, ref strongestCooling);
             }
         }
     }
@@ -450,28 +458,37 @@ internal sealed class LiquidTemperatureField
     private bool PrepareResources(out GameRes resources)
     {
         resources = GameRes.ExistingInstance;
-        if (chunkManager == null || resources == null)
+        if (resources == null)
+            return false;
+        return PrepareDefinitions(resources.LiquidDefinitions, resources, resources.ResourceReloadVersion);
+    }
+
+    private bool PrepareDefinitions(IReadOnlyDictionary<string, LiquidDefinition> definitions,
+        object resourceIdentity, int reloadVersion)
+    {
+        if (world == null || world.Epoch != worldEpoch || definitions == null)
             return false;
         // 资源重载同时废弃源列表和目标块权重，下一次读取直接使用新定义。
-        if (!ReferenceEquals(cachedResources, resources) ||
-            cachedResourceReloadVersion != resources.ResourceReloadVersion)
+        if (!ReferenceEquals(cachedResources, resourceIdentity) || cachedResourceReloadVersion != reloadVersion)
         {
             buckets.Clear();
             sourceChunks.Clear();
-            cachedResources = resources;
-            cachedResourceReloadVersion = resources.ResourceReloadVersion;
+            cachedResources = resourceIdentity;
+            cachedDefinitions = definitions;
+            cachedResourceReloadVersion = reloadVersion;
+            resourceGeneration++;
         }
         return true;
     }
 
-    private SourceChunk GetSources(Vector2Int origin, ChunkTerrainData terrain, GameRes resources)
+    private SourceChunk GetSources(Vector2Int origin, ChunkTerrainData terrain)
     {
         if (!sourceChunks.TryGetValue(origin, out SourceChunk source))
         {
             source = new SourceChunk();
             sourceChunks.Add(origin, source);
         }
-        source.Refresh(terrain, resources.LiquidDefinitions);
+        source.Refresh(terrain, cachedDefinitions);
         return source;
     }
 
@@ -520,7 +537,7 @@ internal sealed class LiquidTemperatureField
                 ChunkTerrainData terrain = ResolveTerrain(sourceOrigin);
                 bucket.Dependencies.Add(new Dependency(sourceOrigin, terrain));
                 if (terrain != null)
-                    GetSources(sourceOrigin, terrain, cachedResources).AccumulateChunk(sourceOrigin, targetOrigin,
+                    GetSources(sourceOrigin, terrain).AccumulateChunk(sourceOrigin, targetOrigin,
                         width, height, bounds, weightsByTemperature);
             }
             bucket.Influences = new Influence[weightsByTemperature.Count];
@@ -534,7 +551,8 @@ internal sealed class LiquidTemperatureField
     {
         var address = new FlatWorld.WorldModel.WorldAddress(dimensionId,
             new Int2(origin.x, origin.y));
-        return chunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
+        // 来源坐标已按本温度场拓扑规范化，直接查绑定世界，避免逐邻区重复取得活动拓扑。
+        return world != null && world.Epoch == worldEpoch && world.Chunks.TryGetValue(address, out ChunkRuntime chunk) &&
                chunk.DataStatus == ChunkDataStatus.Ready && chunk.Terrain != null && !chunk.Terrain.IsDisposed
             ? chunk.Terrain
             : null;

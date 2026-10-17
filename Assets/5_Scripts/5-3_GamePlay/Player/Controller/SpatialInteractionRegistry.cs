@@ -32,21 +32,30 @@ public static class SpatialInteractionRegistry
 
     /// <summary>执行正式交互查询；pointer 为 null 表示邻近查询。</summary>
     public static void Query(Item actor, float radius, Vector2? pointer, List<IInteractable> results)
+        => Query(actor, radius, pointer, results, WorldTopologyRuntime.GetActiveDomain());
+
+    internal static void Query(Item actor, float radius, Vector2? pointer,
+        List<IInteractable> results, WorldTopologyDomain topology)
     {
-        QueryRegisteredTargets(actor, radius, pointer, results);
+        QueryRegisteredTargets(actor, radius, pointer, results, topology);
         MachineWorld.QueryInteractionTargets(actor, radius, pointer, results);
-        FlatWorld.NaturalEntities.NaturalEntityEcsService.QueryInteractions(actor, radius, pointer, results);
+        FlatWorld.NaturalEntities.NaturalEntityEcsService.QueryInteractions(actor, radius, pointer, results, topology);
     }
 
     /// <summary>只查询已注册的视觉目标与资源实体，不为机器描边逐帧查询机械图。</summary>
     public static void QueryPreview(Item actor, float radius, Vector2? pointer, List<IInteractable> results)
+        => QueryPreview(actor, radius, pointer, results, WorldTopologyRuntime.GetActiveDomain());
+
+    internal static void QueryPreview(Item actor, float radius, Vector2? pointer,
+        List<IInteractable> results, WorldTopologyDomain topology)
     {
-        QueryRegisteredTargets(actor, radius, pointer, results);
-        FlatWorld.NaturalEntities.NaturalEntityEcsService.QueryInteractions(actor, radius, pointer, results);
+        QueryRegisteredTargets(actor, radius, pointer, results, topology);
+        FlatWorld.NaturalEntities.NaturalEntityEcsService.QueryInteractions(actor, radius, pointer, results, topology);
     }
 
     /// <summary>查询同场景注册组件，供正式交互与视觉预览共用。</summary>
-    private static void QueryRegisteredTargets(Item actor, float radius, Vector2? pointer, List<IInteractable> results)
+    internal static void QueryRegisteredTargets(Item actor, float radius, Vector2? pointer,
+        List<IInteractable> results, WorldTopologyDomain topology)
     {
         foreach (KeyValuePair<Component, Registration> entry in Targets)
         {
@@ -57,11 +66,11 @@ public static class SpatialInteractionRegistry
                 : target.transform.position;
             if (!target.gameObject.activeInHierarchy ||
                 target.gameObject.scene != actor.gameObject.scene || interaction == null ||
-                !interaction.CanInteract(actor) || WorldTopologyRuntime.Distance(actor.transform.position, position) > radius)
+                !interaction.CanInteract(actor) || topology.Distance((Vector2)actor.transform.position, (Vector2)position) > radius)
                 continue;
             if (pointer.HasValue && (target is ISpatialInteractionShape shape
                 ? !shape.ContainsInteractionPoint(pointer.Value)
-                : WorldTopologyRuntime.Distance(pointer.Value, position) > entry.Value.Radius)) continue;
+                : topology.Distance(pointer.Value, (Vector2)position) > entry.Value.Radius)) continue;
             if (!results.Contains(interaction)) results.Add(interaction);
         }
     }

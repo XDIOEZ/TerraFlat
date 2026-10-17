@@ -39,24 +39,25 @@ public partial class TemperatureMgr
 
     private void PrepareFieldContext()
     {
-        if (fieldContextFrame == Time.frameCount)
-            return;
-        fieldContextFrame = Time.frameCount;
-
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         WorldRuntime world = manager != null ? manager.WorldRuntime : null;
-        PlanetData planet = null;
-        if (SaveDataMgr.Instance != null)
-            SaveDataMgr.Instance.TryGetActivePlanetData(out planet);
         DimensionManager dimension = DimensionManager.ExistingInstance;
         string dimensionId = dimension != null && dimension.ActiveAddress.IsValid
             ? dimension.ActiveAddress.DimensionId : null;
+        long epoch = world?.Epoch ?? 0;
+        if (fieldContextFrame == Time.frameCount && ReferenceEquals(manager, fieldChunkManager) &&
+            ReferenceEquals(world, fieldWorld) && epoch == fieldWorldEpoch && dimensionId == fieldDimension)
+            return;
+        fieldContextFrame = Time.frameCount;
+
+        PlanetData planet = null;
+        if (SaveDataMgr.Instance != null)
+            SaveDataMgr.Instance.TryGetActivePlanetData(out planet);
         int width = manager?.ActiveGenerationProfile?.Width ?? 0;
         int height = manager?.ActiveGenerationProfile?.Height ?? 0;
-        long epoch = world?.Epoch ?? 0;
 
         // 世界实例、星球或维度更换时丢弃可重建的来源缓存，避免上一世界的热源残留。
-        if (!ReferenceEquals(world, fieldWorld) || !ReferenceEquals(planet, fieldPlanet) ||
+        if (!ReferenceEquals(manager, fieldChunkManager) || !ReferenceEquals(world, fieldWorld) || !ReferenceEquals(planet, fieldPlanet) ||
             epoch != fieldWorldEpoch || dimensionId != fieldDimension ||
             width != fieldChunkWidth || height != fieldChunkHeight)
         {
@@ -74,7 +75,7 @@ public partial class TemperatureMgr
             localTemperatureField = world != null && planet != null && dimensionId != null && width > 0 && height > 0
                 ? new LocalTemperatureField(fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
             liquidTemperatureField = world != null && planet != null && dimensionId != null && width > 0 && height > 0
-                ? new LiquidTemperatureField(manager, dimensionId, fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
+                ? new LiquidTemperatureField(world, dimensionId, fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
         }
 
         ambientFieldOffset = planet != null
@@ -91,6 +92,51 @@ public partial class TemperatureMgr
             orbitalTemperatureFactor = OrbitalSeasonPhysics.ResolveEccentricTemperatureFactor(
                 time, time.GetTotalGameTimeSeconds());
         }
+    }
+
+    #endregion
+
+    #region 同步单点采样上下文
+
+    internal readonly struct PointSamplingContext : IDisposable
+    {
+        private readonly TemperatureMgr owner;
+        private readonly WorldRuntime world;
+        private readonly long epoch;
+        private readonly int version;
+        private readonly int frame;
+        private readonly LiquidTemperatureField.PointSamplingBatch liquid;
+
+        internal PointSamplingContext(TemperatureMgr owner)
+        {
+            this.owner = owner;
+            world = owner.fieldWorld;
+            epoch = owner.fieldWorldEpoch;
+            version = owner.fieldContextVersion;
+            frame = Time.frameCount;
+            liquid = owner.liquidTemperatureField?.BeginPointSamplingBatch() ?? default;
+        }
+
+        internal bool TryGetAmbientAndClimateBaseline(Vector2 position, out float ambient, out float baseline)
+        {
+            ambient = baseline = 0f;
+            if (owner == null || world == null || world.Epoch != epoch ||
+                !ReferenceEquals(ChunkMgr.ExistingInstance?.WorldRuntime, world) ||
+                DimensionManager.ExistingInstance?.ActiveAddress.DimensionId != owner.fieldDimension)
+                return false;
+            if (frame != Time.frameCount || version != owner.fieldContextVersion)
+                throw new InvalidOperationException("单点温度上下文只能用于当前同步结算批次。");
+            return owner.TrySamplePreparedTemperature(position, true, out ambient, out baseline, true, liquid);
+        }
+
+        public void Dispose() => liquid.Dispose();
+    }
+
+    // 同步只读批次共用世界与液体邻区，期间不修改来源，下批重新读取权威地形和版本。
+    internal PointSamplingContext CreatePointSamplingContext()
+    {
+        PrepareFieldContext();
+        return localTemperatureField != null && fieldWorld != null ? new PointSamplingContext(this) : default;
     }
 
     #endregion
@@ -252,9 +298,17 @@ public partial class TemperatureMgr
         out float climateBaseline, bool includePlanetOffset = true)
     {
         PrepareFieldContext();
+        return TrySamplePreparedTemperature(worldPosition, includeTransient, out temperature,
+            out climateBaseline, includePlanetOffset);
+    }
+
+    private bool TrySamplePreparedTemperature(Vector2 worldPosition, bool includeTransient, out float temperature,
+        out float climateBaseline, bool includePlanetOffset,
+        LiquidTemperatureField.PointSamplingBatch liquidBatch = default)
+    {
         temperature = 0f;
         climateBaseline = 0f;
-        if (localTemperatureField == null || fieldChunkManager == null)
+        if (localTemperatureField == null || fieldWorld == null || fieldWorld.Epoch != fieldWorldEpoch)
             return false;
 
         Vector2 position = fieldBounds.IsWrapped ? fieldBounds.NormalizePosition(worldPosition) : worldPosition;
@@ -263,7 +317,7 @@ public partial class TemperatureMgr
             Mathf.FloorToInt((float)cell.x / fieldChunkWidth) * fieldChunkWidth,
             Mathf.FloorToInt((float)cell.y / fieldChunkHeight) * fieldChunkHeight);
         RuntimeWorldAddress address = new(fieldDimension, origin);
-        if (!fieldChunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
+        if (!fieldWorld.Chunks.TryGetValue(address, out ChunkRuntime chunk) ||
             chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null || chunk.Terrain.IsDisposed)
             return false;
 
@@ -281,7 +335,10 @@ public partial class TemperatureMgr
                 float ambient = CalculateAmbientBaseline(position, baseline);
                 float heating = 0f, cooling = 0f;
                 localTemperatureField.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
-                liquidTemperatureField?.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
+                if (liquidBatch.IsCreated)
+                    liquidBatch.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
+                else
+                    liquidTemperatureField?.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
                 temperature = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
             }
         }

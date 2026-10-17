@@ -247,6 +247,9 @@ namespace FlatWorld.NaturalEntities
         }
 
         private static ResourceQuery QueryBounds(Vector2 center, Vector2 extents)
+            => QueryBounds(center, extents, WorldTopologyRuntime.GetActiveDomain());
+
+        private static ResourceQuery QueryBounds(Vector2 center, Vector2 extents, WorldTopologyDomain topology)
         {
             List<Record> result = queryLists.Count > 0 ? queryLists.Pop() : new List<Record>(32);
             var query = new ResourceQuery(result);
@@ -262,7 +265,7 @@ namespace FlatWorld.NaturalEntities
             if (((long)maxX - minX + 1) * ((long)maxY - minY + 1) > 16384L) return query;
             for (int y = minY; y <= maxY; y++)
             for (int x = minX; x <= maxX; x++)
-                if (spatialCells.TryGetValue(WorldTopologyRuntime.NormalizeCell(new Vector2Int(x, y)), out HashSet<int> bucket))
+                if (spatialCells.TryGetValue(new Vector2Int(topology.NormalizeX(x), topology.NormalizeY(y)), out HashSet<int> bucket))
                     foreach (int id in bucket)
                         if (records.TryGetValue(id, out Record record) && record.LastSpatialQuery != spatialQuerySequence)
                         { record.LastSpatialQuery = spatialQuerySequence; result.Add(record); }
@@ -314,23 +317,31 @@ namespace FlatWorld.NaturalEntities
         }
 
         public static void QueryInteractions(Item actor, float distance, Vector2? pointer, List<IInteractable> output)
+            => QueryInteractions(actor, distance, pointer, output, WorldTopologyRuntime.GetActiveDomain());
+
+        /// <summary>空间桶与精筛共享本轮拓扑，避免每个候选和网格重新解析活动世界。</summary>
+        internal static void QueryInteractions(Item actor, float distance, Vector2? pointer,
+            List<IInteractable> output, WorldTopologyDomain topology)
         {
             if (actor == null || records.Count == 0 || distance < 0f) return;
             Vector2 origin = actor.transform.position;
             Vector2 center = pointer ?? origin;
-            using ResourceQuery query = QueryBounds(center, pointer.HasValue ? Vector2.zero : Vector2.one * distance);
+            using ResourceQuery query = QueryBounds(center, pointer.HasValue ? Vector2.zero : Vector2.one * distance, topology);
             foreach (Record record in query)
             {
                 if (WorldEntityRuntime.DimensionId != record.DimensionId || !record.CanInteract(actor) ||
-                    WorldTopologyRuntime.Distance(origin, record.Snapshot.transform.position) > distance) continue;
-                if (pointer.HasValue && !ContainsPoint(record, pointer.Value)) continue;
+                    topology.Distance(origin, (Vector2)record.Snapshot.transform.position) > distance) continue;
+                if (pointer.HasValue && !ContainsPoint(record, pointer.Value, topology)) continue;
                 if (!output.Contains(record)) output.Add(record);
             }
         }
 
         private static bool ContainsPoint(Record record, Vector2 pointer)
+            => ContainsPoint(record, pointer, WorldTopologyRuntime.GetActiveDomain());
+
+        private static bool ContainsPoint(Record record, Vector2 pointer, WorldTopologyDomain topology)
         {
-            Vector2 delta = WorldTopologyRuntime.ShortestDelta(record.VisualBounds.center, pointer);
+            Vector2 delta = topology.ShortestDelta((Vector2)record.VisualBounds.center, pointer);
             return Mathf.Abs(delta.x) <= record.VisualBounds.extents.x && Mathf.Abs(delta.y) <= record.VisualBounds.extents.y;
         }
 

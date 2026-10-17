@@ -61,15 +61,22 @@ public partial class Mod_TileEffectReceiver
     protected virtual bool TryResolveLiquidContact(Vector2Int grid, out WorldLiquidSourceTarget target, out bool edge)
     {
         edge = false;
-        if (WorldLiquidSourceResolver.TryResolve(transform.position, out target)) return true;
+        if (TryResolveLiquidAtPosition(transform.position, out target)) return true;
         foreach (Vector2Int offset in WaterEdgeDirections)
         {
             Vector2Int cell = grid + offset;
-            if (!WorldLiquidSourceResolver.TryResolve(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out target)) continue;
+            if (!TryResolveLiquidAtPosition(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out target)) continue;
             edge = true;
             return true;
         }
         return false;
+    }
+
+    private bool TryResolveLiquidAtPosition(Vector2 position, out WorldLiquidSourceTarget target)
+    {
+        target = default;
+        return TryReadRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample) &&
+            WorldLiquidSourceResolver.TryResolve(sample, out target);
     }
 
     /// <summary>深度变化直接刷新快照，不重复退出进入；液体身份或接触模式改变才切换行为。</summary>

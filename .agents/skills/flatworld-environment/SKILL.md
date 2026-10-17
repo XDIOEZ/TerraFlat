@@ -51,6 +51,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `LocalTemperatureSource` 发布目标环境温度（默认篝火 40℃）而非固定摄氏增量；`ThermalInfluenceRuntime` 用 `max(0,1-d²/R²)²` 衰减，按当前天气环境温差取最强升温/降温（独立制冷模式），同类热源不累加。区块只缓存每源距离权重，源温、功率与天气变化不重建几何；设备管理燃料/供电/撤销。
 - 液体热辐射复用相同目标温度模型，配置 `radiantHeatRadius/radiantTargetTemperature`（岩浆目标环境 180℃）；`LiquidTemperatureField` 只索引已加载地表液体，按液体目标温度分组缓存各格最大权重，依 Terrain/SurfaceLiquidRevision/目录重建。岩浆接触仍走 1100℃物质温度、接触加热与伤害，环境不再直接强制成液体自身温度。
 - 单格环境温度按格中心直接累计当地冷热源和邻区稀疏液体热源，不触发整块权重重建；整块雨雪采样仍走批量权重。液体源列表只随 Terrain 身份/SurfaceLiquidRevision 变化扫描，资源重载同时清除源列表和权重缓存；两条路径共用最强影响规则。
+- 自然物同次环境冻结用 `TemperatureMgr.PointSamplingContext` 和 `LiquidTemperatureField.PointSamplingBatch`，按目标块一次收集已规范邻区，只读绑定 `WorldRuntime+Epoch+Dimension` 的当前地形；同批每格仍完整算热源距离，下批重读 Terrain 身份与 SurfaceLiquidRevision。作用域是同步只读阶段，期间调用方不得修改地形、热源或目录，不跟踪同批写入、不跨帧缓存结果；嵌套批次独立，退出清批次引用，目录重载/旧代际拒用，`environment/thermal_point_batch` 覆盖刷新与生命周期边界。
 - 体温是最外层体表；角色与普通物品的环境传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，按 `0.99^seconds` 指数结算，温差小于 0.0001℃收敛。冷热不分速率，不读物品传热率或潮湿/附近火源倍率；`AdvanceTowards` 仅保留给入水、岩浆接触和设备专属传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。
@@ -67,7 +68,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `ContaminationSystem` 是污染权威写入口，指标存 `flatworld.contamination.<definitionId>`，含服务端权威/差量/通知；脏污度与具体病原负荷是不同指标。
 - 全局光由 TimeSystem.prefab 的 DayTimeSystem+Light2D 拥有；FixedLighting 是上限，SuppressWeather 关闭天气。`GetLighting/GetSunLighting` 外层只衰减一次云量，不影响局部灯。
 - 太阳/接触阴影透明度读纯 GetSunLighting，时间仅算轨迹；月相基于 TotalDays+CurrentTime/DayLength，月光作夜间下限后叠采光率/维度上限。MoonlightIntensity 与 MoonAppearance 分别表达亮度和出现进度，退出清 Shader 参数。
-- LightLayerMgr 热路径只读缓存 Light2D 成员并实时采强度/位置；成员集合低频刷新。风玩法按自身格查询，PlanetData.WindStrength/GPU 风只是镜头投影。
+- LightLayerMgr 按查询直接读取 URP 活跃光源登记表，环绕代理分类与 Transform 用弱引用缓存；没有玩法查询时不再定时扫全场景，点光参数仍逐次实时读取，单次查询共用一份拓扑域。URP 适配失败才按需低频回退扫描；规则 `environment/light_registry、light_sampling` 覆盖登记生命周期、代理排除、动态值、环绕距离与无分配热路径。风玩法按自身格查询，PlanetData.WindStrength/GPU 风只是镜头投影。
 - 风区边缘由 `WindTransitionWidth` 控制空间过渡总宽（默认 32 格，边界内外各 16 格）；`TryGetWindBlend` 按连续坐标 SmoothStep 混合最多四区，支持拐角、环绕和客户端副本，缺失区视为无风且不创建状态。风声/设施读混合风向量，移动先按各区原强度换算推速再混合，避免跌过 8 级门槛突然停住。
 - 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档不插值；邻风区各自分档后仍按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风。HasWindPush 每帧只读检查一次所有登记天气区（含客户端副本），不能以镜头区判断全世界。
 - 大批散落物风推动使用 `WorldMotionSystem.TryCreateWindSamplingContext` 每批冻结一次目录质量范围和星球重力；每件仍按实际质量与当地四区风场采样。单件 `SampleWindVelocity` 与批量共用 `WindEnvironmentRules.ResolveBlendedPushVelocity`。

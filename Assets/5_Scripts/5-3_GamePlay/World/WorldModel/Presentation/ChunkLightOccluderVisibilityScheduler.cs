@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -12,11 +11,9 @@ public static class ChunkLightOccluderVisibilityScheduler
 
     private const float IntersectionEpsilon = 0.001f;
     private static readonly HashSet<ChunkLightOccluderRenderer> Renderers = new();
-    private static readonly Func<List<Light2D>> ReadRegisteredLights = CreateLightRegistryGetter();
     private static List<BoundingSphere> lightSpheres = new();
     private static List<BoundingSphere> nextLightSpheres = new();
     private static bool subscribed;
-    private static bool registryFailed;
     private static bool keepAllOccluders;
     private static bool hasSnapshot;
     private static int snapshotFrame = -1;
@@ -75,32 +72,14 @@ public static class ChunkLightOccluderVisibilityScheduler
 
     #region 局部投影光快照
 
-    /// <summary>只在初始化时适配 URP 的真实灯注册表，逐帧调用强类型委托。</summary>
-    private static Func<List<Light2D>> CreateLightRegistryGetter()
-    {
-        try
-        {
-            Type manager = typeof(Light2D).Assembly.GetType("UnityEngine.Rendering.Universal.Light2DManager");
-            MethodInfo getter = manager?.GetProperty("lights", BindingFlags.Static | BindingFlags.Public)
-                ?.GetGetMethod();
-            return getter == null ? null :
-                (Func<List<Light2D>>)Delegate.CreateDelegate(typeof(Func<List<Light2D>>), getter);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
     private static bool RefreshLightSnapshot()
     {
         nextLightSpheres.Clear();
-        bool nextKeepAll = ReadRegisteredLights == null || registryFailed;
+        bool nextKeepAll = !WorldLightRegistry.TryGetActiveLights(out IReadOnlyList<Light2D> lights);
         if (!nextKeepAll)
         {
             try
             {
-                List<Light2D> lights = ReadRegisteredLights();
                 if (lights == null)
                 {
                     nextKeepAll = true;
@@ -137,7 +116,6 @@ public static class ChunkLightOccluderVisibilityScheduler
             }
             catch (Exception)
             {
-                registryFailed = true;
                 nextKeepAll = true;
             }
         }

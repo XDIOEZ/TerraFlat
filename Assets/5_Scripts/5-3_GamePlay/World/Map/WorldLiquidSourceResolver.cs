@@ -22,16 +22,25 @@ public readonly struct WorldLiquidSourceTarget
 /// </summary>
 public static class WorldLiquidSourceResolver
 {
+    #region 液体来源解析
     public static bool TryResolve(Vector2 worldPosition, out WorldLiquidSourceTarget target)
     {
         target = default;
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
-        if (chunkManager == null ||
-            !chunkManager.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) ||
-            sample.LiquidDepth <= 0f || !WorldLiquidSystem.TryGetDefinition(sample, out LiquidDefinition liquid))
+        return chunkManager != null &&
+            chunkManager.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) &&
+            TryResolve(sample, out target);
+    }
+
+    /// <summary>复用调用方本轮的权威地形采样，不重复进行世界寻址。</summary>
+    public static bool TryResolve(RuntimeTerrainTileSample sample, out WorldLiquidSourceTarget target)
+    {
+        target = default;
+        if (sample.LiquidDepth <= 0f || !WorldLiquidSystem.TryGetDefinition(sample, out LiquidDefinition liquid))
             return false;
 
         target = new WorldLiquidSourceTarget(sample, liquid);
         return true;
     }
+    #endregion
 }

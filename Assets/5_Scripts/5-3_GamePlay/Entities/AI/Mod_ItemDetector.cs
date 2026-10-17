@@ -1,8 +1,5 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
-using FlatWorld.WorldModel;
-using Unity.Mathematics;
-using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -37,6 +34,7 @@ public class Mod_ItemDetector : Module
     private readonly List<Item> _emptyItems = new List<Item>(0);
     private long _requestedVersion;
     private long _appliedVersion;
+    private readonly GridLineOfSightQuery _lineOfSightQuery = new();
 
     public long RequestedVersion => _requestedVersion;
     public long AppliedVersion => _appliedVersion;
@@ -65,7 +63,8 @@ public class Mod_ItemDetector : Module
         if (!wallsBlockPerception)
             return true;
 
-        return HasClearGridLineOfSight(transform.position, target.transform.position);
+        using GridLineOfSightQuery query = BeginLineOfSightQuery();
+        return HasLineOfSight(target, query);
     }
 
     /// <summary>
@@ -393,157 +392,27 @@ public class Mod_ItemDetector : Module
 
     #region 视线遮挡
 
-    /// <summary>沿观察者到目标的整数格检查视线，遇到动态建筑或固定阻挡就结束。</summary>
-    private static bool HasClearGridLineOfSight(Vector2 fromWorld, Vector2 toWorld)
+    /// <summary>本轮冻结真实观察者位置与世界上下文，候选射线复用寻址，结束后清空引用。</summary>
+    internal GridLineOfSightQuery BeginLineOfSightQuery()
     {
+        if (!wallsBlockPerception)
+            return null;
+        Vector2 observerPosition = transform.position;
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager == null)
-            return false;
-
-        // 一条视线共用同一份世界拓扑，避免沿途每格重新读取活动星球。
-        var sampler = new GridLineSampler(chunkManager, WorldTopologyRuntime.GetActiveDomain());
-
-        Vector2Int from = sampler.NormalizeCell(new Vector2Int(
-            Mathf.FloorToInt(fromWorld.x),
-            Mathf.FloorToInt(fromWorld.y)));
-        Vector2Int to = sampler.NormalizeCell(new Vector2Int(
-            Mathf.FloorToInt(toWorld.x),
-            Mathf.FloorToInt(toWorld.y)));
-
-        if (!sampler.IsCellLoaded(from) || !sampler.IsCellLoaded(to))
         {
-            return false;
+            _lineOfSightQuery.Begin(null, default, null, 1, 1, observerPosition);
         }
-
-        if (from == to)
-            return true;
-
-        Vector2Int shortest = sampler.ShortestDelta(from, to);
-        Vector2Int unwrappedTo = from + shortest;
-        int x = from.x;
-        int y = from.y;
-        int dx = Mathf.Abs(shortest.x);
-        int dy = Mathf.Abs(shortest.y);
-        int stepX = shortest.x >= 0 ? 1 : -1;
-        int stepY = shortest.y >= 0 ? 1 : -1;
-        int error = dx - dy;
-
-        while (x != unwrappedTo.x || y != unwrappedTo.y)
+        else
         {
-            int previousX = x;
-            int previousY = y;
-            int doubledError = error * 2;
-
-            if (doubledError > -dy)
-            {
-                error -= dy;
-                x += stepX;
-            }
-
-            if (doubledError < dx)
-            {
-                error += dx;
-                y += stepY;
-            }
-
-            bool movedDiagonally = x != previousX && y != previousY;
-            if (movedDiagonally &&
-                (sampler.IsSightBlockingCell(new Vector2Int(x, previousY)) ||
-                 sampler.IsSightBlockingCell(new Vector2Int(previousX, y))))
-            {
-                return false;
-            }
-
-            Vector2Int current = new Vector2Int(x, y);
-            if (current != unwrappedTo && sampler.IsSightBlockingCell(current))
-                return false;
+            chunkManager.BeginLineOfSightQuery(_lineOfSightQuery, observerPosition);
         }
-
-        return true;
+        return _lineOfSightQuery;
     }
 
-    /// <summary>单条视线统一查询动态建筑占地与地形阻挡，并缓存当前区块避免重复解析地址。</summary>
-    private struct GridLineSampler
-    {
-        private readonly ChunkMgr chunkManager;
-        private readonly WorldTopologyDomain topology;
-        private RuntimeWorldAddress cachedAddress;
-        private ChunkTerrainData cachedTerrain;
-        private bool hasCachedChunk;
-
-        public GridLineSampler(ChunkMgr chunkManager, WorldTopologyDomain topology)
-        {
-            this.chunkManager = chunkManager;
-            this.topology = topology;
-            cachedAddress = default;
-            cachedTerrain = null;
-            hasCachedChunk = false;
-        }
-
-        public Vector2Int NormalizeCell(Vector2Int cell)
-        {
-            if (topology.Contains(new int2(cell.x, cell.y)))
-                return cell;
-            int2 normalized = topology.Normalize(new int2(cell.x, cell.y));
-            return new Vector2Int(normalized.x, normalized.y);
-        }
-
-        public Vector2Int ShortestDelta(Vector2Int from, Vector2Int to)
-        {
-            int2 delta = topology.ShortestDelta(new int2(from.x, from.y), new int2(to.x, to.y));
-            return new Vector2Int(delta.x, delta.y);
-        }
-
-        public bool IsCellLoaded(Vector2Int worldCell)
-            => TryResolveTerrain(worldCell, out _, out _, out _);
-
-        /// <summary>未知格仍挡视线，已加载格只读取权威地形的遮挡位。</summary>
-        public bool IsSightBlockingCell(Vector2Int worldCell)
-        {
-            worldCell = NormalizeCell(worldCell);
-            if (!TryResolveTerrain(worldCell, out ChunkTerrainData terrain, out int localX, out int localY))
-                return true;
-            return terrain.IsSightBlockingCell(localX, localY);
-        }
-
-        private bool TryResolveTerrain(
-            Vector2Int worldCell,
-            out ChunkTerrainData terrain,
-            out int localX,
-            out int localY)
-        {
-            if (hasCachedChunk && cachedTerrain != null && !cachedTerrain.IsDisposed)
-            {
-                localX = worldCell.x - cachedAddress.ChunkOrigin.X;
-                localY = worldCell.y - cachedAddress.ChunkOrigin.Y;
-                if ((uint)localX < (uint)cachedTerrain.Width && (uint)localY < (uint)cachedTerrain.Height)
-                {
-                    terrain = cachedTerrain;
-                    return true;
-                }
-            }
-
-            Vector2 samplePosition = new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f);
-            RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(samplePosition);
-            if (!chunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
-                chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null ||
-                chunk.Terrain.IsDisposed)
-            {
-                terrain = null;
-                localX = 0;
-                localY = 0;
-                return false;
-            }
-
-            cachedAddress = address;
-            cachedTerrain = chunk.Terrain;
-            hasCachedChunk = true;
-            localX = worldCell.x - cachedAddress.ChunkOrigin.X;
-            localY = worldCell.y - cachedAddress.ChunkOrigin.Y;
-            terrain = cachedTerrain;
-            return (uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height;
-        }
-    }
+    internal bool HasLineOfSight(Item target, GridLineOfSightQuery query)
+        => target != null && (!wallsBlockPerception ||
+                              query != null && query.HasClearLineTo(target.transform.position));
 
     #endregion
 
@@ -639,6 +508,11 @@ public class Mod_ItemDetector : Module
     protected override void OnSave()
     {
         // 可以在需要时实现
+    }
+
+    protected override void OnUnload()
+    {
+        _lineOfSightQuery.Dispose();
     }
 
     private void OnValidate()

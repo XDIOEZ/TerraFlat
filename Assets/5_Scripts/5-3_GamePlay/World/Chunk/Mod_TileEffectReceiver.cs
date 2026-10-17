@@ -71,6 +71,9 @@ public partial class Mod_TileEffectReceiver : Module
     private float activeSnowDepth;
     private bool snowContactActive;
     private readonly System.Collections.Generic.HashSet<object> effectSuppressors = new();
+    private ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery;
+    private bool terrainQueryActive;
+    private bool hasTerrainQuery;
 
     /// <summary>实例级地块接触开关；起飞先退出旧地块，释放后按当前位置重新进入。</summary>
     public void SetEffectsSuppressed(object owner, bool suppressed)
@@ -162,6 +165,7 @@ public partial class Mod_TileEffectReceiver : Module
     {
         if (effectSuppressors.Count != 0 || isPreparedForWorldTransition)
             return;
+        using var terrainScope = BeginTerrainQuery();
         UpdateLegacyMapReference();
         Vector2Int currentGridPos = GetCurrentGridPos();
         RefreshLiquidContact(currentGridPos, deltaTime);
@@ -267,6 +271,7 @@ public partial class Mod_TileEffectReceiver : Module
     {
         if (effectSuppressors.Count != 0)
             return false;
+        using var terrainScope = BeginTerrainQuery();
         UpdateLegacyMapReference();
         if (item == null)
             return false;
@@ -579,6 +584,47 @@ public partial class Mod_TileEffectReceiver : Module
 
     #region 查询与缓存
 
+    private readonly struct TerrainQueryScope : System.IDisposable
+    {
+        private readonly Mod_TileEffectReceiver receiver;
+        private readonly ChunkMgr.RuntimeTerrainPresenceQuery previousQuery;
+        private readonly bool previousActive;
+        private readonly bool previousAvailable;
+
+        public TerrainQueryScope(Mod_TileEffectReceiver receiver)
+        {
+            this.receiver = receiver;
+            previousQuery = receiver.terrainQuery;
+            previousActive = receiver.terrainQueryActive;
+            previousAvailable = receiver.hasTerrainQuery;
+            receiver.terrainQueryActive = true;
+            receiver.terrainQuery = default;
+            ChunkMgr manager = ChunkMgr.ExistingInstance;
+            receiver.hasTerrainQuery = manager != null &&
+                manager.TryCreateTerrainPresenceQuery(out receiver.terrainQuery);
+        }
+
+        public void Dispose()
+        {
+            receiver.terrainQuery = previousQuery;
+            receiver.terrainQueryActive = previousActive;
+            receiver.hasTerrainQuery = previousAvailable;
+        }
+    }
+
+    /// <summary>脚下与四邻只共享本轮寻址，回调嵌套和下一轮都重新建立上下文。</summary>
+    private TerrainQueryScope BeginTerrainQuery() => new(this);
+
+    private bool TryReadRuntimeTerrainTile(Vector2 position, out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        if (terrainQueryActive)
+            return hasTerrainQuery && terrainQuery.IsForWorld(ChunkMgr.ExistingInstance?.WorldRuntime) &&
+                terrainQuery.TrySample(position, out sample);
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        return manager != null && manager.TryGetRuntimeTerrainTile(position, out sample);
+    }
+
     protected virtual bool TryResolveTileEffect(Vector2Int gridPos, out TileEffectResolution resolution)
     {
         return TryResolveTileEffectAtPosition(transform.position, gridPos, out resolution);
@@ -589,9 +635,14 @@ public partial class Mod_TileEffectReceiver : Module
         out TileEffectResolution resolution)
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager != null && manager.TryGetRuntimeTileEffect(samplePosition, reusableRuntimeTileData,
-                out RuntimeTerrainTileSample sample, out TileData runtimeData,
-                out RuntimeTileDefinition runtimeBlock))
+        if (terrainQueryActive && hasTerrainQuery && !terrainQuery.IsForWorld(manager?.WorldRuntime))
+        {
+            resolution = default;
+            return false;
+        }
+        if (manager != null && TryReadRuntimeTerrainTile(samplePosition, out RuntimeTerrainTileSample sample) &&
+            manager.TryGetRuntimeTileEffect(sample, reusableRuntimeTileData,
+                out TileData runtimeData, out RuntimeTileDefinition runtimeBlock))
         {
             reusableRuntimeTileData = runtimeData;
             resolution = new TileEffectResolution(runtimeBlock, runtimeData, null,
@@ -624,7 +675,7 @@ public partial class Mod_TileEffectReceiver : Module
             // 校验地块身份只读权威采样，避免每帧克隆地块行为数据。
             ChunkMgr manager = ChunkMgr.ExistingInstance;
             return manager != null &&
-                   manager.TryGetRuntimeTerrainTile(transform.position, out RuntimeTerrainTileSample sample) &&
+                   TryReadRuntimeTerrainTile(transform.position, out RuntimeTerrainTileSample sample) &&
                    ReferenceEquals(sample.Terrain, activeRuntimeTerrain) &&
                    sample.TopTileId == activeRuntimeTileId;
         }
@@ -678,7 +729,7 @@ public partial class Mod_TileEffectReceiver : Module
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null ||
-            manager.TryGetRuntimeTerrainTile(transform.position, out _))
+            TryReadRuntimeTerrainTile(transform.position, out _))
             return;
 
         manager.GetChunkBy_ItemPosition(transform.position, out Chunk chunk);
@@ -695,7 +746,10 @@ public partial class Mod_TileEffectReceiver : Module
             return WorldTopologyRuntime.NormalizeCell(new Vector2Int(cell.x, cell.y));
         }
 
-        Vector2 normalized = WorldTopologyRuntime.NormalizePosition(transform.position);
+        Vector2 normalized = terrainQueryActive && hasTerrainQuery &&
+            terrainQuery.IsForWorld(ChunkMgr.ExistingInstance?.WorldRuntime)
+            ? terrainQuery.NormalizePosition(transform.position)
+            : WorldTopologyRuntime.NormalizePosition(transform.position);
         return new Vector2Int(Mathf.FloorToInt(normalized.x), Mathf.FloorToInt(normalized.y));
     }
 

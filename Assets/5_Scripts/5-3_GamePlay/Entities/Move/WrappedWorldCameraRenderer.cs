@@ -202,10 +202,21 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         record.LastRefreshVersion = refreshVersion;
     }
 
-    /// <summary>低频刷新真实点光源列表，逐帧只同步已经缓存的少量灯光。</summary>
+    /// <summary>直接读取 URP 活跃登记成员，只有适配失败时才按需回退场景扫描。</summary>
     private void RefreshPointLightSourceCache()
     {
         float now = Time.unscaledTime;
+        if (WorldLightRegistry.TryGetActiveLights(out IReadOnlyList<Light2D> registered))
+        {
+            pointLightSources.Clear();
+            CollectPointLightSources(registered);
+            if (now >= nextLightSourceRefreshTime)
+            {
+                nextLightSourceRefreshTime = now + LightSourceRefreshInterval;
+                RemoveDestroyedLightRecords();
+            }
+            return;
+        }
         if (now < nextLightSourceRefreshTime)
             return;
 
@@ -214,11 +225,16 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         RemoveDestroyedLightRecords();
         // 光源列表不依赖实例 ID 顺序，刷新时省掉全场景排序。
         Light2D[] lights = FindObjectsByType<Light2D>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-        for (int i = 0; i < lights.Length; i++)
+        CollectPointLightSources(lights);
+    }
+
+    private void CollectPointLightSources(IReadOnlyList<Light2D> lights)
+    {
+        for (int i = 0; i < lights.Count; i++)
         {
             Light2D light = lights[i];
             if (light != null && light.lightType == Light2D.LightType.Point &&
-                !light.TryGetComponent<WorldTopologyLightProxy>(out _))
+                WorldLightRegistry.IsGameplaySource(light))
             {
                 pointLightSources.Add(light);
             }
@@ -514,7 +530,27 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
 }
 
 /// <summary>标记纯渲染用环绕灯光，逻辑光照采样必须忽略这些副本。</summary>
+[ExecuteAlways]
 [DisallowMultipleComponent]
 public sealed class WorldTopologyLightProxy : MonoBehaviour
 {
+    #region 纯表现灯登记
+
+    private Light2D source;
+
+    private void OnEnable()
+    {
+        if (TryGetComponent(out source))
+            WorldLightRegistry.RegisterProxy(source);
+    }
+
+    private void OnDestroy()
+    {
+        // 删除标记后重新分类，避免编辑器或热重建继续沿用旧的代理身份。
+        if (source == null)
+            TryGetComponent(out source);
+        WorldLightRegistry.ForgetSource(source);
+    }
+
+    #endregion
 }

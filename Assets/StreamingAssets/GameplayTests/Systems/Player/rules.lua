@@ -16,6 +16,13 @@ for _, case in ipairs(cases) do
     end, "移动消耗：" .. case.name)
 end
 
+test.system("player", "interaction_query_context", {}, function(data)
+    assert(data.wrapped == 1 and data.infinite == 0, "交互空间查询没有复用正确拓扑或循环重复了同一目标")
+    assert(data.pointerHit == 1 and data.pointerMiss == 0, "空间交互的精确落点范围改变")
+    assert(data.denied == 0 and data.inactive == 0, "同轮新查询没有读取最新准入或活动状态")
+    assert(data.moved == 0 and data.removed == 0, "移动或注销目标仍残留在交互候选")
+end, "交互单轮拓扑：循环接缝、重复视觉、落点与实时失效")
+
 -- 手机准线必须使用有限距离，零力度、推满和异常数值都不能生成无效坐标。
 local cursorCases = {
     {name = "普通交互回中", args = {strength = 0}, distance = 0},

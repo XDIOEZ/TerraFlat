@@ -198,10 +198,11 @@ public partial class ChunkMgr
 {
     #region 运行时地块查询
 
-    /// <summary>单次飞行判定共用世界地址和区块缓存，不读取不需要的地块表面数据。</summary>
+    /// <summary>单轮查询共用世界地址和区块缓存；只缓存寻址，地块层每次仍读取权威值。</summary>
     internal struct RuntimeTerrainPresenceQuery
     {
         private readonly WorldRuntime world;
+        private readonly long worldEpoch;
         private readonly WorldTopologyDomain topology;
         private readonly string dimensionId;
         private readonly int chunkWidth;
@@ -215,6 +216,7 @@ public partial class ChunkMgr
             string dimensionId, int chunkWidth, int chunkHeight)
         {
             this.world = world;
+            worldEpoch = world?.Epoch ?? 0;
             this.topology = topology;
             this.dimensionId = dimensionId;
             this.chunkWidth = chunkWidth;
@@ -231,6 +233,9 @@ public partial class ChunkMgr
             return new Vector2(normalized.x, normalized.y);
         }
 
+        internal bool IsForWorld(WorldRuntime currentWorld)
+            => ReferenceEquals(world, currentWorld) && world != null && world.Epoch == worldEpoch;
+
         internal Vector2 ShortestDelta(Vector2 origin, Vector2 target)
         {
             float2 delta = topology.ShortestDelta(
@@ -238,21 +243,41 @@ public partial class ChunkMgr
             return new Vector2(delta.x, delta.y);
         }
 
+        internal bool TrySample(Vector2 position, out RuntimeTerrainTileSample sample)
+        {
+            sample = default;
+            Vector2 normalized = NormalizePosition(position);
+            if (!IsLoadedNormalized(normalized))
+                return false;
+
+            var worldCell = new Vector2Int(Mathf.FloorToInt(normalized.x), Mathf.FloorToInt(normalized.y));
+            var localCell = new Vector2Int(worldCell.x - cachedOriginX, worldCell.y - cachedOriginY);
+            ChunkTerrainData terrain = cachedChunk.Terrain;
+            TerrainCell cell = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
+            int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
+            sample = new RuntimeTerrainTileSample(cachedChunk.Address, terrain, worldCell, localCell, cell,
+                supportId != 0 && cell.BlockingTileId == 0 && cell.BackTileId == 0
+                    ? supportId : terrain.GetTopTileId(localCell.x, localCell.y));
+            return true;
+        }
+
         internal bool IsLoadedNormalized(Vector2 position)
         {
-            if (world == null)
+            if (world == null || world.Epoch != worldEpoch)
                 return false;
 
             int worldX = Mathf.FloorToInt(position.x);
             int worldY = Mathf.FloorToInt(position.y);
             int originX = topology.NormalizeX(Mathf.FloorToInt(position.x / chunkWidth) * chunkWidth);
             int originY = topology.NormalizeY(Mathf.FloorToInt(position.y / chunkHeight) * chunkHeight);
-            if (!hasCachedOrigin || cachedOriginX != originX || cachedOriginY != originY)
+            if (!hasCachedOrigin || cachedOriginX != originX || cachedOriginY != originY ||
+                cachedChunk == null || cachedChunk.DataStatus == ChunkDataStatus.Evicting ||
+                cachedChunk.Terrain?.IsDisposed == true)
             {
                 cachedOriginX = originX;
                 cachedOriginY = originY;
                 hasCachedOrigin = true;
-                world.TryGetChunk(new RuntimeWorldAddress(dimensionId, new Int2(originX, originY)),
+                world.Chunks.TryGetValue(new RuntimeWorldAddress(dimensionId, new Int2(originX, originY)),
                     out cachedChunk);
             }
 
@@ -324,10 +349,18 @@ public partial class ChunkMgr
     public bool TryGetRuntimeTileEffect(Vector2 worldPosition, TileData reusableTileData,
         out RuntimeTerrainTileSample sample, out TileData tileData, out RuntimeTileDefinition tileBlock)
     {
+        if (TryGetRuntimeTerrainTile(worldPosition, out sample))
+            return TryGetRuntimeTileEffect(sample, reusableTileData, out tileData, out tileBlock);
         tileData = null;
         tileBlock = null;
-        return TryGetRuntimeTerrainTile(worldPosition, out sample) &&
-               ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(
+        return false;
+    }
+
+    /// <summary>同轮地块接触复用已完成的寻址，不再为行为数据重复查询世界和区块。</summary>
+    internal bool TryGetRuntimeTileEffect(RuntimeTerrainTileSample sample, TileData reusableTileData,
+        out TileData tileData, out RuntimeTileDefinition tileBlock)
+    {
+        return ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(
                    ActiveGenerationProfile,
                    RuntimeTileCatalogProfile,
                    sample.Terrain,

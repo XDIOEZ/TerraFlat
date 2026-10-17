@@ -42,6 +42,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 休眠重置时钟、停根刚体并通知 `ISimulationRangeAware`；重入先恢复原 simulated 值再重提目标。`NotifyRuntimeItemMoved` 更新空间索引与分档后发布移动事件。
 - Actor 感知几何来自当前定义；Collider Bridge 仅服务旧对象。注册/结构变化选择后端并增代际，移动只更新位置；格访问以 `LastVisitedBatch` 去重。`ItemPhysicsProjection2D` 将总重量投影成质量，将速度/接触写入非持久化 PhysicsState。
 - 掉落拾取/吸燃料用 `QueryItemCentersInCircleNonAlloc` 查附近中心空间桶；不要复用会扫描全世界感知倍率与几何的 Actor 感知查询，循环接缝仍按真实中心半径去重。
+- `Mod_DiscardItem` 只在实际丢弃动作需要 UI 槽位时查询悬停，保留手部→快捷栏→悬停优先级和原长按时钟；`Mod_TileEffectReceiver` 的本格/四邻复用单轮寻址上下文，每次读取最新权威层，不缓存跨帧水态。
 - `ItemData.transform`、索引与存档使用规范逻辑坐标；Transform/刚体可位于客户端镜像。跨周事件通过 `ReprojectRuntimeItemsToLocalAnchor` 重投影，根刚体由 `WrappedWorldPhysicsAdapter` 管理；Physics2D 命中经 `GameplayPhysics2D.ResolveComponent<T>` 解析源对象。远程副本不进本地 Tick、感知或存档索引。
 
 ## 定义、资源与状态
@@ -69,4 +70,5 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 原生 AI 使用完整 Item。`entityRuntime: resource` 的树、矿点、作物按组合冷编译到共享 `WorldEntityRuntime`，不创建资源 Item 或运行 Module Tick；通用配置集合采用 Replace。能力扩展由 `ResourceEntityCapabilityRegistry` 注册，DLL 状态使用 context.SetState/GetState。
 - 自然实体独立维护导航、空间交互与接触几何，命中经 `GameplayCombatBridge`。植物生命周期只由 `EntityPlantModuleSystem` 推进；区块解绑保存释放，死亡/一次收获才删来源。终端解绑转交快照所有权，仍运行的快照才克隆；句柄包含 World 代际。
 - `NaturalEntityEcsService` 为天气/耐候、已种植土壤和导航占地维护独立输入索引，注册、卸载、恢复和配置刷新时增量更新；Profiler `NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil` 分别记录耗时。
+- `FreezeEnvironment` 的一批资源共享 `TemperatureMgr.PointSamplingContext`，目标区块的相邻热源输入只准备一次；同步作用域结束即释放引用，原 0.25 秒间隔和距离规则保持不变。
 - 自然资源表现按 Dirty/Event 更新，几何版本与外观版本独立；TreeSortingVisual 用根镜像 SortingGroup 与玩家混排，主体不重复 BRG。客户端不推进权威植物 Job，采集命令/增量同步有独立接入点。旧 `DroppedItems/Core` ECS 实现仅为 Editor 学习参考。

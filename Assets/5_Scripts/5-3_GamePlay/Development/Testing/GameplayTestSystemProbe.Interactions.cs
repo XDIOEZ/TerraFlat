@@ -15,6 +15,9 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/aim_cursor", InteractionAimCursor);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
+        operations.Add("player/interaction_query_context", InteractionQueryContext);
+        operations.Add("inventory/discard_hover_query", InventoryDiscardHoverQuery);
+        operations.Add("terrain/contact_query_context", TerrainContactQueryContext);
     }
 
     #endregion

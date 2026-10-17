@@ -2,6 +2,39 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+test.system("environment", "light_registry", {}, function(data)
+    assert(data.registryAvailable, "URP 活跃光源登记表适配失败")
+    assert(data.createdRegistered and data.disabledRemoved and data.reenabledRegistered,
+        "光源创建、组件启停没有立即反映到正式登记表")
+    assert(data.inactiveRemoved and data.reactivatedRegistered and data.destroyedRemoved,
+        "对象启停或销毁遗留了光照成员")
+    assert(data.recreatedRegistered and data.proxyExcluded and data.proxyRemovedRestored,
+        "光源重建或环绕代理分类缓存未正确失效")
+end, "活跃光源登记表、创建启停销毁重建、环绕代理分类失效")
+
+test.system("environment", "light_sampling", {}, function(data)
+    near(data.dark, 0, "没有光源时不再完全黑暗")
+    near(data.timeOnlyOnce, 0.4, "太阳快照重复叠加或漏掉额外全局光")
+    near(data.center, 0.8, "点光中心亮度改变")
+    near(data.innerBoundary, 0.8, "点光内半径边界改变")
+    near(data.falloff, 0.4, "点光线性衰减改变")
+    near(data.outerBoundary, 0, "点光外半径边界漏光")
+    near(data.changedColor, 0.2, "同帧颜色、透明度或强度变化没有立即采到")
+    near(data.zeroIntensity, 0, "同帧关灯后仍有逻辑光照")
+    near(data.disabled, 0, "禁用点光后仍有逻辑光照")
+    near(data.reenabled, 0.8, "同帧重新开灯没有恢复逻辑光照")
+    near(data.movedOutside, 0, "同帧移动光源后仍读取旧位置")
+    near(data.changedRadius, 0.8 / 6, "同帧半径变化未参与采样")
+    near(data.wrappedSeam, 0.8, "环绕世界缝两侧没有采用最短距离")
+    near(data.wrappedEquivalent, data.wrappedSeam, "环绕等价坐标光照不同")
+    near(data.infiniteFar, 0, "非环绕世界错误连接远端光源")
+    near(data.proxyIgnored, 0.4, "纯渲染环绕代理被重复计入玩法光照")
+    near(data.destroyed, 0, "销毁后缓存引用仍贡献光照")
+    near(data.unsupportedType, 0, "原本不参与玩法采样的灯类型被额外计入")
+    near(data.saturated, 1, "多光叠加没有钳制到满亮")
+    assert(data.sampleAllocatedBytes == 0, "预热后的重复光照采样仍分配托管内存")
+end, "实时光照数值、太阳去重、动态参数、代理过滤、环绕距离和热路径分配")
+
 for _, sample in ipairs({
     { temperature = 0, humidity = 0, factor = 0 },
     { temperature = 10, humidity = 0.25, factor = 0.25 },
@@ -384,3 +417,55 @@ test.system("environment", "surface_temperature_snapshot", {}, function(data)
     near(cold.precipitation, 1, "冷快照丢失降水积分")
     near(warm.precipitation, 3, "暖快照丢失降水积分")
 end, "天气地表冻结温度、跨冷热变化、热源值与几何权重独立")
+
+test.system("environment", "thermal_point_batch", {}, function(data)
+    assert(#data.points == 64 and #data.reference == 64, "自然物同批64次温度采样缺失")
+    for index, wanted in ipairs(data.reference) do
+        near(data.points[index], wanted, "批次邻区选择改变正式单点热源结果：" .. index)
+    end
+    near(data.points[1], 100, "液体源所在格未达到目标环境温度")
+    near(data.points[2], 90.3125, "相同目标温度的邻近液体热源错误叠加")
+    near(data.points[9], 20, "液体热源影响越过真实半径")
+    near(data.points[16], 90.3125, "漏掉相邻区块的辐射热源")
+    assert(data.preparedChunks == 1 and data.dependencyLookups == 9,
+        "同一目标区块64次单点采样重复准备邻区，或漏查完整邻区")
+    near(data.nested, 100, "嵌套批次没有独立采样")
+    near(data.outerAfterNested, 100, "释放内层批次清掉外层热源")
+    assert(data.outerLookupsAfterNested == data.dependencyLookups,
+        "嵌套批次使外层重复取得邻区")
+    assert(data.releasedRejected == "InvalidOperationException", "批次释放后仍复用旧邻区结果")
+    assert(data.soilRevisionUnchanged, "普通土壤变化使液体源缓存失效")
+    near(data.soil, 100, "普通土壤变化改变辐射温度")
+    near(data.covered, 65, "支撑遮盖后下一批仍使用被遮住的液体源")
+    near(data.uncovered, 100, "移除支撑后下一批没有恢复液体源")
+    near(data.drained, 20, "抽干后下一批保留旧热源")
+    near(data.beforeReload, 100, "目录重载前采样不正确")
+    near(data.afterReload, 180, "同目录新版本没有重建液体来源")
+    assert(data.reloadRejectedOldScope == "InvalidOperationException", "目录切换后旧批次仍可复用")
+
+    local identity = data.identity
+    assert(identity.sameRevision and identity.oldDisposed, "同地址同版本替换夹具未成立")
+    near(identity.initial, 100, "地形替换前温度错误")
+    near(identity.rebound, 20, "同地址同版本的新地形复用旧液体源")
+    near(identity.missingDimension, 20, "缺失维度误读其他维度的液体")
+    near(identity.newDimension, 100, "新维度液体加载后未生效")
+    near(identity.surfaceAfterCave, 20, "洞穴液体热源泄漏到地表")
+    assert(identity.evicted, "来源区块无法卸载")
+    near(identity.unloaded, 20, "卸载区块后仍残留热源")
+    near(identity.reloaded, 100, "同地址重载后没有恢复当前热源")
+
+    local topology = data.topology
+    assert(topology.ready and topology.preparedChunks == 1 and topology.dependencyLookups == 4,
+        "小环绕世界未按规范地址去重邻区")
+    near(topology.seam, 90.3125, "环绕接缝未使用最短热源距离")
+    near(topology.equivalent, topology.seam, "环绕等价格温度不同")
+    near(topology.unwrapped, 20, "无环绕世界错误连接两边热源")
+
+    local lifecycle = data.lifecycle
+    near(lifecycle.beforeEpoch, 100, "旧世界初始温度错误")
+    near(lifecycle.oldScopeAfterEpoch, 20, "世界代际更换后旧作用域仍读热源")
+    assert(not lifecycle.oldFieldReopened, "旧代际温度场可重新进入采样批次")
+    near(lifecycle.newEpoch, 100, "新代际温度场无法读取当前液体")
+    near(lifecycle.afterDispose, 20, "世界释放后仍持有可用的旧热源")
+    assert(lifecycle.remainingChunks == 0, "世界释放后仍有地形留存")
+end, "自然物同步温度批次、邻区复用、热源刷新、维度环绕与嵌套释放")

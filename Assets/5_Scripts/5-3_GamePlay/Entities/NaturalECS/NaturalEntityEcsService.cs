@@ -121,8 +121,11 @@ namespace FlatWorld.NaturalEntities
                     using (FreezeEnvironmentMarker.Auto())
                     {
                         bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
+                        TemperatureMgr temperature = TemperatureMgr.Instance;
+                        using TemperatureMgr.PointSamplingContext temperatures = temperature != null
+                            ? temperature.CreatePointSamplingContext() : default;
                         foreach (Record record in environmentInputRecords)
-                            FreezeEnvironment(record, hasBounds, bounds);
+                            FreezeEnvironment(record, hasBounds, bounds, temperatures);
                     }
                 }
                 if (soilInputRecords.Count > 0)
@@ -706,20 +709,23 @@ namespace FlatWorld.NaturalEntities
         private static void FreezeEnvironment(Record record)
         {
             bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
-            FreezeEnvironment(record, hasBounds, bounds);
+            TemperatureMgr temperature = TemperatureMgr.Instance;
+            using TemperatureMgr.PointSamplingContext temperatures = temperature != null
+                ? temperature.CreatePointSamplingContext() : default;
+            FreezeEnvironment(record, hasBounds, bounds, temperatures);
         }
 
-        private static void FreezeEnvironment(Record record, bool hasBounds, WorldTopologyBounds bounds)
+        private static void FreezeEnvironment(Record record, bool hasBounds, WorldTopologyBounds bounds,
+            TemperatureMgr.PointSamplingContext temperatures)
         {
             Vector3 position = record.Snapshot.transform.position;
             WeatherMgr weather = record.Profile.HasGrowth ? WeatherMgr.ExistingInstance : null;
             RegionalWeatherSnapshot localWeather = default;
             bool hasWeather = weather != null && weather.TryGetWeatherAt(position, out localWeather);
-            TemperatureMgr temperature = hasWeather || record.Profile.HasClimate ? TemperatureMgr.Instance : null;
             float ambient = 0f, baseline = 0f;
             // 同一自然物的生长、降水和耐候复用一份地表温度采样。
-            bool hasTemperature = (hasWeather || record.Profile.HasClimate) && temperature != null &&
-                temperature.TryGetAmbientAndClimateBaseline(position, out ambient, out baseline);
+            bool hasTemperature = (hasWeather || record.Profile.HasClimate) &&
+                temperatures.TryGetAmbientAndClimateBaseline(position, out ambient, out baseline);
             if (record.Profile.HasGrowth)
             {
                 EntityWeatherInput input = new() { GrowthMultiplier = 1f };

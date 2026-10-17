@@ -3,6 +3,34 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.00001), message)
 end
 
+for _, wrapped in ipairs({false, true}) do
+    test.system("terrain", "contact_query_context", {wrapped = wrapped}, function(data)
+        assert(data.initial.found and data.initial.top == 11 and data.initial.x == -4 and
+            data.initial.y == -2 and data.initial.localX == 0 and data.initial.localY == 0,
+            "负坐标接触寻址或区块内索引错误")
+        assert(data.changed.found and data.changed.top == 44 and data.changed.liquid == "core:dirty_water" and
+            math.abs(data.changed.depth - .6) < .00001, "单轮缓存寻址挡住了实时地表或水深修改")
+        assert(data.covered.top == 90 and data.covered.ground == 90 and data.covered.depth == 0,
+            "平台覆盖没有即时遮断真实液体接触")
+        assert(data.uncovered.top == 44 and math.abs(data.uncovered.depth - .6) < .00001,
+            "同轮移除平台后没有恢复底部地表和液体")
+        assert(data.neighbour.found and data.neighbour.top == 22 and data.neighbour.x == -2,
+            "跨区块查询错误复用了上一块")
+        assert(data.seam.found == wrapped and data.negativeImage.found == wrapped,
+            "循环镜像或无限世界的边界语义改变")
+        if wrapped then
+            assert(data.seam.top == 44 and data.seam.x == -4 and data.negativeImage.top == 33 and
+                data.negativeImage.x == 3, "循环接缝没有命中规范权威格")
+        end
+        assert(not data.missing.found and data.loadedSameBatch.found and data.loadedSameBatch.top == 55 and
+            data.newlyLoaded and data.loadedTop == 55, "缺失格触发了假加载或就绪后仍缓存缺失")
+        assert(not data.removed.found and data.replaced.found and data.replaced.top == 66,
+            "同轮回收或重建地形仍使用旧块缓存")
+        assert(data.sameWorld and not data.foreignWorld and not data.oldEpochAccepted and
+            data.newEpochAccepted and not data.disposedAccepted, "换世界、换代际或释放后仍接受旧接触查询")
+    end, "脚下单轮寻址与实时液体覆盖：" .. (wrapped and "循环世界" or "无限世界"))
+end
+
 for _, kind in ipairs({ "valid", "positive_infinity", "negative_infinity", "nan_x", "nan_y", "outside", "disabled_camera", "missing_camera" }) do
     local input = { kind = kind }
     test.system("terrain", "environment_pointer", input, function(data)

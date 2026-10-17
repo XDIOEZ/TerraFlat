@@ -1,3 +1,36 @@
+test.system("ai", "line_of_sight_batch", {}, function(data)
+    assert(not data.unknownSameCell and data.loadedSameCell and data.blockedEndpointsIgnored,
+        "视线起终点加载资格或同格/端点阻挡豁免改变")
+    assert(data.crossChunkClear and data.secondRayClear,
+        "已加载的跨区块空地没有保持可见")
+    assert(data.firstLookupCount == 2 and data.reusedLookupCount == 2 and data.cachedChunkCount == 2,
+        "同轮不同射线没有复用两个已解析区块")
+    assert(data.allocatedBytes == 0, "预热后的同轮 LOS 仍分配托管内存")
+    assert(not data.dynamicBlocked and data.dynamicRestored,
+        "同轮建筑占地变化仍读取旧的遮挡结果")
+    assert(not data.terrainBlocked and data.terrainRestored and data.terrainRevisionAdvanced,
+        "同轮地形阻挡版本变化没有立即生效")
+    assert(data.diagonalClear and not data.diagonalHorizontalBlocked
+        and not data.diagonalVerticalBlocked and not data.diagonalCenterBlocked,
+        "对角视线漏过侧格拐角或中心阻挡")
+    assert(not data.unknownEndpoint and not data.unknownIntermediate and data.reboundChunkRestored,
+        "未加载端点/途中格没有阻挡，或同地址区块重绑仍读旧数据")
+    assert(not data.generatingChunkBlocked and data.replacedTerrainRestored,
+        "生成中的区块仍参与视线，或新地形提交没有恢复")
+    assert(not data.oldObserverBlocked and data.newObserverClear,
+        "新一轮没有使用观察者当前真实位置")
+    assert(not data.otherDimensionBlocked and data.originalDimensionClear,
+        "不同维度复用了旧区块寻址")
+    assert(not data.staleEpochBlocked and data.newEpochClear,
+        "世界代际变化后旧 LOS 上下文仍有效")
+    assert(data.wrappedShortestClear and data.wrappedEquivalentClear
+        and not data.wrappedSeamBlocked and data.wrappedSeamRestored,
+        "环绕最短路径、等价坐标或接缝实时阻挡改变")
+    assert(data.clearedChunkCount == 0 and not data.disposedQueryBlocked and not data.disposedWorldBlocked,
+        "本轮结束或世界释放后仍保留旧视线资格")
+    assert(data.customNegativeChunksClear, "自定义矩形区块或负坐标寻址错误")
+end, "同轮 LOS 寻址复用、实时遮挡、边界、环绕、代际与清理")
+
 test.system("ai", "hive_resident_schedule", {}, function(data)
     assert(data.preparedCount == 3 and #data.intended == 3, "分帧前没有保存完整的三名初始成员意图")
     for index, guid in ipairs({101, 102, 103}) do

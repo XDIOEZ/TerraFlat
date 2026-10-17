@@ -29,6 +29,15 @@ for _, case in ipairs(pickup_cases) do
     end, "拾取倍率：" .. case.name)
 end
 
+test.system("inventory", "discard_hover_query", {}, function(data)
+    assert(data.idleQueries == 0, "空闲60帧仍然为丢弃扫描UI")
+    assert(data.firstQueries == 1 and data.switchedQueries == 2, "实际丢弃没有及时查询当前UI落点")
+    assert(data.blockedReads == 2, "单次丢弃绕过了首个UI遮挡命中")
+    assert(data.repeatedQueries == 4 and data.finalQueries == 5, "重复丢弃没有在实际动作时重新查询")
+    assert(#data.reads == 4 and data.reads[1] == 1 and data.reads[2] == 2 and
+        data.reads[3] == 1 and data.reads[4] == 2, "单次或重复丢弃使用了过期悬停槽位")
+end, "丢弃按需悬停：空闲零扫描、遮挡与重复动作实时目标")
+
 local cases = {
     {name = "扣除后整堆移交", args = {}, source = 0, target = 3, transferred = true},
     {name = "部分堆叠转移", args = {transfer = 1}, source = 2, target = 1, transferred = true},

@@ -565,6 +565,8 @@ public partial class ItemMgr
 
             using (PerceptionFilterCandidatesMarker.Auto())
             {
+                using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
+                    ? detector.BeginLineOfSightQuery() : null;
                 for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
                 {
                     int snapshotIndex = reader.Read<int>();
@@ -579,7 +581,7 @@ public partial class ItemMgr
                     if (!_perceptionResultItemSet.Add(candidate) ||
                         (snapshot.ShapeCount == 0 && !PassesBridgePerceptionFilter(candidate, query, snapshot)) ||
                         detector == null ||
-                        !detector.HasLineOfSight(candidate))
+                        !detector.HasLineOfSight(candidate, lineOfSight))
                         continue;
 
                     _detectorApplyBuffer.Add(candidate);

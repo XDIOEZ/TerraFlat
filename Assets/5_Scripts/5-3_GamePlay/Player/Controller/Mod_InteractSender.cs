@@ -225,14 +225,16 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     /// <summary>正式交互按光标落点查询全部目标，包括纯数据机械。</summary>
     private IInteractable FindReceiverAtPointer(Vector2 pointerWorld, bool requirePointerPermission = false)
-        => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission, previewOnly: false);
+        => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission, previewOnly: false,
+            WorldTopologyRuntime.GetActiveDomain());
 
     /// <summary>描边只查已接入表现的目标，机器通过轻量视觉注册而不轮询机械图。</summary>
-    private IInteractable FindPreviewReceiverAtPointer(Vector2 pointerWorld)
-        => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission: false, previewOnly: true);
+    private IInteractable FindPreviewReceiverAtPointer(Vector2 pointerWorld, WorldTopologyDomain topology)
+        => FindReceiverAtPointerCore(pointerWorld, requirePointerPermission: false, previewOnly: true, topology);
 
     /// <summary>按用途选择空间目标，物理落点和距离校验保持一致。</summary>
-    private IInteractable FindReceiverAtPointerCore(Vector2 pointerWorld, bool requirePointerPermission, bool previewOnly)
+    private IInteractable FindReceiverAtPointerCore(Vector2 pointerWorld, bool requirePointerPermission,
+        bool previewOnly, WorldTopologyDomain topology)
     {
         using var queryScope = PointerQueryMarker.Auto();
         Physics2D.SyncTransforms();
@@ -253,7 +255,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
             if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
                 continue;
-            float distance = WorldTopologyRuntime.Distance(origin, targetPosition);
+            float distance = topology.Distance((Vector2)origin, (Vector2)targetPosition);
             if (distance > maxInteractDistance || distance >= closestDistance)
                 continue;
 
@@ -263,15 +265,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         spatialCandidates.Clear();
         if (previewOnly)
-            SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, pointerWorld, spatialCandidates);
+            SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, pointerWorld, spatialCandidates, topology);
         else
-            SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates);
+            SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates, topology);
         foreach (IInteractable candidate in spatialCandidates)
         {
             if (!IsInteractionCandidate(candidate, candidate as Component) ||
                 !TryGetInteractionPosition(candidate, out Vector3 targetPosition)) continue;
             if (requirePointerPermission && !candidate.CanPointerInteract(item)) continue;
-            float distance = WorldTopologyRuntime.Distance(origin, targetPosition);
+            float distance = topology.Distance((Vector2)origin, (Vector2)targetPosition);
             if (distance >= closestDistance) continue;
             closestDistance = distance;
             selectedReceiver = candidate;
@@ -350,12 +352,14 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (item == null || !item.gameObject.activeInHierarchy)
             return null;
 
+        // 指针、半径与方向筛选共用本轮拓扑，仍在每次输入和每帧重新查询目标。
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         bool syncedByPointerQuery = false;
         if (TryGetInteractionPointer(out Vector2 pointer))
         {
             IInteractable pointedReceiver = collectReceivers
-                ? FindReceiverAtPointer(pointer)
-                : FindPreviewReceiverAtPointer(pointer);
+                ? FindReceiverAtPointerCore(pointer, requirePointerPermission: false, previewOnly: false, topology)
+                : FindPreviewReceiverAtPointer(pointer, topology);
             syncedByPointerQuery = true;
             if (pointedReceiver != null) return pointedReceiver;
             // 水面交互严格服从光标落点；未命中木筏时交给喝水等环境动作。
@@ -380,13 +384,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         IInteractable directionalReceiver = null;
         float directionalAlignment = 0f;
         float directionalDistance = float.MaxValue;
-        bool hasInteractionDirection = TryGetInteractionDirection(out Vector2 interactionDirection);
+        bool hasInteractionDirection = TryGetInteractionDirection(topology, out Vector2 interactionDirection);
 
         spatialCandidates.Clear();
         if (collectReceivers)
-            SpatialInteractionRegistry.Query(item, maxInteractDistance, null, spatialCandidates);
+            SpatialInteractionRegistry.Query(item, maxInteractDistance, null, spatialCandidates, topology);
         else
-            SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, null, spatialCandidates);
+            SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, null, spatialCandidates, topology);
         for (int i = 0; i < count; i++)
         {
             Collider2D overlap = interactionOverlapBuffer[i];
@@ -405,7 +409,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
             if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
                 continue;
-            float distance = WorldTopologyRuntime.Distance(item.transform.position, targetPosition);
+            float distance = topology.Distance((Vector2)item.transform.position, (Vector2)targetPosition);
             if (distance > maxInteractDistance)
                 continue;
 
@@ -420,8 +424,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!hasInteractionDirection)
                 continue;
 
-            Vector2 receiverOffset = WorldTopologyRuntime.ShortestDelta(
-                item.transform.position, targetPosition);
+            Vector2 receiverOffset = topology.ShortestDelta(
+                (Vector2)item.transform.position, (Vector2)targetPosition);
             if (receiverOffset.sqrMagnitude < 0.0001f)
                 continue;
 
@@ -472,7 +476,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         return FindReceiverAtPointer(pointer) == null;
     }
 
-    private bool TryGetInteractionDirection(out Vector2 direction)
+    private bool TryGetInteractionDirection(WorldTopologyDomain topology, out Vector2 direction)
     {
         direction = default;
         if (gameController == null || item == null ||
@@ -486,8 +490,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (!gameController.TryGetMouseWorldPosition(out Vector3 pointerWorld))
                 return false;
 
-            Vector2 pointerOffset = WorldTopologyRuntime.ShortestDelta(
-                item.transform.position, pointerWorld);
+            Vector2 pointerOffset = topology.ShortestDelta(
+                (Vector2)item.transform.position, (Vector2)pointerWorld);
             if (pointerOffset.sqrMagnitude < 0.0001f)
                 return false;
 
