@@ -899,7 +899,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         while (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
         {
             if (!playerSpeedRestored &&
-                FindFirstComponent("Mod_PlayerAdminController") is Mod_PlayerAdminController controller)
+                FindPreferencePlayerController() is Mod_PlayerAdminController controller)
             {
                 playerSpeedRestored = controller.TrySetAdminMoveSpeedMultiplier(
                     GMConsolePreferences.PlayerMoveSpeedMultiplier,
@@ -935,6 +935,29 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         restorePreferencesCoroutine = null;
         if (windowRoot != null && windowRoot.activeSelf)
             RefreshRuntimeData(true);
+    }
+
+    /// <summary>重试只查当前本地玩家索引，避免每次遍历场景中的全部脚本。</summary>
+    private static Mod_PlayerAdminController FindPreferencePlayerController()
+    {
+        ItemMgr itemManager = ItemMgr.GetInstance();
+        Player player = FindPreferencePlayer(itemManager != null ? itemManager.Player_DIC : null);
+        return player != null ? player.GetComponentInChildren<Mod_PlayerAdminController>(true) : null;
+    }
+
+    private static Player FindPreferencePlayer(Dictionary<string, Player> players)
+    {
+        if (players == null)
+            return null;
+
+        foreach (KeyValuePair<string, Player> entry in players)
+        {
+            Player player = entry.Value;
+            if (player != null && player.IsLocalProfile)
+                return player;
+        }
+
+        return null;
     }
 
     #endregion

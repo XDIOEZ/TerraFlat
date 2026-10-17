@@ -27,6 +27,7 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - 业务通过稳定 Cue ID 发声；`AudioService` 持有跨场景生命周期、声源池、并发优先级、淡入淡出及音量。循环 Cue 的句柄由调用方停止/回收；生成音效 ID 的 `.loop` 后缀表示循环，`player.*` 属于世界 SFX。
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
+- 正式 GameRes 启动在开放主菜单前等待 AudioService.PreloadAsync，以 Resources.LoadAsync 预热 Config/Catalog/Cue/Clip 强引用图，再创建服务、目录索引与声源池；重复预热复用实例，不在首个点击中同步加载整库。异步请求仍有主线程接入成本，同步入口仅保留给绕过正式启动流程的调用。
 - 玩法短音采用 48 kHz 单声道 PCM、预加载、关闭导入归一化；旧 `__01` WAV 和 Cue 保留 GUID，新变体必须写 `.meta` 并加入现有 Cue。按工程分组经 LMMS MCP 渲染后再执行 `build_sfx.py finalize`，脚本仅裁切、接缝、增益和绑定，不合成替代 LMMS 声源；临时 WAV 完整写好后原子替换，避免 Unity 导入半个文件。
 - 脚步的步频和单次音量倍率集中在 `Mod_Mover.FootstepAudio`；六类脚步 Cue 的冷却为 0.08 秒，与 `Player_Fishing_SFX_LMMS/build_sfx.py` 保持同步，避免更快的计步被音频冷却吞掉。
 - 涉水脚步与游泳共用 `WaterEnvironmentRules.SwimmingDepthThreshold`（0.3）分界；游泳首次加载和载具、太空、传送、换世界重建时静默，停步或完全淹没不划水，状态由角色持有，不放入共享液体定义。

@@ -29,7 +29,9 @@ public partial class GameRes
         }, () => IsStartupReady || preparingInPlaceReload, () => GameplayTestResourceCache.Active ? 8d : (double?)null);
         List<ItemDefinitionDto> itemSources = null;
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
-        plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
+        // 音频强引用图在交互前异步预热，首个按钮点击不再同步读取整库。
+        plan.Add("audio", "预加载菜单与玩法音频", 2, FlatWorld.Audio.AudioService.PreloadAsync, "addressables");
+        plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables", "audio");
         plan.Add("players", "加载玩家创建配置", 1,
             () => LoadCatalog<PlayerCreationTemplateCatalogConfig>(PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
@@ -39,7 +41,7 @@ public partial class GameRes
             () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
                 WaterCurrentPushConfigService.ReplaceCatalog));
         plan.Add("startup-ready", "开放主菜单", 0.5f,
-            PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
+            PublishStartupReadyStage, "startup-ui", "audio", "players", "time", "water-current");
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
                 GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report), value => itemSources = value), "addressables");

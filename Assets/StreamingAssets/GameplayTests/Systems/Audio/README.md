@@ -1,5 +1,7 @@
 # 音频
 
+2026-10-17 新增启动预热回归（本轮未运行）：正式音频现场在已有服务上重复调用 PreloadAsync，检查实例、目录和用户设置不被替换，并检查 ui.click 的音频数据已预加载。此断言覆盖幂等及就绪状态，不证明冷启动耗时、首次主菜单点击听感或磁盘冷缓存峰值。
+
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、footstep_surface、swimming_sequence、inventory_cue`。

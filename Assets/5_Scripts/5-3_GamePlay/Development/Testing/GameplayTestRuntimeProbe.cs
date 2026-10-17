@@ -524,6 +524,7 @@ public static partial class GameplayTestRuntimeProbe
         Mod_Hand hand = player.GetComponentInChildren<Mod_Hand>(true);
         return new JObject
         {
+            ["editorSpriteTextures"] = CaptureEditorSpriteTextureIdentifiers(resources),
             ["resourceState"] = resources?.LoadState.ToString(), ["startupReady"] = resources != null && resources.IsStartupReady,
             ["inWorld"] = manager != null && manager.IsInGameWorld, ["gameplayReady"] = manager != null && manager.IsGameplayReady,
             ["entryInProgress"] = manager != null && manager.IsWorldEntryInProgress, ["localProfile"] = player.IsLocalProfile,
@@ -537,6 +538,28 @@ public static partial class GameplayTestRuntimeProbe
                 runtimePanels.Contains(hand.HandInventory.basePanel),
             ["guid"] = player.itemData.Guid, ["isolationRoot"] = RequireIsolatedSaveRoot(player)
         };
+    }
+
+    // 读取正式目录已加载的纹理身份，检查异步预热使用的 TextureImporter 主对象 ID。
+    private static JObject CaptureEditorSpriteTextureIdentifiers(GameRes resources)
+    {
+#if UNITY_EDITOR
+        var localIds = new JArray();
+        var visited = new HashSet<int>();
+        if (resources != null)
+            foreach (RuntimeItemDefinition definition in resources.ItemDefinitions.Values)
+            {
+                Texture2D texture = definition.Sprite != null ? definition.Sprite.texture : null;
+                if (texture == null || !visited.Add(texture.GetInstanceID())) continue;
+                string path = UnityEditor.AssetDatabase.GetAssetPath(texture);
+                if (UnityEditor.AssetImporter.GetAtPath(path) is not UnityEditor.TextureImporter) continue;
+                bool found = UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture, out string _, out long localId);
+                localIds.Add(new JObject { ["path"] = path, ["found"] = found, ["localId"] = localId });
+            }
+        return new JObject { ["textures"] = localIds };
+#else
+        return null;
+#endif
     }
 
     private static JObject CaptureLiveWindow(Player player, JObject args)

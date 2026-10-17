@@ -1,5 +1,8 @@
 -- 已入世 AudioService 播放正式录音；Cue 只隔离测试 ID，播放、池与用户音量均走正式实现。
 test.runtime("audio", "voice_lifecycle", {}, function(data)
+    assert(data.startupServiceStable and data.startupCatalogStable and data.startupSettingsStable,
+        "重复预热替换了音频服务、目录或覆盖用户设置")
+    assert(data.startupUiCueReady, "正式点击音没有完成音频数据预加载")
     assert(#data.feedbackCues == 6, "未读取全部玩法反馈音效")
     for _, cue in ipairs(data.feedbackCues) do
         assert(cue.loaded and cue.variants == 2 and cue.validClips and cue.spatial,

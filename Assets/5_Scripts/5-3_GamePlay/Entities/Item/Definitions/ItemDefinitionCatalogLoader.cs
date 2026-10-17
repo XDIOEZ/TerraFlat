@@ -253,6 +253,9 @@ public static class ItemDefinitionCatalogLoader
             .SelectMany(dto => select(dto) ?? Enumerable.Empty<string>())
             .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
             .Distinct(StringComparer.Ordinal).ToArray();
+#if UNITY_EDITOR
+        var preloadedTexturePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+#endif
         // 小批请求配合统一帧预算，编辑器同步资源提供器也不能连续挤占一帧。
         const int batchSize = 4;
         for (int start = 0; start < addresses.Length; start += batchSize)
@@ -264,9 +267,12 @@ public static class ItemDefinitionCatalogLoader
                 string address = addresses[start + i];
 #if UNITY_EDITOR
                 // 先检查 Sprite 子资源名称，避免 Fast Mode 将错误名称送入包内部后才抛空引用。
-                if (typeof(T) == typeof(Sprite) && address.StartsWith("Assets/", StringComparison.Ordinal) &&
-                    !TryLoadEditorSprite(address, out _, out string error))
-                    throw new InvalidDataException(error);
+                if (typeof(T) == typeof(Sprite) && address.StartsWith("Assets/", StringComparison.Ordinal))
+                {
+                    yield return PreloadEditorSpriteTexture(address, preloadedTexturePaths);
+                    if (!TryLoadEditorSprite(address, out _, out string error))
+                        throw new InvalidDataException(error);
+                }
 #endif
                 batch.Add(gameRes.ResourceAssets.Load<T>(address));
                 if (gameRes.ShouldYieldResourceWork()) yield return null;
@@ -588,6 +594,30 @@ public static class ItemDefinitionCatalogLoader
 
 #if UNITY_EDITOR
     #region 编辑器 Sprite 解析
+
+    private static readonly Unity.Profiling.ProfilerMarker EditorTextureRequestMarker =
+        new("FlatWorld.Resources.EditorSprite.TextureRequest");
+    private const long ImportedTextureMainLocalId = 2800000L;
+
+    /// <summary>TextureImporter 主纹理的固定本地 ID；先异步读取，再沿用严格的子 Sprite 解析。</summary>
+    private static IEnumerator PreloadEditorSpriteTexture(string address, HashSet<string> preloadedPaths)
+    {
+        string path = address;
+        int bracket = path.LastIndexOf('[');
+        if (bracket > 0 && path.EndsWith("]", StringComparison.Ordinal))
+            path = path.Substring(0, bracket);
+        path = path.Replace('\\', '/');
+        if (!preloadedPaths.Add(path) || AssetImporter.GetAtPath(path) is not TextureImporter)
+            yield break;
+
+        AssetDatabaseLoadOperation operation;
+        using (EditorTextureRequestMarker.Auto())
+            operation = AssetDatabase.LoadObjectAsync(path, ImportedTextureMainLocalId);
+        if (!operation.isDone)
+            yield return operation;
+        if (operation.LoadedObject is not Texture2D)
+            throw new InvalidDataException($"Sprite 主纹理异步加载失败：{path}");
+    }
 
     /// <summary>
     /// 编辑器 Fast Mode 直接解析 Sprite，避免 Addressables 1.22.3 的 AssetDatabaseProvider 子资源空引用。

@@ -73,6 +73,17 @@ public static partial class GameplayTestPresentationRuntimeProbe
         try
         {
             AudioService service = fixture.Service;
+            AudioCatalog startupCatalog = service.Catalog;
+            string startupSettings = JsonUtility.ToJson(service.UserSettings);
+            yield return AudioService.PreloadAsync();
+            yield return AudioService.PreloadAsync();
+            // 重复预热不能替换正式服务、目录或覆盖用户设置。
+            bool startupServiceStable = ReferenceEquals(service, AudioService.Instance);
+            bool startupCatalogStable = ReferenceEquals(startupCatalog, service.Catalog);
+            bool startupSettingsStable = startupSettings == JsonUtility.ToJson(service.UserSettings);
+            bool startupUiCueReady = service.TryGetCue("ui.click", out AudioCue click) &&
+                click.Clips.Count > 0 && click.Clips.All(clip => clip != null &&
+                    clip.loadState == AudioDataLoadState.Loaded);
             AudioCue loop = fixture.CloneCue(AudioEventIds.PlayerWetClothesMoveLoop);
             AudioCue shortCue = fixture.CloneCue(AudioEventIds.DoorOpen);
             JArray feedbackCues = new JArray();
@@ -230,6 +241,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool replacementSurvivedOldStop = replacement.IsPlaying && source.isPlaying;
             result = new JObject
             {
+                ["startupServiceStable"] = startupServiceStable, ["startupCatalogStable"] = startupCatalogStable,
+                ["startupSettingsStable"] = startupSettingsStable, ["startupUiCueReady"] = startupUiCueReady,
                 ["feedbackCues"] = feedbackCues,
                 ["movementCues"] = movementCues,
                 ["swimmingCues"] = swimmingCues,

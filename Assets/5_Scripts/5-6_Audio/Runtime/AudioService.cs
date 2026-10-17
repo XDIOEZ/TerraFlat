@@ -11,7 +11,7 @@ namespace FlatWorld.Audio
     /// </summary>
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(10000)]
-    public sealed class AudioService : MonoBehaviour, ISettingsProvider
+    public sealed partial class AudioService : MonoBehaviour, ISettingsProvider
     {
         private const string RuntimeConfigResourcePath = "Audio/AudioRuntimeConfig";
         private const string CatalogResourcePath = "Audio/AudioCatalog";
@@ -528,8 +528,11 @@ namespace FlatWorld.Audio
 
         private void LoadConfiguration()
         {
+            using var configurationScope = ConfigurationMarker.Auto();
             if (runtimeConfig == null)
-                runtimeConfig = Resources.Load<AudioRuntimeConfig>(RuntimeConfigResourcePath);
+                runtimeConfig = preloadedRuntimeConfig != null
+                    ? preloadedRuntimeConfig
+                    : Resources.Load<AudioRuntimeConfig>(RuntimeConfigResourcePath);
 
             if (runtimeConfig != null)
             {
@@ -542,14 +545,20 @@ namespace FlatWorld.Audio
             if (catalog == null)
                 LoadCatalogFallback();
             else
+            {
+                using var indexScope = CatalogIndexMarker.Auto();
                 catalog.RebuildIndex();
+            }
         }
 
         private void LoadCatalogFallback()
         {
-            catalog = Resources.Load<AudioCatalog>(CatalogResourcePath);
+            catalog = preloadedCatalog != null
+                ? preloadedCatalog
+                : Resources.Load<AudioCatalog>(CatalogResourcePath);
             if (catalog == null)
                 catalog = AudioCatalog.CreateRuntimeCatalogFromResources();
+            using var indexScope = CatalogIndexMarker.Auto();
             catalog.RebuildIndex();
         }
 
@@ -562,6 +571,7 @@ namespace FlatWorld.Audio
 
         private void Prewarm(int count)
         {
+            using var poolScope = VoicePoolMarker.Auto();
             count = Mathf.Clamp(count, 0, maxVoices);
             for (int i = totalVoices; i < count; i++)
                 availableVoices.Push(CreateVoice());
