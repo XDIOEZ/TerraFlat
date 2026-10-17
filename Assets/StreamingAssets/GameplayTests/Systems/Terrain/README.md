@@ -3,6 +3,7 @@
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 - 覆盖 `TerrainNoiseKernel` 的种子确定性、噪声范围、零八度拒绝和高度强化；覆盖 `BiomeResolver` 区间边界、重叠顺序、后续候选和未匹配标记。
+- 2026-10-17 新增 `environment_pointer`，经正式 F3 环境面板投影入口检查普通坐标、偏移视口中心、正负无穷、NaN、视口外坐标及停用/缺失相机；失败时输出归零。仅使用独立相机，不读取当前世界；按用户要求未编译、未运行。
 - 2026-10-17 新增紧凑 32×32 纯生成夹具，调用正式 `Generate→WorldRuntime.TryCommit`，采集地形内容指纹、完整高度原始值和实际河湖/液体数量，比较冷生成、邻区先生成后的暖缓存及独立实例；包含正坐标与负坐标环绕世界。河湖必须非空才允许进行稳定性断言。相关 C# 已通过外部编译，按用户要求未执行新增规则；不证明优化前后逐格相同或实际耗时改善。
 - 上述生成规则没有覆盖并发构建、湖中岛遮盖河道、多盆地重叠，以及输出外圈大于环绕世界跨度的情况；环绕场景也未逐格比较接缝两侧。
 - 同脚本通过正式 `Module.ApplyResourceConfiguration` 和 `ModuleJsonConfigurator` 配置独立工具并执行生产校验，核对 JSON 参数确实写入等级/效率字段并拒绝只读计算属性，再经 `TileDefinitionFactory` 构建采挖定义；调用 `GroundTileHarvestSystem.ResolveRequiredUses/ReadProgress` 检查品质/效率、最低次数、进度钳制及无效工具/间隔/层数配置。`GroundTileLayerSystem.Capture/Restore` 直接检查多层深度与草状态快照。

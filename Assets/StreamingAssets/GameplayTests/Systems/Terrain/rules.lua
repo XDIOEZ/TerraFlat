@@ -3,6 +3,21 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.00001), message)
 end
 
+for _, kind in ipairs({ "valid", "positive_infinity", "negative_infinity", "nan_x", "nan_y", "outside", "disabled_camera", "missing_camera" }) do
+    local input = { kind = kind }
+    test.system("terrain", "environment_pointer", input, function(data)
+        assert(data.accepted == (input.kind == "valid"), "环境面板没有正确拒绝无效指针或相机：" .. input.kind)
+        assert(data.finiteWorld, "环境面板投影返回了非有限世界坐标")
+        if input.kind == "valid" then
+            near(data.worldX, 13, "偏移相机视口的中心没有落在正确世界 X")
+            near(data.worldY, -7, "偏移相机视口的中心没有落在正确世界 Y")
+        else
+            near(data.worldX, 0, "投影失败后仍保留旧世界 X")
+            near(data.worldY, 0, "投影失败后仍保留旧世界 Y")
+        end
+    end, "环境面板指针投影与无效输入拒绝：" .. kind)
+end
+
 test.system("terrain", "ground_cover_work", {}, function(data)
     assert(not data.unselectedCompleted and data.unselectedUses == 0, "未选中植被也累计了采集次数")
     assert(data.scissorsCompleted and data.scissorsUses == 1, "剪刀没有一次完成植被采集")

@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("terrain/noise", WorldNoise);
         operations.Add("terrain/biome", WorldBiome);
+        operations.Add("terrain/environment_pointer", WorldEnvironmentPointer);
         operations.Add("ecology/generation", WorldEcology);
         operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
         operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
@@ -64,6 +65,40 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 地形与生态
+
+    private static JObject WorldEnvironmentPointer(JObject args)
+    {
+        var root = new GameObject("[LuaEnvironmentPointerProbe]") { hideFlags = HideFlags.HideAndDontSave };
+        try
+        {
+            Camera camera = root.AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.orthographicSize = 12f;
+            camera.pixelRect = new Rect(100f, 50f, 800f, 600f);
+            root.transform.position = new Vector3(13f, -7f, -10f);
+            string kind = Text(args, "kind", "valid");
+            Vector2 pointer = camera.pixelRect.center;
+            switch (kind)
+            {
+                case "positive_infinity": pointer = new Vector2(float.PositiveInfinity, float.NegativeInfinity); break;
+                case "negative_infinity": pointer.x = float.NegativeInfinity; break;
+                case "nan_x": pointer.x = float.NaN; break;
+                case "nan_y": pointer.y = float.NaN; break;
+                case "outside": pointer.x = camera.pixelRect.xMin - 1f; break;
+                case "disabled_camera": camera.enabled = false; break;
+            }
+            // 使用正式投影入口和独立相机，非法输入不进入正在游玩的世界。
+            bool accepted = EnvironmentInfoDisplay.TryProjectScreenPosition(kind == "missing_camera" ? null : camera,
+                pointer, out Vector3 world);
+            return new JObject
+            {
+                ["accepted"] = accepted, ["worldX"] = world.x, ["worldY"] = world.y,
+                ["finiteWorld"] = float.IsFinite(world.x) && float.IsFinite(world.y) && float.IsFinite(world.z)
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
     private static JObject WorldNoise(JObject args)
     {
         var config = TerrainNoiseConfig.Default(NoiseType.Height);

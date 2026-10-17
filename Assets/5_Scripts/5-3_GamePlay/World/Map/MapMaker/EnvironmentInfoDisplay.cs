@@ -64,6 +64,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private Vector2Int hoveredVisualGridPos;
     private string hoveredBiomeName = "未知";
     private bool isVisible;
+    private bool hasValidPointer;
     private bool isValidPosition;
     private int pageIndex;
     private int pendingPageStep;
@@ -93,17 +94,19 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private void Update()
     {
+        hasValidPointer = false;
+        isValidPosition = false;
+        if (!isVisible)
+            return;
+
         Pointer pointer = Pointer.current;
         if (pointer == null)
-        {
-            isValidPosition = false;
             return;
-        }
 
         mouseScreenPos = pointer.position.ReadValue();
         UpdateMouseInfo();
 
-        if (!isVisible)
+        if (!hasValidPointer)
             return;
 
         Keyboard keyboard = Keyboard.current;
@@ -122,7 +125,7 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!Application.isPlaying || !isVisible)
+        if (!Application.isPlaying || !isVisible || !hasValidPointer)
             return;
 
         if (!stylesCreated)
@@ -152,23 +155,13 @@ public class EnvironmentInfoDisplay : MonoBehaviour
     private void UpdateMouseInfo()
     {
         Camera cam = GetMainCamera();
+        hasValidPointer = TryProjectScreenPosition(cam, mouseScreenPos, out mouseWorldPos);
+        if (!hasValidPointer)
+            return;
+
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
-        if (cam == null || chunkManager == null)
-        {
-            isValidPosition = false;
+        if (chunkManager == null)
             return;
-        }
-
-        Ray ray = cam.ScreenPointToRay(mouseScreenPos);
-        var worldPlane = new Plane(Vector3.forward, Vector3.zero);
-        if (!worldPlane.Raycast(ray, out float distance))
-        {
-            isValidPosition = false;
-            return;
-        }
-
-        mouseWorldPos = ray.GetPoint(distance);
-        mouseWorldPos.z = 0f;
         hoveredVisualGridPos = new Vector2Int(
             Mathf.FloorToInt(mouseWorldPos.x),
             Mathf.FloorToInt(mouseWorldPos.y));
@@ -184,6 +177,28 @@ public class EnvironmentInfoDisplay : MonoBehaviour
             ? biomeName
             : $"Biome#{sample.Cell.BiomeId}";
         isValidPosition = true;
+    }
+
+    public static bool TryProjectScreenPosition(Camera camera, Vector2 screenPosition, out Vector3 worldPosition)
+    {
+        worldPosition = default;
+        // 无效或已离开相机视口的指针不送进 Unity 投影，也不复用上一帧悬停位置。
+        if (camera == null || !camera.isActiveAndEnabled ||
+            !float.IsFinite(screenPosition.x) || !float.IsFinite(screenPosition.y) ||
+            !camera.pixelRect.Contains(screenPosition))
+            return false;
+
+        Ray ray = camera.ScreenPointToRay(screenPosition);
+        var worldPlane = new Plane(Vector3.forward, Vector3.zero);
+        if (!worldPlane.Raycast(ray, out float distance) || !float.IsFinite(distance))
+            return false;
+
+        Vector3 projected = ray.GetPoint(distance);
+        if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y))
+            return false;
+
+        worldPosition = new Vector3(projected.x, projected.y, 0f);
+        return true;
     }
 
     /// <summary>确认 Update 与 OnGUI 之间区块没有被卸载。</summary>

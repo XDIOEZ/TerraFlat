@@ -93,7 +93,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 自动资源刷新合并外部变化，Play/切换期间保留请求、编辑模式静默后处理；Unity 保存独立于全库刷新。内容工坊只写 JSON 差异。
 - 动态 SceneManager.CreateScene 不触发 sceneLoaded；Hierarchy 工具结合卸载/hierarchyChanged 定向解析保存记录，GlobalObjectId 仅解析已加载所属场景。
 - GameLogManager 业务日志接口为 `[WORK]`；定时刷盘线程池最多一个请求，共享日志流锁且无 Unity API，暂停/退出/错误/显式 Flush 同步落盘。
-- F3 EnvironmentInfoDisplay 读取 WorldModel 权威格/EnvironmentLayerIds、FarmlandSystem 水肥和 TemperatureMgr 环境温度；IMGUI 按实际 CalcHeight 整页滚动。F4 为 GM，F6 为晴天。
+- F3 EnvironmentInfoDisplay 读取 WorldModel 权威格/EnvironmentLayerIds、FarmlandSystem 水肥和 TemperatureMgr 环境温度；隐藏时停止采样，投影前拒绝非有限/视口外指针，无效时清悬停且不绘制 IMGUI。IMGUI 按实际 CalcHeight 整页滚动。F4 为 GM，F6 为晴天。
 - GMReflectionConsole 是动态调试 UI，公共控件等 GameRes.StartupResourcesReady；GMConsolePreferences 保存开关，五分页为玩家/世界/生成与 AI/调试工具/设备数据。RuntimeDebugOverlay 通过事件打开 GM，日志 Canvas 更高；复制/磁盘保原文，缺字仅在显示时转码。
 - GMWorldLayerOverlay 的温度/污染互斥共用预算采样纹理，格对齐、未加载透明、关闭停止，既不租区块也不改地形。导航模式为一真实格一 Point texel，读取真实流场与 Job 依赖，借用 Native 表不跨后端发布。
 - Render Streaming 使用项目自有设置与 WebApp，普通 Play 自动串流关闭；显式入口统一保存偏好、端口/URL 和自启服务 PID，回收核对当前缓存 webserver.exe 身份，编码按目标协商能力。
