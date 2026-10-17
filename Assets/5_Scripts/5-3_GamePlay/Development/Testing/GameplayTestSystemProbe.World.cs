@@ -48,6 +48,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/recipe_selection", WorldProcessingSelection);
         operations.Add("processing/slot_identity", WorldProcessingIdentity);
         operations.Add("processing/atomic_output", WorldProcessingAtomicOutput);
+        operations.Add("processing/material_heat", WorldProcessingMaterialHeat);
         foreach (string operation in new[] { "ship_structure", "ship_docking", "ship_mass",
                      "ship_propulsion", "ship_contacts", "ship_snapshots", "ship_engine_placement", "ship_optical",
                      "ship_collider_batch" })
@@ -974,6 +975,33 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 加工进度与来源变更
+    private static JObject WorldProcessingMaterialHeat(JObject args)
+    {
+        float current = (float)Number(args, "current", 100d);
+        float furnace = (float)Number(args, "furnace", 1000d);
+        float seconds = (float)Number(args, "seconds", 1d);
+        ItemData Material() => new Data_GeneralItem
+        {
+            IDName = "system-probe:heated-material",
+            Stack = new ItemStack { Amount = 4f },
+            MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = current }
+        };
+        ItemData material = Material();
+        // 直接采样熔炉复用的正式物质传热入口，业务数值由 Lua 断言。
+        bool changed = ItemMatterRuntime.Advance(material, furnace, 1f, seconds);
+        float next = material.MatterState.TemperatureCelsius;
+        ItemMatterRuntime.Advance(material, furnace, 1f, seconds);
+        ItemData split = Material();
+        for (int i = 0; i < 10; i++)
+            ItemMatterRuntime.Advance(split, furnace, 1f, seconds / 10f);
+        return new JObject
+        {
+            ["changed"] = changed, ["next"] = next,
+            ["second"] = material.MatterState.TemperatureCelsius,
+            ["split"] = split.MatterState.TemperatureCelsius, ["amount"] = material.Stack.Amount
+        };
+    }
+
     private static JObject WorldProcessingSelection(JObject args)
     {
         var state = new RecipeProcessingState();

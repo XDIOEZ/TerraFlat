@@ -31,6 +31,35 @@ test.system("processing", "atomic_output", {}, function(data)
         and data.finalCommits == 1, "再次满输出后继续推进或重复产出")
 end, "真实加工进度、满输出原子拒绝与恢复产出")
 
+for _, input in ipairs({
+    { current = 100, furnace = 1000, seconds = 1, expected = 109, second = 117.91 },
+    { current = 900, furnace = 1000, seconds = 1, expected = 901, second = 901.99 },
+    { current = 999, furnace = 1000, seconds = 1, expected = 999.01 },
+    { current = 100, furnace = 800, seconds = 1, expected = 107 },
+    { current = 1100, furnace = 1000, seconds = 1, expected = 1099 },
+    { current = 1000, furnace = 1000, seconds = 1, expected = 1000 },
+    { current = 100, furnace = 1000, seconds = 0, expected = 100 },
+    { current = 100, furnace = 1000, seconds = -1, expected = 100 },
+    { current = 100, furnace = 1000, seconds = 100000, expected = 1000 },
+}) do
+    test.system("processing", "material_heat", input, function(data)
+        assert(math.abs(data.next - input.expected) <= 0.0001,
+            "炉内材料没有按每游戏秒剩余温差的百分之一升降温")
+        assert(math.abs(data.split - data.next) <= 0.001,
+            "分次更新和后台累计结算相同时长后材料温度不一致")
+        assert(data.next >= math.min(input.current, input.furnace)
+            and data.next <= math.max(input.current, input.furnace), "材料温度越过了实际炉温")
+        assert(data.amount == 4, "升温扣除了材料数量")
+        if input.second then
+            assert(math.abs(data.second - input.second) <= 0.0001, "连续升温没有按最新剩余温差计算")
+            assert(data.second - data.next < data.next - input.current, "材料越接近炉温没有升得越慢")
+        end
+        if input.seconds <= 0 or input.current == input.furnace then
+            assert(not data.changed, "无温差或非正时间仍报告材料状态变化")
+        end
+    end, string.format("材料温差百分比传热：%g℃→%g℃，%g秒", input.current, input.furnace, input.seconds))
+end
+
 test.system("processing", "cold_fuel_candidates", {}, function(data)
     assert(data.sourceCount == 834 and #data.candidateIds == 2, "后台炉体把全世界掉落物送去排序，或漏掉本格候选")
     assert(data.candidateIds[1] == 2 and data.candidateIds[2] == 1, "本格燃料未按近先顺序，或飞行、邻格、重复身份和不可拾取记录混入候选")

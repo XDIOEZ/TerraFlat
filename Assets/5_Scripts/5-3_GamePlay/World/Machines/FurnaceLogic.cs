@@ -411,9 +411,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         foreach (ItemSlot slot in Input.Data.itemSlots)
         {
             ItemData item = slot?.itemData;
-            // 炉内材料保留设备原有的固定加热规则，环境散热不复用该速率。
-            if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds,
-                    transferPerSecondOverride: 1f))
+            // 每游戏秒补上材料与实际炉温之差的 1%，并按经过时间折算分次或后台加热。
+            if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds))
             {
                 // 升温通知只更新观察者，整批加热结束后统一按真实材料选择一次配方。
                 bool previousNotification = notifyingInputMatter;
