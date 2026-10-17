@@ -576,6 +576,7 @@ public sealed partial class GMReflectionConsole
             "背包 物品 数量",
             () => InvokeByTypeName("Mod_PlayerAdminController", "AddAmountToAllBagItems", 100f));
 
+        CreatePickupMultiplierControl(page.Content);
         RefreshTeleportShortcutButton();
         RefreshAdminInvincibilityButton();
         RefreshPlayerMoveSpeedButton();

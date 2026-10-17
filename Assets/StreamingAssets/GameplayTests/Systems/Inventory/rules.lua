@@ -1,3 +1,34 @@
+local pickup_cases = {
+    {name = "开关关闭保持原数量", args = {enabled = false}, first = 3, second = 0, remaining = 0, accepted = true},
+    {name = "材料入包十倍", args = {}, first = 30, second = 0, remaining = 0, accepted = true},
+    {name = "不可堆叠工具不复制", args = {amount = 1, stackable = false}, first = 1, second = 0, remaining = 0, accepted = true},
+    {name = "一倍保持原数量", args = {multiplier = 1}, first = 3, second = 0, remaining = 0, accepted = true},
+    {name = "倍率下限", args = {multiplier = 0}, first = 3, second = 0, remaining = 0, accepted = true, applied = 1},
+    {name = "倍率上限", args = {multiplier = 1000}, first = 300, second = 0, remaining = 0, accepted = true, applied = 100},
+    {name = "两个库存分摊同一次倍率", args = {firstCapacity = 6, secondCapacity = 24, allowPartial = false}, first = 6, second = 24, remaining = 0, accepted = true},
+    {name = "不切开原物品且重试不重复放大", args = {firstCapacity = 15, retry = true}, first = 10, second = 0, remaining = 2, accepted = true},
+    {name = "一份倍率也放不下则不拾取", args = {firstCapacity = 9}, first = 0, second = 0, remaining = 3, accepted = false},
+    {name = "满包拒绝不改变地面数量", args = {firstCapacity = 0}, first = 0, second = 0, remaining = 3, accepted = false},
+    {name = "倍率保留重量上限", args = {maxWeight = 15}, first = 10, second = 0, remaining = 2, accepted = true},
+    {name = "快捷栏不能绕过主背包体积", args = {firstCapacity = 6, secondCapacity = 1000, maxVolume = 15}, first = 6, second = 4, remaining = 2, accepted = true},
+    {name = "整组授权失败无部分入包", args = {firstCapacity = 15, allowPartial = false}, first = 0, second = 0, remaining = 3, accepted = false},
+    {name = "重复目标不虚增可用容量", args = {firstCapacity = 6, duplicateTarget = true}, first = 0, second = 0, remaining = 3, accepted = false}
+}
+for _, case in ipairs(pickup_cases) do
+    test.system("inventory", "pickup_multiplier", case.args, function(data)
+        assert(data.accepted == case.accepted and data.firstAmount == case.first and data.secondAmount == case.second,
+            "拾取倍率、容量预检或跨库存分配错误")
+        assert(data.remaining == case.remaining and data.pickable == (case.remaining > 0),
+            "失败或部分拾取改变了地面原数量/可拾取状态")
+        if case.applied then assert(data.appliedMultiplier == case.applied, "倍率未限制在1至100") end
+        if case.args.retry then
+            assert(not data.blockedRetry and data.afterBlockedRetry == 10, "无容量重试再次发放了物品")
+            assert(data.retryAccepted and data.afterRetry == 30 and data.remainingAfterRetry == 0,
+                "剩余两份没有只按原数量再次结算，或拾取倍率被重复应用")
+        end
+    end, "拾取倍率：" .. case.name)
+end
+
 local cases = {
     {name = "扣除后整堆移交", args = {}, source = 0, target = 3, transferred = true},
     {name = "部分堆叠转移", args = {transfer = 1}, source = 2, target = 1, transferred = true},

@@ -212,6 +212,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         worldLayerOverlay = gameObject.AddComponent<GMWorldLayerOverlay>();
         EnsureEventSystem();
         BuildWindow();
+        Mod_ItemPicker.PickerLoaded += HandlePickupPickerLoaded;
         ApplyPersistedTogglePreferences();
         RestartRestorePreferences();
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
@@ -220,6 +221,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnDestroy()
     {
+        Mod_ItemPicker.PickerLoaded -= HandlePickupPickerLoaded;
         CancelBiomeSearch();
         GMConsolePreferences.SavePendingChanges();
         if (FlatWorld.AIECS.Gameplay.AiecsPlayground.Active != null)
@@ -892,12 +894,19 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private IEnumerator RestorePersistedRuntimePreferences()
     {
         bool playerSpeedRestored = false;
+        bool pickupMultiplierRestored = false;
         bool chunkSpeedRestored = false;
         bool chunkBudgetRestored = false;
         var retryDelay = new WaitForSecondsRealtime(0.25f);
 
-        while (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
+        while (!playerSpeedRestored || !pickupMultiplierRestored || !chunkSpeedRestored || !chunkBudgetRestored)
         {
+            if (!pickupMultiplierRestored && FindPreferenceItemPicker() is Mod_ItemPicker picker)
+            {
+                ApplyPickupMultiplierPreference(picker);
+                pickupMultiplierRestored = true;
+            }
+
             if (!playerSpeedRestored &&
                 FindPreferencePlayerController() is Mod_PlayerAdminController controller)
             {
@@ -928,7 +937,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 chunkBudgetRestored = true;
             }
 
-            if (!playerSpeedRestored || !chunkSpeedRestored || !chunkBudgetRestored)
+            if (!playerSpeedRestored || !pickupMultiplierRestored || !chunkSpeedRestored || !chunkBudgetRestored)
                 yield return retryDelay;
         }
 
@@ -2083,6 +2092,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 RefreshTeleportShortcutButton();
                 RefreshAdminInvincibilityButton();
                 RefreshPlayerMoveSpeedButton();
+                RefreshPickupMultiplierControl();
                 RefreshBuffDefinitions();
                 if (refreshCatalogs)
                     RefreshBuffTargetList(false);

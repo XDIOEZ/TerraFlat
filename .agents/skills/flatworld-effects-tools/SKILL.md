@@ -100,6 +100,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - GameLogManager 业务日志接口为 `[WORK]`；定时刷盘线程池最多一个请求，共享日志流锁且无 Unity API，暂停/退出/错误/显式 Flush 同步落盘。
 - F3 EnvironmentInfoDisplay 读取 WorldModel 权威格/EnvironmentLayerIds、FarmlandSystem 水肥和 TemperatureMgr 环境温度；隐藏时停止采样，投影前拒绝非有限/视口外指针，无效时清悬停且不绘制 IMGUI。IMGUI 按实际 CalcHeight 整页滚动。F4 为 GM，F6 为晴天。
 - GMReflectionConsole 是动态调试 UI，公共控件等 GameRes.StartupResourcesReady；GMConsolePreferences 保存开关，五分页为玩家/世界/生成与 AI/调试工具/设备数据。RuntimeDebugOverlay 通过事件打开 GM，日志 Canvas 更高；复制/磁盘保原文，缺字仅在显示时转码。
+- GM 玩家页的拾取倍增由 `GMReflectionConsole.Pickup` 管开关与1～100整数倍率，默认关闭/10倍；只给本地权威玩家的 `Mod_ItemPicker.PickupAmountMultiplier` 赋值，`PickerLoaded` 恢复原地重建角色。本机偏好不进世界存档；正式拾取按完整原份预检跨库存容量，只放大可堆叠物品，余物保持原数量，回归归 `inventory/pickup_multiplier`。
 - GM 偏好恢复只从 ItemMgr 已登记 Player_DIC 读取本地档案玩家并定向找管理员模块；未入世继续低频等待，不扫描全场 MonoBehaviour，也不为探测状态创建单例。
 - GMWorldLayerOverlay 的温度/污染互斥共用预算采样纹理，格对齐、未加载透明、关闭停止，既不租区块也不改地形。导航模式为一真实格一 Point texel，读取真实流场与 Job 依赖，借用 Native 表不跨后端发布。
 - Render Streaming 使用项目自有设置与 WebApp，普通 Play 自动串流关闭；显式入口统一保存偏好、端口/URL 和自启服务 PID，回收核对当前缓存 webserver.exe 身份，编码按目标协商能力。

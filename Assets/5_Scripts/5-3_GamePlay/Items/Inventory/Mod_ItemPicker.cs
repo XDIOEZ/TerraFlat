@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Audio;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -38,6 +39,7 @@ public class Mod_ItemPicker : Module
         droppedPickupCollider = GetComponent<Collider2D>();
         if (droppedPickupCollider == null) droppedPickupCollider = GetComponentInChildren<Collider2D>(true);
         DroppedItemService.RegisterPicker(this);
+        PickerLoaded?.Invoke(this);
     }
 
     /// <summary>
@@ -57,6 +59,7 @@ public class Mod_ItemPicker : Module
         DroppedItemService.UnregisterPicker(this);
         deferredPickupItems.Clear();
         pickupAttemptedItems.Clear();
+        PickupAmountMultiplier = 1;
     }
 
     public override void Act()
@@ -138,6 +141,46 @@ public class Mod_ItemPicker : Module
             return false;
         }
         set => canPickUp = value;
+    }
+
+    #endregion
+
+    #region 拾取数量倍率
+
+    public const int MinPickupAmountMultiplier = 1;
+    public const int MaxPickupAmountMultiplier = 100;
+    public static event System.Action<Mod_ItemPicker> PickerLoaded;
+    private int pickupAmountMultiplier = MinPickupAmountMultiplier;
+
+    /// <summary>外部工具设置拾取收益，只有可堆叠物品使用倍率，库存转移不经过此规则。</summary>
+    public int PickupAmountMultiplier
+    {
+        get => pickupAmountMultiplier;
+        set => pickupAmountMultiplier = Mathf.Clamp(value, MinPickupAmountMultiplier, MaxPickupAmountMultiplier);
+    }
+
+    /// <summary>先合计不同库存的可用空间，再按完整原物品结算，避免容量不足时留下半份或重复增产。</summary>
+    private float GetMultipliedPickupTargetAmount(ItemData candidate, float capacityAmount, float sourceAmount, int multiplier)
+    {
+        float remainingCapacity = capacityAmount;
+        var countedInventories = new HashSet<Inventory_Data>();
+        foreach (IInventory inventory in AddTargetInventories)
+        {
+            Inventory_Data targetData = inventory?.GetDefaultTargetInventory()?.Data;
+            if (targetData == null || !countedInventories.Add(targetData))
+                continue;
+
+            candidate.Stack.Amount = remainingCapacity;
+            if (targetData.TryAddItem(candidate, false, out float availableAmount))
+                remainingCapacity = Mathf.Max(0f, remainingCapacity - availableAmount);
+            if (remainingCapacity <= 0.0001f)
+                break;
+        }
+
+        float availableTotal = capacityAmount - remainingCapacity;
+        return Mathf.Abs(sourceAmount - Mathf.Round(sourceAmount)) <= 0.0001f
+            ? Mathf.Floor(availableTotal / multiplier + 0.0001f) * multiplier
+            : availableTotal;
     }
 
     #endregion
@@ -323,7 +366,13 @@ public class Mod_ItemPicker : Module
         if (itemData == null || itemData.Stack == null)
             return false;
 
-        float requestedAmount = Mathf.Max(0f, itemData.Stack.Amount);
+        float sourceAmount = itemData.Stack.Amount;
+        int multiplier = itemData.Stack.Stackable && GameNetwork.HasStateAuthority ? PickupAmountMultiplier : 1;
+        float requestedAmount = sourceAmount * multiplier;
+        if (float.IsNaN(requestedAmount) || float.IsInfinity(requestedAmount) || requestedAmount <= 0f)
+            return false;
+
+        ItemData pickupData = multiplier > 1 ? FastCloner.FastCloner.DeepClone(itemData) : itemData;
         float pickupCapacityAmount = GetPickupCapacityLimitedAmount(itemData, requestedAmount);
         if (!itemData.Stack.Stackable)
             pickupCapacityAmount = Mathf.Floor(pickupCapacityAmount + 0.0001f);
@@ -332,6 +381,11 @@ public class Mod_ItemPicker : Module
             return false;
 
         float targetAmount = Mathf.Min(requestedAmount, pickupCapacityAmount);
+        if (multiplier > 1)
+            targetAmount = GetMultipliedPickupTargetAmount(pickupData, targetAmount, sourceAmount, multiplier);
+        if (targetAmount <= 0.0001f || !allowPartial && targetAmount + 0.0001f < requestedAmount)
+            return false;
+
         float remainingAmount = targetAmount;
         foreach (IInventory inventory in AddTargetInventories)
         {
@@ -339,15 +393,15 @@ public class Mod_ItemPicker : Module
             if (targetInventory?.Data == null)
                 continue;
 
-            itemData.Stack.Amount = remainingAmount;
-            if (!allowPartial &&
-                (!targetInventory.Data.TryAddItem(itemData, false, out float availableAmount) ||
+            pickupData.Stack.Amount = remainingAmount;
+            if (!allowPartial && multiplier == 1 &&
+                (!targetInventory.Data.TryAddItem(pickupData, false, out float availableAmount) ||
                  availableAmount + 0.0001f < remainingAmount))
             {
                 continue;
             }
 
-            if (!targetInventory.Data.TryAddItem(itemData, true, out float addedAmount) ||
+            if (!targetInventory.Data.TryAddItem(pickupData, true, out float addedAmount) ||
                 addedAmount <= 0f)
                 continue;
 
@@ -362,13 +416,13 @@ public class Mod_ItemPicker : Module
         float totalAddedAmount = targetAmount - remainingAmount;
         if (totalAddedAmount <= 0f)
         {
-            itemData.Stack.Amount = requestedAmount;
+            itemData.Stack.Amount = sourceAmount;
             return false;
         }
 
-        float worldRemainingAmount = Mathf.Max(0f, requestedAmount - totalAddedAmount);
+        float worldRemainingAmount = Mathf.Max(0f, sourceAmount - totalAddedAmount / multiplier);
         bool fullyAdded = worldRemainingAmount <= 0.0001f;
-        itemData.Stack.Amount = fullyAdded ? requestedAmount : worldRemainingAmount;
+        itemData.Stack.Amount = fullyAdded ? sourceAmount : worldRemainingAmount;
         itemData.Stack.CanBePickedUp = !fullyAdded;
         try
         {

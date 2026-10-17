@@ -8,6 +8,8 @@ internal static class GMConsolePreferences
 {
     private const string KeyPrefix = "FlatWorld.GMConsole.";
     private const string PlayerMoveSpeedKey = KeyPrefix + "PlayerMoveSpeed";
+    private const string PickupMultiplierEnabledKey = KeyPrefix + "PickupMultiplierEnabled";
+    private const string PickupAmountMultiplierKey = KeyPrefix + "PickupAmountMultiplier";
     private const string ChunkLoadSpeedKey = KeyPrefix + "ChunkLoadSpeed";
     private const string ChunkLoadUnlimitedKey = KeyPrefix + "ChunkLoadUnlimited";
     private const string ChunkCommitCountKey = KeyPrefix + "ChunkCommitCount";
@@ -29,6 +31,10 @@ internal static class GMConsolePreferences
 
     public static float PlayerMoveSpeedMultiplier =>
         GetFinitePositiveFloat(PlayerMoveSpeedKey, 1f);
+
+    public static bool PickupMultiplierEnabled => PlayerPrefs.GetInt(PickupMultiplierEnabledKey, 0) != 0;
+    public static int PickupAmountMultiplier => Mathf.Clamp(PlayerPrefs.GetInt(PickupAmountMultiplierKey, 10),
+        Mod_ItemPicker.MinPickupAmountMultiplier, Mod_ItemPicker.MaxPickupAmountMultiplier);
 
     public static float ChunkLoadSpeedMultiplier =>
         GetFinitePositiveFloat(ChunkLoadSpeedKey, 1f);
@@ -84,6 +90,14 @@ internal static class GMConsolePreferences
     #endregion
 
     #region 写入
+
+    /// <summary>倍率拖动时只更新内存偏好，松开滑条或关闭 GM 后统一保存到本机。</summary>
+    public static void SetPickupMultiplier(bool enabled, int multiplier)
+    {
+        PlayerPrefs.SetInt(PickupMultiplierEnabledKey, enabled ? 1 : 0);
+        PlayerPrefs.SetInt(PickupAmountMultiplierKey, Mathf.Clamp(multiplier,
+            Mod_ItemPicker.MinPickupAmountMultiplier, Mod_ItemPicker.MaxPickupAmountMultiplier));
+    }
 
     public static void SetPlayerMoveSpeed(float multiplier)
     {
