@@ -43,6 +43,7 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISet
         if (initialized)
             return;
 
+        FrameRateSettingsPanelController.Ensure(transform);
         ISettingsProvider provider = PlayerWorldCoordinateDisplayPreferences.SettingsProvider;
         displayModeSetting = provider
             .GetSwitch(PlayerWorldCoordinateDisplayPreferences.ModeSettingKey);

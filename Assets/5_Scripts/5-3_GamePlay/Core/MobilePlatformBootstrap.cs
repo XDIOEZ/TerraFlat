@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>Android 首版运行参数：关闭垂直同步并以 60 FPS 为目标；画质档位仍由 ProjectSettings 的 Android High 默认值决定。</summary>
+/// <summary>移动平台横屏方向配置；帧率统一由 FrameRateUserSettings 应用本机偏好。</summary>
 public static class MobilePlatformBootstrap
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -9,8 +9,6 @@ public static class MobilePlatformBootstrap
         if (!Application.isMobilePlatform)
             return;
 
-        QualitySettings.vSyncCount = 0;
-        Application.targetFrameRate = 60;
         Screen.autorotateToPortrait = false;
         Screen.autorotateToPortraitUpsideDown = false;
         Screen.autorotateToLandscapeLeft = true;

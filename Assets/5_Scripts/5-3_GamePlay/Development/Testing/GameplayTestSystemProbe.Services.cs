@@ -43,6 +43,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("modding/package_path", ServiceModPath);
         operations.Add("modding/candidate_patch", ServiceModCandidatePatch);
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
+        operations.Add("ui_settings/frame_rate", ServiceFrameRate);
         operations.Add("ui_settings/navigation_policy", ServiceNavigationPolicy);
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
         operations.Add("ui_settings/new_game_deferred_content", ServiceNewGameDeferredContent);

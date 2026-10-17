@@ -82,6 +82,7 @@ public static class GraphicsUserSettings
         int qualityLevel = FindQualityLevel(cachedPreset);
         if (qualityLevel >= 0 && qualityLevel < QualitySettings.names.Length)
             QualitySettings.SetQualityLevel(qualityLevel, true);
+        FrameRateUserSettings.ApplyCurrentSettings();
     }
 
     /// <summary>恢复高画质默认值并立即应用。</summary>

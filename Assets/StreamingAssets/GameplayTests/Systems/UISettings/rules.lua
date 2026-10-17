@@ -1,4 +1,32 @@
 -- 调用偏好正式净化规则，不写 PlayerPrefs 或改变当前 UI。
+for _, row in ipairs({
+    {text = "1", valid = true, value = 1, custom = 1, target = 1},
+    {text = "137", valid = true, value = 137, custom = 137, target = 137},
+    {text = "144", valid = true, value = 144, custom = 144, target = 144},
+    {text = "1000", valid = true, value = 1000, custom = 1000, target = 1000},
+    {text = "0", valid = false, custom = 0, target = 60},
+    {text = "1001", valid = false, custom = 1001, target = 60},
+    {text = "-1", valid = false, custom = -1, target = 60}, {text = "60.5", valid = false},
+    {text = "", valid = false}, {text = "abc", valid = false},
+    {text = "999999999999999999", valid = false}
+}) do
+    test.system("ui_settings", "frame_rate", {text = row.text, custom = row.custom or 137}, function(data)
+        local expected = {-1, 30, 40, 45, 50, 60, 72, 75, 90, 100, 120, 144, 165, 180, 200, 240, 300, 360, 480}
+        assert(#data.targets == #expected + 1 and #data.ids == #expected + 1, "帧率档位丢失或自定义选项缺失")
+        local unique = {}
+        for index, rate in ipairs(expected) do
+            assert(data.targets[index] == rate, "帧率预设映射错误")
+            assert(not unique[data.ids[index]], "帧率选项稳定身份重复")
+            unique[data.ids[index]] = true
+        end
+        assert(data.ids[1] == "unlimited" and data.ids[#data.ids] == "custom", "不限帧与自定义身份错误")
+        assert(data.defaultTarget == 60 and data.invalidOptionTarget == 60, "默认帧率或无效选项回退不是60帧")
+        assert(data.customTarget == (row.target or 137), "自定义帧率边界或与预设相同的自定义值错误")
+        assert(data.parsed == row.valid, "非法帧率输入没有拒绝或合法输入被拒绝")
+        if row.valid then assert(data.parsedValue == row.value, "自定义帧率解析值错误") end
+    end, "帧率预设与自定义边界：" .. row.text)
+end
+
 test.system("ui_settings", "new_game_deferred_content", {}, function(data)
     assert(data.initialWorldChildren == 0 and data.initialDifficultyChildren == 0,
         "名称页首次显示前已经实例化隐藏世界或难度内容")

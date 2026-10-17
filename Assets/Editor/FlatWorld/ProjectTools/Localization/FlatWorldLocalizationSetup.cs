@@ -120,6 +120,18 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                // 帧率设置的静态标签与动态反馈使用同一份双语文本。
+                { "帧率限制", "Frame Rate Limit" },
+                { "帧数上限", "Frame Rate Limit" },
+                { "自定义帧数", "Custom Frame Rate" },
+                { "不限制", "Unlimited" },
+                { "帧率选项无效。", "Invalid frame rate option." },
+                { "请输入 1～1000 之间的整数帧数。", "Enter a whole number from 1 to 1000." },
+                { "当前帧数上限：不限制", "Current frame rate limit: Unlimited" },
+                { "当前帧数上限：{0} FPS", "Current frame rate limit: {0} FPS" },
+                { "当前帧数上限：60 FPS", "Current frame rate limit: 60 FPS" },
+                { "选择自定义后输入整数，按回车或移开焦点即可应用。", "Choose Custom, enter a whole number, then press Enter or leave the field to apply." },
+                { "帧数上限不保证实际帧数；手机还会受到屏幕刷新率限制。", "Actual frame rate depends on performance. Mobile devices are also limited by display refresh rate." },
                 // 飞船双屏终端保留命令原文，其状态模板与反馈消息同步两种语言。
                 { "飞船控制台", "Ship Console" },
                 { "飞船状态", "Ship Status" },

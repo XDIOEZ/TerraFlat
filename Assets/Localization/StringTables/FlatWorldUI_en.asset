@@ -4990,6 +4990,52 @@ MonoBehaviour:
     m_Localized: "Heatstroke"
     m_Metadata:
       m_Items: []
+  - m_Id: 8109451313713152
+    m_Localized: Frame Rate Limit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452068687872
+    m_Localized: Frame Rate Limit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452072882176
+    m_Localized: Custom Frame Rate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452081270784
+    m_Localized: Unlimited
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452085465088
+    m_Localized: Invalid frame rate option.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452089659392
+    m_Localized: Enter a whole number from 1 to 1000.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452093853696
+    m_Localized: 'Current frame rate limit: Unlimited'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452093853697
+    m_Localized: 'Current frame rate limit: {0} FPS'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452093853698
+    m_Localized: 'Current frame rate limit: 60 FPS'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452098048000
+    m_Localized: Choose Custom, enter a whole number, then press Enter or leave the
+      field to apply.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8109452098048001
+    m_Localized: Actual frame rate depends on performance. Mobile devices are also
+      limited by display refresh rate.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

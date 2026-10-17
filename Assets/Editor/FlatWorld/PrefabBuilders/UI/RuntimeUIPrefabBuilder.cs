@@ -1758,7 +1758,40 @@ public static partial class RuntimeUIPrefabBuilder
         Toggle fpsToggle = CreateToggle("FPS显示开关", fpsRow.transform);
         fpsToggle.isOn = PlayerWorldCoordinateDisplayPreferences.DefaultShowFps;
 
+        CreateFrameRateSettingsControls(content);
         return root;
+    }
+
+    /// <summary>帧率控件共用正式下拉和输入框，内容增长由显示页滚动区域承载。</summary>
+    private static void CreateFrameRateSettingsControls(Transform content)
+    {
+        CreateSettingsSection(content, "帧率限制", "FRAME RATE");
+        var options = new string[FrameRateUserSettings.Options.Count];
+        for (int index = 0; index < options.Length; index++)
+            options[index] = FrameRateUserSettings.Options[index].DisplayName;
+        TMP_Dropdown dropdown = CreateSettingsDropdownRow(content, "帧数上限",
+            FrameRateSettingsPanelController.DropdownName, options);
+        LayoutElement dropdownLayout = dropdown.GetComponent<LayoutElement>();
+        dropdownLayout.preferredWidth = 300f;
+        dropdownLayout.preferredHeight = 60f;
+        dropdownLayout.flexibleWidth = 1f;
+        dropdown.transform.parent.GetComponent<LayoutElement>().preferredHeight = 64f;
+        dropdown.SetValueWithoutNotify(FrameRateUserSettings.DefaultOptionIndex);
+        GameObject row = CreateRow("自定义帧数行", content, 64f);
+        CreateRowLabel(row.transform, "自定义帧数", 122f);
+        TMP_InputField input = CreateInputField(FrameRateSettingsPanelController.InputName, row.transform, "1～1000");
+        input.contentType = TMP_InputField.ContentType.IntegerNumber;
+        input.characterLimit = 4;
+        input.SetTextWithoutNotify(FrameRateUserSettings.DefaultFrameRate.ToString());
+        input.interactable = false;
+        LayoutElement inputLayout = input.GetComponent<LayoutElement>() ?? input.gameObject.AddComponent<LayoutElement>();
+        inputLayout.preferredWidth = 240f;
+        inputLayout.preferredHeight = 60f;
+        TextMeshProUGUI status = CreateText(FrameRateSettingsPanelController.StatusName, content,
+            "当前帧数上限：60 FPS", 16f, Muted);
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
+        CreateSettingsHint(content, "选择自定义后输入整数，按回车或移开焦点即可应用。", 54f);
+        CreateSettingsHint(content, "帧数上限不保证实际帧数；手机还会受到屏幕刷新率限制。", 54f);
     }
 
     /// <summary>构建主菜单退出确认窗口；取消是默认焦点，确认按钮才真正关闭应用。</summary>
