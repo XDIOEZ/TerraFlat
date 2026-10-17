@@ -32,6 +32,13 @@ namespace FlatWorld.Networking.Gameplay
             Inventory target = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
                 { new ItemSlot(0) { itemData = Item(4) }, new ItemSlot(1) { itemData = Item(2) } }, "lua.quick.receipts.target") };
             var quick = new InventoryQuickTransferSignal(source, 0, target, -1, source.Data.GetItemSlot(0).itemData, 3);
+            if (args.Value<string>("mode") == "touch_origin")
+            {
+                // 请求发送时冻结松手位置，回执回放时已退出触屏事务作用域。
+                using (InventoryQuickTransferFeedbackEvents.UseScreenOrigin(source, 0, new Vector2(321f, 123f)))
+                    quick = new InventoryQuickTransferSignal(source, 0, target, -1, quick.Item, 3,
+                        screenOrigin: InventoryQuickTransferFeedbackEvents.GetScreenOrigin(source, 0));
+            }
             var receipts = new[] {
                 new NetworkQuickTransferReceipt { TargetSlot = 0, TargetGuid = target.Data.GetItemSlot(0).itemData.Guid, Amount = 1 },
                 new NetworkQuickTransferReceipt { TargetSlot = 1, TargetGuid = target.Data.GetItemSlot(1).itemData.Guid, Amount = 2 }
@@ -50,7 +57,10 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (ReferenceEquals(signal.Source, source))
                     events.Add(new JObject { ["sourceIndex"] = signal.SourceIndex, ["targetIndex"] = signal.TargetIndex,
-                        ["amount"] = signal.Amount, ["targetMatched"] = ReferenceEquals(signal.Target, target) });
+                        ["amount"] = signal.Amount, ["targetMatched"] = ReferenceEquals(signal.Target, target),
+                        ["hasScreenOrigin"] = signal.ScreenOrigin.HasValue,
+                        ["originX"] = signal.ScreenOrigin.GetValueOrDefault().x,
+                        ["originY"] = signal.ScreenOrigin.GetValueOrDefault().y });
             }
             InventoryQuickTransferFeedbackEvents.Committed += Observe;
             try

@@ -202,7 +202,8 @@ namespace FlatWorld.Networking.Gameplay
             ItemData destination = targetIndex >= 0 && targetIndex < target.Data.itemSlots.Count ? target.Data.itemSlots[targetIndex].itemData : null;
             pendingMachineTransfer = NextMachineToken();
             pendingQuickTransfer = operation == "quick"
-                ? new InventoryQuickTransferSignal(source, sourceIndex, target, -1, item, item.Stack.Amount) : null;
+                ? new InventoryQuickTransferSignal(source, sourceIndex, target, -1, item, item.Stack.Amount,
+                    screenOrigin: InventoryQuickTransferFeedbackEvents.GetScreenOrigin(source, sourceIndex)) : null;
             machineTransferDeadline = Time.unscaledTime + 8f;
             NetworkClient.Send(new NetworkMachineTransferRequest
             {
@@ -352,7 +353,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             foreach (NetworkQuickTransferReceipt receipt in receipts)
                 InventoryQuickTransferFeedbackEvents.Publish(quick.Source, quick.SourceIndex, quick.Target,
-                    receipt.TargetSlot, quick.Item, receipt.Amount);
+                    receipt.TargetSlot, quick.Item, receipt.Amount, quick.ScreenOrigin);
         }
         #endregion
     }

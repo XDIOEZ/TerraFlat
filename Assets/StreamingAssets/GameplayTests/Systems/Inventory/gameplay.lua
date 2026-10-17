@@ -42,14 +42,20 @@ test.runtime("inventory", "quick_transfer_feedback", {}, function(data)
         and data.third.amount == 0 and data.source.amount + data.first.amount + data.second.amount == 9,
         "反馈改变了转移数量、漏扣或生成额外物品")
 end, "快速转移按实际收货槽反馈、提交后发布与拒绝静默")
-for _, mode in ipairs({"valid", "duplicate", "invalid_slot", "wrong_guid", "over_amount", "non_finite", "too_many"}) do
+for _, mode in ipairs({"valid", "touch_origin", "duplicate", "invalid_slot", "wrong_guid", "over_amount", "non_finite", "too_many"}) do
     test.runtime("inventory", "quick_transfer_receipts", {mode = mode}, function(data)
-        if mode == "valid" then
+        if mode == "valid" or mode == "touch_origin" then
             assert(#data.events == 2 and data.events[1].sourceIndex == 0 and data.events[2].sourceIndex == 0
                 and data.events[1].targetIndex == 0 and data.events[1].amount == 1
                 and data.events[2].targetIndex == 1 and data.events[2].amount == 2
                 and data.events[1].targetMatched and data.events[2].targetMatched,
                 "权威回执没有按精确收货槽和实际数量回放")
+            for _, receipt in ipairs(data.events) do
+                assert(receipt.hasScreenOrigin == (mode == "touch_origin"), "回执丢失甩动起点或污染 PC 起点")
+                if mode == "touch_origin" then
+                    assert(receipt.originX == 321 and receipt.originY == 123, "异步回执没有保存松手位置")
+                end
+            end
         else
             assert(#data.events == 0, "无效回执没有整批拒绝，错误播放了部分成功动画：" .. mode)
         end
@@ -80,6 +86,7 @@ for _, case in ipairs(directionalFlicks) do
     test.runtime("inventory", "directional_flick", case, function(data)
         assert(data.selected == case.selected and data.unchangedAfterSelection,
             "候选方向/实际容量/可见性筛选错误，或选目标时提前修改了库存")
+        assert(data.originScopeCleared and not data.unrelatedOriginLeaked, "甩动起点泄漏到其他转移事务")
         assert(data.consumed and data.moved == (case.selected ~= "none") and not data.dragLocked,
             "方向甩动未走真实事务、无目标时错误转移或未释放来源")
         assert(data.source.amount == case.source and data.right.amount == case.right and data.down.amount == case.down
@@ -90,6 +97,11 @@ for _, case in ipairs(directionalFlicks) do
         else
             assert(data.receipts == 1 and data.receiptTarget == (case.receipt or case.selected),
                 "动画反馈不是实际收货格子，或 PC 固定目标被方向候选改变")
+            assert(data.hasScreenOrigin == (case.mode ~= "pc"), "手机甩动缺少动画起点或 PC 被误改")
+            if case.mode ~= "pc" then
+                assert(math.abs(data.originX - data.releaseX) < 0.01 and math.abs(data.originY - data.releaseY) < 0.01,
+                    "甩动动画起点没有使用手指松开位置")
+            end
         end
     end, "按方向选择真实库存：" .. case.mode)
 end

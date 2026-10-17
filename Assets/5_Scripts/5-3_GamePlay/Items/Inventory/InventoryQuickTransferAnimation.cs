@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>从真实源槽飞向实际收货槽的临时图标，不接管物品或输入。</summary>
+/// <summary>从松手位置或真实源槽飞向实际收货槽的临时图标，不接管物品或输入。</summary>
 public sealed class InventoryQuickTransferAnimation : MonoBehaviour
 {
     #region 创建与可见性
@@ -85,7 +85,7 @@ public sealed class InventoryQuickTransferAnimation : MonoBehaviour
         Canvas root = from.Root;
         if (root.transform is not RectTransform rootRect) return;
 
-        // 临时顶层 Canvas 不带射线组件，按真实格子中心跨窗口飞行。
+        // 临时顶层 Canvas 不带射线组件，甩动从松手位置接续，桌面仍从源格子出发。
         var go = new GameObject("InventoryQuickTransferFlight", typeof(RectTransform), typeof(Canvas),
             typeof(CanvasGroup), typeof(CanvasRenderer), typeof(Image));
         go.transform.SetParent(root.transform, false);
@@ -117,6 +117,9 @@ public sealed class InventoryQuickTransferAnimation : MonoBehaviour
         }
         view.flight.sizeDelta = maximum - minimum;
         view.start = view.LocalCenter(from);
+        if (signal.ScreenOrigin is Vector2 screenOrigin && float.IsFinite(screenOrigin.x) && float.IsFinite(screenOrigin.y) &&
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(rootRect, screenOrigin, view.eventCamera, out Vector2 released))
+            view.start = released;
         view.flight.anchoredPosition = view.start;
         activeFlights.Add(view);
         if (from.Slot.text != null)

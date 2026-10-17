@@ -1966,7 +1966,8 @@ public class Inventory
         Inventory hotbar = GetPlayerHotBarInventory();
         hotbar?.RegisterFlickTarget(hotbar.basePanel, true);
         Inventory target = InventoryFlickTargets.Resolve(this, index, origin, direction);
-        return TryQuickTransferTo(index, target);
+        using (InventoryQuickTransferFeedbackEvents.UseScreenOrigin(this, index, origin + direction))
+            return TryQuickTransferTo(index, target);
     }
 
     private bool TryQuickTransferTo(int index, Inventory targetInventory)

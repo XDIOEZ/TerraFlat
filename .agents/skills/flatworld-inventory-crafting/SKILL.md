@@ -36,7 +36,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
 - 触屏快速甩动由 `InventoryFlickGesture` 检查净位移、末段速度与轨迹方向；无正式拖放目标时经 `TryConsumeSourceItem` 校验来源，再调用独立 `OnTouchFlickTransfer`。`InventoryFlickTargets` 由正式库存 UI 生命周期登记真实输入（组合输出显式 `allowDirectionalDeposit:false`），以按下位置到可见槽区域中心和净甩动方向的夹角排序；满格/标签/承载限制拒绝的候选跳过，选定一个库存后只收可容纳部分，余物留原槽。容量预检与提交共用 `Inventory_Data.GetTransferableQuantityTo`；不试转移、不全场查找、不改 PC Shift 目标。单击不等待，半组拖拽保留原语义。
 - 库存短音只通过 `InventoryAudioFeedbackEvents` 观察用户点击/滚轮/拖拽/快速转移成功事务，开始拖拽仅播拿起；交换有独立提示，装备槽由 `EquipmentAudioFeedbackEvents` 在真实物品更替时播穿脱声。全部选音与 UI 播放在 `InventoryInteractionAudio`，业务不操作 AudioService。
-- 快速转移经 `InventoryQuickTransferFeedbackEvents` 在每个实际收货槽提交成功后发布物品/数量/源目标索引；`InventoryQuickTransferAnimation` 独立播放 0.24 秒无射线飞行，按真实 Canvas 坐标与缩放显示、最多并发 32 个，关闭/卸载/虚拟化重绑取消；隐藏或不存在的槽位不编造落点。客户端机器命令只在对应 token 成功回执及同次权威库存快照应用后，按精确收货回执播放；服务器执行远端命令时抑制 Host 本地动画。
+- 快速转移经 `InventoryQuickTransferFeedbackEvents` 在每个实际收货槽提交成功后发布物品/数量/源目标索引；`InventoryQuickTransferAnimation` 独立播放 0.24 秒无射线飞行，甩动从松手屏幕位置起飞、PC 从源槽起飞，按真实 Canvas 坐标与缩放显示、最多并发 32 个，关闭/卸载/虚拟化重绑取消；隐藏或不存在的槽位不编造落点。客户端机器命令只在对应 token 成功回执及同次权威库存快照应用后，按精确收货回执播放，请求阶段冻结本地松手起点并随回执复用；服务器执行远端命令时抑制 Host 本地动画。
 - 长按触屏的整组放置在进度完成时提交并消费手势；进度先缓冲 0.2 秒再显示，原总时长不延长。空槽起手才交 ScrollRect。拖拽来源允许同槽、同非零 Guid、同定义的事务替换实例；持续加工在被拖槽上暂缓。
 - 触屏空手按住槽内物品 1 秒查看同一个 PC 介绍窗；`Inventory.CanTouchInspectItem` 只检查携带手部库存，快捷栏装备不算手持。介绍松手保留、下次窗外按下收起；显示成功消费本次长按，手持物长按与拆半拖拽保留。移动、物品身份变化、手部非空或面板关闭取消查看。
 - `UI_Hand/InventoryDragGhost` 使用顶层 Canvas 且不拦射线；触屏位置取本次 PointerEventData，抬起后保留，桌面明确接管才改用 Pointer.current。`MobileHeldItemDropSurface` 只操作手部携带槽，丢弃经 Mod_DiscardItem，成功生成世界物后才扣源槽。

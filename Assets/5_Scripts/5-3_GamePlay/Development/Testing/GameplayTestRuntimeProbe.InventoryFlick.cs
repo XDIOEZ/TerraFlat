@@ -21,10 +21,14 @@ public static partial class GameplayTestRuntimeProbe
         InventoryFlickTargets[] previousPanels = InventoryFlickTargets.GetActivePanels();
         int receipts = 0;
         string receiptTarget = string.Empty;
+        Vector2? receiptOrigin = null;
+        bool unrelatedOriginLeaked = false;
         void Capture(InventoryQuickTransferSignal signal)
         {
             if (!ReferenceEquals(signal.Source, source)) return;
             receipts++;
+            receiptOrigin = signal.ScreenOrigin;
+            unrelatedOriginLeaked |= InventoryQuickTransferFeedbackEvents.GetScreenOrigin(down, 0).HasValue;
             receiptTarget = ReferenceEquals(signal.Target, right) ? "right" :
                 ReferenceEquals(signal.Target, down) ? "down" : "unexpected";
         }
@@ -64,6 +68,7 @@ public static partial class GameplayTestRuntimeProbe
                 new Vector2(Screen.width * .65f, Screen.height * .64f));
             Vector2 direction = mode == "down" || mode == "same_panel" ? Vector2.down :
                 mode == "diagonal" ? new Vector2(.3f, -1f) : Vector2.right;
+            direction *= 120f;
             if (mode == "partial") right.Data.itemSlots[0].SlotMaxVolume = 2;
             if (mode == "full" || mode == "none") right.Data.itemSlots[0].SlotMaxVolume = 0;
             if (mode == "none") down.Data.itemSlots[0].SlotMaxVolume = 0;
@@ -107,6 +112,11 @@ public static partial class GameplayTestRuntimeProbe
                 ["unchangedAfterSelection"] = unchangedAfterSelection, ["consumed"] = consumed, ["moved"] = moved,
                 ["source"] = CaptureDragSlot(source, 0), ["right"] = CaptureDragSlot(right, 0),
                 ["down"] = CaptureDragSlot(down, 0), ["receipts"] = receipts, ["receiptTarget"] = receiptTarget,
+                ["hasScreenOrigin"] = receiptOrigin.HasValue,
+                ["originX"] = receiptOrigin.GetValueOrDefault().x, ["originY"] = receiptOrigin.GetValueOrDefault().y,
+                ["releaseX"] = (origin + direction).x, ["releaseY"] = (origin + direction).y,
+                ["originScopeCleared"] = !InventoryQuickTransferFeedbackEvents.GetScreenOrigin(source, 0).HasValue,
+                ["unrelatedOriginLeaked"] = unrelatedOriginLeaked,
                 ["dragLocked"] = source.HasActiveSlotDrag };
         }
         finally

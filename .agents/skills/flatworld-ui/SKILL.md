@@ -47,7 +47,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 标准 TMP/Legacy 下拉模板由 `DropdownListLayout` 在每次展开前按实际行高准备，最多显示 5 行，少于等于 5 项全部显示；`BasePanel` 收集组件时接入，公共构建器同步。条目与 Content 排布归原生 Dropdown，模板关闭竞争的 LayoutGroup/ContentSizeFitter，Viewport 不保留垂直内缩，避免末行被裁。
 - `BasePanel → BaseUIAnimation → UIAnimationManager → JSON` 单向依赖，每面板最多一个动画组件，Opened/Closed 是同步业务事件。正式面板以 `ScaleUIAnimation/panel.scale` 绕 MotionRoot 可见中心缩放，动画不争写布局/安全区目标。
 - 动画配置保存 Duration/相对 Offset/Scale/Ease，CanvasScaler 管分辨率；全局播放倍率只作用本系统根 Tween，热重载保留当前行程快照，反向开关保留进度，结束/禁用恢复姿态。
-- 槽间快速转移图标由 `InventoryQuickTransferAnimation` 消费已提交事务，独立顶层 Canvas、无射线、非缩放时间飞行 0.24 秒；两端必须是真实可见且绑定未换代的槽位，父级缩放通过实际图标世界角点换算，关闭/卸载取消，最多并发 32 个；不延迟库存事务或禁用输入。
+- 槽间快速转移图标由 `InventoryQuickTransferAnimation` 消费已提交事务，独立顶层 Canvas、无射线、非缩放时间飞行 0.24 秒，甩动从反馈中的松手屏幕坐标接续、PC 从源格出发；两端必须是真实可见且绑定未换代的槽位，父级缩放通过实际图标世界角点换算，关闭/卸载取消，最多并发 32 个；不延迟库存事务或禁用输入。
 - 交互滑块与只读进度条为不同资产；滑块根为透明命中区，Background/Fill/Handle 持有外观，进度条禁交互/导航。动态 Content 引用来自所属容器，EventSystem 反馈持有唯一非缩放 Tween。
 
 ## 设置数据
