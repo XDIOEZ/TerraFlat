@@ -149,7 +149,6 @@ MonoBehaviour:
           MaxTemperatureLimit: 1000
           IsSmelting: 0
           TemperatureUpSpeed: 10
-          TemperatureDownSpeed: 30
         mod_Fuel: {fileID: 0}
         WorkButton: {fileID: 0}
         progressSlider: {fileID: 0}

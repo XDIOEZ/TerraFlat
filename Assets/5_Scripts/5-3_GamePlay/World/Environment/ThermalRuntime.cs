@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-/// <summary>角色和普通物品共用环境传热公式，特殊接触和设备保留显式固定速率接口。</summary>
+/// <summary>所有自然传热共用温差百分比公式，特殊接触和设备保留显式固定速率接口。</summary>
 public static class ThermalRuntime
 {
     #region 环境传热
@@ -11,22 +11,29 @@ public static class ThermalRuntime
 
     /// <summary>每游戏秒缩小当前温差的 1%，升降温共用同一指数计算且不会越过环境温度。</summary>
     public static float AdvanceAmbient(float currentTemperature, float ambientTemperature, float seconds)
+        => (float)AdvanceAmbient((double)currentTemperature, ambientTemperature, seconds);
+
+    /// <summary>流体内能使用双精度温度，仍与角色和物品共用同一自然传热公式。</summary>
+    public static double AdvanceAmbient(double currentTemperature, double ambientTemperature, double seconds)
     {
-        if (!float.IsFinite(currentTemperature))
-            return float.IsFinite(ambientTemperature) ? ambientTemperature : TemperatureMgr.DefaultAmbientTemperature;
-        if (!float.IsFinite(ambientTemperature) || !float.IsFinite(seconds) || seconds <= 0f)
+        if (!double.IsFinite(currentTemperature))
+            return double.IsFinite(ambientTemperature) ? ambientTemperature : TemperatureMgr.DefaultAmbientTemperature;
+        if (!double.IsFinite(ambientTemperature) || !double.IsFinite(seconds) || seconds <= 0d)
             return currentTemperature;
 
-        // 用双精度中间值避免大温差溢出，并减少分帧结算的舍入误差。
-        double difference = (double)currentTemperature - ambientTemperature;
+        // 用双精度统一角色、物品与流体的分步结算，避免流体内能被 float 温度截断。
+        double difference = currentTemperature - ambientTemperature;
         if (Math.Abs(difference) <= AmbientConvergenceThreshold)
             return ambientTemperature;
-        double remainingDifference = difference * Math.Pow(AmbientDifferenceRetentionPerSecond, seconds);
+        double retention = Math.Pow(AmbientDifferenceRetentionPerSecond, seconds);
+        double remainingDifference = difference * retention;
         if (Math.Abs(remainingDifference) <= AmbientConvergenceThreshold)
             return ambientTemperature;
-        float nextTemperature = (float)(ambientTemperature + remainingDifference);
-        return Mathf.Clamp(nextTemperature, Mathf.Min(currentTemperature, ambientTemperature),
-            Mathf.Max(currentTemperature, ambientTemperature));
+        double nextTemperature = double.IsFinite(difference)
+            ? ambientTemperature + remainingDifference
+            : currentTemperature * retention + ambientTemperature * (1d - retention);
+        return Math.Clamp(nextTemperature, Math.Min(currentTemperature, ambientTemperature),
+            Math.Max(currentTemperature, ambientTemperature));
     }
 
     #endregion

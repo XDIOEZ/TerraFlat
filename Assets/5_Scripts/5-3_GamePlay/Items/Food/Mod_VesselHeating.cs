@@ -40,14 +40,17 @@ public static class InventoryVesselHeating
         return handled;
     }
     public static bool ProcessWorldHeat(LiquidContainerState state, float temperature, float seconds)
-        => ProcessComponents(state, temperature, seconds, null, null);
-    private static bool ProcessComponents(LiquidContainerState state, float temperature, float seconds, Func<string, int, CraftingTransaction> prepare, Action persist)
+        => ProcessComponents(state, temperature, seconds, null, null, ambientTransfer: true);
+    private static bool ProcessComponents(LiquidContainerState state, float temperature, float seconds, Func<string, int, CraftingTransaction> prepare, Action persist, bool ambientTransfer = false)
     {
         if (state == null || state.Amount <= Mod_WaterVessel.AmountEpsilon || !float.IsFinite(temperature) || !float.IsFinite(seconds) || seconds <= 0f) return false;
         MixedLiquidContents.Ensure(state);
         float beforeTemperature = state.Temperature;
-        state.Temperature = ThermalRuntime.AdvanceTowards(state.Temperature, Mathf.Max(-273.15f, temperature), TemperatureTransferPerSecond, seconds);
-        bool changed = !Mathf.Approximately(beforeTemperature, state.Temperature);
+        // 自然传热共用温差百分比，炉内主动加工继续使用设备的显式速率。
+        state.Temperature = ambientTransfer
+            ? ThermalRuntime.AdvanceAmbient(state.Temperature, Mathf.Max(-273.15f, temperature), seconds)
+            : ThermalRuntime.AdvanceTowards(state.Temperature, Mathf.Max(-273.15f, temperature), TemperatureTransferPerSecond, seconds);
+        bool changed = beforeTemperature != state.Temperature;
         var ids = new List<string>(state.Composition.Keys);
         foreach (string id in ids)
         {

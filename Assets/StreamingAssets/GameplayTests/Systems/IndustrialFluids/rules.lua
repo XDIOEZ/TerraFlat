@@ -36,6 +36,34 @@ test.system("industrial_fluids", "heat", {}, function(data)
     near(data.selfTransfer, 0, "同一库存自换热产生能量")
 end, "流体内能、平衡温度与质量隔离")
 
+for _, input in ipairs({
+    {current = 300, ambient = 400, seconds = 1, gas = 2, liquid = 0},
+    {current = 400, ambient = 300, seconds = 1, gas = 2, liquid = 0},
+    {current = 300, ambient = 300.5, seconds = 1, gas = 2, liquid = 0},
+    {current = 300.5, ambient = 300, seconds = 1, gas = 2, liquid = 0},
+    {current = 250, ambient = 200, seconds = 10, gas = 0, liquid = 3},
+    {current = 250, ambient = 350, seconds = 10, gas = 2, liquid = 3},
+    {current = 300, ambient = 400, seconds = 0, gas = 2, liquid = 1},
+    {current = 300, ambient = 400, seconds = -1, gas = 2, liquid = 1},
+}) do
+    test.system("industrial_fluids", "ambient_heat", input, function(data)
+        local expected = input.current
+        if input.seconds > 0 then
+            expected = input.ambient + (input.current - input.ambient) * .99 ^ input.seconds
+        end
+        near(data.whole, expected, "工业流体自然传热没有按剩余温差百分之一推进")
+        near(data.split, data.whole, "流体内能分步结算偏离相同总时长")
+        near(data.energyAfter - data.energyBefore, data.heat, "环境换热回执与实际内能增减不一致")
+        near(data.heat, (data.whole - input.current) * data.heatCapacity, "温度变化没有按实际热容换回内能")
+        assert(data.massRevisionStable and data.gasMoles == input.gas and data.liquidMoles == input.liquid,
+            "自然换热改写了质量版本或气液数量")
+        near(data.zeroTemperature, input.current, "零时间改变了流体温度")
+        assert(data.zeroHeat == 0 and data.negativeHeat == 0
+            and data.invalidHeat == 0 and data.invalidTimeHeat == 0, "非正时间或非法参数仍改变流体内能")
+        assert(data.emptyHeat == 0 and data.emptyEnergy == 0, "空库存自然换热产生内能")
+    end, string.format("流体自然温差比例与内能：%gK→%gK，%g秒", input.current, input.ambient, input.seconds))
+end
+
 test.system("industrial_fluids", "phase_change", {}, function(data)
     assert(data.converted > 0 and data.gasMoles > 0 and data.liquidMoles > 0, "低压两相样本没有实际相变")
     near(data.gasMoles + data.liquidMoles, 10, "相变破坏总物质量")

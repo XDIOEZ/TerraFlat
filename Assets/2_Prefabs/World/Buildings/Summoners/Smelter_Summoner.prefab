@@ -61,7 +61,6 @@ MonoBehaviour:
     MaxTemperatureLimit: 1000
     IsSmelting: 0
     TemperatureUpSpeed: 10
-    TemperatureDownSpeed: 30
   RawData: []
   InputInventory:
     item: {fileID: 0}

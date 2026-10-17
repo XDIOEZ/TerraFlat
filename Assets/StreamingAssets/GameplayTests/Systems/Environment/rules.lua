@@ -224,13 +224,21 @@ test.system("environment", "natural_recovery_validation", {}, function(data)
 end, "自然恢复配置有限值、时长边界及保存历史拒绝")
 
 for _, sample in ipairs({{current = 20, ambient = 120, seconds = 10},
-    {current = 120, ambient = 20, seconds = 10}, {current = 20, ambient = -80, seconds = 10}}) do
+    {current = 120, ambient = 20, seconds = 10}, {current = 20, ambient = -80, seconds = 10},
+    {current = 20, ambient = 120, seconds = 1}, {current = 120, ambient = 20, seconds = 1},
+    {current = 20, ambient = 21, seconds = 1}, {current = 21, ambient = 20, seconds = 1},
+    {current = -10, ambient = -9.5, seconds = 1}, {current = 80, ambient = 80.5, seconds = 1}}) do
     local input = sample
     test.system("environment", "thermal", input, function(data)
         assert(data.whole >= math.min(input.current, input.ambient) and data.whole <= math.max(input.current, input.ambient),
             "环境传热越过目标温度")
         assert(math.abs(data.whole - input.ambient) < math.abs(input.current - input.ambient), "环境传热没有趋近环境")
-        near(data.whole, data.split, "一次和十次结算的传热不一致")
+        local expected = input.ambient + (input.current - input.ambient) * .99 ^ input.seconds
+        near(data.whole, expected, "自然传热没有按剩余温差百分之一结算", .00002)
+        near(data.whole, data.split, "一次和十次结算的传热不一致", .00005)
+        near(data.wholeDouble, expected, "双精度流体传热偏离同一百分比规则")
+        near(data.wholeDouble, data.splitDouble, "双精度一次和十次结算不一致")
+        near(data.whole, data.wholeDouble, "物品与流体使用了不同自然传热比例", .00002)
         near(data.zeroTime, input.current, "零时间仍改变温度")
         near(data.negativeTime, input.current, "负时间仍改变温度")
         near(data.invalidCurrent, input.ambient, "非法体温没有恢复有限环境值")

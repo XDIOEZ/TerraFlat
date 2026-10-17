@@ -48,20 +48,16 @@ public static class FluidThermodynamics
         first.State.TotalInternalEnergyJoules -= transfer; second.State.TotalInternalEnergyJoules += transfer;
         return transfer;
     }
-    /// <summary>环境只提供目标温度，流体仍通过内能保存实际温度并参与原有相变。</summary>
+    /// <summary>环境自然传热统一按温差百分比推进，再换回内能参与原有相变。</summary>
     public static double ExchangeHeatWithEnvironment(FluidInventory inventory, double targetKelvin,
-        double conductanceWattsPerKelvin, double seconds)
+        double seconds)
     {
         if (inventory == null || inventory.IsEmpty || !FluidUnits.IsFinite(targetKelvin) || targetKelvin <= 0 ||
-            !FluidUnits.IsFinite(conductanceWattsPerKelvin) || conductanceWattsPerKelvin <= 0 ||
             !FluidUnits.IsFinite(seconds) || seconds <= 0) return 0;
         inventory.GetEnergyTerms(out double capacity, out _);
         double current = inventory.GetTemperatureKelvin();
-        double difference = targetKelvin - current;
-        double rate = Math.Abs(difference) * conductanceWattsPerKelvin / capacity;
-        float change = ThermalRuntime.AdvanceTowards(0, (float)difference, (float)rate, (float)seconds);
-        double boundedChange = Math.Sign(difference) * Math.Min(Math.Abs(difference), Math.Abs(change));
-        return AddHeat(inventory, boundedChange * capacity);
+        double next = ThermalRuntime.AdvanceAmbient(current, targetKelvin, seconds);
+        return AddHeat(inventory, (next - current) * capacity);
     }
 
     public static FluidCompressionResult Compress(FluidBatch batch, double sourcePressureKPa, double targetPressureKPa,

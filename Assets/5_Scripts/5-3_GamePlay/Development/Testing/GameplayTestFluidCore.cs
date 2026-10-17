@@ -273,8 +273,10 @@ internal static class GameplayTestFluidCore
         Check(report, "大步长传热不越过平衡温度", Near(hot.GetTemperatureKelvin(), cold.GetTemperatureKelvin()));
         Check(report, "封闭传热总内能守恒", Near(hot.State.TotalInternalEnergyJoules + cold.State.TotalInternalEnergyJoules, energy));
         Check(report, "同一状态不能向自身传热", FluidThermodynamics.ExchangeHeat(hot, new FluidInventory(hot.State), 100d, 1d) == 0d);
-        FluidThermodynamics.ExchangeHeatWithEnvironment(cold, 350d, 1e9d, 1d);
-        Check(report, "环境传热有界到目标温度", Near(cold.GetTemperatureKelvin(), 350d));
+        double beforeAmbient = cold.GetTemperatureKelvin();
+        FluidThermodynamics.ExchangeHeatWithEnvironment(cold, 350d, 1d);
+        Check(report, "环境传热每秒消除剩余温差百分之一",
+            Near((cold.GetTemperatureKelvin() - beforeAmbient) / (350d - beforeAmbient), .01d));
         var empty = Filled(report, FluidIds.Oxygen, 0m);
         Check(report, "空库存保持参考温度零压力且不能存热", Near(empty.GetTemperatureKelvin(), FluidUnits.ReferenceTemperatureKelvin) &&
             empty.GetPressureKPa(1d, .001d) == 0d && FluidThermodynamics.AddHeat(empty, 100d) == 0d);

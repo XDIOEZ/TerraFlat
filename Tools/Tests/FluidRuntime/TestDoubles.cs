@@ -4,6 +4,15 @@ using System.Collections.Generic;
 #region 非流体目标的坐标依赖
 namespace UnityEngine
 {
+    public static class Mathf
+    {
+        public static float Max(float a, float b) => MathF.Max(a, b);
+        public static float Min(float a, float b) => MathF.Min(a, b);
+        public static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);
+        public static float MoveTowards(float current, float target, float delta)
+            => MathF.Abs(target - current) <= delta ? target : current + MathF.Sign(target - current) * delta;
+    }
+
     public struct Vector2
     {
         public float x, y;
@@ -30,10 +39,9 @@ public sealed class FluidCatalog
     #endregion
 }
 
-public static class ThermalRuntime
+public static class TemperatureMgr
 {
-    // 未覆盖的环境传热调度主动报错，不能让测试替身冒充生产算法。
-    public static float AdvanceTowards(float value, float target, float rate, float seconds) => throw new NotSupportedException();
+    public const float DefaultAmbientTemperature = 20f;
 }
 
 public static class AtmosphereService

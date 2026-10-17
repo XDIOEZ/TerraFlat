@@ -486,9 +486,7 @@
         "SingleGas": false,
         "SingleLiquid": false,
         "ThroughputLitersPerSecond": 1000,
-        "TrackAmbientTemperature": true,
-        "BodyTemperatureChangePerSecond": 1,
-        "HeatConductanceWattsPerKelvin": 20
+        "TrackAmbientTemperature": true
       }
     },
     {
@@ -547,9 +545,7 @@
         "SingleGas": false,
         "SingleLiquid": false,
         "ThroughputLitersPerSecond": 1000,
-        "TrackAmbientTemperature": true,
-        "BodyTemperatureChangePerSecond": 1,
-        "HeatConductanceWattsPerKelvin": 20
+        "TrackAmbientTemperature": true
       }
     },
     {

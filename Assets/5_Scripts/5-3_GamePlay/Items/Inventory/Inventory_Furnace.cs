@@ -102,8 +102,9 @@ public class Inventory_Furnace : Inventory
         }
         else
         {
-            // 未启动或已停止 → 温度缓慢下降到 20℃
-            _Data.Temperature = Mathf.Max(_Data.Temperature - _Data.TemperatureDownSpeed * deltaTime, 20f);
+            // 熄火后读取真实宿主环境，使用与普通物品相同的温差百分比自然传热。
+            if (TryGetAmbientTemperature(out float ambientTemperature))
+                _Data.Temperature = ThermalRuntime.AdvanceAmbient(_Data.Temperature, ambientTemperature, deltaTime);
             _Data.SmeltingSpeed = 0f;
 
             // 如果燃料模块是点燃的，让它也熄灭
@@ -115,6 +116,28 @@ public class Inventory_Furnace : Inventory
 
         // 同步所有UI
         UpdateUI();
+    }
+
+    private bool TryGetAmbientTemperature(out float temperature)
+    {
+        if (MachineOwner != null)
+        {
+            temperature = MachineWorld.SampleAmbientTemperature(MachineOwner);
+            return true;
+        }
+        Item owner = item != null && item.Owner != null ? item.Owner : item;
+        if (owner != null)
+        {
+            if (ItemEnvironmentSources.TryGet(owner, out ItemEnvironmentSample localEnvironment))
+            {
+                temperature = (float)localEnvironment.TemperatureCelsius;
+                return true;
+            }
+            if (TemperatureMgr.Instance != null &&
+                TemperatureMgr.Instance.TryGetAmbientTemperature(owner.transform.position, out temperature)) return true;
+        }
+        temperature = default;
+        return false;
     }
 
     public override void InitData()
@@ -1207,9 +1230,6 @@ public partial class ModSmeltingData
 
     [Tooltip("温度上升速度")]
     public float TemperatureUpSpeed = 10f;
-
-    [Tooltip("温度下降速度")]
-    public float TemperatureDownSpeed = 30f;
 
     [Tooltip("按副产物规则 id 保存的燃料累计消费数。")]
     public Dictionary<string, int> FuelByproductProgress = new Dictionary<string, int>();

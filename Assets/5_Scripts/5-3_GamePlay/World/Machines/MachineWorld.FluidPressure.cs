@@ -80,7 +80,9 @@ public static partial class MachineWorld
     /// <summary>各罐体读取当地温度层，共享库存只汇总传热后推进一次。</summary>
     private static void AdvanceFluidTankTemperature(FluidTankGroup group, float seconds)
     {
-        double conductance = 0, weightedTemperature = 0;
+        if (!MachineDefinition.Positive(seconds)) return;
+        int temperatureCount = 0;
+        double totalBodyTemperature = 0;
         foreach (MachineEntity member in group.Members)
         {
             FluidMachineDefinition definition = member.Definition.Fluid;
@@ -92,16 +94,17 @@ public static partial class MachineWorld
             float previous = state.BodyTemperatureCelsius;
             bool initialized = state.BodyTemperatureInitialized;
             state.BodyTemperatureCelsius = initialized
-                ? ThermalRuntime.AdvanceTowards(previous, ambient, definition.BodyTemperatureChangePerSecond, seconds)
+                ? ThermalRuntime.AdvanceAmbient(previous, ambient, seconds)
                 : ambient;
             state.BodyTemperatureInitialized = true;
             if (!initialized || previous != state.BodyTemperatureCelsius) StateChanged(member);
-            conductance += definition.HeatConductanceWattsPerKelvin;
-            weightedTemperature += state.BodyTemperatureCelsius * definition.HeatConductanceWattsPerKelvin;
+            temperatureCount++;
+            totalBodyTemperature += state.BodyTemperatureCelsius;
         }
-        if (conductance <= 0 || group.Inventory.IsEmpty) return;
+        if (temperatureCount == 0 || group.Inventory.IsEmpty) return;
+        // 组合罐只用实际罐体平均温度推进共享库存一次，罐数不改变自然传热百分比。
         double heat = FluidThermodynamics.ExchangeHeatWithEnvironment(
-            group.Inventory, weightedTemperature / conductance + 273.15, conductance, seconds);
+            group.Inventory, totalBodyTemperature / temperatureCount + 273.15, seconds);
         if (Math.Abs(heat) > .000001)
             foreach (MachineEntity member in group.Members) StateChanged(member);
     }

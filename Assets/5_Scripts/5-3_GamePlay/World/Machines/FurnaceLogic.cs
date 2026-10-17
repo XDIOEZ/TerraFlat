@@ -84,7 +84,6 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         Data.MaxSmeltingSpeed = configured.MaxSmeltingSpeed;
         Data.MaxTemperatureLimit = configured.MaxTemperatureLimit;
         Data.TemperatureUpSpeed = configured.TemperatureUpSpeed;
-        Data.TemperatureDownSpeed = configured.TemperatureDownSpeed;
         // x 保存真实燃值，可高于 y；y 只作为面板显示容量和自动补充阈值。
         Fuel.Fuel = new Vector2(Mathf.Max(0f, Fuel.Fuel.x), configuredFuel.Fuel.y);
         burnSpeed = fuelConfig.Value("burnSpeedMultiplier", fuelAuthoring.burnSpeedMultiplier);
@@ -219,7 +218,10 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 
     private void Cool(float seconds)
     {
-        Data.Temperature = Mathf.Max(20f, Data.Temperature - Data.TemperatureDownSpeed * seconds);
+        // 先撤掉已熄火的自身热源，再按所属地表、船舱或后台世界的真实环境自然传热。
+        PublishTemperature();
+        Data.Temperature = ThermalRuntime.AdvanceAmbient(Data.Temperature,
+            MachineWorld.SampleAmbientTemperature(Entity), seconds);
         Data.SmeltingSpeed = 0f;
     }
 

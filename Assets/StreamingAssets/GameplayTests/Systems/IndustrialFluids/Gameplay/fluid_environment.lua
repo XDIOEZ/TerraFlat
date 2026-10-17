@@ -2,6 +2,58 @@
 test.check("world_ready")
 test.check("player_ready")
 
+for _, input in ipairs({
+    {current = 20, ambient = 120, seconds = 1},
+    {current = 120, ambient = 20, seconds = 1},
+    {current = 10, ambient = 10.5, seconds = 1},
+    {current = 1000, ambient = 1000.0625, seconds = 1},
+    {current = 10, ambient = -20, seconds = 10},
+    {current = 10, ambient = 50, seconds = 1000},
+    {current = 10, ambient = 50, seconds = 0},
+}) do
+    test.runtime("containers", "ambient_heat", input, function(data)
+        local expected = input.current
+        if input.seconds > 0 then
+            expected = input.ambient + (input.current - input.ambient) * .99 ^ input.seconds
+        end
+        assert(math.abs(data.whole - expected) < .0001 and math.abs(data.split - expected) < .001,
+            "落地液体没有按统一百分比、真实目标和总时长传热")
+        assert(data.loaded and math.abs(data.crucible - expected) < .0001,
+            "坩埚未走自然传热，仍按固定摄氏速度冷却或趋近0℃")
+        assert(data.afterWorldTick == data.crucible and data.worldTickRevisionStable,
+            "坩埚更新后落地液体又叠加了一轮自然传热")
+        assert(data.amount == .5 and data.crucibleAmount == .5, "自然传热误扣了容器液体")
+        assert(data.changed == (input.seconds > 0) and data.revisionChanged == (input.seconds > 0),
+            "小温差的真实变化没有推进状态版本，或零时间被当成变化")
+        local distance = math.min(math.abs(input.ambient - input.current), 10 * input.seconds)
+        local active_expected = input.current + (input.ambient > input.current and distance or -distance)
+        assert(data.heatHandled and math.abs(data.activeTemperature - active_expected) < .0001,
+            "炉内主动加热的10℃每秒设备能力被自然百分比改掉")
+    end, string.format("液体与坩埚自然传热、单次结算和主动加热保留：%g℃→%g℃，%g秒",
+        input.current, input.ambient, input.seconds))
+end
+
+for _, count in ipairs({1, 2}) do
+    test.runtime("industrial_fluids", "tank_ambient_heat", {count = count}, function(data)
+        assert(data.shared and data.memberCount == count and #data.bodies == count,
+            "组合罐没有形成唯一真实共享库存")
+        local target = 0
+        for _, body in ipairs(data.bodies) do
+            assert(body.active and math.abs(body.ambient - 20) > 1, "罐体没有读取非20℃的真实当地环境")
+            assert(math.abs(body.after - (body.before + (body.ambient - body.before) * .01)) < .0001,
+                "罐体自然传热仍按固定摄氏速度结算")
+            target = target + body.after / count
+        end
+        target = target + 273.15
+        local expected = data.beforeKelvin + (target - data.beforeKelvin) * .01
+        assert(math.abs(data.afterKelvin - expected) < .000001,
+            "共享内容没有按真实罐体平均温度只推进一次，或罐数改变了百分比")
+        assert(data.zeroEnergyStable and data.zeroBody == data.bodies[1].before,
+            "零时间改变了罐体或共享库存")
+        assert(data.gasMoles == 1 and data.massRevisionStable, "组合罐传热改变了物质量")
+    end, "单罐及组合罐自然传热的唯一共享结算：" .. count .. "块")
+end
+
 test.runtime("containers", "whole_pour", {}, function(data)
     assert(data.blockedRemoved == 0 and data.blocked.level == 10 and data.blocked.amount == 3
         and data.blocked.water == 2.5 and data.blocked.salt == .5,

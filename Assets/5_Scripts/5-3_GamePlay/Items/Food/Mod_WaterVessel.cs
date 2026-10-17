@@ -17,7 +17,7 @@ public partial class LiquidContainerState
     public string LiquidId; // 主组分的稳定 ID；空容器必须为空。
     public float Amount; // 全部组分的真实份数，保留工业输送产生的小数尾量。
     public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
-    public float Temperature; // 混合液体的共同温度，由加工模块按秒冷却。
+    public float Temperature; // 混合液体的共同温度，自然传热与主动加工共用该状态。
     public double RainwaterProgress; // 不足一份的接雨进度随保存及装拆保留。
 
     #endregion
@@ -129,10 +129,10 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         targetOutline.Show(target.WorldCell);
     }
 
-    /// <summary>落地完整容器每秒读取所在格温度，让液体按统一速率升温、降温并触发无产物热转换。</summary>
+    /// <summary>落地完整容器每秒按当地温差百分比传热，坩埚交由其已有加工时钟统一推进。</summary>
     private void TickWorldHeat()
     {
-        if (!GameNetwork.HasStateAuthority || item == null || item.DestructionHandled ||
+        if (!Enabled || !IsRuntimeLoaded || !GameNetwork.HasStateAuthority || item == null || item.DestructionHandled ||
             item.InHand || item.Owner != null || IsEmptyAmount(Data?.Amount ?? 0f))
         {
             worldHeatClock = 0f;
@@ -145,15 +145,33 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
 
         float seconds = worldHeatClock;
         worldHeatClock = 0f;
+        Mod_Mortar mortar = item.itemMods.GetMod_ByID<Mod_Mortar>(Mod_Mortar.ModuleId);
+        if (mortar != null && mortar.Enabled && mortar.IsRuntimeLoaded && mortar.IsCrucible)
+            return;
+
+        if (AdvanceAmbientHeat(seconds))
+            Commit();
+    }
+
+    /// <summary>容器与坩埚共用实际所在地环境，自然传热只修改一次液体状态。</summary>
+    internal bool AdvanceAmbientHeat(float seconds)
+    {
+        if (!Enabled || !IsRuntimeLoaded || !GameNetwork.HasStateAuthority || item == null || item.DestructionHandled ||
+            IsEmptyAmount(Data?.Amount ?? 0f) || !float.IsFinite(seconds) || seconds <= 0f)
+            return false;
+
+        Item environmentItem = item.Owner != null ? item.Owner : item;
+        if (ItemEnvironmentSources.TryGet(environmentItem, out ItemEnvironmentSample environment))
+            return InventoryVesselHeating.ProcessWorldHeat(Data, (float)environment.TemperatureCelsius, seconds);
+
         TemperatureMgr temperatureManager = TemperatureMgr.Instance;
         if (temperatureManager == null ||
-            !temperatureManager.TryGetAmbientTemperature(item.transform.position, out float ambientTemperature))
+            !temperatureManager.TryGetAmbientTemperature(environmentItem.transform.position, out float ambientTemperature))
         {
-            return;
+            return false;
         }
 
-        if (InventoryVesselHeating.ProcessWorldHeat(Data, ambientTemperature, seconds))
-            Commit();
+        return InventoryVesselHeating.ProcessWorldHeat(Data, ambientTemperature, seconds);
     }
 
     private void OnDisable() => ReleaseTargetOutline();

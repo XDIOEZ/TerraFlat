@@ -47,6 +47,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("industrial_fluids/reservations", WorldFluidReservations);
         operations.Add("industrial_fluids/atomic_recipe", WorldFluidRecipe);
         operations.Add("industrial_fluids/heat", WorldFluidHeat);
+        operations.Add("industrial_fluids/ambient_heat", WorldFluidAmbientHeat);
         operations.Add("industrial_fluids/phase_change", WorldFluidPhase);
         operations.Add("processing/recipe_selection", WorldProcessingSelection);
         operations.Add("processing/slot_identity", WorldProcessingIdentity);
@@ -233,11 +234,14 @@ public static partial class GameplayTestSystemProbe
     {
         float current = (float)Number(args, "current", 20d), ambient = (float)Number(args, "ambient", 120d);
         float seconds = (float)Number(args, "seconds", 10d), split = current;
+        double splitDouble = current;
         for (int i = 0; i < 10; i++) split = ThermalRuntime.AdvanceAmbient(split, ambient, seconds / 10f);
+        for (int i = 0; i < 10; i++) splitDouble = ThermalRuntime.AdvanceAmbient(splitDouble, (double)ambient, seconds / 10d);
         return new JObject
         {
             ["current"] = current, ["ambient"] = ambient,
             ["whole"] = ThermalRuntime.AdvanceAmbient(current, ambient, seconds), ["split"] = split,
+            ["wholeDouble"] = ThermalRuntime.AdvanceAmbient((double)current, ambient, seconds), ["splitDouble"] = splitDouble,
             ["zeroTime"] = ThermalRuntime.AdvanceAmbient(current, ambient, 0f),
             ["negativeTime"] = ThermalRuntime.AdvanceAmbient(current, ambient, -1f),
             ["invalidCurrent"] = ThermalRuntime.AdvanceAmbient(float.NaN, ambient, seconds),
@@ -963,6 +967,44 @@ public static partial class GameplayTestSystemProbe
             ["added"] = added, ["massRevisionStable"] = hot.State.MassRevision == massRevision,
             ["hotMoles"] = (double)hot.GasMoles, ["coldMoles"] = (double)cold.GasMoles,
             ["selfTransfer"] = FluidThermodynamics.ExchangeHeat(hot, hot, 100d, 1d)
+        };
+    }
+
+    // 直接采样库存正式内能接口，比例与守恒的业务期望由 Lua 断言。
+    private static JObject WorldFluidAmbientHeat(JObject args)
+    {
+        FluidCatalog catalog = WorldFluidCatalog();
+        double current = Number(args, "current", 300d), target = Number(args, "ambient", 400d);
+        double seconds = Number(args, "seconds", 1d);
+        decimal gas = (decimal)Number(args, "gas", 2d), liquid = (decimal)Number(args, "liquid", 0d);
+        FluidInventory whole = WorldFilledFluid(catalog, gas, liquid, current);
+        FluidInventory split = WorldFilledFluid(catalog, gas, liquid, current);
+        double beforeEnergy = whole.State.TotalInternalEnergyJoules;
+        long beforeMass = whole.State.MassRevision;
+        double zeroHeat = FluidThermodynamics.ExchangeHeatWithEnvironment(whole, target, 0d);
+        double zeroTemperature = whole.GetTemperatureKelvin();
+        double negativeHeat = FluidThermodynamics.ExchangeHeatWithEnvironment(whole, target, -1d);
+        double invalidHeat = FluidThermodynamics.ExchangeHeatWithEnvironment(whole, double.NaN, seconds);
+        double invalidTimeHeat = FluidThermodynamics.ExchangeHeatWithEnvironment(whole, target, double.PositiveInfinity);
+        double heat = FluidThermodynamics.ExchangeHeatWithEnvironment(whole, target, seconds);
+        for (int i = 0; i < 10; i++)
+            FluidThermodynamics.ExchangeHeatWithEnvironment(split, target, seconds / 10d);
+        whole.GetEnergyTerms(out double heatCapacity, out _);
+        var empty = new FluidInventory(catalog: catalog);
+        return new JObject
+        {
+            ["current"] = current, ["ambient"] = target,
+            ["whole"] = whole.GetTemperatureKelvin(), ["split"] = split.GetTemperatureKelvin(),
+            ["heat"] = heat, ["energyBefore"] = beforeEnergy,
+            ["energyAfter"] = whole.State.TotalInternalEnergyJoules,
+            ["heatCapacity"] = heatCapacity,
+            ["gasMoles"] = (double)whole.GasMoles, ["liquidMoles"] = (double)whole.LiquidMoles,
+            ["massRevisionStable"] = whole.State.MassRevision == beforeMass,
+            ["zeroHeat"] = zeroHeat, ["zeroTemperature"] = zeroTemperature,
+            ["negativeHeat"] = negativeHeat, ["invalidHeat"] = invalidHeat,
+            ["invalidTimeHeat"] = invalidTimeHeat,
+            ["emptyHeat"] = FluidThermodynamics.ExchangeHeatWithEnvironment(empty, target, seconds),
+            ["emptyEnergy"] = empty.State.TotalInternalEnergyJoules
         };
     }
 

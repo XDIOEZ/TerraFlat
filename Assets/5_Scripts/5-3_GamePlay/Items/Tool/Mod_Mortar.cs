@@ -478,9 +478,9 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
 
     #endregion
 
-    #region 坩埚离开热源后的冷却
+    #region 坩埚自然传热与凝固
 
-    /// <summary>坩埚脱离热源后每秒降低一度；固体与液体分别保存在两套容器状态中。</summary>
+    /// <summary>坩埚液体按实际环境温差传热，凝固仍由坩埚自己的材料容器负责。</summary>
     public override void ModUpdate(float deltaTime)
     {
         if (!IsCrucible || !GameNetwork.HasStateAuthority || item?.itemData == null ||
@@ -488,19 +488,19 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             return;
 
         Mod_WaterVessel vessel = item.itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
-        if (vessel == null || Mod_WaterVessel.IsEmptyAmount(vessel.Data?.Amount ?? 0f))
+        if (vessel == null || !vessel.Enabled || !vessel.IsRuntimeLoaded ||
+            Mod_WaterVessel.IsEmptyAmount(vessel.Data?.Amount ?? 0f))
             return;
 
-        if (vessel.Data.Temperature > 0f)
-            vessel.Data.Temperature = Mathf.Max(0f, vessel.Data.Temperature - deltaTime);
-        vessel.Data.Revision++;
+        bool changed = vessel.AdvanceAmbientHeat(deltaTime);
         foreach (string id in new List<string>(vessel.Data.Composition.Keys))
         {
             LiquidSolidification solidification = GameRes.ExistingInstance.GetLiquidDefinition(id)?.Solidification;
             if (solidification != null && vessel.Data.Temperature < solidification.MeltingPoint)
-                TrySolidifyCrucible(vessel, id, solidification);
+                changed |= TrySolidifyCrucible(vessel, id, solidification);
         }
-        vessel.CommitExternalState();
+        if (changed)
+            vessel.CommitExternalState();
     }
 
     /// <summary>把一份已冷却液体原子转换成固体，并保留坩埚中其他固体材料。</summary>
