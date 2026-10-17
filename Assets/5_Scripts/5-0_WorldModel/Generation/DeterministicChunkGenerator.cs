@@ -235,33 +235,31 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>
-        /// 使用与正式区块相同的 Profile、水文和单格地形规则寻找可走陆地。
+        /// 从锚点沿固定斜线逐格寻找首个可走陆地，单格规则与正式区块一致。
         /// 结构不修改液体和可走标记，生态只生成物品放置记录，因此无需生成完整区块。
         /// </summary>
-        public bool TryFindWalkableSurfaceNear(
+        public bool TryFindWalkableSurfaceAlongLine(
             string dimensionId,
             int worldSeed,
             ChunkGenerationProfileSnapshot profile,
             ChunkGenerationTopologySnapshot topology,
             Int2 anchor,
-            int maxRadius,
             int sampleBudget,
             out Int2 worldCell,
             CancellationToken cancellationToken = default)
         {
-            return TryFindWalkableSurfaceNear(dimensionId, worldSeed, profile,
-                topology, anchor, maxRadius, sampleBudget, out worldCell,
+            return TryFindWalkableSurfaceAlongLine(dimensionId, worldSeed, profile,
+                topology, anchor, sampleBudget, out worldCell,
                 cancellationToken, 1);
         }
 
         /// <summary>指定正式世界纪元，允许出生搜索与随后的区块生成复用同一水文区域缓存。</summary>
-        public bool TryFindWalkableSurfaceNear(
+        public bool TryFindWalkableSurfaceAlongLine(
             string dimensionId,
             int worldSeed,
             ChunkGenerationProfileSnapshot profile,
             ChunkGenerationTopologySnapshot topology,
             Int2 anchor,
-            int maxRadius,
             int sampleBudget,
             out Int2 worldCell,
             CancellationToken cancellationToken,
@@ -278,15 +276,12 @@ namespace FlatWorld.WorldModel
             }
 
             dimensionId = string.IsNullOrWhiteSpace(dimensionId) ? "surface" : dimensionId;
-            maxRadius = Math.Max(0, maxRadius);
             sampleBudget = Math.Max(1, sampleBudget);
             worldCell = anchor;
-            IReadOnlyList<Int2> candidates = BuildSurfaceSearchCandidates(
-                anchor, topology, maxRadius, sampleBudget);
             var requests = new Dictionary<Int2, ChunkGenerationRequest>();
             var hydrologyMaps = new Dictionary<Int2, GeneratedHydrologyMap>();
-            using var sampledCell = new ChunkTerrainBuffer(1, 1, liquidTypes);
-            foreach (Int2 candidate in candidates)
+            foreach (Int2 candidate in EnumerateSurfaceSpawnLine(anchor, topology, sampleBudget,
+                         cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 Int2 origin = ResolveSearchChunkOrigin(candidate, profile, topology);
@@ -319,11 +314,10 @@ namespace FlatWorld.WorldModel
                     hydrologyMaps.Add(origin, riverMap);
                 }
 
-                // 单格沿用正式地形生成入口，避免为出生查询重复实现气候、结冰与液体规则。
-                GenerateSurfaceCell(request, profile.Settings, sampledCell, riverMap,
-                    0, 0, candidate.X, candidate.Y);
-                if (sampledCell.GetLiquidDepth(0, 0) > 0f ||
-                    !sampledCell.GetCell(0, 0).IsWalkable)
+                // 直接读取正式单格结果，找到陆地即停，不额外复制整套环境层。
+                SurfaceCellOutput output = SampleSurfaceCellOutput(request, profile.Settings, riverMap,
+                    0, 0, candidate.X, candidate.Y, liquidTypes);
+                if (output.LiquidLevel > 0 || !output.Cell.IsWalkable)
                     continue;
 
                 worldCell = candidate;
@@ -333,83 +327,31 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
-        /// <summary>
-        /// 先密集检查锚点附近，再把剩余预算均匀铺满完整半径，避免预算被近处海面耗尽。
-        /// </summary>
-        private static IReadOnlyList<Int2> BuildSurfaceSearchCandidates(
+        /// <summary>只在需要下一格时沿右上斜线前进一步；环绕回起点或坐标用尽后结束。</summary>
+        private static IEnumerable<Int2> EnumerateSurfaceSpawnLine(
             Int2 anchor,
             ChunkGenerationTopologySnapshot topology,
-            int maxRadius,
-            int sampleBudget)
+            int sampleBudget,
+            CancellationToken cancellationToken)
         {
-            var candidates = new List<Int2>(sampleBudget);
-            var visited = new HashSet<Int2>();
-
-            void AddCandidate(int offsetX, int offsetY)
+            var start = new Int2(topology.NormalizeX(anchor.X), topology.NormalizeY(anchor.Y));
+            Int2 candidate = start;
+            for (int sampled = 0; sampled < sampleBudget; sampled++)
             {
-                if (candidates.Count >= sampleBudget)
-                    return;
-
-                var candidate = new Int2(
-                    topology.NormalizeX(anchor.X + offsetX),
-                    topology.NormalizeY(anchor.Y + offsetY));
-                if (visited.Add(candidate))
-                    candidates.Add(candidate);
-            }
-
-            int localRadius = Math.Min(maxRadius, 8);
-            for (int radius = 0; radius <= localRadius && candidates.Count < sampleBudget; radius++)
-            {
-                for (int offsetY = -radius;
-                     offsetY <= radius && candidates.Count < sampleBudget;
-                     offsetY++)
-                for (int offsetX = -radius;
-                     offsetX <= radius && candidates.Count < sampleBudget;
-                     offsetX++)
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return candidate;
+                long nextX = (long)candidate.X + 1;
+                long nextY = (long)candidate.Y + 1;
+                if (topology.IsWrapped)
                 {
-                    if (radius > 0 && Math.Abs(offsetX) != radius &&
-                        Math.Abs(offsetY) != radius)
-                    {
-                        continue;
-                    }
-
-                    AddCandidate(offsetX, offsetY);
+                    if (nextX >= (long)topology.Min.X + topology.Span.X) nextX = topology.Min.X;
+                    if (nextY >= (long)topology.Min.Y + topology.Span.Y) nextY = topology.Min.Y;
                 }
+                else if (nextX > int.MaxValue || nextY > int.MaxValue)
+                    yield break;
+                candidate = new Int2((int)nextX, (int)nextY);
+                if (candidate.Equals(start)) yield break;
             }
-
-            int remainingBudget = sampleBudget - candidates.Count;
-            if (maxRadius <= localRadius || remainingBudget <= 0)
-                return candidates;
-
-            int gridSize = Math.Max(1, (int)Math.Floor(Math.Sqrt(remainingBudget)));
-            var gridOffsets = new List<Int2>(gridSize * gridSize);
-            for (int gridY = 0; gridY < gridSize; gridY++)
-            for (int gridX = 0; gridX < gridSize; gridX++)
-            {
-                int offsetX = (int)Math.Round(
-                    -maxRadius + 2d * maxRadius * (gridX + 0.5d) / gridSize,
-                    MidpointRounding.AwayFromZero);
-                int offsetY = (int)Math.Round(
-                    -maxRadius + 2d * maxRadius * (gridY + 0.5d) / gridSize,
-                    MidpointRounding.AwayFromZero);
-                gridOffsets.Add(new Int2(offsetX, offsetY));
-            }
-
-            // 全域网格也按距离由近到远检查，避免明明近处有陆地却先选中远端格子。
-            gridOffsets.Sort((left, right) =>
-            {
-                int leftDistance = Math.Max(Math.Abs(left.X), Math.Abs(left.Y));
-                int rightDistance = Math.Max(Math.Abs(right.X), Math.Abs(right.Y));
-                int distanceComparison = leftDistance.CompareTo(rightDistance);
-                if (distanceComparison != 0)
-                    return distanceComparison;
-                int yComparison = left.Y.CompareTo(right.Y);
-                return yComparison != 0 ? yComparison : left.X.CompareTo(right.X);
-            });
-            foreach (Int2 offset in gridOffsets)
-                AddCandidate(offset.X, offset.Y);
-
-            return candidates;
         }
 
         /// <summary>按世界拓扑和 Profile 尺寸计算候选格所属的规范区块原点。</summary>
@@ -771,25 +713,6 @@ namespace FlatWorld.WorldModel
         }
 
         #endregion
-
-        /// <summary>根据高度、温度、降水和河流结果，生成一个地表格子的完整数据。</summary>
-        private void GenerateSurfaceCell(
-            ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings,
-            ChunkTerrainBuffer terrain,
-            GeneratedHydrologyMap riverMap,
-            int x,
-            int y,
-            int worldX,
-            int worldY)
-        {
-            SurfaceCellOutput output = SampleSurfaceCellOutput(request, settings, riverMap,
-                x, y, worldX, worldY, terrain.LiquidTypes);
-            terrain.SetCell(x, y, output.Cell);
-            terrain.SetLiquid(x, y, output.LiquidTypeIndex, output.LiquidLevel);
-            terrain.SetGrass(x, y, output.Grass);
-            new SurfaceEnvironmentWriter(terrain).Write(y * terrain.Width + x, output);
-        }
 
         /// <summary>正式单格生成与群系查询共享最终分类和液体结果。</summary>
         private SurfaceCellOutput SampleSurfaceCellOutput(ChunkGenerationRequest request,

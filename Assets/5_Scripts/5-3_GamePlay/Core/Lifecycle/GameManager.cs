@@ -64,7 +64,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     public UltEvent BackToHelloScene_Event_End { get; set; } = new UltEvent();//用户退回到开始界面结束的事件
     #endregion
     [Header("新玩家出生点搜索配置")]
+    [Tooltip("仅用于联机位置修正时查询已加载区块；新角色按种子沿直线寻找陆地。")]
     [SerializeField, Min(1)] private int spawnLandMaxSearchRadius = 256;
+    [Tooltip("出生直线搜索最多逐格采样多少次；找到第一个无水可走格就停止。")]
     [SerializeField, Min(1)] private int spawnTerrainSampleBudget = 4096;
     [SerializeField, Min(0)] private int spawnSeedAnchorRange = 256;
 
@@ -1039,6 +1041,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         Event_PlayerEnterWorld?.Invoke(player);
     }
 
+    #region 玩家陆地出生定位
+
     private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Player player)
     {
         if (player == null || player.Data == null)
@@ -1088,13 +1092,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             landPosition = landFound
                 ? new Vector2Int(found.Value.X, found.Value.Y)
                 : seedAnchor;
-            failureReason = "未能在出生范围内采样到非水且可行走的陆地。";
+            failureReason = "未能在出生直线的采样预算内找到无水且可行走的陆地。";
         }
         else
         {
             if (pendingNewWorldSpawnSearch != null)
                 ClearPendingNewWorldSpawnSearch(cancel: true);
-            landFound = TryFindNearestLand(seedAnchor, out landPosition, out failureReason);
+            landFound = TryFindSurfaceSpawnAlongLine(seedAnchor, out landPosition, out failureReason);
         }
 
         if (!landFound)
@@ -1131,7 +1135,6 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             pendingNewWorldSpawnSearch = chunkManager.FindSurfaceSpawnAsync(
                 new FlatWorld.WorldModel.Int2(pendingNewWorldSpawnAnchor.x,
                     pendingNewWorldSpawnAnchor.y),
-                Mathf.Max(1, spawnLandMaxSearchRadius),
                 Mathf.Max(1, spawnTerrainSampleBudget),
                 pendingNewWorldSpawnCancellation.Token);
             pendingNewWorldSpawnStartedAt = Time.realtimeSinceStartup;
@@ -1171,12 +1174,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 为新玩家寻找附近陆地并设置出生位置。
+    /// 从种子锚点沿直线寻找新玩家的首个陆地出生位置。
     /// </summary>
     public bool TryGetDefaultPlayerSpawnPosition(out Vector3 spawnPos)
     {
         Vector2Int seedAnchor = GetSeedAnchorPosition();
-        if (!TryFindNearestLand(seedAnchor, out Vector2Int landPos))
+        if (!TryFindSurfaceSpawnAlongLine(seedAnchor, out Vector2Int landPos, out _))
         {
             spawnPos = Vector3.zero;
             return false;
@@ -1224,7 +1227,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 使用存档种子计算确定性的出生锚点
+    /// 使用存档种子计算确定性的出生锚点。
     /// </summary>
     private Vector2Int GetSeedAnchorPosition()
     {
@@ -1232,28 +1235,18 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         System.Random random = new System.Random(seed);
         int anchorRange = Mathf.Max(0, spawnSeedAnchorRange);
 
-        // 将锚点限制在中心区域，降低首次搜索范围
+        // 保持相同种子的直线起点一致。
         int anchorX = random.Next(-anchorRange, anchorRange + 1);
         int anchorY = random.Next(-anchorRange, anchorRange + 1);
         return new Vector2Int(anchorX, anchorY);
     }
 
     /// <summary>
-    /// 用当前维度的纯生成 Profile 与存档星球数据采样候选陆地。
-    /// 该路径只创建可释放的临时地形，不实例化 Map，也不注册运行时 Chunk。
+    /// 联机修正优先使用已加载的真实陆地，缺少候选时复用直线生成查询。
     /// </summary>
     private bool TryFindNearestLand(Vector2Int anchor, out Vector2Int landPos)
     {
-        return TryFindNearestLand(anchor, out landPos, out _);
-    }
-
-    private bool TryFindNearestLand(
-        Vector2Int anchor,
-        out Vector2Int landPos,
-        out string failureReason)
-    {
         landPos = anchor;
-        failureReason = string.Empty;
         ChunkMgr runtimeManager = ChunkMgr.Instance;
         if (runtimeManager?.WorldRuntime != null && runtimeManager.Chunks.Count > 0 &&
             runtimeManager.TryFindRuntimeWalkableLandNear(
@@ -1265,6 +1258,15 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return true;
         }
 
+        return TryFindSurfaceSpawnAlongLine(anchor, out landPos, out _);
+    }
+
+    /// <summary>同步回退与后台预搜索使用同一条直线，不实例化 Map 或注册搜索区块。</summary>
+    private bool TryFindSurfaceSpawnAlongLine(Vector2Int anchor, out Vector2Int landPos,
+        out string failureReason)
+    {
+        landPos = anchor;
+        failureReason = string.Empty;
         if (!TryGetSpawnGenerationInput(
                 out FlatWorld.WorldModel.ChunkGenerationProfileSnapshot profile,
                 out FlatWorld.WorldModel.ChunkGenerationTopologySnapshot topology,
@@ -1277,13 +1279,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         var generator = new FlatWorld.WorldModel.DeterministicChunkGenerator(GameRes.RequireWorldLiquidTypes(),
             WorldGenerationRuntimeHooks.CaptureWorldModelTerrainDecorator(
                 FlatWorld.Spaceflight.SpaceSurfaceTerrain.Apply));
-        if (generator.TryFindWalkableSurfaceNear(
+        if (generator.TryFindWalkableSurfaceAlongLine(
                 dimensionId,
                 GetActiveWorldGenerationSeed(),
                 profile,
                 topology,
                 new FlatWorld.WorldModel.Int2(anchor.x, anchor.y),
-                Mathf.Max(1, spawnLandMaxSearchRadius),
                 Mathf.Max(1, spawnTerrainSampleBudget),
                 out FlatWorld.WorldModel.Int2 result))
         {
@@ -1291,7 +1292,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return true;
         }
 
-        failureReason = "未能在出生范围内采样到非水且可行走的陆地。";
+        failureReason = "未能在出生直线的采样预算内找到无水且可行走的陆地。";
         return false;
     }
 
@@ -1400,6 +1401,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         return tile != null && tile.IsWalkable;
     }
+
+    #endregion
 
     /// <summary>
     /// 保存游戏数据专用方法；分帧采集区块并后台原子写盘，不阻塞主线程。

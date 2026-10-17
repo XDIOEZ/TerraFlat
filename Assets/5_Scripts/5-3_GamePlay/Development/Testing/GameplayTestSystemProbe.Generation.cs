@@ -114,6 +114,64 @@ public static partial class GameplayTestSystemProbe
 
     #endregion
 
+    #region 出生直线搜索采样
+
+    // 只用正式地形扩展设置水面和障碍，候选顺序、落点判断与取消都交给生产入口。
+    private static JObject WorldSurfaceSpawnLine(JObject args)
+    {
+        string scenario = Text(args, "scenario", "mixed");
+        int budget = (int)Number(args, "budget", 8d);
+        var anchor = new Int2((int)Number(args, "x", 0d), (int)Number(args, "y", 0d));
+        bool wrapped = scenario is "wrapped" or "wrapped_empty";
+        var topology = wrapped
+            ? new ChunkGenerationTopologySnapshot(new Int2(-4, -2), new Int2(8, 4)) : default;
+        int distance = scenario == "anchor" ? 0 : scenario == "distant" ? 513 : 4;
+        var target = new Int2(topology.NormalizeX(anchor.X + distance), topology.NormalizeY(anchor.Y + distance));
+        var numbers = SmallGenerationParameters();
+        numbers["terrain.seaLevel"] = 0d;
+        numbers["river.enabled"] = 0d;
+        numbers["lake.large.enabled"] = 0d;
+        numbers["climate.polarBand.enabled"] = 0d;
+        numbers["climate.temperature.celsiusMin"] = 20d;
+        numbers["climate.temperature.celsiusMax"] = 20d;
+        var profile = new ChunkGenerationProfileSnapshot("probe:spawn-line", 1, 4, 4, numbers);
+        var samples = new JArray();
+        using var cancellation = new CancellationTokenSource();
+        bool contextMatches = true;
+        var generator = new DeterministicChunkGenerator(terrainDecorator: (request, terrain, _) =>
+        {
+            Int2 cell = request.Address.ChunkOrigin;
+            samples.Add(new JObject { ["x"] = cell.X, ["y"] = cell.Y });
+            contextMatches &= request.WorldEpoch == 7 && request.WorldSeed == 17413 &&
+                              request.Address.DimensionId == "probe-surface";
+            bool dry = cell.Equals(target) && scenario is not ("empty" or "wrapped_empty" or "cancel_during");
+            bool blocked = !dry && samples.Count % 3 == 2;
+            terrain.SetCell(0, 0, new TerrainCell(1, 0, blocked ? 2 : 0, 1, 1,
+                blocked ? TerrainCellFlags.Blocking : TerrainCellFlags.Walkable));
+            terrain.SetLiquid(0, 0, dry || blocked ? 0 : LiquidTypeCatalog.BuiltIn.GetIndex(
+                samples.Count % 3 == 0 ? LiquidTypeCatalog.LavaId : LiquidTypeCatalog.DirtyWaterId),
+                dry || blocked ? 0 : 10);
+            if (scenario == "cancel_during" && samples.Count == 3) cancellation.Cancel();
+        });
+        bool found = false, cancelled = false;
+        Int2 result = anchor;
+        try
+        {
+            if (scenario == "cancelled") cancellation.Cancel();
+            found = generator.TryFindWalkableSurfaceAlongLine("probe-surface", 17413, profile,
+                topology, anchor, budget, out result, cancellation.Token, 7);
+        }
+        catch (OperationCanceledException) { cancelled = true; }
+        finally { generator.BeginNewWorldHydrologyEpoch(7); }
+        return new JObject
+        {
+            ["found"] = found, ["cancelled"] = cancelled, ["x"] = result.X, ["y"] = result.Y,
+            ["samples"] = samples, ["contextMatches"] = contextMatches
+        };
+    }
+
+    #endregion
+
     #region 纯地形冷暖生成采样
 
     private static Dictionary<string, double> SmallGenerationParameters() => new()

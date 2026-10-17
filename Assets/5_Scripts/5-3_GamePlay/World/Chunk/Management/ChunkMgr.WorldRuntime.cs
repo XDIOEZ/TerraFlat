@@ -128,9 +128,11 @@ public partial class ChunkMgr
             profile ?? defaultGenerationSnapshot, cancellationToken, topology);
     }
 
-    /// <summary>以正式生成配置和同一生成器在后台寻找出生陆地；不注册搜索用区块。</summary>
-    public Task<Int2?> FindSurfaceSpawnAsync(Int2 anchor, int maxRadius,
-        int sampleBudget, CancellationToken cancellationToken = default)
+    #region 新玩家直线出生搜索
+
+    /// <summary>以正式生成配置在后台沿一条线寻找出生陆地，不注册搜索用区块。</summary>
+    public Task<Int2?> FindSurfaceSpawnAsync(Int2 anchor, int sampleBudget,
+        CancellationToken cancellationToken = default)
     {
         if (!IsSurfaceStreamingScene) return Task.FromResult<Int2?>(null);
         EnsureWorldRuntime();
@@ -142,11 +144,13 @@ public partial class ChunkMgr
             : baseSeed;
         long epoch = runtimeChunkManager.World.Epoch;
         DeterministicChunkGenerator generator = runtimeGenerator;
-        return Task.Run(() => generator.TryFindWalkableSurfaceNear(
-                dimensionId, seed, profile, topology, anchor, maxRadius,
+        return Task.Run(() => generator.TryFindWalkableSurfaceAlongLine(
+                dimensionId, seed, profile, topology, anchor,
                 sampleBudget, out Int2 found, cancellationToken, epoch)
             ? (Int2?)found : null, cancellationToken);
     }
+
+    #endregion
 
     #region 群系调试定位
 

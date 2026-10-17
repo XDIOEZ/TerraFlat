@@ -3,6 +3,36 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.00001), message)
 end
 
+for _, case in ipairs({
+    {scenario = "anchor", budget = 8, count = 1, found = true, x = 0, y = 0},
+    {scenario = "mixed", budget = 8, count = 5, found = true, x = 0, y = 0},
+    {scenario = "mixed", budget = 4, count = 4, found = false, x = 0, y = 0},
+    {scenario = "empty", budget = 8, count = 8, found = false, x = 0, y = 0},
+    {scenario = "wrapped", budget = 12, count = 5, found = true, x = 3, y = 1, wrapped = true},
+    {scenario = "wrapped_empty", budget = 20, count = 8, found = false, x = 3, y = 1, wrapped = true},
+    {scenario = "mixed", budget = 8, count = 5, found = true, x = -9, y = -6},
+    {scenario = "distant", budget = 515, count = 514, found = true, x = 0, y = 0},
+    {scenario = "cancelled", budget = 8, count = 0, found = false, x = 0, y = 0, cancelled = true},
+    {scenario = "cancel_during", budget = 8, count = 3, found = false, x = 0, y = 0, cancelled = true}
+}) do
+    local input = case
+    test.system("terrain", "spawn_line", input, function(data)
+        assert(data.found == input.found and data.cancelled == (input.cancelled == true),
+            "出生直线搜索的落地、预算或取消结果错误：" .. input.scenario)
+        assert(#data.samples == input.count and data.contextMatches,
+            "找到陆地后仍继续搜索、预算未生效、环绕重复或世界上下文改变")
+        for index, cell in ipairs(data.samples) do
+            local x, y = input.x + index - 1, input.y + index - 1
+            if input.wrapped then x, y = (x + 4) % 8 - 4, (y + 2) % 4 - 2 end
+            assert(cell.x == x and cell.y == y, "出生搜索偏离了固定斜线或跳过中间格")
+        end
+        if input.found then
+            local last = data.samples[#data.samples]
+            assert(data.x == last.x and data.y == last.y, "落点不是直线上第一个无水可走格")
+        end
+    end, "出生点单线逐格、首个陆地即停与取消：" .. input.scenario .. "/" .. input.budget)
+end
+
 for _, wrapped in ipairs({false, true}) do
     test.system("terrain", "contact_query_context", {wrapped = wrapped}, function(data)
         assert(data.initial.found and data.initial.top == 11 and data.initial.x == -4 and
