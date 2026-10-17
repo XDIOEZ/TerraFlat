@@ -26,15 +26,18 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 ## 库存与手持
 
 - 联机客户端在同地表船体攻击的 `ClientGroundCombatPending` 期间暂缓槽位拖拽、快捷转移与制作事务；等待 Host 消耗结果成功应用后恢复，不能让旧库存包覆盖箭数或静默丢失本地事务。
+- 联机本机库存事务待确认时，原生丢弃、快捷栏使用、进食和本地弓弹药消耗在副作用前查询 `ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction`；桥只由联机业务登记，单机/Host 默认放行，不停止移动、环境与 AI。测试接入保持在 Development/Testing，不在业务代码注册工具或增加测试分支。
 
 - 重量 kg、体积 L、Stackable 独立。普通槽 `DefaultSlotVolume=int.MaxValue`，不可堆叠物一件一槽，装配槽显式为 1；数量/容量使用 float，整数转换用 `GetWholeStackAmount`。生存行囊固定 20 格，储物/制作采用配置格数。
 - ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 绑定实际槽内 ItemData 的 MassChanged，供船载质量缓存使用。新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
 - 携带量统一收集主背包、快捷栏和玩家手工制作的实际输入/输出库存，按数据引用去重；面板关闭仍计入，配方预览不计入。背包显示监听全部随身库存，手工台自行绑定数据事件更新超重状态并在卸载时解绑。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。
+- 世界拾取先用独立候选和去重目标生成只读容量计划，普通原木等按完整整数能收多少收多少，快捷栏余量继续进入背包；成功回执区分原堆扣减量与实际入包量，GM 倍率仍按完整原份结算。轻量掉落的 `body.Amount` 是唯一权威，物态推进先以它给冷载荷播种，不能让旧载荷数量复活余物；随身库存质量事件和倍率实际变化只标记拾取修订号，下次接触查询再重试，不在入包事件里递归拾取。
 - 物品修改经 `TryConsumeFromSlot/TrySetSlotItemAmount` 等事务。`InventoryContextResolver` 以 ItemData 引用/Guid 找真实所属库存；快捷栏修改后按真实槽索引刷新。`BindController/UnbindController` 只管理输入，数据/UI 监听由 `UnbindRuntimeDataEvents` 清理。
 - `Inventory_Data.GetItemSlot` 对空槽表或越界索引返回 null，不得回退第0格；库存 UI 的删除、装备和书籍输入调用链必须检查有效槽。
 - 服务器远端玩家的 Hotbar/Bag 加载真实数据和手持物，不创建 UI 或绑定本机输入；视觉副本用 `ApplyRemoteNetworkData`，权威手持用 `ApplyNetworkAuthorityData`，不能混用。太空拾取 commit 同时走服务器真实库存事务，Host 共享库存只入包一次；客户端选择请求不能改库存数量。
 - PC `OnDesktopTap` 用 Inventory_Hand 整组取放，滚轮逐件；触屏轻点单件，直接槽间拖拽复用鼠标事务，异类交换双向校验容量/接收规则。世界目标实现 `IInventoryDragDropTarget`，使用来源事务原位修改物品。
 - 仅有源库存界面时通过 `HasVisibleFlickTarget/HasFlickTarget` 关闭判定，快速拖出仍按普通拖拽拿到手部。目标可见性复用 `InventoryFlickTargets.HasVisibleTarget`，排除自己、相同数据、手部、输出、关闭/隐藏/禁用或无有效槽映射的界面；不按容量关闭开关，已满但打开的目标仍走拒绝留源。
+- 甩动在消费来源前通过带起点/方向的 `HasFlickTarget` 检查真实目标范围，`Resolve` 使用相同角度资格。优先用已登记的 `UIWindowDragSurface.WindowRect`，无正式窗口时退到真实可见槽区；按屏幕/遮罩裁剪，每个分离窗口独立判定，边缘放宽 10°，范围外走普通拿到手部。起点在目标边界内允许任意有效方向；方向内候选仍按槽区中心夹角排序，容量失败只跳过同方向范围内的目标。
 - 鼠标与触屏快速甩动共用 `InventoryFlickGesture` 检查净位移、末段速度与轨迹方向；无正式拖放目标时经 `TryConsumeSourceItem` 校验来源，再调用独立 `OnFlickTransfer`。`InventoryFlickTargets` 由正式库存 UI 生命周期登记真实输入（组合输出显式 `allowDirectionalDeposit:false`），以按下位置到可见槽区域中心和净甩动方向的夹角排序；满格/标签/承载限制拒绝的候选跳过，选定一个库存后只收可容纳部分，余物留原槽。容量预检与提交共用 `Inventory_Data.GetTransferableQuantityTo`；不试转移、不全场查找、不改 PC Shift 目标。鼠标与触屏使用同一门槛和提交入口，各自采集轨迹，先抬起再 EndDrag 也保留末段速度；单击不等待，半组拖拽保留原语义。
 - 库存短音只通过 `InventoryAudioFeedbackEvents` 观察用户点击/滚轮/拖拽/快速转移成功事务，开始拖拽仅播拿起；交换有独立提示，装备槽由 `EquipmentAudioFeedbackEvents` 在真实物品更替时播穿脱声。全部选音与 UI 播放在 `InventoryInteractionAudio`，业务不操作 AudioService。
 - 快速转移经 `InventoryQuickTransferFeedbackEvents` 在每个实际收货槽提交成功后发布物品/数量/源目标索引；`InventoryQuickTransferAnimation` 独立播放 0.24 秒无射线飞行，鼠标和触屏甩动均从松手屏幕位置起飞、Shift 快速转移从源槽起飞，按真实 Canvas 坐标与缩放显示、最多并发 32 个，关闭/卸载/虚拟化重绑取消；隐藏或不存在的槽位不编造落点。客户端机器命令只在对应 token 成功回执及同次权威库存快照应用后，按精确收货回执播放，请求阶段冻结本地松手起点并随回执复用；服务器执行远端命令时抑制 Host 本地动画。

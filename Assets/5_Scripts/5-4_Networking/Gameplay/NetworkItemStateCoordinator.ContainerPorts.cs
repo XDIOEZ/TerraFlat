@@ -39,6 +39,7 @@ namespace FlatWorld.Networking.Gameplay
         }
         private bool SendContainerIntent(ContainerTransferIntent intent, Player actor)
         {
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
             if (!NetworkClient.ready || NetworkServer.active || actor == null || actor != NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer ||
                 pendingContainerIntent != 0 && Time.unscaledTime < containerIntentDeadline) return false;
             string json = JsonConvert.SerializeObject(intent);
@@ -65,7 +66,8 @@ namespace FlatWorld.Networking.Gameplay
             try { intent = JsonConvert.DeserializeObject<ContainerTransferIntent>(request.IntentJson, new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }); }
             catch (JsonException) { connection.Send(new NetworkContainerIntentResponse { Token = request.Token, Failure = (int)ContainerTransferFailure.InvalidRequest }); return; }
             Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-            if (intent == null || actor == null || (intent.Operation?.Length ?? 0) > 32 || (intent.ContentId?.Length ?? 0) > 128 || (intent.Tag?.Length ?? 0) > 128 ||
+            if (intent == null || actor == null || connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true ||
+                (intent.Operation?.Length ?? 0) > 32 || (intent.ContentId?.Length ?? 0) > 128 || (intent.Tag?.Length ?? 0) > 128 ||
                 !CanUseContainerAddress(connection, actor, intent.Source) || !CanUseContainerAddress(connection, actor, intent.Target))
             { connection.Send(new NetworkContainerIntentResponse { Token = request.Token, Failure = (int)ContainerTransferFailure.AccessDenied }); return; }
             var context = new ContainerTransferContext(actor, GetConnectionLogicalPosition(connection), actor.gameObject.scene.handle, ContainerAccessKind.Manual, "network-container-intent");

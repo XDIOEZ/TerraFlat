@@ -141,6 +141,8 @@ namespace FlatWorld.Networking.Gameplay
         }
         private bool SendIntent(string profile, SpaceNetworkIntent intent)
         {
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() &&
+                intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill) return false;
             if (NetworkServer.active || !NetworkClient.ready || !OwnsProfile(profile)) return false;
             uint sequence = NextToken(ref intentSequence);
             if (intent.StartsGroundCombat || !SpaceSession.ClientGroundCombatPending &&
@@ -163,6 +165,12 @@ namespace FlatWorld.Networking.Gameplay
             if (!ResolveConnection(connection, out ConnectionState state, out NetworkWorldPlayer player) || !IsNewer(message.Sequence, state.IntentSequence)) return;
             state.IntentSequence = message.Sequence;
             SpaceNetworkIntent intent = message.Intent;
+            if (player.HasServerPickupTransaction && intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.UseSkill)
+            {
+                connection.Send(new NetworkSpaceIntentResponse { Sequence = message.Sequence, Accepted = false,
+                    Reason = "正在等待服务器确认拾取库存" });
+                return;
+            }
             if (intent.Kind == SpaceNetworkIntentKind.CombatStateApplied)
             { player.AcknowledgeGroundCombat(unchecked((uint)intent.Action)); return; }
             bool wasGroundCombatPending = player.GroundCombatPending;

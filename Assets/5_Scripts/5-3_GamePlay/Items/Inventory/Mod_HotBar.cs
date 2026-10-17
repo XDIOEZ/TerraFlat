@@ -780,6 +780,9 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnRightClickPerformed()
     {
+        // 本机库存尚未确认时先保留当前物品，避免使用消耗被旧快照覆盖。
+        if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            return;
         if (IsGameplayInputLocked())
         {
             return;

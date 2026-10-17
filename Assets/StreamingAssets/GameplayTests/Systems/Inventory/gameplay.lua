@@ -1,5 +1,39 @@
 -- 复用正式创造背包填充与快捷栏切换；容量和扣料细节在独立规则用例检查。
 test.check("player_ready", "真实玩家就绪")
+test.runtime("inventory", "pending_pickup_guards", {}, function(data)
+    assert(not data.pendingFoodAccepted and data.pendingFoodAmount == 3 and data.pendingFoodProgress == 0
+        and data.pendingFoodUses == 0 and data.pendingNutrition == 0,
+        "库存待确认期间仍执行进食规则、推进进度、扣食物或增加营养")
+    assert(data.pendingDiscardAmount == 3 and data.pendingDropCalls == 0
+        and data.pendingGeneratedAmount == 0 and data.pendingWorldUnchanged,
+        "库存待确认期间生成了世界掉落或扣减丢弃来源")
+    assert(data.releasedFoodAccepted and data.releasedFoodAmount == 2 and data.releasedFoodUses == 1
+        and data.releasedNutrition > 0, "库存确认后没有恢复真实进食事务")
+    assert(data.releasedDiscardAmount == 2 and data.releasedDropCalls == 1 and data.releasedGeneratedAmount == 1,
+        "库存确认后丢弃事务未恢复，或没有先生成一份再扣除一份")
+end, "拾取待确认期间原生进食与丢弃拒绝，确认后恢复")
+for _, case in ipairs({
+    {name = "十根原木捡三留七并腾空间续捡", args = {retry = true}, amount = 3, remaining = 7},
+    {name = "零容量保留完整原堆", args = {maxVolume = 0}, amount = 0, remaining = 10}
+}) do
+    test.runtime("inventory", "dropped_partial_pickup", case.args, function(data)
+        for _, sample in ipairs({data.first, data.afterMatter}) do
+            assert(sample.inventoryAmount == case.amount and sample.remaining == case.remaining
+                and sample.inventoryAmount + sample.remaining == 10, "真实地面余量被物态推进复活或丢失")
+            assert(sample.worldRecords == 1 and sample.sameGuid and sample.unitWeight == 3 and sample.unitVolume == 12,
+                "部分拾取替换了原木堆身份、删除了余量或夹具没有使用正式原木")
+        end
+        if case.args.retry then
+            assert(data.first.hotbarAmount == 2 and data.first.bagAmount == 1,
+                "没有按快捷栏再背包的顺序分摊真实接收量")
+            assert(data.inPlaceInvalidated, "同一个ItemData原位减量没有触发容量失效")
+            assert(data.removed == 2 and data.afterFreeCapacity.inventoryAmount == 3
+                and data.afterFreeCapacity.remaining == 5
+                and data.afterFreeCapacity.inventoryAmount + data.afterFreeCapacity.remaining + data.removed == 10,
+                "站在原地腾出容量后没有继续捡取，或重试造成重复/丢失")
+        end
+    end, "真实部分拾取：" .. case.name)
+end
 for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_changed", "source_changed", "moved", "early_release", "disabled"}) do
     test.runtime("inventory", "touch_tooltip", {mode = mode}, function(data)
         if mode == "inspect" or mode == "closed_after_show" then
@@ -90,6 +124,19 @@ for _, mode in ipairs({"mouse_no_target", "touch_no_target", "mouse_self_only", 
             "关闭甩动后重复点击、夹具污染手部引用或来源占用未释放")
     end, "无其他目标库存界面时关闭甩动：" .. mode)
 end
+for _, mode in ipairs({"mouse_wrong_way", "touch_wrong_way", "mouse_sideways", "touch_sideways",
+    "mouse_edge_in", "touch_edge_in", "mouse_edge_out", "touch_edge_out", "mouse_full_wrong_way"}) do
+    test.runtime("inventory", "flick_pointer", {mode = mode}, function(data)
+        local accepted = mode == "mouse_edge_in" or mode == "touch_edge_in"
+        assert(data.hasTargetBeforeRelease and data.hasTargetInDirection == accepted,
+            "打开的目标没有按实际方向范围区分，或容量错误改变角度资格")
+        assert(data.flicks == (accepted and 1 or 0) and data.taps == 0, "范围外快速拖动仍被甩动消费或误变点击")
+        assert(data.sourceAmount == 0 and data.targetAmount == (accepted and 6 or 0)
+            and data.handAmount == (accepted and 0 or 6), "范围外没有普通拿到手部，或范围内没有真实转移")
+        assert(not accepted or data.releaseMatched, "角度内甩动丢失了真实松手位置")
+        assert(data.handRestored and not data.dragLocked, "角度回退夹具没有恢复手部或释放来源")
+    end, "鼠标触屏甩动角度及普通拿起：" .. mode)
+end
 local directionalFlicks = {
     {mode = "right", selected = "right", source = 0, right = 6, down = 0},
     {mode = "pc", selected = "right", receipt = "down", source = 0, right = 0, down = 6},
@@ -97,6 +144,7 @@ local directionalFlicks = {
     {mode = "diagonal", selected = "down", source = 0, right = 0, down = 6},
     {mode = "partial", selected = "right", source = 4, right = 2, down = 0},
     {mode = "none", selected = "none", source = 6, right = 0, down = 0},
+    {mode = "full_outside_fallback", selected = "none", source = 6, right = 0, down = 0},
     {mode = "full", selected = "down", source = 0, right = 0, down = 6},
     {mode = "blocked", selected = "down", source = 0, right = 0, down = 6},
     {mode = "tag", selected = "down", source = 0, right = 0, down = 6},
@@ -131,6 +179,28 @@ for _, case in ipairs(directionalFlicks) do
             end
         end
     end, "按方向选择真实库存：" .. case.mode)
+end
+local window_flicks = {
+    {mode = "window_bottom", selected = "target", accepted = true, visible = true},
+    {mode = "window_shared_inputs", selected = "second", accepted = true, visible = true},
+    {mode = "window_outside", selected = "none", accepted = false, visible = true},
+    {mode = "window_mask_clip", selected = "none", accepted = false, visible = true},
+    {mode = "window_screen_clip", selected = "none", accepted = false, visible = true},
+    {mode = "window_multi_gap", selected = "none", accepted = false, visible = true},
+    {mode = "window_multi_right", selected = "target", accepted = true, visible = true},
+    {mode = "window_stale", selected = "none", accepted = false, visible = false},
+    {mode = "window_hidden", selected = "none", accepted = false, visible = false}
+}
+for _, case in ipairs(window_flicks) do
+    test.runtime("inventory", "directional_flick", case, function(data)
+        assert(data.visible == case.visible and data.inDirection == case.accepted and data.selected == case.selected,
+            "真实窗口边界、槽映射、屏幕/遮罩裁剪或多窗口间隙判断错误")
+        local target = case.selected == "target" and 6 or 0
+        local second = case.selected == "second" and 6 or 0
+        assert(data.sourceAmount == 6 - target - second and data.targetAmount == target and data.secondAmount == second,
+            "窗口方向选择没有转入真实目标，或错误回退到方向范围外的目标")
+        assert(data.sourceAmount + data.targetAmount + data.secondAmount == 6, "窗口方向转移数量不守恒")
+    end, "正式整窗范围与分离窗口：" .. case.mode)
 end
 local flickTransfers = {
     {name = "整组转移", capacity = 10, source = 0, target = 6, moved = true, attempts = 1},

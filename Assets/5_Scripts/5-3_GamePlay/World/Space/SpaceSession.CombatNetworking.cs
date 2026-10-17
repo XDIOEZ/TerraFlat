@@ -127,6 +127,11 @@ namespace FlatWorld.Spaceflight
         }
         public static bool RejectClientGroundInventoryMutation()
         {
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            {
+                Debug.LogWarning("[库存] 正在等待服务器确认库存，请稍后再整理物品或制作。");
+                return true;
+            }
             if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority || !ClientGroundCombatPending) return false;
             Debug.LogWarning("[库存] 正在等待服务器完成本次战斗结算，请稍后再整理物品或制作。");
             return true;

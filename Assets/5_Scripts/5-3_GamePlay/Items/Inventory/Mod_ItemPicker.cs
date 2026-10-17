@@ -11,7 +11,7 @@ using UnityEngine.Rendering;
 /// <summary>
 /// 物品拾取器组件，用于自动收集可拾取物品
 /// </summary>
-public class Mod_ItemPicker : Module
+public partial class Mod_ItemPicker : Module
 {
     #region 拾取性能诊断
     // 数量快照与事务次数分开记录，整堆入包不等于逐件创建。
@@ -48,6 +48,7 @@ public class Mod_ItemPicker : Module
         // 无论列表是否已有配置，都补齐这两个核心容器（内部会去重）
         TryAddInventoryById(ModText.Hotbar);
         TryAddInventoryById(ModText.Bag);
+        BindPickupCapacityEvents();
         droppedPickupCollider = GetComponent<Collider2D>();
         if (droppedPickupCollider == null) droppedPickupCollider = GetComponentInChildren<Collider2D>(true);
         DroppedItemService.RegisterPicker(this);
@@ -69,6 +70,7 @@ public class Mod_ItemPicker : Module
     protected override void OnUnload()
     {
         DroppedItemService.UnregisterPicker(this);
+        UnbindPickupCapacityEvents();
         deferredPickupItems.Clear();
         pickupAttemptedItems.Clear();
         PickupAmountMultiplier = 1;
@@ -168,31 +170,13 @@ public class Mod_ItemPicker : Module
     public int PickupAmountMultiplier
     {
         get => pickupAmountMultiplier;
-        set => pickupAmountMultiplier = Mathf.Clamp(value, MinPickupAmountMultiplier, MaxPickupAmountMultiplier);
-    }
-
-    /// <summary>先合计不同库存的可用空间，再按完整原物品结算，避免容量不足时留下半份或重复增产。</summary>
-    private float GetMultipliedPickupTargetAmount(ItemData candidate, float capacityAmount, float sourceAmount, int multiplier)
-    {
-        float remainingCapacity = capacityAmount;
-        var countedInventories = new HashSet<Inventory_Data>();
-        foreach (IInventory inventory in AddTargetInventories)
+        set
         {
-            Inventory_Data targetData = inventory?.GetDefaultTargetInventory()?.Data;
-            if (targetData == null || !countedInventories.Add(targetData))
-                continue;
-
-            candidate.Stack.Amount = remainingCapacity;
-            if (targetData.TryAddItem(candidate, false, out float availableAmount))
-                remainingCapacity = Mathf.Max(0f, remainingCapacity - availableAmount);
-            if (remainingCapacity <= 0.0001f)
-                break;
+            int clamped = Mathf.Clamp(value, MinPickupAmountMultiplier, MaxPickupAmountMultiplier);
+            if (pickupAmountMultiplier == clamped) return;
+            pickupAmountMultiplier = clamped;
+            pickupCapacityRevision++;
         }
-
-        float availableTotal = capacityAmount - remainingCapacity;
-        return Mathf.Abs(sourceAmount - Mathf.Round(sourceAmount)) <= 0.0001f
-            ? Mathf.Floor(availableTotal / multiplier + 0.0001f) * multiplier
-            : availableTotal;
     }
 
     #endregion
@@ -231,6 +215,7 @@ public class Mod_ItemPicker : Module
     /// <param name="other">进入触发器的碰撞体</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
+        RefreshPickupAttempts();
         Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble != null)
         {
@@ -246,6 +231,7 @@ public class Mod_ItemPicker : Module
     /// </summary>
     private void OnTriggerStay2D(Collider2D other)
     {
+        RefreshPickupAttempts();
         Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble?.itemData?.Stack == null)
             return;
@@ -374,7 +360,14 @@ public class Mod_ItemPicker : Module
     /// 网络拾取授权和单机拾取共用的唯一入包入口。
     /// </summary>
     public bool TryAcceptNetworkPickup(ItemData itemData, bool allowPartial = true)
+        => TryAcceptNetworkPickup(itemData, out _, out _, allowPartial);
+
+    /// <summary>以实际入包结果返回地面扣减份数和新增数量，预检阶段不改世界原物品。</summary>
+    public bool TryAcceptNetworkPickup(ItemData itemData, out float consumedSourceAmount,
+        out float addedAmount, bool allowPartial = true)
     {
+        consumedSourceAmount = 0f;
+        addedAmount = 0f;
         if (itemData == null || itemData.Stack == null)
             return false;
 
@@ -386,47 +379,33 @@ public class Mod_ItemPicker : Module
             return false;
         PickupSourceWholeUnitsDebug.SetGauge((long)Mathf.Min(sourceAmount, int.MaxValue));
 
-        ItemData pickupData = multiplier > 1 ? FastCloner.FastCloner.DeepClone(itemData) : itemData;
-        float pickupCapacityAmount = GetPickupCapacityLimitedAmount(itemData, requestedAmount);
-        if (!itemData.Stack.Stackable)
-            pickupCapacityAmount = Mathf.Floor(pickupCapacityAmount + 0.0001f);
-        if (pickupCapacityAmount <= 0.0001f ||
-            !allowPartial && pickupCapacityAmount + 0.0001f < requestedAmount)
+        ItemData pickupData = ItemInstanceDataFactory.CloneRuntime(itemData);
+        using var planLease = UnityEngine.Pool.ListPool<PickupInventoryPlan>.Get(out var plan);
+        float targetAmount = BuildPickupPlan(pickupData, sourceAmount, multiplier, plan);
+        if (targetAmount <= 0.0001f || !allowPartial && targetAmount + 0.0001f < requestedAmount)
         {
             PickupCapacityRejectedDebug.AddWork(1);
             return false;
         }
 
-        float targetAmount = Mathf.Min(requestedAmount, pickupCapacityAmount);
-        if (multiplier > 1)
-            targetAmount = GetMultipliedPickupTargetAmount(pickupData, targetAmount, sourceAmount, multiplier);
-        if (targetAmount <= 0.0001f || !allowPartial && targetAmount + 0.0001f < requestedAmount)
-            return false;
-
         float remainingAmount = targetAmount;
-        foreach (IInventory inventory in AddTargetInventories)
+        foreach (PickupInventoryPlan entry in plan)
         {
-            Inventory targetInventory = inventory?.GetDefaultTargetInventory();
+            Inventory targetInventory = entry.Inventory;
             if (targetInventory?.Data == null)
                 continue;
 
-            pickupData.Stack.Amount = remainingAmount;
-            if (!allowPartial && multiplier == 1 &&
-                (!targetInventory.Data.TryAddItem(pickupData, false, out float availableAmount) ||
-                 availableAmount + 0.0001f < remainingAmount))
-            {
-                continue;
-            }
+            pickupData.Stack.Amount = Mathf.Min(remainingAmount, entry.Amount);
 
             bool added;
-            float addedAmount;
+            float inventoryAddedAmount;
             using (PickupInventoryAddDebug.Measure(1, itemData.IDName))
-                added = targetInventory.Data.TryAddItem(pickupData, true, out addedAmount);
-            if (!added || addedAmount <= 0f)
+                added = targetInventory.Data.TryAddItem(pickupData, true, out inventoryAddedAmount);
+            if (!added || inventoryAddedAmount <= 0f)
                 continue;
 
             // 快捷栏只能容纳一部分时，余量继续进入主背包，不能提前结束此次拾取。
-            remainingAmount = Mathf.Max(0f, remainingAmount - addedAmount);
+            remainingAmount = Mathf.Max(0f, remainingAmount - inventoryAddedAmount);
             try
             {
                 using var refreshDebug = PickupRefreshDebug.Measure(1, itemData.IDName);
@@ -441,12 +420,13 @@ public class Mod_ItemPicker : Module
         if (totalAddedAmount <= 0f)
         {
             PickupInventoryRejectedDebug.AddWork(1);
-            itemData.Stack.Amount = sourceAmount;
             return false;
         }
         PickupAddedWholeUnitsDebug.SetGauge((long)Mathf.Min(totalAddedAmount, int.MaxValue));
 
-        float worldRemainingAmount = Mathf.Max(0f, sourceAmount - totalAddedAmount / multiplier);
+        consumedSourceAmount = totalAddedAmount / multiplier;
+        addedAmount = totalAddedAmount;
+        float worldRemainingAmount = Mathf.Max(0f, sourceAmount - consumedSourceAmount);
         bool fullyAdded = worldRemainingAmount <= 0.0001f;
         itemData.Stack.Amount = fullyAdded ? sourceAmount : worldRemainingAmount;
         itemData.Stack.CanBePickedUp = !fullyAdded;
@@ -466,6 +446,56 @@ public class Mod_ItemPicker : Module
         }
         catch (System.Exception exception) { Debug.LogError($"[Mod_ItemPicker] 入包已提交，后续通知失败：{exception}"); }
         return true;
+    }
+
+    #endregion
+
+    #region 只读拾取容量计划
+
+    private readonly struct PickupInventoryPlan
+    {
+        public readonly Inventory Inventory;
+        public readonly float Amount;
+        public PickupInventoryPlan(Inventory inventory, float amount) { Inventory = inventory; Amount = amount; }
+    }
+
+    /// <summary>联机预约与单机入包共用只读容量计划，返回最多能从原堆取走的完整份数。</summary>
+    public float GetAcceptablePickupSourceAmount(ItemData itemData, int multiplierOverride = 0)
+    {
+        if (itemData?.Stack == null || !float.IsFinite(itemData.Stack.Amount) || itemData.Stack.Amount <= 0f)
+            return 0f;
+        int multiplier = !itemData.Stack.Stackable ? 1 : multiplierOverride > 0
+            ? Mathf.Clamp(multiplierOverride, MinPickupAmountMultiplier, MaxPickupAmountMultiplier)
+            : GameNetwork.HasStateAuthority ? PickupAmountMultiplier : 1;
+        ItemData candidate = ItemInstanceDataFactory.CloneRuntime(itemData);
+        using var planLease = UnityEngine.Pool.ListPool<PickupInventoryPlan>.Get(out var plan);
+        return BuildPickupPlan(candidate, itemData.Stack.Amount, multiplier, plan) / multiplier;
+    }
+
+    private float BuildPickupPlan(ItemData candidate, float sourceAmount, int multiplier, List<PickupInventoryPlan> plan)
+    {
+        float requestedAmount = sourceAmount * multiplier;
+        if (!float.IsFinite(requestedAmount) || requestedAmount <= 0f)
+            return 0f;
+        bool wholeUnits = !candidate.Stack.Stackable || Mathf.Abs(sourceAmount - Mathf.Round(sourceAmount)) <= .0001f;
+        float capacity = GetPickupCapacityLimitedAmount(candidate, requestedAmount);
+        if (wholeUnits) capacity = Inventory_Data.GetWholeStackAmount(capacity + .0001f);
+        float remainingCapacity = Mathf.Min(requestedAmount, capacity);
+        using var countedLease = UnityEngine.Pool.HashSetPool<Inventory_Data>.Get(out var counted);
+        foreach (IInventory provider in AddTargetInventories)
+        {
+            Inventory inventory = provider?.GetDefaultTargetInventory();
+            if (inventory?.Data == null || !counted.Add(inventory.Data)) continue;
+            candidate.Stack.Amount = remainingCapacity;
+            if (!inventory.Data.TryAddItem(candidate, false, out float available)) continue;
+            if (wholeUnits) available = Inventory_Data.GetWholeStackAmount(available + .0001f);
+            if (available <= .0001f) continue;
+            plan.Add(new PickupInventoryPlan(inventory, available));
+            remainingCapacity = Mathf.Max(0f, remainingCapacity - available);
+            if (remainingCapacity <= .0001f) break;
+        }
+        float total = Mathf.Min(requestedAmount, capacity) - remainingCapacity;
+        return wholeUnits ? Mathf.Floor(total / multiplier + .0001f) * multiplier : total;
     }
 
     /// <summary>
@@ -509,6 +539,10 @@ public class Mod_ItemPicker : Module
             totalWeight,
             totalVolume);
     }
+
+    #endregion
+
+    #region 拾取表现
 
     /// <summary>
     /// 创建不含碰撞与业务脚本的视觉快照，并将其加速缩小吸入玩家身体。

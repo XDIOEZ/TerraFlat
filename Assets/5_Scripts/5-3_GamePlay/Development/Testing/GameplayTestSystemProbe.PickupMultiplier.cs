@@ -61,11 +61,23 @@ public static partial class GameplayTestSystemProbe
                 {
                     Amount = (float)Number(args, "amount", 3),
                     Stackable = Flag(args, "stackable", true),
+                    Weight = (float)Number(args, "unitWeight", 1),
+                    Volume = (float)Number(args, "unitVolume", 1),
                     CanBePickedUp = true
                 }
             };
+            first.Data.IsDepositBlocked = Flag(args, "blocked", false);
+            var sourceDuringCommit = new JArray();
+            var sourceMassChanges = new JArray();
+            foreach (Inventory inventory in inventories)
+                inventory.Data.Event_OnDataChanged += _ => sourceDuringCommit.Add(source.Stack.Amount);
+            source.MassChanged += _ => sourceMassChanges.Add(source.Stack.Amount);
             float Count(Inventory inventory) => inventory.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
-            bool accepted = picker.TryAcceptNetworkPickup(source, Flag(args, "allowPartial", true));
+            float preflight = picker.GetAcceptablePickupSourceAmount(source);
+            bool preflightUnchanged = sourceDuringCommit.Count == 0 && sourceMassChanges.Count == 0 &&
+                source.Stack.Amount == (float)Number(args, "amount", 3) && source.Stack.CanBePickedUp;
+            bool accepted = picker.TryAcceptNetworkPickup(source, out float consumed, out float added,
+                Flag(args, "allowPartial", true));
             var result = new JObject
             {
                 ["appliedMultiplier"] = picker.PickupAmountMultiplier,
@@ -75,6 +87,12 @@ public static partial class GameplayTestSystemProbe
                 ["remaining"] = source.Stack.CanBePickedUp ? source.Stack.Amount : 0f,
                 ["pickable"] = source.Stack.CanBePickedUp
             };
+            result["preflight"] = preflight;
+            result["preflightUnchanged"] = preflightUnchanged;
+            result["sourceDuringCommit"] = sourceDuringCommit;
+            result["sourceMassChanges"] = sourceMassChanges;
+            result["consumed"] = consumed;
+            result["added"] = added;
             if (Flag(args, "retry", false) && source.Stack.CanBePickedUp)
             {
                 result["blockedRetry"] = picker.TryAcceptNetworkPickup(source);

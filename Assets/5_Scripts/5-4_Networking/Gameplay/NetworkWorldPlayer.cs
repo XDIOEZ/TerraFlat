@@ -247,6 +247,8 @@ namespace FlatWorld.Networking.Gameplay
             if (corePlayer == null || !corePlayer.IsInitialized)
                 return;
 
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return;
+
             if (!IsInSpace && corePlayer.Data?.transform != null)
                 corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
                     ShipSurfacePresentation.GroundPosition(corePlayer.gameObject, corePlayer.transform.position));
@@ -339,7 +341,11 @@ namespace FlatWorld.Networking.Gameplay
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
 
+            // 拾取已交给服务器结算，确认完成前不能被更早的客户端全量库存覆盖。
+            if (HasServerPickupTransaction) return;
+
             if (!ProtectPendingRollStamina(ref payload)) return;
+
             if (corePlayer == null) return;
             if (!IsInSpace && !authoritativeGroundCombatPending)
             {
@@ -542,6 +548,11 @@ namespace FlatWorld.Networking.Gameplay
         private void OnAuthoritativeItemStateChanged(byte[] oldState, byte[] newState)
         {
             if (isServer) return;
+            if (isOwned && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            {
+                ApplyPickupNonInventoryState(newState);
+                return;
+            }
             if (isOwned && (IsInSpace || authoritativeGroundCombatPending || FlatWorld.Spaceflight.SpaceSession.ClientGroundCombatPending) && corePlayer != null)
                 ApplyOwnedCombatState(newState);
             else if (!isOwned)

@@ -201,6 +201,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         presentation.Dispose(); simulation.Dispose();
         payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
         pickupAttempts.Clear();
+        pickupAttemptCapacityRevisions.Clear();
         matterScratch.Clear(); lastMatterTimes.Clear();
     }
 

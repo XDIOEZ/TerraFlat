@@ -410,6 +410,9 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
     private void DropItemByCountCore(ItemSlot slot, int count, Vector2? screenPosition, Vector2? worldPosition)
     {
+        // 等待本机库存事务确认时不能先生成掉落，再被权威快照补回已丢弃数量。
+        if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            return;
         if (count <= 0 || slot == null || slot.Amount <= 0)
         {
             Debug.LogWarning("丢弃数量非法或物品槽为空！");

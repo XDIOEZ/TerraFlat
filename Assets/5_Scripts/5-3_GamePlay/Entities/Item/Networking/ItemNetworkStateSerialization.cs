@@ -15,6 +15,7 @@ public static class ItemNetworkStateSerialization
 
     public static event Action<Item> RuntimeStateChanged;
     public static Func<bool> ShouldDeferLocalDestruction;
+    public static Func<bool> IsLocalInventoryTransactionPending;
     public static Func<Mod_ItemPicker, Item, bool> TryBeginNetworkPickup;
     public static Func<Mod_Building, Vector3, bool> TryBeginNetworkBuilding;
     public static Func<Mod_Building, bool> TryBeginNetworkBuildingDismantle;
@@ -28,6 +29,10 @@ public static class ItemNetworkStateSerialization
 
     public static bool DeferLocalDestruction()
         => ShouldDeferLocalDestruction?.Invoke() == true;
+
+    // 原生库存入口统一查询网络事务状态，不需要依赖传输层或具体事务类型。
+    public static bool HasPendingLocalInventoryTransaction()
+        => IsLocalInventoryTransactionPending?.Invoke() == true;
 
     public static bool BeginNetworkPickup(Mod_ItemPicker picker, Item worldItem)
         => TryBeginNetworkPickup?.Invoke(picker, worldItem) == true;

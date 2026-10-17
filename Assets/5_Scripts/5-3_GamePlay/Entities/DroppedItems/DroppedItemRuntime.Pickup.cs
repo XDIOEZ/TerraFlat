@@ -17,13 +17,18 @@ internal sealed partial class DroppedItemRuntime
     #endregion
 
     private readonly Dictionary<Mod_ItemPicker, HashSet<int>> pickupAttempts = new();
+    private readonly Dictionary<Mod_ItemPicker, ulong> pickupAttemptCapacityRevisions = new();
     private readonly HashSet<int> nearby = new();
     private readonly HashSet<int> pickupReservations = new();
     private readonly List<int> pickupScratch = new();
     private readonly List<Mod_ItemPicker> pickerScratch = new();
     private float pickupClock;
 
-    public void ForgetPicker(Mod_ItemPicker picker) => pickupAttempts.Remove(picker);
+    public void ForgetPicker(Mod_ItemPicker picker)
+    {
+        pickupAttempts.Remove(picker);
+        pickupAttemptCapacityRevisions.Remove(picker);
+    }
 
     /// <summary>只查询拾取器附近空间桶；沿用其真实 Collider 的范围，不为掉落物创建 Collider。</summary>
     private void TickPickup(float deltaTime, IEnumerable<Mod_ItemPicker> pickers)
@@ -38,6 +43,12 @@ internal sealed partial class DroppedItemRuntime
             if (picker == null || !picker.TryGetDroppedPickupBounds(out Bounds bounds)) continue;
             if (!pickupAttempts.TryGetValue(picker, out HashSet<int> attempted))
                 pickupAttempts.Add(picker, attempted = new HashSet<int>());
+            ulong revision = picker.PickupCapacityRevision;
+            if (!pickupAttemptCapacityRevisions.TryGetValue(picker, out ulong attemptedRevision) || attemptedRevision != revision)
+            {
+                attempted.Clear();
+                pickupAttemptCapacityRevisions[picker] = revision;
+            }
             if (!picker.CanPickUp) { attempted.Clear(); continue; }
             nearby.Clear();
             Vector2Int min = SpatialCell(bounds.min), max = SpatialCell(bounds.max);

@@ -43,15 +43,25 @@ namespace FlatWorld.Networking.Gameplay
         private sealed class ClientPickupRequest
         {
             public Mod_ItemPicker Picker;
+            public string ItemId;
+            public uint RequestToken;
+            public uint ReservationToken;
+            public float RequestedSourceAmount;
+            public bool CommitSent;
             public float ExpiresAt;
         }
 
         private sealed class ServerPickupReservation
         {
-            public int ConnectionId;
+            public NetworkConnectionToClient Connection;
+            public NetworkWorldPlayer Actor;
+            public uint RequestToken;
             public uint Token;
             public Item Item;
             public ItemData SpaceData;
+            public ItemData SourceData;
+            public float SourceAmount;
+            public byte[] Payload;
             public float ExpiresAt;
         }
 
@@ -91,6 +101,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool runtimeBridgeRegistered;
         private bool requestedInitialState;
         private uint nextPickupReservationToken;
+        private uint nextPickupRequestToken;
         private uint nextBuildingRequestToken;
         private uint nextBuildingDismantleRequestToken;
 
@@ -104,6 +115,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkItemSpawnRequest>(OnServerSpawnRequest, false);
             NetworkServer.RegisterHandler<NetworkItemPickupRequest>(OnServerPickupRequest, false);
             NetworkServer.RegisterHandler<NetworkItemPickupCommit>(OnServerPickupCommit, false);
+            NetworkServer.RegisterHandler<NetworkItemPickupApplied>(OnServerPickupApplied, false);
             NetworkServer.RegisterHandler<NetworkBuildingPlaceRequest>(OnServerBuildingPlaceRequest, false);
             NetworkServer.RegisterHandler<NetworkBuildingDismantleRequest>(OnServerBuildingDismantleRequest, false);
             MachineWorld.NodeStateChanged += OnMechanicalStateChanged;
@@ -124,6 +136,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkItemSpawnMessage>(OnClientSpawnMessage, false);
             NetworkClient.RegisterHandler<NetworkItemDespawnMessage>(OnClientDespawnMessage, false);
             NetworkClient.RegisterHandler<NetworkItemPickupResponse>(OnClientPickupResponse, false);
+            NetworkClient.RegisterHandler<NetworkItemPickupReceipt>(OnClientPickupReceipt, false);
             NetworkClient.RegisterHandler<NetworkBuildingPlaceResponse>(OnClientBuildingPlaceResponse, false);
             NetworkClient.RegisterHandler<NetworkBuildingDismantleResponse>(OnClientBuildingDismantleResponse, false);
             NetworkClient.RegisterHandler<NetworkMechanicalNodeMessage>(OnClientMechanicalNode, false);
@@ -143,6 +156,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.UnregisterHandler<NetworkItemSpawnRequest>();
             NetworkServer.UnregisterHandler<NetworkItemPickupRequest>();
             NetworkServer.UnregisterHandler<NetworkItemPickupCommit>();
+            NetworkServer.UnregisterHandler<NetworkItemPickupApplied>();
             NetworkServer.UnregisterHandler<NetworkBuildingPlaceRequest>();
             NetworkServer.UnregisterHandler<NetworkBuildingDismantleRequest>();
             MachineWorld.NodeStateChanged -= OnMechanicalStateChanged;
@@ -167,6 +181,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkItemSpawnMessage>();
             NetworkClient.UnregisterHandler<NetworkItemDespawnMessage>();
             NetworkClient.UnregisterHandler<NetworkItemPickupResponse>();
+            NetworkClient.UnregisterHandler<NetworkItemPickupReceipt>();
             NetworkClient.UnregisterHandler<NetworkBuildingPlaceResponse>();
             NetworkClient.UnregisterHandler<NetworkBuildingDismantleResponse>();
             NetworkClient.UnregisterHandler<NetworkMechanicalNodeMessage>();
@@ -178,6 +193,7 @@ namespace FlatWorld.Networking.Gameplay
             requestedClientSpawns.Clear();
             networkInstantiationsInProgress.Clear();
             pendingClientPickups.Clear();
+            appliedClientPickupReceipts.Clear();
             RejectAllPendingBuildings("网络连接已关闭");
             RejectAllPendingDismantles("网络连接已关闭");
             requestedInitialState = false;
@@ -516,7 +532,6 @@ namespace FlatWorld.Networking.Gameplay
         {
             clientStates.Remove(message.ItemGuid);
             pendingClientStates.Remove(message.ItemGuid);
-            pendingClientPickups.Remove(message.ItemGuid);
 
             if (NetworkServer.active)
                 return;
@@ -606,249 +621,6 @@ namespace FlatWorld.Networking.Gameplay
             serverStates.Remove(item.itemData.Guid);
         }
 
-        private bool TryBeginClientPickup(Mod_ItemPicker picker, Item worldItem)
-        {
-            if (!NetworkClient.active || !NetworkClient.ready || picker == null ||
-                worldItem?.itemData == null || worldItem.itemData.Guid == 0)
-            {
-                return false;
-            }
-
-            int guid = worldItem.itemData.Guid;
-            if (!pendingClientPickups.ContainsKey(guid))
-            {
-                pendingClientPickups[guid] = new ClientPickupRequest
-                {
-                    Picker = picker,
-                    ExpiresAt = Time.unscaledTime + PickupReservationSeconds
-                };
-                NetworkClient.Send(new NetworkItemPickupRequest { ItemGuid = guid });
-            }
-
-            return true;
-        }
-
-        private void OnServerPickupRequest(
-            NetworkConnectionToClient connection,
-            NetworkItemPickupRequest request)
-        {
-            if (!CanGrantPickup(connection, request.ItemGuid, out Item item, out ItemData spaceData))
-            {
-                connection?.Send(new NetworkItemPickupResponse
-                {
-                    ItemGuid = request.ItemGuid,
-                    Granted = false,
-                    Payload = Array.Empty<byte>()
-                });
-                return;
-            }
-
-            // 水体浮沉现在是非持久化的世界运行态，不会写入 ItemData/ModuleData。
-            byte[] payload;
-            if (spaceData != null) ItemNetworkStateSerialization.TrySerializeItemData(spaceData, out payload);
-            else payload = CaptureSafely(item);
-            if (!ItemNetworkStateSerialization.IsValidPayload(payload))
-            {
-                connection.Send(new NetworkItemPickupResponse
-                {
-                    ItemGuid = request.ItemGuid,
-                    Granted = false,
-                    Payload = Array.Empty<byte>()
-                });
-                return;
-            }
-
-            uint token = unchecked(++nextPickupReservationToken);
-            if (token == 0)
-                token = unchecked(++nextPickupReservationToken);
-
-            if (spaceData != null)
-            { spaceData.Stack.CanBePickedUp = false; SpaceSession.Current.UpdateNetworkLooseItem(spaceData); }
-            else item.itemData.Stack.CanBePickedUp = false;
-            serverPickupReservations[request.ItemGuid] = new ServerPickupReservation
-            {
-                ConnectionId = connection.connectionId,
-                Token = token,
-                Item = item,
-                SpaceData = spaceData,
-                ExpiresAt = Time.unscaledTime + PickupReservationSeconds
-            };
-            if (item != null) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-
-            connection.Send(new NetworkItemPickupResponse
-            {
-                ItemGuid = request.ItemGuid,
-                ReservationToken = token,
-                Granted = true,
-                Payload = payload
-            });
-        }
-
-        private void OnClientPickupResponse(NetworkItemPickupResponse response)
-        {
-            pendingClientPickups.TryGetValue(response.ItemGuid, out ClientPickupRequest request);
-            pendingClientPickups.Remove(response.ItemGuid);
-
-            if (!response.Granted)
-                return;
-
-            bool accepted = request?.Picker != null &&
-                            ItemNetworkStateSerialization.TryDeserializeItemData(response.Payload, out ItemData itemData) &&
-                            request.Picker.TryAcceptNetworkPickup(itemData, allowPartial: false);
-
-            if (accepted)
-            {
-                Item pickupSource = ItemMgr.Instance?.GetItemByGuid(response.ItemGuid);
-                request.Picker.PlayPickupSuction(pickupSource, hideSourceRenderers: true);
-            }
-
-            NetworkClient.Send(new NetworkItemPickupCommit
-            {
-                ItemGuid = response.ItemGuid,
-                ReservationToken = response.ReservationToken,
-                AcceptedIntoInventory = accepted
-            });
-        }
-
-        private void OnServerPickupCommit(
-            NetworkConnectionToClient connection,
-            NetworkItemPickupCommit commit)
-        {
-            if (!serverPickupReservations.TryGetValue(commit.ItemGuid, out ServerPickupReservation reservation) ||
-                reservation.ConnectionId != connection.connectionId ||
-                reservation.Token != commit.ReservationToken)
-            {
-                return;
-            }
-
-            serverPickupReservations.Remove(commit.ItemGuid);
-            if (reservation.SpaceData != null)
-            {
-                NetworkWorldPlayer actor = connection.identity?.GetComponent<NetworkWorldPlayer>();
-                Mod_ItemPicker picker = actor?.CorePlayer?.GetComponentInChildren<Mod_ItemPicker>(true);
-                ItemData payload = FastCloner.FastCloner.DeepClone(reservation.SpaceData);
-                payload.Stack.CanBePickedUp = true;
-                if (commit.AcceptedIntoInventory && (connection is LocalConnectionToClient || picker != null && picker.TryAcceptNetworkPickup(payload, allowPartial: false)))
-                    SpaceSession.Current?.RemoveNetworkLooseItem(commit.ItemGuid);
-                else ReleasePickupReservation(reservation);
-                return;
-            }
-            Item item = reservation.Item;
-            if (item == null || item.itemData == null)
-                return;
-
-            if (!commit.AcceptedIntoInventory)
-            {
-                ReleasePickupReservation(reservation);
-                return;
-            }
-
-            BroadcastDespawn(item);
-            ItemMgr.Instance.DespawnItem(item, saveData: false);
-        }
-
-        private bool CanGrantPickup(
-            NetworkConnectionToClient connection,
-            int itemGuid,
-            out Item item,
-            out ItemData spaceData)
-        {
-            item = null; spaceData = null;
-            if (connection?.identity == null || !connection.isAuthenticated || !connection.isReady || itemGuid == 0 ||
-                serverPickupReservations.ContainsKey(itemGuid) || ItemMgr.Instance == null)
-            {
-                return false;
-            }
-
-            NetworkWorldPlayer player = connection.identity.GetComponent<NetworkWorldPlayer>();
-            if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true && observer.InSpace)
-            {
-                if (SpaceSession.Current?.TryGetNetworkLooseItem(itemGuid, out ItemData data, out SpaceSectorPosition position) != true ||
-                    data.Stack?.CanBePickedUp != true || SpaceSectorCoordinates.Difference(position, observer.Position).Magnitude > MaxPickupDistance)
-                    return false;
-                spaceData = data;
-                return true;
-            }
-
-            item = ItemMgr.Instance.GetItemByGuid(itemGuid);
-            if (!CanSynchronizeWorldItem(item) || item.itemData.Stack == null ||
-                !item.itemData.Stack.CanBePickedUp)
-            {
-                item = null;
-                return false;
-            }
-
-            if (WorldTopologyRuntime.Distance(
-                    GetConnectionLogicalPosition(connection), GetLogicalItemPosition(item)) > MaxPickupDistance)
-            {
-                item = null;
-                return false;
-            }
-
-            return true;
-        }
-
-        private void ProcessPickupTimeouts()
-        {
-            float now = Time.unscaledTime;
-            if (pendingClientPickups.Count > 0)
-            {
-                int[] clientGuids = new int[pendingClientPickups.Count];
-                pendingClientPickups.Keys.CopyTo(clientGuids, 0);
-                for (int i = 0; i < clientGuids.Length; i++)
-                {
-                    int guid = clientGuids[i];
-                    if (pendingClientPickups.TryGetValue(guid, out ClientPickupRequest request) &&
-                        request.ExpiresAt <= now)
-                    {
-                        pendingClientPickups.Remove(guid);
-                    }
-                }
-            }
-
-            if (!NetworkServer.active || serverPickupReservations.Count == 0)
-                return;
-
-            int[] serverGuids = new int[serverPickupReservations.Count];
-            serverPickupReservations.Keys.CopyTo(serverGuids, 0);
-            for (int i = 0; i < serverGuids.Length; i++)
-            {
-                int guid = serverGuids[i];
-                if (!serverPickupReservations.TryGetValue(guid, out ServerPickupReservation reservation) ||
-                    reservation.ExpiresAt > now)
-                {
-                    continue;
-                }
-
-                serverPickupReservations.Remove(guid);
-                ReleasePickupReservation(reservation);
-            }
-        }
-
-        private static void ReleasePickupReservation(ServerPickupReservation reservation)
-        {
-            if (reservation?.SpaceData?.Stack != null)
-            {
-                reservation.SpaceData.Stack.CanBePickedUp = true;
-                SpaceSession.Current?.UpdateNetworkLooseItem(reservation.SpaceData);
-                return;
-            }
-            Item item = reservation?.Item;
-            if (item?.itemData?.Stack == null)
-                return;
-
-            item.itemData.Stack.CanBePickedUp = true;
-            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-        }
-
-        private void ReleaseAllPickupReservations()
-        {
-            foreach (ServerPickupReservation reservation in serverPickupReservations.Values)
-                ReleasePickupReservation(reservation);
-
-            serverPickupReservations.Clear();
-        }
-
         private void OnRuntimeItemInstantiated(Item item)
         {
             if (item?.itemData == null || networkInstantiationsInProgress.Contains(item.itemData.Guid))
@@ -865,7 +637,8 @@ namespace FlatWorld.Networking.Gameplay
             int guid = item.itemData.Guid;
             pendingSpawnCandidates.Remove(guid);
             requestedClientSpawns.Remove(guid);
-            serverPickupReservations.Remove(guid);
+            if (serverPickupReservations.Remove(guid, out ServerPickupReservation reservation))
+                FinishServerPickup(reservation, false, 0f, 0f);
 
             if (NetworkServer.active && serverStates.TryGetValue(guid, out StateRecord state) && state.SpawnIfMissing)
                 BroadcastDespawn(item);
@@ -1114,6 +887,12 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!NetworkClient.active)
                 return false;
+
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            {
+                building?.RejectNetworkPlacement("正在等待服务器确认拾取库存");
+                return true;
+            }
 
             Item source = building?.item;
             if (source?.itemData?.Stack == null || source.itemData.Stack.Amount < 1f ||
@@ -1512,6 +1291,11 @@ namespace FlatWorld.Networking.Gameplay
             authoritativeSlot = null;
             authoritativePlayer = null;
             reason = null;
+            if (connection?.identity?.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true)
+            {
+                reason = "正在确认拾取库存";
+                return false;
+            }
             if (connection?.identity == null || request.RequestToken == 0 || request.SourceItemGuid == 0 ||
                 string.IsNullOrWhiteSpace(request.ItemId) || request.ItemId.Length > 128 ||
                 !IsFinite(request.Position))
@@ -1732,6 +1516,8 @@ namespace FlatWorld.Networking.Gameplay
                 ItemNetworkStateSerialization.ShouldDeferLocalDestruction =
                     () => NetworkClient.active && !NetworkServer.active;
                 ItemNetworkStateSerialization.TryBeginNetworkPickup = TryBeginClientPickup;
+                ItemNetworkStateSerialization.IsLocalInventoryTransactionPending =
+                    () => NetworkClient.active && !NetworkServer.active && pendingClientPickups.Count > 0;
                 ItemNetworkStateSerialization.TryBeginNetworkBuilding = TryBeginClientBuilding;
                 ItemNetworkStateSerialization.TryBeginNetworkBuildingDismantle =
                     TryBeginNetworkBuildingDismantle;
@@ -1746,6 +1532,7 @@ namespace FlatWorld.Networking.Gameplay
                 ItemMgr.RuntimeItemDespawning -= OnRuntimeItemDespawning;
                 ItemNetworkStateSerialization.ShouldDeferLocalDestruction = null;
                 ItemNetworkStateSerialization.TryBeginNetworkPickup = null;
+                ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = null;
                 ItemNetworkStateSerialization.TryBeginNetworkBuilding = null;
                 ItemNetworkStateSerialization.TryBeginNetworkBuildingDismantle = null;
                 ItemNetworkStateSerialization.TryBeginNetworkMechanicalDismantle = null;

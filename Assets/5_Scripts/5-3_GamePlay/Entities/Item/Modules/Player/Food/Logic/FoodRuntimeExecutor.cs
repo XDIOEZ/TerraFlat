@@ -318,6 +318,10 @@ public static class FoodConsumptionService
             source.Data.Max_EatingProgress <= 0f)
             return false;
 
+        // 库存确认前不推进本地进食规则和进度，替换型食物也遵守同一事务边界。
+        if (consumer.Item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            return false;
+
         FoodUseContext useContext = new FoodUseContext(source, consumer);
         if (!rulePipeline.CanUse(useContext))
             return false;

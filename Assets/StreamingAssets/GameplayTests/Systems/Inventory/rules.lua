@@ -29,6 +29,36 @@ for _, case in ipairs(pickup_cases) do
     end, "拾取倍率：" .. case.name)
 end
 
+local partial_pickups = {
+    {name = "十根原木按体积捡三留七", args = {maxVolume = 36, unitWeight = 3, unitVolume = 12}, first = 3, second = 0, remaining = 7},
+    {name = "十根原木按重量捡三留七", args = {maxWeight = 9, unitWeight = 3, unitVolume = 12}, first = 3, second = 0, remaining = 7},
+    {name = "快捷栏和背包共同容纳三根", args = {firstCapacity = 2, secondCapacity = 1}, first = 2, second = 1, remaining = 7},
+    {name = "只有槽位能容纳三根", args = {firstCapacity = 3}, first = 3, second = 0, remaining = 7},
+    {name = "不足一根不切碎原木", args = {maxVolume = 11, unitVolume = 12}, first = 0, second = 0, remaining = 10},
+    {name = "小数槽容量只接收整根", args = {firstCapacity = 2.5}, first = 2, second = 0, remaining = 8},
+    {name = "零容量保持原堆", args = {firstCapacity = 0}, first = 0, second = 0, remaining = 10},
+    {name = "入库门禁保持原堆", args = {blocked = true}, first = 0, second = 0, remaining = 10},
+    {name = "整组授权可跨快捷栏和背包", args = {firstCapacity = 2, secondCapacity = 8, allowPartial = false}, first = 2, second = 8, remaining = 0},
+    {name = "整组授权容量不足零提交", args = {firstCapacity = 2, secondCapacity = 1, allowPartial = false}, first = 0, second = 0, remaining = 10}
+}
+for _, case in ipairs(partial_pickups) do
+    case.args.enabled = false
+    case.args.amount = 10
+    test.system("inventory", "pickup_multiplier", case.args, function(data)
+        assert(data.accepted == (case.remaining < 10) and data.firstAmount == case.first and data.secondAmount == case.second,
+            "普通拾取没有按真实重量、体积和槽位接收最大整数数量")
+        assert(data.remaining == case.remaining and data.pickable == (case.remaining > 0), "地面余量或可拾取状态错误")
+        assert(data.consumed == 10 - case.remaining and data.added == case.first + case.second
+            and data.firstAmount + data.secondAmount + data.remaining == 10, "拾取回执或数量守恒错误")
+        assert(data.preflightUnchanged, "容量预检改动了世界源物品或触发库存事件")
+        for _, amount in ipairs(data.sourceDuringCommit) do
+            assert(amount == 10, "库存接收期间临时篡改了地面原物品数量")
+        end
+        assert(#data.sourceMassChanges == (case.remaining > 0 and case.remaining < 10 and 1 or 0),
+            "源物品数量在提交前被反复改写或拒绝拾取仍产生质量变化")
+    end, "普通部分拾取：" .. case.name)
+end
+
 test.system("inventory", "discard_hover_query", {}, function(data)
     assert(data.idleQueries == 0, "空闲60帧仍然为丢弃扫描UI")
     assert(data.firstQueries == 1 and data.switchedQueries == 2, "实际丢弃没有及时查询当前UI落点")
@@ -62,7 +92,7 @@ local directions = {
     {name = "角度优先于距离", origin = {0, 0}, direction = {1, 0}, targets = {{1000, 0}, {1, -1}}, selected = 0},
     {name = "使用按下位置而非屏幕原点", origin = {800, 600}, direction = {0, -1}, targets = {{1200, 600}, {800, 100}}, selected = 1},
     {name = "同角度保留稳定顺序", origin = {0, 0}, direction = {1, 0}, targets = {{1000, 0}, {10, 0}}, selected = 0},
-    {name = "只有背向目标也按夹角选择", origin = {0, 0}, direction = {1, 0}, targets = {{-100, 0}}, selected = 0},
+    {name = "中心排序保留背向候选，窗口资格另测", origin = {0, 0}, direction = {1, 0}, targets = {{-100, 0}}, selected = 0},
     {name = "零方向拒绝", origin = {0, 0}, direction = {0, 0}, targets = {{100, 0}}, selected = -1},
     {name = "目标与起点重合拒绝", origin = {0, 0}, direction = {1, 0}, targets = {{0, 0}}, selected = -1},
     {name = "非有限方向拒绝", invalid = "nan", origin = {0, 0}, direction = {1, 0}, targets = {{100, 0}}, selected = -1},
@@ -72,6 +102,42 @@ for _, case in ipairs(directions) do
     test.system("inventory", "flick_direction", case, function(data)
         assert(data.selected == case.selected and not data.nullSourceAccepted, "方向夹角排序或无效输入拒绝错误")
     end, "手机甩动方向：" .. case.name)
+end
+local function angle_direction(degrees)
+    local radians = degrees * math.pi / 180
+    return {math.cos(radians), math.sin(radians)}
+end
+local window_angles = {
+    {name = "正对上方容器", origin = {0, 0}, direction = {0, 1}, bounds = {-100, 100, 200, 100}, accepted = true},
+    {name = "射线穿过容器边角", origin = {0, 0}, direction = {1, 1}, bounds = {-100, 100, 200, 100}, accepted = true},
+    {name = "右边缘额外十度", origin = {0, 0}, direction = angle_direction(35), bounds = {-100, 100, 200, 100}, accepted = true},
+    {name = "右边缘超过十度", origin = {0, 0}, direction = angle_direction(34.9), bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "左边缘额外十度", origin = {0, 0}, direction = angle_direction(145), bounds = {-100, 100, 200, 100}, accepted = true},
+    {name = "左边缘超过十度", origin = {0, 0}, direction = angle_direction(145.1), bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "宽容器允许偏斜", origin = {0, 0}, direction = angle_direction(70), bounds = {-100, 100, 200, 100}, accepted = true},
+    {name = "窄容器同方向范围外", origin = {0, 0}, direction = angle_direction(70), bounds = {-10, 100, 20, 100}, accepted = false},
+    {name = "高容器允许偏斜", origin = {0, 0}, direction = angle_direction(20), bounds = {100, -100, 100, 200}, accepted = true},
+    {name = "矮容器同方向范围外", origin = {0, 0}, direction = angle_direction(20), bounds = {100, -10, 100, 20}, accepted = false},
+    {name = "完全背向拒绝", origin = {0, 0}, direction = {0, -1}, bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "正侧向拒绝", origin = {0, 0}, direction = {1, 0}, bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "负轴上侧跨一百八十度", origin = {0, 0}, direction = angle_direction(179), bounds = {-200, -20, 100, 40}, accepted = true},
+    {name = "负轴下侧跨负一百八十度", origin = {0, 0}, direction = angle_direction(-179), bounds = {-200, -20, 100, 40}, accepted = true},
+    {name = "起点在窗口内允许任意方向", origin = {50, 50}, direction = {-1, 0}, bounds = {0, 0, 100, 100}, accepted = true},
+    {name = "起点在窗口边界允许向外", origin = {0, 0}, direction = {-1, -1}, bounds = {0, 0, 100, 100}, accepted = true},
+    {name = "使用真实按下点", origin = {800, 600}, direction = {0, -1}, bounds = {700, 200, 200, 100}, accepted = true},
+    {name = "零方向拒绝", origin = {0, 0}, direction = {0, 0}, bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "无宽度窗口拒绝", origin = {0, 0}, direction = {0, 1}, bounds = {0, 100, 0, 100}, accepted = false},
+    {name = "负尺寸窗口拒绝", origin = {0, 0}, direction = {0, 1}, bounds = {0, 100, -10, 100}, accepted = false},
+    {name = "非有限方向拒绝", invalid = "nan", origin = {0, 0}, direction = {0, 1}, bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "非有限起点拒绝", invalid = "infinity", origin = {0, 0}, direction = {0, 1}, bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "非有限窗口坐标拒绝", invalid = "bounds_nan", origin = {0, 0}, direction = {0, 1}, bounds = {-100, 100, 200, 100}, accepted = false},
+    {name = "非有限窗口尺寸拒绝", invalid = "bounds_infinity", origin = {0, 0}, direction = {0, 1}, bounds = {-100, 100, 200, 100}, accepted = false}
+}
+for _, case in ipairs(window_angles) do
+    test.system("inventory", "flick_direction", case, function(data)
+        assert(data.angleAccepted == case.accepted and data.edgeTolerance == 10, "实际窗口范围或边缘十度限制错误")
+        assert(not data.nullSourceAccepted, "无来源库存通过了方向转移")
+    end, "甩动窗口角度：" .. case.name)
 end
 local flicks = {
     {name = "快速甩动", points = {{0, 0, 0}, {0.04, 48, 0}, {0.08, 96, 0}}, accepted = true},

@@ -99,6 +99,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 同地表船体战斗的临时权威交接
         public bool SubmitGroundCombatBaseline()
         {
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
             if (!isOwned || isServer || corePlayer == null || !NetworkClient.ready) return false;
             byte[] payload = ItemNetworkStateSerialization.Capture(corePlayer, true);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload)) return false;
@@ -132,7 +133,7 @@ namespace FlatWorld.Networking.Gameplay
             SpaceSessionForNetwork?.EndNetworkAttack(displayName);
             PublishServerPlayerState(force: true);
             authoritativeGroundCombatPending = false; serverGroundAttackHeld = false; groundCombatFrozen = false;
-            if (!IsInSpace) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
+            if (!IsInSpace && !HasServerPickupTransaction) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
         }
         private void UpdateNetworkCombat()
         {
@@ -151,7 +152,7 @@ namespace FlatWorld.Networking.Gameplay
                     {
                         SpaceSessionForNetwork?.EndNetworkAttack(displayName);
                         PublishServerPlayerState(force: true);
-                        if (!IsInSpace) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
+                        if (!IsInSpace && !HasServerPickupTransaction) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
                         groundCombatFrozen = true;
                     }
                 }

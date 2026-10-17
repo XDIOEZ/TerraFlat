@@ -200,7 +200,7 @@ namespace FlatWorld.Networking.Gameplay
                 ["damageWindowOpened"] = activeDamage, ["damageWindowClosed"] = !damage.IsDamageEnabled()
             };
 
-            // 掉落物先由正式拾取租约锁定，再将真实回复载荷放入该假人的测试背包。
+            // 假人只提交接收计划，真实入包与世界扣量均走正式服务器事务。
             Item loot = ItemMgr.Instance.InstantiateItem("Ore_Copper", finish + new Vector3(.5f, 0f),
                 Quaternion.identity, Vector3.one);
             scene.OwnedItemGuids.Add(loot.itemData.Guid);
@@ -212,13 +212,17 @@ namespace FlatWorld.Networking.Gameplay
             yield return RequestPickup(world.Transport, 81, lootGuid, response => grant = response);
             if (!grant.Granted || !ItemNetworkStateSerialization.TryDeserializeItemData(grant.Payload, out ItemData received))
                 throw new InvalidOperationException("假人正式拾取未授予可解码的物品载荷。");
-            int inventorySlot = FindEmptyHotbarSlot(hotbar);
-            hotbar.Data.SetOne_ItemData(inventorySlot, received);
-            ItemSlot slot = hotbar.Data.GetItemSlot(inventorySlot);
-            bool inventoryReceived = slot?.itemData?.IDName == received.IDName && slot.Amount == received.Stack.Amount;
-            if (!inventoryReceived) throw new InvalidOperationException("假人测试背包未接收真实拾取物品。");
+            int receiptCount = world.Transport.Count<NetworkItemPickupReceipt>(81);
             SubmitPickupCommit(world.Transport, 81, lootGuid, grant.ReservationToken, true);
-            yield return null;
+            NetworkItemPickupReceipt pickupReceipt = default;
+            yield return WaitPickupReceipt(world.Transport, 81, receiptCount, value => pickupReceipt = value);
+            ItemSlot slot = null;
+            for (int index = 0; index < hotbar.Data.itemSlots.Count; index++)
+                if (hotbar.Data.GetItemSlot(index)?.itemData?.IDName == received.IDName)
+                { slot = hotbar.Data.GetItemSlot(index); break; }
+            bool inventoryReceived = pickupReceipt.Accepted && slot?.Amount == received.Stack.Amount;
+            if (!inventoryReceived) throw new InvalidOperationException("正式服务器拾取没有写入假人真实背包。");
+            SubmitPickupApplied(world.Transport, 81, pickupReceipt);
             result["pickup"] = new JObject
             {
                 ["worldItemBefore"] = beforePickup["exists"],

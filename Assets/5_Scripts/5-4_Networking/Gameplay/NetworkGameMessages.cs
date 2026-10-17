@@ -6,7 +6,7 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        public const int CurrentVersion = 19;
+        public const int CurrentVersion = 20;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -306,21 +306,45 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkItemPickupRequest : NetworkMessage
     {
         public int ItemGuid;
+        public uint RequestToken;
     }
 
     public struct NetworkItemPickupResponse : NetworkMessage
     {
         public int ItemGuid;
+        public uint RequestToken;
         public uint ReservationToken;
         public bool Granted;
+        public int AmountMultiplier;
         public byte[] Payload;
     }
 
     public struct NetworkItemPickupCommit : NetworkMessage
     {
         public int ItemGuid;
+        public uint RequestToken;
         public uint ReservationToken;
-        public bool AcceptedIntoInventory;
+        public float RequestedSourceAmount;
+    }
+
+    // 客户端只有成功应用服务器库存后才确认，重发回执不会再次结算世界来源。
+    public struct NetworkItemPickupReceipt : NetworkMessage
+    {
+        public int ItemGuid;
+        public uint RequestToken;
+        public uint ReservationToken;
+        public bool Accepted;
+        public float ConsumedSourceAmount;
+        public float AddedAmount;
+        public float RemainingSourceAmount;
+        public byte[] InventoryPayload;
+    }
+
+    public struct NetworkItemPickupApplied : NetworkMessage
+    {
+        public int ItemGuid;
+        public uint RequestToken;
+        public uint ReservationToken;
     }
 
     /// <summary>服务器确认并广播的权威 Item/Module 状态。</summary>

@@ -61,6 +61,7 @@ namespace FlatWorld.Networking.Gameplay
         private InventoryQuickTransferSignal? pendingQuickTransfer;
         private float machineTransferDeadline;
         private uint lastMachineOperationInventory;
+        private uint pendingMachineInventoryOperation;
         private readonly Dictionary<int, (NetworkConnectionToClient Connection, uint Token)> machineTokens = new();
 
         private void StartMachineServerBridge()
@@ -97,6 +98,7 @@ namespace FlatWorld.Networking.Gameplay
             MachineInventoryCommands.RemoteTransferRequested -= SendMachineTransfer;
             NetworkClient.UnregisterHandler<NetworkMachineTransferResponse>();
             pendingMachineTransfer = 0;
+            pendingMachineInventoryOperation = 0;
             pendingQuickTransfer = null;
             lastMachineOperationInventory = 0;
             machineTransferDeadline = 0f;
@@ -104,10 +106,14 @@ namespace FlatWorld.Networking.Gameplay
 
         private bool SendMachineOperation(int id, string operation, string argument)
         {
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() ||
+                IsInventoryMachineOperation(operation) && pendingMachineInventoryOperation != 0) return false;
             if (!NetworkClient.ready || NetworkServer.active || string.IsNullOrWhiteSpace(operation) ||
                 operation.Length > 64 || (argument?.Length ?? 0) > 2048) return false;
+            uint token = NextMachineToken();
+            if (IsInventoryMachineOperation(operation)) pendingMachineInventoryOperation = token;
             NetworkClient.Send(new NetworkMachineOperationRequest
-            { Token = NextMachineToken(), EntityId = id, Operation = operation, Argument = argument ?? "", ShipId = CurrentRequestShipId() });
+            { Token = token, EntityId = id, Operation = operation, Argument = argument ?? "", ShipId = CurrentRequestShipId() });
             return true;
         }
 
@@ -149,11 +155,23 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnMachineOperation(NetworkConnectionToClient connection, NetworkMachineOperationRequest request)
         {
-            if (!AcceptMachineToken(connection, request.Token) || string.IsNullOrWhiteSpace(request.Operation) ||
-                request.Operation.Length > 64 || (request.Argument?.Length ?? 0) > 2048) return;
-            if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope)) return;
-            using (scope) ExecuteMachineOperation(connection, request);
+            try
+            {
+                if (!AcceptMachineToken(connection, request.Token) || string.IsNullOrWhiteSpace(request.Operation) ||
+                    request.Operation.Length > 64 || (request.Argument?.Length ?? 0) > 2048) return;
+                if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true) return;
+                if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope)) return;
+                using (scope) ExecuteMachineOperation(connection, request);
+            }
+            finally
+            {
+                if (IsInventoryMachineOperation(request.Operation))
+                    connection?.Send(new NetworkMachineTransferResponse { Token = request.Token, OperationUpdate = true });
+            }
         }
+
+        private static bool IsInventoryMachineOperation(string operation)
+            => operation is "vessel.fill" or "inventory.private-open" or "inventory.private-layout";
         private void ExecuteMachineOperation(NetworkConnectionToClient connection, NetworkMachineOperationRequest request)
         {
             Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
@@ -193,6 +211,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private bool SendMachineTransfer(Inventory source, int sourceIndex, Inventory target, int targetIndex, string operation, int amount)
         {
+            if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
             if (!NetworkClient.ready || NetworkServer.active || pendingMachineTransfer != 0 && Time.unscaledTime < machineTransferDeadline) return false;
             Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (!MachineInventoryCommands.TryAddress(actor, source, out var from) || !MachineInventoryCommands.TryAddress(actor, target, out var to) ||
@@ -225,7 +244,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             var response = new NetworkMachineTransferResponse { Token = request.Token, Source = request.Source, Target = request.Target };
             Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-            if (request.Source.MachineId == 0 && request.Target.MachineId == 0 &&
+            if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true ||
+                request.Source.MachineId == 0 && request.Target.MachineId == 0 &&
                 !MachineInventoryCommands.IsSpacesuitAddress(request.Source) && !MachineInventoryCommands.IsSpacesuitAddress(request.Target) || actor == null ||
                 request.Source.MachineId != 0 && !CanOperateMachine(connection, actor, request.Source.MachineId) ||
                 request.Target.MachineId != 0 && !CanOperateMachine(connection, actor, request.Target.MachineId) ||
@@ -285,6 +305,7 @@ namespace FlatWorld.Networking.Gameplay
             InventoryQuickTransferSignal? quick = null;
             if (response.OperationUpdate)
             {
+                if (response.Token == pendingMachineInventoryOperation) pendingMachineInventoryOperation = 0;
                 if (response.Token == 0 || unchecked((int)(response.Token - lastMachineOperationInventory)) <= 0) return;
                 lastMachineOperationInventory = response.Token;
             }

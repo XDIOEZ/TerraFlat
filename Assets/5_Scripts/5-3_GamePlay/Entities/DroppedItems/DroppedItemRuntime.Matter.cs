@@ -44,6 +44,8 @@ internal sealed partial class DroppedItemRuntime
             lastMatterTimes[id] = matterTime;
             if (seconds <= 0f) continue;
             LightweightDroppedBody body = simulation.Get(id);
+            // 物态规则只消费实体当前余量，冷载荷的旧数量不能把已拾取的物品加回地面。
+            data.Stack.Amount = body.Amount;
             bool changed, waterContact, consumedAll;
             // 分开记录单件环境、燃烧和物态替换，定位时间预算无法截断的长调用。
             using (MatterEnvironmentMarker.Auto())

@@ -236,6 +236,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     private void BeginCharge()
     {
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
+        if (item?.Owner is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+            return;
         if (_charging || item == null || !item.InHand || item.Owner == null)
             return;
 
@@ -270,6 +272,13 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (!_charging)
             return;
+
+        // 已经蓄力的本地弓也在生成箭和扣弹药前取消，不覆盖尚未确认的库存。
+        if (item?.Owner is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+        {
+            CancelCharge();
+            return;
+        }
 
         // 输入锁、失焦或应用暂停会由 GameController 主动释放“按住”状态；这些属于取消，不应误射一箭。
         if ((_controller != null && _controller.IsGameplayInputLocked) ||
