@@ -27,6 +27,8 @@ public class AI_AttackController
 	private float _recoveryTimer;
 	private bool _windowTriggered;
 	private bool _damageWindowActive;
+	private Mod_AnimatorController _attackAnimator;
+	private Vector2 _attackDirection;
 	/// <summary>缓存的动画接收器引用，用于同步 IsAttacking 状态</summary>
 	private Mod_AnimatorController_Receiver _animatorReceiver;
 	/// <summary>是否已取消 Mod_Damage_AI 的动画事件订阅</summary>
@@ -125,6 +127,7 @@ public class AI_AttackController
 		_recoveryTimer = 0f;
 		_windowTriggered = false;
 		_damageWindowActive = false;
+		_attackAnimator = null;
 		SetDamageEnabled(false);
 		SetAnimatorAttacking(false);
 	}
@@ -183,6 +186,7 @@ public class AI_AttackController
 		SetDamageEnabled(false);
 		_damageWindowActive = false;
 		SetAnimatorAttacking(false);
+		_attackAnimator = null;
 		_recoveryTimer = Mathf.Max(_recoveryTimer, Mathf.Max(0f, RecoveryDuration));
 		_windowTriggered = false;
 		if (Cooldown > 0f)
@@ -220,6 +224,8 @@ public class AI_AttackController
 		_windupTimer = Mathf.Max(0f, WindupDuration);
 		_windowRemainTimer = 0f;
 		_damageWindowActive = false;
+		_attackAnimator = animator;
+		_attackDirection = attackDirection;
 
 		// Attack.anim 的首帧为 IsAttacking=false。起手也保持 false，避免首击时
 		// 控制器先写 true、动画首帧又回写 false，从而产生额外的启动/停止事件。
@@ -228,11 +234,9 @@ public class AI_AttackController
 		// 动画有效帧到达前保持伤害关闭，避免攻击起手帧提前命中。
 		SetDamageEnabled(false);
 
-		// 播放攻击动画
-		if (animator != null && !string.IsNullOrEmpty(attackAnimName))
-		{
+		// 帧动画保留起手过程，单图前探等真正进入伤害窗口时再播放。
+		if (animator != null && !animator.IsSingleSpriteMode && !string.IsNullOrEmpty(attackAnimName))
 			animator.ForcePlayAnimation(attackAnimName);
-		}
 
 		if (_windupTimer <= 0f)
 			ActivateDamageWindow();
@@ -246,6 +250,7 @@ public class AI_AttackController
 		_recoveryTimer = 0f;
 		_windowTriggered = false;
 		_damageWindowActive = false;
+		_attackAnimator = null;
 		SetDamageEnabled(false);
 		SetAnimatorAttacking(false);
 	}
@@ -280,6 +285,8 @@ public class AI_AttackController
 
 		_damageWindowActive = true;
 		_windowRemainTimer = Mathf.Max(0.01f, DamageWindow);
+		if (_attackAnimator != null && _attackAnimator.IsSingleSpriteMode)
+			_attackAnimator.PlayAttack(_attackDirection);
 		// 视觉/事件状态与实际伤害窗口同时开始，首击和后续攻击使用同一时序。
 		SetAnimatorAttacking(true);
 		SetDamageEnabled(true);

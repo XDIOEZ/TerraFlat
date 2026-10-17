@@ -2,9 +2,11 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime`。
+快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation`。
 
 已编写的规则覆盖：ModuleDataCollection 的结构版本、启停与移除退订；ItemInstanceDataFactory 的库存、模块和标签副本隔离。
+
+2026-10-18 新增单图生物动画规则，使用独立临时 Item、停用物理的刚体和真实 `Mod_AnimatorController`，只加载动画模块并调用生产 `AdvancePresentation/PlayAttack/PlayJump/PlayHitReaction`：检查本地/远端主动迈步的左右摇摆与起伏、被动速度不误触发走路、四向与镜像父级攻击前探/归位、跳跃起落、动作中断切模式、重复加载卸载及模块启停。夹具完成绑定后激活根，移动组件保持停用，全步骤同步完成；关闭待机呼吸以核对精确归位。每步核对 Item 根/刚体不动、原 Sprite 局部姿态不被动画覆盖，切回 Animator 与卸载核对原父级、同级顺序和外部最新 Y 轴翻面；组件停用期间动作入口不能重建视觉层或残留动作，并核对身体 Animator 恢复与重新启用后可正常攻击。**本轮仅编写，未编译、未运行**；不代表玩家观感、真实调度、战斗命中、飞行/阴影叠加、对象池复用或网络端到端验收。
 
 尚待补充：强制同一池对象复用、换代后的旧引用拒绝、模块 Tick 频率、世界完整物品与轻量掉落物转换；正式加载、卸载和再次加载见下方共享现场。
 

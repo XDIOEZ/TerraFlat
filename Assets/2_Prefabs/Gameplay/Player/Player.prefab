@@ -2262,6 +2262,70 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: bb8d01322c362534b9cb2810c1e3fa0e, type: 2}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: visualMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: walkSwingAngle
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: walkSwingSpeed
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: walkBobAmount
+      value: 0.04
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: walkReturnSpeed
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: runSwingMultiplier
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: runSpeedMultiplier
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: attackDashDistance
+      value: 0.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: attackDashForwardTime
+      value: 0.06
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: attackDashBackTime
+      value: 0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: jumpHeight
+      value: 0.32
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: jumpDuration
+      value: 0.42
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: jumpSquash
+      value: 0.08
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: idleBreathAmount
+      value: 0.008
+      objectReference: {fileID: 0}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: targetSpriteRenderer
+      value:
+      objectReference: {fileID: 5714023100881721936}
+    - target: {fileID: 8150678009543317076, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+      propertyPath: spriteVisualRoot
+      value:
+      objectReference: {fileID: 6959447698631983779}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2270,6 +2334,11 @@ PrefabInstance:
 --- !u!4 &6959447698631983779 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6222619928666247172, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
+  m_PrefabInstance: {fileID: 3949589889191088807}
+  m_PrefabAsset: {fileID: 0}
+--- !u!212 &5714023100881721936 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 1086107019792522300, guid: b75b25d35b5356244b3000caf49b049c, type: 3}
   m_PrefabInstance: {fileID: 3949589889191088807}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4455247306514855316

@@ -310,7 +310,27 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder, I
 
         comboDeadline = Time.time + scaledWindow;
         nextReadyTime = Time.time + scaledLength;
+        PlayOwnerAttackPresentation();
         return true;
+    }
+
+    /// <summary>每段真实挥动只通知一次持有者，武器自己的动画与伤害盒继续使用原姿态。</summary>
+    private void PlayOwnerAttackPresentation()
+    {
+        Item owner = item?.Owner;
+        Mod_AnimatorController ownerAnimator = owner?.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+        if (ownerAnimator == null || !ownerAnimator.IsSingleSpriteMode)
+            return;
+
+        Vector2 direction = item.transform.right;
+        if (cachedController != null)
+        {
+            Vector2 aim = cachedController.GetAimWorldPosition(8192f);
+            direction = FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
+                ? aim - (Vector2)owner.transform.position
+                : WorldTopologyRuntime.ShortestDelta(owner.transform.position, aim);
+        }
+        ownerAnimator.PlayAttack(direction);
     }
 
     /// <summary>每一段实际挥动只结算一次体力；不足时拒绝启动该段攻击。</summary>

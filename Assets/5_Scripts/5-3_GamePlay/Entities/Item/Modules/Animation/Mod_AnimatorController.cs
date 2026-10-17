@@ -2,13 +2,15 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_AnimatorController : Module, ITrunDirection
+[DefaultExecutionOrder(-100)]
+public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGroundOffset
 {
     #region 模块身份
     // 模板读取早于 Awake，能力 ID 必须在装配前确定。
     public override string CanonicalModuleId => ModText.AnimatorReceiver;
     #endregion
 
+    #region 配置与状态
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
     public Ex_ModData_MemoryPackable ModData;
@@ -18,7 +20,9 @@ public class Mod_AnimatorController : Module, ITrunDirection
     private readonly Dictionary<string, int> _boolParameterHashes = new Dictionary<string, int>();
     private readonly HashSet<string> _loggedWarnings = new HashSet<string>();
     private int _cachedControllerId;
+    #endregion
 
+    #region 模块生命周期
     protected override void OnLoad()
     {
         if (animator == null)
@@ -27,18 +31,34 @@ public class Mod_AnimatorController : Module, ITrunDirection
         }
 
         RefreshControllerCache();
-      //  throw new System.NotImplementedException();
+        InitializePresentation();
     }
 
     protected override void OnSave()
     {
-       // throw new System.NotImplementedException();
     }
     public override void ModUpdate(float deltaTime)
     {
 
     }
 
+    protected override void OnUnload()
+    {
+        ReleasePresentation();
+        ClearPresentationSources();
+    }
+
+    public override void OnResourcesReloaded()
+    {
+        base.OnResourcesReloaded();
+        ReleasePresentation();
+        CachePresentationSources();
+        if (CanAdvancePresentation)
+            PreparePresentation();
+    }
+    #endregion
+
+    #region 动画入口
     [Button]
     public bool PlayAnimation(string animationName)
     {
@@ -57,6 +77,9 @@ public class Mod_AnimatorController : Module, ITrunDirection
         int preferredLayer = -1,
         float normalizedTime = 0f)
     {
+        if (IsSingleSpriteMode)
+            return TryPlaySingleSpriteAnimation(animationName, forceRestart);
+
         if (!TryGetAnimator(animationName))
         {
             return false;
@@ -83,6 +106,9 @@ public class Mod_AnimatorController : Module, ITrunDirection
     [Button]
     public bool SetBool(string parameterName, bool value)
     {
+        if (IsSingleSpriteMode)
+            return SetSingleSpriteBool(parameterName, value);
+
         if (!TryGetAnimator(parameterName) || string.IsNullOrWhiteSpace(parameterName))
         {
             return false;
@@ -97,7 +123,9 @@ public class Mod_AnimatorController : Module, ITrunDirection
         animator.SetBool(parameterHash, value);
         return true;
     }
+    #endregion
 
+    #region Animator 状态查询
     private bool TryGetAnimator(string operationName)
     {
         if (animator == null)
@@ -203,4 +231,5 @@ public class Mod_AnimatorController : Module, ITrunDirection
             Debug.LogWarning(message, context);
         }
     }
+    #endregion
 }

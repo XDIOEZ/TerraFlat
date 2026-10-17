@@ -341,6 +341,10 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         }
 
         projectile.Launch(shooter, direction, charge01, sourceDamageMultiplier, sourceSpeedMultiplier, item);
+        // 只有弹药已经实际发射才触发身体动作，取消蓄力和缺箭不会冒出攻击表现。
+        Mod_AnimatorController shooterAnimator = shooter.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+        if (shooterAnimator != null && shooterAnimator.IsSingleSpriteMode)
+            shooterAnimator.PlayAttack(direction);
         if (UseHeldItemAsAmmo)
         {
             hotbar?.RefreshUI(ammoSlot.Index);

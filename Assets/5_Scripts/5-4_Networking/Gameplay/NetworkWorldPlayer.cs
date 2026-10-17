@@ -80,6 +80,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool itemStateDirty = true;
         private bool lastSubmittedFacingLeft;
         private int lastAppliedAnimatorStateHash;
+        private bool lastAppliedVisualAttacking;
 
         public string DisplayName => displayName;
         public Player CorePlayer => corePlayer;
@@ -163,6 +164,7 @@ namespace FlatWorld.Networking.Gameplay
                 coreTurnBack = null;
                 coreAnimator = null;
                 coreAnimatorReceiver = null;
+                lastAppliedVisualAttacking = false;
                 remoteModuleStateHashes.Clear();
             }
 
@@ -300,8 +302,10 @@ namespace FlatWorld.Networking.Gameplay
             CacheAnimatorModules();
 
             Animator animator = coreAnimator?.animator;
+            bool singleSprite = coreAnimator != null && coreAnimator.IsSingleSpriteMode;
             int animatorStateHash = 0;
-            if (animator != null && animator.runtimeAnimatorController != null && animator.layerCount > 0)
+            if (!singleSprite && animator != null && animator.enabled &&
+                animator.runtimeAnimatorController != null && animator.layerCount > 0)
             {
                 AnimatorStateInfo stateInfo = animator.IsInTransition(0)
                     ? animator.GetNextAnimatorStateInfo(0)
@@ -311,9 +315,10 @@ namespace FlatWorld.Networking.Gameplay
 
             return new NetworkPlayerVisualState
             {
-                IsMoving = velocity.sqrMagnitude > 0.001f,
+                // 单图跟随主动移动，水流、船载与失重漂移不能被同步成迈步。
+                IsMoving = singleSprite ? coreMover != null && coreMover.IsMoving : velocity.sqrMagnitude > 0.001f,
                 IsRunning = coreMover != null && coreMover.IsRunning,
-                IsAttacking = coreAnimatorReceiver != null && coreAnimatorReceiver.IsAttacking,
+                IsAttacking = singleSprite ? coreAnimator.IsAttackPlaying : coreAnimatorReceiver != null && coreAnimatorReceiver.IsAttacking,
                 CanUseSkill = coreAnimatorReceiver != null && coreAnimatorReceiver.CanUseSkill,
                 SkillId = coreAnimatorReceiver != null ? coreAnimatorReceiver.SkillId : 0,
                 AnimatorStateHash = animatorStateHash
@@ -577,6 +582,28 @@ namespace FlatWorld.Networking.Gameplay
 
             CacheAnimatorModules();
 
+            bool singleSprite = coreAnimator != null && coreAnimator.IsSingleSpriteMode;
+            coreAnimator?.SetNetworkPresentation(true, state.IsMoving, state.IsRunning);
+
+            if (coreAnimatorReceiver != null)
+            {
+                if (!singleSprite)
+                    coreAnimatorReceiver.IsAttacking = state.IsAttacking;
+                coreAnimatorReceiver.CanUseSkill = state.CanUseSkill;
+                coreAnimatorReceiver.SkillId = state.SkillId;
+            }
+
+            if (singleSprite)
+            {
+                // 远端状态每帧重复应用，只有新一轮攻击的上升沿触发一次身体动作。
+                if (state.IsAttacking && !lastAppliedVisualAttacking)
+                    coreAnimator.PlayAttack(authoritativeFacingLeft ? Vector2.left : Vector2.right);
+                lastAppliedVisualAttacking = state.IsAttacking;
+                lastAppliedAnimatorStateHash = 0;
+                return;
+            }
+
+            lastAppliedVisualAttacking = state.IsAttacking;
             Animator animator = coreAnimator?.animator;
             if (animator != null)
             {
@@ -586,14 +613,6 @@ namespace FlatWorld.Networking.Gameplay
 
             SetAnimatorBoolIfPresent(animator, AnimationText.Move, state.IsMoving);
             SetAnimatorBoolIfPresent(animator, AnimationText.Run, state.IsRunning);
-
-            if (coreAnimatorReceiver != null)
-            {
-                coreAnimatorReceiver.SetNetworkPresentation(true, state.IsMoving);
-                coreAnimatorReceiver.IsAttacking = state.IsAttacking;
-                coreAnimatorReceiver.CanUseSkill = state.CanUseSkill;
-                coreAnimatorReceiver.SkillId = state.SkillId;
-            }
 
             if (animator == null || state.AnimatorStateHash == 0 ||
                 state.AnimatorStateHash == lastAppliedAnimatorStateHash ||
@@ -704,6 +723,8 @@ namespace FlatWorld.Networking.Gameplay
                 coreTurnBack = corePlayer.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
                 coreAnimator = corePlayer.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
                 coreAnimatorReceiver = coreAnimator as Mod_AnimatorController_Receiver;
+                if (coreAvatarIsLocal)
+                    coreAnimator?.SetNetworkPresentation(false, false);
                 if (!coreAvatarIsLocal && !isServer && coreTurnBack != null)
                     coreTurnBack.faceMouse = null;
 

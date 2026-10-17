@@ -18,12 +18,22 @@ public static class VisualGroundOffsetResolver
     public static IVisualGroundOffset FindProvider(Item item)
     {
         MonoBehaviour[] components = item.GetComponentsInChildren<MonoBehaviour>(true);
+        IVisualGroundOffset first = null;
+        System.Collections.Generic.List<IVisualGroundOffset> providers = null;
         for (int i = 0; i < components.Length; i++)
         {
-            if (components[i] is IVisualGroundOffset provider)
-                return provider;
+            if (components[i] is not IVisualGroundOffset provider)
+                continue;
+            if (first == null)
+            {
+                first = provider;
+                continue;
+            }
+            providers ??= new System.Collections.Generic.List<IVisualGroundOffset> { first };
+            providers.Add(provider);
         }
-        return null;
+        // 鸟类起飞与单图小动作分别贡献位移，不能让新提供者遮掉已有飞行高度。
+        return providers != null ? new CombinedGroundOffsetProvider(providers.ToArray()) : first;
     }
 
     /// <summary>读取指定贴图的位移；没有视觉抬升时地面姿态就是当前姿态。</summary>
@@ -32,6 +42,33 @@ public static class VisualGroundOffsetResolver
         return provider != null && provider.TryGetVisualGroundOffset(visual, out Vector3 offset)
             ? offset
             : Vector3.zero;
+    }
+
+    private sealed class CombinedGroundOffsetProvider : IVisualGroundOffset
+    {
+        private readonly IVisualGroundOffset[] providers;
+
+        public CombinedGroundOffsetProvider(IVisualGroundOffset[] providers)
+        {
+            this.providers = providers;
+        }
+
+        public bool TryGetVisualGroundOffset(Transform visual, out Vector3 worldOffset)
+        {
+            worldOffset = Vector3.zero;
+            bool found = false;
+            for (int i = 0; i < providers.Length; i++)
+            {
+                IVisualGroundOffset provider = providers[i];
+                if (provider is Object unityProvider && unityProvider == null)
+                    continue;
+                if (!provider.TryGetVisualGroundOffset(visual, out Vector3 offset))
+                    continue;
+                worldOffset += offset;
+                found = true;
+            }
+            return found;
+        }
     }
     #endregion
 }

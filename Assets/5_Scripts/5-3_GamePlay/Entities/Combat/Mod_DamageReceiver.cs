@@ -1699,12 +1699,19 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         {
             StopCoroutine(_shakeCoroutine);
             spriteTransform.localPosition = _visualShakeRestPosition;
-        }
-        else
-        {
-            _visualShakeRestPosition = spriteTransform.localPosition;
+            _shakeCoroutine = null;
+            _isVisualShaking = false;
         }
 
+        Mod_AnimatorController visualAnimator = item.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+        if (visualAnimator != null && visualAnimator.IsSingleSpriteMode)
+        {
+            // 单图由同一表现层合成受击与步行动作，避免协程覆盖正在攻击或跳起的姿态。
+            visualAnimator.PlayHitReaction(shakeDuration, shakeMagnitude);
+            return;
+        }
+
+        _visualShakeRestPosition = spriteTransform.localPosition;
         _shakeCoroutine = StartCoroutine(ShakeSprite(spriteTransform, _visualShakeRestPosition));
     }
 

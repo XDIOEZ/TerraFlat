@@ -247,7 +247,22 @@ public partial class Mod_ColdWeapon : Module
 
         // 通知伤害模块启用伤害检测
         NotifyDamageModule(true);
+        PlayOwnerAttackPresentation();
         OnAttackStart.Invoke();
+    }
+
+    /// <summary>刺击真正开始时通知角色单图表现，不改变武器移动轨迹。</summary>
+    private void PlayOwnerAttackPresentation()
+    {
+        Item owner = item?.Owner;
+        Mod_AnimatorController ownerAnimator = owner?.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+        if (ownerAnimator == null || !ownerAnimator.IsSingleSpriteMode)
+            return;
+
+        Vector2 direction = faceMouse != null
+            ? WorldTopologyRuntime.ShortestDelta(owner.transform.position, faceMouse.Data.See_Point)
+            : (Vector2)item.transform.right;
+        ownerAnimator.PlayAttack(direction);
     }
 
     public virtual void StopAttack()
