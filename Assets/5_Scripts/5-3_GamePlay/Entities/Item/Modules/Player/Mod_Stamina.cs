@@ -64,6 +64,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     private RectTransform staminaFillArea; // 保持原填充样式，仅让填充范围与可用上限一致。
     private RectTransform staminaHudRect;
     private RectTransform hotbarHudRect;
+    private HotbarItemNameHUD hotbarItemNameHud;
     private readonly Vector3[] hotbarCorners = new Vector3[4];
     private const float StaminaHotbarGap = 12f;
     protected override void OnLoad()
@@ -127,6 +128,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         staminaFillArea = null;
         staminaHudRect = null;
         hotbarHudRect = null;
+        hotbarItemNameHud = null;
         capacityModifiers.Clear();
         adminController = null;
     }
@@ -281,6 +283,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         {
             Mod_HotBar hotbar = item != null ? item.GetComponentInChildren<Mod_HotBar>(true) : null;
             hotbarHudRect = hotbar?.RuntimeInventory?.basePanel?.transform as RectTransform;
+            hotbarItemNameHud = hotbarHudRect != null ? hotbarHudRect.GetComponent<HotbarItemNameHUD>() : null;
         }
         if (hotbarHudRect == null || !hotbarHudRect.gameObject.activeInHierarchy)
             return;
@@ -299,6 +302,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
             position.y = desiredY;
             staminaHudRect.anchoredPosition = position;
         }
+        hotbarItemNameHud?.PositionAboveHud(staminaHudRect);
     }
 
     #endregion

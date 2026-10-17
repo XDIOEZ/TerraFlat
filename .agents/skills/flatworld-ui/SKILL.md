@@ -34,7 +34,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 手工制作与玩家设置面板也由各自 `OnUnload` 注销并销毁；`UIManager.DestroyPanel` 在延迟 Destroy 前立即停用对象，避免新玩家同帧被旧面板拦截射线。
 - `UI_WorldLoading` 为不透明黑幕与独立内容 CanvasGroup：进世界前覆盖并绘制一帧，区块表现就绪后内容→黑幕淡出→释放输入；同场景重生为单段淡出。
 - 角色世界状态条使用高于 Water 的 Sorting Layer；直接挂普通 Transform 的 RectTransform 偏移以 anchoredPosition 为准。
-- 玩家体力条由 `Mod_Stamina` 按真实快捷栏矩形的上沿动态避让，不改通用 `UI_Slider` Prefab；手机安全区、快捷栏缩放和底部间距改变后保持不重叠。
+- 玩家体力条由 `Mod_Stamina` 按真实快捷栏矩形的上沿动态避让，不改通用 `UI_Slider` Prefab；定位后调用 `HotbarItemNameHUD.PositionAboveHud`，让名称底板按体力条实际上沿留出 12 个快捷栏逻辑像素；手机安全区、快捷栏缩放和底部间距改变后保持不重叠。
 
 ## 布局、动画与公共控件
 

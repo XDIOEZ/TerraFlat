@@ -21,6 +21,7 @@ public sealed class HotbarItemNameHUD : MonoBehaviour
     private Mod_HotBar hotbar;
     private LocalizedTextBinder nameBinding;
     private Tween fadeTween;
+    private readonly Vector3[] layoutCorners = new Vector3[4];
 
     #endregion
 
@@ -66,6 +67,28 @@ public sealed class HotbarItemNameHUD : MonoBehaviour
     {
         if (hotbar != null)
             hotbar.HeldItemChanged -= ShowItem;
+    }
+
+    #endregion
+
+    #region 名称布局
+
+    /// <summary>按下方 HUD 的实际边界抬高名称，兼容快捷栏与体力条采用不同缩放。</summary>
+    public void PositionAboveHud(RectTransform lowerHud)
+    {
+        if (lowerHud == null || nameGroup == null ||
+            nameGroup.transform is not RectTransform plate || plate.parent is not RectTransform parent)
+            return;
+
+        lowerHud.GetWorldCorners(layoutCorners);
+        float lowerHudTop = Mathf.Max(parent.InverseTransformPoint(layoutCorners[1]).y,
+            parent.InverseTransformPoint(layoutCorners[2]).y);
+        plate.GetWorldCorners(layoutCorners);
+        float plateBottom = Mathf.Min(parent.InverseTransformPoint(layoutCorners[0]).y,
+            parent.InverseTransformPoint(layoutCorners[3]).y);
+        float offset = lowerHudTop + 12f - plateBottom;
+        if (Mathf.Abs(offset) > 0.1f)
+            plate.anchoredPosition += Vector2.up * offset;
     }
 
     #endregion
