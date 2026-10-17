@@ -107,6 +107,26 @@ test.runtime("inventory", "equipment_drag", {}, function(data)
         "装备拖拽完成或失败后没有释放来源占用")
 end, "装备槽标签拒绝、合法装卸、双向交换与拖拽收尾")
 
+test.runtime("inventory", "equipment_configuration", {}, function(data)
+    assert(data.genericConfigurationButtons == 1 and data.specializedConfigurationButtons == 0,
+        "正式装备页应只有统一装备配置入口，不应含宇航服专用按钮")
+    assert(data.emptyCount == 0 and data.ordinaryCount == 0,
+        "空装备栏或只有普通装备时不应出现装备配置目标")
+    assert(data.nullRejected and data.foreignRejected,
+        "空目标或不属于实际装备栏的配置效果未被拒绝")
+    assert(data.singleCount == 1 and data.singleItemMatched and data.singleOpened,
+        "正式宇航服衣服没有通过通用装备能力提供自身配置入口")
+    assert(data.unequipped and data.staleRejected and data.afterUnequipCount == 0,
+        "装备卸下后仍可发现或打开旧配置目标")
+    assert(data.multipleCount == 2 and data.firstItemCount == 1 and data.secondItemCount == 1
+        and data.firstConfigurationEffects == 2 and data.secondOpened,
+        "多件可配置装备没有分别收集，或同件装备的多个配置效果没有去重")
+    assert(data.reequippedOldTargetRejected,
+        "同一件物品重新穿戴后，旧装备效果引用仍能打开配置")
+    assert(data.originalEquipmentRestored,
+        "装备配置夹具没有归还隔离玩家原有装备引用或槽位")
+end, "通用装备配置发现、同件去重、多目标、旧目标拒绝与原装备恢复")
+
 test.runtime("inventory", "creative_restore", {}, function(data)
     assert(data.restored and data.slotCount == data.originalSlotCount,
         "创造背包测试结束后未恢复原有背包格数")

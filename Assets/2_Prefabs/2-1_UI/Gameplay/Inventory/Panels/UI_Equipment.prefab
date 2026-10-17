@@ -2979,7 +2979,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 4665960006879160514, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
       propertyPath: m_Name
-      value: "FWUI_ConfigureSpacesuit"
+      value: "FWUI_ConfigureEquipment"
       objectReference: {fileID: 0}
     - target: {fileID: 44358415694853317, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
       propertyPath: m_AnchorMin.x
@@ -3023,7 +3023,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6230221144704590992, guid: 8c3e275eabc48b04c828e6162cc59129, type: 3}
       propertyPath: m_text
-      value: "\u5b87\u822a\u670d\u914d\u7f6e"
+      value: "\u88c5\u5907\u914d\u7f6e"
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

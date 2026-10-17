@@ -21,6 +21,7 @@ public static partial class GameplayTestRuntimeProbe
         ["inventory/creative_restore"] = RestoreCreativeInventoryScope,
         ["inventory/direct_drag"] = CaptureInventoryDirectDrag,
         ["inventory/equipment_drag"] = CaptureInventoryEquipmentDrag,
+        ["inventory/equipment_configuration"] = CaptureEquipmentConfiguration,
         ["world_streaming/live_window"] = CaptureLiveWindow,
         ["save/isolated_roundtrip"] = CaptureIsolatedRoundtrip,
         ["industrial_fluids/selector_routes"] = GameplayTestFluidNetworks.CaptureSelectorRoutes,
@@ -354,6 +355,117 @@ public static partial class GameplayTestRuntimeProbe
         result["headAfterUnequip"] = CaptureDragSlot(equipment, head);
         result["sourceDragReleased"] = !source.HasActiveSlotDrag;
         result["equipmentDragReleased"] = !equipment.HasActiveSlotDrag;
+        return result;
+    }
+
+    #endregion
+
+    #region 正式装备配置入口现场
+
+    // 夹具只暂存隔离玩家原装备，配置目标始终由正式装备效果和公开入口生成。
+    private static JObject CaptureEquipmentConfiguration(Player player, JObject args)
+    {
+        Mod_Equipment equipment = player.itemMods?.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
+        Inventory_Equipment inventory = equipment?.EquipmentInventory;
+        if (inventory?.Data?.itemSlots == null)
+            throw new InvalidOperationException("装备配置测试缺少正式装备模块。");
+
+        var original = new List<(string Slot, ItemData Item)>();
+        foreach (EquipmentSlotRule rule in inventory.SlotRules)
+            original.Add((rule.Id, equipment.GetEquippedItem(rule.Id)));
+        ItemData head = CreateDragItem("Spacesuit_Head");
+        ItemData first = CreateDragItem("Spacesuit_Torso");
+        ItemData second = CreateDragItem("Spacesuit_Torso");
+        second.Tags = new List<string>(second.Tags) { EquipmentSlotCatalog.AnyTag };
+        Inventory holding = CreateDragInventory("lua.gear.configuration.holding", new ItemData[original.Count + 3]);
+        Inventory returns = CreateDragInventory("lua.gear.configuration.returns", new ItemData[original.Count]);
+        int headSource = original.Count, firstSource = headSource + 1, secondSource = headSource + 2;
+        holding.Data.SetOne_ItemData(headSource, head);
+        holding.Data.SetOne_ItemData(firstSource, first);
+        holding.Data.SetOne_ItemData(secondSource, second);
+        int headSlot = inventory.GetSlotIndex(EquipmentSlotCatalog.Head);
+        int torsoSlot = inventory.GetSlotIndex(EquipmentSlotCatalog.TorsoOuter);
+        int secondSlot = inventory.GetSlotIndex(EquipmentSlotCatalog.Hands);
+        var targets = new List<EquipmentInstance> { new EquipmentInstance_SpacesuitSupport() };
+        var result = new JObject();
+        try
+        {
+            for (int index = 0; index < original.Count; index++)
+                if (original[index].Item != null && !inventory.TryMoveSlotTo(
+                    inventory.GetSlotIndex(original[index].Slot), holding, index))
+                    throw new InvalidOperationException("装备配置测试无法暂存原装备：" + original[index].Slot);
+            equipment.CollectConfigurationTargets(targets);
+            result["emptyCount"] = targets.Count;
+            GameObject equipmentPrefab = GameRes.ExistingInstance.GetPrefab("UI_Equipment");
+            UnityEngine.UI.Button[] buttons = equipmentPrefab.GetComponentsInChildren<UnityEngine.UI.Button>(true);
+            result["genericConfigurationButtons"] = buttons.Count(button => button.name == "FWUI_ConfigureEquipment");
+            result["specializedConfigurationButtons"] = buttons.Count(button => button.name == "FWUI_ConfigureSpacesuit");
+            result["nullRejected"] = !equipment.TryOpenConfiguration(null);
+            result["foreignRejected"] = !equipment.TryOpenConfiguration(new EquipmentInstance_SpacesuitSupport());
+
+            if (!holding.TryMoveSlotTo(headSource, inventory, headSlot))
+                throw new InvalidOperationException("装备配置测试无法穿戴正式头盔。");
+            equipment.CollectConfigurationTargets(targets);
+            result["ordinaryCount"] = targets.Count;
+            if (!holding.TryMoveSlotTo(firstSource, inventory, torsoSlot))
+                throw new InvalidOperationException("装备配置测试无法穿戴正式宇航服。");
+            equipment.CollectConfigurationTargets(targets);
+            result["singleCount"] = targets.Count;
+            EquipmentInstance originalTarget = targets.Find(target => ReferenceEquals(target.EquippedItem, first));
+            result["singleItemMatched"] = originalTarget != null;
+            result["singleOpened"] = equipment.TryOpenConfiguration(originalTarget);
+            SpacesuitPanelSession.CloseFor(first);
+
+            result["unequipped"] = inventory.TryMoveSlotTo(torsoSlot, holding, firstSource) &&
+                ReferenceEquals(holding.Data.GetItemSlot(firstSource)?.itemData, first);
+            result["staleRejected"] = !equipment.TryOpenConfiguration(originalTarget);
+            equipment.CollectConfigurationTargets(targets);
+            result["afterUnequipCount"] = targets.Count;
+
+            // 为同一件夹具装备增加第二个配置效果，验证通用收集器按物品引用去重。
+            Ex_ModData_MemoryPackable store = FluidTankStorage.FindBinary(first, ModText.Equipment_Store) ??
+                throw new InvalidOperationException("正式宇航服缺少装备效果存储。");
+            List<EquipmentInstance> effects = null;
+            store.ReadData(ref effects);
+            if (effects == null || !effects.Any(effect => effect is IEquipmentConfiguration))
+                throw new InvalidOperationException("正式宇航服没有保存可配置装备效果。");
+            effects.Add(new EquipmentInstance_SpacesuitSupport());
+            store.WriteData(effects);
+            if (!holding.TryMoveSlotTo(firstSource, inventory, torsoSlot) ||
+                !holding.TryMoveSlotTo(secondSource, inventory, secondSlot))
+                throw new InvalidOperationException("装备配置测试无法准备两个独立配置目标。");
+            equipment.CollectConfigurationTargets(targets);
+            result["multipleCount"] = targets.Count;
+            result["firstItemCount"] = targets.Count(target => ReferenceEquals(target.EquippedItem, first));
+            result["secondItemCount"] = targets.Count(target => ReferenceEquals(target.EquippedItem, second));
+            result["firstConfigurationEffects"] = equipment.EnumerateEquippedInstances().Count(effect =>
+                ReferenceEquals(effect.EquippedItem, first) && effect is IEquipmentConfiguration);
+            result["reequippedOldTargetRejected"] = !equipment.TryOpenConfiguration(originalTarget);
+            EquipmentInstance secondTarget = targets.Find(target => ReferenceEquals(target.EquippedItem, second));
+            result["secondOpened"] = equipment.TryOpenConfiguration(secondTarget);
+            SpacesuitPanelSession.CloseFor(second);
+        }
+        finally
+        {
+            SpacesuitPanelSession.CloseFor(first);
+            SpacesuitPanelSession.CloseFor(second);
+            bool restored = true;
+            for (int index = 0; index < original.Count; index++)
+            {
+                var entry = original[index];
+                ItemData current = equipment.GetEquippedItem(entry.Slot);
+                if (ReferenceEquals(current, entry.Item)) continue;
+                int slot = inventory.GetSlotIndex(entry.Slot);
+                if (current != null && !inventory.TryMoveSlotTo(slot, returns, index))
+                { restored = false; continue; }
+                if (entry.Item != null && (!ReferenceEquals(holding.Data.GetItemSlot(index)?.itemData, entry.Item) ||
+                    !holding.TryMoveSlotTo(index, inventory, slot))) restored = false;
+            }
+            if (!restored)
+                throw new InvalidOperationException("装备配置测试无法归还原装备。");
+        }
+        result["originalEquipmentRestored"] = original.All(entry =>
+            ReferenceEquals(equipment.GetEquippedItem(entry.Slot), entry.Item));
         return result;
     }
 

@@ -30,3 +30,12 @@ public interface IAmbientOxygenBlocker
 {
     bool BlocksAmbientOxygen { get; }
 }
+
+/// <summary>装备自身提供配置入口，通用装备界面不识别具体装备类型。</summary>
+public interface IEquipmentConfiguration
+{
+    #region 装备配置能力
+    bool CanConfigure { get; }
+    void OpenConfiguration();
+    #endregion
+}

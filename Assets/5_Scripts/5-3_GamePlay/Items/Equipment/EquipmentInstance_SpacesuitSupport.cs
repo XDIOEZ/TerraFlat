@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>宇航服装备效果主动读取实际气罐，供氧和整套耐压均由服装侧处理。</summary>
 [System.Serializable, MemoryPackable]
-public partial class EquipmentInstance_SpacesuitSupport : EquipmentInstance, IAmbientOxygenBlocker
+public partial class EquipmentInstance_SpacesuitSupport : EquipmentInstance, IAmbientOxygenBlocker, IEquipmentConfiguration
 {
     #region 装备生命周期与供给
     [MemoryPackIgnore] private Item owner;
@@ -47,6 +47,17 @@ public partial class EquipmentInstance_SpacesuitSupport : EquipmentInstance, IAm
         if (owner == null || EquippedItem == null || !SpacesuitSystem.IsActuallyEquipped(owner, EquippedItem)) return false;
         suit = SpacesuitSystem.GetBinding(EquippedItem, owner);
         return suit != null;
+    }
+    #endregion
+
+    #region 宇航服配置入口
+    [MemoryPackIgnore] public bool CanConfigure => TryGetCurrentSuit(out _);
+
+    public void OpenConfiguration()
+    {
+        // 入口只打开仍实际穿戴的这一件宇航服。
+        if (TryGetCurrentSuit(out SpacesuitBinding suit))
+            SpacesuitPanelSession.Show(suit.Suit, owner);
     }
     #endregion
 }

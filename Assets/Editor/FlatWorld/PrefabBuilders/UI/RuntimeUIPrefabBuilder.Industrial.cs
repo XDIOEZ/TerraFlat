@@ -10,7 +10,6 @@ public static partial class RuntimeUIPrefabBuilder
 {
     #region 工业与气罐正式页面
     private const string IndustrialBasePath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Mechanical.prefab";
-    private const string EquipmentPagePath = "Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Equipment.prefab";
 
     /// <summary>明确执行时重建完整正式资产；控件继续继承项目公共 Prefab。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Industrial Fluid And Spacesuit Panels")]
@@ -29,15 +28,6 @@ public static partial class RuntimeUIPrefabBuilder
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }
-        GameObject equipment = PrefabUtility.LoadPrefabContents(EquipmentPagePath);
-        try
-        {
-            if (!equipment.GetComponentsInChildren<Button>(true).Any(button => button.name == "FWUI_ConfigureSpacesuit"))
-                AddIndustrialButton(equipment.transform, "FWUI_ConfigureSpacesuit", "宇航服配置", new Vector2(0, 28), new Vector2(190, 42),
-                    new Vector2(.5f, 0), new Vector2(.5f, .5f));
-            PrefabUtility.SaveAsPrefabAsset(equipment, EquipmentPagePath);
-        }
-        finally { PrefabUtility.UnloadPrefabContents(equipment); }
         AssetDatabase.SaveAssets();
     }
     private static void ConfigureIndustrialPanel(GameObject root, string name)
@@ -93,6 +83,33 @@ public static partial class RuntimeUIPrefabBuilder
     }
     private static void LayoutIndustrialControl(RectTransform control, Vector2 position, Vector2 size, Vector2 anchor, Vector2 pivot)
     { control.anchorMin = control.anchorMax = anchor; control.pivot = pivot; control.anchoredPosition = position; control.sizeDelta = size; }
+    #endregion
+
+    #region 通用装备配置入口
+    [MenuItem("FlatWorld/UI/Rebuild Equipment Configuration Button")]
+    public static void RebuildEquipmentConfigurationButton()
+    {
+        if (Application.isPlaying) throw new InvalidOperationException("请在退出 PlayMode 后手动重建装备入口。");
+        const string path = "Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Equipment.prefab";
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            // 装备页只提供通用入口，不读取任何具体装备类型。
+            Button button = root.GetComponentsInChildren<Button>(true)
+                .FirstOrDefault(value => value.name == "FWUI_ConfigureEquipment");
+            button ??= InstantiateSharedControl<Button>("UI_Button", "FWUI_ConfigureEquipment", root.transform);
+            LayoutIndustrialControl((RectTransform)button.transform, new Vector2(0, 28), new Vector2(190, 42),
+                new Vector2(.5f, 0), new Vector2(.5f, .5f));
+            TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+            var binder = label.GetComponent<LocalizedTextBinder>() ?? label.gameObject.AddComponent<LocalizedTextBinder>();
+            binder.Configure(FlatWorldLocalizationService.UiTable,
+                FlatWorldLocalizationService.GetUiTextKey("装备配置"), "装备配置");
+            RecordSharedInstance(button.gameObject);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+        AssetDatabase.SaveAssets();
+    }
     #endregion
 
     #region 气罐容量正式控件

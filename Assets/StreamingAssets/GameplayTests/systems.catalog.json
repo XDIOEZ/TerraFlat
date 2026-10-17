@@ -194,6 +194,7 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/*",
         "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/EquipmentConfigurationButton.cs",
         "Assets/5_Scripts/5-3_GamePlay/Items/Readable/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Bag*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_HotBar*",

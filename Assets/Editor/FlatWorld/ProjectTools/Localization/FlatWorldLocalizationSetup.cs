@@ -231,7 +231,7 @@ namespace FlatWorld.Localization.Editor
                 // 化工设备与宇航服的动态读数使用稳定 UI 模板同步两种语言。
                 { "低压增量", "Low-pressure Bonus" },
                 { "高压增量", "High-pressure Bonus" },
-                { "宇航服配置", "Spacesuit Settings" },
+                { "装备配置", "Equipment Settings" },
                 { "应用配置", "Apply Settings" },
                 { "旋转方向", "Rotate" },
                 { "气体ID / 断开压强 / 充装压强", "Gas ID / Cutoff Pressure / Fill Pressure" },

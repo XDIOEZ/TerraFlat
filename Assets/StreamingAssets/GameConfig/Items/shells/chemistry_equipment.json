@@ -190,10 +190,6 @@
                 "Name": "宇航服隔热",
                 "ColdToleranceIncrease": 8,
                 "$concreteType": "EquipmentInstance_ThermalInsulation"
-              },
-              {
-                "Name": "宇航服生命支持",
-                "$concreteType": "EquipmentInstance_SpacesuitSupport"
               }
             ]
           },
@@ -261,6 +257,10 @@
                 "Name": "宇航服隔热",
                 "ColdToleranceIncrease": 8,
                 "$concreteType": "EquipmentInstance_ThermalInsulation"
+              },
+              {
+                "Name": "宇航服生命支持",
+                "$concreteType": "EquipmentInstance_SpacesuitSupport"
               }
             ]
           },

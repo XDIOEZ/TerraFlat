@@ -272,6 +272,66 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     #endregion
 
+    #region 装备配置入口
+
+    /// <summary>按当前真实装备收集配置能力，同一件装备只列出一个入口。</summary>
+    public void CollectConfigurationTargets(List<EquipmentInstance> targets)
+    {
+        if (targets == null) throw new ArgumentNullException(nameof(targets));
+        targets.Clear();
+        if (item == null || equipment_Instances == null || EquipmentInventory?.Data?.itemSlots == null)
+            return;
+
+        int slotCount = Math.Min(equipment_Instances.Count, EquipmentInventory.Data.itemSlots.Count);
+        for (int index = 0; index < slotCount; index++)
+        {
+            ItemData equippedItem = EquipmentInventory.Data.itemSlots[index]?.itemData;
+            List<EquipmentInstance> effects = equipment_Instances[index];
+            if (equippedItem == null || effects == null) continue;
+
+            foreach (EquipmentInstance effect in effects)
+            {
+                if (effect is not IEquipmentConfiguration configuration ||
+                    !ReferenceEquals(effect.EquippedItem, equippedItem) || !configuration.CanConfigure)
+                    continue;
+
+                bool alreadyCollected = false;
+                foreach (EquipmentInstance collected in targets)
+                    if (ReferenceEquals(collected.EquippedItem, equippedItem))
+                    { alreadyCollected = true; break; }
+                if (!alreadyCollected) targets.Add(effect);
+            }
+        }
+    }
+
+    /// <summary>重新核对目标仍属于当前槽位，避免选择期间换装后打开旧装备。</summary>
+    public bool TryOpenConfiguration(EquipmentInstance target)
+    {
+        if (item == null || target is not IEquipmentConfiguration configuration ||
+            equipment_Instances == null || EquipmentInventory?.Data?.itemSlots == null)
+            return false;
+
+        int slotCount = Math.Min(equipment_Instances.Count, EquipmentInventory.Data.itemSlots.Count);
+        for (int index = 0; index < slotCount; index++)
+        {
+            ItemData equippedItem = EquipmentInventory.Data.itemSlots[index]?.itemData;
+            List<EquipmentInstance> effects = equipment_Instances[index];
+            if (equippedItem == null || effects == null || !ReferenceEquals(target.EquippedItem, equippedItem))
+                continue;
+
+            foreach (EquipmentInstance effect in effects)
+            {
+                if (!ReferenceEquals(effect, target)) continue;
+                if (!configuration.CanConfigure) return false;
+                configuration.OpenConfiguration();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    #endregion
+
     #region 装备逻辑
 
     /// <summary>AI、建筑和普通 Item 都可直接复用的装备入口，不依赖玩家输入或装备 UI。</summary>

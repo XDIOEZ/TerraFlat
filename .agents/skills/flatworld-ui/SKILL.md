@@ -63,6 +63,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 气罐在 `UI_IndustrialFluid/UI_FluidTank.prefab` 持有 `GasCapacity/GasPercentage`，按实际气压/安全上限自下而上填充；超压填充封顶、百分比保留真实值并标红。工业页仅储罐显示，组合罐在节点作用域读取整组库存与容积；便携罐通过 `MechanicalPanelSession` 注入读数。布局同步 `RuntimeUIPrefabBuilder.EnsureGasCapacityGauge`。
 - 热栏外观由 `Common/Controls/UI_SelectBox.prefab` 与 Inventory_HotBar.SelectBoxPrefab 持有；选中框归属当前槽位。附属提示 ignoreLayout 且输入透明，Inventory.InitUI 按真实 ItemSlot_UI 计槽；手持名称读取装备热栏物品。
 - 普通合成使用 `Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable.prefab`，参考尺寸 1344×756；正式输入/输出/配方模板按真实容量复用。工业流体/宇航服/气罐使用 MechanicalPanelView 与 PreservePrefabLayout，宇航服入口共用 SpacesuitPanelSession 的真实供氧槽。
+- 装备页只保留 `FWUI_ConfigureEquipment` 通用入口，由 `EquipmentConfigurationButton` 收集可配置装备；一件直接打开，多件用公共下拉选择，没有则禁用。`Mod_Equipment` 只通过 `IEquipmentConfiguration` 分发并复核当前装备身份，具体装备效果拥有配置页面；不在装备 UI 或工业面板重建中添加具体装备分支。
 - 飞船 ShipPanelSession 的命令行/按钮共用执行入口，反馈历史有上限，查看历史不被消息置底。FuelInteraction 仅绑定通用模块，标题来自定义。任务/教程阅读入口为书籍/UI_ReadableBook。
 - PlayerWorldCoordinateHUD 地表读取 WorldLocalPresentation 逻辑坐标，太空读取乘员双精度宇宙位置（支撑船姿态 + 本地位置 / FreeMotion），显示千米与米级精度，不随 ViewOrigin 改变；坐标行宽 560、下方温度/气压与季节行独立。环境温度采样独立于移动、显示按最终精度去重；FoodUIModule 仅为 IsLocalProfile 玩家持有角色 HUD。PlayerBuffStatusHUD 重建容器时清旧行缓存，玩家卸载期间撤绑定，不由 Buff 清理回调重建视图；Buff 列表使用 SafeAreaRoot，最多显示六行，溢出时仅视口可滚动，图标默认显示名称首字。
 - MOD 条目拖拽由共同父节点接收，来源为文件夹身份；跨页行复用保留来源，预览/落点线输入透明，关闭取消。
