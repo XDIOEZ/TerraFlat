@@ -80,6 +80,7 @@ public static class BuffDefinitionFactory
         {
             Id = id,
             DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? id : dto.DisplayName.Trim(),
+            IconAddress = dto.IconAddress?.Trim() ?? string.Empty,
             DeathCauseId = dto.DeathCauseId?.Trim(),
             Category = ParseCategory(dto.Category, id),
             Description = dto.Description?.Trim() ?? string.Empty,

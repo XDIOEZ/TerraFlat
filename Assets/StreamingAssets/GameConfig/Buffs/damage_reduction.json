@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "减伤",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/DamageReduction.png[DamageReduction]",
       "displayName": "减伤",
       "description": "受到的伤害降低30%。",
       "durationSeconds": 5.0,

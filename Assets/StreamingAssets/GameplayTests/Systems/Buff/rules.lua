@@ -1,3 +1,26 @@
+test.system("buff", "icon_catalog", {}, function(data)
+    assert(#data.catalog >= 32, "正式 Buff 目录遗漏已配置状态")
+    local addresses = {}
+    for _, buff in ipairs(data.catalog) do
+        local key = buff.iconAddress:match("^Assets/6_Art/Generated/Buff/StatusIcons/([%w]+)%.png%[%1%]$")
+        assert(key, "Buff 图标地址不完整或 Sprite 名称不一致：" .. buff.id)
+        assert(not addresses[buff.iconAddress], "不同效果意外共用同一张图标：" .. buff.id)
+        addresses[buff.iconAddress] = true
+    end
+    assert(data.normalized == "Assets/Icon.png[Icon]", "Factory 未保留并规范化图标地址")
+    assert(data.missingAddress == "" and data.missingSprite, "未配置图标时未保留首字回退条件")
+end, "正式 Buff 图标目录覆盖与可选地址")
+
+test.system("buff", "icon_presentation", {}, function(data)
+    assert(data.iconBound and data.iconWhite and data.preserveAspect and not data.raycast,
+        "正式图标没有按原色和比例显示或拦截玩法输入")
+    assert(data.initialHidden and data.stackVisible, "正式图标仍叠加首字或遮掉层数徽标")
+    assert(data.missingIconHidden and data.fallbackVisible and data.fallbackInitial == "缺" and data.plainBadgeHidden,
+        "行复用到缺图状态时残留旧图或未恢复首字")
+    assert(data.reboundIcon and data.clearedIcon and data.clearedText and data.clearedBadge,
+        "再次绑定或清理 Buff 行时残留图标、名称或层数")
+end, "正式 Buff 行图标、首字回退与复用清理")
+
 local cases = {
     {name = "逐层过期", args = {}, initial = 3, stacks = 2, remaining = 1.5, expired = false, ticks = 5},
     {name = "跨多层结束", args = {elapsed = 6}, initial = 3, stacks = 1, remaining = 0, expired = true, ticks = 12},

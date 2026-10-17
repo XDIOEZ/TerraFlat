@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "辣",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Spicy.png[Spicy]",
       "deathCauseId": "spicy",
       "displayName": "辣",
       "category": "general",

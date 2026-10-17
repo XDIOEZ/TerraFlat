@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "低温冻伤",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Frostbite.png[Frostbite]",
       "deathCauseId": "freezing",
       "displayName": "低温冻伤",
       "category": "general",
@@ -20,6 +21,7 @@
     },
     {
       "id": "热射病",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Heatstroke.png[Heatstroke]",
       "deathCauseId": "overheating",
       "displayName": "热射病",
       "category": "general",

@@ -4120,6 +4120,198 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d75f4955e7c948c488cdc9ed44089cc6
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/ArmFracture.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4571acf9805f403da0898ebd32bdb38a
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 83bf8bced0c644a691272586ecc075d8
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding2.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1f80cde50d084d2c829017bc686596b3
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding3.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: feb64c51bded4daaa9935ea40633c55d
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryAbdomen.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0fdbfa8e4b7d4de590c52a96440afcb3
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryChest.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ae97b4124f3240928c5eb55bb63732c2
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryHead.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 79debcbb3770407ebb396eda5fb4f64f
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryLeftHand.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 382883fbbb504b6089698f7dd1fe82c5
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryLeftLeg.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: adce54d1bbbb452ea232ed826192f32c
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryPelvis.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fc77dd5ed6904dcfa0b5e2058ee32116
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryRightHand.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 46ae2c618ad84386b86a71c9d2c86e5b
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryRightLeg.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 659939f4454a4c33a346bc1c52eac7d5
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Burning.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b2e5239f772e44f4989e54a7e7fb5b02
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Concussion.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d2b33a333ea541c4b2d93aba65929128
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/DamageReduction.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d20cd9fe8508435d9d8c3ffd50516e21
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Dehydration.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 297014c76ba14ce8905173729ab306f5
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Frostbite.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3a3a020f22e84543a6773001e5915b03
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/FusionContact.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e37aab2082da4b45a44d077addc66e88
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/HealthRecovery.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a624c3f7167547bda463b75eaea62da7
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Heatstroke.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f852efc4de3747d988586ebdd173b80a
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/HerbalRecovery.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5985d1be42b446c89ddfd28a4d033c04
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Hydration.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 824103b54b2b4dddbeb0993b45de3794
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Immobilized.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4b9925f6667f4e159e1d3fadb970482e
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Infection.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1baefdf4d3e94541bdc1f9298e521c37
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/LegFracture.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9b2dc666d5ca4faeae8abc317c760a90
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/NightVision.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ab7022e0946b493ab2be9347727d463e
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Overweight.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dd428ecdad8f4b1d9a7b918d499ffa69
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Radiant.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ad805a6e5cfa413dbf243de6bc356bd1
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Running.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4a7faf28d20c46dfb1450c6c680484e7
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/SpeedBoost.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7f05590e25164caeb61e044105b5c49d
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Spicy.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d99a3aa6565845738e7a4580e7a5687b
+    m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Wet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "补水",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Hydration.png[Hydration]",
       "displayName": "补水",
       "description": "入水后喝几口",
       "durationSeconds": null,
@@ -18,6 +19,7 @@
     },
     {
       "id": "脱水",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Dehydration.png[Dehydration]",
       "displayName": "脱水",
       "description": "饮用海水导致脱水，每秒流失3点水分；再次饮用海水会延长持续时间。",
       "durationSeconds": 10.0,

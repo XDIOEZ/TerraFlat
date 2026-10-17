@@ -35,6 +35,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("buff/lifecycle", EntityBuffLifecycle);
         operations.Add("buff/infection_attributes", EntityInfectionAttributes);
         operations.Add("buff/attribute_validation", EntityBuffAttributeValidation);
+        operations.Add("buff/icon_catalog", EntityBuffIconCatalog);
+        operations.Add("buff/icon_presentation", EntityBuffIconPresentation);
         operations.Add("survival/treatment", EntityTreatment);
         operations.Add("survival/oxygen", EntityOxygen);
         operations.Add("survival/pressure", EntityPressure);
@@ -442,6 +444,79 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region Buff 与治疗会话
+
+    private static JObject EntityBuffIconCatalog(JObject args)
+    {
+        var catalog = new JArray();
+        foreach (BuffDefinition definition in BuffCatalogLoader.LoadBuiltInDefinitions())
+            catalog.Add(new JObject { ["id"] = definition.Id, ["iconAddress"] = definition.IconAddress });
+        BuffDefinition configured = BuffDefinitionFactory.Build(BuffDefinitionFactory.DeserializeDefinition(
+            JObject.Parse("{\"id\":\"test:icon\",\"iconAddress\":\"  Assets/Icon.png[Icon]  \",\"effects\":[]}")));
+        BuffDefinition missing = BuffDefinitionFactory.Build(new BuffDefinitionDto { Id = "test:no_icon" });
+        return new JObject
+        {
+            ["catalog"] = catalog, ["normalized"] = configured.IconAddress,
+            ["missingAddress"] = missing.IconAddress, ["missingSprite"] = missing.Icon == null
+        };
+    }
+
+    private static JObject EntityBuffIconPresentation(JObject args)
+    {
+        return WithEntityProbeItem(receiver =>
+        {
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Buff/UI_BuffStatusItem.prefab";
+#if UNITY_EDITOR
+            GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+#else
+            GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.BuffStatusItem, false);
+#endif
+            if (prefab == null)
+                throw new InvalidOperationException("Buff 图标采样缺少正式行 Prefab。");
+            GameObject rowObject = UnityEngine.Object.Instantiate(prefab);
+            Texture2D texture = new(1, 1);
+            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(.5f, .5f));
+            try
+            {
+                // 使用正式行 Prefab 检查有图、缺图和复用清理，断言由 Lua 负责。
+                BuffStatusRowView row = rowObject.GetComponent<BuffStatusRowView>();
+                var icon = rowObject.transform.Find("状态符号底板/状态图标")?.GetComponent<UnityEngine.UI.Image>();
+                var initial = rowObject.transform.Find("状态符号底板/占位符文本")?.GetComponent<TMPro.TextMeshProUGUI>();
+                Transform badge = rowObject.transform.Find("状态符号底板/层数徽标");
+                if (row == null || icon == null || initial == null || badge == null)
+                    throw new InvalidOperationException("Buff 行 Prefab 图标节点契约不完整。");
+                var withIcon = new BuffInstance();
+                withIcon.Initialize(new BuffDefinition { Id = "test:with_icon", DisplayName = "图标状态", Icon = sprite, MaxStacks = 3 }, receiver);
+                row.Bind(withIcon);
+                var result = new JObject
+                {
+                    ["iconBound"] = icon.enabled && icon.sprite == sprite,
+                    ["iconWhite"] = icon.color == Color.white, ["preserveAspect"] = icon.preserveAspect,
+                    ["raycast"] = icon.raycastTarget, ["initialHidden"] = !initial.gameObject.activeSelf,
+                    ["stackVisible"] = badge.gameObject.activeSelf
+                };
+                var withoutIcon = new BuffInstance();
+                withoutIcon.Initialize(new BuffDefinition { Id = "test:no_icon", DisplayName = "缺图状态" }, receiver);
+                row.Bind(withoutIcon);
+                result["missingIconHidden"] = !icon.enabled && icon.sprite == null;
+                result["fallbackVisible"] = initial.gameObject.activeSelf;
+                result["fallbackInitial"] = initial.text;
+                result["plainBadgeHidden"] = !badge.gameObject.activeSelf;
+                row.Bind(withIcon);
+                result["reboundIcon"] = icon.enabled && icon.sprite == sprite && !initial.gameObject.activeSelf;
+                row.Clear();
+                result["clearedIcon"] = !icon.enabled && icon.sprite == null;
+                result["clearedText"] = string.IsNullOrEmpty(initial.text) && string.IsNullOrEmpty(row.BuffId);
+                result["clearedBadge"] = !badge.gameObject.activeSelf;
+                return result;
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(rowObject);
+                UnityEngine.Object.DestroyImmediate(sprite);
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        });
+    }
 
     private static JObject EntityBuffLifecycle(JObject args)
     {

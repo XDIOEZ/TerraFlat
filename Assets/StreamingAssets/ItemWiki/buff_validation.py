@@ -3,7 +3,7 @@
 import math
 
 
-FIELDS = set("id displayName deathCauseId category description labelKey descriptionKey durationSeconds tickIntervalSeconds stackMode maxStacks decayStacksOnExpiry visualBaseScale visualScalePerStack waterStackIntervalSeconds waterStacksPerDepthLevel rainStackIntervalSeconds rainMaxStacks rainReferenceIntensity drinkDurationExtensionSeconds effects".split())
+FIELDS = set("id displayName iconAddress deathCauseId category description labelKey descriptionKey durationSeconds tickIntervalSeconds stackMode maxStacks decayStacksOnExpiry visualBaseScale visualScalePerStack waterStackIntervalSeconds waterStacksPerDepthLevel rainStackIntervalSeconds rainMaxStacks rainReferenceIntensity drinkDurationExtensionSeconds effects".split())
 EFFECT_FIELDS = set("phase typeId targetId requiredTag value upperLimit scaleWithStacks".split())
 MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "damage_taken_multiplier")}
 TRAUMA = {f"core:trauma_{name}" for name in ("move", "attack", "confusion", "blur")}
@@ -38,7 +38,7 @@ def validate_definition(source):
     buff_id = text(source.get("id"), "BUFF id")
     if not buff_id:
         raise ValueError("BUFF id 不能为空")
-    for field in ("displayName", "deathCauseId", "description", "labelKey", "descriptionKey"):
+    for field in ("displayName", "iconAddress", "deathCauseId", "description", "labelKey", "descriptionKey"):
         text(source.get(field), f"{buff_id}.{field}", optional=True)
     category = text(source.get("category", "general"), "category", optional=True).lower()
     if category not in ("", "general", "blood_loss"):

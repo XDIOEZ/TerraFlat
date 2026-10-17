@@ -8,6 +8,7 @@
 
     // BUFF 只提供领域字段与说明，列表、详情卡片和保存控件继续使用 Item 页面。
     const fields = [
+        ["图标 Sprite 地址", "iconAddress", ""],
         ["持续时间（秒；null 为永久）", "durationSeconds", null, true],
         ["结算间隔（秒）", "tickIntervalSeconds", 0],
         ["叠加方式", "stackMode", "ignore"],

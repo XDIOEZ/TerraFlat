@@ -1478,7 +1478,7 @@
         const icon = document.createElement("span");
         icon.className = "item-icon";
         icon.textContent = fallbackGlyph(entry);
-        fillSpriteIcon(icon, entry.final.visual?.spriteAddress, entry.displayName);
+        fillSpriteIcon(icon, entry.kind === "buff" ? entry.final.iconAddress : entry.final.visual?.spriteAddress, entry.displayName);
         attachItemIconZoom(icon, entry);
 
         const main = document.createElement("span");
@@ -1713,6 +1713,14 @@
 
     // 复用 Item 的数值卡片、内联编辑和保存反馈；说明始终根据当前 BUFF JSON 生成。
     function renderBuffDetail(entry) {
+        const hero = document.createElement("section");
+        hero.className = "detail-hero";
+        const icon = document.createElement("div");
+        icon.className = "detail-icon";
+        icon.textContent = fallbackGlyph(entry);
+        fillSpriteIcon(icon, entry.final.iconAddress, entry.displayName);
+        const title = document.createElement("div");
+        title.className = "detail-title";
         const heading = document.createElement("h2");
         heading.textContent = entry.displayName;
         attachInlineEditor(heading, entry, { sourceType: "root", path: "displayName",
@@ -1720,7 +1728,9 @@
         const meta = document.createElement("p");
         meta.className = "detail-id";
         meta.textContent = `${entry.final.id} · ${entry.package.path}`;
-        els.detailContent.append(heading, meta);
+        title.append(heading, meta);
+        hero.append(icon, title);
+        els.detailContent.appendChild(hero);
         const description = document.createElement("div");
         description.className = "description-card";
         description.textContent = entry.final.description || "暂无说明，双击填写。";

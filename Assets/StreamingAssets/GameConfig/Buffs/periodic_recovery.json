@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "生命恢复(1)",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/HealthRecovery.png[HealthRecovery]",
       "displayName": "生命恢复(1)",
       "description": "每秒恢复1点生命值",
       "durationSeconds": null,
@@ -17,6 +18,7 @@
     },
     {
       "id": "core:herbal_recovery",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/HerbalRecovery.png[HerbalRecovery]",
       "displayName": "草药恢复",
       "description": "缓慢恢复生命，重复使用刷新时长。",
       "durationSeconds": 30,

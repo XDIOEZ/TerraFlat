@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 /// <summary>
 /// 从 StreamingAssets 的 Buff 清单加载多个业务分包，并统一注册到 GameRes。
@@ -32,6 +33,7 @@ public static class BuffCatalogLoader
             throw new ArgumentNullException(nameof(gameRes));
 
         List<BuffDefinition> definitions = LoadBuiltInDefinitions();
+        LoadIcons(gameRes, definitions);
         RegisterDefinitions(gameRes, definitions);
         Debug.Log($"[BuffCatalog] 已从 Buff 分包加载 {definitions.Count} 个 Buff：{BuiltInManifestPath}");
         return definitions.Count;
@@ -60,6 +62,8 @@ public static class BuffCatalogLoader
             onFailed?.Invoke(loadError);
             yield break;
         }
+
+        yield return LoadIconsAsync(gameRes, definitions);
 
         try
         {
@@ -256,4 +260,96 @@ public static class BuffCatalogLoader
         foreach (BuffDefinition definition in definitions)
             gameRes.RegisterBuff(definition);
     }
+
+    #region 图标资源
+
+    private static void LoadIcons(GameRes gameRes, IReadOnlyList<BuffDefinition> definitions)
+    {
+        var icons = new Dictionary<string, Sprite>(StringComparer.Ordinal);
+        foreach (BuffDefinition definition in definitions)
+        {
+            string address = definition.IconAddress;
+            if (string.IsNullOrWhiteSpace(address))
+                continue;
+            if (!icons.TryGetValue(address, out Sprite icon))
+            {
+                if (TryBeginIconLoad(gameRes, address, out AsyncOperationHandle<Sprite> request))
+                {
+                    try
+                    {
+                        request.WaitForCompletion();
+                        icon = ReadLoadedIcon(request, address);
+                    }
+                    catch (Exception exception)
+                    {
+                        WarnMissingIcon(address, exception.Message);
+                    }
+                }
+                icons.Add(address, icon);
+            }
+            definition.Icon = icon;
+        }
+    }
+
+    private static IEnumerator LoadIconsAsync(GameRes gameRes, IReadOnlyList<BuffDefinition> definitions)
+    {
+        var icons = new Dictionary<string, Sprite>(StringComparer.Ordinal);
+        foreach (BuffDefinition definition in definitions)
+        {
+            string address = definition.IconAddress;
+            if (string.IsNullOrWhiteSpace(address))
+                continue;
+            if (!icons.TryGetValue(address, out Sprite icon))
+            {
+                if (TryBeginIconLoad(gameRes, address, out AsyncOperationHandle<Sprite> request))
+                {
+                    yield return request;
+                    icon = ReadLoadedIcon(request, address);
+                }
+                icons.Add(address, icon);
+            }
+            definition.Icon = icon;
+            if (gameRes.ShouldYieldResourceWork())
+                yield return null;
+        }
+    }
+
+    private static bool TryBeginIconLoad(GameRes gameRes, string address, out AsyncOperationHandle<Sprite> request)
+    {
+        request = default;
+        try
+        {
+#if UNITY_EDITOR
+            // 先沿用现有编辑器解析，避免错误子资源名称触发 Fast Mode 内部空引用。
+            if (address.StartsWith("Assets/", StringComparison.Ordinal) &&
+                !ItemDefinitionCatalogLoader.TryLoadEditorSprite(address, out _, out string error))
+            {
+                WarnMissingIcon(address, error);
+                return false;
+            }
+#endif
+            request = gameRes.ResourceAssets.Load<Sprite>(address);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            WarnMissingIcon(address, exception.Message);
+            return false;
+        }
+    }
+
+    private static Sprite ReadLoadedIcon(AsyncOperationHandle<Sprite> request, string address)
+    {
+        if (request.IsValid() && request.Status == AsyncOperationStatus.Succeeded && request.Result != null)
+            return request.Result;
+        WarnMissingIcon(address, request.IsValid() ? request.OperationException?.Message : "请求已经释放");
+        return null;
+    }
+
+    private static void WarnMissingIcon(string address, string reason)
+    {
+        Debug.LogWarning($"[BuffCatalog] 图标加载失败，HUD 使用名称首字：{address}。{reason}");
+    }
+
+    #endregion
 }

@@ -5,7 +5,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Buff 提示栏的单行视图。只负责把 BuffInstance 的名称、层级和剩余时间写入已经制作好的 UI_BuffStatusItem Prefab，
+/// Buff 提示栏的单行视图。只负责把 BuffInstance 的图标、名称、层级和剩余时间写入已经制作好的 UI_BuffStatusItem Prefab，
 /// 不参与 Buff 计算、不修改 Buff 生命周期；可叠层 Buff 在图标角标显示当前层级，普通 Buff 不显示角标。
 /// </summary>
 [DisallowMultipleComponent]
@@ -16,12 +16,14 @@ public sealed class BuffStatusRowView : MonoBehaviour
     private const string NameNodeName = "状态名称";
     private const string RemainingNodeName = "剩余时间";
     private const string IconInitialNodeName = "占位符文本";
+    private const string IconNodeName = "状态图标";
     private const string StackBadgeNodeName = "层数徽标";
     private const string StackTextNodeName = "层数文本";
 
     private TextMeshProUGUI nameText;
     private TextMeshProUGUI remainingText;
     private TextMeshProUGUI iconInitialText;
+    private UnityEngine.UI.Image iconImage;
     private GameObject stackBadge;
     private TextMeshProUGUI stackText;
     private string buffId;
@@ -57,9 +59,16 @@ public sealed class BuffStatusRowView : MonoBehaviour
         if (nameText != null && !string.Equals(nameText.text, resolvedName, StringComparison.Ordinal))
             nameText.text = resolvedName;
 
-        // Buff 没有专属图标时用名称首字作标记，避免显示一块空白色块。
+        // 正式图标独立于灰色底板显示，缺图时保留名称首字。
+        bool hasIcon = iconImage != null && runtime.Definition.Icon != null;
+        if (iconImage != null)
+        {
+            iconImage.sprite = runtime.Definition.Icon;
+            iconImage.enabled = hasIcon;
+        }
         if (iconInitialText != null)
         {
+            iconInitialText.gameObject.SetActive(!hasIcon);
             string initial = string.IsNullOrWhiteSpace(resolvedName)
                 ? "·"
                 : StringInfo.GetNextTextElement(resolvedName.TrimStart());
@@ -129,7 +138,15 @@ public sealed class BuffStatusRowView : MonoBehaviour
         if (remainingText != null)
             remainingText.text = string.Empty;
         if (iconInitialText != null)
+        {
             iconInitialText.text = string.Empty;
+            iconInitialText.gameObject.SetActive(true);
+        }
+        if (iconImage != null)
+        {
+            iconImage.sprite = null;
+            iconImage.enabled = false;
+        }
         if (stackText != null)
             stackText.text = string.Empty;
         if (stackBadge != null)
@@ -145,6 +162,7 @@ public sealed class BuffStatusRowView : MonoBehaviour
         nameText ??= FindChildText(NameNodeName);
         remainingText ??= FindChildText(RemainingNodeName);
         iconInitialText ??= FindChildText(IconInitialNodeName);
+        iconImage ??= FindChild(IconNodeName)?.GetComponent<UnityEngine.UI.Image>();
         stackBadge ??= FindChild(StackBadgeNodeName)?.gameObject;
         stackText ??= FindChildText(StackTextNodeName);
     }

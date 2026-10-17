@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// 由 JSON 构建的只读 Buff 定义。null 持续时间表示永久 Buff。
@@ -9,6 +10,8 @@ public sealed class BuffDefinition
 {
     public string Id { get; internal set; }
     public string DisplayName { get; internal set; }
+    public string IconAddress { get; internal set; }
+    [field: NonSerialized] public Sprite Icon { get; internal set; } // 图标由资源目录预载，HUD 只读取结果。
     public string DeathCauseId { get; internal set; }
     public BuffCategory Category { get; internal set; } = BuffCategory.General;
     public string Description { get; internal set; }

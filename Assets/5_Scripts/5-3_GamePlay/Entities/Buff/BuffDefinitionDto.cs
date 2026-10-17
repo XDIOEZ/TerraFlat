@@ -48,6 +48,9 @@ public sealed class BuffDefinitionDto
     [JsonProperty("displayName")]
     public string DisplayName;
 
+    [JsonProperty("iconAddress")]
+    public string IconAddress;
+
     [JsonProperty("deathCauseId")]
     public string DeathCauseId;
 

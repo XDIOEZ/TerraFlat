@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "出血1",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Bleeding1.png[Bleeding1]",
       "deathCauseId": "bleeding",
       "displayName": "出血1",
       "category": "blood_loss",
@@ -27,6 +28,7 @@
     },
     {
       "id": "出血2",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Bleeding2.png[Bleeding2]",
       "deathCauseId": "bleeding",
       "displayName": "出血2",
       "category": "blood_loss",
@@ -51,6 +53,7 @@
     },
     {
       "id": "出血3",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Bleeding3.png[Bleeding3]",
       "deathCauseId": "bleeding",
       "displayName": "出血3",
       "category": "blood_loss",
@@ -75,6 +78,7 @@
     },
     {
       "id": "燃烧",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Burning.png[Burning]",
       "deathCauseId": "burning",
       "displayName": "燃烧",
       "category": "general",
@@ -96,6 +100,7 @@
     },
     {
       "id": "感染",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Infection.png[Infection]",
       "deathCauseId": "infection",
       "displayName": "感染",
       "category": "general",
@@ -137,6 +142,7 @@
     },
     {
       "id": "光耀",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Radiant.png[Radiant]",
       "deathCauseId": "radiant",
       "displayName": "光耀",
       "description": "每秒对幽灵造成5%最大生命值的真实伤害",

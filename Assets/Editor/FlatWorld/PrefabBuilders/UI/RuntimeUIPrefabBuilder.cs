@@ -907,6 +907,15 @@ public static partial class RuntimeUIPrefabBuilder
         icon.raycastTarget = false;
         AddOutline(icon, Border);
 
+        // 独立白色图层保留像素图原色，底板与层数徽标继续由各自节点持有。
+        GameObject spriteObject = CreateUIObject("状态图标", iconObject.transform, typeof(UnityEngine.UI.Image));
+        UnityEngine.UI.Image spriteImage = spriteObject.GetComponent<UnityEngine.UI.Image>();
+        spriteImage.color = Color.white;
+        spriteImage.raycastTarget = false;
+        spriteImage.preserveAspect = true;
+        spriteImage.enabled = false;
+        Stretch(spriteImage.rectTransform);
+
         TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, "·", 15f, Cream);
         placeholder.fontStyle = FontStyles.Bold;
         placeholder.alignment = TextAlignmentOptions.Center;

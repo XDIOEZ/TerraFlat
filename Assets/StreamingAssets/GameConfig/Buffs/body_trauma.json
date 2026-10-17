@@ -3,6 +3,7 @@
   "buffs": [
     {
       "id": "core:concussion",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/Concussion.png[Concussion]",
       "displayName": "脑震荡",
       "description": "头部创伤导致视野模糊、移动方向反转，144秒后自然恢复。",
       "durationSeconds": 144,
@@ -32,6 +33,7 @@
     },
     {
       "id": "core:leg_fracture",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/LegFracture.png[LegFracture]",
       "displayName": "腿部骨折",
       "description": "每条受伤腿的移动速度乘以 0.65。",
       "durationSeconds": null,
@@ -51,6 +53,7 @@
     },
     {
       "id": "core:arm_fracture",
+      "iconAddress": "Assets/6_Art/Generated/Buff/StatusIcons/ArmFracture.png[ArmFracture]",
       "displayName": "手部骨折/脱臼",
       "description": "每条受伤手臂的攻击速度乘以 0.7。",
       "durationSeconds": null,
