@@ -791,6 +791,7 @@ public class Inventory
             itemSlotUI._OnScroll.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
             itemSlotUI.OnFlickTransfer = null;
+            itemSlotUI.HasFlickTarget = null;
             itemSlotUI.OnMouseDragBegin = null;
             itemSlotUI.OnMouseDragDrop = null;
             itemSlotUI.OnTouchTap = null;
@@ -807,6 +808,7 @@ public class Inventory
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
             itemSlotUI.OnFlickTransfer = OnFlickTransfer;
+            itemSlotUI.HasFlickTarget = HasVisibleFlickTarget;
             itemSlotUI.OnMouseDragBegin = OnMouseDragBegin;
             itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
             itemSlotUI.OnTouchTap = OnTouchTap;
@@ -875,6 +877,7 @@ public class Inventory
         slotUI._OnScroll.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
         slotUI.OnFlickTransfer = null;
+        slotUI.HasFlickTarget = null;
         slotUI.OnMouseDragBegin = null;
         slotUI.OnMouseDragDrop = null;
         slotUI.OnTouchTap = null;
@@ -891,6 +894,7 @@ public class Inventory
         slotUI._OnScroll += OnScroll;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
         slotUI.OnFlickTransfer = OnFlickTransfer;
+        slotUI.HasFlickTarget = HasVisibleFlickTarget;
         slotUI.OnMouseDragBegin = OnMouseDragBegin;
         slotUI.OnMouseDragDrop = OnMouseDragDrop;
         slotUI.OnTouchTap = OnTouchTap;
@@ -1968,6 +1972,14 @@ public class Inventory
         Inventory target = InventoryFlickTargets.Resolve(this, index, origin, direction);
         using (InventoryQuickTransferFeedbackEvents.UseScreenOrigin(this, index, origin + direction))
             return TryQuickTransferTo(index, target);
+    }
+
+    /// <summary>没有其他打开的目标库存界面时，拖动直接沿用拿到手部的普通流程。</summary>
+    public bool HasVisibleFlickTarget()
+    {
+        Inventory hotbar = GetPlayerHotBarInventory();
+        hotbar?.RegisterFlickTarget(hotbar.basePanel, true);
+        return InventoryFlickTargets.HasVisibleTarget(this);
     }
 
     private bool TryQuickTransferTo(int index, Inventory targetInventory)

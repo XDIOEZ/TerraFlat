@@ -74,6 +74,22 @@ for _, mode in ipairs({"mouse_fast", "touch_fast", "mouse_stopped", "mouse_short
         assert(data.handRestored and not data.dragLocked, "甩动夹具没有恢复手部引用或释放来源占用")
     end, "鼠标与触屏共用甩动指针流程：" .. mode)
 end
+for _, mode in ipairs({"mouse_no_target", "touch_no_target", "mouse_self_only", "mouse_hand_only", "mouse_output_only",
+    "mouse_closed_target", "mouse_hidden_target", "mouse_disabled_target", "mouse_close_during_drag", "touch_close_during_drag",
+    "mouse_full_target", "mouse_open_during_drag"}) do
+    test.runtime("inventory", "flick_pointer", {mode = mode}, function(data)
+        local full = mode == "mouse_full_target"
+        local reopened = mode == "mouse_open_during_drag"
+        local enabled = full or reopened
+        assert(data.hasTargetBeforeRelease == enabled and data.flicks == (enabled and 1 or 0),
+            "没有其他目标界面仍消费甩动，或把已满但打开的界面误判成关闭")
+        assert(data.targetAmount == (reopened and 6 or 0) and data.sourceAmount == (full and 6 or 0)
+            and data.handAmount == (enabled and 0 or 6),
+            "无目标界面未回退拿到手部，或满库存未保持原拒绝留源规则")
+        assert(data.taps == 0 and data.handRestored and not data.dragLocked,
+            "关闭甩动后重复点击、夹具污染手部引用或来源占用未释放")
+    end, "无其他目标库存界面时关闭甩动：" .. mode)
+end
 local directionalFlicks = {
     {mode = "right", selected = "right", source = 0, right = 6, down = 0},
     {mode = "pc", selected = "right", receipt = "down", source = 0, right = 0, down = 6},

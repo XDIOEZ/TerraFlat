@@ -90,18 +90,39 @@ public sealed class InventoryFlickTargets : MonoBehaviour
         var centers = new List<Vector2>();
         foreach (InventoryFlickTargets owner in active)
         {
-            if (owner == null || !owner.isActiveAndEnabled || owner.panel == null || !owner.panel.IsOpen()) continue;
+            if (owner == null) continue;
             foreach (Inventory target in owner.inventories)
             {
-                if (target == source || target is Inventory_Hand || target?.Data == null ||
-                    ReferenceEquals(target.Data, source?.Data) || target.Data.Name == ModText.Hand ||
-                    !source.CanQuickTransferTo(sourceIndex, target) || !owner.TryGetVisibleCenter(target, out Vector2 center)) continue;
+                if (!owner.TryGetTargetCenter(source, target, out Vector2 center) ||
+                    !source.CanQuickTransferTo(sourceIndex, target)) continue;
                 candidates.Add(target);
                 centers.Add(center);
             }
         }
         int selected = SelectClosestDirection(origin, direction, centers);
         return selected >= 0 ? candidates[selected] : null;
+    }
+
+    // 开关只看其他目标库存界面是否存在，满格仍按已有甩动规则拒绝并留在源槽。
+    public static bool HasVisibleTarget(Inventory source)
+    {
+        if (source?.Data == null) return false;
+        foreach (InventoryFlickTargets owner in active)
+        {
+            if (owner == null) continue;
+            foreach (Inventory target in owner.inventories)
+                if (owner.TryGetTargetCenter(source, target, out _)) return true;
+        }
+        return false;
+    }
+
+    private bool TryGetTargetCenter(Inventory source, Inventory target, out Vector2 center)
+    {
+        center = default;
+        return isActiveAndEnabled && panel != null && panel.IsOpen() && target != source &&
+               target is not Inventory_Hand && target?.Data != null &&
+               !ReferenceEquals(target.Data, source?.Data) && target.Data.Name != ModText.Hand &&
+               TryGetVisibleCenter(target, out center);
     }
 
     private static bool Finite(Vector2 value) => !float.IsNaN(value.x) && !float.IsNaN(value.y) &&

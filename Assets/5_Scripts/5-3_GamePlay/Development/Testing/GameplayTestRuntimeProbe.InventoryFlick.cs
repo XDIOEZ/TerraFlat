@@ -190,6 +190,19 @@ public static partial class GameplayTestRuntimeProbe
             Vector2 targetPosition = new(Screen.width * .8f, Screen.height * .5f);
             MakeSlot(target, targetRoot.transform, targetPosition);
             target.SyncQuickTransferTarget(targetPanel);
+            if (mode == "mouse_no_target" || mode == "touch_no_target" || mode == "mouse_output_only" || mode == "mouse_self_only")
+                target.SyncQuickTransferTarget(targetPanel, allowDirectionalDeposit: false);
+            if (mode == "mouse_self_only")
+            {
+                sourceSlot.transform.SetParent(targetRoot.transform, true);
+                sourceSlot.transform.position = targetPosition;
+                source.SyncQuickTransferTarget(targetPanel);
+            }
+            if (mode == "mouse_hand_only") target.Data.Name = ModText.Hand;
+            if (mode == "mouse_full_target") target.Data.GetItemSlot(0).SlotMaxVolume = 0;
+            if (mode == "mouse_closed_target" || mode == "mouse_open_during_drag") targetPanel.Close();
+            if (mode == "mouse_hidden_target") targetPanel.canvasGroup.alpha = 0f;
+            if (mode == "mouse_disabled_target") targetRoot.SetActive(false);
             Canvas.ForceUpdateCanvases();
             int flicks = 0, taps = 0;
             Vector2 release = Vector2.zero;
@@ -197,7 +210,8 @@ public static partial class GameplayTestRuntimeProbe
             {
                 flicks++;
                 release = start + direction;
-                if (!ReferenceEquals(InventoryFlickTargets.Resolve(source, index, start, direction), target))
+                Inventory selected = InventoryFlickTargets.Resolve(source, index, start, direction);
+                if (selected != null && !ReferenceEquals(selected, target))
                     throw new InvalidOperationException("甩动指针夹具只能转入自有目标。");
                 source.OnFlickTransfer(index, start, direction);
             };
@@ -205,7 +219,7 @@ public static partial class GameplayTestRuntimeProbe
             sourceSlot.OnTouchTap = _ => taps++;
             var pointer = new ExtendedPointerEventData(EventSystem.current)
             {
-                pointerId = 918274, pointerType = mode == "touch_fast" ? UIPointerType.Touch : UIPointerType.MouseOrPen,
+                pointerId = 918274, pointerType = mode.StartsWith("touch_", StringComparison.Ordinal) ? UIPointerType.Touch : UIPointerType.MouseOrPen,
                 button = PointerEventData.InputButton.Left, position = origin
             };
             sourceSlot.OnPointerDown(pointer);
@@ -213,6 +227,8 @@ public static partial class GameplayTestRuntimeProbe
             while (Time.unscaledTimeAsDouble - started < .02d) yield return null;
             pointer.position = origin + Vector2.right * 4f;
             sourceSlot.OnBeginDrag(pointer);
+            if (mode == "mouse_close_during_drag" || mode == "touch_close_during_drag") targetPanel.Close();
+            if (mode == "mouse_open_during_drag") targetPanel.Open();
             while (Time.unscaledTimeAsDouble - started < .12d) yield return null;
             pointer.position = mode == "mouse_drop" ? targetPosition :
                 origin + Vector2.right * (mode == "mouse_short" ? 20f : 2000f);
@@ -222,10 +238,12 @@ public static partial class GameplayTestRuntimeProbe
                 double stopped = Time.unscaledTimeAsDouble;
                 while (Time.unscaledTimeAsDouble - stopped < .16d) yield return null;
             }
+            bool hasTargetBeforeRelease = source.HasVisibleFlickTarget();
             sourceSlot.OnPointerUp(pointer);
             sourceSlot.OnEndDrag(pointer);
             sourceSlot.OnEndDrag(pointer);
             result = new JObject { ["flicks"] = flicks, ["taps"] = taps,
+                ["hasTargetBeforeRelease"] = hasTargetBeforeRelease,
                 ["releaseMatched"] = Vector2.Distance(release, pointer.position) < .01f,
                 ["sourceAmount"] = source.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
                 ["targetAmount"] = target.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,

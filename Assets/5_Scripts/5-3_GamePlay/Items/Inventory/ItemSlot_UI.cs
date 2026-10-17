@@ -70,6 +70,9 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>鼠标与触屏甩动共用屏幕起点和净方向，与 Shift 固定目标入口分开。</summary>
     public System.Action<int, Vector2, Vector2> OnFlickTransfer { get; set; }
 
+    /// <summary>由库存判断是否存在其他打开的目标界面，缺少目标时不消费快速拖动。</summary>
+    public System.Func<bool> HasFlickTarget { get; set; }
+
     /// <summary>鼠标或触屏拖拽开始时，创建保留来源槽的拖拽事务。</summary>
     public System.Func<int, InventoryDragTransaction> OnMouseDragBegin { get; set; }
 
@@ -235,6 +238,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnGamepadSubmit.Clear();
         OnShiftQuickTransfer.Clear();
         OnFlickTransfer = null;
+        HasFlickTarget = null;
         OnMouseDragBegin = null;
         OnMouseDragDrop = null;
         ItemAddedAtPointer = null;
@@ -781,6 +785,7 @@ public class ItemSlot_UI : MonoBehaviour,
     private bool TryCompleteFlick(PointerEventData eventData, InventoryFlickGesture gesture, bool hasDropTarget)
     {
         if (hasDropTarget || OnFlickTransfer == null || activeDragTransaction?.HideSourceVisual != true ||
+            HasFlickTarget?.Invoke() != true ||
             !gesture.IsFlick(eventData.position, Time.unscaledTimeAsDouble, touchFlickMinimumDistance, touchFlickMinimumSpeed))
             return false;
         activeDragTransaction.TryConsumeSourceItem(sourceItem =>
