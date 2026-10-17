@@ -180,7 +180,11 @@ namespace FlatWorld.WorldModel
                 if (element.Intensity > 0f || profile.Intensity <= 0f || probability <= 0f ||
                     Random01(state.Region, state.CheckIndex, profile.Id) >= probability)
                     continue;
-                BeginElement(state, element, state.LastStepTime, profile.Intensity, profile.DurationSeconds);
+                WeatherElementProfile sampled = settings.SampleNaturalEvent(profile,
+                    Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.1"),
+                    Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.2"),
+                    Random01(state.Region, state.CheckIndex, profile.Id + ".intensity.3"));
+                BeginElement(state, element, state.LastStepTime, sampled.Intensity, sampled.DurationSeconds);
             }
         }
 
@@ -511,7 +515,8 @@ namespace FlatWorld.WorldModel
                 WindX = wind.x, WindY = wind.y, WindStrength = wind.z,
                 CloudCoverage = hasOverride && state.ForcedCloudCoverage >= 0f
                     ? state.ForcedCloudCoverage : Math.Max(precipitation, thunder),
-                FogDensity = hasOverride && state.ForcedFogDensity >= 0f ? state.ForcedFogDensity : 0f,
+                FogDensity = hasOverride && state.ForcedFogDensity >= 0f
+                    ? state.ForcedFogDensity : ActiveIntensity(state, WeatherElementIds.Fog),
                 LightningActivity = thunder, LightningSequence = state.LightningSequence,
                 LightningCell = state.LightningCell, LightningStrength = state.LightningStrength,
                 RemainingSeconds = remainingSeconds,

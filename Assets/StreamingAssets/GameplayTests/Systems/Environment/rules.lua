@@ -2,6 +2,70 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+for _, sample in ipairs({
+    { temperature = 0, humidity = 0, factor = 0 },
+    { temperature = 10, humidity = 0.25, factor = 0.25 },
+    { temperature = 20, humidity = 0.5, factor = 0.5 },
+    { temperature = 30, humidity = 0.75, factor = 0.75 },
+    { temperature = 40, humidity = 1, factor = 1 },
+    { temperature = 40, humidity = 0, factor = 0.5 },
+    { temperature = 0, humidity = 1, factor = 0.5 },
+    { temperature = -100, humidity = 0, factor = 0 },
+    { temperature = 100, humidity = 1, factor = 1 },
+    { temperature = 20, humidity = 0.5, factor = 0.5, wind = 1, precipitation = 1 }
+}) do
+    local input = sample
+    test.system("environment", "natural_fog_profile", input, function(data)
+        assert(data.found, "正式天气配置缺少自然雾要素")
+        near(data.probability, 0.3 * input.factor, "自然雾触发概率没有随温湿条件提高")
+        near(data.activationProbability, 0.09 * input.factor, "自然雾没有沿用统一自然天气概率倍率")
+        near(data.intensityLimit, 0.1 + 0.9 * input.factor, "自然雾强度上限没有随温湿条件提高")
+        near(data.durationLimit, 60 + 180 * input.factor, "自然雾持续时间上限没有随温湿条件增长")
+        near(data.defaultProbability, data.probability, "代码默认值和正式资源配置不一致")
+    end, "自然雾温湿度、起雾机会和强度时长上限：" .. input.temperature .. "/" .. input.humidity)
+end
+
+test.system("environment", "natural_fog_distribution", {}, function(data)
+    local expected = {832, 1984, 2368, 1984, 832}
+    assert(#data.bins == 5 and data.sampleCount == 8000, "自然雾抛物线分布采样不完整")
+    for index, count in ipairs(expected) do
+        assert(data.bins[index] == count, "自然雾强度不是中间高两端低的抛物线分布：" .. index)
+    end
+    near(data.minimumIntensity, 0.1, "自然雾抽样越过最小强度")
+    near(data.maximumIntensity, 1, "自然雾抽样越过最大强度")
+    near(data.minimumDuration, 60, "自然雾抽样越过最小时长")
+    near(data.maximumDuration, 240, "自然雾抽样越过最大时长")
+    near(data.middleIntensity, 0.55, "最常见的中间雾强度错误")
+    near(data.middleDuration, 150, "中间雾没有使用相应持续时间")
+    near(data.coolIntensity, 0.2125, "较低温湿条件没有降低同一次抽样的强度")
+    near(data.coolDuration, 82.5, "较低温湿条件没有缩短同一次抽样的时长")
+end, "自然雾小雾和大雾少、中雾多的抛物线分布")
+
+test.system("environment", "natural_fog_lifecycle", {}, function(data)
+    near(data.beforeCheck, 0, "自然雾在首次天气检查前提前出现")
+    near(data.startedFog, 0.8, "自然抽签没有把雾要素投影到天气快照")
+    near(data.startedRemaining, 12, "自然雾没有使用正式要素持续时间")
+    near(data.neighborFog, data.startedFog, "同一天气区的地块没有共享自然雾")
+    near(data.rainWithFog, 0.4, "自然雾阻止了独立降水")
+    near(data.fogWithRain, 0.8, "降水覆盖了自然雾")
+    near(data.restoredFog, 0.8, "自然雾状态经正式存档记录转换后丢失")
+    near(data.replicaFog, 0.8, "客户端天气快照丢失自然雾")
+    near(data.overrideFog, 0.2, "手动雾覆盖没有优先于自然雾")
+    near(data.resumedFog, 0.8, "手动雾到期后没有恢复仍在持续的自然雾")
+    near(data.zeroOverrideFog, 0, "手动零雾没有临时屏蔽自然雾")
+    near(data.afterZeroOverrideFog, 0.8, "手动零雾到期后没有恢复自然雾")
+    near(data.expiredFog, 0, "自然雾持续时间结束后没有消散")
+    near(data.rainAfterFog, 0.4, "自然雾到期错误终止降水")
+    near(data.clearedFog, 0, "晴天入口没有清除自然雾")
+end, "自然雾正式调度、区域共享、到期、覆盖和保存副本链路")
+
+test.system("environment", "natural_fog_validation", {}, function(data)
+    assert(data.nonFiniteSample == "ArgumentOutOfRangeException" and data.outOfRangeSample == "ArgumentOutOfRangeException",
+        "天气强度抽样接受了非有限或越界的随机数")
+    assert(data.emptyTemperatureRange == "ArgumentOutOfRangeException" and data.negativeTemperatureWeight == "ArgumentOutOfRangeException",
+        "天气规则接受了无效温度区间或负权重")
+end, "自然雾气候权重、温度区间和随机样本校验")
+
 for _, sample in ipairs({{current = 20, ambient = 120, seconds = 10},
     {current = 120, ambient = 20, seconds = 10}, {current = 20, ambient = -80, seconds = 10}}) do
     local input = sample

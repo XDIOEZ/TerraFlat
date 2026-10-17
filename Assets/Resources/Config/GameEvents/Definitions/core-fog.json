@@ -5,7 +5,7 @@
     {
       "id": "surface_daily_dense_fog",
       "displayName": "大雾",
-      "description": "保留手动事件模板；自然雾量由区域湿度、温度和弱风连续计算。",
+      "description": "保留手动事件模板；自然雾按温度与空气湿度触发，强度采用中间高两端低的抛物线分布，强度和时长上限随温湿条件提高。",
       "enabled": false,
       "priority": 30,
       "conflictGroup": "forced_weather",

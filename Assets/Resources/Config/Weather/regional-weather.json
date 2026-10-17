@@ -49,6 +49,22 @@
       "MinimumDurationSeconds": 15.0,
       "MaximumDurationSeconds": 60.0,
       "PrecipitationWeight": 0.7
+    },
+    {
+      "Id": "fog",
+      "HumidityWeight": 1.0,
+      "TemperatureWeight": 1.0,
+      "MinimumTemperatureCelsius": 0.0,
+      "MaximumTemperatureCelsius": 40.0,
+      "ParabolicEventVariation": true,
+      "MinimumProbability": 0.0,
+      "MaximumProbability": 0.3,
+      "MinimumIntensity": 0.1,
+      "MaximumIntensity": 1.0,
+      "MinimumDurationSeconds": 60.0,
+      "MaximumDurationSeconds": 240.0,
+      "WindWeight": 0.0,
+      "PrecipitationWeight": 0.0
     }
   ]
 }

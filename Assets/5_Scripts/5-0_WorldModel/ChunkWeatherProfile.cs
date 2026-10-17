@@ -9,6 +9,7 @@ namespace FlatWorld.WorldModel
         public const string Rain = "rain";
         public const string Wind = "wind";
         public const string Thunder = "thunder";
+        public const string Fog = "fog";
         #endregion
     }
 

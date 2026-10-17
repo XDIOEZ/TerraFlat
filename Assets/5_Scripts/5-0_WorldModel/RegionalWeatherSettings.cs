@@ -22,6 +22,10 @@ namespace FlatWorld.WorldModel
         public float HumidityWeight;
         public float PrecipitationWeight;
         public float WindWeight;
+        public float TemperatureWeight;
+        public float MinimumTemperatureCelsius;
+        public float MaximumTemperatureCelsius = 40f;
+        public bool ParabolicEventVariation;
         public float MinimumProbability;
         public float MaximumProbability;
         public float MinimumIntensity;
@@ -53,8 +57,11 @@ namespace FlatWorld.WorldModel
         {
             if (string.IsNullOrWhiteSpace(Id) ||
                 !NonNegative(HumidityWeight) || !NonNegative(WindWeight) || !NonNegative(PrecipitationWeight) ||
-                !Finite(HumidityWeight + WindWeight + PrecipitationWeight) ||
-                HumidityWeight + WindWeight + PrecipitationWeight <= 0f ||
+                !NonNegative(TemperatureWeight) ||
+                TemperatureWeight > 0f && (!Finite(MinimumTemperatureCelsius) || !Finite(MaximumTemperatureCelsius) ||
+                    MaximumTemperatureCelsius <= MinimumTemperatureCelsius) ||
+                !Finite(HumidityWeight + WindWeight + PrecipitationWeight + TemperatureWeight) ||
+                HumidityWeight + WindWeight + PrecipitationWeight + TemperatureWeight <= 0f ||
                 !Unit(MinimumProbability) || !Unit(MaximumProbability) || MaximumProbability < MinimumProbability ||
                 !Unit(MinimumIntensity) || !Unit(MaximumIntensity) || MaximumIntensity < MinimumIntensity ||
                 !NonNegative(MinimumDurationSeconds) || MinimumDurationSeconds <= 0f ||
@@ -72,10 +79,14 @@ namespace FlatWorld.WorldModel
 
         internal WeatherElementProfile CreateProfile(ChunkWeatherClimate climate)
         {
-            // 雨天消费两层距离降水，空气湿度和风仍可供其它天气要素独立组合。
+            float temperature = TemperatureWeight <= 0f ? 0f : (float)Math.Max(0d, Math.Min(1d,
+                ((double)climate.TemperatureCelsius - MinimumTemperatureCelsius) /
+                ((double)MaximumTemperatureCelsius - MinimumTemperatureCelsius)));
+            // 温湿条件控制起雾概率以及强度、时长上限，具体事件再抽取中间高两端低的变化。
             float factor = (climate.AirHumidity * HumidityWeight + climate.WindStrength * WindWeight +
-                            climate.Precipitation * PrecipitationWeight) /
-                           (HumidityWeight + WindWeight + PrecipitationWeight);
+                            climate.Precipitation * PrecipitationWeight + temperature * TemperatureWeight) /
+                           (HumidityWeight + WindWeight + PrecipitationWeight + TemperatureWeight);
+            factor = Math.Max(0f, Math.Min(1f, factor));
             return new WeatherElementProfile(Id,
                 Lerp(MinimumProbability, MaximumProbability, factor),
                 Lerp(MinimumIntensity, MaximumIntensity, factor),
@@ -132,6 +143,14 @@ namespace FlatWorld.WorldModel
                 MinimumProbability = 0f, MaximumProbability = 0.015f,
                 MinimumIntensity = 0.15f, MaximumIntensity = 0.8f,
                 MinimumDurationSeconds = 15f, MaximumDurationSeconds = 60f
+            },
+            new WeatherElementRule
+            {
+                Id = WeatherElementIds.Fog, HumidityWeight = 1f, TemperatureWeight = 1f,
+                MinimumTemperatureCelsius = 0f, MaximumTemperatureCelsius = 40f, ParabolicEventVariation = true,
+                MinimumProbability = 0f, MaximumProbability = 0.3f,
+                MinimumIntensity = 0.1f, MaximumIntensity = 1f,
+                MinimumDurationSeconds = 60f, MaximumDurationSeconds = 240f
             }
         };
         #endregion
@@ -164,6 +183,26 @@ namespace FlatWorld.WorldModel
                 if (string.Equals(rule.Id, profile.Id, StringComparison.Ordinal))
                     return probability * rule.ResolveProbabilityMultiplier(profile.Intensity);
             return probability;
+        }
+
+        public WeatherElementProfile SampleNaturalEvent(WeatherElementProfile profile, float first, float second, float third)
+        {
+            foreach (WeatherElementRule rule in Elements)
+            {
+                if (!string.Equals(rule.Id, profile.Id, StringComparison.Ordinal) || !rule.ParabolicEventVariation)
+                    continue;
+                if (!Finite(first) || first < 0f || first > 1f || !Finite(second) || second < 0f || second > 1f ||
+                    !Finite(third) || third < 0f || third > 1f)
+                    throw new ArgumentOutOfRangeException(nameof(first), "天气强度抽样须为零到一的有限随机数。");
+                // 三个均匀随机数取中位数，得到密度为 6x(1-x) 的抛物线分布，中雾多、两端少。
+                float factor = Math.Max(Math.Min(first, second), Math.Min(Math.Max(first, second), third));
+                float minimumIntensity = Math.Min(rule.MinimumIntensity, profile.Intensity);
+                float minimumDuration = Math.Min(rule.MinimumDurationSeconds, profile.DurationSeconds);
+                return new WeatherElementProfile(profile.Id, profile.Probability,
+                    minimumIntensity + (profile.Intensity - minimumIntensity) * factor,
+                    minimumDuration + (profile.DurationSeconds - minimumDuration) * factor);
+            }
+            return profile;
         }
 
         public void Validate()

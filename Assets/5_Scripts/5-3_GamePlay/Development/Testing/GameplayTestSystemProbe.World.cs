@@ -24,6 +24,10 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/heat_sources", WorldHeatSources);
         operations.Add("environment/wind", WorldWind);
         operations.Add("environment/weather", WorldWeather);
+        operations.Add("environment/natural_fog_profile", WorldNaturalFogProfile);
+        operations.Add("environment/natural_fog_distribution", WorldNaturalFogDistribution);
+        operations.Add("environment/natural_fog_lifecycle", WorldNaturalFogLifecycle);
+        operations.Add("environment/natural_fog_validation", WorldNaturalFogValidation);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
         operations.Add("dimension/address", WorldDimensionAddress);
         RegisterCavePerformanceOperations(operations);
@@ -286,6 +290,129 @@ public static partial class GameplayTestSystemProbe
             ["originPushX"] = originVelocity.x, ["originPushY"] = originVelocity.y
         };
     }
+
+    #region 自然大雾规则采样
+
+    private static JObject WorldNaturalFogProfile(JObject args)
+    {
+        var settings = ChunkWeatherConfiguration.Load();
+        var climate = new ChunkWeatherClimate((float)Number(args, "humidity", 0.5), 1f, 0f,
+            (float)Number(args, "wind", 0), (float)Number(args, "temperature", 20),
+            (float)Number(args, "precipitation", 0));
+        bool found = settings.CreateProfile(climate).TryGetElement(WeatherElementIds.Fog, out WeatherElementProfile fog);
+        new RegionalWeatherSettings().CreateProfile(climate).TryGetElement(WeatherElementIds.Fog, out WeatherElementProfile defaults);
+        return new JObject
+        {
+            ["found"] = found, ["probability"] = fog.Probability,
+            ["activationProbability"] = settings.ResolveActivationProbability(fog),
+            ["intensityLimit"] = fog.Intensity, ["durationLimit"] = fog.DurationSeconds,
+            ["defaultProbability"] = defaults.Probability
+        };
+    }
+
+    private static JObject WorldNaturalFogDistribution(JObject args)
+    {
+        var settings = ChunkWeatherConfiguration.Load();
+        settings.CreateProfile(new ChunkWeatherClimate(1f, 0f, 0f, 0f, 40f))
+            .TryGetElement(WeatherElementIds.Fog, out WeatherElementProfile fog);
+        int[] bins = new int[5];
+        // 穷举等距均匀输入网格，只采正式抽样结果，分布断言仍由 Lua 持有。
+        for (int a = 0; a < 20; a++)
+        for (int b = 0; b < 20; b++)
+        for (int c = 0; c < 20; c++)
+        {
+            WeatherElementProfile sampled = settings.SampleNaturalEvent(fog, (a + 0.5f) / 20f,
+                (b + 0.5f) / 20f, (c + 0.5f) / 20f);
+            int bin = Math.Min(4, (int)((sampled.Intensity - 0.1f) / 0.9f * 5f));
+            bins[bin]++;
+        }
+        WeatherElementProfile minimum = settings.SampleNaturalEvent(fog, 0f, 0f, 0f);
+        WeatherElementProfile maximum = settings.SampleNaturalEvent(fog, 1f, 1f, 1f);
+        WeatherElementProfile middle = settings.SampleNaturalEvent(fog, 0.2f, 0.8f, 0.5f);
+        settings.CreateProfile(new ChunkWeatherClimate(0.25f, 0f, 0f, 0f, 10f))
+            .TryGetElement(WeatherElementIds.Fog, out WeatherElementProfile cool);
+        cool = settings.SampleNaturalEvent(cool, 0.2f, 0.8f, 0.5f);
+        return new JObject
+        {
+            ["bins"] = new JArray(bins), ["sampleCount"] = 8000,
+            ["minimumIntensity"] = minimum.Intensity, ["maximumIntensity"] = maximum.Intensity,
+            ["minimumDuration"] = minimum.DurationSeconds, ["maximumDuration"] = maximum.DurationSeconds,
+            ["middleIntensity"] = middle.Intensity, ["middleDuration"] = middle.DurationSeconds,
+            ["coolIntensity"] = cool.Intensity, ["coolDuration"] = cool.DurationSeconds
+        };
+    }
+
+    private static JObject WorldNaturalFogLifecycle(JObject args)
+    {
+        var settings = ChunkWeatherConfiguration.Load();
+        WeatherElementRule fog = Array.Find(settings.Elements, rule => rule.Id == WeatherElementIds.Fog).Clone();
+        settings.Elements = new[] { fog };
+        settings.NaturalEventProbabilityMultiplier = 1f;
+        settings.CheckIntervalSeconds = settings.StepSeconds = 2f;
+        fog.MinimumProbability = fog.MaximumProbability = 1f;
+        fog.MinimumIntensity = fog.MaximumIntensity = 0.8f;
+        fog.MinimumDurationSeconds = fog.MaximumDurationSeconds = 12f;
+        var engine = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
+        var origin = new Int2(0, 0);
+        engine.RegisterChunk(origin, settings.CreateProfile(new ChunkWeatherClimate(1f, 1f, 0f, 0f, 40f)), 0d);
+        engine.TryGetSnapshot(origin, out RegionalWeatherSnapshot before);
+        // 概率一只消除夹具随机性，起雾仍经过正式检查、自然事件启动和快照投影。
+        RegionalWeatherSnapshot started = engine.Advance(origin, 2d).Snapshot;
+        engine.RegisterChunk(new Int2(16, 0), settings.CreateProfile(new ChunkWeatherClimate(0f, 0f, 0f, 0f, -20f)), 2d);
+        engine.TryGetSnapshot(new Int2(100, 1), out RegionalWeatherSnapshot neighbor);
+        engine.ForcePrecipitation(origin, 2d, 0.4f, 20f);
+        engine.TryGetSnapshot(origin, out RegionalWeatherSnapshot withRain);
+        if (!engine.TryGetState(origin, out RegionalWeatherState state))
+            throw new InvalidOperationException("自然雾夹具缺少正式区域状态。");
+        var restored = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
+        restored.RestoreState(RegionalWeatherRecord.FromState(state).ToState());
+        restored.TryGetSnapshot(origin, out RegionalWeatherSnapshot restoredSample);
+        var replica = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
+        replica.ApplyReplicatedSnapshot(withRain);
+        replica.TryGetSnapshot(origin, out RegionalWeatherSnapshot replicaSample);
+        restored.Clear(origin, 2d);
+        restored.TryGetSnapshot(origin, out RegionalWeatherSnapshot cleared);
+        engine.ForceElements(origin, 2d, 4d, fogDensity: 0.2f);
+        engine.TryGetSnapshot(origin, out RegionalWeatherSnapshot forced);
+        RegionalWeatherSnapshot resumed = engine.Advance(origin, 6d, false).Snapshot;
+        engine.ForceElements(origin, 6d, 2d, fogDensity: 0f);
+        engine.TryGetSnapshot(origin, out RegionalWeatherSnapshot zeroForced);
+        RegionalWeatherSnapshot afterZero = engine.Advance(origin, 8d, false).Snapshot;
+        RegionalWeatherSnapshot expired = engine.Advance(origin, 14d, false).Snapshot;
+        return new JObject
+        {
+            ["beforeCheck"] = before.FogDensity,
+            ["startedFog"] = started.FogDensity, ["startedRemaining"] = started.RemainingSeconds,
+            ["neighborFog"] = neighbor.FogDensity,
+            ["rainWithFog"] = withRain.RainIntensity, ["fogWithRain"] = withRain.FogDensity,
+            ["restoredFog"] = restoredSample.FogDensity, ["replicaFog"] = replicaSample.FogDensity,
+            ["overrideFog"] = forced.FogDensity, ["resumedFog"] = resumed.FogDensity,
+            ["zeroOverrideFog"] = zeroForced.FogDensity, ["afterZeroOverrideFog"] = afterZero.FogDensity,
+            ["expiredFog"] = expired.FogDensity, ["rainAfterFog"] = expired.RainIntensity,
+            ["clearedFog"] = cleared.FogDensity
+        };
+    }
+
+    private static JObject WorldNaturalFogValidation(JObject args)
+    {
+        string Reject(Action<WeatherElementRule> change)
+        {
+            var settings = new RegionalWeatherSettings();
+            change(Array.Find(settings.Elements, rule => rule.Id == WeatherElementIds.Fog));
+            return WorldException(settings.Validate);
+        }
+        return new JObject
+        {
+            ["nonFiniteSample"] = WorldException(() => new RegionalWeatherSettings().SampleNaturalEvent(
+                new WeatherElementProfile(WeatherElementIds.Fog, 1f, 1f, 240f), float.NaN, 0.5f, 0.5f)),
+            ["outOfRangeSample"] = WorldException(() => new RegionalWeatherSettings().SampleNaturalEvent(
+                new WeatherElementProfile(WeatherElementIds.Fog, 1f, 1f, 240f), 0.5f, 0.5f, -1f)),
+            ["emptyTemperatureRange"] = Reject(rule => rule.MaximumTemperatureCelsius = rule.MinimumTemperatureCelsius),
+            ["negativeTemperatureWeight"] = Reject(rule => rule.TemperatureWeight = -1f)
+        };
+    }
+
+    #endregion
 
     private static JObject WorldWeather(JObject args)
     {
