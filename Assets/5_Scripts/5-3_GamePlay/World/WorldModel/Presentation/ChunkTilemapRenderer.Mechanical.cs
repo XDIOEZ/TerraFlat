@@ -54,6 +54,7 @@ public sealed partial class ChunkTilemapRenderer
     private static void ResetMechanicalVisualCache()
     {
         mechanicalVisualConfigs.Clear();
+        offeredMechanicalVisuals.Clear();
         mechanicalFallbackMaterial = null;
         mechanicalAxisPortSprite = null;
         if (fluidIndicatorSprite != null) UnityEngine.Object.Destroy(fluidIndicatorSprite);
@@ -63,14 +64,16 @@ public sealed partial class ChunkTilemapRenderer
     /// <summary>基础地形建立后接入机械数据变化和表现重建通知。</summary>
     private void BindMechanicalPresentation()
     {
-        MachineWorld.CellChanged += HandleMechanicalCellChanged;
+        MachineWorld.SurfacePresentationCellChanged += HandleMechanicalCellChanged;
+        MachineWorld.SurfacePresentationCellsChanged += HandleMechanicalCellsChanged;
         BatchPresentationRebuilt += RefreshMechanicalPresentation;
     }
 
     /// <summary>区块卸载时解除事件，回收行网格部件、交互和阴影注册。</summary>
     private void UnbindMechanicalPresentation()
     {
-        MachineWorld.CellChanged -= HandleMechanicalCellChanged;
+        MachineWorld.SurfacePresentationCellChanged -= HandleMechanicalCellChanged;
+        MachineWorld.SurfacePresentationCellsChanged -= HandleMechanicalCellsChanged;
         BatchPresentationRebuilt -= RefreshMechanicalPresentation;
         mechanicalVisualNodes.Clear();
         ClearMechanicalDepthVisuals();
@@ -103,6 +106,11 @@ public sealed partial class ChunkTilemapRenderer
         RefreshElectricalWireNeighbours(cell);
         RefreshFluidPipeNeighbours(cell);
         RefreshFluidTankNeighbours(cell);
+        RefreshMechanicalCell(cell);
+    }
+
+    private void RefreshMechanicalCell(Vector2Int cell)
+    {
         var origin = boundChunk.Address.ChunkOrigin;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(
             new Vector2(origin.X, origin.Y), new Vector2(cell.x, cell.y));
@@ -500,7 +508,8 @@ public sealed partial class ChunkTilemapRenderer
             int id = x + y * boundChunk.Terrain.Width + node.Definition.Layer * boundChunk.Terrain.CellCount;
             int visualLayer = node.Definition.Fluid?.Kind == "pipe" ? -2 :
                 node.Definition.Electrical?.IsWire == true ? -1 : node.Definition.Layer;
-            visual = MechanicalDepthVisual.Create(this, origin, id, visualLayer);
+            if (!TryTakePreparedMechanicalVisual(node, this, origin, id, visualLayer, out visual))
+                visual = MechanicalDepthVisual.Create(this, origin, id, visualLayer);
             mechanicalDepthVisuals[key] = visual;
         }
         visual.BeginUpdate(origin);

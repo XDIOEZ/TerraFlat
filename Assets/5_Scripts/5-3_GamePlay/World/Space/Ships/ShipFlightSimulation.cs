@@ -127,12 +127,15 @@ namespace FlatWorld.Spaceflight
             SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
             double gravity = body.SurfaceGravity;
             double thrust = 0d;
+            bool waitingForGround = flight.Phase == ShipFlightPhase.SurfaceDescending && flight.PoweredDescent && WaitForGroundPreparation(assembly);
             if (flight.Ignited || flight.PoweredDescent)
             {
                 // 自动起降只申请当前速度需要的推力，实际出力仍由供电、引擎和真实管路燃料决定。
                 double desiredSpeed = flight.PoweredDescent
                     ? ShipLandingGuidance.LandingSpeed(flight.SurfaceStageElapsedSeconds, flight.HeightMeters, seconds, settings)
                     : ShipLandingGuidance.TakeoffSpeed(settings);
+                // 最后半米等待隐藏建筑备齐，悬停仍由真实引擎与燃料承担。
+                if (waitingForGround) desiredSpeed = Math.Max(desiredSpeed, Math.Min(0d, (GroundPreparationHoldHeight - flight.HeightMeters) / seconds));
                 double requestedThrust = ShipLandingGuidance.RequiredVerticalThrust(assembly.MassKg, gravity,
                     flight.VerticalSpeed, desiredSpeed, seconds);
                 thrust = ConsumeVerticalThrust(assembly, requestedThrust, seconds);
@@ -361,6 +364,7 @@ namespace FlatWorld.Spaceflight
                 flight.PoweredDescent = poweredLanding; flight.SurfaceStageElapsedSeconds = 0d;
                 flight.LandingEventId = Guid.NewGuid().ToString("N");
             }
+            BeginGroundPreparation(assembly, world);
             // 有动力也保留完整下降阶段，期间燃料或供电中断会转为真实坠落。
             if (carrying) ShipPanelSession.CloseForPlayer(this, ItemMgr.Instance?.User_Player);
             if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));

@@ -184,7 +184,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
                 continue;
             }
 
-            if (item.PoolMarker.InPool)
+            if (item.PoolMarker.InPool || item.IsPreparedCandidate)
             {
                 continue;
             }
@@ -201,6 +201,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        ClearPreparedItems();
         Item.RuntimeStructureChanged -= TrackWorldItemMatter;
         RuntimeItemRegistered -= TrackWorldItemMatter;
         RuntimeItemUnregistered -= ReleaseWorldItemMatter;

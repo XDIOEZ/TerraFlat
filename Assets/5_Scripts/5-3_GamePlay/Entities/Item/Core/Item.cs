@@ -124,7 +124,10 @@ public abstract class Item : MonoBehaviour
     private static void ResetStructureEvents() => RuntimeStructureChanged = null;
 
     /// <summary>直接增删运行时组件后调用；仅修改现有组件属性不需要重新扫描层级。</summary>
-    public void NotifyRuntimeStructureChanged() => RuntimeStructureChanged?.Invoke(this);
+    public void NotifyRuntimeStructureChanged()
+    {
+        if (!IsPreparedCandidate) RuntimeStructureChanged?.Invoke(this);
+    }
 
     [HideInInspector]
     /// <summary>
@@ -156,6 +159,8 @@ public abstract class Item : MonoBehaviour
     private bool lifecycleTransition;
     private bool modulesLoading;
     private bool modulesUnloading;
+    private bool moduleLayoutPrepared;
+    internal bool IsPreparedCandidate { get; set; }
     internal bool IsUnloadingModules => modulesUnloading;
     internal bool IsRuntimeTransitioning => lifecycleTransition || modulesLoading || modulesUnloading;
     internal bool CanLoadRuntimeModules => modulesLoaded && !modulesUnloading && !destructionHandled;
@@ -220,6 +225,8 @@ public abstract class Item : MonoBehaviour
     [Button("加载模块")]
     public virtual void Load()
     {
+        if (IsPreparedCandidate)
+            throw new InvalidOperationException($"物品 {name} 仍是停用候选，不能提前加载运行态。");
         if (lifecycleTransition || modulesLoading || modulesUnloading || IsInitialized || destructionHandled) return;
         using var loadDebug = LoadRuntimeDebug.Measure(1, itemData?.IDName);
         lifecycleTransition = true;
@@ -439,6 +446,7 @@ public abstract class Item : MonoBehaviour
         StopAllCoroutines();
         destructionHandled = false;
         isInitialized = false;
+        IsPreparedCandidate = false;
         Owner = null;
         itemMods.ResetForReuse(this);
         ClearModuleSchedule();
@@ -563,20 +571,61 @@ public abstract class Item : MonoBehaviour
 
     #region 模块管理
 
+    /// <summary>停用候选只绑定模块、静态配置与依赖，不建立模块运行态。</summary>
+    internal void PrepareRuntimeModuleLayout()
+    {
+        if (!IsPreparedCandidate || gameObject.activeInHierarchy || IsInitialized || IsRuntimeTransitioning || destructionHandled)
+            throw new InvalidOperationException($"物品 {name} 不是可准备的停用候选。");
+        modulesLoading = true;
+        try { LoadModuleLayout(prepareOnly: true); }
+        finally { modulesLoading = false; }
+    }
+
+    /// <summary>提交时保留已经装配的模块，只把每个模块转向最新的独立实例数据。</summary>
+    internal void BindPreparedRuntimeData(ItemData data)
+    {
+        if (data == null) throw new ArgumentNullException(nameof(data));
+        if (!IsPreparedCandidate || !moduleLayoutPrepared || IsInitialized || IsRuntimeTransitioning || destructionHandled ||
+            gameObject.activeInHierarchy || ItemMgr.GetInstance()?.IsRuntimeItemRegistered(this) == true)
+            throw new InvalidOperationException($"物品 {name} 的准备布局已失效。");
+        if (itemData?.GetType() != data.GetType() || !string.Equals(itemData.IDName, data.IDName, StringComparison.Ordinal))
+            throw new InvalidOperationException($"物品 {name} 的准备布局不能提交为另一种定义或数据类型。");
+        foreach (var pair in Mods)
+        {
+            Module module = pair.Value;
+            if (module == null || module.IsRuntimeLoaded || module.IsRuntimeTransitioning || data.ModuleDataDic == null ||
+                !data.ModuleDataDic.TryGetValue(pair.Key, out ModuleData state) || state == null ||
+                state.GetType() != module._Data?.GetType() || !string.Equals(state.StableName, pair.Key, StringComparison.Ordinal) ||
+                !string.Equals(state.ModuleId, module.ResolvedModuleId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"物品 {name} 的模块 {pair.Key} 最新状态与准备布局不一致。");
+        }
+        SetItemData(data);
+        if (!ReferenceEquals(itemData, data))
+            throw new InvalidOperationException($"物品 {name} 未能绑定提交数据。");
+        foreach (var pair in Mods)
+            pair.Value.BindSnapshotData(this, data.ModuleDataDic[pair.Key], data);
+    }
+
     /// <summary>
     /// 加载并初始化模块（包括缺失补齐、初始化字典等）
     /// 可手动调用
     /// </summary>
     public void ModuleLoad()
     {
+        if (IsPreparedCandidate)
+            throw new InvalidOperationException($"物品 {name} 仍是停用候选，不能提前加载模块运行态。");
         if (modulesLoading || modulesUnloading || destructionHandled)
             throw new InvalidOperationException($"物品 {name} 正在切换生命周期或已回收，不能再次装配模块。");
         modulesLoading = true;
-        try { LoadModuleLayout(); }
+        try
+        {
+            if (moduleLayoutPrepared) LoadPreparedModuleLayout();
+            else LoadModuleLayout();
+        }
         finally { modulesLoading = false; }
     }
 
-    private void LoadModuleLayout()
+    private void LoadModuleLayout(bool prepareOnly = false)
     {
         using var layoutDebug = LoadModuleLayoutDebug.Measure(1, itemData?.IDName);
         ModuleUnload();
@@ -593,7 +642,7 @@ public abstract class Item : MonoBehaviour
                 modules.RemoveAt(i);
         RuntimeItemDefinition definition = null;
         GameRes.Instance?.TryGetItemDefinition(itemData.IDName, out definition);
-        modulesLoaded = true;
+        modulesLoaded = !prepareOnly;
 
         try
         {
@@ -640,6 +689,11 @@ public abstract class Item : MonoBehaviour
                 foreach (Module module in toInitialize) module.ModuleInit(this, module._Data);
             using (BindDependenciesDebug.Measure(toInitialize.Count, itemData?.IDName))
                 foreach (Module module in toInitialize) BindModuleDependencies(module);
+            if (prepareOnly)
+            {
+                moduleLayoutPrepared = true;
+                return;
+            }
             uint generation = RuntimeGeneration;
             using (LoadModulesDebug.Measure(toInitialize.Count, itemData?.IDName))
             {
@@ -660,6 +714,33 @@ public abstract class Item : MonoBehaviour
             {
                 throw new AggregateException($"物品 {name} 模块装配及回滚失败。", loadError, cleanupError);
             }
+            finally { itemMods.ResetForReuse(this); }
+            throw;
+        }
+    }
+
+    private void LoadPreparedModuleLayout()
+    {
+        moduleLayoutPrepared = false;
+        modulesLoaded = true;
+        using var scope = ListPool<Module>.Get(out var snapshot);
+        CopyModulesTo(snapshot);
+        uint generation = RuntimeGeneration;
+        try
+        {
+            using var loadDebug = LoadModulesDebug.Measure(snapshot.Count, itemData?.IDName);
+            foreach (Module module in snapshot)
+            {
+                if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                    throw new InvalidOperationException($"物品 {name} 在准备布局提交期间被回收。");
+                if (module != null && itemMods.HasMod(module)) module.LoadRuntime();
+                if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                    throw new InvalidOperationException($"物品 {name} 在准备布局加载回调中被回收。");
+            }
+        }
+        catch
+        {
+            try { ModuleUnload(); }
             finally { itemMods.ResetForReuse(this); }
             throw;
         }
@@ -708,6 +789,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleUnload()
     {
+        moduleLayoutPrepared = false;
         if (modulesUnloading || (!modulesLoaded && itemMods.Mods.Count == 0))
             return;
 

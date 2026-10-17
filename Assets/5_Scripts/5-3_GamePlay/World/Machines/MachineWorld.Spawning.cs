@@ -49,8 +49,8 @@ public static partial class MachineWorld
             throw;
         }
         dirty = true;
-        BuildingOccupancyRegistry.NotifyMechanicalChanged(entity.Cell);
-        CellChanged?.Invoke(entity.Cell);
+        NotifySurfaceMechanicalChanged(entity.Cell);
+        NotifySurfaceCellChanged(entity.Cell);
         NodeStateChanged?.Invoke(entity);
         return entity;
     }

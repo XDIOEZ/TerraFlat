@@ -53,9 +53,9 @@ public static partial class MachineWorld
     private static bool KeepSimulatingWithoutPlayers => IsShipScope || scope.BackgroundSimulation;
 
     private static void NotifySurfaceMechanicalChanged(Vector2Int cell)
-    { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) BuildingOccupancyRegistry.NotifyMechanicalChanged(cell); }
+    { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) PublishSurfaceMechanicalChange(cell); }
     private static void NotifySurfaceCellChanged(Vector2Int cell)
-    { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) CellChanged?.Invoke(cell); }
+    { if (!IsShipScope && worldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) PublishSurfaceCellChange(cell); }
 
     public static void ReleaseShipScope(string shipId, bool capture = false)
     {
@@ -184,6 +184,7 @@ public static partial class MachineWorld
         if (ids == null || ids.Count == 0 || fromKey == toKey && placement == null) return;
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
             throw new InvalidOperationException("只有权威端可以移交机器节点。");
+        using var surfaceChanges = BeginSurfaceChangeBatch();
         bool sameScope = string.Equals(fromKey, toKey, StringComparison.Ordinal);
         var candidates = new List<ScopeNodeTransfer>(ids.Count);
         var identities = new HashSet<int>();

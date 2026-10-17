@@ -511,7 +511,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             {
                 // 落地专项复用相同的正式起飞准备，省去惯性、导航和跨区的无关迁移。
                 JObject landing = null;
-                yield return LandTemplateAndRefuel(ship, console, groundIds, groundWorld, value => landing = value);
+                yield return LandTemplateAndRefuel(ship, console, groundIds, groundWorld, value => landing = value, inspectPreparation: true);
                 landing["templateId"] = template.Id; landing["enteredConsole"] = entered;
                 landing["beforeBuild"] = beforeBuild; landing["landed"] = landed; landing["filled"] = filled;
                 landing["lifting"] = lifting; landing["liftingGround"] = liftingGround; landing["cruising"] = cruising;

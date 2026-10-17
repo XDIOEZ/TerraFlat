@@ -31,6 +31,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - `Module.Load/Save/Unload` 为受控入口，子类实现 `OnLoad/OnSave/OnUnload`。实际加载态决定保存和 Tick；Enabled 是当前配置，运行切换用 `SetEnabled`。资源建立与清理分别属于 OnLoad/OnUnload，保存只捕获状态。
 - `RuntimeGeneration` 每次 Load 更新，不持久化；战斗身份包含 UID、world/dimension 与该代际。感知注册有独立代际。注册同一实例幂等，不同实例 GUID 冲突报错；注销使用登记时身份。
 - `BindData` 只绑定未加载、未注册外壳；世界物换定义由 `ReplaceRuntimeItem` 创建停用候选并提供失败恢复。独立模块拥有自身 Prefab 根，内嵌模块只拥有组件。
+- `ItemMgr.PrepareItem` 复用现有外壳池，在停用候选中提前装配模块、配置和依赖，不分配世界 GUID 或调用 OnLoad；`CommitPreparedItem` 绑定最新数据后正式登记/加载，可保持停用供整批显示。句柄 Dispose 取消，资源实例或定义/重载版本变化使其失效，机器仍只走 MachineWorld。
 - 池身份在 Item 序列化字段，`PooledItemMarker` 是运行时层级基线；JSON 装配完成后记录基线，卸载完成且层级匹配才可回池，资格与 saveData 独立。临时缓冲按调用借还，嵌套生成不共用同一缓冲。
 
 ## 调度与空间

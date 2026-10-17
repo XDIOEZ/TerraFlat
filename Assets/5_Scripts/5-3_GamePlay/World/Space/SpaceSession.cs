@@ -70,6 +70,7 @@ namespace FlatWorld.Spaceflight
         }
         private void OnDestroy()
         {
+            ClearGroundPreparations();
             ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseShipColliderPresenters();
@@ -90,6 +91,7 @@ namespace FlatWorld.Spaceflight
         private void Load(GameSaveData save)
         {
             if (save == null || ReferenceEquals(owner, save)) return;
+            ClearGroundPreparations();
             ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseViews();
@@ -138,6 +140,7 @@ namespace FlatWorld.Spaceflight
             SpaceMgr.ExistingInstance?.ReleaseRetainedPresentationCache();
             if (Current == null) return;
             Current.running = false;
+            Current.ClearGroundPreparations();
             Current.ResetPresentationHistory();
             Current.ResetSpacePhysics();
             Current.ReleaseViews();
@@ -264,6 +267,7 @@ namespace FlatWorld.Spaceflight
             FlushShipDamageFeedback();
             // 星球、船体和玩家在同一 LateUpdate 使用同一个浮动原点。
             if (IsSpaceView && SpaceMgr.ExistingInstance != null) SpaceMgr.ExistingInstance.TickRuntimePlanets(0f);
+            TickGroundPreparations();
             RestoreLandedBuildings();
             using (ShipViewMarker.Auto()) SynchronizeViews();
             SynchronizeLooseItems();

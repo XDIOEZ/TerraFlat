@@ -73,6 +73,14 @@ namespace FlatWorld.Spaceflight
 
         #region 普通地面建筑创建与卸载
         public static Entry Place(ItemData data, Vector2Int cell, int quarterTurns, string worldKey)
+            => PlaceCore(data, cell, quarterTurns, worldKey, null, true);
+
+        public static Entry PlacePrepared(ItemData data, Vector2Int cell, int quarterTurns, string worldKey,
+            ItemMgr.PreparedItemHandle prepared)
+            => PlaceCore(data, cell, quarterTurns, worldKey, prepared, false);
+
+        private static Entry PlaceCore(ItemData data, Vector2Int cell, int quarterTurns, string worldKey,
+            ItemMgr.PreparedItemHandle prepared, bool activate)
         {
             if (!GameNetwork.HasStateAuthority || data == null || data.Guid == 0 ||
                 string.IsNullOrWhiteSpace(worldKey)) throw new InvalidOperationException("地面建筑数据无效或没有世界写入权限。");
@@ -106,14 +114,24 @@ namespace FlatWorld.Spaceflight
                 else
                 {
                     if (ItemMgr.Instance == null) throw new InvalidOperationException("物品管理器尚未就绪。");
-                    entry.Item = ItemMgr.Instance.InstantiateItem(data, WorldLocalPresentation.ProjectPosition(logical), rotation, Vector3.one);
-                    entry.Item.Load();
+                    if (prepared != null)
+                    {
+                        entry.Item = ItemMgr.Instance.CommitPreparedItem(prepared, data,
+                            WorldLocalPresentation.ProjectPosition(logical), rotation, Vector3.one, activate: activate);
+                    }
+                    else
+                    {
+                        // 提前准备失败时沿用原创建链，最终显示仍等整组所有权移交成功。
+                        entry.Item = ItemMgr.Instance.InstantiateItem(data, WorldLocalPresentation.ProjectPosition(logical), rotation, Vector3.one);
+                        if (!activate) entry.Item.gameObject.SetActive(false);
+                        entry.Item.Load();
+                    }
                     Mod_Building building = entry.Item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building) ??
                         throw new InvalidOperationException("落地成员缺少普通建筑模块：" + data.IDName);
                     building.SetAsInstalled(initializeHealth: false);
                     entry.Item.transform.rotation = rotation;
                     entry.Item.Save();
-                    BuildingPlacementLifecycle.NotifyCommitted(entry.Item);
+                    if (activate) BuildingPlacementLifecycle.NotifyCommitted(entry.Item);
                 }
                 return entry;
             }
@@ -122,6 +140,13 @@ namespace FlatWorld.Spaceflight
                 RollbackCreated(entry);
                 throw;
             }
+        }
+
+        public static void RevealPrepared(Entry entry)
+        {
+            if (entry?.Item == null || entry.Item.DestructionHandled) return;
+            entry.Item.gameObject.SetActive(true);
+            BuildingPlacementLifecycle.NotifyCommitted(entry.Item);
         }
 
         public static void RemoveItem(Entry entry)

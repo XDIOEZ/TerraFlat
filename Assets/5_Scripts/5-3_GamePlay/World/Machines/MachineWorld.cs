@@ -59,6 +59,7 @@ public static partial class MachineWorld
         ResetElectricalRuntime();
         ResetFluidRuntime();
         CellChanged = null;
+        ResetSurfaceChangeBatch();
         NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null;
     }
 

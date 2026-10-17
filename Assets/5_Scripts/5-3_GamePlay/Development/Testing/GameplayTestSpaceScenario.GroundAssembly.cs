@@ -44,6 +44,8 @@ public sealed partial class GameplayTestSpaceScenario
                 ["cell"] = new JObject { ["x"] = entry.Cell.x, ["y"] = entry.Cell.y },
                 ["quarterTurns"] = entry.QuarterTurns, ["snapshotGuid"] = data.Guid,
                 ["specialData"] = data.ItemSpecialData,
+                ["itemInstanceId"] = entry.Item != null ? entry.Item.GetInstanceID() : 0,
+                ["health"] = entry.Machine?.State?.Hp ?? entry.Item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp,
                 ["inventories"] = GroundMachineInventories(entry.Machine)
             });
         }
@@ -158,9 +160,10 @@ public sealed partial class GameplayTestSpaceScenario
     }
 
     private IEnumerator LandTemplateAndRefuel(ShipState ship, string console, HashSet<int> ids,
-        string expectedWorld, Action<JObject> completed)
+        string expectedWorld, Action<JObject> completed, bool inspectPreparation = false)
     {
         session.ClearControl(console);
+        Dictionary<int, GroundMachinePreparationBaseline> machineBaselines = inspectPreparation ? CaptureGroundPreparationMachines(ship) : null;
         bool accepted = session.RequestLanding(console);
         if (!accepted) throw new InvalidOperationException("飞船已离开可降落范围，正式降落入口拒绝了请求。");
         IsMigrationExpected = true;
@@ -169,8 +172,19 @@ public sealed partial class GameplayTestSpaceScenario
             90d, "正式降落请求没有进入地表下降阶段。");
         JObject descending = ShipSnapshot(ship), descendingViews = ShipViewSnapshot(ship);
         descending["flightHud"] = FlightHudSnapshot();
-        yield return WaitUntil(() => Ready() && session.GetShip(ship.ShipId) == null &&
-                GroundBuildingsRestored(ids, expectedWorld),
+        JObject preparation = null, latestBeforeCommit = null;
+        if (inspectPreparation)
+        {
+            yield return ExerciseGroundPreparation(ship, console, ids, expectedWorld, machineBaselines, value => preparation = value);
+            latestBeforeCommit = ShipSnapshot(ship);
+        }
+        yield return WaitUntil(() =>
+            {
+                if (!Ready()) return false;
+                if (session.GetShip(ship.ShipId) != null)
+                { if (inspectPreparation) latestBeforeCommit = ShipSnapshot(ship); return false; }
+                return GroundBuildingsRestored(ids, expectedWorld);
+            },
             90d, "飞船未完成正式降落及普通地面建筑移交。");
         IsMigrationExpected = false;
         JObject landed = GroundBuildingSnapshot(ids);
@@ -178,11 +192,17 @@ public sealed partial class GameplayTestSpaceScenario
         landed["shipRemoved"] = session.GetShip(ship.ShipId) == null;
         landed["supported"] = session.GetPassenger(CurrentPlayer()).Supported;
         landed["flightHud"] = FlightHudSnapshot();
+        if (preparation != null)
+        {
+            preparation["latestBeforeCommit"] = latestBeforeCommit;
+            preparation["committed"] = session.GroundPreparationSnapshot(ship.ShipId);
+            preparation["landedMachines"] = GroundPreparationMachineReadings(ship, machineBaselines, expectedWorld);
+        }
         JObject returnedViews = ShipViewSnapshot(ship), refuel = null;
         yield return RefuelLandedBuildings(ids, value => refuel = value);
         completed(new JObject { ["landingAccepted"] = accepted, ["descending"] = descending,
             ["descendingViews"] = descendingViews, ["landedAgain"] = landed,
-            ["returnedViews"] = returnedViews, ["autoRefuel"] = refuel });
+            ["returnedViews"] = returnedViews, ["autoRefuel"] = refuel, ["preparation"] = preparation });
     }
 
     private IEnumerator RefuelLandedBuildings(HashSet<int> shipIds, Action<JObject> completed)

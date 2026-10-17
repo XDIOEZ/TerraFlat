@@ -42,7 +42,11 @@ public partial class ItemMgr
     public int TotalPooledItemCount => _itemObjectPool.TotalCount;
 
     /// <summary>由主菜单资源重载入口调用，释放所有依赖旧目录的缓存实体。</summary>
-    internal void ClearResourcePools() => _itemObjectPool.Clear();
+    internal void ClearResourcePools()
+    {
+        ClearPreparedItems();
+        _itemObjectPool.Clear();
+    }
 
     #endregion
 
@@ -328,6 +332,8 @@ public partial class ItemMgr
         {
             throw new InvalidOperationException($"物品缺少 ItemData：{item.name}，context={context}。");
         }
+        if (item.IsPreparedCandidate)
+            throw new InvalidOperationException($"物品 {item.name} 仍是停用候选，必须通过 CommitPreparedItem 提交。");
 
         if (!_runtimeRegistry.Contains(item) && _runtimeItemReplacements.TryGetValue(item.itemData.Guid, out var reserved) &&
             (!ReferenceEquals(reserved, authorizedTransfer) ||

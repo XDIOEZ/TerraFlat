@@ -34,8 +34,8 @@ public static partial class MachineWorld
         dirty = true;
         foreach (Vector2Int cell in changed)
         {
-            BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
-            CellChanged?.Invoke(cell);
+            NotifySurfaceMechanicalChanged(cell);
+            NotifySurfaceCellChanged(cell);
         }
     }
 
