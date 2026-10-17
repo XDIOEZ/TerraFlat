@@ -32,6 +32,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 后台炉吸燃料先用本世界冻结拓扑筛同格候选，再仅对候选计算距离、排序和补配置，禁止为同格查询排序全世界掉落物；记录身份优先核对原列表/下标，列表被回调挪动时才回退查找。Profiler 分 `ColdFuel.Collect/Sort/Transfer`。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
 - FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
+- 炉体批量加热自己的输入时，温度状态通知不重复选配方，整批末尾再按真实材料正式匹配；外部库存变动仍即时匹配，不按上次温度缓存生产资格。
 - CultivatorLogic 保存每槽作物、水、肥、电力和待收产量；断供/满输出保留状态。显示读取真实种植槽，空槽隐藏，不为客户端或休眠显示创建业务逻辑。
 - 初始化库存/战利品只执行一次，随机空结果也算完成。最大生命由当前定义及 CraftedDurabilityMultiplier 派生，受损生命不重复叠乘；MachineCombatBridge 消费真实武器窗口并 PublishExternalDamage 回传实际损失。
 - 放置失败不扣召唤器；拆回捕获全状态、成功生成返还物再移除。MachineArchive 持有独立归档，缺失 MOD 定义保留冷快照，显示卸载不删节点或库存；CaptureCurrentWorld 在捕获期间固定 scopeOverride，嵌套节点租约不得切回活动场景或把船库存写入地表档案。

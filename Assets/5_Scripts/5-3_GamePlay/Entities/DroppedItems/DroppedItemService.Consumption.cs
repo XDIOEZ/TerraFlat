@@ -79,7 +79,7 @@ public static partial class DroppedItemService
 
         // interactive 掉落物始终是完整 Item；单机也必须和 passive 轻量掉落物一起参与查询。
         if (!GameNetwork.HasStateAuthority || ItemMgr.Instance == null) return handle.IsValid;
-        ItemMgr.Instance.QueryItemsInCircleNonAlloc(origin, radius, ~0, null, forageLegacyCandidates, forageLegacyDedupe);
+        ItemMgr.Instance.QueryItemCentersInCircleNonAlloc(origin, radius, ~0, null, forageLegacyCandidates, forageLegacyDedupe);
         foreach (Item candidate in forageLegacyCandidates)
         {
             if (!IsLoosePickable(candidate) || candidate.itemData.Tags?.Contains(tag) != true) continue;

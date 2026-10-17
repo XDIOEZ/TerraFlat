@@ -40,6 +40,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 距离档按同场景最近玩家及循环最短距离限制 ItemMgr Tick，不提高模块自身频率。玩家、地图、手持物保持完整更新；Owner 不代表豁免。`ItemSimulationRangeIndex` 使用近档集合、到期堆及区域判档。
 - 休眠重置时钟、停根刚体并通知 `ISimulationRangeAware`；重入先恢复原 simulated 值再重提目标。`NotifyRuntimeItemMoved` 更新空间索引与分档后发布移动事件。
 - Actor 感知几何来自当前定义；Collider Bridge 仅服务旧对象。注册/结构变化选择后端并增代际，移动只更新位置；格访问以 `LastVisitedBatch` 去重。`ItemPhysicsProjection2D` 将总重量投影成质量，将速度/接触写入非持久化 PhysicsState。
+- 掉落拾取/吸燃料用 `QueryItemCentersInCircleNonAlloc` 查附近中心空间桶；不要复用会扫描全世界感知倍率与几何的 Actor 感知查询，循环接缝仍按真实中心半径去重。
 - `ItemData.transform`、索引与存档使用规范逻辑坐标；Transform/刚体可位于客户端镜像。跨周事件通过 `ReprojectRuntimeItemsToLocalAnchor` 重投影，根刚体由 `WrappedWorldPhysicsAdapter` 管理；Physics2D 命中经 `GameplayPhysics2D.ResolveComponent<T>` 解析源对象。远程副本不进本地 Tick、感知或存档索引。
 
 ## 定义、资源与状态

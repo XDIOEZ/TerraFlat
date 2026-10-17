@@ -14,7 +14,7 @@ using Random = UnityEngine.Random;
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
-public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder
+public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder, IItemPoolLifecycle
 {
     #region 可组合生命规则
 
@@ -284,6 +284,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     private bool _isVisualShaking;
     private Coroutine _shakeCoroutine;
     private Vector3 _visualShakeRestPosition;
+    private readonly List<SpriteRenderer> healthBarRendererBuffer = new List<SpriteRenderer>(8);
 
     private bool _deathConsumedByExternalHandler;
     // 结算期间禁止回调重入，死亡标记在 Load 或显式复活时重置。
@@ -356,7 +357,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         LastDamageSource = default; LastDamageCredit = default;
         equipmentInventory = item.itemMods.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module)?.EquipmentInventory;
 
-        HidePanel();
+        ReleaseWorldHealthPanel();
     }
 
     public override void ApplyNetworkData(ModuleData data)
@@ -410,27 +411,26 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (PanelPrefab == null)
             return;
 
-        if (PanleInstance != null) return;
+        if (IsPanelVisible()) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
-        GameObject panel = Instantiate(PanelPrefab, transform);
-        UIValues = panel.GetComponentInChildren<BasePanel>();
-        UIValues.CollectUIComponents();
-        PanleInstance = panel;
+        // 血条仅在本轮实体首次受伤时创建，自动隐藏后复用原实例。
+        if (PanleInstance == null)
+        {
+            PanleInstance = Instantiate(PanelPrefab, transform);
+            UIValues = PanleInstance.GetComponentInChildren<BasePanel>();
+            UIValues.CollectUIComponents();
+        }
+        PanleInstance.SetActive(true);
         UpdateWorldHealthBarLayout();
+        DataUpdate -= RefreshUI;
         DataUpdate += RefreshUI;
 
         RefreshUI();
-        // ✅ 从 UI_Drag 中获取 rectTransform 并恢复位置
-        var s = panel.GetComponentInChildren<UI_Drag>();
-        if (s != null)
-        {
-            // s.rectTransform.anchoredPosition = Data.PanelPosition;
-        }
     }
     [Button("刷新面板")]
     public void RefreshUI()
     {
-        if (UIValues == null) return;
+        if (!IsPanelVisible() || UIValues == null) return;
         UIValues.GetText("血量").text = $"{Hp:F1}";  // F1 表示保留 1 位小数
     }
 
@@ -440,30 +440,48 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     public void HidePanel()
     {
         DataUpdate -= RefreshUI;
-
-        if (PanleInstance == null)
-        {
-            UIValues = null;
-            return;
-        }
-
-        if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
-
-        // ✅ 从 UI_Drag 中获取 rectTransform 并保存位置
-        var s = PanleInstance.GetComponentInChildren<UI_Drag>();
-        if (s != null)
-        {
-            //    Data.PanelPosition = s.rectTransform.anchoredPosition;
-        }
-
-        Destroy(PanleInstance);
-        PanleInstance = null;
-        UIValues = null;
+        CancelHealthPanelHide();
+        if (PanleInstance != null)
+            PanleInstance.SetActive(false);
     }
     public bool IsPanelVisible()
     {
-        return PanleInstance != null;
+        return PanleInstance != null && PanleInstance.activeSelf;
     }// 添加检查面板是否可见的方法
+
+    #region 世界血条缓存生命周期
+
+    /// <summary>卸载与回池时释放本轮血条，避免旧实体的界面进入下一轮生命周期。</summary>
+    private void ReleaseWorldHealthPanel()
+    {
+        HidePanel();
+        GameObject panel = PanleInstance;
+        PanleInstance = null;
+        UIValues = null;
+        healthBarRendererBuffer.Clear();
+        _lastDamageUiTime = -999f;
+        if (panel == null)
+            return;
+        // 延迟销毁前先还原实体层级，避免同帧回池仍把隐藏血条算作额外节点。
+        panel.transform.SetParent(null, true);
+        if (Application.isPlaying)
+            Destroy(panel);
+        else
+            DestroyImmediate(panel);
+    }
+
+    private void CancelHealthPanelHide()
+    {
+        if (_hideUiCoroutine == null)
+            return;
+        StopCoroutine(_hideUiCoroutine);
+        _hideUiCoroutine = null;
+    }
+
+    public void OnItemTakenFromPool() => ReleaseWorldHealthPanel();
+    public void OnItemReturnedToPool() => ReleaseWorldHealthPanel();
+
+    #endregion
 
     public override void ModUpdate(float deltaTime)
     {
@@ -471,7 +489,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         UpdateHitSlowdown(deltaTime);
 
         // 抖动只属于受击视觉，血条继续跟随稳定的物品根节点。
-        if (PanleInstance != null && !_isVisualShaking)
+        if (IsPanelVisible() && !_isVisualShaking)
             UpdateWorldHealthBarLayout();
     }
 
@@ -502,13 +520,14 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     private Bounds GetOwnerVisualBounds()
     {
         GameObject owner = item != null ? item.gameObject : gameObject;
-        SpriteRenderer[] renderers = owner.GetComponentsInChildren<SpriteRenderer>(false);
+        // 反复定位血条复用容器，避免每帧为渲染器数组分配内存。
+        owner.GetComponentsInChildren(false, healthBarRendererBuffer);
         bool hasBounds = false;
         Bounds bounds = default;
 
-        for (int i = 0; i < renderers.Length; i++)
+        for (int i = 0; i < healthBarRendererBuffer.Count; i++)
         {
-            SpriteRenderer renderer = renderers[i];
+            SpriteRenderer renderer = healthBarRendererBuffer[i];
             if (renderer == null || !renderer.enabled || renderer.sprite == null)
                 continue;
 
@@ -584,6 +603,13 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     private void OnDestroy()
     {
         Unload();
+        ReleaseWorldHealthPanel();
+    }
+
+    private void OnDisable()
+    {
+        // Unity 停用对象会中止协程，同步清除句柄以便再次受伤时重新计时。
+        HidePanel();
     }
 
     protected override void OnUnload()
@@ -598,11 +624,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             StopCoroutine(_deathCoroutine);
             _deathCoroutine = null;
         }
-        if (_hideUiCoroutine != null)
-        {
-            StopCoroutine(_hideUiCoroutine);
-            _hideUiCoroutine = null;
-        }
+        ReleaseWorldHealthPanel();
         equipmentInventory = null;
 
         if (_handStateEventOwner != null)
@@ -1424,28 +1446,21 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             ShowPanel();
         }
 
-        if (_hideUiCoroutine != null)
-        {
-            StopCoroutine(_hideUiCoroutine);
-        }
-
-        _hideUiCoroutine = StartCoroutine(HideUiAfterNoDamageCoroutine());
+        // 连续生存扣血只延后截止时间，不为每次伤害反复分配协程。
+        if (IsPanelVisible() && _hideUiCoroutine == null)
+            _hideUiCoroutine = StartCoroutine(HideUiAfterNoDamageCoroutine());
     }
 
     private IEnumerator HideUiAfterNoDamageCoroutine()
     {
-        float delay = Mathf.Max(0f, HideUiDelayAfterLastDamage);
-        yield return new WaitForSeconds(delay);
-
-        // 若等待期间又受伤，则保留面板
-        if (Time.time - _lastDamageUiTime < delay)
+        do
         {
-            _hideUiCoroutine = null;
-            yield break;
+            float remaining = Mathf.Max(0f, HideUiDelayAfterLastDamage) - (Time.time - _lastDamageUiTime);
+            yield return new WaitForSeconds(Mathf.Max(0f, remaining));
         }
-
-        HidePanel();
+        while (Time.time - _lastDamageUiTime < Mathf.Max(0f, HideUiDelayAfterLastDamage));
         _hideUiCoroutine = null;
+        HidePanel();
     }
 
     /// <summary>新实例加载或显式复活时取消上一轮延迟销毁，开启新的死亡结算周期。</summary>

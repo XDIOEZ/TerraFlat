@@ -28,7 +28,8 @@ public static class AtmosphereService
         if (saves?.PlanetData_Dict == null) return false;
         var address = WorldAddress.FromWorldKey(worldKey);
         if (!saves.PlanetData_Dict.TryGetValue(address.PlanetId, out var planet) || planet == null) return false;
-        state = GetOrCreate(planet); return true;
+        // 进入世界时已校验大气，逐个生物采样只读真实库存，不重复建立完整校验集合。
+        state = planet.Atmosphere ?? GetOrCreate(planet); return true;
     }
     public static double PressureKPa(AtmosphereState state) => state == null || state.CapacityMoles == 0m ||
         state.ReferenceMoles <= 0m ? 0d : state.ReferencePressureKPa * (double)(state.CurrentMoles / state.ReferenceMoles);

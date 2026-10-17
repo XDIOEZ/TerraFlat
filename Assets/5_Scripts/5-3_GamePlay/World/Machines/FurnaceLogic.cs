@@ -40,6 +40,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 
     private readonly float burnSpeed;
     private readonly bool absorbDroppedFuel;
+    private readonly Predicate<Vector2> fuelCellFilter;
     private readonly List<FurnaceFuelByproductRule> byproducts;
     private readonly List<string> ignitionIds;
     private readonly List<string> ignitionTags;
@@ -58,6 +59,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private Player productionActor;
     private RuntimeItemReactionDefinition activeReaction;
     private float combustionHeatBonus;
+    private bool notifyingInputMatter;
     #endregion
 
     #region 生命周期
@@ -85,6 +87,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         burnSpeed = fuelConfig.Value("burnSpeedMultiplier", fuelAuthoring.burnSpeedMultiplier);
         AcceptsAirflow = config.Value("acceptsMechanicalBellows", authoring.acceptsMechanicalBellows);
         absorbDroppedFuel = config.Value("absorbDroppedFuel", authoring.absorbDroppedFuel);
+        fuelCellFilter = IsFuelInSameCell;
         byproducts = config.Value("fuelByproductRules", authoring.fuelByproductRules) ?? new();
         FurnaceFuelByproductProcessor.ValidateRules(byproducts);
         ignitionIds = config.Value("ignitionItemIds", authoring.ignitionItemIds) ?? new();
@@ -245,7 +248,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
                    sameCellRadius,
                    Tag.CombustionFuel,
                    out DroppedItemHandle handle,
-                   position => MachineWorld.CellOf(position) == Entity.Cell))
+                   fuelCellFilter))
         {
             if (!DroppedItemService.TryGetSnapshot(handle, out ItemData dropped) || dropped?.Stack == null ||
                 !Mod_Fuel.TryResolveItemData(dropped, out FuelData fuelData) ||
@@ -275,6 +278,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             }
         }
     }
+
+    private bool IsFuelInSameCell(Vector2 position) => MachineWorld.CellOf(position) == Entity.Cell;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual bool Ignite(Player actor)
@@ -409,7 +414,13 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             // 炉内材料保留设备原有的固定加热规则，环境散热不复用该速率。
             if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds,
                     transferPerSecondOverride: 1f))
-                Input.Data.NotifyItemStateChanged(item);
+            {
+                // 升温通知只更新观察者，整批加热结束后统一按真实材料选择一次配方。
+                bool previousNotification = notifyingInputMatter;
+                notifyingInputMatter = true;
+                try { Input.Data.NotifyItemStateChanged(item); }
+                finally { notifyingInputMatter = previousNotification; }
+            }
         }
         if (heatVessels && InventoryVesselHeating.ProcessHeat(Input, Output, Data.Temperature, seconds))
         { Processor.State.Progress = 0f; return; }
@@ -517,7 +528,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 
     public override bool Execute(string operation, string argument, Player actor) => operation == "work" && Ignite(actor);
     protected override void OnInventoryChanged(ItemSlot slot)
-    { RefreshRecipe(); base.OnInventoryChanged(slot); }
+    { if (!notifyingInputMatter) RefreshRecipe(); base.OnInventoryChanged(slot); }
     private void OnProgressChanged() => NotifyChanged();
     #endregion
 }

@@ -93,7 +93,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## 编辑器与调试工具
 
-- 自动资源刷新合并外部变化，Play/切换期间保留请求、编辑模式静默后处理；Unity 保存独立于全库刷新。内容工坊只写 JSON 差异。
+- 自动资源刷新合并外部变化，Windows 用 ReadDirectoryChangesW 事件通知，禁止 Mono DefaultWatcher 递归扫描 Assets；Play/切换期间保留请求、编辑模式静默后处理，通知溢出补一次全量刷新。Unity 保存独立于全库刷新。内容工坊只写 JSON 差异。
 - 动态 SceneManager.CreateScene 不触发 sceneLoaded；Hierarchy 工具结合卸载/hierarchyChanged 定向解析保存记录，GlobalObjectId 仅解析已加载所属场景。
 - GameLogManager 业务日志接口为 `[WORK]`；定时刷盘线程池最多一个请求，共享日志流锁且无 Unity API，暂停/退出/错误/显式 Flush 同步落盘。
 - F3 EnvironmentInfoDisplay 读取 WorldModel 权威格/EnvironmentLayerIds、FarmlandSystem 水肥和 TemperatureMgr 环境温度；隐藏时停止采样，投影前拒绝非有限/视口外指针，无效时清悬停且不绘制 IMGUI。IMGUI 按实际 CalcHeight 整页滚动。F4 为 GM，F6 为晴天。

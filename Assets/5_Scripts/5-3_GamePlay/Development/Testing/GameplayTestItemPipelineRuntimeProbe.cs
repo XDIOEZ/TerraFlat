@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -18,9 +19,78 @@ public static class GameplayTestItemPipelineRuntimeProbe
     private static void Register()
     {
         GameplayTestRuntimeProbe.RegisterAsync("item_runtime", "loaded_lifecycle", CaptureLifecycle);
+        GameplayTestRuntimeProbe.Register("item_runtime", "center_spatial_query", CaptureCenterSpatialQuery);
         GameplayTestRuntimeProbe.RegisterAsync("combat", "held_weapon_action", CaptureHeldWeaponAction);
         GameplayTestRuntimeProbe.Register("modding", "live_lua_module", CaptureLuaModule);
         GameplayTestRuntimeProbe.Register("networking", "live_replica", CaptureReplica);
+    }
+    #endregion
+
+    #region 掉落物中心查询真实空间索引
+    private static JObject CaptureCenterSpatialQuery(Player player, JObject args)
+    {
+        Item sample = null;
+        ItemMgr manager = ItemMgr.Instance;
+        var found = new List<Item>();
+        var dedupe = new HashSet<Item>();
+        var result = new JObject();
+        try
+        {
+            Vector2 center = new(Mathf.Floor(player.transform.position.x) + .5f,
+                Mathf.Floor(player.transform.position.y) + .5f);
+            sample = LoadSpawned(manager.InstantiateItem("Knife_Flint", center));
+            int Count(Vector2 origin, float radius, int mask = ~0, Item excluded = null)
+            {
+                manager.QueryItemCentersInCircleNonAlloc(origin, radius, mask, excluded, found, dedupe);
+                return found.Count(candidate => ReferenceEquals(candidate, sample));
+            }
+            void Move(Vector2 position)
+            {
+                sample.transform.position = position;
+                manager.NotifyRuntimeItemMoved(sample);
+            }
+
+            result["registered"] = manager.IsRuntimeItemRegistered(sample);
+            result["zeroRadius"] = Count(center, 0f);
+            Move(center + Vector2.right);
+            result["boundary"] = Count(center, 1f);
+            result["outside"] = Count(center, .99f);
+            result["excluded"] = Count(center, 1f, excluded: sample);
+            result["masked"] = Count(center, 1f, 0);
+            result["negativeRadius"] = Count(center, -1f);
+            result["invalidRadius"] = Count(center, float.NaN);
+            sample.gameObject.SetActive(false);
+            result["inactive"] = Count(center, 1f);
+            sample.gameObject.SetActive(true);
+
+            WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+            result["wrapped"] = topology.IsWrapped;
+            if (!topology.IsWrapped) throw new InvalidOperationException("接缝查询回归需要正式循环地表世界。");
+            Vector2 seamOrigin = new(topology.Min.x + .25f, topology.Min.y + 1.5f);
+            Move(new Vector2(topology.Min.x + topology.Span.x - .25f, seamOrigin.y));
+            result["seamBoundary"] = Count(seamOrigin, .5f);
+            result["seamOutside"] = Count(seamOrigin, .49f);
+            result["seamDeduplicated"] = Count(seamOrigin, .75f);
+
+            // 同一正式大气查询预热后采样分配量，避免每个生物重复建立全量校验集合。
+            string worldKey = player.gameObject.scene.name;
+            if (!AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState atmosphere))
+                throw new InvalidOperationException("当前隔离世界缺少大气状态。");
+            for (int i = 0; i < 16; i++) AtmosphereService.TryGetForWorld(worldKey, out _);
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            bool reused = true;
+            for (int i = 0; i < 256; i++)
+                reused &= AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState read) && ReferenceEquals(read, atmosphere);
+            result["atmosphereReadBytes"] = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            result["atmosphereIdentityPreserved"] = reused;
+        }
+        finally
+        {
+            int guid = sample != null ? sample.itemData.Guid : 0;
+            Despawn(ref sample);
+            result["fixtureRemoved"] = guid != 0 && manager.GetItemByGuid(guid) == null;
+        }
+        return result;
     }
     #endregion
 

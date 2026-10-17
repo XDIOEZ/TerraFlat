@@ -1,5 +1,18 @@
 -- 物品运行、MOD Lua和网络副本共用正式资源与自有运行实例。
 test.check("world_ready", "正式隔离世界已就绪")
+test.runtime("item_runtime", "center_spatial_query", {}, function(d)
+    assert(d.registered and d.fixtureRemoved, "中心查询夹具未走正式登记或卸载后残留索引")
+    assert(d.zeroRadius == 1 and d.boundary == 1 and d.outside == 0,
+        "中心半径查询遗漏零半径同点或边界，或接收半径外物品")
+    assert(d.excluded == 0 and d.masked == 0 and d.inactive == 0,
+        "中心查询未排除指定对象、屏蔽图层或停用对象")
+    assert(d.negativeRadius == 0 and d.invalidRadius == 0, "非法半径进入空间桶遍历")
+    assert(d.wrapped and d.seamBoundary == 1 and d.seamOutside == 0 and d.seamDeduplicated == 1,
+        "循环接缝遗漏真实物品、超范围命中或重复返回镜像")
+    assert(d.atmosphereIdentityPreserved and d.atmosphereReadBytes <= 32768,
+        "只读大气查询未复用真实状态或仍反复分配完整校验集合")
+end, "真实物品中心查询、半径边界、循环去重及大气只读分配")
+
 test.runtime("item_runtime", "loaded_lifecycle", {}, function(d)
     for _, state in ipairs({d.spawned, d.afterFrame, d.second}) do
         assert(state.initialized and state.active and state.registered and state.indexed and

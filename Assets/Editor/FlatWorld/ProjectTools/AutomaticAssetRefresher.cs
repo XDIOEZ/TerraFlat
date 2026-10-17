@@ -8,7 +8,7 @@ using Unity.Profiling;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 /// <summary>
-/// 监听 Assets 目录变化，并由后台线程按固定间隔合并刷新请求。
+/// 监听 Assets 目录变化，并在主线程静默后合并刷新请求。
 /// 后台线程不调用 Unity API，最终资源刷新始终由 Editor 主线程执行。
 /// </summary>
 [InitializeOnLoad]
@@ -16,15 +16,9 @@ public static class AutomaticAssetRefresher
 {
     #region 常量与状态
 
-    // 后台线程检查文件变化的固定间隔。
-    private const int PollingIntervalMilliseconds = 500;
-
     // 文件连续写入时等待一秒静默，再合并成一次资源刷新。
     private static readonly long DebounceIntervalTicks = Stopwatch.Frequency;
     private static readonly ProfilerMarker RefreshMarker = new("FlatWorld.Editor.AutoAssetRefresh");
-
-    // 程序集重载或退出时等待后台线程结束的最长时间。
-    private const int WorkerJoinTimeoutMilliseconds = 2000;
 
     // EditorPrefs 中保存自动刷新开关的键。
     private const string EditorPrefKey = "FlatWorld_AutoAssetRefresh_Enabled";
@@ -34,9 +28,6 @@ public static class AutomaticAssetRefresher
 
     // 以整数保存开关，便于跨线程原子读取。
     private static int enabledState;
-
-    // 标记文件系统已经发生变化。
-    private static int fileChangesPending;
 
     // 标记主线程需要执行资源刷新。
     private static int mainThreadRefreshPending;
@@ -49,11 +40,9 @@ public static class AutomaticAssetRefresher
     // 监听 Assets 目录的文件变化。
     private static FileSystemWatcher watcher;
 
-    // 按固定间隔合并变化的后台线程。
-    private static Thread pollingThread;
-
-    // 通知后台线程停止轮询。
-    private static ManualResetEvent pollingStopSignal;
+    // Windows 直接等待系统通知，避免 Mono 在匿名线程递归扫描整个 Assets。
+    private static IDisposable nativeWatcher;
+    private static string pendingWatcherWarning;
 
     #endregion
 
@@ -69,7 +58,7 @@ public static class AutomaticAssetRefresher
 
         if (enabled)
         {
-            StartPolling();
+            StartWatching();
         }
 
         EditorApplication.update += OnEditorUpdate;
@@ -113,7 +102,7 @@ public static class AutomaticAssetRefresher
     }
 
     /// <summary>
-    /// 保存开关并启动或停止后台轮询。
+    /// 保存开关并启动或停止目录通知。
     /// </summary>
     private static void SetEnabled(bool enabled)
     {
@@ -122,11 +111,11 @@ public static class AutomaticAssetRefresher
 
         if (enabled)
         {
-            StartPolling();
+            StartWatching();
             return;
         }
 
-        StopPolling();
+        StopWatching();
     }
 
     /// <summary>
@@ -134,6 +123,10 @@ public static class AutomaticAssetRefresher
     /// </summary>
     private static void OnEditorUpdate()
     {
+        string warning = Interlocked.Exchange(ref pendingWatcherWarning, null);
+        if (warning != null)
+            Debug.LogWarning("[AutoAssetRefresh] " + warning);
+
         if (!IsEnabled() || Volatile.Read(ref mainThreadRefreshPending) == 0)
         {
             return;
@@ -159,7 +152,7 @@ public static class AutomaticAssetRefresher
     private static void Shutdown()
     {
         UnlockAssemblyReloadForPlayMode();
-        StopPolling();
+        StopWatching();
         EditorApplication.update -= OnEditorUpdate;
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
@@ -208,101 +201,66 @@ public static class AutomaticAssetRefresher
 
     #endregion
 
-    #region 后台轮询
+    #region 文件通知生命周期
 
-    /// <summary>
-    /// 启动文件监听器与固定间隔轮询线程。
-    /// </summary>
-    private static void StartPolling()
+    /// <summary>启动事件式监听，文件变化直接合并到主线程刷新请求。</summary>
+    private static void StartWatching()
     {
         lock (LifecycleLock)
         {
-            if (pollingThread != null)
+            if (nativeWatcher != null || watcher != null)
+                return;
+
+#if UNITY_EDITOR_WIN
+            nativeWatcher = new WindowsAssetChangeWatcher(Application.dataPath,
+                OnNativeFileChanged, ReportWatcherError);
+#else
+            FileSystemWatcher createdWatcher = CreateWatcher(Application.dataPath);
+            // Mono 的兼容后端会全库轮询；明确提示改用编辑器自身刷新，避免静默退回高开销扫描。
+            var backendField = typeof(FileSystemWatcher).GetField("watcher",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            object backend = backendField?.GetValue(createdWatcher);
+            if (backend?.GetType().FullName == "System.IO.DefaultWatcher")
             {
+                DisposeWatcher(createdWatcher);
+                ReportWatcherError("当前 Mono 只支持扫描式文件监听，已停止此高开销后端；请使用 Unity 自带自动刷新或手动刷新。");
                 return;
             }
-
-            FileSystemWatcher createdWatcher = CreateWatcher(Application.dataPath);
-            ManualResetEvent createdStopSignal = new ManualResetEvent(false);
-            Thread createdThread = new Thread(() => PollForChanges(createdStopSignal))
-            {
-                IsBackground = true,
-                Name = "FlatWorld Auto Asset Refresh Poller"
-            };
-
             watcher = createdWatcher;
-            pollingStopSignal = createdStopSignal;
-            pollingThread = createdThread;
-
-            createdThread.Start();
             createdWatcher.EnableRaisingEvents = true;
+#endif
         }
     }
 
-    /// <summary>
-    /// 每隔固定时间把文件变化合并为一个主线程刷新请求。
-    /// </summary>
-    private static void PollForChanges(ManualResetEvent stopSignal)
+    /// <summary>停止监听并清除尚未消费的请求。</summary>
+    private static void StopWatching()
     {
-        while (!stopSignal.WaitOne(PollingIntervalMilliseconds))
-        {
-            if (!IsEnabled())
-            {
-                continue;
-            }
-
-            if (Volatile.Read(ref fileChangesPending) == 0 || !HasDebounceElapsed())
-            {
-                continue;
-            }
-
-            if (Interlocked.Exchange(ref fileChangesPending, 0) == 0)
-            {
-                continue;
-            }
-
-            Interlocked.Exchange(ref mainThreadRefreshPending, 1);
-        }
-    }
-
-    /// <summary>
-    /// 停止文件监听器并等待后台轮询线程退出。
-    /// </summary>
-    private static void StopPolling()
-    {
+        IDisposable nativeToDispose;
         FileSystemWatcher watcherToDispose;
-        ManualResetEvent stopSignalToDispose;
-        Thread threadToJoin;
-
         lock (LifecycleLock)
         {
+            nativeToDispose = nativeWatcher;
             watcherToDispose = watcher;
-            stopSignalToDispose = pollingStopSignal;
-            threadToJoin = pollingThread;
-
+            nativeWatcher = null;
             watcher = null;
-            pollingStopSignal = null;
-            pollingThread = null;
         }
 
+        nativeToDispose?.Dispose();
         DisposeWatcher(watcherToDispose);
-        stopSignalToDispose?.Set();
-
-        bool threadStopped = threadToJoin == null
-            || !threadToJoin.IsAlive
-            || threadToJoin.Join(WorkerJoinTimeoutMilliseconds);
-
-        if (threadStopped)
-        {
-            stopSignalToDispose?.Dispose();
-        }
-        else
-        {
-            Debug.LogWarning("[AutoAssetRefresh] 后台轮询线程未在限定时间内结束");
-        }
-
-        Interlocked.Exchange(ref fileChangesPending, 0);
         Interlocked.Exchange(ref mainThreadRefreshPending, 0);
+    }
+
+    private static void OnNativeFileChanged(string path)
+    {
+        if (path == null)
+            RequestRefresh();
+        else
+            RequestRefresh(path);
+    }
+
+    private static void ReportWatcherError(string message)
+    {
+        Interlocked.Exchange(ref pendingWatcherWarning, message);
     }
 
     #endregion
@@ -347,7 +305,7 @@ public static class AutomaticAssetRefresher
     }
 
     /// <summary>
-    /// 记录普通文件变化，等待后台线程合并处理。
+    /// 记录普通文件变化，等待主线程静默合并。
     /// </summary>
     private static void OnFileChanged(object sender, FileSystemEventArgs eventArgs)
     {
@@ -355,7 +313,7 @@ public static class AutomaticAssetRefresher
     }
 
     /// <summary>
-    /// 记录文件重命名，等待后台线程合并处理。
+    /// 记录文件重命名，等待主线程静默合并。
     /// </summary>
     private static void OnFileRenamed(object sender, RenamedEventArgs eventArgs)
     {
@@ -373,7 +331,7 @@ public static class AutomaticAssetRefresher
         }
 
         Interlocked.Exchange(ref lastFileChangeTimestamp, Stopwatch.GetTimestamp());
-        Interlocked.Exchange(ref fileChangesPending, 1);
+        Interlocked.Exchange(ref mainThreadRefreshPending, 1);
     }
 
     private static bool HasDebounceElapsed()

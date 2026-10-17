@@ -673,6 +673,17 @@ public partial class ItemMgr
         Item excludedItem,
         List<Item> results,
         HashSet<Item> dedupe)
+        => CollectItemsInCircle(center, radius, layerMask, excludedItem, results, dedupe, true);
+
+    /// <summary>掉落物按中心距离查附近空间桶，不为拾取或吸燃料扫描全世界感知几何。</summary>
+    public void QueryItemCentersInCircleNonAlloc(
+        Vector2 center, float radius, LayerMask layerMask, Item excludedItem,
+        List<Item> results, HashSet<Item> dedupe)
+        => CollectItemsInCircle(center, radius, layerMask, excludedItem, results, dedupe, false);
+
+    private void CollectItemsInCircle(
+        Vector2 center, float radius, LayerMask layerMask, Item excludedItem,
+        List<Item> results, HashSet<Item> dedupe, bool useTargetGeometry)
     {
         if (results == null)
             throw new ArgumentNullException(nameof(results));
@@ -681,11 +692,15 @@ public partial class ItemMgr
 
         results.Clear();
         dedupe.Clear();
-        if (radius < 0f)
+        if (!float.IsFinite(radius) || radius < 0f || !float.IsFinite(center.x) || !float.IsFinite(center.y))
             return;
 
-        float multiplier = GetMaximumTargetPerceptionMultiplier(out float maximumShapeReach);
-        float broadphaseRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(radius, multiplier) + maximumShapeReach;
+        float broadphaseRadius = radius;
+        if (useTargetGeometry)
+        {
+            float multiplier = GetMaximumTargetPerceptionMultiplier(out float maximumShapeReach);
+            broadphaseRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(radius, multiplier) + maximumShapeReach;
+        }
         WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         int minImage = topology.IsWrapped ? -1 : 0;
         int maxImage = topology.IsWrapped ? 1 : 0;
@@ -707,11 +722,28 @@ public partial class ItemMgr
                             continue;
 
                         foreach (Item candidate in cell.Items)
-                            TryAddSpatialCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
+                        {
+                            if (useTargetGeometry)
+                                TryAddSpatialCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
+                            else
+                                TryAddCenterCandidate(candidate, imageCenter, radius, layerMask, excludedItem, results, dedupe);
+                        }
                     }
                 }
             }
         }
+    }
+
+    private static void TryAddCenterCandidate(
+        Item candidate, Vector2 center, float radius, LayerMask layerMask, Item excludedItem,
+        List<Item> results, HashSet<Item> dedupe)
+    {
+        if (candidate == null || candidate == excludedItem || candidate.itemData == null ||
+            !candidate.gameObject.activeInHierarchy || candidate.DestructionHandled || dedupe.Contains(candidate) ||
+            (layerMask.value & 1 << candidate.gameObject.layer) == 0)
+            return;
+        if (((Vector2)candidate.transform.position - center).sqrMagnitude <= radius * radius && dedupe.Add(candidate))
+            results.Add(candidate);
     }
 
     /// <summary>实体跨格时更新成员关系，同格移动无需更改集合。</summary>
