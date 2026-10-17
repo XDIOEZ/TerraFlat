@@ -213,7 +213,7 @@
       "itemId": "Ore_Stone",
       "itemCount": 1,
       "spawnChance": 0.0005,
-      "spawnChanceMultiplier": 1,
+      "spawnChanceMultiplier": 2,
       "distributionMode": 0,
       "patchSpacing": 24,
       "patchRadius": 2.5,
