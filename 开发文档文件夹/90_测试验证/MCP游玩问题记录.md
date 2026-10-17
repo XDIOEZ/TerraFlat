@@ -80,3 +80,55 @@
 
 - 本轮仅做静态修改和差异检查；检测到 Unity 仍处于 **Play Mode 主菜单**，按项目规则未停止、暂停或重进测试世界，因此不把编译、MCP 点击与截图复测写成已通过。
 - 后续可回到隔离存档 `MCP_Playtest_20261017`，按上面的原步骤复测；失败时记录新的 Console、语义树和 GameView 画面。
+
+## 第 2 轮：2026-10-17（MCP 实机游玩与续档验证）
+
+### 测试现场
+
+- **使用 GamePlayMCP 真实 Play Mode**：从 `GameStartScene` 续入上一轮隔离存档 `MCP_Playtest_20261017`，再以种子 `MCP_Playtest_20261017_R2` 创建新的 `Wrapped` 隔离世界；两份隔离存档都保存在 `Library/FlatWorldGameplayMCP/Saves/`，未写正式存档。
+- 先使用 `gameplay_control(acquire)`，之后用 `gameplay_act / gameplay_ui / gameplay_observe / gameplay_query` 实际操作，`manage_scene(screenshot)` 保存 GameView。用于复核的原始 UI 语义树保留在同级 `截图/` 文件夹。
+- 本轮 Editor GameView 实际约 `1286×262`，属于非常扁的编辑器测试视口；不把因此产生的整体 UI 缩小直接认定为游戏布局 Bug。
+- **范围**：连续保存退出/续档、重新创建世界、手机 HUD 按钮、手工制作界面、移动、自动拾取、快捷栏切换和物品拖放尝试。本轮只记录，不修游戏代码。
+
+### 上轮修复复核
+
+- **问题 01：回归通过（当前视口）**。语义矩形：`UI_HotBar` 为 `[527.55, 13.37, 230.90, 26.98]`，`UI_Slider` 为 `[591.35, 44.00, 103.30, 15.80]`；两者垂直分离，GameView 图像中黄色体力条位于快捷栏上方。尚未验证所有分辨率与用户自定义间距。
+- **问题 02：MCP 路径回归通过**。在有控制租约时，`gameplay_ui(click)` 点击 `背包` 得到 `clicked=true` 且实际出现 `UI_Bag`；点击 `制作` 后出现 `UI_HandCraftTable`；点击 `设置` 后出现 `UI_ActionList`。对应关闭按钮也能关闭面板，不能仅凭 MCP 的 `handled` 判定成功。
+- **观察 03：沿用已确认的海流设计结论**，本轮没有修改水流规则。
+
+### 问题 04：保存成功但续档时玩家坐标回到世界原点
+
+- **状态：已稳定复现（两份不同的隔离世界）｜优先级：P1｜领域：玩家位置存档/世界恢复**。
+- **现象**：`gameplay_session(save_exit)` 实际返回 `saved=true`，下一次 `continue_save(isolated=true)` 返回 `ready=true / resumedIsolated=true`，背包和快捷栏选择状态保留，但**玩家坐标并未恢复**，变为 `(0,0)` 附近。
+
+| 测试存档 | 保存退出前位置（`gameplay_observe`） | 同档续档后位置 | 其他状态 |
+| --- | --- | --- | --- |
+| `MCP_Playtest_20261017` | `(47.008, -16.912)` | `(0.005, -0.002)` | `Ore_Stone ×2` 保留 |
+| `MCP_Playtest_20261017_R2` | `(101.423, -460.583)` | `(0.000, 0.000)` | `Ore_Stone ×2`、`Stick_Wood ×1`、选中槽 1 均保留 |
+
+- **复现步骤**：在隔离世界移动至远离原点的位置 → `observe` 记录坐标和库存 → `act(stop)` → `control(release)` → `session(save_exit)` → 在相同 Play Mode 主菜单执行 `session(continue_save, saveName=原存档, isolated=true)` → 再次 `observe`。两个不同的隔离世界均出现坐标归零。
+- **排除延迟**：第一个世界的原点处为深海，读取后再 `wait 2s`，玩家移动到 `(10.872,-4.003)` 并持续受海流推动，**并非随后才回到 `(47.008,-16.912)`**。这里的海流位移和续档时坐标归零是两个不同现象。
+- **期望**：续档后恢复保存时的权威世界坐标，不应在玩家背包成功恢复时将角色重新放到原点。
+- **影响**：原点在海里时，玩家会落入陌生水域；位置归零还会导致采集、设施、地形探索进度难以接续。
+- **可能涉及的环节（尚未定位根因）**：角色坐标快照的写入、读档重建时的数据应用、世界拓扑/表现坐标映射，或会话恢复后的初始摆放。**不得仅凭本轮证据断言具体是哪一个模块出错。**
+- **证据**：[续档到深海的 GameView](截图/MCP_20261017_R2_reload-origin.png)、[新世界原本的岸边地形](截图/MCP_20261017_R2_new-world.png)。
+
+### 问题 05：同一 Play Mode 多次切换世界会累积旧快捷栏，甚至阻断物品拖拽
+
+- **状态：已稳定复现｜优先级：P1｜领域：玩家 HUD 生命周期 / UI 射线层级**。
+- **现象**：从一个隔离世界 `save_exit` 返回菜单后，再续档或创建新隔离世界，前一个世界的常驻 HUD 没有全部释放。新世界出现多个**同时处于屏幕内**的快捷栏和多个旧手持物 UI。
+- **具体现场**：复用同一个 Play Mode，先续入旧世界 → 保存退出 → 再续入旧世界 → 保存退出 → 新建 `MCP_Playtest_20261017_R2`。`gameplay_ui(tree)` 的 `PanelRoot/SafeAreaRoot` 下同时有 `UI_HotBar`、`UI_HotBar_1`、`UI_HotBar_2`（三个都 `onScreen=true`），以及 `UI_Hand`、`UI_Hand_1`、`UI_Hand_2`。再保存并续入 R2 世界后变成 `UI_HotBar` 到 `UI_HotBar_3` **四份快捷栏**，且全部在屏幕内。
+- **选中状态不同步**：新世界 `gameplay_act(select_hotbar,index=1)` 返回 `selected=true/heldItem=Stick_Wood`，新的 `UI_HotBar_2` 选中框 X 约 `559.72`；两个旧快捷栏的选中框仍在 X 约 `542.62`，并非仅有无害的同一外观重绘。
+- **实际交互阻断**：尝试将新世界 `UI_HotBar_2` 第 0 格的石头拖到手工制作 `输入_1`（`gameplay_ui(drag, deltaX=-0.77, dragDeltaY=132.73)`），工具直接拒绝 `ui_target_not_draggable`，报告**顶层命中对象为旧 `UI_HotBar_1/Slot_UI(Clone)`**，而不是本次玩家新快捷栏。可复现旧 HUD 夺走新世界的射线命中；手工制作材料转移因此未能继续验证。
+- **期望**：同一时间每个本地玩家只存在一套有效快捷栏及手持 UI；切换存档或世界时清理/解绑旧面板，不得残留可命中旧玩家数据的 UI 节点。
+- **调查方向（非已确认根因）**：检查 `save_exit` 和 `Player` 卸载链、`Mod_HotBar/Inventory` UI 释放、`UIManager` 常驻 `PanelRoot` 注册与重用；修复应从生命周期所有权入手，不能只隐藏重复窗口或降低旧窗口射线优先级。
+- **证据**：[四份快捷栏时的画面](截图/MCP_20261017_R2_four-hotbars.png)、[快捷栏选中时的画面](截图/MCP_20261017_R2_stale-hotbar-selection.png)、[三份 HUD 的完整 UI 语义树](截图/MCP_20261017_R2_UI-tree-3-hotbars.json)、[四份 HUD 的完整 UI 语义树](截图/MCP_20261017_R2_UI-tree-4-hotbars.json)。
+
+### 已完成的正常玩法与覆盖限制
+
+- **正常**：新隔离世界进入地表沙滩 `(135.5,-493.5)`；`move_to` 路径导航四段均 `reached=true`，经过沙滩、草地及森林边缘，接触自动拾取石头和木棍；最终有 `Ore_Stone ×2 / Stick_Wood ×1`。快捷栏选择 `Stick_Wood` 与结构化库存一致。
+- **正常**：手工制作面板能打开，存在四个材料输入格、两个输出格和配方滚动区；本轮**没有实际完成配方或产出验证**，因为问题 05 的旧快捷栏占用物品拖放的顶层射线位置。不能把未完成制作流程另行认定为制作系统 Bug。
+- **诊断**：本轮 `read_console` 对 Error/Warning 的抽查返回空数组，但未执行长期整轮日志审计；不代表游戏其他系统无异常。
+- **暂未覆盖**：正常武器伤害、建筑放置、复杂配方、联机、太空、深水游泳及跨程序冷启动后的存档恢复。问题 04 目前证明了同一 Play Mode 的保存/续档异常，尚未做 Editor 重启后的同一坐标对照。
+- **下一轮优先级**：先处理问题 04 的位置恢复与问题 05 的旧 HUD 清理；解决后重新验证旧场景存档、物品拖入制作面板及各类 HUD 输入。
+- **收尾状态**：`control(status)` 返回 `owned=false`，`gameplay_session(save_exit)` 返回 `saved=true / code=saved_and_exited`。Unity 保留在原有 Play Mode 的 `GameStartScene` 菜单，未停止或暂停 Editor；隔离存档和全部问题截图已保留。
