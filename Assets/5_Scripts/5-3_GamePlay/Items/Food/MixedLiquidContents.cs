@@ -167,6 +167,7 @@ public static class MixedLiquidContents
     {
         target.LiquidId = saved.LiquidId; target.Amount = saved.Amount; target.Temperature = saved.Temperature;
         target.ProcessingSeconds = saved.ProcessingSeconds; target.Composition = saved.Composition;
+        target.RainwaterProgress = saved.RainwaterProgress;
         target.ComponentProcessingSeconds = saved.ComponentProcessingSeconds; target.PendingOutputs = saved.PendingOutputs;
         target.RandomState = saved.RandomState; target.Revision = saved.Revision;
         target.NotifyMassChanged();

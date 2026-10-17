@@ -103,7 +103,8 @@
           "data": {},
           "parameters": {
             "capacity": 8,
-            "reach": 2.0
+            "reach": 2.0,
+            "CollectsRainwater": true
           }
         },
         "mortar": {

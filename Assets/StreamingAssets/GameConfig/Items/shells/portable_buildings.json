@@ -56,7 +56,7 @@
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": {}
+          "parameters": { "CollectsRainwater": true }
         }
       }
     },

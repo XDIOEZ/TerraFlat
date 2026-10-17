@@ -39,7 +39,7 @@
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": {}
+          "parameters": { "CollectsRainwater": true }
         },
         "contents": {
           "prefab": "Module_VesselContents",
@@ -99,7 +99,7 @@
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": {}
+          "parameters": { "CollectsRainwater": true }
         },
         "contents": {
           "prefab": "Module_VesselContents",

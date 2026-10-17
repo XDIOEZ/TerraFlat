@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -36,6 +37,39 @@ public static class ContaminationSystem
         value = ReadValue(sample.Terrain, sample.LocalCell, definition);
         return true;
     }
+
+    #region 地块总体污染负荷
+
+    // 一次定位真实地格，再汇总所有登记的污染指标，查询失败不当成干净地块。
+    public static bool TryGetNormalizedLoad(Vector2 worldPosition, out float load)
+    {
+        load = 0f;
+        GameRes resources = GameRes.ExistingInstance;
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        if (resources == null || chunks == null ||
+            !chunks.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
+            return false;
+        load = ReadNormalizedLoad(sample.Terrain, sample.LocalCell, resources.ContaminationDefinitions);
+        return true;
+    }
+
+    public static float ReadNormalizedLoad(ChunkTerrainData terrain, Vector2Int localCell,
+        Dictionary<string, ContaminationDefinition> definitions)
+    {
+        if (definitions == null)
+            throw new ArgumentNullException(nameof(definitions));
+        float load = 0f;
+        foreach (ContaminationDefinition definition in definitions.Values)
+        {
+            float value = ReadValue(terrain, localCell, definition);
+            load = Mathf.Max(load, definition.Normalize(value));
+            if (load >= 1f)
+                break;
+        }
+        return load;
+    }
+
+    #endregion
 
     /// <summary>读取污染值；环境层尚未创建时返回定义的默认背景值。</summary>
     public static float ReadValue(ChunkTerrainData terrain, Vector2Int localCell, ContaminationDefinition definition)

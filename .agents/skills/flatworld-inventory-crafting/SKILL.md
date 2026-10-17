@@ -64,6 +64,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - Food 静态世界实例可休眠，库存腐败/融化走冷数据规则。蛋白质负责回血门槛，成本通过 IHealingCostPolicy 一次结算；濒死或 HP≤0 时停止被动回血/生存伤害。体力恢复按有效 MaxValue；医疗等待/提交由 BodyPartTreatmentSession 管理，UI 只发意图。
 - 食物机制由目录与消费物上的 IFoodMechanic 组合；咬痕由 EatingProgress 和 GUID 重建。宇航服的独立单槽气罐保存为 InventoryInstanceSnapshot，接收单只适配纯氧气罐；两相变化后停止供氧。装备效果读实际罐扣量再 SupplyOxygen，供氧/耐压来源不属于氧气模块。
 - 液体只有容器/机器组分和世界 Liquid 层，无独立库存原料。LiquidContainerState.Composition 保存稳定 LiquidId 的真实份数，MixedLiquidContents 派生总量/比例；容量共用，小数尾量、随机态和各口 PendingOutputs 持久化。
+- 朝上开口容器用 `Mod_WaterVessel.CollectsRainwater` 声明接雨；仅权威落地实例按当地真实雨量累计，0.5强度为60秒一份、限制30～120秒，随运行时间倍速/暂停。`VesselRainwaterCollection` 只管时钟与水质选择，污染由 `ContaminationSystem.TryGetNormalizedLoad` 汇总本格所有登记指标；零污染产纯水、任意正污染产脏水，查不到地格不产水。满桶不积攒债务，`RainwaterProgress` 随共享液体模块装拆/保存保留；铁桶与木桶共用正式建筑配对，不给 UI 加类型分支。
 - 转液经 ILiquidTransferPort 原子事务，投料反应由 ingredientReactions 声明并事务扣真实槽。Mod_VesselContents 独立保存木桶六格固体库存，关闭面板只解绑视觉；热加工由 IInventoryHeatTreatment 读取 LiquidDefinition.HeatProcess，先提交产物再消耗液体。
 - 世界装液由 WorldLiquidSourceResolver/WorldLiquidSystem.TryPump 读稳定身份；地表权威为 0～10 整数级，1 份=1 级，容器空位向下取整后先世界提交再写容器。具有 worldWater 的液体倾倒到干地/同种液面写独立 Liquid 层；成功后发布本格通知，由农业自行吸水。
 - PourToGround 按开口、倾角持续计时，每批严格 1 份，可溢出不足一份时不扣液；90° 可倒尽完整份，工业混液小数尾量留桶，整份出口跳过尾量且尊重其它口预约。先扣源再写地表，拒收恢复容器快照；容量不决定流速。UI 以独立 pointerId、未旋转父级坐标解释手势，右侧负 Z、左侧正 Z；WaterVesselPourGraphic 按帧连续显示流，不反扣数据。

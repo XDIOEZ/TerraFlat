@@ -12,10 +12,15 @@ using UnityEngine;
 [Serializable, MemoryPackable]
 public partial class LiquidContainerState
 {
+    #region 容器持久状态
+
     public string LiquidId; // 主组分的稳定 ID；空容器必须为空。
     public float Amount; // 全部组分的真实份数，保留工业输送产生的小数尾量。
     public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
     public float Temperature; // 混合液体的共同温度，由加工模块按秒冷却。
+    public double RainwaterProgress; // 不足一份的接雨进度随保存及装拆保留。
+
+    #endregion
 }
 
 /// <summary>
@@ -78,6 +83,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
             ModData.WriteData(Data);
         RefreshVisual();
         worldHeatClock = 0f;
+        rainSampleClock = 0f;
         actionBound = item?.itemMods?.GetMod_ByID<Mod_Mortar>(Mod_Mortar.ModuleId)?.IsCrucible != true;
         if (actionBound)
             item.OnAct += Act;
@@ -97,6 +103,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         if (actionBound && item != null) item.OnAct -= Act;
         actionBound = false;
         worldHeatClock = 0f;
+        rainSampleClock = 0f;
         ReleaseTargetOutline();
         Changed = null;
     }
@@ -105,6 +112,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
     private void LateUpdate()
     {
         TickWorldHeat();
+        TickRainwaterCollection();
         if (item?.Owner is not Player ownerPlayer || !ownerPlayer.IsLocalProfile)
         {
             targetOutline?.Hide();
@@ -162,9 +170,11 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
             state.Amount < -AmountEpsilon || state.Amount > containerCapacity + AmountEpsilon ||
             IsEmptyAmount(state.Amount) != string.IsNullOrWhiteSpace(state.LiquidId) ||
             float.IsNaN(state.Temperature) || float.IsInfinity(state.Temperature) || state.Temperature < -273.15f ||
-            float.IsNaN(state.ProcessingSeconds) || float.IsInfinity(state.ProcessingSeconds) || state.ProcessingSeconds < 0f)
+            float.IsNaN(state.ProcessingSeconds) || float.IsInfinity(state.ProcessingSeconds) || state.ProcessingSeconds < 0f ||
+            double.IsNaN(state.RainwaterProgress) || double.IsInfinity(state.RainwaterProgress) ||
+            state.RainwaterProgress < 0d || state.RainwaterProgress >= 1d)
         {
-            throw new InvalidOperationException("液体容器容量、液体 ID、数量、温度或加工状态无效。");
+            throw new InvalidOperationException("液体容器容量、液体 ID、数量、温度、加工或接雨状态无效。");
         }
 
         float total = 0f;

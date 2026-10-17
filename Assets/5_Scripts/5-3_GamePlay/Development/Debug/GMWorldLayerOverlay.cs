@@ -205,25 +205,7 @@ internal sealed partial class GMWorldLayerOverlay : MonoBehaviour
 
     /// <summary>一次定位地格后遍历注册目录，取该格最高污染负荷；MOD 污染定义自动参与。</summary>
     private static bool TryGetContaminationLoad(Vector2 position, out float normalizedLoad)
-    {
-        normalizedLoad = 0f;
-        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
-        GameRes gameRes = GameRes.ExistingInstance;
-        if (chunkManager == null || gameRes == null ||
-            !chunkManager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample))
-        {
-            return false;
-        }
-
-        foreach (ContaminationDefinition definition in gameRes.ContaminationDefinitions.Values)
-        {
-            float value = ContaminationSystem.ReadValue(sample.Terrain, sample.LocalCell, definition);
-            normalizedLoad = Mathf.Max(normalizedLoad, definition.Normalize(value));
-            if (normalizedLoad >= 0.9999f)
-                break;
-        }
-        return true;
-    }
+        => ContaminationSystem.TryGetNormalizedLoad(position, out normalizedLoad);
 
     /// <summary>固定 -20～60℃ 色标，确保不同区域的颜色含义不随视口改变。</summary>
     internal static Color32 EvaluateTemperatureColor(float temperature)

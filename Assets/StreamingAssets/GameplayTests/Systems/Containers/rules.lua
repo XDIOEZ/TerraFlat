@@ -17,6 +17,79 @@ for _, case in ipairs(cases) do
         assert(data.quantized == case.quantized, "整份量化错误")
     end, "容器组分事务：" .. case.name)
 end
+
+local rain_cases = {
+    {name = "普通雨不足一分钟", steps = {{seconds = 59}}, collected = {0}, progress = {59 / 60}},
+    {name = "普通雨一分钟一份", steps = {{seconds = 60}}, collected = {1}, progress = {0}},
+    {name = "小雨不足两分钟", steps = {{seconds = 119, intensity = .1}}, collected = {0}, progress = {119 / 120}},
+    {name = "小雨两分钟一份", steps = {{seconds = 120, intensity = .1}}, collected = {1}, progress = {0}},
+    {name = "大雨不足三十秒", steps = {{seconds = 29, intensity = 1}}, collected = {0}, progress = {29 / 30}},
+    {name = "大雨三十秒一份", steps = {{seconds = 30, intensity = 1}}, collected = {1}, progress = {0}},
+    {name = "雨量过大仍最快三十秒", steps = {{seconds = 30, intensity = 10}}, collected = {1}, progress = {0}},
+    {name = "连续中雨保留不足一份进度", steps = {{seconds = 20}, {seconds = 40}}, collected = {0, 1}, progress = {1 / 3, 0}},
+    {name = "雨势改变按真实进度续接", steps = {{seconds = 30}, {seconds = 15, intensity = 1}}, collected = {0, 1}, progress = {.5, 0}},
+    {name = "停雨不凭空加水且保留进度", initial = .5, steps = {{seconds = 600, intensity = 0}, {seconds = 30}}, collected = {0, 1}, progress = {.5, 0}},
+    {name = "暂停不推进", initial = .5, steps = {{seconds = 0}}, collected = {0}, progress = {.5}},
+    {name = "负时间不推进", steps = {{seconds = -60}}, collected = {0}, progress = {0}},
+    {name = "负雨量不接水", steps = {{intensity = -1}}, collected = {0}, progress = {0}},
+    {name = "非法时间不推进", steps = {{invalid = "nan_seconds"}}, collected = {0}, progress = {0}},
+    {name = "非法雨量不接水", steps = {{invalid = "infinite_intensity"}}, collected = {0}, progress = {0}},
+    {name = "仅余半份空间不接水", initial = .75, steps = {{space = .5}}, collected = {0}, progress = {0}},
+    {name = "满桶不积攒补水债务", initial = .75, steps = {{seconds = 6000, space = 0}, {seconds = 1, space = 8}}, collected = {0, 0}, progress = {0, 1 / 60}},
+    {name = "长帧最多装满且丢弃溢出", steps = {{seconds = 6000, space = 2.5}}, collected = {2}, progress = {0}},
+    {name = "连续雨量保留半份便于保存", steps = {{seconds = 90}}, collected = {1}, progress = {.5}}
+}
+for _, case in ipairs(rain_cases) do
+    local expected = case.progress
+    test.system("containers", "rainwater", {progress = case.initial or 0, steps = case.steps}, function(data)
+        assert(data.defaultInterval == 60 and #data.samples == #case.steps, "默认接雨周期或采样数错误")
+        for index, sample in ipairs(data.samples) do
+            assert(sample.collected == case.collected[index], "接雨整份数量错误")
+            assert(math.abs(sample.progress - expected[index]) < .000001, "接雨进度、停雨或溢出处理错误")
+        end
+        assert(math.abs(data.restoredProgress - expected[#expected]) < .000001, "保存克隆或回滚丢失接雨进度")
+    end, "容器自动接雨：" .. case.name)
+end
+
+local quality_cases = {
+    {name = "无污染层为纯水", args = {}, dirty = false},
+    {name = "零脏污为纯水", args = {values = {["core:filth"] = 0}}, dirty = false},
+    {name = "微量脏污也为脏水", args = {values = {["core:filth"] = .000001}}, dirty = true},
+    {name = "满脏污为脏水", args = {values = {["core:filth"] = 1}}, dirty = true},
+    {name = "植物病原污染为脏水", args = {values = {["core:plant_blight"] = .2}}, dirty = true},
+    {name = "动物病原污染为脏水", args = {values = {["core:animal_plague"] = .1}}, dirty = true},
+    {name = "蚊媒污染为脏水", args = {values = {["core:mosquito_pressure"] = .5}}, dirty = true},
+    {name = "扩展污染也参与水质", args = {includeMod = true, values = {["test:mod"] = .01}}, dirty = true}
+}
+for _, case in ipairs(quality_cases) do
+    test.system("containers", "rainwater_quality", case.args, function(data)
+        assert(data.liquidId == (case.dirty and "core:dirty_water" or "core:pure_water"), "雨水没有按所在地块污染选水质")
+        assert((data.load > 0) == case.dirty and data.neighborLiquidId == "core:pure_water", "污染查询串到了相邻格")
+        assert(data.invalidLiquidId == nil, "无法读取的污染状态被当成干净地块")
+    end, "容器接雨水质：" .. case.name)
+end
+
+for _, id in ipairs({"WoodenBarrel", "IronBucket"}) do
+    test.system("containers", "portable_vessels", {id = id}, function(data)
+        assert(#data.definitions == 2, "容器缺少手持或落地本体定义")
+        for index, definition in ipairs(data.definitions) do
+            local building = definition.building
+            assert(definition.buildingEnabled and definition.rainEnabled, "容器建筑或接雨能力未启用")
+            assert(building.BuildingPrefabId == id .. "_Building" and building.SummonerPrefabId == id,
+                "容器的放置和拆回配对错误")
+            assert(building.Role == index - 1, "手持或建筑角色错误")
+            local shared = false
+            for _, module_id in ipairs(building.SharedModuleIds) do
+                if module_id == "Mod_WaterVessel" then shared = true end
+            end
+            assert(shared, "装拆没有保留真实液体模块")
+            if index == 1 then assert(definition.requiresPlacement, "手持容器没有显式放置入口") end
+        end
+        assert(data.amount == 3.5 and data.water == 3 and data.oil == .5 and data.temperature == 18,
+            "放置和拆回丢失液体组分或温度")
+        assert(data.progress == .75 and data.distinctPayload, "放置和拆回丢失接雨进度或错误共用载荷")
+    end, "便携容器放置配置与状态往返：" .. id)
+end
 test.system("containers", "composition", {water = 0, oil = 0}, function(data)
     assert(data.initial == 0 and not data.reserved and not data.repeatReserved, "空容器产生虚假预约")
     assert(not data.consumed and data.afterConsume == 0 and data.restoredPending == 0, "空容器产生虚假消费或恢复预约")

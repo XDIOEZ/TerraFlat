@@ -3,10 +3,10 @@
   "items": [
     {
       "id": "IronBucket",
-      "parent": "BasicItem_Base",
+      "parent": "BuildingSummoner_Base",
       "worldDropBehavior": "interactive",
       "gameName": "铁桶",
-      "description": "用六个铁锭制作的可重复使用的液体容器，可盛装水或高温岩浆。不同液体不能混装，倒空后可再次使用。",
+      "description": "可盛装水或高温岩浆的铁桶，也可放到地上自动接雨；拆回时保留液体和接雨进度。",
       "durability": 80,
       "maxDurability": 80,
       "weight": 3,
@@ -14,18 +14,85 @@
       "stackable": false,
       "canBePickedUp": true,
       "tags": ["Container", "Iron"],
+      "health": {
+        "hasHp": true,
+        "hp": 80,
+        "maxHp": 80,
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png",
         "liquidSurface": { "bounds": { "x": 0.234375, "y": 0.5, "width": 0.53125, "height": 0.21875 }, "maxSourceChannel": 100 },
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"IronBucket_Building\",\"SummonerPrefabId\":\"IronBucket\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          },
+          "parameters": { "RequiresPlacementRequest": true }
+        },
         "vessel": {
           "prefab": "Module_WaterVessel",
           "id": "Mod_WaterVessel",
           "enabled": true,
           "data": {},
-          "parameters": { "capacity": 8, "reach": 2 }
+          "parameters": { "capacity": 8, "reach": 2, "CollectsRainwater": true }
+        }
+      }
+    },
+    {
+      "id": "IronBucket_Building",
+      "parent": "BuildingBody_Base",
+      "gameName": "铁桶-建筑",
+      "description": "放在地面的开口铁桶，可自动接雨，也可拆回；液体、温度和接雨进度都会保留。",
+      "durability": 80,
+      "maxDurability": 80,
+      "weight": 3,
+      "volume": 8,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["Container", "Iron"],
+      "health": {
+        "hasHp": true,
+        "hp": 80,
+        "maxHp": 80,
+        "weakTool": 4,
+        "combatBalanceVersion": 1,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "size": { "x": 0.65, "y": 0.65 }
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png",
+        "liquidSurface": { "bounds": { "x": 0.234375, "y": 0.5, "width": 0.53125, "height": 0.21875 }, "maxSourceChannel": 100 },
+        "collider": { "size": { "x": 0.65, "y": 0.65 } },
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"IronBucket_Building\",\"SummonerPrefabId\":\"IronBucket\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          }
+        },
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": { "capacity": 8, "reach": 2, "CollectsRainwater": true }
         }
       }
     }
