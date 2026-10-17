@@ -68,7 +68,7 @@ namespace FlatWorld.GameplayMCP
             object response = action switch
             {
                 "tree" => GameplayUiRuntime.BuildTree(args),
-                "click" => GameplayUiRuntime.Click(args),
+                "click" => await GameplayUiRuntime.ClickAsync(args),
                 "text" => GameplayUiRuntime.TextInput(args),
                 "scroll" => GameplayUiRuntime.Scroll(args),
                 "drag" => GameplayUiRuntime.Drag(args),

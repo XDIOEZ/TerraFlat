@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using FlatWorld.Mobile;
 using MCPForUnity.Editor.Helpers;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -338,7 +341,7 @@ namespace FlatWorld.GameplayMCP
         #region UI 点击
 
         /// <summary>按 UI 树返回的运行时 ID 查找目标，并通过真实 EventSystem 射线执行左键点击。</summary>
-        public static object Click(JObject parameters)
+        public static async Task<object> ClickAsync(JObject parameters)
         {
             if (!Application.isPlaying)
                 return new ErrorResponse("not_playing: Unity 必须处于 Play Mode 才能点击运行时 UI。");
@@ -376,44 +379,127 @@ namespace FlatWorld.GameplayMCP
                     $"ui_target_blocked: 目标当前没有玩家可点击的可见区域。{suffix}");
             }
 
-            var eventData = new PointerEventData(eventSystem)
+            bool mobileHud = IsMobileHudControl(target.transform);
+            InputDevice mobileDevice = null;
+            bool temporaryAgentUsage = false;
+            if (mobileHud && GameplayMcpRuntime.TryGetPlayerContext(out _, out Mod_GameController controller,
+                    out _, out _) && GameplayMcpRuntime.OwnsControl(controller))
             {
-                pointerId = -1,
-                position = clickPosition,
-                pressPosition = clickPosition,
-                delta = Vector2.zero,
-                button = PointerEventData.InputButton.Left,
-                clickCount = 1,
-                clickTime = Time.unscaledTime,
-                eligibleForClick = true,
-                pointerCurrentRaycast = raycast,
-                pointerPressRaycast = raycast
-            };
+                // MCP 租约只允许带专用 Usage 的输入设备，短时授权手机 HUD 的虚拟设备而不放开真实键鼠。
+                mobileDevice = MobileInputRuntime.Device;
+                bool alreadyAllowed = mobileDevice.usages.Any(usage =>
+                    string.Equals(usage.ToString(), Mod_GameController.ExternalGameplayInputDeviceUsage,
+                        StringComparison.Ordinal));
+                if (!alreadyAllowed)
+                {
+                    InputSystem.AddDeviceUsage(mobileDevice, Mod_GameController.ExternalGameplayInputDeviceUsage);
+                    temporaryAgentUsage = true;
+                }
+            }
 
-            GameObject hitObject = raycast.gameObject;
-            GameObject downHandler = ExecuteEvents.ExecuteHierarchy(
-                hitObject,
-                eventData,
-                ExecuteEvents.pointerDownHandler);
-            GameObject upHandler = hitObject != null
-                ? ExecuteEvents.ExecuteHierarchy(hitObject, eventData, ExecuteEvents.pointerUpHandler)
-                : null;
-            GameObject clickHandler = hitObject != null
-                ? ExecuteEvents.ExecuteHierarchy(hitObject, eventData, ExecuteEvents.pointerClickHandler)
-                : null;
-
-            bool handled = downHandler != null || upHandler != null || clickHandler != null;
-            return new SuccessResponse("FlatWorld UI click completed.", new
+            try
             {
-                action = "click",
-                target_id = targetId,
-                target_name = targetName,
-                target_type = targetKind,
-                target_path = targetPath,
-                screen_position = new[] { Round(clickPosition.x), Round(clickPosition.y) },
-                handled,
-                hint = "Query gameplay_ui(action=tree) again before choosing the next UI action."
-            });
+                var eventData = new PointerEventData(eventSystem)
+                {
+                    pointerId = -1,
+                    position = clickPosition,
+                    pressPosition = clickPosition,
+                    delta = Vector2.zero,
+                    button = PointerEventData.InputButton.Left,
+                    clickCount = 1,
+                    clickTime = Time.unscaledTime,
+                    eligibleForClick = true,
+                    pointerCurrentRaycast = raycast,
+                    pointerPressRaycast = raycast
+                };
+
+                GameObject hitObject = raycast.gameObject;
+                GameObject downHandler = ExecuteEvents.ExecuteHierarchy(
+                    hitObject, eventData, ExecuteEvents.pointerDownHandler);
+                GameObject pressHandler = downHandler != null
+                    ? downHandler : ExecuteEvents.GetEventHandler<IPointerClickHandler>(hitObject);
+                eventData.pointerPress = pressHandler;
+                eventData.rawPointerPress = hitObject;
+
+                // 手机按钮按下必须跨真实帧；普通面板保持可在暂停状态下直接点击。
+                bool frameAdvanced = !mobileHud;
+                GameObject upHandler = null;
+                try
+                {
+                    if (mobileHud)
+                        frameAdvanced = await WaitGameFramesAsync(1);
+                }
+                finally
+                {
+                    if (pressHandler != null)
+                    {
+                        upHandler = ExecuteEvents.Execute(
+                            pressHandler, eventData, ExecuteEvents.pointerUpHandler)
+                            ? pressHandler : null;
+                    }
+                }
+
+                if (!frameAdvanced)
+                    return new ErrorResponse("ui_input_frame_unavailable: 等待真实游戏帧失败，本次点击已释放。");
+
+                bool clicked = pressHandler != null &&
+                               ExecuteEvents.Execute(pressHandler, eventData, ExecuteEvents.pointerClickHandler);
+                if (mobileHud && !await WaitGameFramesAsync(2))
+                    return new ErrorResponse("ui_input_frame_unavailable: 手机按钮后续输入未能完成。");
+
+                bool handled = downHandler != null || upHandler != null || clicked;
+                return new SuccessResponse("FlatWorld UI click completed.", new
+                {
+                    action = "click",
+                    target_id = targetId,
+                    target_name = targetName,
+                    target_type = targetKind,
+                    target_path = targetPath,
+                    screen_position = new[] { Round(clickPosition.x), Round(clickPosition.y) },
+                    handled,
+                    clicked,
+                    hint = "Query gameplay_ui(action=tree) again before choosing the next UI action."
+                });
+            }
+            finally
+            {
+                if (temporaryAgentUsage && mobileDevice != null && mobileDevice.added)
+                    InputSystem.RemoveDeviceUsage(mobileDevice, Mod_GameController.ExternalGameplayInputDeviceUsage);
+            }
+        }
+
+        /// <summary>只对触屏控制节点临时授权 Agent 手机输入，不影响普通面板和主菜单。</summary>
+        private static bool IsMobileHudControl(Transform current)
+        {
+            while (current != null)
+            {
+                if (current.name == RuntimeUIPrefabKeys.MobileControls)
+                    return true;
+                current = current.parent;
+            }
+            return false;
+        }
+
+        /// <summary>用游戏真实帧推进输入设备事件，卡住或退出 Play Mode 时有界返回。</summary>
+        private static async Task<bool> WaitGameFramesAsync(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                int before = Time.frameCount;
+                bool advanced = false;
+                for (int attempt = 0; attempt < 10 && Application.isPlaying; attempt++)
+                {
+                    if (!await GameplayMcpRuntime.WaitEditorSecondsAsync(0.05f))
+                        return false;
+                    if (Time.frameCount <= before)
+                        continue;
+                    advanced = true;
+                    break;
+                }
+                if (!advanced)
+                    return false;
+            }
+            return true;
         }
 
         /// <summary>向语义树中的 ScrollRect 发送真实 EventSystem 滚轮事件，不直接写 normalizedPosition。</summary>

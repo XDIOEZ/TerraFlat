@@ -62,6 +62,10 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     private BasePanel staminaPanel; // 模块持有自己创建的体力面板，卸载时对称释放。
     private RectTransform staminaBackground; // 原体力条灰黑底纹，只调整可用宽度。
     private RectTransform staminaFillArea; // 保持原填充样式，仅让填充范围与可用上限一致。
+    private RectTransform staminaHudRect;
+    private RectTransform hotbarHudRect;
+    private readonly Vector3[] hotbarCorners = new Vector3[4];
+    private const float StaminaHotbarGap = 12f;
     protected override void OnLoad()
     {
         modData.ReadData(ref Data);
@@ -77,6 +81,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
                 staminaPanel.SetGameplayInputBlocking(false);
                 staminaPanel.transform.SetAsFirstSibling();
                 slider = staminaPanel.GetComponentInChildren<Slider>();
+                staminaHudRect = staminaPanel.transform as RectTransform;
             }
         }
 
@@ -87,6 +92,12 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         }
 
         CacheStaminaBarRects();
+        if (staminaHudRect != null)
+        {
+            Canvas.willRenderCanvases -= PositionStaminaAboveHotbar;
+            Canvas.willRenderCanvases += PositionStaminaAboveHotbar;
+            PositionStaminaAboveHotbar();
+        }
 
         // 用当前体力值刷新一次 UI
         UpdateSlider();
@@ -100,6 +111,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     #region 体力面板生命周期
     protected override void OnUnload()
     {
+        Canvas.willRenderCanvases -= PositionStaminaAboveHotbar;
         if (staminaPanel != null)
         {
             UIManager manager = UIManager.ExistingInstance;
@@ -113,6 +125,8 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         slider = null;
         staminaBackground = null;
         staminaFillArea = null;
+        staminaHudRect = null;
+        hotbarHudRect = null;
         capacityModifiers.Clear();
         adminController = null;
     }
@@ -254,6 +268,40 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         staminaBackground = slider.transform.Find("Background") as RectTransform;
         staminaFillArea = slider.fillRect != null ? slider.fillRect.parent as RectTransform : null;
     }
+
+    #region 体力条布局
+
+    /// <summary>根据实际快捷栏上边界定位体力条，适配手机缩放、底部间距和安全区。</summary>
+    private void PositionStaminaAboveHotbar()
+    {
+        if (staminaHudRect == null || staminaHudRect.parent is not RectTransform parent)
+            return;
+
+        if (hotbarHudRect == null)
+        {
+            Mod_HotBar hotbar = item != null ? item.GetComponentInChildren<Mod_HotBar>(true) : null;
+            hotbarHudRect = hotbar?.RuntimeInventory?.basePanel?.transform as RectTransform;
+        }
+        if (hotbarHudRect == null || !hotbarHudRect.gameObject.activeInHierarchy)
+            return;
+
+        hotbarHudRect.GetWorldCorners(hotbarCorners);
+        float hotbarTop = Mathf.Max(parent.InverseTransformPoint(hotbarCorners[1]).y,
+            parent.InverseTransformPoint(hotbarCorners[2]).y);
+        float barHeight = staminaHudRect.rect.height * Mathf.Abs(staminaHudRect.localScale.y);
+        float desiredY = hotbarTop - parent.rect.yMin +
+                         barHeight * staminaHudRect.pivot.y + StaminaHotbarGap;
+        float highestY = parent.rect.height - barHeight * (1f - staminaHudRect.pivot.y) - StaminaHotbarGap;
+        desiredY = Mathf.Min(desiredY, highestY);
+        Vector2 position = staminaHudRect.anchoredPosition;
+        if (Mathf.Abs(position.y - desiredY) > 0.1f)
+        {
+            position.y = desiredY;
+            staminaHudRect.anchoredPosition = position;
+        }
+    }
+
+    #endregion
 
     /// <summary>上限减少时只从右侧缩短原底纹和可填充范围，根节点尺寸保持不变。</summary>
     private void UpdateStaminaCapacityWidth()

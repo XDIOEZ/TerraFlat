@@ -30,6 +30,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 - `move_to` 由 `Mod_GameMCP_LLM → WorldNavigationManager → Mod_GameController → Mod_Mover` 跟随路点，卡滞最多重规划两次。外层连续 8 秒位移不足 0.05 时 `no_progress`，模块可返回 `navigation_stalled`；二者 `timedOut=false/notReached=true`，耗尽时限才是超时。`reached`、剩余距离和新观察表示实际到达。
 - 持续动作当前上限约 20 秒。`steps` 批次最多 8 步、总等待最多 8 秒，持续动作显式传 seconds；失败即停，结果为 `executed/remaining/results`，已执行内容不回滚。
 - `gameplay_ui(tree)` 为当前激活 Canvas 返回分页语义树，默认 64、最多 128 节点。`click/text/scroll/drag` 使用当前可见可交互节点 ID，经 EventSystem 射线和指针事件；文本进入 TMP/UGUI 输入链。UI 变化后旧节点可能失效。
+- `gameplay_ui(click)` 对手机 HUD 的按下与松开跨真实游戏帧（普通面板允许暂停时点击）；MCP 持有控制租约时，仅对手机 HUD 节点短时授权其虚拟设备并及时撤销，确保背包/制作/设置按钮仍走正式输入链。`handled/clicked` 代表事件发送，不代替读取后续 UI 状态。
 - UI 不依赖玩家控制租约。`treeAfter=true` 操作后附新树于 `data.tree.data.semantic_tree`；内层 success/error 表示树是否可用。
 - `gameplay_gm` 使用能力接口中的白名单，要求世界就绪与租约；`apply_self_buff:<buffId>` 校验目录后调用 `Mod_BuffManager.AddBuff`。未提供的生成行为可走正式 GM UI。
 
