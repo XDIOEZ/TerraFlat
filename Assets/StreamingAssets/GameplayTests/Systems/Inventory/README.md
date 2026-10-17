@@ -7,6 +7,7 @@
 - `rules.lua` 的方向与预检：调用正式 `InventoryFlickTargets.SelectClosestDirection` 检查右/下/斜向、角度优先于距离、非零起点、同角度稳定顺序、零方向及非有限输入拒绝；原事务用例增加 `GetTransferableQuantityTo` 与实际收货数量一致、预检不改物品/不发刷新事件及外来槽拒绝。
 - `gameplay.lua` 的方向甩动：临时正式 Canvas/BasePanel 与独立正式物品库存通过 `SyncQuickTransferTarget → InventoryFlickTargets.Resolve → 拖拽来源校验 → OnTouchFlickTransfer`，检查右/下/斜向、满格/入库门禁/标签/承载受限跳过、全部满格时留源、部分接收余物留源、关闭/隐藏/禁用/释放/陈旧绑定排除、显式输出排除、同面板两个独立库存，以及实际收货动画反馈和数量守恒；另验证 PC Shift 保持原最近容器目标。夹具同步期间临时禁用已有候选组件，finally 恢复，提交前仅允许自有目标，不污染玩家库存。采样不派发触屏事件，不替代手机手感、真实布局、Hotbar 手持同步和联机收发验收。
 - `gameplay.lua` 的甩动事务：通过独立正式库存的 `OnMouseDragBegin → TryConsumeSourceItem → ExecuteMachineTransfer(quick)`，检查整组/部分接收、满槽拒绝时余物留原槽、换物后的陈旧来源拒绝、数量守恒、重复提交及来源占用清理；不替代 EventSystem 与手机实机手势验收。
+- `gameplay.lua` 的物品介绍：`inventory/touch_tooltip` 在自有面板与正式 `UI_Slot` 上派发触屏指针事件，走正式长按计时及同一个 `InventoryItemTooltip`；Lua 检查一秒显示、松手与离槽后保留、窗外按下关闭、关面板清理、打开后不再取放/拖拽，以及空槽、手持物、等待中换物/手部非空、移动、提前松手和禁用取消。夹具在异常与中断时恢复手部库存静态引用；不替代 InputSystem 真触屏派发和手机实机手感。
 - `gameplay.lua` 的快速转移反馈：经正式 `ExecuteMachineTransfer(quick)`，采集 `InventoryQuickTransferFeedbackEvents`，检查先合并旧堆再填空槽的每个实际目标/数量、提交时两端状态已生效、失败和越界不发成功反馈、来源剩余和总数量守恒；另检查远端执行表现抑制范围仍发布精确回执且禁止 Host 本地播放。此项检查事务与反馈契约，不验证 0.24 秒飞行动画的屏幕路径、遮罩或手机显示，也未覆盖远端 token/快照回执收发。
 - `gameplay.lua` 的权威回执回放：网络程序集 `GameplayTestQuickTransferFeedback` 注册 `inventory/quick_transfer_receipts`，直接调用正式 `PublishQuickTransferReceipts`，检查有效两目标回放，以及重复槽、越界、GUID 不符、数量超额、非有限数、超过 256 条时整批静默；回放不修改库存。此项不启动 Host/Client，不验证消息传输、token 或快照实际应用。
 - `gameplay.lua`：在隔离玩家上正式初始化两次创造背包，读取真实槽位/定义/身份/数量，检查容量豁免、保留空槽、同类只补首槽100个及不重复扩容；**开始前登记原始库存与角色状态，结束时恢复并断言原有格数、容量、存档标记和重量不变，异常中断也通过每 Lua 清理租约恢复**，不让大量创造物品污染后续飞船载荷。另验证空背包与槽位越界；正式 `OnMouseDragBegin/OnMouseDragDrop` 的整组移动、合并、目标拒绝、部分接收、陈旧来源和拖拽清理，以及装备标签、装卸和交换拒绝；核对快捷栏选择并自动截图。
@@ -17,3 +18,4 @@
 - 2026-10-17 新增甩动识别规则与库存事务回归尚未编译或运行，按用户要求留待自行验收；真实指针派发、松手目标优先级、长按拆半互斥与手机手感仍需实机确认。
 - 2026-10-17 新增逐格快速转移反馈断言尚未编译或运行；动画显示、关闭/虚拟化清理和联机精确回执需用户验收。
 - 2026-10-17 新增方向甩动候选与只读预检回归尚未编译或运行，遵循用户自行验收；遮罩裁剪、实际手机窗口位置变化和多窗口层级遮挡仍需实机确认。
+- 2026-10-17 新增空手长按一秒介绍回归尚未编译或运行，按用户要求留待自行验收。

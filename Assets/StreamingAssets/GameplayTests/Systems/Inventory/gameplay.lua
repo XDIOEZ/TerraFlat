@@ -1,5 +1,25 @@
 -- 复用正式创造背包填充与快捷栏切换；容量和扣料细节在独立规则用例检查。
 test.check("player_ready", "真实玩家就绪")
+for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_changed", "source_changed", "moved", "early_release", "disabled"}) do
+    test.runtime("inventory", "touch_tooltip", {mode = mode}, function(data)
+        if mode == "inspect" or mode == "closed_after_show" then
+            assert(not data.visibleEarly and data.opened and data.persistedAfterRelease,
+                "空手长按未满一秒就显示，或一秒后未复用悬浮窗并在松手后保留")
+            assert(data.dismissedByOutsidePress, "再次点击其他位置没有关闭物品介绍")
+            assert(data.taps == 0 and data.longPresses == 0 and data.drags == 0,
+                "查看物品介绍后又触发取放或拖拽")
+            if mode == "closed_after_show" then
+                assert(data.closedWithPanel, "关闭背包后物品介绍仍残留")
+            end
+        else
+            assert(not data.opened, "非空手、换物、移动、提前松手或禁用后仍打开介绍：" .. mode)
+        end
+        if mode == "held" then assert(data.longPresses > 0, "手持物品时原长按操作被吞掉") end
+        if mode == "early_release" then assert(data.taps == 1, "普通短按没有立即保留原操作") end
+        assert(data.sourceAmount == (mode == "empty" and 0 or 6) and data.originalHandRestored,
+            "查看介绍改变了物品数量或夹具没有恢复原手部库存")
+    end, "手机空手长按物品介绍：" .. mode)
+end
 test.runtime("inventory", "quick_transfer_feedback", {}, function(data)
     assert(data.moved and not data.fullAccepted and not data.invalidAccepted,
         "快速转移成功、满槽或无效来源的返回值错误")

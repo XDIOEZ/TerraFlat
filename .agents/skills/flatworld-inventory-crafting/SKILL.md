@@ -38,6 +38,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 库存短音只通过 `InventoryAudioFeedbackEvents` 观察用户点击/滚轮/拖拽/快速转移成功事务，开始拖拽仅播拿起；交换有独立提示，装备槽由 `EquipmentAudioFeedbackEvents` 在真实物品更替时播穿脱声。全部选音与 UI 播放在 `InventoryInteractionAudio`，业务不操作 AudioService。
 - 快速转移经 `InventoryQuickTransferFeedbackEvents` 在每个实际收货槽提交成功后发布物品/数量/源目标索引；`InventoryQuickTransferAnimation` 独立播放 0.24 秒无射线飞行，按真实 Canvas 坐标与缩放显示、最多并发 32 个，关闭/卸载/虚拟化重绑取消；隐藏或不存在的槽位不编造落点。客户端机器命令只在对应 token 成功回执及同次权威库存快照应用后，按精确收货回执播放；服务器执行远端命令时抑制 Host 本地动画。
 - 长按触屏的整组放置在进度完成时提交并消费手势；进度先缓冲 0.2 秒再显示，原总时长不延长。空槽起手才交 ScrollRect。拖拽来源允许同槽、同非零 Guid、同定义的事务替换实例；持续加工在被拖槽上暂缓。
+- 触屏空手按住槽内物品 1 秒查看同一个 PC 介绍窗；`Inventory.CanTouchInspectItem` 只检查携带手部库存，快捷栏装备不算手持。介绍松手保留、下次窗外按下收起；显示成功消费本次长按，手持物长按与拆半拖拽保留。移动、物品身份变化、手部非空或面板关闭取消查看。
 - `UI_Hand/InventoryDragGhost` 使用顶层 Canvas 且不拦射线；触屏位置取本次 PointerEventData，抬起后保留，桌面明确接管才改用 Pointer.current。`MobileHeldItemDropSurface` 只操作手部携带槽，丢弃经 Mod_DiscardItem，成功生成世界物后才扣源槽。
 - 库存与手工制作面板显式允许手持物世界丢弃并登记自身输入锁 Owner；手机在窗口外沿用轻点单件、长按整组，窗口内和槽位射线优先。该能力不解除移动/攻击输入锁，不改变直接槽间拖拽或松手转入手部的事务。
 - `InstantiateHeldItem` 在注册前绑定真实 ItemData、Owner/inHand；库存事件标脏，在安全边界同步，同 GUID 跨槽保留实例。保存先 ModuleSave 手持物再存库存；卸载释放输入、事件、PlayerHand 与所属 Item 引用。退出场景时 ItemMgr 可能先销毁，清理通过 GetInstance 获取仍存在的管理器，缺失时销毁自有手持物，不调用会报缺失错误的 Instance。RuntimeInventory 在 Player Prefab 中以 `[SerializeReference]` 保存。

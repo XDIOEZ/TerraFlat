@@ -82,6 +82,9 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>判断当前槽位是否可执行“手部整组长按放下”，仅用于长按进度提示与即时提交。</summary>
     public System.Func<int, bool> CanTouchLongPressPutDown { get; set; }
 
+    /// <summary>由真实库存确认当前槽有物品且玩家手部携带槽为空。</summary>
+    public System.Func<int, bool> CanTouchInspectItem { get; set; }
+
     /// <summary>把目标槽位的长按进度转发给唯一的手部插槽视觉。</summary>
     public System.Action<float, bool> OnTouchLongPressProgress { get; set; }
 
@@ -196,6 +199,11 @@ public class ItemSlot_UI : MonoBehaviour,
     private float touchFlickMinimumSpeed = InventoryFlickGesture.DefaultMinimumSpeed;
     private readonly InventoryFlickGesture touchFlickGesture = new();
 
+    [Header("手机长按物品介绍")]
+    [SerializeField, Min(0.1f)] private float touchTooltipSeconds = 1f;
+    private Coroutine touchTooltipCoroutine;
+    private bool touchTooltipTriggered;
+
     /// <summary>
     /// 用于获取槽位数据的委托（解除对Data的直接依赖）
     /// </summary>
@@ -229,6 +237,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnTouchTap = null;
         OnTouchLongPress = null;
         CanTouchLongPressPutDown = null;
+        CanTouchInspectItem = null;
         OnTouchLongPressProgress = null;
         OnTouchWorldLongPress = null;
         OnTouchHalfDragBegin = null;
@@ -251,12 +260,22 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private void OnApplicationFocus(bool focused)
     {
-        if (!focused) touchFlickGesture.Reset();
+        if (!focused)
+        {
+            touchFlickGesture.Reset();
+            CancelTouchTooltipHold();
+            InventoryItemTooltip.Hide(this);
+        }
     }
 
     private void OnApplicationPause(bool paused)
     {
-        if (paused) touchFlickGesture.Reset();
+        if (paused)
+        {
+            touchFlickGesture.Reset();
+            CancelTouchTooltipHold();
+            InventoryItemTooltip.Hide(this);
+        }
     }
     #endregion
 
@@ -266,6 +285,8 @@ public class ItemSlot_UI : MonoBehaviour,
     /// </summary>
     public void InitializeSlot(int index, System.Func<int, ItemSlot> getSlotFunc, System.Action<int> clearAction)
     {
+        CancelTouchTooltipHold();
+        InventoryItemTooltip.Hide(this);
         slotIndex = index;
         GetSlotDataFunc = getSlotFunc;
         ClearSlotDataAction = clearAction;
@@ -419,6 +440,7 @@ public class ItemSlot_UI : MonoBehaviour,
         bool isTouch = IsTouchPointer(eventData);
         if (isTouch && touchPointerId != int.MinValue && touchPointerId != eventData.pointerId)
             return;
+        InventoryItemTooltip.DismissTouchAt(eventData.position);
         RememberPointer(eventData);
         if (eventData.button == PointerEventData.InputButton.Left && !isTouch)
         {
@@ -457,6 +479,8 @@ public class ItemSlot_UI : MonoBehaviour,
             touchLongPressCoroutine = StartCoroutine(WaitForTouchLongPress());
             if (touchPressStartedWithItem)
                 touchHalfDragReadyCoroutine = StartCoroutine(WaitForTouchHalfDragReady());
+            if (CanTouchInspectItem?.Invoke(slotIndex) == true)
+                touchTooltipCoroutine = StartCoroutine(WaitForTouchTooltip());
             return;
         }
 
@@ -484,7 +508,7 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnPointerExit(PointerEventData eventData)
     {
         isPointerOver = false;
-        InventoryItemTooltip.Hide(this);
+        if (!InventoryItemTooltip.IsTouchPinned(this)) InventoryItemTooltip.Hide(this);
         if (eventData == null || eventData.pointerId != touchPointerId)
             return;
 
@@ -492,6 +516,7 @@ public class ItemSlot_UI : MonoBehaviour,
         touchMovedTooFar = true;
         CancelTouchLongPress();
         CancelTouchHalfDragReady();
+        CancelTouchTooltipHold();
     }
 
     public void OnPointerUp(PointerEventData eventData)
@@ -499,9 +524,9 @@ public class ItemSlot_UI : MonoBehaviour,
         RememberPointer(eventData);
         if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
         {
-            bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
+            bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered && !touchTooltipTriggered;
             bool shouldHandleLongPress = !touchMovedTooFar && touchPressStartedWithItem && touchLongPressTriggered &&
-                                         !touchLongPressPutDownCommitted;
+                                         !touchLongPressPutDownCommitted && !touchTooltipTriggered;
             // EventSystem 先派发抬起再派发结束拖拽，保留轨迹到松手目标判定完成。
             if (touchItemDragActive || touchScrollDragActive)
             {
@@ -554,6 +579,8 @@ public class ItemSlot_UI : MonoBehaviour,
             CancelTouchLongPress();
         if (touchMovedTooFar)
             CancelTouchHalfDragReady();
+        if (touchMovedTooFar)
+            CancelTouchTooltipHold();
     }
 
     public void OnInitializePotentialDrag(PointerEventData eventData)
@@ -571,12 +598,14 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>根据输入类型创建整组或半组拖拽事务并显示跟随图标。</summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (IsTouchPointer(eventData) && eventData.pointerId == touchPointerId && touchTooltipTriggered) return;
         InventoryItemTooltip.Hide(this);
         if (IsTouchPointer(eventData))
         {
             if (eventData.pointerId != touchPointerId) return;
             touchMovedTooFar = true;
             CancelTouchLongPress();
+            CancelTouchTooltipHold();
             if (eventData.button == PointerEventData.InputButton.Left && touchPressStartedWithItem)
             {
                 // 长按拆半已经把物品转进手部槽，不能再从原槽甩走剩余半组。
@@ -829,6 +858,8 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private void CancelTouchPress()
     {
+        CancelTouchTooltipHold();
+        touchTooltipTriggered = false;
         touchFlickGesture.Reset();
         CancelTouchLongPress();
         CancelTouchWorldLongPress();
@@ -839,6 +870,49 @@ public class ItemSlot_UI : MonoBehaviour,
         touchLongPressPutDownCommitted = false;
         CancelTouchHalfDragReady();
     }
+
+    #region 手机空手物品介绍
+    private IEnumerator WaitForTouchTooltip()
+    {
+        ItemSlot pressedSlot = GetSlotData();
+        ItemData pressedItem = pressedSlot?.itemData;
+        BasePanel pressedPanel = GetComponentInParent<BasePanel>();
+        CanvasGroup[] groups = GetComponentsInParent<CanvasGroup>();
+        double deadline = Time.unscaledTimeAsDouble + Mathf.Max(0.1f, touchTooltipSeconds);
+        while (touchPointerId != int.MinValue && !touchMovedTooFar && !touchItemDragActive &&
+               (pressedPanel == null || pressedPanel.IsOpen()) &&
+               ReferenceEquals(GetSlotData(), pressedSlot) &&
+               InventoryItemTooltip.MatchesItem(pressedSlot?.itemData, pressedItem) &&
+               CanTouchInspectItem?.Invoke(slotIndex) == true)
+        {
+            foreach (CanvasGroup group in groups)
+                if (group != null && group.alpha <= 0.001f)
+                {
+                    touchTooltipCoroutine = null;
+                    yield break;
+                }
+            if (Time.unscaledTimeAsDouble >= deadline)
+            {
+                touchTooltipCoroutine = null;
+                if (!InventoryItemTooltip.ShowTouch(this, ResolveItemTooltipPrefab(), touchPressPosition))
+                    yield break;
+                touchTooltipTriggered = true;
+                touchLongPressTriggered = true;
+                CancelTouchLongPress();
+                CancelTouchHalfDragReady();
+                yield break;
+            }
+            yield return null;
+        }
+        touchTooltipCoroutine = null;
+    }
+
+    private void CancelTouchTooltipHold()
+    {
+        if (touchTooltipCoroutine != null) StopCoroutine(touchTooltipCoroutine);
+        touchTooltipCoroutine = null;
+    }
+    #endregion
 
     private void CancelTouchLongPress()
     {

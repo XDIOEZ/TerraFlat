@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-/// <summary>库存物品的统一鼠标悬浮信息面板，只负责汇总定义、实例参数和模块返回文本。</summary>
+/// <summary>鼠标悬浮与触屏长按共用的物品介绍，汇总定义、实例参数和模块返回文本。</summary>
 [DisallowMultipleComponent]
 public sealed class InventoryItemTooltip : MonoBehaviour
 {
@@ -38,8 +39,26 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private Coroutine refreshRoutine;
     private bool visible;
     private Vector2 lastContainerSize;
+    private bool touchPinned;
+    private int touchShownFrame;
+    private ItemSlot touchSlot;
+    private ItemData touchItem;
+    private BasePanel touchOwnerPanel;
+    private CanvasGroup[] touchOwnerGroups;
 
     public static void Show(ItemSlot_UI slot, GameObject prefab, Vector2 screenPosition)
+    {
+        if (current != null && current.visible && current.touchPinned) return;
+        ShowInternal(slot, prefab, screenPosition, false);
+    }
+
+    public static bool ShowTouch(ItemSlot_UI slot, GameObject prefab, Vector2 screenPosition)
+    {
+        ShowInternal(slot, prefab, screenPosition, true);
+        return IsTouchPinned(slot);
+    }
+
+    private static void ShowInternal(ItemSlot_UI slot, GameObject prefab, Vector2 screenPosition, bool pinTouch)
     {
         if (slot == null || prefab == null || slot.GetBoundSlotData()?.itemData == null)
         {
@@ -52,6 +71,12 @@ public sealed class InventoryItemTooltip : MonoBehaviour
             return;
 
         tooltip.owner = slot;
+        tooltip.touchPinned = pinTouch;
+        tooltip.touchShownFrame = Time.frameCount;
+        tooltip.touchSlot = pinTouch ? slot.GetBoundSlotData() : null;
+        tooltip.touchItem = tooltip.touchSlot?.itemData;
+        tooltip.touchOwnerPanel = pinTouch ? slot.GetComponentInParent<BasePanel>() : null;
+        tooltip.touchOwnerGroups = pinTouch ? slot.GetComponentsInParent<CanvasGroup>() : null;
         tooltip.pointerScreenPosition = screenPosition;
         tooltip.visible = true;
         tooltip.canvasGroup.alpha = 1f;
@@ -65,7 +90,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
     public static void Move(ItemSlot_UI slot, Vector2 screenPosition)
     {
-        if (current == null || !current.visible || current.owner != slot)
+        if (current == null || !current.visible || current.owner != slot || current.touchPinned)
             return;
 
         current.pointerScreenPosition = screenPosition;
@@ -87,6 +112,51 @@ public sealed class InventoryItemTooltip : MonoBehaviour
             return;
 
         current.HideInternal();
+    }
+
+    public static bool IsTouchPinned(ItemSlot_UI slot)
+        => current != null && current.visible && current.touchPinned && current.owner == slot;
+
+    // 点击窗外时只收起介绍，不拦截这次点击本身的正常用途。
+    public static void DismissTouchAt(Vector2 screenPosition)
+    {
+        if (current == null || !current.visible || !current.touchPinned) return;
+        Canvas canvas = current.GetComponentInParent<Canvas>()?.rootCanvas;
+        Camera camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+        if (!RectTransformUtility.RectangleContainsScreenPoint(current.panelRect, screenPosition, camera))
+            current.HideInternal();
+    }
+
+    internal static bool MatchesItem(ItemData currentItem, ItemData expected)
+        => currentItem != null && expected != null && (ReferenceEquals(currentItem, expected) ||
+            currentItem.Guid != 0 && currentItem.Guid == expected.Guid && currentItem.IDName == expected.IDName);
+
+    private void LateUpdate()
+    {
+        if (!visible || !touchPinned) return;
+        if (!HasValidTouchOwner()) { HideInternal(); return; }
+        if (Time.frameCount == touchShownFrame) return;
+        Touchscreen screen = Touchscreen.current;
+        if (screen != null)
+            foreach (var touch in screen.touches)
+                if (touch.press.wasPressedThisFrame) DismissTouchAt(touch.position.ReadValue());
+        Mouse mouse = Mouse.current;
+        if (mouse != null && (mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame ||
+                              mouse.middleButton.wasPressedThisFrame))
+            DismissTouchAt(mouse.position.ReadValue());
+    }
+
+    private bool HasValidTouchOwner()
+    {
+        if (owner == null || !owner.isActiveAndEnabled ||
+            (touchOwnerPanel != null && !touchOwnerPanel.IsOpen()) ||
+            !ReferenceEquals(owner.GetBoundSlotData(), touchSlot) ||
+            !MatchesItem(touchSlot?.itemData, touchItem) || owner.CanTouchInspectItem?.Invoke(owner.slotIndex) != true)
+            return false;
+        if (touchOwnerGroups != null)
+            foreach (CanvasGroup group in touchOwnerGroups)
+                if (group != null && group.alpha <= 0.001f) return false;
+        return true;
     }
 
     private static InventoryItemTooltip EnsureInstance(GameObject prefab)
@@ -180,6 +250,11 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private void HideInternal()
     {
         visible = false;
+        touchPinned = false;
+        touchOwnerPanel = null;
+        touchOwnerGroups = null;
+        touchSlot = null;
+        touchItem = null;
         owner = null;
         if (refreshRoutine != null)
         {
@@ -197,6 +272,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
     private void RefreshContent()
     {
+        if (touchPinned && !HasValidTouchOwner()) { HideInternal(); return; }
         ItemData itemData = owner?.GetBoundSlotData()?.itemData;
         if (itemData == null)
         {

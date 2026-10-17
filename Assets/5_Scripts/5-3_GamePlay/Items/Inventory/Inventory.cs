@@ -796,6 +796,7 @@ public class Inventory
             itemSlotUI.OnTouchTap = null;
             itemSlotUI.OnTouchLongPress = null;
             itemSlotUI.CanTouchLongPressPutDown = null;
+            itemSlotUI.CanTouchInspectItem = null;
             itemSlotUI.OnTouchLongPressProgress = null;
             itemSlotUI.OnTouchWorldLongPress = null;
             itemSlotUI.OnTouchHalfDragBegin = null;
@@ -811,6 +812,7 @@ public class Inventory
             itemSlotUI.OnTouchTap = OnTouchTap;
             itemSlotUI.OnTouchLongPress = OnTouchLongPress;
             itemSlotUI.CanTouchLongPressPutDown = CanTouchLongPressPutDown;
+            itemSlotUI.CanTouchInspectItem = CanTouchInspectItem;
             itemSlotUI.OnTouchLongPressProgress = ForwardTouchLongPressProgressToHand;
             itemSlotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
             itemSlotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
@@ -878,6 +880,7 @@ public class Inventory
         slotUI.OnTouchTap = null;
         slotUI.OnTouchLongPress = null;
         slotUI.CanTouchLongPressPutDown = null;
+        slotUI.CanTouchInspectItem = null;
         slotUI.OnTouchLongPressProgress = null;
         slotUI.OnTouchWorldLongPress = null;
         slotUI.OnTouchHalfDragBegin = null;
@@ -893,6 +896,7 @@ public class Inventory
         slotUI.OnTouchTap = OnTouchTap;
         slotUI.OnTouchLongPress = OnTouchLongPress;
         slotUI.CanTouchLongPressPutDown = CanTouchLongPressPutDown;
+        slotUI.CanTouchInspectItem = CanTouchInspectItem;
         slotUI.OnTouchLongPressProgress = ForwardTouchLongPressProgressToHand;
         slotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
         slotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
@@ -1403,6 +1407,16 @@ public class Inventory
             return false;
 
         return localSlot.itemData == null || localSlot.itemData.CanStackWith(handSlot.itemData);
+    }
+
+    /// <summary>只把手部携带库存为空视为空手，快捷栏当前装备不影响查看介绍。</summary>
+    public bool CanTouchInspectItem(int index)
+    {
+        Inventory hand = GetPlayerHandInventory();
+        if (Data?.GetItemSlot(index)?.itemData == null || !IsValidQuickTransferTarget(hand)) return false;
+        foreach (ItemSlot slot in hand.Data.itemSlots)
+            if (slot?.itemData != null) return false;
+        return true;
     }
 
     /// <summary>目标槽只负责手势计时，进度统一显示在玩家手部插槽上。</summary>
