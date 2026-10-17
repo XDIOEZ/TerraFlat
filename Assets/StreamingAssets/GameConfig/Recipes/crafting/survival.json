@@ -145,13 +145,7 @@
           "amount": 2
         }
       ],
-      "actions": [
-        {
-          "type": "change_durability",
-          "targetRole": "Axe",
-          "value": 1.0
-        }
-      ]
+      "actions": []
     },
     {
       "id": "core:木棍_切削合成",

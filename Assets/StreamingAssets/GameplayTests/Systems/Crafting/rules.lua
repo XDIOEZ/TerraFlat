@@ -21,6 +21,37 @@ for _, case in ipairs(cases) do
     end, "制作材料分配：" .. case.name)
 end
 
+-- 正式木板配方只消耗原木，满耐久或残余耐久的斧头在连续制作后都原样保留。
+local plankCases = {
+    {name = "满耐久斧头连续制作", args = {}, durability = 1, toolPresent = true, crafted = true},
+    {name = "残余耐久斧头连续制作", args = {durability = .25}, durability = .25, toolPresent = true, crafted = true},
+    {name = "没有斧头不得制作", args = {toolPresent = false}, toolPresent = false, crafted = false},
+    {name = "输出满时保留斧头和原木", args = {fullOutput = true}, durability = 1, toolPresent = true, crafted = false}
+}
+for _, case in ipairs(plankCases) do
+    test.system("crafting", "plank_tool", case.args, function(data)
+        assert(data.recipeId == "core:木板_切削合成" and #data.attempts == 3, "没有使用正式木板配方连续制作")
+        for index, attempt in ipairs(data.attempts) do
+            assert(attempt.matched == case.toolPresent and attempt.prepared == case.crafted
+                and attempt.committed == case.crafted, "木板制作条件或事务结果错误")
+            assert(attempt.logs == (case.crafted and 3 - index or 3), "木板制作扣除了错误数量的原木")
+            assert(attempt.outputAmount == (case.crafted and index * 2 or (case.args.fullOutput and 1 or 0)),
+                "木板制作产量或失败后的输出数量错误")
+            if case.crafted then
+                assert(attempt.outputId == "Plank", "木板配方生成了错误产物")
+            elseif case.args.fullOutput then
+                assert(attempt.outputId == "test:blocker", "失败制作覆盖了原有输出物")
+            end
+            assert(attempt.toolPresent == case.toolPresent, "制作木板后斧头消失或凭空生成")
+            if case.toolPresent then
+                assert(attempt.toolGuid == 1701 and attempt.toolAmount == 1
+                    and attempt.toolDurability == case.durability and attempt.toolMaxDurability == 1,
+                    "制作木板改变了斧头的身份、数量或耐久")
+            end
+        end
+    end, "木板工具保留：" .. case.name)
+end
+
 local transactions = {
     {name = "全产物一次提交", args = {}, prepared = true, committed = true, input = 3, output = 2, finalInput = 3, finalOutput = 2},
     {name = "满包不部分产出或扣料", args = {outputSlots = 1}, prepared = false, committed = false, input = 5, output = 0, finalInput = 5, finalOutput = 0},

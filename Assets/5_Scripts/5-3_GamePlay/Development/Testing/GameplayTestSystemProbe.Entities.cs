@@ -45,6 +45,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
         operations.Add("crafting/transaction", EntityCraftingTransaction);
+        operations.Add("crafting/plank_tool", EntityCraftingPlankTool);
         operations.Add("containers/composition", EntityContainerComposition);
         operations.Add("quests/signal_progress", EntityQuestSignal);
         operations.Add("quests/reward_plan", EntityQuestRewardPlan);
@@ -788,6 +789,71 @@ public static partial class GameplayTestSystemProbe
             ["inputFinal"] = EntityInventoryAmount(input.Data), ["outputFinal"] = EntityInventoryAmount(output.Data),
             ["prepareFailure"] = prepareFailure?.FailureReason.ToString(), ["commitFailure"] = commitFailure?.FailureReason.ToString()
         };
+    }
+
+    // 读取正式木板配方并执行匹配、事务和成功动作，采样连续制作时斧头是否原样保留。
+    private static JObject EntityCraftingPlankTool(JObject args)
+    {
+        string recipeRoot = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RecipeCatalogLoader.RelativeRecipeRoot);
+        RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(StreamingAssetsTextLoader.ReadAllText(
+            RecipeCatalogLoader.ResolvePackagePath(recipeRoot, "crafting/survival.json")));
+        RuntimeRecipe recipe = RecipeRuntimeFactory.Build(catalog.Recipes.Find(value => value.Id == "core:木板_切削合成"), _ => true);
+        Data_GeneralItem tool = EntityProbeData("test:crafting_axe", 1f);
+        tool.Guid = 1701;
+        tool.Tags.Add("Axe");
+        tool.Stack.Stackable = false;
+        tool.Durability = (float)Number(args, "durability", 1d);
+        tool.MaxDurability = 1f;
+        bool toolPresent = Flag(args, "toolPresent", true);
+        var input = new Inventory
+        {
+            Data = new Inventory_Data(new List<ItemSlot>
+            {
+                new(0) { itemData = EntityProbeData("Log", 3f) },
+                new(1) { itemData = toolPresent ? tool : null }
+            }, "independent plank input")
+        };
+        bool fullOutput = Flag(args, "fullOutput", false);
+        var output = new Inventory
+        {
+            Data = new Inventory_Data(new List<ItemSlot>
+            {
+                new(0) { itemData = fullOutput ? EntityProbeData("test:blocker", 1f) : null }
+            }, "independent plank output")
+        };
+        var outputs = new List<ItemData>();
+        foreach (RuntimeRecipeResult result in recipe.outputs.results)
+            outputs.Add(EntityProbeData(result.ItemName, result.amount));
+        var attempts = new JArray();
+        for (int index = 0; index < 3; index++)
+        {
+            bool matched = CraftingRecipeMatcher.TryMatchRecipe(input, recipe, new CraftingCapabilities(), out CraftingRecipeMatch match);
+            bool prepared = false, committed = false;
+            if (matched)
+            {
+                prepared = CraftingTransaction.TryCreate(input, output, match, outputs, false,
+                    out CraftingTransaction transaction, out _);
+                if (prepared && transaction.Commit(out _))
+                {
+                    RecipeActionRunner.Execute(recipe, input);
+                    transaction.Complete();
+                    committed = true;
+                }
+            }
+            ItemData currentTool = input.Data.itemSlots[1].itemData;
+            attempts.Add(new JObject
+            {
+                ["matched"] = matched, ["prepared"] = prepared, ["committed"] = committed,
+                ["logs"] = input.Data.itemSlots[0].itemData?.Stack?.Amount ?? 0f,
+                ["outputId"] = output.Data.itemSlots[0].itemData?.IDName,
+                ["outputAmount"] = output.Data.itemSlots[0].itemData?.Stack?.Amount ?? 0f,
+                ["toolPresent"] = currentTool != null, ["toolGuid"] = currentTool?.Guid ?? 0,
+                ["toolAmount"] = currentTool?.Stack?.Amount ?? 0f,
+                ["toolDurability"] = currentTool?.Durability ?? 0f,
+                ["toolMaxDurability"] = currentTool?.MaxDurability ?? 0f
+            });
+        }
+        return new JObject { ["recipeId"] = recipe.Id, ["attempts"] = attempts };
     }
 
     private static float EntityInventoryAmount(Inventory_Data data)
