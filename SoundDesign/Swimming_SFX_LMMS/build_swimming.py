@@ -1,9 +1,8 @@
-"""编排 LMMS 原生游泳音色，只从 MCP 渲染母带裁切并绑定 Unity 资源。"""
+"""编排真实水声采样，只从 LMMS MCP 渲染母带裁切并绑定 Unity 资源。"""
 
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import importlib.util
 import json
@@ -24,38 +23,16 @@ sfx = importlib.util.module_from_spec(loader)
 loader.loader.exec_module(sfx)
 RATE = sfx.RATE
 PROJECT_FILE = ROOT / "Swimming.mmp"
-MASTER_FILE = ROOT / "renders/Swimming_raw.wav"
+MASTER_FILE = ROOT / "renders/Swimming_real_raw.wav"
 
 
-# region 原生水花音色与非等距水滴
-def water(cutoff, attack, decay, volume, delay=0, repeats=(), resonance=.8, bandpass=False):
-    return dict(sfx.noise(cutoff, attack, decay, volume=volume, delay=delay, repeats=repeats),
-                resonance=resonance, filterType=2 if bandpass else 0)
-
-
+# region 真实水花与划水采样编排
 def specs():
-    # 短水膜与稀疏共鸣水滴分层，避免持续白噪声和低频鼓点。
+    # 保留实录的宽频水花与水流主体，不再用窄带白噪声冒充水声。
     return [
-        dict(cue="player.swim.enter", name="入水水花", seconds=.65, peakDb=-13, rmsDb=-29,
-             layers=[water(2050, .014, .16, 45),
-                     water(790, .028, .20, 26, delay=.025, resonance=1.2, bandpass=True),
-                     water(2750, .002, .025, 29, delay=.055, resonance=2.2, bandpass=True,
-                           repeats=((.093, .62), (.233, .35))),
-                     water(1080, .003, .032, 34, delay=.092, resonance=4.4, bandpass=True,
-                           repeats=((.119, .67), (.265, .38)))]),
-        dict(cue="player.swim.stroke", name="游泳划水", seconds=.60, peakDb=-17, rmsDb=-31,
-             layers=[water(1480, .050, .165, 42),
-                     water(720, .024, .13, 29, delay=.045, resonance=1.4, bandpass=True),
-                     water(2250, .005, .038, 27, delay=.116, resonance=2.1, bandpass=True,
-                           repeats=((.128, .44),)),
-                     water(980, .004, .027, 31, delay=.156, resonance=4.1, bandpass=True,
-                           repeats=((.151, .51),))]),
-        dict(cue="player.swim.exit", name="出水滴水", seconds=.55, peakDb=-18, rmsDb=-32,
-             layers=[water(1580, .025, .115, 26),
-                     water(2380, .002, .024, 25, delay=.053, resonance=2.4, bandpass=True,
-                           repeats=((.149, .61), (.293, .35))),
-                     water(1120, .003, .031, 32, delay=.100, resonance=4.6, bandpass=True,
-                           repeats=((.173, .57), (.291, .29)))])
+        dict(cue="player.swim.enter", name="实录入水水花", seconds=1.05, peakDb=-9, rmsDb=-24),
+        dict(cue="player.swim.stroke", name="实录游泳划水", seconds=.72, peakDb=-11, rmsDb=-26),
+        dict(cue="player.swim.exit", name="实录出水滴水", seconds=1.0, peakDb=-14, rmsDb=-29)
     ]
 
 
@@ -67,9 +44,8 @@ def atomic_text(path, text):
 
 def build():
     tree = ET.parse(SFX_ROOT / "MCP_Base.mmp")
-    template = tree.find(".//track")
     tree.getroot().set("creatorversion", "1.2.2")
-    tree.find("head").set("mastervol", "42")
+    tree.find("head").set("mastervol", "75")
     container = tree.find(".//trackcontainer")
     container.clear()
     container.set("type", "song")
@@ -81,35 +57,21 @@ def build():
                                seconds=sound["seconds"], peakDb=sound["peakDb"],
                                rmsDb=sound["rmsDb"], startSeconds=slot * 2 + .125,
                                file=f"Assets/Audio/Generated/{sound['cue']}__{variant:02}.wav"))
-            for index, original in enumerate(sound["layers"]):
-                patch = copy.deepcopy(original)
-                shift = (0, .075, -.065)[variant - 1]
-                patch["decay"] *= 1 + shift
-                patch["cutoff"] *= 1 + shift
-                patch["delay"] *= (1, 1.08, .94)[variant - 1]
-                track = copy.deepcopy(template)
-                track.set("name", f"{sound['name']} / {variant} / water layer {index + 1}")
-                for pattern in track.findall("pattern"):
-                    track.remove(pattern)
-                sfx.configure(track, patch)
-                track.find("instrumenttrack/eldata").attrib.update(
-                    ftype=str(patch["filterType"]), fres=str(patch["resonance"]))
-                pattern = ET.SubElement(track, "pattern", type="1", steps="16", len="192",
-                                        pos=str(slot * 192), name=sound["cue"])
-                duration = patch["attack"] + patch["decay"] + .02
-                for delay, velocity in ((0, 1),) + tuple(patch["repeats"]):
-                    ET.SubElement(pattern, "note",
-                                  pos=str(round((.125 + patch["delay"] + delay) / sfx.TICK_SECONDS)),
-                                  key=str(patch["key"]),
-                                  len=str(max(3, math.ceil(duration / sfx.TICK_SECONDS))),
-                                  vol=str(round(78 * velocity)), pan="0")
-                container.append(track)
+            sample = ROOT / "Sources" / f"{sound['cue'].split('.')[-1]}_{variant:02}.wav"
+            assert sample.is_file(), f"Prepare recorded sources first: {sample}"
+            track = ET.SubElement(container, "track", muted="0", type="2",
+                                  name=f"{sound['name']} / {variant}", solo="0")
+            sample_track = ET.SubElement(track, "sampletrack", pan="0", vol="80")
+            ET.SubElement(sample_track, "fxchain", numofeffects="0", enabled="0")
+            ET.SubElement(track, "sampleclip", pos=str(slot * 192 + 12),
+                          len=str(math.ceil(sound["seconds"] / sfx.TICK_SECONDS)),
+                          src=sample.as_posix(), muted="0", off="0")
             slot += 1
     tree.find(".//timeline").set("lp1pos", str(slot * 192))
     ET.indent(tree, space="  ")
     atomic_text(PROJECT_FILE, ET.tostring(tree.getroot(), encoding="unicode", xml_declaration=True) + "\n")
     atomic_text(ROOT / "layout.json", json.dumps(layout, ensure_ascii=False, indent=2) + "\n")
-    print("Prepared 9 water events in editable LMMS project; no waveform synthesized in Python")
+    print("Prepared 9 recorded water sample clips in editable LMMS project")
 # endregion
 
 
@@ -141,6 +103,9 @@ def bind_cue(cue, clip_guids):
 
 def finalize():
     layout = json.loads((ROOT / "layout.json").read_text(encoding="utf-8"))
+    samples = [ROOT / "Sources" / f"{entry['cue'].split('.')[-1]}_{entry['variant']:02}.wav" for entry in layout]
+    latest_input = max(path.stat().st_mtime for path in [PROJECT_FILE, ROOT / "sources.json", *samples])
+    assert MASTER_FILE.stat().st_mtime >= latest_input, "LMMS master is stale; reload and render the project before finalize"
     raw = sfx.read_wave(MASTER_FILE)
     assert np.max(np.abs(raw)) < .9999, "Clipped LMMS master"
     assert len(raw) >= round(max(x["startSeconds"] + x["seconds"] for x in layout) * RATE)
@@ -163,7 +128,9 @@ def finalize():
         template = re.sub(r"^guid: [0-9a-f]{32}$", f"guid: {guid}", template, flags=re.M)
         atomic_text(meta_path, template.replace("LMMS_MCP_Gameplay", "LMMS_MCP_Swimming"))
         cue_clips.setdefault(entry["cue"], []).append(guid)
+        sample = ROOT / "Sources" / f"{entry['cue'].split('.')[-1]}_{entry['variant']:02}.wav"
         manifest.append(dict(entry, guid=guid, sha256=hashlib.sha256(asset.read_bytes()).hexdigest(),
+                             sourceSha256=hashlib.sha256(sample.read_bytes()).hexdigest(),
                              peakDb=round(20 * math.log10(np.max(np.abs(data))), 2),
                              rmsDb=round(20 * math.log10(np.sqrt(np.mean(data ** 2))), 2)))
         if entry["variant"] == 1:
@@ -176,10 +143,11 @@ def finalize():
         if line not in text:
             text = text.rstrip() + "\n" + line + "\n"
     atomic_text(catalog, text)
-    sfx.write_wave(ROOT / "Preview_Swimming.wav", np.concatenate(preview))
+    sfx.write_wave(ROOT / "Preview_Swimming_Recorded.wav", np.concatenate(preview))
     atomic_text(ROOT / "manifest.json", json.dumps(dict(
-        engine="LMMS 1.2.2 via MCP", instrument="TripleOscillator noise with native filters/envelopes",
+        engine="LMMS 1.2.2 via MCP", instrument="Recorded swimming, splashes and trickles through LMMS sample tracks",
         masterSha256=hashlib.sha256(MASTER_FILE.read_bytes()).hexdigest(),
+        sourcesFile="sources.json",
         sampleRate=RATE, channels=1, sounds=manifest), ensure_ascii=False, indent=2) + "\n")
     print("Bound 3 spatial world SFX Cues and 9 mono PCM clips")
 
@@ -196,8 +164,11 @@ def verify():
         data = sfx.read_wave(asset)
         peak, rms = np.max(np.abs(data)), np.sqrt(np.mean(data ** 2))
         assert .0001 < peak < .9999 and rms > .00001 and np.isfinite(data).all(), asset
+        assert 20 * math.log10(peak / rms) < 22, f"Water body hidden by isolated peaks: {asset}"
         assert abs(data[0, 0]) <= 1 / 32768 and abs(data[-1, 0]) <= 1 / 32768, asset
         assert hashlib.sha256(asset.read_bytes()).hexdigest() == entry["sha256"]
+        sample = ROOT / "Sources" / f"{entry['cue'].split('.')[-1]}_{entry['variant']:02}.wav"
+        assert hashlib.sha256(sample.read_bytes()).hexdigest() == entry["sourceSha256"]
         assert f"guid: {entry['guid']}" in Path(str(asset) + ".meta").read_text(encoding="utf-8")
         cue = PROJECT / "Assets/Resources/Audio/Cues" / (entry["cue"] + ".asset")
         config = cue.read_text(encoding="utf-8")

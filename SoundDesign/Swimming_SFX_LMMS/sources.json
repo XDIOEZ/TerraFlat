@@ -1,0 +1,57 @@
+{
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "recordings": {
+    "pool_swimming": {
+      "soundId": 530154,
+      "author": "tbsounddesigns",
+      "title": "POOL SWIMMING L-R",
+      "sourcePage": "https://freesound.org/people/tbsounddesigns/sounds/530154/",
+      "previewUrl": "https://cdn.freesound.org/previews/530/530154_5387364-hq.mp3",
+      "previewSha256": "ef75675ac046da6262e53f10e80750fd6ec3cb3f20ea945a364811de505af013",
+      "description": "真实泳池游泳和划水录音。"
+    },
+    "close_pool_splash": {
+      "soundId": 434978,
+      "author": "Sara Lana (uploaded by felix.blume)",
+      "title": "Water Splash",
+      "sourcePage": "https://freesound.org/people/felix.blume/sounds/434978/",
+      "previewUrl": "https://cdn.freesound.org/previews/434/434978_1661766-hq.mp3",
+      "previewSha256": "47db85ab1f917190ac327113e2c5e615d7026516e7552be1f2a42208caff9066",
+      "description": "近距离泳池入水水花，Schoeps CCM4 与 Sound Devices 633 录制。"
+    },
+    "lake_entry": {
+      "soundId": 280219,
+      "author": "yurkobb",
+      "title": "jump-into-water.flac",
+      "sourcePage": "https://freesound.org/people/yurkobb/sounds/280219/",
+      "previewUrl": "https://cdn.freesound.org/previews/280/280219_2023784-hq.mp3",
+      "previewSha256": "237a169a18640dc034a30048d6419d9ae6111e56b64ae5381f1357f9baa65f0e",
+      "description": "真实湖泊入水录音，ZOOM H1 录制。"
+    }
+  },
+  "processing": {
+    "mono": true,
+    "sampleRate": 48000,
+    "highpassHz": 60,
+    "lowpassHz": 12000,
+    "headFadeSeconds": 0.004,
+    "tailFadeSeconds": 0.10,
+    "transientPercentile": 97,
+    "transientRatio": 4,
+    "lookaheadMilliseconds": 4,
+    "gainSmoothingMilliseconds": 1,
+    "peak": 0.65
+  },
+  "segments": [
+    { "file": "Sources/enter_01.wav", "recording": "close_pool_splash", "startSeconds": 0.40, "seconds": 1.05 },
+    { "file": "Sources/enter_02.wav", "recording": "lake_entry", "startSeconds": 0.22, "seconds": 1.05 },
+    { "file": "Sources/enter_03.wav", "recording": "close_pool_splash", "startSeconds": 1.12, "seconds": 1.05 },
+    { "file": "Sources/stroke_01.wav", "recording": "pool_swimming", "startSeconds": 6.20, "seconds": 0.72 },
+    { "file": "Sources/stroke_02.wav", "recording": "pool_swimming", "startSeconds": 7.10, "seconds": 0.72 },
+    { "file": "Sources/stroke_03.wav", "recording": "pool_swimming", "startSeconds": 8.34, "seconds": 0.72 },
+    { "file": "Sources/exit_01.wav", "recording": "close_pool_splash", "startSeconds": 1.55, "seconds": 1.00 },
+    { "file": "Sources/exit_02.wav", "recording": "close_pool_splash", "startSeconds": 2.20, "seconds": 1.00 },
+    { "file": "Sources/exit_03.wav", "recording": "close_pool_splash", "startSeconds": 3.15, "seconds": 1.00 }
+  ]
+}

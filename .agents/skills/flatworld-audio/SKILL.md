@@ -18,7 +18,7 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - 玩法音效：`SoundDesign/Gameplay_SFX_LMMS/` 保存攻击、材质命中和交互三组工程；30 个现有 Cue 绑定 88 个单声道变体，`build_sfx.py build/finalize` 负责编排与母带整理。旧 C# 默认音效生成器已删除，避免覆盖 LMMS 成品。
 - 事务反馈：`SoundDesign/Gameplay_Feedback_LMMS/` 的 6 类 Cue/12 个 LMMS MCP 变体覆盖建造成功/失败、合成、熔炼、火种和点炉；`GameplayFeedbackAudioBridge` 只订阅真实提交与主动拒绝事件，工程通过 `build_feedback.py build → lmms_mcp_render.py --render → finalize/verify` 重做。
 - 脚步与钓鱼：`SoundDesign/Player_Fishing_SFX_LMMS/` 包含 6 类地表脚步和 3 类钓鱼声、共 24 个 LMMS 变体；`Mod_Mover.FootstepAudio` 以本地角色实际距离计步，`Mod_FishingRod.SoundRequested` 经表现桥接只在成功抛竿、咬钩、首次收线时发声。共用的 `lmms_mcp_render.py` 支持 `--project/--output` 指向不同 LMMS 工程。
-- 游泳：`SoundDesign/Swimming_SFX_LMMS/` 保存入水、划水、出水共 3 类/9 个 LMMS 变体及重导脚本；`Mod_Mover.SwimmingAudio` 按本机角色脚下真实 `WaterContact` 液体与主动位移触发，水格间移动不重复入出水，浅水继续用涉水脚步。
+- 游泳：`SoundDesign/Swimming_SFX_LMMS/` 用真实游泳/近录水花，经 LMMS MCP Sample Track 编排渲染入水、划水、出水共 3 类/9 个变体；来源许可和裁切在 `sources.json`，保留 `Sources/` 采样，先 `prepare_sources.py` 再 build/render/finalize，拒绝旧母带。`Mod_Mover.SwimmingAudio` 按本机角色脚下真实 `WaterContact` 液体与主动位移触发，水格间不重复入出水，浅水沿用涉水脚步。
 - 库存取放：`SoundDesign/Inventory_Items_LMMS/install_runtime_cues.py` 将原有 72 个 LMMS 候选音效接入 `ui.inventory.*` UI Cue；`SoundDesign/Inventory_UI_Feedback_LMMS/` 的新工程经 LMMS MCP 生成交换、装备、卸装共 6 个变体。事件入口为 `InventoryAudioFeedbackEvents/EquipmentAudioFeedbackEvents`，由 `InventoryInteractionAudio` 选择材质、转移重量/体积并过滤非本机音效；重建 Catalog 会保留不在 Generated 内的外部 Cue。
 - 候选素材/工程：`Assets/Audio/UI/{LMMS_Clicks,InventoryItems_LMMS}/`、`SoundDesign/{UI_Click_LMMS,Inventory_Items_LMMS}/`。
 
