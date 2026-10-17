@@ -710,13 +710,22 @@ public static partial class GameplayTestSystemProbe
         Vector2 origin = Read(args["origin"]), direction = Read(args["direction"]);
         if (Text(args, "invalid", "") == "nan") direction.x = float.NaN;
         if (Text(args, "invalid", "") == "infinity") origin.y = float.PositiveInfinity;
-        JArray targets = (JArray)args["targets"];
+        JArray targets = args["targets"] as JArray ?? new JArray();
         var positions = new List<Vector2>(targets.Count);
         for (int i = 0; i < targets.Count; i++)
             positions.Add(Read(targets[i]));
         int selected = InventoryFlickTargets.SelectClosestDirection(origin, direction, positions);
-        return new JObject { ["selected"] = selected,
+        var result = new JObject { ["selected"] = selected,
             ["nullSourceAccepted"] = InventoryFlickTargets.Resolve(null, 0, origin, direction) != null };
+        if (args["bounds"] is JArray bounds)
+        {
+            var rect = new Rect(bounds[0].Value<float>(), bounds[1].Value<float>(), bounds[2].Value<float>(), bounds[3].Value<float>());
+            if (Text(args, "invalid", "") == "bounds_nan") rect.x = float.NaN;
+            if (Text(args, "invalid", "") == "bounds_infinity") rect.width = float.PositiveInfinity;
+            result["angleAccepted"] = InventoryFlickTargets.IsDirectionWithinTarget(origin, direction, rect);
+            result["edgeTolerance"] = InventoryFlickTargets.DirectionEdgeToleranceDegrees;
+        }
+        return result;
     }
 
     private static JObject EntityInventoryFlickGesture(JObject args)

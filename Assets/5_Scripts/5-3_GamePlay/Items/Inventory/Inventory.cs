@@ -2004,6 +2004,14 @@ public class Inventory
         return InventoryFlickTargets.HasVisibleTarget(this);
     }
 
+    /// <summary>方向偏出真实目标窗口及十度余量时，沿用普通拖拽拿到手部。</summary>
+    public bool HasVisibleFlickTarget(Vector2 origin, Vector2 direction)
+    {
+        Inventory hotbar = GetPlayerHotBarInventory();
+        hotbar?.RegisterFlickTarget(hotbar.basePanel, true);
+        return InventoryFlickTargets.HasTargetInDirection(this, origin, direction);
+    }
+
     private bool TryQuickTransferTo(int index, Inventory targetInventory)
     {
         if (!IsValidQuickTransferTarget(targetInventory) || targetInventory == this)

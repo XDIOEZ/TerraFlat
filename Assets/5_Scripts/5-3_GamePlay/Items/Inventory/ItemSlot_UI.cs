@@ -70,8 +70,8 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>鼠标与触屏甩动共用屏幕起点和净方向，与 Shift 固定目标入口分开。</summary>
     public System.Action<int, Vector2, Vector2> OnFlickTransfer { get; set; }
 
-    /// <summary>由库存判断是否存在其他打开的目标界面，缺少目标时不消费快速拖动。</summary>
-    public System.Func<bool> HasFlickTarget { get; set; }
+    /// <summary>由库存判断当前方向是否指向其他目标界面，范围外不消费快速拖动。</summary>
+    public System.Func<Vector2, Vector2, bool> HasFlickTarget { get; set; }
 
     /// <summary>鼠标或触屏拖拽开始时，创建保留来源槽的拖拽事务。</summary>
     public System.Func<int, InventoryDragTransaction> OnMouseDragBegin { get; set; }
@@ -784,15 +784,15 @@ public class ItemSlot_UI : MonoBehaviour,
     // 两种指针共用来源校验、方向转移和失败留源，正式拖放目标始终优先。
     private bool TryCompleteFlick(PointerEventData eventData, InventoryFlickGesture gesture, bool hasDropTarget)
     {
+        Vector2 origin = gesture.ScreenOrigin, direction = eventData.position - origin;
         if (hasDropTarget || OnFlickTransfer == null || activeDragTransaction?.HideSourceVisual != true ||
-            HasFlickTarget?.Invoke() != true ||
+            HasFlickTarget?.Invoke(origin, direction) != true ||
             !gesture.IsFlick(eventData.position, Time.unscaledTimeAsDouble, touchFlickMinimumDistance, touchFlickMinimumSpeed))
             return false;
         activeDragTransaction.TryConsumeSourceItem(sourceItem =>
         {
             if (!ReferenceEquals(GetSlotData()?.itemData, sourceItem)) return false;
-            Vector2 origin = gesture.ScreenOrigin;
-            OnFlickTransfer(slotIndex, origin, eventData.position - origin);
+            OnFlickTransfer(slotIndex, origin, direction);
             return true;
         });
         return true;

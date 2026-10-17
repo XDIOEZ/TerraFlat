@@ -16,6 +16,7 @@ public static partial class GameplayTestRuntimeProbe
     private static JObject CaptureInventoryDirectionalFlick(Player player, JObject args)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "right");
+        if (mode.StartsWith("window_", StringComparison.Ordinal)) return CaptureInventoryFlickWindow(mode);
         var root = new GameObject("LuaDirectionalFlick", typeof(RectTransform), typeof(Canvas));
         root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         var panels = new List<BasePanel>();
@@ -69,14 +70,14 @@ public static partial class GameplayTestRuntimeProbe
             }
             Vector2 origin = new(Screen.width * .18f, Screen.height * .72f);
             BasePanel rightPanel = MakePanel(right, new Vector2(Screen.width * .82f, origin.y));
-            bool vertical = mode == "down" || mode == "diagonal" || mode == "same_panel";
+            bool vertical = mode == "down" || mode == "diagonal" || mode == "same_panel" || mode == "full_outside_fallback";
             BasePanel downPanel = MakePanel(down, vertical ? new Vector2(origin.x, Screen.height * .18f) :
-                new Vector2(Screen.width * .65f, Screen.height * .64f));
+                new Vector2(Screen.width * .65f, Screen.height * .70f));
             Vector2 direction = mode == "down" || mode == "same_panel" ? Vector2.down :
-                mode == "diagonal" ? new Vector2(.3f, -1f) : Vector2.right;
+                mode == "diagonal" ? new Vector2(.1f, -1f) : Vector2.right;
             direction *= 120f;
             if (mode == "partial") right.Data.itemSlots[0].SlotMaxVolume = 2;
-            if (mode == "full" || mode == "none") right.Data.itemSlots[0].SlotMaxVolume = 0;
+            if (mode == "full" || mode == "none" || mode == "full_outside_fallback") right.Data.itemSlots[0].SlotMaxVolume = 0;
             if (mode == "none") down.Data.itemSlots[0].SlotMaxVolume = 0;
             if (mode == "blocked") right.Data.IsDepositBlocked = true;
             if (mode == "tag") right.Data.itemSlots[0].CanAcceptTags.Add(EquipmentSlotCatalog.HeadTag);
@@ -136,6 +137,108 @@ public static partial class GameplayTestRuntimeProbe
             Object.Destroy(root);
         }
     }
+
+    // 正式 WindowRect 提供整窗边界，槽映射和裁剪仍通过生产候选接口读取。
+    private static JObject CaptureInventoryFlickWindow(string mode)
+    {
+        var scope = new FlickPointerScope();
+        try
+        {
+            foreach (InventoryFlickTargets registered in scope.PreviousPanels)
+                if (registered != null) registered.enabled = false;
+            Inventory source = CreateDragInventory("lua.window.source", CreateDragItem("Twine", 6));
+            bool multi = mode == "window_multi_gap" || mode == "window_multi_right";
+            Inventory target = CreateDragInventory("lua.window.target", new ItemData[multi ? 2 : 1]);
+            Inventory second = CreateDragInventory("lua.window.second", new ItemData[1]);
+            scope.Root = new GameObject("LuaFlickWindow", typeof(RectTransform), typeof(Canvas));
+            scope.Root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            Canvas.ForceUpdateCanvases();
+            var panelObject = new GameObject("fullScreenOwner", typeof(RectTransform), typeof(BasePanel));
+            panelObject.transform.SetParent(scope.Root.transform, false);
+            var panelRect = (RectTransform)panelObject.transform;
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = panelRect.offsetMax = Vector2.zero;
+            BasePanel panel = panelObject.GetComponent<BasePanel>();
+            panel.SetGameplayInputBlocking(false);
+            panel.Init();
+            float unit = Mathf.Min(Screen.width, Screen.height) / 1000f;
+            RectTransform MakeRect(string name, Transform parent, Vector2 position, Vector2 size)
+            {
+                var go = new GameObject(name, typeof(RectTransform));
+                go.transform.SetParent(parent, false);
+                var rect = (RectTransform)go.transform;
+                rect.sizeDelta = size * unit;
+                rect.position = position * unit;
+                return rect;
+            }
+            RectTransform MakeWindow(Vector2 position, Vector2 size)
+            {
+                RectTransform rect = MakeRect("window", panelObject.transform, position, size);
+                RectTransform surface = MakeRect("dragSurface", rect, position, size);
+                surface.gameObject.AddComponent<UIWindowDragSurface>().Configure(rect);
+                return rect;
+            }
+            ItemSlot_UI MakeSlot(Inventory inventory, int index, RectTransform window, Vector2 position)
+            {
+                RectTransform rect = MakeRect("slot", window, position, new Vector2(20f, 20f));
+                ItemSlot_UI slot = rect.gameObject.AddComponent<ItemSlot_UI>();
+                slot.InitializeSlot(index, inventory.Data.GetItemSlot, _ => { });
+                inventory.itemSlot_UI.Add(slot);
+                return slot;
+            }
+            Vector2 origin = new Vector2(100f, 100f) * unit;
+            Vector2 destination = new Vector2(850f, 300f) * unit;
+            if (multi)
+            {
+                origin = new Vector2(500f, 50f) * unit;
+                RectTransform left = MakeWindow(new Vector2(150f, 650f), new Vector2(100f, 200f));
+                RectTransform right = MakeWindow(new Vector2(850f, 650f), new Vector2(100f, 200f));
+                MakeSlot(target, 0, left, new Vector2(150f, 650f));
+                MakeSlot(target, 1, right, new Vector2(850f, 650f));
+                destination = new Vector2(mode == "window_multi_right" ? 850f : 500f, 650f) * unit;
+            }
+            else
+            {
+                RectTransform window = MakeWindow(new Vector2(600f, 600f), new Vector2(600f, 600f));
+                ItemSlot_UI slot = MakeSlot(target, 0, window, new Vector2(600f, 850f));
+                if (mode == "window_shared_inputs") MakeSlot(second, 0, window, new Vector2(850f, 350f));
+                if (mode == "window_outside") destination = origin + Vector2.left * 200f * unit;
+                if (mode == "window_stale") slot.InitializeSlot(0, _ => second.Data.GetItemSlot(0), _ => { });
+                if (mode == "window_hidden") window.gameObject.AddComponent<CanvasGroup>().alpha = 0f;
+                if (mode == "window_mask_clip")
+                {
+                    RectTransform viewport = MakeRect("viewport", panelObject.transform, new Vector2(700f, 700f), new Vector2(400f, 400f));
+                    viewport.gameObject.AddComponent<RectMask2D>();
+                    window.SetParent(viewport, true);
+                }
+                if (mode == "window_screen_clip")
+                {
+                    window.position = new Vector2(100f, 600f) * unit;
+                    window.sizeDelta = new Vector2(800f, 600f) * unit;
+                    slot.transform.position = new Vector2(200f, 850f) * unit;
+                    destination = new Vector2(-300f, 300f) * unit;
+                }
+            }
+            target.SyncQuickTransferTarget(panel);
+            if (mode == "window_shared_inputs") second.SyncQuickTransferTarget(panel);
+            Canvas.ForceUpdateCanvases();
+            Vector2 direction = destination - origin;
+            bool visible = source.HasVisibleFlickTarget();
+            bool inDirection = source.HasVisibleFlickTarget(origin, direction);
+            Inventory selected = InventoryFlickTargets.Resolve(source, 0, origin, direction);
+            if (selected != null && !ReferenceEquals(selected, target) && !ReferenceEquals(selected, second))
+                throw new InvalidOperationException("窗口方向夹具只能转入自有目标。");
+            source.OnFlickTransfer(0, origin, direction);
+            float targetAmount = 0f;
+            foreach (ItemSlot slot in target.Data.itemSlots) targetAmount += slot.itemData?.Stack?.Amount ?? 0f;
+            return new JObject { ["visible"] = visible, ["inDirection"] = inDirection,
+                ["selected"] = selected == null ? "none" : ReferenceEquals(selected, target) ? "target" : "second",
+                ["sourceAmount"] = source.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
+                ["targetAmount"] = targetAmount, ["secondAmount"] = second.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f };
+        }
+        finally { scope.Dispose(); }
+    }
     #endregion
 
     #region 跨设备甩动指针现场
@@ -185,9 +288,9 @@ public static partial class GameplayTestRuntimeProbe
                 inventory.BindSlotUI(slot, 0);
                 return slot;
             }
-            Vector2 origin = new(-4000f, -4000f);
-            ItemSlot_UI sourceSlot = MakeSlot(source, scope.Root.transform, origin);
             Vector2 targetPosition = new(Screen.width * .8f, Screen.height * .5f);
+            Vector2 origin = new(-4000f, targetPosition.y);
+            ItemSlot_UI sourceSlot = MakeSlot(source, scope.Root.transform, origin);
             MakeSlot(target, targetRoot.transform, targetPosition);
             target.SyncQuickTransferTarget(targetPanel);
             if (mode == "mouse_no_target" || mode == "touch_no_target" || mode == "mouse_output_only" || mode == "mouse_self_only")
@@ -199,7 +302,7 @@ public static partial class GameplayTestRuntimeProbe
                 source.SyncQuickTransferTarget(targetPanel);
             }
             if (mode == "mouse_hand_only") target.Data.Name = ModText.Hand;
-            if (mode == "mouse_full_target") target.Data.GetItemSlot(0).SlotMaxVolume = 0;
+            if (mode == "mouse_full_target" || mode == "mouse_full_wrong_way") target.Data.GetItemSlot(0).SlotMaxVolume = 0;
             if (mode == "mouse_closed_target" || mode == "mouse_open_during_drag") targetPanel.Close();
             if (mode == "mouse_hidden_target") targetPanel.canvasGroup.alpha = 0f;
             if (mode == "mouse_disabled_target") targetRoot.SetActive(false);
@@ -230,8 +333,12 @@ public static partial class GameplayTestRuntimeProbe
             if (mode == "mouse_close_during_drag" || mode == "touch_close_during_drag") targetPanel.Close();
             if (mode == "mouse_open_during_drag") targetPanel.Open();
             while (Time.unscaledTimeAsDouble - started < .12d) yield return null;
+            Vector2 releaseDirection = mode.EndsWith("wrong_way", StringComparison.Ordinal) ? Vector2.left :
+                mode.EndsWith("sideways", StringComparison.Ordinal) ? Vector2.up :
+                mode.EndsWith("edge_in", StringComparison.Ordinal) ? new Vector2(Mathf.Cos(9f * Mathf.Deg2Rad), Mathf.Sin(9f * Mathf.Deg2Rad)) :
+                mode.EndsWith("edge_out", StringComparison.Ordinal) ? new Vector2(Mathf.Cos(12f * Mathf.Deg2Rad), Mathf.Sin(12f * Mathf.Deg2Rad)) : Vector2.right;
             pointer.position = mode == "mouse_drop" ? targetPosition :
-                origin + Vector2.right * (mode == "mouse_short" ? 20f : 2000f);
+                origin + releaseDirection * (mode == "mouse_short" ? 20f : 2000f);
             sourceSlot.OnDrag(pointer);
             if (mode == "mouse_stopped")
             {
@@ -239,11 +346,13 @@ public static partial class GameplayTestRuntimeProbe
                 while (Time.unscaledTimeAsDouble - stopped < .16d) yield return null;
             }
             bool hasTargetBeforeRelease = source.HasVisibleFlickTarget();
+            bool hasTargetInDirection = source.HasVisibleFlickTarget(origin, pointer.position - origin);
             sourceSlot.OnPointerUp(pointer);
             sourceSlot.OnEndDrag(pointer);
             sourceSlot.OnEndDrag(pointer);
             result = new JObject { ["flicks"] = flicks, ["taps"] = taps,
                 ["hasTargetBeforeRelease"] = hasTargetBeforeRelease,
+                ["hasTargetInDirection"] = hasTargetInDirection,
                 ["releaseMatched"] = Vector2.Distance(release, pointer.position) < .01f,
                 ["sourceAmount"] = source.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
                 ["targetAmount"] = target.Data.GetItemSlot(0).itemData?.Stack?.Amount ?? 0f,
