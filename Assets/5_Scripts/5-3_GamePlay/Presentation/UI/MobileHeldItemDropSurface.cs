@@ -27,6 +27,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     private int pointerId = int.MinValue;
     private Vector2 pressPosition;
     private Vector2 currentScreenPosition;
+    private Camera pressEventCamera;
     private Coroutine longPressCoroutine;
     private float pressStartedAt; // 非缩放时间，短按和长按共用同一判定时刻。
     private ItemData pressedItem; // 锁定按下时的物品，其他手指换物后取消本次丢弃。
@@ -48,7 +49,8 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     /// <summary>中间空白层平时对输入透明，拿起物品后才接收世界丢弃手势。</summary>
     public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
     {
-        return !raycastOnlyWhileHoldingItem || HasPlayerHeldItem();
+        return PlayerMobileControlsHUD.CanDropHeldItemAtScreenPosition(screenPoint, eventCamera) &&
+               (!raycastOnlyWhileHoldingItem || HasPlayerHeldItem());
     }
 
     private void OnDisable()
@@ -63,7 +65,9 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     public void OnPointerDown(PointerEventData eventData)
     {
         if (eventData == null || eventData.button != PointerEventData.InputButton.Left ||
-            pointerId != int.MinValue || !HasPlayerHeldItem())
+            pointerId != int.MinValue || !HasPlayerHeldItem() ||
+            !PlayerMobileControlsHUD.CanDropHeldItemAtScreenPosition(
+                eventData.position, eventData.pressEventCamera ?? eventData.enterEventCamera))
         {
             return;
         }
@@ -72,6 +76,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         pointerId = eventData.pointerId;
         pressPosition = eventData.position;
         currentScreenPosition = eventData.position;
+        pressEventCamera = eventData.pressEventCamera ?? eventData.enterEventCamera;
         pressStartedAt = Time.unscaledTime;
         pressedItem = GetPlayerHeldSlot().itemData;
         dropGestureCanceled = false;
@@ -169,8 +174,11 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         ItemSlot handSlot = GetPlayerHeldSlot();
         bool itemUnchanged = pressedItem != null && ReferenceEquals(handSlot?.itemData, pressedItem) &&
                              handSlot.Amount > 0;
+        Camera eventCamera = pressEventCamera;
         ResetGesture();
-        if (!itemUnchanged)
+        // 按住期间可能弹出设置或确认层，提交前重新检查，不让旧手势穿过新输入锁。
+        if (!itemUnchanged ||
+            !PlayerMobileControlsHUD.CanDropHeldItemAtScreenPosition(screenPosition, eventCamera))
             return;
 
         Mod_DiscardItem discardModule =
@@ -187,6 +195,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         longPressCoroutine = null;
         pointerId = int.MinValue;
         pressedItem = null;
+        pressEventCamera = null;
         pressStartedAt = 0f;
         dropGestureCanceled = false;
     }

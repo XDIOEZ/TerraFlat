@@ -88,6 +88,7 @@ public class UIManager : MonoBehaviour
     private BasePanel cachedTopmostGamepadPanel;
     private BasePanel cachedTopmostGameplayInputPanel;
     private BasePanel cachedTopmostCancelPanel;
+    private readonly HeldItemWorldDropPanelQuery heldItemWorldDropPanelQuery = new HeldItemWorldDropPanelQuery();
 
     /// <summary>Profiler 可读取的顶层面板缓存重建次数。</summary>
     public int PanelQueryCacheRebuildCount { get; private set; }
@@ -756,6 +757,112 @@ public class UIManager : MonoBehaviour
         return cachedTopmostGameplayInputPanel != null;
     }
 
+    #region 手持物世界丢弃资格
+
+    /// <summary>所有打开的阻断面板都允许世界丢弃时，才开放窗口外的空白区域。</summary>
+    public bool CanDropHeldItemInWorld()
+    {
+        EnsurePanelQueryCache();
+        return heldItemWorldDropPanelQuery.CanDropHeldItemInWorld;
+    }
+
+    /// <summary>只认可当前打开且已授权面板登记的输入锁，不放行其它玩法锁。</summary>
+    public bool IsHeldItemDropCompatibleLockOwner(object owner)
+    {
+        EnsurePanelQueryCache();
+        return heldItemWorldDropPanelQuery.IsCompatibleLockOwner(owner);
+    }
+
+    /// <summary>窗口内部的透明空白也属于 UI，仅窗口外的屏幕位置可以丢弃。</summary>
+    public bool CanDropHeldItemAtScreenPosition(Vector2 screenPosition, Camera eventCamera)
+    {
+        EnsurePanelQueryCache();
+        return heldItemWorldDropPanelQuery.CanDropAtScreenPosition(screenPosition, eventCamera);
+    }
+
+    /// <summary>与顶层面板查询共用一次扫描，独立规则夹具也复用同一份聚合逻辑。</summary>
+    public sealed class HeldItemWorldDropPanelQuery
+    {
+        private readonly HashSet<object> compatibleOwners = new HashSet<object>();
+        private readonly List<UIWindowDragSurface> windowSurfaces = new List<UIWindowDragSurface>(4);
+        private readonly List<(RectTransform Rect, Canvas Canvas)> protectedWindows =
+            new List<(RectTransform, Canvas)>(8);
+
+        public bool CanDropHeldItemInWorld { get; private set; } = true;
+
+        public void Clear()
+        {
+            CanDropHeldItemInWorld = true;
+            compatibleOwners.Clear();
+            protectedWindows.Clear();
+        }
+
+        public void Include(BasePanel panel)
+        {
+            if (panel == null || !panel.isActiveAndEnabled || !panel.IsOpen())
+                return;
+
+            if (panel.IsGameplayInputBlocking && !panel.AllowsHeldItemWorldDrop)
+                CanDropHeldItemInWorld = false;
+
+            object owner = panel.HeldItemWorldDropLockOwner;
+            if (panel.AllowsHeldItemWorldDrop && IsAliveOwner(owner))
+                compatibleOwners.Add(owner);
+
+            if (!panel.AllowsHeldItemWorldDrop)
+                return;
+
+            // 正式组合窗口的根节点可能全屏，优先记录拖动面声明的实际可见窗口。
+            panel.GetComponentsInChildren(true, windowSurfaces);
+            bool hasWindowBounds = false;
+            foreach (UIWindowDragSurface surface in windowSurfaces)
+            {
+                RectTransform bounds = surface.WindowRect;
+                if (bounds == null)
+                    continue;
+
+                protectedWindows.Add((bounds, bounds.GetComponentInParent<Canvas>()));
+                hasWindowBounds = true;
+            }
+            windowSurfaces.Clear();
+            if (!hasWindowBounds && panel.rectTransform != null)
+                protectedWindows.Add((panel.rectTransform, panel.rectTransform.GetComponentInParent<Canvas>()));
+        }
+
+        public bool IsCompatibleLockOwner(object owner)
+        {
+            return IsAliveOwner(owner) && compatibleOwners.Contains(owner);
+        }
+
+        public bool CanDropAtScreenPosition(Vector2 screenPosition, Camera eventCamera)
+        {
+            if (!CanDropHeldItemInWorld || float.IsNaN(screenPosition.x) || float.IsNaN(screenPosition.y) ||
+                float.IsInfinity(screenPosition.x) || float.IsInfinity(screenPosition.y))
+                return false;
+
+            foreach ((RectTransform bounds, Canvas canvas) in protectedWindows)
+            {
+                if (bounds == null || !bounds.gameObject.activeInHierarchy)
+                    continue;
+
+                Canvas root = canvas != null ? canvas.rootCanvas : null;
+                Camera camera = root == null ? eventCamera : root.renderMode == RenderMode.ScreenSpaceOverlay
+                    ? null : root.worldCamera != null ? root.worldCamera : eventCamera;
+                if (RectTransformUtility.RectangleContainsScreenPoint(bounds, screenPosition, camera))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsAliveOwner(object owner)
+        {
+            return owner != null && (owner is not UnityEngine.Object unityOwner || unityOwner != null);
+        }
+    }
+
+    #endregion
+
     /// <summary>按当前修订号缓存最上层导航面板、玩法模态面板和取消目标。</summary>
     private void EnsurePanelQueryCache()
     {
@@ -772,6 +879,7 @@ public class UIManager : MonoBehaviour
         cachedTopmostGamepadPanel = null;
         cachedTopmostGameplayInputPanel = null;
         cachedTopmostCancelPanel = null;
+        heldItemWorldDropPanelQuery.Clear();
         panelQueryBuffer.Clear();
 
         InspectPanelQueryRoot(rootCanvas != null ? rootCanvas.transform : null);
@@ -802,6 +910,8 @@ public class UIManager : MonoBehaviour
                     BasePanel panel = panelQueryBuffer[panelIndex];
                     if (panel == null)
                         continue;
+
+                    heldItemWorldDropPanelQuery.Include(panel);
 
                     if (panel.IsOpen() && panel.gameObject.activeInHierarchy && panel.IsGamepadNavigationPrepared &&
                         IsPanelAbove(panel, cachedTopmostGamepadPanel))

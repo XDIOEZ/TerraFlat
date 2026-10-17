@@ -5,6 +5,29 @@ for _, row in ipairs({ { size = -1, expected = 0.5 }, { size = 0.5, expected = 0
     end, "UI 独立控件倍率：" .. row.expected)
 end
 
+for _, row in ipairs({
+    {mode = "inside", allowed = false, rootInside = true},
+    {mode = "outside", allowed = true, rootInside = true},
+    {mode = "edge_inside", allowed = false, rootInside = true},
+    {mode = "edge_outside", allowed = true, rootInside = true},
+    {mode = "fallback_inside", allowed = false, rootInside = true},
+    {mode = "fallback_outside", allowed = true, rootInside = false},
+    {mode = "camera_inside", allowed = false, rootInside = true},
+    {mode = "camera_outside", allowed = true, rootInside = true},
+    {mode = "nan", allowed = false},
+    {mode = "infinity", allowed = false}
+}) do
+    test.system("ui_settings", "held_item_world_drop_position", {mode = row.mode}, function(data)
+        assert(data.canDrop and data.canDropAtPoint == row.allowed,
+            "窗口内部透明空白、外部空白或非法屏幕坐标的丢弃门禁错误")
+        if row.rootInside ~= nil then
+            assert(data.insidePanelRoot == row.rootInside, "窗口边界夹具没有正确区分全屏根和实际窗口")
+        end
+        assert(data.usesActualWindow == (row.mode ~= "fallback_inside" and row.mode ~= "fallback_outside"),
+            "正式窗口矩形或缺失拖动面时的保守回退没有参与采样")
+    end, "窗口外手持丢弃屏幕边界：" .. row.mode)
+end
+
 -- 原生 Show 生成全部选项，Lua 只验证正式组件算出的视口和滚动结果。
 local function assert_dropdown_sample(sample, count)
     local visible = math.min(count, 5)
@@ -41,6 +64,47 @@ test.system("ui_settings", "panel_lifecycle", { alpha = 0.75 }, function(data)
     assert(data.closedAlpha == 0 and not data.closedInteraction and data.closeEvents == 1, "重复关闭误发事件或没有清理交互")
     assert(not data.inactiveBlocksGameplay, "停用测试面板仍锁定玩法")
 end, "独立面板初始化、开关幂等与交互状态")
+
+-- 无 Canvas 的自有面板通过正式开关与能力接口采样，不创建或覆盖 UIManager 单例。
+local held_drop_panels = {
+    {mode = "empty", canDrop = true, owner = false, label = "无打开面板"},
+    {mode = "allowed", canDrop = true, owner = true, label = "授权制作或库存面板"},
+    {mode = "denied", canDrop = false, owner = false, label = "默认模态保持拒绝"},
+    {mode = "nonblocking_denied", canDrop = true, owner = false, label = "普通HUD不制造额外阻断"},
+    {mode = "nonblocking_allowed", canDrop = true, owner = true, label = "非模态授权面板"},
+    {mode = "stacked", canDrop = false, owner = true, label = "叠加未授权模态仍阻断"},
+    {mode = "closed", canDrop = true, owner = false, label = "关闭后锁持有者失去资格"},
+    {mode = "denied_closed", canDrop = true, owner = false, label = "拒绝面板关闭后不再阻断"},
+    {mode = "disabled", canDrop = true, owner = false, label = "禁用组件后锁持有者失去资格"},
+    {mode = "denied_disabled", canDrop = true, owner = false, label = "拒绝面板禁用后不再阻断"},
+    {mode = "inactive", canDrop = true, owner = false, label = "停用节点后锁持有者失去资格"},
+    {mode = "revoked", canDrop = false, owner = false, label = "撤销能力同时清理锁持有者"},
+    {mode = "owner_changed", canDrop = true, owner = false, nextOwner = true, label = "更换持有者立即淘汰旧引用"},
+    {mode = "destroyed_owner", canDrop = true, owner = false, label = "销毁持有者不能继续获得兼容资格"},
+    {mode = "destroyed_panel", canDrop = true, owner = false, label = "销毁面板清除授权"},
+    {mode = "no_owner", canDrop = true, owner = false, label = "无持有者能力不放行任意输入锁"},
+    {mode = "reopened", canDrop = true, owner = true, label = "关闭再开重新获得资格"},
+    {mode = "shared_owner", canDrop = true, owner = true, label = "共享持有者仍有另一授权面板"},
+    {mode = "idempotent", canDrop = true, owner = true, label = "重复授权不重发交互通知"}
+}
+for _, row in ipairs(held_drop_panels) do
+    test.system("ui_settings", "held_item_world_drop", {mode = row.mode}, function(data)
+        assert(not data.defaultAllows, "新面板默认开放了世界丢弃")
+        assert(data.canDrop == row.canDrop and data.ownerCompatible == row.owner,
+            "面板开关、模态叠加或能力变化没有更新世界丢弃资格")
+        assert(data.nextOwnerCompatible == (row.nextOwner == true)
+            and not data.unknownOwnerCompatible and not data.nullOwnerCompatible,
+            "未授权、旧引用或空输入锁持有者被放行")
+        if row.mode == "revoked" then assert(data.ownerCleared, "撤销授权后残留锁持有者引用") end
+        if row.mode == "reopened" then
+            assert(data.closedCanDrop and not data.closedOwnerCompatible, "关闭到重开之间仍沿用旧授权")
+        end
+        if row.mode == "idempotent" then
+            assert(data.idempotentNotificationDelta == -1 or data.idempotentNotificationDelta == 0,
+                "同一能力和持有者重复设置仍触发全局刷新")
+        end
+    end, "窗口外手持丢弃资格：" .. row.label)
+end
 
 -- 独立内存 Provider 走正式注册与会话，只采样恢复调用及结果，不操作玩家窗口。
 local function assert_control_calls(data, toggle, slider, dropdown, switch)

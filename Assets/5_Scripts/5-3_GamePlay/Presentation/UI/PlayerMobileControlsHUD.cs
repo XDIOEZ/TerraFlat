@@ -49,6 +49,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private static Color RunOnIndicatorColor => FlatWorldUITheme.Accent;
 
     private static PlayerMobileControlsHUD activeLocalHud;
+    private static readonly System.Func<object, bool> HeldItemDropLockFilter =
+        owner => UIManager.ExistingInstance?.IsHeldItemDropCompatibleLockOwner(owner) == true;
 
     private Player player;
     private Mod_GameController controller;
@@ -1296,6 +1298,23 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             manager.InteractionSurfaceChanged -= RefreshInteractionSurface;
     }
 
+    /// <summary>只放行已授权窗口对应的输入锁，设置、加载或未知锁仍禁止世界丢弃。</summary>
+    public static bool CanDropHeldItemInWorld()
+    {
+        PlayerMobileControlsHUD hud = activeLocalHud;
+        UIManager manager = UIManager.ExistingInstance;
+        return hud != null && hud.isActiveAndEnabled && hud.ShouldShow() &&
+               !UIManager.IsShuttingDown && manager != null && manager.CanDropHeldItemInWorld() &&
+               !hud.controller.HasBlockingGameplayInputLock(HeldItemDropLockFilter);
+    }
+
+    /// <summary>窗口内的透明空白同样归 UI，只有实际窗口外的落点允许丢弃。</summary>
+    public static bool CanDropHeldItemAtScreenPosition(Vector2 screenPosition, Camera eventCamera)
+    {
+        return CanDropHeldItemInWorld() &&
+               UIManager.ExistingInstance.CanDropHeldItemAtScreenPosition(screenPosition, eventCamera);
+    }
+
     /// <summary>根据面板输入锁、设备与几何变化刷新手机玩法层和快捷栏层级。</summary>
     private void RefreshInteractionSurface()
     {
@@ -1306,8 +1325,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
         bool blocked = controller != null && controller.IsGameplayInputLocked;
         bool modalOpen = manager.HasOpenGameplayInputBlockingPanel();
-        bool playerBagOpen = modalOpen && IsPlayerBagPanelOpen();
         bool gameplayVisible = !blocked && !modalOpen;
+        bool heldItemDropAllowed = CanDropHeldItemInWorld();
         RectTransform safeRoot = manager.SafeAreaRoot;
         Vector2 safeSize = safeRoot != null ? safeRoot.rect.size : new Vector2(Screen.width, Screen.height);
         bool geometryChanged = geometryInitialized &&
@@ -1325,9 +1344,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             ApplyMobileControlLayout();
         }
 
-        // 背包打开时仍允许在面板外的世界空白区域轻点/长按丢弃手上物品。
-        // 丢弃面临时放到常驻层最底部，因此背包、槽位、按钮仍优先吃掉自己的射线。
-        RefreshHeldItemDropSurfaceParent(playerBagOpen);
+        // 库存和制作窗口只放行世界丢弃面，窗口、槽位和按钮仍优先接收射线。
+        RefreshHeldItemDropSurfaceParent(!gameplayVisible && heldItemDropAllowed);
 
         // 菜单抽屉用于在背包与制作面板之间切换，不能因玩法面板获得输入锁而自动收起。
         if (gameplayLayer != null)
@@ -1365,24 +1383,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             ResetAllTouchState();
     }
 
-    /// <summary>判断本地玩家自己的行囊面板是否处于打开状态。</summary>
-    private bool IsPlayerBagPanelOpen()
-    {
-        Mod_Inventory bag = player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
-        if (bag?.InventoryInstances == null)
-            return false;
-
-        for (int i = 0; i < bag.InventoryInstances.Count; i++)
-        {
-            Inventory inventory = bag.InventoryInstances[i];
-            if (inventory?.basePanel != null && inventory.basePanel.IsOpen())
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>背包模态期间把世界丢弃面迁到常驻层；离开背包后恢复正式 Prefab 层级。</summary>
+    /// <summary>允许世界丢弃的窗口打开时将丢弃面迁到常驻层，其他情况恢复原层级。</summary>
     private void RefreshHeldItemDropSurfaceParent(bool usePersistentLayer)
     {
         if (heldItemDropSurfaceTransform == null || heldItemDropSurfaceHomeParent == null ||

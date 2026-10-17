@@ -2,9 +2,11 @@
 
 2026-10-15：当时登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增的下拉布局、设置会话规则尚未编译或执行，不属于该历史通过范围；本轮只做静态修改，保留用户当前 PlayMode，最终画面验收由用户进行。
 
-快速入口：`rules.lua`；操作：`ui_settings/mobile_size、navigation_policy、panel_lifecycle、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session`。
+快速入口：`rules.lua`；操作：`ui_settings/mobile_size、navigation_policy、panel_lifecycle、held_item_world_drop、held_item_world_drop_position、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session`。
 
 已编写的规则覆盖：正式 UIUserSettings 控件倍率净化；停用独立 Selectable 的手柄焦点策略（设置滑块、显示条、滚动条、快捷栏）；停用独立 BasePanel 的关闭初始化、重复开关事件幂等、视觉透明度和交互状态。临时排序计数在结束时恢复，不注册测试面板到 UIManager。
+
+窗口外手持丢弃规则使用无 Canvas 的自有 BasePanel，调用正式能力设置、Open/Close、组件禁用/节点停用和销毁接口，再复用 UIManager 同一份面板资格聚合器采样。19 条资格规则覆盖无面板、允许/拒绝、非模态、叠加拒绝层、关闭/重开、禁用/停用、撤销能力、变更或销毁锁持有者、共享持有者、空/未知持有者拒绝与重复授权；仅 PlayMode 且已有 UIManager 时可额外采样重复授权的修订号不变，不创建单例。另有 10 条屏幕边界规则使用真实 UIWindowDragSurface.Configure 声明小窗口，检查全屏面板根内的窗口外位置仍可丢弃、窗口内部透明区/边缘内外、缺失拖动面时回退面板矩形、WorldSpace Canvas 自有停用相机及 NaN/Infinity 拒绝。夹具不注册到用户 UI，不绑定输入、不操作玩家或 PlayerPrefs，结束销毁自有对象并恢复排序计数。这些断言验证面板聚合、锁持有者资格与屏幕几何，不代表真实触摸轻点/长按、丢弃数量守恒、窗口实际射线遮挡、真实 controller 硬锁/未知锁或 HUD 自动刷新已覆盖；独立 controller 的初始化和销毁会修改全局输入状态，因此此规则不创建它。新增规则本轮未编译、未运行，实际 UI 射线与手势由用户验收。
 
 下拉布局规则使用独立 Canvas、无输入模块的临时 EventSystem、真实 TMP/Legacy Dropdown 与正式 `DropdownListLayout`。夹具只补齐原生 Start 初始化和编辑态同步清理，每次展开前显式调用正式 `PrepareForOpen`，再调用原生 Show 生成所有选项；采样 1、3、5、6、10 项的实际行高、视口高度、Content 高度、活动选项数、首尾行完整可见性和滚动到末项，并在同一控件上按 10→1→6→3→5 改选项后重复展开。Lua 持有五行上限与边界断言；夹具不复制生产高度算法，不注册到 UIManager，不修改 PlayerPrefs，结束时销毁自己的列表、Blocker、Canvas 和事件系统，保留原界面选择。此规则验证控件几何与正式滚动接口，不验证 PlayMode 的自动 OnEnable 挂钩；该挂钩、多分辨率、触屏拖动、滚轮手感和 Game View 画面仍待用户后续验收。
 

@@ -93,6 +93,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private bool closeOnEscapeShortcut;
     [SerializeField]
     private bool blocksGameplayInput = true;
+    private bool allowsHeldItemWorldDrop;
     private float openVisualAlpha = 1f;
     private bool runtimeStateInitialized;
     private bool animationReferenceResolved;
@@ -129,6 +130,12 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     /// <summary>当前打开面板是否应接管玩法触摸；导航准备与玩法输入隔离是两条独立契约。</summary>
     public bool IsGameplayInputBlocking => blocksGameplayInput && isOpen && gameObject.activeInHierarchy;
+
+    /// <summary>面板是否允许在窗口外的空白处丢弃手部物品，不影响其它玩法输入锁。</summary>
+    public bool AllowsHeldItemWorldDrop => allowsHeldItemWorldDrop;
+
+    /// <summary>允许世界丢弃的面板对应的输入锁持有者，仅保存当前运行时引用。</summary>
+    public object HeldItemWorldDropLockOwner { get; private set; }
 
     private void Awake()
     {
@@ -413,6 +420,18 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             return;
 
         blocksGameplayInput = shouldBlock;
+        NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>按面板能力开放世界丢弃；关闭授权时同时清理对应的输入锁持有者。</summary>
+    public void SetHeldItemWorldDropAllowed(bool allowed, object inputLockOwner = null)
+    {
+        object nextOwner = allowed ? inputLockOwner : null;
+        if (allowsHeldItemWorldDrop == allowed && ReferenceEquals(HeldItemWorldDropLockOwner, nextOwner))
+            return;
+
+        allowsHeldItemWorldDrop = allowed;
+        HeldItemWorldDropLockOwner = nextOwner;
         NotifyInteractionSurfaceChanged();
     }
 

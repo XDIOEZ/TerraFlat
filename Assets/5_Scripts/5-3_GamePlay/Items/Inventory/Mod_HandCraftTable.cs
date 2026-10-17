@@ -224,6 +224,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panelRect);
 
         InitUI();
+        basePanel.SetHeldItemWorldDropAllowed(true, this);
         basePanel.PrepareForGamepadNavigation();
         basePanel.Opened += AcquirePanelInputLock;
         basePanel.Closed += ReleasePanelInputLock;

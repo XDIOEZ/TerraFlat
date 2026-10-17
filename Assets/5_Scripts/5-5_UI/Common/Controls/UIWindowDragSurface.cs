@@ -12,6 +12,8 @@ public sealed class UIWindowDragSurface : MaskableGraphic
     /// <summary>实际可见窗口的矩形。</summary>
     [SerializeField] private RectTransform windowRect;
 
+    public RectTransform WindowRect => windowRect;
+
     /// <summary>标题栏可拖动高度，单位为窗口本地坐标。</summary>
     [SerializeField] private float headerHeight = 78f;
 

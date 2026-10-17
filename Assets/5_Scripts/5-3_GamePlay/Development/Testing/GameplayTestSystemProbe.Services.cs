@@ -45,6 +45,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/navigation_policy", ServiceNavigationPolicy);
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
+        operations.Add("ui_settings/held_item_world_drop", ServiceHeldItemWorldDropPanels);
+        operations.Add("ui_settings/held_item_world_drop_position", ServiceHeldItemWorldDropPosition);
         operations.Add("ui_settings/dropdown_layout", ServiceDropdownLayout);
         operations.Add("ui_settings/edit_session_values", ServiceSettingsSessionValues);
         operations.Add("ui_settings/edit_session_commit", ServiceSettingsSessionCommit);

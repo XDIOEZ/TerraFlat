@@ -489,6 +489,7 @@ public class Inventory
         bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
         bool usesGameplayInputLock = UsesGameplayInputLock();
         basePanel.SetGameplayInputBlocking(usesGameplayInputLock);
+        basePanel.SetHeldItemWorldDropAllowed(usesTogglePanelLifecycle, this);
         // 玩家主背包仍参与关闭/手柄焦点链，但不再通过玩法输入锁影响其它 UI。
         if (usesTogglePanelLifecycle)
             basePanel.PrepareForGamepadNavigation(closeOnCancel: true);
