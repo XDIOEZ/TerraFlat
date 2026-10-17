@@ -22,7 +22,7 @@ Shader "Hidden/FlatWorld/DenseFog"
             float4 _FogViewportRight;
             float4 _FogViewportUp;
             float4 _FogWorldCenter;
-            float4 _FogRadiiStrength;
+            float4 _FogRadii;
             float4 _FogColor;
             float4 _FogNoise;
 
@@ -72,8 +72,8 @@ Shader "Hidden/FlatWorld/DenseFog"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float distanceFromPlayer = length(input.playerOffset);
-                float radial = saturate((distanceFromPlayer - _FogRadiiStrength.x) /
-                    max(0.001, _FogRadiiStrength.y - _FogRadiiStrength.x));
+                float radial = saturate((distanceFromPlayer - _FogRadii.x) /
+                    max(0.001, _FogRadii.y - _FogRadii.x));
                 if (radial <= 0.0)
                     return half4(0.0, 0.0, 0.0, 0.0);
 
@@ -81,7 +81,7 @@ Shader "Hidden/FlatWorld/DenseFog"
                 float clouds = CloudNoise(worldPoint * _FogNoise.x +
                     _Time.y * _FogNoise.y * float2(1.0, 0.37));
                 radial += (clouds - 0.5) * 0.35 * radial * (1.0 - radial);
-                float alpha = smoothstep(0.0, 1.0, radial) * _FogRadiiStrength.z;
+                float alpha = smoothstep(0.0, 1.0, radial);
                 // 远处仅改变白雾颜色，不打透明孔，人物、名字与光源不会从雾里漏出来。
                 half3 fogColor = _FogColor.rgb * (1.0 - clouds * _FogNoise.z);
                 return half4(fogColor, saturate(alpha));

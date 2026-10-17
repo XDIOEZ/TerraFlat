@@ -879,7 +879,12 @@ public static partial class GameplayTestSystemProbe
             driftSpeed = (float)Number(args, "driftSpeed", 0.1), noiseStrength = (float)Number(args, "noiseStrength", 0.1),
             color = new Color((float)Number(args, "red", 0.5), 0.5f, 0.5f, 1)
         };
-        return new JObject { ["valid"] = config.IsValid };
+        bool visible = config.TryResolveRadii((float)Number(args, "strength", 1), out Vector2 radii);
+        return new JObject
+        {
+            ["valid"] = config.IsValid, ["visible"] = visible,
+            ["clearRadius"] = radii.x, ["opaqueRadius"] = radii.y
+        };
     }
 
     private static JObject ServiceUniverseViewConfiguration(JObject args)

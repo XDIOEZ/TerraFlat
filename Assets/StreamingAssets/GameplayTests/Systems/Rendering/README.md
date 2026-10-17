@@ -6,6 +6,8 @@
 
 已编写的规则覆盖：正式 WorldRenderingConfig 的雾半径/噪声/颜色约束和宇宙视野层次/缩放/过渡约束；停用独立 SpriteRenderer/SortingGroup 的外部代理排序键投影，以及分组停用后的逐级回退。
 
+2026-10-17 天气雾补充但未执行：`rendering/fog_config` 直接采正式 `RenderingDenseFog.TryResolveRadii`，检查满强度沿用配置半径、减弱时清晰圆按强度反比扩大、柔边宽度固定、超上限钳制及零/负强度关闭。Shader 圈外始终完全遮挡，强度不再参与透明度；用户自行验收，本轮未编译、未运行规则或画面测试。
+
 2026-10-17 补充但未执行：高视野云层通过正式 Mod_ChunkLoader 改加载范围，再共用 ChunkMgr 窗口几何与 Shader 参数提交，检查方形清晰窗覆盖 (2d-1) 个活动区块、额外表现圈作为柔雾带、无额外圈时内收一格及极小窗；覆盖范围扩大/缩小、最小值、正负坐标、区块内移动与跨块、非正方形区块。不同正交尺寸、横竖屏及投影翻转只改实际投影，保留世界云纹尺寸；宇宙画面仍在 60～90 直接淡入。此轮仅静态修改，未编译、未运行；实际窗口提交时序、环绕世界接缝、旧联机回退、异步加载中的画面及 GPU 柔边仍由用户验收。
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/player_external_effects`。

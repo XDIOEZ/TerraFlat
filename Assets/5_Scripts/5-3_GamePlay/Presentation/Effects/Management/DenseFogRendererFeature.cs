@@ -97,10 +97,10 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             hasWeatherSample = true;
             sampledFrame = Time.frameCount;
         }
-        if (visibleStrength <= MinimumVisibleStrength)
+        if (visibleStrength <= MinimumVisibleStrength || !config.TryResolveRadii(visibleStrength, out Vector2 radii))
             return;
 
-        pass.Setup(material, sourceCamera, player.transform.position, visibleStrength, config);
+        pass.Setup(material, sourceCamera, player.transform.position, radii, config);
         renderer.EnqueuePass(pass);
     }
 
@@ -133,14 +133,14 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         private static readonly int RightId = Shader.PropertyToID("_FogViewportRight");
         private static readonly int UpId = Shader.PropertyToID("_FogViewportUp");
         private static readonly int CenterId = Shader.PropertyToID("_FogWorldCenter");
-        private static readonly int RadiiId = Shader.PropertyToID("_FogRadiiStrength");
+        private static readonly int RadiiId = Shader.PropertyToID("_FogRadii");
         private static readonly int ColorId = Shader.PropertyToID("_FogColor");
         private static readonly int NoiseId = Shader.PropertyToID("_FogNoise");
         private readonly ProfilingSampler sampler = new ProfilingSampler("FlatWorld Dense Fog");
         private Material passMaterial;
         private Camera sourceCamera;
         private Vector3 playerPosition;
-        private float strength;
+        private Vector2 radii;
         private WorldRenderingConfig.RenderingDenseFog settings;
 
         public FogPass()
@@ -149,13 +149,13 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
         }
 
-        public void Setup(Material target, Camera source, Vector3 center, float opacity,
+        public void Setup(Material target, Camera source, Vector3 center, Vector2 visibilityRadii,
             WorldRenderingConfig.RenderingDenseFog config)
         {
             passMaterial = target;
             sourceCamera = source;
             playerPosition = center;
-            strength = opacity;
+            radii = visibilityRadii;
             settings = config;
         }
 
@@ -181,7 +181,7 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
                 passMaterial.SetVector(UpId, new Vector4(up.x, up.y, 0f, 0f));
                 passMaterial.SetVector(CenterId, new Vector4(playerPosition.x, playerPosition.y, 0f, 0f));
                 passMaterial.SetVector(RadiiId,
-                    new Vector4(settings.clearRadius, settings.opaqueRadius, strength, 0f));
+                    new Vector4(radii.x, radii.y, 0f, 0f));
                 passMaterial.SetColor(ColorId, settings.color);
                 passMaterial.SetVector(NoiseId,
                     new Vector4(settings.noiseScale, settings.driftSpeed, settings.noiseStrength, 0f));

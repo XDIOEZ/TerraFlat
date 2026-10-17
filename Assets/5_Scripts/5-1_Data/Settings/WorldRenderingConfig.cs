@@ -130,6 +130,18 @@ public sealed class WorldRenderingConfig
             IsFinite(color.g) && color.g >= 0f && color.g <= 1f &&
             IsFinite(color.b) && color.b >= 0f && color.b <= 1f;
 
+        public bool TryResolveRadii(float strength, out Vector2 radii)
+        {
+            radii = default;
+            if (!IsFinite(strength) || strength <= 0f)
+                return false;
+
+            // 强度只收缩清晰圆，柔边宽度与圈外遮挡保持不变，散雾时视野向外展开。
+            float radius = clearRadius / Mathf.Clamp01(strength);
+            radii = new Vector2(radius, radius + (opaqueRadius - clearRadius));
+            return true;
+        }
+
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 

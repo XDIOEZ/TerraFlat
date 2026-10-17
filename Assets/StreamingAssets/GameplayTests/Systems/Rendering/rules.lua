@@ -9,6 +9,26 @@ for _, args in ipairs({ { clearRadius = 0 }, { opaqueRadius = 10 }, { transition
 end
 
 for _, args in ipairs({
+    { strength = 1, clear = 10, opaque = 20 },
+    { strength = 0.5, clear = 20, opaque = 30 },
+    { strength = 0.25, clear = 40, opaque = 50 },
+    { strength = 0.0005, clear = 20000, opaque = 20010 },
+    { strength = 2, clear = 10, opaque = 20 },
+    { strength = 0.5, clearRadius = 5, opaqueRadius = 10, clear = 10, opaque = 15 }
+}) do
+    test.system("rendering", "fog_config", args, function(data)
+        assert(data.visible, "非零雾强度没有生成视野圆")
+        assert(math.abs(data.clearRadius - args.clear) < 0.01, "雾强度没有按反比改变清晰圆半径")
+        assert(math.abs(data.opaqueRadius - args.opaque) < 0.01, "雾圈柔边宽度随强度改变")
+    end, "天气雾强度只收缩视野圆并保留固定柔边")
+end
+for _, strength in ipairs({ 0, -1 }) do
+    test.system("rendering", "fog_config", { strength = strength }, function(data)
+        assert(not data.visible, "无雾时仍生成遮挡圈")
+    end, "无雾和负强度关闭天气雾圈")
+end
+
+for _, args in ipairs({
     { size = 5, aspect = 1 }, { size = 20, aspect = 2.2 },
     { size = 40, aspect = 0.6, flipped = true }, { size = 55, aspect = 1.8 },
     { size = 60, aspect = 2.2 }, { size = 90, aspect = 1 }
