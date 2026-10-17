@@ -1,14 +1,15 @@
 using System;
 
 /// <summary>
-/// 生肉完整食用规则：仅玩家食用时进行一次 50% 判定，命中后添加感染 Buff 并把本次感染时长设为 120 秒。
+/// 生肉完整食用规则：仅玩家食用时进行一次 50% 判定，命中后按正式定义施加感染。
 /// 概率入口可替换，便于后续用确定性随机源验证，不把生肉特例写入通用食物结算器。
 /// </summary>
 public sealed class RawMeatInfectionMechanic : IFoodMechanic, IFoodConsumptionObserver
 {
+    #region 生肉感染
+
     public const string ItemId = "Meat";
     public const float InfectionChance = 0.5f;
-    public const float InfectionDurationSeconds = 120f;
 
     private readonly Func<float> rollProvider;
 
@@ -21,7 +22,7 @@ public sealed class RawMeatInfectionMechanic : IFoodMechanic, IFoodConsumptionOb
         this.rollProvider = rollProvider ?? (() => UnityEngine.Random.value);
     }
 
-    /// <summary>在玩家完整吃完生肉后判定感染，并覆盖为本机制规定的 120 秒时长。</summary>
+    /// <summary>玩家完整吃完生肉后判定感染，时长和叠层统一由 Buff 定义决定。</summary>
     public void OnFoodConsumed(FoodConsumeResult result)
     {
         if (!(result.Consumer is Player) ||
@@ -36,13 +37,10 @@ public sealed class RawMeatInfectionMechanic : IFoodMechanic, IFoodConsumptionOb
 
         Mod_BuffManager buffManager = result.Consumer.itemMods?.GetMod_ByID<Mod_BuffManager>(
             ModText.Mod_BuffManager);
-        if (buffManager == null || !buffManager.AddBuff(InfectionBuffIds.Infection, 1, DeathCauseRecord.CaptureAttack(result.ConsumedItem, null)))
-            return;
-
-        buffManager.TrySetBuffDuration(
-            InfectionBuffIds.Infection,
-            InfectionDurationSeconds);
+        buffManager?.AddBuff(InfectionBuffIds.Infection, 1, DeathCauseRecord.CaptureAttack(result.ConsumedItem, null));
     }
+
+    #endregion
 }
 
 /// <summary>生肉感染规则注册入口，确保每个生肉运行时实例按稳定物品 ID 获得规则。</summary>

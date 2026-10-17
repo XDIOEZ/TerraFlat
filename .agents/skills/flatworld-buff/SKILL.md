@@ -20,6 +20,8 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照，真伤沿用统一扣血入口。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因，避免归给此前武器。
 - `durationSeconds:null` 永久，周期间隔为正，extend/refresh 用正持续时间；分包只是归档，语义由 category/effects 定义。
 - `add_stacks` 改单实例 StackCount 并续期，不重放 Start/Stop 或重置 Tick 相位；登记倍率仅一份，`scaleWithStacks` 显式按层。恢复层数归一到 `1..MaxStacks`，表现订 `BuffStacksChanged`。
+- `core:attack_flat_modifier` 按来源修正攻击总值（最低 0，武器/投射物沿 Owner 读取），`core:move_speed_reduction` 用 `1-value×层数` 登记独立移速倍率；二者用 start/stop 成对配置，支持 `scaleWithStacks`，层变只更新这些登记效果，不重放其它 Start。
+- 感染统一由目录控制 300 秒、最多 3 层，重新感染加层并刷新时长，到期整体结束；每层每 10 秒 1 点真伤、固定攻击 -1、移速 -25%。生肉仅判定并施加感染，不覆盖目录时长；玩家由 GO 管理器推进，Native 受体尚不支持登记型属性效果。
 - 可清 Buff 表达潮湿/感染/中毒等角色状态；环境内被动能力/可执行动作由环境运行器负责。`ActiveBuffs` 是只读表现入口。
 - 正式重生在 `Mod_PlayerDeathState.CompleteRespawnState` 收口 `ClearAllBuffs`，同世界/跨维度一致。
 - `BodyTraumaBuffEffects` 在 Start/Stop 时按角色刷新攻速与混乱汇总；逐帧输入及武器读取只查角色索引，不扫描全体 Buff，最后一个来源移除时清掉该角色缓存。

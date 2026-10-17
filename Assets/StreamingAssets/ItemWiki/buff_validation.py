@@ -7,7 +7,8 @@ FIELDS = set("id displayName deathCauseId category description labelKey descript
 EFFECT_FIELDS = set("phase typeId targetId requiredTag value upperLimit scaleWithStacks".split())
 MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "damage_taken_multiplier")}
 TRAUMA = {f"core:trauma_{name}" for name in ("move", "attack", "confusion", "blur")}
-TYPES = MULTIPLIERS | TRAUMA | {f"core:{name}" for name in ("temperature_warming", "night_vision", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "max_health_percent_true_damage", "body_durability_restore")}
+ATTRIBUTES = {"core:attack_flat_modifier", "core:move_speed_reduction"}
+TYPES = MULTIPLIERS | TRAUMA | ATTRIBUTES | {f"core:{name}" for name in ("temperature_warming", "night_vision", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "max_health_percent_true_damage", "body_durability_restore")}
 BODY_PARTS = {"Head", "Chest", "Abdomen", "Pelvis", "LeftHand", "RightHand", "LeftLeg", "RightLeg"}
 
 
@@ -99,8 +100,12 @@ def validate_definition(source):
         target = text(effect.get("targetId"), "targetId", optional=True)
         text(effect.get("requiredTag"), "requiredTag", optional=True)
         scaled = effect.get("scaleWithStacks", False)
-        if type(scaled) is not bool or scaled and (phase != "tick" or kind != "core:true_damage"):
-            raise ValueError("scaleWithStacks 只支持周期真实伤害，且必须是布尔值")
+        if type(scaled) is not bool or scaled and not (phase == "tick" and kind == "core:true_damage" or kind in ATTRIBUTES and phase != "tick"):
+            raise ValueError("scaleWithStacks 只支持周期真实伤害或登记型属性修饰，且必须是布尔值")
+        if kind in ATTRIBUTES and phase == "tick":
+            raise ValueError("登记型属性修饰只支持 start/stop")
+        if kind == "core:move_speed_reduction" and not 0 <= value * (maximum if scaled else 1) < 1:
+            raise ValueError("各层减速比例须位于 [0, 1)")
         if kind in MULTIPLIERS and value <= 0 or kind in TRAUMA and (phase == "tick" or value <= 0):
             raise ValueError("倍率/创伤效果参数无效")
         if kind in {"core:heal", "core:true_damage"} and value < 0:

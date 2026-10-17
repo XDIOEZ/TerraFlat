@@ -53,7 +53,7 @@ namespace FlatWorld.Localization.Editor
                 { "Egg", "An egg from an animal." },
                 { "Egg_Cooked", "A cooked egg." },
                 { "Knife_Flint", "A small blade made from flint." },
-                { "Meat", "Eating raw meat has a 50% chance to cause infection for 120 seconds." },
+                { "Meat", "Eating raw meat has a 50% chance to cause infection for 5 minutes, stacking up to 3 times. Cook before eating." },
                 { "Meat_Cooked", "Cooked meat." },
                 { "Meat_Dehydrate", "Dehydrated meat." },
                 { "Meat_Rotten", "Rotten meat. It should not be eaten." },

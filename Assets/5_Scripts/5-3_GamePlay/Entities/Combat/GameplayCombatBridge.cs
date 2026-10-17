@@ -127,6 +127,8 @@ public static class GameplayCombatBridge
             context.ResourceToolTier = resourceTool.HarvestTier;
             context.ResourceToolEfficiency = resourceTool.HarvestEfficiency;
         }
+        // 角色临时固定攻击修饰应用于完整发送端数值，手持武器与投射物共用拥有者来源。
+        context.Damage = BuffAttributeEffects.ModifyAttackDamage(credit, context.Damage);
         return context;
     }
 

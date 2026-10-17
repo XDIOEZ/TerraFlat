@@ -27,6 +27,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
         operations.Add("buff/lifecycle", EntityBuffLifecycle);
+        operations.Add("buff/infection_attributes", EntityInfectionAttributes);
+        operations.Add("buff/attribute_validation", EntityBuffAttributeValidation);
         operations.Add("survival/treatment", EntityTreatment);
         operations.Add("survival/oxygen", EntityOxygen);
         operations.Add("survival/pressure", EntityPressure);

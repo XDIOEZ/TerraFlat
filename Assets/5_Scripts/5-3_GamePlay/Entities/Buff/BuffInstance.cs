@@ -208,6 +208,9 @@ public partial class BuffInstance
         if (resolved == StackCount)
             return false;
         StackCount = resolved;
+        // 只替换支持叠层的登记型属性，不重放其它 Start 或重置周期时钟。
+        if (started && !stopped)
+            BuffEffectDispatcher.Execute(Definition.StartEffects, this, onlyStackScaled: true);
         return true;
     }
 

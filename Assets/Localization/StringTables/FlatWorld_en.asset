@@ -383,7 +383,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326738
-    m_Localized: Eating raw meat has a 50% chance to cause infection for 120 seconds.
+    m_Localized: Eating raw meat has a 50% chance to cause infection for 5 minutes, stacking up to 3 times. Cook before eating.
     m_Metadata:
       m_Items: []
   - m_Id: 4887326739

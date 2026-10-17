@@ -122,7 +122,7 @@ public static class BuffDefinitionFactory
         int effectIndex = 0;
         foreach (BuffEffectDto effectDto in dto.Effects ?? new List<BuffEffectDto>())
         {
-            BuffEffectDefinition effect = BuildEffect(effectDto, id, effectIndex++);
+            BuffEffectDefinition effect = BuildEffect(effectDto, id, effectIndex++, definition.MaxStacks);
             all.Add(effect);
             switch (effect.Phase)
             {
@@ -145,7 +145,7 @@ public static class BuffDefinitionFactory
         return definition;
     }
 
-    private static BuffEffectDefinition BuildEffect(BuffEffectDto dto, string buffId, int index)
+    private static BuffEffectDefinition BuildEffect(BuffEffectDto dto, string buffId, int index, int maxStacks)
     {
         if (dto == null)
             throw new InvalidDataException($"Buff {buffId} 的 effects[{index}] 为空");
@@ -167,20 +167,30 @@ public static class BuffDefinitionFactory
             UpperLimit = dto.UpperLimit
         };
 
-        ValidateEffectParameters(effect, buffId, index);
+        ValidateEffectParameters(effect, buffId, index, maxStacks);
         if (!BuffEffectDispatcher.TryCacheHandler(effect))
             throw new InvalidDataException($"Buff {buffId} 使用了未知效果处理器：{typeId}");
         return effect;
     }
 
-    private static void ValidateEffectParameters(BuffEffectDefinition effect, string buffId, int index)
+    private static void ValidateEffectParameters(BuffEffectDefinition effect, string buffId, int index, int maxStacks)
     {
         string context = $"Buff {buffId} effects[{index}]";
-        if (effect.ScaleWithStacks &&
+        bool attributeModifier = effect.TypeId is BuffEffectTypeIds.AttackFlatModifier or BuffEffectTypeIds.MoveSpeedReduction;
+        if (effect.ScaleWithStacks && !(attributeModifier && effect.Phase != BuffEffectPhase.Tick) &&
             (effect.Phase != BuffEffectPhase.Tick || effect.TypeId != BuffEffectTypeIds.TrueDamage))
-            throw new InvalidDataException($"{context} scaleWithStacks 当前只支持 tick 真实伤害");
+            throw new InvalidDataException($"{context} scaleWithStacks 只支持周期真实伤害或登记型属性修饰");
         switch (effect.TypeId)
         {
+            case BuffEffectTypeIds.AttackFlatModifier:
+                if (effect.Phase == BuffEffectPhase.Tick)
+                    throw new InvalidDataException($"{context} 固定攻击修饰只支持 start/stop");
+                break;
+            case BuffEffectTypeIds.MoveSpeedReduction:
+                if (effect.Phase == BuffEffectPhase.Tick || effect.Value < 0f ||
+                    effect.Value * (effect.ScaleWithStacks ? maxStacks : 1) >= 1f)
+                    throw new InvalidDataException($"{context} 减速只支持 start/stop，各层减速比例须位于 [0, 1)");
+                break;
             case BodyTraumaBuffEffects.RestoreDurability:
                 if (effect.Phase == BuffEffectPhase.Start || effect.Value <= 0f ||
                     !Enum.TryParse(effect.TargetId, out BodyPartType recoveryPart) ||

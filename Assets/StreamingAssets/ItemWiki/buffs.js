@@ -31,6 +31,8 @@
         "core:nutrition_change": "营养变化",
         "core:temperature_warming": "临时增温",
         "core:move_speed_multiplier": "移动速度倍率",
+        "core:move_speed_reduction": "移动速度降低比例",
+        "core:attack_flat_modifier": "固定攻击力增减",
         "core:damage_taken_multiplier": "承受伤害倍率",
         "core:body_durability_restore": "身体部位恢复"
     };

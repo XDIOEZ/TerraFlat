@@ -14,6 +14,7 @@ public static class GameplayTestBuffRuntimeProbe
     {
         GameplayTestRuntimeProbe.Register("buff", "source_presence", CaptureSourcePresence);
         GameplayTestRuntimeProbe.Register("buff", "bleeding_sources", CaptureBleedingSources);
+        GameplayTestRuntimeProbe.Register("buff", "infection", CaptureInfection);
     }
 
     private sealed class SourceBuffScope : IDisposable
@@ -165,6 +166,69 @@ public static class GameplayTestBuffRuntimeProbe
                 finally { UnityEngine.Object.DestroyImmediate(root); }
             }
         }
+    }
+    #endregion
+
+    #region 正式感染叠层与自然到期
+    private static JObject CaptureInfection(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var scope = new GameplayTestInfectionFixture();
+        Mod_BuffManager manager = scope.Manager;
+        const string id = InfectionBuffIds.Infection;
+        var result = new JObject { ["baseline"] = scope.Snapshot(), ["added"] = manager.AddBuff(id) };
+        if (!manager.TryGetBuff(id, out BuffInstance infection))
+            throw new InvalidOperationException("正式感染目录未能创建独立宿主状态。");
+        result["one"] = scope.Snapshot(infection);
+        float beforeDamage = scope.Health.Hp;
+        manager.Tick(7f);
+        result["beforeStack"] = scope.Snapshot(infection);
+        result["secondAdded"] = manager.AddBuff(id);
+        result["sameInstance"] = manager.TryGetBuff(id, out BuffInstance same) && ReferenceEquals(infection, same);
+        result["two"] = scope.Snapshot(infection);
+        manager.Tick(3f);
+        result["secondTickLoss"] = beforeDamage - scope.Health.Hp;
+        beforeDamage = scope.Health.Hp;
+        result["thirdAdded"] = manager.AddBuff(id);
+        result["three"] = scope.Snapshot(infection);
+        manager.Tick(10f);
+        result["thirdTickLoss"] = beforeDamage - scope.Health.Hp;
+        manager.Tick(7f);
+        result["fourthAdded"] = manager.AddBuff(id);
+        result["overflowAdded"] = manager.AddBuff(id, int.MaxValue);
+        result["capped"] = scope.Snapshot(infection);
+        beforeDamage = scope.Health.Hp;
+        manager.Tick(3f);
+        result["cappedTickLoss"] = beforeDamage - scope.Health.Hp;
+        manager.Tick(296f);
+        result["beforeExpiry"] = scope.Snapshot(infection);
+        result["presentBeforeExpiry"] = manager.HasBuff(id);
+        manager.Tick(1f);
+        result["absentAfterExpiry"] = !manager.HasBuff(id) && manager.ActiveBuffs.Count == 0;
+        result["expiryCycleLoss"] = beforeDamage - scope.Health.Hp;
+        result["expiredRestored"] = scope.Snapshot();
+
+        string firstSource = "test:infection:" + Guid.NewGuid().ToString("N") + ":first";
+        string secondSource = "test:infection:" + Guid.NewGuid().ToString("N") + ":second";
+        BuffInstance first = manager.EnsureSourceBuff(id, firstSource);
+        first.SetStackCount(2);
+        BuffInstance second = manager.EnsureSourceBuff(id, secondSource);
+        result["sourcesDistinct"] = !ReferenceEquals(first, second);
+        result["sourceReuse"] = ReferenceEquals(first, manager.EnsureSourceBuff(id, firstSource));
+        result["twoSources"] = scope.Snapshot();
+        manager.RemoveSourceBuff(firstSource);
+        result["oneSourcePresent"] = manager.HasBuff(id) && manager.ActiveBuffs.Count == 1;
+        result["oneSourceLeft"] = scope.Snapshot(second);
+        result["regularAddedAlongsideSource"] = manager.AddBuff(id);
+        result["sourceAndRegular"] = scope.Snapshot();
+        manager.RemoveBuff(id);
+        result["sourceSurvivedRegularRemoval"] = manager.HasBuff(id) && manager.ActiveBuffs.Count == 1;
+        result["afterRegularRemoval"] = scope.Snapshot(second);
+        manager.RemoveSourceBuff(secondSource);
+        manager.RemoveSourceBuff(secondSource);
+        result["allSourcesRemoved"] = !manager.HasBuff(id) && manager.ActiveBuffs.Count == 0;
+        result["sourcesRestored"] = scope.Snapshot();
+        return result;
     }
     #endregion
 }

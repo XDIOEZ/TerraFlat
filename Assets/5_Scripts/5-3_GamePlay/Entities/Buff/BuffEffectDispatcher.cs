@@ -5,6 +5,8 @@ using UnityEngine;
 public static class BuffEffectTypeIds
 {
     public const string MoveSpeedMultiplier = "core:move_speed_multiplier";
+    public const string MoveSpeedReduction = "core:move_speed_reduction";
+    public const string AttackFlatModifier = "core:attack_flat_modifier";
     public const string FoodConsumeSpeedMultiplier = "core:food_consume_speed_multiplier";
     public const string WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier";
     public const string TemperatureWarming = "core:temperature_warming";
@@ -34,6 +36,8 @@ public static class BuffEffectDispatcher
         Register(BodyTraumaBuffEffects.Blur, BodyTraumaBuffEffects.Apply);
         Register(BodyTraumaBuffEffects.RestoreDurability, BodyTraumaBuffEffects.ApplyDurabilityRecovery);
         Register(BuffEffectTypeIds.MoveSpeedMultiplier, ApplyMoveSpeedMultiplier);
+        Register(BuffEffectTypeIds.MoveSpeedReduction, BuffAttributeEffects.ApplyMoveSpeedReduction);
+        Register(BuffEffectTypeIds.AttackFlatModifier, BuffAttributeEffects.ApplyAttackFlatModifier);
         Register(BuffEffectTypeIds.FoodConsumeSpeedMultiplier, ApplyFoodConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.WaterConsumeSpeedMultiplier, ApplyWaterConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.TemperatureWarming, ApplyTemperatureWarming);
@@ -70,7 +74,7 @@ public static class BuffEffectDispatcher
         return found;
     }
 
-    public static void Execute(IReadOnlyList<BuffEffectDefinition> effects, BuffInstance runtime)
+    public static void Execute(IReadOnlyList<BuffEffectDefinition> effects, BuffInstance runtime, bool onlyStackScaled = false)
     {
         if (effects == null || runtime == null)
             return;
@@ -78,7 +82,7 @@ public static class BuffEffectDispatcher
         for (int i = 0; i < effects.Count; i++)
         {
             BuffEffectDefinition effect = effects[i];
-            if (effect == null)
+            if (effect == null || (onlyStackScaled && !effect.ScaleWithStacks))
                 continue;
 
             if (!effect.IsHandlerCached)

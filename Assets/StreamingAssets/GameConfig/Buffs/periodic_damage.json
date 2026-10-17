@@ -99,15 +99,39 @@
       "deathCauseId": "infection",
       "displayName": "感染",
       "category": "general",
-      "description": "感染期间身体微微发绿，每10秒受到1点真实伤害。",
-      "durationSeconds": 30.0,
+      "description": "持续5分钟，最多3层，再次感染加层并刷新时间。每层每10秒受到1点真实伤害、固定攻击力降低1点、移动速度降低25%；感染期间身体微微发绿。",
+      "durationSeconds": 300.0,
       "tickIntervalSeconds": 10.0,
-      "stackMode": "refresh_duration",
+      "stackMode": "add_stacks",
+      "maxStacks": 3,
       "effects": [
         {
           "phase": "tick",
           "typeId": "core:true_damage",
-          "value": 1.0
+          "value": 1.0,
+          "scaleWithStacks": true
+        },
+        {
+          "phase": "start",
+          "typeId": "core:attack_flat_modifier",
+          "value": -1.0,
+          "scaleWithStacks": true
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:attack_flat_modifier",
+          "value": 0.0
+        },
+        {
+          "phase": "start",
+          "typeId": "core:move_speed_reduction",
+          "value": 0.25,
+          "scaleWithStacks": true
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:move_speed_reduction",
+          "value": 0.0
         }
       ]
     },

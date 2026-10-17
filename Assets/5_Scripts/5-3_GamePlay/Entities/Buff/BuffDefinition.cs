@@ -65,7 +65,7 @@ public sealed class BuffEffectDefinition
     public string TargetId { get; internal set; }
     public string RequiredTag { get; internal set; }
     public float Value { get; internal set; }
-    public bool ScaleWithStacks { get; internal set; } // 周期真实伤害是否乘以实例层数。
+    public bool ScaleWithStacks { get; internal set; } // 周期真实伤害或登记型属性修饰是否乘以实例层数。
     [NonSerialized] internal BodyPartType BodyPartTarget; // 构建定义时解析，恢复 Tick 不重复解释字符串。
     /// <summary>临时增温允许达到的最高体温；只约束此效果增加的温度。</summary>
     public float? UpperLimit { get; internal set; }
