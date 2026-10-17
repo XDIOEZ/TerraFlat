@@ -13,6 +13,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         public readonly AudioService Service;
         public readonly AudioUserSettings Original;
+        public readonly float OriginalTimeScale;
         public readonly List<AudioHandle> Handles = new();
         public readonly List<AudioCue> Cues = new();
         private bool disposed;
@@ -23,6 +24,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             Service = UnityEngine.Object.FindObjectOfType<AudioService>() ??
                 throw new InvalidOperationException("真实音频服务未建立，不能使用独立假服务替代。");
             Original = JsonUtility.FromJson<AudioUserSettings>(JsonUtility.ToJson(Service.UserSettings));
+            OriginalTimeScale = Time.timeScale;
         }
 
         public AudioCue CloneCue(string id)
@@ -50,6 +52,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         {
             if (disposed) return;
             disposed = true;
+            Time.timeScale = OriginalTimeScale;
             foreach (AudioHandle handle in Handles) Service.Stop(handle);
             try
             {
@@ -296,11 +299,126 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["released"] = released, ["sourceReused"] = sourceReused,
                 ["newHandleDistinct"] = replacement != handle, ["replacementSurvivedOldStop"] = replacementSurvivedOldStop
             };
+            yield return CaptureAudioGamePause(fixture, result);
         }
         finally { fixture.Dispose(); }
+        yield return null;
+        yield return null;
         result["handlesReleased"] = fixture.Handles.All(value => !value.IsPlaying);
         result["settingsRestored"] = JsonUtility.ToJson(fixture.Service.UserSettings) == JsonUtility.ToJson(fixture.Original);
+        result["timeScaleRestored"] = Time.timeScale == fixture.OriginalTimeScale;
         complete(result);
     }
+    #endregion
+
+    #region 游戏暂停音源现场
+
+    private static AudioSource PlayPauseVoice(
+        AudioFixture fixture, AudioCue cue, AudioPlayOptions options, out AudioHandle handle)
+    {
+        var occupied = new HashSet<AudioSource>(fixture.Service.GetComponentsInChildren<AudioSource>(true)
+            .Where(value => value.clip != null));
+        handle = fixture.Play(cue, options);
+        if (!handle.IsValid)
+            throw new InvalidOperationException("暂停回归没有取得正式音源句柄。");
+
+        return fixture.Service.GetComponentsInChildren<AudioSource>(true)
+            .SingleOrDefault(value => value.clip != null && !occupied.Contains(value)) ??
+            throw new InvalidOperationException("暂停回归没有找到本轮新增的唯一音源。");
+    }
+
+    private static JObject CapturePauseVoice(AudioHandle handle, AudioSource source)
+    {
+        return new JObject
+        {
+            ["retained"] = handle.IsPlaying, ["playing"] = source.isPlaying,
+            ["sourceId"] = source.GetInstanceID(),
+            ["clipId"] = source.clip != null ? source.clip.GetInstanceID() : 0,
+            ["samples"] = source.timeSamples, ["pitch"] = source.pitch, ["volume"] = source.volume
+        };
+    }
+
+    private static IEnumerator CaptureAudioGamePause(AudioFixture fixture, JObject result)
+    {
+        // 只在隔离世界改变正式时间倍率，真实录音临时切换总线以检查统一暂停规则。
+        var voices = new List<(AudioBus bus, AudioHandle handle, AudioSource source)>();
+        JArray CaptureVoices()
+        {
+            var samples = new JArray();
+            foreach (var voice in voices)
+            {
+                JObject sample = CapturePauseVoice(voice.handle, voice.source);
+                sample["bus"] = voice.bus.ToString();
+                samples.Add(sample);
+            }
+            return samples;
+        }
+
+        var pause = new JObject();
+        result["gamePause"] = pause;
+        Time.timeScale = 1f;
+        yield return null;
+        foreach (AudioBus bus in Enum.GetValues(typeof(AudioBus)))
+        {
+            fixture.Service.SetBusVolume(bus, 1f, false);
+            AudioCue cue = fixture.CloneCue(AudioEventIds.WeatherRainLoop);
+            JsonUtility.FromJsonOverwrite("{\"bus\":" + (int)bus + "}", cue);
+            AudioSource source = PlayPauseVoice(fixture, cue, AudioPlayOptions.Global(pitchScale: .83f),
+                out AudioHandle handle);
+            voices.Add((bus, handle, source));
+        }
+
+        yield return new WaitForSecondsRealtime(.12f);
+        pause["normal"] = CaptureVoices();
+        Time.timeScale = .5f;
+        yield return new WaitForSecondsRealtime(.12f);
+        pause["slow"] = CaptureVoices();
+        Time.timeScale = 2f;
+        yield return new WaitForSecondsRealtime(.12f);
+        pause["fast"] = CaptureVoices();
+        Time.timeScale = 0f;
+        yield return null;
+        yield return null;
+        pause["pausedStart"] = CaptureVoices();
+        yield return new WaitForSecondsRealtime(.15f);
+        pause["pausedEnd"] = CaptureVoices();
+
+        AudioCue oneShotCue = fixture.CloneCue(AudioEventIds.WeatherRainLoop);
+        AudioPlayOptions oneShotOptions = AudioPlayOptions.Global();
+        oneShotOptions.OverrideLoop = true;
+        oneShotOptions.Loop = false;
+        AudioSource oneShotSource = PlayPauseVoice(fixture, oneShotCue, oneShotOptions, out AudioHandle oneShot);
+        pause["newOneShotImmediate"] = CapturePauseVoice(oneShot, oneShotSource);
+        yield return new WaitForSecondsRealtime(.15f);
+        pause["newOneShotHeld"] = CapturePauseVoice(oneShot, oneShotSource);
+
+        AudioCue fadeCue = fixture.CloneCue(AudioEventIds.WeatherRainLoop);
+        AudioPlayOptions fadeOptions = AudioPlayOptions.Global();
+        fadeOptions.FadeIn = 1f;
+        AudioSource fadeSource = PlayPauseVoice(fixture, fadeCue, fadeOptions, out AudioHandle fadeHandle);
+        pause["fadeInStart"] = CapturePauseVoice(fadeHandle, fadeSource);
+        yield return new WaitForSecondsRealtime(.15f);
+        pause["fadeInHeld"] = CapturePauseVoice(fadeHandle, fadeSource);
+
+        AudioCue stopCue = fixture.CloneCue(AudioEventIds.WeatherRainLoop);
+        AudioSource stopSource = PlayPauseVoice(fixture, stopCue, AudioPlayOptions.Global(), out AudioHandle stopHandle);
+        fixture.Service.Stop(stopHandle);
+        pause["immediateStop"] = CapturePauseVoice(stopHandle, stopSource);
+        AudioCue clickCue = fixture.CloneCue(AudioEventIds.UiClick);
+        AudioSource clickSource = PlayPauseVoice(fixture, clickCue, AudioPlayOptions.Global(), out AudioHandle clickHandle);
+        pause["uiClick"] = CapturePauseVoice(clickHandle, clickSource);
+        pause["uiReusedStoppedSource"] = clickSource == stopSource;
+
+        var fadingVoice = voices.Single(value => value.bus == AudioBus.Voice);
+        fixture.Service.Stop(fadingVoice.handle, .1f);
+        yield return new WaitForSecondsRealtime(.15f);
+        pause["fadeOutStopped"] = CapturePauseVoice(fadingVoice.handle, fadingVoice.source);
+        Time.timeScale = 1f;
+        yield return new WaitForSecondsRealtime(.12f);
+        pause["resumed"] = CaptureVoices();
+        pause["newOneShotResumed"] = CapturePauseVoice(oneShot, oneShotSource);
+        pause["fadeInResumed"] = CapturePauseVoice(fadeHandle, fadeSource);
+    }
+
     #endregion
 }

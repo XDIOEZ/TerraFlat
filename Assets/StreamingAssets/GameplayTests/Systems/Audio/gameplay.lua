@@ -88,6 +88,71 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
     assert(not data.farShortAccepted and data.beforeFarShort == data.afterFarShort, "范围外短音仍占用了声源池")
     assert(data.farLoopAccepted and math.abs(data.farOffsetX - data.expectedFarOffsetX) < 0.001 and math.abs(data.farOffsetY) < 0.001 and math.abs(data.farOffsetZ) < 0.001, "远处循环没有保留句柄或空间位置错误")
     assert(data.released and data.sourceReused and data.newHandleDistinct and data.replacementSurvivedOldStop, "停止、声源复用或旧句柄隔离错误")
-    assert(data.handlesReleased and data.settingsRestored, "测试声音或临时音量、静音设置没有释放还原")
-end, "正式录音播放、玩家监听平面、音量/静音与声源池完整往返")
+    -- 采样来自真实 AudioSource，Lua 检查暂停续播、界面豁免与原始音高保留。
+    local pause = data.gamePause
+    local function byBus(phase)
+        local values = pause[phase]
+        assert(#values == 5, phase .. " 没有采样全部五条音频总线")
+        local buses = {}
+        for _, value in ipairs(values) do
+            assert(not buses[value.bus], phase .. " 出现重复总线：" .. value.bus)
+            buses[value.bus] = value
+        end
+        return buses
+    end
+    local normal, slow, fast = byBus("normal"), byBus("slow"), byBus("fast")
+    local pausedStart, pausedEnd, resumed = byBus("pausedStart"), byBus("pausedEnd"), byBus("resumed")
+    for _, bus in ipairs({ "Music", "Sfx", "Ambient", "Voice", "UI" }) do
+        local first = normal[bus]
+        assert(first and first.retained and first.playing and first.samples > 0,
+            bus .. " 初始音源没有真正播放")
+        assert(math.abs(first.pitch - 0.83) < 0.00001, bus .. " 初始音高倍率未生效")
+        for _, value in ipairs({ slow[bus], fast[bus] }) do
+            assert(value.retained and value.playing and value.sourceId == first.sourceId
+                and value.clipId == first.clipId and math.abs(value.pitch - first.pitch) < 0.00001,
+                bus .. " 被游戏加减速改了音高、换了声音或停止播放")
+        end
+        local stopped, held = pausedStart[bus], pausedEnd[bus]
+        assert(stopped.retained and held.retained and held.sourceId == first.sourceId
+            and held.clipId == first.clipId and math.abs(held.pitch - first.pitch) < 0.00001,
+            bus .. " 暂停丢失了原句柄、录音或音高")
+        if bus == "UI" then
+            assert(stopped.playing and held.playing and held.samples > stopped.samples,
+                "游戏暂停阻止了 UI 总线播放")
+        else
+            assert(not stopped.playing and not held.playing and held.samples == stopped.samples,
+                bus .. " 游戏暂停后仍然在推进声音采样")
+        end
+        local restored = resumed[bus]
+        if bus == "Voice" then
+            assert(not restored.retained, "暂停中主动停止的声音在恢复后又复活")
+        else
+            assert(restored.retained and restored.playing and restored.sourceId == first.sourceId
+                and restored.clipId == first.clipId and restored.samples > held.samples
+                and math.abs(restored.pitch - first.pitch) < 0.00001,
+                bus .. " 恢复没有从原音源和原播放位置正常续播")
+        end
+    end
+    local created, held = pause.newOneShotImmediate, pause.newOneShotHeld
+    assert(created.retained and not created.playing and held.retained and not held.playing
+        and created.sourceId == held.sourceId and created.clipId == held.clipId and created.samples == held.samples,
+        "暂停中新建的单次音没有立即暂停，或被误判结束并回收")
+    local continued = pause.newOneShotResumed
+    assert(continued.retained and continued.playing and continued.sourceId == created.sourceId
+        and continued.clipId == created.clipId and continued.samples > held.samples,
+        "暂停中新建的单次音没有恢复续播")
+    assert(pause.fadeInStart.retained and pause.fadeInHeld.retained and not pause.fadeInHeld.playing
+        and pause.fadeInStart.volume == 0 and pause.fadeInHeld.volume == 0,
+        "游戏暂停期间淡入还在推进")
+    assert(pause.fadeInResumed.retained and pause.fadeInResumed.playing and pause.fadeInResumed.volume > 0,
+        "恢复游戏后淡入没有继续")
+    for _, stopped in ipairs({ pause.immediateStop, pause.fadeOutStopped }) do
+        assert(not stopped.retained and not stopped.playing and stopped.clipId == 0,
+            "暂停中的即时停止或淡出没有回收音源")
+    end
+    assert(pause.uiClick.retained and pause.uiClick.playing and pause.uiReusedStoppedSource,
+        "暂停世界音源复用给 UI 点击声时仍带着暂停状态")
+    assert(data.handlesReleased and data.settingsRestored and data.timeScaleRestored,
+        "测试声音或临时音量、静音、游戏时间倍率没有释放还原")
+end, "正式录音播放、音量/静音、暂停续播与声源池完整往返")
 -- 声音现场没有可解释的画面变化，操作已清理，不拍空场截图。

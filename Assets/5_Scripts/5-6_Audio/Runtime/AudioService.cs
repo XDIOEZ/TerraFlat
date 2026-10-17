@@ -99,7 +99,10 @@ namespace FlatWorld.Audio
             public float Fade;
             public float FadeSpeed;
             public bool Stopping;
+            public bool PausedByGame;
         }
+
+        #region 音源生命周期
 
         private void Awake()
         {
@@ -124,6 +127,10 @@ namespace FlatWorld.Audio
             for (int i = activeVoices.Count - 1; i >= 0; i--)
             {
                 Voice voice = activeVoices[i];
+                SynchronizeGamePause(voice);
+                if (voice.PausedByGame && !voice.Stopping)
+                    continue;
+
                 if (voice.FadeSpeed > 0f)
                 {
                     float target = voice.Stopping ? 0f : 1f;
@@ -140,7 +147,7 @@ namespace FlatWorld.Audio
                         voice.FadeSpeed = 0f;
                 }
 
-                if (!voice.Source.loop && !voice.Source.isPlaying)
+                if (!voice.PausedByGame && !voice.Source.loop && !voice.Source.isPlaying)
                     ReleaseVoice(voice);
             }
         }
@@ -151,6 +158,34 @@ namespace FlatWorld.Audio
             if (instance == this)
                 instance = null;
         }
+
+        #endregion
+
+        #region 游戏暂停与恢复
+
+        // 世界声音保留播放位置随游戏暂停，界面声音照常播放且加减速不改变音高。
+        private static void SynchronizeGamePause(Voice voice)
+        {
+            bool shouldPause = Time.timeScale <= 0f && voice.Cue.Bus != AudioBus.UI;
+            if (shouldPause == voice.PausedByGame)
+                return;
+
+            if (shouldPause)
+            {
+                if (!voice.Source.isPlaying)
+                    return;
+
+                voice.Source.Pause();
+                voice.PausedByGame = true;
+            }
+            else
+            {
+                voice.Source.UnPause();
+                voice.PausedByGame = false;
+            }
+        }
+
+        #endregion
 
         #region 世界音效空间定位
 
@@ -441,6 +476,7 @@ namespace FlatWorld.Audio
             activeVoices.Add(voice);
             lastPlayTime[cue.Id] = now;
             source.Play();
+            SynchronizeGamePause(voice);
             return new AudioHandle(voiceId);
         }
 
@@ -655,6 +691,7 @@ namespace FlatWorld.Audio
             voice.VolumeScale = 1f;
             voice.FadeSpeed = 0f;
             voice.Stopping = false;
+            voice.PausedByGame = false;
             voice.GameObject.transform.SetParent(transform, false);
             voice.GameObject.transform.localPosition = Vector3.zero;
             availableVoices.Push(voice);
