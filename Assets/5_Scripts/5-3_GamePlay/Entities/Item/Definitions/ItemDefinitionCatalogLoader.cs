@@ -254,42 +254,58 @@ public static class ItemDefinitionCatalogLoader
             .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
             .Distinct(StringComparer.Ordinal).ToArray();
 #if UNITY_EDITOR
-        var preloadedTexturePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var preloadedTextures = new Dictionary<string, AssetDatabaseLoadOperation>(StringComparer.OrdinalIgnoreCase);
 #endif
-        // 小批请求配合统一帧预算，编辑器同步资源提供器也不能连续挤占一帧。
-        const int batchSize = 4;
-        for (int start = 0; start < addresses.Length; start += batchSize)
-        {
-            int count = Math.Min(batchSize, addresses.Length - start);
-            var batch = new List<AsyncOperationHandle<T>>(count);
-            for (int i = 0; i < count; i++)
+        var results = new T[addresses.Length];
+        yield return ResourceLoadQueue.Run<VisualAssetRequest<T>>(addresses.Length,
+            index =>
             {
-                string address = addresses[start + i];
+                string address = addresses[index];
+                var request = new VisualAssetRequest<T> { Address = address };
 #if UNITY_EDITOR
-                // 先检查 Sprite 子资源名称，避免 Fast Mode 将错误名称送入包内部后才抛空引用。
                 if (typeof(T) == typeof(Sprite) && address.StartsWith("Assets/", StringComparison.Ordinal))
-                {
-                    yield return PreloadEditorSpriteTexture(address, preloadedTexturePaths);
-                    if (!TryLoadEditorSprite(address, out _, out string error))
-                        throw new InvalidDataException(error);
-                }
+                    request.TextureRequest = BeginEditorSpriteTexture(address, preloadedTextures);
+                else
 #endif
-                batch.Add(gameRes.ResourceAssets.Load<T>(address));
-                if (gameRes.ShouldYieldResourceWork()) yield return null;
-            }
-            while (batch.Any(handle => !handle.IsDone))
+                {
+                    request.Handle = gameRes.ResourceAssets.Load<T>(address);
+                    request.AssetRequestStarted = true;
+                }
+                return request;
+            }, request =>
             {
-                progress?.Invoke(0.2f + 0.6f * (start + batch.Sum(handle => handle.PercentComplete)) / addresses.Length);
-                yield return null;
-            }
-            for (int i = 0; i < count; i++)
-            {
-                output.Add(addresses[start + i], ResourceAssetScope.Require(batch[i], $"{typeof(T).Name} -> {addresses[start + i]}"));
-                if (gameRes.ShouldYieldResourceWork()) yield return null;
-            }
-            progress?.Invoke(0.2f + 0.6f * (start + count) / addresses.Length);
-            if (!GameplayTestResourceCache.Active || gameRes.ShouldYieldResourceWork()) yield return null;
+                if (request.AssetRequestStarted) return request.Handle.IsDone;
+#if UNITY_EDITOR
+                // 主纹理完成后接续该 Sprite，不等待其他槽位；错误子资源仍在 Fast Mode 前拒绝。
+                AssetDatabaseLoadOperation texture = request.TextureRequest;
+                if (texture != null && !texture.isDone) return false;
+                if (texture != null && texture.LoadedObject is not Texture2D)
+                    throw new InvalidDataException($"Sprite 主纹理异步加载失败：{request.Address}");
+                if (!TryLoadEditorSprite(request.Address, out _, out string error))
+                    throw new InvalidDataException(error);
+#endif
+                request.Handle = gameRes.ResourceAssets.Load<T>(request.Address);
+                request.AssetRequestStarted = true;
+                return request.Handle.IsDone;
+            },
+            (index, request) => results[index] = ResourceAssetScope.Require(request.Handle, $"{typeof(T).Name} -> {addresses[index]}"),
+            gameRes.ShouldYieldResourceWork,
+            completed => progress?.Invoke(0.2f + 0.6f * completed / addresses.Length));
+        for (int i = 0; i < addresses.Length; i++)
+        {
+            output.Add(addresses[i], results[i]);
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
         }
+    }
+
+    private sealed class VisualAssetRequest<T> where T : UnityEngine.Object
+    {
+        public string Address;
+        public AsyncOperationHandle<T> Handle;
+        public bool AssetRequestStarted;
+#if UNITY_EDITOR
+        public AssetDatabaseLoadOperation TextureRequest;
+#endif
     }
 
     /// <summary>枚举一个物品定义需要预载的主 Sprite 与额外状态 Sprite。</summary>
@@ -599,24 +615,22 @@ public static class ItemDefinitionCatalogLoader
         new("FlatWorld.Resources.EditorSprite.TextureRequest");
     private const long ImportedTextureMainLocalId = 2800000L;
 
-    /// <summary>TextureImporter 主纹理的固定本地 ID；先异步读取，再沿用严格的子 Sprite 解析。</summary>
-    private static IEnumerator PreloadEditorSpriteTexture(string address, HashSet<string> preloadedPaths)
+    /// <summary>同图集只发出一次主纹理异步请求，由资源队列跟进完成和子 Sprite 接续。</summary>
+    private static AssetDatabaseLoadOperation BeginEditorSpriteTexture(string address,
+        IDictionary<string, AssetDatabaseLoadOperation> preloadedTextures)
     {
-        string path = address;
-        int bracket = path.LastIndexOf('[');
-        if (bracket > 0 && path.EndsWith("]", StringComparison.Ordinal))
-            path = path.Substring(0, bracket);
+        int bracket = address.LastIndexOf('[');
+        string path = bracket > 0 && address.EndsWith("]", StringComparison.Ordinal)
+            ? address.Substring(0, bracket) : address;
         path = path.Replace('\\', '/');
-        if (!preloadedPaths.Add(path) || AssetImporter.GetAtPath(path) is not TextureImporter)
-            yield break;
-
-        AssetDatabaseLoadOperation operation;
-        using (EditorTextureRequestMarker.Auto())
-            operation = AssetDatabase.LoadObjectAsync(path, ImportedTextureMainLocalId);
-        if (!operation.isDone)
-            yield return operation;
-        if (operation.LoadedObject is not Texture2D)
-            throw new InvalidDataException($"Sprite 主纹理异步加载失败：{path}");
+        if (preloadedTextures.TryGetValue(path, out AssetDatabaseLoadOperation operation)) return operation;
+        if (AssetImporter.GetAtPath(path) is TextureImporter)
+        {
+            using (EditorTextureRequestMarker.Auto())
+                operation = AssetDatabase.LoadObjectAsync(path, ImportedTextureMainLocalId);
+        }
+        preloadedTextures.Add(path, operation);
+        return operation;
     }
 
     /// <summary>

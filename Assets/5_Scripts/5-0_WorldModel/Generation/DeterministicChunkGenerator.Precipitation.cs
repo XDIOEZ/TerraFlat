@@ -14,6 +14,17 @@ namespace FlatWorld.WorldModel
         private static readonly ConcurrentQueue<HeightDrivenRegionKey> precipitationCacheOrder = new();
         private static readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<bool>> oceanChunkCache = new();
         private static readonly ConcurrentQueue<HeightDrivenRegionKey> oceanChunkCacheOrder = new();
+        private static long precipitationBuildCount;
+        private static long oceanChunkBuildCount;
+
+        /// <summary>只读采集真实缓存构建数；计数只在冷节点的 Lazy 工厂内增加。</summary>
+        public object CaptureClimateCacheDiagnostics() => new
+        {
+            precipitationNodes = precipitationCache.Count,
+            oceanChunks = oceanChunkCache.Count,
+            precipitationBuilds = Interlocked.Read(ref precipitationBuildCount),
+            oceanChunkBuilds = Interlocked.Read(ref oceanChunkBuildCount)
+        };
 
         private readonly struct PrecipitationLattice
         {
@@ -71,6 +82,7 @@ namespace FlatWorld.WorldModel
             if (precipitationCache.TryGetValue(key, out Lazy<double> existing)) return existing.Value;
             var candidate = new Lazy<double>(() =>
             {
+                Interlocked.Increment(ref precipitationBuildCount);
                 double distance = FindOceanDistance(request, settings, lattice, x, y);
                 double celsius = SampleGeographicClimate(request, settings, center.X, center.Y).TemperatureCelsius;
                 return ResolveDistanceRainfall(settings, distance, settings.PrecipitationOceanRadius, celsius);
@@ -87,7 +99,7 @@ namespace FlatWorld.WorldModel
 
         private static HeightDrivenRegionKey PrecipitationKey(ChunkGenerationRequest request, Int2 center) =>
             new(request.WorldEpoch, request.Address.DimensionId, request.WorldSeed,
-                request.Profile.GenerationFingerprint, request.Topology, center, 0, 0);
+                request.Profile.ClimateFingerprint, request.Topology, center, 0, 0);
 
         private static double ResolveDistanceRainfall(ChunkGenerationSettingsSnapshot settings,
             double distance, double radius, double celsius)
@@ -138,6 +150,7 @@ namespace FlatWorld.WorldModel
             if (oceanChunkCache.TryGetValue(key, out Lazy<bool> existing)) return existing.Value;
             var candidate = new Lazy<bool>(() =>
             {
+                Interlocked.Increment(ref oceanChunkBuildCount);
                 if (SampleHeight(request, settings, center.X, center.Y) < settings.SeaLevel) return true;
                 int minX = (int)Math.Ceiling(center.X - lattice.StepX * 0.5d);
                 int minY = (int)Math.Ceiling(center.Y - lattice.StepY * 0.5d);

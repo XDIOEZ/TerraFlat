@@ -3,6 +3,52 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.00001), message)
 end
 
+test.system("terrain", "climate_cache", {scenario = "identity"}, function(data)
+    for _, name in ipairs({"macro", "expanded", "ecology", "minerals", "pairing"}) do
+        assert(data[name].climate == data.base.climate and data[name].generation ~= data.base.generation,
+            "临时输出范围或生态/矿脉/门户配置拆分了同一份气候缓存，或改变了完整生成指纹：" .. name)
+    end
+    for _, name in ipairs({"resizedGrid", "height", "temperature", "rainfall", "scale", "text", "profile", "signature"}) do
+        assert(data[name].climate ~= data.base.climate,
+            "真正的气候配置变化没有使缓存身份失效：" .. name)
+    end
+end, "气候缓存保留完整输入，忽略临时输出范围与生态身份")
+
+for _, case in ipairs({{algorithm = "simple", wrapped = false}, {algorithm = "legacy", wrapped = true}}) do
+    local input = case
+    test.system("terrain", "climate_cache", input, function(data)
+        assert(data.afterCold.precipitationBuilds > data.before.precipitationBuilds and
+            data.afterCold.oceanChunkBuilds > data.before.oceanChunkBuilds, "夹具没有执行冷海洋与降水构建")
+        for _, name in ipairs({"afterEcology", "afterExpanded", "afterRepeated"}) do
+            assert(data[name].precipitationBuilds == data.afterCold.precipitationBuilds and
+                data[name].oceanChunkBuilds == data.afterCold.oceanChunkBuilds,
+                "相同气候输入重复扫描海洋或重建降水节点：" .. name)
+        end
+        assert(data.ecology.terrainHash == data.cold.terrainHash and
+            data.repeated.terrainHash == data.cold.terrainHash, "改生态倍率或暖缓存改变了真实地形")
+        assert(#data.cold.heightBits == 16 and #data.expanded.heightBits == 25,
+            "真实生成没有保留完整的原始高度样本")
+        for y = 0, 3 do
+            for x = 0, 3 do
+                local index = y * 4 + x + 1
+                assert(data.cold.heightBits[index] == data.ecology.heightBits[index] and
+                    data.cold.heightBits[index] == data.repeated.heightBits[index] and
+                    data.cold.heightBits[index] == data.expanded.heightBits[y * 5 + x + 1],
+                    "扩展输出或复用气候缓存改变了公共格的高度原始值")
+            end
+        end
+    end, "正式气候冷暖缓存复用与高度不变：" .. input.algorithm .. "/" .. tostring(input.wrapped))
+end
+
+for _, scenario in ipairs({"seed", "epoch", "dimension", "topology", "parameter"}) do
+    local selected = scenario
+    test.system("terrain", "climate_cache", {scenario = selected}, function(data)
+        assert(data.afterChanged.precipitationBuilds > data.afterCold.precipitationBuilds and
+            data.afterChanged.oceanChunkBuilds > data.afterCold.oceanChunkBuilds,
+            "不同世界上下文或气候参数错误复用了旧海洋/降水缓存：" .. selected)
+    end, "气候缓存上下文隔离：" .. selected)
+end
+
 for _, case in ipairs({
     {scenario = "anchor", budget = 8, count = 1, found = true, x = 0, y = 0},
     {scenario = "mixed", budget = 8, count = 5, found = true, x = 0, y = 0},

@@ -54,6 +54,38 @@ test.system("core_lifecycle", "resource_plan", { mode = "throw" }, function(data
     assert(#data.order == 2 and data.finished == 2, "异常阶段没有执行 finally 清理")
 end, "资源阶段异常与清理")
 
+for _, mode in ipairs({ "slow", "instant", "budget", "empty", "failed_start", "failed_complete", "cancel" }) do
+    test.system("core_lifecycle", "resource_queue", { mode = mode }, function(data)
+        assert(data.maximum <= 4, "资源在途请求超过四个")
+        assert(data.ownedBeforeDispose == data.started, "请求发出后没有立即登记会话所有权")
+        assert(data.ownedAfterDispose == 0 and data.validAfterDispose == 0, "成功、失败或取消后遗留资源请求")
+        if mode == "failed_start" or mode == "failed_complete" then
+            assert(data.failure == "InvalidOperationException" and data.stage == "queue", "没有保留队列失败阶段和异常")
+            if mode == "failed_start" then assert(data.started == 2, "发出失败后仍继续创建请求") end
+        else
+            assert(data.failure == nil, "合法资源队列执行失败")
+            if mode == "empty" then
+                assert(data.started == 0 and data.yielded == 0, "空队列仍发出请求或空等一帧")
+            elseif mode == "cancel" then
+                assert(data.started == 4 and #data.progress == 0, "取消后仍补发请求或收尾")
+            else
+                assert(data.started == 6 and #data.progress == 6 and data.progress[6] == 6, "队列遗漏请求或完成进度")
+                for i = 1, 6 do
+                    assert(data.results[i] == i - 1, "乱序完成改变了资源结果顺序")
+                    assert(data.progress[i] == i, "队列完成进度倒退或跳过")
+                end
+                if mode == "slow" then
+                    assert(data.maximum == 4 and data.startedAt[5] < data.completedAt[1], "慢请求堵住已释放的在途槽位")
+                elseif mode == "instant" then
+                    assert(data.yielded == 0, "已完成资源仍按批次空等下一帧")
+                else
+                    assert(data.yielded > 0, "请求队列没有归还主线程预算")
+                end
+            end
+        end
+    end, "资源队列并发、补槽、顺序与释放：" .. mode)
+end
+
 for _, row in ipairs({ { fail = false, commit = true }, { fail = true, commit = true }, { fail = false, commit = false } }) do
     test.system("core_lifecycle", "resource_candidate", row, function(data)
         assert(#data.betweenFrames == 1 and data.betweenFrames[1], "候选加载让出帧时没有恢复正式目录")

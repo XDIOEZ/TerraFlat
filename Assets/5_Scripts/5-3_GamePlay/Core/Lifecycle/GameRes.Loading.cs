@@ -505,32 +505,20 @@ public partial class GameRes
         Debug.Log($"[GameRes] Prefab 加载计划：后台加载 {selected.Count}，启动阶段已预载 {startupPrefabLocationIds.Count} 个 UI Prefab。");
     }
 
-    /// <summary>位置资源最多四个在途请求，发出与收尾都让出预算，避免 Fast Mode 同步加载挤在一帧。</summary>
+    /// <summary>位置资源最多四个在途请求，完成即补槽，发出与收尾共用主线程预算。</summary>
     private IEnumerator LoadResourceLocations<T>(IList<IResourceLocation> locations, List<T> loaded, string context)
         where T : UnityEngine.Object
     {
-        const int batchSize = 4;
-        for (int start = 0; start < locations.Count; start += batchSize)
+        var results = new T[locations.Count];
+        yield return ResourceLoadQueue.Run(locations.Count,
+            index => resourceAssets.Load<T>(locations[index]), handle => handle.IsDone,
+            (index, handle) => results[index] = ResourceAssetScope.Require(handle, context),
+            ShouldYieldResourceWork,
+            completed => loadPipeline.Report(0.8f * completed / locations.Count));
+        foreach (T result in results)
         {
-            int count = Math.Min(batchSize, locations.Count - start);
-            var batch = new List<AsyncOperationHandle<T>>(count);
-            for (int i = 0; i < count; i++)
-            {
-                batch.Add(resourceAssets.Load<T>(locations[start + i]));
-                if (ShouldYieldResourceWork()) yield return null;
-            }
-            while (batch.Any(handle => !handle.IsDone))
-            {
-                loadPipeline.Report(0.8f * (start + batch.Sum(handle => handle.PercentComplete)) / locations.Count);
-                yield return null;
-            }
-            foreach (AsyncOperationHandle<T> handle in batch)
-            {
-                loaded.Add(ResourceAssetScope.Require(handle, context));
-                if (ShouldYieldResourceWork()) yield return null;
-            }
-            loadPipeline.Report(0.8f * (start + count) / locations.Count);
-            if (!GameplayTestResourceCache.Active || ShouldYieldResourceWork()) yield return null;
+            loaded.Add(result);
+            if (ShouldYieldResourceWork()) yield return null;
         }
     }
 

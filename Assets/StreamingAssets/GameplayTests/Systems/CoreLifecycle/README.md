@@ -2,7 +2,9 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、resource_plan、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、resource_plan、resource_queue、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+
+2026-10-18 资源加载队列新增规则（本轮用户自行验收、未运行）：正式 ResourceLoadQueue 保持最多四个在途请求，完成即补槽，结果按原资源索引保存；覆盖慢请求、即时完成、空队列、主线程预算、发出/收尾失败与取消，并用真实 ResourceAssetScope 句柄检查释放。编辑器 Sprite 主纹理改为同队列异步预热，仍严格检查子资源；真实磁盘冷加载耗时与入世等待由用户验收。
 
 2026-10-17 启动性能修改新增现场断言（本轮未运行）：读取正式物品目录中已加载 Sprite 的 TextureImporter 主纹理 ID，核对编辑器异步预热使用的 2800000 本地身份；非编辑器跳过此项。此检查不创建资源或改变材质，不代替磁盘冷缓存、异步加载取消、主菜单首次交互和实际峰值耗时验收。
 

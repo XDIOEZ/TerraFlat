@@ -247,7 +247,9 @@ namespace FlatWorld.WorldModel
             GenerationFingerprint = CalculateGenerationFingerprint(
                 ProfileId, Signature, Width, Height,
                 this.numericParameters, this.textParameters,
-                EcologyGlobalMultiplier, EcologyRules, CaveResourceRules, PortalPairing);
+                EcologyGlobalMultiplier, EcologyRules, CaveResourceRules, PortalPairing,
+                out ulong climateFingerprint);
+            ClimateFingerprint = climateFingerprint;
             Settings = new ChunkGenerationSettingsSnapshot(this.numericParameters, this.textParameters);
         }
 
@@ -261,6 +263,8 @@ namespace FlatWorld.WorldModel
         public int Height { get; }
         /// <summary>配置内容的稳定指纹，用于跨窗口复用纯生成缓存。</summary>
         public ulong GenerationFingerprint { get; }
+        /// <summary>气候输入的稳定指纹；临时输出尺寸与生态配置不拆分同一份海洋降水缓存。</summary>
+        public ulong ClimateFingerprint { get; }
         /// <summary>只包含生态配置的稳定指纹，用于存档冻结和联机校验。</summary>
         public ulong EcologyFingerprint { get; }
         /// <summary>给 MOD 使用的数字设置副本。</summary>
@@ -396,27 +400,35 @@ namespace FlatWorld.WorldModel
                 portalPairing);
         }
 
+        #region 生成与气候配置指纹
+
         /// <summary>按键排序计算稳定 FNV-1a，避免依赖字典枚举顺序和进程随机哈希。</summary>
         private static ulong CalculateGenerationFingerprint(string profileId, int signature,
             int width, int height, IReadOnlyDictionary<string, double> numbers,
             IReadOnlyDictionary<string, string> texts, double ecologyGlobalMultiplier,
             IReadOnlyList<EcologySpawnRuleSnapshot> ecologyRules,
             IReadOnlyList<CaveResourceRuleSnapshot> caveResourceRules,
-            CavePortalPairingSnapshot portalPairing)
+            CavePortalPairingSnapshot portalPairing, out ulong climateFingerprint)
         {
             ulong hash = 14695981039346656037UL;
+            ulong climateHash = 14695981039346656037UL;
             AddString(ref hash, profileId);
             AddLong(ref hash, signature);
             AddLong(ref hash, width);
             AddLong(ref hash, height);
+            AddString(ref climateHash, profileId);
+            AddLong(ref climateHash, signature);
 
             var numberKeys = new List<string>(numbers.Keys);
             numberKeys.Sort(StringComparer.Ordinal);
             for (int i = 0; i < numberKeys.Count; i++)
             {
                 string key = numberKeys[i];
+                long value = BitConverter.DoubleToInt64Bits(numbers[key]);
                 AddString(ref hash, key);
-                AddLong(ref hash, BitConverter.DoubleToInt64Bits(numbers[key]));
+                AddLong(ref hash, value);
+                AddString(ref climateHash, key);
+                AddLong(ref climateHash, value);
             }
 
             var textKeys = new List<string>(texts.Keys);
@@ -424,9 +436,13 @@ namespace FlatWorld.WorldModel
             for (int i = 0; i < textKeys.Count; i++)
             {
                 string key = textKeys[i];
+                string value = texts[key] ?? string.Empty;
                 AddString(ref hash, key);
-                AddString(ref hash, texts[key] ?? string.Empty);
+                AddString(ref hash, value);
+                AddString(ref climateHash, key);
+                AddString(ref climateHash, value);
             }
+            climateFingerprint = climateHash;
             AddEcologyFingerprintFields(ref hash, ecologyGlobalMultiplier, ecologyRules);
             AddCaveResourceFingerprintFields(ref hash, caveResourceRules);
             AddLong(ref hash, unchecked((long)(portalPairing?.Fingerprint ?? 0UL)));
@@ -550,6 +566,8 @@ namespace FlatWorld.WorldModel
                 }
             }
         }
+
+        #endregion
     }
 
     /// <summary>

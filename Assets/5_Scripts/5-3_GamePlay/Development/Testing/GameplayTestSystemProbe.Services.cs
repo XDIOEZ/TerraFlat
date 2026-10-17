@@ -27,6 +27,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterServiceOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
+        operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);
         operations.Add("core_lifecycle/resource_candidate", ServiceResourceCandidate);
         operations.Add("core_lifecycle/difficulty_rules", ServiceDifficultyRules);
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
