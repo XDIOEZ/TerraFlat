@@ -199,3 +199,17 @@ test.system("item_runtime", "single_sprite_animation", {network = true, withMoti
     checkAnimationBoundary(data)
     for _, sample in ipairs(data.samples) do checkAnimationRest(sample) end
 end, "单图远端显式状态优先于本地特殊来源")
+
+test.system("item_runtime", "single_sprite_shell_assembly", {actorId = "Wolf"}, function(data)
+    assert(data.actorId == "Wolf" and data.templateStableName == "animator" and data.templateIsAnimator,
+        "真实狼外壳没有用 animator 稳定槽位参与正式模块编译")
+    assert(data.registeredSameInstance and data.resolvedSameInstance and data.stableIdentityRequired,
+        "狼动画没有精确复用内嵌组件，或缺少身份时仍被模糊匹配")
+    assert(data.bodyAnimatorMatches and data.bodyRendererMatches and data.controllerName == "Wolf",
+        "狼动画接收模块没有绑定真实狼贴图和控制器")
+    assert(data.animatorCount == 1 and data.rendererCount == 1 and
+        data.finalAnimatorCount == data.animatorCount and data.finalRendererCount == data.rendererCount,
+        "狼装配重复生成了默认动画机或贴图节点")
+    assert(data.singleSprite and data.enabled and data.inactive,
+        "狼正式单图配置没有应用到停用外壳中的精确动画组件")
+end, "真实狼外壳稳定槽位编译、内嵌动画复用与重复视觉拒绝")

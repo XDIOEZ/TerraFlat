@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -184,6 +185,101 @@ public static partial class GameplayTestSystemProbe
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
+    }
+
+    #endregion
+
+    #region 单图生物外壳装配采样
+
+    // 正式定义与编译器共同定位改名的内嵌动画，避免理想化组件夹具漏掉重复视觉节点。
+    private static JObject EntitySingleSpriteShellAssembly(JObject args)
+    {
+        string actorId = Text(args, "actorId", "Wolf");
+        List<ItemDefinitionDto> definitions = null;
+        var candidate = new ResourceReloadContext();
+        ActorDefinitionCatalogLoader.ConfigureResourceReload(candidate);
+        candidate.InCandidate(() => definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions());
+        ItemDefinitionDto definition = definitions.Find(value => value.Id == actorId && !value.Abstract) ??
+            throw new ArgumentException("单图外壳采样找不到正式生物定义：" + actorId);
+        if (!definition.Modules.TryGetValue("animator", out ItemModuleDefinitionDto configured))
+            throw new InvalidOperationException("单图外壳采样缺少正式 animator 槽位。");
+
+        GameObject shell;
+#if UNITY_EDITOR
+        shell = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(definition.SourcePrefab);
+#else
+        shell = GameRes.ExistingInstance?.GetPrefab(definition.ShellPrefab, false);
+#endif
+        if (shell == null) throw new InvalidOperationException("单图外壳采样缺少真实生物 Prefab。");
+        var moduleDefinition = new RuntimeItemModuleDefinition("animator", configured.Id, configured.Prefab,
+            configured.Parameters?.ToString(), configured.Enabled ?? true);
+        var moduleDefinitions = new[] { moduleDefinition };
+        // 不提供资源能力别名，让此规则直接检查显式稳定身份能否命中真实外壳。
+        RuntimeItemModuleAssemblyPlan assembly = ItemModuleAssemblyCompiler.Compile(null, definition.Id,
+            shell, moduleDefinitions, usesResourceEntities: false)[0];
+        Module template = assembly.ResolveEmbeddedModule(shell.transform);
+        var root = new GameObject("[LuaSingleSpriteShellAssembly]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            GameObject instance = UnityEngine.Object.Instantiate(shell, root.transform, false);
+            Item item = instance.GetComponent<Item>();
+            item.IsPreparedCandidate = true;
+            item.BindData(EntityProbeData("test:single_sprite_shell:" + actorId, 1f));
+            item.itemMods.ResetForReuse(item);
+            var animation = assembly.ResolveEmbeddedModule(instance.transform) as Mod_AnimatorController;
+            if (animation == null) throw new InvalidOperationException("正式动画装配计划没有复用外壳组件。");
+            int animatorCount = instance.GetComponentsInChildren<Animator>(true).Length;
+            int rendererCount = instance.GetComponentsInChildren<SpriteRenderer>(true).Length;
+            Transform visual = instance.transform.Find(definition.Visual.RendererPath);
+            Transform animatorRoot = instance.transform.Find(definition.Visual.AnimatorPath);
+            SpriteRenderer renderer = visual != null ? visual.GetComponent<SpriteRenderer>() : null;
+            Animator bodyAnimator = animatorRoot != null ? animatorRoot.GetComponent<Animator>() : null;
+            ModuleData data = FastCloner.FastCloner.DeepClone<object>(animation._Data) as ModuleData;
+            if (data == null || data.GetType() != animation._Data.GetType())
+                throw new InvalidOperationException("单图外壳采样缺少独立模块数据。");
+            data.Enabled = moduleDefinition.Enabled;
+            animation._Data = data;
+            bool stableIdentityRequired = false;
+            string stableName = animation._Data.StableName;
+            try
+            {
+                animation._Data.StableName = null;
+                ItemModuleAssemblyCompiler.Compile(null, definition.Id, instance, moduleDefinitions,
+                    usesResourceEntities: false);
+            }
+            catch (System.IO.InvalidDataException) { stableIdentityRequired = true; }
+            finally { animation._Data.StableName = stableName; }
+            animation.BindRuntimeIdentity(moduleDefinition.StableName, moduleDefinition.ModuleId, moduleDefinition.PrefabId);
+            assembly.ApplyConfiguration(animation);
+            item.itemData.ModuleDataDic[moduleDefinition.StableName] = data;
+            animation.ModuleInit(item, data);
+            item.itemMods.AddMod(animation);
+            bool registeredSameInstance = ReferenceEquals(animation,
+                item.itemMods.RequireSingleModById<Mod_AnimatorController>(ModText.AnimatorReceiver));
+
+            return new JObject
+            {
+                ["actorId"] = actorId,
+                ["templateStableName"] = template?.StableName,
+                ["templateIsAnimator"] = template is Mod_AnimatorController,
+                ["registeredSameInstance"] = registeredSameInstance,
+                ["resolvedSameInstance"] = ReferenceEquals(animation, assembly.ResolveEmbeddedModule(instance.transform)),
+                ["bodyAnimatorMatches"] = bodyAnimator != null && animation.animator == bodyAnimator,
+                ["bodyRendererMatches"] = renderer != null && renderer.GetComponent<Mod_AnimatorController>() == animation,
+                ["controllerName"] = bodyAnimator != null && bodyAnimator.runtimeAnimatorController != null
+                    ? bodyAnimator.runtimeAnimatorController.name : string.Empty,
+                ["animatorCount"] = animatorCount,
+                ["rendererCount"] = rendererCount,
+                ["finalAnimatorCount"] = instance.GetComponentsInChildren<Animator>(true).Length,
+                ["finalRendererCount"] = instance.GetComponentsInChildren<SpriteRenderer>(true).Length,
+                ["stableIdentityRequired"] = stableIdentityRequired,
+                ["singleSprite"] = animation.IsSingleSpriteMode,
+                ["enabled"] = animation.Enabled,
+                ["inactive"] = !instance.activeInHierarchy
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     #endregion

@@ -14,21 +14,18 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
     private FogPass pass;
     private Player localPlayer;
     private Mod_Cam cameraModule;
-    private readonly DenseFogPresentationTransition transition = new();
     private WorldRuntime presentationWorld;
     private long presentationEpoch;
     private int worldSceneHandle;
-    private int sampledFrame = -1;
 
     private void ResetPresentation()
     {
         localPlayer = null;
         cameraModule = null;
-        transition.Reset();
+        pass?.ResetPresentation();
         presentationWorld = null;
         presentationEpoch = 0;
         worldSceneHandle = 0;
-        sampledFrame = -1;
     }
 
     #endregion
@@ -37,10 +34,10 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
 
     public override void Create()
     {
+        ResetPresentation();
         CoreUtils.Destroy(material);
         material = null;
         pass = null;
-        ResetPresentation();
         if (fogShader == null)
         {
             Debug.LogError("[DenseFog] 渲染器资源缺少大雾 Shader。", this);
@@ -102,23 +99,10 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         Vector2 logicalPosition = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
         float target = weather.TryGetWeatherAt(logicalPosition, out var localWeather)
             ? Mathf.Clamp01(localWeather.FogDensity) : 0f;
-        if (target <= 0f && !transition.HasValue)
+        if (target <= 0f && !pass.HasPresentation)
             return;
         WorldRenderingConfig.RenderingDenseFog config = WorldRenderingConfigCatalog.Default.denseFog;
-        ResolveWorldViewport(sourceCamera, cameraData.IsCameraProjectionMatrixFlipped(), player.transform.position,
-            out Vector3 origin, out Vector3 right, out Vector3 up);
-        if (sampledFrame != Time.frameCount)
-        {
-            float outsideRadius = DenseFogPresentationTransition.ResolveOutsideRadius(origin, right, up);
-            transition.Step(target, Time.unscaledDeltaTime, outsideRadius, config);
-            sampledFrame = Time.frameCount;
-        }
-        if (target <= 0f && !transition.IsTransitioning)
-            transition.Reset();
-        if (!transition.IsVisible)
-            return;
-
-        pass.Setup(material, origin, right, up, logicalPosition, transition.Radii, config);
+        pass.Setup(material, sourceCamera, player.transform.position, logicalPosition, target, config);
         renderer.EnqueuePass(pass);
     }
 
@@ -147,10 +131,10 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
 
     protected override void Dispose(bool disposing)
     {
+        ResetPresentation();
         CoreUtils.Destroy(material);
         material = null;
         pass = null;
-        ResetPresentation();
     }
 
     #endregion
@@ -167,13 +151,16 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         private static readonly int ColorId = Shader.PropertyToID("_FogColor");
         private static readonly int NoiseId = Shader.PropertyToID("_FogNoise");
         private readonly ProfilingSampler sampler = new ProfilingSampler("FlatWorld Dense Fog");
+        private readonly DenseFogPresentationTransition transition = new();
         private Material passMaterial;
-        private Vector3 viewportOrigin;
-        private Vector3 viewportRight;
-        private Vector3 viewportUp;
+        private Camera sourceCamera;
+        private Vector3 playerPosition;
         private Vector2 logicalPlayerPosition;
-        private Vector2 radii;
+        private float targetStrength;
+        private int sampledFrame = -1;
         private WorldRenderingConfig.RenderingDenseFog settings;
+
+        public bool HasPresentation => transition.HasValue;
 
         public FogPass()
         {
@@ -181,24 +168,49 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
             renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
         }
 
-        public void Setup(Material target, Vector3 origin, Vector3 right, Vector3 up, Vector2 logicalCenter,
-            Vector2 visibilityRadii,
+        public void ResetPresentation()
+        {
+            transition.Reset();
+            sampledFrame = -1;
+            passMaterial = null;
+            sourceCamera = null;
+            playerPosition = default;
+            logicalPlayerPosition = default;
+            targetStrength = 0f;
+            settings = null;
+        }
+
+        public void Setup(Material target, Camera source, Vector3 player, Vector2 logicalCenter, float strength,
             WorldRenderingConfig.RenderingDenseFog config)
         {
             passMaterial = target;
-            viewportOrigin = origin;
-            viewportRight = right;
-            viewportUp = up;
+            sourceCamera = source;
+            playerPosition = player;
             logicalPlayerPosition = logicalCenter;
-            radii = visibilityRadii;
+            targetStrength = strength;
             settings = config;
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            if (passMaterial == null)
+            if (passMaterial == null || sourceCamera == null)
                 return;
 
+            // GPU 投影会读取当前颜色目标，只能在渲染 Pass 内连同雾圈过渡一起计算。
+            ResolveWorldViewport(sourceCamera, renderingData.cameraData.IsCameraProjectionMatrixFlipped(), playerPosition,
+                out Vector3 viewportOrigin, out Vector3 viewportRight, out Vector3 viewportUp);
+            if (sampledFrame != Time.frameCount)
+            {
+                float outsideRadius = DenseFogPresentationTransition.ResolveOutsideRadius(viewportOrigin, viewportRight, viewportUp);
+                transition.Step(targetStrength, Time.unscaledDeltaTime, outsideRadius, settings);
+                sampledFrame = Time.frameCount;
+            }
+            if (targetStrength <= 0f && !transition.IsTransitioning)
+                transition.Reset();
+            if (!transition.IsVisible)
+                return;
+
+            Vector2 radii = transition.Radii;
             CommandBuffer cmd = CommandBufferPool.Get();
             using (new ProfilingScope(cmd, sampler))
             {

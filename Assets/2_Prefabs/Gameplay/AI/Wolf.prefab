@@ -1009,6 +1009,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: 6c0d68a959e78d545b0b889726a21dcc, type: 2}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: ModSaveData.StableName
+      value: animator
+      objectReference: {fileID: 0}
     - target: {fileID: 2231892886818212503, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_Name
       value: "AI\u52A8\u753B\u6A21\u5757"

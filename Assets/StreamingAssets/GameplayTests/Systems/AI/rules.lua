@@ -1,7 +1,7 @@
 -- 所有正式物种都要在最终继承配置中启用单图，新增控制器只提供能力而不额外画身体。
 test.system("ai", "single_sprite_catalog", {}, function(data)
     assert(#data.actors >= 12, "正式 Actor Manifest 缺少已有物种")
-    local ghost, fish = false, false
+    local ghost, fish, bird, bee = false, false, false, false
     for _, actor in ipairs(data.actors) do
         assert(actor.hasAnimatorModule and actor.hasControllerPrototype and actor.enabled and actor.visualMode == 1,
             "正式物种没有启用可装配的单图动画：" .. actor.id)
@@ -17,6 +17,20 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
             "错误动画能力ID仍被RequireSingle接纳：" .. actor.id)
         assert(wrong.slotSameInstance and wrong.dataBoundToItem and wrong.requiredError ~= "",
             "错误ID反例未完成真实绑定注册或缺少精确查询拒绝：" .. actor.id)
+        if actor.id == "Bird" or actor.id == "Bee" then
+            local flight = actor.flightDependencies
+            assert(flight.moduleCount == 7 and flight.allBound and flight.allEnabled,
+                "真实飞行外壳没有按最终继承配置注册七个依赖模块：" .. actor.id)
+            assert(flight.bound and flight.singleSprite and flight.animationCount == 1,
+                "鸟或蜜蜂正式BindModuleDependencies无法绑定唯一动画能力：" .. actor.id)
+            assert(flight.noneLoaded and flight.inactive,
+                "飞行依赖规则不应激活外壳或执行模块OnLoad：" .. actor.id)
+            assert(flight.wrongIdRejected and flight.wrongIdCount == 1 and flight.requiredCountAfterWrongId == 0
+                and string.find(flight.wrongIdError, data.requiredAnimationId, 1, true),
+                "飞行模块接纳了错误动画ID，或未在真实依赖查询处明确拒绝：" .. actor.id)
+            bird = bird or actor.id == "Bird"
+            bee = bee or actor.id == "Bee"
+        end
         if actor.id == "Ghost" or actor.id == "SmallFish" then
             assert(actor.bodyRendererCount == 1 and actor.moduleRendererCount == 0,
                 "幽灵或鱼的新增动画模块重复创建了身体 Renderer：" .. actor.id)
@@ -26,7 +40,7 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
             fish = fish or actor.id == "SmallFish"
         end
     end
-    assert(ghost and fish, "单图动画目录缺少幽灵或小鱼")
+    assert(ghost and fish and bird and bee, "单图动画目录缺少幽灵、小鱼、鸟或蜜蜂")
 end, "正式全物种单图模式与幽灵小鱼纯控制器")
 
 test.system("ai", "single_sprite_aquatic", {}, function(data)

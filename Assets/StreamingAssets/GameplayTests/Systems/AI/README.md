@@ -2,7 +2,9 @@
 
 2026-10-18 全物种单图动画补充，**仅编写，未编译、未运行**：`ai/single_sprite_catalog` 复用正式 Actor Manifest/继承加载器，通过 `ResourceReloadContext` 候选上下文隔离目录缓存，并将最终参数交给正式 `ModuleJsonConfigurator.Apply`，检查全部正式物种的动画模块启用且为 SingleSprite；Ghost/SmallFish 原外壳保持一个 SpriteRenderer，新纯动画控制器没有 Renderer、碰撞体或刚体。通用主动信号组合规则在 [ItemRuntime](../ItemRuntime/README.md)，真实物种行为、风场、飞行/水下/搁浅观感与联机仍由用户验收。
 
-补强动画身份注册：此前原型类型与 `visualMode` 检查没有注册 `ItemMods`，会漏掉 JSON 把 `Module_Animator_AI/AI动画模块` 当能力 ID 的错误。现在对全部正式物种先把最终显式 `animator` 槽位身份交给生产 `BindRuntimeIdentity`，再调用 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，检查 `StableName/ModuleId/PrefabId`、启用态、唯一能力组和数据绑定；每种还按同一链注册显式错误 ID，只在精确查询处捕获拒绝，保证错误不会被 Canonical 默认值掩盖。临时 Item 使用 `test:...` 身份，避免读取当前正式 Actor 的旧配置。本次只编写，未编译、未运行；此为身份注册链检查，没有执行完整 Bird/Bee 的 `Item.Load`、依赖绑定或生成流程。
+补强动画身份注册：此前原型类型与 `visualMode` 检查没有注册 `ItemMods`，会漏掉 JSON 把 `Module_Animator_AI/AI动画模块` 当能力 ID 的错误。现在对全部正式物种先把最终显式 `animator` 槽位身份交给生产 `BindRuntimeIdentity`，再调用 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，检查 `StableName/ModuleId/PrefabId`、启用态、唯一能力组和数据绑定；每种还按同一链注册显式错误 ID，只在精确查询处捕获拒绝，保证错误不会被 Canonical 默认值掩盖。临时 Item 使用 `test:...` 身份，避免读取当前正式 Actor 的旧配置。基础身份采样只检查动画模块注册与精确查询；Bird/Bee 的真实飞行依赖绑定见下一段。本轮未编译、未运行。
+
+本轮新增 Bird/Bee 真实依赖绑定采样：从正式 Manifest 的最终继承配置中选取飞行模块及其六个必需模块，克隆停用的 Bird/Bee Prefab，由正式 `FindModulePrototype` 按能力或具体 Prefab 身份定位外壳内的真实模块，按生产顺序先注册全部显式身份、再 `ModuleInit`，最后实际调用 `Mod_AI_Bird.BindModuleDependencies`。Lua 检查七个模块的独立数据绑定、启用态、唯一动画能力和单图模式；再把同一动画实例移除后注册为错误显式 ID，确认飞行模块在精确动画依赖处拒绝。夹具只覆盖模块注册与依赖，不启动 GameRes，不执行完整定义装配、`Item.Load/Module.LoadRuntime`、外壳激活或世界居民生成；当前只编写、未编译、未运行，完整生成、蜂巢居民与表现仍由用户验收。
 
 `ai/single_sprite_aquatic` 在独立停用 Item 上，以正式小鱼材质调用真实 `AquaticActorPresentation.Tick/SetStrandedHop/SetCarried`，检查游动信号、单图模式下原节点不再叠加旧摇摆/高度、搁浅和携带的高度倾角输出，以及切回 Animator 后旧游动路径仍可用。没有加载鱼 AI、液体或世界，也没有推进共用动画模块；两者组合由 ItemRuntime 的真实接口与共用层规则覆盖，实际鱼完整行为未运行。
 

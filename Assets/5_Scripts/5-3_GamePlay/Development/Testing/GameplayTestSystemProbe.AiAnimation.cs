@@ -55,6 +55,8 @@ public static partial class GameplayTestSystemProbe
             foreach (JProperty property in registration.Properties()) sample[property.Name] = property.Value.DeepClone();
             sample["declaredPrefabId"] = configured.Prefab;
             sample["wrongIdRegistration"] = CaptureAiAnimationRegistration(definition, configured, prototype, "test:wrong_animation");
+            if (definition.Id == "Bird" || definition.Id == "Bee")
+                sample["flightDependencies"] = CaptureAiFlightDependencies(definition, shell);
         }
         return new JObject { ["actors"] = actors, ["requiredAnimationId"] = ModText.AnimatorReceiver };
     }
@@ -109,6 +111,90 @@ public static partial class GameplayTestSystemProbe
                     ReferenceEquals(item.itemData.ModuleDataDic["animator"], instance._Data),
                 ["dataBoundToItem"] = ReferenceEquals(instance.Item_Data, item.itemData)
             };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    #endregion
+
+    #region 飞行生物真实外壳依赖采样
+
+    // 复用真实外壳与正式模块定位，防止理想化的单动画夹具漏掉鸟和蜜蜂的依赖绑定。
+    private static JObject CaptureAiFlightDependencies(ItemDefinitionDto definition, GameObject shell)
+    {
+        var requiredIds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            Mod_AI_Bird.ModuleId, ModText.Mod_Mover, ModText.Mod_TileEffectReceiver,
+            ModText.Hp, ModText.Food, ModText.Detector, ModText.AnimatorReceiver
+        };
+        var root = new GameObject("[LuaFlightDependencies]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            GameObject instance = UnityEngine.Object.Instantiate(shell, root.transform, false);
+            Item item = instance.GetComponent<Item>();
+            item.IsPreparedCandidate = true;
+            item.BindData(EntityProbeData("test:flight_dependencies:" + definition.Id, 1f));
+            item.itemMods.ResetForReuse(item);
+            var modules = new List<Module>();
+            using (item.itemMods.BeginMutation())
+            {
+                foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in definition.Modules)
+                {
+                    ItemModuleDefinitionDto configured = pair.Value;
+                    if (!requiredIds.Contains(configured.Id)) continue;
+                    Module module = ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Id) ??
+                        ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Prefab);
+                    if (module == null)
+                        throw new InvalidOperationException($"飞行生物 {definition.Id} 的真实外壳缺少依赖模块 {pair.Key}。");
+                    ModuleData data = FastCloner.FastCloner.DeepClone<object>(module._Data) as ModuleData;
+                    if (data == null || data.GetType() != module._Data.GetType())
+                        throw new InvalidOperationException("飞行依赖采样缺少同类型的独立模块数据。");
+                    if (configured.Enabled.HasValue) data.Enabled = configured.Enabled.Value;
+                    module._Data = data;
+                    module.BindRuntimeIdentity(pair.Key, configured.Id, configured.Prefab);
+                    ModuleJsonConfigurator.Apply(module, definition.Id, pair.Key, configured.Id,
+                        configured.Parameters?.ToString());
+                    item.itemData.ModuleDataDic[pair.Key] = data;
+                    item.itemMods.AddMod(module);
+                    modules.Add(module);
+                }
+                foreach (Module module in modules) module.ModuleInit(item, module._Data);
+            }
+
+            Mod_AI_Bird flight = item.itemMods.RequireSingleModById<Mod_AI_Bird>(Mod_AI_Bird.ModuleId);
+            flight.BindModuleDependencies(item.itemMods);
+            Mod_AnimatorController animation = item.itemMods.RequireSingleModById<Mod_AnimatorController>(ModText.AnimatorReceiver);
+            bool allBound = true, allEnabled = true, noneLoaded = true;
+            foreach (Module module in modules)
+            {
+                allBound &= ReferenceEquals(item.itemData.ModuleDataDic[module.StableName], module._Data) &&
+                    ReferenceEquals(module.Item_Data, item.itemData) &&
+                    ReferenceEquals(item.itemMods.GetMod_ByName(module.StableName), module);
+                allEnabled &= module.Enabled;
+                noneLoaded &= !module.IsRuntimeLoaded;
+            }
+            var sample = new JObject
+            {
+                ["moduleCount"] = modules.Count, ["allBound"] = allBound,
+                ["allEnabled"] = allEnabled, ["noneLoaded"] = noneLoaded,
+                ["animationCount"] = item.itemMods.GetModList_ByID(ModText.AnimatorReceiver)?.Count ?? 0,
+                ["singleSprite"] = animation.IsSingleSpriteMode,
+                ["bound"] = true, ["inactive"] = !instance.activeInHierarchy
+            };
+
+            item.itemMods.RemoveMod(animation);
+            animation.BindRuntimeIdentity(animation.StableName, "test:wrong_animation", animation.PrefabId);
+            item.itemMods.AddMod(animation);
+            bool rejected = false;
+            string error = string.Empty;
+            try { flight.BindModuleDependencies(item.itemMods); }
+            catch (InvalidOperationException exception) { rejected = true; error = exception.Message; }
+            sample["wrongIdRejected"] = rejected;
+            sample["wrongIdError"] = error;
+            sample["wrongIdCount"] = item.itemMods.GetModList_ByID("test:wrong_animation")?.Count ?? 0;
+            sample["requiredCountAfterWrongId"] = item.itemMods.GetModList_ByID(ModText.AnimatorReceiver)?.Count ?? 0;
+            return sample;
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
     }

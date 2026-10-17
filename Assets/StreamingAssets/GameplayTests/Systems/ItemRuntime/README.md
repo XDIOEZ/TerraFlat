@@ -2,7 +2,7 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation`。
+快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly`。
 
 已编写的规则覆盖：ModuleDataCollection 的结构版本、启停与移除退订；ItemInstanceDataFactory 的库存、模块和标签副本隔离。
 
@@ -11,6 +11,8 @@
 全 AI 切单图后的新增规则仍归 `single_sprite_animation`：最小临时 Module 只通过正式 `IActorAnimationMotionSource` 返回 Lua 指定的主动状态与外观高度/倾角，实际共用模块负责组合；检查来源优先于 Mover、通用旧状态入口不重启身体 Animator、主动飞行/游动可摆动、被动刚体速度不迈步、来源失效或停用后清除外观偏移，以及远端显式状态优先。各动作还调用正式 `TryGetBaseVisualMatrix`，逐元素核对提供给物理的矩阵保留原 Sprite 局部姿态与外部父层平移/镜像，同时剥离程序摇摆、前探和高度倾角。此组仅编写，未编译、未运行；没有真实生成鸟、蜜蜂、鱼或幽灵。
 
 尚待补充：强制同一池对象复用、换代后的旧引用拒绝、模块 Tick 频率、世界完整物品与轻量掉落物转换；正式加载、卸载和再次加载见下方共享现场。
+
+狼外壳装配新增回归：正式 Actor 加载器读取最终继承定义，真实 Wolf Prefab 与 `ItemModuleAssemblyCompiler` 编译单个 `animator` 槽位，再在停用副本中实际定位、应用配置、注册并要求同一内嵌动画模块；核对控制器仍为 Wolf、Animator 与 SpriteRenderer 各一份，去掉稳定身份后必须拒绝模糊定位。此规则不提供资源能力别名，不创建完整 GameRes 或启动世界；**仅编写，未编译、未运行**，不代表真实出生、初帧采样或对象池复用已验收。
 
 后续修改触及以上关键流程时，需增强本组 Lua 和真实隔离场景夹具，再执行相关系统；不能把快速规则通过当成全路径覆盖。
 
