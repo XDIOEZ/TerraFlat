@@ -313,3 +313,35 @@
 - **最终状态**：实际 `act(stop) → control(release) → gameplay_session(save_exit)` 返回 `saved=true / code=saved_and_exited`，隔离存档仍为 `MCP_Playtest_20261017_R2`。保存前玩家约 `(25.817,-17.717)`、HP `19168/20000`、碳水 `49.156/100`、水分 `0/150`；背包为 `Beeswax×2 / ChippedTool×1 / Stick_Wood×1`，篝火已放置、燃料槽已有一根原木。证据：[生存 HUD 与库存](截图/MCP_20261017_R4_08_eating-status.png)。
 - Unity **维持 Play Mode 主菜单**、`timeScale=1`，未停止、暂停或重启；除隔离世界存档和暂时后已还原的 UI 设置外，没有修改正式游戏代码。本轮不声称已重新载档验证篝火/角色坐标，或已完成实际烹饪。
 - **下轮建议**：首先找饮水来源，再猎取或采集可烹饪的食物，用已建立的篝火完成一轮正式加工；若要判断问题 04/05 最新代码是否生效，需在允许时开始干净 Play Mode，不应继续把旧会话结果误判为新提交回归失败。
+
+## 第 5 轮：2026-10-17（河流饮水、生存补给、骨钩与火把制作）
+
+### 测试环境与关键进度
+
+- **真实游玩**：通过 HomePC2 + GamePlayMCP，在**上轮同一个 Play Mode** 的 `GameStartScene` 续入已有隔离存档 `MCP_Playtest_20261017_R2`；`continue_save(isolated=true)` 返回 `ready=true / resumedIsolated=true`。本轮没有修改游戏生产代码、重启或暂停 Unity，也未接触正式存档。
+- **再访篝火：成功**。虽然续档后玩家又从保存位置恢复到 `(0,0)`，通过 `move_to(-19.4,-12.4)` 走回篝火附近，指向建筑执行正式 `interact` 返回 `interacted=true`，能重新打开 `UI_Bonfire`；`燃料_1` 仍显示原木数量 `1`，证明本轮**建筑及内部燃料槽均实际跨存档保留**。`gameplay_query(source=runtime, query=Bonfire)` 没查到结果，不等同建筑不存在，因为该查询只覆盖特定运行时 Item 而不代表全部建造系统。证据：[再次打开的篝火](截图/MCP_20261017_R5_01_bonfire_revisit.png)。
+- **找到淡水河**：在 `(-43,-59)` 一带通过 `gameplay_query(source=terrain, layerId=riverFloodplain)` 定位到河道，前往约 `(-48,-72)`；实际液体层为 `core:dirty_water`、水深约 `0.6`，河流方向约 `(0.887,-0.462)`、流量 `0.42`。中途流动将停止主动输入的角色推入深水，出现 `oxygen=0/100, drowning=true`，但经 `move_to(-26.5,-82.5)` 回岸后氧气恢复 `100/100`。这说明水体深浅与流速值得谨慎探索，**暂不将河流推力和深水溺水认定为 Bug**。证据：[河流环境](截图/MCP_20261017_R5_02_river-floodplain.png)。
+- **饮水：通过正式玩家输入链**。在浅水中将光标指向角色附近水格，执行 `gameplay_act(press_key, inputAction="E", seconds=3.2)`，实际按玩家当前改键 `<Keyboard>/f` 持续交互，水分 `0 → 约 75/150`；之后站在 **干燥沙地** `(-13.523,-65.320)`，指向邻接脏水格 `(-13.5,-66.5)` 再长按 `4.3s`，水分 `0 → 约 99.55/150`，角色 `inWater=false / oxygen=100/100`。正常玩法支持**站在岸上饮用临近的河水**，无需游入深水。`core:dirty_water` 配置每次补水 `25`、有 `20%` 感染概率；本轮未验证是否实际感染，不能把补水成功写作无副作用。证据：[岸边饮水位置](截图/MCP_20261017_R5_07_drink-from-shore.png)。
+- **野外补给**：到 `(-15.033,-60.533)` 接触 ECS 掉落后，自动拾到 `Meat_Dehydrate×1 / Bone×1 / Fat×1`。选中肉干后第一次 `use` 只推进进食，第二次使用才消耗该件（`Max_EatingProgress=3`）；蛋白质从约 `20/100` 上升至接近 `100/100`，脂肪约 `0→30/100`，水分略有增加。进食进度与数量符合食物配置，不判为异常。证据：[进食后野外 HUD](截图/MCP_20261017_R5_04_survival-food.png)。
+- **制作骨质鱼钩：通过**。将快捷栏的 `Bone×1` 拖入随身制作 `输入_1` → 候选显示「骨质鱼钩」→ 点击候选、点击正式合成按钮 **6 次** → `输出_1` 得到 `FishingHook_Bone×1` → 拖到当前快捷栏第 3 格；库存增加骨钩，骨头正确消耗。
+- **制作火把：通过**。将 `Fat×1` 与 `Stick_Wood×1` 分别拖入 `输入_1/输入_2` → 候选「火把」→ 点击合成按钮 **6 次** → 输出格出现图标名 `Torch_Spent`，但**转入快捷栏后的权威物品 ID 为 `Torch_Summoner×1`**。物品定义原本就以 `Torch_Spent` 图片作为未点燃外观，不应将图标名误认为产出错误。证据：[完成火把制作的输出槽](截图/MCP_20261017_R5_05_torch-crafted.png)。
+- **火把放置边界**：选择 `Torch_Summoner`，瞄准邻近草地执行一次 `gameplay_act(use)`，物品没消耗、也未观测到落地火把；随后检查正式 `Mod_Building.RequiresPlacementRequest=true`，表示需先**显式进入放置模式**，故目前不能判为建筑放置失败。下轮需要通过正常面板/正式输入找到开启放置模式的入口再验证。
+
+### 问题 13：MCP 持续交互命令未覆盖环境喝水（协议能力缺口）
+
+- **状态：可复现、已找到接口差异｜优先级 P2｜领域：GamePlayMCP 能力，非游戏喝水 Bug｜待处理**。
+- **现象**：在 `core:dirty_water` 水体内、水深 `0.3`、氧气 `100/100` 的浅水位置，`look_at` 指向身边有效水面后调用 `gameplay_act(action=interact_hold, seconds=2.2)` 返回 `ok=true / interacted=false / seconds=0`，水分仍为 `0/150`；而同一环境的正式虚拟键盘 `press_key(inputAction="E", seconds=3.2)` 能正确结算三次补水。
+- **根因范围**：`GameplayMcpRuntime.InteractHoldAsync` 当前只调用 `Mod_InteractSender.TryBeginHeldInteraction()`（实体 `IInteractable` 持续交互），若无实体则立即返回 false；正常 `Mod_InteractSender.OnInteractPressed` 还会在实体交互未命中时调用 `BeginEnvironmentActionHold()`，因此 MCP 的专用长按动作没有覆盖水体环境行为。**游戏玩家通过改键后 E/F 正常能喝水**。
+- **期望**：MCP 通用持续交互可以覆盖正常交互键支持的环境动作，或在能力文档中明确要求使用 `press_key(inputAction="E")` 替代环境长按；不要以返回的 `ok=true` 代替业务成功。
+- **当前可用绕行**：将光标瞄准附近真实水格、保持距离在交互上限内，使用 `press_key(inputAction="E",seconds=...)`；对照 `nutrition.water` 前后数值。**本轮仅记录，不修改 MCP 代码。**
+
+### 问题 04 / 05 再观察：续档原点及旧 HUD
+
+- **仍在旧 Play Mode 复现，不等于新提交失败**：玩家续档再次回到 `(0,0)`，本轮当前 HUD 叠加变为 `UI_HotBar×8 / UI_Hand×8`；完整语义树留存在 [8 份 HUD 完整节点数据](截图/MCP_20261017_R5_08hud_full_ui_tree.json)。上一轮修复的生产代码尚无干净 Play Mode 验收，必须区分旧程序集的历史现场与新版回归失败。
+- **临时绕行（正常游戏设置操作）**：制作前打开 `设置 → UI设置 → 快捷栏底部间距`，确认原值 `28`，用游戏正式滑条暂改到 `124`，使当前 `UI_HotBar_7` 避开旧面板射线。输入材料、合成、拖回快捷栏均能通过正式 UI 完成。全部制作结束后又通过同一滑条**确认恢复原始值 `28.0`**，没有永久改变该设备级玩家设置；这不能当作 HUD 堆积修复。
+
+### 本轮结果与后续目标
+
+- **结论**：本轮实际完成了篝火及燃料跨档复验、河流饮水、野外补给、肉干进食、骨质鱼钩制作、火把制作；**尚未完成正式生肉烹饪、钓鱼竿制作、鱼类捕捞和火把地面安装**。这些属于下一轮玩法目标，未完成不等于已发现 Bug。
+- **隔离存档收尾**：在干燥岸边 `( -13.523, -65.320 )` 记录最后状态：HP 约 `19708/20000`、碳水 `47.542/100`、蛋白质 `90.943/100`、水分 `91.959/150`。背包为 `Torch_Summoner×1 / FishingHook_Bone×1 / ChippedTool×1 / Beeswax×1`；篝火燃料原木已有一根。执行 `act(stop) → control(release) → session(save_exit)` 返回 `saved=true / code=saved_and_exited`，同一隔离 `.bytes` 文件的修改时间发生变化且大小由 `889270` 变为 `898123` 字节；这证实**本次写盘实际更新了文件**，但还没重进检查骨钩/火把最终恢复。
+- Unity 仍处于 **Play Mode 的 `GameStartScene` 主菜单**，`timeScale=1`；未停止、暂停或重启，也没有修改任何游戏代码。

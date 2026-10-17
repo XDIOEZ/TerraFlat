@@ -1,0 +1,2617 @@
+{
+  "total_count": 139,
+  "semantic_tree": [
+    {
+      "id": -225422,
+      "parent": null,
+      "depth": 0,
+      "name": "UI_RuntimeDebugOverlay(Clone)",
+      "type": "canvas",
+      "path": "UI_RuntimeDebugOverlay(Clone)",
+      "clickable": false,
+      "rect": [
+        0.0,
+        0.0,
+        1286.0,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -225442,
+      "parent": -225422,
+      "depth": 1,
+      "name": "调试悬浮按钮",
+      "type": "button",
+      "path": "UI_RuntimeDebugOverlay(Clone)/调试安全区/调试悬浮按钮",
+      "clickable": true,
+      "interactable": true,
+      "text": "日志 205",
+      "rect": [
+        1256.53,
+        246.4,
+        22.79,
+        9.42
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -226458,
+      "parent": null,
+      "depth": 0,
+      "name": "GM Canvas",
+      "type": "canvas",
+      "path": "[GM Reflection Console]/GM Canvas",
+      "clickable": false,
+      "rect": [
+        0.0,
+        0.0,
+        1286.0,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -390808,
+      "parent": null,
+      "depth": 0,
+      "name": "血量模块_世界面板",
+      "type": "canvas",
+      "path": "RuntimeEntities/Wolf/伤害接受模块/UI_Health(Clone)/血量模块_世界面板",
+      "clickable": false,
+      "rect": [
+        1230.44,
+        501.58,
+        7.22,
+        2.17
+      ],
+      "onScreen": false,
+      "selected": false
+    },
+    {
+      "id": -390844,
+      "parent": -390808,
+      "depth": 1,
+      "name": "血量",
+      "type": "text",
+      "path": "RuntimeEntities/Wolf/伤害接受模块/UI_Health(Clone)/血量模块_世界面板/血量",
+      "clickable": false,
+      "text": "18.0",
+      "rect": [
+        1226.54,
+        501.22,
+        15.02,
+        2.89
+      ],
+      "onScreen": false,
+      "selected": false
+    },
+    {
+      "id": -356950,
+      "parent": null,
+      "depth": 0,
+      "name": "SceneUI",
+      "type": "canvas",
+      "path": "SceneUI",
+      "clickable": false,
+      "rect": [
+        0.0,
+        0.0,
+        1286.0,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -225866,
+      "parent": null,
+      "depth": 0,
+      "name": "PanelRoot",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot",
+      "clickable": false,
+      "rect": [
+        0.0,
+        0.0,
+        1286.0,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -347962,
+      "parent": -225866,
+      "depth": 1,
+      "name": "手持物丢弃区",
+      "type": "pointer",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/手持物丢弃区",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        0.0,
+        0.0,
+        1286.0,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -347972,
+      "parent": -225866,
+      "depth": 1,
+      "name": "普通指向区",
+      "type": "pointer",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/普通指向区",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        771.6,
+        0.0,
+        514.4,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348004,
+      "parent": -225866,
+      "depth": 1,
+      "name": "移动摇杆",
+      "type": "pointer",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/移动摇杆",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        0.0,
+        0.0,
+        514.4,
+        262.5
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348042,
+      "parent": -225866,
+      "depth": 1,
+      "name": "攻击摇杆",
+      "type": "pointer",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/右侧操作组/攻击摇杆",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        1191.51,
+        16.41,
+        69.88,
+        69.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348076,
+      "parent": -225866,
+      "depth": 1,
+      "name": "交互",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/右侧操作组/交互",
+      "clickable": true,
+      "interactable": true,
+      "text": "交互",
+      "rect": [
+        1189.99,
+        91.15,
+        34.03,
+        34.03
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348106,
+      "parent": -225866,
+      "depth": 1,
+      "name": "使用",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/右侧操作组/使用",
+      "clickable": true,
+      "interactable": true,
+      "text": "使用",
+      "rect": [
+        1228.88,
+        91.15,
+        34.03,
+        34.03
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348136,
+      "parent": -225866,
+      "depth": 1,
+      "name": "奔跑",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/玩法控制层/奔跑",
+      "clickable": true,
+      "interactable": true,
+      "text": "奔跑",
+      "rect": [
+        23.09,
+        115.45,
+        31.6,
+        31.6
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348178,
+      "parent": -225866,
+      "depth": 1,
+      "name": "设置",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/常驻控制层/设置",
+      "clickable": true,
+      "interactable": true,
+      "text": "设置",
+      "rect": [
+        1238.0,
+        214.5,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348206,
+      "parent": -225866,
+      "depth": 1,
+      "name": "菜单",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/常驻控制层/菜单",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        1264.73,
+        116.06,
+        18.23,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -349114,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_7",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7",
+      "clickable": false,
+      "rect": [
+        527.55,
+        13.37,
+        230.9,
+        26.98
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -349140,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        536.89,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Torch_Spent"
+    },
+    {
+      "id": -349172,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        560.76,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1
+    },
+    {
+      "id": -349204,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        584.63,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2,
+      "icon": "Beeswax_Icon"
+    },
+    {
+      "id": -349476,
+      "parent": -349204,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        583.59,
+        14.92,
+        23.35,
+        23.35
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -349236,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        608.49,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3,
+      "icon": "FishingHook_Bone"
+    },
+    {
+      "id": -349268,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        632.36,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4,
+      "icon": "icons_sheet_98"
+    },
+    {
+      "id": -349300,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        656.23,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -349332,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        680.1,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -349364,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        703.97,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -349396,
+      "parent": -349114,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        727.84,
+        15.96,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -348234,
+      "parent": -349114,
+      "depth": 2,
+      "name": "制作",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/制作",
+      "clickable": true,
+      "interactable": true,
+      "text": "制作",
+      "rect": [
+        503.16,
+        16.22,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348262,
+      "parent": -349114,
+      "depth": 2,
+      "name": "背包",
+      "type": "button",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_MobileControls/快捷栏锚点/UI_HotBar_7/背包",
+      "clickable": true,
+      "interactable": true,
+      "text": "背包",
+      "rect": [
+        761.56,
+        16.22,
+        21.27,
+        21.27
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -347920,
+      "parent": -225866,
+      "depth": 1,
+      "name": "内容列表",
+      "type": "scroll",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerBuffStatusHUD/内容列表",
+      "clickable": false,
+      "rect": [
+        9.72,
+        149.48,
+        69.88,
+        12.76
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -356504,
+      "parent": -347920,
+      "depth": 2,
+      "name": "占位符文本",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerBuffStatusHUD/内容列表/Viewport/Content/UI_BuffStatusItem/状态符号底板/占位符文本",
+      "clickable": false,
+      "text": "潮",
+      "rect": [
+        11.24,
+        151.45,
+        8.81,
+        8.81
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -356522,
+      "parent": -347920,
+      "depth": 2,
+      "name": "层数文本",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerBuffStatusHUD/内容列表/Viewport/Content/UI_BuffStatusItem/状态符号底板/层数徽标/层数文本",
+      "clickable": false,
+      "text": "5",
+      "rect": [
+        16.1,
+        150.85,
+        4.56,
+        4.56
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -356540,
+      "parent": -347920,
+      "depth": 2,
+      "name": "状态名称",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerBuffStatusHUD/内容列表/Viewport/Content/UI_BuffStatusItem/状态信息/状态名称",
+      "clickable": false,
+      "text": "潮湿",
+      "rect": [
+        22.18,
+        155.56,
+        55.9,
+        5.16
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -356550,
+      "parent": -347920,
+      "depth": 2,
+      "name": "剩余时间",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerBuffStatusHUD/内容列表/Viewport/Content/UI_BuffStatusItem/状态信息/剩余时间",
+      "clickable": false,
+      "text": "剩余 16s",
+      "rect": [
+        22.18,
+        151.0,
+        55.9,
+        4.25
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -349540,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Slider",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Slider",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        591.35,
+        44.0,
+        103.3,
+        15.8
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 0.99
+    },
+    {
+      "id": -347876,
+      "parent": -225866,
+      "depth": 1,
+      "name": "坐标文本",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerWorldCoordinateHUD/坐标文本",
+      "clickable": false,
+      "text": "X -13.5 Y -65.3",
+      "rect": [
+        8.51,
+        245.49,
+        170.14,
+        8.51
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -347892,
+      "parent": -225866,
+      "depth": 1,
+      "name": "环境温度文本",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerWorldCoordinateHUD/环境温度文本",
+      "clickable": false,
+      "text": "环境温度 29.8℃ 气压 100 kPa · 安全 安全 50～150 kPa · 低压 +0 / 高压 +0 呼吸 星球大气 · 缓冲 30秒",
+      "rect": [
+        8.51,
+        202.95,
+        109.38,
+        33.42
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -347900,
+      "parent": -225866,
+      "depth": 1,
+      "name": "季节文本",
+      "type": "text",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/PlayerWorldCoordinateHUD/季节文本",
+      "clickable": false,
+      "text": "第 1 年 · 春季 · 第 3 天 · 20时",
+      "rect": [
+        8.51,
+        193.23,
+        88.11,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -235280,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -235306,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_404"
+    },
+    {
+      "id": -235638,
+      "parent": -235306,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        542.62,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -235338,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1
+    },
+    {
+      "id": -235370,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2
+    },
+    {
+      "id": -235402,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -235434,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4
+    },
+    {
+      "id": -235466,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -235498,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -235530,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -235562,
+      "parent": -235280,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -234550,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -234566,
+      "parent": -234550,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -252512,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_1",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_1",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -252528,
+      "parent": -252512,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -253158,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_1",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -253184,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_404"
+    },
+    {
+      "id": -253516,
+      "parent": -253184,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        542.62,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -253216,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1
+    },
+    {
+      "id": -253248,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2
+    },
+    {
+      "id": -253280,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -253312,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4
+    },
+    {
+      "id": -253344,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -253376,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -253408,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -253440,
+      "parent": -253158,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_1/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -259864,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_2",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -259890,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_404"
+    },
+    {
+      "id": -259922,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1,
+      "icon": "Item_Tool_408"
+    },
+    {
+      "id": -260220,
+      "parent": -259922,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        564.98,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -259954,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2
+    },
+    {
+      "id": -259986,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -260018,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4
+    },
+    {
+      "id": -260050,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -260082,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -260114,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -260146,
+      "parent": -259864,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -259218,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_2",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_2",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -259234,
+      "parent": -259218,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_2/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -269744,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_3",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_3",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -269760,
+      "parent": -269744,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -270390,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_3",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -270416,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_404"
+    },
+    {
+      "id": -270448,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1,
+      "icon": "Item_Tool_408"
+    },
+    {
+      "id": -270750,
+      "parent": -270448,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        564.98,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -270480,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2
+    },
+    {
+      "id": -270512,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -270544,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4
+    },
+    {
+      "id": -270576,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -270608,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -270640,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -270672,
+      "parent": -270390,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_3/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -277800,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_4",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_4",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -277816,
+      "parent": -277800,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -278446,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_4",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -278472,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_404"
+    },
+    {
+      "id": -278504,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1,
+      "icon": "Item_Tool_408"
+    },
+    {
+      "id": -278806,
+      "parent": -278504,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        564.98,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -278536,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2
+    },
+    {
+      "id": -278568,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -278600,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4
+    },
+    {
+      "id": -278632,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -278664,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -278696,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -278728,
+      "parent": -278446,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_4/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -287790,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_5",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -287816,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_404"
+    },
+    {
+      "id": -287848,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1,
+      "icon": "Item_Tool_408"
+    },
+    {
+      "id": -288150,
+      "parent": -287848,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        564.98,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -287880,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "3",
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2,
+      "icon": "Beeswax_Icon"
+    },
+    {
+      "id": -287912,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -287944,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4
+    },
+    {
+      "id": -287976,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -288008,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -288040,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -288072,
+      "parent": -287790,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -287138,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_5",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_5",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -287154,
+      "parent": -287138,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_5/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -307610,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_HotBar_6",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6",
+      "clickable": false,
+      "rect": [
+        534.84,
+        8.51,
+        216.32,
+        25.28
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -307636,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        543.59,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0,
+      "icon": "Item_Tool_408"
+    },
+    {
+      "id": -307668,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        565.95,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 1
+    },
+    {
+      "id": -307700,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "2",
+      "rect": [
+        588.31,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 2,
+      "icon": "Beeswax_Icon"
+    },
+    {
+      "id": -307972,
+      "parent": -307700,
+      "depth": 3,
+      "name": "UI_SelectBox(Clone)",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)/UI_SelectBox(Clone)",
+      "clickable": false,
+      "rect": [
+        587.34,
+        9.97,
+        21.88,
+        21.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -307732,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        610.67,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 3
+    },
+    {
+      "id": -307764,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "text": "1",
+      "rect": [
+        633.03,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 4,
+      "icon": "icons_sheet_98"
+    },
+    {
+      "id": -307796,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        655.4,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 5
+    },
+    {
+      "id": -307828,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        677.76,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 6
+    },
+    {
+      "id": -307860,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        700.12,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 7
+    },
+    {
+      "id": -307892,
+      "parent": -307610,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_HotBar_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": true,
+      "rect": [
+        722.48,
+        10.94,
+        19.93,
+        19.93
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 8
+    },
+    {
+      "id": -306958,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_6",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_6",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -306974,
+      "parent": -306958,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_6/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    },
+    {
+      "id": -348598,
+      "parent": -225866,
+      "depth": 1,
+      "name": "Panel",
+      "type": "pointer",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel",
+      "clickable": true,
+      "interactable": false,
+      "text": "碳水 | 49/100 | 脂肪",
+      "rect": [
+        8.51,
+        8.51,
+        99.05,
+        69.88
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348610,
+      "parent": -348598,
+      "depth": 2,
+      "name": "碳水",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/碳水",
+      "clickable": true,
+      "interactable": false,
+      "text": "碳水 | 49/100",
+      "rect": [
+        8.51,
+        60.16,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 49.12
+    },
+    {
+      "id": -348676,
+      "parent": -348598,
+      "depth": 2,
+      "name": "脂肪",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/脂肪",
+      "clickable": true,
+      "interactable": false,
+      "text": "脂肪 | 3/100",
+      "rect": [
+        8.51,
+        49.83,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 3.05
+    },
+    {
+      "id": -348742,
+      "parent": -348598,
+      "depth": 2,
+      "name": "蛋白质",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/蛋白质",
+      "clickable": true,
+      "interactable": false,
+      "text": "蛋白质 | 91/100",
+      "rect": [
+        8.51,
+        39.5,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 91.39
+    },
+    {
+      "id": -348808,
+      "parent": -348598,
+      "depth": 2,
+      "name": "水",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/水",
+      "clickable": true,
+      "interactable": false,
+      "text": "水 | 95/150",
+      "rect": [
+        8.51,
+        29.17,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 95.12
+    },
+    {
+      "id": -348874,
+      "parent": -348598,
+      "depth": 2,
+      "name": "维生素",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/维生素",
+      "clickable": true,
+      "interactable": false,
+      "text": "维生素 | 100/100",
+      "rect": [
+        8.51,
+        18.84,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 99.88
+    },
+    {
+      "id": -348940,
+      "parent": -348598,
+      "depth": 2,
+      "name": "体温",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/体温",
+      "clickable": true,
+      "interactable": false,
+      "text": "体温 | 33.2°C",
+      "rect": [
+        8.51,
+        8.51,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 33.21
+    },
+    {
+      "id": -349006,
+      "parent": -348598,
+      "depth": 2,
+      "name": "血量",
+      "type": "slider",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Food/Panel/血量",
+      "clickable": true,
+      "interactable": false,
+      "text": "血量 | 19708/20000",
+      "rect": [
+        8.51,
+        70.49,
+        99.05,
+        7.9
+      ],
+      "onScreen": true,
+      "selected": false,
+      "value": 19707.6
+    },
+    {
+      "id": -348462,
+      "parent": -225866,
+      "depth": 1,
+      "name": "UI_Hand_7",
+      "type": "canvas",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_7",
+      "clickable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false
+    },
+    {
+      "id": -348478,
+      "parent": -348462,
+      "depth": 2,
+      "name": "Slot_UI(Clone)",
+      "type": "item_slot",
+      "path": "UIManager/PanelRoot/SafeAreaRoot/UI_Hand_7/Slot_UI(Clone)",
+      "clickable": true,
+      "interactable": false,
+      "rect": [
+        97.81,
+        -22.44,
+        30.38,
+        30.38
+      ],
+      "onScreen": true,
+      "selected": false,
+      "slotIndex": 0
+    }
+  ],
+  "world": "MCP_Playtest_20261017_R2"
+}
