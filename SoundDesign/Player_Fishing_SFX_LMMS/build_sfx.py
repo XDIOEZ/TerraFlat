@@ -174,7 +174,7 @@ def finalize():
         path = PROJECT / "Assets/Resources/Audio/Cues" / (id + ".asset")
         config = path.read_text(encoding="utf-8")
         footstep = id.startswith("player.footstep.")
-        cooldown = .13 if footstep else .10 if id == "fishing.reel" else .08
+        cooldown = .08 if footstep else .10 if id == "fishing.reel" else .08
         config = re.sub(r"  cooldown: [^\n]+", f"  cooldown: {cooldown}", config)
         config = re.sub(r"  maxInstances: [^\n]+", f"  maxInstances: {2 if footstep else 3}", config)
         path.write_text(config, encoding="utf-8")

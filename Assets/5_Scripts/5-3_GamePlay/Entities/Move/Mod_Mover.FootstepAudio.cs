@@ -10,6 +10,9 @@ public partial class Mod_Mover
 
     private const float WalkingStride = 2.3f;
     private const float RunningStride = 2.9f;
+    // 缩短实际计步距离并压低单次鼓点，保留各地表原有音色。
+    private const float FootstepFrequencyMultiplier = 1.6f;
+    private const float FootstepVolumeMultiplier = 0.6f;
     private const float MaximumStepDisplacement = 1.6f;
     private const float DeepWaterThreshold = 0.55f;
 
@@ -47,14 +50,15 @@ public partial class Mod_Mover
         }
 
         footstepDistance += displacement.magnitude;
-        float stride = IsRunning ? RunningStride : WalkingStride;
+        float stride = (IsRunning ? RunningStride : WalkingStride) / FootstepFrequencyMultiplier;
         if (footstepDistance < stride)
             return;
 
         footstepDistance -= stride;
         string cueId = SampleFootstepCue(currentPosition);
         if (cueId != null)
-            AudioService.Instance.PlayAttached(cueId, item.transform, IsRunning ? 0.55f : 0.42f);
+            AudioService.Instance.PlayAttached(
+                cueId, item.transform, (IsRunning ? 0.55f : 0.42f) * FootstepVolumeMultiplier);
     }
 
     private static string SampleFootstepCue(Vector2 position)
