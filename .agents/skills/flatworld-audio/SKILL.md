@@ -24,6 +24,8 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 
 ## 职责与契约
 
+- 篝火燃烧循环在 `SoundDesign/Fire_LMMS/`：CC0 木柴实录经 LMMS MCP 渲染、`finalize.py` 整理成 20 秒单声道循环；`fire.burning.loop` 绑定在 Bonfire 的 `Mod_Furnace.burningLoopCueId`。`MechanicalDepthVisual.Audio` 读取真实燃烧状态控制空间循环，熄灭、禁用与卸载释放句柄；新增设备通过该字段选择 Cue，不在音频服务识别建筑类型。
+
 - 业务通过稳定 Cue ID 发声；`AudioService` 持有跨场景生命周期、声源池、并发优先级、淡入淡出及音量。循环 Cue 的句柄由调用方停止/回收；生成音效 ID 的 `.loop` 后缀表示循环，历史 `player.swim.stroke` 由 Cue 显式标记循环，`player.*` 属于世界 SFX。
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
