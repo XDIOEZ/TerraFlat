@@ -500,9 +500,9 @@ public class Chunk : MonoBehaviour
     }
 
     /// <summary>
-    /// 自动保存专用的分帧区块快照；每帧只处理约 2.5ms，避免大量物品或差异扫描阻塞玩家输入。
+    /// 自动保存专用的分帧区块快照；沿用整轮保存的共享预算，避免多个阶段在同一帧叠加。
     /// </summary>
-    public IEnumerator SaveChunkCoroutine(Action<Exception> onFailure = null)
+    public IEnumerator SaveChunkCoroutine(Action<Exception> onFailure = null, AutoSaveWorkBudget budget = null)
     {
         if (MapSave == null)
         {
@@ -522,6 +522,7 @@ public class Chunk : MonoBehaviour
             yield break;
         }
 
+        budget ??= new AutoSaveWorkBudget();
         bool differenceHandled = false;
         Exception differenceFailure = null;
         IEnumerator differenceRoutine = ForwardAutoSaveRoutine(
@@ -531,7 +532,8 @@ public class Chunk : MonoBehaviour
                 {
                     differenceHandled = handled;
                     differenceFailure = failure;
-                }),
+                },
+                budget),
             failure =>
             {
                 if (differenceFailure == null)

@@ -17,20 +17,21 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 29; // 星区坐标与全局身份使用新格式，旧档在解析核心数据前拒绝。
+    private const int CompactSaveVersion = 30; // 区块改为独立字节快照，旧档在解析核心数据前拒绝。
     private const int ModdedSaveVersion = 14;
-    private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
     // 实例状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'9' };
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'A' };
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'5' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
     private static readonly Dictionary<string, long> LatestSaveRevisions =
         new(StringComparer.OrdinalIgnoreCase);
     private static long nextSaveRevision;
+    private string pendingBackgroundSavePath;
+    private long pendingBackgroundSaveRevision;
 
     private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
     private readonly Dictionary<string, ChunkSaveRecord> chunkDeltas = new();
@@ -226,7 +227,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// 自动保存专用协程：先通过既有入口采集生态自然物，再把旧区块快照分散到多帧。
     /// 完成快照后通过回调交付后台写盘任务，调用方只能轮询任务，不能同步等待。
     /// </summary>
-    public IEnumerator Save_And_WriteToDiskInBackgroundCoroutine(Action<Task<bool>> onWriteQueued)
+    public IEnumerator Save_And_WriteToDiskInBackgroundCoroutine(Action<Task<bool>> onWriteQueued,
+        AutoSaveWorkBudget budget = null, Func<bool> canContinue = null)
     {
         if (SaveData == null)
         {
@@ -235,14 +237,59 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             yield break;
         }
 
+        budget ??= new AutoSaveWorkBudget();
+        GameSaveData capturedSave = SaveData;
+        AutoSaveWorldScope worldScope = CaptureAutoSaveWorldScope();
+        if (!worldScope.IsCurrent || (canContinue != null && !canContinue()))
+        {
+            onWriteQueued?.Invoke(Task.FromResult(false));
+            yield break;
+        }
+        string fullPath = null;
+        long saveRevision = 0;
+        Exception setupFailure = null;
+        try
+        {
+            EnsureDirectoryExists(UserSavePath);
+            fullPath = GetSaveFilePath(UserSavePath, capturedSave.saveName);
+            // 长采集开始前登记版本，后来的手动或退出保存始终可以取代它。
+            saveRevision = ReserveSaveRevision(fullPath);
+            pendingBackgroundSavePath = fullPath;
+            pendingBackgroundSaveRevision = saveRevision;
+        }
+        catch (Exception exception) { setupFailure = exception; }
+        if (setupFailure != null)
+        {
+            onWriteQueued?.Invoke(Task.FromException<bool>(setupFailure));
+            yield break;
+        }
+
         ecologySnapshotReaders++;
         try
         {
+            bool CanCapture() => worldScope.IsCurrent &&
+                (canContinue == null || canContinue()) &&
+                ReferenceEquals(SaveData, capturedSave) && IsSaveRevisionCurrent(fullPath, saveRevision);
             Exception captureFailure = null;
-            IEnumerator captureRoutine = PrepareLoadedChunksForAutoSaveCoroutine(
+            IEnumerator captureRoutine = ForwardAutoSaveRoutine(
+                PrepareLoadedChunksForAutoSaveCoroutine(exception => captureFailure = exception, budget),
                 exception => captureFailure = exception);
-            while (captureRoutine.MoveNext())
-                yield return captureRoutine.Current;
+            try
+            {
+                while (CanCapture() && captureRoutine.MoveNext())
+                {
+                    if (!CanCapture())
+                        break;
+                    yield return captureRoutine.Current;
+                }
+            }
+            finally { (captureRoutine as IDisposable)?.Dispose(); }
+
+            if (!CanCapture())
+            {
+                onWriteQueued?.Invoke(Task.FromResult(false));
+                yield break;
+            }
 
             if (captureFailure != null)
             {
@@ -250,7 +297,31 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 yield break;
             }
 
-            onWriteQueued?.Invoke(QueueCurrentSaveWriteInBackground());
+            bool writeQueued = false;
+            IEnumerator payloadRoutine = ForwardAutoSaveRoutine(
+                QueueCapturedSaveWriteCoroutine(capturedSave, fullPath, saveRevision, budget, task =>
+                {
+                    writeQueued = true;
+                    onWriteQueued?.Invoke(task);
+                }),
+                exception => captureFailure = exception);
+            try
+            {
+                while (CanCapture() && payloadRoutine.MoveNext())
+                {
+                    if (!CanCapture())
+                        break;
+                    yield return payloadRoutine.Current;
+                }
+            }
+            finally { (payloadRoutine as IDisposable)?.Dispose(); }
+            if (!writeQueued && !CanCapture())
+            {
+                onWriteQueued?.Invoke(Task.FromResult(false));
+                yield break;
+            }
+            if (captureFailure != null)
+                onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
         }
         finally
         {
@@ -268,6 +339,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             string fullPath = GetSaveFilePath(UserSavePath, SaveData.saveName);
             byte[] dataBytes = BuildCompactSavePayload(SaveData);
             long saveRevision = ReserveSaveRevision(fullPath);
+            pendingBackgroundSavePath = fullPath;
+            pendingBackgroundSaveRevision = saveRevision;
 
             return Task.Run(() =>
                 WriteSaveAtomically(fullPath, dataBytes, saveRevision, discardIfSuperseded: true));
@@ -881,6 +954,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 if (new FileInfo(temporaryPath).Length != dataBytes.LongLength)
                     throw new IOException("临时存档写入不完整");
 
+                // 退出或更新保存可能发生在写临时文件期间，提交正式文件前再检查一次。
+                if (discardIfSuperseded && !IsSaveRevisionCurrent(fullPath, saveRevision))
+                    return false;
+
                 if (!File.Exists(fullPath))
                 {
                     File.Move(temporaryPath, fullPath);
@@ -909,6 +986,17 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 DeleteFileIfExists(temporaryPath);
             }
         }
+    }
+
+    /// <summary>退出世界时使旧后台保存失效，不等待磁盘任务，也不影响接下来的正式退出保存。</summary>
+    public void InvalidatePendingBackgroundSave()
+    {
+        string fullPath = pendingBackgroundSavePath;
+        long revision = pendingBackgroundSaveRevision;
+        pendingBackgroundSavePath = null;
+        pendingBackgroundSaveRevision = 0;
+        if (!string.IsNullOrEmpty(fullPath) && IsSaveRevisionCurrent(fullPath, revision))
+            ReserveSaveRevision(fullPath);
     }
 
     /// <summary>
@@ -1123,8 +1211,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// </summary>
     public IEnumerator TrySaveChunkDifferencesCoroutine(
         Chunk chunk,
-        Action<bool, Exception> onCompleted)
+        Action<bool, Exception> onCompleted,
+        AutoSaveWorkBudget budget = null)
     {
+        budget ??= new AutoSaveWorkBudget();
         if (chunk?.MapSave == null || chunk.Map?.Data == null)
         {
             onCompleted?.Invoke(false, null);
@@ -1149,7 +1239,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         HashSet<int> currentGuids = new HashSet<int>();
         List<Item> items = new List<Item>(chunk.RunTimeItems.Values);
-        float frameStart = Time.realtimeSinceStartup;
         for (int i = 0; i < items.Count; i++)
         {
             Item item = items[i];
@@ -1193,11 +1282,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if (changedItem != null)
                 delta.ChangedItems.Add(changedItem);
 
-            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-            {
-                frameStart = Time.realtimeSinceStartup;
-                yield return null;
-            }
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
         }
 
         List<int> baselineGuids = new List<int>(baseline.ItemHashes.Keys);
@@ -1207,11 +1293,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if (!currentGuids.Contains(generatedGuid))
                 delta.RemovedItemGuids.Add(generatedGuid);
 
-            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-            {
-                frameStart = Time.realtimeSinceStartup;
-                yield return null;
-            }
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
         }
 
         Data_TileMap mapData = chunk.Map.Data;
@@ -1234,11 +1317,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     });
                 }
 
-                if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-                {
-                    frameStart = Time.realtimeSinceStartup;
-                    yield return null;
-                }
+                if (budget.ShouldYield())
+                    yield return budget.WaitForNextSlice();
             }
         }
 
@@ -1266,11 +1346,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     });
                 }
 
-                if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-                {
-                    frameStart = Time.realtimeSinceStartup;
-                    yield return null;
-                }
+                if (budget.ShouldYield())
+                    yield return budget.WaitForNextSlice();
             }
         }
 
@@ -1651,16 +1728,20 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>自动保存将自然物、旧 Chunk、差异扫描和 AI 快照按单帧预算分散执行。</summary>
-    private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure)
+    private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure, AutoSaveWorkBudget budget)
     {
         DroppedItemService.PrepareForSave();
-        CaptureRuntimeTerrainStates();
+        yield return budget.WaitForNextSlice();
+        IEnumerator terrainRoutine = CaptureRuntimeTerrainStatesCoroutine(budget);
+        while (terrainRoutine.MoveNext())
+            yield return terrainRoutine.Current;
+        yield return budget.WaitForNextSlice();
         if (ChunkMgr.Instance != null)
         {
             // 自然物也要分帧克隆，避免表现窗口内大量 Item 在同一帧序列化。
             Exception naturalFailure = null;
             IEnumerator naturalRoutine = ForwardAutoSaveRoutine(
-                ChunkMgr.Instance.CaptureRuntimeNaturalItemStatesCoroutine(),
+                ChunkMgr.Instance.CaptureRuntimeNaturalItemStatesCoroutine(budget),
                 exception => naturalFailure = exception);
             while (naturalRoutine.MoveNext())
                 yield return naturalRoutine.Current;
@@ -1681,7 +1762,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 {
                     Exception chunkSaveFailure = null;
                     IEnumerator chunkRoutine = ForwardAutoSaveRoutine(
-                        chunk.SaveChunkCoroutine(exception => chunkSaveFailure = exception),
+                        chunk.SaveChunkCoroutine(exception => chunkSaveFailure = exception, budget),
                         exception =>
                         {
                             if (chunkSaveFailure == null)
@@ -1698,15 +1779,18 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 }
 
                 // 即使当前 Chunk 很小，也让区块之间错开一帧，给输入与物理留出更新机会。
-                yield return null;
+                yield return budget.WaitForNextSlice();
             }
         }
 
         // 旧 Chunk 写入结束后再合并新版建筑和 AI，避免旧差量记录覆盖新版实体快照。
-        CaptureRuntimeBuildingStates();
+        IEnumerator buildingRoutine = CaptureRuntimeBuildingStatesCoroutine(budget);
+        while (buildingRoutine.MoveNext())
+            yield return buildingRoutine.Current;
+        yield return budget.WaitForNextSlice();
         Exception aiFailure = null;
         IEnumerator aiRoutine = ForwardAutoSaveRoutine(
-            CaptureRuntimeAiEntityStatesCoroutine(),
+            CaptureRuntimeAiEntityStatesCoroutine(budget),
             exception => aiFailure = exception);
         while (aiRoutine.MoveNext())
             yield return aiRoutine.Current;
@@ -1722,30 +1806,34 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (routine == null)
             yield break;
 
-        while (true)
+        try
         {
-            bool moved = false;
-            Exception failure = null;
-            try
+            while (true)
             {
-                moved = routine.MoveNext();
-            }
-            catch (Exception exception)
-            {
-                failure = exception;
-            }
+                bool moved = false;
+                Exception failure = null;
+                try
+                {
+                    moved = routine.MoveNext();
+                }
+                catch (Exception exception)
+                {
+                    failure = exception;
+                }
 
-            if (failure != null)
-            {
-                onFailure?.Invoke(failure);
-                yield break;
+                if (failure != null)
+                {
+                    onFailure?.Invoke(failure);
+                    yield break;
+                }
+
+                if (!moved)
+                    yield break;
+
+                yield return routine.Current;
             }
-
-            if (!moved)
-                yield break;
-
-            yield return routine.Current;
         }
+        finally { (routine as IDisposable)?.Dispose(); }
     }
 
     #region Runtime building persistence
@@ -2130,7 +2218,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>自动保存专用的 AI 分帧快照；每帧限制 Item.Save 与数据克隆的累计耗时。</summary>
-    private IEnumerator CaptureRuntimeAiEntityStatesCoroutine()
+    private IEnumerator CaptureRuntimeAiEntityStatesCoroutine(AutoSaveWorkBudget budget)
     {
         ItemMgr itemManager = ItemMgr.Instance;
         if (itemManager == null || SaveData == null)
@@ -2157,7 +2245,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         var capturedAddresses = new HashSet<RuntimeWorldAddress>();
         var runtimeItems = new List<Item>();
         var savedItems = new List<ItemData>();
-        float frameStart = Time.realtimeSinceStartup;
 
         for (int addressIndex = 0; addressIndex < addressSnapshot.Count; addressIndex++)
         {
@@ -2201,11 +2288,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     break;
                 }
 
-                if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-                {
-                    frameStart = Time.realtimeSinceStartup;
-                    yield return null;
-                }
+                if (budget.ShouldYield())
+                    yield return budget.WaitForNextSlice();
             }
 
             if (captureSucceeded)
@@ -2214,11 +2298,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 capturedAddresses.Add(address);
             }
 
-            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-            {
-                frameStart = Time.realtimeSinceStartup;
-                yield return null;
-            }
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
         }
 
         itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);
@@ -2566,33 +2647,24 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         // 先捕获所有移动作用域，再序列化核心数据，避免船体和设备库存落在不同时间点。
         byte[] machines = MachineWorld.CaptureArchive(saveData);
         FlatWorld.Spaceflight.SpaceSession.Capture(saveData);
-        CompactSaveEnvelope envelope = new CompactSaveEnvelope
-        {
-            Version = CompactSaveVersion,
-            CoreSaveData = SerializeCoreDataWithoutChunks(saveData),
-            DroppedItems = DroppedItemService.CaptureArchive(saveData),
-            MechanicalNetworks = machines
-        };
+        byte[] coreSaveData = SerializeCoreDataWithoutChunks(saveData);
+        byte[] droppedItems = DroppedItemService.CaptureArchive(saveData);
+        List<ChunkSaveRecord> records = new();
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
         {
             if (pair.Value == null || !pair.Value.HasChanges)
                 continue;
 
-            envelope.ChunkRecords.Add(pair.Value);
+            records.Add(pair.Value);
         }
 
-        envelope.ChunkRecords.Sort((a, b) =>
-        {
-            int planetCompare = string.CompareOrdinal(a?.PlanetName, b?.PlanetName);
-            return planetCompare != 0 ? planetCompare : string.CompareOrdinal(a?.ChunkName, b?.ChunkName);
-        });
+        records.Sort(CompareChunkSaveRecords);
+        List<byte[]> chunkRecords = new(records.Count);
+        foreach (ChunkSaveRecord record in records)
+            chunkRecords.Add(MemoryPackSerializer.Serialize(record));
 
-        byte[] body = MemoryPackSerializer.Serialize(envelope);
-        byte[] payload = new byte[CompactSaveMagic.Length + body.Length];
-        Buffer.BlockCopy(CompactSaveMagic, 0, payload, 0, CompactSaveMagic.Length);
-        Buffer.BlockCopy(body, 0, payload, CompactSaveMagic.Length, body.Length);
-        return payload;
+        return BuildCompactSaveEnvelopePayload(coreSaveData, chunkRecords, machines, droppedItems);
     }
 
     private static byte[] SerializeCoreDataWithoutChunks(GameSaveData saveData)
@@ -2677,7 +2749,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         for (int i = 0; i < envelope.ChunkRecords.Count; i++)
         {
-            ChunkSaveRecord record = envelope.ChunkRecords[i];
+            byte[] chunkPayload = envelope.ChunkRecords[i];
+            if (chunkPayload == null || chunkPayload.Length == 0)
+                throw new InvalidDataException("差异存档的区块快照为空");
+            ChunkSaveRecord record = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(chunkPayload);
             if (record == null || string.IsNullOrEmpty(record.PlanetName) || string.IsNullOrEmpty(record.ChunkName))
                 continue;
 
@@ -2889,7 +2964,7 @@ public partial class CompactSaveEnvelope
 {
     public int Version;
     public byte[] CoreSaveData;
-    public List<ChunkSaveRecord> ChunkRecords = new();
+    public List<byte[]> ChunkRecords = new(); // 区块在主线程独立冻结，后台封装不再回调物品模块。
     public byte[] DroppedItems;
     public byte[] MechanicalNetworks; // 追加独立版本载荷，旧版本缺失时为空。
 }

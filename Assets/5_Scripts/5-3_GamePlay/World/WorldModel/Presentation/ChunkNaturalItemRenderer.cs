@@ -20,7 +20,6 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 {
     #region 字段
 
-    private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const float LooseItemOffsetRadius = 0.15f;
     private const int InitialPlacementsPerStep = 16;
     private static readonly long InitialStepBudgetTicks = Math.Max(1L, Stopwatch.Frequency / 500L);
@@ -347,7 +346,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     }
 
     /// <summary>自动保存专用的自然物分帧快照，避免一次克隆全部表现物。</summary>
-    public IEnumerator CaptureStateCoroutine()
+    public IEnumerator CaptureStateCoroutine(AutoSaveWorkBudget budget = null)
     {
         if (applicationQuitting || boundChunk == null || chunkManager == null ||
             chunkManager.IsWorldRuntimeShuttingDown || !GameNetwork.HasStateAuthority)
@@ -355,10 +354,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             yield break;
         }
 
+        budget ??= new AutoSaveWorkBudget();
         RuntimeWorldAddress address = boundChunk.Address;
         ChunkRuntime capturedChunk = boundChunk;
         List<KeyValuePair<int, Item>> items = new List<KeyValuePair<int, Item>>(spawnedItems);
-        float frameStart = Time.realtimeSinceStartup;
         for (int i = 0; i < items.Count; i++)
         {
             // 分帧期间发生退出或重新绑定时，旧快照不能继续写回世界。
@@ -384,11 +383,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 }
             }
 
-            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-            {
-                frameStart = Time.realtimeSinceStartup;
-                yield return null;
-            }
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
         }
 
         List<StaticNaturalRuntime> staticRuntimes = new(staticEntities.Values);
@@ -401,11 +397,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             NaturalEntityEcsService.PrepareForCapture(runtime.Handle);
             if (NaturalEntityEcsService.TryCapture(runtime.Handle, out ItemData snapshot))
                 chunkManager.CaptureNaturalItemState(address, snapshot);
-            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-            {
-                frameStart = Time.realtimeSinceStartup;
-                yield return null;
-            }
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
         }
     }
 

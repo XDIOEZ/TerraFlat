@@ -20,13 +20,13 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 ## 快照与磁盘边界
 
-- 当前实例格式 FWD9/29、外层 FWD5/14；格式头在解析内部对象前校验，仅支持当前格式，拒绝的文件保留。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
+- 当前核心格式 FWDA/30、外层 FWD5/14；区块逐条保存独立字节，载入时在主线程恢复 Item/扩展状态。格式头在解析内部对象前校验，仅支持当前格式，拒绝的文件保留。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
 - ItemData 的持久化边界是 InstanceSnapshot，JSON/Unity 字段是配置外壳。冷数据不查 GameRes；入世/入包先按当前定义恢复重量/标签/耐久/模块，再合并稳定模块实例状态，未知扩展负载保留。
 - ItemInstanceDataFactory 冷编译共享配置/默认状态，CloneRuntime 创建独立运行态，不经 MemoryPack 往返；同 GUID 跨槽保留 ItemData 引用，分堆分配新 GUID。活跃库存只 rebase 新冷物品，专用二进制库存由持有模块显式逐槽处理。
 - InventoryInstanceSnapshot 只保存内容/用户状态，恢复保留当前槽标签、UI、输入。不透明 BitData 的配置/进度由模块区分；IItemInstanceStateRestorer 在模块状态恢复后恢复派生属性。
 - 外层 MemoryPack 写入期间的嵌套负载使用 ItemSnapshotSerialization.SerializePayload 独占缓冲；IModuleInstanceStateCodec 同样隔离收发缓冲。FastClonerIgnore 的可写属性会被 setter 写默认值，InstanceSnapshot 计算属性不使用该标记。
 - CraftedDurabilityMultiplier 保存实例品质；恢复按当前基础耐久重算，再保持损伤比例。IRuntimeDataLifecycle.Save 只捕获，Unload 才清事件/资源。
-- 分帧采集后后台处理不可变快照，旧任务不能覆盖新手动/退出保存。保存完成后才释放 MachineWorld/掉落运行态；旧生产者移交早于区块快照。
+- 自动保存共用 AutoSaveWorkBudget：每片目标 0.5ms/最多16单元，耗尽让出两帧再计时；单区块建筑合并保持原子，玩家/机器/船体/掉落联合采集也不跨帧，避免转移时复制或丢失物品。主线程冻结独立字节，后台只封装和原子写盘，不调用 Item codec/Lua。开始采集即登记 revision，并固定场景/WorldRuntime/Epoch；换世界、退出或新保存使旧任务失效。保存完成后才释放 MachineWorld/掉落运行态；旧生产者移交早于区块快照。
 - PlayerData_Dict 用不可变角色 ID，Name_User 仅显示名。改档名同时更新 saveName、磁盘名与退出元数据；特殊 JSON 状态按命名空间保留未知根属性，未来版本扩展拒绝写回。
 - 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
 - 保存退出先在世界退出事件/输入解绑之前执行 `ItemMgr.SavePlayer`，世界事件结算后再写盘；`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 返回实际成功状态，退出回到菜单不能代替写盘成功。

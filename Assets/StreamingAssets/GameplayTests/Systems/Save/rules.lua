@@ -26,3 +26,41 @@ test.system("save", "space_item_chain", { amount = 3, guid = 143 }, function(dat
     assert(data.missingVersion == "InvalidDataException" and data.wrongVersion == "SaveVersionIncompatibleException", "正式解析接受无版本或不同版本档案")
     assert(data.invalidClock == "InvalidDataException", "正式解析接受负时钟")
 end, "正式 JSON、Base64、MemoryPack 与独立库存克隆链")
+
+test.system("save", "autosave_budget", { startTime = 0, steps = {
+    { now = 0 }, { now = 0.000499 }, { now = 0.0005 },
+    { restart = true, now = 15 }, { now = 15 }, { now = 15.00025 }, { now = 15.0006 }
+} }, function(data)
+    assert(data.sliceSeconds == 0.0005 and data.maxWorkUnits == 16 and data.yieldFrames == 2, "自动保存切片或让帧参数不符合当前约定")
+    assert(not data.decisions[1] and not data.decisions[2] and data.decisions[3], "自动保存没有按半毫秒边界交还帧循环")
+    assert(not data.decisions[4] and not data.decisions[5] and data.decisions[6], "重启后把长帧等待时间算入新切片预算")
+end, "自动保存半毫秒切片与长帧后重新计时")
+
+local budget_steps = {}
+for i = 1, 16 do budget_steps[#budget_steps + 1] = { now = 0 } end
+budget_steps[#budget_steps + 1] = { restart = true, now = 1000 }
+for i = 1, 16 do budget_steps[#budget_steps + 1] = { now = 1000 } end
+test.system("save", "autosave_budget", { startTime = 0, steps = budget_steps }, function(data)
+    assert(#data.decisions == 32, "自动保存预算丢失工作单元采样")
+    for i = 1, 15 do
+        assert(not data.decisions[i] and not data.decisions[i + 16], "未达到16个工作单元就因旧计数交还帧循环")
+    end
+    assert(data.decisions[16] and data.decisions[32], "时间未走动时16工作单元上限失效，或重启没有清空计数")
+end, "自动保存工作单元上限与重启计数隔离")
+
+test.system("save", "autosave_chunk_payload", { amount = 3, guid = 143 }, function(data)
+    assert(data.bytes > 0 and data.outerMagic == "FWD5" and data.outerVersion == 14, "自动保存外层封装格式错误")
+    assert(data.compactMagic == "FWDA" and data.compactVersion == 30, "自动保存独立区块字节格式错误")
+    assert(data.coreName == "probe:autosave_core" and data.coreSeed == 2468, "核心数据冻结后被源对象变化污染")
+    assert(data.recordCount == 2 and data.firstChunk == "1_0" and data.secondChunk == "0_0", "封装没有保留捕获顺序或区块身份")
+    assert(data.planet == "probe:autosave" and data.chunkX == 1 and data.itemCount == 1, "区块身份、位置或物品列表丢失")
+    assert(data.guid == 143 and data.definitionId == "probe:item" and data.amount == 3, "区块字节丢失正式物品身份或数量")
+    assert(data.sourceGuid == 1143 and data.sourceAmount == 10, "采样未实际修改冻结后的源物品")
+    assert(data.childGuid == 153 and data.childAmount == 3 and data.sourceChildAmount == 14, "内嵌库存没有冻结真实子物品状态")
+    assert(data.slotCount == 2 and data.selected == 1 and data.secondEmpty, "区块字节往返丢失库存容量、选中槽或空槽")
+    assert(data.removedCount == 1 and data.removedGuid == 41, "冻结后的移除列表被源列表变化污染")
+    assert(data.terrainCount == 1 and data.localX == 2 and data.localY == 3, "地形差量列表或局部坐标丢失")
+    assert(data.ground == 101 and data.back == 102 and data.blocking == 103 and data.biome == 104, "地形差量字段丢失或被后续修改污染")
+    assert(data.navigationCost == 105 and data.flags == 2 and data.damage == 12.5, "导航、阻挡标记或建筑损伤未原样保存")
+    assert(data.firstBytesPreserved and data.machinesPreserved and data.dropsPreserved and data.modsPreserved, "纯字节封装改写了已捕获的独立载荷")
+end, "正式区块冻结字节、嵌套实例与外层存档封装往返")

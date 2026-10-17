@@ -272,10 +272,14 @@ public sealed class ChunkView : MonoBehaviour
     #endregion
 
     /// <summary>自动保存专用的自然物分帧快照入口。</summary>
-    public IEnumerator CaptureNaturalItemStateCoroutine()
+    public IEnumerator CaptureNaturalItemStateCoroutine(AutoSaveWorkBudget budget = null)
     {
+        budget ??= new AutoSaveWorkBudget();
         GetComponent<ChunkAgricultureRenderer>().CaptureState();
-        IEnumerator captureRoutine = naturalItemRenderer.CaptureStateCoroutine();
+        if (budget.ShouldYield())
+            yield return budget.WaitForNextSlice();
+
+        IEnumerator captureRoutine = naturalItemRenderer.CaptureStateCoroutine(budget);
         while (captureRoutine.MoveNext())
             yield return captureRoutine.Current;
     }

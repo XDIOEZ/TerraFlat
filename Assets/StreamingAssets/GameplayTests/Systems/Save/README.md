@@ -2,11 +2,15 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`save/snapshot_memory、special_namespace、space_item_chain`。真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
+快速入口：`rules.lua`；操作：`save/snapshot_memory、special_namespace、space_item_chain、autosave_budget、autosave_chunk_payload`。真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
 
 已编写的规则覆盖：正式 ItemInstanceSnapshot 的内存二进制往返、持久身份、当前定义耐久与模块状态恢复；特殊状态命名空间隔离；JSON/Base64/MemoryPack/实例克隆的嵌套库存链、Vector3字段转换、严格版本和时钟边界。真实场景使用正式 SaveToDisk 首次写入、原子替换、备份和临时文件清理，并读取自己的文件恢复库存。
 
 隔离写盘案例还断言非原点角色坐标在当前文件和备份中均保留；尚未覆盖真正退出世界后重新创建玩家实例的坐标恢复。
+
+2026-10-17 自动保存分帧新增规则：通过确定性时间采样正式 `AutoSaveWorkBudget`，断言半毫秒切片、16 工作单元上限、让出两帧的配置及 `Restart` 清空计时与计数；长帧的等待时间不计入下一切片。独立 `ChunkSaveRecord` 使用正式 MemoryPack 冻结，再调用正式纯字节封装入口；断言 FWDA/30 内层与 FWD5/14 外层、记录捕获顺序、真实物品和嵌套库存、地形差量及载荷原样保留，修改源对象不能污染已冻结字节。
+
+这组规则不运行实际帧循环，不测每帧真实耗时、总保存时长、玩家/机器/船体/掉落的联合原子采集、维度切换取消和保存并发；只验证预算规则与封装数据，不能代替自动保存的现场性能或完整恢复验收。本轮通过外部 C# 编译，当前 Play Mode 保持原状，未执行 Lua 或现场测试。
 
 关键流程待补：并发自动保存与退出保存；磁盘故障注入；完整退出再进入世界后的玩家位置、机器和掉落物复活。禁止读取或改真实玩家档案。
 

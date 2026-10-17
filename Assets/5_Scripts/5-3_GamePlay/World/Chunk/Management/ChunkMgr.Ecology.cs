@@ -245,11 +245,12 @@ public partial class ChunkMgr
     }
 
     /// <summary>自动保存专用的自然物分帧快照，先复制 View 列表再跨帧遍历。</summary>
-    public IEnumerator CaptureRuntimeNaturalItemStatesCoroutine()
+    public IEnumerator CaptureRuntimeNaturalItemStatesCoroutine(AutoSaveWorkBudget budget = null)
     {
         if (!GameNetwork.HasStateAuthority || activeRuntimeBindings == null)
             yield break;
 
+        budget ??= new AutoSaveWorkBudget();
         List<ChunkView> views = new List<ChunkView>();
         foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
         {
@@ -261,12 +262,16 @@ public partial class ChunkMgr
         for (int i = 0; i < views.Count; i++)
         {
             ChunkView view = views[i];
-            if (view == null)
-                continue;
+            if (view != null)
+            {
+                IEnumerator captureRoutine = view.CaptureNaturalItemStateCoroutine(budget);
+                while (captureRoutine.MoveNext())
+                    yield return captureRoutine.Current;
+            }
 
-            IEnumerator captureRoutine = view.CaptureNaturalItemStateCoroutine();
-            while (captureRoutine.MoveNext())
-                yield return captureRoutine.Current;
+            // 空区块也计入预算，避免没有自然物时一次扫完全部表现窗口。
+            if (budget.ShouldYield())
+                yield return budget.WaitForNextSlice();
         }
     }
 

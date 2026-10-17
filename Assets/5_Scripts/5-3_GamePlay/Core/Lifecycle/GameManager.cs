@@ -170,6 +170,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         ResetWorldEntryLifecycle();
 
         // 通知所有订阅者：游戏世界已退出
+        SaveDataMgr.Instance.InvalidatePendingBackgroundSave();
         Event_GameWorldExit?.Invoke();
         ChunkGenerator_River.ClearHydrologyCache();
 
@@ -1464,6 +1465,21 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// <summary>自动保存的分帧入口；快照完成后只返回后台文件写入任务。</summary>
     public IEnumerator SaveGameInBackgroundCoroutine(Action<Task<bool>> onWriteQueued)
     {
+        SaveDataMgr manager = SaveDataMgr.Instance;
+        if (!IsInGameWorld || manager == null || manager.SaveData == null)
+        {
+            onWriteQueued?.Invoke(Task.FromResult(false));
+            yield break;
+        }
+        SaveDataMgr.AutoSaveWorldScope scope = manager.CaptureAutoSaveWorldScope();
+        Func<bool> canContinue = () => this != null && IsInGameWorld && scope.IsCurrent;
+        var budget = new AutoSaveWorkBudget();
+        yield return budget.WaitForNextSlice();
+        if (!canContinue())
+        {
+            onWriteQueued?.Invoke(Task.FromResult(false));
+            yield break;
+        }
         Exception captureFailure = null;
         try
         {
@@ -1480,7 +1496,19 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             yield break;
         }
 
-        yield return SaveDataMgr.Instance.Save_And_WriteToDiskInBackgroundCoroutine(onWriteQueued);
+        if (!canContinue())
+        {
+            onWriteQueued?.Invoke(Task.FromResult(false));
+            yield break;
+        }
+        // 玩家捕获与世界扫描分开排帧，避免自动保存开始时叠加全部工作。
+        yield return budget.WaitForNextSlice();
+        if (!canContinue())
+        {
+            onWriteQueued?.Invoke(Task.FromResult(false));
+            yield break;
+        }
+        yield return manager.Save_And_WriteToDiskInBackgroundCoroutine(onWriteQueued, budget, canContinue);
     }
 
     /// <summary>采集世界时钟和本地玩家的持久化状态。</summary>
