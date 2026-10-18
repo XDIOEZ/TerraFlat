@@ -1,3 +1,44 @@
+-- 正式植物 Job 同时覆盖栽培和野生植物，耗水不依赖生长状态。
+for _, row in ipairs({
+    {label = "明亮生长", light = 1, grows = true, water = 8},
+    {label = "低于门槛停长", light = 0.199, grows = false, water = 8},
+    {label = "等于门槛生长", light = 0.2, grows = true, water = 8},
+    {label = "黑暗仍耗水", light = 0, grows = false, water = 8},
+    {label = "零门槛也不能在全黑生长", minimumLight = 0, light = 0, grows = false, water = 8},
+    {label = "自定义光照需求", light = 0.4, minimumLight = 0.5, grows = false, water = 8},
+    {label = "成熟仍耗水", mature = true, light = 0, grows = false, water = 8},
+    {label = "短日长每天两格", dayLength = 720, light = 0, grows = false, water = 8},
+    {label = "长日长每天两格", dayLength = 2880, light = 0, grows = false, water = 8},
+    {label = "耗水两倍", waterMultiplier = 2, light = 0, grows = false, water = 6},
+    {label = "耐旱十分之一", waterMultiplier = 0.1, light = 0, grows = false, water = 10, remainder = 0.2},
+    {label = "缺肥仍耗水", fertility = 0, grows = false, water = 8},
+    {label = "缺水停止生长", initialWater = 0, grows = false, water = 0},
+    {label = "耗尽后不欠水", initialWater = 1, light = 0, grows = false, water = 0},
+    {label = "补算保留耗尽前的生长", initialWater = 1, grows = true, water = 0},
+    {label = "半天消耗一格", seconds = 720, light = 0, grows = false, water = 9},
+    {label = "温度停长仍耗水", temperatureStress = true, grows = false, water = 8},
+    {label = "野生植物黑暗停长耗水", wild = true, light = 0, grows = false, water = 8},
+    {label = "野生植物明亮生长耗肥", wild = true, grows = true, water = 8},
+    {label = "成熟野生植物仍耗水", wild = true, mature = true, grows = false, water = 8},
+    {label = "同一时刻不重复耗水", repeatSameTime = true, light = 0, grows = false, water = 8}
+}) do
+    local input = {}
+    for key, value in pairs(row) do input[key] = value end
+    -- water 是预期结果，夹具默认从十格水开始。
+    input.water = row.initialWater or 10
+    local expected = row
+    test.system("agriculture", "plant_growth", input, function(data)
+        assert((data.progress > data.before) == expected.grows, expected.label .. "的成长门禁错误")
+        assert(data.water == expected.water, expected.label .. "的每日耗水错误")
+        assert(math.abs(data.waterRemainder - (expected.remainder or 0)) < 0.0001,
+            expected.label .. "的小数耗水进度丢失")
+        assert((data.usedFertility > 0) == expected.grows, expected.label .. "的肥力消耗错误")
+        if expected.repeatSameTime then
+            assert(data.repeatedUsedWater == 0, "重复调度同一世界时刻重复耗水")
+        end
+    end, "植物光照与全天耗水：" .. row.label)
+end
+
 test.system("agriculture", "soil", {}, function(data)
     assert(data.fullWater == 10 and data.fullFertility == 1, "补充水肥超出耕地十级上限")
     assert(data.sourceWaterAfterClone == 10 and data.sourceFertilityAfterClone == 1,

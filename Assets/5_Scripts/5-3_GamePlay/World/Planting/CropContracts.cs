@@ -16,7 +16,8 @@ public enum CropGrowthStatus
     NeedsFertility,
     Mature,
     Harvested,
-    TemperatureStress
+    TemperatureStress,
+    NeedsLight
 }
 
 /// <summary>种植入口初始化世界农作物的统一契约。</summary>

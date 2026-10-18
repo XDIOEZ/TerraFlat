@@ -76,9 +76,10 @@ public partial class TileData_Farmland : TileData
             waterConsumptionRemainder = 0f;
             return;
         }
-        int levels = Mathf.FloorToInt(pending);
+        // 抹平分段累计的浮点尾差，避免整天两格停在一格加 0.999999。
+        int levels = Mathf.Min(waterValue, Mathf.FloorToInt(pending + 0.00001f));
         waterValue -= levels;
-        waterConsumptionRemainder = pending - levels;
+        waterConsumptionRemainder = waterValue <= 0 ? 0f : Mathf.Max(0f, pending - levels);
     }
 
     /// <summary>单格与批量降水共用整级结算，不把时间进度当作真实水分。</summary>

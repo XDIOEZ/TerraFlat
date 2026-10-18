@@ -124,6 +124,7 @@ namespace FlatWorld.NaturalEntities
                 var plant = new EntityPlantLifecycle
                 {
                     Initialized = 1, LastWorldTime = cursor,
+                    WaterInitialized = 1, LastWaterWorldTime = state.waterSimulationInitialized ? state.lastWaterSimulationTime : now,
                     Cultivated = (byte)(state.isCultivatedCrop ? 1 : 0), SoilCell = new int2(state.plantedTilePos.x, state.plantedTilePos.y),
                     GrowWild = (byte)(profile.HasCrop ? 0 : 1), ScaleByStage = (byte)(profile.HasCrop ? 0 : 1),
                     Harvested = (byte)(state.isHarvested ? 1 : 0),
@@ -233,14 +234,18 @@ namespace FlatWorld.NaturalEntities
                     state.isHarvested = plant.Harvested != 0; state.isPlanted = plant.Cultivated != 0;
                     state.plantedTilePosition = new Vector2Int(plant.SoilCell.x, plant.SoilCell.y);
                     state.lastSimulatedTime = plant.LastWorldTime; state.simulationInitialized = plant.Initialized != 0;
+                    state.lastWaterSimulationTime = plant.LastWaterWorldTime; state.waterSimulationInitialized = plant.WaterInitialized != 0;
+                    state.growthStatus = (CropGrowthStatus)plant.Status;
                     ((Ex_ModData_MemoryPackable)snapshot.ModuleDataDic[record.Profile.CropModuleName]).WriteData(state);
                 }
                 else if (TryGetModuleData(snapshot, record.Profile.GrowthModuleName, out ModuleData raw) && raw is Ex_ModData_MemoryPackable data)
                 {
                     GrowData state = data.GetData<GrowData>();
                     state.lastSimulatedTime = plant.LastWorldTime; state.simulationInitialized = plant.Initialized != 0;
+                    state.lastWaterSimulationTime = plant.LastWaterWorldTime; state.waterSimulationInitialized = plant.WaterInitialized != 0;
                     state.isCultivatedCrop = plant.Cultivated != 0; state.isHarvested = plant.Harvested != 0;
                     state.plantedTilePos = new Vector2Int(plant.SoilCell.x, plant.SoilCell.y);
+                    state.growthStatus = (Mod_Grow.GrowthStatus)plant.Status;
                     data.WriteData(state);
                 }
             }
@@ -272,9 +277,12 @@ namespace FlatWorld.NaturalEntities
 
         private static void FreezeSoil(Record record)
         {
-            if (!simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) || plant.Cultivated == 0) return;
+            if (!simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant)) return;
             EntityPlantSoil soil = record.Profile.Soil;
-            if (FarmlandSystem.TryReadSoil(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y), out TileData_Farmland source))
+            Vector2Int cell = PlantSoilCell(record, plant);
+            LightLayerMgr lights = LightLayerMgr.Instance;
+            if (lights != null) lights.TryGetLightLevel(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out soil.LightIntensity);
+            if (FarmlandSystem.TryReadSoil(cell, out TileData_Farmland source, out _, allowNaturalSoil: plant.Cultivated == 0))
             {
                 soil.Available = 1; soil.Water = source.waterValue; soil.MaxWater = source.maxWater;
                 soil.WaterConsumptionRemainder = source.waterConsumptionRemainder;
@@ -288,14 +296,19 @@ namespace FlatWorld.NaturalEntities
             if (!simulation.TryGet(record.Handle.Id, out EntityPlantSoil soil) ||
                 (soil.AddedWater == 0f && soil.UsedWater == 0f && soil.UsedFertility == 0f)) return;
             if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) &&
-                FarmlandSystem.TryReadSoil(new Vector2Int(plant.SoilCell.x, plant.SoilCell.y), out TileData_Farmland target))
+                FarmlandSystem.TryReadSoil(PlantSoilCell(record, plant), out TileData_Farmland target, out _,
+                    allowNaturalSoil: plant.Cultivated == 0))
             {
                 target.AccumulateWaterSupply(soil.AddedWater); target.AccumulateWaterConsumption(soil.UsedWater);
-                target.ConsumeFertility(soil.UsedFertility); FarmlandSystem.CommitSoil(target);
+                target.ConsumeFertility(soil.UsedFertility); FarmlandSystem.CommitSoil(target, allowNaturalSoil: plant.Cultivated == 0);
             }
             soil.AddedWater = soil.UsedWater = soil.UsedFertility = 0f;
             simulation.Set(record.Handle.Id, soil, notifyChanged: false);
         }
+
+        private static Vector2Int PlantSoilCell(Record record, EntityPlantLifecycle plant) => plant.Cultivated != 0
+            ? new Vector2Int(plant.SoilCell.x, plant.SoilCell.y)
+            : Vector2Int.FloorToInt(record.Snapshot.transform.position);
 
         private static void PublishEntities(float deltaTime)
         {

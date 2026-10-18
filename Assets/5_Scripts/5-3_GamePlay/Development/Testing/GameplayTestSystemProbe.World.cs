@@ -41,6 +41,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("building/support_layer", WorldSupportLayer);
         operations.Add("building/shared_state", WorldBuildingState);
         operations.Add("agriculture/soil", WorldSoil);
+        operations.Add("agriculture/plant_growth", WorldPlantGrowth);
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
@@ -813,6 +814,67 @@ public static partial class GameplayTestSystemProbe
             ["fallbackKey"] = fallback.WorldKey, ["fallbackDimension"] = fallback.DimensionId,
             ["sanitizedPlanet"] = separator.PlanetId,
             ["differentDimensionsEqual"] = address == surface
+        };
+    }
+
+    /// <summary>隔离 Entity World 运行正式植物 Job，Lua 持有光照和全天耗水断言。</summary>
+    private static JObject WorldPlantGrowth(JObject args)
+    {
+        using var world = new Unity.Entities.World("PlantGrowthRules");
+        var manager = world.EntityManager;
+        var system = world.CreateSystemManaged<FlatWorld.AIECS.EntityPlantModuleSystem>();
+        system.SetSeasons(Array.Empty<FlatWorld.AIECS.EntitySeasonPeriod>());
+        float dayLength = args.Value<float?>("dayLength") ?? 1440f;
+        float seconds = args.Value<float?>("seconds") ?? dayLength;
+        float initialProgress = args.Value<bool?>("mature") == true ? 1f : 0f;
+        var entity = manager.CreateEntity(typeof(FlatWorld.AIECS.EntityPlantLifecycle),
+            typeof(FlatWorld.AIECS.EntityPlantSoil), typeof(FlatWorld.AIECS.EntityGrowth),
+            typeof(FlatWorld.AIECS.AiecsVital), typeof(FlatWorld.AIECS.EntityModuleAppearance),
+            typeof(FlatWorld.AIECS.EntityModuleActive));
+        manager.SetComponentData(entity, new FlatWorld.AIECS.EntityPlantLifecycle
+        {
+            Initialized = 1, WaterInitialized = 1,
+            Cultivated = (byte)(args.Value<bool?>("wild") == true ? 0 : 1), GrowWild = 1
+        });
+        manager.SetComponentData(entity, new FlatWorld.AIECS.EntityPlantSoil
+        {
+            Available = 1, Water = args.Value<int?>("water") ?? 10, MaxWater = 10,
+            Fertility = args.Value<float?>("fertility") ?? 1f, MaxFertility = 1f,
+            MinimumWaterMultiplier = 0.5f, MinimumFertilityMultiplier = 0.5f,
+            WaterConsumptionMultiplier = args.Value<float?>("waterMultiplier") ?? 1f,
+            FertilityPerSecond = 0.0001f,
+            MinimumLightIntensity = args.Value<float?>("minimumLight") ?? FlatWorld.AIECS.EntityPlantRules.DefaultMinimumLightIntensity,
+            LightIntensity = args.Value<float?>("light") ?? 1f
+        });
+        manager.SetComponentData(entity, new FlatWorld.AIECS.EntityGrowth
+        { Progress = initialProgress, MaxProgress = 1f, Speed = 0.0001f, EnvironmentMultiplier = 1f });
+        manager.SetComponentData(entity, new FlatWorld.AIECS.AiecsVital { Hp = 10f, MaxHp = 10f });
+        if (args.Value<bool?>("temperatureStress") == true)
+            manager.AddComponentData(entity, new FlatWorld.AIECS.EntityClimate
+            {
+                EnvironmentReady = 1, MinimumSurvivalTemperature = 0f, MaximumSurvivalTemperature = 40f,
+                MinimumGrowthTemperature = 5f, MaximumGrowthTemperature = 35f,
+                AmbientCelsius = -1f, BaselineCelsius = -1f, FatalExposureHours = 48f
+            });
+        system.DayLength = dayLength; system.GameTime = seconds; system.StepSeconds = seconds;
+        system.GrowthDifficulty = 1f;
+        system.Update(); system.Complete();
+        var growth = manager.GetComponentData<FlatWorld.AIECS.EntityGrowth>(entity);
+        var soil = manager.GetComponentData<FlatWorld.AIECS.EntityPlantSoil>(entity);
+        float usedWater = soil.UsedWater;
+        float usedFertility = soil.UsedFertility;
+        if (args.Value<bool?>("repeatSameTime") == true)
+        {
+            system.Update(); system.Complete();
+            soil = manager.GetComponentData<FlatWorld.AIECS.EntityPlantSoil>(entity);
+        }
+        return new JObject
+        {
+            ["before"] = initialProgress, ["progress"] = growth.Progress,
+            ["water"] = soil.Water, ["waterRemainder"] = soil.WaterConsumptionRemainder,
+            ["usedWater"] = usedWater, ["usedFertility"] = usedFertility,
+            ["repeatedUsedWater"] = soil.UsedWater,
+            ["status"] = manager.GetComponentData<FlatWorld.AIECS.EntityPlantLifecycle>(entity).Status.ToString()
         };
     }
 

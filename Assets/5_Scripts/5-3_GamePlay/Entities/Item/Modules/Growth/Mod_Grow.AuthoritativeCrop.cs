@@ -53,13 +53,16 @@ public partial class Mod_Grow
         NeedsWater,
         NeedsFertility,
         Mature,
-        Harvested
+        Harvested,
+        TemperatureStress,
+        NeedsLight
     }
 
     [Header("耕地成长配置")]
     [SerializeField, Range(0f, 1f)] private float minimumWaterGrowthMultiplier = 0.5f;
     [SerializeField, Range(0f, 1f)] private float minimumFertilityGrowthMultiplier = 0.5f;
-    [SerializeField, Min(0f)] private float waterConsumePerSecond = 0.002f;
+    [SerializeField, Min(0f)] private float waterConsumptionMultiplier = 1f;
+    [SerializeField, Range(0f, 1f)] private float minimumLightIntensity = FlatWorld.AIECS.EntityPlantRules.DefaultMinimumLightIntensity;
     [SerializeField, Min(0f)] private float fertilityConsumePerSecond = 0.00035f;
     [SerializeField, Range(0f, 1f)] private float rainGrowthBonus = 0.15f;
 
@@ -75,8 +78,6 @@ public partial class Mod_Grow
 #endregion
 
 #region 生命周期接入
-
-    private bool legacyFarmlandProbeComplete;
 
     private void ReadGrowthDataWithMigration()
     {
@@ -115,7 +116,6 @@ public partial class Mod_Grow
 
     private void LoadAuthoritativeCropState()
     {
-        legacyFarmlandProbeComplete = false;
         Data ??= new GrowData();
         Data.environmentGrowthMultiplier = Mathf.Max(0f, Data.environmentGrowthMultiplier);
         Data.MaxGrowProgress = Mathf.Max(0.01f, Data.MaxGrowProgress);
@@ -143,7 +143,8 @@ public partial class Mod_Grow
     {
         minimumWaterGrowthMultiplier = Mathf.Clamp01(minimumWaterGrowthMultiplier);
         minimumFertilityGrowthMultiplier = Mathf.Clamp01(minimumFertilityGrowthMultiplier);
-        waterConsumePerSecond = Mathf.Max(0f, waterConsumePerSecond);
+        waterConsumptionMultiplier = Mathf.Max(0f, waterConsumptionMultiplier);
+        minimumLightIntensity = Mathf.Clamp01(minimumLightIntensity);
         fertilityConsumePerSecond = Mathf.Max(0f, fertilityConsumePerSecond);
         rainGrowthBonus = Mathf.Clamp01(rainGrowthBonus);
         harvestFoodMin = Mathf.Max(1, harvestFoodMin);
@@ -172,6 +173,8 @@ public partial class Mod_Grow
         ConfigureCultivatedClimateDrive();
         Data.simulationInitialized = TryReadCultivatedWorldClock(out _, out double now);
         Data.lastSimulatedTime = now;
+        Data.waterSimulationInitialized = Data.simulationInitialized;
+        Data.lastWaterSimulationTime = now;
         Data.growState = GrowState.幼苗;
         SetGrowthStatus(Data.isMature ? GrowthStatus.Mature : GrowthStatus.Growing, false);
         UpdateVisualAndBehavior();
@@ -211,10 +214,16 @@ public partial class Mod_Grow
             !TryReadCultivatedWorldClock(out TimeData clock, out double now))
             return;
 
+        if (!Data.waterSimulationInitialized)
+        {
+            Data.waterSimulationInitialized = true;
+            Data.lastWaterSimulationTime = now;
+        }
         if (!Data.simulationInitialized || now < Data.lastSimulatedTime)
         {
             Data.simulationInitialized = true;
             Data.lastSimulatedTime = now;
+            if (now < Data.lastWaterSimulationTime) Data.lastWaterSimulationTime = now;
         }
         if (!PlantClimateTimeline.Advance(item, clock, now, ref Data.lastSimulatedTime,
                 environmentConditions, AdvanceCultivatedGrowth, out _))
@@ -235,11 +244,19 @@ public partial class Mod_Grow
     /// <summary>气候和其它独立成长限制各结算一次。</summary>
     private void AdvanceCultivatedGrowth(float seconds, float environmentMultiplier, bool historical)
     {
-        float multiplier = environmentMultiplier;
-        foreach (IPlantGrowthConstraint constraint in growthConstraints)
-            multiplier *= constraint.GrowthMultiplier;
-        if (multiplier > 0f)
-            UpdateAuthoritativeGrowth(seconds * multiplier, historical);
+        try
+        {
+            float multiplier = environmentMultiplier;
+            foreach (IPlantGrowthConstraint constraint in growthConstraints)
+                multiplier *= constraint.GrowthMultiplier;
+            if (multiplier > 0f)
+                UpdateAuthoritativeGrowth(seconds * multiplier, historical);
+        }
+        finally
+        {
+            PlantGrowthEnvironment.AdvanceWater(CurrentSoilCell(), waterConsumptionMultiplier, false,
+                ref Data.waterSimulationInitialized, ref Data.lastWaterSimulationTime, Data.lastSimulatedTime + seconds);
+        }
     }
 
     /// <summary>已种植的树木由成长模块统一驱动气候，避免独立模块重复推进时间。</summary>
@@ -273,69 +290,40 @@ public partial class Mod_Grow
             return;
         }
 
-        // 首次识别旧耕地植株时从当前世界时间建立游标，下一次 Tick 再按世界钟推进。
-        if (!Data.isCultivatedCrop && TryAdoptFarmlandAsLegacyCrop())
+        if (!PlantGrowthEnvironment.HasSufficientLight(CurrentSoilCell(), minimumLightIntensity))
+        {
+            SetGrowthStatus(GrowthStatus.NeedsLight);
             return;
-
-        float growthDelta;
-        if (Data.isCultivatedCrop)
-        {
-            if (!TryResolveFarmland(out TileData_Farmland farmlandData))
-            {
-                SetGrowthStatus(GrowthStatus.MissingFarmland);
-                return;
-            }
-
-            farmlandData.NormalizeValues();
-            FarmlandSystem.CommitSoil(farmlandData);
-
-            if (farmlandData.waterValue <= 0f)
-            {
-                SetGrowthStatus(GrowthStatus.NeedsWater);
-                return;
-            }
-
-            if (farmlandData.Fertility <= 0f)
-            {
-                SetGrowthStatus(GrowthStatus.NeedsFertility);
-                return;
-            }
-
-            float farmlandMultiplier = CalculateFarmlandGrowthMultiplier(
-                farmlandData,
-                minimumWaterGrowthMultiplier,
-                minimumFertilityGrowthMultiplier);
-            float weatherMultiplier = historical ? 1f : ResolveWeatherGrowthMultiplier();
-            float difficultyMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
-            growthDelta = CalculateGrowthDelta(
-                Data.GrowSpeed,
-                farmlandMultiplier,
-                weatherMultiplier,
-                difficultyMultiplier,
-                deltaTime);
-
-            if (growthDelta > 0f)
-            {
-                farmlandData.AccumulateWaterConsumption(waterConsumePerSecond * deltaTime);
-                farmlandData.ConsumeFertility(fertilityConsumePerSecond * deltaTime);
-                FarmlandSystem.CommitSoil(farmlandData);
-            }
         }
-        else
+
+        if (!TryResolveFarmland(out TileData_Farmland farmlandData))
         {
-            float weatherMultiplier = historical ? 1f : ResolveWeatherGrowthMultiplier();
-            float difficultyMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
-            growthDelta = CalculateGrowthDelta(
-                Data.GrowSpeed,
-                Mathf.Max(0f, Data.environmentGrowthMultiplier),
-                weatherMultiplier,
-                difficultyMultiplier,
-                deltaTime);
+            SetGrowthStatus(GrowthStatus.MissingFarmland);
+            return;
         }
+        if (farmlandData.waterValue <= 0)
+        {
+            SetGrowthStatus(GrowthStatus.NeedsWater);
+            return;
+        }
+        if (farmlandData.Fertility <= 0f)
+        {
+            SetGrowthStatus(GrowthStatus.NeedsFertility);
+            return;
+        }
+
+        float farmlandMultiplier = CalculateFarmlandGrowthMultiplier(farmlandData,
+            minimumWaterGrowthMultiplier, minimumFertilityGrowthMultiplier);
+        if (!Data.isCultivatedCrop) farmlandMultiplier *= Mathf.Max(0f, Data.environmentGrowthMultiplier);
+        float growthDelta = CalculateGrowthDelta(Data.GrowSpeed, farmlandMultiplier,
+            historical ? 1f : ResolveWeatherGrowthMultiplier(),
+            GameDifficultyService.Current.Production.CropGrowthMultiplier, deltaTime);
 
         if (growthDelta <= 0f)
             return;
 
+        farmlandData.ConsumeFertility(fertilityConsumePerSecond * deltaTime);
+        FarmlandSystem.CommitSoil(farmlandData, allowNaturalSoil: !Data.isCultivatedCrop);
         Data.GrowProgress = Mathf.Min(Data.MaxGrowProgress, Data.GrowProgress + growthDelta);
         SetGrowthStatus(GrowthStatus.Growing);
         UpdateVisualAndBehavior();
@@ -377,41 +365,13 @@ public partial class Mod_Grow
         return waterMultiplier * fertilityMultiplier;
     }
 
-    private bool TryAdoptFarmlandAsLegacyCrop()
-    {
-        if (Data.isCultivatedCrop || item == null || legacyFarmlandProbeComplete)
-            return Data.isCultivatedCrop;
+    private Vector2Int CurrentSoilCell() => Data.isCultivatedCrop ? Data.plantedTilePos : Vector2Int.FloorToInt(item.transform.position);
 
-        Vector2Int tilePos = new Vector2Int(
-            Mathf.FloorToInt(item.transform.position.x),
-            Mathf.FloorToInt(item.transform.position.y));
-        Data.plantedTilePos = tilePos;
-
-        bool hasSoil = FarmlandSystem.TryReadSoil(tilePos, out _, out RuntimeTerrainTileSample sample);
-        if (sample.Terrain == null)
-            return false;
-
-        // 已有耕地暂时被遮挡时继续等待，普通土地确认一次后不再重复查地形。
-        if (!hasSoil && (FarmlandSystem.IsFarmland(sample.Cell) ||
-                         FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer) > 0f))
-            return false;
-
-        legacyFarmlandProbeComplete = true;
-        if (!hasSoil)
-            return false;
-
-        Data.isCultivatedCrop = true;
-        Data.environmentInitialized = true;
-        Data.environmentGrowthMultiplier = 1f;
-        ConfigureCultivatedClimateDrive();
-        Data.simulationInitialized = TryReadCultivatedWorldClock(out _, out double now);
-        Data.lastSimulatedTime = now;
-        Debug.Log($"[Mod_Grow] 已将旧存档植物迁移为耕地作物，地块={tilePos}", item);
-        return true;
-    }
+    private void AdvanceDailyWater() => PlantGrowthEnvironment.AdvanceWater(CurrentSoilCell(), waterConsumptionMultiplier,
+        !Data.isCultivatedCrop, ref Data.waterSimulationInitialized, ref Data.lastWaterSimulationTime);
 
     private bool TryResolveFarmland(out TileData_Farmland farmlandData) =>
-        FarmlandSystem.TryReadSoil(Data.plantedTilePos, out farmlandData);
+        FarmlandSystem.TryReadSoil(CurrentSoilCell(), out farmlandData, out _, allowNaturalSoil: !Data.isCultivatedCrop);
 
     private float ResolveWeatherGrowthMultiplier()
     {
@@ -454,6 +414,8 @@ public partial class Mod_Grow
             GrowthStatus.MissingFarmland => "耕地已不存在，成长暂停",
             GrowthStatus.NeedsWater => "耕地缺水，成长暂停；雨天或使用肥料可补充水分",
             GrowthStatus.NeedsFertility => "耕地缺肥，成长暂停；请使用肥料",
+            GrowthStatus.NeedsLight => "光照不足，成长暂停",
+            GrowthStatus.TemperatureStress => "温度不适，成长暂停",
             GrowthStatus.Mature => "作物已经成熟，可以交互收获",
             GrowthStatus.Harvested => "作物已经完成收获",
             _ => "水分与肥力恢复，作物继续成长"

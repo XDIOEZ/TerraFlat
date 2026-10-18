@@ -292,7 +292,16 @@
       "group": "生存与生产",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/World/Planting/*",
+        "Assets/5_Scripts/5-1_Data/TileData/TileData_Farmland.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/*Growth*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Growth/*",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Core/EntityPlantModules.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/NaturalEntityEcsProfileCompiler.Plants.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/NaturalEntityEcsService.Plants.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/NaturalEntityEcsService.cs",
+        "Assets/StreamingAssets/GameConfig/Items/shells/crops.json",
+        "Assets/StreamingAssets/GameConfig/Items/shells/cactus.json",
+        "Assets/StreamingAssets/GameConfig/Items/shells/resource_nodes.json",
         "Assets/StreamingAssets/GameplayTests/Systems/Agriculture/*"
       ],
       "dependsOn": [

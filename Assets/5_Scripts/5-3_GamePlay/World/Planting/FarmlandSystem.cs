@@ -230,27 +230,27 @@ public static partial class FarmlandSystem
 
     /// <summary>同时返回已加载的地块，供旧作物识别区分“无耕地”和“区块未就绪”。</summary>
     public static bool TryReadSoil(Vector2Int worldCell, out TileData_Farmland soil,
-        out RuntimeTerrainTileSample sample)
+        out RuntimeTerrainTileSample sample, bool allowNaturalSoil = false)
     {
         soil = null;
         sample = default;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null || !manager.TryGetRuntimeTerrainTile(
                 new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out sample) ||
-            !CanUseSoilCell(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
+            !CanUseSoilCell(sample) || (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return false;
         soil = ReadSoilSnapshot(sample);
         if (TryAbsorbNearbyLiquid(sample, soil))
-            CommitSoil(soil);
+            CommitSoil(soil, allowNaturalSoil);
         return true;
     }
 
     /// <summary>成长或施肥完成后提交水肥快照。</summary>
-    public static void CommitSoil(TileData_Farmland soil)
+    public static void CommitSoil(TileData_Farmland soil, bool allowNaturalSoil = false)
     {
         if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
                 new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample) ||
-            !CanUseSoilCell(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
+            !CanUseSoilCell(sample) || (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return;
         soil.NormalizeValues();
         if (Read(sample.Terrain, sample.LocalCell, SourceLayer) <= 0f)

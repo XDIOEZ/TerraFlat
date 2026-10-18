@@ -181,7 +181,7 @@ namespace FlatWorld.NaturalEntities
             else
                 navigationInputRecords.Remove(record);
 
-            if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) && plant.Cultivated != 0)
+            if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant))
                 soilInputRecords.Add(record);
             else
                 soilInputRecords.Remove(record);
@@ -691,6 +691,8 @@ namespace FlatWorld.NaturalEntities
                 result.environmentGrowthMultiplier = 1f;
                 result.simulationInitialized = crop.simulationInitialized;
                 result.lastSimulatedTime = crop.lastSimulatedTime;
+                result.waterSimulationInitialized = crop.waterSimulationInitialized;
+                result.lastWaterSimulationTime = crop.lastWaterSimulationTime;
                 result.plantedTilePos = crop.plantedTilePosition;
                 return result;
             }
@@ -708,6 +710,8 @@ namespace FlatWorld.NaturalEntities
                     result.environmentGrowthMultiplier = saved.environmentGrowthMultiplier;
                     result.simulationInitialized = saved.simulationInitialized;
                     result.lastSimulatedTime = saved.lastSimulatedTime;
+                    result.waterSimulationInitialized = saved.waterSimulationInitialized;
+                    result.lastWaterSimulationTime = saved.lastWaterSimulationTime;
                     result.plantedTilePos = saved.plantedTilePos;
                 }
             }

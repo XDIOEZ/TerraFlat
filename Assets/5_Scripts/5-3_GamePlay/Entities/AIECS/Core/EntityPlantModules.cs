@@ -8,15 +8,16 @@ namespace FlatWorld.AIECS
 {
     #region 植物与资源模块数据
 
-    public enum EntityPlantGrowthStatus : byte { Growing, MissingSoil, NeedsWater, NeedsFertility, Mature, Harvested, TemperatureStress }
+    public enum EntityPlantGrowthStatus : byte { Growing, MissingSoil, NeedsWater, NeedsFertility, Mature, Harvested, TemperatureStress, NeedsLight }
 
     /// <summary>植物生命周期只保存实例状态，生长与耐候仍使用共享能力组件。</summary>
     public struct EntityPlantLifecycle : IComponentData
     {
         public double LastWorldTime;
+        public double LastWaterWorldTime;
         public int2 SoilCell;
         public float ClimateStress;
-        public byte Initialized, Cultivated, GrowWild, ScaleByStage, Harvested;
+        public byte Initialized, WaterInitialized, Cultivated, GrowWild, ScaleByStage, Harvested;
         public EntityPlantGrowthStatus Status;
     }
 
@@ -26,7 +27,8 @@ namespace FlatWorld.AIECS
         public int Water, MaxWater;
         public float WaterConsumptionRemainder, Fertility, MaxFertility;
         public float MinimumWaterMultiplier, MinimumFertilityMultiplier;
-        public float WaterPerSecond, FertilityPerSecond;
+        public float WaterConsumptionMultiplier, FertilityPerSecond;
+        public float LightIntensity, MinimumLightIntensity;
         public float UsedWater, UsedFertility, AddedWater;
         public byte Available;
     }
@@ -57,6 +59,41 @@ namespace FlatWorld.AIECS
 
     public static class EntityPlantRules
     {
+        public const float DefaultMinimumLightIntensity = 0.2f;
+        public const float BaseWaterPerDay = 2f;
+
+        /// <summary>水量以游戏日为基准，植物差异只通过倍率配置。</summary>
+        public static float WaterRate(float dayLength, float multiplier) =>
+            math.isfinite(dayLength) && dayLength > 0f && math.isfinite(multiplier)
+                ? BaseWaterPerDay * math.max(0f, multiplier) / dayLength : 0f;
+
+        /// <summary>达到最低光照即可生长，完全黑暗始终停长。</summary>
+        public static bool HasSufficientLight(float intensity, float minimum) =>
+            math.isfinite(intensity) && math.isfinite(minimum) && intensity > 0f && intensity >= math.max(0f, minimum);
+
+        /// <summary>水分独立于光照、温度、肥力与成熟状态持续消耗。</summary>
+        public static void ConsumeWater(ref EntityPlantSoil soil, float seconds, float dayLength)
+        {
+            float used = CalculateWaterConsumption(soil.Water, soil.WaterConsumptionRemainder,
+                WaterRate(dayLength, soil.WaterConsumptionMultiplier), seconds);
+            float pending = soil.WaterConsumptionRemainder + used;
+            int levels = pending >= soil.Water ? soil.Water : math.min(soil.Water, (int)math.floor(pending + 0.00001f));
+            soil.Water -= levels;
+            soil.WaterConsumptionRemainder = soil.Water <= 0 ? 0f : math.max(0f, pending - levels);
+            soil.UsedWater += used;
+        }
+
+        /// <summary>耗水按本段世界秒推进，历史气候不会把新植物的耗水游标倒退。</summary>
+        public static void AdvanceWaterClock(ref EntityPlantLifecycle plant, ref EntityPlantSoil soil,
+            double until, float dayLength)
+        {
+            if (plant.WaterInitialized != 0 && until < plant.LastWaterWorldTime) return;
+            float seconds = plant.WaterInitialized != 0 ? (float)(until - plant.LastWaterWorldTime) : 0f;
+            plant.WaterInitialized = 1;
+            plant.LastWaterWorldTime = until;
+            if (soil.Available != 0) ConsumeWater(ref soil, seconds, dayLength);
+        }
+
         /// <summary>冻结输入只允许消费当时存在的水，不能把后续补水算进旧时间片。</summary>
         public static float CalculateWaterConsumption(int water, float remainder, float rate, float seconds) =>
             math.min(math.max(0f, water - remainder), math.max(0f, rate * seconds));
@@ -172,16 +209,22 @@ namespace FlatWorld.AIECS
                 ref EntityGrowth growth, ref AiecsVital vital, ref EntityModuleAppearance appearance)
             {
                 if (vital.Dead != 0 || plant.Harvested != 0) return;
+                soil.UsedWater = soil.UsedFertility = soil.AddedWater = 0f;
+                if (GameTime < plant.LastWaterWorldTime) plant.LastWaterWorldTime = GameTime;
+                bool hasLight = EntityPlantRules.HasSufficientLight(soil.LightIntensity, soil.MinimumLightIntensity);
                 bool hasClimate = Climates.HasComponent(entity);
                 EntityClimate climate = hasClimate ? Climates[entity] : default;
                 EntityWeatherInput localWeather = WeatherInputs.HasComponent(entity)
                     ? WeatherInputs[entity] : new EntityWeatherInput { GrowthMultiplier = 1f };
-                if (hasClimate && climate.EnvironmentReady == 0) return;
+                if (hasClimate && climate.EnvironmentReady == 0)
+                {
+                    EntityPlantRules.AdvanceWaterClock(ref plant, ref soil, GameTime, DayLength);
+                    return;
+                }
                 if (plant.Initialized == 0 || GameTime < plant.LastWorldTime)
                 { plant.Initialized = 1; plant.LastWorldTime = GameTime; }
                 bool historical = GameTime - plant.LastWorldTime > 1d;
                 float before = growth.Progress, oldStress = plant.ClimateStress;
-                soil.UsedWater = soil.UsedFertility = soil.AddedWater = 0f;
                 if (hasClimate) climate.CaughtUp = 0;
                 double maxStep = math.min(30d, DayLength / 96d);
                 for (int step = 0; step < 2048 && GameTime - plant.LastWorldTime > 0.00001d; step++)
@@ -195,27 +238,22 @@ namespace FlatWorld.AIECS
                     float suitability = hasClimate ? EntityPlantRules.AdvanceClimate(ref climate, temperature, seconds, DayLength) : 1f;
                     plant.LastWorldTime += seconds;
                     if (hasClimate && climate.Dead != 0) { vital.Dead = 1; vital.Hp = 0f; break; }
+                    int waterForGrowth = soil.Water;
+                    EntityPlantRules.AdvanceWaterClock(ref plant, ref soil, plant.LastWorldTime, DayLength);
                     if (plant.Cultivated == 0 || growth.Progress >= growth.MaxProgress) continue;
                     if (soil.Available == 0) { plant.Status = EntityPlantGrowthStatus.MissingSoil; continue; }
+                    if (!hasLight) { plant.Status = EntityPlantGrowthStatus.NeedsLight; continue; }
                     if (suitability <= 0f) { plant.Status = EntityPlantGrowthStatus.TemperatureStress; continue; }
-                    if (soil.Water <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsWater; continue; }
+                    if (waterForGrowth <= 0) { plant.Status = EntityPlantGrowthStatus.NeedsWater; continue; }
                     if (soil.Fertility <= 0f) { plant.Status = EntityPlantGrowthStatus.NeedsFertility; continue; }
-                    float multiplier = math.lerp(soil.MinimumWaterMultiplier, 1f, math.saturate((float)soil.Water / math.max(1, soil.MaxWater))) *
+                    float multiplier = math.lerp(soil.MinimumWaterMultiplier, 1f, math.saturate((float)waterForGrowth / math.max(1, soil.MaxWater))) *
                         math.lerp(soil.MinimumFertilityMultiplier, 1f, math.saturate(soil.Fertility / math.max(0.01f, soil.MaxFertility)));
                     float weather = historical ? 1f : localWeather.GrowthMultiplier *
                         (1f + localWeather.RainIntensity * growth.RainGrowthBonus);
                     float increment = seconds * growth.Speed * multiplier * suitability * weather * math.max(0f, Difficulty);
                     if (increment <= 0f) continue;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + increment);
-                    float usedWater = EntityPlantRules.CalculateWaterConsumption(soil.Water,
-                        soil.WaterConsumptionRemainder, soil.WaterPerSecond, seconds);
                     float usedFertility = math.min(soil.Fertility, soil.FertilityPerSecond * seconds);
-                    // Job 使用同一格的耗水进度决定整级扣除，提交时仍合并真实连续消耗。
-                    float pendingWater = soil.WaterConsumptionRemainder + usedWater;
-                    int consumedLevels = pendingWater >= soil.Water ? soil.Water : (int)math.floor(pendingWater);
-                    soil.Water -= consumedLevels;
-                    soil.WaterConsumptionRemainder = soil.Water <= 0 ? 0f : pendingWater - consumedLevels;
-                    soil.UsedWater += usedWater;
                     soil.Fertility -= usedFertility; soil.UsedFertility += usedFertility;
                     plant.Status = EntityPlantGrowthStatus.Growing;
                 }
@@ -229,13 +267,22 @@ namespace FlatWorld.AIECS
                         math.max(0.01f, climate.FatalExposureHours * DayLength / 24f));
                     Climates[entity] = climate;
                 }
-                if (vital.Dead == 0 && caughtUp && plant.Cultivated == 0 && plant.GrowWild != 0)
+                if (vital.Dead == 0 && caughtUp && plant.Cultivated == 0 && plant.GrowWild != 0 &&
+                    hasLight && soil.Available != 0 && soil.Water > 0 && soil.Fertility > 0f)
                 {
                     float suitability = hasClimate ? climate.GrowthMultiplier : 1f;
                     growth.Progress = math.min(growth.MaxProgress, growth.Progress + Delta * growth.Speed *
                         math.max(0f, growth.EnvironmentMultiplier) * suitability * localWeather.GrowthMultiplier *
                         (1f + localWeather.RainIntensity * growth.RainGrowthBonus) * math.max(0f, Difficulty));
+                    if (growth.Progress > before)
+                    {
+                        float used = math.min(soil.Fertility, soil.FertilityPerSecond * Delta);
+                        soil.Fertility -= used; soil.UsedFertility += used;
+                        plant.Status = EntityPlantGrowthStatus.Growing;
+                    }
                 }
+                if (plant.Cultivated == 0 && growth.Progress < growth.MaxProgress && !hasLight)
+                    plant.Status = EntityPlantGrowthStatus.NeedsLight;
                 if (growth.Progress >= growth.MaxProgress) plant.Status = EntityPlantGrowthStatus.Mature;
                 EntityPlantRules.ApplyStage(ref growth, ref appearance, ref vital, plant.ScaleByStage != 0);
                 if ((plant.ScaleByStage == 0 && growth.Progress != before) ||

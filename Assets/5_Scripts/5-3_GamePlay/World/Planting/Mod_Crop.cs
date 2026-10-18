@@ -33,6 +33,8 @@ public partial class CropRuntimeData
 
     public bool simulationInitialized; // 是否已经建立世界时间游标。
     public double lastSimulatedTime; // 最后完成结算的绝对游戏秒。
+    public bool waterSimulationInitialized; // 耗水独立于生长状态。
+    public double lastWaterSimulationTime; // 成熟后仍推进耗水游标。
 }
 
 public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTimePlant, IItemModuleDependencyBinder, INaturalResourceInitializer, INaturalRenewalPolicy
@@ -102,7 +104,10 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
     [Header("耕地消耗")]
     [SerializeField, Min(0f)]
-    private float waterConsumePerSecond = 0.002f;
+    private float waterConsumptionMultiplier = 1f;
+
+    [SerializeField, Range(0f, 1f)]
+    private float minimumLightIntensity = FlatWorld.AIECS.EntityPlantRules.DefaultMinimumLightIntensity;
 
     [SerializeField, Min(0f)]
     private float fertilityConsumePerSecond = 0.00035f;
@@ -222,6 +227,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
             condition.ResetEnvironment();
         Data.simulationInitialized = TryReadWorldClock(out _, out double now);
         Data.lastSimulatedTime = now;
+        Data.waterSimulationInitialized = Data.simulationInitialized;
+        Data.lastWaterSimulationTime = now;
         SetStage(CropStage.Seedling);
         SetGrowthStatus(CropGrowthStatus.Growing, false);
         GrowthChanged?.Invoke(this, 0f);
@@ -276,10 +283,16 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         if (!GameNetwork.HasStateAuthority || Data == null || Data.isHarvested ||
             !TryReadWorldClock(out TimeData clock, out double now))
             return;
+        if (!Data.waterSimulationInitialized)
+        {
+            Data.waterSimulationInitialized = true;
+            Data.lastWaterSimulationTime = now;
+        }
         if (!Data.simulationInitialized || now < Data.lastSimulatedTime)
         {
             Data.lastSimulatedTime = now;
             Data.simulationInitialized = true;
+            if (now < Data.lastWaterSimulationTime) Data.lastWaterSimulationTime = now;
         }
         float previousStress = ClimateStress;
         if (!PlantClimateTimeline.Advance(item, clock, now, ref Data.lastSimulatedTime,
@@ -297,6 +310,17 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
     /// <summary>消费同一段世界时间的耕地资源，温度不适时暂停成长。</summary>
     private void AdvanceGrowth(float deltaTime, float environmentMultiplier, bool historical)
     {
+        try { AdvanceGrowthCore(deltaTime, environmentMultiplier, historical); }
+        finally
+        {
+            Vector2Int cell = Data.isPlanted ? Data.plantedTilePosition : Vector2Int.FloorToInt(item.transform.position);
+            PlantGrowthEnvironment.AdvanceWater(cell, waterConsumptionMultiplier, !Data.isPlanted,
+                ref Data.waterSimulationInitialized, ref Data.lastWaterSimulationTime, Data.lastSimulatedTime + deltaTime);
+        }
+    }
+
+    private void AdvanceGrowthCore(float deltaTime, float environmentMultiplier, bool historical)
+    {
         if (Data == null || !Data.isPlanted || Data.isHarvested || Data.stage == CropStage.Mature)
             return;
 
@@ -313,6 +337,12 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         if (environmentMultiplier <= 0f)
         {
             SetGrowthStatus(CropGrowthStatus.TemperatureStress);
+            return;
+        }
+
+        if (!PlantGrowthEnvironment.HasSufficientLight(Data.plantedTilePosition, minimumLightIntensity))
+        {
+            SetGrowthStatus(CropGrowthStatus.NeedsLight);
             return;
         }
 
@@ -338,7 +368,6 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         if (growthDelta <= 0f)
             return;
 
-        farmlandData.AccumulateWaterConsumption(waterConsumePerSecond * safeDeltaTime);
         farmlandData.ConsumeFertility(fertilityConsumePerSecond * safeDeltaTime);
         FarmlandSystem.CommitSoil(farmlandData);
         SetGrowthStatus(CropGrowthStatus.Growing);
@@ -477,6 +506,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
             CropGrowthStatus.Mature => "作物已经成熟，可以交互收获",
             CropGrowthStatus.Harvested => "作物已经完成收获",
             CropGrowthStatus.TemperatureStress => "温度不适，成长暂停，持续受害会枯萎",
+            CropGrowthStatus.NeedsLight => "光照不足，成长暂停",
             _ => "成长条件恢复，作物继续成长"
         };
         Debug.Log($"[Mod_Crop] {message}，作物={item?.itemData?.IDName}，地块={Data.plantedTilePosition}", item);
@@ -489,7 +519,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
         minimumWaterGrowthMultiplier = Mathf.Clamp01(minimumWaterGrowthMultiplier);
         minimumFertilityGrowthMultiplier = Mathf.Clamp01(minimumFertilityGrowthMultiplier);
-        waterConsumePerSecond = Mathf.Max(0f, waterConsumePerSecond);
+        waterConsumptionMultiplier = Mathf.Max(0f, waterConsumptionMultiplier);
+        minimumLightIntensity = Mathf.Clamp01(minimumLightIntensity);
         fertilityConsumePerSecond = Mathf.Max(0f, fertilityConsumePerSecond);
         rainGrowthBonus = Mathf.Clamp01(rainGrowthBonus);
     }
@@ -499,7 +530,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         growthDurationSeconds = Mathf.Max(0.01f, growthDurationSeconds);
         minimumWaterGrowthMultiplier = Mathf.Clamp01(minimumWaterGrowthMultiplier);
         minimumFertilityGrowthMultiplier = Mathf.Clamp01(minimumFertilityGrowthMultiplier);
-        waterConsumePerSecond = Mathf.Max(0f, waterConsumePerSecond);
+        waterConsumptionMultiplier = Mathf.Max(0f, waterConsumptionMultiplier);
+        minimumLightIntensity = Mathf.Clamp01(minimumLightIntensity);
         fertilityConsumePerSecond = Mathf.Max(0f, fertilityConsumePerSecond);
         rainGrowthBonus = Mathf.Clamp01(rainGrowthBonus);
     }

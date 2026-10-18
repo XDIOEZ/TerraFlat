@@ -26,6 +26,8 @@ public partial class GrowData
 
     public bool simulationInitialized; // 耕地作物是否建立世界时间游标。
     public double lastSimulatedTime; // 耕地作物最后结算的绝对游戏秒。
+    public bool waterSimulationInitialized; // 耗水时钟独立于成长与气候。
+    public double lastWaterSimulationTime; // 成熟后仍保存耗水游标。
 }
 
 
@@ -201,11 +203,13 @@ private void UpdateVisualAndBehavior()
     /// <summary>耕地作物按世界时钟补算；自然树木保留原有成长节奏。</summary>
     public override void ModUpdate(float deltaTime)
     {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || Data == null || Data.isHarvested) return;
         if (Data.isCultivatedCrop)
         {
             CatchUpToWorldTime();
             return;
         }
+        AdvanceDailyWater();
         float multiplier = 1f;
         foreach (IPlantEnvironmentCondition condition in environmentConditions)
             if (condition is IPlantGrowthConstraint constraint)

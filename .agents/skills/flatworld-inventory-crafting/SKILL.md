@@ -86,5 +86,6 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 耕地 `waterValue` 为 `int 0～10`，一份世界水只增加一级；`WorldLiquidSystem.SurfaceLiquidAdded` 只通知倒入本格吸水，不遍历全部耕地，作物读取时保留九宫格灌溉。天气和作物速率使用级/秒，不足一份的补水/耗水进度独立随农业差量保存，所有消费源共用地块进度；湿润度比例计算必须显式转浮点。
 - 播种作物句柄归 ChunkAgricultureRenderer，快照进 AgricultureCells；天然资源使用生态 GUID/差量。解绑不表示死亡；一次收获先生成全部产物再删除来源，持续采果只扣库存，植株/产物保持不同 ID。
 - 植物保存绝对游戏秒，通过 IWorldTimePlant/PlantClimateTimeline 补算冻结历史；成长器统一结算气候、水肥、天气与难度倍率，游标未追上不收获。雨雪由 WorldWeatherSurfaceSystem 供水，植物不重复加雨。
+- 植物成长读所在地 `LightLayerMgr` 实时光照，`minimumLightIntensity` 默认 0.2，达到门槛才生长；ECS 与 GO 共用 `EntityPlantRules`。耗水有独立世界秒游标，全天及成熟后持续按 `2 * waterConsumptionMultiplier / DayLength` 扣水，肥力仅成长时消费；野生植物经 `allowNaturalSoil` 读写原地表水肥，不改成耕地、不自动变成栽培作物。当前只控制成长，不交换气体。
 - seedling/growing/mature 三图由 normalizedGrowth 派生，不增加存档阶段。BodyClip 材质的 BodyMinV/BodyMaxV 是本地 Y，主体与描边保留 DisableBatching。伴生物通过 HostGuid 和 INaturalCompanionHostCondition 门禁生成。
 - BerryCrop 使用资源库存/日历生产，DayLength 决定批次，满库存仍走时钟；稳定 GUID 固定产量区间，一次采集一份，不套额外掉落倍率。WildCrop_Base 提供野生成熟初态/受击能力，具体死亡掉落仍由 lootTableId 声明。
