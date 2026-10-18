@@ -949,27 +949,36 @@ public static partial class MachineWorld
                liquid.WorldWater != null;
     }
 
-    /// <summary>机械风箱只增强出风口正对的相邻炉体；20 RPM 对应满增温，多个风箱取最高倍率。</summary>
+    /// <summary>温度只取最强鼓风，材料加热效率由各个对准炉体的风箱分别贡献。</summary>
     public static float GetBellowsBoost(Vector3 position)
+        => GetBellowsAirflow(position).Strength;
+
+    public static MachineAirflowEffect GetBellowsAirflow(Vector3 position)
     {
-        if (graph == null) return 0;
+        if (graph == null) return default;
         RebuildGraphsIfDirty();
-        Vector2Int cell = graph.NormalizeCell(new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
-        float boost = 0;
+        return SampleBellowsAirflow(graph, new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
+    }
+
+    internal static MachineAirflowEffect SampleBellowsAirflow(MechanicalNetworkGraph sourceGraph, Vector2Int cell)
+    {
+        cell = sourceGraph.NormalizeCell(cell);
+        MachineAirflowEffect effect = default;
         foreach (var offset in MechanicalNetworkGraph.Directions)
         {
-            var node = graph.At(cell + offset, 0);
+            var node = sourceGraph.At(cell + offset, 0);
             if (node?.Definition.Kind != "bellows" || node.Network?.Active != true)
                 continue;
 
-            Vector2Int outlet = graph.NormalizeCell(
+            Vector2Int outlet = sourceGraph.NormalizeCell(
                 node.Cell + MechanicalNetworkGraph.Directions[node.RotationQuarterTurns & 3]);
             if (outlet != cell)
                 continue;
 
-            boost = Mathf.Max(boost, Mathf.Clamp01(GetWorkEfficiency(node)));
+            effect = effect.Combine(MachineAirflowEffect.FromSource(GetWorkEfficiency(node),
+                node.Definition.AirflowHeatingRateBonusPercent));
         }
-        return boost;
+        return effect;
     }
     #endregion
 

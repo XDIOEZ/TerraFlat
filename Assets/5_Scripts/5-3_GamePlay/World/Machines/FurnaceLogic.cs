@@ -15,6 +15,7 @@ public partial class FurnaceRuntimeState
     public FuelData Fuel = new();
     public FuelAbsorptionState Absorption = new();
     public bool AwaitingIgnition;
+    public float HeatingRatePercent; // 权威供热效率随炉体状态同步，面板与实际材料受热共用此值。
     #endregion
 }
 
@@ -29,7 +30,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public Inventory Output { get; }
     public Inventory FuelInventory { get; }
     public bool AcceptsAirflow { get; }
-    public float HeatingRatePercent { get; }
+    public float HeatingRatePercent => State.HeatingRatePercent;
     public float FuelRatio => Fuel.Fuel.y > 0f ? Mathf.Clamp01(Fuel.Fuel.x / Fuel.Fuel.y) : 0f;
     public override bool IsBurning => Data.IsSmelting && !State.AwaitingIgnition && Fuel.Fuel.x > .01f;
     public override float TickInterval => .1f;
@@ -39,6 +40,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public override string Status => FurnaceTemperatureFeedback.GetDisplayedTemperature(Data.Temperature);
 
     private readonly float burnSpeed;
+    private readonly float baseHeatingRatePercent;
     private readonly float fuelAbsorptionSeconds;
     private readonly bool absorbDroppedFuel;
     private readonly Predicate<Vector2> fuelCellFilter;
@@ -81,9 +83,10 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         // x 保存真实燃值，可高于 y；y 只作为面板显示容量和自动补充阈值。
         Fuel.Fuel = new Vector2(Mathf.Max(0f, Fuel.Fuel.x), configuredFuel.Fuel.y);
         burnSpeed = fuelConfig.Value("burnSpeedMultiplier", fuelAuthoring.burnSpeedMultiplier);
-        HeatingRatePercent = config.Value("heatingRatePercent", authoring.heatingRatePercent);
-        if (!MachineDefinition.NonNegative(HeatingRatePercent))
+        baseHeatingRatePercent = config.Value("heatingRatePercent", authoring.heatingRatePercent);
+        if (!MachineDefinition.NonNegative(baseHeatingRatePercent))
             throw new InvalidOperationException("材料升温系数百分比必须为有限非负数。");
+        if (GameNetwork.HasStateAuthority) State.HeatingRatePercent = baseHeatingRatePercent;
         fuelAbsorptionSeconds = config.Value("fuelAbsorptionSeconds", authoring.fuelAbsorptionSeconds);
         if (!MachineDefinition.Positive(fuelAbsorptionSeconds))
             throw new InvalidOperationException("燃料吸收时长必须大于零。");
@@ -421,7 +424,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         float fuelUnits = Mathf.Min(Fuel.Fuel.x, Mathf.Max(0f, seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier));
         MachineWorld.SupplyCombustionSupport(this, fuelUnits, seconds);
         bool hasMaterials = HasMaterials(Input) || HasMaterials(Output);
-        float airflow = AcceptsAirflow ? Entity.Airflow : 0f;
+        float airflow = AcceptsAirflow ? Entity.Airflow.Strength : 0f;
         float maximum = Mathf.Max(1f, CalculateMaximumTemperature(airflow));
         Data.Temperature = Mathf.Min(maximum, Data.Temperature + Data.TemperatureUpSpeed *
             (1f + airflow) * (hasMaterials ? 1f : 2f) * seconds);
@@ -429,8 +432,11 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     }
 
     private void TransferMaterialHeat(float seconds)
-        => FurnaceMaterialHeating.Process(Input, Output, Data.Temperature, seconds, HeatingRatePercent / 100f,
+    {
+        State.HeatingRatePercent = Entity.Airflow.GetHeatingRatePercent(baseHeatingRatePercent, AcceptsAirflow);
+        FurnaceMaterialHeating.Process(Input, Output, Data.Temperature, seconds, HeatingRatePercent / 100f,
             productionActor, FurnaceMaterialHeating.SampleInitialMaterialTemperature(Entity));
+    }
 
     private static bool HasMaterials(Inventory inventory)
     {

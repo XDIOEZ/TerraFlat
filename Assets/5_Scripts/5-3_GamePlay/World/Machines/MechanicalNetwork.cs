@@ -9,6 +9,33 @@ public enum ElectricalConversionMode { Idle, Motor, Generator }
 // 转向统一以世界 XY 平面观察：正转为逆时针，反转为顺时针，与放置朝向和供能入口无关。
 public enum MechanicalRotationDirection { Reverse = -1, Stopped = 0, Forward = 1 }
 
+/// <summary>鼓风温度效果取最高风量，材料加热效率按来源累加百分点。</summary>
+public readonly struct MachineAirflowEffect
+{
+    #region 鼓风效果合并
+    public float Strength { get; }
+    public float HeatingRateBonusPercent { get; }
+
+    private MachineAirflowEffect(float strength, float heatingRateBonusPercent)
+    { Strength = strength; HeatingRateBonusPercent = heatingRateBonusPercent; }
+
+    public static MachineAirflowEffect FromSource(float strength, float maximumHeatingRateBonusPercent)
+    {
+        if (!float.IsFinite(strength) || strength < 0f ||
+            !float.IsFinite(maximumHeatingRateBonusPercent) || maximumHeatingRateBonusPercent < 0f)
+            return default;
+        float supplied = Mathf.Clamp01(strength);
+        return new MachineAirflowEffect(supplied, supplied * maximumHeatingRateBonusPercent);
+    }
+
+    public MachineAirflowEffect Combine(MachineAirflowEffect other)
+        => new(Mathf.Max(Strength, other.Strength), HeatingRateBonusPercent + other.HeatingRateBonusPercent);
+
+    public float GetHeatingRatePercent(float baseRatePercent, bool acceptsAirflow)
+        => baseRatePercent + (acceptsAirflow ? HeatingRateBonusPercent : 0f);
+    #endregion
+}
+
 /// <summary>机械网络的轻量拓扑节点。冷状态只保留端口信息和物品快照，活动状态才持有加工器与可变运行数据。</summary>
 public sealed partial class MachineEntity
 {
@@ -25,7 +52,7 @@ public sealed partial class MachineEntity
     public float AwaySeconds;
     public float LogicElapsed;
     public BoundsInt SimulationBounds;
-    public float Airflow; // 本轮环境输入，不保存第二份机械网络状态。
+    public MachineAirflowEffect Airflow; // 本轮环境输入，不保存第二份机械网络状态。
     public Vector3 Position => FlatWorld.Spaceflight.SpaceSession.Current?.ProjectMachinePosition(this) ?? Snapshot.transform.position;
     public Mod_MechanicalNode View;
     public int RotationQuarterTurns; // 已安装机械节点的逆时针九十度步数。

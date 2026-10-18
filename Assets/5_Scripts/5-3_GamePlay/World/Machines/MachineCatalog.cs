@@ -215,6 +215,7 @@ public sealed class MachineDefinition
     public float Rpm = 20f;
     public float RequiredRpm = 20f; // 用力器达到 100% 工作效率所需的转速。
     public float TorqueLoad;
+    public float AirflowHeatingRateBonusPercent; // 额定风量给炉内材料增加的加热效率百分点。
     public float ManualWorkSecondsPerPress; // 面板一次手动推动贡献的加工时间；0 表示不开放手动推进。
     public float ManualDriveTorque; // 手推时向机械网络输出的扭矩；0 表示不能手推供能。
     public float ManualDriveRpm; // 手推时的低速转速，单位 RPM。
@@ -284,6 +285,7 @@ public sealed class MachineDefinition
         if (string.IsNullOrWhiteSpace(Id) || (Ports != "axis" && Ports != "all" && Ports != "none") ||
             (PortMode != "auto" && PortMode != "input" && PortMode != "output" && PortMode != "relay") ||
             !NonNegative(Torque) || !Positive(Rpm) || !Positive(RequiredRpm) || !NonNegative(TorqueLoad) ||
+            !NonNegative(AirflowHeatingRateBonusPercent) ||
             (SourceRotationDirection != 1 && SourceRotationDirection != -1) ||
             (Source == "water" && !Positive(SourceRadius)) ||
             !Positive(PlayerMoveSpeedMultiplier) || PlayerMoveSpeedMultiplier > 1f || !NonNegative(ManualWorkSecondsPerPress) ||

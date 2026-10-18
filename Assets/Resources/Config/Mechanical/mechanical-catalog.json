@@ -113,7 +113,8 @@
         "left"
       ],
       "RequiredRpm": 20,
-      "TorqueLoad": 10
+      "TorqueLoad": 10,
+      "AirflowHeatingRateBonusPercent": 10
     },
     {
       "Id": "Sawmill",

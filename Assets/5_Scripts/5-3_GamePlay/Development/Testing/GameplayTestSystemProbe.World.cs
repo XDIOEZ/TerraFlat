@@ -46,6 +46,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
+        operations.Add("mechanical/bellows_effects", WorldBellowsEffects);
         operations.Add("electrical/battery_commit", WorldElectricalBattery);
         operations.Add("electrical/supply_limits", WorldElectricalLimits);
         operations.Add("electrical/unlimited_supply", WorldElectricalUnlimitedSupply);
@@ -1009,6 +1010,73 @@ public static partial class GameplayTestSystemProbe
     }
     private static void WorldSolveMechanical(MechanicalNetwork network) => MechanicalNetworkGraph.Solve(network,
         node => node.Definition.Torque > 0f ? 1f : 0f, node => node.Definition.Rpm * node.Definition.SourceRotationDirection, 60f);
+
+    // 独立拓扑只准备方向与转速，鼓风合并和材料受热均调用正式入口。
+    private static JObject WorldBellowsEffects(JObject args)
+    {
+        MachineEntity Bellows(int id, Vector2Int cell, int rotation)
+        {
+            MachineEntity node = WorldMachineNode(id, cell.x);
+            node.Cell = cell;
+            node.RotationQuarterTurns = rotation;
+            node.Definition.Kind = "bellows";
+            node.Definition.RequiredRpm = 20f;
+            node.Definition.AirflowHeatingRateBonusPercent = 10f;
+            return node;
+        }
+        var first = Bellows(1, Vector2Int.left, 0);
+        var second = Bellows(2, Vector2Int.down, 1);
+        var graph = WorldMechanicalGraph(first, second);
+        foreach (MechanicalNetwork network in graph.Networks) network.Active = true;
+        JObject Sample()
+        {
+            MachineAirflowEffect effect = MachineWorld.SampleBellowsAirflow(graph, Vector2Int.zero);
+            float rate = effect.GetHeatingRatePercent(50f, true);
+            var material = new Data_GeneralItem
+            {
+                IDName = "system-probe:bellows-heated-material",
+                Stack = new ItemStack { Amount = 1f },
+                MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = 500f }
+            };
+            ItemMatterRuntime.Advance(material, 501f, 1f, 1f, heatingRateMultiplier: rate / 100f);
+            return new JObject { ["strength"] = effect.Strength, ["rate"] = rate,
+                ["materialTemperature"] = material.MatterState.TemperatureCelsius };
+        }
+        var result = new JObject { ["none"] = Sample() };
+        first.Rpm = 20f;
+        result["single"] = Sample();
+        second.Rpm = 20f;
+        result["multiple"] = Sample();
+        second.Rpm = 10f;
+        result["partial"] = Sample();
+        second.Rpm = -10f;
+        result["reversed"] = Sample();
+        second.Rpm = 40f;
+        result["overspeed"] = Sample();
+        second.Rpm = 0f;
+        result["stopped"] = Sample();
+        second.Rpm = 20f;
+        second.RotationQuarterTurns = 3;
+        result["misdirected"] = Sample();
+        second.RotationQuarterTurns = 1;
+        second.Network.Active = false;
+        result["inactive"] = Sample();
+        second.Network.Active = true;
+        MachineAirflowEffect supplied = MachineWorld.SampleBellowsAirflow(graph, Vector2Int.zero);
+        result["rejectedRate"] = supplied.GetHeatingRatePercent(50f, false);
+        result["otherBaseRate"] = supplied.GetHeatingRatePercent(100f, true);
+        MachineAirflowEffect combined = supplied.Combine(MachineAirflowEffect.FromSource(.5f, 10f));
+        result["combined"] = new JObject { ["strength"] = combined.Strength,
+            ["rate"] = combined.GetHeatingRatePercent(50f, true) };
+        graph.Rebuild(Array.Empty<MachineEntity>());
+        result["cleared"] = Sample();
+        var catalog = JObject.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(
+            Application.dataPath, "Resources/Config/Mechanical/mechanical-catalog.json")));
+        foreach (JObject node in (JArray)catalog["Nodes"])
+            if (node.Value<string>("Id") == "MechanicalBellows")
+                result["configuredBonus"] = node["AirflowHeatingRateBonusPercent"];
+        return result;
+    }
 
     private static JObject WorldMechanicalLoads(JObject args)
     {

@@ -65,7 +65,7 @@ public static partial class MachineWorld
     #endregion
 
     #region 设施状态与环境
-    private static readonly Dictionary<string, Func<MachineEntity, float>> airflowProviders = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Func<MachineEntity, MachineAirflowEffect>> airflowProviders = new(StringComparer.Ordinal);
     public static event Func<int, string, string, bool> RemoteOperationRequested;
 
     /// <summary>客户端仅发送操作意图，不能通过面板直接改写机器状态。</summary>
@@ -233,18 +233,15 @@ public static partial class MachineWorld
 
     /// <summary>鼓风是设施环境输入；炉体不知道齿轮、水车或网络内部结构。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static float SampleAirflow(MachineEntity target)
+    public static MachineAirflowEffect SampleAirflow(MachineEntity target)
     {
-        float value = GetBellowsBoost(target.Position);
+        MachineAirflowEffect value = GetBellowsAirflow(target.Position);
         foreach (var provider in airflowProviders.Values)
-        {
-            float supplied = provider(target);
-            if (MachineDefinition.NonNegative(supplied)) value = Mathf.Max(value, supplied);
-        }
-        return Mathf.Clamp01(value);
+            value = value.Combine(provider(target));
+        return value;
     }
 
-    public static IDisposable RegisterAirflow(string id, Func<MachineEntity, float> provider)
+    public static IDisposable RegisterAirflow(string id, Func<MachineEntity, MachineAirflowEffect> provider)
     {
         if (string.IsNullOrWhiteSpace(id) || provider == null) throw new ArgumentException("鼓风来源注册无效。");
         if (airflowProviders.ContainsKey(id)) throw new InvalidOperationException("鼓风来源已注册：" + id);
@@ -255,8 +252,8 @@ public static partial class MachineWorld
     private sealed class AirflowLease : IDisposable
     {
         private string id;
-        private readonly Func<MachineEntity, float> provider;
-        public AirflowLease(string id, Func<MachineEntity, float> provider) { this.id = id; this.provider = provider; }
+        private readonly Func<MachineEntity, MachineAirflowEffect> provider;
+        public AirflowLease(string id, Func<MachineEntity, MachineAirflowEffect> provider) { this.id = id; this.provider = provider; }
         public void Dispose()
         {
             if (id != null && airflowProviders.TryGetValue(id, out var active) && active == provider) airflowProviders.Remove(id);
