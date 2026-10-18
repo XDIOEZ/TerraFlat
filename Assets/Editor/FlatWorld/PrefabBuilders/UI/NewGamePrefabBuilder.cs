@@ -67,7 +67,6 @@ public static class NewGamePrefabBuilder
         {
             "世界设置",
             "返回名称设置",
-            "可留空，自动生成名称",
             "选择 0 - 20 级挑战强度",
             "规则修改",
             "相对于难度 0",
@@ -228,11 +227,11 @@ public static class NewGamePrefabBuilder
         TMP_Text heading = CreateText("身份与存档标题", panel.transform, "身份与存档", font, 34f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(40f, -28f), new Vector2(ContentInnerWidth, 44f), new Vector2(0f, 1f));
 
-        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "可留空，自动生成名称", new Vector2(40f, -96f), ContentInnerWidth);
-        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "可选，例如：旅人", string.Empty, new Vector2(40f, -140f), new Vector2(ContentInnerWidth, 104f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", new Vector2(40f, -96f), ContentInnerWidth);
+        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, string.Empty, string.Empty, new Vector2(40f, -140f), new Vector2(ContentInnerWidth, 104f), TMP_InputField.ContentType.Standard);
 
-        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "可留空，自动生成名称", new Vector2(40f, -270f), ContentInnerWidth);
-        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "可选，例如：篝火以北", string.Empty, new Vector2(40f, -314f), new Vector2(ContentInnerWidth, 104f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", new Vector2(40f, -270f), ContentInnerWidth);
+        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, string.Empty, string.Empty, new Vector2(40f, -314f), new Vector2(ContentInnerWidth, 104f), TMP_InputField.ContentType.Standard);
     }
 
     private static void BuildWorldSettings(Transform card, TMP_FontAsset font)
@@ -855,12 +854,11 @@ public static class NewGamePrefabBuilder
         return toggle;
     }
 
-    private static void CreateLabel(Transform parent, TMP_FontAsset font, string name, string title, string subtitle, Vector2 position, float width)
+    private static void CreateLabel(Transform parent, TMP_FontAsset font, string name, string title, Vector2 position, float width)
     {
+        // 名称区域只显示字段名，不再生成重复说明。
         TMP_Text titleText = CreateText(name, parent, title, font, 24f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(titleText.rectTransform, position, new Vector2(width, 30f), new Vector2(0f, 1f));
-        TMP_Text subtitleText = CreateText(name + "_说明", parent, subtitle, font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
-        SetRect(subtitleText.rectTransform, position, new Vector2(width, 30f), new Vector2(0f, 1f));
     }
 
     private static void CreateCompactLabel(Transform parent, TMP_FontAsset font, string name, string title, string subtitle, Vector2 position, float width)
