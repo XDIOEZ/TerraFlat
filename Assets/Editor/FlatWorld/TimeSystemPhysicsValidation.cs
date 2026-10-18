@@ -10,7 +10,7 @@ public static class TimeSystemPhysicsValidation
 
     private static int checks;
 
-    [MenuItem("FlatWorld/诊断/验证星球物理日历")]
+    [MenuItem("FlatWorld/其他工具/诊断/验证星球物理日历")]
     public static void RunMenu() => Debug.Log(Run());
 
     public static string Run()

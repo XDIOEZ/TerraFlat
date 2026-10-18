@@ -23,7 +23,7 @@ namespace FlatWorld.Localization.Editor
         private const string EnglishItemNamesPath = "Assets/Localization/ItemNames.en.json";
 
         /// <summary>只更新物品名称，避免全量同步改动无关的 UI 文本和 Prefab。</summary>
-        [MenuItem("FlatWorld/Localization/Sync Item Names")]
+        [MenuItem("FlatWorld/其他工具/Localization/Sync Item Names")]
         public static void SyncItemNames()
         {
             StringTableCollection collection = LocalizationEditorSettings.GetStringTableCollection(

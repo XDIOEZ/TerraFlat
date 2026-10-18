@@ -18,7 +18,7 @@ namespace FlatWorld.AIECS.Editor
     {
         #region 导出入口
         /// <summary>从当前正式内容导出动画、能力清单和独立原型场景；保留旧导出供对照。</summary>
-        [MenuItem("FlatWorld/AIECS/P1 生成渲染原型资源和场景")]
+        [MenuItem("FlatWorld/其他工具/AIECS/P1 生成渲染原型资源和场景")]
         public static void CreateArtifacts()
         {
             AIECSCatalogAudit.RequireEditMode();

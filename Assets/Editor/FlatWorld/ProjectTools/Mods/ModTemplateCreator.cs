@@ -9,7 +9,7 @@ public static class ModTemplateCreator
 {
     #region 菜单
 
-    [MenuItem("FlatWorld/MOD/创建示例 MOD")]
+    [MenuItem("FlatWorld/其他工具/MOD/创建示例 MOD")]
     private static void CreateExampleMod()
     {
         string root = Path.GetFullPath(Path.Combine("Assets", "FlatWorldMods", "example.flatworld.mod"));
@@ -38,7 +38,7 @@ public static class ModTemplateCreator
         Debug.Log($"[MOD] 示例作者工程已创建：{root}。请使用“创作与打包工具”构建安装。");
     }
 
-    [MenuItem("FlatWorld/MOD/打开 MOD 目录")]
+    [MenuItem("FlatWorld/其他工具/MOD/打开 MOD 目录")]
     private static void OpenModsFolder()
     {
         string root = Path.Combine(Application.persistentDataPath, "Mods");

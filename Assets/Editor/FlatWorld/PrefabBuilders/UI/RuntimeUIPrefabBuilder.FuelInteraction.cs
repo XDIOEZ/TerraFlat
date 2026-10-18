@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public static partial class RuntimeUIPrefabBuilder
 {
     /// <summary>重建通用燃料交互面板；正式运行时只实例化该 Prefab。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Fuel Interaction UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Fuel Interaction UI")]
     public static void RebuildFuelInteractionUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

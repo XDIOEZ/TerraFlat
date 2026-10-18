@@ -15,7 +15,7 @@ public static partial class RuntimeUIPrefabBuilder
     #region 公共控件回归验证
 
     /// <summary>验证正式资产的嵌套关系、外观继承和音量手柄，失败时输出具体资产与节点。</summary>
-    [MenuItem("FlatWorld/UI/Shared Controls/Validate Prefabs")]
+    [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Validate Prefabs")]
     public static void ValidateSharedControlPrefabs()
     {
         RequireSharedUI(!EditorApplication.isPlayingOrWillChangePlaymode, "资产验证必须在编辑模式执行");
@@ -164,7 +164,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>在已经打开的真实音量页测试 UI 到 Provider 的写入与百分比；始终恢复玩家原音量。</summary>
-    [MenuItem("FlatWorld/UI/Shared Controls/Validate Runtime Audio")]
+    [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Validate Runtime Audio")]
     public static void ValidateSharedRuntimeAudio()
     {
         RequireSharedUI(EditorApplication.isPlaying, "运行时音量验证必须在 Play Mode 执行");

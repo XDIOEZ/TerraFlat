@@ -7,7 +7,7 @@ public static partial class RuntimeUIPrefabBuilder
 {
     #region 医疗专属面板
 
-    [MenuItem("FlatWorld/UI/Rebuild Body Part Treatment UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Body Part Treatment UI")]
     public static void RebuildBodyPartTreatmentUI()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

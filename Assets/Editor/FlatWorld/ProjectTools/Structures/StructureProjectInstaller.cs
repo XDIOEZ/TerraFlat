@@ -16,7 +16,7 @@ public static class StructureProjectInstaller
         EditorApplication.delayCall += InstallOncePerEditorSession;
     }
 
-    [MenuItem("FlatWorld/遗迹编辑器/安装或修复项目接入")]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/安装或修复项目接入")]
     public static void Install()
     {
         StructureCatalogSO catalog = EnsureDefaultCatalog();
@@ -26,26 +26,26 @@ public static class StructureProjectInstaller
         Debug.Log("[遗迹系统] 项目接入检查完成");
     }
 
-    [MenuItem("FlatWorld/遗迹编辑器/测试/启用单点强制生成")]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/启用单点强制生成")]
     private static void EnableTestMode()
     {
         SetTestMode(true);
     }
 
-    [MenuItem("FlatWorld/遗迹编辑器/测试/关闭强制生成")]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/关闭强制生成")]
     private static void DisableTestMode()
     {
         SetTestMode(false);
     }
 
-    [MenuItem("FlatWorld/遗迹编辑器/测试/定位默认Catalog")]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/定位默认Catalog")]
     private static void SelectDefaultCatalog()
     {
         Selection.activeObject = EnsureDefaultCatalog();
         EditorGUIUtility.PingObject(Selection.activeObject);
     }
 
-    [MenuItem("FlatWorld/遗迹编辑器/测试/定位废弃营地定义")]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/定位废弃营地定义")]
     private static void SelectSampleDefinition()
     {
         Selection.activeObject =

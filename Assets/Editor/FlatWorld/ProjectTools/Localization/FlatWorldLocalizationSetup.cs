@@ -1407,7 +1407,7 @@ namespace FlatWorld.Localization.Editor
         #region 菜单入口
 
         /// <summary>创建本地化资源并从本体物品 JSON 补齐名称/说明条目。</summary>
-        [MenuItem("FlatWorld/Localization/Setup Default Tables")]
+        [MenuItem("FlatWorld/其他工具/Localization/Setup Default Tables")]
         public static void SetupDefaultTables()
         {
             EnsureFolder(RootFolder);
@@ -1518,7 +1518,7 @@ namespace FlatWorld.Localization.Editor
         }
 
         /// <summary>仅同步透视开关和触控尺寸界面的新增文案。</summary>
-        [MenuItem("FlatWorld/Localization/Sync UI Occlusion And Touch Size")]
+        [MenuItem("FlatWorld/其他工具/Localization/Sync UI Occlusion And Touch Size")]
         public static void SyncUiOcclusionAndTouchSize()
         {
             SyncRuntimeUiTexts("物品透视", "开启后，遮挡玩家的树木会局部透明。",

@@ -8,7 +8,7 @@ public static partial class AncientStageAssetBuilder
 {
     #region 模块装配
     /// <summary>把本阶段新增能力保存为可加载的正式模块资源。</summary>
-    [MenuItem("FlatWorld/内容配置/装配远古阶段资源")]
+    [MenuItem("FlatWorld/其他工具/内容配置/装配远古阶段资源")]
     public static void Build()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

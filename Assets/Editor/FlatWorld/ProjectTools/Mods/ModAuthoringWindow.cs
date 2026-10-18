@@ -23,7 +23,7 @@ public sealed class ModAuthoringWindow : EditorWindow
 
     #region 菜单
 
-    [MenuItem("FlatWorld/MOD/创作与打包工具")]
+    [MenuItem("FlatWorld/其他工具/MOD/创作与打包工具")]
     private static void OpenWindow()
     {
         GetWindow<ModAuthoringWindow>("MOD 创作工具").minSize = new Vector2(680f, 480f);

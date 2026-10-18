@@ -15,7 +15,7 @@ public static class DurabilityAndCanopyDiagnostics
 
     private static int assertions;
 
-    [MenuItem("FlatWorld/诊断/待办/部位耐久与树果规则检查")]
+    [MenuItem("FlatWorld/其他工具/诊断/待办/部位耐久与树果规则检查")]
     public static void Validate()
     {
         if (Application.isPlaying) throw new InvalidOperationException("请在非 Play 模式运行隔离规则检查。");

@@ -61,7 +61,7 @@ public static class FishingAssetBuilder
     }
 
     #region 定向资源构建
-    [MenuItem("FlatWorld/小鱼与钓具/构建资源")]
+    [MenuItem("FlatWorld/其他工具/小鱼与钓具/构建资源")]
     public static void Build()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

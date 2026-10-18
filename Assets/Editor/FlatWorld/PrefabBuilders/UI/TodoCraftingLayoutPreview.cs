@@ -47,7 +47,7 @@ public static class TodoCraftingLayoutPreview
 
     #region 显式验证入口
 
-    [MenuItem("FlatWorld/诊断/待办/制作面板多尺寸预览与边界检查")]
+    [MenuItem("FlatWorld/其他工具/诊断/待办/制作面板多尺寸预览与边界检查")]
     public static void ValidateAndRender()
     {
         if (Application.isPlaying)

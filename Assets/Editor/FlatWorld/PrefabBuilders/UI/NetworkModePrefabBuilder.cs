@@ -20,7 +20,7 @@ public static class NetworkModePrefabBuilder
 
     #region Prefab 重建入口
 
-    [MenuItem("FlatWorld/UI/Rebuild Network Mode UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Network Mode UI")]
     public static void RebuildNetworkModeInterface()
     {
         TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

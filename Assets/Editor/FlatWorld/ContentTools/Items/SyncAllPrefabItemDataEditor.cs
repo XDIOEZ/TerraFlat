@@ -19,7 +19,7 @@ public static class SyncAllPrefabItemDataEditor
     private const long ModDamageComponentFileId = 1601643870802310424L;
     private const string DamageSenderLayerName = "DamageSender";
 
-    [MenuItem("FlatWorld/同步所有Prefab ItemData（名字+Guid）")]
+    [MenuItem("FlatWorld/其他工具/同步所有Prefab ItemData（名字+Guid）")]
     public static void SyncAllPrefabItemsInAssets()
     {
         Debug.Log("开始同步所有 Prefab ItemData");
@@ -110,7 +110,7 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/批量拆分旧武器为Legacy+新版")]
+    [MenuItem("FlatWorld/其他工具/武器/批量拆分旧武器为Legacy+新版")]
     public static void SplitLegacyWeaponsAndCreateModernCopies()
     {
         if (!AssetDatabase.IsValidFolder(WeaponFolder))
@@ -202,7 +202,7 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/修复Weapon目录新旧标签")]
+    [MenuItem("FlatWorld/其他工具/武器/修复Weapon目录新旧标签")]
     public static void NormalizeWeaponLegacyAndModernTags()
     {
         if (!AssetDatabase.IsValidFolder(WeaponFolder))
@@ -270,7 +270,7 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/迁移为动画驱动（停用冷兵器模组）")]
+    [MenuItem("FlatWorld/其他工具/武器/迁移为动画驱动（停用冷兵器模组）")]
     public static void MigrateWeaponsToAnimationDriven()
     {
         if (!AssetDatabase.IsValidFolder(WeaponFolder))
@@ -319,7 +319,7 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/全量迁移所有武器工具为动画驱动")]
+    [MenuItem("FlatWorld/其他工具/武器/全量迁移所有武器工具为动画驱动")]
     public static void MigrateAllWeaponAndToolPrefabsToAnimationDriven()
     {
         if (!AssetDatabase.IsValidFolder(WeaponRootFolder))
@@ -362,8 +362,8 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/修复伤害模块结构")]
-    [MenuItem("FlatWorld/Weapon/Repair Embedded Damage Modules")]
+    [MenuItem("FlatWorld/其他工具/武器/修复伤害模块结构")]
+    [MenuItem("FlatWorld/其他工具/Weapon/Repair Embedded Damage Modules")]
     public static void RepairAllDamageModulePrefabStructures()
     {
         const string itemRoot = "Assets/2_Prefabs/Gameplay/Items";
@@ -424,7 +424,7 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/迁移这四个Axe为动画驱动")]
+    [MenuItem("FlatWorld/其他工具/武器/迁移这四个Axe为动画驱动")]
     public static void MigrateFourAxePrefabsToAnimationDriven()
     {
         string[] targetPaths =
@@ -473,8 +473,8 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/配置攻击动画分组（挥动/戳击/混合）")]
-    [MenuItem("FlatWorld/Weapon/Configure Attack Profiles")]
+    [MenuItem("FlatWorld/其他工具/武器/配置攻击动画分组（挥动/戳击/混合）")]
+    [MenuItem("FlatWorld/其他工具/Weapon/Configure Attack Profiles")]
     public static void ConfigureWeaponAttackAnimationProfiles()
     {
         if (!AssetDatabase.IsValidFolder(WeaponRootFolder))
@@ -538,8 +538,8 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
-    [MenuItem("FlatWorld/武器/标准化Render结构（Render_1承载Sprite）")]
-    [MenuItem("FlatWorld/Weapon/Normalize Render Hierarchy")]
+    [MenuItem("FlatWorld/其他工具/武器/标准化Render结构（Render_1承载Sprite）")]
+    [MenuItem("FlatWorld/其他工具/Weapon/Normalize Render Hierarchy")]
     public static void NormalizeWeaponRenderHierarchy()
     {
         if (!AssetDatabase.IsValidFolder(WeaponRootFolder))

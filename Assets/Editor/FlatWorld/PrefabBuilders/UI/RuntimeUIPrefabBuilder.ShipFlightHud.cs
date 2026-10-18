@@ -6,7 +6,7 @@ using UnityEngine;
 public static partial class RuntimeUIPrefabBuilder
 {
     #region 飞船起降高度尺
-    [MenuItem("FlatWorld/UI/Rebuild Ship Flight HUD")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Ship Flight HUD")]
     public static void RebuildShipFlightHUD()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

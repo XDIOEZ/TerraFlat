@@ -25,7 +25,7 @@ public static class WaterPlatformAssetBuilder
     #region 资源装配
 
     /// <summary>生成并保存水上平台全部静态资源；允许重复执行，遇到编号冲突直接报错。</summary>
-    [MenuItem("FlatWorld/内容配置/装配水上平台资源")]
+    [MenuItem("FlatWorld/其他工具/内容配置/装配水上平台资源")]
     public static void Build()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

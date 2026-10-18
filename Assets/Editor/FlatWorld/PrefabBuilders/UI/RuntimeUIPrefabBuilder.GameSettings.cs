@@ -9,7 +9,7 @@ public static partial class RuntimeUIPrefabBuilder
     #region 游戏设置分页
 
     /// <summary>定向重建游戏设置页，并保留两个主设置面板的其他内容。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Game Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Game Settings UI")]
     public static void RebuildGameSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public static partial class RuntimeUIPrefabBuilder
 {
     /// <summary>装配可供桌面和触屏共用的通用水容器操作窗口。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Water Vessel UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Water Vessel UI")]
     public static void RebuildWaterVesselUI()
     {
         ClayJarUIArtBuilder.Build();
@@ -119,7 +119,7 @@ public static partial class RuntimeUIPrefabBuilder
     #endregion
 
     /// <summary>只更新已有正式 Prefab 的液体样式，不重建容器外形、布局或用户已配置的引用。</summary>
-    [MenuItem("FlatWorld/UI/Sync Water Vessel Liquid Styles")]
+    [MenuItem("FlatWorld/其他工具/UI/Sync Water Vessel Liquid Styles")]
     public static void SyncWaterVesselLiquidStyles()
     {
         const string path = "Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_WaterVessel.prefab";

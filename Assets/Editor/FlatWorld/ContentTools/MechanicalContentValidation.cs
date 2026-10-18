@@ -12,7 +12,7 @@ using UnityEngine.UI;
 public static class MechanicalContentValidation
 {
     #region 内容与视图验证
-    [MenuItem("FlatWorld/机械扭矩/验证内容与面板")]
+    [MenuItem("FlatWorld/其他工具/机械扭矩/验证内容与面板")]
     public static void ValidateAndRender()
     {
         MechanicalContentBuilder.Build();

@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public static partial class RuntimeUIPrefabBuilder
 {
     #region 太空正式面板和模块资源
-    [MenuItem("FlatWorld/太空/构建飞船与下落选址页面")]
+    [MenuItem("FlatWorld/其他工具/太空/构建飞船与下落选址页面")]
     public static void RebuildSpacePanels()
     {
         if (Application.isPlaying) throw new InvalidOperationException("运行期间不重建太空 Prefab。");

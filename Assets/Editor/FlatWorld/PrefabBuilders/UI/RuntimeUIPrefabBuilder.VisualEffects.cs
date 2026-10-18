@@ -9,7 +9,7 @@ public static partial class RuntimeUIPrefabBuilder
     #region 视觉特效分页构建
 
     /// <summary>定向固化视觉特效页面、序列化按钮引用和主设置入口。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Visual Effects Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Visual Effects Settings UI")]
     public static void RebuildVisualEffectsSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

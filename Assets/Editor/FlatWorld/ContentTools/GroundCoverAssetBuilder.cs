@@ -17,7 +17,7 @@ public static class GroundCoverAssetBuilder
     private const string ModuleAddress = "Module_GroundCoverHarvest";
 
     /// <summary>只装配采集模块与无 Tilemap/碰撞体的 BRG 花层，并保存实际 Addressables 分组。</summary>
-    [MenuItem("FlatWorld/内容配置/装配地表植被采集资源")]
+    [MenuItem("FlatWorld/其他工具/内容配置/装配地表植被采集资源")]
     public static void Build()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

@@ -28,7 +28,7 @@ public static partial class RuntimeUIPrefabBuilder
     };
 
     /// <summary>只补建缺失的公共资产；已由开发者编辑的 Prefab 永远不被默认构建覆盖。</summary>
-    [MenuItem("FlatWorld/UI/Shared Controls/Create Missing Prefabs")]
+    [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Create Missing Prefabs")]
     public static void EnsureSharedControlPrefabs()
     {
         if (buildingSharedControls)
@@ -338,7 +338,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>迁移所有兼容的正式 UI 控件；不重建面板，不触碰不兼容的物品图标等专用层级。</summary>
-    [MenuItem("FlatWorld/UI/Shared Controls/Migrate Existing UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Migrate Existing UI")]
     public static void MigrateExistingUIToSharedControls()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

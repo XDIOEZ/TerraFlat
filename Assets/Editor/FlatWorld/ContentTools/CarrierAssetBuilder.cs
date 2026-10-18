@@ -11,7 +11,7 @@ public static class CarrierAssetBuilder
     public const string ShellPath = "Assets/2_Prefabs/Gameplay/Items/Common/CarrierBodyShell.prefab";
     public const string SpritePath = "Assets/6_Art/Generated/Vehicles/Boat/Boat_Carrier.png";
 
-    [MenuItem("FlatWorld/载具/构建船模块与外壳")]
+    [MenuItem("FlatWorld/其他工具/载具/构建船模块与外壳")]
     public static void BuildBoatAssets()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -75,7 +75,7 @@ public static class CarrierAssetBuilder
     }
 
     /// <summary>只验证当前资源，不刷新、不进入 Play、不生成缺失资源。</summary>
-    [MenuItem("FlatWorld/载具/静态验证船资源")]
+    [MenuItem("FlatWorld/其他工具/载具/静态验证船资源")]
     public static void VerifyBoatAssets()
     {
         GameObject module = AssetDatabase.LoadAssetAtPath<GameObject>(ModulePath);

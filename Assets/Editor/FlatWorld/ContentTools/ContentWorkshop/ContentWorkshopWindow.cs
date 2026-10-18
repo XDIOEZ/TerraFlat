@@ -17,7 +17,7 @@ namespace FlatWorld.Editor.ContentWorkshop
     {
         #region 常量与模板
 
-        private const string MenuPath = "FlatWorld/内容配置/内容工坊";
+        private const string MenuPath = "FlatWorld/其他工具/内容配置/内容工坊";
         private const float PaletteWidth = 310f;
         private const float InspectorWidth = 315f;
         private const float HeatingIngredientSlotSize = 92f;

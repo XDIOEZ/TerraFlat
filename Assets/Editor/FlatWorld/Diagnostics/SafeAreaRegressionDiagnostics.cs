@@ -9,7 +9,7 @@ public static class SafeAreaRegressionDiagnostics
 {
     #region 安全区回归
 
-    [MenuItem("FlatWorld/诊断/验证安全区屏幕切换")]
+    [MenuItem("FlatWorld/其他工具/诊断/验证安全区屏幕切换")]
     public static void Validate()
     {
         Rect full = new Rect(0, 0, 1240, 888);
@@ -51,7 +51,7 @@ public static class SafeAreaRegressionDiagnostics
     #region 编译注册恢复
 
     /// <summary>由 Unity 自己重建 source-gen 与程序集注册，禁止手工替换 ScriptAssemblies 或靠禁用 Burst 掩盖异常。</summary>
-    [MenuItem("FlatWorld/诊断/请求干净脚本编译")]
+    [MenuItem("FlatWorld/其他工具/诊断/请求干净脚本编译")]
     public static void RequestCleanCompilation()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

@@ -275,7 +275,7 @@ namespace FlatWorld.GameplayMCP
             catch (Exception exception) { report["exportError"] = exception.Message; }
         }
 
-        [MenuItem("FlatWorld/调试/区块加载/输出当前诊断（支持暂停）")]
+        [MenuItem("FlatWorld/其他工具/调试/区块加载/输出当前诊断（支持暂停）")]
         private static void DumpMenu()
         {
             JObject report = JObject.FromObject(GameplayChunkRenderDebugTool.ReadStatus());
@@ -283,7 +283,7 @@ namespace FlatWorld.GameplayMCP
             Debug.Log("[ChunkStreamingDebug] " + report.ToString(Formatting.Indented));
         }
 
-        [MenuItem("FlatWorld/调试/区块加载/采样10秒并输出报告")]
+        [MenuItem("FlatWorld/其他工具/调试/区块加载/采样10秒并输出报告")]
         private static async void SampleMenu()
         {
             try

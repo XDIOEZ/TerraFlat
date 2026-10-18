@@ -19,7 +19,7 @@ public static class ResourceYieldAssetBuilder
     #region 模块装配
 
     /// <summary>通过 Unity 序列化生成通用模块；重复执行只检查已有模块并确保登记。</summary>
-    [MenuItem("FlatWorld/内容配置/装配温度产量模块")]
+    [MenuItem("FlatWorld/其他工具/内容配置/装配温度产量模块")]
     public static void Build()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

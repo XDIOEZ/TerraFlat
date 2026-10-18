@@ -14,7 +14,7 @@ public static class WorldEntityCapabilityDiagnostics
 {
     #region 隔离回归
 
-    [MenuItem("FlatWorld/诊断/验证统一实体能力")]
+    [MenuItem("FlatWorld/其他工具/诊断/验证统一实体能力")]
     public static void Run()
     {
         var result = new DiagnosticResult { runId = Guid.NewGuid().ToString("N") };

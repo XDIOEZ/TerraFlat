@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>在独立预览场景渲染陶罐水质与水位，不启动游戏或修改用户场景。</summary>
 public static class WaterVesselUIPreview
 {
-    [MenuItem("FlatWorld/UI/Preview Water Vessel UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Preview Water Vessel UI")]
     public static void Render()
     {
         string[] ids = { LiquidIds.DirtyWater, LiquidIds.DrinkableWater, LiquidIds.SeaWater };

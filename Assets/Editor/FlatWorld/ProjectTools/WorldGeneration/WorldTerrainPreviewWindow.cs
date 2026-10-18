@@ -415,7 +415,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
     #region 菜单与生命周期
 
-    [MenuItem("FlatWorld/世界生成/地形预览器", priority = 10)]
+    [MenuItem("FlatWorld/其他工具/世界生成/地形预览器", priority = 10)]
     private static void OpenWindow()
     {
         WorldTerrainPreviewWindow window = GetWindow<WorldTerrainPreviewWindow>("地形预览器");

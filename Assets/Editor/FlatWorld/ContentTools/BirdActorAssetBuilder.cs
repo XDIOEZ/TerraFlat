@@ -17,9 +17,9 @@ using EditorAnimatorController = UnityEditor.Animations.AnimatorController;
 public static class BirdActorAssetBuilder
 {
     #region 菜单与路径
-    public const string BuildMenu = "FlatWorld/鸟与海鸥/构建外壳动画与Addressables";
-    public const string ValidateMenu = "FlatWorld/鸟与海鸥/验证规则与资源";
-    public const string RulesMenu = "FlatWorld/鸟与海鸥/仅验证确定性规则";
+    public const string BuildMenu = "FlatWorld/其他工具/鸟与海鸥/构建外壳动画与Addressables";
+    public const string ValidateMenu = "FlatWorld/其他工具/鸟与海鸥/验证规则与资源";
+    public const string RulesMenu = "FlatWorld/其他工具/鸟与海鸥/仅验证确定性规则";
     private const string SourcePath = "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab";
     private const string AnimationRoot = "Assets/8_Animations/Character/Birds";
     private const int AnimationFrameRate = 8;

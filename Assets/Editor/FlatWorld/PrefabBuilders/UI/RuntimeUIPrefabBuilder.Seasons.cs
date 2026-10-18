@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public static partial class RuntimeUIPrefabBuilder
 {
     /// <summary>只构建季节设置页、其世界入口与日历 HUD，保留其他设置页及现有节点。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Season Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Season Settings UI")]
     public static void RebuildSeasonSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

@@ -9,7 +9,7 @@ using UnityEngine;
 public static class MachineWorldContractDiagnostics
 {
     #region 显式检查入口
-    private const string MenuPath = "FlatWorld/诊断/验证机器世界契约";
+    private const string MenuPath = "FlatWorld/其他工具/诊断/验证机器世界契约";
 
     [MenuItem(MenuPath)]
     public static void Validate()

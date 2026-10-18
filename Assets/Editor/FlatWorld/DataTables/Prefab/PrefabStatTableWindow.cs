@@ -28,7 +28,7 @@ public class PrefabStatTableWindow : EditorWindow
     #endregion
 
     #region 菜单与初始化
-    [MenuItem("FlatWorld/Prefab数值表")]
+    [MenuItem("FlatWorld/其他工具/Prefab数值表")]
     public static void OpenWindow()
     {
         GetWindow<PrefabStatTableWindow>("Prefab数值表");

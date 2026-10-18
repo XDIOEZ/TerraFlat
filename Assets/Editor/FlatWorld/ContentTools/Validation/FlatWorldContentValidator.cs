@@ -80,7 +80,7 @@ public static class FlatWorldContentValidator
 {
     #region 常量与内部模型
 
-    public const string MenuPath = "FlatWorld/内容配置/校验全部本体内容";
+    public const string MenuPath = "FlatWorld/其他工具/内容配置/校验全部本体内容";
 
     private const string PrefabRoot = "Assets/2_Prefabs";
     private const string ModulePrefabRoot = PrefabRoot + "/Module";

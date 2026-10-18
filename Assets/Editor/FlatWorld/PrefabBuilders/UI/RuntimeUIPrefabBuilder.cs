@@ -67,7 +67,7 @@ public static partial class RuntimeUIPrefabBuilder
     #region 重建入口
 
     /// <summary>只重建设置主面板与分页容器，不重建设置页资产。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Settings Action List UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Settings Action List UI")]
     public static void RebuildSettingsActionListUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -89,7 +89,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只刷新设置会话页的保存/退出入口与确认层，保留其余设置节点和本地文件 ID。</summary>
-    [MenuItem("FlatWorld/UI/Refresh Settings Session Actions UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Refresh Settings Session Actions UI")]
     public static void RefreshSettingsSessionActionsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -108,7 +108,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建设置入口和全部设置子分页，避免改动无关运行时 UI。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild All Settings Pages UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild All Settings Pages UI")]
     public static void RebuildAllSettingsPagesUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -143,7 +143,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建难度设置页，避免难度界面迭代时触碰其他设置资产。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Difficulty Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Difficulty Settings UI")]
     public static void RebuildDifficultySettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -162,7 +162,7 @@ public static partial class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化 0-20 级难度设置页。");
     }
 
-    [MenuItem("FlatWorld/UI/Rebuild Runtime Prefab UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Runtime Prefab UI")]
     public static void RebuildRuntimePrefabUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -223,7 +223,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只构建手机 HUD、安全区根节点和 Player 挂载，避免重写其它已有 UI Prefab。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Mobile Controls UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Mobile Controls UI")]
     public static void RebuildMobileControlsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -244,7 +244,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只更新触控布局编辑页，不重建 HUD、玩家或根 Canvas。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Touch Layout Editor Only")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Touch Layout Editor Only")]
     public static void RebuildTouchLayoutEditorOnly()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -255,7 +255,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建界面与镜头控制设置页，并同步设置入口分页。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Interface Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Interface Settings UI")]
     public static void RebuildInterfaceSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -279,7 +279,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建维度切换加载页，避免覆盖用户正在调整的其它运行时 UI。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Dimension Loading UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Dimension Loading UI")]
     public static void RebuildDimensionLoadingUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -297,7 +297,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建启动资源加载面板，并把直接引用同步到 WorldManager。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Resource Loading UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Resource Loading UI")]
     public static void RebuildResourceLoadingUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -315,7 +315,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建最早启动的运行时调试悬浮窗，并同步 WorldManager 直接引用。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Runtime Debug Overlay")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Runtime Debug Overlay")]
     public static void RebuildRuntimeDebugOverlayUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -333,7 +333,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild World Streaming Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild World Streaming Settings UI")]
     public static void RebuildWorldStreamingSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -354,7 +354,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建自动保存设置页，避免触控布局调整重写其它设置 Prefab。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Auto Save Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Auto Save Settings UI")]
     public static void RebuildAutoSaveSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -374,7 +374,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建主菜单设置窗口；基础结构复制游戏内设置，仅保留客户端本地设置分页。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Main Menu Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Main Menu Settings UI")]
     public static void RebuildMainMenuSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -392,7 +392,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建主菜单退出确认弹窗，并登记为运行时可寻址 Prefab。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Main Menu Exit Confirmation UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Main Menu Exit Confirmation UI")]
     public static void RebuildMainMenuExitConfirmationUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -410,7 +410,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建左上角常驻的玩家坐标与 FPS HUD，并确保其进入运行时 Prefab 索引。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Player World Coordinate HUD")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Player World Coordinate HUD")]
     public static void RebuildPlayerWorldCoordinateHUD()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -428,7 +428,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建右上角保存状态提示，避免无关运行时 Prefab 被重写。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Save Status HUD")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Save Status HUD")]
     public static void RebuildSaveStatusHUD()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -446,7 +446,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建左侧中部 Buff 提示栏及玩家挂载组件，避免无关 Prefab 被重写。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Buff Status HUD")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Buff Status HUD")]
     public static void RebuildBuffStatusHUD()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -465,7 +465,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建坐标显示设置和设置列表分页，避免无关运行时 Prefab 被重写。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Coordinate Display Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Coordinate Display Settings UI")]
     public static void RebuildCoordinateDisplaySettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -484,7 +484,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>重建按键绑定面板与动态绑定行，确保布局源和正式 Prefab 保持一致。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Input Binding UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Input Binding UI")]
     public static void RebuildInputBindingUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -508,7 +508,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>只重建按键绑定面板布局，保留动态绑定行 Prefab 的稳定文件 ID。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Input Binding Panel UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Input Binding Panel UI")]
     public static void RebuildInputBindingPanelUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

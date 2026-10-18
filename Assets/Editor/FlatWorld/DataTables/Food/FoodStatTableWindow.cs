@@ -27,7 +27,7 @@ public class FoodStatTableWindow : EditorWindow
     #endregion
 
     #region 菜单与初始化
-    [MenuItem("FlatWorld/食物数值表")]
+    [MenuItem("FlatWorld/其他工具/食物数值表")]
     public static void OpenWindow()
     {
         GetWindow<FoodStatTableWindow>("食物数值表");

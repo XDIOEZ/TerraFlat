@@ -22,7 +22,7 @@ public static class PortableBuildingPanelBuilder
     private const string FireDrillPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_FireDrill.prefab";
     private const string FuelInteractionPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_FuelInteraction.prefab";
 
-    [MenuItem("FlatWorld/UI/Configure Portable Building Actions")]
+    [MenuItem("FlatWorld/其他工具/UI/Configure Portable Building Actions")]
     public static void ConfigureAssets()
     {
         ConfigureAsset(VesselPath, ConfigureVessel);
@@ -43,7 +43,7 @@ public static class PortableBuildingPanelBuilder
     }
 
     /// <summary>只装配钻木取火面板，供定向更新时避免触碰其它便携设施。</summary>
-    [MenuItem("FlatWorld/UI/Configure Fire Drill Building Actions")]
+    [MenuItem("FlatWorld/其他工具/UI/Configure Fire Drill Building Actions")]
     public static void ConfigureFireDrillAsset()
     {
         ConfigureAsset(FireDrillPath, ConfigureFireDrill);

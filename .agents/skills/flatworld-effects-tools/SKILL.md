@@ -101,6 +101,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## 编辑器与调试工具
 
+- FlatWorld 一级菜单只保留「测试」「性能分析」和「其他工具」；其余 MenuItem 放在 `FlatWorld/其他工具/` 下并保留原分组，验证函数与 ExecuteMenuItem 调用同步路径。
+
 - 顶栏「性能 JSON」/菜单 `FlatWorld/性能分析/导出选中帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调用 PuerTS `UnityMcpProfilerSnapshot`，复用 `editor.profiler.analyze`。输出 `Assets/67_ProfileData/<时间_frame-帧号_编号>/` 的 `profiler-analysis.json`、`console-logs.json` 与 `screen.png`，全部落盘后发布正式目录；共享的 `00-READ-ME-FIRST.md` 只放在 `67_ProfileData` 根目录，`instructionsFile` 使用 `../` 引用，忽略 `.pending-*`。AI 先读 MD 按字段筛热点再展开调用树；模板为 PuerTS 包根 `ProfilerAnalysisGuide.md`，修改导出结构时同步维护。schema 3 保留选中帧 Top 100、完整线程聚合树与附近帧耗时，额外保存超过 50ms 的最慢最多 3 帧完整树及导出时 Registry 累计快照；计数需先在 GM 开启性能统计。累计快照、日志/全桌面截图与 Profiler 帧分清时间归属；不改 Play/Pause、录制目标/开关，不主动刷新资源。
 
 - 关键性能点共用 Utilities 的 `PerformanceDebugPoint/Registry`；统计与慢摘要默认关闭，在 GM「设备数据」按需开启、设阈值、输出/清空。固定 Marker、struct 作用域不跨 yield，后台只记有界数字并由主线程合并日志；点位单位及 Total/Self、冷暖路径边界见 [关键性能DEBUG点位说明](../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。

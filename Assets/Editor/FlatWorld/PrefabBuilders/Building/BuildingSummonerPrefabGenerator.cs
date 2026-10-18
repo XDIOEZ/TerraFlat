@@ -32,13 +32,13 @@ public static class BuildingSummonerPrefabGenerator
     private static bool _scheduled;
     private static bool _running;
 
-    [MenuItem("FlatWorld/建筑/生成或刷新全部建筑召唤器")]
+    [MenuItem("FlatWorld/其他工具/建筑/生成或刷新全部建筑召唤器")]
     public static void GenerateAll()
     {
         GenerateFromRoots(SourceRoots, relinkAllRecipes: true);
     }
 
-    [MenuItem("FlatWorld/Building/Generate Placeable Tool Summoners")]
+    [MenuItem("FlatWorld/其他工具/Building/Generate Placeable Tool Summoners")]
     public static void GeneratePlaceableToolSummoners()
     {
         GenerateFromRoots(new[] { ToolRoot }, relinkAllRecipes: false);

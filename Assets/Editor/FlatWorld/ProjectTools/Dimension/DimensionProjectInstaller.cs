@@ -33,7 +33,7 @@ public static class DimensionProjectInstaller
     private const long PortalComponentId = 900000000000000001;
     private const long InteractionColliderId = 900000000000000002;
 
-    [MenuItem("FlatWorld/Dimension/Install Default Catalog")]
+    [MenuItem("FlatWorld/其他工具/Dimension/Install Default Catalog")]
     public static void InstallDefaultCatalog()
     {
         Directory.CreateDirectory(CatalogDirectory);
@@ -51,11 +51,11 @@ public static class DimensionProjectInstaller
         Debug.Log($"[DimensionProjectInstaller] 默认维度目录已写入：{CatalogPath}");
     }
 
-    [MenuItem("FlatWorld/Dimension/Install Mine Entrances")]
+    [MenuItem("FlatWorld/其他工具/Dimension/Install Mine Entrances")]
     public static void InstallMineEntrances()
     {
         CreateMineEntrance();
-        if (!EditorApplication.ExecuteMenuItem("FlatWorld/建筑/生成或刷新全部建筑召唤器"))
+        if (!EditorApplication.ExecuteMenuItem("FlatWorld/其他工具/建筑/生成或刷新全部建筑召唤器"))
             throw new InvalidOperationException("无法执行建筑召唤器生成器。");
         CreateCaveExit();
         AssetDatabase.SaveAssets();

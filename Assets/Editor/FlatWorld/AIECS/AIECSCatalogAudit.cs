@@ -21,7 +21,7 @@ namespace FlatWorld.AIECS.Editor
         public const string ReportDirectory = "Library/AIECS";
 
         /// <summary>从正式目录生成可复查的已解析能力清单。</summary>
-        [MenuItem("FlatWorld/AIECS/P0 生成只读能力清单")]
+        [MenuItem("FlatWorld/其他工具/AIECS/P0 生成只读能力清单")]
         public static void WriteInventory()
         {
             RequireEditMode();

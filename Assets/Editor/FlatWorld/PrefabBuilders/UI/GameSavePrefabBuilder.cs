@@ -22,7 +22,7 @@ public static class GameSavePrefabBuilder
     private static Color Amber => FlatWorldUITheme.Accent;
     private static Color Teal => FlatWorldUITheme.Teal;
 
-    [MenuItem("FlatWorld/UI/Rebuild Save UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Save UI")]
     public static void RebuildSaveInterface()
     {
         TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

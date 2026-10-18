@@ -11,7 +11,7 @@ public static class ModManagerPrefabBuilder
 
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab";
 
-    [MenuItem("FlatWorld/UI/同步 MOD 管理页布局")]
+    [MenuItem("FlatWorld/其他工具/UI/同步 MOD 管理页布局")]
     public static void SyncLayout()
     {
         GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);

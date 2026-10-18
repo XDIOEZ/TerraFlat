@@ -21,7 +21,7 @@ public static class AgricultureAssetBuilder
     private const string SpriteMaterialPath = "Assets/9_Shaders/Material/Sprite-Lit-Master.mat";
     private const string WeaponControllerPath = "Assets/8_Animations/Item/Weapon/Weapon_Uni.controller";
 
-    [MenuItem("FlatWorld/内容配置/装配农业资源")]
+    [MenuItem("FlatWorld/其他工具/内容配置/装配农业资源")]
     public static void Build()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

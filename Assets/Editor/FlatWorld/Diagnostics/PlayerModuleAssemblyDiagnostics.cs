@@ -25,7 +25,7 @@ public static class PlayerModuleAssemblyDiagnostics
 
     #region 静态装配入口
 
-    [MenuItem("FlatWorld/诊断/校验玩家模块装配")]
+    [MenuItem("FlatWorld/其他工具/诊断/校验玩家模块装配")]
     public static void Validate() => Debug.Log(Run());
 
     /// <summary>同时覆盖原始模板、空 ID、空白 ID 和错误 ID，避免依赖 Awake 的初始化顺序。</summary>

@@ -34,7 +34,7 @@ public static class ActorDefinitionMigrationTool
 
     #region 菜单入口
 
-    [MenuItem("FlatWorld/AI JSON迁移/导出现有 Actor 并配置 Addressables")]
+    [MenuItem("FlatWorld/其他工具/AI JSON迁移/导出现有 Actor 并配置 Addressables")]
     public static void ExportAll()
     {
         AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -77,7 +77,7 @@ public static class ActorDefinitionMigrationTool
         Debug.Log($"[ActorDefinitionMigration] 已导出 {Sources.Length} 个 Actor：{DefinitionPath}");
     }
 
-    [MenuItem("FlatWorld/AI JSON迁移/校验 Actor 目录")]
+    [MenuItem("FlatWorld/其他工具/AI JSON迁移/校验 Actor 目录")]
     public static void ValidateCatalog()
     {
         List<ItemDefinitionDto> definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions();

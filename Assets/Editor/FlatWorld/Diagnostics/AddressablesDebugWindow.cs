@@ -22,7 +22,7 @@ namespace FlatWorld.Editor.Diagnostics
     {
         #region 常量与字段
 
-        private const string MenuPath = "FlatWorld/诊断/Addressables 逐个加载测试";
+        private const string MenuPath = "FlatWorld/其他工具/诊断/Addressables 逐个加载测试";
         private const string LogPrefix = "[AddressablesDebug]";
         private const double LocationTimeoutSeconds = 10d;
         private const double AssetTimeoutSeconds = 5d;

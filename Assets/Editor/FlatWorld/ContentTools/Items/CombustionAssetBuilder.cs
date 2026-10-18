@@ -12,7 +12,7 @@ using UnityEngine.Rendering.Universal;
 /// </summary>
 public static class CombustionAssetBuilder
 {
-    public const string Menu = "FlatWorld/Content/Combustion/Build Runtime Assets";
+    public const string Menu = "FlatWorld/其他工具/Content/Combustion/Build Runtime Assets";
     private const string CombustionModulePath =
         "Assets/2_Prefabs/Gameplay/Modules/World/Module_Combustion.prefab";
     private const string FuelInteractionModulePath =

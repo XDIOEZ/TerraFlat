@@ -19,7 +19,7 @@ public static class MechanicalContentBuilder
     #region 资源构建
     private const string ModuleFolder = "Assets/2_Prefabs/Gameplay/Modules/Mechanical";
     private const string UiFolder = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting";
-    [MenuItem("FlatWorld/机械扭矩/构建首版资源")]
+    [MenuItem("FlatWorld/其他工具/机械扭矩/构建首版资源")]
     public static void Build()
     {
         Directory.CreateDirectory(ModuleFolder);
@@ -214,7 +214,7 @@ public static class MechanicalContentBuilder
         EditorUtility.SetDirty(entry.parentGroup); EditorUtility.SetDirty(settings);
     }
 
-    [MenuItem("FlatWorld/机械扭矩/校验首版资源")]
+    [MenuItem("FlatWorld/其他工具/机械扭矩/校验首版资源")]
     public static void ValidateAssets()
     {
         foreach (string id in new[] { "Module_HandDrill", "Module_MechanicalNode" })

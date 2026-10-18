@@ -23,7 +23,7 @@ internal static class ModularInventorySpriteImporter
     };
 
     /// <summary>确保图集按像素 UI 规则导入并拥有完整命名切片。</summary>
-    [MenuItem("FlatWorld/UI/切割 Modular Inventory 素材")]
+    [MenuItem("FlatWorld/其他工具/UI/切割 Modular Inventory 素材")]
     public static void EnsureConfigured()
     {
         TextureImporter importer = AssetImporter.GetAtPath(AtlasPath) as TextureImporter;

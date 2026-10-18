@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public static partial class RuntimeUIPrefabBuilder
 {
     /// <summary>只重建调试设置页，并同步游戏内与主菜单设置分页。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Debug Settings UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Debug Settings UI")]
     public static void RebuildDebugSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

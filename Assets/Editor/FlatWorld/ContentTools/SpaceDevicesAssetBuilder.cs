@@ -16,7 +16,7 @@ public static class SpaceDevicesAssetBuilder
     private const string UiFolder = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/";
     private const string SlotPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab";
     private const string ButtonPath = "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab";
-    [MenuItem("FlatWorld/太空/构建培育器与推进气罐页面")]
+    [MenuItem("FlatWorld/其他工具/太空/构建培育器与推进气罐页面")]
     public static void Build()
     {
         if (Application.isPlaying) throw new InvalidOperationException("运行期间不重建太空设备 Prefab，请退出 Play Mode 后执行。");

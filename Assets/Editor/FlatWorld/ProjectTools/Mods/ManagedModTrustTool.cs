@@ -8,7 +8,7 @@ using UnityEngine;
 public static class ManagedModTrustTool
 {
     #region MOD 包检查
-    [MenuItem("FlatWorld/MOD/检查 C# MOD 包")]
+    [MenuItem("FlatWorld/其他工具/MOD/检查 C# MOD 包")]
     private static void ValidatePackage()
     {
         string root = EditorUtility.OpenFolderPanel("选择需要检查的 MOD 包", Path.Combine(Application.persistentDataPath, "Mods"), "");

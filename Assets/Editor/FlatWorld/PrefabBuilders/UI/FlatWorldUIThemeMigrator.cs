@@ -14,7 +14,7 @@ public static class FlatWorldUIThemeMigrator
     private const string MigrationVersion = "2026.09.11.v5.8-border-2px";
 
     /// <summary>执行当前版本迁移；同一项目、同一迁移版本默认只执行一次。</summary>
-    [MenuItem("FlatWorld/UI/主题迁移/执行当前版本迁移")]
+    [MenuItem("FlatWorld/其他工具/UI/主题迁移/执行当前版本迁移")]
     public static void ApplyCurrentVersionMigration()
     {
         EnsureCanMigrate();
@@ -32,7 +32,7 @@ public static class FlatWorldUIThemeMigrator
     }
 
     /// <summary>忽略迁移版本记录，显式强制重新烘焙全部 UI Prefab。</summary>
-    [MenuItem("FlatWorld/UI/主题迁移/强制重新应用统一主题")]
+    [MenuItem("FlatWorld/其他工具/UI/主题迁移/强制重新应用统一主题")]
     public static void ApplyThemeToAllPrefabs()
     {
         EnsureCanMigrate();

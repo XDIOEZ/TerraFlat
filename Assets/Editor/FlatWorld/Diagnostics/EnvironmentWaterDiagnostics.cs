@@ -17,7 +17,7 @@ public static class EnvironmentWaterDiagnostics
 
     private static int assertions;
 
-    [MenuItem("FlatWorld/Diagnostics/Validate Environment Water And Temperature")]
+    [MenuItem("FlatWorld/其他工具/Diagnostics/Validate Environment Water And Temperature")]
     public static void Validate()
     {
         assertions = 0;

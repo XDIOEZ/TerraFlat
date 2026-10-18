@@ -216,7 +216,7 @@ public static class TileDefinitionEditorCatalog
         throw new InvalidDataException("非法地块配置未被拒绝。");
     }
 
-    [MenuItem("FlatWorld/诊断/检查地块 JSON 目录")]
+    [MenuItem("FlatWorld/其他工具/诊断/检查地块 JSON 目录")]
     public static void ValidateCatalog()
     {
         Invalidate();

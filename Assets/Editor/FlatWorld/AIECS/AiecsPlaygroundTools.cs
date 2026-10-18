@@ -19,7 +19,7 @@ namespace FlatWorld.AIECS.Editor
         private const string UiCanvasName = "AIECS开发UI";
 
         /// <summary>用户显式打开开发入口；已有场景的未保存修改由 Unity 的标准场景保存流程处理。</summary>
-        [MenuItem("FlatWorld/AIECS/打开实战开发入口")]
+        [MenuItem("FlatWorld/其他工具/AIECS/打开实战开发入口")]
         public static void Open()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("请退出 Play 后打开入口场景。");
@@ -64,7 +64,7 @@ namespace FlatWorld.AIECS.Editor
         }
 
         /// <summary>显式重建开发入口的 uGUI 子树；保留 Prefab 根和 AIECS 配置，只替换开发面板。</summary>
-        [MenuItem("FlatWorld/AIECS/重建实战开发入口 uGUI Prefab")]
+        [MenuItem("FlatWorld/其他工具/AIECS/重建实战开发入口 uGUI Prefab")]
         public static void RebuildUiPrefabAsset()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)

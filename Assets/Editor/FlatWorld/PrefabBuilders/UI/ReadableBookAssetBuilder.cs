@@ -15,7 +15,7 @@ public static class ReadableBookAssetBuilder
     private const string ModulePath = "Assets/2_Prefabs/Gameplay/Modules/Items/Module_ReadableBook.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
-    [MenuItem("FlatWorld/内容配置/生成可阅读书籍资源")]
+    [MenuItem("FlatWorld/其他工具/内容配置/生成可阅读书籍资源")]
     public static void Build()
     {
         BuildPanelPrefab();

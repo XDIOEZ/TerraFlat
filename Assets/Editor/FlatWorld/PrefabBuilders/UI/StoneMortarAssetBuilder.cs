@@ -21,7 +21,7 @@ public static class StoneMortarAssetBuilder
     private const string SlotPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab";
 
     #region 装配入口
-    [MenuItem("FlatWorld/内容配置/生成石臼资源")]
+    [MenuItem("FlatWorld/其他工具/内容配置/生成石臼资源")]
     public static void Build()
     {
         Sprite icon = ImportPixelSprite(Art + "StoneMortar_Concept_HighRes.png", new RectInt(0, 0, 1280, 1280), "StoneMortar_Icon", 64, 64, 64);
@@ -66,7 +66,7 @@ public static class StoneMortarAssetBuilder
     }
 
     /// <summary>在独立预览场景渲染正式 Prefab，不启动游戏、不改用户场景。</summary>
-    [MenuItem("FlatWorld/内容配置/预览石臼面板")]
+    [MenuItem("FlatWorld/其他工具/内容配置/预览石臼面板")]
     public static void PreviewPanel()
     {
         Scene scene = EditorSceneManager.NewPreviewScene();

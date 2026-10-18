@@ -15,8 +15,8 @@ namespace FlatWorld.Dialogue.Editor
 
         #region 菜单入口
 
-        [MenuItem("FlatWorld/自言自语/校验配置 JSON")]
-        [MenuItem("FlatWorld/Dialogue/Validate Soliloquy JSON")]
+        [MenuItem("FlatWorld/其他工具/自言自语/校验配置 JSON")]
+        [MenuItem("FlatWorld/其他工具/Dialogue/Validate Soliloquy JSON")]
         public static void ValidateAll()
         {
             CharacterSpeechConfigLoadResult result =

@@ -29,7 +29,7 @@ public static class NewGamePrefabBuilder
 
     #endregion
 
-    [MenuItem("FlatWorld/UI/Rebuild New Game UI")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild New Game UI")]
     public static void RebuildNewGameInterface()
     {
         TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);

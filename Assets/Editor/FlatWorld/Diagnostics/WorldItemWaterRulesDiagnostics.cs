@@ -9,7 +9,7 @@ public static class WorldItemWaterRulesDiagnostics
 {
     #region 隔离校验入口
 
-    [MenuItem("FlatWorld/诊断/验证掉落物水体规则")]
+    [MenuItem("FlatWorld/其他工具/诊断/验证掉落物水体规则")]
     public static void Run()
     {
         List<string> results = new();

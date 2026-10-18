@@ -9,7 +9,7 @@ public static class Todo0920AssetValidation
 {
     #region 显式资源入口
 
-    [MenuItem("FlatWorld/诊断/待办/0920资源同步与静态检查")]
+    [MenuItem("FlatWorld/其他工具/诊断/待办/0920资源同步与静态检查")]
     public static void ApplyAndValidate()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

@@ -14,7 +14,7 @@ public static class ItemStepScrollRectMigration
     private const string OriginalGuid = "1aa08ab6e0800fa44ae55d278d1423e3";
 
     /// <summary>仅在显式菜单调用时处理正式 Prefab/场景，不在启动或资源导入时修改项目。</summary>
-    [MenuItem("FlatWorld/UI/统一所有列表为逐项平滑滚动")]
+    [MenuItem("FlatWorld/其他工具/UI/统一所有列表为逐项平滑滚动")]
     public static void Migrate()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

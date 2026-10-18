@@ -101,7 +101,7 @@ public static class GameUIPrefabRebuilder
         }
     }
 
-    [MenuItem("FlatWorld/UI/重构全部游戏内UI")]
+    [MenuItem("FlatWorld/其他工具/UI/重构全部游戏内UI")]
     public static void RebuildAllGameUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -194,7 +194,7 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>只重构玩家行囊的灰阶简约外观，不影响通用槽位和其他游戏内 UI。</summary>
-    [MenuItem("FlatWorld/UI/重构灰阶简约行囊")]
+    [MenuItem("FlatWorld/其他工具/UI/重构灰阶简约行囊")]
     public static void RebuildModularInventoryBag()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -226,7 +226,7 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>只向现有 UI_Bag Footer 增补重量/体积显示，不重排其它行囊结构。</summary>
-    [MenuItem("FlatWorld/UI/同步行囊携带容量显示")]
+    [MenuItem("FlatWorld/其他工具/UI/同步行囊携带容量显示")]
     public static void SyncBagCarryCapacityFooter()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -250,7 +250,7 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>仅重构通用物品槽位，便于独立调整背包/装备等库存界面的槽位视觉。</summary>
-    [MenuItem("FlatWorld/UI/重构基础物品槽位")]
+    [MenuItem("FlatWorld/其他工具/UI/重构基础物品槽位")]
     public static void RebuildBaseInventorySlot()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -279,7 +279,7 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>仅更新快捷栏名称提示，保留九格槽位和现有快捷栏样式。</summary>
-    [MenuItem("FlatWorld/UI/重建手持物名称提示")]
+    [MenuItem("FlatWorld/其他工具/UI/重建手持物名称提示")]
     public static void RebuildHotbarItemNameHUD()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -301,7 +301,7 @@ public static class GameUIPrefabRebuilder
         Debug.Log("[Game UI] 已更新快捷栏上方的手持物名称提示。");
     }
 
-    [MenuItem("FlatWorld/UI/修复快捷栏UI")]
+    [MenuItem("FlatWorld/其他工具/UI/修复快捷栏UI")]
     public static void RebuildHotbarUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -337,7 +337,7 @@ public static class GameUIPrefabRebuilder
         Debug.Log($"[Game UI] 快捷栏修复完成：{rebuilt}/{targets.Length} 个 Prefab。快捷栏直属子节点只保留物品槽。");
     }
 
-    [MenuItem("FlatWorld/UI/修复制作预览图层")]
+    [MenuItem("FlatWorld/其他工具/UI/修复制作预览图层")]
     public static void RebuildCraftingPreviewLayers()
     {
         int rebuilt = 0;
@@ -388,7 +388,7 @@ public static class GameUIPrefabRebuilder
         ValidateCraftingPreviewPrefabs();
     }
 
-    [MenuItem("FlatWorld/UI/验证制作预览图层")]
+    [MenuItem("FlatWorld/其他工具/UI/验证制作预览图层")]
     public static void ValidateCraftingPreviewPrefabs()
     {
         List<string> failures = new List<string>();
@@ -435,7 +435,7 @@ public static class GameUIPrefabRebuilder
         Debug.LogError("[Crafting Preview Prefab] 验证失败：\n- " + string.Join("\n- ", failures));
     }
 
-    [MenuItem("FlatWorld/UI/居中功能列表按钮")]
+    [MenuItem("FlatWorld/其他工具/UI/居中功能列表按钮")]
     public static void RebuildActionListUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -454,7 +454,7 @@ public static class GameUIPrefabRebuilder
             : "[Game UI] 功能列表按钮重建失败，请检查控制台。");
     }
 
-    [MenuItem("FlatWorld/UI/重构合成候选界面")]
+    [MenuItem("FlatWorld/其他工具/UI/重构合成候选界面")]
     public static void RebuildCraftingSelectionUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -493,7 +493,7 @@ public static class GameUIPrefabRebuilder
         ValidateRebuiltUI();
     }
 
-    [MenuItem("FlatWorld/UI/重建矩形进度条UI")]
+    [MenuItem("FlatWorld/其他工具/UI/重建矩形进度条UI")]
     public static void RebuildRectangularProgressBars()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -533,7 +533,7 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>只重建熔炉面板，便于校正其专用布局而不触碰其它游戏内 UI。</summary>
-    [MenuItem("FlatWorld/UI/Apply Furnace Layout")]
+    [MenuItem("FlatWorld/其他工具/UI/Apply Furnace Layout")]
     public static void RebuildFurnaceUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -552,7 +552,7 @@ public static class GameUIPrefabRebuilder
             : "[Game UI] 熔炉面板重建失败，请检查控制台。");
     }
 
-    [MenuItem("FlatWorld/UI/重建角色参数面板")]
+    [MenuItem("FlatWorld/其他工具/UI/重建角色参数面板")]
     public static void RebuildCharacterStatusPanel()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -606,7 +606,7 @@ public static class GameUIPrefabRebuilder
         }
     }
 
-    [MenuItem("FlatWorld/UI/验证重构UI绑定契约")]
+    [MenuItem("FlatWorld/其他工具/UI/验证重构UI绑定契约")]
     public static void ValidateRebuiltUI()
     {
         if (font == null)
@@ -1112,7 +1112,7 @@ public static class GameUIPrefabRebuilder
     #region 制作面板安全区
 
     /// <summary>只给两张制作面板增加适配外壳，保留所有原有业务节点和引用。</summary>
-    [MenuItem("FlatWorld/UI/Adapt Crafting Panels Safe Area Only")]
+    [MenuItem("FlatWorld/其他工具/UI/Adapt Crafting Panels Safe Area Only")]
     public static void AdaptCraftingPanelsSafeAreaOnly()
     {
         foreach (string name in new[] { "UI_HandCraftTable", "UI_MakerTable" })

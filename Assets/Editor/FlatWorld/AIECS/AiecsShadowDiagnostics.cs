@@ -18,7 +18,7 @@ namespace FlatWorld.AIECS.Editor
         private const string CatalogPath = "Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset";
 
         /// <summary>从已生成图集补齐脚底边界，保留现有动画、图集和 GUID。</summary>
-        [MenuItem("FlatWorld/AIECS/阴影 更新非透明边界")]
+        [MenuItem("FlatWorld/其他工具/AIECS/阴影 更新非透明边界")]
         public static void RefreshVisibleBounds()
         {
             AIECSCatalogAudit.RequireEditMode();
@@ -65,7 +65,7 @@ namespace FlatWorld.AIECS.Editor
 
         #region 确定性回归
         /// <summary>验证共享材质、非透明脚底、索引边界和所有权清理，不替代真实 Play 截图。</summary>
-        [MenuItem("FlatWorld/AIECS/阴影 验证批次与生命周期")]
+        [MenuItem("FlatWorld/其他工具/AIECS/阴影 验证批次与生命周期")]
         public static void Validate()
         {
             AIECSCatalogAudit.RequireEditMode();

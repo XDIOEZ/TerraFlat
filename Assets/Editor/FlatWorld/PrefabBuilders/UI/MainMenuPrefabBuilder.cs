@@ -28,7 +28,7 @@ public static class MainMenuPrefabBuilder
     #region 原位换肤
 
     /// <summary>只改正式 Prefab 的颜色与背景引用，不重建节点，不触碰布局、文字或事件。</summary>
-    [MenuItem("FlatWorld/UI/应用主菜单参考图风格（保持布局）")]
+    [MenuItem("FlatWorld/其他工具/UI/应用主菜单参考图风格（保持布局）")]
     public static void ApplyReferenceStyle()
     {
         MainMenuBackdropBaker.Bake(BackgroundSourcePath, BackgroundPath);
@@ -107,7 +107,7 @@ public static class MainMenuPrefabBuilder
 
     #endregion
 
-    [MenuItem("FlatWorld/UI/重建主界面美术")]
+    [MenuItem("FlatWorld/其他工具/UI/重建主界面美术")]
     public static void RebuildMainMenu()
     {
         MainMenuBackdropBaker.Bake(BackgroundSourcePath, BackgroundPath);

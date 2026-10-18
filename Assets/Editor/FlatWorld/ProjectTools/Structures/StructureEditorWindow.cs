@@ -48,7 +48,7 @@ public sealed class StructureEditorWindow : EditorWindow
     private int framedRootId;
     private Vector2 framedCanvasSize;
 
-    [MenuItem("FlatWorld/遗迹编辑器/打开编辑窗口", priority = 0)]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/打开编辑窗口", priority = 0)]
     public static void Open()
     {
         GetWindow<StructureEditorWindow>("遗迹编辑器");

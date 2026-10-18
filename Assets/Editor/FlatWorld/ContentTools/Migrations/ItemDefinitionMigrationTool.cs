@@ -197,7 +197,7 @@ public static class ItemDefinitionMigrationTool
         EditorApplication.update += PollMigrationRequest;
     }
 
-    [MenuItem("FlatWorld/物品JSON迁移/预览共享外壳迁移")]
+    [MenuItem("FlatWorld/其他工具/物品JSON迁移/预览共享外壳迁移")]
     public static void Preview()
     {
         MigrationPreview preview = BuildPreview();
@@ -206,7 +206,7 @@ public static class ItemDefinitionMigrationTool
                   string.Join("\n", preview.GroupLines));
     }
 
-    [MenuItem("FlatWorld/物品JSON迁移/执行全部迁移 %#j")]
+    [MenuItem("FlatWorld/其他工具/物品JSON迁移/执行全部迁移 %#j")]
     public static void ExportAll()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -244,7 +244,7 @@ public static class ItemDefinitionMigrationTool
                   $"{preview.RedundantPrefabCount} 个旧物品 Prefab 不再是运行时依赖。Manifest={ManifestPath}");
     }
 
-    [MenuItem("FlatWorld/物品JSON迁移/校验当前目录")]
+    [MenuItem("FlatWorld/其他工具/物品JSON迁移/校验当前目录")]
     public static void ValidateCatalog()
     {
         if (!File.Exists(ManifestPath))
@@ -253,7 +253,7 @@ public static class ItemDefinitionMigrationTool
     }
 
     /// <summary>把当前物品目录引用的 Sprite 与共享材质同步到 Addressables 稳定地址。</summary>
-    [MenuItem("FlatWorld/物品JSON迁移/同步物品视觉 Addressables")]
+    [MenuItem("FlatWorld/其他工具/物品JSON迁移/同步物品视觉 Addressables")]
     public static void SynchronizeVisualAddressables()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

@@ -29,7 +29,7 @@ namespace FlatWorld.Editor.Diagnostics
         #region 静态目录诊断
 
         /// <summary>只检查编辑器目录及标签解析，不加载 Prefab、不进入 Play Mode。</summary>
-        [MenuItem("FlatWorld/诊断/检查 Addressables 目录")]
+        [MenuItem("FlatWorld/其他工具/诊断/检查 Addressables 目录")]
         private static void InspectEditorCatalog()
         {
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
@@ -64,7 +64,7 @@ namespace FlatWorld.Editor.Diagnostics
         }
 
         /// <summary>静态目录检查只在编辑状态运行，避免干扰播放中的配置快照。</summary>
-        [MenuItem("FlatWorld/诊断/检查 Addressables 目录", true)]
+        [MenuItem("FlatWorld/其他工具/诊断/检查 Addressables 目录", true)]
         private static bool CanInspectEditorCatalog() => !EditorApplication.isPlayingOrWillChangePlaymode;
 
         #endregion

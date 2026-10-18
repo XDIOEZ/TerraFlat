@@ -59,7 +59,7 @@ public static class BuildingShellMigrationTool
     #region 编辑器入口
 
     /// <summary>创建共享 Shell、功能模块 Prefab，并重建两份建筑 JSON。</summary>
-    [MenuItem("FlatWorld/物品JSON迁移/迁移通用建筑 Shell")]
+    [MenuItem("FlatWorld/其他工具/物品JSON迁移/迁移通用建筑 Shell")]
     public static void Migrate()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)

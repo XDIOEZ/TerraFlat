@@ -12,7 +12,7 @@ public static partial class RuntimeUIPrefabBuilder
     private const string IndustrialBasePath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Mechanical.prefab";
 
     /// <summary>明确执行时重建完整正式资产；控件继续继承项目公共 Prefab。</summary>
-    [MenuItem("FlatWorld/UI/Rebuild Industrial Fluid And Spacesuit Panels")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Industrial Fluid And Spacesuit Panels")]
     public static void RebuildIndustrialPanels()
     {
         if (Application.isPlaying) throw new InvalidOperationException("请在退出 PlayMode 后手动重建页面；运行游戏期间只修改静态资产。");
@@ -86,7 +86,7 @@ public static partial class RuntimeUIPrefabBuilder
     #endregion
 
     #region 通用装备配置入口
-    [MenuItem("FlatWorld/UI/Rebuild Equipment Configuration Button")]
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Equipment Configuration Button")]
     public static void RebuildEquipmentConfigurationButton()
     {
         if (Application.isPlaying) throw new InvalidOperationException("请在退出 PlayMode 后手动重建装备入口。");
