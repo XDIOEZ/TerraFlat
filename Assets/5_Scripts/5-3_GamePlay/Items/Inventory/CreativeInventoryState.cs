@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 /// <summary>
 /// 独立保存玩家创造背包的容量豁免状态；库存内容仍由 Mod_Inventory 持久化。
-/// 生存背包固定 20 格，只有创造背包同时开启动态槽位和携带容量豁免。
+/// 生存背包固定 18 格，只有创造背包同时开启动态槽位和携带容量豁免。
 /// </summary>
 public static class CreativeInventoryState
 {

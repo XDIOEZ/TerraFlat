@@ -28,7 +28,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 联机客户端在同地表船体攻击的 `ClientGroundCombatPending` 期间暂缓槽位拖拽、快捷转移与制作事务；等待 Host 消耗结果成功应用后恢复，不能让旧库存包覆盖箭数或静默丢失本地事务。
 - 联机本机库存事务待确认时，原生丢弃、快捷栏使用、进食和本地弓弹药消耗在副作用前查询 `ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction`；桥只由联机业务登记，单机/Host 默认放行，不停止移动、环境与 AI。测试接入保持在 Development/Testing，不在业务代码注册工具或增加测试分支。
 
-- 重量 kg、体积 L、Stackable 独立。普通槽 `DefaultSlotVolume=int.MaxValue`，不可堆叠物一件一槽，装配槽显式为 1；数量/容量使用 float，整数转换用 `GetWholeStackAmount`。生存行囊固定 20 格，储物/制作采用配置格数。
+- 重量 kg、体积 L、Stackable 独立。普通槽 `DefaultSlotVolume=int.MaxValue`，不可堆叠物一件一槽，装配槽显式为 1；数量/容量使用 float，整数转换用 `GetWholeStackAmount`。生存行囊固定 18 格，储物/制作采用配置格数。
 - ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 绑定实际槽内 ItemData 的 MassChanged，供船载质量缓存使用。新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
 - 携带量统一收集主背包、快捷栏和玩家手工制作的实际输入/输出库存，按数据引用去重；面板关闭仍计入，配方预览不计入。背包显示监听全部随身库存，手工台自行绑定数据事件更新超重状态并在卸载时解绑。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。
 - 世界拾取先用独立候选和去重目标生成只读容量计划，普通原木等按完整整数能收多少收多少，快捷栏余量继续进入背包；成功回执区分原堆扣减量与实际入包量，GM 倍率仍按完整原份结算。轻量掉落的 `body.Amount` 是唯一权威，物态推进先以它给冷载荷播种，不能让旧载荷数量复活余物；随身库存质量事件和倍率实际变化只标记拾取修订号，下次接触查询再重试，不在入包事件里递归拾取。

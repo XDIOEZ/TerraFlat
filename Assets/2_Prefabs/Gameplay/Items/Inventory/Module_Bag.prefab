@@ -171,12 +171,6 @@ MonoBehaviour:
           - CanAcceptTags: []
             SlotMaxVolume: 2147483647
             Index: 17
-          - CanAcceptTags: []
-            SlotMaxVolume: 2147483647
-            Index: 18
-          - CanAcceptTags: []
-            SlotMaxVolume: 2147483647
-            Index: 19
           Index: 0
           IsInjected: 0
           PanelPosition: {x: 0, y: 0, z: 0}

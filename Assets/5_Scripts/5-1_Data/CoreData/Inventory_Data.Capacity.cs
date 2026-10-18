@@ -24,7 +24,7 @@ public partial class Inventory_Data
     public const float PlayerBagCarryOverageMultiplier = 1.5f;
 
     /// <summary>生存玩家主背包固定槽位数，也是创造背包的基础槽位数。</summary>
-    public const int DefaultPlayerBagSlotCount = 20;
+    public const int DefaultPlayerBagSlotCount = 18;
 
     /// <summary>空余槽位小于等于该数量时触发扩容。</summary>
     public const int PlayerBagExpandFreeSlotThreshold = 2;
@@ -62,7 +62,7 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     private float CarryCapacityOverageMultiplier { get; set; } = 1f;
 
-    /// <summary>只有创造主背包启用“20 格基线 + 3 个预留空格”的动态收缩策略。</summary>
+    /// <summary>只有创造主背包启用“18 格基线 + 3 个预留空格”的动态收缩策略。</summary>
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     private bool UsesPlayerBagDynamicSlotPolicy { get; set; }
 
@@ -74,7 +74,7 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float CurrentCarryVolume => CalculateCarryVolume();
 
-    /// <summary>生存主背包固定 20 格；创造状态恢复后才允许扩容，堆叠和携带规则独立处理。</summary>
+    /// <summary>生存主背包固定 18 格；创造状态恢复后才允许扩容，堆叠和携带规则独立处理。</summary>
     public void ConfigurePlayerBagCapacity(float maxWeight, float maxVolume)
     {
         UsesPlayerBagDynamicSlotPolicy = true;
@@ -188,7 +188,7 @@ public partial class Inventory_Data
     }
 
     /// <summary>
-    /// 创造主背包自检：按空余槽位阈值扩容，多余空槽收缩到 20 格基线并保留 3 个空槽。
+    /// 创造主背包自检：按空余槽位阈值扩容，多余空槽收缩到 18 格基线并保留 3 个空槽。
     /// </summary>
     public void MaintainDynamicSlotCount()
     {

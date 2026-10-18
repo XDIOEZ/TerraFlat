@@ -273,6 +273,6 @@ for _, case in ipairs(capacities) do
         assert(data.allowed == case.allowed and data.weightLimit == case.weight, "重量体积容量策略错误")
         assert(data.sameIdentity == case.same and data.canStack == case.stack, "堆叠身份错误")
         assert(data.wholeLarge == 2147483647 and data.wholeNegative == 0, "数量转整数边界错误")
-        if case.args.playerBag then assert(data.slots == 20, "生存背包基础格数错误") end
+        if case.args.playerBag then assert(data.slots == 18, "生存背包基础格数错误") end
     end, "库存容量与身份：" .. case.name)
 end
