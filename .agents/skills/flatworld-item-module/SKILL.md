@@ -28,6 +28,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 
 - 能力来自 Prefab/JSON 的显式组合。`StableName` 是 Item 内唯一模块实例键；`ModuleId` 是可共享能力 ID；`PrefabId`/JSON `prefab` 是具体实现地址，不入实例存档。JSON 键决定 StableName，Prefab-only 回退确定性对象名；`CanonicalModuleId` 提供固定能力默认值，JSON 显式 ID 仍须符合依赖契约。
 - 内嵌模块节点改名且同能力有多个实现时，在 Prefab 显式填写与 JSON 槽位一致的 `StableName`，不要依赖不唯一的能力别名定位。
+- 未绑定模块的序列化 `ModuleId` 为空时，按 `CanonicalModuleId` 校验后再恢复三段身份；仍须匹配稳定槽位与编译位置/具体 Prefab 根，显式冲突 ID 或 Prefab 不可覆盖。
 - 跨模块依赖由 `IItemModuleDependencyBinder` 在配置完成后解析唯一 ID/接口。`ItemMods` 的只读视图通过 `AddMod/RemoveMod/BeginMutation` 更新结构版本和能力缓存；可变 ModuleData 不跨宿主共享。
 - `Module.Load/Save/Unload` 为受控入口，子类实现 `OnLoad/OnSave/OnUnload`。实际加载态决定保存和 Tick；Enabled 是当前配置，运行切换用 `SetEnabled`。资源建立与清理分别属于 OnLoad/OnUnload，保存只捕获状态。
 - `RuntimeGeneration` 每次 Load 更新，不持久化；战斗身份包含 UID、world/dimension 与该代际。感知注册有独立代际。注册同一实例幂等，不同实例 GUID 冲突报错；注销使用登记时身份。

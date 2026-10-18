@@ -250,7 +250,21 @@ public static partial class GameplayTestSystemProbe
             }
             catch (System.IO.InvalidDataException) { stableIdentityRequired = true; }
             finally { animation._Data.StableName = stableName; }
+            // 保留真实外壳位置，直接走生产恢复入口覆盖首次绑定前能力 ID 为空的情况。
+            data.ModuleId = "test:conflicting_animation";
+            bool conflictingModuleIdRejected = !assembly.TryRestoreRuntimeIdentity(animation, instance.transform);
+            data.ModuleId = null;
+            data.StableName = "test:conflicting_slot";
+            bool conflictingStableNameRejected = !assembly.TryRestoreRuntimeIdentity(animation, instance.transform);
+            data.StableName = stableName;
+            bool unboundRequiresBinding = !assembly.MatchesBoundModule(animation);
+            bool restoredRuntimeIdentity = assembly.TryRestoreRuntimeIdentity(animation, instance.transform);
+            bool boundAfterRestore = assembly.MatchesBoundModule(animation);
+            animation.BindRuntimeIdentity(moduleDefinition.StableName, moduleDefinition.ModuleId, "test:conflicting_prefab");
+            bool conflictingPrefabRejected = !assembly.MatchesBoundModule(animation) &&
+                !assembly.TryRestoreRuntimeIdentity(animation, instance.transform);
             animation.BindRuntimeIdentity(moduleDefinition.StableName, moduleDefinition.ModuleId, moduleDefinition.PrefabId);
+            bool reusedIdentityMatches = assembly.MatchesBoundModule(animation);
             assembly.ApplyConfiguration(animation);
             item.itemData.ModuleDataDic[moduleDefinition.StableName] = data;
             animation.ModuleInit(item, data);
@@ -274,6 +288,13 @@ public static partial class GameplayTestSystemProbe
                 ["finalAnimatorCount"] = instance.GetComponentsInChildren<Animator>(true).Length,
                 ["finalRendererCount"] = instance.GetComponentsInChildren<SpriteRenderer>(true).Length,
                 ["stableIdentityRequired"] = stableIdentityRequired,
+                ["unboundRequiresBinding"] = unboundRequiresBinding,
+                ["restoredRuntimeIdentity"] = restoredRuntimeIdentity,
+                ["boundAfterRestore"] = boundAfterRestore,
+                ["conflictingModuleIdRejected"] = conflictingModuleIdRejected,
+                ["conflictingStableNameRejected"] = conflictingStableNameRejected,
+                ["conflictingPrefabRejected"] = conflictingPrefabRejected,
+                ["reusedIdentityMatches"] = reusedIdentityMatches,
                 ["singleSprite"] = animation.IsSingleSpriteMode,
                 ["enabled"] = animation.Enabled,
                 ["inactive"] = !instance.activeInHierarchy

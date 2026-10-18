@@ -63,17 +63,22 @@ public sealed class RuntimeItemModuleAssemblyPlan
            string.Equals(module.ResolvedModuleId, ModuleId, StringComparison.OrdinalIgnoreCase) &&
            string.Equals(module.PrefabId, PrefabId, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>脚本重载后的实例只按编译外壳位置或具体 Prefab 根身份恢复绑定。</summary>
+    /// <summary>首次装配或脚本重载后，只按编译外壳位置或具体 Prefab 根身份恢复绑定。</summary>
     public bool TryRestoreRuntimeIdentity(Module module, Transform ownerRoot)
     {
         if (!MatchesImplementation(module) || !string.IsNullOrWhiteSpace(module.PrefabId) ||
-            !string.Equals(module.StableName, StableName, StringComparison.Ordinal) ||
-            !string.Equals(module.ResolvedModuleId, ModuleId, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(module.StableName, StableName, StringComparison.Ordinal))
+            return false;
+        // 原始外壳尚未绑定能力 ID 时使用模块声明的默认值，显式冲突身份仍然拒绝。
+        string moduleId = string.IsNullOrWhiteSpace(module.ResolvedModuleId)
+            ? module.CanonicalModuleId
+            : module.ResolvedModuleId;
+        if (!string.Equals(moduleId, ModuleId, StringComparison.OrdinalIgnoreCase))
             return false;
         bool belongsToShell = ResolveEmbeddedModule(ownerRoot) == module;
         bool belongsToPrefab = false;
         GameObject prefabRoot = null;
-        if (ModulePrefab != null && string.Equals(module.ResolvedModuleId, ModuleId, StringComparison.OrdinalIgnoreCase))
+        if (ModulePrefab != null)
             for (Transform current = module.transform; current != null && current != ownerRoot; current = current.parent)
                 if (string.Equals(current.name, PrefabId, StringComparison.Ordinal))
                 {

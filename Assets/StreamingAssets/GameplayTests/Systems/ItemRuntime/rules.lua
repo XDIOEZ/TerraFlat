@@ -205,6 +205,10 @@ test.system("item_runtime", "single_sprite_shell_assembly", {actorId = "Wolf"}, 
         "真实狼外壳没有用 animator 稳定槽位参与正式模块编译")
     assert(data.registeredSameInstance and data.resolvedSameInstance and data.stableIdentityRequired,
         "狼动画没有精确复用内嵌组件，或缺少身份时仍被模糊匹配")
+    assert(data.unboundRequiresBinding and data.restoredRuntimeIdentity and data.boundAfterRestore and data.reusedIdentityMatches,
+        "狼动画首次能力 ID 为空时没有按默认能力绑定，或已绑定组件不能继续复用")
+    assert(data.conflictingModuleIdRejected and data.conflictingStableNameRejected and data.conflictingPrefabRejected,
+        "狼动画绑定错误地接受了冲突的能力 ID、稳定槽位或具体 Prefab 身份")
     assert(data.bodyAnimatorMatches and data.bodyRendererMatches and data.controllerName == "Wolf",
         "狼动画接收模块没有绑定真实狼贴图和控制器")
     assert(data.animatorCount == 1 and data.rendererCount == 1 and
