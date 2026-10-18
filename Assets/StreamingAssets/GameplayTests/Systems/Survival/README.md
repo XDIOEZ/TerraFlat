@@ -7,7 +7,7 @@
 - 氧气：`Mod_Oxygen.AddOxygen/GetOxygenSupplyAmount/SupplyOxygen` 的储备上下限、比例、非法输入、未加载对象拒绝供氧。
 - 气压：`Mod_Pressure` 的来源组合、同来源替换、移除、上下限保护、配置校验与新生命缓冲。
 - 营养：`Nutrition` 加法保留容量、饱和钳制、碳水→脂肪→蛋白质扣除、不足不部分扣除。
-- 体温：`ThermalRuntime.AdvanceAmbient` 与 `Mod_Temperature` 临时增温的最强来源、上限、撤来源、基础温度独立快照、分帧一致性。
+- 体温：`ThermalRuntime.AdvanceAmbient` 的0.5℃/游戏秒保底与 `Mod_Temperature` 临时增温的最强来源、上限、撤来源、基础温度独立快照、分帧一致性；2026-10-18 更新保底期望，按用户要求未执行本轮回归。
 - 体温表现（2026-10-18 新增，未执行）：`TemperatureWarningPresentationRules` 的安全线前 3℃蓝/红预警、越界 10℃到边缘效果满强度、边界连续性、窄/零宽安全区、非法输入、装备安全范围修正与移除、真实秒渐入/恢复/冷热切换，以及正常主题色、蓝红插值和透明度保留。夹具只调用正式纯表现接口和独立未加载体温模块，不改当前玩家。
 - 医疗：`BodyPartTreatmentSession` 等待、取消、条件失效、失败/成功提交、零等待与重复提交保护。
 

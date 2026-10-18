@@ -39,9 +39,11 @@ end, "流体内能、平衡温度与质量隔离")
 for _, input in ipairs({
     {current = 300, ambient = 400, seconds = 1, gas = 2, liquid = 0},
     {current = 400, ambient = 300, seconds = 1, gas = 2, liquid = 0},
-    {current = 300, ambient = 300.5, seconds = 1, gas = 2, liquid = 0},
-    {current = 300.5, ambient = 300, seconds = 1, gas = 2, liquid = 0},
-    {current = 250, ambient = 200, seconds = 10, gas = 0, liquid = 3},
+    {current = 300, ambient = 300.5, seconds = 1, gas = 2, liquid = 0, expected = 300.5},
+    {current = 300.5, ambient = 300, seconds = 1, gas = 2, liquid = 0, expected = 300},
+    {current = 300, ambient = 300.25, seconds = 1, gas = 2, liquid = 0, expected = 300.25},
+    {current = 300, ambient = 301, seconds = .1, gas = 2, liquid = 0, expected = 300.05},
+    {current = 250, ambient = 200, seconds = 10, gas = 0, liquid = 3, expected = 244.9993718548904},
     {current = 250, ambient = 350, seconds = 10, gas = 2, liquid = 3},
     {current = 300, ambient = 400, seconds = 0, gas = 2, liquid = 1},
     {current = 300, ambient = 400, seconds = -1, gas = 2, liquid = 1},
@@ -49,9 +51,9 @@ for _, input in ipairs({
     test.system("industrial_fluids", "ambient_heat", input, function(data)
         local expected = input.current
         if input.seconds > 0 then
-            expected = input.ambient + (input.current - input.ambient) * .99 ^ input.seconds
+            expected = input.expected or (input.ambient + (input.current - input.ambient) * .99 ^ input.seconds)
         end
-        near(data.whole, expected, "工业流体自然传热没有按剩余温差百分之一推进")
+        near(data.whole, expected, "工业流体自然传热没有按温差百分比和0.5℃每秒保底推进")
         near(data.split, data.whole, "流体内能分步结算偏离相同总时长")
         near(data.energyAfter - data.energyBefore, data.heat, "环境换热回执与实际内能增减不一致")
         near(data.heat, (data.whole - input.current) * data.heatCapacity, "温度变化没有按实际热容换回内能")

@@ -32,7 +32,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 后台炉吸燃料先用本世界冻结拓扑筛同格候选，再仅对候选计算距离、排序和补配置，禁止为同格查询排序全世界掉落物；记录身份优先核对原列表/下标，列表被回调挪动时才回退查找。Profiler 分 `ColdFuel.Collect/Sort/Transfer`。
 - 后台掉落物每步从真实档案重填可复用的运动工作区，跨世界与异常结束均清空状态；水面同点采样合并，冷地表仅复用资源目录及有界查询键，不缓存实际差量。Profiler 分 `ColdWorld.Motion/Water`，规则覆盖见 Processing 的 `cold_motion_workspace`。
 - 冷机器温度优先读已加载/冷缓存真实环境层，缺块时经 `SpaceSurfaceQuery.TryGetAmbientTemperature` 复用正式地理温度与星体覆盖公式，禁止为了取温度同步生成水文/生态整块；全局调温每次读取，资源/存档切换清理有界点样本。规则见 IndustrialFluids 的 `cold_temperature_path`。
-- 罐体和停火炉体向真实当地环境按 `ThermalRuntime.AdvanceAmbient` 每秒消除剩余温差 1%；炉体先撤销自己的已熄火热源，共享罐内容按本轮启用成员的真实罐体平均温度只换热一次，转换回内能后仍走原有相变；主动燃烧升温与两库存换热保留设备规则。
+- 炉内材料、罐体和停火炉体按 `ThermalRuntime.AdvanceAmbient` 每游戏秒消除剩余温差 1%，升降温至少 0.5℃/游戏秒，到达目标即停，跨速率下限的分步与累计结果一致；炉体先撤销自己的已熄火热源，共享罐内容按本轮启用成员的真实罐体平均温度只换热一次，转换回内能后仍走原有相变；主动燃烧升温与两库存换热保留设备规则。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
 - FurnaceLogic 管燃料、炉温、点火与副产物；材料温度存 MatterState，热反应读材料 reactions/transitions，不直接用炉温替代。MaterialHeatingProcessor 按热源上限/供热量加热，堆叠分摊供热，输出容量先检查；燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
 - 炉体点火后逐份吸收槽内燃料，`fuelAbsorptionSeconds` 默认3秒；`FuelAbsorptionState` 保存槽位/物品身份和进度，完成才事务扣一份、增加燃值并记录副产物。取走/换实例清零，满显示容量暂停，后台长步按吸收/燃烧边界分段；面板只读进度。

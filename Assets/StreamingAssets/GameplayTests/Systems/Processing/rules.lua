@@ -49,7 +49,14 @@ end, "真实加工进度、满输出原子拒绝与恢复产出")
 for _, input in ipairs({
     { current = 100, furnace = 1000, seconds = 1, expected = 109, second = 117.91 },
     { current = 900, furnace = 1000, seconds = 1, expected = 901, second = 901.99 },
-    { current = 999, furnace = 1000, seconds = 1, expected = 999.01 },
+    { current = 999, furnace = 1000, seconds = 1, expected = 999.5 },
+    { current = 499, furnace = 500, seconds = 2, expected = 500 },
+    { current = 499.75, furnace = 500, seconds = 1, expected = 500 },
+    { current = 499, furnace = 500, seconds = .1, expected = 499.05 },
+    { current = 501, furnace = 500, seconds = 1, expected = 500.5 },
+    { current = 500.25, furnace = 500, seconds = 1, expected = 500 },
+    { current = 450, furnace = 500, seconds = 10, expected = 455.00062814511 },
+    { current = 400, furnace = 500, seconds = 100, expected = 465.51684617685 },
     { current = 100, furnace = 800, seconds = 1, expected = 107 },
     { current = 1100, furnace = 1000, seconds = 1, expected = 1099 },
     { current = 1000, furnace = 1000, seconds = 1, expected = 1000 },
@@ -59,7 +66,7 @@ for _, input in ipairs({
 }) do
     test.system("processing", "material_heat", input, function(data)
         assert(math.abs(data.next - input.expected) <= 0.0001,
-            "炉内材料没有按每游戏秒剩余温差的百分之一升降温")
+            "炉内材料没有按温差百分比和每游戏秒0.5℃保底升降温")
         assert(math.abs(data.split - data.next) <= 0.001,
             "分次更新和后台累计结算相同时长后材料温度不一致")
         assert(data.next >= math.min(input.current, input.furnace)

@@ -7,9 +7,11 @@ public static class ThermalRuntime
     #region 环境传热
 
     private const double AmbientDifferenceRetentionPerSecond = 0.99d;
-    private const double AmbientConvergenceThreshold = 0.0001d; // 温差小于万分之一度时收敛，避免持续触发状态更新。
+    public const double MinimumAmbientTemperatureChangePerSecond = 0.5d;
+    private static readonly double AmbientDecayRate = -Math.Log(AmbientDifferenceRetentionPerSecond);
+    private static readonly double MinimumRateDifference = MinimumAmbientTemperatureChangePerSecond / AmbientDecayRate;
 
-    /// <summary>每游戏秒缩小当前温差的 1%，升降温共用同一指数计算且不会越过环境温度。</summary>
+    /// <summary>自然温差按每秒 1% 缩小，升降温至少每游戏秒 0.5℃，到达目标即停止。</summary>
     public static float AdvanceAmbient(float currentTemperature, float ambientTemperature, float seconds)
         => (float)AdvanceAmbient((double)currentTemperature, ambientTemperature, seconds);
 
@@ -21,17 +23,29 @@ public static class ThermalRuntime
         if (!double.IsFinite(ambientTemperature) || !double.IsFinite(seconds) || seconds <= 0d)
             return currentTemperature;
 
-        // 用双精度统一角色、物品与流体的分步结算，避免流体内能被 float 温度截断。
         double difference = currentTemperature - ambientTemperature;
-        if (Math.Abs(difference) <= AmbientConvergenceThreshold)
+        double distance = Math.Abs(difference);
+        if (distance == 0d)
             return ambientTemperature;
         double retention = Math.Pow(AmbientDifferenceRetentionPerSecond, seconds);
-        double remainingDifference = difference * retention;
-        if (Math.Abs(remainingDifference) <= AmbientConvergenceThreshold)
-            return ambientTemperature;
-        double nextTemperature = double.IsFinite(difference)
-            ? ambientTemperature + remainingDifference
-            : currentTemperature * retention + ambientTemperature * (1d - retention);
+        double nextTemperature;
+        if (double.IsFinite(distance))
+        {
+            // 跨越速率下限时先结算百分比阶段，再按剩余秒数匀速收敛，保证分步与累计一致。
+            double exponentialSeconds = distance > MinimumRateDifference
+                ? Math.Log(distance / MinimumRateDifference) / AmbientDecayRate : 0d;
+            double remainingDistance = seconds <= exponentialSeconds
+                ? distance * retention
+                : Math.Max(0d, Math.Min(distance, MinimumRateDifference) -
+                    MinimumAmbientTemperatureChangePerSecond * (seconds - exponentialSeconds));
+            if (remainingDistance == 0d)
+                return ambientTemperature;
+            nextTemperature = ambientTemperature + Math.Sign(difference) * remainingDistance;
+        }
+        else
+        {
+            nextTemperature = currentTemperature * retention + ambientTemperature * (1d - retention);
+        }
         return Math.Clamp(nextTemperature, Math.Min(currentTemperature, ambientTemperature),
             Math.Max(currentTemperature, ambientTemperature));
     }

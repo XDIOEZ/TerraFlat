@@ -5,19 +5,19 @@ test.check("player_ready")
 for _, input in ipairs({
     {current = 20, ambient = 120, seconds = 1},
     {current = 120, ambient = 20, seconds = 1},
-    {current = 10, ambient = 10.5, seconds = 1},
-    {current = 1000, ambient = 1000.0625, seconds = 1},
-    {current = 10, ambient = -20, seconds = 10},
-    {current = 10, ambient = 50, seconds = 1000},
+    {current = 10, ambient = 10.5, seconds = 1, expected = 10.5},
+    {current = 1000, ambient = 1000.0625, seconds = 1, expected = 1000.0625},
+    {current = 10, ambient = -20, seconds = 10, expected = 5},
+    {current = 10, ambient = 50, seconds = 1000, expected = 50},
     {current = 10, ambient = 50, seconds = 0},
 }) do
     test.runtime("containers", "ambient_heat", input, function(data)
         local expected = input.current
         if input.seconds > 0 then
-            expected = input.ambient + (input.current - input.ambient) * .99 ^ input.seconds
+            expected = input.expected or (input.ambient + (input.current - input.ambient) * .99 ^ input.seconds)
         end
         assert(math.abs(data.whole - expected) < .0001 and math.abs(data.split - expected) < .001,
-            "落地液体没有按统一百分比、真实目标和总时长传热")
+            "落地液体没有按统一百分比、0.5℃每秒保底、真实目标和总时长传热")
         assert(data.loaded and math.abs(data.crucible - expected) < .0001,
             "坩埚未走自然传热，仍按固定摄氏速度冷却或趋近0℃")
         assert(data.afterWorldTick == data.crucible and data.worldTickRevisionStable,

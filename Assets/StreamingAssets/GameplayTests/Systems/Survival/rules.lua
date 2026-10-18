@@ -41,10 +41,10 @@ for _, case in ipairs(nutritionCases) do
     end, "营养与能量：" .. case.name)
 end
 local temperatureCases = {
-    {name = "有限增温取最强", args = {}, ambient = 28.087641500176, first = 35, strongest = 50, restored = 30},
+    {name = "有限增温取最强", args = {}, ambient = 25, first = 35, strongest = 50, restored = 30},
     {name = "基础体温超过上限不降温", args = {current = 60, ambient = 60}, ambient = 60, first = 60, strongest = 60, restored = 60},
     {name = "多来源不累加", args = {current = 0, ambient = 0}, ambient = 0, first = 10, strongest = 20, restored = 0},
-    {name = "环境温度向上趋近", args = {current = 10, ambient = 30}, ambient = 11.912358499824, first = 20, strongest = 30, restored = 10}
+    {name = "环境温度向上趋近", args = {current = 10, ambient = 30}, ambient = 15, first = 20, strongest = 30, restored = 10}
 }
 for _, case in ipairs(temperatureCases) do
     test.system("survival", "thermal", case.args, function(data)

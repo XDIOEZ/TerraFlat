@@ -446,7 +446,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         foreach (ItemSlot slot in Input.Data.itemSlots)
         {
             ItemData item = slot?.itemData;
-            // 每游戏秒补上材料与实际炉温之差的 1%，并按经过时间折算分次或后台加热。
+            // 材料按温差百分比升降温，每游戏秒至少变化 0.5℃，达到实际炉温即停止。
             if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds))
             {
                 // 升温通知只更新观察者，整批加热结束后统一按真实材料选择一次配方。

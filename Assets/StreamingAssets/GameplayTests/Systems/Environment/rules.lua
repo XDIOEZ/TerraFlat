@@ -226,15 +226,23 @@ end, "自然恢复配置有限值、时长边界及保存历史拒绝")
 for _, sample in ipairs({{current = 20, ambient = 120, seconds = 10},
     {current = 120, ambient = 20, seconds = 10}, {current = 20, ambient = -80, seconds = 10},
     {current = 20, ambient = 120, seconds = 1}, {current = 120, ambient = 20, seconds = 1},
-    {current = 20, ambient = 21, seconds = 1}, {current = 21, ambient = 20, seconds = 1},
-    {current = -10, ambient = -9.5, seconds = 1}, {current = 80, ambient = 80.5, seconds = 1}}) do
+    {current = 20, ambient = 21, seconds = 1, expected = 20.5},
+    {current = 21, ambient = 20, seconds = 1, expected = 20.5},
+    {current = -10, ambient = -9.5, seconds = 1, expected = -9.5},
+    {current = 80, ambient = 80.5, seconds = 1, expected = 80.5},
+    {current = 20, ambient = 20.25, seconds = 1, expected = 20.25},
+    {current = 20.25, ambient = 20, seconds = 1, expected = 20},
+    {current = 20, ambient = 21, seconds = .1, expected = 20.05},
+    {current = 0, ambient = 50, seconds = 10, expected = 5.000628145109616},
+    {current = 50, ambient = 0, seconds = 10, expected = 44.999371854890384},
+    {current = 0, ambient = 100, seconds = 100, expected = 65.5168461768454}}) do
     local input = sample
     test.system("environment", "thermal", input, function(data)
         assert(data.whole >= math.min(input.current, input.ambient) and data.whole <= math.max(input.current, input.ambient),
             "环境传热越过目标温度")
         assert(math.abs(data.whole - input.ambient) < math.abs(input.current - input.ambient), "环境传热没有趋近环境")
-        local expected = input.ambient + (input.current - input.ambient) * .99 ^ input.seconds
-        near(data.whole, expected, "自然传热没有按剩余温差百分之一结算", .00002)
+        local expected = input.expected or (input.ambient + (input.current - input.ambient) * .99 ^ input.seconds)
+        near(data.whole, expected, "自然传热没有按百分比和每游戏秒0.5℃保底结算", .00002)
         near(data.whole, data.split, "一次和十次结算的传热不一致", .00005)
         near(data.wholeDouble, expected, "双精度流体传热偏离同一百分比规则")
         near(data.wholeDouble, data.splitDouble, "双精度一次和十次结算不一致")
