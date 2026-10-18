@@ -13,6 +13,60 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/shadow_proxy_changes", ShadowProxyChanges);
         operations.Add("rendering/building_capability_cache", BuildingCapabilityCache);
         operations.Add("rendering/ship_part_placement_state", ServiceShipPartPlacementState);
+        operations.Add("rendering/effect_composition", RenderEffectComposition);
+    }
+
+    // 通过真实 MPB 验证静态覆雪不重传，而水线换图和效果启停仍会提交。
+    private static JObject RenderEffectComposition(JObject args)
+    {
+        var root = new GameObject("[LuaRenderEffectComposition]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        var texture = new Texture2D(4, 4);
+        Sprite first = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0f), 1f);
+        Sprite second = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 1f), 1f);
+        try
+        {
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = first;
+            var snow = root.AddComponent<SeasonalSnowRenderEffect>();
+            var controller = root.AddComponent<ActorRenderEffectController>();
+            root.SetActive(true);
+            controller.RenderFrame(0f);
+            int bodyMinId = Shader.PropertyToID("_BodyMinV");
+            var block = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            block.SetFloat(bodyMinId, 42f);
+            renderer.SetPropertyBlock(block);
+            renderer.sprite = second;
+            controller.RenderFrame(0f);
+            renderer.GetPropertyBlock(block);
+            float snowIdleMin = block.GetFloat(bodyMinId);
+            snow.enabled = false;
+            controller.RenderFrame(0f);
+            renderer.GetPropertyBlock(block);
+            float snowDisabledMin = block.GetFloat(bodyMinId);
+            root.AddComponent<WaterImmersionRenderEffect>();
+            controller.RefreshBindings();
+            renderer.sprite = first;
+            controller.RenderFrame(0f);
+            renderer.GetPropertyBlock(block);
+            float waterFirstMin = block.GetFloat(bodyMinId);
+            renderer.sprite = second;
+            controller.RenderFrame(0f);
+            renderer.GetPropertyBlock(block);
+            return new JObject
+            {
+                ["snowIdleMin"] = snowIdleMin, ["snowDisabledMin"] = snowDisabledMin,
+                ["waterFirstMin"] = waterFirstMin, ["waterChangedMin"] = block.GetFloat(bodyMinId)
+            };
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+            UnityEngine.Object.DestroyImmediate(first);
+            UnityEngine.Object.DestroyImmediate(second);
+            UnityEngine.Object.DestroyImmediate(texture);
+        }
     }
 
     // 独立禁用物品只采正式能力查询，模块结构与动态属性均不复制生产判断。

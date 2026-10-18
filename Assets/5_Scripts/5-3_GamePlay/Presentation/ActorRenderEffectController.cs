@@ -63,26 +63,36 @@ public sealed class ActorRenderEffectController : MonoBehaviour
 
     private void LateUpdate()
     {
+        RenderFrame(Application.isPlaying ? Time.deltaTime : 0f);
+    }
+
+    // 正式更新与独立规则共用合成入口，不推进游戏或更改控制器启停状态。
+    internal void RenderFrame(float deltaTime)
+    {
         if (propertyBlock == null)
             propertyBlock = new MaterialPropertyBlock();
 
         if (bindingsDirty)
             RefreshBindings();
 
-        float deltaTime = Application.isPlaying ? Time.deltaTime : 0f;
         bool applyEffects = renderStateDirty;
+        bool trackSpriteBodyRange = false;
         for (int i = 0; i < modules.Count; i++)
         {
             ActorRenderEffectModule module = modules[i];
             if (module == null)
                 continue;
-            module.UpdateFrame(deltaTime);
-            bool active = module.isActiveAndEnabled;
+            bool active = module.UpdateFrame(deltaTime);
+            trackSpriteBodyRange |= active && module.RequiresSpriteBodyRange;
             applyEffects |= moduleVersions[i] != module.RenderStateVersion ||
                 moduleActiveStates[i] != active || active && module.RequiresContinuousRendering;
             moduleVersions[i] = module.RenderStateVersion;
             moduleActiveStates[i] = active;
         }
+
+        // 覆雪等只使用独立材质通道，状态未变时无需读取每个 Renderer 的 Sprite。
+        if (!applyEffects && !trackSpriteBodyRange)
+            return;
 
         for (int i = 0; i < renderers.Count; i++)
         {
@@ -389,15 +399,19 @@ public abstract class ActorRenderEffectModule : MonoBehaviour
 
     /// <summary>连续效果保留逐帧提交，静态效果通过版本通知参数变化。</summary>
     public virtual bool RequiresContinuousRendering => true;
+    /// <summary>水线等依赖身体高度的效果保持换图跟踪，独立材质通道可显式关闭。</summary>
+    public virtual bool RequiresSpriteBodyRange => true;
     internal uint RenderStateVersion { get; private set; }
 
     protected void MarkRenderStateDirty() => RenderStateVersion++;
 
     /// <summary>更新模块的平滑状态，不直接操作 Renderer。</summary>
-    internal void UpdateFrame(float deltaTime)
+    internal bool UpdateFrame(float deltaTime)
     {
-        if (isActiveAndEnabled)
+        bool active = isActiveAndEnabled;
+        if (active)
             PrepareFrame(deltaTime);
+        return active;
     }
 
     /// <summary>向指定 Renderer 合并本模块的材质参数。</summary>

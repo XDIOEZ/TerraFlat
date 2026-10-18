@@ -134,6 +134,8 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		get => ModData;
 		set => ModData = (Ex_ModData_MemoryPackable)value;
 	}
+	// 默认能力交给统一身份绑定，Awake 不再改写编译时冻结的外壳身份。
+	public override string CanonicalModuleId => ModText.AI;
 
 	public Item ActorItem => item;
 	public bool IsAlive => _hp != null && _hp.Hp > 0f;
@@ -294,14 +296,6 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 #endregion
 
 #region Lifecycle
-	public override void Awake()
-	{
-		if (string.IsNullOrEmpty(_Data.ID))
-		{
-			_Data.ID = ModText.AI;
-		}
-	}
-
 	/// <summary>通用初始化流程，子类 Load() 中读取存档数据后调用</summary>
 	protected void InitializeAI()
 	{

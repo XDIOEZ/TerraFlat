@@ -305,6 +305,11 @@ test.system("item_runtime", "single_sprite_shell_assembly", {actorId = "Wolf"}, 
 end, "真实狼外壳稳定槽位编译、内嵌动画复用与重复视觉拒绝")
 
 test.system("item_runtime", "module_assembly_identity", {}, function(data)
+    assert(#data.awakeBindings == 2, "缺少真实AI或转身模块的Awake身份回归")
+    for _, row in ipairs(data.awakeBindings) do
+        assert(row.sourceUnchanged and row.restored and row.boundPreserved,
+            row.slot .. "在Awake和定义装配之间改写身份或无法生成")
+    end
     assert(data.sourceIdentityRestored and data.canonicalIdentityRestored,
         "编译来源的默认身份或Awake补全的正式能力ID无法首次绑定")
     assert(data.sourceStableConflictRejected and data.sourceIdConflictRejected,

@@ -447,3 +447,9 @@ test.system("rendering", "fog_transition", { steps = {
     assert(not s[14].transitioning and s[14].clearRadius == 5,
         "屏外弱雾转强雾满 30 秒后没有达到目标")
 end, "天气雾加载首帧、视口端点改变与屏外弱雾接续")
+test.system("rendering", "effect_composition", {}, function(data)
+    assert(data.snowIdleMin == 42, "仅覆雪且参数未变时重复写入了MPB")
+    assert(math.abs(data.snowDisabledMin + 4) < 0.0001, "效果启停后没有重新提交材质参数")
+    assert(math.abs(data.waterFirstMin) < 0.0001 and math.abs(data.waterChangedMin + 4) < 0.0001,
+        "水体效果的身体高度未跟随Sprite换图")
+end, "静态覆雪免重传、效果启停与水线换图合成")

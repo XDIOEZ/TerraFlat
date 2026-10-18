@@ -10,6 +10,7 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
     private float coverage; // 当前覆雪强度。
     private float nextSample; // 避免逐帧查询环境。
     public override bool RequiresContinuousRendering => false;
+    public override bool RequiresSpriteBodyRange => false;
     /// <summary>绑定所有实际生成的物品，复用池化实例上已有组件。</summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()
@@ -36,10 +37,11 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
         if (owner == null || owner.InHand || owner.Owner != null) { SetCoverage(0f); return; }
         if (Time.unscaledTime < nextSample) return;
         nextSample = Time.unscaledTime + 0.5f;
-        bool moved = (transform.position - lastPosition).sqrMagnitude > 0.0001f;
-        lastPosition = transform.position;
-        WeatherMgr weather = WeatherMgr.Instance;
-        SetCoverage(moved || weather == null ? 0f : Mathf.Clamp01(weather.GetSnowCoverage(transform.position)));
+        Vector3 position = transform.position;
+        bool moved = (position - lastPosition).sqrMagnitude > 0.0001f;
+        lastPosition = position;
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        SetCoverage(moved || weather == null ? 0f : Mathf.Clamp01(weather.GetSnowCoverage(position)));
     }
     /// <summary>覆雪值变化时才要求控制器提交材质参数。</summary>
     private void SetCoverage(float value)

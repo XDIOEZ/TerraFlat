@@ -352,8 +352,47 @@ public static partial class GameplayTestSystemProbe
             inactiveSecond._Data.ModuleId = "test:shared-inactive";
             inactiveFirst.EnsureRuntimeIdentity();
             inactiveSecond.EnsureRuntimeIdentity();
+            // 使用真实 AI 和转身组件覆盖“先 Awake 再装配”及“先装配再 Awake”两种顺序。
+            var awakeShell = new GameObject("AwakeIdentityShell");
+            awakeShell.transform.SetParent(root.transform, false);
+            awakeShell.AddComponent<GameItem>().IsPreparedCandidate = true;
+            var aiNode = new GameObject("Module_AI_Chicken");
+            aiNode.transform.SetParent(awakeShell.transform, false);
+            var aiSource = aiNode.AddComponent<AI_Chicken>();
+            aiSource.ModData = new Ex_ModData_MemoryPackable { StableName = "", ModuleId = "" };
+            var turnNode = new GameObject("Module_TurnBody");
+            turnNode.transform.SetParent(awakeShell.transform, false);
+            var turnSource = turnNode.AddComponent<Mod_TurnBack>();
+            turnSource.modData = new Ex_ModData { StableName = "", ModuleId = "" };
+            var awakeDefinitions = new[]
+            {
+                new RuntimeItemModuleDefinition("ai", aiNode.name, aiNode.name, null, true),
+                new RuntimeItemModuleDefinition("turn", turnNode.name, turnNode.name, null, true)
+            };
+            var awakePlans = ItemModuleAssemblyCompiler.Compile(null, "test:awake-identity", awakeShell,
+                awakeDefinitions, usesResourceEntities: false);
+            GameObject awakeInstance = UnityEngine.Object.Instantiate(awakeShell, root.transform, false);
+            var awakeBindings = new JArray();
+            foreach (RuntimeItemModuleAssemblyPlan awakePlan in awakePlans)
+            {
+                Module module = awakePlan.ResolveEmbeddedModule(awakeInstance.transform);
+                string sourceId = module.ResolvedModuleId;
+                string sourceSlot = module.StableName;
+                module.Awake();
+                bool sourceUnchanged = module.ResolvedModuleId == sourceId && module.StableName == sourceSlot;
+                bool restored = awakePlan.TryRestoreRuntimeIdentity(module, awakeInstance.transform);
+                module.Awake();
+                awakeBindings.Add(new JObject
+                {
+                    ["slot"] = awakePlan.StableName,
+                    ["sourceUnchanged"] = sourceUnchanged,
+                    ["restored"] = restored,
+                    ["boundPreserved"] = awakePlan.MatchesBoundModule(module)
+                });
+            }
             return new JObject
             {
+                ["awakeBindings"] = awakeBindings,
                 ["nestedExcludedFromCompile"] = nestedExcludedFromCompile,
                 ["shellPrototypeExact"] = shellPrototypeExact,
                 ["sourceIdentityRestored"] = sourceIdentityRestored,

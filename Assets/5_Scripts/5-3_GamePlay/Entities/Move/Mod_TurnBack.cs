@@ -56,17 +56,12 @@ public class Mod_TurnBack : Module
         set => modData = (Ex_ModData)value;
     }
 
+    // 默认能力交给统一身份绑定，保留外壳来源值直到具体定义完成装配。
+    public override string CanonicalModuleId => ModText.TrunBody;
+
     #endregion
 
     #region 生命周期方法
-
-    public override void Awake()
-    {
-        if (_Data.ID == "")
-        {
-            _Data.ID = ModText.TrunBody;
-        }
-    }
 
     protected override void OnLoad()
     {

@@ -4,6 +4,8 @@
 
 快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly、module_assembly_identity`。
 
+`module_assembly_identity` 新增真实 `AI_Chicken`、`Mod_TurnBack` 的两种调用顺序：先 Awake 后绑定必须保留编译来源身份并成功装配，先绑定后 Awake 必须保留定义身份。2026-10-18 仅补充，Unity 在 PlayMode，本轮未编译或执行；实际自然生成由用户验收。
+
 单图状态换图回归：`single_sprite_animation` 检查 `Flying/Landing/Ground` 状态映射、直接 `TrySetSprite`、同状态重入、未知状态/空图拒绝，以及停用、卸载、切模式与复位后的原图恢复；换图后身体 Animator 仍停用。`single_sprite_shell_assembly` 读取真实 Bird/Seagull 外壳的五种首帧配置，并采样正式飞行阶段选择函数。2026-10-18 本次仅补充断言，Unity 正在 PlayMode，未编译、未执行；不代表真实鸟类飞行、对象池重取或画面观感已验收。
 
 已编写的规则覆盖：ModuleDataCollection 的结构版本、启停与移除退订；ItemInstanceDataFactory 的库存、模块和标签副本隔离。

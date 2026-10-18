@@ -27,6 +27,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 `当前定义 → ItemData → 全部模块登记 → ModuleInit → 依赖绑定 → OnLoad → Tick/Save → OnUnload → Despawn/Pool`
 
 - 能力来自 Prefab/JSON 的显式组合。`StableName` 是 Item 内唯一模块实例键；`ModuleId` 是可共享能力 ID；`PrefabId`/JSON `prefab` 是具体实现地址，不入实例存档。JSON 键决定 StableName，Prefab-only 回退确定性对象名；`CanonicalModuleId` 提供固定能力默认值，JSON 显式 ID 仍须符合依赖契约。
+- 默认能力通过 `CanonicalModuleId` 声明，由统一绑定入口写入；不要在 `Awake` 改写空模板 ID，否则可能同时破坏来源身份和当前定义身份，造成 AI/转身模块生成失败。
 - 内嵌模块节点改名且同能力有多个实现时，在 Prefab 显式填写与 JSON 槽位一致的 `StableName`，不要依赖不唯一的能力别名定位。
 - 未绑定模块只在精确编译位置接受当前定义或冷编译记录的来源模板身份，允许共享 Prefab 默认槽位/能力转为具体定义身份；既不属于来源也不属于定义的 ID/槽位、已绑定的其他 Prefab 不可覆盖。独立 Prefab 必须同时命中根地址和编译组件位置。
 - 编译、实例绑定及额外组件清退都遵循最近 Item 所有权，不能穿过子物品；独立模块 Prefab 不得包含 Item。资源目录预检直接复用编译计划定位目标组件，纯数据能力不查找 GameObject 模块。
