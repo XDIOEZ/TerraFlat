@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FlatWorld.Combat;
 using FlatWorld.Gameplay.Events;
 using FlatWorld.Gameplay.Progress;
@@ -54,6 +55,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
         operations.Add("crafting/transaction", EntityCraftingTransaction);
+        operations.Add("processing/reaction_batch", EntityReactionBatch);
         operations.Add("crafting/plank_tool", EntityCraftingPlankTool);
         operations.Add("crafting/handmade_catalog", EntityCraftingHandmadeCatalog);
         operations.Add("containers/composition", EntityContainerComposition);
@@ -913,6 +915,27 @@ public static partial class GameplayTestSystemProbe
             ["matched"] = matched, ["total"] = total, ["plan"] = allocations,
             ["oakAfter"] = slots[0].itemData.Stack.Amount, ["birchAfter"] = slots[1].itemData.Stack.Amount
         };
+    }
+
+    // 独立材料只提供温度和数量，批量匹配与扣料计划由正式反应入口生成。
+    private static JObject EntityReactionBatch(JObject args)
+    {
+        var material = EntityProbeData("test:reaction_material", (float)Number(args, "available", 7d));
+        material.MatterState = new ItemMatterState { Initialized = true,
+            TemperatureCelsius = (float)Number(args, "temperature", 1000d) };
+        var input = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+            { new(0) { itemData = material } }, "independent reaction batch") };
+        var recipe = new RuntimeRecipe { Id = "test:reaction_batch" };
+        recipe.inputs.RowItems_List.Add(new RuntimeRecipeIngredient { ItemName = material.IDName,
+            amount = (int)Number(args, "required", 2d) });
+        var reaction = new RuntimeItemReactionDefinition(material.IDName, recipe.Id, 1000f, null, recipe, recipe.Id);
+        ISet<int> blocked = Flag(args, "blocked", false) ? new HashSet<int> { 0 } : null;
+        bool matched = ItemReactionResolver.TryMatchBatch(input, reaction, out var match, out int batches,
+            blocked, (int)Number(args, "maximum", int.MaxValue));
+        float consumed = 0f;
+        if (matched) foreach (CraftingConsumption consumption in match.Consumptions) consumed += consumption.Amount;
+        return new JObject { ["matched"] = matched, ["batches"] = batches,
+            ["consumed"] = consumed, ["remaining"] = material.Stack.Amount };
     }
 
     private static JObject EntityCraftingTransaction(JObject args)

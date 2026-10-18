@@ -149,6 +149,27 @@ test.system("processing", "cold_fuel_transfer", {}, function(data)
     near(data.finalSource + data.finalTarget, 3, "恢复后没有按本次真实余量守恒")
 end, "后台燃料实际库存接纳、满槽拒绝、分堆身份与恢复守恒")
 
+for _, sample in ipairs({
+    { available = 7, required = 2, expected = 3 },
+    { available = 5.5, required = 2, expected = 2 },
+    { available = 1.5, required = 2, expected = 0 },
+    { available = 7, required = 2, maximum = 2, expected = 2 },
+    { available = 7, required = 2, maximum = 0, expected = 0 },
+    { available = 7, required = 2, blocked = true, expected = 0 },
+    { available = 7, required = 2, temperature = 999, expected = 0 },
+    { available = 3000000000, required = 3, expected = 715827882 }
+}) do
+    local expected, available, required = sample.expected, sample.available, sample.required
+    test.system("processing", "reaction_batch", sample, function(data)
+        assert(data.matched == (expected > 0) and data.batches == expected,
+            "反应批次没有遵守整份材料、温度、锁槽或整数安全上限")
+        assert(data.remaining == available, "匹配阶段提前扣除了材料")
+        if available < 100 then
+            near(data.consumed, expected * required, "批量扣料计划数量错误")
+        end
+    end, "反应整数批次边界：材料" .. available .. "、每批" .. required .. "、预期" .. expected)
+end
+
 test.system("processing", "cold_motion_workspace", {}, function(data)
     near(data.firstPosition, .5, "冷物没有按档案轨迹推进")
     near(data.firstElapsed, .25, "冷物没有保存实际推进时间")

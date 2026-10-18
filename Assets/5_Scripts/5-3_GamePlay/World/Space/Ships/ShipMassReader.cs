@@ -279,8 +279,8 @@ namespace FlatWorld.Spaceflight
                 RecipeProcessingState workbench = saved.Workbench;
                 mass += ReadInventory(workbench?.Input, depth + 1) + ReadInventory(workbench?.Output, depth + 1);
                 FurnaceRuntimeState furnace = saved.Furnace;
+                // 炉体全部实物库存归 Smelting 管理，供热状态不再持有配方加工器。
                 if (furnace?.Smelting?.InvData != null) foreach (Inventory_Data inventory in furnace.Smelting.InvData.Values) mass += ReadInventory(inventory, depth + 1);
-                mass += ReadInventory(furnace?.Processing?.Input, depth + 1) + ReadInventory(furnace?.Processing?.Output, depth + 1);
                 mass += ReadInventory(saved.Compost?.Inventory, depth + 1);
                 mass += ReadInventory(saved.Drying?.Inventory, depth + 1);
                 FluidMachineState fluid = saved.Fluid;

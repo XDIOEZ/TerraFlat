@@ -872,11 +872,13 @@ public static class ItemReactionResolver
         int upper = maxBatches;
         foreach (RuntimeRecipeIngredient ingredient in ingredients)
         {
-            float available = 0f;
+            double available = 0d;
             foreach (ItemSlot slot in eligible)
                 if (CraftingIngredientMatcher.MatchesIdentity(ingredient, slot?.itemData))
                     available += slot.itemData.Stack.Amount;
-            upper = Mathf.Min(upper, Mathf.FloorToInt(available / ingredient.amount));
+            // 批次数和配方用量始终按整数计算，先约束乘积再分配材料。
+            upper = Math.Min(upper, int.MaxValue / ingredient.amount);
+            upper = (int)Math.Min(upper, Math.Floor(available / ingredient.amount));
         }
         if (upper < 1) return false;
         List<CraftingConsumption> best = null;
@@ -891,7 +893,7 @@ public static class ItemReactionResolver
                     matchMode = ingredient.matchMode,
                     ItemName = ingredient.ItemName,
                     Tag = ingredient.Tag,
-                    amount = ingredient.amount * (float)candidate
+                    amount = checked(ingredient.amount * candidate)
                 });
             if (CraftingMaterialAllocator.TryAllocate(eligible, scaled, out List<CraftingConsumption> consumptions))
             {
