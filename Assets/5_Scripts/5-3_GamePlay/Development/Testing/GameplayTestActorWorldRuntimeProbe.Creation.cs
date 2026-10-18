@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -10,6 +11,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     private static void RegisterCreatureCreation()
     {
         GameplayTestRuntimeProbe.Register("ai", "creature_creation", CaptureCreatureCreation);
+        GameplayTestRuntimeProbe.RegisterAsync("ai", "incremental_creature_creation", CaptureIncrementalCreatureCreation);
     }
 
     // 在隔离世界调用正式管理器，采样身份、回滚、池复用和休眠恢复，业务断言交给 Lua。
@@ -105,6 +107,105 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             result["cleanupComplete"] = owned.TrueForAll(guid => ItemMgr.Instance.GetItemByGuid(guid) == null &&
                 !SaveDataMgr.Instance.ContainsParkedRuntimeAi(guid));
         }
+    }
+
+    #endregion
+
+    #region 分帧出生现场
+
+    // 每次只推进一个正式创建步骤，采样跨帧交付、半途取消和光源惰性创建。
+    private static IEnumerator CaptureIncrementalCreatureCreation(Player player, JObject args, Action<JObject> completed)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        MonsterSpawnerManager manager = MonsterSpawnerManager.ExistingInstance;
+        var sample = FindOpenCell(player);
+        Vector3 position = WorldLocalPresentation.ProjectPosition((Vector2)sample.WorldCell + Vector2.one * .5f);
+        Item created = null;
+        int guid = 0;
+        bool callbackInitialized = false;
+        int firstFrame = Time.frameCount;
+        int steps = 0;
+        bool prematureDelivery = false;
+        double deadline = Time.realtimeSinceStartupAsDouble + 30d;
+        var result = new JObject();
+        try
+        {
+            using (var creation = manager.SpawnCreatureInSteps("Chicken", position, candidate =>
+                   {
+                       created = candidate;
+                       guid = candidate.itemData.Guid;
+                       callbackInitialized = candidate.IsInitialized && candidate.gameObject.activeInHierarchy &&
+                           ReferenceEquals(ItemMgr.Instance.GetItemByGuid(guid), candidate);
+                   }))
+                while (creation.MoveNext())
+                {
+                    steps++;
+                    prematureDelivery |= created != null;
+                    if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException("分帧生物创建超时。");
+                    yield return null;
+                }
+            result["steps"] = steps;
+            result["frames"] = Time.frameCount - firstFrame;
+            result["created"] = guid != 0 && callbackInitialized;
+            result["prematureDelivery"] = prematureDelivery;
+            ActorBuffLightController light = created?.GetComponentInChildren<ActorBuffLightController>(true);
+            result["hasLightController"] = light != null;
+            result["noUnusedLight"] = light != null && light.RuntimeLight == null;
+            if (light != null)
+            {
+                Mod_BuffManager buffs = created.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+                result["radianceAdded"] = buffs.AddBuff(ActorBuffLightController.RadianceBuffId);
+                light.RefreshBuffVisualState();
+                var firstLight = light.RuntimeLight;
+                result["lightCreatedOnDemand"] = firstLight != null && light.IsLightActive;
+                buffs.RemoveBuff(ActorBuffLightController.RadianceBuffId);
+                light.RefreshBuffVisualState();
+                result["lightDisabled"] = !light.IsLightActive;
+                buffs.AddBuff(ActorBuffLightController.RadianceBuffId);
+                light.RefreshBuffVisualState();
+                result["lightReused"] = ReferenceEquals(firstLight, light.RuntimeLight) && light.IsLightActive;
+            }
+            AiRuntimeBackendService.TryDespawnActor(guid);
+            int rollbackBefore = manager.RolledBackCreatureCreations;
+            bool deliveredCancelled = false;
+            using (var cancelled = manager.SpawnCreatureInSteps("Chicken", position, _ => deliveredCancelled = true))
+            {
+                while (cancelled.MoveNext())
+                {
+                    if (cancelled.Current == 1) break;
+                    if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException("分帧取消现场超时。");
+                    yield return null;
+                }
+            }
+            result["cancelDidNotDeliver"] = !deliveredCancelled;
+            result["cancelRollbackCount"] = manager.RolledBackCreatureCreations - rollbackBefore;
+            int published = 0;
+            Action<Item> observe = item =>
+            {
+                if (item.itemData?.IDName == "Chicken" && (item.transform.position - position).sqrMagnitude < .0001f)
+                    published++;
+            };
+            ItemMgr.RuntimeItemInstantiated += observe;
+            bool invalidDelivered = false;
+            try
+            {
+                using var invalidated = manager.SpawnCreatureInSteps("Chicken", position, _ => invalidDelivered = true, canCommit: () => false);
+                while (invalidated.MoveNext())
+                {
+                    if (Time.realtimeSinceStartupAsDouble >= deadline) throw new TimeoutException("分帧生物拒绝现场超时。");
+                    yield return null;
+                }
+            }
+            finally { ItemMgr.RuntimeItemInstantiated -= observe; }
+            result["invalidCommitRejected"] = !invalidDelivered;
+            result["invalidCommitNotPublished"] = published == 0;
+        }
+        finally
+        {
+            if (guid != 0) AiRuntimeBackendService.TryDespawnActor(guid);
+        }
+        result["cleanupComplete"] = guid != 0 && ItemMgr.Instance.GetItemByGuid(guid) == null;
+        completed(result);
     }
 
     #endregion

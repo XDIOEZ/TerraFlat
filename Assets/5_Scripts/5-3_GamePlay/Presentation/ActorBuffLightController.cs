@@ -56,7 +56,9 @@ public sealed class ActorBuffLightController : MonoBehaviour
 
     private void Awake()
     {
-        EnsureRuntimeLight();
+        // 恢复已有子光源引用，但没有光耀时不新建光源。
+        Transform existing = transform.Find(RuntimeLightName);
+        if (existing != null) runtimeLight = existing.GetComponent<Light2D>();
     }
 
     private void OnEnable()
@@ -155,7 +157,6 @@ public sealed class ActorBuffLightController : MonoBehaviour
     /// <summary>根据权威 Buff 状态同时刷新光照与感染染色。</summary>
     public void RefreshBuffVisualState()
     {
-        EnsureRuntimeLight();
         SetLightActive(buffManager != null && buffManager.HasBuff(buffId));
         SetInfectionTintActive(buffManager != null && buffManager.HasBuff(InfectionBuffIds.Infection));
     }
@@ -192,12 +193,20 @@ public sealed class ActorBuffLightController : MonoBehaviour
 
     private void SetLightActive(bool active)
     {
-        EnsureRuntimeLight();
+        // 普通角色没有光耀时不创建光源，也不重复刷新全区块光照。
+        if (!active && runtimeLight == null)
+        {
+            lightActive = false;
+            return;
+        }
+        bool wasActive = IsLightActive;
+        if (active) EnsureRuntimeLight();
         lightActive = active;
         if (runtimeLight.enabled != active)
             runtimeLight.enabled = active;
 
-        LightLayerMgr.Instance?.RefreshAllActiveChunks();
+        if (wasActive != IsLightActive)
+            LightLayerMgr.Instance?.RefreshAllActiveChunks();
     }
 
     /// <summary>感染存在时设置轻微绿色，结束后恢复角色原色。</summary>

@@ -23,6 +23,11 @@ public partial class MonsterSpawnerManager
 
     private void Update()
     {
+        if (_naturalCreatureBirth != null)
+        {
+            AdvanceNaturalCreatureBirth();
+            return;
+        }
         if (Time.unscaledTime < _nextEcologyTickTime)
             return;
         using (TickMarker.Auto())

@@ -92,6 +92,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void OnGameWorldEnter()
     {
+        CancelNaturalCreatureBirth();
         ResetCreatureCreationDiagnostics();
         enabled = false;
         UnsubscribePresentationEvents();
@@ -177,6 +178,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private void OnGameWorldExit()
     {
         enabled = false;
+        CancelNaturalCreatureBirth();
         UnsubscribePresentationEvents();
         _treeHabitatIndex.Dispose();
         _treeCapacityCache.Clear();
@@ -200,6 +202,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     protected override void OnDestroy()
     {
         enabled = false;
+        CancelNaturalCreatureBirth();
         UnsubscribePresentationEvents();
         _treeHabitatIndex.Dispose();
         bool ownsSingleton = ReferenceEquals(instance, this);
@@ -703,7 +706,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             ? SelectPendingCountdownEntry(config, state) : null;
         if (config.ScheduleMode == SpawnerScheduleMode.Countdown && countdownEntry == null)
             return false;
-        bool spawned = TrySpawnOne(config, state, out bool skippedByChance, countdownEntry);
+        bool spawned = TrySpawnOne(config, state, currentDay, out bool skippedByChance, out bool queued, countdownEntry);
+        if (queued) return true;
         if (!spawned && !skippedByChance)
         {
             int remaining = _remainingSearchAttempts.TryGetValue(config, out int value)
@@ -728,10 +732,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return true;
     }
 
-    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, out bool skippedByChance,
-        SpawnerConfig.SpawnEntry requestedEntry = null)
+    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, int currentDay,
+        out bool skippedByChance, out bool queued,
+        SpawnerConfig.SpawnEntry requestedEntry = null, bool incremental = true)
     {
         skippedByChance = false;
+        queued = false;
+        if (_naturalCreatureBirth != null) return false;
         SpawnerCountdownProgress batch = GetSpawnBatch(config, state, requestedEntry);
         int requiredRoom = GetCountdownBatchRequiredRoom(batch);
         int globalLimit = GameDifficultyService.ScaleCount(
@@ -767,6 +774,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         // 即使资源初始化失败，昂贵的创建尝试也不能在同一短时间窗内反复执行。
         _nextCreatureBirthTime = Time.unscaledTime + Mathf.Max(0.1f, _settings.EcologyTickInterval);
+        if (incremental && !AiRuntimeBackendService.UsesEntities(entry.PrefabName))
+        {
+            _naturalCreatureBirth = CreateNaturalCreatureInSteps(config, state, entry, spawnPosition, currentDay,
+                () => batch?.RecordBatchBirth(spawnPosition.x, spawnPosition.y, _itemManager.PlayerInSceneName));
+            queued = true;
+            return false;
+        }
         if (!TrySpawnMonster(entry, spawnPosition))
             return false;
 
@@ -775,6 +789,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
         return true;
     }
+
+    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, out bool skippedByChance)
+        => TrySpawnOne(config, state, 0, out skippedByChance, out _, incremental: false);
 
     private SpawnerConfig.SpawnEntry DetermineAvailableEntry(
         SpawnerConfig config,

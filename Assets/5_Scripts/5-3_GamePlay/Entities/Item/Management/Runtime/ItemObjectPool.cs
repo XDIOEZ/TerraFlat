@@ -63,6 +63,14 @@ internal sealed class ItemObjectPool
 
     public GameObject Acquire(string itemId, Func<string, GameObject> spawn)
     {
+        return TryAcquire(itemId, out GameObject itemObject)
+            ? itemObject : Adopt(itemId, spawn(itemId));
+    }
+
+    /// <summary>只尝试复用；未命中时由调用方决定同步或异步创建外壳。</summary>
+    public bool TryAcquire(string itemId, out GameObject itemObject)
+    {
+        itemObject = null;
         using var acquireDebug = AcquireDebug.Measure(1, itemId);
         if (Pools.TryGetValue(itemId, out Queue<Item> pool))
         {
@@ -84,7 +92,8 @@ internal sealed class ItemObjectPool
                     pooledMarker.RestoreBaseline();
                     pooledItem.transform.SetParent(null, false);
                     HitDebug.AddWork(1);
-                    return pooledItem.gameObject;
+                    itemObject = pooledItem.gameObject;
+                    return true;
                 }
                 catch
                 {
@@ -95,7 +104,11 @@ internal sealed class ItemObjectPool
         }
 
         MissDebug.AddWork(1);
-        GameObject itemObject = spawn(itemId);
+        return false;
+    }
+
+    public GameObject Adopt(string itemId, GameObject itemObject)
+    {
         Item newItem = itemObject.GetComponent<Item>();
         if (newItem == null)
         {

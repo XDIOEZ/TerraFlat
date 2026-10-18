@@ -6,6 +6,7 @@ using System;
 using FastCloner.Code;
 using UnityEngine.Pool;
 using FlatWorld.Diagnostics;
+using Unity.Profiling;
 
 
 /// <summary>
@@ -21,6 +22,18 @@ public abstract class Item : MonoBehaviour
     private static readonly PerformanceDebugPoint InitializeModulesDebug = new("FlatWorld.Item.ModuleInitBatch");
     private static readonly PerformanceDebugPoint BindDependenciesDebug = new("FlatWorld.Item.BindModuleDependenciesBatch");
     private static readonly PerformanceDebugPoint LoadModulesDebug = new("FlatWorld.Item.LoadModulesBatch");
+    private static readonly Dictionary<Type, ProfilerMarker> ModuleInitMarkers = new();
+    private static readonly Dictionary<Type, ProfilerMarker> ModuleLoadMarkers = new();
+
+    // 类型标记只创建一次，后续单只生物卡顿可以直接定位到具体模块。
+    private static ProfilerMarker GetModuleLoadMarker(Module module, bool initializing)
+    {
+        Type type = module.GetType();
+        var markers = initializing ? ModuleInitMarkers : ModuleLoadMarkers;
+        if (!markers.TryGetValue(type, out ProfilerMarker marker))
+            markers.Add(type, marker = new ProfilerMarker((initializing ? "FlatWorld.ModuleInit." : "FlatWorld.ModuleLoad.") + type.Name));
+        return marker;
+    }
     #endregion
 
     #region 核心属性
@@ -228,39 +241,47 @@ public abstract class Item : MonoBehaviour
     [Button("加载模块")]
     public virtual void Load()
     {
+        using var loadDebug = LoadRuntimeDebug.Measure(1, itemData?.IDName);
+        using var steps = LoadInSteps();
+        while (steps.MoveNext()) { }
+    }
+
+    /// <summary>同步与分帧共用同一条加载链，未全部完成前不进入正式 Tick。</summary>
+    internal IEnumerator<int> LoadInSteps()
+    {
         if (IsPreparedCandidate)
             throw new InvalidOperationException($"物品 {name} 仍是停用候选，不能提前加载运行态。");
-        if (lifecycleTransition || modulesLoading || modulesUnloading || IsInitialized || destructionHandled) return;
-        using var loadDebug = LoadRuntimeDebug.Measure(1, itemData?.IDName);
+        if (lifecycleTransition || modulesLoading || modulesUnloading || IsInitialized || destructionHandled) yield break;
         lifecycleTransition = true;
         RuntimeGeneration = ++runtimeGenerationSequence;
         if (RuntimeGeneration == 0) RuntimeGeneration = ++runtimeGenerationSequence;
+        bool completed = false;
         try
         {
             uint generation = RuntimeGeneration;
             itemMods.BindOwner(this);
-            ModuleLoad();
+            modulesLoading = true;
+            using (var layout = moduleLayoutPrepared ? LoadPreparedModuleLayoutSteps() : LoadModuleLayoutSteps())
+                while (layout.MoveNext()) yield return layout.Current;
+            modulesLoading = false;
             CraftedDurabilityQuality.ApplyRuntimeHealth(this);
             if (destructionHandled || !modulesLoaded || RuntimeGeneration != generation)
                 throw new InvalidOperationException($"物品 {name} 在初始化回调中已结束或换代。");
             isInitialized = true;
-        }
-        catch (Exception loadError)
-        {
-            isInitialized = false;
-            using var scope = ListPool<Exception>.Get(out var errors);
-            errors.Add(loadError);
-            try { ItemMgr.GetInstance()?.NotifyRuntimeItemDestroyed(this); }
-            catch (Exception error) { errors.Add(error); }
-            try { ModuleUnload(); }
-            catch (Exception error) { errors.Add(error); }
-            finally { itemMods.ResetForReuse(this); }
-            if (errors.Count > 1)
-                throw new AggregateException($"物品 {name} 加载及回滚失败。", errors);
-            throw;
+            completed = true;
         }
         finally
         {
+            modulesLoading = false;
+            if (!completed)
+            {
+                isInitialized = false;
+                try { ItemMgr.GetInstance()?.NotifyRuntimeItemDestroyed(this); }
+                catch (Exception error) { Debug.LogException(error, this); }
+                try { ModuleUnload(); }
+                catch (Exception error) { Debug.LogException(error, this); }
+                finally { itemMods.ResetForReuse(this); }
+            }
             lifecycleTransition = false;
             MarkModuleScheduleDirty();
         }
@@ -632,6 +653,25 @@ public abstract class Item : MonoBehaviour
     private void LoadModuleLayout(bool prepareOnly = false)
     {
         using var layoutDebug = LoadModuleLayoutDebug.Measure(1, itemData?.IDName);
+        try
+        {
+            using var steps = LoadModuleLayoutSteps(prepareOnly);
+            while (steps.MoveNext()) { }
+        }
+        catch (Exception loadError)
+        {
+            try { ModuleUnload(); }
+            catch (Exception cleanupError)
+            {
+                throw new AggregateException($"物品 {name} 模块装配及回滚失败。", loadError, cleanupError);
+            }
+            finally { itemMods.ResetForReuse(this); }
+            throw;
+        }
+    }
+
+    private IEnumerator<int> LoadModuleLayoutSteps(bool prepareOnly = false)
+    {
         ModuleUnload();
         if (itemData == null) throw new InvalidOperationException($"物品 {name} 缺少实例数据。");
         using var mutation = itemMods.BeginMutation();
@@ -648,111 +688,117 @@ public abstract class Item : MonoBehaviour
         GameRes.Instance?.TryGetItemDefinition(itemData.IDName, out definition);
         modulesLoaded = !prepareOnly;
 
-        try
+        if (definition != null)
         {
-            if (definition != null)
+            // 一次建立当前槽位索引，避免每装配一个模块都重新扫描整份组件列表。
+            using var indexScope = DictionaryPool<string, Module>.Get(out var modulesByName);
+            foreach (Module candidate in modules)
             {
-                // 一次建立当前槽位索引，避免每装配一个模块都重新扫描整份组件列表。
-                using var indexScope = DictionaryPool<string, Module>.Get(out var modulesByName);
-                foreach (Module candidate in modules)
-                {
-                    string stableName = candidate.StableName;
-                    if (string.IsNullOrWhiteSpace(stableName) ||
-                        !definition.TryGetModuleAssembly(stableName, out var candidateAssembly) || candidateAssembly.IsDataOnly)
-                        continue;
-                    if (!modulesByName.TryAdd(stableName, candidate))
-                        throw new InvalidOperationException($"物品 {name} 存在重复模块槽位：{stableName}。");
-                }
-                // 定义声明的稳定槽位为装配真源，孤立存档数据不能复活已移除能力。
-                foreach (RuntimeItemModuleAssemblyPlan assembly in definition.ModuleAssemblies)
-                {
-                    if (assembly.IsDataOnly) continue;
-                    modulesByName.TryGetValue(assembly.StableName, out Module module);
-                    if (module != null)
-                    {
-                        if (string.IsNullOrWhiteSpace(module.PrefabId))
-                            assembly.TryRestoreRuntimeIdentity(module, transform);
-                        if (!assembly.MatchesBoundModule(module))
-                            throw new InvalidOperationException($"物品 {name} 的模块 {assembly.StableName} 与编译装配计划不一致。");
-                    }
-                    module ??= assembly.InstantiateModule(transform);
-                    if (!itemData.ModuleDataDic.TryGetValue(assembly.StableName, out ModuleData data) || data == null)
-                        throw new InvalidOperationException($"物品 {name} 缺少当前模块状态：{assembly.StableName}。");
-                    data.Enabled = assembly.Definition.Enabled;
-                    RegisterModuleForLoad(module, data, assembly.PrefabId, toInitialize, data.Enabled);
-                }
+                string stableName = candidate.StableName;
+                if (string.IsNullOrWhiteSpace(stableName) ||
+                    !definition.TryGetModuleAssembly(stableName, out var candidateAssembly) || candidateAssembly.IsDataOnly)
+                    continue;
+                if (!modulesByName.TryAdd(stableName, candidate))
+                    throw new InvalidOperationException($"物品 {name} 存在重复模块槽位：{stableName}。");
             }
-            else
+            // 定义声明的稳定槽位为装配真源，孤立存档数据不能复活已移除能力。
+            foreach (RuntimeItemModuleAssemblyPlan assembly in definition.ModuleAssemblies)
             {
-                foreach (Module module in modules)
+                if (assembly.IsDataOnly) continue;
+                modulesByName.TryGetValue(assembly.StableName, out Module module);
+                if (module != null)
                 {
-                    if (module == null || module._Data == null) continue;
-                    module.EnsureRuntimeIdentity();
-                    ModuleData data = itemData.ModuleDataDic.TryGetValue(module.StableName, out var saved)
-                        ? saved : module._Data;
-                    RegisterModuleForLoad(module, data, module.PrefabId, toInitialize);
+                    if (string.IsNullOrWhiteSpace(module.PrefabId))
+                        assembly.TryRestoreRuntimeIdentity(module, transform);
+                    if (!assembly.MatchesBoundModule(module))
+                        throw new InvalidOperationException($"物品 {name} 的模块 {assembly.StableName} 与编译装配计划不一致。");
                 }
-            }
-
-            // 全部注册后先绑定数据与配置，再解析依赖，最后建立运行态。
-            using (InitializeModulesDebug.Measure(toInitialize.Count, itemData?.IDName))
-                foreach (Module module in toInitialize) module.ModuleInit(this, module._Data);
-            using (BindDependenciesDebug.Measure(toInitialize.Count, itemData?.IDName))
-                foreach (Module module in toInitialize) BindModuleDependencies(module);
-            if (prepareOnly)
-            {
-                moduleLayoutPrepared = true;
-                return;
-            }
-            uint generation = RuntimeGeneration;
-            using (LoadModulesDebug.Measure(toInitialize.Count, itemData?.IDName))
-            {
-                foreach (Module module in toInitialize)
-                {
-                    if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
-                        throw new InvalidOperationException($"物品 {name} 在装配期间被回收，已终止加载。");
-                    if (itemMods.HasMod(module)) module.LoadRuntime();
-                    if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
-                        throw new InvalidOperationException($"物品 {name} 在模块加载回调中被回收，已终止加载。");
-                }
+                module ??= assembly.InstantiateModule(transform);
+                if (!itemData.ModuleDataDic.TryGetValue(assembly.StableName, out ModuleData data) || data == null)
+                    throw new InvalidOperationException($"物品 {name} 缺少当前模块状态：{assembly.StableName}。");
+                data.Enabled = assembly.Definition.Enabled;
+                RegisterModuleForLoad(module, data, assembly.PrefabId, toInitialize, data.Enabled);
             }
         }
-        catch (Exception loadError)
+        else
         {
-            try { ModuleUnload(); }
-            catch (Exception cleanupError)
+            foreach (Module module in modules)
             {
-                throw new AggregateException($"物品 {name} 模块装配及回滚失败。", loadError, cleanupError);
+                if (module == null || module._Data == null) continue;
+                module.EnsureRuntimeIdentity();
+                ModuleData data = itemData.ModuleDataDic.TryGetValue(module.StableName, out var saved)
+                    ? saved : module._Data;
+                RegisterModuleForLoad(module, data, module.PrefabId, toInitialize);
             }
-            finally { itemMods.ResetForReuse(this); }
-            throw;
+        }
+
+        // 全部注册后先绑定数据与配置，再解析依赖，最后建立运行态。
+        yield return 0;
+        foreach (Module module in toInitialize)
+        {
+            using (InitializeModulesDebug.Measure(1, itemData?.IDName))
+            using (GetModuleLoadMarker(module, true).Auto())
+                module.ModuleInit(this, module._Data);
+            yield return 1;
+        }
+        foreach (Module module in toInitialize)
+        {
+            using (BindDependenciesDebug.Measure(1, itemData?.IDName))
+                BindModuleDependencies(module);
+            yield return 1;
+        }
+        if (prepareOnly)
+        {
+            moduleLayoutPrepared = true;
+            yield break;
+        }
+        uint generation = RuntimeGeneration;
+        foreach (Module module in toInitialize)
+        {
+            if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                throw new InvalidOperationException($"物品 {name} 在装配期间被回收，已终止加载。");
+            using (LoadModulesDebug.Measure(1, itemData?.IDName))
+            using (GetModuleLoadMarker(module, false).Auto())
+                if (itemMods.HasMod(module)) module.LoadRuntime();
+            if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                throw new InvalidOperationException($"物品 {name} 在模块加载回调中被回收，已终止加载。");
+            yield return 1;
         }
     }
 
     private void LoadPreparedModuleLayout()
     {
-        moduleLayoutPrepared = false;
-        modulesLoaded = true;
-        using var scope = ListPool<Module>.Get(out var snapshot);
-        CopyModulesTo(snapshot);
-        uint generation = RuntimeGeneration;
         try
         {
-            using var loadDebug = LoadModulesDebug.Measure(snapshot.Count, itemData?.IDName);
-            foreach (Module module in snapshot)
-            {
-                if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
-                    throw new InvalidOperationException($"物品 {name} 在准备布局提交期间被回收。");
-                if (module != null && itemMods.HasMod(module)) module.LoadRuntime();
-                if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
-                    throw new InvalidOperationException($"物品 {name} 在准备布局加载回调中被回收。");
-            }
+            using var steps = LoadPreparedModuleLayoutSteps();
+            while (steps.MoveNext()) { }
         }
         catch
         {
             try { ModuleUnload(); }
             finally { itemMods.ResetForReuse(this); }
             throw;
+        }
+    }
+
+    private IEnumerator<int> LoadPreparedModuleLayoutSteps()
+    {
+        moduleLayoutPrepared = false;
+        modulesLoaded = true;
+        using var scope = ListPool<Module>.Get(out var snapshot);
+        CopyModulesTo(snapshot);
+        uint generation = RuntimeGeneration;
+        foreach (Module module in snapshot)
+        {
+            if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                throw new InvalidOperationException($"物品 {name} 在准备布局提交期间被回收。");
+            if (module == null) continue;
+            using (LoadModulesDebug.Measure(1, itemData?.IDName))
+            using (GetModuleLoadMarker(module, false).Auto())
+                if (module != null && itemMods.HasMod(module)) module.LoadRuntime();
+            if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
+                throw new InvalidOperationException($"物品 {name} 在准备布局加载回调中被回收。");
+            yield return 1;
         }
     }
 

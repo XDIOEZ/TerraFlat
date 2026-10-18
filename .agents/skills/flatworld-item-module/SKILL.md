@@ -24,6 +24,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 
 ## 身份与生命周期
 
+- `Item.LoadInSteps` 与同步 `Load` 共用装配规则，按注册全部模块→逐个 ModuleInit→逐个依赖→逐个 OnLoad 推进；生命周期切换态跨帧保留，释放枚举器清理已加载模块。`ItemMgr.InstantiateItemInSteps` 复用外壳池，冷壳走 `InstantiateAsync`，候选加载完成前不进入世界注册/保存/网络索引，Profiler 作用域不跨让帧。
 `当前定义 → ItemData → 全部模块登记 → ModuleInit → 依赖绑定 → OnLoad → Tick/Save → OnUnload → Despawn/Pool`
 
 - 能力来自 Prefab/JSON 的显式组合。`StableName` 是 Item 内唯一模块实例键；`ModuleId` 是可共享能力 ID；`PrefabId`/JSON `prefab` 是具体实现地址，不入实例存档。JSON 键决定 StableName，Prefab-only 回退确定性对象名；`CanonicalModuleId` 提供固定能力默认值，JSON 显式 ID 仍须符合依赖契约。

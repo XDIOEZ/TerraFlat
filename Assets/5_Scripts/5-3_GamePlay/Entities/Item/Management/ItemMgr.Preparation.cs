@@ -197,6 +197,100 @@ public partial class ItemMgr
         return preparedItemRoot;
     }
 
+    /// <summary>停用外壳异步复制并分步加载，完成后一次性登记、激活与通知网络。</summary>
+    internal IEnumerator<int> InstantiateItemInSteps(ItemData data, Vector3 position, Action<Item> completed,
+        Action<Item> beforeCommit = null, Func<bool> canCommit = null)
+    {
+        ValidatePreparedItemBackend(data);
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.TryGetItemDefinition(data.IDName, out RuntimeItemDefinition definition))
+            throw new InvalidOperationException($"分帧创建缺少定义：{data.IDName}。");
+        ulong revision = resources.ItemDefinitionRevision;
+        int version = resources.ResourceReloadVersion;
+        GameObject candidateObject = null;
+        Item candidate = null;
+        AsyncInstantiateOperation<GameObject> operation = null;
+        ulong token = 0;
+        bool committed = false;
+        try
+        {
+            if (!_itemObjectPool.TryAcquire(data.IDName, out candidateObject))
+            {
+                GameObject prefab = resources.GetPrefab(data.IDName, logError: false);
+                if (prefab == null) throw new InvalidOperationException($"分帧创建缺少外壳：{data.IDName}。");
+                operation = InstantiateAsync(prefab, GetPreparedItemRoot());
+                while (!operation.isDone) yield return 0;
+                if (operation.Result == null || operation.Result.Length != 1)
+                    throw new InvalidOperationException($"异步外壳未交付：{data.IDName}。");
+                candidateObject = operation.Result[0];
+                _itemObjectPool.Adopt(data.IDName, candidateObject);
+            }
+            candidate = candidateObject.GetComponent<Item>();
+            if (candidate == null || candidate is Player || candidate is Map)
+                throw new InvalidOperationException("分帧创建只支持普通 Item。");
+            candidateObject.SetActive(false);
+            candidate.PrepareForPoolReuse();
+            candidate.transform.SetParent(GetPreparedItemRoot(), false);
+            candidate.BindData(data);
+            candidate.transform.SetPositionAndRotation(position, Quaternion.identity);
+            candidate.transform.localScale = Vector3.one;
+            data.transform ??= new ItemTransform();
+            data.transform.position = WorldLocalPresentation.ToLogical(position);
+            data.transform.rotation = Quaternion.identity;
+            data.transform.scale = Vector3.one;
+            yield return 0;
+            ItemDefinitionRuntime.ConfigureInstance(resources, definition, candidate, data);
+            candidate.PoolMarker.CaptureBaseline();
+            yield return 0;
+            using (var loading = candidate.LoadInSteps())
+                while (true)
+                {
+                    if (candidate == null || candidate.DestructionHandled || candidate.IsInPool ||
+                        !ReferenceEquals(candidate.itemData, data) || !ReferenceEquals(GameRes.ExistingInstance, resources) ||
+                        resources.ItemDefinitionRevision != revision || resources.ResourceReloadVersion != version)
+                        throw new InvalidOperationException("分帧加载期间候选或资源已失效。");
+                    if (!loading.MoveNext()) break;
+                    yield return loading.Current;
+                }
+            yield return 0;
+            if (!ReferenceEquals(GameRes.ExistingInstance, resources) || resources.ItemDefinitionRevision != revision ||
+                resources.ResourceReloadVersion != version || !candidate.IsInitialized)
+                throw new InvalidOperationException("分帧创建期间资源或候选已失效。");
+            if ((WorldLocalPresentation.ProjectPosition(data.transform.position) - position).sqrMagnitude > 0.0001f)
+                yield break;
+            if (canCommit?.Invoke() == false) yield break;
+            beforeCommit?.Invoke(candidate);
+            // 准备阶段不进世界索引，自动保存和玩家感知只会看到完整生物。
+            candidate.transform.SetParent(null, true);
+            Scene targetScene = SceneManager.GetActiveScene();
+            if (candidateObject.scene != targetScene) SceneManager.MoveGameObjectToScene(candidateObject, targetScene);
+            RegisterRuntimeItem(candidate, data.IDName, out token);
+            ItemWorldPlacement.Attach(candidate, candidateObject, data.transform.position, null);
+            EnsureSpawnRegistrationCurrent(candidate, data, token);
+            candidateObject.SetActive(true);
+            EnsureSpawnRegistrationCurrent(candidate, data, token);
+            candidate.NotifyRuntimeStructureChanged();
+            EnsureSpawnRegistrationCurrent(candidate, data, token);
+            RuntimeItemInstantiated?.Invoke(candidate);
+            EnsureSpawnRegistrationCurrent(candidate, data, token);
+            WorldItemWaterSystem.ScheduleSpawnCheck(candidate);
+            completed(candidate);
+            EnsureSpawnRegistrationCurrent(candidate, data, token);
+            committed = true;
+        }
+        finally
+        {
+            if (operation != null && !operation.isDone) operation.Cancel();
+            if (!committed)
+            {
+                if (candidateObject == null && operation?.isDone == true && operation.Result?.Length > 0)
+                    candidateObject = operation.Result[0];
+                if (candidate == null && candidateObject != null) candidate = candidateObject.GetComponent<Item>();
+                CleanupFailedItemSpawn(candidate, candidateObject, data, token);
+            }
+        }
+    }
+
     private void CancelPreparedItem(PreparedItemHandle handle, bool allowPool = true)
     {
         if (!ReferenceEquals(handle.Manager, this) || !preparedItems.Contains(handle)) return;
