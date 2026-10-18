@@ -99,7 +99,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## 编辑器与调试工具
 
-- 顶栏「性能 JSON」/菜单 `FlatWorld/性能分析/导出选中帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调用 PuerTS `UnityMcpProfilerSnapshot`，复用 `editor.profiler.analyze` 的统计。输出 `Assets/67_ProfileData/<本地时间_frame-帧号_编号>/` 下 `profiler-analysis.json`、`console-logs.json` 与 `screen.png`，JSON 共用 snapshotId；截图通过 Windows 桌面像素接口同步捕获全部显示器，性能 JSON 记录截图时间/尺寸，表示导出时的画面；正式时间目录只在三份落盘后发布，忽略 `.pending-*`。性能文件含选中帧 Top 100、所有线程的完整聚合调用树和前后各30帧耗时；Console 导出当前全部保留日志与堆栈，临时取消筛选/折叠后恢复。日志没有精确帧归属或原生时间戳，不能当作选中帧当时的日志；清空的内容不可恢复。导出不改 Play/Pause、录制开关与目标，不主动刷新资源；AI 优先读取用户提供的最新目录，无需保持 Profiler 现场。
+- 顶栏「性能 JSON」/菜单 `FlatWorld/性能分析/导出选中帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调用 PuerTS `UnityMcpProfilerSnapshot`，复用 `editor.profiler.analyze`。输出 `Assets/67_ProfileData/<时间_frame-帧号_编号>/` 的 `profiler-analysis.json`、`console-logs.json`、`screen.png` 与 `00-READ-ME-FIRST.md`，全部落盘后发布正式目录，忽略 `.pending-*`。AI 先读 MD 按字段筛热点再展开调用树；模板为 PuerTS 包根 `ProfilerAnalysisGuide.md`，修改导出结构时同步维护。选中帧 Top 100、完整线程聚合树与附近帧耗时和导出时日志/全桌面截图分清时间归属；不改 Play/Pause、录制目标/开关，不主动刷新资源。
 
 - 关键性能点共用 Utilities 的 `PerformanceDebugPoint/Registry`；统计与慢摘要默认关闭，在 GM「设备数据」按需开启、设阈值、输出/清空。固定 Marker、struct 作用域不跨 yield，后台只记有界数字并由主线程合并日志；点位单位及 Total/Self、冷暖路径边界见 [关键性能DEBUG点位说明](../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。
 

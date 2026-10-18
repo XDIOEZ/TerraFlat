@@ -103,7 +103,7 @@ namespace FlatWorld.Automation
                 string directory = UnityMcpProfilerSnapshot.ExportSelectedFrame((int)selected, ReportsRoot);
                 EditorGUIUtility.systemCopyBuffer = directory;
                 profiler.ShowNotification(new GUIContent("性能、日志与整屏截图已导出，文件夹路径已复制"), 5d);
-                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含 profiler-analysis.json、console-logs.json 和 screen.png；可以继续游戏，将此文件夹路径发给 AI。");
+                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含两个 JSON、screen.png 与 00-READ-ME-FIRST.md；可以继续游戏，将此文件夹路径发给 AI，并让它先读 MD 说明。");
             }
             catch (Exception exception)
             {
