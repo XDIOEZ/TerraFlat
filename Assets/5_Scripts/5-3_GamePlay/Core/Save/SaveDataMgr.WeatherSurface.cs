@@ -10,7 +10,6 @@ public partial class SaveDataMgr
     #region 天气地表批量差量
 
     public static event Action<WeatherSurfaceChunkSnapshot> AuthoritativeWeatherSurfaceChanged;
-    private readonly Dictionary<int, AgricultureCellSaveData> weatherSoilIndex = new();
     private readonly Dictionary<int, SnowCellSaveData> weatherSnowIndex = new();
     private readonly Dictionary<int, WeatherSurfaceCellDelta> weatherSurfaceIndex = new();
 
@@ -27,7 +26,6 @@ public partial class SaveDataMgr
         ChunkSaveRecord record = GetRuntimeChunkRecord(chunk.Address, true);
         record.AgricultureCells ??= new List<AgricultureCellSaveData>();
         record.SnowCells ??= new List<SnowCellSaveData>();
-        weatherSoilIndex.Clear();
         weatherSnowIndex.Clear();
         weatherSurfaceIndex.Clear();
         bool publish = AuthoritativeWeatherSurfaceChanged != null;
@@ -35,18 +33,11 @@ public partial class SaveDataMgr
         {
             if ((soilChanged?.Count ?? 0) > 0)
             {
-                foreach (AgricultureCellSaveData cell in record.AgricultureCells)
-                    weatherSoilIndex[cell.LocalPosition.y * terrain.Width + cell.LocalPosition.x] = cell;
                 for (int i = 0; i < soilChanged.Count; i++)
                 {
                     int index = RequireWeatherSurfaceIndex(terrain, soilChanged[i]);
                     var local = new Vector2Int(index % terrain.Width, index / terrain.Width);
-                    if (!weatherSoilIndex.TryGetValue(index, out AgricultureCellSaveData cell))
-                    {
-                        cell = new AgricultureCellSaveData { LocalPosition = local };
-                        weatherSoilIndex.Add(index, cell);
-                        record.AgricultureCells.Add(cell);
-                    }
+                    AgricultureCellSaveData cell = record.GetOrAddAgricultureCell(local);
                     cell.SourceTileId = (int)FarmlandSystem.Read(terrain, local, FarmlandSystem.SourceLayer);
                     cell.Water = FarmlandSystem.ReadWaterLevel(terrain, local);
                     cell.WaterSupplyRemainder = FarmlandSystem.Read(terrain, local, FarmlandSystem.WaterSupplyRemainderLayer);
@@ -89,7 +80,6 @@ public partial class SaveDataMgr
         }
         finally
         {
-            weatherSoilIndex.Clear();
             weatherSnowIndex.Clear();
             weatherSurfaceIndex.Clear();
         }

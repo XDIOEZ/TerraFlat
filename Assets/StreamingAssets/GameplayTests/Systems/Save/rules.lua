@@ -1,4 +1,15 @@
 -- 只在内存中捕获和恢复当前格式，真实玩家存档不读写。
+test.system("save", "agriculture_cell_index", {}, function(data)
+    assert(data.initiallyMissing and data.identityPreserved and data.baselineSum == data.indexedSum,
+        "密集耕地快速索引丢失原有水肥、作物身份或重复创建格子")
+    assert(data.indexedBytes == 0 and data.persistedBytesUnchanged and data.roundTrip,
+        "已预热的耕地索引仍分配内存或污染 MemoryPack 存档内容")
+    assert(data.appended and data.replaced and data.removed and data.listReplaced,
+        "外部追加、同数量替换、移除或更换列表后读取了旧农业索引")
+    assert(data.originalFirst and data.duplicateNext,
+        "重复坐标没有保留 List.Find 首项优先及移除后的后继规则")
+end, "密集农业索引、稳定零分配、修改失效与存档一致性")
+
 test.system("save", "snapshot_memory", { amount = 3, stock = 7, maximumDurability = 100, durability = 25, targetMaximumDurability = 200, guid = 143 }, function(data)
     assert(data.bytes > 0 and data.definitionId == "probe:item" and data.guid == 143, "快照丢失身份")
     assert(data.amount == 3 and data.sourceAmount == 3, "恢复数量错误或污染源物品")
