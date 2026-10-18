@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
+using Unity.Profiling;
 
 /// <summary>
 /// 通用列表滚动：网格每个滚轮刻度移动设置行数，普通列表移动相同行数的布局条目。
@@ -18,6 +19,12 @@ public sealed class ItemStepScrollRect : ScrollRect
     private Vector2 targetPosition;
     private Vector2 wheelVelocity;
     private bool wheelActive;
+    private RectTransform wheelLayoutContent;
+    private Vector2 wheelLayoutSize, wheelViewportSize;
+    private int wheelLayoutChildCount;
+    private static readonly ProfilerMarker WheelLayoutMarker = new("FlatWorld.UI.ItemScroll.ForceLayout");
+    private static readonly ProfilerMarker WheelBaseMarker = new("FlatWorld.UI.ItemScroll.BaseLateUpdate");
+    private static readonly ProfilerMarker WheelSmoothMarker = new("FlatWorld.UI.ItemScroll.Smooth");
 
     // 长文本不是列表条目，允许指定固定滚轮步长，避免一次跳过整段内容。
     public void SetFixedWheelStep(float pixels) => fixedWheelStep = Mathf.Max(0f, pixels);
@@ -30,7 +37,19 @@ public sealed class ItemStepScrollRect : ScrollRect
     public override void OnScroll(PointerEventData data)
     {
         if (!IsActive() || content == null || data == null) return;
-        Canvas.ForceUpdateCanvases(); // 只在真实滚轮事件读取刚变化的列表布局。
+        RectTransform view = viewport != null ? viewport : (RectTransform)transform;
+        // 连续滚轮期间若布局没变，勿让每个硬件刻度重新强制构建全部 Canvas。
+        if (!wheelActive || wheelLayoutContent != content ||
+            wheelLayoutChildCount != content.childCount ||
+            !wheelLayoutSize.Equals(content.rect.size) ||
+            !wheelViewportSize.Equals(view.rect.size))
+        {
+            using (WheelLayoutMarker.Auto()) Canvas.ForceUpdateCanvases();
+            wheelLayoutContent = content;
+            wheelLayoutChildCount = content.childCount;
+            wheelLayoutSize = content.rect.size;
+            wheelViewportSize = view.rect.size;
+        }
         Vector2 delta = data.scrollDelta;
         if (data.currentInputModule is InputSystemUIInputModule inputModule)
         {
@@ -49,7 +68,6 @@ public sealed class ItemStepScrollRect : ScrollRect
 
         if (!wheelActive) targetPosition = normalizedPosition;
         float rowsPerWheelTick = UIUserSettings.ScrollRowsPerWheelTick;
-        RectTransform view = viewport != null ? viewport : (RectTransform)transform;
         Vector2 hidden = Vector2.Max(Vector2.zero,
             Vector2.Scale(content.rect.size, new Vector2(Mathf.Abs(content.localScale.x), Mathf.Abs(content.localScale.y))) - view.rect.size);
         if (!(horizontal && hidden.x > 0.01f) && !(vertical && hidden.y > 0.01f))
@@ -83,6 +101,7 @@ public sealed class ItemStepScrollRect : ScrollRect
     protected override void OnDisable()
     {
         CancelWheel();
+        wheelLayoutContent = null;
         base.OnDisable();
     }
 
@@ -90,8 +109,9 @@ public sealed class ItemStepScrollRect : ScrollRect
     protected override void LateUpdate()
     {
         if (wheelActive) StopMovement();
-        base.LateUpdate();
+        using (WheelBaseMarker.Auto()) base.LateUpdate();
         if (!wheelActive || content == null) return;
+        using var smoothSample = WheelSmoothMarker.Auto();
         RectTransform view = viewport != null ? viewport : (RectTransform)transform;
         bool scrollX = horizontal && content.rect.width * Mathf.Abs(content.localScale.x) > view.rect.width + 0.01f;
         bool scrollY = vertical && content.rect.height * Mathf.Abs(content.localScale.y) > view.rect.height + 0.01f;
@@ -107,8 +127,10 @@ public sealed class ItemStepScrollRect : ScrollRect
             next = targetPosition;
             CancelWheel();
         }
-        if (horizontal) horizontalNormalizedPosition = next.x;
-        if (vertical) verticalNormalizedPosition = next.y;
+        if (scrollX && Mathf.Abs(next.x - current.x) > 0.0000001f)
+            horizontalNormalizedPosition = next.x;
+        if (scrollY && Mathf.Abs(next.y - current.y) > 0.0000001f)
+            verticalNormalizedPosition = next.y;
     }
 
     private void CancelWheel()
