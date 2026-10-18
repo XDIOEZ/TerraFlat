@@ -652,22 +652,28 @@ public abstract class Item : MonoBehaviour
         {
             if (definition != null)
             {
+                // 一次建立当前槽位索引，避免每装配一个模块都重新扫描整份组件列表。
+                using var indexScope = DictionaryPool<string, Module>.Get(out var modulesByName);
+                foreach (Module candidate in modules)
+                {
+                    string stableName = candidate.StableName;
+                    if (string.IsNullOrWhiteSpace(stableName) ||
+                        !definition.TryGetModuleAssembly(stableName, out var candidateAssembly) || candidateAssembly.IsDataOnly)
+                        continue;
+                    if (!modulesByName.TryAdd(stableName, candidate))
+                        throw new InvalidOperationException($"物品 {name} 存在重复模块槽位：{stableName}。");
+                }
                 // 定义声明的稳定槽位为装配真源，孤立存档数据不能复活已移除能力。
                 foreach (RuntimeItemModuleAssemblyPlan assembly in definition.ModuleAssemblies)
                 {
                     if (assembly.IsDataOnly) continue;
-                    Module module = null;
-                    for (int i = 0; i < modules.Count; i++)
+                    modulesByName.TryGetValue(assembly.StableName, out Module module);
+                    if (module != null)
                     {
-                        Module candidate = modules[i];
-                        if (candidate == null || candidate.StableName != assembly.StableName) continue;
-                        if (string.IsNullOrWhiteSpace(candidate.PrefabId))
-                            assembly.TryRestoreRuntimeIdentity(candidate, transform);
-                        if (module != null)
-                            throw new InvalidOperationException($"物品 {name} 存在重复模块槽位：{assembly.StableName}。");
-                        if (!assembly.MatchesBoundModule(candidate))
+                        if (string.IsNullOrWhiteSpace(module.PrefabId))
+                            assembly.TryRestoreRuntimeIdentity(module, transform);
+                        if (!assembly.MatchesBoundModule(module))
                             throw new InvalidOperationException($"物品 {name} 的模块 {assembly.StableName} 与编译装配计划不一致。");
-                        module = candidate;
                     }
                     module ??= assembly.InstantiateModule(transform);
                     if (!itemData.ModuleDataDic.TryGetValue(assembly.StableName, out ModuleData data) || data == null)

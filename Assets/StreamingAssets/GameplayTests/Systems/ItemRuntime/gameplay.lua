@@ -1,5 +1,19 @@
 -- 物品运行、MOD Lua和网络副本共用正式资源与自有运行实例。
 test.check("world_ready", "正式隔离世界已就绪")
+test.runtime("item_runtime", "shell_final_configuration", {}, function(d)
+    assert(d.rawModuleCount == d.templateModuleCount and d.rawKeptTemplateIdentity,
+        "冷外壳工厂提前创建了临时定义数据或装配了额外模块")
+    assert(d.firstDataBound and d.configuredModuleCount == d.expectedModuleCount,
+        "最终装配没有直接绑定传入数据，或遗漏、重复创建了模块")
+    assert(d.poolAccepted and d.samePooledInstance and d.coldCreates == 1 and d.sameConfiguredComponents,
+        "对象池没有复用同一外壳和已装配组件")
+    assert(d.latestDataBound and d.allModulesBoundToLatestData,
+        "池对象重取后仍引用旧实例数据或旧模块状态")
+    assert(d.nestedExcluded and d.duplicateRejected,
+        "模块槽位索引跨入子物品，或放过同一物品的重复稳定槽位")
+    assert(d.publicFactoryStillConfigured, "公共Prefab工厂不再按原约定提供已配置实例")
+end, "冷外壳、最终数据装配、同池实例更新与模块所有权边界")
+
 test.runtime("item_runtime", "center_spatial_query", {}, function(d)
     assert(d.registered and d.fixtureRemoved, "中心查询夹具未走正式登记或卸载后残留索引")
     assert(d.zeroRadius == 1 and d.boundary == 1 and d.outside == 0,

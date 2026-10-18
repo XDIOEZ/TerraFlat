@@ -8,10 +8,10 @@ using UnityEngine;
 public partial class ItemMgr
 {
     #region 物品生成性能诊断
-    // 冷工厂与最终数据装配分开，保留原有两轮配置供诊断对照。
+    // 冷工厂只创建外壳，实例数据与模块在最终装配阶段一次绑定。
     private static readonly PerformanceDebugPoint SpawnRuntimeDebug = new("FlatWorld.ItemSpawn.InstantiateRuntime");
     private static readonly PerformanceDebugPoint SpawnFinalConfigureDebug = new("FlatWorld.ItemSpawn.ConfigureFinalData");
-    private static readonly PerformanceDebugPoint SpawnColdFactoryDebug = new("FlatWorld.ItemSpawn.ColdFactoryWithInitialConfigure");
+    private static readonly PerformanceDebugPoint SpawnColdFactoryDebug = new("FlatWorld.ItemSpawn.ColdShellFactory");
     private static readonly PerformanceDebugPoint SpawnRegisterDebug = new("FlatWorld.ItemSpawn.Register");
     private static readonly PerformanceDebugPoint SpawnAttachDebug = new("FlatWorld.ItemSpawn.AttachWorld");
     private static readonly PerformanceDebugPoint SpawnCallbacksDebug = new("FlatWorld.ItemSpawn.InstantiatedCallbacks");
@@ -435,7 +435,7 @@ public partial class ItemMgr
     private GameObject SpawnItemObject(string itemId)
     {
         using var coldFactoryDebug = SpawnColdFactoryDebug.Measure(1, itemId);
-        GameObject obj = GameRes.Instance.InstantiatePrefab(itemId);
+        GameObject obj = GameRes.Instance.InstantiateItemShell(itemId);
         if (obj == null) throw new InvalidOperationException($"InstantiatePrefab 失败: {itemId}");
         return obj;
     }

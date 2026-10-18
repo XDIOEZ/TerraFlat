@@ -557,10 +557,13 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 return true;
             }
             // 可直接拾取的散落生成点统一使用掉落物尺寸；能轻量化的单机实例再交给统一掉落服务。
-            ItemData looseData = changedData ?? definition?.CreateItemData();
+            ItemData looseData = changedData;
             bool loosePickupPresentation = false;
-            if (!placement.IsDimensionPortal && definition != null && !definition.IsActor && looseData?.Stack?.CanBePickedUp == true)
+            if (!placement.IsDimensionPortal && definition != null && !definition.IsActor &&
+                (changedData != null ? changedData.Stack?.CanBePickedUp == true : definition.CanBePickedUp))
             {
+                // 先用只读定义筛选，仅真正进入散落物分支时才创建独立状态。
+                looseData ??= definition.CreateItemData();
                 bool installed = Mod_Building.TryReadBuildingData(looseData, out _, out Mod_Building.Building_Data building) &&
                     building.Role == BuildingRole.PlacedBuilding;
                 if (!installed)
@@ -604,13 +607,16 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             }
             else
             {
-                item = itemManager.InstantiateItemDeterministic(
-                    runtimeItemId,
-                    placement.Guid,
-                    position,
-                    rotation,
-                    scale,
-                    gameObject);
+                if (changedData == null && looseData != null)
+                {
+                    looseData.Guid = placement.Guid == 0 ? 1 : placement.Guid;
+                    item = itemManager.InstantiateItem(looseData, position, rotation, scale, gameObject);
+                }
+                else
+                {
+                    item = itemManager.InstantiateItemDeterministic(
+                        runtimeItemId, placement.Guid, position, rotation, scale, gameObject);
+                }
             }
 
             if (item == null)

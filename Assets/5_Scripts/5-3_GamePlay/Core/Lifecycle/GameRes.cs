@@ -220,6 +220,14 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     #region 外部接口
 
     public GameObject InstantiatePrefab(string prefab, Vector3? position = null, Quaternion? rotation = null, Vector3? scale = null, Transform parent = null)
+        => InstantiatePrefabInternal(prefab, position, rotation, scale, parent, configureItem: true);
+
+    // ItemMgr 已持有最终实例数据，冷创建只提供外壳，避免先用临时数据重复装配全部模块。
+    internal GameObject InstantiateItemShell(string itemId, Transform parent = null)
+        => InstantiatePrefabInternal(itemId, null, null, null, parent, configureItem: false);
+
+    private GameObject InstantiatePrefabInternal(string prefab, Vector3? position, Quaternion? rotation,
+        Vector3? scale, Transform parent, bool configureItem)
     {
         if (AllPrefabs.TryGetValue(prefab, out var go))
         {
@@ -240,7 +248,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             if (IsRuntimeModuleTemplate(go))
                 obj.SetActive(true);
 
-            if (TryGetItemDefinition(prefab, out RuntimeItemDefinition definition) &&
+            if (configureItem && TryGetItemDefinition(prefab, out RuntimeItemDefinition definition) &&
                 obj.TryGetComponent(out Item item))
             {
                 try
