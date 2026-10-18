@@ -9,14 +9,9 @@ namespace FlatWorld.Spaceflight
         public bool TryGetMachineEnvironment(string shipId, Vector2 localPosition, out ShipEnvironmentSnapshot environment,
             out decimal availableGasMoles)
         {
-            environment = default; availableGasMoles = 0m;
-            ShipState ship = GetShip(shipId);
-            if (ship == null) return false;
-            EnsureMachineCompartmentGeometry(ship);
-            int x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters), y = (int)Math.Floor(localPosition.y / ship.CellSizeMeters);
-            environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
-            if (!environment.IsSealed)
-                environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetMachineExteriorAt(ship, localPosition));
+            availableGasMoles = 0m;
+            if (!TryResolveMachineEnvironment(shipId, localPosition, out environment, out ShipState ship, out int x, out int y))
+                return false;
             ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
             if (room == null) availableGasMoles = GetMachineOutsideAtmosphere(ship)?.CurrentMoles ?? 0m;
             else
@@ -25,6 +20,24 @@ namespace FlatWorld.Spaceflight
                 foreach (FluidComponentState gas in room.Gas.Components)
                     availableGasMoles += inventory.GetAvailableMoles(gas.FluidId, FluidPhase.Gas);
             }
+            return true;
+        }
+
+        // 温度、压力与浸水查询只需要舱室环境，不为未使用的气体余量创建库存包装。
+        public bool TryGetMachineEnvironment(string shipId, Vector2 localPosition, out ShipEnvironmentSnapshot environment)
+            => TryResolveMachineEnvironment(shipId, localPosition, out environment, out _, out _, out _);
+
+        private bool TryResolveMachineEnvironment(string shipId, Vector2 localPosition, out ShipEnvironmentSnapshot environment,
+            out ShipState ship, out int x, out int y)
+        {
+            environment = default; ship = GetShip(shipId); x = 0; y = 0;
+            if (ship == null) return false;
+            EnsureMachineCompartmentGeometry(ship);
+            x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters);
+            y = (int)Math.Floor(localPosition.y / ship.CellSizeMeters);
+            environment = ShipAtmosphereService.GetEnvironment(ship, x, y);
+            if (!environment.IsSealed)
+                environment = ShipAtmosphereService.GetEnvironment(ship, x, y, GetMachineExteriorAt(ship, localPosition));
             return true;
         }
 

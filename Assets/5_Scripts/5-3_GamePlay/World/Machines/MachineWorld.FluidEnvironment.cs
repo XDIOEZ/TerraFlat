@@ -13,7 +13,7 @@ public static partial class MachineWorld
         if (node == null) return false;
         if (IsShipScope)
         {
-            if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out ShipEnvironmentSnapshot environment, out _))
+            if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out ShipEnvironmentSnapshot environment))
                 throw new InvalidOperationException("船上机器温度查询缺少所属船体。");
             temperature = (float)environment.TemperatureCelsius; return true;
         }
@@ -27,7 +27,7 @@ public static partial class MachineWorld
     internal static double GetFluidAmbientPressureKPa(MachineEntity node)
     {
         if (!IsShipScope) return AtmosphereService.PressureKPa(GetCurrentAtmosphere(node));
-        if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out ShipEnvironmentSnapshot environment, out _))
+        if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out ShipEnvironmentSnapshot environment))
             throw new InvalidOperationException("船上机器外压查询缺少所属船体。");
         return environment.PressureKPa;
     }
@@ -72,7 +72,7 @@ public static partial class MachineWorld
     internal static bool IsFluidEnvironmentSubmerged(MachineEntity node)
     {
         if (IsShipScope && RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position,
-            out ShipEnvironmentSnapshot environment, out _) && environment.HasFloorSupport) return false;
+            out ShipEnvironmentSnapshot environment) && environment.HasFloorSupport) return false;
         if (TryResolveFluidSurfacePoint(node.Position, out string world, out Vector2 position))
         {
             LandingSurfaceSample surface = SpaceSurfaceQuery.GetLandingSurface(world, position);

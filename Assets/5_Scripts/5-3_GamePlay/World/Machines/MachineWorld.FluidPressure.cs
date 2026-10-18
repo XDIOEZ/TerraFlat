@@ -36,8 +36,9 @@ public static partial class MachineWorld
     #region 同一血量与有限组合爆炸
     private static void AdvanceFluidTankPressure(float seconds)
     {
-        var broken = new List<MachineEntity>();
-        var shipDamage = new List<(MachineEntity Node, float Amount)>();
+        // 常态不分配损伤列表，首次超压受损成员按原顺序等概率选择。
+        List<MachineEntity> broken = null;
+        List<(MachineEntity Node, float Amount)> shipDamage = null;
         foreach (FluidTankGroup group in fluidTankGroups)
         {
             if (!group.Active || group.Members.Count == 0) continue;
@@ -54,27 +55,32 @@ public static partial class MachineWorld
                 if (member.Id == group.OverpressureVictimId && member.State?.Hp > 0) victim = member;
             if (victim == null)
             {
-                var alive = new List<MachineEntity>();
-                foreach (MachineEntity member in group.Members) if (member.State?.Hp > 0) alive.Add(member);
-                if (alive.Count == 0) continue;
+                int aliveCount = 0;
+                foreach (MachineEntity member in group.Members) if (member.State?.Hp > 0) aliveCount++;
+                if (aliveCount == 0) continue;
                 decimal roll = FluidRandom.Next01(ref group.RandomState);
-                victim = alive[Math.Min(alive.Count - 1, (int)(roll * alive.Count))]; group.OverpressureVictimId = victim.Id;
+                int selectedIndex = Math.Min(aliveCount - 1, (int)(roll * aliveCount));
+                foreach (MachineEntity member in group.Members)
+                    if (member.State?.Hp > 0 && selectedIndex-- == 0) { victim = member; break; }
+                group.OverpressureVictimId = victim.Id;
             }
             float damage = (float)(victim.Definition.Fluid.OverpressureDamagePerSecond * seconds);
             if (IsShipScope && FlatWorld.Spaceflight.SpaceSession.Current?.Owns(victim.Id) == true)
             {
-                shipDamage.Add((victim, damage));
+                (shipDamage ??= new List<(MachineEntity Node, float Amount)>()).Add((victim, damage));
                 continue;
             }
             victim.State.Hp = Mathf.Max(0, victim.State.Hp - damage);
             Mod_Building.SetMechanicalDamageState(victim.Snapshot, victim.State.Hp < ResolveMaximumHp(victim.Snapshot) * .5f);
             StateChanged(victim);
-            if (victim.State.Hp <= 0) broken.Add(victim);
+            if (victim.State.Hp <= 0) (broken ??= new List<MachineEntity>()).Add(victim);
         }
         // 船体统一扣耐久和销毁部件，收集完再处理，避免破罐重建正在遍历的储罐组。
-        foreach (var hit in shipDamage)
-            FlatWorld.Spaceflight.SpaceSession.Current?.ApplyPieceDamage(hit.Node.Id, hit.Amount, "罐体超压");
-        foreach (MachineEntity node in broken) HandleFluidTankZeroHp(node);
+        if (shipDamage != null)
+            foreach (var hit in shipDamage)
+                FlatWorld.Spaceflight.SpaceSession.Current?.ApplyPieceDamage(hit.Node.Id, hit.Amount, "罐体超压");
+        if (broken != null)
+            foreach (MachineEntity node in broken) HandleFluidTankZeroHp(node);
     }
 
     /// <summary>各罐体读取当地温度层，共享库存只汇总传热后推进一次。</summary>
