@@ -1425,6 +1425,8 @@ public static class ItemDefinitionCatalogLoader
     {
         if (modulePrefab != null)
         {
+            if (modulePrefab.GetComponentInChildren<Item>(true) != null)
+                throw new InvalidDataException($"模块 Prefab {modulePrefab.name} 不能包含 Item，物品必须保留独立所有权。");
             Module[] candidates = modulePrefab.GetComponentsInChildren<Module>(true);
             Module matched = FindUniquePrototype(candidates, moduleId, modulePrefab.name);
             if (matched != null)
@@ -1435,7 +1437,9 @@ public static class ItemDefinitionCatalogLoader
                 throw new InvalidDataException($"模块 Prefab {modulePrefab.name} 包含多个 Module，找不到唯一能力 {moduleId}。");
         }
 
-        return shell == null ? null : FindUniquePrototype(shell.GetComponentsInChildren<Module>(true), moduleId, shell.name);
+        return shell == null ? null : FindUniquePrototype(
+            Array.FindAll(shell.GetComponentsInChildren<Module>(true),
+                module => ItemModuleAssemblyCompiler.IsOwnedByRoot(module, shell.transform)), moduleId, shell.name);
     }
 
     /// <summary>多模块宿主必须唯一命中，禁止目录顺序决定具体实现。</summary>

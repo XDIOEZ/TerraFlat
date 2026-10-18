@@ -240,7 +240,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     private string ResolveImplicitStableName(string moduleId)
     {
         string normalizedId = moduleId.Trim();
-        Item owner = GetComponentInParent<Item>();
+        Item owner = GetComponentInParent<Item>(true);
         if (owner == null)
             return UsesSharedModuleHost() ? normalizedId : (gameObject.name?.Trim() ?? normalizedId);
 

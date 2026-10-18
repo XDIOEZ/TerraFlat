@@ -2,7 +2,7 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly`。
+快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly、module_assembly_identity`。
 
 已编写的规则覆盖：ModuleDataCollection 的结构版本、启停与移除退订；ItemInstanceDataFactory 的库存、模块和标签副本隔离。
 
@@ -14,7 +14,9 @@
 
 狼外壳装配新增回归：正式 Actor 加载器读取最终继承定义，真实 Wolf Prefab 与 `ItemModuleAssemblyCompiler` 编译单个 `animator` 槽位，再在停用副本中实际定位、应用配置、注册并要求同一内嵌动画模块；核对控制器仍为 Wolf、Animator 与 SpriteRenderer 各一份，去掉稳定身份后必须拒绝模糊定位。此规则不提供资源能力别名，不创建完整 GameRes 或启动世界；**仅编写，未编译、未运行**，不代表真实出生、初帧采样或对象池复用已验收。
 
-首次身份绑定补充：真实狼外壳中的动画模块直接调用生产 `TryRestoreRuntimeIdentity`，检查未绑定且能力 ID 为空时按 `CanonicalModuleId` 恢复完整身份，并检查已绑定身份可继续匹配；显式冲突的能力 ID、稳定槽位和具体 Prefab 必须拒绝。**仅编写，未编译、未运行**，完整工厂生成及实际回池重取仍由现场验收覆盖。
+首次身份绑定补充：真实狼外壳中的动画模块直接调用生产 `TryRestoreRuntimeIdentity`，检查编译来源的空能力 ID 可恢复完整身份，并检查已绑定身份可继续匹配；既不匹配来源模板也不匹配当前定义的能力 ID、稳定槽位和具体 Prefab 必须拒绝。**仅编写，未编译、未运行**，完整工厂生成及实际回池重取仍由现场验收覆盖。
+
+通用装配身份规则 `module_assembly_identity`：正式编译器读取默认槽位/能力与定义不同的模板，检查来源原值及 Awake 补全为当前能力 ID 都能绑定；中途篡改槽位/能力必须拒绝。嵌套 Item 的同槽位模块不参与父物品编译、不能归父物品恢复且数据保持原样；包含 Item 的独立模块 Prefab 被拒绝。独立模块必须命中具体 Prefab 根和精确组件位置，仅同名祖先不能蒙混通过。预检解析到编译选定的原型，停用宿主同能力模块的隐式稳定名仍唯一。**仅编写，未编译、未运行**，没有覆盖完整资源目录预检、真实池复用或域重载现场。
 
 后续修改触及以上关键流程时，需增强本组 Lua 和真实隔离场景夹具，再执行相关系统；不能把快速规则通过当成全路径覆盖。
 
@@ -27,3 +29,5 @@
 中心查询回归：用正式创建、移动通知、卸载的小刀查真实 ItemMgr 空间桶，检查零半径、圆周边界、范围外、排除对象、图层、停用、非法半径及循环接缝去重；同轮采样 256 次正式大气只读查询的状态身份与分配预算。此新增回归尚未执行，不代表已通过。
 
 覆盖边界：没有强制保证拿回同一个池对象，检查的是卸载与再次加载契约；调度频率、轻量掉落转换、运行时换定义仍未覆盖。
+
+2026-10-18 单图层销毁边界补充：`single_sprite_animation` 通过正式 `Item.OnDestroy`、单独删除动画组件和 `PrepareForDespawn` 三种收尾检查身体与附加视觉。宿主销毁时视觉与临时表现层一同销毁且不产生 Unity 错误；普通回收或删除组件时恢复各自真实原父级、同级顺序、原局部位置/缩放和外部最新翻面，夹具同时覆盖嵌套视觉父级。**本轮仅静态修改，未编译、未运行规则或 PlayMode**；未覆盖存活 Item 内部的视觉父容器被单独销毁，也不代表真实对象池重取或玩法观感已验收。

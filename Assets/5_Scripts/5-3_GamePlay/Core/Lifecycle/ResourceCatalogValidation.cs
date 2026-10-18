@@ -115,19 +115,18 @@ internal sealed class ItemResourceCatalogValidator : IIncrementalResourceCatalog
                     if (renderer == null || renderer.GetComponent<SpriteRenderer>() == null)
                         errors.Add($"物品 {definition.Id} -> rendererPath {definition.RendererPath} 缺少 SpriteRenderer");
                 }
-                ItemData data = definition.CreateItemData();
-                foreach (KeyValuePair<string, ModuleData> pair in data.ModuleDataDic)
+                foreach (RuntimeItemModuleAssemblyPlan assembly in definition.ModuleAssemblies)
                 {
-                    string prefabId = definition.GetModulePrefabId(pair.Key, pair.Value.ID);
-                    GameObject prefab = resources.GetPrefab(prefabId, false);
-                    Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(definition.ShellPrefab, prefab, prefabId);
+                    if (assembly.IsDataOnly)
+                        continue;
+                    Module prototype = assembly.ResolveImplementationPrototype(definition.ShellPrefab.transform);
                     if (prototype == null)
                     {
-                        errors.Add($"物品 {definition.Id} -> 模块 {pair.Key} -> Prefab {prefabId} 缺失");
+                        errors.Add($"物品 {definition.Id} -> 模块 {assembly.StableName} -> Prefab {assembly.PrefabId} 缺失");
                         continue;
                     }
-                    if (definition.TryGetModuleParameters(pair.Key, out string parameters))
-                        ModuleJsonConfigurator.Validate(prototype, definition.Id, pair.Key, pair.Value.ID, parameters);
+                    if (definition.TryGetModuleParameters(assembly.StableName, out string parameters))
+                        ModuleJsonConfigurator.Validate(prototype, definition.Id, assembly.StableName, assembly.ModuleId, parameters);
                 }
             }
             catch (Exception exception) { errors.Add($"物品 {definition.Id}：{exception.Message}"); }

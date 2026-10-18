@@ -350,6 +350,9 @@ public static class ItemDefinitionRuntime
 
         using var availableScope = ListPool<Module>.Get(out var available);
         item.GetComponentsInChildren(true, available);
+        for (int index = available.Count - 1; index >= 0; index--)
+            if (!ItemModuleAssemblyCompiler.IsOwnedByRoot(available[index], item.transform))
+                available.RemoveAt(index);
         using var boundScope = DictionaryPool<string, Module>.Get(out var boundByName);
         using var consumedScope = HashSetPool<Module>.Get(out var consumed);
         for (int index = 0; index < available.Count; index++)
@@ -385,9 +388,9 @@ public static class ItemDefinitionRuntime
             else
             {
                 module = assembly.ResolveEmbeddedModule(item.transform);
-                if (module != null && !string.IsNullOrWhiteSpace(module.PrefabId) &&
-                    !string.Equals(module.PrefabId, assembly.PrefabId, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException($"物品 {itemData.IDName} 的外壳模块 {assembly.StableName} 已绑定另一具体 Prefab。");
+                if (module != null && !assembly.MatchesBoundModule(module) &&
+                    !assembly.TryRestoreRuntimeIdentity(module, item.transform))
+                    throw new InvalidDataException($"物品 {itemData.IDName} 的外壳模块 {assembly.StableName} 身份与当前定义不匹配。");
                 if (module != null) ReusedModulesDebug.AddWork(1);
                 module ??= assembly.InstantiateModule(item.transform);
             }

@@ -358,10 +358,11 @@ public partial class Mod_AnimatorController
         {
             ResolveLocomotion(out bool moving, out bool running);
             ResetPresentation();
+            bool restoreHierarchy = item?.IsBeingDestroyed != true;
             for (int i = _additionalLayers.Count - 1; i >= 0; i--)
-                _additionalLayers[i].Dispose();
+                _additionalLayers[i].Dispose(restoreHierarchy);
             _additionalLayers.Clear();
-            _bodyLayer?.Dispose();
+            _bodyLayer?.Dispose(restoreHierarchy);
             _bodyLayer = null;
             if (_suppressedAnimator != null)
             {
@@ -552,7 +553,7 @@ public partial class Mod_AnimatorController
     #endregion
 
     #region 独立视觉变换层
-    private sealed class SingleSpriteVisualLayer : IDisposable
+    private sealed class SingleSpriteVisualLayer
     {
         public readonly Transform Root;
         public readonly Transform PoseRoot;
@@ -590,9 +591,11 @@ public partial class Mod_AnimatorController
             PoseRoot.localScale = scale;
         }
 
-        public void Dispose()
+        public void Dispose(bool restoreHierarchy)
         {
             if (PoseRoot == null) return;
+            // 宿主销毁时让视觉层随原层级销毁，正常卸载与回池仍完整恢复父级。
+            if (!restoreHierarchy) return;
             // 先恢复原层级再移出临时节点，回池校验当帧即可看到原始结构。
             if (Root != null && Root.parent == PoseRoot)
             {

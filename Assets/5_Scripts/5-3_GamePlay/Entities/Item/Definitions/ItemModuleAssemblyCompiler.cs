@@ -53,6 +53,10 @@ public sealed class RuntimeItemModuleAssemblyPlan
     internal Module ResolveEmbeddedModule(Transform instanceRoot)
         => shellLocation?.Resolve(instanceRoot);
 
+    // 资源预检复用编译选定的组件，避免把具体 Prefab 地址误当成能力 ID。
+    internal Module ResolveImplementationPrototype(Transform shellRoot)
+        => ModulePrefab != null ? prefabLocation?.Resolve(ModulePrefab.transform) : ResolveEmbeddedModule(shellRoot);
+
     public bool MatchesImplementation(Module module)
         => module != null && module.GetType() == ModuleType;
 
@@ -67,20 +71,16 @@ public sealed class RuntimeItemModuleAssemblyPlan
     public bool TryRestoreRuntimeIdentity(Module module, Transform ownerRoot)
     {
         if (!MatchesImplementation(module) || !string.IsNullOrWhiteSpace(module.PrefabId) ||
-            !string.Equals(module.StableName, StableName, StringComparison.Ordinal))
+            !ItemModuleAssemblyCompiler.IsOwnedByRoot(module, ownerRoot))
             return false;
-        // 原始外壳尚未绑定能力 ID 时使用模块声明的默认值，显式冲突身份仍然拒绝。
-        string moduleId = string.IsNullOrWhiteSpace(module.ResolvedModuleId)
-            ? module.CanonicalModuleId
-            : module.ResolvedModuleId;
-        if (!string.Equals(moduleId, ModuleId, StringComparison.OrdinalIgnoreCase))
-            return false;
-        bool belongsToShell = ResolveEmbeddedModule(ownerRoot) == module;
+        // 首次绑定接受编译来源的原始模板身份，之后只接受当前定义身份。
+        bool belongsToShell = ResolveEmbeddedModule(ownerRoot) == module && shellLocation.MatchesUnboundIdentity(module);
         bool belongsToPrefab = false;
         GameObject prefabRoot = null;
-        if (ModulePrefab != null)
+        if (ModulePrefab != null && prefabLocation != null)
             for (Transform current = module.transform; current != null && current != ownerRoot; current = current.parent)
-                if (string.Equals(current.name, PrefabId, StringComparison.Ordinal))
+                if (string.Equals(current.name, PrefabId, StringComparison.OrdinalIgnoreCase) &&
+                    prefabLocation.Resolve(current) == module && prefabLocation.MatchesUnboundIdentity(module))
                 {
                     belongsToPrefab = true;
                     prefabRoot = current.gameObject;
@@ -120,7 +120,7 @@ public sealed class RuntimeItemModuleAssemblyPlan
             using var scope = ListPool<Module>.Get(out var components);
             instance.GetComponentsInChildren(true, components);
             foreach (Module extra in components)
-                if (extra != null && extra != module)
+                if (extra != null && extra != module && ItemModuleAssemblyCompiler.IsOwnedByRoot(extra, instance.transform))
                     ItemModuleAssemblyCompiler.RetireUnconfiguredModule(extra);
             GameRes resources = GameRes.ExistingInstance;
             if (resources != null && resources.IsRuntimeModuleTemplate(ModulePrefab) ||
@@ -155,9 +155,11 @@ public sealed class RuntimeItemModuleAssemblyPlan
         private readonly int typeComponentIndex;
         private readonly string stableName;
         private readonly string moduleId;
+        private readonly string sourceStableName;
+        private readonly string sourceModuleId;
 
         private ModuleComponentLocation(int[] childIndices, string[] childNames, Type moduleType,
-            int typeComponentIndex, string stableName, string moduleId)
+            int typeComponentIndex, string stableName, string moduleId, string sourceStableName, string sourceModuleId)
         {
             this.childIndices = childIndices;
             this.childNames = childNames;
@@ -165,6 +167,8 @@ public sealed class RuntimeItemModuleAssemblyPlan
             this.typeComponentIndex = typeComponentIndex;
             this.stableName = stableName;
             this.moduleId = moduleId;
+            this.sourceStableName = sourceStableName;
+            this.sourceModuleId = sourceModuleId;
         }
 
         public static ModuleComponentLocation Compile(Transform root, Module module,
@@ -201,7 +205,18 @@ public sealed class RuntimeItemModuleAssemblyPlan
             if (!found)
                 throw new InvalidDataException($"模块 {module.GetType().Name} 组件位置无效。");
             return new ModuleComponentLocation(indices.ToArray(), names.ToArray(), moduleType,
-                typeComponentIndex, definition.StableName, definition.ModuleId);
+                typeComponentIndex, definition.StableName, definition.ModuleId, module.StableName, module.ResolvedModuleId);
+        }
+
+        public bool MatchesUnboundIdentity(Module module)
+            => MatchesIdentityPart(module.StableName, stableName, sourceStableName, StringComparison.Ordinal) &&
+               MatchesIdentityPart(module.ResolvedModuleId, moduleId, sourceModuleId, StringComparison.OrdinalIgnoreCase);
+
+        private static bool MatchesIdentityPart(string actual, string current, string source, StringComparison comparison)
+        {
+            string normalized = actual?.Trim() ?? string.Empty;
+            return string.Equals(normalized, current?.Trim() ?? string.Empty, comparison) ||
+                   string.Equals(normalized, source?.Trim() ?? string.Empty, comparison);
         }
 
         public Module Resolve(Transform root)
@@ -254,6 +269,8 @@ internal static class ItemModuleAssemblyCompiler
         bool usesResourceEntities)
     {
         Module[] embeddedModules = shell != null ? shell.GetComponentsInChildren<Module>(true) : Array.Empty<Module>();
+        if (shell != null)
+            embeddedModules = Array.FindAll(embeddedModules, module => IsOwnedByRoot(module, shell.transform));
         var claimed = new HashSet<Module>();
         var result = new RuntimeItemModuleAssemblyPlan[definitions.Count];
         for (int index = 0; index < definitions.Count; index++)
@@ -337,6 +354,21 @@ internal static class ItemModuleAssemblyCompiler
             GameObject registered = resources.GetPrefab(current.name, false);
             if (registered != null && registered.GetComponentInChildren<Module>(true) != null)
                 return registered != expected;
+        }
+        return false;
+    }
+
+    // 模块归最近的 Item 管理，编译与实例装配都不能穿过子物品边界。
+    internal static bool IsOwnedByRoot(Module module, Transform root)
+    {
+        if (module == null || root == null)
+            return false;
+        for (Transform current = module.transform; current != null; current = current.parent)
+        {
+            if (current == root)
+                return true;
+            if (current.GetComponent<Item>() != null)
+                return false;
         }
         return false;
     }

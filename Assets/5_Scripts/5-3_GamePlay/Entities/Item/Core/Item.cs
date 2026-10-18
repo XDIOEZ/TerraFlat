@@ -182,6 +182,9 @@ public abstract class Item : MonoBehaviour
 
     public bool IsInitialized => isInitialized && modulesLoaded && !lifecycleTransition;
     public bool DestructionHandled => destructionHandled;
+    // 实际销毁阶段不能再把表现节点挂回正在销毁的物品。
+    [field: NonSerialized]
+    public bool IsBeingDestroyed { get; private set; }
     [Tooltip("物品初始化时触发的事件，用于根据环境因素初始化物品")]
     public UltEvent<EnvironmentLayers, Vector2Int> OnInit_Env = new();
 
@@ -398,6 +401,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void OnDestroy()
     {
+        IsBeingDestroyed = true;
         if (destructionHandled)
             return;
 

@@ -163,6 +163,32 @@ test.system("item_runtime", "single_sprite_animation", {withAnimator = true, ste
         "重新启用动画组件后无法正常播放新攻击")
 end, "单图组件停用拒绝攻击跳跃受击且恢复身体Animator")
 
+for _, lifecycle in ipairs({"despawn", "destroy_component", "destroy_owner"}) do
+    test.system("item_runtime", "single_sprite_animation", {
+        nestedVisual = true, withAdditionalVisual = true, finalLifecycle = lifecycle,
+        steps = {{attack = true, jump = true, externalY = 180, deltaTime = .06}}
+    }, function(data)
+        checkAnimationBoundary(data)
+        local final = data.lifecycle
+        assert(#final.errors == 0, "单图生命周期产生 Unity 错误：" .. table.concat(final.errors, "；"))
+        assert(final.poseReleased and final.additionalPoseReleased,
+            "动画收尾没有释放身体或附加视觉的临时父层")
+        if lifecycle == "destroy_owner" then
+            assert(final.ownerDestructionStarted and final.ownerDestroyed and final.visualDestroyed and final.additionalDestroyed,
+                "宿主销毁没有同步销毁单图视觉，或提前把视觉移出了销毁层级")
+            assert(final.poseDestroyed and final.additionalPoseDestroyed,
+                "宿主销毁后仍留下独立单图表现层")
+        else
+            assert(not final.ownerDestructionStarted and not final.ownerDestroyed and not final.visualDestroyed and not final.additionalDestroyed,
+                "普通回收或单独删除动画组件误判为宿主销毁")
+            assert(final.parentRestored and final.additionalParentRestored and final.additionalSiblingRestored and final.localFacingX < -.9,
+                "存活宿主的身体或附加视觉没有恢复真实父级和同级顺序，或最新翻面被覆盖")
+            assert(final.localPositionError < .00001 and final.localScaleError < .00001,
+                "存活视觉恢复层级时丢失了原局部位置或缩放")
+        end
+    end, "单图宿主销毁、模块删除与回收层级边界：" .. lifecycle)
+end
+
 local motionSteps = {{moving = true, source = {y = .3, roll = 12},
     legacyState = "Walk", legacyMove = true, deltaTime = .08}}
 for index = 2, 21 do motionSteps[index] = {moving = false, source = {moving = true}, deltaTime = .08} end
@@ -217,3 +243,17 @@ test.system("item_runtime", "single_sprite_shell_assembly", {actorId = "Wolf"}, 
     assert(data.singleSprite and data.enabled and data.inactive,
         "狼正式单图配置没有应用到停用外壳中的精确动画组件")
 end, "真实狼外壳稳定槽位编译、内嵌动画复用与重复视觉拒绝")
+
+test.system("item_runtime", "module_assembly_identity", {}, function(data)
+    assert(data.sourceIdentityRestored and data.canonicalIdentityRestored,
+        "编译来源的默认身份或Awake补全的正式能力ID无法首次绑定")
+    assert(data.sourceStableConflictRejected and data.sourceIdConflictRejected,
+        "装配覆盖了既不属于来源模板也不属于当前定义的冲突身份")
+    assert(data.nestedExcludedFromCompile and data.nestedRestoreRejected and data.nestedUnchanged and data.nestedPrefabRejected,
+        "父物品编译或恢复跨过了子物品边界，或把完整物品当作独立模块")
+    assert(data.unrelatedOwnerRejected and data.exactPrefabRestored and data.namedAncestorRejected,
+        "独立模块没有恢复精确Prefab组件位置，或仅凭同名祖先接受了错误实现")
+    assert(data.shellPrototypeExact and data.prefabPrototypeExact,
+        "资源预检没有复用编译选定的内嵌或独立Prefab原型")
+    assert(data.inactiveStableNamesDistinct, "停用宿主中同能力模块推导出重复稳定名")
+end, "模块来源身份、嵌套物品所有权、精确Prefab位置与停用宿主稳定槽位")

@@ -30,6 +30,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("item_runtime/single_sprite_animation", EntitySingleSpriteAnimation);
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
+        operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);

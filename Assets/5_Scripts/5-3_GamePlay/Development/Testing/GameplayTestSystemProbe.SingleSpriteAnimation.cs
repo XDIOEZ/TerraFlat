@@ -41,8 +41,16 @@ public static partial class GameplayTestSystemProbe
                 item.itemMods.AddMod(motionSource);
             }
 
+            Transform visualParent = root.transform;
+            if (Flag(args, "nestedVisual", false))
+            {
+                visualParent = new GameObject("BodyContainer").transform;
+                visualParent.SetParent(root.transform, false);
+                visualParent.localPosition = new Vector3(.2f, .1f, 0f);
+            }
+            new GameObject("SiblingBefore").transform.SetParent(visualParent, false);
             var visual = new GameObject("Sprite");
-            visual.transform.SetParent(root.transform, false);
+            visual.transform.SetParent(visualParent, false);
             visual.transform.localPosition = new Vector3(.13f, .17f, 0f);
             visual.transform.localRotation = Quaternion.Euler(0f, 0f, 7f);
             visual.transform.localScale = new Vector3(1.1f, .9f, 1f);
@@ -60,6 +68,15 @@ public static partial class GameplayTestSystemProbe
             animation.idleBreathAmount = 0f;
             animation.targetSpriteRenderer = renderer;
             animation.spriteVisualRoot = visual.transform;
+            Transform additionalVisual = null;
+            int additionalSiblingIndex = -1;
+            if (Flag(args, "withAdditionalVisual", false))
+            {
+                additionalVisual = new GameObject("Accessory").transform;
+                additionalVisual.SetParent(root.transform, false);
+                additionalSiblingIndex = additionalVisual.GetSiblingIndex();
+                animation.additionalVisualRoots = new[] { additionalVisual };
+            }
             animation.ModuleInit(item, new Ex_ModData_MemoryPackable { Enabled = true });
             item.itemMods.AddMod(animation);
             Animator sourceAnimator = Flag(args, "withAnimator", false) ? root.AddComponent<Animator>() : null;
@@ -141,7 +158,7 @@ public static partial class GameplayTestSystemProbe
 
                 Vector3 offset = visual.transform.position - visualPosition;
                 bool hasBaseMatrix = animation.TryGetBaseVisualMatrix(visual.transform, out Matrix4x4 baseMatrix);
-                Matrix4x4 expectedBaseMatrix = root.transform.localToWorldMatrix *
+                Matrix4x4 expectedBaseMatrix = visualParent.localToWorldMatrix *
                     Matrix4x4.TRS(visualLocalPosition, visualLocalRotation, visualLocalScale);
                 float baseMatrixError = 0f;
                 if (hasBaseMatrix)
@@ -162,7 +179,7 @@ public static partial class GameplayTestSystemProbe
                     ["localRotationError"] = Quaternion.Angle(visualLocalRotation, visual.transform.localRotation),
                     ["localFacingX"] = (visual.transform.localRotation * Vector3.right).x,
                     ["localScaleError"] = Vector3.Distance(visualLocalScale, visual.transform.localScale),
-                    ["parentRestored"] = visual.transform.parent == root.transform && visual.transform.GetSiblingIndex() == siblingIndex,
+                    ["parentRestored"] = visual.transform.parent == visualParent && visual.transform.GetSiblingIndex() == siblingIndex,
                     ["attacking"] = animation.IsAttackPlaying,
                     ["componentEnabled"] = animation.enabled,
                     ["bodyAnimatorEnabled"] = sourceAnimator != null && sourceAnimator.enabled,
@@ -174,7 +191,54 @@ public static partial class GameplayTestSystemProbe
                     ["loaded"] = animation.IsRuntimeLoaded
                 });
             }
-            return new JObject { ["samples"] = samples };
+            var result = new JObject { ["samples"] = samples };
+            string finalLifecycle = Text(args, "finalLifecycle", string.Empty);
+            if (!string.IsNullOrEmpty(finalLifecycle))
+            {
+                Transform poseRoot = visual.transform.parent;
+                Transform additionalPoseRoot = additionalVisual != null ? additionalVisual.parent : null;
+                var errors = new JArray();
+                void CaptureLifecycleLog(string message, string stackTrace, LogType type)
+                {
+                    if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+                        errors.Add(message);
+                }
+                // 直接调用正式生命周期并保留 Unity 日志，让 Lua 同时检查销毁和存活宿主的恢复边界。
+                Application.logMessageReceived += CaptureLifecycleLog;
+                try
+                {
+                    switch (finalLifecycle)
+                    {
+                        case "destroy_owner": UnityEngine.Object.DestroyImmediate(root); break;
+                        case "destroy_component": UnityEngine.Object.DestroyImmediate(animation); break;
+                        case "despawn": item.PrepareForDespawn(saveData: false); break;
+                        default: throw new ArgumentException("单图动画收尾生命周期操作未登记：" + finalLifecycle);
+                    }
+                }
+                finally { Application.logMessageReceived -= CaptureLifecycleLog; }
+                result["lifecycle"] = new JObject
+                {
+                    ["errors"] = errors,
+                    ["ownerDestructionStarted"] = item.IsBeingDestroyed,
+                    ["ownerDestroyed"] = root == null,
+                    ["visualDestroyed"] = visual == null,
+                    ["poseDestroyed"] = poseRoot == null,
+                    ["poseReleased"] = poseRoot == null || (poseRoot.parent == null && poseRoot.childCount == 0),
+                    ["additionalDestroyed"] = additionalVisual == null,
+                    ["additionalPoseDestroyed"] = additionalPoseRoot == null,
+                    ["additionalPoseReleased"] = additionalPoseRoot == null ||
+                        (additionalPoseRoot.parent == null && additionalPoseRoot.childCount == 0),
+                    ["parentRestored"] = visual != null && visual.transform.parent == visualParent &&
+                        visual.transform.GetSiblingIndex() == siblingIndex,
+                    ["additionalParentRestored"] = additionalVisual != null && additionalVisual.parent == root.transform,
+                    ["additionalSiblingRestored"] = additionalVisual != null &&
+                        additionalVisual.GetSiblingIndex() == additionalSiblingIndex,
+                    ["localFacingX"] = visual != null ? (visual.transform.localRotation * Vector3.right).x : 0f,
+                    ["localPositionError"] = visual != null ? Vector3.Distance(visualLocalPosition, visual.transform.localPosition) : 0f,
+                    ["localScaleError"] = visual != null ? Vector3.Distance(visualLocalScale, visual.transform.localScale) : 0f
+                };
+            }
+            return result;
         }
         finally
         {
@@ -185,6 +249,102 @@ public static partial class GameplayTestSystemProbe
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
+    }
+
+    #endregion
+
+    #region 模块装配身份边界采样
+
+    // 正式编译计划直接检查模板默认身份、子物品边界及独立 Prefab 的精确组件位置。
+    private static JObject EntityModuleAssemblyIdentity(JObject args)
+    {
+        var root = new GameObject("[LuaModuleAssemblyIdentity]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            var shell = new GameObject("IdentityShell");
+            shell.transform.SetParent(root.transform, false);
+            shell.AddComponent<GameItem>().IsPreparedCandidate = true;
+            var node = new GameObject("SourceAnimation");
+            node.transform.SetParent(shell.transform, false);
+            var source = node.AddComponent<Mod_AnimatorController>();
+            source._Data = new Ex_ModData_MemoryPackable { StableName = "template-default-slot", ModuleId = "template-default-id" };
+            var nested = new GameObject("NestedItem");
+            nested.transform.SetParent(shell.transform, false);
+            nested.AddComponent<GameItem>().IsPreparedCandidate = true;
+            var nestedModule = nested.AddComponent<Mod_AnimatorController>();
+            nestedModule._Data = new Ex_ModData_MemoryPackable { StableName = "animator", ModuleId = ModText.AnimatorReceiver };
+            var definition = new RuntimeItemModuleDefinition("animator", ModText.AnimatorReceiver,
+                ModText.AnimatorReceiver, null, true);
+            RuntimeItemModuleAssemblyPlan plan = ItemModuleAssemblyCompiler.Compile(null, "test:identity", shell,
+                new[] { definition }, usesResourceEntities: false)[0];
+            bool nestedExcludedFromCompile = ReferenceEquals(plan.ResolveEmbeddedModule(shell.transform), source);
+            bool shellPrototypeExact = ReferenceEquals(plan.ResolveImplementationPrototype(shell.transform), source);
+
+            GameObject first = UnityEngine.Object.Instantiate(shell, root.transform, false);
+            Module firstModule = plan.ResolveEmbeddedModule(first.transform);
+            bool sourceIdentityRestored = plan.TryRestoreRuntimeIdentity(firstModule, first.transform) && plan.MatchesBoundModule(firstModule);
+            GameObject second = UnityEngine.Object.Instantiate(shell, root.transform, false);
+            Module secondModule = plan.ResolveEmbeddedModule(second.transform);
+            secondModule._Data.ModuleId = ModText.AnimatorReceiver;
+            bool canonicalIdentityRestored = plan.TryRestoreRuntimeIdentity(secondModule, second.transform) && plan.MatchesBoundModule(secondModule);
+            GameObject corrupted = UnityEngine.Object.Instantiate(shell, root.transform, false);
+            Module corruptedModule = plan.ResolveEmbeddedModule(corrupted.transform);
+            corruptedModule._Data.StableName = "tampered-slot";
+            bool sourceStableConflictRejected = !plan.TryRestoreRuntimeIdentity(corruptedModule, corrupted.transform);
+            corruptedModule._Data.StableName = source.StableName;
+            corruptedModule._Data.ModuleId = "tampered-id";
+            bool sourceIdConflictRejected = !plan.TryRestoreRuntimeIdentity(corruptedModule, corrupted.transform);
+            bool unrelatedOwnerRejected = !plan.TryRestoreRuntimeIdentity(source, root.transform);
+            bool nestedRestoreRejected = !plan.TryRestoreRuntimeIdentity(nestedModule, shell.transform);
+
+            var prefab = new GameObject("SpecificAnimationPrefab");
+            prefab.transform.SetParent(root.transform, false);
+            var implementation = new GameObject("Implementation");
+            implementation.transform.SetParent(prefab.transform, false);
+            var prototype = implementation.AddComponent<Mod_AnimatorController>();
+            prototype._Data = new Ex_ModData_MemoryPackable { StableName = "animator", ModuleId = ModText.AnimatorReceiver };
+            var prefabDefinition = new RuntimeItemModuleDefinition("animator", ModText.AnimatorReceiver, prefab.name, null, true);
+            var prefabPlan = new RuntimeItemModuleAssemblyPlan("test:identity", prefabDefinition, prefab, prototype, null, null, null);
+            GameObject correctPrefab = UnityEngine.Object.Instantiate(prefab, shell.transform, false);
+            correctPrefab.name = prefab.name;
+            Module correctModule = correctPrefab.GetComponentInChildren<Module>(true);
+            bool exactPrefabRestored = prefabPlan.TryRestoreRuntimeIdentity(correctModule, shell.transform) && prefabPlan.MatchesBoundModule(correctModule);
+            GameObject wrongPrefab = UnityEngine.Object.Instantiate(prefab, shell.transform, false);
+            wrongPrefab.name = prefab.name;
+            Module wrongModule = wrongPrefab.GetComponentInChildren<Module>(true);
+            wrongModule.gameObject.name = "WrongImplementation";
+            bool namedAncestorRejected = !prefabPlan.TryRestoreRuntimeIdentity(wrongModule, shell.transform);
+            bool prefabPrototypeExact = ReferenceEquals(prefabPlan.ResolveImplementationPrototype(shell.transform), prototype);
+            bool nestedPrefabRejected = false;
+            try { ItemDefinitionCatalogLoader.FindModulePrototype(null, nested, ModText.AnimatorReceiver); }
+            catch (System.IO.InvalidDataException) { nestedPrefabRejected = true; }
+
+            var inactiveFirst = shell.AddComponent<GameplayTestAnimationMotionSource>();
+            var inactiveSecond = shell.AddComponent<GameplayTestAnimationMotionSource>();
+            inactiveFirst._Data.ModuleId = "test:shared-inactive";
+            inactiveSecond._Data.ModuleId = "test:shared-inactive";
+            inactiveFirst.EnsureRuntimeIdentity();
+            inactiveSecond.EnsureRuntimeIdentity();
+            return new JObject
+            {
+                ["nestedExcludedFromCompile"] = nestedExcludedFromCompile,
+                ["shellPrototypeExact"] = shellPrototypeExact,
+                ["sourceIdentityRestored"] = sourceIdentityRestored,
+                ["canonicalIdentityRestored"] = canonicalIdentityRestored,
+                ["sourceStableConflictRejected"] = sourceStableConflictRejected,
+                ["sourceIdConflictRejected"] = sourceIdConflictRejected,
+                ["unrelatedOwnerRejected"] = unrelatedOwnerRejected,
+                ["nestedRestoreRejected"] = nestedRestoreRejected,
+                ["nestedUnchanged"] = nestedModule.StableName == "animator" && nestedModule.PrefabId == null && nestedModule.Enabled,
+                ["exactPrefabRestored"] = exactPrefabRestored,
+                ["namedAncestorRejected"] = namedAncestorRejected,
+                ["prefabPrototypeExact"] = prefabPrototypeExact,
+                ["nestedPrefabRejected"] = nestedPrefabRejected,
+                ["inactiveStableNamesDistinct"] = inactiveFirst.StableName != inactiveSecond.StableName
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     #endregion
