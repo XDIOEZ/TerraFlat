@@ -55,6 +55,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("crafting/allocation", EntityCraftingAllocation);
         operations.Add("crafting/transaction", EntityCraftingTransaction);
         operations.Add("crafting/plank_tool", EntityCraftingPlankTool);
+        operations.Add("crafting/handmade_catalog", EntityCraftingHandmadeCatalog);
         operations.Add("containers/composition", EntityContainerComposition);
         operations.Add("containers/whole_world_transfer", EntityContainerWholeWorldTransfer);
         operations.Add("containers/whole_batch", EntityContainerWholeBatch);

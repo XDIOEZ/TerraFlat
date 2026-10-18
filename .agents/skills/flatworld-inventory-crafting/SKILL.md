@@ -55,6 +55,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 `配方目录/物品 processing → Matcher 全部候选 → Controller 选择与进度 → CraftingService → CraftingTransaction → 成功动作/进度信号`
 
+- `Recipes/crafting/handmade_equipment.json` 与 `handmade_utilities.json` 补齐手工制品；审查缺配方须同时检查 Recipes、物品 processing、Mechanical Processes、matter 温度/湿度转化及便携载体映射，天然物、温变产物和内部/GM 变体不机械补普通配方。
 - 普通 Crafting 为 unordered：需求是物品/Tag 总量，amount=0 为必须存在但不扣数量的工具；耐久由配方 actions 独立控制，要求原样保留时不配置扣耐久动作。额外材料不屏蔽候选。Exact/Tag 重叠做全局容量分配，选择后按所选 RuntimeRecipe 精确提交。热加工保留有序、镜像和网格语义。
 - 多产物全部放下才提交，失败无扣料或部分产出；非堆叠产物逐件占槽。合法产物来自 GameRes.ItemDefinitions；旧 recipeDict 仅供未迁移熔炼单值索引，普通多候选登记 CraftingRecipeCatalog。被动无配方只清预览。
 - 单原料 processing 不从 parent 继承，经 ItemProcessingResolver 转为 RuntimeRecipe；设备提供 capability/level，材料 minLevel/maxLevel 为闭区间。手工台与工作台互认 handcraft/workbench，固定 4/2 和 5/2 输入输出槽；世界工作台手势数为手工基准 70%，四舍五入至少一次。

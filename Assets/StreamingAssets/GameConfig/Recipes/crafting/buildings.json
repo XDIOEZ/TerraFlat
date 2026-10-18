@@ -187,7 +187,7 @@
     },
     {
       "id": "core:高炉",
-      "displayName": "高炉",
+      "displayName": "熔炉",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "temperature": 0.0,

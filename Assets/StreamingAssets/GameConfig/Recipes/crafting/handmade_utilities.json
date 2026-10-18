@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:handmade_Crucible",
+      "displayName": "坩埚",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "StoneSlab",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "ChippedTool",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Crucible",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Paper",
+      "displayName": "纸张",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Fiber",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "WoodAsh",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Paper",
+          "amount": 4
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Nail",
+      "displayName": "钉子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "StoneHammer",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Nail",
+          "amount": 8
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Door_Wood_Summoner",
+      "displayName": "木门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Door_Wood_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Meatrack_Summoner",
+      "displayName": "晾肉架",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Meatrack_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Scarecrow_Summoner",
+      "displayName": "稻草人",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Straw",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Scarecrow_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_CompostBin_Summoner",
+      "displayName": "堆肥箱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Plank",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "CompostBin_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_BlastFurnace_Summoner",
+      "displayName": "高炉",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 12
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Clay",
+          "amount": 6
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "BlastFurnace_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Generator_Basic_Summoner",
+      "displayName": "基础电机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rubber",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Generator_Basic_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Battery_Basic_Summoner",
+      "displayName": "基础电池",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Tin",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Charcoal",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rubber",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Battery_Basic_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

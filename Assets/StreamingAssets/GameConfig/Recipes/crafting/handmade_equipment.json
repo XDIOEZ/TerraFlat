@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:handmade_Axe_Copper",
+      "displayName": "铜斧",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Axe_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Axe_Bronze",
+      "displayName": "青铜斧",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Bronze",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Axe_Bronze",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Axe_RawIron",
+      "displayName": "生铁斧",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Axe_RawIron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Axe_Iron",
+      "displayName": "铁斧",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Axe_Iron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Dagger_Copper",
+      "displayName": "铜制小刀",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Dagger_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Knife_Flint",
+      "displayName": "燧石小刀",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Flint",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Knife_Flint",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Spear_Stone",
+      "displayName": "石矛",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Spear_Stone",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Spear_Copper",
+      "displayName": "铜矛",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Spear_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Spear_Iron",
+      "displayName": "铁矛",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rope",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Spear_Iron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:handmade_Scissors",
+      "displayName": "剪刀",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Scissors",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

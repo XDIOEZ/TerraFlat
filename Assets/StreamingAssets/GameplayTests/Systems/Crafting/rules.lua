@@ -21,6 +21,66 @@ for _, case in ipairs(cases) do
     end, "制作材料分配：" .. case.name)
 end
 
+-- 正式新增手工配方逐条走匹配与事务，拒绝路径完整对照库存身份、数量和耐久。
+test.system("crafting", "handmade_catalog", {}, function(data)
+    local enabled = {}
+    for _, path in ipairs(data.enabledPackages) do enabled[path] = true end
+    assert(enabled["crafting/handmade_equipment.json"] and enabled["crafting/handmade_utilities.json"], "新增手工配方包未正式启用")
+    local expected = {
+        Axe_Copper = true, Axe_Bronze = true, Axe_RawIron = true, Axe_Iron = true, Dagger_Copper = true,
+        Knife_Flint = true, Spear_Stone = true, Spear_Copper = true, Spear_Iron = true, Scissors = true,
+        Crucible = true, Paper = true, Nail = true, Door_Wood_Summoner = true, Meatrack_Summoner = true,
+        Scarecrow_Summoner = true, CompostBin_Summoner = true, BlastFurnace_Summoner = true,
+        Generator_Basic_Summoner = true, Battery_Basic_Summoner = true
+    }
+    local seen = {}
+    local function sameSlots(before, after)
+        assert(#before == #after, "失败制作改变了库存槽数")
+        for i, slot in ipairs(before) do
+            local other = after[i]
+            assert(slot.id == other.id and slot.guid == other.guid and slot.amount == other.amount
+                and slot.durability == other.durability and slot.maxDurability == other.maxDurability,
+                "拒绝制作或保留工具时改变了原物品")
+        end
+    end
+    local function rejected(attempt, matched)
+        assert(attempt.matched == matched and not attempt.prepared and not attempt.committed, "制作拒绝条件错误")
+        sameSlots(attempt.inputBefore, attempt.inputAfter)
+        sameSlots(attempt.outputBefore, attempt.outputAfter)
+    end
+    assert(#data.recipes == 20, "本轮新增的二十条手工配方数量不完整")
+    for _, recipe in ipairs(data.recipes) do
+        assert(#recipe.warnings == 0 and recipe.inputKinds <= 5, "配方引用不存在的物品或超出工作台五种输入")
+        local normal = recipe.normal
+        assert(normal.matched and normal.prepared and normal.committed, "正式手工配方无法完整产出：" .. recipe.id)
+        assert(#normal.inputAfter == 5 and #normal.outputAfter == 2, "没有使用工作台正式五输入两输出容量")
+        for i, ingredient in ipairs(normal.expectedInput) do
+            local slot = normal.inputAfter[i]
+            assert(slot.amount == ingredient.after and (ingredient.after == 0 or slot.id == ingredient.id), "新增手工配方扣料数量错误")
+            if ingredient.before == ingredient.after then
+                sameSlots({normal.inputBefore[i]}, {slot})
+            end
+        end
+        local actual = {}
+        for _, slot in ipairs(normal.outputAfter) do
+            if slot.amount > 0 then actual[slot.id] = (actual[slot.id] or 0) + slot.amount end
+        end
+        for _, output in ipairs(recipe.expectedOutputs) do
+            assert(output.id ~= "Charcoal" and not string.match(output.id, "^Ingot_"), "温度转变产物误加进手工配方")
+            assert(expected[output.id] and not seen[output.id], "手工配方产物重复或超出本轮清单")
+            seen[output.id] = true
+            assert(actual[output.id] == output.amount, "新增手工配方产物数量错误")
+            actual[output.id] = nil
+        end
+        for id, _ in pairs(actual) do assert(false, "新增手工配方生成额外产物：" .. id) end
+        assert(recipe.missing.removedOne, "缺料案例未实际减少消耗材料")
+        rejected(recipe.missing, false)
+        rejected(recipe.full, true)
+        for _, attempt in ipairs(recipe.missingTools) do rejected(attempt, false) end
+    end
+    for id, _ in pairs(expected) do assert(seen[id], "应补齐的手工产物仍缺配方：" .. id) end
+end, "正式新增手工配方：二十项产物、缺料、工具保留及满输出")
+
 -- 正式木板配方只消耗原木，满耐久或残余耐久的斧头在连续制作后都原样保留。
 local plankCases = {
     {name = "满耐久斧头连续制作", args = {}, durability = 1, toolPresent = true, crafted = true},

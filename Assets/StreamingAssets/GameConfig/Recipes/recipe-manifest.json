@@ -110,6 +110,16 @@
       "id": "crafting/space_devices",
       "path": "crafting/space_devices.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/handmade_equipment",
+      "path": "crafting/handmade_equipment.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/handmade_utilities",
+      "path": "crafting/handmade_utilities.json",
+      "enabled": true
     }
   ]
 }
