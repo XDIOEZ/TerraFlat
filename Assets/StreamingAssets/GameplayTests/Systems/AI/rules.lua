@@ -181,6 +181,15 @@ for _, case in ipairs({
     end, "自然刷新队列：补员=" .. tostring(case.replacement) .. "，出生=" .. tostring(case.spawned))
 end
 
+test.system("ai", "tree_habitat_batch", {}, function(data)
+    assert(data.seamNear and not data.seamTooFar and not data.flatTooFar,
+        "树木栖息地在环绕接缝或普通世界错误计算了与玩家的距离")
+    assert(not data.exactBoundary and data.withinBoundary and not data.emptyPlayers,
+        "树木栖息地改变了严格半径边界或无玩家时的候选资格")
+    assert(data.matchesOriginal and data.wrappedBiome and data.matched == 3 and data.missing == 3,
+        "树木批量群系查询与原地块采样不一致，或未拒绝未知地块")
+end, "树木栖息地批量寻址保持群系、平台、接缝及距离规则")
+
 -- 调用真实动物产蛋日历，不把离线时间变成积压产蛋。
 local cases = {
     {name = "最短两天", args = {day = 10, minimum = 0, delay = 0, checkDay = 11.99}, deadline = 12, due = false, next = 13.99},

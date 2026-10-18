@@ -261,6 +261,20 @@ public partial class ChunkMgr
             return true;
         }
 
+        /// <summary>候选树只读取群系，复用区块寻址且不构造地表覆盖与完整地块样本。</summary>
+        internal bool TryGetBiomeName(Vector2 position, out string biomeName)
+        {
+            biomeName = string.Empty;
+            Vector2 normalized = NormalizePosition(position);
+            if (!IsLoadedNormalized(normalized))
+                return false;
+
+            int x = Mathf.FloorToInt(normalized.x) - cachedOriginX;
+            int y = Mathf.FloorToInt(normalized.y) - cachedOriginY;
+            biomeName = SurfaceBiomeClassifier.GetLegacyName(cachedChunk.Terrain.GetCell(x, y).BiomeId);
+            return !string.IsNullOrWhiteSpace(biomeName);
+        }
+
         internal bool IsLoadedNormalized(Vector2 position)
         {
             if (world == null || world.Epoch != worldEpoch)

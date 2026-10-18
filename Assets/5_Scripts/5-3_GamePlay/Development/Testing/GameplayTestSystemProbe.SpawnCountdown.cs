@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
@@ -12,6 +14,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("ai/spawn_countdown", EntitySpawnCountdown);
         operations.Add("ai/creature_request", EntityCreatureRequest);
+        operations.Add("ai/tree_habitat_batch", EntityTreeHabitatBatch);
     }
 
     // 采正式入口使用的请求守卫，不创建世界或修改单例。
@@ -25,6 +28,82 @@ public static partial class GameplayTestSystemProbe
             ["blank"] = MonsterSpawnerManager.IsValidCreatureRequest(" ", Vector3.zero, true, true),
             ["nan"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", new Vector3(float.NaN, 0f), true, true),
             ["infinity"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", new Vector3(0f, float.PositiveInfinity), true, true)
+        };
+    }
+
+    /// <summary>树木栖息地批量寻址必须保持群系、接缝及距离边界与旧入口一致。</summary>
+    private static JObject EntityTreeHabitatBatch(JObject args)
+    {
+        var domain = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        var players = new List<Vector3> { new(15.5f, 15.5f, 0f), new(0f, 0f, 0f) };
+        bool seamNear = MonsterSpawnerManager.IsHabitatTreeNearPlayers(
+            new Vector2(-15.5f, -15.5f), 2f, players, domain);
+        bool seamTooFar = MonsterSpawnerManager.IsHabitatTreeNearPlayers(
+            new Vector2(-15.5f, -15.5f), 1.4f, players, domain);
+        bool flatTooFar = MonsterSpawnerManager.IsHabitatTreeNearPlayers(
+            new Vector2(-15.5f, -15.5f), 2f, players, default);
+        bool exactBoundary = MonsterSpawnerManager.IsHabitatTreeNearPlayers(
+            new Vector2(2f, 0f), 2f, players, default);
+        bool withinBoundary = MonsterSpawnerManager.IsHabitatTreeNearPlayers(
+            new Vector2(2f, 0f), 2.1f, players, default);
+        bool emptyPlayers = MonsterSpawnerManager.IsHabitatTreeNearPlayers(
+            Vector2.zero, 5f, Array.Empty<Vector3>(), domain);
+
+        using var world = new WorldRuntime("habitat_batch", 1);
+        var profile = new ChunkGenerationProfileSnapshot("habitat_batch", 1, 16, 16);
+        var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));
+        ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
+        using var buffer = new ChunkTerrainBuffer(16, 16);
+        buffer.SetCell(2, 3, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Forest,
+            1, TerrainCellFlags.Walkable));
+        buffer.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 2, 3, 90f);
+        buffer.SetEnvironmentValue(TerrainSupportLayer.CostLayer, 2, 3, 3f);
+        buffer.SetCell(14, 3, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Desert,
+            1, TerrainCellFlags.Walkable));
+        buffer.SetCell(15, 15, new TerrainCell(1, 0, 0, 999,
+            1, TerrainCellFlags.Walkable));
+        using (var result = new ChunkGenerationResult(request, buffer))
+            if (!world.TryCommit(result, out string reason))
+                throw new InvalidOperationException("树木群系夹具提交失败：" + reason);
+
+        var query = new ChunkMgr.RuntimeTerrainPresenceQuery(world, default, "surface", 16, 16);
+        var samples = new[]
+        {
+            new Vector2(2.5f, 3.5f), new Vector2(14.5f, 3.5f),
+            new Vector2(15.5f, 15.5f), new Vector2(5.5f, 7.5f),
+            new Vector2(16.5f, 3.5f), new Vector2(-1.5f, 3.5f)
+        };
+        bool matchesOriginal = true;
+        int matched = 0, missing = 0;
+        for (int i = 0; i < samples.Length; i++)
+        {
+            bool quick = query.TryGetBiomeName(samples[i], out string quickName);
+            bool loaded = query.TrySample(samples[i], out RuntimeTerrainTileSample original);
+            string oldName = loaded ? SurfaceBiomeClassifier.GetLegacyName(original.Cell.BiomeId) : string.Empty;
+            bool oldSuccess = loaded && !string.IsNullOrWhiteSpace(oldName);
+            matchesOriginal &= quick == oldSuccess && string.Equals(quickName, oldName, StringComparison.Ordinal);
+            if (quick) matched++;
+            else missing++;
+        }
+        var wrappedQuery = new ChunkMgr.RuntimeTerrainPresenceQuery(world,
+            new WorldTopologyDomain(new int2(0, 0), new int2(32, 32), true), "surface", 16, 16);
+        bool wrappedBiome = wrappedQuery.TryGetBiomeName(new Vector2(34.5f, 3.5f), out string wrappedName) &&
+            wrappedQuery.TrySample(new Vector2(34.5f, 3.5f), out RuntimeTerrainTileSample wrappedSample) &&
+            string.Equals(wrappedName, SurfaceBiomeClassifier.GetLegacyName(wrappedSample.Cell.BiomeId),
+                StringComparison.Ordinal);
+
+        return new JObject
+        {
+            ["seamNear"] = seamNear,
+            ["seamTooFar"] = seamTooFar,
+            ["flatTooFar"] = flatTooFar,
+            ["exactBoundary"] = exactBoundary,
+            ["withinBoundary"] = withinBoundary,
+            ["emptyPlayers"] = emptyPlayers,
+            ["matchesOriginal"] = matchesOriginal,
+            ["wrappedBiome"] = wrappedBiome,
+            ["matched"] = matched,
+            ["missing"] = missing
         };
     }
 
