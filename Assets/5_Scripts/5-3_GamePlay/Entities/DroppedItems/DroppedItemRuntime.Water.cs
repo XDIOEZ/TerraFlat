@@ -186,12 +186,13 @@ internal sealed partial class DroppedItemRuntime
             foreach (int id in waterScratch)
             {
                 if (!simulation.Contains(id)) continue;
-                CheckEnvironment(id);
+                if (!CheckEnvironment(id, out RuntimeTerrainTileSample sample) || !simulation.Contains(id)) continue;
                 LightweightDroppedBody body = simulation.Get(id);
                 ChunkMgr chunks = ChunkMgr.ExistingInstance;
                 RuntimeWaterCurrentSample current;
                 using (WaterCurrentMarker.Auto())
-                    if (body.WaterKind == 0 || chunks == null || !chunks.TryGetRuntimeWaterCurrent(body.Position, out current)) continue;
+                    if (body.WaterKind == 0 || chunks == null ||
+                        !chunks.TryGetRuntimeWaterCurrent(body.Position, sample, out current)) continue;
                 float speed = ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
                 if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f) continue;
                 float driftSeconds = Mathf.Min(step, 1f);
@@ -218,20 +219,25 @@ internal sealed partial class DroppedItemRuntime
 
     private void CheckEnvironment(int id)
     {
-        using (WaterEnvironmentMarker.Auto()) CheckEnvironmentCore(id);
+        CheckEnvironment(id, out _);
     }
 
-    private void CheckEnvironmentCore(int id)
+    private bool CheckEnvironment(int id, out RuntimeTerrainTileSample sample)
     {
-        if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) return;
+        using (WaterEnvironmentMarker.Auto()) return CheckEnvironmentCore(id, out sample);
+    }
+
+    private bool CheckEnvironmentCore(int id, out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) return false;
         LightweightDroppedBody body = simulation.Get(id);
-        RuntimeTerrainTileSample sample;
         using (WaterTerrainSampleMarker.Auto())
         {
             if (!TrySampleEnvironmentTerrain(body.Position, out sample))
             {
                 QueueEnvironment(id);
-                return;
+                return false;
             }
         }
         WatchTerrain(id, sample);
@@ -246,7 +252,7 @@ internal sealed partial class DroppedItemRuntime
                 changed = true;
             }
             if (changed) { body.Pickable = 1; simulation.Set(body); UpdatePlacement(id); }
-            return;
+            return true;
         }
 
         bool entering = body.WaterKind == 0;
@@ -280,6 +286,7 @@ internal sealed partial class DroppedItemRuntime
         }
         wetItems.Add(id);
         if (changed) { body.Pickable = 1; simulation.Set(body); UpdatePlacement(id); }
+        return true;
     }
 
     /// <summary>火把等规则从定义读取；先准备替代载荷与视觉，成功后保留同一实体及整组数量。</summary>

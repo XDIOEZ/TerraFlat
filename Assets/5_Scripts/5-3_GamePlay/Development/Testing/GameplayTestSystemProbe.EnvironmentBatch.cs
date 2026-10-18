@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -12,6 +13,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/environment_batch_rejection", EnvironmentBatchRejection);
         operations.Add("environment/environment_batch_lifecycle", EnvironmentBatchLifecycle);
         operations.Add("environment/environment_batch_revision", EnvironmentBatchRevision);
+        operations.Add("environment/water_current_reuse", EnvironmentWaterCurrentReuse);
         operations.Add("environment/surface_work_queue", EnvironmentSurfaceWorkQueue);
         operations.Add("environment/surface_temperature_snapshot", EnvironmentSurfaceTemperatureSnapshot);
         operations.Add("agriculture/surface_water_rule", AgricultureSurfaceWaterRule);
@@ -24,6 +26,54 @@ public static partial class GameplayTestSystemProbe
         for (int x = 0; x < width; x++)
             buffer.SetCell(x, y, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
         return buffer.Seal();
+    }
+
+    /// <summary>同一个地块样本必须实时读取河流、海洋、湖泊与表层液体变化。</summary>
+    private static JObject EnvironmentWaterCurrentReuse(JObject args)
+    {
+        using ChunkTerrainData terrain = EnvironmentBatchFixture(4, 1);
+        int water = terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int x = 0; x < 3; x++) terrain.SetLiquid(x, 0, water, 6);
+        terrain.SetCell(1, 0, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Ocean,
+            1, TerrainCellFlags.Walkable));
+        terrain.SetCell(2, 0, new TerrainCell(1, 0, 0, (int)SurfaceBiomeKind.Ocean,
+            1, TerrainCellFlags.Walkable));
+        terrain.SetEnvironmentValue("riverKind", 0, 0, 1f);
+        terrain.SetEnvironmentValue("riverFlowX", 0, 0, 3f);
+        terrain.SetEnvironmentValue("riverFlowY", 0, 0, 4f);
+        terrain.SetEnvironmentValue("riverFlow", 0, 0, .75f);
+        terrain.SetEnvironmentValue("windX", 1, 0, 3f);
+        terrain.SetEnvironmentValue("windY", 1, 0, 4f);
+        terrain.SetEnvironmentValue("riverKind", 2, 0, 2f);
+        RuntimeTerrainTileSample Sample(int x) => new(default, terrain,
+            new UnityEngine.Vector2Int(x, 0), new UnityEngine.Vector2Int(x, 0),
+            terrain.GetCell(x, 0), terrain.GetTopTileId(x, 0));
+        RuntimeTerrainTileSample river = Sample(0), ocean = Sample(1),
+            lake = Sample(2), dry = Sample(3);
+        bool riverValid = ChunkMgr.TryResolveTerrainWaterCurrent(river, out RuntimeWaterCurrentSample flow) &&
+            flow.Kind == RuntimeWaterCurrentKind.River && Mathf.Approximately(flow.Flow, .75f) &&
+            Mathf.Approximately(flow.Direction.x, .6f) && Mathf.Approximately(flow.Direction.y, .8f);
+        bool oceanValid = ChunkMgr.TryResolveTerrainWaterCurrent(ocean, out flow) &&
+            flow.Kind == RuntimeWaterCurrentKind.Ocean && Mathf.Approximately(flow.Flow, 1f) &&
+            Mathf.Approximately(flow.Direction.x, .6f) && Mathf.Approximately(flow.Direction.y, .8f);
+        bool lakeStill = !ChunkMgr.TryResolveTerrainWaterCurrent(lake, out _) &&
+            !ChunkMgr.TryResolveTerrainWaterCurrent(dry, out _);
+        terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 1, 0, 90f);
+        bool covered = !ChunkMgr.TryResolveTerrainWaterCurrent(ocean, out _);
+        terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 1, 0, 0f);
+        bool uncovered = ChunkMgr.TryResolveTerrainWaterCurrent(ocean, out flow) &&
+            flow.Kind == RuntimeWaterCurrentKind.Ocean;
+        terrain.SetEnvironmentValue("riverFlowX", 0, 0, 0f);
+        terrain.SetEnvironmentValue("riverFlowY", 0, 0, 0f);
+        bool stoppedRiver = !ChunkMgr.TryResolveTerrainWaterCurrent(river, out _);
+        terrain.SetLiquid(0, 0, 0, 0);
+        bool drained = !ChunkMgr.TryResolveTerrainWaterCurrent(river, out _);
+        return new JObject
+        {
+            ["river"] = riverValid, ["ocean"] = oceanValid, ["lakeAndDry"] = lakeStill,
+            ["covered"] = covered, ["uncovered"] = uncovered,
+            ["stoppedRiver"] = stoppedRiver, ["drained"] = drained
+        };
     }
 
     private static JObject EnvironmentBatchLayer(ChunkTerrainData terrain, string layerId)

@@ -526,6 +526,13 @@ test.system("environment", "environment_batch", {}, function(data)
     assert(data.blockingRevision == 0 and data.surfaceLiquidRevision == 0, "普通土壤写入污染遮挡或液体版本")
 end, "土壤环境批写、真实变化格、延迟合并通知与单格兼容")
 
+test.system("environment", "water_current_reuse", {}, function(data)
+    assert(data.river and data.ocean and data.lakeAndDry,
+        "重复利用的水体样本丢失河流流量、海洋风场，或把湖泊及干格识别为流动")
+    assert(data.covered and data.uncovered and data.stoppedRiver and data.drained,
+        "水体样本在支撑面变化、河流停流或抽干后没有实时读取权威数据")
+end, "掉落物水流同批复用地块样本，保持流向和液体变化语义")
+
 test.system("environment", "environment_batch_rejection", {}, function(data)
     assert(#data.rejected == 10, "非法输入采样不完整")
     for _, rejected in ipairs(data.rejected) do

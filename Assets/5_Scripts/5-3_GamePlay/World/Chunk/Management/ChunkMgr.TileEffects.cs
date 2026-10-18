@@ -417,20 +417,36 @@ public partial class ChunkMgr
     public bool TryGetRuntimeWaterCurrent(Vector2 worldPosition,
         out RuntimeWaterCurrentSample current)
     {
+        if (TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
+            return TryGetRuntimeWaterCurrent(worldPosition, sample, out current);
         current = default;
-        if (!TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) ||
-            sample.LiquidDepth <= 0f)
-        {
-            return false;
-        }
+        return false;
+    }
 
-        ChunkTerrainData terrain = sample.Terrain;
-        Vector2Int local = sample.LocalCell;
+    /// <summary>同次水态检查复用已取得的地块，只实时读取水深和流向，不重新寻址。</summary>
+    internal bool TryGetRuntimeWaterCurrent(Vector2 worldPosition, RuntimeTerrainTileSample sample,
+        out RuntimeWaterCurrentSample current)
+    {
+        current = default;
+        if (sample.Terrain == null || sample.Terrain.IsDisposed || sample.LiquidDepth <= 0f)
+            return false;
         if (TryGetExperimentalLiquidFlow(worldPosition, out Vector2 liquidFlow))
         {
             current = new RuntimeWaterCurrentSample(RuntimeWaterCurrentKind.ExperimentalLiquid, liquidFlow, liquidFlow.magnitude);
             return true;
         }
+        return TryResolveTerrainWaterCurrent(sample, out current);
+    }
+
+    /// <summary>非实验水流只读当前权威地形，河流优先于海洋、湖泊没有水流。</summary>
+    internal static bool TryResolveTerrainWaterCurrent(RuntimeTerrainTileSample sample,
+        out RuntimeWaterCurrentSample current)
+    {
+        current = default;
+        if (sample.Terrain == null || sample.Terrain.IsDisposed || sample.LiquidDepth <= 0f)
+            return false;
+        ChunkTerrainData terrain = sample.Terrain;
+        Vector2Int local = sample.LocalCell;
         terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
         RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(
             Mathf.RoundToInt(riverKind), (SurfaceBiomeKind)sample.Cell.BiomeId == SurfaceBiomeKind.Ocean);
