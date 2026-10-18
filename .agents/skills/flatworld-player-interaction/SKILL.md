@@ -49,6 +49,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 移动、承载与镜头
 
 - `Mod_Mover` 向 Dynamic Rigidbody2D 提交 `DrivenVelocity + ExternalVelocity`，Physics2D 求解接触；主动速度决定步行动画，水流/输送带/承载不计步行或体力。`WorldUnitChanged` 按刚体实际到达的拓扑规范 1×1 格发布。
+- 地表速度沿用 `SpaceGameplaySettings.WalkingMultiplier`（低重力最高2倍）；起步/转向/刹停共用 `WalkingResponseMultiplier`，按当地重力/地球重力降低响应，月球级约慢6倍，最低重力沿用0.25，普通及高重力响应不变。玩家、GO动物导航和无人工重力的地表船内复用；人工重力按地球值，太空自由漂浮沿用独立规则。回归 `player/surface_gravity_movement`。
 - `Mod_Roll`（`Roll`）由中央 `Roll` Action 默认空格发动，方向取发动时移动输入，无输入时朝光标/准星，指针重合或无效时回退朝向；0.4秒、步行2倍、身体碰撞尺寸50%、全程临时无敌、冷却0秒（上一轮结束即可再次发动）、基础体力10点。动作持有 `Mod_Mover.DrivenMotionLease`，不重复计步行消耗；`RollVisual` 专用父层转一圈，不旋转物理根或镜头。死亡、输入锁、卸载、换场景还原尺寸和租约；载具/太空不发动。网络远端权威只推进体力和生命动作态，本地获服务器许可后复用移动租约；远端表现按序号与绝对进度幂等应用，不加载本地输入/UI。
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。

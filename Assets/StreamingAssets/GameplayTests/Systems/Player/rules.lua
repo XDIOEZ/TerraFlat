@@ -5,6 +5,38 @@ test.system("player", "interaction_completion", {}, function(data)
     assert(not data.staleAccepted and data.nextPreserved and data.nextCancelCount == 1, "旧完成请求污染新交互，或新目标取消失效")
 end, "交互完成清理、重复调用与迟到取消隔离")
 
+-- 玩家与动物复用正式地表重力响应，实际碰撞与场景切换另由现场验收。
+for _, player in ipairs({true, false}) do
+    test.system("player", "surface_gravity_movement", {player = player}, function(data)
+        local function near(actual, expected, label)
+            assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label)
+        end
+        local normal, low, high, zero, minimum, ice = data.normal, data.low, data.high, data.zero, data.minimum, data.ice
+        near(normal.speedMultiplier, 1, "普通重力移速改变")
+        near(normal.responseMultiplier, 1, "普通重力响应改变")
+        near(low.speedMultiplier, 2, "月球级重力没有沿用2倍移速上限")
+        near(low.responseMultiplier, 1 / 6, "月球级重力响应没有慢约6倍")
+        assert(low.start > 0 and low.start < normal.start, "低重力没有更慢起步")
+        assert(low.stop > normal.stop and low.reverse > normal.reverse, "低重力刹停或反向没有保留更多惯性")
+        assert(low.turnX > normal.turnX and low.turnY < normal.turnY, "低重力转向没有保留原方向惯性")
+        assert(high.speedMultiplier < 1, "高重力移速限制失效")
+        near(high.start, normal.start, "高重力额外改变了起步响应")
+        near(high.stop, normal.stop, "高重力额外改变了刹停响应")
+        near(high.turnX, normal.turnX, "高重力额外改变了转向响应")
+        assert(zero.responseMultiplier > 0 and zero.responseMultiplier < low.responseMultiplier,
+            "地表零重力没有使用有限响应下限")
+        near(zero.responseMultiplier, minimum.responseMultiplier, "极低重力响应没有钳制")
+        near(zero.speedMultiplier, 2, "极低重力移速突破上限")
+        assert(ice.start < low.start and ice.stop > low.stop, "地表打滑倍率与低重力没有组合")
+        for _, sample in ipairs({normal, low, high, zero, minimum, ice}) do
+            near(sample.settledSpeed, 10 * sample.speedMultiplier, "持续输入没有达到目标移速或超速")
+            near(sample.settledStopSpeed, 0, "松手后不能最终停止")
+            near(sample.zeroTime, 10, "零时间仍推进惯性")
+            near(sample.negativeTime, 10, "负时间仍推进惯性")
+        end
+    end, player and "低重力玩家移动：提速、起步、刹停、转向及表面组合" or "低重力动物移动：共用惯性、有限下限及最终刹停")
+end
+
 -- 移动、奔跑与营养水分的职责沿用正式移动动作配置。
 local cases = {
     {name = "静止", args = {moving = false, running = false}, nutrition = 1, water = 1},

@@ -103,13 +103,21 @@ public partial class Mod_Mover
         return Vector2.ClampMagnitude(nextVelocity, Mathf.Max(speed, currentVelocity.magnitude));
     }
 
+    /// <summary>导航读取包含当地重力的目标移速，环境推动另行叠加。</summary>
+    public float SurfaceMoveSpeed => Mathf.Max(0f, Speed.Value) * ResolveSurfaceGravitySpeedMultiplier();
+
     private float ResolveSurfaceGravitySpeedMultiplier()
+        => (float)SpaceGameplaySettings.Current.WalkingMultiplier(ResolveSurfaceGravity());
+
+    private double ResolveSurfaceGravity()
     {
-        if (SpaceSession.Current?.State == null || SpaceSession.Current.IsSpaceView) return 1f;
-        if (SpaceSession.Current.TryGetSupport(item.transform.position, out ShipState support, out _, out Vector2 local) &&
-            SpaceSession.Current.HasArtificialGravity(support, local.x, local.y)) return 1f;
-        var body = SpaceSession.Current.FindSurfaceBody(item.gameObject.scene.name);
-        return body != null ? (float)SpaceGameplaySettings.Current.WalkingMultiplier(body.SurfaceGravity) : 1f;
+        double normalGravity = SpaceGameplaySettings.Current.EarthGravity;
+        SpaceSession session = SpaceSession.Current;
+        if (item == null || session?.State == null || SpaceMgr.IsSpaceScene(item.gameObject.scene.name))
+            return normalGravity;
+        if (session.TryGetSupport(item.transform.position, out ShipState support, out _, out Vector2 local) &&
+            session.HasArtificialGravity(support, local.x, local.y)) return normalGravity;
+        return session.FindSurfaceBody(item.gameObject.scene.name)?.SurfaceGravity ?? normalGravity;
     }
     private void ReleaseSpaceInput()
     {

@@ -87,14 +87,22 @@ namespace FlatWorld.Spaceflight
                 }
                 passenger.Supported = true; ship = floorShip;
                 ShipGeometry.Rotate(worldInput.x, worldInput.y, -ship.AngleRadians, out double x, out double y);
-                double multiplier = gravity ? 1d : SpaceGameplaySettings.Current.WalkingMultiplier(GetBody(floorFlight.BodyId).SurfaceGravity);
-                double speed = mover.Speed.Value * seconds * multiplier;
-                passenger.WalkVelocityX = x * mover.Speed.Value * multiplier; passenger.WalkVelocityY = y * mover.Speed.Value * multiplier;
-                double nextX = passenger.LocalX + x * speed, nextY = passenger.LocalY + y * speed;
+                SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+                double walkingGravity = gravity ? settings.EarthGravity : GetBody(floorFlight.BodyId).SurfaceGravity;
+                double multiplier = settings.WalkingMultiplier(walkingGravity);
+                Vector2 targetVelocity = new((float)(x * mover.Speed.Value * multiplier), (float)(y * mover.Speed.Value * multiplier));
+                // 无人工重力的地表船内也保留惯性，普通重力和人工重力沿用直接步行。
+                Vector2 walkingVelocity = walkingGravity < settings.EarthGravity
+                    ? mover.SmoothSurfaceVelocity(new Vector2((float)passenger.WalkVelocityX, (float)passenger.WalkVelocityY),
+                        targetVelocity, (float)seconds, walkingGravity)
+                    : targetVelocity;
+                passenger.WalkVelocityX = walkingVelocity.x; passenger.WalkVelocityY = walkingVelocity.y;
+                double nextX = passenger.LocalX + walkingVelocity.x * seconds, nextY = passenger.LocalY + walkingVelocity.y * seconds;
                 int cx = (int)Math.Floor(nextX / ship.CellSizeMeters), cy = (int)Math.Floor(nextY / ship.CellSizeMeters);
                 bool wall = ship.Pieces.Exists(piece => piece.IsAlive && piece.BlocksPassage &&
                     System.Linq.Enumerable.Contains(ShipGeometry.Footprint(piece), new ShipCell(cx, cy)));
                 if (!wall) { passenger.LocalX = nextX; passenger.LocalY = nextY; }
+                else passenger.WalkVelocityX = passenger.WalkVelocityY = 0d;
                 PlacePassenger(player, passenger, ship);
                 if (!ShipAtmosphereService.HasFloor(ship, (int)Math.Floor(passenger.LocalX / ship.CellSizeMeters),
                         (int)Math.Floor(passenger.LocalY / ship.CellSizeMeters)))

@@ -91,6 +91,9 @@ namespace FlatWorld.Spaceflight
         public double WalkingMultiplier(double gravity)
             => Math.Clamp(Math.Pow(EarthGravity / Math.Max(MinimumGravityForWalking, gravity), GravityWalkExponent),
                 MinimumWalkSpeedMultiplier, MaximumWalkSpeedMultiplier);
+        // 低重力按相对重力降低起步、转向和刹停响应，地球及更高重力保持原手感。
+        public double WalkingResponseMultiplier(double gravity)
+            => Math.Min(1d, Math.Max(MinimumGravityForWalking, gravity) / EarthGravity);
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Reset() => current = null;
         #endregion

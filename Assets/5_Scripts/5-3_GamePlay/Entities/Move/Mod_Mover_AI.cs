@@ -50,7 +50,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     private float EffectiveDestinationChangeDistance =>
         Mathf.Max(MinimumDestinationChangeDistance, destinationChangeThreshold);
 
-    public float SpeedValue => Speed.Value;
+    public float SpeedValue => SurfaceMoveSpeed;
     public bool HasActiveDestination => hasDestination;
     public bool IsPathPending => NavigationAgent != null && NavigationAgent.PathPending;
     public WorldNavigationDestinationResult DestinationResult => NavigationAgent != null

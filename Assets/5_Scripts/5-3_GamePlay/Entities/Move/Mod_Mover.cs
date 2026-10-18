@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UltEvents;
+using FlatWorld.Spaceflight;
 
 /// <summary>
 /// Mod_Mover —— 处理游戏对象的移动逻辑
@@ -435,11 +436,13 @@ public partial class Mod_Mover : Module
         }
 
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(rb.position, targetPosition);
-        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
+        double gravity = ResolveSurfaceGravity();
+        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() *
+            (float)SpaceGameplaySettings.Current.WalkingMultiplier(gravity);
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
             : delta.normalized * moveSpeed;
-        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
+        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
@@ -457,12 +460,14 @@ public partial class Mod_Mover : Module
 
         Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
         RequestedMoveInput = clampedInput;
-        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
+        double gravity = ResolveSurfaceGravity();
+        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() *
+            (float)SpaceGameplaySettings.Current.WalkingMultiplier(gravity);
         Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
             ? clampedInput * moveSpeed
             : Vector2.zero;
         // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
-        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
+        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime, gravity);
         ExternalVelocity = ResolveExternalVelocity();
         rb.velocity = DrivenVelocity + ExternalVelocity;
         UpdateMovementState();
@@ -510,11 +515,11 @@ public partial class Mod_Mover : Module
 
     /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>
     public Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime)
-        => SmoothSurfaceVelocity(currentVelocity, targetVelocity, deltaTime,
-            surfaceAccelerationMultiplier, surfaceDecelerationMultiplier);
+        => SmoothSurfaceVelocity(currentVelocity, targetVelocity, deltaTime, ResolveSurfaceGravity());
 
-    private Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime,
-        float accelerationMultiplier, float decelerationMultiplier)
+    /// <summary>地面、导航与地表船内共用同一重力响应，不混入环境推动速度。</summary>
+    public Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime,
+        double gravity)
     {
         bool isStopping = targetVelocity.sqrMagnitude <= InputMoveThresholdSqr;
         float transitionDuration = isStopping
@@ -528,15 +533,16 @@ public partial class Mod_Mover : Module
             minimumChangeRate,
             referenceSpeed / Mathf.Max(MinimumTransitionDuration, transitionDuration));
         float surfaceMultiplier = isStopping
-            ? decelerationMultiplier
-            : accelerationMultiplier;
+            ? surfaceDecelerationMultiplier
+            : surfaceAccelerationMultiplier;
+        float gravityMultiplier = (float)SpaceGameplaySettings.Current.WalkingResponseMultiplier(gravity);
         float actorAccelerationMultiplier = item is Player
             ? PlayerAccelerationMultiplier
             : 1f;
         Vector2 nextVelocity = Vector2.MoveTowards(
             currentVelocity,
             targetVelocity,
-            speedChangeRate * surfaceMultiplier * actorAccelerationMultiplier * Mathf.Max(0f, deltaTime));
+            speedChangeRate * surfaceMultiplier * gravityMultiplier * actorAccelerationMultiplier * Mathf.Max(0f, deltaTime));
 
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
         return isStopping && nextVelocity.sqrMagnitude <= stopThreshold * stopThreshold
