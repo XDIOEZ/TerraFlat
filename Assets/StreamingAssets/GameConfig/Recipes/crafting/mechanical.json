@@ -474,12 +474,7 @@
         {
           "match": "exact_item",
           "itemId": "Ingot_Copper",
-          "amount": 4
-        },
-        {
-          "match": "exact_item",
-          "itemId": "Plank",
-          "amount": 2
+          "amount": 10
         }
       ],
       "outputs": [
