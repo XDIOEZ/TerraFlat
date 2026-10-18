@@ -34,6 +34,7 @@ namespace FlatWorld.NaturalEntities
         private static readonly List<int> endedPlants = new();
         private static readonly HashSet<int> pendingPublications = new();
         private static readonly List<int> publicationBatch = new();
+        private static readonly HashSet<int> selectiveBodyIds = new();
         private static readonly HashSet<Record> canopySources = new();
         private static readonly List<Record> canopyBatch = new();
         private static ulong lastCapabilityVersion = ulong.MaxValue;
@@ -356,8 +357,22 @@ namespace FlatWorld.NaturalEntities
             publicationBatch.Clear();
             publicationBatch.AddRange(pendingPublications);
             pendingPublications.Clear();
-            using NaturalEntitySimulation.BodyReadBatch bodies = publicationBatch.Count > 0 || canopySources.Count > 0
-                ? simulation.BeginBodyReadBatch() : default;
+            int requestedBodies = publicationBatch.Count + canopySources.Count;
+            bool selective = requestedBodies > 0 && requestedBodies <= 32 &&
+                requestedBodies * 4 <= simulation.Count;
+            if (selective)
+            {
+                selectiveBodyIds.Clear();
+                for (int i = 0; i < publicationBatch.Count; i++)
+                    selectiveBodyIds.Add(publicationBatch[i]);
+                foreach (Record record in canopySources)
+                    selectiveBodyIds.Add(record.Handle.Id);
+            }
+            // 少量树冠只冻结相关实体，广域发布仍一次读取 Chunk 快照。
+            using NaturalEntitySimulation.BodyReadBatch bodies = selective
+                ? simulation.BeginBodyReadBatch(selectiveBodyIds)
+                : requestedBodies > 0 ? simulation.BeginBodyReadBatch() : default;
+            selectiveBodyIds.Clear();
             using FarmlandSystem.SoilSamplingBatch soils = FarmlandSystem.CreateSoilSamplingBatch();
             foreach (int id in publicationBatch)
             {

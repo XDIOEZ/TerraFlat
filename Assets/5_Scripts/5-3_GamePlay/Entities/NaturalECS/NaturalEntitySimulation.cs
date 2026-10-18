@@ -215,6 +215,27 @@ namespace FlatWorld.NaturalEntities
             return new BodyReadBatch(this);
         }
 
+        /// <summary>少量发布目标只冻结所需实体，避免少量树冠触发整个 ECS 世界遍历。</summary>
+        internal BodyReadBatch BeginBodyReadBatch(IReadOnlyCollection<int> requestedIds)
+        {
+            if (requestedIds == null) throw new ArgumentNullException(nameof(requestedIds));
+            if (readingBodyBatch) throw new InvalidOperationException("自然物发布读取不允许重入。");
+            bodySnapshots.Clear();
+            Manager.CompleteDependencyBeforeRO<NaturalEntityLocation>();
+            Manager.CompleteDependencyBeforeRO<EntityModuleAppearance>();
+            Manager.CompleteDependencyBeforeRO<EntityModuleActive>();
+            Manager.CompleteDependencyBeforeRO<AiecsVital>();
+            foreach (int id in requestedIds)
+            {
+                if (!Contains(id)) continue;
+                bodySnapshots[id] = GetBody(id);
+            }
+            readingBodyBatch = true;
+            return new BodyReadBatch(this);
+        }
+
+        internal int CapturedBodyCount => bodySnapshots.Count;
+
         internal void InvalidateBodySnapshot(int id) => bodySnapshots.Remove(id);
 
         public NaturalEntityBody GetBody(int id)

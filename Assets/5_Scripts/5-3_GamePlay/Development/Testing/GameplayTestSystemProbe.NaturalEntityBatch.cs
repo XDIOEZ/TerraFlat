@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterNaturalEntityBatchOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ecology/body_read_batch", NaturalEntityBodyReadBatch);
+        operations.Add("ecology/selective_body_read_batch", NaturalEntitySelectiveBodyReadBatch);
         operations.Add("ecology/spatial_geometry", NaturalEntitySpatialGeometryValues);
         operations.Add("ecology/soil_snapshot_reuse", NaturalEntitySoilSnapshotReuse);
         operations.Add("ecology/soil_liquid_prefilter", NaturalEntitySoilLiquidPrefilter);
@@ -69,6 +70,60 @@ public static partial class GameplayTestSystemProbe
         {
             result["nextBatchScale"] = simulation.GetBody(1).Scale.x;
             result["plainDead"] = simulation.GetBody(3).Dead;
+        }
+        return result;
+    }
+
+    /// <summary>少量发布对象只冻结指定身份，并保持批内失效及新增实体语义。</summary>
+    private static JObject NaturalEntitySelectiveBodyReadBatch(JObject args)
+    {
+        using var world = new World("probe:selective-natural-body");
+        using var simulation = new NaturalEntitySimulation(world);
+        var profile = new NaturalEntityEcsProfile { ComponentTypes = new[]
+        {
+            ComponentType.ReadWrite<NaturalEntityLocation>(), ComponentType.ReadWrite<EntityModuleAppearance>(),
+            ComponentType.ReadWrite<EntityModuleActive>(), ComponentType.ReadWrite<AiecsVital>()
+        } };
+        for (int id = 1; id <= 24; id++)
+        {
+            var body = new NaturalEntityBody
+            {
+                RuntimeId = id, NaturalGuid = id + 1000, Position = new float2(id, 2f),
+                Scale = new float2(1f), VisualVersion = (uint)id, Suspended = (byte)(id == 2 ? 1 : 0)
+            };
+            simulation.Create(profile, id, body,
+                new AiecsVital { Hp = 10f, MaxHp = 10f, Dead = (byte)(id == 2 ? 1 : 0) },
+                null, null, null);
+        }
+
+        var targets = new HashSet<int> { 1, 2, 999 };
+        var result = new JObject();
+        using (simulation.BeginBodyReadBatch(targets))
+        {
+            result["frozenCount"] = simulation.CapturedBodyCount;
+            result["initialPosition"] = simulation.GetBody(1).Position.x;
+            result["inactiveDead"] = simulation.GetBody(2).Dead;
+            result["inactiveSuspended"] = simulation.GetBody(2).Suspended;
+            simulation.Manager.SetComponentData(simulation.GetEntity(1),
+                new NaturalEntityLocation { RuntimeId = 1, NaturalGuid = 1001, Position = new float2(77f, 2f) });
+            result["frozenPosition"] = simulation.GetBody(1).Position.x;
+            result["uncapturedBody"] = simulation.GetBody(3).Position.x;
+            simulation.InvalidateBodySnapshot(1);
+            result["refreshedPosition"] = simulation.GetBody(1).Position.x;
+            simulation.Remove(2);
+            result["removed"] = !simulation.Contains(2);
+            simulation.Create(profile, 25, new NaturalEntityBody
+            {
+                RuntimeId = 25, NaturalGuid = 1025, Position = new float2(25f, 3f),
+                Scale = new float2(1f), VisualVersion = 25
+            }, new AiecsVital { Hp = 10f, MaxHp = 10f }, null, null, null);
+            result["newEntity"] = simulation.GetBody(25).NaturalGuid;
+        }
+        result["afterBatch"] = simulation.GetBody(1).Position.x;
+        using (simulation.BeginBodyReadBatch())
+        {
+            result["fullCount"] = simulation.CapturedBodyCount;
+            result["fullPosition"] = simulation.GetBody(1).Position.x;
         }
         return result;
     }

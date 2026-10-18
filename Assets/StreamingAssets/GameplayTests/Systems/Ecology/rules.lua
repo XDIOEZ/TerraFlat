@@ -12,6 +12,17 @@ test.system("ecology", "body_read_batch", {}, function(data)
         "发布快照跨批保留了旧外观，或把没有生命能力的实体当作死亡")
 end, "自然物发布批量读取保留停用状态与批内写入、移除、新增边界")
 
+test.system("ecology", "selective_body_read_batch", {}, function(data)
+    assert(data.frozenCount == 2 and data.initialPosition == 1 and data.frozenPosition == 1,
+        "少量目标读取扫描了整个 ECS 世界，或失去了批次一致性")
+    assert(data.inactiveDead == 1 and data.inactiveSuspended == 1 and data.uncapturedBody == 3,
+        "少量快照丢失停用生命，或未选择的实体无法读取")
+    assert(data.refreshedPosition == 77 and data.removed and data.newEntity == 1025,
+        "显式失效、移除或批次内新增没有正确刷新身份")
+    assert(data.afterBatch == 77 and data.fullPosition == 77 and data.fullCount == 24,
+        "离开选择批次后未读到权威姿态，或全量批次被意外裁剪")
+end, "自然实体少量发布按目标冻结，其余资源不进入只读快照")
+
 test.system("ecology", "spatial_geometry", {}, function(data)
     assert(data.bodyX == 12 and data.bodyY == 20 and data.bodyWidth == 4 and data.bodyHeight == 4,
         "冷编译阻挡框改变了根姿态、偏移或缩放")
