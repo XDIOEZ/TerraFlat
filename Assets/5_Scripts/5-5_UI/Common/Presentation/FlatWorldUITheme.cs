@@ -1296,12 +1296,14 @@ public static class FlatWorldUITheme
         TextMeshProUGUI subtitle = CreateText(
             "UITheme_Subtitle",
             chrome,
-            "整理呼吸，再次回到这片世界。",
+            string.Empty,
             font,
             16f,
             TextSecondary,
             FontStyles.Normal,
             TextAlignmentOptions.Center);
+        // 死亡界面不再追加泛泛的鼓励口号。
+        subtitle.gameObject.SetActive(false);
         SetRect(subtitle.rectTransform, new Vector2(0f, -130f), new Vector2(620f, 30f), new Vector2(0.5f, 1f));
 
         Image accent = CreateImage("UITheme_Accent", chrome, Accent);

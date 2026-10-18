@@ -197,7 +197,6 @@ public class Mod_FlintStrike : Module, IInteractable
             () => FlatWorldLocalizationService.GetUiText("打火"));
         BindText(basePanel.GetText("FWUI_标题"),
             () => FlatWorldLocalizationService.GetUiText("燧石取火"));
-        BindText(basePanel.GetText("FWUI_眉题"), () => "FIRECRAFT / SPARK");
         BindText(basePanel.GetText("FWUI_FooterHint"), () => FlatWorldLocalizationService.GetUiFormat(
             "每次点击有 {0:0}% 概率产生火种", Mathf.Clamp01(SuccessChancePerClick) * 100f));
         // 共用建筑面板时按真实物品能力隐藏放置、拆除操作。

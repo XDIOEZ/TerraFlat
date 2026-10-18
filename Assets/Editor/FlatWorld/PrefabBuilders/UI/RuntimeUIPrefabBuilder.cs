@@ -1245,7 +1245,8 @@ public static partial class RuntimeUIPrefabBuilder
         percent.alignment = TextAlignmentOptions.Center;
         percent.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
 
-        TextMeshProUGUI hint = CreateText("资源加载提示", card.transform, "若加载失败，这里会显示完整原因。", 16f, Muted);
+        TextMeshProUGUI hint = CreateText("资源加载提示", card.transform, string.Empty, 16f, Muted);
+        hint.gameObject.SetActive(false);
         hint.alignment = TextAlignmentOptions.Center;
         hint.enableAutoSizing = true;
         hint.fontSizeMin = 14f;
@@ -1336,7 +1337,8 @@ public static partial class RuntimeUIPrefabBuilder
         percent.alignment = TextAlignmentOptions.Center;
         percent.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
-        TextMeshProUGUI hint = CreateText("加载提示", card.transform, "请稍候，世界准备完成后将自动进入。", 13f, Muted);
+        TextMeshProUGUI hint = CreateText("加载提示", card.transform, string.Empty, 13f, Muted);
+        hint.gameObject.SetActive(false);
         hint.alignment = TextAlignmentOptions.Center;
         hint.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
         return root;
@@ -1461,7 +1463,8 @@ public static partial class RuntimeUIPrefabBuilder
         SetCentered(percent.rectTransform, new Vector2(0f, -133f), new Vector2(180f, 28f));
 
         TextMeshProUGUI hint = CreateText(GameManager.DimensionLoadingHintKey, card.transform,
-            "维度稳定后将自动抵达。", 16f, Muted);
+            string.Empty, 16f, Muted);
+        hint.gameObject.SetActive(false);
         hint.alignment = TextAlignmentOptions.Center;
         hint.enableAutoSizing = true;
         hint.fontSizeMin = 14f;
@@ -1748,7 +1751,7 @@ public static partial class RuntimeUIPrefabBuilder
         CreateSettingsHeader(content, "显示设置");
         CreateSettingsHint(content, "调整会立即应用并自动保存。", 48f);
 
-        CreateSettingsSection(content, "坐标显示", "POSITION HUD");
+        CreateSettingsSection(content, "坐标显示", string.Empty);
         GameObject modeRow = CreateRow("坐标显示方式行", content, 54f);
         CreateRowLabel(modeRow.transform, "显示方式", 100f);
         CreateSettingsButton("世界坐标模式按钮", modeRow.transform, "世界坐标  X / Y", 252f, 46f, true);
@@ -1762,7 +1765,7 @@ public static partial class RuntimeUIPrefabBuilder
             Muted);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
 
-        CreateSettingsSection(content, "FPS", "PERFORMANCE HUD");
+        CreateSettingsSection(content, "FPS", string.Empty);
         GameObject fpsRow = CreateRow("FPS显示行", content, 54f);
         TextMeshProUGUI fpsLabel = CreateText("FPS显示标签", fpsRow.transform, "FPS", 17f, Cream);
         fpsLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -1776,7 +1779,7 @@ public static partial class RuntimeUIPrefabBuilder
     /// <summary>帧率控件共用正式下拉和输入框，内容增长由显示页滚动区域承载。</summary>
     private static void CreateFrameRateSettingsControls(Transform content)
     {
-        CreateSettingsSection(content, "帧率限制", "FRAME RATE");
+        CreateSettingsSection(content, "帧率限制", string.Empty);
         var options = new string[FrameRateUserSettings.Options.Count];
         for (int index = 0; index < options.Length; index++)
             options[index] = FrameRateUserSettings.Options[index].DisplayName;
@@ -1918,9 +1921,9 @@ public static partial class RuntimeUIPrefabBuilder
 
         TextMeshProUGUI explanation = CreateText(
             "模式说明", content,
-            "纯地形数据在后台生成；Tilemap、碰撞和导航始终在主线程逐帧绘制。",
+            string.Empty,
             16f, Muted);
-        explanation.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
+        explanation.gameObject.SetActive(false);
 
         TextMeshProUGUI status = CreateText(
             "状态文本", content, "当前：自动平衡。", 16f, Teal);
@@ -1939,7 +1942,6 @@ public static partial class RuntimeUIPrefabBuilder
             RuntimeUIPrefabKeys.DifficultySettings,
             out Transform content);
         CreateSettingsHeader(content, "游戏难度");
-        CreateSettingsHint(content, "选择 0 - 20 级难度后点击应用。", 52f);
 
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
         {
@@ -2264,7 +2266,7 @@ public static partial class RuntimeUIPrefabBuilder
         tailRect.sizeDelta = new Vector2(18f, 18f);
         tailRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
-        TextMeshProUGUI message = CreateText("Message", root.transform, "角色会在这里说话", 28f, new Color(0.96f, 0.94f, 0.88f, 1f));
+        TextMeshProUGUI message = CreateText("Message", root.transform, string.Empty, 28f, new Color(0.96f, 0.94f, 0.88f, 1f));
         message.enableAutoSizing = true;
         message.fontSizeMin = 20f;
         message.fontSizeMax = 28f;
@@ -2507,7 +2509,10 @@ public static partial class RuntimeUIPrefabBuilder
         if (title != null)
             title.text = "设置";
         if (eyebrow != null)
-            eyebrow.text = "SETTINGS / PREFERENCES";
+        {
+            eyebrow.text = string.Empty;
+            eyebrow.gameObject.SetActive(false);
+        }
         if (footerHint != null)
             footerHint.text = "客户端设置会自动保存";
 
@@ -4006,7 +4011,7 @@ public static partial class RuntimeUIPrefabBuilder
         return row;
     }
 
-    /// <summary>创建设置页的小节标题，统一使用琥珀色强调和英文眉题。</summary>
+    /// <summary>创建设置页的小节标题，统一使用琥珀色强调。</summary>
     private static void CreateSettingsSection(Transform parent, string title, string eyebrow)
     {
         GameObject section = CreateUIObject(title + "设置分组", parent, typeof(Image));

@@ -67,7 +67,6 @@ public static class NewGamePrefabBuilder
         {
             "世界设置",
             "返回名称设置",
-            "选择 0 - 20 级挑战强度",
             "规则修改",
             "相对于难度 0",
             "死亡惩罚",
@@ -76,7 +75,6 @@ public static class NewGamePrefabBuilder
             "时间流速",
             "战利品数量",
             "生长速度",
-            "选择 0 - 20 级难度后点击应用。",
             "当前存档难度：难度 0"
         };
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
@@ -250,7 +248,7 @@ public static class NewGamePrefabBuilder
             font,
             "星球半径设置项",
             "星球半径",
-            "探索范围",
+            string.Empty,
             GameManager.NewGameRadiusInputKey,
             defaultRadius,
             defaultRadius,
@@ -262,7 +260,7 @@ public static class NewGamePrefabBuilder
             font,
             "空间距离倍率设置项",
             "空间距离倍率",
-            "自然地理尺寸",
+            string.Empty,
             GameManager.NewGameSpatialDistanceScaleInputKey,
             defaultSpatialDistanceScale,
             defaultSpatialDistanceScale,
@@ -309,7 +307,7 @@ public static class NewGamePrefabBuilder
             "世界种子",
             "留空则随机 · 支持数字或文字",
             GameManager.NewGameSeedInputKey,
-            "留空自动生成随机种子",
+            string.Empty,
             string.Empty,
             TMP_InputField.ContentType.Standard);
         panel.gameObject.SetActive(false);
@@ -390,6 +388,9 @@ public static class NewGamePrefabBuilder
 
         TMP_Text subtitleText = CreateText(rowName + "_说明", row.transform, subtitle, font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(subtitleText.rectTransform, new Vector2(18f, -46f), new Vector2(640f, 26f), new Vector2(0f, 1f));
+        subtitleText.gameObject.SetActive(!string.IsNullOrWhiteSpace(subtitle));
+        if (string.IsNullOrWhiteSpace(subtitle))
+            SetRect(titleText.rectTransform, new Vector2(18f, 0f), new Vector2(640f, 30f), new Vector2(0f, 0.5f));
 
         return CreateInput(
             row.transform,
@@ -456,7 +457,8 @@ public static class NewGamePrefabBuilder
         TMP_Text title = CreateText("难度设置标题", dialog.transform, "难度设置", font, 44f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(title.rectTransform, new Vector2(76f, -24f), new Vector2(692f, 56f), new Vector2(0f, 1f));
 
-        TMP_Text subtitle = CreateText("难度设置副标题", dialog.transform, "选择 0 - 20 级挑战强度", font, 20f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text subtitle = CreateText("难度设置副标题", dialog.transform, string.Empty, font, 20f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        subtitle.gameObject.SetActive(false);
         SetRect(subtitle.rectTransform, new Vector2(76f, -80f), new Vector2(692f, 32f), new Vector2(0f, 1f));
 
         CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCloseButtonKey, "关闭", new Vector2(-48f, -28f), new Vector2(170f, 72f), InkSoft, 24f, new Vector2(1f, 1f));
@@ -571,8 +573,9 @@ public static class NewGamePrefabBuilder
         TMP_Text heading = CreateText("自定义规则标题", page.transform, "自定义规则", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(20f, -16f), new Vector2(500f, 40f), new Vector2(0f, 1f));
 
-        TMP_Text caption = CreateText("自定义规则说明", page.transform, "17 项规则均已接入实际游戏系统。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text caption = CreateText("自定义规则说明", page.transform, string.Empty, font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(caption.rectTransform, new Vector2(20f, -60f), new Vector2(520f, 30f), new Vector2(0f, 1f));
+        caption.gameObject.SetActive(false);
         caption.enableWordWrapping = true;
         caption.overflowMode = TextOverflowModes.Ellipsis;
 

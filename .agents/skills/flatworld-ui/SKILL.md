@@ -14,6 +14,8 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 
 ## 视觉与资源所有权
 
+- 静态 UI 只保留字段、操作、实际状态和必要规则，不添加重复标题、英文装饰眉题、开发实现说明或空泛常驻提示。
+
 - 主菜单为视觉基准：纯色灰阶 Image、近白文字、低对比边界，暖黄用于少量焦点/关键操作；面板从根到内容/按钮逐级提亮，普通边框约 2 参考像素、文字描边约 1 像素。物品图标/内容语义色独立于 Chrome 主题；信息 HUD 为角落锚点与透明容器。
 - `FlatWorldUIThemeConfigCatalog → FlatWorldUITheme → BasePanel/构建器` 共用 ui-theme.json。公共控件为真正嵌套 Prefab，`ReusableUIControl` 持有内部结构/字体/Sprite/几何；使用处持有文案、事件、数值、选项与外部布局，页签由 `ReusableUITabVisual.SetSelected` 改状态。
 - 正式 Prefab 持有完整视觉与序列化引用，领域控制器持有实例/业务，UIManager 管生命周期。控件节点名和 RuntimeUIPrefabKeys 为绑定身份，资产处于 Addressables `Prefab` 标签范围；UI 子目录继承根 UI.asmdef，脚本/资源移动保留 meta/GUID。

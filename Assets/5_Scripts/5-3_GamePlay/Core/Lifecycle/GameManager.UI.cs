@@ -390,7 +390,7 @@ public partial class GameManager
         ApplyDimensionLoadingTheme(progress.TargetId);
         dimensionLoadingName.text = ResolveDimensionDisplayName(progress.TargetId);
         dimensionLoadingStatus.text = LocalizeWorldLoadingText(progress.Status);
-        dimensionLoadingHint.text = FlatWorldLocalizationService.GetUiText("维度稳定后将自动抵达。");
+        dimensionLoadingHint.text = string.Empty;
         dimensionLoadingProgress.value = Mathf.Clamp01(progress.Progress);
         dimensionLoadingProgressText.text = $"{Mathf.RoundToInt(progress.Progress * 100f)}%";
         dimensionLoadingCanvasGroup.alpha = 1f;

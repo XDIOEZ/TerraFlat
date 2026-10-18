@@ -274,10 +274,10 @@ public static class MainMenuPrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(5f, 0f);
         accent.raycastTarget = false;
 
-        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 40f, false);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 154f, false);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 268f, true);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuModsButtonKey, "04", "MOD 管理", "查看与配置扩展内容", 382f, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", 40f);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", 154f);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", 268f, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuModsButtonKey, "04", "MOD 管理", 382f);
     }
 
     /// <summary>创建主菜单右上角的设置入口；当前只负责展示，不绑定设置逻辑。</summary>
@@ -315,7 +315,7 @@ public static class MainMenuPrefabBuilder
         TMP_Text eyebrow = CreateText(
             "设置眉题",
             buttonObject.transform,
-            "OPTIONS",
+            string.Empty,
             font,
             10f,
             Accent,
@@ -323,6 +323,7 @@ public static class MainMenuPrefabBuilder
             TextAlignmentOptions.Left);
         eyebrow.characterSpacing = 2f;
         SetRect(eyebrow.rectTransform, new Vector2(16f, -12f), new Vector2(118f, 18f), new Vector2(0f, 1f));
+        eyebrow.gameObject.SetActive(false);
 
         TMP_Text title = CreateText(
             "设置标题",
@@ -333,7 +334,7 @@ public static class MainMenuPrefabBuilder
             Label,
             FontStyles.Bold,
             TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(16f, -33f), new Vector2(118f, 28f), new Vector2(0f, 1f));
+        SetRect(title.rectTransform, new Vector2(16f, 0f), new Vector2(118f, 28f), new Vector2(0f, 0.5f));
 
         TMP_Text arrow = CreateText(
             "设置箭头",
@@ -366,9 +367,8 @@ public static class MainMenuPrefabBuilder
         string objectName,
         string index,
         string title,
-        string subtitle,
         float top,
-        bool online)
+        bool showArrow = true)
     {
         GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
         buttonObject.layer = LayerMask.NameToLayer("UI");
@@ -399,19 +399,9 @@ public static class MainMenuPrefabBuilder
         SetRect(number.rectTransform, new Vector2(16f, 0f), new Vector2(54f, 104f), new Vector2(0f, 0.5f));
 
         TMP_Text titleText = CreateText(objectName + "_标题", buttonObject.transform, title, font, 27f, Label, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, new Vector2(88f, 13f), new Vector2(280f, 38f), new Vector2(0f, 0.5f));
+        SetRect(titleText.rectTransform, new Vector2(88f, 0f), new Vector2(280f, 38f), new Vector2(0f, 0.5f));
 
-        TMP_Text subtitleText = CreateText(objectName + "_说明", buttonObject.transform, subtitle, font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(subtitleText.rectTransform, new Vector2(88f, -23f), new Vector2(300f, 28f), new Vector2(0f, 0.5f));
-
-        if (online)
-        {
-            Image badge = CreateImage("联机状态", buttonObject.transform, ButtonBorder);
-            SetRect(badge.rectTransform, new Vector2(-80f, 0f), new Vector2(72f, 28f), new Vector2(1f, 0.5f));
-            TMP_Text badgeText = CreateText("联机状态文字", badge.transform, "ONLINE", font, 13f, Label, FontStyles.Bold, TextAlignmentOptions.Center);
-            Stretch(badgeText.rectTransform);
-        }
-        else
+        if (showArrow)
         {
             TMP_Text arrow = CreateText(objectName + "_箭头", buttonObject.transform, ">", font, 22f, Muted, FontStyles.Bold, TextAlignmentOptions.Center);
             SetRect(arrow.rectTransform, new Vector2(-32f, 0f), new Vector2(32f, 40f), new Vector2(1f, 0.5f));

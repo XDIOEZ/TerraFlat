@@ -167,7 +167,6 @@ public static class GameSavePrefabBuilder
         Image panel = CreatePanelCard("世界存档区", card);
         SetRect(panel.rectTransform, new Vector2(42f, -150f), new Vector2(520f, 520f), new Vector2(0f, 1f));
 
-        CreateStepBadge(panel.transform, font, "STEP 01", new Vector2(22f, -22f));
         TMP_Text heading = CreateText("世界存档标题", panel.transform, "世界存档", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(22f, -62f), new Vector2(250f, 40f), new Vector2(0f, 1f));
 
@@ -191,7 +190,6 @@ public static class GameSavePrefabBuilder
         Image panel = CreatePanelCard("存档操作区", card);
         SetRect(panel.rectTransform, new Vector2(582f, -150f), new Vector2(816f, 520f), new Vector2(0f, 1f));
 
-        CreateStepBadge(panel.transform, font, "STEP 02", new Vector2(24f, -22f));
         TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 18f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 28f), new Vector2(0f, 1f));
 
@@ -222,7 +220,6 @@ public static class GameSavePrefabBuilder
         Image identity = CreateImage("角色身份区", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
         SetRect(identity.rectTransform, new Vector2(-24f, -204f), new Vector2(400f, 288f), new Vector2(1f, 1f));
 
-        CreateStepBadge(identity.transform, font, "STEP 03", new Vector2(20f, -18f));
         TMP_Text identityHeading = CreateText("角色身份标题", identity.transform, "本次角色", font, 26f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(identityHeading.rectTransform, new Vector2(20f, -58f), new Vector2(300f, 36f), new Vector2(0f, 1f));
         TMP_Text nameLabel = CreateText("玩家名称标签", identity.transform, "玩家名称", font, 18f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -583,15 +580,6 @@ public static class GameSavePrefabBuilder
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.18f);
         outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         return panel;
-    }
-
-    private static void CreateStepBadge(Transform parent, TMP_FontAsset font, string value, Vector2 position)
-    {
-        Image badge = CreateImage(value + "_底板", parent, new Color(0.12f, 0.23f, 0.22f, 1f));
-        SetRect(badge.rectTransform, position, new Vector2(104f, 32f), new Vector2(0f, 1f));
-        TMP_Text text = CreateText(value + "_文字", badge.transform, value, font, 15f, Teal, FontStyles.Bold, TextAlignmentOptions.Center);
-        Stretch(text.rectTransform);
-        text.characterSpacing = 1f;
     }
 
     private static Button CreateButton(Transform parent, TMP_FontAsset font, string name, string caption, Vector2 position, Vector2 size, Color color, Color textColor, float fontSize, Vector2 pivot)

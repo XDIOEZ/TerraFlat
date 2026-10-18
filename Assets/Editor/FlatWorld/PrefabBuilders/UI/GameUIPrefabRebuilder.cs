@@ -114,12 +114,12 @@ public static class GameUIPrefabRebuilder
         List<BuildTarget> targets = new List<BuildTarget>
         {
             new BuildTarget(BagPrefabPath, BuildModularInventoryBagPreview),
-            new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
-            new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
-            new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
-            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4)),
-            new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", "FIRECRAFT / FRICTION", 1, true)),
-            new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", "FIRECRAFT / SPARK", 1, true)),
+            new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", string.Empty, string.Empty, 2, new Vector2(112f, 112f))),
+            new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", string.Empty, string.Empty, 5, new Vector2(88f, 88f))),
+            new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", string.Empty, string.Empty, 5, new Vector2(88f, 88f))),
+            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", string.Empty, 4)),
+            new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", string.Empty, 1, true)),
+            new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", string.Empty, 1, true)),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
             new BuildTarget(CraftingRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
             new BuildTarget(CraftingRoot + "UI_Bonfire.prefab", root => BuildFurnace(root, true)),
@@ -468,7 +468,7 @@ public static class GameUIPrefabRebuilder
         {
             new BuildTarget(
                 CraftingRoot + "UI_HandCraftTable.prefab",
-                root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4)),
+                root => BuildCraftingSelectionWindow(root, "手工制作", string.Empty, 4)),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable)
         };
 
@@ -1039,7 +1039,7 @@ public static class GameUIPrefabRebuilder
     {
         float width = compact ? 646f : 726f;
         float height = compact ? 438f : 526f;
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "连续点击推进取火 · 停止操作时进度会缓慢回落" : "放入材料 · 核对产物 · 开始制作", true);
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, compact ? "连续点击推进取火 · 停止操作时进度会缓慢回落" : string.Empty, true);
 
         float sectionHeight = height - 206f;
         float inputWidth = compact ? 220f : 398f;
@@ -1090,7 +1090,7 @@ public static class GameUIPrefabRebuilder
             height,
             title,
             eyebrow,
-            "放入材料 · 选择配方 · 开始制作", true);
+            string.Empty, true);
         ResizeCraftingFooter(frame, width, height);
 
         AddSection(frame, "INPUT", "输入材料", 20f, sectionTop, 376f, sectionHeight);
@@ -1199,7 +1199,7 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildMakerTable(GameObject root)
     {
-        BuildCraftingSelectionWindow(root, "制作台", "WORKBENCH / REFINED CRAFT", 5);
+        BuildCraftingSelectionWindow(root, "制作台", string.Empty, 5);
         RemoveMakerFlowArrow(root.transform);
     }
 
@@ -1224,12 +1224,12 @@ public static class GameUIPrefabRebuilder
         float width = bonfire ? 740f : 856f;
         const float height = 592f;
         string title = bonfire ? "篝火" : "熔炉";
-        string eyebrow = bonfire ? "BONFIRE / FIRE MANAGEMENT" : "FURNACE / SMELTING OPERATION";
+        string eyebrow = string.Empty;
 
         if (!bonfire)
             RemoveLegacyFurnaceVisuals(root.transform);
 
-        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, bonfire ? "维持燃料 · 处理食物与基础材料" : "控制燃料与温度 · 等待冶炼完成", true);
+        RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, string.Empty, true);
 
         AddSection(frame, "INPUT", "投入", 24f, 104f, bonfire ? 188f : 232f, 366f);
         AddSection(frame, "PROCESS", "作业状态", bonfire ? 232f : 276f, 104f, bonfire ? 276f : 296f, 366f);
@@ -1435,8 +1435,9 @@ public static class GameUIPrefabRebuilder
         SetCentered(card.rectTransform, new Vector2(0f, 8f), new Vector2(860f, 430f));
         AddOutline(card, new Color(0.83f, 0.49f, 0.23f, 0.26f));
 
-        TextMeshProUGUI eyebrow = CreateText("FWUI_DeathEyebrow", card.transform, "JOURNEY INTERRUPTED / 生存记录", 17f, Amber, FontStyles.Bold, TextAlignmentOptions.Center);
+        TextMeshProUGUI eyebrow = CreateText("FWUI_DeathEyebrow", card.transform, string.Empty, 17f, Amber, FontStyles.Bold, TextAlignmentOptions.Center);
         SetTopCenter(eyebrow.rectTransform, 42f, 680f, 28f);
+        eyebrow.gameObject.SetActive(false);
         eyebrow.characterSpacing = 4f;
 
         TextMeshProUGUI title = CreateText("FWUI_Death标题", card.transform, "你变成了一具尸体。", 44f, Cream, FontStyles.Bold, TextAlignmentOptions.Center);
@@ -1448,7 +1449,8 @@ public static class GameUIPrefabRebuilder
         title.enableWordWrapping = true;
         title.richText = false;
 
-        TextMeshProUGUI copy = CreateText("FWUI_DeathCopy", card.transform, "带着经验，重新出发。", 19f, Muted, FontStyles.Normal, TextAlignmentOptions.Center);
+        TextMeshProUGUI copy = CreateText("FWUI_DeathCopy", card.transform, string.Empty, 19f, Muted, FontStyles.Normal, TextAlignmentOptions.Center);
+        copy.gameObject.SetActive(false);
         SetTopCenter(copy.rectTransform, 242f, 720f, 30f);
         copy.richText = false;
 
@@ -1615,17 +1617,22 @@ public static class GameUIPrefabRebuilder
         accent.rectTransform.anchoredPosition = new Vector2(-394f, -24f);
         accent.rectTransform.sizeDelta = new Vector2(4f, 94f);
 
-        TextMeshProUGUI label = CreateText("FWUI_Module标题", chrome, "MODULES  /  界面模块", 12f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
+        TextMeshProUGUI label = CreateText("FWUI_Module标题", chrome, string.Empty, 12f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         label.rectTransform.anchorMin = Vector2.one;
         label.rectTransform.anchorMax = Vector2.one;
         label.rectTransform.pivot = Vector2.one;
         label.rectTransform.anchoredPosition = new Vector2(-42f, -34f);
         label.rectTransform.sizeDelta = new Vector2(334f, 22f);
+        label.gameObject.SetActive(false);
         label.characterSpacing = 2f;
 
         RectTransform dropdown = FindDirectRect(root.transform, "Dropdown");
         if (dropdown != null)
         {
+            // 下拉入口用实际用途替换旧的控件占位文案。
+            TMP_Text dropdownLabel = dropdown.Find("Label")?.GetComponent<TMP_Text>();
+            if (dropdownLabel != null)
+                dropdownLabel.text = "生存状态";
             dropdown.anchorMin = Vector2.one;
             dropdown.anchorMax = Vector2.one;
             dropdown.pivot = Vector2.one;
@@ -1647,7 +1654,7 @@ public static class GameUIPrefabRebuilder
         Transform panel = FindTransform(root.transform, "Panel");
         if (panel == null)
             return;
-        ConfigureFloatingCard(panel, 540f, 320f, "界面设置", "INTERFACE / PRESENTATION");
+        ConfigureFloatingCard(panel, 540f, 320f, "界面设置", string.Empty);
         PlaceTopLeft(panel, "Slider", 38f, 126f, 464f, 30f);
         PlaceTopLeft(panel, "关闭页面", 38f, 240f, 464f, 52f);
         RectTransform close = FindRect(panel, "关闭页面");
@@ -1710,8 +1717,8 @@ public static class GameUIPrefabRebuilder
             360f,
             220f,
             "伤害接收器状态",
-            "DAMAGE RECEIVER / STATUS",
-            "显示整体生命与身体部位耐久");
+            string.Empty,
+            string.Empty);
 
         RectTransform hp = FindRect(root.transform, "整体血量");
         if (hp != null)
@@ -1742,8 +1749,8 @@ public static class GameUIPrefabRebuilder
             1440f,
             810f,
             "功能列表",
-            "ACTIONS / QUICK ENTRY",
-            "选择一项操作继续");
+            string.Empty,
+            string.Empty);
         ConfigureResponsiveActionListFrame(root, frame);
 
         RectTransform scroll = FindRect(root.transform, "Scroll View");
@@ -1840,7 +1847,7 @@ public static class GameUIPrefabRebuilder
         if (panel == null)
             return;
 
-        ConfigureFloatingCard(panel, 324f, 356f, "存档操作", "SAVE / ACTIONS");
+        ConfigureFloatingCard(panel, 324f, 356f, "存档操作", string.Empty);
         PlaceTopLeft(panel, "InputField (TMP)", 24f, 102f, 276f, 52f);
         PlaceTopLeft(panel, "Button_ReName", 24f, 174f, 276f, 50f);
         PlaceTopLeft(panel, "删除按钮", 24f, 236f, 276f, 50f);
@@ -2042,7 +2049,8 @@ public static class GameUIPrefabRebuilder
         RectTransform chrome = CreateRect("FWUI_Chrome", root.transform);
         Stretch(chrome);
         chrome.SetAsFirstSibling();
-        TextMeshProUGUI copy = CreateText("FWUI_SleepCopy", chrome, "RESTING / 世界在篝火外继续流动", 17f, new Color(Cream.r, Cream.g, Cream.b, 0.82f), FontStyles.Bold, TextAlignmentOptions.Center);
+        TextMeshProUGUI copy = CreateText("FWUI_SleepCopy", chrome, string.Empty, 17f, new Color(Cream.r, Cream.g, Cream.b, 0.82f), FontStyles.Bold, TextAlignmentOptions.Center);
+        copy.gameObject.SetActive(false);
         copy.rectTransform.anchorMin = new Vector2(0.5f, 0f);
         copy.rectTransform.anchorMax = new Vector2(0.5f, 0f);
         copy.rectTransform.pivot = new Vector2(0.5f, 0f);
@@ -2340,8 +2348,10 @@ public static class GameUIPrefabRebuilder
         Image accent = CreateImage("FWUI_AccentRail", chrome, Amber);
         SetTopLeft(accent.rectTransform, 0f, 0f, 5f, 78f);
 
-        TextMeshProUGUI eyebrowText = CreateText("FWUI_眉题", chrome, eyebrow, 13f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
+        TextMeshProUGUI eyebrowText = CreateText("FWUI_眉题", chrome, string.Empty, 13f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
         SetTopLeft(eyebrowText.rectTransform, 24f, 13f, width - 120f, 22f);
+        // 眉题仅保留绑定节点，不再重复显示标题。
+        eyebrowText.gameObject.SetActive(false);
         eyebrowText.characterSpacing = 3f;
 
         TextMeshProUGUI titleText = CreateText("FWUI_标题", chrome, title, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -2404,8 +2414,9 @@ public static class GameUIPrefabRebuilder
         Image marker = CreateImage("FWUI_SectionMarker_" + Sanitize(eyebrow), chrome, new Color(0.26f, 0.61f, 0.57f, 0.72f));
         SetTopLeft(marker.rectTransform, x + 12f, y + 15f, 3f, 27f);
 
-        TextMeshProUGUI eyebrowText = CreateText("FWUI_SectionEyebrow_" + Sanitize(eyebrow), chrome, eyebrow, 10f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
+        TextMeshProUGUI eyebrowText = CreateText("FWUI_SectionEyebrow_" + Sanitize(eyebrow), chrome, string.Empty, 10f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
         SetTopLeft(eyebrowText.rectTransform, x + 24f, y + 10f, width - 36f, 16f);
+        eyebrowText.gameObject.SetActive(false);
         eyebrowText.characterSpacing = 2f;
 
         TextMeshProUGUI titleText = CreateText("FWUI_SectionTitle_" + Sanitize(eyebrow), chrome, title, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -2817,8 +2828,9 @@ public static class GameUIPrefabRebuilder
         Image accent = CreateImage("FWUI_CardAccent", chrome, Amber);
         SetTopLeft(accent.rectTransform, 0f, 0f, 4f, 76f);
 
-        TextMeshProUGUI eyebrowText = CreateText("FWUI_CardEyebrow", chrome, eyebrow, 10f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
+        TextMeshProUGUI eyebrowText = CreateText("FWUI_CardEyebrow", chrome, string.Empty, 10f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
         SetTopLeft(eyebrowText.rectTransform, 18f, 12f, width - 36f, 18f);
+        eyebrowText.gameObject.SetActive(false);
         eyebrowText.characterSpacing = 2f;
         TextMeshProUGUI titleText = CreateText("FWUI_Card标题", chrome, title, 22f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetTopLeft(titleText.rectTransform, 18f, 32f, width - 36f, 32f);
