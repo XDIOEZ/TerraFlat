@@ -445,15 +445,27 @@ namespace FlatWorld.AIECS.Gameplay
                 _templateBySpecies.ContainsKey(speciesId);
         }
 
-        public bool TrySpawn(SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 position)
+        // 后端只执行统一管理器已经批准的物化事务，不再暴露多套来源入口。
+        public bool TryCreateActor(string speciesId, Vector3 position, int requestedGuid,
+            SpawnerConfig.SpawnEntry initialization, out int actorGuid)
         {
-            if (!AiRuntimeBackendService.UseEntities || !AiRuntimeBackendService.UsesEntities(entry) || config == null)
+            actorGuid = 0;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || !AiRuntimeBackendService.UseEntities ||
+                !AiRuntimeBackendService.UsesEntities(speciesId) ||
+                !_configBySpecies.TryGetValue(speciesId, out SpawnerConfig config))
                 return false;
-
-            if (!TrySpawnSpecies(entry.PrefabName, config, position, 0, out int actorGuid))
-                return false;
-            ApplyEntryInitialization(actorGuid, entry);
-            return true;
+            if (!TrySpawnSpecies(speciesId, config, position, requestedGuid, out actorGuid)) return false;
+            try
+            {
+                ApplyEntryInitialization(actorGuid, initialization);
+                return true;
+            }
+            catch
+            {
+                TryDespawnActor(actorGuid);
+                actorGuid = 0;
+                throw;
+            }
         }
 
         /// <summary>生成规则只给新 Entity 注入初始值，不再触发旧物种 Module.Load。</summary>
@@ -471,36 +483,6 @@ namespace FlatWorld.AIECS.Gameplay
             float maximum = Mathf.Max(minimum, Mathf.Clamp01(config.MaxFoodRate));
             nutrition.Current = nutrition.Maximum * UnityEngine.Random.Range(minimum, maximum);
             manager.SetComponentData(actor.Entity, nutrition);
-        }
-
-        /// <summary>游戏事件同样创建纯 Entity，不实例化旧 Actor GameObject。</summary>
-        public bool TrySpawnEvent(string speciesId, Vector3 position)
-        {
-            return TrySpawnEvent(speciesId, position, out _);
-        }
-
-        public bool TrySpawnEvent(string speciesId, Vector3 position, out int actorGuid)
-        {
-            actorGuid = 0;
-            if (!AiRuntimeBackendService.UseEntities ||
-                !AiRuntimeBackendService.UsesEntities(speciesId) ||
-                string.IsNullOrWhiteSpace(speciesId) ||
-                !_configBySpecies.TryGetValue(speciesId, out SpawnerConfig config))
-            {
-                return false;
-            }
-
-            return TrySpawnSpecies(speciesId, config, position, 0, out actorGuid);
-        }
-
-        /// <summary>蜂巢等非生态生成器直接创建同一类 ECS Actor，并保留指定的存档 GUID。</summary>
-        public bool TrySpawnDirect(string speciesId, Vector3 position, int requestedGuid, out int actorGuid)
-        {
-            actorGuid = 0;
-            if (!AiRuntimeBackendService.UseEntities || !AiRuntimeBackendService.UsesEntities(speciesId) ||
-                !_configBySpecies.TryGetValue(speciesId, out SpawnerConfig config))
-                return false;
-            return TrySpawnSpecies(speciesId, config, position, requestedGuid, out actorGuid);
         }
 
         public bool TryGetActor(int actorGuid, out Vector3 position, out bool alive)

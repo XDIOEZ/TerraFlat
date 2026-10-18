@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>生物、导航、生存、手工制作和地形生态现场只使用正式隔离世界及自有夹具。</summary>
-public static class GameplayTestActorWorldRuntimeProbe
+public static partial class GameplayTestActorWorldRuntimeProbe
 {
     #region 现场操作登记
     private static readonly Dictionary<string, IDisposable> fixtures = new(StringComparer.Ordinal);
@@ -22,6 +22,7 @@ public static class GameplayTestActorWorldRuntimeProbe
 #endif
     private static void Register()
     {
+        RegisterCreatureCreation();
         GameplayTestRuntimeProbe.RegisterAsync("ai", "advance_navigation", CaptureAdvance);
         GameplayTestRuntimeProbe.Register("ai", "cleanup", (_, _) => Release("ai"));
         GameplayTestRuntimeProbe.Register("survival", "temperature_conditions", CaptureTemperatureConditions);

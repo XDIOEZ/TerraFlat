@@ -5,6 +5,12 @@
   "continueAfterFailure": true,
   "cases": [
     {
+      "id": "ai_creature_creation_gameplay",
+      "name": "统一生物出生：身份、回滚与居民恢复",
+      "luaPath": "GameplayTests/Systems/AI/creature-creation.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_navigation_gameplay",
       "name": "AI 与导航：真实生物推进、异步寻路和到达",
       "luaPath": "GameplayTests/Systems/AI/gameplay.lua",

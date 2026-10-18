@@ -11,6 +11,21 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterSpawnCountdownOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ai/spawn_countdown", EntitySpawnCountdown);
+        operations.Add("ai/creature_request", EntityCreatureRequest);
+    }
+
+    // 采正式入口使用的请求守卫，不创建世界或修改单例。
+    private static JObject EntityCreatureRequest(JObject args)
+    {
+        return new JObject
+        {
+            ["valid"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", Vector3.zero, true, true),
+            ["client"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", Vector3.zero, false, true),
+            ["unready"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", Vector3.zero, true, false),
+            ["blank"] = MonsterSpawnerManager.IsValidCreatureRequest(" ", Vector3.zero, true, true),
+            ["nan"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", new Vector3(float.NaN, 0f), true, true),
+            ["infinity"] = MonsterSpawnerManager.IsValidCreatureRequest("Chicken", new Vector3(0f, float.PositiveInfinity), true, true)
+        };
     }
 
     // 仅创建独立配置与进度，调用生产计时、选择、完成及存档序列化入口。

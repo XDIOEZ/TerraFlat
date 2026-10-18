@@ -53,10 +53,8 @@ public interface IAiEcologyBackend
     /// <summary>玩家实例卸载前解除后端引用，但保留当前世界的生态运行态。</summary>
     void ReleasePlayer(Player player);
     bool SupportsSpecies(string speciesId);
-    bool TrySpawn(SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 position);
-    bool TrySpawnEvent(string speciesId, Vector3 position);
-    bool TrySpawnEvent(string speciesId, Vector3 position, out int actorGuid);
-    bool TrySpawnDirect(string speciesId, Vector3 position, int requestedGuid, out int actorGuid);
+    bool TryCreateActor(string speciesId, Vector3 position, int requestedGuid,
+        SpawnerConfig.SpawnEntry initialization, out int actorGuid);
     bool TrySetAdvanceCommand(int actorGuid, AIAdvanceCommand command);
     bool TryClearAdvanceCommand(int actorGuid);
     bool TryGetActor(int actorGuid, out Vector3 position, out bool alive);
@@ -162,38 +160,8 @@ public static class AiRuntimeBackendService
     public static bool TrySpawnDirect(string speciesId, Vector3 position, int requestedGuid, out int actorGuid)
     {
         actorGuid = 0;
-        if (string.IsNullOrWhiteSpace(speciesId)) return false;
-        if (UsesEntities(speciesId))
-            return UseEntities && _ecology != null &&
-                   _ecology.TrySpawnDirect(speciesId, position, requestedGuid, out actorGuid);
-
-        ItemMgr manager = ItemMgr.Instance;
-        if (manager == null || GameRes.Instance == null ||
-            !GameRes.Instance.TryGetActorDefinition(speciesId, out _)) return false;
-        if (requestedGuid != 0 && (manager.GetItemByGuid(requestedGuid) != null ||
-            (_ecology != null && _ecology.TryGetActor(requestedGuid, out _, out _)))) return false;
-
-        Item item = null;
-        try
-        {
-            ItemData data = GameRes.Instance.CreateItemData(speciesId);
-            if (requestedGuid != 0) data.Guid = requestedGuid;
-            item = manager.InstantiateItem(data, position);
-            if (item == null) return false;
-            if (!item.IsInitialized) item.Load();
-            if (!TryGetGameObjectActor(item, out _))
-                throw new InvalidOperationException($"生物 {speciesId} 缺少已初始化的 GameObject AI。");
-            item.GetComponentInChildren<Mod_ItemDetector>(true)?.Update_Detector();
-            actorGuid = item.itemData.Guid;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            if (item != null && !item.DestructionHandled)
-                manager.DespawnItem(item, saveData: false);
-            Debug.LogError($"[AI] 生成 {speciesId} 失败：{exception}");
-            return false;
-        }
+        MonsterSpawnerManager manager = MonsterSpawnerManager.ExistingInstance;
+        return manager != null && manager.TrySpawnCreature(speciesId, position, requestedGuid, out actorGuid);
     }
 
     /// <summary>只认绑定到当前 Item 的真实 AI，镜像与未初始化外壳不算 GameObject 生物。</summary>

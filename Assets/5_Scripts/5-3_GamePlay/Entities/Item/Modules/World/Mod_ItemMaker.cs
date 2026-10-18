@@ -371,6 +371,30 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             DestroyOwnerWhenFinished(data);
             return true;
         }
+        // 孵化等生物产出逐只交付真实 Actor，整批成功后才消费本次生产。
+        if (GameRes.ExistingInstance != null &&
+            GameRes.ExistingInstance.TryGetActorDefinition(data.itemName, out _))
+        {
+            MonsterSpawnerManager spawner = MonsterSpawnerManager.ExistingInstance;
+            if (spawner == null) return false;
+            var created = new List<int>(randomCount);
+            try
+            {
+                for (int index = 0; index < randomCount; index++)
+                {
+                    if (!spawner.TrySpawnCreature(data.itemName, transform.position, 0, out int guid)) return false;
+                    created.Add(guid);
+                }
+                data.CurrentProductionCount++;
+                DestroyOwnerWhenFinished(data);
+                created.Clear();
+                return true;
+            }
+            finally
+            {
+                foreach (int guid in created) AiRuntimeBackendService.TryDespawnActor(guid);
+            }
+        }
         if (data.StoreInModule)
         {
             int accepted = StoreProducedItems(data.itemName, randomCount);

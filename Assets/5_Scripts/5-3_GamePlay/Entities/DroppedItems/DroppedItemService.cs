@@ -270,16 +270,8 @@ public static partial class DroppedItemService
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) || !definition.IsActor)
             throw new InvalidOperationException($"不是有效的生物战利品：{itemId}");
-        if (AiRuntimeBackendService.UsesEntities(itemId))
-        {
-            var backend = AiRuntimeBackendService.Ecology;
-            if (backend == null) return false;
-            if (!backend.SupportsSpecies(itemId))
-                throw new InvalidOperationException($"当前 ECS 后端未支持生物定义：{itemId}");
-            return backend.TrySpawnEvent(itemId, position);
-        }
-        ItemMgr.Instance.InstantiateItem(itemId, position).Load();
-        return true;
+        // 生物产出与自然、技能、蜂巢共用同一个出生管理器。
+        return AiRuntimeBackendService.TrySpawnDirect(itemId, position, 0, out _);
     }
 
     /// <summary>内容层只声明 passive/interactive；这里集中决定当前实例能否进入轻量掉落物模拟器。</summary>

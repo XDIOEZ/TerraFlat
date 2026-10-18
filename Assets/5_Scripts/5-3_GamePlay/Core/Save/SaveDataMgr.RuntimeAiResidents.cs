@@ -23,6 +23,13 @@ public partial class SaveDataMgr
 
     public int ParkedRuntimeAiCount => parkedRuntimeAiAddressByGuid.Count;
 
+    // 休眠居民仍占用身份，新出生必须拒绝复用该 GUID。
+    public bool ContainsParkedRuntimeAi(int guid)
+    {
+        EnsureRuntimeAiRestoreScope();
+        return parkedRuntimeAiAddressByGuid.ContainsKey(guid);
+    }
+
     /// <summary>查询尚未装载表现的物种居民数，供本地区域密度查询快速跳过空物种。</summary>
     public int GetParkedRuntimeAiSpeciesCount(string speciesId)
     {
@@ -198,10 +205,8 @@ public partial class SaveDataMgr
         try
         {
             ItemData runtimeData = CloneAndRebaseItemData(snapshot);
-            ItemTransform savedTransform = runtimeData.transform;
-            restored = ItemMgr.Instance.InstantiateItem(
-                runtimeData, savedTransform.position, savedTransform.rotation, savedTransform.scale);
-            restored.Load();
+            MonsterSpawnerManager spawner = MonsterSpawnerManager.ExistingInstance;
+            if (spawner == null || !spawner.TryRestoreCreature(runtimeData, out restored)) return false;
             RemoveRuntimeAiRecord(address, snapshot.Guid);
             RemoveParkedRuntimeAi(snapshot.Guid);
             return true;

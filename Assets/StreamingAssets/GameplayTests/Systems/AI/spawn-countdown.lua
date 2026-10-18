@@ -61,3 +61,10 @@ test.system("ai", "spawn_countdown", {}, function(data)
     assert(counts[1] == 3 and counts[2] == 3 and counts[3] == 3,
         "连续跑图时出生、显隐和居民装卸没有轮流获得优先机会")
 end, "自然动物持续倒计时、独立物种、存档恢复与调度公平")
+
+-- 自然、蜂巢、孵化、技能和手动请求共用同一个管理器的权威与就绪守卫。
+test.system("ai", "creature_request", {}, function(data)
+    assert(data.valid, "合法生物出生请求被拒绝")
+    assert(not data.client and not data.unready, "非权威或世界未就绪仍允许生物出生")
+    assert(not data.blank and not data.nan and not data.infinity, "空物种或非有限出生点没有被拒绝")
+end, "统一生物出生入口的权威、就绪与参数边界")

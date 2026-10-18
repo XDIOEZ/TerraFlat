@@ -32,6 +32,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/AI/README.md",
       "integrationCaseIds": [
+        "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -60,6 +61,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Navigation/README.md",
       "integrationCaseIds": [
+        "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],
       "rulesCoverage": "partial"

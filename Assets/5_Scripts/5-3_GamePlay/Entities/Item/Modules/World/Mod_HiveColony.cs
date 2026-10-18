@@ -320,8 +320,7 @@ public sealed partial class Mod_HiveColony : Module
     private bool TrySpawnResident(int slot, ResidentState saved, bool immediate)
     {
         if (!TryReserveResidentSpawnFrame(ref lastNormalSpawnFrame, Time.frameCount, immediate)) return false;
-        SpawnResident(slot, saved);
-        return true;
+        return SpawnResident(slot, saved);
     }
 
     /// <summary>死亡成员永久离巢；尚未重建的存档成员保持原 GUID。</summary>
@@ -354,56 +353,42 @@ public sealed partial class Mod_HiveColony : Module
     }
 
     /// <summary>按存档 GUID 或新身份创建成员，并绑定蜂巢与行为快照。</summary>
-    private void SpawnResident(int slot, ResidentState saved)
+    private bool SpawnResident(int slot, ResidentState saved)
     {
         using var marker = SpawnResidentMarker.Auto();
-        ItemMgr manager = itemManager;
-        if (manager == null)
-            throw new InvalidOperationException("蜂巢成员生成时 ItemMgr 不可用。");
-        if (!GameRes.Instance.TryGetItemDefinition(ActorId, out _))
-            throw new InvalidOperationException($"蜂巢物种 {ActorId} 未注册。");
+        MonsterSpawnerManager spawner = MonsterSpawnerManager.ExistingInstance;
+        if (spawner == null || itemManager == null) return false;
         Vector2 home = HomePosition;
         float angle = slot * (Mathf.PI * 2f / MaximumResidents);
         Vector2 offset = new(Mathf.Cos(angle), Mathf.Sin(angle));
         Vector3 position = WorldTopologyRuntime.NormalizePosition((Vector3)(home + offset * SpawnRadius));
-        ItemData data = GameRes.Instance.CreateItemData(ActorId);
-        if (saved != null)
+        Mod_BeeBehavior.BeeState snapshot = null;
+        Item resident = null;
+        // 蜂巢只提供成员绑定，实际创建和失败回收由统一管理器负责。
+        bool BindResident(Item created)
         {
-            if (manager.GetItemByGuid(saved.Guid) != null)
-                throw new InvalidOperationException($"蜂巢成员 GUID {saved.Guid} 已被其他实体占用。");
-            data.Guid = saved.Guid;
-        }
-        Item resident = manager.InstantiateItem(data, position);
-        int registeredGuid = 0;
-        try
-        {
-            resident.Load();
-            // 按飞行能力的规范 ID 查找，避免把脚本名当成模块身份。
-            Mod_AI_Bird bird = resident.itemMods.GetMod_ByID<Mod_AI_Bird>(Mod_AI_Bird.ModuleId);
-            Mod_BeeBehavior bee = resident.itemMods.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            Mod_AI_Bird bird = created.itemMods.GetMod_ByID<Mod_AI_Bird>(Mod_AI_Bird.ModuleId);
+            Mod_BeeBehavior bee = created.itemMods.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
             if (bird == null || !bird.permanentFlight || bee == null)
                 throw new InvalidOperationException($"蜂巢物种 {ActorId} 必须组合常驻飞行与蜜蜂行为模块。");
+            if (residents.ContainsKey(created.itemData.Guid)) return false;
             bird.SetColonyHome(item.itemData.Guid, home);
             bee.BindColony(this, saved != null && !saved.NeedsInitialState ? saved.Bee : null);
-            int guid = resident.itemData.Guid;
-            if (guid == 0 || (saved != null && guid != saved.Guid) || residents.ContainsKey(guid))
-                throw new InvalidOperationException($"蜂巢生成了无效或重复的成员 GUID：{guid}。");
-            Mod_BeeBehavior.BeeState snapshot = bee.CaptureState();
-            residents.Add(guid, resident);
-            registeredGuid = guid;
-            if (saved != null)
-                CompleteResidentSpawn(saved, snapshot);
-            else
-                state.Residents.Add(new ResidentState { Guid = guid, Bee = snapshot });
+            snapshot = bee.CaptureState();
+            resident = created;
+            return true;
         }
-        catch
-        {
-            // 创建失败撤销运行登记，待出巢意图留给下一帧或下次加载重试。
-            if (registeredGuid != 0) residents.Remove(registeredGuid);
-            if (!resident.DestructionHandled)
-                manager.DespawnItem(resident, saveData: false);
-            throw;
-        }
+        bool restoring = saved != null && !saved.NeedsInitialState;
+        bool success = restoring
+            ? spawner.TryRestoreResident(ActorId, position, saved.Guid, out int guid, BindResident)
+            : spawner.TrySpawnCreature(ActorId, position, saved?.Guid ?? 0, out guid, afterLoad: BindResident);
+        if (!success) return false;
+        residents.Add(guid, resident);
+        if (saved != null)
+            CompleteResidentSpawn(saved, snapshot);
+        else
+            state.Residents.Add(new ResidentState { Guid = guid, Bee = snapshot });
+        return true;
     }
     #endregion
 

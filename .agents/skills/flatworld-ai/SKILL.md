@@ -12,7 +12,7 @@ description: "FlatWorld 动物、怪物与蜂群的生成、GameObject AI、可�
 | 目录/文件 | 职责 |
 | --- | --- |
 | `AI/AI_Base.cs`、`Mod_AI_Bird*.cs`、`AI_Wolf.cs`、`Mod_BeeBehavior*.cs` | 正式 GameObject 主控 |
-| `AI/Runtime/AiRuntimeBackendService.cs`、`AI/Spawning/MonsterSpawnerManager.cs` | 后端路由、生成、人数预算/远距休眠 |
+| `AI/Runtime/AiRuntimeBackendService.cs`、`AI/Spawning/MonsterSpawnerManager.cs` | 后端路由、统一生物出生事务、人数预算/远距休眠 |
 | `AIECS/Gameplay/AiecsDefinitionCompiler.cs` | 合并 Actor/MOD 定义冷编译为纯值模板 |
 | `AIECS/Core/AiecsSimulation.cs`、`AiecsCapabilities/AiecsCapabilitySystems.cs` | 感知、决策、移动、战斗能力查询 |
 | `AIECS/Gameplay/AiecsEcologyRuntimeHost*.cs`、`AiecsGameplayBridge.cs` | 世界、蜂巢、快照、Unity 接口桥 |
@@ -25,7 +25,8 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。
 - 自然动物 `countdown` 在每条规则的 `SpeciesCountdowns` 中按物种保存剩余时长和待出生数，按游戏时间推进且跨区块不重置；无落点或满员保留当前一轮，完成（含独立概率落空）后重计时，不补离线或累计多轮。原权重折算刷新间隔，仍共用预算和人数限制；出生、显隐、居民装卸三路轮转，避免跑图持续显隐导致出生饥饿。
-- `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。同物种单一后端，`TrySpawnDirect` 统一 GM/事件/技能/MOD 生成；GO 返回前完成 Item.Load 并核对 IAIActor。
+- `MonsterSpawnerManager.TrySpawnCreature` 是自然/夜怪、事件、GM/技能/MOD、生物战利品、生产孵化与蜂巢的新出生入口；`AiRuntimeBackendService.TrySpawnDirect` 仅转发给已存在管理器。来源保留时间/落点/预算规则，通用事务检查权威、世界就绪、GUID（含休眠/创建中身份），统一装配、Load、回调后身份/代际复核与失败回收。自然调度关闭不禁用显式出生；ItemMgr 仍是物品/网络副本的底层工厂，不反向依赖生物管理器。
+- `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。后端只通过 `IAiEcologyBackend.TryCreateActor` 接受管理器批准的实际创建，GO 专用初始化回调不能用于 ECS。快照与蜂巢老成员分别走 `TryRestoreCreature/TryRestoreResident`，恢复不消费出生计划/预算、不增加新生统计；同物种保持单一后端。
 - Actor 合并定义的移动/检测/朝向模块须启用；`ModuleData.Enabled` 决定 Load/Tick，`Data.isRunning` 是奔跑。飞行能力 ID 为 `AI_Bird`，`prefab=Mod_AI_Bird` 仅指实现；内容错误码 `FWC-ACTORJSON-004/005` 对应基础模块开关/飞行 ID。
 - 生物 `animator` 稳定槽位的能力 ID 固定为 `动画接收模块`（`ModText.AnimatorReceiver`），并须启用；`Module_Animator_AI` 等只作具体 Prefab 身份。`FWC-ACTORJSON-006` 检查最终继承配置；规则要先 `BindRuntimeIdentity` 保留显式 ID，再走 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，不能仅凭原型类型或模式判装配成功。
 - `WorldEntityRuntime` 独占共享 ECS World；AI 停用不影响树/作物。居民独立于 ChunkView，BRG 只显示已绑定 View 内居民，解绑不删除居民。

@@ -92,6 +92,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void OnGameWorldEnter()
     {
+        ResetCreatureCreationDiagnostics();
         enabled = false;
         UnsubscribePresentationEvents();
         if (DimensionManager.Instance.ActiveDefinition?.EnableMonsterSpawning == false)
@@ -962,46 +963,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         SpawnerConfig.SpawnEntry entry,
         Vector3 spawnPosition)
     {
-        if (AiRuntimeBackendService.UsesEntities(entry))
-        {
-            using (EntityCreationMarker.Auto())
-            {
-                SpawnerConfig owner = FindConfigForEntry(entry);
-                return AiRuntimeBackendService.UseEntities &&
-                       owner != null && AiRuntimeBackendService.Ecology != null &&
-                       AiRuntimeBackendService.Ecology.TrySpawn(owner, entry, spawnPosition);
-            }
-        }
-
-        Item spawnedItem = null;
-        try
-        {
-            using (InstantiateItemMarker.Auto())
-            {
-                spawnedItem = _itemManager.InstantiateItem(
-                    entry.PrefabName,
-                    spawnPosition,
-                    Quaternion.identity,
-                    Vector3.one);
-            }
-
-            if (spawnedItem == null)
-                return false;
-
-            using (LoadCreatedItemMarker.Auto())
-                spawnedItem.Load();
-            using (SpawnInitializationMarker.Auto())
-                ApplySpawnInitialization(spawnedItem, entry);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            if (spawnedItem != null && !spawnedItem.DestructionHandled && _itemManager != null)
-                _itemManager.DespawnItem(spawnedItem, saveData: false);
-
-            Debug.LogError($"[MonsterSpawnerManager] 生成 {entry?.PrefabName} 失败: {ex}");
-            return false;
-        }
+        return entry != null && TrySpawnCreature(entry.PrefabName, spawnPosition, 0, out _,
+            initialization: entry);
     }
 
     private static void ApplySpawnInitialization(
