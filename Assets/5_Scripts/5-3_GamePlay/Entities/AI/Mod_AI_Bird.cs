@@ -637,10 +637,15 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     {
         float visualHeight = HasFishHuntVisualHeightOverride ? FishHuntVisualHeightOverride : CurrentFlightHeight;
         liftRoot.localPosition = liftOrigin + Vector3.up * visualHeight;
+        bool singleSprite = animationBody != null && animationBody.IsSingleSpriteMode;
+        if (singleSprite)
+        {
+            // 飞行阶段只选择通用贴图状态，身体摇摆继续由动画模块组合。
+            animationBody.PlayAnimation(ResolveAnimationStateName(state.Phase, mover.IsActuallyMoving));
+        }
         RefreshFlightHitbox();
         staminaDisplay?.Refresh();
-        if (animationBody != null && animationBody.IsSingleSpriteMode)
-            return;
+        if (singleSprite) return;
         // 对象池先 Load 后激活；激活后以 Animator 的真实状态为准，避免重绑或外部播放造成飞行时残留步行动画。
         if (!birdAnimator.isActiveAndEnabled)
             return;
@@ -667,13 +672,13 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     /// <summary>地面按实际步行状态选动画，空中直接以飞行阶段为权威。</summary>
     private int ResolveAnimationStateHash()
     {
-        return state.Phase switch
+        return ResolveAnimationStateName(state.Phase, mover.IsActuallyMoving) switch
         {
-            BirdFlightPhase.Ground => mover.IsActuallyMoving ? WalkAnimationHash : GroundAnimationHash,
-            BirdFlightPhase.RunUp => WalkAnimationHash,
-            BirdFlightPhase.TakingOff => TakingOffAnimationHash,
-            BirdFlightPhase.Flying => FlyingAnimationHash,
-            BirdFlightPhase.Landing => LandingAnimationHash,
+            "Ground" => GroundAnimationHash,
+            "Walk" => WalkAnimationHash,
+            "TakingOff" => TakingOffAnimationHash,
+            "Flying" => FlyingAnimationHash,
+            "Landing" => LandingAnimationHash,
             _ => throw new InvalidOperationException($"未知鸟类飞行阶段：{state.Phase}")
         };
     }

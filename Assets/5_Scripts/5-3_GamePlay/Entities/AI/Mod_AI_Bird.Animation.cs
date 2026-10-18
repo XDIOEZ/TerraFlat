@@ -7,6 +7,19 @@ public sealed partial class Mod_AI_Bird : IActorAnimationMotionSource
     private Vector2 animationFlightDisplacement;
     private float animationFlightSeconds;
 
+    public static string ResolveAnimationStateName(BirdFlightPhase phase, bool isMoving)
+    {
+        return phase switch
+        {
+            BirdFlightPhase.Ground => isMoving ? "Walk" : "Ground",
+            BirdFlightPhase.RunUp => "Walk",
+            BirdFlightPhase.TakingOff => "TakingOff",
+            BirdFlightPhase.Flying => "Flying",
+            BirdFlightPhase.Landing => "Landing",
+            _ => throw new System.ArgumentOutOfRangeException(nameof(phase), phase, "未知鸟类飞行阶段。")
+        };
+    }
+
     public bool TryGetAnimationMotion(out ActorAnimationMotion motion)
     {
         motion = default;

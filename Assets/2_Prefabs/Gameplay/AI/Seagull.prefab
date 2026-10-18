@@ -798,6 +798,50 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8800902328348574999}
     m_Modifications:
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[0].stateName
+      value: Ground
+      objectReference: {fileID: 0}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[0].sprite
+      value: ''
+      objectReference: {fileID: 21300000, guid: 472bd1ec1307ff3418fe591259f43e20, type: 3}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[1].stateName
+      value: Walk
+      objectReference: {fileID: 0}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[1].sprite
+      value: ''
+      objectReference: {fileID: 21300000, guid: 45d4544a834e02e4a985d93e9273e15b, type: 3}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[2].stateName
+      value: TakingOff
+      objectReference: {fileID: 0}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[2].sprite
+      value: ''
+      objectReference: {fileID: 21300000, guid: 96e40e82c6563a44586d9aedec13bb21, type: 3}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[3].stateName
+      value: Flying
+      objectReference: {fileID: 0}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[3].sprite
+      value: ''
+      objectReference: {fileID: 21300000, guid: 871b9a79a5f462045a474371ec0a186b, type: 3}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[4].stateName
+      value: Landing
+      objectReference: {fileID: 0}
+    - target: {fileID: 1835563831416809626, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: singleSpriteStates.Array.data[4].sprite
+      value: ''
+      objectReference: {fileID: 21300000, guid: b5d77e7892e513e44a5c31f65119a602, type: 3}
     - target: {fileID: 45469955551787273, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

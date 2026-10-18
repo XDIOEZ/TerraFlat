@@ -82,6 +82,15 @@ public static class BirdActorAssetBuilder
             if (actor.Sprite == null || actor.Sprite.transform.name != "Module_Animator_AI")
                 throw new InvalidDataException("鸟 JSON 约定动画与主 Sprite 同在 Module_Animator_AI 节点。");
 
+            // 构建时绑定各状态的首帧，单图模式无需重新启用身体 Animator。
+            Mod_AnimatorController animation = animator.GetComponent<Mod_AnimatorController>();
+            if (animation == null) throw new InvalidDataException("鸟外壳缺少通用动画模块。");
+            animation.singleSpriteStates = States.Select(state => new Mod_AnimatorController.SingleSpriteState
+            {
+                stateName = state, sprite = frames[state][0]
+            }).ToArray();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(animation);
+
             var birdObject = new GameObject("Mod_AI_Bird");
             birdObject.transform.SetParent(root.transform, false);
             Mod_AI_Bird bird = birdObject.AddComponent<Mod_AI_Bird>();
@@ -257,6 +266,14 @@ public static class BirdActorAssetBuilder
             Require(bird != null && bird.liftRoot != null && bird.birdAnimator != null, $"{species} 飞行引用缺失");
             Require(receiver != null && receiver.transform.IsChildOf(bird.liftRoot), $"{species} 受击盒没有随视觉升高");
             Require(bird.birdAnimator.transform.IsChildOf(bird.liftRoot), $"{species} Animator 不在升高节点下");
+            Mod_AnimatorController animation = bird.birdAnimator.GetComponent<Mod_AnimatorController>();
+            foreach (string stateName in States)
+            {
+                Sprite expected = AssetDatabase.LoadAssetAtPath<Sprite>(GetFramePath(species, stateName, 0));
+                Require(animation != null && animation.singleSpriteStates != null &&
+                    animation.singleSpriteStates.Count(entry => entry != null && entry.stateName == stateName &&
+                        entry.sprite == expected && expected != null) == 1, $"{species}/{stateName} 单图状态贴图缺失或重复");
+            }
             Require(shell.GetComponentsInChildren<AI_Chicken>(true).Length == 0, $"{species} 残留鸡 AI");
             Require(bird.liftRoot.localPosition == Vector3.zero, $"{species} 外壳保存了运行时高度");
             foreach (var pair in definition.Modules)

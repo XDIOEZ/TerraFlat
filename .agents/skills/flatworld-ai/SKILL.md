@@ -41,6 +41,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 ## 行为能力与表现
 
 - 单图共用 `Mod_AnimatorController`；鸟、蜂、鱼、幽灵通过 `IActorAnimationMotionSource` 报告主动移动与已有外观高度/倾角，风、水流等被动位移不计迈步。单图模式下旧身体 Animator 与鱼独立游动摇摆让出姿态，Ghost/Fish 的纯控制器不附带 Renderer 或物理组件；目录与窄信号回归见 AI/ItemRuntime 测试说明。
+- 鸟/海鸥的单图状态经 `Mod_AI_Bird.ResolveAnimationStateName` 选择 Ground/Walk/TakingOff/Flying/Landing，具体 Sprite 配在外壳动画模块的 `singleSpriteStates`，使用各状态 `_0` 首帧并继续程序摇摆；`BirdActorAssetBuilder` 重建时保留同一映射。飞行 AI 只发状态，不在通用动画中识别物种。
 - 动物环境短音由可组合 `Mod_AnimalAmbientAudio` 承担；AI 仅通过 `IAnimalAmbientAudioActivity.AllowsAmbientAudio` 暴露平静待机、游荡或觅食资格，睡眠、战斗、逃离及鱼被携带/钓住时抑制。`AI_Base.IsAmbientAudioState` 与移动动画分类分开，行为图按 `wander/forage/idle` 节点语义判定；物种 Cue 与间隔写 Actor JSON，Zombie 显式移除从 Wolf 继承的 `animalAudio`。
 - 食性使用稳定数据 Tag `Carnivore/Herbivore/Omnivore`；玩家独立为威胁。当前动物继承 `Module_Temperature`，安全范围在 Actor 配置；`ITemperatureSafetyMovement` 优先于追击/觅食/游荡，陆地由 Mod_Mover_AI、鸟/鱼由自定义移动实现。
 - 温度避险不记录/回退安全点；记最多 8 个危险锚点 30 秒，以危险点指向角色的向量引导分段随机离开。陆地普通目标保留距离衰减偏置，线路接近危险记录则保持强偏置并走局部随机段；同一段目标缓存。安全环境持续 2 秒且距危险记录至少 3 格后才解除强制避险，体温未恢复则等待。

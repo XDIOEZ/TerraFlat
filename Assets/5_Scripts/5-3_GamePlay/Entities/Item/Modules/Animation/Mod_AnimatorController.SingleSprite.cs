@@ -8,6 +8,13 @@ public partial class Mod_AnimatorController
     #region 单图表现配置
     public enum VisualMode { Animator = 0, SingleSprite = 1 }
 
+    [Serializable]
+    public sealed class SingleSpriteState
+    {
+        public string stateName;
+        public Sprite sprite;
+    }
+
     [Header("视觉模式")]
     public VisualMode visualMode = VisualMode.Animator;
     public SpriteRenderer targetSpriteRenderer;
@@ -15,6 +22,10 @@ public partial class Mod_AnimatorController
     [Tooltip("只填写不含刚体和碰撞体的附加视觉节点，附加节点只跟随位移。")]
     public Transform[] additionalVisualRoots = Array.Empty<Transform>();
     public Rigidbody2D targetRb;
+
+    [Header("单图状态贴图")]
+    [Tooltip("按状态名切换身体精灵图，摇摆动作仍由本模块负责。")]
+    public SingleSpriteState[] singleSpriteStates = Array.Empty<SingleSpriteState>();
 
     [Header("单图行走与奔跑")]
     [Min(0f)] public float moveDetectSpeed = 0.05f;
@@ -72,9 +83,26 @@ public partial class Mod_AnimatorController
     private float _hitDuration;
     private float _hitMagnitude;
     private Vector3 _presentedWorldOffset;
+    private SpriteRenderer _overriddenSpriteRenderer;
+    private Sprite _originalSprite;
     #endregion
 
     #region 动作与网络入口
+    // 只替换身体图片，保留朝向、材质和摇摆姿态，也支持来自不同图集的 Sprite。
+    public bool TrySetSprite(Sprite sprite)
+    {
+        if (sprite == null || !CanStartSingleSpriteAction()) return false;
+        if (_overriddenSpriteRenderer != targetSpriteRenderer)
+        {
+            RestoreSingleSprite();
+            _overriddenSpriteRenderer = targetSpriteRenderer;
+            _originalSprite = targetSpriteRenderer.sprite;
+        }
+        targetSpriteRenderer.sprite = sprite;
+        _lastSingleSpriteState = null;
+        return true;
+    }
+
     [Button("播放单图攻击")]
     public void PlayAttack(Vector2 worldDirection = default)
     {
@@ -168,6 +196,7 @@ public partial class Mod_AnimatorController
     [Button("复位单图动作")]
     public void ResetPresentation()
     {
+        RestoreSingleSprite();
         _attackElapsed = _jumpElapsed = _hitElapsed = -1f;
         _walkPhase = _walkBlend = _idlePhase = 0f;
         _requestedMoving = _requestedRunning = false;
@@ -437,6 +466,14 @@ public partial class Mod_AnimatorController
     #endregion
 
     #region 动作信号与采样
+    private void RestoreSingleSprite()
+    {
+        if (_overriddenSpriteRenderer != null)
+            _overriddenSpriteRenderer.sprite = _originalSprite;
+        _overriddenSpriteRenderer = null;
+        _originalSprite = null;
+    }
+
     private void ResolveLocomotion(out bool moving, out bool running)
     {
         ActorAnimationMotion motion = ResolveAnimationMotion();
@@ -486,11 +523,23 @@ public partial class Mod_AnimatorController
 
     private bool TryPlaySingleSpriteAnimation(string stateName, bool forceRestart)
     {
-        if (string.IsNullOrWhiteSpace(stateName)) return false;
+        if (string.IsNullOrWhiteSpace(stateName) || !CanStartSingleSpriteAction()) return false;
         string state = stateName.Trim();
         int separator = state.LastIndexOf('.');
         if (separator >= 0) state = state.Substring(separator + 1);
         if (!forceRestart && string.Equals(state, _lastSingleSpriteState, StringComparison.OrdinalIgnoreCase)) return true;
+        Sprite stateSprite = null;
+        if (singleSpriteStates != null)
+            for (int i = 0; i < singleSpriteStates.Length; i++)
+            {
+                SingleSpriteState entry = singleSpriteStates[i];
+                if (entry != null && string.Equals(entry.stateName, state, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (entry.sprite == null) return false;
+                    stateSprite = entry.sprite;
+                    break;
+                }
+            }
         switch (state.ToLowerInvariant())
         {
             case "move": case "walk": _requestedMoving = true; _requestedRunning = false; break;
@@ -499,8 +548,10 @@ public partial class Mod_AnimatorController
             // 状态机进入 Attack 仍可能处于前摇，实际攻击窗口显式调用 PlayAttack。
             case "attack": _requestedMoving = false; break;
             case "jump": PlayJump(); break;
-            default: return false;
+            default: if (stateSprite == null) return false; break;
         }
+        if (stateSprite != null) TrySetSprite(stateSprite);
+        else RestoreSingleSprite();
         _lastSingleSpriteState = state;
         return true;
     }

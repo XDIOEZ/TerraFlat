@@ -226,6 +226,66 @@ test.system("item_runtime", "single_sprite_animation", {network = true, withMoti
     for _, sample in ipairs(data.samples) do checkAnimationRest(sample) end
 end, "单图远端显式状态优先于本地特殊来源")
 
+test.system("item_runtime", "single_sprite_animation", {withSpriteStates = true, withAnimator = true, steps = {
+    {legacyState = "Flying"},
+    {legacyState = "Base Layer.Flying", forceRestart = false, moving = true},
+    {legacyState = "Missing"},
+    {legacyState = "Broken"},
+    {legacyState = "Landing"},
+    {legacyState = "Ground"},
+    {sprite = "alternate"},
+    {sprite = "null"},
+    {legacyState = "Flying"},
+    {componentEnabled = false, sprite = "alternate", legacyState = "Flying"},
+    {componentEnabled = true, legacyState = "Flying"},
+    {lifecycle = "unload"},
+    {lifecycle = "load", legacyState = "Flying"},
+    {legacyState = "Flying"},
+    {mode = "Animator"},
+    {mode = "SingleSprite", legacyState = "Flying"},
+    {reset = true}
+}}, function(data)
+    checkAnimationBoundary(data)
+    for _, index in ipairs({1, 2, 9, 11, 14, 16}) do
+        assert(data.samples[index].legacyStateAccepted and data.samples[index].sprite == "flying",
+            "单图飞行状态未换图，或重复状态、重新启用及重新加载后不能换图：" .. index)
+        assert(not data.samples[index].bodyAnimatorEnabled, "切换状态贴图重新启用了身体Animator")
+    end
+    for _, index in ipairs({3, 4}) do
+        assert(not data.samples[index].legacyStateAccepted and data.samples[index].sprite == "flying",
+            "未知状态或空贴图没有拒绝，或拒绝时改坏当前贴图")
+    end
+    assert(data.samples[5].sprite == "landing" and data.samples[6].sprite == "original",
+        "降落与落地没有切换到各自贴图")
+    assert(data.samples[7].spriteAccepted and data.samples[7].sprite == "landing" and
+        not data.samples[8].spriteAccepted and data.samples[8].sprite == "landing",
+        "直接更换Sprite失败，或空Sprite破坏当前图片")
+    assert(not data.samples[10].spriteAccepted and not data.samples[10].legacyStateAccepted,
+        "停用动画组件后仍接受换图")
+    for _, index in ipairs({10, 12, 13, 15, 17}) do
+        assert(data.samples[index].sprite == "original", "停用、卸载、切模式或复位后残留状态贴图：" .. index)
+    end
+end, "单图状态换图、直接换图、拒绝边界与生命周期还原")
+
+for _, species in ipairs({"Bird", "Seagull"}) do
+    test.system("item_runtime", "single_sprite_shell_assembly", {actorId = species}, function(data)
+        local states = {}
+        for _, entry in ipairs(data.stateSprites) do
+            assert(not states[entry.state], "鸟类外壳配置了重复的单图状态")
+            states[entry.state] = entry.sprite
+        end
+        for _, state in ipairs({"Ground", "Walk", "TakingOff", "Flying", "Landing"}) do
+            assert(states[state] == state .. "_0", "鸟类单图状态没有引用正式首帧：" .. state)
+        end
+        for _, entry in ipairs(data.birdStates) do
+            local expected = entry.phase
+            if entry.phase == "Ground" then expected = entry.moving and "Walk" or "Ground" end
+            if entry.phase == "RunUp" then expected = "Walk" end
+            assert(entry.state == expected and states[entry.state], "鸟类飞行阶段未选中已配置的单图状态")
+        end
+    end, "鸟类飞行阶段与正式单图贴图配置：" .. species)
+end
+
 test.system("item_runtime", "single_sprite_shell_assembly", {actorId = "Wolf"}, function(data)
     assert(data.actorId == "Wolf" and data.templateStableName == "animator" and data.templateIsAnimator,
         "真实狼外壳没有用 animator 稳定槽位参与正式模块编译")

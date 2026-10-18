@@ -17,6 +17,7 @@ public static partial class GameplayTestSystemProbe
         root.SetActive(false);
         Mod_AnimatorController animation = null;
         GameplayTestAnimationMotionSource motionSource = null;
+        var sprites = new List<Sprite>();
         try
         {
             root.transform.position = new Vector3(11f, -7f, 0f);
@@ -68,6 +69,23 @@ public static partial class GameplayTestSystemProbe
             animation.idleBreathAmount = 0f;
             animation.targetSpriteRenderer = renderer;
             animation.spriteVisualRoot = visual.transform;
+            if (Flag(args, "withSpriteStates", false))
+            {
+                foreach (string name in new[] { "original", "flying", "landing" })
+                {
+                    Sprite sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f), Vector2.zero, 1f);
+                    sprite.name = name;
+                    sprites.Add(sprite);
+                }
+                renderer.sprite = sprites[0];
+                animation.singleSpriteStates = new[]
+                {
+                    new Mod_AnimatorController.SingleSpriteState { stateName = "Ground", sprite = sprites[0] },
+                    new Mod_AnimatorController.SingleSpriteState { stateName = "Flying", sprite = sprites[1] },
+                    new Mod_AnimatorController.SingleSpriteState { stateName = "Landing", sprite = sprites[2] },
+                    new Mod_AnimatorController.SingleSpriteState { stateName = "Broken", sprite = null }
+                };
+            }
             Transform additionalVisual = null;
             int additionalSiblingIndex = -1;
             if (Flag(args, "withAdditionalVisual", false))
@@ -140,7 +158,9 @@ public static partial class GameplayTestSystemProbe
                 if (Flag(step, "jump", false)) animation.PlayJump();
                 if (Flag(step, "hit", false)) animation.PlayHitReaction(.3f, .05f);
                 bool legacyStateAccepted = step["legacyState"] != null &&
-                    animation.ForcePlayAnimation(Text(step, "legacyState", string.Empty));
+                    animation.TryPlayAnimation(Text(step, "legacyState", string.Empty), Flag(step, "forceRestart", true));
+                bool spriteAccepted = step["sprite"] != null && animation.TrySetSprite(
+                    Text(step, "sprite", string.Empty) == "alternate" && sprites.Count > 2 ? sprites[2] : null);
                 bool legacyMoveAccepted = step["legacyMove"] != null &&
                     animation.SetBool(AnimationText.Move, Flag(step, "legacyMove", false));
                 if (Flag(step, "reset", false)) animation.ResetPresentation();
@@ -184,6 +204,8 @@ public static partial class GameplayTestSystemProbe
                     ["componentEnabled"] = animation.enabled,
                     ["bodyAnimatorEnabled"] = sourceAnimator != null && sourceAnimator.enabled,
                     ["legacyStateAccepted"] = legacyStateAccepted,
+                    ["spriteAccepted"] = spriteAccepted,
+                    ["sprite"] = renderer.sprite != null ? renderer.sprite.name : string.Empty,
                     ["legacyMoveAccepted"] = legacyMoveAccepted,
                     ["hasBaseMatrix"] = hasBaseMatrix,
                     ["basePositionError"] = hasBaseMatrix ? Vector3.Distance(visualPosition, baseMatrix.MultiplyPoint3x4(Vector3.zero)) : -1f,
@@ -247,7 +269,11 @@ public static partial class GameplayTestSystemProbe
                 try { if (animation != null) animation.Unload(); }
                 finally { if (motionSource != null) motionSource.Unload(); }
             }
-            finally { UnityEngine.Object.DestroyImmediate(root); }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                foreach (Sprite sprite in sprites) UnityEngine.Object.DestroyImmediate(sprite);
+            }
         }
     }
 
@@ -432,9 +458,26 @@ public static partial class GameplayTestSystemProbe
             bool registeredSameInstance = ReferenceEquals(animation,
                 item.itemMods.RequireSingleModById<Mod_AnimatorController>(ModText.AnimatorReceiver));
 
+            var stateSprites = new JArray();
+            foreach (Mod_AnimatorController.SingleSpriteState entry in animation.singleSpriteStates)
+                if (entry != null) stateSprites.Add(new JObject
+                {
+                    ["state"] = entry.stateName, ["sprite"] = entry.sprite != null ? entry.sprite.name : string.Empty
+                });
+            var birdStates = new JArray();
+            foreach (BirdFlightPhase phase in Enum.GetValues(typeof(BirdFlightPhase)))
+                foreach (bool moving in new[] { false, true })
+                    birdStates.Add(new JObject
+                    {
+                        ["phase"] = phase.ToString(), ["moving"] = moving,
+                        ["state"] = Mod_AI_Bird.ResolveAnimationStateName(phase, moving)
+                    });
+
             return new JObject
             {
                 ["actorId"] = actorId,
+                ["stateSprites"] = stateSprites,
+                ["birdStates"] = birdStates,
                 ["templateStableName"] = template?.StableName,
                 ["templateIsAnimator"] = template is Mod_AnimatorController,
                 ["registeredSameInstance"] = registeredSameInstance,
