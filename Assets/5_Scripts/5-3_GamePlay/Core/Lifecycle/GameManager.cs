@@ -1483,35 +1483,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             onWriteQueued?.Invoke(Task.FromResult(false));
             yield break;
         }
-        Exception captureFailure = null;
-        try
-        {
-            CaptureSaveGameState();
-        }
-        catch (Exception exception)
-        {
-            captureFailure = exception;
-        }
-
-        if (captureFailure != null)
-        {
-            onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
-            yield break;
-        }
-
-        if (!canContinue())
-        {
-            onWriteQueued?.Invoke(Task.FromResult(false));
-            yield break;
-        }
-        // 玩家捕获与世界扫描分开排帧，避免自动保存开始时叠加全部工作。
-        yield return budget.WaitForNextSlice();
-        if (!canContinue())
-        {
-            onWriteQueued?.Invoke(Task.FromResult(false));
-            yield break;
-        }
-        yield return manager.Save_And_WriteToDiskInBackgroundCoroutine(onWriteQueued, budget, canContinue);
+        // 玩家实时模块与最终库存载荷一起冻结，不能在分帧扫描之前留下旧快捷栏快照。
+        yield return manager.Save_And_WriteToDiskInBackgroundCoroutine(
+            onWriteQueued, CaptureSaveGameState, budget, canContinue);
     }
 
     /// <summary>采集世界时钟和本地玩家的持久化状态。</summary>

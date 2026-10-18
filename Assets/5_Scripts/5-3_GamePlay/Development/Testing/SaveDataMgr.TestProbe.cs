@@ -15,25 +15,16 @@ public partial class SaveDataMgr
         if (ReferenceEquals(this, instance) || gameObject.activeInHierarchy || !string.IsNullOrEmpty(UserSavePath))
             throw new InvalidOperationException("恢复测试必须使用尚未 Awake 的停用独立 SaveDataMgr。");
         ResetChunkDifferenceState();
-        byte[] core = payload;
-        if (HasSaveHeader(payload, ModdedSaveMagic))
+        ModdedSaveEnvelope envelope = ReadSaveEnvelope(payload);
+        if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
         {
-            var body = new byte[payload.Length - ModdedSaveMagic.Length];
-            Buffer.BlockCopy(payload, ModdedSaveMagic.Length, body, 0, body.Length);
-            ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(body);
-            if (envelope?.CoreSavePayload == null) throw new InvalidDataException("MOD 存档封装已损坏。");
-            EnsureCurrentSaveVersion("MOD 存档", envelope.Version, ModdedSaveVersion);
-            core = envelope.CoreSavePayload;
-            if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
-            {
-                ModSaveMetadata metadata = MemoryPackSerializer.Deserialize<ModSaveMetadata>(envelope.ModMetadata);
-                ModRuntimeManager mods = ModRuntimeManager.Instance;
-                string error = null;
-                if (mods == null || !mods.IsReady || !mods.ValidateSaveMetadata(metadata, out error))
-                    throw new InvalidDataException(error ?? "测试存档的 MOD 环境不兼容。");
-            }
+            ModSaveMetadata metadata = MemoryPackSerializer.Deserialize<ModSaveMetadata>(envelope.ModMetadata);
+            ModRuntimeManager mods = ModRuntimeManager.Instance;
+            string error = null;
+            if (mods == null || !mods.IsReady || !mods.ValidateSaveMetadata(metadata, out error))
+                throw new InvalidDataException(error ?? "测试存档的 MOD 环境不兼容。");
         }
-        return DeserializeCoreSavePayload(core);
+        return DeserializeCoreSavePayload(envelope.CoreSavePayload);
     }
 
     #endregion

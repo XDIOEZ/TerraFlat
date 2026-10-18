@@ -18,6 +18,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("save", "autosave_budget", ServiceAutoSaveBudget);
         Register("save", "autosave_chunk_payload", ServiceAutoSaveChunkPayload);
+        Register("save", "autosave_ecology_payload", ServiceAutoSaveEcologyPayload);
     }
 
     // 使用 Lua 提供的确定性时间采样正式预算，规则不驱动正在游玩的帧循环。
@@ -91,9 +92,9 @@ public static partial class GameplayTestSystemProbe
         core.Seed = -1;
 
         byte[] payload = SaveDataMgr.BuildCapturedSavePayload(coreBytes,
-            new List<byte[]> { firstBytes, secondBytes }, machines, drops, mods);
+            new List<byte[]> { firstBytes, secondBytes }, machines, drops, mods, new List<FrozenEcologyChunkSaveRecord>());
         ModdedSaveEnvelope outer = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(ServiceAutoSaveBody(payload));
-        CompactSaveEnvelope compact = MemoryPackSerializer.Deserialize<CompactSaveEnvelope>(ServiceAutoSaveBody(outer.CoreSavePayload));
+        CompactSaveEnvelope compact = outer.CoreSavePayload;
         GameSaveData restoredCore = MemoryPackSerializer.Deserialize<GameSaveData>(compact.CoreSaveData);
         ChunkSaveRecord restored = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(compact.ChunkRecords[0]);
         ChunkSaveRecord restoredSecond = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(compact.ChunkRecords[1]);
@@ -105,7 +106,7 @@ public static partial class GameplayTestSystemProbe
         {
             ["bytes"] = payload.Length,
             ["outerMagic"] = Encoding.ASCII.GetString(payload, 0, 4), ["outerVersion"] = outer.Version,
-            ["compactMagic"] = Encoding.ASCII.GetString(outer.CoreSavePayload, 0, 4), ["compactVersion"] = compact.Version,
+            ["compactVersion"] = compact.Version,
             ["coreName"] = restoredCore.saveName, ["coreSeed"] = restoredCore.Seed,
             ["recordCount"] = compact.ChunkRecords.Count,
             ["firstChunk"] = restored.ChunkName, ["secondChunk"] = restoredSecond.ChunkName,
@@ -128,6 +129,103 @@ public static partial class GameplayTestSystemProbe
             ["dropsPreserved"] = Convert.ToBase64String(compact.DroppedItems) == Convert.ToBase64String(drops),
             ["modsPreserved"] = Convert.ToBase64String(outer.ModMetadata) == Convert.ToBase64String(mods)
         };
+    }
+
+    // 逐物品冻结、让帧期间的采收/替换与最终联合点重组都走正式入口。
+    private static JObject ServiceAutoSaveEcologyPayload(JObject args)
+    {
+        var source = new GameSaveData { saveName = "probe:ecology", Seed = 9123 };
+        var surface = new PlanetData();
+        var cave = new PlanetData();
+        source.PlanetData_Dict.Add("surface", surface);
+        source.PlanetData_Dict.Add("surface__dimension__cave", cave);
+        source.PlanetData_Dict.Add("empty", new PlanetData());
+        EcologyChunkSaveData chunk = cave.Ecology.GetOrCreateChunk(16, -32);
+        chunk.RemovedGuids.Add(90);
+        chunk.RenewalYears.Add(90, 7);
+        for (int i = 0; i < 40; i++)
+        {
+            Data_GeneralItem item = ServiceItem(args);
+            item.Guid = 1000 + i;
+            chunk.ChangedItems.Add(item);
+        }
+        surface.Ecology.GetOrCreateChunk(0, 0).RemovedGuids.Add(80);
+        var frozen = new List<FrozenEcologyChunkSaveRecord>();
+        var cache = new Dictionary<ItemData, byte[]>();
+        int workUnits = 0;
+        foreach (int work in SaveDataMgr.FreezeEcologyChunks(source, frozen, cache)) workUnits += work;
+        List<EcologyChunkSaveData> sourceChunks = cave.Ecology.Chunks;
+        Dictionary<string, MapSave> sourceMaps = cave.MapData_Dict;
+        byte[] core = SaveDataMgr.SerializeCoreDataWithoutChunks(source);
+        bool sourceListsRestored = ReferenceEquals(sourceChunks, cave.Ecology.Chunks) &&
+            ReferenceEquals(sourceMaps, cave.MapData_Dict) && chunk.ChangedItems.Count == 40;
+        GameSaveData coreOnly = MemoryPackSerializer.Deserialize<GameSaveData>(core);
+        var initial = MemoryPackSerializer.Deserialize<EcologyChunkSaveData>(frozen[1].ChunkData);
+        ItemData first = MemoryPackSerializer.Deserialize<ItemData>(frozen[1].ChangedItems[0]);
+
+        chunk.MarkRemoved(1000);
+        Data_GeneralItem replacement = ServiceItem(args);
+        replacement.Guid = 1001;
+        replacement.Stack.Amount = 9;
+        Data_GeneralItem nested = ServiceItem(args);
+        nested.Guid = 2001;
+        nested.Stack.Amount = 5;
+        replacement.ModuleDataDic.Add("cargo", new Inventory_ModuleData
+        {
+            StableName = "cargo", ModuleId = "inventory",
+            Data = new Dictionary<string, Inventory_Data>
+            {
+                ["cargo"] = new(new List<ItemSlot> { new(0) { itemData = nested } }, "cargo")
+            }
+        });
+        chunk.CaptureChangedItem(replacement);
+        chunk.RenewalYears[90] = 8;
+        cave.Ecology.GetOrCreateChunk(32, -32).RemovedGuids.Add(91);
+        frozen = new List<FrozenEcologyChunkSaveRecord>();
+        foreach (int work in SaveDataMgr.FreezeEcologyChunks(source, frozen, cache)) { }
+        byte[] payload = SaveDataMgr.BuildCapturedSavePayload(core, new List<byte[]>(), null, null, null, frozen);
+        replacement.Stack.Amount = 99;
+        nested.Stack.Amount = 77;
+        chunk.RemovedGuids.Clear();
+        chunk.RenewalYears.Clear();
+
+        var host = new GameObject("probe:inactive-save");
+        host.SetActive(false);
+        try
+        {
+            SaveDataMgr reader = host.AddComponent<SaveDataMgr>();
+            GameSaveData restored = reader.ReadTestArchiveWithoutPublishing(payload);
+            EcologyChunkSaveData result = restored.PlanetData_Dict["surface__dimension__cave"].Ecology.Chunks[0];
+            EcologyWorldSaveData emptyEcology = restored.PlanetData_Dict["empty"].Ecology;
+            bool emptyRoundTrip = emptyEcology.Chunks == null && emptyEcology.GetOrCreateChunk(64, 96).ChunkX == 64 &&
+                emptyEcology.Chunks.Count == 1;
+            ItemData restoredNested = ((Inventory_ModuleData)result.ChangedItems[0].ModuleDataDic["cargo"])
+                .Data["cargo"].itemSlots[0].itemData;
+            byte[] oldHeader = (byte[])payload.Clone();
+            oldHeader[3] = (byte)'5';
+            string oldFormat = null;
+            try { reader.ReadTestArchiveWithoutPublishing(oldHeader); }
+            catch (Exception exception) { oldFormat = exception.GetType().Name; }
+            return new JObject
+            {
+                ["workUnits"] = workUnits, ["cacheCount"] = cache.Count,
+                ["coreExcludesChunks"] = coreOnly.PlanetData_Dict["surface__dimension__cave"].Ecology.Chunks == null,
+                ["sourceChunksRestored"] = sourceListsRestored,
+                ["emptyRoundTrip"] = emptyRoundTrip, ["nestedAmount"] = restoredNested.Stack.Amount,
+                ["initialCount"] = initial.ChangedItems?.Count ?? 0, ["initialGuid"] = first.Guid,
+                ["initialAmount"] = first.Stack.Amount,
+                ["worlds"] = restored.PlanetData_Dict.Count,
+                ["surfaceRemoved"] = restored.PlanetData_Dict["surface"].Ecology.Chunks[0].RemovedGuids[0],
+                ["caveChunks"] = restored.PlanetData_Dict["surface__dimension__cave"].Ecology.Chunks.Count,
+                ["itemCount"] = result.ChangedItems.Count, ["firstGuid"] = result.ChangedItems[0].Guid,
+                ["firstAmount"] = result.ChangedItems[0].Stack.Amount,
+                ["harvestRemoved"] = result.IsRemoved(1000), ["renewalYear"] = result.RenewalYears[90],
+                ["chunkX"] = result.ChunkX, ["chunkY"] = result.ChunkY,
+                ["lateChunkRemoved"] = restored.PlanetData_Dict["surface__dimension__cave"].Ecology.Chunks[1].RemovedGuids[0],
+                ["oldFormat"] = oldFormat
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(host); }
     }
 
     private static byte[] ServiceAutoSaveBody(byte[] payload)

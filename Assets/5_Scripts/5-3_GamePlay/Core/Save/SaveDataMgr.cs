@@ -27,6 +27,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static readonly PerformanceDebugPoint SaveCoreCapturePoint = new("FlatWorld.Save.Capture.Core");
     private static readonly PerformanceDebugPoint SaveCoreEncodePoint = new("FlatWorld.Save.Encode.Core");
     private static readonly PerformanceDebugPoint SaveChunkEncodePoint = new("FlatWorld.Save.Encode.Chunks");
+    private static readonly PerformanceDebugPoint SaveEcologyMetadataPoint = new("FlatWorld.Save.Encode.EcologyMetadata");
+    private static readonly PerformanceDebugPoint SaveEcologyItemPoint = new("FlatWorld.Save.Encode.EcologyItem");
+    private static readonly PerformanceDebugPoint SaveEcologyFinalizePoint = new("FlatWorld.Save.Capture.EcologyFinalize");
+    private static readonly PerformanceDebugPoint SavePlayerCapturePoint = new("FlatWorld.Save.Capture.PlayerAndClock");
+    private static readonly PerformanceDebugPoint SaveMachinesCapturePoint = new("FlatWorld.Save.Capture.Machines");
+    private static readonly PerformanceDebugPoint SaveSpaceCapturePoint = new("FlatWorld.Save.Capture.Space");
+    private static readonly PerformanceDebugPoint SaveDropsCapturePoint = new("FlatWorld.Save.Capture.DroppedItems");
     private static readonly PerformanceDebugPoint SaveWritePoint = new("FlatWorld.Save.Write.Atomic");
     private static readonly PerformanceDebugPoint SaveWriteBytesPoint = new("FlatWorld.Save.Write.BytesAndFlush");
     private static readonly PerformanceDebugPoint SaveSnapshotCompressPoint = new("FlatWorld.Save.NetworkSnapshot.GZip");
@@ -39,14 +46,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
     #endregion
 
-    private const int CompactSaveVersion = 30; // 区块改为独立字节快照，旧档在解析核心数据前拒绝。
-    private const int ModdedSaveVersion = 14;
+    private const int CompactSaveVersion = 31; // 生态区块改为逐物品独立字节，统一同步、自动与网络快照格式。
+    private const int ModdedSaveVersion = 15;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
     // 实例状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'A' };
-    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'5' };
+    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'6' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
     private static readonly Dictionary<string, long> LatestSaveRevisions =
@@ -251,7 +257,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// 完成快照后通过回调交付后台写盘任务，调用方只能轮询任务，不能同步等待。
     /// </summary>
     public IEnumerator Save_And_WriteToDiskInBackgroundCoroutine(Action<Task<bool>> onWriteQueued,
-        AutoSaveWorkBudget budget = null, Func<bool> canContinue = null)
+        Action captureCoreState, AutoSaveWorkBudget budget = null, Func<bool> canContinue = null)
     {
         if (SaveData == null)
         {
@@ -322,7 +328,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             bool writeQueued = false;
             IEnumerator payloadRoutine = ForwardAutoSaveRoutine(
-                QueueCapturedSaveWriteCoroutine(capturedSave, fullPath, saveRevision, budget, task =>
+                QueueCapturedSaveWriteCoroutine(capturedSave, fullPath, saveRevision, budget, captureCoreState, task =>
                 {
                     writeQueued = true;
                     onWriteQueued?.Invoke(task);
@@ -2673,7 +2679,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (modRuntime == null || !modRuntime.IsReady)
             throw new InvalidOperationException("MOD 框架尚未完成加载，无法保存世界");
 
-        byte[] corePayload = BuildCoreCompactSavePayload(saveData);
+        CompactSaveEnvelope corePayload = BuildCoreCompactSavePayload(saveData);
         ModdedSaveEnvelope moddedEnvelope = new ModdedSaveEnvelope
         {
             Version = ModdedSaveVersion,
@@ -2690,7 +2696,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return payload;
     }
 
-    private byte[] BuildCoreCompactSavePayload(GameSaveData saveData)
+    private CompactSaveEnvelope BuildCoreCompactSavePayload(GameSaveData saveData)
     {
 
         MonsterSpawnerManager spawnerManager = FindObjectOfType<MonsterSpawnerManager>();
@@ -2700,10 +2706,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         byte[] machines, coreSaveData, droppedItems;
         using (SaveCoreCapturePoint.Measure())
         {
-            machines = MachineWorld.CaptureArchive(saveData);
-            FlatWorld.Spaceflight.SpaceSession.Capture(saveData);
+            using (SaveMachinesCapturePoint.Measure()) machines = MachineWorld.CaptureArchive(saveData);
+            using (SaveSpaceCapturePoint.Measure()) FlatWorld.Spaceflight.SpaceSession.Capture(saveData);
             coreSaveData = SerializeCoreDataWithoutChunks(saveData);
-            droppedItems = DroppedItemService.CaptureArchive(saveData);
+            using (SaveDropsCapturePoint.Measure()) droppedItems = DroppedItemService.CaptureArchive(saveData);
             SaveCoreCapturePoint.AddWork((machines?.LongLength ?? 0) + (coreSaveData?.LongLength ?? 0) + (droppedItems?.LongLength ?? 0));
         }
         List<ChunkSaveRecord> records = new();
@@ -2725,13 +2731,15 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             SaveChunkEncodePoint.SetGauge(records.Count);
         }
 
-        return BuildCompactSaveEnvelopePayload(coreSaveData, chunkRecords, machines, droppedItems);
+        List<FrozenEcologyChunkSaveRecord> ecologyRecords = new();
+        foreach (int work in FreezeEcologyChunks(saveData, ecologyRecords)) { }
+        return BuildCompactSaveEnvelope(coreSaveData, chunkRecords, machines, droppedItems, ecologyRecords);
     }
 
-    private static byte[] SerializeCoreDataWithoutChunks(GameSaveData saveData)
+    internal static byte[] SerializeCoreDataWithoutChunks(GameSaveData saveData)
     {
         using var coreSample = SaveCoreEncodePoint.Measure();
-        List<(PlanetData planet, Dictionary<string, MapSave> maps)> backups = new();
+        List<(PlanetData planet, Dictionary<string, MapSave> maps, List<EcologyChunkSaveData> ecology)> backups = new();
         if (saveData.PlanetData_Dict != null)
         {
             foreach (PlanetData planet in saveData.PlanetData_Dict.Values)
@@ -2739,8 +2747,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 if (planet == null)
                     continue;
 
-                backups.Add((planet, planet.MapData_Dict));
+                backups.Add((planet, planet.MapData_Dict, planet.Ecology?.Chunks));
                 planet.MapData_Dict = new Dictionary<string, MapSave>();
+                if (planet.Ecology != null)
+                    planet.Ecology.Chunks = null;
             }
         }
 
@@ -2754,7 +2764,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         finally
         {
             for (int i = 0; i < backups.Count; i++)
+            {
                 backups[i].planet.MapData_Dict = backups[i].maps;
+                if (backups[i].planet.Ecology != null)
+                    backups[i].planet.Ecology.Chunks = backups[i].ecology;
+            }
         }
     }
 
@@ -2762,39 +2776,31 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         ResetChunkDifferenceState();
 
-        ModSaveMetadata metadata = null;
-        byte[] corePayload = payload;
-        if (HasSaveHeader(payload, ModdedSaveMagic))
-        {
-            byte[] body = new byte[payload.Length - ModdedSaveMagic.Length];
-            Buffer.BlockCopy(payload, ModdedSaveMagic.Length, body, 0, body.Length);
-            ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(body);
-            if (envelope == null || envelope.CoreSavePayload == null)
-                throw new InvalidDataException("MOD 存档封装已损坏");
-            EnsureCurrentSaveVersion("MOD 存档", envelope.Version, ModdedSaveVersion);
-
-            corePayload = envelope.CoreSavePayload;
-            if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
-                metadata = MemoryPackSerializer.Deserialize<ModSaveMetadata>(envelope.ModMetadata);
-        }
-
-        GameSaveData saveData = DeserializeCoreSavePayload(corePayload);
+        ModdedSaveEnvelope envelope = ReadSaveEnvelope(payload);
+        ModSaveMetadata metadata = envelope.ModMetadata?.Length > 0
+            ? MemoryPackSerializer.Deserialize<ModSaveMetadata>(envelope.ModMetadata) : null;
+        GameSaveData saveData = DeserializeCoreSavePayload(envelope.CoreSavePayload);
         ValidateAndRestoreModMetadata(metadata);
         return saveData;
     }
 
-    private GameSaveData DeserializeCoreSavePayload(byte[] payload)
+    private static ModdedSaveEnvelope ReadSaveEnvelope(byte[] payload)
     {
-
-        if (!HasSaveHeader(payload, CompactSaveMagic))
+        if (!HasSaveHeader(payload, ModdedSaveMagic))
         {
             throw new SaveVersionIncompatibleException(
                 "存档封装与当前 Item 实例状态格式不兼容，请创建新世界。不会迁移、覆盖或删除该存档。");
         }
+        ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(
+            payload.AsSpan(ModdedSaveMagic.Length));
+        if (envelope?.CoreSavePayload == null)
+            throw new InvalidDataException("MOD 存档封装已损坏");
+        EnsureCurrentSaveVersion("MOD 存档", envelope.Version, ModdedSaveVersion);
+        return envelope;
+    }
 
-        byte[] body = new byte[payload.Length - CompactSaveMagic.Length];
-        Buffer.BlockCopy(payload, CompactSaveMagic.Length, body, 0, body.Length);
-        CompactSaveEnvelope envelope = MemoryPackSerializer.Deserialize<CompactSaveEnvelope>(body);
+    private GameSaveData DeserializeCoreSavePayload(CompactSaveEnvelope envelope)
+    {
         if (envelope == null || envelope.CoreSaveData == null)
             throw new InvalidDataException("差异存档封装已损坏");
         EnsureCurrentSaveVersion("差异存档", envelope.Version, CompactSaveVersion);
@@ -2806,6 +2812,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!string.IsNullOrWhiteSpace(saveData.SpaceStateJson))
             _ = DeserializeSpaceState(saveData.SpaceStateJson);
 
+        RestoreEcologyChunks(saveData, envelope.EcologyRecords);
         DroppedItemService.RestoreArchive(saveData, envelope.DroppedItems);
         MachineWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
 
@@ -3012,7 +3019,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 public partial class ModdedSaveEnvelope
 {
     public int Version;
-    public byte[] CoreSavePayload;
+    public CompactSaveEnvelope CoreSavePayload; // 单次遍历冻结字节，避免多层大数组封装复制。
     public byte[] ModMetadata;
 }
 
@@ -3032,6 +3039,7 @@ public partial class CompactSaveEnvelope
     public List<byte[]> ChunkRecords = new(); // 区块在主线程独立冻结，后台封装不再回调物品模块。
     public byte[] DroppedItems;
     public byte[] MechanicalNetworks; // 追加独立版本载荷，旧版本缺失时为空。
+    public List<FrozenEcologyChunkSaveRecord> EcologyRecords = new();
 }
 
 [MemoryPackable]
