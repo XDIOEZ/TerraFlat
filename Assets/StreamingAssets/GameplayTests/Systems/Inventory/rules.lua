@@ -1,3 +1,17 @@
+test.system("inventory", "dynamic_slot_maintenance", {}, function(data)
+    assert(data.initialScan and data.stableSkipped and data.initialCount == 195,
+        "创造背包初次整理错误，或256次稳定Tick仍扫描全部槽位")
+    assert(data.removedScan and data.afterRemoveCount == 194 and data.removedStableSkipped,
+        "取走占用槽位后没有同步回收多余空格，或稳定帧仍重扫")
+    assert(data.refilledScan and data.afterRefillCount == 195,
+        "空槽重新填充后没有立即补足三个备用空格")
+    assert(data.replacedSlotScan and data.replacedStableSkipped and data.notifiedScan,
+        "同数量替换槽位或显式结构通知没有使缓存失效")
+    assert(not data.disabledScan and data.reenabledScan and data.finalCount == 195
+        and data.occupied == 192 and data.indexed,
+        "容量模式切换后没有重检，或丢失物品/槽位索引")
+end, "创造背包动态槽位稳定帧免全表扫描与结构变化复核")
+
 test.system("inventory", "readable_book_snapshot", {}, function(data)
     assert(data.written and data.failure == "", "初始书页没有写入正式模块载荷")
     assert(data.addedPages == 2 and #data.pages == 3 and data.materialSlots == 2,

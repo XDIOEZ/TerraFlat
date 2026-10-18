@@ -51,6 +51,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/thermal", EntityTemperature);
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
+        operations.Add("inventory/dynamic_slot_maintenance", EntityDynamicSlotMaintenance);
         operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
         operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
@@ -883,6 +884,62 @@ public static partial class GameplayTestSystemProbe
             ["sameIdentity"] = item.HasSameStackIdentity(other), ["canStack"] = item.CanStackWith(other),
             ["wholeLarge"] = Inventory_Data.GetWholeStackAmount(float.MaxValue),
             ["wholeNegative"] = Inventory_Data.GetWholeStackAmount(-.5f)
+        };
+    }
+
+    // 按正式槽位事件核验创造背包的增减、同数量换槽和稳定帧跳过扫描。
+    private static JObject EntityDynamicSlotMaintenance(JObject args)
+    {
+        var bag = new Inventory_Data(new List<ItemSlot>(), "probe:creative-bag");
+        bag.SetUnlimitedCarryCapacity(true);
+        bag.ConfigurePlayerBagCapacity(50f, 50f);
+        const int filledCount = 192;
+        for (int i = 0; i < filledCount; i++)
+            bag.itemSlots.Add(new ItemSlot(bag.itemSlots.Count)
+            { itemData = EntityProbeData("probe:resource_" + i, 1f) });
+
+        bool initialScan = bag.MaintainDynamicSlotCount();
+        int initialCount = bag.itemSlots.Count;
+        bool stableSkipped = true;
+        for (int i = 0; i < 256; i++)
+            stableSkipped &= !bag.MaintainDynamicSlotCount();
+
+        bag.itemSlots[bag.itemSlots.Count - 1].itemData = null;
+        bool removedScan = bag.MaintainDynamicSlotCount();
+        int afterRemoveCount = bag.itemSlots.Count;
+        bool removedStableSkipped = !bag.MaintainDynamicSlotCount();
+
+        bag.itemSlots[0].itemData = EntityProbeData("probe:restored", 1f);
+        bool refilledScan = bag.MaintainDynamicSlotCount();
+        int afterRefillCount = bag.itemSlots.Count;
+        bag.itemSlots[0] = new ItemSlot(0) { itemData = EntityProbeData("probe:replacement", 1f) };
+        bool replacedSlotScan = bag.MaintainDynamicSlotCount();
+        bool replacedStableSkipped = !bag.MaintainDynamicSlotCount();
+        bag.NotifySlotsChanged();
+        bool notifiedScan = bag.MaintainDynamicSlotCount();
+
+        bag.SetUnlimitedSlots(false);
+        bool disabledScan = bag.MaintainDynamicSlotCount();
+        bag.SetUnlimitedSlots(true);
+        bool reenabledScan = bag.MaintainDynamicSlotCount();
+        int finalCount = bag.itemSlots.Count;
+        int occupied = 0;
+        for (int i = 0; i < bag.itemSlots.Count; i++)
+            if (bag.itemSlots[i]?.itemData != null) occupied++;
+        bool indexed = true;
+        for (int i = 0; i < bag.itemSlots.Count; i++)
+            indexed &= bag.itemSlots[i]?.Index == i;
+
+        return new JObject
+        {
+            ["initialScan"] = initialScan, ["stableSkipped"] = stableSkipped,
+            ["initialCount"] = initialCount, ["removedScan"] = removedScan,
+            ["afterRemoveCount"] = afterRemoveCount, ["removedStableSkipped"] = removedStableSkipped,
+            ["refilledScan"] = refilledScan, ["afterRefillCount"] = afterRefillCount,
+            ["replacedSlotScan"] = replacedSlotScan, ["replacedStableSkipped"] = replacedStableSkipped,
+            ["notifiedScan"] = notifiedScan, ["disabledScan"] = disabledScan,
+            ["reenabledScan"] = reenabledScan, ["finalCount"] = finalCount,
+            ["occupied"] = occupied, ["indexed"] = indexed
         };
     }
 
