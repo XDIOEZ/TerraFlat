@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/grid_changes", NavigationChanges);
         operations.Add("navigation/corner", NavigationCorner);
         operations.Add("navigation/canonical_batch", NavigationCanonicalBatch);
+        operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
     }
 
     private static WorldNavigationGrid NavigationFixture()
@@ -200,6 +201,42 @@ public static partial class GameplayTestSystemProbe
             ["liquidCost"] = regular.TryGetCell(cells[1], out WorldNavigationCell waterCell) &&
                 waterCell.Penalty == 55 && waterCell.Water &&
                 Mathf.Approximately(waterCell.LiquidDepth, 0.4f)
+        };
+    }
+
+    /// <summary>核对增量碰撞索引只删除事件锚点的失效机器，不误清相邻锚点。</summary>
+    private static JObject NavigationMachineObstacleDirty(JObject args)
+    {
+        Vector2Int first = new(4, 5), second = new(5, 5);
+        var anchors = new Dictionary<int, Vector2Int>
+        {
+            [10] = first, [11] = first, [12] = second
+        };
+        var live = new HashSet<int> { 10, 11 };
+        var stale = new List<int>();
+        ChunkCollisionRenderer.CollectStaleMachineIds(anchors, first, live, stale);
+        bool unchanged = stale.Count == 0;
+        live.Remove(11);
+        ChunkCollisionRenderer.CollectStaleMachineIds(anchors, first, live, stale);
+        bool removedOnlyOne = stale.Count == 1 && stale[0] == 11;
+        anchors.Remove(11);
+        anchors[10] = second;
+        ChunkCollisionRenderer.CollectStaleMachineIds(anchors, first, live, stale);
+        bool movedNotRemoved = stale.Count == 0;
+        live.Clear();
+        live.Add(10);
+        ChunkCollisionRenderer.CollectStaleMachineIds(anchors, second, live, stale);
+        bool neighborRemoved = stale.Count == 1 && stale[0] == 12;
+        live.Clear();
+        ChunkCollisionRenderer.CollectStaleMachineIds(anchors, second, live, stale);
+        bool allRemoved = stale.Count == 2 && stale.Contains(10) && stale.Contains(12);
+        return new JObject
+        {
+            ["unchanged"] = unchanged,
+            ["removedOnlyOne"] = removedOnlyOne,
+            ["movedNotRemoved"] = movedNotRemoved,
+            ["neighborRemoved"] = neighborRemoved,
+            ["allRemoved"] = allRemoved
         };
     }
     #endregion

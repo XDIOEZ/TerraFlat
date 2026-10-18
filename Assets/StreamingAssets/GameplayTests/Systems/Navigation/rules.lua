@@ -39,3 +39,10 @@ test.system("navigation", "canonical_batch", {}, function(data)
     assert(data.wrapped and data.unwrapped,
         "批量拓扑归一化改变了环绕接缝或无限世界坐标")
 end, "区块导航批量坐标归一化与旧接口严格等价")
+
+test.system("navigation", "machine_obstacle_dirty", {}, function(data)
+    assert(data.unchanged and data.removedOnlyOne and data.movedNotRemoved,
+        "机器碰撞增量索引误删未改变的设备，或迁移锚点后仍删除已移动设备")
+    assert(data.neighborRemoved and data.allRemoved,
+        "单格变化误清邻近机器，或机器拆除后遗留旧碰撞")
+end, "机器单格碰撞重建只撤销真正失效的锚点")

@@ -23,6 +23,11 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
     private static Tile collisionTile;
     private readonly List<MachineWorld.MachineRenderCell> machineCells = new();
     private readonly HashSet<int> projectedMachineIds = new();
+    private readonly Dictionary<int, Vector2Int> projectedMachineAnchors = new();
+    private readonly HashSet<Vector2Int> dirtyMachineCells = new();
+    private readonly List<Vector2Int> dirtyMachineScratch = new();
+    private readonly HashSet<int> currentMachineIds = new();
+    private readonly List<int> staleMachineIds = new();
     private readonly List<NaturalEntityEcsService.BlockingBodySnapshot> naturalBodies = new();
     private readonly Dictionary<int, NaturalBodyUpdate> pendingNaturalBodies = new();
     private bool machineObstaclesDirty;
@@ -125,6 +130,11 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         BoundChunk = null;
         dataObstaclesDirty = false;
         machineObstaclesDirty = naturalResetPending = false;
+        projectedMachineAnchors.Clear();
+        dirtyMachineCells.Clear();
+        dirtyMachineScratch.Clear();
+        currentMachineIds.Clear();
+        staleMachineIds.Clear();
         pendingNaturalBodies.Clear();
         obstacleColliders?.Clear();
         obstacleColliderCount = 0;
@@ -245,6 +255,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
                 machineCellSample = cell;
 #endif
             machineObstaclesDirty = true;
+            dirtyMachineCells.Add(WorldTopologyRuntime.NormalizeCell(cell));
             QueueDataObstacleRebuild(DirtyReason.Machine);
         }
     }
@@ -357,8 +368,14 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         dataObstaclesDirty = false;
         if (BoundChunk?.Terrain == null || obstacleColliders == null) return 0;
         int changed = 0;
-        if (initialBind || machineObstaclesDirty) changed += SyncMachineObstacles();
+        bool refreshMachines = machineObstaclesDirty;
         machineObstaclesDirty = false;
+        if (initialBind)
+        {
+            dirtyMachineCells.Clear();
+            changed += SyncMachineObstacles();
+        }
+        else if (refreshMachines) changed += SyncDirtyMachineObstacles();
         if (naturalResetPending) changed += obstacleColliders.ClearKind(ChunkObstacleColliderSet.NaturalKind);
         naturalResetPending = false;
         if (initialBind)
@@ -390,6 +407,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
         int changed = 0;
         int originX = BoundChunk.Address.ChunkOrigin.X, originY = BoundChunk.Address.ChunkOrigin.Y;
         projectedMachineIds.Clear();
+        projectedMachineAnchors.Clear();
         MachineWorld.CollectInBounds(new BoundsInt(originX - 2, originY - 2, 0,
             BoundChunk.Terrain.Width + 4, BoundChunk.Terrain.Height + 4, 1), machineCells);
         for (int i = 0; i < machineCells.Count; i++)
@@ -398,10 +416,72 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
             if (node?.Definition.BlocksMovement != true || HasPhysicalItemCollider(node) ||
                 !projectedMachineIds.Add(node.Id)) continue;
             MachineCollisionBounds.ResolveWorldBox(node, out Vector2 center, out Vector2 halfExtents);
-            changed += SyncObstacle(ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id), center, halfExtents);
+            long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
+            changed += SyncObstacle(key, center, halfExtents);
+            if (obstacleColliders.Contains(key)) projectedMachineAnchors[node.Id] = node.Cell;
         }
         changed += obstacleColliders.RemoveExcept(ChunkObstacleColliderSet.MachineKind, projectedMachineIds);
         return changed;
+    }
+
+    /// <summary>普通机器变化只更新受影响的锚点，复杂占地回退完整扫描。</summary>
+    private int SyncDirtyMachineObstacles()
+    {
+        if (dirtyMachineCells.Count == 0) return SyncMachineObstacles();
+        int changed = 0;
+        // 拷贝本轮脏格，处理中途新事件留给下一次物理 Tick。
+        dirtyMachineScratch.Clear();
+        dirtyMachineScratch.AddRange(dirtyMachineCells);
+        dirtyMachineCells.Clear();
+        foreach (Vector2Int cell in dirtyMachineScratch)
+        {
+            currentMachineIds.Clear();
+            for (int layer = 0; layer <= 5; layer++)
+            {
+                MachineEntity node = MachineWorld.GetAtCurrentWorld(cell, layer);
+                if (node == null) continue;
+                // 占地格可能属于邻近机器，不能假定事件格就是实体锚点。
+                if (node.Cell != cell)
+                {
+                    dirtyMachineScratch.Clear();
+                    return changed + SyncMachineObstacles();
+                }
+                if (node.Definition?.BlocksMovement != true || !currentMachineIds.Add(node.Id))
+                    continue;
+                if (HasPhysicalItemCollider(node))
+                {
+                    currentMachineIds.Remove(node.Id);
+                    continue;
+                }
+                MachineCollisionBounds.ResolveWorldBox(node, out Vector2 center, out Vector2 halfExtents);
+                long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, node.Id);
+                changed += SyncObstacle(key, center, halfExtents);
+                if (obstacleColliders.Contains(key)) projectedMachineAnchors[node.Id] = cell;
+                else currentMachineIds.Remove(node.Id);
+            }
+            CollectStaleMachineIds(projectedMachineAnchors, cell, currentMachineIds, staleMachineIds);
+            for (int i = 0; i < staleMachineIds.Count; i++)
+            {
+                int id = staleMachineIds[i];
+                if (obstacleColliders.Remove(ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.MachineKind, id)))
+                    changed++;
+                projectedMachineAnchors.Remove(id);
+            }
+        }
+        currentMachineIds.Clear();
+        staleMachineIds.Clear();
+        dirtyMachineScratch.Clear();
+        return changed;
+    }
+
+    /// <summary>只撤销当前锚点已失效的机器，其他设备的物理形状保持原样。</summary>
+    internal static void CollectStaleMachineIds(Dictionary<int, Vector2Int> anchors, Vector2Int changedCell,
+        HashSet<int> liveIds, List<int> result)
+    {
+        result.Clear();
+        foreach (KeyValuePair<int, Vector2Int> pair in anchors)
+            if (pair.Value == changedCell && !liveIds.Contains(pair.Key))
+                result.Add(pair.Key);
     }
 
     private int SyncObstacle(long key, Vector2 worldCenter, Vector2 halfExtents,
