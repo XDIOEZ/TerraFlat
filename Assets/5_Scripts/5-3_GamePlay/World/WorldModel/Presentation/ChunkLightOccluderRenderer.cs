@@ -24,6 +24,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
 
     private readonly List<LightOccluderSlot> slots = new();
     private readonly List<RectInt> mergedRectangles = new();
+    private readonly List<BoundingSphere> candidateSpheres = new();
     private bool[] blockedCells;
     private bool[] visitedCells;
     private ChunkRuntime boundChunk;
@@ -48,7 +49,16 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     public int EnabledOccluderCount => enabledOccluderCount;
 
     /// <summary>当前实际保留的阴影槽数量，包含少量待复用缓冲槽。</summary>
-    public int RetainedOccluderCount => slots.Count;
+    public int RetainedOccluderCount
+    {
+        get
+        {
+            int count = 0;
+            for (int i = 0; i < slots.Count; i++)
+                if (slots[i]?.GameObject != null) count++;
+            return count;
+        }
+    }
 
     /// <summary>上次裁剪后观察到的实际使用峰值，供 Profiler 与回归检查使用。</summary>
     public int RecentPeakOccluderCount => recentPeakOccluderCount;
@@ -84,8 +94,11 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         for (int i = 0; i < activeOccluderCount; i++)
         {
             LightOccluderSlot slot = slots[i];
-            if (slot.GameObject == null)
+            if (slot?.GameObject == null && !gameObject.activeInHierarchy)
                 continue;
+            if (slot?.GameObject == null)
+                slot = GetOrCreateSlot(i);
+            ConfigureSlot(slot, mergedRectangles[i]);
             slot.GameObject.SetActive(true);
             if (!slot.GameObject.activeInHierarchy)
                 continue;
@@ -201,8 +214,10 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
 
         for (int i = 0; i < mergedRectangles.Count; i++)
         {
-            LightOccluderSlot slot = GetOrCreateSlot(i);
-            ConfigureSlot(slot, mergedRectangles[i]);
+            // 没有局部光照到的墙只保留矩形，避免先生成 URP 阴影网格再立刻关闭。
+            if (i >= slots.Count) slots.Add(null);
+            if (slots[i]?.GameObject != null)
+                ConfigureSlot(slots[i], mergedRectangles[i]);
         }
 
         for (int i = mergedRectangles.Count; i < slots.Count; i++)
@@ -212,7 +227,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         }
 
         activeOccluderCount = mergedRectangles.Count;
-        enabledOccluderCount = activeOccluderCount;
+        enabledOccluderCount = 0;
         chunkLocalCenter = new Vector3(terrain.Width * 0.5f, terrain.Height * 0.5f, 0f);
         shadowVisibilityDirty = true;
         recentPeakOccluderCount = Mathf.Max(recentPeakOccluderCount, activeOccluderCount);
@@ -312,7 +327,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     #region 局部光范围筛选
 
     /// <summary>灯、墙和区块变换都未改变时，保留上次筛选结果。</summary>
-    internal void RefreshShadowVisibility(IReadOnlyList<BoundingSphere> lights, bool keepAll, bool lightsChanged)
+    public void RefreshShadowVisibility(IReadOnlyList<BoundingSphere> lights, bool keepAll, bool lightsChanged)
     {
         if (boundChunk == null || !isActiveAndEnabled)
             return;
@@ -334,7 +349,15 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         {
             LightOccluderSlot slot = slots[i];
             bool shouldEnable = chunkHasLight && (enableAll ||
-                ChunkLightOccluderVisibilityScheduler.IntersectsAny(slot.WorldSphere, lights));
+                ChunkLightOccluderVisibilityScheduler.IntersectsAny(
+                    candidateSpheres[i], lights));
+            if (!shouldEnable && slot?.GameObject == null)
+                continue;
+            if (slot?.GameObject == null)
+            {
+                slot = GetOrCreateSlot(i);
+                ConfigureSlot(slot, mergedRectangles[i]);
+            }
             bool wasEnabled = slot.GameObject.activeSelf;
             if (wasEnabled != shouldEnable)
                 slot.GameObject.SetActive(shouldEnable);
@@ -355,20 +378,26 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         Vector3 center = currentMatrix.MultiplyPoint3x4(chunkLocalCenter);
         float radius = 0f;
         worldBoundsValid = true;
+        candidateSpheres.Clear();
         for (int i = 0; i < activeOccluderCount; i++)
         {
-            LightOccluderSlot slot = slots[i];
-            slot.RefreshShapeBounds();
-            Transform target = slot.GameObject.transform;
-            Vector3 maximum = target.TransformPoint(slot.ShapeBounds.max);
-            Vector3 minimum = target.TransformPoint(slot.ShapeBounds.min);
-            Vector3 slotCenter = (maximum + minimum) * 0.5f;
-            slot.WorldSphere = new BoundingSphere(slotCenter, (maximum - slotCenter).magnitude);
-            worldBoundsValid &= ChunkLightOccluderVisibilityScheduler.IsFinite(slot.WorldSphere);
-            radius = Mathf.Max(radius, (slotCenter - center).magnitude + slot.WorldSphere.radius);
+            BoundingSphere sphere = GetRectangleWorldSphere(mergedRectangles[i], currentMatrix);
+            candidateSpheres.Add(sphere);
+            worldBoundsValid &= ChunkLightOccluderVisibilityScheduler.IsFinite(sphere);
+            radius = Mathf.Max(radius, (sphere.position - center).magnitude + sphere.radius);
         }
         chunkWorldSphere = new BoundingSphere(center, radius);
         worldBoundsValid &= ChunkLightOccluderVisibilityScheduler.IsFinite(chunkWorldSphere);
+    }
+
+    /// <summary>直接由单位方形的矩形变换计算保守球，首次受光前无需创建 Unity 阴影对象。</summary>
+    private static BoundingSphere GetRectangleWorldSphere(RectInt rectangle, Matrix4x4 matrix)
+    {
+        Vector3 center = matrix.MultiplyPoint3x4(new Vector3(
+            rectangle.x + rectangle.width * 0.5f, rectangle.y + rectangle.height * 0.5f, 0f));
+        Vector3 first = matrix.MultiplyVector(new Vector3(rectangle.width * 0.5f, rectangle.height * 0.5f, 0f));
+        Vector3 second = matrix.MultiplyVector(new Vector3(rectangle.width * 0.5f, -rectangle.height * 0.5f, 0f));
+        return new BoundingSphere(center, Mathf.Sqrt(Mathf.Max(first.sqrMagnitude, second.sqrMagnitude)));
     }
 
     #endregion
@@ -450,7 +479,9 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     private LightOccluderSlot GetOrCreateSlot(int index)
     {
         while (slots.Count <= index)
-            slots.Add(CreateSlot(slots.Count));
+            slots.Add(null);
+        if (slots[index]?.GameObject == null)
+            slots[index] = CreateSlot(index);
         return slots[index];
     }
 
@@ -459,7 +490,6 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     {
         var shadowObject = new GameObject($"{OccluderName}_{index:000}");
         shadowObject.layer = ResolveIgnoreRaycastLayer();
-        shadowObject.transform.SetParent(transform, false);
 
         // ShadowCaster2D 在 Awake 时从 Collider2D.bounds 生成默认方形形状，
         // 因此先准备单位碰撞体，再添加 ShadowCaster2D；随后关闭碰撞体避免影响玩法物理。
@@ -473,11 +503,13 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         shadowCaster.selfShadows = true;
         shapeSource.enabled = false;
         shadowObject.SetActive(false);
+        // 单位形状先在原点生成，不能把父级旋转后的 Collider 世界包围盒当成局部墙轮廓。
+        shadowObject.transform.SetParent(transform, false);
 
         return new LightOccluderSlot(shadowObject, shadowCaster);
     }
 
-    /// <summary>把单位方形缩放到地块矩形，并立即刷新 URP 的世界变换缓存。</summary>
+    /// <summary>按地块矩形配置单位方形的位置和缩放，URP 缓存在渲染前受光筛选时刷新。</summary>
     private static void ConfigureSlot(LightOccluderSlot slot, RectInt rectangle)
     {
         Transform target = slot.GameObject.transform;
@@ -487,12 +519,8 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
             0f);
         target.localRotation = Quaternion.identity;
         target.localScale = new Vector3(rectangle.width, rectangle.height, 1f);
-        slot.GameObject.SetActive(true);
         slot.ShadowCaster.castsShadows = true;
         slot.ShadowCaster.selfShadows = true;
-        // URP 14 的 ShadowCaster2D.Update 是公开方法；绑定后主动调用，
-        // 避免刚重绑的区块要等到下一帧才更新阴影缓存。
-        slot.ShadowCaster.Update();
     }
 
     /// <summary>遮挡体不参与游戏碰撞，只让 URP 2D 阴影系统看到它。</summary>
@@ -504,32 +532,14 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
 
     private sealed class LightOccluderSlot
     {
-        private Vector3[] cachedShape;
-
         public LightOccluderSlot(GameObject gameObject, ShadowCaster2D shadowCaster)
         {
             GameObject = gameObject;
             ShadowCaster = shadowCaster;
-            ShapeBounds = new Bounds(Vector3.zero, new Vector3(1f, 1f, 0f));
-            RefreshShapeBounds();
-        }
-
-        public void RefreshShapeBounds()
-        {
-            Vector3[] shape = ShadowCaster.shapePath;
-            if (shape == null || shape.Length == 0 || ReferenceEquals(shape, cachedShape))
-                return;
-            cachedShape = shape;
-            var bounds = new Bounds(shape[0], Vector3.zero);
-            for (int i = 1; i < shape.Length; i++)
-                bounds.Encapsulate(shape[i]);
-            ShapeBounds = bounds;
         }
 
         public GameObject GameObject { get; }
         public ShadowCaster2D ShadowCaster { get; }
-        public Bounds ShapeBounds { get; private set; }
-        public BoundingSphere WorldSphere { get; set; }
     }
 
     #endregion

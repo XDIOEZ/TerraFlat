@@ -1,4 +1,21 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
+    assert(data.candidates == 1 and data.createdAtBind == 0 and data.createdWithoutLight == 0,
+        "没有局部光的墙仍在绑定时创建 URP 阴影对象")
+    assert(data.createdWhenLit == 1 and data.enabledWhenLit == 1 and data.hasMesh and data.selfShadows,
+        "墙首次受光时未补齐原有遮挡网格和墙面阴影")
+    assert(data.initialX == 1 and data.initialWidth == 2, "首次受光的合并墙轮廓错误")
+    assert(data.disabledWithoutLight == 0 and data.retainedWithoutLight == 1 and data.sameAfterRelight,
+        "光移走后没有关闭墙阴影，或再次受光时重复创建对象")
+    assert(data.sameAfterRebind and data.sameMeshAfterRebind and data.retainedAtEnd == 1,
+        "区块重绑重新创建了已有单位阴影网格")
+    assert(data.reboundX == 2.5 and data.reboundY == 1.5 and data.reboundWidth == 3 and data.reboundHeight == 1,
+        "区块复用没有刷新合并墙的位置和尺寸")
+    assert(data.worldX == 17.5 and data.worldY == 13 and data.enabledAfterRebind == 1,
+        "阴影筛选没有跟随区块位置和镜像缩放")
+    assert(data.fallbackEnabled == 1, "无法判断局部光范围时丢失保守阴影回退")
+end, "洞穴墙阴影首次受光按需创建并复用原网格")
+
 for _, row in ipairs({
     { args = {}, level = 11, neighbour = 11, inner = 0, outer = 0, label = "同高异材质不画边" },
     { args = { support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "木地板与普通地面齐平" },

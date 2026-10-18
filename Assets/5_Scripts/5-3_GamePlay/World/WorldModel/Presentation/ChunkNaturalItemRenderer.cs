@@ -40,6 +40,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
     private readonly Dictionary<int, StaticNaturalRuntime> staticEntities = new();
     private readonly List<StaticNaturalRuntime> staticCaptureBuffer = new();
+    private readonly List<ItemData> unbindSnapshots = new();
     private ChunkRuntime boundChunk;
     private ChunkTilemapRenderer terrainOwner;
     private EnvironmentLayers environmentLayers;
@@ -296,7 +297,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     }
 
     /// <summary>普通 Item 仍需复制快照，因为解绑后的对象池实例会继续复用原 ItemData。</summary>
-    private void CaptureSpawnedItemStates()
+    private void CaptureSpawnedItemStates(List<ItemData> snapshots = null)
     {
         RuntimeWorldAddress address = boundChunk.Address;
         foreach (KeyValuePair<int, Item> pair in spawnedItems)
@@ -312,7 +313,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             {
                 item.Save();
                 ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
-                chunkManager.CaptureNaturalItemState(address, snapshot);
+                if (snapshots != null) snapshots.Add(snapshot);
+                else chunkManager.CaptureNaturalItemState(address, snapshot);
             }
             catch (Exception exception)
             {
@@ -327,22 +329,33 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     {
         bool canCapture = !applicationQuitting && boundChunk != null && chunkManager != null &&
                           !chunkManager.IsWorldRuntimeShuttingDown && GameNetwork.HasStateAuthority;
-        if (canCapture)
-            CaptureSpawnedItemStates();
-
-        staticCaptureBuffer.Clear();
-        staticCaptureBuffer.AddRange(staticEntities.Values);
         RuntimeWorldAddress address = boundChunk != null ? boundChunk.Address : default;
-        for (int i = 0; i < staticCaptureBuffer.Count; i++)
+        unbindSnapshots.Clear();
+        try
         {
-            NaturalEntityHandle handle = staticCaptureBuffer[i].Handle;
-            if (canCapture && NaturalEntityEcsService.TryTakeSnapshotAndRemove(handle, out ItemData snapshot))
-                chunkManager.CaptureNaturalItemState(address, snapshot);
-            else
-                NaturalEntityEcsService.Remove(handle);
+            if (canCapture) CaptureSpawnedItemStates(unbindSnapshots);
+            staticCaptureBuffer.Clear();
+            staticCaptureBuffer.AddRange(staticEntities.Values);
+            for (int i = 0; i < staticCaptureBuffer.Count; i++)
+            {
+                NaturalEntityHandle handle = staticCaptureBuffer[i].Handle;
+                if (canCapture && NaturalEntityEcsService.TryTakeSnapshotAndRemove(handle, out ItemData snapshot))
+                    unbindSnapshots.Add(snapshot);
+                else
+                    NaturalEntityEcsService.Remove(handle);
+            }
+            staticCaptureBuffer.Clear();
+            staticEntities.Clear();
         }
-        staticCaptureBuffer.Clear();
-        staticEntities.Clear();
+        finally
+        {
+            // 后续自然物捕获失败时仍提交前面已取得的快照，保留原逐条写入的异常边界。
+            try
+            {
+                if (canCapture) chunkManager.CaptureNaturalItemStates(address, unbindSnapshots);
+            }
+            finally { unbindSnapshots.Clear(); }
+        }
     }
 
     /// <summary>自动保存专用的自然物分帧快照，避免一次克隆全部表现物。</summary>

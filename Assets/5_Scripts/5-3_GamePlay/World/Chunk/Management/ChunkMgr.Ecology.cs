@@ -342,5 +342,15 @@ public partial class ChunkMgr
             address.ChunkOrigin.X, address.ChunkOrigin.Y, itemData);
     }
 
+    /// <summary>卸载捕获保持每个自然物的正式快照，最后集中写入同一区块差量。</summary>
+    public void CaptureNaturalItemStates(RuntimeWorldAddress address, IReadOnlyList<ItemData> items)
+    {
+        if (!GameNetwork.HasStateAuthority || items == null || items.Count == 0 ||
+            SaveDataMgr.Instance == null || !SaveDataMgr.Instance.TryGetActivePlanetData(out PlanetData planet))
+            return;
+        planet.Ecology ??= new EcologyWorldSaveData();
+        planet.Ecology.CaptureChangedItems(address.ChunkOrigin.X, address.ChunkOrigin.Y, items);
+    }
+
     #endregion
 }

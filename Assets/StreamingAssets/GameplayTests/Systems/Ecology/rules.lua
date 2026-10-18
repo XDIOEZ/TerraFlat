@@ -1,4 +1,20 @@
 -- 独立四乘四草稿调用正式生态生成器。
+test.system("ecology", "capture_batch", {}, function(data)
+    local expected = {0, 5, 7, 5, 11, 13}
+    assert(#data.guids == #expected, "批量自然物快照新增了空数据或错误合并已有记录")
+    for index, guid in ipairs(expected) do
+        assert(data.guids[index] == guid, "批量写入改变了原记录顺序或新记录的首次出现顺序")
+    end
+    assert(data.lastFive and data.lastEleven and data.duplicatePreserved,
+        "同 GUID 没有按最后输入覆盖第一条原记录，或改动了已有重复记录")
+    assert(#data.removed == 1 and data.removed[1] == 19,
+        "批量写入没有逐次清除相同 GUID 的删除标记，或误删了其他标记")
+    assert(data.unrelatedPreserved and data.chunkCount == 2,
+        "批量写入影响了其他区块，或空批次创建了重复区块")
+    assert(data.secondBatchReplaced and data.lastGuid == 17 and data.itemCount == 7,
+        "后续批次复用了失效索引，或新增记录没有按顺序追加")
+end, "自然物快照批量写入保留顺序、重复覆盖与删除标记语义")
+
 for _, seed in ipairs({17413, 8321}) do
     local value = seed
     test.system("ecology", "generation", {seed = value}, function(data)

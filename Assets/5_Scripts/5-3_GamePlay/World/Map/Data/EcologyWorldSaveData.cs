@@ -206,6 +206,18 @@ public partial class EcologyWorldSaveData
         GetOrCreateChunk(chunkX, chunkY).CaptureChangedItem(itemData);
     }
 
+    /// <summary>同一轮自然物快照只查找一次区块，批次结束后不保留易失效的索引。</summary>
+    public void CaptureChangedItems(int chunkX, int chunkY, IReadOnlyList<ItemData> items)
+    {
+        if (items == null || items.Count == 0) return;
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] == null || items[i].Guid == 0) continue;
+            GetOrCreateChunk(chunkX, chunkY).CaptureChangedItems(items);
+            return;
+        }
+    }
+
     #endregion
 }
 
@@ -662,6 +674,36 @@ public partial class EcologyChunkSaveData
             }
         }
         ChangedItems.Add(itemData);
+    }
+
+    /// <summary>一次建立 GUID 索引并依原顺序覆盖快照，避免每个自然物重新扫描整份区块差量。</summary>
+    public void CaptureChangedItems(IReadOnlyList<ItemData> items)
+    {
+        if (items == null || items.Count == 0) return;
+        int firstValid = 0;
+        while (firstValid < items.Count && (items[firstValid] == null || items[firstValid].Guid == 0))
+            firstValid++;
+        if (firstValid == items.Count) return;
+        ChangedItems ??= new List<ItemData>();
+        var indices = new Dictionary<int, int>(ChangedItems.Count);
+        for (int i = 0; i < ChangedItems.Count; i++)
+        {
+            ItemData existing = ChangedItems[i];
+            // 和单条写入一样，只替换列表里同 GUID 的第一条，不调整原有顺序。
+            if (existing != null && !indices.ContainsKey(existing.Guid)) indices.Add(existing.Guid, i);
+        }
+        for (int i = firstValid; i < items.Count; i++)
+        {
+            ItemData item = items[i];
+            if (item == null || item.Guid == 0) continue;
+            RemovedGuids?.Remove(item.Guid);
+            if (indices.TryGetValue(item.Guid, out int index)) ChangedItems[index] = item;
+            else
+            {
+                indices.Add(item.Guid, ChangedItems.Count);
+                ChangedItems.Add(item);
+            }
+        }
     }
 
     private void RemoveChangedItem(int guid)

@@ -4,6 +4,7 @@ using FlatWorld.Gameplay.Progress;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -19,6 +20,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("dimension/cave_exit_cache_identity", CaveExitCacheIdentity);
         operations.Add("dimension/cave_exit_cache_distance", CaveExitCacheDistance);
         operations.Add("rendering/cave_shadow_spheres", CaveShadowSpheres);
+        operations.Add("rendering/cave_shadow_lazy_creation", CaveShadowLazyCreation);
+        operations.Add("ecology/capture_batch", EcologyCaptureBatch);
     }
 
     private static readonly global::WorldAddress CavePerformanceSurface = new("probe:cave-cache", "surface");
@@ -237,6 +240,138 @@ public static partial class GameplayTestSystemProbe
             ["intersects"] = ChunkLightOccluderVisibilityScheduler.SpheresIntersect(first, second),
             ["reverseIntersects"] = ChunkLightOccluderVisibilityScheduler.SpheresIntersect(second, first)
         };
+    }
+
+    #endregion
+
+    #region 墙阴影按需创建与重绑采样
+
+    // 夹具走正式绑定和光照刷新，只返回对象、网格和变换状态给 Lua 断言。
+    private static JObject CaveShadowLazyCreation(JObject args)
+    {
+        using var world = new FlatWorld.WorldModel.WorldRuntime("probe:shadow_lazy", 1);
+        var address = new FlatWorld.WorldModel.WorldAddress("probe:shadow_lazy", new FlatWorld.WorldModel.Int2(0, 0));
+        var profile = new FlatWorld.WorldModel.ChunkGenerationProfileSnapshot("probe:shadow_lazy", 1, 4, 2);
+        var request = world.BeginChunkGeneration(address, 1, profile);
+        using (var buffer = new FlatWorld.WorldModel.ChunkTerrainBuffer(4, 2))
+        using (var generated = new FlatWorld.WorldModel.ChunkGenerationResult(request, buffer))
+            if (!world.TryCommit(generated, out string reason)) throw new InvalidOperationException(reason);
+        world.TryGetChunk(address, out var chunk);
+        var wall = new FlatWorld.WorldModel.TerrainCell(1, 0, 2, 0, 1, FlatWorld.WorldModel.TerrainCellFlags.Blocking);
+        var empty = new FlatWorld.WorldModel.TerrainCell(1, 0, 0, 0, 1, FlatWorld.WorldModel.TerrainCellFlags.Walkable);
+        chunk.Terrain.SetCell(0, 0, wall);
+        chunk.Terrain.SetCell(1, 0, wall);
+        var root = new GameObject("probe:shadow_lazy");
+        try
+        {
+            var renderer = root.AddComponent<ChunkLightOccluderRenderer>();
+            renderer.Bind(chunk);
+            var samples = new JObject
+            {
+                ["candidates"] = renderer.ActiveOccluderCount,
+                ["createdAtBind"] = renderer.RetainedOccluderCount
+            };
+            var noLights = Array.Empty<BoundingSphere>();
+            renderer.RefreshShadowVisibility(noLights, false, true);
+            samples["createdWithoutLight"] = renderer.RetainedOccluderCount;
+            var near = new[] { new BoundingSphere(new Vector3(1f, 0.5f, 0f), 1f) };
+            renderer.RefreshShadowVisibility(near, false, true);
+            var first = root.GetComponentInChildren<ShadowCaster2D>(true);
+            samples["createdWhenLit"] = renderer.RetainedOccluderCount;
+            samples["enabledWhenLit"] = renderer.EnabledOccluderCount;
+            samples["hasMesh"] = first != null && first.mesh != null && first.mesh.vertexCount > 0;
+            samples["selfShadows"] = first != null && first.selfShadows;
+            if (first == null) return samples;
+            samples["initialX"] = first.transform.localPosition.x;
+            samples["initialWidth"] = first.transform.localScale.x;
+            renderer.RefreshShadowVisibility(noLights, false, true);
+            samples["disabledWithoutLight"] = renderer.EnabledOccluderCount;
+            samples["retainedWithoutLight"] = renderer.RetainedOccluderCount;
+            renderer.RefreshShadowVisibility(near, false, true);
+            samples["sameAfterRelight"] = first == root.GetComponentInChildren<ShadowCaster2D>(true);
+            var firstMesh = first.mesh;
+            renderer.Unbind();
+            chunk.Terrain.SetCell(0, 0, empty);
+            chunk.Terrain.SetCell(1, 0, empty);
+            for (int x = 1; x < 4; x++) chunk.Terrain.SetCell(x, 1, wall);
+            root.transform.position = new Vector3(20f, 10f, 0f);
+            root.transform.localScale = new Vector3(-1f, 2f, 1f);
+            renderer.Bind(chunk);
+            renderer.RefreshShadowVisibility(new[]
+            {
+                new BoundingSphere(root.transform.TransformPoint(new Vector3(2.5f, 1.5f, 0f)), 0.5f)
+            }, false, true);
+            var reused = root.GetComponentInChildren<ShadowCaster2D>(true);
+            samples["sameAfterRebind"] = first == reused;
+            if (reused == null) return samples;
+            samples["sameMeshAfterRebind"] = firstMesh == reused.mesh;
+            samples["reboundX"] = reused.transform.localPosition.x;
+            samples["reboundY"] = reused.transform.localPosition.y;
+            samples["reboundWidth"] = reused.transform.localScale.x;
+            samples["reboundHeight"] = reused.transform.localScale.y;
+            samples["enabledAfterRebind"] = renderer.EnabledOccluderCount;
+            samples["worldX"] = reused.transform.position.x;
+            samples["worldY"] = reused.transform.position.y;
+            renderer.RefreshShadowVisibility(noLights, false, true);
+            renderer.RefreshShadowVisibility(noLights, true, true);
+            samples["fallbackEnabled"] = renderer.EnabledOccluderCount;
+            samples["retainedAtEnd"] = renderer.RetainedOccluderCount;
+            return samples;
+        }
+        finally
+        {
+            foreach (var caster in root.GetComponentsInChildren<ShadowCaster2D>(true))
+                if (caster.mesh != null) UnityEngine.Object.DestroyImmediate(caster.mesh);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    #endregion
+
+    #region 自然物批量差量写入采样
+
+    private static JObject EcologyCaptureBatch(JObject args)
+    {
+        var world = new EcologyWorldSaveData();
+        var unrelated = world.GetOrCreateChunk(9, 9);
+        var chunk = world.GetOrCreateChunk(0, 0);
+        var duplicate = new Data_GeneralItem { Guid = 5 };
+        chunk.ChangedItems.AddRange(new ItemData[]
+        {
+            null, new Data_GeneralItem { Guid = 5 }, new Data_GeneralItem { Guid = 7 }, duplicate
+        });
+        chunk.RemovedGuids.AddRange(new[] { 5, 5, 11, 19 });
+        var lastFive = new Data_GeneralItem { Guid = 5 };
+        var lastEleven = new Data_GeneralItem { Guid = 11 };
+        world.CaptureChangedItems(0, 0, new ItemData[]
+        {
+            null, new Data_GeneralItem { Guid = 0 }, new Data_GeneralItem { Guid = 5 },
+            new Data_GeneralItem { Guid = 11 }, lastFive, lastEleven, new Data_GeneralItem { Guid = 13 }
+        });
+        var guids = new JArray();
+        foreach (ItemData item in chunk.ChangedItems) guids.Add(item?.Guid ?? 0);
+        var removed = new JArray();
+        foreach (int guid in chunk.RemovedGuids) removed.Add(guid);
+        chunk.TryGetChangedItem(5, out ItemData capturedFive);
+        chunk.TryGetChangedItem(11, out ItemData capturedEleven);
+        var samples = new JObject
+        {
+            ["guids"] = guids, ["removed"] = removed,
+            ["lastFive"] = ReferenceEquals(capturedFive, lastFive),
+            ["lastEleven"] = ReferenceEquals(capturedEleven, lastEleven),
+            ["duplicatePreserved"] = ReferenceEquals(chunk.ChangedItems[3], duplicate),
+            ["unrelatedPreserved"] = ReferenceEquals(world.Chunks[0], unrelated)
+        };
+        var nextThirteen = new Data_GeneralItem { Guid = 13 };
+        world.CaptureChangedItems(0, 0, new ItemData[] { nextThirteen, new Data_GeneralItem { Guid = 17 } });
+        samples["secondBatchReplaced"] = ReferenceEquals(chunk.ChangedItems[5], nextThirteen);
+        samples["lastGuid"] = chunk.ChangedItems[6].Guid;
+        samples["itemCount"] = chunk.ChangedItems.Count;
+        world.CaptureChangedItems(0, 0, null);
+        world.CaptureChangedItems(0, 0, Array.Empty<ItemData>());
+        world.CaptureChangedItems(4, 4, new ItemData[] { null, new Data_GeneralItem { Guid = 0 } });
+        samples["chunkCount"] = world.Chunks.Count;
+        return samples;
     }
 
     #endregion

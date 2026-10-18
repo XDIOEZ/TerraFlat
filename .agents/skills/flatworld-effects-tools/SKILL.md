@@ -27,6 +27,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## MPB、光照与后处理
 
+- `ChunkLightOccluderRenderer` 初绑只合并墙矩形并保留候选，渲染前按局部光保守球首次创建对应 URP ShadowCaster2D；失光禁用、再次受光及重绑复用单位网格，矩形与区块镜像变化重算范围。未知光类型保持全阴影回退，不能漏遮挡；全部候选首次受光仍可能冷创建。规则采样为 `rendering/cave_shadow_lazy_creation`。
+
 - HLSL 参数和局部变量避开 `point/line/triangle` 等保留关键字；命名冲突可导致语法错误和后续标识符未声明的连带报错，共享代码需统一改名。
 - 角色 Shader 参数经统一 MPB 控制器合成；静态效果 RequiresContinuousRendering=false 并按变化 MarkRenderStateDirty。换图、重新绑定与启停仍更新；动态外部 Renderer 创建后单独注册，销毁前注销。
 - 舱内供气器由 `ShipPieceView.AirSupply` 读取实际实供功率，仅重染原图左上 `(26,11,12,3)` 的灯玻璃：通电保留绿蓝原色，断电为暗灰，红色由显式故障表现接口预留，未定义自动触发。`Sprite-Lit-Master` 的 `_DeviceIndicatorRect/_DeviceIndicatorTint` 共用于光照与回退 Pass，Tint Alpha 默认零，写 MPB 前保留其它通道。
