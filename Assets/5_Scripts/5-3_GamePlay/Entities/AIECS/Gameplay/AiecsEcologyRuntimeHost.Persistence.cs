@@ -22,7 +22,15 @@ namespace FlatWorld.AIECS.Gameplay
                 destination.EntitiesResidents = snapshots;
         }
 
-        private bool TryCaptureActiveResidents(List<AiecsResidentSaveData> output)
+        // 诊断包含已死亡和仍归巢的实际实体，不混入尚未恢复的冷记录。
+        public void CopyDiagnosticResidents(List<AiecsResidentSaveData> output)
+        {
+            if (output == null) throw new ArgumentNullException(nameof(output));
+            output.Clear();
+            TryCaptureActiveResidents(output, includeAll: true);
+        }
+
+        private bool TryCaptureActiveResidents(List<AiecsResidentSaveData> output, bool includeAll = false)
         {
             AiecsSimulation simulation = _bridge?.Simulation;
             if (simulation?.IsCreated != true) return false;
@@ -33,10 +41,10 @@ namespace FlatWorld.AIECS.Gameplay
                 Entity entity = actor.Entity;
                 if (!manager.Exists(entity)) continue;
                 AiecsVital vital = manager.GetComponentData<AiecsVital>(entity);
-                if (vital.Dead != 0) continue;
+                if (!includeAll && vital.Dead != 0) continue;
                 AiecsHiveMember hive = manager.HasComponent<AiecsHiveMember>(entity)
                     ? manager.GetComponentData<AiecsHiveMember>(entity) : default;
-                if (hive.HomeGuid != 0) continue;
+                if (!includeAll && hive.HomeGuid != 0) continue;
                 float2 position = manager.GetComponentData<AiecsFlowAgent>(entity).Position;
                 var snapshot = new AiecsResidentSaveData
                 {

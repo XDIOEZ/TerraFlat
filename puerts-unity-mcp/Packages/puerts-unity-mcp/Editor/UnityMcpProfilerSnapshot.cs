@@ -14,9 +14,10 @@ namespace PuertsUnityMcp.Editor
         #region 手动导出入口
 
         // 只读取已有帧和 Console，不切换录制目标或改变游戏暂停状态。
-        public static string ExportSelectedFrame(int frameIndex, string outputRoot, int contextFrameRadius = 30)
+        public static string ExportSelectedFrame(int frameIndex, string outputRoot, int contextFrameRadius = 30,
+            Func<string, string, int, string[]> exportAdditionalFiles = null)
         {
-            return UnityMcpEditorEndpoint.ExportProfilerSnapshot(frameIndex, outputRoot, contextFrameRadius);
+            return UnityMcpEditorEndpoint.ExportProfilerSnapshot(frameIndex, outputRoot, contextFrameRadius, exportAdditionalFiles);
         }
 
         #endregion
@@ -26,7 +27,8 @@ namespace PuertsUnityMcp.Editor
     {
         #region Profiler 离线快照
 
-        internal static string ExportProfilerSnapshot(int frameIndex, string outputRoot, int contextFrameRadius)
+        internal static string ExportProfilerSnapshot(int frameIndex, string outputRoot, int contextFrameRadius,
+            Func<string, string, int, string[]> exportAdditionalFiles = null)
         {
             if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode != EditorApplication.isPlaying)
                 throw new InvalidOperationException("Unity 正在编译、导入或切换运行状态，请稍后再导出。");
@@ -107,10 +109,13 @@ namespace PuertsUnityMcp.Editor
             string pending = Path.Combine(root, ".pending-" + snapshotId);
             string destination = Path.Combine(root, snapshotId);
             Directory.CreateDirectory(pending);
+            // 项目附加现场也先写临时目录，全部成功后才发布同一份报告。
+            snapshot.additionalFiles = exportAdditionalFiles?.Invoke(pending, snapshotId, frameIndex + 1)
+                ?? Array.Empty<string>();
             AtomicFile.WriteJson(Path.Combine(pending, "profiler-analysis.json"), snapshot);
             AtomicFile.WriteJson(Path.Combine(pending, "console-logs.json"), console);
             File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
-            // 共享说明放在根目录，报告只保留 JSON 与整屏截图。
+            // 共享说明放在根目录，报告保留 JSON、整屏截图和项目附加现场。
             Directory.Move(pending, destination);
             return destination;
         }
@@ -305,10 +310,11 @@ namespace PuertsUnityMcp.Editor
         [Serializable]
         private sealed class ProfilerSnapshotReport
         {
-            public int schemaVersion = 3;
+            public int schemaVersion = 4;
             public string snapshotId, capturedAtLocal, capturedAtUtc, projectPath, unityVersion;
             public string consoleFile = "console-logs.json";
             public string instructionsFile = "../00-READ-ME-FIRST.md";
+            public string[] additionalFiles;
             public UnityMcpDesktopScreenshot.ScreenshotInfo screenshot;
             public int selectedFrameIndex, selectedDisplayFrame;
             public bool editorPlayingAtExport, editorPausedAtExport, deepProfilingAtExport;

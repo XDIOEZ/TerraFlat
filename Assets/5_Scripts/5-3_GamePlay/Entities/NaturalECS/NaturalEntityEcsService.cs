@@ -479,6 +479,24 @@ namespace FlatWorld.NaturalEntities
             return true;
         }
 
+        #region 只读现场诊断
+        // 热状态只写到独立副本，诊断不回写生态档案，也不调用扩展模块的保存回调。
+        public static void CopyDiagnosticItems(List<(ItemData Data, bool Suspended, bool Dead)> output)
+        {
+            if (output == null) throw new ArgumentNullException(nameof(output));
+            output.Clear();
+            if (simulation?.IsCreated != true) return;
+            foreach (Record record in records.Values)
+            {
+                ItemData snapshot = FastCloner.FastCloner.DeepClone(record.Snapshot);
+                WriteHotState(record, snapshot);
+                WritePlantState(record, snapshot);
+                NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
+                output.Add((snapshot, body.Suspended != 0, body.Dead != 0));
+            }
+        }
+        #endregion
+
         /// <summary>终端解绑直接移交内部快照所有权，避免卸载区块时再深拷贝一份 ItemData。</summary>
         public static bool TryTakeSnapshotAndRemove(NaturalEntityHandle handle, out ItemData snapshot)
         {

@@ -144,11 +144,11 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     public void Present(Camera camera) => presentation.Present(camera, domain, spatial, SpatialCellSize);
 
-    public List<DroppedItemSaveRecord> Capture()
+    public List<DroppedItemSaveRecord> Capture(bool includeUnresolved = true)
     {
         List<DroppedItemSaveRecord> records = new(simulation.Count + unresolved.Count);
         foreach (int id in simulation.Ids) records.Add(DroppedItemSaveRecord.Capture(payloads[id], simulation, id));
-        records.AddRange(unresolved);
+        if (includeUnresolved) records.AddRange(unresolved);
         records.Sort((left, right) => (left?.Data?.Guid ?? 0).CompareTo(right?.Data?.Guid ?? 0));
         return records;
     }

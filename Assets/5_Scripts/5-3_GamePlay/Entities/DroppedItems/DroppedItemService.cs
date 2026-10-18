@@ -87,6 +87,11 @@ public static partial class DroppedItemService
     public static int Count => runtime?.Count ?? 0;
     public static int VisibleViewCount => runtime?.VisibleViewCount ?? 0;
 
+    #region 只读现场诊断
+    // 只捕获当前模拟器中的物品，不初始化世界、不写存档，也不混入缺失定义的冷记录。
+    public static List<DroppedItemSaveRecord> CaptureDiagnosticItems() => runtime?.Capture(includeUnresolved: false) ?? new();
+    #endregion
+
     #region 外部物理世界生成入口
     private sealed class DropSpawnRegistration : IDisposable
     {

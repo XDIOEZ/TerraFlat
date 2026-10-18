@@ -5,7 +5,7 @@
 ## 选对报告
 
 - 用户指定文件夹时只分析该目录；只说“最新”时，在 `Assets/67_ProfileData/` 中选时间最新且同时有两个 JSON 的正式目录，忽略 `.pending-*`。不要混用不同目录的文件；缺少截图时说明缺口，不擅自换成另一帧。
-- `profiler-analysis.json` 是性能证据，`console-logs.json` 是日志，`screen.png` 是导出时的整个桌面；本文件是阅读说明。
+- `profiler-analysis.json` 是性能证据，`console-logs.json` 是日志，`screen.png` 是导出时的整个桌面；FlatWorld 顶栏/菜单还导出 `world-scene.json`（已加载世界物品现场），文件名登记在性能文件的 `additionalFiles`。本文件是阅读说明。
 - 两个 JSON 的 `snapshotId`、`selectedDisplayFrame` 应相同。`schemaVersion` 分别描述各自格式，不要求两个版本号相等。先检查性能文件 `warnings`、`selectedFrameAnalysis.success/frameCount/skippedFrameCount`，缺数据时明确说明。
 
 ## 按需读取，控制上下文大小
@@ -17,6 +17,7 @@
 5. 日志先按 `entries[].severity` 计数，按正文/堆栈合并重复项；优先读 Error/Exception/Assert 和与热点同名的模块日志，再按需展开完整堆栈。不要只读错误，普通 Debug 日志可能包含分阶段计时和业务计数。
 6. 有项目源码时，按方法名、Marker 名或日志 `file/line` 定位正式实现和调用方；不要为了分析已有文件重新采集、暂停或切换用户的 Unity。
 7. 查看 `performanceDebugAtExport.available/status/statisticsEnabled`，需要处理规模时再按 Marker 筛 `points`。这是导出时本地 Editor 进程中项目 Registry 的累计快照，包含已完成区段，不对应所选录制帧，也不代表远程 Player。未开启、未加载或读取失败必须如实说明，不能把缺失或零数字理解为没有成本。
+8. 有 `world-scene.json` 时，先核对 `snapshotId/selectedDisplayFrame`，读取 `status/notes/summary` 和区块运行/显示数量，再按热点相关的 `definitionId/sources` 筛 `items`，通过 `dataRef` 查 `itemData` 的模块和库存。不要打印整个现场。`loaded-chunk-placement` 只说明已加载区块中的剩余生成基线，不能当作正在 Tick 的实体；容器内容也不计入世界实体数。同一 GUID 的多个来源已合并，按来源的数量不能再相加当总数。
 
 ## 字段速查
 
@@ -41,6 +42,9 @@
 | `performanceDebugAtExport.statisticsEnabled/slowSummaryEnabled/slowThresholdMilliseconds/hasPendingSlowEvents` | 读取时性能统计、慢摘要、慢阈值和未消费慢事件状态；导出不改变开关，不清空统计，不消费慢摘要 |
 | `performanceDebugAtExport.points[].name/calls/work/gauge/peakGauge/hasGauge/totalMilliseconds/maximumMilliseconds` | 自上次清空/会话重置以来、开启收集期间的累计调用/工作量、最近和峰值规模、包含式总耗时和单次最大值；工作量单位按点位说明，不能混加 |
 | `screenshot.file/capturedAtUtc/width/height` | 图片文件名、截图时间与像素尺寸 |
+| `additionalFiles` | 格式 4 的项目附加文件名；FlatWorld 导出入口附带 `world-scene.json` |
+| 现场 `status/capturedAtUtc/captureCompletedAtUtc/unityFrameAtExport` | 本地导出现场的可用性、采集时间范围和 Unity 当前帧；`not-in-play-mode` 不是空世界证据 |
+| 现场 `summary/chunks/items/itemData` | 分类数量、已加载区块状态、按 GUID 合并的世界实体和含库存内容的物品数据；实体和物品数据数量含义不同 |
 | 日志 `entries[].index/severity/message/stackTrace/file/line/rawText` | 日志索引、级别、正文、堆栈、源码位置及完整原文；原文可能自带业务时间戳 |
 
 ## 避免误判
@@ -53,6 +57,7 @@
 - Console 没有逐条日志对应的 Profiler 帧号或原生时间戳；`selectedDisplayFrame` 是这次导出的关联标识，不是每条日志的发生帧。已清空日志不能恢复。
 - 附加帧在读取时可能已被正在录制的环形缓冲淘汰，主报告选中帧与附近耗时都只能说明导出时读到了什么。未附带的帧可能低于阈值、超出数量/半径/缓冲，并非已经排除性能问题；完整聚合树仍不是原始时间线。
 - 性能统计默认关闭，关闭后可能保留此前开启时的累计数字。统计开关、快照和 Console/截图分别在导出过程中读取，后台任务仍可能推进；不能当作同一时刻的原子快照，也不能与历史所选帧作逐条时间关联。
+- 世界现场也是导出时本地 Editor 的数据，不还原历史帧，不代表远程 Player，不是可直接加载的完整存档。只读已加载区块，不包含未加载存档区域；普通 Item 的持久模块状态可能落后于即时值，优先对照 `runtimeModules[].runtimeScalars/liveInventories`，未通用解码的模块状态保留 Base64。自然 ECS 的内置热状态写入独立副本，扩展模块保存回调不执行；不能把最近已有的扩展状态认定为即时值。
 - 证据文件只支持定位和提出方案，不能单独证明修改后的性能改善；实际效果由用户在相同场景下验收。
 
 ## 回答方式

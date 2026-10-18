@@ -50,7 +50,7 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "导出 Profiler 选中帧、附近帧耗时、当前 Console 日志和整个桌面截图到 67_ProfileData；右键打开目录。"
+                        tooltip = "导出 Profiler 选中帧、附近帧耗时、当前 Console 日志、已加载世界物品现场 JSON 和整个桌面截图到 67_ProfileData；右键打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
@@ -100,10 +100,11 @@ namespace FlatWorld.Automation
                 long selected = profiler.selectedFrameIndex;
                 if (selected < 0 || selected > int.MaxValue)
                     throw new InvalidOperationException("请先在 Profiler 曲线上点选要分析的帧。");
-                string directory = UnityMcpProfilerSnapshot.ExportSelectedFrame((int)selected, ReportsRoot);
+                string directory = UnityMcpProfilerSnapshot.ExportSelectedFrame((int)selected, ReportsRoot,
+                    exportAdditionalFiles: WorldSceneSnapshotExporter.Export);
                 EditorGUIUtility.systemCopyBuffer = directory;
-                profiler.ShowNotification(new GUIContent("性能、日志与整屏截图已导出，文件夹路径已复制"), 5d);
-                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含两个 JSON 与 screen.png；可以继续游戏，让 AI 先读 67_ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
+                profiler.ShowNotification(new GUIContent("性能、日志、世界现场与整屏截图已导出，文件夹路径已复制"), 5d);
+                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 67_ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
             }
             catch (Exception exception)
             {

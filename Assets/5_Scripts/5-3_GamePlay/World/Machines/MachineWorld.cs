@@ -262,6 +262,17 @@ public static partial class MachineWorld
         result.AddRange(nodes.Values);
     }
 
+    #region 只读现场诊断
+    // 诊断只读已经存在的作用域，避免为了导出创建或切换机械世界。
+    public static void CollectDiagnosticNodes(List<MachineEntity> result)
+    {
+        if (result == null) throw new ArgumentNullException(nameof(result));
+        result.Clear();
+        foreach (MachineEntity node in nodes.Values)
+            result.Add(node);
+    }
+    #endregion
+
     /// <summary>客户端应用服务端权威快照，不参与机械模拟。</summary>
     public static void ApplyRemoteReset()
     {

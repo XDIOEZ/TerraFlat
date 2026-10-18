@@ -2,7 +2,12 @@
     "name": "FlatWorld.Automation.Editor",
     "rootNamespace": "FlatWorld.Automation",
     "references": [
-        "PuertsUnityMcp.Editor"
+        "PuertsUnityMcp.Editor",
+        "GamePlay",
+        "FlatWorld.AIECS.Gameplay",
+        "Data",
+        "FlatWorld.WorldModel",
+        "FlatWorld.Utilities"
     ],
     "includePlatforms": [
         "Editor"
@@ -16,4 +21,3 @@
     "versionDefines": [],
     "noEngineReferences": false
 }
-
