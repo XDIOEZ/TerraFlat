@@ -24,7 +24,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
     private Vector2Int observer;
     private bool hasCurrentChunk;
     private Vector2Int currentOrigin;
-    private ChunkRuntime currentChunk;
+    private ChunkTerrainData currentTerrain;
 
     internal int ChunkLookupCount { get; private set; }
     internal int CachedChunkCount => chunks.Count;
@@ -51,7 +51,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
         world = null;
         worldChunks = null;
         dimensionId = null;
-        currentChunk = null;
+        currentTerrain = null;
         hasCurrentChunk = false;
     }
 
@@ -65,6 +65,8 @@ internal sealed class GridLineOfSightQuery : IDisposable
         using var scope = LineMarker.Auto();
         if (world == null || world.Epoch != worldEpoch)
             return false;
+        // 每条射线只在进入区块时验证加载态，射线内逐格仍读取最新遮挡位。
+        hasCurrentChunk = false;
         Vector2Int target = NormalizeCell(new Vector2Int(
             Mathf.FloorToInt(targetPosition.x), Mathf.FloorToInt(targetPosition.y)));
         if (!IsCellLoaded(observer) || !IsCellLoaded(target))
@@ -110,10 +112,11 @@ internal sealed class GridLineOfSightQuery : IDisposable
 
     private Vector2Int NormalizeCell(Vector2Int cell)
     {
-        if (topology.Contains(new int2(cell.x, cell.y)))
+        if (!topology.IsWrapped ||
+            (uint)(cell.x - topology.Min.x) < (uint)topology.Span.x &&
+            (uint)(cell.y - topology.Min.y) < (uint)topology.Span.y)
             return cell;
-        int2 normalized = topology.Normalize(new int2(cell.x, cell.y));
-        return new Vector2Int(normalized.x, normalized.y);
+        return new Vector2Int(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y));
     }
 
     private bool IsCellLoaded(Vector2Int cell) => TryResolveTerrain(cell, out _, out _, out _);
@@ -131,8 +134,14 @@ internal sealed class GridLineOfSightQuery : IDisposable
 
     private bool TryResolveTerrain(Vector2Int cell, out ChunkTerrainData terrain, out int localX, out int localY)
     {
-        if (hasCurrentChunk && TryGetCell(currentChunk, currentOrigin, cell, out terrain, out localX, out localY))
-            return true;
+        if (hasCurrentChunk)
+        {
+            terrain = currentTerrain;
+            localX = cell.x - currentOrigin.x;
+            localY = cell.y - currentOrigin.y;
+            if ((uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height)
+                return true;
+        }
 
         Vector2Int origin = new(FloorOrigin(cell.x, chunkWidth), FloorOrigin(cell.y, chunkHeight));
         origin = NormalizeCell(origin);
@@ -149,7 +158,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
             chunks[origin] = chunk;
         }
         currentOrigin = origin;
-        currentChunk = chunk;
+        currentTerrain = chunk.Terrain;
         hasCurrentChunk = true;
         return TryGetCell(chunk, origin, cell, out terrain, out localX, out localY);
     }
