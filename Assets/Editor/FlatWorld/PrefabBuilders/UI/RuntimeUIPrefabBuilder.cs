@@ -2067,7 +2067,8 @@ public static partial class RuntimeUIPrefabBuilder
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = true;
+        // 下拉框保持自身首选高度，不随顶部栏被拉高。
+        layout.childForceExpandHeight = false;
 
         TextMeshProUGUI title = CreateText("标题文本", header.transform, "按键绑定", 22f, Cream);
         title.fontStyle = FontStyles.Bold;
