@@ -50,9 +50,16 @@ public partial class MonsterSpawnerManager
             if (config.SpawnChance <= 0f || (config.SpawnChance < 1f && chanceRoll() >= config.SpawnChance))
                 countdown.Restart(interval);
             else
-                countdown.PendingCount = GameDifficultyService.ScaleCount(config.SpawnCount, frequencyMultiplier, 1);
+                countdown.BeginBatch(DetermineCountdownBatchCount(config, frequencyMultiplier, chanceRoll));
         }
         RefreshCountdownPendingCount(state);
+    }
+
+    public static int DetermineCountdownBatchCount(SpawnerConfig config, float frequencyMultiplier, Func<float> chanceRoll)
+    {
+        return config.SpawnCountWeights != null && config.SpawnCountWeights.Count > 0
+            ? config.DetermineSpawnCount(chanceRoll())
+            : GameDifficultyService.ScaleCount(config.SpawnCount, frequencyMultiplier, 1);
     }
 
     // 每次只挑一个已到期物种，地点或预算受阻也轮到其它物种尝试自己的机会。

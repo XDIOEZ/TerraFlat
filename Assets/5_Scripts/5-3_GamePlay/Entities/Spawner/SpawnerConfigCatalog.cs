@@ -75,6 +75,10 @@ public sealed class SpawnerConfigDefinition
     public int PerPlayerAliveLimit;
     public int SpawnSearchRetryCount = 5;
     public int SpawnCount = 1;
+    [JsonProperty(Required = Required.Default)]
+    public List<SpawnerBatchSizeWeight> SpawnCountWeights = new();
+    [JsonProperty(Required = Required.Default)]
+    public float BatchSpawnRadius;
     public float SpawnChance = 1f;
     public int DaysBetweenSpawns = 1;
     public int GroupAliveLimit = 12;
@@ -120,6 +124,10 @@ public sealed class SpawnerConfigDefinition
         config.PerPlayerAliveLimit = PerPlayerAliveLimit;
         config.SpawnSearchRetryCount = SpawnSearchRetryCount;
         config.SpawnCount = SpawnCount;
+        config.SpawnCountWeights = new List<SpawnerBatchSizeWeight>();
+        foreach (SpawnerBatchSizeWeight option in SpawnCountWeights)
+            config.SpawnCountWeights.Add(new SpawnerBatchSizeWeight { Count = option.Count, Weight = option.Weight });
+        config.BatchSpawnRadius = BatchSpawnRadius;
         config.SpawnChance = SpawnChance;
         config.DaysBetweenSpawns = DaysBetweenSpawns;
         config.GroupAliveLimit = GroupAliveLimit;

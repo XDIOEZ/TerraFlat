@@ -732,14 +732,16 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         SpawnerConfig.SpawnEntry requestedEntry = null)
     {
         skippedByChance = false;
+        SpawnerCountdownProgress batch = GetSpawnBatch(config, state, requestedEntry);
+        int requiredRoom = GetCountdownBatchRequiredRoom(batch);
         int globalLimit = GameDifficultyService.ScaleCount(
             _settings.GlobalAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
             1);
         if (!config.UnboundedDailyGrowth &&
             !config.IgnorePopulationLimits &&
-            (CountPopulationLimitedAlive() >= globalLimit ||
-             CountGroupAlive(config) >= GetEffectiveGroupLimit(config)))
+            ((long)CountPopulationLimitedAlive() + requiredRoom > globalLimit ||
+             (long)CountGroupAlive(config) + requiredRoom > GetEffectiveGroupLimit(config)))
         {
             return false;
         }
@@ -747,13 +749,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         SpawnerConfig.SpawnEntry entry = requestedEntry ?? DetermineAvailableEntry(config, state);
         if (entry == null)
             return false;
-        if (requestedEntry != null && !CanSpawnEntry(config, requestedEntry, state))
+        if (requestedEntry != null && !CanSpawnEntry(config, requestedEntry, state, requiredRoom))
             return false;
 
-        if (!TryGetValidSpawnPosition(config, out Vector3 spawnPosition))
+        if (!TryGetValidSpawnPosition(config, out Vector3 spawnPosition, batch, requiredRoom))
             return false;
 
-        if (!IsWithinLocalSpeciesLimit(config, entry, spawnPosition))
+        if (!IsWithinLocalSpeciesLimit(config, entry, spawnPosition, requiredRoom))
             return false;
 
         // 概率落空是已完成的机会，不能按找不到地点重试到最终必定生成。
@@ -768,6 +770,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (!TrySpawnMonster(entry, spawnPosition))
             return false;
 
+        batch?.RecordBatchBirth(spawnPosition.x, spawnPosition.y, _itemManager.PlayerInSceneName);
         if (!config.UnboundedDailyGrowth)
             state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
         return true;
@@ -814,12 +817,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private bool CanSpawnEntry(
         SpawnerConfig config,
         SpawnerConfig.SpawnEntry entry,
-        SpawnerProgressSaveData state)
+        SpawnerProgressSaveData state,
+        int requiredRoom = 1)
     {
         if (entry == null ||
             string.IsNullOrWhiteSpace(entry.PrefabName) ||
             entry.Probability <= 0f ||
-            (!config.UnboundedDailyGrowth && state.AvailableBudget < Mathf.Max(1, entry.EcologyCost)))
+            (!config.UnboundedDailyGrowth && (long)state.AvailableBudget < (long)Mathf.Max(1, entry.EcologyCost) * requiredRoom))
         {
             return false;
         }
@@ -833,10 +837,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
 
         if (!AiRuntimeBackendService.UsesEntities(entry) &&
-            _monsterManager.Count >= Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
+            (long)_monsterManager.Count + requiredRoom > Mathf.Max(1, _settings.MaxLoadedGameObjectActors))
             return false;
         if (AiRuntimeBackendService.UsesEntities(entry) &&
-            AiRuntimeBackendService.Ecology.ResidentCount >= Mathf.Max(1, _settings.MaxLoadedEntityActors))
+            (long)AiRuntimeBackendService.Ecology.ResidentCount + requiredRoom > Mathf.Max(1, _settings.MaxLoadedEntityActors))
             return false;
 
          int speciesLimit = GameDifficultyService.ScaleCount(
@@ -844,34 +848,45 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
              GameDifficultyService.Current.World.SpawnPopulationMultiplier);
          return config.IgnorePopulationLimits || config.UnboundedDailyGrowth ||
              entry.SpeciesAliveLimit <= 0 ||
-             CountSpeciesAlive(entry.PrefabName) < speciesLimit;
+             (long)CountSpeciesAlive(entry.PrefabName) + requiredRoom <= speciesLimit;
     }
 
-    private bool TryGetValidSpawnPosition(SpawnerConfig config, out Vector3 spawnPosition)
+    private bool TryGetValidSpawnPosition(SpawnerConfig config, out Vector3 spawnPosition,
+        SpawnerCountdownProgress batch = null, int requiredRoom = 1)
     {
         spawnPosition = default;
         if (_playerPositions.Count == 0)
             return false;
 
         PrepareNearbyGroupCounts(config);
-        Vector3 anchor = _playerPositions[UnityEngine.Random.Range(0, _playerPositions.Count)];
-        float randomAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
-        float randomDistance = UnityEngine.Random.Range(
-            Mathf.Max(0f, config.MinSpawnDistance),
-            Mathf.Max(config.MinSpawnDistance, config.MaxSpawnDistance));
-        Vector3 candidate = anchor + new Vector3(
-            Mathf.Cos(randomAngle) * randomDistance,
-            Mathf.Sin(randomAngle) * randomDistance,
-            0f);
-        if (config.TreeHabitat.Enabled && !TryGetTreeHabitatPosition(config, out candidate))
-            return false;
+        Vector3 candidate;
+        if (batch != null && batch.HasBatchAnchor)
+        {
+            Vector2 offset = UnityEngine.Random.insideUnitCircle * config.BatchSpawnRadius;
+            candidate = new Vector3(batch.BatchAnchorX + offset.x, batch.BatchAnchorY + offset.y);
+        }
+        else
+        {
+            Vector3 anchor = _playerPositions[UnityEngine.Random.Range(0, _playerPositions.Count)];
+            float randomAngle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            float randomDistance = UnityEngine.Random.Range(
+                Mathf.Max(0f, config.MinSpawnDistance),
+                Mathf.Max(config.MinSpawnDistance, config.MaxSpawnDistance));
+            candidate = anchor + new Vector3(
+                Mathf.Cos(randomAngle) * randomDistance,
+                Mathf.Sin(randomAngle) * randomDistance,
+                0f);
+            if (config.TreeHabitat.Enabled && !TryGetTreeHabitatPosition(config, out candidate))
+                return false;
+        }
         candidate = WorldTopologyRuntime.NormalizePosition(candidate);
         candidate.x = Mathf.Floor(candidate.x) + 0.5f;
         candidate.y = Mathf.Floor(candidate.y) + 0.5f;
 
-        if (IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
+        if ((batch != null && !IsCountdownBatchCandidate(batch, candidate, config.BatchSpawnRadius, WorldTopologyRuntime.GetActiveDomain())) ||
+            IsNearAnyPlayer(candidate, Mathf.Max(config.MinSpawnDistance, config.PlayerVisibilityExclusionDistance)) ||
             IsVisibleByAnyActiveCamera(candidate, 0.15f) ||
-            !IsWithinPlayerPopulationLimit(config, candidate) ||
+            !IsWithinPlayerPopulationLimit(config, candidate, requiredRoom) ||
             !_chunkManager.IsRuntimeEntityPresentationReady(candidate) ||
             !IsRuntimeTerrainReady(candidate) ||
             !(config.WaterOnly ? AquaticHabitat.CanSwimAt(candidate) : IsWalkableSpawnPosition(candidate)) ||
@@ -1064,7 +1079,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return false;
     }
 
-    private bool IsWithinPlayerPopulationLimit(SpawnerConfig config, Vector3 candidate)
+    private bool IsWithinPlayerPopulationLimit(SpawnerConfig config, Vector3 candidate, int requiredRoom = 1)
     {
         if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth)
             return true;
@@ -1084,7 +1099,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 continue;
 
             int nearbyCount = _nearbyGroupCounts[i];
-            if (nearbyCount >= limit)
+            if ((long)nearbyCount + requiredRoom > limit)
                 return false;
         }
 
@@ -1093,7 +1108,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     /// <summary>物种上限同时考虑候选区域的休眠居民，不阻止其它区域建立独立种群。</summary>
     private bool IsWithinLocalSpeciesLimit(
-        SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 candidate)
+        SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 candidate, int requiredRoom = 1)
     {
         if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth || entry.SpeciesAliveLimit <= 0)
             return true;
@@ -1103,7 +1118,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         int nearbyParked = SaveDataMgr.Instance?.CountParkedRuntimeAiSpeciesWithinRadius(
             entry.PrefabName, candidate,
             Mathf.Max(1f, config.PlayerPopulationRadius) * Mathf.Max(1f, config.PlayerPopulationRadius)) ?? 0;
-        return loaded + nearbyParked < limit;
+        return (long)loaded + nearbyParked + requiredRoom <= limit;
     }
 
     private int GetEffectiveGroupLimit(SpawnerConfig config)
@@ -1467,7 +1482,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 state.SpeciesCountdowns.Add(entry.PrefabName, countdown = new SpawnerCountdownProgress());
             countdown.IntervalGameSeconds = GetCountdownInterval(config, entry, timeData.DayLength,
                 GameDifficultyService.Current.World.SpawnFrequencyMultiplier);
-            countdown.PendingCount = Mathf.Max(countdown.PendingCount, config.SpawnCount);
+            if (countdown.PendingCount <= 0)
+                countdown.BeginBatch(DetermineCountdownBatchCount(config,
+                    GameDifficultyService.Current.World.SpawnFrequencyMultiplier, CountdownChanceRoll));
             countdown.RemainingGameSeconds = 0d;
             RefreshCountdownPendingCount(state);
             return;

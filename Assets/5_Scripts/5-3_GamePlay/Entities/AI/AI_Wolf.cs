@@ -383,6 +383,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 #endregion
 
 #region PublicAPI
+	public int PackMemberCount => _packCount;
+	public AI_Wolf PackLeader => _alphaWolf;
+	public Item CurrentThreat => _currentThreat;
 	public bool HasAdvanceCommand => Data?.HasAdvanceCommand == true;
 	public Vector3 AdvanceTargetPosition => Data?.AdvanceTargetPosition ?? transform.position;
 
@@ -753,8 +756,6 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 		int allyCount = 0;
 		Vector3 allyPosSum = Vector3.zero;
-		int alphaPriority = GetInstanceID();
-
 		foreach (Item it in _detector.CurrentItemsInArea)
 		{
 			if (!TryGetWolfAlly(it, out AI_Wolf ally)) continue;
@@ -763,10 +764,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			allyCount++;
 			allyPosSum += ally.transform.position;
 
-			int allyPriority = ally.GetInstanceID();
-			if (allyPriority < alphaPriority)
+			if (CompareChaseFormationMembers(ally, _alphaWolf) < 0)
 			{
-				alphaPriority = allyPriority;
 				_alphaWolf = ally;
 			}
 		}
@@ -1171,7 +1170,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		if (target == null || target == item) return false;
 
 		ally = target.itemMods?.GetMod_ByID<AI_Wolf>(ModText.AI);
-		if (ally == null || ally == this) return false;
+		// 只有已就绪、启用且存活的同伴才能贡献群体人数和响应支援。
+		if (ally == null || ally == this || !ally._isReady || !ally.Enabled || !ally.IsAlive)
+			return false;
 
 		if (FactionRelationService.GetRelation(item, target) != FactionRelation.Friendly)
 			return false;

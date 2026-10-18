@@ -25,6 +25,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。
 - 自然动物 `countdown` 在每条规则的 `SpeciesCountdowns` 中按物种保存剩余时长和待出生数，按游戏时间推进且跨区块不重置；无落点或满员保留当前一轮，完成（含独立概率落空）后重计时，不补离线或累计多轮。原权重折算刷新间隔，仍共用预算和人数限制；出生、显隐、居民装卸三路轮转，避免跑图持续显隐导致出生饥饿。
+- `spawnCountWeights` 可声明每批数量权重（显式数量不随频率缩量）；狼 1/2 只各 5%、3/4 只各 45%，`batchSpawnRadius=3`。首只前预检整批剩余人数/预算，成功后逐帧一只落在同批锚点附近且不重复占格；锚点随进度保存，离开玩家范围/换场景/锚区块卸载才重选，下一批重新选锚。规则 `ai/spawn_batches`。
 - `MonsterSpawnerManager.TrySpawnCreature` 是自然/夜怪、事件、GM/技能/MOD、生物战利品、生产孵化与蜂巢的新出生入口；`AiRuntimeBackendService.TrySpawnDirect` 仅转发给已存在管理器。来源保留时间/落点/预算规则，通用事务检查权威、世界就绪、GUID（含休眠/创建中身份），统一装配、Load、回调后身份/代际复核与失败回收。自然调度关闭不禁用显式出生；ItemMgr 仍是物品/网络副本的底层工厂，不反向依赖生物管理器。
 - `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。后端只通过 `IAiEcologyBackend.TryCreateActor` 接受管理器批准的实际创建，GO 专用初始化回调不能用于 ECS。快照与蜂巢老成员分别走 `TryRestoreCreature/TryRestoreResident`，恢复不消费出生计划/预算、不增加新生统计；同物种保持单一后端。
 - Actor 合并定义的移动/检测/朝向模块须启用；`ModuleData.Enabled` 决定 Load/Tick，`Data.isRunning` 是奔跑。飞行能力 ID 为 `AI_Bird`，`prefab=Mod_AI_Bird` 仅指实现；内容错误码 `FWC-ACTORJSON-004/005` 对应基础模块开关/飞行 ID。
@@ -43,6 +44,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 行为能力与表现
 
+- 狼 `ai` 槽位的能力 ID 必须为 `AI`，`Module_AI_Wolf` 仅为 Prefab 身份；组群、呼叫和编队只接纳已就绪、启用、存活且友好的狼，按持久 Guid 选同一头狼。两只起协同追击，独狼避让、双狼低血撤退规则保留；回归 `ai/wolf_pack` 使用正式定义注册身份后调用真实决策。
 - 单图共用 `Mod_AnimatorController`；鸟、蜂、鱼、幽灵通过 `IActorAnimationMotionSource` 报告主动移动与已有外观高度/倾角，风、水流等被动位移不计迈步。单图模式下旧身体 Animator 与鱼独立游动摇摆让出姿态，Ghost/Fish 的纯控制器不附带 Renderer 或物理组件；目录与窄信号回归见 AI/ItemRuntime 测试说明。
 - 单图死亡由动画模块订阅生命 `DeathStarted`：冻结致死瞬间 Sprite，上抛并翻转 180° 后保持；`deathDuration/deathJumpHeight` 由 Actor 根定义并继承，正式 AI 统一 0.76 秒/0.35 米。生命 `Data.DestroyDelay=1.1` 留出落地停尸时间；死亡/掉落/回收仍归生命模块，动画不自行删物。
 - 尸体保留期间 AI 基类停止行为并取消动物技能，行为图退出当前节点，幽灵停止主动直追；`Mod_Mover_AI` 清主动速度并拒绝普通/温度避险目标，继续原有被动风/水流。新生命经正式 `Load` 恢复 AI；`Mod_Damage` 只依本物品的生命立即关窗，不按 Owner 关闭已发射投射物。

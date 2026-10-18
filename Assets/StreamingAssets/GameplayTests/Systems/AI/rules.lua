@@ -1,3 +1,39 @@
+-- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
+for _, case in ipairs({
+    {name = "四狼互认并响应支援接口", args = {count = 4, callOnly = true}, members = 4, state = "Chase"},
+    {name = "三狼主动追击", args = {count = 3}, members = 3, state = "Chase"},
+    {name = "双狼主动追击", args = {count = 2}, members = 2, state = "Chase"},
+    {name = "独狼保持避让", args = {count = 1}, members = 1, state = "Avoid"},
+    {name = "双狼残血撤退", args = {count = 2, hpRate = .1}, members = 2, state = "Flee"},
+    {name = "三狼残血仍成群作战", args = {count = 3, hpRate = .1}, members = 3, state = "Chase"},
+    {name = "攻击站位内选择攻击", args = {count = 4, playerX = 1.05}, members = 4, state = "Attack", firstOnly = true}
+}) do
+    test.system("ai", "wolf_pack", case.args, function(data)
+        assert(data.declaredId == "AI" and data.prefabId == "Module_AI_Wolf" and data.identityBound,
+            "正式狼将具体Prefab身份误当AI能力，真实注册后同伴查询失败")
+        assert(data.wrongIdRejected, "错误能力ID被默认值掩盖，身份反例无效")
+        for index, members in ipairs(data.packCounts) do
+            assert(members == case.members and data.leaders[index] == 101,
+                "狼群漏认、重复累计成员，或没有选出同一名稳定头狼")
+            assert(data.threats[index] == 200, "狼没有从检测或同伴呼叫获得同一个玩家目标")
+            if not case.firstOnly or index == 1 then
+                assert(data.states[index] == case.state, "狼群人数与正式追击、攻击或避让选择不符")
+            end
+        end
+    end, "狼群协作：" .. case.name)
+end
+for _, exclusion in ipairs({"dead", "disabled", "unready", "foreign"}) do
+    test.system("ai", "wolf_pack", {count = 4, exclude = exclusion, callOnly = true}, function(data)
+        for index = 1, 3 do
+            assert(data.packCounts[index] == 3 and data.leaders[index] == 101,
+                "死亡、禁用、未就绪或敌对阵营的狼被算作有效同伴")
+            assert(data.states[index] == "Chase" and data.threats[index] == 200,
+                "拒绝无效成员时破坏了剩余狼群的共同追击")
+        end
+        assert(data.threats[4] == 0, "无效成员仍收到同伴支援目标")
+    end, "狼群排除无效同伴：" .. exclusion)
+end
+
 -- 所有正式物种都要在最终继承配置中启用单图，新增控制器只提供能力而不额外画身体。
 test.system("ai", "single_sprite_catalog", {}, function(data)
     assert(#data.actors >= 12, "正式 Actor Manifest 缺少已有物种")

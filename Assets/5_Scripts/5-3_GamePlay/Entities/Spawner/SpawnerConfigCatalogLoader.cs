@@ -163,6 +163,7 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException($"生物生成配置 {config.Id} 的 spawnChance 无效：{config.SpawnChance}");
         if (config.SpawnsPerDay < 1 || config.SpawnCount < 1 || config.SpawnSearchRetryCount < 1)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的数量或重试参数无效");
+        ValidateSpawnBatch(config);
         if (!IsFinite(config.MinSpawnDistance) || !IsFinite(config.MaxSpawnDistance) ||
             config.MinSpawnDistance < 0f || config.MaxSpawnDistance < config.MinSpawnDistance)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的生成距离无效");
@@ -226,6 +227,19 @@ public static class SpawnerConfigCatalogLoader
         {
             throw new InvalidDataException($"物种 {entry.PrefabName} 的出生饱食度范围无效");
         }
+    }
+
+    private static void ValidateSpawnBatch(SpawnerConfigDefinition config)
+    {
+        if (config.SpawnCountWeights == null || !IsFinite(config.BatchSpawnRadius) || config.BatchSpawnRadius < 0f)
+            throw new InvalidDataException($"生物生成配置 {config.Id} 的批次数量或半径无效");
+        bool hasBatch = config.SpawnCountWeights.Count > 0 || config.BatchSpawnRadius > 0f;
+        if (hasBatch && !string.Equals(config.ScheduleMode, nameof(SpawnerScheduleMode.Countdown), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"生物生成配置 {config.Id} 的批次扩展仅支持 countdown 调度");
+        var counts = new HashSet<int>();
+        foreach (SpawnerBatchSizeWeight option in config.SpawnCountWeights)
+            if (option == null || option.Count < 1 || !IsFinite(option.Weight) || option.Weight <= 0f || !counts.Add(option.Count))
+                throw new InvalidDataException($"生物生成配置 {config.Id} 的批次数量权重必须为不重复的正数量和正权重");
     }
 
     private static bool IsSupportedScheduleMode(string value)

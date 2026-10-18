@@ -68,3 +68,36 @@ test.system("ai", "creature_request", {}, function(data)
     assert(not data.client and not data.unready, "非权威或世界未就绪仍允许生物出生")
     assert(not data.blank and not data.nan and not data.infinity, "空物种或非有限出生点没有被拒绝")
 end, "统一生物出生入口的权威、就绪与参数边界")
+
+test.system("ai", "spawn_batches", {}, function(data)
+    local sizes = data.distribution
+    assert(data.samples == 200 and sizes[1] == 10 and sizes[2] == 10 and sizes[3] == 90 and sizes[4] == 90,
+        "狼批次数量没有保持1/2只各5%、3/4只各45%的权重")
+    assert(data.zeroSample == 1 and data.oneSample == 4 and data.radius == 3,
+        "批次数量端点或狼同批3格半径配置不正确")
+    for _, count in ipairs(data.multiplierCounts) do
+        assert(count == 4, "难度频率倍率改变了明确配置的实际批次数量")
+    end
+    assert(data.initialBatchCount == 4 and data.initialRequiredRoom == 4 and data.continuingRequiredRoom == 1,
+        "成批出生没有先预留整批数量门槛，再逐只复核")
+    assert(data.blockedPending == 3 and data.chanceRollsAfterWait == 2,
+        "批次等待期间重抽了数量、概率，或额外累计多轮")
+    assert(data.saved.hasAnchor and data.saved.x == 10.5 and data.saved.y == 20.5 and data.saved.scene == "surface"
+        and data.saved.cells == 1 and data.saved.pending == 3, "存档丢失同批落点、已用格或剩余数量")
+    assert(not data.duplicateCell and data.insideRadius and data.exactRadius and not data.outsideRadius,
+        "同批候选允许叠在已用出生格、跑出半径，或拒绝半径边界")
+    assert(data.anchorExactRange and not data.anchorOutOfRange and not data.anchorOtherScene and not data.anchorNoPlayers,
+        "玩家离开或切换场景后继续使用旧批次锚点，或距离边界不正确")
+    assert(not data.nanAnchor and not data.infiniteAnchor and data.reanchorRequiredRoom == 3,
+        "非法锚点没有拒绝，或重选落点时没有按剩余批次预检人数和预算")
+    assert(data.wrappedAnchor and data.wrappedCandidate, "环绕世界接缝拆散了同批落点")
+    assert(not data.completed.hasAnchor and data.completed.cells == 0 and data.completed.pending == 0
+        and data.completed.remaining == data.completed.interval and data.nextBatchCleared,
+        "完成或开始下一批后沿用旧锚点和出生格")
+    assert(#data.invalidConfigurationsRejected == 11, "批次配置拒绝覆盖缺失")
+    for _, rejected in ipairs(data.invalidConfigurationsRejected) do
+        assert(rejected, "批次数量、权重、半径或不支持的调度模式未拒绝")
+    end
+    assert(data.fixedCount == data.fixedExpectedCount and data.fixedCountRolls == 0,
+        "没有配置数量权重的原规则行为或随机数消耗被改动")
+end, "狼成批数量概率、难度倍率、同批落点和保存恢复")

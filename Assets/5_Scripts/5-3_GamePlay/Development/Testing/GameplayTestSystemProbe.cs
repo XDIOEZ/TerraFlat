@@ -24,6 +24,7 @@ public static partial class GameplayTestSystemProbe
         RegisterSwimmingAudioOperations(result);
         RegisterAnimalAudioOperations(result);
         RegisterAiAnimationOperations(result);
+        RegisterWolfPackOperations(result);
         RegisterSpawnCountdownOperations(result);
         RegisterInteractionOperations(result);
         RegisterNavigationOperations(result);

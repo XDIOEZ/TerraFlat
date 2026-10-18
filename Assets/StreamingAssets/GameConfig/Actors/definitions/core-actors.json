@@ -2142,7 +2142,7 @@
         },
         "ai": {
           "prefab": "Module_AI_Wolf",
-          "id": "Module_AI_Wolf",
+          "id": "AI",
           "enabled": true,
           "data": {
             "BitData": [],

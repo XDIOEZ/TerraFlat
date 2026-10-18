@@ -74,7 +74,7 @@ public partial class SpawnerProgressSaveData
     #endregion
 }
 
-/// <summary>每个物种只保留当前倒计时或一轮待出生，不绑定玩家位置和区块。</summary>
+/// <summary>每个物种只保留当前倒计时或一轮待出生，同批落点独立于玩家当前的位置。</summary>
 [MemoryPackable]
 [Serializable]
 public partial class SpawnerCountdownProgress
@@ -85,6 +85,10 @@ public partial class SpawnerCountdownProgress
     public double LastObservedGameSeconds = -1d;
     public double IntervalGameSeconds;
     public int PendingCount;
+    public bool HasBatchAnchor;
+    public float BatchAnchorX, BatchAnchorY;
+    public string BatchAnchorScene;
+    public List<long> BatchSpawnCells = new();
 
     // 只推进在线观察到的游戏时间，等待落点时不累计第二轮。
     public bool Advance(double totalGameSeconds, double intervalGameSeconds)
@@ -107,7 +111,45 @@ public partial class SpawnerCountdownProgress
             throw new ArgumentOutOfRangeException(nameof(intervalGameSeconds));
         PendingCount = 0;
         RemainingGameSeconds = intervalGameSeconds;
+        ClearBatchAnchor();
     }
+
+    // 同批出生只抽一次数量并保留落点，不能因逐帧创建重新抽成散落的单只。
+    public void BeginBatch(int count)
+    {
+        if (count < 1) throw new ArgumentOutOfRangeException(nameof(count));
+        PendingCount = count;
+        RemainingGameSeconds = 0d;
+        ClearBatchAnchor();
+    }
+
+    public void ClearBatchAnchor()
+    {
+        HasBatchAnchor = false;
+        BatchAnchorX = BatchAnchorY = 0f;
+        BatchAnchorScene = null;
+        BatchSpawnCells ??= new();
+        BatchSpawnCells.Clear();
+    }
+
+    public void RecordBatchBirth(float x, float y, string sceneName)
+    {
+        if (float.IsNaN(x) || float.IsInfinity(x) || float.IsNaN(y) || float.IsInfinity(y) ||
+            string.IsNullOrWhiteSpace(sceneName))
+            throw new ArgumentException("批次出生锚点需要有效场景和有限坐标。");
+        if (!HasBatchAnchor)
+        {
+            HasBatchAnchor = true;
+            BatchAnchorX = x;
+            BatchAnchorY = y;
+            BatchAnchorScene = sceneName;
+        }
+        BatchSpawnCells ??= new();
+        BatchSpawnCells.Add(GetBatchSpawnCell(x, y));
+    }
+
+    public static long GetBatchSpawnCell(float x, float y) =>
+        ((long)(int)Math.Floor(x) << 32) | (uint)(int)Math.Floor(y);
 
     public void CompleteAttempt(double intervalGameSeconds)
     {

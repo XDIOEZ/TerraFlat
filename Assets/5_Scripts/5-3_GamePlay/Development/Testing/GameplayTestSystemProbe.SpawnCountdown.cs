@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using FlatWorld.WorldModel;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
@@ -13,6 +14,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterSpawnCountdownOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ai/spawn_countdown", EntitySpawnCountdown);
+        operations.Add("ai/spawn_batches", EntitySpawnBatches);
         operations.Add("ai/creature_request", EntityCreatureRequest);
         operations.Add("ai/tree_habitat_batch", EntityTreeHabitatBatch);
     }
@@ -230,6 +232,116 @@ public static partial class GameplayTestSystemProbe
             ["pending"] = countdown.PendingCount, ["totalPending"] = state.PendingSpawnCount,
             ["replacements"] = state.PendingReplacementCount, ["lifetime"] = state.LifetimeSpawnCount,
             ["budget"] = state.AvailableBudget };
+    }
+
+    // 采正式数量权重、整批容量需求、同批落点和二进制进度，不创建动物或修改当前世界。
+    private static JObject EntitySpawnBatches(JObject args)
+    {
+        SpawnerConfigCatalog catalog = SpawnerConfigCatalogLoader.LoadBuiltIn();
+        SpawnerConfigDefinition definition = catalog.Configs.Find(value => value.Id == "wolf_common_enemy");
+        if (definition == null) throw new InvalidOperationException("缺少正式狼生成规则。");
+        SpawnerConfig config = definition.CreateRuntimeConfig();
+        try
+        {
+            var distribution = new int[4];
+            for (int i = 0; i < 200; i++)
+                distribution[MonsterSpawnerManager.DetermineCountdownBatchCount(config, 1f, () => (i + 0.5f) / 200f) - 1]++;
+            var multiplierCounts = new JArray();
+            foreach (float multiplier in new[] { 0.1f, 0.5f, 1f, 2f, 10f })
+                multiplierCounts.Add(MonsterSpawnerManager.DetermineCountdownBatchCount(config, multiplier, () => 0.75f));
+            var result = new JObject
+            {
+                ["distribution"] = new JArray(distribution), ["samples"] = 200,
+                ["multiplierCounts"] = multiplierCounts, ["radius"] = config.BatchSpawnRadius,
+                ["zeroSample"] = config.DetermineSpawnCount(0f), ["oneSample"] = config.DetermineSpawnCount(1f)
+            };
+
+            SpawnerConfig.SpawnEntry entry = config.SpawnEntries[0];
+            double interval = MonsterSpawnerManager.GetCountdownInterval(config, entry, 1440d, 1f);
+            int rolls = 0;
+            float Roll() { rolls++; return 0.75f; }
+            var state = new SpawnerProgressSaveData();
+            MonsterSpawnerManager.AdvanceCountdownSchedule(config, state, 0d, 1440d, 1f, Roll);
+            MonsterSpawnerManager.AdvanceCountdownSchedule(config, state, interval, 1440d, 1f, Roll);
+            SpawnerCountdownProgress batch = state.SpeciesCountdowns[entry.PrefabName];
+            result["initialBatchCount"] = batch.PendingCount;
+            result["initialRequiredRoom"] = MonsterSpawnerManager.GetCountdownBatchRequiredRoom(batch);
+            batch.RecordBatchBirth(10.5f, 20.5f, "surface");
+            result["continuingRequiredRoom"] = MonsterSpawnerManager.GetCountdownBatchRequiredRoom(batch);
+            MonsterSpawnerManager.CompleteCountdownSpawnAttempt(state, entry, true, 0);
+            MonsterSpawnerManager.AdvanceCountdownSchedule(config, state, interval * 100d, 1440d, 1f, Roll);
+            result["blockedPending"] = batch.PendingCount;
+            result["chanceRollsAfterWait"] = rolls;
+            var restored = MemoryPackSerializer.Deserialize<SpawnerProgressSaveData>(MemoryPackSerializer.Serialize(state));
+            SpawnerCountdownProgress saved = restored.SpeciesCountdowns[entry.PrefabName];
+            result["saved"] = new JObject { ["hasAnchor"] = saved.HasBatchAnchor, ["x"] = saved.BatchAnchorX,
+                ["y"] = saved.BatchAnchorY, ["scene"] = saved.BatchAnchorScene, ["cells"] = saved.BatchSpawnCells.Count,
+                ["pending"] = saved.PendingCount };
+
+            result["duplicateCell"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, new Vector3(10.5f, 20.5f), 3f, default);
+            result["insideRadius"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, new Vector3(12.5f, 21.5f), 3f, default);
+            result["exactRadius"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, new Vector3(13.5f, 20.5f), 3f, default);
+            result["outsideRadius"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, new Vector3(13.6f, 20.5f), 3f, default);
+            var players = new List<Vector3> { new(0.5f, 20.5f) };
+            result["anchorExactRange"] = MonsterSpawnerManager.IsCountdownBatchAnchorUsable(saved, "surface", players, 10f, default);
+            result["anchorOutOfRange"] = MonsterSpawnerManager.IsCountdownBatchAnchorUsable(saved, "surface", players, 9.9f, default);
+            result["anchorOtherScene"] = MonsterSpawnerManager.IsCountdownBatchAnchorUsable(saved, "cave", players, 50f, default);
+            result["anchorNoPlayers"] = MonsterSpawnerManager.IsCountdownBatchAnchorUsable(saved, "surface", Array.Empty<Vector3>(), 50f, default);
+            saved.BatchAnchorX = float.NaN;
+            result["nanAnchor"] = MonsterSpawnerManager.IsCountdownBatchAnchorUsable(saved, "surface", players, 50f, default);
+            saved.BatchAnchorX = float.PositiveInfinity;
+            result["infiniteAnchor"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, Vector3.zero, 3f, default);
+            saved.ClearBatchAnchor();
+            result["reanchorRequiredRoom"] = MonsterSpawnerManager.GetCountdownBatchRequiredRoom(saved);
+            saved.RecordBatchBirth(15.5f, 0.5f, "surface");
+            var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+            result["wrappedAnchor"] = MonsterSpawnerManager.IsCountdownBatchAnchorUsable(saved, "surface",
+                new[] { new Vector3(-15.5f, 0.5f) }, 1f, wrapped);
+            result["wrappedCandidate"] = MonsterSpawnerManager.IsCountdownBatchCandidate(saved, new Vector3(-15.5f, 0.5f), 3f, wrapped);
+            while (state.PendingSpawnCount > 0)
+                MonsterSpawnerManager.CompleteCountdownSpawnAttempt(state, entry, true, 0);
+            result["completed"] = new JObject { ["hasAnchor"] = batch.HasBatchAnchor, ["cells"] = batch.BatchSpawnCells.Count,
+                ["pending"] = batch.PendingCount, ["remaining"] = batch.RemainingGameSeconds, ["interval"] = interval };
+            batch.RecordBatchBirth(-10.5f, -20.5f, "surface");
+            batch.BeginBatch(3);
+            result["nextBatchCleared"] = !batch.HasBatchAnchor && batch.BatchSpawnCells.Count == 0;
+
+            List<SpawnerBatchSizeWeight> validWeights = definition.SpawnCountWeights;
+            float validRadius = definition.BatchSpawnRadius;
+            var rejected = new JArray();
+            var badWeights = new List<SpawnerBatchSizeWeight>[]
+            {
+                null, new() { new() { Count = 0, Weight = 1f } },
+                new() { new() { Count = 3, Weight = 0f } }, new() { new() { Count = 3, Weight = -1f } },
+                new() { new() { Count = 3, Weight = float.NaN } }, new() { new() { Count = 3, Weight = float.PositiveInfinity } },
+                new() { new() { Count = 3, Weight = 1f }, new() { Count = 3, Weight = 1f } }
+            };
+            foreach (List<SpawnerBatchSizeWeight> weights in badWeights)
+            {
+                definition.SpawnCountWeights = weights;
+                try { SpawnerConfigCatalogLoader.Validate(catalog); rejected.Add(false); }
+                catch (InvalidDataException) { rejected.Add(true); }
+            }
+            definition.SpawnCountWeights = validWeights;
+            foreach (float radius in new[] { -1f, float.NaN, float.PositiveInfinity })
+            {
+                definition.BatchSpawnRadius = radius;
+                try { SpawnerConfigCatalogLoader.Validate(catalog); rejected.Add(false); }
+                catch (InvalidDataException) { rejected.Add(true); }
+            }
+            definition.BatchSpawnRadius = validRadius;
+            definition.ScheduleMode = "timedWindows";
+            try { SpawnerConfigCatalogLoader.Validate(catalog); rejected.Add(false); }
+            catch (InvalidDataException) { rejected.Add(true); }
+            result["invalidConfigurationsRejected"] = rejected;
+            config.SpawnCountWeights.Clear();
+            int fixedRolls = 0;
+            result["fixedCount"] = MonsterSpawnerManager.DetermineCountdownBatchCount(config, 2f, () => { fixedRolls++; return 0f; });
+            result["fixedExpectedCount"] = GameDifficultyService.ScaleCount(config.SpawnCount, 2f, 1);
+            result["fixedCountRolls"] = fixedRolls;
+            return result;
+        }
+        finally { UnityEngine.Object.DestroyImmediate(config); }
     }
 
     #endregion

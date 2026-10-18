@@ -28,6 +28,19 @@ public sealed class SpawnerTreeHabitat
     public float SpawnRadius = 3f;
 }
 
+#region 出生批次数量定义
+
+/// <summary>同一轮出生数量的相对权重，未配置时沿用固定数量。</summary>
+[JsonObject(ItemRequired = Required.Always)]
+[Serializable]
+public sealed class SpawnerBatchSizeWeight
+{
+    public int Count;
+    public float Weight;
+}
+
+#endregion
+
 /// <summary>
 /// 生成规则的世界运行时快照；只由已校验的 JSON 定义创建，不作为编辑器资源维护。
 /// </summary>
@@ -195,6 +208,13 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("每次触发生成时生成的怪物数量")]
     public int SpawnCount = 1; // 每次触发生成的怪物数量，默认1
 
+    [LabelText("批次数量权重")]
+    public List<SpawnerBatchSizeWeight> SpawnCountWeights = new();
+
+    [LabelText("同批出生半径"), MinValue(0f)]
+    [Tooltip("仅倒计时规则可用；大于零时整批围绕首个成功出生点生成，零表示独立选点。")]
+    public float BatchSpawnRadius;
+
     [LabelText("总体生成概率")]
     [Tooltip("每天触发时间点发生生成的总体概率（0-1），例如0.8表示80%概率生成")]
     [Range(0f, 1f)]
@@ -284,6 +304,26 @@ public class SpawnerConfig : ScriptableObject
 
 
 #region 辅助方法
+
+    // 显式数量权重描述实际批次大小，难度只改变这类批次的到期频率。
+    public int DetermineSpawnCount(float sample)
+    {
+        if (SpawnCountWeights == null || SpawnCountWeights.Count == 0)
+            return SpawnCount;
+
+        double totalWeight = 0d;
+        foreach (SpawnerBatchSizeWeight option in SpawnCountWeights)
+            totalWeight += option.Weight;
+        double target = Mathf.Clamp01(sample) * totalWeight;
+        double cumulative = 0d;
+        foreach (SpawnerBatchSizeWeight option in SpawnCountWeights)
+        {
+            cumulative += option.Weight;
+            if (target < cumulative)
+                return option.Count;
+        }
+        return SpawnCountWeights[SpawnCountWeights.Count - 1].Count;
+    }
 
     /// <summary>
     /// 根据随机值判断生成的怪物类型
