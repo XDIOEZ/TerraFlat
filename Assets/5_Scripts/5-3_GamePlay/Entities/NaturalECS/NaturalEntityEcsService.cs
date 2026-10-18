@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.AIECS;
 using FlatWorld.Combat;
+using FlatWorld.Diagnostics;
 using FlatWorld.Geometry;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
@@ -54,7 +55,31 @@ namespace FlatWorld.NaturalEntities
         private const float SimulationInterval = 0.25f;
         private static readonly ProfilerMarker FreezeInputsMarker = new("NaturalEntityRuntime.FreezeInputs");
         private static readonly ProfilerMarker FreezeNavigationMarker = new("NaturalEntityRuntime.FreezeNavigation");
-        private static readonly ProfilerMarker FreezeEnvironmentMarker = new("NaturalEntityRuntime.FreezeEnvironment");
+        #region 环境冻结性能诊断
+        // 逐物件只写局部数量，批末汇总；细分计时由 Profiler 读取，不逐物件进入统计锁。
+        private static readonly PerformanceDebugPoint FreezeEnvironmentMarker = new("NaturalEntityRuntime.FreezeEnvironment");
+        private static readonly ProfilerMarker EnvironmentWeatherMarker = new("NaturalEntityRuntime.FreezeEnvironment.Weather");
+        private static readonly ProfilerMarker EnvironmentTemperatureMarker = new("NaturalEntityRuntime.FreezeEnvironment.Temperature");
+        private static readonly ProfilerMarker EnvironmentWriteMarker = new("NaturalEntityRuntime.FreezeEnvironment.WriteInputs");
+        private static readonly PerformanceDebugPoint WeatherSamplesDebug = new("NaturalEntityRuntime.Environment.WeatherSamples");
+        private static readonly PerformanceDebugPoint TemperatureSamplesDebug = new("NaturalEntityRuntime.Environment.TemperatureSamples");
+        private static readonly PerformanceDebugPoint MissingWeatherDebug = new("NaturalEntityRuntime.Environment.MissingWeather");
+        private static readonly PerformanceDebugPoint MissingTemperatureDebug = new("NaturalEntityRuntime.Environment.MissingTemperature");
+        private static readonly PerformanceDebugPoint InputWritesDebug = new("NaturalEntityRuntime.Environment.InputWrites");
+
+        private struct EnvironmentWork
+        {
+            public int WeatherSamples, TemperatureSamples, MissingWeather, MissingTemperature, InputWrites;
+            public void Publish()
+            {
+                WeatherSamplesDebug.AddWork(WeatherSamples);
+                TemperatureSamplesDebug.AddWork(TemperatureSamples);
+                MissingWeatherDebug.AddWork(MissingWeather);
+                MissingTemperatureDebug.AddWork(MissingTemperature);
+                InputWritesDebug.AddWork(InputWrites);
+            }
+        }
+        #endregion
         private static readonly ProfilerMarker FreezeSoilMarker = new("NaturalEntityRuntime.FreezeSoil");
         private static readonly ProfilerMarker PublishMarker = new("NaturalEntityRuntime.Publish");
         private static readonly ProfilerMarker ContactDamageMarker = new("NaturalEntityRuntime.ContactDamage");
@@ -118,14 +143,18 @@ namespace FlatWorld.NaturalEntities
                 }
                 if (environmentInputRecords.Count > 0)
                 {
-                    using (FreezeEnvironmentMarker.Auto())
+                    using (var sample = FreezeEnvironmentMarker.Measure(environmentInputRecords.Count))
                     {
+                        sample.SetGauge(environmentInputRecords.Count);
                         bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
                         TemperatureMgr temperature = TemperatureMgr.Instance;
+                        WeatherMgr weather = WeatherMgr.ExistingInstance;
                         using TemperatureMgr.PointSamplingContext temperatures = temperature != null
                             ? temperature.CreatePointSamplingContext() : default;
+                        EnvironmentWork work = default;
                         foreach (Record record in environmentInputRecords)
-                            FreezeEnvironment(record, hasBounds, bounds, temperatures);
+                            FreezeEnvironment(record, hasBounds, bounds, temperatures, weather, ref work);
+                        work.Publish();
                     }
                 }
                 if (soilInputRecords.Count > 0)
@@ -708,24 +737,40 @@ namespace FlatWorld.NaturalEntities
         /// <summary>局部热源和天气先冻结为纯数值，再交给共享并行能力；不把当前火源用于历史补算。</summary>
         private static void FreezeEnvironment(Record record)
         {
+            using var sample = FreezeEnvironmentMarker.Measure(1);
             bool hasBounds = WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds);
             TemperatureMgr temperature = TemperatureMgr.Instance;
             using TemperatureMgr.PointSamplingContext temperatures = temperature != null
                 ? temperature.CreatePointSamplingContext() : default;
-            FreezeEnvironment(record, hasBounds, bounds, temperatures);
+            EnvironmentWork work = default;
+            FreezeEnvironment(record, hasBounds, bounds, temperatures, WeatherMgr.ExistingInstance, ref work);
+            work.Publish();
         }
 
         private static void FreezeEnvironment(Record record, bool hasBounds, WorldTopologyBounds bounds,
-            TemperatureMgr.PointSamplingContext temperatures)
+            TemperatureMgr.PointSamplingContext temperatures, WeatherMgr weather, ref EnvironmentWork work)
         {
             Vector3 position = record.Snapshot.transform.position;
-            WeatherMgr weather = record.Profile.HasGrowth ? WeatherMgr.ExistingInstance : null;
             RegionalWeatherSnapshot localWeather = default;
-            bool hasWeather = weather != null && weather.TryGetWeatherAt(position, out localWeather);
+            bool hasWeather = false;
+            if (record.Profile.HasGrowth)
+            {
+                using var sample = EnvironmentWeatherMarker.Auto();
+                work.WeatherSamples++;
+                hasWeather = weather != null && weather.TryGetWeatherAt(position, out localWeather);
+                if (!hasWeather) work.MissingWeather++;
+            }
             float ambient = 0f, baseline = 0f;
             // 同一自然物的生长、降水和耐候复用一份地表温度采样。
-            bool hasTemperature = (hasWeather || record.Profile.HasClimate) &&
-                temperatures.TryGetAmbientAndClimateBaseline(position, out ambient, out baseline);
+            bool hasTemperature = false;
+            if (hasWeather || record.Profile.HasClimate)
+            {
+                using var sample = EnvironmentTemperatureMarker.Auto();
+                work.TemperatureSamples++;
+                hasTemperature = temperatures.TryGetAmbientAndClimateBaseline(position, out ambient, out baseline);
+                if (!hasTemperature) work.MissingTemperature++;
+            }
+            using var write = EnvironmentWriteMarker.Auto();
             if (record.Profile.HasGrowth)
             {
                 EntityWeatherInput input = new() { GrowthMultiplier = 1f };
@@ -737,6 +782,7 @@ namespace FlatWorld.NaturalEntities
                         input.RainIntensity, localWeather.CloudCoverage, localWeather.WindStrength);
                 }
                 simulation.Set(record.Handle.Id, input, notifyChanged: false);
+                work.InputWrites++;
             }
             if (!record.Profile.HasClimate ||
                 !simulation.TryGet(record.Handle.Id, out NaturalEntityClimate climate)) return;
@@ -750,6 +796,7 @@ namespace FlatWorld.NaturalEntities
                 climate.EnvironmentReady = 1;
             }
             simulation.Set(record.Handle.Id, climate, notifyChanged: false);
+            work.InputWrites++;
         }
 
         private static void WriteHotState(Record record, ItemData data)

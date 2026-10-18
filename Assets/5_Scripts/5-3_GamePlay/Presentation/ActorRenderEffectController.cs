@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using UnityEngine;
 
 /// <summary>
@@ -27,6 +28,17 @@ public sealed class ActorRenderEffectController : MonoBehaviour
 
     private static readonly int BodyMinVId = Shader.PropertyToID("_BodyMinV");
     private static readonly int BodyMaxVId = Shader.PropertyToID("_BodyMaxV");
+
+    #region 性能诊断
+    // 固定点位只记数字，区分模块更新、空闲跳过和实际 Renderer 提交。
+    private static readonly PerformanceDebugPoint FrameDebug = new("FlatWorld.ActorRender.Frame");
+    private static readonly PerformanceDebugPoint ModulesDebug = new("FlatWorld.ActorRender.UpdateModules");
+    private static readonly PerformanceDebugPoint SubmitDebug = new("FlatWorld.ActorRender.SubmitRenderers");
+    private static readonly PerformanceDebugPoint BindingsDebug = new("FlatWorld.ActorRender.RefreshBindings");
+    private static readonly PerformanceDebugPoint IdleSkipDebug = new("FlatWorld.ActorRender.IdleSkippedFrames");
+    private static readonly PerformanceDebugPoint SpriteSkipDebug = new("FlatWorld.ActorRender.UnchangedSpriteRenderers");
+    private static readonly PerformanceDebugPoint SubmittedDebug = new("FlatWorld.ActorRender.SubmittedRenderers");
+    #endregion
 
     private readonly List<Renderer> renderers = new List<Renderer>();
     private readonly List<Renderer> externalRenderers = new List<Renderer>();
@@ -69,6 +81,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     // 正式更新与独立规则共用合成入口，不推进游戏或更改控制器启停状态。
     internal void RenderFrame(float deltaTime)
     {
+        using var frame = FrameDebug.Measure();
         if (propertyBlock == null)
             propertyBlock = new MaterialPropertyBlock();
 
@@ -77,23 +90,31 @@ public sealed class ActorRenderEffectController : MonoBehaviour
 
         bool applyEffects = renderStateDirty;
         bool trackSpriteBodyRange = false;
-        for (int i = 0; i < modules.Count; i++)
+        using (ModulesDebug.Measure(modules.Count))
         {
-            ActorRenderEffectModule module = modules[i];
-            if (module == null)
-                continue;
-            bool active = module.UpdateFrame(deltaTime);
-            trackSpriteBodyRange |= active && module.RequiresSpriteBodyRange;
-            applyEffects |= moduleVersions[i] != module.RenderStateVersion ||
-                moduleActiveStates[i] != active || active && module.RequiresContinuousRendering;
-            moduleVersions[i] = module.RenderStateVersion;
-            moduleActiveStates[i] = active;
+            for (int i = 0; i < modules.Count; i++)
+            {
+                ActorRenderEffectModule module = modules[i];
+                if (module == null)
+                    continue;
+                bool active = module.UpdateFrame(deltaTime);
+                trackSpriteBodyRange |= active && module.RequiresSpriteBodyRange;
+                applyEffects |= moduleVersions[i] != module.RenderStateVersion ||
+                    moduleActiveStates[i] != active || active && module.RequiresContinuousRendering;
+                moduleVersions[i] = module.RenderStateVersion;
+                moduleActiveStates[i] = active;
+            }
         }
 
         // 覆雪等只使用独立材质通道，状态未变时无需读取每个 Renderer 的 Sprite。
         if (!applyEffects && !trackSpriteBodyRange)
+        {
+            IdleSkipDebug.AddWork(1);
             return;
+        }
 
+        using var submit = SubmitDebug.Measure(renderers.Count);
+        int skipped = 0, submitted = 0;
         for (int i = 0; i < renderers.Count; i++)
         {
             Renderer renderer = renderers[i];
@@ -104,10 +125,14 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             // 静态参数未变化时保留已提交的 MPB，换图和动态效果仍按当前帧刷新。
             if (!applyEffects && submittedSprites.TryGetValue(renderer, out Sprite previousSprite) &&
                 previousSprite == sprite)
+            {
+                skipped++;
                 continue;
+            }
 
             renderer.GetPropertyBlock(propertyBlock);
-            ApplySpriteBodyRange(renderer, propertyBlock);
+            ApplySpriteBodyRange(sprite, propertyBlock);
+            bool isExternalRenderer = externalRenderers.Contains(renderer);
 
             for (int moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
             {
@@ -119,12 +144,15 @@ public sealed class ActorRenderEffectController : MonoBehaviour
                     renderer,
                     propertyBlock,
                     deltaTime,
-                    externalRenderers.Contains(renderer));
+                    isExternalRenderer);
             }
 
             renderer.SetPropertyBlock(propertyBlock);
             submittedSprites[renderer] = sprite;
+            submitted++;
         }
+        SpriteSkipDebug.AddWork(skipped);
+        SubmittedDebug.AddWork(submitted);
         renderStateDirty = false;
     }
 
@@ -150,6 +178,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     /// <summary>重新收集 Renderer 和效果模块，适用于运行时挂载装备或特效后的刷新。</summary>
     public void RefreshBindings()
     {
+        using var sample = BindingsDebug.Measure();
         renderers.Clear();
         modules.Clear();
 
@@ -205,6 +234,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
         submittedSprites.Clear();
         renderStateDirty = true;
         bindingsDirty = false;
+        sample.AddWork(renderers.Count);
     }
 
     /// <summary>为仅驱动外部 Renderer 的临时效果控制器指定共享 Sprite 效果材质。</summary>
@@ -365,12 +395,13 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     #region Sprite Metadata
 
     /// <summary>把当前 Sprite 的本地可见高度同步给 Shader，动画换帧时仍能正确计算水面位置。</summary>
-    private static void ApplySpriteBodyRange(Renderer renderer, MaterialPropertyBlock block)
+    private static void ApplySpriteBodyRange(Sprite sprite, MaterialPropertyBlock block)
     {
-        if (!(renderer is SpriteRenderer spriteRenderer) || spriteRenderer.sprite == null)
+        if (sprite == null)
             return;
 
-        Bounds bounds = spriteRenderer.sprite.bounds;
+        // 当前 Renderer 的 Sprite 只读一次，避免每个模块重复跨原生边界。
+        Bounds bounds = sprite.bounds;
         float minY = bounds.min.y;
         float maxY = Mathf.Max(bounds.max.y, minY + 0.0001f);
         block.SetFloat(BodyMinVId, minY);

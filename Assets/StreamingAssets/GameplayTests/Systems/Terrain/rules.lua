@@ -315,6 +315,33 @@ for _, case in ipairs({
     end, "河湖正式生成的冷暖缓存、独立实例与顺序稳定：" .. case.label)
 end
 
+test.system("terrain", "river_diagnostic_aggregation", {}, function(data)
+    local prefix = "river.local_refine."
+    assert(data.firstCounts[prefix .. "invocations"] == 1 and
+        data.repeatedCounts[prefix .. "invocations"] == 2,
+        "河流细化次数没有跟随同一外层请求累计")
+    for name, count in pairs(data.firstCounts) do
+        if string.sub(name, 1, #prefix) == prefix then
+            if name == prefix .. "output_padding_last" then
+                assert(data.repeatedCounts[name] == count,
+                    "最近输出外圈被误当作累计工作量")
+            else
+                assert(data.repeatedCounts[name] == count * 2,
+                    "重复细化覆盖了前一次请求工作量，或改变了确定性候选：" .. name)
+            end
+        end
+    end
+    for _, suffix in ipairs({"centerline", "render", "channel_fill", "floodplain", "terminal_lakes", "height_compute"}) do
+        local name = prefix .. suffix
+        assert(type(data.firstStages[name]) == "number" and data.firstStages[name] >= 0 and
+            type(data.repeatedStages[name]) == "number" and data.repeatedStages[name] >= 0,
+            "正式河流生成缺少内部诊断阶段：" .. name)
+    end
+    assert(type(data.repeatedStages["river.local_refine"]) == "number" and
+        data.repeatedCounts[prefix .. "region_nodes"] > 0,
+        "父细化计时或真实宏观扫描没有进入诊断")
+end, "河流同请求多次细化累计与最近规模分离")
+
 local harvestCases = {
     {name = "一级普通工具", args = {}, tool = true, rule = true, uses = 6},
     {name = "三级品质提高工作量", args = {tier = 3}, tool = true, rule = true, uses = 3},

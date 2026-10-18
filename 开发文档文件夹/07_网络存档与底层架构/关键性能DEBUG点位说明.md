@@ -94,3 +94,78 @@ Profiler 的 **Total** 包含所有子调用，**Self** 只排除有独立 Marke
 外部 C# 静态编译已通过 Utilities、Navigation、GamePlay、GM Debug、Networking.Gameplay 及相关依赖，检查基线为 `3f2f40dc` 加本轮 45 个路径的诊断增量。仅在临时验证副本中沿用任务开始前已经存在、SHA 未变的 `Mod_AI_Fish.cs` 单行 Func→Predicate 修正，该行不纳入本轮提交。此结果只对应这份独立源码快照；后续基线变动需另行核对。Unity 没有导入、编译或执行 Lua，PlayMode 与上述用户验收边界不变。
 
 实现参考：[Unity 2022.3 ProfilerMarker.Auto](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Unity.Profiling.ProfilerMarker.Auto.html)、[ProfilerMarker.Begin](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Unity.Profiling.ProfilerMarker.Begin.html)、[Stopwatch.GetTimestamp](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.gettimestamp)。
+
+## 7. 2026-10-18 两份导出疑点的后续诊断
+
+本节记录两份性能导出分析之后新增的观察点与小范围修复。前面第 6 节的外部编译结果属于当时的源码快照，**不覆盖本节新增代码**。本次按用户要求只做静态修改，由用户验收；未启动编译、Lua、PlayMode 测试或重新采样，也未操作用户 Unity 的运行/暂停状态。
+
+### 7.1 河流局部细化
+
+此处保留纯 WorldModel 的依赖边界：固定 ProfilerMarker 看线程调用树，数字复用原有 `ChunkGenerationTiming`，不额外引用通用 DEBUG 聚合器。现有主线程 `[ChunkGenSlow]` 输出会遍历全部阶段与计数，因此原有日志导出即可携带这些字段；没有为每格新增日志或作用域。
+
+| 入口 | 含义 |
+| --- | --- |
+| `FlatWorld.Generation.River.LocalRefine` | 当前区块的河流局部细化总段 |
+| `FlatWorld.Generation.River.Centerline` / `river.local_refine.centerline` | 扫描宏观节点、筛选河段并采样中心线 |
+| `FlatWorld.Generation.River.Render` / `river.local_refine.render` | 中心线扩展水格与冲积带的总段 |
+| `river.local_refine.channel_fill` / `river.local_refine.floodplain` | 在原中心点循环中分别累计水格填充、冲积带处理耗时，正常结束后批量写入本区块诊断 |
+| `FlatWorld.Generation.River.TerminalLakes` / `river.local_refine.terminal_lakes` | 终点候选与终点湖处理；关闭终点湖时仍可观察到零候选 |
+| `river.local_refine.height_compute` | 同一局部采样上下文中，高度缓存未命中的真实高度计算累计耗时，是多个子段中的交叉子集 |
+
+`river.local_refine.*` 数字计数单位如下：
+
+| 字段后缀 | 含义 |
+| --- | --- |
+| `invocations` / `region_nodes` / `output_padding_last` | 进入局部细化次数 / 各次扫描的宏观节点累计量 / 最近一次输出外圈宽度（格） |
+| `segments` / `curve_samples` / `accepted_curve_samples` / `unique_centers` | 入选河段 / 计划曲线采样点 / 落入处理范围的曲线采样点 / 去重后的中心格 |
+| `channel_candidates` / `channel_outside_window` / `channel_ocean_rejected` / `channel_merge_attempts` | 通过圆形范围筛选的候选 / 输出窗口外拒绝 / 海面以下拒绝 / 实际合并尝试；最后一项不等于新增唯一水格 |
+| `floodplain_candidates` / `floodplain_merge_attempts` | 通过冲积带圆形范围筛选的候选 / 实际强度合并尝试；可重复覆盖同一格 |
+| `water_cells` / `floodplain_cells` / `terminal_candidates` | 最终唯一河湖格 / 唯一冲积格 / 达到终点流量条件的候选，候选不等于最终成湖数 |
+| `height_cache_hits` / `height_cache_misses` / `bend_cache_hits` / `bend_cache_misses` | 同一局部上下文的高度与河道弯曲场缓存命中、未命中次数 |
+
+数字只在该请求已有 `ChunkGenerationTiming` 时采集；Editor/Development Build 原有请求诊断与 GM 通用统计开关独立，关闭 GM 统计不等于关闭区块日志。没有请求诊断时，新增循环统计不读取 Stopwatch。原有高度未命中计时逻辑保留。
+
+生态宿主邻区查询会在同一外层请求诊断下多次进入细化；父 `river.local_refine`、本节子段和工作量统一累计，`output_padding_last` 只取最后一次。`unique_centers/water_cells/floodplain_cells` 是每次局部去重后的数量之和，**不是整个请求跨邻区去重的世界唯一格数**。`invocations` 在进入时计数，其他计数按相应阶段完成后写入；取消/异常可能留下未完成阶段。`render` 包含 `channel_fill/floodplain`，`height_compute` 又分布在它们和终点湖等处理中，**不可把这些值相加得到总耗时**。后台耗时也不等于主线程阻塞。
+
+下一份导出可据此判断：centerline 高时看宏观节点与曲线样本；floodplain 高时看候选相对唯一冲积格的放大量及 padding；height_compute 高时看未命中数；height_compute 较低而 render 高时，继续看候选覆盖、字典合并与其他实际工作。这里只提供定位线索，不根据单个比例自动认定算法有错。
+
+已做的小优化是终点湖同格高度只读取一次，资格判断与深度计算复用相同缓存值，省去重复归一化和字典读取；另修复诊断归属：同一外层请求的多次细化不再只保留最后一次明细。生成参数、遍历顺序与数值规则均未修改，没有声称已经修复先前 397～1301 ms 的主要耗时。
+
+### 7.2 角色材质效果、覆雪与天然实体环境冻结
+
+| 点位 | 含义与单位 |
+| --- | --- |
+| `FlatWorld.ActorRender.Frame` | 一次效果控制器帧处理，包含绑定刷新、模块推进与可能发生的 Renderer 提交 |
+| `FlatWorld.ActorRender.UpdateModules` | 本次模块推进；work 为模块列表长度，包含覆雪 PrepareFrame 等子调用 |
+| `FlatWorld.ActorRender.SubmitRenderers` / `RefreshBindings` | Renderer 提交遍历 / 绑定刷新；work 为进入该遍历的 Renderer 数 / 刷新后的 Renderer 数 |
+| `FlatWorld.ActorRender.{IdleSkippedFrames,UnchangedSpriteRenderers,SubmittedRenderers}` | 整轮静态跳过次数 / 遍历中 Sprite 未变而跳过的 Renderer 次数 / 实际提交 MPB 的 Renderer 次数；不是唯一对象数 |
+| `FlatWorld.ActorRender.Snow.SampleCoverage` | 实际 GetSnowCoverage 调用与覆雪值提交；work 为真实天气查询次数，移动或 WeatherMgr 不存在时不进入此点 |
+| `FlatWorld.ActorRender.Snow.{CooldownSkips,ExcludedSamples,CoverageChanges}` | 未到采样时刻的跳过 / 身份、持有等资格不符 / 覆雪值实际变化次数 |
+| `NaturalEntityRuntime.FreezeEnvironment` | 天然实体环境输入冻结总段；work 为本次自然物数，gauge 为最近定时批次规模 |
+| `NaturalEntityRuntime.FreezeEnvironment.{Weather,Temperature,WriteInputs}` | 天气读取 / 温度读取 / 纯环境输入写入；仅原生 ProfilerMarker，不逐物件进入通用统计锁 |
+| `NaturalEntityRuntime.Environment.{WeatherSamples,TemperatureSamples}` | 天气、温度读取尝试量；批次内累计后一次发布，不等于成功数 |
+| `NaturalEntityRuntime.Environment.{MissingWeather,MissingTemperature,InputWrites}` | 读取失败量 / 实际输入写入数 |
+
+`Frame` 包含 Modules/Submit/Bindings，Snow 采样属于 Modules；天然实体总段包含 Weather/Temperature/WriteInputs。父子 Total 均不能相加。先用总段、处理规模确认成本，再用子段与真实提交/查询数判断静态跳过是否生效、成本是否来自采样或状态提交。保留原覆雪采样频率和天然实体模拟规则，本次没有重新采样证明收益。
+
+### 7.3 掉落物水态与重复环境检查
+
+| 点位 | 含义与单位 |
+| --- | --- |
+| `DroppedItems.Water.CleanupTerrainWatches` | 观察块清理；work/gauge 为本批地形观察块数 |
+| `DroppedItems.Water.PendingEnvironment` | 环境队列处理；work 为计划出队条数，gauge 为处理前队列长度，旧条目失效时不保证发生实际环境查询 |
+| `DroppedItems.Water.WetBatch` | 已知湿物件处理；work/gauge 为处理开始时的湿物件快照规模，后续可因失效或环境变化跳过 |
+| `DroppedItems.Water.{MovedItems,PendingWetChecksMerged}` | 累计漂流提交次数 / 已有湿物件排队检查合并条数，均不是唯一物件数 |
+| `DroppedItems.Water.{CheckEnvironment,TerrainSample,EntryTransform,ResolveBuoyancy,SampleCurrent,ResolveDestination,CommitDrift}` | 环境检查、地形采样、入水转换、浮沉、流向采样、目的地解析、漂流提交的原生 Profiler 子段；CommitDrift 包含移动后位置的环境复查 |
+
+已知湿物件从排队阶段合并到紧接着的湿物件批次，省去同轮、同位置的重复地形查询；漂流后的环境复查保留。原水态执行间隔、入水、浮沉与流动参数不变。先对比队列、湿物件规模和合并量，再看子段；Pending 的计划数不等于实际 CheckEnvironment 次数。
+
+### 7.4 导出补抓附近尖峰与累计 DEBUG 快照
+
+导出格式升级到 schema 3，原选中帧 `selectedFrameAnalysis/callTrees` 保留。`additionalFrameDetails` 额外保存附近超过 50 ms、按耗时排序最慢的最多 3 帧的帧耗时、完整聚合线程树与读取状态，排除已单独保存的选中帧。帧已从 Profiler 缓冲移出或读取失败时，按状态报告缺口，不能把缺失树理解为没有成本；这也不能补回早先两份旧导出未记录的 218/119 ms 调用树。第一份 EditorLoop 未展开的问题仍依赖实际录制详细度，导出器不会改变录制配置。
+
+`performanceDebugAtExport` 是导出时只读获取的当前 Editor 进程累计 registry 快照，包括当时开关与累计字段；它不是远程 Player 的统计。它不属于选中帧，也不能精确对应其中某一条尖峰；不清空统计、不消费慢事件、不改变开关。统计默认关闭，未提前开启时不能事后补回数字；关闭状态也可能保留之前开启阶段的累计量，既不代表本帧零开销，也不代表一直处于采集状态。
+
+下一轮可先从 F4/GM 的“设备数据 → 性能 DEBUG”打开“性能统计”，需要慢操作时再开“慢操作摘要”；开始一段短复现前点“清空性能统计”，复现后使用原 Profiler 导出入口。导出器会附上当时累计快照，Profiler Marker 则按 Unity 的采样规则进入调用树。暂停或恢复仍由用户操作，本次没有替用户改变状态。
+
+本节新增 `terrain/river_diagnostic_aggregation` Lua 规则：独立 8×8 地形通过公开 BeginRequest/Generate/Capture，两次正式生成共享同一诊断，检查调用与工作量累计、最近输出规模不累计、各内部阶段存在；不以缓存耗时大小作为断言。它与既有 `terrain/cached_generation` 的实际地形确定性断言互补。本次只编写、静态检查，未编译或执行；掉落物与渲染的具体覆盖以各系统规则及本轮交付说明为准。

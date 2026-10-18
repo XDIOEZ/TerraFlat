@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -55,6 +56,68 @@ namespace PuertsUnityMcp.Editor
             if (!analysis.success || analysis.frameCount != 1)
                 throw new InvalidOperationException("选中帧读取失败：" + string.Join("; ", errors));
 
+            var threads = CaptureProfilerSnapshotTrees(frameIndex, warnings);
+            if (threads.Length == 0)
+                throw new InvalidOperationException("选中帧调用树已不可用，请重新选择仍在 Profiler 缓冲中的帧。");
+            int radius = Mathf.Clamp(contextFrameRadius, 0, 300);
+            var context = new List<ProfilerSnapshotFrame>();
+            for (int index = Math.Max(first, frameIndex - radius); index <= Math.Min(last, frameIndex + radius); index++)
+            {
+                var frame = new ProfilerSnapshotFrame { displayFrame = index + 1 };
+                try
+                {
+                    frame.timeMs = ReadFrameTimeMs(index);
+                    frame.available = frame.timeMs > 0d && !double.IsInfinity(frame.timeMs);
+                    frame.status = frame.available ? "captured" : "frame-time-unavailable";
+                }
+                catch (Exception exception)
+                {
+                    frame.status = "read-failed";
+                    frame.error = exception.Message;
+                    warnings.Add("附近帧 " + frame.displayFrame + " 耗时读取失败：" + frame.error);
+                }
+                context.Add(frame);
+            }
+            var additionalFrames = CaptureNearbyHitchTrees(context, frameIndex, warnings);
+            var snapshot = new ProfilerSnapshotReport
+            {
+                snapshotId = snapshotId,
+                capturedAtLocal = capturedAt.ToString("o", CultureInfo.InvariantCulture),
+                capturedAtUtc = capturedAt.UtcDateTime.ToString("o", CultureInfo.InvariantCulture),
+                projectPath = UnityMcpPaths.ProjectRoot,
+                unityVersion = Application.unityVersion,
+                selectedFrameIndex = frameIndex,
+                selectedDisplayFrame = frameIndex + 1,
+                screenshot = screenshotInfo,
+                editorPlayingAtExport = EditorApplication.isPlaying,
+                editorPausedAtExport = EditorApplication.isPaused,
+                deepProfilingAtExport = ProfilerDriver.deepProfiling,
+                profilerTargetAtExport = BuildProfilerTargetListResult(),
+                selectedFrameAnalysis = analysis,
+                nearbyFrames = context.ToArray(),
+                callTrees = threads,
+                additionalFrameDetails = additionalFrames,
+                performanceDebugAtExport = CapturePerformanceDebugAtExport(),
+                warnings = warnings.ToArray()
+            };
+            string root = Path.GetFullPath(outputRoot);
+            string guidePath = Path.Combine(root, Path.GetFileName(snapshot.instructionsFile));
+            if (!File.Exists(guidePath) || File.ReadAllText(guidePath) != analysisGuide)
+                AtomicFile.WriteAllText(guidePath, analysisGuide);
+            string pending = Path.Combine(root, ".pending-" + snapshotId);
+            string destination = Path.Combine(root, snapshotId);
+            Directory.CreateDirectory(pending);
+            AtomicFile.WriteJson(Path.Combine(pending, "profiler-analysis.json"), snapshot);
+            AtomicFile.WriteJson(Path.Combine(pending, "console-logs.json"), console);
+            File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
+            // 共享说明放在根目录，报告只保留 JSON 与整屏截图。
+            Directory.Move(pending, destination);
+            return destination;
+        }
+
+        // 选中帧和附带尖峰共用聚合规则，保留完整线程树而不截断节点。
+        private static ProfilerSnapshotThread[] CaptureProfilerSnapshotTrees(int frameIndex, List<string> warnings)
+        {
             var threads = new List<ProfilerSnapshotThread>();
             for (int threadIndex = 0; ; threadIndex++)
             {
@@ -96,51 +159,153 @@ namespace PuertsUnityMcp.Editor
                 }
             }
 
-            int radius = Mathf.Clamp(contextFrameRadius, 0, 300);
-            var context = new List<ProfilerSnapshotFrame>();
-            for (int index = Math.Max(first, frameIndex - radius); index <= Math.Min(last, frameIndex + radius); index++)
-            {
-                double timeMs = ReadFrameTimeMs(index);
-                context.Add(new ProfilerSnapshotFrame { displayFrame = index + 1, available = timeMs > 0d, timeMs = timeMs });
-            }
-            var snapshot = new ProfilerSnapshotReport
-            {
-                snapshotId = snapshotId,
-                capturedAtLocal = capturedAt.ToString("o", CultureInfo.InvariantCulture),
-                capturedAtUtc = capturedAt.UtcDateTime.ToString("o", CultureInfo.InvariantCulture),
-                projectPath = UnityMcpPaths.ProjectRoot,
-                unityVersion = Application.unityVersion,
-                selectedFrameIndex = frameIndex,
-                selectedDisplayFrame = frameIndex + 1,
-                screenshot = screenshotInfo,
-                editorPlayingAtExport = EditorApplication.isPlaying,
-                editorPausedAtExport = EditorApplication.isPaused,
-                deepProfilingAtExport = ProfilerDriver.deepProfiling,
-                profilerTargetAtExport = BuildProfilerTargetListResult(),
-                selectedFrameAnalysis = analysis,
-                nearbyFrames = context.ToArray(),
-                callTrees = threads.ToArray(),
-                warnings = warnings.ToArray()
-            };
-            string root = Path.GetFullPath(outputRoot);
-            string guidePath = Path.Combine(root, Path.GetFileName(snapshot.instructionsFile));
-            if (!File.Exists(guidePath) || File.ReadAllText(guidePath) != analysisGuide)
-                AtomicFile.WriteAllText(guidePath, analysisGuide);
-            string pending = Path.Combine(root, ".pending-" + snapshotId);
-            string destination = Path.Combine(root, snapshotId);
-            Directory.CreateDirectory(pending);
-            AtomicFile.WriteJson(Path.Combine(pending, "profiler-analysis.json"), snapshot);
-            AtomicFile.WriteJson(Path.Combine(pending, "console-logs.json"), console);
-            File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
-            // 共享说明放在根目录，报告只保留 JSON 与整屏截图。
-            Directory.Move(pending, destination);
-            return destination;
+            // 远端目标继续录制时可能滚动缓冲，不能把只读到部分线程的树标成完整数据。
+            if (threads.Count > 0 && (frameIndex < ProfilerDriver.firstFrameIndex || frameIndex > ProfilerDriver.lastFrameIndex))
+                throw new InvalidOperationException("读取调用树期间帧已离开 Profiler 缓冲。");
+            return threads.ToArray();
         }
+
+        #endregion
+
+        #region 附近尖峰与导出时累计统计
+
+        private static ProfilerSnapshotFrameDetail[] CaptureNearbyHitchTrees(List<ProfilerSnapshotFrame> context,
+            int selectedFrameIndex, List<string> warnings)
+        {
+            var candidates = context.FindAll(frame => frame.available && frame.displayFrame != selectedFrameIndex + 1 &&
+                frame.timeMs > 50d && !double.IsInfinity(frame.timeMs));
+            candidates.Sort((left, right) =>
+            {
+                int order = right.timeMs.CompareTo(left.timeMs);
+                return order != 0 ? order : left.displayFrame.CompareTo(right.displayFrame);
+            });
+            var details = new List<ProfilerSnapshotFrameDetail>(Math.Min(3, candidates.Count));
+            for (int index = 0; index < Math.Min(3, candidates.Count); index++)
+            {
+                ProfilerSnapshotFrame frame = candidates[index];
+                var detail = new ProfilerSnapshotFrameDetail
+                {
+                    displayFrame = frame.displayFrame, timeMs = frame.timeMs,
+                    callTrees = Array.Empty<ProfilerSnapshotThread>()
+                };
+                try
+                {
+                    detail.callTrees = CaptureProfilerSnapshotTrees(frame.displayFrame - 1, warnings);
+                    detail.available = detail.callTrees.Length > 0;
+                    detail.status = detail.available ? "captured" : "frame-no-longer-available";
+                }
+                catch (Exception exception)
+                {
+                    detail.status = "read-failed";
+                    detail.error = exception.Message;
+                    detail.callTrees = Array.Empty<ProfilerSnapshotThread>();
+                }
+                if (!detail.available)
+                    warnings.Add("附近尖峰帧 " + detail.displayFrame + " 无完整调用树：" + detail.status + " " + detail.error);
+                details.Add(detail);
+            }
+            return details.ToArray();
+        }
+
+        // 包保持独立，通过只读反射获取项目快照，不改开关、不清空或消费慢日志。
+        private static ProfilerSnapshotDebugState CapturePerformanceDebugAtExport()
+        {
+            var state = new ProfilerSnapshotDebugState
+            {
+                capturedAtUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                status = "registry-not-loaded", points = Array.Empty<ProfilerSnapshotDebugPoint>()
+            };
+            try
+            {
+                Type registry = null;
+                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    registry = assembly.GetType("FlatWorld.Diagnostics.PerformanceDebugRegistry", false);
+                    if (registry != null) break;
+                }
+                if (registry == null) return state;
+                const BindingFlags flags = BindingFlags.Public | BindingFlags.Static;
+                state.statisticsEnabled = (bool)registry.GetProperty("StatisticsEnabled", flags).GetValue(null);
+                state.slowSummaryEnabled = (bool)registry.GetProperty("SlowSummaryEnabled", flags).GetValue(null);
+                state.slowThresholdMilliseconds = (double)registry.GetProperty("SlowThresholdMilliseconds", flags).GetValue(null);
+                state.hasPendingSlowEvents = (bool)registry.GetProperty("HasPendingSlowEvents", flags).GetValue(null);
+                var snapshots = (Array)registry.GetMethod("CaptureSnapshot", flags).Invoke(null, null);
+                var points = new List<ProfilerSnapshotDebugPoint>(snapshots.Length);
+                foreach (object snapshot in snapshots)
+                {
+                    Type type = snapshot.GetType();
+                    points.Add(new ProfilerSnapshotDebugPoint
+                    {
+                        name = (string)type.GetField("Name").GetValue(snapshot),
+                        calls = (long)type.GetField("Calls").GetValue(snapshot),
+                        work = (long)type.GetField("Work").GetValue(snapshot),
+                        gauge = (long)type.GetField("Gauge").GetValue(snapshot),
+                        peakGauge = (long)type.GetField("PeakGauge").GetValue(snapshot),
+                        hasGauge = (bool)type.GetField("HasGauge").GetValue(snapshot),
+                        totalMilliseconds = (double)type.GetField("TotalMilliseconds").GetValue(snapshot),
+                        maximumMilliseconds = (double)type.GetField("MaximumMilliseconds").GetValue(snapshot)
+                    });
+                }
+                state.points = points.ToArray();
+                state.available = true;
+                state.status = state.statisticsEnabled ? "statistics-enabled" : "statistics-disabled";
+            }
+            catch (Exception exception)
+            {
+                state.status = "capture-failed";
+                state.error = (exception.InnerException ?? exception).Message;
+            }
+            return state;
+        }
+
+        [Serializable]
+        private sealed class ProfilerSnapshotAdditionalFramePolicy
+        {
+            public int maximumAdditionalFrames = 3;
+            public double exclusiveThresholdMs = 50d;
+            public string selection = "nearbyFrames above threshold, descending timeMs then ascending displayFrame; selectedDisplayFrame excluded";
+            public string omission = "Frames below threshold, outside context/buffer, or beyond the maximum have no extra tree; read failures remain explicit entries.";
+        }
+
+        [Serializable]
+        private sealed class ProfilerSnapshotFrameDetail
+        {
+            public int displayFrame;
+            public double timeMs;
+            public bool available;
+            public string status, error;
+            public ProfilerSnapshotThread[] callTrees;
+        }
+
+        [Serializable]
+        private sealed class ProfilerSnapshotDebugState
+        {
+            public bool available, statisticsEnabled, slowSummaryEnabled, hasPendingSlowEvents;
+            public double slowThresholdMilliseconds;
+            public string capturedAtUtc, status, error;
+            public string source = "Editor process project registry; not remote Player data";
+            public string timeScope = "Cumulative completed scopes since last Clear/session reset, during enabled periods; not a recorded Profiler frame";
+            public string disabledMeaning = "Disabled or unavailable is not zero cost. Retained counts may describe earlier enabled periods. Pending slow events are not drained.";
+            public ProfilerSnapshotDebugPoint[] points;
+        }
+
+        [Serializable]
+        private sealed class ProfilerSnapshotDebugPoint
+        {
+            public string name;
+            public long calls, work, gauge, peakGauge;
+            public bool hasGauge;
+            public double totalMilliseconds, maximumMilliseconds;
+        }
+
+        #endregion
+
+        #region 导出数据契约
 
         [Serializable]
         private sealed class ProfilerSnapshotReport
         {
-            public int schemaVersion = 2;
+            public int schemaVersion = 3;
             public string snapshotId, capturedAtLocal, capturedAtUtc, projectPath, unityVersion;
             public string consoleFile = "console-logs.json";
             public string instructionsFile = "../00-READ-ME-FIRST.md";
@@ -151,6 +316,9 @@ namespace PuertsUnityMcp.Editor
             public EditorProfilerAnalysis selectedFrameAnalysis;
             public ProfilerSnapshotFrame[] nearbyFrames;
             public ProfilerSnapshotThread[] callTrees;
+            public ProfilerSnapshotFrameDetail[] additionalFrameDetails;
+            public ProfilerSnapshotAdditionalFramePolicy additionalFramePolicy = new();
+            public ProfilerSnapshotDebugState performanceDebugAtExport;
             public string[] warnings;
             public string[] readingGuide =
             {
@@ -159,7 +327,9 @@ namespace PuertsUnityMcp.Editor
                 "callTrees merge repeated calls with the same parent and name within each thread; parentId=-1 means a root. Node ids are local to each thread.",
                 "totalMs includes children; selfMs excludes direct children. Never add parent and child inclusive time, or thread totals, to estimate frame wall time.",
                 "gcBytesWithChildren includes descendants; do not sum allocations across ancestors. GC bytes require captured GC.Alloc metadata.",
-                "nearbyFrames contain frame time only, not detailed analysis. callTrees contain CPU markers, not GPU timing or a full event timeline.",
+                "callTrees always belong only to selectedDisplayFrame. additionalFrameDetails separately contain up to 3 nearby frames above 50 ms, slowest first, excluding selectedDisplayFrame.",
+                "nearbyFrames contain frame time only. Additional details include full CPU call trees and availability; missing or omitted frames have no inferred cause. CPU trees are not GPU timing or a full event timeline.",
+                "performanceDebugAtExport is a read-only cumulative snapshot of this Editor process at export time, not selected-frame or remote Player statistics. Disabled statistics are not evidence of zero cost; counts may remain from an earlier enabled period.",
                 "Console logs are an export-time snapshot, not proven logs from the selected frame. Cleared logs cannot be recovered.",
                 "screenshot.file is the full Windows desktop at export time; it does not reconstruct the screen from the recorded Profiler frame.",
                 "Target, deep profiling and editor state describe export time; loaded historical captures may have different recording settings. Editor/wait markers are not proof of gameplay cost."
@@ -172,6 +342,7 @@ namespace PuertsUnityMcp.Editor
             public int displayFrame;
             public bool available;
             public double timeMs;
+            public string status, error;
         }
 
         [Serializable]

@@ -213,9 +213,12 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>记录路由访问格数和实际噪声采样次数，便于区分算法规模与单次采样成本。</summary>
-        internal void RecordStageCount(string stage, long count)
+        internal void RecordStageCount(string stage, long count, bool accumulate = false)
         {
-            lock (gate) stageCounts[stage] = count;
+            // 同一请求的邻区地形可多次进入相同阶段，工作量按需累加，观察值默认仍取最后一次。
+            lock (gate)
+                stageCounts[stage] = accumulate && stageCounts.TryGetValue(stage, out long previous)
+                    ? previous + count : count;
         }
 
         internal ChunkGenerationTiming(ChunkStreamingDiagnostics owner, ChunkGenerationRequest request)

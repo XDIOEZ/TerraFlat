@@ -1,12 +1,28 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.DroppedItems;
+using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
+using Unity.Profiling;
 using UnityEngine;
 using static WorldItemWaterRules;
 
 internal sealed partial class DroppedItemRuntime
 {
+    #region 水态诊断与状态
+
+    private static readonly PerformanceDebugPoint WaterCleanupPoint = new("DroppedItems.Water.CleanupTerrainWatches");
+    private static readonly PerformanceDebugPoint WaterPendingPoint = new("DroppedItems.Water.PendingEnvironment");
+    private static readonly PerformanceDebugPoint WaterWetPoint = new("DroppedItems.Water.WetBatch");
+    private static readonly PerformanceDebugPoint WaterMovedPoint = new("DroppedItems.Water.MovedItems");
+    private static readonly PerformanceDebugPoint WaterDeferredWetPoint = new("DroppedItems.Water.PendingWetChecksMerged");
+    private static readonly ProfilerMarker WaterEnvironmentMarker = new("DroppedItems.Water.CheckEnvironment");
+    private static readonly ProfilerMarker WaterTerrainSampleMarker = new("DroppedItems.Water.TerrainSample");
+    private static readonly ProfilerMarker WaterEntryMarker = new("DroppedItems.Water.EntryTransform");
+    private static readonly ProfilerMarker WaterBuoyancyMarker = new("DroppedItems.Water.ResolveBuoyancy");
+    private static readonly ProfilerMarker WaterCurrentMarker = new("DroppedItems.Water.SampleCurrent");
+    private static readonly ProfilerMarker WaterDestinationMarker = new("DroppedItems.Water.ResolveDestination");
+    private static readonly ProfilerMarker WaterCommitMarker = new("DroppedItems.Water.CommitDrift");
     private const float WaterInterval = SettledTickInterval;
     private sealed class TerrainWatch
     {
@@ -23,6 +39,8 @@ internal sealed partial class DroppedItemRuntime
     private readonly List<TerrainWatch> terrainScratch = new();
     private readonly List<int> waterScratch = new();
     private float waterClock;
+
+    #endregion
 
     #region 地形事件与低频调度
 
@@ -79,36 +97,64 @@ internal sealed partial class DroppedItemRuntime
         waterClock += deltaTime;
         if (waterClock < WaterInterval) return;
         float step = waterClock; waterClock = 0f;
-        terrainScratch.Clear(); terrainScratch.AddRange(terrainWatches.Values);
-        foreach (TerrainWatch watch in terrainScratch)
+        using (var cleanup = WaterCleanupPoint.Measure(terrainWatches.Count))
         {
-            if (!watch.Terrain.IsDisposed) continue;
-            foreach (int id in watch.Residents) { QueueEnvironment(id); itemTerrain.Remove(id); }
-            watch.Terrain.Changed -= watch.Handler; terrainWatches.Remove(watch.Terrain);
+            cleanup.SetGauge(terrainWatches.Count);
+            terrainScratch.Clear(); terrainScratch.AddRange(terrainWatches.Values);
+            foreach (TerrainWatch watch in terrainScratch)
+            {
+                if (!watch.Terrain.IsDisposed) continue;
+                foreach (int id in watch.Residents) { QueueEnvironment(id); itemTerrain.Remove(id); }
+                watch.Terrain.Changed -= watch.Handler; terrainWatches.Remove(watch.Terrain);
+            }
         }
         // 未加载地形只排队重试，严格限制每轮成本，绝不触发同步 Chunk 加载。
         int budget = Mathf.Min(256, pendingEnvironment.Count);
-        while (budget-- > 0)
+        using (var pending = WaterPendingPoint.Measure(budget))
         {
-            int id = pendingEnvironment.Dequeue();
-            if (!pendingEnvironmentSet.Remove(id) || !simulation.Contains(id)) continue;
-            CheckEnvironment(id);
+            pending.SetGauge(pendingEnvironment.Count);
+            int mergedWet = 0;
+            while (budget-- > 0)
+            {
+                int id = pendingEnvironment.Dequeue();
+                if (!pendingEnvironmentSet.Remove(id) || !simulation.Contains(id)) continue;
+                // 湿物件紧接着会统一检查，合并本轮同一位置的重复地形查询。
+                if (wetItems.Contains(id)) { mergedWet++; continue; }
+                CheckEnvironment(id);
+            }
+            WaterDeferredWetPoint.AddWork(mergedWet);
         }
-        waterScratch.Clear(); waterScratch.AddRange(wetItems);
-        foreach (int id in waterScratch)
+        using (var wet = WaterWetPoint.Measure(wetItems.Count))
         {
-            if (!simulation.Contains(id)) continue;
-            CheckEnvironment(id);
-            LightweightDroppedBody body = simulation.Get(id);
-            ChunkMgr chunks = ChunkMgr.ExistingInstance;
-            if (body.WaterKind == 0 || chunks == null || !chunks.TryGetRuntimeWaterCurrent(body.Position, out RuntimeWaterCurrentSample current)) continue;
-            float speed = ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
-            if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f) continue;
-            float driftSeconds = Mathf.Min(step, 1f);
-            Vector2 destination = domain.Normalize((Vector2)body.Position + current.Direction * (speed * driftSeconds));
-            if (!WorldItemWaterSystem.TryResolveWaterAt(destination, out bool isWater) || !isWater) continue;
-            presentation.RecordWaterDrift(id, domain.ShortestDelta(body.Position, destination), driftSeconds);
-            body.Position = destination; simulation.Set(body); UpdatePlacement(id); CheckEnvironment(id);
+            wet.SetGauge(wetItems.Count);
+            int moved = 0;
+            waterScratch.Clear(); waterScratch.AddRange(wetItems);
+            foreach (int id in waterScratch)
+            {
+                if (!simulation.Contains(id)) continue;
+                CheckEnvironment(id);
+                LightweightDroppedBody body = simulation.Get(id);
+                ChunkMgr chunks = ChunkMgr.ExistingInstance;
+                RuntimeWaterCurrentSample current;
+                using (WaterCurrentMarker.Auto())
+                    if (body.WaterKind == 0 || chunks == null || !chunks.TryGetRuntimeWaterCurrent(body.Position, out current)) continue;
+                float speed = ResolveDriftSpeed(current.Kind, current.Flow, payloads[id].Stack);
+                if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f) continue;
+                float driftSeconds = Mathf.Min(step, 1f);
+                Vector2 destination;
+                using (WaterDestinationMarker.Auto())
+                {
+                    destination = domain.Normalize((Vector2)body.Position + current.Direction * (speed * driftSeconds));
+                    if (!WorldItemWaterSystem.TryResolveWaterAt(destination, out bool isWater) || !isWater) continue;
+                }
+                using (WaterCommitMarker.Auto())
+                {
+                    presentation.RecordWaterDrift(id, domain.ShortestDelta(body.Position, destination), driftSeconds);
+                    body.Position = destination; simulation.Set(body); UpdatePlacement(id); CheckEnvironment(id);
+                    moved++;
+                }
+            }
+            WaterMovedPoint.AddWork(moved);
         }
     }
 
@@ -118,13 +164,22 @@ internal sealed partial class DroppedItemRuntime
 
     private void CheckEnvironment(int id)
     {
+        using (WaterEnvironmentMarker.Auto()) CheckEnvironmentCore(id);
+    }
+
+    private void CheckEnvironmentCore(int id)
+    {
         if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) return;
         LightweightDroppedBody body = simulation.Get(id);
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
-        if (chunks == null || !chunks.TryGetRuntimeTerrainTile(body.Position, out RuntimeTerrainTileSample sample))
+        RuntimeTerrainTileSample sample;
+        using (WaterTerrainSampleMarker.Auto())
         {
-            QueueEnvironment(id);
-            return;
+            if (chunks == null || !chunks.TryGetRuntimeTerrainTile(body.Position, out sample))
+            {
+                QueueEnvironment(id);
+                return;
+            }
         }
         WatchTerrain(id, sample);
         bool changed = body.Pickable == 0;
@@ -144,12 +199,16 @@ internal sealed partial class DroppedItemRuntime
         bool entering = body.WaterKind == 0;
         if (entering)
         {
-            try { TransformOnWaterEntry(id, ref body); }
+            try { using (WaterEntryMarker.Auto()) TransformOnWaterEntry(id, ref body); }
             catch (Exception exception) { Debug.LogError($"[DroppedItems] 入水转换失败，原物品已保留：{exception}"); }
         }
         ItemData data = payloads[id];
-        float ratio = ResolveWeightVolumeRatio(data.Stack);
-        float threshold = ResolveSinkRatioThreshold((Vector2)body.Position);
+        float ratio, threshold;
+        using (WaterBuoyancyMarker.Auto())
+        {
+            ratio = ResolveWeightVolumeRatio(data.Stack);
+            threshold = ResolveSinkRatioThreshold((Vector2)body.Position);
+        }
         byte kind = (byte)(ShouldSink(ratio, threshold) ? 2 : 1);
         float target = kind == 1 ? ResolveFloatingDepth(ratio) : 1f;
         if (entering || body.WaterKind != kind)

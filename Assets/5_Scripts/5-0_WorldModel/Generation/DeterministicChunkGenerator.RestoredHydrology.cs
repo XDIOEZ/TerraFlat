@@ -98,11 +98,14 @@ namespace FlatWorld.WorldModel
                     continue;
                 foreach (Int2 lakePosition in basin)
                 {
-                    if (!outputWindow.Contains(lakePosition) ||
-                        sampling.Height(lakePosition) <= settings.SeaLevel)
+                    if (!outputWindow.Contains(lakePosition))
+                        continue;
+                    // 同一格高度只取一次，资格与深度计算复用相同缓存值。
+                    double height = sampling.Height(lakePosition);
+                    if (height <= settings.SeaLevel)
                         continue;
                     double depthT = Clamp01((sinkHeight + settings.RiverMaxLakeLevelRise -
-                                             sampling.Height(lakePosition)) /
+                                             height) /
                                             settings.RiverMaxLakeLevelRise);
                     SetRiverCell(riverCells, lakePosition, new GeneratedHydrologyCell(
                         GeneratedHydrologyKind.Lake,

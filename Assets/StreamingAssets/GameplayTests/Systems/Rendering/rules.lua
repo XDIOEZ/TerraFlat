@@ -452,4 +452,8 @@ test.system("rendering", "effect_composition", {}, function(data)
     assert(math.abs(data.snowDisabledMin + 4) < 0.0001, "效果启停后没有重新提交材质参数")
     assert(math.abs(data.waterFirstMin) < 0.0001 and math.abs(data.waterChangedMin + 4) < 0.0001,
         "水体效果的身体高度未跟随Sprite换图")
+    assert(data.diagnosticFrames == 6 and data.diagnosticIdleFrames == 1,
+        "渲染诊断未记录真实帧数和整轮空闲跳过")
+    assert(data.diagnosticSubmitted == 4 and data.diagnosticSpriteSkipped == 1,
+        "渲染诊断未区分MPB提交与同图跳过")
 end, "静态覆雪免重传、效果启停与水线换图合成")

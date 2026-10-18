@@ -32,6 +32,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - HLSL 参数和局部变量避开 `point/line/triangle` 等保留关键字；命名冲突可导致语法错误和后续标识符未声明的连带报错，共享代码需统一改名。
 - 角色 Shader 参数经统一 MPB 控制器合成；静态效果 RequiresContinuousRendering=false 并按变化 MarkRenderStateDirty。换图、重新绑定与启停仍更新；动态外部 Renderer 创建后单独注册，销毁前注销。
 - `RequiresSpriteBodyRange` 默认开启；只写覆雪等独立通道的模块可关闭，状态未变时整轮跳过 Renderer/Sprite 访问。水线保持换图跟踪，新增模块按实际 Shader 输入选择，不能全局关闭身体高度更新。
+- 渲染性能诊断用 `FlatWorld.ActorRender.Frame/UpdateModules/SubmitRenderers/RefreshBindings`，均为包含式耗时；Frame.work 未声明，Modules/Submit.work 分别为输入模块/Renderer 数，Bindings.work 为收集后的 Renderer 数。`IdleSkippedFrames/UnchangedSpriteRenderers/SubmittedRenderers` 分别累计整轮跳过、换图未变跳过和真实 MPB 提交数；`Snow.SampleCoverage.work` 是真正环境采样次数，CooldownSkips/ExcludedSamples/CoverageChanges 分别为冷却跳过、无 Owner 或手持排除、值变化次数。每 Renderer 共用一次 Sprite 与外部归属读取，不改原 0.5 秒采样规则。Profiler 点始终可见，GM“性能 DEBUG”统计开启才累计数量，慢摘要另行开启；这些数不代表实际提速或画面验收。
 - 舱内供气器由 `ShipPieceView.AirSupply` 读取实际实供功率，仅重染原图左上 `(26,11,12,3)` 的灯玻璃：通电保留绿蓝原色，断电为暗灰，红色由显式故障表现接口预留，未定义自动触发。`Sprite-Lit-Master` 的 `_DeviceIndicatorRect/_DeviceIndicatorTint` 共用于光照与回退 Pass，Tint Alpha 默认零，写 MPB 前保留其它通道。
 - 代理同步源贴图、分离 Alpha、UV 边界、裁剪与 MPB；Universal2D/NormalsRendering/回退 Pass 共用坐标和阈值。URP 2D Lit Shader 实际采样 Shape Light，标签本身不提供光照。SpriteRenderer 与 MeshRenderer 分节点，共同根负责生命周期。
 - 动态世界图标复用 RuntimeItemDefinition.Material/外壳回退。全局 Shader 参数置于全局声明，与材质 Properties 分离，避免材质默认值遮蔽。
@@ -100,7 +101,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## 编辑器与调试工具
 
-- 顶栏「性能 JSON」/菜单 `FlatWorld/性能分析/导出选中帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调用 PuerTS `UnityMcpProfilerSnapshot`，复用 `editor.profiler.analyze`。输出 `Assets/67_ProfileData/<时间_frame-帧号_编号>/` 的 `profiler-analysis.json`、`console-logs.json` 与 `screen.png`，全部落盘后发布正式目录；共享的 `00-READ-ME-FIRST.md` 只放在 `67_ProfileData` 根目录，`instructionsFile` 使用 `../` 引用，忽略 `.pending-*`。AI 先读 MD 按字段筛热点再展开调用树；模板为 PuerTS 包根 `ProfilerAnalysisGuide.md`，修改导出结构时同步维护。选中帧 Top 100、完整线程聚合树与附近帧耗时和导出时日志/全桌面截图分清时间归属；不改 Play/Pause、录制目标/开关，不主动刷新资源。
+- 顶栏「性能 JSON」/菜单 `FlatWorld/性能分析/导出选中帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调用 PuerTS `UnityMcpProfilerSnapshot`，复用 `editor.profiler.analyze`。输出 `Assets/67_ProfileData/<时间_frame-帧号_编号>/` 的 `profiler-analysis.json`、`console-logs.json` 与 `screen.png`，全部落盘后发布正式目录；共享的 `00-READ-ME-FIRST.md` 只放在 `67_ProfileData` 根目录，`instructionsFile` 使用 `../` 引用，忽略 `.pending-*`。AI 先读 MD 按字段筛热点再展开调用树；模板为 PuerTS 包根 `ProfilerAnalysisGuide.md`，修改导出结构时同步维护。schema 3 保留选中帧 Top 100、完整线程聚合树与附近帧耗时，额外保存超过 50ms 的最慢最多 3 帧完整树及导出时 Registry 累计快照；计数需先在 GM 开启性能统计。累计快照、日志/全桌面截图与 Profiler 帧分清时间归属；不改 Play/Pause、录制目标/开关，不主动刷新资源。
 
 - 关键性能点共用 Utilities 的 `PerformanceDebugPoint/Registry`；统计与慢摘要默认关闭，在 GM「设备数据」按需开启、设阈值、输出/清空。固定 Marker、struct 作用域不跨 yield，后台只记有界数字并由主线程合并日志；点位单位及 Total/Self、冷暖路径边界见 [关键性能DEBUG点位说明](../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。
 

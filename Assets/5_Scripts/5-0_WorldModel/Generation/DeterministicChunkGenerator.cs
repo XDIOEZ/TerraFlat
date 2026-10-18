@@ -1146,7 +1146,9 @@ namespace FlatWorld.WorldModel
                 cancellationToken, timing);
             if (!isBiomeSearchGenerator)
                 QueueNeighbourHydrologyPrewarm(request, settings, ResolveHeightDrivenRegion(request, settings));
-            using (timing?.MeasureStage("river.local_refine") ?? default)
+            // 邻区宿主查询复用外层请求诊断，父子细化阶段统一累计而非互相覆盖。
+            using ((timing ?? ChunkGenerationTiming.CurrentOnThread)?.MeasureStage(
+                       "river.local_refine", accumulate: true) ?? default)
                 return BuildMacroRiverChunk(request, settings, macro, cancellationToken);
         }
 
@@ -1372,7 +1374,10 @@ namespace FlatWorld.WorldModel
             Int2 center,
             double flow,
             int channelRadius,
-            Dictionary<Int2, double> floodplainCells)
+            Dictionary<Int2, double> floodplainCells,
+            bool measureCandidates,
+            ref long candidates,
+            ref long mergeAttempts)
         {
             if (settings.RiverFloodplainMaxRadius <= channelRadius ||
                 flow < settings.RiverFloodplainStartFlow)
@@ -1406,6 +1411,7 @@ namespace FlatWorld.WorldModel
                     double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
                     if (distance > radius + 0.25d)
                         continue;
+                    if (measureCandidates) candidates++;
 
                     Int2 position = sampling.Normalize(new Int2(
                         center.X + offsetX,
@@ -1417,6 +1423,7 @@ namespace FlatWorld.WorldModel
                     }
 
                     double edgeStrength = 1d - Clamp01(distance / (radius + 0.75d));
+                    if (measureCandidates) mergeAttempts++;
                     SetFloodplainStrength(
                         floodplainCells,
                         position,
@@ -1629,6 +1636,9 @@ namespace FlatWorld.WorldModel
             /// <summary>仅统计缓存未命中时的真实高度计算。</summary>
             public long HeightComputeTicks { get; private set; }
             public long HeightMissCount { get; private set; }
+            public long HeightHitCount { get; private set; }
+            public long ChannelCenterBiasHitCount { get; private set; }
+            public long ChannelCenterBiasMissCount { get; private set; }
 
             /// <summary>创建一次水文采样上下文，并准备各类采样缓存。</summary>
             public HydrologySamplingContext(
@@ -1666,6 +1676,7 @@ namespace FlatWorld.WorldModel
                         HeightMissCount++;
                     }
                 }
+                else if (measureSampling) HeightHitCount++;
                 return value;
             }
 
@@ -1690,7 +1701,11 @@ namespace FlatWorld.WorldModel
             {
                 position = Normalize(position);
                 if (channelCenterBiasCache.TryGetValue(position, out double value))
+                {
+                    if (measureSampling) ChannelCenterBiasHitCount++;
                     return value;
+                }
+                if (measureSampling) ChannelCenterBiasMissCount++;
 
                 double scale = Math.Max(7d, Settings.RiverMeanderScale * 0.28d);
                 double broad = Fractal(

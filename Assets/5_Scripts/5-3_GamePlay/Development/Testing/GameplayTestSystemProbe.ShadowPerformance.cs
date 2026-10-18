@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -24,6 +25,7 @@ public static partial class GameplayTestSystemProbe
         var texture = new Texture2D(4, 4);
         Sprite first = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0f), 1f);
         Sprite second = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 1f), 1f);
+        bool statisticsEnabled = PerformanceDebugRegistry.StatisticsEnabled;
         try
         {
             var renderer = root.AddComponent<SpriteRenderer>();
@@ -31,6 +33,11 @@ public static partial class GameplayTestSystemProbe
             var snow = root.AddComponent<SeasonalSnowRenderEffect>();
             var controller = root.AddComponent<ActorRenderEffectController>();
             root.SetActive(true);
+            PerformanceDebugRegistry.SetStatisticsEnabled(true);
+            long framesBefore = ReadRenderDiagnostic("FlatWorld.ActorRender.Frame", true);
+            long idleBefore = ReadRenderDiagnostic("FlatWorld.ActorRender.IdleSkippedFrames", false);
+            long submittedBefore = ReadRenderDiagnostic("FlatWorld.ActorRender.SubmittedRenderers", false);
+            long spriteSkippedBefore = ReadRenderDiagnostic("FlatWorld.ActorRender.UnchangedSpriteRenderers", false);
             controller.RenderFrame(0f);
             int bodyMinId = Shader.PropertyToID("_BodyMinV");
             var block = new MaterialPropertyBlock();
@@ -54,19 +61,34 @@ public static partial class GameplayTestSystemProbe
             renderer.sprite = second;
             controller.RenderFrame(0f);
             renderer.GetPropertyBlock(block);
+            float waterChangedMin = block.GetFloat(bodyMinId);
+            controller.RenderFrame(0f);
             return new JObject
             {
                 ["snowIdleMin"] = snowIdleMin, ["snowDisabledMin"] = snowDisabledMin,
-                ["waterFirstMin"] = waterFirstMin, ["waterChangedMin"] = block.GetFloat(bodyMinId)
+                ["waterFirstMin"] = waterFirstMin, ["waterChangedMin"] = waterChangedMin,
+                ["diagnosticFrames"] = ReadRenderDiagnostic("FlatWorld.ActorRender.Frame", true) - framesBefore,
+                ["diagnosticIdleFrames"] = ReadRenderDiagnostic("FlatWorld.ActorRender.IdleSkippedFrames", false) - idleBefore,
+                ["diagnosticSubmitted"] = ReadRenderDiagnostic("FlatWorld.ActorRender.SubmittedRenderers", false) - submittedBefore,
+                ["diagnosticSpriteSkipped"] = ReadRenderDiagnostic("FlatWorld.ActorRender.UnchangedSpriteRenderers", false) - spriteSkippedBefore
             };
         }
         finally
         {
+            PerformanceDebugRegistry.SetStatisticsEnabled(statisticsEnabled);
             UnityEngine.Object.DestroyImmediate(root);
             UnityEngine.Object.DestroyImmediate(first);
             UnityEngine.Object.DestroyImmediate(second);
             UnityEngine.Object.DestroyImmediate(texture);
         }
+    }
+
+    // 只读正式诊断快照，Lua 据实际提交和跳过数量判断点位有没有失真。
+    private static long ReadRenderDiagnostic(string name, bool calls)
+    {
+        foreach (PerformanceDebugRegistry.Snapshot point in PerformanceDebugRegistry.CaptureSnapshot())
+            if (point.Name == name) return calls ? point.Calls : point.Work;
+        throw new InvalidOperationException("渲染性能点没有登记：" + name);
     }
 
     // 独立禁用物品只采正式能力查询，模块结构与动态属性均不复制生产判断。

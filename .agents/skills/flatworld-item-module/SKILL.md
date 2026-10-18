@@ -78,5 +78,6 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 原生 AI 使用完整 Item。`entityRuntime: resource` 的树、矿点、作物按组合冷编译到共享 `WorldEntityRuntime`，不创建资源 Item 或运行 Module Tick；通用配置集合采用 Replace。能力扩展由 `ResourceEntityCapabilityRegistry` 注册，DLL 状态使用 context.SetState/GetState。
 - 自然实体独立维护导航、空间交互与接触几何，命中经 `GameplayCombatBridge`。植物生命周期只由 `EntityPlantModuleSystem` 推进；区块解绑保存释放，死亡/一次收获才删来源。终端解绑转交快照所有权，仍运行的快照才克隆；句柄包含 World 代际。
 - `NaturalEntityEcsService` 为天气/耐候、已种植土壤和导航占地维护独立输入索引，注册、卸载、恢复和配置刷新时增量更新；Profiler `NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil` 分别记录耗时。
+- `NaturalEntityRuntime.FreezeEnvironment` 性能摘要的 work 是输入自然物数，gauge 为最近定时批次的输入规模；Profiler 子段 `.Weather/.Temperature/.WriteInputs` 定位天气查询、温度采样和 ECS 写入（仅 Profiler 细分，不进入摘要计时）。`NaturalEntityRuntime.Environment.WeatherSamples/TemperatureSamples/MissingWeather/MissingTemperature/InputWrites` 按批累计查询尝试、缺失样本与实际组件写次数；GM“性能 DEBUG”统计开启才累计数量，慢摘要另行开启，Profiler 点始终可见。查询失败保留正式回退规则，同批只冻结服务引用，每件天气和温度仍实时读取。
 - `FreezeEnvironment` 的一批资源共享 `TemperatureMgr.PointSamplingContext`，目标区块的相邻热源输入只准备一次；同步作用域结束即释放引用，原 0.25 秒间隔和距离规则保持不变。
 - 自然资源表现按 Dirty/Event 更新，几何版本与外观版本独立；TreeSortingVisual 用根镜像 SortingGroup 与玩家混排，主体不重复 BRG。客户端不推进权威植物 Job，采集命令/增量同步有独立接入点。旧 `DroppedItems/Core` ECS 实现仅为 Editor 学习参考。

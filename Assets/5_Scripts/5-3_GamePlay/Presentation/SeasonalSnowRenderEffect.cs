@@ -1,3 +1,4 @@
+using FlatWorld.Diagnostics;
 using UnityEngine;
 
 /// <summary>静止世界物件的雪顶材质通道，复用统一 MPB 控制器，移动、拿起、回池和退出世界时撤销。</summary>
@@ -5,6 +6,11 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
 {
     #region 覆雪状态与生命周期
     private static readonly int CoverageId = Shader.PropertyToID("_SnowCoverage");
+    // 只给真正的环境采样计时，空闲跳过与覆盖变化独立计数。
+    private static readonly PerformanceDebugPoint SampleDebug = new("FlatWorld.ActorRender.Snow.SampleCoverage");
+    private static readonly PerformanceDebugPoint CooldownDebug = new("FlatWorld.ActorRender.Snow.CooldownSkips");
+    private static readonly PerformanceDebugPoint ExcludedDebug = new("FlatWorld.ActorRender.Snow.ExcludedSamples");
+    private static readonly PerformanceDebugPoint ChangedDebug = new("FlatWorld.ActorRender.Snow.CoverageChanges");
     private Item owner; // 物件身份和手持状态。
     private Vector3 lastPosition; // 排除移动中的物体。
     private float coverage; // 当前覆雪强度。
@@ -34,20 +40,28 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
     /// <summary>只让静止且无移动能力的世界物件积雪，不把雪刷到动物或背包物件上。</summary>
     protected override void PrepareFrame(float deltaTime)
     {
-        if (owner == null || owner.InHand || owner.Owner != null) { SetCoverage(0f); return; }
-        if (Time.unscaledTime < nextSample) return;
+        if (owner == null || owner.InHand || owner.Owner != null)
+        {
+            ExcludedDebug.AddWork(1);
+            SetCoverage(0f);
+            return;
+        }
+        if (Time.unscaledTime < nextSample) { CooldownDebug.AddWork(1); return; }
         nextSample = Time.unscaledTime + 0.5f;
         Vector3 position = transform.position;
         bool moved = (position - lastPosition).sqrMagnitude > 0.0001f;
         lastPosition = position;
         WeatherMgr weather = WeatherMgr.ExistingInstance;
-        SetCoverage(moved || weather == null ? 0f : Mathf.Clamp01(weather.GetSnowCoverage(position)));
+        if (moved || weather == null) { SetCoverage(0f); return; }
+        using var sample = SampleDebug.Measure(1);
+        SetCoverage(Mathf.Clamp01(weather.GetSnowCoverage(position)));
     }
     /// <summary>覆雪值变化时才要求控制器提交材质参数。</summary>
     private void SetCoverage(float value)
     {
         if (coverage == value) return;
         coverage = value;
+        ChangedDebug.AddWork(1);
         MarkRenderStateDirty();
     }
     /// <summary>雪只影响自身表面，不扩展到外部手持物。</summary>

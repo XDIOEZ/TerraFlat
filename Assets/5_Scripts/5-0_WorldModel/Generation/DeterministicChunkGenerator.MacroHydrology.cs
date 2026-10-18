@@ -1,17 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Unity.Mathematics;
+using Unity.Profiling;
 
 namespace FlatWorld.WorldModel
 {
     public sealed partial class DeterministicChunkGenerator
     {
         #region Chunk 水文走廊细化
+
+        private static readonly ProfilerMarker RiverLocalRefineMarker = new("FlatWorld.Generation.River.LocalRefine");
+        private static readonly ProfilerMarker RiverCenterlineMarker = new("FlatWorld.Generation.River.Centerline");
+        private static readonly ProfilerMarker RiverRenderMarker = new("FlatWorld.Generation.River.Render");
+        private static readonly ProfilerMarker RiverTerminalLakesMarker = new("FlatWorld.Generation.River.TerminalLakes");
+
         private static GeneratedHydrologyMap BuildMacroRiverChunk(
             ChunkGenerationRequest request, ChunkGenerationSettingsSnapshot settings,
             MacroHydrologyRegion region, CancellationToken cancellationToken)
         {
+            using var refineScope = RiverLocalRefineMarker.Auto();
+            ChunkGenerationTiming timing = ChunkGenerationTiming.CurrentOnThread;
+            timing?.RecordStageCount("river.local_refine.invocations", 1, accumulate: true);
             var sampling = new HydrologySamplingContext(request, settings);
             var centers = new Dictionary<Int2, ChannelCenterSample>();
             var outputWindow = new HydrologyOutputWindow(request);
@@ -25,115 +36,145 @@ namespace FlatWorld.WorldModel
             int chunkCenterY = request.Address.ChunkOrigin.Y + request.Profile.Height / 2;
             int[] primaryUpstream = region.PrimaryUpstream;
             WorldTopologyDomain domain = request.Topology.ToDomain();
+            long segments = 0, curveSamples = 0, acceptedCurveSamples = 0;
 
-            for (int i = 0; i < region.Count; i++)
+            using (RiverCenterlineMarker.Auto())
+            using (timing?.MeasureStage("river.local_refine.centerline", accumulate: true) ?? default)
             {
-                if ((i & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
-                if (!region.Visible[i] || region.Downstream[i] < 0) continue;
-                int next = region.Downstream[i];
-                Int2 source = ChannelPosition(region, i);
-                Int2 target = ChannelPosition(region, next);
-                int sourceX = ShiftNearChunk(source.X, chunkCenterX,
-                    request.Topology.IsWrapped ? request.Topology.Span.X : 0);
-                int sourceY = ShiftNearChunk(source.Y, chunkCenterY,
-                    request.Topology.IsWrapped ? request.Topology.Span.Y : 0);
-                int2 delta = domain.ShortestDelta(
-                    new int2(source.X, source.Y), new int2(target.X, target.Y));
-                double endX = sourceX + delta.x;
-                double endY = sourceY + delta.y;
-                if (Math.Max(sourceX, endX) < minX || Math.Min(sourceX, endX) > maxX ||
-                    Math.Max(sourceY, endY) < minY || Math.Min(sourceY, endY) > maxY)
-                    continue;
-
-                double length = Math.Sqrt(delta.x * (double)delta.x + delta.y * (double)delta.y);
-                if (length <= 0.000001d) continue;
-                ResolveChannelTangents(request, region, primaryUpstream, i, next,
-                    delta.x, delta.y, length, out double startTangentX,
-                    out double startTangentY, out double endTangentX,
-                    out double endTangentY);
-                double normalX = -delta.y / length;
-                double normalY = delta.x / length;
-                double amplitude = Math.Min(length * 0.28d,
-                    Math.Min(settings.RiverMeanderScale * 0.42d,
-                        Math.Max(3d, settings.RiverMaxWidth * 2.7d))) *
-                    settings.RiverMeanderStrength;
-                double bendA = SampleChannelBend(sampling, source.X, source.Y,
-                    source.X + delta.x, source.Y + delta.y, 1d / 3d, amplitude);
-                double bendB = SampleChannelBend(sampling, source.X, source.Y,
-                    source.X + delta.x, source.Y + delta.y, 2d / 3d, amplitude);
-                bool bedEdgeDeposit = TryResolveBedEdgeDepositRange(
-                    request, settings, source, target,
-                    Math.Max(region.Flows[i], region.Flows[next]),
-                    out double bedEdgeDepositStart);
-                int steps = Math.Max(1, (int)Math.Ceiling(length / 0.28d));
-                double previousX = 0d;
-                double previousY = 0d;
-                for (int step = 0; step <= steps; step++)
+                for (int i = 0; i < region.Count; i++)
                 {
-                    double t = step / (double)steps;
-                    double t2 = t * t;
-                    double t3 = t2 * t;
-                    double startTangentWeight = t3 - 2d * t2 + t;
-                    double endWeight = -2d * t3 + 3d * t2;
-                    double endTangentWeight = t3 - t2;
-                    double remaining = 1d - t;
-                    double offset = 10d * t2 * remaining * remaining *
-                                    (remaining * bendA + t * bendB);
-                    // 在河段局部坐标计算曲线，环绕平移不会改变浮点取整后的水格。
-                    double relativeX = startTangentWeight * startTangentX +
-                               endWeight * delta.x + endTangentWeight * endTangentX +
-                               normalX * offset;
-                    double relativeY = startTangentWeight * startTangentY +
-                               endWeight * delta.y + endTangentWeight * endTangentY +
-                               normalY * offset;
-                    double x = sourceX + relativeX;
-                    double y = sourceY + relativeY;
-                    if (x < minX || x > maxX || y < minY || y > maxY)
+                    if ((i & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
+                    if (!region.Visible[i] || region.Downstream[i] < 0) continue;
+                    int next = region.Downstream[i];
+                    Int2 source = ChannelPosition(region, i);
+                    Int2 target = ChannelPosition(region, next);
+                    int sourceX = ShiftNearChunk(source.X, chunkCenterX,
+                        request.Topology.IsWrapped ? request.Topology.Span.X : 0);
+                    int sourceY = ShiftNearChunk(source.Y, chunkCenterY,
+                        request.Topology.IsWrapped ? request.Topology.Span.Y : 0);
+                    int2 delta = domain.ShortestDelta(
+                        new int2(source.X, source.Y), new int2(target.X, target.Y));
+                    double endX = sourceX + delta.x;
+                    double endY = sourceY + delta.y;
+                    if (Math.Max(sourceX, endX) < minX || Math.Min(sourceX, endX) > maxX ||
+                        Math.Max(sourceY, endY) < minY || Math.Min(sourceY, endY) > maxY)
+                        continue;
+
+                    double length = Math.Sqrt(delta.x * (double)delta.x + delta.y * (double)delta.y);
+                    if (length <= 0.000001d) continue;
+                    if (timing != null) segments++;
+                    ResolveChannelTangents(request, region, primaryUpstream, i, next,
+                        delta.x, delta.y, length, out double startTangentX,
+                        out double startTangentY, out double endTangentX,
+                        out double endTangentY);
+                    double normalX = -delta.y / length;
+                    double normalY = delta.x / length;
+                    double amplitude = Math.Min(length * 0.28d,
+                        Math.Min(settings.RiverMeanderScale * 0.42d,
+                            Math.Max(3d, settings.RiverMaxWidth * 2.7d))) *
+                        settings.RiverMeanderStrength;
+                    double bendA = SampleChannelBend(sampling, source.X, source.Y,
+                        source.X + delta.x, source.Y + delta.y, 1d / 3d, amplitude);
+                    double bendB = SampleChannelBend(sampling, source.X, source.Y,
+                        source.X + delta.x, source.Y + delta.y, 2d / 3d, amplitude);
+                    bool bedEdgeDeposit = TryResolveBedEdgeDepositRange(
+                        request, settings, source, target,
+                        Math.Max(region.Flows[i], region.Flows[next]),
+                        out double bedEdgeDepositStart);
+                    int steps = Math.Max(1, (int)Math.Ceiling(length / 0.28d));
+                    if (timing != null) curveSamples += (long)steps + 1;
+                    double previousX = 0d;
+                    double previousY = 0d;
+                    for (int step = 0; step <= steps; step++)
                     {
+                        double t = step / (double)steps;
+                        double t2 = t * t;
+                        double t3 = t2 * t;
+                        double startTangentWeight = t3 - 2d * t2 + t;
+                        double endWeight = -2d * t3 + 3d * t2;
+                        double endTangentWeight = t3 - t2;
+                        double remaining = 1d - t;
+                        double offset = 10d * t2 * remaining * remaining *
+                                        (remaining * bendA + t * bendB);
+                        // 在河段局部坐标计算曲线，环绕平移不会改变浮点取整后的水格。
+                        double relativeX = startTangentWeight * startTangentX +
+                                   endWeight * delta.x + endTangentWeight * endTangentX +
+                                   normalX * offset;
+                        double relativeY = startTangentWeight * startTangentY +
+                                   endWeight * delta.y + endTangentWeight * endTangentY +
+                                   normalY * offset;
+                        double x = sourceX + relativeX;
+                        double y = sourceY + relativeY;
+                        if (x < minX || x > maxX || y < minY || y > maxY)
+                        {
+                            previousX = relativeX;
+                            previousY = relativeY;
+                            continue;
+                        }
+                        Int2 cell = sampling.Normalize(new Int2(source.X + (int)Math.Floor(relativeX), source.Y + (int)Math.Floor(relativeY)));
+                        if (timing != null) acceptedCurveSamples++;
+                        // 汇合处的流量缓入缓出，主支流河宽不会在节点突然变速。
+                        double flow = Lerp(region.Flows[i], region.Flows[next], Smooth(t));
+                        double directionX = step == 0 ? startTangentX : relativeX - previousX;
+                        double directionY = step == 0 ? startTangentY : relativeY - previousY;
+                        double directionLength = Math.Sqrt(directionX * directionX +
+                                                           directionY * directionY);
+                        if (directionLength > 0.000001d)
+                        {
+                            directionX /= directionLength;
+                            directionY /= directionLength;
+                        }
+                        SetChannelCenterSample(centers, cell,
+                            new ChannelCenterSample(
+                                flow,
+                                directionX,
+                                directionY,
+                                bedEdgeDeposit && t >= bedEdgeDepositStart));
                         previousX = relativeX;
                         previousY = relativeY;
-                        continue;
                     }
-                    Int2 cell = sampling.Normalize(new Int2(source.X + (int)Math.Floor(relativeX), source.Y + (int)Math.Floor(relativeY)));
-                    // 汇合处的流量缓入缓出，主支流河宽不会在节点突然变速。
-                    double flow = Lerp(region.Flows[i], region.Flows[next], Smooth(t));
-                    double directionX = step == 0 ? startTangentX : relativeX - previousX;
-                    double directionY = step == 0 ? startTangentY : relativeY - previousY;
-                    double directionLength = Math.Sqrt(directionX * directionX +
-                                                       directionY * directionY);
-                    if (directionLength > 0.000001d)
-                    {
-                        directionX /= directionLength;
-                        directionY /= directionLength;
-                    }
-                    SetChannelCenterSample(centers, cell,
-                        new ChannelCenterSample(
-                            flow,
-                            directionX,
-                            directionY,
-                            bedEdgeDeposit && t >= bedEdgeDepositStart));
-                    previousX = relativeX;
-                    previousY = relativeY;
                 }
             }
+            timing?.RecordStageCount("river.local_refine.region_nodes", region.Count, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.output_padding_last", outputWindow.Padding);
+            timing?.RecordStageCount("river.local_refine.segments", segments, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.curve_samples", curveSamples, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.accepted_curve_samples", acceptedCurveSamples, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.unique_centers", centers.Count, accumulate: true);
 
             var riverCells = new Dictionary<Int2, GeneratedHydrologyCell>();
             var floodplainCells = new Dictionary<Int2, double>();
             int maximumRadius = Math.Max(0, (settings.RiverMaxWidth - 1) / 2);
-            RenderMacroCenters(settings, sampling, outputWindow, centers, maximumRadius,
-                riverCells, floodplainCells, cancellationToken);
+            using (RiverRenderMarker.Auto())
+            using (timing?.MeasureStage("river.local_refine.render", accumulate: true) ?? default)
+                RenderMacroCenters(settings, sampling, outputWindow, centers, maximumRadius,
+                    riverCells, floodplainCells, cancellationToken, timing);
 
-            if (settings.RiverLakeChance > 0d)
+            using (RiverTerminalLakesMarker.Auto())
+            using (timing?.MeasureStage("river.local_refine.terminal_lakes", accumulate: true) ?? default)
             {
-                var terminals = new Dictionary<Int2, double>();
-                for (int i = 0; i < region.Count; i++)
+                timing?.RecordStageCount("river.local_refine.terminal_candidates", 0, accumulate: true);
+                if (settings.RiverLakeChance > 0d)
                 {
-                    if (region.Terminals[i] >= settings.RiverLakeMinFlow)
-                        terminals[region.Positions[i]] = region.Terminals[i];
+                    var terminals = new Dictionary<Int2, double>();
+                    for (int i = 0; i < region.Count; i++)
+                    {
+                        if (region.Terminals[i] >= settings.RiverLakeMinFlow)
+                            terminals[region.Positions[i]] = region.Terminals[i];
+                    }
+                    AddHeightDrivenTerminalLakes(request, settings, sampling, outputWindow, terminals,
+                        riverCells, cancellationToken);
+                    timing?.RecordStageCount("river.local_refine.terminal_candidates", terminals.Count, accumulate: true);
                 }
-                AddHeightDrivenTerminalLakes(request, settings, sampling, outputWindow, terminals,
-                    riverCells, cancellationToken);
             }
+            timing?.RecordStageCount("river.local_refine.water_cells", riverCells.Count, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.floodplain_cells", floodplainCells.Count, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.height_cache_hits", sampling.HeightHitCount, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.height_cache_misses", sampling.HeightMissCount, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.bend_cache_hits", sampling.ChannelCenterBiasHitCount, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.bend_cache_misses", sampling.ChannelCenterBiasMissCount, accumulate: true);
+            timing?.RecordStageDuration("river.local_refine.height_compute",
+                sampling.HeightComputeTicks * 1000d / Stopwatch.Frequency, accumulate: true);
             return new GeneratedHydrologyMap(riverCells, floodplainCells);
         }
 
@@ -322,12 +363,17 @@ namespace FlatWorld.WorldModel
             HydrologySamplingContext sampling, HydrologyOutputWindow outputWindow,
             IReadOnlyDictionary<Int2, ChannelCenterSample> centers, int maximumRadius,
             Dictionary<Int2, GeneratedHydrologyCell> riverCells,
-            Dictionary<Int2, double> floodplainCells, CancellationToken cancellationToken)
+            Dictionary<Int2, double> floodplainCells, CancellationToken cancellationToken,
+            ChunkGenerationTiming timing)
         {
             int rendered = 0;
+            long channelTicks = 0, floodplainTicks = 0;
+            long candidates = 0, outsideWindow = 0, oceanRejected = 0, mergeAttempts = 0;
+            long floodplainCandidates = 0, floodplainMergeAttempts = 0;
             foreach (KeyValuePair<Int2, ChannelCenterSample> pair in centers)
             {
                 if ((rendered++ & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
+                long started = timing != null ? Stopwatch.GetTimestamp() : 0;
                 Int2 center = pair.Key;
                 ChannelCenterSample sample = pair.Value;
                 double widthT = InverseLerp(settings.RiverStartFlow,
@@ -342,25 +388,49 @@ namespace FlatWorld.WorldModel
                 for (int offsetX = -radius; offsetX <= radius; offsetX++)
                 {
                     if (offsetX * offsetX + offsetY * offsetY > radius * radius + 1) continue;
+                    if (timing != null) candidates++;
                     Int2 water = sampling.Normalize(new Int2(center.X + offsetX,
                         center.Y + offsetY));
                     if (!outputWindow.Contains(water))
+                    {
+                        if (timing != null) outsideWindow++;
                         continue;
+                    }
                     double height = sampling.Height(water);
                     if (height <= settings.SeaLevel)
+                    {
+                        if (timing != null) oceanRejected++;
                         continue;
+                    }
                     double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
                     double edgeStrength = radius == 0 ? 1d :
                         1d - Clamp01(distance / (radius + 0.5d));
                     double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
+                    if (timing != null) mergeAttempts++;
                     SetRiverCell(riverCells, water, new GeneratedHydrologyCell(
                         GeneratedHydrologyKind.River, sample.Flow, depth, height + depth * settings.RiverMaxLakeLevelRise,
                         sample.DirectionX, sample.DirectionY, edgeStrength,
                         sample.BedEdgeDeposit));
                 }
+                if (timing != null)
+                {
+                    channelTicks += Stopwatch.GetTimestamp() - started;
+                    started = Stopwatch.GetTimestamp();
+                }
                 AddFloodplain(settings, sampling, outputWindow, center, sample.Flow,
-                    radius, floodplainCells);
+                    radius, floodplainCells, timing != null,
+                    ref floodplainCandidates, ref floodplainMergeAttempts);
+                if (timing != null) floodplainTicks += Stopwatch.GetTimestamp() - started;
             }
+            // 循环内只累加数字，结束后一次写入本区块诊断，后台不输出日志。
+            timing?.RecordStageDuration("river.local_refine.channel_fill", channelTicks * 1000d / Stopwatch.Frequency, accumulate: true);
+            timing?.RecordStageDuration("river.local_refine.floodplain", floodplainTicks * 1000d / Stopwatch.Frequency, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.channel_candidates", candidates, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.channel_outside_window", outsideWindow, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.channel_ocean_rejected", oceanRejected, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.channel_merge_attempts", mergeAttempts, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.floodplain_candidates", floodplainCandidates, accumulate: true);
+            timing?.RecordStageCount("river.local_refine.floodplain_merge_attempts", floodplainMergeAttempts, accumulate: true);
         }
 
         private static int GetHydrologyOutputPadding(ChunkGenerationRequest request) =>
