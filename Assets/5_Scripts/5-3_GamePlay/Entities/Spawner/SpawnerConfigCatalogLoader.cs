@@ -231,6 +231,7 @@ public static class SpawnerConfigCatalogLoader
     private static bool IsSupportedScheduleMode(string value)
     {
         return string.Equals(value, "timedWindows", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, nameof(SpawnerScheduleMode.Countdown), StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(SpawnerScheduleMode.TimedWindows), StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "dayMilestoneGrowth", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(SpawnerScheduleMode.DayMilestoneGrowth), StringComparison.OrdinalIgnoreCase);

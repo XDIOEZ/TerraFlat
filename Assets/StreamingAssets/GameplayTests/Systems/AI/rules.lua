@@ -139,11 +139,24 @@ end
 test.system("ai", "ecology_config", {}, function(data)
     assert(data.fishSafeMin == -26.5 and data.fishSafeMax == 63.5, "鱼的冷热安全范围没有按确认值扩大")
     assert(data.fishWaterOnly, "小鱼自然生成不再限制水域")
+    local biomes = {}
+    for _, name in ipairs(data.fishAllowedBiomes) do biomes[name] = true end
+    assert(#data.fishAllowedBiomes == 2 and biomes["海洋"] and biomes["河流"],
+        "小鱼自然生成必须同时覆盖海洋和河流，且不能扩张到所有液体")
     assert(data.chickenChance == .5 and data.chickenWeight == 2.5, "小鸡减半概率改变了原物种权重")
     assert(data.boarChance == 1 and math.abs(data.boarWeight - .2631579) < .000001,
         "小鸡减半影响了野猪默认概率或原权重")
     assert(data.defaultChance == 1, "未配置独立概率的物种没有保持全通过")
 end, "自然刷新：小鸡独立机会减半，野猪与权重保持原样")
+for _, weight in ipairs({0, 1, 70, 10000}) do
+    test.system("ai", "fish_current", {weight = weight}, function(data)
+        assert(not data.receivesCurrent, "鱼没有声明免受表层水流推动的能力")
+        assert(data.fishSpeed == 0 and data.passiveVelocityX == 0 and data.passiveVelocityY == 0,
+            "鱼的水流推动仍随体重产生位移")
+        assert(math.abs(data.chickenSpeed - .54) < .000001 and math.abs(data.wolfSpeed - .54) < .000001 and data.defaultSpeed > 0,
+            "鱼的水流免疫误改了其他生物的通用推动规则")
+    end, "鱼水流免疫：体重 " .. weight)
+end
 for _, case in ipairs({
     {chance = .5, sample = 0, accepted = true}, {chance = .5, sample = .4999, accepted = true},
     {chance = .5, sample = .5, accepted = false}, {chance = .5, sample = 1, accepted = false},

@@ -24,6 +24,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。
+- 自然动物 `countdown` 在每条规则的 `SpeciesCountdowns` 中按物种保存剩余时长和待出生数，按游戏时间推进且跨区块不重置；无落点或满员保留当前一轮，完成（含独立概率落空）后重计时，不补离线或累计多轮。原权重折算刷新间隔，仍共用预算和人数限制；出生、显隐、居民装卸三路轮转，避免跑图持续显隐导致出生饥饿。
 - `ConfigureRoutes` 冻结物种归属，未列物种默认 GO；显式 ECS 失败不自动回退。同物种单一后端，`TrySpawnDirect` 统一 GM/事件/技能/MOD 生成；GO 返回前完成 Item.Load 并核对 IAIActor。
 - Actor 合并定义的移动/检测/朝向模块须启用；`ModuleData.Enabled` 决定 Load/Tick，`Data.isRunning` 是奔跑。飞行能力 ID 为 `AI_Bird`，`prefab=Mod_AI_Bird` 仅指实现；内容错误码 `FWC-ACTORJSON-004/005` 对应基础模块开关/飞行 ID。
 - 生物 `animator` 稳定槽位的能力 ID 固定为 `动画接收模块`（`ModText.AnimatorReceiver`），并须启用；`Module_Animator_AI` 等只作具体 Prefab 身份。`FWC-ACTORJSON-006` 检查最终继承配置；规则要先 `BindRuntimeIdentity` 保留显式 ID，再走 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，不能仅凭原型类型或模式判装配成功。
@@ -57,6 +58,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `EggLaying/AnimalEggLayingSchedule` 保存绝对日，成功产蛋后冷却至少两天，不追补；Bird 无鸡生产模块、Bee 关产蛋。产物/延迟来自 Actor，只有权威端生成。
 - `ContainerFeeding` 经允许 Animal 的种子端口交易一件真实物品，完整种子快照随鸟保存，死亡掉落成功后才清空。`Predation` 锁水中 Fish，走 DamageReceiver 后由 `IAquaticPredatorCarryTarget` 携到陆地，再攻击/吃 Meat；携带不保存，受惊/避险/疲劳/卸载释放。
 - 水生 AI 的 `AquaticHabitat` 读真实 Liquid 和整段线路，不读平台投影液深；未知格不是干地。鱼共享 Buff 潮湿计时，缺水阈值 `minimumWetStacks=3`；逃离 Carnivore、玩家和 `IAquaticPredatorThreat`，线路须全程水域可达。
+- 小鱼自然刷新同时允许 `海洋/河流`，仍受 `waterOnly` 的真实水域限制；`Mod_AI_Fish` 通过 `IWaterCurrentExposure=false` 声明水流免疫，`water-current.json` 的 `SmallFish.pushSpeed=0` 供统一 GO/ECS 推动目录复用，不在水流核心识别鱼物种。
 - 水生线路保留每 0.2 米采样，只合并同次调用中连续相同规范格的查询；每次重新读取水态，不跨帧缓存。鱼觅食筛选委托和捕食能力列表复用，模块结构变化仍自动失效。
 - 鱼饱食低于 90% 吃近物、低于 70% 主动觅食，先筛水域后选最近；`eatRange` 共用于扫描/计时/消费。Stranded 间歇蹦跳回水，起跳期间推进地面位移，逐段检查阻挡/未知格；离水回水优先温度游动，钓线/携带接管清蹦跳。
 - 鱼用 `underwater-creature` 整身染色，无实体阻挡/半身裁切，保留受击 Trigger；`AquaticActorPresentation` 保留水平翻面、水下排序与染色，单图摇摆及搁浅/携带的高度倾角交共用表现层，不旋根/碰撞体。无阴影物种在 `visual.shadows.enabled` 配置。

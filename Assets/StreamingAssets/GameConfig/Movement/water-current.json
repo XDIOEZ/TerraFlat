@@ -6,6 +6,7 @@
   },
   "actors": [
     { "id": "Chicken", "pushSpeed": 0.54 },
-    { "id": "Wolf", "pushSpeed": 0.54 }
+    { "id": "Wolf", "pushSpeed": 0.54 },
+    { "id": "SmallFish", "pushSpeed": 0.0 }
   ]
 }

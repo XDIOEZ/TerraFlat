@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "config": {
     "id": "small_fish_ecology",
-    "scheduleMode": "timedWindows",
+    "scheduleMode": "countdown",
     "ecologyGroup": "animals",
     "requireGlobalDarkness": false,
     "spawnTriggerTime": 360.0,
@@ -29,7 +29,8 @@
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
     "allowedBiomeNames": [
-      "海洋"
+      "海洋",
+      "河流"
     ],
     "recycleDistance": 110.0,
     "recycleGraceSeconds": 20.0,

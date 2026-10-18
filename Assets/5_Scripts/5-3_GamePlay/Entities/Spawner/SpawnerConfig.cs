@@ -7,7 +7,8 @@ using Sirenix.OdinInspector;
 public enum SpawnerScheduleMode
 {
     TimedWindows = 0,
-    DayMilestoneGrowth = 1
+    DayMilestoneGrowth = 1,
+    Countdown = 2
 }
 
 public enum SpawnerEcologyGroup

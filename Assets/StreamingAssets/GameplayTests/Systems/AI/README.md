@@ -1,5 +1,9 @@
 # AI 生物测试
 
+2026-10-18 自然动物倒计时补充，**仅编写，未编译、未运行**：`spawn-countdown.lua` 调用 `ai/spawn_countdown`，读取正式七份自然动物规则与八个物种，通过正式 `AdvanceCountdownSchedule/SelectPendingCountdownEntry/CompleteCountdownSpawnAttempt` 检查初始完整间隔、到期前和恰好到期、一轮受阻不丢失也不累积、整轮完成后重新计时、概率落空消费机会及零/必定概率边界、混合规则中鸡猪各自计时且保持原权重对应的相对频率、一个物种受阻仍轮到其它物种、二进制存档保留剩余时长与待出生队列、恢复观察基准不补离线、长时钟精度和无效间隔拒绝。三类生命周期工作优先序直接采正式轮转入口。夹具不绑定空间，连续推进的是同一份正式持久状态；跨区块不重置由其不依赖区块/玩家坐标的所有权结构保证，没有真实跑图、选点、满员或预算耗尽现场，也没有验证最后的出生和帧耗时，仍由用户验收。
+
+本轮小鱼生成与抗水流规则补充：`ai/ecology_config` 读取正式目录核对小鱼仅海洋+河流且 `waterOnly`；新增 `ai/fish_current` 使用独立未加载鱼模块读取 `IWaterCurrentExposure`，并用正式 `water-current` 目录在 0/1/70/10000kg 检查鱼推动速度为零、零速公共采样返回零及其他物种仍保留推动。夹具未加载真实鱼或世界，不代表河流海洋实际移动验收；本轮未编译、未运行。
+
 2026-10-18 全物种单图动画补充，**仅编写，未编译、未运行**：`ai/single_sprite_catalog` 复用正式 Actor Manifest/继承加载器，通过 `ResourceReloadContext` 候选上下文隔离目录缓存，并将最终参数交给正式 `ModuleJsonConfigurator.Apply`，检查全部正式物种的动画模块启用且为 SingleSprite；Ghost/SmallFish 原外壳保持一个 SpriteRenderer，新纯动画控制器没有 Renderer、碰撞体或刚体。通用主动信号组合规则在 [ItemRuntime](../ItemRuntime/README.md)，真实物种行为、风场、飞行/水下/搁浅观感与联机仍由用户验收。
 
 补强动画身份注册：此前原型类型与 `visualMode` 检查没有注册 `ItemMods`，会漏掉 JSON 把 `Module_Animator_AI/AI动画模块` 当能力 ID 的错误。现在对全部正式物种先把最终显式 `animator` 槽位身份交给生产 `BindRuntimeIdentity`，再调用 `ModuleInit→ItemMods.AddMod→RequireSingleModById`，检查 `StableName/ModuleId/PrefabId`、启用态、唯一能力组和数据绑定；每种还按同一链注册显式错误 ID，只在精确查询处捕获拒绝，保证错误不会被 Canonical 默认值掩盖。临时 Item 使用 `test:...` 身份，避免读取当前正式 Actor 的旧配置。基础身份采样只检查动画模块注册与精确查询；Bird/Bee 的真实飞行依赖绑定见下一段。本轮未编译、未运行。

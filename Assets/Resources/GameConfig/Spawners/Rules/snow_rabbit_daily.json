@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "config": {
     "id": "snow_rabbit_daily",
-    "scheduleMode": "timedWindows",
+    "scheduleMode": "countdown",
     "ecologyGroup": "animals",
     "requireGlobalDarkness": false,
     "spawnTriggerTime": 720.0,

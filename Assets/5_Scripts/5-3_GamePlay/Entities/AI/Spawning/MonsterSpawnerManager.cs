@@ -56,6 +56,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private int _spawnConfigCursor;
     private int _activeResidentCursor;
     private int _parkedAddressCursor;
+    private int _lifecycleWorkCursor;
 
     #endregion
 
@@ -277,19 +278,25 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return;
         _nextEcologyTickTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);
 
-        bool presentationChanged = ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
         if (!GameNetwork.HasStateAuthority)
         {
+            ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
             RefreshClientChunkDormancy();
             return;
         }
 
         if (!TryGetCurrentTimeData(out string sceneName, out TimeData timeData))
+        {
+            ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
             return;
+        }
 
         RefreshPlayerPositions(sceneName);
         if (_playerPositions.Count == 0)
+        {
+            ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick));
             return;
+        }
 
         int currentDay = timeData.GetCurrentDay();
         for (int i = 0; i < _spawnerConfigs.Count; i++)
@@ -302,7 +309,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             RecoverEcologyBudget(config, state, currentDay);
             ClampPendingSpawns(config, state);
 
-            if (config.ScheduleMode == SpawnerScheduleMode.DayMilestoneGrowth)
+            if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
+                ProcessCountdowns(config, state, timeData);
+            else if (config.ScheduleMode == SpawnerScheduleMode.DayMilestoneGrowth)
                 ProcessMilestoneGrowth(config, state, sceneName, currentDay);
             else
                 ProcessTimedWindows(config, state, sceneName, timeData, currentDay);
@@ -310,9 +319,24 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             QueuePopulationRecovery(config, state);
         }
 
-        if (!presentationChanged && SaveDataMgr.Instance?.IsEcologySnapshotInProgress != true &&
-            !MaintainResidentStreaming())
-            ProcessDueSpawnWork(sceneName, currentDay);
+        // 出生、显隐和居民装卸轮流优先，每轮最多执行一次实体生命周期操作。
+        bool snapshotInProgress = SaveDataMgr.Instance?.IsEcologySnapshotInProgress == true;
+        int firstWork = NextLifecycleWork(ref _lifecycleWorkCursor);
+        for (int work = 0; work < 3; work++)
+        {
+            switch ((firstWork + work) % 3)
+            {
+                case 0:
+                    if (!snapshotInProgress && ProcessDueSpawnWork(sceneName, currentDay)) return;
+                    break;
+                case 1:
+                    if (ProcessPresentationChanges(Mathf.Max(1, _settings.ResidentChecksPerTick))) return;
+                    break;
+                case 2:
+                    if (!snapshotInProgress && MaintainResidentStreaming()) return;
+                    break;
+            }
+        }
     }
 
     #endregion
@@ -342,6 +366,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         saveData.MonsterSpawnerData ??= new MonsterSpawnerSaveData();
         saveData.MonsterSpawnerData.ConfigStates ??= new Dictionary<string, SpawnerProgressSaveData>();
         _runtimeStates = saveData.MonsterSpawnerData.ConfigStates;
+        // 恢复存档保留剩余时长，重新绑定观察基准，不补离线期间的游戏时间。
+        foreach (SpawnerProgressSaveData state in _runtimeStates.Values)
+            state?.ResetCountdownObservation();
     }
 
     #endregion
@@ -558,6 +585,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void QueuePopulationRecovery(SpawnerConfig config, SpawnerProgressSaveData state)
     {
+        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
+            return;
         if (config.RecoveryTargetPopulation <= 0)
             return;
         string key = GetConfigKey(config);
@@ -583,6 +612,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void ClampPendingSpawns(SpawnerConfig config, SpawnerProgressSaveData state)
     {
+        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
+            return;
         if (state.PendingSpawnCount <= 0 && state.PendingReplacementCount <= 0)
             return;
         if (config.IgnorePopulationLimits || config.UnboundedDailyGrowth)
@@ -600,7 +631,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void QueueDeathReplacement(SpawnerConfig config)
     {
-        if (!enabled || config == null || config.RecoveryTargetPopulation <= 0)
+        if (!enabled || config == null || config.ScheduleMode == SpawnerScheduleMode.Countdown ||
+            config.RecoveryTargetPopulation <= 0)
             return;
 
         SpawnerProgressSaveData state = GetOrCreateState(config);
@@ -620,10 +652,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     #region 生成执行
 
     /// <summary>每轮只处理一个配置的一次候选搜索或创建；配置轮转防止长期饥饿。</summary>
-    private void ProcessDueSpawnWork(string sceneName, int currentDay)
+    private bool ProcessDueSpawnWork(string sceneName, int currentDay)
     {
         int count = _spawnerConfigs.Count;
-        if (count == 0) return;
+        if (count == 0) return false;
         int cursor = _spawnConfigCursor % count;
         for (int visited = 0; visited < count; visited++)
         {
@@ -631,9 +663,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             cursor = (cursor + 1) % count;
             if (config == null) continue;
             if (ProcessPendingSpawns(config, GetOrCreateState(config), sceneName, currentDay))
-                break;
+            {
+                _spawnConfigCursor = cursor;
+                return true;
+            }
         }
         _spawnConfigCursor = cursor;
+        return false;
     }
 
     private bool ProcessPendingSpawns(
@@ -662,7 +698,11 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             !UsesEntityPopulation(config))
             return false;
 
-        bool spawned = TrySpawnOne(config, state, out bool skippedByChance);
+        SpawnerConfig.SpawnEntry countdownEntry = config.ScheduleMode == SpawnerScheduleMode.Countdown
+            ? SelectPendingCountdownEntry(config, state) : null;
+        if (config.ScheduleMode == SpawnerScheduleMode.Countdown && countdownEntry == null)
+            return false;
+        bool spawned = TrySpawnOne(config, state, out bool skippedByChance, countdownEntry);
         if (!spawned && !skippedByChance)
         {
             int remaining = _remainingSearchAttempts.TryGetValue(config, out int value)
@@ -682,11 +722,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _remainingSearchAttempts.Remove(config);
         _nextSpawnRetryTime[key] = now + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
 
-        state.CompleteSpawnAttempt(spawned, currentDay);
+        if (countdownEntry == null) state.CompleteSpawnAttempt(spawned, currentDay);
+        else CompleteCountdownSpawnAttempt(state, countdownEntry, spawned, currentDay);
         return true;
     }
 
-    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, out bool skippedByChance)
+    private bool TrySpawnOne(SpawnerConfig config, SpawnerProgressSaveData state, out bool skippedByChance,
+        SpawnerConfig.SpawnEntry requestedEntry = null)
     {
         skippedByChance = false;
         int globalLimit = GameDifficultyService.ScaleCount(
@@ -701,8 +743,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return false;
         }
 
-        SpawnerConfig.SpawnEntry entry = DetermineAvailableEntry(config, state);
+        SpawnerConfig.SpawnEntry entry = requestedEntry ?? DetermineAvailableEntry(config, state);
         if (entry == null)
+            return false;
+        if (requestedEntry != null && !CanSpawnEntry(config, requestedEntry, state))
             return false;
 
         if (!TryGetValidSpawnPosition(config, out Vector3 spawnPosition))
@@ -1182,6 +1226,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _spawnConfigCursor = 0;
         _activeResidentCursor = 0;
         _parkedAddressCursor = 0;
+        _lifecycleWorkCursor = 0;
         _playerPositions.Clear();
         _nearbyGroupCounts.Clear();
         _availableEntries.Clear();
@@ -1449,6 +1494,21 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         SpawnerConfig config = _spawnerConfigs[0];
         SpawnerProgressSaveData state = GetOrCreateState(config);
+        if (config.ScheduleMode == SpawnerScheduleMode.Countdown)
+        {
+            if (!TryGetCurrentTimeData(out _, out TimeData timeData) || config.SpawnEntries.Count == 0)
+                return;
+            SpawnerConfig.SpawnEntry entry = config.SpawnEntries[0];
+            state.SpeciesCountdowns ??= new();
+            if (!state.SpeciesCountdowns.TryGetValue(entry.PrefabName, out SpawnerCountdownProgress countdown))
+                state.SpeciesCountdowns.Add(entry.PrefabName, countdown = new SpawnerCountdownProgress());
+            countdown.IntervalGameSeconds = GetCountdownInterval(config, entry, timeData.DayLength,
+                GameDifficultyService.Current.World.SpawnFrequencyMultiplier);
+            countdown.PendingCount = Mathf.Max(countdown.PendingCount, config.SpawnCount);
+            countdown.RemainingGameSeconds = 0d;
+            RefreshCountdownPendingCount(state);
+            return;
+        }
         state.PendingSpawnCount += Mathf.Max(1, config.SpawnCount);
     }
 

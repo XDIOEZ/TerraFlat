@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "config": {
     "id": "snow_leopard_daily",
-    "scheduleMode": "timedWindows",
+    "scheduleMode": "countdown",
     "ecologyGroup": "commonEnemies",
     "requireGlobalDarkness": false,
     "spawnTriggerTime": 1200.0,

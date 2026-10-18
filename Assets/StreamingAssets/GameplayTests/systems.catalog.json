@@ -22,7 +22,8 @@
         "combat"
       ],
       "ruleCaseIds": [
-        "ai_rules"
+        "ai_rules",
+        "ai_spawn_countdown_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/AI/rules-suite.json",
       "integrationSuites": [

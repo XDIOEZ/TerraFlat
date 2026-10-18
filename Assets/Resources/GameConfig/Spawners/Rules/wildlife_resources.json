@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "config": {
     "id": "wildlife_resources",
-    "scheduleMode": "timedWindows",
+    "scheduleMode": "countdown",
     "ecologyGroup": "animals",
     "requireGlobalDarkness": false,
     "spawnTriggerTime": 720.0,

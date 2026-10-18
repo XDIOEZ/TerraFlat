@@ -9,6 +9,12 @@
       "name": "AI生物规则与边界",
       "luaPath": "GameplayTests/Systems/AI/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "ai_spawn_countdown_rules",
+      "name": "自然动物连续倒计时",
+      "luaPath": "GameplayTests/Systems/AI/spawn-countdown.lua",
+      "enabled": true
     }
   ]
 }

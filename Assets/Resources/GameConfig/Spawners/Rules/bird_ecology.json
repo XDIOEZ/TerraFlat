@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "config": {
     "id": "bird_ecology",
-    "scheduleMode": "timedWindows",
+    "scheduleMode": "countdown",
     "ecologyGroup": "animals",
     "requireGlobalDarkness": false,
     "spawnTriggerTime": 360.0,

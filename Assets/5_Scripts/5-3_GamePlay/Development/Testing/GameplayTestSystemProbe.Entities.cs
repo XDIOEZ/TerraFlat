@@ -22,6 +22,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
+        operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
         operations.Add("ai/spawn_attempt", EntitySpawnAttempt);
         operations.Add("ai/aquatic_traversal", EntityAquaticTraversal);
@@ -88,8 +89,32 @@ public static partial class GameplayTestSystemProbe
             ["defaultChance"] = new SpawnerConfig.SpawnEntry().SpawnChance,
             ["fishSpawnsPerDay"] = fishSpawns.SpawnsPerDay, ["fishSpawnCount"] = fishSpawns.SpawnCount,
             ["fishWaterOnly"] = fishSpawns.WaterOnly,
+            ["fishAllowedBiomes"] = new JArray(fishSpawns.AllowedBiomeNames),
             ["fishSafeMin"] = temperature["SafeTemperatureMin"], ["fishSafeMax"] = temperature["SafeTemperatureMax"]
         };
+    }
+
+    // 独立读取正式水流目录和鱼能力，不发布目录或加载当前世界中的鱼。
+    private static JObject EntityFishCurrent(JObject args)
+    {
+        WaterCurrentPushCatalog currents = WaterCurrentPushConfigLoader.Deserialize(
+            StreamingAssetsTextLoader.ReadAllText(WaterCurrentPushConfigLoader.BuiltInConfigPath));
+        float weight = (float)Number(args, "weight", 1d);
+        return WithEntityProbeItem(receiver =>
+        {
+            IWaterCurrentExposure exposure = receiver.gameObject.AddComponent<Mod_AI_Fish>();
+            float fishSpeed = currents.ResolvePushSpeed("SmallFish", weight);
+            Vector2 passiveVelocity = WorldMotionSystem.SampleWaterVelocity(Vector2.zero, fishSpeed);
+            return new JObject
+            {
+                ["receivesCurrent"] = exposure.ReceivesWaterCurrent,
+                ["fishSpeed"] = fishSpeed,
+                ["passiveVelocityX"] = passiveVelocity.x, ["passiveVelocityY"] = passiveVelocity.y,
+                ["chickenSpeed"] = currents.ResolvePushSpeed("Chicken", weight),
+                ["wolfSpeed"] = currents.ResolvePushSpeed("Wolf", weight),
+                ["defaultSpeed"] = currents.ResolvePushSpeed("test:unlisted_actor", weight)
+            };
+        });
     }
 
     private static JObject EntitySpawnChance(JObject args)

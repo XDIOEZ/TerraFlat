@@ -151,6 +151,9 @@ public sealed class SpawnerConfigDefinition
 
     private static SpawnerScheduleMode ParseScheduleMode(string value)
     {
+        if (string.Equals(value, nameof(SpawnerScheduleMode.Countdown), StringComparison.OrdinalIgnoreCase))
+            return SpawnerScheduleMode.Countdown;
+
         if (string.Equals(value, "dayMilestoneGrowth", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(value, nameof(SpawnerScheduleMode.DayMilestoneGrowth), StringComparison.OrdinalIgnoreCase))
         {
