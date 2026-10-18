@@ -1703,7 +1703,12 @@ public partial class GameManager
         }
 
         string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveName + ".bytes");
-        SaveDataMgr.Instance.LoadSaveByDisk(path);
+        if (!SaveDataMgr.Instance.LoadSaveByDisk(path))
+        {
+            // 载入失败复用小通知，短暂显示后自动收起且不阻挡操作。
+            saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+            saveStatusHUD?.ShowTransientMessage("存档加载失败", 3f);
+        }
 
         SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
         if (saveList != null)

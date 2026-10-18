@@ -5096,6 +5096,10 @@ MonoBehaviour:
     m_Localized: "Input weight {0:0.##}/{1:0.##} kg\nInput volume {2:0.##}/{3:0.##} L"
     m_Metadata:
       m_Items: []
+  - m_Id: 8452394532769792
+    m_Localized: Failed to load save
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

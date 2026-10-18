@@ -5045,6 +5045,10 @@ MonoBehaviour:
     m_Localized: "\u8f93\u5165\u91cd\u91cf {0:0.##}/{1:0.##} kg\n\u8f93\u5165\u4f53\u79ef {2:0.##}/{3:0.##} L"
     m_Metadata:
       m_Items: []
+  - m_Id: 8452394532769792
+    m_Localized: "\u5B58\u6863\u52A0\u8F7D\u5931\u8D25"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

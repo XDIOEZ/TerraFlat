@@ -995,6 +995,7 @@ namespace FlatWorld.Localization.Editor
                 { "正在进入存档", "Entering Save" },
                 { "正在保存…", "Saving…" },
                 { "保存失败", "Save Failed" },
+                { "存档加载失败", "Failed to load save" },
                 { "资源更新中 {0:0}%", "Updating resources {0:0}%" },
                 { "资源更新完成", "Resources updated" },
                 { "更新失败，仍使用旧资源", "Update failed; old assets kept" },
