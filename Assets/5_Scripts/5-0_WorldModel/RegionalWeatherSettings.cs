@@ -112,7 +112,7 @@ namespace FlatWorld.WorldModel
         public int RegionSizeInChunks = 8;
         public float WindTransitionWidth = 32f; // 风区边界两侧共同组成按距离渐弱的过渡带。
         public float StepSeconds = 2f;
-        public float CheckIntervalSeconds = 30f;
+        public float CheckIntervalSeconds = 300f; // 每五个游戏分钟独立检查全部自然天气要素。
         public float NaturalEventProbabilityMultiplier = 0.3f; // 所有自然天气统一减少出现机会，强风倍率再独立叠加。
         public int MaximumCatchUpSteps = 120;
         public float FreezingTemperature = 0f;
@@ -135,7 +135,8 @@ namespace FlatWorld.WorldModel
                 MinimumDurationSeconds = 45f, MaximumDurationSeconds = 180f,
                 ProbabilityBands = new[]
                 {
-                    new WeatherProbabilityBand { MinimumIntensity = 0.8f, Multiplier = 0.5f },
+                    // 八级风按标准日长平均约一周一次，更强的风继续降低出现机会。
+                    new WeatherProbabilityBand { MinimumIntensity = 0.8f, Multiplier = 0.45f },
                     new WeatherProbabilityBand { MinimumIntensity = 0.9f, Multiplier = 0.25f },
                     new WeatherProbabilityBand { MinimumIntensity = 1f, Multiplier = 0.1f }
                 }

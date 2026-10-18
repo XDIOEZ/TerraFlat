@@ -17,6 +17,44 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/natural_recovery_clock", WorldNaturalRecoveryClock);
         operations.Add("environment/natural_recovery_manual", WorldNaturalRecoveryManual);
         operations.Add("environment/natural_recovery_validation", WorldNaturalRecoveryValidation);
+        operations.Add("environment/natural_draw_all", WorldNaturalDrawAll);
+    }
+
+    private static JObject WorldNaturalDrawAll(JObject args)
+    {
+        RegionalWeatherSettings settings = ChunkWeatherConfiguration.Load();
+        settings.NaturalEventProbabilityMultiplier = 1f;
+        // 只把夹具概率固定为零或一，时钟和逐项抽签沿用正式引擎。
+        foreach (WeatherElementRule rule in settings.Elements)
+        {
+            rule.MinimumProbability = rule.MaximumProbability = (bool?)args[rule.Id] == true ? 1f : 0f;
+            rule.MinimumIntensity = rule.MaximumIntensity = .5f;
+            rule.MinimumDurationSeconds = rule.MaximumDurationSeconds = 45f;
+            rule.RecoveryProbabilityMultiplier = 1f;
+            rule.ParabolicEventVariation = false;
+        }
+        RegionalWeatherEngine engine = WeatherRecoveryEngine(settings, 17413);
+        JObject Sample()
+        {
+            RegionalWeatherState state = WeatherRecoveryState(engine);
+            var sample = new JObject { ["time"] = state.LastStepTime };
+            foreach (string id in WeatherRecoveryIds)
+                sample[id] = WeatherRecoverySample(settings, state, id);
+            return sample;
+        }
+        engine.Advance(default, 298d);
+        JObject before = Sample();
+        engine.Advance(default, 300d);
+        JObject first = Sample();
+        engine.Advance(default, 598d);
+        JObject between = Sample();
+        engine.Advance(default, 600d);
+        return new JObject
+        {
+            ["before"] = before, ["first"] = first, ["between"] = between, ["second"] = Sample(),
+            ["checkSeconds"] = settings.CheckIntervalSeconds,
+            ["defaultCheckSeconds"] = new RegionalWeatherSettings().CheckIntervalSeconds
+        };
     }
 
     private static JObject WorldNaturalRecoveryProbability(JObject args)
@@ -43,7 +81,14 @@ public static partial class GameplayTestSystemProbe
             ["low"] = settings.ResolveActivationProbability(new WeatherElementProfile(id, .2f, .5f, 60f), 1150d, recoveryEnd),
             ["high"] = settings.ResolveActivationProbability(new WeatherElementProfile(id, .8f, .5f, 60f), 1150d, recoveryEnd),
             ["maximumBasis"] = settings.ResolveActivationProbability(maximum),
-            ["maximumAtEnd"] = settings.ResolveActivationProbability(maximum, 1000d, recoveryEnd)
+            ["maximumAtEnd"] = settings.ResolveActivationProbability(maximum, 1000d, recoveryEnd),
+            ["belowGaleMultiplier"] = rule.ResolveProbabilityMultiplier(.799f),
+            ["galeMultiplier"] = rule.ResolveProbabilityMultiplier(.8f),
+            ["strongGaleMultiplier"] = rule.ResolveProbabilityMultiplier(.9f),
+            ["stormMultiplier"] = rule.ResolveProbabilityMultiplier(1f),
+            ["defaultGaleMultiplier"] = defaults.ResolveProbabilityMultiplier(.8f),
+            ["defaultStrongGaleMultiplier"] = defaults.ResolveProbabilityMultiplier(.9f),
+            ["defaultStormMultiplier"] = defaults.ResolveProbabilityMultiplier(1f)
         };
     }
 

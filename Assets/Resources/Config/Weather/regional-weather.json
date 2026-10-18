@@ -2,7 +2,7 @@
   "RegionSizeInChunks": 8,
   "WindTransitionWidth": 32.0,
   "StepSeconds": 2.0,
-  "CheckIntervalSeconds": 30.0,
+  "CheckIntervalSeconds": 300.0,
   "NaturalEventProbabilityMultiplier": 0.3,
   "MaximumCatchUpSteps": 120,
   "FreezingTemperature": 0.0,
@@ -32,7 +32,7 @@
       "MinimumIntensity": 0.1,
       "MaximumIntensity": 1.0,
       "ProbabilityBands": [
-        { "MinimumIntensity": 0.8, "Multiplier": 0.5 },
+        { "MinimumIntensity": 0.8, "Multiplier": 0.45 },
         { "MinimumIntensity": 0.9, "Multiplier": 0.25 },
         { "MinimumIntensity": 1.0, "Multiplier": 0.1 }
       ],

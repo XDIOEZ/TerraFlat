@@ -175,6 +175,7 @@ namespace FlatWorld.WorldModel
         {
             if (state.Profile == null)
                 return;
+            // 同一轮逐项独立抽签，任一要素的成败都不阻止其余天气形成组合。
             foreach (WeatherElementProfile profile in state.Profile.Elements)
             {
                 WeatherElementState element = GetOrCreateElement(state, profile.Id);

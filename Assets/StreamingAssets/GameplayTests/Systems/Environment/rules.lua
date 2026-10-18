@@ -2,6 +2,30 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+for _, combination in ipairs({
+    {wind = true, rain = true, thunder = true, fog = true},
+    {wind = true, rain = true, thunder = false, fog = false},
+    {wind = false, rain = true, thunder = true, fog = false},
+    {wind = false, rain = false, thunder = false, fog = false}
+}) do
+    local expected = combination
+    test.system("environment", "natural_draw_all", expected, function(data)
+        near(data.checkSeconds, 300, "正式天气抽取间隔不是五个游戏分钟")
+        near(data.defaultCheckSeconds, data.checkSeconds, "默认天气间隔和正式配置不同")
+        for _, id in ipairs({"wind", "rain", "thunder", "fog"}) do
+            near(data.before[id].intensity, 0, "五分钟尚未到就抽出了天气：" .. id)
+            near(data.between[id].intensity, 0, "下一轮五分钟尚未到就重抽天气：" .. id)
+            local intensity = expected[id] and 0.5 or 0
+            near(data.first[id].intensity, intensity, "首轮逐项抽签遗漏或错误启动：" .. id)
+            near(data.second[id].intensity, intensity, "第二轮逐项抽签遗漏或错误启动：" .. id)
+            if expected[id] then
+                near(data.first[id].started, 300, "组合天气没有在同一轮启动：" .. id)
+                near(data.second[id].started, 600, "下一轮天气没有在五分钟边界启动：" .. id)
+            end
+        end
+    end, "五游戏分钟边界、全部命中、风雨组合、雷雨组合及全部未中")
+end
+
 test.system("environment", "light_registry", {}, function(data)
     assert(data.registryAvailable, "URP 活跃光源登记表适配失败")
     assert(data.createdRegistered and data.disabledRemoved and data.reenabledRegistered,
@@ -106,7 +130,7 @@ for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
         near(data.seconds, 300, "自然天气恢复时长不是300游戏秒")
         near(data.defaultFloor, data.floor, "代码默认恢复倍率和正式配置不同")
         near(data.defaultSeconds, data.seconds, "代码默认恢复时长和正式配置不同")
-        near(data.checkSeconds, 30, "自我调节改变了原30秒检查间隔")
+        near(data.checkSeconds, 300, "自然天气没有按五个游戏分钟检查")
         near(data.recoveryEnd, 1300, "恢复完成时刻没有从事件结束后计时")
         near(data.basis, 0.12, "自我调节改写了冻结基础概率或统一倍率")
         near(data.initial, data.basis, "初次没有自然历史时被抑制")
@@ -118,7 +142,16 @@ for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
         near(data.high, data.low * 4, "相同历史和强度下基础概率比例没有保留")
         assert(data.high > data.low, "相同恢复进度时高概率没有保持更高")
         near(data.maximumAtEnd, data.maximumBasis * 0.2, "强度概率分段与恢复倍率没有叠加")
-        if element_id == "wind" then near(data.maximumAtEnd, 0.0024, "十级风分段概率被自我调节覆盖") end
+        if element_id == "wind" then
+            near(data.maximumAtEnd, 0.0024, "十级风分段概率被自我调节覆盖", 0.000001)
+            near(data.belowGaleMultiplier, 1, "降低大风概率影响了八级以下普通风")
+            near(data.galeMultiplier, 0.45, "八级风没有降低到约每周一次的概率")
+            near(data.strongGaleMultiplier, 0.25, "九级风概率倍率错误")
+            near(data.stormMultiplier, 0.1, "十级风概率倍率错误")
+            near(data.defaultGaleMultiplier, data.galeMultiplier, "八级风默认值和正式配置不同")
+            near(data.defaultStrongGaleMultiplier, data.strongGaleMultiplier, "九级风默认值和正式配置不同")
+            near(data.defaultStormMultiplier, data.stormMultiplier, "十级风默认值和正式配置不同")
+        end
     end, "自然天气概率自我调节、默认配置和完整恢复：" .. element_id)
 
     test.system("environment", "natural_recovery_lifecycle", {id = element_id}, function(data)
@@ -342,9 +375,9 @@ test.system("environment", "weather", {}, function(data)
     near(data.endedPrecipitation, 0, "持续时间结束后降水事件没有停止")
     assert(data.negativeRegionX == -128 and data.negativeRegionY == -128, "负坐标天气区域没有向下归整")
     near(data.rainProbability, 0.12, "自然天气统一概率倍率错误")
-    near(data.wind8Probability, 0.06, "八级风附加概率倍率错误")
-    near(data.wind9Probability, 0.03, "九级风附加概率倍率错误")
-    near(data.wind10Probability, 0.012, "十级风附加概率倍率错误")
+    near(data.wind8Probability, 0.054, "八级风附加概率倍率错误", 0.000001)
+    near(data.wind9Probability, 0.03, "九级风附加概率倍率错误", 0.000001)
+    near(data.wind10Probability, 0.012, "十级风附加概率倍率错误", 0.000001)
 end, "区域天气共享、冻结气候、事件到期与强风概率")
 
 test.system("environment", "wind_read_path", {}, function(data)
