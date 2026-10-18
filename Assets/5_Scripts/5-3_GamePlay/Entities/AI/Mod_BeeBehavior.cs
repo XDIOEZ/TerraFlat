@@ -111,6 +111,7 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
         damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;
         damageReceiver.OnDamageReceived += HandleBeeDamageReceived;
         bird.RegisterFlightPilot(this);
+        AI_DebugOverlay.Register(this, DrawDebugOverlay);
     }
 
     /// <summary>蜂巢在成员装配完毕后注入归属与上一次保存的行为状态。</summary>
@@ -141,6 +142,7 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
 
     protected override void OnUnload()
     {
+        AI_DebugOverlay.Unregister(this);
         if (damageReceiver != null)
             damageReceiver.OnDamageReceived -= HandleBeeDamageReceived;
         bird?.UnregisterFlightPilot(this);
@@ -151,6 +153,8 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
         damageReceiver = null;
         nightSleepRequested = false;
     }
+
+    private void OnDestroy() => AI_DebugOverlay.Unregister(this);
     #endregion
 
     #region 权威行为调度
@@ -299,22 +303,20 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
 
     #region 调试显示
     private static GUIStyle beeDebugStyle; // 蜜蜂共用头顶调试样式，避免每只蜂重复创建。
+    private static readonly GUIContent beeLine1Content = new();
+    private static readonly GUIContent beeLine2Content = new();
+    private static readonly GUIContent beeLabelContent = new();
 
-    /// <summary>接入动物参数总开关，显示蜜蜂当前行为、饱食、愤怒、目标与蜂巢库存。</summary>
-    private void OnGUI()
+    /// <summary>蜜蜂头顶标签由统一绘制器调用，不再逐只触发 IMGUI。</summary>
+    private void DrawDebugOverlay(Camera camera)
     {
-        if (Event.current.type != EventType.Repaint)
-            return;
-        if (!AI_DebugOverlay.Visible || !Application.isPlaying || !AI_DebugOverlay.CanDrawWorldLabels || item == null)
-            return;
-
-        Camera camera = Camera.main;
-        if (camera == null)
+        if (item == null)
             return;
 
         Transform visualRoot = bird != null && bird.liftRoot != null ? bird.liftRoot : item.transform;
         Vector3 screenPos = camera.WorldToScreenPoint(visualRoot.position + new Vector3(0f, 0.55f, 0f));
-        if (screenPos.z <= 0f)
+        if (screenPos.z <= 0f || screenPos.x < -Screen.width || screenPos.x > Screen.width * 2f ||
+            screenPos.y < -Screen.height || screenPos.y > Screen.height * 2f)
             return;
 
         beeDebugStyle ??= new GUIStyle(GUI.skin.box)
@@ -330,16 +332,19 @@ public sealed partial class Mod_BeeBehavior : Module, IItemModuleDependencyBinde
         int hiveGuid = bird != null ? bird.HomeHiveGuid : 0;
         string line2 =
             $"目标: {GetBeeDebugTarget()} | 蜂巢: {hiveText} | 巢GUID: {hiveGuid}";
+        beeLine1Content.text = line1;
+        beeLine2Content.text = line2;
+        beeLabelContent.text = $"{line1}\n{line2}";
         float width = Mathf.Max(
-            beeDebugStyle.CalcSize(new GUIContent(line1)).x,
-            beeDebugStyle.CalcSize(new GUIContent(line2)).x) + 14f;
+            beeDebugStyle.CalcSize(beeLine1Content).x,
+            beeDebugStyle.CalcSize(beeLine2Content).x) + 14f;
         const float height = 46f;
         Rect rect = new(
             screenPos.x - width * 0.5f,
             Screen.height - screenPos.y - height * 0.5f,
             width,
             height);
-        GUI.Box(rect, $"{line1}\n{line2}", beeDebugStyle);
+        GUI.Box(rect, beeLabelContent, beeDebugStyle);
     }
 
     /// <summary>将蜜蜂内部行为标记整理成可读的调试状态。</summary>

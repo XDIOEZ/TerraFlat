@@ -9,11 +9,15 @@ public static class HiveColonyDebugOverlay
 {
     public static bool Visible { get; private set; }
 
-    public static void SetVisible(bool visible) => Visible = visible;
+    public static void SetVisible(bool visible)
+    {
+        Visible = visible;
+        AI_DebugOverlay.RefreshVisibility();
+    }
 
     public static bool Toggle()
     {
-        Visible = !Visible;
+        SetVisible(!Visible);
         return Visible;
     }
 }
@@ -83,22 +87,19 @@ public sealed partial class Mod_HiveColony : Module
 
     #region 调试显示
     private static GUIStyle hiveDebugStyle; // 所有蜂巢共用调试样式。
+    private static readonly GUIContent hiveLine1Content = new();
+    private static readonly GUIContent hiveLine2Content = new();
+    private static readonly GUIContent hiveLabelContent = new();
 
-    /// <summary>独立显示蜂巢库存、成员、繁殖与领地警戒参数。</summary>
-    private void OnGUI()
+    /// <summary>蜂巢通过集中绘制器显示调试信息，保留独立开关。</summary>
+    private void DrawDebugOverlay(Camera camera)
     {
-        // 调试文字只在实际绘制时计算，跳过 IMGUI 的布局与输入事件。
-        if (Event.current.type != EventType.Repaint)
-            return;
-        if (!HiveColonyDebugOverlay.Visible || !Application.isPlaying || !AI_DebugOverlay.CanDrawWorldLabels || item == null)
-            return;
-
-        Camera camera = Camera.main;
-        if (camera == null)
+        if (item == null)
             return;
 
         Vector3 screenPos = camera.WorldToScreenPoint(item.transform.position + new Vector3(0f, 1.25f, 0f));
-        if (screenPos.z <= 0f)
+        if (screenPos.z <= 0f || screenPos.x < -Screen.width || screenPos.x > Screen.width * 2f ||
+            screenPos.y < -Screen.height || screenPos.y > Screen.height * 2f)
             return;
 
         hiveDebugStyle ??= new GUIStyle(GUI.skin.box)
@@ -112,16 +113,19 @@ public sealed partial class Mod_HiveColony : Module
             $"蜂巢 | 蜂蜜: {state.Honey}/{state.HoneyCapacity} | 成员: {state.Residents.Count}/{MaximumResidents} | 已装载: {residents.Count} | 睡眠: {SleepingResidents}";
         string line2 =
             $"繁殖: {GetBirthDebugText()} | 警戒: {GetAlarmDebugText()} | 领地: {TerritorySizeCells}×{TerritorySizeCells}格";
+        hiveLine1Content.text = line1;
+        hiveLine2Content.text = line2;
+        hiveLabelContent.text = $"{line1}\n{line2}";
         float width = Mathf.Max(
-            hiveDebugStyle.CalcSize(new GUIContent(line1)).x,
-            hiveDebugStyle.CalcSize(new GUIContent(line2)).x) + 14f;
+            hiveDebugStyle.CalcSize(hiveLine1Content).x,
+            hiveDebugStyle.CalcSize(hiveLine2Content).x) + 14f;
         const float height = 46f;
         Rect rect = new(
             screenPos.x - width * 0.5f,
             Screen.height - screenPos.y - height * 0.5f,
             width,
             height);
-        GUI.Box(rect, $"{line1}\n{line2}", hiveDebugStyle);
+        GUI.Box(rect, hiveLabelContent, hiveDebugStyle);
     }
 
     /// <summary>把繁殖约束整理为当前最直接的调试状态。</summary>
@@ -186,6 +190,7 @@ public sealed partial class Mod_HiveColony : Module
         hiveDestroyed = false;
         BindHiveDamageEvents();
         if (GameNetwork.HasStateAuthority) EnsureInitialResidentIntents();
+        AI_DebugOverlay.RegisterHive(this, DrawDebugOverlay);
     }
 
     /// <summary>先同步成员的饱食度与愤怒值，再保存蜂巢唯一的权威快照。</summary>
@@ -199,6 +204,7 @@ public sealed partial class Mod_HiveColony : Module
     /// <summary>卸载时先保存成员状态，再撤回独立 Actor。</summary>
     protected override void OnUnload()
     {
+        AI_DebugOverlay.UnregisterHive(this);
         ItemMgr manager = itemManager;
         UnbindHiveDamageEvents();
         // 世界关闭时管理器可能已经先销毁，此时不能把随场景销毁的蜜蜂误判成真实死亡。
@@ -217,6 +223,8 @@ public sealed partial class Mod_HiveColony : Module
         itemManager = null;
         pendingResidentSpawns = false;
     }
+
+    private void OnDestroy() => AI_DebugOverlay.UnregisterHive(this);
 
     public override void ModUpdate(float deltaTime)
     {

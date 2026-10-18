@@ -450,6 +450,7 @@ namespace FlatWorld.WorldModel
         private readonly struct HydrologyOutputWindow
         {
             private readonly int originX, originY, centerX, centerY, spanX, spanY, maximumX, maximumY;
+            private readonly int worldMinX, worldMinY;
 
             internal HydrologyOutputWindow(ChunkGenerationRequest request)
             {
@@ -460,6 +461,8 @@ namespace FlatWorld.WorldModel
                 centerY = originY + request.Profile.Height / 2;
                 spanX = request.Topology.IsWrapped ? request.Topology.Span.X : 0;
                 spanY = request.Topology.IsWrapped ? request.Topology.Span.Y : 0;
+                worldMinX = request.Topology.Min.X;
+                worldMinY = request.Topology.Min.Y;
                 maximumX = request.Profile.Width + Padding;
                 maximumY = request.Profile.Height + Padding;
             }
@@ -483,6 +486,24 @@ namespace FlatWorld.WorldModel
                 bool contains = x >= -Padding && y >= -Padding && x < maximumX && y < maximumY;
                 index = contains ? (y + Padding) * Width + x + Padding : -1;
                 return contains;
+            }
+
+            /// <summary>冲积带扫描只在越界时回绕坐标，避免每个重复候选格都执行取模。</summary>
+            internal bool TryGetCandidateIndex(Int2 position, out int index)
+            {
+                return TryGetIndex(new Int2(
+                    NormalizeWhenOutside(position.X, worldMinX, spanX),
+                    NormalizeWhenOutside(position.Y, worldMinY, spanY)), out index);
+            }
+
+            private static int NormalizeWhenOutside(int position, int minimum, int span)
+            {
+                if (span <= 0) return position;
+                long offset = (long)position - minimum;
+                if (offset >= 0L && offset < span) return position;
+                long wrapped = offset % span;
+                if (wrapped < 0L) wrapped += span;
+                return (int)(minimum + wrapped);
             }
 
             internal Int2 PositionAt(int index) => new(originX - Padding + index % Width,
@@ -554,12 +575,12 @@ namespace FlatWorld.WorldModel
 
             internal bool Merge(Int2 position, double strength)
             {
-                if (!window.TryGetIndex(position, out int index)) return false;
+                if (!window.TryGetCandidateIndex(position, out int index)) return false;
                 if (denseLength == 0)
                 {
                     HeightQueries++;
                     if (sampling.Height(position) <= sampling.Settings.SeaLevel) return false;
-                    SetFloodplainStrength(output, position, strength);
+                    SetFloodplainStrength(output, sampling.Normalize(position), strength);
                     return true;
                 }
                 if (strengths == null)

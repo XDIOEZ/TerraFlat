@@ -1407,8 +1407,7 @@ namespace FlatWorld.WorldModel
             foreach (FloodplainKernel.Sample sample in kernel.Samples)
             {
                 if (measureCandidates) candidates++;
-                Int2 position = sampling.Normalize(new Int2(center.X + sample.X,
-                    center.Y + sample.Y));
+                Int2 position = new(center.X + sample.X, center.Y + sample.Y);
                 if (floodplain.Merge(position, centerStrength * sample.Strength) && measureCandidates)
                     mergeAttempts++;
             }

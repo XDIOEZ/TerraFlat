@@ -35,6 +35,7 @@ public static class AI_DebugOverlay
 {
 	#region 集中绘制
 	private static readonly Dictionary<MonoBehaviour, Action<Camera>> sources = new();
+	private static readonly Dictionary<MonoBehaviour, Action<Camera>> hiveSources = new();
 	private static AI_DebugOverlayRenderer renderer;
 	public static bool Visible { get; private set; }
 
@@ -75,35 +76,60 @@ public static class AI_DebugOverlay
 		RefreshRenderer(false);
 	}
 
+	/// <summary>蜂巢调试使用同一个绘制入口，但保留独立的 GM 开关。</summary>
+	public static void RegisterHive(MonoBehaviour source, Action<Camera> draw)
+	{
+		hiveSources[source] = draw;
+		RefreshRenderer();
+	}
+
+	public static void UnregisterHive(MonoBehaviour source)
+	{
+		hiveSources.Remove(source);
+		RefreshRenderer(false);
+	}
+
+	public static void RefreshVisibility() => RefreshRenderer();
+
 	private static void RefreshRenderer(bool allowCreation = true)
 	{
-		// 关闭调试时不保留任何 AI 的 OnGUI 入口，开启后共用一个绘制器。
-		if (allowCreation && renderer == null && Visible && sources.Count > 0)
+		// 只有任一开关对应的来源需要绘制时才启用唯一的 IMGUI 入口。
+		bool needsRenderer = Visible && sources.Count > 0 ||
+		    HiveColonyDebugOverlay.Visible && hiveSources.Count > 0;
+		if (allowCreation && renderer == null && needsRenderer)
 		{
 			GameObject host = new GameObject("[AI Debug Overlay]");
 			UnityEngine.Object.DontDestroyOnLoad(host);
 			renderer = host.AddComponent<AI_DebugOverlayRenderer>();
 		}
 		if (renderer != null)
-			renderer.enabled = Visible && sources.Count > 0;
+			renderer.enabled = needsRenderer;
 	}
 
 	public static void Draw()
 	{
-		if (!Visible || !Application.isPlaying || !CanDrawWorldLabels)
+		bool drawActors = Visible && sources.Count > 0;
+		bool drawHives = HiveColonyDebugOverlay.Visible && hiveSources.Count > 0;
+		if ((!drawActors && !drawHives) || !Application.isPlaying || !CanDrawWorldLabels)
 			return;
 		Camera camera = Camera.main;
 		if (camera == null)
 			return;
-		foreach (var source in sources)
-			if (source.Key != null && source.Key.isActiveAndEnabled)
-				source.Value(camera);
+		if (drawActors)
+			foreach (var source in sources)
+				if (source.Key != null && source.Key.isActiveAndEnabled)
+					source.Value(camera);
+		if (drawHives)
+			foreach (var source in hiveSources)
+				if (source.Key != null && source.Key.isActiveAndEnabled)
+					source.Value(camera);
 	}
 
 	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 	private static void ResetRuntime()
 	{
 		sources.Clear();
+		hiveSources.Clear();
 		renderer = null;
 		Visible = false;
 	}
