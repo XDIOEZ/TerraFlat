@@ -13,6 +13,9 @@ public static partial class GameplayTestSystemProbe
     {
         var result = new Dictionary<string, Func<JObject, JObject>>(StringComparer.Ordinal);
         RegisterEntityOperations(result);
+        RegisterWorldMatterOperations(result);
+        RegisterBirdFlightQueryOperations(result);
+        RegisterNaturalEntityBatchOperations(result);
         RegisterWorldOperations(result);
         RegisterServiceOperations(result);
         result.Add("rendering/dropped_combustion_material", ServiceDroppedCombustionMaterial);

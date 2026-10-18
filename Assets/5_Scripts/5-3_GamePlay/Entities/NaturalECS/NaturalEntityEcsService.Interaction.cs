@@ -169,25 +169,48 @@ namespace FlatWorld.NaturalEntities
         private static void RegisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Registered, bool notifyPhysics = true)
         {
             NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
+            ResolveSpatialBounds(record, body);
+            RegisterSpatialCells(record);
+            if (notifyPhysics && record.BlocksMovement)
+                PublishPhysicsBodyChanged(record, reason, true);
+        }
+
+        private static void ResolveSpatialBounds(Record record, NaturalEntityBody body)
+        {
             Matrix4x4 root = BodyMatrix(body);
-            ItemColliderDefinitionDto collider = record.Profile.Definition.Visual?.Collider;
-            record.BlocksMovement = collider?.Enabled != false && collider?.IsTrigger == false;
-            record.BodyBounds = TransformBounds(root, collider?.Offset ?? Vector2.zero, collider?.Size ?? Vector2.one);
-            JObject health = record.Profile.HealthParameters;
-            JObject hit = health?["$collider2D"] as JObject;
-            record.HitColliderEnabled = hit?["enabled"]?.Value<bool>() != false;
-            Vector2 hitOffset = hit?["offset"]?.ToObject<Vector2>() ?? collider?.Offset ?? Vector2.zero;
-            Vector2 hitSize = hit?["size"]?.ToObject<Vector2>() ?? collider?.Size ?? Vector2.one;
-            JObject transform = health?["$transform"] as JObject;
-            Matrix4x4 hitMatrix = root * Matrix4x4.TRS(transform?["localPosition"]?.ToObject<Vector3>() ?? Vector3.zero,
-                Quaternion.Euler(transform?["localEulerAngles"]?.ToObject<Vector3>() ?? Vector3.zero),
-                transform?["localScale"]?.ToObject<Vector3>() ?? Vector3.one);
-            record.HitBounds = TransformBounds(hitMatrix, hitOffset, hitSize);
-            // 树的受击范围至少覆盖实体阻挡范围，避免投射物先撞树干物理盒却没有进入伤害结算。
-            if (record.HitColliderEnabled && record.BlocksMovement && record.Profile.Definition.HasTag(Tag.Tree))
-                record.HitBounds.Encapsulate(record.BodyBounds);
+            NaturalEntitySpatialGeometry geometry = record.Profile.SpatialGeometry;
+            record.BlocksMovement = geometry.BlocksMovement;
+            record.HitColliderEnabled = geometry.HitColliderEnabled;
+            geometry.Resolve(root, out record.BodyBounds, out record.HitBounds);
             ResolveBodyVisual(record, body, out Sprite sprite, out Matrix4x4 matrix, out _, out _);
             record.VisualBounds = sprite != null ? TransformBounds(matrix, sprite.bounds.center, sprite.bounds.size) : record.HitBounds;
+            record.IndexedRevision = body.VisualVersion;
+        }
+
+        // 外观变色、库存及果实数量不改变几何时，保留空间桶与物理登记。
+        private static void RefreshSpatial(Record record, NaturalEntityBody body)
+        {
+            Bounds previousBody = record.BodyBounds, previousHit = record.HitBounds, previousVisual = record.VisualBounds;
+            bool previousBlocking = record.BlocksMovement;
+            ResolveSpatialBounds(record, body);
+            if (previousBody.Equals(record.BodyBounds) && previousHit.Equals(record.HitBounds) &&
+                previousVisual.Equals(record.VisualBounds) && previousBlocking == record.BlocksMovement) return;
+            UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
+            RegisterSpatialCells(record);
+            if (previousBlocking == record.BlocksMovement && previousBody.Equals(record.BodyBounds)) return;
+            if (previousBlocking)
+            {
+                PhysicsBodyChanged?.Invoke(previousBody);
+                PhysicsBodyChangedWithReason?.Invoke(previousBody, PhysicsBodyChangeReason.VisualRevision,
+                    record.Snapshot.Guid, record.Profile.Definition.Id);
+                BlockingBodyChanged?.Invoke(new BlockingBodySnapshot(record.Handle.Id, record.Snapshot.Guid,
+                    record.Profile.Definition.Id, previousBody), false, PhysicsBodyChangeReason.VisualRevision);
+            }
+            if (record.BlocksMovement) PublishPhysicsBodyChanged(record, PhysicsBodyChangeReason.VisualRevision, true);
+        }
+
+        private static void RegisterSpatialCells(Record record)
+        {
             Bounds bounds = record.HitBounds;
             bounds.Encapsulate(record.BodyBounds); bounds.Encapsulate(record.VisualBounds);
             int firstX = Mathf.FloorToInt(bounds.min.x), lastX = Mathf.FloorToInt(bounds.max.x);
@@ -201,10 +224,7 @@ namespace FlatWorld.NaturalEntities
                 if (!spatialCells.TryGetValue(cell, out HashSet<int> bucket)) spatialCells.Add(cell, bucket = new());
                 if (bucket.Add(record.Handle.Id)) record.SpatialCells.Add(cell);
             }
-            record.IndexedRevision = body.VisualVersion;
             RefreshContactDamageSource(record);
-            if (notifyPhysics && record.BlocksMovement)
-                PublishPhysicsBodyChanged(record, reason, true);
         }
 
         private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed, bool notifyPhysics = true)
@@ -345,7 +365,7 @@ namespace FlatWorld.NaturalEntities
             return Mathf.Abs(delta.x) <= record.VisualBounds.extents.x && Mathf.Abs(delta.y) <= record.VisualBounds.extents.y;
         }
 
-        private static Bounds TransformBounds(Matrix4x4 matrix, Vector2 center, Vector2 size)
+        internal static Bounds TransformBounds(Matrix4x4 matrix, Vector2 center, Vector2 size)
         {
             Vector3 x = matrix.MultiplyVector(new Vector3(Mathf.Abs(size.x) * 0.5f, 0f));
             Vector3 y = matrix.MultiplyVector(new Vector3(0f, Mathf.Abs(size.y) * 0.5f));

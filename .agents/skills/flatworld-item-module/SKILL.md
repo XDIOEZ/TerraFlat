@@ -73,6 +73,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 
 - 单机掉落经 `DroppedItemService.Spawn/SpawnLoot`：passive 使用纯 C# 轻量数据和近镜头池化 Sprite；interactive 保留完整 Item。两种新生掉落都复制独立载荷并分配新 GUID，完整 Item 在注册前清零载荷 GUID，来源库存/手持物身份保持不变。需要模块飞行效果的物品使用 interactive 与 `IDroppedItemSpawnContextReceiver`。普通世界掉落缩放 0.5，精确落点由 destination 指定；联机沿用 Item 权威链。
 - 世界散落物温湿推进共用 `WorldItemMatterRules`，普通环境温差每游戏秒缩小 1%，统一调用 `ThermalRuntime.AdvanceAmbient`；完整 Item 在注册/加载时建立时间基线，两种后端按逐件累计间隔分帧推进。高温液体接触仍以液体自身 `temperature/contactHeatingPerSecond` 固定传热，达到当前定义 `matter.ignitionTemperature` 才点燃；设备可显式传入专属速率，airExposure 只调普通环境下的干燥。已有 `Mod_Combustion` 时复用模块且不再扣材料堆数；两种后端共用材料火焰粒子。
+- 完整散落物的层级资格按结构事件、模块版本、载荷引用与运行代际失效，不在反复复核时遍历组件树；物种登记、飞行和投射物附着仍读实时状态。轻量掉落每次同步 Tick 共用地形寻址，世界/代际改变立即重建，每次样本仍读权威层，入水转换、浮力和物质接触复用样本液体定义；不能跨燃烧回调缓存温度来源。
 - 掉落物单件物质结算按 `DroppedItems.Matter.Environment/Combustion/Transition` 分段记录；约 1ms 的批次预算只能在件与件之间检查，单件环境查询必须走温度场单格入口，避免查询一格却重建整块。
 - 完整 Item 的浮沉/漂流由 `WorldItemWaterSystem` 按最终位置派生，轻量掉落复用 `WorldItemWaterRules`。水体状态不入库存；轨迹结束后交回水系统，先移除 Mod_Droping 再允许拾取。河流加速按总重量，浮沉按单件千克/升：普通水门槛 1 kg/L，其他液体乘 `buoyancyThresholdMultiplier`（海水 1.5、岩浆 6），达到门槛下沉；该倍率不改变液体载荷重量。转换表现用 `IWaterEntryTransformEffect` 在回收前脱离源物。
 - 完整散落物的风推动登记时缓存建筑与水态组件引用；水态由 `WorldItemWaterSystem.ActivateExistingItem` 更新引用，注销随物品回收。轻量掉落物与完整物品通过 `WorldMotionSystem.WindSamplingContext` 共用每批固定的质量范围和星球重力。
@@ -82,4 +83,5 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - `NaturalEntityEcsService` 为天气/耐候、已种植土壤和导航占地维护独立输入索引，注册、卸载、恢复和配置刷新时增量更新；Profiler `NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil` 分别记录耗时。
 - `NaturalEntityRuntime.FreezeEnvironment` 性能摘要的 work 是输入自然物数，gauge 为最近定时批次的输入规模；Profiler 子段 `.Weather/.Temperature/.WriteInputs` 定位天气查询、温度采样和 ECS 写入（仅 Profiler 细分，不进入摘要计时）。`NaturalEntityRuntime.Environment.WeatherSamples/TemperatureSamples/MissingWeather/MissingTemperature/InputWrites` 按批累计查询尝试、缺失样本与实际组件写次数；GM“性能 DEBUG”统计开启才累计数量，慢摘要另行开启，Profiler 点始终可见。查询失败保留正式回退规则，同批只冻结服务引用，每件天气和温度仍实时读取。
 - `FreezeEnvironment` 的一批资源共享 `TemperatureMgr.PointSamplingContext`，目标区块的相邻热源输入只准备一次；同步作用域结束即释放引用，原 0.25 秒间隔和距离规则保持不变。
+- 自然物土壤输入与提交共享 `FarmlandSystem.SoilSamplingBatch` 的本轮寻址及可复用容器，九宫格灌溉和消费仍逐件同步执行。发布用 `NaturalEntitySimulation.BodyReadBatch` 拷贝只读值，组件写入、外部 `NotifyChanged` 和移除使对应值失效；不跨批保留。碰撞参数冷编译为 `NaturalEntitySpatialGeometry`，外观版本只在真实 Bounds 变化时重建空间桶。
 - 自然资源表现按 Dirty/Event 更新，几何版本与外观版本独立；TreeSortingVisual 用根镜像 SortingGroup 与玩家混排，主体不重复 BRG。客户端不推进权威植物 Job，采集命令/增量同步有独立接入点。旧 `DroppedItems/Core` ECS 实现仅为 Editor 学习参考。

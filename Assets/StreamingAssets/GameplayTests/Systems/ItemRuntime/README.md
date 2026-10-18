@@ -4,6 +4,8 @@
 
 快速入口：`rules.lua`；操作：`item_runtime/module_structure、clone_runtime、single_sprite_animation、single_sprite_shell_assembly、module_assembly_identity`。
 
+2026-10-18 平均帧优化补充 `world_matter_structure/world_matter_contact`：正式层级资格缓存检查模块增删、载荷替换、加载换代、自定义 AI 排除与稳态零分配；正式物质入口检查复用液体定义后的岩浆加热、遇水接触、零时长拒绝与数量不变。掉落物同步驱动复用 `ChunkMgr.RuntimeTerrainPresenceQuery`，其地形实时变化、环绕、卸载和世界代际边界复用 `terrain/contact_query_context` 规则。Unity 正在 PlayMode，本轮只静态修改，未编译或运行；真实平均帧和玩法由用户验收。
+
 `module_assembly_identity` 新增真实 `AI_Chicken`、`Mod_TurnBack` 的两种调用顺序：先 Awake 后绑定必须保留编译来源身份并成功装配，先绑定后 Awake 必须保留定义身份。2026-10-18 仅补充，Unity 在 PlayMode，本轮未编译或执行；实际自然生成由用户验收。
 
 单图状态换图回归：`single_sprite_animation` 检查 `Flying/Landing/Ground` 状态映射、直接 `TrySetSprite`、同状态重入、未知状态/空图拒绝，以及停用、卸载、切模式与复位后的原图恢复；换图后身体 Animator 仍停用。`single_sprite_shell_assembly` 读取真实 Bird/Seagull 外壳的五种首帧配置，并采样正式飞行阶段选择函数。2026-10-18 本次仅补充断言，Unity 正在 PlayMode，未编译、未执行；不代表真实鸟类飞行、对象池重取或画面观感已验收。

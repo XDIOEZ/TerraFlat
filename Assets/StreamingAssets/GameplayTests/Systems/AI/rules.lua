@@ -135,6 +135,27 @@ for _, case in ipairs({
     end, "水生线路查询去重：" .. case.name)
 end
 
+-- 同一条同步前视弧线保留原采样点，仅跨分段合并连续相同规范格。
+for _, case in ipairs({
+    {name = "同格连续分段", chunks = {{x=0,y=0}}, segments = {{x=.4,y=.1},{x=.7,y=.1},{x=.9,y=.1}}, results = {true,true,true}, queries = 1},
+    {name = "跨格不能漏查", chunks = {{x=0,y=0},{x=2,y=0}}, segments = {{x=.9,y=.1},{x=1.3,y=.1},{x=2.3,y=.1}}, results = {true,true,true}, queries = 3},
+    {name = "未知块拒绝后仍可返回", chunks = {{x=0,y=0}}, segments = {{x=.9,y=.1},{x=2.1,y=.1},{x=.1,y=.1}}, results = {true,false,true}, queries = 4},
+    {name = "负坐标矩形区块", originX = -2.9, chunkWidth = 3, chunkHeight = 2, chunks = {{x=-3,y=0},{x=0,y=0}}, segments = {{x=-2.1,y=.1},{x=-.1,y=.1},{x=.1,y=.1}}, results = {true,true,true}, queries = 4},
+    {name = "环绕接缝", originX = 3.7, wrapped = true, chunks = {{x=2,y=0},{x=-4,y=0}}, segments = {{x=3.9,y=.1},{x=-3.9,y=.1},{x=-3.6,y=.1}}, results = {true,true,true}, queries = 2}
+}) do
+    test.system("ai", "flight_traversal_batch", case, function(data)
+        assert(#data.results == #case.results and data.batchQueries == case.queries,
+            "鸟前视弧线重复查询连续同格或漏查跨格：" .. case.name)
+        for index, accepted in ipairs(case.results) do
+            assert(data.results[index] == accepted, "鸟前视弧线改变了原分段通行：" .. case.name)
+        end
+        assert(data.freshBeforeChange and not data.freshAfterEviction and data.freshAfterReload,
+            "鸟实际位移复核沿用了前视缓存或看不到区块卸载重载：" .. case.name)
+        assert(not data.oldEpochAccepted and not data.disposedAccepted,
+            "鸟实际位移复核接受了旧世界代际或已释放世界：" .. case.name)
+    end, "鸟前视弧线查询复用：" .. case.name)
+end
+
 -- 自然刷新读取正式目录，独立概率落空也要消耗排队机会。
 test.system("ai", "ecology_config", {}, function(data)
     assert(data.fishSafeMin == -26.5 and data.fishSafeMax == 63.5, "鱼的冷热安全范围没有按确认值扩大")

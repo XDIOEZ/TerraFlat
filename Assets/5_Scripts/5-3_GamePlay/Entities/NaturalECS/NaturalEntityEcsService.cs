@@ -161,8 +161,11 @@ namespace FlatWorld.NaturalEntities
                 {
                     using (FreezeSoilMarker.Auto())
                     {
+                        using FarmlandSystem.SoilSamplingBatch soils = FarmlandSystem.CreateSoilSamplingBatch();
+                        LightLayerMgr lights = LightLayerMgr.Instance;
+                        LightLayerMgr.PointSamplingBatch lighting = lights != null ? lights.CreatePointSamplingBatch() : default;
                         foreach (Record record in soilInputRecords)
-                            FreezeSoil(record);
+                            FreezeSoil(record, soils, lighting, lights != null);
                     }
                 }
             }

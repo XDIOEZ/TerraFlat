@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
+using UnityEngine.Pool;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 public partial class ItemMgr
@@ -12,6 +13,7 @@ public partial class ItemMgr
     private static readonly long WorldMatterStepBudgetTicks = System.Math.Max(1L, Stopwatch.Frequency / 1000L);
     private readonly List<Item> worldMatterSnapshot = new();
     private readonly Dictionary<Item, WorldMatterEntry> worldMatterEntries = new(ItemReferenceComparer.Instance);
+    private readonly Dictionary<Item, WorldMatterStructure> worldMatterStructures = new(ItemReferenceComparer.Instance);
     private double worldMatterTime;
     private double nextWorldMatterSweepTime = WorldMatterTickInterval;
     private int worldMatterCursor;
@@ -24,6 +26,45 @@ public partial class ItemMgr
         public double LastTime;
         public ParticleSystem Particles;
         public ParticleSystemRenderer ParticleRenderer;
+    }
+
+    // 层级能力只在结构或代际改变时读取，动态物种和投射物附着仍使用当前状态。
+    internal sealed class WorldMatterStructure
+    {
+        private readonly Item item;
+        private readonly ItemData data;
+        private readonly ItemMods modules;
+        private readonly uint generation;
+        private readonly uint structureVersion;
+        private readonly bool hasAiComponent;
+        private readonly bool hasTileReceiver;
+        private readonly Mod_Projectile projectile;
+
+        internal WorldMatterStructure(Item item)
+        {
+            this.item = item;
+            data = item.itemData;
+            modules = item.itemMods;
+            generation = item.RuntimeGeneration;
+            structureVersion = modules?.StructureVersion ?? 0;
+            using var scope = ListPool<MonoBehaviour>.Get(out var behaviours);
+            item.GetComponentsInChildren(true, behaviours);
+            foreach (MonoBehaviour behaviour in behaviours)
+            {
+                hasAiComponent |= behaviour is IAIActor or Mod_ItemChunkAssigner;
+                hasTileReceiver |= behaviour is Mod_TileEffectReceiver;
+                if (projectile == null && behaviour is Mod_Projectile candidate) projectile = candidate;
+            }
+        }
+
+        internal bool IsCurrent(Item current) => ReferenceEquals(item, current) &&
+            generation == current.RuntimeGeneration && ReferenceEquals(data, current.itemData) &&
+            ReferenceEquals(modules, current.itemMods) && structureVersion == (current.itemMods?.StructureVersion ?? 0);
+
+        internal bool BlocksWorldMatter => hasTileReceiver ||
+            (item is not Player && item is not Map &&
+             (hasAiComponent || MonsterManager.IsRegisteredSpeciesId(item.itemData?.IDName))) ||
+            (projectile != null && projectile.HasActiveWorldAttachment);
     }
 
     // 完整散落物独立于模块调度推进，休眠模块的普通联机掉落也能受热燃烧。
@@ -117,17 +158,17 @@ public partial class ItemMgr
             !item.gameObject.activeInHierarchy || !IsRuntimeItemRegistered(item) ||
             item.Owner != null || item.InHand || item.itemData?.Stack == null ||
             !item.itemData.Stack.CanBePickedUp || item.itemData.Stack.Amount <= 0f ||
-            RuntimeAiEntityUtility.IsAiEntity(item) || Mod_Droping.IsDropInProgress(item))
+            Mod_Droping.IsDropInProgress(item))
             return false;
-        if (item.GetComponentInChildren<Mod_TileEffectReceiver>(true) != null)
-            return false;
-        Mod_Projectile projectile = item.GetComponentInChildren<Mod_Projectile>(true);
-        return projectile == null || !projectile.HasActiveWorldAttachment;
+        if (!worldMatterStructures.TryGetValue(item, out WorldMatterStructure structure) || !structure.IsCurrent(item))
+            worldMatterStructures[item] = structure = new WorldMatterStructure(item);
+        return !structure.BlocksWorldMatter;
     }
 
     // 注册或加载完成就建立时间基线，避免首轮分帧扫描丢掉已过去的游戏时间。
     private void TrackWorldItemMatter(Item item)
     {
+        if (!ReferenceEquals(item, null)) worldMatterStructures.Remove(item);
         if (IsWorldMatterCandidate(item))
             GetWorldMatterEntry(item);
         else
@@ -216,8 +257,10 @@ public partial class ItemMgr
 
     private void ReleaseWorldItemMatter(Item item)
     {
-        if (ReferenceEquals(item, null) || !worldMatterEntries.TryGetValue(item, out WorldMatterEntry entry))
+        if (ReferenceEquals(item, null))
             return;
+        if (!IsRuntimeItemRegistered(item)) worldMatterStructures.Remove(item);
+        if (!worldMatterEntries.TryGetValue(item, out WorldMatterEntry entry)) return;
         DestroyWorldItemCombustionVisual(entry);
         worldMatterEntries.Remove(item);
     }
@@ -236,6 +279,7 @@ public partial class ItemMgr
         foreach (WorldMatterEntry entry in worldMatterEntries.Values)
             DestroyWorldItemCombustionVisual(entry);
         worldMatterEntries.Clear();
+        worldMatterStructures.Clear();
         worldMatterSnapshot.Clear();
         worldMatterCursor = 0;
         worldMatterTime = 0;

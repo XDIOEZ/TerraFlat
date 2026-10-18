@@ -49,8 +49,14 @@ internal sealed partial class DroppedItemRuntime
             bool changed, waterContact, consumedAll;
             // 分开记录单件环境、燃烧和物态替换，定位时间预算无法截断的长调用。
             using (MatterEnvironmentMarker.Auto())
-                changed = WorldItemMatterRules.Advance(data, body.Position, seconds,
-                    liquidContact: body.WaterKind != 0 && !simulation.TryGetFlight(id, out _), out waterContact);
+            {
+                WorldLiquidSettings contact = null;
+                if (body.WaterKind != 0 && !simulation.TryGetFlight(id, out _) &&
+                    TrySampleEnvironmentTerrain(body.Position, out RuntimeTerrainTileSample terrain) &&
+                    WorldLiquidSourceResolver.TryResolve(terrain, out WorldLiquidSourceTarget source))
+                    contact = source.Liquid.WorldWater;
+                changed = WorldItemMatterRules.Advance(data, body.Position, seconds, contact, out waterContact);
+            }
             // 满足材料转化时先保全整堆数量，再交给新材料自己的燃烧规则。
             if (TryTransitionMatter(id, data, ref body))
                 continue;

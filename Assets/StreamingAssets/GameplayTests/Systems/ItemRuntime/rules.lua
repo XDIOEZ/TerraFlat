@@ -1,4 +1,29 @@
 -- 检查模块结构版本和正式物品工厂的可变状态隔离。
+test.system("item_runtime", "world_matter_structure", {}, function(data)
+    assert(data.initialCurrent and not data.initialBlocked and data.stableAllowed,
+        "普通散落物资格缓存没有保留正常物品")
+    assert(data.stableAllocatedBytes == 0, "散落物稳态资格检查仍分配层级组件数组")
+    assert(data.addInvalidated and data.receiverBlocked and data.receiverMatchesReference,
+        "新增地块接收能力后仍重复推进世界物质")
+    assert(data.removeInvalidated and data.afterRemoveAllowed,
+        "移除地块接收能力后物品没有恢复世界物质资格")
+    assert(data.aiBlocked and data.aiMatchesReference, "缓存遗漏自定义 AI 能力")
+    assert(data.rebindInvalidated and data.generationInvalidated and data.generationAllowed,
+        "换载荷或重新加载后仍使用旧代际资格")
+end, "世界散落物资格缓存、能力变更与零分配热路径")
+
+for _, row in ipairs({
+    { water = false, temperature = 1100, rate = 75, seconds = 2, expected = 170 },
+    { water = true, temperature = 5, rate = 75, seconds = 2, expected = 5 },
+    { water = false, temperature = 1100, rate = 75, seconds = 0, expected = 20 }
+}) do
+    test.system("item_runtime", "world_matter_contact", row, function(data)
+        assert(math.abs(data.temperature - row.expected) < .0001, "复用地形液体定义后接触传热规则变化")
+        assert(data.waterContact == (row.water and row.seconds > 0), "水与岩浆的真实接触分类变化")
+        assert(data.amount == 7, "环境推进修改了整堆物品数量")
+    end, "世界散落物复用液体定义：" .. tostring(row.water) .. "/" .. row.seconds)
+end
+
 test.system("item_runtime", "module_structure", { stock = 2 }, function(data)
     assert(data.added == data.before + 1, "新增模块没有发布结构变化")
     assert(data.same == data.added, "原引用赋值误增结构版本")

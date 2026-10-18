@@ -9,24 +9,42 @@ public static class WorldItemMatterRules
         out bool waterContact)
     {
         waterContact = false;
+        if (data == null || !float.IsFinite(seconds) || seconds <= 0f) return false;
+        WorldLiquidSettings contact = null;
+        if (liquidContact && WorldLiquidSourceResolver.TryResolve(position, out WorldLiquidSourceTarget source))
+            contact = source.Liquid.WorldWater;
+        return Advance(data, position, seconds, contact, out waterContact);
+    }
+
+    // 同一轮已读过地形的后端直接传入液体配置，避免物质接触重复寻址。
+    internal static bool Advance(ItemData data, Vector2 position, float seconds, WorldLiquidSettings contact,
+        out bool waterContact)
+    {
+        waterContact = false;
         if (data == null || !float.IsFinite(seconds) || seconds <= 0f)
             return false;
         float ambient = TemperatureMgr.DefaultAmbientTemperature;
-        if (TemperatureMgr.Instance != null)
-            TemperatureMgr.Instance.TryGetAmbientTemperature(position, out ambient);
+        TemperatureMgr temperatures = TemperatureMgr.Instance;
+        if (temperatures != null) temperatures.TryGetAmbientTemperature(position, out ambient);
+        return Advance(data, ambient, seconds, contact, out waterContact);
+    }
 
+    internal static bool Advance(ItemData data, float ambient, float seconds, WorldLiquidSettings contact,
+        out bool waterContact)
+    {
+        waterContact = false;
+        if (data == null || !float.IsFinite(seconds) || seconds <= 0f) return false;
         bool changed = ItemMatterRuntime.EnsureInitialized(data, ambient);
         float targetTemperature = ambient;
         float? contactHeatingPerSecond = null;
-        if (liquidContact && WorldLiquidSourceResolver.TryResolve(position, out WorldLiquidSourceTarget source) &&
-            source.Liquid.WorldWater is WorldLiquidSettings settings)
+        if (contact != null)
         {
-            waterContact = settings.WaterContact;
+            waterContact = contact.WaterContact;
             // 高温液体接触使用液体自身温度，不能把周围空气的辐射温度当作岩浆温度。
-            if (settings.ContactHeatingPerSecond > 0f)
+            if (contact.ContactHeatingPerSecond > 0f)
             {
-                targetTemperature = settings.Temperature;
-                contactHeatingPerSecond = settings.ContactHeatingPerSecond;
+                targetTemperature = contact.Temperature;
+                contactHeatingPerSecond = contact.ContactHeatingPerSecond;
             }
         }
 

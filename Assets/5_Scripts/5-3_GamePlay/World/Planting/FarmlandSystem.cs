@@ -249,9 +249,17 @@ public static partial class FarmlandSystem
     public static void CommitSoil(TileData_Farmland soil, bool allowNaturalSoil = false)
     {
         if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
-                new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample) ||
-            !CanUseSoilCell(sample) || (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample)))
+                new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample))
             return;
+        CommitSoil(sample, soil, allowNaturalSoil);
+    }
+
+    private static void CommitSoil(RuntimeTerrainTileSample sample, TileData_Farmland soil, bool allowNaturalSoil,
+        bool normalizedWorldCell = false)
+    {
+        if (!CanUseSoilCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, sample.Cell,
+                sample.WorldCell, normalizedWorldCell) ||
+            (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample))) return;
         soil.NormalizeValues();
         if (Read(sample.Terrain, sample.LocalCell, SourceLayer) <= 0f)
             sample.Terrain.SetEnvironmentValue(SourceLayer, sample.LocalCell.x, sample.LocalCell.y,

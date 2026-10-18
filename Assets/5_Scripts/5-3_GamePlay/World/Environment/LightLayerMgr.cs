@@ -109,13 +109,39 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         if (!chunkMgr.TryGetRuntimeTerrainTile(worldPos, out RuntimeTerrainTileSample sample))
             return false;
 
-        Vector2 cellCenter = new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f);
-        lightLevel = EvaluateLights(GetActiveLights(), cellCenter, _hasTimeLightValue,
-            _timeGlobalLight, _timeLightValue, WorldTopologyRuntime.GetActiveDomain());
-        sample.Terrain.SetEnvironmentValue(
-            RuntimeLightLayerId, sample.LocalCell.x, sample.LocalCell.y, lightLevel);
+        lightLevel = CreatePointSamplingBatch().Sample(sample);
         return true;
     }
+
+    // 一批植物复用灯成员与拓扑，单格灯参数和权威光照层仍同步读取与提交。
+    internal readonly struct PointSamplingBatch
+    {
+        private readonly IReadOnlyList<Light2D> lights;
+        private readonly WorldTopologyDomain domain;
+        private readonly Light2D timeSource;
+        private readonly float timeValue;
+        private readonly bool hasTimeValue;
+
+        internal PointSamplingBatch(LightLayerMgr owner)
+        {
+            lights = owner.GetActiveLights();
+            domain = WorldTopologyRuntime.GetActiveDomain();
+            timeSource = owner._timeGlobalLight;
+            timeValue = owner._timeLightValue;
+            hasTimeValue = owner._hasTimeLightValue;
+        }
+
+        internal float Sample(RuntimeTerrainTileSample sample)
+        {
+            if (lights == null || sample.Terrain == null || sample.Terrain.IsDisposed) return CompletelyDarkValue;
+            float value = EvaluateLights(lights, new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f),
+                hasTimeValue, timeSource, timeValue, domain);
+            sample.Terrain.SetEnvironmentValue(RuntimeLightLayerId, sample.LocalCell.x, sample.LocalCell.y, value);
+            return value;
+        }
+    }
+
+    internal PointSamplingBatch CreatePointSamplingBatch() => new(this);
 
     public bool IsCompletelyDark(Vector2 worldPos)
     {

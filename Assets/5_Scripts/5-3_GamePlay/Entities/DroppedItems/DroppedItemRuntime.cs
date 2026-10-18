@@ -124,6 +124,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     {
         if (deltaTime <= 0f) return;
         domain = WorldTopologyRuntime.GetActiveDomain();
+        using var terrainSampling = new TerrainSamplingScope(this);
         using (MotionTickMarker.Auto())
         {
             simulation.Step(deltaTime, domain, changes);

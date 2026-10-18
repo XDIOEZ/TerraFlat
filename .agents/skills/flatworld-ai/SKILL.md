@@ -56,6 +56,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 蜂巢首次先登记完整成员意图及稳定 GUID，普通首次/恢复/日出/繁殖共用每巢每帧一只的实例化配额；未完成意图和睡眠状态随存档保留，成功创建后才提交，死亡不重补初始成员。受击护巢绕过配额立即出巢，卸载不继续推进待生成工作。
 - 蜜蜂追击/护巢受 AngryLockRadius/LOS 约束，丢目标按 LostTargetAngerSeconds 保持搜索最后可见位置，到点等待，重见重计时；夜间归巢不抢占追击，蜂巢销毁后无领地巡逻。
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。
+- 鸟前视弧线跨连续小段复用规范格游标，只合并纯地形存在查询；实际位移、下一条弧线及地面复合约束重新复核。落点环扫共用本轮拓扑和地形寻址，逐候选实时 `CanLand`；规则 `ai/flight_traversal_batch`。
 - 鸟离地撤实体阻挡，仅留感知/受击 Trigger；`BirdLift` 下独立运动学刚体承接受击盒，按当前 Sprite/镜像/动画姿态同步，卸载恢复配置。空中死亡先收视觉高度，再统一生命/掉落流程。
 - `EggLaying/AnimalEggLayingSchedule` 保存绝对日，成功产蛋后冷却至少两天，不追补；Bird 无鸡生产模块、Bee 关产蛋。产物/延迟来自 Actor，只有权威端生成。
 - `ContainerFeeding` 经允许 Animal 的种子端口交易一件真实物品，完整种子快照随鸟保存，死亡掉落成功后才清空。`Predation` 锁水中 Fish，走 DamageReceiver 后由 `IAquaticPredatorCarryTarget` 携到陆地，再攻击/吃 Meat；携带不保存，受惊/避险/疲劳/卸载释放。

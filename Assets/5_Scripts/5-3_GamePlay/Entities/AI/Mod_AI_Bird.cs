@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>鸟的地面、助跑与飞行阶段；助跑仍接触地面，离地后才屏蔽近战和地块效果。</summary>
@@ -958,8 +959,13 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         if (radius <= 0f)
             return false;
 
-        Vector2Int originCell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
-            Mathf.FloorToInt(origin.x), Mathf.FloorToInt(origin.y)));
+        ChunkMgr chunks = ChunkMgr.ExistingInstance;
+        if (chunks == null || !chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery query))
+            return false;
+
+        // 同一轮落点搜索共用世界拓扑和地形寻址，逐候选仍实时确认可站立状态。
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        int2 originCell = topology.Normalize(new int2(Mathf.FloorToInt(origin.x), Mathf.FloorToInt(origin.y)));
         int maxRing = Mathf.Max(1, Mathf.CeilToInt(radius));
         float radiusSqr = radius * radius;
 
@@ -975,12 +981,12 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
                     if (Mathf.Abs(x) != ring && Mathf.Abs(y) != ring)
                         continue;
 
-                    Vector2Int cell = WorldTopologyRuntime.NormalizeCell(originCell + new Vector2Int(x, y));
-                    Vector2 candidate = WorldTopologyRuntime.NormalizePosition(new Vector2(cell.x + 0.5f, cell.y + 0.5f));
-                    float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, candidate);
+                    int2 cell = topology.Normalize(originCell + new int2(x, y));
+                    Vector2 candidate = query.NormalizePosition(new Vector2(cell.x + 0.5f, cell.y + 0.5f));
+                    float distanceSqr = query.ShortestDelta(origin, candidate).sqrMagnitude;
                     if (distanceSqr > radiusSqr || distanceSqr >= bestDistanceSqr || !CanLand(candidate))
                         continue;
-                    if (!flightNavigation.CanTraverse(origin, candidate))
+                    if (!flightNavigation.CanTraverse(origin, candidate, ref query))
                         continue;
 
                     bestDistanceSqr = distanceSqr;
@@ -1064,12 +1070,13 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         float previewRemaining = Mathf.Min(0.75f, lookAhead / Mathf.Max(0.01f, speed));
         Vector2 preview = body.position;
         float previewAngle = angle;
+        var traversalCursor = new BirdFlightNavigationProfile.TraversalCursor();
         while (previewRemaining > 0.0001f)
         {
             float step = Mathf.Min(previewRemaining, 0.1f);
             Vector2 offset = ResolveFlightArc(previewAngle, targetAngle, speed, turnSpeed, step, out previewAngle);
             Vector2 next = query.NormalizePosition(preview + offset);
-            if (!flightNavigation.CanTraverse(preview, next, ref query)) return false;
+            if (!flightNavigation.CanTraverse(preview, next, ref query, ref traversalCursor)) return false;
             preview = next;
             previewRemaining -= step;
         }

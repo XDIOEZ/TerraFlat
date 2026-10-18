@@ -70,11 +70,20 @@ namespace FlatWorld.NaturalEntities
         private readonly World world;
         private readonly Dictionary<int, Entity> entities = new();
         private readonly Dictionary<NaturalEntityEcsProfile, EntityArchetype> archetypes = new();
+        private readonly Dictionary<int, NaturalEntityBody> bodySnapshots = new();
+        private readonly EntityQuery bodyQuery;
+        private bool readingBodyBatch;
         public event Action<int> Changed;
         public NaturalEntitySimulation(World sharedWorld)
         {
             world = sharedWorld ?? throw new ArgumentNullException(nameof(sharedWorld));
             if (!world.IsCreated) throw new InvalidOperationException("实体世界已释放。");
+            bodyQuery = Manager.CreateEntityQuery(new EntityQueryDesc
+            {
+                All = new[] { ComponentType.ReadOnly<NaturalEntityLocation>(),
+                    ComponentType.ReadOnly<EntityModuleAppearance>(), ComponentType.ReadOnly<EntityModuleActive>() },
+                Options = EntityQueryOptions.IgnoreComponentEnabledState
+            });
         }
         public bool IsCreated => world.IsCreated;
         public int Count => entities.Count;
@@ -128,6 +137,7 @@ namespace FlatWorld.NaturalEntities
         public void Remove(int id)
         {
             if (!entities.TryGetValue(id, out Entity entity)) return;
+            bodySnapshots.Remove(id);
             if (IsCreated) { Complete(); if (Manager.Exists(entity)) Manager.DestroyEntity(entity); }
             entities.Remove(id);
         }
@@ -144,6 +154,9 @@ namespace FlatWorld.NaturalEntities
             }
             entities.Clear();
             archetypes.Clear();
+            bodySnapshots.Clear();
+            readingBodyBatch = false;
+            if (IsCreated) bodyQuery.Dispose();
             Changed = null;
         }
 
@@ -151,8 +164,62 @@ namespace FlatWorld.NaturalEntities
 
         #region 组件边界
 
+        internal readonly struct BodyReadBatch : IDisposable
+        {
+            private readonly NaturalEntitySimulation owner;
+            internal BodyReadBatch(NaturalEntitySimulation owner) => this.owner = owner;
+            public void Dispose()
+            {
+                if (owner == null) return;
+                owner.readingBodyBatch = false;
+                owner.bodySnapshots.Clear();
+            }
+        }
+
+        // 回调前复制批量只读值，不持有跨结构变更的 Chunk/NativeArray 引用。
+        internal BodyReadBatch BeginBodyReadBatch()
+        {
+            if (readingBodyBatch) throw new InvalidOperationException("自然物发布读取不允许重入。");
+            bodySnapshots.Clear();
+            Manager.CompleteDependencyBeforeRO<NaturalEntityLocation>();
+            Manager.CompleteDependencyBeforeRO<EntityModuleAppearance>();
+            Manager.CompleteDependencyBeforeRO<EntityModuleActive>();
+            Manager.CompleteDependencyBeforeRO<AiecsVital>();
+            var locations = Manager.GetComponentTypeHandle<NaturalEntityLocation>(true);
+            var appearances = Manager.GetComponentTypeHandle<EntityModuleAppearance>(true);
+            var active = Manager.GetComponentTypeHandle<EntityModuleActive>(true);
+            var vitals = Manager.GetComponentTypeHandle<AiecsVital>(true);
+            var entityType = Manager.GetEntityTypeHandle();
+            using var chunks = bodyQuery.ToArchetypeChunkArray(Allocator.Temp);
+            foreach (ArchetypeChunk chunk in chunks)
+            {
+                var sources = chunk.GetNativeArray(ref locations);
+                var visuals = chunk.GetNativeArray(ref appearances);
+                var health = chunk.GetNativeArray(ref vitals);
+                var identities = chunk.GetNativeArray(entityType);
+                for (int index = 0; index < chunk.Count; index++)
+                {
+                    NaturalEntityLocation source = sources[index];
+                    if (!entities.TryGetValue(source.RuntimeId, out Entity owned) || owned != identities[index]) continue;
+                    EntityModuleAppearance visual = visuals[index];
+                    bodySnapshots[source.RuntimeId] = new NaturalEntityBody
+                    {
+                        RuntimeId = source.RuntimeId, NaturalGuid = source.NaturalGuid, Position = source.Position,
+                        Scale = visual.Scale, Rotation = visual.Rotation, VisualVersion = visual.Revision,
+                        Dead = health.IsCreated ? health[index].Dead : (byte)0,
+                        Suspended = (byte)(chunk.IsComponentEnabled(ref active, index) ? 0 : 1)
+                    };
+                }
+            }
+            readingBodyBatch = true;
+            return new BodyReadBatch(this);
+        }
+
+        internal void InvalidateBodySnapshot(int id) => bodySnapshots.Remove(id);
+
         public NaturalEntityBody GetBody(int id)
         {
+            if (readingBodyBatch && bodySnapshots.TryGetValue(id, out NaturalEntityBody cached)) return cached;
             // EntityManager 按组件完成写依赖，读取单棵树不再等待整个 World 的所有 Job。
             Entity entity = entities[id];
             NaturalEntityLocation source = Manager.GetComponentData<NaturalEntityLocation>(entity);
@@ -168,6 +235,7 @@ namespace FlatWorld.NaturalEntities
 
         public void SetBody(int id, NaturalEntityBody body)
         {
+            bodySnapshots.Remove(id);
             Entity entity = entities[id];
             Manager.SetComponentData(entity, new NaturalEntityLocation
             { RuntimeId = id, NaturalGuid = body.NaturalGuid, Position = body.Position });
@@ -187,6 +255,8 @@ namespace FlatWorld.NaturalEntities
 
         public void Set<T>(int id, T value, bool notifyChanged = true) where T : unmanaged, IComponentData
         {
+            if (typeof(T) == typeof(AiecsVital) || typeof(T) == typeof(EntityModuleAppearance) ||
+                typeof(T) == typeof(NaturalEntityLocation)) bodySnapshots.Remove(id);
             // EntityManager 自行完成对应组件的读写依赖，结构变更仍使用其同步边界。
             Entity entity = entities[id];
             if (Manager.HasComponent<T>(entity)) Manager.SetComponentData(entity, value);
@@ -196,6 +266,7 @@ namespace FlatWorld.NaturalEntities
 
         public void RemoveComponent<T>(int id) where T : unmanaged, IComponentData
         {
+            bodySnapshots.Remove(id);
             Entity entity = entities[id];
             if (Manager.HasComponent<T>(entity))
             {

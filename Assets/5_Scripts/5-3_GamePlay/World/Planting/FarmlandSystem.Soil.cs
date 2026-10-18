@@ -43,23 +43,39 @@ public static partial class FarmlandSystem
     public static TileData_Farmland ReadSoilSnapshot(RuntimeTerrainTileSample sample)
     {
         var soil = (TileData_Farmland)RequireFarmlandDefinition().TileDataTemplate.Clone();
+        ReadSoilSnapshot(sample, soil);
+        return soil;
+    }
+
+    // 同步批次复用自己的快照容器，数值仍逐次读取当前权威环境层。
+    internal static void ReadSoilSnapshot(RuntimeTerrainTileSample sample, TileData_Farmland soil)
+    {
         soil.position = (Vector3Int)sample.WorldCell;
         if (HasSoilState(sample))
         {
             soil.waterValue = ReadWaterLevel(sample.Terrain, sample.LocalCell);
             soil.waterSupplyRemainder = Read(sample.Terrain, sample.LocalCell, WaterSupplyRemainderLayer);
             soil.waterConsumptionRemainder = Read(sample.Terrain, sample.LocalCell, WaterConsumptionRemainderLayer);
-            soil.fertilityValue = new GameValue_float(Read(sample.Terrain, sample.LocalCell, FertilityLayer));
+            SetSnapshotFertility(soil, Read(sample.Terrain, sample.LocalCell, FertilityLayer));
         }
         else
         {
             if (sample.Terrain.TryGetEnvironmentValue("moisture", sample.LocalCell.x, sample.LocalCell.y, out float moisture))
                 soil.waterValue = Mathf.RoundToInt(Mathf.Clamp01(moisture) * soil.maxWater);
             if (sample.Terrain.TryGetEnvironmentValue("fertility", sample.LocalCell.x, sample.LocalCell.y, out float fertility))
-                soil.fertilityValue = new GameValue_float(fertility);
+                SetSnapshotFertility(soil, fertility);
         }
         soil.NormalizeValues();
-        return soil;
+    }
+
+    private static void SetSnapshotFertility(TileData_Farmland soil, float value)
+    {
+        soil.fertilityValue ??= new GameValue_float();
+        soil.fertilityValue.BaseValue = value;
+        soil.fertilityValue.BaseAdditive = 0f;
+        soil.fertilityValue.AdditiveModifier = 0f;
+        soil.fertilityValue.MultiplicativeModifier = 1f;
+        soil.fertilityValue.FinalAdditive = 0f;
     }
 
     /// <summary>只在实际耕作、浇水或播种时创建水肥差量；允许配置过的自然基质承载作物。</summary>
@@ -115,7 +131,8 @@ public static partial class FarmlandSystem
     }
 
     /// <summary>作物读取时保留九宫格灌溉，每份地表水只兑换一级耕地水分。</summary>
-    private static bool TryAbsorbNearbyLiquid(RuntimeTerrainTileSample farmland, TileData_Farmland soil)
+    private static bool TryAbsorbNearbyLiquid(RuntimeTerrainTileSample farmland, TileData_Farmland soil,
+        SoilSamplingBatch batch = null)
     {
         if (!GameNetwork.HasStateAuthority || soil == null || ChunkMgr.ExistingInstance == null)
             return false;
@@ -124,13 +141,16 @@ public static partial class FarmlandSystem
         if (soil.waterValue >= soil.maxWater) return false;
 
         bool absorbedAny = false;
-        Vector2Int center = WorldTopologyRuntime.NormalizeCell(farmland.WorldCell);
+        Vector2Int center = batch == null ? WorldTopologyRuntime.NormalizeCell(farmland.WorldCell) : farmland.WorldCell;
         for (int dy = -1; dy <= 1 && soil.waterValue < soil.maxWater; dy++)
         for (int dx = -1; dx <= 1 && soil.waterValue < soil.maxWater; dx++)
         {
-            Vector2Int cell = WorldTopologyRuntime.NormalizeCell(center + new Vector2Int(dx, dy));
-            if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
-                    new Vector2(cell.x + 0.5f, cell.y + 0.5f), out RuntimeTerrainTileSample source) ||
+            Vector2Int cell = center + new Vector2Int(dx, dy);
+            Vector2 position = new(cell.x + 0.5f, cell.y + 0.5f);
+            RuntimeTerrainTileSample source;
+            bool found = batch != null ? batch.TrySample(position, out source) :
+                ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out source);
+            if (!found ||
                 source.Terrain == null || source.Terrain.IsDisposed)
                 continue;
             absorbedAny |= TryAbsorbLiquid(source, soil);

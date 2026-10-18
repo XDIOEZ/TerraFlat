@@ -1,4 +1,38 @@
 -- 独立四乘四草稿调用正式生态生成器。
+test.system("ecology", "body_read_batch", {}, function(data)
+    assert(data.initialGuid == 41 and data.initialRevision == 5,
+        "发布批次丢失自然物身份或外观版本")
+    assert(data.inactiveDead == 1 and data.inactiveSuspended == 1,
+        "批量读取漏掉停用实体或改变死亡状态")
+    assert(data.deadAfterWrite == 1 and data.movedX == 8 and data.movedRevision == 6,
+        "批次内生命或姿态写入后仍读到旧值")
+    assert(data.externalRevision == 9 and data.removed and data.createdGuid == 43,
+        "显式通知、移除或新增没有使当前发布快照失效")
+    assert(data.afterBatchRevision == 12 and data.nextBatchScale == 3 and data.plainDead == 0,
+        "发布快照跨批保留了旧外观，或把没有生命能力的实体当作死亡")
+end, "自然物发布批量读取保留停用状态与批内写入、移除、新增边界")
+
+test.system("ecology", "spatial_geometry", {}, function(data)
+    assert(data.bodyX == 12 and data.bodyY == 20 and data.bodyWidth == 4 and data.bodyHeight == 4,
+        "冷编译阻挡框改变了根姿态、偏移或缩放")
+    assert(data.hitX == 10 and data.hitY == 22 and data.hitWidth == 2 and data.hitHeight == 1,
+        "冷编译受击框丢失模块局部姿态")
+    assert(data.treeContainsBodyMin and data.treeContainsBodyMax and data.blocking,
+        "树木受击框没有覆盖真实阻挡范围")
+    assert(data.compiledUnchanged and data.compiledEnabled and not data.refreshedEnabled and data.refreshedWidth == 18,
+        "热路径重新解析了已编译定义，或配置重编译没有更新碰撞参数")
+end, "自然物碰撞几何冷编译保留姿态、树干覆盖与配置刷新")
+
+test.system("ecology", "soil_snapshot_reuse", {}, function(data)
+    local function near(a, b) return math.abs(a - b) < 0.00001 end
+    assert(data.generatedWater == 6 and near(data.generatedFertility, 0.7),
+        "复用容器没有读取自然地表生成水肥")
+    assert(data.latestWater == 3 and near(data.latestFertility, 0.4) and near(data.latestRemainder, 0.25),
+        "同批土壤读取缓存了旧数值或丢失共用耗水尾数")
+    assert(data.emptyWater == 0 and data.emptyRemainder == 0,
+        "土壤水量耗尽后复用容器残留了旧耗水尾数")
+end, "自然物土壤容器复用仍逐次读取权威水肥与耗水尾数")
+
 test.system("ecology", "capture_batch", {}, function(data)
     local expected = {0, 5, 7, 5, 11, 13}
     assert(#data.guids == #expected, "批量自然物快照新增了空数据或错误合并已有记录")

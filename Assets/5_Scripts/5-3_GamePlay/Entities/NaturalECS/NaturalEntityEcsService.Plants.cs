@@ -5,6 +5,7 @@ using FlatWorld.Networking;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace FlatWorld.NaturalEntities
@@ -209,6 +210,7 @@ namespace FlatWorld.NaturalEntities
                 if (simulation.Manager.HasComponent<EntityCanopyFruitModule>(entity))
                     simulation.Manager.SetComponentData(entity, component);
                 else simulation.Manager.AddComponentObject(entity, component);
+                record.CanopyModule = component;
                 record.CanopyWasLive = false;
                 canopySources.Add(record);
             }
@@ -217,6 +219,7 @@ namespace FlatWorld.NaturalEntities
                 Entity entity = simulation.GetEntity(id);
                 if (simulation.Manager.HasComponent<EntityCanopyFruitModule>(entity))
                     simulation.Manager.RemoveComponent<EntityCanopyFruitModule>(entity);
+                record.CanopyModule = null;
                 canopySources.Remove(record);
             }
         }
@@ -275,32 +278,59 @@ namespace FlatWorld.NaturalEntities
 
         #region 世界输入及副作用提交
 
+        private static readonly ProfilerMarker SoilReadMarker = new("NaturalEntityRuntime.Soil.Read");
+        private static readonly ProfilerMarker SoilLightMarker = new("NaturalEntityRuntime.Soil.Light");
+        private static readonly ProfilerMarker SoilCommitMarker = new("NaturalEntityRuntime.Soil.Commit");
+        private static readonly ProfilerMarker SpatialPublishMarker = new("NaturalEntityRuntime.Publish.Spatial");
+
         private static void FreezeSoil(Record record)
+        {
+            using FarmlandSystem.SoilSamplingBatch soils = FarmlandSystem.CreateSoilSamplingBatch();
+            LightLayerMgr lights = LightLayerMgr.Instance;
+            FreezeSoil(record, soils, lights != null ? lights.CreatePointSamplingBatch() : default, lights != null);
+        }
+
+        private static void FreezeSoil(Record record, FarmlandSystem.SoilSamplingBatch soils,
+            LightLayerMgr.PointSamplingBatch lighting, bool hasLights)
         {
             if (!simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant)) return;
             EntityPlantSoil soil = record.Profile.Soil;
             Vector2Int cell = PlantSoilCell(record, plant);
-            LightLayerMgr lights = LightLayerMgr.Instance;
-            if (lights != null) lights.TryGetLightLevel(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out soil.LightIntensity);
-            if (FarmlandSystem.TryReadSoil(cell, out TileData_Farmland source, out _, allowNaturalSoil: plant.Cultivated == 0))
+            if (hasLights)
             {
-                soil.Available = 1; soil.Water = source.waterValue; soil.MaxWater = source.maxWater;
-                soil.WaterConsumptionRemainder = source.waterConsumptionRemainder;
-                soil.Fertility = source.Fertility; soil.MaxFertility = source.maxFertility;
+                using var sample = SoilLightMarker.Auto();
+                soil.LightIntensity = soils.TrySample(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out var terrain)
+                    ? lighting.Sample(terrain) : LightLayerMgr.CompletelyDarkValue;
+            }
+            using (SoilReadMarker.Auto())
+            {
+                if (soils.TryRead(cell, out TileData_Farmland source, out _, allowNaturalSoil: plant.Cultivated == 0))
+                {
+                    soil.Available = 1; soil.Water = source.waterValue; soil.MaxWater = source.maxWater;
+                    soil.WaterConsumptionRemainder = source.waterConsumptionRemainder;
+                    soil.Fertility = source.Fertility; soil.MaxFertility = source.maxFertility;
+                }
             }
             simulation.Set(record.Handle.Id, soil, notifyChanged: false);
         }
 
         private static void CommitSoil(Record record)
         {
+            using FarmlandSystem.SoilSamplingBatch soils = FarmlandSystem.CreateSoilSamplingBatch();
+            CommitSoil(record, soils);
+        }
+
+        private static void CommitSoil(Record record, FarmlandSystem.SoilSamplingBatch soils)
+        {
             if (!simulation.TryGet(record.Handle.Id, out EntityPlantSoil soil) ||
                 (soil.AddedWater == 0f && soil.UsedWater == 0f && soil.UsedFertility == 0f)) return;
+            using var sample = SoilCommitMarker.Auto();
             if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) &&
-                FarmlandSystem.TryReadSoil(PlantSoilCell(record, plant), out TileData_Farmland target, out _,
+                soils.TryRead(PlantSoilCell(record, plant), out TileData_Farmland target, out _,
                     allowNaturalSoil: plant.Cultivated == 0))
             {
                 target.AccumulateWaterSupply(soil.AddedWater); target.AccumulateWaterConsumption(soil.UsedWater);
-                target.ConsumeFertility(soil.UsedFertility); FarmlandSystem.CommitSoil(target, allowNaturalSoil: plant.Cultivated == 0);
+                target.ConsumeFertility(soil.UsedFertility); soils.Commit(target, allowNaturalSoil: plant.Cultivated == 0);
             }
             soil.AddedWater = soil.UsedWater = soil.UsedFertility = 0f;
             simulation.Set(record.Handle.Id, soil, notifyChanged: false);
@@ -324,33 +354,22 @@ namespace FlatWorld.NaturalEntities
             publicationBatch.Clear();
             publicationBatch.AddRange(pendingPublications);
             pendingPublications.Clear();
+            using NaturalEntitySimulation.BodyReadBatch bodies = publicationBatch.Count > 0 || canopySources.Count > 0
+                ? simulation.BeginBodyReadBatch() : default;
+            using FarmlandSystem.SoilSamplingBatch soils = FarmlandSystem.CreateSoilSamplingBatch();
             foreach (int id in publicationBatch)
             {
                 if (!records.TryGetValue(id, out Record record)) continue;
-                CommitSoil(record);
+                CommitSoil(record, soils);
+                if (!records.TryGetValue(id, out Record current) || !ReferenceEquals(record, current) || !Contains(record.Handle)) continue;
                 NaturalEntityBody body = simulation.GetBody(record.Handle.Id);
                 if (body.Dead != 0) { endedPlants.Add(record.Handle.Id); continue; }
                 if (body.VisualVersion != record.PresentedRevision)
                     MarkPresentationDirty(record);
                 if (body.VisualVersion != record.IndexedRevision)
                 {
-                    // 外观、果实和受击版本仍刷新空间索引，但相同阻挡矩形不通知物理层。
-                    Bounds previousBounds = record.BodyBounds;
-                    bool previouslyBlocking = record.BlocksMovement;
-                    UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
-                    RegisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
-                    if (previouslyBlocking != record.BlocksMovement || !previousBounds.Equals(record.BodyBounds))
-                    {
-                        if (previouslyBlocking)
-                        {
-                            PhysicsBodyChanged?.Invoke(previousBounds);
-                            PhysicsBodyChangedWithReason?.Invoke(previousBounds, PhysicsBodyChangeReason.VisualRevision,
-                                record.Snapshot.Guid, record.Profile.Definition.Id);
-                            BlockingBodyChanged?.Invoke(new BlockingBodySnapshot(record.Handle.Id, record.Snapshot.Guid,
-                                record.Profile.Definition.Id, previousBounds), false, PhysicsBodyChangeReason.VisualRevision);
-                        }
-                        if (record.BlocksMovement) PublishPhysicsBodyChanged(record, PhysicsBodyChangeReason.VisualRevision, true);
-                    }
+                    using var sample = SpatialPublishMarker.Auto();
+                    RefreshSpatial(record, body);
                 }
             }
             publicationBatch.Clear();
@@ -378,7 +397,10 @@ namespace FlatWorld.NaturalEntities
         public static void NotifyChanged(NaturalEntityHandle handle)
         {
             if (!Contains(handle)) return;
-            RefreshInputIndexes(records[handle.Id]);
+            simulation.InvalidateBodySnapshot(handle.Id);
+            Record record = records[handle.Id];
+            record.CanopyModule = null;
+            RefreshInputIndexes(record);
             QueuePublication(handle.Id);
         }
 

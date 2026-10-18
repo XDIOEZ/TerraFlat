@@ -39,6 +39,60 @@ internal sealed partial class DroppedItemRuntime
     private readonly List<TerrainWatch> terrainScratch = new();
     private readonly List<int> waterScratch = new();
     private float waterClock;
+    private ChunkMgr terrainSamplingManager;
+    private ChunkMgr.RuntimeTerrainPresenceQuery terrainSamplingQuery;
+    private bool terrainSamplingActive;
+    private bool terrainSamplingAvailable;
+
+    #endregion
+
+    #region 同步环境寻址
+
+    private readonly struct TerrainSamplingScope : IDisposable
+    {
+        private readonly DroppedItemRuntime owner;
+        private readonly ChunkMgr previousManager;
+        private readonly ChunkMgr.RuntimeTerrainPresenceQuery previousQuery;
+        private readonly bool previousActive;
+        private readonly bool previousAvailable;
+
+        internal TerrainSamplingScope(DroppedItemRuntime owner)
+        {
+            this.owner = owner;
+            previousManager = owner.terrainSamplingManager;
+            previousQuery = owner.terrainSamplingQuery;
+            previousActive = owner.terrainSamplingActive;
+            previousAvailable = owner.terrainSamplingAvailable;
+            owner.terrainSamplingActive = true;
+            owner.terrainSamplingManager = null;
+            owner.terrainSamplingAvailable = false;
+            owner.terrainSamplingQuery = default;
+        }
+
+        public void Dispose()
+        {
+            owner.terrainSamplingManager = previousManager;
+            owner.terrainSamplingQuery = previousQuery;
+            owner.terrainSamplingActive = previousActive;
+            owner.terrainSamplingAvailable = previousAvailable;
+        }
+    }
+
+    // 只复用本次同步驱动的世界寻址，每次仍读最新地形；切世界和换代立即重新建立。
+    private bool TrySampleEnvironmentTerrain(Vector2 position, out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null) return false;
+        if (!terrainSamplingActive) return manager.TryGetRuntimeTerrainTile(position, out sample);
+        if (!terrainSamplingAvailable || !ReferenceEquals(manager, terrainSamplingManager) ||
+            !terrainSamplingQuery.IsForWorld(manager.WorldRuntime))
+        {
+            terrainSamplingManager = manager;
+            terrainSamplingAvailable = manager.TryCreateTerrainPresenceQuery(out terrainSamplingQuery);
+        }
+        return terrainSamplingAvailable && terrainSamplingQuery.TrySample(position, out sample);
+    }
 
     #endregion
 
@@ -171,11 +225,10 @@ internal sealed partial class DroppedItemRuntime
     {
         if (!simulation.Contains(id) || simulation.TryGetFlight(id, out _)) return;
         LightweightDroppedBody body = simulation.Get(id);
-        ChunkMgr chunks = ChunkMgr.ExistingInstance;
         RuntimeTerrainTileSample sample;
         using (WaterTerrainSampleMarker.Auto())
         {
-            if (chunks == null || !chunks.TryGetRuntimeTerrainTile(body.Position, out sample))
+            if (!TrySampleEnvironmentTerrain(body.Position, out sample))
             {
                 QueueEnvironment(id);
                 return;
@@ -197,9 +250,10 @@ internal sealed partial class DroppedItemRuntime
         }
 
         bool entering = body.WaterKind == 0;
+        bool hasLiquid = WorldLiquidSourceResolver.TryResolve(sample, out WorldLiquidSourceTarget source);
         if (entering)
         {
-            try { using (WaterEntryMarker.Auto()) TransformOnWaterEntry(id, ref body); }
+            try { using (WaterEntryMarker.Auto()) TransformOnWaterEntry(id, ref body, source); }
             catch (Exception exception) { Debug.LogError($"[DroppedItems] 入水转换失败，原物品已保留：{exception}"); }
         }
         ItemData data = payloads[id];
@@ -207,7 +261,7 @@ internal sealed partial class DroppedItemRuntime
         using (WaterBuoyancyMarker.Auto())
         {
             ratio = ResolveWeightVolumeRatio(data.Stack);
-            threshold = ResolveSinkRatioThreshold((Vector2)body.Position);
+            threshold = hasLiquid ? ResolveSinkRatioThreshold(source.Liquid.BuoyancyThresholdMultiplier) : SinkRatioThreshold;
         }
         byte kind = (byte)(ShouldSink(ratio, threshold) ? 2 : 1);
         float target = kind == 1 ? ResolveFloatingDepth(ratio) : 1f;
@@ -229,11 +283,10 @@ internal sealed partial class DroppedItemRuntime
     }
 
     /// <summary>火把等规则从定义读取；先准备替代载荷与视觉，成功后保留同一实体及整组数量。</summary>
-    private void TransformOnWaterEntry(int id, ref LightweightDroppedBody body)
+    private void TransformOnWaterEntry(int id, ref LightweightDroppedBody body, WorldLiquidSourceTarget source)
     {
         // 入水熄灭转换只适用于真实水接触，岩浆等熔体不能把火把变成木棍。
-        if (!WorldLiquidSourceResolver.TryResolve(body.Position, out WorldLiquidSourceTarget source) ||
-            source.Liquid.WorldWater?.WaterContact != true) return;
+        if (source.Liquid?.WorldWater?.WaterContact != true) return;
         GameRes resources = GameRes.ExistingInstance;
         ItemData original = payloads[id];
         if (!resources.TryGetItemDefinition(original.IDName, out RuntimeItemDefinition definition) ||

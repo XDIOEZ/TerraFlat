@@ -28,6 +28,7 @@ namespace FlatWorld.NaturalEntities
         public ContactDamageSettings ContactDamage;
         public ComponentType[] ComponentTypes;
         public ulong RegistryRevision;
+        public NaturalEntitySpatialGeometry SpatialGeometry;
         public readonly List<CompiledResourceCapability> Extensions = new();
         public bool HasGrowth => (Capabilities & NaturalEntityCapability.Growth) != 0;
         public bool HasClimate => (Capabilities & NaturalEntityCapability.Climate) != 0;
@@ -156,6 +157,8 @@ namespace FlatWorld.NaturalEntities
 
             if (!ValidatePlantComposition(result, out reason)) return false;
             if (!BuildComponentTypes(result, out reason)) return false;
+            result.SpatialGeometry = NaturalEntitySpatialGeometry.Compile(definition.Visual?.Collider,
+                result.HealthParameters, definition.HasTag(Tag.Tree));
             result.RegistryRevision = ResourceEntityCapabilityRegistry.Revision;
             profile = result;
             return true;

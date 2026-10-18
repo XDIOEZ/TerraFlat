@@ -13,6 +13,7 @@ namespace FlatWorld.NaturalEntities
 
         private sealed partial class Record : ICanopyFruitSink
         {
+            public EntityCanopyFruitModule CanopyModule;
             public double CanopyStepFrom, CanopyStepTo;
             public bool CanopyLiveStep;
             public float NextCanopyPresentationTime;
@@ -41,8 +42,10 @@ namespace FlatWorld.NaturalEntities
 
         private static CanopyFruitState GetCanopy(Record record)
         {
+            if (record.CanopyModule != null) return record.CanopyModule.State;
             Entity entity = simulation.GetEntity(record.Handle.Id);
-            return simulation.Manager.GetComponentObject<EntityCanopyFruitModule>(entity).State;
+            record.CanopyModule = simulation.Manager.GetComponentObject<EntityCanopyFruitModule>(entity);
+            return record.CanopyModule.State;
         }
 
         private static void AdvanceCanopy(Record record, double now)
