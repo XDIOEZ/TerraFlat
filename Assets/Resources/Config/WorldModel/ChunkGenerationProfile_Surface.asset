@@ -436,4 +436,10 @@ MonoBehaviour:
   - surface.ancient.foxtail
   - surface.ancient.willow
   - surface.common.oreStone
+  - surface.common.coal
+  - surface.common.copper
+  - surface.common.gold
+  - surface.common.iron
+  - surface.common.tin
+  - surface.common.sulfur
   caveResourceRuleIds: []

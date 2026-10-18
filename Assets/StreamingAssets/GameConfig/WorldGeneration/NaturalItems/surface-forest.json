@@ -250,7 +250,7 @@
       "itemId": "Mine_Stone",
       "itemCount": 1,
       "spawnChance": 5e-05,
-      "spawnChanceMultiplier": 5,
+      "spawnChanceMultiplier": 2,
       "distributionMode": 0,
       "patchSpacing": 24,
       "patchRadius": 2.5,
