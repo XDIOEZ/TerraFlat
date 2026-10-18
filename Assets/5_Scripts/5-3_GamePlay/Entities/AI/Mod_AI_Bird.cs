@@ -637,7 +637,10 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private void ApplyFlightPresentation()
     {
         float visualHeight = HasFishHuntVisualHeightOverride ? FishHuntVisualHeightOverride : CurrentFlightHeight;
-        liftRoot.localPosition = liftOrigin + Vector3.up * visualHeight;
+        Vector3 visualPosition = liftOrigin + Vector3.up * visualHeight;
+        // 高度没有实际变化时不脏化 LiftRoot 及其子节点物理 Transform。
+        if (!liftRoot.localPosition.Equals(visualPosition))
+            liftRoot.localPosition = visualPosition;
         bool singleSprite = animationBody != null && animationBody.IsSingleSpriteMode;
         if (singleSprite)
         {
@@ -1156,10 +1159,15 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     private Vector2 flightHitboxOriginalSize;
     private readonly Dictionary<Sprite, Bounds> flightSpriteBounds = new();
     private readonly List<Vector2> flightShapePoints = new();
+    private Sprite lastFlightGeometrySprite;
+    private Matrix4x4 lastFlightGeometryMatrix;
+    private Vector2 lastFlightGeometryOffset, lastFlightGeometrySize;
+    private bool lastFlightFlipX, lastFlightFlipY, hasFlightGeometry;
 
     /// <summary>受击 Trigger 使用独立运动学刚体，根部阻挡关闭或远距休眠时仍能被投射物查询。</summary>
     private void BindFlightHitbox()
     {
+        hasFlightGeometry = false;
         if (!health.transform.IsChildOf(liftRoot))
             throw new InvalidOperationException("鸟的生命模块必须位于 BirdLift 下，随贴图一起升高。");
         flightHitbox = health.GetComponent<BoxCollider2D>();
@@ -1189,42 +1197,57 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         if (flightHitbox == null || flightHitboxBody == null || renderer == null || renderer.sprite == null)
             return;
         Sprite sprite = renderer.sprite;
-        if (!flightSpriteBounds.TryGetValue(sprite, out Bounds bounds))
-        {
-            bool hasPoint = false;
-            bounds = sprite.bounds;
-            for (int shape = 0; shape < sprite.GetPhysicsShapeCount(); shape++)
-            {
-                flightShapePoints.Clear();
-                sprite.GetPhysicsShape(shape, flightShapePoints);
-                foreach (Vector2 point in flightShapePoints)
-                {
-                    if (!hasPoint) bounds = new Bounds(point, Vector3.zero);
-                    else bounds.Encapsulate(point);
-                    hasPoint = true;
-                }
-            }
-            flightSpriteBounds.Add(sprite, bounds);
-        }
-        Bounds localBounds = default;
         Matrix4x4 spriteMatrix = renderer.transform.localToWorldMatrix;
         if (animationBody != null && animationBody.TryGetBaseVisualMatrix(renderer.transform, out Matrix4x4 baseMatrix))
             spriteMatrix = baseMatrix;
         Matrix4x4 spriteToHitbox = flightHitbox.transform.worldToLocalMatrix * spriteMatrix;
-        for (int corner = 0; corner < 4; corner++)
+        if (!hasFlightGeometry ||
+            !IsFlightHitboxGeometryUnchanged(lastFlightGeometrySprite, sprite,
+                lastFlightGeometryMatrix, spriteToHitbox,
+                lastFlightFlipX, lastFlightFlipY, renderer.flipX, renderer.flipY) ||
+            !flightHitbox.offset.Equals(lastFlightGeometryOffset) ||
+            !flightHitbox.size.Equals(lastFlightGeometrySize))
         {
-            Vector3 point = new((corner & 1) == 0 ? bounds.min.x : bounds.max.x,
-                (corner & 2) == 0 ? bounds.min.y : bounds.max.y, 0f);
-            if (renderer.flipX) point.x = -point.x;
-            if (renderer.flipY) point.y = -point.y;
-            point = spriteToHitbox.MultiplyPoint3x4(point);
-            if (corner == 0) localBounds = new Bounds(point, Vector3.zero);
-            else localBounds.Encapsulate(point);
+            if (!flightSpriteBounds.TryGetValue(sprite, out Bounds bounds))
+            {
+                bool hasPoint = false;
+                bounds = sprite.bounds;
+                for (int shape = 0; shape < sprite.GetPhysicsShapeCount(); shape++)
+                {
+                    flightShapePoints.Clear();
+                    sprite.GetPhysicsShape(shape, flightShapePoints);
+                    foreach (Vector2 point in flightShapePoints)
+                    {
+                        if (!hasPoint) bounds = new Bounds(point, Vector3.zero);
+                        else bounds.Encapsulate(point);
+                        hasPoint = true;
+                    }
+                }
+                flightSpriteBounds.Add(sprite, bounds);
+            }
+            Bounds localBounds = default;
+            for (int corner = 0; corner < 4; corner++)
+            {
+                Vector3 point = new((corner & 1) == 0 ? bounds.min.x : bounds.max.x,
+                    (corner & 2) == 0 ? bounds.min.y : bounds.max.y, 0f);
+                if (renderer.flipX) point.x = -point.x;
+                if (renderer.flipY) point.y = -point.y;
+                point = spriteToHitbox.MultiplyPoint3x4(point);
+                if (corner == 0) localBounds = new Bounds(point, Vector3.zero);
+                else localBounds.Encapsulate(point);
+            }
+            Vector2 offset = localBounds.center;
+            Vector2 size = new(Mathf.Max(0.01f, localBounds.size.x), Mathf.Max(0.01f, localBounds.size.y));
+            if (!flightHitbox.offset.Equals(offset)) flightHitbox.offset = offset;
+            if (!flightHitbox.size.Equals(size)) flightHitbox.size = size;
+            lastFlightGeometrySprite = sprite;
+            lastFlightGeometryMatrix = spriteToHitbox;
+            lastFlightFlipX = renderer.flipX;
+            lastFlightFlipY = renderer.flipY;
+            lastFlightGeometryOffset = offset;
+            lastFlightGeometrySize = size;
+            hasFlightGeometry = true;
         }
-        Vector2 offset = localBounds.center;
-        Vector2 size = new(Mathf.Max(0.01f, localBounds.size.x), Mathf.Max(0.01f, localBounds.size.y));
-        if (flightHitbox.offset != offset) flightHitbox.offset = offset;
-        if (flightHitbox.size != size) flightHitbox.size = size;
         // 直接提交受击刚体姿态，避免空中贴图已移动而物理查询仍使用旧位置。
         Vector2 position = flightHitbox.transform.position;
         float rotation = flightHitbox.transform.eulerAngles.z;
@@ -1232,8 +1255,17 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         if (!Mathf.Approximately(flightHitboxBody.rotation, rotation)) flightHitboxBody.rotation = rotation;
     }
 
+    /// <summary>只有贴图、镜像及受击盒相对矩阵都相同时才复用已有命中形状。</summary>
+    internal static bool IsFlightHitboxGeometryUnchanged(Sprite previous, Sprite current,
+        Matrix4x4 previousMatrix, Matrix4x4 currentMatrix,
+        bool previousFlipX, bool previousFlipY, bool currentFlipX, bool currentFlipY)
+        => ReferenceEquals(previous, current) && previousMatrix.Equals(currentMatrix) &&
+           previousFlipX == currentFlipX && previousFlipY == currentFlipY;
+
     private void ReleaseFlightHitbox()
     {
+        hasFlightGeometry = false;
+        lastFlightGeometrySprite = null;
         if (flightHitboxBody != null) flightHitboxBody.simulated = false;
         if (flightHitbox != null)
         {

@@ -58,6 +58,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 鸟飞行导航只查线路是否加载，区块尺寸来自当前 ActiveGenerationProfile。`IBirdFlightPilot` 可组合独立 Pilot；巡航/避让用限角速度圆弧，弧线与位移共用地形查询。
 - 鸟前视弧线跨连续小段复用规范格游标，只合并纯地形存在查询；实际位移、下一条弧线及地面复合约束重新复核。落点环扫共用本轮拓扑和地形寻址，逐候选实时 `CanLand`；规则 `ai/flight_traversal_batch`。
 - 鸟离地撤实体阻挡，仅留感知/受击 Trigger；`BirdLift` 下独立运动学刚体承接受击盒，按当前 Sprite/镜像/动画姿态同步，卸载恢复配置。空中死亡先收视觉高度，再统一生命/掉落流程。
+- 鸟的 `LiftRoot` 高度未变化时不重复写 Transform；飞行受击盒按 Sprite/翻面/相对矩阵与现有几何尺寸检测变化，未变时跳过 4 角投影，运动学刚体姿态仍每次同步。规则 `ai/flight_hitbox_geometry_cache`。
 - `EggLaying/AnimalEggLayingSchedule` 保存绝对日，成功产蛋后冷却至少两天，不追补；Bird 无鸡生产模块、Bee 关产蛋。产物/延迟来自 Actor，只有权威端生成。
 - `ContainerFeeding` 经允许 Animal 的种子端口交易一件真实物品，完整种子快照随鸟保存，死亡掉落成功后才清空。`Predation` 锁水中 Fish，走 DamageReceiver 后由 `IAquaticPredatorCarryTarget` 携到陆地，再攻击/吃 Meat；携带不保存，受惊/避险/疲劳/卸载释放。
 - 水生 AI 的 `AquaticHabitat` 读真实 Liquid 和整段线路，不读平台投影液深；未知格不是干地。鱼共享 Buff 潮湿计时，缺水阈值 `minimumWetStacks=3`；逃离 Carnivore、玩家和 `IAquaticPredatorThreat`，线路须全程水域可达。

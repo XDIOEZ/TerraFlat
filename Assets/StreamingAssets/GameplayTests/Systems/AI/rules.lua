@@ -156,6 +156,12 @@ for _, case in ipairs({
     end, "鸟前视弧线查询复用：" .. case.name)
 end
 
+test.system("ai", "flight_hitbox_geometry_cache", {}, function(data)
+    assert(data.same and data.restored, "飞行受击盒相对几何不变时没有复用已有形状")
+    assert(data.differentSprite and data.moved and data.flippedX and data.flippedY,
+        "换图、相对位置或镜像变化没有强制刷新受击盒")
+end, "飞行受击盒只在真实视觉几何变化时重算，持续同步物理姿态")
+
 -- 自然刷新读取正式目录，独立概率落空也要消耗排队机会。
 test.system("ai", "ecology_config", {}, function(data)
     assert(data.fishSafeMin == -26.5 and data.fishSafeMax == 63.5, "鱼的冷热安全范围没有按确认值扩大")

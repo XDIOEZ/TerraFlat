@@ -10,7 +10,44 @@ public static partial class GameplayTestSystemProbe
     #region 鸟类前视弧线单轮查询
 
     private static void RegisterBirdFlightQueryOperations(Dictionary<string, Func<JObject, JObject>> operations)
-        => operations.Add("ai/flight_traversal_batch", BirdFlightTraversalBatch);
+    {
+        operations.Add("ai/flight_traversal_batch", BirdFlightTraversalBatch);
+        operations.Add("ai/flight_hitbox_geometry_cache", BirdFlightHitboxGeometryCache);
+    }
+
+    /// <summary>验证受击盒缓存只在贴图、翻面或相对矩阵变化时失效。</summary>
+    private static JObject BirdFlightHitboxGeometryCache(JObject args)
+    {
+        Texture2D texture = null;
+        Sprite first = null, second = null;
+        try
+        {
+            texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            first = Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f));
+            second = Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f));
+            Matrix4x4 unchanged = Matrix4x4.identity;
+            Matrix4x4 shifted = Matrix4x4.Translate(new Vector3(.25f, 0f, 0f));
+            bool Compare(Sprite oldSprite, Sprite newSprite, Matrix4x4 oldMatrix,
+                Matrix4x4 newMatrix, bool flipX = false, bool flipY = false)
+                => Mod_AI_Bird.IsFlightHitboxGeometryUnchanged(oldSprite, newSprite,
+                    oldMatrix, newMatrix, false, false, flipX, flipY);
+            return new JObject
+            {
+                ["same"] = Compare(first, first, unchanged, unchanged),
+                ["differentSprite"] = !Compare(first, second, unchanged, unchanged),
+                ["moved"] = !Compare(first, first, unchanged, shifted),
+                ["flippedX"] = !Compare(first, first, unchanged, unchanged, flipX: true),
+                ["flippedY"] = !Compare(first, first, unchanged, unchanged, flipY: true),
+                ["restored"] = Compare(first, first, unchanged, unchanged)
+            };
+        }
+        finally
+        {
+            if (first != null) UnityEngine.Object.DestroyImmediate(first);
+            if (second != null) UnityEngine.Object.DestroyImmediate(second);
+            if (texture != null) UnityEngine.Object.DestroyImmediate(texture);
+        }
+    }
 
     // 仅在自有世界调用正式飞行通行，Lua 检查连续分段、接缝与查询生命周期。
     private static JObject BirdFlightTraversalBatch(JObject args)
