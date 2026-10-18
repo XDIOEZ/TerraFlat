@@ -616,12 +616,10 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "cave.river.minDepth", 0.25d));
             CaveRiverMaxDepth = Math.Max(CaveRiverMinDepth, Clamp01(
                 GetDouble(numbers, "cave.river.maxDepth", 0.65d)));
-            CaveDirtWallEnabled = GetBool(numbers, "cave.dirtWall.enabled", false);
-            CaveDirtWallTileId = GetInt(numbers, "cave.dirtWall.tileId", 0);
-            CaveDirtWallChance = Clamp01(
-                GetDouble(numbers, "cave.dirtWall.chance", 0.18d));
-            CaveDirtWallDecorationChance = Clamp01(
-                GetDouble(numbers, "cave.dirtWall.decorationChance", 0.28d));
+            CaveDirtGroundEnabled = GetBool(numbers, "cave.dirtGround.enabled", false);
+            CaveDirtGroundTileId = GetInt(numbers, "cave.dirtGround.tileId", DirtTileId);
+            CaveDirtGroundChance = Clamp01(
+                GetDouble(numbers, "cave.dirtGround.chance", 0.18d));
             CaveVineEnabled = GetBool(numbers, "cave.vine.enabled", false);
             CaveVineWallChance = Clamp01(
                 GetDouble(numbers, "cave.vine.wallChance", 0.06d));
@@ -632,9 +630,6 @@ namespace FlatWorld.WorldModel
             CaveVineItemId = CaveVineEnabled
                 ? GetRequiredText(texts, "cave.vine.itemId")
                 : string.Empty;
-            CaveDirtWallVineItemId = GetText(texts, "cave.dirtWall.vineItemId",
-                CaveVineItemId);
-            CaveDirtWallFlowerItemId = GetText(texts, "cave.dirtWall.flowerItemId", string.Empty);
             CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
             CavePortalChunkChance = Clamp01(
                 GetDouble(numbers, "cave.portal.chunkChance", 0d));
@@ -991,12 +986,9 @@ namespace FlatWorld.WorldModel
         public double CaveRiverMinDepth { get; }
         public double CaveRiverMaxDepth { get; }
         /// <summary>地下河与地下湖岸边生成的天然泥土墙及其装饰。</summary>
-        public bool CaveDirtWallEnabled { get; }
-        public int CaveDirtWallTileId { get; }
-        public double CaveDirtWallChance { get; }
-        public double CaveDirtWallDecorationChance { get; }
-        public string CaveDirtWallVineItemId { get; }
-        public string CaveDirtWallFlowerItemId { get; }
+        public bool CaveDirtGroundEnabled { get; }
+        public int CaveDirtGroundTileId { get; }
+        public double CaveDirtGroundChance { get; }
         /// <summary>洞壁藤蔓基础概率；临近地下水时使用湿润倍率。</summary>
         public bool CaveVineEnabled { get; }
         public double CaveVineWallChance { get; }

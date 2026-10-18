@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier: 
   profileId: cave.default
-  generationSignature: 40
+  generationSignature: 41
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -61,14 +61,12 @@ MonoBehaviour:
     Value: 0.25
   - Id: cave.groundwater.maxDepth
     Value: 0.85
-  - Id: cave.dirtWall.enabled
+  - Id: cave.dirtGround.enabled
     Value: 1
-  - Id: cave.dirtWall.tileId
-    Value: 22
-  - Id: cave.dirtWall.chance
+  - Id: cave.dirtGround.tileId
+    Value: 29
+  - Id: cave.dirtGround.chance
     Value: 0.18
-  - Id: cave.dirtWall.decorationChance
-    Value: 0.28
   - Id: cave.vine.enabled
     Value: 1
   - Id: cave.vine.wallChance
@@ -100,10 +98,6 @@ MonoBehaviour:
     Value: TileBase_StoneWall
   - Id: cave.vine.itemId
     Value: TwineCrop
-  - Id: cave.dirtWall.vineItemId
-    Value: TwineCrop
-  - Id: cave.dirtWall.flowerItemId
-    Value: Flower
   - Id: cave.portal.itemId
     Value: CaveExit
   - Id: cave.portal.targetDimensionId
@@ -126,8 +120,8 @@ MonoBehaviour:
     Value: Tile_Wall_Iron
   - Id: tile.block.21
     Value: Tile_Wall_Bronze
-  - Id: tile.block.22
-    Value: Tile_DirtWall
+  - Id: tile.block.29
+    Value: Tile_Dirt
   - Id: tile.block.23
     Value: Tile_Floor_Wood
   - Id: tile.block.24

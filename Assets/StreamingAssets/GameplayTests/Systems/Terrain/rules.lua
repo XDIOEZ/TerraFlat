@@ -1,4 +1,23 @@
 -- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
+for _, case in ipairs({{enabled = true, chance = 1}, {enabled = false, chance = 1}, {enabled = true, chance = 0}}) do
+    local input = case
+    test.system("terrain", "cave_dirt_ground", input, function(data)
+        assert(data.waterCount > 0 and data.wallCount > 0, "洞穴夹具没有生成地下河与天然岩壁")
+        assert(data.otherChanges == 0, "泥土地面改变了阻挡、寻路、岩壁或液体")
+        if input.enabled and input.chance > 0 then
+            assert(data.dirtCount > 0 and #data.samples > 0 and data.groundChanges == data.dirtCount,
+                "河岸没有实际替换成泥土地面")
+            for _, cell in ipairs(data.samples) do
+                assert(cell.ground == 29 and cell.blocking == 0 and cell.walkable and cell.cost == 1,
+                    "泥土仍然生成在阻挡层或阻断寻路")
+                assert(cell.water == 0 and cell.adjacentWater, "泥土覆盖了水体或离开河岸")
+            end
+        else
+            assert(data.dirtCount == 0 and data.groundChanges == 0, "关闭泥土或零概率仍然替换地面")
+        end
+    end, "洞穴河岸泥土只换底材：" .. tostring(input.enabled) .. "/" .. input.chance)
+end
+
 local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.00001), message)
 end

@@ -21,6 +21,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
         operations.Add("terrain/climate_cache", WorldClimateCache);
         operations.Add("terrain/spawn_line", WorldSurfaceSpawnLine);
+        operations.Add("terrain/cave_dirt_ground", WorldCaveDirtGround);
         operations.Add("time/calendar", WorldCalendar);
         operations.Add("environment/thermal", WorldThermal);
         operations.Add("environment/heat_sources", WorldHeatSources);
@@ -75,6 +76,74 @@ public static partial class GameplayTestSystemProbe
         try { action(); return string.Empty; }
         catch (Exception exception) { return exception.GetType().Name; }
     }
+    #endregion
+
+    #region 洞穴泥土地面生成采样
+
+    // 对比正式生成器开启与关闭泥土时的原始格子，夹具不接触当前玩家世界。
+    private static JObject WorldCaveDirtGround(JObject args)
+    {
+        var numbers = new Dictionary<string, double>
+        {
+            ["cave.floorTileId"] = 4, ["cave.wallTileId"] = 7,
+            ["cave.dirtGround.enabled"] = 0, ["cave.dirtGround.tileId"] = 29,
+            ["cave.dirtGround.chance"] = 1, ["cave.river.enabled"] = 1,
+            ["cave.river.connectionChance"] = 1, ["cave.network.extraConnectionChance"] = 1,
+            ["cave.portal.enabled"] = 0, ["structure.enabled"] = 0
+        };
+        var texts = new Dictionary<string, string> { ["terrain.mode"] = "cave" };
+        var baselineProfile = new ChunkGenerationProfileSnapshot("probe:cave-dirt", 1, 64, 64, numbers, texts);
+        numbers["cave.dirtGround.enabled"] = (bool?)args["enabled"] == false ? 0 : 1;
+        numbers["cave.dirtGround.chance"] = Number(args, "chance", 1);
+        var dirtProfile = new ChunkGenerationProfileSnapshot("probe:cave-dirt", 1, 64, 64, numbers, texts);
+        using var baselineWorld = new WorldRuntime("probe:cave-dirt-baseline", 1);
+        using var dirtWorld = new WorldRuntime("probe:cave-dirt-enabled", 1);
+        var address = new FlatWorld.WorldModel.WorldAddress("cave", new Int2(-32, -32));
+        var generator = new DeterministicChunkGenerator();
+        using var baselineResult = generator.Generate(
+            baselineWorld.BeginChunkGeneration(address, 17413, baselineProfile), System.Threading.CancellationToken.None);
+        using var dirtResult = generator.Generate(
+            dirtWorld.BeginChunkGeneration(address, 17413, dirtProfile), System.Threading.CancellationToken.None);
+        if (!baselineWorld.TryCommit(baselineResult, out string baselineError))
+            throw new InvalidOperationException(baselineError);
+        if (!dirtWorld.TryCommit(dirtResult, out string dirtError))
+            throw new InvalidOperationException(dirtError);
+        baselineWorld.TryGetChunk(address, out ChunkRuntime baselineChunk);
+        dirtWorld.TryGetChunk(address, out ChunkRuntime dirtChunk);
+        ChunkTerrainData baseline = baselineChunk.Terrain, dirt = dirtChunk.Terrain;
+        int dirtCount = 0, waterCount = 0, wallCount = 0, groundChanges = 0, otherChanges = 0;
+        var samples = new JArray();
+        var neighbours = new[] { new Int2(-1, 0), new Int2(1, 0), new Int2(0, -1), new Int2(0, 1) };
+        for (int y = 0; y < dirt.Height; y++)
+        for (int x = 0; x < dirt.Width; x++)
+        {
+            TerrainCell before = baseline.GetCell(x, y), after = dirt.GetCell(x, y);
+            if (before.GroundTileId != after.GroundTileId) groundChanges++;
+            if (before.BlockingTileId != after.BlockingTileId || before.Flags != after.Flags ||
+                before.NavigationCost != after.NavigationCost || before.BackTileId != after.BackTileId ||
+                before.BiomeId != after.BiomeId || baseline.GetLiquidLevel(x, y) != dirt.GetLiquidLevel(x, y) ||
+                baseline.GetLiquidTypeIndex(x, y) != dirt.GetLiquidTypeIndex(x, y)) otherChanges++;
+            if (after.BlockingTileId == 7) wallCount++;
+            if (dirt.GetLiquidLevel(x, y) > 0) waterCount++;
+            if (after.GroundTileId != 29) continue;
+            dirtCount++;
+            bool adjacentWater = false;
+            foreach (Int2 offset in neighbours)
+            {
+                int nx = x + offset.X, ny = y + offset.Y;
+                if (nx >= 0 && ny >= 0 && nx < dirt.Width && ny < dirt.Height && dirt.GetLiquidLevel(nx, ny) > 0)
+                    adjacentWater = true;
+            }
+            if (x == 0 || y == 0 || x == dirt.Width - 1 || y == dirt.Height - 1) continue;
+            samples.Add(new JObject { ["ground"] = after.GroundTileId, ["blocking"] = after.BlockingTileId,
+                ["walkable"] = after.IsWalkable, ["cost"] = after.NavigationCost,
+                ["water"] = dirt.GetLiquidLevel(x, y), ["adjacentWater"] = adjacentWater });
+        }
+        return new JObject { ["dirtCount"] = dirtCount, ["waterCount"] = waterCount,
+            ["wallCount"] = wallCount, ["groundChanges"] = groundChanges,
+            ["otherChanges"] = otherChanges, ["samples"] = samples };
+    }
+
     #endregion
 
     #region 地形与生态

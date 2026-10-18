@@ -16,7 +16,7 @@ namespace FlatWorld.WorldModel
         IChunkEcologyNeighborhoodTagResolver
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 76;
+        public const int CurrentGenerationSignature = 77;
 
         private readonly LiquidTypeCatalog liquidTypes;
         private readonly Action<ChunkGenerationRequest, ChunkTerrainBuffer, CancellationToken> terrainDecorator;
@@ -1720,6 +1720,8 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
+        #region 洞穴地表与岩壁
+
         /// <summary>根据群系交界主通道、稀疏支路和入口安全网络生成洞穴地面或岩壁格。</summary>
         private static void GenerateCaveCell(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, ChunkTerrainBuffer terrain,
@@ -1743,16 +1745,15 @@ namespace FlatWorld.WorldModel
             bool river = caveRiver.IsRiver;
             int liquidLevel = QuantizeGeneratedLiquidLevel(Math.Max(groundliquidDepth, caveRiver.Depth));
             bool water = liquidLevel > 0;
-            bool dirtWall = open && !water && CaveLayoutKernel.ShouldPlaceDirtWall(
+            bool dirtGround = open && !water && CaveLayoutKernel.ShouldPlaceDirtGround(
                 request, settings, worldX, worldY);
-            TerrainCellFlags flags = !open || dirtWall
+            TerrainCellFlags flags = !open
                 ? TerrainCellFlags.Blocking
                 : TerrainCellFlags.Walkable;
-            int groundTileId = settings.CaveFloorTileId;
-            int blockingTileId = !open
-                ? settings.CaveWallTileId
-                : dirtWall ? settings.CaveDirtWallTileId : 0;
-            short navigationCost = !open || dirtWall
+            // 河岸泥土只替换底材，开放通道继续使用正常导航与空阻挡层。
+            int groundTileId = dirtGround ? settings.CaveDirtGroundTileId : settings.CaveFloorTileId;
+            int blockingTileId = !open ? settings.CaveWallTileId : 0;
+            short navigationCost = !open
                 ? short.MaxValue
                 : settings.DefaultNavigationCost;
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0,
@@ -1763,16 +1764,18 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
-            terrain.SetEnvironmentValue("moisture", x, y, water ? 1f : dirtWall ? 0.72f : 0.3f);
+            terrain.SetEnvironmentValue("moisture", x, y, water ? 1f : dirtGround ? 0.72f : 0.3f);
             terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)caveRiver.Flow : 0f);
             terrain.SetEnvironmentValue("riverFlowX", x, y, river ? (float)caveRiver.FlowX : 0f);
             terrain.SetEnvironmentValue("riverFlowY", x, y, river ? (float)caveRiver.FlowY : 0f);
             terrain.SetEnvironmentValue("riverKind", x, y, river ? 1f : groundwater ? 2f : 0f);
             terrain.SetEnvironmentValue("groundwater", x, y, groundwater ? 1f : 0f);
-            terrain.SetEnvironmentValue("caveDirtWall", x, y, dirtWall ? 1f : 0f);
+            terrain.SetEnvironmentValue("caveDirtGround", x, y, dirtGround ? 1f : 0f);
             terrain.SetEnvironmentValue("grass", x, y, 0f);
             terrain.SetGrass(x, y, GrassEmpty);
         }
+
+        #endregion
 
         /// <summary>在地表生成完成后，按种子在区块中放置确定性的简化结构区域。</summary>
         private static void ApplyStructures(ChunkGenerationRequest request,

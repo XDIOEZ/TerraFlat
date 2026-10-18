@@ -352,12 +352,12 @@ namespace FlatWorld.WorldModel
             return best;
         }
 
-        /// <summary>开放的干地若紧邻地下河/湖，则按稳定概率转成天然泥土岸壁。</summary>
-        internal static bool ShouldPlaceDirtWall(ChunkGenerationRequest request,
+        /// <summary>开放的干地若紧邻地下河/湖，则按稳定概率转成可行走的泥土地面。</summary>
+        internal static bool ShouldPlaceDirtGround(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
-            if (!settings.CaveDirtWallEnabled || settings.CaveDirtWallTileId <= 0 ||
-                settings.CaveDirtWallChance <= 0d ||
+            if (!settings.CaveDirtGroundEnabled || settings.CaveDirtGroundTileId <= 0 ||
+                settings.CaveDirtGroundChance <= 0d ||
                 IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY) ||
                 !IsOpenAtWorld(request, settings, worldX, worldY))
             {
@@ -392,7 +392,7 @@ namespace FlatWorld.WorldModel
 
             Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
             uint state = Hash(request.WorldSeed, normalized.X, normalized.Y, 0x4d12c671);
-            return NextUnitDouble(ref state) < settings.CaveDirtWallChance;
+            return NextUnitDouble(ref state) < settings.CaveDirtGroundChance;
         }
 
         private static void TrySampleRiverConnection(ChunkGenerationRequest request,
