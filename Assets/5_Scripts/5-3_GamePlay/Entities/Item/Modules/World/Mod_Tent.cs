@@ -70,6 +70,7 @@ public class Mod_Tent : Module, IInteractable
     private Coroutine sleepingRoutine;
     private Coroutine panelFadeRoutine;
     private Coroutine zzzFloatRoutine;
+    private bool isSleeping;
     private RectTransform sleepPanelRect;
     private readonly List<ZzzFloatNode> zzzFloatNodes = new();
     private bool movementInputLocked;
@@ -105,8 +106,10 @@ public class Mod_Tent : Module, IInteractable
     /// <summary>回收模块时释放输入锁、时间倍率与临时睡眠面板。</summary>
     protected override void OnUnload()
     {
-        if (sleepingRoutine != null)
-            StopCoroutine(sleepingRoutine);
+        Coroutine routine = sleepingRoutine;
+        FinishSleep(closePanel: false);
+        if (routine != null)
+            StopCoroutine(routine);
         if (panelFadeRoutine != null)
             StopCoroutine(panelFadeRoutine);
         StopZzzFloat();
@@ -143,29 +146,29 @@ public class Mod_Tent : Module, IInteractable
 
     public void OnInteractStart(Item playerItem)
     {
+        if (isSleeping || playerItem == null)
+            return;
+
         currentPlayer = playerItem;
 
         if (!EnsureSleepPanel())
+        {
+            currentPlayer = null;
             return;
+        }
 
         BindSleepUI();
-        FadePanel(1f, true);
         OnClickSleep();
     }
 
     public void OnInteractCancel(Item playerItem)
     {
-        if (sleepingRoutine != null)
-        {
-            StopCoroutine(sleepingRoutine);
-            sleepingRoutine = null;
-            Debug.Log("[Tent] 交互被取消，睡眠提前结束");
-        }
+        if (!isSleeping || playerItem != currentPlayer)
+            return;
 
-        StopZzzFloat();
-        UnlockPlayerMovementInput();
-        RestoreDayNightTimeScale();
-        FadePanel(0f, false);
+        if (sleepingRoutine != null)
+            StopCoroutine(sleepingRoutine);
+        FinishSleep();
     }
 
     #endregion
@@ -203,38 +206,50 @@ public class Mod_Tent : Module, IInteractable
         }
     }
 
-    private void FadePanel(float targetAlpha, bool openAfterFade)
+    private void OpenSleepPanel()
     {
-        if (sleepPanel == null)
+        if (panelFadeRoutine != null)
+        {
+            StopCoroutine(panelFadeRoutine);
+            panelFadeRoutine = null;
+        }
+
+        // 入睡直接全黑，遮罩只由本模块控制，避免与通用面板动画争写。
+        sleepPanel.SetOpenVisualAlpha(1f);
+        sleepPanel.Open();
+        sleepCanvasGroup.alpha = 1f;
+    }
+
+    private void CloseSleepPanel()
+    {
+        if (sleepPanel == null || !sleepPanel.IsOpen())
             return;
 
         if (panelFadeRoutine != null)
             StopCoroutine(panelFadeRoutine);
-
-        panelFadeRoutine = StartCoroutine(CoFadePanel(targetAlpha, openAfterFade));
+        if (panelFadeDuration <= 0f)
+        {
+            sleepPanel.Close();
+            panelFadeRoutine = null;
+            return;
+        }
+        panelFadeRoutine = StartCoroutine(CoCloseSleepPanel());
     }
 
-    private IEnumerator CoFadePanel(float targetAlpha, bool openAfterFade)
+    private IEnumerator CoCloseSleepPanel()
     {
-        sleepPanel.Open();
-
+        // 淡出只读取当前透明度，绝不重新打开已经关闭的遮罩。
         float from = sleepCanvasGroup.alpha;
         float elapsed = 0f;
-        while (elapsed < panelFadeDuration)
+        while (elapsed < Mathf.Max(0f, panelFadeDuration))
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / panelFadeDuration);
-            sleepCanvasGroup.alpha = Mathf.Lerp(from, targetAlpha, t);
+            sleepCanvasGroup.alpha = Mathf.Lerp(from, 0f, t);
             yield return null;
         }
 
-        sleepCanvasGroup.alpha = targetAlpha;
-        sleepCanvasGroup.interactable = openAfterFade;
-        sleepCanvasGroup.blocksRaycasts = openAfterFade;
-
-        if (!openAfterFade)
-            sleepPanel.Close();
-
+        sleepPanel.Close();
         panelFadeRoutine = null;
     }
 
@@ -250,10 +265,12 @@ public class Mod_Tent : Module, IInteractable
             return;
         }
 
-        if (sleepingRoutine != null)
+        if (isSleeping)
             return;
 
-        sleepingRoutine = StartCoroutine(CoSleep(currentPlayer));
+        isSleeping = true;
+        Coroutine routine = StartCoroutine(CoSleep(currentPlayer));
+        sleepingRoutine = isSleeping ? routine : null;
     }
 
     private void OnClickCancel()
@@ -265,8 +282,8 @@ public class Mod_Tent : Module, IInteractable
     {
         if (GameManager.Instance == null)
         {
-            Debug.LogError("[Tent] GameManager 未初始化，无法自动保存");
-            sleepingRoutine = null;
+            Debug.LogError("[Tent] GameManager 未初始化，无法手动保存");
+            FinishSleep();
             yield break;
         }
 
@@ -275,55 +292,73 @@ public class Mod_Tent : Module, IInteractable
         if (food == null || hp == null)
         {
             Debug.LogError("[Tent] 玩家缺少 Mod_Food 或 Mod_DamageReceiver，无法执行睡眠结算");
-            sleepingRoutine = null;
+            FinishSleep();
             yield break;
         }
 
         if (!LockPlayerMovementInput(playerItem))
         {
-            sleepingRoutine = null;
+            FinishSleep();
             yield break;
         }
 
-        ApplySleepDayNightTimeScale();
-
-        // 记录睡觉点作为玩家濒死后的重生优先点
-        var deathState = playerItem.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
-        if (deathState != null)
+        try
         {
-            deathState.SetSleepRespawnPoint(playerItem.transform.position);
-        }
+            OpenSleepPanel();
+            StartZzzFloat();
+            // 先让黑幕绘制一帧，再冻结手动保存快照，避免采集卡顿暴露游戏画面。
+            yield return null;
 
-        GameManager.Instance.SaveGame();
-        StartZzzFloat();
+            var deathState = playerItem.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
+            deathState?.SetSleepRespawnPoint(playerItem.transform.position);
+            GameManager.Instance.SaveGame();
+            // 快照保留正常时间倍率，睡眠加速只在本轮睡眠会话内生效。
+            ApplySleepDayNightTimeScale();
 
-        int totalTicks = Mathf.Max(1, Mathf.CeilToInt(sleepDuration / Mathf.Max(0.01f, sleepTickInterval)));
-        SleepPlan sleepPlan = BuildSleepPlan(food, hp, totalTicks);
+            int totalTicks = Mathf.Max(1, Mathf.CeilToInt(sleepDuration / Mathf.Max(0.01f, sleepTickInterval)));
+            SleepPlan sleepPlan = BuildSleepPlan(food, hp, totalTicks);
 
-        float elapsed = 0f;
-        bool earlyWake = false;
-        while (elapsed < sleepDuration)
-        {
-            elapsed += sleepTickInterval;
-
-            ConsumeSleepNutrition(food, sleepPlan.hungerConsumePerTick, sleepPlan.waterConsumePerTick);
-            HealBySleep(hp, playerItem, sleepPlan.healPerTick);
-
-            if (ShouldWakeEarly(food))
+            float elapsed = 0f;
+            bool earlyWake = false;
+            while (elapsed < sleepDuration)
             {
-                earlyWake = true;
-                break;
+                elapsed += sleepTickInterval;
+
+                ConsumeSleepNutrition(food, sleepPlan.hungerConsumePerTick, sleepPlan.waterConsumePerTick);
+                HealBySleep(hp, playerItem, sleepPlan.healPerTick);
+
+                if (ShouldWakeEarly(food))
+                {
+                    earlyWake = true;
+                    break;
+                }
+
+                yield return new WaitForSeconds(sleepTickInterval);
             }
-
-            yield return new WaitForSeconds(sleepTickInterval);
+            Debug.Log(earlyWake ? "[Tent] 玩家在睡觉中途被饿醒/渴醒" : "[Tent] 睡眠结束");
         }
+        finally { FinishSleep(); }
+    }
 
+    private void FinishSleep(bool closePanel = true)
+    {
+        if (!isSleeping)
+            return;
+
+        // 先提交会话结束，再释放交互引用，迟到的取消回调不会再次拉起遮罩。
+        isSleeping = false;
         sleepingRoutine = null;
         StopZzzFloat();
         UnlockPlayerMovementInput();
         RestoreDayNightTimeScale();
-        Debug.Log(earlyWake ? "[Tent] 玩家在睡觉中途被饿醒/渴醒" : "[Tent] 睡眠结束");
-        FadePanel(0f, false);
+        if (currentPlayer != null)
+        {
+            foreach (Mod_InteractSender sender in currentPlayer.GetComponentsInChildren<Mod_InteractSender>(true))
+                sender.CompleteInteraction(this);
+        }
+        currentPlayer = null;
+        if (closePanel)
+            CloseSleepPanel();
     }
 
     private bool ShouldWakeEarly(Mod_Food food)

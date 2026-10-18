@@ -1,3 +1,10 @@
+test.system("player", "interaction_completion", {}, function(data)
+    assert(not data.wrongTargetAccepted and data.originalPreserved, "不匹配的完成请求清掉当前交互")
+    assert(data.accepted and data.currentCleared and data.onlyCompletedRemoved, "完成交互没有撤掉自身目标，或误删其他候选")
+    assert(not data.repeatedAccepted and data.completedCancelCount == 0, "重复完成或后续取消再次回调已结束目标")
+    assert(not data.staleAccepted and data.nextPreserved and data.nextCancelCount == 1, "旧完成请求污染新交互，或新目标取消失效")
+end, "交互完成清理、重复调用与迟到取消隔离")
+
 -- 移动、奔跑与营养水分的职责沿用正式移动动作配置。
 local cases = {
     {name = "静止", args = {moving = false, running = false}, nutrition = 1, water = 1},

@@ -76,6 +76,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Interaction/*",
         "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset",
         "Assets/StreamingAssets/GameplayTests/Systems/Player/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Tent.cs",
         "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/ItemActionFeedback.cs",
         "Assets/5_Scripts/Shared/Utilities/Geometry/AttackShape2D.cs",
@@ -1059,6 +1060,9 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInventoryFlickSettingsProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Tent.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/World/Mod_Tent.cs",
+        "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Sleep.prefab",
         "Assets/5_Scripts/5-5_UI/*",
         "Assets/Resources/UI/*",
         "Assets/3_Prefabs/*UI*",

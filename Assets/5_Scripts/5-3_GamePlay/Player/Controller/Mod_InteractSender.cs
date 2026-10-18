@@ -667,6 +667,23 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             receiver.OnInteractEnd(item);
     }
 
+    /// <summary>目标主动完成交互，只清理匹配的会话，不再发送取消回调。</summary>
+    public bool CompleteInteraction(IInteractable receiver)
+    {
+        if (receiver == null || currentReceiver != receiver)
+            return false;
+
+        if (heldReceiver == receiver)
+            heldReceiver = null;
+        currentReceiver = null;
+        currentReceiverComponent = null;
+        receiversInRange.Remove(receiver);
+        spatialCandidates.Remove(receiver);
+        if (previewReceiver == receiver)
+            ClearInteractionPreview();
+        return true;
+    }
+
     /// <summary>结束当前交互并清理一次性探测状态。</summary>
     public void CancelCurrentInteraction()
     {

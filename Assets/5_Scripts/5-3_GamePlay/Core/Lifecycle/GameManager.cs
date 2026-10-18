@@ -1404,32 +1404,43 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     #endregion
 
+    #region 手动与自动保存入口
+
     /// <summary>
-    /// 保存游戏数据专用方法；分帧采集区块并后台原子写盘，不阻塞主线程。
+    /// 手动保存立即采集完整快照，再交给后台原子写盘。
     /// </summary>
     public void SaveGame()
     {
-        if (manualSaveCoroutine != null)
+        if (manualSaveInProgress)
             return;
 
         LastSaveSucceeded = null;
         BeginSaveStatus();
-        manualSaveCoroutine = StartCoroutine(SaveGameInBackgroundCoroutineWithStatus());
+        manualSaveInProgress = true;
+        StartCoroutine(SaveGameInBackgroundCoroutineWithStatus());
     }
 
-    private Coroutine manualSaveCoroutine;
+    private bool manualSaveInProgress;
 
-    /// <summary>等待分帧快照与后台写盘完成，结束后更新右上角保存状态。</summary>
+    /// <summary>立即冻结手动保存快照，等待后台写盘后更新保存状态。</summary>
     private IEnumerator SaveGameInBackgroundCoroutineWithStatus()
     {
         Task<bool> writeTask = null;
         bool succeeded = false;
         Exception saveFailure = null;
 
-        yield return SaveGameInBackgroundCoroutine(task => writeTask = task);
+        try
+        {
+            // 手动保存不使用自动保存的分帧预算，睡眠与设置按钮共用此入口。
+            writeTask = SaveGameInBackground();
+        }
+        catch (Exception exception)
+        {
+            saveFailure = exception;
+        }
         if (writeTask == null)
         {
-            saveFailure = new InvalidOperationException("手动保存未创建后台写入任务。");
+            saveFailure ??= new InvalidOperationException("手动保存未创建后台写入任务。");
         }
         else
         {
@@ -1453,14 +1464,17 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         LastSaveSucceeded = succeeded;
         CompleteSaveStatus(succeeded);
-        manualSaveCoroutine = null;
+        manualSaveInProgress = false;
     }
 
     /// <summary>
-    /// 自动保存入口：保持实体和输入继续运行，主线程负责采集/构建字节快照，磁盘原子写入由后台任务完成。
+    /// 立即采集入口：主线程构建完整快照，磁盘原子写入由后台任务完成。
     /// </summary>
     public Task<bool> SaveGameInBackground()
     {
+        if (!IsInGameWorld || SaveDataMgr.Instance?.SaveData == null)
+            return Task.FromResult(false);
+
         CaptureSaveGameState();
         return SaveDataMgr.Instance.Save_And_WriteToDiskInBackground();
     }
@@ -1504,6 +1518,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 先保存玩家数据
         ItemMgr.Instance.SavePlayer();
     }
+
+    #endregion
 
     #endregion
 

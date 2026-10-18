@@ -139,6 +139,13 @@ for _, kind in ipairs({ "tmp", "legacy" }) do
     end, "下拉重复展开适应选项增减：" .. kind)
 end
 
+test.system("ui_settings", "tent_veil", {}, function(data)
+    assert(data.red == 0 and data.green == 0 and data.blue == 0 and data.alpha == 1 and data.panelAlpha == 1,
+        "正式睡眠遮罩没有配置为完全不透明的纯黑")
+    assert(data.plainImage and data.fullScreen, "睡眠遮罩仍依赖带透明边缘的图片，或没有覆盖全屏")
+    assert(data.animationCount == 0, "睡眠遮罩仍叠加通用动画，与帐篷淡出争写")
+end, "睡眠正式遮罩纯黑、全屏与动画所有权")
+
 test.system("ui_settings", "panel_lifecycle", { alpha = 0.75 }, function(data)
     assert(data.initialAlpha == 0 and not data.initialInteraction, "面板关闭初始化仍可见或能接收输入")
     assert(data.openAlpha == 0.75 and data.openInteraction and data.openEvents == 1, "重复打开误发事件或丢失指定透明度")

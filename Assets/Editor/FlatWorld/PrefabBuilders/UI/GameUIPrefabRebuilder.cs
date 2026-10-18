@@ -2014,6 +2014,10 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildSleepHud(GameObject root)
     {
+        // 睡眠遮罩由帐篷控制，不能再叠加通用面板缩放或淡入动画。
+        foreach (BaseUIAnimation animation in root.GetComponents<BaseUIAnimation>())
+            UnityEngine.Object.DestroyImmediate(animation);
+
         RectTransform rect = root.GetComponent<RectTransform>();
         if (rect == null)
             return;
@@ -2021,7 +2025,14 @@ public static class GameUIPrefabRebuilder
 
         Image veil = FindDirectRect(root.transform, "Image")?.GetComponent<Image>();
         if (veil != null)
-            veil.color = new Color(0.012f, 0.028f, 0.045f, 0.72f);
+        {
+            veil.color = Color.black;
+            veil.sprite = null;
+            veil.type = Image.Type.Simple;
+            Stretch(veil.rectTransform);
+            if (veil.GetComponent<FullScreenRectController>() == null)
+                veil.gameObject.AddComponent<FullScreenRectController>();
+        }
 
         RectTransform zzzs = FindDirectRect(root.transform, "ZZZs");
         if (zzzs != null)
