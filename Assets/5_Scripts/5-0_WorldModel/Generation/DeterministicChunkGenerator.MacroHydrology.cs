@@ -371,6 +371,11 @@ namespace FlatWorld.WorldModel
             long channelTicks = 0, floodplainTicks = 0;
             long candidates = 0, outsideWindow = 0, oceanRejected = 0, mergeAttempts = 0;
             long floodplainCandidates = 0, floodplainMergeAttempts = 0;
+            // 热循环复用一份行列映射，避免每个河道像素重复做环绕归一化和开方。
+            Span<int> normalizedX = stackalloc int[ChannelKernel.MaximumCachedRadius * 2 + 1];
+            Span<int> normalizedY = stackalloc int[ChannelKernel.MaximumCachedRadius * 2 + 1];
+            Span<byte> insideX = stackalloc byte[ChannelKernel.MaximumCachedRadius * 2 + 1];
+            Span<byte> insideY = stackalloc byte[ChannelKernel.MaximumCachedRadius * 2 + 1];
             using var floodplain = new FloodplainRaster(outputWindow, sampling, floodplainCells);
             foreach (KeyValuePair<Int2, ChannelCenterSample> pair in centers)
             {
@@ -386,27 +391,53 @@ namespace FlatWorld.WorldModel
                 int radius = Math.Min(maximumRadius, Math.Max(0, width / 2));
                 double centerDepth = Lerp(settings.RiverDepthMin, settings.RiverDepthMax,
                     Math.Sqrt(widthT));
+                ChannelKernel kernel = ChannelKernel.ForRadius(radius);
+                if (kernel != null)
+                {
+                    int diameter = radius * 2 + 1;
+                    for (int i = 0; i < diameter; i++)
+                    {
+                        normalizedX[i] = sampling.NormalizeX(center.X + i - radius);
+                        normalizedY[i] = sampling.NormalizeY(center.Y + i - radius);
+                        insideX[i] = outputWindow.ContainsX(normalizedX[i]) ? (byte)1 : (byte)0;
+                        insideY[i] = outputWindow.ContainsY(normalizedY[i]) ? (byte)1 : (byte)0;
+                    }
+                }
                 for (int offsetY = -radius; offsetY <= radius; offsetY++)
                 for (int offsetX = -radius; offsetX <= radius; offsetX++)
                 {
                     if (offsetX * offsetX + offsetY * offsetY > radius * radius + 1) continue;
                     if (timing != null) candidates++;
-                    Int2 water = sampling.Normalize(new Int2(center.X + offsetX,
-                        center.Y + offsetY));
-                    if (!outputWindow.Contains(water))
+                    Int2 water;
+                    if (kernel != null)
                     {
-                        if (timing != null) outsideWindow++;
-                        continue;
+                        int xIndex = offsetX + radius, yIndex = offsetY + radius;
+                        if (insideX[xIndex] == 0 || insideY[yIndex] == 0)
+                        {
+                            if (timing != null) outsideWindow++;
+                            continue;
+                        }
+                        water = new Int2(normalizedX[xIndex], normalizedY[yIndex]);
                     }
-                    double height = sampling.Height(water);
+                    else
+                    {
+                        water = sampling.Normalize(new Int2(center.X + offsetX, center.Y + offsetY));
+                        if (!outputWindow.Contains(water))
+                        {
+                            if (timing != null) outsideWindow++;
+                            continue;
+                        }
+                    }
+                    double height = sampling.HeightNormalized(water);
                     if (height <= settings.SeaLevel)
                     {
                         if (timing != null) oceanRejected++;
                         continue;
                     }
-                    double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
-                    double edgeStrength = radius == 0 ? 1d :
-                        1d - Clamp01(distance / (radius + 0.5d));
+                    double edgeStrength = kernel != null
+                        ? kernel.StrengthAt(offsetX, offsetY)
+                        : radius == 0 ? 1d : 1d - Clamp01(
+                            Math.Sqrt(offsetX * offsetX + offsetY * offsetY) / (radius + 0.5d));
                     double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                     if (timing != null) mergeAttempts++;
                     SetRiverCell(riverCells, water, new GeneratedHydrologyCell(
@@ -437,6 +468,40 @@ namespace FlatWorld.WorldModel
             timing?.RecordStageCount("river.local_refine.floodplain_candidates", floodplainCandidates, accumulate: true);
             timing?.RecordStageCount("river.local_refine.floodplain_merge_attempts", floodplainMergeAttempts, accumulate: true);
             timing?.RecordStageCount("river.local_refine.floodplain_height_queries", floodplain.HeightQueries, accumulate: true);
+        }
+
+        /// <summary>常见河宽只预计算一次圆形采样的原始浮点边缘权重。</summary>
+        private sealed class ChannelKernel
+        {
+            internal const int MaximumCachedRadius = 32;
+            private static readonly ChannelKernel[] cache = new ChannelKernel[MaximumCachedRadius + 1];
+            private readonly double[] strengths;
+            private readonly int radius, diameter;
+
+            private ChannelKernel(int radius)
+            {
+                this.radius = radius;
+                diameter = radius * 2 + 1;
+                strengths = new double[diameter * diameter];
+                for (int y = -radius; y <= radius; y++)
+                for (int x = -radius; x <= radius; x++)
+                {
+                    if (x * x + y * y > radius * radius + 1) continue;
+                    strengths[(y + radius) * diameter + x + radius] = radius == 0
+                        ? 1d : 1d - Clamp01(Math.Sqrt(x * x + y * y) / (radius + 0.5d));
+                }
+            }
+
+            internal static ChannelKernel ForRadius(int radius)
+            {
+                if ((uint)radius > MaximumCachedRadius) return null;
+                ChannelKernel kernel = Volatile.Read(ref cache[radius]);
+                if (kernel != null) return kernel;
+                kernel = new ChannelKernel(radius);
+                return Interlocked.CompareExchange(ref cache[radius], kernel, null) ?? kernel;
+            }
+
+            internal double StrengthAt(int x, int y) => strengths[(y + radius) * diameter + x + radius];
         }
 
         private static int GetHydrologyOutputPadding(ChunkGenerationRequest request) =>
@@ -477,6 +542,18 @@ namespace FlatWorld.WorldModel
                 int x = ShiftNearChunk(position.X, centerX, spanX) - originX;
                 int y = ShiftNearChunk(position.Y, centerY, spanY) - originY;
                 return x >= -Padding && y >= -Padding && x < maximumX && y < maximumY;
+            }
+
+            internal bool ContainsX(int x)
+            {
+                int offset = ShiftNearChunk(x, centerX, spanX) - originX;
+                return offset >= -Padding && offset < maximumX;
+            }
+
+            internal bool ContainsY(int y)
+            {
+                int offset = ShiftNearChunk(y, centerY, spanY) - originY;
+                return offset >= -Padding && offset < maximumY;
             }
 
             internal bool TryGetIndex(Int2 position, out int index)

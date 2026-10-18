@@ -1671,10 +1671,18 @@ namespace FlatWorld.WorldModel
                     Request.Topology.NormalizeY(position.Y));
             }
 
+            public int NormalizeX(int x) => Request.Topology.NormalizeX(x);
+            public int NormalizeY(int y) => Request.Topology.NormalizeY(y);
+
             /// <summary>读取坐标高度；第一次读取后缓存结果，避免重复计算噪声。</summary>
             public double Height(Int2 position)
             {
-                position = Normalize(position);
+                return HeightNormalized(Normalize(position));
+            }
+
+            /// <summary>河道已归一化坐标直接查高度缓存，避免同一个格再次执行取模。</summary>
+            public double HeightNormalized(Int2 position)
+            {
                 if (!heightCache.TryGetValue(position, out double value))
                 {
                     long started = measureSampling ? Stopwatch.GetTimestamp() : 0;
