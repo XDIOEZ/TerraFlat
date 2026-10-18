@@ -468,7 +468,14 @@ public partial class GameManager
         dimensionLoadingBackground.color = theme.BackgroundColor;
         dimensionLoadingTexture.sprite = theme.BackgroundTexture;
         dimensionLoadingTexture.enabled = theme.BackgroundTexture != null;
-        dimensionLoadingTexture.color = new Color(1f, 1f, 1f, 0.16f);
+        dimensionLoadingTexture.color = new Color(1f, 1f, 1f, Mathf.Clamp01(theme.BackgroundTextureOpacity));
+        dimensionLoadingTexture.pixelsPerUnitMultiplier = 1f;
+        if (theme.BackgroundTexture != null && theme.BackgroundTileSize > 0f)
+        {
+            // 按参考像素固定平铺块大小，避免草地因素材导入比例变成细碎色块。
+            dimensionLoadingTexture.pixelsPerUnitMultiplier = theme.BackgroundTexture.rect.width /
+                (dimensionLoadingTexture.pixelsPerUnit * theme.BackgroundTileSize);
+        }
         dimensionLoadingIcon.sprite = theme.Icon != null ? theme.Icon : theme.BackgroundTexture;
         dimensionLoadingIcon.enabled = dimensionLoadingIcon.sprite != null;
         dimensionLoadingProgressFill.color = theme.AccentColor;

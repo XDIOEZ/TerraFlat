@@ -4,6 +4,7 @@
     "references": [
         "PuertsUnityMcp.Editor",
         "GamePlay",
+        "AYellowpaper.SerializedCollections",
         "FlatWorld.AIECS.Gameplay",
         "Data",
         "FlatWorld.WorldModel",

@@ -10,6 +10,7 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 - `Assets/5_Scripts/5-3_GamePlay/World/Dimension/`：`WorldAddress`、`DimensionManager`、`DimensionCatalogSO`、`Mod_DimensionPortal`、`DimensionTravelProgressStore`。
 - `Assets/5_Scripts/5-0_WorldModel/Generation/`：`DeterministicChunkGenerator`、`CaveLayoutKernel`、`CaveGenerationFeatureGenerator`。
 - `Assets/StreamingAssets/GameConfig/Items/shells/dimension_portals.json`：运行时入口定义。
+- 加载页纹理、透明度和平铺宽度由 `DimensionLoadingTheme` 配置，`GameManager.UI` 统一应用；默认地表复用 `Grass_Ground`，以 128 参考像素平铺并完整显示纹理。
 
 ## 地址与切换
 

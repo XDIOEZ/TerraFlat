@@ -14,8 +14,14 @@ public enum DimensionSunShadowMode { Automatic, Enabled, Disabled }
 [Serializable]
 public sealed class DimensionLoadingTheme
 {
-    [Tooltip("加载页低透明度平铺纹理。")]
+    #region 加载页主题
+
+    [Tooltip("加载页铺满屏幕的平铺纹理。")]
     public Sprite BackgroundTexture;
+    [Tooltip("背景纹理的不透明度；1 为完整显示纹理。")]
+    [Range(0f, 1f)] public float BackgroundTextureOpacity = 0.16f;
+    [Tooltip("单块纹理的宽度（UI 参考像素）；0 使用 Sprite 的原始尺寸。")]
+    [Min(0f)] public float BackgroundTileSize;
     [Tooltip("加载页中央维度图标；未配置时使用背景纹理。")]
     public Sprite Icon;
     public Color BackgroundColor = new Color(0.055f, 0.06f, 0.07f, 1f);
@@ -33,6 +39,8 @@ public sealed class DimensionLoadingTheme
 
         return CreateNeutral();
     }
+
+    #endregion
 }
 
 [Serializable]

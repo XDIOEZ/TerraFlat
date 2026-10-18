@@ -154,7 +154,7 @@ namespace FlatWorld.Spaceflight
             Vector2 position = PressureExplosionQueue.NormalizeInWorld(world, new Vector2((float)x, (float)y));
             double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == world &&
                 TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float actual)
-                ? actual : SpaceSurfaceQuery.GetLandingSurface(world, position).TemperatureCelsius;
+                ? actual : SpaceSurfaceQuery.GetAmbientTemperature(world, position);
             return new PlanetShipAtmosphereSource(GetMachineOutsideAtmosphere(ship), temperature);
         }
         #endregion

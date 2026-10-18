@@ -1084,7 +1084,8 @@
         "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.Performance.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.Device.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.PerformanceDebug.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ShipFlightHud.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ShipFlightHud.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.VirtualizedInventory.cs"
       ],
       "dependsOn": [
         "localization",

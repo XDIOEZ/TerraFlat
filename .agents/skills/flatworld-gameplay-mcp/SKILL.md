@@ -54,6 +54,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 
 - JSON + Lua 自动回归优先 `python Tools/GameplayTesting/run_suite.py GameplayTests/mechanical-suite.json`，也可用 `gameplay_test_pipeline(run/status/report)` 或测试中心多选。系统入口、编写规则、每份 Lua 最多三次显式截图、隔离执行及报告契约统一见 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)。
 
+- PuerTS Editor MCP 快通道：`python Tools/UnityMcpFast.py health` 检查连接，`list --filter profiler` 列工具，`call editor.playmode.state --args {}` 查询，`bench` 测延迟，`batch calls.json` 批量查询。脚本读取 Editor 端口配置，HTTP 直连免启动 Node/uvx；批次复用连接，未知结果的写操作不自动重试。GameplayMCP 仍使用独立的 6400+ 端口。
 - `capability_gap` 表示正常玩法缺少协议表达。动作实现 `IGameplayMcpAction` 并加 `GameplayMcpActionAttribute`，TypeCache 注册表生成能力清单；扩展复用生产接口/UI 事件，不引入任意代码执行或私有状态写入。
 - `gameplay_aiecs_debug(status/sample)` 只读 GM 模拟；`gameplay_chunk_render_debug(status/sample)` 只读区块阶段/心跳/耗时。采样 1～20 秒；区块采样在暂停、换世界、编译时标记无效，报告位于 `Library/FlatWorldGameplayMCP/ChunkDiagnostics/`，菜单 `FlatWorld/调试/区块加载`。
 - 功能复现使用真实玩法链，协议不维护一次性测试动作。连接、超时和性能解释见 [MCP游戏测试经验.md](Exp/MCP游戏测试经验.md)，采集查询见 [采集查询.md](Exp/采集查询.md)。

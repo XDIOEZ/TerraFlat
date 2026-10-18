@@ -525,3 +525,34 @@ for _, water in ipairs({false, true}) do
         assert(data.stableRoundtrip, "落地凭证在第二次会话快照中发生变化")
     end, "清船后的正式乘员落地凭证 JSON 往返：海面=" .. tostring(water))
 end
+test.system("ui_settings", "virtualized_inventory", {}, function(data)
+    assert(data.poolCount == 12, "虚拟库存没有按视口和缓冲行限制槽位池")
+    local expected = {
+        {first = 3, count = 12, retained = 9, entering = 3},
+        {first = 3, count = 12, retained = 12, entering = 0},
+        {first = 0, count = 12, retained = 9, entering = 3},
+        {first = 27, count = 12, retained = 0, entering = 12},
+        {first = 36, count = 5, retained = 3, entering = 2},
+        {first = 0, count = 12, retained = 0, entering = 12},
+        {first = 3, count = 12, retained = 9, entering = 3}
+    }
+    assert(#data.samples == #expected, "虚拟库存滚动采样缺失")
+    for index, sample in ipairs(data.samples) do
+        local want = expected[index]
+        assert(sample.poolCount == 12 and sample.active == want.count and #sample.indices == want.count,
+            "滚动扩建槽位池或末尾没有正确隐藏空余槽")
+        assert(sample.retained == want.retained and sample.entering == want.entering,
+            "滚动一行重绑了仍可见的槽位，或跳转、回滚丢失槽位")
+        for offset, slot in ipairs(sample.indices) do
+            assert(slot == want.first + offset - 1, "虚拟库存显示索引缺失或重复")
+        end
+        assert(sample.mappingValid and sample.routed, "虚拟槽位位置、库存映射或点击数据索引错误")
+        assert(sample.callbacksStable, "滚动或末尾重新显示时重复创建数据、点击或拖拽回调")
+    end
+    assert(data.clearedIndex == 12 and data.invalidUnchanged,
+        "复用后的清空回调仍指向旧格，或无效索引破坏了绑定")
+    assert(data.forcedRefreshStable and data.mapCleared and data.layoutRestored,
+        "强制刷新重建了回调，或解绑没有清理映射并恢复布局")
+    assert(data.expandedPoolCount == 18 and data.expandedMappingValid,
+        "更大视口重新绑定后没有扩充槽位池或丢失数据映射")
+end, "创造背包滚动：保留重叠槽位、复用交互回调与末尾回滚")

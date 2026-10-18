@@ -52,7 +52,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `LocalTemperatureSource` 发布目标环境温度（默认篝火 40℃）而非固定摄氏增量；`ThermalInfluenceRuntime` 用 `max(0,1-d²/R²)²` 衰减，按当前天气环境温差取最强升温/降温（独立制冷模式），同类热源不累加。区块只缓存每源距离权重，源温、功率与天气变化不重建几何；设备管理燃料/供电/撤销。
 - 液体热辐射复用相同目标温度模型，配置 `radiantHeatRadius/radiantTargetTemperature`（岩浆目标环境 180℃）；`LiquidTemperatureField` 只索引已加载地表液体，按液体目标温度分组缓存各格最大权重，依 Terrain/SurfaceLiquidRevision/目录重建。岩浆接触仍走 1100℃物质温度、接触加热与伤害，环境不再直接强制成液体自身温度。
 - 单格环境温度按格中心直接累计当地冷热源和邻区稀疏液体热源，不触发整块权重重建；整块雨雪采样仍走批量权重。液体源列表只随 Terrain 身份/SurfaceLiquidRevision 变化扫描，资源重载同时清除源列表和权重缓存；两条路径共用最强影响规则。
-- 自然物同次环境冻结用 `TemperatureMgr.PointSamplingContext` 和 `LiquidTemperatureField.PointSamplingBatch`，按目标块一次收集已规范邻区，只读绑定 `WorldRuntime+Epoch+Dimension` 的当前地形；同批每格仍完整算热源距离，下批重读 Terrain 身份与 SurfaceLiquidRevision。作用域是同步只读阶段，期间调用方不得修改地形、热源或目录，不跟踪同批写入、不跨帧缓存结果；嵌套批次独立，退出清批次引用，目录重载/旧代际拒用，`environment/thermal_point_batch` 覆盖刷新与生命周期边界。
+- 自然物同次环境冻结用 `TemperatureMgr.PointSamplingContext` 和 `LiquidTemperatureField.PointSamplingBatch`，按目标块一次收集已规范邻区，只读绑定 `WorldRuntime+Epoch+Dimension` 的当前地形；同批每格仍完整算热源距离，下批重读 Terrain 身份与 SurfaceLiquidRevision。跨程序集的 GM 温度观察层使用公开的 `BeginAmbientPointSampling()` 包装复用相同批次。作用域是同步只读阶段，期间不得修改地形、热源或目录，不跨帧缓存结果；嵌套批次独立，退出释放，目录重载/旧代际拒用，`environment/thermal_point_batch` 覆盖刷新与生命周期边界。
 - 体温是最外层体表；角色、普通物品、罐体/工业内容、停火炉体、落地容器与坩埚的自然传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，速率最低 0.5℃/游戏秒，到达目标即停止；跨下限时先指数后匀速，保证分步与累计一致。默认下限在 `MinimumAmbientTemperatureChangePerSecond`。流体用同公式双精度结果按真实热容换回内能，共享罐库存每轮只推进一次；冷热不分速率，不读物品传热率或潮湿/附近火源倍率。`AdvanceTowards` 仅保留给入水、岩浆接触和主动设备传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。

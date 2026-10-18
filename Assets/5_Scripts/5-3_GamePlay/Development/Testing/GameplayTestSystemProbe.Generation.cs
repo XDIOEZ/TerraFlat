@@ -199,8 +199,8 @@ public static partial class GameplayTestSystemProbe
         numbers["climate.distance.minimumRainfall"] = 1d;
         numbers["climate.distance.maximumRainfall"] = 1d;
         numbers["climate.polarBand.enabled"] = 0d;
-        numbers["climate.temperature.celsiusMin"] = 20d;
-        numbers["climate.temperature.celsiusMax"] = 20d;
+        // 默认 simple 气候不读旧噪声温度范围，关闭海拔降温才能让水文夹具保留液态河湖。
+        numbers["climate.temperature.altitudeCoolingStrength"] = 0d;
         numbers["river.startFlow"] = .0001d;
         numbers["river.tributaryStartFlow"] = .0001d;
         numbers["river.floodplainStartFlow"] = .0001d;

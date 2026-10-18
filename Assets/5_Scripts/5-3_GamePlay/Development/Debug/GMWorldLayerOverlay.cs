@@ -123,13 +123,18 @@ internal sealed partial class GMWorldLayerOverlay : MonoBehaviour
 
         using (SampleMarker.Auto())
         {
+            // 同一批温度格复用液体热源邻区，避免每格重复检查来源与资源版本。
+            TemperatureMgr temperatureMgr = Mode == GmWorldLayerMode.Temperature
+                ? TemperatureMgr.Instance : null;
+            using TemperatureMgr.AmbientPointSamplingBatch temperatureSamples = temperatureMgr != null
+                ? temperatureMgr.BeginAmbientPointSampling() : default;
             int end = Mathf.Min(columns * rows, sampleIndex + SamplesPerFrame);
             for (; sampleIndex < end; sampleIndex++)
             {
                 int x = sampleIndex % columns;
                 int y = sampleIndex / columns;
                 Vector2 position = new(origin.x + (x + 0.5f) * stride, origin.y + (y + 0.5f) * stride);
-                pixels[y * TextureSize + x] = TrySampleColor(position, out Color32 color)
+                pixels[y * TextureSize + x] = TrySampleColor(position, in temperatureSamples, out Color32 color)
                     ? color
                     : new Color32(0, 0, 0, 0);
             }
@@ -177,13 +182,13 @@ internal sealed partial class GMWorldLayerOverlay : MonoBehaviour
     #region 数据采样
 
     /// <summary>按当前模式读取一个世界位置；未加载或目录未就绪时返回透明。</summary>
-    private bool TrySampleColor(Vector2 position, out Color32 color)
+    private bool TrySampleColor(Vector2 position, in TemperatureMgr.AmbientPointSamplingBatch temperatureSamples,
+        out Color32 color)
     {
         switch (Mode)
         {
             case GmWorldLayerMode.Temperature:
-                if (TemperatureMgr.Instance != null &&
-                    TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float temperature))
+                if (temperatureSamples.TryGetAmbientTemperature(position, out float temperature))
                 {
                     color = EvaluateTemperatureColor(temperature);
                     return true;

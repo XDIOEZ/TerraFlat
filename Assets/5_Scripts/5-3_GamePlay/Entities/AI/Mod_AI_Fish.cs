@@ -88,7 +88,7 @@ public sealed partial class Mod_AI_Fish : Module, IAIActor, IItemModuleDependenc
     private readonly AIStateMachine<Behaviour> machine = new();
     private DroppedItemHandle target;
     private string targetTag;
-    private Func<Vector2, bool> reachableFoodFilter;
+    private Predicate<Vector2> reachableFoodFilter;
     private Vector2 destination;
     private bool hasDestination, loaded, nodesRegistered;
     private float scanRemaining, eatElapsed, idleRemaining;

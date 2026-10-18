@@ -115,8 +115,10 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
 
     private static bool UsesGeneratedHeight(string dimensionId)
     {
-        if (DimensionManager.Instance != null &&
-            DimensionManager.Instance.TryGetDefinition(dimensionId, out DimensionDefinition definition))
+        // 高度查询只借用已存在的维度服务，不能为读取数据创建游戏管理器。
+        DimensionManager dimensions = DimensionManager.ExistingInstance;
+        if (dimensions != null &&
+            dimensions.TryGetDefinition(dimensionId, out DimensionDefinition definition))
             return definition.GenerationMode == DimensionGenerationMode.Surface;
         return string.Equals(dimensionId, global::WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
     }

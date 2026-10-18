@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using Unity.Mathematics;
@@ -42,40 +43,71 @@ namespace FlatWorld.WorldModel
 
             // 按原候选顺序处理包围框，同格首个有效湖泊或岛屿仍遮断后续盆地。
             var resolved = new HashSet<Int2>();
-            foreach (Basin basin in basins)
+            // 同一盆地的每列/每行只计算一次环绕坐标和最短位移。
+            int[] normalizedX = ArrayPool<int>.Shared.Rent(Math.Max(1, output.MaxX - output.MinX));
+            int[] normalizedY = ArrayPool<int>.Shared.Rent(Math.Max(1, output.MaxY - output.MinY));
+            double[] deltaX = ArrayPool<double>.Shared.Rent(Math.Max(1, output.MaxX - output.MinX));
+            double[] deltaY = ArrayPool<double>.Shared.Rent(Math.Max(1, output.MaxY - output.MinY));
+            try
             {
-                double reach = basin.Reach;
-                output.GetImages(basin.Center, reach, out int minImageX, out int maxImageX,
-                    out int minImageY, out int maxImageY);
-                for (int imageY = minImageY; imageY <= maxImageY; imageY++)
-                for (int imageX = minImageX; imageX <= maxImageX; imageX++)
+                foreach (Basin basin in basins)
                 {
-                    double centerX = basin.Center.x + imageX * (double)output.SpanX;
-                    double centerY = basin.Center.y + imageY * (double)output.SpanY;
-                    int minX = Math.Max(output.MinX, (int)Math.Floor(centerX - reach) - 1);
-                    int minY = Math.Max(output.MinY, (int)Math.Floor(centerY - reach) - 1);
-                    int maxX = Math.Min(output.MaxX, (int)Math.Ceiling(centerX + reach) + 1);
-                    int maxY = Math.Min(output.MaxY, (int)Math.Ceiling(centerY + reach) + 1);
-                    for (int y = minY; y < maxY; y++)
-                    for (int x = minX; x < maxX; x++)
+                    double reach = basin.Reach;
+                    output.GetImages(basin.Center, reach, out int minImageX, out int maxImageX,
+                        out int minImageY, out int maxImageY);
+                    for (int imageY = minImageY; imageY <= maxImageY; imageY++)
+                    for (int imageX = minImageX; imageX <= maxImageX; imageX++)
                     {
-                        if ((visited++ & 63) == 0) cancellation.ThrowIfCancellationRequested();
-                        var position = new Int2(request.Topology.NormalizeX(x), request.Topology.NormalizeY(y));
-                        if (resolved.Contains(position) ||
-                            !basin.TrySample(domain, position, out double depth, out bool island)) continue;
-                        // 自然陆地岛不能再被旧汇流小水潭覆盖；盆地外保留原河流及冲积层。
-                        if (island)
+                        double centerX = basin.Center.x + imageX * (double)output.SpanX;
+                        double centerY = basin.Center.y + imageY * (double)output.SpanY;
+                        int minX = Math.Max(output.MinX, (int)Math.Floor(centerX - reach) - 1);
+                        int minY = Math.Max(output.MinY, (int)Math.Floor(centerY - reach) - 1);
+                        int maxX = Math.Min(output.MaxX, (int)Math.Ceiling(centerX + reach) + 1);
+                        int maxY = Math.Min(output.MaxY, (int)Math.Ceiling(centerY + reach) + 1);
+                        for (int i = 0; i < maxX - minX; i++)
                         {
-                            cells.Remove(position);
-                            resolved.Add(position);
-                            continue;
+                            int canonical = request.Topology.NormalizeX(minX + i);
+                            normalizedX[i] = canonical;
+                            deltaX[i] = domain.ShortestDelta(basin.Center,
+                                new double2(canonical + 0.5d, basin.Center.y)).x;
                         }
-                        if (heightSampler(position) <= settings.SeaLevel + 0.01d) continue;
-                        cells[position] = new GeneratedHydrologyCell(GeneratedHydrologyKind.Lake,
-                            0d, depth, basin.SurfaceLevel);
-                        resolved.Add(position);
+                        for (int i = 0; i < maxY - minY; i++)
+                        {
+                            int canonical = request.Topology.NormalizeY(minY + i);
+                            normalizedY[i] = canonical;
+                            deltaY[i] = domain.ShortestDelta(basin.Center,
+                                new double2(basin.Center.x, canonical + 0.5d)).y;
+                        }
+                        for (int y = minY; y < maxY; y++)
+                        for (int x = minX; x < maxX; x++)
+                        {
+                            if ((visited++ & 63) == 0) cancellation.ThrowIfCancellationRequested();
+                            int ix = x - minX, iy = y - minY;
+                            var position = new Int2(normalizedX[ix], normalizedY[iy]);
+                            if (resolved.Contains(position) ||
+                                !basin.TrySampleProjected(new double2(deltaX[ix], deltaY[iy]),
+                                    out double depth, out bool island)) continue;
+                            // 自然陆地岛不能再被旧汇流小水潭覆盖；盆地外保留原河流及冲积层。
+                            if (island)
+                            {
+                                cells.Remove(position);
+                                resolved.Add(position);
+                                continue;
+                            }
+                            if (heightSampler(position) <= settings.SeaLevel + 0.01d) continue;
+                            cells[position] = new GeneratedHydrologyCell(GeneratedHydrologyKind.Lake,
+                                0d, depth, basin.SurfaceLevel);
+                            resolved.Add(position);
+                        }
                     }
                 }
+            }
+            finally
+            {
+                ArrayPool<int>.Shared.Return(normalizedX);
+                ArrayPool<int>.Shared.Return(normalizedY);
+                ArrayPool<double>.Shared.Return(deltaX);
+                ArrayPool<double>.Shared.Return(deltaY);
             }
             return new GeneratedHydrologyMap(cells, floodplains);
         }
@@ -229,13 +261,15 @@ namespace FlatWorld.WorldModel
             }
 
             /// <summary>不规则岸线和岛岸共享连续距离水深，避免切块边界或湖心突然变深。</summary>
-            internal bool TrySample(WorldTopologyDomain domain, Int2 position, out double depth, out bool island)
+            internal bool TrySampleProjected(double2 delta, out double depth, out bool island)
             {
                 depth = 0d; island = false;
-                double2 delta = domain.ShortestDelta(center, new double2(position.X + 0.5d, position.Y + 0.5d));
                 if (Math.Abs(delta.x) > radius * 1.55d || Math.Abs(delta.y) > radius * 1.55d) return false;
                 double2 local = new double2(delta.x * cosine + delta.y * sine,
                     -delta.x * sine + delta.y * cosine) / new double2(radius * 1.25d, radius * 0.8d);
+                // 最远可能岸线只有 1.135 倍归一化半径，外侧无需计算反正切和两次正弦。
+                const double maximumShore = 1d + 0.09d + 0.045d;
+                if (math.lengthsq(local) > maximumShore * maximumShore) return false;
                 double angle = Math.Atan2(local.y, local.x);
                 double shore = 1d + Math.Sin(angle * 3d + phase) * 0.09d + Math.Sin(angle * 5d - phase) * 0.045d;
                 double distance = (shore - math.length(local)) * radius * 0.8d;

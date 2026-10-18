@@ -110,8 +110,8 @@ public static partial class GameplayTestSystemProbe
         {
             var eventObject = new GameObject("EventSystem");
             eventObject.transform.SetParent(root.transform, false);
-            EventSystem eventSystem = eventObject.AddComponent<EventSystem>();
-            eventSystem.enabled = false;
+            // 编辑态同样执行正式登记生命周期，不能把未登记的禁用事件系统设为当前实例。
+            EventSystem eventSystem = eventObject.AddComponent<GameplayTestDropdownEventSystem>();
             GameplayTestHotPathRaycaster raycaster = eventObject.AddComponent<GameplayTestHotPathRaycaster>();
             var moduleObject = new GameObject("Discard");
             moduleObject.transform.SetParent(root.transform, false);
@@ -162,7 +162,7 @@ public static partial class GameplayTestSystemProbe
         {
             UnityEngine.Object.DestroyImmediate(root);
             if (temporaryMouse != null) UnityEngine.InputSystem.InputSystem.RemoveDevice(temporaryMouse);
-            EventSystem.current = previous;
+            if (previous != null) EventSystem.current = previous;
         }
     }
 
@@ -243,6 +243,7 @@ public static partial class GameplayTestSystemProbe
     #endregion
 }
 
+[ExecuteAlways, AddComponentMenu("")]
 internal sealed class GameplayTestHotPathRaycaster : BaseRaycaster
 {
     #region 独立 UI 射线采样

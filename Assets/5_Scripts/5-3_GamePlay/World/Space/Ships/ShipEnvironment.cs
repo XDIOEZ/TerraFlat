@@ -74,10 +74,10 @@ namespace FlatWorld.Spaceflight
             if (body == null || !owner.PlanetData_Dict.TryGetValue(body.PlanetId, out PlanetData planet))
                 return PlanetShipAtmosphereSource.Vacuum;
             Vector2 position = new((float)ship.PositionX, (float)ship.PositionY);
-            // 本地已加载地表优先读取实时温度，冷世界才调用离线地表生成查询。
+            // 本地地表读实时温度，冷世界只采单格温度，避免完整区块生成。
             double temperature = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == flight.SurfaceWorldKey &&
                 TemperatureMgr.Instance != null && TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float ambient)
-                ? ambient : SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, position).TemperatureCelsius;
+                ? ambient : SpaceSurfaceQuery.GetAmbientTemperature(body.PlanetId, position);
             return new PlanetShipAtmosphereSource(AtmosphereService.GetOrCreate(planet), temperature);
         }
         public bool TrySample(Item item, out ItemEnvironmentSample sample)

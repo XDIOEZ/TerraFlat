@@ -77,6 +77,7 @@ test.system("rendering", "terrain_height_save", { naturalDepth = 2 }, function(d
 end, "天然底床独立于玩家采挖快照恢复")
 
 test.system("rendering", "terrain_height_neighbours", {}, function(data)
+    assert(data.dimensionServicePreserved, "只读高度查询创建或替换了全局维度管理器")
     assert(not data.missing and data.available and data.initial == 0, "缺失或刚加载的邻区高度查询错误")
     assert(data.changed and data.lowered == -3, "跨区块查询没有立即读取新的采挖深度")
     assert(data.evicted and not data.afterEviction, "邻区卸载后仍返回旧高度")

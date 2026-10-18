@@ -797,7 +797,8 @@ public static partial class GameplayTestSystemProbe
                 if (tmp != null) { tmp.ClearOptions(); tmp.AddOptions(labels); }
                 if (legacy != null) { legacy.ClearOptions(); legacy.AddOptions(labels); }
                 control.gameObject.SetActive(true);
-                // 编辑态不依赖普通 MonoBehaviour 回调，显式调用正式准备入口后仍由原生 Show 创建列表。
+                // 与原生 Show 一样先激活模板，LayoutUtility 才会读取活动行上的首选高度。
+                template.gameObject.SetActive(true);
                 template.GetComponent<DropdownListLayout>().PrepareForOpen();
                 if (tmp != null) tmp.Show(); else legacy.Show();
                 Transform popup = control.Find("Dropdown List");

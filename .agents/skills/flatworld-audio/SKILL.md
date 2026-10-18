@@ -1,13 +1,24 @@
 ---
 name: flatworld-audio
-description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量设置与音效资源。"
+description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及音频服务、Cue、声源池、空间衰减与音量设置。"
 ---
 
 # FlatWorld 音频
 
-## 音效创作约定
+## 音效来源与制作
 
-- 今后新建音效统一使用 **LMMS MCP** 创作、编排和渲染，保留可编辑 `.mmp` 工程到 `SoundDesign/` 对应目录。外部脚本只负责裁切、循环接缝、增益整理、文件检查和 Unity 接入，不直接合成音效替代 LMMS MCP。
+- 新增或替换音效、环境声、配乐时，先联网寻找适合的免费开放授权资源，可从 [Freesound](https://freesound.org/) 和 [OpenGameArt](https://opengameart.org/) 入手；结合实际用途、音色、噪声、时长和循环需要选择，合适的现成资源优先使用。
+- 逐项核对原作者发布页或资源包的许可，优先采用允许商用、修改和随游戏分发的 **CC0 / CC BY** 素材；其他许可须满足其具体条件，包括 ShareAlike 的要求。仅限非商用、不允许所需改编或授权不清的素材不用于正式资源；“免费下载”“免版税”本身不能代替许可。
+- 合适的成品可直接接入，按需裁切、处理循环接缝、整理增益和转换格式；需要进一步编排或混音时再用 LMMS，不要求所有外部音源都重新渲染。
+- 找不到效果和许可都合适的资源时，可参考其音色、节奏和层次，再用 **LMMS MCP** 自行创作、编排和渲染，保留可编辑 `.mmp` 工程到 `SoundDesign/` 对应目录。引用采样或改编仍须遵守原许可；不得把未获许可的原音频或可识别旋律混入成品。
+- LMMS 制作分支中的外部脚本只负责裁切、循环接缝、增益整理、文件检查和 Unity 接入，不直接合成音效替代 LMMS MCP。
+
+## 来源与署名
+
+- 采用、改编或参考第三方声音时，在 `SoundDesign/<分组>/sources.json` 记录作品标题、原作者、原始页面链接、许可证名称/版本及链接、原始文件与成品文件/Cue 的对应关系、使用方式和修改内容；已有来源清单（如 `grass_sources.json`）沿用即可。保留随包许可、版权声明及作者指定的署名信息。
+- 同步整理可直接发布的 `CREDITS.md`：优先沿用项目已有的统一鸣谢文件；没有时放在对应 `SoundDesign/<分组>/`。交付时一并提供，发布时随游戏分发，不能只在来源 JSON 或聊天里留记录。署名包含“作品 — 作者 — 来源 — 许可 — 使用位置 — 修改说明”，并遵从作者的合理署名要求。
+- **CC0 素材也按项目约定保留作者致谢**，尊重分享者；经过 LMMS 加工后仍保留原作者和许可证。只作风格参考、未使用原音频的，明确标成“参考学习，未使用原音频”，不得与实际采样/改编混淆，也不暗示原作者为本项目背书。
+- 许可与署名细节按素材实际版本核对，常用规则见 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 和 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)。
 
 ## 入口
 
@@ -33,7 +44,7 @@ description: "FlatWorld 音频服务、Cue、声源池、空间衰减、音量�
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。
 - 正式 GameRes 启动在开放主菜单前等待 AudioService.PreloadAsync，以 Resources.LoadAsync 预热 Config/Catalog/Cue/Clip 强引用图，再创建服务、目录索引与声源池；重复预热复用实例，不在首个点击中同步加载整库。异步请求仍有主线程接入成本，同步入口仅保留给绕过正式启动流程的调用。
-- 玩法短音采用 48 kHz 单声道 PCM、预加载、关闭导入归一化；旧 `__01` WAV 和 Cue 保留 GUID，新变体必须写 `.meta` 并加入现有 Cue。按工程分组经 LMMS MCP 渲染后再执行 `build_sfx.py finalize`，脚本仅裁切、接缝、增益和绑定，不合成替代 LMMS 声源；临时 WAV 完整写好后原子替换，避免 Unity 导入半个文件。
+- 玩法短音采用 48 kHz 单声道 PCM、预加载、关闭导入归一化；旧 `__01` WAV 和 Cue 保留 GUID，新变体必须写 `.meta` 并加入现有 Cue。采用外部素材时按上述来源与署名流程整理后接入；使用 LMMS 制作时，按工程分组经 LMMS MCP 渲染后再执行 `build_sfx.py finalize`，脚本仅裁切、接缝、增益和绑定，不合成替代 LMMS 声源。临时 WAV 完整写好后原子替换，避免 Unity 导入半个文件。
 - 脚步的步频和单次音量倍率集中在 `Mod_Mover.FootstepAudio`；六类脚步 Cue 的冷却为 0.08 秒，与 `Player_Fishing_SFX_LMMS/build_sfx.py` 保持同步，避免更快的计步被音频冷却吞掉。
 - 雪地脚步读取脚下真实 `WorldSnowSystem.GetSurfaceDepth`，复用 `SnowDepthLayer` 十档量化：一层音量 0.45/pitch 1.10，十层 1.60/pitch 0.86，超十层仅声音封顶；Lua `audio/footstep_surface` 采样正式选音与两种倍率，不改积雪、水声或其他材质规则。
 - 入水、出水、游泳循环和浅水脚步共用 `Mod_Mover.ResolveWaterAudioVolume`：真实脚下 `LiquidDepth` 的 0.1～1 对应 1～10 份水，两端 10%、0.55 处 100%，其间倒抛物线；循环水量倍率平滑更新，出水取离开前最后水格，非水脚步不变。Lua 用 `audio/water_depth_volume` 和 `swimming_sequence` 采样正式规则。

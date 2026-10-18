@@ -263,6 +263,11 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
+        // 只读环境温度不需要生成冷区块，异常世界仍沿用完整地表查询的错误行为。
+        public static double GetAmbientTemperature(string worldKey, Vector2 position)
+            => TryGetAmbientTemperature(worldKey, position, out float temperature)
+                ? temperature : GetLandingSurface(worldKey, position).TemperatureCelsius;
+
         // 冷查询只复用正式温度公式，地表覆盖层和全局调温仍按各自真实来源生效。
         internal static float SampleGeneratedTemperature(ChunkGenerationRequest request, int x, int y)
             => SpaceSurfaceTerrain.TrySampleTemperature(request, x, y, out float celsius, out _)

@@ -55,8 +55,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 ## 生态与采挖
 
-- 洞穴散矿读取基础生态阶段实际矿山：距离任意矿山至少 5 格、来源最多 12 格（固定地图格数）；`cave.resource.looseDensity/looseStoneDensity` 默认互斥 2% 对应矿石、5% 石头，石头矿山不贡献额外矿石概率。邻块基础生态通过有界缓存共享，来源坐标保存在散矿 RuleId，不能用只支持同块宿主显示的 `HostGuid`。
 - Profile 首次使用时默认冻结；关闭冻结只丢 Profile，保留删除 GUID、覆盖与 `RenewalYears`，重开后下次进入世界冻结当前配置。快照/生态指纹包含数量、环境边界与依赖标签。
+- 洞穴散矿读取基础生态阶段实际矿山：距离任意矿山至少 5 格、来源最多 12 格（固定地图格数）；`cave.resource.looseDensity/looseStoneDensity` 默认互斥 2% 对应矿石、5% 石头，石头矿山不贡献额外矿石概率。邻块基础生态通过有界缓存共享，来源坐标保存在散矿 RuleId，不能用只支持同块宿主显示的 `HostGuid`。
 - 洞穴河湖岸泥土由 `cave.dirtGround.enabled/tileId/chance` 控制，只替换开放干格的 Ground（默认 Profile 为 `Tile_Dirt` 29），不写 Blocking、不提高导航代价；普通岩壁仍独立生成。
 - `itemCountDistribution=1` 使用 `itemCountMin..itemCount` 的二次峰值数量；`itemCountPeak/itemCountQuadraticRadius` 控制分布。`distributionMode=2` 聚落按 `(1-d/r)^2` 衰减，中心来自全局种子网格。
 - `CompanionHostTag` 要求同格实际宿主；`RequiredChunkTag/RequiredTagChunkRadius` 查确定性邻区标签，不依赖加载顺序。洞穴占格顺序为入口 → 配置植物 → 藤蔓/矿物，安全区不生植物。

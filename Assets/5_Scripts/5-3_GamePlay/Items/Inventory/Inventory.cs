@@ -810,10 +810,10 @@ public class Inventory
 
         slotUI.InitializeSlot(
             fixedIndex,
-            index => index < 0 ? Data.itemSlots[fixedIndex] : Data.GetItemSlot(index),
+            index => Data.GetItemSlot(index < 0 ? slotUI.slotIndex : index),
             index =>
             {
-                int targetIndex = index < 0 ? fixedIndex : index;
+                int targetIndex = index < 0 ? slotUI.slotIndex : index;
                 ItemSlot targetSlot = Data.GetItemSlot(targetIndex);
                 // 虚拟化槽位的旧回调不得误删第0格，也不能对无效槽执行扣除。
                 if (targetSlot == null) return;
@@ -854,6 +854,17 @@ public class Inventory
         slotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
         slotUI.OnDesktopTap = OnDesktopTap;
 
+        slotUI.RefreshUI();
+    }
+
+    /// <summary>同一库存的虚拟槽只切换索引，复用首次绑定的交互回调。</summary>
+    public void RebindVirtualSlotUI(ItemSlot_UI slotUI, int bindIndex)
+    {
+        if (slotUI == null || Data?.GetItemSlot(bindIndex) == null)
+            return;
+
+        RegisterSlotUI(slotUI, bindIndex);
+        slotUI.InitializeSlot(bindIndex, slotUI.GetSlotDataFunc, slotUI.ClearSlotDataAction);
         slotUI.RefreshUI();
     }
 

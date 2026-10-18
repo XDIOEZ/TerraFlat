@@ -159,6 +159,7 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject ServiceTerrainHeightNeighbours(JObject args)
     {
+        DimensionManager originalDimensions = DimensionManager.ExistingInstance;
         using var world = new WorldRuntime("probe:terrain_height", 1);
         var profile = new ChunkGenerationProfileSnapshot("probe:terrain_height", 1, 16, 16);
         Vector2Int origin = WorldTopologyRuntime.NormalizeCell(new Vector2Int(1000000, -1000000));
@@ -189,7 +190,8 @@ public static partial class GameplayTestSystemProbe
         {
             ["missing"] = missing, ["available"] = available, ["initial"] = first.Level,
             ["changed"] = changed, ["lowered"] = lowered.Level, ["evicted"] = evicted,
-            ["afterEviction"] = afterEviction, ["reloaded"] = reloaded, ["restored"] = restored.Level
+            ["afterEviction"] = afterEviction, ["reloaded"] = reloaded, ["restored"] = restored.Level,
+            ["dimensionServicePreserved"] = ReferenceEquals(originalDimensions, DimensionManager.ExistingInstance)
         };
     }
 

@@ -29,7 +29,9 @@ MonoBehaviour:
     SuppressWeather: 0
     EnableMonsterSpawning: 1
     LoadingTheme:
-      BackgroundTexture: {fileID: -1927215229, guid: e436c11fc6160134099a64147dcc7416, type: 3}
+      BackgroundTexture: {fileID: 21300000, guid: a4fd8944c8064006985cca29e05c143d, type: 3}
+      BackgroundTextureOpacity: 1
+      BackgroundTileSize: 128
       Icon: {fileID: 1410977415, guid: 513506228e739ea46b4c301966a0eed6, type: 3}
       BackgroundColor: {r: 0.075, g: 0.145, b: 0.075, a: 1}
       AccentColor: {r: 0.56, g: 0.76, b: 0.36, a: 1}
@@ -50,6 +52,8 @@ MonoBehaviour:
     EnableMonsterSpawning: 0
     LoadingTheme:
       BackgroundTexture: {fileID: 21300000, guid: 42e0b4fd5a43d9148916d0617fa9de68, type: 3}
+      BackgroundTextureOpacity: 0.16
+      BackgroundTileSize: 0
       Icon: {fileID: 21300000, guid: 0c0fcf1252967d246bb822de654a7b07, type: 3}
       BackgroundColor: {r: 0.055, g: 0.055, b: 0.065, a: 1}
       AccentColor: {r: 0.95, g: 0.62, b: 0.22, a: 1}

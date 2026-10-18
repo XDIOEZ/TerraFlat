@@ -15,6 +15,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
     private readonly List<ItemSlot_UI> pooledSlots = new();
     private readonly List<int> boundIndices = new();
+    private readonly List<bool> initializedBindings = new();
 
     private Inventory inventory;
     private RectTransform content;
@@ -66,6 +67,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
                 inventory?.UnbindVirtualSlotUI(pooledSlots[i], boundIndices[i]);
         pooledSlots.Clear();
         boundIndices.Clear();
+        initializedBindings.Clear();
         inventory = null;
         refreshPending = false;
         if (gridLayout != null)
@@ -167,6 +169,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
     {
         pooledSlots.Clear();
         boundIndices.Clear();
+        initializedBindings.Clear();
 
         for (int i = 0; i < content.childCount; i++)
         {
@@ -176,6 +179,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
             pooledSlots.Add(slot);
             boundIndices.Add(-1);
+            initializedBindings.Add(false);
             PrepareSlotTransform(slot);
             visualProfile?.Apply(slot);
         }
@@ -222,6 +226,7 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
             pooledSlots.Add(slot);
             boundIndices.Add(-1);
+            initializedBindings.Add(false);
             PrepareSlotTransform(slot);
             visualProfile?.Apply(slot);
         }
@@ -265,13 +270,19 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
 
         firstBoundRow = firstRow;
         int firstIndex = firstRow * columns;
+        int poolCount = pooledSlots.Count;
+        if (poolCount == 0)
+            return;
+
+        // 数据索引固定映射到环形池，仍在可视范围的槽位不换对象、不重绑回调。
+        int poolOffset = firstIndex % poolCount;
         for (int poolIndex = 0; poolIndex < pooledSlots.Count; poolIndex++)
         {
             ItemSlot_UI slot = pooledSlots[poolIndex];
             if (slot == null)
                 continue;
 
-            int dataIndex = firstIndex + poolIndex;
+            int dataIndex = firstIndex + (poolIndex - poolOffset + poolCount) % poolCount;
             int oldIndex = boundIndices[poolIndex];
             if (oldIndex >= 0 && oldIndex != dataIndex)
                 inventory.UnbindVirtualSlotUI(slot, oldIndex);
@@ -279,24 +290,33 @@ public sealed class InventoryVirtualizedSlotGrid : MonoBehaviour, IScrollHandler
             if (dataIndex < 0 || dataIndex >= inventory.Data.itemSlots.Count)
             {
                 boundIndices[poolIndex] = -1;
-                slot.gameObject.SetActive(false);
+                if (slot.gameObject.activeSelf)
+                    slot.gameObject.SetActive(false);
                 continue;
             }
 
-            PositionSlot(slot, dataIndex);
-            slot.gameObject.SetActive(true);
+            if (!slot.gameObject.activeSelf)
+                slot.gameObject.SetActive(true);
             if (oldIndex != dataIndex)
             {
-                inventory.BindSlotUI(slot, dataIndex);
+                PositionSlot(slot, dataIndex);
+                if (initializedBindings[poolIndex])
+                    inventory.RebindVirtualSlotUI(slot, dataIndex);
+                else
+                {
+                    inventory.BindSlotUI(slot, dataIndex);
+                    initializedBindings[poolIndex] = true;
+                }
                 boundIndices[poolIndex] = dataIndex;
+                bagSearch?.RefreshRenderedSlot(slot, dataIndex);
             }
             else if (force)
             {
+                PositionSlot(slot, dataIndex);
                 slot.RefreshUI();
+                bagSearch?.RefreshRenderedSlot(slot, dataIndex);
             }
         }
-
-        bagSearch?.RefreshRenderedSlots();
     }
 
     private void PrepareSlotTransform(ItemSlot_UI slot)

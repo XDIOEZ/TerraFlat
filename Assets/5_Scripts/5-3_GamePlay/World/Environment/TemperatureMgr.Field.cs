@@ -145,6 +145,22 @@ public partial class TemperatureMgr
         return localTemperatureField != null && fieldWorld != null ? new PointSamplingContext(this) : default;
     }
 
+    /// <summary>对外提供只读温度批次，复用内部热源查询而不暴露世界缓存实现。</summary>
+    public readonly struct AmbientPointSamplingBatch : IDisposable
+    {
+        private readonly PointSamplingContext context;
+
+        internal AmbientPointSamplingBatch(PointSamplingContext context) => this.context = context;
+
+        public bool TryGetAmbientTemperature(Vector2 position, out float temperature)
+            => context.TryGetAmbientAndClimateBaseline(position, out temperature, out _);
+
+        public void Dispose() => context.Dispose();
+    }
+
+    public AmbientPointSamplingBatch BeginAmbientPointSampling()
+        => new(CreatePointSamplingContext());
+
     #endregion
 
     #region 统一逐格采样
