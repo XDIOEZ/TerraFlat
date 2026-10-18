@@ -2,13 +2,15 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`save/snapshot_memory、special_namespace、space_item_chain、autosave_budget、autosave_chunk_payload、autosave_ecology_payload`。真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
+快速入口：`rules.lua`；操作：`save/snapshot_memory、special_namespace、space_item_chain、autosave_budget、autosave_chunk_payload、autosave_ecology_payload、load_failure_state`。真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
 
 已编写的规则覆盖：正式 ItemInstanceSnapshot 的内存二进制往返、持久身份、当前定义耐久与模块状态恢复；特殊状态命名空间隔离；JSON/Base64/MemoryPack/实例克隆的嵌套库存链、Vector3字段转换、严格版本和时钟边界。真实场景使用正式 SaveToDisk 首次写入、原子替换、备份和临时文件清理，并读取自己的文件恢复库存。
 
 隔离写盘案例还断言非原点角色坐标在当前文件和备份中均保留；尚未覆盖真正退出世界后重新创建玩家实例的坐标恢复。
 
-2026-10-17 自动保存分帧新增规则：通过确定性时间采样正式 `AutoSaveWorkBudget`，断言半毫秒切片、16 工作单元上限、让出两帧的配置及 `Restart` 清空计时与计数；长帧的等待时间不计入下一切片。独立 `ChunkSaveRecord` 使用正式 MemoryPack 冻结，再调用正式纯字节封装入口；断言当前 CompactSaveEnvelope/31 内层与 FWD6/15 外层、记录捕获顺序、真实物品和嵌套库存、地形差量及载荷原样保留，修改源对象不能污染已冻结字节。
+2026-10-17 自动保存分帧新增规则：通过确定性时间采样正式 `AutoSaveWorkBudget`，断言半毫秒切片、16 工作单元上限、让出两帧的配置及 `Restart` 清空计时与计数；长帧的等待时间不计入下一切片。独立 `ChunkSaveRecord` 使用正式 MemoryPack 冻结，再调用正式纯字节封装入口；断言当前 CompactSaveEnvelope/32 内层与 FWD6/15 外层、记录捕获顺序、真实物品和嵌套库存、地形差量及载荷原样保留，修改源对象不能污染已冻结字节。
+
+2026-10-18 载入失败新增规则：当前核心格式内存恢复；旧内层版本携带不合法核心字节时先抛版本不兼容；第二条区块损坏时不发布第一条或清空原差量；随机不存在文件载入返回失败并清掉上一档案和角色，同时保留原差量。本组使用停用独立管理器，不读写真实存档；本轮按用户要求未运行。普通损坏后的真实备份恢复及完整 UI 交互仍需现场覆盖。
 
 2026-10-18 地下保存新增规则：40个物品的单个生态块逐项提供工作边界；核心剔除生态动态块后恢复源列表引用；地表/洞穴独立往返。分帧预冻后模拟采收删除、快照替换、恢复年份变化和新增区块，正式最终重组只补冻新快照，并经停用独立 SaveDataMgr 正式解析，断言最终删除/库存/身份及源对象隔离，拒绝旧格式头。封装直接嵌套纯字节记录，不再先生成整个内层大 byte[]。本轮保持冻结的 Play Mode，未编译、未运行 Lua 或性能复测。
 

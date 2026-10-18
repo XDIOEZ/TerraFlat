@@ -46,7 +46,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
     #endregion
 
-    private const int CompactSaveVersion = 31; // 生态区块改为逐物品独立字节，统一同步、自动与网络快照格式。
+    private const int CompactSaveVersion = 32; // 核心移除冶炼速度字段，旧结构须先由版本检查明确拒绝。
     private const int ModdedSaveVersion = 15;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
@@ -715,12 +715,15 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// 从磁盘加载存档
     /// </summary>
     /// <param name="loadSavePath">存档路径</param>
-    public void LoadSaveByDisk(string loadSavePath)
+    public bool LoadSaveByDisk(string loadSavePath)
     {
+        // 新选择载入失败时不能继续使用上一份存档和角色。
+        SaveData = null;
+        CurrentContrrolPlayerName = string.Empty;
         if (string.IsNullOrEmpty(loadSavePath))
         {
             Debug.LogError("❌ 存档路径为空");
-            return;
+            return false;
         }
 
         try
@@ -749,7 +752,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                         Debug.Log("✅ 存档加载成功");
                     else
                         Debug.LogWarning($"⚠️ 正式存档不可用，已从{(i == 1 ? "备份" : "临时文件")}恢复：{candidatePath}");
-                    return;
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -769,8 +772,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         catch (Exception ex)
         {
             Debug.LogError($"❌ 加载存档失败: {ex.Message}");
-            Debug.LogException(ex);
+            if (ex is not SaveVersionIncompatibleException)
+                Debug.LogException(ex);
         }
+        return false;
     }
 
     /// <summary>
@@ -2774,13 +2779,16 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private GameSaveData DeserializeSavePayload(byte[] payload)
     {
-        ResetChunkDifferenceState();
-
         ModdedSaveEnvelope envelope = ReadSaveEnvelope(payload);
         ModSaveMetadata metadata = envelope.ModMetadata?.Length > 0
             ? MemoryPackSerializer.Deserialize<ModSaveMetadata>(envelope.ModMetadata) : null;
-        GameSaveData saveData = DeserializeCoreSavePayload(envelope.CoreSavePayload);
+        var restoredChunkDeltas = new Dictionary<string, ChunkSaveRecord>();
+        GameSaveData saveData = DeserializeCoreSavePayload(envelope.CoreSavePayload, restoredChunkDeltas);
         ValidateAndRestoreModMetadata(metadata);
+        // 整份文件验证完才替换差量，失败候选不能清空或留下半份区块记录。
+        ResetChunkDifferenceState();
+        foreach (var entry in restoredChunkDeltas)
+            chunkDeltas.Add(entry.Key, entry.Value);
         return saveData;
     }
 
@@ -2799,7 +2807,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return envelope;
     }
 
-    private GameSaveData DeserializeCoreSavePayload(CompactSaveEnvelope envelope)
+    private GameSaveData DeserializeCoreSavePayload(CompactSaveEnvelope envelope,
+        Dictionary<string, ChunkSaveRecord> restoredChunkDeltas)
     {
         if (envelope == null || envelope.CoreSaveData == null)
             throw new InvalidDataException("差异存档封装已损坏");
@@ -2828,7 +2837,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if (record == null || string.IsNullOrEmpty(record.PlanetName) || string.IsNullOrEmpty(record.ChunkName))
                 continue;
 
-            chunkDeltas[BuildChunkKey(record.PlanetName, record.ChunkName)] = record;
+            restoredChunkDeltas[BuildChunkKey(record.PlanetName, record.ChunkName)] = record;
         }
 
         return saveData;

@@ -827,6 +827,9 @@ public static partial class GameplayTestSystemProbe
         float dayLength = args.Value<float?>("dayLength") ?? 1440f;
         float seconds = args.Value<float?>("seconds") ?? dayLength;
         float initialProgress = args.Value<bool?>("mature") == true ? 1f : 0f;
+        byte cultivated = (byte)(args.Value<bool?>("wild") == true ? 0 : 1);
+        var soilCell = new Unity.Mathematics.int2(17, -29);
+        const float initialClimateStress = 0.25f;
         var entity = manager.CreateEntity(typeof(FlatWorld.AIECS.EntityPlantLifecycle),
             typeof(FlatWorld.AIECS.EntityPlantSoil), typeof(FlatWorld.AIECS.EntityGrowth),
             typeof(FlatWorld.AIECS.AiecsVital), typeof(FlatWorld.AIECS.EntityModuleAppearance),
@@ -834,7 +837,8 @@ public static partial class GameplayTestSystemProbe
         manager.SetComponentData(entity, new FlatWorld.AIECS.EntityPlantLifecycle
         {
             Initialized = 1, WaterInitialized = 1,
-            Cultivated = (byte)(args.Value<bool?>("wild") == true ? 0 : 1), GrowWild = 1
+            Cultivated = cultivated, GrowWild = 1, ScaleByStage = 1, SoilCell = soilCell,
+            ClimateStress = initialClimateStress
         });
         manager.SetComponentData(entity, new FlatWorld.AIECS.EntityPlantSoil
         {
@@ -868,13 +872,23 @@ public static partial class GameplayTestSystemProbe
             system.Update(); system.Complete();
             soil = manager.GetComponentData<FlatWorld.AIECS.EntityPlantSoil>(entity);
         }
+        // 非零哨兵可直接抓到旧 Burst 布局把时钟、坐标和身份字段互相覆盖的问题。
+        var lifecycle = manager.GetComponentData<FlatWorld.AIECS.EntityPlantLifecycle>(entity);
         return new JObject
         {
             ["before"] = initialProgress, ["progress"] = growth.Progress,
             ["water"] = soil.Water, ["waterRemainder"] = soil.WaterConsumptionRemainder,
             ["usedWater"] = usedWater, ["usedFertility"] = usedFertility,
             ["repeatedUsedWater"] = soil.UsedWater,
-            ["status"] = manager.GetComponentData<FlatWorld.AIECS.EntityPlantLifecycle>(entity).Status.ToString()
+            ["status"] = lifecycle.Status.ToString(),
+            ["cultivated"] = lifecycle.Cultivated, ["expectedCultivated"] = cultivated,
+            ["growWild"] = lifecycle.GrowWild, ["scaleByStage"] = lifecycle.ScaleByStage,
+            ["harvested"] = lifecycle.Harvested,
+            ["soilX"] = lifecycle.SoilCell.x, ["soilY"] = lifecycle.SoilCell.y,
+            ["expectedSoilX"] = soilCell.x, ["expectedSoilY"] = soilCell.y,
+            ["climateStress"] = lifecycle.ClimateStress, ["initialClimateStress"] = initialClimateStress,
+            ["lastWaterWorldTime"] = lifecycle.LastWaterWorldTime, ["expectedWaterWorldTime"] = seconds,
+            ["waterInitialized"] = lifecycle.WaterInitialized
         };
     }
 

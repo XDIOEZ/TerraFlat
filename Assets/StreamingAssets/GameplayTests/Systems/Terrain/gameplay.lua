@@ -22,6 +22,14 @@ test.runtime("terrain", "cover_resource_lifecycle", {}, function(data)
         data.removedGuid == data.expectedGuid, "移除真实资源实体没有保留快照或释放实际占地")
     assert(data.entityRestored and data.entityRecaptured and data.restoredGuid == data.expectedGuid and
         data.restoredId == "Tree_Pine", "真实资源快照无法恢复原实体身份")
+    local growth = data.growthSnapshots
+    for _, key in ipairs({"captured", "removed", "restored"}) do
+        local state = growth[key]
+        assert(not state.cultivated and state.soilX == 0 and state.soilY == 0,
+            "野生松树在" .. key .. "阶段被错误写成耕地植株或污染了种植坐标")
+        assert(state.waterInitialized and state.lastWaterWorldTime == growth.captured.lastWaterWorldTime,
+            "松树在" .. key .. "阶段丢失或改写了独立耗水时钟")
+    end
     assert(data.habitatRegistered == data.habitatBefore + 1 and
         data.habitatRemoved == data.habitatBefore and data.habitatRestored == data.habitatBefore + 1,
         "ECS树木栖息地索引未随创建、移除和恢复同步")

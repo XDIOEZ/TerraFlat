@@ -19,6 +19,15 @@ public static partial class GameplayTestSystemProbe
         Register("save", "autosave_budget", ServiceAutoSaveBudget);
         Register("save", "autosave_chunk_payload", ServiceAutoSaveChunkPayload);
         Register("save", "autosave_ecology_payload", ServiceAutoSaveEcologyPayload);
+        Register("save", "load_failure_state", ServiceLoadFailureState);
+    }
+
+    private static JObject ServiceLoadFailureState(JObject args)
+    {
+        var host = new GameObject("probe:inactive-save-failure");
+        host.SetActive(false);
+        try { return host.AddComponent<SaveDataMgr>().CaptureTestLoadFailureState(); }
+        finally { UnityEngine.Object.DestroyImmediate(host); }
     }
 
     // 使用 Lua 提供的确定性时间采样正式预算，规则不驱动正在游玩的帧循环。

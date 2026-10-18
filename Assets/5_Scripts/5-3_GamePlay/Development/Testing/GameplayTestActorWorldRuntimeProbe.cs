@@ -602,6 +602,21 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         if (restoredEntity) NaturalEntityEcsService.BindPresentation(own.Resource, owner);
         int visualsAfterRestore = owner.DepthMeshPartCount;
         bool recaptured = NaturalEntityEcsService.TryCapture(own.Resource, out ItemData recovered);
+        if (!captured || snapshot == null || !removed || removedSnapshot == null || !recaptured || recovered == null)
+            throw new InvalidOperationException("自然资源的捕获、解绑或恢复快照失败，无法检查成长负载。");
+        string growthModuleName = resourceDefinition.ModuleDefinitions.First(value => value.PrefabId == "Module_Growth").StableName;
+        JObject GrowthSnapshot(ItemData data)
+        {
+            // 正式捕获、解绑和恢复各读一次原始成长负载，防止野树被写成耕地植物。
+            GrowData state = ((Ex_ModData_MemoryPackable)data.ModuleDataDic[growthModuleName]).GetData<GrowData>();
+            return new JObject
+            {
+                ["cultivated"] = state.isCultivatedCrop,
+                ["soilX"] = state.plantedTilePos.x, ["soilY"] = state.plantedTilePos.y,
+                ["waterInitialized"] = state.waterSimulationInitialized,
+                ["lastWaterWorldTime"] = state.lastWaterSimulationTime
+            };
+        }
         return new JObject
         {
             ["firstCoverAccepted"] = first, ["firstReason"] = firstReason,
@@ -627,6 +642,11 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             ["walkableAfterRemoval"] = walkableAfter, ["removedGuid"] = removedSnapshot?.Guid,
             ["entityRestored"] = restoredEntity, ["entityRecaptured"] = recaptured,
             ["restoredGuid"] = recovered?.Guid, ["restoredId"] = recovered?.IDName,
+            ["growthSnapshots"] = new JObject
+            {
+                ["captured"] = GrowthSnapshot(snapshot), ["removed"] = GrowthSnapshot(removedSnapshot),
+                ["restored"] = GrowthSnapshot(recovered)
+            },
             ["habitatBefore"] = own.OriginalHabitatTreeCount,
             ["habitatRegistered"] = habitatAfterRegister,
             ["habitatRemoved"] = habitatAfterRemove,

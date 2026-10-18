@@ -28,6 +28,17 @@ for _, row in ipairs({
     input.water = row.initialWater or 10
     local expected = row
     test.system("agriculture", "plant_growth", input, function(data)
+        assert(data.cultivated == data.expectedCultivated and data.soilX == data.expectedSoilX
+            and data.soilY == data.expectedSoilY, expected.label .. "的种植身份或地块坐标被 Job 改写")
+        assert(data.growWild == 1 and data.scaleByStage == 1 and data.harvested == 0,
+            expected.label .. "的野生成长、阶段缩放或收获身份被 Job 改写")
+        assert(data.waterInitialized == 1
+            and math.abs(data.lastWaterWorldTime - data.expectedWaterWorldTime) < 0.0001,
+            expected.label .. "的独立耗水时钟没有推进到当前世界时刻")
+        if not expected.temperatureStress then
+            assert(data.climateStress == data.initialClimateStress,
+                expected.label .. "在没有气候模块时错误改写了气候压力")
+        end
         assert((data.progress > data.before) == expected.grows, expected.label .. "的成长门禁错误")
         assert(data.water == expected.water, expected.label .. "的每日耗水错误")
         assert(math.abs(data.waterRemainder - (expected.remainder or 0)) < 0.0001,
