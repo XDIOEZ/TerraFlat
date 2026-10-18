@@ -139,6 +139,11 @@ public partial class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         _state = GhostState.Wander;
         _decisionTimer = 0f;
         BindGhostPresentation();
+        if (_damageReceiver != null)
+        {
+            _damageReceiver.DeathStarted -= HandleGhostDeath;
+            _damageReceiver.DeathStarted += HandleGhostDeath;
+        }
     }
 
     private void EnsureNavigationAgent()
@@ -166,7 +171,7 @@ public partial class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
     public override void ModUpdate(float deltaTime)
     {
         _animationDrivenVelocity = Vector2.zero;
-        if (item == null ||
+        if (!IsAlive || item == null ||
             item.itemData == null ||
             GameManager.Instance == null ||
             !GameManager.Instance.IsInGameWorld)
@@ -361,6 +366,19 @@ public partial class Mod_AI_Ghost : Module, IAIActor, ISimulationRangeAware
         _animationDrivenVelocity = Vector2.zero;
         _pathAgent?.Stop();
     }
+
+    #region 死亡行为边界
+
+    private void HandleGhostDeath(Mod_DamageReceiver health)
+    {
+        // 尸体停留期间撤销幽灵的主动追击，视觉交给死亡动画保持。
+        _hasMoveTarget = false;
+        _animationDrivenVelocity = Vector2.zero;
+        _pathAgent?.Stop(clearDestination: true);
+        if (_rigidbody != null) _rigidbody.velocity = Vector2.zero;
+    }
+
+    #endregion
 
     #region 模拟范围休眠
 

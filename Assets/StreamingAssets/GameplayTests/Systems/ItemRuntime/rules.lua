@@ -292,6 +292,153 @@ test.system("item_runtime", "single_sprite_animation", {withSpriteStates = true,
     end
 end, "单图状态换图、直接换图、拒绝边界与生命周期还原")
 
+-- 死亡沿正式生命事件和共用推进入口采样，Lua只判断动作与底边，不重算动画曲线。
+local function checkDeadRest(sample, sprite)
+    assert(sample.dead and not sample.deathPlaying and not sample.attacking, "死亡落地后没有保持终态")
+    assert(math.abs(math.abs(sample.angle) - 180) < .02, "死亡落地没有保持翻肚皮")
+    assert(math.abs(sample.bottomOffset) < .0003, "翻转后的图片底边没有落回中性地面")
+    assert(sample.sprite == sprite, "死亡终态没有保持死亡瞬间的图片")
+end
+
+for _, geometry in ipairs({
+    {name = "底角枢轴"},
+    {name = "镜像父级和偏心枢轴", mirrored = true, rootScaleX = 1.7, rootScaleY = .65, pivotX = .2, pivotY = .7},
+    {name = "贴图双翻面和非等比缩放", flipX = true, flipY = true, visualScaleX = .65, visualScaleY = 1.8, pivotX = .8, pivotY = .3}
+}) do
+    geometry.withHealth, geometry.withSpriteStates, geometry.nestedVisual = true, true, true
+    geometry.steps = {
+        {legacyState = "Flying", deltaTime = 0},
+        {kill = true, deltaTime = 0},
+        {deltaTime = .1}, {deltaTime = .28}, {deltaTime = .2}, {deltaTime = .19}, {deltaTime = 2}
+    }
+    test.system("item_runtime", "single_sprite_animation", geometry, function(data)
+        checkAnimationBoundary(data)
+        local samples = data.samples
+        assert(samples[2].hp == 0 and samples[2].deathStartedCount == 1 and samples[2].dead and samples[2].deathPlaying,
+            "正式生命DeathStarted没有启动单图死亡")
+        assert(samples[3].bottomOffset > .02 and samples[4].bottomOffset > samples[3].bottomOffset,
+            "死亡没有先向上抛起")
+        assert(math.abs(samples[4].angle) > 10 and math.abs(samples[4].angle) < 179,
+            "死亡抛起过程中没有旋转")
+        assert(samples[5].bottomOffset < samples[4].bottomOffset, "死亡没有从最高点回落")
+        for index = 2, #samples do
+            assert(samples[index].bottomOffset >= -.0003 and samples[index].sprite == "flying",
+                "死亡途中穿入地面或换掉了死亡瞬间图片")
+        end
+        checkDeadRest(samples[6], "flying")
+        checkDeadRest(samples[7], "flying")
+    end, "单图死亡上抛旋转、底边落地与终态保持：" .. geometry.name)
+end
+
+test.system("item_runtime", "single_sprite_animation", {withHealth = true, withSpriteStates = true, withAnimator = true, steps = {
+    {legacyState = "Flying", attack = true, jump = true, hit = true, deltaTime = .06},
+    {kill = true, death = true, deltaTime = 0},
+    {attack = true, jump = true, hit = true, sprite = "alternate", legacyState = "Landing", moving = true, deltaTime = .1},
+    {kill = true, legacyState = "Death", forceRestart = true, deltaTime = .15},
+    {legacyState = "Base Layer.Dead", forceRestart = true, deltaTime = .15},
+    {death = true, deltaTime = .37},
+    {attack = true, jump = true, hit = true, sprite = "alternate", legacyState = "Ground", deltaTime = .5},
+    {death = true, legacyState = "Death", forceRestart = true, deltaTime = .1}
+}}, function(data)
+    checkAnimationBoundary(data)
+    assert(data.samples[1].attacking and data.samples[1].y > .01, "死亡优先级夹具没有先播放存活动作")
+    assert(data.samples[2].deathAccepted and data.samples[2].deathPlaying, "公开死亡入口未接管进行中的存活动作")
+    for index = 2, #data.samples do
+        local sample = data.samples[index]
+        assert(sample.dead and not sample.attacking and sample.sprite == "flying" and not sample.bodyAnimatorEnabled,
+            "攻击、跳跃、受击、移动或换图打断了死亡展示")
+        assert(sample.deathStartedCount == 1, "重复致死重新发布了同一轮生命死亡事件")
+    end
+    for _, index in ipairs({3, 7}) do
+        assert(not data.samples[index].spriteAccepted and not data.samples[index].legacyStateAccepted,
+            "死亡中仍接受了换图或普通状态")
+    end
+    for _, index in ipairs({4, 5, 8}) do assert(data.samples[index].legacyStateAccepted, "旧Death/Dead状态入口没有接入死亡") end
+    for _, index in ipairs({6, 7, 8}) do checkDeadRest(data.samples[index], "flying") end
+    assert(data.samples[6].deathAccepted and data.samples[8].deathAccepted,
+        "死亡重复调用不能幂等接收，或完成后的重复调用重新起跳")
+end, "单图死亡抢占动作、固定图片、旧状态接入和重复死亡不重播")
+
+test.system("item_runtime", "single_sprite_animation", {withHealth = true, withSpriteStates = true, withMotionSource = true, steps = {
+    {legacyState = "Flying", source = {y = .6, roll = 12}, deltaTime = 0},
+    {kill = true, deltaTime = 0},
+    {source = {available = false}, legacyState = "Ground", deltaTime = .1},
+    {source = {y = 8, roll = 70, moving = true}, deltaTime = .67},
+    {sourceEnabled = false, deltaTime = 1}
+}}, function(data)
+    checkAnimationBoundary(data)
+    assert(math.abs(data.samples[1].y - .6) < .0002, "飞行死亡夹具没有先建立真实表现高度")
+    assert(math.abs(data.samples[2].y - data.samples[1].y) < .0003,
+        "飞行死亡起点瞬间丢掉了已有高度")
+    assert(data.samples[3].bottomOffset >= -.0003 and data.samples[3].sprite == "flying",
+        "飞行来源回地面时提前改图或穿地")
+    checkDeadRest(data.samples[4], "flying")
+    checkDeadRest(data.samples[5], "flying")
+end, "单图飞行死亡保留起始高度，来源回地面后仍落到中性底边")
+
+test.system("item_runtime", "single_sprite_animation", {withHealth = true, withSpriteStates = true, steps = {
+    {zeroHp = true, deltaTime = .38}, {deltaTime = .39},
+    {revive = true, deltaTime = 0}, {attack = true, deltaTime = .06},
+    {kill = true, deltaTime = .77}, {lifecycle = "pool_reuse", moving = false, deltaTime = 0},
+    {attack = true, deltaTime = .06}, {kill = true, deltaTime = .77},
+    {lifecycle = "unload", deltaTime = 0}, {revive = true, lifecycle = "load", deltaTime = 0}
+}}, function(data)
+    checkAnimationBoundary(data)
+    assert(data.samples[1].dead and data.samples[1].deathPlaying and data.samples[1].deathStartedCount == 0,
+        "未收到死亡事件的零血量兜底没有启动死亡展示")
+    for _, index in ipairs({2, 5, 8}) do checkDeadRest(data.samples[index], "original") end
+    for _, index in ipairs({3, 6, 9, 10}) do
+        checkAnimationRest(data.samples[index])
+        assert(not data.samples[index].dead and not data.samples[index].deathPlaying,
+            "复活、正式取池复位或卸载后残留死亡状态")
+    end
+    assert(data.samples[3].hp > 0 and data.samples[6].hp > 0 and data.samples[10].hp > 0,
+        "复活和同外壳新载荷没有恢复生命")
+    assert(data.samples[4].attacking and data.samples[7].attacking,
+        "复活或同外壳复用后仍拒绝正常攻击")
+    assert(data.samples[5].deathStartedCount == 1 and data.samples[8].deathStartedCount == 2,
+        "复用后新生命不能再次触发唯一死亡事件")
+    assert(not data.samples[9].loaded and data.samples[9].parentRestored and data.samples[10].loaded,
+        "死亡卸载没有恢复层级，或重载未成功")
+end, "单图零血量兜底、显式复活、正式回收取池复位与重载")
+
+test.system("item_runtime", "single_sprite_animation", {withHealth = true, withSpriteStates = true, steps = {
+    {death = true, deltaTime = .77}, {deltaTime = 1}, {reset = true, deltaTime = 0}
+}}, function(data)
+    checkAnimationBoundary(data)
+    assert(data.samples[1].deathAccepted and data.samples[1].hp > 0, "公开死亡展示入口错误要求先扣血")
+    checkDeadRest(data.samples[1], "original")
+    checkDeadRest(data.samples[2], "original")
+    checkAnimationRest(data.samples[3])
+    assert(not data.samples[3].dead, "显式展示复位没有清除手动死亡终态")
+end, "单图手动死亡演示保持至显式复位")
+
+-- 真实伤害 Prefab 保留碰撞体引用，死亡关窗与新生命复位都走正式生命周期。
+for _, initiallyOpen in ipairs({false, true}) do
+    test.system("item_runtime", "single_sprite_animation", {
+        withHealth = true, withDamage = true, withSpriteStates = true, damageInitiallyOpen = initiallyOpen,
+        steps = {
+            {deltaTime = 0}, {damageAttack = true, deltaTime = 0},
+            {kill = true, deltaTime = 0}, {damageAttack = true, deltaTime = 0},
+            {revive = true, damageReload = true, deltaTime = 0}, {damageAttack = true, deltaTime = 0},
+            {kill = true, deltaTime = 0}, {lifecycle = "pool_reuse", deltaTime = 0},
+            {damageAttack = true, deltaTime = 0}, {kill = true, deltaTime = 0},
+            {damageReload = true, deltaTime = 0}, {lifecycle = "pool_reuse", deltaTime = 0}
+        }
+    }, function(data)
+        checkAnimationBoundary(data)
+        for _, index in ipairs({1, 5, 8, 12}) do
+            assert(data.samples[index].damageEnabled == initiallyOpen,
+                "新生命重载或同外壳复用没有恢复伤害窗首次初态，或误开了原本关闭的窗口")
+        end
+        for _, index in ipairs({2, 6, 9}) do assert(data.samples[index].damageEnabled, "存活时正常攻击未开启真实伤害窗") end
+        for _, index in ipairs({3, 4, 7, 10, 11}) do
+            assert(not data.samples[index].damageEnabledBeforeAdvance and not data.samples[index].damageEnabled,
+                "致死事件没有立即关窗，或死后攻击与重载重新开启了真实伤害窗")
+        end
+    end, initiallyOpen and "死亡立即关闭常开接触伤害，新生命恢复常开初态" or "死亡关闭攻击窗，复用不误开首次关闭窗口")
+end
+
 for _, species in ipairs({"Bird", "Seagull"}) do
     test.system("item_runtime", "single_sprite_shell_assembly", {actorId = species}, function(data)
         local states = {}

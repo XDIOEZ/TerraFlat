@@ -17,11 +17,15 @@ public static partial class GameplayTestSystemProbe
         root.SetActive(false);
         Mod_AnimatorController animation = null;
         GameplayTestAnimationMotionSource motionSource = null;
+        Mod_DamageReceiver health = null;
+        Mod_Damage damage = null;
+        int deathStartedCount = 0;
         var sprites = new List<Sprite>();
         try
         {
             root.transform.position = new Vector3(11f, -7f, 0f);
-            root.transform.localScale = new Vector3(Flag(args, "mirrored", false) ? -1f : 1f, 1f, 1f);
+            root.transform.localScale = new Vector3((Flag(args, "mirrored", false) ? -1f : 1f) *
+                (float)Number(args, "rootScaleX", 1d), (float)Number(args, "rootScaleY", 1d), 1f);
             Vector3 rootPosition = root.transform.position;
             Quaternion rootRotation = root.transform.rotation;
             Vector3 rootScale = root.transform.localScale;
@@ -35,6 +39,32 @@ public static partial class GameplayTestSystemProbe
             mover.rb = body;
             mover.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
             item.itemMods.AddMod(mover);
+            if (Flag(args, "withHealth", false))
+            {
+                health = root.AddComponent<Mod_DamageReceiver>();
+                health.ModuleInit(item, new Ex_ModData { ID = ModText.Hp, Enabled = true });
+                health.Data = new Mod_DamageReceiver.DamageReceiver_SaveData { Hp = 10f, MaxHp = 10f, DestroyDelay = -1f };
+                health.DeathStarted += _ => deathStartedCount++;
+                item.itemMods.AddMod(health);
+            }
+            if (Flag(args, "withDamage", false))
+            {
+                if (health == null) throw new ArgumentException("死亡伤害窗口采样需要生命模块。");
+#if UNITY_EDITOR
+                GameObject damagePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                    "Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab");
+#else
+                GameObject damagePrefab = GameRes.ExistingInstance?.GetPrefab("Mod_Damage", false);
+#endif
+                if (damagePrefab == null) throw new InvalidOperationException("死亡伤害窗口采样缺少正式伤害模块Prefab。");
+                // 保留真实 Prefab 的显式碰撞体绑定，首次加载前只指定窗口初态。
+                damage = UnityEngine.Object.Instantiate(damagePrefab, root.transform, false).GetComponent<Mod_Damage>();
+                if (damage == null || damage.DamageCollider == null)
+                    throw new InvalidOperationException("正式伤害模块Prefab缺少已绑定伤害碰撞体。");
+                damage.DamageCollider.enabled = Flag(args, "damageInitiallyOpen", false);
+                damage.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = "Mod_Damage", Enabled = true });
+                item.itemMods.AddMod(damage);
+            }
             if (Flag(args, "withMotionSource", false))
             {
                 motionSource = root.AddComponent<GameplayTestAnimationMotionSource>();
@@ -54,8 +84,11 @@ public static partial class GameplayTestSystemProbe
             visual.transform.SetParent(visualParent, false);
             visual.transform.localPosition = new Vector3(.13f, .17f, 0f);
             visual.transform.localRotation = Quaternion.Euler(0f, 0f, 7f);
-            visual.transform.localScale = new Vector3(1.1f, .9f, 1f);
+            visual.transform.localScale = new Vector3((float)Number(args, "visualScaleX", 1.1d),
+                (float)Number(args, "visualScaleY", .9d), 1f);
             SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.flipX = Flag(args, "flipX", false);
+            renderer.flipY = Flag(args, "flipY", false);
             Vector3 visualPosition = visual.transform.position;
             Vector3 visualLocalPosition = visual.transform.localPosition;
             Quaternion visualLocalRotation = visual.transform.localRotation;
@@ -73,7 +106,8 @@ public static partial class GameplayTestSystemProbe
             {
                 foreach (string name in new[] { "original", "flying", "landing" })
                 {
-                    Sprite sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f), Vector2.zero, 1f);
+                    Sprite sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f),
+                        new Vector2((float)Number(args, "pivotX", 0d), (float)Number(args, "pivotY", 0d)), 1f);
                     sprite.name = name;
                     sprites.Add(sprite);
                 }
@@ -86,6 +120,7 @@ public static partial class GameplayTestSystemProbe
                     new Mod_AnimatorController.SingleSpriteState { stateName = "Broken", sprite = null }
                 };
             }
+            float baseBottomY = renderer.bounds.min.y;
             Transform additionalVisual = null;
             int additionalSiblingIndex = -1;
             if (Flag(args, "withAdditionalVisual", false))
@@ -102,6 +137,7 @@ public static partial class GameplayTestSystemProbe
             root.SetActive(true);
             if (motionSource != null) motionSource.Load();
             animation.Load();
+            if (damage != null) damage.Load();
 
             bool network = Flag(args, "network", false), moving = false, running = false;
             var samples = new JArray();
@@ -157,6 +193,29 @@ public static partial class GameplayTestSystemProbe
                     animation.PlayAttack(new Vector2((float)Number(step, "x", 1d), (float)Number(step, "y", 0d)));
                 if (Flag(step, "jump", false)) animation.PlayJump();
                 if (Flag(step, "hit", false)) animation.PlayHitReaction(.3f, .05f);
+                if (Flag(step, "revive", false))
+                {
+                    if (health == null) throw new ArgumentException("复活动画采样需要生命模块。");
+                    health.Hp = health.MaxHp;
+                }
+                if (Flag(step, "kill", false) || Flag(step, "zeroHp", false))
+                {
+                    if (health == null) throw new ArgumentException("死亡事件采样需要生命模块。");
+                    health.Hp = 0f;
+                    if (Flag(step, "kill", false)) health.ResolveNetworkAuthoritativeDeath("test:animation_death");
+                }
+                if (Flag(step, "damageAttack", false))
+                {
+                    if (damage == null) throw new ArgumentException("伤害窗口采样没有创建伤害模块。");
+                    damage.StartAttack();
+                }
+                if (Flag(step, "damageReload", false))
+                {
+                    if (damage == null) throw new ArgumentException("伤害窗口采样没有创建伤害模块。");
+                    damage.Unload();
+                    damage.Load();
+                }
+                bool deathAccepted = Flag(step, "death", false) && animation.PlayDeath();
                 bool legacyStateAccepted = step["legacyState"] != null &&
                     animation.TryPlayAnimation(Text(step, "legacyState", string.Empty), Flag(step, "forceRestart", true));
                 bool spriteAccepted = step["sprite"] != null && animation.TrySetSprite(
@@ -170,9 +229,43 @@ public static partial class GameplayTestSystemProbe
                     case "load": animation.Load(); break;
                     case "disable": animation.SetEnabled(false); break;
                     case "enable": animation.SetEnabled(true); animation.Load(); break;
+                    case "pool_reuse":
+                        // 同一外壳经过正式回收与取池复位，再绑定新载荷，不替生产代码手动清动画。
+                        item.PrepareForDespawn(saveData: false);
+                        root.SetActive(false);
+                        item.NotifyReturnedToPool();
+                        item.PrepareForPoolReuse();
+                        item.BindData(EntityProbeData("test:single_sprite_animation", 1f));
+                        mover.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
+                        item.itemMods.AddMod(mover);
+                        if (health != null)
+                        {
+                            health.ModuleInit(item, new Ex_ModData { ID = ModText.Hp, Enabled = true });
+                            health.Hp = health.MaxHp;
+                            item.itemMods.AddMod(health);
+                        }
+                        if (motionSource != null)
+                        {
+                            motionSource.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = "test:animation_motion", Enabled = true });
+                            motionSource.Available = false;
+                            item.itemMods.AddMod(motionSource);
+                        }
+                        animation.ModuleInit(item, new Ex_ModData_MemoryPackable { Enabled = true });
+                        item.itemMods.AddMod(animation);
+                        if (damage != null)
+                        {
+                            damage.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = "Mod_Damage", Enabled = true });
+                            item.itemMods.AddMod(damage);
+                        }
+                        root.SetActive(true);
+                        if (motionSource != null) motionSource.Load();
+                        animation.Load();
+                        if (damage != null) damage.Load();
+                        break;
                     case "": break;
                     default: throw new ArgumentException("单图动画采样生命周期操作未登记。");
                 }
+                bool damageEnabledBeforeAdvance = damage != null && damage.DamageCollider.enabled;
                 if (animation.IsRuntimeLoaded && animation.Enabled && animation.enabled)
                     animation.AdvancePresentation((float)Number(step, "deltaTime", .08d));
 
@@ -201,6 +294,15 @@ public static partial class GameplayTestSystemProbe
                     ["localScaleError"] = Vector3.Distance(visualLocalScale, visual.transform.localScale),
                     ["parentRestored"] = visual.transform.parent == visualParent && visual.transform.GetSiblingIndex() == siblingIndex,
                     ["attacking"] = animation.IsAttackPlaying,
+                    ["dead"] = animation.IsDeadPresentation,
+                    ["deathPlaying"] = animation.IsDeathPlaying,
+                    ["deathAccepted"] = deathAccepted,
+                    ["deathStartedCount"] = deathStartedCount,
+                    ["hp"] = health != null ? new JValue(health.Hp) : JValue.CreateNull(),
+                    ["damageEnabled"] = damage != null && damage.DamageCollider.enabled,
+                    ["damageEnabledBeforeAdvance"] = damageEnabledBeforeAdvance,
+                    ["bottomY"] = renderer.bounds.min.y,
+                    ["bottomOffset"] = renderer.bounds.min.y - baseBottomY,
                     ["componentEnabled"] = animation.enabled,
                     ["bodyAnimatorEnabled"] = sourceAnimator != null && sourceAnimator.enabled,
                     ["legacyStateAccepted"] = legacyStateAccepted,
@@ -213,7 +315,11 @@ public static partial class GameplayTestSystemProbe
                     ["loaded"] = animation.IsRuntimeLoaded
                 });
             }
-            var result = new JObject { ["samples"] = samples };
+            var result = new JObject
+            {
+                ["samples"] = samples, ["baseBottomY"] = baseBottomY,
+                ["deathDuration"] = animation.deathDuration, ["deathJumpHeight"] = animation.deathJumpHeight
+            };
             string finalLifecycle = Text(args, "finalLifecycle", string.Empty);
             if (!string.IsNullOrEmpty(finalLifecycle))
             {

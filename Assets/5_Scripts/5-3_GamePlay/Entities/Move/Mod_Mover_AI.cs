@@ -41,6 +41,8 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     private bool hasDestination;
     private bool hasTemperatureSafetyDestination;
     private Mod_Temperature temperature;
+    private Mod_DamageReceiver health;
+    private bool CanActivelyMove => health == null || health.Hp > 0f;
     private bool hasTemperatureBiasedDestination;
     private Vector2 temperatureBiasedRequest;
     private Vector2 temperatureBiasedDestination;
@@ -94,12 +96,27 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         HasReachedTarget = true;
         CanMove = true;
         NavigationAgent.Stop(clearDestination: true);
+        if (health != null) health.DeathStarted -= HandleActorDeath;
+        health = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (health != null)
+        {
+            health.DeathStarted += HandleActorDeath;
+            if (!CanActivelyMove) HandleActorDeath(health);
+        }
     }
 
     public override void ModUpdate(float deltaTime)
     {
         if (NavigationAgent == null)
             return;
+
+        if (!CanActivelyMove)
+        {
+            if (CanMove || hasDestination || hasTemperatureSafetyDestination)
+                HandleActorDeath(health);
+            ApplyNavigationVelocity(Vector2.zero, deltaTime);
+            return;
+        }
 
         if (hasTemperatureSafetyDestination)
             CanMove = true;
@@ -122,7 +139,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     /// <summary>提交不限制路径总代价的普通移动目标。</summary>
     public void SetDestination(Vector2 destination, bool forceRepath = false)
     {
-        if (hasTemperatureSafetyDestination)
+        if (!CanActivelyMove || hasTemperatureSafetyDestination)
             return;
         SubmitDestination(ResolveTemperatureBiasedDestination(destination), int.MaxValue, forceRepath);
     }
@@ -133,7 +150,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         int maximumPathCostExclusive,
         bool forceRepath = false)
     {
-        if (hasTemperatureSafetyDestination)
+        if (!CanActivelyMove || hasTemperatureSafetyDestination)
             return DestinationResult;
         SubmitDestination(ResolveTemperatureBiasedDestination(destination), Mathf.Max(1, maximumPathCostExclusive), forceRepath);
         return DestinationResult;
@@ -145,6 +162,9 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         int maximumPathCostExclusive,
         bool forceRepath)
     {
+        if (!CanActivelyMove)
+            return;
+
         bool isNewRequest =
             !hasDestination ||
             (destination - lastSubmittedDestination).sqrMagnitude >
@@ -191,6 +211,9 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
 
     public void SetTemperatureSafetyDestination(Vector2 destination)
     {
+        if (!CanActivelyMove)
+            return;
+
         bool changed = !hasTemperatureSafetyDestination ||
             WorldTopologyRuntime.SqrDistance(TargetPosition, destination) >
             EffectiveDestinationChangeDistance * EffectiveDestinationChangeDistance;
@@ -248,7 +271,7 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
     /// <summary>重入范围后按旧目标重新申请路径，不补走暂停期间的位移。</summary>
     public void OnSimulationRangeResumed()
     {
-        if (!CanMove || !hasDestination || NavigationAgent == null)
+        if (!CanActivelyMove || !CanMove || !hasDestination || NavigationAgent == null)
             return;
         NavigationAgent.SetDestination(lastSubmittedDestination, forceRepath: true);
         HasReachedTarget = false;
@@ -268,6 +291,8 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
 
     protected override void OnUnload()
     {
+        if (health != null) health.DeathStarted -= HandleActorDeath;
+        health = null;
         hasTemperatureSafetyDestination = false;
         hasTemperatureBiasedDestination = false;
         temperature = null;
@@ -275,12 +300,24 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
         base.OnUnload();
     }
 
+    #region 死亡移动边界
+
+    private void HandleActorDeath(Mod_DamageReceiver receiver)
+    {
+        // 死亡撤销普通与温度避险目标，保留原有被动位移规则。
+        hasTemperatureSafetyDestination = false;
+        hasTemperatureBiasedDestination = false;
+        StopMovementInternal();
+        ApplyNavigationVelocity(Vector2.zero, 0f);
+    }
+
+    #endregion
+
     private bool CanTemperatureSafetyOverrideStop()
     {
         if (item == null || item.DestructionHandled)
             return false;
 
-        Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-        return health == null || health.Hp > 0f;
+        return CanActivelyMove;
     }
 }

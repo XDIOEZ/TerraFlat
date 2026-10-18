@@ -365,7 +365,7 @@ public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator
 
     public Item ActorItem => item;
     public bool IsAlive => _context?.Health == null || _context.Health.Hp > 0f;
-    public bool AllowsAmbientAudio => _isLoaded && _runtime?.AllowsAmbientAudio == true;
+    public bool AllowsAmbientAudio => _isLoaded && IsAlive && _runtime?.AllowsAmbientAudio == true;
 
     private AIBehaviorGraphContext _context; // 本轮 Load 绑定的 Actor 能力。
     private AIBehaviorGraphRuntime _runtime; // 已编译的通用行为图。
@@ -391,6 +391,12 @@ public sealed class Mod_AI_BehaviorGraph : Module, IModuleJsonParameterValidator
 
     public override void ModUpdate(float deltaTime)
     {
+        // 死亡后的节点退出仍执行一次，尸体不再推进觅食和行为转换。
+        if (!IsAlive)
+        {
+            _runtime?.Reset();
+            return;
+        }
         _runtime?.Tick(deltaTime);
     }
 

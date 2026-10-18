@@ -10,6 +10,12 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
         assert(actor.requiredCount == 1 and actor.registeredIdCount == 1 and actor.requiredSameInstance and not actor.requiredRejected,
             "动画能力真实注册后无法被RequireSingle唯一取到：" .. actor.id)
         assert(actor.slotSameInstance and actor.dataBoundToItem, "动画数据或稳定槽位没有绑定真实临时Item：" .. actor.id)
+        assert(math.abs(actor.deathDuration - .76) < .0001 and math.abs(actor.deathJumpHeight - .35) < .0001,
+            "正式物种缺少统一翻肚皮动作参数：" .. actor.id)
+        assert(actor.deathHealth.present and actor.deathHealth.hasPrototype and actor.deathHealth.enabled,
+            "正式物种缺少可触发死亡动画的生命模块：" .. actor.id)
+        assert(actor.deathHealth.destroyDelay > actor.deathDuration + .2,
+            "正式物种在翻转落地和短暂停留前就销毁：" .. actor.id)
         local wrong = actor.wrongIdRegistration
         assert(wrong.moduleId == "test:wrong_animation" and wrong.stableName == "animator" and wrong.prefabId == actor.declaredPrefabId,
             "显式错误ID被Canonical自动纠正，身份反例失去作用：" .. actor.id)

@@ -166,7 +166,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	public Item ActorItem => item;
 	public bool IsAlive => _hp != null && _hp.Hp > 0f;
 	// 环境叫声只跟随平静待机和游荡，睡眠、逃跑与攻击交给各状态原有表现。
-	public bool AllowsAmbientAudio => _isReady && IsAmbientAudioState(_currentState);
+	public bool AllowsAmbientAudio => _isReady && IsAlive && IsAmbientAudioState(_currentState);
 #endregion
 
 #region RuntimeState
@@ -209,6 +209,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	private Vector3 _lastDamageThreatPosition;
 	private bool _freezeDamageThreatOrigin; // 投射物来源按命中瞬间冻结，不能跟着穿过身体的弹体翻转方向。
 	private Mod_DamageReceiver _damageEventSource;
+	private readonly List<Mod_Damage> _deathDamageSources = new();
 	// 睡眠中受到有效伤害后锁存一次唤醒请求，直到真正离开睡眠状态。
 	private bool _sleepInterruptedByDamage;
 	// 路径代价拒绝后暂时屏蔽同一追击目标，避免状态机立即重复追击。
@@ -356,7 +357,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 
 	public override void ModUpdate(float deltaTime)
 	{
-		if (!_isReady)
+		if (!_isReady || !IsAlive)
 		{
 			return;
 		}
@@ -402,6 +403,7 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 	{
 		AI_DebugOverlay.Unregister(this);
 		UnbindDamageThreatEvents();
+		_deathDamageSources.Clear();
 		_stateMachine?.Reset();
 		_isReady = false;
 		_recentDamageThreat = null;
@@ -1151,6 +1153,9 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 		_turnBody = item.GetComponentInChildren<Mod_TurnBack>(true);
 		_sleepVisual = item.GetComponentInChildren<ActorSleepVisualEffectController>(true);
 		item.GetMod(out _animator);
+		_deathDamageSources.Clear();
+		foreach (Module module in item.itemMods.Mods.Values)
+			if (module is Mod_Damage damage) _deathDamageSources.Add(damage);
 		BindDamageThreatEvents();
 
 		// 子类绑定额外模块
@@ -1193,14 +1198,30 @@ public abstract class AI_Base<TState> : Module, IAIActor, IAnimalAmbientAudioAct
 
 		_damageEventSource = _hp;
 		_damageEventSource.OnDamageReceived += HandleDamageReceived;
+		_damageEventSource.DeathStarted += HandleActorDeath;
 	}
 
 	private void UnbindDamageThreatEvents()
 	{
 		if (_damageEventSource != null)
+		{
 			_damageEventSource.OnDamageReceived -= HandleDamageReceived;
+			_damageEventSource.DeathStarted -= HandleActorDeath;
+		}
 
 		_damageEventSource = null;
+	}
+
+	private void HandleActorDeath(Mod_DamageReceiver health)
+	{
+		// 尸体保留期间先停止主动行为和技能，再释放当前节点的临时状态。
+		_isReady = false;
+		_mover?.StopMovement();
+		for (int i = 0; i < _deathDamageSources.Count; i++)
+			if (_deathDamageSources[i] != null) _deathDamageSources[i].StopAttack();
+		_sleepVisual?.SetSleeping(item.transform, false);
+		_animalSkills.CancelAll();
+		_stateMachine?.Reset();
 	}
 
 	private void HandleDamageReceived(DamageReceiverDamageInfo damageInfo)

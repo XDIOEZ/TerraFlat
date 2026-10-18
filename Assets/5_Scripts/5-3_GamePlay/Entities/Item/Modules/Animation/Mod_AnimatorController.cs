@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DefaultExecutionOrder(-100)]
-public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGroundOffset
+public partial class Mod_AnimatorController : Module, ITrunDirection, IVisualGroundOffset, IItemModuleDependencyBinder
 {
     #region 模块身份
     // 模板读取早于 Awake，能力 ID 必须在装配前确定。

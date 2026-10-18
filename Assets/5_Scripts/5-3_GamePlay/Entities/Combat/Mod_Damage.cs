@@ -132,11 +132,17 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     protected override void OnUnload()
     {
+        if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
+        sourceHealth = null;
         SetIdleTickSuppressed(false);
         base.OnUnload();
     }
     private bool tileDamageAppliedThisWindow;
     private bool nonDamageableImpactAppliedThisWindow;
+    private Mod_DamageReceiver sourceHealth;
+    private bool hasInitialDamageColliderState;
+    private bool initialDamageColliderEnabled;
+    private bool restoreDamageColliderAfterDeath;
     private float damageRangeMultiplier = 1f;
 
     // 实现ModuleData属性
@@ -287,6 +293,21 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
     protected override void OnLoad()
     {
+        if (damageCollider != null)
+        {
+            if (!hasInitialDamageColliderState)
+            {
+                initialDamageColliderEnabled = damageCollider.enabled;
+                hasInitialDamageColliderState = true;
+            }
+            // 新一轮生命恢复配置初态，不恢复上一轮死亡时可能尚未结束的攻击窗。
+            if (restoreDamageColliderAfterDeath)
+                damageCollider.enabled = initialDamageColliderEnabled;
+            restoreDamageColliderAfterDeath = false;
+        }
+        if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
+        sourceHealth = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (sourceHealth != null) sourceHealth.DeathStarted += HandleSourceDeath;
         DeliveryCapabilities = FlatWorld.Combat.CombatDeliveryCapabilities.None;
         explicitProjectileSweep = false;
         contextModifiers.Clear();
@@ -324,6 +345,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
+        if (sourceHealth != null && sourceHealth.Hp <= 0f) HandleSourceDeath(sourceHealth);
     }
 
     protected override void OnSave()
@@ -775,8 +797,16 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private bool CanDealDamageNow()
     {
+        if (sourceHealth != null && sourceHealth.Hp <= 0f) return false;
         if (!OnlyDealDamageWhenInHand) return true;
         return item.InHand;
+    }
+
+    private void HandleSourceDeath(Mod_DamageReceiver health)
+    {
+        // 只关闭本物品自己的伤害窗口，已发射投射物不追查原持有者生命。
+        restoreDamageColliderAfterDeath = true;
+        StopAttack();
     }
 
     /// <summary>有效命中播放一个主伤害类型特效，再播放独立的数字等通用反馈。</summary>
@@ -1162,6 +1192,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <param name="enabled">是否启用伤害检测</param>
     public void SetDamageEnabled(bool enabled)
     {
+        if (enabled && sourceHealth != null && sourceHealth.Hp <= 0f) enabled = false;
         if (damageCollider == null)
         {
             Debug.LogError($"{name} 未配置伤害碰撞体引用，无法切换伤害窗口。", this);
@@ -1200,6 +1231,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>开始新的攻击窗口；伤害冷却只由真正命中负责更新时间。</summary>
     public void StartAttack()
     {
+        if (sourceHealth != null && sourceHealth.Hp <= 0f) return;
         // 碰撞体可能持续启用，开始新的动作时仍需重新计算本次可命中的目标数。
         attackWindowHitReceivers.Clear();
         if (damageCollider != null && damageCollider.enabled)

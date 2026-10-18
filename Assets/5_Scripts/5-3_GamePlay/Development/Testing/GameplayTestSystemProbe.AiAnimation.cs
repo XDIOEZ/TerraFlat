@@ -55,6 +55,7 @@ public static partial class GameplayTestSystemProbe
             foreach (JProperty property in registration.Properties()) sample[property.Name] = property.Value.DeepClone();
             sample["declaredPrefabId"] = configured.Prefab;
             sample["wrongIdRegistration"] = CaptureAiAnimationRegistration(definition, configured, prototype, "test:wrong_animation");
+            sample["deathHealth"] = CaptureAiDeathHealthConfiguration(definition, shell);
             if (definition.Id == "Bird" || definition.Id == "Bee")
                 sample["flightDependencies"] = CaptureAiFlightDependencies(definition, shell);
         }
@@ -100,6 +101,8 @@ public static partial class GameplayTestSystemProbe
             return new JObject
             {
                 ["visualMode"] = (int)((Mod_AnimatorController)instance).visualMode,
+                ["deathDuration"] = ((Mod_AnimatorController)instance).deathDuration,
+                ["deathJumpHeight"] = ((Mod_AnimatorController)instance).deathJumpHeight,
                 ["enabled"] = instance.Enabled,
                 ["stableName"] = instance.StableName, ["moduleId"] = instance.ResolvedModuleId,
                 ["prefabId"] = instance.PrefabId,
@@ -113,6 +116,35 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 生命窗口读取最终继承定义并交给正式参数装配，避免只扫描某一份 JSON 漏掉继承覆盖。
+    private static JObject CaptureAiDeathHealthConfiguration(ItemDefinitionDto definition, GameObject shell)
+    {
+        foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in definition.Modules)
+        {
+            ItemModuleDefinitionDto configured = pair.Value;
+            if (configured.Id != ModText.Hp) continue;
+            var prototype = ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, configured.Id) as Mod_DamageReceiver;
+            if (prototype == null) return new JObject { ["present"] = true, ["hasPrototype"] = false };
+            var root = new GameObject("[LuaActorDeathHealth]") { hideFlags = HideFlags.HideAndDontSave };
+            root.SetActive(false);
+            try
+            {
+                var instance = root.AddComponent<Mod_DamageReceiver>();
+                instance._Data = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+                instance.Data = FastCloner.FastCloner.DeepClone<object>(prototype.Data) as Mod_DamageReceiver.DamageReceiver_SaveData;
+                if (configured.Enabled.HasValue) instance._Data.Enabled = configured.Enabled.Value;
+                ModuleJsonConfigurator.Apply(instance, definition.Id, pair.Key, configured.Id, configured.Parameters?.ToString());
+                return new JObject
+                {
+                    ["present"] = true, ["hasPrototype"] = true, ["enabled"] = instance.Enabled,
+                    ["destroyDelay"] = instance.Data.DestroyDelay
+                };
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+        return new JObject { ["present"] = false, ["hasPrototype"] = false };
     }
 
     #endregion

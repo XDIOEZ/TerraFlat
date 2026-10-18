@@ -484,7 +484,7 @@ namespace FlatWorld.Networking.Gameplay
             Mod_DamageReceiver damageReceiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
             if (damageReceiver != null && damageReceiver.Hp <= 0f)
             {
-                BroadcastDespawn(item);
+                // 零血先同步死亡表现，真实回收时再统一广播删除。
                 damageReceiver.ResolveNetworkAuthoritativeDeath();
             }
         }
@@ -640,8 +640,12 @@ namespace FlatWorld.Networking.Gameplay
             if (serverPickupReservations.Remove(guid, out ServerPickupReservation reservation))
                 FinishServerPickup(reservation, false, 0f, 0f);
 
-            if (NetworkServer.active && serverStates.TryGetValue(guid, out StateRecord state) && state.SpawnIfMissing)
-                BroadcastDespawn(item);
+            if (NetworkServer.active && serverStates.TryGetValue(guid, out StateRecord state))
+            {
+                Mod_DamageReceiver receiver = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+                if (state.SpawnIfMissing || receiver != null && receiver.Hp <= 0f)
+                    BroadcastDespawn(item);
+            }
         }
 
         private void ProcessSpawnCandidates()
@@ -1496,9 +1500,6 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active)
             {
                 ProcessServerItem(item);
-                Mod_DamageReceiver receiver = item.GetComponentInChildren<Mod_DamageReceiver>(true);
-                if (receiver != null && receiver.Hp <= 0f)
-                    BroadcastDespawn(item);
                 return;
             }
 

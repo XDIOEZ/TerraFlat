@@ -49,8 +49,14 @@ public partial class Mod_AnimatorController
     [Min(0.05f)] public float jumpDuration = 0.42f;
     [Range(0f, 0.3f)] public float jumpSquash = 0.08f;
 
+    [Header("单图死亡翻身")]
+    [Min(0.05f)] public float deathDuration = 0.76f;
+    [Min(0f)] public float deathJumpHeight = 0.35f;
+
     public bool IsSingleSpriteMode => visualMode == VisualMode.SingleSprite;
     public bool IsAttackPlaying => IsSingleSpriteMode && _attackElapsed >= 0f;
+    public bool IsDeadPresentation => IsSingleSpriteMode && _deathElapsed >= 0f;
+    public bool IsDeathPlaying => IsDeadPresentation && _deathElapsed < Mathf.Max(0.05f, deathDuration);
     protected bool CanAdvancePresentation => IsRuntimeLoaded || _networkPresentationActive;
     #endregion
 
@@ -85,6 +91,17 @@ public partial class Mod_AnimatorController
     private Vector3 _presentedWorldOffset;
     private SpriteRenderer _overriddenSpriteRenderer;
     private Sprite _originalSprite;
+    private readonly List<IVisualGroundOffset> _externalGroundOffsetSources = new List<IVisualGroundOffset>();
+    private float _deathElapsed = -1f;
+    private bool _deathFromHealth;
+    private Sprite _deathSprite;
+    private bool _deathFlipX, _deathFlipY;
+    private Vector3 _deathBodyPosition, _deathBodyScale;
+    private Quaternion _deathBodyRotation;
+    private Vector3 _deathGroundCenterLocal, _deathStartCenterOffset;
+    private float _deathGroundBottomOffset, _deathStartBottomOffset;
+    private float _deathStartAngle, _deathEndAngle;
+    private Vector3 _deathStartScale;
     #endregion
 
     #region 动作与网络入口
@@ -128,6 +145,43 @@ public partial class Mod_AnimatorController
         _hitElapsed = 0f;
     }
 
+    [Button("播放单图死亡")]
+    public bool PlayDeath()
+    {
+        if (IsDeadPresentation) return true;
+        if (!isActiveAndEnabled || !IsSingleSpriteMode || !CanAdvancePresentation || !PreparePresentation())
+            return false;
+
+        // 致命受击立即冻结图片和当前姿态，后续死亡回调不能把飞行高度或攻击动作抢走。
+        _deathSprite = targetSpriteRenderer.sprite;
+        _deathFlipX = targetSpriteRenderer.flipX;
+        _deathFlipY = targetSpriteRenderer.flipY;
+        _deathBodyPosition = spriteVisualRoot.localPosition;
+        _deathBodyRotation = spriteVisualRoot.localRotation;
+        _deathBodyScale = spriteVisualRoot.localScale;
+        Bounds startBounds = targetSpriteRenderer.bounds;
+        _deathStartAngle = Mathf.DeltaAngle(0f, _bodyLayer.PoseRoot.localEulerAngles.z);
+        _deathStartScale = _bodyLayer.PoseRoot.localScale;
+        Vector3 facing = targetSpriteRenderer.transform.TransformVector(Vector3.right) * (_deathFlipX ? -1f : 1f);
+        _deathEndAngle = facing.x < 0f ? -180f : 180f;
+        Vector3 externalOffset = ResolveExternalGroundOffset();
+        _bodyLayer.ResetPose();
+        Bounds neutralBounds = targetSpriteRenderer.bounds;
+        Vector3 groundCenter = neutralBounds.center - externalOffset;
+        _deathGroundCenterLocal = item != null ? item.transform.InverseTransformPoint(groundCenter) : groundCenter;
+        _deathGroundBottomOffset = neutralBounds.min.y - neutralBounds.center.y;
+        _deathStartCenterOffset = startBounds.center - groundCenter;
+        _deathStartBottomOffset = startBounds.min.y - (groundCenter.y + _deathGroundBottomOffset);
+        _deathFromHealth = _presentationHealth != null && _presentationHealth.Hp <= 0f;
+        _deathElapsed = 0f;
+        _attackElapsed = _jumpElapsed = _hitElapsed = -1f;
+        _walkPhase = _walkBlend = _idlePhase = 0f;
+        _requestedMoving = _requestedRunning = false;
+        _lastSingleSpriteState = "Death";
+        SampleDeath(0f);
+        return true;
+    }
+
     public void SetNetworkPresentation(bool active, bool isMoving, bool isRunning = false)
     {
         _networkPresentationActive = active;
@@ -158,7 +212,14 @@ public partial class Mod_AnimatorController
         if (!PreparePresentation()) return;
         if (_presentationHealth != null && _presentationHealth.Hp <= 0f)
         {
+            PlayDeath();
+            _deathFromHealth = true;
+        }
+        else if (_deathFromHealth)
             ResetPresentation();
+        if (IsDeadPresentation)
+        {
+            SampleDeath(Mathf.Max(0f, deltaTime));
             return;
         }
 
@@ -196,6 +257,10 @@ public partial class Mod_AnimatorController
     [Button("复位单图动作")]
     public void ResetPresentation()
     {
+        if (_deathElapsed >= 0f) RestoreDeathBody();
+        _deathElapsed = -1f;
+        _deathFromHealth = false;
+        _deathSprite = null;
         RestoreSingleSprite();
         _attackElapsed = _jumpElapsed = _hitElapsed = -1f;
         _walkPhase = _walkBlend = _idlePhase = 0f;
@@ -246,24 +311,33 @@ public partial class Mod_AnimatorController
 
     private void CachePresentationSources()
     {
+        if (_presentationHealth != null) _presentationHealth.DeathStarted -= HandlePresentationDeath;
         _presentationOwner = item;
         _sourcesCached = true;
         _presentationMover = item?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         _presentationFocus = item?.itemMods?.GetMod_ByID<Mod_FocusPoint>(ModText.FocusPoint);
         _presentationTurn = item?.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
         _presentationHealth = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (_presentationHealth != null) _presentationHealth.DeathStarted += HandlePresentationDeath;
         _presentationMotionSource = null;
+        _externalGroundOffsetSources.Clear();
         if (item?.itemMods != null)
             foreach (Module module in item.itemMods.Mods.Values)
-                if (module is IActorAnimationMotionSource source)
-                {
+            {
+                if (_presentationMotionSource == null && module is IActorAnimationMotionSource source)
                     _presentationMotionSource = source;
-                    break;
-                }
+                if (module != this && module is IVisualGroundOffset offsetSource)
+                    _externalGroundOffsetSources.Add(offsetSource);
+            }
     }
+
+    public void BindModuleDependencies(ItemMods modules) => CachePresentationSources();
+
+    private void HandlePresentationDeath(Mod_DamageReceiver receiver) => PlayDeath();
 
     private void ClearPresentationSources()
     {
+        if (_presentationHealth != null) _presentationHealth.DeathStarted -= HandlePresentationDeath;
         _networkPresentationActive = _networkIsMoving = _networkIsRunning = false;
         _sourcesCached = false;
         _presentationOwner = null;
@@ -272,10 +346,12 @@ public partial class Mod_AnimatorController
         _presentationTurn = null;
         _presentationHealth = null;
         _presentationMotionSource = null;
+        _externalGroundOffsetSources.Clear();
     }
 
     private bool CanStartSingleSpriteAction() =>
-        isActiveAndEnabled && IsSingleSpriteMode && CanAdvancePresentation && PreparePresentation();
+        isActiveAndEnabled && IsSingleSpriteMode && !IsDeadPresentation &&
+        CanAdvancePresentation && PreparePresentation() && (_presentationHealth == null || _presentationHealth.Hp > 0f);
 
     private bool PreparePresentation()
     {
@@ -515,6 +591,8 @@ public partial class Mod_AnimatorController
 
     private bool SetSingleSpriteBool(string parameterName, bool value)
     {
+        if (IsDeadPresentation) return parameterName == AnimationText.Move ||
+            parameterName == AnimationText.Run || parameterName == AnimationText.Attack;
         if (parameterName == AnimationText.Move) { _requestedMoving = value; return true; }
         if (parameterName == AnimationText.Run) { _requestedRunning = value; return true; }
         if (parameterName == AnimationText.Attack) return true;
@@ -523,10 +601,13 @@ public partial class Mod_AnimatorController
 
     private bool TryPlaySingleSpriteAnimation(string stateName, bool forceRestart)
     {
-        if (string.IsNullOrWhiteSpace(stateName) || !CanStartSingleSpriteAction()) return false;
+        if (string.IsNullOrWhiteSpace(stateName)) return false;
         string state = stateName.Trim();
         int separator = state.LastIndexOf('.');
         if (separator >= 0) state = state.Substring(separator + 1);
+        if (string.Equals(state, "Death", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(state, "Dead", StringComparison.OrdinalIgnoreCase)) return PlayDeath();
+        if (!CanStartSingleSpriteAction()) return false;
         if (!forceRestart && string.Equals(state, _lastSingleSpriteState, StringComparison.OrdinalIgnoreCase)) return true;
         Sprite stateSprite = null;
         if (singleSpriteStates != null)
@@ -600,6 +681,65 @@ public partial class Mod_AnimatorController
         float strength = _hitMagnitude * (1f - progress);
         offset += new Vector3(Mathf.Sin(progress * Mathf.PI * 8f),
             Mathf.Sin(progress * Mathf.PI * 12f), 0f) * strength;
+    }
+    #endregion
+
+    #region 死亡冻结与落地采样
+    private Vector3 ResolveExternalGroundOffset()
+    {
+        Vector3 offset = Vector3.zero;
+        for (int i = 0; i < _externalGroundOffsetSources.Count; i++)
+        {
+            IVisualGroundOffset source = _externalGroundOffsetSources[i];
+            if (source is UnityEngine.Object unitySource && unitySource == null) continue;
+            if (source.TryGetVisualGroundOffset(targetSpriteRenderer.transform, out Vector3 contribution))
+                offset += contribution;
+        }
+        return offset;
+    }
+
+    private void RestoreDeathBody()
+    {
+        if (spriteVisualRoot != null)
+        {
+            spriteVisualRoot.localPosition = _deathBodyPosition;
+            spriteVisualRoot.localRotation = _deathBodyRotation;
+            spriteVisualRoot.localScale = _deathBodyScale;
+        }
+        if (targetSpriteRenderer == null) return;
+        targetSpriteRenderer.sprite = _deathSprite;
+        targetSpriteRenderer.flipX = _deathFlipX;
+        targetSpriteRenderer.flipY = _deathFlipY;
+    }
+
+    private void SampleDeath(float step)
+    {
+        _deathElapsed = Mathf.Min(_deathElapsed + step, Mathf.Max(0.05f, deathDuration));
+        float progress = Mathf.Clamp01(_deathElapsed / Mathf.Max(0.05f, deathDuration));
+        float turn = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress / 0.78f));
+        float settle = 1f - Mathf.SmoothStep(0f, 1f, progress);
+        float height = _deathStartBottomOffset * settle + Mathf.Max(0f, deathJumpHeight) * 4f * progress * (1f - progress);
+        Vector3 groundCenter = item != null ? item.transform.TransformPoint(_deathGroundCenterLocal) : _deathGroundCenterLocal;
+
+        RestoreDeathBody();
+        _bodyLayer.ResetPose();
+        Vector3 center = targetSpriteRenderer.sprite != null
+            ? targetSpriteRenderer.transform.TransformPoint(targetSpriteRenderer.sprite.bounds.center)
+            : targetSpriteRenderer.transform.position;
+        Vector3 pivot = _bodyLayer.PoseRoot.InverseTransformPoint(center);
+        float angle = Mathf.Lerp(_deathStartAngle, _deathEndAngle, turn);
+        Vector3 scale = Vector3.Lerp(_deathStartScale, Vector3.one, turn);
+        _bodyLayer.Apply(Vector3.zero, angle, scale, pivot);
+        Bounds rotated = targetSpriteRenderer.bounds;
+        Vector3 offset = new Vector3(groundCenter.x + _deathStartCenterOffset.x * settle - rotated.center.x,
+            groundCenter.y + _deathGroundBottomOffset + height - rotated.min.y,
+            groundCenter.z + _deathStartCenterOffset.z * settle - rotated.center.z);
+        _bodyLayer.Apply(offset, angle, scale, pivot);
+        Vector3 groundOffset = new Vector3(_deathStartCenterOffset.x * settle, height,
+            _deathStartCenterOffset.z * settle) - ResolveExternalGroundOffset();
+        for (int i = 0; i < _additionalLayers.Count; i++)
+            _additionalLayers[i].Apply(groundOffset, 0f, Vector3.one, Vector3.zero);
+        _presentedWorldOffset = groundOffset;
     }
     #endregion
 

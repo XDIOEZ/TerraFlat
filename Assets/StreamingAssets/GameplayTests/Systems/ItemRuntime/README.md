@@ -10,6 +10,10 @@
 
 单图状态换图回归：`single_sprite_animation` 检查 `Flying/Landing/Ground` 状态映射、直接 `TrySetSprite`、同状态重入、未知状态/空图拒绝，以及停用、卸载、切模式与复位后的原图恢复；换图后身体 Animator 仍停用。`single_sprite_shell_assembly` 读取真实 Bird/Seagull 外壳的五种首帧配置，并采样正式飞行阶段选择函数。2026-10-18 本次仅补充断言，Unity 正在 PlayMode，未编译、未执行；不代表真实鸟类飞行、对象池重取或画面观感已验收。
 
+单图死亡回归补充：`single_sprite_animation` 使用独立生命模块的正式 `ResolveNetworkAuthoritativeDeath→DeathStarted` 和动画 `AdvancePresentation`，采固定图片、上抛、旋转、底边不穿地、约 180° 落地保持、重复 Death/Dead 不重播，以及攻击/跳跃/受击/移动/状态换图不能抢占。覆盖偏心枢轴、父级镜像与非等比缩放、Sprite 双翻面、已有飞行高度归地面、零血量事件缺失兜底、显式复活、卸载重载、手动演示复位，并通过正式 `PrepareForDespawn/NotifyReturnedToPool/PrepareForPoolReuse` 在同一临时外壳重新绑定载荷检查死亡残留清理。生命模块不启动 UI、完整伤害或战利品，取池夹具也没有经过真实 ItemMgr 池查询；当前 Unity 正在 PlayMode，**仅静态编写，未编译、未运行**。真实鸟/鱼/蜂死亡、完整对象池工厂、尸体停移动与关闭伤害、联机血量同步到延迟回收的时序和最终观感由用户验收。
+
+死亡伤害窗口补充同一入口：克隆正式 `Mod_Damage.prefab` 保留序列化碰撞体引用，绑定临时 Item 并正式加载；Lua 采真实 `DamageCollider.enabled`，检查致死事件在动画推进前立即关窗、死后 `StartAttack` 和重载不能开窗，以及常开接触窗在新生命重载/同外壳复用后恢复、初始关闭的攻击窗不会被误开。只检查实际窗口与生命周期，没有受击目标或完整 AI 战斗现场；本次同样未编译、未运行。
+
 已编写的规则覆盖：ModuleDataCollection 的结构版本、启停与移除退订；ItemInstanceDataFactory 的库存、模块和标签副本隔离。
 
 2026-10-18 新增单图生物动画规则，使用独立临时 Item、停用物理的刚体和真实 `Mod_AnimatorController`，只加载动画模块并调用生产 `AdvancePresentation/PlayAttack/PlayJump/PlayHitReaction`：检查本地/远端主动迈步的左右摇摆与起伏、被动速度不误触发走路、四向与镜像父级攻击前探/归位、跳跃起落、动作中断切模式、重复加载卸载及模块启停。夹具完成绑定后激活根，移动组件保持停用，全步骤同步完成；关闭待机呼吸以核对精确归位。每步核对 Item 根/刚体不动、原 Sprite 局部姿态不被动画覆盖，切回 Animator 与卸载核对原父级、同级顺序和外部最新 Y 轴翻面；组件停用期间动作入口不能重建视觉层或残留动作，并核对身体 Animator 恢复与重新启用后可正常攻击。**本轮仅编写，未编译、未运行**；不代表玩家观感、真实调度、战斗命中、飞行/阴影叠加、对象池复用或网络端到端验收。

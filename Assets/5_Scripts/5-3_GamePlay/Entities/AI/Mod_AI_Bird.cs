@@ -245,6 +245,7 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
         {
             if (!stoppedForDeath)
             {
+                animationBody?.PlayDeath();
                 stoppedForDeath = true;
                 ResetFishHunting(releaseCaptured: true);
                 mover.StopMovement();
@@ -1281,6 +1282,8 @@ public sealed partial class Mod_AI_Bird : Module, IAIActor, IItemModuleDependenc
     /// <summary>空中死亡先落回地面映射位置，再交给生命模块执行唯一死亡与掉落结算。</summary>
     private void HandleBirdDeath(Mod_DamageReceiver receiver)
     {
+        // 先让通用死亡动画接住当前飞行姿态，再撤销飞行模块自己的高度。
+        animationBody?.PlayDeath();
         stoppedForDeath = true;
         DropCarriedBackpackSeed();
         ResetFishHunting(releaseCaptured: true);

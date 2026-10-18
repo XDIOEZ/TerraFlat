@@ -110,6 +110,8 @@
           },
           "parameters": {
             "visualMode": 1,
+            "deathDuration": 0.76,
+            "deathJumpHeight": 0.35,
             "moveDetectSpeed": 0.05,
             "walkSwingAngle": 8.0,
             "walkSwingSpeed": 12.0,
@@ -346,7 +348,7 @@
                 "Physical": 0
               },
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
+              "DestroyDelay": 1.1,
               "CombatBalanceVersion": 1
             },
             "impactAudioMaterial": 0,
@@ -1072,7 +1074,7 @@
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
+              "DestroyDelay": 1.1,
               "DefenseValues": {
                 "Physical": 3
               },
@@ -1413,6 +1415,8 @@
           },
           "parameters": {
             "visualMode": 1,
+            "deathDuration": 0.76,
+            "deathJumpHeight": 0.35,
             "moveDetectSpeed": 0.05,
             "walkSwingAngle": 8.0,
             "walkSwingSpeed": 12.0,
@@ -1842,7 +1846,7 @@
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
+              "DestroyDelay": 1.1,
               "DefenseValues": {
                 "Physical": 2
               },
@@ -2100,6 +2104,8 @@
           },
           "parameters": {
             "visualMode": 1,
+            "deathDuration": 0.76,
+            "deathJumpHeight": 0.35,
             "moveDetectSpeed": 0.05,
             "walkSwingAngle": 8.0,
             "walkSwingSpeed": 12.0,
@@ -2302,6 +2308,8 @@
           "enabled": true,
           "parameters": {
             "visualMode": 1,
+            "deathDuration": 0.76,
+            "deathJumpHeight": 0.35,
             "walkSwingAngle": 6.0,
             "walkSwingSpeed": 10.0,
             "walkBobAmount": 0.035,
@@ -2417,7 +2425,7 @@
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
+              "DestroyDelay": 1.1,
               "LootTable": [],
               "DefenseValues": {
                 "Physical": 1

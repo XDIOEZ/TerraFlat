@@ -41,6 +41,7 @@ public partial class Mod_AI_Ghost : IActorAnimationMotionSource
 
     protected override void OnUnload()
     {
+        if (_damageReceiver != null) _damageReceiver.DeathStarted -= HandleGhostDeath;
         for (int i = 0; i < _animationDamageSources.Count; i++)
             if (_animationDamageSources[i] != null)
                 _animationDamageSources[i].OnReceiverDamageResolved -= PlayGhostContactAttack;

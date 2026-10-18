@@ -30,6 +30,9 @@ public class Mod_AnimatorController_Receiver : Mod_AnimatorController
         if (!CanAdvancePresentation)
             return;
 
+        if (IsDeadPresentation)
+            IsAttacking = CanUseSkill = false;
+
         if (CanUseSkill != lastCanUseSkill)
         {
             lastCanUseSkill = CanUseSkill;
