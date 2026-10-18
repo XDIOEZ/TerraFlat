@@ -53,9 +53,6 @@ MonoBehaviour:
     Type: 0
     BitData: 
   Data:
-    SmeltingProgress: 0
-    MaxSmeltingSpeed: 10
-    SmeltingSpeed: 10
     Temperature: 20
     MaxTemperature: 0
     MaxTemperatureLimit: 300
@@ -147,7 +144,6 @@ MonoBehaviour:
   basePanel: {fileID: 0}
   UI_Prefab: {fileID: 2639614329428065687, guid: ca4e9b1fb55d2354882fd54109ad9dfa, type: 3}
   WorkButton: {fileID: 0}
-  progressSlider: {fileID: 0}
   fuelSlider: {fileID: 0}
   temperatureSlider: {fileID: 0}
   TemperatureText: {fileID: 0}

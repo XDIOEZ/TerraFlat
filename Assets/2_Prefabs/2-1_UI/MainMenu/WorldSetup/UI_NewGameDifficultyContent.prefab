@@ -9781,7 +9781,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u751F\u957F\u901F\u5EA6\n\u7194\u70BC\u901F\u5EA6\n\u5236\u4F5C\u4EA7\u91CF"
+  m_text: "\u751F\u957F\u901F\u5EA6\n\u5236\u4F5C\u4EA7\u91CF"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e46c8ef214b33b4408cf60be5c29141c, type: 2}
   m_sharedMaterial: {fileID: 4795396880416652781, guid: e46c8ef214b33b4408cf60be5c29141c, type: 2}

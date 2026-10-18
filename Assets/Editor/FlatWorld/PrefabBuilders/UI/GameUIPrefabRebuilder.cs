@@ -64,8 +64,8 @@ public static class GameUIPrefabRebuilder
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
         { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "FWUI_FurnaceTemperatureValue", "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "燃料显示条", "FWUI_FurnaceTemperatureValue", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
         { CraftingRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
         { ScreensRoot + "UI_Death.prefab", new[] { "重生", "回到主菜单" } },
@@ -1227,6 +1227,11 @@ public static class GameUIPrefabRebuilder
         string title = bonfire ? "篝火" : "熔炉";
         string eyebrow = string.Empty;
 
+        RectTransform legacyProgress = FindRect(root.transform, "熔炼进度条");
+        if (legacyProgress != null) UnityEngine.Object.DestroyImmediate(legacyProgress.gameObject);
+        RectTransform legacyProgressLabel = FindRect(root.transform, "FWUI_FurnaceProgressLabel");
+        if (legacyProgressLabel != null) UnityEngine.Object.DestroyImmediate(legacyProgressLabel.gameObject);
+
         if (!bonfire)
             RemoveLegacyFurnaceVisuals(root.transform);
 
@@ -1274,14 +1279,6 @@ public static class GameUIPrefabRebuilder
                 SetTopLeft(sliders, 274f, 272f, 192f, 92f);
                 sliders.localScale = Vector3.one;
 
-                RectTransform processBar = FindRect(sliders, "熔炼进度条");
-                if (processBar != null)
-                {
-                    processBar.localScale = Vector3.one;
-                    processBar.localRotation = Quaternion.identity;
-                    SetTopLeft(processBar, 0f, 0f, 192f, 16f);
-                }
-
                 RectTransform fuelBar = FindRect(sliders, "燃料显示条");
                 if (fuelBar != null)
                 {
@@ -1296,16 +1293,6 @@ public static class GameUIPrefabRebuilder
                 SetTopLeft(sliders, 316f, 306f, 220f, 70f);
                 sliders.localScale = Vector3.one;
 
-                RectTransform processBar = FindRect(sliders, "熔炼进度条");
-                if (processBar != null)
-                {
-                    processBar.localScale = Vector3.one;
-                    processBar.localRotation = Quaternion.identity;
-                    SetTopLeft(processBar, 0f, 0f, 220f, 18f);
-                    if (processBar.TryGetComponent(out Slider processSlider))
-                        processSlider.interactable = false;
-                }
-
                 RectTransform fuelBar = FindRect(sliders, "燃料显示条");
                 if (fuelBar != null)
                 {
@@ -1316,7 +1303,6 @@ public static class GameUIPrefabRebuilder
                         fuelSlider.interactable = false;
                 }
 
-                AddFurnaceProcessLabel(frame, "FWUI_FurnaceProgressLabel", "熔炼进度", 316f, 284f, 220f);
                 AddFurnaceProcessLabel(frame, "FWUI_FurnaceFuelLabel", "燃料余量", 316f, 336f, 220f);
                 AddFurnaceTemperatureLabel(frame);
             }
@@ -1333,7 +1319,7 @@ public static class GameUIPrefabRebuilder
             }
         }
 
-        PlaceActionButton(root.transform, "合成按钮", width, height, bonfire ? "开始处理" : "启动熔炼");
+        PlaceActionButton(root.transform, "合成按钮", width, height, "点火");
         foreach (ItemSlot_UI slot in root.GetComponentsInChildren<ItemSlot_UI>(true))
             if (slot.name.StartsWith("燃料_", StringComparison.Ordinal) || slot.name.StartsWith("燃料 ", StringComparison.Ordinal))
                 EnsureSlotProcessingProgress(slot);

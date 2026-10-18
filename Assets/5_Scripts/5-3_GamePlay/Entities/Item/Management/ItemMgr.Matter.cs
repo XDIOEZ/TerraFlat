@@ -58,6 +58,30 @@ public partial class ItemMgr
             {
                 bool changed = WorldItemMatterRules.Advance(entry.Data, item.transform.position, seconds,
                     liquidContact: true, out bool waterContact);
+                // 热分解先交接新物质，避免同一轮燃烧把已满足转化条件的材料直接扣没。
+                if (ItemMatterRuntime.TryCreateSolidTransitionOutputs(entry.Data, out IReadOnlyList<ItemData> products))
+                {
+                    var spawned = new List<DroppedItemHandle>();
+                    try
+                    {
+                        Vector2 position = item.transform.position;
+                        for (int index = 1; index < products.Count; index++)
+                        {
+                            DroppedItemHandle handle = DroppedItemService.Spawn(products[index], position, position);
+                            if (!handle.IsValid) throw new System.InvalidOperationException("材料转化产物未成功落地。");
+                            spawned.Add(handle);
+                        }
+                        products[0].Guid = entry.Data.Guid;
+                        products[0].inHand = entry.Data.inHand;
+                        ReplaceRuntimeItem(item, products[0]);
+                    }
+                    catch
+                    {
+                        foreach (DroppedItemHandle handle in spawned) DroppedItemService.Remove(handle);
+                        throw;
+                    }
+                    continue;
+                }
                 bool consumedAll = false;
                 Mod_Combustion combustion = GetWorldMatterCombustion(item);
                 if (combustion != null)

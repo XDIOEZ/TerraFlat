@@ -622,9 +622,8 @@ public static class NewGamePrefabBuilder
     {
         Image page = CreateCustomCategoryPage(GameManager.NewGameDifficultyProductionPageKey, parent);
         CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCropGrowthSliderKey, "作物生长", "种子、作物和浆果成熟速度", 0f);
-        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultySmeltingSpeedSliderKey, "熔炼速度", "熔炉生产进度速度", 68f);
-        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyFuelConsumptionSliderKey, "燃料消耗", "所有燃料模块的消耗速度", 136f);
-        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCraftingOutputSliderKey, "制作产量", "手工、工作台与熔炉产量", 204f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyFuelConsumptionSliderKey, "燃料消耗", "所有燃料模块的消耗速度", 68f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCraftingOutputSliderKey, "制作产量", "手工与工作台产量", 136f);
     }
 
     private static Image CreateCustomCategoryPage(string name, Transform parent)
@@ -766,7 +765,7 @@ public static class NewGamePrefabBuilder
             details.transform,
             font,
             "生产",
-            "生长速度\n熔炼速度\n制作产量",
+            "生长速度\n制作产量",
             GameManager.NewGameDifficultyProductionValuesTextKey,
             478f);
     }

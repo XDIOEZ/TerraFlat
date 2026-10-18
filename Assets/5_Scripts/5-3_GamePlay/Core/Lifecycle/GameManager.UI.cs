@@ -88,7 +88,6 @@ public partial class GameManager
     public const string NewGameDifficultySpawnPopulationSliderKey = "难度_种群上限倍率";
     public const string NewGameDifficultyLootAmountSliderKey = "难度_战利品倍率";
     public const string NewGameDifficultyCropGrowthSliderKey = "难度_作物生长倍率";
-    public const string NewGameDifficultySmeltingSpeedSliderKey = "难度_熔炼速度倍率";
     public const string NewGameDifficultyFuelConsumptionSliderKey = "难度_燃料消耗倍率";
     public const string NewGameDifficultyCraftingOutputSliderKey = "难度_制作产量倍率";
 
@@ -1579,7 +1578,6 @@ public partial class GameManager
         if (productionValues != null)
             productionValues.text =
                 $"{FormatDifficultyDelta(definition.Production.CropGrowthMultiplier)}\n" +
-                $"{FormatDifficultyDelta(definition.Production.SmeltingSpeedMultiplier)}\n" +
                 $"{FormatDifficultyDelta(definition.Production.CraftingOutputMultiplier)}";
 
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)

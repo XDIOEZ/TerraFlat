@@ -138,7 +138,6 @@ MonoBehaviour:
     CustomSpawnPopulationMultiplier: 1
     CustomLootAmountMultiplier: 1
     CustomCropGrowthMultiplier: 1
-    CustomSmeltingSpeedMultiplier: 1
     CustomFuelConsumptionMultiplier: 1
     CustomCraftingOutputMultiplier: 1
     GameEventData:
@@ -480,7 +479,6 @@ MonoBehaviour:
     CustomSpawnPopulationMultiplier: 1
     CustomLootAmountMultiplier: 1
     CustomCropGrowthMultiplier: 1
-    CustomSmeltingSpeedMultiplier: 1
     CustomFuelConsumptionMultiplier: 1
     CustomCraftingOutputMultiplier: 1
     GameEventData:

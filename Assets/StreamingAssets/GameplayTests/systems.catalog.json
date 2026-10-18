@@ -697,6 +697,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.ColdWorld.cs"
       ],
       "dependsOn": [
+        "item_runtime",
         "crafting",
         "inventory",
         "mechanical",

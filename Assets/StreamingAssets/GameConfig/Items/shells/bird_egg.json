@@ -13,7 +13,6 @@
           "id": "core:鸟蛋=熟蛋",
           "minTemperature": 150.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             { "match": "exact_item", "amount": 1, "itemId": "BirdEgg" }
           ],

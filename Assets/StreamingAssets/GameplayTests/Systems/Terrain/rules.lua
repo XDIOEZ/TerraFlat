@@ -340,13 +340,6 @@ test.system("terrain", "river_diagnostic_aggregation", {}, function(data)
     assert(type(data.repeatedStages["river.local_refine"]) == "number" and
         data.repeatedCounts[prefix .. "region_nodes"] > 0,
         "父细化计时或真实宏观扫描没有进入诊断")
-    local queries = data.firstCounts[prefix .. "floodplain_height_queries"]
-    local merges = data.firstCounts[prefix .. "floodplain_merge_attempts"]
-    local cells = data.firstCounts[prefix .. "floodplain_cells"]
-    assert(type(queries) == "number" and queries > 0 and cells > 0 and queries == cells,
-        "纯陆地河漫滩没有按唯一候选格只查询一次高度")
-    assert(merges > queries and queries <= data.firstCounts[prefix .. "floodplain_candidates"],
-        "河漫滩夹具没有覆盖重叠扩张，或重叠格仍重复查询高度")
 end, "河流同请求多次细化累计与最近规模分离")
 
 local harvestCases = {

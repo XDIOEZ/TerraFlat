@@ -1179,7 +1179,6 @@
           "id": "core:铜+锡=青铜",
           "minTemperature": 1000.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -1202,7 +1201,6 @@
         {
           "id": "matter:melt:Ingot_Copper",
           "minTemperature": 1085,
-          "work": 20,
           "inputs": [
             {
               "match": "exact_item",
@@ -1307,7 +1305,6 @@
           "id": "core:粗铁锭=铁锭",
           "minTemperature": 1489.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -1330,7 +1327,6 @@
         {
           "id": "matter:melt:Ingot_RawIron",
           "minTemperature": 1538,
-          "work": 20,
           "inputs": [
             {
               "match": "exact_item",
@@ -1517,7 +1513,6 @@
         {
           "id": "matter:melt:Ingot_Tin",
           "minTemperature": 232,
-          "work": 20,
           "inputs": [
             {
               "match": "exact_item",
@@ -1889,7 +1884,6 @@
           "id": "core:铜矿=铜",
           "minTemperature": 1000.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -1908,7 +1902,6 @@
           "id": "core:铜+锡=青铜 1",
           "minTemperature": 1000.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -1932,7 +1925,6 @@
           "id": "core:铜矿石=熔融铜",
           "minTemperature": 1085.0,
           "maxTemperature": 1600.0,
-          "work": 20.0,
           "inputs": [
             {
               "match": "exact_item",
@@ -2124,7 +2116,6 @@
           "id": "core:铁矿=粗铁锭",
           "minTemperature": 1000.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -2143,7 +2134,6 @@
           "id": "core:铁矿=铁锭",
           "minTemperature": 1489.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -2167,7 +2157,6 @@
           "id": "core:铁矿+碳=钢",
           "minTemperature": 1489.0,
           "maxTemperature": 9999.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -2201,7 +2190,6 @@
           "id": "core:铁矿石=熔融铁",
           "minTemperature": 1538.0,
           "maxTemperature": 2000.0,
-          "work": 20.0,
           "inputs": [
             {
               "match": "exact_item",
@@ -2307,7 +2295,6 @@
           "id": "core:锡矿=锡",
           "minTemperature": 1000.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -2326,7 +2313,6 @@
           "id": "core:锡矿石=熔融锡",
           "minTemperature": 232.0,
           "maxTemperature": 1200.0,
-          "work": 20.0,
           "inputs": [
             {
               "match": "exact_item",
@@ -2765,7 +2751,6 @@
           "id": "core:大米=米饭",
           "minTemperature": 100.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -3947,7 +3932,6 @@
           "id": "core:鸡蛋=煎鸡蛋",
           "minTemperature": 150.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -4610,7 +4594,6 @@
           "id": "core:生肉=熟肉",
           "minTemperature": 200.0,
           "maxTemperature": 400.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",
@@ -6253,6 +6236,16 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": ["readable.writing.ink", "Combustion.Fuel"],
+      "matter": {
+        "transitions": [
+          {
+            "id": "charcoal.ash",
+            "minTemperature": 1000,
+            "outputItemId": "WoodAsh",
+            "outputAmountMultiplier": 1
+          }
+        ]
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Charcoal/Charcoal_Icon.png",
         "collider": {
@@ -6302,6 +6295,9 @@
       "weight": 0.6,
       "volume": 0.8,
       "tags": ["Combustion.Fuel"],
+      "matter": {
+        "transitions": []
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/Peat/Peat_Icon.png",
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }

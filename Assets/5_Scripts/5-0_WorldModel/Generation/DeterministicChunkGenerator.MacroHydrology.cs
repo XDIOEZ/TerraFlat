@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -371,7 +370,6 @@ namespace FlatWorld.WorldModel
             long channelTicks = 0, floodplainTicks = 0;
             long candidates = 0, outsideWindow = 0, oceanRejected = 0, mergeAttempts = 0;
             long floodplainCandidates = 0, floodplainMergeAttempts = 0;
-            using var floodplain = new FloodplainRaster(outputWindow, sampling, floodplainCells);
             foreach (KeyValuePair<Int2, ChannelCenterSample> pair in centers)
             {
                 if ((rendered++ & 63) == 0) cancellationToken.ThrowIfCancellationRequested();
@@ -419,14 +417,11 @@ namespace FlatWorld.WorldModel
                     channelTicks += Stopwatch.GetTimestamp() - started;
                     started = Stopwatch.GetTimestamp();
                 }
-                AddFloodplain(settings, sampling, center, sample.Flow,
-                    radius, floodplain, timing != null,
+                AddFloodplain(settings, sampling, outputWindow, center, sample.Flow,
+                    radius, floodplainCells, timing != null,
                     ref floodplainCandidates, ref floodplainMergeAttempts);
                 if (timing != null) floodplainTicks += Stopwatch.GetTimestamp() - started;
             }
-            long flushStarted = timing != null ? Stopwatch.GetTimestamp() : 0;
-            floodplain.CopyToOutput(cancellationToken);
-            if (timing != null) floodplainTicks += Stopwatch.GetTimestamp() - flushStarted;
             // 循环内只累加数字，结束后一次写入本区块诊断，后台不输出日志。
             timing?.RecordStageDuration("river.local_refine.channel_fill", channelTicks * 1000d / Stopwatch.Frequency, accumulate: true);
             timing?.RecordStageDuration("river.local_refine.floodplain", floodplainTicks * 1000d / Stopwatch.Frequency, accumulate: true);
@@ -436,7 +431,6 @@ namespace FlatWorld.WorldModel
             timing?.RecordStageCount("river.local_refine.channel_merge_attempts", mergeAttempts, accumulate: true);
             timing?.RecordStageCount("river.local_refine.floodplain_candidates", floodplainCandidates, accumulate: true);
             timing?.RecordStageCount("river.local_refine.floodplain_merge_attempts", floodplainMergeAttempts, accumulate: true);
-            timing?.RecordStageCount("river.local_refine.floodplain_height_queries", floodplain.HeightQueries, accumulate: true);
         }
 
         private static int GetHydrologyOutputPadding(ChunkGenerationRequest request) =>
@@ -466,143 +460,11 @@ namespace FlatWorld.WorldModel
 
             internal int Padding { get; }
 
-            internal int Width => maximumX + Padding;
-            internal int Height => maximumY + Padding;
-
             internal bool Contains(Int2 position)
             {
                 int x = ShiftNearChunk(position.X, centerX, spanX) - originX;
                 int y = ShiftNearChunk(position.Y, centerY, spanY) - originY;
                 return x >= -Padding && y >= -Padding && x < maximumX && y < maximumY;
-            }
-
-            internal bool TryGetIndex(Int2 position, out int index)
-            {
-                int x = ShiftNearChunk(position.X, centerX, spanX) - originX;
-                int y = ShiftNearChunk(position.Y, centerY, spanY) - originY;
-                bool contains = x >= -Padding && y >= -Padding && x < maximumX && y < maximumY;
-                index = contains ? (y + Padding) * Width + x + Padding : -1;
-                return contains;
-            }
-
-            internal Int2 PositionAt(int index) => new(originX - Padding + index % Width,
-                originY - Padding + index / Width);
-        }
-
-        /// <summary>每种半径只计算一次原始圆形偏移和衰减，复用平方根结果。</summary>
-        private sealed class FloodplainKernel
-        {
-            private const int MaximumCachedRadius = 96;
-            private static readonly FloodplainKernel[] cache = new FloodplainKernel[MaximumCachedRadius + 1];
-
-            internal static FloodplainKernel ForRadius(int radius)
-            {
-                if ((uint)radius > MaximumCachedRadius) return new FloodplainKernel(radius);
-                FloodplainKernel kernel = Volatile.Read(ref cache[radius]);
-                if (kernel != null) return kernel;
-                kernel = new FloodplainKernel(radius);
-                return Interlocked.CompareExchange(ref cache[radius], kernel, null) ?? kernel;
-            }
-
-            internal readonly struct Sample
-            {
-                internal Sample(int x, int y, double strength)
-                { X = x; Y = y; Strength = strength; }
-                internal int X { get; }
-                internal int Y { get; }
-                internal double Strength { get; }
-            }
-
-            internal FloodplainKernel(int radius)
-            {
-                var samples = new List<Sample>((int)Math.Ceiling(Math.PI * (radius + 1d) * (radius + 1d)));
-                for (int y = -radius; y <= radius; y++)
-                for (int x = -radius; x <= radius; x++)
-                {
-                    double distance = Math.Sqrt(x * x + y * y);
-                    if (distance > radius + 0.25d) continue;
-                    double edgeStrength = 1d - Clamp01(distance / (radius + 0.75d));
-                    samples.Add(new Sample(x, y, Math.Sqrt(edgeStrength)));
-                }
-                Samples = samples.ToArray();
-            }
-
-            internal Sample[] Samples { get; }
-        }
-
-        /// <summary>重叠冲积格直接在池化窗口取最大值，每格只查询一次高度。</summary>
-        private sealed class FloodplainRaster : IDisposable
-        {
-            private const int MaximumDenseCells = 1024 * 1024;
-            private readonly HydrologyOutputWindow window;
-            private readonly HydrologySamplingContext sampling;
-            private readonly Dictionary<Int2, double> output;
-            private readonly int denseLength;
-            private double[] strengths;
-            private List<int> visited;
-
-            internal FloodplainRaster(HydrologyOutputWindow window,
-                HydrologySamplingContext sampling, Dictionary<Int2, double> output)
-            {
-                this.window = window; this.sampling = sampling; this.output = output;
-                long length = (long)window.Width * window.Height;
-                denseLength = window.Width > 0 && window.Height > 0 && length <= MaximumDenseCells
-                    ? (int)length : 0;
-            }
-
-            internal long HeightQueries { get; private set; }
-
-            internal bool Merge(Int2 position, double strength)
-            {
-                if (!window.TryGetIndex(position, out int index)) return false;
-                if (denseLength == 0)
-                {
-                    HeightQueries++;
-                    if (sampling.Height(position) <= sampling.Settings.SeaLevel) return false;
-                    SetFloodplainStrength(output, position, strength);
-                    return true;
-                }
-                if (strengths == null)
-                {
-                    strengths = ArrayPool<double>.Shared.Rent(denseLength);
-                    Array.Clear(strengths, 0, denseLength);
-                    visited = new List<int>();
-                }
-                double current = strengths[index];
-                if (current == 0d)
-                {
-                    HeightQueries++;
-                    if (sampling.Height(position) <= sampling.Settings.SeaLevel)
-                    { strengths[index] = -1d; return false; }
-                    visited.Add(index);
-                    strengths[index] = Clamp01(strength);
-                }
-                else if (current < 0d) return false;
-                else
-                {
-                    strength = Clamp01(strength);
-                    if (strength > current) strengths[index] = strength;
-                }
-                return true;
-            }
-
-            internal void CopyToOutput(CancellationToken cancellation)
-            {
-                if (visited == null) return;
-                output.EnsureCapacity(visited.Count);
-                for (int i = 0; i < visited.Count; i++)
-                {
-                    if ((i & 255) == 0) cancellation.ThrowIfCancellationRequested();
-                    int index = visited[i];
-                    output.Add(sampling.Normalize(window.PositionAt(index)), strengths[index]);
-                }
-            }
-
-            public void Dispose()
-            {
-                if (strengths == null) return;
-                ArrayPool<double>.Shared.Return(strengths);
-                strengths = null;
             }
         }
         #endregion

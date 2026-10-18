@@ -985,7 +985,6 @@
           "id": "core:烧制陶罐",
           "minTemperature": 600,
           "maxTemperature": 2000,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",

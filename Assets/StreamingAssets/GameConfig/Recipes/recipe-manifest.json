@@ -52,28 +52,8 @@
       "enabled": true
     },
     {
-      "id": "cooking/basic_food",
-      "path": "cooking/basic_food.json",
-      "enabled": true
-    },
-    {
       "id": "cooking/advanced_food",
       "path": "cooking/advanced_food.json",
-      "enabled": true
-    },
-    {
-      "id": "smelting/ores",
-      "path": "smelting/ores.json",
-      "enabled": true
-    },
-    {
-      "id": "smelting/alloys",
-      "path": "smelting/alloys.json",
-      "enabled": true
-    },
-    {
-      "id": "smelting/crucible",
-      "path": "smelting/crucible.json",
       "enabled": true
     },
     {

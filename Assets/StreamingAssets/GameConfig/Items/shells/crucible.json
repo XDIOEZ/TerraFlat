@@ -22,7 +22,6 @@
           "id": "core:砂子=熔融玻璃",
           "minTemperature": 1700.0,
           "maxTemperature": 2000.0,
-          "work": 20.0,
           "inputs": [
             {
               "match": "exact_item",
@@ -65,7 +64,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BasicItem_Base",
       "gameName": "坩埚",
-      "description": "可装入沙子、矿石等固体材料，也可保存熔化后的高温液体。放入任意接入通用加热能力的炉子后，坩埚会按材料配方和温度区间处理内部材料。",
+      "description": "可装入沙子、矿石等固体材料，也可保存高温液体。热源只加热坩埚，内部材料按自身温度和反应特质熔化或转化。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

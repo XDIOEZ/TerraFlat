@@ -51,6 +51,9 @@ internal sealed partial class DroppedItemRuntime
             using (MatterEnvironmentMarker.Auto())
                 changed = WorldItemMatterRules.Advance(data, body.Position, seconds,
                     liquidContact: body.WaterKind != 0 && !simulation.TryGetFlight(id, out _), out waterContact);
+            // 满足材料转化时先保全整堆数量，再交给新材料自己的燃烧规则。
+            if (TryTransitionMatter(id, data, ref body))
+                continue;
             using (MatterCombustionMarker.Auto())
                 changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact, out consumedAll);
             if (changed)
@@ -67,21 +70,57 @@ internal sealed partial class DroppedItemRuntime
                 UpdatePlacement(id);
             }
 
-            bool replaced;
-            ItemData replacement;
-            using (MatterTransitionMarker.Auto())
-                replaced = ItemMatterRuntime.TryCreateSolidTransitionReplacement(data, out replacement);
-            if (!replaced)
-                continue;
-            if (!GameRes.ExistingInstance.TryGetItemDefinition(replacement.IDName, out RuntimeItemDefinition target) ||
-                !target.UsesLightweightWorldDrop)
-                continue;
+        }
+    }
 
-            payloads[id] = replacement;
-            visuals[id] = ResolveVisual(replacement);
-            body.Amount = replacement.Stack.Amount;
-            simulation.Set(body);
-            UpdatePlacement(id);
+    private bool TryTransitionMatter(int id, ItemData data, ref LightweightDroppedBody body)
+    {
+        using (MatterTransitionMarker.Auto())
+        {
+            if (!ItemMatterRuntime.TryCreateSolidTransitionOutputs(data, out IReadOnlyList<ItemData> outputs)) return false;
+            ItemData replacement = outputs[0];
+            if (!GameRes.ExistingInstance.TryGetItemDefinition(replacement.IDName, out RuntimeItemDefinition target) ||
+                !target.UsesLightweightWorldDrop) return false;
+            var replacementVisual = ResolveVisual(replacement);
+            var originalVisual = visuals[id];
+            LightweightDroppedBody originalBody = body;
+            var spawned = new List<DroppedItemHandle>();
+            try
+            {
+                // 多产物先全部生成，任一生成失败就回收，源堆保持原样。
+                for (int index = 1; index < outputs.Count; index++)
+                {
+                    DroppedItemHandle handle = DroppedItemService.Spawn(outputs[index], body.Position, body.Position);
+                    if (!handle.IsValid) throw new System.InvalidOperationException("材料转化产物未成功落地。");
+                    spawned.Add(handle);
+                }
+                replacement.Guid = data.Guid;
+                replacement.inHand = data.inHand;
+                payloads[id] = replacement;
+                visuals[id] = replacementVisual;
+                body.Amount = replacement.Stack.Amount;
+                simulation.Set(body);
+                UpdatePlacement(id);
+                presentation.Changed(id);
+                return true;
+            }
+            catch
+            {
+                try
+                {
+                    payloads[id] = data;
+                    visuals[id] = originalVisual;
+                    body = originalBody;
+                    simulation.Set(body);
+                    UpdatePlacement(id);
+                    presentation.Changed(id);
+                }
+                finally
+                {
+                    foreach (DroppedItemHandle handle in spawned) DroppedItemService.Remove(handle);
+                }
+                throw;
+            }
         }
     }
 

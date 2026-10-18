@@ -20,8 +20,6 @@ public static partial class GameplayTestSystemProbe
         numbers["river.startFlow"] = .0001d;
         numbers["river.tributaryStartFlow"] = .0001d;
         numbers["river.floodplainStartFlow"] = .0001d;
-        numbers["river.floodplainMaxRadius"] = 8d;
-        numbers["river.floodplainMaxSlope"] = 1d;
         numbers["river.lakeChance"] = 0d;
         numbers["lake.large.enabled"] = 0d;
         var profile = new ChunkGenerationProfileSnapshot("probe:river-diagnostics", 1, 8, 8, numbers);

@@ -83,13 +83,12 @@ internal sealed class WorkbenchMachinePanelSession : MachinePanelSession
     #endregion
 }
 
-/// <summary>熔炉表现只读取炉温、燃料和加工状态，按钮发送权威操作。</summary>
+/// <summary>熔炉表现只读取炉温、燃料和供热状态，按钮发送权威操作。</summary>
 internal sealed class FurnaceMachinePanelSession : MachinePanelSession
 {
     #region 熔炉绑定与刷新
 
     private readonly FurnaceLogic furnace;
-    private readonly Slider progress;
     private readonly Slider fuel;
     private readonly TMP_Text temperature;
     private readonly TMP_Text hint;
@@ -105,7 +104,6 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
             BindSlots(panel, furnace.FuelInventory, "燃料");
             BindActionButton(panel.GetButton("合成按钮")
                 ?? throw new InvalidOperationException("熔炉面板缺少合成按钮。"));
-            progress = panel.GetSlider("熔炼进度条");
             fuel = panel.GetSlider("燃料显示条");
             temperature = panel.GetText("FWUI_FurnaceTemperatureValue");
             hint = panel.GetText("FWUI_FooterHint");
@@ -115,10 +113,9 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
 
     protected override void RefreshPresentation()
     {
-        if (progress != null) progress.value = furnace.Progress01;
         if (fuel != null) fuel.value = furnace.FuelRatio;
         if (temperature != null) temperature.text = furnace.Status;
-        if (hint != null) hint.text = furnace.GetProcessingHint();
+        if (hint != null) hint.text = furnace.GetHeatingHint();
         for (int i = 0; i < furnace.FuelInventory.itemSlot_UI.Count; i++)
             furnace.FuelInventory.itemSlot_UI[i]?.SetProcessingProgress(furnace.GetFuelAbsorptionProgress(i));
     }

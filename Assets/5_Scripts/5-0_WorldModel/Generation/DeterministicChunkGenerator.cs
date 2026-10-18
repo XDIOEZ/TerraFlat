@@ -1370,10 +1370,11 @@ namespace FlatWorld.WorldModel
         private static void AddFloodplain(
             ChunkGenerationSettingsSnapshot settings,
             HydrologySamplingContext sampling,
+            HydrologyOutputWindow outputWindow,
             Int2 center,
             double flow,
             int channelRadius,
-            FloodplainRaster floodplain,
+            Dictionary<Int2, double> floodplainCells,
             bool measureCandidates,
             ref long candidates,
             ref long mergeAttempts)
@@ -1403,14 +1404,31 @@ namespace FlatWorld.WorldModel
                 MidpointRounding.AwayFromZero);
             double centerStrength = Math.Sqrt(flatness) * (0.55d + Math.Sqrt(flowT) * 0.45d);
 
-            FloodplainKernel kernel = FloodplainKernel.ForRadius(radius);
-            foreach (FloodplainKernel.Sample sample in kernel.Samples)
+            for (int offsetY = -radius; offsetY <= radius; offsetY++)
             {
-                if (measureCandidates) candidates++;
-                Int2 position = sampling.Normalize(new Int2(center.X + sample.X,
-                    center.Y + sample.Y));
-                if (floodplain.Merge(position, centerStrength * sample.Strength) && measureCandidates)
-                    mergeAttempts++;
+                for (int offsetX = -radius; offsetX <= radius; offsetX++)
+                {
+                    double distance = Math.Sqrt(offsetX * offsetX + offsetY * offsetY);
+                    if (distance > radius + 0.25d)
+                        continue;
+                    if (measureCandidates) candidates++;
+
+                    Int2 position = sampling.Normalize(new Int2(
+                        center.X + offsetX,
+                        center.Y + offsetY));
+                    if (!outputWindow.Contains(position) ||
+                        sampling.Height(position) <= settings.SeaLevel)
+                    {
+                        continue;
+                    }
+
+                    double edgeStrength = 1d - Clamp01(distance / (radius + 0.75d));
+                    if (measureCandidates) mergeAttempts++;
+                    SetFloodplainStrength(
+                        floodplainCells,
+                        position,
+                        centerStrength * Math.Sqrt(edgeStrength));
+                }
             }
         }
 

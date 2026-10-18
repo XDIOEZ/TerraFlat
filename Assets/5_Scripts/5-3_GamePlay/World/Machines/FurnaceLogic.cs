@@ -13,13 +13,12 @@ public partial class FurnaceRuntimeState
     #region 熔炉持久状态
     public ModSmeltingData Smelting = new();
     public FuelData Fuel = new();
-    public RecipeProcessingState Processing = new();
     public FuelAbsorptionState Absorption = new();
     public bool AwaitingIgnition;
     #endregion
 }
 
-/// <summary>炉温、燃料、熔炼与副产物内聚在托管领域对象中，图形与面板没有权威状态。</summary>
+/// <summary>炉温、燃料、供热与副产物内聚在托管领域对象中，图形与面板没有权威状态。</summary>
 public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 {
     #region 配置与状态
@@ -29,12 +28,10 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public Inventory Input { get; }
     public Inventory Output { get; }
     public Inventory FuelInventory { get; }
-    public RecipeProcessor Processor { get; }
     public bool AcceptsAirflow { get; }
     public float FuelRatio => Fuel.Fuel.y > 0f ? Mathf.Clamp01(Fuel.Fuel.x / Fuel.Fuel.y) : 0f;
     public override bool IsBurning => Data.IsSmelting && !State.AwaitingIgnition && Fuel.Fuel.x > .01f;
     public override float TickInterval => .1f;
-    public override float Progress01 => Processor.Progress01;
     public override GameObject PanelPrefab { get; }
     public override string ActionLabel => "点火";
     public override bool CanAct => !Data.IsSmelting;
@@ -49,7 +46,6 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private readonly List<string> ignitionTags;
     private readonly float ignitionFuel;
     private readonly float ignitionTemperature;
-    private readonly bool heatVessels;
     private readonly bool hasLocalHeat;
     private readonly bool publishCellTemperature;
     private readonly float neighborTargetTemperature;
@@ -60,9 +56,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private const float FurnaceCoreHeatRadius = 0.7f;
     private TemperatureMgr temperatureManager;
     private Player productionActor;
-    private RuntimeItemReactionDefinition activeReaction;
     private float combustionHeatBonus;
-    private bool notifyingInputMatter;
     #endregion
 
     #region 生命周期
@@ -81,7 +75,6 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         Data.InvData ??= new Dictionary<string, Inventory_Data>();
         Data.FuelByproductProgress ??= new Dictionary<string, int>();
         Data.PendingFuelByproductCount ??= new Dictionary<string, int>();
-        Data.MaxSmeltingSpeed = configured.MaxSmeltingSpeed;
         Data.MaxTemperatureLimit = configured.MaxTemperatureLimit;
         Data.TemperatureUpSpeed = configured.TemperatureUpSpeed;
         // x 保存真实燃值，可高于 y；y 只作为面板显示容量和自动补充阈值。
@@ -100,7 +93,6 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         ignitionTags = config.Value("ignitionTags", authoring.ignitionTags) ?? new();
         ignitionFuel = config.Value("ignitionFuelValueOverride", authoring.ignitionFuelValueOverride);
         ignitionTemperature = config.Value("ignitionMaxTemperatureOverride", authoring.ignitionMaxTemperatureOverride);
-        heatVessels = entity.Definition.Content.Has<Mod_VesselHeating>();
         PanelPrefab = authoring.UI_Prefab;
         publishCellTemperature = config.Value("publishCellTemperature", authoring.publishCellTemperature);
         neighborTargetTemperature = config.Value("neighborTargetTemperature", authoring.neighborTargetTemperature);
@@ -111,13 +103,6 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         Input = RestoreInventory("furnace.input", authoring.InputInventory);
         Output = RestoreInventory("furnace.output", authoring.OutputInventory);
         FuelInventory = RestoreInventory("furnace.fuel", authoring.FuelInventory);
-        State.Processing ??= new RecipeProcessingState();
-        Processor = new RecipeProcessor(Input, Output,
-            new CraftingCapabilities { RecipeType = RecipeType.Smelting, AllowCompactGrid = true }, State.Processing);
-        Processor.PreviewOverride = PreviewSmelting;
-        Processor.CommitOverride = CommitSmelting;
-        Processor.Changed += OnProgressChanged;
-        RefreshRecipe();
         PublishTemperature();
     }
 
@@ -131,22 +116,20 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
 
     public override void Capture()
     {
-        Data.SmeltingProgress = Processor.State.Progress;
         MachinePersistence.Write(Entity.Snapshot, "furnace", State);
     }
 
     public override bool ApplyRemoteSnapshot(ItemData snapshot)
     {
         FurnaceRuntimeState incoming = MachinePersistence.Read<FurnaceRuntimeState>(snapshot, "furnace");
-        if (incoming?.Smelting?.InvData == null || incoming.Processing == null) return false;
+        if (incoming?.Smelting?.InvData == null) return false;
         MachineInventory.ApplySnapshot(FuelInventory, incoming.Smelting.InvData["furnace.fuel"]);
-        Processor.ApplyRemoteState(incoming.Processing);
+        MachineInventory.ApplySnapshot(Input, incoming.Smelting.InvData["furnace.input"]);
+        MachineInventory.ApplySnapshot(Output, incoming.Smelting.InvData["furnace.output"]);
         State = incoming;
-        State.Processing = Processor.State;
         Data.InvData["furnace.input"] = Input.Data;
         Data.InvData["furnace.output"] = Output.Data;
         Data.InvData["furnace.fuel"] = FuelInventory.Data;
-        RefreshRecipe();
         NotifyRemoteChanged();
         return true;
     }
@@ -160,8 +143,6 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         }
         temperatureManager = null;
         productionActor = null;
-        Processor.Changed -= OnProgressChanged;
-        Processor.Dispose();
         base.Dispose();
     }
     #endregion
@@ -203,7 +184,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             }
             if (step > 0f)
             {
-                if (IsBurning) { HeatAndProcess(step); ConsumeFuel(step); }
+                if (IsBurning) { HeatMaterials(step); ConsumeFuel(step); }
                 else Cool(step);
                 if (source != null) State.Absorption.Advance(step, fuelAbsorptionSeconds);
                 remaining -= step;
@@ -222,7 +203,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         PublishTemperature();
         Data.Temperature = ThermalRuntime.AdvanceAmbient(Data.Temperature,
             MachineWorld.SampleAmbientTemperature(Entity), seconds);
-        Data.SmeltingSpeed = 0f;
+        TransferMaterialHeat(seconds);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -428,39 +409,48 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     }
     #endregion
 
-    #region 熔炼
+    #region 材料供热
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual void HeatAndProcess(float seconds)
+    public virtual void HeatMaterials(float seconds)
     {
         combustionHeatBonus = 0;
         float fuelUnits = Mathf.Min(Fuel.Fuel.x, Mathf.Max(0f, seconds * burnSpeed * GameDifficultyService.Current.Production.FuelConsumptionMultiplier));
         MachineWorld.SupplyCombustionSupport(this, fuelUnits, seconds);
-        bool hasInput = false;
-        foreach (ItemSlot slot in Input.Data.itemSlots) hasInput |= slot?.itemData != null;
+        bool hasMaterials = HasMaterials(Input) || HasMaterials(Output);
         float airflow = AcceptsAirflow ? Entity.Airflow : 0f;
         float maximum = Mathf.Max(1f, CalculateMaximumTemperature(airflow));
         Data.Temperature = Mathf.Min(maximum, Data.Temperature + Data.TemperatureUpSpeed *
-            (1f + airflow) * (hasInput ? 1f : 2f) * seconds);
-        if (!hasInput) { Processor.State.Progress = 0f; return; }
+            (1f + airflow) * (hasMaterials ? 1f : 2f) * seconds);
+        TransferMaterialHeat(seconds);
+    }
+
+    private void TransferMaterialHeat(float seconds)
+    {
         if (MachineInventory.IsBeingDragged(Input) || MachineInventory.IsBeingDragged(Output)) return;
-        foreach (ItemSlot slot in Input.Data.itemSlots)
+        // 先推进已有产物，材料自己结算转化，避免新产物重复获得同一段热量。
+        AdvanceMaterialInventory(Output, seconds);
+        InventoryVesselHeating.ProcessHeat(Output, Output, Data.Temperature, seconds);
+        MaterialThermalProcessor.Process(Output, Output, productionActor);
+        AdvanceMaterialInventory(Input, seconds);
+        InventoryVesselHeating.ProcessHeat(Input, Output, Data.Temperature, seconds);
+        MaterialThermalProcessor.Process(Input, Output, productionActor);
+    }
+
+    private void AdvanceMaterialInventory(Inventory inventory, float seconds)
+    {
+        foreach (ItemSlot slot in inventory.Data.itemSlots)
         {
-            ItemData item = slot?.itemData;
-            // 材料按温差百分比升降温，每游戏秒至少变化 0.5℃，达到实际炉温即停止。
-            if (item != null && ItemMatterRuntime.Advance(item, Data.Temperature, 1f, seconds))
-            {
-                // 升温通知只更新观察者，整批加热结束后统一按真实材料选择一次配方。
-                bool previousNotification = notifyingInputMatter;
-                notifyingInputMatter = true;
-                try { Input.Data.NotifyItemStateChanged(item); }
-                finally { notifyingInputMatter = previousNotification; }
-            }
+            ItemData material = slot?.itemData;
+            if (material != null && ItemMatterRuntime.Advance(material, Data.Temperature, 1f, seconds))
+                inventory.Data.NotifyItemStateChanged(material);
         }
-        if (heatVessels && InventoryVesselHeating.ProcessHeat(Input, Output, Data.Temperature, seconds))
-        { Processor.State.Progress = 0f; return; }
-        RefreshRecipe();
-        Data.SmeltingSpeed = Mathf.Lerp(1f, Data.MaxSmeltingSpeed, Data.Temperature / maximum);
-        Processor.Advance(Data.SmeltingSpeed * GameDifficultyService.Current.Production.SmeltingSpeedMultiplier * seconds, productionActor);
+    }
+
+    private static bool HasMaterials(Inventory inventory)
+    {
+        foreach (ItemSlot slot in inventory.Data.itemSlots)
+            if (slot?.itemData != null) return true;
+        return false;
     }
 
     /// <summary>炉体只接收已结算的助燃效果，不查找设备或修改来源库存。</summary>
@@ -469,105 +459,16 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         if (MachineDefinition.NonNegative(temperatureBonus)) combustionHeatBonus = Mathf.Max(combustionHeatBonus, temperatureBonus);
     }
 
-    private void RefreshRecipe()
-    {
-        if (Processor == null || Processor.IsCommitting) return;
-        if (ItemReactionResolver.TryResolve(Input, Processor.Capabilities,
-                out RuntimeItemReactionDefinition reaction, out _, requireLiquidOutput: false))
-        {
-            activeReaction = reaction;
-            Processor.SelectRecipe(reaction.Recipe, reaction.WorkRequired);
-            return;
-        }
-
-        activeReaction = null;
-        bool found = CraftingRecipeMatcher.TryMatch(Input, Processor.Capabilities, out CraftingRecipeMatch match, out _);
-        Processor.SelectRecipe(found ? match.Recipe : null, 100f);
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual CraftingResult ResolveOutputs()
-    {
-        RuntimeRecipe recipe = Processor.Recipe;
-        if (recipe == null) return CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前材料没有熔炼配方");
-        float reactionTemperature = Data.Temperature;
-        if (activeReaction != null &&
-            CraftingRecipeMatcher.TryMatchRecipe(Input, recipe, Processor.Capabilities, out CraftingRecipeMatch reactionMatch))
-        {
-            reactionTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, reactionMatch, Data.Temperature);
-            if (reactionTemperature < (activeReaction.MinTemperature ?? float.MinValue))
-                return CraftingResult.Failed(CraftingFailureReason.ConditionsNotMet, "材料温度不足", recipe);
-            if (reactionTemperature > (activeReaction.MaxTemperature ?? float.MaxValue))
-            {
-                ItemData charredReaction = GameRes.Instance.CreateItemData("CharredMatter");
-                charredReaction.Stack.Amount = 1f;
-                return CraftingResult.Succeeded(recipe, new[] { charredReaction });
-            }
-            return CraftingService.DescribeRecipe(recipe);
-        }
-
-        if (reactionTemperature < recipe.Temperature)
-            return CraftingResult.Failed(CraftingFailureReason.ConditionsNotMet, "炉温不足", recipe);
-        if (reactionTemperature <= recipe.Temperature_Max) return CraftingService.DescribeRecipe(recipe);
-        ItemData charred = GameRes.Instance.CreateItemData("CharredMatter");
-        charred.Stack.Amount = 1f;
-        return CraftingResult.Succeeded(recipe, new[] { charred });
-    }
-
-    /// <summary>说明材料加热与加工阻塞，避免只看炉温误判机器停转。</summary>
-    public string GetProcessingHint()
-    {
-        CraftingResult preview = Processor.Preview();
-        if (activeReaction != null && preview.Message == "材料温度不足" &&
-            CraftingRecipeMatcher.TryMatchRecipe(Input, Processor.Recipe, Processor.Capabilities, out CraftingRecipeMatch match))
-        {
-            float current = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, match, Data.Temperature);
-            // 当前燃料的温度上限不足时明确提示换燃料，避免一直等待。
-            float maximum = CalculateMaximumTemperature(AcceptsAirflow ? Entity.Airflow : 0f);
-            string action = !IsBurning ? FlatWorldLocalizationService.GetUiText("补充燃料并点火")
-                : maximum < activeReaction.MinTemperature
-                    ? FlatWorldLocalizationService.GetUiFormat("当前燃料最高 {0:0}°C · 需要更高温燃料或鼓风", maximum)
-                    : FlatWorldLocalizationService.GetUiText("正在加热");
-            return FlatWorldLocalizationService.GetUiFormat(
-                "材料 {0:0}°C / 需要 {1:0}°C · {2}", current, activeReaction.MinTemperature, action);
-        }
-        if (!preview.Success) return string.IsNullOrWhiteSpace(preview.Message)
-            ? string.Empty : FlatWorldLocalizationService.GetUiText(preview.Message);
-        return FlatWorldLocalizationService.GetUiText(IsBurning
-            ? "正在加工 · 等待产出" : "材料就绪 · 补充燃料并点火");
-    }
-
-    private CraftingResult PreviewSmelting()
-    {
-        CraftingResult outputs = ResolveOutputs();
-        return outputs.Success ? CraftingService.PreviewRecipeOutputs(Input, Output, Processor.Capabilities, Processor.Recipe, outputs.Outputs) : outputs;
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual CraftingResult CommitSmelting(Player actor)
-    {
-        CraftingResult outputs = ResolveOutputs();
-        if (!outputs.Success) return outputs;
-        float reactionTemperature = Data.Temperature;
-        if (activeReaction != null &&
-            CraftingRecipeMatcher.TryMatchRecipe(Input, Processor.Recipe, Processor.Capabilities, out CraftingRecipeMatch reactionMatch))
-            reactionTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(Input, reactionMatch, Data.Temperature);
-        CraftingResult result = CraftingService.CraftRecipeOutputs(Input, Output, Processor.Capabilities, Processor.Recipe,
-            outputs.Outputs, reactionTemperature <= Processor.Recipe.Temperature_Max, actor, publishCrafting: false);
-        if (result.Success)
-            foreach (ItemData output in result.Outputs)
-                GameplayProgressEvents.PublishSmeltSucceeded(actor, output.IDName, output.Stack.Amount);
-        return result;
-    }
+    /// <summary>面板只报告炉体供热状态，材料转化条件由材料定义负责。</summary>
+    public string GetHeatingHint()
+        => FlatWorldLocalizationService.GetUiText(IsBurning ? "正在加热" : "补充燃料并点火");
 
     public override bool Execute(string operation, string argument, Player actor) => operation == "work" && Ignite(actor);
     protected override void OnInventoryChanged(ItemSlot slot)
     {
         if (State.Absorption.SlotIndex >= 0 && CurrentAbsorptionSlot() == null)
             State.Absorption.Reset();
-        if (!notifyingInputMatter) RefreshRecipe();
         base.OnInventoryChanged(slot);
     }
-    private void OnProgressChanged() => NotifyChanged();
     #endregion
 }

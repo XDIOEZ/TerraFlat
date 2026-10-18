@@ -485,33 +485,6 @@
       "actions": []
     },
     {
-      "id": "core:烧制陶罐",
-      "displayName": "烧制陶罐",
-      "recipeType": "smelting",
-      "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "temperature": 600,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "ClayJarBlank",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "ClayJar",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:腌肉",
       "displayName": "腌肉",
       "recipeType": "crafting",

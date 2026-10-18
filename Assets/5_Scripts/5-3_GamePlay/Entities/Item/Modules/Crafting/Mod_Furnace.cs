@@ -10,7 +10,7 @@ internal static class FurnaceTemperatureFeedback
     #endregion
 }
 
-/// <summary>炉体内容配置；燃烧、库存和熔炼全部由 FurnaceLogic 管理。</summary>
+/// <summary>炉体内容配置；燃烧、库存和供热全部由 FurnaceLogic 管理。</summary>
 public class Mod_Furnace : Mod_MachineAuthoring
 {
     #region 炉体配置

@@ -52,7 +52,6 @@
           "id": "core:金矿石=金锭",
           "minTemperature": 1064.0,
           "maxTemperature": 2000.0,
-          "work": 100,
           "inputs": [
             {
               "match": "exact_item",

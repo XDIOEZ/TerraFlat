@@ -136,6 +136,36 @@ public static class CraftingService
         finally { ReleaseInventories(locked); }
     }
 
+    // 材料反应直接提交已经确定的扣料计划，炉体无需选配方或累计加工进度。
+    public static CraftingResult CommitMaterialOutputs(Inventory input, Inventory output,
+        CraftingRecipeMatch match, IReadOnlyList<ItemData> results)
+    {
+        if (input?.Data?.itemSlots == null || output?.Data?.itemSlots == null || match == null || results == null || results.Count == 0 ||
+            MachineInventory.IsBeingDragged(input) || MachineInventory.IsBeingDragged(output))
+            return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "材料事务库存无效或正在拖拽");
+        if (!TryAcquireInventories(input, output, out var locked))
+            return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "材料库存正在提交另一笔事务");
+        try
+        {
+            var outputs = new List<ItemData>();
+            foreach (ItemData value in results)
+            {
+                if (value?.Stack == null || !float.IsFinite(value.Stack.Amount) || value.Stack.Amount <= 0f ||
+                    !GameRes.Instance.TryGetItemDefinition(value.IDName, out _))
+                    return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "材料产物无效", match.Recipe);
+                outputs.Add(FastCloner.FastCloner.DeepClone(value));
+            }
+            if (!CraftingOutputRules.Prepare(input, match, outputs, out string error))
+                return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, match.Recipe);
+            if (!CraftingTransaction.TryCreate(input, output, match, outputs, ReferenceEquals(input, output),
+                    out var transaction, out var failure)) return failure;
+            if (!transaction.Commit(out failure)) return failure;
+            transaction.Complete();
+            return CraftingResult.Succeeded(match.Recipe, outputs);
+        }
+        finally { ReleaseInventories(locked); }
+    }
+
     /// <summary>热加工等领域可以替换最终产物，但预检仍走同一材料计划与空间事务。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static CraftingResult PreviewRecipeOutputs(Inventory input, Inventory output,

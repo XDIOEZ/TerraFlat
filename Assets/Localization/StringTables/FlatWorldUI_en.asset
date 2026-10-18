@@ -736,7 +736,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7236136968
-    m_Localized: Handcrafting, workbench, and furnace output
+    m_Localized: Handcrafting and workbench output
     m_Metadata:
       m_Items: []
   - m_Id: 7236136969
@@ -4719,7 +4719,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740524
-    m_Localized: "Growth Speed\nSmelting Speed\nCrafting Yield"
+    m_Localized: "Growth Speed\nCrafting Yield"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740525

@@ -53,6 +53,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 ## 定义、资源与状态
 
 - Manifest 唯一发现内容；装配计划在 `RuntimeItemDefinition` 冷路径编译具体 Prefab、组件槽与参数。`shellPrefab` 引用通用目录，独立外壳用 `shellAddress`；`sourcePrefab` 只供编辑器与冗余排除，源资产删除后同步移除该字段。创建物品不回退同名 Prefab。
+- ItemMgr 冷工厂只取 `GameRes.InstantiateItemShell` 原始外壳，用最终 ItemData 装配一次；公共 `InstantiatePrefab` 仍返回已配置实例。Load 按本 Item 的 StableName 单次建索引，排除子 Item 并拒绝重复槽位；回归见 `item_runtime/shell_final_configuration`。
 - 非 Actor 定义须显式提供或继承正数 `weight/volume` 与明确的 `stackable`；冷载荷表现外壳也遵守此契约。
 - `ModuleJsonConfigurator` 对 Item/Actor 参数采用严格契约；向量 JSON 显式写 x/y/z，Unity Vector 的计算属性不能交给 `JToken.FromObject`。显示名 gameName 属于具体定义；业务 id、翻译键和 `formerIds` 别名各自独立。
 - `GameRes.ResourceAssets` 持有 Sprite/材质/动画/外壳句柄。Shell 使用 Sprite Pivot 排序，子装饰以根 SortingGroup 保持整体深度；材质池复用恢复配置值或外壳默认值。通用占位图为 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，标签 ItemSprite。
@@ -61,6 +62,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - 单图动作通过独立父层组合，不改原视觉 localPose、Item 根或刚体；只暂停身体 Animator，附加视觉拒绝刚体/碰撞体，手持武器沿正式命中姿态链。切模式/卸载恢复父级与同级顺序并保留最新翻面；停用组件拒绝新动作，停用 GO 先归零表现层，正式卸载再解除。宿主 `OnDestroy` 通过非持久化 `IsBeingDestroyed` 标记只释放表现层引用，不向正在销毁的宿主重新挂节点；仅移除动画组件或正常回池仍恢复存活层级。回归归属 `item_runtime/single_sprite_animation`，独立规则不代表动作观感已验收。
 - F5 `RefreshLiveConfiguration` 原位更新改变的显式参数和仍受定义控制的视觉，不替换 ItemData/模块集合或重新 Load；结构与删除参数后的默认值应用于新实例。`ApplyResourceConfiguration/OnResourcesReloaded` 保留进度并更新缓存/订阅。发布时清闲置池并禁用活跃旧实例回池。
 - 恢复先重建当前定义，再按稳定模块名合并实例状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配保留时间、次数和初始化标记。制作耐久倍率进入实例堆叠身份。
+- 材料热转化由 `ItemMatterRuntime` 与 `MaterialThermalProcessor` 按自身温度结算，热源只供热；`matter.transitions` 的 `inputAmount/remainderOutputItemId` 支持同堆整组与尾数多产物，全部产物和扣料共用原子事务。Wood 标签 500℃起每3份产1炭、余数每份1灰，木炭1000℃起1:1灰；转化继承真实温度，禁止跨槽拼木材组。
 - 物质状态在 `ItemData.MatterState`，静态相变/反应在定义 `matter/reactions`。玩法分类使用 `ItemData.Tags`；战利品通过顶层 lootTableId 引用稳定物品 ID。`IResourceYieldModifier` 在资源源头聚合，每条产出链应用一次并统一随机取整。
 
 - 燃烧由 Fuel 数据、Combustion 状态、FuelInteraction 交互与 ICombustionStateReceiver 表现组合；视觉尺寸/密度由 flameScale/flameHeightRatio/flameEmissionMultiplier 配置，attachFlameToAnchor 让主体火苗跟随燃烧点，followSourceRenderer/sourceRendererAnchorOffset 绑定真实贴图动画。火把底图为熄灭状态，熄灭清空粒子；氧气模块只管储备/缺氧并暴露 SupplyOxygen，环境/装备供给方负责真实条件与扣量。`requiredTool/minimumTier` 是采集专精加成参考，不是普通采矿资格。

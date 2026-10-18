@@ -115,22 +115,19 @@ public sealed class WorldDifficultyRules
     }
 }
 
-/// <summary>种植、熔炼、燃料与制作产出规则。</summary>
+/// <summary>种植、燃料与制作产出规则。</summary>
 public sealed class ProductionDifficultyRules
 {
     public float CropGrowthMultiplier { get; }
-    public float SmeltingSpeedMultiplier { get; }
     public float FuelConsumptionMultiplier { get; }
     public float CraftingOutputMultiplier { get; }
 
     public ProductionDifficultyRules(
         float cropGrowthMultiplier,
-        float smeltingSpeedMultiplier,
         float fuelConsumptionMultiplier,
         float craftingOutputMultiplier)
     {
         CropGrowthMultiplier = cropGrowthMultiplier;
-        SmeltingSpeedMultiplier = smeltingSpeedMultiplier;
         FuelConsumptionMultiplier = fuelConsumptionMultiplier;
         CraftingOutputMultiplier = craftingOutputMultiplier;
     }
@@ -155,7 +152,6 @@ public sealed class GameDifficultyRuleValues
     public float SpawnPopulationMultiplier = 1f;
     public float LootAmountMultiplier = 1f;
     public float CropGrowthMultiplier = 1f;
-    public float SmeltingSpeedMultiplier = 1f;
     public float FuelConsumptionMultiplier = 1f;
     public float CraftingOutputMultiplier = 1f;
 
@@ -179,7 +175,6 @@ public sealed class GameDifficultyRuleValues
         SpawnPopulationMultiplier = NormalizeMultiplier(SpawnPopulationMultiplier, 0.25f);
         LootAmountMultiplier = NormalizeMultiplier(LootAmountMultiplier, 0f);
         CropGrowthMultiplier = NormalizeMultiplier(CropGrowthMultiplier, 0f);
-        SmeltingSpeedMultiplier = NormalizeMultiplier(SmeltingSpeedMultiplier, 0.1f);
         FuelConsumptionMultiplier = NormalizeMultiplier(FuelConsumptionMultiplier, 0f);
         CraftingOutputMultiplier = NormalizeMultiplier(CraftingOutputMultiplier, 0.25f);
     }
@@ -299,7 +294,6 @@ public static class GameDifficultyCatalog
                 Mathf.Lerp(1f, 0.65f, t)),
             new ProductionDifficultyRules(
                 Mathf.Lerp(1f, 0.70f, t),
-                Mathf.Lerp(1f, 0.75f, t),
                 Mathf.Lerp(1f, 1.6f, t),
                 Mathf.Lerp(1f, 0.80f, t)));
     }
@@ -354,7 +348,6 @@ public static class GameDifficultyCatalog
                 values.LootAmountMultiplier),
             new ProductionDifficultyRules(
                 values.CropGrowthMultiplier,
-                values.SmeltingSpeedMultiplier,
                 values.FuelConsumptionMultiplier,
                 values.CraftingOutputMultiplier));
     }
@@ -380,7 +373,6 @@ public static class GameDifficultyCatalog
             SpawnPopulationMultiplier = saveData.CustomSpawnPopulationMultiplier,
             LootAmountMultiplier = saveData.CustomLootAmountMultiplier,
             CropGrowthMultiplier = saveData.CustomCropGrowthMultiplier,
-            SmeltingSpeedMultiplier = saveData.CustomSmeltingSpeedMultiplier,
             FuelConsumptionMultiplier = saveData.CustomFuelConsumptionMultiplier,
             CraftingOutputMultiplier = saveData.CustomCraftingOutputMultiplier
         };
@@ -411,7 +403,6 @@ public static class GameDifficultyCatalog
         saveData.CustomSpawnPopulationMultiplier = values.SpawnPopulationMultiplier;
         saveData.CustomLootAmountMultiplier = values.LootAmountMultiplier;
         saveData.CustomCropGrowthMultiplier = values.CropGrowthMultiplier;
-        saveData.CustomSmeltingSpeedMultiplier = values.SmeltingSpeedMultiplier;
         saveData.CustomFuelConsumptionMultiplier = values.FuelConsumptionMultiplier;
         saveData.CustomCraftingOutputMultiplier = values.CraftingOutputMultiplier;
     }

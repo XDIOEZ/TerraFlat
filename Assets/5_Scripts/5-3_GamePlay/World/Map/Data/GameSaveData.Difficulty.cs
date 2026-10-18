@@ -21,7 +21,6 @@ public partial class GameSaveData
     [ShowInInspector] public float CustomSpawnPopulationMultiplier = 1f;
     [ShowInInspector] public float CustomLootAmountMultiplier = 1f;
     [ShowInInspector] public float CustomCropGrowthMultiplier = 1f;
-    [ShowInInspector] public float CustomSmeltingSpeedMultiplier = 1f;
     [ShowInInspector] public float CustomFuelConsumptionMultiplier = 1f;
     [ShowInInspector] public float CustomCraftingOutputMultiplier = 1f;
 }
