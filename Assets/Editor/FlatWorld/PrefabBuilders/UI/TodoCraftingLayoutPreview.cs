@@ -99,7 +99,7 @@ public static class TodoCraftingLayoutPreview
             var bounds = serialized.FindProperty("boundsTarget").objectReferenceValue as RectTransform;
             Vector2 margin = serialized.FindProperty("safeMargin").vector2Value;
             float presentationScale = serialized.FindProperty("presentationScale").floatValue;
-            Require(Mathf.Abs(presentationScale - (id == "UI_HandCraftTable" ? 0.6f : 1f)) < 0.001f,
+            Require(Mathf.Abs(presentationScale - (id == "UI_HandCraftTable" ? 0.6f : 0.8f)) < 0.001f,
                 $"{id} 制作面板表现比例不正确：{presentationScale}。");
             Require(bounds != null, $"{id} 缺少固定内容边界引用。");
             Require(Mathf.Abs(bounds.sizeDelta.x - 1344f) < 0.01f &&

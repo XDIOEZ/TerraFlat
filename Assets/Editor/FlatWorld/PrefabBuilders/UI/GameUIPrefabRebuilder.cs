@@ -1176,7 +1176,8 @@ public static class GameUIPrefabRebuilder
         SafeAreaScaleGroup scale = root.GetComponent<SafeAreaScaleGroup>();
         if (scale == null)
             scale = root.AddComponent<SafeAreaScaleGroup>();
-        scale.Configure(content, new[] { content }, new Vector2(24f, 24f), root.name == "UI_HandCraftTable" ? 0.6f : 1f);
+        // 制作台整体缩到八成，为底部快捷栏留出空间。
+        scale.Configure(content, new[] { content }, new Vector2(24f, 24f), root.name == "UI_HandCraftTable" ? 0.6f : 0.8f);
     }
 
     /// <summary>重建前还原旧构建坐标空间，避免重复包裹或改变内部绝对布局。</summary>

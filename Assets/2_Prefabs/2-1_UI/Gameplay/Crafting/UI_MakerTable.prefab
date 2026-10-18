@@ -2007,7 +2007,7 @@ MonoBehaviour:
   - {fileID: 4557262765215977988}
   safeMargin: {x: 24, y: 24}
   maxScale: 1
-  presentationScale: 1
+  presentationScale: 0.8
 --- !u!1 &2655137761059294619
 GameObject:
   m_ObjectHideFlags: 0
