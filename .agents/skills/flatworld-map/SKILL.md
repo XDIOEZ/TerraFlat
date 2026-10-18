@@ -34,7 +34,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - JSON 构建 `RuntimeTileDefinition` 和共享 Behaviour；`TileBehaviourRegistry` 按显式 `type` 工厂解析，未知字段/非法数值失败。`TileData.ID/Name` 来自定义，位置/进度属于实例，`CreateTileData/Clone` 产生单格副本。`TileDefinitionEditorCatalog` 保存 JSON，`GameRes.GetTileBlock` 返回运行时定义。
 - Ground 是真实底材，Liquid 独立保存深度与身份。`WorldLiquidSystem.TryPump/TrySet` 改液体，地面替换不自动清水。`TerrainSupportLayer` 投影平台表面并遮断底部液体接触，底部液体仍存在。
 - `WorldLiquidSourceResolver` 从 Liquid 层解析 `LiquidDefinition`；`WorldLiquidSourceTarget` 独立于 TileData。世界液体权威水量是 `int LiquidLevel` 0～10，一份液体等于一级；生成向上取整，正值至少一级。`GetLiquidDepth` 只由等级除以 10 派生表现比例。`TryPour` 成功只发布本格 `SurfaceLiquidAdded`，耕地按本格订阅吸水；取水派生规则等待端口事务成功 `PublishState` 后的 `SurfaceLiquidPumped`。
-- `WorldLiquidReplenishment` 订阅 `SurfaceLiquidPumped`，只让取水点四邻水格各检查一次自己的四邻；只补 `GetLiquidBaseline` 中原有同种液体且当前为零的格子，每补一格按供水格当前 `max(1, LiquidLevel / 4)` 转移整数层级，补水不递归。普通陆地、异种液体和显式挡水格不参与；复用 `TrySet` 的差量/表现通知，规则在 `SurfaceFluids/replenishment.lua`。
+- `WorldLiquidReplenishment` 订阅 `SurfaceLiquidPumped`，固定取水点及四邻涉及的最多 16 条邻边，双向按水量差的一半转移整级水量，直到邻边差不超过一级；供水格保留至少一级，空格与浅水格均可补水。目标须为 `GetLiquidBaseline` 中原有同种水域，普通陆地、异种液体和显式挡水格不参与；不递归扩张、不凭空造水，复用 `TrySet` 的差量/表现通知，规则在 `SurfaceFluids/replenishment.lua`。
 - 海底材质读取 `height`：`terrain.oceanSandMinimumHeight..SeaLevel` 为沙底，其下石底；沙滩由 `BeachLevel` 控制。河床中心/边缘材质来自 `river.bed*`，边缘底材只用于局部沉积段；湖泊读 `terrain.riverbedTileId`。
 - `riverFlowX/Y` 保存真实河道下游切线，`ChunkMgr.TryGetRuntimeWaterCurrent` 是消费入口；湖面静止，海洋表层暂用 `windX/Y`。实验流向经 `TryGetExperimentalLiquidFlow` 查询，不覆写天然流向；显式挡水来源登记 `WorldLiquidFlowObstacles`，平台不自动挡水。
 - 承重读取地块 `loadCapacity` 或液体 `worldWater.loadCapacity`，覆盖层优先于底部液面。共享 Behaviour 只保存规则，长按/Tick/接触时钟属于角色。

@@ -13,6 +13,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("surface_fluids", "replenishment", WorldLiquidReplenishmentRules);
         Register("surface_fluids", "replenishment_limits", WorldLiquidReplenishmentLimits);
+        Register("surface_fluids", "replenishment_pair", WorldLiquidReplenishmentPair);
     }
 
     private static TerrainCell ReplenishmentGround(int blocking = 0, TerrainCellFlags flags = TerrainCellFlags.Walkable) =>
@@ -20,6 +21,38 @@ public static partial class GameplayTestSystemProbe
 
     private static RuntimeTerrainTileSample ReplenishmentSample(ChunkTerrainData terrain, int x, int y) =>
         new(default, terrain, new Vector2Int(x, y), new Vector2Int(x, y), terrain.GetCell(x, y), 0);
+
+    private static JObject WorldLiquidReplenishmentPair(JObject args)
+    {
+        int sourceLevel = (int)Number(args, "sourceLevel", 10);
+        int targetLevel = (int)Number(args, "targetLevel", 0);
+        using var buffer = new ChunkTerrainBuffer(2, 1);
+        int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int x = 0; x < 2; x++)
+        {
+            buffer.SetCell(x, 0, ReplenishmentGround());
+            buffer.SetLiquid(x, 0, water, 1);
+        }
+        using ChunkTerrainData terrain = buffer.Seal();
+        terrain.SetLiquid(0, 0, sourceLevel == 0 ? 0 : water, sourceLevel);
+        terrain.SetLiquid(1, 0, targetLevel == 0 ? 0 : water, targetLevel);
+        var source = ReplenishmentSample(terrain, 0, 0);
+        var target = ReplenishmentSample(terrain, 1, 0);
+        int amount = WorldLiquidReplenishment.GetTransferLevel(source, target);
+        // 两端只写回正式规则返回的转移量，Lua 检查全部整数水量组合。
+        if (amount > 0)
+        {
+            terrain.SetLiquid(0, 0, water, sourceLevel - amount);
+            terrain.SetLiquid(1, 0, water, targetLevel + amount);
+        }
+        return new JObject
+        {
+            ["amount"] = amount, ["source"] = terrain.GetLiquidLevel(0, 0),
+            ["target"] = terrain.GetLiquidLevel(1, 0),
+            ["forwardAgain"] = WorldLiquidReplenishment.GetTransferLevel(source, target),
+            ["reverseAgain"] = WorldLiquidReplenishment.GetTransferLevel(target, source)
+        };
+    }
 
     private static JObject WorldLiquidReplenishmentRules(JObject args)
     {
@@ -69,10 +102,10 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject WorldLiquidReplenishmentLimits(JObject args)
     {
-        using var buffer = new ChunkTerrainBuffer(8, 1);
+        using var buffer = new ChunkTerrainBuffer(9, 1);
         int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
         int sea = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.SeaWaterId);
-        for (int x = 0; x < 8; x++)
+        for (int x = 0; x < 9; x++)
         {
             buffer.SetCell(x, 0, ReplenishmentGround());
             if (x != 2 && x != 7) buffer.SetLiquid(x, 0, x == 4 ? sea : water, x == 0 ? 10 : 1);
@@ -83,6 +116,7 @@ public static partial class GameplayTestSystemProbe
         foreach (int x in new[] { 1, 4, 5, 6 }) terrain.SetLiquid(x, 0, 0, 0);
         terrain.SetLiquid(7, 0, water, 5);
         terrain.SetLiquid(7, 0, 0, 0);
+        terrain.SetLiquid(8, 0, sea, 1);
         var source = ReplenishmentSample(terrain, 0, 0);
         int Read(int x) => WorldLiquidReplenishment.GetTransferLevel(source, ReplenishmentSample(terrain, x, 0));
         var result = new JObject
@@ -90,7 +124,7 @@ public static partial class GameplayTestSystemProbe
             ["emptyBasin"] = Read(1), ["originalLevel"] = terrain.GetLiquidBaseline(1, 0).LiquidLevel,
             ["dryLand"] = Read(2), ["wetNeighbour"] = Read(3), ["otherLiquid"] = Read(4),
             ["wall"] = Read(5), ["blockedFlag"] = Read(6), ["pouredLand"] = Read(7),
-            ["sameCell"] = Read(0)
+            ["sameCell"] = Read(0), ["changedLiquid"] = Read(8)
         };
         terrain.SetCell(0, 0, ReplenishmentGround(99));
         result["blockedSource"] = Read(1);
