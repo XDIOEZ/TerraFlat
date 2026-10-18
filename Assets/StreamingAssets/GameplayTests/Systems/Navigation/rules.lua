@@ -40,6 +40,17 @@ test.system("navigation", "canonical_batch", {}, function(data)
         "批量拓扑归一化改变了环绕接缝或无限世界坐标")
 end, "区块导航批量坐标归一化与旧接口严格等价")
 
+test.system("navigation", "chunk_block_pool", {}, function(data)
+    assert(data.originalWater and data.emptyAfterUnload and data.reusedClean and data.clearReset,
+        "导航块卸载复用后遗留旧的地形、水深、代价或世界格")
+    assert(data.initiallyBlocked and data.blockerPreserved and data.blockerReleased,
+        "导航块回收影响动态阻挡源的登记与解除")
+    assert(data.rounds == 64 and data.createdAtWarmup == 1 and data.createdAfterRounds == 1,
+        "预热后64轮不同区块装卸仍构造新的导航块数组")
+    assert(data.poolBounded and data.worldResetReleasesPool and data.resetRequiresFreshBlock,
+        "导航缓存超过上限，或切换世界后没有释放旧数组")
+end, "导航区块复用零分配、完整清理及动态阻挡隔离")
+
 test.system("navigation", "machine_obstacle_dirty", {}, function(data)
     assert(data.unchanged and data.removedOnlyOne and data.movedNotRemoved,
         "机器碰撞增量索引误删未改变的设备，或迁移锚点后仍删除已移动设备")

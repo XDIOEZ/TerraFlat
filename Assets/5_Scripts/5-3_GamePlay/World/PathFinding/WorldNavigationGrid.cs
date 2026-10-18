@@ -24,6 +24,7 @@ public readonly struct WorldNavigationCell
 public sealed class WorldNavigationGrid
 {
     private const int MaxPreciseChangedCells = 2048;
+    private const int MaxPooledNavigationBlocks = 64;
 
     private static readonly Vector2Int[] NeighbourOffsets =
     {
@@ -34,7 +35,10 @@ public sealed class WorldNavigationGrid
     #region Chunk 连续格数据
     private const int BlockSize = 16;
     private readonly Dictionary<Vector2Int, ChunkNavigationBlock> blocks = new(128);
+    private readonly Stack<ChunkNavigationBlock> pooledBlocks = new(MaxPooledNavigationBlocks);
     private int registeredCellCount;
+    internal int CreatedNavigationBlockCount { get; private set; }
+    internal int PooledNavigationBlockCount => pooledBlocks.Count;
 
     private sealed class ChunkNavigationBlock
     {
@@ -73,7 +77,13 @@ public sealed class WorldNavigationGrid
         Vector2Int origin = BlockOrigin(cell);
         if (!blocks.TryGetValue(origin, out ChunkNavigationBlock block))
         {
-            block = new ChunkNavigationBlock();
+            if (pooledBlocks.Count > 0)
+                block = pooledBlocks.Pop();
+            else
+            {
+                block = new ChunkNavigationBlock();
+                CreatedNavigationBlockCount++;
+            }
             blocks.Add(origin, block);
         }
         int index = BlockIndex(cell, origin);
@@ -91,7 +101,13 @@ public sealed class WorldNavigationGrid
         block.Cells[index] = default;
         block.Count--;
         registeredCellCount--;
-        if (block.Count == 0) blocks.Remove(origin);
+        if (block.Count == 0)
+        {
+            // 最后一个格子已清空，回收完整数组供下一个流式区块复用。
+            blocks.Remove(origin);
+            if (pooledBlocks.Count < MaxPooledNavigationBlocks)
+                pooledBlocks.Push(block);
+        }
         return true;
     }
     #endregion
@@ -169,6 +185,8 @@ public sealed class WorldNavigationGrid
     public void Clear()
     {
         Cleared?.Invoke();
+        // 切换世界时释放池内缓存，不把上一世界的数组长期留在内存。
+        pooledBlocks.Clear();
         if (registeredCellCount == 0 && blockerCounts.Count == 0 && blockerCells.Count == 0)
             return;
 

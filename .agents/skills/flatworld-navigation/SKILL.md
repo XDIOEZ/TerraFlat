@@ -28,6 +28,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - 来源 ID 为 long：Unity 有符号 InstanceID 保留低域，数据来源占高 32 位域；后端交接先撤旧再登新。失败/未表现完成的块不注册，View 入池前 Unbind。
 - Ground 基础成本与 Liquid 成本独立；`WorldLiquidSystem.GetNavigationCost` 合成有限高成本，液体仍可走，抽干回到底材成本。平台 `TerrainSupportLayer.GetSurfaceCell` 遮断液体成本并使有效液深为 0。
 - 区块注册、局部批量更新和卸载先冻结 `WorldTopologyDomain`，已规范化格使用 `GetEffectiveWalkableNormalized/SetCanonicalCell/RemoveCanonicalCell`，不逐格重新读取活动星球；外部 `SetCell/RemoveCell` 仍自行归一化。规则 `navigation/canonical_batch` 对照两套入口、失效版本、液深及环绕。
+- `WorldNavigationGrid` 的 16×16 导航块在最后一格移除后复用完整数组（最多缓存64块），`Clear` 释放缓存；动态阻挡另有独立归属，不随格数据池化清除。`navigation/chunk_block_pool` 检查流式重载、来源阻挡及缓存上限。
 - 直线快捷路径和路点跳过都检查中间格成本不高于端点；可走格成本变化也使旧路径失效。总成本读 `WorldNavigationPathResult.TotalCost`。
 - `DestinationResult` 表达目的地结果，含 `RejectedByPathCost`；同目标四次无路径后保持 Failed，目标/网格修订/成功路径解除。新路径超限不覆盖已接受路径，旧路径走完后停续算，明显目标移动才再评估。
 - 追击上限随 RequestPath 进入共享搜索，前沿到上限只结束该请求；成功/拒绝/取消/失败清等待链，缓存只用已收敛起点成本。
