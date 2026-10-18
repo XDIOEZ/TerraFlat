@@ -123,14 +123,16 @@ namespace PuertsUnityMcp.Editor
                 warnings = warnings.ToArray()
             };
             string root = Path.GetFullPath(outputRoot);
+            string guidePath = Path.Combine(root, Path.GetFileName(snapshot.instructionsFile));
+            if (!File.Exists(guidePath) || File.ReadAllText(guidePath) != analysisGuide)
+                AtomicFile.WriteAllText(guidePath, analysisGuide);
             string pending = Path.Combine(root, ".pending-" + snapshotId);
             string destination = Path.Combine(root, snapshotId);
             Directory.CreateDirectory(pending);
             AtomicFile.WriteJson(Path.Combine(pending, "profiler-analysis.json"), snapshot);
             AtomicFile.WriteJson(Path.Combine(pending, "console-logs.json"), console);
             File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
-            AtomicFile.WriteAllText(Path.Combine(pending, snapshot.instructionsFile), analysisGuide);
-            // 前置说明、JSON 与整屏截图都落盘后才公布正式目录。
+            // 共享说明放在根目录，报告只保留 JSON 与整屏截图。
             Directory.Move(pending, destination);
             return destination;
         }
@@ -141,7 +143,7 @@ namespace PuertsUnityMcp.Editor
             public int schemaVersion = 2;
             public string snapshotId, capturedAtLocal, capturedAtUtc, projectPath, unityVersion;
             public string consoleFile = "console-logs.json";
-            public string instructionsFile = "00-READ-ME-FIRST.md";
+            public string instructionsFile = "../00-READ-ME-FIRST.md";
             public UnityMcpDesktopScreenshot.ScreenshotInfo screenshot;
             public int selectedFrameIndex, selectedDisplayFrame;
             public bool editorPlayingAtExport, editorPausedAtExport, deepProfilingAtExport;
