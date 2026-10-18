@@ -491,9 +491,21 @@ namespace FlatWorld.WorldModel
             /// <summary>冲积带扫描只在越界时回绕坐标，避免每个重复候选格都执行取模。</summary>
             internal bool TryGetCandidateIndex(Int2 position, out int index)
             {
-                return TryGetIndex(new Int2(
-                    NormalizeWhenOutside(position.X, worldMinX, spanX),
-                    NormalizeWhenOutside(position.Y, worldMinY, spanY)), out index);
+                return TryGetCandidateIndex(CandidateLocalX(position.X), CandidateLocalY(position.Y), out index);
+            }
+
+            // 冲积带同一圆核内的行列坐标分别复用，保留原先归一化和跨周就近投影顺序。
+            internal int CandidateLocalX(int x) => ShiftNearChunk(
+                NormalizeWhenOutside(x, worldMinX, spanX), centerX, spanX) - originX;
+
+            internal int CandidateLocalY(int y) => ShiftNearChunk(
+                NormalizeWhenOutside(y, worldMinY, spanY), centerY, spanY) - originY;
+
+            internal bool TryGetCandidateIndex(int x, int y, out int index)
+            {
+                bool contains = x >= -Padding && y >= -Padding && x < maximumX && y < maximumY;
+                index = contains ? (y + Padding) * Width + x + Padding : -1;
+                return contains;
             }
 
             private static int NormalizeWhenOutside(int position, int minimum, int span)
@@ -576,6 +588,20 @@ namespace FlatWorld.WorldModel
             internal bool Merge(Int2 position, double strength)
             {
                 if (!window.TryGetCandidateIndex(position, out int index)) return false;
+                return MergeIndexed(position, index, strength);
+            }
+
+            internal int MapX(int x) => window.CandidateLocalX(x);
+            internal int MapY(int y) => window.CandidateLocalY(y);
+
+            internal bool MergeMapped(Int2 position, int mappedX, int mappedY, double strength)
+            {
+                if (!window.TryGetCandidateIndex(mappedX, mappedY, out int index)) return false;
+                return MergeIndexed(position, index, strength);
+            }
+
+            private bool MergeIndexed(Int2 position, int index, double strength)
+            {
                 if (denseLength == 0)
                 {
                     HeightQueries++;

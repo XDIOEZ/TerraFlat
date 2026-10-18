@@ -1412,6 +1412,27 @@ namespace FlatWorld.WorldModel
             double centerStrength = Math.Sqrt(flatness) * (0.55d + Math.Sqrt(flowT) * 0.45d);
 
             FloodplainKernel kernel = FloodplainKernel.ForRadius(radius);
+            // 常见圆核将 X/Y 投影从逐像素降为逐行列，超大半径保留原路径避免栈空间过大。
+            if (radius <= 96)
+            {
+                int diameter = radius * 2 + 1;
+                Span<int> mappedX = stackalloc int[diameter];
+                Span<int> mappedY = stackalloc int[diameter];
+                for (int i = 0; i < diameter; i++)
+                {
+                    mappedX[i] = floodplain.MapX(center.X + i - radius);
+                    mappedY[i] = floodplain.MapY(center.Y + i - radius);
+                }
+                foreach (FloodplainKernel.Sample sample in kernel.Samples)
+                {
+                    if (measureCandidates) candidates++;
+                    Int2 position = new(center.X + sample.X, center.Y + sample.Y);
+                    if (floodplain.MergeMapped(position, mappedX[sample.X + radius],
+                        mappedY[sample.Y + radius], centerStrength * sample.Strength) && measureCandidates)
+                        mergeAttempts++;
+                }
+                return;
+            }
             foreach (FloodplainKernel.Sample sample in kernel.Samples)
             {
                 if (measureCandidates) candidates++;
