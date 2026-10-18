@@ -83,5 +83,6 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - `NaturalEntityEcsService` 为天气/耐候、已种植土壤和导航占地维护独立输入索引，注册、卸载、恢复和配置刷新时增量更新；Profiler `NaturalEntityRuntime.FreezeNavigation/FreezeEnvironment/FreezeSoil` 分别记录耗时。
 - `NaturalEntityRuntime.FreezeEnvironment` 性能摘要的 work 是输入自然物数，gauge 为最近定时批次的输入规模；Profiler 子段 `.Weather/.Temperature/.WriteInputs` 定位天气查询、温度采样和 ECS 写入（仅 Profiler 细分，不进入摘要计时）。`NaturalEntityRuntime.Environment.WeatherSamples/TemperatureSamples/MissingWeather/MissingTemperature/InputWrites` 按批累计查询尝试、缺失样本与实际组件写次数；GM“性能 DEBUG”统计开启才累计数量，慢摘要另行开启，Profiler 点始终可见。查询失败保留正式回退规则，同批只冻结服务引用，每件天气和温度仍实时读取。
 - `FreezeEnvironment` 的一批资源共享 `TemperatureMgr.PointSamplingContext`，目标区块的相邻热源输入只准备一次；同步作用域结束即释放引用，原 0.25 秒间隔和距离规则保持不变。
+- 自然物土壤灌溉沿用原九宫格顺序和水量事务；批量寻址先筛实际表层水格，干格及支撑面遮水不再构造完整 Tile 样本，变化实时读取。规则 `ecology/soil_liquid_prefilter` 覆盖抽干、支撑恢复和环绕。
 - 自然物土壤输入与提交共享 `FarmlandSystem.SoilSamplingBatch` 的本轮寻址及可复用容器，九宫格灌溉和消费仍逐件同步执行。发布用 `NaturalEntitySimulation.BodyReadBatch` 拷贝只读值，组件写入、外部 `NotifyChanged` 和移除使对应值失效；不跨批保留。碰撞参数冷编译为 `NaturalEntitySpatialGeometry`，外观版本只在真实 Bounds 变化时重建空间桶。
 - 自然资源表现按 Dirty/Event 更新，几何版本与外观版本独立；TreeSortingVisual 用根镜像 SortingGroup 与玩家混排，主体不重复 BRG。客户端不推进权威植物 Job，采集命令/增量同步有独立接入点。旧 `DroppedItems/Core` ECS 实现仅为 Editor 学习参考。

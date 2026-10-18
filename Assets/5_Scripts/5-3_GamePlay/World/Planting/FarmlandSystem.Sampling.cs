@@ -32,6 +32,14 @@ public static partial class FarmlandSystem
                 query.IsForWorld(manager.WorldRuntime) && query.TrySample(position, out sample);
         }
 
+        /// <summary>无表层水的邻格直接跳过，保留真实水格的完整读取及抽取事务。</summary>
+        internal bool TrySampleSurfaceLiquid(Vector2 position, out RuntimeTerrainTileSample sample)
+        {
+            sample = default;
+            return leased && hasQuery && manager != null &&
+                query.IsForWorld(manager.WorldRuntime) && query.TrySampleSurfaceLiquid(position, out sample);
+        }
+
         // 返回容器只借给当前调用者，下一次读取会覆盖，不能存入实体或跨回调保留。
         internal bool TryRead(Vector2Int cell, out TileData_Farmland soil,
             out RuntimeTerrainTileSample sample, bool allowNaturalSoil)

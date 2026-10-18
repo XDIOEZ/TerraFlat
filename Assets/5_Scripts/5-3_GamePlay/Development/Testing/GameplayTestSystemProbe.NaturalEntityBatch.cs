@@ -17,6 +17,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ecology/body_read_batch", NaturalEntityBodyReadBatch);
         operations.Add("ecology/spatial_geometry", NaturalEntitySpatialGeometryValues);
         operations.Add("ecology/soil_snapshot_reuse", NaturalEntitySoilSnapshotReuse);
+        operations.Add("ecology/soil_liquid_prefilter", NaturalEntitySoilLiquidPrefilter);
     }
 
     // 只创建自有 ECS World，读取正式批次结果，不触碰玩家世界或重算业务规则。
@@ -121,6 +122,56 @@ public static partial class GameplayTestSystemProbe
         FarmlandSystem.ReadSoilSnapshot(sample, soil);
         result["emptyWater"] = soil.waterValue; result["emptyRemainder"] = soil.waterConsumptionRemainder;
         return result;
+    }
+
+    /// <summary>预筛水格与完整采样保持一致，支撑面遮水、抽干及跨周仍读取当前权威数据。</summary>
+    private static JObject NaturalEntitySoilLiquidPrefilter(JObject args)
+    {
+        using var world = new WorldRuntime("soil-liquid-prefilter", 1);
+        var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));
+        var profile = new ChunkGenerationProfileSnapshot("soil-liquid-prefilter", 1, 4, 2);
+        ChunkGenerationRequest request = world.BeginChunkGeneration(address, 1, profile);
+        using var buffer = new ChunkTerrainBuffer(4, 2);
+        int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int y = 0; y < 2; y++)
+        for (int x = 0; x < 4; x++)
+            buffer.SetCell(x, y, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+        buffer.SetLiquid(1, 0, water, 4);
+        buffer.SetLiquid(2, 0, water, 6);
+        buffer.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 2, 0, 90f);
+        using (var result = new ChunkGenerationResult(request, buffer))
+            if (!world.TryCommit(result, out string reason))
+                throw new InvalidOperationException("土壤液体预筛夹具提交失败：" + reason);
+
+        var batch = new ChunkMgr.RuntimeTerrainPresenceQuery(world, default, "surface", 4, 2);
+        bool dry = batch.TrySample(new Vector2(0.5f, 0.5f), out _) &&
+            !batch.TrySampleSurfaceLiquid(new Vector2(0.5f, 0.5f), out _);
+        bool waterMatches = batch.TrySample(new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample regular) &&
+            batch.TrySampleSurfaceLiquid(new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample quick) &&
+            quick.WorldCell == regular.WorldCell && quick.LocalCell == regular.LocalCell &&
+            quick.LiquidLevel == regular.LiquidLevel && quick.LiquidLevel == 4 &&
+            quick.LiquidId == regular.LiquidId;
+        bool covered = batch.TrySample(new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample underSupport) &&
+            underSupport.LiquidLevel == 0 && underSupport.Terrain.GetLiquidLevel(2, 0) == 6 &&
+            !batch.TrySampleSurfaceLiquid(new Vector2(2.5f, 0.5f), out _);
+        bool missing = !batch.TrySampleSurfaceLiquid(new Vector2(4.5f, 0.5f), out _);
+
+        if (!world.TryGetChunk(address, out ChunkRuntime chunk))
+            throw new InvalidOperationException("土壤液体夹具区块丢失。");
+        chunk.Terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 2, 0, 0f);
+        bool uncovered = batch.TrySampleSurfaceLiquid(new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample released) &&
+            released.LiquidLevel == 6;
+        chunk.Terrain.SetLiquid(1, 0, 0, 0);
+        bool drained = !batch.TrySampleSurfaceLiquid(new Vector2(1.5f, 0.5f), out _);
+        var wrapped = new ChunkMgr.RuntimeTerrainPresenceQuery(world,
+            new WorldTopologyDomain(new int2(0, 0), new int2(16, 16), true), "surface", 4, 2);
+        bool seam = wrapped.TrySampleSurfaceLiquid(new Vector2(18.5f, 0.5f), out RuntimeTerrainTileSample across) &&
+            across.WorldCell == new Vector2Int(2, 0) && across.LiquidLevel == 6;
+        return new JObject
+        {
+            ["dry"] = dry, ["waterMatches"] = waterMatches, ["covered"] = covered,
+            ["missing"] = missing, ["uncovered"] = uncovered, ["drained"] = drained, ["seam"] = seam
+        };
     }
 
     #endregion

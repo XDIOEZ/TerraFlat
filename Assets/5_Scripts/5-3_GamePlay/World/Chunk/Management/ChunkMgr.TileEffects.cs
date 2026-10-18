@@ -252,13 +252,38 @@ public partial class ChunkMgr
 
             var worldCell = new Vector2Int(Mathf.FloorToInt(normalized.x), Mathf.FloorToInt(normalized.y));
             var localCell = new Vector2Int(worldCell.x - cachedOriginX, worldCell.y - cachedOriginY);
+            sample = CreateLoadedSample(worldCell, localCell);
+            return true;
+        }
+
+        /// <summary>九宫格灌溉先筛实际水格，干格不再构造完整地块样本。</summary>
+        internal bool TrySampleSurfaceLiquid(Vector2 position, out RuntimeTerrainTileSample sample)
+        {
+            sample = default;
+            Vector2 normalized = NormalizePosition(position);
+            if (!IsLoadedNormalized(normalized))
+                return false;
+
+            var worldCell = new Vector2Int(Mathf.FloorToInt(normalized.x), Mathf.FloorToInt(normalized.y));
+            var localCell = new Vector2Int(worldCell.x - cachedOriginX, worldCell.y - cachedOriginY);
+            if (!HasUncoveredSurfaceLiquid(cachedChunk.Terrain, localCell.x, localCell.y))
+                return false;
+            sample = CreateLoadedSample(worldCell, localCell);
+            return true;
+        }
+
+        internal static bool HasUncoveredSurfaceLiquid(ChunkTerrainData terrain, int x, int y) =>
+            terrain != null && !terrain.IsDisposed && terrain.GetLiquidLevel(x, y) > 0 &&
+            TerrainSupportLayer.GetTileId(terrain, x, y) == 0;
+
+        private RuntimeTerrainTileSample CreateLoadedSample(Vector2Int worldCell, Vector2Int localCell)
+        {
             ChunkTerrainData terrain = cachedChunk.Terrain;
             TerrainCell cell = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
             int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
-            sample = new RuntimeTerrainTileSample(cachedChunk.Address, terrain, worldCell, localCell, cell,
+            return new RuntimeTerrainTileSample(cachedChunk.Address, terrain, worldCell, localCell, cell,
                 supportId != 0 && cell.BlockingTileId == 0 && cell.BackTileId == 0
                     ? supportId : terrain.GetTopTileId(localCell.x, localCell.y));
-            return true;
         }
 
         /// <summary>候选树只读取群系，复用区块寻址且不构造地表覆盖与完整地块样本。</summary>

@@ -148,7 +148,7 @@ public static partial class FarmlandSystem
             Vector2Int cell = center + new Vector2Int(dx, dy);
             Vector2 position = new(cell.x + 0.5f, cell.y + 0.5f);
             RuntimeTerrainTileSample source;
-            bool found = batch != null ? batch.TrySample(position, out source) :
+            bool found = batch != null ? batch.TrySampleSurfaceLiquid(position, out source) :
                 ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out source);
             if (!found ||
                 source.Terrain == null || source.Terrain.IsDisposed)
