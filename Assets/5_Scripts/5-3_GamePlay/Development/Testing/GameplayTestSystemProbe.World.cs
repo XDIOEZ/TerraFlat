@@ -22,6 +22,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/river_diagnostic_aggregation", WorldRiverDiagnosticAggregation);
         operations.Add("terrain/climate_cache", WorldClimateCache);
         operations.Add("terrain/spawn_line", WorldSurfaceSpawnLine);
+        operations.Add("terrain/tile_search", WorldTileSearch);
         operations.Add("terrain/cave_dirt_ground", WorldCaveDirtGround);
         operations.Add("terrain/cave_loose_resources", WorldCaveLooseResources);
         operations.Add("time/calendar", WorldCalendar);

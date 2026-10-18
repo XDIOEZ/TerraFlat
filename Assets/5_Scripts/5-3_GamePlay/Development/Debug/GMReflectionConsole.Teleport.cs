@@ -105,7 +105,7 @@ public sealed partial class GMReflectionConsole
     private void OnDisable()
     {
         CancelTeleportTargeting();
-        CancelBiomeSearch();
+        CancelLocationSearches();
     }
 
     /// <summary>失焦时释放触点及输入锁。</summary>
@@ -220,9 +220,9 @@ public sealed partial class GMReflectionConsole
 
     private void TeleportToSelectedBiome()
     {
-        if (biomeSearchCancellation != null)
+        if (biomeSearchCancellation != null || tileSearchCancellation != null)
         {
-            SetStatus("正在定位群系，请等待或取消搜索。", Color.yellow);
+            SetStatus("正在搜索，请等待或取消当前搜索。", Color.yellow);
             return;
         }
         Player player = ItemMgr.GetInstance()?.User_Player;

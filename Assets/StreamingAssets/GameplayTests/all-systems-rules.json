@@ -83,6 +83,12 @@
       "enabled": true
     },
     {
+      "id": "terrain_tile_search_rules",
+      "name": "GM地块名称定位与取消",
+      "luaPath": "GameplayTests/Systems/Terrain/tile-search-rules.lua",
+      "enabled": true
+    },
+    {
       "id": "ecology_rules",
       "name": "自然生态与资源规则与边界",
       "luaPath": "GameplayTests/Systems/Ecology/rules.lua",

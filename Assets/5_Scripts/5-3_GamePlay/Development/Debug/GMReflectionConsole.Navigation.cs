@@ -1425,6 +1425,7 @@ public sealed partial class GMReflectionConsole
             "遗迹 建筑 structure ruin 传送",
             teleportButton.transform as RectTransform);
         BuildBiomeTeleportRow(page.Content);
+        BuildTileTeleportRow(page.Content);
     }
 
     #endregion
@@ -1612,7 +1613,7 @@ public sealed partial class GMReflectionConsole
         GmPageId groupId = GetPageGroup(pageId);
         GMConsolePreferences.SetActivePageIndex((int)groupId);
         if (groupId != GmPageId.World)
-            CancelBiomeSearch();
+            CancelLocationSearches();
         activeGmPage = groupId;
 
         foreach (KeyValuePair<GmPageId, GmPageView> pair in gmGroups)

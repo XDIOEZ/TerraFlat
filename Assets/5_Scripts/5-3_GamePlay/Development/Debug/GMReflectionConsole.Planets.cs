@@ -93,7 +93,7 @@ public sealed partial class GMReflectionConsole
             SetStatus("目标星球附近被其他星体覆盖，暂时无法传送。", Color.yellow);
             return;
         }
-        CancelBiomeSearch();
+        CancelLocationSearches();
         planetTeleportRunning = true;
         planetTeleportButton.interactable = false;
         bool accepted = session.TryTeleportPlayerToSpace(player, motion, succeeded =>

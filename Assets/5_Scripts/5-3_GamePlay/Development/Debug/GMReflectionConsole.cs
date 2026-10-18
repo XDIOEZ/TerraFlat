@@ -222,7 +222,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void OnDestroy()
     {
         Mod_ItemPicker.PickerLoaded -= HandlePickupPickerLoaded;
-        CancelBiomeSearch();
+        CancelLocationSearches();
         GMConsolePreferences.SavePendingChanges();
         if (FlatWorld.AIECS.Gameplay.AiecsPlayground.Active != null)
             FlatWorld.AIECS.Gameplay.AiecsPlayground.Active.HealthOverlaySuppressed = false;
@@ -848,7 +848,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnActiveSceneChanged(Scene previous, Scene next)
     {
-        CancelBiomeSearch();
+        CancelLocationSearches();
         activePageDataDirty = true;
         CancelPendingDayTimeJump();
         CancelTeleportTargeting();
@@ -974,7 +974,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void SetWindowVisible(bool visible)
     {
         if (!visible)
-            CancelBiomeSearch();
+            CancelLocationSearches();
         CancelTeleportTargeting();
         if (airdropBrowserRoot != null)
             airdropBrowserRoot.SetActive(false);

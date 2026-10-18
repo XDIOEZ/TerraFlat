@@ -19,6 +19,7 @@
       "loadCapacity": 8,
       "naturalPlantable": true,
       "displayName": "Tile_Grass",
+      "searchAliases": ["草地", "草原地块"],
       "tileAsset": "Tile_Grass",
       "data": {
         "type": "grass",
@@ -74,6 +75,7 @@
       "runtimeTileId": 3,
       "loadCapacity": 5,
       "displayName": "Tile_Sand",
+      "searchAliases": ["沙地", "沙子", "沙土地块"],
       "tileAsset": "Tile_Sand",
       "data": {
         "type": "universal",
@@ -91,6 +93,7 @@
       "runtimeTileId": 4,
       "loadCapacity": 10,
       "displayName": "Tile_Stone",
+      "searchAliases": ["石地", "石头地块", "岩石地块"],
       "tileAsset": "Tile_Stone",
       "data": {
         "type": "universal",
@@ -123,6 +126,7 @@
       "runtimeTileId": 9,
       "loadCapacity": 8,
       "displayName": "Tile_Ice",
+      "searchAliases": ["冰地", "冰块", "冰面"],
       "tileAsset": "TileBase_Ice",
       "data": {
         "type": "universal",

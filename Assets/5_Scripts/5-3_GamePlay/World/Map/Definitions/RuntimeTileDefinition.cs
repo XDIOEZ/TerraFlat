@@ -14,6 +14,7 @@ public sealed class RuntimeTileDefinition
     public string Id { get; }
     public int RuntimeTileId { get; }
     public string DisplayName { get; }
+    public IReadOnlyList<string> SearchAliases { get; }
     public string TileAssetId { get; }
     /// <summary>当前地表允许放置的最低承重需求上限。</summary>
     public int LoadCapacity { get; }
@@ -34,6 +35,7 @@ public sealed class RuntimeTileDefinition
         Id = dto.Id;
         RuntimeTileId = dto.RuntimeTileId;
         DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? dto.Id : dto.DisplayName;
+        SearchAliases = new List<string>(dto.SearchAliases ?? new List<string>()).AsReadOnly();
         TileAssetId = dto.TileAsset;
         LoadCapacity = dto.LoadCapacity;
         MinimumSurfaceDepth = dto.MinimumSurfaceDepth;

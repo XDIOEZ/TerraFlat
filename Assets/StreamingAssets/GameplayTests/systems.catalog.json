@@ -389,7 +389,8 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "terrain_rules"
+        "terrain_rules",
+        "terrain_tile_search_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Terrain/rules-suite.json",
       "integrationSuites": [

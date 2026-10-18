@@ -9,6 +9,12 @@
       "name": "地形生成规则与边界",
       "luaPath": "GameplayTests/Systems/Terrain/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "terrain_tile_search_rules",
+      "name": "GM地块名称定位与取消",
+      "luaPath": "GameplayTests/Systems/Terrain/tile-search-rules.lua",
+      "enabled": true
     }
   ]
 }

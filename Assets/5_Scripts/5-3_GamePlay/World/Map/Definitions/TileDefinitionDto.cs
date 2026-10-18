@@ -41,6 +41,7 @@ public sealed class TileDefinitionDto
     [JsonProperty("id", Required = Required.Always)] public string Id;
     [JsonProperty("runtimeTileId")] public int RuntimeTileId;
     [JsonProperty("displayName")] public string DisplayName;
+    [JsonProperty("searchAliases")] public List<string> SearchAliases = new(); // 调试定位可识别的地块别名。
     [JsonProperty("tileAsset", Required = Required.Always)] public string TileAsset;
     // 地表可承受的建筑等级；旧 MOD 地块未配置时按普通泥土的 8 点处理。
     [JsonProperty("loadCapacity")] public int LoadCapacity = 8;
