@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -15,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/corner", NavigationCorner);
         operations.Add("navigation/canonical_batch", NavigationCanonicalBatch);
         operations.Add("navigation/chunk_block_pool", NavigationChunkBlockPool);
+        operations.Add("navigation/liquid_cell_snapshot", NavigationLiquidCellSnapshot);
         operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
     }
 
@@ -202,6 +204,90 @@ public static partial class GameplayTestSystemProbe
             ["liquidCost"] = regular.TryGetCell(cells[1], out WorldNavigationCell waterCell) &&
                 waterCell.Penalty == 55 && waterCell.Water &&
                 Mathf.Approximately(waterCell.LiquidDepth, 0.4f)
+        };
+    }
+
+    // 对照原版多次水位查询与新的同格复用，覆盖平台、抽干和不可走水格。
+    private static JObject NavigationLiquidCellSnapshot(JObject args)
+    {
+        using var buffer = new ChunkTerrainBuffer(4, 1);
+        for (int x = 0; x < 4; x++)
+            buffer.SetCell(x, 0, new TerrainCell(17, 0, 0, 1, 12, TerrainCellFlags.Walkable));
+        int liquidIndex = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        buffer.SetLiquid(0, 0, liquidIndex, 6);
+        buffer.SetLiquid(1, 0, liquidIndex, 6);
+        buffer.SetLiquid(3, 0, liquidIndex, 6);
+        using ChunkTerrainData terrain = buffer.Seal();
+        TerrainSupportLayer.Set(terrain, 1, 0, 90, 2);
+
+        bool Equivalent(int x, bool walkable)
+        {
+            bool baselineWater = WorldLiquidSystem.GetSurfaceDepth(terrain, x, 0) > 0f;
+            float baselineDepth = baselineWater ? terrain.GetLiquidDepth(x, 0) : 0f;
+            uint baselineCost = 0, nextCost = 0;
+            bool baselineThrows = false, nextThrows = false;
+            if (walkable)
+                try { baselineCost = WorldLiquidSystem.GetNavigationCost(terrain, x, 0, 12); }
+                catch (InvalidOperationException) { baselineThrows = true; }
+            try
+            {
+                nextCost = WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, x, 0,
+                    12, walkable, out bool nextWater, out float nextDepth);
+                return !baselineThrows && baselineCost == nextCost && baselineWater == nextWater &&
+                    Mathf.Approximately(baselineDepth, nextDepth);
+            }
+            catch (InvalidOperationException) { nextThrows = true; }
+            return baselineThrows && nextThrows;
+        }
+
+        bool wet = WorldLiquidSystem.GetSurfaceLevel(terrain, 0, 0) == 6 && Equivalent(0, true);
+        bool covered = WorldLiquidSystem.GetSurfaceLevel(terrain, 1, 0) == 0 && Equivalent(1, true);
+        bool dry = WorldLiquidSystem.GetSurfaceLevel(terrain, 2, 0) == 0 && Equivalent(2, true);
+        bool blockedWet = Equivalent(3, false) &&
+            WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, 3, 0, 12, false,
+                out bool water, out float depth) == 0 && water && Mathf.Approximately(depth, .6f);
+        TerrainSupportLayer.Set(terrain, 1, 0, 0, 2);
+        bool uncovered = WorldLiquidSystem.GetSurfaceLevel(terrain, 1, 0) == 6 && Equivalent(1, true);
+        terrain.SetLiquid(0, 0, 0, 0);
+        bool drained = WorldLiquidSystem.GetSurfaceLevel(terrain, 0, 0) == 0 && Equivalent(0, true);
+        TerrainSupportLayer.Set(terrain, 1, 0, 90, 2);
+
+        // 只用无水及平台覆盖格测读格成本，避免测试资源目录和异常分配影响基准。
+        const int iterations = 65536;
+        long baselineSum = 0, optimizedSum = 0;
+        for (int i = 0; i < 256; i++)
+        {
+            int x = i % 2 + 1;
+            _ = WorldLiquidSystem.GetNavigationCost(terrain, x, 0, 12);
+            _ = WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, x, 0, 12, true, out _, out _);
+        }
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            int x = i % 2 + 1;
+            bool hasWater = WorldLiquidSystem.GetSurfaceDepth(terrain, x, 0) > 0f;
+            uint cost = WorldLiquidSystem.GetNavigationCost(terrain, x, 0, 12);
+            float liquidDepth = hasWater ? terrain.GetLiquidDepth(x, 0) : 0f;
+            baselineSum += cost + (hasWater ? 1 : 0) + (int)(liquidDepth * 10f);
+        }
+        timer.Stop();
+        double baselineMilliseconds = timer.Elapsed.TotalMilliseconds;
+        timer.Restart();
+        for (int i = 0; i < iterations; i++)
+        {
+            int x = i % 2 + 1;
+            uint cost = WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, x, 0,
+                12, true, out bool hasWater, out float liquidDepth);
+            optimizedSum += cost + (hasWater ? 1 : 0) + (int)(liquidDepth * 10f);
+        }
+        timer.Stop();
+        return new JObject
+        {
+            ["wet"] = wet, ["covered"] = covered, ["dry"] = dry,
+            ["blockedWet"] = blockedWet, ["uncovered"] = uncovered, ["drained"] = drained,
+            ["iterations"] = iterations, ["sameOutputs"] = baselineSum == optimizedSum,
+            ["baselineMilliseconds"] = baselineMilliseconds,
+            ["optimizedMilliseconds"] = timer.Elapsed.TotalMilliseconds
         };
     }
 

@@ -40,6 +40,15 @@ test.system("navigation", "canonical_batch", {}, function(data)
         "批量拓扑归一化改变了环绕接缝或无限世界坐标")
 end, "区块导航批量坐标归一化与旧接口严格等价")
 
+test.system("navigation", "liquid_cell_snapshot", {}, function(data)
+    assert(data.wet and data.covered and data.dry and data.blockedWet,
+        "导航共用单格水位后改变了真实水面、平台遮水或不可走格水深")
+    assert(data.uncovered and data.drained,
+        "拆除平台或抽干水体后，导航使用了过期水位/地形代价")
+    assert(data.iterations == 65536 and data.sameOutputs,
+        "导航批量读取与原水位/水深/代价接口结果不一致")
+end, "导航格水位单次采样与液体权威结果等价")
+
 test.system("navigation", "chunk_block_pool", {}, function(data)
     assert(data.originalWater and data.emptyAfterUnload and data.reusedClean and data.clearReset,
         "导航块卸载复用后遗留旧的地形、水深、代价或世界格")

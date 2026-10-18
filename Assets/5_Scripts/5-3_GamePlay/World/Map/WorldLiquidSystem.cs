@@ -29,8 +29,12 @@ public static class WorldLiquidSystem
 
     /// <summary>寻路读取当前液体定义的高成本，抽干后自动恢复 Ground 原成本。</summary>
     public static uint GetNavigationCost(ChunkTerrainData terrain, int x, int y, uint groundCost)
+        => GetNavigationCost(terrain, x, y, groundCost, GetSurfaceLevel(terrain, x, y));
+
+    // 导航已采样当前水位时直接复用，不重复检查平台遮水和液体等级。
+    internal static uint GetNavigationCost(ChunkTerrainData terrain, int x, int y, uint groundCost, int surfaceLevel)
     {
-        if (GetSurfaceDepth(terrain, x, y) <= 0f) return groundCost;
+        if (surfaceLevel <= 0) return groundCost;
         string id = terrain.GetLiquidId(x, y);
         if (GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetLiquidDefinition(id, out var definition) &&
             definition.WorldWater != null)
