@@ -1,4 +1,38 @@
 -- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
+for _, scenario in ipairs({ "ocean", "freshwater", "cave", "frozen_ocean" }) do
+    test.system("terrain", "natural_waterbed", { scenario = scenario }, function(data)
+        local natural, river, lake = 0, 0, 0
+        assert(#data.samples > 0, "天然底床夹具没有生成地形")
+        for _, sample in ipairs(data.samples) do
+            local depth = sample.naturalDepth
+            if depth > 0 then
+                natural = natural + 1
+                assert(depth == 2 or depth == 3, "天然水体底床没有降低两到三层")
+                if sample.kind == 1 then river = river + 1 end
+                if sample.kind == 2 then lake = lake + 1 end
+                if scenario == "frozen_ocean" then
+                    assert(sample.liquid == 0, "冻结水体仍残留液体")
+                else
+                    assert(sample.liquid > 0, "未冻结的天然底床没有初始液体")
+                    assert(depth == (sample.liquid <= 5 and 2 or 3), "浅深水没有生成对应底床层数")
+                end
+            else
+                assert(sample.liquid == 0, "天然液体生成时漏写底床凹陷")
+            end
+            assert(sample.initial == sample.base - depth + (sample.liquid > 0 and 1 or 0),
+                "天然水面没有使用底床加一层的统一规则")
+            assert(sample.drained == sample.base - depth and sample.poured == sample.drained + 1,
+                "抽水或倒水改坏了底床与液面层级")
+            assert(sample.afterDepth == depth and sample.height == sample.afterHeight,
+                "液体变化改写了天然底床或生成海拔")
+        end
+        assert(natural > 0, "夹具没有真实天然水域，不能证明底床生成正确")
+        if scenario == "freshwater" then
+            assert(river + lake > 0, "淡水夹具没有真实河流或湖泊")
+        end
+    end, "天然水域底床与抽水倒水层级：" .. scenario)
+end
+
 -- 基础生态夹具只给原始矿山与占格，逐格核对正式散矿阶段的概率和来源。
 for _, case in ipairs({
     {scenario = "mixed", ore = 0.02, stone = 0.05},

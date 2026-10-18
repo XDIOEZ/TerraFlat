@@ -462,6 +462,7 @@ namespace FlatWorld.WorldModel
             public TerrainCell Cell;
             public int LiquidTypeIndex;
             public int LiquidLevel;
+            public int NaturalDepthLevels;
             public float SnowDepth;
             public byte Grass;
             public float Height;
@@ -506,6 +507,7 @@ namespace FlatWorld.WorldModel
             private readonly float[] lavaShore;
             private readonly float[] grass;
             private readonly float[] snowDepth;
+            private readonly float[] naturalDepthLevels;
 
             public SurfaceEnvironmentWriter(ChunkTerrainBuffer terrain)
             {
@@ -529,6 +531,7 @@ namespace FlatWorld.WorldModel
                 lavaShore = terrain.GetOrCreateEnvironmentLayer("lava.shore");
                 grass = terrain.GetOrCreateEnvironmentLayer("grass");
                 snowDepth = terrain.GetOrCreateEnvironmentLayer(SnowDepthLayer.LayerId);
+                naturalDepthLevels = terrain.GetOrCreateEnvironmentLayer(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId);
             }
 
             public void Write(int index, SurfaceCellOutput value)
@@ -553,6 +556,7 @@ namespace FlatWorld.WorldModel
                 lavaShore[index] = value.LavaShore;
                 grass[index] = value.Grass == GrassPresent ? 1f : 0f;
                 snowDepth[index] = SnowDepthLayer.Quantize(value.SnowDepth);
+                naturalDepthLevels[index] = value.NaturalDepthLevels;
             }
         }
 
@@ -752,6 +756,7 @@ namespace FlatWorld.WorldModel
             if (decorated.TryGetEnvironmentValue("precipitation", 0, 0, out float rain)) output.Precipitation = rain;
             if (decorated.TryGetEnvironmentValue("moisture", 0, 0, out float moisture)) output.Moisture = moisture;
             if (decorated.TryGetEnvironmentValue(SnowDepthLayer.LayerId, 0, 0, out float snow)) output.SnowDepth = snow;
+            output.NaturalDepthLevels = TerrainSurfaceHeightLayer.GetNaturalDepthLevels(decorated, 0, 0);
             return output;
         }
 
@@ -896,7 +901,7 @@ namespace FlatWorld.WorldModel
             // 地面与液体在同一批次提交，height 继续随权威区块移交。
             float initialLiquidDepth = ocean
                 ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
-                : river && !frozenRiver ? (float)riverCell.Depth : 0f;
+                : river ? (float)riverCell.Depth : 0f;
             bool lavaCell = false;
             float lavaShore = 0f;
             if (climate.BaseBiome == SurfaceBiomeKind.Stone)
@@ -923,6 +928,8 @@ namespace FlatWorld.WorldModel
                 }
             }
             int initialLiquidLevel = QuantizeGeneratedLiquidLevel(initialLiquidDepth);
+            // 先生成真实底床再冻结液体，水被抽干或结冰后凹陷仍然保留。
+            int naturalDepthLevels = ResolveNaturalBedDepth(initialLiquidLevel);
 
             // 海水同样按零下基温结冰，岩浆不参加水体结冰规则。
             if (!lavaCell && initialLiquidLevel > 0 && temperatureCelsius < 0f)
@@ -961,6 +968,7 @@ namespace FlatWorld.WorldModel
                 LiquidTypeIndex = initialLiquidLevel > 0
                     ? lavaCell ? lava : ocean ? seaWater : dirtyWater : 0,
                 LiquidLevel = initialLiquidLevel,
+                NaturalDepthLevels = naturalDepthLevels,
                 SnowDepth = snowDepth,
                 Grass = grass ? GrassPresent : GrassEmpty,
                 Height = (float)height,
@@ -1758,6 +1766,8 @@ namespace FlatWorld.WorldModel
                 navigationCost, flags));
             terrain.SetLiquid(x, y, water ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId) : 0,
                 liquidLevel);
+            terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId, x, y,
+                ResolveNaturalBedDepth(liquidLevel));
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
@@ -1961,6 +1971,10 @@ namespace FlatWorld.WorldModel
         private static double Lerp(double left, double right, double t) => left + (right - left) * t;
         /// <summary>天然水体只写十个整数等级，正深度至少保留一级。</summary>
         private static int QuantizeGeneratedLiquidLevel(double depth) => LiquidCellValue.FromGeneratedDepth(depth);
+
+        /// <summary>天然浅水底床降低两层，超过半满的深水底床降低三层。</summary>
+        private static int ResolveNaturalBedDepth(int liquidLevel) =>
+            liquidLevel <= 0 ? 0 : liquidLevel <= LiquidCellValue.MaximumLevel / 2 ? 2 : 3;
 
         /// <summary>把数值限制在 0 到 1 之间。</summary>
         private static double Clamp01(double value) => value < 0d ? 0d : value > 1d ? 1d : value;

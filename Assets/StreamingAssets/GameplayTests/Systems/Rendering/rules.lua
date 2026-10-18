@@ -36,7 +36,16 @@ for _, row in ipairs({
     { args = { depth = 6, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "地板跨过挖坑回到地面齐平" },
     { args = { depth = 2, covers = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "填土只回填一层" },
     { args = { covers = 1 }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "额外填高后向外投影" },
-    { args = { liquid = true }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "岸边只向较低水面投影" },
+    { args = { liquid = true }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "平地倒水高一层并向外投影" },
+    { args = { liquid = true, naturalDepth = 2 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "浅水底床低两层且水面低于岸一层" },
+    { args = { liquid = true, naturalDepth = 3 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "深水底床低三层且水面低于岸两层" },
+    { args = { naturalDepth = 2 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "浅水抽干仍保留天然底床" },
+    { args = { naturalDepth = 3, depth = 1 }, level = 7, neighbour = 11, inner = 4, outer = 0, label = "天然底床继续采挖时叠加深度" },
+    { args = { naturalDepth = 2, covers = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "天然底床填土逐层回升" },
+    { args = { liquid = true, naturalDepth = 3, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "天然深水上平台仍与岸齐平" },
+    { args = { liquid = true, depth = 1 }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "一层坑中倒水与岸齐平" },
+    { args = { liquid = true, depth = 2 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "两层坑中倒水仍向坑内投影" },
+    { args = { liquid = true, naturalDepth = 2, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴水床同样使用真实高差" },
     { args = { liquid = true, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "水上平台表面仍与岸边齐平" },
     { args = { depth = 1, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴忽略生成海拔但保留采挖高差" },
     { args = { missingHeight = true }, level = 0, neighbour = 0, inner = 0, outer = 0, label = "缺失高度回退平地" },
@@ -61,6 +70,11 @@ test.system("rendering", "terrain_height_save", {}, function(data)
     assert(data.level == 5 and math.abs(data.rawHeight - 0.55) < 0.0001, "采挖高差污染生成高度")
     assert(data.negativeRejected, "非法负采挖深度没有被拒绝")
 end, "地表高低层保存恢复且不改生成高度和石头产量")
+
+test.system("rendering", "terrain_height_save", { naturalDepth = 2 }, function(data)
+    assert(data.naturalDepth == 2 and data.surfaceDepth == 6 and data.level == 3,
+        "采挖快照恢复覆盖了天然底床，或把天然凹陷混进玩家采挖层数")
+end, "天然底床独立于玩家采挖快照恢复")
 
 test.system("rendering", "terrain_height_neighbours", {}, function(data)
     assert(not data.missing and data.available and data.initial == 0, "缺失或刚加载的邻区高度查询错误")

@@ -9,6 +9,7 @@ namespace FlatWorld.WorldModel
 
         public const string ExcavatedLevelsLayerId = "terrain.surface.excavatedLevels";
         public const string CoverLevelsLayerId = "terrain.surface.coverLevels";
+        public const string NaturalDepthLevelsLayerId = "terrain.surface.naturalDepthLevels";
         public const int GeneratedHeightLevels = 20;
 
         /// <summary>生成高度只提供基础档位，缺失或非法高度使用平地基准。</summary>
@@ -23,6 +24,10 @@ namespace FlatWorld.WorldModel
 
         public static int GetExcavatedLevels(ChunkTerrainData terrain, int x, int y) =>
             ReadLevels(terrain, ExcavatedLevelsLayerId, x, y);
+
+        /// <summary>天然底床凹陷属于生成地形，取水或倒水不会改写。</summary>
+        public static int GetNaturalDepthLevels(ChunkTerrainData terrain, int x, int y) =>
+            ReadLevels(terrain, NaturalDepthLevelsLayerId, x, y);
 
         /// <summary>每次真正采掉天然地层才降低表面，独立于石头的剩余产量。</summary>
         public static void SetExcavatedLevels(ChunkTerrainData terrain, int x, int y, int levels)
@@ -49,16 +54,17 @@ namespace FlatWorld.WorldModel
                 return false;
             TerrainCell cell = terrain.GetCell(x, y);
             bool support = TerrainSupportLayer.GetTileId(terrain, x, y) != 0;
-            bool liquid = terrain.GetLiquidDepth(x, y) > 0f && !support;
+            bool liquid = !support && terrain.GetLiquidLevel(x, y) > 0;
             bool blocking = cell.BlockingTileId != 0 && (cell.Flags & TerrainCellFlags.Blocking) != 0;
             if (cell.GroundTileId == 0 && !support && !liquid && !blocking)
                 return false;
 
             int baseline = GetBaseLevel(terrain, x, y, useGeneratedHeight);
-            int level = support ? baseline : baseline - Math.Max(GetExcavatedLevels(terrain, x, y), minimumDepth) +
+            int level = support ? baseline : baseline - GetNaturalDepthLevels(terrain, x, y) -
+                Math.Max(GetExcavatedLevels(terrain, x, y), minimumDepth) +
                 ReadLevels(terrain, CoverLevelsLayerId, x, y);
-            // 液面沿用低于岸边的表现层，支撑面铺在基准面并遮住底下的坑或水。
-            if (liquid) level--;
+            // 液面统一高于实际底床一层，支撑面仍回到地面基准并遮住坑水。
+            if (liquid) level++;
             surface = new TerrainSurfaceHeight(level, blocking ? level + 1 : level, !blocking);
             return true;
         }

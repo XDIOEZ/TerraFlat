@@ -209,6 +209,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
     private static bool AffectsHeight(ChunkTerrainChanged change) =>
         change.Kind == TerrainChangeKind.Cell || change.Kind == TerrainChangeKind.Liquid ||
         change.Kind == TerrainChangeKind.TileStack || change.AffectsEnvironmentLayer("height") ||
+        change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId) ||
         change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId) ||
         change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.CoverLevelsLayerId) ||
         change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer);
