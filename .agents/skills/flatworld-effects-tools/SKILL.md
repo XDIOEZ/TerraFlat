@@ -84,6 +84,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 - 池取出重置 Transform/Animator/颜色/寿命，回收清理订阅。源同帧销毁时一次性粒子先脱离源；需在角色 OnDisable 回收的特效使用独立根，Owner 与父级分离。睡眠可见实例随休眠释放/恢复，状态请求仍由角色持有。
 - ParticleSystem 显式持有 URP 材质，Velocity 三轴 MinMax 模式一致；EmitParams.rotation 为度数，2D 方向使用 SignedAngle(up,direction) 的反号。CombustionVisualEffect 的 BindWorldPresentation 供无 SpriteRenderer 的行网格设施复用粒子模板与显式排序；模板/尺寸只在配置变化时应用，熄灭清空粒子。
+- 世界掉落物的两种后端共用 WorldItemCombustionVisual，创建时绑定 Resources/Combustion_Particle；材质移动保留 GUID，模块 Prefab 继续共用同一资源。规则采样为 rendering/dropped_combustion_material。
 - ProjectileFlightTrailPresenter 只读投射物飞行/Sprite。DamageTextEffect 持有样式/显示倍率；CombatFeedbackEvents 的逻辑未命中快照由 CombatMissFeedbackPresenter 消费，独立于伤害结算。
 - 罐内连续液面与罐口重力条带为表现；液流在 Mod_WaterVessel 成功移除后触发，Graphic 不参与数量结算且位于内腔 Mask 外。
 - 载具尾波消费实际水面位移并逐发射点确认水面，限额世界空间粒子随主体 Sorting Layer、Order+1 排序；停用/回池/换世界清理。

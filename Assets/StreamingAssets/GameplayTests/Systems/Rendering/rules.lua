@@ -1,4 +1,12 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "dropped_combustion_material", {}, function(data)
+    assert(data.assigned, "掉落物燃烧粒子没有绑定材质，会显示紫块")
+    assert(data.shared, "重复创建燃烧粒子没有复用共享材质")
+    assert(data.shader == "Universal Render Pipeline/2D/Sprite-Unlit-Default" and data.supported,
+        "掉落物燃烧材质没有使用可用的 URP 2D 着色器")
+    assert(data.texture == "Circle", "掉落物燃烧材质丢失透明粒子贴图")
+end, "掉落物燃烧粒子绑定可用材质并共享透明贴图")
+
 test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
     assert(data.candidates == 1 and data.createdAtBind == 0 and data.createdWithoutLight == 0,
         "没有局部光的墙仍在绑定时创建 URP 阴影对象")

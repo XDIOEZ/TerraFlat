@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-18 掉落物燃烧材质补充但未执行：`rendering/dropped_combustion_material` 在独立禁用节点调用正式共用粒子工厂，检查非空共享材质、可用 URP 2D Shader 与 Circle 透明贴图。原燃烧材质保留 GUID 移入 Resources，轻量与普通世界掉落物统一显式绑定。保留用户 PlayMode，未编译、未运行 Lua；最终画面由用户验收。
+
 2026-10-18 地表高低阴影改为固定表现深度：共享 Shader 将正整数层差统一视为有边，不再按高差削弱强度，所有高差使用相同材质深浅和宽度；同高无边、阴影落在较低侧的现有 `terrain_height` 规则保持。此次只做静态 Shader/材质修改，保留用户 PlayMode，未运行 Lua 或视觉验收；GPU 最终输出仍由用户验收。
 
 2026-10-17 地表高低阴影补充但未执行：`rendering/terrain_height` 采样正式 `TerrainSurfaceHeightLayer`，覆盖地板齐平、同高异材质、逐层采挖、基岩最低深度、成片低地无内缝、高侧向低侧投影、填土、平台、水面、墙脚与洞穴基准。`terrain_height_save` 检查独立于石头产量的表面深度、MemoryPack 保存恢复、非法负深度及生成高度不变；`terrain_height_neighbours` 通过正式管理器查询邻区加载、采挖、卸载和重载。当前用户 PlayMode 保留，未编译、未运行；未覆盖最终 Shader 画面、BRG GPU 提交、环绕接缝视觉、真实采挖操作及性能，验收由用户执行。

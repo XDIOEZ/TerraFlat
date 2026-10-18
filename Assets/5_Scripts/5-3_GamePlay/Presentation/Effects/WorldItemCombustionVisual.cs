@@ -7,6 +7,11 @@ public static class WorldItemCombustionVisual
 
     public static ParticleSystem Create(Transform parent)
     {
+        // 两种掉落后端共用正式燃烧材质，避免新建粒子使用空材质显示紫块。
+        Material material = Resources.Load<Material>("Combustion_Particle");
+        if (material == null)
+            throw new System.InvalidOperationException("世界掉落物燃烧缺少 Combustion_Particle 粒子材质。");
+
         var root = new GameObject("世界掉落物_燃烧", typeof(ParticleSystem));
         root.transform.SetParent(parent, false);
         root.transform.localPosition = Vector3.zero;
@@ -14,6 +19,7 @@ public static class WorldItemCombustionVisual
         root.transform.localScale = Vector3.one;
 
         ParticleSystem particles = root.GetComponent<ParticleSystem>();
+        particles.GetComponent<ParticleSystemRenderer>().sharedMaterial = material;
         ParticleSystem.MainModule main = particles.main;
         main.loop = true;
         main.playOnAwake = false;
