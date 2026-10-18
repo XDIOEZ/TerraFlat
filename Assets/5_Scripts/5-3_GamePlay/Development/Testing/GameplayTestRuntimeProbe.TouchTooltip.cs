@@ -20,6 +20,8 @@ public static partial class GameplayTestRuntimeProbe
     private static IEnumerator CaptureTouchTooltip(Player player, JObject args, Action<JObject> completed)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "inspect");
+        string panelPrefab = GameplayTestSystemProbe.Text(args, "panelPrefab", "");
+        string slotName = GameplayTestSystemProbe.Text(args, "slotName", "输入_1");
         var scope = new TouchTooltipScope();
         RegisterCleanup(scope);
         JObject result;
@@ -33,14 +35,49 @@ public static partial class GameplayTestRuntimeProbe
             GameObject prefab = GameRes.ExistingInstance.GetPrefab("UI_Slot", false);
             if (prefab == null || EventSystem.current == null || UIManager.ExistingInstance?.SafeAreaRoot == null)
                 throw new InvalidOperationException("手机物品介绍测试缺少正式槽位、EventSystem 或 SafeAreaRoot。");
-            scope.Root = new GameObject("LuaTouchTooltip", typeof(RectTransform), typeof(BasePanel));
-            scope.Root.transform.SetParent(UIManager.ExistingInstance.SafeAreaRoot, false);
-            BasePanel panel = scope.Root.GetComponent<BasePanel>();
+            BasePanel panel;
+            if (string.IsNullOrEmpty(panelPrefab))
+            {
+                scope.Root = new GameObject("LuaTouchTooltip", typeof(RectTransform), typeof(BasePanel));
+                scope.Root.transform.SetParent(UIManager.ExistingInstance.SafeAreaRoot, false);
+                panel = scope.Root.GetComponent<BasePanel>();
+                panel.InitClosed();
+                GameObject slotObject = UnityEngine.Object.Instantiate(prefab, scope.Root.transform, false);
+                scope.Slot = slotObject.GetComponent<ItemSlot_UI>();
+            }
+            else
+            {
+                // 正式面板走场景 UI 根，覆盖机器窗口与常驻提示窗之间的真实排序差异。
+                GameObject panelAsset = GameRes.ExistingInstance.GetPrefab(panelPrefab, false);
+                if (panelAsset == null) throw new InvalidOperationException("物品介绍测试缺少正式面板：" + panelPrefab);
+                scope.Panel = panel = UIManager.ExistingInstance.CreatePanelFromGameObject(panelAsset, initializeClosed: true);
+                scope.Root = panel.gameObject;
+                panel.GetComponent<MechanicalPanelView>()?.SetProcessingVisible(true);
+                foreach (ItemSlot_UI candidate in panel.GetComponentsInChildren<ItemSlot_UI>(true))
+                    if (candidate.name == slotName) { scope.Slot = candidate; break; }
+                if (scope.Slot == null) throw new InvalidOperationException(panelPrefab + " 缺少槽位：" + slotName);
+                scope.Slot.gameObject.SetActive(true);
+            }
             panel.SetGameplayInputBlocking(false);
-            panel.Init();
-            GameObject slotObject = UnityEngine.Object.Instantiate(prefab, scope.Root.transform, false);
-            scope.Slot = slotObject.GetComponent<ItemSlot_UI>();
             source.BindSlotUI(scope.Slot, 0);
+            panel.Open();
+            yield return null;
+            var mouse = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width * .4f, Screen.height * .6f) };
+            scope.Slot.OnPointerEnter(mouse);
+            InventoryItemTooltip tooltip = UIManager.ExistingInstance.SafeAreaRoot.GetComponentInChildren<InventoryItemTooltip>(true);
+            Canvas tooltipCanvas = tooltip != null ? tooltip.GetComponent<Canvas>() : null;
+            Canvas sourceCanvas = scope.Slot.GetComponentInParent<Canvas>();
+            bool hoverOpened = tooltip != null && tooltip.GetComponent<CanvasGroup>().alpha > .99f;
+            bool tooltipAbovePanel = tooltipCanvas != null && tooltipCanvas.overrideSorting &&
+                tooltipCanvas.sortingLayerID == sourceCanvas.sortingLayerID && tooltipCanvas.sortingOrder > sourceCanvas.sortingOrder;
+            bool tooltipInputTransparent = tooltip != null && !tooltip.GetComponent<CanvasGroup>().blocksRaycasts &&
+                tooltip.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null;
+            panel.Close();
+            yield return null;
+            bool hoverClosedWithPanel = tooltip == null || tooltip.GetComponent<CanvasGroup>().alpha <= .001f;
+            scope.Slot.OnPointerExit(mouse);
+            panel.Open();
+            yield return null;
             int taps = 0, longPresses = 0, drags = 0;
             scope.Slot.OnTouchTap = _ => taps++;
             scope.Slot.OnTouchLongPress = _ => { longPresses++; return false; };
@@ -75,6 +112,8 @@ public static partial class GameplayTestRuntimeProbe
             bool closedWithPanel = !InventoryItemTooltip.IsTouchPinned(scope.Slot);
             InventoryItemTooltip.DismissTouchAt(new Vector2(-1000f, -1000f));
             result = new JObject { ["visibleEarly"] = visibleEarly, ["opened"] = opened,
+                ["hoverOpened"] = hoverOpened, ["hoverClosedWithPanel"] = hoverClosedWithPanel,
+                ["tooltipAbovePanel"] = tooltipAbovePanel, ["tooltipInputTransparent"] = tooltipInputTransparent,
                 ["persistedAfterRelease"] = persisted, ["dismissedByOutsidePress"] = !InventoryItemTooltip.IsTouchPinned(scope.Slot),
                 ["closedWithPanel"] = closedWithPanel,
                 ["taps"] = taps, ["longPresses"] = longPresses, ["drags"] = drags,
@@ -89,6 +128,7 @@ public static partial class GameplayTestRuntimeProbe
     {
         public readonly Inventory OriginalHand = Inventory_Hand.PlayerHand;
         public GameObject Root;
+        public BasePanel Panel;
         public ItemSlot_UI Slot;
         private bool disposed;
         public void Dispose()
@@ -97,7 +137,8 @@ public static partial class GameplayTestRuntimeProbe
             disposed = true;
             Inventory_Hand.PlayerHand = OriginalHand;
             if (Slot != null) InventoryItemTooltip.Hide(Slot);
-            if (Root != null) { Root.SetActive(false); UnityEngine.Object.Destroy(Root); }
+            if (Panel != null && UIManager.ExistingInstance != null) UIManager.ExistingInstance.DestroyPanel(Panel);
+            else if (Root != null) { Root.SetActive(false); UnityEngine.Object.Destroy(Root); }
         }
     }
     #endregion

@@ -9,6 +9,7 @@ using UnityEngine.UI;
 
 /// <summary>鼠标悬浮与触屏长按共用的物品介绍，汇总定义、实例参数和模块返回文本。</summary>
 [DisallowMultipleComponent]
+[RequireComponent(typeof(Canvas))]
 public sealed class InventoryItemTooltip : MonoBehaviour
 {
     #region 配置
@@ -41,10 +42,10 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     private Vector2 lastContainerSize;
     private bool touchPinned;
     private int touchShownFrame;
-    private ItemSlot touchSlot;
-    private ItemData touchItem;
-    private BasePanel touchOwnerPanel;
-    private CanvasGroup[] touchOwnerGroups;
+    private ItemSlot ownerSlot;
+    private ItemData ownerItem;
+    private BasePanel ownerPanel;
+    private CanvasGroup[] ownerGroups;
 
     public static void Show(ItemSlot_UI slot, GameObject prefab, Vector2 screenPosition)
     {
@@ -73,10 +74,10 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         tooltip.owner = slot;
         tooltip.touchPinned = pinTouch;
         tooltip.touchShownFrame = Time.frameCount;
-        tooltip.touchSlot = pinTouch ? slot.GetBoundSlotData() : null;
-        tooltip.touchItem = tooltip.touchSlot?.itemData;
-        tooltip.touchOwnerPanel = pinTouch ? slot.GetComponentInParent<BasePanel>() : null;
-        tooltip.touchOwnerGroups = pinTouch ? slot.GetComponentsInParent<CanvasGroup>() : null;
+        tooltip.ownerSlot = slot.GetBoundSlotData();
+        tooltip.ownerItem = tooltip.ownerSlot?.itemData;
+        tooltip.ownerPanel = slot.GetComponentInParent<BasePanel>();
+        tooltip.ownerGroups = slot.GetComponentsInParent<CanvasGroup>();
         tooltip.pointerScreenPosition = screenPosition;
         tooltip.visible = true;
         tooltip.canvasGroup.alpha = 1f;
@@ -133,8 +134,9 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!visible || !touchPinned) return;
-        if (!HasValidTouchOwner()) { HideInternal(); return; }
+        if (!visible) return;
+        if (!HasValidOwner()) { HideInternal(); return; }
+        if (!touchPinned) return;
         if (Time.frameCount == touchShownFrame) return;
         Touchscreen screen = Touchscreen.current;
         if (screen != null)
@@ -146,15 +148,16 @@ public sealed class InventoryItemTooltip : MonoBehaviour
             DismissTouchAt(mouse.position.ReadValue());
     }
 
-    private bool HasValidTouchOwner()
+    private bool HasValidOwner()
     {
         if (owner == null || !owner.isActiveAndEnabled ||
-            (touchOwnerPanel != null && !touchOwnerPanel.IsOpen()) ||
-            !ReferenceEquals(owner.GetBoundSlotData(), touchSlot) ||
-            !MatchesItem(touchSlot?.itemData, touchItem) || owner.CanTouchInspectItem?.Invoke(owner.slotIndex) != true)
+            (ownerPanel != null && !ownerPanel.IsOpen()) ||
+            !ReferenceEquals(owner.GetBoundSlotData(), ownerSlot) ||
+            !MatchesItem(ownerSlot?.itemData, ownerItem) ||
+            (touchPinned && owner.CanTouchInspectItem?.Invoke(owner.slotIndex) != true))
             return false;
-        if (touchOwnerGroups != null)
-            foreach (CanvasGroup group in touchOwnerGroups)
+        if (ownerGroups != null)
+            foreach (CanvasGroup group in ownerGroups)
                 if (group != null && group.alpha <= 0.001f) return false;
         return true;
     }
@@ -181,6 +184,11 @@ public sealed class InventoryItemTooltip : MonoBehaviour
         }
 
         current.EnsureReferences();
+        // 独立画布跨过场景机器与常驻背包的根排序，所有槽位共用同一层级且不参与射线。
+        Canvas tooltipCanvas = current.GetComponent<Canvas>();
+        tooltipCanvas.overrideSorting = true;
+        tooltipCanvas.sortingLayerID = rootCanvas.sortingLayerID;
+        tooltipCanvas.sortingOrder = UIManager.ItemTooltipSortingOrder;
         current.HideInternal();
         return current;
     }
@@ -251,10 +259,10 @@ public sealed class InventoryItemTooltip : MonoBehaviour
     {
         visible = false;
         touchPinned = false;
-        touchOwnerPanel = null;
-        touchOwnerGroups = null;
-        touchSlot = null;
-        touchItem = null;
+        ownerPanel = null;
+        ownerGroups = null;
+        ownerSlot = null;
+        ownerItem = null;
         owner = null;
         if (refreshRoutine != null)
         {
@@ -272,7 +280,7 @@ public sealed class InventoryItemTooltip : MonoBehaviour
 
     private void RefreshContent()
     {
-        if (touchPinned && !HasValidTouchOwner()) { HideInternal(); return; }
+        if (!HasValidOwner()) { HideInternal(); return; }
         ItemData itemData = owner?.GetBoundSlotData()?.itemData;
         if (itemData == null)
         {

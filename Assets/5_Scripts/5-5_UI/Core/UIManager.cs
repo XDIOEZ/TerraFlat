@@ -67,6 +67,8 @@ public class UIManager : MonoBehaviour
     public const int HeldItemSortingOrder = 32767;
     /// <summary>设置面板的基础 Canvas 层级；高于玩法 HUD，低于加载和调试全屏覆盖层。</summary>
     public const int SettingsPanelSortingOrder = 2000;
+    /// <summary>物品介绍统一覆盖各类玩法窗口，并让设置和全屏覆盖层继续显示在上方。</summary>
+    public const int ItemTooltipSortingOrder = SettingsPanelSortingOrder - 1;
     public const int GlobalOverlaySortingOrder = 32000;
 
     private Canvas rootCanvas;

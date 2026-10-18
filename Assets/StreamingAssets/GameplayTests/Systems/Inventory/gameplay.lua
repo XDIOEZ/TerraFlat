@@ -54,6 +54,32 @@ for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_ch
             "查看介绍改变了物品数量或夹具没有恢复原手部库存")
     end, "手机空手长按物品介绍：" .. mode)
 end
+for _, panel in ipairs({
+    {prefab = "UI_Furnace", slots = {"输入_1", "输出_1", "燃料_1"}},
+    {prefab = "UI_Bonfire", slots = {"输入_1", "输出_1", "燃料_1"}},
+    {prefab = "UI_HandCraftTable", slots = {"输入_1", "输出_1"}},
+    {prefab = "UI_MakerTable", slots = {"输入_1", "输出_1"}},
+    {prefab = "UI_Mechanical", slots = {"输入_1", "输出_1"}},
+    {prefab = "UI_IndustrialFluid", slots = {"输入_1", "输出_1"}},
+    {prefab = "UI_FluidTank", slots = {"输入_1", "输出_1"}}
+}) do
+    for _, slotName in ipairs(panel.slots) do
+        test.runtime("inventory", "touch_tooltip", {
+            mode = "closed_after_show", panelPrefab = panel.prefab, slotName = slotName
+        }, function(data)
+            assert(data.hoverOpened and data.tooltipAbovePanel and data.tooltipInputTransparent,
+                "正式面板的悬浮介绍未显示、被窗口遮挡或拦截输入")
+            assert(data.hoverClosedWithPanel, "关闭正式面板后鼠标悬浮介绍仍残留")
+            assert(not data.visibleEarly and data.opened and data.persistedAfterRelease,
+                "正式槽位未在长按一秒后显示同一介绍窗，或松手后没有保留")
+            assert(data.closedWithPanel and data.dismissedByOutsidePress,
+                "关闭正式面板后长按介绍仍残留")
+            assert(data.taps == 0 and data.longPresses == 0 and data.drags == 0 and data.sourceAmount == 6,
+                "查看物品介绍触发了槽位取放或改变了数量")
+            assert(data.originalHandRestored, "正式面板介绍夹具没有恢复手部库存")
+        end, "各面板统一物品介绍：" .. panel.prefab .. "/" .. slotName)
+    end
+end
 test.runtime("inventory", "quick_transfer_feedback", {}, function(data)
     assert(data.moved and not data.fullAccepted and not data.invalidAccepted,
         "快速转移成功、满槽或无效来源的返回值错误")
