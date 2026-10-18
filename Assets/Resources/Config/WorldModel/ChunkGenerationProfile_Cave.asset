@@ -86,7 +86,13 @@ MonoBehaviour:
   - Id: cave.resource.density
     Value: 0.042
   - Id: cave.resource.looseDensity
-    Value: 0.0012
+    Value: 0.02
+  - Id: cave.resource.looseStoneDensity
+    Value: 0.05
+  - Id: cave.resource.looseMinDistance
+    Value: 5
+  - Id: cave.resource.looseMaxDistance
+    Value: 12
   - Id: navigation.defaultCost
     Value: 1
   textParameters:

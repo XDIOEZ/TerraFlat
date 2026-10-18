@@ -22,6 +22,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/climate_cache", WorldClimateCache);
         operations.Add("terrain/spawn_line", WorldSurfaceSpawnLine);
         operations.Add("terrain/cave_dirt_ground", WorldCaveDirtGround);
+        operations.Add("terrain/cave_loose_resources", WorldCaveLooseResources);
         operations.Add("time/calendar", WorldCalendar);
         operations.Add("environment/thermal", WorldThermal);
         operations.Add("environment/heat_sources", WorldHeatSources);
@@ -76,6 +77,139 @@ public static partial class GameplayTestSystemProbe
         try { action(); return string.Empty; }
         catch (Exception exception) { return exception.GetType().Name; }
     }
+    #endregion
+
+    #region 洞穴散矿规则采样
+
+    // 只布置基础生态输入，散矿仍调用正式生成入口，概率和距离期望交给 Lua。
+    private sealed class CaveLooseResourceFixture : IChunkEcologyNeighborhoodTagResolver,
+        ICaveBaseEcologyResolver
+    {
+        public readonly List<(int x, int y, string item, string rule)> Sources = new();
+        public bool HasHostTagInChunk(ChunkGenerationRequest request, string tag,
+            CancellationToken cancellationToken) => false;
+        public ChunkEcologyData GetCaveBaseEcology(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, CancellationToken cancellationToken)
+        {
+            var placements = new List<NaturalItemPlacement>();
+            foreach (var source in Sources)
+            {
+                int x = request.Topology.NormalizeX(source.x) - request.Address.ChunkOrigin.X;
+                int y = request.Topology.NormalizeY(source.y) - request.Address.ChunkOrigin.Y;
+                if (request.Topology.IsWrapped)
+                {
+                    if (x < 0) x += request.Topology.Span.X;
+                    if (y < 0) y += request.Topology.Span.Y;
+                }
+                if ((uint)x < (uint)request.Profile.Width && (uint)y < (uint)request.Profile.Height)
+                    placements.Add(new NaturalItemPlacement(1000 + Sources.IndexOf(source),
+                        source.item, x, y, 0f, 0f, source.rule));
+            }
+            return new ChunkEcologyData(placements);
+        }
+    }
+
+    private static JObject WorldCaveLooseResources(JObject args)
+    {
+        string scenario = (string)args["scenario"] ?? "mixed";
+        bool wrapped = (bool?)args["wrapped"] == true;
+        double oreChance = Number(args, "ore", .02d), stoneChance = Number(args, "stone", .05d);
+        var numbers = new Dictionary<string, double>
+        {
+            ["cave.portal.enabled"] = 0, ["cave.vine.enabled"] = 0,
+            ["cave.spawn.safeRadius"] = 0, ["cave.spawn.x"] = 1000, ["cave.spawn.y"] = 1000,
+            ["cave.resource.looseDensity"] = oreChance,
+            ["cave.resource.looseStoneDensity"] = stoneChance,
+            ["cave.resource.looseMinDistance"] = 5, ["cave.resource.looseMaxDistance"] = 12
+        };
+        var rules = new[]
+        {
+            new CaveResourceRuleSnapshot("probe.mine.iron", "Mine_Iron", 1, .04, 1),
+            new CaveResourceRuleSnapshot("probe.mine.gold", "Mine_Gold", 1, .04, 2),
+            new CaveResourceRuleSnapshot("probe.mine.stone", "Mine_Stone", 0, .04, 3)
+        };
+        var profile = new ChunkGenerationProfileSnapshot("probe:loose", 1, 16, 16, numbers,
+            new Dictionary<string, string> { ["terrain.mode"] = "cave" }, caveResourceRules: rules);
+        var topology = wrapped ? new ChunkGenerationTopologySnapshot(new Int2(0, 0), new Int2(32, 32)) : default;
+        var fixture = new CaveLooseResourceFixture();
+        if (scenario != "empty" && scenario != "occupied")
+        {
+            fixture.Sources.Add((-1, 8, scenario == "stone" ? "Mine_Stone" : "Mine_Iron",
+                scenario == "stone" ? "probe.mine.stone" : "probe.mine.iron"));
+            if (scenario != "stone")
+            {
+                fixture.Sources.Add((24, 24, "Mine_Gold", "probe.mine.gold"));
+                fixture.Sources.Add((16, 0, "Mine_Stone", "probe.mine.stone"));
+            }
+        }
+        fixture.Sources.Add((5, 5, "probe:flora", "probe.flora"));
+        fixture.Sources.Add((6, 5, "TwineCrop", "cave.vine.twine"));
+        // 被植物占去的位置没有矿山规则身份，不能成为散矿来源。
+        fixture.Sources.Add((0, 15, "Mine_Gold", "probe.flora"));
+        int seed = (int)Number(args, "seed", 17413);
+        var request = new ChunkGenerationRequest(1,
+            new FlatWorld.WorldModel.WorldAddress("cave", new Int2(0, 0)), seed, 1, profile, topology);
+        using var terrain = new ChunkTerrainBuffer(16, 16);
+        var cells = new JArray();
+        for (int y = 0; y < 16; y++)
+        for (int x = 0; x < 16; x++)
+        {
+            bool blocked = x == 7 && y == 7, wet = x == 7 && y == 8;
+            terrain.SetCell(x, y, new TerrainCell(4, 0, blocked ? 7 : 0, 1, 1,
+                blocked ? TerrainCellFlags.Blocking : TerrainCellFlags.Walkable));
+            if (wet) terrain.SetLiquid(x, y, terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 10);
+            uint state = CaveLayoutKernel.Hash(seed ^ unchecked((int)0x6c8e9cf5), x, y, 0x1b873593);
+            cells.Add(new JObject { ["x"] = x, ["y"] = y, ["blocked"] = blocked,
+                ["wet"] = wet, ["roll"] = CaveLayoutKernel.NextUnitDouble(ref state),
+                ["safe"] = CaveLayoutKernel.IsInsideDefaultSpawnSafeArea(request, profile.Settings, x, y) });
+        }
+        JArray Capture(ChunkEcologyData ecology)
+        {
+            var rows = new JArray();
+            foreach (NaturalItemPlacement p in ecology.Placements)
+                rows.Add(new JObject { ["x"] = p.LocalX, ["y"] = p.LocalY,
+                    ["item"] = p.ItemId, ["rule"] = p.RuleId, ["guid"] = p.Guid,
+                    ["host"] = p.HostGuid, ["offsetX"] = p.OffsetX, ["offsetY"] = p.OffsetY });
+            return rows;
+        }
+        var sources = new JArray();
+        foreach (var source in fixture.Sources)
+            sources.Add(new JObject { ["x"] = topology.NormalizeX(source.x),
+                ["y"] = topology.NormalizeY(source.y), ["item"] = source.item,
+                ["mine"] = source.rule.StartsWith("probe.mine.", StringComparison.Ordinal) });
+        ChunkEcologyData result = CaveGenerationFeatureGenerator.GenerateCave(request, terrain,
+            CancellationToken.None, fixture);
+        // 先解析邻块再重生成当前块，结果必须不受解析顺序影响。
+        fixture.GetCaveBaseEcology(new ChunkGenerationRequest(1,
+            new FlatWorld.WorldModel.WorldAddress("cave", new Int2(16, 0)), seed, 1, profile, topology),
+            null, CancellationToken.None);
+        ChunkEcologyData repeated = CaveGenerationFeatureGenerator.GenerateCave(request, terrain,
+            CancellationToken.None, fixture);
+        var expandedProfile = new ChunkGenerationProfileSnapshot("probe:loose", 1, 32, 16, numbers,
+            new Dictionary<string, string> { ["terrain.mode"] = "cave" }, caveResourceRules: rules);
+        var expandedRequest = new ChunkGenerationRequest(1, request.Address, seed, 1, expandedProfile, topology);
+        using var expandedTerrain = new ChunkTerrainBuffer(32, 16);
+        for (int y = 0; y < 16; y++)
+        for (int x = 0; x < 32; x++)
+        {
+            bool blocked = x == 7 && y == 7;
+            expandedTerrain.SetCell(x, y, new TerrainCell(4, 0, blocked ? 7 : 0, 1, 1,
+                blocked ? TerrainCellFlags.Blocking : TerrainCellFlags.Walkable));
+            if (x == 7 && y == 8) expandedTerrain.SetLiquid(x, y,
+                expandedTerrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 10);
+        }
+        ChunkEcologyData expanded = CaveGenerationFeatureGenerator.GenerateCave(expandedRequest,
+            expandedTerrain, CancellationToken.None, fixture);
+        var defaults = new ChunkGenerationSettingsSnapshot(new Dictionary<string, double>(),
+            new Dictionary<string, string>());
+        return new JObject { ["cells"] = cells, ["sources"] = sources,
+            ["placements"] = Capture(result), ["repeated"] = Capture(repeated), ["expanded"] = Capture(expanded),
+            ["oreChance"] = profile.Settings.CaveLooseOreDensity,
+            ["stoneChance"] = profile.Settings.CaveLooseStoneDensity,
+            ["defaultOre"] = defaults.CaveLooseOreDensity, ["defaultStone"] = defaults.CaveLooseStoneDensity,
+            ["min"] = defaults.CaveLooseResourceMinDistance, ["max"] = defaults.CaveLooseResourceMaxDistance };
+    }
+
     #endregion
 
     #region 洞穴泥土地面生成采样

@@ -653,7 +653,14 @@ namespace FlatWorld.WorldModel
             CaveResourceDensity = Clamp01(
                 GetDouble(numbers, "cave.resource.density", 0.042d));
             CaveLooseOreDensity = Clamp01(
-                GetDouble(numbers, "cave.resource.looseDensity", 0.0012d));
+                GetDouble(numbers, "cave.resource.looseDensity", 0.02d));
+            CaveLooseStoneDensity = Clamp01(
+                GetDouble(numbers, "cave.resource.looseStoneDensity", 0.05d));
+            // 散矿距离按地图格数固定，不受地形空间倍率改变。
+            CaveLooseResourceMinDistance = Clamp(GetInt(numbers,
+                "cave.resource.looseMinDistance", 5), 0, 128);
+            CaveLooseResourceMaxDistance = Clamp(GetInt(numbers,
+                "cave.resource.looseMaxDistance", 12), CaveLooseResourceMinDistance, 128);
             CavePortalItemId = GetText(texts, "cave.portal.itemId", "CaveExit");
             CavePortalTargetDimensionId = GetText(
                 texts,
@@ -1019,6 +1026,9 @@ namespace FlatWorld.WorldModel
         /// <summary>洞壁矿脉与散落矿石的密度。</summary>
         public double CaveResourceDensity { get; }
         public double CaveLooseOreDensity { get; }
+        public double CaveLooseStoneDensity { get; }
+        public int CaveLooseResourceMinDistance { get; }
+        public int CaveLooseResourceMaxDistance { get; }
         /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
         /// <summary>水域的有限寻路代价；高于陆地，但所有水格仍参与带权寻路。</summary>

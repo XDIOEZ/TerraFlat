@@ -9,7 +9,7 @@ namespace FlatWorld.WorldModel
     /// 新版区块的洞穴物品阶段。
     /// 地形完成后在纯数据中合并可配置植物、藤蔓、矿物和跨维度传送门，主线程只负责由 ChunkView 实例化。
     /// </summary>
-    public static class CaveGenerationFeatureGenerator
+    public static partial class CaveGenerationFeatureGenerator
     {
         #region 地表配对缓存
 
@@ -84,6 +84,18 @@ namespace FlatWorld.WorldModel
             if (terrain == null)
                 throw new ArgumentNullException(nameof(terrain));
 
+            var resolver = neighborhoodTagResolver as ICaveBaseEcologyResolver;
+            ChunkEcologyData basis = resolver != null
+                ? resolver.GetCaveBaseEcology(request, terrain, cancellationToken)
+                : GenerateCaveBase(request, terrain, cancellationToken, neighborhoodTagResolver);
+            return AppendLooseResources(request, terrain, basis, resolver, cancellationToken);
+        }
+
+        // 基础阶段不生成散矿，邻区查询可安全复用且不递归。
+        internal static ChunkEcologyData GenerateCaveBase(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, CancellationToken cancellationToken,
+            IChunkEcologyNeighborhoodTagResolver neighborhoodTagResolver)
+        {
             ChunkGenerationSettingsSnapshot settings = request.Profile.Settings;
             var placements = new List<NaturalItemPlacement>();
             var claimedGuids = new HashSet<int>();
@@ -128,14 +140,10 @@ namespace FlatWorld.WorldModel
                     if (resourceRules == null || resourceRules.Count == 0)
                         continue;
 
-                    bool spawnedMine = CaveLayoutKernel.IsWallEdge(
-                                           request, settings, worldX, worldY) &&
-                                       TryAddWallResource(request, settings, resourceRules,
-                                           worldX, worldY, localX, localY, placements, claimedGuids);
-                    if (!spawnedMine)
+                    if (CaveLayoutKernel.IsWallEdge(request, settings, worldX, worldY))
                     {
-                        TryAddLooseOre(request, settings, resourceRules, worldX, worldY,
-                            localX, localY, placements, claimedGuids);
+                        TryAddWallResource(request, settings, resourceRules,
+                            worldX, worldY, localX, localY, placements, claimedGuids);
                     }
                 }
             }
@@ -752,35 +760,6 @@ namespace FlatWorld.WorldModel
             AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid,
                 selected.ItemId, localX, localY, 0f, 0f, selected.RuleId));
             return true;
-        }
-
-        private static void TryAddLooseOre(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings,
-            IReadOnlyList<CaveResourceRuleSnapshot> rules, int worldX, int worldY,
-            int localX, int localY, List<NaturalItemPlacement> placements,
-            HashSet<int> claimedGuids)
-        {
-            if (settings.CaveLooseOreDensity <= 0d)
-                return;
-
-            uint state = CaveLayoutKernel.Hash(request.WorldSeed ^ unchecked((int)0x6c8e9cf5),
-                worldX, worldY, 0x1b873593);
-            if (CaveLayoutKernel.NextUnitDouble(ref state) > settings.CaveLooseOreDensity)
-                return;
-
-            CaveResourceRuleSnapshot selected = SelectResource(request, rules, worldX, worldY);
-            string itemId = ToLooseOreItemId(selected?.ItemId);
-            if (string.IsNullOrWhiteSpace(itemId))
-                return;
-
-            float offsetX = (float)Lerp(-0.22d, 0.22d,
-                CaveLayoutKernel.NextUnitDouble(ref state));
-            float offsetY = (float)Lerp(-0.22d, 0.22d,
-                CaveLayoutKernel.NextUnitDouble(ref state));
-            int guid = CaveLayoutKernel.CreatePlacementGuid(request, worldX, worldY,
-                $"cave.loose.{itemId}");
-            AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid, itemId,
-                localX, localY, offsetX, offsetY, $"cave.loose.{selected.RuleId}"));
         }
 
         private static CaveResourceRuleSnapshot SelectResource(ChunkGenerationRequest request,

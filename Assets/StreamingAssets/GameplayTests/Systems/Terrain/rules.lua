@@ -1,4 +1,107 @@
 -- 地形生成、采挖与植被工作规则，不生成当前玩家世界，也不截图。
+-- 基础生态夹具只给原始矿山与占格，逐格核对正式散矿阶段的概率和来源。
+for _, case in ipairs({
+    {scenario = "mixed", ore = 0.02, stone = 0.05},
+    {scenario = "mixed", ore = 1, stone = 0},
+    {scenario = "mixed", ore = 0, stone = 1},
+    {scenario = "mixed", ore = 0, stone = 0},
+    {scenario = "mixed", ore = 1, stone = 0, wrapped = true},
+    {scenario = "mixed", ore = 0.02, stone = 0.05, wrapped = true},
+    {scenario = "stone", ore = 0.02, stone = 0.05},
+    {scenario = "stone", ore = 1, stone = 0},
+    {scenario = "empty", ore = 1, stone = 0},
+    {scenario = "occupied", ore = 0, stone = 1}
+}) do
+    local input = case
+    test.system("terrain", "cave_loose_resources", input, function(data)
+        assert(data.defaultOre == 0.02 and data.defaultStone == 0.05 and data.min == 5 and data.max == 12,
+            "散矿默认概率或距离偏离 2%/5% 与 5～12 格")
+        assert(data.oreChance == input.ore and data.stoneChance == input.stone, "散矿参数未进入正式快照")
+        local function key(x, y) return x .. ":" .. y end
+        local function distance(a, b)
+            local dx, dy = math.abs(a.x - b.x), math.abs(a.y - b.y)
+            if input.wrapped then dx, dy = math.min(dx, 32 - dx), math.min(dy, 32 - dy) end
+            return dx * dx + dy * dy
+        end
+        local function closer(source, best, d, bestDistance)
+            return not best or d < bestDistance or
+                (d == bestDistance and (source.x < best.x or source.x == best.x and source.y < best.y))
+        end
+        local occupied, loose = {}, {}
+        for _, source in ipairs(data.sources) do
+            if source.x >= 0 and source.x < 16 and source.y >= 0 and source.y < 16 then
+                occupied[key(source.x, source.y)] = true
+            end
+        end
+        for _, placement in ipairs(data.placements) do
+            if string.sub(placement.rule, 1, 11) == "cave.loose." then
+                local id = key(placement.x, placement.y)
+                assert(not loose[id] and not occupied[id], "散矿重复生成或覆盖矿山、植物、藤蔓")
+                assert(placement.host == 0 and placement.offsetX == 0 and placement.offsetY == 0,
+                    "散矿成为仅同块可见的伴生物，或偏移缩短了最小距离")
+                loose[id] = placement
+            end
+        end
+        local expectedCount, actualCount = 0, 0
+        for _, cell in ipairs(data.cells) do
+            local nearest, nearestOre, best, bestOre = nil, nil, math.huge, math.huge
+            for _, source in ipairs(data.sources) do
+                if source.mine then
+                    local d = distance(cell, source)
+                    if closer(source, nearest, d, best) then nearest, best = source, d end
+                    if source.item ~= "Mine_Stone" and closer(source, nearestOre, d, bestOre) then
+                        nearestOre, bestOre = source, d
+                    end
+                end
+            end
+            local expectedItem, expectedSource
+            if not cell.blocked and not cell.wet and not cell.safe and not occupied[key(cell.x, cell.y)] and
+                best >= 25 and best <= 144 then
+                if cell.roll < input.ore then
+                    if nearestOre and bestOre <= 144 then
+                        expectedItem, expectedSource = string.gsub(nearestOre.item, "^Mine_", "Ore_"), nearestOre
+                    end
+                elseif cell.roll < math.min(1, input.ore + input.stone) then
+                    expectedItem, expectedSource = "Ore_Stone", nearest
+                end
+            end
+            local actual = loose[key(cell.x, cell.y)]
+            assert((actual ~= nil) == (expectedItem ~= nil),
+                "散矿概率、空格资格或 5～12 格距离不符合规则：" .. key(cell.x, cell.y))
+            if expectedItem then
+                expectedCount = expectedCount + 1
+                assert(actual.item == expectedItem, "散矿没有对应真实来源矿山，或石头矿山吃到了额外 2%")
+                assert(actual.rule == "cave.loose." .. expectedItem .. "@" .. expectedSource.x .. "," .. expectedSource.y,
+                    "散矿来源坐标不稳定，或跨区块没有使用最近对应矿山")
+            end
+            if actual then actualCount = actualCount + 1 end
+        end
+        assert(expectedCount == actualCount, "散矿数量与候选格精确断言不一致")
+        if input.scenario == "mixed" and input.ore == 1 then
+            assert(loose[key(4, 8)] and loose[key(11, 8)], "5 格或 12 格边界没有包含在内")
+        end
+        assert(#data.placements == #data.repeated, "先解析邻块改变了当前块数量")
+        for index, placement in ipairs(data.placements) do
+            local repeated = data.repeated[index]
+            assert(placement.guid == repeated.guid and placement.item == repeated.item and
+                placement.rule == repeated.rule and placement.x == repeated.x and placement.y == repeated.y,
+                "固定种子重生成或邻块解析顺序改变了结果")
+        end
+        local expanded = {}
+        for _, placement in ipairs(data.expanded) do
+            if placement.x < 16 then expanded[key(placement.x, placement.y)] = placement end
+        end
+        for _, placement in ipairs(data.placements) do
+            local same = expanded[key(placement.x, placement.y)]
+            assert(same and placement.guid == same.guid and placement.item == same.item and placement.rule == same.rule,
+                "跨区块拼接与整片生成的同一格结果不一致")
+            expanded[key(placement.x, placement.y)] = nil
+        end
+        assert(next(expanded) == nil, "扩大窗口凭空增加了公共区域散矿")
+    end, "洞穴散矿真实来源、稀疏概率与跨块确定性：" .. input.scenario .. "/" .. input.ore .. "/" ..
+        input.stone .. "/" .. tostring(input.wrapped))
+end
+
 for _, case in ipairs({{enabled = true, chance = 1}, {enabled = false, chance = 1}, {enabled = true, chance = 0}}) do
     local input = case
     test.system("terrain", "cave_dirt_ground", input, function(data)
