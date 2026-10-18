@@ -174,6 +174,14 @@ public partial class Mod_GameController : Module
         _gameplayInputLockOwners.Count > 0 ||
         IsWorldLoadingGameplayLocked(); // 当前是否锁定玩家输入
 
+    /// <summary>普通窗口共用开关准入；允许关掉自身，打开时服从硬锁和模态面板。</summary>
+    public bool CanToggleGameplayWindow(BasePanel panel)
+    {
+        return (panel != null && panel.IsOpen()) ||
+               (!IsGameplayInputLocked &&
+                UIManager.ExistingInstance?.HasOpenGameplayInputBlockingPanel() != true);
+    }
+
     public bool IsGameplayInputExplicitlyLocked => _isGameplayInputLocked; // 只读过场显式锁，不包含面板锁或外部控制租约。
     public int GameplayInputLockOwnerCount => _gameplayInputLockOwners.Count; // 面板叠加锁数量只用于区分总锁来源。
 

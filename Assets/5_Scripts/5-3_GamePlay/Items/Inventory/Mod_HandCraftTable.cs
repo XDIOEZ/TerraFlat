@@ -110,24 +110,12 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             if (!_inputController.IsGameplayInputAllowed(context))
                 return;
 
-            if (_inputController.IsGameplayInputLocked &&
-                (basePanel == null || !basePanel.IsOpen()) &&
-                !CanToggleFromMobileMenu())
-            {
+            if (!_inputController.CanToggleGameplayWindow(basePanel))
                 return;
-            }
 
             TogglePanelByKey();
         };
         _toggleAction.performed += _toggleCallback;
-    }
-
-    /// <summary>手机菜单抽屉内的制作按钮允许在背包面板打开时切换制作面板。</summary>
-    private bool CanToggleFromMobileMenu()
-    {
-        return _inputController != null &&
-               _inputController.IsUsingMobile &&
-               PlayerMobileControlsHUD.IsActiveDrawerOpen;
     }
 
 #endregion
@@ -172,9 +160,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         if (basePanel.IsOpen())
         {
             basePanel.Close();
-            inputInventory.SyncQuickTransferTarget(basePanel);
-            inputInventory.DefaultTarget_Inventory = null;
-            outputInventory.DefaultTarget_Inventory = null;
             return;
         }
 
@@ -224,22 +209,18 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panelRect);
 
         InitUI();
-        basePanel.SetHeldItemWorldDropAllowed(true, this);
-        basePanel.PrepareForGamepadNavigation();
-        basePanel.Opened += AcquirePanelInputLock;
-        basePanel.Closed += ReleasePanelInputLock;
+        basePanel.PrepareForGameplayWindow();
+        basePanel.Closed += HandlePanelClosed;
         basePanel.Close();
         return true;
     }
 
-    private void AcquirePanelInputLock()
+    private void HandlePanelClosed()
     {
-        _inputController?.AcquireGameplayInputLock(this);
-    }
-
-    private void ReleasePanelInputLock()
-    {
-        _inputController?.ReleaseGameplayInputLock(this);
+        // 按键、返回和关闭按钮统一解除当前窗口的库存交互引用。
+        inputInventory?.SyncQuickTransferTarget(basePanel);
+        if (inputInventory != null) inputInventory.DefaultTarget_Inventory = null;
+        if (outputInventory != null) outputInventory.DefaultTarget_Inventory = null;
     }
 
     private void OnDestroy()
@@ -260,11 +241,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         if (basePanel != null)
         {
-            basePanel.Opened -= AcquirePanelInputLock;
-            basePanel.Closed -= ReleasePanelInputLock;
+            basePanel.Closed -= HandlePanelClosed;
         }
 
-        ReleasePanelInputLock();
         // 制作窗口归模块所有，跨世界卸载时必须释放其常驻面板和全部材料槽位 UI。
         BasePanel ownedPanel = basePanel;
         basePanel = null;
@@ -454,9 +433,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             throw new System.InvalidOperationException("[Mod_HandCraftTable] basePanel 为空，无法关闭面板");
 
         basePanel.Close();
-        inputInventory.SyncQuickTransferTarget(basePanel);
-        inputInventory.DefaultTarget_Inventory = null;
-        outputInventory.DefaultTarget_Inventory = null;
     }
 
     public void I_TogglePanel()

@@ -376,6 +376,14 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     #region 面板显示控制
 
+    /// <summary>背包、制作和设施窗口共用非模态交互，不占用玩法输入。</summary>
+    public void PrepareForGameplayWindow()
+    {
+        SetGameplayInputBlocking(false);
+        SetHeldItemWorldDropAllowed(true);
+        PrepareForGamepadNavigation(closeOnCancel: true);
+    }
+
     public void PrepareForGamepadNavigation(
         string preferredControlName = null,
         bool closeOnCancel = true,

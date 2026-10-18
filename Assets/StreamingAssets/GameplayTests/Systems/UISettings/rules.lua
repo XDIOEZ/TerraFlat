@@ -154,6 +154,21 @@ test.system("ui_settings", "panel_lifecycle", { alpha = 0.75 }, function(data)
 end, "独立面板初始化、开关幂等与交互状态")
 
 -- 无 Canvas 的自有面板通过正式开关与能力接口采样，不创建或覆盖 UIManager 单例。
+test.system("ui_settings", "held_item_world_drop", {mode = "gameplay_windows"}, function(data)
+    assert(#data.windows == 3 and data.allOpen, "背包、手工与工作台窗口不能同时保持打开")
+    for _, window in ipairs(data.windows) do
+        assert(window.open and not window.blocking and not window.hasLockOwner,
+            "通用玩法窗口仍阻断输入或登记了额外锁持有者")
+        assert(window.navigation and window.cancelTarget and window.allowsWorldDrop,
+            "通用玩法窗口丢失导航、返回关闭或窗口外丢弃能力")
+    end
+    assert(data.openEvents == 3 and data.closeEvents == 1, "重复配置或重复开关误发事件")
+    assert(data.canDropWithWindows and data.otherWindowsStayOpen and data.closedWindowStopsCancel
+        and data.reopenedWithoutBlocking, "关闭或重开一个窗口影响了其它窗口或重新锁定玩法")
+    assert(data.modalBlocksGameplay and data.modalBlocksDrop and data.modalCloseRestoresWindows,
+        "模态界面未保持独立阻断，或关闭模态后未恢复普通窗口")
+end, "背包、手工与工作台共用非模态窗口规则")
+
 local held_drop_panels = {
     {mode = "empty", canDrop = true, owner = false, label = "无打开面板"},
     {mode = "allowed", canDrop = true, owner = true, label = "授权制作或库存面板"},

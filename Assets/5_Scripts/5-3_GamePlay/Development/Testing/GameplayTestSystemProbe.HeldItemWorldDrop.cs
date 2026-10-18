@@ -9,6 +9,8 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceHeldItemWorldDropPanels(JObject args)
     {
         string mode = Text(args, "mode", "allowed");
+        if (mode == "gameplay_windows")
+            return ServiceGameplayWindows();
         var root = new GameObject("[LuaHeldItemDropPanels]", typeof(RectTransform));
         root.SetActive(false);
         root.hideFlags = HideFlags.HideAndDontSave;
@@ -126,6 +128,81 @@ public static partial class GameplayTestSystemProbe
         panel.canvasGroup = panelObject.GetComponent<CanvasGroup>();
         panel.InitClosed();
         return panel;
+    }
+
+    /// <summary>通用玩法窗口并行开关，模态面板仍独立阻断。</summary>
+    private static JObject ServiceGameplayWindows()
+    {
+        var root = new GameObject("[LuaGameplayWindows]", typeof(RectTransform));
+        root.SetActive(false);
+        root.hideFlags = HideFlags.HideAndDontSave;
+        int originalOrder = BasePanel.CurrentOrder;
+        try
+        {
+            BasePanel[] windows =
+            {
+                CreateHeldItemDropProbePanel(root.transform, "Bag"),
+                CreateHeldItemDropProbePanel(root.transform, "Handcraft"),
+                CreateHeldItemDropProbePanel(root.transform, "Workbench")
+            };
+            BasePanel modal = CreateHeldItemDropProbePanel(root.transform, "Modal");
+            int opened = 0, closed = 0;
+            foreach (BasePanel window in windows)
+            {
+                window.PrepareForGameplayWindow();
+                window.Opened += () => opened++;
+                window.Closed += () => closed++;
+            }
+            root.SetActive(true);
+            var samples = new JArray();
+            var query = new UIManager.HeldItemWorldDropPanelQuery();
+            foreach (BasePanel window in windows)
+            {
+                window.Open();
+                window.PrepareForGameplayWindow();
+                window.Open();
+                query.Include(window);
+                samples.Add(new JObject
+                {
+                    ["open"] = window.IsOpen(),
+                    ["blocking"] = window.IsGameplayInputBlocking,
+                    ["navigation"] = window.IsGamepadNavigationPrepared,
+                    ["cancelTarget"] = window.IsCancelShortcutTarget,
+                    ["allowsWorldDrop"] = window.AllowsHeldItemWorldDrop,
+                    ["hasLockOwner"] = window.HeldItemWorldDropLockOwner != null
+                });
+            }
+            var result = new JObject
+            {
+                ["windows"] = samples,
+                ["allOpen"] = windows[0].IsOpen() && windows[1].IsOpen() && windows[2].IsOpen(),
+                ["canDropWithWindows"] = query.CanDropHeldItemInWorld,
+                ["openEvents"] = opened
+            };
+            windows[1].Close();
+            windows[1].Close();
+            result["otherWindowsStayOpen"] = windows[0].IsOpen() && windows[2].IsOpen();
+            result["closedWindowStopsCancel"] = !windows[1].IsCancelShortcutTarget;
+            result["closeEvents"] = closed;
+            windows[1].Open();
+            result["reopenedWithoutBlocking"] = windows[1].IsOpen() && !windows[1].IsGameplayInputBlocking;
+            modal.Open();
+            query.Include(modal);
+            result["modalBlocksGameplay"] = modal.IsGameplayInputBlocking;
+            result["modalBlocksDrop"] = !query.CanDropHeldItemInWorld;
+            modal.Close();
+            query.Clear();
+            foreach (BasePanel window in windows) query.Include(window);
+            query.Include(modal);
+            result["modalCloseRestoresWindows"] = query.CanDropHeldItemInWorld &&
+                windows[0].IsOpen() && windows[1].IsOpen() && windows[2].IsOpen();
+            return result;
+        }
+        finally
+        {
+            try { Object.DestroyImmediate(root); }
+            finally { BasePanel.CurrentOrder = originalOrder; }
+        }
     }
 
     private static JObject ServiceHeldItemWorldDropPosition(JObject args)

@@ -66,9 +66,7 @@ public class MachinePanelSession : IMachinePanelSession
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(prefab);
         panels.Add(panel);
         panel.InitClosed();
-        // 工作设施沿用非模态库存面板，避免输入锁取消当前交互后立即关窗。
-        panel.SetGameplayInputBlocking(false);
-        panel.PrepareForGamepadNavigation(closeOnCancel: true);
+        panel.PrepareForGameplayWindow();
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panel.Dragger != null ? panel.Dragger.rectTransform : panel.rectTransform);
         panel.Closed += OnPanelClosed;
         return panel;

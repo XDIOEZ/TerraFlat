@@ -186,7 +186,6 @@ public class Inventory
     private Inventory_Data _overweightObservedData; // 当前绑定超重监听的数据源，用于安全解绑旧引用。
 
     // 输入绑定缓存，便于之后解除绑定
-    private Mod_GameController _boundController;
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
     private bool _isProcessingGamepadSubmit;
@@ -285,13 +284,8 @@ public class Inventory
             if (!gameController.IsGameplayInputAllowed(ctx))
                 return;
 
-            if (gameController.IsGameplayInputLocked &&
-                (basePanel == null || !basePanel.IsOpen()) &&
-                !CanToggleFromMobileMenu() &&
-                !CanOpenPlayerBagAlongsideOtherPanels(gameController))
-            {
+            if (!gameController.CanToggleGameplayWindow(basePanel))
                 return;
-            }
 
             // 键盘 B 是库存自身的开关键；手柄 B 已交给全局返回动作。
             SwitchUI();
@@ -299,29 +293,8 @@ public class Inventory
 
         action.performed += _toggleCallback;
 
-        _boundController = gameController;
         _boundToggleAction = action;
         BindCarryCapacityLinkedInventory();
-
-        if (basePanel != null && basePanel.IsOpen() && UsesGameplayInputLock())
-            AcquirePanelInputLock();
-    }
-
-    /// <summary>手机菜单抽屉内的背包按钮允许在制作面板打开时切换背包。</summary>
-    private bool CanToggleFromMobileMenu()
-    {
-        return _boundController != null &&
-               _boundController.IsUsingMobile &&
-               PlayerMobileControlsHUD.IsActiveDrawerOpen;
-    }
-
-    /// <summary>玩家主背包与其它 UI 面板并行；只保留直接锁和世界加载锁这类硬阻断。</summary>
-    private bool CanOpenPlayerBagAlongsideOtherPanels(Mod_GameController gameController)
-    {
-        if (!IsPlayerBagInventory() || gameController == null)
-            return false;
-
-        return !gameController.HasBlockingGameplayInputLock(_ => true);
     }
 
     /// <summary>
@@ -331,14 +304,11 @@ public class Inventory
     public void UnbindController()
     {
         UnbindCarryCapacityLinkedInventory();
-        _boundController?.ReleaseGameplayInputLock(this);
-
         if (_boundToggleAction != null && _toggleCallback != null)
         {
             _boundToggleAction.performed -= _toggleCallback;
         }
 
-        _boundController = null;
         _boundToggleAction = null;
         _toggleCallback = null;
     }
@@ -380,8 +350,6 @@ public class Inventory
         basePanel = null;
         if (panel != null)
         {
-            panel.Opened -= AcquirePanelInputLock;
-            panel.Closed -= ReleasePanelInputLock;
             UIManager manager = UIManager.ExistingInstance;
             if (manager != null)
                 manager.DestroyPanel(panel);
@@ -492,18 +460,14 @@ public class Inventory
             ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
             : uiManager.CreatePanelFromGameObject(panelPrefab);
         basePanel = createdPanel.GetComponentInChildren<BasePanel>();
-        ResolvePanelInputController();
         bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
-        bool usesGameplayInputLock = UsesGameplayInputLock();
-        basePanel.SetGameplayInputBlocking(usesGameplayInputLock);
-        basePanel.SetHeldItemWorldDropAllowed(usesTogglePanelLifecycle, this);
-        // 玩家主背包仍参与关闭/手柄焦点链，但不再通过玩法输入锁影响其它 UI。
+        // 可开关窗口统一配置，快捷栏和手部只保留常驻 HUD 行为。
         if (usesTogglePanelLifecycle)
-            basePanel.PrepareForGamepadNavigation(closeOnCancel: true);
-        if (usesGameplayInputLock)
+            basePanel.PrepareForGameplayWindow();
+        else
         {
-            basePanel.Opened += AcquirePanelInputLock;
-            basePanel.Closed += ReleasePanelInputLock;
+            basePanel.SetGameplayInputBlocking(false);
+            basePanel.SetHeldItemWorldDropAllowed(false);
         }
         // 可开关库存 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 走正常面板生命周期。
         // 快捷栏与手部库存保留 Prefab 的显示状态，不参与这次归一化。
@@ -548,26 +512,6 @@ public class Inventory
         InitUI();
 
         return true; // 成功创建了面板
-    }
-
-    private void AcquirePanelInputLock()
-    {
-        if (UsesGameplayInputLock())
-            _boundController?.AcquireGameplayInputLock(this);
-    }
-
-    private void ReleasePanelInputLock()
-    {
-        _boundController?.ReleaseGameplayInputLock(this);
-    }
-
-    private void ResolvePanelInputController()
-    {
-        if (_boundController != null || item == null)
-            return;
-
-        _boundController = item.itemMods?.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        _boundController ??= item.GetComponent<Mod_GameController>();
     }
 
     // 辅助方法：检查 Vector2 是否有效
@@ -2301,12 +2245,6 @@ public class Inventory
     private bool UsesTogglePanelLifecycle()
     {
         return !IsHotBarInventory() && !IsHandInventory();
-    }
-
-    /// <summary>玩家主背包是可并行 UI，不获取玩法输入锁；其它独立库存面板维持原有锁定行为。</summary>
-    private bool UsesGameplayInputLock()
-    {
-        return UsesTogglePanelLifecycle() && !IsPlayerBagInventory();
     }
 
     #endregion
