@@ -415,18 +415,7 @@ namespace PuertsUnityMcp.Editor
             }
 
             var samples = BuildSampleRecords(frameData, warnings);
-            for (var i = samples.Count - 1; i >= 0; i--)
-            {
-                var sample = samples[i];
-                sample.selfMs = Math.Max(0d, sample.ms - sample.childrenMs);
-                if (sample.parentIndex >= 0)
-                {
-                    var parent = samples[sample.parentIndex];
-                    parent.childrenMs += sample.ms;
-                    parent.gcBytesWithChildren += sample.gcBytesWithChildren;
-                    parent.gcAllocationCountWithChildren += sample.gcAllocationCountWithChildren;
-                }
-            }
+            AccumulateProfilerSampleChildren(samples);
 
             var activeMs = 0d;
             var idleMs = 0d;
@@ -475,6 +464,27 @@ namespace PuertsUnityMcp.Editor
 
             thread.AddFrame(displayFrame, activeMs, idleMs);
         }
+
+        #region Profiler 样本共用计算
+
+        // AI 报告与手动快照共用自身耗时和子树分配计算，避免两份报告口径不同。
+        private static void AccumulateProfilerSampleChildren(List<ProfilerSampleRecord> samples)
+        {
+            for (var i = samples.Count - 1; i >= 0; i--)
+            {
+                var sample = samples[i];
+                sample.selfMs = Math.Max(0d, sample.ms - sample.childrenMs);
+                if (sample.parentIndex >= 0)
+                {
+                    var parent = samples[sample.parentIndex];
+                    parent.childrenMs += sample.ms;
+                    parent.gcBytesWithChildren += sample.gcBytesWithChildren;
+                    parent.gcAllocationCountWithChildren += sample.gcAllocationCountWithChildren;
+                }
+            }
+        }
+
+        #endregion
 
         private static string BuildSamplePath(List<ProfilerSampleRecord> samples, int sampleIndex)
         {

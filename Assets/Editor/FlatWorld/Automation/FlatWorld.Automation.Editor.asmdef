@@ -1,7 +1,9 @@
 {
     "name": "FlatWorld.Automation.Editor",
     "rootNamespace": "FlatWorld.Automation",
-    "references": [],
+    "references": [
+        "PuertsUnityMcp.Editor"
+    ],
     "includePlatforms": [
         "Editor"
     ],

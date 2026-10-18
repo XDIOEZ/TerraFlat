@@ -99,6 +99,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 ## 编辑器与调试工具
 
+- 顶栏「性能 JSON」/菜单 `FlatWorld/性能分析/导出选中帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调用 PuerTS `UnityMcpProfilerSnapshot`，复用 `editor.profiler.analyze` 的统计。输出 `Assets/67_ProfileData/<本地时间_frame-帧号_编号>/` 下 `profiler-analysis.json` 与 `console-logs.json`，共用 snapshotId；正式时间目录只在两份落盘后发布，忽略 `.pending-*`。性能文件含选中帧 Top 100、所有线程的完整聚合调用树和前后各30帧耗时；Console 导出当前全部保留日志与堆栈，临时取消筛选/折叠后恢复。日志没有精确帧归属或原生时间戳，不能当作选中帧当时的日志；清空的内容不可恢复。导出不改 Play/Pause、录制开关与目标，不主动刷新资源；AI 优先读取用户提供的最新目录，无需保持 Profiler 现场。
+
 - 关键性能点共用 Utilities 的 `PerformanceDebugPoint/Registry`；统计与慢摘要默认关闭，在 GM「设备数据」按需开启、设阈值、输出/清空。固定 Marker、struct 作用域不跨 yield，后台只记有界数字并由主线程合并日志；点位单位及 Total/Self、冷暖路径边界见 [关键性能DEBUG点位说明](../../../开发文档文件夹/07_网络存档与底层架构/关键性能DEBUG点位说明.md)。
 
 - 自动资源刷新合并外部变化，Windows 用 ReadDirectoryChangesW 事件通知，禁止 Mono DefaultWatcher 递归扫描 Assets；Play/切换期间保留请求、编辑模式静默后处理，通知溢出补一次全量刷新。Unity 保存独立于全库刷新。内容工坊只写 JSON 差异。
