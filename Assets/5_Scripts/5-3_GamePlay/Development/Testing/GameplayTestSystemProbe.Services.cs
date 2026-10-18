@@ -32,6 +32,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("core_lifecycle/difficulty_rules", ServiceDifficultyRules);
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
         operations.Add("item_runtime/clone_runtime", ServiceCloneRuntime);
+        operations.Add("item_runtime/cleanup_lookup", ServiceItemCleanupLookup);
         operations.Add("world_streaming/chunk_leases", ServiceChunkLeases);
         operations.Add("world_streaming/generation_lifecycle", ServiceGenerationLifecycle);
         operations.Add("world_streaming/commit_snapshot", ServiceCommitSnapshot);
@@ -178,6 +179,18 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 物品模块与独立运行态
+
+    // 重复注销时必须直接访问已登记的管理器，不隐式扫描场景或分配数组。
+    private static JObject ServiceItemCleanupLookup(JObject args)
+    {
+        ItemMgr existing = ItemMgr.GetExistingInstance();
+        bool stable = true;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 256; i++)
+            if (!ReferenceEquals(ItemMgr.GetExistingInstance(), existing)) stable = false;
+        long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        return new JObject { ["stable"] = stable, ["allocatedBytes"] = allocatedBytes };
+    }
 
     private static JObject ServiceModuleStructure(JObject args)
     {

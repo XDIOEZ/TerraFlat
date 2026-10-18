@@ -1,4 +1,9 @@
 -- 检查模块结构版本和正式物品工厂的可变状态隔离。
+test.system("item_runtime", "cleanup_lookup", {}, function(data)
+    assert(data.stable, "场景销毁期间无搜索单例读取不稳定")
+    assert(data.allocatedBytes == 0, "场景销毁期间无搜索单例读取仍产生 GC 分配")
+end, "物品批量销毁时的单例只读查询")
+
 test.system("item_runtime", "world_matter_structure", {}, function(data)
     assert(data.initialCurrent and not data.initialBlocked and data.stableAllowed,
         "普通散落物资格缓存没有保留正常物品")

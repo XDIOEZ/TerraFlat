@@ -426,7 +426,8 @@ public abstract class Item : MonoBehaviour
         if (destructionHandled)
             return;
 
-        try { ItemMgr.GetInstance()?.NotifyRuntimeItemDestroyed(this); }
+        // 场景卸载时管理器可能先销毁，禁止每个 Item 再扫描全场景找单例。
+        try { ItemMgr.GetExistingInstance()?.NotifyRuntimeItemDestroyed(this); }
         finally { EndRuntime(saveData: true, saveTransform: false); }
     }
 
