@@ -296,15 +296,17 @@ namespace FlatWorld.NaturalEntities
             if (!simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant)) return;
             EntityPlantSoil soil = record.Profile.Soil;
             Vector2Int cell = PlantSoilCell(record, plant);
+            bool hasTerrain = soils.TrySample(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out var terrain);
             if (hasLights)
             {
                 using var sample = SoilLightMarker.Auto();
-                soil.LightIntensity = soils.TrySample(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out var terrain)
+                soil.LightIntensity = hasTerrain
                     ? lighting.Sample(terrain) : LightLayerMgr.CompletelyDarkValue;
             }
             using (SoilReadMarker.Auto())
             {
-                if (soils.TryRead(cell, out TileData_Farmland source, out _, allowNaturalSoil: plant.Cultivated == 0))
+                if (hasTerrain && soils.TryReadSampled(terrain, out TileData_Farmland source,
+                        allowNaturalSoil: plant.Cultivated == 0))
                 {
                     soil.Available = 1; soil.Water = source.waterValue; soil.MaxWater = source.maxWater;
                     soil.WaterConsumptionRemainder = source.waterConsumptionRemainder;

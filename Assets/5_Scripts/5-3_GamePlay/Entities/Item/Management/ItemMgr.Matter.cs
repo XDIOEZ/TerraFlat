@@ -62,7 +62,7 @@ public partial class ItemMgr
             ReferenceEquals(modules, current.itemMods) && structureVersion == (current.itemMods?.StructureVersion ?? 0);
 
         internal bool BlocksWorldMatter => hasTileReceiver ||
-            (item is not Player && item is not Map &&
+            (item is not Player && item is not global::Map &&
              (hasAiComponent || MonsterManager.IsRegisteredSpeciesId(item.itemData?.IDName))) ||
             (projectile != null && projectile.HasActiveWorldAttachment);
     }

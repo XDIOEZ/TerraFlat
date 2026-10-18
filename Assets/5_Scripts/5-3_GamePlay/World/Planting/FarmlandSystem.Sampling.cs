@@ -44,8 +44,19 @@ public static partial class FarmlandSystem
         internal bool TryRead(Vector2Int cell, out TileData_Farmland soil,
             out RuntimeTerrainTileSample sample, bool allowNaturalSoil)
         {
+            if (!TrySample(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out sample))
+            {
+                soil = null;
+                return false;
+            }
+            return TryReadSampled(sample, out soil, allowNaturalSoil);
+        }
+
+        /// <summary>光照已经取得的权威地块可直接读取水肥，避免同一植物重复寻址。</summary>
+        internal bool TryReadSampled(RuntimeTerrainTileSample sample, out TileData_Farmland soil, bool allowNaturalSoil)
+        {
             soil = null;
-            if (!TrySample(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out sample) ||
+            if (!leased || !hasQuery || manager == null || !query.IsForWorld(manager.WorldRuntime) ||
                 !CanUseSoilCell(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, sample.Cell, sample.WorldCell, true) ||
                 (!allowNaturalSoil && !IsFarmland(sample.Cell) && !HasSoilState(sample)))
                 return false;
