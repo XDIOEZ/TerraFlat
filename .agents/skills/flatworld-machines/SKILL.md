@@ -34,7 +34,10 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 冷机器温度优先读已加载/冷缓存真实环境层，缺块时经 `SpaceSurfaceQuery.TryGetAmbientTemperature` 复用正式地理温度与星体覆盖公式，禁止为了取温度同步生成水文/生态整块；全局调温每次读取，资源/存档切换清理有界点样本。规则见 IndustrialFluids 的 `cold_temperature_path`。
 - 炉内材料、罐体和停火炉体按 `ThermalRuntime.AdvanceAmbient` 每游戏秒消除剩余温差 1%，升降温至少 0.5℃/游戏秒，到达目标即停，跨速率下限的分步与累计结果一致；炉体先撤销自己的已熄火热源，共享罐内容按本轮启用成员的真实罐体平均温度只换热一次，转换回内能后仍走原有相变；主动燃烧升温与两库存换热保留设备规则。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
-- 所有炉体共用 FurnaceLogic，只管燃料、炉温、点火、供热与燃料副产物，不持有配方、RecipeProcessor 或加工进度；Input/Output 都按材料自身 MatterState 温度换热，熄火后继续余热传递。MaterialThermalProcessor 统一按材料 transitions/reactions 原子转化，不以炉温代替材料温度；先处理已有 Output，再处理 Input，避免新产物同轮重复加热。燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
+- 燃料炉的 `heatingRatePercent` 只缩放炉内材料相对原速的升温（Smelter 50%、BlastFurnace/Bonfire 100%），炉体升温、真实干燥/加工计时及自然冷却不变；电炉与燃料炉共用 `FurnaceMaterialHeating`，Input/Output、容器液体和坩埚内材料沿同倍率受热。新冷载荷先取真实环境/容器原温；活动地表初温用气候基温避开自身炉心热源，已初始化温度不覆盖。
+- `InductionStoveLogic` 为独立3输入2输出电磁炉，120V/1200W、最高2000℃、材料150%；实际供电比例只控制炉体主动升温，断电仍从真实余热换热，没有燃料、点火或配方。
+- 炉输入区共用箱子总重量/总体积容量（Smelter 50 kg/50 L、BlastFurnace 150 kg/150 L、InductionStove 300 kg/300 L），仅Input限制，不限制Output/Fuel；模板通过 Inventory.StorageMaxWeightKg/StorageMaxVolumeCubicMeters（m³）交MachineInventory.Create/InitData恢复策略，库存内部体积为L，既有原子入库/转移事务统一判满，不另写炉专用限制。
+- 燃料炉共用 FurnaceLogic，只管燃料、炉温、点火、供热与燃料副产物，不持有配方、RecipeProcessor 或加工进度；Input/Output 都按材料自身 MatterState 温度换热，熄火后继续余热传递。MaterialThermalProcessor 统一按材料 transitions/reactions 原子转化，不以炉温代替材料温度；先处理已有 Output，再处理 Input，避免新产物同轮重复加热。燃料资格读 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。
 - 炉体点火后逐份吸收槽内燃料，`fuelAbsorptionSeconds` 默认3秒；`FuelAbsorptionState` 保存槽位/物品身份和进度，完成才事务扣一份、增加燃值并记录副产物。取走/换实例清零，满显示容量暂停，后台长步按吸收/燃烧边界分段；面板只读进度。
 - CultivatorLogic 保存每槽作物、水、肥、电力和待收产量；断供/满输出保留状态。显示读取真实种植槽，空槽隐藏，不为客户端或休眠显示创建业务逻辑。
 - 初始化库存/战利品只执行一次，随机空结果也算完成。最大生命由当前定义及 CraftedDurabilityMultiplier 派生，受损生命不重复叠乘；MachineCombatBridge 消费真实武器窗口并 PublishExternalDamage 回传实际损失。

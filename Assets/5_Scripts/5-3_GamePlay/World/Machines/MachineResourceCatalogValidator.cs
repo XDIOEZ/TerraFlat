@@ -47,6 +47,16 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
                     if (panel == null || panel.GetComponent<MechanicalPanelView>() == null)
                         errors.Add("电热器正式面板或视图缺失：" + definition.Id);
                 }
+                if (definition.Induction != null)
+                {
+                    GameObject panel = resources.GetPrefab(definition.Induction.PanelId, false);
+                    ValidatePanel(definition.Id, panel, errors);
+                    if (panel != null)
+                    {
+                        ValidatePanelSlots(definition.Id, panel, "输入", definition.Induction.InputSlots, errors);
+                        ValidatePanelSlots(definition.Id, panel, "输出", definition.Induction.OutputSlots, errors);
+                    }
+                }
                 try { MachineCombatBridge.ValidateHealth(pair.Value.Health); }
                 catch (InvalidOperationException error) { errors.Add("机器受击配置无效：" + pair.Key + "，" + error.Message); }
                 if (!string.IsNullOrWhiteSpace(definition.LogicId) && !MachineLogicRegistry.IsRegistered(definition.LogicId))
@@ -169,7 +179,11 @@ public sealed class MachineResourceCatalogValidator : IIncrementalResourceCatalo
 
     private static void ValidatePanelSlots(string id, GameObject panel, string prefix, Inventory inventory, List<string> errors)
     {
-        int count = inventory?.Data?.itemSlots?.Count ?? 0;
+        ValidatePanelSlots(id, panel, prefix, inventory?.Data?.itemSlots?.Count ?? 0, errors);
+    }
+
+    private static void ValidatePanelSlots(string id, GameObject panel, string prefix, int count, List<string> errors)
+    {
         ItemSlot_UI[] slots = panel.GetComponentsInChildren<ItemSlot_UI>(true);
         for (int i = 1; i <= count; i++)
         {

@@ -231,6 +231,7 @@ public sealed class MachineDefinition
     public MechanicalAxisPortVisualDefinition AxisPortVisual; // 标准连接杆端口由目录统一控制。
     public MachineTransportDefinition Transport; // 输送能力独立于物品名称，MOD 可以配置自己的传送设备。
     public FluidMachineDefinition Fluid; // 气液统一覆盖层和工业腔体能力。
+    public InductionStoveDefinition Induction; // 电磁炉库存与换热配置独立于环境电热器。
     public ElectricHeaterDefinition Heating; // 周围加热能力独立于气液库存与管网。
     public MachineLightDefinition Lighting; // 通用照明参数与具体灯泡外观分离。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
@@ -312,7 +313,10 @@ public sealed class MachineDefinition
         Fluid?.Validate(Id);
         Electrical?.Validate(Id);
         Heating?.Validate(Id, Electrical);
+        Induction?.Validate(Id, Electrical);
         Lighting?.Validate(Id, Electrical);
+        if (LogicId == "induction-stove" && Induction == null)
+            throw new ArgumentException("电磁炉缺少供热配置：" + Id);
         if (LogicId == "electric-heater" && Heating == null)
             throw new ArgumentException("电热器缺少加热配置：" + Id);
         if (LogicId == "electric-light" && Lighting == null)

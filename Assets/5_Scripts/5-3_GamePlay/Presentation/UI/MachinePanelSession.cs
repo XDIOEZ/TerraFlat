@@ -72,10 +72,23 @@ public class MachinePanelSession : IMachinePanelSession
         return panel;
     }
 
-    protected void BindSlots(BasePanel panel, Inventory inventory, string prefix, bool allowDirectionalDeposit = true)
+    protected void BindSlots(BasePanel panel, Inventory inventory, string prefix, bool allowDirectionalDeposit = true,
+        bool matchSlotVisibility = false)
     {
         TrackInventory(inventory, panel, allowDirectionalDeposit);
         inventory.itemSlot_UI.Clear();
+        if (matchSlotVisibility)
+        {
+            // 共用面板按真实库存显示槽位，避免较小容器留下不能存物品的假槽。
+            foreach (ItemSlot_UI slot in panel.GetComponentsInChildren<ItemSlot_UI>(true))
+            {
+                string name = slot.name;
+                if ((!name.StartsWith(prefix + "_", StringComparison.Ordinal) &&
+                     !name.StartsWith(prefix + " ", StringComparison.Ordinal)) ||
+                    !int.TryParse(name.Substring(prefix.Length + 1), out int index)) continue;
+                slot.gameObject.SetActive(index > 0 && index <= inventory.Data.itemSlots.Count);
+            }
+        }
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
             Button button = panel.GetButton(prefix + "_" + (i + 1)) ?? panel.GetButton(prefix + " " + (i + 1));

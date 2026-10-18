@@ -35,6 +35,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 库存、快捷栏与手部面板随所属模块卸载调用 `Inventory.ReleaseRuntimePanel`，同时注销 `UIManager` 注册；仅解除输入与数据绑定不会自动销毁跨场景面板。
 - 手工制作与玩家设置面板也由各自 `OnUnload` 注销并销毁；`UIManager.DestroyPanel` 在延迟 Destroy 前立即停用对象，避免新玩家同帧被旧面板拦截射线。
 - `UI_WorldLoading` 为不透明黑幕与独立内容 CanvasGroup：进世界前覆盖并绘制一帧，区块表现就绪后内容→黑幕淡出→释放输入；同场景重生为单段淡出。
+- `UI_Sleep` 为纯黑不透明 Image，`FullScreenRectController` 覆盖手机安全区外画面；不挂通用面板动画。`Mod_Tent` 入睡直接全黑、绘制一帧后触发手动保存，结束只从当前透明度淡出一次，并完成发送器交互；正式 Prefab 与 `BuildSleepHud` 同步。
 - 角色世界状态条使用高于 Water 的 Sorting Layer；直接挂普通 Transform 的 RectTransform 偏移以 anchoredPosition 为准。
 - 玩家体力条由 `Mod_Stamina` 按真实快捷栏矩形的上沿动态避让，不改通用 `UI_Slider` Prefab；定位后调用 `HotbarItemNameHUD.PositionAboveHud`，让名称底板按体力条实际上沿留出 12 个快捷栏逻辑像素；手机安全区、快捷栏缩放和底部间距改变后保持不重叠。
 
@@ -66,7 +67,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 ## 业务视图契约
 
 - 死亡界面 `UI_Death` 的主标题由 `Mod_PlayerDeathState.DeathMessage` 消费权威 `DeathCauseRecord`，通过 `DeathMessageCatalog` 与 `GameConfig/Combat/death-messages.json` 组合死因；来源缺失不编造名称。动态标题关闭静态 Binder，语言切换保留 Variant；正式 Prefab 与 `GameUIPrefabRebuilder.BuildDeathScreen` 同步多行自动字号布局。
-- `MachinePanelFactoryRegistry` 按 LogicId 注册租约；通用会话管生命周期、库存绑定、权威请求，具体会话管专属控件。`IInstanceUI.IsPanelOpen` 来自真实面板，模块列表按创建/展开/操作事件刷新。
+- `MachinePanelFactoryRegistry` 按 LogicId 注册租约；通用会话管生命周期、库存绑定、权威请求，具体会话管专属控件。炉体共用面板的槽位按真实库存容量显隐，基础熔炉2输入、高炉3输入，不按炉型ID分支；电磁炉复用面板绑定3输入2输出、隐藏燃料与点火，状态显示真实供电及材料升温系数，输入重量/体积只读正式库存容量规则。`IInstanceUI.IsPanelOpen` 来自真实面板，模块列表按创建/展开/操作事件刷新。
 - 电池在 `UI_Mechanical.prefab` 内持有 `BatteryCharge/BatteryPercentage` 正式引用，竖向 Slider 禁交互/导航、从下向上填充；`MechanicalPanelSession` 接收储能比例读取函数，仅电池显示并在状态刷新时同步，正文右侧留出控件空间。修改外观同步 `MechanicalContentBuilder.EnsureBatteryGauge`。
 - 气罐在 `UI_IndustrialFluid/UI_FluidTank.prefab` 持有 `GasCapacity/GasPercentage`，按实际气压/安全上限自下而上填充；超压填充封顶、百分比保留真实值并标红。工业页仅储罐显示，组合罐在节点作用域读取整组库存与容积；便携罐通过 `MechanicalPanelSession` 注入读数。布局同步 `RuntimeUIPrefabBuilder.EnsureGasCapacityGauge`。
 - 热栏外观由 `Common/Controls/UI_SelectBox.prefab` 与 Inventory_HotBar.SelectBoxPrefab 持有；选中框归属当前槽位。附属提示 ignoreLayout 且输入透明，Inventory.InitUI 按真实 ItemSlot_UI 计槽；手持名称读取装备热栏物品。

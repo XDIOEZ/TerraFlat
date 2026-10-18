@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "InductionStove",
+      "parent": "BuildingBody_Base",
+      "gameName": "电磁炉-建筑",
+      "description": "通电自动加热材料，3格输入、2格输出，输入总容量300 kg、300 L；升温系数150%，最高2000℃，额定120V、1200W。材料按自身温度转化，停电后保留余热。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.Electrical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"InductionStove\",\"SummonerPrefabId\":\"InductionStove_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "InductionStove"
+          }
+        }
+      }
+    },
+    {
+      "id": "InductionStove_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "电磁炉",
+      "description": "通电自动加热材料，3格输入、2格输出，输入总容量300 kg、300 L；升温系数150%，最高2000℃，额定120V、1200W。材料按自身温度转化，停电后保留余热。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 20,
+      "volume": 30,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.Electrical"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"InductionStove\",\"SummonerPrefabId\":\"InductionStove_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": true
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "InductionStove"
+          }
+        }
+      }
+    }
+  ]
+}

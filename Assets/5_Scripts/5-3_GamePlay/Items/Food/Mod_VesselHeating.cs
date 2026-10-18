@@ -19,14 +19,18 @@ public static class InventoryVesselHeating
 {
     #region 混合液体热加工
     public const float TemperatureTransferPerSecond = 10f;
-    public static bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
+    public static bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds,
+        float heatingRateMultiplier = 1f, float initialMaterialTemperature = TemperatureMgr.DefaultAmbientTemperature)
     {
+        if (input?.Data?.itemSlots == null || !float.IsFinite(temperature) || !float.IsFinite(seconds) || seconds <= 0f ||
+            !float.IsFinite(heatingRateMultiplier) || heatingRateMultiplier < 0f ||
+            !float.IsFinite(initialMaterialTemperature)) return false;
         bool handled = false;
         foreach (ItemSlot slot in input.Data.itemSlots)
         {
             if (input.IsSlotBeingDragged(slot.Index)) continue;
             if (Mod_Mortar.IsCrucibleItem(slot.itemData))
-            { handled = true; Mod_Mortar.TryProcessCrucibleHeat(slot.itemData, temperature, seconds); input.Data.NotifyItemStateChanged(slot.itemData); continue; }
+            { handled = true; Mod_Mortar.TryProcessCrucibleHeat(slot.itemData, temperature, seconds, heatingRateMultiplier, initialMaterialTemperature); input.Data.NotifyItemStateChanged(slot.itemData); continue; }
             if (!Mod_WaterVessel.TryRead(slot.itemData, out var storage, out var state)) continue;
             handled = true;
             void Persist()
@@ -35,21 +39,23 @@ public static class InventoryVesselHeating
                 if (!Mod_WaterVessel.TryRead(slot.itemData, out var currentStorage, out _)) throw new InvalidOperationException("加热容器已离开来源库存。");
                 currentStorage.WriteData(state); input.Data.NotifyItemStateChanged(slot.itemData);
             }
-            if (ProcessComponents(state, temperature, seconds, (id, amount) => PrepareOutput(output, id, amount), Persist)) Persist();
+            if (ProcessComponents(state, temperature, seconds, (id, amount) => PrepareOutput(output, id, amount), Persist, heatingRateMultiplier: heatingRateMultiplier)) Persist();
         }
         return handled;
     }
     public static bool ProcessWorldHeat(LiquidContainerState state, float temperature, float seconds)
         => ProcessComponents(state, temperature, seconds, null, null, ambientTransfer: true);
-    private static bool ProcessComponents(LiquidContainerState state, float temperature, float seconds, Func<string, int, CraftingTransaction> prepare, Action persist, bool ambientTransfer = false)
+    private static bool ProcessComponents(LiquidContainerState state, float temperature, float seconds, Func<string, int, CraftingTransaction> prepare, Action persist, bool ambientTransfer = false, float heatingRateMultiplier = 1f)
     {
         if (state == null || state.Amount <= Mod_WaterVessel.AmountEpsilon || !float.IsFinite(temperature) || !float.IsFinite(seconds) || seconds <= 0f) return false;
         MixedLiquidContents.Ensure(state);
         float beforeTemperature = state.Temperature;
-        // 自然传热共用温差百分比，炉内主动加工继续使用设备的显式速率。
+        // 只缩放主动升温，液体加工计时和自然冷却继续使用真实秒数。
+        float temperatureSeconds = ThermalRuntime.ResolveHeatingSeconds(
+            state.Temperature, temperature, seconds, heatingRateMultiplier);
         state.Temperature = ambientTransfer
             ? ThermalRuntime.AdvanceAmbient(state.Temperature, Mathf.Max(-273.15f, temperature), seconds)
-            : ThermalRuntime.AdvanceTowards(state.Temperature, Mathf.Max(-273.15f, temperature), TemperatureTransferPerSecond, seconds);
+            : ThermalRuntime.AdvanceTowards(state.Temperature, Mathf.Max(-273.15f, temperature), TemperatureTransferPerSecond, temperatureSeconds);
         bool changed = beforeTemperature != state.Temperature;
         var ids = new List<string>(state.Composition.Keys);
         foreach (string id in ids)

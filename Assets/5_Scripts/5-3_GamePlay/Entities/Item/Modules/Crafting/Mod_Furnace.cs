@@ -23,6 +23,8 @@ public class Mod_Furnace : Mod_MachineAuthoring
     public Inventory FuelInventory;
     [Min(.1f), Tooltip("每份燃料留在槽位中吸收的秒数，完成后才扣除并增加燃料余量。")]
     public float fuelAbsorptionSeconds = 3f;
+    [Min(0f), Tooltip("炉内材料升温倍率百分比；100为原速，0停止主动升温，冷却不变。")]
+    public float heatingRatePercent = 100f;
     public bool acceptsMechanicalBellows;
     [Tooltip("是否自动吸收落在同一格的燃料掉落物到燃料槽。")]
     public bool absorbDroppedFuel;

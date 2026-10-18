@@ -845,6 +845,31 @@
       }
     },
     {
+      "Id": "InductionStove",
+      "Kind": "shaft",
+      "Ports": "none",
+      "LogicId": "induction-stove",
+      "PlacementLayer": 0,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "cell",
+        "NominalVoltage": 120,
+        "PowerWatts": 1200
+      },
+      "Induction": {
+        "InputSlots": 3,
+        "OutputSlots": 2,
+        "MaxTemperature": 2000,
+        "TemperatureUpSpeed": 10,
+        "HeatingRatePercent": 150,
+        "InputMaxWeightKg": 300,
+        "InputMaxVolumeLiters": 300,
+        "PanelId": "UI_Furnace"
+      }
+    },
+    {
       "Id": "ElectricHeater",
       "Kind": "shaft",
       "Ports": "none",

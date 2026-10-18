@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:induction_stove",
+      "displayName": "电磁炉",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Glass",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "InductionStove_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "induction_stove",
+      "path": "shells/induction_stove.json",
+      "enabled": true
+    },
+    {
       "id": "space_wrecks",
       "path": "shells/space_wrecks.json",
       "enabled": true

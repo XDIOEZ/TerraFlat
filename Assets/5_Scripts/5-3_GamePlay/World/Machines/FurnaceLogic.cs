@@ -29,6 +29,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public Inventory Output { get; }
     public Inventory FuelInventory { get; }
     public bool AcceptsAirflow { get; }
+    public float HeatingRatePercent { get; }
     public float FuelRatio => Fuel.Fuel.y > 0f ? Mathf.Clamp01(Fuel.Fuel.x / Fuel.Fuel.y) : 0f;
     public override bool IsBurning => Data.IsSmelting && !State.AwaitingIgnition && Fuel.Fuel.x > .01f;
     public override float TickInterval => .1f;
@@ -80,6 +81,9 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         // x 保存真实燃值，可高于 y；y 只作为面板显示容量和自动补充阈值。
         Fuel.Fuel = new Vector2(Mathf.Max(0f, Fuel.Fuel.x), configuredFuel.Fuel.y);
         burnSpeed = fuelConfig.Value("burnSpeedMultiplier", fuelAuthoring.burnSpeedMultiplier);
+        HeatingRatePercent = config.Value("heatingRatePercent", authoring.heatingRatePercent);
+        if (!MachineDefinition.NonNegative(HeatingRatePercent))
+            throw new InvalidOperationException("材料升温系数百分比必须为有限非负数。");
         fuelAbsorptionSeconds = config.Value("fuelAbsorptionSeconds", authoring.fuelAbsorptionSeconds);
         if (!MachineDefinition.Positive(fuelAbsorptionSeconds))
             throw new InvalidOperationException("燃料吸收时长必须大于零。");
@@ -425,26 +429,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     }
 
     private void TransferMaterialHeat(float seconds)
-    {
-        if (MachineInventory.IsBeingDragged(Input) || MachineInventory.IsBeingDragged(Output)) return;
-        // 先推进已有产物，材料自己结算转化，避免新产物重复获得同一段热量。
-        AdvanceMaterialInventory(Output, seconds);
-        InventoryVesselHeating.ProcessHeat(Output, Output, Data.Temperature, seconds);
-        MaterialThermalProcessor.Process(Output, Output, productionActor);
-        AdvanceMaterialInventory(Input, seconds);
-        InventoryVesselHeating.ProcessHeat(Input, Output, Data.Temperature, seconds);
-        MaterialThermalProcessor.Process(Input, Output, productionActor);
-    }
-
-    private void AdvanceMaterialInventory(Inventory inventory, float seconds)
-    {
-        foreach (ItemSlot slot in inventory.Data.itemSlots)
-        {
-            ItemData material = slot?.itemData;
-            if (material != null && ItemMatterRuntime.Advance(material, Data.Temperature, 1f, seconds))
-                inventory.Data.NotifyItemStateChanged(material);
-        }
-    }
+        => FurnaceMaterialHeating.Process(Input, Output, Data.Temperature, seconds, HeatingRatePercent / 100f,
+            productionActor, FurnaceMaterialHeating.SampleInitialMaterialTemperature(Entity));
 
     private static bool HasMaterials(Inventory inventory)
     {
@@ -470,5 +456,68 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
             State.Absorption.Reset();
         base.OnInventoryChanged(slot);
     }
+    #endregion
+}
+
+/// <summary>燃料炉和电炉复用同一材料供热流程，热源只提供温度与升温倍率。</summary>
+public static class FurnaceMaterialHeating
+{
+    #region 炉内材料传热
+
+    // 新材料采用所属环境基温，地表不把炉子自己发布的炉心热源当作初温。
+    public static float SampleInitialMaterialTemperature(MachineEntity entity)
+    {
+        if (MachineWorld.CanPublishLocalEnvironment(entity) && TemperatureMgr.Instance != null &&
+            TemperatureMgr.Instance.TryGetClimateBaseline(entity.Position, out float baseline)) return baseline;
+        return MachineWorld.SampleAmbientTemperature(entity);
+    }
+
+    public static bool Process(Inventory input, Inventory output, float sourceTemperature, float seconds,
+        float heatingRateMultiplier = 1f, Player actor = null,
+        float initialMaterialTemperature = TemperatureMgr.DefaultAmbientTemperature)
+    {
+        if (input?.Data?.itemSlots == null || output?.Data?.itemSlots == null ||
+            !float.IsFinite(sourceTemperature) || !float.IsFinite(seconds) || seconds <= 0f ||
+            !float.IsFinite(heatingRateMultiplier) || heatingRateMultiplier < 0f ||
+            !float.IsFinite(initialMaterialTemperature) ||
+            MachineInventory.IsBeingDragged(input) || MachineInventory.IsBeingDragged(output)) return false;
+        // 输出先受热，确保这一轮新生成的产物不重复领到相同时间段的热量。
+        bool changed = Advance(output, output);
+        if (!ReferenceEquals(input, output)) changed |= Advance(input, output);
+        return changed;
+
+        bool Advance(Inventory materials, Inventory destination)
+        {
+            bool inventoryChanged = false;
+            var originalGuids = new HashSet<int>();
+            foreach (ItemSlot slot in materials.Data.itemSlots)
+            {
+                ItemData material = slot?.itemData;
+                if (material == null) continue;
+                originalGuids.Add(material.Guid);
+                // 新冷载荷先建立真实环境初温，不能直接初始化为炉内热源目标温度。
+                if (ItemMatterRuntime.EnsureInitialized(material, initialMaterialTemperature))
+                {
+                    materials.Data.NotifyItemStateChanged(material);
+                    inventoryChanged = true;
+                }
+            }
+            // 内容先读取容器本轮受热前的温度，避免给新装入材料重复加热。
+            inventoryChanged |= InventoryVesselHeating.ProcessHeat(materials, destination, sourceTemperature, seconds,
+                heatingRateMultiplier, initialMaterialTemperature);
+            foreach (ItemSlot slot in materials.Data.itemSlots)
+            {
+                ItemData material = slot?.itemData;
+                if (material == null || !originalGuids.Contains(material.Guid) ||
+                    !ItemMatterRuntime.Advance(material, sourceTemperature, 1f, seconds,
+                        heatingRateMultiplier: heatingRateMultiplier)) continue;
+                materials.Data.NotifyItemStateChanged(material);
+                inventoryChanged = true;
+            }
+            inventoryChanged |= MaterialThermalProcessor.Process(materials, destination, actor);
+            return inventoryChanged;
+        }
+    }
+
     #endregion
 }

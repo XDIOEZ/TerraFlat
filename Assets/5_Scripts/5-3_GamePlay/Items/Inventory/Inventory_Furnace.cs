@@ -22,6 +22,7 @@ public class Inventory_Furnace : Inventory
     public ModSmeltingData _Data = new ModSmeltingData();
 
     public Mod_Fuel mod_Fuel; // 燃料模块
+    public float HeatingRatePercent => item?.itemMods?.GetMod_ByID<Mod_Furnace>(ModText.Furnace)?.heatingRatePercent ?? 100f;
     public Button WorkButton;
 
     [Header("UI组件")]
@@ -227,23 +228,25 @@ public class Inventory_Furnace : Inventory
         mod_Fuel?.ConsumeFuel(deltaTime);
     }
 
-    private void TransferMaterialHeat(float seconds)
+    private float GetInitialMaterialTemperature()
     {
-        if (MachineInventory.IsBeingDragged(InputInventory) || MachineInventory.IsBeingDragged(OutputInventory)) return;
-        // 炉只传热，转化和反应统一交给材料自身的规则。
-        AdvanceMaterialInventory(OutputInventory, seconds);
-        InventoryVesselHeating.ProcessHeat(OutputInventory, OutputInventory, _Data.Temperature, seconds);
-        MaterialThermalProcessor.Process(OutputInventory, OutputInventory);
-        AdvanceMaterialInventory(InputInventory, seconds);
-        InventoryVesselHeating.ProcessHeat(InputInventory, OutputInventory, _Data.Temperature, seconds);
-        MaterialThermalProcessor.Process(InputInventory, OutputInventory);
+        if (MachineOwner != null) return FurnaceMaterialHeating.SampleInitialMaterialTemperature(MachineOwner);
+        Item owner = item != null && item.Owner != null ? item.Owner : item;
+        if (owner != null)
+        {
+            if (ItemEnvironmentSources.TryGet(owner, out ItemEnvironmentSample localEnvironment))
+                return (float)localEnvironment.TemperatureCelsius;
+            if (TemperatureMgr.Instance != null &&
+                TemperatureMgr.Instance.TryGetClimateBaseline(owner.transform.position, out float baseline)) return baseline;
+        }
+        return TryGetAmbientTemperature(out float ambient) ? ambient : TemperatureMgr.DefaultAmbientTemperature;
     }
 
-    private void AdvanceMaterialInventory(Inventory inventory, float seconds)
+    private void TransferMaterialHeat(float seconds)
     {
-        foreach (ItemSlot slot in inventory.Data.itemSlots)
-            if (slot?.itemData != null && ItemMatterRuntime.Advance(slot.itemData, _Data.Temperature, 1f, seconds))
-                inventory.Data.NotifyItemStateChanged(slot.itemData);
+        float initialTemperature = GetInitialMaterialTemperature();
+        FurnaceMaterialHeating.Process(InputInventory, OutputInventory, _Data.Temperature, seconds,
+            HeatingRatePercent / 100f, initialMaterialTemperature: initialTemperature);
     }
     #endregion
 

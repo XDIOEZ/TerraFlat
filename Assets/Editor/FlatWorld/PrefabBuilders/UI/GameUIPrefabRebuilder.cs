@@ -64,7 +64,7 @@ public static class GameUIPrefabRebuilder
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
         { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "燃料显示条", "FWUI_FurnaceTemperatureValue", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "燃料显示条", "FWUI_FurnaceTemperatureValue", "FWUI_FurnaceInputCapacity", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
         { CraftingRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
@@ -1305,6 +1305,10 @@ public static class GameUIPrefabRebuilder
 
                 AddFurnaceProcessLabel(frame, "FWUI_FurnaceFuelLabel", "燃料余量", 316f, 336f, 220f);
                 AddFurnaceTemperatureLabel(frame);
+                TextMeshProUGUI capacity = CreateText("FWUI_FurnaceInputCapacity", frame, string.Empty,
+                    13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+                SetTopLeft(capacity.rectTransform, 316f, 286f, 220f, 42f);
+                capacity.raycastTarget = false;
             }
         }
 

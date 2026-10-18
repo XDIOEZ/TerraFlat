@@ -96,13 +96,94 @@ test.runtime("processing", "furnace_heat_only", {}, function(data)
         seen[furnace.id] = true
         assert(furnace.processorAbsent, "炉体仍创建配方加工器：" .. furnace.id)
         assert(furnace.woodLeft == 0 and furnace.charcoal == 1, "炉体500℃未调用材料自身转化：" .. furnace.id)
-        assert(furnace.coldWoodLeft == 3 and math.abs(furnace.coldWoodTemperature - 109) < .0001,
+        local expectedCold = 1000 - 900 * .99 ^ (furnace.heatingRatePercent / 100)
+        assert(furnace.coldWoodLeft == 3 and math.abs(furnace.coldWoodTemperature - expectedCold) < .0001,
             "炉温1000℃时错误跳过木头自身升温：" .. furnace.id)
         assert(furnace.hotCharcoalLeft == 0 and furnace.ash == 1,
             "产出槽木炭达到1000℃后没有继续受热变灰：" .. furnace.id)
+        assert(furnace.panel.inputBound and furnace.panel.outputBound
+            and furnace.panel.visibleInputs == furnace.inputSlots and furnace.panel.visibleOutputs == furnace.outputSlots,
+            "炉体显示假槽或UI没有绑定真实库存：" .. furnace.id)
+        if furnace.id == "Smelter" then
+            assert(furnace.heatingRatePercent == 50 and furnace.inputSlots == 2 and furnace.temperatureUpSpeed == 10,
+                "普通熔炉应为50%材料升温、2输入，炉体仍为10℃/秒")
+        elseif furnace.id == "BlastFurnace" then
+            assert(furnace.heatingRatePercent == 100 and furnace.inputSlots == 3 and furnace.temperatureUpSpeed == 10,
+                "高炉应为100%材料升温、3输入，炉体仍为10℃/秒")
+        end
     end
     assert(seen.Smelter and seen.BlastFurnace and seen.Bonfire, "正式熔炉、高炉或篝火没有进入全炉型回归")
 end, "全部正式炉型只供热、材料自身温度与产出槽继续受热")
+
+for _, multiplier in ipairs({ 0, .5, 1, 1.5 }) do
+    test.runtime("processing", "material_heating_coefficient", { multiplier = multiplier }, function(data)
+        local expected = 1000 - 900 * .99 ^ multiplier
+        assert(math.abs(data.input - expected) < .0001 and math.abs(data.output - expected) < .0001
+            and math.abs(data.crucibleMaterial - expected) < .0001,
+            "输入、产出与坩埚内部固体未共用同一升温倍率")
+        assert(math.abs(data.bucket - (20 + 10 * multiplier)) < .0001
+            and math.abs(data.crucibleLiquid - data.bucket) < .0001,
+            "普通容器与坩埚内液体换热倍率不一致")
+        assert(math.abs(data.freshTemperature - (1000 - 965 * .99 ^ multiplier)) < .0001
+            and data.freshAmount == 3 and data.freshOutputCount == 0,
+            "新投材料被初始化为炉温而瞬间变炭灰，或覆盖了35℃真实环境初温")
+        assert(math.abs(data.freshCrucibleMaterial - (1000 - 980 * .99 ^ multiplier)) < .0001,
+            "坩埚新材料没有采用加热前的20℃容器内温度")
+        assert(math.abs(data.liquidProcessingSeconds - 1) < .0001,
+            "升温倍率加快了海水加工计时")
+        assert(math.abs(data.leafMoisture - .798725) < .00001,
+            "升温倍率错误缩放了相同温度下的一秒蒸发时间")
+    end, string.format("共享供热%g倍：全部载荷、新材料初温与非温度计时", multiplier))
+end
+
+for _, input in ipairs({ { watts = 0, expected = 20 }, { watts = 600, expected = 25 },
+    { watts = 1200, expected = 30 }, { watts = 2400, expected = 30 } }) do
+    test.runtime("processing", "induction_power", input, function(data)
+        assert(data.inputSlots == 3 and data.outputSlots == 2 and data.inventoryCount == 2 and data.processorAbsent,
+            "电磁炉不是3输入2输出、仍有燃料库存或配方加工器")
+        assert(data.voltage == 120 and data.ratedWatts == 1200 and data.maximum == 2000
+            and data.temperatureUpSpeed == 10 and data.heatingRatePercent == 150,
+            "电磁炉额定电力、炉温上限、10℃/秒炉体升温或150%材料换热配置错误")
+        assert(data.zero == data.before and math.abs(data.after - input.expected) < .0001
+            and data.supplied == math.min(input.watts, 1200), "电磁炉供电比例/零时间/功率上限错误")
+        assert(math.abs(data.material - .75) < .0001,
+            "电磁炉材料150%被供电比例再次降额，或停电后没有利用炉体余热")
+        assert(data.longStepMaximum == 2000 and data.coasting < 2000 and data.coasting > 20,
+            "电磁炉超过2000℃，或断电后继续主动升温/丢失余热")
+        assert(data.panel.inputBound and data.panel.outputBound and data.panel.visibleInputs == 3
+            and data.panel.visibleOutputs == 2 and data.panel.visibleFuelSlots == 0 and not data.panel.ignitionVisible,
+            "电磁炉正式面板槽位数量与真实绑定错误，或残留燃料/点火控件")
+    end, string.format("电磁炉供电边界与余热：%dW", input.watts))
+end
+
+test.runtime("processing", "induction_grid", {}, function(data)
+    assert(data.sameNetwork and data.poweredWatts == 1200 and data.batteryConsumedJoules == 1200,
+        "真实电池和电线没有经正式电网向电磁炉交付并扣除1200J")
+    assert(data.poweredTemperature == 30 and data.emptyWatts == 0 and data.coastingTemperature < 30,
+        "电池耗尽后电磁炉仍主动升温，或满供电未按10℃/秒升温")
+end, "真实双电池电网供热与断电自然冷却")
+
+for _, furnace in ipairs({ { id = "Smelter", capacity = 50 }, { id = "BlastFurnace", capacity = 150 },
+    { id = "InductionStove", capacity = 300 } }) do
+    for _, material in ipairs({ { id = "Ore_Gold", unit = 3 }, { id = "Plank", unit = 4 } }) do
+        test.runtime("processing", "furnace_input_capacity", { id = furnace.id, itemId = material.id }, function(data)
+            local expected = math.floor(furnace.capacity / material.unit)
+            assert(data.capacityEnabled and not data.unlimitedCarry and not data.unlimitedSlots
+                and data.maxWeight == furnace.capacity and data.maxAllowedWeight == furnace.capacity
+                and data.maxVolume == furnace.capacity, "炉体输入未启用实际kg/L总容量，或错误借用玩家超重宽限")
+            assert(data.firstTransfer and data.nonEmptySlots >= 2 and data.filled == expected
+                and data.remaining + data.filled == 500, "不同输入槽没有累计总容量，或超大请求未按实际容量部分接纳")
+            assert(not data.extraTransfer and not data.fullGrant and data.recoveredGrant and data.afterGrant == expected,
+                "输入已满仍接受转移或制作产物，或释放空间后未恢复正式制作事务")
+            assert(data.panel.inputBound and data.panelMaxWeight == furnace.capacity and data.panelMaxVolume == furnace.capacity,
+                "重新绑定正式面板后丢失输入容量")
+            assert(data.snapshotApplied and data.afterSnapshot == expected and not data.postSnapshotExtraTransfer,
+                "远程快照清除了输入容量或突破上限")
+            assert(not data.outputCapacityEnabled and not data.fuelCapacityEnabled,
+                "只限制输入容量时错误给产出或燃料库存增加了总容量限制")
+        end, string.format("%s输入%dkg/%dL跨槽容量：%s", furnace.id, furnace.capacity, furnace.capacity, material.id))
+    end
+end
 
 test.runtime("processing", "furnace_ambient_heat", {}, function(data)
     assert(#data.samples == 3, "高炉升温、降温和小温差采样不完整")

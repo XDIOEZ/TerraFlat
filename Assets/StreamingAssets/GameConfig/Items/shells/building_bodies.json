@@ -21,7 +21,7 @@
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab",
       "gameName": "高炉-建筑",
-      "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
+      "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。3 个输入槽，材料升温系数 100%。输入区总容量 150 kg / 150 L。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -129,7 +129,8 @@
             "Type": 0
           },
           "parameters": {
-            "acceptsMechanicalBellows": true
+            "acceptsMechanicalBellows": true,
+            "heatingRatePercent": 100
           }
         },
         "combustionVisual": {
@@ -1143,7 +1144,7 @@
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Smelter.prefab",
       "gameName": "熔炉-建筑",
-      "description": "用于冶炼矿石的熔炉。",
+      "description": "用于冶炼矿石的熔炉。2 个输入槽，材料升温系数 50%。输入区总容量 50 kg / 50 L。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1230,7 +1231,8 @@
             "Type": 0
           },
           "parameters": {
-            "acceptsMechanicalBellows": true
+            "acceptsMechanicalBellows": true,
+            "heatingRatePercent": 50
           }
         },
         "燃料模块": {

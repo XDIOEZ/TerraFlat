@@ -279,8 +279,12 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     }
 
     /// <summary>接受通用热源提供的温度和时间，只修改坩埚自身材料与液体状态。</summary>
-    public static bool TryProcessCrucibleHeat(ItemData itemData, float temperature, float seconds)
+    public static bool TryProcessCrucibleHeat(ItemData itemData, float temperature, float seconds,
+        float heatingRateMultiplier = 1f, float initialMaterialTemperature = TemperatureMgr.DefaultAmbientTemperature)
     {
+        if (!float.IsFinite(temperature) || !float.IsFinite(seconds) || seconds <= 0f ||
+            !float.IsFinite(heatingRateMultiplier) || heatingRateMultiplier < 0f ||
+            !float.IsFinite(initialMaterialTemperature)) return false;
         if (!TryReadCrucibleState(itemData, out Ex_ModData_MemoryPackable storage, out MortarState state))
             return false;
 
@@ -289,11 +293,17 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
             out Ex_ModData_MemoryPackable liquidStorage,
             out LiquidContainerState liquidState) &&
             !Mod_WaterVessel.IsEmptyAmount(liquidState.Amount);
+        float initialContentsTemperature = hasLiquid && float.IsFinite(liquidState.Temperature)
+            ? liquidState.Temperature
+            : itemData.MatterState?.Initialized == true
+                ? itemData.MatterState.TemperatureCelsius : initialMaterialTemperature;
         if (hasLiquid)
         {
             // 坩埚内液体按真实温差受热，不把炉温直接当成材料温度。
+            float temperatureSeconds = ThermalRuntime.ResolveHeatingSeconds(
+                liquidState.Temperature, temperature, seconds, heatingRateMultiplier);
             liquidState.Temperature = ThermalRuntime.AdvanceTowards(liquidState.Temperature, temperature,
-                InventoryVesselHeating.TemperatureTransferPerSecond, seconds);
+                InventoryVesselHeating.TemperatureTransferPerSecond, temperatureSeconds);
             liquidState.ProcessingSeconds = 0f;
             liquidState.Revision++;
             liquidStorage.WriteData(liquidState);
@@ -312,8 +322,10 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         foreach (ItemSlot materialSlot in materialInventory.Data.itemSlots)
         {
             ItemData material = materialSlot?.itemData;
-            if (material != null && ItemMatterRuntime.Advance(material, temperature, 1f, seconds))
-                materialInventory.Data.NotifyItemStateChanged(material);
+            if (material == null) continue;
+            bool changed = ItemMatterRuntime.EnsureInitialized(material, initialContentsTemperature);
+            changed |= ItemMatterRuntime.Advance(material, temperature, 1f, seconds, heatingRateMultiplier: heatingRateMultiplier);
+            if (changed) materialInventory.Data.NotifyItemStateChanged(material);
         }
 
         // 先容纳已达到熔点的液体产物，容器已满的材料保持原样。

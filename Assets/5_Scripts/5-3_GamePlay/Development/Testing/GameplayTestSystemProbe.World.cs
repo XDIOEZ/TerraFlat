@@ -1231,6 +1231,8 @@ public static partial class GameplayTestSystemProbe
         float current = (float)Number(args, "current", 100d);
         float furnace = (float)Number(args, "furnace", 1000d);
         float seconds = (float)Number(args, "seconds", 1d);
+        float heatingRateMultiplier = (float)Number(args, "heatingRateMultiplier", 1d);
+        float? fixedTransfer = args["fixedTransfer"] == null ? null : (float)Number(args, "fixedTransfer", 10d);
         ItemData Material() => new Data_GeneralItem
         {
             IDName = "system-probe:heated-material",
@@ -1239,12 +1241,15 @@ public static partial class GameplayTestSystemProbe
         };
         ItemData material = Material();
         // 直接采样熔炉复用的正式物质传热入口，业务数值由 Lua 断言。
-        bool changed = ItemMatterRuntime.Advance(material, furnace, 1f, seconds);
+        bool changed = ItemMatterRuntime.Advance(material, furnace, 1f, seconds,
+            transferPerSecondOverride: fixedTransfer, heatingRateMultiplier: heatingRateMultiplier);
         float next = material.MatterState.TemperatureCelsius;
-        ItemMatterRuntime.Advance(material, furnace, 1f, seconds);
+        ItemMatterRuntime.Advance(material, furnace, 1f, seconds,
+            transferPerSecondOverride: fixedTransfer, heatingRateMultiplier: heatingRateMultiplier);
         ItemData split = Material();
         for (int i = 0; i < 10; i++)
-            ItemMatterRuntime.Advance(split, furnace, 1f, seconds / 10f);
+            ItemMatterRuntime.Advance(split, furnace, 1f, seconds / 10f,
+                transferPerSecondOverride: fixedTransfer, heatingRateMultiplier: heatingRateMultiplier);
         return new JObject
         {
             ["changed"] = changed, ["next"] = next,

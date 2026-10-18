@@ -82,6 +82,33 @@ for _, input in ipairs({
     end, string.format("材料温差百分比传热：%g℃→%g℃，%g秒", input.current, input.furnace, input.seconds))
 end
 
+for _, input in ipairs({
+    { current = 500, furnace = 501, seconds = 1, heatingRateMultiplier = 0, expected = 500 },
+    { current = 500, furnace = 501, seconds = 1, heatingRateMultiplier = .5, expected = 500.25 },
+    { current = 500, furnace = 501, seconds = 1, heatingRateMultiplier = 1, expected = 500.5 },
+    { current = 500, furnace = 501, seconds = 1, heatingRateMultiplier = 1.5, expected = 500.75 },
+    { current = 500, furnace = 501, seconds = 1, heatingRateMultiplier = 10, expected = 501 },
+    { current = 100, furnace = 1000, seconds = 1, heatingRateMultiplier = .5, expected = 1000 - 900 * math.sqrt(.99) },
+    { current = 100, furnace = 1000, seconds = 1, heatingRateMultiplier = 1.5, expected = 1000 - 900 * .99 ^ 1.5 },
+    { current = 1100, furnace = 1000, seconds = 1, heatingRateMultiplier = 0, expected = 1099 },
+    { current = 1100, furnace = 1000, seconds = 1, heatingRateMultiplier = .5, expected = 1099 },
+    { current = 1100, furnace = 1000, seconds = 1, heatingRateMultiplier = 1.5, expected = 1099 },
+    { current = 500.25, furnace = 500, seconds = 1, heatingRateMultiplier = 1.5, expected = 500 },
+    { current = 20, furnace = 1000, seconds = 1, heatingRateMultiplier = .5, fixedTransfer = 10, expected = 25 },
+    { current = 20, furnace = 1000, seconds = 1, heatingRateMultiplier = 1.5, fixedTransfer = 10, expected = 35 },
+    { current = 100, furnace = 20, seconds = 1, heatingRateMultiplier = 1.5, fixedTransfer = 10, expected = 90 },
+    { current = 100, furnace = 1000, seconds = 0, heatingRateMultiplier = 1.5, expected = 100 },
+}) do
+    test.system("processing", "material_heat", input, function(data)
+        assert(math.abs(data.next - input.expected) < .0001, "材料换热倍率未只作用于升温，或冷却被错误加速")
+        assert(math.abs(data.split - data.next) < .001, "换热倍率分次推进与累计时长不同")
+        assert(data.amount == 4, "材料换热倍率改变了数量")
+        if input.heatingRateMultiplier == 0 and input.current < input.furnace or input.seconds == 0 then
+            assert(not data.changed, "零升温倍率或零时间仍改变材料状态")
+        end
+    end, string.format("升温倍率%g，仅传热不加快冷却：%g℃→%g℃", input.heatingRateMultiplier, input.current, input.furnace))
+end
+
 test.system("processing", "fuel_absorption", {}, function(data)
     assert(not data.premature and data.beforeAmount == 3, "燃料遮罩长满前提前扣了物品")
     near(data.beforeProgress, 2.9 / 3, "燃料遮罩未按三秒一份推进")

@@ -17,6 +17,9 @@
     <type fullname="RecipeProcessor" preserve="all" />
     <type fullname="MechanicalNetworkGraph" preserve="all" />
     <type fullname="FurnaceLogic" preserve="all" />
+    <type fullname="InductionStoveLogic" preserve="all" />
+    <type fullname="InductionStoveDefinition" preserve="all" />
+    <type fullname="InductionStoveState" preserve="all" />
     <type fullname="WorkbenchLogic" preserve="all" />
     <type fullname="StorageLogic" preserve="all" />
     <type fullname="CompostLogic" preserve="all" />

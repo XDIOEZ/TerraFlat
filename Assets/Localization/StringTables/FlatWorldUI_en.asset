@@ -5080,6 +5080,22 @@ MonoBehaviour:
     m_Localized: "Flick Quick Transfer"
     m_Metadata:
       m_Items: []
+  - m_Id: 17033886000000006
+    m_Localized: "Induction Stove"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000007
+    m_Localized: "Power supplied {0:0.#}/{1:0.#} W"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000008
+    m_Localized: "Heating coefficient {0:0}% \u00b7 {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000009
+    m_Localized: "Input weight {0:0.##}/{1:0.##} kg\nInput volume {2:0.##}/{3:0.##} L"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

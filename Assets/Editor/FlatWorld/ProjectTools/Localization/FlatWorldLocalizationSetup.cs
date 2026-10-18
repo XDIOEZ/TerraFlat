@@ -32,6 +32,12 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishDescriptionOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "BlastFurnace", "A furnace with forced airflow for high temperature metalworking. 3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input capacity." },
+                { "Smelter", "A furnace for smelting ore. 2 input slots, a 50% material heating coefficient, and 50 kg / 50 L input capacity." },
+                { "BlastFurnace_Summoner", "A furnace with forced airflow for high temperature metalworking. 3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input capacity." },
+                { "Smelter_Summoner", "A furnace for smelting ore. 2 input slots, a 50% material heating coefficient, and 50 kg / 50 L input capacity." },
+                { "InductionStove", "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots, 150% heating coefficient, up to 2000 C, rated 120 V and 1200 W. Materials transform at their own temperature and retain residual heat after power loss." },
+                { "InductionStove_Summoner", "Automatically heats materials with electricity. 3 input slots with 300 kg / 300 L capacity, 2 output slots, 150% heating coefficient, up to 2000 C, rated 120 V and 1200 W. Materials transform at their own temperature and retain residual heat after power loss." },
                 { "Ore_Diamond", "Rare ore mined from a diamond deposit. Can be picked up, stacked and stored as a material." },
                 { "Mine_Diamond", "A rare diamond vein in underground caves. Drops diamond ore when mined. No tool tier is required; mining efficiency depends on damage, defense and tool harvesting bonuses." },
                 { "ClayJar", "Holds 8 servings. Fill it at a water source; boil fresh water or evaporate seawater in a furnace." },
@@ -284,6 +290,10 @@ namespace FlatWorld.Localization.Editor
                 { "没有动力", "No mechanical power" },
                 { "没有电", "No electricity" },
                 { "正在加热", "Heating" },
+                { "输入重量 {0:0.##}/{1:0.##} kg\n输入体积 {2:0.##}/{3:0.##} L", "Input weight {0:0.##}/{1:0.##} kg\nInput volume {2:0.##}/{3:0.##} L" },
+                { "电磁炉", "Induction Stove" },
+                { "实际供电 {0:0.#}/{1:0.#} W", "Power supplied {0:0.#}/{1:0.#} W" },
+                { "升温系数 {0:0}% · {1}", "Heating coefficient {0:0}% · {1}" },
                 { "通电自动加热", "Heats automatically when powered" },
                 { "罐体温度 {0:0.##}℃", "Tank body temperature {0:0.##} C" },
                 { "{0}\n实际供电 {1:0.#}/{2:0.#} W\n加热半径 {3:0.#} 格 · 中心升温 {4:0.#}℃", "{0}\nPower supplied {1:0.#}/{2:0.#} W\nHeating radius {3:0.#} tiles · Center temperature increase {4:0.#} C" },

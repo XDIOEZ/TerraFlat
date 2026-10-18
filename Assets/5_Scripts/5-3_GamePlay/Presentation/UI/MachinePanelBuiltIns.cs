@@ -1,4 +1,6 @@
 using System;
+using FlatWorld.Localization;
+using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
@@ -13,6 +15,7 @@ internal static class MachinePanelBuiltIns
         MachinePanelFactoryRegistry.AddBuiltIn("ship-device", CreateShipDevice);
         MachinePanelFactoryRegistry.AddBuiltIn("workbench", entity => new WorkbenchMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("furnace", entity => new FurnaceMachinePanelSession(entity));
+        MachinePanelFactoryRegistry.AddBuiltIn("induction-stove", entity => new InductionStovePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("mortar", entity => new MortarMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("fire-drill", entity => new FireDrillMachinePanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("manual-processing", CreateManualProcessing);
@@ -91,6 +94,7 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
     private readonly FurnaceLogic furnace;
     private readonly Slider fuel;
     private readonly TMP_Text temperature;
+    private readonly TMP_Text capacity;
     private readonly TMP_Text hint;
 
     public FurnaceMachinePanelSession(MachineEntity entity) : base(entity, bindDefaultInventories: false)
@@ -99,13 +103,14 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
         {
             furnace = (FurnaceLogic)Logic;
             BasePanel panel = CreatePanel(furnace.PanelPrefab);
-            BindSlots(panel, furnace.Input, "输入");
+            BindSlots(panel, furnace.Input, "输入", matchSlotVisibility: true);
             BindSlots(panel, furnace.Output, "输出", allowDirectionalDeposit: false);
             BindSlots(panel, furnace.FuelInventory, "燃料");
             BindActionButton(panel.GetButton("合成按钮")
                 ?? throw new InvalidOperationException("熔炉面板缺少合成按钮。"));
             fuel = panel.GetSlider("燃料显示条");
             temperature = panel.GetText("FWUI_FurnaceTemperatureValue");
+            capacity = panel.GetText("FWUI_FurnaceInputCapacity");
             hint = panel.GetText("FWUI_FooterHint");
         }
         catch { Dispose(); throw; }
@@ -115,11 +120,80 @@ internal sealed class FurnaceMachinePanelSession : MachinePanelSession
     {
         if (fuel != null) fuel.value = furnace.FuelRatio;
         if (temperature != null) temperature.text = furnace.Status;
-        if (hint != null) hint.text = furnace.GetHeatingHint();
+        if (capacity != null) capacity.text = FurnaceInputCapacityFeedback.Describe(furnace.Input);
+        if (hint != null) hint.text = FlatWorldLocalizationService.GetUiFormat(
+            "升温系数 {0:0}% · {1}", furnace.HeatingRatePercent, furnace.GetHeatingHint());
         for (int i = 0; i < furnace.FuelInventory.itemSlot_UI.Count; i++)
             furnace.FuelInventory.itemSlot_UI[i]?.SetProcessingProgress(furnace.GetFuelAbsorptionProgress(i));
     }
 
+    #endregion
+}
+
+/// <summary>电磁炉复用库存面板，仅展示材料、炉温和真实供电。</summary>
+internal sealed class InductionStovePanelSession : MachinePanelSession
+{
+    #region 电磁炉绑定
+    private readonly InductionStoveLogic stove;
+    private readonly TMP_Text temperature;
+    private readonly TMP_Text power;
+    private readonly TMP_Text capacity;
+    private readonly TMP_Text hint;
+
+    public InductionStovePanelSession(MachineEntity entity) : base(entity, bindDefaultInventories: false)
+    {
+        try
+        {
+            stove = (InductionStoveLogic)Logic;
+            BasePanel panel = CreatePanel(stove.PanelPrefab);
+            BindSlots(panel, stove.Input, "输入", matchSlotVisibility: true);
+            BindSlots(panel, stove.Output, "输出", allowDirectionalDeposit: false, matchSlotVisibility: true);
+            // 电力炉没有燃料或点火操作，共用面板只保留实际使用的控件。
+            foreach (ItemSlot_UI slot in panel.GetComponentsInChildren<ItemSlot_UI>(true))
+                if (slot.name.StartsWith("燃料_", StringComparison.Ordinal) || slot.name.StartsWith("燃料 ", StringComparison.Ordinal))
+                    slot.gameObject.SetActive(false);
+            Button ignition = panel.GetButton("合成按钮");
+            if (ignition != null) ignition.gameObject.SetActive(false);
+            Slider fuel = panel.GetSlider("燃料显示条");
+            if (fuel != null) fuel.gameObject.SetActive(false);
+            TMP_Text title = panel.GetText("FWUI_标题");
+            if (title != null)
+            {
+                title.text = FlatWorldLocalizationService.GetUiText("电磁炉");
+                title.GetComponent<LocalizedTextBinder>()?.ConfigureRuntime(() => FlatWorldLocalizationService.GetUiText("电磁炉"));
+            }
+            temperature = panel.GetText("FWUI_FurnaceTemperatureValue");
+            capacity = panel.GetText("FWUI_FurnaceInputCapacity");
+            power = panel.GetText("FWUI_FurnaceFuelLabel");
+            hint = panel.GetText("FWUI_FooterHint");
+        }
+        catch { Dispose(); throw; }
+    }
+
+    protected override void RefreshPresentation()
+    {
+        if (temperature != null) temperature.text = stove.Status;
+        if (capacity != null) capacity.text = FurnaceInputCapacityFeedback.Describe(stove.Input);
+        if (power != null) power.text = FlatWorldLocalizationService.GetUiFormat(
+            "实际供电 {0:0.#}/{1:0.#} W", stove.SuppliedWatts, Entity.Definition.Electrical.PowerWatts);
+        if (hint != null) hint.text = FlatWorldLocalizationService.GetUiFormat(
+            "升温系数 {0:0}% · {1}", stove.HeatingRatePercent,
+            FlatWorldLocalizationService.GetUiText(stove.SuppliedWatts > 0f ? "正在加热" : "没有电"));
+    }
+    #endregion
+}
+
+/// <summary>炉面板只读取库存现有容量规则，重量与体积不在 UI 中重新计算。</summary>
+internal static class FurnaceInputCapacityFeedback
+{
+    #region 输入容量读数
+    public static string Describe(Inventory inventory)
+    {
+        Inventory_Data data = inventory?.Data;
+        return data?.HasCarryCapacity == true ? FlatWorldLocalizationService.GetUiFormat(
+            "输入重量 {0:0.##}/{1:0.##} kg\n输入体积 {2:0.##}/{3:0.##} L",
+            data.CurrentCarryWeight, data.MaxCarryWeight, data.CurrentCarryVolume, data.MaxCarryVolume) : string.Empty;
+    }
     #endregion
 }
 

@@ -279,6 +279,8 @@
     "GasCompressor_Mechanical_Summoner": "Mechanical Gas Compressor",
     "GasCompressor_Electric": "Electric Gas Compressor",
     "GasCompressor_Electric_Summoner": "Electric Gas Compressor",
+    "InductionStove": "Induction Stove",
+    "InductionStove_Summoner": "Induction Stove",
     "ElectricHeater": "Electric Heater",
     "ElectricHeater_Summoner": "Electric Heater",
     "FluidFilter": "Fluid Filter",

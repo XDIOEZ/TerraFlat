@@ -1731,6 +1731,22 @@ MonoBehaviour:
     m_Key: item.Creative_Power_Source_Summoner.description
     m_Metadata:
       m_Items: []
+  - m_Id: 23082859458715655
+    m_Key: item.InductionStove.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715656
+    m_Key: item.InductionStove_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715657
+    m_Key: item.InductionStove.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23082859458715658
+    m_Key: item.InductionStove_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

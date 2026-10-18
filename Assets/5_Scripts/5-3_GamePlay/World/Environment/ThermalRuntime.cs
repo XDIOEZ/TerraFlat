@@ -50,6 +50,18 @@ public static class ThermalRuntime
             Math.Max(currentTemperature, ambientTemperature));
     }
 
+    // 供热倍率只缩放升温所用时间，冷却和调用方的真实加工时间保持原值。
+    public static float ResolveHeatingSeconds(float currentTemperature, float targetTemperature,
+        float seconds, float heatingRateMultiplier = 1f)
+    {
+        if (!float.IsFinite(currentTemperature) || !float.IsFinite(targetTemperature) ||
+            !float.IsFinite(seconds) || seconds <= 0f ||
+            !float.IsFinite(heatingRateMultiplier) || heatingRateMultiplier < 0f) return 0f;
+        return targetTemperature > currentTemperature
+            ? (float)Math.Min(float.MaxValue, (double)seconds * heatingRateMultiplier)
+            : seconds;
+    }
+
     #endregion
 
     #region 特殊固定速率传热

@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "crafting/induction_stove",
+      "path": "crafting/induction_stove.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/vehicles",
       "path": "crafting/vehicles.json",
       "enabled": true

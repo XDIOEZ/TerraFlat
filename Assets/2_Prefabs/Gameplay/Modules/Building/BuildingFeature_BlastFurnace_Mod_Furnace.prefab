@@ -59,7 +59,10 @@ MonoBehaviour:
     IsSmelting: 0
     TemperatureUpSpeed: 10
   RawData: []
+  heatingRatePercent: 100
   InputInventory:
+    StorageMaxWeightKg: 150
+    StorageMaxVolumeCubicMeters: 0.15
     item: {fileID: 0}
     InventoryPanel_Prefab: {fileID: 0}
     basePanel: {fileID: 0}
