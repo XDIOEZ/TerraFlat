@@ -34,7 +34,8 @@ public static class ReadableBookAssetBuilder
         root.gameObject.SetActive(false);
 
         Image overlay = root.gameObject.AddComponent<Image>();
-        overlay.color = new Color32(12, 12, 12, 178);
+        // 阅读界面只显示书页与控件，透明遮罩保留点击阻挡。
+        overlay.color = Color.clear;
         overlay.raycastTarget = true;
 
         BasePanel basePanel = root.gameObject.AddComponent<BasePanel>();
@@ -48,7 +49,7 @@ public static class ReadableBookAssetBuilder
 
         RectTransform frame = Rect("书籍框", root, new Vector2(1080f, 650f), Vector2.zero);
         Image frameImage = frame.gameObject.AddComponent<Image>();
-        frameImage.color = new Color32(39, 39, 39, 255);
+        frameImage.color = Color.clear;
         frameImage.raycastTarget = false;
 
         TextMeshProUGUI title = Text("书籍标题", frame, "书籍", new Vector2(900f, 48f), new Vector2(0f, 286f), 28f,
