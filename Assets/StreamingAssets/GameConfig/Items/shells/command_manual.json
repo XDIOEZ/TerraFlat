@@ -5,18 +5,18 @@
       "id": "CommandManual",
       "parent": "MinersNote",
       "gameName": "命令手册",
-      "description": "输入 /help 获得的说明书，记录领取时的命令与调试操作目录。手持后使用即可阅读。",
+      "description": "输入 /help 获得的聊天命令手册，书内自带 1 个木炭。手持后使用即可阅读和编辑。",
       "labelKey": "item.CommandManual.name",
       "descriptionKey": "item.CommandManual.description",
       "modules": {
         "readableBook": {
           "parameters": {
-            "allowHandwriting": false,
+            "allowHandwriting": true,
             "allowPageExpansion": false,
             "pages": [
               {
                 "key": "item.CommandManual.page.1",
-                "fallback": "命令手册\n\n在聊天框输入 /help，可领取一本记录当前命令与调试操作的手册。手持这本书后使用即可阅读，不需要墨水或纸张。"
+                "fallback": "命令手册\n\n在聊天框输入 /help，可领取一本只记录聊天斜杠命令的手册。书内书写材料槽自带 1 个木炭，手持后使用即可阅读，双击标题或正文即可编辑。"
               }
             ]
           }

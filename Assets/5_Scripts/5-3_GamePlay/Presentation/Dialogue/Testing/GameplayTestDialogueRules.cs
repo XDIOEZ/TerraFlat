@@ -185,7 +185,18 @@ namespace FlatWorld.Dialogue
                 PlayerHelpCatalog.UnregisterProvider(secondProvider);
             }
 
-            IReadOnlyList<PlayerHelpEntry> entries = PlayerHelpCatalog.Collect();
+            IReadOnlyList<PlayerHelpEntry> entries;
+            try
+            {
+                // 主动混入非聊天入口，确保精简目录不会被运行环境中的 GM 登记影响。
+                PlayerHelpCatalog.RegisterProvider(firstProvider, () => new[]
+                {
+                    new PlayerHelpEntry("管理员操作", "打开面板", "F4", "打开 GM 面板。"),
+                    new PlayerHelpEntry("调试快捷键", "调试操作", "/debug-probe", "非聊天命令，不能只按斜杠筛选。")
+                });
+                entries = PlayerHelpCatalog.Collect("聊天命令");
+            }
+            finally { PlayerHelpCatalog.UnregisterProvider(firstProvider); }
             IReadOnlyList<ReadableBookPageContent> pages = PlayerHelpChatCommand.BuildPages(entries);
             JArray entryData = new();
             JArray pageData = new();

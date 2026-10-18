@@ -55,8 +55,8 @@ public static class PlayerHelpCatalog
 
     #region 稳定收集与去重
 
-    /// <summary>按类别、用法及标题稳定排序，完全相同的说明只保留一条。</summary>
-    public static IReadOnlyList<PlayerHelpEntry> Collect()
+    /// <summary>可按类别筛选，再按类别、用法及标题稳定排序，相同说明只保留一条。</summary>
+    public static IReadOnlyList<PlayerHelpEntry> Collect(string category = null)
     {
         List<PlayerHelpEntry> entries = new();
         foreach (Func<IEnumerable<PlayerHelpEntry>> provider in providers.Values)
@@ -65,7 +65,7 @@ public static class PlayerHelpCatalog
             if (supplied == null)
                 continue;
             foreach (PlayerHelpEntry entry in supplied)
-                if (entry != null)
+                if (entry != null && (category == null || string.Equals(entry.Category, category, StringComparison.Ordinal)))
                     entries.Add(entry);
         }
 

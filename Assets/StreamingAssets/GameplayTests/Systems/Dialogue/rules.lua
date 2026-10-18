@@ -77,10 +77,14 @@ test.system("dialogue", "help_catalog", {}, function(data)
     assert(#data.probeUsages == 2 and data.probeUsages[1] == "/a" and data.probeUsages[2] == "/z",
         "帮助目录注册替换、去重或稳定排序错误")
     assert(#data.entries >= 3 and #data.pages == #data.entries + 1, "命令手册未按简介与每条一页生成")
-    assert(data.pages[1].title == "命令手册" and string.find(data.pages[1].body, "F4", 1, true), "手册简介缺失入口说明")
+    assert(data.pages[1].title == "命令手册" and string.find(data.pages[1].body, "聊天", 1, true)
+        and string.find(data.pages[1].body, "木炭", 1, true), "手册简介缺失聊天或自带材料说明")
+    assert(not string.find(data.pages[1].body, "F4", 1, true)
+        and not string.find(data.pages[1].body, "调试快捷键", 1, true), "手册简介仍包含非聊天入口")
     local found = {}
     for index, entry in ipairs(data.entries) do
-        assert(entry.category ~= "__dialogue_help_rule", "帮助提供方撤销后仍留有条目")
+        assert(entry.category == "聊天命令" and string.sub(entry.usage, 1, 1) == "/",
+            "手册混入了聊天斜杠命令以外的操作")
         local page = data.pages[index + 1]
         assert(page.index == index and page.title == entry.title, "手册页码或标题没有对应操作")
         assert(page.customTitle and page.customBody, "书页未保存为独立物品的实例内容")
@@ -93,7 +97,7 @@ test.system("dialogue", "help_catalog", {}, function(data)
         and string.find(found["/carryweight 数值"], "kg", 1, true), "重量说明遗漏单位或超额规则")
     assert(string.find(found["/carryvolume 数值"], "L", 1, true)
         and string.find(found["/carryvolume 数值"], "硬上限", 1, true), "体积说明遗漏单位或硬上限")
-end, "命令目录稳定收集并完整生成独立书页")
+end, "命令目录只收聊天斜杠命令并完整生成独立书页")
 
 test.system("dialogue", "help_command", {}, function(data)
     assert(data.handled and data.feedback == "当前本地玩家尚未就绪。", "帮助命令缺少本地玩家时未拒绝")

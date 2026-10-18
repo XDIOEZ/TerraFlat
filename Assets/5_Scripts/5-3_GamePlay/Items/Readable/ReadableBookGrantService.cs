@@ -9,7 +9,7 @@ public static class ReadableBookGrantService
     #region 本地权威玩家发书
 
     public static bool TryGive(Player player, string itemDefinitionId,
-        IReadOnlyList<ReadableBookPageContent> pages, out string failureReason)
+        IReadOnlyList<ReadableBookPageContent> pages, out string failureReason, string writingMaterialDefinitionId = null)
     {
         if (player == null || !player.IsLocalProfile || player.Data == null || player.DestructionHandled)
         {
@@ -42,7 +42,7 @@ public static class ReadableBookGrantService
             failureReason = "读物定义尚未加载，请等待游戏资源就绪。";
             return false;
         }
-        if (!TryGetReadableConfiguration(definition, out string stableName, out int basePageCount))
+        if (!TryGetReadableConfiguration(definition, out string stableName, out int basePageCount, out string writingMaterialTag))
         {
             failureReason = "该物品没有唯一且已启用的可阅读书籍模块。";
             return false;
@@ -56,8 +56,28 @@ public static class ReadableBookGrantService
             failureReason = "读物实例数据无效，或该读物不支持独立书页。";
             return false;
         }
+        ItemData writingMaterial = null;
+        if (writingMaterialDefinitionId != null)
+        {
+            if (string.IsNullOrWhiteSpace(writingMaterialTag) ||
+                !resources.TryGetItemDefinition(writingMaterialDefinitionId, out RuntimeItemDefinition materialDefinition))
+            {
+                failureReason = "随书书写材料未配置，或该读物不允许书写。";
+                return false;
+            }
+            writingMaterial = resources.CreateItemData(materialDefinition.Id);
+            if (writingMaterial?.Stack == null || writingMaterial.Tags == null ||
+                !writingMaterial.Tags.Contains(writingMaterialTag))
+            {
+                failureReason = "随书材料不能用于该读物的书写槽。";
+                return false;
+            }
+            writingMaterial.Stack.Amount = 1f;
+            writingMaterial.Stack.CanBePickedUp = false;
+        }
+
         book.Stack.Amount = 1f;
-        if (!ReadableBookInitialContent.TryWrite(bookData, basePageCount, pages, out failureReason) ||
+        if (!ReadableBookInitialContent.TryWrite(bookData, basePageCount, pages, out failureReason, writingMaterial) ||
             !TryInsert(bag, capacity, book, out failureReason))
             return false;
 
@@ -73,10 +93,11 @@ public static class ReadableBookGrantService
     #region 定义与库存事务
 
     private static bool TryGetReadableConfiguration(RuntimeItemDefinition definition,
-        out string stableName, out int basePageCount)
+        out string stableName, out int basePageCount, out string writingMaterialTag)
     {
         stableName = null;
         basePageCount = 0;
+        writingMaterialTag = null;
         foreach (RuntimeItemModuleDefinition module in definition.ModuleDefinitions)
         {
             if (!module.Enabled || !string.Equals(module.ModuleId, Mod_ReadableBook.ModuleId, StringComparison.Ordinal))
@@ -98,6 +119,8 @@ public static class ReadableBookGrantService
                     return false;
             stableName = module.StableName;
             basePageCount = configuredPages.Count;
+            if (parameters?["allowHandwriting"]?.Value<bool>() ?? prototype.allowHandwriting)
+                writingMaterialTag = parameters?["writingMaterialTag"]?.Value<string>() ?? prototype.writingMaterialTag;
         }
         return stableName != null;
     }

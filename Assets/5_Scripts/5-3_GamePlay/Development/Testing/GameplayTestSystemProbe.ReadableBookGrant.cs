@@ -38,7 +38,13 @@ public static partial class GameplayTestSystemProbe
             new() { PageIndex = -1, Title = "管理员操作", Body = "F4：打开 GM 面板。" },
             new() { Title = "说明", Body = "中文与换行\n完整保留。" }
         };
-        bool written = ReadableBookInitialContent.TryWrite(module, 1, pages, out string failure);
+        ItemData material = null;
+        if (Flag(args, "withMaterial", false))
+        {
+            material = ReadableBookProbeItem("Charcoal", 104);
+        }
+        bool written = ReadableBookInitialContent.TryWrite(module, 1, pages, out string failure, material);
+        if (material != null) material.Stack.Amount = 7f;
         byte[] beforeRejected = module.BitData;
         bool emptyAccepted = ReadableBookInitialContent.TryWrite(module, 1,
             Array.Empty<ReadableBookPageContent>(), out _);
@@ -54,6 +60,8 @@ public static partial class GameplayTestSystemProbe
         ItemData restoredBook = snapshot.CreateColdData().GetItemSlot(0).itemData;
         var restoredModule = (Ex_ModData_MemoryPackable)restoredBook.ModuleDataDic["readableBook"];
         ReadableBookInstanceSnapshot restored = restoredModule.GetData<ReadableBookInstanceSnapshot>();
+        Inventory_Data restoredInputs = restored.InputInventory.CreateColdData();
+        ItemData restoredMaterial = restoredInputs.GetItemSlot(0).itemData;
         var restoredPages = new JArray();
         foreach (ReadableBookPageContent page in restored.PageContents)
             restoredPages.Add(new JObject
@@ -70,6 +78,9 @@ public static partial class GameplayTestSystemProbe
         {
             ["written"] = written, ["failure"] = failure, ["addedPages"] = restored.AddedPageCount,
             ["pages"] = restoredPages, ["materialSlots"] = restored.InputInventory.SlotCount,
+            ["materialId"] = restoredMaterial?.IDName ?? string.Empty,
+            ["materialAmount"] = restoredMaterial?.Stack?.Amount ?? 0f,
+            ["paperEmpty"] = restoredInputs.GetItemSlot(1).itemData == null,
             ["emptyAccepted"] = emptyAccepted, ["nullPageAccepted"] = nullPageAccepted,
             ["rejectedUnchanged"] = rejectedUnchanged, ["guid"] = restoredBook.Guid,
             ["independentBody"] = module.GetData<ReadableBookInstanceSnapshot>().PageContents[0].Body,

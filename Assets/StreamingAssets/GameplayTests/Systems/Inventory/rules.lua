@@ -17,6 +17,15 @@ test.system("inventory", "readable_book_snapshot", {}, function(data)
     assert(data.independentBody == expected[1].body, "调用方或另一本书改动污染了本书内容")
 end, "命令手册：独立书页、扩页状态和正式库存快照往返")
 
+test.system("inventory", "readable_book_snapshot", {withMaterial = true}, function(data)
+    assert(data.written and data.failure == "" and data.materialSlots == 2,
+        "带书写材料的书页快照没有成功写入")
+    assert(data.materialId == "Charcoal" and data.materialAmount == 1,
+        "书写槽未保存独立的一份木炭")
+    assert(data.paperEmpty and #data.pages == 3 and data.rejectedUnchanged,
+        "随书材料污染了纸张槽、书页或无效请求的拒绝结果")
+end, "命令手册：书写槽自带一份木炭并随书籍快照往返")
+
 for _, mode in ipairs({"success", "full", "weight", "volume", "deposit", "tags", "slot_limit", "pending"}) do
     test.system("inventory", "readable_book_grant", {mode = mode}, function(data)
         local accepted = mode == "success"

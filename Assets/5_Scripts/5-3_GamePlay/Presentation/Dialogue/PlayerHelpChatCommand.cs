@@ -30,7 +30,7 @@ namespace FlatWorld.Dialogue
         private static IEnumerable<PlayerHelpEntry> DescribeCommands()
         {
             yield return new PlayerHelpEntry("聊天命令", "领取命令手册", $"/{CommandName}",
-                "每次输入向主背包发放 1 本《命令手册》，记录生成时已登记的聊天命令、F4 面板操作和管理员/调试快捷键。" +
+                "每次输入向主背包发放 1 本《命令手册》，只记录聊天栏的斜杠命令，书内书写材料槽自带 1 个木炭，可直接编辑。" +
                 "仅支持单机或主机本地玩家；主背包需要空格，重量与体积必须容得下这本书。" +
                 "把书放入快捷栏，选中并使用即可阅读；再次输入可领取一份最新目录。");
         }
@@ -61,15 +61,16 @@ namespace FlatWorld.Dialogue
                 return PlayerChatCommandResult.HandledWith("当前本地玩家尚未就绪。");
 
             IReadOnlyList<ReadableBookPageContent> pages;
-            try { pages = BuildPages(PlayerHelpCatalog.Collect()); }
+            try { pages = BuildPages(PlayerHelpCatalog.Collect("聊天命令")); }
             catch (Exception exception)
             {
                 Debug.LogException(exception, this);
                 return PlayerChatCommandResult.HandledWith("命令手册内容生成失败，请查看日志。");
             }
-            if (!ReadableBookGrantService.TryGive(context.Sender, ManualDefinitionId, pages, out string failureReason))
+            if (!ReadableBookGrantService.TryGive(context.Sender, ManualDefinitionId, pages, out string failureReason,
+                    writingMaterialDefinitionId: "Charcoal"))
                 return PlayerChatCommandResult.HandledWith(failureReason);
-            return PlayerChatCommandResult.HandledWith("命令手册已放入主背包。把书放进快捷栏，选中并使用即可阅读。");
+            return PlayerChatCommandResult.HandledWith("命令手册已放入主背包，书内自带 1 个木炭。把书放进快捷栏，选中并使用即可阅读和编辑。");
         }
 
         /// <summary>简介占一页，每个操作独占一页，正文完整保留用法和使用条件。</summary>
@@ -77,11 +78,10 @@ namespace FlatWorld.Dialogue
         {
             List<ReadableBookPageContent> pages = new()
             {
-                CreatePage(0, "命令手册", "这本手册收录生成时已登记的聊天斜杠命令、F4 面板操作和管理员/调试快捷键。\n\n" +
-                    $"共 {entries.Count} 条操作说明，每条各占一页。\n\n" +
-                    "聊天命令：按 Enter 打开聊天框，输入命令，再按 Enter 提交。\n" +
-                    "F4 操作：打开 GM 面板后按对应页签和控件操作。\n" +
-                    "快捷键：按各页给出的键位和条件操作。\n\n" +
+                CreatePage(0, "命令手册", "这本手册只收录聊天栏的斜杠命令。\n\n" +
+                    $"共 {entries.Count} 条命令，每条各占一页。\n\n" +
+                    "按 Enter 打开聊天框，输入命令，再按 Enter 提交。\n\n" +
+                    "书内书写材料槽自带 1 个木炭，双击标题或正文即可编辑。\n\n" +
                     $"每本书保存领取时的目录；需要更新时再次输入 /{CommandName} 领取新书。")
             };
             foreach (PlayerHelpEntry entry in entries)

@@ -7,7 +7,7 @@ internal static class ReadableBookInitialContent
     #region 初始书页快照
 
     internal static bool TryWrite(Ex_ModData_MemoryPackable target, int basePageCount,
-        IReadOnlyList<ReadableBookPageContent> pages, out string failureReason)
+        IReadOnlyList<ReadableBookPageContent> pages, out string failureReason, ItemData writingMaterial = null)
     {
         if (target == null || basePageCount <= 0 || pages == null || pages.Count == 0)
         {
@@ -32,12 +32,15 @@ internal static class ReadableBookInitialContent
             });
         }
 
+        var inputs = new ReadableBookInstanceData().InputInventory;
+        // 随书材料和书页一起写入该本书的快照，不占玩家背包的额外槽位。
+        inputs.GetItemSlot(0).itemData = writingMaterial;
         // 初始文本随该本物品序列化，调用方修改页面列表也不会改动已经发出的书。
         target.WriteData(new ReadableBookInstanceSnapshot
         {
             AddedPageCount = Math.Max(0, copiedPages.Count - basePageCount),
             PageContents = copiedPages,
-            InputInventory = InventoryInstanceSnapshot.Capture(new ReadableBookInstanceData().InputInventory)
+            InputInventory = InventoryInstanceSnapshot.Capture(inputs)
         });
         failureReason = string.Empty;
         return true;
