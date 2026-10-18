@@ -137,7 +137,13 @@ public static class BuildingOccupancyRegistry
     public static bool GetEffectiveWalkable(Vector2Int cell, bool terrainWalkable)
     {
         if (!terrainWalkable) return false;
-        cell = WorldTopologyRuntime.NormalizeCell(cell);
+        return GetEffectiveWalkableNormalized(WorldTopologyRuntime.NormalizeCell(cell), true);
+    }
+
+    /// <summary>区块导航批量装载已经规范化坐标，不重复读取活动世界边界。</summary>
+    internal static bool GetEffectiveWalkableNormalized(Vector2Int cell, bool terrainWalkable)
+    {
+        if (!terrainWalkable) return false;
         MachineEntity mechanical = MachineWorld.GetAtCurrentWorld(cell, 0);
         if (mechanical?.Definition.BlocksMovement == true) return false;
         if (OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))

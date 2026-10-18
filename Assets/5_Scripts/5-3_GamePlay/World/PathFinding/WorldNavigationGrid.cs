@@ -183,7 +183,13 @@ public sealed class WorldNavigationGrid
 
     public void SetCell(Vector2Int position, uint penalty, bool walkable, bool water = false, float liquidDepth = 0f)
     {
-        position = NormalizeCell(position);
+        SetCanonicalCell(NormalizeCell(position), penalty, walkable, water, liquidDepth);
+    }
+
+    /// <summary>内部批处理传入已规范化世界格，避免重复查询活动星球边界。</summary>
+    internal void SetCanonicalCell(Vector2Int position, uint penalty, bool walkable, bool water = false,
+        float liquidDepth = 0f)
+    {
         WorldNavigationCell next = new(penalty, walkable && penalty > 0u, water, liquidDepth);
         bool hasCurrent = TryGetTerrainCell(position, out WorldNavigationCell current);
         if (hasCurrent &&
@@ -210,7 +216,11 @@ public sealed class WorldNavigationGrid
 
     public bool RemoveCell(Vector2Int position)
     {
-        position = NormalizeCell(position);
+        return RemoveCanonicalCell(NormalizeCell(position));
+    }
+
+    internal bool RemoveCanonicalCell(Vector2Int position)
+    {
         if (!TryGetTerrainCell(position, out WorldNavigationCell current))
             return false;
 

@@ -30,3 +30,12 @@ test.system("navigation", "corner", {}, function(data)
     assert(not data.closed and not data.otherClosed, "对角移动穿过阻挡角落")
     assert(not data.farTraversal and not data.sameTraversal, "非法相邻移动被接受")
 end, "导航斜角防穿与相邻边保护")
+
+test.system("navigation", "canonical_batch", {}, function(data)
+    assert(data.cells and data.notifications and data.revisions,
+        "规范坐标批量写入改变了地格、变更通知或路径失效版本")
+    assert(data.walkability and data.liquidCost,
+        "规范坐标导航丢失建筑阻挡、水体成本或水深")
+    assert(data.wrapped and data.unwrapped,
+        "批量拓扑归一化改变了环绕接缝或无限世界坐标")
+end, "区块导航批量坐标归一化与旧接口严格等价")

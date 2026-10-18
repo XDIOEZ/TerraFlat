@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using FlatWorld.WorldModel;
 using Unity.Profiling;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
@@ -264,6 +265,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         using (RegisterChunkRemoveMarker.Auto())
             UnregisterChunkRuntime(chunk.Address);
         ChunkTerrainData terrain = chunk.Terrain;
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         grid.BeginBatchUpdate();
         try
         {
@@ -272,17 +274,17 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             {
                 for (int x = 0; x < terrain.Width; x++)
                 {
-                    Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(new Vector2Int(
+                    Vector2Int worldCell = NormalizeRuntimeNavigationCell(topology,
                         chunk.Address.ChunkOrigin.X + x,
-                        chunk.Address.ChunkOrigin.Y + y));
+                        chunk.Address.ChunkOrigin.Y + y);
                     TerrainCell terrainCell = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
                     bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
                                     (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
-                    walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable);
+                    walkable = BuildingOccupancyRegistry.GetEffectiveWalkableNormalized(worldCell, walkable);
                     uint penalty = walkable ? (uint)Mathf.Max(1, terrainCell.NavigationCost) : 0u;
                     bool water = WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f;
                     if (walkable) penalty = WorldLiquidSystem.GetNavigationCost(terrain, x, y, penalty);
-                    grid.SetCell(worldCell, penalty, walkable, water,
+                    grid.SetCanonicalCell(worldCell, penalty, walkable, water,
                         ResolveRuntimeLiquidDepth(terrain, x, y, water));
                 }
             }
@@ -301,8 +303,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     public void UpdateChunkRuntimeCell(ChunkRuntime chunk, int localX, int localY)
     {
         if (!CanUpdateRuntimeChunk(chunk)) return;
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         grid.BeginBatchUpdate();
-        try { WriteRuntimeNavigationCell(chunk, localX, localY); }
+        try { WriteRuntimeNavigationCell(chunk, localX, localY, topology); }
         finally { grid.EndBatchUpdate(); }
     }
 
@@ -311,11 +314,12 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     {
         if (!CanUpdateRuntimeChunk(chunk)) return;
         int width = chunk.Terrain.Width;
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         grid.BeginBatchUpdate();
         try
         {
             for (int i = 0; i < indices.Length; i++)
-                WriteRuntimeNavigationCell(chunk, indices[i] % width, indices[i] / width);
+                WriteRuntimeNavigationCell(chunk, indices[i] % width, indices[i] / width, topology);
         }
         finally { grid.EndBatchUpdate(); }
     }
@@ -324,11 +328,12 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     public void UpdateChunkRuntimeCells(ChunkRuntime chunk, IReadOnlyList<Int2> cells)
     {
         if (!CanUpdateRuntimeChunk(chunk) || cells == null) return;
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         grid.BeginBatchUpdate();
         try
         {
             for (int i = 0; i < cells.Count; i++)
-                WriteRuntimeNavigationCell(chunk, cells[i].X, cells[i].Y);
+                WriteRuntimeNavigationCell(chunk, cells[i].X, cells[i].Y, topology);
         }
         finally { grid.EndBatchUpdate(); }
     }
@@ -337,12 +342,13 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     public void RefreshChunkRuntimeCells(ChunkRuntime chunk)
     {
         if (!CanUpdateRuntimeChunk(chunk)) return;
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         grid.BeginBatchUpdate();
         try
         {
             for (int y = 0; y < chunk.Terrain.Height; y++)
             for (int x = 0; x < chunk.Terrain.Width; x++)
-                WriteRuntimeNavigationCell(chunk, x, y);
+                WriteRuntimeNavigationCell(chunk, x, y, topology);
         }
         finally { grid.EndBatchUpdate(); }
     }
@@ -352,22 +358,32 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         runtimeChunks.TryGetValue(chunk.Address, out RuntimeChunkRegistration registration) &&
         ReferenceEquals(registration.Chunk, chunk);
 
-    private void WriteRuntimeNavigationCell(ChunkRuntime chunk, int localX, int localY)
+    private void WriteRuntimeNavigationCell(ChunkRuntime chunk, int localX, int localY,
+        in WorldTopologyDomain topology)
     {
         ChunkTerrainData terrain = chunk.Terrain;
         if ((uint)localX >= (uint)terrain.Width || (uint)localY >= (uint)terrain.Height)
             return;
-        Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(new Vector2Int(
-            chunk.Address.ChunkOrigin.X + localX, chunk.Address.ChunkOrigin.Y + localY));
+        Vector2Int worldCell = NormalizeRuntimeNavigationCell(topology,
+            chunk.Address.ChunkOrigin.X + localX, chunk.Address.ChunkOrigin.Y + localY);
         TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, localX, localY);
         bool walkable = (surface.Flags & TerrainCellFlags.Walkable) != 0 &&
                         (surface.Flags & TerrainCellFlags.Blocking) == 0;
-        walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable);
+        walkable = BuildingOccupancyRegistry.GetEffectiveWalkableNormalized(worldCell, walkable);
         bool water = WorldLiquidSystem.GetSurfaceDepth(terrain, localX, localY) > 0f;
         uint penalty = walkable ? (uint)Mathf.Max(1, surface.NavigationCost) : 0u;
         if (walkable) penalty = WorldLiquidSystem.GetNavigationCost(terrain, localX, localY, penalty);
-        grid.SetCell(worldCell, penalty, walkable, water,
+        grid.SetCanonicalCell(worldCell, penalty, walkable, water,
             ResolveRuntimeLiquidDepth(terrain, localX, localY, water));
+    }
+
+    /// <summary>同批使用冻结拓扑，仅跨世界接缝时对整型格执行回绕。</summary>
+    internal static Vector2Int NormalizeRuntimeNavigationCell(in WorldTopologyDomain topology, int x, int y)
+    {
+        int2 cell = new(x, y);
+        if (topology.IsWrapped && !topology.Contains(cell))
+            cell = topology.Normalize(cell);
+        return new Vector2Int(cell.x, cell.y);
     }
     #endregion
 
@@ -384,13 +400,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         if (!runtimeChunks.Remove(address, out RuntimeChunkRegistration registration))
             return;
 
+        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         grid.BeginBatchUpdate();
         try
         {
             for (int y = 0; y < registration.Height; y++)
             for (int x = 0; x < registration.Width; x++)
-                grid.RemoveCell(WorldNavigationGrid.NormalizeCell(new Vector2Int(
-                    address.ChunkOrigin.X + x, address.ChunkOrigin.Y + y)));
+                grid.RemoveCanonicalCell(NormalizeRuntimeNavigationCell(topology,
+                    address.ChunkOrigin.X + x, address.ChunkOrigin.Y + y));
         }
         finally
         {

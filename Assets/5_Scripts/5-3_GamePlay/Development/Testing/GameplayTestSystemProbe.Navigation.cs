@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
@@ -12,6 +13,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/blockers", NavigationBlockers);
         operations.Add("navigation/grid_changes", NavigationChanges);
         operations.Add("navigation/corner", NavigationCorner);
+        operations.Add("navigation/canonical_batch", NavigationCanonicalBatch);
     }
 
     private static WorldNavigationGrid NavigationFixture()
@@ -110,6 +112,95 @@ public static partial class GameplayTestSystemProbe
         return new JObject { ["open"] = open, ["openCost"] = openCost, ["closed"] = closed, ["otherClosed"] = otherClosed,
             ["farTraversal"] = grid.CanTraverse(from, new Vector2Int(12, 12), out _),
             ["sameTraversal"] = grid.CanTraverse(from, from, out _) };
+    }
+
+    /// <summary>对比常规世界格接口与已归一化批量接口的结果、变更通知和环绕位置。</summary>
+    private static JObject NavigationCanonicalBatch(JObject args)
+    {
+        var regular = new WorldNavigationGrid();
+        var canonical = new WorldNavigationGrid();
+        var regularChanged = new List<Vector2Int>();
+        var canonicalChanged = new List<Vector2Int>();
+        regular.CellChanged += cell => regularChanged.Add(cell);
+        canonical.CellChanged += cell => canonicalChanged.Add(cell);
+        Vector2Int[] cells = { new(2, 3), new(3, 3), new(4, 3), new(-7, 9) };
+        uint[] costs = { 1, 40, 0, 8 };
+        bool[] walkable = { true, true, false, true };
+        bool[] water = { false, true, false, true };
+        float[] depths = { 0f, 0.5f, 0f, 0.9f };
+
+        regular.BeginBatchUpdate();
+        canonical.BeginBatchUpdate();
+        for (int i = 0; i < cells.Length; i++)
+        {
+            regular.SetCell(cells[i], costs[i], walkable[i], water[i], depths[i]);
+            canonical.SetCanonicalCell(WorldNavigationGrid.NormalizeCell(cells[i]),
+                costs[i], walkable[i], water[i], depths[i]);
+        }
+        regular.EndBatchUpdate();
+        canonical.EndBatchUpdate();
+        regular.SetCell(cells[1], 55, true, true, 0.4f);
+        canonical.SetCanonicalCell(WorldNavigationGrid.NormalizeCell(cells[1]), 55, true, true, 0.4f);
+        regular.SetCell(cells[1], 55, true, true, 0.4f);
+        canonical.SetCanonicalCell(WorldNavigationGrid.NormalizeCell(cells[1]), 55, true, true, 0.4f);
+        regular.RegisterBlocker(301, new[] { cells[0] });
+        canonical.RegisterBlocker(301, new[] { cells[0] });
+        regular.RemoveCell(cells[2]);
+        canonical.RemoveCanonicalCell(WorldNavigationGrid.NormalizeCell(cells[2]));
+
+        bool sameCells = regular.CellCount == canonical.CellCount;
+        foreach (Vector2Int position in cells)
+        {
+            bool left = regular.TryGetCell(position, out WorldNavigationCell a);
+            bool right = canonical.TryGetCanonicalCell(WorldNavigationGrid.NormalizeCell(position),
+                out WorldNavigationCell b);
+            sameCells &= left == right && (!left ||
+                a.Penalty == b.Penalty && a.Walkable == b.Walkable && a.Water == b.Water &&
+                Mathf.Approximately(a.LiquidDepth, b.LiquidDepth));
+        }
+        var regularPositions = new List<Vector2Int>();
+        var canonicalPositions = new List<Vector2Int>();
+        regular.CopyCellPositions(regularPositions);
+        canonical.CopyCellPositions(canonicalPositions);
+        sameCells &= new HashSet<Vector2Int>(regularPositions).SetEquals(canonicalPositions);
+        bool sameNotifications = regularChanged.Count == canonicalChanged.Count;
+        for (int i = 0; i < regularChanged.Count && sameNotifications; i++)
+            sameNotifications = regularChanged[i] == canonicalChanged[i];
+        bool sameRevisions = regular.Revision == canonical.Revision &&
+            regular.PathInvalidationRevision == canonical.PathInvalidationRevision &&
+            regular.PathCostRevision == canonical.PathCostRevision;
+        bool walkabilityEquivalent = true;
+        foreach (Vector2Int position in cells)
+            walkabilityEquivalent &= BuildingOccupancyRegistry.GetEffectiveWalkable(position, true) ==
+                BuildingOccupancyRegistry.GetEffectiveWalkableNormalized(
+                    WorldNavigationGrid.NormalizeCell(position), true);
+        var domain = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        bool wrappedEquivalent = true;
+        foreach (Vector2Int position in new[]
+        {
+            new Vector2Int(-17, -16), new Vector2Int(-16, -16), new Vector2Int(15, 15),
+            new Vector2Int(16, 16), new Vector2Int(48, -49)
+        })
+        {
+            int2 expected = domain.Normalize(new int2(position.x, position.y));
+            Vector2Int actual = WorldNavigationManager.NormalizeRuntimeNavigationCell(
+                domain, position.x, position.y);
+            wrappedEquivalent &= actual.x == expected.x && actual.y == expected.y;
+        }
+        Vector2Int unwrapped = WorldNavigationManager.NormalizeRuntimeNavigationCell(
+            default, -100, 420);
+        return new JObject
+        {
+            ["cells"] = sameCells,
+            ["notifications"] = sameNotifications,
+            ["revisions"] = sameRevisions,
+            ["walkability"] = walkabilityEquivalent,
+            ["wrapped"] = wrappedEquivalent,
+            ["unwrapped"] = unwrapped == new Vector2Int(-100, 420),
+            ["liquidCost"] = regular.TryGetCell(cells[1], out WorldNavigationCell waterCell) &&
+                waterCell.Penalty == 55 && waterCell.Water &&
+                Mathf.Approximately(waterCell.LiquidDepth, 0.4f)
+        };
     }
     #endregion
 }
