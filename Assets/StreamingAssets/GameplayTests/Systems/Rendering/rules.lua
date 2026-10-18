@@ -1,4 +1,13 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "terrain_shadow_dirty_queue", {}, function(data)
+    assert(data.fullCount == 4096 and data.sparseVisits == 384 and data.fullScanVisits == 524288,
+        "地形阴影小范围改动仍按全区块扫描，或重建时漏掉完整格子")
+    assert(data.deduplicated and data.drained and data.retried and data.retryContents,
+        "重复脏格未合并，或中断/失败后丢失待更新格")
+    assert(data.fullReentrant and data.rebuilding and data.empty and data.cleared and data.reset,
+        "提交中重建、清理或重新绑定遗留旧阴影脏格")
+end, "地形阴影增量脏格队列、提交重入与异常重试")
+
 test.system("rendering", "dropped_combustion_material", {}, function(data)
     assert(data.assigned, "掉落物燃烧粒子没有绑定材质，会显示紫块")
     assert(data.shared, "重复创建燃烧粒子没有复用共享材质")

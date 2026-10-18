@@ -15,8 +15,9 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
     private ChunkRuntime chunk;
     private ChunkTilemapRenderer owner;
     private bool useGeneratedHeight;
-    private bool[] dirty;
+    private readonly TerrainShadowDirtyQueue dirty = new();
     private bool dirtyAny;
+    private bool flushInProgress;
     private int submittedCount;
     private readonly List<IDisposable> chunkSubscriptions = new();
     private readonly List<NeighbourSubscription> terrainSubscriptions = new();
@@ -37,7 +38,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         if (chunk.Terrain == null || owner == null || material == null)
             throw new InvalidOperationException("地表高低阴影缺少权威地形、BRG Owner 或共享材质。");
         useGeneratedHeight = UsesGeneratedHeight(chunk.Address.DimensionId);
-        dirty = new bool[chunk.Terrain.Width * chunk.Terrain.Height];
+        dirty.Reset(chunk.Terrain.Width * chunk.Terrain.Height);
         chunk.Terrain.Changed += HandleChanged;
         chunk.Terrain.LiquidBatchChanged += HandleLiquidChanged;
         owner.BatchPresentationRebuilt += MarkAll;
@@ -62,7 +63,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         }
         chunk = null;
         owner = null;
-        dirty = null;
+        dirty.Clear();
         dirtyAny = false;
         submittedCount = 0;
         enabled = false;
@@ -125,23 +126,35 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
 
     private void FlushDirty()
     {
-        if (!dirtyAny || chunk?.Terrain == null || owner == null || !owner.IsBatchPresentationRegistered ||
+        if (flushInProgress || !dirtyAny || chunk?.Terrain == null || owner == null || !owner.IsBatchPresentationRegistered ||
             SharedSpriteMeshCache.IsSessionEnding) return;
-        ChunkBatchRendererGroupService.BeginBulkSubmit();
+        flushInProgress = true;
+        // 将脏格移入独立工作批次，渲染期间再次标脏会留给下一帧。
+        List<int> batch = dirty.BeginDrain();
+        int processed = 0;
         try
         {
-            int width = chunk.Terrain.Width;
-            for (int index = 0; index < dirty.Length; index++)
+            ChunkBatchRendererGroupService.BeginBulkSubmit();
+            try
             {
-                if (!dirty[index]) continue;
-                if (Refresh(index % width, index / width)) dirty[index] = false;
+                int width = chunk.Terrain.Width;
+                for (; processed < batch.Count; processed++)
+                {
+                    int index = batch[processed];
+                    if (!Refresh(index % width, index / width)) dirty.Mark(index);
+                }
+                submittedCount = ChunkBatchRendererGroupService.GetOwnerLayerVisualCount(owner,
+                    ChunkBatchRendererGroupService.VisualLayer.TerrainHeightShadow);
             }
-            dirtyAny = Array.IndexOf(dirty, true) >= 0;
-            enabled = dirtyAny;
-            submittedCount = ChunkBatchRendererGroupService.GetOwnerLayerVisualCount(owner,
-                ChunkBatchRendererGroupService.VisualLayer.TerrainHeightShadow);
+            finally { ChunkBatchRendererGroupService.EndBulkSubmit(); }
         }
-        finally { ChunkBatchRendererGroupService.EndBulkSubmit(); }
+        finally
+        {
+            dirty.CompleteDrain(processed);
+            dirtyAny = dirty.PendingCount > 0;
+            enabled = dirtyAny;
+            flushInProgress = false;
+        }
     }
 
     private bool Refresh(int x, int y)
@@ -189,16 +202,17 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
 
     private void MarkAll()
     {
-        if (dirty == null) return;
-        Array.Fill(dirty, true);
+        if (chunk?.Terrain == null) return;
+        dirty.MarkAll();
         dirtyAny = true;
         enabled = true;
     }
 
     private void Mark(int x, int y)
     {
-        if (dirty == null || (uint)x >= (uint)chunk.Terrain.Width || (uint)y >= (uint)chunk.Terrain.Height) return;
-        dirty[y * chunk.Terrain.Width + x] = true;
+        if (chunk?.Terrain == null || (uint)x >= (uint)chunk.Terrain.Width ||
+            (uint)y >= (uint)chunk.Terrain.Height) return;
+        dirty.Mark(y * chunk.Terrain.Width + x);
         dirtyAny = true;
         enabled = true;
     }
@@ -307,6 +321,66 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         public ChunkTerrainData Terrain { get; }
         public Action<ChunkTerrainChanged> Changed { get; }
         public Action<ChunkLiquidBatchChanged> Liquid { get; }
+    }
+
+    #endregion
+}
+
+/// <summary>阴影脏格双缓冲队列，只遍历有变化的格子，重入通知和失败重试不会丢失。</summary>
+internal sealed class TerrainShadowDirtyQueue
+{
+    #region 脏格收集与提交
+
+    private bool[] queuedFlags;
+    private List<int> pending = new();
+    private List<int> working = new();
+
+    internal int PendingCount => pending.Count;
+
+    internal void Reset(int cellCount)
+    {
+        queuedFlags = new bool[cellCount];
+        pending.Clear();
+        working.Clear();
+        // 首次整块绑定只扩容一次；重绑优先沿用上一轮最大的列表缓冲。
+        if (working.Capacity > pending.Capacity) (pending, working) = (working, pending);
+        if (pending.Capacity < cellCount) pending.Capacity = cellCount;
+    }
+
+    internal void Clear()
+    {
+        queuedFlags = null;
+        pending.Clear();
+        working.Clear();
+    }
+
+    internal void Mark(int index)
+    {
+        if (queuedFlags == null || (uint)index >= (uint)queuedFlags.Length || queuedFlags[index]) return;
+        queuedFlags[index] = true;
+        pending.Add(index);
+    }
+
+    internal void MarkAll()
+    {
+        if (queuedFlags == null) return;
+        for (int index = 0; index < queuedFlags.Length; index++) Mark(index);
+    }
+
+    internal List<int> BeginDrain()
+    {
+        List<int> batch = pending;
+        pending = working;
+        working = batch;
+        for (int i = 0; i < batch.Count; i++) queuedFlags[batch[i]] = false;
+        return batch;
+    }
+
+    internal void CompleteDrain(int processedCount)
+    {
+        // 异常中断时，未成功刷新的当前格及剩余格继续留在下次提交中。
+        for (int i = processedCount; i < working.Count; i++) Mark(working[i]);
+        working.Clear();
     }
 
     #endregion

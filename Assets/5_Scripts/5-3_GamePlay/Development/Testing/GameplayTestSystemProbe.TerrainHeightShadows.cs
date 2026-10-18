@@ -14,7 +14,63 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/terrain_height", ServiceTerrainHeight);
         operations.Add("rendering/terrain_height_save", ServiceTerrainHeightSave);
         operations.Add("rendering/terrain_height_neighbours", ServiceTerrainHeightNeighbours);
+        operations.Add("rendering/terrain_shadow_dirty_queue", ServiceTerrainShadowDirtyQueue);
         operations.Add("terrain/natural_waterbed", ServiceNaturalWaterbed);
+    }
+
+    // 直接推进阴影正式脏格队列，比较稀疏变更与全格重建的实际遍历数量。
+    private static JObject ServiceTerrainShadowDirtyQueue(JObject args)
+    {
+        var queue = new TerrainShadowDirtyQueue();
+        queue.Reset(64 * 64);
+        queue.MarkAll();
+        List<int> full = queue.BeginDrain();
+        int fullCount = full.Count;
+        queue.CompleteDrain(fullCount);
+
+        const int rounds = 128;
+        int sparseVisits = 0;
+        bool deduplicated = true;
+        for (int i = 0; i < rounds; i++)
+        {
+            queue.Mark(11); queue.Mark(12); queue.Mark(13); queue.Mark(11);
+            List<int> batch = queue.BeginDrain();
+            deduplicated &= batch.Count == 3 && queue.PendingCount == 0;
+            sparseVisits += batch.Count;
+            queue.CompleteDrain(batch.Count);
+        }
+        bool drained = queue.PendingCount == 0;
+
+        queue.Mark(2); queue.Mark(3); queue.Mark(4);
+        List<int> interrupted = queue.BeginDrain();
+        queue.Mark(3); queue.Mark(8);
+        queue.CompleteDrain(1);
+        bool retried = queue.PendingCount == 3;
+        List<int> retry = queue.BeginDrain();
+        bool retryContents = retry.Count == 3 && retry.Contains(3) && retry.Contains(4) && retry.Contains(8);
+        queue.MarkAll();
+        queue.CompleteDrain(retry.Count);
+        bool fullReentrant = queue.PendingCount == 64 * 64;
+        List<int> rebuilt = queue.BeginDrain();
+        bool rebuilding = rebuilt.Count == 64 * 64;
+        queue.CompleteDrain(rebuilt.Count);
+        bool empty = queue.PendingCount == 0;
+
+        queue.Clear();
+        queue.Mark(2);
+        bool cleared = queue.PendingCount == 0;
+        queue.Reset(16);
+        queue.Mark(-1); queue.Mark(16); queue.Mark(4); queue.Mark(4);
+        bool reset = queue.PendingCount == 1;
+        return new JObject
+        {
+            ["fullCount"] = fullCount, ["sparseVisits"] = sparseVisits,
+            ["fullScanVisits"] = rounds * 64 * 64, ["deduplicated"] = deduplicated,
+            ["drained"] = drained, ["retried"] = retried,
+            ["retryContents"] = retryContents, ["fullReentrant"] = fullReentrant,
+            ["rebuilding"] = rebuilding, ["empty"] = empty,
+            ["cleared"] = cleared, ["reset"] = reset
+        };
     }
 
     // 夹具只构造权威地形并采样正式高度规则，所有预期由 Lua 判断。
