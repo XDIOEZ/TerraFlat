@@ -41,6 +41,7 @@ namespace PuertsUnityMcp.Editor
                 + "_frame-" + (frameIndex + 1) + "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
             var warnings = new List<string>();
             var errors = new List<string>();
+            byte[] screenshotPng = UnityMcpDesktopScreenshot.Capture(out var screenshotInfo);
             // 先取日志，避免导出过程产生的日志混入用户的现场。
             var console = UnityMcpConsoleSnapshot.Read(snapshotId, capturedAt, frameIndex + 1);
             var analysis = AnalyzeEditorProfilerFrames(new EditorProfilerRequest
@@ -110,6 +111,7 @@ namespace PuertsUnityMcp.Editor
                 unityVersion = Application.unityVersion,
                 selectedFrameIndex = frameIndex,
                 selectedDisplayFrame = frameIndex + 1,
+                screenshot = screenshotInfo,
                 editorPlayingAtExport = EditorApplication.isPlaying,
                 editorPausedAtExport = EditorApplication.isPaused,
                 deepProfilingAtExport = ProfilerDriver.deepProfiling,
@@ -125,7 +127,8 @@ namespace PuertsUnityMcp.Editor
             Directory.CreateDirectory(pending);
             AtomicFile.WriteJson(Path.Combine(pending, "profiler-analysis.json"), snapshot);
             AtomicFile.WriteJson(Path.Combine(pending, "console-logs.json"), console);
-            // 两份文件都落盘后才公布正式目录，失败的 pending 目录不作为新报告。
+            File.WriteAllBytes(Path.Combine(pending, screenshotInfo.file), screenshotPng);
+            // JSON 与整屏截图都落盘后才公布正式目录，失败的 pending 目录不作为新报告。
             Directory.Move(pending, destination);
             return destination;
         }
@@ -133,9 +136,10 @@ namespace PuertsUnityMcp.Editor
         [Serializable]
         private sealed class ProfilerSnapshotReport
         {
-            public int schemaVersion = 1;
+            public int schemaVersion = 2;
             public string snapshotId, capturedAtLocal, capturedAtUtc, projectPath, unityVersion;
             public string consoleFile = "console-logs.json";
+            public UnityMcpDesktopScreenshot.ScreenshotInfo screenshot;
             public int selectedFrameIndex, selectedDisplayFrame;
             public bool editorPlayingAtExport, editorPausedAtExport, deepProfilingAtExport;
             public EditorProfilerTargetListResult profilerTargetAtExport;
@@ -152,6 +156,7 @@ namespace PuertsUnityMcp.Editor
                 "gcBytesWithChildren includes descendants; do not sum allocations across ancestors. GC bytes require captured GC.Alloc metadata.",
                 "nearbyFrames contain frame time only, not detailed analysis. callTrees contain CPU markers, not GPU timing or a full event timeline.",
                 "Console logs are an export-time snapshot, not proven logs from the selected frame. Cleared logs cannot be recovered.",
+                "screenshot.file is the full Windows desktop at export time; it does not reconstruct the screen from the recorded Profiler frame.",
                 "Target, deep profiling and editor state describe export time; loaded historical captures may have different recording settings. Editor/wait markers are not proof of gameplay cost."
             };
         }

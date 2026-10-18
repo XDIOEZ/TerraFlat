@@ -50,7 +50,7 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "导出 Profiler 选中帧、前后各 30 帧耗时和当前 Console 日志到 67_ProfileData；右键打开目录。"
+                        tooltip = "导出 Profiler 选中帧、附近帧耗时、当前 Console 日志和整个桌面截图到 67_ProfileData；右键打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
@@ -102,8 +102,8 @@ namespace FlatWorld.Automation
                     throw new InvalidOperationException("请先在 Profiler 曲线上点选要分析的帧。");
                 string directory = UnityMcpProfilerSnapshot.ExportSelectedFrame((int)selected, ReportsRoot);
                 EditorGUIUtility.systemCopyBuffer = directory;
-                profiler.ShowNotification(new GUIContent("性能与日志 JSON 已导出，文件夹路径已复制"), 5d);
-                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含 profiler-analysis.json 和 console-logs.json；可以继续游戏，将此文件夹路径发给 AI。");
+                profiler.ShowNotification(new GUIContent("性能、日志与整屏截图已导出，文件夹路径已复制"), 5d);
+                Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含 profiler-analysis.json、console-logs.json 和 screen.png；可以继续游戏，将此文件夹路径发给 AI。");
             }
             catch (Exception exception)
             {
