@@ -2,14 +2,14 @@ using UnityEngine;
 
 /// <summary>
 /// 世界散落物共用的水体规则：轻量掉落与联机 Item 路径读取同一组数值。
-/// 重量/体积为内容中的玩法比值，淡水下沉阈值为 0.64；液体定义只放大浮力阈值，
-/// 不改写物品重量、体积或淡水原有的水线与沉没时长。
+/// 单件重量（千克）/体积（升）决定密度，淡水下沉阈值为 1 kg/L；
+/// 其他液体通过定义中的倍率调整浮力阈值，不改写物品重量或体积。
 /// </summary>
 public static class WorldItemWaterRules
 {
     #region 共用参数
 
-    public const float SinkRatioThreshold = 0.64f;
+    public const float SinkRatioThreshold = 1f;
     // 所有掉落后端共用三倍沉没时长，不改变密度阈值或上浮速度。
     public const float SlowSinkDuration = 13.5f;
     public const float FastSinkDuration = 3f;

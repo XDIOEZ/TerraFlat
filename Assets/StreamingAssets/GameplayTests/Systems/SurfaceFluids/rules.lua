@@ -36,3 +36,25 @@ test.system("surface_fluids", "liquid_layer", {}, function(data)
     assert(flow.single.left == 1 and flow.single.right == 0 and flow.single.transfers == 0, "单份水被拆开或来回移动")
     assert(flow.edge.left < 6 and flow.edge.right > 0 and flow.edge.left + flow.edge.right == 6, "有效邻边没有整份转移")
 end, "整数十级液体、存档恢复、守恒流动与边界停稳")
+
+-- 正式目录决定液体浮力，单件密度与堆叠数量无关。
+for _, row in ipairs({
+    {liquidId = "core:dirty_water", weight = .99, volume = 1, threshold = 1, sinks = false},
+    {liquidId = "core:drinkable_water", weight = 1, volume = 1, threshold = 1, sinks = true},
+    {liquidId = "core:pure_water", weight = 1.01, volume = 1, threshold = 1, sinks = true},
+    {liquidId = "core:filtered_water", weight = .99, volume = 1, threshold = 1, sinks = false},
+    {liquidId = "core:salt_water", weight = 1, volume = 1, threshold = 1, sinks = true},
+    {liquidId = "core:sea_water", weight = 1.49, volume = 1, threshold = 1.5, sinks = false},
+    {liquidId = "core:lava", weight = 2.5, volume = .75, threshold = 6, sinks = false},
+    {liquidId = "core:lava", weight = 2.5, volume = .75, amount = 64, threshold = 6, sinks = false},
+    {liquidId = "core:lava", weight = 5.5, volume = 1, threshold = 6, sinks = false},
+    {liquidId = "core:lava", weight = 5.999, volume = 1, threshold = 6, sinks = false},
+    {liquidId = "core:lava", weight = 6, volume = 1, threshold = 6, sinks = true},
+    {liquidId = "core:lava", weight = 6.001, volume = 1, threshold = 6, sinks = true}
+}) do
+    test.system("surface_fluids", "buoyancy", row, function(data)
+        near(data.threshold, row.threshold, "正式液体目录的浮沉门槛错误")
+        near(data.ratio, row.weight / row.volume, "单件密度计算受到堆叠数量影响")
+        assert(data.sinks == row.sinks, "水或岩浆的浮沉边界错误")
+    end, "液体浮沉：" .. row.liquidId .. "，密度 " .. row.weight / row.volume .. " kg/L，数量 " .. (row.amount or 1))
+end

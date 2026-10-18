@@ -53,6 +53,7 @@
       "visualState": "lava",
       "primaryColor": { "r": 1.0, "g": 0.22, "b": 0.025, "a": 1.0 },
       "viscosity": 6.0,
+      "buoyancyThresholdMultiplier": 6.0,
       "drinkable": false,
       "hydrationPerServing": 0.0,
       "worldWater": {

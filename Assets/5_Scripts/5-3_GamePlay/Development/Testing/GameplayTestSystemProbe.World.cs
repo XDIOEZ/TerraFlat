@@ -35,6 +35,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/natural_fog_validation", WorldNaturalFogValidation);
         RegisterWeatherRecoveryOperations(operations);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
+        operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
         RegisterCavePerformanceOperations(operations);
         RegisterColdDropProbes(operations);
@@ -661,6 +662,29 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 地表液体与建筑支撑
+    private static JObject WorldLiquidBuoyancy(JObject args)
+    {
+        // 独立读取正式液体目录并调用共用浮沉规则，不修改当前世界的液体注册表。
+        var definitions = LiquidDefinitionFactory.BuildCatalog(LiquidDefinitionFactory.DeserializeCatalog(
+            StreamingAssetsTextLoader.ReadAllText(LiquidCatalogLoader.BuiltInPath)));
+        string liquidId = Text(args, "liquidId", LiquidTypeCatalog.DirtyWaterId);
+        LiquidDefinition liquid = definitions.Find(definition => definition.Id == liquidId)
+            ?? throw new ArgumentException("浮沉采样液体不存在：" + liquidId);
+        var stack = new ItemStack
+        {
+            Weight = (float)Number(args, "weight", 2.5d),
+            Volume = (float)Number(args, "volume", .75d),
+            Amount = (float)Number(args, "amount", 1d)
+        };
+        float ratio = WorldItemWaterRules.ResolveWeightVolumeRatio(stack);
+        float threshold = WorldItemWaterRules.ResolveSinkRatioThreshold(liquid.BuoyancyThresholdMultiplier);
+        return new JObject
+        {
+            ["ratio"] = ratio, ["threshold"] = threshold,
+            ["sinks"] = WorldItemWaterRules.ShouldSink(ratio, threshold)
+        };
+    }
+
     private static JObject WorldLiquidLayer(JObject args)
     {
         using var buffer = new ChunkTerrainBuffer(1, 1);
