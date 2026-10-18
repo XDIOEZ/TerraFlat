@@ -3,9 +3,54 @@ using Newtonsoft.Json;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
+#region 掉落数量分布
+
+public enum LootAmountDistribution { Uniform, QuadraticPeak }
+
+/// <summary>所有掉落后端共用数量抽样，二次曲线在峰值最高且两端仍可出现。</summary>
+public static class LootAmountRules
+{
+    public static void Validate(int minimum, int maximum, LootAmountDistribution distribution, int peak)
+    {
+        if (minimum < 0 || maximum < minimum)
+            throw new System.ArgumentException("掉落数量范围无效。");
+        if (distribution != LootAmountDistribution.Uniform && distribution != LootAmountDistribution.QuadraticPeak)
+            throw new System.ArgumentException("未知的掉落数量分布。");
+        if (distribution == LootAmountDistribution.QuadraticPeak && (peak < minimum || peak > maximum))
+            throw new System.ArgumentException("掉落数量峰值必须在数量范围内。");
+    }
+
+    public static int Sample(int minimum, int maximum, LootAmountDistribution distribution, int peak, double random)
+    {
+        Validate(minimum, maximum, distribution, peak);
+        if (double.IsNaN(random) || random < 0d || random > 1d)
+            throw new System.ArgumentOutOfRangeException(nameof(random));
+        if (minimum == maximum || random == 0d) return minimum;
+        if (random == 1d) return maximum;
+        if (distribution == LootAmountDistribution.Uniform)
+            return (int)(minimum + (long)(random * ((long)maximum - minimum + 1L)));
+
+        // 半径比最远数量多一格，避免端点权重为零而永远抽不到。
+        double radius = System.Math.Max((long)peak - minimum, (long)maximum - peak) + 1d;
+        double Weight(long amount) { double distance = (amount - peak) / radius; return 1d - distance * distance; }
+        double total = 0d;
+        for (long amount = minimum; amount <= maximum; amount++) total += Weight(amount);
+        double remaining = random * total;
+        for (long amount = minimum; amount <= maximum; amount++)
+        {
+            remaining -= Weight(amount);
+            if (remaining < 0d) return (int)amount;
+        }
+        return maximum;
+    }
+}
+
+#endregion
+
 [System.Serializable]
 public class LootEntry
 {
+    #region 掉落配置与抽样
     [Tooltip("战利品预制体")]
     [JsonIgnore] // 避免JSON序列化此字段
     [UnityEngine.Serialization.FormerlySerializedAs("LootPrefab")]
@@ -25,6 +70,12 @@ public class LootEntry
 
     [Tooltip("最大掉落数量")]
     public int MaxAmount = 1;
+
+    public LootAmountDistribution AmountDistribution;
+    public int PeakAmount;
+
+    public int SampleAmount(double random) => LootAmountRules.Sample(MinAmount, MaxAmount, AmountDistribution, PeakAmount, random);
+    public int RollAmount() => SampleAmount(Random.value);
 
     // 编辑器验证方法，确保数值有效性
     public void OnValidate()
@@ -48,6 +99,8 @@ public class LootEntry
         {
             MaxAmount = MinAmount; // 调整最大数量为最小数量
         }
+        if (AmountDistribution == LootAmountDistribution.QuadraticPeak)
+            PeakAmount = Mathf.Clamp(PeakAmount, MinAmount, MaxAmount);
 #endif
     }
 
@@ -56,4 +109,5 @@ public class LootEntry
     {
         LootPrefab = null;
     }
+    #endregion
 }

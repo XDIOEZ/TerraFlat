@@ -1676,8 +1676,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             if (Random.value > lootEntry.DropChance)
                 continue;
 
-            // 确定掉落数量（在MinAmount和MaxAmount之间）
-            int baseDropAmount = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+            // 数量统一使用条目声明的分布。
+            int baseDropAmount = lootEntry.RollAmount();
             // 环境等产出修饰由源物品的通用模块提供，与难度合并后只随机取整一次。
             float resourceMultiplier = ResourceYieldUtility.GetMultiplier(item, lootEntry.LootPrefabName);
             int dropAmount = GameDifficultyService.ScaleRandomizedAmount(

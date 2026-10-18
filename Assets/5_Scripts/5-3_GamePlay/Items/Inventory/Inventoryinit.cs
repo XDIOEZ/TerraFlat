@@ -32,7 +32,7 @@ public void InjectRandomItemsToInventory(Inventory targetInventory)
             if (prefab != null)
             {
                 // 随机生成数量（在最小和最大数量之间）
-                int count = Random.Range(lootEntry.MinAmount, lootEntry.MaxAmount + 1);
+                int count = lootEntry.RollAmount();
                 if (count > 0)
                 {
                     validPrefabs.Add(prefab);

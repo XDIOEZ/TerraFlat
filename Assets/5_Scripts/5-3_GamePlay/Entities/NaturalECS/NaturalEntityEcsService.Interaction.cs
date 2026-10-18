@@ -561,7 +561,7 @@ namespace FlatWorld.NaturalEntities
                     {
                         float multiplier = GameDifficultyService.Current.World.LootAmountMultiplier * YieldMultiplier(record, entry.ItemId);
                         if (UnityEngine.Random.value > Mathf.Clamp01(entry.Probability * GameDifficultyService.Current.World.LootAmountMultiplier)) continue;
-                        int count = GameDifficultyService.ScaleRandomizedAmount(UnityEngine.Random.Range(entry.MinAmount, entry.MaxAmount + 1), multiplier);
+                        int count = GameDifficultyService.ScaleRandomizedAmount(entry.RollAmount(), multiplier);
                         if (count > 0) DroppedItemService.SpawnLoot(entry.ItemId, record.Snapshot.transform.position, count);
                     }
             }

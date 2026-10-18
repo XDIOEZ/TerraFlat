@@ -35,6 +35,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("combat/physical", EntityPhysicalDamage);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
+        operations.Add("combat/loot_amount", EntityLootAmount);
+        operations.Add("combat/tree_leaf_configuration", EntityTreeLeafConfiguration);
         RegisterCombatAudioOperations(operations);
         operations.Add("buff/lifecycle", EntityBuffLifecycle);
         operations.Add("buff/infection_attributes", EntityInfectionAttributes);
@@ -409,6 +411,58 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 战斗结算与身份
+
+    // 采样正式目录与同一组分位点，不改变 Unity 的全局随机状态。
+    private static JObject EntityLootAmount(JObject args)
+    {
+        var entryJson = new JObject
+        {
+            ["itemId"] = "Leaf", ["probability"] = 1,
+            ["minAmount"] = Number(args, "minimum", 1), ["maxAmount"] = Number(args, "maximum", 20),
+            ["amountDistribution"] = Text(args, "distribution", "QuadraticPeak"),
+            ["peakAmount"] = Number(args, "peak", 10)
+        };
+        var catalogJson = new JObject { ["schemaVersion"] = 1,
+            ["lootTables"] = new JArray(new JObject { ["id"] = "probe", ["entries"] = new JArray(entryJson) }) };
+        RuntimeLootTable table;
+        try { table = LootTableCatalogLoader.DeserializeCatalog(catalogJson.ToString())[0]; }
+        catch (Exception error) when (error is ArgumentException || error is System.IO.InvalidDataException)
+        { return new JObject { ["rejected"] = true }; }
+        RuntimeLootTableEntry native = table.Entries[0];
+        LootEntry go = table.CreateDamageReceiverEntries()[0].ToObject<LootEntry>();
+        var counts = new int[native.MaxAmount - native.MinAmount + 1];
+        bool equivalent = true;
+        for (int i = 0; i < 10000; i++)
+        {
+            double random = (i + .5d) / 10000d;
+            int amount = native.SampleAmount(random);
+            counts[amount - native.MinAmount]++;
+            equivalent &= amount == go.SampleAmount(random);
+        }
+        return new JObject { ["rejected"] = false, ["counts"] = new JArray(counts),
+            ["minimum"] = native.SampleAmount(0d), ["maximum"] = native.SampleAmount(1d),
+            ["goMinimum"] = go.SampleAmount(0d), ["goMaximum"] = go.SampleAmount(1d),
+            ["backendEquivalent"] = equivalent };
+    }
+
+    private static JObject EntityTreeLeafConfiguration(JObject args)
+    {
+        var tables = LootTableCatalogLoader.LoadBuiltIn().ToDictionary(table => table.Id, StringComparer.OrdinalIgnoreCase);
+        var trees = new JArray();
+        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+        {
+            if (definition.Abstract || definition.Tags == null ||
+                !definition.Tags.Exists(tag => string.Equals(tag, Tag.Tree, StringComparison.OrdinalIgnoreCase))) continue;
+            var leaves = new JArray();
+            if (!string.IsNullOrWhiteSpace(definition.LootTableId) && tables.TryGetValue(definition.LootTableId, out var table))
+                foreach (RuntimeLootTableEntry entry in table.Entries)
+                    if (entry.ItemId == "Leaf") leaves.Add(new JObject { ["probability"] = entry.Probability,
+                        ["minimum"] = entry.MinAmount, ["maximum"] = entry.MaxAmount,
+                        ["distribution"] = entry.AmountDistribution.ToString(), ["peak"] = entry.PeakAmount });
+            trees.Add(new JObject { ["id"] = definition.Id, ["leaves"] = leaves });
+        }
+        return new JObject { ["trees"] = trees };
+    }
 
     private static JObject EntityPhysicalDamage(JObject args)
     {

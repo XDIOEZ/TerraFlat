@@ -47,6 +47,12 @@ public sealed class LootTableEntryDefinitionDto
 
     [JsonProperty("maxAmount")]
     public int MaxAmount = 1;
+
+    [JsonProperty("amountDistribution")]
+    public LootAmountDistribution AmountDistribution;
+
+    [JsonProperty("peakAmount")]
+    public int PeakAmount;
 }
 
 #endregion
@@ -60,14 +66,23 @@ public sealed class RuntimeLootTableEntry
     public float Probability { get; }
     public int MinAmount { get; }
     public int MaxAmount { get; }
+    public LootAmountDistribution AmountDistribution { get; }
+    public int PeakAmount { get; }
 
-    public RuntimeLootTableEntry(string itemId, float probability, int minAmount, int maxAmount)
+    public RuntimeLootTableEntry(string itemId, float probability, int minAmount, int maxAmount,
+        LootAmountDistribution amountDistribution = LootAmountDistribution.Uniform, int peakAmount = 0)
     {
         ItemId = itemId;
         Probability = probability;
         MinAmount = minAmount;
         MaxAmount = maxAmount;
+        LootAmountRules.Validate(minAmount, maxAmount, amountDistribution, peakAmount);
+        AmountDistribution = amountDistribution;
+        PeakAmount = peakAmount;
     }
+
+    public int SampleAmount(double random) => LootAmountRules.Sample(MinAmount, MaxAmount, AmountDistribution, PeakAmount, random);
+    public int RollAmount() => SampleAmount(UnityEngine.Random.value);
 }
 
 /// <summary>
@@ -97,7 +112,9 @@ public sealed class RuntimeLootTable
                 ["LootPrefabName"] = entry.ItemId,
                 ["DropChance"] = entry.Probability,
                 ["MinAmount"] = entry.MinAmount,
-                ["MaxAmount"] = entry.MaxAmount
+                ["MaxAmount"] = entry.MaxAmount,
+                ["AmountDistribution"] = (int)entry.AmountDistribution,
+                ["PeakAmount"] = entry.PeakAmount
             });
         }
 
@@ -216,7 +233,9 @@ public static class LootTableCatalogLoader
                     itemId,
                     entry.Probability,
                     entry.MinAmount,
-                    entry.MaxAmount);
+                    entry.MaxAmount,
+                    entry.AmountDistribution,
+                    entry.PeakAmount);
             }
 
             result.Add(new RuntimeLootTable(tableId, entries));

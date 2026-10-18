@@ -19,8 +19,10 @@
         {
           "itemId": "Leaf",
           "probability": 1.0,
-          "minAmount": 3,
-          "maxAmount": 3
+          "minAmount": 1,
+          "maxAmount": 20,
+          "amountDistribution": "QuadraticPeak",
+          "peakAmount": 10
         },
         {
           "itemId": "Log",
@@ -409,6 +411,14 @@
       "id": "Ancient_Willow",
       "entries": [
         {
+          "itemId": "Leaf",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 20,
+          "amountDistribution": "QuadraticPeak",
+          "peakAmount": 10
+        },
+        {
           "itemId": "WillowBranch",
           "probability": 1,
           "minAmount": 2,
@@ -446,8 +456,10 @@
         {
           "itemId": "Leaf",
           "probability": 1.0,
-          "minAmount": 3,
-          "maxAmount": 3
+          "minAmount": 1,
+          "maxAmount": 20,
+          "amountDistribution": "QuadraticPeak",
+          "peakAmount": 10
         },
         {
           "itemId": "Log",
@@ -475,8 +487,10 @@
         {
           "itemId": "Leaf",
           "probability": 1.0,
-          "minAmount": 3,
-          "maxAmount": 3
+          "minAmount": 1,
+          "maxAmount": 20,
+          "amountDistribution": "QuadraticPeak",
+          "peakAmount": 10
         },
         {
           "itemId": "Log",
@@ -504,8 +518,10 @@
         {
           "itemId": "Leaf",
           "probability": 1.0,
-          "minAmount": 3,
-          "maxAmount": 3
+          "minAmount": 1,
+          "maxAmount": 20,
+          "amountDistribution": "QuadraticPeak",
+          "peakAmount": 10
         },
         {
           "itemId": "Log",
@@ -533,8 +549,10 @@
         {
           "itemId": "Leaf",
           "probability": 1.0,
-          "minAmount": 3,
-          "maxAmount": 3
+          "minAmount": 1,
+          "maxAmount": 20,
+          "amountDistribution": "QuadraticPeak",
+          "peakAmount": 10
         },
         {
           "itemId": "Log",

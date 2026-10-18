@@ -1,3 +1,65 @@
+-- 正式掉落条目及展开到 GO 的配置必须保持相同分布，不能只改变某一种后端。
+test.system("combat", "loot_amount", {}, function(data)
+    assert(not data.rejected and data.backendEquivalent, "GO 与原生掉落数量抽样不一致")
+    assert(data.minimum == 1 and data.maximum == 20 and data.goMinimum == 1 and data.goMaximum == 20,
+        "掉叶子未包含 1 与 20 的端点")
+    assert(#data.counts == 20 and data.counts[1] > 0 and data.counts[20] > 0, "端点没有实际概率")
+    local total = 0
+    for amount, count in ipairs(data.counts) do
+        total = total + count
+        if amount < 10 then assert(count < data.counts[amount + 1], "低数量侧没有向 10 片递增") end
+        if amount > 10 then assert(count < data.counts[amount - 1], "高数量侧没有离开 10 片递减") end
+    end
+    assert(total == 10000 and math.abs(data.counts[9] - data.counts[11]) <= 2, "抽样丢失数量或峰值偏离 10")
+    local peakCurvature = data.counts[9] - 2 * data.counts[10] + data.counts[11]
+    for amount = 2, 19 do
+        local curvature = data.counts[amount - 1] - 2 * data.counts[amount] + data.counts[amount + 1]
+        assert(curvature < 0 and math.abs(curvature - peakCurvature) <= 8, "概率没有沿二次曲线变化")
+    end
+end, "树叶二次分布：1～20 片且 10 片唯一最高概率")
+
+for _, row in ipairs({
+    {minimum = 1, maximum = 4, distribution = "Uniform", peak = 0},
+    {minimum = 3, maximum = 3, peak = 3},
+    {minimum = 1, maximum = 5, peak = 1},
+    {minimum = 1, maximum = 5, peak = 5}
+}) do
+    test.system("combat", "loot_amount", row, function(data)
+        assert(not data.rejected and data.backendEquivalent, "有效数量分布被拒绝或后端不一致")
+        assert(data.minimum == row.minimum and data.maximum == row.maximum, "数量分布越界")
+        if row.distribution == "Uniform" then
+            for _, count in ipairs(data.counts) do assert(count == 2500, "普通掉落不再均匀") end
+        elseif row.minimum == row.maximum then
+            assert(data.counts[1] == 10000, "固定掉落数量变化")
+        else
+            for index = 2, #data.counts do
+                assert((row.peak == row.minimum and data.counts[index] < data.counts[index - 1]) or
+                    (row.peak == row.maximum and data.counts[index] > data.counts[index - 1]), "边界峰值分布方向错误")
+            end
+        end
+    end, "掉落分布：均匀、固定与端点峰值")
+end
+
+for _, row in ipairs({{minimum = 0}, {minimum = 20, maximum = 1}, {peak = 0}, {peak = 21}, {distribution = "Unknown"}}) do
+    test.system("combat", "loot_amount", row, function(data)
+        assert(data.rejected, "无效掉落配置没有在加载时拒绝")
+    end, "掉落分布：拒绝非法数量、峰值与分布")
+end
+
+test.system("combat", "tree_leaf_configuration", {}, function(data)
+    local expected = {AppleTree = true, PeachTree = true, OrangeTree = true, Tree_Coconut = true,
+        Tree_Pine = true, Tree_Oak = true, Tree_Willow = true}
+    assert(#data.trees >= 7, "树木采样遗漏正式定义")
+    for _, tree in ipairs(data.trees) do
+        expected[tree.id] = nil
+        assert(#tree.leaves == 1, tree.id .. " 缺失或重复掉叶子")
+        local leaf = tree.leaves[1]
+        assert(leaf.probability == 1 and leaf.minimum == 1 and leaf.maximum == 20 and
+            leaf.distribution == "QuadraticPeak" and leaf.peak == 10, tree.id .. " 没有统一树叶掉落配置")
+    end
+    assert(next(expected) == nil, "已知树种有遗漏")
+end, "所有树种都必定掉叶子，包括柳树及继承定义")
+
 local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .00001, label .. "错误")
 end

@@ -642,7 +642,7 @@ namespace FlatWorld.AIECS.Gameplay
                 foreach (var entry in table.Entries)
                 {
                     if (UnityEngine.Random.value > entry.Probability) continue;
-                    int count = GameDifficultyService.ScaleRandomizedAmount(UnityEngine.Random.Range(entry.MinAmount, entry.MaxAmount + 1), GameDifficultyService.Current.World.LootAmountMultiplier);
+                    int count = GameDifficultyService.ScaleRandomizedAmount(entry.RollAmount(), GameDifficultyService.Current.World.LootAmountMultiplier);
                     if (count > 0) QueueLoot(entry.ItemId, death.Position, count);
                 }
             }
