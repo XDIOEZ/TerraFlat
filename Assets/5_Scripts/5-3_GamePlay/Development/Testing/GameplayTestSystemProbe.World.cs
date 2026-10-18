@@ -201,8 +201,8 @@ public static partial class GameplayTestSystemProbe
         }
         ChunkEcologyData expanded = CaveGenerationFeatureGenerator.GenerateCave(expandedRequest,
             expandedTerrain, CancellationToken.None, fixture);
-        var defaults = new ChunkGenerationSettingsSnapshot(new Dictionary<string, double>(),
-            new Dictionary<string, string>());
+        // 通过公开配置入口获取默认设置，避免跨程序集调用内部构造函数。
+        var defaults = new ChunkGenerationProfileSnapshot("probe:loose:defaults", 1, 16, 16).Settings;
         return new JObject { ["cells"] = cells, ["sources"] = sources,
             ["placements"] = Capture(result), ["repeated"] = Capture(repeated), ["expanded"] = Capture(expanded),
             ["oreChance"] = profile.Settings.CaveLooseOreDensity,
