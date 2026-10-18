@@ -506,8 +506,7 @@ public sealed partial class ChunkTilemapRenderer
         if (!mechanicalDepthVisuals.TryGetValue(key, out MechanicalDepthVisual visual) || visual == null)
         {
             int id = x + y * boundChunk.Terrain.Width + node.Definition.Layer * boundChunk.Terrain.CellCount;
-            int visualLayer = node.Definition.Fluid?.Kind == "pipe" ? -2 :
-                node.Definition.Electrical?.IsWire == true ? -1 : node.Definition.Layer;
+            int visualLayer = node.Definition.VisualLayer;
             if (!TryTakePreparedMechanicalVisual(node, this, origin, id, visualLayer, out visual))
                 visual = MechanicalDepthVisual.Create(this, origin, id, visualLayer);
             mechanicalDepthVisuals[key] = visual;

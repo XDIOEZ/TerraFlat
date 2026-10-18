@@ -68,9 +68,11 @@ public static class SpatialInteractionRegistry
                 target.gameObject.scene != actor.gameObject.scene || interaction == null ||
                 !interaction.CanInteract(actor) || topology.Distance((Vector2)actor.transform.position, (Vector2)position) > radius)
                 continue;
-            if (pointer.HasValue && (target is ISpatialInteractionShape shape
-                ? !shape.ContainsInteractionPoint(pointer.Value)
-                : topology.Distance(pointer.Value, (Vector2)position) > entry.Value.Radius)) continue;
+            if (pointer.HasValue && (interaction is IGridInteractionTarget gridTarget
+                ? !gridTarget.TryGetInteractionGridHit(pointer.Value, topology, out _)
+                : target is ISpatialInteractionShape shape
+                    ? !shape.ContainsInteractionPoint(pointer.Value)
+                    : topology.Distance(pointer.Value, (Vector2)position) > entry.Value.Radius)) continue;
             if (!results.Contains(interaction)) results.Add(interaction);
         }
     }

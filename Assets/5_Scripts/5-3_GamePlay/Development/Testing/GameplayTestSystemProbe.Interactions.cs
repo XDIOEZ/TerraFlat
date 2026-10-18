@@ -16,8 +16,72 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
         operations.Add("player/interaction_query_context", InteractionQueryContext);
+        operations.Add("player/grid_interaction_bands", InteractionGridBands);
         operations.Add("inventory/discard_hover_query", InventoryDiscardHoverQuery);
         operations.Add("terrain/contact_query_context", TerrainContactQueryContext);
+    }
+
+    #endregion
+
+    #region 同格交互分区
+
+    private sealed class GridInteractionProbeTarget : IGridInteractionTarget
+    {
+        public int TargetGuid { get; set; }
+        public int Layer;
+        public string GridId = "probe:grid";
+        public Vector3 WorldPosition => new(.5f, .5f);
+        public bool IsValid => true;
+        public void OnInteractStart(Item actor) { }
+        public void OnInteractCancel(Item actor) { }
+        public bool TryGetInteractionGridHit(Vector2 pointer, WorldTopologyDomain topology, out GridInteractionHit hit)
+        {
+            hit = new GridInteractionHit(GridId, Vector2Int.zero, Layer, pointer.y);
+            return pointer.x >= 0f && pointer.x < 1f && pointer.y >= 0f && pointer.y < 1f;
+        }
+    }
+
+    // 只提交候选并采样正式选择器，层级、份数和边界的期望由 Lua 判断。
+    private static JObject InteractionGridBands(JObject args)
+    {
+        var selector = new GridInteractionSelector();
+        var candidates = new List<IInteractable>();
+        var targets = new List<GridInteractionProbeTarget>();
+        JArray layers = args["layers"] as JArray ?? new JArray(-1, 0);
+        for (int i = 0; i < layers.Count; i++)
+        {
+            var target = new GridInteractionProbeTarget { TargetGuid = i + 1, Layer = (int)layers[i] };
+            targets.Add(target); candidates.Add(target);
+            if (Flag(args, "duplicate", false)) candidates.Add(target);
+        }
+        if (Flag(args, "reverse", false)) candidates.Reverse();
+        var ordinary = new CompletedInteractionProbe();
+        var otherGrid = new GridInteractionProbeTarget { GridId = "probe:other-grid", TargetGuid = 100 };
+        candidates.Add(ordinary); candidates.Add(otherGrid);
+        selector.FilterPointerTargets(candidates, new Vector2(.5f, (float)Number(args, "height", .5d)), default);
+        int count = 0, selected = 0;
+        foreach (GridInteractionProbeTarget target in targets)
+            if (candidates.Contains(target)) { count++; selected = target.TargetGuid; }
+        bool ordinaryPreserved = candidates.Contains(ordinary), otherGridPreserved = candidates.Contains(otherGrid);
+        candidates.Clear(); candidates.Add(targets[0]);
+        selector.FilterPointerTargets(candidates, new Vector2(.5f, .1f), default);
+
+        var pipe = new MachineDefinition { Fluid = new FluidMachineDefinition { Kind = "pipe" } };
+        var wire = new MachineDefinition { Electrical = new ElectricalDefinition { Role = "wire" } };
+        var device = new MachineDefinition { PlacementLayer = 0 };
+        using var machine = new MachineInteractionTarget(new MachineEntity
+        { Cell = Vector2Int.zero, ScopeKey = "probe:machine", Definition = wire });
+        return new JObject
+        {
+            ["count"] = count, ["selected"] = selected,
+            ["ordinaryPreserved"] = ordinaryPreserved, ["otherGridPreserved"] = otherGridPreserved,
+            ["reusedCount"] = candidates.Count,
+            ["reusedSelected"] = candidates.Count > 0 ? ((IWorldInteractionTarget)candidates[0]).TargetGuid : 0,
+            ["pipeLayer"] = pipe.VisualLayer, ["wireLayer"] = wire.VisualLayer, ["deviceLayer"] = device.VisualLayer,
+            ["cellTopHit"] = machine.TryGetInteractionGridHit(new Vector2(.99f, .99f), default, out _),
+            ["cellBottomHit"] = machine.TryGetInteractionGridHit(new Vector2(.01f, .01f), default, out _),
+            ["neighbourHit"] = machine.TryGetInteractionGridHit(new Vector2(.5f, 1f), default, out _)
+        };
     }
 
     #endregion

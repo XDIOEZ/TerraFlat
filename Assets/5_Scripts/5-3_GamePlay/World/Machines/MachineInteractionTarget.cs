@@ -4,7 +4,7 @@ using FlatWorld.Networking;
 using UnityEngine;
 
 /// <summary>纯数据机械的短期交互代理；没有 GameObject、Collider、SpriteRenderer 或逐节点 Update。</summary>
-public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldInteractionPreview, IDisposable
+public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInteractionPreview, IDisposable
 {
     #region 节点交互
     private readonly MachineEntity node;
@@ -23,6 +23,15 @@ public sealed class MachineInteractionTarget : IWorldInteractionTarget, IWorldIn
     public bool IsValid => !disposed && MachineWorld.Contains(node);
     public bool CanInteract(Item actor) => IsValid;
     public bool CanPointerInteract(Item actor) => false;
+
+    // 分区覆盖完整逻辑格，不再受电线贴图窄条或圆形命中半径影响。
+    public bool TryGetInteractionGridHit(Vector2 pointer, WorldTopologyDomain topology, out GridInteractionHit hit)
+    {
+        int x = Mathf.FloorToInt(pointer.x), y = Mathf.FloorToInt(pointer.y);
+        var cell = new Vector2Int(topology.NormalizeX(x), topology.NormalizeY(y));
+        hit = new GridInteractionHit(node.ScopeKey, cell, node.Definition.VisualLayer, pointer.y - y);
+        return cell == node.Cell;
+    }
 
     // 描边属于本地表现状态，不进入机器存档和网络同步。
     public bool IsInteractionHighlighted { get; private set; }

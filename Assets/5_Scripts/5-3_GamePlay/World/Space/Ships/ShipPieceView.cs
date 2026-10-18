@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
-    public sealed partial class ShipPieceView : MonoBehaviour, IWorldInteractionTarget, IWorldInteractionPreview, ISpatialInteractionShape
+    public sealed partial class ShipPieceView : MonoBehaviour, IGridInteractionTarget, IWorldInteractionPreview, ISpatialInteractionShape
     {
         #region 船体表现与正式交互
         public Item Item { get; private set; }
@@ -36,13 +36,12 @@ namespace FlatWorld.Spaceflight
         public bool IsValid => isActiveAndEnabled && session != null && session.FindPiece(pieceId, out _, out _);
         public bool IsInteractionHighlighted { get; private set; }
         public event Action<bool> InteractionHighlightChanged;
-        // 普通设备装到船上仍按实际线路能力过滤，不能只依赖船体部件分类。
+        // 船上线路和设备参与同格分区，地板、墙和纯能力部件不占交互份数。
         private bool HasInteractionAction => boundPiece != null &&
-            boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall or ShipPieceKind.Navigation or
-                ShipPieceKind.Wire or ShipPieceKind.Fiber) &&
+            boundPiece.Kind is not (ShipPieceKind.Floor or ShipPieceKind.Wall or ShipPieceKind.Navigation) &&
             ((boundPiece.Kind is ShipPieceKind.Console or ShipPieceKind.DockingPort or
                 ShipPieceKind.Engine or ShipPieceKind.Door) ||
-                (machineTarget != null && machineDefinition?.IsConnectionLine == false));
+                machineTarget != null);
         public bool CanInteract(Item actor)
         {
             if (actor == null || !HasInteractionAction || !IsValid) return false;
@@ -55,6 +54,23 @@ namespace FlatWorld.Spaceflight
         public bool CanPointerInteract(Item actor) => false;
         public bool ContainsInteractionPoint(Vector2 point) => interactionBounds.Contains(
             (Vector2)transform.InverseTransformPoint(point - (Vector2)transform.TransformVector(interactionLift)));
+
+        // 使用船体本地格分区，转向、升降和多格设备仍共享同一套网格身份。
+        public bool TryGetInteractionGridHit(Vector2 pointer, WorldTopologyDomain topology, out GridInteractionHit hit)
+        {
+            hit = default;
+            if (boundPiece == null || boundCellSize <= 0d) return false;
+            Vector2 projected = session.IsSpaceView ? pointer :
+                (Vector2)transform.position + topology.ShortestDelta(transform.position, pointer);
+            Vector3 local = transform.InverseTransformPoint(projected - (Vector2)transform.TransformVector(interactionLift));
+            float x = local.x / (float)boundCellSize + .5f;
+            float y = local.y / (float)boundCellSize + .5f;
+            int cellX = Mathf.FloorToInt(x), cellY = Mathf.FloorToInt(y);
+            if (cellX < 0 || cellX >= boundWidth || cellY < 0 || cellY >= boundHeight) return false;
+            hit = new GridInteractionHit(machineScopeKey, new Vector2Int(boundCellX + cellX, boundCellY + cellY),
+                machineDefinition?.VisualLayer ?? 0, y - cellY);
+            return true;
+        }
         public void SetInteractionHighlighted(bool highlighted)
         {
             IsInteractionHighlighted = highlighted; InteractionHighlightChanged?.Invoke(highlighted);

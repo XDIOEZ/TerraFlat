@@ -1,3 +1,31 @@
+-- 同格从上到下按显示层级等分，查询顺序、重复视觉和边界不能改变结果。
+for _, case in ipairs({
+    {layers = {-1, 0}, height = .9, selected = 1},
+    {layers = {-1, 0}, height = .51, selected = 1},
+    {layers = {-1, 0}, height = .5, selected = 2},
+    {layers = {-1, 0}, height = .1, selected = 2},
+    {layers = {-2, -1, 0}, height = .9, selected = 1},
+    {layers = {-2, -1, 0}, height = .5, selected = 2},
+    {layers = {-2, -1, 0}, height = .1, selected = 3},
+    {layers = {-2, -1, 0}, height = 0, selected = 3},
+    {layers = {0}, height = .95, selected = 1},
+    {layers = {0}, height = .05, selected = 1}
+}) do
+    for _, reverse in ipairs({false, true}) do
+        test.system("player", "grid_interaction_bands", {
+            layers = case.layers, height = case.height, reverse = reverse, duplicate = true
+        }, function(data)
+            assert(data.count == 1 and data.selected == case.selected, "同格交互没有按光标高度等分或查询顺序影响了层级")
+            assert(data.ordinaryPreserved and data.otherGridPreserved, "同格分区误删普通目标或另一套网格")
+            assert(data.reusedCount == 1 and data.reusedSelected == 1, "复用查询仍残留上一格的目标或份数")
+            assert(data.pipeLayer < data.wireLayer and data.wireLayer < data.deviceLayer,
+                "管道、电线、设备的交互顺序与显示层级不一致")
+            assert(data.cellTopHit and data.cellBottomHit and not data.neighbourHit,
+                "同格交互没有覆盖整格或泄漏到邻格")
+        end, "同格交互等分：" .. #case.layers .. "层，高度" .. case.height .. (reverse and "，反序" or ""))
+    end
+end
+
 test.system("player", "interaction_completion", {}, function(data)
     assert(not data.wrongTargetAccepted and data.originalPreserved, "不匹配的完成请求清掉当前交互")
     assert(data.accepted and data.currentCleared and data.onlyCompletedRemoved, "完成交互没有撤掉自身目标，或误删其他候选")

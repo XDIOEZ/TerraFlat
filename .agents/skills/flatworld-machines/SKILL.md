@@ -79,6 +79,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 主体/运动部件按脚点 Y 行合批，MechanicalDepthVisual 只负责交互/灯光，HP/库存不在代理。MechanicalShaft 连接层在机械主体下方；端口、铁环、连接短管由独立层生成，主体贴图只画设备本体。
 - 飞船降落通过 `ChunkTilemapRenderer.MechanicalLandingPreparation` 分帧预建停用交互/灯光外壳、部件缓冲及共享 Sprite 几何，不复制运行机器；`BeginCommit` 提供候选，区块接管后归正常生命周期，未消费候选随准备器释放。`MachineWorld.BeginSurfaceChangeBatch` 只在同步交接内按世界/格去重；旧 `CellChanged` 保留，区块经 `SurfacePresentationCell(s)Changed` 按最终格和连接邻居各刷新一次，不延迟常规 Tick。
 - Pivot/Renderer 局部变换供预览、落地与阴影共用，逻辑占格不随贴图偏移。旋转/往复部件保持同画布/PPU/Pivot，变速先积旧相位再改角速度；太阳/接触阴影独立 BRG 管理。交互目标经 SpatialInteractionRegistry 注册同一数据目标。
+- `MachineDefinition.VisualLayer` 共用管道→电线→设备的显示与交互顺序；光标取完整逻辑格的可交互叠层，由 `GridInteractionSelector` 从上到下等分选择，不用贴图窄条或邻格半径决定线路命中。
 - 电池世界三格灯由 `BatteryChargePresentation` 共用 33%/66%/99% 门槛；`BatteryIndicator.Cells` 为原图左上原点的像素矩形。地面 `MechanicalDepthVisual.Battery` 合入主体脚点行，船上 `ShipPieceView.Battery` 跟随主体变换；节点状态通知只在档位变化时更新，未亮格保留底图，精确数值仍看面板。
 - 机器面板非模态；电池读数、电池形竖向填充和居中百分比使用 0.2 秒非缩放刷新，关闭停止，文本仅在变化时更新；比例读取节点 `ElectricalStoredJoules/CapacityJoules`，未接电网仍显示，UI 不修改储能。灯光跟随真实燃烧/燃料，不跟加工进度；声明 Mod_CombustionVisual 的设施由 MechanicalDepthVisual 读取同一燃烧状态并复用粒子，主体与粒子共享脚点行排序，停用/拆除清空。
 - ConveyorPath 同时决定运输/推动/显示；ConveyorMode 0自动、1~12手动，自动传播优先手动段。DroppedItemRuntime/TransportItemBacked 按局部索引每轮搬一次，末端经 ContainerTransferService 按成功数量扣地面物。

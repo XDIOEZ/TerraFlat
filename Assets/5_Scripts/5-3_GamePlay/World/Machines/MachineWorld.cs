@@ -27,7 +27,6 @@ public static partial class MachineWorld
     private static readonly Dictionary<string, Func<MachineEntity, float>> sourceProviders = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Func<MachineEntity, float>> sourceRpmProviders = new(StringComparer.Ordinal);
     private static List<Vector2Int> players => scope.Players;
-    private const float PointerInteractionRadius = .65f; // 机械数据目标的准线命中半径，必须与查询格范围同步。
     private static MechanicalNetworkGraph graph { get => scope.Graph; set => scope.Graph = value; }
     private static GameSaveData owner { get => scope.Owner; set => scope.Owner = value; }
     private static string worldKey { get => scope.Key; set => scope.Key = value; }
@@ -436,22 +435,19 @@ public static partial class MachineWorld
         RebuildGraphsIfDirty();
         if (!graph.HasNodes) return;
         Vector3 position = actor.transform.position;
-        // 命中点与机械锚点的格坐标差不会超过距离的向上取整，无需多扫外围一圈。
-        int extent = Mathf.CeilToInt(pointer.HasValue ? PointerInteractionRadius : radius);
+        // 光标按完整逻辑格取齐叠层，邻近兜底仍按玩家交互半径查询。
+        int extent = pointer.HasValue ? 0 : Mathf.CeilToInt(radius);
         Vector2 queryCenter = pointer ?? (Vector2)position;
         Vector2Int center = new Vector2Int(Mathf.FloorToInt(queryCenter.x), Mathf.FloorToInt(queryCenter.y));
         IReadOnlyList<MachineEntity> candidates = graph.GetInteractionCandidates(center, extent, pointer.HasValue);
         WorldTopologyDomain topology = graph.Topology;
         float2 actorPosition = new float2(position.x, position.y);
-        Vector2 pointerPosition = pointer.GetValueOrDefault();
-        float2 pointerPoint = new float2(pointerPosition.x, pointerPosition.y);
         for (int i = 0; i < candidates.Count; i++)
         {
             MachineEntity node = candidates[i];
             Vector3 targetPosition = node.Snapshot.transform.position;
             float2 targetPoint = new float2(targetPosition.x, targetPosition.y);
-            if (topology.Distance(actorPosition, targetPoint) > radius ||
-                pointer.HasValue && topology.Distance(pointerPoint, targetPoint) > PointerInteractionRadius)
+            if (topology.Distance(actorPosition, targetPoint) > radius)
                 continue;
             MachineInteractionTarget target = GetOrCreateInteractionTarget(node);
             if (target != null && !result.Contains(target)) result.Add(target);

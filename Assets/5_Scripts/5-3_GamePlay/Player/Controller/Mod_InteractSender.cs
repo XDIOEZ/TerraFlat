@@ -38,6 +38,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     // 交互是纯查询通道，不再创建或启用任何 Trigger；该缓冲区只服务 Physics2D Overlap 查询。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
     private readonly List<IInteractable> spatialCandidates = new(); // 纯空间目标共用选择规则。
+    private readonly GridInteractionSelector gridInteractionSelector = new(); // 光标同格分区与预览共用正式选择器。
     private static readonly ProfilerMarker PointerQueryMarker = new("FlatWorld.Interaction.PointerQuery");
     private static readonly ProfilerMarker RadiusQueryMarker = new("FlatWorld.Interaction.RadiusQuery");
     private Mod_HotBar hotBar;
@@ -240,39 +241,36 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
         Vector3 origin = item.transform.position;
-        IInteractable selectedReceiver = null;
-        float closestDistance = float.MaxValue;
+        spatialCandidates.Clear();
         for (int i = 0; i < count; i++)
         {
             if (IsCombatOnlyCollider(interactionOverlapBuffer[i]))
                 continue;
 
             IInteractable receiver = GameplayPhysics2D.ResolveComponent<IInteractable>(interactionOverlapBuffer[i]);
-            Component receiverComponent = receiver as Component;
-            if (!IsInteractionCandidate(receiver, receiverComponent) ||
-                (requirePointerPermission && !receiver.CanPointerInteract(item)))
-                continue;
-
-            if (!TryGetInteractionPosition(receiver, out Vector3 targetPosition))
-                continue;
-            float distance = topology.Distance((Vector2)origin, (Vector2)targetPosition);
-            if (distance > maxInteractDistance || distance >= closestDistance)
-                continue;
-
-            closestDistance = distance;
-            selectedReceiver = receiver;
+            if (receiver != null && !spatialCandidates.Contains(receiver)) spatialCandidates.Add(receiver);
         }
-
-        spatialCandidates.Clear();
         if (previewOnly)
             SpatialInteractionRegistry.QueryPreview(item, maxInteractDistance, pointerWorld, spatialCandidates, topology);
         else
             SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates, topology);
+
+        // 先排除无资格或超距物体，再计算这一格实际可交互的份数。
+        for (int i = spatialCandidates.Count - 1; i >= 0; i--)
+        {
+            IInteractable candidate = spatialCandidates[i];
+            if (!IsInteractionCandidate(candidate, candidate as Component) ||
+                (requirePointerPermission && !candidate.CanPointerInteract(item)) ||
+                !TryGetInteractionPosition(candidate, out Vector3 position) ||
+                topology.Distance((Vector2)origin, (Vector2)position) > maxInteractDistance)
+                spatialCandidates.RemoveAt(i);
+        }
+        gridInteractionSelector.FilterPointerTargets(spatialCandidates, pointerWorld, topology);
+        IInteractable selectedReceiver = null;
+        float closestDistance = float.MaxValue;
         foreach (IInteractable candidate in spatialCandidates)
         {
-            if (!IsInteractionCandidate(candidate, candidate as Component) ||
-                !TryGetInteractionPosition(candidate, out Vector3 targetPosition)) continue;
-            if (requirePointerPermission && !candidate.CanPointerInteract(item)) continue;
+            if (!TryGetInteractionPosition(candidate, out Vector3 targetPosition)) continue;
             float distance = topology.Distance((Vector2)origin, (Vector2)targetPosition);
             if (distance >= closestDistance) continue;
             closestDistance = distance;

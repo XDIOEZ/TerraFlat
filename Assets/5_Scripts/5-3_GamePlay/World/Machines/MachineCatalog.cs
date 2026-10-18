@@ -242,6 +242,7 @@ public sealed class MachineDefinition
     public bool HasElectricalPorts => Electrical?.HasConnection == true;
     public bool IsConverter => Electrical?.IsConverter == true;
     public bool IsConnectionLine => Electrical?.IsWire == true || Fluid?.Kind == "pipe"; // 自动接邻格的线路与设备主体分层显示。
+    public int VisualLayer => Fluid?.Kind == "pipe" ? -2 : Electrical?.IsWire == true ? -1 : Layer; // 显示和同格交互共用底层到高层的顺序。
     public bool Rotatable => !IsConnectionLine && (Fluid != null || Transport != null || Ports == "axis" || Kind == "bellows" || (Kind == "gear" && AxlePorts?.Length > 0));
     /// <summary>放置输入按定义轮换朝向，具体设备通过配置声明自己的旋转档数。</summary>
     public int NextPlacementQuarterTurns(int current)
