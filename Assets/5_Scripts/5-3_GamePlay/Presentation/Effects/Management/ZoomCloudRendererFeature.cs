@@ -3,7 +3,7 @@ using FlatWorld.Diagnostics;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-/// <summary>共用星球柔边云团，以玩家实际加载窗口为边界遮住远处未加载区域。</summary>
+/// <summary>以实际加载窗口遮住未加载区域，有大气显示柔边云团，无大气显示星空。</summary>
 public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 {
     #region 性能分段
@@ -21,6 +21,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
     private Mod_Cam cameraModule;
     private Mod_ChunkLoader chunkLoader;
     private bool hasSample;
+    private bool useStarfield;
     private int sampledFrame = -1;
     private int worldSceneHandle;
     private Vector2 driftVelocity;
@@ -34,6 +35,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         cameraModule = null;
         chunkLoader = null;
         hasSample = false;
+        useStarfield = false;
         sampledFrame = -1;
         driftVelocity = cloudOffset = cloudWorldCenter = lastLogicalPlayerPosition = Vector2.zero;
     }
@@ -104,6 +106,9 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         float universeOpacity = SurfaceZoomTransition.Sample(cameraModule);
         if (sampledFrame != Time.frameCount)
         {
+            // 读取当前星球的真实大气，无气压时把加载边界外的云替换为星空。
+            useStarfield = AtmosphereService.TryGetForWorld(player.gameObject.scene.name, out var atmosphere) &&
+                           ZoomCloudMaterialParameters.UsesStarfield(atmosphere);
             Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             weather.TryGetWeatherAt(logicalPlayer, out var sample);
             Vector2 wind = new Vector2(sample.WindX, sample.WindY);
@@ -136,7 +141,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             return;
 
         pass.Setup(material, sourceCamera, player.transform.position, cloudWorldCenter,
-            cloudOffset, activeBounds, presentationBounds, config);
+            cloudOffset, activeBounds, presentationBounds, config, useStarfield);
         renderer.EnqueuePass(pass);
     }
 
@@ -163,6 +168,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 
     private sealed class CloudPass : ScriptableRenderPass
     {
+        private static readonly int ScreenId = Shader.PropertyToID("_CloudScreenSize");
         private readonly ProfilingSampler sampler = new ProfilingSampler("FlatWorld Zoom Clouds");
         private Material passMaterial;
         private Camera sourceCamera;
@@ -172,6 +178,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         private Rect activeBounds;
         private Rect presentationBounds;
         private WorldRenderingConfig.RenderingZoomClouds settings;
+        private bool useStarfield;
 
         public CloudPass()
         {
@@ -181,7 +188,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
 
         public void Setup(Material target, Camera source, Vector3 player, Vector2 center,
             Vector2 driftOffset, Rect activeWindow, Rect presentationWindow,
-            WorldRenderingConfig.RenderingZoomClouds config)
+            WorldRenderingConfig.RenderingZoomClouds config, bool starfield)
         {
             passMaterial = target;
             sourceCamera = source;
@@ -191,6 +198,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             activeBounds = activeWindow;
             presentationBounds = presentationWindow;
             settings = config;
+            useStarfield = starfield;
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
@@ -203,7 +211,9 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
             using (new ProfilingScope(cmd, sampler))
             {
                 ZoomCloudMaterialParameters.Apply(passMaterial, sourceCamera, renderingData.cameraData.IsCameraProjectionMatrixFlipped(),
-                    playerPosition, worldCenter, offset, activeBounds, presentationBounds, settings);
+                    playerPosition, worldCenter, offset, activeBounds, presentationBounds, settings, useStarfield);
+                RenderTextureDescriptor descriptor = renderingData.cameraData.cameraTargetDescriptor;
+                passMaterial.SetVector(ScreenId, new Vector4(descriptor.width, descriptor.height, 0f, 0f));
 
                 CoreUtils.SetRenderTarget(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle);
                 cmd.DrawProcedural(Matrix4x4.identity, passMaterial, 0, MeshTopology.Triangles, 3, 1);
@@ -231,10 +241,13 @@ public static class ZoomCloudMaterialParameters
     private static readonly int ColorId = Shader.PropertyToID("_CloudColor");
     private static readonly int ShapeId = Shader.PropertyToID("_CloudShape");
 
+    public static bool UsesStarfield(AtmosphereState atmosphere)
+        => atmosphere != null && AtmosphereService.PressureKPa(atmosphere) <= 0d;
+
     public static void Apply(Material target, Camera source, bool projectionFlipped,
         Vector3 playerPosition, Vector2 worldCenter, Vector2 driftOffset,
         Rect activeBounds, Rect presentationBounds,
-        WorldRenderingConfig.RenderingZoomClouds settings)
+        WorldRenderingConfig.RenderingZoomClouds settings, bool useStarfield = false)
     {
         Matrix4x4 projection = GL.GetGPUProjectionMatrix(source.projectionMatrix, projectionFlipped);
         Matrix4x4 inverse = (projection * source.worldToCameraMatrix).inverse;
@@ -257,7 +270,7 @@ public static class ZoomCloudMaterialParameters
         target.SetVector(WindowId, new Vector4(centerOffset.x, centerOffset.y, clearHalfSize.x, clearHalfSize.y));
         target.SetVector(FeatherId, new Vector4(feather.x, feather.y, 0f, 0f));
         target.SetColor(ColorId, settings.color);
-        target.SetVector(ShapeId, new Vector4(settings.noiseScale, settings.shadowStrength, 0f, 0f));
+        target.SetVector(ShapeId, new Vector4(settings.noiseScale, settings.shadowStrength, useStarfield ? 1f : 0f, 0f));
     }
 
     #endregion

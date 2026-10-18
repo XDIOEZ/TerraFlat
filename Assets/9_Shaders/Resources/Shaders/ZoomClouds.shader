@@ -18,6 +18,7 @@ Shader "Hidden/FlatWorld/ZoomClouds"
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Assets/9_Shaders/Shader/PlanetCloudCommon.hlsl"
+            #include "Assets/9_Shaders/Shader/UniverseStarfieldCommon.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _CloudViewportOrigin;
@@ -29,6 +30,7 @@ Shader "Hidden/FlatWorld/ZoomClouds"
                 float4 _CloudFeather;
                 float4 _CloudColor;
                 float4 _CloudShape;
+                float4 _CloudScreenSize;
             CBUFFER_END
 
             struct Attributes
@@ -61,10 +63,17 @@ Shader "Hidden/FlatWorld/ZoomClouds"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 distanceFromWindow = abs(input.playerOffset - _CloudWindow.xy) - _CloudWindow.zw;
                 float2 edgeProgress = distanceFromWindow / max(_CloudFeather.xy, 0.0001);
+                float edgeFade = smoothstep(0.0, 1.0, max(edgeProgress.x, edgeProgress.y));
+                [branch]
+                if (_CloudShape.z > 0.5)
+                {
+                    // 真空星球用同一个柔边窗口遮住未加载区，不绘制白色云纹。
+                    half3 stars = SampleUniverseStarfield(input.positionCS.xy - _CloudScreenSize.xy * 0.5);
+                    return half4(stars, edgeFade);
+                }
                 float2 worldPosition = input.playerOffset + _CloudWorldCenter.xy;
                 float3 cloudCoords = float3((worldPosition - _CloudDriftOffset.xy) * _CloudShape.x, 0.71) + 137.0;
                 float clouds = PlanetFractal(cloudCoords);
-                float edgeFade = smoothstep(0.0, 1.0, max(edgeProgress.x, edgeProgress.y));
                 float incoming = saturate(edgeFade + (clouds - 0.5) * 0.3 * edgeFade * (1.0 - edgeFade));
                 // 云纹只扰动方形窗口的柔边带，已加载清晰区和不透明外边界只随加载范围变化。
                 float veilAlpha = edgeFade;

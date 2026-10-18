@@ -133,6 +133,21 @@ for _, strength in ipairs({ 0, -1 }) do
 end
 
 for _, args in ipairs({
+    { vacuum = true, expectedStarfield = true },
+    { expectedStarfield = false, initialStarfield = true },
+    { remainingFraction = 0, expectedStarfield = true },
+    { remainingFraction = 0.000000001, expectedStarfield = false },
+    { missingAtmosphere = true, expectedStarfield = false, initialStarfield = true }
+}) do
+    test.system("rendering", "zoom_cloud_mask", args, function(data)
+        assert(data.starfield == args.expectedStarfield, "加载边界没有按真实大气切换云层和星空")
+        assert(data.clearWidth == 80 and data.clearHeight == 80, "背景切换改变了清晰加载范围")
+        assert(data.opaqueWidth == 112 and data.opaqueHeight == 112, "星空没有沿用原来的完全遮挡边界")
+        assert(data.featherX == 16 and data.featherY == 16, "背景切换改变了原来的柔边宽度")
+    end, "无大气加载边界用星空且返回有气星球时恢复云层")
+end
+
+for _, args in ipairs({
     { size = 5, aspect = 1 }, { size = 20, aspect = 2.2 },
     { size = 40, aspect = 0.6, flipped = true }, { size = 55, aspect = 1.8 },
     { size = 60, aspect = 2.2 }, { size = 90, aspect = 1 }

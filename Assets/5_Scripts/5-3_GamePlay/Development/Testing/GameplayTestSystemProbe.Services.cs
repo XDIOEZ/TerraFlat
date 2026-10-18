@@ -943,9 +943,22 @@ public static partial class GameplayTestSystemProbe
             Rect presentationBounds = ChunkMgr.CalculateRuntimeWindowBounds(chunkOrigin, chunkSize,
                 Flag(args, "preload", true) ? loader.CurrentPresentationChunkDistanceXY : loader.CurrentLoadChunkDistanceXY);
             var settings = WorldRenderingConfigCatalog.Default.zoomClouds;
+            // 使用独立大气夹具，快速规则不依赖运行中的资源目录或星球存档。
+            AtmosphereState atmosphere = Flag(args, "missingAtmosphere", false) ? null : new AtmosphereState();
+            if (atmosphere != null && !Flag(args, "vacuum", false))
+            {
+                atmosphere.CapacityMoles = atmosphere.ReferenceMoles = 100m;
+                atmosphere.ReferencePressureKPa = 100d;
+                atmosphere.Gases.Add(new AtmosphereGasAmount { FluidId = "core:nitrogen",
+                    Moles = 100m * (args.Value<decimal?>("remainingFraction") ?? 1m) });
+            }
+            if (Flag(args, "initialStarfield", false))
+                ZoomCloudMaterialParameters.Apply(material, camera, false, player, player, Vector2.zero,
+                    activeBounds, presentationBounds, settings, true);
             // 通过正式加载器改范围并共用窗口几何与材质提交，采样 Shader 实际收到的世界边界。
             ZoomCloudMaterialParameters.Apply(material, camera, args.Value<bool?>("flipped") ?? false,
-                player, player, Vector2.zero, activeBounds, presentationBounds, settings);
+                player, player, Vector2.zero, activeBounds, presentationBounds, settings,
+                ZoomCloudMaterialParameters.UsesStarfield(atmosphere));
             Vector4 window = material.GetVector("_CloudWindow");
             Vector4 feather = material.GetVector("_CloudFeather");
             Vector4 origin = material.GetVector("_CloudViewportOrigin");
@@ -954,6 +967,8 @@ public static partial class GameplayTestSystemProbe
             Vector2 center = new Vector2(origin.x + 0.5f * (right.x + up.x), origin.y + 0.5f * (right.y + up.y));
             return new JObject
             {
+                ["starfield"] = material.GetVector("_CloudShape").z > 0.5f,
+                ["pressureKPa"] = AtmosphereService.PressureKPa(atmosphere),
                 ["loadDistance"] = loader.CurrentLoadChunkDistance,
                 ["initialWidth"] = initialWidth,
                 ["clearWidth"] = window.z * 2f, ["clearHeight"] = window.w * 2f,
