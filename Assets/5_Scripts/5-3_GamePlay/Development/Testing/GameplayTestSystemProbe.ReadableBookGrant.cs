@@ -126,7 +126,8 @@ public static partial class GameplayTestSystemProbe
 
     private static ItemData ReadableBookProbeItem(string id, int guid)
     {
-        return new ItemData
+        // 使用已注册序列化类型的通用物品数据创建测试物品。
+        return new Data_GeneralItem
         {
             IDName = id, Guid = guid,
             Stack = new ItemStack { Amount = 1f, Weight = .1f, Volume = .2f, Stackable = false },
