@@ -56,6 +56,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 ## 定义、资源与状态
 
 - Manifest 唯一发现内容；装配计划在 `RuntimeItemDefinition` 冷路径编译具体 Prefab、组件槽与参数。`shellPrefab` 引用通用目录，独立外壳用 `shellAddress`；`sourcePrefab` 只供编辑器与冗余排除，源资产删除后同步移除该字段。创建物品不回退同名 Prefab。
+- 静态资源 ECS 编译配置的产物目录在首次注册时校验，后续同配置直接复用；失败不缓存，资源目录重载清理编译缓存，新配置或能力版本重编译后重新核验。回归 `ecology/output_validation_cache`。
 - ItemMgr 冷工厂只取 `GameRes.InstantiateItemShell` 原始外壳，用最终 ItemData 装配一次；公共 `InstantiatePrefab` 仍返回已配置实例。Load 按本 Item 的 StableName 单次建索引，排除子 Item 并拒绝重复槽位；回归见 `item_runtime/shell_final_configuration`。
 - 非 Actor 定义须显式提供或继承正数 `weight/volume` 与明确的 `stackable`；冷载荷表现外壳也遵守此契约。
 - `ModuleJsonConfigurator` 对 Item/Actor 参数采用严格契约；向量 JSON 显式写 x/y/z，Unity Vector 的计算属性不能交给 `JToken.FromObject`。显示名 gameName 属于具体定义；业务 id、翻译键和 `formerIds` 别名各自独立。

@@ -1,4 +1,13 @@
 -- 独立四乘四草稿调用正式生态生成器。
+test.system("ecology", "output_validation_cache", {}, function(data)
+    assert(data.calls == 4096 and data.fullValidations == 1,
+        "同一种自然实体在连续绑定时重复查询产物定义")
+    assert(data.freshValidated and data.rejected and data.failedNotCached,
+        "配置重编译不重新校验，或非法资源定义被错误缓存")
+    assert(data.corrected and data.correctedSkipped,
+        "资源修复后不能重新校验，或校验成功后再次重复执行")
+end, "自然资源产物契约按编译配置校验一次、失败可重试")
+
 test.system("ecology", "body_read_batch", {}, function(data)
     assert(data.initialGuid == 41 and data.initialRevision == 5,
         "发布批次丢失自然物身份或外观版本")

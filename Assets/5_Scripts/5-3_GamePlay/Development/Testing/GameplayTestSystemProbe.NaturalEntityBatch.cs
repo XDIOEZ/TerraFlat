@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ecology/spatial_geometry", NaturalEntitySpatialGeometryValues);
         operations.Add("ecology/soil_snapshot_reuse", NaturalEntitySoilSnapshotReuse);
         operations.Add("ecology/soil_liquid_prefilter", NaturalEntitySoilLiquidPrefilter);
+        operations.Add("ecology/output_validation_cache", NaturalEntityOutputValidationCache);
     }
 
     // 只创建自有 ECS World，读取正式批次结果，不触碰玩家世界或重算业务规则。
@@ -72,6 +73,33 @@ public static partial class GameplayTestSystemProbe
             result["plainDead"] = simulation.GetBody(3).Dead;
         }
         return result;
+    }
+
+    // 真实产物校验入口：同一编译配置只执行一次，失败不缓存且新配置重新校验。
+    private static JObject NaturalEntityOutputValidationCache(JObject args)
+    {
+        var profile = new NaturalEntityEcsProfile();
+        const int batchSize = 4096;
+        int fullValidations = 0;
+        for (int i = 0; i < batchSize; i++)
+            if (NaturalEntityEcsService.ValidateOutputDefinitionsOnce(profile)) fullValidations++;
+
+        bool freshValidated = NaturalEntityEcsService.ValidateOutputDefinitionsOnce(new NaturalEntityEcsProfile());
+        var invalid = new NaturalEntityEcsProfile { TreeSeedId = "probe:missing_output_definition" };
+        bool rejected = false;
+        try { NaturalEntityEcsService.ValidateOutputDefinitionsOnce(invalid); }
+        catch (InvalidOperationException) { rejected = true; }
+        bool failedNotCached = !invalid.OutputDefinitionsValidated;
+        invalid.TreeSeedId = null;
+        bool corrected = NaturalEntityEcsService.ValidateOutputDefinitionsOnce(invalid);
+        bool correctedSkipped = !NaturalEntityEcsService.ValidateOutputDefinitionsOnce(invalid);
+        return new JObject
+        {
+            ["calls"] = batchSize, ["fullValidations"] = fullValidations,
+            ["freshValidated"] = freshValidated,
+            ["rejected"] = rejected, ["failedNotCached"] = failedNotCached,
+            ["corrected"] = corrected, ["correctedSkipped"] = correctedSkipped
+        };
     }
 
     /// <summary>少量发布对象只冻结指定身份，并保持批内失效及新增实体语义。</summary>

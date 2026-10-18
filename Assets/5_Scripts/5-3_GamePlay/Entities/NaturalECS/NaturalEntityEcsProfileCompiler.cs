@@ -28,6 +28,8 @@ namespace FlatWorld.NaturalEntities
         public ContactDamageSettings ContactDamage;
         public ComponentType[] ComponentTypes;
         public ulong RegistryRevision;
+        // 同一份编译配置的产物契约只校验一次，配置重编译会得到新实例。
+        internal bool OutputDefinitionsValidated;
         public NaturalEntitySpatialGeometry SpatialGeometry;
         public readonly List<CompiledResourceCapability> Extensions = new();
         public bool HasGrowth => (Capabilities & NaturalEntityCapability.Growth) != 0;

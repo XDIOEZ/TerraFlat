@@ -421,13 +421,23 @@ namespace FlatWorld.NaturalEntities
             QueuePublication(handle.Id);
         }
 
+        /// <summary>产物定义与编译配置绑定，验证失败不缓存，下一次仍会重新核对。</summary>
+        internal static bool ValidateOutputDefinitionsOnce(NaturalEntityEcsProfile profile)
+        {
+            if (profile.OutputDefinitionsValidated) return false;
+            ValidateOutputDefinitions(profile);
+            profile.OutputDefinitionsValidated = true;
+            return true;
+        }
+
         private static void ValidateOutputDefinitions(NaturalEntityEcsProfile profile)
         {
             void Require(string itemId)
             {
                 if (string.IsNullOrWhiteSpace(itemId)) return;
-                if (!GameRes.ExistingInstance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
-                    throw new InvalidOperationException($"植物 {profile.Definition.Id} 引用了不存在的产物 {itemId}。");
+                GameRes resources = GameRes.ExistingInstance;
+                if (resources == null || !resources.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
+                    throw new InvalidOperationException($"植物 {profile.Definition?.Id ?? "未知资源"} 引用了不存在的产物 {itemId}。");
                 if (definition.IsActor || definition.UsesResourceEntities)
                     throw new InvalidOperationException($"植物资源产出 {itemId} 必须是可交付物品，生物或植株生成应使用独立能力。");
                 if ((itemId == profile.Collection?.CollectItemId || itemId == profile.Canopy?.FruitItemId ||
