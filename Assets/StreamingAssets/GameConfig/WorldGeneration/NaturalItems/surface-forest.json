@@ -307,7 +307,7 @@
       "ruleId": "surface.forest.log",
       "itemId": "Log",
       "itemCount": 1,
-      "spawnChance": 0.0012,
+      "spawnChance": 0.0006,
       "spawnChanceMultiplier": 1,
       "distributionMode": 0,
       "patchSpacing": 24,
