@@ -1,11 +1,37 @@
 using FlatWorld.Audio;
 using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>本地玩家以真实位移计步，按脚下地表材质播放短音。</summary>
 public partial class Mod_Mover
 {
+    #region 位移音效共用空间快照
+
+    internal readonly struct MotionAudioSpatialFrame
+    {
+        private readonly WorldTopologyDomain topology;
+        public readonly Vector2 Position;
+
+        public MotionAudioSpatialFrame(Vector2 position, in WorldTopologyDomain topology)
+        {
+            this.topology = topology;
+            float2 normalized = topology.Normalize(new float2(position.x, position.y));
+            Position = new Vector2(normalized.x, normalized.y);
+        }
+
+        // 脚步和游泳各自保留上帧基线，只复用本帧位置与坐标域。
+        public Vector2 DeltaFrom(Vector2 previous)
+        {
+            float2 delta = topology.ShortestDelta(new float2(previous.x, previous.y),
+                new float2(Position.x, Position.y));
+            return new Vector2(delta.x, delta.y);
+        }
+    }
+
+    #endregion
+
     #region 地表脚步音效
 
     private const float WalkingStride = 2.3f;
@@ -31,13 +57,13 @@ public partial class Mod_Mover
         footstepDistance = 0f;
     }
 
-    private void TickFootstepAudio()
+    private void TickFootstepAudio(in MotionAudioSpatialFrame frame)
     {
         if (!footstepAudioEnabled || rb == null)
             return;
 
-        Vector2 currentPosition = WorldTopologyRuntime.NormalizePosition(rb.position);
-        Vector2 displacement = WorldTopologyRuntime.ShortestDelta(footstepPreviousPosition, currentPosition);
+        Vector2 currentPosition = frame.Position;
+        Vector2 displacement = frame.DeltaFrom(footstepPreviousPosition);
         footstepPreviousPosition = currentPosition;
 
         // 风、水流、载具、传送与失重漂移都不是主动踩地，不能触发脚步。

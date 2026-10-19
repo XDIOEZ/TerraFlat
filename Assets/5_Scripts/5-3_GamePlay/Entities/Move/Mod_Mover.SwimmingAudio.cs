@@ -97,13 +97,13 @@ public partial class Mod_Mover
         ResetSwimmingAudio();
     }
 
-    private void TickSwimmingAudio()
+    private void TickSwimmingAudio(in MotionAudioSpatialFrame frame)
     {
         if (!swimmingAudioEnabled || rb == null)
             return;
 
-        Vector2 currentPosition = WorldTopologyRuntime.NormalizePosition(rb.position);
-        Vector2 displacement = WorldTopologyRuntime.ShortestDelta(swimmingAudioPreviousPosition, currentPosition);
+        Vector2 currentPosition = frame.Position;
+        Vector2 displacement = frame.DeltaFrom(swimmingAudioPreviousPosition);
         swimmingAudioPreviousPosition = currentPosition;
 
         bool contactAvailable = swimmingAudioTileEffects != null && swimmingAudioTileEffects.WaterContactPresentationAvailable;
