@@ -62,6 +62,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 关闭编辑会话只恢复偏离基线的控件值；扩展状态通过 `ISettingsEditSessionChangeTracker` 跳过无变化恢复，未提供检测的 Participant 保留恢复。注册表返回是否尝试恢复，关闭控制器仅在可能写回偏好时保存；按键放弃仅在实际覆盖改变时重载并通知，避免无修改关闭重复切画质、写盘和重建输入。
 - 模拟半径为设备级 PlayerPrefs 偏好，三半径整组校验严格递增，Item/AIECS 共用；镜头缩放独立。视觉特效默认/范围来自 default-rendering.json，玩家值由 Provider 保存；太阳投影关闭不关闭脚底阴影。
 - 水体风格由 `WaterVisualSettings` Provider 的 Dropdown 暴露风格化/写实/Unity 风格水/轻量（低配），稳定 ID 为 `stylized/realistic/unity-stylized-water/low-spec`；正式 `UI_VisualEffectsSettings` 与构建器同步公共下拉列表，选项随 Provider 和语言刷新，保存/放弃复用设置会话。
+- 主菜单和游戏内共用画质页与 `GraphicsSettingsPanelLauncher`，整体下拉从极低到极致共六档，`GraphicsUserSettings` 的 UI 顺序与持久化枚举分开；显式选预设才由 `GraphicsQualityPresets` 联动水体、阴影和后处理，启动/放弃只恢复各项自身偏好，不覆盖玩家后续微调。正式 `UI_ActionList/UI_MainMenuSettings` 与构建器同步。
 - 帧率由 `FrameRateUserSettings` 统一持有，默认60帧；显示页共用预设/不限帧与1～1000整数输入，`FrameRateSettingsPanelController` 只绑定控件。预设与自定义值均加入设置会话；切画质后重新应用，移动启动不再覆盖上限。手机不限帧使用屏幕刷新率，避免平台-1默认降为30帧。
 - 主菜单/游戏内共用 NewWorldUserSettings。新世界窗口每次打开回填默认，名称/世界设置切页保留输入；返回先关难度层、再名称页、最后窗口。难度共用 GameDifficultyCatalog 的 0～20 级，摘要为战斗/生存/世界/生产。
 

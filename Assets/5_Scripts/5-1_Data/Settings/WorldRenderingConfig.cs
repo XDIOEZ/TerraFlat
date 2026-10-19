@@ -353,7 +353,7 @@ public static class WorldRenderingConfigCatalog
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
             throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
         if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.universeView.IsValid ||
-            config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
+            config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 5 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 3 ||
             config.shadows.minimumBlurStrength < 0f ||

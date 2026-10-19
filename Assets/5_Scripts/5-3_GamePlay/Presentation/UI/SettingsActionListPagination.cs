@@ -135,7 +135,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "世界坐标模式按钮",
         "双指缩放灵敏度",
         "MasterVolume",
-        "风格化水体按钮",
+        "水体风格下拉列表",
         UIText.SaveButton,
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
@@ -250,6 +250,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             return;
         }
 
+        GraphicsSettingsPanelLauncher.Ensure(pages[FindPageIndex(GraphicsPageName)]);
         BindTabButtons();
         if (panelContext == SettingsPanelContext.InGame)
             BindWorldDetailButtons();
@@ -523,7 +524,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             return true;
 
         if (panelContext == SettingsPanelContext.InGame)
-            return (pageIndex >= 0 && pageIndex <= 11) || pageIndex == 14;
+            return (pageIndex >= 0 && pageIndex <= 12) || pageIndex == 14;
 
         return (pageIndex >= 1 && pageIndex <= 6) ||
                pageIndex == 12 || pageIndex == 13 || pageIndex == 14;
@@ -536,7 +537,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             return true;
 
         if (panelContext == SettingsPanelContext.InGame)
-            return tabIndex >= 0 && tabIndex <= 8;
+            return tabIndex >= 0 && tabIndex <= 9;
 
         return (tabIndex >= 1 && tabIndex <= 7) || tabIndex == 9 || tabIndex == 10;
     }

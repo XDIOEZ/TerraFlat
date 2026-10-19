@@ -922,7 +922,6 @@ public partial class GameManager
             pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
             panel,
             null);
-        BindMainMenuSettingsQuality(panel);
         BindMainMenuSettingsLanguage(panel);
         SettingsEditSessionController.Ensure(panel);
         panel.RefreshUIComponents();
@@ -932,89 +931,6 @@ public partial class GameManager
     }
 
     #region 主菜单画质设置
-
-    /// <summary>绑定主菜单画质预设和后处理质量下拉框，并立即应用到运行时。</summary>
-    private static void BindMainMenuSettingsQuality(BasePanel panel)
-    {
-        ISettingsDropdown qualitySetting =
-            GraphicsUserSettings.SettingsProvider.GetDropdown(
-                GraphicsUserSettings.PresetSettingKey);
-        ISettingsDropdown effectsQualitySetting =
-            ScreenPostProcessSettings.SettingsProvider.GetDropdown(
-                ScreenPostProcessSettings.QualitySettingKey);
-        TMP_Dropdown qualityDropdown = GetMainMenuSettingsDropdown(
-            panel,
-            MainMenuSettingsQualityPresetKey);
-        TMP_Dropdown effectsQualityDropdown = GetMainMenuSettingsDropdown(
-            panel,
-            MainMenuSettingsEffectsQualityKey);
-
-        if (qualityDropdown == null || effectsQualityDropdown == null ||
-            qualitySetting == null || effectsQualitySetting == null)
-        {
-            Debug.LogError(
-                "[GameManager] 主菜单设置 Prefab 缺少画质预设或特效质量下拉列表。",
-                panel);
-            return;
-        }
-
-        qualityDropdown.ClearOptions();
-        qualityDropdown.AddOptions(GetSettingOptionLabels(qualitySetting.Options));
-        qualityDropdown.onValueChanged.AddListener(
-            selectedIndex => OnMainMenuSettingsQualityChanged(
-                panel,
-                qualitySetting,
-                selectedIndex));
-
-        effectsQualityDropdown.ClearOptions();
-        effectsQualityDropdown.AddOptions(
-            GetSettingOptionLabels(effectsQualitySetting.Options));
-        effectsQualityDropdown.onValueChanged.AddListener(
-            selectedIndex => OnMainMenuSettingsEffectsQualityChanged(
-                panel,
-                effectsQualitySetting,
-                selectedIndex));
-
-        RefreshMainMenuSettingsQuality(panel);
-    }
-
-    /// <summary>应用主菜单的画质预设。</summary>
-    private static void OnMainMenuSettingsQualityChanged(
-        BasePanel panel,
-        ISettingsDropdown setting,
-        int selectedIndex)
-    {
-        if (!setting.TrySetSelectedIndex(selectedIndex, out string error))
-        {
-            SetMainMenuSettingsStatus(panel, error);
-            RefreshMainMenuSettingsQuality(panel);
-            return;
-        }
-
-        RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(
-            panel,
-            FlatWorldLocalizationService.GetUiText("画质设置已修改，请点击保存"));
-    }
-
-    /// <summary>应用主菜单的后处理特效质量。</summary>
-    private static void OnMainMenuSettingsEffectsQualityChanged(
-        BasePanel panel,
-        ISettingsDropdown setting,
-        int selectedIndex)
-    {
-        if (!setting.TrySetSelectedIndex(selectedIndex, out string error))
-        {
-            SetMainMenuSettingsStatus(panel, error);
-            RefreshMainMenuSettingsQuality(panel);
-            return;
-        }
-
-        RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(
-            panel,
-            FlatWorldLocalizationService.GetUiText("特效质量设置已修改，请点击保存"));
-    }
 
     /// <summary>恢复主菜单当前已注册的全部设置默认值。</summary>
     private static void ResetMainMenuSettings(BasePanel panel)

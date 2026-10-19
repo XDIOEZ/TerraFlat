@@ -48,6 +48,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/frame_rate", ServiceFrameRate);
         operations.Add("ui_settings/water_visual_provider", ServiceWaterVisualProvider);
+        operations.Add("ui_settings/graphics_quality_provider", ServiceGraphicsQualityProvider);
         operations.Add("ui_settings/performance_debug", ServicePerformanceDebug);
         operations.Add("ui_settings/navigation_policy", ServiceNavigationPolicy);
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
@@ -103,6 +104,68 @@ public static partial class GameplayTestSystemProbe
             ["switchCount"] = provider.SwitchSettings.Count,
             ["dropdowns"] = dropdowns,
             ["lowSpecIndex"] = (int)WaterVisualStyle.LowSpec
+        };
+    }
+
+    #endregion
+
+    #region 整体画质元数据
+
+    private static JObject ServiceGraphicsQualityProvider(JObject args)
+    {
+        // 只采样正式下拉契约和纯预设规则，不应用画质或写入玩家偏好。
+        ISettingsProvider provider = GraphicsUserSettings.SettingsProvider;
+        var dropdowns = new JArray();
+        foreach (ISettingsDropdown dropdown in provider.DropdownSettings)
+        {
+            var options = new JArray();
+            foreach (SettingOption option in dropdown.Options)
+                options.Add(new JObject { ["id"] = option.Id, ["label"] = option.DisplayName });
+            dropdowns.Add(new JObject
+            {
+                ["key"] = dropdown.Descriptor.Key,
+                ["controlType"] = dropdown.Descriptor.ControlType.ToString(),
+                ["label"] = dropdown.Descriptor.DisplayName,
+                ["options"] = options
+            });
+        }
+
+        var profiles = new JArray();
+        for (int index = 0; index < GraphicsUserSettings.PresetCount; index++)
+        {
+            GraphicsPreset preset = GraphicsUserSettings.GetPresetForIndex(index);
+            GraphicsQualityProfile profile = GraphicsQualityPresets.GetProfile(preset);
+            profiles.Add(new JObject
+            {
+                ["preset"] = preset.ToString(),
+                ["roundtripIndex"] = GraphicsUserSettings.GetIndexForPreset(preset),
+                ["qualityName"] = GraphicsUserSettings.GetQualityNameForPreset(preset),
+                ["waterStyle"] = profile.WaterStyle.ToString(),
+                ["postProcessQuality"] = profile.PostProcessQuality.ToString(),
+                ["sunShadows"] = profile.SunShadows,
+                ["shadowBlur"] = profile.ShadowBlur,
+                ["groundShadows"] = profile.GroundShadows
+            });
+        }
+
+        bool Rejects(Action action)
+        {
+            try { action(); }
+            catch (ArgumentOutOfRangeException) { return true; }
+            return false;
+        }
+
+        return new JObject
+        {
+            ["providerId"] = provider.ProviderId,
+            ["switchCount"] = provider.SwitchSettings.Count,
+            ["dropdowns"] = dropdowns,
+            ["presetCount"] = GraphicsUserSettings.PresetCount,
+            ["profiles"] = profiles,
+            ["rejectsNegativeIndex"] = Rejects(() => GraphicsUserSettings.GetPresetForIndex(-1)),
+            ["rejectsOverflowIndex"] = Rejects(() => GraphicsUserSettings.GetPresetForIndex(GraphicsUserSettings.PresetCount)),
+            ["rejectsUnknownPreset"] = Rejects(() => GraphicsUserSettings.GetIndexForPreset((GraphicsPreset)99)),
+            ["rejectsUnknownQualityName"] = Rejects(() => GraphicsUserSettings.GetQualityNameForPreset((GraphicsPreset)99))
         };
     }
 

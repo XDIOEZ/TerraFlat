@@ -5023,6 +5023,22 @@ MonoBehaviour:
     m_Items: []
   m_KeyGenerator:
     rid: 443753568374358017
+  - m_Id: 17923500000000001
+    m_Key: ui.text.0645E9E6
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000002
+    m_Key: ui.text.97C426BC
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000003
+    m_Key: ui.text.BBE56E68
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000004
+    m_Key: ui.text.9DC5C510
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds:

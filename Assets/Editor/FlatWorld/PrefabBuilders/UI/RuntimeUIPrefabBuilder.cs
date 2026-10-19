@@ -2369,6 +2369,35 @@ public static partial class RuntimeUIPrefabBuilder
         RemoveObsoleteActionListPagerControls(root.transform);
         EnsureSeasonSettingsPage(root);
         EnsureGameSettingsPage(root);
+        Transform graphicsPage = ConfigureGraphicsSettingsPage(content);
+        graphicsPage.gameObject.SetActive(false);
+        EnsureActionListTabButton(
+            root.transform,
+            FindTransform(root.transform, SettingsActionListPagination.TabBarName),
+            SettingsActionListPagination.GraphicsTabButtonName,
+            "画质设置");
+    }
+
+    /// <summary>主菜单和游戏内设置共用六档整体画质入口。</summary>
+    private static Transform ConfigureGraphicsSettingsPage(Transform content)
+    {
+        Transform graphicsPage = EnsureActionListPage(content, SettingsActionListPagination.GraphicsPageName);
+        ClearDirectChildren(graphicsPage);
+        CreateSettingsHeader(graphicsPage, "画质设置");
+        CreateSettingsHint(graphicsPage, "选择预设会同时调整水体、阴影和后处理，之后仍可单独调整。", 60f);
+        TMP_Dropdown preset = CreateSettingsDropdownRow(
+            graphicsPage,
+            "画质预设",
+            GameManager.MainMenuSettingsQualityPresetKey,
+            new[] { "极低", "低", "中", "高", "极高", "极致" });
+        preset.SetValueWithoutNotify(3);
+        preset.RefreshShownValue();
+        CreateSettingsDropdownRow(
+            graphicsPage,
+            "特效质量",
+            GameManager.MainMenuSettingsEffectsQualityKey,
+            new[] { "高", "中", "低" });
+        return graphicsPage;
     }
 
     /// <summary>
@@ -2409,29 +2438,14 @@ public static partial class RuntimeUIPrefabBuilder
         DestroyTransformIfPresent(tabBar, SettingsActionListPagination.WorldTabButtonName);
         DestroyTransformIfPresent(tabBar, SettingsActionListPagination.SessionTabButtonName);
 
-        Transform graphicsPage = EnsureActionListPage(
-            content,
-            SettingsActionListPagination.GraphicsPageName);
-        ClearDirectChildren(graphicsPage);
-        CreateSettingsHeader(graphicsPage, "画质设置");
-        CreateSettingsHint(graphicsPage, "这些设置不依赖当前世界，会立即应用并自动保存。", 48f);
-        CreateSettingsDropdownRow(
-            graphicsPage,
-            "画质预设",
-            GameManager.MainMenuSettingsQualityPresetKey,
-            new[] { "高（推荐）", "中", "低" });
-        CreateSettingsDropdownRow(
-            graphicsPage,
-            "特效质量",
-            GameManager.MainMenuSettingsEffectsQualityKey,
-            new[] { "高", "中", "低" });
+        Transform graphicsPage = ConfigureGraphicsSettingsPage(content);
 
         Transform languagePage = EnsureActionListPage(
             content,
             SettingsActionListPagination.LanguagePageName);
         ClearDirectChildren(languagePage);
         CreateSettingsHeader(languagePage, "语言");
-        CreateSettingsHint(languagePage, "界面语言会立即切换并保存到本机。", 48f);
+        CreateSettingsHint(languagePage, "界面语言会立即切换，点击保存后保留修改。", 48f);
         CreateSettingsDropdownRow(
             languagePage,
             "游戏语言",
@@ -2516,7 +2530,7 @@ public static partial class RuntimeUIPrefabBuilder
             eyebrow.gameObject.SetActive(false);
         }
         if (footerHint != null)
-            footerHint.text = "客户端设置会自动保存";
+            footerHint.text = "未保存修改将在关闭时撤销";
 
         DestroyTransformIfPresent(root.transform, "恢复所有设置");
         Button resetButton = CreateButton(

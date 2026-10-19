@@ -1,3 +1,53 @@
+-- 只采样整体画质元数据和纯映射，不读取当前选项或应用画质。
+test.system("ui_settings", "graphics_quality_provider", {}, function(data)
+    assert(data.providerId == "graphics" and data.switchCount == 0 and #data.dropdowns == 1,
+        "整体画质没有统一为一个下拉列表")
+    local dropdown = data.dropdowns[1]
+    assert(dropdown.key == "graphics.preset" and dropdown.controlType == "Dropdown"
+        and type(dropdown.label) == "string" and dropdown.label:match("%S"),
+        "整体画质设置键、控件类型或可见名称错误")
+    local ids = {"very-low", "low", "medium", "high", "very-high", "ultra"}
+    local presets = {"VeryLow", "Low", "Medium", "High", "VeryHigh", "Ultra"}
+    local names = {"Very Low", "Low", "Medium", "High", "Very High", "Ultra"}
+    assert(data.presetCount == 6 and #dropdown.options == 6 and #data.profiles == 6,
+        "整体画质必须完整提供六个档位")
+    local seen = {}
+    for index, id in ipairs(ids) do
+        local option, profile = dropdown.options[index], data.profiles[index]
+        assert(option.id == id and not seen[id]
+            and type(option.label) == "string" and option.label:match("%S"),
+            "六档画质顺序、唯一身份或可见名称错误")
+        assert(profile.preset == presets[index] and profile.roundtripIndex == index - 1
+            and profile.qualityName == names[index], "下拉索引、持久化枚举和 Unity 档位映射不一致")
+        seen[id] = true
+    end
+    local p = data.profiles
+    for index = 1, 3 do
+        assert(p[index].waterStyle == "LowSpec", "低至中画质没有使用轻量水体")
+    end
+    for index = 4, 6 do
+        assert(p[index].waterStyle == "Realistic", "高画质没有恢复写实水体")
+    end
+    assert(p[1].postProcessQuality == "Low" and p[2].postProcessQuality == "Low"
+        and p[3].postProcessQuality == "Medium" and p[4].postProcessQuality == "Medium"
+        and p[5].postProcessQuality == "High" and p[6].postProcessQuality == "High",
+        "后处理质量没有随整体档位逐级提升")
+    assert(not p[1].sunShadows and not p[1].shadowBlur and not p[1].groundShadows
+        and not p[2].sunShadows and not p[2].shadowBlur and p[2].groundShadows,
+        "极低与低画质没有分别减少地面阴影和太阳阴影成本")
+    for index = 3, 4 do
+        assert(p[index].sunShadows and not p[index].shadowBlur and p[index].groundShadows,
+            "中高画质没有保留阴影并关闭模糊")
+    end
+    for index = 5, 6 do
+        assert(p[index].sunShadows and p[index].shadowBlur and p[index].groundShadows,
+            "极高与极致画质没有恢复完整阴影")
+    end
+    assert(data.rejectsNegativeIndex and data.rejectsOverflowIndex
+        and data.rejectsUnknownPreset and data.rejectsUnknownQualityName,
+        "非法画质索引或枚举没有被正式映射接口拒绝")
+end, "整体六档画质下拉顺序、纯映射、低配降耗与高配效果")
+
 -- 只采样水体设置元数据，不读取当前选项、不写偏好或切换现场材质。
 test.system("ui_settings", "water_visual_provider", {}, function(data)
     assert(data.providerId == "water-visuals" and data.switchCount == 0,

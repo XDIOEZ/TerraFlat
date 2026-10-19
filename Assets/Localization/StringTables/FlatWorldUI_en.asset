@@ -5108,6 +5108,22 @@ MonoBehaviour:
     m_Localized: "Lightweight (Low-end): simpler water detail with lower rendering cost."
     m_Metadata:
       m_Items: []
+  - m_Id: 17923500000000001
+    m_Localized: "Very Low"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000002
+    m_Localized: "Very High"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000003
+    m_Localized: "Ultra"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000004
+    m_Localized: "Presets adjust water, shadows, and post-processing together. You can still adjust each setting afterward."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
