@@ -129,11 +129,34 @@ namespace FlatWorld.Spaceflight
         private static readonly ProfilerMarker coldChunkGenerationMarker = new("SpaceSurfaceQuery.ColdChunk.Generate");
         private static readonly ProfilerMarker coldTemperatureMarker = new("SpaceSurfaceQuery.Temperature.Sample");
 
+        #region 冷地表固定风力缓存
+        // 仅保存生成时的不可变天气汇总，不保留被逐出的完整地形。
+        internal sealed class ColdWindStrengthCache
+        {
+            private readonly int capacity;
+            private readonly Dictionary<Int2, float> values = new();
+            private readonly Queue<Int2> order = new();
+
+            public ColdWindStrengthCache(int capacity) => this.capacity = Math.Max(1, capacity);
+            public int Count => values.Count;
+            public bool TryGet(Int2 origin, out float strength) => values.TryGetValue(origin, out strength);
+
+            public void Store(Int2 origin, float strength)
+            {
+                if (values.ContainsKey(origin)) { values[origin] = strength; return; }
+                if (order.Count >= capacity) values.Remove(order.Dequeue());
+                order.Enqueue(origin);
+                values.Add(origin, strength);
+            }
+        }
+        #endregion
+
         private sealed class SurfaceCache : IDisposable
         {
             public readonly WorldRuntime World;
             public readonly DeterministicChunkGenerator Generator;
             public readonly Queue<RuntimeAddress> Order = new();
+            public readonly ColdWindStrengthCache WindStrength = new(128);
             public readonly ulong Fingerprint;
             public readonly int Seed;
             public SurfaceCache(string planetId, ChunkGenerationProfileSnapshot profile, int seed, LiquidTypeCatalog liquids)
@@ -190,6 +213,8 @@ namespace FlatWorld.Spaceflight
                     while (cache.Order.Count > MaximumCachedChunksPerPlanet) cache.World.EvictChunk(cache.Order.Dequeue());
                 }
             }
+            if (!loaded && terrain.WeatherProfile != null)
+                caches[planetId].WindStrength.Store(address.ChunkOrigin, terrain.WeatherProfile.Climate.WindStrength);
             TerrainCell cell = terrain.GetCell(localX, localY);
             string liquidId = terrain.GetLiquidId(localX, localY);
             int liquidLevel = terrain.GetLiquidLevel(localX, localY);
@@ -286,6 +311,7 @@ namespace FlatWorld.Spaceflight
         public static bool TrySampleEnvironmentValue(string worldKey, Vector2 position, string key, out float value)
         {
             value = 0f;
+            if (key == "windStrength" && TryGetCachedWindStrength(worldKey, position, out value)) return true;
             if (!TryGetColdSample(worldKey, position, out _, out ChunkTerrainData terrain, out Vector2Int local)) return false;
             if (key == "windStrength")
             {
@@ -293,6 +319,38 @@ namespace FlatWorld.Spaceflight
                 value = terrain.WeatherProfile.Climate.WindStrength; return true;
             }
             return terrain.TryGetEnvironmentValue(key, local.x, local.y, out value);
+        }
+
+        /// <summary>冷风力机复用固定区块气候值；实时已加载地形始终优先。</summary>
+        private static bool TryGetCachedWindStrength(string worldKey, Vector2 position, out float value)
+        {
+            value = 0f;
+            if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(position.x) || !float.IsFinite(position.y))
+                return false;
+            global::WorldAddress world = global::WorldAddress.FromWorldKey(worldKey);
+            GameSaveData save = SaveDataMgr.Instance?.SaveData;
+            if (!world.IsSurface || !ReferenceEquals(owner, save) || save?.PlanetData_Dict == null ||
+                !save.PlanetData_Dict.TryGetValue(world.PlanetId, out PlanetData planet)) return false;
+
+            ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
+            ChunkGenerationTopologySnapshot topology = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
+                ? new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y), new Int2(bounds.Span.x, bounds.Span.y)) : default;
+            int cellX = topology.NormalizeX(Mathf.FloorToInt(position.x));
+            int cellY = topology.NormalizeY(Mathf.FloorToInt(position.y));
+            int originX = (int)Math.Floor(cellX / (double)profile.Width) * profile.Width;
+            int originY = (int)Math.Floor(cellY / (double)profile.Height) * profile.Height;
+            var address = new RuntimeAddress(WorldAddress.SurfaceDimensionId, new Int2(originX, originY));
+            ChunkTerrainData loaded = GetLoadedTerrain(world.PlanetId, address);
+            if (loaded != null)
+            {
+                if (loaded.WeatherProfile == null) return false;
+                value = loaded.WeatherProfile.Climate.WindStrength;
+                return true;
+            }
+            return caches.TryGetValue(world.PlanetId, out SurfaceCache cache) &&
+                   cache.Fingerprint == profile.GenerationFingerprint &&
+                   cache.Seed == GetGenerationSeed(save.Seed, world.PlanetId) &&
+                   cache.WindStrength.TryGet(address.ChunkOrigin, out value);
         }
 
         public static bool TryGetWaterCurrent(string worldKey, Vector2 position, out RuntimeWaterCurrentSample current)
