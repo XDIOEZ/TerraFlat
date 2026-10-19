@@ -224,6 +224,7 @@ namespace FlatWorld.Spaceflight
         #region 落地后交还普通建筑与地表网络
         private string lastGroundRestoreError;
         private readonly List<ShipState> groundRestoreShips = new();
+        private readonly List<ShipState> groundRestoreMembers = new();
         private readonly HashSet<string> groundRestoreHandled = new(StringComparer.Ordinal);
 
         private sealed class GroundRestorePlan
@@ -252,7 +253,8 @@ namespace FlatWorld.Spaceflight
                 ShipFlightState flight = GetFlight(ship.ShipId);
                 if (ship.IsWreck || flight == null || flight.SurfaceWorldKey != world ||
                     flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)) continue;
-                var members = new List<ShipState>();
+                List<ShipState> members = groundRestoreMembers;
+                members.Clear();
                 ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
                 if (assembly == null) members.Add(ship);
                 else foreach (string id in assembly.MemberShipIds)
@@ -314,9 +316,20 @@ namespace FlatWorld.Spaceflight
                             throw new InvalidOperationException($"落点的地面建筑层已被占用：格({at.x},{at.y})，层{layer}，" +
                                 $"待落地部件{piece.ItemId}[{piece.PieceId}]，请清理落点。");
                     }
+            }
+            return plan;
+        }
+
+        private void CaptureGroundShipContents(GroundRestorePlan plan)
+        {
+            foreach (var pair in plan.Pieces)
+            {
+                int id = pair.Key;
+                ShipPieceState piece = pair.Value;
+                MachineDefinition definition = MachineCatalog.Get(piece.ItemId);
                 if (definition != null)
                 {
-                    using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
+                    using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(plan.Ship.ShipId)))
                     {
                         MachineEntity node = MachineWorld.GetById(id) ?? throw new InvalidOperationException("待落地机器身份缺失：" + piece.ItemId);
                         plan.OriginalMachines.Add(id, new MachineScopePlacement(node.Cell, node.Snapshot.transform.position, node.RotationQuarterTurns));
@@ -333,16 +346,28 @@ namespace FlatWorld.Spaceflight
                 SaveGroundPartState(snapshot, piece);
                 plan.Snapshots.Add(id, snapshot);
             }
-            return plan;
         }
 
         private void RestoreGroundAssembly(List<ShipState> members, string world)
         {
             using var sample = GroundCommitMarker.Auto();
+            GroundShipPreparation preparation = EnsureGroundPreparation(members[0], world);
+            if (!preparation.RestoreGate.ShouldAttempt(world, BuildingOccupancyRegistry.Revision, members)) return;
             var plans = new List<GroundRestorePlan>(members.Count);
             var occupied = new Dictionary<Vector3Int, ShipPieceState>();
             // 整组先检查最终落点，再创建正式建筑，不能只交还对接组合的一半。
-            foreach (ShipState ship in members) plans.Add(PlanGroundShip(ship, world, occupied));
+            try
+            {
+                foreach (ShipState ship in members) plans.Add(PlanGroundShip(ship, world, occupied));
+            }
+            catch (InvalidOperationException)
+            {
+                preparation.RestoreGate.Block(world, BuildingOccupancyRegistry.Revision, members);
+                throw;
+            }
+            // 整组占地通过后才复制最新数据，失败落点不再逐帧制造快照垃圾。
+            using (GroundCaptureMarker.Auto())
+                foreach (GroundRestorePlan plan in plans) CaptureGroundShipContents(plan);
             bool handedOff = false;
             try
             {

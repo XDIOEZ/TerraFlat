@@ -44,9 +44,47 @@ public static class GameplayTestShipSurfaceProbe
             ["operation"] = "ship_surface_state", ["scope"] = "production-domain",
             ["airborneVisualRise"] = ShipSurfaceState.AirborneVisualRise, ["samples"] = samples,
             ["groundAssembly"] = GroundAssemblySamples(),
+            ["groundRestoreGate"] = GroundRestoreGateSamples(),
             ["uprightAssemblies"] = UprightAssemblySamples(),
             ["limitations"] = "只采样正式整体运动模式、排序资格、视觉升高与投送资格；不创建碰撞组件，也不证明真实远程命中、层级或联机。"
         };
+    }
+
+    // 失败输入未变化时保持阻塞，真实占地、结构和落点变化立即重新规划。
+    private static JArray GroundRestoreGateSamples()
+    {
+        var gate = new ShipGroundRestoreGate();
+        var ship = new ShipState { ShipId = "restore-gate", PositionX = 10d, PositionY = -20d };
+        var members = new List<ShipState> { ship };
+        var samples = new JArray();
+        void Sample(string name, uint revision = 7, string world = "surface")
+            => samples.Add(new JObject { ["name"] = name, ["attempt"] = gate.ShouldAttempt(world, revision, members) });
+        Sample("initial");
+        gate.Block("surface", 7, members);
+        Sample("unchanged");
+        bool repeatedBlocked = true;
+        for (int i = 0; i < 1000; i++) repeatedBlocked &= !gate.ShouldAttempt("surface", 7, members);
+        samples.Add(new JObject { ["name"] = "repeat-1000", ["attempt"] = !repeatedBlocked });
+        Sample("occupancy-changed", 8);
+        Sample("world-changed", world: "other");
+        ship.PositionX++; Sample("position-changed"); ship.PositionX--;
+        ship.AngleRadians = Math.PI * .5d; Sample("angle-changed"); ship.AngleRadians = 0d;
+        ship.CenterOfMassLocalX = .25d; Sample("center-changed"); ship.CenterOfMassLocalX = 0d;
+        ship.CellSizeMeters = 2d; Sample("cell-size-changed"); ship.CellSizeMeters = 1d;
+        ship.NotifyStructureChanged(); Sample("structure-changed");
+        gate.Block("surface", 7, members);
+        ship.Pieces.Add(new ShipPieceState()); Sample("piece-count-changed"); ship.Pieces.Clear();
+        members.Add(new ShipState { ShipId = "docked-member" }); Sample("member-added");
+        gate.Block("surface", 7, members);
+        members.RemoveAt(1); Sample("member-removed");
+        gate.Block("surface", 7, members);
+        members[0] = new ShipState { ShipId = ship.ShipId, PositionX = ship.PositionX, PositionY = ship.PositionY };
+        Sample("identity-replaced");
+        members[0] = ship;
+        Sample("restored-input");
+        gate = new ShipGroundRestoreGate(); Sample("preparation-replaced");
+        gate.Block("surface", 7, members); Sample("blocked-again");
+        return samples;
     }
 
     private static JObject GroundAssemblySamples()

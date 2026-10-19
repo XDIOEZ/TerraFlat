@@ -142,6 +142,21 @@ do
         end
         assert(type(data.limitations) == "string" and #data.limitations > 0, "空地结果必须保留覆盖边界")
         local assembly = data.groundAssembly
+        local retryExpected = {
+            initial = true, unchanged = false, ["repeat-1000"] = false, ["occupancy-changed"] = true,
+            ["world-changed"] = true, ["position-changed"] = true, ["angle-changed"] = true,
+            ["center-changed"] = true, ["cell-size-changed"] = true, ["structure-changed"] = true,
+            ["piece-count-changed"] = true, ["member-added"] = true, ["member-removed"] = true,
+            ["identity-replaced"] = true, ["restored-input"] = false,
+            ["preparation-replaced"] = true, ["blocked-again"] = false
+        }
+        assert(type(data.groundRestoreGate) == "table" and #data.groundRestoreGate == 17, "落地失败重试样本不完整")
+        local retrySeen = {}
+        for _, sample in ipairs(data.groundRestoreGate) do
+            assert(retryExpected[sample.name] ~= nil and not retrySeen[sample.name], "落地重试样本未知或重复")
+            retrySeen[sample.name] = true
+            assert(sample.attempt == retryExpected[sample.name], "落地失败重复工作或变化后未立即重试：" .. sample.name)
+        end
         local layerExpected = {floor = 6, ["floor-with-machine"] = 6, wall = 0, fiber = 5,
             ["custom-equipment"] = 4, machine = 0, wire = 3, pipe = 2}
         assert(type(assembly.layers) == "table" and #assembly.layers == 8, "落地地板、光纤、设备及机器覆盖层样本不完整")
