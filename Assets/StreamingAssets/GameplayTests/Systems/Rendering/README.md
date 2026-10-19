@@ -47,3 +47,5 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `rendering/pla
 2026-10-17 船件热查询补充但未执行：`rendering/ship_part_placement_state` 装配禁用独立 Item 的真实建筑/机械/船件模块，Lua 检查活建筑状态优先于旧持久数据、运行身份切换即时生效、缺活模块的持久状态回退、机械模块移除和地板短路，并采样预热后 256 轮正式通行查询的线程分配。保留用户暂停现场，本轮未编译、未运行；未覆盖建筑行网格最终画面、实时 MPB 显示或改善后的帧率。
 
 2026-10-18 新增但未执行：`rendering/cave_shadow_lazy_creation` 使用独立 4×2 权威区块和正式 `ChunkLightOccluderRenderer.Bind/RefreshShadowVisibility`，断言无灯时不创建阴影对象、首次受光创建真实 URP 网格、失光关闭与再次受光复用、解绑重绑后的墙位置/尺寸/镜像更新，以及未知光范围的保守回退。本组不改变正在冻结的现场；尚未验证最终墙体漏光和重新采样后的帧率，全受光新墙冷创建仍有开销。
+
+2026-10-19 新增但未执行：`rendering/ship_block_visual` 采正式化学引擎目录机身尺寸和共用 `DoorSlideVisual`，覆盖双向滑动、中途反转、首次开门恢复、旋转缩放保留、排序/颜色同步与释放。用户正在 PlayMode，本轮只静态修改，未编译或运行；实际门交互、通行和最终拼缝由用户验收。

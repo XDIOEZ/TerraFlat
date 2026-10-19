@@ -112,3 +112,5 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 船体结构事务须 NotifyStructureChanged；舱室格子、支撑和正式对接登记由 StructureRevision 失效。Ships/Flights/Devices 使用 SpaceStateCollection 权威增删版本与值类型遍历，身份在加入前确定；GetShip/GetFlight/GetDevice 复用 ID 索引，恢复/卸载释放索引。舱气库存包装复用，换 Gas 状态或材料目录时重绑。
 - 冷地表查询复用冻结Profile及最新存档差量；TrySampleEnvironmentValue读真实环境层，windStrength读该地块天气Profile基线；TryGetWaterCurrent按正式河流/海流规则返回采样，不加载场景或借玩家当前天气。
 - `dotnet run --project Tools/Tests/ShipMass/ShipMass.Tests.csproj -c Release` 验证载荷缓存失效、真实状态及建筑回收封包；SpaceCruise另覆盖极大星区编号的局部精度、空域、目录身份、跨界星体接触和对接，ShipContacts覆盖跨界船/物接触与远区排除，以及原有惯性、质量与快照。专项耗时/分配不代表 Unity 场景帧率，试玩中只静态修改，不操作 Play Mode。
+
+- 化学引擎地表机身由流体定义 `BodySizeCells=1` 铺满一格；不能仅改 Item rendererScale，地表机器合批会独立适配尺寸。地面 `Mod_Door.UseItemSprite` 与船上 `ShipPieceView` 共用 `DoorSlideVisual` 双扇动画，开关通行仍归原业务，休眠/卸载释放门叶。

@@ -509,3 +509,31 @@ test.system("rendering", "effect_composition", {}, function(data)
     assert(data.diagnosticSubmitted == 4 and data.diagnosticSpriteSkipped == 1,
         "渲染诊断未区分MPB提交与同图跳过")
 end, "静态覆雪免重传、效果启停与水线换图合成")
+
+
+test.system("rendering", "ship_block_visual", {}, function(data)
+    local s = {}
+    for _, value in ipairs(data.samples) do
+        s[value.name] = value
+        assert(not value.sourceVisible, "双扇门显示时主体没有隐藏")
+        assert(value.sourceScaleX == 2 and math.abs(value.sourceRotation - 90) < 0.001,
+            "门动画改写了安装缩放或旋转")
+    end
+    assert(s.closed.progress == 0 and math.abs(s.closed.leftX + 0.25) < 0.0001
+        and math.abs(s.closed.rightX - 0.25) < 0.0001, "关闭门板没有完整拼合一格")
+    assert(math.abs(s.opening.progress - 0.5) < 0.0001 and s.opening.leftX < s.closed.leftX,
+        "开门没有连续向两边滑动")
+    assert(math.abs(s.reversing.progress - 0.25) < 0.0001
+        and s.reversing.leftX > s.opening.leftX, "中途关门没有从当前进度反转")
+    assert(s.closed_again.progress == 0 and s.open.progress == 1
+        and s.restored_open.progress == 1, "关门终点、开门终点或首次开门恢复错误")
+    assert(s.appearance.order == 37 and math.abs(s.appearance.green - 0.4) < 0.0001,
+        "门叶没有同步主体排序与颜色")
+    assert(data.sourceRestored and data.activeLeavesAfterRelease == 0, "回收未恢复主体或残留门叶")
+    assert(data.engineSize == 1 and data.gmEngineSize == 1, "普通或GM化学引擎仍被缩成非满格")
+    local expected = {0.85, 0.55, 0.32}
+    for i, value in ipairs(data.defaultBodySizes) do
+        assert(math.abs(value - expected[i]) < 0.0001, "引擎满格改动改变了其它设备默认尺寸")
+    end
+    for _, rejected in ipairs(data.invalidRejected) do assert(rejected, "无效机身尺寸没有被拒绝") end
+end, "化学引擎满格、双扇门双向动画、反转恢复与回收")

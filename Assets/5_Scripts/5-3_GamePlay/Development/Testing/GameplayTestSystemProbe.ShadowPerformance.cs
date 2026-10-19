@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/shadow_footprint_matrix", ShadowFootprintMatrix);
         operations.Add("rendering/building_capability_cache", BuildingCapabilityCache);
         operations.Add("rendering/ship_part_placement_state", ServiceShipPartPlacementState);
+        operations.Add("rendering/ship_block_visual", ServiceShipBlockVisual);
         operations.Add("rendering/effect_composition", RenderEffectComposition);
     }
 

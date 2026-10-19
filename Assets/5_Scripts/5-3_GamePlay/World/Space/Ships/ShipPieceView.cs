@@ -93,6 +93,7 @@ namespace FlatWorld.Spaceflight
             SpatialInteractionRegistry.Unregister(this);
             registeredForInteraction = false;
             gameObject.SetActive(false);
+            ReleaseDoorVisual();
             ReleaseCultivatorVisual();
             cultivatorPlots.Refresh(null);
             ReleaseBatteryChargeVisual();
@@ -155,7 +156,6 @@ namespace FlatWorld.Spaceflight
             boundShip = ship; boundPiece = piece; boundWidth = width; boundHeight = height;
             boundQuarterTurns = piece.QuarterTurns; boundCellSize = ship.CellSizeMeters;
             boundCellX = piece.CellX; boundCellY = piece.CellY;
-            doorVisualDirty = true;
             if (machineScopeKey == null || shipId != ship.ShipId)
                 machineScopeKey = MachineWorld.GetShipScopeKey(ship.ShipId);
             shipId = ship.ShipId;

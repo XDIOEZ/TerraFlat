@@ -70,4 +70,70 @@ public static partial class GameplayTestSystemProbe
     });
 
     #endregion
+
+    #region 方块机身与双扇门表现采样
+    private static JObject ServiceShipBlockVisual(JObject args)
+    {
+        var root = new GameObject("[LuaDoorSlideVisual]") { hideFlags = HideFlags.HideAndDontSave };
+        var renderer = root.AddComponent<SpriteRenderer>();
+        Sprite sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, Texture2D.whiteTexture.width,
+            Texture2D.whiteTexture.height), new Vector2(.5f, .5f), Texture2D.whiteTexture.width);
+        DoorSlideVisual door = null;
+        try
+        {
+            renderer.sprite = sprite;
+            root.transform.rotation = Quaternion.Euler(0, 0, 90);
+            root.transform.localScale = new Vector3(2, 3, 1);
+            var samples = new JArray();
+            void Capture(string name)
+            {
+                SpriteRenderer left = root.transform.GetChild(root.transform.childCount - 2).GetComponent<SpriteRenderer>();
+                SpriteRenderer right = root.transform.GetChild(root.transform.childCount - 1).GetComponent<SpriteRenderer>();
+                samples.Add(new JObject { ["name"] = name, ["progress"] = door.Progress,
+                    ["sourceVisible"] = renderer.enabled, ["leftX"] = left.transform.localPosition.x,
+                    ["rightX"] = right.transform.localPosition.x,
+                    ["order"] = left.sortingOrder, ["green"] = left.color.g,
+                    ["sourceScaleX"] = root.transform.localScale.x,
+                    ["sourceRotation"] = root.transform.eulerAngles.z });
+            }
+            // 只推进正式共用表现，采样交由 Lua 判断闭合、反转、恢复和清理。
+            door = new DoorSlideVisual(renderer, false);
+            Capture("closed");
+            door.SetOpen(true); door.Advance(DoorSlideVisual.SlideSeconds * .5f); Capture("opening");
+            door.SetOpen(false); door.Advance(DoorSlideVisual.SlideSeconds * .25f); Capture("reversing");
+            door.Advance(DoorSlideVisual.SlideSeconds); Capture("closed_again");
+            door.SetOpen(true); door.Advance(DoorSlideVisual.SlideSeconds); Capture("open");
+            renderer.sortingOrder = 37; renderer.color = new Color(.2f, .4f, .6f, 1f);
+            renderer.enabled = true; door.Advance(0); Capture("appearance");
+            door.Dispose(); door = null;
+            bool restored = renderer.enabled;
+            door = new DoorSlideVisual(renderer, true); Capture("restored_open");
+            door.Dispose(); door = null;
+            int activeLeaves = 0;
+            foreach (Transform child in root.transform) if (child.gameObject.activeSelf) activeLeaves++;
+            var fluid = new FluidMachineDefinition { Kind = "receiver", BodySizeCells = 1f };
+            var invalid = new JArray();
+            foreach (float value in new[] { 0f, -1f, float.NaN, float.PositiveInfinity })
+            {
+                fluid.BodySizeCells = value;
+                try { fluid.Validate("probe:body-size"); invalid.Add(false); }
+                catch (ArgumentException) { invalid.Add(true); }
+            }
+            var defaults = new JArray();
+            foreach (var sample in new[] { ("receiver", 0), ("receiver", 2), ("mechanical-probe", 4) })
+                defaults.Add(new FluidMachineDefinition { Kind = sample.Item1 }.ResolveBodySizeCells(sample.Item2));
+            return new JObject { ["samples"] = samples, ["sourceRestored"] = restored,
+                ["activeLeavesAfterRelease"] = activeLeaves, ["invalidRejected"] = invalid,
+                ["defaultBodySizes"] = defaults,
+                ["engineSize"] = MachineCatalog.Get("ShipChemicalEngine").Fluid.ResolveBodySizeCells(0),
+                ["gmEngineSize"] = MachineCatalog.Get("ShipChemicalEngine_GM").Fluid.ResolveBodySizeCells(0) };
+        }
+        finally
+        {
+            door?.Dispose();
+            if (Application.isPlaying) { UnityEngine.Object.Destroy(root); UnityEngine.Object.Destroy(sprite); }
+            else { UnityEngine.Object.DestroyImmediate(root); UnityEngine.Object.DestroyImmediate(sprite); }
+        }
+    }
+    #endregion
 }
