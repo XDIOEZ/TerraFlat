@@ -3,12 +3,21 @@ test.space("ship_landing", function(data)
     assert(data.scope == "live-ship-landing" and #data.ships > 0, "没有执行真实飞船起降专项")
     local function ground(snapshot, label)
         assert(snapshot.phase == "GroundBuildings" and not snapshot.spaceView, "当前不是普通地面建筑：" .. label)
-        local ids, machines = {}, 0
+        local ids, machines, occupied, fibers = {}, 0, {}, 0
         for _, building in ipairs(snapshot.buildings) do
             assert(building.guid ~= 0 and not ids[building.guid] and building.snapshotGuid == building.guid,
                 "普通建筑 Guid 重复、丢失或快照串号：" .. label)
             assert(building.installed and building.scope == snapshot.world,
                 "普通建筑没有按正式地表作用域安装：" .. label)
+            local key = building.cell.x .. ":" .. building.cell.y .. ":" .. building.placementLayer
+            assert(not occupied[key] and building.placementOccupied,
+                "普通建筑同层重叠或没有登记正式占地：" .. label .. "/" .. building.itemId)
+            occupied[key] = building.guid
+            if building.itemId == "ShipFiber" then
+                fibers = fibers + 1
+                assert(building.placementLayer == 5 and building.sameLayerPlacementRejected,
+                    "光纤落地丢失显式层，或允许同层重复铺设：" .. label)
+            end
             assert(building.cell.x % 1 == 0 and building.cell.y % 1 == 0 and
                 building.quarterTurns % 1 == 0 and building.quarterTurns >= 0 and building.quarterTurns <= 3,
                 "落地建筑没有对齐格子和 90 度朝向：" .. label)
@@ -17,6 +26,14 @@ test.space("ship_landing", function(data)
         end
         assert(snapshot.pieceCount > 0 and #snapshot.buildings == snapshot.pieceCount,
             "普通地面成员采样不完整：" .. label)
+        local stackedFibers = 0
+        for _, building in pairs(ids) do
+            if building.itemId == "ShipFiber" and
+                occupied[building.cell.x .. ":" .. building.cell.y .. ":0"] then
+                stackedFibers = stackedFibers + 1
+            end
+        end
+        assert(fibers > 0 and stackedFibers > 0, "落地专项没有覆盖与设备同格的非机器光纤：" .. label)
         return ids, machines
     end
     local function ground_view(snapshot, label)

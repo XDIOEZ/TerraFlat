@@ -22,8 +22,12 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
     protected override void OnUnload() { }
 
     // 地面地板使用独立占地层，普通设备和管电线路仍归各自的正式建筑层。
-    public int OccupancyLayer => Configuration.Kind == ShipPieceKind.Floor ? GroundFloorLayer :
-        MechanicalExtension?.OccupancyLayer ?? Configuration.Layer;
+    public int OccupancyLayer => ResolveGroundOccupancyLayer(Configuration.Kind, Configuration.Layer,
+        MechanicalExtension?.OccupancyLayer);
+
+    // 地面安装与落地预检共用层号，保留光纤等非机器船件的显式层。
+    public static int ResolveGroundOccupancyLayer(ShipPieceKind kind, int configuredLayer, int? machineLayer = null)
+        => kind == ShipPieceKind.Floor ? GroundFloorLayer : machineLayer ?? configuredLayer;
     public bool BlocksMovement => Configuration.Kind != ShipPieceKind.Floor &&
         (MechanicalExtension?.BlocksMovement ?? Configuration.BlocksMovement ?? true);
     public float PlayerMoveSpeedMultiplier => MechanicalExtension?.PlayerMoveSpeedMultiplier ?? 1f;

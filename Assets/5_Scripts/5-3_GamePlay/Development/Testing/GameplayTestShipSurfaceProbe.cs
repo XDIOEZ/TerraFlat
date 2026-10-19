@@ -77,7 +77,22 @@ public static class GameplayTestShipSurfaceProbe
             origins.Add(new JObject { ["originX"] = origin.x, ["originY"] = origin.y,
                 ["centerX"] = center.x, ["centerY"] = center.y, ["x"] = snapped.x, ["y"] = snapped.y });
         }
-        return new JObject { ["angles"] = angles, ["anchors"] = anchors, ["origins"] = origins };
+        // 用不同配置层及机器覆盖层采样正式落地层号，防止同格光纤再次被当成设备。
+        var layers = new JArray();
+        foreach (var sample in new[]
+        {
+            (Name: "floor", Kind: ShipPieceKind.Floor, Layer: -1, Machine: (int?)null),
+            (Name: "floor-with-machine", Kind: ShipPieceKind.Floor, Layer: -1, Machine: (int?)0),
+            (Name: "wall", Kind: ShipPieceKind.Wall, Layer: 0, Machine: (int?)null),
+            (Name: "fiber", Kind: ShipPieceKind.Fiber, Layer: 5, Machine: (int?)null),
+            (Name: "custom-equipment", Kind: ShipPieceKind.Equipment, Layer: 4, Machine: (int?)null),
+            (Name: "machine", Kind: ShipPieceKind.Equipment, Layer: 5, Machine: (int?)0),
+            (Name: "wire", Kind: ShipPieceKind.Wire, Layer: 0, Machine: (int?)3),
+            (Name: "pipe", Kind: ShipPieceKind.Pipe, Layer: 0, Machine: (int?)2)
+        })
+            layers.Add(new JObject { ["name"] = sample.Name,
+                ["layer"] = Mod_ShipPart.ResolveGroundOccupancyLayer(sample.Kind, sample.Layer, sample.Machine) });
+        return new JObject { ["angles"] = angles, ["anchors"] = anchors, ["origins"] = origins, ["layers"] = layers };
     }
 
     // 使用正式组合缓存和成员提交入口，覆盖单船、对接船及残留角速度。

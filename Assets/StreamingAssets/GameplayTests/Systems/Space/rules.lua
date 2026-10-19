@@ -122,6 +122,15 @@ do
         end
         assert(type(data.limitations) == "string" and #data.limitations > 0, "空地结果必须保留覆盖边界")
         local assembly = data.groundAssembly
+        local layerExpected = {floor = 6, ["floor-with-machine"] = 6, wall = 0, fiber = 5,
+            ["custom-equipment"] = 4, machine = 0, wire = 3, pipe = 2}
+        assert(type(assembly.layers) == "table" and #assembly.layers == 8, "落地地板、光纤、设备及机器覆盖层样本不完整")
+        seen = {}
+        for _, sample in ipairs(assembly.layers) do
+            assert(layerExpected[sample.name] ~= nil and not seen[sample.name], "落地占用层样本未知或重复")
+            seen[sample.name] = true
+            assert(sample.layer == layerExpected[sample.name], "落地占用层丢失船件显式层或机器覆盖层：" .. sample.name)
+        end
         local angleExpected = {
             [0] = 0, [44.999] = 0, [45] = 1, [45.001] = 1, [89.999] = 1, [135] = 2, [179.999] = 2,
             [225] = 3, [315] = 0, [359.999] = 0, [-44.999] = 0, [-45] = 3, [-135] = 2,

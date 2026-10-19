@@ -278,7 +278,7 @@ namespace FlatWorld.Spaceflight
             }
         }
 
-        private GroundRestorePlan PlanGroundShip(ShipState ship, string world, HashSet<Vector3Int> occupied)
+        private GroundRestorePlan PlanGroundShip(ShipState ship, string world, Dictionary<Vector3Int, ShipPieceState> occupied)
         {
             using var worldScope = MachineWorld.UseScope(world);
             if (Math.Abs(ship.CellSizeMeters - 1d) > .000001d) throw new InvalidOperationException("船格必须与普通建筑的一米格对齐。");
@@ -299,15 +299,20 @@ namespace FlatWorld.Spaceflight
                 plan.Placements.Add(id, new MachineScopePlacement(cell, new Vector3(cell.x + .5f, cell.y + .5f), q));
                 plan.Pieces.Add(id, piece);
                 MachineDefinition definition = MachineCatalog.Get(piece.ItemId);
-                int layer = piece.Kind == ShipPieceKind.Floor ? Mod_ShipPart.GroundFloorLayer : definition?.Layer ??
-                    ReadBuildingPlacementLayer(GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition itemDefinition) ? itemDefinition : null);
+                int layer = Mod_ShipPart.ResolveGroundOccupancyLayer(piece.Kind, piece.Layer, definition?.Layer);
                 int worldWidth = (turns & 1) == 0 ? width : height, worldHeight = (turns & 1) == 0 ? height : width;
                 for (int y = 0; y < worldHeight; y++)
                     for (int x = 0; x < worldWidth; x++)
                     {
                         Vector2Int at = WorldTopologyRuntime.NormalizeCell(cell + new Vector2Int(x, y));
-                        if (!occupied.Add(new Vector3Int(at.x, at.y, layer)) || BuildingOccupancyRegistry.IsOccupied(at, layer: layer))
-                            throw new InvalidOperationException("落点的建筑层已被占用，请清理落点。");
+                        var key = new Vector3Int(at.x, at.y, layer);
+                        if (occupied.TryGetValue(key, out ShipPieceState other))
+                            throw new InvalidOperationException($"船体部件落地占地重叠：格({at.x},{at.y})，层{layer}，" +
+                                $"{other.ItemId}[{other.PieceId}]与{piece.ItemId}[{piece.PieceId}]。");
+                        occupied.Add(key, piece);
+                        if (BuildingOccupancyRegistry.IsOccupiedNormalized(at, layer: layer))
+                            throw new InvalidOperationException($"落点的地面建筑层已被占用：格({at.x},{at.y})，层{layer}，" +
+                                $"待落地部件{piece.ItemId}[{piece.PieceId}]，请清理落点。");
                     }
                 if (definition != null)
                 {
@@ -335,7 +340,7 @@ namespace FlatWorld.Spaceflight
         {
             using var sample = GroundCommitMarker.Auto();
             var plans = new List<GroundRestorePlan>(members.Count);
-            var occupied = new HashSet<Vector3Int>();
+            var occupied = new Dictionary<Vector3Int, ShipPieceState>();
             // 整组先检查最终落点，再创建正式建筑，不能只交还对接组合的一半。
             foreach (ShipState ship in members) plans.Add(PlanGroundShip(ship, world, occupied));
             bool handedOff = false;

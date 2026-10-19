@@ -1,5 +1,7 @@
 # 太空纯规则回归
 
+- 2026-10-20 落地占用层回归：`ship_surface_state` 增加地板、光纤、自定义非机器层及机器覆盖层8个正式规则样本；`ship_landing_gameplay` 读取实际地面占用层，检查同格设备与光纤分层、同层不可重复铺设以及移交后的占地登记。本次只补代码与断言，未编译、未运行；不覆盖真实地面障碍拒绝或对接成员冲突的现场事务。
+
 可单选落地专项 `ship_landing_gameplay` 在 `universe-suite.json` 中：复用正式 GM 普通建筑、供电补给和起飞，只跑真实降落、同 Guid 普通建筑移交及普通源罐→管道→定向出气口自动加油。保留氢氧增减和全链守恒断言，显式截图落地加油现场；不跑完整航行中的惯性、导航、跨区。命令：`python Tools/GameplayTesting/run_suite.py GameplayTests/universe-suite.json --cases ship_landing_gameplay --run-timeout 300`。2026-10-16 首轮已通过相关快速规则 4/4、专项 EditMode 13/13 和 PlayMode 1/1，真实世界 82.29 秒且 Error/Warning 为 0；报告与覆盖边界见 [玩法说明](Gameplay/README.md)。
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
