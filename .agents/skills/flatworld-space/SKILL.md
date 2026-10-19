@@ -87,7 +87,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 太空驾驶 `DrivingCameraMaxSize=120000`，滚轮乘/除 `DrivingCameraZoomMultiplier=1.25`，退出恢复原尺寸。宇宙坐标 HUD 读双精度位置；SpaceStarfield 用固定420点单网格与 Resources/Space/Starfield Shader 实现三层轻微视差、白/红/蓝色温与独立闪烁，拉远不增加对象或重抽样本。
 - 驾驶高度 HUD 经 `SpaceSession.FlightHud.cs` 的 `TryGetShipFlightHudSnapshot` 只读真实起降高度；普通建筑移交成功才写乘员 `LastShipLanding` 凭证并沿既有快照复制，不能把退出驾驶或船记录消失当作落地完成；主动退出用 `RequestConsoleExit` 通知本地 HUD，手动 `EnterConsole` 解除退出锁，自动接管/释放不发这两种通知。
 - PlanetSurfacePresentation 保持每体四顶点与共享 Resources/Space/PlanetSurface 材质，GPU 绘制球面细节、云层、气体条带、大气边缘和太阳日冕；MPB 接收种子/太阳方向，远景按导数淡出，太阳自发光，其余保留 URP 2D 光照。外观参数归各星体 Prefab。
-- 船地板/管道/电线使用 vehicle 的 -2/-1/0，设备用 building；材质与 rendererLocalScale 来自定义。船管线读本船正式端口掩码，拓扑变化才刷新，会话结束退订。
+- 船地板/管道/电线/光纤使用 vehicle 的 -2/-1/0/1，机器线路用 `VisualLayer+1` 保持地表顺序，设备用 building；管电读取本船正式拓扑的 pipe0..15/wire0..15，格/朝向/流体端口签名变化才刷新同格与四邻，会话结束退订。光纤共用 `ShipOpticalGraph.GetConnectionMask` 与 `ShipFiberConnectionVisual`，按船结构修订刷新，创建和休眠恢复均重建连接表现。
 - ShipColliderPresenter 只服务仍归 SpaceSession 的已装配船，使用一个表现刚体与共享 CustomCollider2D；待移交的落地船也保留阻挡。ShipPieceView 只留贴图/交互，地面还原成功即清理船表现；太空维修仍可用，跨区只迁移整船根。
 - 船体升空排序和共享 Collider 偏移在 ShipColliderPresenter 每船只更新一次，ShipPieceView 不重复操作整船根；静止舱门不重复写两扇门的 Renderer 属性，开关与 Rebind 仍正常刷新。
 - ShipPieceView 在创建、休眠恢复或换船时缓存 MachineWorld 的稳定 ship 作用域键，部件数字 GUID 只在身份绑定时解析；灯光、管线与交互热查询不再逐次拼键或解析数字。

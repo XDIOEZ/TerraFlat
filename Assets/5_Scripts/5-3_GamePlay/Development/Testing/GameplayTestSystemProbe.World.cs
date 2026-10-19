@@ -52,6 +52,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("electrical/battery_commit", WorldElectricalBattery);
         operations.Add("electrical/supply_limits", WorldElectricalLimits);
         operations.Add("electrical/unlimited_supply", WorldElectricalUnlimitedSupply);
+        operations.Add("electrical/line_connections", WorldElectricalLineConnections);
+        operations.Add("space/fiber_connections", WorldFiberConnections);
         operations.Add("industrial_fluids/reservations", WorldFluidReservations);
         operations.Add("industrial_fluids/atomic_recipe", WorldFluidRecipe);
         operations.Add("industrial_fluids/heat", WorldFluidHeat);

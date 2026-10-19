@@ -21,8 +21,10 @@ namespace FlatWorld.Spaceflight
         private Sprite tankSource;
         private int tankMask = -1;
         private double tankCellSize;
-        private int pipeMask = -1;
-        private Sprite pipeSource;
+        private int connectionMask = -1;
+        private Sprite connectionSource;
+        private SpriteRenderer[] fiberParts;
+        private ulong boundStructureRevision;
         private ShipState boundShip;
         private ShipPieceState boundPiece;
         private int boundWidth, boundHeight, boundQuarterTurns, boundCellX, boundCellY;
@@ -98,6 +100,7 @@ namespace FlatWorld.Spaceflight
             cultivatorPlots.Refresh(null);
             ReleaseBatteryChargeVisual();
             ReleaseElectricLightVisual();
+            ShipFiberConnectionVisual.Release(ref fiberParts);
             engineExhaust?.Bind(null, null, null);
             session = null; boundShip = null; boundPiece = null;
             machineTarget = null; machineDefinition = null;
@@ -111,7 +114,7 @@ namespace FlatWorld.Spaceflight
             session = owner; shipId = ship.ShipId; pieceId = piece.PieceId;
             machineScopeKey = MachineWorld.GetShipScopeKey(shipId);
             targetGuid = int.TryParse(pieceId, out int id) ? id : 0;
-            tankMask = pipeMask = -1;
+            tankMask = connectionMask = -1;
             surfaceCollider = null; surfaceSortingBound = false;
             RefreshDefinitionVisual(piece, data);
             gameObject.SetActive(true);
@@ -122,11 +125,11 @@ namespace FlatWorld.Spaceflight
         {
             if (visual == null) return;
             MachineDefinition machine = MachineCatalog.Get(piece.ItemId);
-            bool connectionLine = machine?.IsConnectionLine == true;
+            bool connectionLine = machine?.IsConnectionLine == true || piece.Kind == ShipPieceKind.Fiber;
             WorldSortingManager.GetInstance().ApplyRenderer(visual,
                 piece.Kind == ShipPieceKind.Floor || connectionLine
                     ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
-                piece.Kind == ShipPieceKind.Floor ? -2 : machine?.Fluid?.Kind == "pipe" ? -1 : 0);
+                ResolveSortingOrder(piece, machine));
             if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
             {
                 visual.sprite = definition.Sprite;
@@ -143,6 +146,11 @@ namespace FlatWorld.Spaceflight
                 visual.transform.localScale = tile.transform.lossyScale;
             }
         }
+        // 创建和恢复共用线路层级，保持尾焰、地板、管线、电线、光纤的先后顺序。
+        internal static int ResolveSortingOrder(ShipPieceState piece, MachineDefinition machine)
+            => piece.Kind == ShipPieceKind.Floor ? -2 : machine?.IsConnectionLine == true
+                ? machine.VisualLayer + 1 : piece.Kind == ShipPieceKind.Fiber ? 1 : 0;
+
         public void Rebind(ShipState ship, ShipPieceState piece, bool force = false)
         {
             int width = piece.QuarterTurns % 2 == 0 ? piece.Width : piece.Height;
@@ -150,12 +158,14 @@ namespace FlatWorld.Spaceflight
             if (!force && !pendingMachineBinding && ReferenceEquals(boundShip, ship) && ReferenceEquals(boundPiece, piece) &&
                 boundWidth == width && boundHeight == height && boundQuarterTurns == piece.QuarterTurns &&
                 boundCellX == piece.CellX && boundCellY == piece.CellY &&
-                boundCellSize == ship.CellSizeMeters)
+                boundCellSize == ship.CellSizeMeters &&
+                (piece.Kind != ShipPieceKind.Fiber || boundStructureRevision == ship.StructureRevision))
                 return;
 
             boundShip = ship; boundPiece = piece; boundWidth = width; boundHeight = height;
             boundQuarterTurns = piece.QuarterTurns; boundCellSize = ship.CellSizeMeters;
             boundCellX = piece.CellX; boundCellY = piece.CellY;
+            boundStructureRevision = ship.StructureRevision;
             if (machineScopeKey == null || shipId != ship.ShipId)
                 machineScopeKey = MachineWorld.GetShipScopeKey(ship.ShipId);
             shipId = ship.ShipId;
@@ -190,13 +200,20 @@ namespace FlatWorld.Spaceflight
                     BindCultivatorVisual(node);
                     BindBatteryChargeVisual(node);
                     BindElectricLightVisual(node);
-                    SynchronizePipeVisual(node);
+                    SynchronizeConnectionVisual(node);
                 }
             else
             {
                 BindCultivatorVisual(null);
                 BindBatteryChargeVisual(null);
                 BindElectricLightVisual(null);
+            }
+            if (piece.Kind == ShipPieceKind.Fiber && visual != null)
+            {
+                // 光纤沿用同船正式信息图，结构变化后才重选连接形状。
+                visual.transform.localRotation = Quaternion.identity;
+                ShipFiberConnectionVisual.Update(visual, ref fiberParts,
+                    ShipOpticalGraph.GetConnectionMask(ship, piece), ship.CellSizeMeters);
             }
             // 只登记真正能交互的船体设备，避免地板和墙壁进入每帧目标查询。
             if (HasInteractionAction)
@@ -257,24 +274,27 @@ namespace FlatWorld.Spaceflight
             tankCellSize = ship.CellSizeMeters;
         }
 
-        // 船上管线只读本船端口连通，形状随船旋转而不随管格摆放旋转。
-        internal void SynchronizePipeVisual(MachineEntity node)
+        // 船上管电线路读取本船正式拓扑，连接形状不受放置旋转影响。
+        internal void SynchronizeConnectionVisual(MachineEntity node)
         {
-            if (visual == null || node?.Definition.Fluid?.Kind != "pipe" || boundPiece?.IsAlive != true ||
+            if (visual == null || node?.Definition.IsConnectionLine != true || boundPiece?.IsAlive != true ||
                 node.ScopeKey != machineScopeKey) return;
             using var nodeScope = MachineWorld.UseNodeScope(node);
-            int mask = MachineWorld.GetFluidPipeConnectionMask(node);
+            bool pipe = node.Definition.Fluid?.Kind == "pipe";
+            int mask = pipe ? MachineWorld.GetFluidPipeConnectionMask(node)
+                : MachineWorld.GetElectricalWireConnectionMask(node.Cell);
+            string state = (pipe ? "pipe" : "wire") + mask;
             GameRes resources = GameRes.ExistingInstance;
             if (resources == null || !resources.TryGetItemDefinition(node.Definition.Id, out RuntimeItemDefinition definition))
-                throw new InvalidOperationException("船上管道物品定义缺失：" + node.Definition.Id);
+                throw new InvalidOperationException("船上线路物品定义缺失：" + node.Definition.Id);
             visual.transform.localRotation = Quaternion.identity;
             visual.transform.localScale = new Vector3((float)boundShip.CellSizeMeters, (float)boundShip.CellSizeMeters, 1f);
-            if (pipeMask == mask && pipeSource == definition.Sprite) return;
-            if (!definition.TryGetVisualStateSprite("pipe" + mask, out Sprite connected))
-                throw new InvalidOperationException("船上管道连接贴图缺失：" + node.Definition.Id + "/pipe" + mask);
+            if (!definition.TryGetVisualStateSprite(state, out Sprite connected))
+                throw new InvalidOperationException("船上线路连接贴图缺失：" + node.Definition.Id + "/" + state);
+            if (connectionMask == mask && connectionSource == definition.Sprite && visual.sprite == connected) return;
             visual.sprite = connected;
-            pipeMask = mask;
-            pipeSource = definition.Sprite;
+            connectionMask = mask;
+            connectionSource = definition.Sprite;
         }
         public void SetVisualLift(Vector3 visualLiftOffset)
         {
@@ -324,14 +344,15 @@ namespace FlatWorld.Spaceflight
             ReleaseCultivatorVisual();
             ReleaseBatteryChargeVisual();
             ReleaseElectricLightVisual();
+            ShipFiberConnectionVisual.Release(ref fiberParts);
         }
         #endregion
     }
     public sealed partial class SpaceSession
     {
-        #region 船上管线事件刷新
+        #region 船上管电线路事件刷新
         private readonly System.Collections.Generic.Dictionary<int,
-            (string Scope, Vector2Int Cell, int Turns, bool Enabled, bool Ruptured)> shipMachineVisualTopology = new();
+            (string Scope, Vector2Int Cell, string Definition, int Turns, bool Enabled, bool Ruptured)> shipMachineVisualTopology = new();
         private bool shipMachineVisualEventsBound;
 
         private void BindShipMachineVisualEvents()
@@ -360,47 +381,59 @@ namespace FlatWorld.Spaceflight
 
         internal void TrackShipMachineVisualTopology(MachineEntity node)
         {
-            if (node?.Definition.Fluid == null) return;
-            using var nodeScope = MachineWorld.UseNodeScope(node);
-            shipMachineVisualTopology[node.Id] = (node.ScopeKey, node.Cell, node.RotationQuarterTurns,
-                MachineWorld.GetFluidDeviceBehavior(node).PortsEnabled(node), MachineWorld.GetFluidState(node).Ruptured);
+            if (node == null || (node.Definition.Fluid == null && node.Definition.Electrical?.HasConnection != true)) return;
+            bool enabled = true, ruptured = false;
+            if (node.Definition.Fluid != null)
+            {
+                using var nodeScope = MachineWorld.UseNodeScope(node);
+                enabled = MachineWorld.GetFluidDeviceBehavior(node).PortsEnabled(node);
+                ruptured = MachineWorld.GetFluidState(node).Ruptured;
+            }
+            shipMachineVisualTopology[node.Id] = (node.ScopeKey, node.Cell, node.Definition.Id,
+                node.RotationQuarterTurns, enabled, ruptured);
         }
 
         // 库存读数变化不刷新邻格，只有端口拓扑签名变化才重查连接形状。
         private void HandleShipMachineVisualTopologyChanged(MachineEntity node)
         {
-            if (State == null || node?.Definition.Fluid == null ||
+            if (State == null || node == null ||
+                (node.Definition.Fluid == null && node.Definition.Electrical?.HasConnection != true) ||
                 node.ScopeKey?.StartsWith("ship:", StringComparison.Ordinal) != true) return;
             bool known = shipMachineVisualTopology.TryGetValue(node.Id, out var previous);
             TrackShipMachineVisualTopology(node);
             var current = shipMachineVisualTopology[node.Id];
             if (known && previous.Equals(current)) return;
             if (known && (previous.Scope != current.Scope || previous.Cell != current.Cell))
-                RefreshShipFluidPipeNeighbours(previous.Scope, previous.Cell);
-            RefreshShipFluidPipeNeighbours(current.Scope, current.Cell);
+                RefreshShipConnectionNeighbours(previous.Scope, previous.Cell);
+            RefreshShipConnectionNeighbours(current.Scope, current.Cell);
         }
 
         private void HandleShipMachineVisualNodeRemoved(int id)
         {
             if (!shipMachineVisualTopology.Remove(id, out var previous)) return;
-            RefreshShipFluidPipeNeighbours(previous.Scope, previous.Cell);
+            RefreshShipConnectionNeighbours(previous.Scope, previous.Cell);
         }
 
-        private void RefreshShipFluidPipeNeighbours(string scopeKey, Vector2Int cell)
+        private void RefreshShipConnectionNeighbours(string scopeKey, Vector2Int cell)
         {
             if (State == null || string.IsNullOrWhiteSpace(scopeKey)) return;
             using var shipScope = MachineWorld.UseScope(scopeKey);
-            RefreshShipFluidPipeVisual(cell);
+            RefreshShipConnectionVisual(cell);
             foreach (Vector2Int direction in MechanicalNetworkGraph.Directions)
-                RefreshShipFluidPipeVisual(cell + direction);
+                RefreshShipConnectionVisual(cell + direction);
         }
 
-        private void RefreshShipFluidPipeVisual(Vector2Int cell)
+        private void RefreshShipConnectionVisual(Vector2Int cell)
         {
-            MachineEntity pipe = MachineWorld.GetFluidPipeAt(cell);
-            if (pipe?.Definition.Fluid?.Kind == "pipe" &&
-                views.TryGetValue(pipe.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), out ShipPieceView view) && view != null)
-                view.SynchronizePipeVisual(pipe);
+            RefreshShipConnectionNode(MachineWorld.GetFluidPipeAt(cell));
+            RefreshShipConnectionNode(MachineWorld.GetElectricalWireAtCurrentWorld(cell));
+        }
+
+        private void RefreshShipConnectionNode(MachineEntity node)
+        {
+            if (node?.Definition.IsConnectionLine == true &&
+                views.TryGetValue(node.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), out ShipPieceView view) && view != null)
+                view.SynchronizeConnectionVisual(node);
         }
         #endregion
 
@@ -463,13 +496,13 @@ namespace FlatWorld.Spaceflight
                             root.transform.SetParent(presenter.Root.transform, false);
                             GameObject visual = new("Render"); visual.transform.SetParent(root.transform, false);
                             SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-                            // 船体承载层依次绘制地板、管道、电线，统一压在机器和乘员下面。
+                            // 船体线路复用地表层级顺序，统一压在机器和乘员下面。
                             MachineDefinition machineDefinition = MachineCatalog.Get(piece.ItemId);
-                            bool connectionLine = machineDefinition?.IsConnectionLine == true;
+                            bool connectionLine = machineDefinition?.IsConnectionLine == true || piece.Kind == ShipPieceKind.Fiber;
                             WorldSortingManager.GetInstance().ApplyRenderer(renderer,
                                 piece.Kind == ShipPieceKind.Floor || connectionLine
                                     ? WorldSortingManager.VehicleCategory : WorldSortingManager.BuildingCategory,
-                                piece.Kind == ShipPieceKind.Floor ? -2 : machineDefinition?.Fluid?.Kind == "pipe" ? -1 : 0);
+                                ShipPieceView.ResolveSortingOrder(piece, machineDefinition));
                             renderer.spriteSortPoint = SpriteSortPoint.Pivot;
                             if (GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition definition))
                             {

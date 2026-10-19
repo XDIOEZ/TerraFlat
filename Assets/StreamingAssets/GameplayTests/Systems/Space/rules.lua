@@ -1,5 +1,25 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
+test.system("space", "fiber_connections", {}, function(data)
+    assert(#data.masks == 16, "光纤连接的16种四邻样本不完整")
+    for index, mask in ipairs(data.masks) do
+        assert(mask == index - 1, "光纤单点/直线/转弯/分叉掩码错误：" .. (index - 1))
+    end
+    assert(data.endpoints == 10, "光纤没有连向控制台和导航端点")
+    assert(data.destroyedEndpoint == 8 and data.removedEndpoint == 2 and data.repairedEndpoint == 10,
+        "光纤端点拆毁或重新安装后仍显示旧连接")
+    assert(data.destroyedFiber == 0, "摧毁光纤仍保留连接样式")
+    assert(data.connected and not data.disconnected and data.repaired,
+        "光纤显示连接的同时破坏了正式控制台到导航连通规则")
+    assert(data.isolatedMask == 1 and data.originalAfterOtherShip == 10 and data.foreignFiber == 0,
+        "同坐标不同船的光纤连接串到一起")
+    assert(data.nonOpticalNeighbors == 0, "光纤错误连向相邻电线或管道")
+    assert(#data.sortingOrders == 4, "缺少船上线层采样")
+    for index, expected in ipairs({-2, -1, 0, 1}) do
+        assert(data.sortingOrders[index] == expected, "船上地板/管道/电线/光纤层级错误：" .. index)
+    end
+end, "光纤16种连接、设备端点、拆建重算与同坐标船体隔离")
+
 do
     -- 只采样正式表现插值，不创建世界或操作当前船体与镜头。
     test.system("space", "presentation_interpolation", {}, function(data)
