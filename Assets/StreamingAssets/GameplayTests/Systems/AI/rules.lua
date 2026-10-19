@@ -390,3 +390,11 @@ test.system("ai", "detector_apply_batch", {}, function(data)
     assert(data.debugUpdated and data.debugOffReused and data.cleared,
         "打开再关闭感知 Debug 后标签和目标状态失效，或清空批次仍残留对象")
 end, "普通感知跳过仅供 Debug 的进出差集，标签和切换语义保持一致")
+
+test.system("ai", "stale_perception_batch", {}, function(data)
+    assert(data.matched and data.superseded and data.missingPreserved,
+        "感知请求版本相同、过期或检测器已销毁时筛选资格错误")
+    assert(data.staleCount == 3 and data.nextCount == 2 and
+        data.nextFirst == 32 and data.nextSecond == 54 and data.emptyCount == 0,
+        "丢弃过期感知候选后未正确消费 NativeStream 或破坏下一组结果")
+end, "过期感知批次跳过无效视线与碰撞计算，完整消费结果流")

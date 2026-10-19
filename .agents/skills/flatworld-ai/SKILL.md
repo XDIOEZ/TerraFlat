@@ -44,6 +44,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - Actor 感知冻结时同轮仿射变换一次性写入 Burst 形状与粗筛包围盒，保留复杂形状、负缩放和独立查询的相同包围语义；规则 `ai/perception_shape_batch`。
 - 狼的目标筛选与通用 Detector 最近物查询在单次遍历内最多获取一次 `WorldTopologyDomain`，无匹配对象时不解析世界边界；逐候选仍实时读位置和阵营，通用入口供鸡、野猪使用，规则 `ai/closest_target_batch` 覆盖接缝、同距、玩家和移动目标。
 - `Mod_ItemDetector.ApplyDetectorResults` 仅在 `DebugMode` 开启时构造旧候选差集并比较进入/离开，普通批次保留去重、顺序和原标签 List 引用；关闭 Debug 时清理旧集合，回归 `ai/detector_apply_batch`。
+- `ItemMgr.Perception.Apply` 对请求版本已过期的检测器跳过候选精筛与 LOS，但仍逐项消费其 NativeStream 索引并结束当前流；有效请求和缺失检测器按原规则处理，回归 `ai/stale_perception_batch`。
 - 同 detector 的同步候选批次用 `GridLineOfSightQuery` 冻结观察者与世界上下文；每条射线首次进入区块时验证加载态，射线内复用地形引用、逐格实时读取遮挡，下一条射线重新验证，防止沿用卸载/重建区块。规则 `ai/line_of_sight_batch`；Profiler `FlatWorld.Perception.GridLineOfSight/ResolveSightChunk`。
 - 视线遇阻即返回不可见，仅在整条射线无遮挡时检查终点是否加载；起点、拐角侧格和中途区块照常验证。
 - 水平和垂直的整数格 LOS 用直线逐格扫描代替通用 Bresenham 分支；中途仍实时检查遮挡，起终点豁免和环绕/区块加载语义保持，`ai/line_of_sight_batch` 覆盖两轴正负方向与接缝。

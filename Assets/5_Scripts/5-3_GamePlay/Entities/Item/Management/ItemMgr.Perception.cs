@@ -583,12 +583,21 @@ public partial class ItemMgr
             for (int queryIndex = 0; queryIndex < _inFlightDetectors.Count; queryIndex++)
             {
                 Mod_ItemDetector detector = _inFlightDetectors[queryIndex];
-                DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
                 int candidateCount = reader.BeginForEachIndex(queryIndex);
                 raw += candidateCount;
                 _detectorApplyBuffer.Clear();
                 _perceptionResultItemSet.Clear();
 
+                if (IsPerceptionDetectorRequestStale(detector, _inFlightDetectorVersions[queryIndex]))
+                {
+                    // 过期结果不能回写，但 NativeStream 必须读完本组后才能继续下一组。
+                    DiscardPerceptionCandidateIndices(ref reader, candidateCount);
+                    reader.EndForEachIndex();
+                    staleDetector++;
+                    continue;
+                }
+
+                DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
                 using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
                     using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
@@ -666,6 +675,21 @@ public partial class ItemMgr
             PerceptionStaleDetectorDebug.AddWork(staleDetector);
         }
     }
+
+    #region 过期感知批次快速丢弃
+
+    /// <summary>版本已更新的检测器不能消费旧结果；已销毁检测器沿用原缺失候选统计流程。</summary>
+    internal static bool IsPerceptionDetectorRequestStale(Mod_ItemDetector detector, long submittedVersion)
+        => detector != null && detector.RequestedVersion != submittedVersion;
+
+    /// <summary>逐项消费本组原始索引，避免后续结果流发生未读数据残留。</summary>
+    internal static void DiscardPerceptionCandidateIndices(ref NativeStream.Reader reader, int count)
+    {
+        for (int i = 0; i < count; i++)
+            reader.Read<int>();
+    }
+
+    #endregion
 
     /// <summary>拒绝回池复用、结构切换或注销后的旧快照。</summary>
     private bool IsSnapshotItemStillValid(Item candidate, PerceptionItemSnapshot snapshot)

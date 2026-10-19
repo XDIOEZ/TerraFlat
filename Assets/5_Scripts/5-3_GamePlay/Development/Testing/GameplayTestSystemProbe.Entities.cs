@@ -7,6 +7,7 @@ using FlatWorld.Gameplay.Events;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Gameplay.Quests;
 using Newtonsoft.Json.Linq;
+using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -26,6 +27,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
         operations.Add("ai/closest_target_batch", EntityClosestTargetBatch);
         operations.Add("ai/detector_apply_batch", EntityDetectorApplyBatch);
+        operations.Add("ai/stale_perception_batch", EntityStalePerceptionBatch);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
         operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
@@ -79,6 +81,56 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region AI 与移动消耗
+
+    // 用正式 NativeStream 读写接口确认旧请求跳过后不影响下一组及空候选流。
+    private static JObject EntityStalePerceptionBatch(JObject args)
+    {
+        var root = new GameObject("[StalePerceptionBatch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            var detector = root.AddComponent<Mod_ItemDetector>();
+            bool matched = !ItemMgr.IsPerceptionDetectorRequestStale(detector, detector.RequestedVersion);
+            bool superseded = ItemMgr.IsPerceptionDetectorRequestStale(detector, detector.RequestedVersion + 1);
+            bool missingPreserved = !ItemMgr.IsPerceptionDetectorRequestStale(null, 9);
+
+            using var stream = new NativeStream(3, Allocator.TempJob);
+            NativeStream.Writer writer = stream.AsWriter();
+            writer.BeginForEachIndex(0);
+            writer.Write(12);
+            writer.Write(-7);
+            writer.Write(100);
+            writer.EndForEachIndex();
+            writer.BeginForEachIndex(1);
+            writer.Write(32);
+            writer.Write(54);
+            writer.EndForEachIndex();
+            writer.BeginForEachIndex(2);
+            writer.EndForEachIndex();
+
+            NativeStream.Reader reader = stream.AsReader();
+            int staleCount = reader.BeginForEachIndex(0);
+            ItemMgr.DiscardPerceptionCandidateIndices(ref reader, staleCount);
+            reader.EndForEachIndex();
+            int nextCount = reader.BeginForEachIndex(1);
+            int nextFirst = reader.Read<int>();
+            int nextSecond = reader.Read<int>();
+            reader.EndForEachIndex();
+            int emptyCount = reader.BeginForEachIndex(2);
+            ItemMgr.DiscardPerceptionCandidateIndices(ref reader, emptyCount);
+            reader.EndForEachIndex();
+
+            return new JObject
+            {
+                ["matched"] = matched, ["superseded"] = superseded,
+                ["missingPreserved"] = missingPreserved,
+                ["staleCount"] = staleCount, ["nextCount"] = nextCount,
+                ["nextFirst"] = nextFirst, ["nextSecond"] = nextSecond,
+                ["emptyCount"] = emptyCount
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
 
     // 未加载的正式检测器核对去重、标签映射、旧版本和 Debug 开关后的实时结果。
     private static JObject EntityDetectorApplyBatch(JObject args)
