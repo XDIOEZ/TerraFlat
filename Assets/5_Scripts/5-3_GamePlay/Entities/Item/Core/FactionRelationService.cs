@@ -35,8 +35,38 @@ public static class FactionRelationService
         public FactionRelation Relation;
     }
 
-    private static Dictionary<string, RegisteredRelation> ExternalRelations =
-        new Dictionary<string, RegisteredRelation>(StringComparer.OrdinalIgnoreCase);
+    // 无序阵营对用值类型作键，避免每次战斗和感知查询都拼接临时字符串。
+    private readonly struct FactionPair : IEquatable<FactionPair>
+    {
+        private readonly string first;
+        private readonly string second;
+
+        public FactionPair(string left, string right)
+        {
+            if (string.Compare(left, right, StringComparison.OrdinalIgnoreCase) <= 0)
+            {
+                first = left;
+                second = right;
+            }
+            else
+            {
+                first = right;
+                second = left;
+            }
+        }
+
+        public bool Equals(FactionPair other) =>
+            string.Equals(first, other.first, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(second, other.second, StringComparison.OrdinalIgnoreCase);
+
+        public override bool Equals(object obj) => obj is FactionPair other && Equals(other);
+
+        public override int GetHashCode() => unchecked(
+            StringComparer.OrdinalIgnoreCase.GetHashCode(first) * 397 ^
+            StringComparer.OrdinalIgnoreCase.GetHashCode(second));
+    }
+
+    private static Dictionary<FactionPair, RegisteredRelation> ExternalRelations = new();
 
     /// <summary>候选阵营关系加载期间，当前战斗继续查询正式关系表。</summary>
     internal static void ConfigureResourceReload(ResourceReloadContext context) =>
@@ -105,8 +135,8 @@ public static class FactionRelationService
         if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase))
             return FactionRelation.Friendly;
 
-        string key = BuildRelationKey(left, right);
-        if (ExternalRelations.TryGetValue(key, out RegisteredRelation registered))
+        if (ExternalRelations.Count != 0 &&
+            ExternalRelations.TryGetValue(new FactionPair(left, right), out RegisteredRelation registered))
             return registered.Relation;
 
         if (string.Equals(left, NeutralFactionId, StringComparison.OrdinalIgnoreCase) ||
@@ -218,7 +248,7 @@ public static class FactionRelationService
         if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("不能为同一阵营注册跨阵营关系。", nameof(rightFactionId));
 
-        string key = BuildRelationKey(left, right);
+        FactionPair key = new(left, right);
         if (ExternalRelations.TryGetValue(key, out RegisteredRelation existing) &&
             !string.Equals(existing.OwnerId, owner, StringComparison.OrdinalIgnoreCase))
         {
@@ -241,8 +271,8 @@ public static class FactionRelationService
             return;
 
         string owner = ownerId.Trim();
-        List<string> keysToRemove = new List<string>();
-        foreach (KeyValuePair<string, RegisteredRelation> pair in ExternalRelations)
+        List<FactionPair> keysToRemove = new List<FactionPair>();
+        foreach (KeyValuePair<FactionPair, RegisteredRelation> pair in ExternalRelations)
         {
             if (string.Equals(pair.Value?.OwnerId, owner, StringComparison.OrdinalIgnoreCase))
                 keysToRemove.Add(pair.Key);
@@ -318,13 +348,6 @@ public static class FactionRelationService
         }
 
         return true;
-    }
-
-    /// <summary>构造不区分左右顺序的关系键。</summary>
-    private static string BuildRelationKey(string left, string right)
-    {
-        int comparison = string.Compare(left, right, StringComparison.OrdinalIgnoreCase);
-        return comparison <= 0 ? left + "\u001f" + right : right + "\u001f" + left;
     }
 
     #endregion
