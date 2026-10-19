@@ -24,6 +24,7 @@ public partial class ItemMgr
         public ItemData Data;
         public uint Generation;
         public double LastTime;
+        public WorldMatterStructure Structure;
         public ParticleSystem Particles;
         public ParticleSystemRenderer ParticleRenderer;
     }
@@ -39,6 +40,8 @@ public partial class ItemMgr
         private readonly bool hasAiComponent;
         private readonly bool hasTileReceiver;
         private readonly Mod_Projectile projectile;
+        private readonly Mod_Combustion combustion;
+        private readonly Mod_CombustionVisual combustionVisual;
 
         internal WorldMatterStructure(Item item)
         {
@@ -47,6 +50,9 @@ public partial class ItemMgr
             modules = item.itemMods;
             generation = item.RuntimeGeneration;
             structureVersion = modules?.StructureVersion ?? 0;
+            // 燃烧能力随模块结构缓存，运行时启停仍按当前状态判断。
+            combustion = modules?.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
+            combustionVisual = modules?.GetMod_ByID<Mod_CombustionVisual>(Mod_CombustionVisual.ModuleId);
             using var scope = ListPool<MonoBehaviour>.Get(out var behaviours);
             item.GetComponentsInChildren(true, behaviours);
             foreach (MonoBehaviour behaviour in behaviours)
@@ -60,6 +66,13 @@ public partial class ItemMgr
         internal bool IsCurrent(Item current) => ReferenceEquals(item, current) &&
             generation == current.RuntimeGeneration && ReferenceEquals(data, current.itemData) &&
             ReferenceEquals(modules, current.itemMods) && structureVersion == (current.itemMods?.StructureVersion ?? 0);
+
+        internal Mod_Combustion CachedCombustion => combustion;
+        internal Mod_CombustionVisual CachedCombustionVisual => combustionVisual;
+        internal Mod_Combustion ActiveCombustion => combustion != null && combustion.Enabled && combustion.IsRuntimeLoaded
+            ? combustion : null;
+        internal Mod_CombustionVisual ActiveCombustionVisual => combustionVisual != null &&
+            combustionVisual.Enabled && combustionVisual.IsRuntimeLoaded ? combustionVisual : null;
 
         internal bool BlocksWorldMatter => hasTileReceiver ||
             (item is not Player && item is not global::Map &&
@@ -124,7 +137,7 @@ public partial class ItemMgr
                     continue;
                 }
                 bool consumedAll = false;
-                Mod_Combustion combustion = GetWorldMatterCombustion(item);
+                Mod_Combustion combustion = entry.Structure.ActiveCombustion;
                 if (combustion != null)
                 {
                     if (waterContact && combustion.IsBurning)
@@ -148,7 +161,7 @@ public partial class ItemMgr
                 if (!IsWorldMatterEntryCurrent(entry)) continue;
             }
 
-            RefreshWorldItemCombustionVisual(entry);
+            RefreshWorldItemCombustionVisual(entry, alreadyValidated: true);
         }
     }
 
@@ -180,7 +193,10 @@ public partial class ItemMgr
         if (worldMatterEntries.TryGetValue(item, out WorldMatterEntry entry))
         {
             if (entry.Generation == item.RuntimeGeneration && ReferenceEquals(entry.Data, item.itemData))
+            {
+                entry.Structure = worldMatterStructures[item];
                 return entry;
+            }
             ReleaseWorldItemMatter(item);
         }
 
@@ -189,20 +205,19 @@ public partial class ItemMgr
             Item = item,
             Data = item.itemData,
             Generation = item.RuntimeGeneration,
-            LastTime = worldMatterTime
+            LastTime = worldMatterTime,
+            Structure = worldMatterStructures[item]
         };
         worldMatterEntries.Add(item, entry);
         return entry;
     }
 
     private bool IsWorldMatterEntryCurrent(WorldMatterEntry entry)
-        => IsWorldMatterCandidate(entry.Item) && entry.Generation == entry.Item.RuntimeGeneration &&
-           ReferenceEquals(entry.Data, entry.Item.itemData);
-
-    private static Mod_Combustion GetWorldMatterCombustion(Item item)
     {
-        Mod_Combustion combustion = item.itemMods?.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
-        return combustion != null && combustion.Enabled && combustion.IsRuntimeLoaded ? combustion : null;
+        if (!IsWorldMatterCandidate(entry.Item) || entry.Generation != entry.Item.RuntimeGeneration ||
+            !ReferenceEquals(entry.Data, entry.Item.itemData)) return false;
+        entry.Structure = worldMatterStructures[entry.Item];
+        return true;
     }
 
     #endregion
@@ -210,18 +225,17 @@ public partial class ItemMgr
     #region 世界散落物燃烧表现与释放
 
     // 火焰挂在管理器下跟随真实贴图，不改变物品对象池的层级基线。
-    private void RefreshWorldItemCombustionVisual(WorldMatterEntry entry)
+    private void RefreshWorldItemCombustionVisual(WorldMatterEntry entry, bool alreadyValidated = false)
     {
-        if (!IsWorldMatterEntryCurrent(entry))
+        if (!alreadyValidated && !IsWorldMatterEntryCurrent(entry))
         {
             DestroyWorldItemCombustionVisual(entry);
             return;
         }
 
-        Mod_Combustion combustion = GetWorldMatterCombustion(entry.Item);
-        Mod_CombustionVisual moduleVisual = entry.Item.itemMods?.GetMod_ByID<Mod_CombustionVisual>(Mod_CombustionVisual.ModuleId);
-        bool hasModuleVisual = combustion != null && moduleVisual != null &&
-            moduleVisual.Enabled && moduleVisual.IsRuntimeLoaded;
+        Mod_Combustion combustion = entry.Structure.ActiveCombustion;
+        Mod_CombustionVisual moduleVisual = entry.Structure.ActiveCombustionVisual;
+        bool hasModuleVisual = combustion != null && moduleVisual != null;
         bool burning = !hasModuleVisual && (combustion != null
             ? combustion.IsActivelyBurning
             : entry.Data.MatterState?.IsBurning == true);

@@ -77,7 +77,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 
 - 单机掉落经 `DroppedItemService.Spawn/SpawnLoot`：passive 使用纯 C# 轻量数据和近镜头池化 Sprite；interactive 保留完整 Item。两种新生掉落都复制独立载荷并分配新 GUID，完整 Item 在注册前清零载荷 GUID，来源库存/手持物身份保持不变。需要模块飞行效果的物品使用 interactive 与 `IDroppedItemSpawnContextReceiver`。普通世界掉落缩放 0.5，精确落点由 destination 指定；联机沿用 Item 权威链。
 - 世界散落物温湿推进共用 `WorldItemMatterRules`，普通环境温差每游戏秒缩小 1%，统一调用 `ThermalRuntime.AdvanceAmbient`；完整 Item 在注册/加载时建立时间基线，两种后端按逐件累计间隔分帧推进。高温液体接触仍以液体自身 `temperature/contactHeatingPerSecond` 固定传热，达到当前定义 `matter.ignitionTemperature` 才点燃；设备可显式传入专属速率，airExposure 只调普通环境下的干燥。已有 `Mod_Combustion` 时复用模块且不再扣材料堆数；两种后端共用材料火焰粒子。
-- 完整散落物的层级资格按结构事件、模块版本、载荷引用与运行代际失效，不在反复复核时遍历组件树；物种登记、飞行和投射物附着仍读实时状态。轻量掉落每次同步 Tick 共用地形寻址，世界/代际改变立即重建，每次样本仍读权威层，入水转换、浮力和物质接触复用样本液体定义；不能跨燃烧回调缓存温度来源。
+- 完整散落物的层级资格与燃烧模块引用按结构事件、模块版本、载荷引用与运行代际失效；同件物质结算末尾通过已验证结构更新火焰，帧级表现仍重新检查有效性。模块启停与燃烧状态实时读取，物种登记、飞行和投射物附着仍读实时状态；回归 `item_runtime/world_matter_structure`。轻量掉落每次同步 Tick 共用地形寻址，世界/代际改变立即重建，每次样本仍读权威层，入水转换、浮力和物质接触复用样本液体定义；不能跨燃烧回调缓存温度来源。
 - 轻量漂浮物水态检查与水流查询在同一 Tick 复用同一份 `RuntimeTerrainTileSample`，仅省区块寻址，水深/流向/实验水流仍实时读取；规则 `environment/water_current_reuse` 检查抽干、遮水和河海湖分支。
 - 掉落物单件物质结算按 `DroppedItems.Matter.Environment/Combustion/Transition` 分段记录；约 1ms 的批次预算只能在件与件之间检查，单件环境查询必须走温度场单格入口，避免查询一格却重建整块。
 - 完整 Item 的浮沉/漂流由 `WorldItemWaterSystem` 按最终位置派生，轻量掉落复用 `WorldItemWaterRules`。水体状态不入库存；轨迹结束后交回水系统，先移除 Mod_Droping 再允许拾取。河流加速按总重量，浮沉按单件千克/升：普通水门槛 1 kg/L，其他液体乘 `buoyancyThresholdMultiplier`（海水 1.5、岩浆 6），达到门槛下沉；该倍率不改变液体载荷重量。转换表现用 `IWaterEntryTransformEffect` 在回收前脱离源物。

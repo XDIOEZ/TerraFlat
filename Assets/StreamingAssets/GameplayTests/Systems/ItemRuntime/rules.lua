@@ -15,6 +15,9 @@ test.system("item_runtime", "world_matter_structure", {}, function(data)
     assert(data.aiBlocked and data.aiMatchesReference, "缓存遗漏自定义 AI 能力")
     assert(data.rebindInvalidated and data.generationInvalidated and data.generationAllowed,
         "换载荷或重新加载后仍使用旧代际资格")
+    assert(data.combustionCached and data.inactiveCombustionExcluded and
+        data.combustionRemovalInvalidated and data.combustionVisualRemoved,
+        "散落物燃烧模块缓存未绑定正式模块身份或未随结构变更失效")
 end, "世界散落物资格缓存、能力变更与零分配热路径")
 
 for _, row in ipairs({

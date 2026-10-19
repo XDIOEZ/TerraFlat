@@ -61,6 +61,25 @@ public static partial class GameplayTestSystemProbe
         item.ResumeRuntimeAfterReplacement();
         result["generationInvalidated"] = !beforeLoad.IsCurrent(item);
         result["generationAllowed"] = !new ItemMgr.WorldMatterStructure(item).BlocksWorldMatter;
+
+        var combustionHost = new GameObject("CombustionCapabilities");
+        combustionHost.transform.SetParent(item.transform, false);
+        var combustion = combustionHost.AddComponent<Mod_Combustion>();
+        var visual = combustionHost.AddComponent<Mod_CombustionVisual>();
+        combustion.ModData.StableName = "probe_combustion";
+        visual.ModData.StableName = "probe_combustion_visual";
+        item.itemMods.AddMod(combustion);
+        item.itemMods.AddMod(visual);
+        var withCombustion = new ItemMgr.WorldMatterStructure(item);
+        result["combustionCached"] = ReferenceEquals(withCombustion.CachedCombustion, combustion) &&
+            ReferenceEquals(withCombustion.CachedCombustionVisual, visual);
+        result["inactiveCombustionExcluded"] = withCombustion.ActiveCombustion == null &&
+            withCombustion.ActiveCombustionVisual == null && !withCombustion.BlocksWorldMatter;
+        item.itemMods.RemoveMod(visual);
+        result["combustionRemovalInvalidated"] = !withCombustion.IsCurrent(item);
+        result["combustionVisualRemoved"] = new ItemMgr.WorldMatterStructure(item).CachedCombustionVisual == null;
+        item.itemMods.RemoveMod(combustion);
+        UnityEngine.Object.DestroyImmediate(combustionHost);
         return result;
     });
 
