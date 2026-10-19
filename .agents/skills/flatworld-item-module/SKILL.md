@@ -67,6 +67,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - F5 `RefreshLiveConfiguration` 原位更新改变的显式参数和仍受定义控制的视觉，不替换 ItemData/模块集合或重新 Load；结构与删除参数后的默认值应用于新实例。`ApplyResourceConfiguration/OnResourcesReloaded` 保留进度并更新缓存/订阅。发布时清闲置池并禁用活跃旧实例回池。
 - 恢复先重建当前定义，再按稳定模块名合并实例状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配保留时间、次数和初始化标记。制作耐久倍率进入实例堆叠身份。
 - 材料热转化由 `ItemMatterRuntime` 与 `MaterialThermalProcessor` 按自身温度结算，热源只供热；`matter.transitions` 的 `inputAmount/remainderOutputItemId` 支持同堆整组与尾数多产物，全部产物和扣料共用原子事务。Wood 标签 500℃起每3份产1炭、余数每份1灰，木炭1000℃起1:1灰；转化继承真实温度，禁止跨槽拼木材组。
+- 高频物态条件扫描对 `IReadOnlyList<RuntimeItemMatterTransition>` 使用索引遍历，避免每件轻量掉落物发生接口枚举器装箱；按原顺序选择首个匹配项，回归 `item_runtime/matter_transition_scan`。
 - 物质状态在 `ItemData.MatterState`，静态相变/反应在定义 `matter/reactions`。玩法分类使用 `ItemData.Tags`；战利品通过顶层 lootTableId 引用稳定物品 ID。`IResourceYieldModifier` 在资源源头聚合，每条产出链应用一次并统一随机取整。
 
 - 燃烧由 Fuel 数据、Combustion 状态、FuelInteraction 交互与 ICombustionStateReceiver 表现组合；视觉尺寸/密度由 flameScale/flameHeightRatio/flameEmissionMultiplier 配置，attachFlameToAnchor 让主体火苗跟随燃烧点，followSourceRenderer/sourceRendererAnchorOffset 绑定真实贴图动画。火把底图为熄灭状态，熄灭清空粒子；氧气模块只管储备/缺氧并暴露 SupplyOxygen，环境/装备供给方负责真实条件与扣量。`requiredTool/minimumTier` 是采集专精加成参考，不是普通采矿资格。

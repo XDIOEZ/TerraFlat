@@ -1,3 +1,13 @@
+-- 物质条件表的读取顺序、固液分支与临界状态保持不变。
+test.system("item_runtime", "matter_transition_scan", {}, function(data)
+    assert(data.firstMatch and data.secondMatch,
+        "物质转换条件没有按既有配置优先级选择首个匹配项")
+    assert(data.dryBoundary and data.dryRejected and data.uninitializedRejected,
+        "物质转换条件没有在湿度阈值与未初始化时实时更新")
+    assert(data.noLiquidMatch and data.emptyRejected and data.nullRejected,
+        "物质固液类型或空定义的拒绝规则改变")
+end, "材料只读条件表索引扫描保持优先级、温湿度边界及空值语义")
+
 -- 检查模块结构版本和正式物品工厂的可变状态隔离。
 test.system("item_runtime", "cleanup_lookup", {}, function(data)
     assert(data.stable, "场景销毁期间无搜索单例读取不稳定")

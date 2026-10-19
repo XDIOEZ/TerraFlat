@@ -11,6 +11,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("item_runtime/world_matter_structure", WorldMatterStructure);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
+        operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
     }
 
     // 独立停用宿主只读取正式资格缓存，不创建世界、拾取器或完整物品管理器。
@@ -99,6 +100,45 @@ public static partial class GameplayTestSystemProbe
         {
             ["changed"] = changed, ["waterContact"] = waterContact,
             ["temperature"] = data.MatterState.TemperatureCelsius, ["amount"] = data.Stack.Amount
+        };
+    }
+
+    /// <summary>用只读列表验证物质条件顺序、边界和运行态变化不被索引优化改变。</summary>
+    private static JObject MatterTransitionScan(JObject args)
+    {
+        var transitions = new List<RuntimeItemMatterTransition>
+        {
+            new("hot", 600f, null, null, null, "probe:hot", 1f, null),
+            new("warm", 500f, null, null, null, "probe:warm", 1f, null),
+            new("dry", null, null, null, 0.2f, "probe:dry", 1f, null)
+        };
+        var matter = new RuntimeItemMatterDefinition(null, 0.8f, 0f, 0f, 0f, 0f,
+            transitions.AsReadOnly());
+        var state = new ItemMatterState { Initialized = true, TemperatureCelsius = 700f, Moisture = 0.6f };
+        bool firstMatch = ItemMatterRuntime.SelectMatchedTransition(matter, state, false) == transitions[0];
+        state.TemperatureCelsius = 550f;
+        bool secondMatch = ItemMatterRuntime.SelectMatchedTransition(matter, state, false) == transitions[1];
+        state.TemperatureCelsius = 20f;
+        state.Moisture = 0.2f;
+        bool dryBoundary = ItemMatterRuntime.SelectMatchedTransition(matter, state, false) == transitions[2];
+        state.Moisture = 0.21f;
+        bool dryRejected = ItemMatterRuntime.SelectMatchedTransition(matter, state, false) == null;
+        state.Initialized = false;
+        bool uninitializedRejected = ItemMatterRuntime.SelectMatchedTransition(matter, state, false) == null;
+        state.Initialized = true;
+        bool noLiquidMatch = ItemMatterRuntime.SelectMatchedTransition(matter, state, true) == null;
+        bool emptyRejected = ItemMatterRuntime.SelectMatchedTransition(
+            new RuntimeItemMatterDefinition(null, 0f, 0f, 0f, 0f, 0f,
+                Array.Empty<RuntimeItemMatterTransition>()), state, false) == null;
+        bool nullRejected = ItemMatterRuntime.SelectMatchedTransition(null, state, false) == null &&
+            ItemMatterRuntime.SelectMatchedTransition(matter, null, false) == null;
+
+        return new JObject
+        {
+            ["firstMatch"] = firstMatch, ["secondMatch"] = secondMatch,
+            ["dryBoundary"] = dryBoundary, ["dryRejected"] = dryRejected,
+            ["uninitializedRejected"] = uninitializedRejected, ["noLiquidMatch"] = noLiquidMatch,
+            ["emptyRejected"] = emptyRejected, ["nullRejected"] = nullRejected
         };
     }
 
