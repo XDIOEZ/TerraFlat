@@ -60,6 +60,13 @@ test.system("navigation", "chunk_block_pool", {}, function(data)
         "导航缓存超过上限，或切换世界后没有释放旧数组")
 end, "导航区块复用零分配、完整清理及动态阻挡隔离")
 
+test.system("navigation", "block_addressing", {}, function(data)
+    assert(data.independent and data.enumerated and data.removed,
+        "16×16导航区块在负坐标、边界或整数极值下串格、漏格或错误移除")
+    assert(data.lookups == 524288 and data.checksum == 67897344,
+        "导航批量读取的真实格状态或代价与先前语义不一致")
+end, "16格导航区块负坐标索引与高频读取性能")
+
 test.system("navigation", "machine_obstacle_dirty", {}, function(data)
     assert(data.unchanged and data.removedOnlyOne and data.movedNotRemoved,
         "机器碰撞增量索引误删未改变的设备，或迁移锚点后仍删除已移动设备")

@@ -30,6 +30,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - 导航块注册、地块局部变更及已加载格只读共用 `ResolveRuntimeLiquidNavigation`，每格只调用一次 `GetSurfaceLevel`，同一结果派生水深和实际路径代价；规则 `navigation/liquid_cell_snapshot` 核验平台遮水、移除平台和抽干水体。
 - 区块注册、局部批量更新和卸载先冻结 `WorldTopologyDomain`，已规范化格使用 `GetEffectiveWalkableNormalized/SetCanonicalCell/RemoveCanonicalCell`，不逐格重新读取活动星球；外部 `SetCell/RemoveCell` 仍自行归一化。规则 `navigation/canonical_batch` 对照两套入口、失效版本、液深及环绕。
 - `WorldNavigationGrid` 的 16×16 导航块在最后一格移除后复用完整数组（最多缓存64块），`Clear` 释放缓存；动态阻挡另有独立归属，不随格数据池化清除。`navigation/chunk_block_pool` 检查流式重载、来源阻挡及缓存上限。
+- 16×16 块寻址用位掩码同时支持负数和整型边界，写入/移除时一次取块并带回旧格，避免重复查字典；`navigation/block_addressing` 对照边界、坐标回读、枚举、移除及读取基准。
 - 直线快捷路径和路点跳过都检查中间格成本不高于端点；可走格成本变化也使旧路径失效。总成本读 `WorldNavigationPathResult.TotalCost`。
 - `DestinationResult` 表达目的地结果，含 `RejectedByPathCost`；同目标四次无路径后保持 Failed，目标/网格修订/成功路径解除。新路径超限不覆盖已接受路径，旧路径走完后停续算，明显目标移动才再评估。
 - 追击上限随 RequestPath 进入共享搜索，前沿到上限只结束该请求；成功/拒绝/取消/失败清等待链，缓存只用已收敛起点成本。

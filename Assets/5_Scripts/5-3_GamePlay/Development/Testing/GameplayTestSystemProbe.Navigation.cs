@@ -16,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/corner", NavigationCorner);
         operations.Add("navigation/canonical_batch", NavigationCanonicalBatch);
         operations.Add("navigation/chunk_block_pool", NavigationChunkBlockPool);
+        operations.Add("navigation/block_addressing", NavigationBlockAddressing);
         operations.Add("navigation/liquid_cell_snapshot", NavigationLiquidCellSnapshot);
         operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
         operations.Add("navigation/avoidance_topology", NavigationAvoidanceTopology);
@@ -127,6 +128,61 @@ public static partial class GameplayTestSystemProbe
         for (int y = 10; y <= 12; y++)
         for (int x = 10; x <= 12; x++) grid.SetCell(new Vector2Int(x, y), 1, true);
         return grid;
+    }
+
+    // 对照 16 格整块边界验证极大/负坐标，再测正式格查询的热路径耗时。
+    private static JObject NavigationBlockAddressing(JObject args)
+    {
+        int[] values =
+        {
+            int.MinValue, int.MinValue + 15, -257, -33, -32, -31, -17, -16, -15,
+            -1, 0, 1, 15, 16, 17, 31, 32, 33, int.MaxValue - 15, int.MaxValue
+        };
+        var grid = new WorldNavigationGrid();
+        var positions = new List<Vector2Int>(values.Length);
+        bool independent = true;
+        for (int i = 0; i < values.Length; i++)
+        {
+            var cell = new Vector2Int(values[i], values[(i * 7 + 3) % values.Length]);
+            positions.Add(cell);
+            grid.SetCanonicalCell(cell, (uint)(i + 1), true);
+        }
+        for (int i = 0; i < positions.Count; i++)
+            independent &= grid.TryGetCanonicalCell(positions[i], out WorldNavigationCell cell) &&
+                cell.Walkable && cell.Penalty == i + 1;
+
+        var copied = new List<Vector2Int>();
+        grid.CopyCellPositions(copied);
+        bool enumerated = copied.Count == positions.Count && new HashSet<Vector2Int>(copied).SetEquals(positions);
+        for (int i = 0; i < positions.Count; i += 2)
+            grid.RemoveCanonicalCell(positions[i]);
+        bool removed = grid.CellCount == positions.Count / 2;
+        for (int i = 0; i < positions.Count; i++)
+            removed &= grid.TryGetCanonicalCell(positions[i], out WorldNavigationCell cell) == (i % 2 != 0) &&
+                (i % 2 == 0 || cell.Penalty == i + 1);
+
+        var bench = new WorldNavigationGrid();
+        var samples = new Vector2Int[256];
+        for (int i = 0; i < samples.Length; i++)
+        {
+            var position = new Vector2Int((i & 15) - 8, (i >> 4) - 8);
+            samples[i] = position;
+            bench.SetCanonicalCell(position, (uint)(i + 1), true);
+        }
+        const int lookups = 524288;
+        uint checksum = 0;
+        for (int i = 0; i < 4096; i++)
+            if (bench.TryGetCanonicalCell(samples[i & 255], out WorldNavigationCell cell)) checksum += cell.Penalty;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < lookups; i++)
+            if (bench.TryGetCanonicalCell(samples[i & 255], out WorldNavigationCell cell)) checksum += cell.Penalty;
+        timer.Stop();
+        return new JObject
+        {
+            ["independent"] = independent, ["enumerated"] = enumerated, ["removed"] = removed,
+            ["lookups"] = lookups, ["checksum"] = checksum,
+            ["milliseconds"] = timer.Elapsed.TotalMilliseconds
+        };
     }
 
     private static JObject NavigationPath(JObject args)
