@@ -87,3 +87,12 @@ test.system("navigation", "avoidance_topology", {}, function(data)
     assert(#data.seamDelta == 2 and data.seamDelta[1] == 1 and data.seamDelta[2] == 0,
         "环绕接缝的相邻 AI 距离没有采用最短路径")
 end, "局部避让冻结拓扑后保留无限世界、环绕及九宫格桶边界")
+
+test.system("navigation", "topology_bounds_cache", {}, function(data)
+    assert(data.initial and data.reused and data.radiusRefresh and data.chunkRefresh,
+        "世界边界缓存没有复用稳定配置，或修改半径/区块尺寸后继续使用旧结果")
+    assert(data.invalidCached and data.recovered and data.infinite and data.wrapped,
+        "非法区块尺寸、无限世界或重新启用环绕时缓存未正确失效")
+    assert(data.differentPlanet and data.missingPlanet and data.returned and data.reset,
+        "切换星球、清空存档或恢复世界后沿用了错误的拓扑缓存")
+end, "活动星球拓扑边界缓存复用与动态配置失效")

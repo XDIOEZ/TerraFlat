@@ -19,6 +19,72 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/liquid_cell_snapshot", NavigationLiquidCellSnapshot);
         operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
         operations.Add("navigation/avoidance_topology", NavigationAvoidanceTopology);
+        operations.Add("navigation/topology_bounds_cache", NavigationTopologyBoundsCache);
+    }
+
+    /// <summary>缓存必须和正式世界边界算法一致，动态配置或星球身份变化立即失效。</summary>
+    private static JObject NavigationTopologyBoundsCache(JObject args)
+    {
+        var cache = new WorldTopologyRuntime.ActiveBoundsCache();
+        var planet = new PlanetData
+        {
+            TopologyMode = WorldTopologyMode.Wrapped,
+            Radius = 9,
+            ChunkSize = new Vector2Int(4, 4)
+        };
+
+        static bool MatchesBaseline(WorldTopologyRuntime.ActiveBoundsCache cache, PlanetData planet)
+        {
+            bool expectedValid = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds expected);
+            bool actualValid = cache.TryGet(planet, out WorldTopologyBounds actual);
+            return expectedValid == actualValid && (!actualValid ||
+                expected.Min == actual.Min && expected.MaxExclusive == actual.MaxExclusive &&
+                expected.Span == actual.Span && expected.ChunkSize == actual.ChunkSize &&
+                expected.Mode == actual.Mode);
+        }
+
+        bool initial = MatchesBaseline(cache, planet) && cache.RebuildCount == 1;
+        bool reused = true;
+        for (int i = 0; i < 512; i++)
+            reused &= MatchesBaseline(cache, planet);
+        reused &= cache.RebuildCount == 1;
+
+        planet.Radius = 23;
+        bool radiusRefresh = MatchesBaseline(cache, planet) && cache.RebuildCount == 2;
+        planet.ChunkSize = new Vector2Int(6, 4);
+        bool chunkRefresh = MatchesBaseline(cache, planet) && cache.RebuildCount == 3;
+        planet.ChunkSize = new Vector2Int(0, 4);
+        bool invalidCached = MatchesBaseline(cache, planet) && MatchesBaseline(cache, planet) &&
+            cache.RebuildCount == 4;
+        planet.ChunkSize = new Vector2Int(6, 4);
+        bool recovered = MatchesBaseline(cache, planet) && cache.RebuildCount == 5;
+        planet.TopologyMode = WorldTopologyMode.Infinite;
+        bool infinite = MatchesBaseline(cache, planet) && cache.RebuildCount == 6;
+        planet.TopologyMode = WorldTopologyMode.Wrapped;
+        bool wrapped = MatchesBaseline(cache, planet) && cache.RebuildCount == 7;
+
+        var other = new PlanetData
+        {
+            TopologyMode = WorldTopologyMode.Wrapped,
+            Radius = planet.Radius,
+            ChunkSize = planet.ChunkSize
+        };
+        bool differentPlanet = MatchesBaseline(cache, other) && cache.RebuildCount == 8;
+        bool missingPlanet = MatchesBaseline(cache, null) && MatchesBaseline(cache, null) &&
+            cache.RebuildCount == 9;
+        bool returned = MatchesBaseline(cache, planet) && cache.RebuildCount == 10;
+        cache.Clear();
+        bool reset = cache.RebuildCount == 0 && MatchesBaseline(cache, planet) &&
+            cache.RebuildCount == 1;
+
+        return new JObject
+        {
+            ["initial"] = initial, ["reused"] = reused, ["radiusRefresh"] = radiusRefresh,
+            ["chunkRefresh"] = chunkRefresh, ["invalidCached"] = invalidCached,
+            ["recovered"] = recovered, ["infinite"] = infinite, ["wrapped"] = wrapped,
+            ["differentPlanet"] = differentPlanet, ["missingPlanet"] = missingPlanet,
+            ["returned"] = returned, ["reset"] = reset
+        };
     }
 
     /// <summary>用正式局部避让桶入口核验无限地图和环绕接缝的格归属。</summary>
