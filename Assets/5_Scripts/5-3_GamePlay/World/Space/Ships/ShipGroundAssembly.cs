@@ -78,9 +78,11 @@ namespace FlatWorld.Spaceflight
             var existingShips = new HashSet<string>();
             foreach (ShipState existing in State.Ships) existingShips.Add(existing.ShipId);
             bool transferred = false;
+            bool atmosphereTransferred = false;
             try
             {
                 selected = CollectGroundAssembly(world, console.Id);
+                GetGroundAtmosphere(world);
                 foreach (ShipGroundBuildingStore.Entry entry in selected)
                 {
                     ItemData snapshot = entry.Capture();
@@ -112,6 +114,8 @@ namespace FlatWorld.Spaceflight
                         new Vector2Int(piece.CellX, piece.CellY),
                         new Vector3((float)((piece.CellX + .5d) * ship.CellSizeMeters),
                             (float)((piece.CellY + .5d) * ship.CellSizeMeters)), piece.QuarterTurns));
+                TakeGroundAtmosphere(ship, world);
+                atmosphereTransferred = true;
                 MachineWorld.TransferScopeNodes(world, MachineWorld.GetShipScopeKey(ship.ShipId), machineIds,
                     node => destinations[node.Id]);
                 transferred = true;
@@ -146,6 +150,7 @@ namespace FlatWorld.Spaceflight
                             Debug.LogException(rollback); return false;
                         }
                     }
+                    if (atmosphereTransferred) ReturnGroundAtmosphere(ship, world);
                     for (int i = pieces.Count - 1; i >= 0; i--) RollbackPiece(ship, pieces[i]);
                     if (shipColliderPresenters.Remove(ship.ShipId, out ShipColliderPresenter presenter)) CompleteGroundCleanup(presenter.Dispose);
                 }
@@ -204,18 +209,24 @@ namespace FlatWorld.Spaceflight
                 for (int x = 0; x < width; x++) yield return WorldTopologyRuntime.NormalizeCell(entry.Cell + new Vector2Int(x, y));
         }
 
-        private static void InitializeTemplateCabin(ShipState ship, int consoleGuid)
+        private static void InitializeTemplateCabin(ShipState ship, int consoleGuid, string scopeKey = null, HashSet<ShipCell> selected = null)
         {
-            using var scope = MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId));
+            using var scope = MachineWorld.UseScope(scopeKey ?? MachineWorld.GetShipScopeKey(ship.ShipId));
             MachineEntity console = MachineWorld.GetById(consoleGuid);
             JObject root = ItemSpecialDataJsonStore.ReadRoot(console.Snapshot.ItemSpecialData);
             JObject marker = root[ShipFixedStructureBuilder.TemplateMarker] as JObject;
             if (marker?["initialCabinGas"] is not JObject payload) return;
             if (ship.Compartments.Count == 0) throw new InvalidOperationException("模板配置了舱气，但当前船体没有密闭舱。");
             FixedStructureGas gas = payload.ToObject<FixedStructureGas>();
+            bool initialized = false;
             foreach (ShipCompartmentState room in ship.Compartments)
+            {
+                if (selected != null && !room.Cells.Exists(selected.Contains)) continue;
                 room.Gas = FixedStructureResourceInitializer.CreateFluidState(gas, null, room.VolumeLiters,
                     ShipAtmosphereService.MinimumCabinGasSpaceLiters, double.MaxValue);
+                initialized = true;
+            }
+            if (!initialized) return;
             marker.Remove("initialCabinGas");
             console.Snapshot.ItemSpecialData = root.ToString(Newtonsoft.Json.Formatting.None);
         }
@@ -469,6 +480,7 @@ namespace FlatWorld.Spaceflight
             ship.AngleRadians = plan.Turns * Math.PI * .5d;
             ShipGeometry.Rotate(ship.CenterOfMassLocalX, ship.CenterOfMassLocalY, ship.AngleRadians, out double centerX, out double centerY);
             ship.PositionX = plan.Origin.x + centerX; ship.PositionY = plan.Origin.y + centerY;
+            ReturnGroundAtmosphere(ship, world);
             ShipFlightState completedFlight = GetFlight(ship.ShipId);
             foreach (ShipPieceState piece in ship.Pieces)
             {

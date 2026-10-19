@@ -30,7 +30,7 @@ namespace FlatWorld.Spaceflight
         private bool TryResolveMachineEnvironment(string shipId, Vector2 localPosition, out ShipEnvironmentSnapshot environment,
             out ShipState ship, out int x, out int y)
         {
-            environment = default; ship = GetShip(shipId); x = 0; y = 0;
+            environment = default; ship = ResolveAtmosphereGeometry(shipId); x = 0; y = 0;
             if (ship == null) return false;
             EnsureMachineCompartmentGeometry(ship);
             x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters);
@@ -45,7 +45,7 @@ namespace FlatWorld.Spaceflight
             FluidInventory target, double volumeLiters, double minimumGasSpaceLiters, out FluidBatch batch)
         {
             batch = default;
-            ShipState ship = GetShip(shipId);
+            ShipState ship = ResolveAtmosphereGeometry(shipId);
             if (ship == null || target == null || standardLiters <= 0m) return false;
             EnsureMachineCompartmentGeometry(ship);
             int x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters), y = (int)Math.Floor(localPosition.y / ship.CellSizeMeters);
@@ -86,7 +86,7 @@ namespace FlatWorld.Spaceflight
 
         public AtmosphereEmissionResult EmitMachineGas(string shipId, Vector2 localPosition, FluidBatch batch)
         {
-            ShipState ship = GetShip(shipId) ?? throw new InvalidOperationException("机器排气时缺少真实船体。");
+            ShipState ship = ResolveAtmosphereGeometry(shipId) ?? throw new InvalidOperationException("机器排气时缺少真实气密区域。");
             EnsureMachineCompartmentGeometry(ship);
             int x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters), y = (int)Math.Floor(localPosition.y / ship.CellSizeMeters);
             if (ShipAtmosphereService.FindCompartment(ship, x, y) == null)
@@ -97,7 +97,7 @@ namespace FlatWorld.Spaceflight
 
         public AtmosphereState GetMachineAirSnapshot(string shipId, Vector2 localPosition)
         {
-            ShipState ship = GetShip(shipId);
+            ShipState ship = ResolveAtmosphereGeometry(shipId);
             if (ship == null) return null;
             EnsureMachineCompartmentGeometry(ship);
             int x = (int)Math.Floor(localPosition.x / ship.CellSizeMeters), y = (int)Math.Floor(localPosition.y / ship.CellSizeMeters);
@@ -148,6 +148,8 @@ namespace FlatWorld.Spaceflight
 
         private AtmosphereState GetMachineOutsideAtmosphere(ShipState ship)
         {
+            if (IsGroundAtmosphere(ship))
+                return AtmosphereService.TryGetForWorld(ship.WorldAddress, out AtmosphereState groundAir) ? groundAir : null;
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is ShipFlightPhase.Cruising) return null;
             return AtmosphereService.TryGetForWorld(flight.SurfaceWorldKey ?? ship.WorldAddress, out AtmosphereState atmosphere) ? atmosphere : null;
@@ -155,10 +157,12 @@ namespace FlatWorld.Spaceflight
         private void EnsureMachineCompartmentGeometry(ShipState ship)
         {
             // 同轮连锁破壁后立即失去旧密闭环境，未改结构的机器查询复用现有舱室。
-            if (ship.AtmosphereStructureDirty) ShipAtmosphereService.RebuildCompartments(ship, GetOutside(ship));
+            if (ship.AtmosphereStructureDirty) ShipAtmosphereService.RebuildCompartments(ship,
+                IsGroundAtmosphere(ship) ? GetGroundOutside(ship.WorldAddress) : GetOutside(ship));
         }
         private IShipAtmosphereSource GetMachineExteriorAt(ShipState ship, Vector2 localPosition)
         {
+            if (IsGroundAtmosphere(ship)) return GetGroundOutside(ship.WorldAddress);
             ShipFlightState flight = GetFlight(ship.ShipId);
             if (flight == null || flight.Phase is ShipFlightPhase.Cruising)
                 return PlanetShipAtmosphereSource.Vacuum;

@@ -61,6 +61,8 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 
 ## 环境与迁移
 
+- `ShipGroundAtmosphere` 为普通地面建筑独立持有按 WorldKey 保存的气密几何/舱气，不加入 Ships/Flights；结构或资源修订才刷新，复用 ShipAtmosphereService。ShipDeviceLogic 正常 Tick 供压，生物及机器读同一房间，起飞/落地按格移交真实气体与已围合历史；模板初始舱气在地面首次密闭时落账。回归 `Gameplay/ship_rules.lua` 的 `ground_atmosphere`，领域样本不代表真实管电网或起降现场通过。
+
 - 闭合墙边界及完整内部地板决定密闭；停供保留舱气，正常舱门不泄压，破口随外界，修复不返旧气。密闭舱维持正常舱温，补舱只恢复温度，仍需真实供气。
 - 舱室环境一次索引查地板与房间，敞开舱用 WithOutside 补真实外温压；不可变真空源共用单例，结构环境每船缓存压力资格委托并在每次结算前更新外压。
 - 墙体压力耐受比较船外气压；真空占位温度不作为气体传热伤害，密闭舱内设备读舱温，有气外界仍按材料耐温结算。压力沿持续断裂线损伤，破坏后重取线；触地、船间冲击和燃爆共用局部断裂线及真实能量预算。结构实际掉血由统一事件聚合红字；Cabin FluidInventory 最小空间使用 MinimumCabinGasSpaceLiters。

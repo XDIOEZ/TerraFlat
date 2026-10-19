@@ -20,7 +20,16 @@ namespace FlatWorld.Spaceflight
         public List<ShipNavigationState> Navigation = new();
         public List<ShipDockingPairState> Docking = new();
         public List<SpaceLooseItemState> LooseItems = new();
+        public List<GroundAtmosphereState> GroundAtmospheres = new();
         public long NavigationSequence;
+    }
+
+    [Serializable]
+    public sealed class GroundAtmosphereState
+    {
+        // 地面只借用气密几何与库存，不登记为飞船或创建飞行记录。
+        public string WorldKey;
+        public ShipState Geometry = new();
     }
 
     [Serializable]

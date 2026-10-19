@@ -7,13 +7,20 @@ using UnityEngine.SceneManagement;
 public static partial class MachineWorld
 {
     #region 流体环境的上下文适配
+    private static bool TryGetLocalAtmosphereKey(MachineEntity node, out string key)
+    {
+        key = IsShipScope ? worldKey.Substring(5) : worldKey;
+        return IsShipScope || node != null && SpaceSession.Current != null &&
+            SpaceSession.Current.TryGetGroundEnvironment(worldKey, node.Position, out _);
+    }
+
     internal static bool TryGetFluidAmbientTemperature(MachineEntity node, out float temperature)
     {
         temperature = TemperatureMgr.DefaultAmbientTemperature;
         if (node == null) return false;
-        if (IsShipScope)
+        if (TryGetLocalAtmosphereKey(node, out string atmosphereKey))
         {
-            if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out ShipEnvironmentSnapshot environment))
+            if (!RequireShipEnvironment().TryGetMachineEnvironment(atmosphereKey, node.Position, out ShipEnvironmentSnapshot environment))
                 throw new InvalidOperationException("船上机器温度查询缺少所属船体。");
             temperature = (float)environment.TemperatureCelsius; return true;
         }
@@ -26,23 +33,23 @@ public static partial class MachineWorld
 
     internal static double GetFluidAmbientPressureKPa(MachineEntity node)
     {
-        if (!IsShipScope) return AtmosphereService.PressureKPa(GetCurrentAtmosphere(node));
-        if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out ShipEnvironmentSnapshot environment))
+        if (!TryGetLocalAtmosphereKey(node, out string atmosphereKey)) return AtmosphereService.PressureKPa(GetCurrentAtmosphere(node));
+        if (!RequireShipEnvironment().TryGetMachineEnvironment(atmosphereKey, node.Position, out ShipEnvironmentSnapshot environment))
             throw new InvalidOperationException("船上机器外压查询缺少所属船体。");
         return environment.PressureKPa;
     }
 
     internal static decimal GetFluidAmbientGasMoles(MachineEntity node)
     {
-        if (!IsShipScope) return GetCurrentAtmosphere(node)?.CurrentMoles ?? 0m;
-        if (!RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position, out _, out decimal moles))
+        if (!TryGetLocalAtmosphereKey(node, out string atmosphereKey)) return GetCurrentAtmosphere(node)?.CurrentMoles ?? 0m;
+        if (!RequireShipEnvironment().TryGetMachineEnvironment(atmosphereKey, node.Position, out _, out decimal moles))
             throw new InvalidOperationException("船上机器进气源缺少所属船体。");
         return moles;
     }
 
     internal static bool TryExtractFluidAmbientGasTo(MachineEntity node, decimal standardLiters, ref ulong randomState,
         FluidInventory target, double volumeLiters, double minimumGasSpaceLiters, out FluidBatch batch)
-        => IsShipScope ? RequireShipEnvironment().TryExtractMachineGasTo(worldKey.Substring(5), node.Position, standardLiters,
+        => TryGetLocalAtmosphereKey(node, out string atmosphereKey) ? RequireShipEnvironment().TryExtractMachineGasTo(atmosphereKey, node.Position, standardLiters,
             ref randomState, target, volumeLiters, minimumGasSpaceLiters, out batch)
             : AtmosphereService.TryExtractTo(GetCurrentAtmosphere(node), standardLiters, ref randomState, target, volumeLiters, minimumGasSpaceLiters, out batch);
 
@@ -71,7 +78,7 @@ public static partial class MachineWorld
 
     internal static bool IsFluidEnvironmentSubmerged(MachineEntity node)
     {
-        if (IsShipScope && RequireShipEnvironment().TryGetMachineEnvironment(worldKey.Substring(5), node.Position,
+        if (TryGetLocalAtmosphereKey(node, out string atmosphereKey) && RequireShipEnvironment().TryGetMachineEnvironment(atmosphereKey, node.Position,
             out ShipEnvironmentSnapshot environment) && environment.HasFloorSupport) return false;
         if (TryResolveFluidSurfacePoint(node.Position, out string world, out Vector2 position))
         {

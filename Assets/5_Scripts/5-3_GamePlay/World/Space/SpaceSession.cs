@@ -59,6 +59,7 @@ namespace FlatWorld.Spaceflight
             Current = this;
             RegisterShipDamageFeedback();
             ItemEnvironmentSources.Register(this);
+            MachineWorld.CellChanged += InvalidateGroundAtmosphere;
             GameplayCombatBridge.Register(ShipCombatBridge.Instance);
             PressureExplosionQueue.WorldHandler = HandleShipExplosion;
             PressureExplosionQueue.SnapshotHandler = CaptureShipExplosionContext;
@@ -82,6 +83,7 @@ namespace FlatWorld.Spaceflight
             dropRegistration?.Dispose();
             ItemMgr.RuntimeItemDespawning -= OnLooseItemDespawning;
             ItemEnvironmentSources.Unregister(this);
+            MachineWorld.CellChanged -= InvalidateGroundAtmosphere;
             GameplayCombatBridge.Unregister(ShipCombatBridge.Instance);
             if (PressureExplosionQueue.WorldHandler == HandleShipExplosion) PressureExplosionQueue.WorldHandler = null;
             if (PressureExplosionQueue.SnapshotHandler == CaptureShipExplosionContext) PressureExplosionQueue.SnapshotHandler = null;
@@ -107,6 +109,7 @@ namespace FlatWorld.Spaceflight
             ResetMassWorkspace();
             viewBindingsDirty = false;
             owner = save;
+            groundAtmosphereIndex.Clear(); groundGeometryWorld = null; groundMachinesDirty = true;
             State = string.IsNullOrWhiteSpace(save.SpaceStateJson)
                 ? new SpaceSessionState { Sectors = new List<UniverseState> { SpaceCatalog.LoadDefault().GenerateSector(save.Seed, default) } }
                 : SaveDataMgr.DeserializeSpaceState(save.SpaceStateJson);
@@ -146,6 +149,7 @@ namespace FlatWorld.Spaceflight
             Current.ReleaseViews();
             Current.DestroyDrivingCameraTarget();
             Current.owner = null;
+            Current.groundAtmosphereIndex.Clear(); Current.groundGeometryWorld = null;
             Current.State = null;
             Current.Universe = null;
             Current.sectorDirectory.Clear();

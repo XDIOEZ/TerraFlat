@@ -98,11 +98,18 @@ namespace FlatWorld.Spaceflight
                 return true;
             }
             if (IsSpaceView) { sample = new ItemEnvironmentSample(0d, -270d, false, false, false); return true; }
-            return false;
+            return TrySampleGround(item, out sample);
         }
         public float SupplyAmbientOxygen(Item item, float maximumAmount)
         {
-            if (maximumAmount <= 0f || !TryGetSupport(item.transform.position, out ShipState ship, out _, out Vector2 local)) return 0f;
+            if (maximumAmount <= 0f || item == null) return 0f;
+            if (!TryGetSupport(item.transform.position, out ShipState ship, out _, out Vector2 local))
+            {
+                local = PressureExplosionQueue.NormalizeInWorld(item.gameObject.scene.name,
+                    WorldLocalPresentation.ToLogical((Vector2)item.transform.position));
+                if (!TryGetGroundEnvironment(item.gameObject.scene.name, local, out _)) return 0f;
+                ship = GetGroundAtmosphere(item.gameObject.scene.name);
+            }
             int x = (int)Math.Floor(local.x / ship.CellSizeMeters), y = (int)Math.Floor(local.y / ship.CellSizeMeters);
             ShipCompartmentState room = ShipAtmosphereService.FindCompartment(ship, x, y);
             decimal requested = AtmosphereService.Quantize((decimal)maximumAmount * AmbientMolesPerOxygenUnit);

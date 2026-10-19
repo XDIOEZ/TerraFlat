@@ -218,6 +218,8 @@ namespace FlatWorld.Spaceflight
                 foreach (ShipNavigationState task in State.Navigation) if (includedShips.Contains(task.ShipId)) snapshot.Navigation.Add(task);
                 foreach (ShipDockingPairState pair in State.Docking) if (includedShips.Contains(pair.ShipAId) && includedShips.Contains(pair.ShipBId)) snapshot.Docking.Add(pair);
                 foreach (SpaceSectorId sector in includedSectors) snapshot.Sectors.Add(GetUniverse(sector).State);
+                foreach (GroundAtmosphereState ground in State.GroundAtmospheres)
+                    if (ground.WorldKey == observer.WorldKey) snapshot.GroundAtmospheres.Add(ground);
                 NetworkFilterPoint.SetGauge(includedShips.Count);
             }
             using (NetworkJsonPoint.Measure(snapshot.Ships.Count + snapshot.Devices.Count +
@@ -236,6 +238,7 @@ namespace FlatWorld.Spaceflight
             double presentationSeconds = State == null ? Time.fixedDeltaTime : received.SimulationSeconds - State.SimulationSeconds;
             CapturePresentationState(false);
             State = received;
+            groundAtmosphereIndex.Clear(); groundGeometryWorld = null; groundMachinesDirty = true;
             RebuildSectorDirectory();
             foreach (UniverseState sector in State.Sectors) RegisterSectorPlanets(sector, null);
             contents.Clear(); ClearQueryIndexes();
