@@ -72,13 +72,22 @@ namespace FlatWorld.Spaceflight
 
         public static bool TrySampleLiquid(string worldKey, Vector2 point, out LiquidDefinition liquid, out int level)
         {
-            liquid = null; level = 0;
+            bool found = TryReadLiquidSurface(worldKey, point, out LandingSurfaceSample sample, out liquid);
+            level = found ? sample.LiquidLevel : 0;
+            return found;
+        }
+
+        // 同一抽液事务共用液体校验与地表采样，避免重复读取冷区块和存档差量。
+        private static bool TryReadLiquidSurface(string worldKey, Vector2 point, out LandingSurfaceSample sample, out LiquidDefinition liquid)
+        {
+            sample = default;
+            liquid = null;
+            GameRes resources = GameRes.ExistingInstance;
             if (string.IsNullOrWhiteSpace(worldKey) || worldKey.StartsWith("ship:", StringComparison.Ordinal) ||
                 !global::WorldAddress.FromWorldKey(worldKey).IsSurface || !float.IsFinite(point.x) || !float.IsFinite(point.y) ||
-                GameRes.ExistingInstance == null || !TryGetLandingSurface(worldKey, point, out LandingSurfaceSample sample) ||
-                sample.LiquidDepth <= 0f || !GameRes.ExistingInstance.TryGetLiquidDefinition(sample.LiquidId, out liquid) || liquid.WorldWater == null)
+                resources == null || !TryGetLandingSurface(worldKey, point, out sample) ||
+                sample.LiquidDepth <= 0f || !resources.TryGetLiquidDefinition(sample.LiquidId, out liquid) || liquid.WorldWater == null)
             { liquid = null; return false; }
-            level = sample.LiquidLevel;
             return true;
         }
 
@@ -87,8 +96,7 @@ namespace FlatWorld.Spaceflight
         {
             liquidId = null; removedLevel = 0;
             if (!GameNetwork.HasStateAuthority || requestedLevel <= 0 ||
-                !TrySampleLiquid(worldKey, point, out LiquidDefinition liquid, out _)) return false;
-            LandingSurfaceSample sample = GetLandingSurface(worldKey, point);
+                !TryReadLiquidSurface(worldKey, point, out LandingSurfaceSample sample, out _)) return false;
             PlanetData planet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[worldKey];
             Vector2Int size = PlanetData.NormalizeChunkSize(planet.ChunkSize);
             int originX = (int)Math.Floor(sample.Cell.x / (double)size.x) * size.x;
