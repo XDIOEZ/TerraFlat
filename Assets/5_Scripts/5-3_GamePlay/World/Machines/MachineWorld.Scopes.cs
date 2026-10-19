@@ -15,6 +15,25 @@ public readonly struct MachineScopePlacement
 }
 #endregion
 
+#region 机械世界身份冻结
+
+/// <summary>世界身份变更时解析一次船体 ID，避免每次环境 Tick 截取新的字符串。</summary>
+internal readonly struct MachineScopeIdentity
+{
+    public readonly string WorldKey;
+    public readonly string ShipId;
+
+    public MachineScopeIdentity(string worldKey)
+    {
+        WorldKey = worldKey;
+        ShipId = worldKey != null && worldKey.StartsWith("ship:", StringComparison.Ordinal)
+            ? worldKey.Substring(5)
+            : null;
+    }
+}
+
+#endregion
+
 public static partial class MachineWorld
 {
     #region 独立本地格作用域
@@ -28,7 +47,9 @@ public static partial class MachineWorld
         public ElectricalNetworkGraph Electrical;
         public FluidNetworkGraph Fluid;
         public GameSaveData Owner;
-        public string Key;
+        private MachineScopeIdentity identity;
+        public string Key { get => identity.WorldKey; set => identity = new MachineScopeIdentity(value); }
+        public string ShipId => identity.ShipId;
         public bool Dirty, SuppressRemoval, BackgroundSimulation;
         public float Elapsed;
         public uint Step;
@@ -49,7 +70,8 @@ public static partial class MachineWorld
     private static readonly Dictionary<string, ScopeState> scopes = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, string> shipScopeKeys = new(StringComparer.Ordinal);
     private static string scopeOverride;
-    public static bool IsShipScope => worldKey != null && worldKey.StartsWith("ship:", StringComparison.Ordinal);
+    private static string shipScopeId => scope.ShipId;
+    public static bool IsShipScope => shipScopeId != null;
     private static bool KeepSimulatingWithoutPlayers => IsShipScope || scope.BackgroundSimulation;
 
     private static void NotifySurfaceMechanicalChanged(Vector2Int cell)

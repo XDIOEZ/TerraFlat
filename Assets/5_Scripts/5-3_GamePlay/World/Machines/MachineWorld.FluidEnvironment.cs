@@ -9,7 +9,7 @@ public static partial class MachineWorld
     #region 流体环境的上下文适配
     private static bool TryGetLocalAtmosphereKey(MachineEntity node, out string key)
     {
-        key = IsShipScope ? worldKey.Substring(5) : worldKey;
+        key = shipScopeId ?? worldKey;
         return IsShipScope || node != null && SpaceSession.Current != null &&
             SpaceSession.Current.TryGetGroundEnvironment(worldKey, node.Position, out _);
     }
@@ -55,7 +55,7 @@ public static partial class MachineWorld
 
     internal static bool TryResolveFluidSurfacePoint(Vector2 localPosition, out string world, out Vector2 position)
     {
-        if (IsShipScope) return RequireShipEnvironment().TryResolveMachineSurfacePoint(worldKey.Substring(5), localPosition, out world, out position);
+        if (IsShipScope) return RequireShipEnvironment().TryResolveMachineSurfacePoint(shipScopeId, localPosition, out world, out position);
         world = worldKey; position = localPosition;
         return WorldAddress.FromWorldKey(world).IsSurface;
     }

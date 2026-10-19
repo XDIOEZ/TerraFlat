@@ -48,6 +48,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
+        operations.Add("mechanical/ship_scope_identity", WorldMechanicalShipScopeIdentity);
         operations.Add("mechanical/bellows_effects", WorldBellowsEffects);
         operations.Add("electrical/battery_commit", WorldElectricalBattery);
         operations.Add("electrical/supply_limits", WorldElectricalLimits);
@@ -79,6 +80,49 @@ public static partial class GameplayTestSystemProbe
                      "ship_damage_lines", "ship_damage_fragmentation" })
             operations.Add("space/" + operation, _ => GameplayTestShipDamageProbe.Capture(operation));
     }
+
+    #region 船体作用域身份无分配回归
+
+    // 正式值类型身份在切船、切地表与资源释放时只按本作用域解析前缀。
+    private static JObject WorldMechanicalShipScopeIdentity(JObject args)
+    {
+        var alpha = new MachineScopeIdentity("ship:alpha-01");
+        var beta = new MachineScopeIdentity("ship:beta-02");
+        var surface = new MachineScopeIdentity("planet:surface");
+        var empty = new MachineScopeIdentity("ship:");
+        var caseMismatch = new MachineScopeIdentity("Ship:alpha-01");
+        var invalid = new MachineScopeIdentity(null);
+
+        bool identity = alpha.WorldKey == "ship:alpha-01" && alpha.ShipId == "alpha-01" &&
+            beta.WorldKey == "ship:beta-02" && beta.ShipId == "beta-02" &&
+            surface.WorldKey == "planet:surface" && surface.ShipId == null;
+        bool strictPrefix = empty.ShipId == string.Empty && caseMismatch.ShipId == null &&
+            caseMismatch.WorldKey == "Ship:alpha-01" && invalid.ShipId == null && invalid.WorldKey == null;
+
+        // 重复读取必须返回同一字符串对象；旧 Substring 热路径会生成新对象。
+        string firstId = alpha.ShipId;
+        bool stableReference = firstId != null;
+        for (int i = 0; i < 1024; i++)
+            stableReference &= ReferenceEquals(firstId, alpha.ShipId);
+
+        MachineScopeIdentity active = alpha;
+        active = beta;
+        bool switchedShip = active.ShipId == "beta-02" && active.WorldKey == "ship:beta-02" &&
+            !ReferenceEquals(active.ShipId, alpha.ShipId);
+        active = surface;
+        bool switchedSurface = active.ShipId == null && active.WorldKey == surface.WorldKey;
+        active = alpha;
+        bool restoredShip = ReferenceEquals(active.ShipId, alpha.ShipId);
+
+        return new JObject
+        {
+            ["identity"] = identity, ["strictPrefix"] = strictPrefix,
+            ["stableReference"] = stableReference, ["switchedShip"] = switchedShip,
+            ["switchedSurface"] = switchedSurface, ["restoredShip"] = restoredShip
+        };
+    }
+
+    #endregion
 
     // 正式取水通知在隔离地形上验证有序投递、动态退订与稳态托管分配。
     private static JObject WorldLiquidNotificationDispatch(JObject args)

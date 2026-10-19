@@ -2,6 +2,15 @@ local function near(a, b, message)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
 end
 
+test.system("mechanical", "ship_scope_identity", {}, function(data)
+    assert(data.identity and data.strictPrefix,
+        "船体作用域 ID 解析污染了地表身份，或改变了前缀大小写和空船 ID 规则")
+    assert(data.stableReference,
+        "重复读取船体作用域 ID 没有复用同一字符串引用，仍可能逐次分配")
+    assert(data.switchedShip and data.switchedSurface and data.restoredShip,
+        "跨船、地表切换或恢复作用域时仍错误复用了旧船 ID")
+end, "机器船体身份按作用域冻结：重读零字符串创建与跨世界刷新")
+
 test.system("mechanical", "load_allocation", {}, function(data)
     assert(data.first.nearSatisfied and not data.first.farSatisfied, "不足扭矩没有优先满足近处完整负载")
     near(data.first.nearRpm, 60, "近处负载没有获得真实转速")

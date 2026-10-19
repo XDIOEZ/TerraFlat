@@ -174,7 +174,7 @@ public static partial class MachineWorld
                 WorldKey = spillWorld, FluidId = batch.FluidId, Center = spillPosition,
                 LiquidMoles = batch.LiquidMoles, InternalEnergyJoules = definition.EnergyAt(0m, batch.LiquidMoles, temperature)
             };
-            if (IsShipScope && RequireShipEnvironment().TryGetMachineSpillAnchor(worldKey.Substring(5), node.Position,
+            if (IsShipScope && RequireShipEnvironment().TryGetMachineSpillAnchor(shipScopeId, node.Position,
                 out string detachedWorld, out Vector2 detachedPosition))
             { spill.DetachedWorldKey = detachedWorld; spill.DetachedCenter = detachedPosition; }
             owner.Mechanical.PendingPressureLiquidSpills.Add(spill);

@@ -30,6 +30,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 移动船使用 `UseScope(GetShipScopeKey(ShipId))/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。ScopeLease 为值类型，按单一 using 生命周期释放；面板/延迟回调通过 UseNodeScope 进入节点所在作用域。分裂以 TransferShipNodes 整批移交，真实库存先拆分，每个作用域整批结束才重建拓扑。
 - 起飞/落地复用 TransferScopeNodes 在普通 worldKey 与 ship:key 间整批交接真实节点、加工器和共享罐份额，调用者给出最终 Cell/位置/绝对朝向；先全量校验，再提交归属与地表通知。不能用 Remove/Place 代替迁移，Remove 会执行储罐拆除排放；落地机器直接加入普通管电网络。
 - 船上无机械端口的设施与机械网、流体网一样持续模拟，不用地表玩家区块决定休眠；`ship:` 作用域不是场景名，不能因场景匹配不到玩家而释放电池、培育仓等设备的交互对象和面板。
+- 机械 `ScopeState.Key` 写入时冻结 `MachineScopeIdentity.ShipId`，船上温度/压力/排气/溢流每轮只读同一字符串，不反复 `Substring(5)`；切船、落回地表、释放作用域不得借用上一个船 ID。回归 `mechanical/ship_scope_identity`。
 - SpaceSession 以游戏时钟调用 TickBackgroundWorlds，档案中的非活动地表作用域只恢复数据网络并持续推进加工/燃料/气液；活动地表由 ItemMgr 调度，避免重复。冷环境按自己的 WorldKey/冻结拓扑查询，不发布到当前场景 TemperatureMgr；炉吸燃料与带面交付经 DroppedItemService.ColdWorld 按世界查询实物、去重和原子扣量，不借用眼前世界掉落物。退出游戏后不补算。
 - 后台炉吸燃料先用本世界冻结拓扑筛同格候选，再仅对候选计算距离、排序和补配置，禁止为同格查询排序全世界掉落物；记录身份优先核对原列表/下标，列表被回调挪动时才回退查找。Profiler 分 `ColdFuel.Collect/Sort/Transfer`。
 - 后台掉落物每步从真实档案重填可复用的运动工作区，跨世界与异常结束均清空状态；水面同点采样合并，冷地表仅复用资源目录及有界查询键，不缓存实际差量。Profiler 分 `ColdWorld.Motion/Water`，规则覆盖见 Processing 的 `cold_motion_workspace`。

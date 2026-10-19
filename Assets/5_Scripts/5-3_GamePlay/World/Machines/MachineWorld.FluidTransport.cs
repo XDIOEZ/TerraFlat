@@ -371,7 +371,7 @@ public static partial class MachineWorld
         bool local = IsShipScope || SpaceSession.Current != null &&
             SpaceSession.Current.TryGetGroundEnvironment(worldKey, emissionPoint, out _);
         AtmosphereEmissionResult result = local
-            ? RequireShipEnvironment().EmitMachineGas(IsShipScope ? worldKey.Substring(5) : worldKey, emissionPoint, batch)
+            ? RequireShipEnvironment().EmitMachineGas(shipScopeId ?? worldKey, emissionPoint, batch)
             : AtmosphereService.Emit(GetCurrentAtmosphere(node), batch);
         FluidMachineState state = GetFluidState(node);
         state.LastEmittedStandardLiters += FluidUnits.MolToStandardLiters(batch.GasMoles);
