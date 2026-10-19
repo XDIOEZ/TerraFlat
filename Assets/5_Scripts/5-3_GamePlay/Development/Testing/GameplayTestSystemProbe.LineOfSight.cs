@@ -87,7 +87,13 @@ public static partial class GameplayTestSystemProbe
         data["diagonalCenterBlocked"] = query.HasClearLineTo(diagonalTarget);
         first.Terrain.SetDynamicSightBlockingCell(1, 1, false);
 
+        int lookupsBeforeUnknown = query.ChunkLookupCount;
+        first.Terrain.SetDynamicSightBlockingCell(2, 0, true);
+        data["blockedBeforeUnknownEndpoint"] = query.HasClearLineTo(new Vector2(8.5f, 0.5f));
+        data["blockedBeforeUnknownSkippedEndpointLookup"] = query.ChunkLookupCount == lookupsBeforeUnknown;
+        first.Terrain.SetDynamicSightBlockingCell(2, 0, false);
         data["unknownEndpoint"] = query.HasClearLineTo(new Vector2(8.5f, 0.5f));
+        data["unknownEndpointChecked"] = query.ChunkLookupCount > lookupsBeforeUnknown;
         SightProbeChunk(world, new Vector2Int(8, 0));
         world.EvictChunk(new RuntimeWorldAddress("sight_probe", new Int2(4, 0)));
         data["unknownIntermediate"] = query.HasClearLineTo(new Vector2(11.5f, 0.5f));

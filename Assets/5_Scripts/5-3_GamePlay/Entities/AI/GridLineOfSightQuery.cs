@@ -69,7 +69,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
         hasCurrentChunk = false;
         Vector2Int target = NormalizeCell(new Vector2Int(
             Mathf.FloorToInt(targetPosition.x), Mathf.FloorToInt(targetPosition.y)));
-        if (!IsCellLoaded(observer) || !IsCellLoaded(target))
+        if (!IsCellLoaded(observer))
             return false;
         if (observer == target)
             return true;
@@ -107,7 +107,8 @@ internal sealed class GridLineOfSightQuery : IDisposable
                 IsSightBlockingCell(new Vector2Int(x, y)))
                 return false;
         }
-        return true;
+        // 射线已被遮挡时跳过远端加载查询，无遮挡才验证终点区块。
+        return IsCellLoaded(target);
     }
 
     private Vector2Int NormalizeCell(Vector2Int cell)

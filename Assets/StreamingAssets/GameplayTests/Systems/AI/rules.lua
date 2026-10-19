@@ -118,6 +118,9 @@ test.system("ai", "line_of_sight_batch", {}, function(data)
         "对角视线漏过侧格拐角或中心阻挡")
     assert(not data.unknownEndpoint and not data.unknownIntermediate and data.reboundChunkRestored,
         "未加载端点/途中格没有阻挡，或同地址区块重绑仍读旧数据")
+    assert(not data.blockedBeforeUnknownEndpoint and data.blockedBeforeUnknownSkippedEndpointLookup
+        and data.unknownEndpointChecked,
+        "被墙截断的射线仍多查终点，或无遮挡时漏查未知终点")
     assert(not data.generatingChunkBlocked and data.replacedTerrainRestored,
         "生成中的区块仍参与视线，或新地形提交没有恢复")
     assert(not data.oldObserverBlocked and data.newObserverClear,
