@@ -66,3 +66,24 @@ test.system("navigation", "machine_obstacle_dirty", {}, function(data)
     assert(data.neighborRemoved and data.allRemoved,
         "单格变化误清邻近机器，或机器拆除后遗留旧碰撞")
 end, "机器单格碰撞重建只撤销真正失效的锚点")
+
+test.system("navigation", "avoidance_topology", {}, function(data)
+    local function bucket(actual, x, y)
+        assert(#actual == 2 and actual[1] == x and actual[2] == y,
+            "局部避让桶的规范坐标或负数向下取整错误")
+    end
+    bucket(data.unwrappedNegative, -2, -1)
+    bucket(data.wrappedSeam, 7, 0)
+    bucket(data.equivalentImage, 7, 0)
+    bucket(data.wrappedCrossing, -8, 0)
+    bucket(data.unwrappedCrossing, 8, 0)
+    bucket(data.nonSquareWrapped, -6, -3)
+    assert(#data.neighbours == 9, "局部避让漏掉九宫格候选桶")
+    for index, actual in ipairs(data.neighbours) do
+        local x = ({6, 7, -8})[((index - 1) % 3) + 1]
+        local y = math.floor((index - 1) / 3) - 1
+        bucket(actual, x, y)
+    end
+    assert(#data.seamDelta == 2 and data.seamDelta[1] == 1 and data.seamDelta[2] == 0,
+        "环绕接缝的相邻 AI 距离没有采用最短路径")
+end, "局部避让冻结拓扑后保留无限世界、环绕及九宫格桶边界")

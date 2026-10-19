@@ -18,6 +18,40 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/chunk_block_pool", NavigationChunkBlockPool);
         operations.Add("navigation/liquid_cell_snapshot", NavigationLiquidCellSnapshot);
         operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
+        operations.Add("navigation/avoidance_topology", NavigationAvoidanceTopology);
+    }
+
+    /// <summary>用正式局部避让桶入口核验无限地图和环绕接缝的格归属。</summary>
+    private static JObject NavigationAvoidanceTopology(JObject args)
+    {
+        var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        var unwrapped = default(WorldTopologyDomain);
+
+        static JArray Bucket(Vector2 position, in WorldTopologyDomain topology)
+        {
+            Vector2Int bucket = WorldNavigationAgent.GetLocalAvoidanceBucket(position, topology);
+            return new JArray(bucket.x, bucket.y);
+        }
+
+        var neighbours = new JArray();
+        Vector2 center = new(15.5f, 0.5f);
+        for (int y = -1; y <= 1; y++)
+        for (int x = -1; x <= 1; x++)
+            neighbours.Add(Bucket(center + new Vector2(x * 2f, y * 2f), wrapped));
+
+        float2 seamDelta = wrapped.ShortestDelta(new float2(15.5f, 0.5f), new float2(-15.5f, 0.5f));
+        return new JObject
+        {
+            ["unwrappedNegative"] = Bucket(new Vector2(-2.01f, -1.99f), unwrapped),
+            ["wrappedSeam"] = Bucket(center, wrapped),
+            ["equivalentImage"] = Bucket(new Vector2(79.5f, 0.5f), wrapped),
+            ["wrappedCrossing"] = Bucket(new Vector2(17.5f, 0.5f), wrapped),
+            ["unwrappedCrossing"] = Bucket(new Vector2(17.5f, 0.5f), unwrapped),
+            ["nonSquareWrapped"] = Bucket(new Vector2(12.25f, 14.25f),
+                new WorldTopologyDomain(new int2(-12, -6), new int2(24, 20), true)),
+            ["neighbours"] = neighbours,
+            ["seamDelta"] = new JArray(seamDelta.x, seamDelta.y)
+        };
     }
 
     private static WorldNavigationGrid NavigationFixture()

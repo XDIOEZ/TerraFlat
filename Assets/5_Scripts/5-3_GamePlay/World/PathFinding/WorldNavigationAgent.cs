@@ -1,4 +1,5 @@
 using System;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>导航代理对当前目的地请求给出的正式结果。</summary>
@@ -306,7 +307,10 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     public void Tick(float deltaTime)
     {
         Vector2 current = CurrentPosition;
-        UpdateLocalAvoidanceBucket(current);
+        // 单次冻结局部避让拓扑，避免九宫格和邻居查询反复解析活动世界。
+        WorldTopologyDomain avoidanceTopology = surfaceMover is Mod_Mover_AI && isActiveAndEnabled
+            ? WorldTopologyRuntime.GetActiveDomain() : default;
+        UpdateLocalAvoidanceBucket(current, avoidanceTopology);
         preferredVelocity = Vector2.zero;
 
         if (!CanMove || !hasDestination)
@@ -410,7 +414,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         Vector2 steeredVelocity = ResolveLocalAvoidanceVelocity(
             navigation,
             current,
-            preferredVelocity);
+            preferredVelocity,
+            avoidanceTopology);
         ApplyVelocity(steeredVelocity, deltaTime);
         RecoverIfStalled(current);
     }
@@ -658,7 +663,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         !ReachedDestination;
 
     /// <summary>用小型空间桶限制邻居查询，不让 GameObject AI 的避让退化成全体两两扫描。</summary>
-    private void UpdateLocalAvoidanceBucket(Vector2 position)
+    private void UpdateLocalAvoidanceBucket(Vector2 position, in WorldTopologyDomain topology)
     {
         if (surfaceMover is not Mod_Mover_AI || !isActiveAndEnabled)
         {
@@ -666,7 +671,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             return;
         }
 
-        Vector2Int nextBucket = GetLocalAvoidanceBucket(position);
+        Vector2Int nextBucket = GetLocalAvoidanceBucket(position, topology);
         if (hasLocalAvoidanceBucket && nextBucket == localAvoidanceBucket)
             return;
 
@@ -698,9 +703,9 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         hasLocalAvoidanceBucket = false;
     }
 
-    private static Vector2Int GetLocalAvoidanceBucket(Vector2 position)
+    internal static Vector2Int GetLocalAvoidanceBucket(Vector2 position, in WorldTopologyDomain topology)
     {
-        Vector2 normalized = WorldTopologyRuntime.NormalizePosition(position);
+        float2 normalized = topology.Normalize(new float2(position.x, position.y));
         return new Vector2Int(
             Mathf.FloorToInt(normalized.x / LocalAvoidanceBucketSize),
             Mathf.FloorToInt(normalized.y / LocalAvoidanceBucketSize));
@@ -710,7 +715,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private Vector2 ResolveLocalAvoidanceVelocity(
         WorldNavigationManager navigation,
         Vector2 current,
-        Vector2 desiredVelocity)
+        Vector2 desiredVelocity,
+        in WorldTopologyDomain topology)
     {
         float desiredSpeed = desiredVelocity.magnitude;
         if (!IsLocalAvoidanceParticipant || desiredSpeed <= 0.0001f)
@@ -731,7 +737,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
                 Vector2 bucketSample = current + new Vector2(
                     x * LocalAvoidanceBucketSize,
                     y * LocalAvoidanceBucketSize);
-                Vector2Int bucketKey = GetLocalAvoidanceBucket(bucketSample);
+                Vector2Int bucketKey = GetLocalAvoidanceBucket(bucketSample, topology);
                 if (!LocalAvoidanceBuckets.TryGetValue(bucketKey,
                         out System.Collections.Generic.List<WorldNavigationAgent> neighbors))
                     continue;
@@ -742,7 +748,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
                     if (other == null || other == this || !other.IsLocalAvoidanceParticipant || other.body == body)
                         continue;
 
-                    Vector2 toOther = WorldTopologyRuntime.ShortestDelta(current, other.CurrentPosition);
+                    Vector2 otherPosition = other.CurrentPosition;
+                    float2 shortest = topology.ShortestDelta(
+                        new float2(current.x, current.y),
+                        new float2(otherPosition.x, otherPosition.y));
+                    Vector2 toOther = new(shortest.x, shortest.y);
                     float distanceSqr = toOther.sqrMagnitude;
                     if (distanceSqr > LocalAvoidanceRadius * LocalAvoidanceRadius)
                         continue;
@@ -796,7 +806,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         primary = primary.sqrMagnitude > 0.0001f
             ? primary.normalized * desiredSpeed
             : desiredVelocity;
-        if (IsLocalAvoidanceVelocityNavigable(navigation, current, primary))
+        if (IsLocalAvoidanceVelocityNavigable(navigation, current, primary, topology))
             return primary;
 
         if (passing.sqrMagnitude > 0.0001f)
@@ -807,7 +817,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             alternate = alternate.sqrMagnitude > 0.0001f
                 ? alternate.normalized * desiredSpeed
                 : desiredVelocity;
-            if (IsLocalAvoidanceVelocityNavigable(navigation, current, alternate))
+            if (IsLocalAvoidanceVelocityNavigable(navigation, current, alternate, topology))
                 return alternate;
         }
 
@@ -818,7 +828,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private bool IsLocalAvoidanceVelocityNavigable(
         WorldNavigationManager navigation,
         Vector2 current,
-        Vector2 velocity)
+        Vector2 velocity,
+        in WorldTopologyDomain topology)
     {
         if (navigation == null || velocity.sqrMagnitude <= 0.0001f)
             return false;
@@ -827,8 +838,9 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             Mathf.Max(LocalAvoidanceBodyRadius * 2f, velocity.magnitude * 0.2f),
             0.7f,
             1.1f);
-        Vector2 probe = WorldTopologyRuntime.NormalizePosition(
-            current + velocity.normalized * probeDistance);
+        Vector2 candidate = current + velocity.normalized * probeDistance;
+        float2 normalized = topology.Normalize(new float2(candidate.x, candidate.y));
+        Vector2 probe = new(normalized.x, normalized.y);
         if (!navigation.TryGetCell(current, out uint currentPenalty, out bool currentWalkable) ||
             !currentWalkable ||
             !navigation.TryGetCell(probe, out uint probePenalty, out bool probeWalkable) ||
