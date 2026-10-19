@@ -2306,6 +2306,7 @@ public static partial class RuntimeUIPrefabBuilder
         MoveEntryToPage(root.transform, worldPage, "自动保存");
         MoveEntryToPage(root.transform, worldPage, "流送性能");
         MoveEntryToPage(root.transform, worldPage, "游戏难度");
+        MoveEntryToPage(root.transform, worldPage, "联机设置");
 
         ConfigureSettingsSessionActions(root.transform, sessionPage);
 

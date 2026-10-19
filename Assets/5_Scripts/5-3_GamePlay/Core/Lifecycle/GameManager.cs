@@ -145,6 +145,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
         LastExitSaveSucceeded = null;
+        saveCurrentGame &= FlatWorld.Networking.GameNetwork.HasStateAuthority;
 
         // 先检查依赖并采集玩家状态；世界退出事件可能撤除载具、输入与 MOD 会话。
         if (ItemMgr.Instance == null || ChunkMgr.Instance == null || SaveDataMgr.Instance == null)
@@ -167,9 +168,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 阶段 1：准备阶段
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // 标记已退出游戏世界，各管理器应停止运行
+        // 标记退出后再关闭网络身份，断线回调不得重复启动退出流程。
         IsInGameWorld = false;
         ResetWorldEntryLifecycle();
+        FlatWorld.Networking.GameNetwork.Session.Stop();
 
         // 通知所有订阅者：游戏世界已退出
         SaveDataMgr.Instance.InvalidatePendingBackgroundSave();
@@ -369,8 +371,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         SaveDataMgr saveDataMgr,
         NewWorldCreationRequest request)
     {
+        int entryGeneration = worldEntryGeneration;
         // 黑幕盖住主菜单后再执行存档和世界初始化。
         yield return WaitForWorldLoadingCurtain();
+        if (!isWorldEntryInProgress || entryGeneration != worldEntryGeneration)
+            yield break;
 
         bool contentReady = false;
         yield return WaitForContentReadyBeforeWorld(
@@ -378,7 +383,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             0.08f,
             0.18f,
             ready => contentReady = ready);
-        if (!contentReady)
+        if (!contentReady || !isWorldEntryInProgress || entryGeneration != worldEntryGeneration)
             yield break;
 
         try
@@ -555,10 +560,33 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         StartCoroutine(ContinueGameCoroutine(playerId, newPlayerDisplayName));
     }
 
-    private IEnumerator ContinueGameCoroutine(string playerId, string newPlayerDisplayName)
+    #region 外部玩家复用正式世界进入流程
+
+    public bool EnterWorldWithExternalPlayer(string playerId, string worldKey, Action onWorldActivated)
     {
+        if (onWorldActivated == null || !CanQueueWorldEntry("进入世界") || IsInGameWorld)
+            return false;
+        if (string.IsNullOrWhiteSpace(worldKey) ||
+            SaveDataMgr.Instance?.SaveData?.PlanetData_Dict.ContainsKey(worldKey) != true)
+            return false;
+        if (!BeginWorldEntry("正在进入世界", "正在准备世界数据…", 0.12f))
+            return false;
+
+        // 场景与加载页沿用存档入口，玩家由网络身份在场景就绪后提供。
+        StartCoroutine(ContinueGameCoroutine(playerId, null, worldKey, onWorldActivated));
+        return true;
+    }
+
+    #endregion
+
+    private IEnumerator ContinueGameCoroutine(string playerId, string newPlayerDisplayName,
+        string worldKey = null, Action onWorldActivated = null)
+    {
+        int entryGeneration = worldEntryGeneration;
         // 黑幕盖住主菜单后再读取存档和切换场景。
         yield return WaitForWorldLoadingCurtain();
+        if (!isWorldEntryInProgress || entryGeneration != worldEntryGeneration)
+            yield break;
 
         bool contentReady = false;
         yield return WaitForContentReadyBeforeWorld(
@@ -566,10 +594,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             0.12f,
             0.34f,
             ready => contentReady = ready);
-        if (!contentReady)
+        if (!contentReady || !isWorldEntryInProgress || entryGeneration != worldEntryGeneration)
             yield break;
 
-        if (newPlayerDisplayName == null)
+        if (onWorldActivated != null)
+            ContinueGameInternal(playerId, worldKey, false, null, onWorldActivated);
+        else if (newPlayerDisplayName == null)
             ContinueGameInternal(playerId);
         else
             ContinueGameInternal(playerId, null, false, newPlayerDisplayName);
@@ -585,6 +615,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     private void ContinueGameInternal(string playerName, string fallbackPlanetName,
         bool prepareNewWorldSpawn, string newPlayerDisplayName)
     {
+        ContinueGameInternal(playerName, fallbackPlanetName, prepareNewWorldSpawn, newPlayerDisplayName, null);
+    }
+
+    private void ContinueGameInternal(string playerName, string fallbackPlanetName,
+        bool prepareNewWorldSpawn, string newPlayerDisplayName, Action onWorldActivated)
+    {
         try
         {
             SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
@@ -598,10 +634,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             // 1. 根据存档立即确定玩家所在的星球名
             saveDataMgr.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData);
-            string planetName = ResolveWorldKeyForPlayer(
-                saveDataMgr.SaveData,
-                playerData,
-                fallbackPlanetName);
+            string planetName = onWorldActivated != null
+                ? fallbackPlanetName
+                : ResolveWorldKeyForPlayer(saveDataMgr.SaveData, playerData, fallbackPlanetName);
             if (string.IsNullOrWhiteSpace(planetName))
             {
                 FailWorldEntry("存档中没有可进入的星球数据。");
@@ -612,14 +647,19 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
             // 根据稳定角色 ID 加载玩家；首次创建时另行传递显示名。
             float sceneTransitionStartedAt = Time.realtimeSinceStartup;
+            int entryGeneration = worldEntryGeneration;
             startNewWorldSpawnSearchOnActivation = prepareNewWorldSpawn;
             RunWorld(NewScenename: planetName, () =>
             {
+                if (!isWorldEntryInProgress || entryGeneration != worldEntryGeneration)
+                    return;
                 try
                 {
                     Debug.Log($"[GameManager] 世界场景切换耗时 {Time.realtimeSinceStartup - sceneTransitionStartedAt:0.00} 秒。");
                     ReportWorldEntryProgress("正在进入存档", "正在创建玩家并准备出生区域…", 0.66f);
-                    if (newPlayerDisplayName == null)
+                    if (onWorldActivated != null)
+                        onWorldActivated();
+                    else if (newPlayerDisplayName == null)
                         LoadPlayer(playerName);
                     else
                         LoadPlayer(playerName, newPlayerDisplayName);
@@ -1472,7 +1512,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     public Task<bool> SaveGameInBackground()
     {
-        if (!IsInGameWorld || SaveDataMgr.Instance?.SaveData == null)
+        if (!IsInGameWorld || !FlatWorld.Networking.GameNetwork.HasStateAuthority || SaveDataMgr.Instance?.SaveData == null)
             return Task.FromResult(false);
 
         CaptureSaveGameState();
@@ -1483,7 +1523,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     public IEnumerator SaveGameInBackgroundCoroutine(Action<Task<bool>> onWriteQueued)
     {
         SaveDataMgr manager = SaveDataMgr.Instance;
-        if (!IsInGameWorld || manager == null || manager.SaveData == null)
+        if (!IsInGameWorld || !FlatWorld.Networking.GameNetwork.HasStateAuthority || manager == null || manager.SaveData == null)
         {
             onWriteQueued?.Invoke(Task.FromResult(false));
             yield break;

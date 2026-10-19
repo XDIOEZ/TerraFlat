@@ -13,6 +13,24 @@ local function assert_cleanup(data)
 end
 
 test.runtime("networking", "bots_session", { count = 4 }, function(data)
+    local host = data.hostPreparation
+    assert(host and host.inWorld and host.gameplayReady,
+        "正式公开入口没有复用已经完成进入流程的游戏世界")
+    assert(host.saveSame and host.planetSame and host.planetDictionarySame and host.playerDictionarySame,
+        "准备公开局域网时重建了现有存档、星球或玩家档案字典")
+    assert(host.localSame and host.localDataSame and host.sceneSame,
+        "准备公开局域网时替换了单机主角、角色数据或活动场景")
+    assert(host.dayTimeSame and host.savedTimeSame and host.clockDictionarySame and host.clockSame,
+        "准备公开局域网时替换了正式昼夜系统、存档时间或运行时钟")
+    assert(type(host.localProfile) == "string" and #host.localProfile > 0
+        and host.preparedProfile == host.localProfile,
+        "主机准备没有沿用已经入世主角的正式档案身份")
+    assert(host.before and host.after and host.planetName == host.before.planetName,
+        "公开的星球与当前单机星球不一致")
+    for field, before in pairs(host.before) do
+        assert(host.after[field] == before,
+            "准备公开局域网改写了单机世界原始值：" .. field)
+    end
     assert(data.transport == "mirror-in-memory" and data.requestedCount == 4 and #data.players == 4,
         "正式 Mirror 内存传输没有创建四名远端假人")
     local profiles, net_ids, guids = {}, {}, {}
@@ -65,7 +83,7 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
         "远端连接复用了已占用短名档案的实际角色")
     assert(data.liveConnections == data.requestedCount + 2, "同名与档案冲突连接的实际数量错误")
     assert_cleanup(data)
-end, "四假人正式加入：独立档案、快照分片、重复就绪与本地名冲突")
+end, "复用单机世界准备公开、四假人正式加入、快照与身份隔离")
 
 test.runtime("networking", "bots_rejection", {}, function(data)
     local required = { no_join = true, version = true, mod_api = true, mod_set = true,

@@ -125,6 +125,8 @@ namespace FlatWorld.Networking.Gameplay
             ApplyPlayerColor(playerColor);
             EnsureNameLabel();
             ApplyDisplayName(displayName);
+            if (isOwned)
+                SaveDataMgr.Instance.CurrentContrrolPlayerName = displayName;
             EnsureCorePlayer(isOwned);
             NetworkChunkStreamingCoordinator.Register(transform);
             ItemNetworkStateSerialization.RuntimeStateChanged += OnRuntimeItemStateChanged;
@@ -134,9 +136,10 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnStartLocalPlayer()
         {
             base.OnStartLocalPlayer();
+            SaveDataMgr.Instance.CurrentContrrolPlayerName = displayName;
             EnsureCorePlayer(true);
 
-            if (corePlayer != null && !localPlayerEnterNotified)
+            if (corePlayer != null && !localPlayerEnterNotified && !reusedLocalWorldPlayer)
             {
                 localPlayerEnterNotified = true;
                 GameManager.Instance.NotifyNetworkLocalPlayerEntered(corePlayer);
@@ -148,6 +151,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            RestoreSinglePlayerStreaming();
             UnbindNetworkRoll(endSession: true);
             ItemNetworkStateSerialization.RuntimeStateChanged -= OnRuntimeItemStateChanged;
             WorldTopologyRuntime.LocalPlayerWrapped -= HandleLocalPresentationWrap;
@@ -174,6 +178,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
+            if (GameManager.ExistingInstance?.IsInGameWorld != true)
+                return;
             if (isServer)
             {
                 if (corePlayer == null) EnsureCorePlayer(isOwned);
@@ -709,11 +715,16 @@ namespace FlatWorld.Networking.Gameplay
 
         private void EnsureCorePlayer(bool localControl)
         {
-            if (ItemMgr.Instance == null || SaveDataMgr.Instance?.SaveData == null)
+            if (GameManager.ExistingInstance?.IsInGameWorld != true ||
+                ItemMgr.Instance == null || SaveDataMgr.Instance?.SaveData == null)
                 return;
 
             try
             {
+                Player existingLocalPlayer = ItemMgr.Instance.User_Player;
+                if (corePlayer == null && existingLocalPlayer != null && existingLocalPlayer.IsInitialized &&
+                    existingLocalPlayer.ProfileName == displayName && existingLocalPlayer.IsLocalProfile)
+                    reusedLocalWorldPlayer = true;
                 int networkGuid = unchecked((int)(0x40000000u | (netId & 0x3fffffffu)));
                 Vector3 logicalSpawnPosition = IsInSpace ? AuthoritativeLogicalPosition : localControl
                     ? WorldTopologyRuntime.NormalizePosition(transform.position)
@@ -757,6 +768,7 @@ namespace FlatWorld.Networking.Gameplay
                     : IsInSpace ? AuthoritativeLogicalPosition : WorldLocalPresentation.ProjectPosition(AuthoritativeLogicalPosition));
                 if (isServer) SpaceSessionForNetwork?.EnsureNetworkPassenger(corePlayer);
                 itemStateDirty = true;
+                ApplyDisplayName(displayName);
 
                 if (!isServer && !isOwned && ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
                     ApplyRemoteItemState(authoritativeItemState);
@@ -772,6 +784,23 @@ namespace FlatWorld.Networking.Gameplay
                 Debug.LogError($"[联机] 创建核心 Player Item 失败：{displayName}\n{exception}", this);
             }
         }
+
+        #region 已有单机主角接管
+
+        private bool reusedLocalWorldPlayer;
+
+        private void RestoreSinglePlayerStreaming()
+        {
+            if (!reusedLocalWorldPlayer || corePlayer == null)
+                return;
+            // 停止公开后把区块窗口交还原主角，保留当前角色、背包和相机。
+            Mod_ChunkLoader loader = corePlayer.GetComponentInChildren<Mod_ChunkLoader>(true);
+            loader?.SetExternalStreamingManaged(false);
+            if (GameManager.ExistingInstance?.IsInGameWorld == true)
+                loader?.RefreshConfiguredChunkWindow();
+        }
+
+        #endregion
 
         private static void BindRemoteVisualModules(Player player)
         {
@@ -1051,7 +1080,9 @@ namespace FlatWorld.Networking.Gameplay
         {
             EnsureNameLabel();
             if (nameLabel != null)
-                nameLabel.text = value;
+                nameLabel.text = SaveDataMgr.Instance?.SaveData?.PlayerData_Dict is { } profiles &&
+                    profiles.TryGetValue(value, out Data_Player data) && !string.IsNullOrWhiteSpace(data.Name_User)
+                    ? data.Name_User : value;
         }
 
         private void OnPlayerColorChanged(Color oldColor, Color newColor) => ApplyPlayerColor(newColor);

@@ -43,10 +43,11 @@ namespace FlatWorld.Networking.Gameplay
         }
         public override void OnStopServer()
         {
+            RestoreSinglePlayerStreaming();
             UnbindNetworkRoll(endSession: true);
             SpaceSessionForNetwork?.RemoveNetworkPassengerInput(displayName);
             SpaceSessionForNetwork?.EndNetworkAttack(displayName);
-            if (corePlayer != null && ItemMgr.Instance != null)
+            if (!reusedLocalWorldPlayer && corePlayer != null && ItemMgr.Instance != null)
                 ItemMgr.Instance.ReleaseNetworkPlayer(corePlayer, persistData: true);
             corePlayer = null;
             base.OnStopServer();

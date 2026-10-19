@@ -46,4 +46,6 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## UI 生命周期
 
-`NetworkModeUIController` 常驻，场景 UI 在 `GameStartScene` 加载及 `UIManager.InteractionSurfaceChanged` 后幂等重绑。`RuntimeUIPrefabKeys.NetworkMode` 必须进入 `GameRes.StartupPrefabKeys`，联机面板和入口只等 `IsStartupReady`；创建/加入按钮仍等完整 `isLoadFinish`，避免提前读取玩法目录。Prefab 根 CanvasGroup Alpha 为 1、默认关闭交互与射线，运行时以 `BasePanel.InitClosed()` 初始化隐藏。
+菜单新游戏复用 `GameManager.CreateNewWorld`，加载页隐藏后通过 `Event_NewWorldReady` 自动公开局域网；工具/Lua 的请求入口不自动开网络。主菜单只加入，游戏内设置经 `GameNetwork.SettingsRequested` 打开同一个常驻面板。`PrepareHostWorld` 只接管已就绪世界与稳定 ProfileId；Host 不回放自身快照或重发玩家进入事件，停止公开恢复原主角流送。客户端经 `EnterWorldWithExternalPlayer` 复用正式进入流程；退出使进入代次失效并停网络，客户端不落盘主机存档。
+
+`NetworkModeUIController` 和面板挂常驻根，在场景加载及 `UIManager.InteractionSurfaceChanged` 后幂等重绑。`RuntimeUIPrefabKeys.NetworkMode` 必须进入 `GameRes.StartupPrefabKeys`，联机面板和入口只等 `IsStartupReady`；公开/加入按钮仍等完整 `isLoadFinish`。Prefab 根 CanvasGroup Alpha 为 1、默认关闭交互与射线，运行时以 `BasePanel.InitClosed()` 初始化隐藏。

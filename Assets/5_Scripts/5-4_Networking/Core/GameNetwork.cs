@@ -13,6 +13,14 @@ namespace FlatWorld.Networking
 
         public static INetworkSession Session => currentSession ?? OfflineSession;
 
+        #region 联机配置入口
+
+        public static event Action SettingsRequested;
+
+        public static void ShowSettings() => SettingsRequested?.Invoke();
+
+        #endregion
+
         public static bool IsOnline => Session.IsOnline;
 
         /// <summary>

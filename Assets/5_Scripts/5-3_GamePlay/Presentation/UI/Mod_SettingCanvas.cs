@@ -122,6 +122,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             SettingCanvasPrefab,
             initializeClosed: true);
         BindButton(UIText.SaveButton, SaveGame);
+        BindButton("联机设置", OpenNetworkSettings);
         returnToMainMenuButton = BindButton(
             UIText.ReturnToMainMenuButton,
             RequestReturnToMainMenu);
@@ -201,6 +202,17 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             }
         }
     }
+
+    #region 联机设置入口
+
+    private void OpenNetworkSettings()
+    {
+        // 关闭单机设置先恢复时间，让公开世界后所有玩家正常运行。
+        I_ClosePanel();
+        GameNetwork.ShowSettings();
+    }
+
+    #endregion
 
     #region 设置面板层级
 

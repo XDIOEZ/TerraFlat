@@ -16,6 +16,7 @@ namespace FlatWorld.Networking.Gameplay
         private FlatWorldGameNetworkManager networkManager;
         private INetworkSession subscribedSession;
         private bool initialized;
+        private GameManager boundGameManager;
 
         #region 面板能力状态
 
@@ -46,6 +47,9 @@ namespace FlatWorld.Networking.Gameplay
             subscribedSession.StateChanged += OnSessionStateChanged;
             subscribedSession.Error += SetStatus;
             SceneManager.sceneLoaded += OnSceneLoaded;
+            boundGameManager = GameManager.Instance;
+            boundGameManager.Event_NewWorldReady += OnNewWorldReady;
+            GameNetwork.SettingsRequested += I_ShowPanel;
             initialized = true;
             RequestUIRefresh();
         }
@@ -73,6 +77,10 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            if (boundGameManager != null)
+                boundGameManager.Event_NewWorldReady -= OnNewWorldReady;
+            boundGameManager = null;
+            GameNetwork.SettingsRequested -= I_ShowPanel;
             initialized = false;
         }
 
@@ -89,11 +97,18 @@ namespace FlatWorld.Networking.Gameplay
                 panel.Close();
         }
 
+        #region 当前世界的局域网公开
+
+        private void OnNewWorldReady()
+        {
+            if (GameNetwork.Session.State == NetworkSessionState.Offline)
+                StartHost();
+        }
+
         private void StartHost()
         {
             try
             {
-                networkManager.PrepareLocalPlayer(playerNameInput.text);
                 networkManager.PrepareHostWorld();
                 NetworkStartResult result = GameNetwork.Session.StartHost(ReadPort());
                 if (!result.Success)
@@ -106,8 +121,12 @@ namespace FlatWorld.Networking.Gameplay
             }
         }
 
+        #endregion
+
         private void StartClient()
         {
+            if (GameManager.Instance.IsInGameWorld || GameManager.Instance.IsWorldEntryInProgress)
+                return;
             networkManager.PrepareLocalPlayer(playerNameInput.text);
             NetworkStartResult result = GameNetwork.Session.StartClient(addressInput.text, ReadPort());
             if (!result.Success)
@@ -118,7 +137,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private ushort ReadPort()
         {
-            return ushort.TryParse(portInput.text, out ushort port) && port > 0 ? port : (ushort)7777;
+            return ushort.TryParse(portInput != null ? portInput.text : null, out ushort port) && port > 0 ? port : (ushort)7777;
         }
 
         private void OnSessionStateChanged(NetworkSessionState state)

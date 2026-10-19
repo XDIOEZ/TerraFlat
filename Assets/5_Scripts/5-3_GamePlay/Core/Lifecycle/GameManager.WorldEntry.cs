@@ -63,6 +63,8 @@ public partial class GameManager
     private Coroutine worldEntryCompletionCoroutine;
     private bool isRespawnLoadingPresentationActive;
     private bool isGameplayReady;
+    private bool notifyNewWorldReady;
+    private int worldEntryGeneration;
     private float worldEntryStartedAt;
 
     public bool IsWorldEntryInProgress => isWorldEntryInProgress;
@@ -83,6 +85,7 @@ public partial class GameManager
     /// 世界进入生命周期的只读通知。核心流程不要求存在任何订阅者。
     /// </summary>
     public event Action<WorldEntryProgressInfo> WorldEntryProgressChanged;
+    public event Action Event_NewWorldReady;
 
     /// <summary>统一切换玩法闸门，确保输入锁和手机 HUD 在同一状态变化后同步刷新。</summary>
     private void SetGameplayReady(bool ready)
@@ -123,6 +126,7 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = true;
+        worldEntryGeneration++;
         worldEntryStartedAt = Time.realtimeSinceStartup;
         SetGameplayReady(false);
         worldEntryCompletesOnPlayerReady = completeOnPlayerReady;
@@ -192,6 +196,12 @@ public partial class GameManager
             return;
 
         SetGameplayReady(true);
+        if (notifyNewWorldReady)
+        {
+            // 首次创建完成后才开放附加会话，资源、场景、主角和可见区块都已就绪。
+            notifyNewWorldReady = false;
+            Event_NewWorldReady?.Invoke();
+        }
     }
 
     private void OnWorldEntryPlayerReady(Player player)
@@ -353,6 +363,8 @@ public partial class GameManager
 
     private void FailWorldEntry(string message, Exception exception = null)
     {
+        worldEntryGeneration++;
+        notifyNewWorldReady = false;
         ClearPendingNewWorldSpawnSearch(cancel: true);
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
         if (worldEntryCompletionCoroutine != null)
@@ -434,6 +446,8 @@ public partial class GameManager
 
     private void ResetWorldEntryLifecycle()
     {
+        worldEntryGeneration++;
+        notifyNewWorldReady = false;
         HideDimensionLoadingViewImmediate();
         startNewWorldSpawnSearchOnActivation = false;
         ClearPendingNewWorldSpawnSearch(cancel: true);

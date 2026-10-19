@@ -29,6 +29,7 @@ namespace FlatWorld.Networking.Gameplay
         private NetworkSpaceStateCoordinator spaceStateCoordinator;
         private IncomingWorldSnapshot incomingWorldSnapshot;
         private int nextSnapshotTransferId;
+        private bool ownsClientWorld;
 
         private sealed class IncomingWorldSnapshot
         {
@@ -42,6 +43,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public string GameplayStatus { get; private set; } = "离线";
         public string CurrentPlanetName => currentPlanetName;
+        public string LocalPlayerName => localPlayerName;
         public int LastSnapshotBytes { get; private set; }
 
         public event Action<string, object[]> GameplayStatusChanged;
@@ -51,57 +53,32 @@ namespace FlatWorld.Networking.Gameplay
             localPlayerName = SanitizePlayerName(playerName);
         }
 
+        #region 复用当前世界的局域网会话
+
         public void PrepareHostWorld()
         {
             SaveDataMgr saveManager = SaveDataMgr.Instance;
             GameManager gameManager = GameManager.Instance;
-            if (saveManager == null || gameManager == null)
-                throw new InvalidOperationException("核心游戏管理器尚未初始化");
+            Player localPlayer = ItemMgr.Instance?.User_Player;
+            if (gameManager == null || !gameManager.IsInGameWorld || !gameManager.IsGameplayReady ||
+                saveManager?.SaveData == null || localPlayer == null || !localPlayer.IsInitialized ||
+                DayTimeSystem.GetInstance() == null)
+                throw new InvalidOperationException("请先进入世界，再从设置中公开到局域网。");
 
-            if (saveManager.SaveData == null)
-                saveManager.SaveData = new GameSaveData();
+            currentPlanetName = ResolveCurrentPlanetName();
+            if (!saveManager.SaveData.PlanetData_Dict.TryGetValue(currentPlanetName, out PlanetData planet) || planet == null)
+                throw new InvalidOperationException("当前世界数据尚未就绪，无法公开到局域网。");
 
-            GameSaveData saveData = saveManager.SaveData;
-            if (saveData.Seed == 0)
-            {
-                int seed = Environment.TickCount;
-                if (seed == 0)
-                    seed = 1;
-
-                saveData.saveName = "NetworkWorld";
-                saveData.SaveSeed = seed.ToString();
-                saveData.Seed = seed;
-            }
-
-            if (saveData.PlanetData_Dict == null)
-                saveData.PlanetData_Dict = new Dictionary<string, PlanetData>();
-
-            PlanetData planet = saveData.PlanetData_Dict.Values.FirstOrDefault(item => item != null);
-            if (planet == null)
-            {
-                PlanetData readyPlanet = gameManager.ReadyPlanetData ?? new PlanetData();
-                if (string.IsNullOrWhiteSpace(readyPlanet.Name))
-                    readyPlanet.Name = "地球";
-
-                gameManager.SetNewPlanetData(readyPlanet, gameManager.ReadyTimeData);
-                planet = saveData.PlanetData_Dict[readyPlanet.Name];
-            }
-
-            currentPlanetName = planet.Name;
-            if (string.IsNullOrWhiteSpace(currentPlanetName))
-            {
-                currentPlanetName = "地球";
-                planet.Name = currentPlanetName;
-                saveData.PlanetData_Dict[currentPlanetName] = planet;
-            }
-
-            NormalizeGenerationSettings(planet);
+            // 公开会话只接管现有角色身份，不再创建第二份世界或改写生成参数。
+            localPlayerName = localPlayer.ProfileName;
 
             // 快照和生成设置哈希必须使用同一份已冻结的生态配置。
             ChunkMgr.Instance?.EnsureActiveEcologyConfiguration();
 
-            SetGameplayStatus("主机世界已准备：{0} / Seed {1}", currentPlanetName, saveData.Seed);
+            SetGameplayStatus("主机世界已准备：{0} / Seed {1}", currentPlanetName, saveManager.SaveData.Seed);
         }
+
+        #endregion
 
         public override void OnStartServer()
         {
@@ -173,7 +150,13 @@ namespace FlatWorld.Networking.Gameplay
                     SpaceSession space = SpaceSession.EnsureLoaded();
                     bool spaceSpawn = space.TryGetNetworkObserver(playerName, out SpaceNetworkObserver observer) && observer.InSpace;
                     Vector3 spawnPosition = spaceSpawn ? (Vector3)space.ProjectPosition(observer.Position) : default;
-                    if (spaceSpawn || TryResolvePlayerLandSpawnPosition(playerName, playerIndex, out spawnPosition))
+                    Player localPlayer = ItemMgr.Instance?.User_Player;
+                    bool reuseLocalPlayer = connection is LocalConnectionToClient && localPlayer != null &&
+                        localPlayer.ProfileName == playerName;
+                    if (reuseLocalPlayer && !spaceSpawn)
+                        spawnPosition = WorldTopologyRuntime.NormalizePosition(
+                            ShipSurfacePresentation.GroundPosition(localPlayer.gameObject, localPlayer.transform.position));
+                    if (spaceSpawn || reuseLocalPlayer || TryResolvePlayerLandSpawnPosition(playerName, playerIndex, out spawnPosition))
                     {
                         if (!spaceSpawn)
                         {
@@ -236,6 +219,9 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            if (worldEnterCoroutine != null)
+                StopCoroutine(worldEnterCoroutine);
+            worldEnterCoroutine = null;
             ModRuntimeManager.Instance?.SetWorldMutationAuthority(NetworkServer.active);
             NetworkClient.UnregisterHandler<NetworkProtocolRejected>();
             NetworkClient.UnregisterHandler<NetworkWorldSnapshotBegin>();
@@ -248,6 +234,13 @@ namespace FlatWorld.Networking.Gameplay
             spaceStateCoordinator?.StopClientSide();
             base.OnStopClient();
             SetGameplayStatus("客户端已停止");
+            if (ownsClientWorld)
+            {
+                ownsClientWorld = false;
+                GameManager gameManager = GameManager.ExistingInstance;
+                if (gameManager != null && (gameManager.IsInGameWorld || gameManager.IsWorldEntryInProgress))
+                    gameManager.StartCoroutine(gameManager.BackToHelloScene_Coroutine(null, saveCurrentGame: false));
+            }
         }
 
         public override void OnStopServer()
@@ -288,6 +281,11 @@ namespace FlatWorld.Networking.Gameplay
             if (!IsCurrentAuthenticatedConnection(connection) || connection.identity != null ||
                 pendingPlayerNames.ContainsKey(connection.connectionId))
                 return;
+            if (GameManager.ExistingInstance?.IsInGameWorld != true || DayTimeSystem.GetInstance() == null)
+            {
+                connection.Disconnect();
+                return;
+            }
 
             if (!clientProtocolHellos.TryGetValue(connection.connectionId, out NetworkProtocolHello hello) ||
                 hello.Version != NetworkGameplayProtocol.CurrentVersion)
@@ -318,9 +316,20 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
 
+            if (connection is LocalConnectionToClient)
+            {
+                // 本地主机沿用已加载的存档和玩家引用，不能把自己的快照反序列化覆盖回去。
+                pendingPlayerNames[connection.connectionId] = localPlayerName;
+                worldReadyConnections[connection.connectionId] = connection;
+                OnServerAddPlayer(connection);
+                return;
+            }
+
             string playerName = MakeUniquePlayerName(SanitizePlayerName(request.PlayerName), connection.connectionId);
 
             CaptureLoadedChunks();
+            ItemMgr.Instance.SavePlayer();
+            SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.GetInstance().GetSaveData();
             SpaceSession.Capture(SaveDataMgr.Instance?.SaveData);
             string planetName = ResolveCurrentPlanetName();
             PlanetData synchronizedPlanet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[planetName];
@@ -520,6 +529,12 @@ namespace FlatWorld.Networking.Gameplay
             while (SaveDataMgr.Instance == null || GameManager.Instance == null || ChunkMgr.Instance == null)
                 yield return null;
 
+            if (GameManager.Instance.IsInGameWorld || GameManager.Instance.IsWorldEntryInProgress)
+            {
+                FailIncomingSnapshot("请先退出当前世界，再加入其他游戏。");
+                yield break;
+            }
+
             if (!TryApplySynchronizedSnapshot(snapshot))
                 yield break;
 
@@ -528,16 +543,27 @@ namespace FlatWorld.Networking.Gameplay
             LastSnapshotBytes = snapshot.CompressedSaveData?.Length ?? 0;
             SetGameplayStatus("地图同步完成，正在进入 {0}", currentPlanetName);
 
-            if (!GameManager.Instance.IsInGameWorld)
+            bool sceneReady = false;
+            bool accepted = GameManager.Instance.EnterWorldWithExternalPlayer(localPlayerName, currentPlanetName, () =>
             {
-                bool worldReady = false;
-                GameManager.Instance.RunWorld(currentPlanetName, () => worldReady = true);
-                while (!worldReady)
-                    yield return null;
-            }
-
-            if (NetworkClient.active)
+                if (!NetworkClient.active)
+                    return;
+                sceneReady = true;
                 NetworkClient.Send(new NetworkWorldReady());
+            });
+            if (!accepted)
+            {
+                FailIncomingSnapshot("世界进入流程未能启动。");
+                yield break;
+            }
+            ownsClientWorld = true;
+            while (NetworkClient.active && GameManager.Instance.IsWorldEntryInProgress)
+                yield return null;
+            if (!sceneReady || !GameManager.Instance.IsInGameWorld)
+            {
+                FailIncomingSnapshot("世界加载失败，联机会话已断开。");
+                yield break;
+            }
 
             worldEnterCoroutine = null;
             SetGameplayStatus("世界已就绪：{0} / Seed {1}", currentPlanetName, snapshot.Seed);
@@ -575,7 +601,8 @@ namespace FlatWorld.Networking.Gameplay
         private bool CanSpawnJoinedPlayer(NetworkConnectionToClient connection, bool requireWorldReady = true)
         {
             // 所有出生入口都要求当前连接完成正式版本、MOD 与入世检查。
-            if (!IsCurrentAuthenticatedConnection(connection) ||
+            if (GameManager.ExistingInstance?.IsInGameWorld != true || DayTimeSystem.GetInstance() == null ||
+                !IsCurrentAuthenticatedConnection(connection) ||
                 !pendingPlayerNames.TryGetValue(connection.connectionId, out string name) || string.IsNullOrWhiteSpace(name) ||
                 !clientProtocolHellos.TryGetValue(connection.connectionId, out NetworkProtocolHello hello)) return false;
             return (!requireWorldReady || worldReadyConnections.TryGetValue(connection.connectionId, out var ready) && ReferenceEquals(ready, connection)) &&

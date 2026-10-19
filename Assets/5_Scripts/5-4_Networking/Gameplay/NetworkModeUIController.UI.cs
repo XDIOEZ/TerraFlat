@@ -2,6 +2,9 @@
 
 using System.Collections;
 using System;
+using System.Collections.Generic;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using FlatWorld.Localization;
 using Mirror;
 using TMPro;
@@ -46,6 +49,12 @@ namespace FlatWorld.Networking.Gameplay
         private object[] lastStatusArguments = Array.Empty<object>();
         private int lastDisplayedPlayerCount = -1;
         private bool lastContentReady;
+        private bool lastInWorld;
+        private bool showPanelWhenReady;
+        private string lanAddressText = string.Empty;
+        private bool lastServerActive;
+        private string addressBeforeHosting;
+        private bool showingHostAddress;
 
         #endregion
 
@@ -55,8 +64,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             // 先登记协程，再创建会广播交互事件的场景 UI，避免同步回调重复启动。
             yield return null;
-            while (isActiveAndEnabled &&
-                   SceneManager.GetActiveScene().name == NetworkGameBootstrap.StartSceneName)
+            while (isActiveAndEnabled && !UIManager.IsShuttingDown)
             {
                 UIManager uiManager = UIManager.ExistingInstance;
                 if (uiManager == null)
@@ -70,7 +78,7 @@ namespace FlatWorld.Networking.Gameplay
 
                 SubscribeToUIManager(uiManager);
 
-                Transform sceneRoot = uiManager.ScenePanelRoot;
+                Transform sceneRoot = uiManager.SafeAreaRoot;
                 if (!IsPanelAttachedTo(sceneRoot))
                 {
                     DestroyCurrentPanel();
@@ -83,11 +91,15 @@ namespace FlatWorld.Networking.Gameplay
                     }
 
                     BindNetworkPanelControls();
+                    uiManager.ConfigureSettingsPanelLayer(panel);
                 }
 
                 TryBindMainMenuButton(uiManager);
-                if (panel != null && mainMenuMultiplayerButton != null)
+                if (panel != null && (IsInWorld || mainMenuMultiplayerButton != null))
+                {
+                    if (showPanelWhenReady) I_ShowPanel();
                     break;
+                }
 
                 yield return null;
             }
@@ -98,8 +110,7 @@ namespace FlatWorld.Networking.Gameplay
         /// <summary>只启动一个 UI 修复协程，覆盖首次启动、场景返回和 PanelRoot 重建。</summary>
         private void RequestUIRefresh()
         {
-            if (!isActiveAndEnabled ||
-                SceneManager.GetActiveScene().name != NetworkGameBootstrap.StartSceneName)
+            if (!isActiveAndEnabled || UIManager.IsShuttingDown)
                 return;
 
             if (ensureUICoroutine == null)
@@ -109,17 +120,17 @@ namespace FlatWorld.Networking.Gameplay
         /// <summary>面板注册、销毁或切换时，立即检查联机入口是否需要重绑。</summary>
         private void OnInteractionSurfaceChanged()
         {
-            if (SceneManager.GetActiveScene().name != NetworkGameBootstrap.StartSceneName)
-                return;
+            if (UIManager.IsShuttingDown) return;
 
             UIManager uiManager = subscribedUIManager;
-            if (uiManager == null || !IsPanelAttachedTo(uiManager.ScenePanelRoot))
+            if (uiManager == null || !IsPanelAttachedTo(uiManager.SafeAreaRoot))
             {
                 RequestUIRefresh();
                 return;
             }
 
             TryBindMainMenuButton(uiManager);
+            RefreshInteractableState();
         }
 
         /// <summary>切换 PanelRoot 订阅对象，避免旧 UIManager 持有常驻控制器。</summary>
@@ -214,7 +225,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             // 面板随启动资源开放，创建和加入仍等待完整玩法目录就绪。
-            if (lastContentReady != IsContentReady)
+            if (lastContentReady != IsContentReady || lastInWorld != IsInWorld)
             {
                 RefreshInteractableState();
                 if (GameNetwork.Session.State == NetworkSessionState.Offline)
@@ -239,10 +250,16 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (panel == null)
             {
+                showPanelWhenReady = true;
                 RequestUIRefresh();
                 return;
             }
 
+            showPanelWhenReady = false;
+            RefreshLanAddresses();
+            RefreshInteractableState();
+            RefreshLocalizedStatus();
+            subscribedUIManager?.ConfigureSettingsPanelLayer(panel);
             panel.Open();
             panel.transform.SetAsLastSibling();
         }
@@ -255,34 +272,47 @@ namespace FlatWorld.Networking.Gameplay
 
         public void I_TogglePanel()
         {
-            if (panel != null)
-                panel.Toggle();
+            if (panel != null && panel.IsOpen()) I_ClosePanel();
+            else I_ShowPanel();
         }
 
         private void RefreshInteractableState()
         {
             bool offline = GameNetwork.Session.State == NetworkSessionState.Offline;
             lastContentReady = IsContentReady;
+            lastInWorld = IsInWorld;
+            Player localPlayer = ItemMgr.Instance?.User_Player;
+            if (lastInWorld && playerNameInput != null && localPlayer != null)
+                playerNameInput.SetTextWithoutNotify(localPlayer.Data?.Name_User ?? localPlayer.ProfileName);
+            panel?.SetButtonVisible(HostButtonKey, lastInWorld);
+            panel?.SetButtonVisible(JoinButtonKey, !lastInWorld);
+            SetHostButtonLabel("公开到局域网");
             if (hostButton != null)
-                hostButton.interactable = offline && lastContentReady;
+                hostButton.interactable = offline && lastContentReady && lastInWorld && localPlayer != null &&
+                    GameManager.ExistingInstance.IsGameplayReady;
             if (joinButton != null)
-                joinButton.interactable = offline && lastContentReady;
+                joinButton.interactable = offline && lastContentReady && !lastInWorld;
             if (disconnectButton != null)
                 disconnectButton.interactable = !offline;
             if (playerNameInput != null)
-                playerNameInput.interactable = offline;
-            if (addressInput != null)
-                addressInput.interactable = offline;
+                playerNameInput.interactable = offline && !lastInWorld;
+
             if (portInput != null)
                 portInput.interactable = offline;
+            if (NetworkServer.active && !lastServerActive) RefreshLanAddresses();
+            lastServerActive = NetworkServer.active;
+            RefreshAddressPresentation(offline);
+            RefreshLocalizedStatus();
         }
+
+        private static bool IsInWorld => GameManager.ExistingInstance?.IsInGameWorld == true;
 
         private static bool IsContentReady => GameRes.ExistingInstance != null && GameRes.ExistingInstance.isLoadFinish;
 
         private void RefreshOfflineStatus()
         {
             SetStatus(IsContentReady
-                ? "离线：可创建主机，或粘贴好友提供的 UDP 穿透地址"
+                ? (IsInWorld ? "当前世界为单机，可公开到局域网供好友加入。" : "填写好友的连接地址，加入已有世界。")
                 : "正在加载资源…");
         }
 
@@ -308,6 +338,7 @@ namespace FlatWorld.Networking.Gameplay
         private void HandleLanguageChanged(string _)
         {
             RefreshLocalizedStatus();
+            RefreshInteractableState();
             lastDisplayedPlayerCount = -1;
         }
 
@@ -316,6 +347,73 @@ namespace FlatWorld.Networking.Gameplay
             if (text != null && text.TryGetComponent(out LocalizedTextBinder binder))
                 binder.enabled = false;
         }
+
+        #region 局域网面板呈现
+
+        private void RefreshAddressPresentation(bool offline)
+        {
+            if (addressInput == null) return;
+            if (NetworkServer.active)
+            {
+                if (!showingHostAddress) addressBeforeHosting = addressInput.text;
+                showingHostAddress = true;
+                addressInput.SetTextWithoutNotify(lanAddressText);
+            }
+            else if (showingHostAddress)
+            {
+                showingHostAddress = false;
+                addressInput.SetTextWithoutNotify(addressBeforeHosting ?? string.Empty);
+            }
+            // 公开后的地址只读但允许选中复制，关闭公开后恢复加入地址草稿。
+            addressInput.readOnly = NetworkServer.active;
+            addressInput.interactable = NetworkServer.active || (offline && !IsInWorld);
+            TMP_Text label = panel.GetText(AddressInputKey + "_标签");
+            if (label == null) return;
+            DisableStaticBinding(label);
+            label.text = FlatWorldLocalizationService.GetUiText(
+                NetworkServer.active ? "局域网连接地址" : "主机连接地址");
+        }
+
+        private void SetHostButtonLabel(string text)
+        {
+            TMP_Text label = hostButton != null ? hostButton.GetComponentInChildren<TMP_Text>(true) : null;
+            if (label == null) return;
+            DisableStaticBinding(label);
+            label.text = FlatWorldLocalizationService.GetUiText(text);
+        }
+
+        private void RefreshLanAddresses()
+        {
+            // 只在打开面板和会话变化时读取本机网卡，避免每帧枚举网络接口。
+            var addresses = new List<string>();
+            ushort port = NetworkServer.active && networkManager != null
+                ? networkManager.GetComponent<kcp2k.KcpTransport>()?.Port ?? ReadPort() : ReadPort();
+            try
+            {
+                foreach (NetworkInterface adapter in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (adapter.OperationalStatus != OperationalStatus.Up ||
+                        adapter.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                    foreach (UnicastIPAddressInformation address in adapter.GetIPProperties().UnicastAddresses)
+                    {
+                        if (address.Address.AddressFamily != AddressFamily.InterNetwork ||
+                            System.Net.IPAddress.IsLoopback(address.Address)) continue;
+                        string endpoint = address.Address + ":" + port;
+                        if (!addresses.Contains(endpoint)) addresses.Add(endpoint);
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is NetworkInformationException ||
+                                              exception is SocketException ||
+                                              exception is PlatformNotSupportedException)
+            {
+                Debug.LogWarning($"[联机UI] 无法读取局域网地址：{exception.Message}", this);
+            }
+            lanAddressText = addresses.Count > 0 ? string.Join(" / ", addresses) :
+                FlatWorldLocalizationService.GetUiText("未找到可用的局域网地址");
+        }
+
+        #endregion
 
         private void ReleaseUIBindings()
         {
@@ -342,6 +440,8 @@ namespace FlatWorld.Networking.Gameplay
 
             playerNameInput = null;
             addressInput = null;
+            showingHostAddress = false;
+            addressBeforeHosting = null;
             portInput = null;
             statusText = null;
             playerCountText = null;

@@ -54,7 +54,8 @@ namespace FlatWorld.Networking.Gameplay
             int count = args.Value<int?>("count") ?? 4;
             if (count < 2 || count > 8) throw new ArgumentOutOfRangeException(nameof(args), "假人数量限 2～8。");
             using var world = new BotWorld(local);
-            var result = new JObject { ["transport"] = "mirror-in-memory", ["requestedCount"] = count };
+            var result = new JObject { ["transport"] = "mirror-in-memory", ["requestedCount"] = count,
+                ["hostPreparation"] = world.HostPreparation };
             var players = new JArray();
             for (int i = 0; i < count; i++)
             {
@@ -381,6 +382,7 @@ namespace FlatWorld.Networking.Gameplay
             private readonly bool ownsManager;
             private bool disposed;
             public JObject ReplayedHandshake { get; private set; }
+            public JObject HostPreparation { get; private set; }
 
             public BotWorld(Player player)
             {
@@ -409,6 +411,7 @@ namespace FlatWorld.Networking.Gameplay
                 try
                 {
                     GameplayTestRuntimeProbe.RegisterCleanup(this);
+                    CaptureHostPreparation();
                     Session = SpaceSession.EnsureLoaded();
                     Manager.transport = Transport;
                     // Mirror 已有 singleton 时跳过传输重绑，必须显式切到本轮内存传输。
@@ -419,6 +422,80 @@ namespace FlatWorld.Networking.Gameplay
                 }
                 catch { Dispose(); throw; }
             }
+
+            private void CaptureHostPreparation()
+            {
+                SaveDataMgr saveManager = SaveDataMgr.Instance;
+                GameSaveData save = saveManager.SaveData;
+                PlanetData planet = saveManager.GetCurrentPlanetData();
+                DayTimeSystem dayTime = DayTimeSystem.GetInstance();
+                if (planet == null || dayTime == null ||
+                    !dayTime.TryGetResolvedTimeData(initialScene.name, out _, out TimeData clock))
+                    throw new InvalidOperationException("公开世界回归要求正式星球与昼夜时钟已经就绪。");
+                var planets = save.PlanetData_Dict;
+                var profiles = save.PlayerData_Dict;
+                DayTimeSaveData savedTime = save.DayTimeData;
+                var clocks = dayTime.WorldTimeDict;
+                JObject before = HostWorldValues(save, planet, clock);
+                // 在同一帧调用正式准备入口，直接观察当前单机世界是否被替换或改写。
+                Manager.PrepareHostWorld();
+                GameSaveData afterSave = saveManager.SaveData;
+                PlanetData afterPlanet = saveManager.GetCurrentPlanetData();
+                DayTimeSystem afterDayTime = DayTimeSystem.GetInstance();
+                TimeData afterClock = null;
+                bool hasClock = afterDayTime != null && afterDayTime.TryGetResolvedTimeData(
+                    initialScene.name, out _, out afterClock);
+                HostPreparation = new JObject
+                {
+                    ["inWorld"] = GameManager.Instance.IsInGameWorld,
+                    ["gameplayReady"] = GameManager.Instance.IsGameplayReady,
+                    ["saveSame"] = ReferenceEquals(save, afterSave),
+                    ["planetSame"] = ReferenceEquals(planet, afterPlanet),
+                    ["planetDictionarySame"] = ReferenceEquals(planets, afterSave?.PlanetData_Dict),
+                    ["playerDictionarySame"] = ReferenceEquals(profiles, afterSave?.PlayerData_Dict),
+                    ["localSame"] = ReferenceEquals(local, ItemMgr.Instance.User_Player),
+                    ["localDataSame"] = ReferenceEquals(localData, ItemMgr.Instance.User_Player?.Data),
+                    ["dayTimeSame"] = ReferenceEquals(dayTime, afterDayTime),
+                    ["savedTimeSame"] = ReferenceEquals(savedTime, afterSave?.DayTimeData),
+                    ["clockDictionarySame"] = ReferenceEquals(clocks, afterDayTime?.WorldTimeDict),
+                    ["clockSame"] = hasClock && ReferenceEquals(clock, afterClock),
+                    ["sceneSame"] = SceneManager.GetActiveScene() == initialScene,
+                    ["planetName"] = Manager.CurrentPlanetName,
+                    ["localProfile"] = local.ProfileName,
+                    ["preparedProfile"] = Manager.LocalPlayerName,
+                    ["before"] = before,
+                    ["after"] = afterSave != null && afterPlanet != null && hasClock
+                        ? HostWorldValues(afterSave, afterPlanet, afterClock) : null
+                };
+            }
+
+            private static JObject HostWorldValues(GameSaveData save, PlanetData planet, TimeData clock) => new()
+            {
+                ["saveName"] = save.saveName, ["saveSeed"] = save.SaveSeed, ["seed"] = save.Seed,
+                ["saveTime"] = save.Time, ["saveTimeSpeed"] = save.TimeSpeed,
+                ["planetName"] = planet.Name, ["planetCount"] = save.PlanetData_Dict.Count,
+                ["profileCount"] = save.PlayerData_Dict.Count,
+                ["currentTime"] = clock.CurrentTime, ["totalDays"] = clock.TotalDays,
+                ["rotationPeriod"] = clock.RotationPeriodSeconds, ["orbitalPeriod"] = clock.OrbitalPeriodSeconds,
+                ["clockTimeScale"] = clock.TimeScaleModifier,
+                ["difficulty"] = (int)save.Difficulty,
+                ["dropAllCarriedItems"] = save.CustomDifficultyDropAllCarriedItems,
+                ["playerAttack"] = save.CustomPlayerAttackMultiplier,
+                ["creatureAttack"] = save.CustomCreatureAttackMultiplier,
+                ["creatureHealth"] = save.CustomCreatureHealthMultiplier,
+                ["hungerDrain"] = save.CustomHungerDrainMultiplier,
+                ["staminaConsumption"] = save.CustomStaminaConsumptionMultiplier,
+                ["staminaRecovery"] = save.CustomStaminaRecoveryMultiplier,
+                ["healing"] = save.CustomHealingMultiplier,
+                ["environmentalDamage"] = save.CustomEnvironmentalDamageMultiplier,
+                ["timeSpeed"] = save.CustomTimeSpeedMultiplier,
+                ["spawnFrequency"] = save.CustomSpawnFrequencyMultiplier,
+                ["spawnPopulation"] = save.CustomSpawnPopulationMultiplier,
+                ["lootAmount"] = save.CustomLootAmountMultiplier,
+                ["cropGrowth"] = save.CustomCropGrowthMultiplier,
+                ["fuelConsumption"] = save.CustomFuelConsumptionMultiplier,
+                ["craftingOutput"] = save.CustomCraftingOutputMultiplier
+            };
 
             public NetworkWorldPlayer Core(int id) => NetworkServer.connections.TryGetValue(id, out var connection)
                 ? connection.identity?.GetComponent<NetworkWorldPlayer>() : null;

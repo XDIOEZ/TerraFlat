@@ -1416,7 +1416,8 @@ public partial class GameManager
         if (!TryBuildNewWorldCreationRequest(out NewWorldCreationRequest request))
             return;
 
-        CreateNewWorld(request);
+        if (CreateNewWorld(request))
+            notifyNewWorldReady = true;
     }
 
     private bool TryBuildNewWorldCreationRequest(out NewWorldCreationRequest request)
