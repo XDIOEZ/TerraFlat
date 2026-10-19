@@ -1097,6 +1097,7 @@ public static partial class GameplayTestSystemProbe
         var first = Bellows(1, Vector2Int.left, 0);
         var second = Bellows(2, Vector2Int.down, 1);
         var graph = WorldMechanicalGraph(first, second);
+        bool bellowsIndexed = graph.HasBellows;
         foreach (MechanicalNetwork network in graph.Networks) network.Active = true;
         JObject Sample()
         {
@@ -1140,6 +1141,18 @@ public static partial class GameplayTestSystemProbe
             ["rate"] = combined.GetHeatingRatePercent(50f, true) };
         graph.Rebuild(Array.Empty<MachineEntity>());
         result["cleared"] = Sample();
+        bool emptyFastPath = !graph.HasBellows;
+        MachineEntity unrelated = WorldMachineNode(41, 0);
+        unrelated.Definition.Kind = "gear";
+        graph.Rebuild(new[] { unrelated });
+        bool nonBellowsFastPath = !graph.HasBellows &&
+            MachineWorld.SampleBellowsAirflow(graph, Vector2Int.zero).Strength == 0f;
+        graph.Rebuild(new[] { first, second });
+        bool restoredAfterRebuild = graph.HasBellows;
+        result["bellowsIndexed"] = bellowsIndexed;
+        result["emptyFastPath"] = emptyFastPath;
+        result["nonBellowsFastPath"] = nonBellowsFastPath;
+        result["restoredAfterRebuild"] = restoredAfterRebuild;
         var catalog = JObject.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(
             Application.dataPath, "Resources/Config/Mechanical/mechanical-catalog.json")));
         foreach (JObject node in (JArray)catalog["Nodes"])

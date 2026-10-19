@@ -284,6 +284,9 @@ public sealed partial class MechanicalNetworkGraph
     /// <summary>空机械世界跳过逐帧交互格扫描。</summary>
     internal bool HasNodes => cells.Count > 0;
 
+    /// <summary>拓扑重建时统计是否存在风箱，供无风箱设施直接跳过四邻检查。</summary>
+    internal bool HasBellows { get; private set; }
+
     /// <summary>同格内光标和玩家移动复用候选节点；拓扑变化时随索引一起失效。</summary>
     internal IReadOnlyList<MachineEntity> GetInteractionCandidates(Vector2Int center, int extent, bool pointed)
     {
@@ -325,6 +328,7 @@ public sealed partial class MechanicalNetworkGraph
     {
         pointerWindow.Reset(); nearbyWindow.Reset();
         cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); ConverterNetworks.Clear(); Facilities.Clear();
+        HasBellows = false;
         var sorted = new List<MachineEntity>(nodes);
         sorted.Sort(CompareNodes);
         foreach (var node in sorted)
@@ -333,6 +337,7 @@ public sealed partial class MechanicalNetworkGraph
             var key = new Vector3Int(node.Cell.x, node.Cell.y, node.Definition.Layer);
             if (cells.ContainsKey(key)) throw new InvalidOperationException("机械格重复占用：" + key);
             cells.Add(key, node);
+            if (node.Definition.Kind == "bellows") HasBellows = true;
             if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
                 occupiedOnPlacementLayers.Add(node.Cell);
             node.MechanicalPortsSuppressed = false;

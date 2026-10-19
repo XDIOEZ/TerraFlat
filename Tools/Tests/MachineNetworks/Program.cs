@@ -20,6 +20,22 @@ MechanicalNetworkGraph Graph(params MachineEntity[] nodes)
 void Solve(MechanicalNetwork network) => MechanicalNetworkGraph.Solve(network,
     node => node.TestSourceFactor, node => node.Definition.Rpm * node.Definition.SourceRotationDirection, 60);
 
+#region 风箱拓扑索引
+// 新建、清空和增删风箱只按拓扑重建更新存在标志。
+var bellowsGraph = Graph();
+Check(!bellowsGraph.HasBellows, "空图不应报告有风箱");
+var ordinaryNode = Node(901, 0);
+ordinaryNode.Definition.Kind = "gear";
+bellowsGraph.Rebuild(new[] { ordinaryNode });
+Check(!bellowsGraph.HasBellows, "只有普通机械时应走无风箱快路径");
+var bellowsNode = Node(902, 1);
+bellowsNode.Definition.Kind = "bellows";
+bellowsGraph.Rebuild(new[] { ordinaryNode, bellowsNode });
+Check(bellowsGraph.HasBellows, "新增风箱后快路径必须立即失效");
+bellowsGraph.Rebuild(new[] { ordinaryNode });
+Check(!bellowsGraph.HasBellows, "拆除最后一台风箱后应恢复快路径");
+#endregion
+
 // 近处负载先取得完整扭矩；无功率变化时路径不重建。
 var source = Node(1, 0, torque: 100, mode: "output");
 var near = Node(2, 1, load: 60);

@@ -953,11 +953,13 @@ public static partial class MachineWorld
     {
         if (graph == null) return default;
         RebuildGraphsIfDirty();
+        if (!graph.HasBellows) return default;
         return SampleBellowsAirflow(graph, new Vector2Int(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
     }
 
     internal static MachineAirflowEffect SampleBellowsAirflow(MechanicalNetworkGraph sourceGraph, Vector2Int cell)
     {
+        if (sourceGraph == null || !sourceGraph.HasBellows) return default;
         cell = sourceGraph.NormalizeCell(cell);
         MachineAirflowEffect effect = default;
         foreach (var offset in MechanicalNetworkGraph.Directions)

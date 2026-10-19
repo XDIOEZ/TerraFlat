@@ -22,6 +22,9 @@ test.system("mechanical", "gear_conflict", {}, function(data)
 end, "齿轮反转与异速源停网")
 
 test.system("mechanical", "bellows_effects", {}, function(data)
+    assert(data.bellowsIndexed and data.emptyFastPath and
+        data.nonBellowsFastPath and data.restoredAfterRebuild,
+        "机械拓扑变化后风箱快速索引未正确更新或空拓扑仍执行邻格查询")
     near(data.none.strength, 0, "没有风箱时仍有鼓风")
     near(data.none.rate, 50, "没有风箱时改变了基础效率")
     near(data.single.strength, 1, "额定转速没有达到满风量")
