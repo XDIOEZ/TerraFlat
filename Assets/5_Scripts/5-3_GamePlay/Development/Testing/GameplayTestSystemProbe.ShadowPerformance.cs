@@ -12,9 +12,65 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterShadowPerformanceOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("rendering/shadow_proxy_changes", ShadowProxyChanges);
+        operations.Add("rendering/shadow_footprint_matrix", ShadowFootprintMatrix);
         operations.Add("rendering/building_capability_cache", BuildingCapabilityCache);
         operations.Add("rendering/ship_part_placement_state", ServiceShipPartPlacementState);
         operations.Add("rendering/effect_composition", RenderEffectComposition);
+    }
+
+    // 独立四角基准对照正式仿射包围盒，覆盖镜像、偏心点、非等比缩放和三维旋转。
+    private static JObject ShadowFootprintMatrix(JObject args)
+    {
+        Bounds[] localBounds =
+        {
+            new(new Vector3(1.3f, -.8f, 0f), new Vector3(5.4f, 3.3f, 0f)),
+            new(new Vector3(-2f, 3f, 9f), new Vector3(1.2f, 7.5f, 2f)),
+            new(new Vector3(.2f, -.4f, 0f), Vector3.zero)
+        };
+        Vector3[] scales =
+        {
+            Vector3.one, new(-2f, .4f, 1f), new(.25f, -3f, 1f), new(-1.5f, -2.5f, 2f)
+        };
+        Quaternion[] rotations =
+        {
+            Quaternion.identity, Quaternion.Euler(0f, 0f, 45f),
+            Quaternion.Euler(0f, 0f, 173f), Quaternion.Euler(18f, -13f, 82f)
+        };
+
+        float maximumError = 0f;
+        int cases = 0;
+        for (int shape = 0; shape < localBounds.Length; shape++)
+        for (int scale = 0; scale < scales.Length; scale++)
+        for (int rotation = 0; rotation < rotations.Length; rotation++)
+        for (int flips = 0; flips < 4; flips++)
+        {
+            Bounds local = localBounds[shape];
+            Matrix4x4 matrix = Matrix4x4.TRS(new Vector3(13.75f, -21.5f, 4.25f),
+                rotations[rotation], scales[scale]);
+            matrix.m01 += .17f;
+            matrix.m20 -= .06f;
+            bool flipX = (flips & 1) != 0, flipY = (flips & 2) != 0;
+            Bounds actual = ShadowFootprintResolver.TransformVisibleBounds(local, matrix, flipX, flipY);
+
+            Bounds expected = default;
+            for (int corner = 0; corner < 4; corner++)
+            {
+                Vector3 point = new((corner & 1) == 0 ? local.min.x : local.max.x,
+                    corner < 2 ? local.min.y : local.max.y, 0f);
+                if (flipX) point.x = -point.x;
+                if (flipY) point.y = -point.y;
+                point = matrix.MultiplyPoint3x4(point);
+                if (corner == 0) expected = new Bounds(point, Vector3.zero);
+                else expected.Encapsulate(point);
+            }
+            maximumError = Mathf.Max(maximumError,
+                Mathf.Abs(actual.min.x - expected.min.x), Mathf.Abs(actual.min.y - expected.min.y),
+                Mathf.Abs(actual.min.z - expected.min.z), Mathf.Abs(actual.max.x - expected.max.x),
+                Mathf.Abs(actual.max.y - expected.max.y), Mathf.Abs(actual.max.z - expected.max.z));
+            cases++;
+        }
+
+        return new JObject { ["cases"] = cases, ["maximumError"] = maximumError };
     }
 
     // 通过真实 MPB 验证静态覆雪不重传，而水线换图和效果启停仍会提交。

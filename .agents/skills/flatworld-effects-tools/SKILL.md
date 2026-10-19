@@ -57,6 +57,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 太阳投影独立持有注册与 SunShadowCaster 覆盖；接触/太阳共用 IVisualGroundOffset 地面折算、光照/晨昏透明度和 `_WorldSunShadowColor`，柔化共用 `_WorldSunShadowBlur`，关闭太阳投影保留接触阴影通道。
 - 太阳阴影代理按源帧/姿态/脚点值变化提交 Renderer 与 MPB，太阳全局参数和投影裁剪盒仍逐帧更新；归池重置缓存。建筑能力查询复用 ItemMods.GetCapabilities 缓存，模块结构变化失效，能力属性仍实时读取，避免逐阴影遍历只读字典分配。
 - 世界物品 `visual.shadows.contactWidth/footLocalPosition/footOverlap` 持有底座/落地点；ShadowFootprintResolver 限定可见底边内缩，AIECS 取待机帧固定 VisibleRect。落点不随攻击/奔跑帧伸缩。
+- Sprite 可见轮廓阴影使用仿射矩阵中心与半轴直接求世界包围盒，不再逐帧变换四角；保留翻面、负缩放、旋转、偏心脚点的原位置，回归 `rendering/shadow_footprint_matrix`。
 - SunShadowSampling.hlsl 由普通 Sprite/AIECS/资源 BRG 共用；采样使用当前帧 UV 边界和世界 PPU，图集外沿透明，半埋裁剪进入采样。透明外沿几何与 CPU 包围盒一致；太阳高度先 Clamp01 再幂运算，投影范围有限且排除 NaN/Infinity。
 - 地块高低阴影只由 `TerrainHeightShadowManager` 提交：读取 `TerrainSurfaceHeightLayer` 的有效表面与邻格顶部，高侧投到低侧，同高无边；正整数层差只作 0/1 边缘判断，阴影深浅与宽度固定，不按高差衰减。地形、墙脚、地板和平台共用 `TerrainHeightShadow` BRG 层、一张格子网格和材质，角上取最大值。`GroundElevationShadowSettings` 统一控制显隐与宽度；生成高度保留，角色/太阳阴影仍独立。
 - 高低阴影脏格采用双缓冲去重队列：仅扫描发生变化的格，提交时新通知留待下一轮，提交失败/异常保留未完成格，整块重绑才全量枚举；规则 `rendering/terrain_shadow_dirty_queue`。

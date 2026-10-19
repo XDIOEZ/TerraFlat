@@ -122,6 +122,11 @@ test.system("rendering", "shadow_proxy_changes", {}, function(data)
     assert(data.recycledSource and data.recycledProperties, "阴影归池后没有重新提交源与属性")
 end, "太阳阴影静态复用与动态变化")
 
+test.system("rendering", "shadow_footprint_matrix", {}, function(data)
+    assert(data.cases == 192 and data.maximumError < 0.0002,
+        "角色阴影仿射包围盒与原四角投影不一致，误差：" .. tostring(data.maximumError))
+end, "接触与太阳阴影的四角投影数学等价：镜像、旋转、偏心与缩放")
+
 for _, args in ipairs({
     { strength = 1, clear = 10, opaque = 20 },
     { strength = 0.5, clear = 20, opaque = 30 },
