@@ -39,7 +39,7 @@ public static partial class RuntimeUIPrefabBuilder
         EnsureRuntimePrefabAddressable(path);
     }
 
-    /// <summary>用三个 64 像素互斥按钮展示水体风格，说明只描述选择后的视觉差异。</summary>
+    /// <summary>用统一的触屏下拉列表展示水体风格，说明只描述选择后的视觉差异。</summary>
     private static GameObject BuildVisualEffectsSettings()
     {
         GameObject root = CreateSettingsPageRoot(RuntimeUIPrefabKeys.VisualEffectsSettings,
@@ -143,24 +143,27 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI label = CreateText("水体风格标签", content, "水体风格", 22f, Cream);
         label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
         GameObject row = CreateRow("水体风格行", content, 72f);
-        Button stylized = CreateSettingsButton("风格化水体按钮", row.transform, "风格化", 200f, 64f, false);
-        Button realistic = CreateSettingsButton("写实水体按钮", row.transform, "写实", 200f, 64f, true);
-        Button unityStylized = CreateSettingsButton("Unity风格水体按钮", row.transform, "Unity 风格水", 200f, 64f, false);
-        SetButtonLabelSize(stylized, 20f);
-        SetButtonLabelSize(realistic, 20f);
-        SetButtonLabelSize(unityStylized, 20f);
+        TMP_Dropdown waterStyle = CreateDropdown("水体风格下拉列表", row.transform);
+        ConfigureTouchSettingsDropdown(waterStyle, 620f);
+        waterStyle.ClearOptions();
+        waterStyle.AddOptions(new System.Collections.Generic.List<string>
+        {
+            "风格化", "写实", "Unity 风格水", "轻量（低配）"
+        });
+        waterStyle.SetValueWithoutNotify((int)WaterVisualSettings.DefaultStyle);
+        waterStyle.RefreshShownValue();
         CreateSettingsHint(content, "风格化：鲜明水色、清晰浪纹与泡沫。", 52f);
         CreateSettingsHint(content, "写实：柔和水色、连续波浪与细碎反光。", 52f);
         CreateSettingsHint(content, "Unity 风格水：柔和水色、顺流波纹与岸边泡沫。", 52f);
+
+        CreateSettingsHint(content, "轻量（低配）：简化水面细节，减少渲染开销。", 52f);
 
         Transform footer = CreateRow("底部操作", content, 72f).transform;
         Button reset = CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 200f, 64f, false);
         SetButtonLabelSize(reset, 18f);
         var controller = root.AddComponent<VisualEffectsSettingsPanelLauncher>();
         var serialized = new SerializedObject(controller);
-        serialized.FindProperty("stylizedButton").objectReferenceValue = stylized;
-        serialized.FindProperty("realisticButton").objectReferenceValue = realistic;
-        serialized.FindProperty("unityStylizedButton").objectReferenceValue = unityStylized;
+        serialized.FindProperty("waterStyleDropdown").objectReferenceValue = waterStyle;
         serialized.FindProperty("resetButton").objectReferenceValue = reset;
         serialized.FindProperty("occlusionToggle").objectReferenceValue = occlusion;
         serialized.FindProperty("sunShadowToggle").objectReferenceValue = sunShadows;

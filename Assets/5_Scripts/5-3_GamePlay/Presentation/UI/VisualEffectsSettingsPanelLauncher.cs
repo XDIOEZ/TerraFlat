@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
@@ -12,9 +14,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
 {
     #region Prefab 引用与状态
 
-    [SerializeField] private Button stylizedButton;
-    [SerializeField] private Button realisticButton;
-    [SerializeField] private Button unityStylizedButton;
+    [SerializeField] private TMP_Dropdown waterStyleDropdown;
     [SerializeField] private Button resetButton;
     [SerializeField] private Toggle occlusionToggle;
     [SerializeField] private Toggle sunShadowToggle;
@@ -36,7 +36,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     private ISettingsSlider interactionOutlineThicknessSetting;
     private ISettingsToggle occlusionSetting;
     private ISettingsProvider provider;
-    private ISettingsSwitch styleSetting;
+    private ISettingsDropdown styleSetting;
 
     #endregion
 
@@ -45,16 +45,16 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>页面首次显示时解析设置契约，保留正式 Prefab 的序列化控件引用。</summary>
     private void Awake()
     {
-        if (stylizedButton == null || realisticButton == null || unityStylizedButton == null || resetButton == null ||
+        if (waterStyleDropdown == null || resetButton == null ||
             occlusionToggle == null || sunShadowToggle == null || sunShadowBlurToggle == null ||
             sunShadowBlurSlider == null || sunShadowBlurValueText == null || groundElevationToggle == null ||
             groundElevationWidthSlider == null || groundElevationWidthValueText == null ||
             interactionOutlineToggle == null || interactionOutlineThicknessSlider == null ||
             interactionOutlineThicknessValueText == null)
-            throw new MissingReferenceException("视觉特效设置页缺少按钮引用。");
+            throw new MissingReferenceException("视觉特效设置页缺少控件引用。");
 
         provider = WaterVisualSettings.SettingsProvider;
-        styleSetting = provider.GetSwitch(WaterVisualSettings.StyleSettingKey);
+        styleSetting = provider.GetDropdown(WaterVisualSettings.StyleSettingKey);
         occlusionSetting = PlayerOcclusionShaderGlobals.SettingsProvider.GetToggle(
             PlayerOcclusionShaderGlobals.EnabledSettingKey);
         ISettingsProvider sunProvider = SunShadowSettings.SettingsProvider;
@@ -84,9 +84,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         interactionOutlineToggle.onValueChanged.AddListener(SetInteractionOutline);
         interactionOutlineThicknessSlider.onValueChanged.AddListener(SetInteractionOutlineThickness);
         occlusionToggle.onValueChanged.AddListener(SetOcclusion);
-        stylizedButton.onClick.AddListener(SelectStylized);
-        realisticButton.onClick.AddListener(SelectRealistic);
-        unityStylizedButton.onClick.AddListener(SelectUnityStylized);
+        waterStyleDropdown.onValueChanged.AddListener(SelectStyle);
         resetButton.onClick.AddListener(ResetToDefaults);
     }
 
@@ -94,10 +92,12 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     private void OnEnable()
     {
         WaterVisualSettings.Changed += RefreshView;
+        FlatWorldLocalizationService.LanguageChanged += OnLanguageChanged;
         PlayerOcclusionShaderGlobals.Changed += RefreshView;
         SunShadowSettings.Changed += RefreshView;
         GroundElevationShadowSettings.Changed += RefreshView;
         InteractionOutlineSettings.Changed += RefreshView;
+        RefreshStyleOptions();
         RefreshView();
     }
 
@@ -105,6 +105,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     private void OnDisable()
     {
         WaterVisualSettings.Changed -= RefreshView;
+        FlatWorldLocalizationService.LanguageChanged -= OnLanguageChanged;
         PlayerOcclusionShaderGlobals.Changed -= RefreshView;
         SunShadowSettings.Changed -= RefreshView;
         GroundElevationShadowSettings.Changed -= RefreshView;
@@ -132,14 +133,24 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     private void SetInteractionOutline(bool value) => interactionOutlineSetting.SetValue(value);
     private void SetInteractionOutlineThickness(float value) => interactionOutlineThicknessSetting.SetValue(value);
 
-    /// <summary>通过设置契约选用风格化水面。</summary>
-    private void SelectStylized() => SelectStyle(0);
+    /// <summary>由 Provider 的稳定选项生成本地化下拉列表。</summary>
+    private void RefreshStyleOptions()
+    {
+        var labels = new List<string>(styleSetting.Options.Count);
+        foreach (SettingOption option in styleSetting.Options)
+            labels.Add(FlatWorldLocalizationService.GetUiText(option.DisplayName));
+        waterStyleDropdown.ClearOptions();
+        waterStyleDropdown.AddOptions(labels);
+        waterStyleDropdown.SetValueWithoutNotify(styleSetting.SelectedIndex);
+        waterStyleDropdown.RefreshShownValue();
+    }
 
-    /// <summary>通过设置契约选用写实水面。</summary>
-    private void SelectRealistic() => SelectStyle(1);
-
-    /// <summary>通过设置契约选用 Unity 风格水面。</summary>
-    private void SelectUnityStylized() => SelectStyle((int)WaterVisualStyle.UnityStylized);
+    /// <summary>切换语言时重新填充动态选项。</summary>
+    private void OnLanguageChanged(string _)
+    {
+        RefreshStyleOptions();
+        RefreshView();
+    }
 
     /// <summary>提交风格并回填权威选中状态。</summary>
     private void SelectStyle(int index)
@@ -159,7 +170,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         InteractionOutlineSettings.SettingsProvider.ResetToDefaults();
     }
 
-    /// <summary>用选中底色标识当前风格，三个按钮始终可导航和操作。</summary>
+    /// <summary>回填当前水体风格及各项视觉偏好。</summary>
     private void RefreshView()
     {
         occlusionToggle.SetIsOnWithoutNotify(PlayerOcclusionShaderGlobals.Enabled);
@@ -177,12 +188,8 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         interactionOutlineThicknessSlider.SetValueWithoutNotify(InteractionOutlineSettings.ThicknessPixels);
         interactionOutlineThicknessSlider.interactable = InteractionOutlineSettings.Enabled;
         interactionOutlineThicknessValueText.text = $"{Mathf.RoundToInt(InteractionOutlineSettings.ThicknessPixels)} px";
-        stylizedButton.targetGraphic.color = styleSetting.SelectedIndex == 0
-            ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
-        realisticButton.targetGraphic.color = styleSetting.SelectedIndex == 1
-            ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
-        unityStylizedButton.targetGraphic.color = styleSetting.SelectedIndex == (int)WaterVisualStyle.UnityStylized
-            ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
+        waterStyleDropdown.SetValueWithoutNotify(styleSetting.SelectedIndex);
+        waterStyleDropdown.RefreshShownValue();
     }
 
     /// <summary>分页正式显示时与其它设置页保持统一生命周期。</summary>
@@ -203,9 +210,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         if (interactionOutlineToggle != null) interactionOutlineToggle.onValueChanged.RemoveListener(SetInteractionOutline);
         if (interactionOutlineThicknessSlider != null)
             interactionOutlineThicknessSlider.onValueChanged.RemoveListener(SetInteractionOutlineThickness);
-        stylizedButton.onClick.RemoveListener(SelectStylized);
-        realisticButton.onClick.RemoveListener(SelectRealistic);
-        unityStylizedButton.onClick.RemoveListener(SelectUnityStylized);
+        waterStyleDropdown.onValueChanged.RemoveListener(SelectStyle);
         resetButton.onClick.RemoveListener(ResetToDefaults);
     }
 

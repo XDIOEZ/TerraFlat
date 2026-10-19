@@ -355,7 +355,7 @@ public static class WorldRenderingConfigCatalog
         if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.universeView.IsValid ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 2 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
-            config.preferences.waterStyle < 0 || config.preferences.waterStyle > 2 ||
+            config.preferences.waterStyle < 0 || config.preferences.waterStyle > 3 ||
             config.shadows.minimumBlurStrength < 0f ||
             config.shadows.maximumBlurStrength < config.shadows.minimumBlurStrength ||
             config.shadows.blurStrength < config.shadows.minimumBlurStrength ||

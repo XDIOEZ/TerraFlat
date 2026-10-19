@@ -5011,6 +5011,14 @@ MonoBehaviour:
     m_Key: ui.text.32452301
     m_Metadata:
       m_Items: []
+  - m_Id: 17923400000000001
+    m_Key: ui.text.B1E51227
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923400000000002
+    m_Key: ui.text.EF024E78
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -181,8 +181,12 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             float4 flowY;
         };
         #include "WaterSurfaceCommon.hlsl"
+        #if !defined(FLATWORLD_WATER_LOW_SPEC)
         #include "LavaSurfaceCommon.hlsl"
-        #if defined(FLATWORLD_WATER_UNITY_STYLIZED)
+        #endif
+        #if defined(FLATWORLD_WATER_LOW_SPEC)
+            #include "WaterSurfaceLowSpec.hlsl"
+        #elif defined(FLATWORLD_WATER_UNITY_STYLIZED)
             #include "UnityStylizedWaterSurface.hlsl"
         #elif defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
@@ -190,17 +194,21 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
-        #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
+        #if !defined(FLATWORLD_WATER_UNITY_STYLIZED) && !defined(FLATWORLD_WATER_LOW_SPEC)
         #include "RiverSurface.hlsl"
         #endif
 
-        // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
+        // 两种批次共用外观分支，轻量档直接跳过完整波光与岸线噪声求解。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth, ChunkMeshWaterData data)
         {
+            #if defined(FLATWORLD_WATER_LOW_SPEC)
+            return CalculateLowSpecWaterSurface(positionWS, depth,
+                InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
+            #else
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
             WaterSurfaceData surface = (WaterSurfaceData)0;
-            #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
+            #if !defined(FLATWORLD_WATER_UNITY_STYLIZED) && !defined(FLATWORLD_WATER_LOW_SPEC)
             float2 positionDx = ddx(positionWS);
             float2 positionDy = ddy(positionWS);
             UNITY_BRANCH
@@ -210,13 +218,18 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #endif
                 surface = CalculateWaterSurface(positionWS, screenUV, depth, motion);
             return surface;
+            #endif
         }
 
         half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS, ChunkMeshWaterData data)
         {
+            #if defined(FLATWORLD_WATER_LOW_SPEC)
+            return ApplyLowSpecWaterShore(sourceColor, recess);
+            #else
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.waterKind);
             return ApplyShore(sourceColor, recess, positionWS, motion);
+            #endif
         }
     ENDHLSL
 
@@ -235,7 +248,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -298,6 +311,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                 half liquidDepth = continuousDepth;
                 #endif
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
+                #if !defined(FLATWORLD_WATER_LOW_SPEC)
                 UNITY_BRANCH
                 if (_LavaMode > 0.5)
                 {
@@ -315,12 +329,17 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                     lit.a = lava.alpha;
                     return lit;
                 }
+                #endif
                 // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
                 main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth, data);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS, data);
+                #if defined(FLATWORLD_WATER_LOW_SPEC)
+                half4 mask = half4(1, 1, 1, 1);
+                #else
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
+                #endif
                 SurfaceData2D surfaceData; InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, mask, surfaceData);
                 InitializeInputData(input.uv, input.lightingUV, inputData);
@@ -339,7 +358,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0;
                 float4 shore:TEXCOORD1; float4 depth:TEXCOORD2; float4 flowX:TEXCOORD4;
                 float4 flowY:TEXCOORD5; float kind:TEXCOORD6; };
@@ -381,6 +400,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                 half liquidDepth = continuousDepth;
                 #endif
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
+                #if !defined(FLATWORLD_WATER_LOW_SPEC)
                 UNITY_BRANCH
                 if (_LavaMode > 0.5)
                 {
@@ -391,6 +411,7 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
                         main.a);
                     return half4(lava.albedo + lava.emission, lava.alpha);
                 }
+                #endif
                 // 保留原透明度，同时让透明度跟随连续水深跨格平滑变化。
                 main.a = ResolveWaterSurfaceAlpha(main.a, continuousDepth);
                 WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth, data);

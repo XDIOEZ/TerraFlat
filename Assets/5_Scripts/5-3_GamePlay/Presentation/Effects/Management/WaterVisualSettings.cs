@@ -8,7 +8,8 @@ public enum WaterVisualStyle
 {
     Stylized = 0,
     Realistic = 1,
-    UnityStylized = 2
+    UnityStylized = 2,
+    LowSpec = 3
 }
 
 /// <summary>
@@ -71,6 +72,7 @@ public static class WaterVisualSettings
         WaterVisualStyle.Stylized => "stylized",
         WaterVisualStyle.Realistic => "realistic",
         WaterVisualStyle.UnityStylized => "unity-stylized-water",
+        WaterVisualStyle.LowSpec => "low-spec",
         _ => throw new ArgumentOutOfRangeException(nameof(style), style, "未注册的水体风格。")
     };
 
@@ -86,6 +88,7 @@ public static class WaterVisualSettings
             "stylized" => WaterVisualStyle.Stylized,
             "realistic" => WaterVisualStyle.Realistic,
             "unity-stylized-water" => WaterVisualStyle.UnityStylized,
+            "low-spec" => WaterVisualStyle.LowSpec,
             _ => throw new InvalidOperationException($"未注册的水体风格偏好：{savedId}")
         };
         initialized = true;
@@ -115,21 +118,22 @@ public static class WaterVisualSettings
     /// <summary>仅暴露设置元数据和读写能力，不依赖任何 UI 控件。</summary>
     private sealed class WaterSettingsProvider : ISettingsProvider
     {
-        private readonly IReadOnlyList<ISettingsSwitch> switches = new ISettingsSwitch[]
+        private readonly IReadOnlyList<ISettingsDropdown> dropdowns = new ISettingsDropdown[]
         {
-            new SettingsSwitch(
-                new SettingDescriptor(StyleSettingKey, "水体风格", SettingControlType.Switch,
+            new SettingsDropdown(
+                new SettingDescriptor(StyleSettingKey, "水体风格", SettingControlType.Dropdown,
                     "visual-effects"),
                 new SettingOption[]
                 {
                     new SettingOption("stylized", "风格化"),
                     new SettingOption("realistic", "写实"),
-                    new SettingOption("unity-stylized-water", "Unity 风格水")
+                    new SettingOption("unity-stylized-water", "Unity 风格水"),
+                    new SettingOption("low-spec", "轻量（低配）")
                 },
                 () => (int)Style,
                 index =>
                 {
-                    if (index < 0 || index > (int)WaterVisualStyle.UnityStylized)
+                    if (index < 0 || index > (int)WaterVisualStyle.LowSpec)
                         return "未注册的水体风格选项。";
                     SetStyle((WaterVisualStyle)index);
                     return null;
@@ -141,8 +145,8 @@ public static class WaterVisualSettings
         public int Order => 45;
         public IReadOnlyList<ISettingsToggle> ToggleSettings => Array.Empty<ISettingsToggle>();
         public IReadOnlyList<ISettingsSlider> SliderSettings => Array.Empty<ISettingsSlider>();
-        public IReadOnlyList<ISettingsDropdown> DropdownSettings => Array.Empty<ISettingsDropdown>();
-        public IReadOnlyList<ISettingsSwitch> SwitchSettings => switches;
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings => Array.Empty<ISettingsSwitch>();
         public void ResetToDefaults() => SetStyle(DefaultStyle);
     }
 

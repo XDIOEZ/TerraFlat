@@ -1,3 +1,27 @@
+-- 只采样水体设置元数据，不读取当前选项、不写偏好或切换现场材质。
+test.system("ui_settings", "water_visual_provider", {}, function(data)
+    assert(data.providerId == "water-visuals" and data.switchCount == 0,
+        "水体风格没有保留稳定 Provider ID，或仍暴露按钮切换")
+    assert(#data.dropdowns == 1, "水体风格应统一暴露一个下拉列表")
+    local dropdown = data.dropdowns[1]
+    assert(dropdown.key == "waterVisuals.style" and dropdown.controlType == "Dropdown",
+        "水体风格稳定设置键或下拉控件类型错误")
+    assert(type(dropdown.label) == "string" and dropdown.label:match("%S"),
+        "水体下拉列表缺少可见名称")
+    local ids = {"stylized", "realistic", "unity-stylized-water", "low-spec"}
+    assert(#dropdown.options == #ids and data.lowSpecIndex == 3,
+        "水体风格应包含四项，轻量风格须使用索引 3")
+    local seen = {}
+    for index, expected in ipairs(ids) do
+        local option = dropdown.options[index]
+        assert(option.id == expected and not seen[option.id],
+            "水体风格选项稳定 ID、顺序或唯一性错误")
+        assert(type(option.label) == "string" and option.label:match("%S"),
+            "水体风格选项缺少可见名称")
+        seen[option.id] = true
+    end
+end, "水体风格统一下拉、四种稳定选项与轻量风格索引")
+
 -- 用正式诊断接口检查计数与代际，不执行玩法或写入玩家偏好。
 test.system("ui_settings", "performance_debug", {}, function(data)
     assert(data.disabled.calls == 0 and data.disabled.work == 0 and not data.disabled.hasGauge,

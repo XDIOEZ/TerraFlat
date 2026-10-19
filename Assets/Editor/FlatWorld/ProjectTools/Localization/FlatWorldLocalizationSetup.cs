@@ -493,6 +493,8 @@ namespace FlatWorld.Localization.Editor
                 { "风格化", "Stylized" },
                 { "写实", "Realistic" },
                 { "Unity 风格水", "Unity Stylized" },
+                { "轻量（低配）", "Lightweight (Low-end)" },
+                { "轻量（低配）：简化水面细节，减少渲染开销。", "Lightweight (Low-end): simpler water detail with lower rendering cost." },
                 { "风格化：鲜明水色、清晰浪纹与泡沫。", "Stylized: vivid water colors, distinct ripples and foam." },
                 { "写实：柔和水色、连续波浪与细碎反光。", "Realistic: softer colors, flowing waves and subtle glints." },
                 { "Unity 风格水：柔和水色、顺流波纹与岸边泡沫。", "Unity Stylized: soft water colors, flowing ripples and shoreline foam." },

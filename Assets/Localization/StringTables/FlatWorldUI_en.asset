@@ -5100,6 +5100,14 @@ MonoBehaviour:
     m_Localized: Failed to load save
     m_Metadata:
       m_Items: []
+  - m_Id: 17923400000000001
+    m_Localized: "Lightweight (Low-end)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923400000000002
+    m_Localized: "Lightweight (Low-end): simpler water detail with lower rendering cost."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

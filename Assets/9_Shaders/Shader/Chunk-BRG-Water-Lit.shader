@@ -238,7 +238,9 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #define _UnitySparkleColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _UnitySparkleColor)
         #endif
         #include "WaterSurfaceCommon.hlsl"
-        #if defined(FLATWORLD_WATER_UNITY_STYLIZED)
+        #if defined(FLATWORLD_WATER_LOW_SPEC)
+            #include "WaterSurfaceLowSpec.hlsl"
+        #elif defined(FLATWORLD_WATER_UNITY_STYLIZED)
             #include "UnityStylizedWaterSurface.hlsl"
         #elif defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
@@ -246,18 +248,23 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #include "WaterSurfaceRealistic.hlsl"
         #endif
 
-        #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
+        #if !defined(FLATWORLD_WATER_UNITY_STYLIZED) && !defined(FLATWORLD_WATER_LOW_SPEC)
         #include "RiverSurface.hlsl"
         #endif
 
-        // 两种批次只适配数据布局，所有水体完整使用同一套流动、波光与岸线效果。
+        // 两种批次共用外观分支，轻量档直接跳过完整波光与岸线噪声求解。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
         {
+            #if defined(FLATWORLD_WATER_LOW_SPEC)
+            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
+            return CalculateLowSpecWaterSurface(positionWS, depth,
+                InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
+            #else
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
             WaterSurfaceData surface = (WaterSurfaceData)0;
-            #if !defined(FLATWORLD_WATER_UNITY_STYLIZED)
+            #if !defined(FLATWORLD_WATER_UNITY_STYLIZED) && !defined(FLATWORLD_WATER_LOW_SPEC)
             float2 positionDx = ddx(positionWS);
             float2 positionDy = ddy(positionWS);
             UNITY_BRANCH
@@ -267,14 +274,19 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #endif
                 surface = CalculateWaterSurface(positionWS, screenUV, depth, motion);
             return surface;
+            #endif
         }
 
         half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS)
         {
+            #if defined(FLATWORLD_WATER_LOW_SPEC)
+            return ApplyLowSpecWaterShore(sourceColor, recess);
+            #else
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             WaterMotionData motion = ResolveWaterMotion(
                 InterpolateWaterCurrent(positionWS, data.flowX, data.flowY), data.transform0.w);
             return ApplyShore(sourceColor, recess, positionWS, motion);
+            #endif
         }
     ENDHLSL
 
@@ -294,7 +306,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -351,7 +363,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
+                #if defined(FLATWORLD_WATER_LOW_SPEC)
+                half4 mask = half4(1, 1, 1, 1);
+                #else
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
+                #endif
                 SurfaceData2D surfaceData; InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, mask, surfaceData);
                 InitializeInputData(input.uv, input.lightingUV, inputData);
@@ -371,7 +387,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ DOTS_INSTANCING_ON
-            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 shore:TEXCOORD1; half4 depth:TEXCOORD2; float2 positionWS:TEXCOORD3; float2 screenUV:TEXCOORD4; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             Varyings Vert(Attributes input)

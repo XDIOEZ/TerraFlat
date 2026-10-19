@@ -8,6 +8,7 @@ using FlatWorld.Gameplay.Presentation.Audio;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
+using FlatWorld.Settings;
 using FlatWorld.Spaceflight;
 using FlatWorld.WorldModel;
 using MemoryPack;
@@ -46,6 +47,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("modding/candidate_patch", ServiceModCandidatePatch);
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/frame_rate", ServiceFrameRate);
+        operations.Add("ui_settings/water_visual_provider", ServiceWaterVisualProvider);
         operations.Add("ui_settings/performance_debug", ServicePerformanceDebug);
         operations.Add("ui_settings/navigation_policy", ServiceNavigationPolicy);
         operations.Add("ui_settings/panel_lifecycle", ServicePanelLifecycle);
@@ -71,6 +73,37 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/universe_view_transition", ServiceUniverseViewTransition);
         operations.Add("rendering/group_projection", ServiceGroupProjection);
         RegisterShadowPerformanceOperations(operations);
+    }
+
+    #endregion
+
+    #region 水体设置元数据
+
+    private static JObject ServiceWaterVisualProvider(JObject args)
+    {
+        // 正式入口会注册 Provider；这里只读元数据，不读取选中项或调用设置写入接口。
+        ISettingsProvider provider = WaterVisualSettings.SettingsProvider;
+        var dropdowns = new JArray();
+        foreach (ISettingsDropdown dropdown in provider.DropdownSettings)
+        {
+            var options = new JArray();
+            foreach (SettingOption option in dropdown.Options)
+                options.Add(new JObject { ["id"] = option.Id, ["label"] = option.DisplayName });
+            dropdowns.Add(new JObject
+            {
+                ["key"] = dropdown.Descriptor.Key,
+                ["controlType"] = dropdown.Descriptor.ControlType.ToString(),
+                ["label"] = dropdown.Descriptor.DisplayName,
+                ["options"] = options
+            });
+        }
+        return new JObject
+        {
+            ["providerId"] = provider.ProviderId,
+            ["switchCount"] = provider.SwitchSettings.Count,
+            ["dropdowns"] = dropdowns,
+            ["lowSpecIndex"] = (int)WaterVisualStyle.LowSpec
+        };
     }
 
     #endregion

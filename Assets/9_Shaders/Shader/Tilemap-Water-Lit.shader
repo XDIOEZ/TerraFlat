@@ -80,7 +80,9 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
 
     HLSLINCLUDE
         #include "WaterSurfaceCommon.hlsl"
-        #if defined(FLATWORLD_WATER_UNITY_STYLIZED)
+        #if defined(FLATWORLD_WATER_LOW_SPEC)
+            #include "WaterSurfaceLowSpec.hlsl"
+        #elif defined(FLATWORLD_WATER_UNITY_STYLIZED)
             #include "UnityStylizedWaterSurface.hlsl"
         #elif defined(FLATWORLD_WATER_STYLIZED)
             #include "WaterSurfaceStylized.hlsl"
@@ -111,7 +113,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
             #pragma multi_compile_instancing
-            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -190,7 +192,11 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS,
                     ResolveWaterMotion(_FlowDirection.xy, 2.0));
 
+                #if defined(FLATWORLD_WATER_LOW_SPEC)
+                half4 lightMask = half4(1, 1, 1, 1);
+                #else
                 half4 lightMask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
+                #endif
                 SurfaceData2D surfaceData;
                 InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, lightMask, surfaceData);
@@ -212,7 +218,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
             #pragma multi_compile_instancing
-            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED
+            #pragma multi_compile_local_fragment _ FLATWORLD_WATER_STYLIZED FLATWORLD_WATER_UNITY_STYLIZED FLATWORLD_WATER_LOW_SPEC
 
             struct Attributes
             {
