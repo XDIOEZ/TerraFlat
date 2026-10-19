@@ -560,6 +560,11 @@ test.system("environment", "water_current_reuse", {}, function(data)
         "重复利用的水体样本丢失河流流量、海洋风场，或把湖泊及干格识别为流动")
     assert(data.covered and data.uncovered and data.stoppedRiver and data.drained,
         "水体样本在支撑面变化、河流停流或抽干后没有实时读取权威数据")
+    assert(math.abs(data.riverVelocityX - 1.0285714) < .0001 and
+        math.abs(data.riverVelocityY - 1.3714286) < .0001 and
+        math.abs(data.oceanVelocityX - 1.2) < .0001 and
+        math.abs(data.oceanVelocityY - 1.6) < .0001 and data.zeroSpeedVelocity == 0,
+        "水流速度复用后河流流量曲线、海洋定速或零推速规则改变")
 end, "掉落物水流同批复用地块样本，保持流向和液体变化语义")
 
 test.system("environment", "environment_batch_rejection", {}, function(data)

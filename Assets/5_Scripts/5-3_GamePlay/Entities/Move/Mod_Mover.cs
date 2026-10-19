@@ -500,8 +500,7 @@ public partial class Mod_Mover : Module
             if (!exposure.ReceivesWaterCurrent)
                 return Vector2.zero;
         return item != null && rb != null
-            ? WorldMotionSystem.SampleWaterVelocity(rb.position,
-                WaterCurrentPushConfigService.ResolvePushSpeed(item))
+            ? WorldMotionSystem.SampleWaterVelocity(rb.position, item)
             : Vector2.zero;
     }
 

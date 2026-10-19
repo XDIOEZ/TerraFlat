@@ -56,6 +56,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
+- `Mod_Mover` 的逐帧水流推动先查询当前格真实流向，有有效水流后才解析 Actor 推动配置；`WorldMotionSystem.CalculateWaterCurrentVelocity` 与数值速度入口共用原流量曲线，不跨帧缓存水态。回归 `environment/water_current_reuse`。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
 - `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。
 - `Mover_SaveData.isRunning` 保存奔跑开关，输入锁停止位移但保留开关。Run 与 Move 分离，静止动画为 Idle，跑步播放不改全局 Animator.speed。体力统一经带来源的 `Mod_Stamina` API；管理员无限体力也在该权威模块处理。普通划船不耗体力，按住奔跑且移动时的载具加速记为 `flatworld.carrier.boost`。
