@@ -55,6 +55,9 @@ for _, case in ipairs(temperatureCases) do
         near(data.afterFirstRemoval, case.strongest, "移除未生效来源")
         near(data.restored, case.restored, "恢复基础体温")
         assert(data.invalidSecondsNext == case.restored and data.savedTemperature == case.restored and data.saveIsIndependent, "非法时间或临时增温污染基础快照")
+        near(data.tickNatural, data.ambientNext, "角色真实热传导入口与原算法一致")
+        near(data.tickWarmed, data.expectedWarmed, "有增温来源时仅对基础体温进行热传导")
+        near(data.tickAfterRemoval, data.ambientNext, "移除热源恢复本轮基础体温")
     end, "角色体温：" .. case.name)
 end
 

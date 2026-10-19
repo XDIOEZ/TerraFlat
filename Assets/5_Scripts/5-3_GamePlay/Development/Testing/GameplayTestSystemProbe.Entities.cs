@@ -949,16 +949,33 @@ public static partial class GameplayTestSystemProbe
             temperature.RemoveTemporaryWarming(first);
             float afterFirstRemoval = temperature.Data.CurrentTemperature;
             temperature.RemoveTemporaryWarming(second);
+            float restored = temperature.Data.CurrentTemperature;
             float split = ThermalRuntime.AdvanceAmbient(current, ambient, seconds * .5f);
             split = ThermalRuntime.AdvanceAmbient(split, ambient, seconds * .5f);
+
+            // 真实角色热传导入口与纯热公式比对，临时增温不参与基础温差。
+            temperature.SetAmbientTemperature(ambient);
+            temperature.AdvanceAmbientTemperature(seconds);
+            float tickNatural = temperature.Data.CurrentTemperature;
+            temperature.SetTemperature(current);
+            temperature.SetTemporaryWarming(first, 10f, 35f);
+            temperature.AdvanceAmbientTemperature(seconds);
+            float tickWarmed = temperature.Data.CurrentTemperature;
+            float expectedNatural = ThermalRuntime.AdvanceAmbient(current, ambient, seconds);
+            float expectedWarmed = expectedNatural + Mathf.Max(0f,
+                Mathf.Min(10f, Mathf.Max(0f, 35f - expectedNatural)));
+            temperature.RemoveTemporaryWarming(first);
+            float tickAfterRemoval = temperature.Data.CurrentTemperature;
             return new JObject
             {
                 ["ambientNext"] = ThermalRuntime.AdvanceAmbient(current, ambient, seconds), ["splitNext"] = split,
                 ["invalidSecondsNext"] = ThermalRuntime.AdvanceAmbient(current, ambient, float.NaN),
                 ["firstWarming"] = firstWarming, ["strongestWarming"] = strongestWarming,
-                ["afterFirstRemoval"] = afterFirstRemoval, ["restored"] = temperature.Data.CurrentTemperature,
+                ["afterFirstRemoval"] = afterFirstRemoval, ["restored"] = restored,
                 ["savedTemperature"] = snapshot.CurrentTemperature,
-                ["saveIsIndependent"] = !ReferenceEquals(snapshot, temperature.Data)
+                ["saveIsIndependent"] = !ReferenceEquals(snapshot, temperature.Data),
+                ["tickNatural"] = tickNatural, ["tickWarmed"] = tickWarmed,
+                ["expectedWarmed"] = expectedWarmed, ["tickAfterRemoval"] = tickAfterRemoval
             };
         });
     }

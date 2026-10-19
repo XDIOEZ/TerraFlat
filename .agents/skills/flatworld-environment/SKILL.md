@@ -55,6 +55,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 自然物同次环境冻结用 `TemperatureMgr.PointSamplingContext` 和 `LiquidTemperatureField.PointSamplingBatch`，按目标块一次收集已规范邻区，只读绑定 `WorldRuntime+Epoch+Dimension` 的当前地形；同批每格仍完整算热源距离，下批重读 Terrain 身份与 SurfaceLiquidRevision。跨程序集的 GM 温度观察层使用公开的 `BeginAmbientPointSampling()` 包装复用相同批次。作用域是同步只读阶段，期间不得修改地形、热源或目录，不跨帧缓存结果；嵌套批次独立，退出释放，目录重载/旧代际拒用，`environment/thermal_point_batch` 覆盖刷新与生命周期边界。
 - 体温是最外层体表；角色、普通物品、罐体/工业内容、停火炉体、落地容器与坩埚的自然传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，速率最低 0.5℃/游戏秒，到达目标即停止；跨下限时先指数后匀速，保证分步与累计一致。默认下限在 `MinimumAmbientTemperatureChangePerSecond`。流体用同公式双精度结果按真实热容换回内能，共享罐库存每轮只推进一次；冷热不分速率，不读物品传热率或潮湿/附近火源倍率。`AdvanceTowards` 仅保留给入水、岩浆接触和主动设备传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
+- `Mod_Temperature` 的 0.25 秒体温结算直接调用管理器原用的 `ThermalRuntime.AdvanceAmbient` 并提交自然体温，不再逐 Tick 构造方法组委托或额外解析管理器；热传导、增温来源、变化事件和疾病结算顺序不变。回归 `survival/thermal`。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。
 - `TemperatureWarningPresentationRules` 供 `FoodUIModule` 体温条与 `TemperatureScreenRendererFeature` 共用，读取最终体温和装备修正后的安全线；条在安全线前 3℃渐蓝/红（窄范围取四分之一宽度），屏幕越线后 10℃到满强，真实秒平滑渐入/退去，冷热有符号强度保证互斥。只改表现，不改危险缓冲/Buff；规则归 `survival/temperature_presentation*`，最终画面由用户验收。
 - 冷热共用 RemainingTemperatureBufferSeconds：危险扣 1/s、安全默认补 1/s、容量默认 60；短暂安全/冷热切换/清 Buff 不重置，保存剩余量，RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点并向远离方向随机引导，不再记录或回退安全点；普通陆地移动也保留短期方向偏置。
