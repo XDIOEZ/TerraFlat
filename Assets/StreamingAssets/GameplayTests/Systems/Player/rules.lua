@@ -229,6 +229,13 @@ for _, case in ipairs(cursorCases) do
     end, "手机准线距离：" .. case.name)
 end
 
+test.system("player", "focus_aim_batch", {}, function(data)
+    assert(data.deltasCorrect and data.samples == 168,
+        "鼠标瞄准合并距离后改变了环绕接缝、直瞄或半周期方向")
+    assert(data.stopsCorrect and data.specialThresholds,
+        "瞄准死区的距离临界值、负数或无效阈值行为改变")
+end, "玩家瞄准复用一次指针与环绕拓扑，保持方向和死区边界")
+
 test.system("player", "trauma_modifiers", {}, function(data)
     local function check(sample, attack, inverted, label)
         assert(type(sample.attack) == "number" and math.abs(sample.attack - attack) < .00001,

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -13,12 +14,73 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("player/physics_source", InteractionPhysicsSource);
         operations.Add("player/aim_cursor", InteractionAimCursor);
+        operations.Add("player/focus_aim_batch", InteractionFocusAimBatch);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
         operations.Add("player/interaction_query_context", InteractionQueryContext);
         operations.Add("player/grid_interaction_bands", InteractionGridBands);
         operations.Add("inventory/discard_hover_query", InventoryDiscardHoverQuery);
         operations.Add("terrain/contact_query_context", TerrainContactQueryContext);
+    }
+
+    #endregion
+
+    #region 角色瞄准单轮拓扑与方向回归
+
+    // 只对照正式瞄准方向入口，覆盖环绕接缝、翻身直瞄和停止半径。
+    private static JObject InteractionFocusAimBatch(JObject args)
+    {
+        Vector2[] starts =
+        {
+            new(15.5f, .5f), new(-15.5f, .5f), Vector2.zero,
+            Vector2.zero, new(-15.5f, -15.5f), new(3.5f, 3.5f)
+        };
+        Vector2[] targets =
+        {
+            new(-15.5f, .5f), new(15.5f, .5f), new(16f, 0f),
+            new(-16f, 0f), new(15.5f, 15.5f), new(3.5f, 3.5f)
+        };
+        Vector2[] wrappedExpected =
+        {
+            new(1f, 0f), new(-1f, 0f), new(-16f, 0f),
+            new(-16f, 0f), new(-1f, -1f), Vector2.zero
+        };
+        float[] stopDistances = { -1f, 0f, .1f, 1f, 2f, 5f, 32f };
+        var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        bool deltasCorrect = true, stopsCorrect = true;
+        int sampleCount = 0;
+        for (int worldIndex = 0; worldIndex < 2; worldIndex++)
+        for (int directIndex = 0; directIndex < 2; directIndex++)
+        for (int i = 0; i < starts.Length; i++)
+        {
+            bool isWrapped = worldIndex != 0;
+            bool direct = directIndex != 0;
+            WorldTopologyDomain topology = isWrapped ? wrapped : default;
+            Vector2 actual = Mod_FocusPoint.ResolveAimDelta(starts[i], targets[i], direct, topology);
+            Vector2 expected = isWrapped && !direct ? wrappedExpected[i] : targets[i] - starts[i];
+            deltasCorrect &= (actual - expected).sqrMagnitude < .00000001f;
+            float oldDistance = isWrapped && !direct
+                ? topology.Distance(new float2(starts[i].x, starts[i].y),
+                    new float2(targets[i].x, targets[i].y))
+                : Vector2.Distance(starts[i], targets[i]);
+            for (int j = 0; j < stopDistances.Length; j++)
+            {
+                float threshold = stopDistances[j];
+                stopsCorrect &= Mod_FocusPoint.IsWithinAimStopDistance(actual, threshold) ==
+                    (oldDistance <= threshold);
+                sampleCount++;
+            }
+        }
+
+        bool specialThresholds = !Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, float.NaN) &&
+            !Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, -1f) &&
+            Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, float.PositiveInfinity) &&
+            !Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, float.NegativeInfinity);
+        return new JObject
+        {
+            ["deltasCorrect"] = deltasCorrect, ["stopsCorrect"] = stopsCorrect,
+            ["specialThresholds"] = specialThresholds, ["samples"] = sampleCount
+        };
     }
 
     #endregion

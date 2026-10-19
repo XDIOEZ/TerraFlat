@@ -61,6 +61,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 太空场景禁止玩家奔跑；失重 WASD 输入由 `SpaceSession.StepFreePassengers` 在固定步调用 `Mod_Mover.SmoothSpaceVelocity`，按屏幕方向给 FreeWalkVelocity 累加推力，松键无摩擦并保持速度，反向输入逐渐制动。离船继承船体点速度，继承/碰撞速度不受主动移动限速影响。Shift 不参与冲刺、借力或抓墙，普通地表奔跑保留。
 - 地表飞船起降和玩家单独下落整体移动根节点/刚体，手持物自然跟随；`ShipSurfacePresentation` 暂存离地碰撞与高度，落地/释放恢复。玩家保存、环绕坐标、世界格事件与联机地面状态通过 `GroundPosition` 去掉临时高度，不能把高度写入地面位置。
 - `Mod_FocusPoint` 独占翻身/瞄准节点的最终旋转，`Mod_TurnBack` 提供本地 Y 转角，手持物瞄准换算到父节点坐标。太空 `SetSpaceUpright` 只固定本体/刚体与镜头朝上，仍开启鼠标左右翻面；不能调用 `SetMirroringEnabled(false)` 把角色锁向右侧。`CameraFollowRotation` 在 Cinemachine 管线内写绝对朝向，不叠加 Dutch，`Mod_Cam.SetFollowTargetRotation(false)` 明确恢复零角度。镜头使用 Cinemachine 2.x Framing Transposer 的 Lookahead/XY Damping；缩放解析玩家兄弟模块 `Mod_ChunkLoader` 刷新区块窗口。管理员无限视野只跳过最终尺寸上限，有限 `MaxPovValue` 仍供普通玩法/UI 使用。
+- `Mod_FocusPoint` 每轮只采样一次指针，批内共用世界拓扑；每个目标由同一最短方向判断距离平方与角度，本体直瞄不解析世界边界，死区和翻面不变。回归 `player/focus_aim_batch`。
 - 环绕副本使用 URP Overlay，`WrappedWorldCameraRenderer` 唯一管理相机后处理开关：有副本仅最后活动相机启用，无副本/解绑恢复主相机；`ScreenPostProcessManager` 只合成 Volume 参数。
 - 地表柔边云团与外圈浓云由 ZoomCloudRendererFeature 在最终环绕补绘后叠加；清晰区对齐玩家设置的实际方形加载窗，额外表现预加载圈形成柔雾带，缺少外圈时在已加载窗内收一格柔边。窗口随加载设置与跨区块提交变化，缩放只改变屏幕投影；风只控制漂移，SurfaceZoomTransition 独立平滑 60～90 的宇宙画面直接淡入淡出，正常太空和禁天气维度不叠地表云，HUD 不被覆盖。
 - `CameraZoomExtensions` 注册通用缩放策略；地表宇宙观察把逻辑尺寸与实际相机尺寸分开，`CurrentOrthographicSize` 在这种策略下读逻辑尺寸，其余模式仍读 lens。滚轮/双指共用线性→倍率的连续步坐标，手机滑条通过 GetViewSliderValue/SetViewSliderValue 使用稳定分段映射；驾驶跟随覆盖优先，观察不改变玩家位置、听音或区块加载距离。
