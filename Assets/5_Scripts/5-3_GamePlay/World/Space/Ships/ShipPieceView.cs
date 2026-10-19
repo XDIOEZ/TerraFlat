@@ -60,8 +60,9 @@ namespace FlatWorld.Spaceflight
         {
             hit = default;
             if (boundPiece == null || boundCellSize <= 0d) return false;
+            Vector2 position = transform.position;
             Vector2 projected = session.IsSpaceView ? pointer :
-                (Vector2)transform.position + topology.ShortestDelta(transform.position, pointer);
+                position + (Vector2)topology.ShortestDelta(position, pointer);
             Vector3 local = transform.InverseTransformPoint(projected - (Vector2)transform.TransformVector(interactionLift));
             float x = local.x / (float)boundCellSize + .5f;
             float y = local.y / (float)boundCellSize + .5f;
