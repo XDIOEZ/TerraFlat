@@ -52,6 +52,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/oxygen", EntityOxygen);
         operations.Add("survival/pressure", EntityPressure);
         operations.Add("survival/nutrition", EntityNutrition);
+        operations.Add("survival/food_observer_index", EntityFoodObserverIndex);
         operations.Add("survival/thermal", EntityTemperature);
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
@@ -931,6 +932,117 @@ public static partial class GameplayTestSystemProbe
             ["excessiveAccepted"] = excessive, ["afterRejected"] = fed.Carbohydrates + fed.Fat + fed.Protein
         };
     }
+
+    #region 食物规则观察者索引回归
+
+    private sealed class FoodPipelineTickProbe : IFoodMechanic, IFoodTickObserver, IFoodTickRequirement, IFoodStateObserver
+    {
+        private readonly List<string> calls;
+        public FoodPipelineTickProbe(string id, int priority, bool active, List<string> calls)
+        {
+            MechanicId = id;
+            Priority = priority;
+            RequiresFoodTick = active;
+            this.calls = calls;
+        }
+
+        public string MechanicId { get; }
+        public int Priority { get; }
+        public bool RequiresFoodTick { get; set; }
+        public void OnFoodTick(FoodTickContext _) => calls.Add(MechanicId + ":tick");
+        public void OnFoodStateChanged(FoodStateChangedContext _) => calls.Add(MechanicId + ":state");
+    }
+
+    private sealed class FoodPipelineUngatedProbe : IFoodMechanic, IFoodTickObserver
+    {
+        private readonly List<string> calls;
+        public FoodPipelineUngatedProbe(List<string> calls) => this.calls = calls;
+        public string MechanicId => "ungated";
+        public int Priority => 20;
+        public void OnFoodTick(FoodTickContext _) => calls.Add("ungated:tick");
+    }
+
+    private sealed class FoodPipelinePassiveProbe : IFoodMechanic
+    {
+        public string MechanicId => "passive";
+        public int Priority => -20;
+    }
+
+    // 正式食物管线验证优先级、动态启停、无调度接口以及热添加的观察者。
+    private static JObject EntityFoodObserverIndex(JObject args)
+    {
+        var calls = new List<string>();
+        var context = new FoodRuntimeContext(null, new ModData_FoodData(), null, null, null, null, null);
+        using var pipeline = new FoodRulePipeline(context);
+        var early = new FoodPipelineTickProbe("early", -10, true, calls);
+        var late = new FoodPipelineTickProbe("late", 40, false, calls);
+        pipeline.Add(late);
+        pipeline.Add(new FoodPipelineUngatedProbe(calls));
+        pipeline.Add(new FoodPipelinePassiveProbe());
+        pipeline.Add(early);
+        pipeline.Add(early);
+        bool registered = pipeline.RuleCount == 4 && pipeline.TickObserverCount == 3 &&
+            pipeline.StateObserverCount == 2 && pipeline.HasActiveTickObservers();
+        pipeline.Initialize();
+        bool sortedCount = pipeline.RuleCount == 4 && pipeline.TickObserverCount == 3 &&
+            pipeline.StateObserverCount == 2;
+        var tick = new FoodTickContext(context, .1f);
+        var state = new FoodStateChangedContext(context);
+        pipeline.OnTick(tick);
+        bool sortedTick = string.Join(",", calls) == "early:tick,ungated:tick";
+        calls.Clear();
+        pipeline.OnStateChanged(state);
+        bool sortedState = string.Join(",", calls) == "early:state,late:state";
+        calls.Clear();
+
+        early.RequiresFoodTick = false;
+        late.RequiresFoodTick = true;
+        pipeline.OnTick(tick);
+        bool dynamicEligibility = string.Join(",", calls) == "ungated:tick,late:tick";
+        calls.Clear();
+        var appended = new FoodPipelineTickProbe("appended", -30, true, calls);
+        pipeline.Add(appended);
+        pipeline.Add(appended);
+        bool lateRegistered = pipeline.RuleCount == 5 && pipeline.TickObserverCount == 4 &&
+            pipeline.StateObserverCount == 3;
+        pipeline.OnTick(tick);
+        bool lateTick = string.Join(",", calls) == "ungated:tick,late:tick,appended:tick";
+        calls.Clear();
+        pipeline.OnStateChanged(state);
+        bool lateState = string.Join(",", calls) == "early:state,late:state,appended:state";
+        calls.Clear();
+
+        var gatedContext = new FoodRuntimeContext(null, new ModData_FoodData(), null, null, null, null, null);
+        bool gatedPause, gatedResume;
+        using (var gatedPipeline = new FoodRulePipeline(gatedContext))
+        {
+            var gated = new FoodPipelineTickProbe("gated", 0, false, calls);
+            gatedPipeline.Add(gated);
+            gatedPipeline.Initialize();
+            gatedPause = !gatedPipeline.HasActiveTickObservers();
+            gatedPipeline.OnTick(new FoodTickContext(gatedContext, .1f));
+            gatedPause &= calls.Count == 0;
+            gated.RequiresFoodTick = true;
+            gatedResume = gatedPipeline.HasActiveTickObservers();
+            gatedPipeline.OnTick(new FoodTickContext(gatedContext, .1f));
+            gatedResume &= string.Join(",", calls) == "gated:tick";
+        }
+
+        pipeline.Dispose();
+        bool disposed = pipeline.RuleCount == 0 && pipeline.TickObserverCount == 0 &&
+            pipeline.StateObserverCount == 0 && context.RulePipeline == null &&
+            gatedContext.RulePipeline == null;
+        return new JObject
+        {
+            ["registered"] = registered, ["sortedCount"] = sortedCount,
+            ["sortedTick"] = sortedTick, ["sortedState"] = sortedState,
+            ["dynamicEligibility"] = dynamicEligibility, ["lateRegistered"] = lateRegistered,
+            ["lateTick"] = lateTick, ["lateState"] = lateState,
+            ["gatedPause"] = gatedPause, ["gatedResume"] = gatedResume, ["disposed"] = disposed
+        };
+    }
+
+    #endregion
 
     private static JObject EntityTemperature(JObject args)
     {

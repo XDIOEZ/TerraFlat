@@ -40,6 +40,15 @@ for _, case in ipairs(nutritionCases) do
         assert(not data.excessiveAccepted and data.afterRejected == data.afterEnergy, "失败能量请求扣了部分营养")
     end, "营养与能量：" .. case.name)
 end
+test.system("survival", "food_observer_index", {}, function(data)
+    assert(data.registered and data.sortedCount and data.sortedTick and data.sortedState,
+        "食物规则 Tick 或状态观察者索引遗漏、重复或改变优先级顺序")
+    assert(data.dynamicEligibility and data.lateRegistered and data.lateTick and data.lateState,
+        "食物规则动态调度或初始化后新增扩展机制未生效")
+    assert(data.gatedPause and data.gatedResume and data.disposed,
+        "食物规则休眠、恢复或卸载后观察者引用生命周期不正确")
+end, "食物高频规则只遍历观察者：排序、休眠及热添加回归")
+
 local temperatureCases = {
     {name = "有限增温取最强", args = {}, ambient = 25, first = 35, strongest = 50, restored = 30},
     {name = "基础体温超过上限不降温", args = {current = 60, ambient = 60}, ambient = 60, first = 60, strongest = 60, restored = 60},

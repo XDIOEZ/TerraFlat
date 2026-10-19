@@ -68,6 +68,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 装备、食物与容器
 
+- `FoodRulePipeline` 初始化后复用 Tick/状态观察者列表，不再每 0.1 秒扫描所有食物规则；`RequiresFoodTick` 每次仍实时判断，加载后新增扩展按原插入顺序执行，规则 `survival/food_observer_index`。
 - 装备能力显式组合 Mod_Equipment，按 EquipmentSlot 标签选槽；世界主交互优先。ThermalInsulation 修改安全温度上下界，耐寒/耐热独立，不改变传热或当前温度。
 - 穿戴中的配置由装备效果实现 `IEquipmentConfiguration`，经 `Mod_Equipment.CollectConfigurationTargets/TryOpenConfiguration` 收集和校验；同件装备去重，卸下或更换后拒绝旧目标。宇航服生命支持/配置效果挂在持有气罐状态的衣服上，头盔只提供套装部件资格与自身防护。
 - Food 静态世界实例可休眠，库存腐败/融化走冷数据规则。蛋白质负责回血门槛，成本通过 IHealingCostPolicy 一次结算；濒死或 HP≤0 时停止被动回血/生存伤害。体力恢复按有效 MaxValue；医疗等待/提交由 BodyPartTreatmentSession 管理，UI 只发意图。
