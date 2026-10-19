@@ -507,6 +507,9 @@ public partial class Mod_ItemPicker : Module
         if (itemData?.Stack == null || requestedAmount <= 0f)
             return 0f;
 
+        if (item is Player creativePlayer && CreativeInventoryState.IsEnabled(creativePlayer))
+            return requestedAmount;
+
         if (item is Player player &&
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot playerSnapshot))
         {
@@ -516,7 +519,7 @@ public partial class Mod_ItemPicker : Module
         Inventory_Data bagData = null;
         float totalWeight = 0f;
         float totalVolume = 0f;
-        var countedInventories = new HashSet<Inventory_Data>();
+        using var countedLease = UnityEngine.Pool.HashSetPool<Inventory_Data>.Get(out var countedInventories);
         for (int i = 0; i < AddTargetInventories.Count; i++)
         {
             Inventory targetInventory = AddTargetInventories[i]?.GetDefaultTargetInventory();
@@ -524,8 +527,9 @@ public partial class Mod_ItemPicker : Module
             if (targetData == null || !countedInventories.Add(targetData))
                 continue;
 
-            totalWeight += targetData.CurrentCarryWeight;
-            totalVolume += targetData.CurrentCarryVolume;
+            targetData.GetCarryUsage(out float weight, out float volume);
+            totalWeight += weight;
+            totalVolume += volume;
             if (string.Equals(targetData.Name, ModText.Bag, System.StringComparison.Ordinal))
                 bagData = targetData;
         }

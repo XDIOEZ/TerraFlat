@@ -23,6 +23,18 @@ test.system("inventory", "incremental_mass_binding", {}, function(data)
         "批量槽位中的结构与质量事件次数不符合真实变更")
 end, "大库存单格增量质量绑定与换槽重建事件一致性")
 
+test.system("inventory", "carry_usage_single_pass", {}, function(data)
+    assert(data.slotCount == 128 and data.initiallyEqual and
+        data.initialWeight == 192 and data.initialVolume == 256,
+        "单轮汇总没有与逐项重量、体积保持一致")
+    assert(data.amountUpdated and data.volumeUpdated and data.replaced,
+        "物品数量、直接体积变更或换槽后使用了过期的携带量")
+    assert(data.capacityLimited and data.replacementAccepted and data.replacementRejected,
+        "合并扫描改变了容量限额或换物门禁")
+    assert(data.unlimited and data.empty,
+        "无限容量绕过或空库存读取没有保留原有边界")
+end, "大库存重量体积同轮汇总与动态变更实时读取")
+
 test.system("inventory", "readable_book_snapshot", {}, function(data)
     assert(data.written and data.failure == "", "初始书页没有写入正式模块载荷")
     assert(data.addedPages == 2 and #data.pages == 3 and data.materialSlots == 2,

@@ -51,6 +51,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/thermal", EntityTemperature);
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
+        operations.Add("inventory/carry_usage_single_pass", EntityCarryUsageSinglePass);
         operations.Add("inventory/dynamic_slot_maintenance", EntityDynamicSlotMaintenance);
         operations.Add("inventory/incremental_mass_binding", EntityIncrementalMassBinding);
         operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
@@ -885,6 +886,65 @@ public static partial class GameplayTestSystemProbe
             ["sameIdentity"] = item.HasSameStackIdentity(other), ["canStack"] = item.CanStackWith(other),
             ["wholeLarge"] = Inventory_Data.GetWholeStackAmount(float.MaxValue),
             ["wholeNegative"] = Inventory_Data.GetWholeStackAmount(-.5f)
+        };
+    }
+
+    // 独立大库存核对同轮重量体积，以及改量、改体积、换物与容量门禁。
+    private static JObject EntityCarryUsageSinglePass(JObject args)
+    {
+        const int slotCount = 128;
+        var slots = new List<ItemSlot>(slotCount);
+        for (int i = 0; i < slotCount; i++)
+            slots.Add(new ItemSlot(i)
+            {
+                itemData = i % 2 == 0 ? EntityProbeData("probe:usage_" + i, 2f, 1.5f, 2f) : null
+            });
+        var inventory = new Inventory_Data(slots, "probe:carry-usage");
+
+        inventory.GetCarryUsage(out float initialWeight, out float initialVolume);
+        bool initiallyEqual = Mathf.Approximately(initialWeight, inventory.CurrentCarryWeight) &&
+                              Mathf.Approximately(initialVolume, inventory.CurrentCarryVolume);
+
+        slots[0].itemData.Stack.Amount = 3f;
+        inventory.GetCarryUsage(out float amountWeight, out float amountVolume);
+        bool amountUpdated = Mathf.Approximately(amountWeight, 193.5f) &&
+                             Mathf.Approximately(amountVolume, 258f);
+
+        slots[0].itemData.Stack.Volume = 5f;
+        inventory.GetCarryUsage(out float volumeWeight, out float volumeVolume);
+        bool volumeUpdated = Mathf.Approximately(volumeWeight, amountWeight) &&
+                             Mathf.Approximately(volumeVolume, 267f);
+
+        slots[2].itemData = EntityProbeData("probe:replacement", 4f, 1f, 3f);
+        inventory.GetCarryUsage(out float replacedWeight, out float replacedVolume);
+        bool replaced = Mathf.Approximately(replacedWeight, 194.5f) &&
+                        Mathf.Approximately(replacedVolume, 275f) &&
+                        Mathf.Approximately(inventory.CurrentCarryWeight, replacedWeight) &&
+                        Mathf.Approximately(inventory.CurrentCarryVolume, replacedVolume);
+
+        inventory.SetCarryCapacity(220f, 285f);
+        var incoming = EntityProbeData("probe:incoming", 1f, 1f, 2f);
+        bool capacityLimited = Mathf.Approximately(inventory.GetCapacityLimitedAmount(incoming, 30f), 5f);
+        bool replacementAccepted = inventory.CanReplaceItem(slots[2].itemData,
+            EntityProbeData("probe:lighter", 2f, 10f, 5f));
+        bool replacementRejected = !inventory.CanReplaceItem(slots[2].itemData,
+            EntityProbeData("probe:bulkier", 2f, 10f, 12f));
+
+        inventory.SetUnlimitedCarryCapacity(true);
+        bool unlimited = Mathf.Approximately(inventory.GetCapacityLimitedAmount(incoming, 30f), 30f) &&
+                         inventory.GetCapacityLimitedAmount(null, 30f) == 0f;
+        var empty = new Inventory_Data(new List<ItemSlot>(), "probe:empty-usage");
+        empty.GetCarryUsage(out float emptyWeight, out float emptyVolume);
+
+        return new JObject
+        {
+            ["initiallyEqual"] = initiallyEqual,
+            ["initialWeight"] = initialWeight, ["initialVolume"] = initialVolume,
+            ["amountUpdated"] = amountUpdated, ["volumeUpdated"] = volumeUpdated,
+            ["replaced"] = replaced, ["capacityLimited"] = capacityLimited,
+            ["replacementAccepted"] = replacementAccepted, ["replacementRejected"] = replacementRejected,
+            ["unlimited"] = unlimited, ["empty"] = emptyWeight == 0f && emptyVolume == 0f,
+            ["slotCount"] = inventory.itemSlots.Count
         };
     }
 

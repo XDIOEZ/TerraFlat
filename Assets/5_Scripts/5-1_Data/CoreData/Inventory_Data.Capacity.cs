@@ -276,11 +276,10 @@ public partial class Inventory_Data
     /// <summary>按当前整包容量计算这次最多还能加入多少件指定物品。</summary>
     public float GetCapacityLimitedAmount(ItemData itemData, float requestedAmount)
     {
-        return GetCapacityLimitedAmount(
-            itemData,
-            requestedAmount,
-            CalculateCarryWeight(),
-            CalculateCarryVolume());
+        if (!HasCarryCapacity || HasUnlimitedCarryCapacity)
+            return GetCapacityLimitedAmount(itemData, requestedAmount, 0f, 0f);
+        GetCarryUsage(out float weight, out float volume);
+        return GetCapacityLimitedAmount(itemData, requestedAmount, weight, volume);
     }
 
     /// <summary>给事务模拟层使用的纯计算版本；current* 可以来自尚未提交的工作快照。</summary>
@@ -323,10 +322,29 @@ public partial class Inventory_Data
         if (!HasCarryCapacity || HasUnlimitedCarryCapacity)
             return true;
 
-        float weight = CalculateCarryWeight() - GetWeight(removing) + GetWeight(adding);
-        float volume = CalculateCarryVolume() - GetVolume(removing) + GetVolume(adding);
+        GetCarryUsage(out float currentWeight, out float currentVolume);
+        float weight = currentWeight - GetWeight(removing) + GetWeight(adding);
+        float volume = currentVolume - GetVolume(removing) + GetVolume(adding);
         return weight <= MaxAllowedCarryWeight + 0.0001f &&
                volume <= MaxCarryVolume + 0.0001f;
+    }
+
+    /// <summary>一次遍历同时获取重量和体积，保持每次读取都是最新的槽位数据。</summary>
+    public void GetCarryUsage(out float weight, out float volume)
+    {
+        weight = 0f;
+        volume = 0f;
+        if (itemSlots == null)
+            return;
+
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            ItemStack stack = itemSlots[i]?.itemData?.Stack;
+            if (stack == null)
+                continue;
+            weight += Mathf.Max(0f, stack.CurrentWeight);
+            volume += Mathf.Max(0f, stack.CurrentVolume);
+        }
     }
 
     private float CalculateCarryWeight()

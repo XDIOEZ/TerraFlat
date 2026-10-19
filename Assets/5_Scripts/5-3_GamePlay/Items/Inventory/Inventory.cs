@@ -1164,8 +1164,7 @@ public class Inventory
         }
         else if (Data?.HasCarryCapacity == true)
         {
-            currentWeight = Data.CurrentCarryWeight;
-            currentVolume = Data.CurrentCarryVolume;
+            Data.GetCarryUsage(out currentWeight, out currentVolume);
             weightLimit = Data.HasUnlimitedCarryCapacity ? float.PositiveInfinity : Data.MaxCarryWeight;
             volumeLimit = Data.HasUnlimitedCarryCapacity ? float.PositiveInfinity : Data.MaxCarryVolume;
             maxWeight = Data.MaxCarryWeight.ToString("0.##");
