@@ -981,7 +981,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		}
 
 		_chaseFormationMembers.Sort(ChaseFormationMemberComparer);
-		int slotIndex = ResolveChaseFormationSlotIndex(_currentThreat.transform.position);
+		// 同一轮阵型只读取一次世界拓扑，成员位置及地形资格仍实时核验。
+		WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+		int slotIndex = ResolveChaseFormationSlotIndex(_currentThreat.transform.position, topology);
 		if (slotIndex < 0)
 		{
 			ClearChaseFormation();
@@ -998,15 +1000,15 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			chaseFormationVerticalSpacing,
 			chaseFormationMaxVerticalRatio);
 		Vector2 desiredOffset = Vector2.ClampMagnitude(
-			slotOffset + CalculateChaseSeparationOffset(),
+			slotOffset + CalculateChaseSeparationOffset(topology),
 			maxFormationRadius);
 
 		Vector3 targetPosition = _currentThreat.transform.position;
-		Vector3 formationTarget = WorldTopologyRuntime.NormalizePosition(targetPosition + (Vector3)desiredOffset);
+		Vector3 formationTarget = NormalizeChasePosition(targetPosition + (Vector3)desiredOffset, topology);
 		if (!IsWalkableFormationDestination(formationTarget))
 		{
 			// 分离偏移踩到障碍时，优先保留原槽位；槽位同样不可走时回退旧追击逻辑。
-			formationTarget = WorldTopologyRuntime.NormalizePosition(targetPosition + (Vector3)slotOffset);
+			formationTarget = NormalizeChasePosition(targetPosition + (Vector3)slotOffset, topology);
 			if (!IsWalkableFormationDestination(formationTarget))
 			{
 				ClearChaseFormation();
@@ -1021,7 +1023,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	}
 
 	/// <summary>计算过近同伴带来的有限分离偏移，结果只影响下次寻路目标，不改写导航速度。</summary>
-	private Vector2 CalculateChaseSeparationOffset()
+	private Vector2 CalculateChaseSeparationOffset(in WorldTopologyDomain topology)
 	{
 		float separationDistance = Mathf.Max(0.05f, chaseSeparationDistance);
 		float maxOffset = Mathf.Max(0f, chaseSeparationMaxOffset);
@@ -1030,13 +1032,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 		float separationDistanceSqr = separationDistance * separationDistance;
 		Vector2 separation = Vector2.zero;
+		Vector3 wolfPosition = transform.position;
 		for (int i = 0; i < _chaseFormationMembers.Count; i++)
 		{
 			AI_Wolf ally = _chaseFormationMembers[i];
 			if (ally == null || ally == this)
 				continue;
 
-			Vector2 away = WorldTopologyRuntime.ShortestDelta(ally.transform.position, transform.position);
+			Vector2 away = GetChaseDelta(ally.transform.position, wolfPosition, topology);
 			float distanceSqr = away.sqrMagnitude;
 			if (distanceSqr >= separationDistanceSqr)
 				continue;
@@ -1066,14 +1069,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	}
 
 	/// <summary>优先占据自己所在的左右翼，避免为了固定编号从玩家身体中央穿过。</summary>
-	private int ResolveChaseFormationSlotIndex(Vector3 targetPosition)
+	private int ResolveChaseFormationSlotIndex(Vector3 targetPosition, in WorldTopologyDomain topology)
 	{
 		int leftLaneCount = 0;
 		int rightLaneCount = 0;
 		for (int memberIndex = 0; memberIndex < _chaseFormationMembers.Count; memberIndex++)
 		{
 			AI_Wolf member = _chaseFormationMembers[memberIndex];
-			bool useRightLane = ShouldUseRightChaseLane(member, targetPosition, memberIndex);
+			bool useRightLane = ShouldUseRightChaseLane(member, targetPosition, memberIndex, topology);
 			int slotIndex = useRightLane
 				? rightLaneCount++ * 2 + 1
 				: leftLaneCount++ * 2;
@@ -1085,16 +1088,35 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	}
 
 	/// <summary>横向位置明确时保留原侧；与玩家 X 轴重合时按稳定排序交替分翼。</summary>
-	private static bool ShouldUseRightChaseLane(AI_Wolf wolf, Vector3 targetPosition, int stableMemberIndex)
+	private static bool ShouldUseRightChaseLane(AI_Wolf wolf, Vector3 targetPosition, int stableMemberIndex,
+		in WorldTopologyDomain topology)
 	{
 		if (wolf == null)
 			return (stableMemberIndex & 1) != 0;
 
-		float horizontalOffset = WorldTopologyRuntime.ShortestDelta(targetPosition, wolf.transform.position).x;
+		return ResolveRightChaseLane(targetPosition, wolf.transform.position, stableMemberIndex, topology);
+	}
+
+	internal static bool ResolveRightChaseLane(Vector2 targetPosition, Vector2 wolfPosition, int stableMemberIndex,
+		in WorldTopologyDomain topology)
+	{
+		float horizontalOffset = GetChaseDelta(targetPosition, wolfPosition, topology).x;
 		if (Mathf.Abs(horizontalOffset) > 0.05f)
 			return horizontalOffset > 0f;
 
 		return (stableMemberIndex & 1) != 0;
+	}
+
+	internal static Vector2 GetChaseDelta(Vector2 from, Vector2 to, in WorldTopologyDomain topology)
+	{
+		float2 delta = topology.ShortestDelta(new float2(from.x, from.y), new float2(to.x, to.y));
+		return new Vector2(delta.x, delta.y);
+	}
+
+	internal static Vector3 NormalizeChasePosition(Vector3 position, in WorldTopologyDomain topology)
+	{
+		float2 normalized = topology.Normalize(new float2(position.x, position.y));
+		return new Vector3(normalized.x, normalized.y, position.z);
 	}
 
 	/// <summary>玩家身份只读取项目 ItemData Tag，不再依赖 Unity Tag。</summary>

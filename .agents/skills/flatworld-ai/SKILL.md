@@ -53,6 +53,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 - 狼 `ai` 槽位的能力 ID 必须为 `AI`，`Module_AI_Wolf` 仅为 Prefab 身份；组群、呼叫和编队只接纳已就绪、启用、存活且友好的狼，按持久 Guid 选同一头狼。两只起协同追击，独狼避让、双狼低血撤退规则保留；回归 `ai/wolf_pack` 使用正式定义注册身份后调用真实决策。
 - 狼的一轮状态评估先筛选有效同伴，再复用同一列表计算追击编队；新一轮和卸载时清空，支援呼叫仍实时复核资格。
+- 狼群追击编队单次刷新冻结 `WorldTopologyDomain`，左右翼分配、同伴分离和站位归一化共用这份拓扑；同伴位置和路径可走性仍实时读取，回归 `ai/wolf_formation_topology`。
 - 单图共用 `Mod_AnimatorController`；鸟、蜂、鱼、幽灵通过 `IActorAnimationMotionSource` 报告主动移动与已有外观高度/倾角，风、水流等被动位移不计迈步。单图模式下旧身体 Animator 与鱼独立游动摇摆让出姿态，Ghost/Fish 的纯控制器不附带 Renderer 或物理组件；目录与窄信号回归见 AI/ItemRuntime 测试说明。
 - 单图死亡由动画模块订阅生命 `DeathStarted`：冻结致死瞬间 Sprite，上抛并翻转 180° 后保持；`deathDuration/deathJumpHeight` 由 Actor 根定义并继承，正式 AI 统一 0.76 秒/0.35 米。生命 `Data.DestroyDelay=1.1` 留出落地停尸时间；死亡/掉落/回收仍归生命模块，动画不自行删物。
 - 尸体保留期间 AI 基类停止行为并取消动物技能，行为图退出当前节点，幽灵停止主动直追；`Mod_Mover_AI` 清主动速度并拒绝普通/温度避险目标，继续原有被动风/水流。新生命经正式 `Load` 恢复 AI；`Mod_Damage` 只依本物品的生命立即关窗，不按 Owner 关闭已发射投射物。

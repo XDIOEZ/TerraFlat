@@ -1,4 +1,14 @@
 -- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
+test.system("ai", "wolf_formation_topology", {}, function(data)
+    assert(data.cases == 7 and data.wrappedDeltas and data.infiniteDeltas,
+        "狼群站位共用拓扑后改变了环绕接缝、负方向或半周期最短位移")
+    assert(data.normalized and data.infiniteUnchanged,
+        "阵型位置没有正确归一化或误改 Z/无限世界坐标")
+    assert(data.laneSeamRight and data.laneSeamLeft and data.unwrappedLaneLeft and
+        data.laneTieParity and data.laneNearTie,
+        "站位左右翼选择在环绕接缝、直线距离或近重合时改变")
+end, "狼群站位批次冻结拓扑，环绕位移、归一化和左右翼分配等价")
+
 for _, case in ipairs({
     {name = "四狼互认并响应支援接口", args = {count = 4, callOnly = true}, members = 4, state = "Chase"},
     {name = "三狼主动追击", args = {count = 3}, members = 3, state = "Chase"},

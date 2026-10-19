@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
@@ -10,6 +11,58 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterWolfPackOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ai/wolf_pack", EntityAiWolfPack);
+        operations.Add("ai/wolf_formation_topology", EntityWolfFormationTopology);
+    }
+
+    // 正式狼群站位算法在环绕、无限世界和半周期平局时保持同一距离及分翼规则。
+    private static JObject EntityWolfFormationTopology(JObject args)
+    {
+        var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        var infinite = default(WorldTopologyDomain);
+        Vector2[] origins =
+        {
+            new(15.5f, .5f), new(-15.5f, .5f), new(.5f, 15.5f),
+            new(.5f, -15.5f), Vector2.zero, Vector2.zero, new(3f, 4f)
+        };
+        Vector2[] destinations =
+        {
+            new(-15.5f, .5f), new(15.5f, .5f), new(.5f, -15.5f),
+            new(.5f, 15.5f), new(16f, 0f), new(-16f, 0f), new(3f, 4f)
+        };
+        Vector2[] wrappedExpected =
+        {
+            new(1f, 0f), new(-1f, 0f), new(0f, 1f),
+            new(0f, -1f), new(-16f, 0f), new(-16f, 0f), Vector2.zero
+        };
+
+        bool wrappedDeltas = true, infiniteDeltas = true;
+        for (int i = 0; i < origins.Length; i++)
+        {
+            wrappedDeltas &= AI_Wolf.GetChaseDelta(origins[i], destinations[i], wrapped) == wrappedExpected[i];
+            infiniteDeltas &= AI_Wolf.GetChaseDelta(origins[i], destinations[i], infinite) ==
+                destinations[i] - origins[i];
+        }
+
+        Vector3 position = new(17.25f, -17.75f, 3.5f);
+        bool normalized = AI_Wolf.NormalizeChasePosition(position, wrapped) ==
+            new Vector3(-14.75f, 14.25f, 3.5f);
+        bool infiniteUnchanged = AI_Wolf.NormalizeChasePosition(position, infinite) == position;
+        bool laneSeamRight = AI_Wolf.ResolveRightChaseLane(origins[0], destinations[0], 0, wrapped);
+        bool laneSeamLeft = !AI_Wolf.ResolveRightChaseLane(origins[1], destinations[1], 1, wrapped);
+        bool unwrappedLaneLeft = !AI_Wolf.ResolveRightChaseLane(origins[0], destinations[0], 1, infinite);
+        bool laneTieParity = !AI_Wolf.ResolveRightChaseLane(Vector2.zero, Vector2.zero, 0, wrapped) &&
+                             AI_Wolf.ResolveRightChaseLane(Vector2.zero, Vector2.zero, 1, wrapped);
+        bool laneNearTie = AI_Wolf.ResolveRightChaseLane(Vector2.zero, new Vector2(.04f, 0f), 1, wrapped) &&
+                           !AI_Wolf.ResolveRightChaseLane(Vector2.zero, new Vector2(-.04f, 0f), 0, wrapped);
+
+        return new JObject
+        {
+            ["wrappedDeltas"] = wrappedDeltas, ["infiniteDeltas"] = infiniteDeltas,
+            ["normalized"] = normalized, ["infiniteUnchanged"] = infiniteUnchanged,
+            ["laneSeamRight"] = laneSeamRight, ["laneSeamLeft"] = laneSeamLeft,
+            ["unwrappedLaneLeft"] = unwrappedLaneLeft, ["laneTieParity"] = laneTieParity,
+            ["laneNearTie"] = laneNearTie, ["cases"] = origins.Length
+        };
     }
 
     #endregion
