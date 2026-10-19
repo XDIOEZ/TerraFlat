@@ -9,7 +9,8 @@ internal sealed class ItemSimulationRangeIndex
     #region 区域与成员状态
 
     private const int RegionSize = 16;
-    private const float RegionRadius = 11.31381f;
+    internal const float RegionRadius = 11.31381f;
+    private const float RegionShortcutMargin = 0.02f;
     private const float ClockTolerance = 0.0005f;
 
     private readonly struct RegionKey : IEquatable<RegionKey>
@@ -298,6 +299,13 @@ internal sealed class ItemSimulationRangeIndex
         for (int i = 0; i < players.Count; i++)
             if (players[i].Scene == region.Key.Scene)
                 nearestCenter = math.min(nearestCenter, topology.SqrDistance(region.Key.Center, players[i].Position));
+        // 明显位于近档或最远档外的整块区域直接判定，边界沿用原始开平方精算。
+        if (TryResolveUnambiguousRegionTier(nearestCenter, nearRadius, farRadius, out SimulationRangeTier settled))
+        {
+            region.Boundary = false;
+            region.Tier = settled;
+            return;
+        }
         float distance = math.sqrt(nearestCenter);
         float lower = math.max(0f, distance - RegionRadius);
         float upper = distance + RegionRadius;
@@ -306,6 +314,32 @@ internal sealed class ItemSimulationRangeIndex
         region.Boundary = closest != farthest;
         region.Tier = closest;
     }
+
+    #region 区域距离快速判档
+
+    /// <summary>仅远离阈值时跳过开平方；预留小幅浮点余量，靠近边界仍使用原判断。</summary>
+    internal static bool TryResolveUnambiguousRegionTier(float squaredDistance, int near, int far,
+        out SimulationRangeTier tier)
+    {
+        float certainlyNear = near - RegionRadius - RegionShortcutMargin;
+        if (certainlyNear > 0f && squaredDistance >= 0f && squaredDistance < certainlyNear * certainlyNear)
+        {
+            tier = SimulationRangeTier.Near;
+            return true;
+        }
+
+        float certainlyStopped = far + RegionRadius + RegionShortcutMargin;
+        if (squaredDistance > certainlyStopped * certainlyStopped)
+        {
+            tier = SimulationRangeTier.Stopped;
+            return true;
+        }
+
+        tier = default;
+        return false;
+    }
+
+    #endregion
 
     public SimulationRangeTier ResolveTier(Item item)
     {

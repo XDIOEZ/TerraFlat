@@ -38,6 +38,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("item_runtime/single_sprite_animation", EntitySingleSpriteAnimation);
         operations.Add("item_runtime/initial_animator_activation", EntityInitialAnimatorActivation);
+        operations.Add("item_runtime/simulation_region_shortcut", EntitySimulationRegionShortcut);
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
@@ -447,6 +448,70 @@ public static partial class GameplayTestSystemProbe
             return new JObject { ["initiallyDue"] = initiallyDue, ["rejected"] = true, ["parameter"] = exception.ParamName };
         }
     }
+
+    #region 模拟区域快速判档回归
+
+    // 与原本的开平方判档逐样本比较，覆盖玩家附近、远区、各档边界和无限距离。
+    private static JObject EntitySimulationRegionShortcut(JObject args)
+    {
+        static SimulationRangeTier Classify(float squared, int near, int middle, int far)
+        {
+            if (squared <= near * near) return SimulationRangeTier.Near;
+            if (squared <= middle * middle) return SimulationRangeTier.Middle;
+            if (squared <= far * far) return SimulationRangeTier.Far;
+            return SimulationRangeTier.Stopped;
+        }
+
+        int samples = 0, nearSkipped = 0, stoppedSkipped = 0, preciseFallbacks = 0;
+        bool identical = true;
+        float radius = ItemSimulationRangeIndex.RegionRadius;
+        int[] nearRadii = { 8, 16, 24, 32, 64, 96, 128, 192 };
+        foreach (int near in nearRadii)
+        for (int far = near + 16; far <= 256; far += 16)
+        {
+            int middle = (near + far) / 2;
+            for (int index = 0; index < 180; index++)
+            {
+                float distance = index < 60 ? index * 3.71f : index < 120
+                    ? near + radius + (index - 90) * .013f
+                    : far + radius + (index - 150) * .013f;
+                distance = Mathf.Max(0f, distance);
+                float squared = distance * distance;
+                float center = Mathf.Sqrt(squared);
+                float low = Mathf.Max(0f, center - radius);
+                float high = center + radius;
+                SimulationRangeTier expectedNear = Classify(low * low, near, middle, far);
+                SimulationRangeTier expectedFar = Classify(high * high, near, middle, far);
+                bool shortcut = ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(
+                    squared, near, far, out SimulationRangeTier actual);
+                if (shortcut)
+                {
+                    identical &= expectedNear == expectedFar && expectedNear == actual;
+                    if (actual == SimulationRangeTier.Near) nearSkipped++;
+                    if (actual == SimulationRangeTier.Stopped) stoppedSkipped++;
+                }
+                else preciseFallbacks++;
+                samples++;
+            }
+        }
+
+        bool infiniteStopped = ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(
+            float.PositiveInfinity, 32, 96, out SimulationRangeTier infiniteTier) &&
+            infiniteTier == SimulationRangeTier.Stopped;
+        bool invalidFallsBack = !ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(
+            float.NaN, 32, 96, out _) &&
+            !ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(-1f, 32, 96, out _) &&
+            !ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(float.NegativeInfinity, 32, 96, out _);
+        return new JObject
+        {
+            ["identical"] = identical, ["samples"] = samples,
+            ["nearSkipped"] = nearSkipped, ["stoppedSkipped"] = stoppedSkipped,
+            ["preciseFallbacks"] = preciseFallbacks, ["infiniteStopped"] = infiniteStopped,
+            ["invalidFallsBack"] = invalidFallsBack
+        };
+    }
+
+    #endregion
 
     private static JObject EntityMovementCost(JObject args)
     {

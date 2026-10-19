@@ -1,4 +1,13 @@
 -- 物质条件表的读取顺序、固液分支与临界状态保持不变。
+test.system("item_runtime", "simulation_region_shortcut", {}, function(data)
+    assert(data.identical and data.samples > 10000,
+        "物品模拟区域快路径改变原有距离分档或未覆盖足够半径样本")
+    assert(data.nearSkipped > 0 and data.stoppedSkipped > 0 and data.preciseFallbacks > 0,
+        "明确近/远区域没有跳过开平方，或边界区域没有保留原精算")
+    assert(data.infiniteStopped and data.invalidFallsBack,
+        "无同场景玩家或无效距离的判档规则改变")
+end, "物品区域判档：近远快速区与临界距离原算法保持一致")
+
 test.system("item_runtime", "initial_animator_activation", {}, function(data)
     assert(data.queuedWhileInactive and data.stillQueued and data.disabledNotPlayed,
         "停用候选或禁用 Animator 的初始播放未延迟，可能重复输出 Unity 动画错误")
