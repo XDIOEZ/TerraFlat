@@ -360,6 +360,5 @@ namespace FlatWorld.Spaceflight
     {
         public string ConsolePieceId;
         public Vector2 Move;
-        public float Turn;
     }
 }

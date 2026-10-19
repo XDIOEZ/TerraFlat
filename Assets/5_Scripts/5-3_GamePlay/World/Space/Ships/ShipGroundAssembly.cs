@@ -41,6 +41,14 @@ namespace FlatWorld.Spaceflight
         public static int SnapQuarterTurns(double radians) =>
             (int)Math.Round(radians / (Math.PI * .5d), MidpointRounding.AwayFromZero) & 3;
 
+        // 船体位置记录重心，落地格子必须从本地原点换算，避免载荷改变后整船错位。
+        public static Vector2Int SnapOrigin(ShipState ship)
+        {
+            ShipGeometry.LocalToWorld(ship, 0d, 0d, out double x, out double y);
+            return new Vector2Int((int)Math.Round(x, MidpointRounding.AwayFromZero),
+                (int)Math.Round(y, MidpointRounding.AwayFromZero));
+        }
+
         public static Vector2Int RotateAnchor(int x, int y, int width, int height, int quarterTurns) =>
             (quarterTurns & 3) switch
             {
@@ -275,8 +283,7 @@ namespace FlatWorld.Spaceflight
             using var worldScope = MachineWorld.UseScope(world);
             if (Math.Abs(ship.CellSizeMeters - 1d) > .000001d) throw new InvalidOperationException("船格必须与普通建筑的一米格对齐。");
             int turns = ShipGroundAssembly.SnapQuarterTurns(ship.AngleRadians);
-            Vector2Int origin = new((int)Math.Round(ship.PositionX, MidpointRounding.AwayFromZero),
-                (int)Math.Round(ship.PositionY, MidpointRounding.AwayFromZero));
+            Vector2Int origin = ShipGroundAssembly.SnapOrigin(ship);
             var plan = new GroundRestorePlan { Ship = ship, Origin = origin, Turns = turns,
                 Preparation = EnsureGroundPreparation(ship, world) };
             plan.Preparation.ReadyAtCommit = plan.Preparation.Ready;
@@ -429,7 +436,9 @@ namespace FlatWorld.Spaceflight
         private void DetachGroundShipOwnership(GroundRestorePlan plan, string world)
         {
             ShipState ship = plan.Ship;
-            ship.PositionX = plan.Origin.x; ship.PositionY = plan.Origin.y; ship.AngleRadians = plan.Turns * Math.PI * .5d;
+            ship.AngleRadians = plan.Turns * Math.PI * .5d;
+            ShipGeometry.Rotate(ship.CenterOfMassLocalX, ship.CenterOfMassLocalY, ship.AngleRadians, out double centerX, out double centerY);
+            ship.PositionX = plan.Origin.x + centerX; ship.PositionY = plan.Origin.y + centerY;
             ShipFlightState completedFlight = GetFlight(ship.ShipId);
             foreach (ShipPieceState piece in ship.Pieces)
             {

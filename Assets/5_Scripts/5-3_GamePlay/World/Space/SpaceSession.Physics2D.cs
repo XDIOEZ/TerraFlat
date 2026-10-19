@@ -25,10 +25,10 @@ namespace FlatWorld.Spaceflight
                 if (flight?.Phase != ShipFlightPhase.Cruising) continue;
                 SpacePhysicsBody body = spacePhysics.Acquire("ship:" + assembly.AssemblyId);
                 body.Assembly = assembly; body.Passenger = null; body.LooseItem = null;
-                body.FreeCircle = body.FreezeRotation = false;
+                body.FreeCircle = false; body.FreezeRotation = true;
                 body.Position = new SpaceSectorPosition(assembly.Sector, new SpaceVector2(assembly.PositionX, assembly.PositionY));
                 body.Velocity = new SpaceVector2(assembly.VelocityX, assembly.VelocityY);
-                body.AngleRadians = assembly.AngleRadians; body.AngularVelocityRadians = assembly.AngularVelocityRadiansPerSecond;
+                body.AngleRadians = body.AngularVelocityRadians = 0d;
                 body.MassKg = assembly.MassKg; body.InertiaKgM2 = assembly.InertiaKgM2;
                 body.RadiusMeters = AssemblyRadius(assembly);
                 AddSpaceShipShapes(body, assembly);

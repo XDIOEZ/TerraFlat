@@ -74,7 +74,7 @@ namespace FlatWorld.Spaceflight
                 SpaceSectorCoordinates.Relative(Assembly.Sector, new SpaceVector2(Assembly.PositionX, Assembly.PositionY), CalculationSector) :
                 new SpaceVector2(Assembly.PositionX, Assembly.PositionY);
             public double InverseMass => Dynamic && Assembly.MassKg > 0d ? 1d / Assembly.MassKg : 0d;
-            public double InverseInertia => Dynamic && Assembly.InertiaKgM2 > 0d ? 1d / Assembly.InertiaKgM2 : 0d;
+            public double InverseInertia => 0d; // 地表偏心碰撞也只改变平移，不产生船体旋转。
         }
         private sealed class ShipContactShape
         {

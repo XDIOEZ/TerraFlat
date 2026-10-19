@@ -190,7 +190,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         switch (command)
         {
             case "help":
-                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时不再施加推进力。进入星体引力范围会受吸引，有大气时逐渐减速，离开范围后恢复惯性漂移；点击降落时，有燃料平稳着陆，无燃料下落并结算冲击。");
+                Append("系统", "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；飞船始终朝上，不再旋转。停机、断电或缺燃料时不再施加推进力。进入星体引力范围会受吸引，有大气时逐渐减速，离开范围后恢复惯性漂移；点击降落时，有燃料平稳着陆，无燃料下落并结算冲击。");
                 break;
             case "status":
                 Append("系统", status.text, literal: true);
@@ -202,7 +202,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
             case "drive":
                 if (actor != null && session.EnterConsole(actor, console))
                 {
-                    Append("完成", "已进入驾驶位，WASD 移动、Q/E 旋转需要可用引擎与燃料，Esc 离开；下落时由实际船体位置决定落点。");
+                    Append("完成", "已进入驾驶位，WASD 平移需要可用引擎与燃料，飞船始终朝上，Esc 离开；下落时由实际船体位置决定落点。");
                     RenderOutput();
                     Close();
                     return;
@@ -515,7 +515,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         else
             text.AppendLine(Text("地表落点由飞船进入地表后的实际位置决定。"));
         if (flight.Phase == ShipFlightPhase.SurfaceDescending || flight.Phase == ShipFlightPhase.Lifting && flight.VerticalSpeed < 0d)
-            text.AppendLine(Text("下落船控视角：WASD 移动、Q/E 旋转需要供电、可用引擎及燃料；落点随实际船体位置变化。"));
+            text.AppendLine(Text("下落船控视角：WASD 平移需要供电、可用引擎及燃料，飞船始终朝上；落点随实际船体位置变化。"));
         text.AppendLine();
         text.AppendLine(Format("导航  {0}", task == null ? Text("待机") : Text(task.Status)));
         if (task != null)

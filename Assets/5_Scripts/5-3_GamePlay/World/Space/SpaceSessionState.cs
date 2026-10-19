@@ -90,7 +90,6 @@ namespace FlatWorld.Spaceflight
         public double SurfaceX, SurfaceY, HeightMeters, VerticalSpeed, SurfaceAngle;
         public double SurfaceStageElapsedSeconds;
         public bool PoweredDescent;
-        [JsonIgnore] public bool DrivingTurnActive;
         public SpaceMotionState Motion = new();
         public bool Ignited, TransferPending, LandingResolved, LandingSelected;
         public double LandingX, LandingY;
