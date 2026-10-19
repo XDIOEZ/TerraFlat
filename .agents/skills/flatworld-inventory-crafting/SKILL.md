@@ -64,6 +64,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 手钻/手动设备复用 RecipeProcessor 与 AdvanceManually、CraftingService；SharedModuleIds 转移库存和进度。固定转换不应用难度增产。`CraftingOutputRules` 共用预检/提交，防腐寿命来自实际扣料计划的最差余量；耐久品质保存 CraftedDurabilityMultiplier，手钻读取实际矿锭 DrillDurability Tag。
 - 打火石 `Mod_FlintStrike` 直接复用 `UI_FireDrill`，按真实物品能力隐藏建筑按钮并绑定概率文案；每次点击独立 10%，不累积或衰减进度。成功时由 `CraftingTransaction` 一次扣一份火绒并产一份火种，失败/满输出不扣料，预览按库存事件刷新。
 - Save 只保存，Unload 才解绑制作监听。库存冷 Tick 由 ModuleDataRuleRegistry/InventoryModuleDataScheduler 按规则和宿主代际推进；结构变化重建，数值变化不重建，跨库存共享状态扣除重叠时间而不补暂停。
+- `InventoryModuleDataScheduler` 的活动规则 `Entry` 使用值类型，重建时不再逐条创建托管对象；Tick 按只读引用遍历条目，槽位、代际和规则实时复核不变。
 - 便携气罐按不可变模块声明缓存配置解析，对外配置仍是独立副本；流体包装随真实 Contents、二进制载荷或目录换代重建，稳定 Tick 不重复序列化或刷新槽位。保存比较 StateRevision、超压时钟和破裂状态，界面比较实际内容与生命变化。
 
 ## 装备、食物与容器
