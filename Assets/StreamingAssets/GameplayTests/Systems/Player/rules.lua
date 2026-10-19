@@ -236,6 +236,13 @@ test.system("player", "focus_aim_batch", {}, function(data)
         "瞄准死区的距离临界值、负数或无效阈值行为改变")
 end, "玩家瞄准复用一次指针与环绕拓扑，保持方向和死区边界")
 
+test.system("player", "interaction_registry_prefilter", {}, function(data)
+    assert(data.correctRange and data.distantSkipped and data.pointerMatched,
+        "交互目标预筛没有提前排除远目标或误改了光标命中")
+    assert(data.infiniteRange and data.movedTargetUpdated and data.negativeRadiusRejected and data.radiusEdges,
+        "交互目标跨周、实时移动或距离边界选择与原规则不一致")
+end, "交互光标预筛先查距离再执行能力：环绕、鼠标与实时移动")
+
 test.system("player", "trauma_modifiers", {}, function(data)
     local function check(sample, attack, inverted, label)
         assert(type(sample.attack) == "number" and math.abs(sample.attack - attack) < .00001,

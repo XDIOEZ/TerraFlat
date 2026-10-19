@@ -44,6 +44,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 同格叠层通过 `IGridInteractionTarget` 声明网格/格坐标/显示层级，`GridInteractionSelector` 只统计有资格且在距离内的目标，按光标由上到下平均分给底层到高层；正式按键与描边共用选择，重复视觉不增加份数，地板/墙不占份数。
 - 光标未命中后同轮半径兜底复用已完成的 `Physics2D.SyncTransforms`，显式点选仍独立同步；Profiler 区分 `FlatWorld.Interaction.PointerQuery/RadiusQuery`。
 - 指针、半径、注册目标和自然资源空间桶共用单轮 `WorldTopologyDomain`；桶内不逐格重建活动世界上下文，目标与准入仍每帧现查，不跨帧缓存或改变输入响应周期。
+- `SpatialInteractionRegistry.QueryRegisteredTargets` 一轮只读取一次玩家位置及场景，先排除远处/未激活目标，再调用 `CanInteract`，并复用最短距离平方进行半径与光标过滤；正常命中和动态移动仍实时检查，回归 `player/interaction_registry_prefilter`。
 - 环境输入只转发按下/持续/松开，环境定义由 `EnvironmentInteractionRunner` 建独立实例；玩家状态不存于共享地块定义。
 - 载具按键交互和描边共享落点查询，上下船均要求实际命中；无邻近陆地时允许安全水面落点，未命中载具的可触及水面仍可交给环境动作。
 
