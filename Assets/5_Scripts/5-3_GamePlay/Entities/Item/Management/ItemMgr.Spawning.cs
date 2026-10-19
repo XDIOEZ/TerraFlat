@@ -128,6 +128,7 @@ public partial class ItemMgr
             itemObj.transform.rotation = rotation;
             itemObj.transform.localScale = scale;
             itemObj.SetActive(true);
+            item.FlushPendingInitialAnimatorState();
 
             using (SpawnRegisterDebug.Measure(1, itemData.IDName))
                 RegisterRuntimeItem(item, itemData.IDName, out registrationToken);

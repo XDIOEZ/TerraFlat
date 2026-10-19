@@ -37,6 +37,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/movement_cost", EntityMovementCost);
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("item_runtime/single_sprite_animation", EntitySingleSpriteAnimation);
+        operations.Add("item_runtime/initial_animator_activation", EntityInitialAnimatorActivation);
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
@@ -76,6 +77,46 @@ public static partial class GameplayTestSystemProbe
         operations.Add("quests/inventory_objective", EntityQuestInventoryObjective);
         operations.Add("quests/progress_store", EntityQuestProgressStore);
         operations.Add("game_events/day_schedule", EntityEventDaySchedule);
+    }
+
+    #endregion
+
+    #region 初始动画候选生命周期回归
+
+    // 停用候选和禁用 Animator 不得执行 Play，取消或回池必须清除过期待播状态。
+    private static JObject EntityInitialAnimatorActivation(JObject args)
+    {
+        var root = new GameObject("[InitialAnimatorActivation]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            var item = root.AddComponent<GameItem>();
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            var animator = visual.AddComponent<Animator>();
+            animator.enabled = false;
+            item.QueueInitialAnimatorState(animator, Animator.StringToHash("Idle"), 0);
+            bool queuedWhileInactive = item.HasPendingInitialAnimatorState;
+            item.FlushPendingInitialAnimatorState();
+            bool stillQueued = item.HasPendingInitialAnimatorState;
+            root.SetActive(true);
+            bool disabledNotPlayed = !item.HasPendingInitialAnimatorState;
+            item.ClearPendingInitialAnimatorState();
+            bool cancelClears = !item.HasPendingInitialAnimatorState;
+            root.SetActive(false);
+            item.QueueInitialAnimatorState(animator, Animator.StringToHash("Stand"), 0);
+            item.PrepareForPoolReuse();
+            bool poolClears = !item.HasPendingInitialAnimatorState;
+            return new JObject
+            {
+                ["queuedWhileInactive"] = queuedWhileInactive,
+                ["stillQueued"] = stillQueued,
+                ["disabledNotPlayed"] = disabledNotPlayed,
+                ["cancelClears"] = cancelClears,
+                ["poolClears"] = poolClears
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     #endregion

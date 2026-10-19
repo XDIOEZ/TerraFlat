@@ -82,6 +82,7 @@ public static class ItemDefinitionRuntime
         using var configureDebug = ConfigureInstanceDebug.Measure(1, definition.Id);
         item.BindData(itemData);
         item.gameObject.name = definition.Id;
+        item.ClearPendingInitialAnimatorState();
         using (ConfigureVisualDebug.Measure(1, definition.Id))
             ApplyVisual(definition, item);
         // 只按定义显式声明的模块装配能力，普通实体不会自动获得装备交互。
@@ -284,8 +285,8 @@ public static class ItemDefinitionRuntime
             }
         }
 
-        animator.Play(stateHash, layer, 0f);
-        animator.Update(0f);
+        // 候选外壳停用时 Animator 尚未运行，等激活且状态机就绪后再播。
+        item.QueueInitialAnimatorState(animator, stateHash, layer);
     }
 
     private static void ApplyCollider(Item item, ItemColliderDefinitionDto definition)

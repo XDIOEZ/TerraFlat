@@ -141,7 +141,11 @@ public partial class ItemMgr
             EnsurePreparedCommitCurrent(handle, candidate, latestData, registrationToken);
             if (!candidate.IsInitialized)
                 throw new InvalidOperationException("准备物品提交后没有成功建立模块运行态。");
-            if (activate) candidateObject.SetActive(true);
+            if (activate)
+            {
+                candidateObject.SetActive(true);
+                candidate.FlushPendingInitialAnimatorState();
+            }
             EnsurePreparedCommitCurrent(handle, candidate, latestData, registrationToken);
             RuntimeItemInstantiated?.Invoke(candidate);
             EnsurePreparedCommitCurrent(handle, candidate, latestData, registrationToken);
@@ -268,6 +272,7 @@ public partial class ItemMgr
             ItemWorldPlacement.Attach(candidate, candidateObject, data.transform.position, null);
             EnsureSpawnRegistrationCurrent(candidate, data, token);
             candidateObject.SetActive(true);
+            candidate.FlushPendingInitialAnimatorState();
             EnsureSpawnRegistrationCurrent(candidate, data, token);
             candidate.NotifyRuntimeStructureChanged();
             EnsureSpawnRegistrationCurrent(candidate, data, token);

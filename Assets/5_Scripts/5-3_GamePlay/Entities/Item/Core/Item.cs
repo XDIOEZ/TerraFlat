@@ -198,6 +198,58 @@ public abstract class Item : MonoBehaviour
     [SerializeField, HideInInspector] private bool poolingDisabled;
     [NonSerialized] private PooledItemMarker poolMarker;
 
+    #region 初始动画延迟播放
+
+    [NonSerialized] private Animator pendingInitialAnimator;
+    [NonSerialized] private int pendingInitialAnimatorStateHash;
+    [NonSerialized] private int pendingInitialAnimatorLayer;
+
+    internal bool HasPendingInitialAnimatorState => pendingInitialAnimator != null;
+
+    /// <summary>停用外壳只登记待播状态，激活后才向正式 Animator 提交。</summary>
+    internal void QueueInitialAnimatorState(Animator animator, int stateHash, int layer)
+    {
+        pendingInitialAnimator = animator;
+        pendingInitialAnimatorStateHash = stateHash;
+        pendingInitialAnimatorLayer = layer;
+        FlushPendingInitialAnimatorState();
+    }
+
+    internal void FlushPendingInitialAnimatorState()
+    {
+        Animator animator = pendingInitialAnimator;
+        if (animator == null)
+        {
+            ClearPendingInitialAnimatorState();
+            return;
+        }
+        // 单图表现会主动禁用身体 Animator；激活后不保留将来可能误播的旧待播态。
+        if (animator.gameObject.activeInHierarchy && !animator.enabled)
+        {
+            ClearPendingInitialAnimatorState();
+            return;
+        }
+        if (!animator.isActiveAndEnabled || !animator.isInitialized)
+            return;
+
+        int hash = pendingInitialAnimatorStateHash;
+        int layer = pendingInitialAnimatorLayer;
+        ClearPendingInitialAnimatorState();
+        animator.Play(hash, layer, 0f);
+        animator.Update(0f);
+    }
+
+    internal void ClearPendingInitialAnimatorState()
+    {
+        pendingInitialAnimator = null;
+        pendingInitialAnimatorStateHash = 0;
+        pendingInitialAnimatorLayer = 0;
+    }
+
+    private void OnEnable() => FlushPendingInitialAnimatorState();
+
+    #endregion
+
     /// <summary>对象池状态随 Item 实例保存，不额外向新物品添加组件。</summary>
     internal PooledItemMarker PoolMarker => poolMarker ??= new PooledItemMarker(this);
     internal string PoolKey { get => poolKey; set => poolKey = value; }
@@ -363,6 +415,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public virtual void Start()
     {
+        FlushPendingInitialAnimatorState();
         // 获取或初始化精灵渲染器
         if (Sprite == null)
             Sprite = GetComponentInChildren<SpriteRenderer>();
@@ -478,6 +531,7 @@ public abstract class Item : MonoBehaviour
 
     public void PrepareForPoolReuse()
     {
+        ClearPendingInitialAnimatorState();
         PersistenceOwner = null;
         ModuleUnload();
         StopAllCoroutines();

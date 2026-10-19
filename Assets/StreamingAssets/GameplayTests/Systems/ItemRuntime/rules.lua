@@ -1,4 +1,11 @@
 -- 物质条件表的读取顺序、固液分支与临界状态保持不变。
+test.system("item_runtime", "initial_animator_activation", {}, function(data)
+    assert(data.queuedWhileInactive and data.stillQueued and data.disabledNotPlayed,
+        "停用候选或禁用 Animator 的初始播放未延迟，可能重复输出 Unity 动画错误")
+    assert(data.cancelClears and data.poolClears,
+        "初始动画的过期待播状态没有在取消或对象池复用时清理")
+end, "物品初始化动画延迟到正式激活，取消与对象池复用安全")
+
 test.system("item_runtime", "matter_transition_scan", {}, function(data)
     assert(data.firstMatch and data.secondMatch,
         "物质转换条件没有按既有配置优先级选择首个匹配项")
