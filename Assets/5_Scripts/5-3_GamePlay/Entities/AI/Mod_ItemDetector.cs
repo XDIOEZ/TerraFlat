@@ -150,11 +150,15 @@ public class Mod_ItemDetector : Module
             Debug.Log($"<color=yellow>=== 应用检测结果（位置：{transform.position}，半径：{DetectionRadius}）===</color>");
 
         _previousItemSet.Clear();
-        for (int i = 0; i < CurrentItemsInArea.Count; i++)
+        // 进入/离开回调只输出调试日志，普通感知不再构造旧目标差集。
+        if (DebugMode)
         {
-            Item previousItem = CurrentItemsInArea[i];
-            if (previousItem != null)
-                _previousItemSet.Add(previousItem);
+            for (int i = 0; i < CurrentItemsInArea.Count; i++)
+            {
+                Item previousItem = CurrentItemsInArea[i];
+                if (previousItem != null)
+                    _previousItemSet.Add(previousItem);
+            }
         }
 
         CurrentItemsInArea.Clear();
@@ -191,8 +195,9 @@ public class Mod_ItemDetector : Module
             }
         }
 
-        // 检查物品变化
-        CheckItemEntries();
+        // 仅 Debug 模式对比进入/离开变化，正常模式只保留正式目标和标签结果。
+        if (DebugMode)
+            CheckItemEntries();
         _appliedVersion = requestVersion;
     }
 

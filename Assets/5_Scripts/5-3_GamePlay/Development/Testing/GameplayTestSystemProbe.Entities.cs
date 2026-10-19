@@ -25,6 +25,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
         operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
         operations.Add("ai/closest_target_batch", EntityClosestTargetBatch);
+        operations.Add("ai/detector_apply_batch", EntityDetectorApplyBatch);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
         operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
@@ -77,6 +78,78 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region AI 与移动消耗
+
+    // 未加载的正式检测器核对去重、标签映射、旧版本和 Debug 开关后的实时结果。
+    private static JObject EntityDetectorApplyBatch(JObject args)
+    {
+        var root = new GameObject("[DetectorApplyBatch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            Mod_ItemDetector detector = root.AddComponent<Mod_ItemDetector>();
+            Item Create(string id, params string[] tags)
+            {
+                var host = new GameObject(id);
+                host.transform.SetParent(root.transform, false);
+                GameItem item = host.AddComponent<GameItem>();
+                Data_GeneralItem data = EntityProbeData(id, 1f);
+                data.Tags = new List<string>(tags);
+                item.BindData(data);
+                return item;
+            }
+
+            Item first = Create("test:detector:first", "Animal", "Food");
+            Item second = Create("test:detector:second", "Animal");
+            Item third = Create("test:detector:third", "Food");
+            detector.ApplyDetectorResults(0, new List<Item> { first, second, first, null, third });
+            bool initialUnique = detector.CurrentItemsInArea.Count == 3 &&
+                detector.CurrentItemsInArea[0] == first && detector.CurrentItemsInArea[1] == second &&
+                detector.CurrentItemsInArea[2] == third;
+            List<Item> animals = detector.GetItemsByTag("Animal");
+            List<Item> food = detector.GetItemsByTag("Food");
+            bool initialTags = animals.Count == 2 && animals[0] == first && animals[1] == second &&
+                food.Count == 2 && food[0] == first && food[1] == third;
+
+            detector.ApplyDetectorResults(1, new List<Item> { second });
+            bool staleIgnored = detector.CurrentItemsInArea.Count == 3 &&
+                ReferenceEquals(animals, detector.GetItemsByTag("Animal"));
+
+            detector.ApplyDetectorResults(0, new List<Item> { third, first, third });
+            bool reordered = detector.CurrentItemsInArea.Count == 2 &&
+                detector.CurrentItemsInArea[0] == third && detector.CurrentItemsInArea[1] == first;
+            bool reusedTags = ReferenceEquals(animals, detector.GetItemsByTag("Animal")) &&
+                ReferenceEquals(food, detector.GetItemsByTag("Food")) &&
+                animals.Count == 1 && animals[0] == first && food.Count == 2 &&
+                food[0] == third && food[1] == first;
+
+            third.itemData.Tags.Add("Animal");
+            detector.ApplyDetectorResults(0, new List<Item> { first, third });
+            bool changedTags = animals.Count == 2 && animals[0] == first && animals[1] == third;
+
+            detector.DebugMode = true;
+            detector.ApplyDetectorResults(0, new List<Item> { third });
+            bool debugUpdated = detector.CurrentItemsInArea.Count == 1 &&
+                detector.CurrentItemsInArea[0] == third && animals.Count == 1 && animals[0] == third;
+
+            detector.DebugMode = false;
+            detector.ApplyDetectorResults(0, new List<Item> { second, first });
+            bool debugOffReused = ReferenceEquals(animals, detector.GetItemsByTag("Animal")) &&
+                animals.Count == 2 && animals[0] == second && animals[1] == first &&
+                food.Count == 1 && food[0] == first;
+
+            detector.ApplyDetectorResults(0, null);
+            bool cleared = detector.CurrentItemsInArea.Count == 0 && animals.Count == 0 && food.Count == 0;
+            return new JObject
+            {
+                ["initialUnique"] = initialUnique, ["initialTags"] = initialTags,
+                ["staleIgnored"] = staleIgnored, ["reordered"] = reordered,
+                ["reusedTags"] = reusedTags, ["changedTags"] = changedTags,
+                ["debugUpdated"] = debugUpdated, ["debugOffReused"] = debugOffReused,
+                ["cleared"] = cleared
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
 
     // 使用真实检测器和未加载物品，核对最近目标筛选的环绕、过滤与实时位置。
     private static JObject EntityClosestTargetBatch(JObject args)

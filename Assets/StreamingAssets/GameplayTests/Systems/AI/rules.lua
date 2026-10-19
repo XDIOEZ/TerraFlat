@@ -373,3 +373,12 @@ test.system("ai", "closest_target_batch", {}, function(data)
         data.movedTargetUpdated and data.runtimeEntryConsistent,
         "目标筛选的空标签、区分大小写、实时位置或公开调用入口改变")
 end, "AI 最近目标批量距离计算保持接缝、过滤及动态候选语义")
+
+test.system("ai", "detector_apply_batch", {}, function(data)
+    assert(data.initialUnique and data.initialTags and data.staleIgnored,
+        "感知结果应用没有去重或更新标签，或接受了过期版本")
+    assert(data.reordered and data.reusedTags and data.changedTags,
+        "感知批次改变了候选顺序、原标签列表引用或实时标签更新")
+    assert(data.debugUpdated and data.debugOffReused and data.cleared,
+        "打开再关闭感知 Debug 后标签和目标状态失效，或清空批次仍残留对象")
+end, "普通感知跳过仅供 Debug 的进出差集，标签和切换语义保持一致")
