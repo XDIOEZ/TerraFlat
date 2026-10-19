@@ -51,6 +51,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 ## 机械与电力
 
 - 机械拓扑重建时记录 `HasBellows`；若当前机械世界没有风箱，设施 Tick 直接跳过四邻风箱格查询，`RegisterAirflow` 扩展来源仍正常叠加。拆装风箱按原拓扑变更立即刷新，回归 `mechanical/bellows_effects`。
+- `MechanicalNetworkGraph.Rebuild` 复用节点排序、BFS 队列和 X/Y 区块边界工作区，`finally` 清理对象引用；机械连接、环绕最短区块范围保持原算法。离线 `Tools/Tests/MachineNetworks` 断言预热后纯设施重复重建零 GC。
 - 机械动力专项 Lua 入口为 `GameplayTests/mechanical-suite.json`，在独立真实世界组装全目录 20 种机械端口组件并核验动力、加工、发电、输送、测压及手推；编写、截图和执行转 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，清单与 GM 参数见 `Assets/StreamingAssets/GameplayTests/README.md`。
 - RPM/SourceRpm/SpeedRatio 有符号：正逆时针、负顺时针；方向由 RPM 派生，效率与功率读绝对值 SpeedRpm。轴、离合器、跨轴器保持方向，齿牙啮合/齿轮箱翻转；闭环转向不一致整网停转。
 - 动力源分别提供扭矩与 RPM；同速有效源累加扭矩，异速冲突停转。用力器是输入终点，不转送扭矩，按最近可达源距离分配固定 TorqueLoad，同距按稳定 ID；不足完整需求才停该用力器。传动件不限制通过量，TorqueCapacity 不参与求解。

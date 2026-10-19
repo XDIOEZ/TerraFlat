@@ -36,6 +36,43 @@ bellowsGraph.Rebuild(new[] { ordinaryNode });
 Check(!bellowsGraph.HasBellows, "拆除最后一台风箱后应恢复快路径");
 #endregion
 
+#region 拓扑重建缓冲复用
+
+// 大量无端口设施反复重建，预热后不再为节点排序、搜索或边界工作区分配数组。
+var rebuildFacilities = Enumerable.Range(0, 96).Select(i => Node(10000 + i, i * 2)).ToArray();
+foreach (MachineEntity entity in rebuildFacilities) entity.Definition.HasMechanicalPorts = false;
+var reuseGraph = Graph(rebuildFacilities);
+for (int i = 0; i < 4; i++) reuseGraph.Rebuild(rebuildFacilities);
+long allocationBefore = GC.GetAllocatedBytesForCurrentThread();
+for (int i = 0; i < 32; i++) reuseGraph.Rebuild(rebuildFacilities);
+long allocationBytes = GC.GetAllocatedBytesForCurrentThread() - allocationBefore;
+Check(allocationBytes == 0, "机械图稳态重建仍为排序/搜索/边界工作区创建托管对象：" + allocationBytes);
+Check(reuseGraph.Facilities.Count == rebuildFacilities.Length && reuseGraph.Networks.Count == 0,
+    "设施重建复用缓冲后丢失或误连无端口节点");
+
+var rebuildSource = Node(11000, 15, 60f, mode: "output");
+var rebuildConsumer = Node(11001, 16, load: 30f, mode: "input");
+var boundsGraph = Graph(rebuildSource, rebuildConsumer);
+var originalBounds = boundsGraph.Networks.Single().Bounds;
+for (int i = 0; i < 48; i++)
+{
+    boundsGraph.Rebuild(new[] { rebuildSource, rebuildConsumer });
+    var currentBounds = boundsGraph.Networks.Single().Bounds;
+    Check(currentBounds.xMin == originalBounds.xMin && currentBounds.size.x == originalBounds.size.x &&
+          currentBounds.yMin == originalBounds.yMin && currentBounds.size.y == originalBounds.size.y,
+        "多次重建后机械网的区块包围盒发生漂移");
+}
+bool rejectedDuplicate = false;
+try { boundsGraph.Rebuild(new[] { rebuildSource, Node(11002, 15) }); }
+catch (InvalidOperationException) { rejectedDuplicate = true; }
+Check(rejectedDuplicate, "重复机械格必须继续拒绝提交");
+boundsGraph.Rebuild(new[] { rebuildSource, rebuildConsumer });
+Check(boundsGraph.Networks.Count == 1 && boundsGraph.Networks[0].Bounds.xMin == originalBounds.xMin &&
+    boundsGraph.Networks[0].Bounds.size.x == originalBounds.size.x,
+    "构图异常后缓存的队列和边界工作区没有清理或无法恢复");
+
+#endregion
+
 // 近处负载先取得完整扭矩；无功率变化时路径不重建。
 var source = Node(1, 0, torque: 100, mode: "output");
 var near = Node(2, 1, load: 60);
