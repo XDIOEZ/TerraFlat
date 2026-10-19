@@ -2,6 +2,29 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+for _, input in ipairs({
+    { fraction = 0, expected = false },
+    { fraction = 0.049999, expected = false },
+    { fraction = 0.05, expected = true },
+    { fraction = 0.050001, expected = true },
+    { fraction = 0.21, expected = true },
+    { fraction = 1, expected = true },
+    { fraction = 0.21, pressure = 0, expected = false },
+    { fraction = 0.21, vacuum = true, expected = false },
+    { fraction = 0.049999, pressure = 1000, expected = false },
+    { fraction = 0.05, pressure = 1, expected = true }
+}) do
+    local expected = input.expected
+    test.system("environment", "combustion_oxygen", input, function(data)
+        near(data.minimumFraction, 0.05, "明火氧气门槛必须是5%")
+        assert(data.allowed == expected, "星球大气燃烧条件不符合5%门槛")
+        assert(data.partialPressureAllowed == expected, "局部舱气未按氧气占比判断燃烧")
+        assert(not data.missingAllowed, "缺失环境时不能默认允许燃烧")
+        assert(data.localAllowed == expected and data.localUpdated ~= expected,
+            "燃烧没有读取当前局部环境，或错误缓存了旧氧气状态")
+    end, "真空、缺氧、5%临界值及局部气体实时更新")
+end
+
 for _, combination in ipairs({
     {wind = true, rain = true, thunder = true, fog = true},
     {wind = true, rain = true, thunder = false, fog = false},

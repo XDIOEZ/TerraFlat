@@ -41,6 +41,18 @@ public static class AtmosphereService
         foreach (var gas in state.Gases) if (FluidInventory.Same(gas.FluidId, fluidId)) return gas.Moles;
         return 0m;
     }
+    // 明火统一要求真实气体中的氧气至少占 5%，真空和缺失环境均不能燃烧。
+    public const decimal MinimumCombustionOxygenFraction = .05m;
+    public static bool CanSustainCombustion(AtmosphereState state)
+    {
+        decimal total = state?.CurrentMoles ?? 0m;
+        return total > 0m && PressureKPa(state) > 0d &&
+            GetMoles(state, FluidIds.Oxygen) >= total * MinimumCombustionOxygenFraction;
+    }
+    public static bool CanSustainCombustion(double pressureKPa, double oxygenPartialPressureKPa)
+        => FluidUnits.IsFinite(pressureKPa) && FluidUnits.IsFinite(oxygenPartialPressureKPa) &&
+            pressureKPa > 0d && oxygenPartialPressureKPa >= pressureKPa * (double)MinimumCombustionOxygenFraction;
+
     public static bool CanBreathe(AtmosphereState state, string oxygenId = FluidIds.Oxygen,
         double minimumOxygenPartialPressureKPa = 16d, double maximumCarbonDioxidePartialPressureKPa = 1d)
     {

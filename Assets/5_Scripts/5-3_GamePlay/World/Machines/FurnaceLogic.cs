@@ -36,7 +36,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public override float TickInterval => .1f;
     public override GameObject PanelPrefab { get; }
     public override string ActionLabel => "点火";
-    public override bool CanAct => !Data.IsSmelting;
+    public override bool CanAct => !Data.IsSmelting && MachineWorld.CanSustainCombustion(Entity);
     public override string Status => FurnaceTemperatureFeedback.GetDisplayedTemperature(Data.Temperature);
 
     private readonly float burnSpeed;
@@ -161,6 +161,9 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         if (!MachineDefinition.Positive(seconds)) return;
         if (absorbDroppedFuel) AbsorbDroppedFuelFromCell();
         bool wasBurning = IsBurning;
+        bool wasSmelting = Data.IsSmelting;
+        // 缺氧直接停火，保留炉内燃值，后续恢复氧气仍需要重新点火。
+        if (!MachineWorld.CanSustainCombustion(Entity)) Data.IsSmelting = false;
         float remaining = seconds;
         while (remaining > .00001f)
         {
@@ -201,7 +204,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
         }
         FurnaceFuelByproductProcessor.TryFlushPendingOutputs(FuelInventory.Data, byproducts, Data, GameRes.Instance);
         PublishTemperature();
-        NotifyChanged(wasBurning != IsBurning);
+        NotifyChanged(wasBurning != IsBurning || wasSmelting != Data.IsSmelting);
     }
 
     private void Cool(float seconds)
@@ -324,6 +327,11 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public virtual bool Ignite(Player actor)
     {
         if (!GameNetwork.HasStateAuthority || Data.IsSmelting) return false;
+        if (!MachineWorld.CanSustainCombustion(Entity))
+        {
+            ItemActionFeedback.Show(actor, "氧气不足 5%，无法点火。");
+            return false;
+        }
         if (!TryFindFuelSlot(true, out ItemSlot source) &&
             (!HasHeldIgnition(actor) || !TryFindFuelSlot(false, out source))) return false;
         State.Absorption.Reset();

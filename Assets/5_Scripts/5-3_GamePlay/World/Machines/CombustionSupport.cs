@@ -48,6 +48,20 @@ internal sealed class FluidOutletCombustionSupport : ICombustionSupportSource
 
 public static partial class MachineWorld
 {
+    #region 燃烧环境条件
+    public static bool CanSustainCombustion(MachineEntity node)
+    {
+        if (node == null) return false;
+        using var nodeScope = UseNodeScope(node);
+        if (!TryGetLocalAtmosphereKey(node, out string atmosphereKey))
+            return AtmosphereService.CanSustainCombustion(GetCurrentAtmosphere(node));
+        if (!RequireShipEnvironment().TryGetMachineEnvironment(atmosphereKey, node.Position, out var environment)) return false;
+        return environment.IsSealed
+            ? AtmosphereService.CanSustainCombustion(environment.PressureKPa, environment.OxygenPartialPressureKPa)
+            : AtmosphereService.CanSustainCombustion(GetCurrentAtmosphere(node));
+    }
+    #endregion
+
     #region 通用助燃来源登记
     private sealed class CombustionSupportLease : IDisposable
     {

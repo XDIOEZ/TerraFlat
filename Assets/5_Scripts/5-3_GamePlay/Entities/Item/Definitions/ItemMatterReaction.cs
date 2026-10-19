@@ -562,7 +562,7 @@ public static class ItemMatterRuntime
     }
 
     /// <summary>温度达到燃点后持续燃烧；真实水接触会熄灭，燃尽后由世界掉落系统移除。</summary>
-    public static bool AdvanceCombustion(ItemData item, float seconds, bool waterContact, out bool consumedAll)
+    public static bool AdvanceCombustion(ItemData item, float seconds, bool waterContact, bool combustionSupported, out bool consumedAll)
     {
         consumedAll = false;
         if (item?.Stack == null || item.Stack.Amount <= 0f || seconds <= 0f || !float.IsFinite(seconds))
@@ -577,7 +577,7 @@ public static class ItemMatterRuntime
         float beforeElapsed = state.CombustionElapsedSeconds;
         float beforeAmount = item.Stack.Amount;
 
-        if (waterContact)
+        if (waterContact || !combustionSupported)
         {
             state.IsBurning = false;
             state.CombustionElapsedSeconds = 0f;

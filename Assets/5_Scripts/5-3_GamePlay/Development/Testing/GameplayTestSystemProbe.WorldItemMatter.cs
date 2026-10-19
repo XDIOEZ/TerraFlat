@@ -12,6 +12,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/world_matter_structure", WorldMatterStructure);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
+        operations.Add("environment/combustion_oxygen", CombustionOxygen);
     }
 
     // 独立停用宿主只读取正式资格缓存，不创建世界、拾取器或完整物品管理器。
@@ -142,6 +143,51 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
+    #endregion
+
+    #region 明火氧气规则采样
+    // 使用独立大气与临时环境来源，采样正式阈值和环境覆盖，不修改真实舱气。
+    private static JObject CombustionOxygen(JObject args)
+    {
+        decimal fraction = args?.Value<decimal?>("fraction") ?? .05m;
+        double pressure = Number(args, "pressure", 100d);
+        var atmosphere = new AtmosphereState
+        {
+            CapacityMoles = 100m, ReferenceMoles = 100m,
+            ReferencePressureKPa = pressure, TemperatureKelvin = 293.15d
+        };
+        atmosphere.Gases.Add(new AtmosphereGasAmount { FluidId = FluidIds.Oxygen, Moles = 100m * fraction });
+        atmosphere.Gases.Add(new AtmosphereGasAmount { FluidId = "core:nitrogen", Moles = 100m * (1m - fraction) });
+        if (Flag(args, "vacuum", false)) atmosphere.Gases.Clear();
+        bool allowed = AtmosphereService.CanSustainCombustion(atmosphere);
+        var source = new GameplayCombustionEnvironmentSource { Allowed = allowed };
+        ItemEnvironmentSources.Register(source);
+        try
+        {
+            bool first = ItemEnvironmentSources.CanSustainCombustion("probe:combustion", default);
+            source.Allowed = !allowed;
+            bool updated = ItemEnvironmentSources.CanSustainCombustion("probe:combustion", default);
+            return new JObject
+            {
+                ["minimumFraction"] = AtmosphereService.MinimumCombustionOxygenFraction,
+                ["allowed"] = allowed,
+                ["partialPressureAllowed"] = AtmosphereService.CanSustainCombustion(pressure,
+                    Flag(args, "vacuum", false) ? 0d : pressure * (double)fraction),
+                ["missingAllowed"] = AtmosphereService.CanSustainCombustion(null),
+                ["localAllowed"] = first, ["localUpdated"] = updated
+            };
+        }
+        finally { ItemEnvironmentSources.Unregister(source); }
+    }
+
+    private sealed class GameplayCombustionEnvironmentSource : IItemEnvironmentSource
+    {
+        public bool Allowed;
+        public bool TrySample(Item item, out ItemEnvironmentSample sample) { sample = default; return false; }
+        public float SupplyAmbientOxygen(Item item, float maximumAmount) => 0f;
+        public bool TrySampleCombustion(string worldKey, Vector2 position, out bool canBurn)
+        { canBurn = Allowed; return worldKey == "probe:combustion"; }
+    }
     #endregion
 }
 

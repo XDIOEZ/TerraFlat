@@ -147,7 +147,8 @@ public partial class ItemMgr
                 }
                 else
                 {
-                    changed |= ItemMatterRuntime.AdvanceCombustion(entry.Data, seconds, waterContact, out consumedAll);
+                    changed |= ItemMatterRuntime.AdvanceCombustion(entry.Data, seconds, waterContact,
+                        ItemEnvironmentSources.CanSustainCombustion(item), out consumedAll);
                 }
 
                 if (!IsWorldMatterEntryCurrent(entry)) continue;

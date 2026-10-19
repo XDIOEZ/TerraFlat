@@ -23,6 +23,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 ## 时间、天气与湿度
 
+- 明火统一由 `AtmosphereService.CanSustainCombustion` 检查真实氧气占比至少5%，真空/未知环境拒绝；`ItemEnvironmentSources` 的燃烧点采样允许局部密闭舱气覆盖星球大气，按实时组分读取。回归 `environment/combustion_oxygen`。
+
 - 星球大气在创建/进入世界时完整校验；`TryGetForWorld` 只读已有真实状态，逐个生物采样不重复分配全量校验集合。显式 `GetOrCreate/Validate` 仍保留校验入口。
 
 - DayTimeSystem 是跨场景/保存主入口，场景也可能引用 DayNightTimeManager。日长为 RotationPeriodSeconds、年长为 OrbitalPeriodSeconds，运行时 SetRotationPeriod/SetOrbitalPeriod；季节、年与轨道共用游戏秒轴。SeasonCalendar 历史快照冻结周期/倾角/离心率，不用当前日长重算过去。

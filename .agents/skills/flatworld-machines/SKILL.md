@@ -23,6 +23,8 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 实体与业务
 
+- 燃料炉点火和持续燃烧都经 `MachineWorld.CanSustainCombustion` 检查所属世界/真实舱气氧气至少占5%；缺氧停火、清吸料进度并保留燃值，恢复氧气后重新点火，余热仍走自然传热。外部氧气助燃的温度加成不能绕过此门槛。
+
 - 召唤器/手持保留 Item，落地设施经 Place/SpawnGenerated/RestoreMachine 创建数据节点；Mod_MachineAuthoring 保存配置，不驱动落地 Load/Tick。普通 Ports=none 设施共用格索引，不产生扭矩网络。
 - 模拟不依赖 ChunkView，网络整体恢复后才 Tick，快照后才休眠；无端口设施按玩家窗口休眠。世界时间由调用方传入，有界补算保留余量，手摇倒计时先于领域分派。
 - 移动船使用 `UseScope(GetShipScopeKey(ShipId))/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。ScopeLease 为值类型，按单一 using 生命周期释放；面板/延迟回调通过 UseNodeScope 进入节点所在作用域。分裂以 TransferShipNodes 整批移交，真实库存先拆分，每个作用域整批结束才重建拓扑。
