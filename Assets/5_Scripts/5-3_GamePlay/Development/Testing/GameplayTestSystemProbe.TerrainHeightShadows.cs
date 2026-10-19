@@ -86,15 +86,21 @@ public static partial class GameplayTestSystemProbe
         if (!Flag(args, "missingHeight", false))
         {
             terrain.SetEnvironmentValue("height", 0, 0, height);
-            terrain.SetEnvironmentValue("height", 1, 0, height);
+            terrain.SetEnvironmentValue("height", 1, 0, (float)Number(args, "neighbourHeight", height));
         }
         TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 0, 0, (int)Number(args, "depth", 0));
         TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 1, 0, (int)Number(args, "neighbourDepth", 0));
         TerrainSurfaceHeightLayer.SetCoverLevels(terrain, 0, 0, (int)Number(args, "covers", 0));
         terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId, 0, 0,
             (float)Number(args, "naturalDepth", 0));
+        terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId, 1, 0,
+            (float)Number(args, "neighbourNaturalDepth", 0));
         if (Flag(args, "liquid", false))
-            terrain.SetLiquid(0, 0, LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId), 5);
+            terrain.SetLiquid(0, 0, LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId),
+                (int)Number(args, "liquidLevel", 5));
+        if (Flag(args, "neighbourLiquid", false))
+            terrain.SetLiquid(1, 0, LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId),
+                (int)Number(args, "neighbourLiquidLevel", 5));
         if (Flag(args, "support", false)) TerrainSupportLayer.Set(terrain, 0, 0, 23, 1);
         bool useGeneratedHeight = Flag(args, "surface", true);
         TerrainSurfaceHeightLayer.TryGetSurface(terrain, 0, 0, useGeneratedHeight, out TerrainSurfaceHeight current,
@@ -108,7 +114,8 @@ public static partial class GameplayTestSystemProbe
             ["inner"] = TerrainSurfaceHeightLayer.GetShadowDelta(current, neighbour),
             ["outer"] = TerrainSurfaceHeightLayer.GetShadowDelta(neighbour, current),
             ["receiver"] = current.ReceivesShadow, ["neighbourReceiver"] = neighbour.ReceivesShadow,
-            ["outside"] = outside, ["waterLevel"] = terrain.GetLiquidLevel(0, 0)
+            ["outside"] = outside, ["waterLevel"] = terrain.GetLiquidLevel(0, 0),
+            ["neighbourWaterLevel"] = terrain.GetLiquidLevel(1, 0)
         };
     }
 

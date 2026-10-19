@@ -47,7 +47,8 @@ for _, row in ipairs({
     { args = { covers = 1 }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "额外填高后向外投影" },
     { args = { liquid = true }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "平地倒水高一层并向外投影" },
     { args = { liquid = true, naturalDepth = 2 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "浅水底床低两层且水面低于岸一层" },
-    { args = { liquid = true, naturalDepth = 3 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "深水底床低三层且水面低于岸两层" },
+    { args = { liquid = true, naturalDepth = 3 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "深水底床低三层但水面仍只低于岸一层" },
+    { args = { liquid = true, naturalDepth = 2, neighbourLiquid = true, neighbourNaturalDepth = 3, neighbourHeight = 0.5 }, level = 10, neighbour = 9, inner = 0, outer = 1, label = "河床深浅不产生台阶但真实地势高差保留" },
     { args = { naturalDepth = 2 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "浅水抽干仍保留天然底床" },
     { args = { naturalDepth = 3, depth = 1 }, level = 7, neighbour = 11, inner = 4, outer = 0, label = "天然底床继续采挖时叠加深度" },
     { args = { naturalDepth = 2, covers = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "天然底床填土逐层回升" },
@@ -55,6 +56,7 @@ for _, row in ipairs({
     { args = { liquid = true, depth = 1 }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "一层坑中倒水与岸齐平" },
     { args = { liquid = true, depth = 2 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "两层坑中倒水仍向坑内投影" },
     { args = { liquid = true, naturalDepth = 2, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴水床同样使用真实高差" },
+    { args = { liquid = true, naturalDepth = 3, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴深浅水面保持同一高度" },
     { args = { liquid = true, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "水上平台表面仍与岸边齐平" },
     { args = { depth = 1, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴忽略生成海拔但保留采挖高差" },
     { args = { missingHeight = true }, level = 0, neighbour = 0, inner = 0, outer = 0, label = "缺失高度回退平地" },
@@ -66,6 +68,25 @@ for _, row in ipairs({
         assert(not data.outside, "未知邻格被伪造成有效高度")
         if row.args.liquid then assert(data.waterLevel == 5, "高度查询改变了权威水量") end
     end, "地表高低阴影：" .. row.label)
+end
+
+-- 深浅底床与剩余水量可以不同，同一地势的天然水面仍须齐平。
+for _, surface in ipairs({ true, false }) do
+    for _, naturalDepth in ipairs({ 2, 3 }) do
+        for _, liquidLevel in ipairs({ 1, 5, 6, 10 }) do
+            test.system("rendering", "terrain_height", {
+                liquid = true, naturalDepth = naturalDepth, liquidLevel = liquidLevel,
+                neighbourLiquid = true, neighbourNaturalDepth = 5 - naturalDepth,
+                neighbourLiquidLevel = 11 - liquidLevel, surface = surface
+            }, function(data)
+                assert(data.level == data.base - 1 and data.neighbour == data.level,
+                    "天然浅水与深水的水面没有齐平")
+                assert(data.inner == 0 and data.outer == 0, "水内深浅交界仍出现高低台阶阴影")
+                assert(data.waterLevel == liquidLevel and data.neighbourWaterLevel == 11 - liquidLevel,
+                    "统一水面高度改写了真实水量")
+            end, "天然深浅水面齐平：" .. tostring(surface) .. "/" .. naturalDepth .. "/" .. liquidLevel)
+        end
+    end
 end
 
 test.system("rendering", "terrain_height", { wall = true }, function(data)
