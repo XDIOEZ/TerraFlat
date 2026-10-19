@@ -2,7 +2,9 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、resource_plan、resource_queue、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+快速入口：`rules.lua`；操作：`core_lifecycle/difficulty_rules、startup_prefabs、resource_plan、resource_queue、resource_candidate`。真实入口：`gameplay.lua` / `core_lifecycle/live_entry`。
+
+2026-10-19 手机端联机入口新增快速规则（本轮按用户要求未编译、未运行）：只读采样正式启动 UI 清单，检查联机面板及现有菜单、手机面板在启动阶段预载，资源键非空且不重复；不启动 GameRes 或创建临时资产。此项不证明触屏点击、资源后台加载时的面板打开、Host/Join 就绪门禁或 Android 真机运行，仍由用户验收。
 
 2026-10-18 资源加载队列新增规则（本轮用户自行验收、未运行）：正式 ResourceLoadQueue 保持最多四个在途请求，完成即补槽，结果按原资源索引保存；覆盖慢请求、即时完成、空队列、主线程预算、发出/收尾失败与取消，并用真实 ResourceAssetScope 句柄检查释放。编辑器 Sprite 主纹理改为同队列异步预热，仍严格检查子资源；真实磁盘冷加载耗时与入世等待由用户验收。
 

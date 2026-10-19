@@ -29,6 +29,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
         operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);
         operations.Add("core_lifecycle/resource_candidate", ServiceResourceCandidate);
+        operations.Add("core_lifecycle/startup_prefabs", ServiceStartupPrefabs);
         operations.Add("core_lifecycle/difficulty_rules", ServiceDifficultyRules);
         operations.Add("item_runtime/module_structure", ServiceModuleStructure);
         operations.Add("item_runtime/clone_runtime", ServiceCloneRuntime);
@@ -98,6 +99,20 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 资源生命周期
+
+    private static JObject ServiceStartupPrefabs(JObject args)
+    {
+        // 固定字段只读采样正式启动清单，不创建 GameRes 或发出资源请求。
+        var field = typeof(GameRes).GetField("StartupPrefabKeys",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        if (field?.GetValue(null) is not string[] keys)
+            throw new InvalidOperationException("无法读取正式启动 UI Prefab 清单。");
+        return new JObject
+        {
+            ["keys"] = new JArray(keys),
+            ["networkPanelKey"] = RuntimeUIPrefabKeys.NetworkMode
+        };
+    }
 
     private static JObject ServiceResourcePlan(JObject args)
     {

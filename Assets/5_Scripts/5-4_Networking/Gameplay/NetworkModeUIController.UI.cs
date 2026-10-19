@@ -45,6 +45,7 @@ namespace FlatWorld.Networking.Gameplay
         private string lastStatusTemplate;
         private object[] lastStatusArguments = Array.Empty<object>();
         private int lastDisplayedPlayerCount = -1;
+        private bool lastContentReady;
 
         #endregion
 
@@ -61,7 +62,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (uiManager == null)
                     uiManager = UIManager.Instance;
                 if (uiManager == null ||
-                    GameRes.Instance == null || !GameRes.Instance.isLoadFinish)
+                    GameRes.Instance == null || !GameRes.Instance.IsStartupReady)
                 {
                     yield return null;
                     continue;
@@ -169,7 +170,7 @@ namespace FlatWorld.Networking.Gameplay
                 closeButton.onClick.AddListener(I_ClosePanel);
 
             if (string.IsNullOrEmpty(lastStatusTemplate))
-                SetStatus("离线：可创建主机，或粘贴好友提供的 UDP 穿透地址");
+                RefreshOfflineStatus();
             else
                 RefreshLocalizedStatus();
             lastDisplayedPlayerCount = -1;
@@ -212,6 +213,14 @@ namespace FlatWorld.Networking.Gameplay
             if (panel == null)
                 return;
 
+            // 面板随启动资源开放，创建和加入仍等待完整玩法目录就绪。
+            if (lastContentReady != IsContentReady)
+            {
+                RefreshInteractableState();
+                if (GameNetwork.Session.State == NetworkSessionState.Offline)
+                    RefreshOfflineStatus();
+            }
+
             int playerCount = 0;
             if (NetworkServer.active)
                 playerCount = NetworkServer.connections.Count;
@@ -253,10 +262,11 @@ namespace FlatWorld.Networking.Gameplay
         private void RefreshInteractableState()
         {
             bool offline = GameNetwork.Session.State == NetworkSessionState.Offline;
+            lastContentReady = IsContentReady;
             if (hostButton != null)
-                hostButton.interactable = offline;
+                hostButton.interactable = offline && lastContentReady;
             if (joinButton != null)
-                joinButton.interactable = offline;
+                joinButton.interactable = offline && lastContentReady;
             if (disconnectButton != null)
                 disconnectButton.interactable = !offline;
             if (playerNameInput != null)
@@ -265,6 +275,15 @@ namespace FlatWorld.Networking.Gameplay
                 addressInput.interactable = offline;
             if (portInput != null)
                 portInput.interactable = offline;
+        }
+
+        private static bool IsContentReady => GameRes.ExistingInstance != null && GameRes.ExistingInstance.isLoadFinish;
+
+        private void RefreshOfflineStatus()
+        {
+            SetStatus(IsContentReady
+                ? "离线：可创建主机，或粘贴好友提供的 UDP 穿透地址"
+                : "正在加载资源…");
         }
 
         private void SetStatus(string message)

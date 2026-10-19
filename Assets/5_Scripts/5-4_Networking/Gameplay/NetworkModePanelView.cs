@@ -9,7 +9,7 @@ namespace FlatWorld.Networking.Gameplay
     /// </summary>
     public sealed partial class NetworkModeUIController
     {
-        public const string NetworkPanelKey = "UI_NetworkMode";
+        public const string NetworkPanelKey = RuntimeUIPrefabKeys.NetworkMode;
 
         #region Prefab 实例化
 

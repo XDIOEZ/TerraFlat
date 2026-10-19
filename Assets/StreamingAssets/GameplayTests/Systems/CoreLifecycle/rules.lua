@@ -29,6 +29,23 @@ for _, case in ipairs({
     end, "难度 0 减伤边界：" .. case.name)
 end
 
+test.system("core_lifecycle", "startup_prefabs", {}, function(data)
+    local present = {}
+    for _, key in ipairs(data.keys) do
+        assert(type(key) == "string" and #key > 0, "启动 UI 清单存在空键")
+        assert(not present[key], "启动 UI 清单重复加载：" .. key)
+        present[key] = true
+    end
+    assert(data.networkPanelKey == "UI_NetworkMode", "联机面板资源键偏离正式 Prefab 名称")
+    for _, key in ipairs({
+        "UI_SliderControl", "UI_MainMenuSettings", "UI_MainMenuExitConfirmation",
+        "UI_ModManager", "UI_InputBindingRow", "UI_WorldLoading", "UI_NetworkMode",
+        "UI_MobileControls", "UI_MobileControlLayoutEditor"
+    }) do
+        assert(present[key], "菜单提前就绪时缺少可立即访问的 UI：" .. key)
+    end
+end, "启动 UI 包含联机与手机面板且资源键唯一")
+
 -- 只执行独立资源计划，阶段依赖和失败清理由生产管线处理。
 test.system("core_lifecycle", "resource_plan", { mode = "ordered" }, function(data)
     assert(data.failure == nil, "合法资源依赖被拒绝")
