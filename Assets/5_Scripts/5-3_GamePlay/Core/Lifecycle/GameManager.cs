@@ -20,6 +20,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     #endregion
 
     #region 游戏生命周期状态
+
+    // 生命周期查询只读取现有管理器，避免退出清理时自动创建缺少场景配置的空实例。
+    public static GameManager ExistingInstance => instance;
+
     /// <summary>
     /// 玩家是否已进入游戏世界。
     /// 管理器在 GameStartScene 中初始化时不应执行游戏逻辑，
