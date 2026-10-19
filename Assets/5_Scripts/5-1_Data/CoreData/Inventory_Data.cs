@@ -109,21 +109,8 @@ public partial class Inventory_Data
 
     private void SynchronizeRuntimeSlotBindings()
     {
-        if (hasObservedSlotVersion && ReferenceEquals(observedSlotSource, itemSlots))
-        {
-            if (itemSlots == null)
-                return;
-            try
-            {
-                // 复制枚举器的版本守卫能发现同数量替换，日常检查只读取一个槽位。
-                List<ItemSlot>.Enumerator probe = observedSlotVersion;
-                probe.MoveNext();
-                return;
-            }
-            catch (InvalidOperationException)
-            {
-            }
-        }
+        if (IsObservedSlotLayoutCurrent())
+            return;
 
         if (observedRuntimeSlots != null)
             foreach (ItemSlot slot in observedRuntimeSlots)
@@ -146,7 +133,35 @@ public partial class Inventory_Data
         PublishRuntimeStructureChanged();
     }
 
-    private void HandleSlotReferenceChanged(ItemSlot slot) => PublishRuntimeStructureChanged();
+    private bool IsObservedSlotLayoutCurrent()
+    {
+        if (!hasObservedSlotVersion || !ReferenceEquals(observedSlotSource, itemSlots))
+            return false;
+        if (itemSlots == null)
+            return true;
+        try
+        {
+            // 枚举器版本守卫同时识别同数量换槽，不需要逐格比较。
+            List<ItemSlot>.Enumerator probe = observedSlotVersion;
+            probe.MoveNext();
+            return true;
+        }
+        catch (InvalidOperationException) { return false; }
+    }
+
+    private void HandleSlotReferenceChanged(ItemSlot slot)
+    {
+        if (!IsObservedSlotLayoutCurrent())
+        {
+            SynchronizeRuntimeSlotBindings();
+            return;
+        }
+
+        // 单格替换只更新该格质量订阅，槽位表变化仍走完整重绑。
+        contentStructureRevision++;
+        RebindMassSlot(slot);
+        RuntimeStructureChanged?.Invoke(this);
+    }
 
     private void PublishRuntimeStructureChanged()
     {

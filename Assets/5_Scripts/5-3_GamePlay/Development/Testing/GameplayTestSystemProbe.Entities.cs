@@ -52,6 +52,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
         operations.Add("inventory/dynamic_slot_maintenance", EntityDynamicSlotMaintenance);
+        operations.Add("inventory/incremental_mass_binding", EntityIncrementalMassBinding);
         operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
         operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
@@ -940,6 +941,62 @@ public static partial class GameplayTestSystemProbe
             ["notifiedScan"] = notifiedScan, ["disabledScan"] = disabledScan,
             ["reenabledScan"] = reenabledScan, ["finalCount"] = finalCount,
             ["occupied"] = occupied, ["indexed"] = indexed
+        };
+    }
+
+    // 独立大库存验证单格替换的质量监听，以及槽位布局变化后的完整同步。
+    private static JObject EntityIncrementalMassBinding(JObject args)
+    {
+        const int count = 128;
+        var slots = new List<ItemSlot>(count);
+        for (int i = 0; i < count; i++)
+            slots.Add(new ItemSlot(i) { itemData = EntityProbeData("probe:mass_" + i, 1f) });
+        var inventory = new Inventory_Data(slots, "probe:mass-binding");
+        uint initialStructure = inventory.ContentStructureRevision;
+        ulong initialMass = inventory.MassRevision;
+        int structureEvents = 0, massEvents = 0;
+        inventory.RuntimeStructureChanged += _ => structureEvents++;
+        inventory.MassChanged += _ => massEvents++;
+
+        ItemData oldItem = slots[17].itemData;
+        ItemData replacement = EntityProbeData("probe:replacement", 1f);
+        slots[17].itemData = replacement;
+        bool replaced = structureEvents == 1 && massEvents == 1 &&
+                        inventory.ContentStructureRevision == initialStructure + 1 &&
+                        inventory.MassRevision == initialMass + 1;
+        oldItem.Stack.Amount += 1f;
+        bool oldDetached = massEvents == 1;
+        replacement.Stack.Amount += 1f;
+        bool newAttached = massEvents == 2;
+        slots[18].itemData.Stack.Amount += 1f;
+        bool otherAttached = massEvents == 3;
+
+        slots[17].itemData = null;
+        bool cleared = structureEvents == 2 && massEvents == 4;
+        replacement.Stack.Amount += 1f;
+        bool clearedDetached = massEvents == 4;
+        slots[17].itemData = replacement;
+        bool restored = structureEvents == 3 && massEvents == 5;
+
+        ItemData oldNeighbor = slots[18].itemData;
+        ItemData newNeighbor = EntityProbeData("probe:new-neighbor", 1f);
+        slots[18] = new ItemSlot(18) { itemData = newNeighbor };
+        inventory.NotifySlotsChanged();
+        bool layoutRebound = structureEvents == 4 && massEvents == 6;
+        oldNeighbor.Stack.Amount += 1f;
+        bool oldNeighborDetached = massEvents == 6;
+        newNeighbor.Stack.Amount += 1f;
+        bool newNeighborAttached = massEvents == 7;
+
+        return new JObject
+        {
+            ["replaced"] = replaced, ["oldDetached"] = oldDetached,
+            ["newAttached"] = newAttached, ["otherAttached"] = otherAttached,
+            ["cleared"] = cleared, ["clearedDetached"] = clearedDetached,
+            ["restored"] = restored, ["layoutRebound"] = layoutRebound,
+            ["oldNeighborDetached"] = oldNeighborDetached, ["newNeighborAttached"] = newNeighborAttached,
+            ["structureEvents"] = structureEvents, ["massEvents"] = massEvents,
+            ["totalSlots"] = inventory.itemSlots.Count
         };
     }
 

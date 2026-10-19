@@ -12,6 +12,17 @@ test.system("inventory", "dynamic_slot_maintenance", {}, function(data)
         "容量模式切换后没有重检，或丢失物品/槽位索引")
 end, "创造背包动态槽位稳定帧免全表扫描与结构变化复核")
 
+test.system("inventory", "incremental_mass_binding", {}, function(data)
+    assert(data.replaced and data.oldDetached and data.newAttached and data.otherAttached,
+        "单格替换没有只更新原物品与新物品的质量监听，或影响了其它槽位")
+    assert(data.cleared and data.clearedDetached and data.restored,
+        "槽位置空与恢复后的质量监听或结构版本错误")
+    assert(data.layoutRebound and data.oldNeighborDetached and data.newNeighborAttached,
+        "同数量换槽后没有全量同步新的质量监听，或旧槽仍保留订阅")
+    assert(data.totalSlots == 128 and data.structureEvents == 4 and data.massEvents == 7,
+        "批量槽位中的结构与质量事件次数不符合真实变更")
+end, "大库存单格增量质量绑定与换槽重建事件一致性")
+
 test.system("inventory", "readable_book_snapshot", {}, function(data)
     assert(data.written and data.failure == "", "初始书页没有写入正式模块载荷")
     assert(data.addedPages == 2 and #data.pages == 3 and data.materialSlots == 2,
