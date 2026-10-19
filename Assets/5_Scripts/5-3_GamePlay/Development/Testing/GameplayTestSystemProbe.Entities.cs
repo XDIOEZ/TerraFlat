@@ -24,6 +24,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
         operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
+        operations.Add("ai/closest_target_batch", EntityClosestTargetBatch);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
         operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
@@ -76,6 +77,63 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region AI 与移动消耗
+
+    // 使用真实检测器和未加载物品，核对最近目标筛选的环绕、过滤与实时位置。
+    private static JObject EntityClosestTargetBatch(JObject args)
+    {
+        var root = new GameObject("[ClosestTargetBatch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            Mod_ItemDetector detector = root.AddComponent<Mod_ItemDetector>();
+            Item Create(string id, float x, string tag)
+            {
+                var host = new GameObject(id);
+                host.transform.SetParent(root.transform, false);
+                GameItem item = host.AddComponent<GameItem>();
+                Data_GeneralItem data = EntityProbeData(id, 1f);
+                data.Tags = new List<string> { tag };
+                item.BindData(data);
+                host.transform.position = new Vector3(x, 0.5f);
+                return item;
+            }
+
+            Item ignored = Create("test:ignored", 15.5f, "Other");
+            Item seam = Create("test:seam", -15.5f, "Edible");
+            Item nearby = Create("test:nearby", 14.5f, "Edible");
+            Item far = Create("test:far", 9.5f, "Edible");
+            Item player = Create("test:player", 15.25f, "Player");
+            detector.CurrentItemsInArea = new List<Item> { ignored, seam, nearby, far, player, null };
+
+            var edible = new List<string> { "Edible" };
+            var origin = new Vector3(15.5f, 0.5f);
+            var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+            bool unwrappedNearest = detector.FindClosestItemByTags(edible, origin, false, default) == nearby;
+            bool wrappedTieFirst = detector.FindClosestItemByTags(edible, origin, false, wrapped) == seam;
+            bool playerExcluded = detector.FindClosestItemByTags(edible, origin, false, wrapped) == seam;
+            bool playerIncluded = detector.FindClosestItemByTags(edible, origin, true, wrapped) == player;
+            bool playerWithNoTags = detector.FindClosestItemByTags(null, origin, true, wrapped) == player;
+            bool emptyRejected = detector.FindClosestItemByTags(null, origin, false, wrapped) == null;
+            bool caseSensitive = detector.FindClosestItemByTags(new List<string> { "edible" }, origin, false, wrapped) == null;
+            bool runtimeUnmatched = detector.FindClosestItemByTags(new List<string> { "edible" }, origin) == null;
+            nearby.transform.position = new Vector3(15.45f, 0.5f);
+            bool movedTargetUpdated = detector.FindClosestItemByTags(edible, origin, false, wrapped) == nearby;
+            bool runtimeEntryConsistent = ReferenceEquals(
+                detector.FindClosestItemByTags(edible, origin),
+                detector.FindClosestItemByTags(edible, origin, false, WorldTopologyRuntime.GetActiveDomain()));
+
+            return new JObject
+            {
+                ["unwrappedNearest"] = unwrappedNearest, ["wrappedTieFirst"] = wrappedTieFirst,
+                ["playerExcluded"] = playerExcluded, ["playerIncluded"] = playerIncluded,
+                ["playerWithNoTags"] = playerWithNoTags, ["emptyRejected"] = emptyRejected,
+                ["caseSensitive"] = caseSensitive, ["runtimeUnmatched"] = runtimeUnmatched,
+                ["movedTargetUpdated"] = movedTargetUpdated,
+                ["runtimeEntryConsistent"] = runtimeEntryConsistent
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
 
     // 两种形状共用正式仿射变换，检查负缩放、旋转、原列表前缀与包围盒。
     private static JObject EntityPerceptionShapeBatch(JObject args)

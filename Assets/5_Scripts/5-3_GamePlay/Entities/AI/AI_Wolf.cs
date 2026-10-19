@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using MemoryPack;
 using Sirenix.OdinInspector;
+using Unity.Mathematics;
 using UnityEngine;
 using UltEvents;
 #if UNITY_EDITOR
@@ -841,11 +842,22 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 		Item closest = null;
 		float closestDistanceSqr = float.MaxValue;
+		// 同一次威胁筛选只解析一次世界边界，候选距离仍逐个实时读取。
+		WorldTopologyDomain topology = default;
+		bool topologyResolved = false;
+		Vector3 position = transform.position;
+		float2 origin = new(position.x, position.y);
 		foreach (Item candidate in allItems)
 		{
 			if (!IsLivingActorTarget(candidate)) continue;
 
-			float distanceSqr = WorldTopologyRuntime.SqrDistance(transform.position, candidate.transform.position);
+			if (!topologyResolved)
+			{
+				topology = WorldTopologyRuntime.GetActiveDomain();
+				topologyResolved = true;
+			}
+			Vector3 target = candidate.transform.position;
+			float distanceSqr = topology.SqrDistance(origin, new float2(target.x, target.y));
 			if (distanceSqr < closestDistanceSqr)
 			{
 				closest = candidate;
@@ -895,6 +907,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 		Item closest = null;
 		float closestDistanceSqr = float.MaxValue;
+		WorldTopologyDomain topology = default;
+		bool topologyResolved = false;
+		Vector3 position = transform.position;
+		float2 origin = new(position.x, position.y);
 		for (int i = 0; i < detectedItems.Count; i++)
 		{
 			Item candidate = detectedItems[i];
@@ -904,9 +920,13 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 				continue;
 			}
 
-			float distanceSqr = WorldTopologyRuntime.SqrDistance(
-				transform.position,
-				candidate.transform.position);
+			if (!topologyResolved)
+			{
+				topology = WorldTopologyRuntime.GetActiveDomain();
+				topologyResolved = true;
+			}
+			Vector3 target = candidate.transform.position;
+			float distanceSqr = topology.SqrDistance(origin, new float2(target.x, target.y));
 			if (distanceSqr >= closestDistanceSqr)
 				continue;
 

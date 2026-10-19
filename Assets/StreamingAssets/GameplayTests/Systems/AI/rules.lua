@@ -363,3 +363,13 @@ test.system("ai", "perception_shape_batch", {}, function(data)
     assert(data.bounds and data.withoutOutput, "合并计算的粗筛包围盒与独立计算不一致")
     assert(data.rejectedEmpty, "空形状仍登记目标或修改了已有 Burst 几何列表")
 end, "Actor 感知形状一次变换生成包围盒和 Burst 数据")
+
+test.system("ai", "closest_target_batch", {}, function(data)
+    assert(data.unwrappedNearest and data.wrappedTieFirst,
+        "目标筛选的无限世界距离、环绕接缝或同距离优先级改变")
+    assert(data.playerExcluded and data.playerIncluded and data.playerWithNoTags,
+        "玩家威胁识别或目标标签过滤规则改变")
+    assert(data.emptyRejected and data.caseSensitive and data.runtimeUnmatched and
+        data.movedTargetUpdated and data.runtimeEntryConsistent,
+        "目标筛选的空标签、区分大小写、实时位置或公开调用入口改变")
+end, "AI 最近目标批量距离计算保持接缝、过滤及动态候选语义")

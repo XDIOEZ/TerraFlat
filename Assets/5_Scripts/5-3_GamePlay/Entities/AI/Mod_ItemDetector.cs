@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using Unity.Mathematics;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -342,9 +343,19 @@ public class Mod_ItemDetector : Module
 
     /// <summary>按物品标签寻找最近目标；启用玩家选项时同时识别 Player 实体和 ItemData 标签。</summary>
     public Item FindClosestItemByTags(List<string> tags, Vector3 origin, bool includePlayerEntities = false)
+        => FindClosestItemByTagsInternal(tags, origin, includePlayerEntities, default, resolveActiveTopology: true);
+
+    /// <summary>本轮筛选复用世界拓扑，避免逐候选重新读取星球边界。</summary>
+    internal Item FindClosestItemByTags(List<string> tags, Vector3 origin, bool includePlayerEntities,
+        in WorldTopologyDomain topology)
+        => FindClosestItemByTagsInternal(tags, origin, includePlayerEntities, topology, resolveActiveTopology: false);
+
+    private Item FindClosestItemByTagsInternal(List<string> tags, Vector3 origin,
+        bool includePlayerEntities, WorldTopologyDomain topology, bool resolveActiveTopology)
     {
         Item closestItem = null;
         float closestDistanceSqr = float.MaxValue;
+        float2 originPosition = new(origin.x, origin.y);
 
         for (int i = 0; i < CurrentItemsInArea.Count; i++)
         {
@@ -359,7 +370,13 @@ public class Mod_ItemDetector : Module
             if (!matches)
                 continue;
 
-            float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, detectedItem.transform.position);
+            if (resolveActiveTopology)
+            {
+                topology = WorldTopologyRuntime.GetActiveDomain();
+                resolveActiveTopology = false;
+            }
+            Vector3 targetPosition = detectedItem.transform.position;
+            float distanceSqr = topology.SqrDistance(originPosition, new float2(targetPosition.x, targetPosition.y));
             if (distanceSqr >= closestDistanceSqr)
                 continue;
 
