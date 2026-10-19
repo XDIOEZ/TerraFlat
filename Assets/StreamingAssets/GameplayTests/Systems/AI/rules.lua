@@ -110,6 +110,14 @@ test.system("ai", "line_of_sight_batch", {}, function(data)
         "视线起终点加载资格或同格/端点阻挡豁免改变")
     assert(data.crossChunkClear and data.secondRayClear,
         "已加载的跨区块空地没有保持可见")
+    assert(data.verticalPositiveClear and data.verticalNegativeClear and
+        not data.verticalIntermediateBlocked and data.verticalEndpointIgnored,
+        "纵向视线在正负方向、跨区块、遮挡和终点豁免上与原规则不一致")
+    assert(not data.verticalBlockedBeforeUnknown and data.verticalSkippedUnknownLookup and
+        not data.verticalUnknownEndpoint,
+        "纵向视线被遮挡后仍查询未知终点，或让未知区块可见")
+    assert(data.horizontalNegativeClear and data.wrappedVerticalSeamClear,
+        "负坐标横向视线或环绕纵向接缝漏查真实加载状态")
     assert(data.firstLookupCount == 2 and data.reusedLookupCount == 2 and data.cachedChunkCount == 2,
         "同轮不同射线没有复用两个已解析区块")
     assert(data.allocatedBytes == 0, "预热后的同轮 LOS 仍分配托管内存")

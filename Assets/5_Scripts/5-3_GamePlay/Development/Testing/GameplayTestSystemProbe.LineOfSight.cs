@@ -46,12 +46,28 @@ public static partial class GameplayTestSystemProbe
         var data = new JObject { ["unknownSameCell"] = query.HasClearLineTo(observer) };
         ChunkRuntime first = SightProbeChunk(world, Vector2Int.zero);
         SightProbeChunk(world, new Vector2Int(4, 0));
+        ChunkRuntime verticalUp = SightProbeChunk(world, new Vector2Int(0, 4));
+        SightProbeChunk(world, new Vector2Int(0, -4));
         query.Begin(world, default, "sight_probe", 4, 4, observer);
         data["crossChunkClear"] = query.HasClearLineTo(new Vector2(7.5f, 0.5f));
         data["firstLookupCount"] = query.ChunkLookupCount;
         data["secondRayClear"] = query.HasClearLineTo(new Vector2(6.5f, 1.5f));
         data["reusedLookupCount"] = query.ChunkLookupCount;
         data["cachedChunkCount"] = query.CachedChunkCount;
+
+        data["verticalPositiveClear"] = query.HasClearLineTo(new Vector2(0.5f, 7.5f));
+        data["verticalNegativeClear"] = query.HasClearLineTo(new Vector2(0.5f, -3.5f));
+        first.Terrain.SetDynamicSightBlockingCell(0, 2, true);
+        data["verticalIntermediateBlocked"] = query.HasClearLineTo(new Vector2(0.5f, 7.5f));
+        int beforeVerticalUnknown = query.ChunkLookupCount;
+        data["verticalBlockedBeforeUnknown"] = query.HasClearLineTo(new Vector2(0.5f, 8.5f));
+        data["verticalSkippedUnknownLookup"] = query.ChunkLookupCount == beforeVerticalUnknown;
+        first.Terrain.SetDynamicSightBlockingCell(0, 2, false);
+        verticalUp.Terrain.SetDynamicSightBlockingCell(0, 3, true);
+        data["verticalEndpointIgnored"] = query.HasClearLineTo(new Vector2(0.5f, 7.5f));
+        verticalUp.Terrain.SetDynamicSightBlockingCell(0, 3, false);
+        data["verticalUnknownEndpoint"] = query.HasClearLineTo(new Vector2(0.5f, 8.5f));
+
         query.HasClearLineTo(new Vector2(7.5f, 0.5f));
         long before = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 256; i++)
@@ -123,6 +139,10 @@ public static partial class GameplayTestSystemProbe
 
         ChunkRuntime wrappedLeft = SightProbeChunk(world, new Vector2Int(-4, 0));
         var wrapped = new WorldTopologyDomain(new int2(-4, -4), new int2(8, 8), true);
+        query.Begin(world, default, "sight_probe", 4, 4, observer);
+        data["horizontalNegativeClear"] = query.HasClearLineTo(new Vector2(-3.5f, 0.5f));
+        query.Begin(world, wrapped, "sight_probe", 4, 4, new Vector2(3.5f, 3.5f));
+        data["wrappedVerticalSeamClear"] = query.HasClearLineTo(new Vector2(3.5f, -3.5f));
         query.Begin(world, wrapped, "sight_probe", 4, 4, new Vector2(3.5f, 0.5f));
         first.Terrain.SetCell(0, 0, SightProbeCell(true));
         data["wrappedShortestClear"] = query.HasClearLineTo(new Vector2(-2.5f, 0.5f));

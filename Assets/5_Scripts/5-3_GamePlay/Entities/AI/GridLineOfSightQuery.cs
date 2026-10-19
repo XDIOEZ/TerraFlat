@@ -82,6 +82,23 @@ internal sealed class GridLineOfSightQuery : IDisposable
         int dy = Mathf.Abs(delta.y);
         int stepX = delta.x >= 0 ? 1 : -1;
         int stepY = delta.y >= 0 ? 1 : -1;
+
+        // 水平或垂直射线没有切角，直接检查中途格，免去每格 Bresenham 分支。
+        if (dy == 0)
+        {
+            for (int nextX = x + stepX; nextX != unwrappedTarget.x; nextX += stepX)
+                if (IsSightBlockingCell(new Vector2Int(nextX, y)))
+                    return false;
+            return IsCellLoaded(target);
+        }
+        if (dx == 0)
+        {
+            for (int nextY = y + stepY; nextY != unwrappedTarget.y; nextY += stepY)
+                if (IsSightBlockingCell(new Vector2Int(x, nextY)))
+                    return false;
+            return IsCellLoaded(target);
+        }
+
         int error = dx - dy;
         while (x != unwrappedTarget.x || y != unwrappedTarget.y)
         {

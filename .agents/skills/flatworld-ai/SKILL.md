@@ -46,6 +46,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `Mod_ItemDetector.ApplyDetectorResults` 仅在 `DebugMode` 开启时构造旧候选差集并比较进入/离开，普通批次保留去重、顺序和原标签 List 引用；关闭 Debug 时清理旧集合，回归 `ai/detector_apply_batch`。
 - 同 detector 的同步候选批次用 `GridLineOfSightQuery` 冻结观察者与世界上下文；每条射线首次进入区块时验证加载态，射线内复用地形引用、逐格实时读取遮挡，下一条射线重新验证，防止沿用卸载/重建区块。规则 `ai/line_of_sight_batch`；Profiler `FlatWorld.Perception.GridLineOfSight/ResolveSightChunk`。
 - 视线遇阻即返回不可见，仅在整条射线无遮挡时检查终点是否加载；起点、拐角侧格和中途区块照常验证。
+- 水平和垂直的整数格 LOS 用直线逐格扫描代替通用 Bresenham 分支；中途仍实时检查遮挡，起终点豁免和环绕/区块加载语义保持，`ai/line_of_sight_batch` 覆盖两轴正负方向与接缝。
 
 ## 行为能力与表现
 
