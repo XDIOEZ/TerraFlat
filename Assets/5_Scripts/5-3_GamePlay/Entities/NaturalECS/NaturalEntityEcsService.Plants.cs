@@ -329,11 +329,12 @@ namespace FlatWorld.NaturalEntities
                 (soil.AddedWater == 0f && soil.UsedWater == 0f && soil.UsedFertility == 0f)) return;
             using var sample = SoilCommitMarker.Auto();
             if (simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle plant) &&
-                soils.TryRead(PlantSoilCell(record, plant), out TileData_Farmland target, out _,
+                soils.TryRead(PlantSoilCell(record, plant), out TileData_Farmland target, out RuntimeTerrainTileSample sampled,
                     allowNaturalSoil: plant.Cultivated == 0))
             {
                 target.AccumulateWaterSupply(soil.AddedWater); target.AccumulateWaterConsumption(soil.UsedWater);
-                target.ConsumeFertility(soil.UsedFertility); soils.Commit(target, allowNaturalSoil: plant.Cultivated == 0);
+                target.ConsumeFertility(soil.UsedFertility);
+                soils.CommitSampled(sampled, target, allowNaturalSoil: plant.Cultivated == 0);
             }
             soil.AddedWater = soil.UsedWater = soil.UsedFertility = 0f;
             simulation.Set(record.Handle.Id, soil, notifyChanged: false);

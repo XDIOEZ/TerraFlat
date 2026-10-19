@@ -151,12 +151,19 @@ public static partial class GameplayTestWorldRuntimeProbe
             var behavior = new Tile_Farmland();
             behavior.Irrigate(soil, 3);
             FarmlandSystem.CommitSoil(soil);
-            FarmlandSystem.TryReadSoil(site.Sample.WorldCell, out TileData_Farmland watered);
-            float afterIrrigation = watered?.waterValue ?? -1f;
-            behavior.ConsumeWater(watered, 1);
-            watered.AccumulateWaterSupply(.25f);
-            watered.AccumulateWaterConsumption(.5f);
-            FarmlandSystem.CommitSoil(watered);
+            float afterIrrigation;
+            using (FarmlandSystem.SoilSamplingBatch batch = FarmlandSystem.CreateSoilSamplingBatch())
+            {
+                if (!batch.TryRead(site.Sample.WorldCell, out TileData_Farmland watered,
+                        out RuntimeTerrainTileSample sampled, allowNaturalSoil: false))
+                    throw new InvalidOperationException("农业批次未取得真实耕地。");
+                afterIrrigation = watered.waterValue;
+                behavior.ConsumeWater(watered, 1);
+                watered.AccumulateWaterSupply(.25f);
+                watered.AccumulateWaterConsumption(.5f);
+                batch.CommitSampled(sampled, watered, allowNaturalSoil: false);
+                result["sampledCommit"] = true;
+            }
             FarmlandSystem.TryReadSoil(site.Sample.WorldCell, out TileData_Farmland consumed);
             AgricultureCellSaveData saved = SaveDataMgr.TestExistingInstance.GetAgricultureCells(site.Sample.Address)
                 .FirstOrDefault(value => value.LocalPosition == site.Sample.LocalCell);
