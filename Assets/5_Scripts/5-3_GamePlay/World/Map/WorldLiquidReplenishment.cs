@@ -54,7 +54,9 @@ public static class WorldLiquidReplenishment
             !chunks.TryGetRuntimeTerrainTile((Vector2)origin.WorldCell + Vector2.one * .5f, out var current) ||
             !ReferenceEquals(current.Terrain, origin.Terrain))
             return;
-        var edges = new List<(RuntimeTerrainTileSample A, RuntimeTerrainTileSample B)>(16);
+        // 邻边缓冲借还可重入的 ListPool，重复取水不再逐次创建列表。
+        using var edgeLease = UnityEngine.Pool.ListPool<(RuntimeTerrainTileSample A, RuntimeTerrainTileSample B)>.Get(
+            out List<(RuntimeTerrainTileSample A, RuntimeTerrainTileSample B)> edges);
         foreach (Vector2Int direction in Directions)
         {
             if (!TryGetNeighbour(chunks, origin, direction, out var source))

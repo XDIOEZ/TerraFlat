@@ -36,6 +36,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 天然水域生成时把底床凹陷写入 `terrain.surface.naturalDepthLevels`：初始水量 1～5 级降低 2 层，6～10 级降低 3 层；地表、洞穴和冻结前水域共用，抽水/倒水不改底床。有效水面统一为底床加 1 层，阴影只比较实际高差；原始 `height` 与玩家采挖深度独立。
 - `WorldLiquidSourceResolver` 从 Liquid 层解析 `LiquidDefinition`；`WorldLiquidSourceTarget` 独立于 TileData。世界液体权威水量是 `int LiquidLevel` 0～10，一份液体等于一级；生成向上取整，正值至少一级。`GetLiquidDepth` 只由等级除以 10 派生表现比例。`TryPour` 成功只发布本格 `SurfaceLiquidAdded`，耕地按本格订阅吸水；取水派生规则等待端口事务成功 `PublishState` 后的 `SurfaceLiquidPumped`。
 - `WorldLiquidReplenishment` 订阅 `SurfaceLiquidPumped`，固定取水点及四邻涉及的最多 16 条邻边，双向按水量差的一半转移整级水量，直到邻边差不超过一级；供水格保留至少一级，空格与浅水格均可补水。目标须为 `GetLiquidBaseline` 中原有同种水域，普通陆地、异种液体和显式挡水格不参与；不递归扩张、不凭空造水，复用 `TrySet` 的差量/表现通知，规则在 `SurfaceFluids/replenishment.lua`。
+- 地表倒水/取水事件只在订阅变化时生成监听器快照，派发时不调用 `GetInvocationList`；补水邻边用 `ListPool` 借还，通知中的新增/退订影响下一次派发，异常仍逐监听器隔离。回归 `surface_fluids/notification_dispatch`。
 - 海底材质读取 `height`：`terrain.oceanSandMinimumHeight..SeaLevel` 为沙底，其下石底；沙滩由 `BeachLevel` 控制。河床中心/边缘材质来自 `river.bed*`，边缘底材只用于局部沉积段；湖泊读 `terrain.riverbedTileId`。
 - `riverFlowX/Y` 保存真实河道下游切线，`ChunkMgr.TryGetRuntimeWaterCurrent` 是消费入口；湖面静止，海洋表层暂用 `windX/Y`。实验流向经 `TryGetExperimentalLiquidFlow` 查询，不覆写天然流向；显式挡水来源登记 `WorldLiquidFlowObstacles`，平台不自动挡水。
 - 承重读取地块 `loadCapacity` 或液体 `worldWater.loadCapacity`，覆盖层优先于底部液面。共享 Behaviour 只保存规则，长按/Tick/接触时钟属于角色。

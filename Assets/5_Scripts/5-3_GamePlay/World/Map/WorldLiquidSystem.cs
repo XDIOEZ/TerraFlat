@@ -10,8 +10,26 @@ using UnityEngine;
 public static class WorldLiquidSystem
 {
     #region 查询
-    public static event Action<RuntimeTerrainTileSample> SurfaceLiquidAdded;
-    public static event Action<RuntimeTerrainTileSample> SurfaceLiquidPumped;
+    private static Action<RuntimeTerrainTileSample> liquidAddedSubscribers;
+    private static Action<RuntimeTerrainTileSample> liquidPumpedSubscribers;
+    private static Delegate[] liquidAddedSnapshot = Array.Empty<Delegate>();
+    private static Delegate[] liquidPumpedSnapshot = Array.Empty<Delegate>();
+
+    // 监听器增删时才生成一次调用快照，频繁倒水/取水不再逐次分配委托数组。
+    public static event Action<RuntimeTerrainTileSample> SurfaceLiquidAdded
+    {
+        add { liquidAddedSubscribers += value; liquidAddedSnapshot = SnapshotSubscribers(liquidAddedSubscribers); }
+        remove { liquidAddedSubscribers -= value; liquidAddedSnapshot = SnapshotSubscribers(liquidAddedSubscribers); }
+    }
+
+    public static event Action<RuntimeTerrainTileSample> SurfaceLiquidPumped
+    {
+        add { liquidPumpedSubscribers += value; liquidPumpedSnapshot = SnapshotSubscribers(liquidPumpedSubscribers); }
+        remove { liquidPumpedSubscribers -= value; liquidPumpedSnapshot = SnapshotSubscribers(liquidPumpedSubscribers); }
+    }
+
+    private static Delegate[] SnapshotSubscribers(Action<RuntimeTerrainTileSample> subscribers)
+        => subscribers?.GetInvocationList() ?? Array.Empty<Delegate>();
     public static bool TryGetDefinition(RuntimeTerrainTileSample sample, out LiquidDefinition definition)
     {
         definition = null;
@@ -67,20 +85,20 @@ public static class WorldLiquidSystem
     }
 
     private static void NotifySurfaceLiquidAdded(RuntimeTerrainTileSample sample)
-        => PublishSurfaceLiquidEvent(SurfaceLiquidAdded, sample);
+        => PublishSurfaceLiquidEvent(liquidAddedSnapshot, sample);
 
     /// <summary>抽水事务全部提交后发布，取水后的派生规则不得提前改变回滚现场。</summary>
     public static void PublishSurfaceLiquidPumped(RuntimeTerrainTileSample sample)
     {
         if (!GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed) return;
-        PublishSurfaceLiquidEvent(SurfaceLiquidPumped, sample);
+        PublishSurfaceLiquidEvent(liquidPumpedSnapshot, sample);
     }
 
-    private static void PublishSurfaceLiquidEvent(Action<RuntimeTerrainTileSample> handlers, RuntimeTerrainTileSample sample)
+    private static void PublishSurfaceLiquidEvent(Delegate[] handlers, RuntimeTerrainTileSample sample)
     {
-        if (handlers == null) return;
+        // 本轮取快照，回调期间增删订阅只影响下一次通知。
         // 接收方异常不能把已写入的水变成失败事务，让来源重复恢复同一份水。
-        foreach (Action<RuntimeTerrainTileSample> handler in handlers.GetInvocationList())
+        foreach (Action<RuntimeTerrainTileSample> handler in handlers)
         {
             try { handler(sample); }
             catch (Exception exception) { Debug.LogException(exception); }
