@@ -58,7 +58,11 @@ test.system("ecology", "soil_liquid_prefilter", {}, function(data)
         "九宫格液体预筛误读干格、覆盖水、未加载格或改变真实水格样本")
     assert(data.uncovered and data.drained and data.seam,
         "支撑移除、抽干后预筛未实时更新，或环绕接缝未读取规范水格")
-end, "自然物九宫格灌溉只完整读取有水格，保留地形变化和跨周边界")
+    assert(data.actorDry and data.actorWet and data.actorCovered and data.actorMissing and
+        data.actorWrongWorld and data.actorUncovered and data.actorDrained and
+        data.actorSeam and data.actorOldEpochRejected,
+        "角色水接触快速预筛的干格、平台、世界切换、动态液位或环绕接缝规则改变")
+end, "自然物灌溉与角色水接触复用水格预筛，保留动态液层和世界边界")
 
 test.system("ecology", "capture_batch", {}, function(data)
     local expected = {0, 5, 7, 5, 11, 13}

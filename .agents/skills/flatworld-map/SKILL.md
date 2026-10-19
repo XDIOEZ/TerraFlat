@@ -40,6 +40,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - `riverFlowX/Y` 保存真实河道下游切线，`ChunkMgr.TryGetRuntimeWaterCurrent` 是消费入口；湖面静止，海洋表层暂用 `windX/Y`。实验流向经 `TryGetExperimentalLiquidFlow` 查询，不覆写天然流向；显式挡水来源登记 `WorldLiquidFlowObstacles`，平台不自动挡水。
 - 承重读取地块 `loadCapacity` 或液体 `worldWater.loadCapacity`，覆盖层优先于底部液面。共享 Behaviour 只保存规则，长按/Tick/接触时钟属于角色。
 
+- `Mod_TileEffectReceiver` 在单轮脚下/四邻液体接触查询时先筛真实水量及平台遮断，干格不构建完整 `RuntimeTerrainTileSample`；入水、岸边行为仍实时结算，旧 Map 回退不变。回归 `ecology/soil_liquid_prefilter`。
+
 ## 确定性气候与水文
 
 - 固定种子、规范逻辑坐标、稳定排序和生成签名共同决定结果；正式批次、单格、邻区、预览和定位共用规则。`WorldTopologyDomain` 提供纯坐标数学，物理镜像属于表现层。海洋水源/第一层降水缓存使用纯 Profile 的 `ClimateFingerprint`：临时输出尺寸、生态/矿脉与门户配对不拆分缓存，全部数字/文本参数和真实气候格网尺寸仍使缓存失效；世界纪元、维度、种子、拓扑和节点坐标继续独立入键。
