@@ -350,3 +350,9 @@ for _, case in ipairs({
         assert(data.effective == case.effective, "正式目标体型感知规则错误")
     end, "AI感知范围：" .. case.name)
 end
+
+test.system("ai", "perception_shape_batch", {}, function(data)
+    assert(data.shapes and data.added == 2, "形状转换没有保持旋转、负缩放及已有形状偏移")
+    assert(data.bounds and data.withoutOutput, "合并计算的粗筛包围盒与独立计算不一致")
+    assert(data.rejectedEmpty, "空形状仍登记目标或修改了已有 Burst 几何列表")
+end, "Actor 感知形状一次变换生成包围盒和 Burst 数据")

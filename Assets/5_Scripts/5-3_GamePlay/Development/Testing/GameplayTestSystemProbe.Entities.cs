@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Geometry;
 using FlatWorld.Combat;
 using FlatWorld.Gameplay.Events;
 using FlatWorld.Gameplay.Progress;
@@ -22,6 +23,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/attack_window", EntityAiAttackWindow);
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
+        operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
         operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
@@ -74,6 +76,50 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region AI 与移动消耗
+
+    // 两种形状共用正式仿射变换，检查负缩放、旋转、原列表前缀与包围盒。
+    private static JObject EntityPerceptionShapeBatch(JObject args)
+    {
+        PerceptionShape2D[] local =
+        {
+            PerceptionShape2D.Aabb(new float2(2f, 1f), new float2(1f, .5f)),
+            PerceptionShape2D.Circle(new float2(-1f, 2f), 1f)
+        };
+        Matrix4x4 matrix = Matrix4x4.TRS(new Vector3(10f, -5f, 0f),
+            Quaternion.Euler(0f, 0f, 90f), new Vector3(-2f, 3f, 1f));
+        var world = new List<PerceptionShape2D>
+        {
+            PerceptionShape2D.Circle(new float2(99f, 99f), 1f)
+        };
+        bool success = ItemMgr.TryBuildPerceptionShapes(local, matrix, world, out Bounds combined);
+        bool shapes = success && world.Count == 3 &&
+                      world[0].Center.x == 99f && world[0].Center.y == 99f &&
+                      world[1].IsCircle == 0 && world[2].IsCircle == 1 &&
+                      Mathf.Abs(world[1].Center.x - 7f) < .0001f &&
+                      Mathf.Abs(world[1].Center.y + 9f) < .0001f &&
+                      Mathf.Abs(world[1].Extents.x - 1.5f) < .0001f &&
+                      Mathf.Abs(world[1].Extents.y - 2f) < .0001f &&
+                      Mathf.Abs(world[2].Center.x - 4f) < .0001f &&
+                      Mathf.Abs(world[2].Center.y + 3f) < .0001f &&
+                      Mathf.Abs(world[2].Radius - 3f) < .0001f;
+        bool bounds = success && Mathf.Abs(combined.min.x - 1f) < .0001f &&
+                      Mathf.Abs(combined.min.y + 11f) < .0001f &&
+                      Mathf.Abs(combined.max.x - 8.5f) < .0001f &&
+                      Mathf.Abs(combined.max.y) < .0001f;
+        bool withoutOutput = ItemMgr.TryBuildPerceptionShapes(local, matrix, null, out Bounds onlyBounds) &&
+                             combined.center == onlyBounds.center && combined.extents == onlyBounds.extents;
+        int count = world.Count;
+        bool rejectedEmpty = !ItemMgr.TryBuildPerceptionShapes(Array.Empty<PerceptionShape2D>(),
+                                 matrix, world, out _) &&
+                             !ItemMgr.TryBuildPerceptionShapes(null, matrix, world, out _) &&
+                             world.Count == count;
+        return new JObject
+        {
+            ["shapes"] = shapes, ["bounds"] = bounds,
+            ["withoutOutput"] = withoutOutput, ["rejectedEmpty"] = rejectedEmpty,
+            ["added"] = world.Count - 1
+        };
+    }
 
     // 读取正式目录并调用正式概率与队列规则，测试不重新计算业务逻辑。
     private static JObject EntityEcologyConfig(JObject args)
