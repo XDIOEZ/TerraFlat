@@ -79,6 +79,9 @@ public static class WorldMotionSystem
     /// <summary>按当地风级、物体总质量与星球重力读取分档推动速度。</summary>
     public static Vector2 SampleWindVelocity(Vector2 position, float mass)
     {
+        // 全域没有八级以上的有效推动或渐弱尾段时，不读取目录质量、重力和拓扑。
+        if (!HasWindPush)
+            return Vector2.zero;
         return TryCreateWindSamplingContext(out WindSamplingContext context)
             ? context.Sample(position, mass) : Vector2.zero;
     }

@@ -78,5 +78,6 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `RegionalWindPushField` 每个规范天气区分别平滑三种起吹档位的推动向量，起风、停风、改档和反向都从当前推速用完整 `_weatherTransitionSeconds`（默认 3 秒）SmoothStep 续接；再按四区空间权重混合，跨界不重置时间。秒轴用 `Time.timeAsDouble`，不随游戏日历跳时，暂停冻结；普通客户端消费快照走同一力场，原始天气/设施/声音查询不被改写。每帧共用一批结果，同帧区域变更以 `WindQueryRevision` 补同步；世界/代际/拓扑重建或天气禁用清空，首次强风从零渐入，停风尾段仍保留 HasWindPush。规则 `environment/wind_push_transition` 覆盖连续性。
 - 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级目标速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档目标不插值；邻风区各自分档并平滑响应后按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风，不能以镜头区判断全世界。
 - 大批散落物风推动使用 `WorldMotionSystem.TryCreateWindSamplingContext` 每批冻结一次目录质量范围和星球重力；每件仍按实际质量与当地四区风场采样。单件 `SampleWindVelocity` 与批量共用区域推动场，稳态目标和空间混合仍由 `WindEnvironmentRules` 统一裁定。
+- 单件 `SampleWindVelocity` 在全域无有效风推动时直接返回零，省去每物品的质量目录、星球重力和拓扑准备；`RegionalWindPushField.Sample` 也不查询全零风区。`HasWindPush` 包含起风目标和停风尾段，不能按原始瞬时风强跳过，回归 `environment/wind_push_transition`。
 - 风采样直接读取区域风字段，与完整天气快照共用 `BuildWind`；风源同步只读风字段，不组装雨雷快照。每批风推动冻结活动拓扑域与 ChunkMgr，逐小步阻挡和移动后的环境检测仍实时执行。
 - 单机散落物水态走 DroppedItemRuntime.Water；陆地静物订所在地格变化，未知格限量重试，水中低频查流。水态替换先备载荷/共享视觉再提交整组数量，水花归实际世界 Scene；浮力阈值与视觉浸没分开。

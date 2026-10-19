@@ -344,6 +344,12 @@ test.system("environment", "wind_push_transition", {}, function(data)
         near(sample.x, x, label .. "：水平推速")
         near(sample.y, y, label .. "：垂直推速")
     end
+    assert(data.calmNoPush and data.calmNowHasPush,
+        "无风跳过采样的条件在新风源启用后没有解除")
+    velocity(data.calmLevel8, 0, 0, "无风八级采样直接归零")
+    velocity(data.calmLevel10, 0, 0, "无风十级采样直接归零")
+    velocity(data.calmFarAway, 0, 0, "无风远区不触发混合风场")
+    velocity(data.calmRising, .25, 0, "无风到强风渐入保留原曲线")
     velocity(data.start, 0, 0, "起风当刻从零接续")
     velocity(data.rising, .03, 0, "八级风完整时间渐入")
     velocity(data.steady, .06, 0, "稳态仍保留八级档")
