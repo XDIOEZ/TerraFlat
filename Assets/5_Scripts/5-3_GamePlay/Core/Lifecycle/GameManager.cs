@@ -1,4 +1,16 @@
 // AI-Context: 游戏世界总生命周期与出生点服务；出生点必须按新版纯生成 Profile 计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时注册运行时 Chunk 或默认投放到水面。
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 创建世界：CreateNewWorld() / CreateNewWorldCoroutine() / RunWorld()
+// 继续游戏：ContinueGame() / ContinueGameInternal() / LoadPlayer()
+// 场景切换：ChangeScene_By_SceneNames() / LoadSceneSingleAndInvokeWhenReady()
+// 太空转移：StartSpaceTransferWithSpawn() / SpaceTransferWithSpawnCoroutine()
+// 玩家出生：PlaceNewPlayerOnLandThenEnterWorld() / BeginNewWorldSpawnSearch() / TryFindSurfaceSpawnAlongLine()
+// 出生校验：TryGetDefaultPlayerSpawnPosition() / IsValidLandSpawnPosition() / TryGetNearestLandSpawnPosition()
+// 手动/自动保存：SaveGame() / SaveGameInBackground() / SaveGameInBackgroundCoroutine()
+// 世界退出：BackToHelloScene_Coroutine() / SaveAllChunks()
+// 主菜单及加载 UI 入口位于同名分部 GameManager.UI.cs。
+// ====================================================
+
 using System;
 using System.Collections;
 using System.Collections.Generic;

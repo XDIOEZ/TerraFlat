@@ -1,3 +1,14 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 实例数据：BindData() / SetItemData() / SyncItemData()
+// 启动加载：Load() / LoadInSteps() / ModuleLoad() / LoadModuleLayout()
+// 模块装配：RegisterModuleForLoad() / BindModuleDependencies() / GetMod<T>()
+// 运行时更新：Tick() / TickScheduled() / EnsureModuleSchedule() / TickScheduledModules()
+// 模块调度：GetTickTier() / MarkModuleScheduleDirty() / SetSimulationRangePaused()
+// 保存与卸载：Save() / ModuleSave() / ModuleUnload() / PrepareForDespawn()
+// 对象池复用：PrepareForPoolReuse() / NotifyReturnedToPool()
+// 数据绑定/结构通知：NotifyRuntimeStructureChanged() / LoadDataPosition()
+// ====================================================
+
 using UnityEngine;
 using UltEvents;
 using System.Collections.Generic;

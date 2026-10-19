@@ -1,3 +1,15 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 网络快照：CreateCompressedNetworkSnapshot() / ApplyCompressedNetworkSnapshot()
+// 保存入口：Save_And_WriteToDisk() / Save_And_WriteToDiskInBackground() / Save_And_WriteToDiskInBackgroundCoroutine()
+// 磁盘读写：SaveToDisk() / LoadSaveByDisk() / WriteSaveAtomically() / InvalidatePendingBackgroundSave()
+// 存档重命名：TryRenameSave() / TryRenamePlayerDisplayName()
+// 区块差量：TryFinalizeProceduralChunk() / TrySaveChunkDifferences() / TrySaveChunkDifferencesCoroutine() / ApplyChunkDelta()
+// 地形差量：RestoreRuntimeTerrainForChunk() / RecordRuntimeTerrainChange() / CaptureRuntimeTerrainStates()
+// 建筑存档：RecordRuntimeBuildingChange() / CaptureRuntimeBuildingStates() / RestoreRuntimeBuildingsForChunk()
+// AI 实体存档：CaptureRuntimeAiEntityStates() / RestoreRuntimeAiEntitiesForChunk()
+// 编码解码：BuildCompactSavePayload() / BuildCoreCompactSavePayload() / DeserializeSavePayload() / DeserializeCoreSavePayload()
+// ====================================================
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
