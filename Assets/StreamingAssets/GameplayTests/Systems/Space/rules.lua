@@ -150,7 +150,29 @@ do
             assert(sample.negativeOriginX == value[1] - 10 and sample.negativeOriginY == value[2] - 20,
                 "负坐标落地原点丢失或多格建筑偏移错误")
         end
-        return "覆盖活动船体保持整体、普通地面无船体、空地阈值、八种投送能力、正负半角吸附及四朝向多格落点。"
+        assert(#assembly.origins == 4, "缺少载荷重心变化与负坐标半格落点样本")
+        for _, sample in ipairs(assembly.origins) do
+            local positive = sample.originX > 0
+            assert(sample.x == (positive and 10 or -11) and sample.y == (positive and 20 or -21),
+                "落地把重心当成格子原点，或负坐标吸附错误")
+        end
+        assert(#data.uprightAssemblies == 2, "缺少单船与对接整体的锁朝上样本")
+        for _, sample in ipairs(data.uprightAssemblies) do
+            assert(sample.groups == 1 and #sample.carried == sample.members, "对接组合丢失成员")
+            near(sample.refreshedAngle, 0, "组合刷新没有锁朝上")
+            near(sample.refreshedAngularVelocity, 0, "组合刷新保留了角速度")
+            near(sample.angle, 0, "提交碰撞结果后组合没有锁朝上")
+            near(sample.angularVelocity, 0, "提交碰撞结果后组合保留角速度")
+            for index, ship in ipairs(sample.carried) do
+                near(ship.angle, 0, "成员没有锁朝上")
+                near(ship.angularVelocity, 0, "成员保留角速度")
+                near(ship.x, (index - 1) * 4 + 5, "锁朝上破坏成员横向间距")
+                near(ship.y, (index - 1) * 2 - 3, "锁朝上破坏成员纵向间距")
+                near(ship.velocityX, 3, "锁朝上改变平移惯性")
+                near(ship.velocityY, -2, "锁朝上附加旋转速度")
+            end
+        end
+        return "覆盖空地与投送资格、格子原点和重心区分、单船及对接整体锁朝上与平移惯性。"
     end, "飞船装配整体、普通地面与落点吸附规则")
 end
 

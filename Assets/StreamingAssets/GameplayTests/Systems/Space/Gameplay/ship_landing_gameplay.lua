@@ -148,6 +148,8 @@ test.space("ship_landing", function(data)
         assert(ship.cruising.hydrogen < ship.filled.hydrogen and ship.cruising.oxygen < ship.filled.oxygen,
             "起飞没有消耗真实氢氧：" .. label)
         for _, flight in ipairs({ship.lifting, ship.cruising, ship.descending}) do
+            assert(math.abs(flight.angle) < 0.000001 and math.abs(flight.angularVelocity) < 0.000001,
+                "起降过程没有保持朝上：" .. label)
             assert(flight.id == ship.lifting.id and flight.pieceCount == ship.landed.pieceCount and
                 #flight.pieces == ship.landed.pieceCount and #flight.machines == machineCount,
                 "起降丢失船体身份、部件或普通机器：" .. label)
@@ -180,6 +182,7 @@ test.space("ship_landing", function(data)
         for guid, building in pairs(initial) do
             assert(restored[guid] and restored[guid].itemId == building.itemId and
                 restored[guid].machine == building.machine, "落地没有还原同 Guid 的普通建筑：" .. label)
+            assert(restored[guid].quarterTurns == building.quarterTurns, "起降改变了建筑安装朝向：" .. label)
         end
         ground_preparation(ship, restored, machineCount, label)
         ground_view(ship.viewCache.surface, label .. "/GM 创建")

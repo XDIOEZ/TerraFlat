@@ -528,13 +528,19 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             session.ClearControl(console);
             JObject coast = null;
             yield return CoastOwnedShip(ship, value => coast = value);
+            JObject turnBefore = ShipSnapshot(ship);
             session.SetControl(console, Vector2.zero, 1f);
             yield return Wait(.25d);
             JObject turned = ShipSnapshot(ship);
+            session.SetControl(console, Vector2.zero, -1f);
+            yield return Wait(.25d);
+            JObject reverseTurned = ShipSnapshot(ship);
             session.ClearControl(console);
             var target = SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(ship.PositionX + 15d, ship.PositionY));
             bool navigationAccepted = session.StartNavigation(console, target);
             if (!navigationAccepted) throw new InvalidOperationException("真实导航器供电或光纤连接未就绪。");
+            session.SetControl(console, Vector2.zero, 1f);
+            bool turnPreservedNavigation = session.GetLatestNavigation(ship.ShipId)?.Active == true;
             yield return WaitUntil(() => session.GetLatestNavigation(ship.ShipId)?.Active == false, 45d,
                 "真实导航没有完成到点和制动。");
             JObject navigated = ShipSnapshot(ship);
@@ -555,11 +561,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             results.Add(new JObject { ["templateId"] = template.Id, ["enteredConsole"] = entered,
                 ["beforeBuild"] = beforeBuild, ["liftingGround"] = liftingGround,
                 ["landed"] = landed, ["filled"] = filled, ["lifting"] = lifting, ["cruising"] = cruising,
-                ["thrust"] = thrust, ["coast"] = coast, ["turned"] = turned, ["navigated"] = navigated,
+                ["thrust"] = thrust, ["coast"] = coast, ["turnBefore"] = turnBefore, ["turned"] = turned,
+                ["reverseTurned"] = reverseTurned, ["turnPreservedNavigation"] = turnPreservedNavigation, ["navigated"] = navigated,
                 ["navigationAccepted"] = navigationAccepted, ["navigationDistance"] = distance,
                 ["arrivalDistance"] = SpaceGameplaySettings.Current.NavigationArrivalDistanceMeters,
                 ["arrivalSpeed"] = SpaceGameplaySettings.Current.NavigationArrivalSpeedMetersPerSecond,
                 ["shipTransition"] = shipTransition, ["beforeLanding"] = beforeLanding,
+                ["descending"] = returned["descending"],
                 ["landingAccepted"] = returned["landingAccepted"], ["landedAgain"] = landedAgain,
                 ["autoRefuel"] = returned["autoRefuel"],
                 ["viewCache"] = new JObject { ["surface"] = surfaceViews, ["space"] = cruisingViews, ["returned"] = returned["returnedViews"] } });
@@ -846,6 +854,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         return new JObject { ["id"] = ship.ShipId, ["phase"] = flight?.Phase.ToString(),
             ["sector"] = Sector(ship.Sector), ["position"] = Vector(new SpaceVector2(ship.PositionX, ship.PositionY)),
             ["velocity"] = Vector(new SpaceVector2(ship.VelocityX, ship.VelocityY)), ["angle"] = ship.AngleRadians,
+            ["angularVelocity"] = ship.AngularVelocityRadiansPerSecond,
             ["mass"] = ship.MassKg, ["pieceCount"] = ship.Pieces.Count, ["height"] = flight?.HeightMeters,
             ["impactSpeed"] = flight?.ImpactSpeed, ["landingResolved"] = flight?.LandingResolved,
             ["poweredDescent"] = flight?.PoweredDescent,
