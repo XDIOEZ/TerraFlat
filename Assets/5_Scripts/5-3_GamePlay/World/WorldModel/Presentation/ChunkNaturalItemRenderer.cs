@@ -31,6 +31,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         new("FlatWorld.ChunkStreaming.CaptureNaturalItems");
     private static readonly ProfilerMarker NaturalItemDespawnMarker =
         new("FlatWorld.ChunkStreaming.DespawnNaturalItems");
+    private static int renewalSeasonSampleFrame = -1;
+    private static DayTimeSystem renewalSeasonTimeSystem;
+    private static SeasonSnapshot renewalSeasonSnapshot;
+    private static bool renewalSeasonAvailable;
 
     private readonly Dictionary<int, Item> spawnedItems = new();
     private readonly HashSet<Item> transientItems = new();
@@ -763,11 +767,11 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     /// <summary>春季逐步补回已被移除的自然植物，不扫描或加载窗口以外的区块。</summary>
     private void ProcessNaturalRenewal()
     {
-        if (unbinding || boundChunk?.Ecology?.Placements == null || Time.unscaledTime < nextRenewalCheck ||
-            !GameNetwork.HasStateAuthority || !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season) ||
+        IReadOnlyList<NaturalItemPlacement> placements = boundChunk?.Ecology?.Placements;
+        if (unbinding || placements == null || placements.Count == 0 || Time.unscaledTime < nextRenewalCheck ||
+            !GameNetwork.HasStateAuthority || !TryGetRenewalSeason(out SeasonSnapshot season) ||
             season.Season != WorldSeason.Spring) return;
         nextRenewalCheck = Time.unscaledTime + 1f;
-        IReadOnlyList<NaturalItemPlacement> placements = boundChunk.Ecology.Placements;
         for (int i = 0; i < 4 && placements.Count > 0; i++)
         {
             NaturalItemPlacement placement = placements[renewalCursor++ % placements.Count];
@@ -780,6 +784,23 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
                 break;
             }
         }
+    }
+
+    /// <summary>同一帧的所有区块共用一次季节计算，换时间系统时立即重新采样。</summary>
+    private static bool TryGetRenewalSeason(out SeasonSnapshot season)
+    {
+        DayTimeSystem timeSystem = DayTimeSystem.Instance;
+        int frame = Time.frameCount;
+        if (renewalSeasonSampleFrame != frame || !ReferenceEquals(renewalSeasonTimeSystem, timeSystem))
+        {
+            renewalSeasonSampleFrame = frame;
+            renewalSeasonTimeSystem = timeSystem;
+            renewalSeasonSnapshot = default;
+            renewalSeasonAvailable = timeSystem != null && timeSystem.TryGetCurrentSeason(out renewalSeasonSnapshot);
+        }
+
+        season = renewalSeasonSnapshot;
+        return renewalSeasonAvailable;
     }
     /// <summary>恢复点必须仍为空地，禁止覆盖玩家建筑、耕地或平台。</summary>
     private bool CanRenewAt(NaturalItemPlacement placement)
