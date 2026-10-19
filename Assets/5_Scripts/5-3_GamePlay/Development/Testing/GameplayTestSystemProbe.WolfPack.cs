@@ -106,6 +106,7 @@ public static partial class GameplayTestSystemProbe
             }
             wolves[0].TriggerPackAttack(player);
             var packCounts = new JArray();
+            var validatedAllyCounts = new JArray();
             var leaders = new JArray();
             var states = new JArray();
             var threats = new JArray();
@@ -113,6 +114,7 @@ public static partial class GameplayTestSystemProbe
             {
                 ai.RefreshProbe();
                 packCounts.Add(ai.PackMemberCount);
+                validatedAllyCounts.Add(ai.ValidatedPackAllyCount);
                 leaders.Add(ai.PackLeader?.item?.itemData?.Guid ?? 0);
                 states.Add(ai.EvaluateProbe().ToString());
                 threats.Add(ai.CurrentThreat?.itemData?.Guid ?? 0);
@@ -127,7 +129,8 @@ public static partial class GameplayTestSystemProbe
             {
                 ["declaredId"] = configuredAi.Id, ["prefabId"] = configuredAi.Prefab,
                 ["identityBound"] = identityBound, ["wrongIdRejected"] = wrongIdRejected,
-                ["packCounts"] = packCounts, ["leaders"] = leaders,
+                ["packCounts"] = packCounts, ["validatedAllyCounts"] = validatedAllyCounts,
+                ["leaders"] = leaders,
                 ["states"] = states, ["threats"] = threats,
                 ["detectorRadius"] = detectors[0].DetectionRadius
             };

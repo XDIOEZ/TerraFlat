@@ -517,7 +517,8 @@ public class Mod_ItemDetector : Module
 
     private void OnValidate()
     {
-        _Data.ID = ModText.Detector;
+        // 新增组件时数据尚未绑定，延后到模块装配设置能力身份。
+        if (_Data != null) _Data.ID = ModText.Detector;
     }
     #endregion
 }

@@ -75,6 +75,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	private int _chaseFormationMemberCount;
 
 	private bool _hasChaseFormationTarget;
+	private readonly List<AI_Wolf> _packAllies = new List<AI_Wolf>(8);
 	private readonly List<AI_Wolf> _chaseFormationMembers = new List<AI_Wolf>(8);
 	private static readonly Comparison<AI_Wolf> ChaseFormationMemberComparer = CompareChaseFormationMembers;
 
@@ -263,11 +264,19 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		Data.State = _currentState;
 		ModData.WriteData(Data);
 	}
+
+	protected override void OnUnload()
+	{
+		_packAllies.Clear();
+		_chaseFormationMembers.Clear();
+		base.OnUnload();
+	}
 #endregion
 
 #region Base Overrides - Hooks
 	protected override void OnResetRuntimeState()
 	{
+		_packAllies.Clear();
 		_alertTimer = 0f;
 		_packAssistTimer = 0f;
 		_packCallCooldownTimer = 0f;
@@ -384,6 +393,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 #region PublicAPI
 	public int PackMemberCount => _packCount;
+	internal int ValidatedPackAllyCount => _packAllies.Count;
 	public AI_Wolf PackLeader => _alphaWolf;
 	public Item CurrentThreat => _currentThreat;
 	public bool HasAdvanceCommand => Data?.HasAdvanceCommand == true;
@@ -746,6 +756,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	private void RefreshPackStatus()
 	{
+		// 有效同伴共用一份快照，避免追击编队再次遍历感知候选并查询阵营。
+		_packAllies.Clear();
 		_packCount = 1;
 		_hasPackMate = false;
 		_packCenter = transform.position;
@@ -760,6 +772,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 		{
 			if (!TryGetWolfAlly(it, out AI_Wolf ally)) continue;
 
+			_packAllies.Add(ally);
 			_packCount++;
 			allyCount++;
 			allyPosSum += ally.transform.position;
@@ -929,14 +942,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 			return;
 
 		_chaseFormationMembers.Add(this);
-		List<Item> detectedItems = _detector?.CurrentItemsInArea;
-		if (detectedItems == null)
-			return;
-
-		for (int i = 0; i < detectedItems.Count; i++)
+		for (int i = 0; i < _packAllies.Count; i++)
 		{
-			if (!TryGetWolfAlly(detectedItems[i], out AI_Wolf ally) ||
-				!IsEligibleChaseFormationMember(ally, _currentThreat) ||
+			AI_Wolf ally = _packAllies[i];
+			if (!IsEligibleChaseFormationMember(ally, _currentThreat) ||
 				_chaseFormationMembers.Contains(ally))
 			{
 				continue;

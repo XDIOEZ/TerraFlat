@@ -15,6 +15,8 @@ for _, case in ipairs({
         for index, members in ipairs(data.packCounts) do
             assert(members == case.members and data.leaders[index] == 101,
                 "狼群漏认、重复累计成员，或没有选出同一名稳定头狼")
+            assert(data.validatedAllyCounts[index] == members - 1,
+                "本轮有效同伴快照与群体人数不一致")
             assert(data.threats[index] == 200, "狼没有从检测或同伴呼叫获得同一个玩家目标")
             if not case.firstOnly or index == 1 then
                 assert(data.states[index] == case.state, "狼群人数与正式追击、攻击或避让选择不符")
@@ -27,6 +29,8 @@ for _, exclusion in ipairs({"dead", "disabled", "unready", "foreign"}) do
         for index = 1, 3 do
             assert(data.packCounts[index] == 3 and data.leaders[index] == 101,
                 "死亡、禁用、未就绪或敌对阵营的狼被算作有效同伴")
+            assert(data.validatedAllyCounts[index] == 2,
+                "无效同伴仍进入本轮复用快照")
             assert(data.states[index] == "Chase" and data.threats[index] == 200,
                 "拒绝无效成员时破坏了剩余狼群的共同追击")
         end
