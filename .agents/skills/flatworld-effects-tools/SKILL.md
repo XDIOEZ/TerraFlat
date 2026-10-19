@@ -78,6 +78,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - `WaterMotionData.ocean` 只标记 kind=2；风格化海洋走 `OceanSurfaceStylized.hlsl`，与河流共用 RiverPattern 短亮纹、十档水色及格角局部采样，海风/潮汐/白沫规则独立。`SampleDirectionalWaterCorner` 接收已经乘过倍率的速度和独立泡沫覆盖率，河流包装保持原参数，禁止海洋二次乘流速倍率。
 - WaterVisualSettings 切换风格化、写实、Unity 风格水三种材质，保留水深 MPB/地形实例；第三种使用 `FLATWORLD_WATER_UNITY_STYLIZED/UnityStylizedWaterSurface.hlsl`，河流与海洋均走四向法线、碎光、指数深浅色与泡沫。`ChunkView.unityStylizedWaterMaterial` 直接引用材质；线性 Repeat/Mipmap 数据贴图由 `Tools/Rendering/generate_unity_stylized_water_patterns.py` 生成，改编代码 BSD-3-Clause 许可见 ThirdPartyNotices/UnityStylizedWater-LICENSE.txt。
 - 水体三种本地关键字使用 `multi_compile_local_fragment` 保留运行时切换变体；不能依赖源 Tilemap 材质为 Shader.Find 创建的 Mesh/BRG 材质保留变体。
+- 地面单 Quad 的 `FLATWORLD_CHUNK_CELL_BUFFER` 由运行时启用，两条光照 Pass 均用 `multi_compile_local` 保留；不能改为 `shader_feature_local`，否则包内缺少逐格数据变体，零色/零 UV 顶点会使整片地面消失露黑。Shader 本体由 Resources 下的 `ChunkMesh-Contact-Lit.mat` 引用。
 - ActorWaterCommon.hlsl 共用于 Sprite-Lit-Master/AIECS；旋转附属物共享角色世界水线坐标。视觉读取 Mod_TileEffectReceiver 的有效淹没，独立权威 LiquidDepth 不被漂浮改写；边缘邻格容错仅用于交互，液体接触独立于 Ground，液体身份变化才 Exit/Enter。
 - 季节雪为 `_SnowCoverage` MPB 通道；SnowFootprintTrail 的历史按自身寿命消退，动态创建时解析专用资源。ChunkSnowCoverRenderer/ChunkSupportSurfaceRenderer 只读对应层并释放自身本体表现；支撑面不再自行计算或绘制阴影。地形 Mesh 与 BRG 共读排序 JSON，高低阴影在地面/支撑/雪之上、墙体之下。
 - 掉落沉没先浸没再远离，SubmergedProgress 仅缩表现矩阵，质量/体积/原 Scale 保留；WaterElapsed 延续进度，结束销毁由权威层提交，离水/拾取/回池恢复姿态。

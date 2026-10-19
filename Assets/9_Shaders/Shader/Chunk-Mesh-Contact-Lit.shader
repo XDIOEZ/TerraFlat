@@ -135,7 +135,8 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma shader_feature_local _ FLATWORLD_CHUNK_CELL_BUFFER
+            // 单 Quad 的逐格数据仅在运行时启用，打包必须保留两种网格路径。
+            #pragma multi_compile_local _ FLATWORLD_CHUNK_CELL_BUFFER
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -176,7 +177,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             #pragma target 4.5
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma shader_feature_local _ FLATWORLD_CHUNK_CELL_BUFFER
+            #pragma multi_compile_local _ FLATWORLD_CHUNK_CELL_BUFFER
             half4 Frag(Varyings input) : SV_Target
             {
                 float2 sampleUV;
