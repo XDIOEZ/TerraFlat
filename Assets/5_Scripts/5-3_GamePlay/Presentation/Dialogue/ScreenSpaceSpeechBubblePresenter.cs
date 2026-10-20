@@ -78,7 +78,8 @@ namespace FlatWorld.Dialogue
             label.text = request.Text.Trim();
             visiblePriority = request.Priority;
             isVisible = true;
-            viewObject.SetActive(true);
+            if (!viewObject.activeSelf)
+                viewObject.SetActive(true);
             PlaceBelowInteractivePanels();
             UpdateLayout();
             if (!UpdateScreenPosition())
@@ -103,9 +104,9 @@ namespace FlatWorld.Dialogue
             isVisible = false;
             visiblePriority = CharacterSpeechPriority.Ambient;
 
-            if (canvasGroup != null)
+            if (canvasGroup != null && canvasGroup.alpha != 0f)
                 canvasGroup.alpha = 0f;
-            if (viewObject != null)
+            if (viewObject != null && viewObject.activeSelf)
                 viewObject.SetActive(false);
         }
 
@@ -224,7 +225,8 @@ private bool EnsureView()
                 worldCamera = Camera.main;
             if (worldCamera == null)
             {
-                viewObject.SetActive(false);
+                if (viewObject.activeSelf)
+                    viewObject.SetActive(false);
                 return false;
             }
 
@@ -237,11 +239,14 @@ private bool EnsureView()
                             screenPoint.y <= Screen.height;
             if (!onScreen)
             {
-                viewObject.SetActive(false);
+                if (viewObject.activeSelf)
+                    viewObject.SetActive(false);
                 return false;
             }
 
-            viewObject.SetActive(true);
+            // 角色停在屏幕内时不再逐帧写入同一激活状态，离屏返回仍立即恢复。
+            if (!viewObject.activeSelf)
+                viewObject.SetActive(true);
             Camera canvasCamera =
                 rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
                     ? rootCanvas.worldCamera
@@ -267,7 +272,10 @@ private bool EnsureView()
                 localPoint.y,
                 canvasBounds.yMin + safeMargin,
                 canvasBounds.yMax - height - safeMargin);
-            viewRect.anchoredPosition = localPoint;
+            // 不跳过世界坐标/屏幕裁剪计算，只避免静止气泡的 Canvas 变换重复提交。
+            // 精确比较以保留像素级微小移动和视口/安全边界变化。
+            if (!viewRect.anchoredPosition.Equals(localPoint))
+                viewRect.anchoredPosition = localPoint;
             return true;
         }
 
