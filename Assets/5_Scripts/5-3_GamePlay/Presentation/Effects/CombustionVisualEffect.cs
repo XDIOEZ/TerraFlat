@@ -31,6 +31,9 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
     private ParticleSystem flameParticles;
     private ParticleSystem emberParticles;
     private ParticleSystem smokeParticles;
+    private ParticleSystemRenderer flameRenderer;
+    private ParticleSystemRenderer emberRenderer;
+    private ParticleSystemRenderer smokeRenderer;
     private bool particlesPlaying;
     private bool combustionActive;
     private float flameScale = 1f;
@@ -328,13 +331,19 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         if (!followSourceRenderer || rendererFlameAnchor == null || sourceSpriteRenderer == null)
             return;
         Transform source = sourceSpriteRenderer.transform;
-        rendererFlameAnchor.SetPositionAndRotation(source.TransformPoint(sourceRendererAnchorOffset), source.rotation);
+        Vector3 anchorPosition = source.TransformPoint(sourceRendererAnchorOffset);
+        Quaternion anchorRotation = source.rotation;
+        // 静止火源不反复写入 Transform；源或父级移动时仍按最终世界姿态同步。
+        if (rendererFlameAnchor.position != anchorPosition || rendererFlameAnchor.rotation != anchorRotation)
+            rendererFlameAnchor.SetPositionAndRotation(anchorPosition, anchorRotation);
         Vector3 parentScale = transform.lossyScale;
         Vector3 sourceScale = source.lossyScale;
-        rendererFlameAnchor.localScale = new Vector3(
+        Vector3 anchorScale = new Vector3(
             parentScale.x != 0f ? sourceScale.x / parentScale.x : 1f,
             parentScale.y != 0f ? sourceScale.y / parentScale.y : 1f,
             parentScale.z != 0f ? sourceScale.z / parentScale.z : 1f);
+        if (rendererFlameAnchor.localScale != anchorScale)
+            rendererFlameAnchor.localScale = anchorScale;
     }
 
     /// <summary>光源被关闭时同步熄灭燃烧粒子。</summary>
@@ -396,6 +405,9 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         if (smokeParticles == null)
             smokeParticles = CreateParticleSystem(SmokeName);
 
+        flameRenderer = flameParticles.GetComponent<ParticleSystemRenderer>();
+        emberRenderer = emberParticles.GetComponent<ParticleSystemRenderer>();
+        smokeRenderer = smokeParticles.GetComponent<ParticleSystemRenderer>();
         ReparentParticleSystem(flameParticles);
         ReparentParticleSystem(emberParticles);
         ReparentParticleSystem(smokeParticles);
@@ -609,22 +621,31 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
             sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingLayerID : 0;
         int sortingOrder = (hasExplicitSorting ? explicitSortingOrder :
             sourceSpriteRenderer != null ? sourceSpriteRenderer.sortingOrder : 0) + 2;
-        ApplySorting(flameParticles, sortingLayerId, sortingOrder);
-        ApplySorting(emberParticles, sortingLayerId, sortingOrder + 1);
-        ApplySorting(smokeParticles, sortingLayerId, sortingOrder - 1);
+        // 粒子渲染器只在首次绑定或失效后重新查找，外部排序变更仍逐帧对齐。
+        flameRenderer = ResolveParticleRenderer(flameParticles, flameRenderer);
+        emberRenderer = ResolveParticleRenderer(emberParticles, emberRenderer);
+        smokeRenderer = ResolveParticleRenderer(smokeParticles, smokeRenderer);
+        ApplySorting(flameRenderer, sortingLayerId, sortingOrder);
+        ApplySorting(emberRenderer, sortingLayerId, sortingOrder + 1);
+        ApplySorting(smokeRenderer, sortingLayerId, sortingOrder - 1);
     }
 
-    private static void ApplySorting(ParticleSystem particles, int sortingLayerId, int sortingOrder)
+    private static ParticleSystemRenderer ResolveParticleRenderer(
+        ParticleSystem particles, ParticleSystemRenderer cached)
     {
-        if (particles == null)
-            return;
+        return cached != null ? cached :
+            particles != null ? particles.GetComponent<ParticleSystemRenderer>() : null;
+    }
 
-        ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
+    private static void ApplySorting(ParticleSystemRenderer renderer, int sortingLayerId, int sortingOrder)
+    {
         if (renderer == null)
             return;
 
-        renderer.sortingLayerID = sortingLayerId;
-        renderer.sortingOrder = sortingOrder;
+        if (renderer.sortingLayerID != sortingLayerId)
+            renderer.sortingLayerID = sortingLayerId;
+        if (renderer.sortingOrder != sortingOrder)
+            renderer.sortingOrder = sortingOrder;
     }
 
     private static Gradient CreateGradient(
