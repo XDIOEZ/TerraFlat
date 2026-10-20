@@ -161,7 +161,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         float xRadius = halfWidth + CullingMargin;
         float yRadius = halfHeight + CullingMargin;
 
-        CollectCandidates(cameraCenter, xRadius, yRadius, domain, spatial, spatialCellSize);
+        CollectCandidates(cameraCenter, xRadius, yRadius, domain, spatial, spatialCellSize, candidates);
         visible.Clear();
 
         foreach (int id in candidates)
@@ -201,13 +201,15 @@ internal sealed class DroppedItemPresentation : IDisposable
         releaseScratch.Clear();
     }
 
-    private void CollectCandidates(
+    /// <summary>纯空间桶候选选择，可供规则测试直接核验视野与环绕接缝。</summary>
+    internal static void CollectCandidates(
         Vector2 center,
         float xRadius,
         float yRadius,
         WorldTopologyDomain domain,
         Dictionary<Vector2Int, HashSet<int>> spatial,
-        float cellSize)
+        float cellSize,
+        HashSet<int> candidates)
     {
         candidates.Clear();
         if (spatial.Count == 0 || cellSize <= 0f) return;
@@ -216,6 +218,42 @@ internal sealed class DroppedItemPresentation : IDisposable
         int maxX = Mathf.FloorToInt((center.x + xRadius) / cellSize);
         int minY = Mathf.FloorToInt((center.y - yRadius) / cellSize);
         int maxY = Mathf.FloorToInt((center.y + yRadius) / cellSize);
+
+        // 掉落物稀疏时只检查有物品的桶；拉远镜头无需逐格探测大片空地。
+        // 外扩一格保证边缘桶完整包含，最终仍由物品的精确坐标决定是否可见。
+        long columns = (long)maxX - minX + 1;
+        long rows = (long)maxY - minY + 1;
+        if (columns <= 0 || rows <= 0) return;
+        if (spatial.Count < (double)columns * rows)
+        {
+            float2 cameraPoint = new(center.x, center.y);
+            float paddingX = xRadius + cellSize;
+            float paddingY = yRadius + cellSize;
+            foreach (KeyValuePair<Vector2Int, HashSet<int>> pair in spatial)
+            {
+                Vector2Int cell = pair.Key;
+                float2 cellCenter = new((cell.x + 0.5f) * cellSize, (cell.y + 0.5f) * cellSize);
+                float2 delta = domain.ShortestDelta(cameraPoint, cellCenter);
+                if (math.abs(delta.x) > paddingX || math.abs(delta.y) > paddingY)
+                    continue;
+                foreach (int id in pair.Value)
+                    candidates.Add(id);
+            }
+            return;
+        }
+
+        // 密集掉落物仍按视野网格查询，复杂度不随世界上全部物品数量增长。
+        if (!domain.IsWrapped)
+        {
+            for (int y = minY; y <= maxY; y++)
+            for (int x = minX; x <= maxX; x++)
+            {
+                if (!spatial.TryGetValue(new Vector2Int(x, y), out HashSet<int> bucket)) continue;
+                foreach (int id in bucket) candidates.Add(id);
+            }
+            return;
+        }
+
         for (int y = minY; y <= maxY; y++)
         {
             for (int x = minX; x <= maxX; x++)

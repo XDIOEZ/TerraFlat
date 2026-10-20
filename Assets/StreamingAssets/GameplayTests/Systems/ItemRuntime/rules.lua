@@ -1,4 +1,14 @@
--- 物质条件表的读取顺序、固液分支与临界状态保持不变。
+-- 同时覆盖轻量掉落物的稀疏/密集热路径和环绕视野边界。
+test.system("item_runtime", "drop_visibility_broadphase", {}, function(data)
+    assert(data.sparseCorrect and data.denseCorrect,
+        "轻量掉落物稀疏/密集桶路径漏掉可见物品或选入远处物品")
+    assert(data.seamCorrect and data.wideCorrect,
+        "环绕接缝或大视野丢失了另一侧掉落物")
+    assert(data.sparseAllocatedBytes == 0 and data.denseAllocatedBytes == 0,
+        "稳态可见性候选收集仍产生逐帧托管内存分配")
+end, "轻量掉落物自适应可见桶查询及环绕接缝零分配")
+
+-- 物品距离调度保持原始判档逻辑，只跳过明显无须精算的区域。
 test.system("item_runtime", "simulation_region_shortcut", {}, function(data)
     assert(data.identical and data.samples > 10000,
         "物品模拟区域快路径改变原有距离分档或未覆盖足够半径样本")

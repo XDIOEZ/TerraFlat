@@ -59,10 +59,21 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
     public override float TickInterval => .2f;
     public override GameObject PanelPrefab => GameRes.Instance.GetPrefab(Configuration.PanelId);
     public override string ActionLabel => "收获成熟作物";
-    public override bool CanAct => State.Plots.Any(plot => plot.CropId != null && plot.Growth >= 1f);
+    public override bool CanAct
+    {
+        get
+        {
+            // 面板轮询不需要构造 LINQ 枚举器。
+            foreach (CultivatorPlotState plot in State.Plots)
+                if (plot.CropId != null && plot.Growth >= 1f) return true;
+            return false;
+        }
+    }
     public ILiquidTransferPort WaterInputPort => waterPort == null || !waterPort.IsValid ? waterPort = new CultivatorWaterPort(this) : waterPort;
     private CultivatorWaterPort waterPort;
     private readonly Dictionary<string, CropProfile> profiles = new(StringComparer.Ordinal);
+    private readonly List<CultivatorPlotState> growingPlots = new();
+    private readonly List<(string Id, decimal Moles)> consumedFluidBuffer = new();
     private bool committing;
     private float lastSuppliedWatts = float.NaN;
     private decimal lastIrrigationLiters = -1m;
@@ -216,11 +227,15 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         lastIrrigationLiters = currentWater;
         float ratio = Mathf.Clamp01(Entity.ElectricalSuppliedWatts / Entity.Definition.Electrical.PowerWatts);
         float difficulty = Mathf.Max(0f, GameDifficultyService.Current.Production.CropGrowthMultiplier);
-        var growing = State.Plots.Where(plot => plot.CropId != null && plot.Growth < 1f && CanAdvance(plot, difficulty)).ToList();
-        if (ratio <= 0f || growing.Count == 0 || MachineWorld.GetFluidState(Entity).Ruptured)
+        // 每个培育器复用工作列表，保留生长前冻结的植株集合与原顺序。
+        growingPlots.Clear();
+        foreach (CultivatorPlotState plot in State.Plots)
+            if (plot.CropId != null && plot.Growth < 1f && CanAdvance(plot, difficulty))
+                growingPlots.Add(plot);
+        if (ratio <= 0f || growingPlots.Count == 0 || MachineWorld.GetFluidState(Entity).Ruptured)
         { if (changed) NotifyChanged(); return; }
-        decimal availableLiters = IrrigationLiters();
-        decimal requestedLiters = Configuration.WaterLitersPerSecondPerPlot * (decimal)(seconds * ratio) * growing.Count;
+        decimal availableLiters = currentWater;
+        decimal requestedLiters = Configuration.WaterLitersPerSecondPerPlot * (decimal)(seconds * ratio) * growingPlots.Count;
         if (availableLiters <= 0m || requestedLiters <= 0m)
         { if (changed) NotifyChanged(); return; }
         decimal consumedLiters = Math.Min(availableLiters, requestedLiters);
@@ -235,7 +250,7 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         float boostedSeconds = Mathf.Min(effectiveSeconds, Mathf.Max(0f, State.FertilizerSeconds));
         float growthSeconds = effectiveSeconds + boostedSeconds * (Configuration.FertilizerGrowthMultiplier - 1f);
         State.FertilizerSeconds = Mathf.Max(0f, State.FertilizerSeconds - effectiveSeconds);
-        foreach (CultivatorPlotState plot in growing)
+        foreach (CultivatorPlotState plot in growingPlots)
         {
             CropProfile profile = Profile(plot.CropId);
             AdvanceGrowth(plot, profile, growthSeconds, difficulty);
@@ -335,30 +350,36 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
     private decimal IrrigationLiters()
     {
         decimal result = 0m;
+        FluidInventory water = Water;
         foreach (string id in Configuration.WaterFluidIds)
-            result += FluidUnits.MolToLiquidLiters(Water.Catalog.Find(id), Water.GetAvailableMoles(id, FluidPhase.Liquid));
+            result += FluidUnits.MolToLiquidLiters(water.Catalog.Find(id), water.GetAvailableMoles(id, FluidPhase.Liquid));
         return result;
     }
     private bool ConsumeIrrigation(decimal liters)
     {
         if (liters <= 0m || IrrigationLiters() < liters) return false;
-        FluidInventoryState before = Water.State.Clone();
-        var consumed = new List<(string Id, decimal Moles)>();
+        FluidInventory water = Water;
+        FluidInventoryState before = water.State.Clone();
+        consumedFluidBuffer.Clear();
         decimal remaining = liters;
-        foreach (string id in Configuration.WaterFluidIds)
+        try
         {
-            FluidDefinition definition = Water.Catalog.Find(id);
-            decimal moles = Math.Min(Water.GetAvailableMoles(id, FluidPhase.Liquid), FluidUnits.LiquidLitersToMol(definition, remaining));
-            if (moles <= 0m) continue;
-            if (!Water.TryTakeExact(id, FluidPhase.Liquid, moles, out _)) { Water.Restore(before); return false; }
-            consumed.Add((id, moles));
-            remaining -= FluidUnits.MolToLiquidLiters(definition, moles);
-            if (remaining > .0000000001m) continue;
-            foreach (var entry in consumed) MachineWorld.ConsumeFluidStepStock(Water, entry.Id, 0m, entry.Moles);
-            return true;
+            foreach (string id in Configuration.WaterFluidIds)
+            {
+                FluidDefinition definition = water.Catalog.Find(id);
+                decimal moles = Math.Min(water.GetAvailableMoles(id, FluidPhase.Liquid), FluidUnits.LiquidLitersToMol(definition, remaining));
+                if (moles <= 0m) continue;
+                if (!water.TryTakeExact(id, FluidPhase.Liquid, moles, out _)) { water.Restore(before); return false; }
+                consumedFluidBuffer.Add((id, moles));
+                remaining -= FluidUnits.MolToLiquidLiters(definition, moles);
+                if (remaining > .0000000001m) continue;
+                foreach (var entry in consumedFluidBuffer) MachineWorld.ConsumeFluidStepStock(water, entry.Id, 0m, entry.Moles);
+                return true;
+            }
+            water.Restore(before);
+            return false;
         }
-        Water.Restore(before);
-        return false;
+        finally { consumedFluidBuffer.Clear(); }
     }
     public void CollectContainerPorts(List<IContainerPort> ports)
     { using var scope = MachineWorld.UseNodeScope(Entity); if (MachineWorld.Contains(Entity)) ports.Add(WaterInputPort); }
@@ -378,16 +399,17 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         {
             using var scope = MachineWorld.UseNodeScope(Entity);
             var text = new StringBuilder();
+            decimal availableWater = IrrigationLiters();
             text.Append(FlatWorldLocalizationService.GetUiFormat(
                 "供电 {0:0.#}/{1:0.#} W · 可灌溉水 {2:0.###} L\n肥料加速剩余 {3:0.#} 秒\n",
-                Entity.ElectricalSuppliedWatts, Entity.Definition.Electrical.PowerWatts, IrrigationLiters(), State.FertilizerSeconds));
+                Entity.ElectricalSuppliedWatts, Entity.Definition.Electrical.PowerWatts, availableWater, State.FertilizerSeconds));
             for (int i = 0; i < State.Plots.Count; i++)
             {
                 CultivatorPlotState plot = State.Plots[i];
                 string name = plot.CropId != null && GameRes.Instance.TryGetItemDefinition(plot.CropId, out var definition)
                     ? definition.DisplayName : FlatWorldLocalizationService.GetUiText("空槽");
                 string status = plot.CropId == null ? "等待种子（树木不支持）" : plot.Growth >= 1f ? "成熟，等待收获" :
-                    Entity.ElectricalSuppliedWatts <= 0f ? "缺电，已暂停" : IrrigationLiters() <= 0m ? "缺水，已暂停" : "正在生长";
+                    Entity.ElectricalSuppliedWatts <= 0f ? "缺电，已暂停" : availableWater <= 0m ? "缺水，已暂停" : "正在生长";
                 text.Append(FlatWorldLocalizationService.GetUiFormat("{0}：{1} {2:0.#}% · {3}\n",
                     i + 1, name, plot.Growth * 100f, FlatWorldLocalizationService.GetUiText(status)));
             }

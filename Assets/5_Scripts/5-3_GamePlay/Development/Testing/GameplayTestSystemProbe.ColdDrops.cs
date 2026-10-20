@@ -12,7 +12,69 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/cold_fuel_candidates", ColdFuelCandidates);
         operations.Add("processing/cold_fuel_transfer", ColdFuelTransfer);
         operations.Add("processing/cold_motion_workspace", ColdMotionWorkspace);
+        operations.Add("item_runtime/drop_visibility_broadphase", DropVisibilityBroadphase);
     }
+
+    #region 轻量掉落物视野筛选性能与接缝回归
+
+    private static JObject DropVisibilityBroadphase(JObject args)
+    {
+        const float cellSize = 2f;
+        var buckets = new Dictionary<Vector2Int, HashSet<int>>();
+        var candidates = new HashSet<int>();
+        void Add(int id, float x, float y)
+        {
+            var cell = new Vector2Int(Mathf.FloorToInt(x / cellSize), Mathf.FloorToInt(y / cellSize));
+            if (!buckets.TryGetValue(cell, out HashSet<int> ids))
+                buckets.Add(cell, ids = new HashSet<int>());
+            ids.Add(id);
+        }
+
+        // 稀疏时按现存桶筛选，保留镜头边界；远处掉落物不应进入精确表现阶段。
+        Add(1, .5f, .5f);
+        Add(2, 4.5f, .5f);
+        Add(3, 26f, 26f);
+        DroppedItemPresentation.CollectCandidates(Vector2.zero, 5f, 5f, default, buckets, cellSize, candidates);
+        bool sparseCorrect = candidates.Contains(1) && candidates.Contains(2) && !candidates.Contains(3);
+        for (int i = 0; i < 32; i++)
+            DroppedItemPresentation.CollectCandidates(Vector2.zero, 5f, 5f, default, buckets, cellSize, candidates);
+        long start = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 128; i++)
+            DroppedItemPresentation.CollectCandidates(Vector2.zero, 5f, 5f, default, buckets, cellSize, candidates);
+        long sparseBytes = GC.GetAllocatedBytesForCurrentThread() - start;
+
+        // 密集时按视野格查询，不扫描世界上所有的远处掉落物。
+        buckets.Clear();
+        Add(11, .5f, .5f);
+        for (int i = 0; i < 64; i++) Add(100 + i, 50f + i * 2f, 50f);
+        DroppedItemPresentation.CollectCandidates(Vector2.zero, 5f, 5f, default, buckets, cellSize, candidates);
+        bool denseCorrect = candidates.Count == 1 && candidates.Contains(11);
+        start = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 128; i++)
+            DroppedItemPresentation.CollectCandidates(Vector2.zero, 5f, 5f, default, buckets, cellSize, candidates);
+        long denseBytes = GC.GetAllocatedBytesForCurrentThread() - start;
+
+        // 世界从最右侧看向最左侧时仍能找到对岸掉落物；超大视野也不能丢失镜像。
+        var wrapped = new WorldTopologyDomain(new int2(-8, -8), new int2(16, 16), true);
+        buckets.Clear();
+        Add(21, -7.5f, .5f);
+        Add(22, 0f, 0f);
+        DroppedItemPresentation.CollectCandidates(new Vector2(7f, 0f), 3f, 3f,
+            wrapped, buckets, cellSize, candidates);
+        bool seamCorrect = candidates.Contains(21) && !candidates.Contains(22);
+        DroppedItemPresentation.CollectCandidates(new Vector2(7f, 0f), 20f, 20f,
+            wrapped, buckets, cellSize, candidates);
+        bool wideCorrect = candidates.Contains(21) && candidates.Contains(22);
+
+        return new JObject
+        {
+            ["sparseCorrect"] = sparseCorrect, ["denseCorrect"] = denseCorrect,
+            ["seamCorrect"] = seamCorrect, ["wideCorrect"] = wideCorrect,
+            ["sparseAllocatedBytes"] = sparseBytes, ["denseAllocatedBytes"] = denseBytes
+        };
+    }
+
+    #endregion
 
     private static DroppedItemSaveRecord ColdFuelRecord(int id, float x, float y, float amount = 1f)
     {
