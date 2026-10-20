@@ -70,6 +70,36 @@ namespace FlatWorld.WorldModel
             for (int i = 0; i < snapshot.Length; i++) snapshot[i](message);
         }
 
+        // 每种事件只在首次使用时绑定一次强类型派发器，值类型广播不再经过 object 装箱。
+        private static class AddressEventRouter<TEvent>
+        {
+            public static readonly Action<WorldEventBus, TEvent> Dispatch = Create();
+
+            private static Action<WorldEventBus, TEvent> Create()
+            {
+                if (typeof(TEvent) == typeof(ChunkCommitted))
+                    return (Action<WorldEventBus, TEvent>)(object)
+                        (Action<WorldEventBus, ChunkCommitted>)PublishCommitted;
+                if (typeof(TEvent) == typeof(ChunkEvicted))
+                    return (Action<WorldEventBus, TEvent>)(object)
+                        (Action<WorldEventBus, ChunkEvicted>)PublishEvicted;
+                return typeof(TEvent).IsValueType ? null : PublishBoxed;
+            }
+
+            private static void PublishCommitted(WorldEventBus bus, ChunkCommitted message) =>
+                PublishAddress(bus.committedByAddress, message.Address, message);
+
+            private static void PublishEvicted(WorldEventBus bus, ChunkEvicted message) =>
+                PublishAddress(bus.evictedByAddress, message.Address, message);
+
+            private static void PublishBoxed(WorldEventBus bus, TEvent message)
+            {
+                // 保留外部通过 object/interface 发布已装箱消息时的定向通知行为。
+                if (message is ChunkCommitted committed) PublishCommitted(bus, committed);
+                else if (message is ChunkEvicted evicted) PublishEvicted(bus, evicted);
+            }
+        }
+
         private sealed class AddressSubscription<TEvent> : IDisposable
         {
             private Dictionary<WorldAddress, HandlerList<TEvent>> table;
@@ -118,25 +148,7 @@ namespace FlatWorld.WorldModel
         /// <summary>把消息立刻告诉所有关心这种消息的接收者。</summary>
         public void Publish<TEvent>(TEvent worldEvent)
         {
-            // 大多数世界消息是值类型；先按静态类型分流，避免每次 is 判断装箱。
-            if (typeof(TEvent) == typeof(ChunkCommitted))
-            {
-                ChunkCommitted committed = (ChunkCommitted)(object)worldEvent;
-                PublishAddress(committedByAddress, committed.Address, committed);
-            }
-            else if (typeof(TEvent) == typeof(ChunkEvicted))
-            {
-                ChunkEvicted evicted = (ChunkEvicted)(object)worldEvent;
-                PublishAddress(evictedByAddress, evicted.Address, evicted);
-            }
-            else if (!typeof(TEvent).IsValueType)
-            {
-                // 兼容显式通过 object/interface 发送的装箱事件。
-                if (worldEvent is ChunkCommitted committed)
-                    PublishAddress(committedByAddress, committed.Address, committed);
-                else if (worldEvent is ChunkEvicted evicted)
-                    PublishAddress(evictedByAddress, evicted.Address, evicted);
-            }
+            AddressEventRouter<TEvent>.Dispatch?.Invoke(this, worldEvent);
             if (!_handlers.TryGetValue(typeof(TEvent), out object registered) ||
                 ((HandlerList<TEvent>)registered).Count == 0)
                 return;

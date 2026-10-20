@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Cinemachine;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -21,6 +23,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
     private readonly List<Vector2Int> requiredImages = new();
     private readonly List<Light2D> pointLightSources = new();
     private readonly List<ReplicaLightRecord> replicaLights = new();
+    private readonly Dictionary<ReplicaLightKey, ReplicaLightRecord> replicaLightLookup = new();
     private Camera sourceCamera;
     private UniversalAdditionalCameraData sourceCameraData;
     // 绑定时读取主相机配置，不能把转交后的临时关闭状态当成用户配置。
@@ -96,6 +99,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
                 Destroy(replicaLights[i].Proxy.gameObject);
         }
         replicaLights.Clear();
+        replicaLightLookup.Clear();
     }
 
     /// <summary>在相机移动完成后同步环绕世界副本及其最终后处理所有权。</summary>
@@ -118,7 +122,8 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         {
             Camera replica = replicas[i];
             bool active = i < count;
-            replica.enabled = active;
+            if (replica.enabled != active)
+                replica.enabled = active;
             if (!active)
                 continue;
 
@@ -178,8 +183,10 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
             ReplicaLightRecord record = replicaLights[i];
             if (record.Proxy != null)
             {
-                record.Proxy.enabled = record.LastRefreshVersion == refreshVersion &&
-                                       ShouldReplicateLight(record.Source);
+                bool active = record.LastRefreshVersion == refreshVersion &&
+                              ShouldReplicateLight(record.Source);
+                if (record.Proxy.enabled != active)
+                    record.Proxy.enabled = active;
             }
         }
     }
@@ -197,7 +204,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         if (offset == Vector2.zero || !IsLightPotentiallyVisible(source, offset, cameraPosition))
             return;
 
-        ReplicaLightRecord record = GetOrCreateReplicaLight(source, offset);
+        ReplicaLightRecord record = GetOrCreateReplicaLight(source, offset, bounds);
         SyncReplicaLight(record, source, offset);
         record.LastRefreshVersion = refreshVersion;
     }
@@ -272,6 +279,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
                 continue;
 
             replicaLights.RemoveAt(i);
+            replicaLightLookup.Remove(record.Key);
             if (record.Proxy != null)
                 Destroy(record.Proxy.gameObject);
         }
@@ -283,14 +291,20 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
                source.lightType == Light2D.LightType.Point && source.intensity > 0f;
     }
 
-    /// <summary>按真实灯光和世界镜像偏移复用代理，避免玩家移动时反复创建对象。</summary>
-    private ReplicaLightRecord GetOrCreateReplicaLight(Light2D source, Vector2 offset)
+    /// <summary>用灯实例与规范镜像格定位代理，避免光源数量增加时逐个线性寻找。</summary>
+    private ReplicaLightRecord GetOrCreateReplicaLight(Light2D source, Vector2 offset,
+        WorldTopologyBounds bounds)
     {
-        for (int i = 0; i < replicaLights.Count; i++)
+        // 镜像偏移由浮点坐标求差得到，按世界跨度还原整数镜像坐标，避免移动时舍入抖动导致重复代理。
+        var key = new ReplicaLightKey(source, new Vector2Int(
+            Mathf.RoundToInt(offset.x / bounds.Span.x),
+            Mathf.RoundToInt(offset.y / bounds.Span.y)));
+        if (replicaLightLookup.TryGetValue(key, out ReplicaLightRecord existing))
         {
-            ReplicaLightRecord existing = replicaLights[i];
-            if (existing.Source == source && existing.Offset == offset)
+            if (existing.Proxy != null)
                 return existing;
+            replicaLightLookup.Remove(key);
+            replicaLights.Remove(existing);
         }
 
         var proxyObject = new GameObject($"Wrapped Light - {source.name}", typeof(Light2D));
@@ -300,8 +314,9 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
 
         // 首次建立时复制私有序列化配置（尤其是受影响的 Sorting Layer）。
         JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(source), proxy);
-        var record = new ReplicaLightRecord(source, proxy, offset);
+        var record = new ReplicaLightRecord(key, proxy);
         replicaLights.Add(record);
+        replicaLightLookup.Add(key, record);
         return record;
     }
 
@@ -314,29 +329,46 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         Light2D proxy = record.Proxy;
         Transform sourceTransform = source.transform;
         Transform proxyTransform = proxy.transform;
-        proxyTransform.SetPositionAndRotation(sourceTransform.position + (Vector3)offset,
-            sourceTransform.rotation);
-        proxyTransform.localScale = sourceTransform.lossyScale;
-        proxy.gameObject.layer = source.gameObject.layer;
+        bool firstSync = !record.HasSyncedSettings;
+        Vector3 position = sourceTransform.position + (Vector3)offset;
+        Quaternion rotation = sourceTransform.rotation;
+        if (firstSync || !proxyTransform.position.Equals(position) || !proxyTransform.rotation.Equals(rotation))
+            proxyTransform.SetPositionAndRotation(position, rotation);
+        Vector3 scale = sourceTransform.lossyScale;
+        if (firstSync || !proxyTransform.localScale.Equals(scale))
+            proxyTransform.localScale = scale;
+        if (firstSync || proxy.gameObject.layer != source.gameObject.layer)
+            proxy.gameObject.layer = source.gameObject.layer;
 
-        proxy.lightType = Light2D.LightType.Point;
+        // 常驻环绕灯多数属性不变，只有实际改变时才写回 URP Light2D。
+        // 冷创建必须强制提交一次，不能假设 JSON 反序列化已触发 URP 内部状态重建。
+        if (firstSync || proxy.lightType != Light2D.LightType.Point)
+            proxy.lightType = Light2D.LightType.Point;
         Light2DSortingLayerUtility.CopyLightLayers(source, proxy);
-        proxy.blendStyleIndex = source.blendStyleIndex;
-        proxy.color = source.color;
-        proxy.intensity = source.intensity;
-        proxy.falloffIntensity = source.falloffIntensity;
-        proxy.overlapOperation = source.overlapOperation;
-        proxy.lightOrder = source.lightOrder;
-        proxy.pointLightInnerAngle = source.pointLightInnerAngle;
-        proxy.pointLightOuterAngle = source.pointLightOuterAngle;
-        proxy.pointLightInnerRadius = source.pointLightInnerRadius;
-        proxy.pointLightOuterRadius = source.pointLightOuterRadius;
-        proxy.shadowsEnabled = source.shadowsEnabled;
-        proxy.shadowIntensity = source.shadowIntensity;
-        proxy.volumeIntensityEnabled = source.volumeIntensityEnabled;
-        proxy.volumeIntensity = source.volumeIntensity;
-        proxy.volumetricShadowsEnabled = source.volumetricShadowsEnabled;
-        proxy.shadowVolumeIntensity = source.shadowVolumeIntensity;
+        if (firstSync || proxy.blendStyleIndex != source.blendStyleIndex) proxy.blendStyleIndex = source.blendStyleIndex;
+        if (firstSync || !proxy.color.Equals(source.color)) proxy.color = source.color;
+        if (firstSync || proxy.intensity != source.intensity) proxy.intensity = source.intensity;
+        if (firstSync || proxy.falloffIntensity != source.falloffIntensity) proxy.falloffIntensity = source.falloffIntensity;
+        if (firstSync || proxy.overlapOperation != source.overlapOperation) proxy.overlapOperation = source.overlapOperation;
+        if (firstSync || proxy.lightOrder != source.lightOrder) proxy.lightOrder = source.lightOrder;
+        if (firstSync || proxy.pointLightInnerAngle != source.pointLightInnerAngle)
+            proxy.pointLightInnerAngle = source.pointLightInnerAngle;
+        if (firstSync || proxy.pointLightOuterAngle != source.pointLightOuterAngle)
+            proxy.pointLightOuterAngle = source.pointLightOuterAngle;
+        if (firstSync || proxy.pointLightInnerRadius != source.pointLightInnerRadius)
+            proxy.pointLightInnerRadius = source.pointLightInnerRadius;
+        if (firstSync || proxy.pointLightOuterRadius != source.pointLightOuterRadius)
+            proxy.pointLightOuterRadius = source.pointLightOuterRadius;
+        if (firstSync || proxy.shadowsEnabled != source.shadowsEnabled) proxy.shadowsEnabled = source.shadowsEnabled;
+        if (firstSync || proxy.shadowIntensity != source.shadowIntensity) proxy.shadowIntensity = source.shadowIntensity;
+        if (firstSync || proxy.volumeIntensityEnabled != source.volumeIntensityEnabled)
+            proxy.volumeIntensityEnabled = source.volumeIntensityEnabled;
+        if (firstSync || proxy.volumeIntensity != source.volumeIntensity) proxy.volumeIntensity = source.volumeIntensity;
+        if (firstSync || proxy.volumetricShadowsEnabled != source.volumetricShadowsEnabled)
+            proxy.volumetricShadowsEnabled = source.volumetricShadowsEnabled;
+        if (firstSync || proxy.shadowVolumeIntensity != source.shadowVolumeIntensity)
+            proxy.shadowVolumeIntensity = source.shadowVolumeIntensity;
+        record.HasSyncedSettings = true;
     }
 
     private void DisableAllReplicaLights()
@@ -348,19 +380,38 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         }
     }
 
-    private sealed class ReplicaLightRecord
+    private readonly struct ReplicaLightKey : IEquatable<ReplicaLightKey>
     {
-        public ReplicaLightRecord(Light2D source, Light2D proxy, Vector2 offset)
+        public readonly Light2D Source;
+        public readonly Vector2Int Image;
+
+        public ReplicaLightKey(Light2D source, Vector2Int image)
         {
             Source = source;
-            Proxy = proxy;
-            Offset = offset;
+            Image = image;
         }
 
-        public Light2D Source { get; }
+        public bool Equals(ReplicaLightKey other) =>
+            ReferenceEquals(Source, other.Source) && Image == other.Image;
+
+        public override bool Equals(object obj) => obj is ReplicaLightKey other && Equals(other);
+        public override int GetHashCode() =>
+            unchecked(RuntimeHelpers.GetHashCode(Source) * 397 ^ Image.GetHashCode());
+    }
+
+    private sealed class ReplicaLightRecord
+    {
+        public ReplicaLightRecord(ReplicaLightKey key, Light2D proxy)
+        {
+            Key = key;
+            Proxy = proxy;
+        }
+
+        public ReplicaLightKey Key { get; }
+        public Light2D Source => Key.Source;
         public Light2D Proxy { get; }
-        public Vector2 Offset { get; }
         public int LastRefreshVersion { get; set; }
+        public bool HasSyncedSettings { get; set; }
     }
 
     #endregion

@@ -28,6 +28,27 @@ namespace FlatWorld.Tests.EditMode
         }
 
         [Test]
+        public void AddressPublish_ChunkCommittedAndEvicted_AllocateNoMemoryAfterWarmup()
+        {
+            var bus = new WorldEventBus();
+            var address = new WorldAddress("surface", new Int2(0, 0));
+            int delivered = 0;
+            using var committed = bus.SubscribeChunkCommitted(address, _ => delivered++);
+            using var evicted = bus.SubscribeChunkEvicted(address, _ => delivered++);
+            using var global = bus.Subscribe<ChunkCommitted>(_ => delivered++);
+            var added = new ChunkCommitted(address, 1);
+            var removed = new ChunkEvicted(address);
+
+            for (int i = 0; i < 32; i++) { bus.Publish(added); bus.Publish(removed); }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 256; i++) { bus.Publish(added); bus.Publish(removed); }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(delivered, Is.EqualTo(288 * 3));
+            Assert.That(allocated, Is.Zero, "区块提交和逐出含地址分发也不应逐次装箱");
+        }
+
+        [Test]
         public void Publish_UnsubscribingAndReentering_KeepsOuterSnapshot()
         {
             var bus = new WorldEventBus();
@@ -78,6 +99,22 @@ namespace FlatWorld.Tests.EditMode
             second.Dispose();
             bus.Publish(new ChunkCommitted(firstAddress, 3));
             Assert.That(committed, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void AddressPublish_BoxedEvents_StillNotifyAddressSubscribers()
+        {
+            var bus = new WorldEventBus();
+            var address = new WorldAddress("surface", new Int2(32, 0));
+            int delivered = 0;
+            using var added = bus.SubscribeChunkCommitted(address, _ => delivered += 1);
+            using var removed = bus.SubscribeChunkEvicted(address, _ => delivered += 10);
+            using var general = bus.Subscribe<object>(_ => delivered += 100);
+
+            bus.Publish<object>(new ChunkCommitted(address, 1));
+            bus.Publish<object>(new ChunkEvicted(address));
+
+            Assert.That(delivered, Is.EqualTo(211));
         }
 
         #endregion

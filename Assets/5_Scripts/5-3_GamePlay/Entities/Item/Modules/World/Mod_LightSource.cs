@@ -53,6 +53,10 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
     private SpriteRenderer emissiveSourceRenderer;
     private SpriteRenderer emissiveOverlayRenderer;
     private MaterialPropertyBlock emissivePropertyBlock;
+    private bool hasEmissiveVisualState;
+    private EmissiveVisualState lastEmissiveVisualState;
+    private SpriteRenderer syncedEmissiveOverlay;
+    private Material syncedEmissiveMaterial;
     private bool combustionActive = true;
     private Light2D sortingLayerSourceLight;
     private int[] originalSortingLayerIds;
@@ -78,6 +82,7 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
 
     private void OnEnable()
     {
+        hasEmissiveVisualState = false;
         ResolveTargetLight();
         ApplyTargetSortingLayers();
         RefreshEmissiveOverlay();
@@ -87,6 +92,7 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
     {
         if (emissiveOverlayRenderer != null)
             emissiveOverlayRenderer.enabled = false;
+        hasEmissiveVisualState = false;
     }
 
     private void OnValidate()
@@ -280,6 +286,47 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
 
     #region 自发光 Sprite 覆盖层
 
+    // 每帧只读取源贴图状态，真正变化时才写回 Renderer 与 MPB。
+    private readonly struct EmissiveVisualState
+    {
+        public readonly Sprite Sprite;
+        public readonly Texture Texture;
+        public readonly Color Color;
+        public readonly bool FlipX, FlipY;
+        public readonly SpriteDrawMode DrawMode;
+        public readonly Vector2 Size;
+        public readonly SpriteTileMode TileMode;
+        public readonly SpriteMaskInteraction Mask;
+        public readonly SpriteSortPoint SortPoint;
+        public readonly int Layer, Order;
+        public readonly float ClipLocalY;
+
+        public EmissiveVisualState(SpriteRenderer source, float clipLocalY)
+        {
+            Sprite = source.sprite;
+            Texture = Sprite != null ? Sprite.texture : null;
+            Color = source.color;
+            FlipX = source.flipX;
+            FlipY = source.flipY;
+            DrawMode = source.drawMode;
+            Size = source.size;
+            TileMode = source.tileMode;
+            Mask = source.maskInteraction;
+            SortPoint = source.spriteSortPoint;
+            Layer = source.sortingLayerID;
+            Order = source.sortingOrder + 1;
+            ClipLocalY = clipLocalY;
+        }
+
+        public bool Matches(in EmissiveVisualState other) =>
+            Sprite == other.Sprite && Texture == other.Texture && Color.Equals(other.Color) &&
+            FlipX == other.FlipX && FlipY == other.FlipY &&
+            DrawMode == other.DrawMode && Size.Equals(other.Size) &&
+            TileMode == other.TileMode && Mask == other.Mask &&
+            SortPoint == other.SortPoint && Layer == other.Layer &&
+            Order == other.Order && ClipLocalY == other.ClipLocalY;
+    }
+
     /// <summary>
     /// Blocking Tile 的 ShadowCaster2D 开启 selfShadows 后，会通过 2D 阴影模板影响所有与墙体占地重叠的 Lit Sprite。
     /// 发光体可按配置只覆盖上半部，或覆盖整个源 Sprite；覆盖层只抬高被阴影压暗的结果，仍保留更亮的 Lit 结果。
@@ -291,48 +338,75 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
         {
             if (emissiveOverlayRenderer != null)
                 emissiveOverlayRenderer.enabled = false;
+            hasEmissiveVisualState = false;
             return;
         }
 
         ResolveEmissiveSourceRenderer();
-        if (emissiveSourceRenderer == null)
-            return;
-
-        EnsureEmissiveOverlay();
-        if (emissiveOverlayRenderer == null || emissiveOverlayRenderer.sharedMaterial == null)
-            return;
-
-        bool shouldRender = isActiveAndEnabled &&
+        bool shouldRender = emissiveSourceRenderer != null && isActiveAndEnabled &&
                             emissiveSourceRenderer.enabled &&
                             emissiveSourceRenderer.sprite != null &&
                             TargetLight != null &&
                             TargetLight.enabled &&
                             TargetLight.intensity > 0f;
-        emissiveOverlayRenderer.enabled = shouldRender;
         if (!shouldRender)
+        {
+            if (emissiveOverlayRenderer != null && emissiveOverlayRenderer.enabled)
+                emissiveOverlayRenderer.enabled = false;
+            hasEmissiveVisualState = false;
             return;
+        }
 
-        emissiveOverlayRenderer.sprite = emissiveSourceRenderer.sprite;
-        emissiveOverlayRenderer.color = emissiveSourceRenderer.color;
-        emissiveOverlayRenderer.flipX = emissiveSourceRenderer.flipX;
-        emissiveOverlayRenderer.flipY = emissiveSourceRenderer.flipY;
-        emissiveOverlayRenderer.drawMode = emissiveSourceRenderer.drawMode;
-        emissiveOverlayRenderer.size = emissiveSourceRenderer.size;
-        emissiveOverlayRenderer.tileMode = emissiveSourceRenderer.tileMode;
-        emissiveOverlayRenderer.maskInteraction = emissiveSourceRenderer.maskInteraction;
-        emissiveOverlayRenderer.spriteSortPoint = emissiveSourceRenderer.spriteSortPoint;
-        emissiveOverlayRenderer.sortingLayerID = emissiveSourceRenderer.sortingLayerID;
-        emissiveOverlayRenderer.sortingOrder = emissiveSourceRenderer.sortingOrder + 1;
+        EnsureEmissiveOverlay();
+        if (emissiveOverlayRenderer == null || emissiveOverlayRenderer.sharedMaterial == null)
+            return;
+        if (!emissiveOverlayRenderer.enabled)
+            emissiveOverlayRenderer.enabled = true;
 
-        emissivePropertyBlock ??= new MaterialPropertyBlock();
-        emissiveOverlayRenderer.GetPropertyBlock(emissivePropertyBlock);
-        // 自定义 Sprite Shader 使用 MPB 时必须同步 _MainTex，否则运行时代理可能采到白纹理。
-        emissivePropertyBlock.SetTexture(MainTexId, emissiveSourceRenderer.sprite.texture);
         float clipLocalY = ignore2DShadowsOnSourceSprite
             ? emissiveSourceRenderer.sprite.bounds.min.y - Mathf.Epsilon
             : emissiveStartLocalY;
-        emissivePropertyBlock.SetFloat(ClipLocalYId, clipLocalY);
-        emissiveOverlayRenderer.SetPropertyBlock(emissivePropertyBlock);
+        var visual = new EmissiveVisualState(emissiveSourceRenderer, clipLocalY);
+        bool firstSync = !hasEmissiveVisualState;
+        if (!firstSync && visual.Matches(lastEmissiveVisualState))
+            return;
+
+        if (firstSync || visual.Sprite != lastEmissiveVisualState.Sprite)
+            emissiveOverlayRenderer.sprite = visual.Sprite;
+        if (firstSync || !visual.Color.Equals(lastEmissiveVisualState.Color))
+            emissiveOverlayRenderer.color = visual.Color;
+        if (firstSync || visual.FlipX != lastEmissiveVisualState.FlipX)
+            emissiveOverlayRenderer.flipX = visual.FlipX;
+        if (firstSync || visual.FlipY != lastEmissiveVisualState.FlipY)
+            emissiveOverlayRenderer.flipY = visual.FlipY;
+        if (firstSync || visual.DrawMode != lastEmissiveVisualState.DrawMode)
+            emissiveOverlayRenderer.drawMode = visual.DrawMode;
+        if (firstSync || !visual.Size.Equals(lastEmissiveVisualState.Size))
+            emissiveOverlayRenderer.size = visual.Size;
+        if (firstSync || visual.TileMode != lastEmissiveVisualState.TileMode)
+            emissiveOverlayRenderer.tileMode = visual.TileMode;
+        if (firstSync || visual.Mask != lastEmissiveVisualState.Mask)
+            emissiveOverlayRenderer.maskInteraction = visual.Mask;
+        if (firstSync || visual.SortPoint != lastEmissiveVisualState.SortPoint)
+            emissiveOverlayRenderer.spriteSortPoint = visual.SortPoint;
+        if (firstSync || visual.Layer != lastEmissiveVisualState.Layer)
+            emissiveOverlayRenderer.sortingLayerID = visual.Layer;
+        if (firstSync || visual.Order != lastEmissiveVisualState.Order)
+            emissiveOverlayRenderer.sortingOrder = visual.Order;
+
+        if (firstSync || visual.Sprite != lastEmissiveVisualState.Sprite ||
+            visual.Texture != lastEmissiveVisualState.Texture ||
+            visual.ClipLocalY != lastEmissiveVisualState.ClipLocalY)
+        {
+            emissivePropertyBlock ??= new MaterialPropertyBlock();
+            emissiveOverlayRenderer.GetPropertyBlock(emissivePropertyBlock);
+            // 只在贴图或裁剪位置变化时提交 Shader 参数，避免静态光源逐帧访问 MPB。
+            emissivePropertyBlock.SetTexture(MainTexId, visual.Texture);
+            emissivePropertyBlock.SetFloat(ClipLocalYId, visual.ClipLocalY);
+            emissiveOverlayRenderer.SetPropertyBlock(emissivePropertyBlock);
+        }
+        lastEmissiveVisualState = visual;
+        hasEmissiveVisualState = true;
     }
 
     private void ResolveEmissiveSourceRenderer()
@@ -390,11 +464,23 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
             emissiveOverlayRenderer = overlayObject.AddComponent<SpriteRenderer>();
         }
 
-        if (emissiveOverlayRenderer.sharedMaterial == null ||
-            emissiveOverlayRenderer.sharedMaterial.shader == null ||
-            emissiveOverlayRenderer.sharedMaterial.shader.name != "Game/2D/Emissive-Sprite-Overlay")
+        if (syncedEmissiveOverlay != emissiveOverlayRenderer)
         {
-            emissiveOverlayRenderer.sharedMaterial = GetSharedEmissiveMaterial();
+            syncedEmissiveOverlay = emissiveOverlayRenderer;
+            syncedEmissiveMaterial = null;
+            hasEmissiveVisualState = false;
+        }
+        Material currentMaterial = emissiveOverlayRenderer.sharedMaterial;
+        if (currentMaterial == null || currentMaterial != syncedEmissiveMaterial)
+        {
+            if (currentMaterial == null || currentMaterial.shader == null ||
+                currentMaterial.shader.name != "Game/2D/Emissive-Sprite-Overlay")
+            {
+                currentMaterial = GetSharedEmissiveMaterial();
+                emissiveOverlayRenderer.sharedMaterial = currentMaterial;
+            }
+            syncedEmissiveMaterial = currentMaterial;
+            hasEmissiveVisualState = false;
         }
     }
 
