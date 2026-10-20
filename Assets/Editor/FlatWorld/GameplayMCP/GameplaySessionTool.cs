@@ -9,7 +9,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_session",
         Description = "Manage the FlatWorld gameplay session without visual menu navigation. Actions: status, list_saves, continue_save, create_world, reload_resources, save_exit. continue_save defaults to the most recent save and an isolated Library copy.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplaySessionTool
     {
         #region 统一输入输出

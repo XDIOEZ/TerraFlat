@@ -12,6 +12,20 @@ using UnityEngine;
 
 namespace FlatWorld.NaturalEntities
 {
+    /// <summary>只读自然实体目标投影，保留正式交互身份与实体代际，不创建 Item 外壳。</summary>
+    public readonly struct NaturalEntityTargetObservation
+    {
+        public readonly NaturalEntityHandle Handle;
+        public readonly IWorldInteractionTarget Target;
+        public readonly string ItemId;
+        public readonly Bounds AimBounds;
+        public readonly bool HasHealth;
+        public readonly Vector2 Health;
+        public NaturalEntityTargetObservation(NaturalEntityHandle handle, IWorldInteractionTarget target,
+            string itemId, Bounds aimBounds, bool hasHealth, Vector2 health)
+        { Handle = handle; Target = target; ItemId = itemId; AimBounds = aimBounds; HasHealth = hasHealth; Health = health; }
+    }
+
     public static partial class NaturalEntityEcsService
     {
         #region 空间索引与无外壳目标
@@ -119,6 +133,35 @@ namespace FlatWorld.NaturalEntities
                     simulation.TryGet(record.Handle.Id, out AiecsVital vital))
                 { health = new Vector2(vital.Hp, vital.MaxHp); return true; }
             return false;
+        }
+
+        /// <summary>按实际空间桶观察当前世界存活实体，未激活生成点不会成为可操作目标。</summary>
+        public static void QueryTargetObservations(Item actor, float radius, List<NaturalEntityTargetObservation> result)
+        {
+            if (result == null) throw new ArgumentNullException(nameof(result));
+            result.Clear();
+            if (actor == null || !float.IsFinite(radius) || radius <= 0f || simulation == null) return;
+            using ResourceQuery query = QueryBounds(actor.transform.position, Vector2.one * radius);
+            foreach (Record record in query)
+            {
+                if (!record.IsValid || record.DimensionId != WorldEntityRuntime.DimensionId ||
+                    WorldTopologyRuntime.Distance(actor.transform.position, record.WorldPosition) > radius) continue;
+                bool hasHealth = simulation.TryGet(record.Handle.Id, out AiecsVital vital);
+                result.Add(new NaturalEntityTargetObservation(record.Handle, record, record.Profile.Definition.Id,
+                    record.HitBounds, hasHealth, hasHealth ? new Vector2(vital.Hp, vital.MaxHp) : default));
+            }
+        }
+
+        /// <summary>动作前按带代际句柄重新读取目标，删除、卸载或换代后立即拒绝。</summary>
+        public static bool TryGetTargetObservation(NaturalEntityHandle handle, out NaturalEntityTargetObservation observation)
+        {
+            using var scope = UseHandle(handle);
+            observation = default;
+            if (!Contains(handle) || !records.TryGetValue(handle.Id, out Record record) || !record.IsValid) return false;
+            bool hasHealth = simulation.TryGet(handle.Id, out AiecsVital vital);
+            observation = new NaturalEntityTargetObservation(handle, record, record.Profile.Definition.Id,
+                record.HitBounds, hasHealth, hasHealth ? new Vector2(vital.Hp, vital.MaxHp) : default);
+            return true;
         }
 
         #region 树木栖息地查询

@@ -1457,6 +1457,7 @@ public static partial class GameplayTestSystemProbe
     private static JObject EntityInventoryTransactions(JObject args)
     {
         var sourceSlot = new ItemSlot(0) { itemData = EntityProbeData("test:inventory", (float)Number(args, "amount", 5d)) };
+        sourceSlot.itemData.Stack.Stackable = Flag(args, "stackable", true);
         var source = new Inventory_Data(new List<ItemSlot> { sourceSlot }, "independent source");
         var destinationSlot = new ItemSlot(0) { SlotMaxVolume = (float)Number(args, "slotCapacity", 100d) };
         var destination = new Inventory_Data(new List<ItemSlot> { destinationSlot }, "independent destination")
@@ -1473,12 +1474,20 @@ public static partial class GameplayTestSystemProbe
         bool preflightUnchanged = sourceSlot.itemData?.Stack.Amount == afterConsume &&
             destinationSlot.itemData == null && refreshes == 0;
         int foreignPreflight = source.GetTransferableQuantityTo(destinationSlot, destination, sourceSlot, 1);
-        bool transferred = source.TransferItemQuantityTo(sourceSlot, destination, destinationSlot, (int)Number(args, "transfer", 3d));
+        var sourceInventory = new Inventory { Data = source };
+        var targetInventory = new Inventory { Data = destination };
+        bool publicGuards = !sourceInventory.TryTransferQuantityTo(0, sourceInventory, 0, 1) &&
+            !sourceInventory.TryTransferQuantityTo(0, targetInventory, 0, 0) &&
+            !sourceInventory.TryTransferQuantityTo(-1, targetInventory, 0, 1);
+        bool transferred = Flag(args, "publicQuantity", false)
+            ? sourceInventory.TryTransferQuantityTo(0, targetInventory, 0, (int)Number(args, "transfer", 3d))
+            : source.TransferItemQuantityTo(sourceSlot, destination, destinationSlot, (int)Number(args, "transfer", 3d));
         float sourceAmount = sourceSlot.itemData?.Stack.Amount ?? 0f, targetAmount = destinationSlot.itemData?.Stack.Amount ?? 0f;
         return new JObject
         {
             ["consumed"] = consumed, ["afterConsume"] = afterConsume, ["excessiveAccepted"] = excessiveAccepted,
             ["foreignAccepted"] = foreignAccepted, ["transferred"] = transferred,
+            ["publicGuards"] = publicGuards,
             ["preflight"] = preflight, ["preflightUnchanged"] = preflightUnchanged, ["foreignPreflight"] = foreignPreflight,
             ["sourceAmount"] = sourceAmount, ["targetAmount"] = targetAmount,
             ["sourceEmpty"] = sourceSlot.itemData == null,

@@ -20,8 +20,8 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     [McpForUnityTool(
         "gameplay_query",
-        Description = "Query already-loaded FlatWorld runtime data. Sources: runtime Item objects, ecology placements, terrain environment layers, tile surface cells, and ECS drops. source=tile resolves an exact tile id/name and returns nearest loaded coordinates. source=drops observes ECS dropped items with live world positions. Read-only; it never spawns, teleports, picks up, or mutates gameplay.",
-        Group = "core")]
+        Description = "Query already-loaded FlatWorld data. source=world returns unified live targets for Items, natural ECS, machines and drops. Other sources: runtime Item objects, ecology placements, terrain environment layers, tile surface cells, and ECS drops. Read-only; it never spawns, teleports, picks up, or mutates gameplay.",
+        Group = "core", Discoverable = false)]
     public static class GameplayQueryTool
     {
         #region 统一输入输出
@@ -40,13 +40,13 @@ namespace FlatWorld.GameplayMCP
 
         public sealed class Parameters : GameplayMcpOutputParameters
         {
-            [ToolParameter("Runtime matches: include localized names, health and mechanical details. Defaults to false with output=compact, true with output=full.", Required = false)]
+            [ToolParameter("Include localized names and health. world defaults to false; runtime defaults to false with output=compact, true with output=full.", Required = false)]
             public bool? includeDetails { get; set; }
 
-            [ToolParameter("Query source: runtime for instantiated Items, ecology for deterministic natural placements, terrain for environment layers, tile for surface tile identity, drops for ECS dropped items.", Required = false, DefaultValue = "runtime")]
+            [ToolParameter("world: unified live targets across Items, natural ECS, machines and drops (default radius 16, page max 32, compact by default). Also runtime, ecology, terrain, tile, drops.", Required = false, DefaultValue = "runtime")]
             public string source { get; set; }
 
-            [ToolParameter("Search text. runtime/ecology/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
+            [ToolParameter("Search text. world/runtime/ecology/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
             public string query { get; set; }
 
             [ToolParameter("Backward-compatible exact stable ItemDefinition id filter. When set, it takes precedence over query. Empty means any id.", Required = false)]
@@ -61,13 +61,13 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Optional pickup filter. Omit to include both pickup and non-pickup entities.", Required = false)]
             public bool? pickup { get; set; }
 
-            [ToolParameter("Optional player-centered runtime query radius in world units. 0 or omitted searches all loaded runtime Items; positive values are capped at 64.", Required = false, DefaultValue = "0")]
+            [ToolParameter("Player-centered radius. world: omit for 16, must be finite and positive, capped at 64. runtime: 0 or omitted searches all loaded Items; positive values capped at 64.", Required = false)]
             public float radius { get; set; }
 
-            [ToolParameter("Maximum number of nearest matches returned. Defaults to 3; runtime queries are capped at 32 to protect model context.", Required = false, DefaultValue = "3")]
+            [ToolParameter("Maximum number of nearest matches returned. Defaults to 3; world/runtime are capped at 32.", Required = false, DefaultValue = "3")]
             public int limit { get; set; }
 
-            [ToolParameter("Zero-based runtime result offset for paging through large result sets without returning everything at once.", Required = false, DefaultValue = "0")]
+            [ToolParameter("Zero-based world/runtime result offset for paging through large result sets.", Required = false, DefaultValue = "0")]
             public int offset { get; set; }
 
             [ToolParameter("Terrain environment layer id when source=terrain, for example riverFloodplain or height.", Required = false, DefaultValue = "riverFloodplain")]
@@ -116,6 +116,9 @@ namespace FlatWorld.GameplayMCP
                 ? Mathf.Max(0, parsedOffset)
                 : 0;
             bool? pickup = TryReadNullableBool(parameters?["pickup"]);
+
+            if (string.Equals(source, "world", StringComparison.OrdinalIgnoreCase))
+                return GameplayWorldTargets.Query(player, parameters ?? new JObject(), ResolveCatalogItemIds(itemId, query));
 
             if (string.Equals(source, "ecology", StringComparison.OrdinalIgnoreCase))
             {
@@ -170,7 +173,7 @@ namespace FlatWorld.GameplayMCP
             }
 
             if (!string.Equals(source, "runtime", StringComparison.OrdinalIgnoreCase))
-                return new ErrorResponse("unknown_query_source: source 只支持 runtime、ecology、terrain、tile 或 drops。");
+                return new ErrorResponse("unknown_query_source: source 支持 world、runtime、ecology、terrain、tile 或 drops。");
 
             ItemMgr itemMgr = ItemMgr.Instance;
             if (itemMgr == null)
@@ -304,7 +307,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按可选玩家半径取得运行时物品；半径查询复用 ItemMgr 的空间索引，避免扫描全场景。</summary>
-        private static Item[] GetRuntimeCandidates(ItemMgr itemMgr, Player player, float radius)
+        internal static Item[] GetRuntimeCandidates(ItemMgr itemMgr, Player player, float radius)
         {
             if (radius <= 0f)
             {

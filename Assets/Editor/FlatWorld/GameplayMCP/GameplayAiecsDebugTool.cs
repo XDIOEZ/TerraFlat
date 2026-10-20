@@ -18,7 +18,7 @@ namespace FlatWorld.GameplayMCP
     /// 帧时来自真实 PlayerLoop，报告采样覆盖和 Editor 条件；生成仍须通过 GM 正式按钮。
     /// </summary>
     [McpForUnityTool("gameplay_aiecs_debug", Description =
-        "Read live AIECS test counters or sample real frame times for 1-20 seconds. Actions: status, sample. Read-only; create/clear units through the GM UI. Reports Burst, actual alive/visible counts, tick progress, backlog, memory, errors and occupancy validation.", Group = "core")]
+        "Read live AIECS test counters or sample real frame times for 1-20 seconds. Actions: status, sample. Read-only; create/clear units through the GM UI. Reports Burst, actual alive/visible counts, tick progress, backlog, memory, errors and occupancy validation.", Group = "core", Discoverable = false)]
     public static class GameplayAiecsDebugTool
     {
         #region 统一输入输出

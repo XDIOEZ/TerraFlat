@@ -15,6 +15,7 @@ namespace MCPForUnity.Editor.Services
         public string Namespace { get; set; }
         public string AssemblyName { get; set; }
         public bool AutoRegister { get; set; } = true;
+        public bool Discoverable { get; set; } = true;
         public bool RequiresPolling { get; set; } = false;
         public string PollAction { get; set; } = "status";
         public int MaxPollSeconds { get; set; } = 0;
@@ -50,12 +51,12 @@ namespace MCPForUnity.Editor.Services
         ToolMetadata GetToolMetadata(string toolName);
 
         /// <summary>
-        /// Returns only the tools currently enabled for registration
+        /// Returns only discoverable tools currently enabled for registration
         /// </summary>
         List<ToolMetadata> GetEnabledTools();
 
         /// <summary>
-        /// Checks whether a tool is currently enabled for registration
+        /// Checks whether a tool is enabled for execution, including internal tools
         /// </summary>
         bool IsToolEnabled(string toolName);
 

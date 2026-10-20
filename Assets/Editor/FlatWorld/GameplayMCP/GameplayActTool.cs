@@ -10,7 +10,7 @@ namespace FlatWorld.GameplayMCP
     [McpForUnityTool(
         "gameplay_act",
         Description = "Perform a live gameplay action, or up to 8 sequential short steps in one call. Set observe=true to return compact live state after execution; observation overrides that profile. Batch stops at the first failed outcome. Use separate calls when the next action depends on fresh observation.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayActTool
     {
         #region 统一输入输出
@@ -51,6 +51,9 @@ namespace FlatWorld.GameplayMCP
 
             [ToolParameter("Runtime Item Guid returned by gameplay_observe.", Required = false)]
             public int targetGuid { get; set; }
+
+            [ToolParameter("Opaque live target from gameplay_query(source=world). Supported by move_to/look_at/interact/interact_hold/attack; expires after world/player/entity changes. Do not combine with targetGuid or x/y.", Required = false)]
+            public string target { get; set; }
 
             [ToolParameter("Zero-based hotbar slot index.", Required = false)]
             public int index { get; set; }

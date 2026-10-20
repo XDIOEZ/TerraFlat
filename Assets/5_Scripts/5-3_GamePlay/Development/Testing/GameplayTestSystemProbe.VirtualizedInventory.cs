@@ -98,7 +98,7 @@ public static partial class GameplayTestSystemProbe
                 scroll.onValueChanged.Invoke(Vector2.zero);
                 Dictionary<int, ItemSlot_UI> after = Snapshot();
                 int retained = 0, entering = 0;
-                bool mappingValid = true, callbacksStable = true, routed = true;
+                bool mappingValid = true, callbacksStable = true, routed = true, bindingValid = true;
                 for (int i = 0; i < inventory.itemSlot_UI.Count; i++)
                 {
                     ItemSlot_UI mapped = inventory.itemSlot_UI[i];
@@ -108,6 +108,8 @@ public static partial class GameplayTestSystemProbe
                 for (int i = 0; i < grid.PooledSlots.Count; i++)
                 {
                     ItemSlot_UI slot = grid.PooledSlots[i];
+                    bindingValid &= slot.gameObject.activeSelf
+                        ? ReferenceEquals(slot.BoundInventory, inventory) : slot.BoundInventory == null;
                     callbacksStable &= ReferenceEquals(getters[i], slot.GetSlotDataFunc)
                         && ReferenceEquals(clearers[i], slot.ClearSlotDataAction)
                         && ReferenceEquals(desktop[i], slot.OnDesktopTap)
@@ -132,7 +134,7 @@ public static partial class GameplayTestSystemProbe
                 {
                     ["row"] = row, ["indices"] = new JArray(indices), ["active"] = after.Count,
                     ["retained"] = retained, ["entering"] = entering, ["mappingValid"] = mappingValid,
-                    ["callbacksStable"] = callbacksStable, ["routed"] = routed,
+                    ["callbacksStable"] = callbacksStable, ["routed"] = routed, ["bindingValid"] = bindingValid,
                     ["poolCount"] = grid.PooledSlots.Count
                 });
             }
@@ -154,8 +156,11 @@ public static partial class GameplayTestSystemProbe
             grid.RefreshVisibleSlots();
             bool forcedRefreshStable = ReferenceEquals(getters[0], rebound.GetSlotDataFunc)
                 && ReferenceEquals(desktop[0], rebound.OnDesktopTap);
+            var previouslyBoundSlots = new List<ItemSlot_UI>(grid.PooledSlots);
             grid.Unbind();
             bool mapCleared = inventory.itemSlot_UI.TrueForAll(slot => slot == null);
+            bool bindingsCleared = true;
+            foreach (ItemSlot_UI slot in previouslyBoundSlots) bindingsCleared &= slot.BoundInventory == null;
             viewport.sizeDelta = new Vector2(72f, 96f);
             grid.Bind(inventory, content, template.gameObject, null);
             int expandedPoolCount = grid.PooledSlots.Count;
@@ -169,7 +174,7 @@ public static partial class GameplayTestSystemProbe
             {
                 ["poolCount"] = initialPoolCount, ["samples"] = samples, ["clearedIndex"] = clearedIndex,
                 ["invalidUnchanged"] = invalidUnchanged, ["forcedRefreshStable"] = forcedRefreshStable,
-                ["mapCleared"] = mapCleared, ["expandedPoolCount"] = expandedPoolCount,
+                ["mapCleared"] = mapCleared, ["bindingsCleared"] = bindingsCleared, ["expandedPoolCount"] = expandedPoolCount,
                 ["expandedMappingValid"] = expandedMappingValid,
                 ["layoutRestored"] = layout.enabled && content.GetComponent<ContentSizeFitter>().enabled
             };

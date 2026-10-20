@@ -58,6 +58,8 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 制作与加工
 
+- 通用输入适配层用 `Inventory.TryTransferQuantityTo` 复用数量、容量、接收与机器联网事务；槽位身份读 `ItemSlot_UI.BoundInventory`，虚拟槽释放时清空。制作状态读 `CraftingStationView.Controller` 的当前候选/业务选择/进度，选择仍走正式候选按钮事件，不从 EventSystem 焦点推断选中配方。
+
 `配方目录/物品 processing → Matcher 全部候选 → Controller 选择与进度 → CraftingService → CraftingTransaction → 成功动作/进度信号`
 
 - `Recipes/crafting/handmade_equipment.json` 与 `handmade_utilities.json` 补齐手工制品；审查缺配方须同时检查 Recipes、物品 processing、Mechanical Processes、matter 温度/湿度转化及便携载体映射，天然物、温变产物和内部/GM 变体不机械补普通配方。

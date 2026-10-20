@@ -30,6 +30,9 @@ namespace MCPForUnity.Editor.Tools
         /// </summary>
         public bool AutoRegister { get; set; } = true;
 
+        /// <summary>只控制工具清单公开；内部命令仍沿用独立的启用和执行校验。</summary>
+        public bool Discoverable { get; set; } = true;
+
         /// <summary>
         /// Tool group for dynamic visibility on the Python server.
         /// Core tools are enabled by default; other groups start hidden and

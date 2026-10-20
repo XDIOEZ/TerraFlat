@@ -19,7 +19,7 @@ namespace FlatWorld.GameplayMCP
     /// GamePlayMCP 的 UI 语义适配器。
     /// 只观察当前激活 Canvas，并通过 EventSystem 的真实射线与 Pointer 事件链点击，不直接调用按钮业务回调。
     /// </summary>
-    internal static class GameplayUiRuntime
+    internal static partial class GameplayUiRuntime
     {
         private const int DefaultNodeLimit = 64;
         private const int MaximumNodeLimit = 128;
@@ -243,6 +243,17 @@ namespace FlatWorld.GameplayMCP
             if (slot != null)
             {
                 node["slotIndex"] = slot.slotIndex;
+                if (slot.BoundInventory != null)
+                {
+                    ItemData data = slot.GetBoundSlotData()?.itemData;
+                    node["itemId"] = data?.IDName ?? string.Empty;
+                    node["amount"] = Round(data?.Stack?.Amount ?? 0f);
+                    node["inventory"] = slot.BoundInventory.Data?.Name ?? string.Empty;
+                    CraftingStationController owner = target.GetComponentInParent<CraftingStationView>()?.Controller;
+                    node["role"] = owner != null && !owner.IsDisposed && ReferenceEquals(owner.InputInventory, slot.BoundInventory)
+                        ? "crafting_input" : owner != null && !owner.IsDisposed && ReferenceEquals(owner.OutputInventory, slot.BoundInventory)
+                            ? "crafting_output" : "inventory";
+                }
                 // 空槽隐藏图标后仍保留 Sprite 引用，只报告当前实际显示的图标。
                 string iconName = slot.image != null && slot.image.isActiveAndEnabled &&
                                   slot.image.color.a > 0f
@@ -250,6 +261,15 @@ namespace FlatWorld.GameplayMCP
                     : null;
                 if (!string.IsNullOrEmpty(iconName))
                     node["icon"] = iconName;
+            }
+
+            CraftingStationView crafting = target.GetComponentInParent<CraftingStationView>();
+            if (crafting?.Controller != null && !crafting.Controller.IsDisposed &&
+                target.GetComponent<Button>() is Button recipeButton &&
+                crafting.Controller.FindButtonRecipe(recipeButton) is RuntimeRecipe recipe)
+            {
+                node["recipeId"] = recipe.Id;
+                node["recipeSelected"] = ReferenceEquals(crafting.Controller.SelectedRecipe, recipe);
             }
 
             if (target.GetComponent<Toggle>() is { } toggle)

@@ -10,11 +10,13 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     [McpForUnityTool(
         "gameplay_ui",
-        Description = "Inspect and operate live FlatWorld UI without screenshots. action=tree returns a paged semantic UI tree; action=click uses EventSystem left click; action=text sends character events to the focused InputField; action=scroll/drag use standard UI event chains.",
-        Group = "core")]
+        Description = "Inspect and operate live FlatWorld UI. action=tree returns paged visible controls; click/text/scroll/drag use standard UI events; transfer moves an optional quantity between visible item slots; recipes reads current crafting candidates and progress; select_recipe selects a candidate through its real UI button.",
+        Group = "core", Discoverable = false)]
     public static class GameplayUiTool
     {
         #region 统一输入输出
+
+        public static readonly string[] ActionNames = { "tree", "click", "text", "scroll", "drag", "transfer", "recipes", "select_recipe" };
 
         /// <summary>按需返回数据，错误与分页状态保持完整。</summary>
         public static async Task<object> HandleCommand(JObject parameters)
@@ -26,14 +28,23 @@ namespace FlatWorld.GameplayMCP
 
         public sealed class Parameters : GameplayMcpOutputParameters
         {
-            [ToolParameter("After a successful click, text, scroll or drag, wait one Editor update and return the refreshed UI tree in the same call. Uses the same paging options.", Required = false)]
+            [ToolParameter("After a successful UI action, wait one Editor update and return the refreshed UI tree in the same call. Uses the same paging options.", Required = false)]
             public bool treeAfter { get; set; }
 
-            [ToolParameter("UI action: tree, click, text, scroll, or drag.", Required = false, DefaultValue = "tree")]
+            [ToolParameter("UI action: tree, click, text, scroll, drag, transfer, recipes, or select_recipe.", Required = false, DefaultValue = "tree")]
             public string action { get; set; }
 
-            [ToolParameter("Runtime UI node id returned by action=tree. Required for action=click, action=text, action=scroll, or action=drag.", Required = false)]
+            [ToolParameter("Runtime UI node id: control for click/text/scroll/drag, destination item_slot for transfer, optional crafting panel/node for recipes/select_recipe.", Required = false)]
             public int targetId { get; set; }
+
+            [ToolParameter("Visible source item_slot node id for action=transfer; targetId is the destination slot.", Required = false)]
+            public int sourceId { get; set; }
+
+            [ToolParameter("Positive integer quantity for action=transfer. Omit to move the whole stack through normal drag rules.", Required = false)]
+            public int? amount { get; set; }
+
+            [ToolParameter("Exact candidate recipe id for action=select_recipe. targetId identifies its open crafting panel when more than one is open.", Required = false)]
+            public string recipeId { get; set; }
 
             [ToolParameter("Text to type into a focused TMP_InputField/InputField for action=text. Focus the field through action=click first.", Required = false)]
             public string text { get; set; }
@@ -47,10 +58,10 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Vertical screen-space drag delta in pixels for action=drag.", Required = false, DefaultValue = "0")]
             public float dragDeltaY { get; set; }
 
-            [ToolParameter("Zero-based semantic node offset for action=tree paging.", Required = false, DefaultValue = "0")]
+            [ToolParameter("Zero-based node offset for tree, or candidate offset for recipes.", Required = false, DefaultValue = "0")]
             public int offset { get; set; }
 
-            [ToolParameter("Maximum semantic nodes returned by action=tree. Defaults to 64 and is capped at 128.", Required = false, DefaultValue = "64")]
+            [ToolParameter("Page size: tree defaults to 64/max128; recipes defaults to 8/max32.", Required = false)]
             public int limit { get; set; }
 
             [ToolParameter("Include visible non-interactive text and UI containers so the Agent can understand panel context.", Required = false, DefaultValue = "true")]
@@ -72,7 +83,10 @@ namespace FlatWorld.GameplayMCP
                 "text" => GameplayUiRuntime.TextInput(args),
                 "scroll" => GameplayUiRuntime.Scroll(args),
                 "drag" => GameplayUiRuntime.Drag(args),
-                _ => new ErrorResponse("unknown_ui_action: action 只支持 tree、click、text、scroll 或 drag。")
+                "transfer" => GameplayUiRuntime.Transfer(args),
+                "recipes" => GameplayUiRuntime.Recipes(args),
+                "select_recipe" => await GameplayUiRuntime.SelectRecipeAsync(args),
+                _ => new ErrorResponse("unknown_ui_action: 请查询 UI 能力取得当前可用动作。")
             };
             if (action != "tree" && args.Value<bool?>("treeAfter") == true && response is SuccessResponse success)
             {

@@ -9,7 +9,7 @@ namespace FlatWorld.GameplayMCP
     /// <summary>AI 只发一次启动命令，再读取整体结果，不按逐帧玩法 MCP 反复操作。</summary>
     [McpForUnityTool("gameplay_test_pipeline",
         Description = "Run targeted FlatWorld Lua rules or gameplay suites. Set playModeOnly=true to run only PlayMode Lua without EditMode preflight. Actions: run, status, report, catalog. systemIds selects fast rules; suitePath selects a suite. Never interrupts active PlayMode.",
-        Group = "core")]
+        Group = "core", Discoverable = false)]
     public static class GameplayTestPipelineTool
     {
         #region 测试流水线命令

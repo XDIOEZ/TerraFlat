@@ -663,11 +663,12 @@ test.system("ui_settings", "virtualized_inventory", {}, function(data)
             assert(slot == want.first + offset - 1, "虚拟库存显示索引缺失或重复")
         end
         assert(sample.mappingValid and sample.routed, "虚拟槽位位置、库存映射或点击数据索引错误")
+        assert(sample.bindingValid, "虚拟槽位重绑后库存身份错误，或隐藏槽仍持有旧库存")
         assert(sample.callbacksStable, "滚动或末尾重新显示时重复创建数据、点击或拖拽回调")
     end
     assert(data.clearedIndex == 12 and data.invalidUnchanged,
         "复用后的清空回调仍指向旧格，或无效索引破坏了绑定")
-    assert(data.forcedRefreshStable and data.mapCleared and data.layoutRestored,
+    assert(data.forcedRefreshStable and data.mapCleared and data.bindingsCleared and data.layoutRestored,
         "强制刷新重建了回调，或解绑没有清理映射并恢复布局")
     assert(data.expandedPoolCount == 18 and data.expandedMappingValid,
         "更大视口重新绑定后没有扩充槽位池或丢失数据映射")

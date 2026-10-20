@@ -294,6 +294,10 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
 
             tagsContainer.Add(CreateTag(tool.StructuredOutput ? "Structured output" : "Free-form"));
 
+            // 内部操作可管理执行开关，但启用后仍不进入 AI 的默认工具清单。
+            if (!tool.Discoverable)
+                tagsContainer.Add(CreateTag("Internal / on demand"));
+
             if (tool.RequiresPolling)
             {
                 tagsContainer.Add(CreateTag($"Polling: {tool.PollAction}"));
