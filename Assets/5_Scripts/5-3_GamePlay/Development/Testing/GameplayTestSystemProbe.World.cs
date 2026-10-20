@@ -31,6 +31,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/heat_sources", WorldHeatSources);
         operations.Add("environment/wind", WorldWind);
         operations.Add("environment/weather", WorldWeather);
+        operations.Add("environment/rain_visual_batch", WorldRainVisualBatch);
         operations.Add("environment/natural_fog_profile", WorldNaturalFogProfile);
         operations.Add("environment/natural_fog_distribution", WorldNaturalFogDistribution);
         operations.Add("environment/natural_fog_lifecycle", WorldNaturalFogLifecycle);
@@ -887,6 +888,39 @@ public static partial class GameplayTestSystemProbe
             ["wind8Probability"] = settings.ResolveActivationProbability(new WeatherElementProfile("wind", .4f, .8f, 60f)),
             ["wind9Probability"] = settings.ResolveActivationProbability(new WeatherElementProfile("wind", .4f, .9f, 60f)),
             ["wind10Probability"] = settings.ResolveActivationProbability(new WeatherElementProfile("wind", .4f, 1f, 60f))
+        };
+    }
+
+    /// <summary>取正式雨雪速率缓存和水花视口计算的纯结果，核验停雨/复启与排空旧粒子。</summary>
+    private static JObject WorldRainVisualBatch(JObject args)
+    {
+        float appliedIntensity = -1f;
+        int emissionWrites = 0;
+        foreach (float intensity in new[] { 0f, .25f, .25f, 1f, 1f, 0f, 0f })
+        {
+            if (!RainEffectController.ShouldRefreshEmissionRates(appliedIntensity, intensity)) continue;
+            appliedIntensity = intensity;
+            emissionWrites++;
+        }
+
+        Rect window = RainGroundSplashController.GetSamplingBounds(
+            new Vector3(10f, -4f, 0f), 20f, 1.5f, new Vector2(.2f, .4f));
+        Rect narrow = RainGroundSplashController.GetSamplingBounds(
+            new Vector3(-40f, 17f, 0f), 5f, 0f, Vector2.zero);
+        return new JObject
+        {
+            ["emissionWrites"] = emissionWrites,
+            ["steadySkipped"] = !RainEffectController.ShouldRefreshEmissionRates(.25f, .25f),
+            ["reactivationRefreshes"] = RainEffectController.ShouldRefreshEmissionRates(-1f, .25f),
+            ["newRateRefreshes"] = RainEffectController.ShouldRefreshEmissionRates(.25f, 1f),
+            ["capWhileDraining"] = RainEffectController.ResolveParticleCapacity(80, 100, .1f),
+            ["capAfterDraining"] = RainEffectController.ResolveParticleCapacity(12, 100, .1f),
+            ["capMinimum"] = RainEffectController.ResolveParticleCapacity(0, 100, 0f),
+            ["capAtFullIntensity"] = RainEffectController.ResolveParticleCapacity(12, 100, 1f),
+            ["minX"] = window.xMin, ["maxX"] = window.xMax,
+            ["minY"] = window.yMin, ["maxY"] = window.yMax,
+            ["narrowMinX"] = narrow.xMin, ["narrowMaxX"] = narrow.xMax,
+            ["narrowMinY"] = narrow.yMin, ["narrowMaxY"] = narrow.yMax
         };
     }
     #endregion

@@ -30,6 +30,7 @@ public class RainEffectController : MonoBehaviour
     private float[] _baseRateOverDistanceMultipliers; // 初始按距离发射倍率
     private int[] _baseMaxParticles; // 初始最大粒子数
     private float[] _lastAppliedLifetimes; // 最近写入的生命周期，避免每帧重复设置
+    private float _lastAppliedEmissionIntensity = -1f; // 发射倍率只在雨雪强度变化时写入。
     private Camera _cachedMainCamera; // 世界相机生命周期内复用，避免 LateUpdate 每帧 Camera.main 查询。
 
 #endregion
@@ -56,6 +57,7 @@ public class RainEffectController : MonoBehaviour
         _minimumParticleLifetime = Mathf.Max(0.01f, _minimumParticleLifetime);
         _lifetimeCoverageMultiplier = Mathf.Max(1f, _lifetimeCoverageMultiplier);
         _minMaxParticlesFactor = Mathf.Clamp01(_minMaxParticlesFactor);
+        _lastAppliedEmissionIntensity = -1f;
     }
 
     private void LateUpdate()
@@ -66,6 +68,7 @@ public class RainEffectController : MonoBehaviour
     private void OnDisable()
     {
         _currentIntensity = 0f;
+        _lastAppliedEmissionIntensity = -1f;
         if (_runtimeParticleSystems == null)
             return;
         foreach (ParticleSystem particles in _runtimeParticleSystems)
@@ -133,16 +136,12 @@ public class RainEffectController : MonoBehaviour
         }
 
         Vector3 runtimeOffset = GetRuntimeOffset(targetCamera);
-        transform.position = targetCamera.transform.position + runtimeOffset;
-
-        if (_lockRotation)
-        {
-            transform.rotation = Quaternion.identity;
-        }
-        else
-        {
-            transform.rotation = targetCamera.transform.rotation;
-        }
+        Transform effectTransform = transform;
+        Vector3 position = targetCamera.transform.position + runtimeOffset;
+        Quaternion rotation = _lockRotation ? Quaternion.identity : targetCamera.transform.rotation;
+        // 静止相机不重复使粒子父级 Transform 变脏；移动时合并位置与旋转提交。
+        if (effectTransform.position != position || effectTransform.rotation != rotation)
+            effectTransform.SetPositionAndRotation(position, rotation);
 
         SyncParticleLifetimeToCamera(targetCamera, runtimeOffset);
 
@@ -160,7 +159,9 @@ public class RainEffectController : MonoBehaviour
         float yScale = Mathf.Max(0.25f, orthographicHeight / referenceHeight);
         float xScale = yScale * aspectRatio; // X轴乘以宽高比以覆盖整个宽度
 
-        transform.localScale = new Vector3(xScale, yScale, 1f);
+        Vector3 scale = new Vector3(xScale, yScale, 1f);
+        if (effectTransform.localScale != scale)
+            effectTransform.localScale = scale;
     }
 
     private Vector3 GetRuntimeOffset(Camera targetCamera)
@@ -317,17 +318,24 @@ public class RainEffectController : MonoBehaviour
         // 发射量从零按雨量成比例增加，已有粒子在停雨时继续落完。
         float emissionFactor = _currentIntensity;
         float maxParticlesFactor = Mathf.Lerp(_minMaxParticlesFactor, 1f, _currentIntensity);
+        bool emissionChanged = ShouldRefreshEmissionRates(_lastAppliedEmissionIntensity, _currentIntensity);
 
         for (int i = 0; i < _runtimeParticleSystems.Length; i++)
         {
             ParticleSystem particleSystem = _runtimeParticleSystems[i];
-            ParticleSystem.EmissionModule emission = particleSystem.emission;
+            if (emissionChanged)
+            {
+                ParticleSystem.EmissionModule emission = particleSystem.emission;
+                emission.rateOverTimeMultiplier = _baseRateOverTimeMultipliers[i] * emissionFactor;
+                emission.rateOverDistanceMultiplier = _baseRateOverDistanceMultipliers[i] * emissionFactor;
+            }
             ParticleSystem.MainModule main = particleSystem.main;
 
-            emission.rateOverTimeMultiplier = _baseRateOverTimeMultipliers[i] * emissionFactor;
-            emission.rateOverDistanceMultiplier = _baseRateOverDistanceMultipliers[i] * emissionFactor;
-            main.maxParticles = Mathf.Max(particleSystem.particleCount,
-                Mathf.Max(1, Mathf.RoundToInt(_baseMaxParticles[i] * maxParticlesFactor)));
+            // 强度不变时仍允许旧雨滴逐渐消亡并收缩粒子上限，但不重复提交相同容量。
+            int maxParticles = ResolveParticleCapacity(particleSystem.particleCount,
+                _baseMaxParticles[i], maxParticlesFactor);
+            if (main.maxParticles != maxParticles)
+                main.maxParticles = maxParticles;
             if (_currentIntensity > 0.001f)
             {
                 if (!particleSystem.isEmitting)
@@ -336,7 +344,15 @@ public class RainEffectController : MonoBehaviour
             else if (particleSystem.isEmitting)
                 particleSystem.Stop(false, ParticleSystemStopBehavior.StopEmitting);
         }
+        _lastAppliedEmissionIntensity = _currentIntensity;
     }
+
+    /// <summary>停用或运行时配置更新会将已写强度置为负值，从下一次调用重新提交。</summary>
+    internal static bool ShouldRefreshEmissionRates(float applied, float intensity) => applied != intensity;
+
+    /// <summary>低雨量时必须给已有粒子留容量，直到它们自然落完才逐步收缩。</summary>
+    internal static int ResolveParticleCapacity(int alive, int baseCapacity, float capacityFactor) =>
+        Mathf.Max(alive, Mathf.Max(1, Mathf.RoundToInt(baseCapacity * capacityFactor)));
 
 #endregion
 }

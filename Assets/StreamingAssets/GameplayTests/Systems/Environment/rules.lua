@@ -2,6 +2,22 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+test.system("environment", "rain_visual_batch", {}, function(data)
+    assert(data.emissionWrites == 4 and data.steadySkipped and data.reactivationRefreshes and data.newRateRefreshes,
+        "稳态雨雪重复写入粒子发射倍率，或重新启用后没有刷新")
+    assert(data.capWhileDraining == 80 and data.capAfterDraining == 12 and
+        data.capMinimum == 1 and data.capAtFullIntensity == 100,
+        "粒子容量收缩提前丢弃尚未落地的旧粒子，或未随雨量恢复")
+    near(data.minX, -5.2, "水花可见区域左边界改变")
+    near(data.maxX, 25.2, "水花可见区域右边界改变")
+    near(data.minY, -14.4, "水花可见区域下边界改变")
+    near(data.maxY, 6.4, "水花可见区域上边界改变")
+    near(data.narrowMinX, -40.25, "极窄横纵比没有正确钳制")
+    near(data.narrowMaxX, -39.75, "极窄横纵比上限错误")
+    near(data.narrowMinY, 14.5, "非正交采样下边界改变")
+    near(data.narrowMaxY, 19.5, "非正交采样上边界改变")
+end, "雨雪稳态发射参数缓存、旧雨滴渐退和同帧水花采样边界")
+
 for _, input in ipairs({
     { fraction = 0, expected = false },
     { fraction = 0.049999, expected = false },

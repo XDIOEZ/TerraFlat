@@ -84,9 +84,14 @@ public sealed class RainGroundSplashController : MonoBehaviour
             return;
 
         _spawnAccumulator -= emitCount;
+        // 一帧里的多颗水花共用相机范围与天气管理器，随机候选顺序保持不变。
+        float viewportHeight = targetCamera.orthographic ? targetCamera.orthographicSize * 2f : 10f;
+        Rect bounds = GetSamplingBounds(targetCamera.transform.position, viewportHeight,
+            targetCamera.aspect, _cameraPadding);
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
         for (int i = 0; i < emitCount; i++)
         {
-            if (TryFindVisibleGround(targetCamera, chunkMgr, out Vector3 splashPosition))
+            if (TryFindVisibleGround(chunkMgr, weather, bounds, out Vector3 splashPosition))
                 EmitSplash(splashPosition);
         }
     }
@@ -219,25 +224,18 @@ public sealed class RainGroundSplashController : MonoBehaviour
     #region 地面采样与发射
 
     /// <summary>优先在相机可见范围的已加载地形中寻找落点，海面也保留雨滴水花。</summary>
-    private bool TryFindVisibleGround(Camera targetCamera, ChunkMgr chunkMgr, out Vector3 splashPosition)
+    private bool TryFindVisibleGround(ChunkMgr chunkMgr, WeatherMgr weather, Rect bounds,
+        out Vector3 splashPosition)
     {
         splashPosition = default;
-        float viewportHeight = targetCamera.orthographic ? targetCamera.orthographicSize * 2f : 10f;
-        float viewportWidth = viewportHeight * Mathf.Max(0.1f, targetCamera.aspect);
-        Vector3 cameraPosition = targetCamera.transform.position;
-        float minX = cameraPosition.x - viewportWidth * 0.5f - _cameraPadding.x;
-        float maxX = cameraPosition.x + viewportWidth * 0.5f + _cameraPadding.x;
-        float minY = cameraPosition.y - viewportHeight * 0.5f - _cameraPadding.y;
-        float maxY = cameraPosition.y + viewportHeight * 0.5f + _cameraPadding.y;
 
         for (int attempt = 0; attempt < _groundSampleAttempts; attempt++)
         {
             Vector2 candidate = new(
-                Mathf.Lerp(minX, maxX, Next01(ref _randomState)),
-                Mathf.Lerp(minY, maxY, Next01(ref _randomState)));
+                Mathf.Lerp(bounds.xMin, bounds.xMax, Next01(ref _randomState)),
+                Mathf.Lerp(bounds.yMin, bounds.yMax, Next01(ref _randomState)));
 
             // 水花按真实落点消费液态雨量，跨区域和雪区不凭镜头雨势发射。
-            WeatherMgr weather = WeatherMgr.ExistingInstance;
             if (weather == null || !weather.TryGetPrecipitationAt(candidate, out float rainIntensity, out _) ||
                 rainIntensity <= 0f)
                 continue;
@@ -253,6 +251,19 @@ public sealed class RainGroundSplashController : MonoBehaviour
         }
 
         return false;
+    }
+
+    /// <summary>相机采样框只在本帧实际发射水花时计算一次。</summary>
+    internal static Rect GetSamplingBounds(Vector3 cameraPosition, float viewportHeight, float aspect,
+        Vector2 padding)
+    {
+        float viewportWidth = viewportHeight * Mathf.Max(0.1f, aspect);
+        float halfWidth = viewportWidth * 0.5f;
+        float halfHeight = viewportHeight * 0.5f;
+        return Rect.MinMaxRect(cameraPosition.x - halfWidth - padding.x,
+            cameraPosition.y - halfHeight - padding.y,
+            cameraPosition.x + halfWidth + padding.x,
+            cameraPosition.y + halfHeight + padding.y);
     }
 
     /// <summary>按随机大小与生命周期发射一颗环形水花。</summary>
