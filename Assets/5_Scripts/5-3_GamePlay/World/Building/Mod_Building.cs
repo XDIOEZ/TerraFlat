@@ -487,9 +487,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
         Save();
+        // Host 与服务端共用已扣料的库存，成功回执只同步表现，不能再次查找已清空的材料槽。
+        if (GameNetwork.HasStateAuthority)
+        {
+            CleanupGhost();
+            actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.RuntimeInventory.SyncHeldItemImmediately();
+            return;
+        }
+
         ApplySourceAmount(authoritativeRemainingAmount);
-        if (!GameNetwork.HasStateAuthority)
-            GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
+        GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
     }
 
     public void RejectNetworkPlacement(string reason)

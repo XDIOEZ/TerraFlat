@@ -12,3 +12,15 @@ test.runtime("building", "placement", {}, function(data)
         "重叠放置未拒绝或额外扣料/写入地形")
     assert(data.restored, "建造现场没有拆除自有墙并恢复地块")
 end, "真实格子建筑放置、扣料、失败回滚与占地冲突")
+
+for _, amount in ipairs({1, 2}) do
+    local expected = amount - 1
+    test.runtime("building", "host_placement_receipt", {amount = amount}, function(data)
+        assert(data.installed and data.afterServer == expected and data.remainingAmount == expected,
+            "服务端建造没有实际落地或没有准确扣除一份材料")
+        assert(data.afterReceipt == expected and data.receiptWrites == 0 and not data.pending,
+            "Host 成功或重复回执再次写入共享库存，或没有结束等待状态")
+        assert(#data.errors == 0, "Host 回执仍报告槽位解析或其他错误")
+        assert(data.restored, "Host 回执采样没有撤除自有建筑并恢复地块")
+    end, "Host 建造回执：材料初始数量 " .. amount)
+end
