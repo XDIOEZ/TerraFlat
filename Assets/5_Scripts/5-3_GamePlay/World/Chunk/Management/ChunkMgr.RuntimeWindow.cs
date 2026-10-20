@@ -118,7 +118,10 @@ public partial class ChunkMgr
     private readonly List<RuntimeWorldAddress> runtimePresentationRescheduleBuffer = new();
     private readonly Queue<RuntimePrefetchRequest> runtimePrefetchQueue = new();
     private readonly HashSet<RuntimeWorldAddress> runtimePrefetchTargets = new();
+    private readonly List<RuntimePrefetchRequest> runtimePrefetchSortBuffer = new();
     private readonly Queue<PooledChunkViewEntry> chunkViewPool = new();
+    private float nextChunkViewPoolMaintenanceAt;
+    private int lastChunkViewPoolRetainedCapacity = -1;
     private Transform runtimeChunkViewRoot;
     private bool runtimeWindowUsesLocalPresentation;
     private Rect runtimeActiveWindowBounds;
@@ -653,7 +656,8 @@ public partial class ChunkMgr
         int activeRadiusY = activeDistance.y - 1;
         int prefetchRadiusX = prefetchDistance.x - 1;
         int prefetchRadiusY = prefetchDistance.y - 1;
-        var requests = new List<RuntimePrefetchRequest>();
+        // 视野移动会反复重排，复用临时数组避免每次创建排序列表。
+        runtimePrefetchSortBuffer.Clear();
         for (int dx = -prefetchRadiusX; dx <= prefetchRadiusX; dx++)
         {
             for (int dy = -prefetchRadiusY; dy <= prefetchRadiusY; dy++)
@@ -672,17 +676,18 @@ public partial class ChunkMgr
                     TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
                     chunk.DataStatus == ChunkDataStatus.Ready)
                     continue;
-                requests.Add(new RuntimePrefetchRequest(address, profile, seed, topology, ring));
+                runtimePrefetchSortBuffer.Add(new RuntimePrefetchRequest(address, profile, seed, topology, ring));
             }
         }
 
-        requests.Sort((left, right) =>
+        runtimePrefetchSortBuffer.Sort((left, right) =>
         {
             int ring = left.Ring.CompareTo(right.Ring);
             return ring != 0 ? ring : left.Address.CompareTo(right.Address);
         });
-        for (int i = 0; i < requests.Count; i++)
-            runtimePrefetchQueue.Enqueue(requests[i]);
+        for (int i = 0; i < runtimePrefetchSortBuffer.Count; i++)
+            runtimePrefetchQueue.Enqueue(runtimePrefetchSortBuffer[i]);
+        runtimePrefetchSortBuffer.Clear();
 
         if (runtimePrefetchInFlight is RuntimeWorldAddress inFlight &&
             !runtimePrefetchTargets.Contains(inFlight) &&
@@ -1079,6 +1084,8 @@ public partial class ChunkMgr
         Transform viewRoot = GetRuntimeChunkViewRoot();
         while (chunkViewPool.Count > 0)
         {
+            // 取走后立即刷新下一次维护的截止时间，避免使用过时的队列元信息。
+            nextChunkViewPoolMaintenanceAt = 0f;
             PooledChunkViewEntry entry = chunkViewPool.Dequeue();
             ChunkView pooled = entry.TakeView();
             if (pooled == null)
@@ -1241,6 +1248,13 @@ public partial class ChunkMgr
             return;
 
         float now = Time.realtimeSinceStartup;
+        int retainedCapacity = RecommendedRuntimeChunkViewPoolCapacity;
+        // 只在池内容、目标容量变化或真实裁剪/销毁期限到达时遍历。
+        // 这是按资源生命周期触发的维护，不改变任何玩法更新频率。
+        if (retainedCapacity == lastChunkViewPoolRetainedCapacity &&
+            now < nextChunkViewPoolMaintenanceAt && chunkViewPool.Peek().View != null)
+            return;
+
         int entryCount = chunkViewPool.Count;
         for (int i = 0; i < entryCount; i++)
         {
@@ -1249,7 +1263,6 @@ public partial class ChunkMgr
                 chunkViewPool.Enqueue(entry);
         }
 
-        int retainedCapacity = RecommendedRuntimeChunkViewPoolCapacity;
         while (chunkViewPool.Count > retainedCapacity)
         {
             PooledChunkViewEntry oldest = chunkViewPool.Peek();
@@ -1278,6 +1291,18 @@ public partial class ChunkMgr
 
             chunkViewPool.Enqueue(entry);
         }
+
+        lastChunkViewPoolRetainedCapacity = retainedCapacity;
+        nextChunkViewPoolMaintenanceAt = float.PositiveInfinity;
+        foreach (PooledChunkViewEntry entry in chunkViewPool)
+        {
+            if (!entry.ResourcesTrimmed)
+                nextChunkViewPoolMaintenanceAt = Mathf.Min(nextChunkViewPoolMaintenanceAt,
+                    entry.PooledAt + PooledViewResourceTrimDelaySeconds);
+        }
+        if (chunkViewPool.Count > retainedCapacity)
+            nextChunkViewPoolMaintenanceAt = Mathf.Min(nextChunkViewPoolMaintenanceAt,
+                chunkViewPool.Peek().PooledAt + ChunkViewPoolDestroyDelaySeconds);
     }
 
     /// <summary>解除当前 ChunkView 的全部租约并送回对象池。</summary>
@@ -1293,6 +1318,7 @@ public partial class ChunkMgr
         view.gameObject.SetActive(false);
         // View 已属于创建时的世界根节点，回收不创建根节点，也不迁移到其它场景。
         chunkViewPool.Enqueue(new PooledChunkViewEntry(view, Time.realtimeSinceStartup, completed));
+        nextChunkViewPoolMaintenanceAt = 0f;
     }
 
     /// <summary>销毁 View 前再次确保表现、导航等全部租约已经释放。</summary>
@@ -1313,6 +1339,8 @@ public partial class ChunkMgr
     /// <summary>世界退出或管理器销毁时释放池内全部 View。</summary>
     private void DestroyRuntimeChunkViewPool()
     {
+        nextChunkViewPoolMaintenanceAt = 0f;
+        lastChunkViewPoolRetainedCapacity = -1;
         while (chunkViewPool.Count > 0)
         {
             PooledChunkViewEntry entry = chunkViewPool.Dequeue();
@@ -1386,6 +1414,7 @@ public partial class ChunkMgr
         runtimePresentationInProgressCount = 0;
         runtimePrefetchQueue.Clear();
         runtimePrefetchTargets.Clear();
+        runtimePrefetchSortBuffer.Clear();
         if (runtimePrefetchInFlight is RuntimeWorldAddress inFlight)
             CancelChunkDataRequest(inFlight);
         runtimePrefetchInFlight = null;

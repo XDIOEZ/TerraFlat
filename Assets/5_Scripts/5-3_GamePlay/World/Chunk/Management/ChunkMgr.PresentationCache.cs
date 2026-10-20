@@ -21,6 +21,8 @@ public partial class ChunkMgr
 
     private void RetainSceneTransitionChunkViews()
     {
+        // 太空交接会批量取出、丢弃和迁移池条目，回地表时重新核对维护期限。
+        nextChunkViewPoolMaintenanceAt = 0f;
         int available = chunkViewPool.Count;
         int retained = 0;
         GameRes resources = GameRes.ExistingInstance;

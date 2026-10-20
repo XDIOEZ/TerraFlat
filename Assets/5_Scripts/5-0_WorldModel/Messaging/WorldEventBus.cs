@@ -9,60 +9,83 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public sealed class WorldEventBus
     {
-        private readonly Dictionary<Type, List<Delegate>> _handlers =
-            new Dictionary<Type, List<Delegate>>();
-        private readonly Dictionary<WorldAddress, List<Action<ChunkCommitted>>> committedByAddress = new();
-        private readonly Dictionary<WorldAddress, List<Action<ChunkEvicted>>> evictedByAddress = new();
+        // 订阅发生变化才重新生成快照，避免每次广播都分配新的委托数组。
+        private sealed class HandlerList<TEvent>
+        {
+            private readonly List<Action<TEvent>> handlers = new();
+            private Action<TEvent>[] snapshot;
+
+            public int Count => handlers.Count;
+
+            public void Add(Action<TEvent> handler, bool allowDuplicate = false)
+            {
+                if (!allowDuplicate && handlers.Contains(handler)) return;
+                handlers.Add(handler);
+                snapshot = null;
+            }
+
+            public void Remove(Action<TEvent> handler)
+            {
+                if (handlers.Remove(handler)) snapshot = null;
+            }
+
+            // 回调期间增删订阅不会修改已取出的数组；重入广播会看到最新订阅。
+            public Action<TEvent>[] Snapshot => snapshot ??= handlers.ToArray();
+        }
+
+        private readonly Dictionary<Type, object> _handlers = new();
+        private readonly Dictionary<WorldAddress, HandlerList<ChunkCommitted>> committedByAddress = new();
+        private readonly Dictionary<WorldAddress, HandlerList<ChunkEvicted>> evictedByAddress = new();
 
         #region 区块地址定向通知
         public IDisposable SubscribeChunkCommitted(WorldAddress address, Action<ChunkCommitted> handler)
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
-            if (!committedByAddress.TryGetValue(address, out List<Action<ChunkCommitted>> handlers))
+            if (!committedByAddress.TryGetValue(address, out HandlerList<ChunkCommitted> handlers))
             {
-                handlers = new List<Action<ChunkCommitted>>();
+                handlers = new HandlerList<ChunkCommitted>();
                 committedByAddress.Add(address, handlers);
             }
-            handlers.Add(handler);
+            handlers.Add(handler, allowDuplicate: true);
             return new AddressSubscription<ChunkCommitted>(committedByAddress, handlers, address, handler);
         }
 
         public IDisposable SubscribeChunkEvicted(WorldAddress address, Action<ChunkEvicted> handler)
         {
             if (handler == null) throw new ArgumentNullException(nameof(handler));
-            if (!evictedByAddress.TryGetValue(address, out List<Action<ChunkEvicted>> handlers))
+            if (!evictedByAddress.TryGetValue(address, out HandlerList<ChunkEvicted> handlers))
             {
-                handlers = new List<Action<ChunkEvicted>>();
+                handlers = new HandlerList<ChunkEvicted>();
                 evictedByAddress.Add(address, handlers);
             }
-            handlers.Add(handler);
+            handlers.Add(handler, allowDuplicate: true);
             return new AddressSubscription<ChunkEvicted>(evictedByAddress, handlers, address, handler);
         }
 
-        private static void PublishAddress<TEvent>(Dictionary<WorldAddress, List<Action<TEvent>>> table,
+        private static void PublishAddress<TEvent>(Dictionary<WorldAddress, HandlerList<TEvent>> table,
             WorldAddress address, TEvent message)
         {
-            if (!table.TryGetValue(address, out List<Action<TEvent>> handlers)) return;
-            Action<TEvent>[] snapshot = handlers.ToArray();
+            if (!table.TryGetValue(address, out HandlerList<TEvent> handlers)) return;
+            Action<TEvent>[] snapshot = handlers.Snapshot;
             for (int i = 0; i < snapshot.Length; i++) snapshot[i](message);
         }
 
         private sealed class AddressSubscription<TEvent> : IDisposable
         {
-            private Dictionary<WorldAddress, List<Action<TEvent>>> table;
-            private readonly List<Action<TEvent>> subscribedList;
+            private Dictionary<WorldAddress, HandlerList<TEvent>> table;
+            private readonly HandlerList<TEvent> subscribedList;
             private readonly WorldAddress address;
             private readonly Action<TEvent> handler;
 
-            internal AddressSubscription(Dictionary<WorldAddress, List<Action<TEvent>>> table,
-                List<Action<TEvent>> subscribedList, WorldAddress address, Action<TEvent> handler)
+            internal AddressSubscription(Dictionary<WorldAddress, HandlerList<TEvent>> table,
+                HandlerList<TEvent> subscribedList, WorldAddress address, Action<TEvent> handler)
             { this.table = table; this.subscribedList = subscribedList;
               this.address = address; this.handler = handler; }
 
             public void Dispose()
             {
                 if (table == null) return;
-                if (table.TryGetValue(address, out List<Action<TEvent>> handlers) &&
+                if (table.TryGetValue(address, out HandlerList<TEvent> handlers) &&
                     ReferenceEquals(handlers, subscribedList))
                 {
                     handlers.Remove(handler);
@@ -83,37 +106,51 @@ namespace FlatWorld.WorldModel
                 throw new ArgumentNullException(nameof(handler));
 
             Type eventType = typeof(TEvent);
-            if (!_handlers.TryGetValue(eventType, out List<Delegate> handlers))
+            if (!_handlers.TryGetValue(eventType, out object registered))
             {
-                handlers = new List<Delegate>();
-                _handlers.Add(eventType, handlers);
+                registered = new HandlerList<TEvent>();
+                _handlers.Add(eventType, registered);
             }
-            if (!handlers.Contains(handler))
-                handlers.Add(handler);
+            ((HandlerList<TEvent>)registered).Add(handler);
             return new Subscription<TEvent>(this, handler);
         }
 
         /// <summary>把消息立刻告诉所有关心这种消息的接收者。</summary>
         public void Publish<TEvent>(TEvent worldEvent)
         {
-            if (worldEvent is ChunkCommitted committed)
+            // 大多数世界消息是值类型；先按静态类型分流，避免每次 is 判断装箱。
+            if (typeof(TEvent) == typeof(ChunkCommitted))
+            {
+                ChunkCommitted committed = (ChunkCommitted)(object)worldEvent;
                 PublishAddress(committedByAddress, committed.Address, committed);
-            else if (worldEvent is ChunkEvicted evicted)
+            }
+            else if (typeof(TEvent) == typeof(ChunkEvicted))
+            {
+                ChunkEvicted evicted = (ChunkEvicted)(object)worldEvent;
                 PublishAddress(evictedByAddress, evicted.Address, evicted);
-            if (!_handlers.TryGetValue(typeof(TEvent), out List<Delegate> handlers) || handlers.Count == 0)
+            }
+            else if (!typeof(TEvent).IsValueType)
+            {
+                // 兼容显式通过 object/interface 发送的装箱事件。
+                if (worldEvent is ChunkCommitted committed)
+                    PublishAddress(committedByAddress, committed.Address, committed);
+                else if (worldEvent is ChunkEvicted evicted)
+                    PublishAddress(evictedByAddress, evicted.Address, evicted);
+            }
+            if (!_handlers.TryGetValue(typeof(TEvent), out object registered) ||
+                ((HandlerList<TEvent>)registered).Count == 0)
                 return;
 
-            // 先复制接收者名单。这样接收者在处理消息时增删订阅，也不会弄乱本轮通知。
-            Delegate[] snapshot = handlers.ToArray();
+            Action<TEvent>[] snapshot = ((HandlerList<TEvent>)registered).Snapshot;
             for (int i = 0; i < snapshot.Length; i++)
-                ((Action<TEvent>)snapshot[i]).Invoke(worldEvent);
+                snapshot[i](worldEvent);
         }
 
         /// <summary>看看现在有多少接收者在等某种消息，主要用于检查和测试。</summary>
         public int SubscriptionCount<TEvent>()
         {
-            return _handlers.TryGetValue(typeof(TEvent), out List<Delegate> handlers)
-                ? handlers.Count
+            return _handlers.TryGetValue(typeof(TEvent), out object registered)
+                ? ((HandlerList<TEvent>)registered).Count
                 : 0;
         }
 
@@ -127,8 +164,9 @@ namespace FlatWorld.WorldModel
 
         private void Unsubscribe<TEvent>(Action<TEvent> handler)
         {
-            if (!_handlers.TryGetValue(typeof(TEvent), out List<Delegate> handlers))
+            if (!_handlers.TryGetValue(typeof(TEvent), out object registered))
                 return;
+            HandlerList<TEvent> handlers = (HandlerList<TEvent>)registered;
             handlers.Remove(handler);
             if (handlers.Count == 0)
                 _handlers.Remove(typeof(TEvent));
