@@ -72,24 +72,23 @@ public class VisualEffectManager : SingletonAutoMono<VisualEffectManager>
 
     private void Update()
     {
+        // 只移除已经到期或失效的回收任务，未到期项保持原位，避免每帧反复移动 List 尾部数据。
         float now = Time.time;
         for (int i = pendingReturns.Count - 1; i >= 0; i--)
         {
             PendingReturn pending = pendingReturns[i];
-            pendingReturns.RemoveAt(i);
-
             if (pending.EffectObject == null)
-                continue;
-
-            if (activeEffectNames.ContainsKey(pending.EffectObject) &&
-                pending.EffectObject.activeInHierarchy &&
-                now < pending.ReturnAt)
             {
-                pendingReturns.Add(pending);
+                pendingReturns.RemoveAt(i);
                 continue;
             }
 
-            if (activeEffectNames.ContainsKey(pending.EffectObject))
+            bool active = activeEffectNames.ContainsKey(pending.EffectObject);
+            if (active && pending.EffectObject.activeInHierarchy && now < pending.ReturnAt)
+                continue;
+
+            pendingReturns.RemoveAt(i);
+            if (active)
                 ReturnEffectToPool(pending.EffectName, pending.EffectObject);
         }
     }

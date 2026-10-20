@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-20 延迟特效回收队列优化：VisualEffectManager.Update 不再每帧对有效未到期 PendingReturn 执行 RemoveAt+Add（会导致 List 元素搬移）；到期、失活和对象销毁仍沿原条件回收/剔除，提前归池仍注销旧任务。现有 Lua 覆盖正常特效池与 Owner 清理，尚未专测大量混合到期时间、同帧失活与重新租用；本轮未运行完整 Unity 编译或 PlayMode。
+
 2026-10-20 投射物飞行拖尾优化：ProjectileFlightTrailPresenter 每帧仍同步源排序，但只在 Layer/Sorting 值变化时写入；重复发射沿用已配置的颜色渐变，改变 TrailColor 或重建 TrailRenderer 后重新提交。保留实际飞行判定、尾部锚点、发射/回收及 TrailRenderer 清理语义。现有 Lua 未覆盖频繁发射、动态排序、渐变变化和最终拖尾画面；本轮未运行完整 Unity 编译、PlayMode 或 FPS/GC 前后对比。
 
 2026-10-20 交互描边稳定态优化：InteractionTargetOutline 对相同 Sprite、颜色、排序、裁剪值跳过 Renderer/MPB 重复提交，代理相对 Sprite 的变换仅创建时归零，源动画和材质裁剪仍逐帧采样。重新高亮或材质更换重新提交，独立描边不参与 ActorRenderEffectController 的 MPB 合成。当前 Lua 尚未覆盖描边目标变更、动态裁剪和最终白边画面；本轮只做静态检查，未运行 PlayMode 或 FPS 实测。
