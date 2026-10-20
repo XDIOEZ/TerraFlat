@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Diagnostics;
 using FlatWorld.Spaceflight;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -17,6 +18,66 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/ship_part_placement_state", ServiceShipPartPlacementState);
         operations.Add("rendering/ship_block_visual", ServiceShipBlockVisual);
         operations.Add("rendering/effect_composition", RenderEffectComposition);
+        operations.Add("rendering/snow_sparse_refresh", SnowSparseRefresh);
+    }
+
+    /// <summary>对照正式雪厚采样，覆盖无雪跳过、有效覆盖面与玩家编辑的边界。</summary>
+    private static JObject SnowSparseRefresh(JObject args)
+    {
+        using var buffer = new ChunkTerrainBuffer(2, 2);
+        buffer.SetCell(0, 0, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
+        buffer.SetCell(1, 0, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
+        using ChunkTerrainData terrain = buffer.Seal();
+
+        bool emptySkipped = !WorldSnowSystem.HasPotentialSnow(terrain);
+        terrain.SetEnvironmentValue(SnowDepthLayer.LayerId, 0, 0, 0f);
+        bool zeroLayerSkipped = !WorldSnowSystem.HasPotentialSnow(terrain);
+        float maximumError = 0f;
+        int compared = 0;
+
+        void Compare(int x, int y)
+        {
+            TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
+            float original = WorldSnowSystem.GetSurfaceDepth(terrain, x, y, null, 0f);
+            float reused = WorldSnowSystem.GetSurfaceDepth(terrain, x, y, surface, null, 0f);
+            maximumError = Mathf.Max(maximumError, Mathf.Abs(original - reused));
+            compared++;
+        }
+
+        terrain.SetEnvironmentValue(SnowDepthLayer.LayerId, 0, 0, 0.3f);
+        bool naturalDetected = WorldSnowSystem.HasPotentialSnow(terrain);
+        Compare(0, 0);
+        terrain.SetEnvironmentValue(SnowDepthLayer.LayerId, 0, 0, 0f);
+
+        terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, 0.4f);
+        bool weatherDetected = WorldSnowSystem.HasPotentialSnow(terrain);
+        Compare(0, 0);
+        terrain.SetEnvironmentValue(WorldSnowSystem.WeatherDepthLayer, 0, 0, 0f);
+
+        terrain.SetEnvironmentValue(WorldSnowInteraction.EditedLayer, 0, 0, 1f);
+        terrain.SetEnvironmentValue(WorldSnowInteraction.DepthLayer, 0, 0, 0.7f);
+        terrain.SetEnvironmentValue(WorldSnowInteraction.SeasonLayer, 0, 0, 0.2f);
+        bool editedDetected = WorldSnowSystem.HasPotentialSnow(terrain);
+        Compare(0, 0);
+
+        TerrainSupportLayer.Set(terrain, 0, 0, 2, 1);
+        Compare(0, 0);
+        terrain.SetCell(1, 0, default);
+        Compare(1, 0);
+
+        terrain.SetEnvironmentValue(WorldSnowInteraction.EditedLayer, 0, 0, 0f);
+        bool clearedSkipped = !WorldSnowSystem.HasPotentialSnow(terrain);
+        return new JObject
+        {
+            ["emptySkipped"] = emptySkipped,
+            ["zeroLayerSkipped"] = zeroLayerSkipped,
+            ["naturalDetected"] = naturalDetected,
+            ["weatherDetected"] = weatherDetected,
+            ["editedDetected"] = editedDetected,
+            ["clearedSkipped"] = clearedSkipped,
+            ["compared"] = compared,
+            ["maximumError"] = maximumError
+        };
     }
 
     // 独立四角基准对照正式仿射包围盒，覆盖镜像、偏心点、非等比缩放和三维旋转。

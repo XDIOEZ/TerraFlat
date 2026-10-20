@@ -30,6 +30,27 @@ public static class WorldSnowSystem
 
     public const string WeatherDepthLayer = "snow.weather.depth";
 
+    /// <summary>空雪层直接读取数组确认，避免无雪区块逐格执行地表与液体查询。</summary>
+    internal static bool HasPotentialSnow(ChunkTerrainData terrain)
+    {
+        if (terrain == null || terrain.IsDisposed)
+            return false;
+        // 玩家编辑层即使暂时没有雪，也保留原计算路径处理天气与历史差量。
+        return HasPositiveValues(terrain, SnowDepthLayer.LayerId) ||
+               HasPositiveValues(terrain, WeatherDepthLayer) ||
+               HasPositiveValues(terrain, WorldSnowInteraction.EditedLayer);
+    }
+
+    private static bool HasPositiveValues(ChunkTerrainData terrain, string layerId)
+    {
+        if (!terrain.TryGetEnvironmentLayer(layerId, out ReadOnlyMemory<float> values))
+            return false;
+        ReadOnlySpan<float> cells = values.Span;
+        for (int i = 0; i < cells.Length; i++)
+            if (cells[i] > 0f) return true;
+        return false;
+    }
+
     public static float GetWeatherDepth(ChunkTerrainData terrain, int x, int y)
     {
         if (terrain == null || terrain.IsDisposed ||
@@ -63,7 +84,23 @@ public static class WorldSnowSystem
             WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)
             return 0f;
 
-        TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
+        return ResolveSurfaceDepth(terrain, x, y, TerrainSupportLayer.GetSurfaceCell(terrain, x, y),
+            seasonalSnow, baselineOffset);
+    }
+
+    /// <summary>批量绘制复用调用方已经取得的有效地表，避免为同格重复解析支撑面。</summary>
+    internal static float GetSurfaceDepth(ChunkTerrainData terrain, int x, int y, TerrainCell surface,
+        SnowCoverState seasonalSnow, float baselineOffset)
+    {
+        if (terrain == null || terrain.IsDisposed ||
+            WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f)
+            return 0f;
+        return ResolveSurfaceDepth(terrain, x, y, surface, seasonalSnow, baselineOffset);
+    }
+
+    private static float ResolveSurfaceDepth(ChunkTerrainData terrain, int x, int y, TerrainCell surface,
+        SnowCoverState seasonalSnow, float baselineOffset)
+    {
         if (surface.GroundTileId == 0)
             return 0f;
 

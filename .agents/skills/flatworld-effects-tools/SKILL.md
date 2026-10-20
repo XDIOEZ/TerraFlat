@@ -64,6 +64,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 地块高低阴影只由 `TerrainHeightShadowManager` 提交：读取 `TerrainSurfaceHeightLayer` 的有效表面与邻格顶部，高侧投到低侧，同高无边；正整数层差只作 0/1 边缘判断，阴影深浅与宽度固定，不按高差衰减。地形、墙脚、地板和平台共用 `TerrainHeightShadow` BRG 层、一张格子网格和材质，角上取最大值。`GroundElevationShadowSettings` 统一控制显隐与宽度；生成高度保留，角色/太阳阴影仍独立。
 - 高低阴影脏格采用双缓冲去重队列：仅扫描发生变化的格，提交时新通知留待下一轮，提交失败/异常保留未完成格，整块重绑才全量枚举；规则 `rendering/terrain_shadow_dirty_queue`。
 - 天然水面统一低于同地势岸边 1 层，不跟随天然底床的 2～3 层深浅变化；抽干才露出真实底床。普通地面倒水仍高于底床 1 层，玩家采挖/填土和原始地势照常叠加，平台仍与地面基准齐平；统一高度层只读取天然凹陷，不识别具体河流来源或改写真实水量。
+- 区块覆雪 ChunkSnowCoverRenderer 在没有天然/天气/玩家编辑雪且旧表现为空时只检查雪层正值，跳过全格渲染刷新；有雪时共享已查询的有效地表以免重复求支撑面，Owner 重建的空雪区块不提交。规则 `rendering/snow_sparse_refresh` 对比原雪厚入口和复用入口。
 - Blocking 静态墙共用 ChunkLightOccluderRenderer/selfShadows；局部体积光同时使用有效 volumetricShadows。selfShadows 会影响墙区重叠 Lit Sprite，自发光区域由独立 Unlit/Emissive 的 Max 混合保颜色下限。
 - 静态墙阴影由 `ChunkLightOccluderVisibilityScheduler` 在渲染前按 URP 已登记局部投影光筛选，灯/墙/变换不变时复用结果；候选矩形与 `EnabledOccluderCount` 分开。Point 使用含 Z 的保守球相交，非 Point 或适配失败保留全部，恢复当帧补 `ShadowCaster2D.Update`。
 - 洞口环境采光由 `DimensionTravelProgressStore.ReadCache` 和 `CaveExitAmbientLightCache` 维护；入口/锚点变化才更新出口集合，玩家位置/拓扑变化才重算距离，不定时解析角色 JSON。

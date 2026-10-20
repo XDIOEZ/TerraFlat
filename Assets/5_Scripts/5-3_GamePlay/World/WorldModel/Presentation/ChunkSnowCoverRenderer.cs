@@ -20,6 +20,7 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     private float refreshPhase; // 降雪重新开始时保持错峰。
     private int[] visibleCoverage; // 保存真实层数，玩家雪堆可以超过十层。
     private int[] visibleWallCoverage; // 墙体出现和拆除也触发刷新。
+    private bool hasVisibleSnow; // 无雪时跳过 BRG 重建和多余的全格采样。
     private long sampledTerrainRevision; // 地形、水面或支撑面变化时重新绘制。
     private bool terrainDirty; // 非雪天的地形改动也要更新现有覆盖。
 
@@ -62,6 +63,7 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         wallSnowMesh?.Dispose(); wallSnowMesh = null;
         owner = null;
         chunk = null; visibleCoverage = null; visibleWallCoverage = null;
+        hasVisibleSnow = false;
         sampledTerrainRevision = -1;
         terrainDirty = false;
         enabled = false;
@@ -123,6 +125,14 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>按当前有效支撑面遮罩绘制雪，平台移除后下方水面不留悬空白块。</summary>
     private void Refresh()
     {
+        // 自然雪层即使全零也始终存在，先按数组扫描零值才能真正跳过暖区块。
+        if (!hasVisibleSnow && !WorldSnowSystem.HasPotentialSnow(chunk.Terrain))
+        {
+            sampledTerrainRevision = chunk.Terrain.Revision;
+            return;
+        }
+
+        bool hasSnow = false;
         groundSnowMesh?.BeginBulkUpdate();
         try
         {
@@ -131,8 +141,9 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
             {
                 TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(chunk.Terrain, x, y);
                 float coverage = WorldSnowSystem.GetSurfaceDepth(
-                    chunk.Terrain, x, y, null, 0f);
+                    chunk.Terrain, x, y, surface, null, 0f);
                 int value = Mathf.RoundToInt(coverage * SnowDepthLayer.LayerCount);
+                hasSnow |= value > 0;
                 int index = y * chunk.Terrain.Width + x;
                 int wallValue = surface.BlockingTileId != 0 ? value : 0;
                 if (visibleWallCoverage[index] != wallValue)
@@ -146,13 +157,14 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
             }
         }
         finally { FinishGroundSnowUpdate(); }
+        hasVisibleSnow = hasSnow;
         sampledTerrainRevision = chunk.Terrain.Revision;
     }
 
     /// <summary>Owner 全量重建后按已采样覆盖补齐积雪实例。</summary>
     private void ResubmitVisible()
     {
-        if (chunk?.Terrain == null || visibleCoverage == null) return;
+        if (chunk?.Terrain == null || visibleCoverage == null || !hasVisibleSnow) return;
         groundSnowMesh?.BeginBulkUpdate();
         try
         {

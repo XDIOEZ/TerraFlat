@@ -520,6 +520,15 @@ test.system("rendering", "fog_transition", { steps = {
     assert(not s[14].transitioning and s[14].clearRadius == 5,
         "屏外弱雾转强雾满 30 秒后没有达到目标")
 end, "天气雾加载首帧、视口端点改变与屏外弱雾接续")
+test.system("rendering", "snow_sparse_refresh", {}, function(data)
+    assert(data.emptySkipped and data.zeroLayerSkipped and data.clearedSkipped,
+        "没有积雪的区块仍进行逐格渲染扫描")
+    assert(data.naturalDetected and data.weatherDetected and data.editedDetected,
+        "自然雪、天气雪或玩家编辑雪被错误当作空区块")
+    assert(data.compared == 5 and data.maximumError == 0,
+        "复用有效地表改变了覆盖面、编辑雪或无地面时的雪厚")
+end, "暖区块跳过全格覆雪扫描与已有雪厚结果一致")
+
 test.system("rendering", "effect_composition", {}, function(data)
     assert(data.snowIdleMin == 42, "仅覆雪且参数未变时重复写入了MPB")
     assert(math.abs(data.snowDisabledMin + 4) < 0.0001, "效果启停后没有重新提交材质参数")
