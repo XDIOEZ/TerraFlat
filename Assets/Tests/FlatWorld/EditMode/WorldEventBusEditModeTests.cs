@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using NUnit.Framework;
+using ModelWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 namespace FlatWorld.Tests.EditMode
 {
@@ -15,7 +16,7 @@ namespace FlatWorld.Tests.EditMode
             var bus = new WorldEventBus();
             int delivered = 0;
             using var subscription = bus.Subscribe<ChunkDataStatusChanged>(_ => delivered++);
-            var address = new WorldAddress("surface", new Int2(0, 0));
+            var address = new ModelWorldAddress("surface", new Int2(0, 0));
             var message = new ChunkDataStatusChanged(address, ChunkDataStatus.Requested, ChunkDataStatus.Ready);
 
             for (int i = 0; i < 32; i++) bus.Publish(message);
@@ -31,7 +32,7 @@ namespace FlatWorld.Tests.EditMode
         public void AddressPublish_ChunkCommittedAndEvicted_AllocateNoMemoryAfterWarmup()
         {
             var bus = new WorldEventBus();
-            var address = new WorldAddress("surface", new Int2(0, 0));
+            var address = new ModelWorldAddress("surface", new Int2(0, 0));
             int delivered = 0;
             using var committed = bus.SubscribeChunkCommitted(address, _ => delivered++);
             using var evicted = bus.SubscribeChunkEvicted(address, _ => delivered++);
@@ -76,8 +77,8 @@ namespace FlatWorld.Tests.EditMode
         public void AddressSubscriptions_AreIsolatedAndKeepDuplicateSubscriptionBehavior()
         {
             var bus = new WorldEventBus();
-            var firstAddress = new WorldAddress("surface", new Int2(0, 0));
-            var secondAddress = new WorldAddress("surface", new Int2(16, 0));
+            var firstAddress = new ModelWorldAddress("surface", new Int2(0, 0));
+            var secondAddress = new ModelWorldAddress("surface", new Int2(16, 0));
             int committed = 0;
             int evicted = 0;
             Action<ChunkCommitted> callback = _ => committed++;
@@ -105,7 +106,7 @@ namespace FlatWorld.Tests.EditMode
         public void AddressPublish_BoxedEvents_StillNotifyAddressSubscribers()
         {
             var bus = new WorldEventBus();
-            var address = new WorldAddress("surface", new Int2(32, 0));
+            var address = new ModelWorldAddress("surface", new Int2(32, 0));
             int delivered = 0;
             using var added = bus.SubscribeChunkCommitted(address, _ => delivered += 1);
             using var removed = bus.SubscribeChunkEvicted(address, _ => delivered += 10);
