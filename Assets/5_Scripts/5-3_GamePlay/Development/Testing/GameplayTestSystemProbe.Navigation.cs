@@ -21,6 +21,165 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
         operations.Add("navigation/avoidance_topology", NavigationAvoidanceTopology);
         operations.Add("navigation/topology_bounds_cache", NavigationTopologyBoundsCache);
+        operations.Add("navigation/goal_cache_maintenance", NavigationGoalCacheMaintenance);
+        operations.Add("navigation/goal_path_buffers", NavigationGoalPathBuffers);
+    }
+
+    /// <summary>真实逆向目标场反复生成路径，检查缓冲复用不会泄漏到独立请求的路点数组。</summary>
+    private static JObject NavigationGoalPathBuffers(JObject args)
+    {
+        var grid = new WorldNavigationGrid();
+        for (int x = 0; x <= 3; x++)
+            grid.SetCell(new Vector2Int(x, 0), 1, true);
+        var goal = new Vector2Int(3, 0);
+        var start = new Vector2Int(0, 0);
+        var field = new WorldNavigationManager.GoalField(goal, grid.Revision, 0f);
+        for (int x = 3; x > 0; x--)
+        {
+            if (!field.TryPopNext(out _))
+                throw new InvalidOperationException("逆向导航缓存无法弹出目标场节点。");
+            field.TryRelax(new Vector2Int(x - 1, 0), new Vector2Int(x, 0), (4 - x) * 10);
+        }
+        if (!field.TryPopNext(out _))
+            throw new InvalidOperationException("逆向导航缓存没有收敛到起点。");
+
+        var request = new WorldNavigationManager.PathRequest(1, new Vector2(.5f, .5f),
+            new Vector2(3.5f, .5f), null, int.MaxValue) { StartCell = start, GoalCell = goal };
+        bool built = field.TryBuildPath(start, request, grid, 64,
+            out Vector2[] first, out Vector2 resolved, out bool reaches, out int cost);
+        bool correct = built && reaches && cost == 30 &&
+            first.Length == 1 && first[0] == new Vector2(3.5f, .5f) &&
+            resolved == first[0];
+        for (int i = 0; i < 32; i++)
+            field.TryBuildPath(start, request, grid, 64, out _, out _, out _, out _);
+
+        const int iterations = 256;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        int successes = 0;
+        for (int i = 0; i < iterations; i++)
+        {
+            if (field.TryBuildPath(start, request, grid, 64,
+                    out Vector2[] points, out _, out bool completed, out int total) &&
+                completed && total == 30 && points.Length == 1)
+                successes++;
+        }
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        // 返回的数组归调用者所有，之后的缓冲复用及其写入不能改变历史路线。
+        bool isolated = false;
+        if (built && first.Length > 0)
+        {
+            first[0] = new Vector2(99f, 99f);
+            bool nextBuilt = field.TryBuildPath(start, request, grid, 64,
+                out Vector2[] second, out _, out _, out _);
+            isolated = nextBuilt && !ReferenceEquals(first, second) &&
+                first[0] == new Vector2(99f, 99f) && second.Length == 1 &&
+                second[0] == new Vector2(3.5f, .5f);
+        }
+
+        return new JObject
+        {
+            ["correct"] = correct, ["isolated"] = isolated,
+            ["iterations"] = iterations, ["successes"] = successes,
+            ["allocatedBytes"] = allocated
+        };
+    }
+
+    /// <summary>以逐帧全量清理为对照，验证目标场最早到期调度不会漏掉取消、复用或寿命变化。</summary>
+    private static JObject NavigationGoalCacheMaintenance(JObject args)
+    {
+        var scheduled = new List<(int Id, float Used, bool Waiting)>();
+        var reference = new List<(int Id, float Used, bool Waiting)>();
+        float deadline = float.NegativeInfinity;
+        float scheduledLifetime = float.NaN;
+        float lifetime = 3f;
+        int scans = 0, skipped = 0, created = 0;
+        bool identical = true;
+
+        for (int frame = 0; frame < 2400; frame++)
+        {
+            float now = frame * 0.05f;
+            if (frame % 17 == 0 && scheduled.Count < 48)
+            {
+                var entry = (++created, now, frame % 4 == 0);
+                scheduled.Add(entry);
+                reference.Add(entry);
+                deadline = WorldNavigationManager.EarlierGoalPruneAt(deadline, now, lifetime);
+            }
+            if (frame % 13 == 0 && scheduled.Count > 0)
+            {
+                int index = frame / 13 % scheduled.Count;
+                var entry = scheduled[index];
+                // 被使用过的旧截止时间是保守下界，允许提早扫描但不能迟到。
+                var updated = (entry.Id, now, entry.Waiting);
+                scheduled[index] = updated;
+                reference[index] = updated;
+            }
+            if (frame % 29 == 0 && scheduled.Count > 0)
+            {
+                int index = frame / 29 % scheduled.Count;
+                var entry = scheduled[index];
+                var updated = (entry.Id, entry.Used, !entry.Waiting);
+                scheduled[index] = updated;
+                reference[index] = updated;
+            }
+            if (frame % 71 == 0 && scheduled.Count > 0)
+            {
+                int index = frame / 71 % scheduled.Count;
+                scheduled.RemoveAt(index);
+                reference.RemoveAt(index);
+            }
+            if (frame % 233 == 0)
+                lifetime = frame % 2 == 0 ? 0.5f : 3f;
+
+            // 基准旧逻辑：每一帧都遍历全部目标，严格超过生命周期才清除。
+            for (int index = reference.Count - 1; index >= 0; index--)
+                if (!reference[index].Waiting && now - reference[index].Used > lifetime)
+                    reference.RemoveAt(index);
+
+            if (WorldNavigationManager.IsGoalPruneScanDue(now, deadline, lifetime, scheduledLifetime))
+            {
+                scans++;
+                float next = float.PositiveInfinity;
+                for (int index = scheduled.Count - 1; index >= 0; index--)
+                {
+                    var entry = scheduled[index];
+                    if (!entry.Waiting && now - entry.Used > lifetime)
+                    {
+                        scheduled.RemoveAt(index);
+                        continue;
+                    }
+                    next = WorldNavigationManager.EarlierGoalPruneAt(next, entry.Used, lifetime);
+                }
+                deadline = next;
+                scheduledLifetime = lifetime;
+            }
+            else skipped++;
+
+            identical &= scheduled.Count == reference.Count;
+            for (int index = 0; identical && index < scheduled.Count; index++)
+                identical &= scheduled[index].Id == reference[index].Id;
+        }
+
+        float steadyDeadline = WorldNavigationManager.EarlierGoalPruneAt(
+            float.PositiveInfinity, 100f, 3f);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        int unnecessaryScans = 0;
+        for (int i = 0; i < 65536; i++)
+            if (WorldNavigationManager.IsGoalPruneScanDue(100f + (i % 120) * .025f,
+                    steadyDeadline, 3f, 3f))
+                unnecessaryScans++;
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        return new JObject
+        {
+            ["identical"] = identical, ["frames"] = 2400,
+            ["scans"] = scans, ["skipped"] = skipped, ["created"] = created,
+            ["earlierAdded"] = WorldNavigationManager.EarlierGoalPruneAt(20f, 10f, 3f) == 13f,
+            ["lifetimeChanged"] = WorldNavigationManager.IsGoalPruneScanDue(1f, 50f, 1f, 3f),
+            ["noPrematurePrune"] = !WorldNavigationManager.IsGoalPruneScanDue(12f, steadyDeadline, 3f, 3f),
+            ["unnecessaryScans"] = unnecessaryScans, ["steadyAllocatedBytes"] = allocated
+        };
     }
 
     /// <summary>缓存必须和正式世界边界算法一致，动态配置或星球身份变化立即失效。</summary>

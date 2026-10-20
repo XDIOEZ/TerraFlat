@@ -108,6 +108,13 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     private int observedGridRevision;
     private int scheduleIndex;
     private string activeWorldKey;
+    // 目标场只会因新建、扩展或删除而改变格数量；稳态帧无需反复遍历所有目标场求和。
+    private bool cachedGoalCellCountDirty = true;
+    private int cachedGoalCellCount;
+    // 所有目标场（包括当前有等待请求的）都贡献保守的最早过期时间。
+    // 新增目标会将截止时间前移；更新 LastUsedTime 只会让它推迟，不会漏清理。
+    private float nextGoalPruneAt = float.NegativeInfinity;
+    private float scheduledGoalFieldLifetime = float.NaN;
 
     public bool Init { get; private set; }
     public static WorldNavigationManager ExistingInstance { get; private set; }
@@ -219,6 +226,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         FailAllRequests();
         fieldsByGoal.Clear();
         fieldSchedule.Clear();
+        cachedGoalCellCountDirty = true;
         admissionQueue.Clear();
         grid.Clear();
         RecycleAllMapCellSets();
@@ -236,6 +244,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     private static readonly ProfilerMarker RegisterChunkRemoveMarker = new("FlatWorld.Navigation.RegisterChunk.RemovePrevious");
     private static readonly ProfilerMarker RegisterChunkPopulateMarker = new("FlatWorld.Navigation.RegisterChunk.PopulateCells");
     private static readonly ProfilerMarker RegisterChunkEndMarker = new("FlatWorld.Navigation.RegisterChunk.EndBatch");
+    private static readonly ProfilerMarker GoalPruneScanMarker = new("FlatWorld.Navigation.GoalCache.PruneScan");
+    private static readonly ProfilerMarker GoalCellCountScanMarker = new("FlatWorld.Navigation.GoalCache.CountScan");
 
     public void RegisterMap(Map map)
     {
@@ -615,6 +625,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             FailAllRequests();
             fieldsByGoal.Clear();
             fieldSchedule.Clear();
+            cachedGoalCellCountDirty = true;
             admissionQueue.Clear();
             grid.Clear();
             RecycleAllMapCellSets();
@@ -839,7 +850,11 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 continue;
             }
 
-            if (!ExpandGoalField(field))
+            int storedBefore = field.StoredCellCount;
+            bool expanded = ExpandGoalField(field);
+            if (storedBefore != field.StoredCellCount)
+                cachedGoalCellCountDirty = true;
+            if (!expanded)
             {
                 field.MarkFailed();
                 DrainFailedRequests(field, Mathf.Max(1, maxPathBuildsPerExpansion));
@@ -1003,6 +1018,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         field = new GoalField(goal, grid.Revision, Time.unscaledTime);
         fieldsByGoal[goal] = field;
         fieldSchedule.Add(field);
+        cachedGoalCellCountDirty = true;
+        nextGoalPruneAt = EarlierGoalPruneAt(nextGoalPruneAt, field.LastUsedTime, goalFieldLifetime);
         return true;
     }
 
@@ -1169,6 +1186,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
             fieldsByGoal.Clear();
             fieldSchedule.Clear();
+            cachedGoalCellCountDirty = true;
             scheduleIndex = 0;
         }
         else
@@ -1215,6 +1233,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             fieldsByGoal.Remove(field.Goal);
 
         fieldSchedule.RemoveAt(index);
+        cachedGoalCellCountDirty = true;
         if (scheduleIndex > index)
             scheduleIndex--;
         if (scheduleIndex >= fieldSchedule.Count)
@@ -1416,15 +1435,34 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     private void PruneGoalFields()
     {
         float now = Time.unscaledTime;
+        float lifetime = goalFieldLifetime;
+        if (!IsGoalPruneScanDue(now, nextGoalPruneAt, lifetime, scheduledGoalFieldLifetime))
+            return;
+
+        using var pruneScope = GoalPruneScanMarker.Auto();
+        float nextDeadline = float.PositiveInfinity;
         for (int i = fieldSchedule.Count - 1; i >= 0; i--)
         {
             GoalField field = fieldSchedule[i];
-            if (field.HasWaitingRequests || now - field.LastUsedTime <= goalFieldLifetime)
+            if (!field.HasWaitingRequests && now - field.LastUsedTime > lifetime)
+            {
+                RemoveFieldAt(i);
                 continue;
-
-            RemoveFieldAt(i);
+            }
+            nextDeadline = EarlierGoalPruneAt(nextDeadline, field.LastUsedTime, lifetime);
         }
+        nextGoalPruneAt = nextDeadline;
+        scheduledGoalFieldLifetime = lifetime;
     }
+
+    /// <summary>跳过到期时间尚未到的目标场，不改变原有严格大于生命周期才逐出的规则。</summary>
+    internal static bool IsGoalPruneScanDue(float now, float nextDeadline,
+        float currentLifetime, float scheduledLifetime) =>
+        currentLifetime != scheduledLifetime || now >= nextDeadline;
+
+    /// <summary>新增/复用目标只能让已有时间下界提前，不允许漏掉更早创建的目标。</summary>
+    internal static float EarlierGoalPruneAt(float existingDeadline, float lastUsedAt, float lifetime) =>
+        Mathf.Min(existingDeadline, lastUsedAt + lifetime);
 
     private void EnforceCacheCellBudget()
     {
@@ -1436,10 +1474,16 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     private int GetTotalCachedSearchCells()
     {
+        if (!cachedGoalCellCountDirty)
+            return cachedGoalCellCount;
+
+        using var countScope = GoalCellCountScanMarker.Auto();
         int total = 0;
         for (int i = 0; i < fieldSchedule.Count; i++)
             total += fieldSchedule[i].StoredCellCount;
-        return total;
+        cachedGoalCellCount = total;
+        cachedGoalCellCountDirty = false;
+        return cachedGoalCellCount;
     }
 
     private bool EvictOldestIdleField()
@@ -1464,7 +1508,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     #endregion
 
-    private sealed class PathRequest
+    // 同程序集规则探针可构造纯网格请求，验证共享目标路径缓冲与输出数组隔离。
+    internal sealed class PathRequest
     {
         public readonly int Id;
         public readonly Vector2 Start;
@@ -1510,7 +1555,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         }
     }
 
-    private sealed class GoalField
+    internal sealed class GoalField
     {
         private readonly WorldNavigationGrid.MinHeap frontier = new();
         private readonly Dictionary<Vector2Int, int> costs = new(1024);
@@ -1521,6 +1566,10 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         // 同一目标按请求上限分别结束，避免一只狼取消整群共用的搜索。
         private readonly SortedSet<(int Limit, int RequestId)> costLimitedRequests = new();
         private readonly Dictionary<int, int> requestCostLimits = new(32);
+        // 同一个目标场的路径构造在主线程串行执行；跨请求复用工作区，
+        // 最终路点始终复制到独立数组，不能暴露这两份可变缓冲。
+        private readonly List<Vector2Int> rawPathBuffer = new(64);
+        private readonly List<Vector2> smoothedPathBuffer = new(16);
         private int waitingCount;
         private int minX;
         private int maxX;
@@ -1753,7 +1802,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 return false;
             }
 
-            List<Vector2Int> raw = new(64) { start };
+            List<Vector2Int> raw = rawPathBuffer;
+            raw.Clear();
+            raw.Add(start);
             Vector2Int current = start;
             int guard = nextTowardGoal.Count + 1;
             int pathCellLimit = Mathf.Max(2, maxPathCells);
@@ -1774,7 +1825,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                 return false;
             }
 
-            List<Vector2> smoothed = new(16);
+            List<Vector2> smoothed = smoothedPathBuffer;
+            smoothed.Clear();
             bool includeResolvedStart = start != WorldNavigationGrid.WorldToCell(request.Start);
             if (includeResolvedStart)
                 smoothed.Add(WorldNavigationGrid.CellCenter(start));

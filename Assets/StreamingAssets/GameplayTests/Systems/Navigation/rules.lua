@@ -107,3 +107,22 @@ test.system("navigation", "topology_bounds_cache", {}, function(data)
     assert(data.differentPlanet and data.missingPlanet and data.returned and data.reset,
         "切换星球、清空存档或恢复世界后沿用了错误的拓扑缓存")
 end, "活动星球拓扑边界缓存复用与动态配置失效")
+
+test.system("navigation", "goal_cache_maintenance", {}, function(data)
+    assert(data.identical and data.frames == 2400 and data.created > 0,
+        "导航目标缓存按到期时间清理与原版逐帧扫描产生不同的目标存活结果")
+    assert(data.skipped > 0 and data.scans < data.frames,
+        "目标缓存的无变化帧没有跳过全量清理")
+    assert(data.earlierAdded and data.lifetimeChanged and data.noPrematurePrune,
+        "新增更早到期目标、运行时修改缓存寿命或到期边界的处理不正确")
+    assert(data.unnecessaryScans == 0 and data.steadyAllocatedBytes == 0,
+        "目标场未到期时仍启动扫描或产生 GC 分配")
+end, "导航目标场过期调度与逐帧基准等价，稳定期无扫描无分配")
+
+test.system("navigation", "goal_path_buffers", {}, function(data)
+    assert(data.correct and data.isolated and data.successes == data.iterations
+        and data.iterations == 256,
+        "共享目标路径复用中间列表后改变路线代价、终点或不同请求的路点数组所有权")
+    assert(data.allocatedBytes < data.iterations * 256,
+        "反复生成共享目标路径仍分配了额外的临时 List 和后备数组")
+end, "共享目标场复用寻路工作列表、保持独立路线结果并减少 GC")
