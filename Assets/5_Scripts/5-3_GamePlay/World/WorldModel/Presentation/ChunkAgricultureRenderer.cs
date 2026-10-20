@@ -41,11 +41,14 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         new("FlatWorld.ChunkStreaming.DespawnCrops");
     private static readonly ProfilerMarker OverlayClearMarker =
         new("FlatWorld.ChunkStreaming.ClearTillingOverlays");
+    private static readonly ProfilerMarker TillingRefreshMarker =
+        new("FlatWorld.Agriculture.RefreshTillingOverlays");
     private ChunkRuntime chunk;
     private bool unbinding;
     private bool applicationQuitting;
     private bool bindingInitialState;
     private bool hasActiveFade;
+    private float nextTillingRuntimeRefreshAt = float.PositiveInfinity;
     private ItemMgr itemManager;
     private SaveDataMgr saveManager;
     private ChunkMgr chunkManager;
@@ -142,6 +145,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         groundHarvestOverlays.Clear();
         tillingCellBuffer.Clear();
         hasActiveFade = false;
+        nextTillingRuntimeRefreshAt = float.PositiveInfinity;
         chunk = null;
         unbinding = false;
     }
@@ -374,8 +378,18 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     private void RefreshTillingRuntimeOverlays()
     {
         if (chunk == null || tillingOverlays.Count == 0)
+        {
+            nextTillingRuntimeRefreshAt = float.PositiveInfinity;
+            return;
+        }
+
+        // 锄地结束后的固定保持阶段，无论有多少覆盖层都不需要再查农田状态。
+        // 当任意格进入真实衰减或透明度收尾时，恢复每帧读取直到该阶段结束。
+        if (!IsTillingRuntimeRefreshDue(Time.time, nextTillingRuntimeRefreshAt))
             return;
 
+        using var refreshScope = TillingRefreshMarker.Auto();
+        nextTillingRuntimeRefreshAt = float.PositiveInfinity;
         tillingCellBuffer.Clear();
         foreach (Vector2Int local in tillingOverlays.Keys)
             tillingCellBuffer.Add(local);
@@ -386,6 +400,9 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         }
         tillingCellBuffer.Clear();
     }
+
+    /// <summary>保持阶段只比较时间，不重复查询农田字典与地块数据。</summary>
+    internal static bool IsTillingRuntimeRefreshDue(float now, float nextRefreshAt) => now >= nextRefreshAt;
 
     private void HandleTillingVisualChanged(RuntimeWorldAddress address, Vector2Int local)
     {
@@ -413,7 +430,8 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
             return;
         }
 
-        float progress = FarmlandSystem.GetTillingVisualProgress(chunk.Address, local, cell.GroundTileId);
+        float progress = FarmlandSystem.GetTillingVisualProgress(
+            chunk.Address, local, cell.GroundTileId, out float nextRefreshAt);
         if (progress <= 0f)
         {
             if (!tillingOverlays.TryGetValue(local, out ProgressOverlay fading))
@@ -424,9 +442,15 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
                 tillingOverlays.Remove(local);
                 DisposeOverlay(fading);
             }
+            else
+            {
+                // 状态已退完时继续驱动最后一段透明度动画，然后释放闲置覆盖层。
+                nextTillingRuntimeRefreshAt = Time.time;
+            }
             return;
         }
 
+        nextTillingRuntimeRefreshAt = Mathf.Min(nextTillingRuntimeRefreshAt, nextRefreshAt);
         if (!tillingOverlays.TryGetValue(local, out ProgressOverlay overlay))
         {
             if (!TryResolveFarmlandVisual(out Sprite sprite, out Color color, out Matrix4x4 tileTransform))

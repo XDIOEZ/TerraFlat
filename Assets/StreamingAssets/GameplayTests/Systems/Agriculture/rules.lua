@@ -1,4 +1,13 @@
 -- 正式植物 Job 同时覆盖栽培和野生植物，耗水不依赖生长状态。
+test.system("agriculture", "tilling_visual_schedule", {}, function(data)
+    assert(data.noEarlyRefresh and data.idleFramesSkipped == 600 and data.startsOnTime,
+        "锄地完成后的十秒保持阶段仍逐帧读取，或退回开始时间被推迟")
+    assert(data.additionalWorkExtends and data.decayContinues and data.emptyIgnored,
+        "再次施工没有延期、退回阶段未保持逐帧推进或空格被错误轮询")
+    assert(data.unnecessaryRefreshes == 0 and data.steadyAllocatedBytes == 0,
+        "锄地保持期仍触发大量无效扫描或生成 GC 分配")
+end, "锄地十秒保持期跳过覆盖层扫描、按时退回及零分配")
+
 for _, row in ipairs({
     {label = "明亮生长", light = 1, grows = true, water = 8},
     {label = "低于门槛停长", light = 0.199, grows = false, water = 8},

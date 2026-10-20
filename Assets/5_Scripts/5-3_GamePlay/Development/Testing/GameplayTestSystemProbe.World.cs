@@ -45,6 +45,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("building/shared_state", WorldBuildingState);
         operations.Add("agriculture/soil", WorldSoil);
         operations.Add("agriculture/plant_growth", WorldPlantGrowth);
+        operations.Add("agriculture/tilling_visual_schedule", WorldTillingVisualSchedule);
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
@@ -79,6 +80,60 @@ public static partial class GameplayTestSystemProbe
         foreach (string operation in new[] { "ship_local_damage", "ship_hit_targeting",
                      "ship_damage_lines", "ship_damage_fragmentation" })
             operations.Add("space/" + operation, _ => GameplayTestShipDamageProbe.Capture(operation));
+    }
+
+    /// <summary>直接采生产的锄地衰减调度，核对十秒稳态跳过、继续施工延期与开始退回的边界。</summary>
+    private static JObject WorldTillingVisualSchedule(JObject args)
+    {
+        const float began = 100f;
+        float deadline = FarmlandSystem.NextTillingVisualRefreshTime(began, began);
+        int idleFramesSkipped = 0;
+        for (int frame = 0; frame < 600; frame++)
+        {
+            float now = began + frame / 60f;
+            if (!ChunkAgricultureRenderer.IsTillingRuntimeRefreshDue(now, deadline))
+                idleFramesSkipped++;
+        }
+
+        bool startsOnTime = ChunkAgricultureRenderer.IsTillingRuntimeRefreshDue(
+            began + FarmlandSystem.TillingRecoveryDelaySeconds, deadline);
+        bool noEarlyRefresh = idleFramesSkipped == 600;
+        float extendedDeadline = FarmlandSystem.NextTillingVisualRefreshTime(began + 4f, began + 4f);
+        bool additionalWorkExtends = extendedDeadline == deadline + 4f &&
+            !ChunkAgricultureRenderer.IsTillingRuntimeRefreshDue(deadline, extendedDeadline);
+        bool decayContinues = true;
+        for (int frame = 1; frame <= 150; frame++)
+        {
+            float now = deadline + frame / 60f;
+            decayContinues &= ChunkAgricultureRenderer.IsTillingRuntimeRefreshDue(
+                now, FarmlandSystem.NextTillingVisualRefreshTime(began, now));
+        }
+
+        // 空单元不需要安排衰减期，正式数据入口应返回无进度和无限远截止时间。
+        var emptyAddress = new FlatWorld.WorldModel.WorldAddress("probe:tilling-visual", new Int2(0, 0));
+        float missingProgress = FarmlandSystem.GetTillingVisualProgress(
+            emptyAddress, Vector2Int.zero, 7, out float missingRefreshAt);
+        bool emptyIgnored = missingProgress == 0f && float.IsPositiveInfinity(missingRefreshAt) &&
+            !ChunkAgricultureRenderer.IsTillingRuntimeRefreshDue(began + 1000f, missingRefreshAt);
+
+        // 静止等待阶段的数万次调用应只比较时间，无枚举与托管堆分配。
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        int unnecessaryRefreshes = 0;
+        for (int frame = 0; frame < 65536; frame++)
+        {
+            float now = began + (frame % 600) / 60f;
+            if (ChunkAgricultureRenderer.IsTillingRuntimeRefreshDue(now, deadline))
+                unnecessaryRefreshes++;
+        }
+        long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        return new JObject
+        {
+            ["idleFramesSkipped"] = idleFramesSkipped,
+            ["startsOnTime"] = startsOnTime, ["noEarlyRefresh"] = noEarlyRefresh,
+            ["additionalWorkExtends"] = additionalWorkExtends,
+            ["decayContinues"] = decayContinues, ["emptyIgnored"] = emptyIgnored,
+            ["unnecessaryRefreshes"] = unnecessaryRefreshes, ["steadyAllocatedBytes"] = bytes
+        };
     }
 
     #region 船体作用域身份无分配回归

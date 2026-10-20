@@ -127,7 +127,13 @@ public static partial class FarmlandSystem
     public static event Action<RuntimeWorldAddress, Vector2Int> TillingVisualChanged;
 
     public static float GetTillingVisualProgress(RuntimeWorldAddress address, Vector2Int localCell, int currentGroundTileId)
+        => GetTillingVisualProgress(address, localCell, currentGroundTileId, out _);
+
+    /// <summary>一并返回下一次进度可能变化的时间；静止等待期间无需逐帧扫描覆盖层。</summary>
+    public static float GetTillingVisualProgress(RuntimeWorldAddress address, Vector2Int localCell,
+        int currentGroundTileId, out float nextRefreshAt)
     {
+        nextRefreshAt = float.PositiveInfinity;
         var key = new TillingKey(address, localCell);
         if (!tillingStates.TryGetValue(key, out TillingRuntimeState state) ||
             state.SourceGroundTileId != currentGroundTileId)
@@ -136,10 +142,20 @@ public static partial class FarmlandSystem
             return 0f;
         }
 
-        float progress = EvaluateTillingProgress(state, Time.time);
+        float now = Time.time;
+        float progress = EvaluateTillingProgress(state, now);
         if (progress <= 0f)
             tillingStates.Remove(key);
+        else
+            nextRefreshAt = NextTillingVisualRefreshTime(state.LastWorkedAt, now);
         return progress;
+    }
+
+    /// <summary>锄地后延迟期无进度变化，开始自然恢复时才需要每帧采样。</summary>
+    internal static float NextTillingVisualRefreshTime(float lastWorkedAt, float now)
+    {
+        float recoveryStart = lastWorkedAt + TillingRecoveryDelaySeconds;
+        return now < recoveryStart ? recoveryStart : now;
     }
 
     /// <summary>区块表现解绑时丢弃所有未完成耕作，保证它不会跟随存档或重新加载恢复。</summary>

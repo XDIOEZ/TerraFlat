@@ -1,5 +1,7 @@
 # 农业规则与现场回归
 
+2026-10-20：`ChunkAgricultureRenderer` 的临时锄地覆盖层，在最近施工后的 10 秒保持期只检查下一次变化的截止时刻，不再每帧遍历全部临时格；开始退回后仍按原 2.5 秒连续计算并保留 Renderer 淡出，施工事件可重新延长保持期，解绑清理日程。`FarmlandSystem.GetTillingVisualProgress` 可同步返回下一次变化时刻，和权威锄地进度使用同一 `Time.time`。Profiler `FlatWorld.Agriculture.RefreshTillingOverlays` 只包含实际扫描。新增规则 `agriculture/tilling_visual_schedule` 对照 600 帧保持期、再次施工、退回、空格与零分配；这是时间调度规则，不代替正式耕地的 PlayMode 图像验收。新增规则尚未执行。
+
 2026-10-18：植物 Job 增加非零/负坐标哨兵，检查栽培身份、野生成长、缩放和收获标记保持，以及无气候模块时压力不被改写、耗水时钟正确推进，防止 Burst 组件布局错位；新增 Lua 断言本轮未运行。
 
 2026-10-18：新增 `agriculture/plant_growth`，隔离 Entity World 调用正式植物 Job，覆盖光照不足/恰好门槛、自定义门槛、黑暗与成熟持续耗水、不同日长与耗水倍率、缺肥/温度停长仍耗水、野生植物及同一世界时刻不重复耗水；Lua 持有业务断言。本轮 Unity 正在 PlayMode，只静态修改，未编译、未运行新增用例。
