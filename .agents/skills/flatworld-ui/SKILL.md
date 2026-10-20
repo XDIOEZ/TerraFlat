@@ -31,6 +31,7 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - `BasePanel.SetHeldItemWorldDropAllowed` 声明窗口外手持丢弃能力；普通玩法窗口不登记锁 Owner，确有输入锁的专用面板才传入自身 Owner。`UIManager` 同轮面板缓存汇总所有阻断窗口、兼容锁与实际窗口矩形（优先 `UIWindowDragSurface.WindowRect`）。任一未授权阻断窗口/未知锁继续阻断，实际窗口内部透明空白也不能作为世界落点。
 - 手机菜单/返回位于独立常驻层，返回顺序为顶层可取消面板→抽屉→设置。主菜单 CancelShortcutOverride 打开退出确认；嵌套危险确认先消费取消。存档删除统一由 `SaveDataManager_UI` 确认层提交并锁定目标身份。
 - `FlatWorldUI/Cancel` 为唯一返回输入入口，`EventSystemGuard.CancelRequested` 提供玩法处理；设置模块不额外订阅 Win10/ESC。`BasePanel.OnCancel` 必须检查同帧消费，关闭设置本身也走 CancelShortcutOverride，避免跳过未保存确认或一次返回连关两层。
+- 手柄 UI 临时停用只解绑活动动作，保留最新玩家输入资产；`OnEnable` 恢复返回与确认，停用期间 `Configure` 的替换/撤销延后到恢复生效，已销毁资产不得重新接入。回归 `ui_settings/gamepad_input_reenable`。
 - 文本通过 FlatWorldUI 表与 GetUiText/GetUiFormat，节点名不翻译；手柄焦点限定顶层面板，TMP 输入确认后进入虚拟键盘。鼠标按下焦点与列表业务选中状态分离，完整点击才提交选择。
 - 面板可能先于模块销毁，Unity `!= null` 判断存活；即使面板已销毁仍释放锁/快捷转移引用。场景卸载清理失效注册并刷新交互缓存；输入查询覆盖当前场景与常驻根。资源重载清空两类根下的运行时 UI 与注册缓存，保留 UIRoot/SafeAreaRoot，再由当前 GameRes/Player 重建。
 - 库存、快捷栏与手部面板随所属模块卸载调用 `Inventory.ReleaseRuntimePanel`，同时注销 `UIManager` 注册；仅解除输入与数据绑定不会自动销毁跨场景面板。

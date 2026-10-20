@@ -168,6 +168,7 @@ public partial class Mod_TileEffectReceiver
 
     protected override void OnUnload()
     {
+        resumeTileEffectsOnEnable = false;
         PrepareForWorldTransition();
         waterOxygen?.RemoveBreathingBlockCause(this);
         effectSuppressors.Clear();

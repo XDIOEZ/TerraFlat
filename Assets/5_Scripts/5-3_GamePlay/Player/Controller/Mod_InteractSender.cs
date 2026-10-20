@@ -56,6 +56,16 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         ModSaveData.WriteData(RawData);
     }
 
+    protected override void OnUnload()
+    {
+        // 正式卸载也必须归还输入和交互会话，不能只依赖 Unity 停用回调。
+        UnbindInput();
+        EndEnvironmentActionHold();
+        CancelCurrentInteraction();
+        gameController = null;
+        hotBar = null;
+    }
+
     public override void ModUpdate(float deltaTime)
     {
         PruneDestroyedInteractionTargets();

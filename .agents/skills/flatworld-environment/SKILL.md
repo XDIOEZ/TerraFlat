@@ -7,6 +7,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 ## 多世界所有权
 
+- `Mod_TileEffectReceiver` 临时停用先退出冰面、水体和积雪接触，已加载模块重新启用按当前位置重新建立；正式迁移的 `PrepareForWorldTransition` 会撤销临时恢复资格，必须等世界就绪显式 `RefreshCurrentTileEffects`。新代际加载仅重置接触门禁，正常 Tick 再读取环境，避免模块装配期间提前施加效果。回归 `environment/tile_effect_reenable` 在玩家现场清单。
+
 - 天气按 `WeatherMgr.GetForWorld(WorldKey)` 持独立区域引擎、地表积分队列和雷击序号；`Instance/ExistingInstance` 只路由当前 `GameplayWorldRegistry.ExecutionWorldKey`，太空/菜单可为空，不回退其它地表。后台世界继续权威结算，雨雪、声音、闪电和 Shader 只由本机世界输出。
 - 同步事务用 `GameplayWorldRegistry.UseWorld` 选择环境、拓扑和物理世界，禁止跨 `yield` 持有；时间回调、网络请求和离场清理按拥有者 WorldKey 进入上下文。网络天气/地表快照携真实 WorldKey，请求世界从连接绑定角色读取。
 - `TemperatureMgr` 每 WorldKey 独立温度场，热源按对象实际场景发布，撤销按来源绑定的原场清理；晚回调不得借当前镜头移除别的世界。雷击去重按世界/地形纪元保存。

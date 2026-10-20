@@ -1,5 +1,7 @@
 # 农业规则与现场回归
 
+2026-10-21：新增 `agriculture/crop_visual_reenable`，使用正式萝卜与水稻覆盖连续缩放和阶段图，检查停用期间成长不改外壳、恢复后读取最新成长并继续监听、多次启停不累积缩放、正式卸载后启用不重建表现。本轮仅静态修改，未编译、未执行；实际作物图像由用户验收。
+
 2026-10-20：区块农业表现初绑改为只枚举实际临时锄地格与非零开采伤害格；无对应数据时不再全格调用资源目录与环境层。无临时锄地、无渐变的区块禁用自身 `Update`，地形/锄地事件仍能在产生动画时重新启用。现场 `tillage_irrigation` 增加施工开始/完成后的稀疏格登记断言；本轮未执行 PlayMode 集成与帧率采样。
 
 2026-10-20：`ChunkAgricultureRenderer` 的临时锄地覆盖层，在最近施工后的 10 秒保持期只检查下一次变化的截止时刻，不再每帧遍历全部临时格；开始退回后仍按原 2.5 秒连续计算并保留 Renderer 淡出，施工事件可重新延长保持期，解绑清理日程。`FarmlandSystem.GetTillingVisualProgress` 可同步返回下一次变化时刻，和权威锄地进度使用同一 `Time.time`。Profiler `FlatWorld.Agriculture.RefreshTillingOverlays` 只包含实际扫描。新增规则 `agriculture/tilling_visual_schedule` 对照 600 帧保持期、再次施工、退回、空格与零分配；这是时间调度规则，不代替正式耕地的 PlayMode 图像验收。新增规则尚未执行。

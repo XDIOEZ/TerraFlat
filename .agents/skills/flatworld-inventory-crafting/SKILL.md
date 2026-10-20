@@ -88,6 +88,8 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 农业
 
+- 作物 `Mod_CropVisual` 临时停用会还原外壳并解除成长监听；已加载模块重新启用时须重新捕获原始材质/图片/缩放并显示最新成长，正式卸载后不恢复。回归 `agriculture/crop_visual_reenable`。
+
 - `ChunkAgricultureRenderer` 初绑只收集未完成锄地格及非零伤害格；没有锄地覆盖层/渐变时停用自身 Update，地形与施工事件负责唤醒。静态格更新仍由 Terrain.Changed 即时通知。
 - `Mod_Plantable → CreateEntityCrop → 扣真实种子`，失败 RollbackEntityCrop；resource 作物不临时物化 Item。空耕地播种不检查水肥，水肥只影响后续成长；范围内的种植基质保留播种意图，作物占格或播种失败不回退食用，离开基质才让食用接管。
 - FarmlandSystem 操作 ChunkTerrainData；未完成锄地仅为会话进度，停工 10 秒后恢复，完成才写 Tile_Farmland。水肥快照修改经 CommitSoil；工具结算等待 IWeaponActionAnimation 确认真实挥动。

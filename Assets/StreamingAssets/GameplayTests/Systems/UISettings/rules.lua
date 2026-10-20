@@ -1,3 +1,23 @@
+test.system("ui_settings", "gamepad_input_reenable", {}, function(data)
+    local function check_binding(sample)
+        assert(sample.assetMatches and sample.cancelMatches and sample.submitMatches,
+            "手柄 UI 恢复后没有使用最新玩家输入资产的返回与确认动作")
+    end
+    assert(data.deferredInitialBinding, "停用的手柄 UI 控制器不应提前订阅输入")
+    check_binding(data.initial)
+    assert(data.initial.reboundRecognized, "首次配置没有识别实际重绑确认键")
+    assert(#data.rounds == 3, "缺少手柄 UI 连续停用恢复采样")
+    for _, sample in ipairs(data.rounds) do
+        check_binding(sample)
+        assert(sample.disabledUnbound and sample.reboundRecognized and sample.defaultRejected,
+            "手柄 UI 停用没有解绑，或恢复后改回默认确认键")
+    end
+    check_binding(data.replaced)
+    assert(data.replacedWhileDisabledUnbound and data.replaced.newRecognized and data.replaced.oldRejected,
+        "停用期间替换输入资产没有延后生效，或恢复时仍接受旧确认键")
+    assert(data.withdrawn and data.destroyedWithdrawn, "输入资产撤销或销毁后被恢复流程重新接入")
+end, "手柄 UI 停用恢复保留重绑，并遵从停用期间的替换、撤销与销毁")
+
 test.system("ui_settings", "cancel_dispatch", {}, function(data)
     assert(data.consumed and not data.afterRemoval,
         "返回分发没有尊重消费结果或注销")
