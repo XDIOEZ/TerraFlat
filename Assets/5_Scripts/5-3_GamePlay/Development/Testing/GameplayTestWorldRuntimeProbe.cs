@@ -143,7 +143,13 @@ public static partial class GameplayTestWorldRuntimeProbe
         {
             bool partial = FarmlandSystem.TryTill(site.Center, site.Authority, 16f, .25f, out bool partialCompleted);
             int partialGround = site.Sample.Terrain.GetCell(site.Sample.LocalCell.x, site.Sample.LocalCell.y).GroundTileId;
+            var tillingCells = new List<Vector2Int>();
+            FarmlandSystem.CollectTillingVisualCells(site.Sample.Address, tillingCells);
+            result["partialVisualIndexed"] = tillingCells.Contains(site.Sample.LocalCell);
             bool completed = FarmlandSystem.TryTill(site.Center, site.Authority, 16f, .75f, out bool tillCompleted);
+            tillingCells.Clear();
+            FarmlandSystem.CollectTillingVisualCells(site.Sample.Address, tillingCells);
+            result["completedVisualRemoved"] = !tillingCells.Contains(site.Sample.LocalCell);
             bool soilReady = FarmlandSystem.TryReadSoil(site.Sample.WorldCell, out TileData_Farmland soil);
             if (!soilReady || soil == null) throw new InvalidOperationException("正式耕作没有产生可读取的真实土壤状态。");
             soil.ConsumeWater(soil.maxWater);

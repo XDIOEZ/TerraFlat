@@ -126,6 +126,14 @@ public static partial class FarmlandSystem
     /// <summary>只通知表现层刷新指定格；事件本身不保存任何地形数据。</summary>
     public static event Action<RuntimeWorldAddress, Vector2Int> TillingVisualChanged;
 
+    /// <summary>初绑仅枚举本区块实际施工中的格，避免每个区块全格查询临时锄地。</summary>
+    internal static void CollectTillingVisualCells(RuntimeWorldAddress address, List<Vector2Int> cells)
+    {
+        foreach (TillingKey key in tillingStates.Keys)
+            if (key.Address.Equals(address))
+                cells.Add(key.LocalCell);
+    }
+
     public static float GetTillingVisualProgress(RuntimeWorldAddress address, Vector2Int localCell, int currentGroundTileId)
         => GetTillingVisualProgress(address, localCell, currentGroundTileId, out _);
 

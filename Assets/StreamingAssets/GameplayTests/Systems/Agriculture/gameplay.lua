@@ -4,6 +4,8 @@ test.runtime("agriculture", "tillage_irrigation", {}, function(data)
     assert(data.scope == "live-isolated-world", "农业测试没有进入隔离世界")
     assert(data.partialAccepted and not data.partialCompleted and data.partialGroundPreserved,
         "未完成耕作提前改变正式地形")
+    assert(data.partialVisualIndexed and data.completedVisualRemoved,
+        "锄地临时格索引未及时增删，区块重绑可能遗漏或留下旧覆盖层")
     assert(data.completionAccepted and data.tillCompleted and data.groundAfter == "Tile_Farmland",
         "完成耕作没有提交正式耕地")
     assert(data.afterIrrigation == 3 and data.afterConsumption == 2,

@@ -71,14 +71,35 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         bindingInitialState = true;
         try
         {
-            for (int y = 0; y < chunk.Terrain.Height; y++)
-                for (int x = 0; x < chunk.Terrain.Width; x++)
-                    RefreshCell(new Vector2Int(x, y));
+            // 临时锄地按活跃格恢复；开采伤害层缺失时完全跳过逐格初始化。
+            FarmlandSystem.CollectTillingVisualCells(chunk.Address, tillingCellBuffer);
+            for (int i = 0; i < tillingCellBuffer.Count; i++)
+            {
+                Vector2Int local = tillingCellBuffer[i];
+                if ((uint)local.x < (uint)chunk.Terrain.Width && (uint)local.y < (uint)chunk.Terrain.Height)
+                    RefreshTillingOverlay(local, chunk.Terrain.GetCell(local.x, local.y));
+            }
+
+            if (chunk.Terrain.TryGetEnvironmentLayer(TileBuildingSystem.RuntimeDamageLayerId,
+                    out ReadOnlyMemory<float> damageLayer))
+            {
+                ReadOnlySpan<float> damage = damageLayer.Span;
+                int width = chunk.Terrain.Width;
+                for (int index = 0; index < damage.Length; index++)
+                {
+                    if (damage[index] <= 0f) continue;
+                    Vector2Int local = new(index % width, index / width);
+                    RefreshGroundHarvestOverlay(local, chunk.Terrain.GetCell(local.x, local.y));
+                }
+            }
         }
         finally
         {
+            tillingCellBuffer.Clear();
             bindingInitialState = false;
         }
+
+        enabled = tillingOverlays.Count != 0 || hasActiveFade;
 
         foreach (var saved in saveManager.GetAgricultureCells(chunk.Address))
         {
@@ -148,6 +169,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         nextTillingRuntimeRefreshAt = float.PositiveInfinity;
         chunk = null;
         unbinding = false;
+        enabled = false;
     }
 
     /// <summary>自动保存与区块解绑共用抓取入口。</summary>
@@ -344,12 +366,16 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
     private void Update()
     {
         RefreshTillingRuntimeOverlays();
-        if (!hasActiveFade)
-            return;
+        if (hasActiveFade)
+        {
+            float alphaStep = Time.deltaTime / Mathf.Max(0.01f, tillingFadeDuration);
+            hasActiveFade = FadeOverlays(tillingOverlays.Values, alphaStep) |
+                            FadeOverlays(groundHarvestOverlays.Values, alphaStep);
+        }
 
-        float alphaStep = Time.deltaTime / Mathf.Max(0.01f, tillingFadeDuration);
-        hasActiveFade = FadeOverlays(tillingOverlays.Values, alphaStep) |
-                        FadeOverlays(groundHarvestOverlays.Values, alphaStep);
+        // 无锄地进度和渐变时停止空闲区块的 Unity Update，事件仍能随时唤醒。
+        if (!hasActiveFade && tillingOverlays.Count == 0)
+            enabled = false;
     }
 
     private static bool FadeOverlays(IEnumerable<ProgressOverlay> overlays, float alphaStep)
@@ -451,6 +477,8 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         }
 
         nextTillingRuntimeRefreshAt = Mathf.Min(nextTillingRuntimeRefreshAt, nextRefreshAt);
+        if (!bindingInitialState)
+            enabled = true;
         if (!tillingOverlays.TryGetValue(local, out ProgressOverlay overlay))
         {
             if (!TryResolveFarmlandVisual(out Sprite sprite, out Color color, out Matrix4x4 tileTransform))
@@ -532,6 +560,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         else if (!Mathf.Approximately(overlay.Renderer.color.a, overlay.TargetAlpha))
         {
             hasActiveFade = true;
+            enabled = true;
         }
     }
 
