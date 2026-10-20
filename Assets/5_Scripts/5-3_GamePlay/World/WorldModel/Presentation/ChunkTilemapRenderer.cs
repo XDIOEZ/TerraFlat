@@ -55,6 +55,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private bool bindingVisualsInvalidated;
     private readonly List<int> bindingDirtyScratch = new(BaseCellsPerStep);
     private bool liquidGlowDirty;
+    // 缓存真实液体层中是否含岩浆，包括被平台遮住的岩浆；遮挡解除后仍会重新出现发光。
+    private bool hasLavaLiquid;
+    // 独立规则测试核对水体更新没有进入其它地形网格的写入路径。
+    internal long IncrementalFullTerrainCellWrites { get; private set; }
+    internal int PendingLiquidVisualCellCount => liquidVisualDirty.Count;
+    internal bool PendingLiquidGlowRefresh => liquidGlowDirty;
 
     /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
     private static bool RenderDebugEnabled => Application.isEditor || Debug.isDebugBuild;
@@ -104,6 +110,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private static readonly ProfilerMarker BindLiquidGlowMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Complete.LiquidGlow");
     private static readonly ProfilerMarker BindMechanicalMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Complete.Mechanical");
     private static readonly ProfilerMarker BindNotifyMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.Complete.Notify");
+    // 增量液体写入与基础地形绑定分开计时，确认流动时不再反复提交其它三层网格。
+    private static readonly ProfilerMarker LiquidOnlyRefreshMarker =
+        new("FlatWorld.ChunkRendering.LiquidOnlyRefresh");
+    private static readonly ProfilerMarker LiquidGlowRefreshMarker =
+        new("FlatWorld.ChunkRendering.LavaGlowRefresh");
 
     #endregion
 
@@ -292,6 +303,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     public void Unbind()
     {
         batchBindingVersion++;
+        IncrementalFullTerrainCellWrites = 0;
         bindingCellWrite = false;
         bindingVisualsInvalidated = false;
         bindingDirtyScratch.Clear();
@@ -309,6 +321,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
         liquidVisualDirty.Clear();
         liquidGlowDirty = false;
+        hasLavaLiquid = false;
         ReleaseLiquidGlowLights();
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
@@ -432,8 +445,9 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             RefreshFireVisual(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
             return;
         }
-        if (changed.Kind == TerrainChangeKind.Liquid ||
-            changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer))
+        if ((changed.Kind == TerrainChangeKind.Liquid &&
+             (hasLavaLiquid || IsLavaCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y))) ||
+            (changed.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) && hasLavaLiquid))
             liquidGlowDirty = true;
         if (changed.Kind != TerrainChangeKind.Cell &&
             changed.Kind != TerrainChangeKind.TileStack &&
@@ -446,8 +460,17 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
         // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
         int width = boundChunk.Terrain.Width;
-        foreach (int index in changed.GetCellIndices(width))
-            RefreshBatchArea(boundChunk.Terrain, index % width, index / width, 1);
+        if (changed.Kind == TerrainChangeKind.Liquid && !batchBindingInProgress)
+        {
+            using var refreshScope = LiquidOnlyRefreshMarker.Auto();
+            foreach (int index in changed.GetCellIndices(width))
+                RefreshLiquidArea(boundChunk.Terrain, index % width, index / width, 1);
+        }
+        else
+        {
+            foreach (int index in changed.GetCellIndices(width))
+                RefreshBatchArea(boundChunk.Terrain, index % width, index / width, 1);
+        }
     }
 
     /// <summary>基础地形只读取高度、水流和风向，土壤与雪层不重提地形网格。</summary>
@@ -505,6 +528,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     /// <summary>按 8x8 格聚合岩浆光源，避免大片岩浆为每个液体格创建一盏灯。</summary>
     private void RefreshLiquidGlowLights(ChunkTerrainData terrain)
     {
+        using var glowScope = LiquidGlowRefreshMarker.Auto();
+        hasLavaLiquid = false;
         GameRes resources = GameRes.ExistingInstance;
         if (terrain == null || resources == null)
         {
@@ -533,9 +558,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             for (int y = bucketY; y < maxY; y++)
             for (int x = bucketX; x < maxX; x++)
             {
-                float depth = WorldLiquidSystem.GetSurfaceDepth(terrain, x, y);
-                if (depth <= 0f || terrain.GetLiquidId(x, y) != LiquidTypeCatalog.LavaId)
+                // 水体往往覆盖大面积地表，先过滤权威液体身份，不能为每格水都计算表层深度。
+                if (!IsLavaCell(terrain, x, y))
                     continue;
+                hasLavaLiquid = true;
+                float depth = WorldLiquidSystem.GetSurfaceDepth(terrain, x, y);
+                if (depth <= 0f) continue;
 
                 float weight = Mathf.Max(0.1f, depth);
                 weightedX += (x + 0.5f) * weight;
@@ -563,6 +591,24 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         }
 
         DisableUnusedLiquidGlowLights(lightIndex);
+    }
+
+    /// <summary>不看表现遮挡，只判断权威液体是否为岩浆；平台遮住的岩浆也保留变化资格。</summary>
+    private static bool IsLavaCell(ChunkTerrainData terrain, int x, int y) =>
+        terrain.GetLiquidLevel(x, y) > 0 && terrain.GetLiquidId(x, y) == LiquidTypeCatalog.LavaId;
+
+    /// <summary>已有岩浆需要观察清空；没有岩浆时只读本次变化的格子，不再扫描整个区块。</summary>
+    private static bool BatchContainsLava(ChunkLiquidBatchChanged changed)
+    {
+        ChunkTerrainData terrain = changed.Terrain;
+        ReadOnlySpan<int> levels = terrain.LiquidLevel;
+        ReadOnlySpan<int> types = terrain.LiquidTypeIndex;
+        foreach (int index in changed.CellIndices.Span)
+        {
+            if (levels[index] > 0 && terrain.LiquidTypes.GetId(types[index]) == LiquidTypeCatalog.LavaId)
+                return true;
+        }
+        return false;
     }
 
     private Light2D GetOrCreateLiquidGlowLight(int index)
@@ -616,10 +662,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
 
         ChunkTerrainData terrain = boundChunk.Terrain;
+        using var refreshScope = LiquidOnlyRefreshMarker.Auto();
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
             if (terrain.GetLiquidDepth(x, y) > 0f)
-                RefreshBatchCell(terrain, x, y);
+                RefreshLiquidVisual(terrain, x, y);
     }
 
     /// <summary>相邻区块就绪后补齐高度、岸线与四角水深。</summary>
@@ -760,7 +807,13 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 continue;
             if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourTerrainChanged"))
                 return;
-            RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY, x, y);
+            if (changed.Kind == TerrainChangeKind.Liquid && !batchBindingInProgress)
+            {
+                using var refreshScope = LiquidOnlyRefreshMarker.Auto();
+                RefreshLiquidEdge(boundChunk.Terrain, offsetX, offsetY, x, y);
+            }
+            else
+                RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY, x, y);
         }
     }
 
@@ -782,7 +835,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     /// <summary>延后到本帧所有液体 Chunk 写回之后，合并处理岸线、四角液深与高度边。</summary>
     private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)
     {
-        liquidGlowDirty = true;
+        if (hasLavaLiquid || BatchContainsLava(changed))
+            liquidGlowDirty = true;
         QueueLiquidVisuals(changed, 0, 0);
     }
 
@@ -821,19 +875,30 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         if (boundChunk?.Terrain == null || batchBindingInProgress)
             return;
 
-        if (liquidVisualDirty.Count > 0 && EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
-        {
-            ChunkTerrainData terrain = boundChunk.Terrain;
-            foreach (int index in liquidVisualDirty)
-                RefreshBatchCell(terrain, index % terrain.Width, index / terrain.Width);
-        }
-        liquidVisualDirty.Clear();
+        FlushPendingLiquidVisuals();
 
         if (liquidGlowDirty)
         {
             liquidGlowDirty = false;
             RefreshLiquidGlowLights(boundChunk.Terrain);
         }
+    }
+
+    /// <summary>纯液体流动只提交 Water Mesh，保留区块绑定期间由协程负责的完整脏格恢复。</summary>
+    internal void FlushPendingLiquidVisuals()
+    {
+        if (boundChunk?.Terrain == null || batchBindingInProgress)
+            return;
+        if (liquidVisualDirty.Count > 0 && EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
+        {
+            ChunkTerrainData terrain = boundChunk.Terrain;
+            using var refreshScope = LiquidOnlyRefreshMarker.Auto();
+            // 分帧初绑期间的地形变化已经由绑定协程完整补写；
+            // 到达这里的脏格只来自液体批次或流向变化，不需重写 Ground/Back/Blocking。
+            foreach (int index in liquidVisualDirty)
+                RefreshLiquidVisual(terrain, index % terrain.Width, index / terrain.Width);
+        }
+        liquidVisualDirty.Clear();
     }
 
     private void RefreshAllBatchVisuals(ChunkTerrainData terrain)
@@ -863,6 +928,18 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         => RefreshBatchRectangle(terrain, centerX - radius, centerX + radius,
             centerY - radius, centerY + radius);
 
+    /// <summary>只为液体深度、岸线、流向和水面材质更新共享邻格。</summary>
+    private void RefreshLiquidArea(ChunkTerrainData terrain, int centerX, int centerY, int radius)
+    {
+        int minX = Mathf.Max(0, centerX - radius);
+        int maxX = Mathf.Min(terrain.Width - 1, centerX + radius);
+        int minY = Mathf.Max(0, centerY - radius);
+        int maxY = Mathf.Min(terrain.Height - 1, centerY + radius);
+        for (int y = minY; y <= maxY; y++)
+        for (int x = minX; x <= maxX; x++)
+            RefreshLiquidVisual(terrain, x, y);
+    }
+
     private void RefreshBatchRectangle(ChunkTerrainData terrain, int left, int right, int bottom, int top)
     {
         int minX = Mathf.Max(0, left);
@@ -881,6 +958,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         int x = offsetX < 0 ? 0 : offsetX > 0 ? terrain.Width - 1 : Mathf.Clamp(neighbourX, 0, terrain.Width - 1);
         int y = offsetY < 0 ? 0 : offsetY > 0 ? terrain.Height - 1 : Mathf.Clamp(neighbourY, 0, terrain.Height - 1);
         RefreshBatchArea(terrain, x, y, 1);
+    }
+
+    private void RefreshLiquidEdge(ChunkTerrainData terrain, int offsetX, int offsetY,
+        int neighbourX, int neighbourY)
+    {
+        int x = offsetX < 0 ? 0 : offsetX > 0 ? terrain.Width - 1 : Mathf.Clamp(neighbourX, 0, terrain.Width - 1);
+        int y = offsetY < 0 ? 0 : offsetY > 0 ? terrain.Height - 1 : Mathf.Clamp(neighbourY, 0, terrain.Height - 1);
+        RefreshLiquidArea(terrain, x, y, 1);
     }
 
     /// <summary>邻区首次提交会改变整条共享边界，而不是单一格。</summary>
@@ -915,6 +1000,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
         }
         if (batchBindingInProgress) BaseTerrainBindingCellWrites++;
+        else IncrementalFullTerrainCellWrites++;
         TerrainCell cell = terrain.GetCell(x, y);
 
         if (cell.GroundTileId != 0)

@@ -71,6 +71,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 ## 液体与地表表现
 
 - Ground/Liquid 独立合批，水面主路径为 `ChunkGroundMeshRenderer/Chunk-Mesh-Water-Lit`，BRG 包装共享同一效果；液体外观来自 LiquidDefinition.WorldWater，岸线来自 LiquidDepth>0，水深为四角连续插值。液深边界变化更新八方向共享边/角；水深 UV 使用世界坐标和水层原点/纹理边框，独立于合批后的局部 POSITION。
+- `ChunkTilemapRenderer` 的液体批次、单格液体、相邻块液体和换水体材质只重提 Water Mesh；Ground/Back/Blocking 仍由正式地形变化、邻块加载与区块全量绑定负责。无岩浆区块只观察变化格是否新出现岩浆，不因普通水流扫描整块发光；真实岩浆与平台遮挡继续重建。分帧绑定期间继续完整回扫受影响的格子，禁止绕过分帧预算。Profiler `FlatWorld.ChunkRendering.LiquidOnlyRefresh/LavaGlowRefresh`，规则 `world_streaming/base_presentation_steps` 核对水流不写其它网格、不唤醒岩浆扫描及普通地形变更仍完整刷新。
 - WaterSurfaceCommon.hlsl 共用深度/岸线/月光，包装 UsePass Shader 暴露同名新增材质属性；月光在 Light2D 后合成，月亮出现与月相亮度为独立参数。
 - 写实水色连续、风格化十档，两种路径 Alpha 都随连续深度 0.60→0.80。ChunkEnvironmentRenderer 默认排除有液格，抽干恢复地表覆盖；岩浆用 LavaSurfaceCommon 与 LavaMode，独立 LavaPatternTex 承载形态。
 - `WaterSurfaceFlow.hlsl` 统一 Mesh/BRG 的完整水面输入：FlowX/Y 为河流/实验液流四角实际速度，天然海洋为风向；仅 kind=2 使用海面规则，kind=3 顺流。双相平流移植自 unity-voronoi-water（MIT-0，许可在 StreamingAssets/ThirdPartyNotices），用世界坐标与二维噪声交接，保留流速大小。

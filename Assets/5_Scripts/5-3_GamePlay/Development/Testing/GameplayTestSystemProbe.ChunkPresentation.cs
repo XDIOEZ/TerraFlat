@@ -98,6 +98,34 @@ public static partial class GameplayTestSystemProbe
             (stale as IDisposable)?.Dispose();
             bool replacementSurvived = renderer.IsBatchPresentationRegistered && !renderer.IsBatchPresentationComplete;
             Drain(replacement);
+
+            // 按正式 LiquidBatchChanged 入口制造一次加水再排水，帧末只需刷新水面。
+            // 两个批次在下一次表现提交前完成，最终地面依然干燥，不依赖测试 GameRes 水材质。
+            long fullWritesBeforeLiquid = renderer.IncrementalFullTerrainCellWrites;
+            int visualCountBeforeLiquid = renderer.BaseTerrainVisualCount;
+            int waterIndex = chunk.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+            chunk.Terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(5, waterIndex, 5) });
+            chunk.Terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(5, 0, 0) });
+            bool waterSkippedLavaScan = !renderer.PendingLiquidGlowRefresh;
+            int queuedLiquidCells = renderer.PendingLiquidVisualCellCount;
+            renderer.FlushPendingLiquidVisuals();
+            bool liquidOnlyRefresh = queuedLiquidCells > 0 &&
+                renderer.PendingLiquidVisualCellCount == 0 &&
+                renderer.IncrementalFullTerrainCellWrites == fullWritesBeforeLiquid &&
+                renderer.BaseTerrainVisualCount == visualCountBeforeLiquid &&
+                chunk.Terrain.GetLiquidLevel(5, 0) == 0;
+
+            int lavaIndex = chunk.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId);
+            chunk.Terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(5, lavaIndex, 4) });
+            bool lavaRequestedGlow = renderer.PendingLiquidGlowRefresh;
+            chunk.Terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(5, 0, 0) });
+            renderer.FlushPendingLiquidVisuals();
+            bool lavaRemovalPreserved = lavaRequestedGlow && renderer.PendingLiquidGlowRefresh &&
+                renderer.IncrementalFullTerrainCellWrites == fullWritesBeforeLiquid;
+
+            // 非液体的正式 Cell 修改仍必须走四层完整重提路径。
+            chunk.Terrain.SetCell(5, 4, new TerrainCell(0, 0, 0, 1, 7, TerrainCellFlags.Walkable));
+            bool terrainRefreshPreserved = renderer.IncrementalFullTerrainCellWrites > fullWritesBeforeLiquid;
             return new JObject
             {
                 ["firstYield"] = firstYield, ["secondYield"] = secondYield,
@@ -111,7 +139,11 @@ public static partial class GameplayTestSystemProbe
                 ["maxStepWrites"] = maxStepWrites, ["unbound"] = unbound,
                 ["cancelledReleased"] = cancelledReleased, ["cancelledEvents"] = cancelledEvents,
                 ["replacementSurvived"] = replacementSurvived,
-                ["replacementCompleted"] = renderer.IsBatchPresentationComplete, ["finalEvents"] = events
+                ["replacementCompleted"] = renderer.IsBatchPresentationComplete, ["finalEvents"] = events,
+                ["liquidOnlyRefresh"] = liquidOnlyRefresh, ["queuedLiquidCells"] = queuedLiquidCells,
+                ["terrainRefreshPreserved"] = terrainRefreshPreserved,
+                ["waterSkippedLavaScan"] = waterSkippedLavaScan,
+                ["lavaRemovalPreserved"] = lavaRemovalPreserved
             };
         }
         finally
