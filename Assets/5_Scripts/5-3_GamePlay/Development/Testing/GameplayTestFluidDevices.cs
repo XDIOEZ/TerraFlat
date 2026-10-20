@@ -549,10 +549,43 @@ internal static class GameplayTestFluidDevices
             ["residuePerReaction"] = reaction.ResidueItemsPerReaction, ["products"] = products };
     }
 
+    // 只调用正式设备推进并返回拒绝状态，Lua 检查主动停用电力需求不能被误报成断电。
+    internal static JObject CaptureStatusFeedback(Player player, JObject args)
+    {
+        using var fixture = new MachineWorld.GameplayFluidScope();
+        string scenario = args.Value<string>("scenario") ?? "compressor_empty";
+        bool compressor = scenario.StartsWith("compressor_", StringComparison.Ordinal);
+        bool liquidPump = scenario == "liquid_buffer_full";
+        MachineEntity node = fixture.Add(compressor ? "GasCompressor_Electric" : liquidPump ? "LiquidPump_Electric" : "FluidFilter");
+        fixture.Begin();
+        if (compressor && scenario != "compressor_empty") AddFluid(Prepare, node, FluidIds.Oxygen, 1m);
+        if (liquidPump) FillLiquidCapacity(Prepare, node, FluidIds.PureWater, "main");
+        if (!compressor && !liquidPump && scenario != "reaction_empty")
+        {
+            FluidMachineReactionDefinition reaction = node.Definition.Fluid.Reactions[0];
+            FluidReactionTerm input = reaction.Inputs[0];
+            AddFluid(Prepare, node, input.FluidId, input.Phase == "gas" ? 10m : 0m,
+                input.Phase == "liquid" ? 10m : 0m, input.Chamber);
+            if (scenario != "reaction_no_filter")
+                SetItem(Prepare, ((FluidMachineLogic)node.Logic).FilterMaterial, node.Definition.Fluid.FilterMaterialItemId);
+            if (scenario == "reaction_output_full")
+                FillLiquidCapacity(Prepare, node, reaction.Outputs[0].FluidId, reaction.Outputs[0].Chamber);
+        }
+        SetPower(node, false);
+        string before = Payload(Inventory(node));
+        float demand = MachineWorld.GetFluidDeviceBehavior(node).ElectricalDemand(node);
+        if (compressor) FluidDeviceOperations.AdvanceCompressor(node, fixture.Seconds);
+        else if (liquidPump) FluidDeviceOperations.AdvanceLiquidPump(node, fixture.Seconds);
+        else FluidDeviceOperations.AdvanceFluidReaction(node, fixture.Seconds);
+        return new JObject { ["status"] = State(node).Status, ["demand"] = demand,
+            ["suppliedWatts"] = node.ElectricalSuppliedWatts, ["inputUnchanged"] = before == Payload(Inventory(node)) };
+    }
+
     internal static JObject CaptureResidueTransfer(Player player, JObject args)
     {
         using var fixture = new MachineWorld.GameplayFluidScope();
-        MachineEntity node = fixture.Add("WaterElectrolyzer"), target = fixture.Add("LiquidStorageTank", 1);
+        bool mismatched = args.Value<bool?>("mismatched") == true;
+        MachineEntity node = fixture.Add("WaterElectrolyzer"), target = fixture.Add(mismatched ? "LiquidPump_Electric" : "LiquidStorageTank", 1);
         fixture.Begin();
         FluidMachineLogic logic = Logic(Prepare, node), targetLogic = Logic(Prepare, target);
         FluidMachineReactionDefinition reaction = Array.Find(node.Definition.Fluid.Reactions,
@@ -565,7 +598,9 @@ internal static class GameplayTestFluidDevices
         if (source == null || !source.ReserveLiquid(out LiquidTransferBatch batch))
             throw new InvalidOperationException("真实电解没有产生可预留液碱。");
         if (args.Value<bool?>("full") == true) FillLiquidCapacity(Prepare, target, byproduct.FluidId, "main");
-        var receiver = new IndustrialLiquidTransferPort(targetLogic, target.Definition.Fluid.Ports[0]);
+        if (mismatched) AddFluid(Prepare, target, FluidIds.PureWater, 0m, 1m);
+        var receiver = new IndustrialLiquidTransferPort(targetLogic,
+            Array.Find(target.Definition.Fluid.Ports, value => value.Mode != "output"));
         int scene = SceneManager.GetSceneByName(fixture.Key).handle;
         var context = new ContainerTransferContext(node.Position, scene, ContainerAccessKind.Mod, "Lua 液碱原子交易");
         var machineContext = new ContainerTransferContext(node.Position, scene, ContainerAccessKind.Machine, "Lua 液碱机器访问");
@@ -576,7 +611,8 @@ internal static class GameplayTestFluidDevices
         float requested = args.Value<float?>("requested") ?? 1f;
         ContainerTransferResult preview = ContainerTransferService.PreviewLiquid(source, receiver, context, requested);
         decimal roundtrip = FluidUnits.ServingsToMol(FluidCatalog.Default.Find(byproduct.FluidId), (decimal)batch.Servings);
-        bool machineDenied = !ContainerTransferService.PreviewLiquid(source, receiver, machineContext, requested).Success;
+        ContainerTransferResult machinePreview = ContainerTransferService.PreviewLiquid(source, receiver, machineContext, requested);
+        bool machineDenied = !machinePreview.Success;
         ContainerTransferResult result = ContainerTransferService.TransferLiquid(source, receiver, context, requested);
         return new JObject { ["fluidId"] = byproduct.FluidId, ["visibleServings"] = batch.Servings,
             ["visibleRoundtripMoles"] = (double)roundtrip, ["sourceBefore"] = (double)before,
@@ -584,6 +620,9 @@ internal static class GameplayTestFluidDevices
             ["targetAfter"] = (double)destination.GetLiquidMoles(byproduct.FluidId), ["previewSuccess"] = preview.Success,
             ["previewFailure"] = preview.Failure.ToString(), ["success"] = result.Success, ["failure"] = result.Failure.ToString(),
             ["transferredServings"] = result.LiquidServings, ["machineDenied"] = machineDenied,
+            ["machineFailureStatus"] = FluidDeviceOperations.GetLiquidPumpTransferFailureStatus(machinePreview.Failure),
+            ["transferFailureStatus"] = result.Success ? string.Empty : FluidDeviceOperations.GetLiquidPumpTransferFailureStatus(result.Failure,
+                destination, FluidCatalog.Default.Find(byproduct.FluidId), target.Definition.Fluid.SingleLiquid),
             ["sourceUnchanged"] = sourcePayload == Payload(origin), ["targetUnchanged"] = targetPayload == Payload(destination),
             ["gasBefore"] = gasBefore, ["gasAfter"] = (double)Inventory(node, "output").GasMoles,
             ["sourcePortId"] = source.Reference.PortId, ["machineAccess"] = (source.Configuration.Access & ContainerAccessKind.Machine) != 0 };

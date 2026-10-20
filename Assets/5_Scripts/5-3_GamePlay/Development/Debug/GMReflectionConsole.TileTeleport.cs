@@ -168,8 +168,31 @@ public sealed partial class GMReflectionConsole
                 tileTeleportHint.text = "目标地块在搜索期间发生了变化，请重新搜索。";
                 yield break;
             }
-            teleported = traits.TryTeleportToWorldPosition(destination);
-            tileTeleportHint.text = teleported ? $"已传送到{name}：({result.Cell.X}, {result.Cell.Y})。" : "当前无法传送，请稍后重试。";
+            // 提交传送不等于落点已应用，只有权威回执成功才显示完成。
+            bool completed = false;
+            if (!PlayerTeleportService.TryTeleportToSurface(player, destination, succeeded =>
+            {
+                teleported = succeeded;
+                completed = true;
+            }))
+            {
+                tileTeleportHint.text = "当前无法传送，请等待世界就绪或上一笔传送结束。";
+                yield break;
+            }
+            double teleportDeadline = Time.realtimeSinceStartupAsDouble + 30d;
+            while (!completed)
+            {
+                if (cancellation.IsCancellationRequested || !IsSameWorld()) yield break;
+                if (Time.realtimeSinceStartupAsDouble >= teleportDeadline)
+                {
+                    tileTeleportHint.text = "等待传送结果超时，尚未确认落点。";
+                    yield break;
+                }
+                tileTeleportHint.text = "已定位地块，正在等待传送结果…";
+                yield return null;
+            }
+            tileTeleportHint.text = teleported ? $"已传送到{name}：({result.Cell.X}, {result.Cell.Y})。" :
+                "地块传送未完成，落点尚未应用。";
             if (teleported) Debug.Log($"[GM] 已传送到地块 {definition.Id}，逻辑落点={destination}");
 
             bool IsSameWorld() => this != null && player != null && traits != null && manager != null &&

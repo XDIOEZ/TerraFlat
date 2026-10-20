@@ -93,11 +93,11 @@ public sealed partial class DimensionManager
         bool wasSimulated = body != null && body.simulated;
         bool wasRunning = mover != null && mover.IsRunning;
         bool completed = false;
+        Exception failure = null;
         controller?.SetGameplayInputLocked(true);
         if (body != null) body.simulated = false;
         try
         {
-            Exception failure = null;
             yield return GameManager.RunWorldTransitionSteps(
                 ApplyNetworkPresentationSteps(actor, target, position, () => ReferenceEquals(owner, SaveDataMgr.Instance?.SaveData) &&
                     GameManager.ExistingInstance?.IsInGameWorld == true && (!requireConnection || ReferenceEquals(session, GameNetwork.Session) && GameNetwork.IsOnline)), error => failure = error);
@@ -114,7 +114,7 @@ public sealed partial class DimensionManager
             if (body != null) body.simulated = wasSimulated;
             isTransitioning = false;
             networkTransitionPending = false;
-            GameManager.Instance.EndNetworkDimensionLoading(completed);
+            GameManager.Instance.EndNetworkDimensionLoading(completed, failure?.Message);
             if (completed || !GameNetwork.IsOnline)
             {
                 controller?.SetGameplayInputLocked(false);

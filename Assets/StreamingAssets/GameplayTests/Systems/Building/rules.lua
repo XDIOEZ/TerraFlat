@@ -1,3 +1,9 @@
+test.system("building", "placement_feedback", {}, function(data)
+    assert(#data.details == 2 and data.details[1] == "召唤器数量不足" and data.details[2] == "地块支撑能力不足",
+        "建造拒绝原因被统一位置错误覆盖")
+    assert(data.semanticCount == 2 and data.actorPreserved, "详细原因通道破坏既有音效语义或玩家归属")
+end, "建造数量和支撑拒绝原因原样发布且保留语义事件")
+
 test.system("building", "support_layer", {}, function(data)
     assert(data.surfaceGround == 90 and data.surfaceCost == 2 and data.surfaceWalkable,
         "覆盖支撑没有提供新的有效地面和通行成本")

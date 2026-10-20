@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -10,13 +10,18 @@ namespace FlatWorld.Spaceflight
         #region 舱门开关与通道占位
         private readonly List<Collider2D> doorwayOverlaps = new();
 
-        public bool TryToggleDoor(string pieceId)
+        public bool TryToggleDoor(string pieceId) => TryToggleDoor(pieceId, out _);
+        public bool TryToggleDoor(string pieceId, out string reason)
         {
+            reason = null;
             if (SubmitLocalIntent(SpaceNetworkIntentKind.ToggleDoor, pieceId)) return true;
-            if (!GameNetwork.HasStateAuthority || !FindPiece(pieceId, out ShipState ship, out ShipPieceState door) ||
-                !door.IsAlive || door.Kind != ShipPieceKind.Door) return false;
+            if (!GameNetwork.HasStateAuthority) return RejectShipOperation("当前端没有世界操作权限。", out reason);
+            if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState door) || !door.IsAlive)
+                return RejectShipOperation("舱门已失效。", out reason);
+            if (door.Kind != ShipPieceKind.Door) return RejectShipOperation("操作目标不是舱门。", out reason);
             // 通道有人时保持打开，不通过挪动乘员来强行关门。
-            if (door.DoorOpen && IsDoorwayOccupied(ship, door)) return false;
+            if (door.DoorOpen && IsDoorwayOccupied(ship, door))
+                return RejectShipOperation("舱门通道被占用，无法关闭。", out reason);
             door.DoorOpen = !door.DoorOpen;
             RefreshShipPassageGeometry(ship);
             return true;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -39,10 +39,7 @@ namespace FlatWorld.Spaceflight
         {
             reason = null;
             if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.ToggleIgnition, consoleId);
-            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console)
-            { reason = FlatWorldLocalizationService.GetUiText("点火失败：飞船控制台已失效。"); return false; }
-            if (!IsPowered(ship, console))
-            { reason = FlatWorldLocalizationService.GetUiText("点火失败：控制台未供电或已停用。"); return false; }
+            if (!TryGetPoweredConsole(consoleId, out ShipState ship, out _, out reason)) return false;
             var flight = GetFlight(ship.ShipId);
             var assembly = GetConnectedAssembly(ship.ShipId);
             if (flight == null || assembly == null)
@@ -50,6 +47,7 @@ namespace FlatWorld.Spaceflight
             if (flight.Ignited)
             {
                 foreach (string id in assembly.MemberShipIds) GetFlight(id).Ignited = false;
+                reason = FlatWorldLocalizationService.GetUiText("引擎已停机，飞船继续按惯性运动。");
                 return true;
             }
             // 从停靠转入动力模拟前同步实际载荷，避免使用静态阶段的旧质量。
@@ -80,6 +78,7 @@ namespace FlatWorld.Spaceflight
                     member.SurfaceStageElapsedSeconds = 0d;
                 }
             }
+            reason = FlatWorldLocalizationService.GetUiText("点火已开启。");
             return true;
         }
 

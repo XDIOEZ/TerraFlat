@@ -450,6 +450,31 @@ do
             assert(arrival.speed >= 0 and arrival.speed <= data.arrivalSpeed,
                 "多步长导航进入范围时尚未停稳")
         end
+        local feedback = data.operationFeedback
+        assert(#feedback.consoles >= 4 and feedback.consoles[1] == "飞船控制台已失效。"
+            and feedback.consoles[2] == "控制台已瘫痪或船体已成为残骸。"
+            and feedback.consoles[3] == "控制台已停用，请先启用。"
+            and feedback.consoles[4] == "控制台未获得足够电力。", "控制台失效/瘫痪/停用被误报为缺电")
+        assert(#feedback.navigation == 5 and feedback.navigation[1] == "飞船未安装自动导航设备。"
+            and feedback.navigation[2] == "自动导航设备已瘫痪。"
+            and feedback.navigation[3] == "自动导航设备已停用，请先启用。"
+            and feedback.navigation[4] == "自动导航设备未获得足够电力。"
+            and feedback.navigation[5] == "控制台与已供电的自动导航设备之间没有连通的光纤。", "导航失败原因没有区分设备、瘫痪、停用、供电与光纤")
+        for index, expected in ipairs({true, true, false, false, false, false}) do
+            assert(feedback.pressure[index] == expected, "目标气压边界或非法数值准入错误")
+        end
+        assert(feedback.dockPending == "本船已确认对接，正在等待另一艘飞船确认。"
+            and feedback.dockConnected == "双方确认完成，对接连接已建立。", "单方确认误报为连接完成")
+        assert(feedback.healthyConsole, "正常控制台被错误拒绝")
+        local dockReasons = {record = "对接记录已失效。", foreign = "当前飞船不属于这组对接接口。",
+            console = "对接双方都需要有效控制台。", port = "对接接口已失效。", world = "对接双方不在同一世界。",
+            position = "对接接口尚未贴合。", direction = "对接接口朝向未对齐。", speed = "对接双方的相对速度过大。"}
+        assert(#feedback.dockFailures == 8, "缺少对接拒绝分支样本")
+        for _, sample in ipairs(feedback.dockFailures) do
+            assert(not sample.accepted and sample.reason == dockReasons[sample.case], "对接拒绝原因错误：" .. sample.case)
+            dockReasons[sample.case] = nil
+        end
+        assert(next(dockReasons) == nil, "对接拒绝分支样本重复或缺失")
         local ignitionFailures = {
             overweight = "Overweight", floating = "Overweight", boundary = "Overweight",
             sufficient = "None", noFuel = "NoFuel", cruising = "None", lifting = "None", zeroGravity = "None"

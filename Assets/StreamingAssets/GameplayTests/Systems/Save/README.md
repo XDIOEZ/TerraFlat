@@ -1,5 +1,7 @@
 # 实例与世界存档
 
+- 2026-10-21 `rename_feedback` 检查未载入/失效角色/空名/超长/重名/旧选择/非法文件名与名称不变分支；`resource_reload_feedback` 检查发布前后反馈及维度失败原因保留。只调用独立内存对象与文案规则，未覆盖真实写盘异常、资源发布事务或真实维度迁移。用户PlayMode中，本轮未编译、未执行。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`save/snapshot_memory、special_namespace、space_item_chain、autosave_budget、autosave_chunk_payload、autosave_ecology_payload、load_failure_state`。真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
@@ -21,3 +23,5 @@
 写盘门禁要求当前正式存档目录严格位于 `Library/FlatWorldGameplayTests/Saves/<本轮ID>`，拒绝目录联接。保存源为当前档案的冷克隆，测试文件保留在本轮目录的唯一 `Roundtrips` 子目录。读取使用停用独立 SaveDataMgr，调用正式核心解析，校验 MOD 元数据但不发布全局 MOD 状态；Lua 同时检查活跃存档、角色、管理器引用及必要标量没有被修改。
 
 后续修改触及以上关键流程时，需增强本组 Lua 和真实隔离场景夹具，再执行相关系统；不能把快速规则通过当成全路径覆盖。
+
+2026-10-21 资源更新失败反馈规则补充：正式嵌套迭代器驱动器跨过一次让帧后抛错，断言回收实际失败原因，覆盖发布后玩家重建的异常捕获基础；未执行，仍不代替真实资源发布和玩家重建流程验收。

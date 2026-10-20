@@ -23,7 +23,7 @@ namespace FlatWorld.Spaceflight
     public enum SpaceNetworkIntentKind
     {
         EnterConsole, ExitConsole, ToggleDoor, ToggleIgnition, RequestLanding,
-        StartNavigation, CancelNavigation, ConfirmDock, DisconnectDock, Attack, AttackEnd, UseSkill, Respawn, CombatStateApplied, LaunchGroundShip, UsePlayerItem, HarvestNatural
+        StartNavigation, CancelNavigation, ConfirmDock, DisconnectDock, Attack, AttackEnd, UseSkill, Respawn, CombatStateApplied, LaunchGroundShip, UsePlayerItem, HarvestNatural, SetTargetPressure
     }
 
     [Serializable]

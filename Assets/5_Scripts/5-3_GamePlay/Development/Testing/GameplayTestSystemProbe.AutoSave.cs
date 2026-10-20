@@ -21,6 +21,41 @@ public static partial class GameplayTestSystemProbe
         Register("save", "autosave_ecology_payload", ServiceAutoSaveEcologyPayload);
         Register("save", "agriculture_cell_index", ServiceAgricultureCellIndex);
         Register("save", "load_failure_state", ServiceLoadFailureState);
+        Register("save", "rename_feedback", ServiceRenameFeedback);
+        Register("save", "resource_reload_feedback", ServiceResourceReloadFeedback);
+    }
+
+    private static JObject ServiceRenameFeedback(JObject args)
+    {
+        var host = new GameObject("probe:inactive-rename-feedback");
+        host.SetActive(false);
+        try { return host.AddComponent<SaveDataMgr>().CaptureTestRenameFeedback(); }
+        finally { UnityEngine.Object.DestroyImmediate(host); }
+    }
+
+    private static JObject ServiceResourceReloadFeedback(JObject args)
+    {
+        const string failure = "probe:actual-publish-failure";
+        Exception nestedFailure = null;
+        var steps = GameManager.RunWorldTransitionSteps(OuterSteps(), exception => nestedFailure = exception);
+        while (steps.MoveNext()) { }
+        return new JObject
+        {
+            ["beforePublish"] = GameSaveStatusHUD.GetResourceReloadResultText(false, false, failure),
+            ["afterPublish"] = GameSaveStatusHUD.GetResourceReloadResultText(false, true, failure),
+            ["success"] = GameSaveStatusHUD.GetResourceReloadResultText(true, true, failure),
+            ["missingReason"] = GameSaveStatusHUD.GetResourceReloadResultText(false, false, null),
+            ["dimensionReason"] = GameManager.GetNetworkDimensionFailureText(failure),
+            ["nestedReloadReason"] = nestedFailure?.Message
+        };
+
+        // 使用正式迭代器驱动器验证跨帧嵌套异常不会绕过热更新失败反馈。
+        System.Collections.IEnumerator OuterSteps() { yield return FailingSteps(); }
+        System.Collections.IEnumerator FailingSteps()
+        {
+            yield return null;
+            throw new InvalidOperationException(failure);
+        }
     }
 
     private static JObject ServiceLoadFailureState(JObject args)

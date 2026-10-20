@@ -622,8 +622,70 @@ public static class GameplayTestShipProbe
             ["unpoweredOverspeed"] = Vector(noPower), ["arrivals"] = arrivals,
             ["arrivalDistance"] = settings.NavigationArrivalDistanceMeters,
             ["arrivalSpeed"] = settings.NavigationArrivalSpeedMetersPerSecond,
-            ["ignition"] = CaptureIgnitionThrustFailures()
+            ["ignition"] = CaptureIgnitionThrustFailures(),
+            ["operationFeedback"] = CaptureShipOperationFeedback()
         };
+    }
+
+    // 正式反馈分类优先说明失效/瘫痪/停用，不能把这些状态误报成缺电。
+    private static JObject CaptureShipOperationFeedback()
+    {
+        var consoles = new JArray();
+        foreach (var sample in new[]
+        {
+            (false, false, false, false), (true, false, false, false), (true, true, false, false),
+            (true, true, true, false), (true, true, true, true)
+        }) consoles.Add(SpaceSession.GetConsoleOperationFailure(sample.Item1, sample.Item2, sample.Item3, sample.Item4));
+        var pressure = new JArray();
+        foreach (double value in new[] { 0d, 200000d, -.01d, 200000.01d, double.NaN, double.PositiveInfinity })
+            pressure.Add(SpaceSession.IsValidTargetPressure(value));
+        return new JObject
+        {
+            ["consoles"] = consoles,
+            ["navigation"] = new JArray(SpaceSession.GetNavigationDeviceFailure(false, false, false, false),
+                SpaceSession.GetNavigationDeviceFailure(true, false, false, false),
+                SpaceSession.GetNavigationDeviceFailure(true, true, false, false),
+                SpaceSession.GetNavigationDeviceFailure(true, true, true, false),
+                SpaceSession.GetNavigationDeviceFailure(true, true, true, true)),
+            ["pressure"] = pressure,
+            ["dockPending"] = SpaceSession.GetDockConfirmationFeedback(false),
+            ["dockConnected"] = SpaceSession.GetDockConfirmationFeedback(true),
+            ["healthyConsole"] = SpaceSession.GetConsoleOperationFailure(true, true, true, true) == null,
+            ["dockFailures"] = CaptureDockingFailureReasons()
+        };
+    }
+
+    private static JArray CaptureDockingFailureReasons()
+    {
+        var results = new JArray();
+        foreach (string test in new[] { "record", "foreign", "console", "port", "world", "position", "direction", "speed" })
+        {
+            ShipState a = DockShip("feedback-a", 0), b = DockShip("feedback-b", 2);
+            ShipDockingService.PortWorldPose(a, a.DockingPorts[0], out double ax, out double ay, out _, out _);
+            ShipDockingService.PortWorldPose(b, b.DockingPorts[0], out double bx, out double by, out _, out _);
+            b.PositionX += ax - bx; b.PositionY += ay - by;
+            var ships = new List<ShipState> { a, b };
+            var pairs = new List<ShipDockingPairState>();
+            if (!ShipDockingService.TryCreateCandidate(ships, pairs, a.ShipId, a.DockingPorts[0].PortId,
+                b.ShipId, b.DockingPorts[0].PortId, out ShipDockingPairState pair))
+                throw new InvalidOperationException("对接反馈夹具未形成候选接口。");
+            if (test == "console") b.Pieces.RemoveAll(piece => piece.Kind == ShipPieceKind.Console);
+            if (test == "port") b.Pieces.RemoveAll(piece => piece.Kind == ShipPieceKind.DockingPort);
+            if (test == "world") b.PlatformKind = ShipPlatformKind.Land;
+            if (test == "position") b.PositionX += 10d;
+            if (test == "direction")
+            {
+                b.Pieces.Find(piece => piece.Kind == ShipPieceKind.DockingPort).QuarterTurns = 0;
+                ShipDockingService.SynchronizePorts(b);
+                ShipDockingService.PortWorldPose(b, b.DockingPorts[0], out bx, out by, out _, out _);
+                b.PositionX += ax - bx; b.PositionY += ay - by;
+            }
+            if (test == "speed") b.VelocityX = 10d;
+            bool accepted = ShipDockingService.Confirm(ships, pairs, test == "record" ? "missing" : pair.PairId,
+                test == "foreign" ? "other" : a.ShipId, out string reason);
+            results.Add(new JObject { ["case"] = test, ["accepted"] = accepted, ["reason"] = reason });
+        }
+        return results;
     }
 
     // 采样正式点火拒绝规则，覆盖超重、缺燃料、推力等于重力及不同飞行阶段。

@@ -21,15 +21,21 @@ public partial class GameManager
             WorldEntryProgressState.Running, WorldEntryPresentationMode.Dimension, networkDimensionTarget));
     }
 
-    internal void EndNetworkDimensionLoading(bool completed)
+    internal void EndNetworkDimensionLoading(bool completed, string failureReason = null)
     {
         if (!networkDimensionLoading) return;
         networkDimensionLoading = false;
         PublishWorldEntryProgress(new WorldEntryProgressInfo(completed ? "维度切换完成" : "维度切换失败",
-            completed ? "目标区域已经准备完毕。" : "目标区域未准备完成，请检查连接。", completed ? 1f : 0f,
+            completed ? "目标区域已经准备完毕。" : GetNetworkDimensionFailureText(failureReason), completed ? 1f : 0f,
             completed ? WorldEntryProgressState.Completed : WorldEntryProgressState.Failed,
             WorldEntryPresentationMode.Dimension, networkDimensionTarget));
         networkDimensionTarget = null;
     }
+
+    // 加载失败保留准备阶段的异常，不能把资源或场景错误一概归为连接问题。
+    internal static string GetNetworkDimensionFailureText(string failureReason)
+        => string.IsNullOrWhiteSpace(failureReason)
+            ? FlatWorld.Localization.FlatWorldLocalizationService.GetUiText("目标区域准备未完成，请查看日志。")
+            : failureReason;
     #endregion
 }

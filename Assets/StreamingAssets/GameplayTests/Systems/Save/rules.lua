@@ -1,3 +1,34 @@
+-- 只检查正式改名服务的内存拒绝和不变名称，不执行磁盘写入。
+test.system("save", "rename_feedback", {}, function(data)
+    local expected = {
+        noSave = "当前存档尚未载入，无法修改角色名称。",
+        missingPlayer = "所选角色已不存在，请重新选择。",
+        empty = "名称不能为空",
+        tooLong = "名称不能超过48个字符。",
+        duplicate = "当前存档中已有同名角色。"
+    }
+    for name, reason in pairs(expected) do
+        assert(not data[name].success and data[name].reason == reason, "角色改名错误原因：" .. name)
+    end
+    assert(data.saveNoSave == "当前存档尚未载入，无法改名。", "未加载存档被误报为名称或磁盘问题")
+    assert(data.staleSave == "当前选择的存档已变化，请重新选择。", "旧选择被误报为重名")
+    assert(data.invalidSave == "存档名称包含文件名不允许的字符，或以句点结尾。", "非法文件名没有明确原因")
+    assert(data.unchangedAccepted and data.saveUnchangedAccepted and data.saveName == "probe_save" and data.playerPreserved,
+        "改名拒绝污染名称，或相同名称不再幂等成功")
+    assert(data.unchangedReason == nil and data.saveUnchangedReason == nil, "成功改名仍残留拒绝原因")
+end, "存档角色改名按真实校验返回原因且不污染原名称")
+
+test.system("save", "resource_reload_feedback", {}, function(data)
+    local cause = "probe:actual-publish-failure"
+    assert(string.find(data.beforePublish, cause, 1, true) and string.find(data.afterPublish, cause, 1, true),
+        "资源更新提示丢失实际失败原因")
+    assert(data.beforePublish ~= data.afterPublish and not string.find(data.success, cause, 1, true),
+        "资源提交前后错误使用同一结果描述，或成功提示仍包含旧错误")
+    assert(type(data.missingReason) == "string" and #data.missingReason > 0, "缺少原因时没有明确回退")
+    assert(data.dimensionReason == cause, "维度准备失败被覆盖为连接故障")
+    assert(data.nestedReloadReason == cause, "发布后的跨帧玩家重建异常丢失失败原因")
+end, "资源更新提交阶段和维度加载真实失败原因")
+
 -- 只在内存中捕获和恢复当前格式，真实玩家存档不读写。
 test.system("save", "agriculture_cell_index", {}, function(data)
     assert(data.initiallyMissing and data.identityPreserved and data.baselineSum == data.indexedSum,

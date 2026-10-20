@@ -5,6 +5,8 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 
 # 建造
 
+- 放置拒绝通过 `PlacementRejectedDetailed` 携带真实校验/权威回执原因给气泡，`PlacementRejected` 继续服务音效语义；不得把数量、支撑或事务失败统一覆盖为位置错误。
+
 ## 代码与内容
 
 - 玩法根：`Assets/5_Scripts/5-3_GamePlay/`。

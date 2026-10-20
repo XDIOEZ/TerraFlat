@@ -22,6 +22,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 内容：`GameConfig/Space/solar-system.json` 的主目录在 `(0,0)`、`sectorSystems` 扩展其他星区，默认 `(-1,0)` 为天狼星，其余为空域；`Resources/Config/Space/space-gameplay.json`、Items/shells/space_ships.json 和 space_devices.json 配置玩法。固定船型在 `GameConfig/Structures/fixed-structures.json`，ShipFixedStructureBuilder 经 ShipGroundBuildingStore 逐件生成普通地面建筑，不提前创建飞船。
 - 测试船生成、补给和地面点火复用单人与多人的权威事务；客户端只提交模板/控制台身份并等正式回执，服务器使用连接绑定的玩家和所在世界验证位置、占地与资源，生成的普通建筑走原有机器/物品发布链。
 - 点火拒绝由 `ToggleIgnition(..., out reason)` 返回真实原因；超重显示当前总质量和推力可支撑质量，地面装配与船控回执原样传递，不用通用缺电提示覆盖。船控客户端经 `RequestToggleIgnition` 等待权威回执。
+- 船控驾驶/退出/导航/降落/对接/目标气压统一经 `RequestShipOperation` 等权威回执；确认对接区分等待另一方与已连通，选点导航拒绝也回到原面板显示，不能把发包当成功或把状态失败统称距离/权限不足。
 - 功能规划来源：`开发文档文件夹/01_世界生成与环境/太空场景开发待办.md`，未完成项与运行系统分开。
 
 ## 时钟、坐标与接触

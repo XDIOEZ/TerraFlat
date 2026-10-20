@@ -1,6 +1,7 @@
 // 动态建筑放置占用层：以离散世界格记录建筑位置，不依赖任何 Physics2D Collider。
 // 该层同时服务放置冲突判断与导航脏格更新；建筑实体的 Collider 只负责交互/受击等运行时物理。
 using System;
+using FlatWorld.Localization;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using Unity.Mathematics;
@@ -132,7 +133,7 @@ public static class BuildingOccupancyRegistry
             return true;
         }
 
-        reason = $"地块 ({cell.x},{cell.y}) 已被建筑占用";
+        reason = FlatWorldLocalizationService.GetUiFormat("地块 ({0},{1}) 已被建筑占用", cell.x, cell.y);
         return false;
     }
 

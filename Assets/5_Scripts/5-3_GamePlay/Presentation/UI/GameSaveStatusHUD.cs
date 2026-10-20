@@ -32,7 +32,9 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     private float resourceReloadProgress;
     private bool transientMessageActive;
     private string transientMessage;
+    private object[] transientMessageArguments;
     private string queuedResourceReloadMessage;
+    private object[] queuedResourceReloadMessageArguments;
     private float queuedResourceReloadVisibleSeconds;
     private bool missingPrefabLogged;
 
@@ -93,6 +95,7 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         saveFailed = false;
         transientMessageActive = false;
         transientMessage = null;
+        transientMessageArguments = null;
         CancelHideCoroutine();
         BeginViewIfReady();
         if (statusText == null)
@@ -117,6 +120,7 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
 
         transientMessageActive = false;
         transientMessage = null;
+        transientMessageArguments = null;
         BeginViewIfReady();
         if (statusText == null)
             return;
@@ -145,9 +149,11 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         resourceReloadInProgress = true;
         resourceReloadProgress = 0f;
         queuedResourceReloadMessage = null;
+        queuedResourceReloadMessageArguments = null;
         queuedResourceReloadVisibleSeconds = 0f;
         transientMessageActive = false;
         transientMessage = null;
+        transientMessageArguments = null;
         saveFailed = false;
         CancelHideCoroutine();
         BeginViewIfReady();
@@ -170,11 +176,13 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     }
 
     /// <summary>显示热更新成功或失败结果；若保存提示正在显示则排队到保存提示结束后。</summary>
-    public void EndResourceReload(bool succeeded)
+    public void EndResourceReload(bool succeeded, bool published = false, string failureReason = null)
     {
         resourceReloadInProgress = false;
         resourceReloadProgress = succeeded ? 1f : resourceReloadProgress;
-        string message = succeeded ? "资源更新完成" : "更新失败，仍使用旧资源";
+        string message = GetResourceReloadResultSource(succeeded, published);
+        object[] arguments = succeeded ? null : new object[]
+            { string.IsNullOrWhiteSpace(failureReason) ? "未提供失败原因，请查看日志。" : failureReason };
         float visibleSeconds = succeeded
             ? ResourceReloadSuccessVisibleSeconds
             : ResourceReloadFailureVisibleSeconds;
@@ -182,11 +190,29 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         if (saveInProgress)
         {
             queuedResourceReloadMessage = message;
+            queuedResourceReloadMessageArguments = arguments;
             queuedResourceReloadVisibleSeconds = visibleSeconds;
             return;
         }
 
-        ShowTransientMessage(message, visibleSeconds);
+        ShowTransientMessage(message, visibleSeconds, arguments);
+    }
+
+    // 提示按正式发布边界说明当前状态，并保留实际失败阶段。
+    internal static string GetResourceReloadResultText(bool succeeded, bool published, string failureReason)
+        => GetMessageText(GetResourceReloadResultSource(succeeded, published), succeeded ? null :
+            new object[] { string.IsNullOrWhiteSpace(failureReason) ? "未提供失败原因，请查看日志。" : failureReason });
+
+    private static string GetResourceReloadResultSource(bool succeeded, bool published)
+        => succeeded ? "资源更新完成" : published ? "新资源已发布，但后续更新未完成：{0}" : "资源更新失败，仍使用旧资源：{0}";
+
+    private static string GetMessageText(string source, object[] arguments)
+    {
+        if (arguments == null) return FlatWorldLocalizationService.GetUiText(source);
+        var localized = new object[arguments.Length];
+        for (int i = 0; i < arguments.Length; i++)
+            localized[i] = arguments[i] is string text ? FlatWorldLocalizationService.GetUiText(text) : arguments[i];
+        return FlatWorldLocalizationService.GetUiFormat(source, localized);
     }
 
     /// <summary>取消热更新提示；退出世界时不留下错误消息或拦截界面。</summary>
@@ -195,6 +221,7 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         resourceReloadInProgress = false;
         resourceReloadProgress = 0f;
         queuedResourceReloadMessage = null;
+        queuedResourceReloadMessageArguments = null;
         queuedResourceReloadVisibleSeconds = 0f;
         CancelHideCoroutine();
         if (!saveInProgress)
@@ -211,13 +238,13 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         else if (resourceReloadInProgress)
             statusText.text = GetResourceReloadStatusText();
         else if (transientMessageActive)
-            statusText.text = FlatWorldLocalizationService.GetUiText(transientMessage);
+            statusText.text = GetMessageText(transientMessage, transientMessageArguments);
         else if (saveFailed)
             statusText.text = FlatWorldLocalizationService.GetUiText("保存失败");
     }
 
     /// <summary>显示一条复用现有状态文本的短暂玩法提示，避免新增单句提示预制体。</summary>
-    public void ShowTransientMessage(string message, float visibleSeconds = 2f)
+    public void ShowTransientMessage(string message, float visibleSeconds = 2f, object[] arguments = null)
     {
         if (string.IsNullOrWhiteSpace(message) || saveInProgress || resourceReloadInProgress)
             return;
@@ -229,8 +256,9 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
             return;
 
         transientMessage = message;
+        transientMessageArguments = arguments;
         transientMessageActive = true;
-        statusText.text = FlatWorldLocalizationService.GetUiText(message);
+        statusText.text = GetMessageText(message, arguments);
         shownAt = Time.unscaledTime;
         SetViewVisible(true);
         ScheduleHide(visibleSeconds);
@@ -283,11 +311,13 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     private void ShowQueuedResourceReloadMessage()
     {
         string message = queuedResourceReloadMessage;
+        object[] arguments = queuedResourceReloadMessageArguments;
         float visibleSeconds = queuedResourceReloadVisibleSeconds;
         queuedResourceReloadMessage = null;
+        queuedResourceReloadMessageArguments = null;
         queuedResourceReloadVisibleSeconds = 0f;
         saveFailed = false;
-        ShowTransientMessage(message, visibleSeconds);
+        ShowTransientMessage(message, visibleSeconds, arguments);
     }
 
     private bool EnsureView()
@@ -384,6 +414,7 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
 
         transientMessageActive = false;
         transientMessage = null;
+        transientMessageArguments = null;
         saveFailed = false;
         SetViewVisible(false);
     }

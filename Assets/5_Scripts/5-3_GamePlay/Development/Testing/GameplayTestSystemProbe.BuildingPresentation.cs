@@ -5,6 +5,42 @@ using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
 {
+    #region 建造拒绝消息采样
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoadMethod]
+#endif
+    private static void RegisterBuildingFeedbackRules() => Register("building", "placement_feedback", ServiceBuildingPlacementFeedback);
+
+    private static JObject ServiceBuildingPlacementFeedback(JObject args)
+    {
+        var host = new GameObject("probe:inactive-building-feedback");
+        host.SetActive(false);
+        Player actor = host.AddComponent<Player>();
+        var details = new JArray();
+        int semanticCount = 0;
+        bool actorPreserved = true;
+        void Detailed(Player value, FlatWorld.Gameplay.Building.BuildingPlacementFailureReason reason, string detail)
+        { actorPreserved &= ReferenceEquals(value, actor); details.Add(detail); }
+        void Semantic(Player value, FlatWorld.Gameplay.Building.BuildingPlacementFailureReason reason) => semanticCount++;
+        FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PlacementRejectedDetailed += Detailed;
+        FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PlacementRejected += Semantic;
+        try
+        {
+            FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PublishPlacementRejected(actor, detail: "召唤器数量不足");
+            FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PublishPlacementRejected(actor, detail: "地块支撑能力不足");
+            FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PublishPlacementRejected(null, detail: "不应发布");
+            return new JObject { ["details"] = details, ["semanticCount"] = semanticCount, ["actorPreserved"] = actorPreserved };
+        }
+        finally
+        {
+            FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PlacementRejectedDetailed -= Detailed;
+            FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PlacementRejected -= Semantic;
+            UnityEngine.Object.DestroyImmediate(host);
+        }
+    }
+    #endregion
+
     #region 船件建筑状态的正式能力采样
 
     // 禁用独立物品只装配必要模块，分层与通行判断全部交给正式船件接口。
