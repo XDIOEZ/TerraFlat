@@ -153,7 +153,13 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (string.IsNullOrWhiteSpace(input)) return;
         commandField.SetTextWithoutNotify(string.Empty);
         Execute(input);
-        if (IsOpen && !Application.isMobilePlatform && !EventSystemGuard.IsGamepadMode)
+        // 是否继续键盘输入由玩家控制方案决定，手机外接键盘也能连续输入命令。
+        Mod_GameController controller = actor != null
+            ? actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller)
+            : null;
+        if (IsOpen && controller != null &&
+            controller.PreferredInputDevice == Mod_GameController.InputDeviceType.KeyboardMouse &&
+            !EventSystemGuard.IsGamepadMode)
             panel.StartCoroutine(RestoreCommandFocus());
     }
 

@@ -607,6 +607,13 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     public void OnCancel(BaseEventData eventData)
     {
+        // 全局返回已处理时，EventSystem 不能再对焦点窗口重复执行取消。
+        if (UIManager.Instance.WasCancelHandledThisFrame())
+        {
+            eventData.Use();
+            return;
+        }
+
         if (!gamepadNavigationPrepared || !closeOnGamepadCancel || !isOpen)
             return;
 

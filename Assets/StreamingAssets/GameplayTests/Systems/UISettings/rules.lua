@@ -1,3 +1,25 @@
+test.system("ui_settings", "cancel_dispatch", {}, function(data)
+    assert(data.consumed and not data.afterRemoval,
+        "返回分发没有尊重消费结果或注销")
+    assert(data.first == 2 and data.consumer == 1 and data.tail == 1,
+        "已经消费的返回继续传给了后续处理者，或注销后仍收到返回")
+end, "统一返回分发与注销")
+
+for _, mode in ipairs({"default", "rebound", "cleared"}) do
+    test.system("ui_settings", "cancel_bindings", {mode = mode}, function(data)
+        local keyboard = mode == "cleared" and "" or (mode == "rebound" and "<Keyboard>/f10" or "<Keyboard>/escape")
+        assert(data.keyboard == keyboard, "UI 返回没有同步键盘重绑或清空")
+        assert(data.gamepadSettings == (mode == "cleared" and "" or "<Gamepad>/start"),
+            "手柄设置返回没有同步清空")
+        assert(data.gamepadBack == "<Gamepad>/buttonEast" and data.mobile == "<FlatWorldMobileDevice>/settings",
+            "手柄取消或手机返回未接入统一入口")
+        assert(data.count == 4 and data.initialCount == data.count, "重复同步新增了重复返回绑定")
+        for _, path in ipairs(data.submitGamepadPaths) do
+            assert(mode ~= "cleared" or path == "", "清空手柄确认后 UI 又恢复了默认键")
+        end
+    end, "统一返回绑定 " .. mode)
+end
+
 -- 只采样整体画质元数据和纯映射，不读取当前选项或应用画质。
 test.system("ui_settings", "graphics_quality_provider", {}, function(data)
     assert(data.providerId == "graphics" and data.switchCount == 0 and #data.dropdowns == 1,

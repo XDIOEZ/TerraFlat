@@ -96,4 +96,87 @@ public static partial class GameplayTestSystemProbe
     }
 
     #endregion
+
+    #region 统一返回与 UI 绑定采样
+
+    private static JObject ServiceCancelBindings(JObject args)
+    {
+        string mode = Text(args, "mode", "default");
+        var actions = new PlayerInputActions();
+        try
+        {
+            var escape = actions.Win10.ESC;
+            if (mode == "rebound")
+                escape.ApplyBindingOverride(0, "<Keyboard>/f10");
+            else if (mode == "cleared")
+            {
+                escape.ApplyBindingOverride(0, string.Empty);
+                escape.ApplyBindingOverride(1, string.Empty);
+                var submit = actions.Win10.LeftClick;
+                for (int i = 0; i < submit.bindings.Count; i++)
+                {
+                    if (submit.bindings[i].groups == "Gamepad")
+                        submit.ApplyBindingOverride(i, string.Empty);
+                }
+            }
+            else if (mode != "default")
+                throw new ArgumentException("未知返回绑定采样模式：" + mode);
+
+            // 只同步独立资产，不配置现场 EventSystem，也不写入玩家偏好。
+            EventSystemGuard.SynchronizeUIInputBindings(actions.asset);
+            var cancel = actions.asset.FindAction("FlatWorldUI/Cancel", true);
+            int initialCount = cancel.bindings.Count;
+            EventSystemGuard.SynchronizeUIInputBindings(actions.asset);
+            var submitPaths = new JArray();
+            var uiSubmit = actions.asset.FindAction("FlatWorldUI/Submit", true);
+            for (int i = 2; i < uiSubmit.bindings.Count; i++)
+                submitPaths.Add(uiSubmit.bindings[i].effectivePath ?? string.Empty);
+            return new JObject
+            {
+                ["keyboard"] = cancel.bindings[0].effectivePath ?? string.Empty,
+                ["gamepadBack"] = cancel.bindings[1].effectivePath,
+                ["gamepadSettings"] = cancel.bindings[2].effectivePath ?? string.Empty,
+                ["mobile"] = cancel.bindings[3].effectivePath,
+                ["count"] = cancel.bindings.Count,
+                ["initialCount"] = initialCount,
+                ["submitGamepadPaths"] = submitPaths
+            };
+        }
+        finally
+        {
+            actions.Disable();
+            UnityEngine.Object.DestroyImmediate(actions.asset);
+        }
+    }
+
+    private static JObject ServiceCancelDispatch(JObject args)
+    {
+        int first = 0, consumer = 0, tail = 0;
+        Func<InputControl, bool> firstHandler = _ => { first++; return false; };
+        Func<InputControl, bool> consumerHandler = _ => { consumer++; return true; };
+        Func<InputControl, bool> tailHandler = _ => { tail++; return false; };
+        EventSystemGuard.CancelRequested += firstHandler;
+        EventSystemGuard.CancelRequested += consumerHandler;
+        EventSystemGuard.CancelRequested += tailHandler;
+        try
+        {
+            // 空来源不会触发真实玩家返回，只验证正式分发的消费和注销契约。
+            bool consumed = EventSystemGuard.TryHandleCancelRequest(null);
+            EventSystemGuard.CancelRequested -= consumerHandler;
+            bool afterRemoval = EventSystemGuard.TryHandleCancelRequest(null);
+            return new JObject
+            {
+                ["consumed"] = consumed, ["afterRemoval"] = afterRemoval,
+                ["first"] = first, ["consumer"] = consumer, ["tail"] = tail
+            };
+        }
+        finally
+        {
+            EventSystemGuard.CancelRequested -= firstHandler;
+            EventSystemGuard.CancelRequested -= consumerHandler;
+            EventSystemGuard.CancelRequested -= tailHandler;
+        }
+    }
+
+    #endregion
 }

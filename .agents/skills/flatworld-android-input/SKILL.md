@@ -38,6 +38,7 @@ description: "FlatWorld 移动触控、虚拟输入设备、摇杆/指向/攻击
 - 普通指向捕获层在按钮/攻击摇杆后，仅接收空白区域；左右区域比例来自 `LeftControlZoneRatio/RightControlZoneRatio`，改比例先释放触点。`FloatingMoveJoystick` 保存固定/浮动偏好；移动/指向摇杆取得触点后显示，攻击摇杆固定。
 - `TouchControlsOpacityPercent` 仅作用玩法层及手机快捷栏，0% 仍可交互；常驻菜单完全可见。菜单/返回独立于可隐藏玩法层，抽屉入口在 Button.onClick 完整点击后脉冲；返回先关闭顶层面板，再抽屉，再设置。
 - 控制根平时位于常驻 HUD 后，模态时沉底；抽屉仅无正式模态时置顶。快捷栏为玩法层兄弟，在背包/容器下保持拖放；模态时独立 Canvas 临时 overrideSorting，关闭后恢复。槽内选中框归属当前槽位并按内部兄弟顺序置底。
+- 返回统一从 `FlatWorldUI/Cancel → EventSystemGuard.CancelRequested → Mod_SettingCanvas` 分发；手机 settings 也绑定 UI Cancel，不再单独监听 Win10/ESC 打开设置。`BasePanel.OnCancel` 尊重同帧消费，避免一次按键打开后立即关闭或连关两层。
 - `BasePanel` 的 GameplayInputBlocking 与手柄导航资格独立，常驻 HUD 显式关闭阻断，模态接管玩法输入。
 - Android `mandatorySystemGestures` 补齐 safeArea 未覆盖的底部边距；强制系统手势区不可被 exclusionRects 屏蔽。
 - 手机准线使用 Prefab 的非交互 `GamepadCursorGraphic`，HUD 在 `Canvas.willRenderCanvases` 按最终玩家/相机位置投影；普通距离来自交互模块，只有实际进入 `IsPlacementModeActive` 的建筑才用放置距离，木桶等便携容器未放置时沿用普通范围。无限建造映射为有限视野距离，`PlayerAimCursorSystem` 在插值前过滤非有限距离/力度；入世按 `Mod_TurnBack.currentDirection` 初始化，HUD 对缺失准线节点有一次性补齐路径。

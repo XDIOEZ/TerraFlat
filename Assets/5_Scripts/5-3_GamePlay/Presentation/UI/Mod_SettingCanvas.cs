@@ -48,8 +48,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
         playerDeathState = item.itemMods.GetMod_ByID<Mod_PlayerDeathState>(
             Mod_PlayerDeathState.ModuleId);
 
-        // 绑定ESC按键事件
-        playerInputActions.Win10.ESC.performed += OnEscapePressed;
+        // 返回只接入统一 UI 分发，避免同一次按键先打开设置又被 UI Cancel 关闭。
+        EventSystemGuard.CancelRequested += OnCancelRequested;
     }
 
     protected override void OnSave()
@@ -61,16 +61,21 @@ public class Mod_SettingCanvas : Module, IInstanceUI
     }
 
 
-    // ESC按键响应
-    private void OnEscapePressed(InputAction.CallbackContext context)
+    #region 统一返回处理
+
+    private bool OnCancelRequested(InputControl source)
     {
-        if (gameController != null && !gameController.IsGameplayInputAllowed(context))
-            return;
+        // 手柄 B 仍只取消窗口，只有设置动作的实际绑定才能打开设置。
+        if (source == null || playerInputActions.Win10.ESC.GetBindingIndexForControl(source) < 0)
+            return false;
+
+        if (gameController != null && !gameController.IsGameplayInputAllowed(source.device))
+            return true;
 
         UIManager uiManager = UIManager.Instance;
         if (uiManager.WasCancelHandledThisFrame())
         {
-            return;
+            return true;
         }
 
         // 先取消导航选点，再退出驾驶，右键始终留给手持物使用。
@@ -79,34 +84,37 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             spaceSession?.RequestConsoleExit(item as Player) == true)
         {
             uiManager.NotifyCancelHandled();
-            return;
+            return true;
         }
 
         if (exitConfirmation != null && exitConfirmation.TryClose())
         {
             uiManager.NotifyCancelHandled();
-            return;
+            return true;
         }
 
         // 返回顺序：最上层可取消面板 -> 手机抽屉 -> 设置面板。
         // 不能先检查 Gameplay Input Lock，否则背包/制作等面板持有输入锁时 ESC 会被直接吞掉。
-        if (uiManager.TryCloseTopmostCancelPanel(basePanel))
-            return;
+        if (uiManager.TryCloseTopmostCancelPanel())
+            return true;
 
         if (PlayerMobileControlsHUD.TryCloseActiveDrawer())
         {
             uiManager.NotifyCancelHandled();
-            return;
+            return true;
         }
 
         bool panelOpen = basePanel != null && basePanel.IsOpen();
         if (gameController != null && gameController.IsGameplayInputLocked && !panelOpen)
         {
-            return;
+            return true;
         }
 
         I_TogglePanel();
+        return true;
     }
+
+    #endregion
 
     /// <summary>创建唯一设置主面板，并把各设置逻辑绑定到十个内嵌分页。</summary>
     private bool EnsurePanelCreated()
@@ -324,10 +332,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
     /// <summary>玩家退出世界时对称释放输入、暂停与常驻设置面板。</summary>
     protected override void OnUnload()
     {
-        if (playerInputActions != null)
-        {
-            playerInputActions.Win10.ESC.performed -= OnEscapePressed;
-        }
+        EventSystemGuard.CancelRequested -= OnCancelRequested;
 
         if (basePanel != null)
         {

@@ -32,6 +32,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
 - 外部控制持有唯一 External Gameplay Control 租约，期间真实设备退出玩法仲裁，移动/瞄准/攻击注入现有生产链；打包运行时 `Mod_GameMCP_LLM` 复用该租约与移动输入。
 - 丢弃组合态让 Ctrl+滚轮缩放让位，普通滚轮仍可换槽。返回顺序为顶层可取消面板 → 手机抽屉 → 设置；返回处理先于玩法锁拦截。聊天 Enter 打开当帧抑制提交。
+- 返回由 `FlatWorldUI/Cancel` 唯一分发，经 `EventSystemGuard.CancelRequested` 交给设置模块；不可再额外订阅 `Win10/ESC.performed` 开关设置。UI 同步重绑时保留空字符串禁用态，不把清空绑定恢复为默认键。
 
 ## 交互
 

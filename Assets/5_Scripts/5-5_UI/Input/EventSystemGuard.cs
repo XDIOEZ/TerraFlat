@@ -22,6 +22,26 @@ public static class EventSystemGuard
     private static bool gamepadMode;
     private static bool gamepadModeEntryAllowed = true;
 
+    #region 统一返回分发
+
+    // 玩法模块只登记返回处理，物理输入统一由 UI Cancel 分发一次。
+    public static event Func<InputControl, bool> CancelRequested;
+
+    public static bool TryHandleCancelRequest(InputControl source)
+    {
+        if (CancelRequested == null)
+            return false;
+
+        foreach (Func<InputControl, bool> handler in CancelRequested.GetInvocationList())
+        {
+            if (handler(source))
+                return true;
+        }
+        return false;
+    }
+
+    #endregion
+
     /// <summary>当前 UI 是否由手柄驱动，供虚拟光标与玩法输入拦截判断。</summary>
     public static bool IsGamepadMode => gamepadMode;
 
@@ -200,7 +220,7 @@ public static class EventSystemGuard
         for (int i = 0; i < submitGamepadPaths.Count; i++)
             ApplyBindingOverride(submit, 2 + i, submitGamepadPaths[i]);
         for (int i = submitGamepadPaths.Count; i < submit.bindings.Count - 2; i++)
-            ApplyBindingOverride(submit, 2 + i, null);
+            ApplyBindingOverride(submit, 2 + i, string.Empty);
 
         InputAction cancel = uiMap.FindAction("Cancel", false);
         // 键盘 B 仍属于库存开关；手柄 B 没有 Win10/B 绑定，由 UI Cancel 使用默认 buttonEast 返回。
@@ -288,6 +308,7 @@ public static class EventSystemGuard
         EnsureBinding(uiMap.FindAction("MouseLeftClick", false), "<Touchscreen>/touch*/press");
         EnsureBinding(uiMap.FindAction("MouseRightClick", false), "<Mouse>/rightButton");
         EnsureBinding(uiMap.FindAction("MouseScroll", false), "<Mouse>/scroll");
+        EnsureBinding(uiMap.FindAction("Cancel", false), "<FlatWorldMobileDevice>/settings");
 
         return uiMap;
     }
@@ -314,8 +335,19 @@ public static class EventSystemGuard
 
     private static string FindFirstGroupBindingPath(InputAction action, string group, string fallback)
     {
-        List<string> paths = FindGroupBindingPaths(action, group);
-        return paths.Count > 0 ? paths[0] : fallback;
+        if (action == null)
+            return fallback;
+
+        // 明确清空的绑定必须保持禁用，不能重新落回默认键。
+        for (int i = 0; i < action.bindings.Count; i++)
+        {
+            InputBinding binding = action.bindings[i];
+            if (!binding.isComposite && !binding.isPartOfComposite &&
+                !string.IsNullOrEmpty(binding.groups) &&
+                binding.groups.IndexOf(group, StringComparison.OrdinalIgnoreCase) >= 0)
+                return binding.effectivePath ?? string.Empty;
+        }
+        return fallback;
     }
 
     private static List<string> FindGroupBindingPaths(InputAction action, string group)
@@ -346,7 +378,7 @@ public static class EventSystemGuard
         if (action == null || bindingIndex < 0 || bindingIndex >= action.bindings.Count)
             return;
 
-        if (string.IsNullOrEmpty(path))
+        if (path == null)
         {
             action.RemoveBindingOverride(bindingIndex);
             return;

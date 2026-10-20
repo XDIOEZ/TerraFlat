@@ -51,9 +51,10 @@
 | 面板打开后仍能移动/攻击 | `UIManager.InteractionSurfaceChanged`、`PlayerMobileControlsHUD.RefreshInteractionSurface()`、`Mod_GameController.CancelActiveAttackAndMobileInput()` |
 | 按钮会改变普通朝向 | `UI_MobileControls.prefab` 的层级/射线顺序和指向捕获层范围 |
 | 快捷栏与摇杆重叠 | `PlayerMobileControlsHUD.TryConfigureHotbarWidth()`；上限为安全区宽度 44% 与 760 参考像素的较小值 |
-| Android 返回行为错误 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Module_Setting.cs` 与 `PlayerMobileControlsHUD.TryCloseActiveDrawer()` |
+| Android/外接键盘返回行为错误 | `EventSystemGuard.CancelRequested`、`GamepadUIRuntimeController.OnCancelPerformed`、`Presentation/UI/Mod_SettingCanvas.cs` 与 `PlayerMobileControlsHUD.TryCloseActiveDrawer()` |
 
 返回顺序保持：最上层临时/正式面板 → 手机抽屉 → 设置面板；不要直接退出游戏。
+物理返回和手机 settings 统一进入 `FlatWorldUI/Cancel`；不要再把设置开关直接订阅到 `Win10/ESC.performed`，否则同次输入可能又打开又关闭。
 
 ## 玩法消费者
 

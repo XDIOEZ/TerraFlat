@@ -471,6 +471,12 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (manager == null || manager.WasCancelHandledThisFrame())
             return;
 
+        if (EventSystemGuard.TryHandleCancelRequest(context.control))
+        {
+            manager.NotifyCancelHandled();
+            return;
+        }
+
         manager.TryCloseTopmostCancelPanel();
     }
 
