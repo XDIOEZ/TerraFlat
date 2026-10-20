@@ -38,8 +38,9 @@ public static class PlayerTeleportService
     {
         // 传送同步清理乘船、速度和角色索引，防止旧位置继续驱动角色。
         SpaceSession.Current?.ResetPassengerForRespawn(player);
+        Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+        mover?.DetachCarrier(null);
         Vector3 presentation = WorldLocalPresentation.ProjectPosition(logical);
-        player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.ResetSwimmingAudio();
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null)
         {
@@ -49,6 +50,7 @@ public static class PlayerTeleportService
         }
         player.transform.position = presentation;
         player.Data.transform.position = logical;
+        mover?.ResetMotion();
         ItemMgr.Instance?.NotifyRuntimeItemMoved(player);
         if (player.IsLocalProfile)
             player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?.RefreshChunksAroundPlayer();

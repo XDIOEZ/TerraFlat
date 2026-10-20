@@ -18,7 +18,7 @@ public partial class Mod_Mover
     /// <summary>只有本地且拥有状态权威的玩家可取得座位，远程玩家不能读取本机输入。</summary>
     public bool TryAttachCarrier(ICarrierMotionSource source, Vector2 safePosition)
     {
-        if (CarrierSource != null || source == null || !source.IsAvailable || rb == null ||
+        if (resettingMotion || CarrierSource != null || source == null || !source.IsAvailable || rb == null ||
             !GameNetwork.HasStateAuthority || item is not Player player || !player.IsLocalProfile)
             return false;
         carrierTileEffects = item.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
@@ -178,7 +178,7 @@ public partial class Mod_Mover
         ExternalVelocity = CarrierSource.CurrentVelocity;
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
-    private void OnDisable() { ClearDrivenMotion(); ResetSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); }
-    protected override void OnUnload() { ClearDrivenMotion(); DisposeSwimmingAudio(); ReleaseSpaceInput(); ReleaseCarrierLease(); UnbindMoveAnimationCallbacks(); }
+    private void OnDisable() { ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); }
+    protected override void OnUnload() { ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); DisposeSwimmingAudio(); UnbindMoveAnimationCallbacks(); }
     #endregion
 }

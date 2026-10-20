@@ -110,6 +110,8 @@ public static partial class GameplayTestSystemProbe
                     case "disable": roll.enabled = false; break;
                     case "unload": roll.Unload(); break;
                     case "mover_unload": mover.Unload(); break;
+                    case "mover_reset": mover.ResetMotion(); break;
+                    case "mover_disable": mover.enabled = false; break;
                     case "locked": mover.IsLock = true; roll.AdvanceRoll(0f); break;
                     case "dead": health.Hp = 0f; roll.AdvanceRoll(0f); break;
                     case "presentation": roll.ApplyNetworkPresentation(Flag(step, "active", true), Vector2.right,

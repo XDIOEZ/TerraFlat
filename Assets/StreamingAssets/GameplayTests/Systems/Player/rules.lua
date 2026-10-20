@@ -83,6 +83,44 @@ for _, case in ipairs(cases) do
     end, "移动消耗：" .. case.name)
 end
 
+-- 运动重置采样只驱动独立模块，检查重复调用和回调中的旧状态回写。
+test.system("player", "motion_reset", {}, function(data)
+    local function stopped(s)
+        assert(not s.moving and not s.lease, "重置后仍残留走路或临时移动租约")
+        assert(s.velocity == 0 and s.angularVelocity == 0 and s.driven == 0 and s.external == 0 and s.input == 0,
+            "停止后仍残留刚体、主动、被动速度或输入")
+        assert(s.running and s.speed == data.before.speed, "重置改动了奔跑偏好或速度倍率")
+        assert(not s.acquiredInReset, "重置回调重新取得了主动移动租约")
+    end
+    assert(data.before.moving and data.before.velocity > 0, "夹具没有通过正式输入开始移动")
+    stopped(data.reset)
+    stopped(data.repeated)
+    assert(data.reset.x == 17 and data.reset.y == 23, "重置覆盖了新的传送落点")
+    assert(data.reset.starts == 1 and data.reset.ends == 1 and data.reset.resets == 1,
+        "停止事件里的重置发生了递归或漏发")
+    assert(data.repeated.ends == 1 and data.repeated.resets == 2, "重复重置重复发出停止事件")
+    assert(data.resumed.moving and data.resumed.starts == 2, "重置后新输入不能正常恢复移动")
+    stopped(data.locked)
+    assert(data.acquired and data.owned.lease and not data.owned.moving and data.owned.driven == 3,
+        "普通输入、目标移动或导航覆盖了临时动作的移动所有权")
+    stopped(data.leaseReset)
+    assert(data.acquiredAgain and data.afterStale.lease and data.afterStale.driven == 2,
+        "旧租约写入或释放影响了新租约")
+    for _, sample in ipairs(data.invalid) do stopped(sample) end
+    for _, sample in ipairs(data.smooth) do
+        for _, value in pairs(sample) do
+            assert(type(value) == "number" and value == value and math.abs(value) < math.huge,
+                "非法速度或时间污染了速度过渡结果")
+        end
+        assert(sample.timeX == 1 and sample.timeY == 0, "非法时间仍推进了速度过渡")
+    end
+    stopped(data.reentrant)
+    stopped(data.nextReentrant)
+    assert(data.nextReentrant.starts == data.reentrant.starts + 1 and data.nextReentrant.ends == data.reentrant.ends + 1,
+        "开始事件里的重置破坏了下一次移动状态")
+    stopped(data.missingBody)
+end, "移动重置：落点、重复调用、回调重入、动作所有权、失效租约与非法输入")
+
 -- 翻滚采样实走模块的发动、体力事务、碰撞缩放和收尾，不推进场景物理。
 local function roll_near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label)
@@ -151,7 +189,7 @@ for _, args in ipairs({{stamina = 0}, {missingBody = true}, {triggerOnly = true}
     end, "翻滚拒绝：体力不足或缺少真实身体碰撞")
 end
 
-for _, action in ipairs({"cancel", "disable", "unload", "locked", "dead"}) do
+for _, action in ipairs({"cancel", "disable", "unload", "locked", "dead", "mover_reset", "mover_disable"}) do
     test.system("player", "roll_action", {steps = {{action = "start"}, {action = action}}}, function(data)
         assert(data.samples[1].accepted, "取消边界夹具未能发动")
         roll_restored(data.samples[2])

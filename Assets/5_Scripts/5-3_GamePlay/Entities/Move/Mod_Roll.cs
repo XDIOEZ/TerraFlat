@@ -77,11 +77,13 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     private void OnDestroy() { CancelRoll(); UnbindCallbacks(); NetworkRollRequest = null; }
     private void BindCallbacks()
     {
+        if (mover != null) mover.MotionReset += CancelRoll;
         if (controller != null && player != null && player.IsLocalProfile) controller.RollRequested += HandleRollRequested;
         if (health != null) health.DeathStarted += HandleDeath;
     }
     private void UnbindCallbacks()
     {
+        if (mover != null) mover.MotionReset -= CancelRoll;
         if (controller != null) controller.RollRequested -= HandleRollRequested;
         if (health != null) health.DeathStarted -= HandleDeath;
     }
