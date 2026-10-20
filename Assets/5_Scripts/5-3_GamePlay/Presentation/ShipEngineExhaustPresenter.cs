@@ -18,11 +18,19 @@ namespace FlatWorld.Spaceflight
         private SpriteRenderer source;
         private ParticleSystem particles;
         private ParticleSystemRenderer particleRenderer;
+        private Sprite syncedNozzleSprite;
         private bool emitting;
         private float appliedOutput = -1f;
 
         public void Bind(SpaceSession owner, ShipPieceState engine, SpriteRenderer renderer)
         {
+            if (!ReferenceEquals(source, renderer))
+            {
+                // 船件休眠或视图复用后重新绑定当前喷口，不继续使用旧视觉节点。
+                if (particles != null && renderer != null && particles.transform.parent != renderer.transform)
+                    particles.transform.SetParent(renderer.transform, false);
+                syncedNozzleSprite = null;
+            }
             session = owner;
             piece = engine;
             source = renderer;
@@ -64,6 +72,7 @@ namespace FlatWorld.Spaceflight
             if (particles != null) particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
             emitting = false;
             appliedOutput = -1f;
+            syncedNozzleSprite = null;
         }
         #endregion
 
@@ -77,6 +86,7 @@ namespace FlatWorld.Spaceflight
             GameObject nozzle = new("ShipEngineExhaust");
             nozzle.transform.SetParent(source.transform, false);
             particles = nozzle.AddComponent<ParticleSystem>();
+            syncedNozzleSprite = null;
             particles.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = particles.main;
             main.playOnAwake = false;
@@ -134,14 +144,29 @@ namespace FlatWorld.Spaceflight
 
         private void SynchronizeNozzle()
         {
-            if (source.sprite != null)
+            Sprite sprite = source.sprite;
+            if (syncedNozzleSprite != sprite)
             {
-                Bounds bounds = source.sprite.bounds;
-                particles.transform.localPosition = new Vector3(bounds.center.x, bounds.min.y + .025f, 0f);
+                syncedNozzleSprite = sprite;
+                if (sprite != null)
+                {
+                    Bounds bounds = sprite.bounds;
+                    Vector3 position = new(bounds.center.x, bounds.min.y + .025f, 0f);
+                    if (particles.transform.localPosition != position)
+                        particles.transform.localPosition = position;
+                }
             }
             // 喷焰排在船地板、管道和电线后面，停推后的残留粒子也保持同一层级。
-            WorldSortingManager.GetInstance().ApplyRenderer(particleRenderer, WorldSortingManager.VehicleCategory, -3);
-            particles.gameObject.layer = source.gameObject.layer;
+            WorldSortingManager.GetInstance().GetSortingKey(WorldSortingManager.VehicleCategory,
+                out int layerId, out int order);
+            if (particleRenderer.sortingLayerID != layerId)
+                particleRenderer.sortingLayerID = layerId;
+            int exhaustOrder = checked(order - 3);
+            if (particleRenderer.sortingOrder != exhaustOrder)
+                particleRenderer.sortingOrder = exhaustOrder;
+            int gameObjectLayer = source.gameObject.layer;
+            if (particles.gameObject.layer != gameObjectLayer)
+                particles.gameObject.layer = gameObjectLayer;
         }
         #endregion
     }
