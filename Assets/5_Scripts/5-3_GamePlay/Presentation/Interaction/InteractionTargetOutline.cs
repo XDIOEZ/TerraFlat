@@ -87,7 +87,12 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
         highlighted = value;
         if (highlighted)
+        {
+            // 再次选中时重交裁剪参数，兼容外部资源重载后的代理状态恢复。
+            for (int i = 0; i < outlineEntries.Count; i++)
+                outlineEntries[i].HasClipState = false;
             RefreshOutlineRenderers();
+        }
         else
             DisableOutlineRenderers();
     }
@@ -174,6 +179,7 @@ public sealed class InteractionTargetOutline : MonoBehaviour
                 DestroyEntryRenderer(existing);
                 existing.Source = source;
                 existing.Renderer = CreateOutlineRenderer(source);
+                existing.HasClipState = false;
                 return existing;
             }
         }
@@ -199,36 +205,51 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         if (outline == null)
             return;
 
-        outline.sharedMaterial = material;
-        outline.sprite = source.sprite;
-        outline.color = new Color(1f, 1f, 1f, source.color.a);
-        outline.flipX = source.flipX;
-        outline.flipY = source.flipY;
-        outline.maskInteraction = source.maskInteraction;
-        outline.sortingLayerID = source.sortingLayerID;
-        outline.sortingOrder = Mathf.Min(short.MaxValue, source.sortingOrder + 1);
-        outline.drawMode = source.drawMode;
-        outline.size = source.size;
-        outline.tileMode = source.tileMode;
+        // 每帧仍读取源动画和排序，只有实际变化才跨入 Unity 原生属性写入。
+        if (outline.sharedMaterial != material)
+        {
+            outline.sharedMaterial = material;
+            entry.HasClipState = false;
+        }
+        Sprite sprite = source.sprite;
+        if (outline.sprite != sprite) outline.sprite = sprite;
+        Color outlineColor = new(1f, 1f, 1f, source.color.a);
+        if (!outline.color.Equals(outlineColor)) outline.color = outlineColor;
+        if (outline.flipX != source.flipX) outline.flipX = source.flipX;
+        if (outline.flipY != source.flipY) outline.flipY = source.flipY;
+        if (outline.maskInteraction != source.maskInteraction) outline.maskInteraction = source.maskInteraction;
+        if (outline.sortingLayerID != source.sortingLayerID) outline.sortingLayerID = source.sortingLayerID;
+        int order = Mathf.Min(short.MaxValue, source.sortingOrder + 1);
+        if (outline.sortingOrder != order) outline.sortingOrder = order;
+        if (outline.drawMode != source.drawMode) outline.drawMode = source.drawMode;
+        if (!outline.size.Equals(source.size)) outline.size = source.size;
+        if (outline.tileMode != source.tileMode) outline.tileMode = source.tileMode;
 
-        outline.transform.localPosition = Vector3.zero;
-        outline.transform.localRotation = Quaternion.identity;
-        outline.transform.localScale = Vector3.one;
-        SyncRendererClipState(source, outline);
-        outline.enabled = highlighted && source.enabled &&
-            source.gameObject.activeInHierarchy && source.sprite != null;
+        SyncRendererClipState(source, entry);
+        bool visible = highlighted && source.enabled &&
+            source.gameObject.activeInHierarchy && sprite != null;
+        if (outline.enabled != visible) outline.enabled = visible;
     }
 
     /// <summary>同步贴图、图集边界和局部裁剪，避免描边采到邻图或显示已剔除像素。</summary>
-    private void SyncRendererClipState(SpriteRenderer source, SpriteRenderer outline)
+    private void SyncRendererClipState(SpriteRenderer source, OutlineEntry entry)
     {
         Material sourceMaterial = source.sharedMaterial;
         sourcePropertyBlock.Clear();
         source.GetPropertyBlock(sourcePropertyBlock);
 
+        // MPB 仍每帧读取，保证角色受伤/淹没等动态裁剪即时生效；只省掉未变化的代理提交。
+        float bodyClip = ReadSourceFloat(sourceMaterial, BodyClipProperty, 0f);
+        float bodyMinV = ReadSourceFloat(sourceMaterial, BodyMinVProperty, 0f);
+        float bodyMaxV = ReadSourceFloat(sourceMaterial, BodyMaxVProperty, 1f);
+        Sprite sprite = entry.Renderer.sprite;
+        if (entry.HasClipState && entry.ClipSprite == sprite &&
+            entry.BodyClip.Equals(bodyClip) && entry.BodyMinV.Equals(bodyMinV) &&
+            entry.BodyMaxV.Equals(bodyMaxV))
+            return;
+
         outlinePropertyBlock.Clear();
         // 写入裁剪参数会替换代理 Renderer 的属性块，必须同时恢复 Sprite 的逐渲染器贴图。
-        Sprite sprite = outline.sprite;
         if (sprite != null)
         {
             outlinePropertyBlock.SetTexture(MainTextureProperty, sprite.texture);
@@ -237,10 +258,15 @@ public sealed class InteractionTargetOutline : MonoBehaviour
             outlinePropertyBlock.SetFloat(ExternalAlphaProperty, alpha != null ? 1f : 0f);
             outlinePropertyBlock.SetVector(SpriteUvProperty, DataUtility.GetOuterUV(sprite));
         }
-        outlinePropertyBlock.SetFloat(BodyClipProperty, ReadSourceFloat(sourceMaterial, BodyClipProperty, 0f));
-        outlinePropertyBlock.SetFloat(BodyMinVProperty, ReadSourceFloat(sourceMaterial, BodyMinVProperty, 0f));
-        outlinePropertyBlock.SetFloat(BodyMaxVProperty, ReadSourceFloat(sourceMaterial, BodyMaxVProperty, 1f));
-        outline.SetPropertyBlock(outlinePropertyBlock);
+        outlinePropertyBlock.SetFloat(BodyClipProperty, bodyClip);
+        outlinePropertyBlock.SetFloat(BodyMinVProperty, bodyMinV);
+        outlinePropertyBlock.SetFloat(BodyMaxVProperty, bodyMaxV);
+        entry.Renderer.SetPropertyBlock(outlinePropertyBlock);
+        entry.ClipSprite = sprite;
+        entry.BodyClip = bodyClip;
+        entry.BodyMinV = bodyMinV;
+        entry.BodyMaxV = bodyMaxV;
+        entry.HasClipState = true;
     }
 
     private float ReadSourceFloat(Material sourceMaterial, int property, float fallback)
@@ -258,7 +284,13 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         outlineObject.hideFlags = HideFlags.DontSave;
         outlineObject.layer = source.gameObject.layer;
         outlineObject.transform.SetParent(source.transform, worldPositionStays: false);
+        // 代理相对源 Sprite 的姿态从创建起固定，后续跟随由父子 Transform 自动完成。
+        outlineObject.transform.localPosition = Vector3.zero;
+        outlineObject.transform.localRotation = Quaternion.identity;
+        outlineObject.transform.localScale = Vector3.one;
 
+        // 描边独立读取主体裁剪，不进入角色 MPB 合成，避免外部写回覆盖稀疏缓存。
+        outlineObject.AddComponent<ActorRenderEffectExclude>();
         SpriteRenderer outline = outlineObject.AddComponent<SpriteRenderer>();
         outline.hideFlags = HideFlags.DontSave;
         outline.enabled = false;
@@ -275,7 +307,7 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
     private static void SetEntryEnabled(OutlineEntry entry, bool enabled)
     {
-        if (entry?.Renderer != null)
+        if (entry?.Renderer != null && entry.Renderer.enabled != enabled)
             entry.Renderer.enabled = enabled;
     }
 
@@ -324,6 +356,11 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     {
         public SpriteRenderer Source;
         public SpriteRenderer Renderer;
+        public Sprite ClipSprite;
+        public float BodyClip;
+        public float BodyMinV;
+        public float BodyMaxV;
+        public bool HasClipState;
     }
 
     #endregion
