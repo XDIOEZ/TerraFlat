@@ -72,10 +72,19 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
         if (effectObject != null)
         {
             CacheEffectRenderers(effectObject);
-            WorldSortingManager sorting = WorldSortingManager.GetInstance();
-            for (int i = 0; i < _effectRenderers.Count; i++)
-                if (_effectRenderers[i] != null)
-                    sorting.ApplyRenderer(_effectRenderers[i], WorldSortingManager.WorldEffectCategory, 10);
+            if (_effectRenderers.Count != 0)
+            {
+                WorldSortingManager sorting = WorldSortingManager.GetInstance();
+                sorting.GetSortingKey(WorldSortingManager.WorldEffectCategory, out int layerId, out int order);
+                order = checked(order + 10);
+                for (int i = 0; i < _effectRenderers.Count; i++)
+                {
+                    ParticleSystemRenderer renderer = _effectRenderers[i];
+                    if (renderer == null) continue;
+                    if (renderer.sortingLayerID != layerId) renderer.sortingLayerID = layerId;
+                    if (renderer.sortingOrder != order) renderer.sortingOrder = order;
+                }
+            }
             SynchronizeTransform(effectObject.transform);
         }
     }
@@ -121,8 +130,14 @@ public sealed class ActorSleepVisualEffectController : MonoBehaviour
     /// <summary>同步角色的头部偏移、旋转和缩放；独立特效根节点使用单位缩放。</summary>
     private void SynchronizeTransform(Transform effectTransform)
     {
-        effectTransform.SetPositionAndRotation(_actorRoot.TransformPoint(localOffset), _actorRoot.rotation);
-        effectTransform.localScale = _actorRoot.lossyScale;
+        // 睡眠中的静止角色不重复提交相同姿态，避免每帧使粒子层级变脏。
+        Vector3 position = _actorRoot.TransformPoint(localOffset);
+        Quaternion rotation = _actorRoot.rotation;
+        if (effectTransform.position != position || effectTransform.rotation != rotation)
+            effectTransform.SetPositionAndRotation(position, rotation);
+        Vector3 scale = _actorRoot.lossyScale;
+        if (effectTransform.localScale != scale)
+            effectTransform.localScale = scale;
     }
 
     /// <summary>回收当前角色的睡眠特效。</summary>

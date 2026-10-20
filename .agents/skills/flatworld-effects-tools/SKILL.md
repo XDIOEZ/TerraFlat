@@ -31,6 +31,8 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 
 - HLSL 参数和局部变量避开 `point/line/triangle` 等保留关键字；命名冲突可导致语法错误和后续标识符未声明的连带报错，共享代码需统一改名。
 - 角色 Shader 参数经统一 MPB 控制器合成；静态效果 RequiresContinuousRendering=false 并按变化 MarkRenderStateDirty。换图、重新绑定与启停仍更新；动态外部 Renderer 创建后单独注册，销毁前注销。
+- `ActorStatusVisualEffectController` 由 Buff 事件与兜底校验维护活跃精灵/光晕/粒子标记；无激活表现的 NPC 跳过逐帧视觉字典遍历，重新绑载和父级切换仍刷新角色来源。
+- `ActorSleepVisualEffectController` 睡眠粒子只在排序键或 Transform 实际变化时提交原生属性，静止角色不重复使粒子层级变脏；来源池引用仍逐帧校验。
 - `RequiresSpriteBodyRange` 默认开启；只写覆雪等独立通道的模块可关闭，状态未变时整轮跳过 Renderer/Sprite 访问。水线保持换图跟踪，新增模块按实际 Shader 输入选择，不能全局关闭身体高度更新。
 - 渲染性能诊断用 `FlatWorld.ActorRender.Frame/UpdateModules/SubmitRenderers/RefreshBindings`，均为包含式耗时；Frame.work 未声明，Modules/Submit.work 分别为输入模块/Renderer 数，Bindings.work 为收集后的 Renderer 数。`IdleSkippedFrames/UnchangedSpriteRenderers/SubmittedRenderers` 分别累计整轮跳过、换图未变跳过和真实 MPB 提交数；`Snow.SampleCoverage.work` 是真正环境采样次数，CooldownSkips/ExcludedSamples/CoverageChanges 分别为冷却跳过、无 Owner 或手持排除、值变化次数。每 Renderer 共用一次 Sprite 与外部归属读取，不改原 0.5 秒采样规则。Profiler 点始终可见，GM“性能 DEBUG”统计开启才累计数量，慢摘要另行开启；这些数不代表实际提速或画面验收。
 - 舱内供气器由 `ShipPieceView.AirSupply` 读取实际实供功率，仅重染原图左上 `(26,11,12,3)` 的灯玻璃：通电保留绿蓝原色，断电为暗灰，红色由显式故障表现接口预留，未定义自动触发。`Sprite-Lit-Master` 的 `_DeviceIndicatorRect/_DeviceIndicatorTint` 共用于光照与回退 Pass，Tint Alpha 默认零，写 MPB 前保留其它通道。

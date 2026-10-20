@@ -232,8 +232,11 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     private SortingGroup sourceSortingGroup;
     private bool sourceSortingResolved;
     private Mod_BuffManager buffManager;
+    private Item cachedOwner;
     private float nextReconciliationTime;
     private bool statusesDirty = true;
+    private bool hasAnimatedVisuals;
+    private bool hasActiveParticleVisuals;
 
     #endregion
 
@@ -248,7 +251,14 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
 
     private void OnEnable()
     {
+        cachedOwner = null;
         BindBuffManager();
+        statusesDirty = true;
+    }
+
+    private void OnTransformParentChanged()
+    {
+        cachedOwner = null;
         statusesDirty = true;
     }
 
@@ -265,19 +275,23 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         if (statusesDirty || Time.unscaledTime >= nextReconciliationTime)
             RefreshStatusVisuals();
 
-        UpdateActiveVisuals(Time.deltaTime);
+        if (hasAnimatedVisuals)
+            UpdateActiveVisuals(Time.deltaTime);
     }
 
     /// <summary>池化粒子不挂在角色层级下，在角色移动完成后同步世界变换。</summary>
     private void LateUpdate()
     {
-        UpdateActiveParticleVisuals();
+        if (hasActiveParticleVisuals)
+            UpdateActiveParticleVisuals();
     }
 
     private void OnDisable()
     {
         UnbindBuffManager();
         SetAllVisualsActive(false);
+        hasAnimatedVisuals = false;
+        hasActiveParticleVisuals = false;
     }
 
     private void OnDestroy()
@@ -383,7 +397,9 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     /// <summary>优先从角色 Item 的模块容器查找，兼容 Prefab 装配尚未完成的早期阶段。</summary>
     private Mod_BuffManager ResolveBuffManager()
     {
-        Item owner = GetComponentInParent<Item>();
+        Item owner = cachedOwner;
+        if (owner == null)
+            cachedOwner = owner = GetComponentInParent<Item>();
         if (owner == null)
             return GetComponentInParent<Mod_BuffManager>();
 
@@ -409,6 +425,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         SetVisualActive(runtime?.DefinitionId, true);
         SetParticleVisualsForBuff(runtime?.DefinitionId);
         SetGlowVisualActive(runtime?.DefinitionId, true);
+        RefreshActiveVisualFlags();
     }
 
     private void OnBuffRemoved(BuffInstance runtime)
@@ -416,6 +433,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         SetVisualActive(runtime?.DefinitionId, false);
         SetParticleVisualsForBuff(runtime?.DefinitionId);
         SetGlowVisualActive(runtime?.DefinitionId, false);
+        RefreshActiveVisualFlags();
     }
 
     private void OnBuffDurationChanged(BuffInstance runtime)
@@ -425,6 +443,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             SetVisualActive(runtime.DefinitionId, true);
             SetParticleVisualsForBuff(runtime.DefinitionId);
             SetGlowVisualActive(runtime.DefinitionId, true);
+            RefreshActiveVisualFlags();
         }
     }
 
@@ -438,6 +457,8 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         visualsByBuffId.Clear();
         particleVisualsByEffectName.Clear();
         glowVisualsByBuffId.Clear();
+        hasAnimatedVisuals = false;
+        hasActiveParticleVisuals = false;
 
         if (statusEffects != null)
         {
@@ -613,27 +634,49 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     /// <summary>事件遗漏或 Buff 从存档恢复时，按权威 Mod_BuffManager 状态修正视觉。</summary>
     private void ReconcileStatusVisuals()
     {
+        bool animated = false;
         foreach (KeyValuePair<string, RuntimeStatusVisual> pair in visualsByBuffId)
         {
             bool shouldBeActive = buffManager != null && buffManager.HasBuff(pair.Key);
             SetVisualActive(pair.Value, shouldBeActive);
+            animated |= pair.Value.IsActive;
         }
 
+        bool particles = false;
         foreach (KeyValuePair<string, RuntimeStatusParticleVisual> pair in particleVisualsByEffectName)
         {
             RuntimeStatusParticleVisual visual = pair.Value;
             bool shouldBeActive = visual?.Effect != null && visual.Effect.HasAnyBuff(buffManager);
             SetParticleVisualActive(visual, shouldBeActive);
+            particles |= visual != null && visual.IsActive;
         }
 
         foreach (KeyValuePair<string, RuntimeStatusGlowVisual> pair in glowVisualsByBuffId)
         {
             bool shouldBeActive = buffManager != null && buffManager.HasBuff(pair.Key);
             SetGlowVisualActive(pair.Value, shouldBeActive);
+            animated |= pair.Value.IsActive;
         }
 
+        hasAnimatedVisuals = animated;
+        hasActiveParticleVisuals = particles;
         statusesDirty = false;
         nextReconciliationTime = Time.unscaledTime + reconciliationInterval;
+    }
+
+    /// <summary>Buff 事件才检查活跃效果，普通角色不再逐帧遍历所有未启用的表现配置。</summary>
+    private void RefreshActiveVisualFlags()
+    {
+        hasAnimatedVisuals = false;
+        foreach (RuntimeStatusVisual visual in visualsByBuffId.Values)
+            if (visual.IsActive) { hasAnimatedVisuals = true; break; }
+        if (!hasAnimatedVisuals)
+            foreach (RuntimeStatusGlowVisual visual in glowVisualsByBuffId.Values)
+                if (visual.IsActive) { hasAnimatedVisuals = true; break; }
+
+        hasActiveParticleVisuals = false;
+        foreach (RuntimeStatusParticleVisual visual in particleVisualsByEffectName.Values)
+            if (visual.IsActive) { hasActiveParticleVisuals = true; break; }
     }
 
     /// <summary>按 Buff ID 处理一次视觉启停。</summary>
