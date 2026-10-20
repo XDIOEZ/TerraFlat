@@ -22,3 +22,4 @@ description: "FlatWorld 角色台词、Facts、请求调度、冷却、一次性
 - `/help` 由 `PlayerHelpChatCommand` 同样定向装配，通过中立 `PlayerHelpCatalog.Collect("聊天命令")` 只收聊天栏斜杠命令，再交 `ReadableBookGrantService` 发放一份可编辑的 `CommandManual` 实物书，书内书写槽自带 1 个 `Charcoal`；每次一本、每条一页，保留资格与容量限制，新增命令在所属系统登记说明。
 - Facts 读权威状态，可选模块缺失表示无该 Fact。`weather.isRaining` 表达降水过程，雨雪文案另读 `weather.isSnowing`；物品失败反馈也经语义事件进入气泡。
 - `WeatherExposureSpeechProvider` 只贡献所在地天气与附近燃烧源 Facts；实际热影响由权威环境温度场和温度模块结算。
+- 热源 Facts 扫描复用每个 Provider 的 `Physics2D.OverlapCircleNonAlloc` 缓冲；缓冲满且未发现火源就扩容重查，不能漏掉拥挤区域的点燃物。扫描后清理 Collider 引用，原半径/LayerMask/燃料判定及采样间隔不变。

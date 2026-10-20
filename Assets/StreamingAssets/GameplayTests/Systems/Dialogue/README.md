@@ -1,5 +1,7 @@
 # 角色对话
 
+2026-10-20：`WeatherExposureSpeechProvider` 附近燃烧源扫描使用可复用的物理重叠数组代替每次 `OverlapCircleAll` 分配；满容量自动扩容并重新查询，避免密集碰撞体导致漏报，且及时清理对象池 Collider 引用。原天气、燃料、点燃判断与刷新时序不变。当前 Lua 尚未覆盖热源密集场景、动态启停及雨天 Fact，未运行完整 Unity 编译或 PlayMode；需现场回归与 GC 对比。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`dialogue/condition、config、builtin_locales、carry_weight_command、help_catalog、help_command`。

@@ -11,6 +11,8 @@ namespace FlatWorld.Dialogue
     {
 #region 配置
 
+        private const int InitialHeatSourceHitCapacity = 16;
+
         [Header("暴露检测")]
         [SerializeField, Min(0.5f)] private float heatSourceRadius = 6f;
         [SerializeField, Min(0.1f)] private float scanInterval = 0.5f;
@@ -23,6 +25,7 @@ namespace FlatWorld.Dialogue
         private Item actorItem;
         private float nextScanAt;
         private float localRainIntensity;
+        private Collider2D[] heatSourceHits; // 复用碰撞查询结果，密集热源按需扩容。
 
         public bool IsRainExposed { get; private set; }
         public bool HasNearbyHeatSource { get; private set; }
@@ -100,27 +103,48 @@ namespace FlatWorld.Dialogue
 
         private bool FindNearbyIgnitedHeatSource()
         {
-            Collider2D[] hits = Physics2D.OverlapCircleAll(
-                transform.position,
-                heatSourceRadius,
-                heatSourceLayerMask);
-            for (int i = 0; i < hits.Length; i++)
+            heatSourceHits ??= new Collider2D[InitialHeatSourceHitCapacity];
+            Vector2 position = transform.position;
+            while (true)
             {
-                Item nearbyItem = GameplayPhysics2D.ResolveComponent<Item>(hits[i]);
-                if (nearbyItem == null || nearbyItem == actorItem || nearbyItem.itemMods == null)
-                    continue;
+                int count = Physics2D.OverlapCircleNonAlloc(
+                    position, heatSourceRadius, heatSourceHits, heatSourceLayerMask);
+                bool found = false;
+                try
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        Item nearbyItem = GameplayPhysics2D.ResolveComponent<Item>(heatSourceHits[i]);
+                        if (nearbyItem == null || nearbyItem == actorItem || nearbyItem.itemMods == null)
+                            continue;
 
-                Mod_Fuel fuel = nearbyItem.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
-                if (fuel == null || !fuel.HasFuel())
-                    continue;
+                        Mod_Fuel fuel = nearbyItem.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
+                        if (fuel == null || !fuel.HasFuel())
+                            continue;
 
-                Mod_Combustion combustion =
-                    nearbyItem.itemMods.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
-                if (combustion != null ? combustion.IsActivelyBurning : fuel.GetIgnitedState())
+                        Mod_Combustion combustion =
+                            nearbyItem.itemMods.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
+                        if (combustion != null ? combustion.IsActivelyBurning : fuel.GetIgnitedState())
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    // 查询后不保留池化或已销毁碰撞体的托管引用。
+                    System.Array.Clear(heatSourceHits, 0, count);
+                }
+
+                if (found)
                     return true;
-            }
+                if (count < heatSourceHits.Length)
+                    return false;
 
-            return false;
+                // 满缓冲时重新查询全部碰撞体，不能漏掉后面的燃烧源。
+                System.Array.Resize(ref heatSourceHits, heatSourceHits.Length * 2);
+            }
         }
 
 #endregion
