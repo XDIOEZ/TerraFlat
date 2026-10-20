@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-10-20 接触阴影 BRG 稳定帧上传优化：ContactShadowBatchRenderer 每帧仍按 ActorShadowManager 原顺序收集/裁剪全部 Item 与机械阴影，逐槽精确比较位置、大小和透明度，数量或数据不变时不重复调用 GPU GraphicsBuffer.SetData；扩容重建 GPU 缓冲或前帧收集未完成时保证完整上传。空帧保持原有 count=0 隐藏，能在保留有效缓冲时复用旧数据。尚未添加 Unity GPU 现场用例，本轮未执行编译、PlayMode 和 Profiler 前后对比；需验证动态角色、静态植物、排序批次、昼夜光照及空帧恢复。
+
 2026-10-20 点光源稳定态性能优化：Mod_LightSource 对已在 XY 平面的 Point Light2D 用四元数快速判断，避免每个常态灯逐帧将世界旋转转为欧拉角；倾斜时仍按原 X/Y 0.01° 门槛修正并保留世界 Z。未配置自发光且尚无覆盖节点时跳过逐帧 Sprite 同步。现有 Lua 未专测手持灯倾斜、旋转父层与动态自发光切换；本轮未运行完整 Unity 编译或 PlayMode。
 
 2026-10-20 延迟特效回收队列优化：VisualEffectManager.Update 不再每帧对有效未到期 PendingReturn 执行 RemoveAt+Add（会导致 List 元素搬移）；到期、失活和对象销毁仍沿原条件回收/剔除，提前归池仍注销旧任务。现有 Lua 覆盖正常特效池与 Owner 清理，尚未专测大量混合到期时间、同帧失活与重新租用；本轮未运行完整 Unity 编译或 PlayMode。

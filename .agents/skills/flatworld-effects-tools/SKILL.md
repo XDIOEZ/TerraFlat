@@ -56,6 +56,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 ## 阴影与遮光
 
 - ActorShadowManager 按完整 RuntimeItemRegistered/Unregistered 与结构事件维护注册，旧 Item 椭圆由 ContactShadowBatchRenderer 合批；根植植物通过 Tree/Plant 或 IPlantableCrop 接入，尺寸来自根 Collider 与可见 Sprite。`Shadow.prefab` 是 ShadowCaster2D，与可见脚底阴影独立。
+- ContactShadowBatchRenderer 仍每帧重采有效阴影并参与 CPU 视锥裁剪，但依次精确比较本帧实例位置/尺寸/透明度与最近一次 GPU 提交的槽位及数量；完全相同则跳过 GraphicsBuffer.SetData。空帧沿用 count=0 隐藏，重新显示可复用未丢失的旧 GPU 数据；中断收集或扩容替换缓冲时强制上传，不能因为 CPU 暂存数组与 GPU 数据脱节而漏画阴影。
 - 玩家位于实际 SpaceScene 时，接触阴影和太阳投影都跳过，舱内人工重力不恢复阴影；保留注册绑定，返回地表继续按原光照规则显示。
 - 太阳投影独立持有注册与 SunShadowCaster 覆盖；接触/太阳共用 IVisualGroundOffset 地面折算、光照/晨昏透明度和 `_WorldSunShadowColor`，柔化共用 `_WorldSunShadowBlur`，关闭太阳投影保留接触阴影通道。
 - 太阳阴影代理按源帧/姿态/脚点值变化提交 Renderer 与 MPB，太阳全局参数和投影裁剪盒仍逐帧更新；归池重置缓存。建筑能力查询复用 ItemMods.GetCapabilities 缓存，模块结构变化失效，能力属性仍实时读取，避免逐阴影遍历只读字典分配。

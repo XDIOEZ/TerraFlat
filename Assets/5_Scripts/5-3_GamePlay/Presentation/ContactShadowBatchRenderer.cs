@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// 场景级接触阴影 BRG：每个排序批次的椭圆共用网格、材质和一条绘制命令。
-/// 实例数据每只 32 字节，每帧只上传有效阴影；不为单只物品创建 Renderer。
+/// 实例数据每只 32 字节，批次内容或数量变化时才上传有效阴影；不为单只物品创建 Renderer。
 /// </summary>
 internal sealed class ContactShadowBatchRenderer : IDisposable
 {
@@ -30,6 +30,9 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private BatchMaterialID materialId;
     private InstanceData[] instances = new InstanceData[InitialCapacity];
     private int count;
+    private int uploadedCount;
+    private bool dataChanged = true;
+    private bool previousFrameComplete;
     private bool disposed;
     private Color batchColor;
     private float globalOpacity = 1f;
@@ -65,7 +68,13 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     /// <summary>开始收集本帧所有 Item 的接触阴影。</summary>
     public void BeginFrame()
     {
-        lock (syncRoot) count = 0;
+        lock (syncRoot)
+        {
+            count = 0;
+            // 上次收集若被异常中断，CPU 数组不再代表 GPU 已上传内容，必须重新提交。
+            dataChanged = !previousFrameComplete;
+            previousFrameComplete = false;
+        }
     }
 
     /// <summary>追加一个世界空间椭圆；同一材质可汇聚不同尺寸和透明度。</summary>
@@ -78,19 +87,35 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
                 Array.Resize(ref instances, instances.Length * 2);
                 Resize(instances.Length);
             }
-            instances[count++] = new InstanceData
+            InstanceData next = new InstanceData
             {
                 Footprint = new Vector4(center.x, center.y, width * 0.5f, height * 0.5f),
                 Appearance = new Vector4(opacity, 0f, 0f, 0f)
             };
+            // 保持每帧完整收集与裁剪，仅当同一槽位内容变化时标记 GPU 上传。
+            // Equals 使用精确分量比较，避免近似相等吞掉轻微阴影移动。
+            if (!dataChanged && (count >= uploadedCount ||
+                !instances[count].Footprint.Equals(next.Footprint) ||
+                !instances[count].Appearance.Equals(next.Appearance)))
+                dataChanged = true;
+            instances[count++] = next;
         }
     }
 
-    /// <summary>一次上传本帧实例；空帧由裁剪回调立即停止绘制。</summary>
+    /// <summary>内容变化时上传本帧实例；静止帧复用 GPU 数据，空帧由裁剪回调停止绘制。</summary>
     public void EndFrame()
     {
         lock (syncRoot)
-            if (count > 0) buffer.SetData(instances, 0, ZeroPrefixBytes / InstanceStride, count);
+        {
+            if (count > 0 && (dataChanged || count != uploadedCount))
+            {
+                buffer.SetData(instances, 0, ZeroPrefixBytes / InstanceStride, count);
+                uploadedCount = count;
+            }
+            // 空帧直接由 count 禁止绘制，缓冲区原数据可以在恢复时继续复用。
+            // 若此前有未完成的帧写入 CPU 数组，空帧不能错误地宣布 GPU 缓存有效。
+            previousFrameComplete = count > 0 || !dataChanged;
+        }
     }
 
     /// <summary>只改整批透明度；实例位置不变时无需重新扫描和上传所有阴影。</summary>
@@ -155,6 +180,10 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
             batchId = group.AddBatch(metadata, buffer.bufferHandle);
         }
         finally { metadata.Dispose(); }
+        // 新 GraphicsBuffer 只有元数据前缀，下一次非空 EndFrame 必须完整上传实例。
+        uploadedCount = 0;
+        dataChanged = true;
+        previousFrameComplete = false;
     }
 
     #endregion
