@@ -3,9 +3,14 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using FlatWorld.Networking;
+using FlatWorld.Localization;
 
 namespace FlatWorld.Spaceflight
 {
+    #region 点火推力判定
+    internal enum ShipIgnitionThrustFailure { None, NoFuel, Overweight }
+    #endregion
+
     public sealed partial class SpaceSession
     {
         #region 发射与惯性太空航行
@@ -27,14 +32,21 @@ namespace FlatWorld.Spaceflight
             queryAssemblies.Refresh(State.Ships, State.Docking);
             return queryAssemblies.Find(shipId);
         }
-        public bool ToggleIgnition(string consoleId)
+        public bool ToggleIgnition(string consoleId) => ToggleIgnition(consoleId, out _);
+
+        // 点火失败由权威规则给出具体原因，地面装配和联机回执沿用同一结果。
+        public bool ToggleIgnition(string consoleId, out string reason)
         {
+            reason = null;
             if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.ToggleIgnition, consoleId);
-            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
+            if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console)
+            { reason = FlatWorldLocalizationService.GetUiText("点火失败：飞船控制台已失效。"); return false; }
+            if (!IsPowered(ship, console))
+            { reason = FlatWorldLocalizationService.GetUiText("点火失败：控制台未供电或已停用。"); return false; }
             var flight = GetFlight(ship.ShipId);
-            if (flight == null) return false;
             var assembly = GetConnectedAssembly(ship.ShipId);
-            if (assembly == null) return false;
+            if (flight == null || assembly == null)
+            { reason = FlatWorldLocalizationService.GetUiText("点火失败：飞船状态尚未就绪。"); return false; }
             if (flight.Ignited)
             {
                 foreach (string id in assembly.MemberShipIds) GetFlight(id).Ignited = false;
@@ -44,10 +56,13 @@ namespace FlatWorld.Spaceflight
             RefreshMass();
             assembly = GetConnectedAssembly(ship.ShipId);
             CollectActuators(assembly);
+            if (actuators.Count == 0)
+            { reason = FlatWorldLocalizationService.GetUiText("点火失败：没有可用引擎，请检查引擎供电、安装方向和设备状态。"); return false; }
             double thrust = GetAvailableEngineThrust();
-            if (thrust <= 0d) return false;
             double gravity = flight.Phase == ShipFlightPhase.Cruising ? 0d : GetBody(flight.BodyId).SurfaceGravity;
-            if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating && thrust <= assembly.MassKg * gravity) return false;
+            ShipIgnitionThrustFailure failure = GetIgnitionThrustFailure(flight.Phase, thrust, assembly.MassKg, gravity);
+            if (failure != ShipIgnitionThrustFailure.None)
+            { reason = DescribeIgnitionThrustFailure(failure, thrust, assembly.MassKg, gravity); return false; }
             bool ignite = !flight.Ignited;
             BodyState sourceBody = flight.Phase == ShipFlightPhase.Cruising ? null : GetBody(flight.BodyId);
             foreach (string id in assembly.MemberShipIds)
@@ -66,6 +81,40 @@ namespace FlatWorld.Spaceflight
                 }
             }
             return true;
+        }
+
+        internal static ShipIgnitionThrustFailure GetIgnitionThrustFailure(ShipFlightPhase phase,
+            double thrust, double mass, double gravity)
+        {
+            if (thrust <= 0d) return ShipIgnitionThrustFailure.NoFuel;
+            return phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating && thrust <= mass * gravity
+                ? ShipIgnitionThrustFailure.Overweight : ShipIgnitionThrustFailure.None;
+        }
+
+        internal static string DescribeIgnitionThrustFailure(ShipIgnitionThrustFailure failure,
+            double thrust, double mass, double gravity) => failure switch
+        {
+            ShipIgnitionThrustFailure.NoFuel => FlatWorldLocalizationService.GetUiText(
+                "点火失败：引擎没有可用燃料，请检查燃料配比、管路和阀门。"),
+            ShipIgnitionThrustFailure.Overweight => FlatWorldLocalizationService.GetUiFormat(
+                "点火失败：飞船超重。当前总质量 {0:0.##} kg，现有推力在当前重力下最多支撑 {1:0.##} kg，请减载或增加可用推力。",
+                mass, gravity > 0d ? thrust / gravity : 0d),
+            _ => null
+        };
+
+        // 客户端等待服务器的实际点火结果，不能把成功发包显示成点火成功。
+        public void RequestToggleIgnition(string consoleId, Action<bool, string> completed)
+        {
+            if (GameNetwork.HasStateAuthority)
+            {
+                bool success = ToggleIgnition(consoleId, out string reason);
+                completed?.Invoke(success, reason);
+                return;
+            }
+            Player player = ItemMgr.Instance?.User_Player;
+            if (player == null || !SpaceNetworkBridge.SendIntent(player.ProfileName,
+                new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ToggleIgnition, PieceId = consoleId }, completed))
+                completed?.Invoke(false, FlatWorldLocalizationService.GetUiText("联机连接尚未就绪，请稍后重试。"));
         }
         private void StepAssembly(ShipAssemblyState assembly, double seconds)
         {

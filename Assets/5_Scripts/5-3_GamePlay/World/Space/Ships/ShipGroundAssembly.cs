@@ -150,8 +150,8 @@ namespace FlatWorld.Spaceflight
                     node => destinations[node.Id]);
                 transferred = true;
                 ShipAtmosphereService.RebuildCompartments(ship, GetOutside(ship));
-                if (!ToggleIgnition(console.Id.ToString(CultureInfo.InvariantCulture)))
-                    throw new InvalidOperationException("点火失败：请检查控制台供电、引擎方向、管路、燃料和载重。");
+                if (!ToggleIgnition(console.Id.ToString(CultureInfo.InvariantCulture), out string ignitionReason))
+                    throw new InvalidOperationException(ignitionReason);
                 foreach (ShipGroundBuildingStore.Entry entry in selected)
                     if (entry.Item != null)
                     { removedItems.Add(entry); ShipGroundBuildingStore.RemoveItem(entry); }

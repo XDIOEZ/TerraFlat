@@ -215,10 +215,12 @@ public sealed class ShipPanelSession : IMachinePanelSession
                 Report(session.RequestConsoleExit(actor), "已退出驾驶。", "当前未处于驾驶状态。");
                 break;
             case "ignite":
-                if (!session.ToggleIgnition(console))
-                    Append("拒绝", "点火失败：需要供电、有效航空燃料及足够升空推力。");
-                else
-                    Append("完成", session.GetFlight(shipId).Ignited ? "点火已开启。" : "引擎已停机，飞船继续按惯性运动。");
+                session.RequestToggleIgnition(console, (success, reason) =>
+                {
+                    if (!IsAlive) return;
+                    Append(success ? "完成" : "拒绝", success ? "点火操作已完成。" : reason, literal: !success);
+                    Refresh();
+                });
                 break;
             case "land":
                 if (session.RequestLanding(console))

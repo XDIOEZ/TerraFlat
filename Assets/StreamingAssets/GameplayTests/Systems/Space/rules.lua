@@ -450,7 +450,24 @@ do
             assert(arrival.speed >= 0 and arrival.speed <= data.arrivalSpeed,
                 "多步长导航进入范围时尚未停稳")
         end
-        return "覆盖四向喷嘴、缺油比例、纯转向、松键惯性、侧向漂移、反向制动和多步长到点停稳。"
+        local ignitionFailures = {
+            overweight = "Overweight", floating = "Overweight", boundary = "Overweight",
+            sufficient = "None", noFuel = "NoFuel", cruising = "None", lifting = "None", zeroGravity = "None"
+        }
+        assert(#data.ignition == 8, "缺少点火失败原因和边界样本")
+        for _, sample in ipairs(data.ignition) do
+            assert(sample.failure == ignitionFailures[sample.case], "点火失败原因错误：" .. sample.case)
+            if sample.failure ~= "None" then
+                assert(type(sample.reason) == "string" and #sample.reason > 0, "点火拒绝没有具体提示")
+            end
+            if sample.case == "overweight" then
+                assert(string.find(sample.reason, "900000", 1, true) and string.find(sample.reason, "366972", 1, true),
+                    "超重提示缺少当前质量或当前推力可支撑质量")
+            end
+            ignitionFailures[sample.case] = nil
+        end
+        assert(next(ignitionFailures) == nil, "点火失败样本重复或缺失")
+        return "覆盖四向喷嘴、缺油比例、惯性、导航和点火超重/缺燃料原因与边界。"
     end, "喷嘴推进惯性与自动导航")
 end
 

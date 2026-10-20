@@ -5128,6 +5128,34 @@ MonoBehaviour:
     m_Localized: "Presets adjust water, shadows, and post-processing together. You can still adjust each setting afterward."
     m_Metadata:
       m_Items: []
+  - m_Id: 17923500000000005
+    m_Localized: "Ignition failed: the ship console is no longer valid."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000006
+    m_Localized: "Ignition failed: the console has no power or is disabled."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000007
+    m_Localized: "Ignition failed: the ship is not ready."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000008
+    m_Localized: "Ignition failed: no engines are available. Check engine power, mounting direction, and device condition."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000009
+    m_Localized: "Ignition failed: the engines have no usable fuel. Check the fuel mixture, pipes, and valves."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000010
+    m_Localized: "Ignition failed: the ship is overweight. Total mass: {0:0.##} kg. Available thrust can support at most {1:0.##} kg under the current gravity. Reduce cargo or increase available thrust."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17923500000000011
+    m_Localized: "Ignition command completed."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

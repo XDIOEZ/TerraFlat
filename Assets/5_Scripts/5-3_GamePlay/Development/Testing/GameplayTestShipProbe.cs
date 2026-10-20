@@ -621,8 +621,36 @@ public static class GameplayTestShipProbe
             ["sideways"] = Vector(sideways), ["reverseInput"] = Vector(reverseInput), ["reverse"] = Vector(reverse),
             ["unpoweredOverspeed"] = Vector(noPower), ["arrivals"] = arrivals,
             ["arrivalDistance"] = settings.NavigationArrivalDistanceMeters,
-            ["arrivalSpeed"] = settings.NavigationArrivalSpeedMetersPerSecond
+            ["arrivalSpeed"] = settings.NavigationArrivalSpeedMetersPerSecond,
+            ["ignition"] = CaptureIgnitionThrustFailures()
         };
+    }
+
+    // 采样正式点火拒绝规则，覆盖超重、缺燃料、推力等于重力及不同飞行阶段。
+    private static JArray CaptureIgnitionThrustFailures()
+    {
+        var samples = new JArray();
+        foreach (var sample in new[]
+        {
+            ("overweight", ShipFlightPhase.Landed, 3600000d, 900000d, 9.81d),
+            ("floating", ShipFlightPhase.Floating, 1000d, 101d, 10d),
+            ("boundary", ShipFlightPhase.Landed, 1000d, 100d, 10d),
+            ("sufficient", ShipFlightPhase.Landed, 1000.01d, 100d, 10d),
+            ("noFuel", ShipFlightPhase.Landed, 0d, 900000d, 9.81d),
+            ("cruising", ShipFlightPhase.Cruising, 1000d, 900000d, 9.81d),
+            ("lifting", ShipFlightPhase.Lifting, 1000d, 900000d, 9.81d),
+            ("zeroGravity", ShipFlightPhase.Landed, 1d, 900000d, 0d)
+        })
+        {
+            ShipIgnitionThrustFailure failure = SpaceSession.GetIgnitionThrustFailure(
+                sample.Item2, sample.Item3, sample.Item4, sample.Item5);
+            samples.Add(new JObject
+            {
+                ["case"] = sample.Item1, ["failure"] = failure.ToString(),
+                ["reason"] = SpaceSession.DescribeIgnitionThrustFailure(failure, sample.Item3, sample.Item4, sample.Item5)
+            });
+        }
+        return samples;
     }
 
     #endregion

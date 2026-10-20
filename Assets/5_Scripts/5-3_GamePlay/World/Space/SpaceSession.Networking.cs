@@ -154,7 +154,7 @@ namespace FlatWorld.Spaceflight
                     }
                     break;
                 case SpaceNetworkIntentKind.ToggleDoor: result = TryToggleDoor(piece.PieceId); break;
-                case SpaceNetworkIntentKind.ToggleIgnition: result = ToggleIgnition(piece.PieceId); break;
+                case SpaceNetworkIntentKind.ToggleIgnition: return ToggleIgnition(piece.PieceId, out reason);
                 case SpaceNetworkIntentKind.RequestLanding:
                     BodyState body = GetLandingCandidate(ship.ShipId);
                     if (body != null && !CanTransferToNetworkSurface(body.SurfaceAddress.WorldKey, out reason)) return false;
