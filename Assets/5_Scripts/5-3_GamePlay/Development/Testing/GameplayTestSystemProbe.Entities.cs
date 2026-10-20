@@ -95,9 +95,10 @@ public static partial class GameplayTestSystemProbe
             var item = root.AddComponent<GameItem>();
             var visual = new GameObject("Visual");
             visual.transform.SetParent(root.transform, false);
+            visual.AddComponent<SpriteRenderer>();
             var animator = visual.AddComponent<Animator>();
             animator.enabled = false;
-            item.QueueInitialAnimatorState(animator, Animator.StringToHash("Idle"), 0);
+            item.QueueInitialAnimatorState(animator, "Idle");
             bool queuedWhileInactive = item.HasPendingInitialAnimatorState;
             item.FlushPendingInitialAnimatorState();
             bool stillQueued = item.HasPendingInitialAnimatorState;
@@ -106,16 +107,64 @@ public static partial class GameplayTestSystemProbe
             item.ClearPendingInitialAnimatorState();
             bool cancelClears = !item.HasPendingInitialAnimatorState;
             root.SetActive(false);
-            item.QueueInitialAnimatorState(animator, Animator.StringToHash("Stand"), 0);
+            item.QueueInitialAnimatorState(animator, "Stand");
             item.PrepareForPoolReuse();
             bool poolClears = !item.HasPendingInitialAnimatorState;
+
+            string actorId = Text(args, "actorId", "SmallFish");
+            string stateName = actorId == "Bird" ? "Ground" : "Idle";
+            string controllerPath = actorId switch
+            {
+                "SmallFish" => "Assets/8_Animations/Character/SmallFish.controller",
+                "Bird" => "Assets/8_Animations/Character/Birds/Bird/Bird.controller",
+                _ => throw new ArgumentException("初始动画回归只接收 SmallFish 或 Bird。")
+            };
+            RuntimeAnimatorController controller;
+#if UNITY_EDITOR
+            controller = UnityEditor.AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath);
+#else
+            controller = GameRes.ExistingInstance?.GetPrefab(actorId, false)?.GetComponentInChildren<Animator>(true)
+                ?.runtimeAnimatorController;
+#endif
+            if (controller == null) throw new InvalidOperationException("初始动画回归缺少正式控制器：" + controllerPath);
+            animator.enabled = true;
+            bool coldUninitialized = !animator.isInitialized;
+            // 直接经过正式绑定入口，确保旧的停用状态查询也会被本规则捕获。
+            ItemDefinitionRuntime.ApplyAnimator(item, "Visual", controller, stateName);
+            bool coldQueued = item.HasPendingInitialAnimatorState;
+            item.FlushPendingInitialAnimatorState();
+            bool coldStillQueued = item.HasPendingInitialAnimatorState && !animator.isInitialized;
+            root.SetActive(true);
+            animator.Rebind();
+            item.FlushPendingInitialAnimatorState();
+            bool activePlayed = animator.isInitialized && !item.HasPendingInitialAnimatorState &&
+                animator.GetCurrentAnimatorStateInfo(0).shortNameHash == Animator.StringToHash(stateName);
+            ItemDefinitionRuntime.ApplyAnimator(item, "Visual", controller, "Base Layer." + stateName);
+            bool fullPathPlayed = !item.HasPendingInitialAnimatorState &&
+                animator.GetCurrentAnimatorStateInfo(0).shortNameHash == Animator.StringToHash(stateName);
+            bool invalidStateRejected = false;
+            try { item.QueueInitialAnimatorState(animator, "MissingInitialState"); }
+            catch (System.IO.InvalidDataException) { invalidStateRejected = true; }
+            root.SetActive(false);
+            ItemDefinitionRuntime.ApplyAnimator(item, "Visual", controller, stateName);
+            animator.enabled = false;
+            root.SetActive(true);
+            bool singleSpriteDiscarded = !item.HasPendingInitialAnimatorState;
             return new JObject
             {
                 ["queuedWhileInactive"] = queuedWhileInactive,
                 ["stillQueued"] = stillQueued,
                 ["disabledNotPlayed"] = disabledNotPlayed,
                 ["cancelClears"] = cancelClears,
-                ["poolClears"] = poolClears
+                ["poolClears"] = poolClears,
+                ["actorId"] = actorId,
+                ["coldUninitialized"] = coldUninitialized,
+                ["coldQueued"] = coldQueued,
+                ["coldStillQueued"] = coldStillQueued,
+                ["activePlayed"] = activePlayed,
+                ["fullPathPlayed"] = fullPathPlayed,
+                ["invalidStateRejected"] = invalidStateRejected,
+                ["singleSpriteDiscarded"] = singleSpriteDiscarded
             };
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
