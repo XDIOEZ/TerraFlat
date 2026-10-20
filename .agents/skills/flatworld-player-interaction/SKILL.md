@@ -36,6 +36,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 交互
 
 - `IInteractable` 的交互键通道为 Start→按住 Update→松开 End，取消/目标失效为 Cancel；鼠标与外部单次调用为 Start→End。`CanPointerInteract=false` 仅禁鼠标点选。
+- 发送器 `OnDisable` 解绑输入并取消交互；已加载模块的 `OnEnable` 必须幂等重绑，场景迁移或临时停用不会重新执行 `OnLoad`。回归 `player/interaction_input_reenable` 检查真实按下/松开及多次恢复不重复订阅。
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。
 - 接口持有 Unity 组件时先按 UnityEngine.Object 原生存活状态检查；目标销毁后清除交互与描边缓存，不再向销毁对象发送回调，纯 C# 世界目标保持普通引用生命周期。
 - 右键只使用当前快捷栏中由本玩家持有的 `Item`，经 `Item.Act/OnAct` 分发；F 只交互世界建筑、工作台、设备、门、入口和载具。`CanPointerInteract` 默认 false，仅采集等左键动作显式允许；F 的指针选目标和描边不受点选权限影响。

@@ -618,6 +618,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             clearedOutline.SetHighlighted(false);
     }
 
+    private void OnEnable()
+    {
+        // 场景迁移或临时停用不会重新加载模块，恢复时须重新接上交互按键。
+        if (IsRuntimeLoaded)
+            BindInput();
+    }
+
     private void OnDisable()
     {
         UnbindInput();
