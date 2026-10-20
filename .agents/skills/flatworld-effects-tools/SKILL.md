@@ -71,6 +71,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - 洞口环境采光由 `DimensionTravelProgressStore.ReadCache` 和 `CaveExitAmbientLightCache` 维护；入口/锚点变化才更新出口集合，玩家位置/拓扑变化才重算距离，不定时解析角色 JSON。
 - 动态 PlacedBuilding 的 Sprite 节点持 ShadowCaster2D，投影路径来自 Sprite fallback physics shape；手持/召唤器态关闭。内嵌发光避让使用裁剪投影并关闭 useRendererSilhouette，使自阴影也采用裁剪网格。
 - Light2DSortingLayerUtility 适配 URP 14 接收层：光源空列表保留 Prefab，建筑空列表接收全部；镜像光同步集合。接收层过滤不表达物理高度或逐灯 Owner 排除。
+- Mod_LightSource 的 Point Light2D 平面约束先检查世界旋转四元数 X/Y 分量；已在 XY 平面的常态灯不再转欧拉角，检测到倾斜时沿用原 0.01° 容差与 Z 轴修正。未启用自发光且不存在覆盖层时跳过 LateUpdate 的 Sprite 检查，动态开关仍按原入口同步。
 
 ## 液体与地表表现
 

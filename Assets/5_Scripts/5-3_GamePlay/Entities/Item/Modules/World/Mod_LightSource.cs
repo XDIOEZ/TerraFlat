@@ -114,13 +114,20 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
     private void LateUpdate()
     {
         KeepPointLightOn2DPlane();
-        RefreshEmissiveOverlay();
+        // 未配置自发光且未创建过覆盖层时，无需进入逐帧 Sprite 表现检查。
+        if (keepUpperSpriteEmissive || ignore2DShadowsOnSourceSprite || emissiveOverlayRenderer != null)
+            RefreshEmissiveOverlay();
     }
 
     /// <summary>只修正 Point Light2D 的世界 X/Y 旋转，保留 Z 轴朝向。</summary>
     private void KeepPointLightOn2DPlane()
     {
         if (TargetLight == null || TargetLight.lightType != Light2D.LightType.Point)
+            return;
+
+        // 已经绕世界 Z 轴旋转的光源直接通过四元数分量判定，避免每帧转换欧拉角。
+        Quaternion worldRotation = TargetLight.transform.rotation;
+        if (Mathf.Abs(worldRotation.x) < 0.000001f && Mathf.Abs(worldRotation.y) < 0.000001f)
             return;
 
         Vector3 worldEuler = TargetLight.transform.eulerAngles;
