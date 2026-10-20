@@ -107,6 +107,44 @@ public static partial class GameplayTestSystemProbe
             neighbours.Add(Bucket(center + new Vector2(x * 2f, y * 2f), wrapped));
 
         float2 seamDelta = wrapped.ShortestDelta(new float2(15.5f, 0.5f), new float2(-15.5f, 0.5f));
+
+        // 三次按轴寻址必须与逐格九次 Normalize 完全一致，包括负坐标、半格边界和跨多个世界镜像。
+        var unusualDomain = new WorldTopologyDomain(new int2(-11, -7), new int2(25, 21), true);
+        WorldTopologyDomain[] domains = { unwrapped, wrapped,
+            new WorldTopologyDomain(new int2(-12, -6), new int2(24, 20), true), unusualDomain };
+        float[] coordinates = { -32768f, -17f, -16f, -15.999f, -2.01f, -0.001f,
+            0f, 0.001f, 1.9999999f, 2f, 15.999f, 16f, 17.5f, 79.5f, 32768f };
+        bool equivalentBuckets = true;
+        int comparedBuckets = 0;
+        foreach (WorldTopologyDomain domain in domains)
+        for (int sample = 0; sample < coordinates.Length; sample++)
+        {
+            Vector2 position = new(coordinates[sample], coordinates[(sample * 7 + 3) % coordinates.Length]);
+            Vector2Int lower = WorldNavigationAgent.GetLocalAvoidanceBucket(position + new Vector2(-2f, -2f), domain);
+            Vector2Int middle = WorldNavigationAgent.GetLocalAvoidanceBucket(position, domain);
+            Vector2Int upper = WorldNavigationAgent.GetLocalAvoidanceBucket(position + new Vector2(2f, 2f), domain);
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                Vector2Int expected = WorldNavigationAgent.GetLocalAvoidanceBucket(
+                    position + new Vector2(dx * 2f, dy * 2f), domain);
+                Vector2Int actual = WorldNavigationAgent.CombineLocalAvoidanceNeighbourBucket(
+                    lower, middle, upper, dx, dy);
+                equivalentBuckets &= actual == expected;
+                comparedBuckets++;
+            }
+        }
+
+        bool idleAvoidanceSkipped = !WorldNavigationAgent.RequiresLocalAvoidanceNavigation(
+            4, false, Vector2.zero, Vector2.zero) &&
+            !WorldNavigationAgent.RequiresLocalAvoidanceNavigation(
+                0, false, Vector2.zero, Vector2.zero);
+        bool realAvoidancePreserved = WorldNavigationAgent.RequiresLocalAvoidanceNavigation(
+            4, false, Vector2.right, Vector2.zero) &&
+            WorldNavigationAgent.RequiresLocalAvoidanceNavigation(
+                4, false, Vector2.zero, Vector2.left) &&
+            WorldNavigationAgent.RequiresLocalAvoidanceNavigation(
+                4, true, Vector2.zero, Vector2.zero);
         return new JObject
         {
             ["unwrappedNegative"] = Bucket(new Vector2(-2.01f, -1.99f), unwrapped),
@@ -117,7 +155,10 @@ public static partial class GameplayTestSystemProbe
             ["nonSquareWrapped"] = Bucket(new Vector2(12.25f, 14.25f),
                 new WorldTopologyDomain(new int2(-12, -6), new int2(24, 20), true)),
             ["neighbours"] = neighbours,
-            ["seamDelta"] = new JArray(seamDelta.x, seamDelta.y)
+            ["seamDelta"] = new JArray(seamDelta.x, seamDelta.y),
+            ["equivalentBuckets"] = equivalentBuckets, ["comparedBuckets"] = comparedBuckets,
+            ["idleAvoidanceSkipped"] = idleAvoidanceSkipped,
+            ["realAvoidancePreserved"] = realAvoidancePreserved
         };
     }
 

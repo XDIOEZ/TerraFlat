@@ -308,7 +308,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     {
         Vector2 current = CurrentPosition;
         // 单次冻结局部避让拓扑，避免九宫格和邻居查询反复解析活动世界。
-        WorldTopologyDomain avoidanceTopology = surfaceMover is Mod_Mover_AI && isActiveAndEnabled
+        WorldTopologyDomain avoidanceTopology = IsLocalAvoidanceParticipant
             ? WorldTopologyRuntime.GetActiveDomain() : default;
         UpdateLocalAvoidanceBucket(current, avoidanceTopology);
         preferredVelocity = Vector2.zero;
@@ -665,7 +665,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     /// <summary>用小型空间桶限制邻居查询，不让 GameObject AI 的避让退化成全体两两扫描。</summary>
     private void UpdateLocalAvoidanceBucket(Vector2 position, in WorldTopologyDomain topology)
     {
-        if (surfaceMover is not Mod_Mover_AI || !isActiveAndEnabled)
+        // 停止、休眠及无目标的 AI 不参与避让，避免其占用九宫格候选桶。
+        if (!IsLocalAvoidanceParticipant)
         {
             RemoveFromLocalAvoidanceBucket();
             return;
@@ -711,6 +712,23 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             Mathf.FloorToInt(normalized.y / LocalAvoidanceBucketSize));
     }
 
+    /// <summary>九宫格的 X/Y 分别只取决于对应坐标轴，三次完整寻址即可组成九个格。</summary>
+    internal static Vector2Int CombineLocalAvoidanceNeighbourBucket(
+        Vector2Int negative, Vector2Int center, Vector2Int positive, int x, int y)
+    {
+        return new Vector2Int(
+            x < 0 ? negative.x : x > 0 ? positive.x : center.x,
+            y < 0 ? negative.y : y > 0 ? positive.y : center.y);
+    }
+
+    /// <summary>只有产生真实分离或预测碰撞时才需要再次查询地形与视线。</summary>
+    internal static bool RequiresLocalAvoidanceNavigation(int neighbours, bool imminentCollision,
+        Vector2 separation, Vector2 passing)
+    {
+        return neighbours > 0 && (imminentCollision || separation.sqrMagnitude != 0f ||
+                                  passing.sqrMagnitude != 0f);
+    }
+
     /// <summary>预测短时间内的相撞趋势，优先向自身右侧错身，并在贴身时附加分离力。</summary>
     private Vector2 ResolveLocalAvoidanceVelocity(
         WorldNavigationManager navigation,
@@ -718,8 +736,10 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         Vector2 desiredVelocity,
         in WorldTopologyDomain topology)
     {
+        if (!IsLocalAvoidanceParticipant)
+            return desiredVelocity;
         float desiredSpeed = desiredVelocity.magnitude;
-        if (!IsLocalAvoidanceParticipant || desiredSpeed <= 0.0001f)
+        if (desiredSpeed <= 0.0001f)
             return desiredVelocity;
 
         Vector2 forward = desiredVelocity / desiredSpeed;
@@ -730,14 +750,22 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         int acceptedNeighbors = 0;
         int bucketRange = Mathf.Max(1, Mathf.CeilToInt(LocalAvoidanceRadius / LocalAvoidanceBucketSize));
 
+        // 原九宫格各算一次环绕 Normalize；现在只读取负/正对角与本体桶，各轴结果重组即可。
+        Vector2Int negativeBucket = GetLocalAvoidanceBucket(
+            current - new Vector2(LocalAvoidanceBucketSize, LocalAvoidanceBucketSize), topology);
+        Vector2Int centerBucket = hasLocalAvoidanceBucket
+            ? localAvoidanceBucket : GetLocalAvoidanceBucket(current, topology);
+        Vector2Int positiveBucket = GetLocalAvoidanceBucket(
+            current + new Vector2(LocalAvoidanceBucketSize, LocalAvoidanceBucketSize), topology);
+
         for (int y = -bucketRange; y <= bucketRange && acceptedNeighbors < MaxLocalAvoidanceNeighbors; y++)
         {
             for (int x = -bucketRange; x <= bucketRange && acceptedNeighbors < MaxLocalAvoidanceNeighbors; x++)
             {
-                Vector2 bucketSample = current + new Vector2(
-                    x * LocalAvoidanceBucketSize,
-                    y * LocalAvoidanceBucketSize);
-                Vector2Int bucketKey = GetLocalAvoidanceBucket(bucketSample, topology);
+                Vector2Int bucketKey = bucketRange == 1
+                    ? CombineLocalAvoidanceNeighbourBucket(negativeBucket, centerBucket, positiveBucket, x, y)
+                    : GetLocalAvoidanceBucket(current + new Vector2(
+                        x * LocalAvoidanceBucketSize, y * LocalAvoidanceBucketSize), topology);
                 if (!LocalAvoidanceBuckets.TryGetValue(bucketKey,
                         out System.Collections.Generic.List<WorldNavigationAgent> neighbors))
                     continue;
@@ -795,7 +823,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             }
         }
 
-        if (acceptedNeighbors == 0)
+        if (!RequiresLocalAvoidanceNavigation(acceptedNeighbors, hasImminentCollision, separation, passing))
             return desiredVelocity;
 
         separation = Vector2.ClampMagnitude(separation, 1f);

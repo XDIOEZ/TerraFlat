@@ -93,6 +93,10 @@ test.system("navigation", "avoidance_topology", {}, function(data)
     end
     assert(#data.seamDelta == 2 and data.seamDelta[1] == 1 and data.seamDelta[2] == 0,
         "环绕接缝的相邻 AI 距离没有采用最短路径")
+    assert(data.equivalentBuckets and data.comparedBuckets == 540,
+        "按轴复用九宫格坐标后，负数、临界格或循环镜像的候选桶与原版不一致")
+    assert(data.idleAvoidanceSkipped and data.realAvoidancePreserved,
+        "无实际避让时仍然探路，或真实分离/碰撞条件被跳过")
 end, "局部避让冻结拓扑后保留无限世界、环绕及九宫格桶边界")
 
 test.system("navigation", "topology_bounds_cache", {}, function(data)
