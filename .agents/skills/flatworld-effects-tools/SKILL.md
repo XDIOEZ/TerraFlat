@@ -97,7 +97,7 @@ description: "FlatWorld 特效/Shader、MPB、世界排序、光影、水体渲�
 - ParticleSystem 显式持有 URP 材质，Velocity 三轴 MinMax 模式一致；EmitParams.rotation 为度数，2D 方向使用 SignedAngle(up,direction) 的反号。CombustionVisualEffect 的 BindWorldPresentation 供无 SpriteRenderer 的行网格设施复用粒子模板与显式排序；模板/尺寸只在配置变化时应用，熄灭清空粒子。
 - CombustionVisualEffect 初绑缓存三路 ParticleSystemRenderer，运行时逐帧读取实际排序键、仅差异提交；火焰随 Sprite 的世界锚点/局部缩放也只在姿态变化时写 Transform，不改变持续发射或源光源关闭规则。
 - 世界掉落物的两种后端共用 WorldItemCombustionVisual，创建时绑定 Resources/Combustion_Particle；材质移动保留 GUID，模块 Prefab 继续共用同一资源。规则采样为 rendering/dropped_combustion_material。
-- ProjectileFlightTrailPresenter 只读投射物飞行/Sprite。DamageTextEffect 持有样式/显示倍率；CombatFeedbackEvents 的逻辑未命中快照由 CombatMissFeedbackPresenter 消费，独立于伤害结算。
+- ProjectileFlightTrailPresenter 只读投射物飞行/Sprite，飞行中仅在层级/排序变化时提交 Renderer；池化重发时仅颜色改变才重建渐变，TrailRenderer 重建则强制首次提交。DamageTextEffect 持有样式/显示倍率；CombatFeedbackEvents 的逻辑未命中快照由 CombatMissFeedbackPresenter 消费，独立于伤害结算。
 - 罐内连续液面与罐口重力条带为表现；液流在 Mod_WaterVessel 成功移除后触发，Graphic 不参与数量结算且位于内腔 Mask 外。
 - 载具尾波消费实际水面位移并逐发射点确认水面，限额世界空间粒子随主体 Sorting Layer、Order+1 排序；停用/回池/换世界清理。
 - ShipEngineExhaustPresenter 消费船引擎实际耗油后的出力，复用 Resources/ShipEngineExhaust 材质；材质 .meta 的 GUID 必须为 32 位十六进制，导入后确认 Resources 可加载。局部粒子按 vehicle -3 排在船地板/管线后面，停推残留继续同步；单引擎最多 48 粒子，停推 StopEmitting、禁用 StopEmittingAndClear。

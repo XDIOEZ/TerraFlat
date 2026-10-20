@@ -42,6 +42,8 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
     private GameObject trailObject;
     private TrailRenderer trailRenderer;
     private bool wasFlying;
+    private Color appliedTrailColor;
+    private bool hasAppliedTrailColor;
 
     #endregion
 
@@ -157,10 +159,11 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
         trailRenderer.receiveShadows = false;
         trailRenderer.lightProbeUsage = LightProbeUsage.Off;
         trailRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        trailRenderer.colorGradient = BuildGradient();
+        // 代理若被外部销毁后重建，即使颜色没变也必须首次提交渐变。
+        hasAppliedTrailColor = false;
+        ApplyGradientIfChanged();
         trailRenderer.emitting = false;
         trailRenderer.Clear();
-        SyncTrailSorting();
     }
 
     private void BeginTrail()
@@ -173,7 +176,7 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
         trailRenderer.startWidth = Mathf.Max(0f, StartWidth);
         trailRenderer.endWidth = Mathf.Max(0f, EndWidth);
         trailRenderer.minVertexDistance = Mathf.Max(0.001f, MinVertexDistance);
-        trailRenderer.colorGradient = BuildGradient();
+        ApplyGradientIfChanged();
         trailRenderer.Clear();
         trailRenderer.emitting = true;
     }
@@ -183,7 +186,8 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
         if (trailRenderer == null)
             return;
 
-        trailRenderer.emitting = false;
+        if (trailRenderer.emitting)
+            trailRenderer.emitting = false;
         if (clear)
             trailRenderer.Clear();
     }
@@ -210,9 +214,26 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
         if (trailRenderer == null || sourceRenderer == null)
             return;
 
-        trailObject.layer = sourceRenderer.gameObject.layer;
-        trailRenderer.sortingLayerID = sourceRenderer.sortingLayerID;
-        trailRenderer.sortingOrder = sourceRenderer.sortingOrder - 1;
+        // 飞行中仍逐帧追踪源层级，但静态值不重复提交给 Unity Renderer。
+        int layer = sourceRenderer.gameObject.layer;
+        if (trailObject.layer != layer)
+            trailObject.layer = layer;
+        int sortingLayer = sourceRenderer.sortingLayerID;
+        if (trailRenderer.sortingLayerID != sortingLayer)
+            trailRenderer.sortingLayerID = sortingLayer;
+        int sortingOrder = sourceRenderer.sortingOrder - 1;
+        if (trailRenderer.sortingOrder != sortingOrder)
+            trailRenderer.sortingOrder = sortingOrder;
+    }
+
+    /// <summary>对象池再次发射时复用未变的颜色渐变，修改颜色仍按原时机刷新。</summary>
+    private void ApplyGradientIfChanged()
+    {
+        if (trailRenderer == null || hasAppliedTrailColor && appliedTrailColor.Equals(TrailColor))
+            return;
+        trailRenderer.colorGradient = BuildGradient();
+        appliedTrailColor = TrailColor;
+        hasAppliedTrailColor = true;
     }
 
     private Gradient BuildGradient()
@@ -265,6 +286,7 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
 
         trailObject = null;
         trailRenderer = null;
+        hasAppliedTrailColor = false;
     }
 
     #endregion
