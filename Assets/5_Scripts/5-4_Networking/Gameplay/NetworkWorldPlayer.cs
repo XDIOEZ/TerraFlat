@@ -136,6 +136,7 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnStartLocalPlayer()
         {
             base.OnStartLocalPlayer();
+            ApplyDisplayName(displayName);
             SaveDataMgr.Instance.CurrentContrrolPlayerName = displayName;
             EnsureCorePlayer(true);
 
@@ -1063,6 +1064,8 @@ namespace FlatWorld.Networking.Gameplay
             followCamera.enabled = true;
         }
 
+        #region 玩家名称表现
+
         private void EnsureNameLabel()
         {
             if (nameLabel != null)
@@ -1080,10 +1083,16 @@ namespace FlatWorld.Networking.Gameplay
         {
             EnsureNameLabel();
             if (nameLabel != null)
+            {
+                // 每个客户端只显示其他玩家的头顶名字。
+                nameLabel.enabled = !isLocalPlayer;
                 nameLabel.text = SaveDataMgr.Instance?.SaveData?.PlayerData_Dict is { } profiles &&
                     profiles.TryGetValue(value, out Data_Player data) && !string.IsNullOrWhiteSpace(data.Name_User)
                     ? data.Name_User : value;
+            }
         }
+
+        #endregion
 
         private void OnPlayerColorChanged(Color oldColor, Color newColor) => ApplyPlayerColor(newColor);
 
