@@ -1,3 +1,14 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 实例数据：BindData() / SetItemData() / SyncItemData()
+// 启动加载：Load() / LoadInSteps() / ModuleLoad() / LoadModuleLayout()
+// 模块装配：RegisterModuleForLoad() / BindModuleDependencies() / GetMod<T>()
+// 运行时更新：Tick() / TickScheduled() / EnsureModuleSchedule() / TickScheduledModules()
+// 模块调度：GetTickTier() / MarkModuleScheduleDirty() / SetSimulationRangePaused()
+// 保存与卸载：Save() / ModuleSave() / ModuleUnload() / PrepareForDespawn()
+// 对象池复用：PrepareForPoolReuse() / NotifyReturnedToPool()
+// 数据绑定/结构通知：NotifyRuntimeStructureChanged() / LoadDataPosition()
+// ====================================================
+
 using UnityEngine;
 using UltEvents;
 using System.Collections.Generic;
@@ -187,6 +198,58 @@ public abstract class Item : MonoBehaviour
     [SerializeField, HideInInspector] private bool poolingDisabled;
     [NonSerialized] private PooledItemMarker poolMarker;
 
+    #region 初始动画延迟播放
+
+    [NonSerialized] private Animator pendingInitialAnimator;
+    [NonSerialized] private int pendingInitialAnimatorStateHash;
+    [NonSerialized] private int pendingInitialAnimatorLayer;
+
+    internal bool HasPendingInitialAnimatorState => pendingInitialAnimator != null;
+
+    /// <summary>停用外壳只登记待播状态，激活后才向正式 Animator 提交。</summary>
+    internal void QueueInitialAnimatorState(Animator animator, int stateHash, int layer)
+    {
+        pendingInitialAnimator = animator;
+        pendingInitialAnimatorStateHash = stateHash;
+        pendingInitialAnimatorLayer = layer;
+        FlushPendingInitialAnimatorState();
+    }
+
+    internal void FlushPendingInitialAnimatorState()
+    {
+        Animator animator = pendingInitialAnimator;
+        if (animator == null)
+        {
+            ClearPendingInitialAnimatorState();
+            return;
+        }
+        // 单图表现会主动禁用身体 Animator；激活后不保留将来可能误播的旧待播态。
+        if (animator.gameObject.activeInHierarchy && !animator.enabled)
+        {
+            ClearPendingInitialAnimatorState();
+            return;
+        }
+        if (!animator.isActiveAndEnabled || !animator.isInitialized)
+            return;
+
+        int hash = pendingInitialAnimatorStateHash;
+        int layer = pendingInitialAnimatorLayer;
+        ClearPendingInitialAnimatorState();
+        animator.Play(hash, layer, 0f);
+        animator.Update(0f);
+    }
+
+    internal void ClearPendingInitialAnimatorState()
+    {
+        pendingInitialAnimator = null;
+        pendingInitialAnimatorStateHash = 0;
+        pendingInitialAnimatorLayer = 0;
+    }
+
+    private void OnEnable() => FlushPendingInitialAnimatorState();
+
+    #endregion
+
     /// <summary>对象池状态随 Item 实例保存，不额外向新物品添加组件。</summary>
     internal PooledItemMarker PoolMarker => poolMarker ??= new PooledItemMarker(this);
     internal string PoolKey { get => poolKey; set => poolKey = value; }
@@ -352,6 +415,7 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public virtual void Start()
     {
+        FlushPendingInitialAnimatorState();
         // 获取或初始化精灵渲染器
         if (Sprite == null)
             Sprite = GetComponentInChildren<SpriteRenderer>();
@@ -426,7 +490,8 @@ public abstract class Item : MonoBehaviour
         if (destructionHandled)
             return;
 
-        try { ItemMgr.GetInstance()?.NotifyRuntimeItemDestroyed(this); }
+        // 场景卸载时管理器可能先销毁，禁止每个 Item 再扫描全场景找单例。
+        try { ItemMgr.GetExistingInstance()?.NotifyRuntimeItemDestroyed(this); }
         finally { EndRuntime(saveData: true, saveTransform: false); }
     }
 
@@ -466,6 +531,7 @@ public abstract class Item : MonoBehaviour
 
     public void PrepareForPoolReuse()
     {
+        ClearPendingInitialAnimatorState();
         PersistenceOwner = null;
         ModuleUnload();
         StopAllCoroutines();

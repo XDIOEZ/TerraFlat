@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -14,7 +15,110 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/grid_changes", NavigationChanges);
         operations.Add("navigation/corner", NavigationCorner);
         operations.Add("navigation/canonical_batch", NavigationCanonicalBatch);
+        operations.Add("navigation/chunk_block_pool", NavigationChunkBlockPool);
+        operations.Add("navigation/block_addressing", NavigationBlockAddressing);
+        operations.Add("navigation/liquid_cell_snapshot", NavigationLiquidCellSnapshot);
         operations.Add("navigation/machine_obstacle_dirty", NavigationMachineObstacleDirty);
+        operations.Add("navigation/avoidance_topology", NavigationAvoidanceTopology);
+        operations.Add("navigation/topology_bounds_cache", NavigationTopologyBoundsCache);
+    }
+
+    /// <summary>缓存必须和正式世界边界算法一致，动态配置或星球身份变化立即失效。</summary>
+    private static JObject NavigationTopologyBoundsCache(JObject args)
+    {
+        var cache = new WorldTopologyRuntime.ActiveBoundsCache();
+        var planet = new PlanetData
+        {
+            TopologyMode = WorldTopologyMode.Wrapped,
+            Radius = 9,
+            ChunkSize = new Vector2Int(4, 4)
+        };
+
+        static bool MatchesBaseline(WorldTopologyRuntime.ActiveBoundsCache cache, PlanetData planet)
+        {
+            bool expectedValid = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds expected);
+            bool actualValid = cache.TryGet(planet, out WorldTopologyBounds actual);
+            return expectedValid == actualValid && (!actualValid ||
+                expected.Min == actual.Min && expected.MaxExclusive == actual.MaxExclusive &&
+                expected.Span == actual.Span && expected.ChunkSize == actual.ChunkSize &&
+                expected.Mode == actual.Mode);
+        }
+
+        bool initial = MatchesBaseline(cache, planet) && cache.RebuildCount == 1;
+        bool reused = true;
+        for (int i = 0; i < 512; i++)
+            reused &= MatchesBaseline(cache, planet);
+        reused &= cache.RebuildCount == 1;
+
+        planet.Radius = 23;
+        bool radiusRefresh = MatchesBaseline(cache, planet) && cache.RebuildCount == 2;
+        planet.ChunkSize = new Vector2Int(6, 4);
+        bool chunkRefresh = MatchesBaseline(cache, planet) && cache.RebuildCount == 3;
+        planet.ChunkSize = new Vector2Int(0, 4);
+        bool invalidCached = MatchesBaseline(cache, planet) && MatchesBaseline(cache, planet) &&
+            cache.RebuildCount == 4;
+        planet.ChunkSize = new Vector2Int(6, 4);
+        bool recovered = MatchesBaseline(cache, planet) && cache.RebuildCount == 5;
+        planet.TopologyMode = WorldTopologyMode.Infinite;
+        bool infinite = MatchesBaseline(cache, planet) && cache.RebuildCount == 6;
+        planet.TopologyMode = WorldTopologyMode.Wrapped;
+        bool wrapped = MatchesBaseline(cache, planet) && cache.RebuildCount == 7;
+
+        var other = new PlanetData
+        {
+            TopologyMode = WorldTopologyMode.Wrapped,
+            Radius = planet.Radius,
+            ChunkSize = planet.ChunkSize
+        };
+        bool differentPlanet = MatchesBaseline(cache, other) && cache.RebuildCount == 8;
+        bool missingPlanet = MatchesBaseline(cache, null) && MatchesBaseline(cache, null) &&
+            cache.RebuildCount == 9;
+        bool returned = MatchesBaseline(cache, planet) && cache.RebuildCount == 10;
+        cache.Clear();
+        bool reset = cache.RebuildCount == 0 && MatchesBaseline(cache, planet) &&
+            cache.RebuildCount == 1;
+
+        return new JObject
+        {
+            ["initial"] = initial, ["reused"] = reused, ["radiusRefresh"] = radiusRefresh,
+            ["chunkRefresh"] = chunkRefresh, ["invalidCached"] = invalidCached,
+            ["recovered"] = recovered, ["infinite"] = infinite, ["wrapped"] = wrapped,
+            ["differentPlanet"] = differentPlanet, ["missingPlanet"] = missingPlanet,
+            ["returned"] = returned, ["reset"] = reset
+        };
+    }
+
+    /// <summary>用正式局部避让桶入口核验无限地图和环绕接缝的格归属。</summary>
+    private static JObject NavigationAvoidanceTopology(JObject args)
+    {
+        var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        var unwrapped = default(WorldTopologyDomain);
+
+        static JArray Bucket(Vector2 position, in WorldTopologyDomain topology)
+        {
+            Vector2Int bucket = WorldNavigationAgent.GetLocalAvoidanceBucket(position, topology);
+            return new JArray(bucket.x, bucket.y);
+        }
+
+        var neighbours = new JArray();
+        Vector2 center = new(15.5f, 0.5f);
+        for (int y = -1; y <= 1; y++)
+        for (int x = -1; x <= 1; x++)
+            neighbours.Add(Bucket(center + new Vector2(x * 2f, y * 2f), wrapped));
+
+        float2 seamDelta = wrapped.ShortestDelta(new float2(15.5f, 0.5f), new float2(-15.5f, 0.5f));
+        return new JObject
+        {
+            ["unwrappedNegative"] = Bucket(new Vector2(-2.01f, -1.99f), unwrapped),
+            ["wrappedSeam"] = Bucket(center, wrapped),
+            ["equivalentImage"] = Bucket(new Vector2(79.5f, 0.5f), wrapped),
+            ["wrappedCrossing"] = Bucket(new Vector2(17.5f, 0.5f), wrapped),
+            ["unwrappedCrossing"] = Bucket(new Vector2(17.5f, 0.5f), unwrapped),
+            ["nonSquareWrapped"] = Bucket(new Vector2(12.25f, 14.25f),
+                new WorldTopologyDomain(new int2(-12, -6), new int2(24, 20), true)),
+            ["neighbours"] = neighbours,
+            ["seamDelta"] = new JArray(seamDelta.x, seamDelta.y)
+        };
     }
 
     private static WorldNavigationGrid NavigationFixture()
@@ -24,6 +128,61 @@ public static partial class GameplayTestSystemProbe
         for (int y = 10; y <= 12; y++)
         for (int x = 10; x <= 12; x++) grid.SetCell(new Vector2Int(x, y), 1, true);
         return grid;
+    }
+
+    // 对照 16 格整块边界验证极大/负坐标，再测正式格查询的热路径耗时。
+    private static JObject NavigationBlockAddressing(JObject args)
+    {
+        int[] values =
+        {
+            int.MinValue, int.MinValue + 15, -257, -33, -32, -31, -17, -16, -15,
+            -1, 0, 1, 15, 16, 17, 31, 32, 33, int.MaxValue - 15, int.MaxValue
+        };
+        var grid = new WorldNavigationGrid();
+        var positions = new List<Vector2Int>(values.Length);
+        bool independent = true;
+        for (int i = 0; i < values.Length; i++)
+        {
+            var cell = new Vector2Int(values[i], values[(i * 7 + 3) % values.Length]);
+            positions.Add(cell);
+            grid.SetCanonicalCell(cell, (uint)(i + 1), true);
+        }
+        for (int i = 0; i < positions.Count; i++)
+            independent &= grid.TryGetCanonicalCell(positions[i], out WorldNavigationCell cell) &&
+                cell.Walkable && cell.Penalty == i + 1;
+
+        var copied = new List<Vector2Int>();
+        grid.CopyCellPositions(copied);
+        bool enumerated = copied.Count == positions.Count && new HashSet<Vector2Int>(copied).SetEquals(positions);
+        for (int i = 0; i < positions.Count; i += 2)
+            grid.RemoveCanonicalCell(positions[i]);
+        bool removed = grid.CellCount == positions.Count / 2;
+        for (int i = 0; i < positions.Count; i++)
+            removed &= grid.TryGetCanonicalCell(positions[i], out WorldNavigationCell cell) == (i % 2 != 0) &&
+                (i % 2 == 0 || cell.Penalty == i + 1);
+
+        var bench = new WorldNavigationGrid();
+        var samples = new Vector2Int[256];
+        for (int i = 0; i < samples.Length; i++)
+        {
+            var position = new Vector2Int((i & 15) - 8, (i >> 4) - 8);
+            samples[i] = position;
+            bench.SetCanonicalCell(position, (uint)(i + 1), true);
+        }
+        const int lookups = 524288;
+        uint checksum = 0;
+        for (int i = 0; i < 4096; i++)
+            if (bench.TryGetCanonicalCell(samples[i & 255], out WorldNavigationCell cell)) checksum += cell.Penalty;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < lookups; i++)
+            if (bench.TryGetCanonicalCell(samples[i & 255], out WorldNavigationCell cell)) checksum += cell.Penalty;
+        timer.Stop();
+        return new JObject
+        {
+            ["independent"] = independent, ["enumerated"] = enumerated, ["removed"] = removed,
+            ["lookups"] = lookups, ["checksum"] = checksum,
+            ["milliseconds"] = timer.Elapsed.TotalMilliseconds
+        };
     }
 
     private static JObject NavigationPath(JObject args)
@@ -201,6 +360,168 @@ public static partial class GameplayTestSystemProbe
             ["liquidCost"] = regular.TryGetCell(cells[1], out WorldNavigationCell waterCell) &&
                 waterCell.Penalty == 55 && waterCell.Water &&
                 Mathf.Approximately(waterCell.LiquidDepth, 0.4f)
+        };
+    }
+
+    // 对照原版多次水位查询与新的同格复用，覆盖平台、抽干和不可走水格。
+    private static JObject NavigationLiquidCellSnapshot(JObject args)
+    {
+        using var buffer = new ChunkTerrainBuffer(4, 1);
+        for (int x = 0; x < 4; x++)
+            buffer.SetCell(x, 0, new TerrainCell(17, 0, 0, 1, 12, TerrainCellFlags.Walkable));
+        int liquidIndex = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        buffer.SetLiquid(0, 0, liquidIndex, 6);
+        buffer.SetLiquid(1, 0, liquidIndex, 6);
+        buffer.SetLiquid(3, 0, liquidIndex, 6);
+        using ChunkTerrainData terrain = buffer.Seal();
+        TerrainSupportLayer.Set(terrain, 1, 0, 90, 2);
+
+        bool Equivalent(int x, bool walkable)
+        {
+            bool baselineWater = WorldLiquidSystem.GetSurfaceDepth(terrain, x, 0) > 0f;
+            float baselineDepth = baselineWater ? terrain.GetLiquidDepth(x, 0) : 0f;
+            uint baselineCost = 0, nextCost = 0;
+            bool baselineThrows = false, nextThrows = false;
+            if (walkable)
+                try { baselineCost = WorldLiquidSystem.GetNavigationCost(terrain, x, 0, 12); }
+                catch (InvalidOperationException) { baselineThrows = true; }
+            try
+            {
+                nextCost = WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, x, 0,
+                    12, walkable, out bool nextWater, out float nextDepth);
+                return !baselineThrows && baselineCost == nextCost && baselineWater == nextWater &&
+                    Mathf.Approximately(baselineDepth, nextDepth);
+            }
+            catch (InvalidOperationException) { nextThrows = true; }
+            return baselineThrows && nextThrows;
+        }
+
+        bool wet = WorldLiquidSystem.GetSurfaceLevel(terrain, 0, 0) == 6 && Equivalent(0, true);
+        bool covered = WorldLiquidSystem.GetSurfaceLevel(terrain, 1, 0) == 0 && Equivalent(1, true);
+        bool dry = WorldLiquidSystem.GetSurfaceLevel(terrain, 2, 0) == 0 && Equivalent(2, true);
+        bool blockedWet = Equivalent(3, false) &&
+            WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, 3, 0, 12, false,
+                out bool water, out float depth) == 0 && water && Mathf.Approximately(depth, .6f);
+        TerrainSupportLayer.Set(terrain, 1, 0, 0, 2);
+        bool uncovered = WorldLiquidSystem.GetSurfaceLevel(terrain, 1, 0) == 6 && Equivalent(1, true);
+        terrain.SetLiquid(0, 0, 0, 0);
+        bool drained = WorldLiquidSystem.GetSurfaceLevel(terrain, 0, 0) == 0 && Equivalent(0, true);
+        TerrainSupportLayer.Set(terrain, 1, 0, 90, 2);
+
+        // 只用无水及平台覆盖格测读格成本，避免测试资源目录和异常分配影响基准。
+        const int iterations = 65536;
+        long baselineSum = 0, optimizedSum = 0;
+        for (int i = 0; i < 256; i++)
+        {
+            int x = i % 2 + 1;
+            _ = WorldLiquidSystem.GetNavigationCost(terrain, x, 0, 12);
+            _ = WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, x, 0, 12, true, out _, out _);
+        }
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            int x = i % 2 + 1;
+            bool hasWater = WorldLiquidSystem.GetSurfaceDepth(terrain, x, 0) > 0f;
+            uint cost = WorldLiquidSystem.GetNavigationCost(terrain, x, 0, 12);
+            float liquidDepth = hasWater ? terrain.GetLiquidDepth(x, 0) : 0f;
+            baselineSum += cost + (hasWater ? 1 : 0) + (int)(liquidDepth * 10f);
+        }
+        timer.Stop();
+        double baselineMilliseconds = timer.Elapsed.TotalMilliseconds;
+        timer.Restart();
+        for (int i = 0; i < iterations; i++)
+        {
+            int x = i % 2 + 1;
+            uint cost = WorldNavigationManager.ResolveRuntimeLiquidNavigation(terrain, x, 0,
+                12, true, out bool hasWater, out float liquidDepth);
+            optimizedSum += cost + (hasWater ? 1 : 0) + (int)(liquidDepth * 10f);
+        }
+        timer.Stop();
+        return new JObject
+        {
+            ["wet"] = wet, ["covered"] = covered, ["dry"] = dry,
+            ["blockedWet"] = blockedWet, ["uncovered"] = uncovered, ["drained"] = drained,
+            ["iterations"] = iterations, ["sameOutputs"] = baselineSum == optimizedSum,
+            ["baselineMilliseconds"] = baselineMilliseconds,
+            ["optimizedMilliseconds"] = timer.Elapsed.TotalMilliseconds
+        };
+    }
+
+    // 反复装卸不同区块，确认导航块复用不产生稳定帧 GC 且不残留旧地形。
+    private static JObject NavigationChunkBlockPool(JObject args)
+    {
+        var grid = new WorldNavigationGrid();
+        var changed = new List<Vector2Int>(512);
+        const int size = 16;
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+            grid.SetCanonicalCell(new Vector2Int(x, y), 3, true, x == 0, x == 0 ? .6f : 0f);
+        bool originalWater = grid.TryGetCanonicalCell(Vector2Int.zero, out WorldNavigationCell water) &&
+            water.Walkable && water.Water && Mathf.Approximately(water.LiquidDepth, .6f);
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+            grid.RemoveCanonicalCell(new Vector2Int(x, y));
+        grid.ConsumeChanges(changed, out _);
+        int createdAtWarmup = grid.CreatedNavigationBlockCount;
+
+        const int rounds = 64;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int round = 0; round < rounds; round++)
+        {
+            int originX = (round + 1) * size;
+            grid.BeginBatchUpdate();
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                grid.SetCanonicalCell(new Vector2Int(originX + x, y), 7, true);
+            grid.EndBatchUpdate();
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                grid.RemoveCanonicalCell(new Vector2Int(originX + x, y));
+            grid.ConsumeChanges(changed, out _);
+        }
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        int createdAfterRounds = grid.CreatedNavigationBlockCount;
+        bool emptyAfterUnload = grid.CellCount == 0 &&
+            !grid.TryGetCanonicalCell(new Vector2Int(rounds * size, 0), out _);
+
+        var old = new Vector2Int(0, 0);
+        var fresh = new Vector2Int(-16, -16);
+        grid.SetCanonicalCell(old, 2, true, true, .4f);
+        grid.RegisterBlocker(9001, new[] { old });
+        bool initiallyBlocked = grid.TryGetCanonicalCell(old, out WorldNavigationCell blocked) && !blocked.Walkable;
+        grid.RemoveCanonicalCell(old);
+        grid.SetCanonicalCell(fresh, 12, true);
+        bool reusedClean = !grid.TryGetCanonicalCell(old, out _) &&
+            grid.TryGetCanonicalCell(fresh, out WorldNavigationCell freshCell) && freshCell.Walkable &&
+            freshCell.Penalty == 12 && !freshCell.Water && freshCell.LiquidDepth == 0f;
+        grid.SetCanonicalCell(old, 2, true);
+        bool blockerPreserved = !grid.IsWalkable(old);
+        grid.UnregisterBlocker(9001);
+        bool blockerReleased = grid.IsWalkable(old);
+        grid.Clear();
+        bool clearReset = grid.CellCount == 0 && !grid.TryGetCanonicalCell(fresh, out _);
+
+        // 超过池上限的并行块必须有界保留，换世界则完全丢弃缓存。
+        var bounded = new WorldNavigationGrid();
+        for (int i = 0; i < 72; i++)
+            bounded.SetCanonicalCell(new Vector2Int(i * size, 0), 1, true);
+        for (int i = 0; i < 72; i++)
+            bounded.RemoveCanonicalCell(new Vector2Int(i * size, 0));
+        bool poolBounded = bounded.PooledNavigationBlockCount == 64 && bounded.CellCount == 0;
+        bounded.Clear();
+        bool worldResetReleasesPool = bounded.PooledNavigationBlockCount == 0;
+        bounded.SetCanonicalCell(new Vector2Int(-32, 0), 1, true);
+        bool resetRequiresFreshBlock = bounded.CreatedNavigationBlockCount == 73;
+        return new JObject
+        {
+            ["rounds"] = rounds, ["allocatedBytes"] = allocated,
+            ["createdAtWarmup"] = createdAtWarmup, ["createdAfterRounds"] = createdAfterRounds,
+            ["originalWater"] = originalWater, ["emptyAfterUnload"] = emptyAfterUnload,
+            ["initiallyBlocked"] = initiallyBlocked, ["reusedClean"] = reusedClean,
+            ["blockerPreserved"] = blockerPreserved, ["blockerReleased"] = blockerReleased,
+            ["clearReset"] = clearReset, ["poolBounded"] = poolBounded,
+            ["worldResetReleasesPool"] = worldResetReleasesPool,
+            ["resetRequiresFreshBlock"] = resetRequiresFreshBlock
         };
     }
 

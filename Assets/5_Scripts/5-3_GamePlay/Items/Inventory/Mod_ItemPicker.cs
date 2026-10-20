@@ -215,15 +215,15 @@ public partial class Mod_ItemPicker : Module
     /// <param name="other">进入触发器的碰撞体</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
-        RefreshPickupAttempts();
         Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
-        if (pickAble != null)
-        {
-            deferredPickupItems.Remove(pickAble);
-            pickupAttemptedItems.Remove(pickAble);
-        }
+        if (pickAble == null) return;
 
-        TryPickUp(other, logMissingInventories: true);
+        RefreshPickupAttempts();
+        deferredPickupItems.Remove(pickAble);
+        pickupAttemptedItems.Remove(pickAble);
+
+        if (pickAble.itemData?.Stack != null)
+            TryPickUp(pickAble, logMissingInventories: true);
     }
 
     /// <summary>
@@ -231,7 +231,6 @@ public partial class Mod_ItemPicker : Module
     /// </summary>
     private void OnTriggerStay2D(Collider2D other)
     {
-        RefreshPickupAttempts();
         Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble?.itemData?.Stack == null)
             return;
@@ -244,9 +243,11 @@ public partial class Mod_ItemPicker : Module
             return;
         }
 
+        // 真正具备拾取资格才同步容量修订；飞行中和禁止拾取的物品仍保留补偿队列。
+        RefreshPickupAttempts();
         if (deferredPickupItems.Remove(pickAble) ||
             pickupAttemptedItems.Add(pickAble))
-            TryPickUp(other, logMissingInventories: false);
+            TryPickUp(pickAble, logMissingInventories: false);
     }
 
     /// <summary>
@@ -265,7 +266,7 @@ public partial class Mod_ItemPicker : Module
     /// <summary>
     /// 统一处理进入和持续停留触发器的拾取请求。
     /// </summary>
-    private void TryPickUp(Collider2D other, bool logMissingInventories)
+    private void TryPickUp(Item pickAble, bool logMissingInventories)
     {
         // 检查物品栏列表是否为空
         if (AddTargetInventories.Count == 0)
@@ -281,8 +282,7 @@ public partial class Mod_ItemPicker : Module
             return;
         }
 
-        // 获取物品组件
-        Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
+        // 已由进入/停留事件解析正式碰撞来源，避免每次接触再次遍历组件层级。
         if (pickAble?.itemData?.Stack == null)
             return;
 
@@ -507,6 +507,9 @@ public partial class Mod_ItemPicker : Module
         if (itemData?.Stack == null || requestedAmount <= 0f)
             return 0f;
 
+        if (item is Player creativePlayer && CreativeInventoryState.IsEnabled(creativePlayer))
+            return requestedAmount;
+
         if (item is Player player &&
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot playerSnapshot))
         {
@@ -516,7 +519,7 @@ public partial class Mod_ItemPicker : Module
         Inventory_Data bagData = null;
         float totalWeight = 0f;
         float totalVolume = 0f;
-        var countedInventories = new HashSet<Inventory_Data>();
+        using var countedLease = UnityEngine.Pool.HashSetPool<Inventory_Data>.Get(out var countedInventories);
         for (int i = 0; i < AddTargetInventories.Count; i++)
         {
             Inventory targetInventory = AddTargetInventories[i]?.GetDefaultTargetInventory();
@@ -524,8 +527,9 @@ public partial class Mod_ItemPicker : Module
             if (targetData == null || !countedInventories.Add(targetData))
                 continue;
 
-            totalWeight += targetData.CurrentCarryWeight;
-            totalVolume += targetData.CurrentCarryVolume;
+            targetData.GetCarryUsage(out float weight, out float volume);
+            totalWeight += weight;
+            totalVolume += volume;
             if (string.Equals(targetData.Name, ModText.Bag, System.StringComparison.Ordinal))
                 bagData = targetData;
         }

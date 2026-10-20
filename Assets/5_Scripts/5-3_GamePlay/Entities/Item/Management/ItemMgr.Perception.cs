@@ -453,13 +453,8 @@ public partial class ItemMgr
 
         PerceptionTarget target = GetPerceptionTarget(candidate);
         int shapeStart = _perceptionShapeData.Count;
-        if (!TryGetPerceptionBounds(candidate, target, out Bounds perceptionBounds)) return;
-        if (target.Shapes != null)
-        {
-            Matrix4x4 matrix = candidate.transform.localToWorldMatrix;
-            foreach (PerceptionShape2D local in target.Shapes)
-                _perceptionShapeData.Add(TransformPerceptionShape(local, matrix));
-        }
+        if (!TryGetPerceptionBounds(candidate, target, out Bounds perceptionBounds,
+                target.Shapes != null ? _perceptionShapeData : null)) return;
         Vector3 position = candidate.transform.position;
         Vector3 boundsCenter = perceptionBounds.center;
         Vector3 boundsExtents = perceptionBounds.extents;
@@ -520,19 +515,33 @@ public partial class ItemMgr
     }
 
     /// <summary>纯数据形状计算包围范围，只有非 Actor 进入主线程物理 Bridge。</summary>
-    private static bool TryGetPerceptionBounds(Item item, PerceptionTarget target, out Bounds combinedBounds)
+    private static bool TryGetPerceptionBounds(Item item, PerceptionTarget target, out Bounds combinedBounds,
+        List<PerceptionShape2D> worldShapes = null)
     {
         if (target.Shapes == null) return target.Bridge.TryGetBounds(out combinedBounds);
+        return TryBuildPerceptionShapes(target.Shapes, item.transform.localToWorldMatrix, worldShapes,
+            out combinedBounds);
+    }
+
+    // 同一次世界变换兼得粗筛包围盒和 Burst 形状，避免对每个 Actor 重算两遍。
+    internal static bool TryBuildPerceptionShapes(PerceptionShape2D[] localShapes, Matrix4x4 matrix,
+        List<PerceptionShape2D> worldShapes, out Bounds combinedBounds)
+    {
         combinedBounds = default;
-        Matrix4x4 matrix = item.transform.localToWorldMatrix;
-        for (int index = 0; index < target.Shapes.Length; index++)
+        if (localShapes == null || localShapes.Length == 0)
+            return false;
+        float2 translation = new(matrix.m03, matrix.m13);
+        float2 axisX = new(matrix.m00, matrix.m10);
+        float2 axisY = new(matrix.m01, matrix.m11);
+        for (int index = 0; index < localShapes.Length; index++)
         {
-            PerceptionShape2D shape = TransformPerceptionShape(target.Shapes[index], matrix);
+            PerceptionShape2D shape = localShapes[index].Transform(translation, axisX, axisY);
+            worldShapes?.Add(shape);
             var bounds = new Bounds(new Vector3(shape.Center.x, shape.Center.y, 0f), new Vector3(shape.Extents.x * 2f, shape.Extents.y * 2f, 0f));
             if (index == 0) combinedBounds = bounds;
             else combinedBounds.Encapsulate(bounds);
         }
-        return target.Shapes.Length > 0;
+        return true;
     }
 
     /// <summary>完成飞行中的查询，并在选择丢弃时不向旧场景回写结果。</summary>
@@ -574,12 +583,21 @@ public partial class ItemMgr
             for (int queryIndex = 0; queryIndex < _inFlightDetectors.Count; queryIndex++)
             {
                 Mod_ItemDetector detector = _inFlightDetectors[queryIndex];
-                DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
                 int candidateCount = reader.BeginForEachIndex(queryIndex);
                 raw += candidateCount;
                 _detectorApplyBuffer.Clear();
                 _perceptionResultItemSet.Clear();
 
+                if (IsPerceptionDetectorRequestStale(detector, _inFlightDetectorVersions[queryIndex]))
+                {
+                    // 过期结果不能回写，但 NativeStream 必须读完本组后才能继续下一组。
+                    DiscardPerceptionCandidateIndices(ref reader, candidateCount);
+                    reader.EndForEachIndex();
+                    staleDetector++;
+                    continue;
+                }
+
+                DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
                 using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
                     using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
@@ -657,6 +675,21 @@ public partial class ItemMgr
             PerceptionStaleDetectorDebug.AddWork(staleDetector);
         }
     }
+
+    #region 过期感知批次快速丢弃
+
+    /// <summary>版本已更新的检测器不能消费旧结果；已销毁检测器沿用原缺失候选统计流程。</summary>
+    internal static bool IsPerceptionDetectorRequestStale(Mod_ItemDetector detector, long submittedVersion)
+        => detector != null && detector.RequestedVersion != submittedVersion;
+
+    /// <summary>逐项消费本组原始索引，避免后续结果流发生未读数据残留。</summary>
+    internal static void DiscardPerceptionCandidateIndices(ref NativeStream.Reader reader, int count)
+    {
+        for (int i = 0; i < count; i++)
+            reader.Read<int>();
+    }
+
+    #endregion
 
     /// <summary>拒绝回池复用、结构切换或注销后的旧快照。</summary>
     private bool IsSnapshotItemStillValid(Item candidate, PerceptionItemSnapshot snapshot)

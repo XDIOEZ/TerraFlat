@@ -53,9 +53,12 @@ public static partial class GameplayTestSystemProbe
         bool riverValid = ChunkMgr.TryResolveTerrainWaterCurrent(river, out RuntimeWaterCurrentSample flow) &&
             flow.Kind == RuntimeWaterCurrentKind.River && Mathf.Approximately(flow.Flow, .75f) &&
             Mathf.Approximately(flow.Direction.x, .6f) && Mathf.Approximately(flow.Direction.y, .8f);
+        Vector2 riverVelocity = WorldMotionSystem.CalculateWaterCurrentVelocity(flow, 2f);
         bool oceanValid = ChunkMgr.TryResolveTerrainWaterCurrent(ocean, out flow) &&
             flow.Kind == RuntimeWaterCurrentKind.Ocean && Mathf.Approximately(flow.Flow, 1f) &&
             Mathf.Approximately(flow.Direction.x, .6f) && Mathf.Approximately(flow.Direction.y, .8f);
+        Vector2 oceanVelocity = WorldMotionSystem.CalculateWaterCurrentVelocity(flow, 2f);
+        Vector2 zeroSpeedVelocity = WorldMotionSystem.CalculateWaterCurrentVelocity(flow, 0f);
         bool lakeStill = !ChunkMgr.TryResolveTerrainWaterCurrent(lake, out _) &&
             !ChunkMgr.TryResolveTerrainWaterCurrent(dry, out _);
         terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 1, 0, 90f);
@@ -71,6 +74,9 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["river"] = riverValid, ["ocean"] = oceanValid, ["lakeAndDry"] = lakeStill,
+            ["riverVelocityX"] = riverVelocity.x, ["riverVelocityY"] = riverVelocity.y,
+            ["oceanVelocityX"] = oceanVelocity.x, ["oceanVelocityY"] = oceanVelocity.y,
+            ["zeroSpeedVelocity"] = zeroSpeedVelocity.sqrMagnitude,
             ["covered"] = covered, ["uncovered"] = uncovered,
             ["stoppedRiver"] = stoppedRiver, ["drained"] = drained
         };

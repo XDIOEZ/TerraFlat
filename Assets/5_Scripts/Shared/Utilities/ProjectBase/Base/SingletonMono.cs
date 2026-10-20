@@ -28,6 +28,9 @@ public class SingletonMono<T> : MonoBehaviour where T : MonoBehaviour
         return instance;
     }
 
+    /// <summary>销毁清理阶段只读取已登记实例，不触发全场景单例搜索。</summary>
+    public static T GetExistingInstance() => instance != null ? instance : null;
+
     /// <summary>单例销毁时清理静态引用，避免下一次场景进入继续持有旧对象。</summary>
     protected virtual void OnDestroy()
     {

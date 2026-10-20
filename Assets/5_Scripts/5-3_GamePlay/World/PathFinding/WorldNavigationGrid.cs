@@ -24,6 +24,7 @@ public readonly struct WorldNavigationCell
 public sealed class WorldNavigationGrid
 {
     private const int MaxPreciseChangedCells = 2048;
+    private const int MaxPooledNavigationBlocks = 64;
 
     private static readonly Vector2Int[] NeighbourOffsets =
     {
@@ -32,9 +33,14 @@ public sealed class WorldNavigationGrid
     };
 
     #region Chunk 连续格数据
+    // 必须保持 2 的幂；位掩码对负坐标同样按块向下对齐。
     private const int BlockSize = 16;
+    private const int BlockMask = BlockSize - 1;
     private readonly Dictionary<Vector2Int, ChunkNavigationBlock> blocks = new(128);
+    private readonly Stack<ChunkNavigationBlock> pooledBlocks = new(MaxPooledNavigationBlocks);
     private int registeredCellCount;
+    internal int CreatedNavigationBlockCount { get; private set; }
+    internal int PooledNavigationBlockCount => pooledBlocks.Count;
 
     private sealed class ChunkNavigationBlock
     {
@@ -44,54 +50,73 @@ public sealed class WorldNavigationGrid
     }
 
     private static Vector2Int BlockOrigin(Vector2Int cell)
-        => new(FloorBlock(cell.x), FloorBlock(cell.y));
+        => new(cell.x & ~BlockMask, cell.y & ~BlockMask);
 
-    private static int FloorBlock(int value)
-    {
-        int quotient = value / BlockSize;
-        if (value < 0 && value % BlockSize != 0) quotient--;
-        return quotient * BlockSize;
-    }
-
-    private static int BlockIndex(Vector2Int cell, Vector2Int origin)
-        => (cell.y - origin.y) * BlockSize + cell.x - origin.x;
+    // 16 格块用位掩码寻址，负坐标也天然向下对齐，无需整数除法与余数。
+    private static int BlockIndex(Vector2Int cell)
+        => (cell.y & BlockMask) * BlockSize + (cell.x & BlockMask);
 
     private bool TryGetTerrainCell(Vector2Int cell, out WorldNavigationCell value)
     {
         Vector2Int origin = BlockOrigin(cell);
         if (blocks.TryGetValue(origin, out ChunkNavigationBlock block))
         {
-            int index = BlockIndex(cell, origin);
+            int index = BlockIndex(cell);
             if (block.Registered[index]) { value = block.Cells[index]; return true; }
         }
         value = default;
         return false;
     }
 
-    private void WriteTerrainCell(Vector2Int cell, WorldNavigationCell value)
+    // 写格时同时返回旧状态，避免 SetCanonicalCell 为比较/写入重复查找同一块。
+    private bool WriteTerrainCell(Vector2Int cell, WorldNavigationCell value, out WorldNavigationCell previous)
     {
+        previous = default;
         Vector2Int origin = BlockOrigin(cell);
+        int index = BlockIndex(cell);
         if (!blocks.TryGetValue(origin, out ChunkNavigationBlock block))
         {
-            block = new ChunkNavigationBlock();
+            if (pooledBlocks.Count > 0)
+                block = pooledBlocks.Pop();
+            else
+            {
+                block = new ChunkNavigationBlock();
+                CreatedNavigationBlockCount++;
+            }
             blocks.Add(origin, block);
         }
-        int index = BlockIndex(cell, origin);
-        if (!block.Registered[index]) { block.Registered[index] = true; block.Count++; registeredCellCount++; }
+        if (block.Registered[index])
+        {
+            previous = block.Cells[index];
+            if (previous.Penalty == value.Penalty && previous.Walkable == value.Walkable &&
+                previous.Water == value.Water && Mathf.Approximately(previous.LiquidDepth, value.LiquidDepth))
+                return false;
+        }
+        else { block.Registered[index] = true; block.Count++; registeredCellCount++; }
         block.Cells[index] = value;
+        return true;
     }
 
-    private bool RemoveTerrainCell(Vector2Int cell)
+    // 移除时直接取得旧格，调用方无需再单独进行一次字典查询。
+    private bool RemoveTerrainCell(Vector2Int cell, out WorldNavigationCell previous)
     {
+        previous = default;
         Vector2Int origin = BlockOrigin(cell);
         if (!blocks.TryGetValue(origin, out ChunkNavigationBlock block)) return false;
-        int index = BlockIndex(cell, origin);
+        int index = BlockIndex(cell);
         if (!block.Registered[index]) return false;
+        previous = block.Cells[index];
         block.Registered[index] = false;
         block.Cells[index] = default;
         block.Count--;
         registeredCellCount--;
-        if (block.Count == 0) blocks.Remove(origin);
+        if (block.Count == 0)
+        {
+            // 最后一个格子已清空，回收完整数组供下一个流式区块复用。
+            blocks.Remove(origin);
+            if (pooledBlocks.Count < MaxPooledNavigationBlocks)
+                pooledBlocks.Push(block);
+        }
         return true;
     }
     #endregion
@@ -169,6 +194,8 @@ public sealed class WorldNavigationGrid
     public void Clear()
     {
         Cleared?.Invoke();
+        // 切换世界时释放池内缓存，不把上一世界的数组长期留在内存。
+        pooledBlocks.Clear();
         if (registeredCellCount == 0 && blockerCounts.Count == 0 && blockerCells.Count == 0)
             return;
 
@@ -191,20 +218,12 @@ public sealed class WorldNavigationGrid
         float liquidDepth = 0f)
     {
         WorldNavigationCell next = new(penalty, walkable && penalty > 0u, water, liquidDepth);
-        bool hasCurrent = TryGetTerrainCell(position, out WorldNavigationCell current);
-        if (hasCurrent &&
-            current.Penalty == next.Penalty &&
-            current.Walkable == next.Walkable &&
-            current.Water == next.Water &&
-            Mathf.Approximately(current.LiquidDepth, next.LiquidDepth))
-        {
+        if (!WriteTerrainCell(position, next, out WorldNavigationCell current))
             return;
-        }
 
         bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
-        bool wasEffectivelyWalkable = hasCurrent && current.Walkable && !blocked;
+        bool wasEffectivelyWalkable = current.Walkable && !blocked;
         bool willBeEffectivelyWalkable = next.Walkable && !blocked;
-        WriteTerrainCell(position, next);
         RecordChangedCell(position);
         // 代价变化会改变最优路径，单独记录代价版本供运行中的 Agent 重新寻路。
         bool changesPathCost = wasEffectivelyWalkable && current.Penalty != next.Penalty;
@@ -221,12 +240,11 @@ public sealed class WorldNavigationGrid
 
     internal bool RemoveCanonicalCell(Vector2Int position)
     {
-        if (!TryGetTerrainCell(position, out WorldNavigationCell current))
+        if (!RemoveTerrainCell(position, out WorldNavigationCell current))
             return false;
 
         bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
         bool invalidatesExistingPaths = current.Walkable && !blocked;
-        RemoveTerrainCell(position);
         RecordChangedCell(position);
         MarkRevisionChanged(invalidatesExistingPaths);
         return true;
@@ -244,11 +262,10 @@ public sealed class WorldNavigationGrid
                 Vector2Int position = NormalizeCell(new Vector2Int(x, y));
                 if (!visited.Add(position))
                     continue;
-                if (TryGetTerrainCell(position, out WorldNavigationCell current))
+                if (RemoveTerrainCell(position, out WorldNavigationCell current))
                 {
                     bool blocked = blockerCounts.TryGetValue(position, out int blockerCount) && blockerCount > 0;
                     invalidatesExistingPaths |= current.Walkable && !blocked;
-                    RemoveTerrainCell(position);
                     RecordChangedCell(position);
                     removed++;
                 }

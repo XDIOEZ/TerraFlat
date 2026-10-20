@@ -105,6 +105,8 @@ public static partial class GameplayTestRuntimeProbe
             return ReferenceEquals(candidate, item);
         }
         public float SupplyAmbientOxygen(Item candidate, float maximumAmount) => 0f;
+        public bool TrySampleCombustion(string worldKey, Vector2 position, out bool canBurn)
+        { canBurn = false; return false; }
     }
 
     #endregion

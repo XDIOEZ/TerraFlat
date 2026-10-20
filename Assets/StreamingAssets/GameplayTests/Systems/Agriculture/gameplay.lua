@@ -8,6 +8,7 @@ test.runtime("agriculture", "tillage_irrigation", {}, function(data)
         "完成耕作没有提交正式耕地")
     assert(data.afterIrrigation == 3 and data.afterConsumption == 2,
         "正式土壤灌溉与消耗没有提交到真实区块")
+    assert(data.sampledCommit, "已读取地块的批量提交没有通过正式采样入口")
     assert(data.savedSource > 0 and data.savedSource == data.currentSource and data.savedCropAbsent
         and math.abs(data.savedWater - data.afterConsumption) < 0.0001, "农业独立差量与真实水肥不一致")
     assert(data.savedSupplyRemainder == 0.25 and data.supplyRemainder == 0.25

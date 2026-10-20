@@ -44,6 +44,7 @@ public class Inventory_Furnace : Inventory
     public override void ModUpdate(float deltaTime)
     {
         base.ModUpdate(deltaTime);
+        if (_Data.IsSmelting && !HasCombustionAtmosphere()) _Data.IsSmelting = false;
 
         if (_Data.IsSmelting) // 已经处于熔炼状态
         {
@@ -264,6 +265,7 @@ public class Inventory_Furnace : Inventory
 
     private void OnButtonClick()
     {
+        if (!HasCombustionAtmosphere()) return;
         // 安全检查
         if (FuelInventory == null || FuelInventory.Data == null)
         {
@@ -302,12 +304,17 @@ public class Inventory_Furnace : Inventory
     #endregion
 
     #region 燃烧状态控制
+    private bool HasCombustionAtmosphere() => MachineOwner != null
+        ? MachineWorld.CanSustainCombustion(MachineOwner)
+        : ItemEnvironmentSources.CanSustainCombustion(item);
+
     /// <summary>
     /// 设置燃烧状态
     /// </summary>
     /// <param name="isBurning">是否燃烧</param>
     public void SetBurningState(bool isBurning)
     {
+        isBurning &= HasCombustionAtmosphere();
         _Data.IsSmelting = isBurning;
         mod_Fuel?.SetIgnited(isBurning);
 

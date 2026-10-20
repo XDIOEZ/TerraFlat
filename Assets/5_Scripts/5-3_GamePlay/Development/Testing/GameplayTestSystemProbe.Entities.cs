@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Geometry;
 using FlatWorld.Combat;
 using FlatWorld.Gameplay.Events;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Gameplay.Quests;
 using Newtonsoft.Json.Linq;
+using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -22,6 +24,10 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/attack_window", EntityAiAttackWindow);
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
+        operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
+        operations.Add("ai/closest_target_batch", EntityClosestTargetBatch);
+        operations.Add("ai/detector_apply_batch", EntityDetectorApplyBatch);
+        operations.Add("ai/stale_perception_batch", EntityStalePerceptionBatch);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
         operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
@@ -31,6 +37,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/movement_cost", EntityMovementCost);
         operations.Add("player/trauma_modifiers", EntityTraumaModifiers);
         operations.Add("item_runtime/single_sprite_animation", EntitySingleSpriteAnimation);
+        operations.Add("item_runtime/initial_animator_activation", EntityInitialAnimatorActivation);
+        operations.Add("item_runtime/simulation_region_shortcut", EntitySimulationRegionShortcut);
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
@@ -48,9 +56,13 @@ public static partial class GameplayTestSystemProbe
         operations.Add("survival/oxygen", EntityOxygen);
         operations.Add("survival/pressure", EntityPressure);
         operations.Add("survival/nutrition", EntityNutrition);
+        operations.Add("survival/food_observer_index", EntityFoodObserverIndex);
         operations.Add("survival/thermal", EntityTemperature);
         operations.Add("inventory/transactions", EntityInventoryTransactions);
         operations.Add("inventory/capacity_identity", EntityInventoryCapacity);
+        operations.Add("inventory/carry_usage_single_pass", EntityCarryUsageSinglePass);
+        operations.Add("inventory/dynamic_slot_maintenance", EntityDynamicSlotMaintenance);
+        operations.Add("inventory/incremental_mass_binding", EntityIncrementalMassBinding);
         operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
         operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
@@ -70,7 +82,270 @@ public static partial class GameplayTestSystemProbe
 
     #endregion
 
+    #region 初始动画候选生命周期回归
+
+    // 停用候选和禁用 Animator 不得执行 Play，取消或回池必须清除过期待播状态。
+    private static JObject EntityInitialAnimatorActivation(JObject args)
+    {
+        var root = new GameObject("[InitialAnimatorActivation]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            var item = root.AddComponent<GameItem>();
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            var animator = visual.AddComponent<Animator>();
+            animator.enabled = false;
+            item.QueueInitialAnimatorState(animator, Animator.StringToHash("Idle"), 0);
+            bool queuedWhileInactive = item.HasPendingInitialAnimatorState;
+            item.FlushPendingInitialAnimatorState();
+            bool stillQueued = item.HasPendingInitialAnimatorState;
+            root.SetActive(true);
+            bool disabledNotPlayed = !item.HasPendingInitialAnimatorState;
+            item.ClearPendingInitialAnimatorState();
+            bool cancelClears = !item.HasPendingInitialAnimatorState;
+            root.SetActive(false);
+            item.QueueInitialAnimatorState(animator, Animator.StringToHash("Stand"), 0);
+            item.PrepareForPoolReuse();
+            bool poolClears = !item.HasPendingInitialAnimatorState;
+            return new JObject
+            {
+                ["queuedWhileInactive"] = queuedWhileInactive,
+                ["stillQueued"] = stillQueued,
+                ["disabledNotPlayed"] = disabledNotPlayed,
+                ["cancelClears"] = cancelClears,
+                ["poolClears"] = poolClears
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    #endregion
+
     #region AI 与移动消耗
+
+    // 用正式 NativeStream 读写接口确认旧请求跳过后不影响下一组及空候选流。
+    private static JObject EntityStalePerceptionBatch(JObject args)
+    {
+        var root = new GameObject("[StalePerceptionBatch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            var detector = root.AddComponent<Mod_ItemDetector>();
+            bool matched = !ItemMgr.IsPerceptionDetectorRequestStale(detector, detector.RequestedVersion);
+            bool superseded = ItemMgr.IsPerceptionDetectorRequestStale(detector, detector.RequestedVersion + 1);
+            bool missingPreserved = !ItemMgr.IsPerceptionDetectorRequestStale(null, 9);
+
+            using var stream = new NativeStream(3, Allocator.TempJob);
+            NativeStream.Writer writer = stream.AsWriter();
+            writer.BeginForEachIndex(0);
+            writer.Write(12);
+            writer.Write(-7);
+            writer.Write(100);
+            writer.EndForEachIndex();
+            writer.BeginForEachIndex(1);
+            writer.Write(32);
+            writer.Write(54);
+            writer.EndForEachIndex();
+            writer.BeginForEachIndex(2);
+            writer.EndForEachIndex();
+
+            NativeStream.Reader reader = stream.AsReader();
+            int staleCount = reader.BeginForEachIndex(0);
+            ItemMgr.DiscardPerceptionCandidateIndices(ref reader, staleCount);
+            reader.EndForEachIndex();
+            int nextCount = reader.BeginForEachIndex(1);
+            int nextFirst = reader.Read<int>();
+            int nextSecond = reader.Read<int>();
+            reader.EndForEachIndex();
+            int emptyCount = reader.BeginForEachIndex(2);
+            ItemMgr.DiscardPerceptionCandidateIndices(ref reader, emptyCount);
+            reader.EndForEachIndex();
+
+            return new JObject
+            {
+                ["matched"] = matched, ["superseded"] = superseded,
+                ["missingPreserved"] = missingPreserved,
+                ["staleCount"] = staleCount, ["nextCount"] = nextCount,
+                ["nextFirst"] = nextFirst, ["nextSecond"] = nextSecond,
+                ["emptyCount"] = emptyCount
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 未加载的正式检测器核对去重、标签映射、旧版本和 Debug 开关后的实时结果。
+    private static JObject EntityDetectorApplyBatch(JObject args)
+    {
+        var root = new GameObject("[DetectorApplyBatch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            Mod_ItemDetector detector = root.AddComponent<Mod_ItemDetector>();
+            Item Create(string id, params string[] tags)
+            {
+                var host = new GameObject(id);
+                host.transform.SetParent(root.transform, false);
+                GameItem item = host.AddComponent<GameItem>();
+                Data_GeneralItem data = EntityProbeData(id, 1f);
+                data.Tags = new List<string>(tags);
+                item.BindData(data);
+                return item;
+            }
+
+            Item first = Create("test:detector:first", "Animal", "Food");
+            Item second = Create("test:detector:second", "Animal");
+            Item third = Create("test:detector:third", "Food");
+            detector.ApplyDetectorResults(0, new List<Item> { first, second, first, null, third });
+            bool initialUnique = detector.CurrentItemsInArea.Count == 3 &&
+                detector.CurrentItemsInArea[0] == first && detector.CurrentItemsInArea[1] == second &&
+                detector.CurrentItemsInArea[2] == third;
+            List<Item> animals = detector.GetItemsByTag("Animal");
+            List<Item> food = detector.GetItemsByTag("Food");
+            bool initialTags = animals.Count == 2 && animals[0] == first && animals[1] == second &&
+                food.Count == 2 && food[0] == first && food[1] == third;
+
+            detector.ApplyDetectorResults(1, new List<Item> { second });
+            bool staleIgnored = detector.CurrentItemsInArea.Count == 3 &&
+                ReferenceEquals(animals, detector.GetItemsByTag("Animal"));
+
+            detector.ApplyDetectorResults(0, new List<Item> { third, first, third });
+            bool reordered = detector.CurrentItemsInArea.Count == 2 &&
+                detector.CurrentItemsInArea[0] == third && detector.CurrentItemsInArea[1] == first;
+            bool reusedTags = ReferenceEquals(animals, detector.GetItemsByTag("Animal")) &&
+                ReferenceEquals(food, detector.GetItemsByTag("Food")) &&
+                animals.Count == 1 && animals[0] == first && food.Count == 2 &&
+                food[0] == third && food[1] == first;
+
+            third.itemData.Tags.Add("Animal");
+            detector.ApplyDetectorResults(0, new List<Item> { first, third });
+            bool changedTags = animals.Count == 2 && animals[0] == first && animals[1] == third;
+
+            detector.DebugMode = true;
+            detector.ApplyDetectorResults(0, new List<Item> { third });
+            bool debugUpdated = detector.CurrentItemsInArea.Count == 1 &&
+                detector.CurrentItemsInArea[0] == third && animals.Count == 1 && animals[0] == third;
+
+            detector.DebugMode = false;
+            detector.ApplyDetectorResults(0, new List<Item> { second, first });
+            bool debugOffReused = ReferenceEquals(animals, detector.GetItemsByTag("Animal")) &&
+                animals.Count == 2 && animals[0] == second && animals[1] == first &&
+                food.Count == 1 && food[0] == first;
+
+            detector.ApplyDetectorResults(0, null);
+            bool cleared = detector.CurrentItemsInArea.Count == 0 && animals.Count == 0 && food.Count == 0;
+            return new JObject
+            {
+                ["initialUnique"] = initialUnique, ["initialTags"] = initialTags,
+                ["staleIgnored"] = staleIgnored, ["reordered"] = reordered,
+                ["reusedTags"] = reusedTags, ["changedTags"] = changedTags,
+                ["debugUpdated"] = debugUpdated, ["debugOffReused"] = debugOffReused,
+                ["cleared"] = cleared
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 使用真实检测器和未加载物品，核对最近目标筛选的环绕、过滤与实时位置。
+    private static JObject EntityClosestTargetBatch(JObject args)
+    {
+        var root = new GameObject("[ClosestTargetBatch]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            Mod_ItemDetector detector = root.AddComponent<Mod_ItemDetector>();
+            Item Create(string id, float x, string tag)
+            {
+                var host = new GameObject(id);
+                host.transform.SetParent(root.transform, false);
+                GameItem item = host.AddComponent<GameItem>();
+                Data_GeneralItem data = EntityProbeData(id, 1f);
+                data.Tags = new List<string> { tag };
+                item.BindData(data);
+                host.transform.position = new Vector3(x, 0.5f);
+                return item;
+            }
+
+            Item ignored = Create("test:ignored", 15.5f, "Other");
+            Item seam = Create("test:seam", -15.5f, "Edible");
+            Item nearby = Create("test:nearby", 14.5f, "Edible");
+            Item far = Create("test:far", 9.5f, "Edible");
+            Item player = Create("test:player", 15.25f, "Player");
+            detector.CurrentItemsInArea = new List<Item> { ignored, seam, nearby, far, player, null };
+
+            var edible = new List<string> { "Edible" };
+            var origin = new Vector3(15.5f, 0.5f);
+            var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+            bool unwrappedNearest = detector.FindClosestItemByTags(edible, origin, false, default) == nearby;
+            bool wrappedTieFirst = detector.FindClosestItemByTags(edible, origin, false, wrapped) == seam;
+            bool playerExcluded = detector.FindClosestItemByTags(edible, origin, false, wrapped) == seam;
+            bool playerIncluded = detector.FindClosestItemByTags(edible, origin, true, wrapped) == player;
+            bool playerWithNoTags = detector.FindClosestItemByTags(null, origin, true, wrapped) == player;
+            bool emptyRejected = detector.FindClosestItemByTags(null, origin, false, wrapped) == null;
+            bool caseSensitive = detector.FindClosestItemByTags(new List<string> { "edible" }, origin, false, wrapped) == null;
+            bool runtimeUnmatched = detector.FindClosestItemByTags(new List<string> { "edible" }, origin) == null;
+            nearby.transform.position = new Vector3(15.45f, 0.5f);
+            bool movedTargetUpdated = detector.FindClosestItemByTags(edible, origin, false, wrapped) == nearby;
+            bool runtimeEntryConsistent = ReferenceEquals(
+                detector.FindClosestItemByTags(edible, origin),
+                detector.FindClosestItemByTags(edible, origin, false, WorldTopologyRuntime.GetActiveDomain()));
+
+            return new JObject
+            {
+                ["unwrappedNearest"] = unwrappedNearest, ["wrappedTieFirst"] = wrappedTieFirst,
+                ["playerExcluded"] = playerExcluded, ["playerIncluded"] = playerIncluded,
+                ["playerWithNoTags"] = playerWithNoTags, ["emptyRejected"] = emptyRejected,
+                ["caseSensitive"] = caseSensitive, ["runtimeUnmatched"] = runtimeUnmatched,
+                ["movedTargetUpdated"] = movedTargetUpdated,
+                ["runtimeEntryConsistent"] = runtimeEntryConsistent
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 两种形状共用正式仿射变换，检查负缩放、旋转、原列表前缀与包围盒。
+    private static JObject EntityPerceptionShapeBatch(JObject args)
+    {
+        PerceptionShape2D[] local =
+        {
+            PerceptionShape2D.Aabb(new float2(2f, 1f), new float2(1f, .5f)),
+            PerceptionShape2D.Circle(new float2(-1f, 2f), 1f)
+        };
+        Matrix4x4 matrix = Matrix4x4.TRS(new Vector3(10f, -5f, 0f),
+            Quaternion.Euler(0f, 0f, 90f), new Vector3(-2f, 3f, 1f));
+        var world = new List<PerceptionShape2D>
+        {
+            PerceptionShape2D.Circle(new float2(99f, 99f), 1f)
+        };
+        bool success = ItemMgr.TryBuildPerceptionShapes(local, matrix, world, out Bounds combined);
+        bool shapes = success && world.Count == 3 &&
+                      world[0].Center.x == 99f && world[0].Center.y == 99f &&
+                      world[1].IsCircle == 0 && world[2].IsCircle == 1 &&
+                      Mathf.Abs(world[1].Center.x - 7f) < .0001f &&
+                      Mathf.Abs(world[1].Center.y + 9f) < .0001f &&
+                      Mathf.Abs(world[1].Extents.x - 1.5f) < .0001f &&
+                      Mathf.Abs(world[1].Extents.y - 2f) < .0001f &&
+                      Mathf.Abs(world[2].Center.x - 4f) < .0001f &&
+                      Mathf.Abs(world[2].Center.y + 3f) < .0001f &&
+                      Mathf.Abs(world[2].Radius - 3f) < .0001f;
+        bool bounds = success && Mathf.Abs(combined.min.x - 1f) < .0001f &&
+                      Mathf.Abs(combined.min.y + 11f) < .0001f &&
+                      Mathf.Abs(combined.max.x - 8.5f) < .0001f &&
+                      Mathf.Abs(combined.max.y) < .0001f;
+        bool withoutOutput = ItemMgr.TryBuildPerceptionShapes(local, matrix, null, out Bounds onlyBounds) &&
+                             combined.center == onlyBounds.center && combined.extents == onlyBounds.extents;
+        int count = world.Count;
+        bool rejectedEmpty = !ItemMgr.TryBuildPerceptionShapes(Array.Empty<PerceptionShape2D>(),
+                                 matrix, world, out _) &&
+                             !ItemMgr.TryBuildPerceptionShapes(null, matrix, world, out _) &&
+                             world.Count == count;
+        return new JObject
+        {
+            ["shapes"] = shapes, ["bounds"] = bounds,
+            ["withoutOutput"] = withoutOutput, ["rejectedEmpty"] = rejectedEmpty,
+            ["added"] = world.Count - 1
+        };
+    }
 
     // 读取正式目录并调用正式概率与队列规则，测试不重新计算业务逻辑。
     private static JObject EntityEcologyConfig(JObject args)
@@ -173,6 +448,70 @@ public static partial class GameplayTestSystemProbe
             return new JObject { ["initiallyDue"] = initiallyDue, ["rejected"] = true, ["parameter"] = exception.ParamName };
         }
     }
+
+    #region 模拟区域快速判档回归
+
+    // 与原本的开平方判档逐样本比较，覆盖玩家附近、远区、各档边界和无限距离。
+    private static JObject EntitySimulationRegionShortcut(JObject args)
+    {
+        static SimulationRangeTier Classify(float squared, int near, int middle, int far)
+        {
+            if (squared <= near * near) return SimulationRangeTier.Near;
+            if (squared <= middle * middle) return SimulationRangeTier.Middle;
+            if (squared <= far * far) return SimulationRangeTier.Far;
+            return SimulationRangeTier.Stopped;
+        }
+
+        int samples = 0, nearSkipped = 0, stoppedSkipped = 0, preciseFallbacks = 0;
+        bool identical = true;
+        float radius = ItemSimulationRangeIndex.RegionRadius;
+        int[] nearRadii = { 8, 16, 24, 32, 64, 96, 128, 192 };
+        foreach (int near in nearRadii)
+        for (int far = near + 16; far <= 256; far += 16)
+        {
+            int middle = (near + far) / 2;
+            for (int index = 0; index < 180; index++)
+            {
+                float distance = index < 60 ? index * 3.71f : index < 120
+                    ? near + radius + (index - 90) * .013f
+                    : far + radius + (index - 150) * .013f;
+                distance = Mathf.Max(0f, distance);
+                float squared = distance * distance;
+                float center = Mathf.Sqrt(squared);
+                float low = Mathf.Max(0f, center - radius);
+                float high = center + radius;
+                SimulationRangeTier expectedNear = Classify(low * low, near, middle, far);
+                SimulationRangeTier expectedFar = Classify(high * high, near, middle, far);
+                bool shortcut = ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(
+                    squared, near, far, out SimulationRangeTier actual);
+                if (shortcut)
+                {
+                    identical &= expectedNear == expectedFar && expectedNear == actual;
+                    if (actual == SimulationRangeTier.Near) nearSkipped++;
+                    if (actual == SimulationRangeTier.Stopped) stoppedSkipped++;
+                }
+                else preciseFallbacks++;
+                samples++;
+            }
+        }
+
+        bool infiniteStopped = ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(
+            float.PositiveInfinity, 32, 96, out SimulationRangeTier infiniteTier) &&
+            infiniteTier == SimulationRangeTier.Stopped;
+        bool invalidFallsBack = !ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(
+            float.NaN, 32, 96, out _) &&
+            !ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(-1f, 32, 96, out _) &&
+            !ItemSimulationRangeIndex.TryResolveUnambiguousRegionTier(float.NegativeInfinity, 32, 96, out _);
+        return new JObject
+        {
+            ["identical"] = identical, ["samples"] = samples,
+            ["nearSkipped"] = nearSkipped, ["stoppedSkipped"] = stoppedSkipped,
+            ["preciseFallbacks"] = preciseFallbacks, ["infiniteStopped"] = infiniteStopped,
+            ["invalidFallsBack"] = invalidFallsBack
+        };
+    }
+
+    #endregion
 
     private static JObject EntityMovementCost(JObject args)
     {
@@ -752,6 +1091,117 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
+    #region 食物规则观察者索引回归
+
+    private sealed class FoodPipelineTickProbe : IFoodMechanic, IFoodTickObserver, IFoodTickRequirement, IFoodStateObserver
+    {
+        private readonly List<string> calls;
+        public FoodPipelineTickProbe(string id, int priority, bool active, List<string> calls)
+        {
+            MechanicId = id;
+            Priority = priority;
+            RequiresFoodTick = active;
+            this.calls = calls;
+        }
+
+        public string MechanicId { get; }
+        public int Priority { get; }
+        public bool RequiresFoodTick { get; set; }
+        public void OnFoodTick(FoodTickContext _) => calls.Add(MechanicId + ":tick");
+        public void OnFoodStateChanged(FoodStateChangedContext _) => calls.Add(MechanicId + ":state");
+    }
+
+    private sealed class FoodPipelineUngatedProbe : IFoodMechanic, IFoodTickObserver
+    {
+        private readonly List<string> calls;
+        public FoodPipelineUngatedProbe(List<string> calls) => this.calls = calls;
+        public string MechanicId => "ungated";
+        public int Priority => 20;
+        public void OnFoodTick(FoodTickContext _) => calls.Add("ungated:tick");
+    }
+
+    private sealed class FoodPipelinePassiveProbe : IFoodMechanic
+    {
+        public string MechanicId => "passive";
+        public int Priority => -20;
+    }
+
+    // 正式食物管线验证优先级、动态启停、无调度接口以及热添加的观察者。
+    private static JObject EntityFoodObserverIndex(JObject args)
+    {
+        var calls = new List<string>();
+        var context = new FoodRuntimeContext(null, new ModData_FoodData(), null, null, null, null, null);
+        using var pipeline = new FoodRulePipeline(context);
+        var early = new FoodPipelineTickProbe("early", -10, true, calls);
+        var late = new FoodPipelineTickProbe("late", 40, false, calls);
+        pipeline.Add(late);
+        pipeline.Add(new FoodPipelineUngatedProbe(calls));
+        pipeline.Add(new FoodPipelinePassiveProbe());
+        pipeline.Add(early);
+        pipeline.Add(early);
+        bool registered = pipeline.RuleCount == 4 && pipeline.TickObserverCount == 3 &&
+            pipeline.StateObserverCount == 2 && pipeline.HasActiveTickObservers();
+        pipeline.Initialize();
+        bool sortedCount = pipeline.RuleCount == 4 && pipeline.TickObserverCount == 3 &&
+            pipeline.StateObserverCount == 2;
+        var tick = new FoodTickContext(context, .1f);
+        var state = new FoodStateChangedContext(context);
+        pipeline.OnTick(tick);
+        bool sortedTick = string.Join(",", calls) == "early:tick,ungated:tick";
+        calls.Clear();
+        pipeline.OnStateChanged(state);
+        bool sortedState = string.Join(",", calls) == "early:state,late:state";
+        calls.Clear();
+
+        early.RequiresFoodTick = false;
+        late.RequiresFoodTick = true;
+        pipeline.OnTick(tick);
+        bool dynamicEligibility = string.Join(",", calls) == "ungated:tick,late:tick";
+        calls.Clear();
+        var appended = new FoodPipelineTickProbe("appended", -30, true, calls);
+        pipeline.Add(appended);
+        pipeline.Add(appended);
+        bool lateRegistered = pipeline.RuleCount == 5 && pipeline.TickObserverCount == 4 &&
+            pipeline.StateObserverCount == 3;
+        pipeline.OnTick(tick);
+        bool lateTick = string.Join(",", calls) == "ungated:tick,late:tick,appended:tick";
+        calls.Clear();
+        pipeline.OnStateChanged(state);
+        bool lateState = string.Join(",", calls) == "early:state,late:state,appended:state";
+        calls.Clear();
+
+        var gatedContext = new FoodRuntimeContext(null, new ModData_FoodData(), null, null, null, null, null);
+        bool gatedPause, gatedResume;
+        using (var gatedPipeline = new FoodRulePipeline(gatedContext))
+        {
+            var gated = new FoodPipelineTickProbe("gated", 0, false, calls);
+            gatedPipeline.Add(gated);
+            gatedPipeline.Initialize();
+            gatedPause = !gatedPipeline.HasActiveTickObservers();
+            gatedPipeline.OnTick(new FoodTickContext(gatedContext, .1f));
+            gatedPause &= calls.Count == 0;
+            gated.RequiresFoodTick = true;
+            gatedResume = gatedPipeline.HasActiveTickObservers();
+            gatedPipeline.OnTick(new FoodTickContext(gatedContext, .1f));
+            gatedResume &= string.Join(",", calls) == "gated:tick";
+        }
+
+        pipeline.Dispose();
+        bool disposed = pipeline.RuleCount == 0 && pipeline.TickObserverCount == 0 &&
+            pipeline.StateObserverCount == 0 && context.RulePipeline == null &&
+            gatedContext.RulePipeline == null;
+        return new JObject
+        {
+            ["registered"] = registered, ["sortedCount"] = sortedCount,
+            ["sortedTick"] = sortedTick, ["sortedState"] = sortedState,
+            ["dynamicEligibility"] = dynamicEligibility, ["lateRegistered"] = lateRegistered,
+            ["lateTick"] = lateTick, ["lateState"] = lateState,
+            ["gatedPause"] = gatedPause, ["gatedResume"] = gatedResume, ["disposed"] = disposed
+        };
+    }
+
+    #endregion
+
     private static JObject EntityTemperature(JObject args)
     {
         return WithEntityProbeItem(receiver =>
@@ -769,16 +1219,33 @@ public static partial class GameplayTestSystemProbe
             temperature.RemoveTemporaryWarming(first);
             float afterFirstRemoval = temperature.Data.CurrentTemperature;
             temperature.RemoveTemporaryWarming(second);
+            float restored = temperature.Data.CurrentTemperature;
             float split = ThermalRuntime.AdvanceAmbient(current, ambient, seconds * .5f);
             split = ThermalRuntime.AdvanceAmbient(split, ambient, seconds * .5f);
+
+            // 真实角色热传导入口与纯热公式比对，临时增温不参与基础温差。
+            temperature.SetAmbientTemperature(ambient);
+            temperature.AdvanceAmbientTemperature(seconds);
+            float tickNatural = temperature.Data.CurrentTemperature;
+            temperature.SetTemperature(current);
+            temperature.SetTemporaryWarming(first, 10f, 35f);
+            temperature.AdvanceAmbientTemperature(seconds);
+            float tickWarmed = temperature.Data.CurrentTemperature;
+            float expectedNatural = ThermalRuntime.AdvanceAmbient(current, ambient, seconds);
+            float expectedWarmed = expectedNatural + Mathf.Max(0f,
+                Mathf.Min(10f, Mathf.Max(0f, 35f - expectedNatural)));
+            temperature.RemoveTemporaryWarming(first);
+            float tickAfterRemoval = temperature.Data.CurrentTemperature;
             return new JObject
             {
                 ["ambientNext"] = ThermalRuntime.AdvanceAmbient(current, ambient, seconds), ["splitNext"] = split,
                 ["invalidSecondsNext"] = ThermalRuntime.AdvanceAmbient(current, ambient, float.NaN),
                 ["firstWarming"] = firstWarming, ["strongestWarming"] = strongestWarming,
-                ["afterFirstRemoval"] = afterFirstRemoval, ["restored"] = temperature.Data.CurrentTemperature,
+                ["afterFirstRemoval"] = afterFirstRemoval, ["restored"] = restored,
                 ["savedTemperature"] = snapshot.CurrentTemperature,
-                ["saveIsIndependent"] = !ReferenceEquals(snapshot, temperature.Data)
+                ["saveIsIndependent"] = !ReferenceEquals(snapshot, temperature.Data),
+                ["tickNatural"] = tickNatural, ["tickWarmed"] = tickWarmed,
+                ["expectedWarmed"] = expectedWarmed, ["tickAfterRemoval"] = tickAfterRemoval
             };
         });
     }
@@ -883,6 +1350,177 @@ public static partial class GameplayTestSystemProbe
             ["sameIdentity"] = item.HasSameStackIdentity(other), ["canStack"] = item.CanStackWith(other),
             ["wholeLarge"] = Inventory_Data.GetWholeStackAmount(float.MaxValue),
             ["wholeNegative"] = Inventory_Data.GetWholeStackAmount(-.5f)
+        };
+    }
+
+    // 独立大库存核对同轮重量体积，以及改量、改体积、换物与容量门禁。
+    private static JObject EntityCarryUsageSinglePass(JObject args)
+    {
+        const int slotCount = 128;
+        var slots = new List<ItemSlot>(slotCount);
+        for (int i = 0; i < slotCount; i++)
+            slots.Add(new ItemSlot(i)
+            {
+                itemData = i % 2 == 0 ? EntityProbeData("probe:usage_" + i, 2f, 1.5f, 2f) : null
+            });
+        var inventory = new Inventory_Data(slots, "probe:carry-usage");
+
+        inventory.GetCarryUsage(out float initialWeight, out float initialVolume);
+        bool initiallyEqual = Mathf.Approximately(initialWeight, inventory.CurrentCarryWeight) &&
+                              Mathf.Approximately(initialVolume, inventory.CurrentCarryVolume);
+
+        slots[0].itemData.Stack.Amount = 3f;
+        inventory.GetCarryUsage(out float amountWeight, out float amountVolume);
+        bool amountUpdated = Mathf.Approximately(amountWeight, 193.5f) &&
+                             Mathf.Approximately(amountVolume, 258f);
+
+        slots[0].itemData.Stack.Volume = 5f;
+        inventory.GetCarryUsage(out float volumeWeight, out float volumeVolume);
+        bool volumeUpdated = Mathf.Approximately(volumeWeight, amountWeight) &&
+                             Mathf.Approximately(volumeVolume, 267f);
+
+        slots[2].itemData = EntityProbeData("probe:replacement", 4f, 1f, 3f);
+        inventory.GetCarryUsage(out float replacedWeight, out float replacedVolume);
+        bool replaced = Mathf.Approximately(replacedWeight, 194.5f) &&
+                        Mathf.Approximately(replacedVolume, 275f) &&
+                        Mathf.Approximately(inventory.CurrentCarryWeight, replacedWeight) &&
+                        Mathf.Approximately(inventory.CurrentCarryVolume, replacedVolume);
+
+        inventory.SetCarryCapacity(220f, 285f);
+        var incoming = EntityProbeData("probe:incoming", 1f, 1f, 2f);
+        bool capacityLimited = Mathf.Approximately(inventory.GetCapacityLimitedAmount(incoming, 30f), 5f);
+        bool replacementAccepted = inventory.CanReplaceItem(slots[2].itemData,
+            EntityProbeData("probe:lighter", 2f, 10f, 5f));
+        bool replacementRejected = !inventory.CanReplaceItem(slots[2].itemData,
+            EntityProbeData("probe:bulkier", 2f, 10f, 12f));
+
+        inventory.SetUnlimitedCarryCapacity(true);
+        bool unlimited = Mathf.Approximately(inventory.GetCapacityLimitedAmount(incoming, 30f), 30f) &&
+                         inventory.GetCapacityLimitedAmount(null, 30f) == 0f;
+        var empty = new Inventory_Data(new List<ItemSlot>(), "probe:empty-usage");
+        empty.GetCarryUsage(out float emptyWeight, out float emptyVolume);
+
+        return new JObject
+        {
+            ["initiallyEqual"] = initiallyEqual,
+            ["initialWeight"] = initialWeight, ["initialVolume"] = initialVolume,
+            ["amountUpdated"] = amountUpdated, ["volumeUpdated"] = volumeUpdated,
+            ["replaced"] = replaced, ["capacityLimited"] = capacityLimited,
+            ["replacementAccepted"] = replacementAccepted, ["replacementRejected"] = replacementRejected,
+            ["unlimited"] = unlimited, ["empty"] = emptyWeight == 0f && emptyVolume == 0f,
+            ["slotCount"] = inventory.itemSlots.Count
+        };
+    }
+
+    // 按正式槽位事件核验创造背包的增减、同数量换槽和稳定帧跳过扫描。
+    private static JObject EntityDynamicSlotMaintenance(JObject args)
+    {
+        var bag = new Inventory_Data(new List<ItemSlot>(), "probe:creative-bag");
+        bag.SetUnlimitedCarryCapacity(true);
+        bag.ConfigurePlayerBagCapacity(50f, 50f);
+        const int filledCount = 192;
+        for (int i = 0; i < filledCount; i++)
+            bag.itemSlots.Add(new ItemSlot(bag.itemSlots.Count)
+            { itemData = EntityProbeData("probe:resource_" + i, 1f) });
+
+        bool initialScan = bag.MaintainDynamicSlotCount();
+        int initialCount = bag.itemSlots.Count;
+        bool stableSkipped = true;
+        for (int i = 0; i < 256; i++)
+            stableSkipped &= !bag.MaintainDynamicSlotCount();
+
+        bag.itemSlots[bag.itemSlots.Count - 1].itemData = null;
+        bool removedScan = bag.MaintainDynamicSlotCount();
+        int afterRemoveCount = bag.itemSlots.Count;
+        bool removedStableSkipped = !bag.MaintainDynamicSlotCount();
+
+        bag.itemSlots[0].itemData = EntityProbeData("probe:restored", 1f);
+        bool refilledScan = bag.MaintainDynamicSlotCount();
+        int afterRefillCount = bag.itemSlots.Count;
+        bag.itemSlots[0] = new ItemSlot(0) { itemData = EntityProbeData("probe:replacement", 1f) };
+        bool replacedSlotScan = bag.MaintainDynamicSlotCount();
+        bool replacedStableSkipped = !bag.MaintainDynamicSlotCount();
+        bag.NotifySlotsChanged();
+        bool notifiedScan = bag.MaintainDynamicSlotCount();
+
+        bag.SetUnlimitedSlots(false);
+        bool disabledScan = bag.MaintainDynamicSlotCount();
+        bag.SetUnlimitedSlots(true);
+        bool reenabledScan = bag.MaintainDynamicSlotCount();
+        int finalCount = bag.itemSlots.Count;
+        int occupied = 0;
+        for (int i = 0; i < bag.itemSlots.Count; i++)
+            if (bag.itemSlots[i]?.itemData != null) occupied++;
+        bool indexed = true;
+        for (int i = 0; i < bag.itemSlots.Count; i++)
+            indexed &= bag.itemSlots[i]?.Index == i;
+
+        return new JObject
+        {
+            ["initialScan"] = initialScan, ["stableSkipped"] = stableSkipped,
+            ["initialCount"] = initialCount, ["removedScan"] = removedScan,
+            ["afterRemoveCount"] = afterRemoveCount, ["removedStableSkipped"] = removedStableSkipped,
+            ["refilledScan"] = refilledScan, ["afterRefillCount"] = afterRefillCount,
+            ["replacedSlotScan"] = replacedSlotScan, ["replacedStableSkipped"] = replacedStableSkipped,
+            ["notifiedScan"] = notifiedScan, ["disabledScan"] = disabledScan,
+            ["reenabledScan"] = reenabledScan, ["finalCount"] = finalCount,
+            ["occupied"] = occupied, ["indexed"] = indexed
+        };
+    }
+
+    // 独立大库存验证单格替换的质量监听，以及槽位布局变化后的完整同步。
+    private static JObject EntityIncrementalMassBinding(JObject args)
+    {
+        const int count = 128;
+        var slots = new List<ItemSlot>(count);
+        for (int i = 0; i < count; i++)
+            slots.Add(new ItemSlot(i) { itemData = EntityProbeData("probe:mass_" + i, 1f) });
+        var inventory = new Inventory_Data(slots, "probe:mass-binding");
+        uint initialStructure = inventory.ContentStructureRevision;
+        ulong initialMass = inventory.MassRevision;
+        int structureEvents = 0, massEvents = 0;
+        inventory.RuntimeStructureChanged += _ => structureEvents++;
+        inventory.MassChanged += _ => massEvents++;
+
+        ItemData oldItem = slots[17].itemData;
+        ItemData replacement = EntityProbeData("probe:replacement", 1f);
+        slots[17].itemData = replacement;
+        bool replaced = structureEvents == 1 && massEvents == 1 &&
+                        inventory.ContentStructureRevision == initialStructure + 1 &&
+                        inventory.MassRevision == initialMass + 1;
+        oldItem.Stack.Amount += 1f;
+        bool oldDetached = massEvents == 1;
+        replacement.Stack.Amount += 1f;
+        bool newAttached = massEvents == 2;
+        slots[18].itemData.Stack.Amount += 1f;
+        bool otherAttached = massEvents == 3;
+
+        slots[17].itemData = null;
+        bool cleared = structureEvents == 2 && massEvents == 4;
+        replacement.Stack.Amount += 1f;
+        bool clearedDetached = massEvents == 4;
+        slots[17].itemData = replacement;
+        bool restored = structureEvents == 3 && massEvents == 5;
+
+        ItemData oldNeighbor = slots[18].itemData;
+        ItemData newNeighbor = EntityProbeData("probe:new-neighbor", 1f);
+        slots[18] = new ItemSlot(18) { itemData = newNeighbor };
+        inventory.NotifySlotsChanged();
+        bool layoutRebound = structureEvents == 4 && massEvents == 6;
+        oldNeighbor.Stack.Amount += 1f;
+        bool oldNeighborDetached = massEvents == 6;
+        newNeighbor.Stack.Amount += 1f;
+        bool newNeighborAttached = massEvents == 7;
+
+        return new JObject
+        {
+            ["replaced"] = replaced, ["oldDetached"] = oldDetached,
+            ["newAttached"] = newAttached, ["otherAttached"] = otherAttached,
+            ["cleared"] = cleared, ["clearedDetached"] = clearedDetached,
+            ["restored"] = restored, ["layoutRebound"] = layoutRebound,
+            ["oldNeighborDetached"] = oldNeighborDetached, ["newNeighborAttached"] = newNeighborAttached,
+            ["structureEvents"] = structureEvents, ["massEvents"] = massEvents,
+            ["totalSlots"] = inventory.itemSlots.Count
         };
     }
 

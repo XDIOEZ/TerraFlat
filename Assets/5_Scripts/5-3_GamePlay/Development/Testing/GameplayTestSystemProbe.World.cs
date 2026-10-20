@@ -36,6 +36,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("environment/natural_fog_validation", WorldNaturalFogValidation);
         RegisterWeatherRecoveryOperations(operations);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
+        operations.Add("surface_fluids/notification_dispatch", WorldLiquidNotificationDispatch);
         operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
         RegisterCavePerformanceOperations(operations);
@@ -47,10 +48,13 @@ public static partial class GameplayTestSystemProbe
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
+        operations.Add("mechanical/ship_scope_identity", WorldMechanicalShipScopeIdentity);
         operations.Add("mechanical/bellows_effects", WorldBellowsEffects);
         operations.Add("electrical/battery_commit", WorldElectricalBattery);
         operations.Add("electrical/supply_limits", WorldElectricalLimits);
         operations.Add("electrical/unlimited_supply", WorldElectricalUnlimitedSupply);
+        operations.Add("electrical/line_connections", WorldElectricalLineConnections);
+        operations.Add("space/fiber_connections", WorldFiberConnections);
         operations.Add("industrial_fluids/reservations", WorldFluidReservations);
         operations.Add("industrial_fluids/atomic_recipe", WorldFluidRecipe);
         operations.Add("industrial_fluids/heat", WorldFluidHeat);
@@ -75,6 +79,115 @@ public static partial class GameplayTestSystemProbe
         foreach (string operation in new[] { "ship_local_damage", "ship_hit_targeting",
                      "ship_damage_lines", "ship_damage_fragmentation" })
             operations.Add("space/" + operation, _ => GameplayTestShipDamageProbe.Capture(operation));
+    }
+
+    #region 船体作用域身份无分配回归
+
+    // 正式值类型身份在切船、切地表与资源释放时只按本作用域解析前缀。
+    private static JObject WorldMechanicalShipScopeIdentity(JObject args)
+    {
+        var alpha = new MachineScopeIdentity("ship:alpha-01");
+        var beta = new MachineScopeIdentity("ship:beta-02");
+        var surface = new MachineScopeIdentity("planet:surface");
+        var empty = new MachineScopeIdentity("ship:");
+        var caseMismatch = new MachineScopeIdentity("Ship:alpha-01");
+        var invalid = new MachineScopeIdentity(null);
+
+        bool identity = alpha.WorldKey == "ship:alpha-01" && alpha.ShipId == "alpha-01" &&
+            beta.WorldKey == "ship:beta-02" && beta.ShipId == "beta-02" &&
+            surface.WorldKey == "planet:surface" && surface.ShipId == null;
+        bool strictPrefix = empty.ShipId == string.Empty && caseMismatch.ShipId == null &&
+            caseMismatch.WorldKey == "Ship:alpha-01" && invalid.ShipId == null && invalid.WorldKey == null;
+
+        // 重复读取必须返回同一字符串对象；旧 Substring 热路径会生成新对象。
+        string firstId = alpha.ShipId;
+        bool stableReference = firstId != null;
+        for (int i = 0; i < 1024; i++)
+            stableReference &= ReferenceEquals(firstId, alpha.ShipId);
+
+        MachineScopeIdentity active = alpha;
+        active = beta;
+        bool switchedShip = active.ShipId == "beta-02" && active.WorldKey == "ship:beta-02" &&
+            !ReferenceEquals(active.ShipId, alpha.ShipId);
+        active = surface;
+        bool switchedSurface = active.ShipId == null && active.WorldKey == surface.WorldKey;
+        active = alpha;
+        bool restoredShip = ReferenceEquals(active.ShipId, alpha.ShipId);
+
+        return new JObject
+        {
+            ["identity"] = identity, ["strictPrefix"] = strictPrefix,
+            ["stableReference"] = stableReference, ["switchedShip"] = switchedShip,
+            ["switchedSurface"] = switchedSurface, ["restoredShip"] = restoredShip
+        };
+    }
+
+    #endregion
+
+    // 正式取水通知在隔离地形上验证有序投递、动态退订与稳态托管分配。
+    private static JObject WorldLiquidNotificationDispatch(JObject args)
+    {
+        using var buffer = new ChunkTerrainBuffer(1, 1);
+        buffer.SetCell(0, 0, new TerrainCell(17, 0, 0, 0, 1, TerrainCellFlags.Walkable));
+        using ChunkTerrainData terrain = buffer.Seal();
+        var sample = new RuntimeTerrainTileSample(default, terrain, Vector2Int.zero, Vector2Int.zero,
+            terrain.GetCell(0, 0), 17);
+        int hits = 0;
+        Action<RuntimeTerrainTileSample> countA = _ => hits++;
+        Action<RuntimeTerrainTileSample> countB = _ => hits++;
+        WorldLiquidSystem.SurfaceLiquidPumped += countA;
+        WorldLiquidSystem.SurfaceLiquidPumped += countB;
+        try
+        {
+            const int iterations = 1024;
+            for (int i = 0; i < 16; i++) WorldLiquidSystem.PublishSurfaceLiquidPumped(sample);
+            hits = 0;
+            for (int i = 0; i < iterations; i++) WorldLiquidSystem.PublishSurfaceLiquidPumped(sample);
+            int hitsFromSteadyDispatch = hits;
+
+            var received = new List<int>(16);
+            Action<RuntimeTerrainTileSample> third = _ => received.Add(3);
+            Action<RuntimeTerrainTileSample> first = _ =>
+            {
+                received.Add(1);
+                WorldLiquidSystem.SurfaceLiquidPumped -= third;
+            };
+            Action<RuntimeTerrainTileSample> second = _ => received.Add(2);
+            WorldLiquidSystem.SurfaceLiquidPumped += first;
+            WorldLiquidSystem.SurfaceLiquidPumped += second;
+            WorldLiquidSystem.SurfaceLiquidPumped += third;
+            try
+            {
+                received.Clear();
+                WorldLiquidSystem.PublishSurfaceLiquidPumped(sample);
+                bool firstSnapshot = received.Count == 3 && received[0] == 1 && received[1] == 2 && received[2] == 3;
+                received.Clear();
+                WorldLiquidSystem.PublishSurfaceLiquidPumped(sample);
+                bool nextSnapshot = received.Count == 2 && received[0] == 1 && received[1] == 2;
+                WorldLiquidSystem.SurfaceLiquidPumped += second;
+                received.Clear();
+                WorldLiquidSystem.PublishSurfaceLiquidPumped(sample);
+                bool duplicates = received.Count == 3 && received[0] == 1 && received[1] == 2 && received[2] == 2;
+                return new JObject
+                {
+                    ["iterations"] = iterations, ["hits"] = hitsFromSteadyDispatch,
+                    ["firstSnapshot"] = firstSnapshot,
+                    ["nextSnapshot"] = nextSnapshot, ["duplicates"] = duplicates
+                };
+            }
+            finally
+            {
+                WorldLiquidSystem.SurfaceLiquidPumped -= first;
+                WorldLiquidSystem.SurfaceLiquidPumped -= second;
+                WorldLiquidSystem.SurfaceLiquidPumped -= second;
+                WorldLiquidSystem.SurfaceLiquidPumped -= third;
+            }
+        }
+        finally
+        {
+            WorldLiquidSystem.SurfaceLiquidPumped -= countA;
+            WorldLiquidSystem.SurfaceLiquidPumped -= countB;
+        }
     }
 
     private static string WorldException(Action action)
@@ -1028,6 +1141,7 @@ public static partial class GameplayTestSystemProbe
         var first = Bellows(1, Vector2Int.left, 0);
         var second = Bellows(2, Vector2Int.down, 1);
         var graph = WorldMechanicalGraph(first, second);
+        bool bellowsIndexed = graph.HasBellows;
         foreach (MechanicalNetwork network in graph.Networks) network.Active = true;
         JObject Sample()
         {
@@ -1071,6 +1185,18 @@ public static partial class GameplayTestSystemProbe
             ["rate"] = combined.GetHeatingRatePercent(50f, true) };
         graph.Rebuild(Array.Empty<MachineEntity>());
         result["cleared"] = Sample();
+        bool emptyFastPath = !graph.HasBellows;
+        MachineEntity unrelated = WorldMachineNode(41, 0);
+        unrelated.Definition.Kind = "gear";
+        graph.Rebuild(new[] { unrelated });
+        bool nonBellowsFastPath = !graph.HasBellows &&
+            MachineWorld.SampleBellowsAirflow(graph, Vector2Int.zero).Strength == 0f;
+        graph.Rebuild(new[] { first, second });
+        bool restoredAfterRebuild = graph.HasBellows;
+        result["bellowsIndexed"] = bellowsIndexed;
+        result["emptyFastPath"] = emptyFastPath;
+        result["nonBellowsFastPath"] = nonBellowsFastPath;
+        result["restoredAfterRebuild"] = restoredAfterRebuild;
         var catalog = JObject.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(
             Application.dataPath, "Resources/Config/Mechanical/mechanical-catalog.json")));
         foreach (JObject node in (JArray)catalog["Nodes"])

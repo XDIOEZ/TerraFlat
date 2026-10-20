@@ -5,6 +5,16 @@ using UnityEngine.Rendering.Universal;
 
 public class Mod_Fuel : Module
 {
+    #region 明火环境约束
+    public override ModuleTickMode TickMode => IsIgnited ? ModuleTickMode.FixedInterval : ModuleTickMode.Disabled;
+    public override float FixedTickInterval => 1f;
+    // 旧燃料光源同样服从环境氧气条件，避免手持火种在真空中继续发光。
+    public override void ModUpdate(float deltaTime)
+    {
+        if (IsIgnited && !ItemEnvironmentSources.CanSustainCombustion(item)) SetIgnited(false);
+    }
+    #endregion
+
     public Ex_ModData_MemoryPackable ExData;
     public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
     public FuelData Data = new FuelData();
@@ -134,8 +144,11 @@ public class Mod_Fuel : Module
     /// <param name="ignited">是否点燃</param>
     public void SetIgnited(bool ignited)
     {
-        IsIgnited = ignited;
+        bool next = ignited && ItemEnvironmentSources.CanSustainCombustion(item);
+        bool changed = IsIgnited != next;
+        IsIgnited = next;
         UpdateLightState();
+        if (changed) InvalidateTickSchedule();
     }
 
     /// <summary>

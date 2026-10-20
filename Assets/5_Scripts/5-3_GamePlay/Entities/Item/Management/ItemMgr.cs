@@ -6,6 +6,16 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // AI-Context: Item 实例、运行时注册和网络玩家副本的生命周期管理器；远程视觉物不得进入本地 Tick/存档索引。
+// ===== AI 函数导航（ItemMgr 为 partial 类，按函数名及分部文件搜索） =====
+// 本文件主循环：LoadAllRuntimeItems() / Update() / LateUpdate() / RefreshSimulationPlayers()
+// 本文件调度维护：CleanupNullItems() / NotifyItemScheduleChanged()
+// 生成与销毁 → ItemMgr.Spawning.cs：InstantiateItem() / InstantiateHeldItem() / InjectRuntimeItem() / DespawnItem()
+// 玩家加载与保存 → ItemMgr.Players.cs：LoadPlayer() / CreatePlayer() / SavePlayer() / ReloadLocalPlayerAfterResourceReload()
+// 网络玩家 → ItemMgr.Players.cs：LoadNetworkPlayer() / PromoteNetworkPlayerToLocal() / ReleaseNetworkPlayer()
+// 运行时实体 → ItemMgr.RuntimeEntities.cs：TryGetRuntimeEntityAddress() / CopyRuntimeAiItems()
+// 替换实例 → ItemMgr.Replacement.cs：ReplaceRuntimeItem()
+// 其余分部：ItemMgr.Perception.cs（感知）/ ItemMgr.Matter.cs（物质）/ ItemMgr.RandomDrop.cs（掉落）
+// =================================================================
 
 public partial class ItemMgr : SingletonMono<ItemMgr>
 {

@@ -3,7 +3,7 @@ using FlatWorld.Spaceflight;
 using Newtonsoft.Json;
 using UnityEngine;
 
-public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy
+public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildingTraversalPolicy, IBuildingPlacementCommitted
 {
     #region 显式船体能力
     public const string ModuleId = "船体部件模块";
@@ -17,13 +17,19 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
         get => ModData;
         set => ModData = value as Ex_ModData_MemoryPackable ?? throw new ArgumentException("船体部件数据类型错误。");
     }
-    protected override void OnLoad() { }
+    protected override void OnLoad() => ShipGroundOpticalPresentation.Register(this);
     protected override void OnSave() { }
-    protected override void OnUnload() { }
+    protected override void OnUnload() => ShipGroundOpticalPresentation.Unregister(this);
+    public void OnBuildingPlacementCommitted() => ShipGroundOpticalPresentation.Refresh(this);
+    public override void OnResourcesReloaded() => ShipGroundOpticalPresentation.Refresh(this);
 
     // 地面地板使用独立占地层，普通设备和管电线路仍归各自的正式建筑层。
-    public int OccupancyLayer => Configuration.Kind == ShipPieceKind.Floor ? GroundFloorLayer :
-        MechanicalExtension?.OccupancyLayer ?? Configuration.Layer;
+    public int OccupancyLayer => ResolveGroundOccupancyLayer(Configuration.Kind, Configuration.Layer,
+        MechanicalExtension?.OccupancyLayer);
+
+    // 地面安装与落地预检共用层号，保留光纤等非机器船件的显式层。
+    public static int ResolveGroundOccupancyLayer(ShipPieceKind kind, int configuredLayer, int? machineLayer = null)
+        => kind == ShipPieceKind.Floor ? GroundFloorLayer : machineLayer ?? configuredLayer;
     public bool BlocksMovement => Configuration.Kind != ShipPieceKind.Floor &&
         (MechanicalExtension?.BlocksMovement ?? Configuration.BlocksMovement ?? true);
     public float PlayerMoveSpeedMultiplier => MechanicalExtension?.PlayerMoveSpeedMultiplier ?? 1f;

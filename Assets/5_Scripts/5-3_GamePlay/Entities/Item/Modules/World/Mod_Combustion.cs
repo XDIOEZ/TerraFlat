@@ -64,6 +64,7 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
 
     public bool IsBurning => Data?.IsBurning == true && fuel?.HasFuel() == true;
     public bool IsActivelyBurning => IsBurning && CanCombustNow();
+    public bool HasCombustionAtmosphere => ItemEnvironmentSources.CanSustainCombustion(item);
 
     public void BindModuleDependencies(ItemMods modules)
     {
@@ -104,7 +105,7 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
         item.OnInHandChanged -= HandleInHandChanged;
         item.OnInHandChanged += HandleInHandChanged;
 
-        if (!fuel.HasFuel())
+        if (!fuel.HasFuel() || !HasCombustionAtmosphere)
             Data.IsBurning = false;
 
         if (CanCombustNow())
@@ -146,6 +147,12 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
             return;
         }
 
+        if (Data.IsBurning && !HasCombustionAtmosphere)
+        {
+            Extinguish();
+            return;
+        }
+
         if (!CanCombustNow())
         {
             ClearWorldTimeBaseline();
@@ -168,7 +175,7 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
     /// <summary>点燃已有燃料的对象；不负责消耗火种或添加燃料。</summary>
     public bool Ignite()
     {
-        if (!GameNetwork.HasStateAuthority || fuel == null || !fuel.HasFuel())
+        if (!GameNetwork.HasStateAuthority || fuel == null || !fuel.HasFuel() || !CanCombustNow())
             return false;
 
         Data.IsBurning = true;
@@ -199,7 +206,7 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
     /// <summary>当前承载形态是否允许燃烧。</summary>
     public bool CanCombustNow()
     {
-        if (item == null || item.DestructionHandled)
+        if (item == null || item.DestructionHandled || !HasCombustionAtmosphere)
             return false;
 
         if (item.InHand)
@@ -212,6 +219,14 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
     /// <summary>按当前场景解析后的世界绝对时间扣燃料，睡觉、加速和跳时都会被计入。</summary>
     private void ConsumeElapsedWorldTime(bool commit)
     {
+        if (!HasCombustionAtmosphere)
+        {
+            Data.IsBurning = false;
+            ClearWorldTimeBaseline();
+            if (commit) Commit(notifyNetwork: true);
+            else ApplyCombustionState();
+            return;
+        }
         if (!TryGetWorldTime(out string clockId, out float currentTime))
             return;
 

@@ -46,9 +46,28 @@ public static partial class GameplayTestSystemProbe
     {
         // 只推进独立正式风场并返回原始推速，期望数值和连续性判断全部留给 Lua。
         var origin = new Int2(0, 0);
+        var quietEngine = WindPushEngine(0f);
+        var quietField = new RegionalWindPushField();
+        quietField.Synchronize(quietEngine, 0d, 3f);
+        bool calmNoPush = !quietField.HasWindPush;
+        JObject calmLevel8 = WindPushSample(quietField);
+        JObject calmLevel10 = WindPushSample(quietField, level: 10);
+        JObject calmFarAway = WindPushSample(quietField, 384d, -384d);
+        quietEngine.ForceElement(origin, 0d, WeatherElementIds.Wind, 1f, 100f);
+        quietField.Synchronize(quietEngine, 0d, 3f);
+        bool calmNowHasPush = quietField.HasWindPush;
+        quietField.Synchronize(quietEngine, 1.5d, 3f);
+        JObject calmRising = WindPushSample(quietField);
+
         var engine = WindPushEngine(.8f);
         var field = new RegionalWindPushField();
         var result = new JObject();
+        result["calmNoPush"] = calmNoPush;
+        result["calmLevel8"] = calmLevel8;
+        result["calmLevel10"] = calmLevel10;
+        result["calmFarAway"] = calmFarAway;
+        result["calmNowHasPush"] = calmNowHasPush;
+        result["calmRising"] = calmRising;
         field.Synchronize(engine, 0d, 3f);
         result["start"] = WindPushSample(field);
         field.Synchronize(engine, 1.5d, 3f);

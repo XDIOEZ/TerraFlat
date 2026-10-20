@@ -1,4 +1,15 @@
 // AI-Context: GameManager 的主菜单、新游戏与存档面板控制分部；直接组合 BasePanel，不使用领域 View 代理。
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 世界加载幕：OnWorldEntryProgressChanged() / ShowWorldLoadingView() / UpdateWorldLoadingView() / FadeWorldLoadingView()
+// 维度加载：PresentDimensionLoading() / EnsureDimensionLoadingView() / HideDimensionLoadingViewImmediate()
+// 保存与资源重载提示：BeginSaveStatus() / CompleteSaveStatus() / BeginResourceReloadStatus() / EndResourceReloadStatus()
+// 主菜单：OpenHellowCanvas() / OpenMainMenuSettings() / OpenMainMenuExitConfirmation()
+// 设置：BindMainMenuSettingsQuality() / BindMainMenuSettingsLanguage()
+// 新游戏：OpenNewGame() / CreateNewWorld() / TryBuildNewWorldCreationRequest()
+// 新游戏分页与难度：ShowNewGamePage() / OpenNewGameDifficultyPanel() / ConfirmNewGameDifficulty()
+// 存档选择：OpenGameSaveManager() / OnClick_StartGame_Button() / OnClick_LoadSaveData_Button() / OnClick_DeleteSave_Button()
+// 世界/玩家生命周期在 GameManager.cs，本文件专管 UI。
+// ====================================================
 
 using System;
 using System.Collections;

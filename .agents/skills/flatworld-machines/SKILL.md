@@ -23,15 +23,19 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 实体与业务
 
+- 燃料炉点火和持续燃烧都经 `MachineWorld.CanSustainCombustion` 检查所属世界/真实舱气氧气至少占5%；缺氧停火、清吸料进度并保留燃值，恢复氧气后重新点火，余热仍走自然传热。外部氧气助燃的温度加成不能绕过此门槛。
+
 - 召唤器/手持保留 Item，落地设施经 Place/SpawnGenerated/RestoreMachine 创建数据节点；Mod_MachineAuthoring 保存配置，不驱动落地 Load/Tick。普通 Ports=none 设施共用格索引，不产生扭矩网络。
 - 模拟不依赖 ChunkView，网络整体恢复后才 Tick，快照后才休眠；无端口设施按玩家窗口休眠。世界时间由调用方传入，有界补算保留余量，手摇倒计时先于领域分派。
 - 移动船使用 `UseScope(GetShipScopeKey(ShipId))/TickShip`，本地 Cell 不随地表切换；位置经 SpaceSession 投影。ScopeLease 为值类型，按单一 using 生命周期释放；面板/延迟回调通过 UseNodeScope 进入节点所在作用域。分裂以 TransferShipNodes 整批移交，真实库存先拆分，每个作用域整批结束才重建拓扑。
 - 起飞/落地复用 TransferScopeNodes 在普通 worldKey 与 ship:key 间整批交接真实节点、加工器和共享罐份额，调用者给出最终 Cell/位置/绝对朝向；先全量校验，再提交归属与地表通知。不能用 Remove/Place 代替迁移，Remove 会执行储罐拆除排放；落地机器直接加入普通管电网络。
 - 船上无机械端口的设施与机械网、流体网一样持续模拟，不用地表玩家区块决定休眠；`ship:` 作用域不是场景名，不能因场景匹配不到玩家而释放电池、培育仓等设备的交互对象和面板。
+- 机械 `ScopeState.Key` 写入时冻结 `MachineScopeIdentity.ShipId`，船上温度/压力/排气/溢流每轮只读同一字符串，不反复 `Substring(5)`；切船、落回地表、释放作用域不得借用上一个船 ID。回归 `mechanical/ship_scope_identity`。
 - SpaceSession 以游戏时钟调用 TickBackgroundWorlds，档案中的非活动地表作用域只恢复数据网络并持续推进加工/燃料/气液；活动地表由 ItemMgr 调度，避免重复。冷环境按自己的 WorldKey/冻结拓扑查询，不发布到当前场景 TemperatureMgr；炉吸燃料与带面交付经 DroppedItemService.ColdWorld 按世界查询实物、去重和原子扣量，不借用眼前世界掉落物。退出游戏后不补算。
 - 后台炉吸燃料先用本世界冻结拓扑筛同格候选，再仅对候选计算距离、排序和补配置，禁止为同格查询排序全世界掉落物；记录身份优先核对原列表/下标，列表被回调挪动时才回退查找。Profiler 分 `ColdFuel.Collect/Sort/Transfer`。
 - 后台掉落物每步从真实档案重填可复用的运动工作区，跨世界与异常结束均清空状态；水面同点采样合并，冷地表仅复用资源目录及有界查询键，不缓存实际差量。Profiler 分 `ColdWorld.Motion/Water`，规则覆盖见 Processing 的 `cold_motion_workspace`。
 - 冷机器温度优先读已加载/冷缓存真实环境层，缺块时经 `SpaceSurfaceQuery.TryGetAmbientTemperature` 复用正式地理温度与星体覆盖公式，禁止为了取温度同步生成水文/生态整块；全局调温每次读取，资源/存档切换清理有界点样本。规则见 IndustrialFluids 的 `cold_temperature_path`。
+- 冷地表风力机读取 `windStrength` 时保留区块生成的固定天气汇总值（每星球最多128块），即使完整区块逐出也不反复生成水文/生态；已加载地表优先读当前资料，真实水流/液体不共享风力缓存，规则 `cold_wind_cache`。
 - 炉内材料、罐体和停火炉体按 `ThermalRuntime.AdvanceAmbient` 每游戏秒消除剩余温差 1%，升降温至少 0.5℃/游戏秒，到达目标即停，跨速率下限的分步与累计结果一致；炉体先撤销自己的已熄火热源，共享罐内容按本轮启用成员的真实罐体平均温度只换热一次，转换回内能后仍走原有相变；主动燃烧升温与两库存换热保留设备规则。
 - 加工条件归设备，产物归材料：ProcessCapability/Level 匹配 ItemDefinition.processing 的结果/work/等级闭区间；专用手钻/锻造仍用 MachineProcessDefinition。RecipeProcessor 复用 CraftingService 原子事务，输出满保留进度，SharedModuleIds 迁移便携载体状态。
 - 燃料炉的 `heatingRatePercent` 只缩放炉内材料相对原速的升温（Smelter 50%、BlastFurnace/Bonfire 100%），炉体升温、真实干燥/加工计时及自然冷却不变；电炉与燃料炉共用 `FurnaceMaterialHeating`，Input/Output、容器液体和坩埚内材料沿同倍率受热。新冷载荷先取真实环境/容器原温；活动地表初温用气候基温避开自身炉心热源，已初始化温度不覆盖。
@@ -47,6 +51,8 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 
 ## 机械与电力
 
+- 机械拓扑重建时记录 `HasBellows`；若当前机械世界没有风箱，设施 Tick 直接跳过四邻风箱格查询，`RegisterAirflow` 扩展来源仍正常叠加。拆装风箱按原拓扑变更立即刷新，回归 `mechanical/bellows_effects`。
+- `MechanicalNetworkGraph.Rebuild` 复用节点排序、BFS 队列和 X/Y 区块边界工作区，`finally` 清理对象引用；机械连接、环绕最短区块范围保持原算法。离线 `Tools/Tests/MachineNetworks` 断言预热后纯设施重复重建零 GC。
 - 机械动力专项 Lua 入口为 `GameplayTests/mechanical-suite.json`，在独立真实世界组装全目录 20 种机械端口组件并核验动力、加工、发电、输送、测压及手推；编写、截图和执行转 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md)，清单与 GM 参数见 `Assets/StreamingAssets/GameplayTests/README.md`。
 - RPM/SourceRpm/SpeedRatio 有符号：正逆时针、负顺时针；方向由 RPM 派生，效率与功率读绝对值 SpeedRpm。轴、离合器、跨轴器保持方向，齿牙啮合/齿轮箱翻转；闭环转向不一致整网停转。
 - 动力源分别提供扭矩与 RPM；同速有效源累加扭矩，异速冲突停转。用力器是输入终点，不转送扭矩，按最近可达源距离分配固定 TorqueLoad，同距按稳定 ID；不足完整需求才停该用力器。传动件不限制通过量，TorqueCapacity 不参与求解。

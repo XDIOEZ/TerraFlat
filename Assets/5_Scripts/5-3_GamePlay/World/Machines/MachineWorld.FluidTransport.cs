@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
+using FlatWorld.Spaceflight;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -366,8 +367,11 @@ public static partial class MachineWorld
 
     private static void RecordAtmosphereEmission(MachineEntity node, FluidBatch batch, Vector2? environmentPosition = null)
     {
-        AtmosphereEmissionResult result = IsShipScope
-            ? RequireShipEnvironment().EmitMachineGas(worldKey.Substring(5), environmentPosition ?? node.Position, batch)
+        Vector2 emissionPoint = environmentPosition ?? node.Position;
+        bool local = IsShipScope || SpaceSession.Current != null &&
+            SpaceSession.Current.TryGetGroundEnvironment(worldKey, emissionPoint, out _);
+        AtmosphereEmissionResult result = local
+            ? RequireShipEnvironment().EmitMachineGas(shipScopeId ?? worldKey, emissionPoint, batch)
             : AtmosphereService.Emit(GetCurrentAtmosphere(node), batch);
         FluidMachineState state = GetFluidState(node);
         state.LastEmittedStandardLiters += FluidUnits.MolToStandardLiters(batch.GasMoles);
@@ -376,7 +380,7 @@ public static partial class MachineWorld
     }
 
     internal static AtmosphereState GetCurrentAtmosphere(MachineEntity node = null)
-        => IsShipScope ? RequireShipEnvironment().GetMachineAirSnapshot(worldKey.Substring(5), node?.Position ?? Vector2.zero)
+        => TryGetLocalAtmosphereKey(node, out string atmosphereKey) ? RequireShipEnvironment().GetMachineAirSnapshot(atmosphereKey, node?.Position ?? Vector2.zero)
             : AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState atmosphere) ? atmosphere : null;
 
     #endregion

@@ -1328,6 +1328,7 @@
       "BlocksMovement": true,
       "Fluid": {
         "Kind": "receiver",
+        "BodySizeCells": 1,
         "VolumeLiters": 5,
         "MinimumGasSpaceLiters": 1,
         "MaxSafePressureKPa": 2000,
@@ -1361,6 +1362,7 @@
       "BlocksMovement": true,
       "Fluid": {
         "Kind": "receiver",
+        "BodySizeCells": 1,
         "VolumeLiters": 5,
         "MinimumGasSpaceLiters": 1,
         "MaxSafePressureKPa": 2000,

@@ -308,6 +308,20 @@ do
             local uniform = (profile.numbers["space.uniformSurface"] or 0) > 0
             local climateOverride = uniform or (profile.numbers["space.climateOverride"] or 0) > 0
             local variation = profile.numbers["space.temperatureVariationCelsius"] or 0
+            if surface.id == "core:surface.moon" then
+                -- 月球只保留月壤和高低起伏，坑沿、矿物和自然物不能重新混入石头。
+                assert(uniform and surface.tiles["space.uniformTileId"] == "Tile_MoonRegolith", "月球没有统一使用月壤")
+                for key, tileId in pairs(surface.tiles) do
+                    assert(tileId == "Tile_MoonRegolith", "月球混入其它地表材质:" .. key)
+                end
+                assert(profile.ecologyRuleCount == 0 and profile.caveResourceRuleCount == 0 and
+                    profile.ecologyMultiplier == 0, "月球仍会生成自然物或矿物")
+                assert(profile.numbers["cave.portal.enabled"] == 0 and profile.numbers["structure.enabled"] == 0,
+                    "月球仍会生成洞口或遗迹")
+                assert(profile.numbers["space.crater.enabled"] == 1 and
+                    profile.numbers["space.crater.minimumRadius"] <= 3 and
+                    profile.numbers["space.crater.maximumRadius"] >= 50, "月球缺少大小差异明显的环形山")
+            end
             for index, sample in ipairs(body.samples) do
                 local repeated = body.repeatSamples[index]
                 local sampleLabel = label .. "/第" .. index .. "个地表样本"
@@ -331,6 +345,7 @@ do
                 end
                 if uniform then
                     near(sample.liquidDepth, 0, sampleLabel .. "/均匀地表液体清除")
+                    assert(sample.blockingTileId == 0, sampleLabel .. "均匀地表混入阻挡地块")
                     if profile.numbers["space.uniformTileId"] then
                         assert(sample.groundTileId == profile.numbers["space.uniformTileId"], sampleLabel .. "均匀地表地块错误")
                     end

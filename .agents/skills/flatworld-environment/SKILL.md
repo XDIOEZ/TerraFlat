@@ -23,6 +23,8 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 
 ## 时间、天气与湿度
 
+- 明火统一由 `AtmosphereService.CanSustainCombustion` 检查真实氧气占比至少5%，真空/未知环境拒绝；`ItemEnvironmentSources` 的燃烧点采样允许局部密闭舱气覆盖星球大气，按实时组分读取。回归 `environment/combustion_oxygen`。
+
 - 星球大气在创建/进入世界时完整校验；`TryGetForWorld` 只读已有真实状态，逐个生物采样不重复分配全量校验集合。显式 `GetOrCreate/Validate` 仍保留校验入口。
 
 - DayTimeSystem 是跨场景/保存主入口，场景也可能引用 DayNightTimeManager。日长为 RotationPeriodSeconds、年长为 OrbitalPeriodSeconds，运行时 SetRotationPeriod/SetOrbitalPeriod；季节、年与轨道共用游戏秒轴。SeasonCalendar 历史快照冻结周期/倾角/离心率，不用当前日长重算过去。
@@ -55,6 +57,7 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - 自然物同次环境冻结用 `TemperatureMgr.PointSamplingContext` 和 `LiquidTemperatureField.PointSamplingBatch`，按目标块一次收集已规范邻区，只读绑定 `WorldRuntime+Epoch+Dimension` 的当前地形；同批每格仍完整算热源距离，下批重读 Terrain 身份与 SurfaceLiquidRevision。跨程序集的 GM 温度观察层使用公开的 `BeginAmbientPointSampling()` 包装复用相同批次。作用域是同步只读阶段，期间不得修改地形、热源或目录，不跨帧缓存结果；嵌套批次独立，退出释放，目录重载/旧代际拒用，`environment/thermal_point_batch` 覆盖刷新与生命周期边界。
 - 体温是最外层体表；角色、普通物品、罐体/工业内容、停火炉体、落地容器与坩埚的自然传热共用 `ThermalRuntime.AdvanceAmbient`，每游戏秒保留温差的 99%，速率最低 0.5℃/游戏秒，到达目标即停止；跨下限时先指数后匀速，保证分步与累计一致。默认下限在 `MinimumAmbientTemperatureChangePerSecond`。流体用同公式双精度结果按真实热容换回内能，共享罐库存每轮只推进一次；冷热不分速率，不读物品传热率或潮湿/附近火源倍率。`AdvanceTowards` 仅保留给入水、岩浆接触和主动设备传热，衣物只修安全范围。
 - Mod_Temperature 管基础体温、按来源临时增温、安全范围、缓冲与避险。增温取最强有效来源，上限只限制该来源；保存基础副本，伤害/UI 读最终值。水冷保护 0～1、多来源相加钳制。
+- `Mod_Temperature` 的 0.25 秒体温结算直接调用管理器原用的 `ThermalRuntime.AdvanceAmbient` 并提交自然体温，不再逐 Tick 构造方法组委托或额外解析管理器；热传导、增温来源、变化事件和疾病结算顺序不变。回归 `survival/thermal`。
 - 玩家默认安全 5～40℃、普通生物 5～50℃，Actor 可覆盖，装备经 SetSafeTemperatureRangeModifier 修正。越界且共用缓冲耗尽才持有冻伤/热射病 Buff；安全移除，TemperatureMgr 不直接扣血。
 - `TemperatureWarningPresentationRules` 供 `FoodUIModule` 体温条与 `TemperatureScreenRendererFeature` 共用，读取最终体温和装备修正后的安全线；条在安全线前 3℃渐蓝/红（窄范围取四分之一宽度），屏幕越线后 10℃到满强，真实秒平滑渐入/退去，冷热有符号强度保证互斥。只改表现，不改危险缓冲/Buff；规则归 `survival/temperature_presentation*`，最终画面由用户验收。
 - 冷热共用 RemainingTemperatureBufferSeconds：危险扣 1/s、安全默认补 1/s、容量默认 60；短暂安全/冷热切换/清 Buff 不重置，保存剩余量，RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点并向远离方向随机引导，不再记录或回退安全点；普通陆地移动也保留短期方向偏置。
@@ -75,5 +78,6 @@ description: "FlatWorld 游戏时间、季节、区域天气、湿度、光照�
 - `RegionalWindPushField` 每个规范天气区分别平滑三种起吹档位的推动向量，起风、停风、改档和反向都从当前推速用完整 `_weatherTransitionSeconds`（默认 3 秒）SmoothStep 续接；再按四区空间权重混合，跨界不重置时间。秒轴用 `Time.timeAsDouble`，不随游戏日历跳时，暂停冻结；普通客户端消费快照走同一力场，原始天气/设施/声音查询不被改写。每帧共用一批结果，同帧区域变更以 `WindQueryRevision` 补同步；世界/代际/拓扑重建或天气禁用清空，首次强风从零渐入，停风尾段仍保留 HasWindPush。规则 `environment/wind_push_transition` 覆盖连续性。
 - 风推动共用 SampleWindVelocity：当前总质量乘天气所属星球重力/9.81 得等效质量；完整 ItemDefinitions 单件最轻 B、最重 A 的中点 C=(A+B)/2 为参考上限，B～C 均分三段，对应 8/9/10 级起吹，等效质量达到 C 不推动。风强向下取完整级别，未达起吹级目标速度为零，达到/高一级/高两级为 0.06/0.2/0.5 单位/s，同档目标不插值；邻风区各自分档并平滑响应后按空间距离混合。目录质量范围按 ItemDefinitionRevision/引用缓存；所有移动后端共用，抛掷未结束或完全沉没的散物不受风，不能以镜头区判断全世界。
 - 大批散落物风推动使用 `WorldMotionSystem.TryCreateWindSamplingContext` 每批冻结一次目录质量范围和星球重力；每件仍按实际质量与当地四区风场采样。单件 `SampleWindVelocity` 与批量共用区域推动场，稳态目标和空间混合仍由 `WindEnvironmentRules` 统一裁定。
+- 单件 `SampleWindVelocity` 在全域无有效风推动时直接返回零，省去每物品的质量目录、星球重力和拓扑准备；`RegionalWindPushField.Sample` 也不查询全零风区。`HasWindPush` 包含起风目标和停风尾段，不能按原始瞬时风强跳过，回归 `environment/wind_push_transition`。
 - 风采样直接读取区域风字段，与完整天气快照共用 `BuildWind`；风源同步只读风字段，不组装雨雷快照。每批风推动冻结活动拓扑域与 ChunkMgr，逐小步阻挡和移动后的环境检测仍实时执行。
 - 单机散落物水态走 DroppedItemRuntime.Water；陆地静物订所在地格变化，未知格限量重试，水中低频查流。水态替换先备载荷/共享视觉再提交整组数量，水花归实际世界 Scene；浮力阈值与视觉浸没分开。

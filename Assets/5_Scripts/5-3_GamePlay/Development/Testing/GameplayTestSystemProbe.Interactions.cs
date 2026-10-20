@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -13,12 +14,159 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("player/physics_source", InteractionPhysicsSource);
         operations.Add("player/aim_cursor", InteractionAimCursor);
+        operations.Add("player/focus_aim_batch", InteractionFocusAimBatch);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
         operations.Add("player/interaction_query_context", InteractionQueryContext);
+        operations.Add("player/interaction_registry_prefilter", InteractionRegistryPrefilter);
         operations.Add("player/grid_interaction_bands", InteractionGridBands);
         operations.Add("inventory/discard_hover_query", InventoryDiscardHoverQuery);
         operations.Add("terrain/contact_query_context", TerrainContactQueryContext);
+    }
+
+    #endregion
+
+    #region 注册交互目标的距离预筛回归
+
+    // 正式注册表逐项核对活跃、距离、鼠标命中及同帧移动后的实时行为。
+    private static JObject InteractionRegistryPrefilter(JObject args)
+    {
+        var root = new GameObject("[InteractionRegistryPrefilter]") { hideFlags = HideFlags.HideAndDontSave };
+        var registered = new List<GameplayTestSpatialInteractionTarget>();
+        try
+        {
+            var actorHost = new GameObject("Actor");
+            actorHost.transform.SetParent(root.transform, false);
+            actorHost.SetActive(false);
+            actorHost.transform.position = new Vector3(15.5f, .5f);
+            Item actor = actorHost.AddComponent<GameItem>();
+
+            GameplayTestSpatialInteractionTarget Create(string name, float x, bool allowed, float pointerRadius)
+            {
+                var host = new GameObject(name);
+                host.transform.SetParent(root.transform, false);
+                host.transform.position = new Vector3(x, .5f);
+                var target = host.AddComponent<GameplayTestSpatialInteractionTarget>();
+                target.Allowed = allowed;
+                registered.Add(target);
+                SpatialInteractionRegistry.Register(target, pointerRadius);
+                return target;
+            }
+
+            var near = Create("Near", 15.25f, true, .5f);
+            var seam = Create("Seam", -15.5f, true, .75f);
+            var far = Create("Far", 3f, true, .75f);
+            var rejected = Create("Rejected", 15f, false, .75f);
+            var inactive = Create("Inactive", 15.3f, true, .75f);
+            inactive.gameObject.SetActive(false);
+
+            var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+            var results = new List<IInteractable>();
+            SpatialInteractionRegistry.QueryRegisteredTargets(actor, 1f, null, results, wrapped);
+            bool correctRange = results.Count == 2 && results.Contains(near) && results.Contains(seam) &&
+                !results.Contains(far) && !results.Contains(rejected) && !results.Contains(inactive);
+            bool distantSkipped = far.EligibilityChecks == 0 && inactive.EligibilityChecks == 0 &&
+                rejected.EligibilityChecks == 1 && near.EligibilityChecks == 1 && seam.EligibilityChecks == 1;
+
+            results.Clear();
+            SpatialInteractionRegistry.QueryRegisteredTargets(actor, 1f, new Vector2(-15.5f, .5f), results, wrapped);
+            bool pointerMatched = results.Count == 1 && results[0] == seam;
+
+            results.Clear();
+            SpatialInteractionRegistry.QueryRegisteredTargets(actor, 1f, null, results, default);
+            bool infiniteRange = results.Count == 1 && results[0] == near;
+
+            far.transform.position = new Vector3(15.75f, .5f);
+            results.Clear();
+            SpatialInteractionRegistry.QueryRegisteredTargets(actor, 1f, null, results, wrapped);
+            bool movedTargetUpdated = results.Count == 3 && results.Contains(far) && far.EligibilityChecks == 1;
+
+            results.Clear();
+            SpatialInteractionRegistry.QueryRegisteredTargets(actor, -.5f, null, results, wrapped);
+            bool negativeRadiusRejected = results.Count == 0;
+
+            bool radiusEdges = SpatialInteractionRegistry.IsWithinInteractionRadius(
+                new Vector2(15.5f, .5f), new Vector2(-15.5f, .5f), 1f, wrapped) &&
+                !SpatialInteractionRegistry.IsWithinInteractionRadius(
+                    new Vector2(15.5f, .5f), new Vector2(-15.5f, .5f), .99f, wrapped) &&
+                !SpatialInteractionRegistry.IsWithinInteractionRadius(
+                    new Vector2(15.5f, .5f), new Vector2(-15.5f, .5f), 1f, default) &&
+                SpatialInteractionRegistry.IsWithinInteractionRadius(Vector2.zero, Vector2.zero, 0f, default);
+
+            return new JObject
+            {
+                ["correctRange"] = correctRange, ["distantSkipped"] = distantSkipped,
+                ["pointerMatched"] = pointerMatched, ["infiniteRange"] = infiniteRange,
+                ["movedTargetUpdated"] = movedTargetUpdated,
+                ["negativeRadiusRejected"] = negativeRadiusRejected, ["radiusEdges"] = radiusEdges
+            };
+        }
+        finally
+        {
+            for (int i = 0; i < registered.Count; i++)
+                SpatialInteractionRegistry.Unregister(registered[i]);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
+    #endregion
+
+    #region 角色瞄准单轮拓扑与方向回归
+
+    // 只对照正式瞄准方向入口，覆盖环绕接缝、翻身直瞄和停止半径。
+    private static JObject InteractionFocusAimBatch(JObject args)
+    {
+        Vector2[] starts =
+        {
+            new(15.5f, .5f), new(-15.5f, .5f), Vector2.zero,
+            Vector2.zero, new(-15.5f, -15.5f), new(3.5f, 3.5f)
+        };
+        Vector2[] targets =
+        {
+            new(-15.5f, .5f), new(15.5f, .5f), new(16f, 0f),
+            new(-16f, 0f), new(15.5f, 15.5f), new(3.5f, 3.5f)
+        };
+        Vector2[] wrappedExpected =
+        {
+            new(1f, 0f), new(-1f, 0f), new(-16f, 0f),
+            new(-16f, 0f), new(-1f, -1f), Vector2.zero
+        };
+        float[] stopDistances = { -1f, 0f, .1f, 1f, 2f, 5f, 32f };
+        var wrapped = new WorldTopologyDomain(new int2(-16, -16), new int2(32, 32), true);
+        bool deltasCorrect = true, stopsCorrect = true;
+        int sampleCount = 0;
+        for (int worldIndex = 0; worldIndex < 2; worldIndex++)
+        for (int directIndex = 0; directIndex < 2; directIndex++)
+        for (int i = 0; i < starts.Length; i++)
+        {
+            bool isWrapped = worldIndex != 0;
+            bool direct = directIndex != 0;
+            WorldTopologyDomain topology = isWrapped ? wrapped : default;
+            Vector2 actual = Mod_FocusPoint.ResolveAimDelta(starts[i], targets[i], direct, topology);
+            Vector2 expected = isWrapped && !direct ? wrappedExpected[i] : targets[i] - starts[i];
+            deltasCorrect &= (actual - expected).sqrMagnitude < .00000001f;
+            float oldDistance = isWrapped && !direct
+                ? topology.Distance(new float2(starts[i].x, starts[i].y),
+                    new float2(targets[i].x, targets[i].y))
+                : Vector2.Distance(starts[i], targets[i]);
+            for (int j = 0; j < stopDistances.Length; j++)
+            {
+                float threshold = stopDistances[j];
+                stopsCorrect &= Mod_FocusPoint.IsWithinAimStopDistance(actual, threshold) ==
+                    (oldDistance <= threshold);
+                sampleCount++;
+            }
+        }
+
+        bool specialThresholds = !Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, float.NaN) &&
+            !Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, -1f) &&
+            Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, float.PositiveInfinity) &&
+            !Mod_FocusPoint.IsWithinAimStopDistance(Vector2.one, float.NegativeInfinity);
+        return new JObject
+        {
+            ["deltasCorrect"] = deltasCorrect, ["stopsCorrect"] = stopsCorrect,
+            ["specialThresholds"] = specialThresholds, ["samples"] = sampleCount
+        };
     }
 
     #endregion
@@ -372,4 +520,20 @@ public static partial class GameplayTestSystemProbe
     }
 
     #endregion
+}
+
+// 编辑态采样用可注册的最小交互组件，统计远距离目标有没有走正式准入逻辑。
+internal sealed class GameplayTestSpatialInteractionTarget : MonoBehaviour, IInteractable
+{
+    internal bool Allowed;
+    internal int EligibilityChecks;
+
+    public bool CanInteract(Item actor)
+    {
+        EligibilityChecks++;
+        return Allowed;
+    }
+
+    public void OnInteractStart(Item actor) { }
+    public void OnInteractCancel(Item actor) { }
 }

@@ -72,6 +72,13 @@ public static partial class FarmlandSystem
         internal void Commit(TileData_Farmland soil, bool allowNaturalSoil)
         {
             if (TrySample(new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample))
+                CommitSampled(sample, soil, allowNaturalSoil);
+        }
+
+        // 本轮已取得的地块直接提交，避免每株植物重复寻址同一格。
+        internal void CommitSampled(RuntimeTerrainTileSample sample, TileData_Farmland soil, bool allowNaturalSoil)
+        {
+            if (leased && hasQuery && manager != null && query.IsForWorld(manager.WorldRuntime))
                 CommitSoil(sample, soil, allowNaturalSoil, normalizedWorldCell: true);
         }
 

@@ -42,6 +42,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - RuntimeTileDeltas 保存完整 TerrainCell 与格墙损伤；ChangedItems 保存动态建筑及 AI；SupportCells 保存平台。Tile 栈由 Data_TileMap 读写，农业/支撑等独立列表均计入 HasChanges。
 - 普通建筑装船前经 RemoveRuntimeBuildingRecord 立即撤掉地面 ChangedItems 并记录移除身份，不能仅卸载表现；落地或回滚恢复走普通建筑记录，清同身份移除标记。机器归属通过作用域移交，只在当前所有者的 MachineArchive 保存。
 - AgricultureCells 仅保存水肥/真实作物，未完成锄地为会话状态。GroundLayerCells 保存采层/覆盖栈/草层；SnowCells 保存玩家厚度与天气基线，ContaminationCells 保存稳定污染 ID/数值；天气批写按格合并并保留作物字段。
+- 密集 AgricultureCells 运行态按局部格建立不序列化的索引，少于16格直接线性读取；追加、同数量替换和移除会使索引同步或失效，天气批量写与普通土壤提交共用 `GetOrAddAgricultureCell`，规则 `save/agriculture_cell_index`。
 - LiquidCells 只存局部坐标、稳定 LiquidId、深度；生成后覆盖、绑定前恢复，回到生成值删除差量。写液体不产生地形/农业差量，RecordLiquidBatch 先写权威内存再通知；缺失液体/污染定义明确拒绝恢复。
 - AI 休眠先写完整 ChangedItems 再卸载，跨帧保存冻结出生/睡醒迁移，合并活动快照保留休眠居民。宿主维护的临时 AI 由双向宿主/成员 GUID 保存，排除独立 AI 快照。
 - Frozen 使用冻结 Ecology Profile；FollowCurrent 使用当前生成配置。切换清 Profile 时保留生态删除 GUID、状态覆盖和恢复年份。

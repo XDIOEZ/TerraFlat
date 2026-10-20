@@ -1,5 +1,25 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
+test.system("space", "fiber_connections", {}, function(data)
+    assert(#data.masks == 16, "光纤连接的16种四邻样本不完整")
+    for index, mask in ipairs(data.masks) do
+        assert(mask == index - 1, "光纤单点/直线/转弯/分叉掩码错误：" .. (index - 1))
+    end
+    assert(data.endpoints == 10, "光纤没有连向控制台和导航端点")
+    assert(data.destroyedEndpoint == 8 and data.removedEndpoint == 2 and data.repairedEndpoint == 10,
+        "光纤端点拆毁或重新安装后仍显示旧连接")
+    assert(data.destroyedFiber == 0, "摧毁光纤仍保留连接样式")
+    assert(data.connected and not data.disconnected and data.repaired,
+        "光纤显示连接的同时破坏了正式控制台到导航连通规则")
+    assert(data.isolatedMask == 1 and data.originalAfterOtherShip == 10 and data.foreignFiber == 0,
+        "同坐标不同船的光纤连接串到一起")
+    assert(data.nonOpticalNeighbors == 0, "光纤错误连向相邻电线或管道")
+    assert(#data.sortingOrders == 4, "缺少船上线层采样")
+    for index, expected in ipairs({-2, -1, 0, 1}) do
+        assert(data.sortingOrders[index] == expected, "船上地板/管道/电线/光纤层级错误：" .. index)
+    end
+end, "光纤16种连接、设备端点、拆建重算与同坐标船体隔离")
+
 do
     -- 只采样正式表现插值，不创建世界或操作当前船体与镜头。
     test.system("space", "presentation_interpolation", {}, function(data)
@@ -122,6 +142,30 @@ do
         end
         assert(type(data.limitations) == "string" and #data.limitations > 0, "空地结果必须保留覆盖边界")
         local assembly = data.groundAssembly
+        local retryExpected = {
+            initial = true, unchanged = false, ["repeat-1000"] = false, ["occupancy-changed"] = true,
+            ["world-changed"] = true, ["position-changed"] = true, ["angle-changed"] = true,
+            ["center-changed"] = true, ["cell-size-changed"] = true, ["structure-changed"] = true,
+            ["piece-count-changed"] = true, ["member-added"] = true, ["member-removed"] = true,
+            ["identity-replaced"] = true, ["restored-input"] = false,
+            ["preparation-replaced"] = true, ["blocked-again"] = false
+        }
+        assert(type(data.groundRestoreGate) == "table" and #data.groundRestoreGate == 17, "落地失败重试样本不完整")
+        local retrySeen = {}
+        for _, sample in ipairs(data.groundRestoreGate) do
+            assert(retryExpected[sample.name] ~= nil and not retrySeen[sample.name], "落地重试样本未知或重复")
+            retrySeen[sample.name] = true
+            assert(sample.attempt == retryExpected[sample.name], "落地失败重复工作或变化后未立即重试：" .. sample.name)
+        end
+        local layerExpected = {floor = 6, ["floor-with-machine"] = 6, wall = 0, fiber = 5,
+            ["custom-equipment"] = 4, machine = 0, wire = 3, pipe = 2}
+        assert(type(assembly.layers) == "table" and #assembly.layers == 8, "落地地板、光纤、设备及机器覆盖层样本不完整")
+        seen = {}
+        for _, sample in ipairs(assembly.layers) do
+            assert(layerExpected[sample.name] ~= nil and not seen[sample.name], "落地占用层样本未知或重复")
+            seen[sample.name] = true
+            assert(sample.layer == layerExpected[sample.name], "落地占用层丢失船件显式层或机器覆盖层：" .. sample.name)
+        end
         local angleExpected = {
             [0] = 0, [44.999] = 0, [45] = 1, [45.001] = 1, [89.999] = 1, [135] = 2, [179.999] = 2,
             [225] = 3, [315] = 0, [359.999] = 0, [-44.999] = 0, [-45] = 3, [-135] = 2,
@@ -150,7 +194,29 @@ do
             assert(sample.negativeOriginX == value[1] - 10 and sample.negativeOriginY == value[2] - 20,
                 "负坐标落地原点丢失或多格建筑偏移错误")
         end
-        return "覆盖活动船体保持整体、普通地面无船体、空地阈值、八种投送能力、正负半角吸附及四朝向多格落点。"
+        assert(#assembly.origins == 4, "缺少载荷重心变化与负坐标半格落点样本")
+        for _, sample in ipairs(assembly.origins) do
+            local positive = sample.originX > 0
+            assert(sample.x == (positive and 10 or -11) and sample.y == (positive and 20 or -21),
+                "落地把重心当成格子原点，或负坐标吸附错误")
+        end
+        assert(#data.uprightAssemblies == 2, "缺少单船与对接整体的锁朝上样本")
+        for _, sample in ipairs(data.uprightAssemblies) do
+            assert(sample.groups == 1 and #sample.carried == sample.members, "对接组合丢失成员")
+            near(sample.refreshedAngle, 0, "组合刷新没有锁朝上")
+            near(sample.refreshedAngularVelocity, 0, "组合刷新保留了角速度")
+            near(sample.angle, 0, "提交碰撞结果后组合没有锁朝上")
+            near(sample.angularVelocity, 0, "提交碰撞结果后组合保留角速度")
+            for index, ship in ipairs(sample.carried) do
+                near(ship.angle, 0, "成员没有锁朝上")
+                near(ship.angularVelocity, 0, "成员保留角速度")
+                near(ship.x, (index - 1) * 4 + 5, "锁朝上破坏成员横向间距")
+                near(ship.y, (index - 1) * 2 - 3, "锁朝上破坏成员纵向间距")
+                near(ship.velocityX, 3, "锁朝上改变平移惯性")
+                near(ship.velocityY, -2, "锁朝上附加旋转速度")
+            end
+        end
+        return "覆盖空地与投送资格、格子原点和重心区分、单船及对接整体锁朝上与平移惯性。"
     end, "飞船装配整体、普通地面与落点吸附规则")
 end
 

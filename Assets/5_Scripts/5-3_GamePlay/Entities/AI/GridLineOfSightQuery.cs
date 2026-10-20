@@ -24,7 +24,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
     private Vector2Int observer;
     private bool hasCurrentChunk;
     private Vector2Int currentOrigin;
-    private ChunkRuntime currentChunk;
+    private ChunkTerrainData currentTerrain;
 
     internal int ChunkLookupCount { get; private set; }
     internal int CachedChunkCount => chunks.Count;
@@ -51,7 +51,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
         world = null;
         worldChunks = null;
         dimensionId = null;
-        currentChunk = null;
+        currentTerrain = null;
         hasCurrentChunk = false;
     }
 
@@ -65,9 +65,11 @@ internal sealed class GridLineOfSightQuery : IDisposable
         using var scope = LineMarker.Auto();
         if (world == null || world.Epoch != worldEpoch)
             return false;
+        // 每条射线只在进入区块时验证加载态，射线内逐格仍读取最新遮挡位。
+        hasCurrentChunk = false;
         Vector2Int target = NormalizeCell(new Vector2Int(
             Mathf.FloorToInt(targetPosition.x), Mathf.FloorToInt(targetPosition.y)));
-        if (!IsCellLoaded(observer) || !IsCellLoaded(target))
+        if (!IsCellLoaded(observer))
             return false;
         if (observer == target)
             return true;
@@ -80,6 +82,23 @@ internal sealed class GridLineOfSightQuery : IDisposable
         int dy = Mathf.Abs(delta.y);
         int stepX = delta.x >= 0 ? 1 : -1;
         int stepY = delta.y >= 0 ? 1 : -1;
+
+        // 水平或垂直射线没有切角，直接检查中途格，免去每格 Bresenham 分支。
+        if (dy == 0)
+        {
+            for (int nextX = x + stepX; nextX != unwrappedTarget.x; nextX += stepX)
+                if (IsSightBlockingCell(new Vector2Int(nextX, y)))
+                    return false;
+            return IsCellLoaded(target);
+        }
+        if (dx == 0)
+        {
+            for (int nextY = y + stepY; nextY != unwrappedTarget.y; nextY += stepY)
+                if (IsSightBlockingCell(new Vector2Int(x, nextY)))
+                    return false;
+            return IsCellLoaded(target);
+        }
+
         int error = dx - dy;
         while (x != unwrappedTarget.x || y != unwrappedTarget.y)
         {
@@ -105,15 +124,17 @@ internal sealed class GridLineOfSightQuery : IDisposable
                 IsSightBlockingCell(new Vector2Int(x, y)))
                 return false;
         }
-        return true;
+        // 射线已被遮挡时跳过远端加载查询，无遮挡才验证终点区块。
+        return IsCellLoaded(target);
     }
 
     private Vector2Int NormalizeCell(Vector2Int cell)
     {
-        if (topology.Contains(new int2(cell.x, cell.y)))
+        if (!topology.IsWrapped ||
+            (uint)(cell.x - topology.Min.x) < (uint)topology.Span.x &&
+            (uint)(cell.y - topology.Min.y) < (uint)topology.Span.y)
             return cell;
-        int2 normalized = topology.Normalize(new int2(cell.x, cell.y));
-        return new Vector2Int(normalized.x, normalized.y);
+        return new Vector2Int(topology.NormalizeX(cell.x), topology.NormalizeY(cell.y));
     }
 
     private bool IsCellLoaded(Vector2Int cell) => TryResolveTerrain(cell, out _, out _, out _);
@@ -131,8 +152,14 @@ internal sealed class GridLineOfSightQuery : IDisposable
 
     private bool TryResolveTerrain(Vector2Int cell, out ChunkTerrainData terrain, out int localX, out int localY)
     {
-        if (hasCurrentChunk && TryGetCell(currentChunk, currentOrigin, cell, out terrain, out localX, out localY))
-            return true;
+        if (hasCurrentChunk)
+        {
+            terrain = currentTerrain;
+            localX = cell.x - currentOrigin.x;
+            localY = cell.y - currentOrigin.y;
+            if ((uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height)
+                return true;
+        }
 
         Vector2Int origin = new(FloorOrigin(cell.x, chunkWidth), FloorOrigin(cell.y, chunkHeight));
         origin = NormalizeCell(origin);
@@ -149,7 +176,7 @@ internal sealed class GridLineOfSightQuery : IDisposable
             chunks[origin] = chunk;
         }
         currentOrigin = origin;
-        currentChunk = chunk;
+        currentTerrain = chunk.Terrain;
         hasCurrentChunk = true;
         return TryGetCell(chunk, origin, cell, out terrain, out localX, out localY);
     }

@@ -13,7 +13,7 @@ public static class GameplayTestShipProbe
 
     public static bool Supports(string operation) => operation is "ship_structure" or "ship_docking" or
         "ship_atmosphere" or "ship_mass" or "ship_propulsion" or "ship_contacts" or
-        "ship_snapshots" or "ship_engine_placement" or "ship_fuel" or "ship_optical" or "ship_collider_batch";
+        "ship_snapshots" or "ship_engine_placement" or "ship_fuel" or "ship_optical" or "ship_collider_batch" or "ground_atmosphere";
 
     // 样本不注册到正式会话，也不推进当前玩家、机器、存档或世界时钟。
     public static JObject Capture(string operation)
@@ -23,6 +23,7 @@ public static class GameplayTestShipProbe
             "ship_structure" => CaptureStructure(),
             "ship_docking" => CaptureDocking(),
             "ship_atmosphere" => CaptureAtmosphere(),
+            "ground_atmosphere" => CaptureGroundAtmosphere(),
             "ship_mass" => CaptureMass(),
             "ship_propulsion" => CapturePropulsion(),
             "ship_contacts" => CaptureContacts(),
@@ -363,6 +364,63 @@ public static class GameplayTestShipProbe
         ["carbonDioxidePressure"] = value.CarbonDioxidePartialPressureKPa,
         ["canBreathe"] = value.CanBreathe, ["temperature"] = value.TemperatureCelsius
     };
+
+    private static JObject CaptureGroundAtmosphere()
+    {
+        // 独立地面气密模型直接调用正式供压和所有权移交，不登记飞船或操作当前现场。
+        ShipState ground = CabinShip();
+        var config = new ShipPartConfiguration { PowerWatts = 60f, SupplyMolesPerSecond = 8f, TargetPressureKPa = 101.325f };
+        var inventory = new FluidInventory();
+        bool prepared = inventory.TryAdd(Gas(FluidIds.Oxygen, 2000m), 1000000d, .001d);
+        var source = new TankShipAtmosphereSource(inventory, 1000000d, .001d);
+        decimal before = inventory.GasMoles;
+        bool noPower = SpaceSession.SupplyGroundGas(ground, 2, 2, source, config, .5f, true, true, 0f, out _);
+        bool disabled = SpaceSession.SupplyGroundGas(ground, 2, 2, source, config, .5f, false, true, 1f, out _);
+        bool damaged = SpaceSession.SupplyGroundGas(ground, 2, 2, source, config, .5f, true, false, 1f, out _);
+        decimal afterRejected = inventory.GasMoles;
+        bool supplied = SpaceSession.SupplyGroundGas(ground, 2, 2, source, config, .5f, true, true, 1f, out decimal received);
+        decimal afterSupply = inventory.GasMoles;
+        ShipEnvironmentSnapshot first = ShipAtmosphereService.GetEnvironment(ground, 2, 2);
+        SpaceSession.SupplyGroundGas(ground, 2, 2, source, config, 1000f, true, true, 1f, out _);
+        ShipEnvironmentSnapshot full = ShipAtmosphereService.GetEnvironment(ground, 2, 2);
+        decimal fullMoles = ShipAtmosphereService.TotalMoles(ground.Compartments[0].Gas);
+        decimal beforeStop = inventory.GasMoles;
+        bool atTarget = SpaceSession.SupplyGroundGas(ground, 2, 2, source, config, 1f, true, true, 1f, out _);
+        decimal afterStop = inventory.GasMoles;
+        var saved = new SpaceSessionState();
+        saved.GroundAtmospheres.Add(new GroundAtmosphereState { WorldKey = "probe-ground", Geometry = ground });
+        SpaceSessionState restored = JsonConvert.DeserializeObject<SpaceSessionState>(JsonConvert.SerializeObject(saved));
+        ShipState loaded = restored.GroundAtmospheres[0].Geometry;
+        ShipEnvironmentSnapshot afterLoad = ShipAtmosphereService.GetEnvironment(loaded, 2, 2);
+        var flying = CabinShip();
+        flying.Compartments.Clear(); flying.EverEnclosedCells.Clear();
+        var cells = new HashSet<ShipCell>(loaded.Compartments[0].Cells);
+        SpaceSession.MoveRoomCells(loaded, flying, cell => new ShipCell(cell.X, cell.Y), cells);
+        ShipAtmosphereService.RebuildCompartments(flying);
+        decimal flyingMoles = ShipAtmosphereService.TotalMoles(flying.Compartments[0].Gas);
+        SpaceSession.MoveRoomCells(flying, loaded, cell => new ShipCell(cell.X, cell.Y), cells);
+        ShipAtmosphereService.RebuildCompartments(loaded);
+        decimal landedMoles = ShipAtmosphereService.TotalMoles(loaded.Compartments[0].Gas);
+        ShipPieceState door = loaded.Pieces.Find(piece => piece.Kind == ShipPieceKind.Door);
+        ShipStructureService.ApplyDamage(loaded, door.PieceId, door.Health, "地面供压破口样本");
+        ShipAtmosphereService.RebuildCompartments(loaded);
+        decimal beforeBreach = inventory.GasMoles;
+        bool openSupply = SpaceSession.SupplyGroundGas(loaded, 2, 2, source, config, 1f, true, true, 1f, out _);
+        return new JObject
+        {
+            ["prepared"] = prepared, ["activeShips"] = restored.Ships.Count,
+            ["noPowerAccepted"] = noPower, ["disabledAccepted"] = disabled, ["damagedAccepted"] = damaged,
+            ["rejectedConsumption"] = before - afterRejected, ["supplied"] = supplied, ["received"] = received,
+            ["sourceConsumption"] = afterRejected - afterSupply, ["first"] = Environment(first),
+            ["full"] = Environment(full), ["targetPressure"] = config.TargetPressureKPa,
+            ["atTargetAccepted"] = atTarget, ["afterTargetConsumption"] = beforeStop - afterStop,
+            ["afterLoad"] = Environment(afterLoad), ["fullMoles"] = fullMoles,
+            ["flyingMoles"] = flyingMoles, ["landedMoles"] = landedMoles,
+            ["sourceRoomsAfterReturn"] = flying.Compartments.Count,
+            ["breachedRooms"] = loaded.Compartments.Count, ["openSupplyAccepted"] = openSupply,
+            ["openConsumption"] = beforeBreach - inventory.GasMoles
+        };
+    }
 
     private static JObject CaptureAtmosphere()
     {

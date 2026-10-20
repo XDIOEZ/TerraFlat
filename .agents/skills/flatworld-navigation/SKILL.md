@@ -27,7 +27,10 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - 机器数据 Box 属于 `ChunkCollisionRenderer` 的物理表现，不改导航权威；初绑全量收集，普通 `MachineWorld.CellChanged` 按锚点增量更新、去除失效 Box，跨锚点占地回退全量扫描。校验 `navigation/machine_obstacle_dirty`。
 - 来源 ID 为 long：Unity 有符号 InstanceID 保留低域，数据来源占高 32 位域；后端交接先撤旧再登新。失败/未表现完成的块不注册，View 入池前 Unbind。
 - Ground 基础成本与 Liquid 成本独立；`WorldLiquidSystem.GetNavigationCost` 合成有限高成本，液体仍可走，抽干回到底材成本。平台 `TerrainSupportLayer.GetSurfaceCell` 遮断液体成本并使有效液深为 0。
+- 导航块注册、地块局部变更及已加载格只读共用 `ResolveRuntimeLiquidNavigation`，每格只调用一次 `GetSurfaceLevel`，同一结果派生水深和实际路径代价；规则 `navigation/liquid_cell_snapshot` 核验平台遮水、移除平台和抽干水体。
 - 区块注册、局部批量更新和卸载先冻结 `WorldTopologyDomain`，已规范化格使用 `GetEffectiveWalkableNormalized/SetCanonicalCell/RemoveCanonicalCell`，不逐格重新读取活动星球；外部 `SetCell/RemoveCell` 仍自行归一化。规则 `navigation/canonical_batch` 对照两套入口、失效版本、液深及环绕。
+- `WorldNavigationGrid` 的 16×16 导航块在最后一格移除后复用完整数组（最多缓存64块），`Clear` 释放缓存；动态阻挡另有独立归属，不随格数据池化清除。`navigation/chunk_block_pool` 检查流式重载、来源阻挡及缓存上限。
+- 16×16 块寻址用位掩码同时支持负数和整型边界，写入/移除时一次取块并带回旧格，避免重复查字典；`navigation/block_addressing` 对照边界、坐标回读、枚举、移除及读取基准。
 - 直线快捷路径和路点跳过都检查中间格成本不高于端点；可走格成本变化也使旧路径失效。总成本读 `WorldNavigationPathResult.TotalCost`。
 - `DestinationResult` 表达目的地结果，含 `RejectedByPathCost`；同目标四次无路径后保持 Failed，目标/网格修订/成功路径解除。新路径超限不覆盖已接受路径，旧路径走完后停续算，明显目标移动才再评估。
 - 追击上限随 RequestPath 进入共享搜索，前沿到上限只结束该请求；成功/拒绝/取消/失败清等待链，缓存只用已收敛起点成本。
@@ -52,4 +55,5 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - 最终逐小步经 Navigation.CanStep；圆心线段到阻挡 AABB 的扫掠处理身体净空，软液体成本仅按中心判定。Steering 不将中心推入更贵地形，飞行态不受地面水流推动。
 - 未知格阻挡，转弯净空不足先对齐格心；允许短暂视觉重叠，近战名额由战斗 Engagement Slot 控制。Native Unreachable 延迟重试与 GO 完整总代价拒绝是不同能力。
 - 连续 Steering/密度默认开启，GM 关闭时仍保留 Flow/地形扫掠，不启用单格预约。
+- GO 导航的局部避让每轮 Tick 冻结一次世界拓扑，九宫格桶、邻居最短距离和侧移探点复用该值；仍实时读取成员位置与地形。规则 `navigation/avoidance_topology` 覆盖负坐标、环绕接缝和九宫格。
 - `Mod_Mover_AI.StopMovement` 是明确取消目标和路径；模拟范围休眠仍用独立 Pause 语义保留恢复条件。AI 真实推进 Lua 用自有同阵营生物隔离玩家避让，并检查到达后结束和取消后无目标/路径。

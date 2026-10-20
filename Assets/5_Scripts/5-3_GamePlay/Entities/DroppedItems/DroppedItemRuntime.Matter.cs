@@ -61,7 +61,8 @@ internal sealed partial class DroppedItemRuntime
             if (TryTransitionMatter(id, data, ref body))
                 continue;
             using (MatterCombustionMarker.Auto())
-                changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact, out consumedAll);
+                changed |= ItemMatterRuntime.AdvanceCombustion(data, seconds, waterContact,
+                    ItemEnvironmentSources.CanSustainCombustion(matterWorldKey, body.Position), out consumedAll);
             if (changed)
                 presentation.Changed(id);
             if (consumedAll)

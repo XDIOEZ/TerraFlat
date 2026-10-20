@@ -1,5 +1,14 @@
 using UnityEngine;
 
+#region 燃烧环境替身
+public static class ItemEnvironmentSources
+{
+    public static bool CombustionSupported = true;
+    public static bool CanSustainCombustion(Item item) => CombustionSupported;
+    public static bool CanSustainCombustion(string worldKey, Vector2 position) => CombustionSupported;
+}
+#endregion
+
 #region Unity 与检查器替身
 
 namespace UnityEngine
@@ -380,6 +389,7 @@ namespace FlatWorld.DroppedItems
 
 internal sealed partial class DroppedItemRuntime
 {
+    private readonly string matterWorldKey = "probe:thermal";
     private readonly FlatWorld.DroppedItems.LightweightDroppedItemSimulation simulation = new();
     private readonly Dictionary<int, ItemData> payloads = new();
     private readonly Dictionary<int, object> visuals = new();

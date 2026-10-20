@@ -233,7 +233,16 @@ do
             assert(coast.before.engineOutput == 0 and coast.after.engineOutput == 0, "松键后引擎仍在出力：" .. label)
             assert(math.abs(coast.after.hydrogen - coast.before.hydrogen) < 0.000001 and
                 math.abs(coast.after.oxygen - coast.before.oxygen) < 0.000001, "松键后推进仍在耗油：" .. label)
-            assert(math.abs(ship.turned.angle - coast.after.angle) > 0.01, "正式旋转输入未转动船体：" .. label)
+            for _, snapshot in ipairs({ship.lifting, ship.cruising, ship.turnBefore, ship.turned, ship.reverseTurned,
+                ship.navigated, ship.beforeLanding, ship.descending}) do
+                assert(math.abs(snapshot.angle) < 0.000001 and math.abs(snapshot.angularVelocity) < 0.000001,
+                    "起降、正反转向或导航改变了船体朝上姿态：" .. label)
+            end
+            for _, snapshot in ipairs({ship.turned, ship.reverseTurned}) do
+                assert(snapshot.engineOutput == 0 and math.abs(snapshot.hydrogen - ship.turnBefore.hydrogen) < 0.000001 and
+                    math.abs(snapshot.oxygen - ship.turnBefore.oxygen) < 0.000001, "纯转向输入仍触发出力或耗油：" .. label)
+            end
+            assert(ship.turnPreservedNavigation, "无效转向输入取消了正式导航：" .. label)
             assert(ship.navigationAccepted and ship.navigationDistance <= ship.arrivalDistance, "正式导航未到点：" .. label)
             assert(magnitude(ship.navigated.velocity) <= ship.arrivalSpeed + 0.001, "到点后没有制动：" .. label)
             local crossing = ship.shipTransition
@@ -361,6 +370,10 @@ do
         assert(data.afterTime > data.beforeTime, "真实宇宙会话没有推进")
         assert(data.afterTime - data.beforeTime >= 3 - 0.000001, "船体接触采样前没有完成三秒真实模拟")
         local left, right = data.afterLeft, data.afterRight
+        for _, ship in ipairs({left, right, data.afterRemote}) do
+            assert(math.abs(ship.angle) < 0.000001 and math.abs(ship.angularVelocity) < 0.000001,
+                "原生碰撞后船体没有保持朝上")
+        end
         assert(left.id == data.beforeLeft.id and right.id == data.beforeRight.id, "接触改变了船体身份")
         assert(left.mass > 0 and right.mass > 0, "接触夹具没有真实质量")
         local beforeMomentum = data.beforeLeft.mass * data.beforeLeft.velocity.x + data.beforeRight.mass * data.beforeRight.velocity.x

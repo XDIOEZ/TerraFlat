@@ -40,18 +40,25 @@ public static class ShadowFootprintResolver
             LocalBounds.Add(sprite, local);
         }
 
-        Bounds world = default;
-        for (int corner = 0; corner < 4; corner++)
-        {
-            Vector3 point = new Vector3((corner & 1) == 0 ? local.min.x : local.max.x,
-                corner < 2 ? local.min.y : local.max.y, 0f);
-            if (flipX) point.x = -point.x;
-            if (flipY) point.y = -point.y;
-            point = localToWorld.MultiplyPoint3x4(point);
-            if (corner == 0) world = new Bounds(point, Vector3.zero);
-            else world.Encapsulate(point);
-        }
-        return world;
+        return TransformVisibleBounds(local, localToWorld, flipX, flipY);
+    }
+
+    /// <summary>二维矩形按仿射矩阵解析中心与半轴，避免逐帧变换四角并扩张包围盒。</summary>
+    internal static Bounds TransformVisibleBounds(Bounds local, Matrix4x4 localToWorld,
+        bool flipX = false, bool flipY = false)
+    {
+        Vector3 center = local.center;
+        if (flipX) center.x = -center.x;
+        if (flipY) center.y = -center.y;
+        center.z = 0f;
+        center = localToWorld.MultiplyPoint3x4(center);
+
+        Vector3 half = local.extents;
+        Vector3 worldHalf = new(
+            Mathf.Abs(localToWorld.m00) * half.x + Mathf.Abs(localToWorld.m01) * half.y,
+            Mathf.Abs(localToWorld.m10) * half.x + Mathf.Abs(localToWorld.m11) * half.y,
+            Mathf.Abs(localToWorld.m20) * half.x + Mathf.Abs(localToWorld.m21) * half.y);
+        return new Bounds(center, worldHalf * 2f);
     }
 
     /// <summary>优先使用 Sprite 导入轮廓，避免不可读纹理退回透明整帧。</summary>

@@ -3,6 +3,9 @@ using FlatWorld.Spaceflight;
 public sealed class ShipDeviceLogic : MachineLogic
 {
     #region 飞船设备与整船规则协作
+    private ShipPartConfiguration groundConfiguration;
+    private GameRes configurationResources;
+    private ulong configurationRevision;
     public ShipDeviceLogic(MachineEntity entity) : base(entity) { }
     public override string Status
     {
@@ -16,6 +19,20 @@ public sealed class ShipDeviceLogic : MachineLogic
         }
     }
     public override void Capture() { }
+    public override void Tick(float seconds)
+    {
+        // 未装船设备由机器世界正常调度，船上设备继续由整船环境循环推进。
+        if (Entity.ScopeKey?.StartsWith("ship:", System.StringComparison.Ordinal) == true) return;
+        GameRes resources = GameRes.ExistingInstance;
+        ulong revision = resources != null ? resources.ItemDefinitionRevision : 0;
+        if (!ReferenceEquals(configurationResources, resources) || configurationRevision != revision || groundConfiguration == null)
+        {
+            groundConfiguration = SpaceSession.ResolvePartConfiguration(Entity.Snapshot);
+            configurationResources = resources; configurationRevision = revision;
+        }
+        if (groundConfiguration?.SupplyMolesPerSecond > 0f)
+            SpaceSession.Current?.SupplyGroundAtmosphere(Entity, groundConfiguration, seconds);
+    }
     public override bool Execute(string operation, string argument, Player actor)
     {
         if (Entity.ScopeKey?.StartsWith("ship:", System.StringComparison.Ordinal) != true)

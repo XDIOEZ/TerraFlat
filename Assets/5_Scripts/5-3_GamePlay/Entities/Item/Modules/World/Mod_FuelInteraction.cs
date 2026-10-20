@@ -161,6 +161,11 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
 
         if (!combustion.IsBurning && ignitionSource)
         {
+            if (!combustion.CanCombustNow())
+            {
+                ItemActionFeedback.Show(actor, "氧气不足 5%，无法点火。");
+                return false;
+            }
             float starterFuel = 0f;
             if (!fuel.HasFuel())
             {

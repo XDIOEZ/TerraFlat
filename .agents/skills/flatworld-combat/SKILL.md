@@ -69,6 +69,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - Hurt(IDamageSender) 适配同一提交核心；Hurt(CombatDamageContext) 使用明确 Source/Credit，旧 Attacker 为空不等于无来源。专属 incoming rule 未提供纯实现时显式拒绝。
 - Native 阵营先校验字符/UTF-8 容量再解码，坏值返回 -1、不耗冷却并限频诊断，不截断或中断整轮。
+- `FactionRelationService` 以不区分顺序和大小写的值类型阵营对查询外部关系，避免高频查询拼接字符串；空阵营、同阵营、Neutral 默认与 MOD 覆盖优先级不变，回归 `combat/faction_relation_lookup`。
 - Mod_ContactDamage/ContactDamageRuntime 共用真实身体查询与完整身份限频；资源定义由 NaturalEntityEcsProfileCompiler 编译。空中目标/Client 不结算，移除/死亡/卸载/停用撤来源，冷却不保存。
 - Engagement Slot 只限制目标级同时接敌，起手取资格，已进入动作沿原时序；最终距离/方向/LOS/阵营仍独立判定。
 - 同目标命中按时间/攻击键串行，不同目标并行；死亡先锁存、尸体时间队列批回收、掉落按预算消费。原生后端尚未迁移完整投射物扫掠/附着、技能和生态掉落修饰。

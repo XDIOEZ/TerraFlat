@@ -91,8 +91,9 @@ public static class PlayerCarryCapacityUtility
         float totalVolume = 0f;
         foreach (Inventory_Data data in inventories)
         {
-            totalWeight += data.CurrentCarryWeight;
-            totalVolume += data.CurrentCarryVolume;
+            data.GetCarryUsage(out float weight, out float volume);
+            totalWeight += weight;
+            totalVolume += volume;
         }
 
         snapshot = new PlayerCarryCapacitySnapshot(bagData, totalWeight, totalVolume);
@@ -194,6 +195,14 @@ public static class PlayerCarryCapacityUtility
         Mod_BuffManager buffManager = player.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         if (buffManager == null)
             return;
+
+        // 创造模式不可能超重，跳过随身库存全量计重。
+        if (player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag)
+                ?.GetDefaultTargetInventory()?.Data?.HasUnlimitedCarryCapacity == true)
+        {
+            buffManager.RemoveSourceBuff(OverweightBuffSource);
+            return;
+        }
 
         if (TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot) &&
             snapshot.IsOverNormalWeight)

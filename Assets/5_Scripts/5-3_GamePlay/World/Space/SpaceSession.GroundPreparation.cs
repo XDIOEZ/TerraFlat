@@ -15,6 +15,7 @@ namespace FlatWorld.Spaceflight
         private const float GroundPreparationTimeoutSeconds = 30f;
         private const double GroundPreparationHoldHeight = .5d;
         private static readonly ProfilerMarker GroundPreparationMarker = new("SpaceSession.Late.GroundPreparation");
+        private static readonly ProfilerMarker GroundCaptureMarker = new("SpaceSession.Late.GroundCapture");
         private static readonly ProfilerMarker GroundCommitMarker = new("SpaceSession.Late.GroundCommit");
         private readonly Dictionary<string, GroundShipPreparation> groundPreparations = new(StringComparer.Ordinal);
         private readonly Dictionary<string, JObject> groundPreparationHistory = new(StringComparer.Ordinal);
@@ -45,6 +46,7 @@ namespace FlatWorld.Spaceflight
         private sealed class GroundShipPreparation : IDisposable
         {
             public readonly ShipState Ship;
+            public readonly ShipGroundRestoreGate RestoreGate = new();
             public readonly string World;
             public readonly GameRes Resources;
             public readonly ulong DefinitionRevision, StructureRevision;
@@ -236,7 +238,7 @@ namespace FlatWorld.Spaceflight
             foreach (GroundShipPreparation preparation in groundPreparations.Values) preparation.Dispose();
             groundPreparations.Clear(); groundPreparationHistory.Clear(); groundPreparationHistoryOrder.Clear();
             groundPreparationWork.Clear(); groundPreparationRemoval.Clear(); groundPreparationNext = 0;
-            groundRestoreShips.Clear(); groundRestoreHandled.Clear(); lastGroundRestoreError = null;
+            groundRestoreShips.Clear(); groundRestoreMembers.Clear(); groundRestoreHandled.Clear(); lastGroundRestoreError = null;
         }
         #endregion
 

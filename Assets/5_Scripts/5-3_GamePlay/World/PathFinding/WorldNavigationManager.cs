@@ -281,11 +281,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                     bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
                                     (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
                     walkable = BuildingOccupancyRegistry.GetEffectiveWalkableNormalized(worldCell, walkable);
-                    uint penalty = walkable ? (uint)Mathf.Max(1, terrainCell.NavigationCost) : 0u;
-                    bool water = WorldLiquidSystem.GetSurfaceDepth(terrain, x, y) > 0f;
-                    if (walkable) penalty = WorldLiquidSystem.GetNavigationCost(terrain, x, y, penalty);
-                    grid.SetCanonicalCell(worldCell, penalty, walkable, water,
-                        ResolveRuntimeLiquidDepth(terrain, x, y, water));
+                    uint penalty = ResolveRuntimeLiquidNavigation(terrain, x, y,
+                        (uint)Mathf.Max(1, terrainCell.NavigationCost), walkable, out bool water, out float depth);
+                    grid.SetCanonicalCell(worldCell, penalty, walkable, water, depth);
                 }
             }
             runtimeChunks[chunk.Address] = new RuntimeChunkRegistration(chunk,
@@ -370,11 +368,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         bool walkable = (surface.Flags & TerrainCellFlags.Walkable) != 0 &&
                         (surface.Flags & TerrainCellFlags.Blocking) == 0;
         walkable = BuildingOccupancyRegistry.GetEffectiveWalkableNormalized(worldCell, walkable);
-        bool water = WorldLiquidSystem.GetSurfaceDepth(terrain, localX, localY) > 0f;
-        uint penalty = walkable ? (uint)Mathf.Max(1, surface.NavigationCost) : 0u;
-        if (walkable) penalty = WorldLiquidSystem.GetNavigationCost(terrain, localX, localY, penalty);
-        grid.SetCanonicalCell(worldCell, penalty, walkable, water,
-            ResolveRuntimeLiquidDepth(terrain, localX, localY, water));
+        uint penalty = ResolveRuntimeLiquidNavigation(terrain, localX, localY,
+            (uint)Mathf.Max(1, surface.NavigationCost), walkable, out bool water, out float depth);
+        grid.SetCanonicalCell(worldCell, penalty, walkable, water, depth);
     }
 
     /// <summary>同批使用冻结拓扑，仅跨世界接缝时对整型格执行回绕。</summary>
@@ -737,23 +733,23 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         TerrainCell terrainCell = TerrainSupportLayer.GetSurfaceCell(sourceChunk.Terrain, localX, localY);
         bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
                         (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
-        bool water = WorldLiquidSystem.GetSurfaceDepth(sourceChunk.Terrain, localX, localY) > 0f;
+        uint penalty = ResolveRuntimeLiquidNavigation(sourceChunk.Terrain, localX, localY,
+            (uint)Mathf.Max(1, terrainCell.NavigationCost), walkable, out bool water, out float depth);
         cell = new WorldNavigationCell(
-            walkable ? WorldLiquidSystem.GetNavigationCost(sourceChunk.Terrain, localX, localY,
-                (uint)Mathf.Max(1, terrainCell.NavigationCost)) : 0u,
+            penalty,
             BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable),
-            water,
-            ResolveRuntimeLiquidDepth(sourceChunk.Terrain, localX, localY, water));
+            water, depth);
         return true;
     }
 
-    /// <summary>读取有效表面的真实水深；水上平台已经由 TerrainSupportLayer 清除 Water 标记。</summary>
-    private static float ResolveRuntimeLiquidDepth(ChunkTerrainData terrain, int localX, int localY, bool water)
+    /// <summary>同格水位只读取一次；平台遮水、有限成本和深度沿用同一权威层。</summary>
+    internal static uint ResolveRuntimeLiquidNavigation(ChunkTerrainData terrain, int localX, int localY,
+        uint groundCost, bool walkable, out bool water, out float depth)
     {
-        if (!water || terrain == null || terrain.IsDisposed)
-            return 0f;
-
-        return terrain.GetLiquidDepth(localX, localY);
+        int surfaceLevel = WorldLiquidSystem.GetSurfaceLevel(terrain, localX, localY);
+        water = surfaceLevel > 0;
+        depth = LiquidCellValue.ToNormalizedDepth(surfaceLevel);
+        return walkable ? WorldLiquidSystem.GetNavigationCost(terrain, localX, localY, groundCost, surfaceLevel) : 0u;
     }
 
     #endregion

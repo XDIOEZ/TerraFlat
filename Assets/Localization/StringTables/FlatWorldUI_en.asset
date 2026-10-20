@@ -3007,7 +3007,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740096
-    m_Localized: "help: command help\nstatus: current ship status\nclear: clear feedback\ndrive / exit: enter / leave the console\nignite: ignite / shut down engines\nnavigate X Y: navigate using view coordinates\npick: click the view to pick a navigation point\ncancel: cancel navigation\nland: begin landing on a nearby body\ndock / undock: confirm docking / disconnect a port\npressure kPa: set target supply pressure\nWASD applies thrust; release to keep drifting and reverse to brake. Q/E turns the ship; release to stop turning. Shutdown, power loss, or no fuel preserves translational momentum. Bodies do not pull in or stop ships; land safely with fuel, or fall and take impact damage without fuel."
+    m_Localized: "help: command help\nstatus: current ship status\nclear: clear feedback\ndrive / exit: enter / leave the console\nignite: ignite / shut down engines\nnavigate X Y: navigate using view coordinates\npick: click the view to pick a navigation point\ncancel: cancel navigation\nland: begin landing on a nearby body\ndock / undock: confirm docking / disconnect a port\npressure kPa: set target supply pressure\nWASD applies thrust; release to keep drifting and reverse to brake. The ship always faces up and does not rotate. Shutdown, power loss, or no fuel stops propulsion. Gravity attracts the ship within a body's range; atmosphere gradually slows it, and inertial drift resumes outside that range. Landing uses fuel for a safe touchdown; without fuel, the ship falls and takes impact damage."
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740097
@@ -3015,7 +3015,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740098
-    m_Localized: "At the controls. WASD accelerates, Q/E rotates, Esc leaves the console."
+    m_Localized: "At the controls. WASD moves the ship using available engines and fuel. The ship always faces up. Esc leaves the console; the actual ship position determines the landing site during descent."
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740099
@@ -5098,6 +5098,10 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 8452394532769792
     m_Localized: Failed to load save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000010
+    m_Localized: "Descent controls: WASD moves the ship using power, available engines, and fuel. The ship always faces up; its actual position determines the landing site."
     m_Metadata:
       m_Items: []
   - m_Id: 17923400000000001

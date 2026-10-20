@@ -9,7 +9,8 @@ public sealed class InventoryModuleDataScheduler : IDisposable
 {
     #region 活动集合与实例时钟
 
-    private sealed class Entry
+    // 活动条目只保存槽位及规则引用，使用值类型避免大库存每条规则额外分配对象。
+    private struct Entry
     {
         public ItemData ItemData;
         public ModuleData ModuleData;
@@ -211,8 +212,9 @@ public sealed class InventoryModuleDataScheduler : IDisposable
             Entry[] snapshot = entries;
             uint currentGeneration = generation;
             double now = Time.timeAsDouble;
-            foreach (Entry entry in snapshot)
+            for (int index = 0; index < snapshot.Length; index++)
             {
+                ref readonly Entry entry = ref snapshot[index];
                 if (generation != currentGeneration || !ReferenceEquals(owner.Data, data))
                     break;
                 if (data?.itemSlots == null || (uint)entry.SlotIndex >= (uint)data.itemSlots.Count ||

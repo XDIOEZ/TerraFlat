@@ -25,6 +25,7 @@ public sealed partial class GameplayTestSpaceScenario
     private JObject GroundBuildingSnapshot(ICollection<int> ids)
     {
         string world = SceneManager.GetActiveScene().name;
+        using var worldScope = MachineWorld.UseScope(world);
         List<ShipGroundBuildingStore.Entry> entries = ShipGroundBuildingStore.Collect(world);
         var selected = new JArray();
         int machineCount = 0, itemCount = 0;
@@ -34,6 +35,11 @@ public sealed partial class GameplayTestSpaceScenario
             if (!ids.Contains(entry.Guid)) continue;
             ItemData data = entry.Capture();
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
+            Mod_Building runtimeBuilding = entry.Item?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+            int placementLayer = entry.Machine?.Definition.Layer ?? BuildingOccupancyRegistry.GetPlacementLayer(runtimeBuilding);
+            bool sameLayerRejected = false;
+            IBuildingPlacementExtension extension = BuildingPlacementLifecycle.GetExtension(entry.Item);
+            if (extension != null) sameLayerRejected = !extension.ValidatePlacement(entry.Cell, out _);
             selected.Add(new JObject
             {
                 ["id"] = entry.Guid.ToString(CultureInfo.InvariantCulture), ["guid"] = entry.Guid,
@@ -43,6 +49,9 @@ public sealed partial class GameplayTestSpaceScenario
                     building.State is BuildingState.Installed or BuildingState.Damaged,
                 ["cell"] = new JObject { ["x"] = entry.Cell.x, ["y"] = entry.Cell.y },
                 ["quarterTurns"] = entry.QuarterTurns, ["snapshotGuid"] = data.Guid,
+                ["placementLayer"] = placementLayer,
+                ["placementOccupied"] = BuildingOccupancyRegistry.IsOccupied(entry.Cell, layer: placementLayer),
+                ["sameLayerPlacementRejected"] = sameLayerRejected,
                 ["specialData"] = data.ItemSpecialData,
                 ["itemInstanceId"] = entry.Item != null ? entry.Item.GetInstanceID() : 0,
                 ["health"] = entry.Machine?.State?.Hp ?? entry.Item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp,

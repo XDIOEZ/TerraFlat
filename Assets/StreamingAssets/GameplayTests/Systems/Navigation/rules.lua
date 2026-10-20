@@ -40,9 +40,66 @@ test.system("navigation", "canonical_batch", {}, function(data)
         "批量拓扑归一化改变了环绕接缝或无限世界坐标")
 end, "区块导航批量坐标归一化与旧接口严格等价")
 
+test.system("navigation", "liquid_cell_snapshot", {}, function(data)
+    assert(data.wet and data.covered and data.dry and data.blockedWet,
+        "导航共用单格水位后改变了真实水面、平台遮水或不可走格水深")
+    assert(data.uncovered and data.drained,
+        "拆除平台或抽干水体后，导航使用了过期水位/地形代价")
+    assert(data.iterations == 65536 and data.sameOutputs,
+        "导航批量读取与原水位/水深/代价接口结果不一致")
+end, "导航格水位单次采样与液体权威结果等价")
+
+test.system("navigation", "chunk_block_pool", {}, function(data)
+    assert(data.originalWater and data.emptyAfterUnload and data.reusedClean and data.clearReset,
+        "导航块卸载复用后遗留旧的地形、水深、代价或世界格")
+    assert(data.initiallyBlocked and data.blockerPreserved and data.blockerReleased,
+        "导航块回收影响动态阻挡源的登记与解除")
+    assert(data.rounds == 64 and data.createdAtWarmup == 1 and data.createdAfterRounds == 1,
+        "预热后64轮不同区块装卸仍构造新的导航块数组")
+    assert(data.poolBounded and data.worldResetReleasesPool and data.resetRequiresFreshBlock,
+        "导航缓存超过上限，或切换世界后没有释放旧数组")
+end, "导航区块复用零分配、完整清理及动态阻挡隔离")
+
+test.system("navigation", "block_addressing", {}, function(data)
+    assert(data.independent and data.enumerated and data.removed,
+        "16×16导航区块在负坐标、边界或整数极值下串格、漏格或错误移除")
+    assert(data.lookups == 524288 and data.checksum == 67897344,
+        "导航批量读取的真实格状态或代价与先前语义不一致")
+end, "16格导航区块负坐标索引与高频读取性能")
+
 test.system("navigation", "machine_obstacle_dirty", {}, function(data)
     assert(data.unchanged and data.removedOnlyOne and data.movedNotRemoved,
         "机器碰撞增量索引误删未改变的设备，或迁移锚点后仍删除已移动设备")
     assert(data.neighborRemoved and data.allRemoved,
         "单格变化误清邻近机器，或机器拆除后遗留旧碰撞")
 end, "机器单格碰撞重建只撤销真正失效的锚点")
+
+test.system("navigation", "avoidance_topology", {}, function(data)
+    local function bucket(actual, x, y)
+        assert(#actual == 2 and actual[1] == x and actual[2] == y,
+            "局部避让桶的规范坐标或负数向下取整错误")
+    end
+    bucket(data.unwrappedNegative, -2, -1)
+    bucket(data.wrappedSeam, 7, 0)
+    bucket(data.equivalentImage, 7, 0)
+    bucket(data.wrappedCrossing, -8, 0)
+    bucket(data.unwrappedCrossing, 8, 0)
+    bucket(data.nonSquareWrapped, -6, -3)
+    assert(#data.neighbours == 9, "局部避让漏掉九宫格候选桶")
+    for index, actual in ipairs(data.neighbours) do
+        local x = ({6, 7, -8})[((index - 1) % 3) + 1]
+        local y = math.floor((index - 1) / 3) - 1
+        bucket(actual, x, y)
+    end
+    assert(#data.seamDelta == 2 and data.seamDelta[1] == 1 and data.seamDelta[2] == 0,
+        "环绕接缝的相邻 AI 距离没有采用最短路径")
+end, "局部避让冻结拓扑后保留无限世界、环绕及九宫格桶边界")
+
+test.system("navigation", "topology_bounds_cache", {}, function(data)
+    assert(data.initial and data.reused and data.radiusRefresh and data.chunkRefresh,
+        "世界边界缓存没有复用稳定配置，或修改半径/区块尺寸后继续使用旧结果")
+    assert(data.invalidCached and data.recovered and data.infinite and data.wrapped,
+        "非法区块尺寸、无限世界或重新启用环绕时缓存未正确失效")
+    assert(data.differentPlanet and data.missingPlanet and data.returned and data.reset,
+        "切换星球、清空存档或恢复世界后沿用了错误的拓扑缓存")
+end, "活动星球拓扑边界缓存复用与动态配置失效")

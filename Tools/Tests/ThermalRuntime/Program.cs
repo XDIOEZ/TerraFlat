@@ -265,18 +265,26 @@ internal static class Program
         GameRes.ExistingInstance.Definitions["burnable"] = new RuntimeItemDefinition { Matter = matter };
         var burning = Material(99f, "burnable");
         Expect(!WorldItemMatterRules.CanIgnite(burning), "Below ignition temperature must remain unlit");
-        ItemMatterRuntime.AdvanceCombustion(burning, 1f, false, out bool consumed);
+        ItemMatterRuntime.AdvanceCombustion(burning, 1f, false, true, out bool consumed);
         Expect(!burning.MatterState.IsBurning && !consumed, "Ambient change must not bypass ignition threshold");
         burning.MatterState.TemperatureCelsius = 100f;
         Expect(WorldItemMatterRules.CanIgnite(burning), "Ignition boundary must remain inclusive");
-        ItemMatterRuntime.AdvanceCombustion(burning, 1f, false, out consumed);
+        ItemMatterRuntime.AdvanceCombustion(burning, 1f, false, true, out consumed);
         Expect(burning.MatterState.IsBurning && !consumed, "Material at ignition temperature must burn");
-        ItemMatterRuntime.AdvanceCombustion(burning, 11f, false, out consumed);
+        ItemMatterRuntime.AdvanceCombustion(burning, 11f, false, true, out consumed);
         Near(burning.Stack.Amount, 4f, "Normal combustion must consume one unit after 12 seconds");
+        ItemMatterRuntime.AdvanceCombustion(burning, 20f, false, false, out consumed);
+        Expect(!burning.MatterState.IsBurning && burning.MatterState.CombustionElapsedSeconds == 0f && !consumed,
+            "Insufficient oxygen must extinguish material without consuming it");
+        Near(burning.Stack.Amount, 4f, "Oxygen loss must preserve material");
+        ItemMatterRuntime.AdvanceCombustion(burning, 20f, false, false, out consumed);
+        Expect(!burning.MatterState.IsBurning && !consumed, "High temperature must not ignite material without oxygen");
+        ItemMatterRuntime.AdvanceCombustion(burning, 1f, false, true, out consumed);
+        Expect(burning.MatterState.IsBurning, "Hot material may reignite once oxygen returns");
         WorldLiquidSourceResolver.Settings = new WorldLiquidSettings { Temperature = 20f, WaterContact = true };
         WorldItemMatterRules.Advance(burning, default, 1f, true, out water);
         Expect(water, "Actual water contact must be reported to combustion");
-        ItemMatterRuntime.AdvanceCombustion(burning, 1f, water, out consumed);
+        ItemMatterRuntime.AdvanceCombustion(burning, 1f, water, true, out consumed);
         Expect(!burning.MatterState.IsBurning && burning.MatterState.CombustionElapsedSeconds == 0f && !consumed,
             "Water must extinguish material and clear combustion time");
         Near(burning.Stack.Amount, 4f, "Extinguishing must not consume material");

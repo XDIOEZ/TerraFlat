@@ -15,6 +15,22 @@ local function finite_sample(sample)
     for _, energy in ipairs(sample.sourceJoules) do near(energy, 0, "无限电源开始储存或消耗电量") end
 end
 
+test.system("electrical", "line_connections", {}, function(data)
+    assert(#data.masks == 16, "电线连接的16种四邻样本不完整")
+    for index, mask in ipairs(data.masks) do
+        assert(mask == index - 1, "电线单点/直线/转弯/分叉掩码错误：" .. (index - 1))
+    end
+    assert(data.beforeRemoval == 2 and data.afterRemoval == 0 and data.afterRepair == 2,
+        "拆线或重新铺线后连接掩码没有重建")
+    assert(data.independentGraphMask == 1, "独立电网混入了另一张图的同坐标电线")
+    assert(#data.endpoints == 4, "缺少四向设备端口样本")
+    for index, expected in ipairs({2, 1, 8, 4}) do
+        assert(data.endpoints[index].facing == expected and data.endpoints[index].away == 0,
+            "设备旋转后的真实方向端口没有控制电线连接：" .. index)
+    end
+    assert(data.colocatedMask == 0, "同格设备端口凭空画出四向连接")
+end, "电线16种连接、方向端口、拆建刷新与独立拓扑隔离")
+
 test.system("electrical", "battery_commit", {}, function(data)
     near(data.previewEnergy, 100, "反复探算扣除了真实电池储能")
     assert(data.previewNotifications == 0, "电池探算发布了储能变化")

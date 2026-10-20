@@ -121,6 +121,7 @@ public partial class ItemMgr
             RegisterRuntimeItem(candidate, replacement.IDName, out transfer.CandidateToken, transfer);
             AttachReplacementOwnership(transfer, candidate);
             candidate.gameObject.SetActive(transfer.Active);
+            if (transfer.Active) candidate.FlushPendingInitialAnimatorState();
             EnsureSpawnRegistrationCurrent(candidate, transfer.ReplacementData, transfer.CandidateToken);
             candidate.Load();
             EnsureReplacementCandidateCurrent(transfer);

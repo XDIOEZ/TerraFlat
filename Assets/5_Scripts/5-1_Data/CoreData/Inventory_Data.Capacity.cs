@@ -8,6 +8,11 @@ public partial class Inventory_Data
 {
     #region 动态槽位容量
 
+    [System.NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private uint lastMaintainedSlotRevision;
+    [System.NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private bool hasMaintainedDynamicSlots;
+
     /// <summary>普通库存使用整型最大值作为无限堆叠上限，重量和体积限制独立生效。</summary>
     public const float DefaultSlotVolume = int.MaxValue;
 
@@ -143,6 +148,7 @@ public partial class Inventory_Data
     /// <summary>启用或关闭自动扩容；关闭时保留现有槽位与物品。</summary>
     public void SetUnlimitedSlots(bool enabled)
     {
+        hasMaintainedDynamicSlots = false;
         HasUnlimitedSlots = enabled;
         EnsureSpareSlot();
     }
@@ -190,31 +196,44 @@ public partial class Inventory_Data
     /// <summary>
     /// 创造主背包自检：按空余槽位阈值扩容，多余空槽收缩到 18 格基线并保留 3 个空槽。
     /// </summary>
-    public void MaintainDynamicSlotCount()
+    public bool MaintainDynamicSlotCount()
     {
-        EnsureSpareSlot();
         if (!HasUnlimitedSlots || !UsesPlayerBagDynamicSlotPolicy || itemSlots == null)
-            return;
+        {
+            hasMaintainedDynamicSlots = false;
+            EnsureSpareSlot();
+            return false;
+        }
+
+        // 只在槽位结构或物品引用变化后核验空槽，稳定帧不再扫描全部创造物品。
+        uint revision = ContentStructureRevision;
+        if (hasMaintainedDynamicSlots && lastMaintainedSlotRevision == revision)
+            return false;
+        EnsureSpareSlot();
 
         int occupiedSlotCount = itemSlots.Count - CountEmptySlots();
         int targetSlotCount = Mathf.Max(
             DefaultPlayerBagSlotCount,
             occupiedSlotCount + PlayerBagTargetFreeSlotCount);
         int removeCount = itemSlots.Count - targetSlotCount;
-        if (removeCount <= 0)
-            return;
-
-        for (int i = itemSlots.Count - 1; i >= 0 && removeCount > 0; i--)
+        if (removeCount > 0)
         {
-            ItemSlot slot = itemSlots[i];
-            if (slot != null && slot.itemData != null)
-                continue;
+            for (int i = itemSlots.Count - 1; i >= 0 && removeCount > 0; i--)
+            {
+                ItemSlot slot = itemSlots[i];
+                if (slot != null && slot.itemData != null)
+                    continue;
 
-            itemSlots.RemoveAt(i);
-            removeCount--;
+                itemSlots.RemoveAt(i);
+                removeCount--;
+            }
+
+            ReindexDynamicSlots();
         }
 
-        ReindexDynamicSlots();
+        lastMaintainedSlotRevision = ContentStructureRevision;
+        hasMaintainedDynamicSlots = true;
+        return true;
     }
 
     /// <summary>统计当前所有空余槽位；玩家背包扩容依据总空余量，而不是最后一格是否被占用。</summary>
@@ -257,11 +276,10 @@ public partial class Inventory_Data
     /// <summary>按当前整包容量计算这次最多还能加入多少件指定物品。</summary>
     public float GetCapacityLimitedAmount(ItemData itemData, float requestedAmount)
     {
-        return GetCapacityLimitedAmount(
-            itemData,
-            requestedAmount,
-            CalculateCarryWeight(),
-            CalculateCarryVolume());
+        if (!HasCarryCapacity || HasUnlimitedCarryCapacity)
+            return GetCapacityLimitedAmount(itemData, requestedAmount, 0f, 0f);
+        GetCarryUsage(out float weight, out float volume);
+        return GetCapacityLimitedAmount(itemData, requestedAmount, weight, volume);
     }
 
     /// <summary>给事务模拟层使用的纯计算版本；current* 可以来自尚未提交的工作快照。</summary>
@@ -304,10 +322,29 @@ public partial class Inventory_Data
         if (!HasCarryCapacity || HasUnlimitedCarryCapacity)
             return true;
 
-        float weight = CalculateCarryWeight() - GetWeight(removing) + GetWeight(adding);
-        float volume = CalculateCarryVolume() - GetVolume(removing) + GetVolume(adding);
+        GetCarryUsage(out float currentWeight, out float currentVolume);
+        float weight = currentWeight - GetWeight(removing) + GetWeight(adding);
+        float volume = currentVolume - GetVolume(removing) + GetVolume(adding);
         return weight <= MaxAllowedCarryWeight + 0.0001f &&
                volume <= MaxCarryVolume + 0.0001f;
+    }
+
+    /// <summary>一次遍历同时获取重量和体积，保持每次读取都是最新的槽位数据。</summary>
+    public void GetCarryUsage(out float weight, out float volume)
+    {
+        weight = 0f;
+        volume = 0f;
+        if (itemSlots == null)
+            return;
+
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            ItemStack stack = itemSlots[i]?.itemData?.Stack;
+            if (stack == null)
+                continue;
+            weight += Mathf.Max(0f, stack.CurrentWeight);
+            volume += Mathf.Max(0f, stack.CurrentVolume);
+        }
     }
 
     private float CalculateCarryWeight()

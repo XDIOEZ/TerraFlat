@@ -1,3 +1,14 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// UI 根与场景归属：EnsurePanelRootExists() / GetScenePanelRoot() / GetPanelRootFor()
+// 面板查询：GetPanel() / TryGetPanel() / GetAllPanelsOfType()
+// 显示与取消：ShowPanel() / HidePanel() / TogglePanel() / TryCloseTopmostCancelPanel()
+// 手柄与输入阻断：ConstrainSelectionToTopmostGamepadPanel() / HasOpenGameplayInputBlockingPanel()
+// 手持物世界丢弃：CanDropHeldItemInWorld() / CanDropHeldItemAtScreenPosition() / EnsurePanelQueryCache()
+// 创建与销毁：CreatePanelFromGameObject() / CreatePersistentPanelFromGameObject() / DestroyPanel()
+// 资源重载清理：DestroyRuntimeUiInstancesForResourceReload()
+// 注册与刷新：RegisterPanel() / RefreshPanels() / NotifyInteractionSurfaceChanged()
+// ====================================================
+
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;

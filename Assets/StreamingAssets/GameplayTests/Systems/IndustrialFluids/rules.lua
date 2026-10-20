@@ -73,6 +73,11 @@ test.system("industrial_fluids", "phase_change", {}, function(data)
     assert(data.kelvin > 0 and data.kelvin < 300, "蒸发没有消费潜热或温度无效")
 end, "两相变换的真实物质量与内能守恒")
 
+test.system("industrial_fluids", "cold_wind_cache", {}, function(data)
+    assert(data.initial and data.replaced and data.evicted and data.missing and data.bounded,
+        "冷区块逐出后的固定风力缓存未复用、更新或限制容量")
+end, "冷地表固定风力汇总值复用与有界逐出")
+
 test.system("industrial_fluids", "cold_temperature_path", {}, function(data)
     assert(#data.groups == 4, "没有采样普通、新旧气候及两类星体覆盖")
     for _, group in ipairs(data.groups) do

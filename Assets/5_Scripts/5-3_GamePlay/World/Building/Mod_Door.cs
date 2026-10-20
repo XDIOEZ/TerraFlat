@@ -44,6 +44,8 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     public BoxCollider2D InteractionCollider;
     private bool loaded;
     private Sprite itemClosedSprite;
+    private DoorSlideVisual slideVisual;
+    private Coroutine slideRoutine;
     #endregion
 
     #region 生命周期
@@ -67,7 +69,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         if (!CanInteract(null)) return;
         CacheReferences();
         itemClosedSprite = UseItemSprite ? DoorRenderer?.sprite : null;
-        ApplyDoorState();
+        ApplyDoorState(true);
         SpatialInteractionRegistry.Register(this, 0.75f);
     }
 
@@ -75,6 +77,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     protected override void OnUnload()
     {
         loaded = false;
+        ReleaseSlideVisual();
         SpatialInteractionRegistry.Unregister(this);
         if (UseItemSprite && DoorRenderer != null && itemClosedSprite != null)
         {
@@ -85,8 +88,17 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         base.OnUnload();
     }
 
-    private void OnDisable() => SpatialInteractionRegistry.Unregister(this);
-    private void OnEnable() { if (loaded && CanInteract(null)) SpatialInteractionRegistry.Register(this, 0.75f); }
+    private void OnDisable()
+    {
+        ReleaseSlideVisual();
+        SpatialInteractionRegistry.Unregister(this);
+    }
+    private void OnEnable()
+    {
+        if (!loaded || !CanInteract(null)) return;
+        ApplyDoorState(true);
+        SpatialInteractionRegistry.Register(this, 0.75f);
+    }
 
     /// <summary>安装流程会统一开启建筑碰撞，提交后按门的真实状态重新同步。</summary>
     public void OnBuildingPlacementCommitted()
@@ -94,7 +106,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         CacheReferences();
         if (!CanInteract(null)) return;
         if (UseItemSprite && itemClosedSprite == null) itemClosedSprite = DoorRenderer?.sprite;
-        ApplyDoorState();
+        ApplyDoorState(true);
         SpatialInteractionRegistry.Register(this, 0.75f);
     }
 
@@ -191,7 +203,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         EnsureInteractionCollider();
     }
 
-    private void ApplyDoorState()
+    private void ApplyDoorState(bool immediate = false)
     {
         if (DoorRenderer == null)
         {
@@ -207,9 +219,12 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
 
         if (UseItemSprite)
         {
-            // 单张门图复用同一开关状态，打开后隐藏主体而保留正式交互和占格。
+            // 单图门复用双扇滑动表现，安装与载入直接恢复最终姿态。
             DoorRenderer.sprite = itemClosedSprite;
-            DoorRenderer.enabled = !Data.IsOpen;
+            if (slideVisual == null) slideVisual = new DoorSlideVisual(DoorRenderer, Data.IsOpen);
+            else slideVisual.SetOpen(Data.IsOpen, immediate);
+            if (slideRoutine != null) StopCoroutine(slideRoutine);
+            slideRoutine = StartCoroutine(AnimateDoor());
         }
         else DoorRenderer.sprite = Data.IsOpen ? OpenSprite : CloseSprite;
 
@@ -228,6 +243,22 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
         Physics2D.SyncTransforms();
         Mod_Building building = item?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
         BuildingOccupancyRegistry.SetPassable(building, Data.IsOpen);
+    }
+
+    private IEnumerator AnimateDoor()
+    {
+        // 等安装注册完成后再同步一次排序，静止门不保留逐帧更新。
+        yield return null;
+        while (slideVisual != null && slideVisual.Advance(Time.deltaTime)) yield return null;
+        slideRoutine = null;
+    }
+
+    private void ReleaseSlideVisual()
+    {
+        if (slideRoutine != null) StopCoroutine(slideRoutine);
+        slideRoutine = null;
+        slideVisual?.Dispose();
+        slideVisual = null;
     }
 
     private void EnsureInteractionCollider()

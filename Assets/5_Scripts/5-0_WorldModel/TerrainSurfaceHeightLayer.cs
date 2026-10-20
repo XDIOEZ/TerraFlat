@@ -60,11 +60,12 @@ namespace FlatWorld.WorldModel
                 return false;
 
             int baseline = GetBaseLevel(terrain, x, y, useGeneratedHeight);
-            int level = support ? baseline : baseline - GetNaturalDepthLevels(terrain, x, y) -
+            int naturalDepth = GetNaturalDepthLevels(terrain, x, y);
+            // 天然水面只低于同地势河岸一层，抽干后才显示底床的真实深浅。
+            int surfaceDepth = liquid ? (naturalDepth > 0 ? 1 : -1) : naturalDepth;
+            int level = support ? baseline : baseline - surfaceDepth -
                 Math.Max(GetExcavatedLevels(terrain, x, y), minimumDepth) +
                 ReadLevels(terrain, CoverLevelsLayerId, x, y);
-            // 液面统一高于实际底床一层，支撑面仍回到地面基准并遮住坑水。
-            if (liquid) level++;
             surface = new TerrainSurfaceHeight(level, blocking ? level + 1 : level, !blocking);
             return true;
         }

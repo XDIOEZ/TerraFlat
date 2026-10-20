@@ -1,6 +1,31 @@
 -- 同一主题集中编排，子检查保留独立标签和原始采样。
 
 do
+    test.space("ground_atmosphere", function(data)
+        local function near(actual, expected, label)
+            assert(type(actual) == "number" and math.abs(actual - expected) < 0.0001, label)
+        end
+        assert(data.prepared and data.activeShips == 0, "地面房间不能依赖已装配飞船")
+        assert(not data.noPowerAccepted and not data.disabledAccepted and not data.damagedAccepted,
+            "断电、停用或瘫痪的设备仍在供气")
+        near(data.rejectedConsumption, 0, "拒绝供压时不能扣气")
+        assert(data.supplied and data.first.sealed and data.first.pressure > 0, "地面密闭区没有获得压力")
+        near(data.received, 4, "半秒供气必须遵守每秒8mol上限")
+        near(data.sourceConsumption, data.received, "真实气源扣量与房间入量不守恒")
+        near(data.full.pressure, data.targetPressure, "地面房间未按目标压力停供")
+        assert(not data.atTargetAccepted, "达到目标压力后仍在补气")
+        near(data.afterTargetConsumption, 0, "达到目标压力后仍在扣气")
+        near(data.afterLoad.pressure, data.full.pressure, "地面房间存档往返丢失压力")
+        near(data.flyingMoles, data.fullMoles, "装船移交丢失或重复生成气体")
+        near(data.landedMoles, data.fullMoles, "落地移交丢失或重复生成气体")
+        assert(data.sourceRoomsAfterReturn == 0, "气体移交后原所有者仍保留房间")
+        assert(data.breachedRooms == 0 and not data.openSupplyAccepted, "破口后仍能向不存在的密闭区供压")
+        near(data.openConsumption, 0, "开放区域供压错误消耗库存")
+        return "覆盖地面供压条件、真实扣气、目标压力、存档和空地所有权移交；不代表场景验收。"
+    end, "未装船的密闭房间供压与真实气量")
+end
+
+do
     -- 独立结构样本验证四邻支撑、真实伤害后的分裂和旋转占地，不代表已执行场景放置。
     test.space("ship_structure", function(data)
         assert(data.operation == "ship_structure" and data.scope == "production-domain", "缺少正式结构领域结果")

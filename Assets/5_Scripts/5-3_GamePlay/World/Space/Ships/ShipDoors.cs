@@ -61,71 +61,34 @@ namespace FlatWorld.Spaceflight
     public sealed partial class ShipPieceView
     {
         #region 双扇滑动舱门表现
-        private const float DoorSlideSeconds = .22f;
+        private DoorSlideVisual doorVisual;
         private Sprite doorSource;
-        private SpriteRenderer[] doorLeaves;
-        private Vector3[] doorClosedOffsets;
-        private float doorSlide;
-        private bool doorVisualDirty = true;
+        private bool? doorOpen;
 
         private void SynchronizeDoorVisual()
         {
             if (boundPiece?.Kind != ShipPieceKind.Door || visual == null || visual.sprite == null) return;
-            if (doorLeaves == null || doorSource != visual.sprite)
+            if (doorVisual == null || doorSource != visual.sprite)
             {
-                bool firstBinding = doorLeaves == null;
                 ReleaseDoorVisual();
                 doorSource = visual.sprite;
-                if (firstBinding) doorSlide = boundPiece.DoorOpen ? 1f : 0f;
-                doorLeaves = new SpriteRenderer[2]; doorClosedOffsets = new Vector3[2];
-                Rect rect = doorSource.rect;
-                float splitWidth = Mathf.Floor(rect.width * .5f);
-                for (int side = 0; side < 2; side++)
-                {
-                    Rect half = new(rect.x + (side == 0 ? 0f : splitWidth), rect.y,
-                        side == 0 ? splitWidth : rect.width - splitWidth, rect.height);
-                    GameObject leaf = new(side == 0 ? "左舱门" : "右舱门");
-                    leaf.transform.SetParent(visual.transform, false);
-                    SpriteRenderer renderer = doorLeaves[side] = leaf.AddComponent<SpriteRenderer>();
-                    renderer.sprite = Sprite.Create(doorSource.texture, half, new Vector2(.5f, .5f),
-                        doorSource.pixelsPerUnit, 0, SpriteMeshType.FullRect);
-                    renderer.sprite.name = doorSource.name + "_DoorLeaf_" + side;
-                    renderer.sprite.hideFlags = HideFlags.DontSave;
-                    renderer.spriteSortPoint = SpriteSortPoint.Pivot;
-                    doorClosedOffsets[side] = new Vector3(
-                        (half.center.x - rect.x - doorSource.pivot.x) / doorSource.pixelsPerUnit,
-                        (half.center.y - rect.y - doorSource.pivot.y) / doorSource.pixelsPerUnit);
-                }
+                doorVisual = new DoorSlideVisual(visual, boundPiece.DoorOpen);
+                doorOpen = boundPiece.DoorOpen;
             }
-            float targetSlide = boundPiece.DoorOpen ? 1f : 0f;
-            // 舱门静止且外观未变化时，不再每帧写入两扇门的渲染属性和变换。
-            if (!doorVisualDirty && doorSlide == targetSlide &&
-                doorLeaves[0].sharedMaterial == visual.sharedMaterial && doorLeaves[0].color == visual.color &&
-                doorLeaves[0].sortingLayerID == visual.sortingLayerID &&
-                doorLeaves[0].sortingOrder == visual.sortingOrder)
-                return;
-            // 两扇门沿自身横轴滑开，旋转安装和船体运动都沿用父节点变换。
-            doorSlide = Mathf.MoveTowards(doorSlide, targetSlide, Time.deltaTime / DoorSlideSeconds);
-            float travel = (float)(boundPiece.Width * boundCellSize * .55d) / Mathf.Max(.001f, Mathf.Abs(visual.transform.localScale.x));
-            float easedSlide = Mathf.SmoothStep(0f, 1f, doorSlide);
-            for (int side = 0; side < doorLeaves.Length; side++)
+            if (doorOpen != boundPiece.DoorOpen)
             {
-                SpriteRenderer leaf = doorLeaves[side];
-                leaf.sharedMaterial = visual.sharedMaterial; leaf.color = visual.color;
-                leaf.sortingLayerID = visual.sortingLayerID; leaf.sortingOrder = visual.sortingOrder;
-                leaf.transform.localPosition = doorClosedOffsets[side] + Vector3.right * ((side == 0 ? -1f : 1f) * travel * easedSlide);
+                doorOpen = boundPiece.DoorOpen;
+                doorVisual.SetOpen(boundPiece.DoorOpen);
             }
-            visual.enabled = false;
-            doorVisualDirty = false;
+            doorVisual.Advance(Time.deltaTime);
         }
 
         private void ReleaseDoorVisual()
         {
-            if (doorLeaves != null)
-                foreach (SpriteRenderer leaf in doorLeaves)
-                    if (leaf != null) { Destroy(leaf.sprite); Destroy(leaf.gameObject); }
-            doorLeaves = null; doorClosedOffsets = null; doorSource = null;
-            doorVisualDirty = true;
+            doorVisual?.Dispose();
+            doorVisual = null;
+            doorSource = null;
+            doorOpen = null;
         }
         #endregion
     }

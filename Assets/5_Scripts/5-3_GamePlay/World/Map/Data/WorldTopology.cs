@@ -193,12 +193,60 @@ public static class WorldTopologyRuntime
     public static event Action<WorldWrapEvent> LocalPlayerPositionWrapped;
     public static event Action<WorldWrapEvent> PositionWrapped;
 
+    #region 活动世界边界缓存
+
+    // 边界只由星球拓扑、半径和区块尺寸决定，配置变化时立即重算。
+    internal sealed class ActiveBoundsCache
+    {
+        private PlanetData planet;
+        private WorldTopologyMode mode;
+        private int radius;
+        private Vector2Int chunkSize;
+        private WorldTopologyBounds bounds;
+        private bool initialized;
+        private bool valid;
+
+        internal int RebuildCount { get; private set; }
+
+        internal bool TryGet(PlanetData current, out WorldTopologyBounds result)
+        {
+            if (!initialized || !ReferenceEquals(planet, current) ||
+                (current != null && (mode != current.TopologyMode || radius != current.Radius ||
+                                     chunkSize != current.ChunkSize)))
+            {
+                planet = current;
+                mode = current?.TopologyMode ?? default;
+                radius = current?.Radius ?? 0;
+                chunkSize = current?.ChunkSize ?? default;
+                valid = WorldTopologyBounds.TryCreate(current, out bounds);
+                initialized = true;
+                RebuildCount++;
+            }
+
+            result = bounds;
+            return valid;
+        }
+
+        internal void Clear()
+        {
+            planet = null;
+            bounds = default;
+            initialized = valid = false;
+            RebuildCount = 0;
+        }
+    }
+
+    private static readonly ActiveBoundsCache activeBounds = new();
+
+    #endregion
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeEvents()
     {
         LocalPlayerWrapped = null;
         LocalPlayerPositionWrapped = null;
         PositionWrapped = null;
+        activeBounds.Clear();
     }
 
     public static bool TryGetActiveBounds(out WorldTopologyBounds bounds)
@@ -208,7 +256,7 @@ public static class WorldTopologyRuntime
                                   saveDataManager.TryGetActivePlanetData(out PlanetData planet)
             ? planet
             : null;
-        return WorldTopologyBounds.TryCreate(activePlanet, out bounds);
+        return activeBounds.TryGet(activePlanet, out bounds);
     }
 
     public static Vector2 NormalizePosition(Vector2 position)

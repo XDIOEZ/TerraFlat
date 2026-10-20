@@ -2,6 +2,15 @@ local function near(a, b, message)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
 end
 
+test.system("mechanical", "ship_scope_identity", {}, function(data)
+    assert(data.identity and data.strictPrefix,
+        "船体作用域 ID 解析污染了地表身份，或改变了前缀大小写和空船 ID 规则")
+    assert(data.stableReference,
+        "重复读取船体作用域 ID 没有复用同一字符串引用，仍可能逐次分配")
+    assert(data.switchedShip and data.switchedSurface and data.restoredShip,
+        "跨船、地表切换或恢复作用域时仍错误复用了旧船 ID")
+end, "机器船体身份按作用域冻结：重读零字符串创建与跨世界刷新")
+
 test.system("mechanical", "load_allocation", {}, function(data)
     assert(data.first.nearSatisfied and not data.first.farSatisfied, "不足扭矩没有优先满足近处完整负载")
     near(data.first.nearRpm, 60, "近处负载没有获得真实转速")
@@ -22,6 +31,9 @@ test.system("mechanical", "gear_conflict", {}, function(data)
 end, "齿轮反转与异速源停网")
 
 test.system("mechanical", "bellows_effects", {}, function(data)
+    assert(data.bellowsIndexed and data.emptyFastPath and
+        data.nonBellowsFastPath and data.restoredAfterRebuild,
+        "机械拓扑变化后风箱快速索引未正确更新或空拓扑仍执行邻格查询")
     near(data.none.strength, 0, "没有风箱时仍有鼓风")
     near(data.none.rate, 50, "没有风箱时改变了基础效率")
     near(data.single.strength, 1, "额定转速没有达到满风量")

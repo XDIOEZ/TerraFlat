@@ -1,3 +1,14 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 区块索引：TryGetChunkByPos() / TryGetActiveChunkByPos() / NormalizeChunkPosition()
+// 加载队列：RequestLoadChunk_By_Position() / ProcessChunkLoadQueueCoroutine() / ResetChunkLoadQueue()
+// 读取与创建：LoadChunk_By_Position() / TryActivateExistingChunk() / TryLoadChunkFromSaveData() / TryCreateNewChunk()
+// 玩家周围流送：LoadChunkCloseToPlayer() / RefreshChunkPenaltyCloseToPlayer() / RefreshChunkPenalty()
+// 激活与回收：SwitchActiveChunks_TO_UnActive() / SetChunkActive() / DestroyChunk_In_Distance()
+// 对象池：AcquireChunk() / ReleaseChunkToPool() / FinalizeChunkPoolReturn()
+// 场景清理：OnSceneChange() / ClearAllChunk() / DestroyChunk()
+// Item 所属区块：UpdateItem_ChunkOwner()
+// ====================================================
+
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;

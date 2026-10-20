@@ -19,9 +19,11 @@ for _, scenario in ipairs({ "ocean", "freshwater", "cave", "frozen_ocean" }) do
             else
                 assert(sample.liquid == 0, "天然液体生成时漏写底床凹陷")
             end
-            assert(sample.initial == sample.base - depth + (sample.liquid > 0 and 1 or 0),
-                "天然水面没有使用底床加一层的统一规则")
-            assert(sample.drained == sample.base - depth and sample.poured == sample.drained + 1,
+            local expectedInitial = sample.liquid > 0 and sample.base - 1 or sample.base - depth
+            assert(sample.initial == expectedInitial,
+                "天然深浅水面没有统一低于同地势河岸一层")
+            assert(sample.drained == sample.base - depth and
+                sample.poured == (depth > 0 and sample.base - 1 or sample.base + 1),
                 "抽水或倒水改坏了底床与液面层级")
             assert(sample.afterDepth == depth and sample.height == sample.afterHeight,
                 "液体变化改写了天然底床或生成海拔")

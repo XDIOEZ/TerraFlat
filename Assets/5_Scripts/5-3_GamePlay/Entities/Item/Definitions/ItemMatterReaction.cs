@@ -562,7 +562,7 @@ public static class ItemMatterRuntime
     }
 
     /// <summary>温度达到燃点后持续燃烧；真实水接触会熄灭，燃尽后由世界掉落系统移除。</summary>
-    public static bool AdvanceCombustion(ItemData item, float seconds, bool waterContact, out bool consumedAll)
+    public static bool AdvanceCombustion(ItemData item, float seconds, bool waterContact, bool combustionSupported, out bool consumedAll)
     {
         consumedAll = false;
         if (item?.Stack == null || item.Stack.Amount <= 0f || seconds <= 0f || !float.IsFinite(seconds))
@@ -577,7 +577,7 @@ public static class ItemMatterRuntime
         float beforeElapsed = state.CombustionElapsedSeconds;
         float beforeAmount = item.Stack.Amount;
 
-        if (waterContact)
+        if (waterContact || !combustionSupported)
         {
             state.IsBurning = false;
             state.CombustionElapsedSeconds = 0f;
@@ -627,20 +627,34 @@ public static class ItemMatterRuntime
         RuntimeItemMatterDefinition matter = ResolveMatter(item);
         if (matter == null) return null;
         RuntimeItemMatterTransition first = null;
-        foreach (RuntimeItemMatterTransition transition in matter.Transitions)
+        IReadOnlyList<RuntimeItemMatterTransition> transitions = matter.Transitions;
+        for (int i = 0; i < transitions.Count; i++)
+        {
+            RuntimeItemMatterTransition transition = transitions[i];
             if (transition.MinTemperature.HasValue && transition.LiquidOutput == null &&
                 (first == null || transition.MinTemperature < first.MinTemperature))
                 first = transition;
+        }
         return first;
     }
 
     public static RuntimeItemMatterTransition GetMatchedTransition(ItemData item, bool liquid)
     {
-        RuntimeItemMatterDefinition matter = ResolveMatter(item);
-        if (matter == null || item?.MatterState == null) return null;
-        foreach (RuntimeItemMatterTransition transition in matter.Transitions)
-            if ((transition.LiquidOutput != null) == liquid && transition.Matches(item.MatterState))
+        return SelectMatchedTransition(ResolveMatter(item), item?.MatterState, liquid);
+    }
+
+    /// <summary>按配置顺序筛选材料条件，索引遍历避免接口枚举器装箱。</summary>
+    internal static RuntimeItemMatterTransition SelectMatchedTransition(
+        RuntimeItemMatterDefinition matter, ItemMatterState state, bool liquid)
+    {
+        if (matter == null || state == null) return null;
+        IReadOnlyList<RuntimeItemMatterTransition> transitions = matter.Transitions;
+        for (int i = 0; i < transitions.Count; i++)
+        {
+            RuntimeItemMatterTransition transition = transitions[i];
+            if ((transition.LiquidOutput != null) == liquid && transition.Matches(state))
                 return transition;
+        }
         return null;
     }
 
@@ -648,8 +662,10 @@ public static class ItemMatterRuntime
     {
         RuntimeItemMatterDefinition matter = ResolveMatter(item);
         if (matter == null || item?.MatterState?.Initialized != true) return 0f;
-        foreach (RuntimeItemMatterTransition transition in matter.Transitions)
+        IReadOnlyList<RuntimeItemMatterTransition> transitions = matter.Transitions;
+        for (int i = 0; i < transitions.Count; i++)
         {
+            RuntimeItemMatterTransition transition = transitions[i];
             if (!transition.MaxMoisture.HasValue || transition.LiquidOutput != null) continue;
             float start = matter.InitialMoisture;
             float end = transition.MaxMoisture.Value;

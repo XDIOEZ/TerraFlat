@@ -1,3 +1,15 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 输入源仲裁：IsGameplayInputAllowed() / ReadMoveInput() / SetPreferredInputDevice()
+// UI 与输入锁：CanToggleGameplayWindow() / HasBlockingGameplayInputLock() / AcquireGameplayInputLock() / ReleaseGameplayInputLock()
+// 鼠标按键：LeftClickAction() / LeftClickUpAction() / RightClickAction() / RightClickUpAction()
+// 世界指针：GetPointerScreenPosition() / GetMouseWorldPosition() / TryGetMouseWorldPosition() / GetAimWorldPosition()
+// UI 命中与建筑：IsPointerOverUI() / TryRotateBuildingPreviewAt()
+// 回调注册：RegisterInputCallbacks() / UnregisterInputCallbacks() / HandleMoveInputChanged()
+// 手柄指针：InitializeVirtualCursor() / UpdateVirtualCursor() / UpdateGameplayRadialCursor()
+// 手机攻击与瞄准：MobileAttackStartedAction() / MobileAttackEndedAction() / HandleMobileAim() / UpdateMobileRadialCursor()
+// 失焦与中断：CancelActiveAttackAndMobileInput() / OnApplicationFocus() / OnApplicationPause()
+// ====================================================
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;

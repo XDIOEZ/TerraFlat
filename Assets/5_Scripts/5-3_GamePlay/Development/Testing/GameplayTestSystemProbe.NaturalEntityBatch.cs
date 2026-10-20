@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ecology/spatial_geometry", NaturalEntitySpatialGeometryValues);
         operations.Add("ecology/soil_snapshot_reuse", NaturalEntitySoilSnapshotReuse);
         operations.Add("ecology/soil_liquid_prefilter", NaturalEntitySoilLiquidPrefilter);
+        operations.Add("ecology/output_validation_cache", NaturalEntityOutputValidationCache);
     }
 
     // 只创建自有 ECS World，读取正式批次结果，不触碰玩家世界或重算业务规则。
@@ -72,6 +73,33 @@ public static partial class GameplayTestSystemProbe
             result["plainDead"] = simulation.GetBody(3).Dead;
         }
         return result;
+    }
+
+    // 真实产物校验入口：同一编译配置只执行一次，失败不缓存且新配置重新校验。
+    private static JObject NaturalEntityOutputValidationCache(JObject args)
+    {
+        var profile = new NaturalEntityEcsProfile();
+        const int batchSize = 4096;
+        int fullValidations = 0;
+        for (int i = 0; i < batchSize; i++)
+            if (NaturalEntityEcsService.ValidateOutputDefinitionsOnce(profile)) fullValidations++;
+
+        bool freshValidated = NaturalEntityEcsService.ValidateOutputDefinitionsOnce(new NaturalEntityEcsProfile());
+        var invalid = new NaturalEntityEcsProfile { TreeSeedId = "probe:missing_output_definition" };
+        bool rejected = false;
+        try { NaturalEntityEcsService.ValidateOutputDefinitionsOnce(invalid); }
+        catch (InvalidOperationException) { rejected = true; }
+        bool failedNotCached = !invalid.OutputDefinitionsValidated;
+        invalid.TreeSeedId = null;
+        bool corrected = NaturalEntityEcsService.ValidateOutputDefinitionsOnce(invalid);
+        bool correctedSkipped = !NaturalEntityEcsService.ValidateOutputDefinitionsOnce(invalid);
+        return new JObject
+        {
+            ["calls"] = batchSize, ["fullValidations"] = fullValidations,
+            ["freshValidated"] = freshValidated,
+            ["rejected"] = rejected, ["failedNotCached"] = failedNotCached,
+            ["corrected"] = corrected, ["correctedSkipped"] = correctedSkipped
+        };
     }
 
     /// <summary>少量发布对象只冻结指定身份，并保持批内失效及新增实体语义。</summary>
@@ -201,6 +229,8 @@ public static partial class GameplayTestSystemProbe
         var batch = new ChunkMgr.RuntimeTerrainPresenceQuery(world, default, "surface", 4, 2);
         bool dry = batch.TrySample(new Vector2(0.5f, 0.5f), out _) &&
             !batch.TrySampleSurfaceLiquid(new Vector2(0.5f, 0.5f), out _);
+        bool actorDry = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            world, new Vector2(0.5f, 0.5f), out _);
         bool waterMatches = batch.TrySample(new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample regular) &&
             batch.TrySampleSurfaceLiquid(new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample quick) &&
             quick.WorldCell == regular.WorldCell && quick.LocalCell == regular.LocalCell &&
@@ -209,23 +239,48 @@ public static partial class GameplayTestSystemProbe
         bool covered = batch.TrySample(new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample underSupport) &&
             underSupport.LiquidLevel == 0 && underSupport.Terrain.GetLiquidLevel(2, 0) == 6 &&
             !batch.TrySampleSurfaceLiquid(new Vector2(2.5f, 0.5f), out _);
+        bool actorWet = Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            world, new Vector2(1.5f, 0.5f), out RuntimeTerrainTileSample actorSample) &&
+            actorSample.WorldCell == regular.WorldCell && actorSample.LiquidLevel == regular.LiquidLevel &&
+            actorSample.LiquidId == regular.LiquidId;
+        bool actorCovered = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            world, new Vector2(2.5f, 0.5f), out _);
         bool missing = !batch.TrySampleSurfaceLiquid(new Vector2(4.5f, 0.5f), out _);
+        bool actorMissing = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            world, new Vector2(4.5f, 0.5f), out _);
+        bool actorWrongWorld = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            null, new Vector2(1.5f, 0.5f), out _);
 
         if (!world.TryGetChunk(address, out ChunkRuntime chunk))
             throw new InvalidOperationException("土壤液体夹具区块丢失。");
         chunk.Terrain.SetEnvironmentValue(TerrainSupportLayer.TileIdLayer, 2, 0, 0f);
         bool uncovered = batch.TrySampleSurfaceLiquid(new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample released) &&
             released.LiquidLevel == 6;
+        bool actorUncovered = Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            world, new Vector2(2.5f, 0.5f), out RuntimeTerrainTileSample actorReleased) &&
+            actorReleased.LiquidLevel == 6;
         chunk.Terrain.SetLiquid(1, 0, 0, 0);
         bool drained = !batch.TrySampleSurfaceLiquid(new Vector2(1.5f, 0.5f), out _);
+        bool actorDrained = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref batch,
+            world, new Vector2(1.5f, 0.5f), out _);
         var wrapped = new ChunkMgr.RuntimeTerrainPresenceQuery(world,
             new WorldTopologyDomain(new int2(0, 0), new int2(16, 16), true), "surface", 4, 2);
         bool seam = wrapped.TrySampleSurfaceLiquid(new Vector2(18.5f, 0.5f), out RuntimeTerrainTileSample across) &&
             across.WorldCell == new Vector2Int(2, 0) && across.LiquidLevel == 6;
+        bool actorSeam = Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref wrapped,
+            world, new Vector2(18.5f, 0.5f), out RuntimeTerrainTileSample actorAcross) &&
+            actorAcross.WorldCell == across.WorldCell && actorAcross.LiquidLevel == across.LiquidLevel;
+        world.BeginNewEpoch(2);
+        bool actorOldEpochRejected = !Mod_TileEffectReceiver.TrySampleLiquidContactCandidate(ref wrapped,
+            world, new Vector2(18.5f, 0.5f), out _);
         return new JObject
         {
             ["dry"] = dry, ["waterMatches"] = waterMatches, ["covered"] = covered,
-            ["missing"] = missing, ["uncovered"] = uncovered, ["drained"] = drained, ["seam"] = seam
+            ["missing"] = missing, ["uncovered"] = uncovered, ["drained"] = drained, ["seam"] = seam,
+            ["actorDry"] = actorDry, ["actorWet"] = actorWet, ["actorCovered"] = actorCovered,
+            ["actorMissing"] = actorMissing, ["actorWrongWorld"] = actorWrongWorld,
+            ["actorUncovered"] = actorUncovered, ["actorDrained"] = actorDrained,
+            ["actorSeam"] = actorSeam, ["actorOldEpochRejected"] = actorOldEpochRejected
         };
     }
 

@@ -29,9 +29,11 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 联机本机库存事务待确认时，原生丢弃、快捷栏使用、进食和本地弓弹药消耗在副作用前查询 `ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction`；桥只由联机业务登记，单机/Host 默认放行，不停止移动、环境与 AI。测试接入保持在 Development/Testing，不在业务代码注册工具或增加测试分支。
 
 - 重量 kg、体积 L、Stackable 独立。普通槽 `DefaultSlotVolume=int.MaxValue`，不可堆叠物一件一槽，装配槽显式为 1；数量/容量使用 float，整数转换用 `GetWholeStackAmount`。生存行囊固定 18 格，储物/制作采用配置格数。
-- ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 绑定实际槽内 ItemData 的 MassChanged，供船载质量缓存使用。新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
-- 携带量统一收集主背包、快捷栏和玩家手工制作的实际输入/输出库存，按数据引用去重；面板关闭仍计入，配方预览不计入。背包显示监听全部随身库存，手工台自行绑定数据事件更新超重状态并在卸载时解绑。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。
+- 创造背包 `MaintainDynamicSlotCount` 按 `ContentStructureRevision` 核验动态空槽，稳定 Tick 不重复扫描；槽位/物品引用变化和容量模式切换必须失效缓存，规则见 `inventory/dynamic_slot_maintenance`。
+- ItemStack.Amount/Weight 与 ItemData.Stack 原位修改发质量事件；Inventory_Data 单格替换只重绑该格 MassChanged，换槽位表才全量重绑，质量和结构事件语义不变（规则 `inventory/incremental_mass_binding`）。船载质量缓存消费这些事件；新增含质量载荷须复用 NotifyMassChanged/PayloadChanged 边界，温度/血量等无质量变化不使船重失效；运行时观察引用与订阅不进入存档或克隆。
+- 携带量统一收集主背包、快捷栏和玩家手工制作的实际输入/输出库存，按数据引用去重；面板关闭仍计入，配方预览不计入。需要同时读取重量和体积时调用 `GetCarryUsage` 单次扫描，保持即时取值而非跨帧缓存（规则 `inventory/carry_usage_single_pass`）；创造模式跳过不必要的限额预检。背包显示监听全部随身库存，手工台自行绑定数据事件更新超重状态并在卸载时解绑。储物独立容量为 kg/m³ 配置，InitData/恢复后转为内部 L 并重用容量策略。`IsDepositBlocked` 在数据事务入口拒绝跨库存转入，仍允许取出与内部整理。
 - 世界拾取先用独立候选和去重目标生成只读容量计划，普通原木等按完整整数能收多少收多少，快捷栏余量继续进入背包；成功回执区分原堆扣减量与实际入包量，GM 倍率仍按完整原份结算。轻量掉落的 `body.Amount` 是唯一权威，物态推进先以它给冷载荷播种，不能让旧载荷数量复活余物；随身库存质量事件和倍率实际变化只标记拾取修订号，下次接触查询再重试，不在入包事件里递归拾取。
+- `Mod_ItemPicker` 的 Trigger 进入/停留单次解析 Collider 对应的 Item 并传入正式入包入口；进入时无 Item/有效 Stack 就跳过库存扫描，停留时飞行中或禁止拾取的目标跳过容量同步但仍登记延迟拾取，恢复可拾取时按原修订号重试。
 - 物品修改经 `TryConsumeFromSlot/TrySetSlotItemAmount` 等事务。`InventoryContextResolver` 以 ItemData 引用/Guid 找真实所属库存；快捷栏修改后按真实槽索引刷新。`BindController/UnbindController` 只管理输入，数据/UI 监听由 `UnbindRuntimeDataEvents` 清理。
 - `Inventory_Data.GetItemSlot` 对空槽表或越界索引返回 null，不得回退第0格；库存 UI 的删除、装备和书籍输入调用链必须检查有效槽。
 - 带初始内容的读物经 `Items/Readable/ReadableBookGrantService` 创建真实物品数据；可选 `writingMaterialDefinitionId` 经启用书写与材料标签校验后向书内槽0附送一份材料。独立书页和材料保存为 `ReadableBookInstanceSnapshot` 的 `AddedPageCount/PageContents/InputInventory`，发放复用完整随身容量、槽接收策略与待确认库存事务门禁，不生成世界 Item 或改共享静态页。
@@ -63,10 +65,12 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 手钻/手动设备复用 RecipeProcessor 与 AdvanceManually、CraftingService；SharedModuleIds 转移库存和进度。固定转换不应用难度增产。`CraftingOutputRules` 共用预检/提交，防腐寿命来自实际扣料计划的最差余量；耐久品质保存 CraftedDurabilityMultiplier，手钻读取实际矿锭 DrillDurability Tag。
 - 打火石 `Mod_FlintStrike` 直接复用 `UI_FireDrill`，按真实物品能力隐藏建筑按钮并绑定概率文案；每次点击独立 10%，不累积或衰减进度。成功时由 `CraftingTransaction` 一次扣一份火绒并产一份火种，失败/满输出不扣料，预览按库存事件刷新。
 - Save 只保存，Unload 才解绑制作监听。库存冷 Tick 由 ModuleDataRuleRegistry/InventoryModuleDataScheduler 按规则和宿主代际推进；结构变化重建，数值变化不重建，跨库存共享状态扣除重叠时间而不补暂停。
+- `InventoryModuleDataScheduler` 的活动规则 `Entry` 使用值类型，重建时不再逐条创建托管对象；Tick 按只读引用遍历条目，槽位、代际和规则实时复核不变。
 - 便携气罐按不可变模块声明缓存配置解析，对外配置仍是独立副本；流体包装随真实 Contents、二进制载荷或目录换代重建，稳定 Tick 不重复序列化或刷新槽位。保存比较 StateRevision、超压时钟和破裂状态，界面比较实际内容与生命变化。
 
 ## 装备、食物与容器
 
+- `FoodRulePipeline` 初始化后复用 Tick/状态观察者列表，不再每 0.1 秒扫描所有食物规则；`RequiresFoodTick` 每次仍实时判断，加载后新增扩展按原插入顺序执行，规则 `survival/food_observer_index`。
 - 装备能力显式组合 Mod_Equipment，按 EquipmentSlot 标签选槽；世界主交互优先。ThermalInsulation 修改安全温度上下界，耐寒/耐热独立，不改变传热或当前温度。
 - 穿戴中的配置由装备效果实现 `IEquipmentConfiguration`，经 `Mod_Equipment.CollectConfigurationTargets/TryOpenConfiguration` 收集和校验；同件装备去重，卸下或更换后拒绝旧目标。宇航服生命支持/配置效果挂在持有气罐状态的衣服上，头盔只提供套装部件资格与自身防护。
 - Food 静态世界实例可休眠，库存腐败/融化走冷数据规则。蛋白质负责回血门槛，成本通过 IHealingCostPolicy 一次结算；濒死或 HP≤0 时停止被动回血/生存伤害。体力恢复按有效 MaxValue；医疗等待/提交由 BodyPartTreatmentSession 管理，UI 只发意图。
@@ -84,6 +88,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - `Mod_Plantable → CreateEntityCrop → 扣真实种子`，失败 RollbackEntityCrop；resource 作物不临时物化 Item。空耕地播种不检查水肥，水肥只影响后续成长；范围内的种植基质保留播种意图，作物占格或播种失败不回退食用，离开基质才让食用接管。
 - FarmlandSystem 操作 ChunkTerrainData；未完成锄地仅为会话进度，停工 10 秒后恢复，完成才写 Tile_Farmland。水肥快照修改经 CommitSoil；工具结算等待 IWeaponActionAnimation 确认真实挥动。
 - `SoilSamplingBatch` 仅共享同步寻址和土壤容器，返回快照只借到下次读取，不能保留到回调/实体；水肥每次读权威层、九宫格逐份泵水、消费按原调用顺序提交，不缓存土壤值或跨帧复用寻址。
+- 自然实体同一轮土壤读写保留 `TryRead` 返回的地块，直接 `CommitSampled` 写回，不再重复做一次地块寻址；其他调用仍用普通 `Commit`。
 - 耕地 `waterValue` 为 `int 0～10`，一份世界水只增加一级；`WorldLiquidSystem.SurfaceLiquidAdded` 只通知倒入本格吸水，不遍历全部耕地，作物读取时保留九宫格灌溉。天气和作物速率使用级/秒，不足一份的补水/耗水进度独立随农业差量保存，所有消费源共用地块进度；湿润度比例计算必须显式转浮点。
 - 播种作物句柄归 ChunkAgricultureRenderer，快照进 AgricultureCells；天然资源使用生态 GUID/差量。解绑不表示死亡；一次收获先生成全部产物再删除来源，持续采果只扣库存，植株/产物保持不同 ID。
 - 植物保存绝对游戏秒，通过 IWorldTimePlant/PlantClimateTimeline 补算冻结历史；成长器统一结算气候、水肥、天气与难度倍率，游标未追上不收获。雨雪由 WorldWeatherSurfaceSystem 供水，植物不重复加雨。

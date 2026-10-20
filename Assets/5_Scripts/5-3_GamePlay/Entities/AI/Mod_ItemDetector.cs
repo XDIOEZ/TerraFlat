@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using Unity.Mathematics;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -149,11 +150,15 @@ public class Mod_ItemDetector : Module
             Debug.Log($"<color=yellow>=== 应用检测结果（位置：{transform.position}，半径：{DetectionRadius}）===</color>");
 
         _previousItemSet.Clear();
-        for (int i = 0; i < CurrentItemsInArea.Count; i++)
+        // 进入/离开回调只输出调试日志，普通感知不再构造旧目标差集。
+        if (DebugMode)
         {
-            Item previousItem = CurrentItemsInArea[i];
-            if (previousItem != null)
-                _previousItemSet.Add(previousItem);
+            for (int i = 0; i < CurrentItemsInArea.Count; i++)
+            {
+                Item previousItem = CurrentItemsInArea[i];
+                if (previousItem != null)
+                    _previousItemSet.Add(previousItem);
+            }
         }
 
         CurrentItemsInArea.Clear();
@@ -190,8 +195,9 @@ public class Mod_ItemDetector : Module
             }
         }
 
-        // 检查物品变化
-        CheckItemEntries();
+        // 仅 Debug 模式对比进入/离开变化，正常模式只保留正式目标和标签结果。
+        if (DebugMode)
+            CheckItemEntries();
         _appliedVersion = requestVersion;
     }
 
@@ -342,9 +348,19 @@ public class Mod_ItemDetector : Module
 
     /// <summary>按物品标签寻找最近目标；启用玩家选项时同时识别 Player 实体和 ItemData 标签。</summary>
     public Item FindClosestItemByTags(List<string> tags, Vector3 origin, bool includePlayerEntities = false)
+        => FindClosestItemByTagsInternal(tags, origin, includePlayerEntities, default, resolveActiveTopology: true);
+
+    /// <summary>本轮筛选复用世界拓扑，避免逐候选重新读取星球边界。</summary>
+    internal Item FindClosestItemByTags(List<string> tags, Vector3 origin, bool includePlayerEntities,
+        in WorldTopologyDomain topology)
+        => FindClosestItemByTagsInternal(tags, origin, includePlayerEntities, topology, resolveActiveTopology: false);
+
+    private Item FindClosestItemByTagsInternal(List<string> tags, Vector3 origin,
+        bool includePlayerEntities, WorldTopologyDomain topology, bool resolveActiveTopology)
     {
         Item closestItem = null;
         float closestDistanceSqr = float.MaxValue;
+        float2 originPosition = new(origin.x, origin.y);
 
         for (int i = 0; i < CurrentItemsInArea.Count; i++)
         {
@@ -359,7 +375,13 @@ public class Mod_ItemDetector : Module
             if (!matches)
                 continue;
 
-            float distanceSqr = WorldTopologyRuntime.SqrDistance(origin, detectedItem.transform.position);
+            if (resolveActiveTopology)
+            {
+                topology = WorldTopologyRuntime.GetActiveDomain();
+                resolveActiveTopology = false;
+            }
+            Vector3 targetPosition = detectedItem.transform.position;
+            float distanceSqr = topology.SqrDistance(originPosition, new float2(targetPosition.x, targetPosition.y));
             if (distanceSqr >= closestDistanceSqr)
                 continue;
 
@@ -517,7 +539,8 @@ public class Mod_ItemDetector : Module
 
     private void OnValidate()
     {
-        _Data.ID = ModText.Detector;
+        // 新增组件时数据尚未绑定，延后到模块装配设置能力身份。
+        if (_Data != null) _Data.ID = ModText.Detector;
     }
     #endregion
 }

@@ -77,19 +77,14 @@ namespace FlatWorld.Spaceflight
             {
                 StepLift(assembly, seconds); return;
             }
-            ResolveCruiseCommand(assembly, seconds, out SpaceVector2 velocity, out double turn);
-            SpaceGameplaySettings config = SpaceGameplaySettings.Current;
+            ResolveCruiseCommand(assembly, seconds, out SpaceVector2 velocity);
             var motion = flight.Motion;
             motion.PositionMeters = new SpaceVector2(assembly.PositionX, assembly.PositionY);
             motion.VelocityMetersPerSecond = velocity;
             motion.RadiusMeters = AssemblyRadius(assembly);
             motion.Sector = assembly.Sector;
             assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
-            // 控制只提交速度请求，平移和旋转都由同一次 Unity 2D 模拟推进。
-            bool turning = Math.Abs(turn) > .001d;
-            if (turning || flight.DrivingTurnActive)
-                assembly.AngularVelocityRadiansPerSecond = Math.Clamp(turn, -1d, 1d) * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
-            flight.DrivingTurnActive = turning;
+            // 控制只提交平移速度，船体朝向由整船规则和原生刚体约束共同锁定。
             ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
             foreach (string id in assembly.MemberShipIds)
             {
@@ -154,13 +149,10 @@ namespace FlatWorld.Spaceflight
             {
                 movementSeconds = flight.HeightMeters <= 0d && previousHeight > 0d
                     ? seconds * Math.Clamp(previousHeight / (previousHeight - flight.HeightMeters), 0d, 1d) : seconds;
-                ResolveCruiseCommand(assembly, movementSeconds, out SpaceVector2 velocity, out double turn, surfaceDescent: true);
-                SpaceGameplaySettings config = SpaceGameplaySettings.Current;
+                ResolveCruiseCommand(assembly, movementSeconds, out SpaceVector2 velocity, surfaceDescent: true);
                 assembly.VelocityX = velocity.X; assembly.VelocityY = velocity.Y;
                 assembly.PositionX += velocity.X * movementSeconds;
                 assembly.PositionY += velocity.Y * movementSeconds;
-                assembly.AngularVelocityRadiansPerSecond = turn * config.CruiseTurnDegreesPerSecond * Math.PI / 180d;
-                assembly.AngleRadians += assembly.AngularVelocityRadiansPerSecond * movementSeconds;
                 ShipDockingService.RigidlyCarryMembers(assembly, State.Ships);
             }
             flight.EntrySurfaceVelocity = new SpaceVector2(Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY), flight.VerticalSpeed);

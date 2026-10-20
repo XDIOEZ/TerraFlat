@@ -1,3 +1,4 @@
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 public partial class Mod_TileEffectReceiver
@@ -75,8 +76,23 @@ public partial class Mod_TileEffectReceiver
     private bool TryResolveLiquidAtPosition(Vector2 position, out WorldLiquidSourceTarget target)
     {
         target = default;
+        if (terrainQueryActive)
+        {
+            // 干格与平台覆盖格先筛水量，不再构造完整地形样本。
+            return hasTerrainQuery && TrySampleLiquidContactCandidate(ref terrainQuery,
+                ChunkMgr.ExistingInstance?.WorldRuntime, position, out RuntimeTerrainTileSample liquidSample) &&
+                WorldLiquidSourceResolver.TryResolve(liquidSample, out target);
+        }
         return TryReadRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample) &&
             WorldLiquidSourceResolver.TryResolve(sample, out target);
+    }
+
+    /// <summary>每次验证当前世界和实时水层，只为未被覆盖的液格创建地形样本。</summary>
+    internal static bool TrySampleLiquidContactCandidate(ref ChunkMgr.RuntimeTerrainPresenceQuery query,
+        WorldRuntime world, Vector2 position, out RuntimeTerrainTileSample sample)
+    {
+        sample = default;
+        return query.IsForWorld(world) && query.TrySampleSurfaceLiquid(position, out sample);
     }
 
     /// <summary>深度变化直接刷新快照，不重复退出进入；液体身份或接触模式改变才切换行为。</summary>

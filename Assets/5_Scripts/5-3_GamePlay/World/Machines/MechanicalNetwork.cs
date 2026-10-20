@@ -247,6 +247,16 @@ public sealed partial class MechanicalNetworkGraph
     private readonly InteractionWindow pointerWindow = new(); // 光标查询候选窗口。
     private readonly InteractionWindow nearbyWindow = new(); // 近距离按键查询候选窗口。
 
+    #region 机械拓扑重建工作区
+
+    // 排序、连通搜索和区块边界共用工作区，重建结束后不保留机械实体引用。
+    private readonly List<MachineEntity> rebuildNodes = new();
+    private readonly Queue<MachineEntity> rebuildQueue = new();
+    private readonly List<int> boundsX = new();
+    private readonly List<int> boundsY = new();
+
+    #endregion
+
     public MechanicalNetworkGraph(Vector2Int chunkSize, Vector2Int chunkPeriod, Func<Vector2Int, Vector2Int> normalize)
     {
         this.chunkSize = new Vector2Int(Mathf.Max(1, chunkSize.x), Mathf.Max(1, chunkSize.y));
@@ -283,6 +293,9 @@ public sealed partial class MechanicalNetworkGraph
 
     /// <summary>空机械世界跳过逐帧交互格扫描。</summary>
     internal bool HasNodes => cells.Count > 0;
+
+    /// <summary>拓扑重建时统计是否存在风箱，供无风箱设施直接跳过四邻检查。</summary>
+    internal bool HasBellows { get; private set; }
 
     /// <summary>同格内光标和玩家移动复用候选节点；拓扑变化时随索引一起失效。</summary>
     internal IReadOnlyList<MachineEntity> GetInteractionCandidates(Vector2Int center, int extent, bool pointed)
@@ -323,9 +336,28 @@ public sealed partial class MechanicalNetworkGraph
     /// <summary>仅放置、拆除、离合器和变速操作调用；恢复时先构建完整网络，再允许任意节点模拟。</summary>
     public void Rebuild(IEnumerable<MachineEntity> nodes)
     {
+        rebuildNodes.Clear();
+        rebuildQueue.Clear();
+        try
+        {
+            RebuildCore(nodes);
+        }
+        finally
+        {
+            rebuildNodes.Clear();
+            rebuildQueue.Clear();
+            boundsX.Clear();
+            boundsY.Clear();
+        }
+    }
+
+    private void RebuildCore(IEnumerable<MachineEntity> nodes)
+    {
         pointerWindow.Reset(); nearbyWindow.Reset();
         cells.Clear(); occupiedOnPlacementLayers.Clear(); pressureSwitches.Clear(); Networks.Clear(); ConverterNetworks.Clear(); Facilities.Clear();
-        var sorted = new List<MachineEntity>(nodes);
+        HasBellows = false;
+        rebuildNodes.AddRange(nodes);
+        List<MachineEntity> sorted = rebuildNodes;
         sorted.Sort(CompareNodes);
         foreach (var node in sorted)
         {
@@ -333,6 +365,7 @@ public sealed partial class MechanicalNetworkGraph
             var key = new Vector3Int(node.Cell.x, node.Cell.y, node.Definition.Layer);
             if (cells.ContainsKey(key)) throw new InvalidOperationException("机械格重复占用：" + key);
             cells.Add(key, node);
+            if (node.Definition.Kind == "bellows") HasBellows = true;
             if (node.Definition.Layer == 0 || node.Definition.Layer == 1)
                 occupiedOnPlacementLayers.Add(node.Cell);
             node.MechanicalPortsSuppressed = false;
@@ -347,7 +380,7 @@ public sealed partial class MechanicalNetworkGraph
         foreach (MachineEntity node in sorted)
             if (node.Definition.Layer <= 1 && pressureSwitches.ContainsKey(node.Cell)) node.MechanicalPortsSuppressed = true;
         RebuildConveyorPaths(sorted);
-        var queue = new Queue<MachineEntity>();
+        Queue<MachineEntity> queue = rebuildQueue;
         foreach (var root in sorted)
         {
             if (root.Network != null || !root.Definition.HasMechanicalPorts) continue;
@@ -413,8 +446,10 @@ public sealed partial class MechanicalNetworkGraph
     #region 区块范围与整网滞回
     private BoundsInt CalculateBounds(List<MachineEntity> nodes)
     {
-        var xs = new List<int>(nodes.Count);
-        var ys = new List<int>(nodes.Count);
+        List<int> xs = boundsX;
+        List<int> ys = boundsY;
+        xs.Clear();
+        ys.Clear();
         foreach (var node in nodes) { Vector2Int chunk = ChunkOf(node.Cell); xs.Add(chunk.x); ys.Add(chunk.y); }
         GetAxisBounds(xs, chunkPeriod.x, out int x, out int width);
         GetAxisBounds(ys, chunkPeriod.y, out int y, out int height);

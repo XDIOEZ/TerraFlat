@@ -7,7 +7,61 @@ public sealed class FoodRulePipeline : IDisposable
 {
     private readonly IFoodRuntimeContext context;
     private readonly List<IFoodMechanic> rules = new List<IFoodMechanic>();
+    private readonly List<TickObserver> tickObservers = new(4);
+    private readonly List<StateObserver> stateObservers = new(2);
     private bool initialized;
+
+    #region 高频观察者索引
+
+    private readonly struct TickObserver
+    {
+        public readonly IFoodMechanic Rule;
+        public readonly IFoodTickObserver Callback;
+        public readonly IFoodTickRequirement Requirement;
+
+        public TickObserver(IFoodMechanic rule, IFoodTickObserver callback)
+        {
+            Rule = rule;
+            Callback = callback;
+            Requirement = rule as IFoodTickRequirement;
+        }
+
+        public bool ShouldTick => Requirement == null || Requirement.RequiresFoodTick;
+    }
+
+    private readonly struct StateObserver
+    {
+        public readonly IFoodMechanic Rule;
+        public readonly IFoodStateObserver Callback;
+
+        public StateObserver(IFoodMechanic rule, IFoodStateObserver callback)
+        {
+            Rule = rule;
+            Callback = callback;
+        }
+    }
+
+    internal int RuleCount => rules.Count;
+    internal int TickObserverCount => tickObservers.Count;
+    internal int StateObserverCount => stateObservers.Count;
+
+    private void RegisterObservers(IFoodMechanic rule)
+    {
+        if (rule is IFoodTickObserver tick)
+            tickObservers.Add(new TickObserver(rule, tick));
+        if (rule is IFoodStateObserver state)
+            stateObservers.Add(new StateObserver(rule, state));
+    }
+
+    private void RebuildObserverIndexes()
+    {
+        tickObservers.Clear();
+        stateObservers.Clear();
+        for (int i = 0; i < rules.Count; i++)
+            RegisterObservers(rules[i]);
+    }
+
+    #endregion
 
     public FoodRulePipeline(IFoodRuntimeContext context)
     {
@@ -19,7 +73,10 @@ public sealed class FoodRulePipeline : IDisposable
     public void Add(IFoodMechanic rule)
     {
         if (rule != null && !rules.Contains(rule))
+        {
             rules.Add(rule);
+            RegisterObservers(rule);
+        }
     }
 
     public void Initialize()
@@ -35,6 +92,8 @@ public sealed class FoodRulePipeline : IDisposable
                 : StringComparer.OrdinalIgnoreCase.Compare(a.MechanicId, b.MechanicId);
         });
 
+        // 排序完成后只冻结观察者身份，Tick 资格仍实时读取。
+        RebuildObserverIndexes();
         for (int i = 0; i < rules.Count; i++)
             RestoreState(rules[i]);
         initialized = true;
@@ -74,9 +133,9 @@ public sealed class FoodRulePipeline : IDisposable
     /// <summary>判断当前规则集合是否存在需要持续调度的 Tick 观察者。</summary>
     public bool HasActiveTickObservers()
     {
-        for (int i = 0; i < rules.Count; i++)
+        for (int i = 0; i < tickObservers.Count; i++)
         {
-            if (ShouldTick(rules[i]))
+            if (tickObservers[i].ShouldTick)
                 return true;
         }
 
@@ -86,18 +145,18 @@ public sealed class FoodRulePipeline : IDisposable
     /// <summary>只推进当前声明为活跃的 Tick 观察者。</summary>
     public void OnTick(FoodTickContext value)
     {
-        // 高频通知直接遍历规则，避免捕获上下文的闭包分配。
-        for (int i = 0; i < rules.Count; i++)
+        // 只遍历已登记的 Tick 观察者，保留每轮动态调度资格。
+        for (int i = 0; i < tickObservers.Count; i++)
         {
-            IFoodMechanic rule = rules[i];
+            TickObserver observer = tickObservers[i];
             try
             {
-                if (ShouldTick(rule))
-                    ((IFoodTickObserver)rule).OnFoodTick(value);
+                if (observer.ShouldTick)
+                    observer.Callback.OnFoodTick(value);
             }
             catch (Exception exception)
             {
-                LogFailure(rule, "Tick", exception);
+                LogFailure(observer.Rule, "Tick", exception);
             }
         }
     }
@@ -107,18 +166,16 @@ public sealed class FoodRulePipeline : IDisposable
 
     public void OnStateChanged(FoodStateChangedContext value)
     {
-        for (int i = 0; i < rules.Count; i++)
+        for (int i = 0; i < stateObservers.Count; i++)
         {
-            IFoodMechanic rule = rules[i];
-            if (!(rule is IFoodStateObserver observer))
-                continue;
+            StateObserver observer = stateObservers[i];
             try
             {
-                observer.OnFoodStateChanged(value);
+                observer.Callback.OnFoodStateChanged(value);
             }
             catch (Exception exception)
             {
-                LogFailure(rule, "状态刷新", exception);
+                LogFailure(observer.Rule, "状态刷新", exception);
             }
         }
     }
@@ -170,6 +227,8 @@ public sealed class FoodRulePipeline : IDisposable
         }
 
         rules.Clear();
+        tickObservers.Clear();
+        stateObservers.Clear();
         initialized = false;
         if (context is FoodRuntimeContext runtimeContext &&
             ReferenceEquals(runtimeContext.RulePipeline, this))
@@ -194,15 +253,6 @@ public sealed class FoodRulePipeline : IDisposable
                 item.StateKey, provider.StateKey, StringComparison.Ordinal));
         if (state?.Payload != null)
             Run(rule, "恢复", _ => provider.RestoreState(state.Payload));
-    }
-
-    /// <summary>兼容未声明调度策略的扩展规则，并过滤明确休眠的观察者。</summary>
-    private static bool ShouldTick(IFoodMechanic rule)
-    {
-        if (!(rule is IFoodTickObserver))
-            return false;
-
-        return !(rule is IFoodTickRequirement requirement) || requirement.RequiresFoodTick;
     }
 
     private static void Run(IFoodMechanic rule, string stage, Action<IFoodMechanic> action)

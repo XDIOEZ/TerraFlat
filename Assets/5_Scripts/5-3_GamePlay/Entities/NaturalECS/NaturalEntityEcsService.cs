@@ -224,6 +224,8 @@ namespace FlatWorld.NaturalEntities
             lastCapabilityVersion = ulong.MaxValue;
             simulation?.Dispose();
             simulation = null;
+            if (profileResourceOwner != null) profileResourceOwner.ResourcesReloaded -= InvalidateResourceProfiles;
+            profileResourceOwner = null;
             profiles.Clear();
             nextRuntimeId = 1;
             pendingSimulationSeconds = 0f;
@@ -247,6 +249,7 @@ namespace FlatWorld.NaturalEntities
                 throw new InvalidOperationException($"资源实体 {definition.Id} 编译失败：{failure}");
             if (profile.HasClimate && (float.IsNaN(baselineCelsius) || float.IsInfinity(baselineCelsius)))
                 return false;
+            ValidateOutputDefinitionsOnce(profile);
 
             ItemData snapshot = persistedData == null
                 ? definition.CreateItemData()
@@ -290,7 +293,6 @@ namespace FlatWorld.NaturalEntities
             try
             {
                 InitializePlantedSnapshot(record, plantedCell);
-                ValidateOutputDefinitions(profile);
                 BuildComponents(record, baselineCelsius,
                     out NaturalEntityBody body,
                     out NaturalEntityHealth? health,
@@ -420,7 +422,7 @@ namespace FlatWorld.NaturalEntities
             if (ReferenceEquals(record.Profile.Definition, definition) &&
                 record.Profile.RegistryRevision == ResourceEntityCapabilityRegistry.Revision) return true;
             if (!TryGetProfile(definition, out NaturalEntityEcsProfile replacement, out _)) return false;
-            ValidateOutputDefinitions(replacement);
+            ValidateOutputDefinitionsOnce(replacement);
             if (!TryCapture(handle, out ItemData snapshot)) return false;
             float baseline = simulation.TryGet(handle.Id, out NaturalEntityClimate climate) ? climate.BaselineCelsius : 0f;
             NaturalEntityEcsProfile previous = record.Profile;
@@ -946,6 +948,21 @@ namespace FlatWorld.NaturalEntities
 
         #region 定义缓存
 
+        private static GameRes profileResourceOwner;
+
+        // 资源目录更换时丢弃旧校验结论，避免新产物定义沿用此前通过的结果。
+        private static void BindProfileResourceReload()
+        {
+            GameRes resources = GameRes.ExistingInstance;
+            if (ReferenceEquals(profileResourceOwner, resources)) return;
+            if (profileResourceOwner != null) profileResourceOwner.ResourcesReloaded -= InvalidateResourceProfiles;
+            profileResourceOwner = resources;
+            if (profileResourceOwner != null) profileResourceOwner.ResourcesReloaded += InvalidateResourceProfiles;
+            profiles.Clear();
+        }
+
+        private static void InvalidateResourceProfiles() => profiles.Clear();
+
         private static bool TryGetProfile(RuntimeItemDefinition definition,
             out NaturalEntityEcsProfile profile, out string reason)
         {
@@ -953,6 +970,7 @@ namespace FlatWorld.NaturalEntities
             reason = null;
             if (definition == null)
                 return false;
+            BindProfileResourceReload();
             if (!profiles.TryGetValue(definition, out CompileCacheEntry entry) ||
                 entry.RegistryRevision != ResourceEntityCapabilityRegistry.Revision)
             {

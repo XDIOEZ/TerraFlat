@@ -6,7 +6,7 @@
       "runtimeTileId": 32,
       "displayName": "月壤",
       "loadCapacity": 10,
-      "tileAsset": "Tile_Sand",
+      "tileAsset": "Tile_MoonRegolith",
       "data": {
         "type": "universal",
         "parameters": {

@@ -2958,7 +2958,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740096
-    m_Localized: "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；Q/E 旋转，松键停转。停机、断电或缺燃料时保留平移惯性。星体不会吸引或截停飞船；点击降落时，有燃料平稳着陆，无燃料下落并结算冲击。"
+    m_Localized: "help：命令帮助\nstatus：当前船况\nclear：清空反馈\ndrive / exit：进入 / 退出驾驶\nignite：点火 / 停机\nnavigate X Y：按画面坐标导航\npick：点击画面选择导航点\ncancel：取消导航\nland：向附近星体开始降落\ndock / undock：确认对接 / 解除接口\npressure kPa：设置供气目标气压\nWASD 施加推力，松键继续滑行，反向输入制动；飞船始终朝上，不再旋转。停机、断电或缺燃料时不再施加推进力。进入星体引力范围会受吸引，有大气时逐渐减速，离开范围后恢复惯性漂移；点击降落时，有燃料平稳着陆，无燃料下落并结算冲击。"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740097
@@ -2966,7 +2966,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740098
-    m_Localized: "\u5df2\u8fdb\u5165\u9a7e\u9a76\u4f4d\uff0cWASD \u52a0\u901f\uff0cQ/E \u8f6c\u52a8\uff0cEsc \u79bb\u5f00\u3002"
+    m_Localized: "已进入驾驶位，WASD 平移需要可用引擎与燃料，飞船始终朝上，Esc 离开；下落时由实际船体位置决定落点。"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740099
@@ -5047,6 +5047,10 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 8452394532769792
     m_Localized: "\u5B58\u6863\u52A0\u8F7D\u5931\u8D25"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17033886000000010
+    m_Localized: "下落船控视角：WASD 平移需要供电、可用引擎及燃料，飞船始终朝上；落点随实际船体位置变化。"
     m_Metadata:
       m_Items: []
   - m_Id: 17923400000000001

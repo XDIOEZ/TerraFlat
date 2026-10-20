@@ -37,8 +37,9 @@ namespace FlatWorld.Spaceflight
             if (State == null || string.IsNullOrEmpty(consolePieceId)) return;
             if (!controlRequests.TryGetValue(consolePieceId, out ShipControlRequest request))
                 controlRequests.Add(consolePieceId, request = new ShipControlRequest { ConsolePieceId = consolePieceId });
-            request.Move = Vector2.ClampMagnitude(move, 1f); request.Turn = Mathf.Clamp(turn, -1f, 1f);
-            if ((move.sqrMagnitude > .0001f || Math.Abs(turn) > .001f) && FindPiece(consolePieceId, out ShipState ship, out _))
+            // 转向输入不再产生推力、耗油或取消导航，驾驶只接收平移。
+            request.Move = Vector2.ClampMagnitude(move, 1f);
+            if (move.sqrMagnitude > .0001f && FindPiece(consolePieceId, out ShipState ship, out _))
                 foreach (ShipNavigationState navigation in State.Navigation)
                     if (navigation.Active && SameAssembly(ship.ShipId, navigation.ShipId))
                     { navigation.Active = false; navigation.Status = "已手动接管"; }
@@ -163,57 +164,52 @@ namespace FlatWorld.Spaceflight
         }
 
         // 手动推力与导航制动共用真实动力授权，无输入或失去动力时保持当前速度。
-        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, out double turn, bool surfaceDescent = false)
+        private void ResolveCruiseCommand(ShipAssemblyState assembly, double seconds, out SpaceVector2 targetVelocity, bool surfaceDescent = false)
         {
             SpaceVector2 current = new(assembly.VelocityX, assembly.VelocityY);
-            targetVelocity = current; turn = 0d;
+            targetVelocity = current;
             SpaceVector2 steering = default;
             bool manual = false;
             foreach (ShipControlRequest request in controlRequests.Values)
             {
                 if (!FindPiece(request.ConsolePieceId, out ShipState ship, out ShipPieceState console) ||
                     !assembly.MemberShipIds.Contains(ship.ShipId) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) continue;
-                steering += SpaceVector2.FromAngle(ship.AngleRadians) * request.Move.x +
-                            SpaceVector2.FromAngle(ship.AngleRadians + Math.PI / 2d) * request.Move.y;
-                turn += request.Turn;
-                manual |= request.Move.sqrMagnitude > .0001f || Math.Abs(request.Turn) > .001f;
+                steering += SpaceVector2.FromVector2(request.Move);
+                manual |= request.Move.sqrMagnitude > .0001f;
             }
             SpaceGameplaySettings config = SpaceGameplaySettings.Current;
             targetVelocity = ShipCruiseGuidance.ManualVelocity(current, steering, config, seconds);
-            turn = Math.Clamp(turn, -1d, 1d);
             ShipNavigationState task = surfaceDescent ? null : GetNavigation(assembly);
             if (task != null && !manual && NavigationConnected(task))
             {
                 ShipState controlled = GetShip(task.ShipId);
                 bool powered = FindPiece(task.NavigationPieceId, out _, out ShipPieceState nav) && IsPowered(controlled, nav) &&
                     FindPiece(task.ConsolePieceId, out _, out ShipPieceState console) && IsPowered(controlled, console);
-                if (!powered) { targetVelocity = current; turn = 0d; task.Status = "断电，保持惯性，等待导航设备恢复"; return; }
+                if (!powered) { targetVelocity = current; task.Status = "断电，保持惯性，等待导航设备恢复"; return; }
                 SpaceVector2 target = SpaceSectorCoordinates.Relative(task.TargetSector, new SpaceVector2(task.TargetX, task.TargetY), assembly.Sector);
                 SpaceVector2 error = target - new SpaceVector2(assembly.PositionX, assembly.PositionY);
                 SpaceVector2 velocity = new(assembly.VelocityX, assembly.VelocityY);
                 if (error.Magnitude <= config.NavigationArrivalDistanceMeters && velocity.Magnitude <= Math.Min(.001d, config.NavigationArrivalSpeedMetersPerSecond))
                 {
                     task.Active = false; task.Status = "已到达导航点";
-                    targetVelocity = current; turn = 0d;
+                    targetVelocity = current;
                     return;
                 }
                 targetVelocity = ShipCruiseGuidance.ArrivalVelocity(error, config, seconds);
-                turn = error.Magnitude > config.NavigationArrivalDistanceMeters
-                    ? ShipCruiseGuidance.TurnToward(controlled.AngleRadians, error, config, seconds) : 0d;
                 task.Status = targetVelocity.Magnitude < config.CruiseMaxSpeedMetersPerSecond * .95d ? "接近目标，减速中" : "正在导航";
             }
-            if ((targetVelocity - current).Magnitude < .001d && Math.Abs(turn) < .001d)
-            { targetVelocity = current; turn = 0d; return; }
+            if ((targetVelocity - current).Magnitude < .001d)
+            { targetVelocity = current; return; }
             CollectActuators(assembly);
             if (actuators.Count == 0)
             {
-                targetVelocity = current; turn = 0d;
+                targetVelocity = current;
                 if (task != null && task.Active) task.Status = "没有可用引擎";
                 return;
             }
             double change = ShipCruiseGuidance.ChangeRate(current, targetVelocity, config) * seconds;
             SpaceVector2 requestedChange = ShipCruiseGuidance.StepVelocity(current, targetVelocity, config, seconds) - current;
-            thrustAllocation.Reset(requestedChange, change, turn);
+            thrustAllocation.Reset(requestedChange, change, 0d);
             bool ignited = false;
             foreach (ShipActuator engine in actuators)
             {
@@ -238,11 +234,10 @@ namespace FlatWorld.Spaceflight
                 requestedEngine = true;
                 thrustAllocation.SetActualOutput(index, ConsumeEngineFuel(actuators[index], throttle, seconds));
             }
-            // 平移与转向分别按对应喷嘴的真实供油恢复，缺某侧燃料不借其它朝向的引擎。
+            // 平移按对应喷嘴的真实供油恢复，缺某侧燃料不借其它朝向的引擎。
             SpaceVector2 actualChange = thrustAllocation.ResolveVelocityChange();
             targetVelocity = current + actualChange;
-            turn *= thrustAllocation.ResolveTurnAuthority();
-            if (actualChange.SqrMagnitude > 1e-12d || Math.Abs(turn) > .001d) return;
+            if (actualChange.SqrMagnitude > 1e-12d) return;
             bool navigating = task != null && task.Active;
             if (navigating) task.Status = !ignited ? "引擎已停机，保持惯性，等待点火" : !requestedEngine
                 ? "当前方向没有可用喷嘴，保持惯性" : "燃料不足，保持惯性，等待补给";

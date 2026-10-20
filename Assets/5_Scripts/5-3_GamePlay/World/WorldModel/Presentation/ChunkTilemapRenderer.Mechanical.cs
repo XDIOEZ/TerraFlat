@@ -402,8 +402,8 @@ public sealed partial class ChunkTilemapRenderer
             }
         }
         else Part(node, x, y, 0, body, material, origin, rotation, Vector3.zero,
-            Fit(body, node.Definition.Layer == 2 ? .55f : probe ? .32f : .85f,
-                node.Definition.Layer == 2 ? .55f : probe ? .32f : .85f), 0, 0);
+            Fit(body, node.Definition.Fluid.ResolveBodySizeCells(node.Definition.Layer),
+                node.Definition.Fluid.ResolveBodySizeCells(node.Definition.Layer)), 0, 0);
         MechanicalDepthVisual visual = mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)];
         Ports(node, x, y, 6, material, origin, rotation);
         visual.UpdateFacility(node);

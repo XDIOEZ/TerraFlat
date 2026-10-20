@@ -1,3 +1,15 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 网络快照：CreateCompressedNetworkSnapshot() / ApplyCompressedNetworkSnapshot()
+// 保存入口：Save_And_WriteToDisk() / Save_And_WriteToDiskInBackground() / Save_And_WriteToDiskInBackgroundCoroutine()
+// 磁盘读写：SaveToDisk() / LoadSaveByDisk() / WriteSaveAtomically() / InvalidatePendingBackgroundSave()
+// 存档重命名：TryRenameSave() / TryRenamePlayerDisplayName()
+// 区块差量：TryFinalizeProceduralChunk() / TrySaveChunkDifferences() / TrySaveChunkDifferencesCoroutine() / ApplyChunkDelta()
+// 地形差量：RestoreRuntimeTerrainForChunk() / RecordRuntimeTerrainChange() / CaptureRuntimeTerrainStates()
+// 建筑存档：RecordRuntimeBuildingChange() / CaptureRuntimeBuildingStates() / RestoreRuntimeBuildingsForChunk()
+// AI 实体存档：CaptureRuntimeAiEntityStates() / RestoreRuntimeAiEntitiesForChunk()
+// 编码解码：BuildCompactSavePayload() / BuildCoreCompactSavePayload() / DeserializeSavePayload() / DeserializeCoreSavePayload()
+// ====================================================
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -2198,6 +2210,23 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
     }
 
+    public void CollectArchivedRuntimeBuildings(string worldKey, Dictionary<int, ItemData> output)
+    {
+        // 冷区块的建筑仍参与气密，活动实例由调用方覆盖，已移交身份不再读回。
+        foreach (ChunkSaveRecord record in chunkDeltas.Values)
+        {
+            if (record?.PlanetName != worldKey || record.ChangedItems == null) continue;
+            string restoredKey = $"{BuildChunkKey(worldKey, record.ChunkName)}\u001f{WorldAddress.FromWorldKey(worldKey).DimensionId}";
+            if (worldKey == SceneManager.GetActiveScene().name && restoredRuntimeBuildingChunks.Contains(restoredKey)) continue;
+            foreach (ItemData data in record.ChangedItems)
+                if (data != null && record.RemovedItemGuids?.Contains(data.Guid) != true &&
+                    !MachineWorld.OwnsWorldItem(data) && IsRestorableRuntimeBuildingData(data) &&
+                    Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building) &&
+                    building.Role == BuildingRole.PlacedBuilding)
+                    output[data.Guid] = data;
+        }
+    }
+
     private static void CollectRuntimeBuildingData(
         IEnumerable<ItemData> source,
         List<ItemData> output)
@@ -2882,7 +2911,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         var state = document.ToObject<FlatWorld.Spaceflight.SpaceSessionState>();
         if (state == null || state.Sectors == null || state.Sectors.Count == 0 || state.Ships == null ||
             state.Flights == null || state.Devices == null || state.Passengers == null || state.Navigation == null ||
-            state.Docking == null || state.LooseItems == null ||
+            state.Docking == null || state.LooseItems == null || state.GroundAtmospheres == null ||
             !FlatWorld.Spaceflight.SpaceVector2.Finite(state.SimulationSeconds) || state.SimulationSeconds < 0d)
             throw new InvalidDataException("太空星区存档的权威状态不完整。");
         var sectors = new HashSet<FlatWorld.Spaceflight.SpaceSectorId>();

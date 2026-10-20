@@ -36,6 +36,10 @@ public sealed class FluidMachineDefinition
     public string FilterMaterialItemId = "Cloth";
     public double FilterWorkPerItem = 100;
     public string PanelId = "UI_IndustrialFluid";
+    public float? BodySizeCells; // 方块设备可声明满格机身，普通接头沿用原尺寸。
+
+    public float ResolveBodySizeCells(int layer)
+        => BodySizeCells ?? (layer == 2 ? .55f : Kind is "mechanical-probe" or "electronic-probe" ? .32f : .85f);
 
     public void Validate(string ownerId)
     {
@@ -48,7 +52,7 @@ public sealed class FluidMachineDefinition
             !Positive(MaximumPhaseMolesPerSecond) ||
             !Positive(OverpressureDamagePerSecond) || !Positive(DefaultDisconnectPressureKPa) ||
             DefaultReconnectPressureKPa < 0 || DefaultReconnectPressureKPa >= DefaultDisconnectPressureKPa ||
-            !Positive(FilterWorkPerItem) || Ports == null || Reactions == null)
+            !Positive(FilterWorkPerItem) || (BodySizeCells.HasValue && !Positive(BodySizeCells.Value)) || Ports == null || Reactions == null)
             throw new ArgumentException("工业流体设备配置无效：" + ownerId);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (FluidMachinePortDefinition port in Ports)

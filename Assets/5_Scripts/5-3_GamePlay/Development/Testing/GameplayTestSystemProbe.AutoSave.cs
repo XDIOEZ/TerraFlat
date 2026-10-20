@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
         Register("save", "autosave_budget", ServiceAutoSaveBudget);
         Register("save", "autosave_chunk_payload", ServiceAutoSaveChunkPayload);
         Register("save", "autosave_ecology_payload", ServiceAutoSaveEcologyPayload);
+        Register("save", "agriculture_cell_index", ServiceAgricultureCellIndex);
         Register("save", "load_failure_state", ServiceLoadFailureState);
     }
 
@@ -235,6 +236,80 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { UnityEngine.Object.DestroyImmediate(host); }
+    }
+
+    // 独立记录验证密集耕地索引、外部列表变化和真实存档序列化均保持原样。
+    private static JObject ServiceAgricultureCellIndex(JObject args)
+    {
+        var record = new ChunkSaveRecord { PlanetName = "probe", ChunkName = "0_0" };
+        bool initiallyMissing = record.FindAgricultureCell(Vector2Int.zero) == null;
+        for (int i = 0; i < 256; i++)
+        {
+            AgricultureCellSaveData cell = record.GetOrAddAgricultureCell(new Vector2Int(i % 16, i / 16));
+            cell.Water = i % 11;
+        }
+        AgricultureCellSaveData first = record.FindAgricultureCell(new Vector2Int(3, 0));
+        first.Crop = ServiceItem(args);
+        bool identityPreserved = ReferenceEquals(first, record.GetOrAddAgricultureCell(first.LocalPosition)) &&
+            ReferenceEquals(first.Crop, record.FindAgricultureCell(first.LocalPosition).Crop) &&
+            record.AgricultureCells.Count == 256;
+        byte[] beforeIndexRead = MemoryPackSerializer.Serialize(record);
+        const int iterations = 8192;
+        int baselineSum = 0, indexedSum = 0;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < iterations; i++)
+        {
+            Vector2Int position = new((i * 73 & 255) % 16, (i * 73 & 255) / 16);
+            AgricultureCellSaveData found = record.AgricultureCells.Find(c => c.LocalPosition == position);
+            baselineSum += found.Water;
+        }
+        timer.Stop();
+        double linearMilliseconds = timer.Elapsed.TotalMilliseconds;
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        timer.Restart();
+        for (int i = 0; i < iterations; i++)
+        {
+            Vector2Int position = new((i * 73 & 255) % 16, (i * 73 & 255) / 16);
+            indexedSum += record.FindAgricultureCell(position).Water;
+        }
+        timer.Stop();
+        long indexedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        double indexedMilliseconds = timer.Elapsed.TotalMilliseconds;
+        bool persistedBytesUnchanged = beforeIndexRead.AsSpan().SequenceEqual(MemoryPackSerializer.Serialize(record));
+
+        // 列表追加、同数量替换、移除以及更换列表实例都不能命中旧位置。
+        var extra = new AgricultureCellSaveData { LocalPosition = new Vector2Int(16, 0) };
+        record.AgricultureCells.Add(extra);
+        bool appended = ReferenceEquals(record.FindAgricultureCell(extra.LocalPosition), extra);
+        var replacement = new AgricultureCellSaveData { LocalPosition = new Vector2Int(17, 0) };
+        record.AgricultureCells[1] = replacement;
+        bool replaced = record.FindAgricultureCell(new Vector2Int(1, 0)) == null &&
+            ReferenceEquals(record.FindAgricultureCell(replacement.LocalPosition), replacement);
+        record.AgricultureCells.Remove(extra);
+        bool removed = record.FindAgricultureCell(extra.LocalPosition) == null;
+        var duplicate = new AgricultureCellSaveData { LocalPosition = first.LocalPosition };
+        record.AgricultureCells.Add(duplicate);
+        bool originalFirst = ReferenceEquals(first, record.FindAgricultureCell(first.LocalPosition));
+        record.AgricultureCells.Remove(first);
+        bool duplicateNext = ReferenceEquals(duplicate, record.FindAgricultureCell(duplicate.LocalPosition));
+        record.AgricultureCells = new List<AgricultureCellSaveData> { replacement };
+        bool listReplaced = record.FindAgricultureCell(duplicate.LocalPosition) == null &&
+            ReferenceEquals(record.FindAgricultureCell(replacement.LocalPosition), replacement);
+
+        ChunkSaveRecord restored = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(beforeIndexRead);
+        bool roundTrip = restored.AgricultureCells.Count == 256 &&
+            restored.FindAgricultureCell(new Vector2Int(3, 0)).Crop?.Guid == first.Crop.Guid &&
+            restored.FindAgricultureCell(new Vector2Int(15, 15)).Water == 255 % 11;
+        return new JObject
+        {
+            ["initiallyMissing"] = initiallyMissing, ["identityPreserved"] = identityPreserved,
+            ["baselineSum"] = baselineSum, ["indexedSum"] = indexedSum,
+            ["linearMilliseconds"] = linearMilliseconds, ["indexedMilliseconds"] = indexedMilliseconds,
+            ["indexedBytes"] = indexedBytes, ["persistedBytesUnchanged"] = persistedBytesUnchanged,
+            ["appended"] = appended, ["replaced"] = replaced, ["removed"] = removed,
+            ["originalFirst"] = originalFirst, ["duplicateNext"] = duplicateNext,
+            ["listReplaced"] = listReplaced, ["roundTrip"] = roundTrip
+        };
     }
 
     private static byte[] ServiceAutoSaveBody(byte[] payload)

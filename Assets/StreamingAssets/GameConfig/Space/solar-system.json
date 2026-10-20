@@ -60,10 +60,9 @@
     {
       "id": "core:surface.moon", "temperatureCelsius": -30, "pressureKPa": 0,
       "atmosphereComposition": {},
-      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "space.climateOverride": 1, "space.temperatureVariationCelsius": 15, "space.crater.enabled": 1, "space.crater.spacing": 120, "space.crater.minimumRadius": 10, "space.crater.maximumRadius": 34, "space.crater.depth": 0.35 },
-      "tileParameters": { "terrain.groundTileId": "Tile_MoonRegolith", "terrain.dirtTileId": "Tile_MoonRegolith", "terrain.stoneTileId": "Tile_MoonRegolith", "terrain.sandTileId": "Tile_MoonRegolith", "space.crater.rimTileId": "Tile_Stone" },
-      "ecologyRuleIds": ["surface.stone.iron", "surface.stone.stone", "surface.common.oreStone"],
-      "caveResourceRuleIds": ["cave.resource.diamond", "cave.resource.iron", "cave.resource.stone"]
+      "numericParameters": { "terrain.seaLevel": 0, "terrain.beachLevel": 0, "river.enabled": 0, "lake.large.enabled": 0, "lake.lava.enabled": 0, "grass.density": 0, "biome.peat.spawnChance": 0, "climate.polarBand.enabled": 0, "cave.portal.enabled": 0, "structure.enabled": 0, "space.uniformSurface": 1, "space.climateOverride": 1, "space.temperatureVariationCelsius": 15, "space.crater.enabled": 1, "space.crater.spacing": 120, "space.crater.minimumRadius": 3, "space.crater.maximumRadius": 50, "space.crater.depth": 0.35 },
+      "tileParameters": { "terrain.groundTileId": "Tile_MoonRegolith", "terrain.dirtTileId": "Tile_MoonRegolith", "terrain.stoneTileId": "Tile_MoonRegolith", "terrain.sandTileId": "Tile_MoonRegolith", "space.uniformTileId": "Tile_MoonRegolith", "space.crater.rimTileId": "Tile_MoonRegolith" },
+      "ecologyRuleIds": [], "caveResourceRuleIds": [], "ecologyMultiplier": 0
     },
     {
       "id": "core:surface.mars", "temperatureCelsius": -55, "pressureKPa": 0.6,

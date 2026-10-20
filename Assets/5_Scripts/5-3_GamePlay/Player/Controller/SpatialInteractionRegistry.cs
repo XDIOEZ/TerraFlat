@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>无物理目标的作者视觉命中范围；用于准线、按键和鼠标共用同一目标。</summary>
@@ -57,24 +58,36 @@ public static class SpatialInteractionRegistry
     internal static void QueryRegisteredTargets(Item actor, float radius, Vector2? pointer,
         List<IInteractable> results, WorldTopologyDomain topology)
     {
+        // 同轮冻结玩家位置和场景，先排除远处/失活目标，再执行能力准入判断。
+        Vector2 actorPosition = actor.transform.position;
+        var actorScene = actor.gameObject.scene;
         foreach (KeyValuePair<Component, Registration> entry in Targets)
         {
             Component target = entry.Key;
             IInteractable interaction = entry.Value.Interaction;
-            if (target == null) continue;
+            if (target == null || interaction == null || !target.gameObject.activeInHierarchy ||
+                target.gameObject.scene != actorScene) continue;
             Vector3 position = target is IWorldInteractionTarget worldTarget ? worldTarget.WorldPosition
                 : target.transform.position;
-            if (!target.gameObject.activeInHierarchy ||
-                target.gameObject.scene != actor.gameObject.scene || interaction == null ||
-                !interaction.CanInteract(actor) || topology.Distance((Vector2)actor.transform.position, (Vector2)position) > radius)
+            if (!IsWithinInteractionRadius(actorPosition, position, radius, topology) ||
+                !interaction.CanInteract(actor))
                 continue;
             if (pointer.HasValue && (interaction is IGridInteractionTarget gridTarget
                 ? !gridTarget.TryGetInteractionGridHit(pointer.Value, topology, out _)
                 : target is ISpatialInteractionShape shape
                     ? !shape.ContainsInteractionPoint(pointer.Value)
-                    : topology.Distance(pointer.Value, (Vector2)position) > entry.Value.Radius)) continue;
+                    : !IsWithinInteractionRadius(pointer.Value, position, entry.Value.Radius, topology))) continue;
             if (!results.Contains(interaction)) results.Add(interaction);
         }
+    }
+
+    /// <summary>只用最短位移的平方比较范围，半径为负时拒绝所有正常命中。</summary>
+    internal static bool IsWithinInteractionRadius(Vector2 origin, Vector2 target, float radius,
+        in WorldTopologyDomain topology)
+    {
+        if (radius < 0f) return false;
+        return !(topology.SqrDistance(new float2(origin.x, origin.y),
+            new float2(target.x, target.y)) > radius * radius);
     }
     #endregion
 }

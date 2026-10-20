@@ -1,4 +1,35 @@
+-- 物质条件表的读取顺序、固液分支与临界状态保持不变。
+test.system("item_runtime", "simulation_region_shortcut", {}, function(data)
+    assert(data.identical and data.samples > 10000,
+        "物品模拟区域快路径改变原有距离分档或未覆盖足够半径样本")
+    assert(data.nearSkipped > 0 and data.stoppedSkipped > 0 and data.preciseFallbacks > 0,
+        "明确近/远区域没有跳过开平方，或边界区域没有保留原精算")
+    assert(data.infiniteStopped and data.invalidFallsBack,
+        "无同场景玩家或无效距离的判档规则改变")
+end, "物品区域判档：近远快速区与临界距离原算法保持一致")
+
+test.system("item_runtime", "initial_animator_activation", {}, function(data)
+    assert(data.queuedWhileInactive and data.stillQueued and data.disabledNotPlayed,
+        "停用候选或禁用 Animator 的初始播放未延迟，可能重复输出 Unity 动画错误")
+    assert(data.cancelClears and data.poolClears,
+        "初始动画的过期待播状态没有在取消或对象池复用时清理")
+end, "物品初始化动画延迟到正式激活，取消与对象池复用安全")
+
+test.system("item_runtime", "matter_transition_scan", {}, function(data)
+    assert(data.firstMatch and data.secondMatch,
+        "物质转换条件没有按既有配置优先级选择首个匹配项")
+    assert(data.dryBoundary and data.dryRejected and data.uninitializedRejected,
+        "物质转换条件没有在湿度阈值与未初始化时实时更新")
+    assert(data.noLiquidMatch and data.emptyRejected and data.nullRejected,
+        "物质固液类型或空定义的拒绝规则改变")
+end, "材料只读条件表索引扫描保持优先级、温湿度边界及空值语义")
+
 -- 检查模块结构版本和正式物品工厂的可变状态隔离。
+test.system("item_runtime", "cleanup_lookup", {}, function(data)
+    assert(data.stable, "场景销毁期间无搜索单例读取不稳定")
+    assert(data.allocatedBytes == 0, "场景销毁期间无搜索单例读取仍产生 GC 分配")
+end, "物品批量销毁时的单例只读查询")
+
 test.system("item_runtime", "world_matter_structure", {}, function(data)
     assert(data.initialCurrent and not data.initialBlocked and data.stableAllowed,
         "普通散落物资格缓存没有保留正常物品")
@@ -10,6 +41,9 @@ test.system("item_runtime", "world_matter_structure", {}, function(data)
     assert(data.aiBlocked and data.aiMatchesReference, "缓存遗漏自定义 AI 能力")
     assert(data.rebindInvalidated and data.generationInvalidated and data.generationAllowed,
         "换载荷或重新加载后仍使用旧代际资格")
+    assert(data.combustionCached and data.inactiveCombustionExcluded and
+        data.combustionRemovalInvalidated and data.combustionVisualRemoved,
+        "散落物燃烧模块缓存未绑定正式模块身份或未随结构变更失效")
 end, "世界散落物资格缓存、能力变更与零分配热路径")
 
 for _, row in ipairs({

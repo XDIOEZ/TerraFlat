@@ -58,7 +58,7 @@ public static class GameplayTestInventoryFlickSettingsProbe
             var gesture = new InventoryFlickGesture();
             gesture.Begin(Position(points[0]), points[0][0].Value<double>(), 1f);
             foreach (JToken point in points.Skip(1)) gesture.Record(Position(point), point[0].Value<double>());
-            JToken last = points[^1];
+            JToken last = points[points.Count - 1];
             result = Snapshot();
             result["accepted"] = gesture.IsFlick(Position(last), last[0].Value<double>(),
                 InventoryFlickUserSettings.MinimumDistance, InventoryFlickUserSettings.MinimumSpeed);

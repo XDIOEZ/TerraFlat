@@ -159,7 +159,7 @@ public sealed class RegionalWindPushField
     /// <summary>先读取各区已经过渡的推动速度，再沿用天气区同一空间权重混合。</summary>
     public Vector2 Sample(double2 position, int requiredWindLevel)
     {
-        if (requiredWindLevel < WindEnvironmentRules.MinimumPushWindLevel ||
+        if (!HasWindPush || requiredWindLevel < WindEnvironmentRules.MinimumPushWindLevel ||
             requiredWindLevel > WindEnvironmentRules.MaximumWindLevel || engine == null ||
             !engine.TryGetWindBlend(position, out RegionalWindBlend blend))
             return Vector2.zero;

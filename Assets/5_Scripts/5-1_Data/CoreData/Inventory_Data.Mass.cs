@@ -33,6 +33,21 @@ public partial class Inventory_Data
             }
         NotifyMassChanged();
     }
+
+    private void RebindMassSlot(ItemSlot slot)
+    {
+        if (massSlotItems == null || !massSlotItems.TryGetValue(slot, out ItemData previous))
+        {
+            RebindMassSlots();
+            return;
+        }
+
+        ItemData current = slot.itemData;
+        if (previous != null) previous.MassChanged -= HandleItemMassChanged;
+        massSlotItems[slot] = current;
+        if (current != null) { _ = current.Stack; current.MassChanged += HandleItemMassChanged; }
+        NotifyMassChanged();
+    }
     private void HandleItemMassChanged(ItemData _) => NotifyMassChanged();
     #endregion
 }

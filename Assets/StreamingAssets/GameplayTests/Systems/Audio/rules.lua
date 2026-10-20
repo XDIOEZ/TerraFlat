@@ -205,6 +205,13 @@ wind_sequence("退出重置清除双路包络，新世界按当前风级重新�
 })
 
 -- 地表优先级：深水静音 > 浅水 > 积雪 > 人工支撑/石地 > 沙滩 > 草被 > 泥土。
+test.system("audio", "motion_audio_spatial", {}, function(data)
+    assert(data.wrappedPosition and data.footstepDelta and data.swimmingDelta and data.independentBaseline,
+        "脚步和游泳共用物理帧位置时丢失了环绕接缝或误共用位移基线")
+    assert(data.infinitePosition and data.infiniteDelta and data.negativeSeam and data.halfPeriodTie and data.stationary,
+        "音效空间快照在无限世界、反向接缝、半周期或静止情况下改变位移")
+end, "脚步与游泳每物理帧共用一次世界拓扑，独立计步与传送边界保持")
+
 for _, row in ipairs({
     { biome = 4, grass = 2, expected = "player.footstep.grass" },
     { biome = 4, expected = "player.footstep.dirt" },

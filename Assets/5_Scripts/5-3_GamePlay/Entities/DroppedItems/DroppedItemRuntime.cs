@@ -19,6 +19,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     private readonly List<DroppedItemSaveRecord> unresolved = new();
     private readonly DroppedItemPresentation presentation;
     private WorldTopologyDomain domain;
+    private readonly string matterWorldKey;
     public int Count => simulation.Count;
     public bool IsCreated => simulation.IsCreated;
     public int VisibleViewCount => presentation.VisibleViewCount;
@@ -26,6 +27,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     public DroppedItemRuntime(Scene scene, List<DroppedItemSaveRecord> records)
     {
+        matterWorldKey = scene.name;
         try
         {
             domain = WorldTopologyRuntime.GetActiveDomain();

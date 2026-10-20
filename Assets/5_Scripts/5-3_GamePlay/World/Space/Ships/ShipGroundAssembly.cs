@@ -41,6 +41,14 @@ namespace FlatWorld.Spaceflight
         public static int SnapQuarterTurns(double radians) =>
             (int)Math.Round(radians / (Math.PI * .5d), MidpointRounding.AwayFromZero) & 3;
 
+        // 船体位置记录重心，落地格子必须从本地原点换算，避免载荷改变后整船错位。
+        public static Vector2Int SnapOrigin(ShipState ship)
+        {
+            ShipGeometry.LocalToWorld(ship, 0d, 0d, out double x, out double y);
+            return new Vector2Int((int)Math.Round(x, MidpointRounding.AwayFromZero),
+                (int)Math.Round(y, MidpointRounding.AwayFromZero));
+        }
+
         public static Vector2Int RotateAnchor(int x, int y, int width, int height, int quarterTurns) =>
             (quarterTurns & 3) switch
             {
@@ -70,9 +78,11 @@ namespace FlatWorld.Spaceflight
             var existingShips = new HashSet<string>();
             foreach (ShipState existing in State.Ships) existingShips.Add(existing.ShipId);
             bool transferred = false;
+            bool atmosphereTransferred = false;
             try
             {
                 selected = CollectGroundAssembly(world, console.Id);
+                GetGroundAtmosphere(world);
                 foreach (ShipGroundBuildingStore.Entry entry in selected)
                 {
                     ItemData snapshot = entry.Capture();
@@ -104,6 +114,8 @@ namespace FlatWorld.Spaceflight
                         new Vector2Int(piece.CellX, piece.CellY),
                         new Vector3((float)((piece.CellX + .5d) * ship.CellSizeMeters),
                             (float)((piece.CellY + .5d) * ship.CellSizeMeters)), piece.QuarterTurns));
+                TakeGroundAtmosphere(ship, world);
+                atmosphereTransferred = true;
                 MachineWorld.TransferScopeNodes(world, MachineWorld.GetShipScopeKey(ship.ShipId), machineIds,
                     node => destinations[node.Id]);
                 transferred = true;
@@ -138,6 +150,7 @@ namespace FlatWorld.Spaceflight
                             Debug.LogException(rollback); return false;
                         }
                     }
+                    if (atmosphereTransferred) ReturnGroundAtmosphere(ship, world);
                     for (int i = pieces.Count - 1; i >= 0; i--) RollbackPiece(ship, pieces[i]);
                     if (shipColliderPresenters.Remove(ship.ShipId, out ShipColliderPresenter presenter)) CompleteGroundCleanup(presenter.Dispose);
                 }
@@ -196,18 +209,24 @@ namespace FlatWorld.Spaceflight
                 for (int x = 0; x < width; x++) yield return WorldTopologyRuntime.NormalizeCell(entry.Cell + new Vector2Int(x, y));
         }
 
-        private static void InitializeTemplateCabin(ShipState ship, int consoleGuid)
+        private static void InitializeTemplateCabin(ShipState ship, int consoleGuid, string scopeKey = null, HashSet<ShipCell> selected = null)
         {
-            using var scope = MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId));
+            using var scope = MachineWorld.UseScope(scopeKey ?? MachineWorld.GetShipScopeKey(ship.ShipId));
             MachineEntity console = MachineWorld.GetById(consoleGuid);
             JObject root = ItemSpecialDataJsonStore.ReadRoot(console.Snapshot.ItemSpecialData);
             JObject marker = root[ShipFixedStructureBuilder.TemplateMarker] as JObject;
             if (marker?["initialCabinGas"] is not JObject payload) return;
             if (ship.Compartments.Count == 0) throw new InvalidOperationException("模板配置了舱气，但当前船体没有密闭舱。");
             FixedStructureGas gas = payload.ToObject<FixedStructureGas>();
+            bool initialized = false;
             foreach (ShipCompartmentState room in ship.Compartments)
+            {
+                if (selected != null && !room.Cells.Exists(selected.Contains)) continue;
                 room.Gas = FixedStructureResourceInitializer.CreateFluidState(gas, null, room.VolumeLiters,
                     ShipAtmosphereService.MinimumCabinGasSpaceLiters, double.MaxValue);
+                initialized = true;
+            }
+            if (!initialized) return;
             marker.Remove("initialCabinGas");
             console.Snapshot.ItemSpecialData = root.ToString(Newtonsoft.Json.Formatting.None);
         }
@@ -216,6 +235,7 @@ namespace FlatWorld.Spaceflight
         #region 落地后交还普通建筑与地表网络
         private string lastGroundRestoreError;
         private readonly List<ShipState> groundRestoreShips = new();
+        private readonly List<ShipState> groundRestoreMembers = new();
         private readonly HashSet<string> groundRestoreHandled = new(StringComparer.Ordinal);
 
         private sealed class GroundRestorePlan
@@ -244,7 +264,8 @@ namespace FlatWorld.Spaceflight
                 ShipFlightState flight = GetFlight(ship.ShipId);
                 if (ship.IsWreck || flight == null || flight.SurfaceWorldKey != world ||
                     flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)) continue;
-                var members = new List<ShipState>();
+                List<ShipState> members = groundRestoreMembers;
+                members.Clear();
                 ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
                 if (assembly == null) members.Add(ship);
                 else foreach (string id in assembly.MemberShipIds)
@@ -270,13 +291,12 @@ namespace FlatWorld.Spaceflight
             }
         }
 
-        private GroundRestorePlan PlanGroundShip(ShipState ship, string world, HashSet<Vector3Int> occupied)
+        private GroundRestorePlan PlanGroundShip(ShipState ship, string world, Dictionary<Vector3Int, ShipPieceState> occupied)
         {
             using var worldScope = MachineWorld.UseScope(world);
             if (Math.Abs(ship.CellSizeMeters - 1d) > .000001d) throw new InvalidOperationException("船格必须与普通建筑的一米格对齐。");
             int turns = ShipGroundAssembly.SnapQuarterTurns(ship.AngleRadians);
-            Vector2Int origin = new((int)Math.Round(ship.PositionX, MidpointRounding.AwayFromZero),
-                (int)Math.Round(ship.PositionY, MidpointRounding.AwayFromZero));
+            Vector2Int origin = ShipGroundAssembly.SnapOrigin(ship);
             var plan = new GroundRestorePlan { Ship = ship, Origin = origin, Turns = turns,
                 Preparation = EnsureGroundPreparation(ship, world) };
             plan.Preparation.ReadyAtCommit = plan.Preparation.Ready;
@@ -292,19 +312,35 @@ namespace FlatWorld.Spaceflight
                 plan.Placements.Add(id, new MachineScopePlacement(cell, new Vector3(cell.x + .5f, cell.y + .5f), q));
                 plan.Pieces.Add(id, piece);
                 MachineDefinition definition = MachineCatalog.Get(piece.ItemId);
-                int layer = piece.Kind == ShipPieceKind.Floor ? Mod_ShipPart.GroundFloorLayer : definition?.Layer ??
-                    ReadBuildingPlacementLayer(GameRes.ExistingInstance.TryGetItemDefinition(piece.ItemId, out RuntimeItemDefinition itemDefinition) ? itemDefinition : null);
+                int layer = Mod_ShipPart.ResolveGroundOccupancyLayer(piece.Kind, piece.Layer, definition?.Layer);
                 int worldWidth = (turns & 1) == 0 ? width : height, worldHeight = (turns & 1) == 0 ? height : width;
                 for (int y = 0; y < worldHeight; y++)
                     for (int x = 0; x < worldWidth; x++)
                     {
                         Vector2Int at = WorldTopologyRuntime.NormalizeCell(cell + new Vector2Int(x, y));
-                        if (!occupied.Add(new Vector3Int(at.x, at.y, layer)) || BuildingOccupancyRegistry.IsOccupied(at, layer: layer))
-                            throw new InvalidOperationException("落点的建筑层已被占用，请清理落点。");
+                        var key = new Vector3Int(at.x, at.y, layer);
+                        if (occupied.TryGetValue(key, out ShipPieceState other))
+                            throw new InvalidOperationException($"船体部件落地占地重叠：格({at.x},{at.y})，层{layer}，" +
+                                $"{other.ItemId}[{other.PieceId}]与{piece.ItemId}[{piece.PieceId}]。");
+                        occupied.Add(key, piece);
+                        if (BuildingOccupancyRegistry.IsOccupiedNormalized(at, layer: layer))
+                            throw new InvalidOperationException($"落点的地面建筑层已被占用：格({at.x},{at.y})，层{layer}，" +
+                                $"待落地部件{piece.ItemId}[{piece.PieceId}]，请清理落点。");
                     }
+            }
+            return plan;
+        }
+
+        private void CaptureGroundShipContents(GroundRestorePlan plan)
+        {
+            foreach (var pair in plan.Pieces)
+            {
+                int id = pair.Key;
+                ShipPieceState piece = pair.Value;
+                MachineDefinition definition = MachineCatalog.Get(piece.ItemId);
                 if (definition != null)
                 {
-                    using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
+                    using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(plan.Ship.ShipId)))
                     {
                         MachineEntity node = MachineWorld.GetById(id) ?? throw new InvalidOperationException("待落地机器身份缺失：" + piece.ItemId);
                         plan.OriginalMachines.Add(id, new MachineScopePlacement(node.Cell, node.Snapshot.transform.position, node.RotationQuarterTurns));
@@ -321,16 +357,28 @@ namespace FlatWorld.Spaceflight
                 SaveGroundPartState(snapshot, piece);
                 plan.Snapshots.Add(id, snapshot);
             }
-            return plan;
         }
 
         private void RestoreGroundAssembly(List<ShipState> members, string world)
         {
             using var sample = GroundCommitMarker.Auto();
+            GroundShipPreparation preparation = EnsureGroundPreparation(members[0], world);
+            if (!preparation.RestoreGate.ShouldAttempt(world, BuildingOccupancyRegistry.Revision, members)) return;
             var plans = new List<GroundRestorePlan>(members.Count);
-            var occupied = new HashSet<Vector3Int>();
+            var occupied = new Dictionary<Vector3Int, ShipPieceState>();
             // 整组先检查最终落点，再创建正式建筑，不能只交还对接组合的一半。
-            foreach (ShipState ship in members) plans.Add(PlanGroundShip(ship, world, occupied));
+            try
+            {
+                foreach (ShipState ship in members) plans.Add(PlanGroundShip(ship, world, occupied));
+            }
+            catch (InvalidOperationException)
+            {
+                preparation.RestoreGate.Block(world, BuildingOccupancyRegistry.Revision, members);
+                throw;
+            }
+            // 整组占地通过后才复制最新数据，失败落点不再逐帧制造快照垃圾。
+            using (GroundCaptureMarker.Auto())
+                foreach (GroundRestorePlan plan in plans) CaptureGroundShipContents(plan);
             bool handedOff = false;
             try
             {
@@ -429,7 +477,10 @@ namespace FlatWorld.Spaceflight
         private void DetachGroundShipOwnership(GroundRestorePlan plan, string world)
         {
             ShipState ship = plan.Ship;
-            ship.PositionX = plan.Origin.x; ship.PositionY = plan.Origin.y; ship.AngleRadians = plan.Turns * Math.PI * .5d;
+            ship.AngleRadians = plan.Turns * Math.PI * .5d;
+            ShipGeometry.Rotate(ship.CenterOfMassLocalX, ship.CenterOfMassLocalY, ship.AngleRadians, out double centerX, out double centerY);
+            ship.PositionX = plan.Origin.x + centerX; ship.PositionY = plan.Origin.y + centerY;
+            ReturnGroundAtmosphere(ship, world);
             ShipFlightState completedFlight = GetFlight(ship.ShipId);
             foreach (ShipPieceState piece in ship.Pieces)
             {

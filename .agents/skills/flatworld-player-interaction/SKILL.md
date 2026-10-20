@@ -44,6 +44,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 同格叠层通过 `IGridInteractionTarget` 声明网格/格坐标/显示层级，`GridInteractionSelector` 只统计有资格且在距离内的目标，按光标由上到下平均分给底层到高层；正式按键与描边共用选择，重复视觉不增加份数，地板/墙不占份数。
 - 光标未命中后同轮半径兜底复用已完成的 `Physics2D.SyncTransforms`，显式点选仍独立同步；Profiler 区分 `FlatWorld.Interaction.PointerQuery/RadiusQuery`。
 - 指针、半径、注册目标和自然资源空间桶共用单轮 `WorldTopologyDomain`；桶内不逐格重建活动世界上下文，目标与准入仍每帧现查，不跨帧缓存或改变输入响应周期。
+- `SpatialInteractionRegistry.QueryRegisteredTargets` 一轮只读取一次玩家位置及场景，先排除远处/未激活目标，再调用 `CanInteract`，并复用最短距离平方进行半径与光标过滤；正常命中和动态移动仍实时检查，回归 `player/interaction_registry_prefilter`。
 - 环境输入只转发按下/持续/松开，环境定义由 `EnvironmentInteractionRunner` 建独立实例；玩家状态不存于共享地块定义。
 - 载具按键交互和描边共享落点查询，上下船均要求实际命中；无邻近陆地时允许安全水面落点，未命中载具的可触及水面仍可交给环境动作。
 
@@ -55,12 +56,14 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
+- `Mod_Mover` 的逐帧水流推动先查询当前格真实流向，有有效水流后才解析 Actor 推动配置；`WorldMotionSystem.CalculateWaterCurrentVelocity` 与数值速度入口共用原流量曲线，不跨帧缓存水态。回归 `environment/water_current_reuse`。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
 - `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。
 - `Mover_SaveData.isRunning` 保存奔跑开关，输入锁停止位移但保留开关。Run 与 Move 分离，静止动画为 Idle，跑步播放不改全局 Animator.speed。体力统一经带来源的 `Mod_Stamina` API；管理员无限体力也在该权威模块处理。普通划船不耗体力，按住奔跑且移动时的载具加速记为 `flatworld.carrier.boost`。
 - 太空场景禁止玩家奔跑；失重 WASD 输入由 `SpaceSession.StepFreePassengers` 在固定步调用 `Mod_Mover.SmoothSpaceVelocity`，按屏幕方向给 FreeWalkVelocity 累加推力，松键无摩擦并保持速度，反向输入逐渐制动。离船继承船体点速度，继承/碰撞速度不受主动移动限速影响。Shift 不参与冲刺、借力或抓墙，普通地表奔跑保留。
 - 地表飞船起降和玩家单独下落整体移动根节点/刚体，手持物自然跟随；`ShipSurfacePresentation` 暂存离地碰撞与高度，落地/释放恢复。玩家保存、环绕坐标、世界格事件与联机地面状态通过 `GroundPosition` 去掉临时高度，不能把高度写入地面位置。
 - `Mod_FocusPoint` 独占翻身/瞄准节点的最终旋转，`Mod_TurnBack` 提供本地 Y 转角，手持物瞄准换算到父节点坐标。太空 `SetSpaceUpright` 只固定本体/刚体与镜头朝上，仍开启鼠标左右翻面；不能调用 `SetMirroringEnabled(false)` 把角色锁向右侧。`CameraFollowRotation` 在 Cinemachine 管线内写绝对朝向，不叠加 Dutch，`Mod_Cam.SetFollowTargetRotation(false)` 明确恢复零角度。镜头使用 Cinemachine 2.x Framing Transposer 的 Lookahead/XY Damping；缩放解析玩家兄弟模块 `Mod_ChunkLoader` 刷新区块窗口。管理员无限视野只跳过最终尺寸上限，有限 `MaxPovValue` 仍供普通玩法/UI 使用。
+- `Mod_FocusPoint` 每轮只采样一次指针，批内共用世界拓扑；每个目标由同一最短方向判断距离平方与角度，本体直瞄不解析世界边界，死区和翻面不变。回归 `player/focus_aim_batch`。
 - 环绕副本使用 URP Overlay，`WrappedWorldCameraRenderer` 唯一管理相机后处理开关：有副本仅最后活动相机启用，无副本/解绑恢复主相机；`ScreenPostProcessManager` 只合成 Volume 参数。
 - 地表柔边云团与外圈浓云由 ZoomCloudRendererFeature 在最终环绕补绘后叠加；清晰区对齐玩家设置的实际方形加载窗，额外表现预加载圈形成柔雾带，缺少外圈时在已加载窗内收一格柔边。窗口随加载设置与跨区块提交变化，缩放只改变屏幕投影；风只控制漂移，SurfaceZoomTransition 独立平滑 60～90 的宇宙画面直接淡入淡出，正常太空和禁天气维度不叠地表云，HUD 不被覆盖。
 - `CameraZoomExtensions` 注册通用缩放策略；地表宇宙观察把逻辑尺寸与实际相机尺寸分开，`CurrentOrthographicSize` 在这种策略下读逻辑尺寸，其余模式仍读 lens。滚轮/双指共用线性→倍率的连续步坐标，手机滑条通过 GetViewSliderValue/SetViewSliderValue 使用稳定分段映射；驾驶跟随覆盖优先，观察不改变玩家位置、听音或区块加载距离。

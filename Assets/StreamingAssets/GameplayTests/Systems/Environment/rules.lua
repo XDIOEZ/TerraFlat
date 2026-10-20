@@ -2,6 +2,29 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+for _, input in ipairs({
+    { fraction = 0, expected = false },
+    { fraction = 0.049999, expected = false },
+    { fraction = 0.05, expected = true },
+    { fraction = 0.050001, expected = true },
+    { fraction = 0.21, expected = true },
+    { fraction = 1, expected = true },
+    { fraction = 0.21, pressure = 0, expected = false },
+    { fraction = 0.21, vacuum = true, expected = false },
+    { fraction = 0.049999, pressure = 1000, expected = false },
+    { fraction = 0.05, pressure = 1, expected = true }
+}) do
+    local expected = input.expected
+    test.system("environment", "combustion_oxygen", input, function(data)
+        near(data.minimumFraction, 0.05, "明火氧气门槛必须是5%")
+        assert(data.allowed == expected, "星球大气燃烧条件不符合5%门槛")
+        assert(data.partialPressureAllowed == expected, "局部舱气未按氧气占比判断燃烧")
+        assert(not data.missingAllowed, "缺失环境时不能默认允许燃烧")
+        assert(data.localAllowed == expected and data.localUpdated ~= expected,
+            "燃烧没有读取当前局部环境，或错误缓存了旧氧气状态")
+    end, "真空、缺氧、5%临界值及局部气体实时更新")
+end
+
 for _, combination in ipairs({
     {wind = true, rain = true, thunder = true, fog = true},
     {wind = true, rain = true, thunder = false, fog = false},
@@ -321,6 +344,12 @@ test.system("environment", "wind_push_transition", {}, function(data)
         near(sample.x, x, label .. "：水平推速")
         near(sample.y, y, label .. "：垂直推速")
     end
+    assert(data.calmNoPush and data.calmNowHasPush,
+        "无风跳过采样的条件在新风源启用后没有解除")
+    velocity(data.calmLevel8, 0, 0, "无风八级采样直接归零")
+    velocity(data.calmLevel10, 0, 0, "无风十级采样直接归零")
+    velocity(data.calmFarAway, 0, 0, "无风远区不触发混合风场")
+    velocity(data.calmRising, .25, 0, "无风到强风渐入保留原曲线")
     velocity(data.start, 0, 0, "起风当刻从零接续")
     velocity(data.rising, .03, 0, "八级风完整时间渐入")
     velocity(data.steady, .06, 0, "稳态仍保留八级档")
@@ -531,6 +560,11 @@ test.system("environment", "water_current_reuse", {}, function(data)
         "重复利用的水体样本丢失河流流量、海洋风场，或把湖泊及干格识别为流动")
     assert(data.covered and data.uncovered and data.stoppedRiver and data.drained,
         "水体样本在支撑面变化、河流停流或抽干后没有实时读取权威数据")
+    assert(math.abs(data.riverVelocityX - 1.0285714) < .0001 and
+        math.abs(data.riverVelocityY - 1.3714286) < .0001 and
+        math.abs(data.oceanVelocityX - 1.2) < .0001 and
+        math.abs(data.oceanVelocityY - 1.6) < .0001 and data.zeroSpeedVelocity == 0,
+        "水流速度复用后河流流量曲线、海洋定速或零推速规则改变")
 end, "掉落物水流同批复用地块样本，保持流向和液体变化语义")
 
 test.system("environment", "environment_batch_rejection", {}, function(data)

@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 public partial class Mod_FocusPoint : Module
@@ -91,8 +92,9 @@ public partial class Mod_FocusPoint : Module
         }
 
         // 更新鼠标世界位置（供外部脚本调用）
-        Data.See_Point = Mod_GameController.GetMouseWorldPosition();
-        Data.DefaultSkill_Point = Mod_GameController.GetMouseWorldPosition();
+        Vector3 pointerWorld = Mod_GameController.GetMouseWorldPosition();
+        Data.See_Point = pointerWorld;
+        Data.DefaultSkill_Point = pointerWorld;
         // 仅在启用旋转且列表有对象时执行逻辑
         if (Data.ActivateRotation)
         {
@@ -144,6 +146,10 @@ public partial class Mod_FocusPoint : Module
     private void FaceToMouse(Vector3 targetPosition, float deltaTime)
     {
         bool bodyRotationAim = turnBody != null && !turnBody.IsMirroringEnabled;
+        List<Transform> targets = GetValidRotationTargets();
+        // 普通瞄准整轮只取一次环绕拓扑，本体旋转不需要查询世界边界。
+        WorldTopologyDomain topology = !bodyRotationAim && targets.Count > 0
+            ? WorldTopologyRuntime.GetActiveDomain() : default;
         // 获取玩家当前朝向
         float playerFacingDirection = 1f; // 1表示朝右，-1表示朝左
         if (turnBody != null)
@@ -152,21 +158,14 @@ public partial class Mod_FocusPoint : Module
         }
 
         // 遍历所有有效目标执行旋转
-        foreach (var targetTrans in GetValidRotationTargets())
+        foreach (var targetTrans in targets)
         {
-            // 计算目标对象到鼠标位置的距离
-            float distanceToMouse = bodyRotationAim
-                ? Vector2.Distance(targetTrans.position, targetPosition)
-                : WorldTopologyRuntime.Distance(targetTrans.position, targetPosition);
+            Vector3 targetOrigin = targetTrans.position;
+            Vector2 direction = ResolveAimDelta(targetOrigin, targetPosition, bodyRotationAim, topology);
 
-            // 如果距离小于阈值，则停止旋转，保留当前角度
-            if (distanceToMouse <= Data.StopRotationDistance)
+            // 距离平方直接复用方向，避免另一次世界查询和开平方。
+            if (IsWithinAimStopDistance(direction, Data.StopRotationDistance))
                 continue;
-
-            // 计算目标对象到鼠标位置的方向
-            Vector2 direction = bodyRotationAim
-                ? (Vector2)(targetPosition - targetTrans.position)
-                : WorldTopologyRuntime.ShortestDelta(targetTrans.position, targetPosition);
 
             // 本体已经转动时，手持物只补父节点坐标中的瞄准角，避免重复叠加整个人的旋转。
             if (bodyRotationAim && targetTrans.parent != null)
@@ -205,6 +204,23 @@ public partial class Mod_FocusPoint : Module
             targetTrans.localRotation = Quaternion.Euler(baseLocalX, facingAngleY, smoothedAngle);
         }
     }
+
+    #region 瞄准方向计算
+
+    internal static Vector2 ResolveAimDelta(Vector2 origin, Vector2 target,
+        bool direct, in WorldTopologyDomain topology)
+    {
+        if (direct)
+            return target - origin;
+        float2 delta = topology.ShortestDelta(new float2(origin.x, origin.y),
+            new float2(target.x, target.y));
+        return new Vector2(delta.x, delta.y);
+    }
+
+    internal static bool IsWithinAimStopDistance(Vector2 delta, float distance)
+        => distance >= 0f && delta.sqrMagnitude <= distance * distance;
+
+    #endregion
 
     private List<Transform> GetValidRotationTargets()
     {

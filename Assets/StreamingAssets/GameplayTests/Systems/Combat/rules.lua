@@ -1,3 +1,20 @@
+-- 阵营查询沿用正式服务，额外 GC 断言仅在计数器可用时执行。
+test.system("combat", "faction_relation_lookup", {}, function(data)
+    assert(data.sameFactionFriendly and data.differentFactionHostile and data.neutralFactionNeutral
+        and data.emptyFactionHostile, "阵营默认关系或大小写、空值规则变化")
+    assert(data.registeredBothDirections and data.ownerConflictRejected and data.neutralOverride
+        and data.ownerReplacement and data.ownerCleared and data.candidateIsolated,
+        "MOD 阵营关系的双向覆盖、归属冲突、清理或候选隔离失效")
+    assert(data.defaultSum == 0 and data.registeredSum == 256,
+        "阵营重复查询返回了错误的默认敌对或外部中立关系")
+    assert(data.controlSize == 2048, "GC 计数器探针没有实际完成分配对照")
+    if data.allocationCounterAvailable then
+        assert(data.defaultAllocatedBytes == 0 and data.registeredAllocatedBytes == 0,
+            "阵营热查询产生托管分配：默认 " .. data.defaultAllocatedBytes ..
+            "B，注册 " .. data.registeredAllocatedBytes .. "B")
+    end
+end, "阵营无字符串键查询与MOD关系覆盖语义")
+
 -- 正式掉落条目及展开到 GO 的配置必须保持相同分布，不能只改变某一种后端。
 test.system("combat", "loot_amount", {}, function(data)
     assert(not data.rejected and data.backendEquivalent, "GO 与原生掉落数量抽样不一致")

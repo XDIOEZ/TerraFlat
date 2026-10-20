@@ -3,12 +3,21 @@ test.space("ship_landing", function(data)
     assert(data.scope == "live-ship-landing" and #data.ships > 0, "没有执行真实飞船起降专项")
     local function ground(snapshot, label)
         assert(snapshot.phase == "GroundBuildings" and not snapshot.spaceView, "当前不是普通地面建筑：" .. label)
-        local ids, machines = {}, 0
+        local ids, machines, occupied, fibers = {}, 0, {}, 0
         for _, building in ipairs(snapshot.buildings) do
             assert(building.guid ~= 0 and not ids[building.guid] and building.snapshotGuid == building.guid,
                 "普通建筑 Guid 重复、丢失或快照串号：" .. label)
             assert(building.installed and building.scope == snapshot.world,
                 "普通建筑没有按正式地表作用域安装：" .. label)
+            local key = building.cell.x .. ":" .. building.cell.y .. ":" .. building.placementLayer
+            assert(not occupied[key] and building.placementOccupied,
+                "普通建筑同层重叠或没有登记正式占地：" .. label .. "/" .. building.itemId)
+            occupied[key] = building.guid
+            if building.itemId == "ShipFiber" then
+                fibers = fibers + 1
+                assert(building.placementLayer == 5 and building.sameLayerPlacementRejected,
+                    "光纤落地丢失显式层，或允许同层重复铺设：" .. label)
+            end
             assert(building.cell.x % 1 == 0 and building.cell.y % 1 == 0 and
                 building.quarterTurns % 1 == 0 and building.quarterTurns >= 0 and building.quarterTurns <= 3,
                 "落地建筑没有对齐格子和 90 度朝向：" .. label)
@@ -17,6 +26,14 @@ test.space("ship_landing", function(data)
         end
         assert(snapshot.pieceCount > 0 and #snapshot.buildings == snapshot.pieceCount,
             "普通地面成员采样不完整：" .. label)
+        local stackedFibers = 0
+        for _, building in pairs(ids) do
+            if building.itemId == "ShipFiber" and
+                occupied[building.cell.x .. ":" .. building.cell.y .. ":0"] then
+                stackedFibers = stackedFibers + 1
+            end
+        end
+        assert(fibers > 0 and stackedFibers > 0, "落地专项没有覆盖与设备同格的非机器光纤：" .. label)
         return ids, machines
     end
     local function ground_view(snapshot, label)
@@ -148,6 +165,8 @@ test.space("ship_landing", function(data)
         assert(ship.cruising.hydrogen < ship.filled.hydrogen and ship.cruising.oxygen < ship.filled.oxygen,
             "起飞没有消耗真实氢氧：" .. label)
         for _, flight in ipairs({ship.lifting, ship.cruising, ship.descending}) do
+            assert(math.abs(flight.angle) < 0.000001 and math.abs(flight.angularVelocity) < 0.000001,
+                "起降过程没有保持朝上：" .. label)
             assert(flight.id == ship.lifting.id and flight.pieceCount == ship.landed.pieceCount and
                 #flight.pieces == ship.landed.pieceCount and #flight.machines == machineCount,
                 "起降丢失船体身份、部件或普通机器：" .. label)
@@ -180,6 +199,7 @@ test.space("ship_landing", function(data)
         for guid, building in pairs(initial) do
             assert(restored[guid] and restored[guid].itemId == building.itemId and
                 restored[guid].machine == building.machine, "落地没有还原同 Guid 的普通建筑：" .. label)
+            assert(restored[guid].quarterTurns == building.quarterTurns, "起降改变了建筑安装朝向：" .. label)
         end
         ground_preparation(ship, restored, machineCount, label)
         ground_view(ship.viewCache.surface, label .. "/GM 创建")

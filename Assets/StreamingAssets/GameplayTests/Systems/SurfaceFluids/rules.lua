@@ -2,6 +2,13 @@ local function near(a, b, message)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= 0.00001, message)
 end
 
+test.system("surface_fluids", "notification_dispatch", {}, function(data)
+    assert(data.iterations == 1024 and data.hits == 2048,
+        "正式取水通知在重复发送时丢失或重复调用监听器")
+    assert(data.firstSnapshot and data.nextSnapshot and data.duplicates,
+        "监听器在通知途中退订没有保持本轮快照，或重复订阅顺序变化")
+end, "取水事件投递顺序、重入退订与稳态分配")
+
 test.system("surface_fluids", "liquid_layer", {}, function(data)
     assert(data.added and not data.repeated and data.repeatedRevisionStable, "液深重复写入错误地产生变更")
     assert(data.wetChanged and data.wetId == "core:dirty_water", "液体独立身份或差量未保存")

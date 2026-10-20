@@ -27,6 +27,8 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - `Item.LoadInSteps` 与同步 `Load` 共用装配规则，按注册全部模块→逐个 ModuleInit→逐个依赖→逐个 OnLoad 推进；生命周期切换态跨帧保留，释放枚举器清理已加载模块。`ItemMgr.InstantiateItemInSteps` 复用外壳池，冷壳走 `InstantiateAsync`，候选加载完成前不进入世界注册/保存/网络索引，Profiler 作用域不跨让帧。
 `当前定义 → ItemData → 全部模块登记 → ModuleInit → 依赖绑定 → OnLoad → Tick/Save → OnUnload → Despawn/Pool`
 
+- 场景卸载时 `Item.OnDestroy` 只通过 `ItemMgr.GetExistingInstance()` 注销；管理器已销毁后禁止逐物品执行全场景单例查找，仍正常卸载模块。
+
 - 能力来自 Prefab/JSON 的显式组合。`StableName` 是 Item 内唯一模块实例键；`ModuleId` 是可共享能力 ID；`PrefabId`/JSON `prefab` 是具体实现地址，不入实例存档。JSON 键决定 StableName，Prefab-only 回退确定性对象名；`CanonicalModuleId` 提供固定能力默认值，JSON 显式 ID 仍须符合依赖契约。
 - 默认能力通过 `CanonicalModuleId` 声明，由统一绑定入口写入；不要在 `Awake` 改写空模板 ID，否则可能同时破坏来源身份和当前定义身份，造成 AI/转身模块生成失败。
 - 内嵌模块节点改名且同能力有多个实现时，在 Prefab 显式填写与 JSON 槽位一致的 `StableName`，不要依赖不唯一的能力别名定位。
@@ -45,6 +47,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 - Tick 捕获注册令牌及 Item/Module 代际，回调后复核。重建保留未变模块时钟；休眠不补算。Profiler 标记为 `FlatWorld.Module.<类型名>`。
 - Tick 峰值先读原始帧子标记；`FlatWorld.Hive.SpawnResident` 区分真实成员生成，不能把合法实例化峰当成调度频率问题。水生线路保留 0.2 米采样，只在单次调用内合并连续相同规范液体格，不跨调用缓存水态。
 - 距离档按同场景最近玩家及循环最短距离限制 ItemMgr Tick，不提高模块自身频率。玩家、地图、手持物保持完整更新；Owner 不代表豁免。`ItemSimulationRangeIndex` 使用近档集合、到期堆及区域判档。
+- `ItemSimulationRangeIndex` 对明显处于全近档或全停止档的区域直接用平方距离判定，跳过开平方；阈值留浮点余量，跨档边界仍精确计算，规则 `item_runtime/simulation_region_shortcut`。
 - 休眠重置时钟、停根刚体并通知 `ISimulationRangeAware`；重入先恢复原 simulated 值再重提目标。`NotifyRuntimeItemMoved` 更新空间索引与分档后发布移动事件。
 - Actor 感知几何来自当前定义；Collider Bridge 仅服务旧对象。注册/结构变化选择后端并增代际，移动只更新位置；格访问以 `LastVisitedBatch` 去重。`ItemPhysicsProjection2D` 将总重量投影成质量，将速度/接触写入非持久化 PhysicsState。
 - 掉落拾取/吸燃料用 `QueryItemCentersInCircleNonAlloc` 查附近中心空间桶；不要复用会扫描全世界感知倍率与几何的 Actor 感知查询，循环接缝仍按真实中心半径去重。
@@ -54,16 +57,19 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 ## 定义、资源与状态
 
 - Manifest 唯一发现内容；装配计划在 `RuntimeItemDefinition` 冷路径编译具体 Prefab、组件槽与参数。`shellPrefab` 引用通用目录，独立外壳用 `shellAddress`；`sourcePrefab` 只供编辑器与冗余排除，源资产删除后同步移除该字段。创建物品不回退同名 Prefab。
+- 静态资源 ECS 编译配置的产物目录在首次注册时校验，后续同配置直接复用；失败不缓存，资源目录重载清理编译缓存，新配置或能力版本重编译后重新核验。回归 `ecology/output_validation_cache`。
 - ItemMgr 冷工厂只取 `GameRes.InstantiateItemShell` 原始外壳，用最终 ItemData 装配一次；公共 `InstantiatePrefab` 仍返回已配置实例。Load 按本 Item 的 StableName 单次建索引，排除子 Item 并拒绝重复槽位；回归见 `item_runtime/shell_final_configuration`。
 - 非 Actor 定义须显式提供或继承正数 `weight/volume` 与明确的 `stackable`；冷载荷表现外壳也遵守此契约。
 - `ModuleJsonConfigurator` 对 Item/Actor 参数采用严格契约；向量 JSON 显式写 x/y/z，Unity Vector 的计算属性不能交给 `JToken.FromObject`。显示名 gameName 属于具体定义；业务 id、翻译键和 `formerIds` 别名各自独立。
 - `GameRes.ResourceAssets` 持有 Sprite/材质/动画/外壳句柄。Shell 使用 Sprite Pivot 排序，子装饰以根 SortingGroup 保持整体深度；材质池复用恢复配置值或外壳默认值。通用占位图为 `Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`，标签 ItemSprite。
 - 生物动画共用 `Entities/Item/Modules/Animation/Mod_AnimatorController`：`visualMode` 选择 Animator 或 SingleSprite，单图只驱动显式视觉子节点。移动优先级为远端显式状态→已加载且启用的 `IActorAnimationMotionSource`→Mover；来源报告主动移动及外观 `WorldOffset/RollDegrees`，被动位移不算迈步。攻击、跳跃调用 `PlayAttack(worldDirection)`、`PlayJump()`，动画不负责伤害或物理。
+- `ItemDefinitionRuntime` 的初始 Animator 状态先验证再由 Item 持有待播记录；停用外壳不执行 `Play/Update`，激活且 Animator 初始化后提交，单图模式正式禁用的 Animator 丢弃旧待播状态，回池与重新装配也清空引用。规则 `item_runtime/initial_animator_activation`。
 - 单图 `singleSpriteStates` 在具体外壳配置状态名与 Sprite，复用 `PlayAnimation/TryPlayAnimation` 切图；`TrySetSprite(Sprite)` 支持直接换图及跨图集 Sprite，不启动身体 Animator。空图/未知状态拒绝，复位、停用、卸载及切模式还原换图前的图片，回池不残留状态图。
 - 单图动作通过独立父层组合，不改原视觉 localPose、Item 根或刚体；只暂停身体 Animator，附加视觉拒绝刚体/碰撞体，手持武器沿正式命中姿态链。切模式/卸载恢复父级与同级顺序并保留最新翻面；停用组件拒绝新动作，停用 GO 先归零表现层，正式卸载再解除。宿主 `OnDestroy` 通过非持久化 `IsBeingDestroyed` 标记只释放表现层引用，不向正在销毁的宿主重新挂节点；仅移除动画组件或正常回池仍恢复存活层级。回归归属 `item_runtime/single_sprite_animation`，独立规则不代表动作观感已验收。
 - F5 `RefreshLiveConfiguration` 原位更新改变的显式参数和仍受定义控制的视觉，不替换 ItemData/模块集合或重新 Load；结构与删除参数后的默认值应用于新实例。`ApplyResourceConfiguration/OnResourcesReloaded` 保留进度并更新缓存/订阅。发布时清闲置池并禁用活跃旧实例回池。
 - 恢复先重建当前定义，再按稳定模块名合并实例状态；嵌套二进制库存由持有模块逐槽 rebase。生产配置与进度分离，产物身份匹配保留时间、次数和初始化标记。制作耐久倍率进入实例堆叠身份。
 - 材料热转化由 `ItemMatterRuntime` 与 `MaterialThermalProcessor` 按自身温度结算，热源只供热；`matter.transitions` 的 `inputAmount/remainderOutputItemId` 支持同堆整组与尾数多产物，全部产物和扣料共用原子事务。Wood 标签 500℃起每3份产1炭、余数每份1灰，木炭1000℃起1:1灰；转化继承真实温度，禁止跨槽拼木材组。
+- 高频物态条件扫描对 `IReadOnlyList<RuntimeItemMatterTransition>` 使用索引遍历，避免每件轻量掉落物发生接口枚举器装箱；按原顺序选择首个匹配项，回归 `item_runtime/matter_transition_scan`。
 - 物质状态在 `ItemData.MatterState`，静态相变/反应在定义 `matter/reactions`。玩法分类使用 `ItemData.Tags`；战利品通过顶层 lootTableId 引用稳定物品 ID。`IResourceYieldModifier` 在资源源头聚合，每条产出链应用一次并统一随机取整。
 
 - 燃烧由 Fuel 数据、Combustion 状态、FuelInteraction 交互与 ICombustionStateReceiver 表现组合；视觉尺寸/密度由 flameScale/flameHeightRatio/flameEmissionMultiplier 配置，attachFlameToAnchor 让主体火苗跟随燃烧点，followSourceRenderer/sourceRendererAnchorOffset 绑定真实贴图动画。火把底图为熄灭状态，熄灭清空粒子；氧气模块只管储备/缺氧并暴露 SupplyOxygen，环境/装备供给方负责真实条件与扣量。`requiredTool/minimumTier` 是采集专精加成参考，不是普通采矿资格。
@@ -74,7 +80,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 
 - 单机掉落经 `DroppedItemService.Spawn/SpawnLoot`：passive 使用纯 C# 轻量数据和近镜头池化 Sprite；interactive 保留完整 Item。两种新生掉落都复制独立载荷并分配新 GUID，完整 Item 在注册前清零载荷 GUID，来源库存/手持物身份保持不变。需要模块飞行效果的物品使用 interactive 与 `IDroppedItemSpawnContextReceiver`。普通世界掉落缩放 0.5，精确落点由 destination 指定；联机沿用 Item 权威链。
 - 世界散落物温湿推进共用 `WorldItemMatterRules`，普通环境温差每游戏秒缩小 1%，统一调用 `ThermalRuntime.AdvanceAmbient`；完整 Item 在注册/加载时建立时间基线，两种后端按逐件累计间隔分帧推进。高温液体接触仍以液体自身 `temperature/contactHeatingPerSecond` 固定传热，达到当前定义 `matter.ignitionTemperature` 才点燃；设备可显式传入专属速率，airExposure 只调普通环境下的干燥。已有 `Mod_Combustion` 时复用模块且不再扣材料堆数；两种后端共用材料火焰粒子。
-- 完整散落物的层级资格按结构事件、模块版本、载荷引用与运行代际失效，不在反复复核时遍历组件树；物种登记、飞行和投射物附着仍读实时状态。轻量掉落每次同步 Tick 共用地形寻址，世界/代际改变立即重建，每次样本仍读权威层，入水转换、浮力和物质接触复用样本液体定义；不能跨燃烧回调缓存温度来源。
+- 完整散落物的层级资格与燃烧模块引用按结构事件、模块版本、载荷引用与运行代际失效；同件物质结算末尾通过已验证结构更新火焰，帧级表现仍重新检查有效性。模块启停与燃烧状态实时读取，物种登记、飞行和投射物附着仍读实时状态；回归 `item_runtime/world_matter_structure`。轻量掉落每次同步 Tick 共用地形寻址，世界/代际改变立即重建，每次样本仍读权威层，入水转换、浮力和物质接触复用样本液体定义；不能跨燃烧回调缓存温度来源。
 - 轻量漂浮物水态检查与水流查询在同一 Tick 复用同一份 `RuntimeTerrainTileSample`，仅省区块寻址，水深/流向/实验水流仍实时读取；规则 `environment/water_current_reuse` 检查抽干、遮水和河海湖分支。
 - 掉落物单件物质结算按 `DroppedItems.Matter.Environment/Combustion/Transition` 分段记录；约 1ms 的批次预算只能在件与件之间检查，单件环境查询必须走温度场单格入口，避免查询一格却重建整块。
 - 完整 Item 的浮沉/漂流由 `WorldItemWaterSystem` 按最终位置派生，轻量掉落复用 `WorldItemWaterRules`。水体状态不入库存；轨迹结束后交回水系统，先移除 Mod_Droping 再允许拾取。河流加速按总重量，浮沉按单件千克/升：普通水门槛 1 kg/L，其他液体乘 `buoyancyThresholdMultiplier`（海水 1.5、岩浆 6），达到门槛下沉；该倍率不改变液体载荷重量。转换表现用 `IWaterEntryTransformEffect` 在回收前脱离源物。

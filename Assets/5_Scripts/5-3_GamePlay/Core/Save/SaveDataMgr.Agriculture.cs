@@ -30,12 +30,7 @@ public partial class SaveDataMgr
         if (!GameNetwork.HasStateAuthority || SaveData == null)
             return;
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
-        AgricultureCellSaveData cell = record.AgricultureCells.Find(c => c.LocalPosition == sample.LocalCell);
-        if (cell == null)
-        {
-            cell = new AgricultureCellSaveData { LocalPosition = sample.LocalCell };
-            record.AgricultureCells.Add(cell);
-        }
+        AgricultureCellSaveData cell = record.GetOrAddAgricultureCell(sample.LocalCell);
         cell.SourceTileId = (int)FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.SourceLayer);
         cell.Water = FarmlandSystem.ReadWaterLevel(sample.Terrain, sample.LocalCell);
         cell.WaterSupplyRemainder = FarmlandSystem.Read(sample.Terrain, sample.LocalCell,
@@ -69,7 +64,7 @@ public partial class SaveDataMgr
         if (!GameNetwork.HasStateAuthority || SaveData == null)
             return;
         var record = GetRuntimeChunkRecord(address, true);
-        var cell = record.AgricultureCells.Find(c => c.LocalPosition == local);
+        var cell = record.FindAgricultureCell(local);
         if (cell == null)
             throw new InvalidOperationException("种植格缺少水肥状态，必须先准备种植基质。");
         cell.Crop = crop == null ? null : CloneItemData(crop);
@@ -86,7 +81,7 @@ public partial class SaveDataMgr
             return false;
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, false);
         if (record == null) return true;
-        AgricultureCellSaveData cell = record.AgricultureCells.Find(value => value.LocalPosition == sample.LocalCell);
+        AgricultureCellSaveData cell = record.FindAgricultureCell(sample.LocalCell);
         if (cell == null) return true;
         if (cell.Crop != null) return false;
         record.AgricultureCells.Remove(cell);
@@ -109,6 +104,83 @@ public partial class SaveDataMgr
             if (cell.SourceTileId != 0)
                 FarmlandSystem.SyncSoilEnvironment(chunk.Terrain, x, y, cell.Water, cell.Fertility);
         }
+    }
+
+    #endregion
+}
+
+public partial class ChunkSaveRecord
+{
+    #region 农业差量快速定位
+
+    // 只索引当前内存记录，不进入存档；列表外部改动通过枚举器结构版本检测后重建。
+    [NonSerialized, MemoryPackIgnore, FastCloner.Code.FastClonerIgnore]
+    private Dictionary<Vector2Int, AgricultureCellSaveData> agricultureIndex;
+    [NonSerialized, MemoryPackIgnore, FastCloner.Code.FastClonerIgnore]
+    private List<AgricultureCellSaveData> indexedAgricultureCells;
+    [NonSerialized, MemoryPackIgnore, FastCloner.Code.FastClonerIgnore]
+    private List<AgricultureCellSaveData>.Enumerator indexedAgricultureVersion;
+    [NonSerialized, MemoryPackIgnore, FastCloner.Code.FastClonerIgnore]
+    private int indexedAgricultureCount;
+
+    internal AgricultureCellSaveData FindAgricultureCell(Vector2Int position)
+    {
+        List<AgricultureCellSaveData> cells = AgricultureCells;
+        if (cells == null || cells.Count < 16)
+        {
+            if (indexedAgricultureCells != null)
+            {
+                agricultureIndex.Clear();
+                indexedAgricultureCells = null;
+            }
+            if (cells == null) return null;
+        }
+        // 小列表线性读取更轻，稠密耕地才启用坐标索引。
+        if (cells.Count < 16)
+        {
+            for (int i = 0; i < cells.Count; i++)
+                if (cells[i] != null && cells[i].LocalPosition == position) return cells[i];
+            return null;
+        }
+
+        bool valid = ReferenceEquals(indexedAgricultureCells, cells) && indexedAgricultureCount == cells.Count;
+        if (valid)
+        {
+            try { var version = indexedAgricultureVersion; version.MoveNext(); }
+            catch (InvalidOperationException) { valid = false; }
+        }
+        if (!valid)
+        {
+            agricultureIndex ??= new Dictionary<Vector2Int, AgricultureCellSaveData>();
+            agricultureIndex.Clear();
+            // 保留旧 List.Find 的首个同坐标记录优先语义。
+            for (int i = 0; i < cells.Count; i++)
+            {
+                AgricultureCellSaveData cell = cells[i];
+                if (cell != null) agricultureIndex.TryAdd(cell.LocalPosition, cell);
+            }
+            indexedAgricultureCells = cells;
+            indexedAgricultureCount = cells.Count;
+            indexedAgricultureVersion = cells.GetEnumerator();
+        }
+        return agricultureIndex.TryGetValue(position, out AgricultureCellSaveData found) ? found : null;
+    }
+
+    internal AgricultureCellSaveData GetOrAddAgricultureCell(Vector2Int position)
+    {
+        AgricultureCellSaveData cell = FindAgricultureCell(position);
+        if (cell != null) return cell;
+        AgricultureCells ??= new List<AgricultureCellSaveData>();
+        cell = new AgricultureCellSaveData { LocalPosition = position };
+        AgricultureCells.Add(cell);
+        if (ReferenceEquals(indexedAgricultureCells, AgricultureCells) &&
+            indexedAgricultureCount == AgricultureCells.Count - 1)
+        {
+            agricultureIndex.TryAdd(position, cell);
+            indexedAgricultureCount = AgricultureCells.Count;
+            indexedAgricultureVersion = AgricultureCells.GetEnumerator();
+        }
+        return cell;
     }
 
     #endregion

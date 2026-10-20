@@ -12,6 +12,7 @@ public readonly struct ItemEnvironmentSample
 public interface IItemEnvironmentSource
 {
     bool TrySample(Item item, out ItemEnvironmentSample sample);
+    bool TrySampleCombustion(string worldKey, UnityEngine.Vector2 position, out bool canBurn);
     float SupplyAmbientOxygen(Item item, float maximumAmount);
 }
 
@@ -31,6 +32,20 @@ public static class ItemEnvironmentSources
         for (int i = sources.Count - 1; i >= 0; i--)
             if (sources[i].TrySample(item, out var sample)) return sample.CanBreathe ? sources[i].SupplyAmbientOxygen(item, maximumAmount) : 0f;
         return 0f;
+    }
+    // 燃烧方只查询所在位置的环境，由环境提供方决定采用舱气还是星球大气。
+    public static bool CanSustainCombustion(string worldKey, UnityEngine.Vector2 position)
+    {
+        for (int i = sources.Count - 1; i >= 0; i--)
+            if (sources[i].TrySampleCombustion(worldKey, position, out bool canBurn)) return canBurn;
+        return AtmosphereService.TryGetForWorld(worldKey, out AtmosphereState atmosphere) &&
+            AtmosphereService.CanSustainCombustion(atmosphere);
+    }
+    public static bool CanSustainCombustion(Item item)
+    {
+        if (item == null) return false;
+        while (item.Owner != null) item = item.Owner;
+        return CanSustainCombustion(item.gameObject.scene.name, item.transform.position);
     }
 }
 #endregion

@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
         Register("industrial_fluids", "portable_tank_cache", WorldPortableTankCache);
         Register("industrial_fluids", "portable_tank_payload", WorldPortableTankPayload);
         Register("industrial_fluids", "cold_temperature_path", WorldColdTemperaturePath);
+        Register("industrial_fluids", "cold_wind_cache", WorldColdWindCache);
     }
 
     // 独立物品使用不存在于目录的身份，规则采样不加载或改写当前资源会话。
@@ -149,6 +150,36 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 冷机器地理温度的正式点采样
+    /// <summary>验证冷区块被逐出后固定气候缓存仍按原点提供风力且保持有界。</summary>
+    private static JObject WorldColdWindCache(JObject args)
+    {
+        var cache = new SpaceSurfaceQuery.ColdWindStrengthCache(3);
+        var a = new Int2(-16, -8);
+        var b = new Int2(0, -8);
+        var c = new Int2(16, -8);
+        var d = new Int2(32, -8);
+        cache.Store(a, .25f);
+        cache.Store(b, .5f);
+        cache.Store(c, .75f);
+        bool initial = cache.TryGet(a, out float first) && Mathf.Approximately(first, .25f) && cache.Count == 3;
+        cache.Store(b, .6f);
+        bool replaced = cache.TryGet(b, out float updated) && Mathf.Approximately(updated, .6f) && cache.Count == 3;
+        cache.Store(d, 1f);
+        bool evicted = !cache.TryGet(a, out _) && cache.TryGet(c, out float retained) &&
+            Mathf.Approximately(retained, .75f) && cache.Count == 3;
+        bool missing = !cache.TryGet(new Int2(-32, -8), out _);
+        var small = new SpaceSurfaceQuery.ColdWindStrengthCache(0);
+        small.Store(a, .25f);
+        small.Store(b, .5f);
+        bool bounded = small.Count == 1 && !small.TryGet(a, out _) &&
+            small.TryGet(b, out float last) && Mathf.Approximately(last, .5f);
+        return new JObject
+        {
+            ["initial"] = initial, ["replaced"] = replaced,
+            ["evicted"] = evicted, ["missing"] = missing, ["bounded"] = bounded
+        };
+    }
+
     // 点读与完整生成都调用生产入口，只返回真实环境层及查询值给 Lua 对照。
     private static JObject WorldColdTemperaturePath(JObject args)
     {

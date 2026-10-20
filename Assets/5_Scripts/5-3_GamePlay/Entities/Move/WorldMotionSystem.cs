@@ -70,15 +70,40 @@ public static class WorldMotionSystem
         if (manager == null || !manager.TryGetRuntimeWaterCurrent(position, out RuntimeWaterCurrentSample current))
             return Vector2.zero;
 
+        return CalculateWaterCurrentVelocity(current, speed);
+    }
+
+    /// <summary>移动角色先确认当地确有水流，再查询物种或重量决定的真实推速。</summary>
+    public static Vector2 SampleWaterVelocity(Vector2 position, Item actor)
+    {
+        if (actor == null) return Vector2.zero;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || !manager.TryGetRuntimeWaterCurrent(position, out RuntimeWaterCurrentSample current))
+            return Vector2.zero;
+
+        return CalculateWaterCurrentVelocity(current, WaterCurrentPushConfigService.ResolvePushSpeed(actor));
+    }
+
+    #region 当前水流速度计算
+
+    // 两种采样入口共用原流量公式，不改变河流、海洋和实验液体的推动强度。
+    internal static Vector2 CalculateWaterCurrentVelocity(in RuntimeWaterCurrentSample current, float speed)
+    {
+        if (speed <= 0f) return Vector2.zero;
         float strength = current.Kind == RuntimeWaterCurrentKind.River
             ? WaterEnvironmentRules.ResolveRiverStrength(current.Flow)
             : Mathf.Clamp01(current.Flow);
         return current.Direction * (speed * strength);
     }
 
+    #endregion
+
     /// <summary>按当地风级、物体总质量与星球重力读取分档推动速度。</summary>
     public static Vector2 SampleWindVelocity(Vector2 position, float mass)
     {
+        // 全域没有八级以上的有效推动或渐弱尾段时，不读取目录质量、重力和拓扑。
+        if (!HasWindPush)
+            return Vector2.zero;
         return TryCreateWindSamplingContext(out WindSamplingContext context)
             ? context.Sample(position, mass) : Vector2.zero;
     }

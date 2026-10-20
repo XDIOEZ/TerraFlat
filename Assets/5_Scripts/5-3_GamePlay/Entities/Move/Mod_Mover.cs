@@ -266,8 +266,13 @@ public partial class Mod_Mover : Module
             rb.velocity = DrivenVelocity + ExternalVelocity;
         }
 
-        TickFootstepAudio();
-        TickSwimmingAudio();
+        if (footstepAudioEnabled || swimmingAudioEnabled)
+        {
+            // 同一物理帧共用角色位置和环绕拓扑，脚步与游泳仍独立统计位移。
+            var audioPosition = new MotionAudioSpatialFrame(rb.position, WorldTopologyRuntime.GetActiveDomain());
+            TickFootstepAudio(in audioPosition);
+            TickSwimmingAudio(in audioPosition);
+        }
 
         if (WorldUnitChanged == null)
             return;
@@ -500,8 +505,7 @@ public partial class Mod_Mover : Module
             if (!exposure.ReceivesWaterCurrent)
                 return Vector2.zero;
         return item != null && rb != null
-            ? WorldMotionSystem.SampleWaterVelocity(rb.position,
-                WaterCurrentPushConfigService.ResolvePushSpeed(item))
+            ? WorldMotionSystem.SampleWaterVelocity(rb.position, item)
             : Vector2.zero;
     }
 

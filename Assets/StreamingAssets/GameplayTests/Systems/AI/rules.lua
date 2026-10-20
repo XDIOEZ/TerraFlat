@@ -1,4 +1,14 @@
 -- 狼群使用最终定义的真实能力身份，重复候选不加人数，并保留独狼避让和双狼残血撤退。
+test.system("ai", "wolf_formation_topology", {}, function(data)
+    assert(data.cases == 7 and data.wrappedDeltas and data.infiniteDeltas,
+        "狼群站位共用拓扑后改变了环绕接缝、负方向或半周期最短位移")
+    assert(data.normalized and data.infiniteUnchanged,
+        "阵型位置没有正确归一化或误改 Z/无限世界坐标")
+    assert(data.laneSeamRight and data.laneSeamLeft and data.unwrappedLaneLeft and
+        data.laneTieParity and data.laneNearTie,
+        "站位左右翼选择在环绕接缝、直线距离或近重合时改变")
+end, "狼群站位批次冻结拓扑，环绕位移、归一化和左右翼分配等价")
+
 for _, case in ipairs({
     {name = "四狼互认并响应支援接口", args = {count = 4, callOnly = true}, members = 4, state = "Chase"},
     {name = "三狼主动追击", args = {count = 3}, members = 3, state = "Chase"},
@@ -15,6 +25,8 @@ for _, case in ipairs({
         for index, members in ipairs(data.packCounts) do
             assert(members == case.members and data.leaders[index] == 101,
                 "狼群漏认、重复累计成员，或没有选出同一名稳定头狼")
+            assert(data.validatedAllyCounts[index] == members - 1,
+                "本轮有效同伴快照与群体人数不一致")
             assert(data.threats[index] == 200, "狼没有从检测或同伴呼叫获得同一个玩家目标")
             if not case.firstOnly or index == 1 then
                 assert(data.states[index] == case.state, "狼群人数与正式追击、攻击或避让选择不符")
@@ -27,6 +39,8 @@ for _, exclusion in ipairs({"dead", "disabled", "unready", "foreign"}) do
         for index = 1, 3 do
             assert(data.packCounts[index] == 3 and data.leaders[index] == 101,
                 "死亡、禁用、未就绪或敌对阵营的狼被算作有效同伴")
+            assert(data.validatedAllyCounts[index] == 2,
+                "无效同伴仍进入本轮复用快照")
             assert(data.states[index] == "Chase" and data.threats[index] == 200,
                 "拒绝无效成员时破坏了剩余狼群的共同追击")
         end
@@ -106,6 +120,14 @@ test.system("ai", "line_of_sight_batch", {}, function(data)
         "视线起终点加载资格或同格/端点阻挡豁免改变")
     assert(data.crossChunkClear and data.secondRayClear,
         "已加载的跨区块空地没有保持可见")
+    assert(data.verticalPositiveClear and data.verticalNegativeClear and
+        not data.verticalIntermediateBlocked and data.verticalEndpointIgnored,
+        "纵向视线在正负方向、跨区块、遮挡和终点豁免上与原规则不一致")
+    assert(not data.verticalBlockedBeforeUnknown and data.verticalSkippedUnknownLookup and
+        not data.verticalUnknownEndpoint,
+        "纵向视线被遮挡后仍查询未知终点，或让未知区块可见")
+    assert(data.horizontalNegativeClear and data.wrappedVerticalSeamClear,
+        "负坐标横向视线或环绕纵向接缝漏查真实加载状态")
     assert(data.firstLookupCount == 2 and data.reusedLookupCount == 2 and data.cachedChunkCount == 2,
         "同轮不同射线没有复用两个已解析区块")
     assert(data.allocatedBytes == 0, "预热后的同轮 LOS 仍分配托管内存")
@@ -118,6 +140,9 @@ test.system("ai", "line_of_sight_batch", {}, function(data)
         "对角视线漏过侧格拐角或中心阻挡")
     assert(not data.unknownEndpoint and not data.unknownIntermediate and data.reboundChunkRestored,
         "未加载端点/途中格没有阻挡，或同地址区块重绑仍读旧数据")
+    assert(not data.blockedBeforeUnknownEndpoint and data.blockedBeforeUnknownSkippedEndpointLookup
+        and data.unknownEndpointChecked,
+        "被墙截断的射线仍多查终点，或无遮挡时漏查未知终点")
     assert(not data.generatingChunkBlocked and data.replacedTerrainRestored,
         "生成中的区块仍参与视线，或新地形提交没有恢复")
     assert(not data.oldObserverBlocked and data.newObserverClear,
@@ -350,3 +375,36 @@ for _, case in ipairs({
         assert(data.effective == case.effective, "正式目标体型感知规则错误")
     end, "AI感知范围：" .. case.name)
 end
+
+test.system("ai", "perception_shape_batch", {}, function(data)
+    assert(data.shapes and data.added == 2, "形状转换没有保持旋转、负缩放及已有形状偏移")
+    assert(data.bounds and data.withoutOutput, "合并计算的粗筛包围盒与独立计算不一致")
+    assert(data.rejectedEmpty, "空形状仍登记目标或修改了已有 Burst 几何列表")
+end, "Actor 感知形状一次变换生成包围盒和 Burst 数据")
+
+test.system("ai", "closest_target_batch", {}, function(data)
+    assert(data.unwrappedNearest and data.wrappedTieFirst,
+        "目标筛选的无限世界距离、环绕接缝或同距离优先级改变")
+    assert(data.playerExcluded and data.playerIncluded and data.playerWithNoTags,
+        "玩家威胁识别或目标标签过滤规则改变")
+    assert(data.emptyRejected and data.caseSensitive and data.runtimeUnmatched and
+        data.movedTargetUpdated and data.runtimeEntryConsistent,
+        "目标筛选的空标签、区分大小写、实时位置或公开调用入口改变")
+end, "AI 最近目标批量距离计算保持接缝、过滤及动态候选语义")
+
+test.system("ai", "detector_apply_batch", {}, function(data)
+    assert(data.initialUnique and data.initialTags and data.staleIgnored,
+        "感知结果应用没有去重或更新标签，或接受了过期版本")
+    assert(data.reordered and data.reusedTags and data.changedTags,
+        "感知批次改变了候选顺序、原标签列表引用或实时标签更新")
+    assert(data.debugUpdated and data.debugOffReused and data.cleared,
+        "打开再关闭感知 Debug 后标签和目标状态失效，或清空批次仍残留对象")
+end, "普通感知跳过仅供 Debug 的进出差集，标签和切换语义保持一致")
+
+test.system("ai", "stale_perception_batch", {}, function(data)
+    assert(data.matched and data.superseded and data.missingPreserved,
+        "感知请求版本相同、过期或检测器已销毁时筛选资格错误")
+    assert(data.staleCount == 3 and data.nextCount == 2 and
+        data.nextFirst == 32 and data.nextSecond == 54 and data.emptyCount == 0,
+        "丢弃过期感知候选后未正确消费 NativeStream 或破坏下一组结果")
+end, "过期感知批次跳过无效视线与碰撞计算，完整消费结果流")

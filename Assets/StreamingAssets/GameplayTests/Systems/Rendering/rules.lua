@@ -1,4 +1,13 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "terrain_shadow_dirty_queue", {}, function(data)
+    assert(data.fullCount == 4096 and data.sparseVisits == 384 and data.fullScanVisits == 524288,
+        "地形阴影小范围改动仍按全区块扫描，或重建时漏掉完整格子")
+    assert(data.deduplicated and data.drained and data.retried and data.retryContents,
+        "重复脏格未合并，或中断/失败后丢失待更新格")
+    assert(data.fullReentrant and data.rebuilding and data.empty and data.cleared and data.reset,
+        "提交中重建、清理或重新绑定遗留旧阴影脏格")
+end, "地形阴影增量脏格队列、提交重入与异常重试")
+
 test.system("rendering", "dropped_combustion_material", {}, function(data)
     assert(data.assigned, "掉落物燃烧粒子没有绑定材质，会显示紫块")
     assert(data.shared, "重复创建燃烧粒子没有复用共享材质")
@@ -38,7 +47,8 @@ for _, row in ipairs({
     { args = { covers = 1 }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "额外填高后向外投影" },
     { args = { liquid = true }, level = 12, neighbour = 11, inner = 0, outer = 1, label = "平地倒水高一层并向外投影" },
     { args = { liquid = true, naturalDepth = 2 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "浅水底床低两层且水面低于岸一层" },
-    { args = { liquid = true, naturalDepth = 3 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "深水底床低三层且水面低于岸两层" },
+    { args = { liquid = true, naturalDepth = 3 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "深水底床低三层但水面仍只低于岸一层" },
+    { args = { liquid = true, naturalDepth = 2, neighbourLiquid = true, neighbourNaturalDepth = 3, neighbourHeight = 0.5 }, level = 10, neighbour = 9, inner = 0, outer = 1, label = "河床深浅不产生台阶但真实地势高差保留" },
     { args = { naturalDepth = 2 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "浅水抽干仍保留天然底床" },
     { args = { naturalDepth = 3, depth = 1 }, level = 7, neighbour = 11, inner = 4, outer = 0, label = "天然底床继续采挖时叠加深度" },
     { args = { naturalDepth = 2, covers = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "天然底床填土逐层回升" },
@@ -46,6 +56,7 @@ for _, row in ipairs({
     { args = { liquid = true, depth = 1 }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "一层坑中倒水与岸齐平" },
     { args = { liquid = true, depth = 2 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "两层坑中倒水仍向坑内投影" },
     { args = { liquid = true, naturalDepth = 2, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴水床同样使用真实高差" },
+    { args = { liquid = true, naturalDepth = 3, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴深浅水面保持同一高度" },
     { args = { liquid = true, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "水上平台表面仍与岸边齐平" },
     { args = { depth = 1, surface = false }, level = -1, neighbour = 0, inner = 1, outer = 0, label = "洞穴忽略生成海拔但保留采挖高差" },
     { args = { missingHeight = true }, level = 0, neighbour = 0, inner = 0, outer = 0, label = "缺失高度回退平地" },
@@ -57,6 +68,25 @@ for _, row in ipairs({
         assert(not data.outside, "未知邻格被伪造成有效高度")
         if row.args.liquid then assert(data.waterLevel == 5, "高度查询改变了权威水量") end
     end, "地表高低阴影：" .. row.label)
+end
+
+-- 深浅底床与剩余水量可以不同，同一地势的天然水面仍须齐平。
+for _, surface in ipairs({ true, false }) do
+    for _, naturalDepth in ipairs({ 2, 3 }) do
+        for _, liquidLevel in ipairs({ 1, 5, 6, 10 }) do
+            test.system("rendering", "terrain_height", {
+                liquid = true, naturalDepth = naturalDepth, liquidLevel = liquidLevel,
+                neighbourLiquid = true, neighbourNaturalDepth = 5 - naturalDepth,
+                neighbourLiquidLevel = 11 - liquidLevel, surface = surface
+            }, function(data)
+                assert(data.level == data.base - 1 and data.neighbour == data.level,
+                    "天然浅水与深水的水面没有齐平")
+                assert(data.inner == 0 and data.outer == 0, "水内深浅交界仍出现高低台阶阴影")
+                assert(data.waterLevel == liquidLevel and data.neighbourWaterLevel == 11 - liquidLevel,
+                    "统一水面高度改写了真实水量")
+            end, "天然深浅水面齐平：" .. tostring(surface) .. "/" .. naturalDepth .. "/" .. liquidLevel)
+        end
+    end
 end
 
 test.system("rendering", "terrain_height", { wall = true }, function(data)
@@ -112,6 +142,11 @@ test.system("rendering", "shadow_proxy_changes", {}, function(data)
     assert(data.slicedVisible and data.meshVisible, "阴影绘制模式切换后显示节点错误")
     assert(data.recycledSource and data.recycledProperties, "阴影归池后没有重新提交源与属性")
 end, "太阳阴影静态复用与动态变化")
+
+test.system("rendering", "shadow_footprint_matrix", {}, function(data)
+    assert(data.cases == 192 and data.maximumError < 0.0002,
+        "角色阴影仿射包围盒与原四角投影不一致，误差：" .. tostring(data.maximumError))
+end, "接触与太阳阴影的四角投影数学等价：镜像、旋转、偏心与缩放")
 
 for _, args in ipairs({
     { strength = 1, clear = 10, opaque = 20 },
@@ -495,3 +530,31 @@ test.system("rendering", "effect_composition", {}, function(data)
     assert(data.diagnosticSubmitted == 4 and data.diagnosticSpriteSkipped == 1,
         "渲染诊断未区分MPB提交与同图跳过")
 end, "静态覆雪免重传、效果启停与水线换图合成")
+
+
+test.system("rendering", "ship_block_visual", {}, function(data)
+    local s = {}
+    for _, value in ipairs(data.samples) do
+        s[value.name] = value
+        assert(not value.sourceVisible, "双扇门显示时主体没有隐藏")
+        assert(value.sourceScaleX == 2 and math.abs(value.sourceRotation - 90) < 0.001,
+            "门动画改写了安装缩放或旋转")
+    end
+    assert(s.closed.progress == 0 and math.abs(s.closed.leftX + 0.25) < 0.0001
+        and math.abs(s.closed.rightX - 0.25) < 0.0001, "关闭门板没有完整拼合一格")
+    assert(math.abs(s.opening.progress - 0.5) < 0.0001 and s.opening.leftX < s.closed.leftX,
+        "开门没有连续向两边滑动")
+    assert(math.abs(s.reversing.progress - 0.25) < 0.0001
+        and s.reversing.leftX > s.opening.leftX, "中途关门没有从当前进度反转")
+    assert(s.closed_again.progress == 0 and s.open.progress == 1
+        and s.restored_open.progress == 1, "关门终点、开门终点或首次开门恢复错误")
+    assert(s.appearance.order == 37 and math.abs(s.appearance.green - 0.4) < 0.0001,
+        "门叶没有同步主体排序与颜色")
+    assert(data.sourceRestored and data.activeLeavesAfterRelease == 0, "回收未恢复主体或残留门叶")
+    assert(data.engineSize == 1 and data.gmEngineSize == 1, "普通或GM化学引擎仍被缩成非满格")
+    local expected = {0.85, 0.55, 0.32}
+    for i, value in ipairs(data.defaultBodySizes) do
+        assert(math.abs(value - expected[i]) < 0.0001, "引擎满格改动改变了其它设备默认尺寸")
+    end
+    for _, rejected in ipairs(data.invalidRejected) do assert(rejected, "无效机身尺寸没有被拒绝") end
+end, "化学引擎满格、双扇门双向动画、反转恢复与回收")

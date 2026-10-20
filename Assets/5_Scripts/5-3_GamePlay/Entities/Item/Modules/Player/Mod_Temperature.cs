@@ -119,13 +119,21 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         Data.AmbientTemperature = ambient;
         ProcessWaterEntryCooling(deltaTime);
-        TemperatureMgr.Instance.ProcessTemperature(
-            Data,
-            deltaTime,
-            SetNaturalTemperature,
-            NaturalTemperature);
+        AdvanceAmbientTemperature(deltaTime);
         UpdateTemperatureSafety(deltaTime);
     }
+
+    #region 体温热传导热路径
+
+    // 直接提交温度计算结果，避免每轮模块 Tick 创建实例回调委托。
+    internal void AdvanceAmbientTemperature(float deltaTime)
+    {
+        float nextTemperature = ThermalRuntime.AdvanceAmbient(
+            NaturalTemperature, Data.AmbientTemperature, deltaTime);
+        SetNaturalTemperature(nextTemperature);
+    }
+
+    #endregion
 
     protected override void OnUnload()
     {

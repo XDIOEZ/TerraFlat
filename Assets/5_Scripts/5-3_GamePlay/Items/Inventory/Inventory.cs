@@ -1,3 +1,17 @@
+// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+// 本文件包含 InventoryDragTransaction（拖拽事务）和 Inventory（库存运行时）两个类。
+// 拖拽事务：InventoryDragTransaction.TryDrop() / PrepareFallback() / Complete()
+// 输入绑定：Inventory.BindController() / UnbindController() / UnbindRuntimeDataEvents()
+// 面板生命周期：SwitchUI() / EnsurePanelCreated() / ReleaseRuntimePanel()
+// 数据与 UI 同步：InitData() / InitUI() / SyncData() / RefreshUI()
+// 虚拟化槽位：BindSlotUI() / RebindVirtualSlotUI() / PrepareVirtualizedSlotUIMap()
+// 鼠标与触摸：OnDesktopTap() / OnTouchTap() / OnScroll() / OnTouchLongPress()
+// 拖动处理：OnMouseDragBegin() / OnMouseDragDrop() / TryMoveSlotTo()
+// 快速转移：OnShiftQuickTransfer() / OnFlickTransfer() / TryQuickTransferTo() / SyncQuickTransferTarget()
+// 运行时容量：AppendExternalSlots() / RemoveExternalSlots() / AddSlotsAtRuntime()
+// 保存：Save()
+// ====================================================
+
 using UnityEngine;
 using Sirenix.OdinInspector;
 using System;
@@ -1164,8 +1178,7 @@ public class Inventory
         }
         else if (Data?.HasCarryCapacity == true)
         {
-            currentWeight = Data.CurrentCarryWeight;
-            currentVolume = Data.CurrentCarryVolume;
+            Data.GetCarryUsage(out currentWeight, out currentVolume);
             weightLimit = Data.HasUnlimitedCarryCapacity ? float.PositiveInfinity : Data.MaxCarryWeight;
             volumeLimit = Data.HasUnlimitedCarryCapacity ? float.PositiveInfinity : Data.MaxCarryVolume;
             maxWeight = Data.MaxCarryWeight.ToString("0.##");
