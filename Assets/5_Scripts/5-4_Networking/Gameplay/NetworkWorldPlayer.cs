@@ -136,6 +136,7 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnStartLocalPlayer()
         {
             base.OnStartLocalPlayer();
+            BindTeleport();
             ApplyDisplayName(displayName);
             SaveDataMgr.Instance.CurrentContrrolPlayerName = displayName;
             EnsureCorePlayer(true);
@@ -152,6 +153,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            UnbindTeleport();
             RestoreSinglePlayerStreaming();
             UnbindNetworkRoll(endSession: true);
             ItemNetworkStateSerialization.RuntimeStateChanged -= OnRuntimeItemStateChanged;
@@ -212,6 +214,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void UpdateOwnedMovement()
         {
+            if (pendingTeleportRequest != 0) return;
             if (IsInSpace)
             {
                 UpdateSpaceMovement();
@@ -251,6 +254,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void UpdateOwnedItemState()
         {
+            if (pendingTeleportRequest != 0) return;
             if (corePlayer == null || !corePlayer.IsInitialized)
                 return;
 
@@ -446,6 +450,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnAuthoritativePositionChanged(Vector3 oldPosition, Vector3 newPosition)
         {
+            if (isOwned && pendingTeleportRequest != 0) return;
             if (IsInSpace) return;
             if (!IsValidPosition(newPosition))
                 return;

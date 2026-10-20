@@ -452,25 +452,7 @@ public class Mod_PlayerTraits : Module
         if (!TryGetPlayer(out Player target) || !target.IsLocalProfile || target.Data == null ||
             !ChunkMgr.IsSurfaceStreamingScene)
             return false;
-        SpaceSession session = SpaceSession.Current;
-        Vector3 logicalDestination = WorldTopologyRuntime.NormalizePosition(destination);
-        Vector3 presentationDestination = WorldLocalPresentation.ProjectPosition(logicalDestination);
-        // 地表传送先解除乘船与下降状态，避免权威船内位置把玩家拉回原船。
-        session?.ResetPassengerForRespawn(target);
-        Rigidbody2D body = target.GetComponent<Rigidbody2D>();
-        target.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.ResetSwimmingAudio();
-        if (body != null)
-        {
-            body.velocity = Vector2.zero;
-            body.angularVelocity = 0f;
-            body.position = presentationDestination;
-        }
-        target.transform.position = presentationDestination;
-        target.Data.transform.position = logicalDestination;
-        target.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?.RefreshChunksAroundPlayer();
-
-        Debug.Log($"[GM] 玩家已传送到逻辑位置: {logicalDestination}");
-        return true;
+        return PlayerTeleportService.TryTeleportToSurface(target, destination);
     }
 
     #endregion

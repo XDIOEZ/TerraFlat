@@ -71,3 +71,4 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - `Mod_Cam.SetFollowOverride/ClearFollowOverride` 供临时驾驶覆盖跟随目标并同步环绕副本，释放回玩家，不改变听音主体；可随跟随租约传入最大视野与缩放倍率，`EffectiveMaxPovValue/UsesProportionalZoom` 供 UI 同步。太空驾驶上限为 120000、滚轮乘/除 1.25，双指共用比例缩放、手机滑条使用对数映射；退出租约清除临时范围，普通地表在宇宙观察起点前按原尺寸增减，缩放不改变区块加载距离。飞船驾驶目标由 SpaceSession 投影整船中心，镜头固定朝上，下降触地/退出恢复原视野。相机根实例进入持久场景，由 Mod_Cam 卸载/销毁时释放并清订阅与引用，普通星区卸载不销毁或重建相机。
 - 已插值目标可传 `FollowMode.PresentationLocked`：XY 阻尼、前探与预判平滑归零，Brain 固定 LateUpdate 跟随；缩放/设置变更不解除锁定，释放或目标销毁后恢复最新玩家设置和进入前的 Brain 更新方式。太空驾驶使用此模式，地表驾驶沿用普通设置。
 - 开发快捷键：Ctrl+F1 管理员，F1 录制 UI 隐藏，F2 创造背包（主背包打开不拦截，其它模态/加载锁拦截），T 与 GM 点选共用 `Mod_PlayerTraits.TryTeleportToScreenPosition`；太空先经 `SpaceSession.UnprojectPosition` 还原宇宙坐标，再调用 `TryTeleportPlayerToSpace`，地表传送先复用中立乘员重置解除乘船/下降，再写拓扑规范坐标并刷新区块。
+- 地表传送统一经 `PlayerTeleportService` 应用落点；联机先由 `NetworkRequest` 桥请求服务器确认，不能只修改本机 Transform 或放宽普通移动限幅。

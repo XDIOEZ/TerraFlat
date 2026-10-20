@@ -319,18 +319,27 @@ public sealed partial class GMReflectionConsole
             }
             Vector3 destination = new(result.Cell.X + 0.5f, result.Cell.Y + 0.5f,
                 player.transform.position.z);
-            Rigidbody2D body = player.GetComponent<Rigidbody2D>();
-            if (body != null)
+            bool completed = false, succeeded = false;
+            if (!PlayerTeleportService.TryTeleportToSurface(player, destination, success =>
             {
-                body.velocity = Vector2.zero;
-                body.angularVelocity = 0f;
-                body.position = destination;
+                succeeded = success;
+                completed = true;
+            }))
+            {
+                biomeHintText.text = "当前无法传送，请等待世界就绪或上一笔传送结束。";
+                yield break;
             }
-            player.transform.position = destination;
-            player.Data.transform.position = destination;
-            Mod_ChunkLoader loader = player.GetComponentInChildren<Mod_ChunkLoader>(true) ??
-                player.GetComponentInParent<Mod_ChunkLoader>();
-            loader?.RefreshChunksAroundPlayer();
+            while (!completed)
+            {
+                if (!IsSameWorld()) yield break;
+                biomeHintText.text = "已定位群系，正在等待服务器确认传送…";
+                yield return null;
+            }
+            if (!succeeded)
+            {
+                biomeHintText.text = "群系传送未完成，请检查联机状态或稍后重试。";
+                yield break;
+            }
             biomeHintText.text = $"已定位{name}：({result.Cell.X}, {result.Cell.Y})，检查 {result.SampledCount} 个采样位置。";
             Debug.Log($"[GM] 已按正式生成规则传送到群系 {name} ({biome})，落点={destination}，采样={result.SampledCount}");
             teleported = true;

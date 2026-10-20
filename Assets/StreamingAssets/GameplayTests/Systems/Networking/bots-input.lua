@@ -42,3 +42,30 @@ test.runtime("networking", "bots_input", {}, function(data)
         "输入夹具没有恢复本地主角、场景、传输或存档档案")
     assert(cleanup.botRuntimeLeft == 0 and cleanup.botPassengersLeft == 0, "输入夹具遗留假人或太空乘员")
 end, "两假人正式输入：乱序、非法值、就绪、独立意图、超时和断线")
+
+test.runtime("networking", "bots_teleport", {}, function(data)
+    local function near(a, b)
+        return a == a and b == b and math.abs(a - b) < 0.001
+    end
+    local function assert_position(sample, x, y, label)
+        assert(near(sample.x, x) and near(sample.y, y), label .. "服务器位置错误")
+        assert(near(sample.bodyX, x) and near(sample.bodyY, y), label .. "角色本体没有同步落点")
+        assert(near(sample.savedX, x) and near(sample.savedY, y), label .. "角色数据仍是旧位置")
+        assert(near(sample.observerX, x) and near(sample.observerY, y), label .. "区块观察者仍是旧位置")
+    end
+    assert(data.scope == "live-isolated-world" and data.transport == "mirror-in-memory", "传送未经过正式联机夹具")
+    assert(data.ordinaryStep < 2, "普通移动错误绕过了服务器单步位移限制")
+    assert_position(data.teleported, data.targetX, data.targetY, "GM 传送")
+    assert(data.teleported.revision > data.start.revision and data.teleported.velocity == 0,
+        "传送没有刷新地表归属或清零速度")
+    assert_position(data.afterRejected, data.targetX, data.targetY, "重复、非法或其他连接的传送请求")
+    assert(data.afterRejected.revision == data.teleported.revision, "拒绝的请求重复执行了传送")
+    assert(near(data.witnessBefore.x, data.witnessAfter.x) and near(data.witnessBefore.y, data.witnessAfter.y),
+        "传送影响了另一名玩家")
+    assert_position(data.afterMove, data.nextX, data.nextY, "传送后的普通移动")
+    local cleanup = data.cleanup
+    assert(not cleanup.serverActive and not cleanup.clientActive and cleanup.connections == 0 and cleanup.spawned == 0,
+        "传送夹具遗留联机对象")
+    assert(cleanup.localUnchanged and cleanup.sceneUnchanged and cleanup.transportRestored and cleanup.profilesRestored,
+        "传送夹具没有恢复原现场")
+end, "GM 地表传送：正式请求、拒绝、独立玩家和新落点续走")
