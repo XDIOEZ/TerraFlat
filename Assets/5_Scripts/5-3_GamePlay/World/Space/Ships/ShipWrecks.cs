@@ -56,6 +56,8 @@ namespace FlatWorld.Spaceflight
 
         private void FlushDetachedWrecks()
         {
+            // 同一轮拆分复用命中列表，避免每扩展一块部件都复制整个待处理集合。
+            var touchingCandidates = new List<ShipPieceState>();
             foreach (var entry in detachedWrecks.Values)
             {
                 var remaining = new HashSet<ShipPieceState>(entry.Pieces);
@@ -65,8 +67,18 @@ namespace FlatWorld.Spaceflight
                     foreach (ShipPieceState seed in remaining) { group.Add(seed); break; }
                     remaining.Remove(group[0]);
                     for (int i = 0; i < group.Count; i++)
-                        foreach (ShipPieceState candidate in new List<ShipPieceState>(remaining))
-                            if (PiecesTouch(group[i], candidate)) { remaining.Remove(candidate); group.Add(candidate); }
+                    {
+                        touchingCandidates.Clear();
+                        foreach (ShipPieceState candidate in remaining)
+                            if (PiecesTouch(group[i], candidate)) touchingCandidates.Add(candidate);
+                        // HashSet 枚举期间不修改集合；按原枚举顺序追加，保持连通分组结果。
+                        for (int candidateIndex = 0; candidateIndex < touchingCandidates.Count; candidateIndex++)
+                        {
+                            ShipPieceState candidate = touchingCandidates[candidateIndex];
+                            remaining.Remove(candidate);
+                            group.Add(candidate);
+                        }
+                    }
                     ShipState wreck = JsonConvert.DeserializeObject<ShipState>(JsonConvert.SerializeObject(entry.Pose));
                     string sourceShipId = wreck.ShipId;
                     wreck.ShipId = Guid.NewGuid().ToString("N");
@@ -95,10 +107,26 @@ namespace FlatWorld.Spaceflight
 
         private static bool PiecesTouch(ShipPieceState a, ShipPieceState b)
         {
-            foreach (ShipCell cell in ShipGeometry.Footprint(a))
-                foreach (ShipCell other in ShipGeometry.Footprint(b))
-                    if (Math.Abs(cell.X - other.X) + Math.Abs(cell.Y - other.Y) <= 1) return true;
-            return false;
+            // Footprint 是旋转后的完整矩形；两矩形的最小格曼哈顿距离等于 X/Y 轴间隙之和。
+            // 不再为每一对部件创建占地迭代器并进行面积乘积次逐格比较。
+            int widthA = Math.Max(1, a.Width), heightA = Math.Max(1, a.Height);
+            int widthB = Math.Max(1, b.Width), heightB = Math.Max(1, b.Height);
+            if ((a.QuarterTurns & 1) != 0) (widthA, heightA) = (heightA, widthA);
+            if ((b.QuarterTurns & 1) != 0) (widthB, heightB) = (heightB, widthB);
+            long gapX = AxisGap(a.CellX, widthA, b.CellX, widthB);
+            if (gapX > 1) return false;
+            long gapY = AxisGap(a.CellY, heightA, b.CellY, heightB);
+            return gapX + gapY <= 1;
+        }
+
+        /// <summary>两个整数闭区间之间相隔的最少格数；long 避免大坐标与尺寸溢出。</summary>
+        private static long AxisGap(int startA, int sizeA, int startB, int sizeB)
+        {
+            long endA = (long)startA + sizeA - 1;
+            long endB = (long)startB + sizeB - 1;
+            if (endA < startB) return startB - endA;
+            if (endB < startA) return startA - endB;
+            return 0;
         }
 
         private void SynchronizeWreckView(ShipState ship)

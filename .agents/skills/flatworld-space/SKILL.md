@@ -70,6 +70,7 @@ description: "FlatWorld 太空会话、椭圆星系、船体航行/接触、对�
 - 船体与残骸均按部件映射结构血量，不设共享血池。PhysicalDefense 从部件配置或真实定义读取；DisableHealth/MaxDisableHealth 单独累计功能损伤，归零停工但保留结构，Health 归零才剥离。正式动力、导航和生命支持共用 IsOperational/IsPowered。
 - 普通攻击冻结首次命中：设备/墙优先线路，再地板；SelectAtContact 把边线接触钳进真实候选占地，避免伤到邻格。摧毁上层部件的同一发不穿透地板。冲击/燃爆先均分冻结沿线名单的原始预算，再逐件扣防御，不按部件数放大伤害。
 - 地板四邻分裂后有可用控制台和引擎的部分保留飞船，其他部分成为 ShipWreck；先移交乘员、点火、导航与端口归属再冷封残骸。每块一个无原设备模块的 Item 保存各部件耐久与库存，攻击具体部位还能再次拆分；WreckGuid 只标记外壳身份。失去支撑的部件按邻接合成残骸，普通散落物仍走 SpaceDropView 正式拾取事务。
+- ShipWrecks 拆离部件的连通分组沿用格曼哈顿距离 ≤1 的重叠/四邻接规则；矩形 Footprint 的两轴最短间隙直接 O(1) 判断，不再为每对候选逐格构建迭代器。遍历 HashSet 时先将相邻候选写入复用列表，枚举结束再移除，维持原分组与部件顺序；只改损毁后残骸组装开销，不改变损伤、物理或质量转移。
 - 每个星区一个动态表现 Scene，身份用 SpaceSectorCoordinates.SceneKey；判断太空统一 SpaceMgr.IsSpaceScene。SpaceSectorStreaming 仅提前请求行进方向的目标区，越界后保留源区直到离开目标侧过渡带，边界可自由移动与折返；美术晚到不阻挡飞行。多人共享区场景及租约，跨边界仍可见、攻击、碰撞与交互；无玩家区域仍由独立计算场景推进物理，不加载对应美术。
 - TryTeleportPlayerToSpace 接收所属星区的坐标/速度，负责脱支撑/驾驶/下落状态及失败恢复。地表/太空维度迁移复用 DimensionManager 的玩家快照和原有加载页；普通星区跨界只调整租约及当前Scene，不调用黑屏维度迁移。读档按归属星区/飞行阶段恢复，未就绪不下落。
 - 太空死亡以 SpaceMgr.IsSpaceScene 判断来源，回主地球的固定主世界出生点；SpaceSession.Respawn 在完整维度重生事务前解除驾驶/支撑/下降状态，迁移期间用中立乘员与 transitionRunning 防止重建太空归属，成功清记录、失败恢复。星区Scene不能补写为主世界出生点。
