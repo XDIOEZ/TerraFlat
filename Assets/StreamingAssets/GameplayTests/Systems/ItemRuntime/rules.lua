@@ -18,6 +18,19 @@ test.system("item_runtime", "simulation_region_shortcut", {}, function(data)
         "无同场景玩家或无效距离的判档规则改变")
 end, "物品区域判档：近远快速区与临界距离原算法保持一致")
 
+test.system("item_runtime", "simulation_membership_cache", {}, function(data)
+    assert(data.initiallyNear and data.stableCached and data.visualZIgnored and data.cachedHits > 0,
+        "静止实体在单帧前后或后续更新中反复重算区域归属")
+    assert(data.allocatedBytes == 0, "模拟区域稳态查询仍产生托管内存分配")
+    assert(data.movedRecalculated and data.movedFar and data.playerApproached,
+        "实体移动或玩家靠近后没有更新模拟距离档")
+    assert(data.queueRestored, "模拟区域缓存命中后没有补回低频堆的到期成员")
+    assert(data.handUnrestricted and data.handStillNear and data.releasedFar,
+        "手持资格切换与玩家移动沿用了过期的模拟档缓存")
+    assert(data.seamNear and data.wrappedImageRefresh,
+        "环绕世界接缝或等价镜像坐标移动时错误复用了旧的模拟区域")
+end, "物品模拟区域身份缓存、移动/玩家/手持失效与零分配")
+
 test.system("item_runtime", "initial_animator_activation", {}, function(data)
     assert(data.queuedWhileInactive and data.stillQueued and data.disabledNotPlayed,
         "停用候选或禁用 Animator 的初始播放未延迟，可能重复输出 Unity 动画错误")

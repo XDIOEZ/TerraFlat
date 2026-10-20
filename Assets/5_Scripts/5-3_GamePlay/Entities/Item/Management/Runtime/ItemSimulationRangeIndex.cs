@@ -74,6 +74,13 @@ internal sealed class ItemSimulationRangeIndex
         public bool ForceDue;
         public SimulationRangeTier Tier;
         public float DueAt;
+        // 一次 ResolveTier 之后的真实位置快照。区域版本由 BeginFrame 统一更新，
+        // 只有同区域、同位置、同场景且距离资格没有改变，才能跳过重复寻址。
+        public bool HasMembershipSnapshot;
+        public bool WasRangeRestricted;
+        // 距离和区域寻址只使用 XY；渲染层级的 Z 变化不应该使模拟身份缓存失效。
+        public float2 LastPosition;
+        public int LastScene;
     }
 
     internal readonly struct Transition
@@ -105,6 +112,10 @@ internal sealed class ItemSimulationRangeIndex
     private int nearRadius;
     private int middleRadius;
     private int farRadius;
+
+    // 由隔离规则测试读取；正式发布包无需累计诊断数字。
+    internal long MembershipRecalculations { get; private set; }
+    internal long MembershipCacheHits { get; private set; }
 
     #endregion
 
@@ -160,15 +171,46 @@ internal sealed class ItemSimulationRangeIndex
     private void RefreshMembership(Member member)
     {
         Item item = member.Entry.Item;
-        bool unrestricted = !item.ShouldUseSimulationRange();
-        if (unrestricted)
+        bool restricted = item.ShouldUseSimulationRange();
+        if (!restricted)
         {
+            // Player / 手持物无距离限制，位置变化不会改变其模拟档。
+            if (member.HasMembershipSnapshot && !member.WasRangeRestricted &&
+                member.Region == null && member.HasTier && member.Tier == SimulationRangeTier.Near)
+            {
+                RestoreMissingActiveSlot(member);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                MembershipCacheHits++;
+#endif
+                return;
+            }
             RemoveFromRegion(member);
             SetTier(member, SimulationRangeTier.Near);
+            member.HasMembershipSnapshot = true;
+            member.WasRangeRestricted = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            MembershipRecalculations++;
+#endif
             return;
         }
 
-        RegionKey key = GetKey(item);
+        // 单轮 Tick 会先 ResolveTier 后 NotifyMoved；静止单位不再重复规范化坐标/查区域。
+        // 玩家移动时 BeginFrame 已更新 Region.Version 和需要变化的成员档位。
+        Vector3 position = item.transform.position;
+        float2 positionXY = new(position.x, position.y);
+        int scene = item.gameObject.scene.handle;
+        if (member.HasMembershipSnapshot && member.WasRangeRestricted &&
+            member.Region != null && member.Region.Version == contextVersion &&
+            member.HasTier && math.all(member.LastPosition == positionXY) && member.LastScene == scene)
+        {
+            RestoreMissingActiveSlot(member);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            MembershipCacheHits++;
+#endif
+            return;
+        }
+
+        RegionKey key = new(scene, topology.Normalize(positionXY));
         if (member.Region == null || !member.Region.Key.Equals(key))
         {
             RemoveFromRegion(member);
@@ -185,13 +227,22 @@ internal sealed class ItemSimulationRangeIndex
 
         Region current = member.Region;
         RefreshRegion(current);
-        SetTier(member, current.Boundary ? ResolveExact(item) : current.Tier);
+        SetTier(member, current.Boundary ? ResolveExact(position, scene) : current.Tier);
+        member.HasMembershipSnapshot = true;
+        member.WasRangeRestricted = true;
+        member.LastPosition = positionXY;
+        member.LastScene = scene;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        MembershipRecalculations++;
+#endif
     }
 
-    private RegionKey GetKey(Item item)
+    /// <summary>缓存命中时仍保留 SetTier 的原有兜底：异常收尾后补回脱离队列的到期成员。</summary>
+    private void RestoreMissingActiveSlot(Member member)
     {
-        Vector3 position = item.transform.position;
-        return new RegionKey(item.gameObject.scene.handle, topology.Normalize(new float2(position.x, position.y)));
+        if (member.EveryFrame && member.Tier != SimulationRangeTier.Stopped &&
+            member.NearSlot < 0 && member.HeapSlot < 0)
+            SetTier(member, member.Tier);
     }
 
     private void RemoveFromRegion(Member member)
@@ -352,8 +403,14 @@ internal sealed class ItemSimulationRangeIndex
     {
         if (!item.ShouldUseSimulationRange() || players.Count == 0) return SimulationRangeTier.Near;
         Vector3 position = item.transform.position;
-        float2 entityPosition = new(position.x, position.y);
         int scene = item.gameObject.scene.handle;
+        return ResolveExact(position, scene);
+    }
+
+    private SimulationRangeTier ResolveExact(Vector3 position, int scene)
+    {
+        if (players.Count == 0) return SimulationRangeTier.Near;
+        float2 entityPosition = new(position.x, position.y);
         float distanceSquared = float.PositiveInfinity;
         for (int i = 0; i < players.Count; i++)
             if (players[i].Scene == scene)

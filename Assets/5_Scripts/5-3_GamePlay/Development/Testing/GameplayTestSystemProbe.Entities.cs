@@ -39,6 +39,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/single_sprite_animation", EntitySingleSpriteAnimation);
         operations.Add("item_runtime/initial_animator_activation", EntityInitialAnimatorActivation);
         operations.Add("item_runtime/simulation_region_shortcut", EntitySimulationRegionShortcut);
+        operations.Add("item_runtime/simulation_membership_cache", EntitySimulationMembershipCache);
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
@@ -509,6 +510,113 @@ public static partial class GameplayTestSystemProbe
             ["preciseFallbacks"] = preciseFallbacks, ["infiniteStopped"] = infiniteStopped,
             ["invalidFallsBack"] = invalidFallsBack
         };
+    }
+
+    /// <summary>真实 Item 与模拟区域索引回归：只缓存未变位置，玩家/手持状态变化仍同步改档。</summary>
+    private static JObject EntitySimulationMembershipCache(JObject args)
+    {
+        var playerObject = new GameObject("[LuaSimulationRangePlayer]") { hideFlags = HideFlags.HideAndDontSave };
+        playerObject.SetActive(false);
+        try
+        {
+            return WithEntityProbeItem(item =>
+            {
+                Data_GeneralItem data = EntityProbeData("probe:range-cache", 1f);
+                item.BindData(data);
+                item.transform.position = Vector3.zero;
+                playerObject.transform.position = Vector3.zero;
+                var index = new ItemSimulationRangeIndex();
+                var entry = new ItemTickScheduler.ScheduledEntry(item, 1);
+                var players = new[] { playerObject.transform };
+                index.Register(entry, everyFrame: true);
+                index.BeginFrame(players, default);
+                bool initiallyNear = index.ResolveTier(item) == SimulationRangeTier.Near;
+
+                for (int i = 0; i < 32; i++) { index.ResolveTier(item); index.NotifyMoved(item); }
+                long recalculations = index.MembershipRecalculations;
+                long hits = index.MembershipCacheHits;
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 256; i++) { index.ResolveTier(item); index.NotifyMoved(item); }
+                long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                bool stableCached = index.MembershipRecalculations == recalculations &&
+                    index.MembershipCacheHits - hits >= 512;
+
+                item.transform.position = new Vector3(0f, 0f, 2f);
+                index.NotifyMoved(item);
+                bool visualZIgnored = index.MembershipRecalculations == recalculations &&
+                    index.ResolveTier(item) == SimulationRangeTier.Near;
+
+                // 同区移动改变原始位置；远区停算仍必须生效，不依赖切换桶才刷新。
+                item.transform.position = Vector3.right * 0.5f;
+                index.NotifyMoved(item);
+                bool movedRecalculated = index.MembershipRecalculations > recalculations &&
+                    index.ResolveTier(item) == SimulationRangeTier.Near;
+
+                // 中档成员出堆后，ResolveTier 的缓存命中仍必须补回临时离堆的到期条目。
+                item.transform.position = Vector3.right * (SimulationRangePreferences.NearRadius + 1f);
+                bool middleTier = index.ResolveTier(item) == SimulationRangeTier.Middle;
+                var dueItems = new List<ItemTickScheduler.ScheduledEntry>();
+                index.CollectEveryFrame(dueItems, Time.time + 1f);
+                bool firstDue = dueItems.Count == 1 && ReferenceEquals(dueItems[0].Item, item);
+                index.ResolveTier(item);
+                index.CollectEveryFrame(dueItems, Time.time + 1f);
+                bool queueRestored = middleTier && firstDue && dueItems.Count == 1 &&
+                    ReferenceEquals(dueItems[0].Item, item);
+                index.EndFrame();
+
+                float farPosition = SimulationRangePreferences.FarRadius + 48f;
+                item.transform.position = Vector3.right * farPosition;
+                bool movedFar = index.ResolveTier(item) == SimulationRangeTier.Stopped;
+
+                // 玩家移动时先按最新玩家快照更新整区域，成员位置没有变化也不能继续停算。
+                playerObject.transform.position = Vector3.right * farPosition;
+                long beforePlayerMove = index.MembershipRecalculations;
+                index.BeginFrame(players, default);
+                bool playerApproached = index.ResolveTier(item) == SimulationRangeTier.Near &&
+                    index.MembershipRecalculations == beforePlayerMove;
+
+                // 手持状态变化直接跳过模拟区域；从手中放下立刻恢复距离限制。
+                data.inHand = true;
+                bool handUnrestricted = index.ResolveTier(item) == SimulationRangeTier.Near;
+                playerObject.transform.position = Vector3.zero;
+                index.BeginFrame(players, default);
+                bool handStillNear = index.ResolveTier(item) == SimulationRangeTier.Near;
+                data.inHand = false;
+                bool releasedFar = index.ResolveTier(item) == SimulationRangeTier.Stopped;
+
+                // 非零世界原点及接缝镜像：同一实体即使仍处在原桶，逻辑位置变化也需重新核验。
+                var wrapped = new WorldTopologyDomain(new int2(-128, -96), new int2(256, 192), true);
+                item.transform.position = new Vector3(127.5f, 0f, 0f);
+                playerObject.transform.position = new Vector3(-127.5f, 0f, 0f);
+                index.BeginFrame(players, wrapped);
+                bool seamNear = index.ResolveTier(item) == SimulationRangeTier.Near;
+                long beforeWrappedMove = index.MembershipRecalculations;
+                item.transform.position = new Vector3(-128.5f, 0f, 0f);
+                index.NotifyMoved(item);
+                bool wrappedImageRefresh = index.MembershipRecalculations > beforeWrappedMove &&
+                    index.ResolveTier(item) == SimulationRangeTier.Near;
+                index.Remove(item);
+
+                return new JObject
+                {
+                    ["initiallyNear"] = initiallyNear,
+                    ["stableCached"] = stableCached,
+                    ["allocatedBytes"] = allocated,
+                    ["visualZIgnored"] = visualZIgnored,
+                    ["movedRecalculated"] = movedRecalculated,
+                    ["queueRestored"] = queueRestored,
+                    ["movedFar"] = movedFar,
+                    ["playerApproached"] = playerApproached,
+                    ["handUnrestricted"] = handUnrestricted,
+                    ["handStillNear"] = handStillNear,
+                    ["releasedFar"] = releasedFar,
+                    ["seamNear"] = seamNear,
+                    ["wrappedImageRefresh"] = wrappedImageRefresh,
+                    ["cachedHits"] = hits
+                };
+            });
+        }
+        finally { UnityEngine.Object.DestroyImmediate(playerObject); }
     }
 
     #endregion
