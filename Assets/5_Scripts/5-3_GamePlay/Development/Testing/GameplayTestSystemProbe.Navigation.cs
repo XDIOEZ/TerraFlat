@@ -122,6 +122,9 @@ public static partial class GameplayTestSystemProbe
                 var updated = (entry.Id, entry.Used, !entry.Waiting);
                 scheduled[index] = updated;
                 reference[index] = updated;
+                if (entry.Waiting && !updated.Item3)
+                    deadline = WorldNavigationManager.EarlierIdleGoalPruneAt(
+                        deadline, entry.Used, lifetime, updated.Item3);
             }
             if (frame % 71 == 0 && scheduled.Count > 0)
             {
@@ -149,7 +152,8 @@ public static partial class GameplayTestSystemProbe
                         scheduled.RemoveAt(index);
                         continue;
                     }
-                    next = WorldNavigationManager.EarlierGoalPruneAt(next, entry.Used, lifetime);
+                    next = WorldNavigationManager.EarlierIdleGoalPruneAt(
+                        next, entry.Used, lifetime, entry.Waiting);
                 }
                 deadline = next;
                 scheduledLifetime = lifetime;
@@ -170,6 +174,16 @@ public static partial class GameplayTestSystemProbe
                     steadyDeadline, 3f, 3f))
                 unnecessaryScans++;
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        float waitingDeadline = WorldNavigationManager.EarlierIdleGoalPruneAt(
+            float.PositiveInfinity, 0f, 3f, true);
+        bool activeWaitSkipped = float.IsPositiveInfinity(waitingDeadline);
+        for (int frame = 0; frame < 600; frame++)
+            activeWaitSkipped &= !WorldNavigationManager.IsGoalPruneScanDue(
+                frame / 60f, waitingDeadline, 3f, 3f);
+        float abandonedDeadline = WorldNavigationManager.EarlierIdleGoalPruneAt(
+            waitingDeadline, 0f, 3f, false);
+        bool lastWaitingRearmed = WorldNavigationManager.IsGoalPruneScanDue(
+            10f, abandonedDeadline, 3f, 3f);
 
         return new JObject
         {
@@ -178,7 +192,8 @@ public static partial class GameplayTestSystemProbe
             ["earlierAdded"] = WorldNavigationManager.EarlierGoalPruneAt(20f, 10f, 3f) == 13f,
             ["lifetimeChanged"] = WorldNavigationManager.IsGoalPruneScanDue(1f, 50f, 1f, 3f),
             ["noPrematurePrune"] = !WorldNavigationManager.IsGoalPruneScanDue(12f, steadyDeadline, 3f, 3f),
-            ["unnecessaryScans"] = unnecessaryScans, ["steadyAllocatedBytes"] = allocated
+            ["unnecessaryScans"] = unnecessaryScans, ["steadyAllocatedBytes"] = allocated,
+            ["activeWaitSkipped"] = activeWaitSkipped, ["lastWaitingRearmed"] = lastWaitingRearmed
         };
     }
 

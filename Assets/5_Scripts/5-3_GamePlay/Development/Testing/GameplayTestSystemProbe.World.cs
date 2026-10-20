@@ -17,6 +17,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/biome", WorldBiome);
         operations.Add("terrain/environment_pointer", WorldEnvironmentPointer);
         operations.Add("ecology/generation", WorldEcology);
+        operations.Add("ecology/companion_bind_candidates", WorldEcologyCompanionBindCandidates);
         operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
         operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
         operations.Add("terrain/river_diagnostic_aggregation", WorldRiverDiagnosticAggregation);
@@ -80,6 +81,65 @@ public static partial class GameplayTestSystemProbe
         foreach (string operation in new[] { "ship_local_damage", "ship_hit_targeting",
                      "ship_damage_lines", "ship_damage_fragmentation" })
             operations.Add("space/" + operation, _ => GameplayTestShipDamageProbe.Capture(operation));
+    }
+
+    /// <summary>复用真实区块初绑的伴生物挑选入口，核验候选顺序及多次 Bind 的缓冲复用。</summary>
+    private static JObject WorldEcologyCompanionBindCandidates(JObject args)
+    {
+        const int count = 512;
+        var placements = new NaturalItemPlacement[count];
+        var expected = new List<int>();
+        for (int i = 0; i < count; i++)
+        {
+            // 宿主和伴生物交错；宿主 GUID 与伴生规则 ID 不能在候选缓冲中被丢弃。
+            bool companion = i % 41 == 0;
+            placements[i] = new NaturalItemPlacement(1000 + i, companion ? "probe:hive" : "probe:tree",
+                i % 16, i / 16, 0f, 0f, companion ? "hive-rule" : "tree-rule",
+                hostGuid: companion ? 900 + i : 0);
+            if (companion) expected.Add(1000 + i);
+        }
+        var selected = new List<NaturalItemPlacement>(expected.Count);
+        void Collect()
+        {
+            selected.Clear();
+            foreach (NaturalItemPlacement placement in placements)
+                ChunkNaturalItemRenderer.CollectInitialCompanion(placement, selected);
+        }
+        Collect();
+        bool ordered = selected.Count == expected.Count;
+        for (int i = 0; ordered && i < selected.Count; i++)
+            ordered &= selected[i].Guid == expected[i] && selected[i].HostGuid == 900 + (selected[i].Guid - 1000) &&
+                selected[i].ItemId == "probe:hive";
+
+        // 全宿主与全伴生两种边界都按源列表过滤，不插入假候选或改变相对次序。
+        selected.Clear();
+        for (int i = 0; i < 16; i++)
+            ChunkNaturalItemRenderer.CollectInitialCompanion(
+                new NaturalItemPlacement(1 + i, "probe:tree", i, 0, 0, 0, "tree"), selected);
+        bool hostIgnored = selected.Count == 0;
+        for (int i = 0; i < 16; i++)
+            ChunkNaturalItemRenderer.CollectInitialCompanion(
+                new NaturalItemPlacement(101 + i, "probe:hive", i, 0, 0, 0, "hive", hostGuid: 1 + i), selected);
+        bool companionAccepted = selected.Count == 16;
+        for (int i = 0; companionAccepted && i < selected.Count; i++)
+            companionAccepted &= selected[i].Guid == 101 + i && selected[i].HostGuid == 1 + i;
+
+        for (int i = 0; i < 32; i++) Collect();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 256; i++) Collect();
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        bool repeated = selected.Count == expected.Count;
+        for (int i = 0; repeated && i < selected.Count; i++)
+            repeated &= selected[i].Guid == expected[i];
+
+        return new JObject
+        {
+            ["ordered"] = ordered, ["repeated"] = repeated,
+            ["hostIgnored"] = hostIgnored, ["companionAccepted"] = companionAccepted,
+            ["totalPlacements"] = count, ["companionCount"] = expected.Count,
+            ["secondPassInspections"] = selected.Count,
+            ["oldSecondPassInspections"] = count, ["allocatedBytes"] = allocated
+        };
     }
 
     /// <summary>直接采生产的锄地衰减调度，核对十秒稳态跳过、继续施工延期与开始退回的边界。</summary>

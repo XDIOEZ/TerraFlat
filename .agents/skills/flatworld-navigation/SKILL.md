@@ -34,7 +34,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - 直线快捷路径和路点跳过都检查中间格成本不高于端点；可走格成本变化也使旧路径失效。总成本读 `WorldNavigationPathResult.TotalCost`。
 - `DestinationResult` 表达目的地结果，含 `RejectedByPathCost`；同目标四次无路径后保持 Failed，目标/网格修订/成功路径解除。新路径超限不覆盖已接受路径，旧路径走完后停续算，明显目标移动才再评估。
 - 追击上限随 RequestPath 进入共享搜索，前沿到上限只结束该请求；成功/拒绝/取消/失败清等待链，缓存只用已收敛起点成本。
-- 旧 GO 导航目标场的过期扫描按所有缓存目标（包括正在处理请求的目标）的最早有效截止时间跳过稳态帧；新增目标可提前截止，目标寿命配置变化立即重扫。搜索格预算只在目标场创建/移除或逆向搜索新存入格子时重新统计；规则 `navigation/goal_cache_maintenance` 对照原始逐帧全扫。Profiler `FlatWorld.Navigation.GoalCache.PruneScan/CountScan` 只覆盖实际扫描。
+- 旧 GO 导航目标场的过期扫描仅按空闲目标的最早有效截止时间执行；仍在等待请求的过期目标不参与截止时间，取消/完成最后一名等待者时立即重新安排，不会造成持续逐帧全扫。新增目标可提前截止，目标寿命配置变化立即重扫。搜索格预算只在目标场创建/移除或逆向搜索新存入格子时重新统计；规则 `navigation/goal_cache_maintenance` 覆盖等待者转换及逐帧基准。Profiler `FlatWorld.Navigation.GoalCache.PruneScan/CountScan` 只覆盖实际扫描。
 - `WorldNavigationManager.GoalField.TryBuildPath` 在同一目标场内复用原始格和路点平滑临时列表，成功路径始终另建独立 `Vector2[]` 返回，不能把可重用缓冲直接暴露给 AI；规则 `navigation/goal_path_buffers` 校验代价、终点、请求隔离和重复寻路 GC。
 - Wrapped 网格/路点用规范格和最短位移，Job 用冻结 WorldTopologyDomain。当前通行配置只支持半径小于半格的圆形单位，能力/大体型差异尚未拆缓存，环绕跨度为 16 的正整数倍。
 - Mod_Mover_AI 的 `ITemperatureSafetyMovement` 避险目标优先；普通目标/停止不抢占，死亡/卸载仍强停。体温模块拥有危险记忆与方向偏置，普通目标按整段缓存偏置，同一个避险目标重复提交不强制重寻路；鸟的地面到达/失败沿用 mover 结果。

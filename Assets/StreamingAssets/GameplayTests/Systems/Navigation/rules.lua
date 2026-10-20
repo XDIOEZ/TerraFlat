@@ -115,6 +115,8 @@ test.system("navigation", "goal_cache_maintenance", {}, function(data)
         "目标缓存的无变化帧没有跳过全量清理")
     assert(data.earlierAdded and data.lifetimeChanged and data.noPrematurePrune,
         "新增更早到期目标、运行时修改缓存寿命或到期边界的处理不正确")
+    assert(data.activeWaitSkipped and data.lastWaitingRearmed,
+        "有等待请求的老目标仍每帧触发清理，或取消最后一个等待者后没有恢复过期检查")
     assert(data.unnecessaryScans == 0 and data.steadyAllocatedBytes == 0,
         "目标场未到期时仍启动扫描或产生 GC 分配")
 end, "导航目标场过期调度与逐帧基准等价，稳定期无扫描无分配")

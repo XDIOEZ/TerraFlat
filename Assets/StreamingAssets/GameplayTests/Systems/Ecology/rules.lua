@@ -1,4 +1,15 @@
 -- 独立四乘四草稿调用正式生态生成器。
+test.system("ecology", "companion_bind_candidates", {}, function(data)
+    assert(data.ordered and data.repeated and data.hostIgnored and data.companionAccepted,
+        "宿主首次扫描后的伴生物候选丢失、重排或再次绑定残留上一轮结果")
+    assert(data.totalPlacements == 512 and data.companionCount > 0 and
+        data.secondPassInspections == data.companionCount and
+        data.secondPassInspections < data.oldSecondPassInspections,
+        "伴生物绑定第二阶段仍然扫描全部自然生态放置点")
+    assert(data.allocatedBytes == 0,
+        "复用候选列表预热后，重复初绑扫描仍分配托管内存")
+end, "自然物宿主先于伴生物绑定，第二阶段只遍历伴生候选")
+
 test.system("ecology", "output_validation_cache", {}, function(data)
     assert(data.calls == 4096 and data.fullValidations == 1,
         "同一种自然实体在连续绑定时重复查询产物定义")

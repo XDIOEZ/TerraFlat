@@ -42,6 +42,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
     private readonly HashSet<Item> unbindItemSet = new();
     private readonly HashSet<int> generatedPortalGuids = new();
     private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
+    // 初次绑定在宿主扫描期间顺便记录伴生物，不再为了少数伴生物二次遍历整块生态放置表。
+    private readonly List<NaturalItemPlacement> initialCompanionPlacements = new(16);
     private readonly Dictionary<int, StaticNaturalRuntime> staticEntities = new();
     private readonly List<StaticNaturalRuntime> staticCaptureBuffer = new();
     private readonly List<ItemData> unbindSnapshots = new();
@@ -142,6 +144,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         if (chunkManager != null)
             chunkManager.NaturalItemRemoved += HandleStaticRemoved;
         initialBindingInProgress = true;
+        initialCompanionPlacements.Clear();
 
         try
         {
@@ -159,7 +162,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             {
                 NaturalItemPlacement placement = placements[i];
                 bool spawnedItem = false;
-                if (!placement.IsCompanion)
+                if (!CollectInitialCompanion(placement, initialCompanionPlacements))
                 {
                     bool boundStatic;
                     using (StaticEntityBindMarker.Auto())
@@ -178,19 +181,17 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
 
             checkedPlacements = 0;
             deadline = Stopwatch.GetTimestamp() + InitialStepBudgetTicks;
-            for (int i = 0; i < placements.Count; i++)
+            // 保留原列表的相对顺序与每步预算，只有真实伴生点进入第二次绑定扫描。
+            for (int i = 0; i < initialCompanionPlacements.Count; i++)
             {
-                NaturalItemPlacement placement = placements[i];
+                NaturalItemPlacement placement = initialCompanionPlacements[i];
                 bool spawnedItem = false;
-                if (placement.IsCompanion)
+                if (!CanSpawnCompanionForHost(placement))
                 {
-                    if (!CanSpawnCompanionForHost(placement))
-                    {
-                        if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
-                            deferredCompanionPlacements.Add(placement);
-                    }
-                    else spawnedItem = SpawnInitialPlacement(placement);
+                    if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
+                        deferredCompanionPlacements.Add(placement);
                 }
+                else spawnedItem = SpawnInitialPlacement(placement);
                 if (++checkedPlacements >= InitialPlacementsPerStep || spawnedItem ||
                     Stopwatch.GetTimestamp() >= deadline)
                 {
@@ -202,8 +203,17 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
         }
         finally
         {
+            initialCompanionPlacements.Clear();
             initialBindingInProgress = false;
         }
+    }
+
+    /// <summary>同一放置表扫描时只收集伴生点；独立规则核对顺序与重复扫描预算。</summary>
+    internal static bool CollectInitialCompanion(NaturalItemPlacement placement, List<NaturalItemPlacement> selected)
+    {
+        if (!placement.IsCompanion) return false;
+        selected.Add(placement);
+        return true;
     }
 
     /// <summary>传送门创建后立即同步碰撞体，分帧等待期间也能正常交互。</summary>
@@ -272,6 +282,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IIncrementalChunkV
             transientItems.Clear();
             generatedPortalGuids.Clear();
             deferredCompanionPlacements.Clear();
+            initialCompanionPlacements.Clear();
             companionReadinessCursor = 0;
             nextCompanionReadinessCheck = 0f;
             initialBindingInProgress = false;

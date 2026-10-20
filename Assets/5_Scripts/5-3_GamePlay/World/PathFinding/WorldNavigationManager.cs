@@ -111,8 +111,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     // 目标场只会因新建、扩展或删除而改变格数量；稳态帧无需反复遍历所有目标场求和。
     private bool cachedGoalCellCountDirty = true;
     private int cachedGoalCellCount;
-    // 所有目标场（包括当前有等待请求的）都贡献保守的最早过期时间。
-    // 新增目标会将截止时间前移；更新 LastUsedTime 只会让它推迟，不会漏清理。
+    // 只记录没有等待请求的目标场的最早可能到期时间。
+    // 活跃目标超过寿命时不应每帧重扫；最后一个等待者离开时重新登记该截止时间。
     private float nextGoalPruneAt = float.NegativeInfinity;
     private float scheduledGoalFieldLifetime = float.NaN;
 
@@ -227,6 +227,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         fieldsByGoal.Clear();
         fieldSchedule.Clear();
         cachedGoalCellCountDirty = true;
+        nextGoalPruneAt = float.NegativeInfinity;
+        scheduledGoalFieldLifetime = float.NaN;
         admissionQueue.Clear();
         grid.Clear();
         RecycleAllMapCellSets();
@@ -626,6 +628,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             fieldsByGoal.Clear();
             fieldSchedule.Clear();
             cachedGoalCellCountDirty = true;
+            nextGoalPruneAt = float.NegativeInfinity;
+            scheduledGoalFieldLifetime = float.NaN;
             admissionQueue.Clear();
             grid.Clear();
             RecycleAllMapCellSets();
@@ -1019,7 +1023,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         fieldsByGoal[goal] = field;
         fieldSchedule.Add(field);
         cachedGoalCellCountDirty = true;
-        nextGoalPruneAt = EarlierGoalPruneAt(nextGoalPruneAt, field.LastUsedTime, goalFieldLifetime);
+        ArmGoalPruneIfIdle(field);
         return true;
     }
 
@@ -1137,6 +1141,10 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             }
         }
 
+        // TakeWaitingRequests 先从目标场移除节点，随后 ScheduleSuccess 再解除请求引用；
+        // 因此最后一名等待者在这里离开，不能只依赖 DetachRequestFromField。
+        ArmGoalPruneIfIdle(field);
+
         if (hasMoreAtCurrentCell)
         {
             // Revisit this resolved start on the next scheduler slice. This prevents a same-cell
@@ -1187,6 +1195,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
             fieldsByGoal.Clear();
             fieldSchedule.Clear();
             cachedGoalCellCountDirty = true;
+            nextGoalPruneAt = float.NegativeInfinity;
+            scheduledGoalFieldLifetime = float.NaN;
             scheduleIndex = 0;
         }
         else
@@ -1326,12 +1336,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         completionNodes[completed.Result.RequestId] = node;
     }
 
-    private static void DetachRequestFromField(PathRequest request)
+    private void DetachRequestFromField(PathRequest request)
     {
         if (request?.Field == null)
             return;
 
-        request.Field.RemoveWaitingRequest(request.StartCell, request.FieldNode);
+        GoalField field = request.Field;
+        field.RemoveWaitingRequest(request.StartCell, request.FieldNode);
+        ArmGoalPruneIfIdle(field);
         request.FieldNode = null;
         request.Field = null;
     }
@@ -1444,12 +1456,14 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         for (int i = fieldSchedule.Count - 1; i >= 0; i--)
         {
             GoalField field = fieldSchedule[i];
+            // 未结算请求的生命周期由请求本身负责；活动目标不占用下一次逐出检查。
             if (!field.HasWaitingRequests && now - field.LastUsedTime > lifetime)
             {
                 RemoveFieldAt(i);
                 continue;
             }
-            nextDeadline = EarlierGoalPruneAt(nextDeadline, field.LastUsedTime, lifetime);
+            nextDeadline = EarlierIdleGoalPruneAt(nextDeadline, field.LastUsedTime,
+                lifetime, field.HasWaitingRequests);
         }
         nextGoalPruneAt = nextDeadline;
         scheduledGoalFieldLifetime = lifetime;
@@ -1463,6 +1477,22 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
     /// <summary>新增/复用目标只能让已有时间下界提前，不允许漏掉更早创建的目标。</summary>
     internal static float EarlierGoalPruneAt(float existingDeadline, float lastUsedAt, float lifetime) =>
         Mathf.Min(existingDeadline, lastUsedAt + lifetime);
+
+    /// <summary>未完成请求的目标不占用过期时间；从等待转为空闲时必须主动调用重登记。</summary>
+    internal static float EarlierIdleGoalPruneAt(float existingDeadline, float lastUsedAt,
+        float lifetime, bool hasWaitingRequests) =>
+        hasWaitingRequests ? existingDeadline : EarlierGoalPruneAt(existingDeadline, lastUsedAt, lifetime);
+
+    /// <summary>最后一名等待者离开或新建空闲目标时，将其过期时间纳入本轮下界。</summary>
+    private void ArmGoalPruneIfIdle(GoalField field)
+    {
+        if (field.HasWaitingRequests ||
+            !fieldsByGoal.TryGetValue(field.Goal, out GoalField current) ||
+            !ReferenceEquals(current, field))
+            return;
+        nextGoalPruneAt = EarlierIdleGoalPruneAt(nextGoalPruneAt, field.LastUsedTime,
+            goalFieldLifetime, false);
+    }
 
     private void EnforceCacheCellBudget()
     {
