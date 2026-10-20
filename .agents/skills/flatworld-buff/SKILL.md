@@ -18,6 +18,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 ## 定义与状态
 
 - `ActorBuffLightController` 只在实际存在光耀时创建点光源，移除后关闭并复用；仅真实开关变化时刷新光照，普通动物出生和其它 Buff 变化不新建闲置光源。
+- `ActorSpeedBuffMovementTrail` 按 Buff 增删、续期事件缓存加速表现资格；存档替换 Buff 字典或数量变化时补同步，模块延后装配及挂点变化仍重新绑定。空闲粒子只清一次，同帧发射复用脚底位置，不调整速度或发射率。
 - ID 用于注册、内容和保存。`schemaVersion:1` 严格拒绝重复 ID、未知 typeId/字段、非法枚举/非有限值；新效果由稳定 typeId、Dispatcher、参数校验组成。Handler 构建时缓存。
 - 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照，真伤沿用统一扣血入口。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因，避免归给此前武器。
 - `durationSeconds:null` 永久，周期间隔为正，extend/refresh 用正持续时间；分包只是归档，语义由 category/effects 定义。

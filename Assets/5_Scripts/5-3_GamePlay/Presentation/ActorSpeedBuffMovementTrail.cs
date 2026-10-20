@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -33,7 +34,12 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     private ParticleSystemRenderer trailRenderer;
     private Mod_BuffManager buffManager;
     private Mod_Mover mover;
+    private Item cachedOwner;
     private SpriteRenderer sourceRenderer;
+    private Dictionary<string, BuffInstance> observedBuffs;
+    private int observedBuffCount = -1;
+    private bool speedBuffActive;
+    private bool trailPlaying;
     private float spawnAccumulator;
     private Vector3 lastPosition;
     private bool hasLastPosition;
@@ -55,13 +61,23 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     {
         lastPosition = transform.position;
         hasLastPosition = true;
+        cachedOwner = null;
+        mover = null;
         BindBuffManager();
+    }
+
+    /// <summary>更换角色挂点时，下次更新重新解析模块归属。</summary>
+    private void OnTransformParentChanged()
+    {
+        cachedOwner = null;
+        mover = null;
     }
 
     /// <summary>每帧根据当前 Buff 与实际移动速度更新脚底粒子。</summary>
     private void Update()
     {
         BindBuffManager();
+        ReconcileSpeedBuffState();
         UpdateMovementTrail();
         lastPosition = transform.position;
         hasLastPosition = true;
@@ -72,6 +88,8 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     {
         UnbindBuffManager();
         ClearTrailParticles();
+        cachedOwner = null;
+        mover = null;
         hasLastPosition = false;
     }
 
@@ -95,18 +113,22 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
 
         UnbindBuffManager();
         buffManager = resolvedManager;
-        if (buffManager == null)
-            return;
+        if (buffManager != null)
+        {
+            buffManager.BuffAdded += OnBuffChanged;
+            buffManager.BuffRemoved += OnBuffChanged;
+            buffManager.BuffDurationChanged += OnBuffChanged;
+        }
 
-        buffManager.BuffAdded += OnBuffChanged;
-        buffManager.BuffRemoved += OnBuffChanged;
-        buffManager.BuffDurationChanged += OnBuffChanged;
+        RefreshSpeedBuffState();
     }
 
     /// <summary>优先从 Item 模块容器查找 Mod_BuffManager，兼容角色表现节点的父级装配结构。</summary>
     private Mod_BuffManager ResolveBuffManager()
     {
-        Item owner = GetComponentInParent<Item>();
+        Item owner = cachedOwner;
+        if (owner == null)
+            cachedOwner = owner = GetComponentInParent<Item>();
         if (owner == null)
             return GetComponentInParent<Mod_BuffManager>();
 
@@ -117,19 +139,38 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     /// <summary>解除旧 Mod_BuffManager 的生命周期事件订阅。</summary>
     private void UnbindBuffManager()
     {
-        if (buffManager == null)
-            return;
-
-        buffManager.BuffAdded -= OnBuffChanged;
-        buffManager.BuffRemoved -= OnBuffChanged;
-        buffManager.BuffDurationChanged -= OnBuffChanged;
+        if (buffManager != null)
+        {
+            buffManager.BuffAdded -= OnBuffChanged;
+            buffManager.BuffRemoved -= OnBuffChanged;
+            buffManager.BuffDurationChanged -= OnBuffChanged;
+        }
         buffManager = null;
+        observedBuffs = null;
+        observedBuffCount = -1;
+        speedBuffActive = false;
     }
 
-    /// <summary>Buff 发生变化时，在下一次表现更新前立即清理已经失效的拖尾。</summary>
+    /// <summary>Buff 增删或续期时立即更新拖尾资格，避免每帧遍历整个效果集合。</summary>
     private void OnBuffChanged(BuffInstance runtime)
     {
-        if (!HasActiveSpeedBuff())
+        RefreshSpeedBuffState();
+    }
+
+    /// <summary>存档恢复可整体替换 Buff 字典；没有单条事件时也须立即恢复正确表现。</summary>
+    private void ReconcileSpeedBuffState()
+    {
+        Dictionary<string, BuffInstance> current = buffManager != null ? buffManager.ActiveBuffs : null;
+        if (!ReferenceEquals(current, observedBuffs) || (current?.Count ?? 0) != observedBuffCount)
+            RefreshSpeedBuffState();
+    }
+
+    private void RefreshSpeedBuffState()
+    {
+        observedBuffs = buffManager != null ? buffManager.ActiveBuffs : null;
+        observedBuffCount = observedBuffs?.Count ?? 0;
+        speedBuffActive = HasActiveSpeedBuff();
+        if (!speedBuffActive)
             ClearTrailParticles();
     }
 
@@ -169,7 +210,7 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     /// <summary>按速度 Buff、Mod_Mover 实际速度和发射累积量生成脚底反向粒子。</summary>
     private void UpdateMovementTrail()
     {
-        if (!HasActiveSpeedBuff() || !TryGetMovementVelocity(out Vector2 velocity))
+        if (!speedBuffActive || !TryGetMovementVelocity(out Vector2 velocity))
         {
             ClearTrailParticles();
             return;
@@ -179,9 +220,11 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
         if (trailParticles == null)
             return;
 
-        UpdateTrailTransform();
+        Vector3 footPosition = GetFootWorldPosition();
+        UpdateTrailTransform(footPosition);
         if (!trailParticles.isPlaying)
             trailParticles.Play(true);
+        trailPlaying = true;
 
         float speedFactor = Mathf.Clamp(velocity.magnitude / 2.5f, 0.65f, 1.45f);
         spawnAccumulator = Mathf.Min(
@@ -196,7 +239,7 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
         Vector2 backward = -velocity.normalized;
         Vector2 lateral = new(-backward.y, backward.x);
         for (int i = 0; i < emitCount; i++)
-            EmitTrailParticle(backward, lateral, velocity.magnitude);
+            EmitTrailParticle(footPosition, backward, lateral, velocity.magnitude);
     }
 
     /// <summary>读取 Mod_Mover 或 AI 导航的实际速度；没有刚体速度时再使用表现节点位移兜底。</summary>
@@ -325,13 +368,13 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     }
 
     /// <summary>将粒子发射器放在当前 Sprite 脚底，并同步到角色排序层的后方。</summary>
-    private void UpdateTrailTransform()
+    private void UpdateTrailTransform(Vector3 footPosition)
     {
         if (trailParticles == null)
             return;
 
         sourceRenderer ??= GetComponent<SpriteRenderer>();
-        trailParticles.transform.position = GetFootWorldPosition();
+        trailParticles.transform.position = footPosition;
         if (trailRenderer == null)
             trailRenderer = trailParticles.GetComponent<ParticleSystemRenderer>();
 
@@ -357,9 +400,8 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     }
 
     /// <summary>在脚底发射一颗向移动反方向漂移、带少量横向随机的粒子。</summary>
-    private void EmitTrailParticle(Vector2 backward, Vector2 lateral, float movementSpeed)
+    private void EmitTrailParticle(Vector3 footPosition, Vector2 backward, Vector2 lateral, float movementSpeed)
     {
-        Vector3 footPosition = GetFootWorldPosition();
         footPosition += (Vector3)(lateral * UnityEngine.Random.Range(-0.07f, 0.07f));
 
         float driftSpeed = Mathf.Clamp(0.14f + movementSpeed * 0.08f, 0.14f, 0.7f);
@@ -387,8 +429,9 @@ public sealed class ActorSpeedBuffMovementTrail : MonoBehaviour
     private void ClearTrailParticles()
     {
         spawnAccumulator = 0f;
-        if (trailParticles != null)
+        if (trailParticles != null && trailPlaying)
             trailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        trailPlaying = false;
     }
 
     #endregion
