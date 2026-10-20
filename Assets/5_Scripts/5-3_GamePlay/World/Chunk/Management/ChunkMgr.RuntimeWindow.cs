@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
@@ -1137,15 +1137,19 @@ public partial class ChunkMgr
         return created;
     }
 
-    private void HandleRuntimeEntityPresentationChanged(RuntimeWorldAddress address) =>
+    private void HandleRuntimeEntityPresentationChanged(RuntimeWorldAddress address)
+    {
+        if (activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) && binding.View != null)
+            GameplayWorldRegistry.RegisterPresentation(binding.View.gameObject);
         RuntimeEntityPresentationChanged?.Invoke(address);
+    }
 
     /// <summary>
     /// 区块表现必须属于当前世界场景；ChunkMgr 随 WorldManager 常驻，但不能把自然物带入 DDOL 场景。
     /// </summary>
     private Transform GetRuntimeChunkViewRoot()
     {
-        Scene activeScene = SceneManager.GetActiveScene();
+        Scene activeScene = GameplayWorldRegistry.CurrentScene;
         if (!activeScene.IsValid() || !activeScene.isLoaded)
             throw new InvalidOperationException("[ChunkMgr] 当前没有可承载区块表现的已加载场景。");
 

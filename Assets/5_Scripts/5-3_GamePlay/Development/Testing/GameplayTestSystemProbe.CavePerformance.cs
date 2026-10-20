@@ -19,6 +19,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("dimension/cave_exit_cache_sources", CaveExitCacheSources);
         operations.Add("dimension/cave_exit_cache_identity", CaveExitCacheIdentity);
         operations.Add("dimension/cave_exit_cache_distance", CaveExitCacheDistance);
+        operations.Add("dimension/portal_world_ownership", PortalWorldOwnership);
         operations.Add("rendering/cave_shadow_spheres", CaveShadowSpheres);
         operations.Add("rendering/cave_shadow_lazy_creation", CaveShadowLazyCreation);
         operations.Add("ecology/capture_batch", EcologyCaptureBatch);
@@ -52,14 +53,14 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
-    private static DimensionPortalAnchor CreateCavePerformanceAnchor(Data_Player player, int guid, Vector3 position)
+    private static DimensionPortalAnchor CreateCavePerformanceAnchor(GameSaveData save, int guid, Vector3 position)
     {
         DimensionPortalAnchor result = null;
         WithEntityProbeItem(item =>
         {
             item.BindData(new Data_GeneralItem { Guid = guid });
             item.transform.position = position;
-            result = DimensionTravelProgressStore.GetOrCreateCaveAnchor(player, CavePerformanceSurface,
+            result = DimensionTravelProgressStore.GetOrCreateCaveAnchor(save, CavePerformanceSurface,
                 item, CavePerformanceAddress, new DimensionDefinition());
             return new JObject();
         });
@@ -93,7 +94,7 @@ public static partial class GameplayTestSystemProbe
         var save = CavePerformanceSave();
         Data_Player player = save.PlayerData_Dict["first"];
         Vector3 entrancePosition = new(30.5f, 0.5f, 0f);
-        DimensionPortalAnchor anchor = CreateCavePerformanceAnchor(player, 412, entrancePosition);
+        DimensionPortalAnchor anchor = CreateCavePerformanceAnchor(save, 412, entrancePosition);
         return WithEntityProbeItem(exit =>
         {
             exit.BindData(new Data_GeneralItem { Guid = anchor.CaveExitGuid });
@@ -111,7 +112,7 @@ public static partial class GameplayTestSystemProbe
             samples["restored"] = CaptureCavePerformanceLight(cache, save, exit.transform.position);
             samples["restoredBlockedFlag"] = DimensionTravelProgressStore.IsCaveExitBlocked(save, CavePerformanceAddress, exit, false);
             exit.transform.position = new Vector3(20.5f, 0.5f, 0f);
-            DimensionTravelProgressStore.UpdateCaveExit(player, anchor, exit);
+            DimensionTravelProgressStore.UpdateCaveExit(save, anchor, exit);
             samples["moved"] = CaptureCavePerformanceLight(cache, save, exit.transform.position);
             return samples;
         });
@@ -127,14 +128,14 @@ public static partial class GameplayTestSystemProbe
         var samples = new JObject { ["natural"] = CaptureCavePerformanceLight(cache, save, naturalPosition) };
         Vector3 firstEntrance = new(30.5f, 0.5f, 0f);
         Vector3 secondEntrance = new(40.5f, 0.5f, 0f);
-        DimensionPortalAnchor first = CreateCavePerformanceAnchor(save.PlayerData_Dict["first"], 112, firstEntrance);
-        DimensionPortalAnchor second = CreateCavePerformanceAnchor(save.PlayerData_Dict["second"], 113, secondEntrance);
+        DimensionPortalAnchor first = CreateCavePerformanceAnchor(save, 112, firstEntrance);
+        DimensionPortalAnchor second = CreateCavePerformanceAnchor(save, 113, secondEntrance);
         second.CaveExitPosition = new Vector3(25.5f, 25.5f, 0f);
         WithEntityProbeItem(exit =>
         {
             exit.BindData(new Data_GeneralItem { Guid = second.CaveExitGuid });
             exit.transform.position = second.CaveExitPosition;
-            DimensionTravelProgressStore.UpdateCaveExit(save.PlayerData_Dict["second"], second, exit);
+            DimensionTravelProgressStore.UpdateCaveExit(save, second, exit);
             return new JObject();
         });
         samples["all"] = CaptureCavePerformanceLight(cache, save, first.CaveExitPosition);
@@ -167,13 +168,14 @@ public static partial class GameplayTestSystemProbe
         ItemSpecialDataJsonStore.WriteNamespace(player, "probe.cave.other", new JObject { ["value"] = 5 });
         samples["otherNamespace"] = CaptureCavePerformanceLight(cache, save, position);
         player.ItemSpecialData = new string(player.ItemSpecialData.ToCharArray());
+        save.DimensionStateJson = new string(save.DimensionStateJson.ToCharArray());
         samples["sameContent"] = CaptureCavePerformanceLight(cache, save, position);
-        JObject external = ItemSpecialDataJsonStore.ReadNamespace(player, "flatworld.dimensions");
+        JObject external = ItemSpecialDataJsonStore.ReadRoot(save.DimensionStateJson);
         external["surfaceEntranceStates"][CavePerformanceSurface.WorldKey]["0,0"]["blocked"] = true;
-        ItemSpecialDataJsonStore.WriteNamespace(player, "flatworld.dimensions", external);
+        save.DimensionStateJson = external.ToString(Newtonsoft.Json.Formatting.None);
         samples["externalBlocked"] = CaptureCavePerformanceLight(cache, save, position);
         external["surfaceEntranceStates"][CavePerformanceSurface.WorldKey]["0,0"]["blocked"] = false;
-        ItemSpecialDataJsonStore.WriteNamespace(player, "flatworld.dimensions", external);
+        save.DimensionStateJson = external.ToString(Newtonsoft.Json.Formatting.None);
         samples["externalRestored"] = CaptureCavePerformanceLight(cache, save, position);
         return samples;
     }
@@ -374,5 +376,50 @@ public static partial class GameplayTestSystemProbe
         return samples;
     }
 
+    #endregion
+
+    #region 共有入口与角色独立落点
+    private static JObject PortalWorldOwnership(JObject args)
+    {
+        var save = CavePerformanceSave();
+        var first = save.PlayerData_Dict["first"];
+        var second = new Data_Player();
+        DimensionTravelProgressStore.SetLastPosition(first, CavePerformanceAddress, new Vector3(4, 5));
+        DimensionTravelProgressStore.SetLastPosition(second, CavePerformanceAddress, new Vector3(9, 8));
+        string before = save.DimensionStateJson;
+        DimensionPortalAnchor preview = null;
+        WithEntityProbeItem(entrance =>
+        {
+            entrance.BindData(new Data_GeneralItem { Guid = 713 });
+            entrance.transform.position = new Vector3(30.5f, .5f);
+            preview = DimensionTravelProgressStore.GetOrCreateCaveAnchor(save, CavePerformanceSurface,
+                entrance, CavePerformanceAddress, new DimensionDefinition(), commit: false);
+            return new JObject();
+        });
+        bool previewReadOnly = save.DimensionStateJson == before;
+        DimensionPortalAnchor anchor = CreateCavePerformanceAnchor(save, 713, new Vector3(30.5f, .5f));
+        save.PlayerData_Dict.Clear();
+        return WithEntityProbeItem(exit =>
+        {
+            exit.BindData(new Data_GeneralItem { Guid = anchor.CaveExitGuid });
+            exit.transform.position = anchor.CaveExitPosition;
+            bool shared = DimensionTravelProgressStore.TryGetAnchorByCaveExit(save, CavePerformanceAddress, exit, out var paired);
+            byte[] bytes = MemoryPack.MemoryPackSerializer.Serialize(save);
+            GameSaveData restored = MemoryPack.MemoryPackSerializer.Deserialize<GameSaveData>(bytes);
+            bool roundtrip = DimensionTravelProgressStore.TryGetAnchorByCaveExit(restored, CavePerformanceAddress, exit, out var saved);
+            DimensionTravelProgressStore.TryGetLastPosition(first, CavePerformanceAddress, out Vector3 firstLast);
+            DimensionTravelProgressStore.TryGetLastPosition(second, CavePerformanceAddress, out Vector3 secondLast);
+            return new JObject
+            {
+                ["previewReadOnly"] = previewReadOnly,
+                ["previewIdentityStable"] = preview.CaveExitGuid == anchor.CaveExitGuid,
+                ["sharedFound"] = shared, ["sharedIdentity"] = shared && paired.SurfaceEntranceGuid == 713,
+                ["playersEmpty"] = save.PlayerData_Dict.Count == 0,
+                ["roundtripFound"] = roundtrip,
+                ["roundtripIdentity"] = roundtrip && saved.CaveExitGuid == anchor.CaveExitGuid,
+                ["firstLastX"] = firstLast.x, ["secondLastX"] = secondLast.x
+            };
+        });
+    }
     #endregion
 }

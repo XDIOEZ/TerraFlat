@@ -5,7 +5,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
+public partial class WeatherMgr : MonoBehaviour
 {
     private bool _weatherRuntimeAllowed;
 
@@ -52,7 +52,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 #region 属性
 
     // 渲染查询只能读取现有管理器，不能在菜单或退出世界时自动创建天气系统。
-    public static WeatherMgr ExistingInstance => instance;
+    public static WeatherMgr ExistingInstance => GetForWorld(GameplayWorldRegistry.ExecutionWorldKey, false);
 
     [ShowInInspector, ReadOnly, LabelText("当前天气")]
     public WeatherType CurrentWeather => GetCurrentWeather(); // 当前天气类型
@@ -164,6 +164,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         if (!ForceRegionalWeather(WeatherType.Rain, intensity, durationSeconds))
             return false;
 
+        if (!IsLocalWeatherWorld) return true;
         Camera camera = Camera.main;
         Vector2 position = camera != null ? (Vector2)camera.transform.position : (Vector2)transform.position;
         TryGetPrecipitationAt(position, out float rain, out float snow);
@@ -195,6 +196,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public void RefreshRainEffect()
     {
+        if (!presentationActive) return;
         RefreshSnowEffect();
         float rainIntensity = _presentedRainIntensity;
         if (rainIntensity <= 0.001f)
@@ -468,62 +470,52 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void Start()
     {
+        if (this != templateManager) return;
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Event_GameWorldEnter += OnGameWorldEnter;
             GameManager.Instance.Event_GameWorldExit += OnGameWorldExit;
         }
-
-        bool isInGameWorld = GameManager.Instance != null && GameManager.Instance.IsInGameWorld;
-        ApplyGameWorldLifecycleState(isInGameWorld);
+        if (GameManager.Instance?.IsInGameWorld == true) OnGameWorldEnter();
     }
 
-    protected override void OnDestroy()
+    private void OnDestroy()
     {
-        ShutdownWeatherEventSystem();
+        using (EnterOwnedWorld()) ShutdownWeatherEventSystem();
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
             GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
         }
+        if (!string.IsNullOrEmpty(ownedWorld)) worldManagers.Remove(ownedWorld);
+        if (templateManager == this) templateManager = null;
     }
 
-    private void OnGameWorldEnter()
-    {
-        ApplyGameWorldLifecycleState(true);
-    }
-
-    private void OnGameWorldExit()
-    {
-        ApplyGameWorldLifecycleState(false);
-    }
+    private void OnGameWorldEnter() => GetForWorld(GameplayWorldRegistry.LocalPresentationWorldKey);
+    private void OnGameWorldExit() => ReleaseAll();
 
     private void ApplyGameWorldLifecycleState(bool isActive)
     {
-        _weatherRuntimeAllowed = isActive && !SpaceMgr.IsSpaceScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) &&
-                                 !IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition);
-        enabled = _weatherRuntimeAllowed;
-
-        if (!_weatherRuntimeAllowed)
-        {
-            ShutdownWeatherEventSystem();
-            _debugPanelVisible = false;
-            return;
-        }
-
-        ActivateWeatherEventSystem();
-        RefreshWeatherFeedback();
+        bool allowed = isActive && !SpaceMgr.IsSpaceScene(ownedWorld) &&
+            !IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition);
+        if (_weatherRuntimeAllowed == allowed) return;
+        _weatherRuntimeAllowed = allowed;
+        if (allowed) ActivateWeatherEventSystem();
+        else ShutdownWeatherEventSystem();
     }
 
     private void Update()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard[_toggleDebugPanelInputKey].wasPressedThisFrame)
-        {
-            ToggleDebugPanel();
-        }
-
+        if (string.IsNullOrEmpty(ownedWorld)) return;
+        using var worldScope = EnterOwnedWorld();
+        ApplyGameWorldLifecycleState(GameManager.Instance?.IsInGameWorld == true);
+        bool local = IsLocalWeatherWorld && _weatherRuntimeAllowed;
+        SetPresentationActive(local);
+        if (!_weatherRuntimeAllowed) return;
         MaintainWeatherEventSystem();
+        if (!local) return;
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null && keyboard[_toggleDebugPanelInputKey].wasPressedThisFrame) ToggleDebugPanel();
         AdvanceOceanWaveClock(Time.deltaTime);
         MaintainSnowPresentation();
         if (_rainEffectInstance != null && _rainEffectInstance.activeSelf)
@@ -532,7 +524,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void OnGUI()
     {
-        if (!_debugPanelVisible)
+        if (!IsLocalWeatherWorld || !_debugPanelVisible)
         {
             return;
         }

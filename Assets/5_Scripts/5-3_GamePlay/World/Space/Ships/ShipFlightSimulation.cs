@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -29,7 +29,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool ToggleIgnition(string consoleId)
         {
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.ToggleIgnition, consoleId)) return true;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.ToggleIgnition, consoleId);
             if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) || console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             var flight = GetFlight(ship.ShipId);
             if (flight == null) return false;

@@ -11,30 +11,23 @@ public static partial class DimensionTravelProgressStore
     private const string EntranceStatesKey = "surfaceEntranceStates";
     public static uint EntranceStateRevision { get; private set; }
 
-    /// <summary>
-    /// 与现有入口锚点共用维度 JSON 扩展，不改变 MemoryPack 布局。维度旅行当前只在离线模式开放，
-    /// 同步写入已有角色的旅行记录，切换角色也读取同一世界的封堵状态。
-    /// </summary>
+    /// <summary>封堵和天然入口状态写入世界共有记录，不依赖任何玩家是否曾经进入。</summary>
     public static void SetSurfaceEntranceState(GameSaveData save, WorldAddress surface, Vector2 position,
         bool blocked, bool generated)
     {
-        if (save?.PlayerData_Dict == null || !surface.IsSurface || !IsFinite(position.x) || !IsFinite(position.y)) return;
+        if (save == null || !surface.IsSurface || !IsFinite(position.x) || !IsFinite(position.y)) return;
         string key = EntranceCellKey(position);
-        foreach (Data_Player player in save.PlayerData_Dict.Values)
-        {
-            JObject data = ItemSpecialDataJsonStore.ReadNamespace(player, NamespaceKey);
-            JObject worlds = data[EntranceStatesKey] as JObject ?? new JObject();
-            JObject cells = worlds[surface.WorldKey] as JObject ?? new JObject();
-            JObject previous = cells[key] as JObject;
-            bool wasGenerated = previous?.Value<bool?>("generated") == true;
-            if (previous != null && previous.Value<bool?>("blocked") == blocked && (!generated || wasGenerated)) continue;
-            cells[key] = new JObject { ["blocked"] = blocked, ["generated"] = generated || wasGenerated };
-            worlds[surface.WorldKey] = cells;
-            data[EntranceStatesKey] = worlds;
-            ItemSpecialDataJsonStore.WriteNamespace(player, NamespaceKey, data);
-            InvalidatePlayerReadCache(player);
-            EntranceStateRevision++;
-        }
+        JObject data = ItemSpecialDataJsonStore.ReadRoot(save.DimensionStateJson);
+        JObject worlds = data[EntranceStatesKey] as JObject ?? new JObject();
+        JObject cells = worlds[surface.WorldKey] as JObject ?? new JObject();
+        JObject previous = cells[key] as JObject;
+        bool wasGenerated = previous?.Value<bool?>("generated") == true;
+        if (previous != null && previous.Value<bool?>("blocked") == blocked && (!generated || wasGenerated)) return;
+        cells[key] = new JObject { ["blocked"] = blocked, ["generated"] = generated || wasGenerated };
+        worlds[surface.WorldKey] = cells;
+        data[EntranceStatesKey] = worlds;
+        save.DimensionStateJson = data.ToString(Newtonsoft.Json.Formatting.None);
+        EntranceStateRevision++;
     }
 
     /// <summary>状态与实体加载无关：地表入口所在区块卸载后，矿洞仍能判断出口是否被封堵。</summary>
@@ -47,7 +40,7 @@ public static partial class DimensionTravelProgressStore
     private static bool HasSurfaceEntranceFlag(GameSaveData save, WorldAddress surface, Vector2 position,
         EntranceReadFlags flag)
     {
-        if (save?.PlayerData_Dict == null) return false;
+        if (save == null) return false;
         return GetSaveReadCache(save).HasEntranceFlag(surface.WorldKey, Vector2Int.FloorToInt(position), flag);
     }
 
@@ -66,8 +59,8 @@ public static partial class DimensionTravelProgressStore
     {
         if (exit == null || cave.DimensionId != WorldAddress.CaveDimensionId) return false;
         if (generated)
-            return IsSurfaceEntranceBlocked(save, cave.WithDimension(WorldAddress.SurfaceDimensionId), exit.transform.position);
-        if (save?.PlayerData_Dict == null || exit.itemData == null) return false;
+            return IsSurfaceEntranceBlocked(save, cave.WithDimension(WorldAddress.SurfaceDimensionId), WorldLocalPresentation.ToLogical(exit.transform.position));
+        if (save == null || exit.itemData == null) return false;
         SaveReadCache cache = GetSaveReadCache(save);
         return cache.IsCaveExitBlocked(cave.WorldKey, exit.itemData.Guid);
     }
@@ -75,7 +68,7 @@ public static partial class DimensionTravelProgressStore
     /// <summary>采光由已保存出口和确定性天然出口共同决定；手工出口不用保持远处区块加载。</summary>
     public static void CollectOpenCaveExitPositions(GameSaveData save, WorldAddress cave, List<Vector2> result)
     {
-        if (save?.PlayerData_Dict == null || result == null ||
+        if (save == null || result == null ||
             cave.DimensionId != WorldAddress.CaveDimensionId) return;
         GetSaveReadCache(save).CollectOpenCaveExitPositions(cave.WorldKey, result);
     }

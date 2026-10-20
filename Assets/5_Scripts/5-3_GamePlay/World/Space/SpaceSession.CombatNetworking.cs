@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
@@ -79,8 +79,8 @@ namespace FlatWorld.Spaceflight
         {
             reason = "玩家或手持武器尚未准备好";
             Player player = FindNetworkPlayer(profile);
-            if (!GameNetwork.HasStateAuthority || player == null || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer) ||
-                !observer.InSpace && !HasAttackableSurfaceShip(observer.WorldKey) && action != 1) return false;
+            if (!GameNetwork.HasStateAuthority || player == null || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return false;
+            using var worldScope = observer.InSpace ? default(IDisposable) : GameplayWorldRegistry.UseWorld(observer.WorldKey);
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
             Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -104,12 +104,18 @@ namespace FlatWorld.Spaceflight
         }
 
         public static bool SubmitNetworkAttack(Item weapon, int action, Vector2 worldAim)
+            => SubmitNetworkItemAction(weapon, action, worldAim, false);
+
+        public static bool SubmitNetworkUse(Item heldItem, Vector2 worldAim)
+            => SubmitNetworkItemAction(heldItem, 2, worldAim, true);
+
+        private static bool SubmitNetworkItemAction(Item weapon, int action, Vector2 worldAim, bool useItem)
         {
             Player player = CombatPlayer(weapon);
             SpaceSession session = Current;
-            if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority || player == null ||
-                session == null || !session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) ||
-                !observer.InSpace && !session.HasAttackableSurfaceShip(observer.WorldKey) && !ClientGroundCombatPending) return false;
+            if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority) return false;
+            if (player == null || session == null ||
+                !session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer)) return true;
             bool startsGroundCombat = !observer.InSpace && !ClientGroundCombatPending;
             if (startsGroundCombat && SpaceNetworkBridge.CombatPreparationSender?.Invoke(player.ProfileName) != true) return true;
             if (action != 2) ClientAttackHeld = action == 0;
@@ -118,7 +124,7 @@ namespace FlatWorld.Spaceflight
                 : new SpaceSectorPosition(default, SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(worldAim)));
             bool sent = SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
             {
-                Kind = action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
+                Kind = useItem ? SpaceNetworkIntentKind.UsePlayerItem : action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
                 Sector = aim.Sector, X = aim.LocalMeters.X, Y = aim.LocalMeters.Y, TargetId = observer.InSpace ? null : observer.WorldKey,
                 SelectedSlot = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurrentIndex ?? -1, StartsGroundCombat = startsGroundCombat
             });

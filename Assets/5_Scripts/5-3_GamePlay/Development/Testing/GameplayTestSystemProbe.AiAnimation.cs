@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -9,8 +9,37 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterAiAnimationOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
+        operations.Add("ai/network_snapshot_buffer", AiNetworkSnapshotBuffer);
         operations.Add("ai/single_sprite_catalog", EntityAiSingleSpriteCatalog);
         operations.Add("ai/single_sprite_aquatic", EntityAiSingleSpriteAquatic);
+    }
+
+    // 规则驱动正式快照缓冲，覆盖分片与世界代际边界，不启动网络或模拟。
+    private static JObject AiNetworkSnapshotBuffer(JObject args)
+    {
+        var buffer = new AiEcologySnapshotBuffer();
+        var a = new AiEcologyNetworkActor { Guid = 1, Species = "Wolf", Position = Vector2.one };
+        var b = new AiEcologyNetworkActor { Guid = 2, Species = "Bird", Position = Vector2.right };
+        bool incomplete = !buffer.Accept("a", 7, 1, 1, 2, new[] { b }, out _);
+        bool duplicatePart = !buffer.Accept("a", 7, 1, 1, 2, new[] { b }, out _);
+        bool mixedRealm = !buffer.Accept("a", 8, 1, 0, 2, new[] { a }, out _);
+        bool mixedWorld = !buffer.Accept("b", 7, 1, 0, 2, new[] { a }, out _);
+        bool assembled = buffer.Accept("a", 7, 1, 0, 2, new[] { a }, out AiEcologyNetworkActor[] result) &&
+            result.Length == 2 && result[0].Guid == 1 && result[1].Guid == 2;
+        bool oldRejected = !buffer.Accept("a", 7, 1, 0, 1, new[] { a }, out _);
+        buffer.Accept("a", 7, 2, 0, 2, new[] { a }, out _);
+        bool newerReplacesIncomplete = buffer.Accept("a", 7, 3, 0, 1, new[] { b }, out result) && result.Length == 1 && result[0].Guid == 2;
+        bool emptyClears = buffer.Accept("a", 7, 4, 0, 1, Array.Empty<AiEcologyNetworkActor>(), out result) && result.Length == 0;
+        bool duplicateGuid = !buffer.Accept("a", 7, 5, 0, 1, new[] { a, a }, out _);
+        a.Position = new Vector2(float.NaN, 0);
+        bool invalidRejected = !buffer.Accept("a", 7, 6, 0, 1, new[] { a }, out _);
+        buffer.Reset();
+        bool resetAcceptsNewRealm = buffer.Accept("b", 9, 1, 0, 1, new[] { b }, out result) && result.Length == 1;
+        return new JObject { ["incomplete"] = incomplete, ["duplicatePart"] = duplicatePart,
+            ["mixedRealm"] = mixedRealm, ["mixedWorld"] = mixedWorld, ["assembled"] = assembled,
+            ["oldRejected"] = oldRejected, ["newerReplacesIncomplete"] = newerReplacesIncomplete,
+            ["emptyClears"] = emptyClears, ["duplicateGuid"] = duplicateGuid,
+            ["invalidRejected"] = invalidRejected, ["resetAcceptsNewRealm"] = resetAcceptsNewRealm };
     }
 
     // 正式加载器负责 Manifest 和继承，候选上下文保证规则不替换正在使用的目录缓存。

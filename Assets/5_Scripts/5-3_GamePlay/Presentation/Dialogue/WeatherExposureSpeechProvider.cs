@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using UnityEngine;
 
 namespace FlatWorld.Dialogue
@@ -107,7 +107,7 @@ namespace FlatWorld.Dialogue
             Vector2 position = transform.position;
             while (true)
             {
-                int count = Physics2D.OverlapCircleNonAlloc(
+                int count = GameplayPhysics2D.OverlapCircleNonAlloc(
                     position, heatSourceRadius, heatSourceHits, heatSourceLayerMask);
                 bool found = false;
                 try

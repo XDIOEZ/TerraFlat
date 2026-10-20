@@ -299,6 +299,18 @@
       "enabled": true
     },
     {
+      "id": "networking_world_scope",
+      "name": "真实双世界：同格占地、自然实体与物理隔离",
+      "luaPath": "GameplayTests/Systems/Networking/world-scope.lua",
+      "enabled": true
+    },
+    {
+      "id": "networking_bots_ships",
+      "name": "联机假人：飞船生成补给点火与拒绝身份",
+      "luaPath": "GameplayTests/Systems/Networking/bots-ships.lua",
+      "enabled": true
+    },
+    {
       "id": "ui_localization_gameplay",
       "name": "正式设置窗口、保存放弃与中英文切换",
       "luaPath": "GameplayTests/Systems/UISettings/gameplay.lua",

@@ -137,7 +137,7 @@ namespace FlatWorld.NaturalEntities
                 layerMask = LayerMask.GetMask("DamageReciver"), useDepth = false
             };
             canopyHits.Clear(); canopyReceivers.Clear();
-            Physics2D.CircleCast(start, record.Profile.Canopy.CollisionRadius, displacement.normalized,
+            GameplayPhysics2D.CircleCast(start, record.Profile.Canopy.CollisionRadius, displacement.normalized,
                 filter, canopyHits, displacement.magnitude);
             canopyHits.Sort((a, b) => a.distance.CompareTo(b.distance));
             var damage = new FallingFruitDamage(record.Profile.Canopy.BluntDamage);
@@ -198,6 +198,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>保存前只完成已发生的死亡与土壤提交，不推进游戏时钟或运行测试。</summary>
         public static void PrepareForCapture(NaturalEntityHandle handle)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle) || !GameNetwork.HasStateAuthority) return;
             Record record = records[handle.Id];
             CommitSoil(record);

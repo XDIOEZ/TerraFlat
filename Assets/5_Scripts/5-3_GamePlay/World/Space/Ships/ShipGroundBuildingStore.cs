@@ -45,9 +45,10 @@ namespace FlatWorld.Spaceflight
         public static List<Entry> Collect(string worldKey)
         {
             if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("地面世界地址为空。", nameof(worldKey));
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             var result = new List<Entry>();
             ItemMgr items = ItemMgr.Instance;
-            if (items != null && worldKey == SceneManager.GetActiveScene().name)
+            if (items != null)
                 foreach (Item item in items.WorldRunTimeItems.Values)
                 {
                     if (item == null || item.DestructionHandled || item.itemData == null || item.InHand ||
@@ -72,6 +73,15 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 普通地面建筑创建与卸载
+        public static Func<IReadOnlyList<Entry>, bool> NetworkPublisher;
+
+        public static void PublishCreated(IReadOnlyList<Entry> entries)
+        {
+            if (GameNetwork.IsOnline && GameNetwork.HasStateAuthority &&
+                NetworkPublisher?.Invoke(entries) != true)
+                throw new InvalidOperationException("地面建筑的联机发布器尚未就绪。");
+        }
+
         public static Entry Place(ItemData data, Vector2Int cell, int quarterTurns, string worldKey)
             => PlaceCore(data, cell, quarterTurns, worldKey, null, true);
 
@@ -84,8 +94,10 @@ namespace FlatWorld.Spaceflight
         {
             if (!GameNetwork.HasStateAuthority || data == null || data.Guid == 0 ||
                 string.IsNullOrWhiteSpace(worldKey)) throw new InvalidOperationException("地面建筑数据无效或没有世界写入权限。");
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
+            Scene targetScene = GameplayWorldRegistry.CurrentScene;
             bool machine = MachineCatalog.Get(data.IDName) != null;
-            if (!machine && worldKey != SceneManager.GetActiveScene().name)
+            if (!targetScene.IsValid() || !targetScene.isLoaded)
                 throw new InvalidOperationException("普通建筑需要在目标地表场景就绪后恢复。");
             quarterTurns &= 3;
             Vector3 logical = new(cell.x + .5f, cell.y + .5f, 0f);
@@ -124,6 +136,8 @@ namespace FlatWorld.Spaceflight
                         // 提前准备失败时沿用原创建链，最终显示仍等整组所有权移交成功。
                         entry.Item = ItemMgr.Instance.InstantiateItem(data, WorldLocalPresentation.ProjectPosition(logical), rotation, Vector3.one);
                         if (!activate) entry.Item.gameObject.SetActive(false);
+                        entry.Item.transform.SetParent(null, true);
+                        if (entry.Item.gameObject.scene != targetScene) SceneManager.MoveGameObjectToScene(entry.Item.gameObject, targetScene);
                         entry.Item.Load();
                     }
                     Mod_Building building = entry.Item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building) ??
@@ -154,6 +168,7 @@ namespace FlatWorld.Spaceflight
             if (entry?.Machine != null) throw new InvalidOperationException("机器必须通过作用域迁移移交，不能按建筑卸载。");
             if (entry?.Item == null || entry.Item.DestructionHandled) return;
             Item item = entry.Item;
+            using var worldScope = GameplayWorldRegistry.UseWorld(item.gameObject.scene.name);
             if (ItemMgr.Instance == null) throw new InvalidOperationException("物品管理器尚未就绪。");
             ItemMgr manager = ItemMgr.Instance;
             int guid = entry.Guid;

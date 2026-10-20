@@ -1,3 +1,4 @@
+﻿using System;
 using FlatWorld.Networking.MirrorAdapter;
 using kcp2k;
 using UnityEngine;
@@ -15,6 +16,38 @@ namespace FlatWorld.Networking.Gameplay
 
         private static NetworkGameBootstrap instance;
         private static bool sceneHookInstalled;
+        private FlatWorldGameNetworkManager manager;
+        private GameSaveData attemptedWorld;
+        private static int automaticSessionSuppressions;
+        public static IDisposable SuppressAutomaticSession()
+        {
+            automaticSessionSuppressions++;
+            return new AutomaticSessionSuppression();
+        }
+        private sealed class AutomaticSessionSuppression : IDisposable
+        {
+            private bool disposed;
+            public void Dispose() { if (disposed) return; disposed = true; automaticSessionSuppressions--; }
+        }
+        private void LateUpdate()
+        {
+            if (manager == null || automaticSessionSuppressions > 0 || Mirror.NetworkServer.active || Mirror.NetworkClient.active) return;
+            GameManager game = GameManager.ExistingInstance;
+            GameSaveData save = SaveDataMgr.Instance?.SaveData;
+            Player player = ItemMgr.Instance?.User_Player;
+            if (game?.IsInGameWorld != true || !game.IsGameplayReady || player?.IsInitialized != true ||
+                save == null || ReferenceEquals(save, attemptedWorld)) return;
+            attemptedWorld = save;
+            try
+            {
+                // 单人也创建正式本机连接，公开房间只改变加入资格而不重建世界。
+                manager.PrepareHostWorld();
+                Mirror.NetworkServer.listen = false;
+                NetworkStartResult result = GameNetwork.Session.StartHost();
+                if (!result.Success) Debug.LogError("[单人联机] 本机会话启动失败：" + result.Error, this);
+            }
+            catch (Exception error) { Debug.LogException(error, this); }
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -60,7 +93,7 @@ namespace FlatWorld.Networking.Gameplay
 
             GameObject managerObject = new GameObject("FlatWorldNetworkManager");
             KcpTransport transport = managerObject.AddComponent<KcpTransport>();
-            FlatWorldGameNetworkManager manager = managerObject.AddComponent<FlatWorldGameNetworkManager>();
+            manager = managerObject.AddComponent<FlatWorldGameNetworkManager>();
             managerObject.transform.SetParent(transform, false);
             manager.transport = transport;
             manager.playerPrefab = playerPrefab;

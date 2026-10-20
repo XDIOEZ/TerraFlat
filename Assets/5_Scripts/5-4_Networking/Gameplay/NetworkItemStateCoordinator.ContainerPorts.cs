@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using MemoryPack;
 using Mirror;
 using Newtonsoft.Json;
@@ -6,7 +6,9 @@ using UnityEngine;
 
 namespace FlatWorld.Networking.Gameplay
 {
-    public struct NetworkContainerIntentRequest : NetworkMessage { public uint Token; public string IntentJson; public string ShipId; }
+    public struct NetworkContainerIntentRequest : NetworkMessage, INetworkWorldRequest {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision; public uint Token; public string IntentJson; public string ShipId; }
     public struct NetworkContainerIntentResponse : NetworkMessage
     {
         public uint Token;
@@ -24,7 +26,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 容器意图网络桥
         private uint pendingContainerIntent;
         private float containerIntentDeadline;
-        private void StartContainerServerBridge() => NetworkServer.RegisterHandler<NetworkContainerIntentRequest>(OnContainerIntent, true);
+        private void StartContainerServerBridge() => NetworkServer.RegisterHandler<NetworkContainerIntentRequest>(NetworkGameplayWorldScope.Wrap<NetworkContainerIntentRequest>(OnContainerIntent), true);
         private void StopContainerServerBridge() => NetworkServer.UnregisterHandler<NetworkContainerIntentRequest>();
         private void StartContainerClientBridge()
         {
@@ -45,14 +47,16 @@ namespace FlatWorld.Networking.Gameplay
             string json = JsonConvert.SerializeObject(intent);
             if (json.Length > 4096) return false;
             pendingContainerIntent = NextMachineToken(); containerIntentDeadline = Time.unscaledTime + 8f;
-            NetworkClient.Send(new NetworkContainerIntentRequest { Token = pendingContainerIntent, IntentJson = json, ShipId = CurrentRequestShipId() }); return true;
+            NetworkClient.Send(new NetworkContainerIntentRequest { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = pendingContainerIntent, IntentJson = json, ShipId = CurrentRequestShipId() }); return true;
         }
         private bool CanUseContainerAddress(NetworkConnectionToClient connection, Player actor, ContainerPortAddress address)
         {
             if (address == null) return true;
             if ((address.ItemId?.Length ?? 0) > 128 || (address.PortId?.Length ?? 0) > 64 || (address.Inventory.PlayerInventory?.Length ?? 0) > 128) return false;
             int machine = address.ColdItem ? address.Inventory.MachineId : address.MachineId;
-            return machine == 0 || CanOperateMachine(connection, actor, machine);
+            if (machine != 0) return CanOperateMachine(connection, actor, machine);
+            if (address.ColdItem || address.ItemGuid == 0) return true;
+            return NetworkGameplayWorldScope.OwnsItem(connection, ItemMgr.Instance?.GetItemByGuid(address.ItemGuid));
         }
         private void OnContainerIntent(NetworkConnectionToClient connection, NetworkContainerIntentRequest request)
         {

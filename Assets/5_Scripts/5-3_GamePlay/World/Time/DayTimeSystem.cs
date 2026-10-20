@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -221,7 +221,7 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>按活动场景句柄复用名称，世界进入与退出时同时失效。</summary>
     public string GetCurrentActiveSceneName()
     {
-        Scene scene = SceneManager.GetActiveScene();
+        Scene scene = GameplayWorldRegistry.CurrentScene;
         if (cachedActiveSceneHandle != scene.handle)
         {
             // Scene.name 的托管字符串只在切换场景时读取。

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -6,7 +6,7 @@ using UnityEngine;
 /// <summary>
 /// Buff 生命周期、叠加、持久化和角色消费事件的统一入口。
 /// </summary>
-public partial class Mod_BuffManager : Module
+public partial class Mod_BuffManager : Module, IPlayerStateAuthorityModule
 {
     private const float TickInterval = 0.1f;
     private const string LegacyModuleId = "Buff模块";

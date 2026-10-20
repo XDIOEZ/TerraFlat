@@ -9,21 +9,21 @@ public partial class TemperatureMgr
 {
     #region 温度场上下文
 
-    private ChunkMgr fieldChunkManager;
-    private WorldRuntime fieldWorld;
-    private long fieldWorldEpoch;
-    private PlanetData fieldPlanet;
-    private string fieldDimension;
-    private WorldTopologyBounds fieldBounds;
-    private LocalTemperatureField localTemperatureField;
-    private LiquidTemperatureField liquidTemperatureField;
-    private int fieldContextFrame = -1;
-    private float ambientFieldOffset;
-    private float seasonTiltOffsetAtPole;
-    private float orbitalTemperatureFactor;
-    private int fieldChunkWidth;
-    private int fieldChunkHeight;
-    private int fieldContextVersion;
+    private ChunkMgr fieldChunkManager { get => FieldState.fieldChunkManager; set => FieldState.fieldChunkManager = value; }
+    private WorldRuntime fieldWorld { get => FieldState.fieldWorld; set => FieldState.fieldWorld = value; }
+    private long fieldWorldEpoch { get => FieldState.fieldWorldEpoch; set => FieldState.fieldWorldEpoch = value; }
+    private PlanetData fieldPlanet { get => FieldState.fieldPlanet; set => FieldState.fieldPlanet = value; }
+    private string fieldDimension { get => FieldState.fieldDimension; set => FieldState.fieldDimension = value; }
+    private WorldTopologyBounds fieldBounds { get => FieldState.fieldBounds; set => FieldState.fieldBounds = value; }
+    private LocalTemperatureField localTemperatureField { get => FieldState.localTemperatureField; set => FieldState.localTemperatureField = value; }
+    private LiquidTemperatureField liquidTemperatureField { get => FieldState.liquidTemperatureField; set => FieldState.liquidTemperatureField = value; }
+    private int fieldContextFrame { get => FieldState.fieldContextFrame; set => FieldState.fieldContextFrame = value; }
+    private float ambientFieldOffset { get => FieldState.ambientFieldOffset; set => FieldState.ambientFieldOffset = value; }
+    private float seasonTiltOffsetAtPole { get => FieldState.seasonTiltOffsetAtPole; set => FieldState.seasonTiltOffsetAtPole = value; }
+    private float orbitalTemperatureFactor { get => FieldState.orbitalTemperatureFactor; set => FieldState.orbitalTemperatureFactor = value; }
+    private int fieldChunkWidth { get => FieldState.fieldChunkWidth; set => FieldState.fieldChunkWidth = value; }
+    private int fieldChunkHeight { get => FieldState.fieldChunkHeight; set => FieldState.fieldChunkHeight = value; }
+    private int fieldContextVersion { get => FieldState.fieldContextVersion; set => FieldState.fieldContextVersion = value; }
     private static readonly ProfilerMarker PointTemperatureMarker = new("FlatWorld.Temperature.SamplePoint");
 
     #region 性能分段
@@ -75,7 +75,7 @@ public partial class TemperatureMgr
             fieldDimension = dimensionId;
             fieldBounds = default;
             if (planet != null)
-                WorldTopologyBounds.TryCreate(planet, out fieldBounds);
+                { WorldTopologyBounds.TryCreate(planet, out var bounds); fieldBounds = bounds; }
             fieldChunkWidth = width;
             fieldChunkHeight = height;
             localTemperatureField = world != null && planet != null && dimensionId != null && width > 0 && height > 0
@@ -410,14 +410,17 @@ public partial class TemperatureMgr
         PrepareFieldContext();
         if (localTemperatureField == null)
             return false;
+        if (sourceOwners.TryGetValue(owner, out LocalTemperatureField previous) && !ReferenceEquals(previous, localTemperatureField))
+            previous.RemoveSource(owner);
         localTemperatureField.SetSource(owner, position, radius, targetTemperature, cooling, strength);
+        sourceOwners[owner] = localTemperatureField;
         return true;
     }
 
     /// <summary>设备关闭、移除或退出世界时撤销自身来源，不影响其他来源。</summary>
     public void RemoveLocalTemperatureSource(object owner)
     {
-        localTemperatureField?.RemoveSource(owner);
+        if (owner != null && sourceOwners.Remove(owner, out LocalTemperatureField field)) field.RemoveSource(owner);
     }
 
     #endregion

@@ -27,34 +27,70 @@ public static class WorldEntityRuntime
 {
     #region 世界与能力所有权
 
-    private static World world;
-    private static WorldRuntime terrainWorld;
-    private static long terrainEpoch;
-    private static GameSaveData save;
-    private static string dimensionId;
-    private static bool releasing;
-    private static readonly List<IWorldEntityRuntimeModule> modules = new();
-    private static readonly HashSet<IWorldEntityRuntimeModule> failed = new();
-    private static IWorldEntityRuntimeModule[] dispatch = Array.Empty<IWorldEntityRuntimeModule>();
-    private static EntityCapabilitySystem capabilities;
-    private static EntityPlantModuleSystem plants;
-    private static EntitySeasonPeriod[] seasonPeriods;
-    private static float capabilitySeconds;
+    private sealed class RuntimeState
+    {
+        public World World;
+        public WorldRuntime Terrain;
+        public long TerrainEpoch;
+        public GameSaveData Save;
+        public string Dimension;
+        public bool Releasing, Suspended;
+        public ulong Generation, CapabilityVersion;
+        public readonly List<IWorldEntityRuntimeModule> Modules = new();
+        public readonly HashSet<IWorldEntityRuntimeModule> Failed = new();
+        public IWorldEntityRuntimeModule[] Dispatch = Array.Empty<IWorldEntityRuntimeModule>();
+        public EntityCapabilitySystem Capabilities;
+        public EntityPlantModuleSystem Plants;
+        public EntitySeasonPeriod[] Seasons;
+        public float CapabilitySeconds;
+    }
+
+    private static readonly Dictionary<string, RuntimeState> worlds = new(StringComparer.Ordinal);
+    private static readonly List<string> tickWorlds = new();
+    private static ulong nextGeneration;
+    private static RuntimeState releaseOverride;
+    private static string cachedWorldKey;
+    private static RuntimeState cachedState;
+    private static RuntimeState State
+    {
+        get
+        {
+            if (releaseOverride != null) return releaseOverride;
+            string key = GameplayWorldRegistry.ExecutionWorldKey ?? string.Empty;
+            if (cachedState != null && string.Equals(cachedWorldKey, key, StringComparison.Ordinal)) return cachedState;
+            if (!worlds.TryGetValue(key, out RuntimeState state))
+                worlds[key] = state = new RuntimeState { Generation = ++nextGeneration };
+            cachedWorldKey = key; return cachedState = state;
+        }
+    }
+    private static World world { get => State.World; set => State.World = value; }
+    private static WorldRuntime terrainWorld { get => State.Terrain; set => State.Terrain = value; }
+    private static long terrainEpoch { get => State.TerrainEpoch; set => State.TerrainEpoch = value; }
+    private static GameSaveData save { get => State.Save; set => State.Save = value; }
+    private static string dimensionId { get => State.Dimension; set => State.Dimension = value; }
+    private static bool releasing { get => State.Releasing; set => State.Releasing = value; }
+    private static List<IWorldEntityRuntimeModule> modules => State.Modules;
+    private static HashSet<IWorldEntityRuntimeModule> failed => State.Failed;
+    private static IWorldEntityRuntimeModule[] dispatch { get => State.Dispatch; set => State.Dispatch = value; }
+    private static EntityCapabilitySystem capabilities { get => State.Capabilities; set => State.Capabilities = value; }
+    private static EntityPlantModuleSystem plants { get => State.Plants; set => State.Plants = value; }
+    private static EntitySeasonPeriod[] seasonPeriods { get => State.Seasons; set => State.Seasons = value; }
+    private static float capabilitySeconds { get => State.CapabilitySeconds; set => State.CapabilitySeconds = value; }
     private const float CapabilityInterval = 0.25f;
     private static readonly ProfilerMarker ModulesMarker = new("WorldEntityRuntime.Modules");
     private static readonly ProfilerMarker JobCompletionMarker = new("WorldEntityRuntime.CompleteJobs");
     private static readonly ProfilerMarker CapabilitiesMarker = new("WorldEntityRuntime.Capabilities");
     private static readonly ProfilerMarker PostSimulationMarker = new("WorldEntityRuntime.PostSimulation");
-    public static ulong Generation { get; private set; } = 1;
-    public static ulong CapabilityVersion { get; private set; }
+    public static ulong Generation { get => State.Generation; private set => State.Generation = value; }
+    public static ulong CapabilityVersion { get => State.CapabilityVersion; private set => State.CapabilityVersion = value; }
     public static World Current => world != null && world.IsCreated ? world : null;
     public static int ModuleCount => modules.Count;
     public static int FailedModuleCount => failed.Count;
     public static string DimensionId => dimensionId;
-    public static bool DevelopmentSuspended { get; set; }
+    public static bool DevelopmentSuspended { get => State.Suspended; set => State.Suspended = value; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() => ReleaseWorld();
+    private static void ResetStatics() => ReleaseAll();
 
     /// <summary>自然物可先于动物创建世界；世界身份来自存档、维度和地形纪元，而非玩家 GameObject。</summary>
     public static World GetOrCreate(string dimension)
@@ -87,21 +123,27 @@ public static class WorldEntityRuntime
     {
         if (module == null || string.IsNullOrWhiteSpace(module.RuntimeModuleId))
             throw new ArgumentException("实体能力运行器缺少稳定 ID。", nameof(module));
-        if (releasing || Current == null || !ReferenceEquals(world, expectedWorld))
+        RuntimeState owner = null;
+        foreach (RuntimeState state in worlds.Values)
+            if (ReferenceEquals(state.World, expectedWorld)) { owner = state; break; }
+        if (owner == null || owner.Releasing || expectedWorld?.IsCreated != true)
             throw new InvalidOperationException("不能把能力运行器登记到已经失效的实体世界。");
-        if (modules.Contains(module)) return;
-        foreach (IWorldEntityRuntimeModule existing in modules)
+        if (owner.Modules.Contains(module)) return;
+        foreach (IWorldEntityRuntimeModule existing in owner.Modules)
             if (string.Equals(existing.RuntimeModuleId, module.RuntimeModuleId, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("实体能力运行器重复：" + module.RuntimeModuleId);
-        modules.Add(module);
-        dispatch = modules.ToArray();
+        owner.Modules.Add(module);
+        owner.Dispatch = owner.Modules.ToArray();
     }
 
     public static void Unregister(IWorldEntityRuntimeModule module)
     {
         if (module == null) return;
-        failed.Remove(module);
-        if (modules.Remove(module)) dispatch = modules.ToArray();
+        foreach (RuntimeState state in worlds.Values)
+        {
+            state.Failed.Remove(module);
+            if (state.Modules.Remove(module)) state.Dispatch = state.Modules.ToArray();
+        }
     }
 
     #endregion
@@ -110,6 +152,23 @@ public static class WorldEntityRuntime
 
     /// <summary>由 ItemMgr 的正式玩法门禁只推进一次；运行器内部按能力查询并行，不扫描无关实体。</summary>
     public static void Tick(float deltaTime)
+    {
+        if (deltaTime <= 0f) return;
+        tickWorlds.Clear();
+        foreach (var pair in worlds) if (pair.Value.World?.IsCreated == true) tickWorlds.Add(pair.Key);
+        // 一个玩法调度入口逐世界推进，后台地表不因主机进入太空而停止成长。
+        foreach (string key in tickWorlds)
+        {
+            if (GameplayWorldRegistry.TryGet(key, out _))
+            {
+                using var scope = GameplayWorldRegistry.UseWorld(key);
+                TickCurrent(deltaTime);
+            }
+            else if (key == GameplayWorldRegistry.ExecutionWorldKey) TickCurrent(deltaTime);
+        }
+    }
+
+    private static void TickCurrent(float deltaTime)
     {
         if (Current == null || releasing || DevelopmentSuspended || deltaTime <= 0f) return;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
@@ -247,9 +306,36 @@ public static class WorldEntityRuntime
             modules.Clear();
             failed.Clear();
             dispatch = Array.Empty<IWorldEntityRuntimeModule>();
-            Generation++;
+            Generation = ++nextGeneration;
             releasing = false;
         }
+    }
+
+    public static void ReleaseWorld(string worldKey)
+    {
+        if (worldKey == null || !worlds.TryGetValue(worldKey, out RuntimeState state)) return;
+        if (GameplayWorldRegistry.TryGet(worldKey, out _))
+        {
+            using var scope = GameplayWorldRegistry.UseWorld(worldKey);
+            ReleaseWorld();
+        }
+        else
+        {
+            RuntimeState previous = releaseOverride;
+            releaseOverride = state;
+            try { ReleaseWorld(); }
+            finally { releaseOverride = previous; }
+        }
+        worlds.Remove(worldKey);
+        if (cachedWorldKey == worldKey) { cachedWorldKey = null; cachedState = null; }
+    }
+
+    public static void ReleaseAll()
+    {
+        var keys = new List<string>(worlds.Keys);
+        foreach (string key in keys) ReleaseWorld(key);
+        worlds.Clear(); tickWorlds.Clear(); releaseOverride = null;
+        cachedWorldKey = null; cachedState = null;
     }
 
     /// <summary>只在退出边界隔离异常，保留具体失败步骤并继续清理独立资源。</summary>

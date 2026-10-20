@@ -25,10 +25,9 @@ public partial class SaveDataMgr
         }
 
         // 排空已有积分后再冻结天气时钟和区块字节，期间只暂缓新的权威天气步。
-        using IDisposable weatherCapture = WeatherMgr.ExistingInstance?.BeginSurfaceSaveCapture();
-        if (WeatherMgr.ExistingInstance != null)
+        using IDisposable weatherCapture = WeatherMgr.BeginAllSurfaceSaveCapture();
         {
-            IEnumerator weatherRoutine = WeatherMgr.ExistingInstance.FlushSurfaceWorkForAutoSave(budget);
+            IEnumerator weatherRoutine = WeatherMgr.FlushAllSurfaceWorkForAutoSave(budget);
             while (weatherRoutine.MoveNext())
             {
                 yield return weatherRoutine.Current;
@@ -40,8 +39,7 @@ public partial class SaveDataMgr
             }
         }
 
-        MonsterSpawnerManager spawnerManager = FindObjectOfType<MonsterSpawnerManager>();
-        spawnerManager?.CaptureSaveData(capturedSave);
+        MonsterSpawnerManager.CaptureAll(capturedSave);
         yield return budget.WaitForNextSlice();
         if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
         {

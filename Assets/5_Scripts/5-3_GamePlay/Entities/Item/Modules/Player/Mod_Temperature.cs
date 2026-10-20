@@ -1,10 +1,10 @@
-using MemoryPack;
+﻿using MemoryPack;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
 using FlatWorld.Networking;
 
-public partial class Mod_Temperature : Module, IEnvironmentAdjustable
+public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerStateAuthorityModule
 {
     public const float NormalSurfaceTemperature = 36.5f; // 玩家默认体表温度，也是重生后的恢复目标
 

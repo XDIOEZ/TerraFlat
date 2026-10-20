@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -35,21 +35,18 @@ public partial class GameManager
         if (pendingLocalSpacePlayer != player)
         {
             pendingLocalSpacePlayer?.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
-            networkLocalWorldKey = null; localSpacePresentationActive = false;
-            networkLocalRealmRevision = 0;
+            networkLocalWorldKey = SceneManager.GetActiveScene().name; localSpacePresentationActive = false;
+            networkLocalRealmRevision = !observer.InSpace && observer.WorldKey == networkLocalWorldKey ? observer.RealmRevision : 0;
             SetNetworkSurfaceVisibility(true);
         }
         pendingLocalSpacePlayer = player; pendingLocalSpaceObserver = observer;
         string key = observer.InSpace ? SpaceSectorCoordinates.SceneKey(observer.Position.Sector) : observer.WorldKey;
         if (string.IsNullOrWhiteSpace(key)) return;
-        if (!observer.InSpace)
+        if (!observer.InSpace && !localSpacePresentationActive && key == networkLocalWorldKey &&
+            SceneManager.GetActiveScene().name == key)
         {
-            if (networkLocalWorldKey != key || networkLocalRealmRevision != observer.RealmRevision)
-            {
-                if (networkLocalRealmRoutine != null) StopCoroutine(networkLocalRealmRoutine);
-                networkLocalRealmRoutine = null;
+            if (networkLocalRealmRevision != observer.RealmRevision && networkLocalRealmRoutine == null)
                 ApplyNetworkLocalSurface(player, observer, key);
-            }
             return;
         }
         if ((networkLocalWorldKey != key || networkLocalRealmRevision != observer.RealmRevision) && networkLocalRealmRoutine == null)
@@ -73,28 +70,31 @@ public partial class GameManager
                 SpaceNetworkObserver observer = pendingLocalSpaceObserver;
                 string key = observer.InSpace ? SpaceSectorCoordinates.SceneKey(observer.Position.Sector) : observer.WorldKey;
                 if (string.IsNullOrWhiteSpace(key) || key == networkLocalWorldKey && observer.RealmRevision == networkLocalRealmRevision) break;
-                if (!observer.InSpace && SpaceSession.Current?.CanTransferToNetworkSurface(key, out _) != true)
-                {
-                    if (Time.unscaledTime >= nextSurfaceTransferWarning)
-                    {
-                        nextSurfaceTransferWarning = Time.unscaledTime + 5f;
-                        Debug.LogWarning("[太空联机] 本机没有保留目标地表运行时，继续显示当前有效区域。", this);
-                    }
-                    break;
-                }
                 bool enteringSpace = observer.InSpace && !localSpacePresentationActive;
-                localSpacePresentationActive = observer.InSpace;
                 if (observer.InSpace)
                 {
+                    localSpacePresentationActive = true;
                     SetNetworkSurfaceVisibility(false);
                     yield return SpaceMgr.Instance.ActivateLocalSector(observer.Position.Sector);
                 }
                 else
                 {
-                    Scene scene = SceneManager.GetSceneByName(key);
-                    SceneManager.SetActiveScene(scene);
-                    SetNetworkSurfaceVisibility(true);
-                    player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
+                    Vector3 point = new((float)observer.Position.LocalMeters.X, (float)observer.Position.LocalMeters.Y);
+                    Exception failure = null;
+                    yield return RunWorldTransitionSteps(DimensionManager.Instance.ApplyNetworkPresentation(player,
+                        WorldAddress.FromWorldKey(key), point), error => failure = error);
+                    if (failure != null)
+                    {
+                        if (Time.unscaledTime >= nextSurfaceTransferWarning)
+                        {
+                            nextSurfaceTransferWarning = Time.unscaledTime + 5f;
+                            Debug.LogWarning("[联机维度] 本机目标世界准备失败：" + failure.Message, this);
+                        }
+                        break;
+                    }
+                    localSpacePresentationActive = false;
+                    ApplyNetworkLocalSurface(player, observer, key);
+                    continue;
                 }
                 Scene target = SceneManager.GetSceneByName(key);
                 if (player != null && target.IsValid() && target.isLoaded)
@@ -120,6 +120,7 @@ public partial class GameManager
                 }
                 networkLocalWorldKey = key;
                 networkLocalRealmRevision = observer.RealmRevision;
+                if (observer.InSpace) NetworkDimensionBridge.NotifyPresentationReady(player, key);
             }
         }
         finally { networkLocalRealmRoutine = null; }
@@ -127,33 +128,35 @@ public partial class GameManager
 
     private void ApplyNetworkLocalSurface(Player player, SpaceNetworkObserver observer, string key)
     {
-        if (SpaceSession.Current?.CanTransferToNetworkSurface(key, out _) != true)
+        if (!GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime world))
         {
             if (Time.unscaledTime >= nextSurfaceTransferWarning)
             {
                 nextSurfaceTransferWarning = Time.unscaledTime + 5f;
-                Debug.LogWarning("[太空联机] 本机没有保留目标地表运行时，继续显示当前有效区域。", this);
+                Debug.LogWarning("[联机维度] 目标世界尚未完成本机准备。", this);
             }
             return;
         }
         // 先把真实玩家移出星区资源根，资源租约释放不能销毁仍在使用的角色。
-        Scene target = SceneManager.GetSceneByName(key);
+        Scene target = world.Scene;
         Vector3 before = player.transform.position;
         player.transform.SetParent(null, true);
         SceneManager.MoveGameObjectToScene(player.gameObject, target);
         SceneManager.SetActiveScene(target);
+        GameplayWorldRegistry.SelectLocalWorld(key);
         localSpacePresentationActive = false;
         SetNetworkSurfaceVisibility(true);
         player.Data.CurrentSceneName = key;
         Vector3 point = new((float)observer.Position.LocalMeters.X, (float)observer.Position.LocalMeters.Y);
         player.Data.transform.position = point;
         player.transform.position = WorldLocalPresentation.ProjectPosition(point);
-        SpaceSession.Current.RestorePassengerPose(player);
+        SpaceSession.Current?.RestorePassengerPose(player);
         Rigidbody2D body = player.GetComponent<Rigidbody2D>();
         if (body != null) { body.position = player.transform.position; body.velocity = Vector2.zero; }
         player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ShiftSpacePresentation(player.transform.position - before);
         ItemMgr.Instance.NotifyRuntimeItemMoved(player);
         networkLocalWorldKey = key; networkLocalRealmRevision = observer.RealmRevision;
+        NetworkDimensionBridge.NotifyPresentationReady(player, key);
     }
 
     private void ResetNetworkLocalRealm()
@@ -175,6 +178,7 @@ public partial class GameManager
             foreach (var pair in hiddenNetworkSurfaceRenderers)
                 if (pair.Key != null) pair.Key.forceRenderingOff = pair.Value;
             hiddenNetworkSurfaceRenderers.Clear();
+            GameplayWorldRegistry.RefreshVisibility();
             return;
         }
         for (int index = 0; index < SceneManager.sceneCount; index++)

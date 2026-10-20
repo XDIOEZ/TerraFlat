@@ -1,4 +1,4 @@
-// AI-Context: 生命值权威数据与受伤反馈模块；远程应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
+﻿// AI-Context: 生命值权威数据与受伤反馈模块；远程应用只刷新数值/表现，不在客户端重复结算伤害或死亡。
 
 using System;
 using Sirenix.OdinInspector;
@@ -14,7 +14,7 @@ using Random = UnityEngine.Random;
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
-public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder, IItemPoolLifecycle
+public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder, IItemPoolLifecycle, IPlayerStateAuthorityModule
 {
     #region 可组合生命规则
 

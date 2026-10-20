@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 public partial class ChunkMgr
@@ -83,7 +83,7 @@ public partial class ChunkMgr
         instance != null && instance.IsChunkLoadSpeedUnlimited;
 
     /// <summary>返回已存在的区块管理器，不在菜单场景自动创建空对象。</summary>
-    public static ChunkMgr ExistingInstance => instance;
+    public static ChunkMgr ExistingInstance => GameplayWorldRegistry.ExecutionChunks ?? instance;
 
     /// <summary>缩放整数工作量；无限制仍保留四倍分帧安全上限，避免堵死主线程。</summary>
     public static int ScaleCurrentChunkLoadItemBudget(int baseBudget, int minimum)

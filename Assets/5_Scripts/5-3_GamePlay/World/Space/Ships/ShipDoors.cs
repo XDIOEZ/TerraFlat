@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -46,7 +46,7 @@ namespace FlatWorld.Spaceflight
             Vector2 center = DisplayPoint(ship, (minX + maxX) * .5d, (minY + maxY) * .5d);
             Vector2 size = new((float)(maxX - minX - .05d), (float)(maxY - minY - .05d));
             doorwayOverlaps.Clear();
-            Physics2D.OverlapBox(center, size, (float)(ship.AngleRadians * Mathf.Rad2Deg),
+            GameplayPhysics2D.OverlapBox(center, size, (float)(ship.AngleRadians * Mathf.Rad2Deg),
                 new ContactFilter2D { useTriggers = false }, doorwayOverlaps);
             foreach (Collider2D collider in doorwayOverlaps)
                 if (collider != null && collider.attachedRigidbody != null &&

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Diagnostics;
 using FlatWorld.Networking;
@@ -93,7 +93,19 @@ namespace FlatWorld.Spaceflight
             if (!GameNetwork.HasStateAuthority || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return false;
             SpacePassengerState passenger = State.Passengers.Find(value => value.ProfileId == profile);
             if (intent.Kind == SpaceNetworkIntentKind.Respawn) return ExecuteNetworkRespawn(profile, out reason);
-            if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill)
+            if (intent.Kind == SpaceNetworkIntentKind.LaunchGroundShip)
+            {
+                if (observer.InSpace || (intent.Action != 0 && intent.Action != 1) ||
+                    !int.TryParse(intent.PieceId, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out int consoleGuid)) return false;
+                Player actor = FindNetworkPlayer(profile);
+                if (!ShipGroundAssembly.TryLaunch(actor, consoleGuid, out ShipState launched, out reason)) return false;
+                if (intent.Action == 1 && FindPiece(intent.PieceId, out _, out ShipPieceState console))
+                    BindConsoleControl(passenger, launched, console, observer.Position, false);
+                return true;
+            }
+
+            if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem)
             {
                 if (!observer.InSpace && intent.Kind != SpaceNetworkIntentKind.AttackEnd && intent.TargetId != observer.WorldKey) return false;
                 Mod_HotBar combatHotbar = FindNetworkPlayer(profile)?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
@@ -104,6 +116,16 @@ namespace FlatWorld.Spaceflight
                 }
                 return ExecuteNetworkAttack(profile, intent.Kind == SpaceNetworkIntentKind.Attack ? 0 : intent.Kind == SpaceNetworkIntentKind.AttackEnd ? 1 : 2,
                     new SpaceSectorPosition(intent.Sector, new SpaceVector2(intent.X, intent.Y)), out reason);
+            }
+            if (intent.Kind == SpaceNetworkIntentKind.HarvestNatural)
+            {
+                if (observer.InSpace || intent.TargetId != observer.WorldKey ||
+                    !int.TryParse(intent.PieceId, System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture, out int guid)) return false;
+                bool harvested = FlatWorld.NaturalEntities.NaturalEntityEcsService.TryHarvestNetwork(
+                    FindNetworkPlayer(profile), observer.WorldKey, guid, new Vector2((float)intent.X, (float)intent.Y));
+                if (harvested) reason = null;
+                return harvested;
             }
             if (intent.Kind == SpaceNetworkIntentKind.ExitConsole)
             {
@@ -117,7 +139,9 @@ namespace FlatWorld.Spaceflight
             double distance = observer.InSpace
                 ? SpaceSectorCoordinates.Difference(observer.Position, new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y))).Magnitude
                 : WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), new Vector2((float)x, (float)y));
-            if (distance > ConsoleInteractionDistance || observer.InSpace != (GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising)) return false;
+            ShipFlightState targetFlight = GetFlight(ship.ShipId);
+            if (distance > ConsoleInteractionDistance || observer.InSpace != (targetFlight?.Phase == ShipFlightPhase.Cruising) ||
+                !observer.InSpace && !string.Equals(observer.WorldKey, targetFlight?.SurfaceWorldKey, StringComparison.Ordinal)) return false;
             bool result;
             switch (intent.Kind)
             {
@@ -151,7 +175,10 @@ namespace FlatWorld.Spaceflight
             foreach (ShipDockingPortState own in ship.DockingPorts)
                 foreach (ShipState other in State.Ships)
                 {
-                    if (other == ship || GetFlight(other.ShipId)?.Phase != GetFlight(ship.ShipId)?.Phase) continue;
+                    ShipFlightState ownFlight = GetFlight(ship.ShipId), otherFlight = GetFlight(other.ShipId);
+                    if (other == ship || ownFlight == null || otherFlight?.Phase != ownFlight.Phase ||
+                        ownFlight.Phase != ShipFlightPhase.Cruising &&
+                        (ownFlight.SurfaceWorldKey != otherFlight.SurfaceWorldKey || Math.Abs(ownFlight.HeightMeters - otherFlight.HeightMeters) > 1d)) continue;
                     ShipDockingService.SynchronizePorts(other);
                     foreach (ShipDockingPortState target in other.DockingPorts)
                         if (ShipDockingService.TryCreateCandidate(State.Ships, State.Docking, ship.ShipId, own.PortId, other.ShipId, target.PortId, out ShipDockingPairState pair))

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -40,7 +40,7 @@ public enum BuildingPlacementLayer
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation
+public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamageContextRule, IBuildingPreviewRotation, ILocalItemUseRequestHandler
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -204,6 +204,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         return true;
     }
     /// <summary>进入放置模式即拥有右键；非法或隐藏的预览也必须进入安装校验以给出拒绝反馈。</summary>
+    public int LocalUsePriority => 100;
+    public bool CanHandleLocalUse => IsPlacementActionAvailable;
+    public void HandleLocalUse() => Install();
+
     public bool IsPlacementActionAvailable
     {
         get

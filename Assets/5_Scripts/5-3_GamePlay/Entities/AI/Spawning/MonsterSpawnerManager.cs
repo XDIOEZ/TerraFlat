@@ -11,7 +11,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// 已出生个体由存档和休眠仓库保留身份，远距卸载表现，靠近时恢复同一 GUID 与模块状态。
 /// </summary>
 [RequireComponent(typeof(MonsterManager))]
-public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerManager>
+public partial class MonsterSpawnerManager : MonoBehaviour
 {
     #region 配置
 
@@ -62,32 +62,22 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     #region Unity 生命周期
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
-        if (Instance != this)
-            return;
-
         _monsterManager = GetComponent<MonsterManager>();
+        if (templateManager == null) templateManager = this;
+        enabled = false;
     }
 
     private void Start()
     {
-        enabled = false;
-
         _gameManager = GameManager.Instance;
-        if (_gameManager != null)
+        if (_gameManager != null && templateManager == this)
         {
-            _gameManager.Event_GameWorldEnter += OnGameWorldEnter;
-            _gameManager.Event_GameWorldExit += OnGameWorldExit;
+            _gameManager.Event_GameWorldEnter += HandleWorldEnter;
+            _gameManager.Event_GameWorldExit += ReleaseAll;
         }
-
-        if (_monsterManager != null)
-        {
-            _monsterManager.MonsterRegistered += OnMonsterRegistered;
-            _monsterManager.MonsterUnregistered += OnMonsterUnregistered;
-            _monsterManager.MonsterDeathStarted += OnMonsterDeathStarted;
-        }
+        BindPopulationEvents();
     }
 
     private void OnGameWorldEnter()
@@ -199,17 +189,16 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _dayTimeSystem = null;
     }
 
-    protected override void OnDestroy()
+    private void OnDestroy()
     {
         enabled = false;
         CancelNaturalCreatureBirth();
         UnsubscribePresentationEvents();
         _treeHabitatIndex.Dispose();
-        bool ownsSingleton = ReferenceEquals(instance, this);
         if (_gameManager != null)
         {
-            _gameManager.Event_GameWorldEnter -= OnGameWorldEnter;
-            _gameManager.Event_GameWorldExit -= OnGameWorldExit;
+            _gameManager.Event_GameWorldEnter -= HandleWorldEnter;
+            _gameManager.Event_GameWorldExit -= ReleaseAll;
         }
 
         if (_monsterManager != null)
@@ -220,15 +209,17 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         }
 
         // 场景切换时可能短暂创建重复 WorldManager；副本销毁不得清空正式单例的混合后端路由。
-        if (ownsSingleton)
+        if (!string.IsNullOrEmpty(_ownedWorld))
         {
+            using var worldScope = EnterOwnedWorld();
             // OnDestroy 可能发生在 Unity 正在卸载场景时，禁止对即将销毁的对象调用 SetActive。
             ClearTrackedPopulation(restoreChunkDormantItems: false);
             AiRuntimeBackendService.ClearRoutes();
             ReleaseJsonRuntimeConfigs();
         }
-
-        base.OnDestroy();
+        if (_ownedWorld != null && worldManagers.TryGetValue(_ownedWorld, out MonsterSpawnerManager current) && current == this)
+            worldManagers.Remove(_ownedWorld);
+        if (templateManager == this) templateManager = null;
     }
 
     private bool PrepareSpawnerConfigs()
@@ -274,7 +265,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void TickSpawner()
     {
-        if (_gameManager == null || !_gameManager.IsGameplayReady)
+        if (!IsOwnedWorldReady)
             return;
 
         float now = Time.unscaledTime;
@@ -349,14 +340,14 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     public void CaptureSaveData(GameSaveData saveData)
     {
-        if (saveData == null)
+        if (saveData == null || string.IsNullOrEmpty(_ownedWorld))
             return;
-
-        saveData.MonsterSpawnerData ??= new MonsterSpawnerSaveData();
-        saveData.MonsterSpawnerData.ConfigStates = _runtimeStates ?? new Dictionary<string, SpawnerProgressSaveData>();
+        using var worldScope = EnterOwnedWorld();
+        MonsterSpawnerSaveData state = saveData.GetMonsterSpawnerData(_ownedWorld);
+        state.ConfigStates = _runtimeStates ?? new Dictionary<string, SpawnerProgressSaveData>();
         // ECS 停用时保留原有冷快照，不让未启动的后端覆盖历史居民。
         if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
-            AiRuntimeBackendService.Ecology?.CaptureResidents(saveData.MonsterSpawnerData);
+            AiRuntimeBackendService.Ecology?.CaptureResidents(state);
     }
 
     private void BindSaveData(GameSaveData saveData)
@@ -367,9 +358,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return;
         }
 
-        saveData.MonsterSpawnerData ??= new MonsterSpawnerSaveData();
-        saveData.MonsterSpawnerData.ConfigStates ??= new Dictionary<string, SpawnerProgressSaveData>();
-        _runtimeStates = saveData.MonsterSpawnerData.ConfigStates;
+        MonsterSpawnerSaveData saved = saveData.GetMonsterSpawnerData(_ownedWorld);
+        saved.ConfigStates ??= new Dictionary<string, SpawnerProgressSaveData>();
+        _runtimeStates = saved.ConfigStates;
         // 恢复存档保留剩余时长，重新绑定观察基准，不补离线期间的游戏时间。
         foreach (SpawnerProgressSaveData state in _runtimeStates.Values)
             state?.ResetCountdownObservation();
@@ -389,7 +380,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return false;
         }
 
-        sceneName = _itemManager.PlayerInSceneName;
+        sceneName = _ownedWorld;
         return !string.IsNullOrEmpty(sceneName) &&
                _dayTimeSystem.TryGetResolvedTimeData(sceneName, out _, out timeData);
     }
@@ -1058,6 +1049,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         foreach (Player player in _itemManager.Player_DIC.Values)
         {
+            if (player != null && GameNetwork.IsOnline && FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(
+                player.ProfileName, out FlatWorld.Spaceflight.SpaceNetworkObserver observer) == true)
+            {
+                if (!observer.InSpace && observer.WorldKey == sceneName)
+                    AddPlayerPosition(observer.Position.LocalMeters.ToVector2());
+                continue;
+            }
             if (player == null ||
                 (player.Data != null &&
                  !string.IsNullOrWhiteSpace(player.Data.CurrentSceneName) &&
@@ -1069,7 +1067,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             AddPlayerPosition(player.transform.position);
         }
 
-        if (_playerPositions.Count == 0 && _itemManager.UserPlayerTransform != null)
+        if (_playerPositions.Count == 0 && _itemManager.UserPlayerTransform != null &&
+            _itemManager.User_Player?.Data?.CurrentSceneName == sceneName)
             AddPlayerPosition(_itemManager.UserPlayerTransform.position);
     }
 
@@ -1302,6 +1301,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void OnMonsterDeathStarted(Item item, SpawnerConfig config)
     {
+        using var worldScope = EnterOwnedWorld();
         QueueDeathReplacement(config);
     }
 

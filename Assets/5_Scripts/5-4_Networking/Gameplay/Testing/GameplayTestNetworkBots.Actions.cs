@@ -14,7 +14,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 联机假人真实动作与现场保留
         // 对应 Mirror Weaver 的正式 CmdSubmitMotion 签名，假人从独立连接发包而非直接改坐标。
         private const string MotionCommandName =
-            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitMotion(UnityEngine.Vector3,UnityEngine.Vector2,System.Boolean,FlatWorld.Networking.Gameplay.NetworkPlayerVisualState)";
+            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitMotion(UnityEngine.Vector3,UnityEngine.Vector2,System.Boolean,FlatWorld.Networking.Gameplay.NetworkPlayerVisualState,System.UInt32)";
 
         private static BotActionScene activeActionScene;
 
@@ -283,6 +283,7 @@ namespace FlatWorld.Networking.Gameplay
             writer.WriteVector2(velocity);
             writer.WriteBool(false);
             writer.Write(new NetworkPlayerVisualState { IsMoving = velocity.sqrMagnitude > 0f });
+            writer.WriteUInt(actor.RealmRevision);
             return world.Transport.Receive(botId, new CommandMessage
             {
                 netId = actor.netId, componentIndex = actor.ComponentIndex,

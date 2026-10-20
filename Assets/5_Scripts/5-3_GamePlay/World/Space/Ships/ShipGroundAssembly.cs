@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using FlatWorld.Gameplay.Progress;
@@ -16,14 +16,23 @@ namespace FlatWorld.Spaceflight
         public static bool TryGetGroundConsole(Player actor, int consoleGuid, out MachineEntity console)
         {
             console = null;
-            if (actor == null || SpaceMgr.IsSpaceScene(actor.gameObject.scene.name)) return false;
-            using (MachineWorld.UseScope(actor.gameObject.scene.name))
+            if (actor == null) return false;
+            string world = actor.Data?.CurrentSceneName ?? actor.gameObject.scene.name;
+            Vector2 position = WorldLocalPresentation.ToLogical(actor.transform.position);
+            if (GameNetwork.IsOnline && GameNetwork.HasStateAuthority &&
+                SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer) == true)
+            {
+                if (observer.InSpace) return false;
+                world = observer.WorldKey; position = observer.Position.LocalMeters.ToVector2();
+            }
+            if (string.IsNullOrWhiteSpace(world) || SpaceMgr.IsSpaceScene(world)) return false;
+            using var worldScope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+            using (MachineWorld.UseScope(world))
             {
                 MachineEntity candidate = MachineWorld.GetById(consoleGuid);
-                if (candidate == null || candidate.ScopeKey != actor.gameObject.scene.name ||
+                if (candidate == null || candidate.ScopeKey != world ||
                     SpaceSession.ResolvePartConfiguration(candidate.Snapshot)?.Kind != ShipPieceKind.Console ||
-                    WorldTopologyRuntime.Distance(actor.transform.position,
-                        WorldLocalPresentation.ProjectPosition(candidate.Snapshot.transform.position)) > SpaceSession.ConsoleInteractionDistance)
+                    WorldTopologyRuntime.Distance(position, candidate.Snapshot.transform.position) > SpaceSession.ConsoleInteractionDistance)
                     return false;
                 console = candidate; return true;
             }
@@ -35,6 +44,25 @@ namespace FlatWorld.Spaceflight
             if (!GameNetwork.HasStateAuthority || !TryGetGroundConsole(actor, consoleGuid, out MachineEntity console))
             { reason = "请靠近有效的地面控制台后点火。"; return false; }
             return SpaceSession.EnsureLoaded().TryLaunchGroundShip(actor, console, out ship, out reason);
+        }
+
+        // 地面点火统一由权威端装配，客户端只申请控制台操作并等待真实结果。
+        public static bool RequestLaunch(Player actor, int consoleGuid, bool driveAfterLaunch, Action<bool, string> completed)
+        {
+            if (actor == null) { completed?.Invoke(false, "当前玩家尚未就绪。"); return false; }
+            var intent = new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.LaunchGroundShip,
+                PieceId = consoleGuid.ToString(CultureInfo.InvariantCulture), Action = driveAfterLaunch ? 1 : 0 };
+            if (!GameNetwork.HasStateAuthority)
+            {
+                bool submitted = SpaceNetworkBridge.SendIntent(actor.ProfileName, intent, completed);
+                if (!submitted) completed?.Invoke(false, "联机连接尚未就绪，无法申请点火。");
+                return submitted;
+            }
+            SpaceSession session = SpaceSession.EnsureLoaded();
+            session.EnsureNetworkPassenger(actor);
+            bool accepted = session.ExecuteNetworkIntent(actor.ProfileName, intent, out string reason);
+            completed?.Invoke(accepted, reason);
+            return true;
         }
 
         // 整船只吸附一次，旋转后的矩形左下格由同一整数变换求出。
@@ -69,6 +97,7 @@ namespace FlatWorld.Spaceflight
         {
             ship = null; reason = null;
             string world = console.ScopeKey;
+            using var worldScope = GameplayWorldRegistry.UseWorld(world);
             var selected = new List<ShipGroundBuildingStore.Entry>();
             var pieces = new List<ShipPieceState>();
             var removedItems = new List<ShipGroundBuildingStore.Entry>();
@@ -89,8 +118,9 @@ namespace FlatWorld.Spaceflight
                     originalData.Add(entry.Guid, FastCloner.FastCloner.DeepClone(snapshot));
                     originalPlacement.Add(entry.Guid, new MachineScopePlacement(entry.Cell,
                         new Vector3(entry.Cell.x + .5f, entry.Cell.y + .5f), entry.QuarterTurns));
-                    Vector2 point = WorldLocalPresentation.ProjectPosition(new Vector2(entry.Cell.x + .5f, entry.Cell.y + .5f));
-                    ShipPieceState piece = AddPiece(snapshot, point, entry.QuarterTurns, out ShipState ownerShip, registerMachine: false);
+                    Vector2 point = new(entry.Cell.x + .5f, entry.Cell.y + .5f);
+                    ShipPieceState piece = AddPiece(snapshot, point, entry.QuarterTurns, out ShipState ownerShip,
+                        registerMachine: false, surfaceWorldKey: world);
                     if (existingShips.Contains(ownerShip.ShipId))
                     {
                         RollbackPiece(ownerShip, piece);
@@ -154,9 +184,11 @@ namespace FlatWorld.Spaceflight
                     for (int i = pieces.Count - 1; i >= 0; i--) RollbackPiece(ship, pieces[i]);
                     if (shipColliderPresenters.Remove(ship.ShipId, out ShipColliderPresenter presenter)) CompleteGroundCleanup(presenter.Dispose);
                 }
+                var restored = new List<ShipGroundBuildingStore.Entry>();
                 foreach (ShipGroundBuildingStore.Entry entry in removedItems)
                     if (entry.Item == null || entry.Item.DestructionHandled)
-                        ShipGroundBuildingStore.Place(originalData[entry.Guid], entry.Cell, entry.QuarterTurns, world);
+                        restored.Add(ShipGroundBuildingStore.Place(originalData[entry.Guid], entry.Cell, entry.QuarterTurns, world));
+                ShipGroundBuildingStore.PublishCreated(restored);
                 ship = null; reason = "无法起飞：" + error.Message; return false;
             }
         }
@@ -254,16 +286,16 @@ namespace FlatWorld.Spaceflight
 
         private void RestoreLandedBuildings()
         {
-            if (IsSpaceView || !GameNetwork.HasStateAuthority || GameManager.Instance?.IsGameplayReady != true ||
-                DimensionManager.ExistingInstance?.IsTransitioning == true) return;
-            string world = SceneManager.GetActiveScene().name;
+            if (!GameNetwork.HasStateAuthority) return;
             groundRestoreHandled.Clear(); groundRestoreShips.Clear(); groundRestoreShips.AddRange(State.Ships);
             foreach (ShipState ship in groundRestoreShips)
             {
                 if (groundRestoreHandled.Contains(ship.ShipId)) continue;
                 ShipFlightState flight = GetFlight(ship.ShipId);
-                if (ship.IsWreck || flight == null || flight.SurfaceWorldKey != world ||
+                if (ship.IsWreck || flight == null || !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _) ||
                     flight.Phase is not (ShipFlightPhase.Landed or ShipFlightPhase.Floating)) continue;
+                string world = flight.SurfaceWorldKey;
+                using var worldScope = GameplayWorldRegistry.UseWorld(world);
                 List<ShipState> members = groundRestoreMembers;
                 members.Clear();
                 ShipAssemblyState assembly = GetConnectedAssembly(ship.ShipId);
@@ -432,6 +464,9 @@ namespace FlatWorld.Spaceflight
                             foreach (GroundRestorePlan plan in plans)
                                 foreach (ShipGroundBuildingStore.Entry entry in plan.Created)
                                     CompleteGroundCleanup(() => ShipGroundBuildingStore.RevealPrepared(entry));
+                            var restoredBuildings = new List<ShipGroundBuildingStore.Entry>();
+                            foreach (GroundRestorePlan plan in plans) restoredBuildings.AddRange(plan.Created);
+                            CompleteGroundCleanup(() => ShipGroundBuildingStore.PublishCreated(restoredBuildings));
                         }
                     }
                     finally

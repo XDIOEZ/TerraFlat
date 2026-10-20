@@ -112,6 +112,7 @@ namespace FlatWorld.Spaceflight
         private void BeginGroundPreparation(ShipAssemblyState assembly, string world)
         {
             if (!GameNetwork.HasStateAuthority) return;
+            GameplayWorldRegistry.GetOrCreate(world);
             foreach (string id in assembly.MemberShipIds)
                 if (GetShip(id) is ShipState ship && !ship.IsWreck) EnsureGroundPreparation(ship, world);
         }
@@ -119,9 +120,6 @@ namespace FlatWorld.Spaceflight
         private void TickGroundPreparations()
         {
             if (State == null || !GameNetwork.HasStateAuthority) { ClearGroundPreparations(); return; }
-            string world = SceneManager.GetActiveScene().name;
-            bool surfaceReady = !IsSpaceView && GameManager.Instance?.IsGameplayReady == true &&
-                DimensionManager.ExistingInstance?.IsTransitioning != true;
             groundPreparationRemoval.Clear();
             foreach (var pair in groundPreparations)
             {
@@ -129,19 +127,18 @@ namespace FlatWorld.Spaceflight
                 ShipState ship = GetShip(pair.Key);
                 ShipFlightState flight = GetFlight(pair.Key);
                 if (ship == null || ship.IsWreck || flight == null || preparation.World != flight.SurfaceWorldKey ||
-                    flight.Phase is not (ShipFlightPhase.SurfaceDescending or ShipFlightPhase.Landed or ShipFlightPhase.Floating) ||
-                    preparation.World != world && (preparation.PreparedItems > 0 || preparation.MachinePresentation != null))
+                    flight.Phase is not (ShipFlightPhase.SurfaceDescending or ShipFlightPhase.Landed or ShipFlightPhase.Floating))
                     groundPreparationRemoval.Add(pair.Key);
             }
             foreach (string id in groundPreparationRemoval) CancelGroundPreparation(id);
-            if (!surfaceReady || Time.timeScale <= 0f) return;
+            if (Time.timeScale <= 0f) return;
             groundPreparationWork.Clear();
             foreach (ShipState ship in State.Ships)
             {
                 ShipFlightState flight = GetFlight(ship.ShipId);
-                if (ship.IsWreck || flight == null || flight.SurfaceWorldKey != world ||
+                if (ship.IsWreck || flight == null || !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _) ||
                     flight.Phase is not (ShipFlightPhase.SurfaceDescending or ShipFlightPhase.Landed or ShipFlightPhase.Floating)) continue;
-                GroundShipPreparation preparation = EnsureGroundPreparation(ship, world);
+                GroundShipPreparation preparation = EnsureGroundPreparation(ship, flight.SurfaceWorldKey);
                 if (preparation.Failed || preparation.Ready) continue;
                 preparation.ActiveSeconds += Time.unscaledDeltaTime;
                 if (preparation.ActiveSeconds > GroundPreparationTimeoutSeconds)
@@ -165,7 +162,11 @@ namespace FlatWorld.Spaceflight
                     if (!pending) break;
                     continue;
                 }
-                try { StepGroundPreparation(preparation, Math.Max(0d, GroundPreparationFrameMilliseconds - elapsedMilliseconds)); }
+                try
+                {
+                    using var worldScope = GameplayWorldRegistry.UseWorld(preparation.World);
+                    StepGroundPreparation(preparation, Math.Max(0d, GroundPreparationFrameMilliseconds - elapsedMilliseconds));
+                }
                 catch (Exception error) { FailGroundPreparation(preparation, error); }
                 steps++;
                 elapsedMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d / System.Diagnostics.Stopwatch.Frequency;
@@ -201,15 +202,13 @@ namespace FlatWorld.Spaceflight
 
         private bool WaitForGroundPreparation(ShipAssemblyState assembly)
         {
-            string world = SceneManager.GetActiveScene().name;
-            if (IsSpaceView || DimensionManager.ExistingInstance?.IsTransitioning == true) return false;
             bool pending = false;
             foreach (string id in assembly.MemberShipIds)
             {
                 ShipState ship = GetShip(id);
                 ShipFlightState flight = GetFlight(id);
-                if (ship == null || flight?.SurfaceWorldKey != world) continue;
-                GroundShipPreparation preparation = EnsureGroundPreparation(ship, world);
+                if (ship == null || flight == null || !GameplayWorldRegistry.TryGet(flight.SurfaceWorldKey, out _)) continue;
+                GroundShipPreparation preparation = EnsureGroundPreparation(ship, flight.SurfaceWorldKey);
                 if (preparation.Failed || preparation.Ready) continue;
                 pending = true;
                 if (flight.HeightMeters <= GroundPreparationHoldHeight + .001d) preparation.HoldSteps++;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using MemoryPack;
@@ -72,6 +72,7 @@ namespace FlatWorld.Spaceflight
         private void OnDestroy()
         {
             ClearGroundPreparations();
+            observedNetworkRealms.Clear();
             ResetPresentationHistory();
             ResetSpacePhysics();
             ReleaseShipColliderPresenters();

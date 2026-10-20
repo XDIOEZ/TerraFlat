@@ -60,6 +60,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 
         if (bindings.Count > 0)
         {
+            int localScene = SceneManager.GetActiveScene().handle;
             shadowBatch ??= new ContactShadowBatchRenderer();
             shadowBatch.BeginFrame();
             cleanupBindings.Clear();
@@ -74,6 +75,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
                     continue;
                 }
 
+                if (item.gameObject.scene.handle != localScene) continue;
                 UpdateBinding(item, binding);
             }
 
@@ -174,10 +176,11 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
     /// <summary>已显示机械共用一个位于机械主体下方的 BRG 椭圆批次。</summary>
     private void AppendMechanicalShadows()
     {
+        int localScene = SceneManager.GetActiveScene().handle;
         WorldRenderingConfig.ContactShadow defaults = Defaults;
         foreach (MechanicalShadowRegistry.Entry entry in MechanicalShadowRegistry.Entries)
         {
-            if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded ||
+            if (!entry.Active || !entry.Scene.IsValid() || !entry.Scene.isLoaded || entry.Scene.handle != localScene ||
                 entry.ContactWidth <= 0f) continue;
             float opacity = GetShadowOpacity(entry.Scene);
             if (opacity <= 0.001f) continue;

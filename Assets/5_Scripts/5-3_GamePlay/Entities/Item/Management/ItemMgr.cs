@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using Unity.Profiling;
@@ -71,7 +71,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     #region 分级更新调度
 
-    private readonly ItemTickScheduler _tickScheduler = new();
+    private readonly WorldItemTickScheduler _tickScheduler = new();
     private Action<Item> _refreshRuntimeItemIndexesCallback;
     private readonly List<Transform> _simulationPlayers = new(4);
     private bool _itemTickSuspended;
@@ -106,7 +106,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
                 return playerData.CurrentSceneName;
             }
 
-            return SceneManager.GetActiveScene().name;
+            return GameplayWorldRegistry.CurrentScene.name;
         }
     }
 
@@ -199,8 +199,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         RuntimeItemUnregistered -= ReleaseWorldItemMatter;
         ClearWorldItemMatter();
         MachineWorld.ReleaseWorld(capture: false);
-        WorldEntityRuntime.ReleaseWorld();
-        DroppedItemService.ReleaseWorld(capture: false);
+        WorldEntityRuntime.ReleaseAll();
+        FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
+        DroppedItemService.ReleaseAll(capture: false);
         Item.RuntimeStructureChanged -= OnPerceptionStructureChanged;
         CompletePerceptionBatch(false);
         DisposePerceptionJobData();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using MemoryPack;
@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>气压危险共用生命权威，装备只按来源扩展安全范围。</summary>
-public sealed partial class Mod_Pressure : Module, IItemModuleDependencyBinder, IModuleJsonParameterValidator
+public sealed partial class Mod_Pressure : Module, IItemModuleDependencyBinder, IModuleJsonParameterValidator, IPlayerStateAuthorityModule
 {
     #region 配置与真实状态
     public const string ModuleId = "气压生存模块";

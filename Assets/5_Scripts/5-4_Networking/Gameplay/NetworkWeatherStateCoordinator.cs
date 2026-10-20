@@ -14,6 +14,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool serverStarted;
         private bool clientStarted;
         private bool requestedInitialState;
+        private string requestedWorld;
 
 #region 生命周期
 
@@ -74,6 +75,9 @@ namespace FlatWorld.Networking.Gameplay
             if (SaveDataMgr.Instance?.Active_PlanetData == null)
                 return;
 
+            string world = GameplayWorldRegistry.LocalPresentationWorldKey;
+            if (!string.Equals(requestedWorld, world, System.StringComparison.Ordinal))
+            { requestedWorld = world; requestedInitialState = false; ResetWeatherSurfaceClient(); }
             if (!requestedInitialState)
             {
                 requestedInitialState = true;
@@ -84,17 +88,40 @@ namespace FlatWorld.Networking.Gameplay
 
 #endregion
 
+#region 世界消息路由
+        // 请求世界来自连接绑定角色，客户端不能借天气请求读取其它维度。
+        private static bool TryGetConnectionWorld(NetworkConnectionToClient connection, out string world)
+        {
+            world = null;
+            var player = connection?.identity != null ? connection.identity.GetComponent<NetworkWorldPlayer>() : null;
+            if (player == null || !player.TryGetSpaceObserver(out var observer) || observer.InSpace ||
+                string.IsNullOrEmpty(observer.WorldKey)) return false;
+            world = observer.WorldKey;
+            return true;
+        }
+        private static bool CanApplyLocalWorld(string world) =>
+            string.Equals(world, GameplayWorldRegistry.LocalPresentationWorldKey, System.StringComparison.Ordinal) &&
+            GameplayWorldRegistry.TryGet(world, out _);
+        private static void SendToWorld<T>(string world, T message) where T : struct, NetworkMessage
+        {
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (TryGetConnectionWorld(connection, out string observerWorld) &&
+                    string.Equals(world, observerWorld, System.StringComparison.Ordinal)) connection.Send(message);
+        }
+#endregion
+
 #region 服务端
 
         private void OnServerStateRequest(
             NetworkConnectionToClient connection,
             NetworkWeatherStateRequest request)
         {
-            if (connection == null || WeatherMgr.Instance == null)
-                return;
-
-            connection.Send(CreateMessage(WeatherMgr.Instance.CaptureWeatherState()));
-            IReadOnlyList<RegionalWeatherStateSnapshot> regions = WeatherMgr.Instance.CaptureRegionalWeatherStates();
+            if (!TryGetConnectionWorld(connection, out string world) || !GameplayWorldRegistry.TryGet(world, out _)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(world);
+            WeatherMgr weather = WeatherMgr.GetForWorld(world);
+            if (weather == null) return;
+            connection.Send(CreateMessage(weather.CaptureWeatherState()));
+            IReadOnlyList<RegionalWeatherStateSnapshot> regions = weather.CaptureRegionalWeatherStates();
             for (int i = 0; i < regions.Count; i++)
                 connection.Send(CreateRegionalMessage(regions[i], true));
         }
@@ -104,7 +131,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!NetworkServer.active)
                 return;
 
-            NetworkServer.SendToAll(CreateMessage(snapshot));
+            SendToWorld(snapshot.WorldKey, CreateMessage(snapshot));
         }
 
         private void HandleAuthoritativeRegionalWeatherStateChanged(RegionalWeatherStateSnapshot snapshot)
@@ -112,7 +139,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!NetworkServer.active)
                 return;
 
-            NetworkServer.SendToAll(CreateRegionalMessage(snapshot, false));
+            SendToWorld(snapshot.WorldKey, CreateRegionalMessage(snapshot, false));
         }
 
         private static NetworkRegionalWeatherStateMessage CreateRegionalMessage(
@@ -151,6 +178,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             return new NetworkWeatherStateMessage
             {
+                WorldKey = snapshot.WorldKey,
                 PlanetName = snapshot.PlanetName,
                 Weather = snapshot.Weather,
                 Phase = snapshot.Phase,
@@ -174,7 +202,9 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active)
                 return;
 
-            WeatherMgr.Instance.ApplyReplicatedWeatherState(
+            if (!CanApplyLocalWorld(message.WorldKey)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(message.WorldKey);
+            WeatherMgr.GetForWorld(message.WorldKey)?.ApplyReplicatedWeatherState(
                 message.PlanetName,
                 message.Weather,
                 message.Phase,
@@ -193,6 +223,8 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active)
                 return;
 
+            if (!CanApplyLocalWorld(message.WorldKey)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(message.WorldKey);
             RegionalWeatherStateSnapshot snapshot = new RegionalWeatherStateSnapshot(
                 message.WorldKey,
                 new Int2(message.RegionX, message.RegionY),
@@ -214,7 +246,7 @@ namespace FlatWorld.Networking.Gameplay
                 new Int2(message.LightningCellX, message.LightningCellY),
                 message.LightningStrength,
                 message.RemainingSeconds);
-            WeatherMgr.Instance.ApplyReplicatedRegionalWeatherState(snapshot, message.InitialState);
+            WeatherMgr.GetForWorld(message.WorldKey)?.ApplyReplicatedRegionalWeatherState(snapshot, message.InitialState);
         }
 
 #endregion

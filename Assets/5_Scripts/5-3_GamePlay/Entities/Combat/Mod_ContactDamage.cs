@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
@@ -115,7 +115,7 @@ internal sealed class ContactDamageRuntime
         var filter = new ContactFilter2D { useTriggers = false, useDepth = false, useLayerMask = false };
         overlaps.Clear();
         seen.Clear();
-        Physics2D.OverlapBox(center, size, root.rotation.eulerAngles.z, filter, overlaps);
+        GameplayPhysics2D.OverlapBox(center, size, root.rotation.eulerAngles.z, filter, overlaps);
         uint currentPulse = ++pulse;
         bool hasSourceItem = !ReferenceEquals(sourceItem, null);
         FixedString128Bytes causeItemId = default;

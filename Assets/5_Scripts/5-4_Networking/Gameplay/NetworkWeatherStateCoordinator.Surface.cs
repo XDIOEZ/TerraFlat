@@ -124,10 +124,11 @@ namespace FlatWorld.Networking.Gameplay
         private void OnServerWeatherSurfaceRequest(NetworkConnectionToClient connection,
             NetworkWeatherSurfaceRequest request)
         {
-            if (connection?.identity == null || string.IsNullOrWhiteSpace(request.DimensionId) ||
-                !NetworkServer.active || SaveDataMgr.Instance?.Active_PlanetData is not PlanetData planet ||
-                !string.Equals(planet.Name, request.WorldKey, StringComparison.Ordinal))
-                return;
+            if (!NetworkServer.active || string.IsNullOrWhiteSpace(request.DimensionId) ||
+                !TryGetConnectionWorld(connection, out string world) ||
+                !string.Equals(world, request.WorldKey, StringComparison.Ordinal) ||
+                !GameplayWorldRegistry.TryGet(world, out _)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(world);
             ChunkMgr manager = ChunkMgr.ExistingInstance;
             var address = new RuntimeWorldAddress(request.DimensionId, new Int2(request.ChunkX, request.ChunkY));
             if (manager == null || !manager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
@@ -177,9 +178,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (target != null)
                     target.Send(message);
                 else
-                    foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
-                        if (connection?.identity != null)
-                            connection.Send(message);
+                    SendToWorld(snapshot.WorldKey, message);
             }
         }
 
@@ -190,7 +189,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnClientWeatherSurfaceMessage(NetworkWeatherSurfaceMessage message)
         {
             if (!PrepareWeatherSurfaceClient(out ChunkMgr manager, out PlanetData planet) ||
-                !string.Equals(planet.Name, message.WorldKey, StringComparison.Ordinal) ||
+                !string.Equals(GameplayWorldRegistry.LocalPresentationWorldKey, message.WorldKey, StringComparison.Ordinal) ||
                 string.IsNullOrWhiteSpace(message.DimensionId))
                 return;
             var address = new RuntimeWorldAddress(message.DimensionId, new Int2(message.ChunkX, message.ChunkY));
@@ -399,7 +398,7 @@ namespace FlatWorld.Networking.Gameplay
                 cursor.NextRequestTime = Time.unscaledTime + 2f;
                 NetworkClient.Send(new NetworkWeatherSurfaceRequest
                 {
-                    WorldKey = planet.Name,
+                    WorldKey = GameplayWorldRegistry.LocalPresentationWorldKey,
                     DimensionId = pair.Key.DimensionId,
                     ChunkX = pair.Key.ChunkOrigin.X,
                     ChunkY = pair.Key.ChunkOrigin.Y

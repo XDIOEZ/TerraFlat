@@ -88,10 +88,36 @@ public interface IAiEcologyBackend
 public static class AiRuntimeBackendService
 {
     private static IAiEcologyBackend _ecology;
-    private static readonly HashSet<string> EntitySpecies = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, HashSet<string>> entitySpeciesByWorld = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, IAiEcologyBackend> ecologyByWorld = new(StringComparer.Ordinal);
+    public static Func<string, IAiEcologyBackend> WorldEcologyFactory;
+    public static Action<string> WorldEcologyReleaser;
+    private static HashSet<string> EntitySpecies
+    {
+        get
+        {
+            string key = GameplayWorldRegistry.ExecutionWorldKey;
+            if (!entitySpeciesByWorld.TryGetValue(key, out HashSet<string> values))
+                entitySpeciesByWorld[key] = values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return values;
+        }
+    }
 
     public static bool UseEntities { get; set; } = false;
-    public static IAiEcologyBackend Ecology => _ecology;
+    public static IAiEcologyBackend Ecology
+    {
+        get
+        {
+            string world = GameplayWorldRegistry.ExecutionWorldKey;
+            if (ecologyByWorld.TryGetValue(world, out IAiEcologyBackend backend))
+            {
+                if (backend is not UnityEngine.Object owner || owner != null) return backend;
+                ecologyByWorld.Remove(world);
+            }
+            return GameplayWorldRegistry.TryGet(world, out _) && WorldEcologyFactory != null
+                ? WorldEcologyFactory(world) : GameplayWorldRegistry.HasExecutionContext ? null : _ecology;
+        }
+    }
     public static bool HasEntitiesRoutes => EntitySpecies.Count > 0;
 
     /// <summary>按物种冻结后端，同一物种不能同时由 GameObject 和 ECS 接管。</summary>
@@ -186,7 +212,8 @@ public static class AiRuntimeBackendService
         }
         position = default;
         alive = false;
-        return _ecology != null && _ecology.TryGetActor(actorGuid, out position, out alive);
+        IAiEcologyBackend backend = Ecology;
+        return backend != null && backend.TryGetActor(actorGuid, out position, out alive);
     }
 
     public static bool TrySetAdvanceCommand(int actorGuid, AIAdvanceCommand command)
@@ -200,7 +227,7 @@ public static class AiRuntimeBackendService
                 { receiver.BeginAdvance(command); return true; }
             return false;
         }
-        return _ecology?.TrySetAdvanceCommand(actorGuid, command) == true;
+        return Ecology?.TrySetAdvanceCommand(actorGuid, command) == true;
     }
 
     public static bool TryClearAdvanceCommand(int actorGuid)
@@ -213,7 +240,7 @@ public static class AiRuntimeBackendService
                 { receiver.CancelAdvance(); return true; }
             return false;
         }
-        return _ecology?.TryClearAdvanceCommand(actorGuid) == true;
+        return Ecology?.TryClearAdvanceCommand(actorGuid) == true;
     }
 
     public static bool TryDespawnActor(int actorGuid)
@@ -225,7 +252,7 @@ public static class AiRuntimeBackendService
             manager.DespawnItem(item, saveData: false);
             return true;
         }
-        return _ecology?.TryDespawnActor(actorGuid) == true;
+        return Ecology?.TryDespawnActor(actorGuid) == true;
     }
 
     #endregion
@@ -260,6 +287,23 @@ public static class AiRuntimeBackendService
         if (ReferenceEquals(_ecology, backend))
             _ecology = null;
     }
+
+    #region 世界后端所有权
+    public static void RegisterWorldEcology(string world, IAiEcologyBackend backend)
+    {
+        if (string.IsNullOrWhiteSpace(world) || backend == null) throw new ArgumentException("世界生态后端缺少有效所有者。");
+        if (ecologyByWorld.TryGetValue(world, out IAiEcologyBackend existing) && !ReferenceEquals(existing, backend))
+            throw new InvalidOperationException("同一世界不能注册两份生态后端。");
+        ecologyByWorld[world] = backend;
+    }
+
+    public static void ReleaseWorldEcology(string world)
+    {
+        ecologyByWorld.Remove(world);
+        entitySpeciesByWorld.Remove(world);
+        WorldEcologyReleaser?.Invoke(world);
+    }
+    #endregion
 }
 
 #endregion

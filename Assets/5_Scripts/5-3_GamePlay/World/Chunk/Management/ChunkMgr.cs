@@ -1,4 +1,4 @@
-// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
+﻿// ===== AI 函数导航（按函数名搜索，不依赖行号） =====
 // 区块索引：TryGetChunkByPos() / TryGetActiveChunkByPos() / NormalizeChunkPosition()
 // 导航刷新：RefreshChunkPenaltyCloseToPlayer() / RefreshChunkPenalty()
 // 激活与回收：SwitchActiveChunks_TO_UnActive() / SetChunkActive() / DestroyChunk_In_Distance()
@@ -738,7 +738,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
 
     public static Vector2 GetChunkSize()
     {
-        var sceneName = SceneManager.GetActiveScene().name;
+        var sceneName = GameplayWorldRegistry.CurrentScene.name;
         if (SpaceMgr.IsSpaceScene(sceneName)) return new Vector2(PlanetData.DefaultChunkDimension, PlanetData.DefaultChunkDimension);
 
         // 添加null检查，防止出现NullReferenceException

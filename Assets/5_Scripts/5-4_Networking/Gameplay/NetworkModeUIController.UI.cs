@@ -1,4 +1,4 @@
-// AI-Context: NetworkModeUIController 的 UI 状态与生命周期分部；直接持有 BasePanel 并绑定联机控件。
+﻿// AI-Context: NetworkModeUIController 的 UI 状态与生命周期分部；直接持有 BasePanel 并绑定联机控件。
 
 using System.Collections;
 using System;
@@ -53,6 +53,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool showPanelWhenReady;
         private string lanAddressText = string.Empty;
         private bool lastServerActive;
+        private bool lastPrivateSession;
         private string addressBeforeHosting;
         private bool showingHostAddress;
 
@@ -225,7 +226,8 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             // 面板随启动资源开放，创建和加入仍等待完整玩法目录就绪。
-            if (lastContentReady != IsContentReady || lastInWorld != IsInWorld)
+            if (lastContentReady != IsContentReady || lastInWorld != IsInWorld ||
+                lastPrivateSession != (networkManager?.IsPrivateSession == true))
             {
                 RefreshInteractableState();
                 if (GameNetwork.Session.State == NetworkSessionState.Offline)
@@ -279,6 +281,8 @@ namespace FlatWorld.Networking.Gameplay
         private void RefreshInteractableState()
         {
             bool offline = GameNetwork.Session.State == NetworkSessionState.Offline;
+            bool privateHost = NetworkServer.active && networkManager?.IsPrivateSession == true;
+            lastPrivateSession = networkManager?.IsPrivateSession == true;
             lastContentReady = IsContentReady;
             lastInWorld = IsInWorld;
             Player localPlayer = ItemMgr.Instance?.User_Player;
@@ -288,17 +292,23 @@ namespace FlatWorld.Networking.Gameplay
             panel?.SetButtonVisible(JoinButtonKey, !lastInWorld);
             SetHostButtonLabel("公开到局域网");
             if (hostButton != null)
-                hostButton.interactable = offline && lastContentReady && lastInWorld && localPlayer != null &&
+                hostButton.interactable = (offline || privateHost) && lastContentReady && lastInWorld && localPlayer != null &&
                     GameManager.ExistingInstance.IsGameplayReady;
             if (joinButton != null)
                 joinButton.interactable = offline && lastContentReady && !lastInWorld;
             if (disconnectButton != null)
-                disconnectButton.interactable = !offline;
+                disconnectButton.interactable = !offline && !privateHost;
+            TMP_Text disconnectLabel = disconnectButton != null ? disconnectButton.GetComponentInChildren<TMP_Text>(true) : null;
+            if (disconnectLabel != null)
+            {
+                DisableStaticBinding(disconnectLabel);
+                disconnectLabel.text = FlatWorldLocalizationService.GetUiText(NetworkServer.active ? "关闭公开" : "断开连接");
+            }
             if (playerNameInput != null)
                 playerNameInput.interactable = offline && !lastInWorld;
 
             if (portInput != null)
-                portInput.interactable = offline;
+                portInput.interactable = offline || privateHost;
             if (NetworkServer.active && !lastServerActive) RefreshLanAddresses();
             lastServerActive = NetworkServer.active;
             RefreshAddressPresentation(offline);

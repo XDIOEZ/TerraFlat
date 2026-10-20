@@ -1,4 +1,4 @@
-// AI-Context: 玩家快捷栏与手持物实例的唯一来源；远程应用只创建视觉副本，不绑定 UI/输入或参与 ItemMgr Tick。
+﻿// AI-Context: 玩家快捷栏与手持物实例的唯一来源；远程应用只创建视觉副本，不绑定 UI/输入或参与 ItemMgr Tick。
 
 using DG.Tweening;
 using MemoryPack;
@@ -803,6 +803,20 @@ public class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
         }
 
+        // 已有独立事务的建造和容器界面优先拥有这次输入，避免再发 Act 双重消费。
+        ILocalItemUseRequestHandler useHandler = null;
+        foreach (Module module in heldItem.itemMods.Mods.Values)
+            if (module is ILocalItemUseRequestHandler handler && handler.CanHandleLocalUse &&
+                (useHandler == null || handler.LocalUsePriority > useHandler.LocalUsePriority)) useHandler = handler;
+        if (useHandler != null) { useHandler.HandleLocalUse(); return; }
+        // 客户端只发送真实槽位和指向，消耗及效果由服务器同一个 Act 入口执行。
+        Vector2 aim = _inputController != null ? _inputController.GetAimWorldPosition(8192f) : item.transform.position;
+        if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkUse(heldItem, aim))
+        {
+            foreach (Module module in heldItem.itemMods.Mods.Values)
+                if (module is ILocalItemUsePresentation presentation) presentation.PresentLocalUse();
+            return;
+        }
         heldItem.Act();
     }
 

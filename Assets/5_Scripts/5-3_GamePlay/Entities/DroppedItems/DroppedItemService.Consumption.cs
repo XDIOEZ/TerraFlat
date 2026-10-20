@@ -102,7 +102,7 @@ public static partial class DroppedItemService
         position = default;
         if (handle.Legacy != null)
         {
-            if (!IsLoosePickable(handle.Legacy)) return false;
+            if (!handle.IsValid || !IsLoosePickable(handle.Legacy)) return false;
             position = handle.Legacy.transform.position;
             return true;
         }

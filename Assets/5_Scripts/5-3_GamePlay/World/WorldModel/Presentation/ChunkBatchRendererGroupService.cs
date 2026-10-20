@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Collections;
@@ -305,7 +305,7 @@ internal static class ChunkBatchRendererGroupService
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
                 int ownerId = owner.GetInstanceID();
-                RegisterOwnerCullingState(ownerId, worldBounds, owner.DepthPresentationOffset);
+                RegisterOwnerCullingState(ownerId, worldBounds, owner.DepthPresentationOffset, owner.gameObject.scene.name);
                 RefreshOwnerProjection(owner);
                 ownerCullingById[ownerId].Bounds = worldBounds;
                 warnedMissingOwnerIds.Remove(ownerId);
@@ -313,17 +313,18 @@ internal static class ChunkBatchRendererGroupService
         }
 
         /// <summary>复用区块状态，使已有实例自动读取最新边界。</summary>
-        private void RegisterOwnerCullingState(int ownerId, Bounds worldBounds, Vector3 projectionOffset)
+        private void RegisterOwnerCullingState(int ownerId, Bounds worldBounds, Vector3 projectionOffset, string worldKey)
         {
             if (ownerCullingById.TryGetValue(ownerId, out OwnerCullingState state))
             {
                 state.Bounds = worldBounds;
+                state.WorldKey = worldKey;
                 return;
             }
 
             state = new OwnerCullingState(worldBounds, activeOwnerCullingStates.Count)
             {
-                ProjectionOffset = projectionOffset
+                ProjectionOffset = projectionOffset, WorldKey = worldKey
             };
             ownerCullingById.Add(ownerId, state);
             activeOwnerCullingStates.Add(state);
@@ -751,8 +752,7 @@ internal static class ChunkBatchRendererGroupService
                 int visibleCount = 0;
                 int sortedVisibleCount = 0;
                 bool ownerVisibilityChanged = false;
-                bool allOwnersVisible = !WorldStreamingPreferences.OwnerCullingEnabled ||
-                    RefreshOwnerVisibility(context.cullingPlanes, out ownerVisibilityChanged);
+                bool allOwnersVisible = RefreshOwnerVisibility(context.cullingPlanes, out ownerVisibilityChanged);
                 if (!allOwnersVisible && (visibleInstanceListsDirty || ownerVisibilityChanged))
                     RebuildVisibleInstanceLists();
                 for (int i = 0; i < orderedBatches.Count; i++)
@@ -890,7 +890,8 @@ internal static class ChunkBatchRendererGroupService
             for (int i = 0; i < activeOwnerCullingStates.Count; i++)
             {
                 OwnerCullingState state = activeOwnerCullingStates[i];
-                bool visible = IsOwnerVisible(state.Bounds, planes);
+                bool visible = state.WorldKey == GameplayWorldRegistry.LocalPresentationWorldKey &&
+                    (!WorldStreamingPreferences.OwnerCullingEnabled || IsOwnerVisible(state.Bounds, planes));
                 if (state.Visible != visible)
                 {
                     state.Visible = visible;
@@ -1291,6 +1292,7 @@ internal static class ChunkBatchRendererGroupService
                 Index = index;
             }
 
+            public string WorldKey { get; set; }
             public Bounds Bounds { get; set; }
             public Vector3 ProjectionOffset { get; set; }
             public int Index { get; set; }

@@ -1,4 +1,4 @@
-using MemoryPack;
+﻿using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
@@ -43,7 +43,7 @@ public partial class GameSaveData
             if (PlanetData_Dict == null)
                 return null;
             
-            string sceneName = SceneManager.GetActiveScene().name;
+            string sceneName = GameplayWorldRegistry.ExecutionWorldKey;
             PlanetData planetData;
             if (PlanetData_Dict.TryGetValue(sceneName, out planetData))
                 return planetData;

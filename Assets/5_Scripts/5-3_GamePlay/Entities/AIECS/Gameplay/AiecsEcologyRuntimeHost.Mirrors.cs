@@ -26,7 +26,6 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (_player == null || _bridge?.Simulation == null)
                 return;
-            Vector3 playerPosition = _player.transform.position;
             for (int i = _boundMirrors.Count - 1; i >= 0; i--)
             {
                 AiecsActorMirrorProxy proxy = _boundMirrors[i];
@@ -37,7 +36,8 @@ namespace FlatWorld.AIECS.Gameplay
                     continue;
                 }
                 Vector3 actorPosition = new Vector3(position.x, position.y, 0f);
-                if (WorldTopologyRuntime.SqrDistance(playerPosition, actorPosition) > MirrorExitRadiusSquared)
+                if (!TryGetClosestWorldPlayer(actorPosition, out Vector3 playerPosition) ||
+                    WorldTopologyRuntime.SqrDistance(playerPosition, actorPosition) > MirrorExitRadiusSquared)
                 {
                     ReleaseMirrorAt(i);
                     continue;
@@ -55,7 +55,8 @@ namespace FlatWorld.AIECS.Gameplay
                 EcologyActor actor = _actorSweep[_mirrorScanCursor++];
                 if (actor.Proxy != null || !IsAlive(actor, out float2 position)) continue;
                 Vector3 actorPosition = new Vector3(position.x, position.y, 0f);
-                if (WorldTopologyRuntime.SqrDistance(playerPosition, actorPosition) > MirrorEnterRadiusSquared)
+                if (!TryGetClosestWorldPlayer(actorPosition, out Vector3 playerPosition) ||
+                    WorldTopologyRuntime.SqrDistance(playerPosition, actorPosition) > MirrorEnterRadiusSquared)
                     continue;
                 AiecsActorMirrorProxy proxy = AcquireMirror();
                 proxy.Bind(this, actor.Entity, actor.Identity, actor.ActorGuid);

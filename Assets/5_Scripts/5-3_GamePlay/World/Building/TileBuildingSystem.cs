@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
@@ -447,7 +447,7 @@ public static partial class TileBuildingSystem
         // 这里只用攻击 Collider 的世界 AABB 做广相；TilemapDamageReceiver.TryResolveHit 会继续用
         // 原始 attackCollider.ClosestPoint 做逐格精确验证，因此旋转武器不会因为 AABB 扩大而误伤。
         Bounds attackBounds = attackCollider.bounds;
-        Physics2D.OverlapBox(
+        GameplayPhysics2D.OverlapBox(
             attackBounds.center,
             attackBounds.size,
             0f,

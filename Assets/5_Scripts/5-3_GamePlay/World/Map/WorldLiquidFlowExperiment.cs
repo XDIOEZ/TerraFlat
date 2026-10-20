@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using FlatWorld.Networking;
@@ -127,12 +127,16 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
         world = owner.WorldRuntime; epoch = world.Epoch;
         committedSubscription = world.Events.Subscribe<ChunkCommitted>(OnCommitted);
         evictedSubscription = world.Events.Subscribe<ChunkEvicted>(OnEvicted);
-        WorldLiquidFlowObstacles.Changed += Wake;
+        WorldLiquidFlowObstacles.Changed += OnObstacleChanged;
         foreach (var pair in owner.Chunks)
             if (pair.Key.DimensionId == dimension && pair.Value.DataStatus == ChunkDataStatus.Ready) ready.Add(pair.Key);
     }
 
     /// <summary>只在真实修改或开发者显式操作时扩展模拟范围，模拟传播本身不能无限扩大范围。</summary>
+    private void OnObstacleChanged(Vector2Int cell)
+    {
+        if (world.WorldId == GameplayWorldRegistry.ExecutionWorldKey) Wake(cell);
+    }
     public void Wake(Vector2Int worldCell)
     {
         if (disposed || !GameNetwork.HasStateAuthority) return;
@@ -177,7 +181,7 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
         disposed = true;
         try { cancellation.Cancel(); }
         catch (Exception exception) { Debug.LogException(exception); }
-        WorldLiquidFlowObstacles.Changed -= Wake;
+        WorldLiquidFlowObstacles.Changed -= OnObstacleChanged;
         committedSubscription.Dispose(); evictedSubscription.Dispose();
         foreach (State state in observed.Values)
         {

@@ -43,7 +43,10 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly Func<string, float2, bool> actorLootSpawner;
         private readonly bool removeSpawnedStaticDropsOnDispose;
         private readonly List<DroppedItemHandle> ownedStaticDrops = new List<DroppedItemHandle>();
-        private readonly FlowGoalHandle[] goals;
+        private FlowGoalHandle[] goals;
+        private readonly Stack<int> freePlayerGroups = new();
+        private readonly string worldKey;
+        private readonly WorldNavigationManager navigationOwner;
         private readonly AiecsLosBridge los;
         private AiecsLosView losView;
         private uint factionRevision;
@@ -90,6 +93,8 @@ namespace FlatWorld.AIECS.Gameplay
 
             this.actorIds = (string[])actorIds.Clone();
             Navigation = navigation; worldStamp = ++worldSequence;
+            worldKey = player.Data?.CurrentSceneName ?? player.gameObject.scene.name;
+            navigationOwner = WorldNavigationManager.ExistingInstance;
             dimensionName = ChunkMgr.Instance.ResolveWorldAddress(player.transform.position).DimensionId;
             if (!DimensionIds.TryGetValue(dimensionName, out dimensionStamp))
             { dimensionStamp = (uint)DimensionIds.Count + 1; DimensionIds.Add(dimensionName, dimensionStamp); }
@@ -133,6 +138,12 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>为少量真实玩家维护受击/感知代理；引用只存在 Bridge 中。</summary>
         private void AddPlayer(Player player, int group)
         {
+            if (group >= goals.Length)
+            {
+                Array.Resize(ref goals, group + 1);
+                goals[group] = Navigation.CreateGoal((Vector2)player.transform.position);
+                Simulation.SetGroupGoal(group, goals[group]);
+            }
             Mod_DamageReceiver receiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (receiver == null) throw new InvalidOperationException("当前玩家没有生命接收器，无法建立双向战斗入口。");
             var proxy = new ExternalProxy { Item = player, Receiver = receiver, Group = group,
@@ -148,11 +159,26 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>玩家复活或对象池代际改变后重新建立代理，旧实体版本和旧命中保持失效。</summary>
         public void EnsurePlayer(Player player)
         {
-            if (player == null || !player.gameObject.activeInHierarchy) return;
+            if (player == null || !player.gameObject.activeInHierarchy || player.Data?.CurrentSceneName != worldKey) return;
             CombatIdentity key = IdentityOf(player);
             if (proxyLookup.ContainsKey(key)) return;
             ReleasePlayer(player);
-            AddPlayer(player, Templates.Length);
+            AddPlayer(player, freePlayerGroups.Count > 0 ? freePlayerGroups.Pop() : Templates.Length + proxies.Count);
+        }
+
+        // 跨维度只撤销离开的玩家代理，其他玩家与本世界居民继续保留。
+        public void SynchronizePlayers(IReadOnlyList<Player> players)
+        {
+            for (int i = proxies.Count - 1; i >= 0; i--)
+            {
+                if (proxies[i].Item is Player current && current != null && current.Data?.CurrentSceneName == worldKey &&
+                    current.gameObject.activeInHierarchy) continue;
+                if (Simulation?.IsCreated == true) Simulation.Despawn(proxies[i].Entity);
+                proxyLookup.Remove(proxies[i].Key);
+                freePlayerGroups.Push(proxies[i].Group);
+                proxies.RemoveAt(i);
+            }
+            foreach (Player player in players) EnsurePlayer(player);
         }
 
         /// <summary>玩家实体卸载前仅撤销外部代理，保留本世界的 ECS 居民与模拟状态。</summary>
@@ -164,6 +190,7 @@ namespace FlatWorld.AIECS.Gameplay
                 if (Simulation?.IsCreated == true)
                     Simulation.Despawn(proxies[i].Entity);
                 proxyLookup.Remove(proxies[i].Key);
+                freePlayerGroups.Push(proxies[i].Group);
                 proxies.RemoveAt(i);
             }
         }
@@ -194,9 +221,8 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>
-        public bool IsCurrentWorld(Player player) => Simulation?.IsCreated == true && player != null && Navigation != null && WorldNavigationManager.ExistingInstance != null &&
-            WorldNavigationManager.ExistingInstance.OwnsSharedNavigation(Navigation) &&
-            ChunkMgr.ExistingInstance != null && ChunkMgr.ExistingInstance.ResolveWorldAddress(player.transform.position).DimensionId == dimensionName;
+        public bool IsCurrentWorld(Player player) => Simulation?.IsCreated == true && player != null && Navigation != null &&
+            player.Data?.CurrentSceneName == worldKey && navigationOwner != null && navigationOwner.OwnsSharedNavigation(Navigation);
 
         /// <summary>只暴露真实外部玩家代理的共享目标，复活代际、死亡和世界切换后旧目标不可观察。</summary>
         public bool TryGetPlayerFlow(Player player, out FlowNavigationCache cache, out FlowGoalHandle goal)
@@ -225,8 +251,9 @@ namespace FlatWorld.AIECS.Gameplay
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
                 var proxy = proxies[i];
-                if (proxy.Item == null || proxy.Receiver == null || IdentityOf(proxy.Item) != proxy.Key || !proxy.Item.gameObject.activeInHierarchy)
-                { Simulation.Despawn(proxy.Entity); proxyLookup.Remove(proxy.Key); proxies.RemoveAt(i); continue; }
+                if (proxy.Item == null || proxy.Receiver == null || IdentityOf(proxy.Item) != proxy.Key || !proxy.Item.gameObject.activeInHierarchy ||
+                    proxy.Item.gameObject.scene.name != worldKey)
+                { Simulation.Despawn(proxy.Entity); proxyLookup.Remove(proxy.Key); freePlayerGroups.Push(proxy.Group); proxies.RemoveAt(i); continue; }
                 string faction = FactionRelationService.GetFactionId(proxy.Item);
                 if (!string.Equals(faction, proxy.Faction, StringComparison.Ordinal))
                 { proxy.Faction = faction; proxy.FactionIndex = Faction(faction); }
@@ -238,10 +265,9 @@ namespace FlatWorld.AIECS.Gameplay
             var centers = Simulation.GroupPositions;
             for (int i = 0; i < Templates.Length; i++) if (centers[i].z > 0f) Navigation.UpdateGoal(goals[i], centers[i].xy);
             losView = los.Read(Navigation.Read()); Simulation.Difficulty = GameplayCombatBridge.Difficulty();
-            Player currentPlayer = ItemMgr.Instance?.User_Player;
             DayTimeSystem clock = DayTimeSystem.Instance;
-            if (currentPlayer != null && clock != null &&
-                clock.TryGetResolvedTimeData(currentPlayer.gameObject.scene.name, out _, out TimeData day) &&
+            if (clock != null &&
+                clock.TryGetResolvedTimeData(worldKey, out _, out TimeData day) &&
                 day != null && day.DayLength > 0f)
             {
                 Simulation.DayRatio = Mathf.Repeat(day.CurrentTime, day.DayLength) / day.DayLength;
@@ -474,8 +500,7 @@ namespace FlatWorld.AIECS.Gameplay
         public bool TryGetIdentity(Item item, out CombatIdentity identity)
         {
             identity = default;
-            if (item?.itemData == null || ChunkMgr.Instance == null ||
-                ChunkMgr.Instance.ResolveWorldAddress(item.transform.position).DimensionId != dimensionName) return false;
+            if (item?.itemData == null || item.gameObject.scene.name != worldKey) return false;
             identity = IdentityOf(item); return true;
         }
 
@@ -484,6 +509,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (Simulation == null || !GameDifficultyService.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
                 (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             var view = Simulation.Spatial;
             if (!view.Samples.IsCreated) return;
             // 导航可能在模拟与武器 Update 之间发布新表；实际 Pulse 重新借用当前 LOS 索引。
@@ -552,9 +578,8 @@ namespace FlatWorld.AIECS.Gameplay
             if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || Simulation?.IsCreated != true ||
                 context.Attack.Source.Backend != CombatBackend.Environment || !context.Attack.Source.IsValid ||
                 !float.IsFinite(radius) || radius <= 0f) return;
-            Player player = ItemMgr.Instance?.User_Player;
-            if (!IsCurrentWorld(player) || player.gameObject.scene.name != worldKey ||
-                WorldEntityRuntime.DimensionId != dimensionName) return;
+            if (this.worldKey != worldKey) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
             AiecsSpatialView view = Simulation.Spatial;
             if (!view.Samples.IsCreated) return;
             weaponVisited.Clear();

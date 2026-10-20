@@ -1014,7 +1014,8 @@
       "sourcePaths": [
         "Assets/5_Scripts/5-4_Networking/*",
         "Assets/Resources/Networking/*",
-        "Assets/StreamingAssets/GameplayTests/Systems/Networking/*"
+        "Assets/StreamingAssets/GameplayTests/Systems/Networking/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldScopeRuntimeProbe.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1033,6 +1034,8 @@
         "networking_bots_pickup",
         "networking_bots_actions",
         "networking_bots_roll",
+        "networking_world_scope",
+        "networking_bots_ships",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"

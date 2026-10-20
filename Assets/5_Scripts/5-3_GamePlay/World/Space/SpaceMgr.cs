@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -28,6 +28,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     private readonly Dictionary<string, Planet> runtimePlanetDict = new(StringComparer.Ordinal);
     private readonly Dictionary<SpaceSectorId, SectorView> sectors = new();
     private readonly List<SectorView> releaseScratch = new();
+    private readonly SpaceSectorStreaming localSectorStreaming = new();
     private SpaceStarfield starfield;
     private PlanetData debugPlanetData = new();
     private bool presentationLoaded;
@@ -68,6 +69,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     private void OnActiveSceneChanged(Scene before, Scene after) => UpdateVisibility();
     private void OnWorldExit()
     {
+        authoritySectors.Clear();
         bool retain = SectorPresentationCachingEnabled && !GameNetwork.IsOnline && GameManager.Instance?.IsInGameWorld == true;
         if (!retain) ClearRetainedSectors();
         releaseScratch.Clear(); releaseScratch.AddRange(sectors.Values);
@@ -84,7 +86,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         LocalSpacePresentationActive = visible;
         foreach (SectorView view in sectors.Values)
             if (view.Root != null)
-                view.Root.gameObject.SetActive(visible && (GameNetwork.IsOnline || view.Wanted && !view.Unloading));
+                view.Root.gameObject.SetActive(visible && view.Wanted && !view.Unloading);
         if (starfield != null) starfield.gameObject.SetActive(visible);
     }
     private void EnsureBackground()
@@ -94,11 +96,13 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         background.transform.SetParent(transform, false);
         starfield = background.AddComponent<SpaceStarfield>();
     }
-    private SectorView EnsureSectorScene(SpaceSession session, SpaceSectorId sector)
+    private SectorView EnsureSectorScene(SpaceSession session, SpaceSectorId sector, bool presentation = true)
     {
         if (sectors.TryGetValue(sector, out SectorView existing))
         {
-            existing.Wanted = true;
+            existing.Wanted |= presentation;
+            if (presentation && !existing.PresentationReady && existing.Loading == null && !existing.Unloading && existing.Root != null)
+                existing.Loading = StartCoroutine(LoadSectorPresentation(session, existing, existing.Data));
             if (existing.Unloading) return existing;
             if (existing.Scene.IsValid() && existing.Scene.isLoaded && existing.Root != null) return existing;
             foreach (Planet planet in existing.Planets) if (planet != null) { RuntimePlanets.Remove(planet); runtimePlanetDict.Remove(planet.planetData.BodyId); }
@@ -115,15 +119,27 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         }
         GameObject root = new("星区资源_" + key);
         SceneManager.MoveGameObjectToScene(root, scene);
-        var view = new SectorView { Sector = sector, Scene = scene, Root = root.transform, Wanted = true,
+        var view = new SectorView { Sector = sector, Scene = scene, Root = root.transform, Wanted = presentation,
             SessionState = session.State, Data = data.State, ResourceOwner = GameRes.ExistingInstance,
             ResourceRevision = GameRes.ExistingInstance?.ItemDefinitionRevision ?? 0 };
         sectors.Add(sector, view);
         SectorPresentationCreatedCount++;
-        view.Loading = StartCoroutine(LoadSectorPresentation(session, view, data.State));
+        if (presentation) view.Loading = StartCoroutine(LoadSectorPresentation(session, view, data.State));
         if (view.PresentationReady) view.Loading = null;
         return view;
     }
+
+    #region 远端权威角色的星区资源租约
+    private readonly Dictionary<string, SpaceSectorId> authoritySectors = new(StringComparer.Ordinal);
+    // 远端只保留正式星区地址和场景租约，星区运动仍由SpaceSession推进且不加载本机外观。
+    public Scene BindAuthoritySector(string profile, SpaceSectorId sector)
+    {
+        authoritySectors[profile] = sector;
+        SectorView view = EnsureSectorScene(SpaceSession.EnsureLoaded(), sector, false);
+        return !view.Unloading ? view.Scene : default;
+    }
+    public void ReleaseAuthoritySector(string profile) => authoritySectors.Remove(profile);
+    #endregion
 
     #region 星区时间与采光归属
     private static void EnsureSpaceSceneTime(string sceneName)
@@ -151,6 +167,8 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
 
     private IEnumerator LoadSectorPresentation(SpaceSession session, SectorView view, UniverseState data)
     {
+        try
+        {
         var failures = new HashSet<string>(StringComparer.Ordinal);
         while (view.Wanted && !view.Unloading && view.Root != null)
         {
@@ -182,15 +200,21 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
             }
             for (int frame = 0; frame < 120 && view.Wanted && !view.Unloading; frame++) yield return null;
         }
-        view.Loading = null;
+        }
+        finally { view.Loading = null; }
     }
     public void UpdateSectorLeases(SpaceSession session, IReadOnlyCollection<SpaceSectorId> required)
     {
         PruneRetainedSectors(session);
         foreach (SectorView view in sectors.Values) view.Wanted = false;
-        foreach (SpaceSectorId sector in required) EnsureSectorScene(session, sector);
         Player player = ItemMgr.Instance?.User_Player;
-        if (player != null && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && observer.InSpace)
+        bool localInSpace = player != null && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver localObserver) && localObserver.InSpace;
+        localSectorStreaming.BeginFrame();
+        if (localInSpace && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver local))
+            localSectorStreaming.Observe(player.ProfileName, local.Position, local.Velocity);
+        localSectorStreaming.EndFrame();
+        foreach (SpaceSectorId sector in localSectorStreaming.Required) EnsureSectorScene(session, sector);
+        if (localInSpace && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer))
         {
             SectorView current = EnsureSectorScene(session, observer.Position.Sector);
             if (!current.Unloading && current.Scene.IsValid() && current.Scene.isLoaded)
@@ -202,7 +226,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
             EnsureBackground();
         }
         releaseScratch.Clear();
-        foreach (SectorView view in sectors.Values) if (!view.Wanted && !view.Unloading) releaseScratch.Add(view);
+        foreach (SectorView view in sectors.Values) if (!view.Wanted && !view.Unloading && !authoritySectors.ContainsValue(view.Sector)) releaseScratch.Add(view);
         foreach (SectorView view in releaseScratch) StartCoroutine(ReleaseSector(view));
         UpdateVisibility();
     }
@@ -231,6 +255,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         }
         if (sectors.TryGetValue(view.Sector, out SectorView current) && ReferenceEquals(current, view))
             sectors.Remove(view.Sector);
+        GameplayWorldRegistry.ReleaseSpaceContext(SpaceSectorCoordinates.SceneKey(view.Sector));
         view.Unloading = false;
         view.Scene = default;
     }

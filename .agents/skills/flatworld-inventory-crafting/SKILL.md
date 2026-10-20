@@ -25,6 +25,9 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 ## 库存与手持
 
+- 普通地表与飞船内的快捷栏使用/攻击共用服务器正式 Act/武器入口；客户端只发选中槽位、aim 与 realm，服务器从真实槽位取物。UsePlayerItem 复用库存 pending/应用 ack，不能客户端先扣料或旧全量包覆写服务器消耗；纯本机使用界面通过 ILocalItemUsePresentation 展示。
+
+
 - 联机客户端在同地表船体攻击的 `ClientGroundCombatPending` 期间暂缓槽位拖拽、快捷转移与制作事务；等待 Host 消耗结果成功应用后恢复，不能让旧库存包覆盖箭数或静默丢失本地事务。
 - 联机本机库存事务待确认时，原生丢弃、快捷栏使用、进食和本地弓弹药消耗在副作用前查询 `ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction`；桥只由联机业务登记，单机/Host 默认放行，不停止移动、环境与 AI。测试接入保持在 Development/Testing，不在业务代码注册工具或增加测试分支。
 

@@ -1,5 +1,6 @@
 // 动态建筑放置占用层：以离散世界格记录建筑位置，不依赖任何 Physics2D Collider。
 // 该层同时服务放置冲突判断与导航脏格更新；建筑实体的 Collider 只负责交互/受击等运行时物理。
+using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using Unity.Mathematics;
@@ -7,26 +8,92 @@ using UnityEngine;
 
 public static class BuildingOccupancyRegistry
 {
-    public static uint Revision { get; private set; } // LOS 快照可独立于导航值变化失效。
-    public static uint SightBlockingRebuildRevision { get; private set; }
-    public static event System.Action<Vector2Int> CellChanged; // 少量地图快照订阅者，禁止逐 AI 订阅。
-    private static readonly Dictionary<Vector2Int, HashSet<Mod_Building>> OccupantsByCell = new();
-    private static readonly Dictionary<Mod_Building, HashSet<Vector2Int>> CellsByBuilding = new();
-    private static readonly HashSet<Vector2Int> SightBlockedCells = new();
-    // 开门只撤销导航阻挡，不能撤销建筑放置占用，否则其它建筑可以重叠放进门里。
-    private static readonly HashSet<Mod_Building> PassableBuildings = new();
+    #region 世界占地索引所有权
+    private sealed class WorldIndex
+    {
+        public uint Revision = 1, SightBlockingRebuildRevision = 1;
+        public Action<Vector2Int> CellChanged;
+        public readonly Dictionary<Vector2Int, HashSet<Mod_Building>> Occupants = new();
+        public readonly Dictionary<Mod_Building, HashSet<Vector2Int>> Buildings = new();
+        public readonly HashSet<Vector2Int> SightBlocked = new();
+        public readonly HashSet<Mod_Building> Passable = new();
+    }
+
+    private static readonly Dictionary<string, WorldIndex> worlds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<Mod_Building, string> buildingWorlds = new();
+    private static string indexWorldOverride;
+    private static string cachedWorldKey;
+    private static WorldIndex cachedIndex;
+    private static string WorldKey => indexWorldOverride ?? GameplayWorldRegistry.ExecutionWorldKey;
+    private static WorldIndex Index
+    {
+        get
+        {
+            string key = WorldKey ?? string.Empty;
+            if (cachedIndex != null && string.Equals(cachedWorldKey, key, StringComparison.Ordinal)) return cachedIndex;
+            if (!worlds.TryGetValue(key, out WorldIndex value)) worlds[key] = value = new WorldIndex();
+            cachedWorldKey = key; return cachedIndex = value;
+        }
+    }
+    public static uint Revision { get => Index.Revision; private set => Index.Revision = value; }
+    public static uint SightBlockingRebuildRevision { get => Index.SightBlockingRebuildRevision; private set => Index.SightBlockingRebuildRevision = value; }
+    public static event Action<Vector2Int> CellChanged { add => Index.CellChanged += value; remove => Index.CellChanged -= value; }
+    private static Dictionary<Vector2Int, HashSet<Mod_Building>> OccupantsByCell => Index.Occupants;
+    private static Dictionary<Mod_Building, HashSet<Vector2Int>> CellsByBuilding => Index.Buildings;
+    private static HashSet<Vector2Int> SightBlockedCells => Index.SightBlocked;
+    private static HashSet<Mod_Building> PassableBuildings => Index.Passable;
+
+    public static IDisposable SubscribeCells(Action<Vector2Int> handler)
+        => new CellSubscription(Index, handler);
+
+    private sealed class CellSubscription : IDisposable
+    {
+        private WorldIndex owner;
+        private readonly Action<Vector2Int> handler;
+        public CellSubscription(WorldIndex owner, Action<Vector2Int> handler)
+        { this.owner = owner; this.handler = handler; owner.CellChanged += handler; }
+        public void Dispose()
+        {
+            if (owner == null) return;
+            owner.CellChanged -= handler; owner = null;
+        }
+    }
+
+    private sealed class IndexScope : IDisposable
+    {
+        private readonly string previous;
+        public IndexScope(string key) { previous = indexWorldOverride; indexWorldOverride = key; }
+        public void Dispose() => indexWorldOverride = previous;
+    }
+
+    // Unity 的门和卸载回调按建筑自身归属进入世界，不能借本机镜头选索引。
+    private static IDisposable UseBuildingWorld(Mod_Building building, bool useRegistered)
+    {
+        string key = useRegistered && buildingWorlds.TryGetValue(building, out string owner)
+            ? owner : building.gameObject.scene.name;
+        return GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : new IndexScope(key);
+    }
+
+    public static void ReleaseWorld(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return;
+        if (worlds.Remove(key, out WorldIndex index))
+            foreach (Mod_Building building in index.Buildings.Keys) buildingWorlds.Remove(building);
+        if (cachedWorldKey == key) { cachedWorldKey = null; cachedIndex = null; }
+    }
+
+    public static void ReleaseAll()
+    {
+        worlds.Clear(); buildingWorlds.Clear(); indexWorldOverride = null;
+        cachedWorldKey = null; cachedIndex = null;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
     {
-        OccupantsByCell.Clear();
-        CellsByBuilding.Clear();
-        SightBlockedCells.Clear();
-        PassableBuildings.Clear();
-        Revision++;
-        SightBlockingRebuildRevision++;
-        CellChanged = null;
+        ReleaseAll();
     }
+    #endregion
 
     #region 占地查询
 
@@ -185,6 +252,7 @@ public static class BuildingOccupancyRegistry
     public static void SetPassable(Mod_Building building, bool passable)
     {
         if (building == null) return;
+        using var worldScope = UseBuildingWorld(building, useRegistered: true);
         bool changed = passable ? PassableBuildings.Add(building) : PassableBuildings.Remove(building);
         if (changed && CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> cells))
             foreach (Vector2Int cell in cells) RefreshCell(cell);
@@ -203,6 +271,7 @@ public static class BuildingOccupancyRegistry
     {
         if (building == null || cells == null)
             return;
+        using var worldScope = UseBuildingWorld(building, useRegistered: false);
 
         var nextCells = new HashSet<Vector2Int>();
         foreach (Vector2Int cell in cells)
@@ -220,6 +289,7 @@ public static class BuildingOccupancyRegistry
             return;
 
         CellsByBuilding[building] = nextCells;
+        buildingWorlds[building] = WorldKey;
         foreach (Vector2Int cell in nextCells)
         {
             if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
@@ -238,6 +308,7 @@ public static class BuildingOccupancyRegistry
     {
         if (building == null)
             return;
+        using var worldScope = UseBuildingWorld(building, useRegistered: false);
 
         cell = WorldTopologyRuntime.NormalizeCell(cell);
         if (CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> currentCells) &&
@@ -250,6 +321,7 @@ public static class BuildingOccupancyRegistry
         Unregister(building);
         var cells = new HashSet<Vector2Int> { cell };
         CellsByBuilding[building] = cells;
+        buildingWorlds[building] = WorldKey;
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
         {
             occupants = new HashSet<Mod_Building>();
@@ -262,11 +334,14 @@ public static class BuildingOccupancyRegistry
 
     public static void Unregister(Mod_Building building)
     {
+        if (building == null) return;
+        using var worldScope = UseBuildingWorld(building, useRegistered: true);
         if (building != null) PassableBuildings.Remove(building);
         if (building == null || !CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> cells))
             return;
 
         CellsByBuilding.Remove(building);
+        buildingWorlds.Remove(building);
         foreach (Vector2Int cell in cells)
         {
             if (OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
@@ -310,7 +385,7 @@ public static class BuildingOccupancyRegistry
         }
 
         Revision++;
-        CellChanged?.Invoke(cell);
+        Index.CellChanged?.Invoke(cell);
     }
 
     #region 分层视线查询

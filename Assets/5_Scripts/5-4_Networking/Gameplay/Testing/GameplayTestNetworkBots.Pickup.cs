@@ -236,6 +236,9 @@ namespace FlatWorld.Networking.Gameplay
             };
         }
 
+        private static uint BotRealm(int botId) => NetworkServer.connections.TryGetValue(botId, out var connection)
+            ? connection.identity?.GetComponent<NetworkWorldPlayer>()?.RealmRevision ?? 0 : 0;
+
         private static void SubmitPickupCommit(GameplayTestBotTransport transport, int botId, int guid, uint token,
             bool accepted, float? requested = null, uint requestToken = 0)
         {
@@ -247,7 +250,7 @@ namespace FlatWorld.Networking.Gameplay
                         requested = source.Stack.Amount;
                 }
             if (!transport.Receive(botId, new NetworkItemPickupCommit
-                { ItemGuid = guid, RequestToken = requestToken, ReservationToken = token,
+                { RealmRevision = BotRealm(botId), ItemGuid = guid, RequestToken = requestToken, ReservationToken = token,
                   RequestedSourceAmount = accepted ? requested ?? 0f : 0f }))
                 throw new InvalidOperationException("假人拾取提交没有进入正式服务端传输入口。");
         }
@@ -255,7 +258,7 @@ namespace FlatWorld.Networking.Gameplay
         private static void SubmitPickupApplied(GameplayTestBotTransport transport, int botId, NetworkItemPickupReceipt receipt)
         {
             if (!transport.Receive(botId, new NetworkItemPickupApplied
-                { ItemGuid = receipt.ItemGuid, RequestToken = receipt.RequestToken, ReservationToken = receipt.ReservationToken }))
+                { RealmRevision = BotRealm(botId), ItemGuid = receipt.ItemGuid, RequestToken = receipt.RequestToken, ReservationToken = receipt.ReservationToken }))
                 throw new InvalidOperationException("假人收货确认没有进入正式服务端传输入口。");
         }
 
@@ -263,7 +266,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
             writer.WriteBytesAndSize(payload);
-            const string command = "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitItemState(System.Byte[])";
+            writer.WriteUInt(actor.RealmRevision);
+            const string command = "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitItemState(System.Byte[],System.UInt32)";
             return world.Transport.Receive(botId, new CommandMessage
             {
                 netId = actor.netId, componentIndex = actor.ComponentIndex,
@@ -283,7 +287,7 @@ namespace FlatWorld.Networking.Gameplay
             Action<NetworkItemPickupResponse> received)
         {
             int previous = transport.Count<NetworkItemPickupResponse>(botId);
-            if (!transport.Receive(botId, new NetworkItemPickupRequest { ItemGuid = guid, RequestToken = ++nextBotPickupRequest }))
+            if (!transport.Receive(botId, new NetworkItemPickupRequest { RealmRevision = BotRealm(botId), ItemGuid = guid, RequestToken = ++nextBotPickupRequest }))
                 throw new InvalidOperationException("假人拾取请求没有进入正式服务端传输入口。");
             double deadline = Time.realtimeSinceStartupAsDouble + 8d;
             while (transport.Count<NetworkItemPickupResponse>(botId) <= previous)

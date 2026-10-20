@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using MemoryPack;
 using UltEvents;
@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// 氧气模块只维护氧气储备和缺氧伤害，外部能力主动调用供给接口。
 /// </summary>
-public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
+public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder, IPlayerStateAuthorityModule
 {
     public const string ModuleId = "氧气模块";
 

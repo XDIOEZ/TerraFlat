@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Navigation;
@@ -68,7 +68,9 @@ namespace FlatWorld.AIECS.Gameplay
         private bool _ownsBackendRegistration;
         private bool _disposingSimulation;
 
-        public static AiecsEcologyRuntimeHost Active => active;
+        public static AiecsEcologyRuntimeHost Active => worldHosts.TryGetValue(GameplayWorldRegistry.ExecutionWorldKey,
+            out AiecsEcologyRuntimeHost owner) && owner != null ? owner :
+            !GameplayWorldRegistry.HasExecutionContext && active != null && string.IsNullOrEmpty(active.ownedWorldKey) ? active : null;
         public bool IsReady => !_disposingSimulation && _bridge?.Simulation?.IsCreated == true;
         public string RuntimeModuleId => "entity.ai";
 
@@ -78,6 +80,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void Awake()
         {
+            if (!string.IsNullOrEmpty(creatingWorld)) { ownedWorldKey = creatingWorld; return; }
             // WorldManager 跨场景常驻；回主菜单时场景副本会在同一帧短暂 Awake。
             // 副本只保持禁用，不能抢占仍存活的正式生态后端，也不能制造退出流程异常。
             _ownsBackendRegistration = AiRuntimeBackendService.TryRegisterEcology(this);
@@ -88,10 +91,17 @@ namespace FlatWorld.AIECS.Gameplay
             }
 
             active = this;
+            AiEcologyNetworkBridge.Capture = CaptureNetworkActors;
+            AiEcologyNetworkBridge.Apply = ApplyNetworkActors;
+            AiEcologyNetworkBridge.Clear = ClearNetworkActors;
+            AiRuntimeBackendService.WorldEcologyFactory = GetOrCreateWorldHost;
+            AiRuntimeBackendService.WorldEcologyReleaser = ReleaseWorldHost;
         }
 
         private void Update()
         {
+            if (FlatWorld.Networking.GameNetwork.IsOnline && !FlatWorld.Networking.GameNetwork.HasStateAuthority) return;
+            using var worldScope = UseOwnedWorld();
             if (!AiRuntimeBackendService.UseEntities)
             {
                 // 停用只保存并释放 AI 自身的状态与绘制，不关闭树木和作物共用的 World。
@@ -115,36 +125,18 @@ namespace FlatWorld.AIECS.Gameplay
             }
             WorldEntityRuntime.DevelopmentSuspended = false;
 
-            if (_bridge == null)
-                TryStartSimulation();
-            else if (_player == null)
-            {
-                Player currentPlayer = ItemMgr.Instance?.User_Player;
-                if (currentPlayer == null)
-                    return;
-                if (!_bridge.IsCurrentWorld(currentPlayer))
-                {
-                    DisposeSimulation();
-                    _startFailed = false;
-                    return;
-                }
-                _player = currentPlayer;
-            }
-            if (_bridge == null || _player == null)
-                return;
-
-            if (!_bridge.IsCurrentWorld(_player))
-            {
-                DisposeSimulation();
-                _startFailed = false;
-                return;
-            }
+            _player = RefreshWorldPlayers();
+            if (_bridge == null && _player != null) TryStartSimulation();
+            SynchronizeWorldPlayers();
+            if (_player == null) ReleaseAllMirrors();
 
         }
 
         /// <summary>动物能力由统一实体入口驱动；Update 只准备依赖，不再另起一套玩法 Tick。</summary>
         public void TickEntities(float deltaTime)
         {
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return;
+            using var worldScope = UseOwnedWorld();
             if (!AiRuntimeBackendService.UseEntities || deltaTime <= 0f ||
                 !_worldPrepared || !IsReady || _player == null ||
                 AiecsPlayground.Active?.HasActiveScenario == true || !_bridge.IsCurrentWorld(_player))
@@ -159,7 +151,7 @@ namespace FlatWorld.AIECS.Gameplay
             int budget = MaxSimulationStepsPerFrame;
             try
             {
-                _bridge.EnsurePlayer(_player);
+                SynchronizeWorldPlayers();
                 _bridge.Simulation.Complete();
                 RefreshAdvanceGoals();
                 while (_simulationTime + step <= now && budget-- > 0)
@@ -195,6 +187,11 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void LateUpdate()
         {
+            if (FlatWorld.Networking.GameNetwork.IsOnline && !FlatWorld.Networking.GameNetwork.HasStateAuthority)
+            { DrawNetworkActors(); return; }
+            using var worldScope = UseOwnedWorld();
+            if (_renderer != null && IsReady && ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName != ownedWorldKey)
+            { _renderer.Draw(_bridge.Simulation, null, default); return; }
             if (!AiRuntimeBackendService.UseEntities || !IsReady || _renderer == null || _player == null)
                 return;
 
@@ -217,7 +214,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>脚本重载不保证调用 OnDestroy，停用阶段就释放自有模拟与原生绘制资源。</summary>
-        private void OnDisable() => DisposeSimulation();
+        private void OnDisable() { DisposeNetworkActors(); DisposeSimulation(); }
 
         private void OnDestroy()
         {
@@ -225,7 +222,16 @@ namespace FlatWorld.AIECS.Gameplay
             if (ReferenceEquals(active, this))
                 active = null;
             if (_ownsBackendRegistration)
+            {
+                if (AiEcologyNetworkBridge.Capture == CaptureNetworkActors) AiEcologyNetworkBridge.Capture = null;
+                if (AiEcologyNetworkBridge.Apply == ApplyNetworkActors) AiEcologyNetworkBridge.Apply = null;
+                if (AiEcologyNetworkBridge.Clear == ClearNetworkActors) AiEcologyNetworkBridge.Clear = null;
                 AiRuntimeBackendService.UnregisterEcology(this);
+                if (AiRuntimeBackendService.WorldEcologyFactory == GetOrCreateWorldHost) AiRuntimeBackendService.WorldEcologyFactory = null;
+                if (AiRuntimeBackendService.WorldEcologyReleaser == ReleaseWorldHost) AiRuntimeBackendService.WorldEcologyReleaser = null;
+            }
+            if (!string.IsNullOrEmpty(ownedWorldKey) && worldHosts.TryGetValue(ownedWorldKey, out AiecsEcologyRuntimeHost owner) && owner == this)
+                worldHosts.Remove(ownedWorldKey);
         }
 
         #endregion
@@ -235,6 +241,8 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>冻结本世界会用到的 Actor 目录；不支持的定义明确拒绝，不回退旧 AI。</summary>
         public bool PrepareWorld(IReadOnlyList<SpawnerConfig> configs)
         {
+            if (string.IsNullOrEmpty(ownedWorldKey)) GetOrCreateWorldHost(GameplayWorldRegistry.ExecutionWorldKey);
+            using var worldScope = UseOwnedWorld();
             ResetWorld();
             _worldPrepared = true;
 
@@ -304,6 +312,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         public void ResetWorld()
         {
+            DisposeNetworkActors();
             DisposeSimulation();
             _templateBySpecies.Clear();
             _configBySpecies.Clear();
@@ -334,7 +343,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (_startFailed || !_worldPrepared || AiecsPlayground.Active?.HasActiveScenario == true)
                 return;
 
-            _player = ItemMgr.Instance?.User_Player;
+            _player = RefreshWorldPlayers();
             WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
             if (_player == null || navigation == null || !navigation.IsNavigationReady)
                 return;

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 
@@ -19,7 +19,7 @@ namespace FlatWorld.Networking.Gameplay
             byte[] payload = ItemNetworkStateSerialization.Capture(corePlayer, true);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload)) return false;
             // 与后续请求使用同一可靠通道，先到达的基线建立本次服务端真实库存。
-            CmdSubmitItemState(payload);
+            CmdSubmitItemState(payload, authoritativeRealmRevision);
             return true;
         }
 
@@ -30,7 +30,7 @@ namespace FlatWorld.Networking.Gameplay
                 ItemMgr.Instance?.InitializeNetworkAuthorityPlayer(corePlayer, surfaceCombat: true);
             if (!corePlayer.IsInitialized)
             {
-                if (!IsInSpace && !authoritativeGroundCombatPending) ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
+                if (!IsInSpace && !authoritativeGroundCombatPending) MaintainPlayerAuthority();
                 return false;
             }
             serverPickupTransactions.Add(token);
@@ -41,7 +41,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!serverPickupTransactions.Remove(token) || HasServerPickupTransaction ||
                 IsInSpace || authoritativeGroundCombatPending) return;
-            ItemMgr.Instance?.ReleaseNetworkAuthorityPlayer(corePlayer);
+            MaintainPlayerAuthority();
         }
 
         internal byte[] CapturePickupInventoryState()
@@ -86,8 +86,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void ApplyPickupNonInventoryState(byte[] payload)
         {
-            if (corePlayer == null || (!IsInSpace && !authoritativeGroundCombatPending &&
-                !FlatWorld.Spaceflight.SpaceSession.ClientGroundCombatPending) ||
+            if (corePlayer == null ||
                 !ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData authority) ||
                 authority.Guid != corePlayer.itemData.Guid) return;
             byte[] current = ItemNetworkStateSerialization.Capture(corePlayer, true);

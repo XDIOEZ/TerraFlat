@@ -1,4 +1,4 @@
-using System;
+﻿﻿using System;
 using FlatWorld.Networking;
 
 namespace FlatWorld.Spaceflight
@@ -23,7 +23,7 @@ namespace FlatWorld.Spaceflight
     public enum SpaceNetworkIntentKind
     {
         EnterConsole, ExitConsole, ToggleDoor, ToggleIgnition, RequestLanding,
-        StartNavigation, CancelNavigation, ConfirmDock, DisconnectDock, Attack, AttackEnd, UseSkill, Respawn, CombatStateApplied
+        StartNavigation, CancelNavigation, ConfirmDock, DisconnectDock, Attack, AttackEnd, UseSkill, Respawn, CombatStateApplied, LaunchGroundShip, UsePlayerItem, HarvestNatural
     }
 
     [Serializable]
@@ -33,6 +33,7 @@ namespace FlatWorld.Spaceflight
         public string ShipId, PieceId, TargetId;
         public int Action;
         public int SelectedSlot;
+        public uint RealmRevision;
         public bool StartsGroundCombat;
         public double X, Y;
         public SpaceSectorId Sector;
@@ -43,10 +44,16 @@ namespace FlatWorld.Spaceflight
         public static Func<string, SpacePassengerInput, bool> InputSender;
         public static Func<string, SpaceNetworkIntent, bool> IntentSender;
         public static Func<string, bool> CombatPreparationSender;
+        public static Action GroundStreamingRefreshRequested;
+        public static void RequestGroundStreamingRefresh() => GroundStreamingRefreshRequested?.Invoke();
+        public static Func<string, SpaceNetworkIntent, Action<bool, string>, bool> IntentWithReplySender;
         public static bool SubmitInput(string profileId, SpacePassengerInput input)
             => GameNetwork.IsOnline && !GameNetwork.HasStateAuthority && InputSender?.Invoke(profileId, input) == true;
         public static bool SendIntent(string profileId, SpaceNetworkIntent intent)
             => GameNetwork.IsOnline && !GameNetwork.HasStateAuthority && IntentSender?.Invoke(profileId, intent) == true;
+        // 需要反馈的操作按请求序号等待服务器回执，不把成功发包当作执行成功。
+        public static bool SendIntent(string profileId, SpaceNetworkIntent intent, Action<bool, string> completed)
+            => GameNetwork.IsOnline && !GameNetwork.HasStateAuthority && IntentWithReplySender?.Invoke(profileId, intent, completed) == true;
     }
     #endregion
 }

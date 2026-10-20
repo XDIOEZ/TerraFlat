@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using Sirenix.OdinInspector;
@@ -12,7 +12,7 @@ using FlatWorld.Spaceflight;
 /// 玩家死亡状态模块：监听 Mod_DamageReceiver 的死亡事件，处理濒死UI、重生与回主菜单。
 /// 进入世界时从已加载的权威血量恢复濒死控制与界面，不重放死亡结算或掉落。
 /// </summary>
-public partial class Mod_PlayerDeathState : Module
+public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule, IClientPlayerPresentationTick
 {
 #region 基础参数
 
@@ -319,7 +319,7 @@ public partial class Mod_PlayerDeathState : Module
 
 #region 重生恢复
 
-    // 远端角色的生存模块只在重生时短暂恢复数据，不开启地表环境调度。
+    // 重生复用已加载的权威生存模块，缺少的模块只为本次恢复临时加载。
     public void CompleteNetworkRespawn()
     {
         if (!GameNetwork.HasStateAuthority || _player == null || _damageReceiver == null) return;
@@ -620,7 +620,7 @@ public partial class Mod_PlayerDeathState : Module
 
         if (GameNetwork.IsOnline)
         {
-            FlatWorld.Networking.Gameplay.NetworkChunkStreamingCoordinator.RequestImmediateRefresh();
+            FlatWorld.Spaceflight.SpaceNetworkBridge.RequestGroundStreamingRefresh();
             return;
         }
         ChunkMgr.Instance.RefreshRuntimeWindow(transform.position, 1, 1, includeLocalPresentation: true);

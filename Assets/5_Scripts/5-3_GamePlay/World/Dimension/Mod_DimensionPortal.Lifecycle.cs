@@ -36,26 +36,26 @@ public sealed partial class Mod_DimensionPortal
     public void OnBuildingPlacementCommitted()
     {
         CachePortalContext();
-        WorldAddress source = DimensionManager.ExistingInstance?.ActiveAddress ?? default;
+        WorldAddress source = ResolvePortalAddress();
         if (!GameNetwork.HasStateAuthority || !source.IsSurface || portalItem == null ||
             targetDimensionId != WorldAddress.CaveDimensionId || (entranceHealth != null && entranceHealth.Hp <= 0f)) return;
         DimensionTravelProgressStore.SetSurfaceEntranceState(SaveDataMgr.Instance?.SaveData, source,
-            portalItem.transform.position, blocked: false, generated: generatedWorldPortal);
+            WorldLocalPresentation.ToLogical(portalItem.transform.position), blocked: false, generated: generatedWorldPortal);
     }
 
     private void OnEntranceDestroyed(Mod_DamageReceiver receiver)
     {
-        WorldAddress source = DimensionManager.ExistingInstance?.ActiveAddress ?? default;
+        WorldAddress source = ResolvePortalAddress();
         if (!GameNetwork.HasStateAuthority || !source.IsSurface || portalItem == null ||
             targetDimensionId != WorldAddress.CaveDimensionId) return;
         DimensionTravelProgressStore.SetSurfaceEntranceState(SaveDataMgr.Instance?.SaveData, source,
-            portalItem.transform.position, blocked: true, generated: generatedWorldPortal);
+            WorldLocalPresentation.ToLogical(portalItem.transform.position), blocked: true, generated: generatedWorldPortal);
     }
 
     /// <summary>地表矿洞入口被打坏时应真正销毁并掉落石料，不能按普通建筑拆回完整召唤器。</summary>
     public bool UseDamageReceiverFatalResolution(Mod_DamageReceiver receiver)
     {
-        WorldAddress source = DimensionManager.ExistingInstance?.ActiveAddress ?? default;
+        WorldAddress source = ResolvePortalAddress();
         return source.IsSurface && portalItem != null &&
             targetDimensionId == WorldAddress.CaveDimensionId;
     }
@@ -63,13 +63,18 @@ public sealed partial class Mod_DimensionPortal
     /// <summary>封堵是保存下来的旅行状态，不通过查找当前场景里是否存在地表入口来猜测。</summary>
     private void RefreshBlockedState()
     {
-        WorldAddress source = DimensionManager.ExistingInstance?.ActiveAddress ?? default;
+        WorldAddress source = ResolvePortalAddress();
         IsBlockedExit = targetDimensionId == WorldAddress.SurfaceDimensionId &&
             DimensionTravelProgressStore.IsCaveExitBlocked(SaveDataMgr.Instance?.SaveData, source, portalItem, generatedWorldPortal);
         if (tintCaptured && portalItem?.Sprite != null)
             portalItem.Sprite.color = IsBlockedExit ? new Color(unblockedTint.r * 0.45f, unblockedTint.g * 0.45f,
                 unblockedTint.b * 0.45f, unblockedTint.a) : unblockedTint;
     }
+
+    // 入口归属读取自己的场景，远端世界不借用主机当前观察的维度。
+    private WorldAddress ResolvePortalAddress() => portalItem != null
+        ? WorldAddress.FromWorldKey(portalItem.gameObject.scene.name)
+        : WorldAddress.FromWorldKey(GameplayWorldRegistry.ExecutionWorldKey);
 
     #endregion
 }

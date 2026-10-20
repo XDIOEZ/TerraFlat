@@ -29,6 +29,8 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private Coroutine scrollRoutine;
     private bool outputDirty, observed, followCommand;
     private bool driveAfterLaunch, transferringGroundConsole;
+    private bool groundLaunchPending, groundLaunchAccepted;
+    private float groundLaunchDeadline;
     private float nextRefreshTime;
     private ShipFlightPhase observedPhase;
     private bool observedIgnited, observedDriving, observedPowered;
@@ -268,6 +270,11 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void ExecuteGround(string command)
     {
+        if (groundLaunchPending && command is not ("help" or "status" or "clear"))
+        {
+            Append("系统", "正在等待点火结果与船体同步。");
+            return;
+        }
         switch (command)
         {
             case "help":
@@ -299,26 +306,49 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void LaunchFromGround()
     {
-        bool launched;
-        ShipState ship;
-        string reason;
-        // 移交普通机器会同步释放旧交互代理，此时让当前面板随控制台一起转交给飞船会话。
+        if (groundLaunchPending) { Append("系统", "正在等待点火结果与船体同步。"); return; }
+        // 网络删除普通控制台可能早于船体快照，整个移交期间保留当前面板。
+        groundLaunchPending = true;
+        groundLaunchAccepted = false;
+        groundLaunchDeadline = Time.unscaledTime + 15f;
         transferringGroundConsole = true;
-        try { launched = ShipGroundAssembly.TryLaunch(actor, groundConsoleGuid, out ship, out reason); }
-        finally { transferringGroundConsole = false; }
-        if (!launched)
+        bool submitted = ShipGroundAssembly.RequestLaunch(actor, groundConsoleGuid, driveAfterLaunch, (success, reason) =>
         {
-            Append("拒绝", string.IsNullOrWhiteSpace(reason) ? "点火失败：请检查地板、供电、航空燃料和升空推力。" : reason, literal: true);
-            return;
+            if (!IsAlive || !groundLaunchPending) return;
+            if (!success)
+            {
+                groundLaunchPending = false;
+                transferringGroundConsole = false;
+                Append("拒绝", string.IsNullOrWhiteSpace(reason) ? "点火失败：请检查地板、供电、航空燃料和升空推力。" : reason, literal: true);
+                RenderOutput();
+                return;
+            }
+            groundLaunchAccepted = true;
+            CompleteGroundLaunch();
+        });
+        if (!submitted && groundLaunchPending)
+        {
+            groundLaunchPending = false;
+            transferringGroundConsole = false;
+            Append("拒绝", "联机连接尚未就绪，请稍后重试。");
         }
+        if (groundLaunchPending) Append("系统", "正在等待点火结果与船体同步。");
+    }
+
+    private bool CompleteGroundLaunch()
+    {
         session = SpaceSession.Current;
+        if (!groundLaunchAccepted || session == null || !session.FindPiece(pieceId, out ShipState ship, out _)) return false;
         shipId = ship.ShipId;
         groundConsoleGuid = 0;
+        groundLaunchPending = false;
+        transferringGroundConsole = false;
         observed = false;
         Append("完成", "地面建筑已装配成船，点火升空。");
-        if (!driveAfterLaunch) return;
+        if (!driveAfterLaunch) return true;
         driveAfterLaunch = false;
-        if (session != null && session.EnterConsole(actor, pieceId))
+        // 驾驶预约在服务端随点火原子接管，客户端只等待同一次权威乘员快照。
+        if (session.State.Passengers.Any(value => value.ProfileId == actor.ProfileName && value.ConsolePieceId == pieceId))
         {
             Append("完成", "已进入驾驶位，Esc 离开驾驶。");
             RenderOutput();
@@ -326,6 +356,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         }
         else
             Append("拒绝", "已点火起飞，进入驾驶失败；请靠近已供电的控制台重新进入。");
+        return true;
     }
 
     private bool TryCoordinates(string[] parts, out Vector2 point)
@@ -544,6 +575,19 @@ public sealed class ShipPanelSession : IMachinePanelSession
 
     private void RefreshGroundConsole()
     {
+        if (groundLaunchPending)
+        {
+            if (CompleteGroundLaunch()) { if (IsOpen) RefreshScreens(true); return; }
+            if (Time.unscaledTime < groundLaunchDeadline)
+            {
+                status.text = Text("正在等待点火结果与船体同步。");
+                RenderOutput();
+                return;
+            }
+            groundLaunchPending = false;
+            transferringGroundConsole = false;
+            Append("拒绝", "点火结果等待超时，请检查连接后重新打开控制台。");
+        }
         if (!ShipGroundAssembly.TryGetGroundConsole(actor, groundConsoleGuid, out MachineEntity console))
         { Close(); return; }
         landingButton.interactable = false;

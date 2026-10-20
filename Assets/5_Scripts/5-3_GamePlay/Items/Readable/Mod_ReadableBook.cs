@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
@@ -59,7 +59,7 @@ public sealed partial class ReadableBookInstanceSnapshot
 /// 通用可阅读物品模块。配置页数是书籍的初始容量；实例编辑内容与扩页状态独立保存在该本物品上。
 /// 书写材料与纸张通过物品标签配置，煤炭、木炭及 MOD 染料可共用同一库存事务接口。
 /// </summary>
-public sealed class Mod_ReadableBook : Module
+public sealed class Mod_ReadableBook : Module, ILocalItemUsePresentation
 {
     #region 配置与状态
 
@@ -174,6 +174,8 @@ public sealed class Mod_ReadableBook : Module
     #region 阅读、书写与扩页
 
     /// <summary>只有本地玩家当前手持这件物品时，使用动作才打开阅读界面。</summary>
+    public void PresentLocalUse() => Act();
+
     public override void Act()
     {
         if (!CanRead(item?.Owner))

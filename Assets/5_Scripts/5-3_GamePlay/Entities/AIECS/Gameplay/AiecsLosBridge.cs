@@ -25,10 +25,11 @@ namespace FlatWorld.AIECS.Gameplay
         private uint buildingRevision;
         private uint sightBlockingRebuildRevision;
         private NativeArray<byte> cells;
+        private readonly IDisposable occupancySubscription;
         public long ChunkCopies { get; private set; }
 
         /// <summary>一个快照订阅一次占地通知，与 AI 数量无关。</summary>
-        public AiecsLosBridge() { BuildingOccupancyRegistry.CellChanged += OnBuildingChanged; }
+        public AiecsLosBridge() { occupancySubscription = BuildingOccupancyRegistry.SubscribeCells(OnBuildingChanged); }
 
         /// <summary>占地更新只登记所在块；Native 写入延迟到上一批读取完成以后。</summary>
         private void OnBuildingChanged(Vector2Int cell) => dirtyBuildings.Add(FlowNavigationMath.ChunkOf(new int2(cell.x, cell.y), domain));
@@ -82,7 +83,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>只释放本桥的遮挡数组，导航索引由原缓存管理。</summary>
         public void Dispose()
         {
-            BuildingOccupancyRegistry.CellChanged -= OnBuildingChanged;
+            occupancySubscription.Dispose();
             if (cells.IsCreated) cells.Dispose(); cells = default; stamps.Clear(); dirtyBuildings.Clear();
         }
 

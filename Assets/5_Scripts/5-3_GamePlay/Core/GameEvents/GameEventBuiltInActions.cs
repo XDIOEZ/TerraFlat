@@ -528,9 +528,9 @@ namespace FlatWorld.Gameplay.Events
         public void Suspend(GameEventActionContext context, JObject parameters, GameEventActionRuntimeSaveData state)
         {
             // 清理只访问已存在的天气管理器，禁止销毁阶段自动创建新对象。
-            WeatherMgr weather = WeatherMgr.ExistingInstance;
-            if (weather != null)
-                weather.ClearGameEventWeather(context.Definition.Id);
+            if (!GameplayWorldRegistry.TryGet(context.ActiveWorldKey, out _)) return;
+            using var worldScope = GameplayWorldRegistry.UseWorld(context.ActiveWorldKey);
+            WeatherMgr.GetForWorld(context.ActiveWorldKey, false)?.ClearGameEventWeather(context.Definition.Id);
         }
 
         private static GameEventActionStatus Apply(
@@ -558,8 +558,11 @@ namespace FlatWorld.Gameplay.Events
                 state.RuntimeDataJson = JsonConvert.SerializeObject(runtime, Formatting.None);
                 return GameEventActionStatus.Completed;
             }
-            bool applied = WeatherMgr.Instance != null &&
-                           WeatherMgr.Instance.ApplyGameEventWeather(
+            if (!GameplayWorldRegistry.TryGet(context.ActiveWorldKey, out _)) return GameEventActionStatus.Running;
+            using var worldScope = GameplayWorldRegistry.UseWorld(context.ActiveWorldKey);
+            WeatherMgr manager = WeatherMgr.GetForWorld(context.ActiveWorldKey);
+            bool applied = manager != null &&
+                           manager.ApplyGameEventWeather(
                                context.Definition.Id,
                                weather,
                                Mathf.Clamp01(value.Intensity),

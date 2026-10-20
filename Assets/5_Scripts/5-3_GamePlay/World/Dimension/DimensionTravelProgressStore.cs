@@ -18,7 +18,6 @@ public static partial class DimensionTravelProgressStore
     private const string NamespaceKey = "flatworld.dimensions";
     private const string LastPositionsKey = "lastPositions";
     private const string PortalAnchorsKey = "portalAnchors";
-    private const string ActivePortalAnchorKey = "activePortalAnchor";
 
     private static readonly Vector2Int[] CaveExitOffsets =
     {
@@ -71,21 +70,23 @@ public static partial class DimensionTravelProgressStore
     #region 入口锚点
 
     public static DimensionPortalAnchor GetOrCreateCaveAnchor(
-        Data_Player playerData,
+        GameSaveData save,
         WorldAddress surfaceAddress,
         Item surfaceEntrance,
         WorldAddress caveAddress,
-        DimensionDefinition caveDefinition)
+        DimensionDefinition caveDefinition,
+        bool commit = true)
     {
-        if (playerData == null || surfaceEntrance?.itemData == null || !surfaceAddress.IsSurface ||
+        if (save == null || surfaceEntrance?.itemData == null || !surfaceAddress.IsSurface ||
             caveAddress.DimensionId != WorldAddress.CaveDimensionId)
         {
             return null;
         }
 
         int entranceGuid = surfaceEntrance.itemData.Guid;
+        Vector3 entrancePosition = WorldLocalPresentation.ToLogical(surfaceEntrance.transform.position);
         string anchorId = BuildAnchorId(surfaceAddress.WorldKey, entranceGuid);
-        JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
+        JObject dimensionData = ItemSpecialDataJsonStore.ReadRoot(save.DimensionStateJson);
         JObject anchors = dimensionData[PortalAnchorsKey] as JObject ?? new JObject();
         // 重建只更换地表实体 GUID，不更换这个格子已经绑定的矿洞出口。
         DimensionPortalAnchor anchor = ParseAnchor(anchorId, anchors[anchorId] as JObject);
@@ -96,7 +97,7 @@ public static partial class DimensionTravelProgressStore
                 DimensionPortalAnchor candidate = ParseAnchor(property.Name, property.Value as JObject);
                 if (candidate == null || candidate.SurfaceWorldKey != surfaceAddress.WorldKey ||
                     candidate.CaveWorldKey != caveAddress.WorldKey ||
-                    Vector2Int.FloorToInt(candidate.SurfaceEntrancePosition) != Vector2Int.FloorToInt(surfaceEntrance.transform.position))
+                    Vector2Int.FloorToInt(candidate.SurfaceEntrancePosition) != Vector2Int.FloorToInt(entrancePosition))
                     continue;
                 anchor = candidate;
                 anchorId = candidate.AnchorId;
@@ -112,27 +113,25 @@ public static partial class DimensionTravelProgressStore
 
         anchor.SurfaceWorldKey = surfaceAddress.WorldKey;
         anchor.SurfaceEntranceGuid = entranceGuid;
-        anchor.SurfaceEntrancePosition = surfaceEntrance.transform.position;
+        anchor.SurfaceEntrancePosition = entrancePosition;
         anchor.CaveWorldKey = caveAddress.WorldKey;
         anchors[anchorId] = SerializeAnchor(anchor);
         dimensionData[PortalAnchorsKey] = anchors;
-        dimensionData[ActivePortalAnchorKey] = anchorId;
-        ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
-        InvalidatePlayerReadCache(playerData);
+        if (commit) save.DimensionStateJson = dimensionData.ToString(Newtonsoft.Json.Formatting.None);
         return anchor;
     }
 
     public static bool TryGetAnchorByCaveExit(
-        Data_Player playerData,
+        GameSaveData save,
         WorldAddress caveAddress,
         Item caveExit,
         out DimensionPortalAnchor anchor)
     {
         anchor = null;
-        if (playerData == null || caveExit?.itemData == null || caveAddress.DimensionId != WorldAddress.CaveDimensionId)
+        if (save == null || caveExit?.itemData == null || caveAddress.DimensionId != WorldAddress.CaveDimensionId)
             return false;
 
-        JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
+        JObject dimensionData = ItemSpecialDataJsonStore.ReadRoot(save.DimensionStateJson);
         if (dimensionData[PortalAnchorsKey] is not JObject anchors)
             return false;
 
@@ -145,12 +144,7 @@ public static partial class DimensionTravelProgressStore
                 continue;
             }
 
-            candidate.CaveExitPosition = caveExit.transform.position;
-            anchors[property.Name] = SerializeAnchor(candidate);
-            dimensionData[PortalAnchorsKey] = anchors;
-            dimensionData[ActivePortalAnchorKey] = property.Name;
-            ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
-            InvalidatePlayerReadCache(playerData);
+            candidate.CaveExitPosition = WorldLocalPresentation.ToLogical(caveExit.transform.position);
             anchor = candidate;
             return true;
         }
@@ -158,20 +152,18 @@ public static partial class DimensionTravelProgressStore
         return false;
     }
 
-    public static void UpdateCaveExit(Data_Player playerData, DimensionPortalAnchor anchor, Item caveExit)
+    public static void UpdateCaveExit(GameSaveData save, DimensionPortalAnchor anchor, Item caveExit)
     {
-        if (playerData == null || anchor == null || caveExit?.itemData == null || string.IsNullOrWhiteSpace(anchor.AnchorId))
+        if (save == null || anchor == null || caveExit?.itemData == null || string.IsNullOrWhiteSpace(anchor.AnchorId))
             return;
 
         anchor.CaveExitGuid = caveExit.itemData.Guid;
-        anchor.CaveExitPosition = caveExit.transform.position;
-        JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
+        anchor.CaveExitPosition = WorldLocalPresentation.ToLogical(caveExit.transform.position);
+        JObject dimensionData = ItemSpecialDataJsonStore.ReadRoot(save.DimensionStateJson);
         JObject anchors = dimensionData[PortalAnchorsKey] as JObject ?? new JObject();
         anchors[anchor.AnchorId] = SerializeAnchor(anchor);
         dimensionData[PortalAnchorsKey] = anchors;
-        dimensionData[ActivePortalAnchorKey] = anchor.AnchorId;
-        ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
-        InvalidatePlayerReadCache(playerData);
+        save.DimensionStateJson = dimensionData.ToString(Newtonsoft.Json.Formatting.None);
     }
 
     private static string BuildAnchorId(string surfaceWorldKey, int entranceGuid)

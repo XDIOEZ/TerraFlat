@@ -23,10 +23,16 @@ public static partial class MachineWorld
         // 先复制世界键，爆炸与加工捕获修改档案时不会破坏当前枚举。
         foreach (string key in backgroundWorldKeys)
         {
+            bool loaded = GameplayWorldRegistry.TryGet(key, out _);
+            using var worldScope = loaded ? GameplayWorldRegistry.UseWorld(key) : null;
             using var lease = UseScope(key);
             ScopeState background = scope;
             background.BackgroundSimulation = true;
-            try { DroppedItemService.TickColdWorld(key, seconds); Tick(seconds); }
+            try
+            {
+                if (!loaded) DroppedItemService.TickColdWorld(key, seconds);
+                Tick(seconds);
+            }
             finally { background.BackgroundSimulation = false; }
         }
     }

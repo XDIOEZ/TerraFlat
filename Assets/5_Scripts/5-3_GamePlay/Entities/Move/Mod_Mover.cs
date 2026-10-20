@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UltEvents;
@@ -194,6 +194,7 @@ public partial class Mod_Mover : Module
 
     protected override void OnLoad()
     {
+        networkAuthorityMovement = networkMoving = networkRunning = false;
         ClearDrivenMotion();
         ModDataMemoryPack.ReadData(ref Data);
         bool persistedRunState = Data.isRunning;
@@ -314,6 +315,7 @@ public partial class Mod_Mover : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (networkAuthorityMovement) { TickNetworkMovementCosts(deltaTime); return; }
         if (HasDrivenMotion)
         {
             if (IsSurfaceMotionAvailable && inputController?.IsGameplayInputLocked != true) { ApplyDrivenMotion(); return; }
@@ -355,7 +357,7 @@ public partial class Mod_Mover : Module
         {
             MoveByInput(input, deltaTime);
 
-            if (stamina != null)
+            if (stamina != null && FlatWorld.Networking.GameNetwork.HasStateAuthority)
             {
                 float consumePerSecond = IsRunning ? RunStaminaConsume : MoveStaminaConsume;
                 string sourceId = IsRunning

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using MemoryPack;
 using FlatWorld.Spaceflight;
@@ -9,8 +9,10 @@ using FlatWorld.Gameplay.InventoryFeedback;
 
 namespace FlatWorld.Networking.Gameplay
 {
-    public struct NetworkMachineOperationRequest : NetworkMessage
+    public struct NetworkMachineOperationRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public uint Token;
         public int EntityId;
         public string Operation;
@@ -18,8 +20,10 @@ namespace FlatWorld.Networking.Gameplay
         public string ShipId;
     }
 
-    public struct NetworkMachineTransferRequest : NetworkMessage
+    public struct NetworkMachineTransferRequest : NetworkMessage, INetworkWorldRequest
     {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision;
         public uint Token;
         public MachineInventoryAddress Source;
         public MachineInventoryAddress Target;
@@ -68,8 +72,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             StartContainerServerBridge();
             StartFluidServerBridge();
-            NetworkServer.RegisterHandler<NetworkMachineOperationRequest>(OnMachineOperation, true);
-            NetworkServer.RegisterHandler<NetworkMachineTransferRequest>(OnMachineTransfer, true);
+            NetworkServer.RegisterHandler<NetworkMachineOperationRequest>(NetworkGameplayWorldScope.Wrap<NetworkMachineOperationRequest>(OnMachineOperation), true);
+            NetworkServer.RegisterHandler<NetworkMachineTransferRequest>(NetworkGameplayWorldScope.Wrap<NetworkMachineTransferRequest>(OnMachineTransfer), true);
         }
 
         private void StopMachineServerBridge()
@@ -113,7 +117,7 @@ namespace FlatWorld.Networking.Gameplay
             uint token = NextMachineToken();
             if (IsInventoryMachineOperation(operation)) pendingMachineInventoryOperation = token;
             NetworkClient.Send(new NetworkMachineOperationRequest
-            { Token = token, EntityId = id, Operation = operation, Argument = argument ?? "", ShipId = CurrentRequestShipId() });
+            { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = token, EntityId = id, Operation = operation, Argument = argument ?? "", ShipId = CurrentRequestShipId() });
             return true;
         }
 
@@ -225,7 +229,7 @@ namespace FlatWorld.Networking.Gameplay
                     screenOrigin: InventoryQuickTransferFeedbackEvents.GetScreenOrigin(source, sourceIndex)) : null;
             machineTransferDeadline = Time.unscaledTime + 8f;
             NetworkClient.Send(new NetworkMachineTransferRequest
-            {
+            { RealmRevision = NetworkGameplayWorldScope.LocalRevision,
                 Token = pendingMachineTransfer, Source = from, Target = to, SourceSlot = sourceIndex, TargetSlot = targetIndex,
                 ExpectedSourceGuid = item.Guid, ExpectedSourceId = item.IDName,
                 ExpectedTargetGuid = destination?.Guid ?? 0, ExpectedTargetId = destination?.IDName ?? "", Operation = operation, Amount = amount,
@@ -338,7 +342,7 @@ namespace FlatWorld.Networking.Gameplay
             if (string.IsNullOrEmpty(shipId))
             {
                 if (player.IsInSpace) return false;
-                scope = MachineWorld.UseScope(player.CorePlayer.gameObject.scene.name);
+                scope = MachineWorld.UseScope(player.CorePlayer.Data.CurrentSceneName);
                 return true;
             }
             if (!player.TryGetSpaceObserver(out SpaceNetworkObserver observer) || !observer.InSpace || SpaceSession.Current?.GetShip(shipId) == null) return false;

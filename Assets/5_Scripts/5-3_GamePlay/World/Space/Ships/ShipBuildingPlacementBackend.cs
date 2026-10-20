@@ -66,7 +66,8 @@ namespace FlatWorld.Spaceflight
             ship = null; floor = null; local = default; return false;
         }
 
-        public ShipPieceState AddPiece(ItemData data, Vector2 displayPosition, int quarterTurns, out ShipState ship, bool registerMachine = true)
+        public ShipPieceState AddPiece(ItemData data, Vector2 displayPosition, int quarterTurns, out ShipState ship,
+            bool registerMachine = true, string surfaceWorldKey = null)
         {
             ShipPartConfiguration config = ResolvePartConfiguration(data);
             Mod_Building.TryReadBuildingData(data, out _, out Mod_Building.Building_Data building);
@@ -74,12 +75,14 @@ namespace FlatWorld.Spaceflight
             ResolvePlacedPieceHealth(data, config, machine, building, out double health, out double maximumHealth, out bool rebuilt);
             int width = Math.Max(1, Math.Max(config.FootprintWidth, building?.FootprintWidth ?? 1));
             int height = Math.Max(1, Math.Max(config.FootprintHeight, building?.FootprintHeight ?? 1));
-            TryGetSupport(displayPosition, out ship, out _, out Vector2 local);
+            Vector2 local;
+            if (surfaceWorldKey == null) TryGetSupport(displayPosition, out ship, out _, out local);
+            else TryGetGroundAssemblySupport(surfaceWorldKey, displayPosition, out ship, out local);
             bool created = false;
             if (ship == null && config.Kind == ShipPieceKind.Floor)
             {
-                ship = FindAdjacentShip(displayPosition, width, height, quarterTurns, out local);
-                if (ship == null) { ship = CreateShip(displayPosition, out local); created = true; }
+                ship = FindAdjacentShip(displayPosition, width, height, quarterTurns, out local, surfaceWorldKey);
+                if (ship == null) { ship = CreateShip(displayPosition, out local, surfaceWorldKey); created = true; }
             }
             if (ship == null) throw new InvalidOperationException("设备需要完整的飞船地板支撑。");
             int cellX = Mathf.FloorToInt(local.x / (float)ship.CellSizeMeters), cellY = Mathf.FloorToInt(local.y / (float)ship.CellSizeMeters);
@@ -181,17 +184,37 @@ namespace FlatWorld.Spaceflight
             return FluidUnits.IsFinite(defense) ? Math.Max(0d, defense) : 0d;
         }
 
-        private ShipState FindAdjacentShip(Vector2 displayPosition, int width, int height, int quarterTurns, out Vector2 local)
+        // 地面装配按权威世界查询，不依赖主机当前看见哪一个场景。
+        private bool TryGetGroundAssemblySupport(string world, Vector2 logical, out ShipState ship, out Vector2 local)
         {
-            SpaceVector2 absolute = IsSpaceView ? UnprojectPosition(displayPosition) : new SpaceVector2(displayPosition.x, displayPosition.y);
             foreach (ShipState candidate in State.Ships)
             {
-                if (!IsVisible(candidate)) continue;
-                SpaceVector2 relative = IsSpaceView ? SpaceSectorCoordinates.Relative(ViewSector, absolute, candidate.Sector) : absolute;
-                Vector2 ground = IsSpaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
-                if (!IsSpaceView) ground.y -= (float)ShipSurfaceState.VisualRise(GetFlight(candidate.ShipId));
+                ShipFlightState flight = GetFlight(candidate.ShipId);
+                if (candidate.IsWreck || flight == null || flight.Phase == ShipFlightPhase.Cruising || flight.SurfaceWorldKey != world) continue;
+                Vector2 position = WorldLocalPresentation.ProjectPosition(logical, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
+                ShipGeometry.WorldToLocal(candidate, position.x, position.y, out double x, out double y);
+                if (!ShipAtmosphereService.HasFloor(candidate, (int)Math.Floor(x / candidate.CellSizeMeters),
+                    (int)Math.Floor(y / candidate.CellSizeMeters))) continue;
+                ship = candidate; local = new Vector2((float)x, (float)y); return true;
+            }
+            ship = null; local = default; return false;
+        }
+
+        private ShipState FindAdjacentShip(Vector2 displayPosition, int width, int height, int quarterTurns, out Vector2 local,
+            string surfaceWorldKey = null)
+        {
+            bool spaceView = surfaceWorldKey == null && IsSpaceView;
+            SpaceVector2 absolute = spaceView ? UnprojectPosition(displayPosition) : new SpaceVector2(displayPosition.x, displayPosition.y);
+            foreach (ShipState candidate in State.Ships)
+            {
+                ShipFlightState flight = GetFlight(candidate.ShipId);
+                if (surfaceWorldKey == null ? !IsVisible(candidate) : candidate.IsWreck ||
+                    flight == null || flight.Phase == ShipFlightPhase.Cruising || flight.SurfaceWorldKey != surfaceWorldKey) continue;
+                SpaceVector2 relative = spaceView ? SpaceSectorCoordinates.Relative(ViewSector, absolute, candidate.Sector) : absolute;
+                Vector2 ground = spaceView ? default : WorldLocalPresentation.ProjectPosition(displayPosition, new Vector2((float)candidate.PositionX, (float)candidate.PositionY));
+                if (!spaceView && surfaceWorldKey == null) ground.y -= (float)ShipSurfaceState.VisualRise(flight);
                 double x, y;
-                if (IsSpaceView) PresentationWorldToLocal(candidate, new SpaceSectorPosition(ViewSector, absolute), out x, out y);
+                if (spaceView) PresentationWorldToLocal(candidate, new SpaceSectorPosition(ViewSector, absolute), out x, out y);
                 else ShipGeometry.WorldToLocal(candidate, ground.x, ground.y, out x, out y);
                 var proposal = new ShipPieceState { CellX = (int)Math.Floor(x / candidate.CellSizeMeters),
                     CellY = (int)Math.Floor(y / candidate.CellSizeMeters), Width = width,
@@ -211,11 +234,12 @@ namespace FlatWorld.Spaceflight
         private static bool SameOccupancyLayer(ShipPieceState left, ShipPieceState right) =>
             left.Kind == ShipPieceKind.Floor || right.Kind == ShipPieceKind.Floor
                 ? left.Kind == right.Kind : left.Layer == right.Layer;
-        private ShipState CreateShip(Vector2 position, out Vector2 local)
+        private ShipState CreateShip(Vector2 position, out Vector2 local, string surfaceWorldKey = null)
         {
-            string world = SceneManager.GetActiveScene().name;
+            string world = surfaceWorldKey ?? SceneManager.GetActiveScene().name;
+            bool spaceView = surfaceWorldKey == null && IsSpaceView;
             var ship = new ShipState { PositionX = Math.Floor(position.x), PositionY = Math.Floor(position.y), WorldAddress = world, PlatformKind = ShipPlatformKind.Land };
-            if (IsSpaceView)
+            if (spaceView)
             {
                 SpaceSectorPosition absolute = UnprojectSectorPosition(position);
                 ship.Sector = absolute.Sector; ship.WorldAddress = SpaceSectorCoordinates.SceneKey(ship.Sector);
@@ -228,7 +252,7 @@ namespace FlatWorld.Spaceflight
             {
                 ShipId = ship.ShipId, BodyId = bodyId, SurfaceWorldKey = world,
                 SurfaceX = position.x, SurfaceY = position.y,
-                Phase = IsSpaceView ? ShipFlightPhase.Cruising : ShipFlightPhase.Landed,
+                Phase = spaceView ? ShipFlightPhase.Cruising : ShipFlightPhase.Landed,
                 Motion = new SpaceMotionState { Sector = ship.Sector, PositionMeters = new SpaceVector2(ship.PositionX, ship.PositionY) },
                 LandingRandomState = unchecked((ulong)(uint)owner.Seed * 6364136223846793005UL + (uint)State.Ships.Count) | 1UL
             });

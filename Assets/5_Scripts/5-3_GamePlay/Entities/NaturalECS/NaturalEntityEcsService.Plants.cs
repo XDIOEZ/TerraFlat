@@ -32,16 +32,17 @@ namespace FlatWorld.NaturalEntities
         }
 
         private static readonly List<int> endedPlants = new();
-        private static readonly HashSet<int> pendingPublications = new();
+        private static HashSet<int> pendingPublications => State.pendingPublications;
         private static readonly List<int> publicationBatch = new();
         private static readonly HashSet<int> selectiveBodyIds = new();
-        private static readonly HashSet<Record> canopySources = new();
+        private static HashSet<Record> canopySources => State.canopySources;
         private static readonly List<Record> canopyBatch = new();
-        private static ulong lastCapabilityVersion = ulong.MaxValue;
-        private static readonly Dictionary<Vector2Int, int> cultivatedCells = new();
+        private static ulong lastCapabilityVersion { get => State.lastCapabilityVersion; set => State.lastCapabilityVersion = value; }
+        private static Dictionary<Vector2Int, int> cultivatedCells => State.cultivatedCells;
 
         public static void BindRemovalHandler(NaturalEntityHandle handle, Action<NaturalEntityHandle> removed)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle)) throw new InvalidOperationException("植物实体已失效。");
             records[handle.Id].Removed = removed;
         }
@@ -49,6 +50,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>MOD 可在主线程通过真实 Entity 组合额外组件，不需要任何植物外壳。</summary>
         public static bool TryGetEntity(NaturalEntityHandle handle, out Entity entity)
         {
+            using var handleScope = UseHandle(handle);
             entity = Contains(handle) ? simulation.GetEntity(handle.Id) : Entity.Null;
             return entity != Entity.Null;
         }
@@ -414,6 +416,7 @@ namespace FlatWorld.NaturalEntities
         /// <summary>外部能力修改生命、位置或外观后通知桥接，只提交该实体的变化。</summary>
         public static void NotifyChanged(NaturalEntityHandle handle)
         {
+            using var handleScope = UseHandle(handle);
             if (!Contains(handle)) return;
             simulation.InvalidateBodySnapshot(handle.Id);
             Record record = records[handle.Id];

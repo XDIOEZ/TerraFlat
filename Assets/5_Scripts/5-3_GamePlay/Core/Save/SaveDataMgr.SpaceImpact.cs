@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FlatWorld.Combat;
@@ -35,7 +35,7 @@ public partial class SaveDataMgr
         WorldTopologyDomain domain = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
         float2 canonicalCenter = domain.Normalize(new float2(center.x, center.y));
         center = new Vector2(canonicalCenter.x, canonicalCenter.y);
-        bool visible = SceneManager.GetActiveScene().name == address.WorldKey;
+        bool visible = GameplayWorldRegistry.CurrentScene.name == address.WorldKey;
         var processed = new HashSet<int>();
         var records = new HashSet<ChunkSaveRecord>();
 

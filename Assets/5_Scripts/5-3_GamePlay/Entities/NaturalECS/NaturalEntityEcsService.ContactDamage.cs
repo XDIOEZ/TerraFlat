@@ -14,9 +14,9 @@ namespace FlatWorld.NaturalEntities
             public ContactDamageRuntime ContactDamage;
         }
 
-        private static readonly HashSet<Record> contactDamageSources = new();
+        private static HashSet<Record> contactDamageSources => State.contactDamageSources;
         private static readonly List<Record> contactDamageBatch = new();
-        private static float contactDamageElapsed;
+        private static float contactDamageElapsed { get => State.contactDamageElapsed; set => State.contactDamageElapsed = value; }
 
         private static void RefreshContactDamageSource(Record record)
         {

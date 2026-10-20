@@ -1,11 +1,13 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using MemoryPack;
 using Mirror;
 using UnityEngine;
 
 namespace FlatWorld.Networking.Gameplay
 {
-    public struct NetworkSpacesuitHelmetRequest : NetworkMessage { public uint Token; public int SuitGuid; public bool On; }
+    public struct NetworkSpacesuitHelmetRequest : NetworkMessage, INetworkWorldRequest {
+        public uint RealmRevision;
+        public uint WorldRevision => RealmRevision; public uint Token; public int SuitGuid; public bool On; }
     public struct NetworkSpacesuitHelmetResponse : NetworkMessage { public uint Token; public int SuitGuid; public byte[] State; }
     public struct NetworkAtmosphereState : NetworkMessage { public string WorldKey; public byte[] State; }
     public struct NetworkPressureExplosion : NetworkMessage { public byte[] Event; }
@@ -18,7 +20,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly HashSet<ulong> receivedPressureExplosions = new();
         private void StartFluidServerBridge()
         {
-            NetworkServer.RegisterHandler<NetworkSpacesuitHelmetRequest>(OnSuitHelmet, true);
+            NetworkServer.RegisterHandler<NetworkSpacesuitHelmetRequest>(NetworkGameplayWorldScope.Wrap<NetworkSpacesuitHelmetRequest>(OnSuitHelmet), true);
             PressureExplosionQueue.Presented += BroadcastPressureExplosion;
         }
         private void StopFluidServerBridge()
@@ -44,7 +46,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool SendSuitHelmet(Player actor, int guid, bool on)
         {
             if (!NetworkClient.ready || NetworkServer.active || actor == null || guid == 0) return false;
-            NetworkClient.Send(new NetworkSpacesuitHelmetRequest { Token = NextMachineToken(), SuitGuid = guid, On = on });
+            NetworkClient.Send(new NetworkSpacesuitHelmetRequest { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = NextMachineToken(), SuitGuid = guid, On = on });
             return true;
         }
         private void OnSuitHelmet(NetworkConnectionToClient connection, NetworkSpacesuitHelmetRequest request)
@@ -86,8 +88,8 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (!connection.isReady || connection.identity == null) continue;
                 Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-                if (actor == null || !AtmosphereService.TryGetForWorld(actor.gameObject.scene.name, out AtmosphereState atmosphere)) continue;
-                connection.Send(new NetworkAtmosphereState { WorldKey = actor.gameObject.scene.name,
+                if (actor == null || !AtmosphereService.TryGetForWorld(actor.Data.CurrentSceneName, out AtmosphereState atmosphere)) continue;
+                connection.Send(new NetworkAtmosphereState { WorldKey = actor.Data.CurrentSceneName,
                     State = MemoryPackSerializer.Serialize(atmosphere) });
             }
         }

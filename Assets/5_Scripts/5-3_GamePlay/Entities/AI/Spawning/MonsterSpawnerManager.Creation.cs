@@ -48,9 +48,10 @@ public partial class MonsterSpawnerManager
         out int actorGuid, Action<Item> beforeLoad, Func<Item, bool> afterLoad,
         SpawnerConfig.SpawnEntry initialization)
     {
+        using var worldScope = EnterOwnedWorld();
         actorGuid = 0;
         if (!PrepareCreatureFactory() || !IsValidCreatureRequest(speciesId, position, GameNetwork.HasStateAuthority,
-                _gameManager != null && _gameManager.IsGameplayReady) ||
+                IsOwnedWorldReady) ||
             GameRes.ExistingInstance == null || !GameRes.ExistingInstance.TryGetActorDefinition(speciesId, out _) ||
             (requestedGuid != 0 && IsCreatureIdentityOccupied(requestedGuid, false)))
             return false;
@@ -127,7 +128,7 @@ public partial class MonsterSpawnerManager
     {
         // 关闭自然生态只停调度，不影响 GM、技能、孵化或蜂巢的显式出生请求。
         _itemManager = ItemMgr.GetInstance();
-        return _itemManager != null && _gameManager != null && _gameManager.IsGameplayReady;
+        return _itemManager != null && IsOwnedWorldReady;
     }
 
     private bool IsValidCreatedCreature(Item candidate, int guid, uint generation)

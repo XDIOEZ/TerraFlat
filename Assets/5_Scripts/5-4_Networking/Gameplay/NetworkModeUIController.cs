@@ -1,4 +1,4 @@
-// AI-Context: 联机控制器的会话逻辑分部；UI 组合与动态界面构建位于同一控制器的 UI partial。
+﻿// AI-Context: 联机控制器的会话逻辑分部；UI 组合与动态界面构建位于同一控制器的 UI partial。
 
 using System;
 using FlatWorld.Localization;
@@ -101,18 +101,29 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnNewWorldReady()
         {
-            if (GameNetwork.Session.State == NetworkSessionState.Offline)
-                StartHost();
+            RefreshInteractableState();
         }
 
         private void StartHost()
         {
             try
             {
+                if (Mirror.NetworkServer.active)
+                {
+                    networkManager.PublishSession(ReadPort());
+                    SetStatus("已公开到局域网，好友可以使用连接地址加入。");
+                    RefreshLanAddresses(); RefreshInteractableState();
+                    return;
+                }
                 networkManager.PrepareHostWorld();
                 NetworkStartResult result = GameNetwork.Session.StartHost(ReadPort());
-                if (!result.Success)
-                    SetStatus(result.Error);
+                if (!result.Success) SetStatus(result.Error);
+                else
+                {
+                    networkManager.PublishSession(ReadPort());
+                    SetStatus("已公开到局域网，好友可以使用连接地址加入。");
+                    RefreshInteractableState();
+                }
             }
             catch (Exception exception)
             {
@@ -133,7 +144,17 @@ namespace FlatWorld.Networking.Gameplay
                 SetStatus(result.Error);
         }
 
-        private void StopSession() => GameNetwork.Session.Stop();
+        private void StopSession()
+        {
+            if (Mirror.NetworkServer.active && IsInWorld)
+            {
+                networkManager.MakeSessionPrivate();
+                SetStatus("已关闭公开，当前世界继续保留本机玩家。");
+                RefreshInteractableState();
+                return;
+            }
+            GameNetwork.Session.Stop();
+        }
 
         private ushort ReadPort()
         {

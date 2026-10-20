@@ -15,7 +15,7 @@ namespace FlatWorld.Networking.Gameplay
         private const string RollStaminaAckCommandName =
             "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdAcknowledgeRollStamina(System.UInt32,System.Single)";
         private const string ItemStateCommandName =
-            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitItemState(System.Byte[])";
+            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdSubmitItemState(System.Byte[],System.UInt32)";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void RegisterRollRuntime() => RegisterRoll();
@@ -47,6 +47,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
             writer.WriteBytesAndSize(payload);
+            writer.WriteUInt(actor.RealmRevision);
             return SendRollCommandBytes(world, actor, botId, ItemStateCommandName, writer);
         }
 

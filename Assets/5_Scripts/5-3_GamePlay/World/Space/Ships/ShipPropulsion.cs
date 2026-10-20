@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Localization;
 using UnityEngine;
@@ -58,7 +58,7 @@ namespace FlatWorld.Spaceflight
         public bool StartNavigation(string consoleId, Vector2 displayPoint)
         {
             SpaceSectorPosition target = UnprojectSectorPosition(displayPoint);
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.StartNavigation, consoleId, position: target)) return true;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.StartNavigation, consoleId, position: target);
             return StartNavigation(consoleId, target);
         }
         public bool StartNavigation(string consoleId, SpaceSectorPosition position)
@@ -95,7 +95,8 @@ namespace FlatWorld.Spaceflight
         }
         public void CancelNavigation(string shipId)
         {
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.CancelNavigation, ResolveConsole(shipId), shipId)) return;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
+            { SubmitLocalIntent(SpaceNetworkIntentKind.CancelNavigation, ResolveConsole(shipId), shipId); return; }
             foreach (ShipNavigationState task in State.Navigation)
                 if (SameAssembly(shipId, task.ShipId)) { task.Active = false; task.Status = "已取消"; }
         }

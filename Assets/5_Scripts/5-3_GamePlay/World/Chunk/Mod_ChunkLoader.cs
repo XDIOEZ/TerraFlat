@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
@@ -319,7 +319,7 @@ public class Mod_ChunkLoader : Module
         if (!CanStreamSurface) return;
         if (_externalStreamingManaged)
         {
-            FlatWorld.Networking.Gameplay.NetworkChunkStreamingCoordinator.RequestImmediateRefresh();
+            FlatWorld.Spaceflight.SpaceNetworkBridge.RequestGroundStreamingRefresh();
             return;
         }
         ChunkMgr chunkManager = ChunkMgr.Instance;
@@ -362,7 +362,7 @@ public class Mod_ChunkLoader : Module
         ResetEffectiveDistancesFromConfig();
         needsChunkUpdate = true;
         if (_externalStreamingManaged)
-            FlatWorld.Networking.Gameplay.NetworkChunkStreamingCoordinator.RequestImmediateRefresh();
+            FlatWorld.Spaceflight.SpaceNetworkBridge.RequestGroundStreamingRefresh();
     }
 
     /// <summary>从持久化配置初始化对称流送窗口。</summary>

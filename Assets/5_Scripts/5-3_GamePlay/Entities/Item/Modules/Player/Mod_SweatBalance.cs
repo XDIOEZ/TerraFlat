@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
@@ -17,7 +17,7 @@ public partial class SweatBalanceState
 }
 
 /// <summary>高温补给规则：30℃以上增加耗水与盐负担，最多降低 25% 体力上限；盐食物在 60 秒内缓慢恢复。</summary>
-public sealed class Mod_SweatBalance : Module, IItemModuleDependencyBinder, IStaminaCapacityModifier
+public sealed class Mod_SweatBalance : Module, IItemModuleDependencyBinder, IStaminaCapacityModifier, IPlayerStateAuthorityModule
 {
     #region 数据与依赖
     public const string ModuleId = "Mod_SweatBalance";

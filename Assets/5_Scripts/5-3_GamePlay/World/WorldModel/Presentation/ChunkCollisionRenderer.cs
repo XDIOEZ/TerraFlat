@@ -208,13 +208,16 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 纯数据实体投影
 
-    private void HandleMachineCellChanged(Vector2Int cell) => MarkDataObstaclesDirty(cell);
+    private void HandleMachineCellChanged(Vector2Int cell)
+    {
+        if (MachineWorld.WorldKey == gameObject.scene.name) MarkDataObstaclesDirty(cell);
+    }
 
     /// <summary>记录最终实体状态，旧/新位置通知在同一物理 Tick 合并，不扫描其它树。</summary>
     private void HandleNaturalBodyChanged(NaturalEntityEcsService.BlockingBodySnapshot body, bool exists,
         NaturalEntityEcsService.PhysicsBodyChangeReason reason)
     {
-        if (BoundChunk?.Terrain == null) return;
+        if (BoundChunk?.Terrain == null || body.WorldKey != gameObject.scene.name) return;
         long key = ChunkObstacleColliderSet.Key(ChunkObstacleColliderSet.NaturalKind, body.RuntimeId);
         if (!obstacleColliders.Contains(key) && !pendingNaturalBodies.ContainsKey(body.RuntimeId) &&
             !TryResolveLocalBox(body.Bounds.center, body.Bounds.extents, out _, out _)) return;
@@ -237,6 +240,7 @@ public sealed class ChunkCollisionRenderer : MonoBehaviour, IChunkViewRenderer
 
     private void HandlePhysicsBodiesReset()
     {
+        if (GameplayWorldRegistry.ExecutionWorldKey != gameObject.scene.name) return;
         pendingNaturalBodies.Clear();
         naturalResetPending = true;
         QueueDataObstacleRebuild(DirtyReason.NaturalReset);

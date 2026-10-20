@@ -15,6 +15,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>保存普通与失巢居民；归巢成员由蜂巢独占保存，避免同一 GUID 出现两份。</summary>
         public void CaptureResidents(MonsterSpawnerSaveData destination)
         {
+            using var worldScope = UseOwnedWorld();
             if (destination == null) return;
             // 未恢复居民也必须保留；World 已销毁时不能用一次空采集覆盖已有冷快照。
             var snapshots = new List<AiecsResidentSaveData>(_pendingRestores);
@@ -87,6 +88,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void LoadResidentSnapshots()
         {
+            using var worldScope = UseOwnedWorld();
             _pendingRestores.Clear();
             List<AiecsResidentSaveData> saved = SaveDataMgr.Instance?.SaveData?.MonsterSpawnerData?.EntitiesResidents;
             if (saved == null) return;

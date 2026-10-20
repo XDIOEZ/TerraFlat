@@ -14,6 +14,7 @@ public sealed partial class GMReflectionConsole
     private Button fixedStructureBuildButton;
     private bool fixedStructuresLoading;
     private bool fixedStructuresLoaded;
+    private bool fixedStructureRequestPending;
 
     // 按钮只消费结构目录，船型和测试物资均由 JSON 模板决定。
     private void BuildFixedStructureSection(Transform content)
@@ -37,7 +38,7 @@ public sealed partial class GMReflectionConsole
         CreateButton(row.transform, "刷新模板", () => LoadFixedStructureTemplates(), 96f, 40f);
         CreateSearchableButton(content, GmPageId.Spawn, "补满附近测试飞船资源",
             "飞船 燃料 电量 氧气 种子 补给 refill ship", RefillNearbyFixedStructure, 44f);
-        AddPageHint(content, "单机地表：在附近已加载的空地生成。JSON 可增加船型；补给恢复设备资源，库存按剩余容量补充，不修复船体或舱气。", 44f);
+        AddPageHint(content, "在附近已加载的地表空地生成，联机由服务器处理。JSON 可增加船型；补给按剩余容量补充，不修复船体或舱气。", 44f);
         RegisterSearchEntry(GmPageId.Spawn, "生成测试飞船",
             "固定结构 飞船 模板 ship structure JSON 生成", row.transform as RectTransform);
     }
@@ -56,7 +57,7 @@ public sealed partial class GMReflectionConsole
                 ? $"{index + 1}/{fixedStructures.Count}  {fixedStructures[index].DisplayName}"
                 : fixedStructuresLoading ? "正在读取结构模板…" : "没有可用的飞船模板";
         if (fixedStructureBuildButton != null)
-            fixedStructureBuildButton.interactable = index >= 0 && !fixedStructuresLoading;
+            fixedStructureBuildButton.interactable = index >= 0 && !fixedStructuresLoading && !fixedStructureRequestPending;
     }
 
     private void LoadFixedStructureTemplates()
@@ -93,19 +94,37 @@ public sealed partial class GMReflectionConsole
 
     private void BuildSelectedFixedStructure()
     {
-        if (fixedStructuresLoading) return;
+        if (fixedStructuresLoading || fixedStructureRequestPending) return;
         FixedStructureDefinition template = fixedStructures.Find(value => value.Id == selectedFixedStructureId);
         if (template == null) { SetStatus("请先选择飞船模板。", Color.yellow); return; }
-        bool success = ShipFixedStructureBuilder.TryBuild(ItemMgr.Instance?.User_Player, template, out _, out string reason);
-        SetStatus(reason, success ? Color.green : Color.yellow);
-        if (success) SetWindowVisible(false);
+        fixedStructureRequestPending = true;
+        SetStatus("正在生成测试飞船…", Color.yellow);
+        RefreshFixedStructureOptions();
+        ShipFixedStructureBuilder.RequestBuild(ItemMgr.Instance?.User_Player, template, (success, reason) =>
+        {
+            if (this == null) return;
+            fixedStructureRequestPending = false;
+            RefreshFixedStructureOptions();
+            SetStatus(reason, success ? Color.green : Color.yellow);
+            if (success) SetWindowVisible(false);
+        });
     }
 
     private void RefillNearbyFixedStructure()
     {
         if (fixedStructuresLoading) { SetStatus("请等待结构模板读取完成。", Color.yellow); return; }
-        bool success = ShipFixedStructureBuilder.TryRefill(ItemMgr.Instance?.User_Player, fixedStructures, out string reason);
-        SetStatus(reason, success ? Color.green : Color.yellow);
+        if (fixedStructureRequestPending) return;
+        // 生成和补给共用在途门禁，只有服务器结果返回后才恢复下一次操作。
+        fixedStructureRequestPending = true;
+        SetStatus("正在补给附近测试飞船…", Color.yellow);
+        RefreshFixedStructureOptions();
+        ShipFixedStructureBuilder.RequestRefill(ItemMgr.Instance?.User_Player, fixedStructures, (success, reason) =>
+        {
+            if (this == null) return;
+            fixedStructureRequestPending = false;
+            RefreshFixedStructureOptions();
+            SetStatus(reason, success ? Color.green : Color.yellow);
+        });
     }
     #endregion
 }

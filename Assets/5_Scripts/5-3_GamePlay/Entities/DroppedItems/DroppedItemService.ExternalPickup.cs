@@ -15,7 +15,8 @@ public static partial class DroppedItemService
         scratch.AddRange(pickers);
         foreach (Mod_ItemPicker picker in scratch)
         {
-            if (picker == null || !picker.CanPickUp || !picker.TryGetDroppedPickupBounds(out Bounds bounds) ||
+            if (picker == null || picker.gameObject.scene.name != GameplayWorldRegistry.ExecutionWorldKey ||
+                !picker.CanPickUp || !picker.TryGetDroppedPickupBounds(out Bounds bounds) ||
                 !bounds.Contains(new Vector3(point.x, point.y, bounds.center.z)) || !picker.CanReachDroppedPoint(point)) continue;
             ItemData candidate = FastCloner.FastCloner.DeepClone(payload);
             if (!picker.TryAcceptDroppedPickup(candidate)) continue;

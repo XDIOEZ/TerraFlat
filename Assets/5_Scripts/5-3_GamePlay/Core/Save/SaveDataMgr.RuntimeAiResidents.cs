@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -13,13 +13,33 @@ public partial class SaveDataMgr
 {
     #region 休眠索引
 
-    private readonly Dictionary<RuntimeWorldAddress, List<ItemData>> parkedRuntimeAiByAddress = new(); // 区块快照。
-    private readonly Dictionary<int, RuntimeWorldAddress> parkedRuntimeAiAddressByGuid = new(); // GUID 反查。
-    private readonly Dictionary<string, int> parkedRuntimeAiSpeciesCounts = new(StringComparer.Ordinal); // 物种居民数。
-    private readonly Dictionary<RuntimeWorldAddress, int> parkedRuntimeAiItemCursors = new(); // 区块内轮转位置。
-    private readonly List<RuntimeWorldAddress> parkedRuntimeAiAddresses = new(); // 全局轮转地址。
-    private readonly Dictionary<RuntimeWorldAddress, int> parkedRuntimeAiAddressIndices = new(); // 常数时间移除索引。
-    private readonly HashSet<RuntimeWorldAddress> parkedRuntimeAiQueryAddresses = new(); // 循环世界范围查询去重。
+    private sealed class ParkedWorldState
+    {
+        public readonly Dictionary<RuntimeWorldAddress, List<ItemData>> ByAddress = new();
+        public readonly Dictionary<int, RuntimeWorldAddress> ByGuid = new();
+        public readonly Dictionary<string, int> Species = new(StringComparer.Ordinal);
+        public readonly Dictionary<RuntimeWorldAddress, int> Cursors = new();
+        public readonly List<RuntimeWorldAddress> Addresses = new();
+        public readonly Dictionary<RuntimeWorldAddress, int> Indices = new();
+        public readonly HashSet<RuntimeWorldAddress> QueryAddresses = new();
+    }
+    private readonly Dictionary<string, ParkedWorldState> parkedWorldStates = new(StringComparer.Ordinal);
+    private ParkedWorldState ParkedWorld
+    {
+        get
+        {
+            string key = GameplayWorldRegistry.ExecutionWorldKey;
+            if (!parkedWorldStates.TryGetValue(key, out ParkedWorldState value)) parkedWorldStates.Add(key, value = new ParkedWorldState());
+            return value;
+        }
+    }
+    private Dictionary<RuntimeWorldAddress, List<ItemData>> parkedRuntimeAiByAddress => ParkedWorld.ByAddress;
+    private Dictionary<int, RuntimeWorldAddress> parkedRuntimeAiAddressByGuid => ParkedWorld.ByGuid;
+    private Dictionary<string, int> parkedRuntimeAiSpeciesCounts => ParkedWorld.Species;
+    private Dictionary<RuntimeWorldAddress, int> parkedRuntimeAiItemCursors => ParkedWorld.Cursors;
+    private List<RuntimeWorldAddress> parkedRuntimeAiAddresses => ParkedWorld.Addresses;
+    private Dictionary<RuntimeWorldAddress, int> parkedRuntimeAiAddressIndices => ParkedWorld.Indices;
+    private HashSet<RuntimeWorldAddress> parkedRuntimeAiQueryAddresses => ParkedWorld.QueryAddresses;
 
     public int ParkedRuntimeAiCount => parkedRuntimeAiAddressByGuid.Count;
 
@@ -287,7 +307,7 @@ public partial class SaveDataMgr
 
     private void UpsertRuntimeAiRecord(RuntimeWorldAddress address, ItemData snapshot)
     {
-        string planetName = SceneManager.GetActiveScene().name;
+        string planetName = GameplayWorldRegistry.CurrentScene.name;
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
@@ -307,7 +327,7 @@ public partial class SaveDataMgr
 
     private void RemoveRuntimeAiRecord(RuntimeWorldAddress address, int guid)
     {
-        string key = BuildChunkKey(SceneManager.GetActiveScene().name, ToChunkName(address));
+        string key = BuildChunkKey(GameplayWorldRegistry.CurrentScene.name, ToChunkName(address));
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record?.ChangedItems == null)
             return;
         record.ChangedItems.RemoveAll(data => data != null && data.Guid == guid);

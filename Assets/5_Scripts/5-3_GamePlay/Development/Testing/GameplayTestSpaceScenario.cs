@@ -671,6 +671,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         session.RestorePassengerPose(CurrentPlayer());
     }
 
+    // 联机假人与单人起飞测试复用同一真实区块租约前置。
+    public IEnumerator PrepareTemplateSite(FixedStructureDefinition template) => PrepareSite(template);
+
     private IEnumerator PrepareSite(FixedStructureDefinition template)
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("地表区块管理器缺失。");

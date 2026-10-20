@@ -1,4 +1,4 @@
-// AI-Context: FlatWorld Mirror 会话与场景生命周期总控；只在服务器创建权威对象并分配玩家身份。
+﻿// AI-Context: FlatWorld Mirror 会话与场景生命周期总控；只在服务器创建权威对象并分配玩家身份。
 
 using System;
 using System.Collections;
@@ -40,6 +40,30 @@ namespace FlatWorld.Networking.Gameplay
             public byte[][] Chunks;
             public int ReceivedChunks;
         }
+
+        #region 单人私有会话与公开加入
+        public bool IsPrivateSession { get; private set; } = true;
+        public void PublishSession(ushort port = 7777)
+        {
+            if (!NetworkServer.active) throw new InvalidOperationException("本机房间尚未启动。");
+            if (!transport.ServerActive())
+            {
+                if (transport is kcp2k.KcpTransport kcp) kcp.Port = port;
+                transport.ServerStart();
+            }
+            NetworkServer.maxConnections = maxConnections;
+            NetworkServer.listen = true;
+            IsPrivateSession = false;
+        }
+        public void MakeSessionPrivate()
+        {
+            IsPrivateSession = true;
+            NetworkServer.listen = false;
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values.ToArray())
+                if (connection is not LocalConnectionToClient) connection.Disconnect();
+            if (transport.ServerActive()) transport.ServerStop();
+        }
+        #endregion
 
         public string GameplayStatus { get; private set; } = "离线";
         public string CurrentPlanetName => currentPlanetName;
@@ -245,6 +269,8 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopServer()
         {
+            IsPrivateSession = true;
+            NetworkServer.listen = true;
             ModRuntimeManager.Instance?.SetWorldMutationAuthority(!NetworkClient.active);
             NetworkServer.UnregisterHandler<NetworkProtocolHello>();
             NetworkServer.UnregisterHandler<NetworkJoinRequest>();
@@ -277,6 +303,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnServerJoinRequest(NetworkConnectionToClient connection, NetworkJoinRequest request)
         {
+            if (IsPrivateSession && connection is not LocalConnectionToClient)
+            { connection.Disconnect(); return; }
             // 每个真实连接只允许启动一次世界快照；重复 Join 不得改名或重复压缩整张地图。
             if (!IsCurrentAuthenticatedConnection(connection) || connection.identity != null ||
                 pendingPlayerNames.ContainsKey(connection.connectionId))

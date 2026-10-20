@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -319,7 +319,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         target = null;
         item = null;
 
-        int hitCount = Physics2D.OverlapPointNonAlloc(worldPosition, hoverInspectorHits);
+        int hitCount = GameplayPhysics2D.OverlapPointNonAlloc(worldPosition, hoverInspectorHits);
         int bestScore = int.MinValue;
         for (int i = 0; i < hitCount; i++)
         {

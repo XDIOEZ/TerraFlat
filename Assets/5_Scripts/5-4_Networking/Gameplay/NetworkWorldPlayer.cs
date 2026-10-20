@@ -1,4 +1,4 @@
-// AI-Context: Mirror 玩家网络聚合器；负责运动、全模块快照、转身、动画与远程手持物，严禁远程副本获得本地输入权。
+﻿// AI-Context: Mirror 玩家网络聚合器；负责运动、全模块快照、转身、动画与远程手持物，严禁远程副本获得本地输入权。
 
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -185,10 +185,11 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             if (isServer)
             {
+                using var worldScope = NetworkGameplayWorldScope.Use(this);
                 if (corePlayer == null) EnsureCorePlayer(isOwned);
+                MaintainPlayerAuthority();
                 SynchronizeGroundObserver();
                 RefreshSpaceAuthority();
-                if (IsInSpace && corePlayer != null && !coreAvatarIsLocal) ItemMgr.Instance?.InitializeNetworkAuthorityPlayer(corePlayer);
                 PublishServerPlayerState();
             }
             UpdateNetworkCombat();
@@ -209,12 +210,12 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
 
-            UpdateRemoteMovement();
+            using (isServer ? NetworkGameplayWorldScope.Use(this) : null) UpdateRemoteMovement();
         }
 
         private void UpdateOwnedMovement()
         {
-            if (pendingTeleportRequest != 0) return;
+            if (pendingTeleportRequest != 0 || authoritativeWorldTransferPending) return;
             if (IsInSpace)
             {
                 UpdateSpaceMovement();
@@ -249,12 +250,12 @@ namespace FlatWorld.Networking.Gameplay
             if (isServer)
                 ApplyMotionOnServer(transform.position, velocity, facingLeft, visualState);
             else
-                CmdSubmitMotion(transform.position, velocity, facingLeft, visualState);
+                CmdSubmitMotion(transform.position, velocity, facingLeft, visualState, authoritativeRealmRevision);
         }
 
         private void UpdateOwnedItemState()
         {
-            if (pendingTeleportRequest != 0) return;
+            if (pendingTeleportRequest != 0 || authoritativeWorldTransferPending) return;
             if (corePlayer == null || !corePlayer.IsInitialized)
                 return;
 
@@ -285,7 +286,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (isServer)
                     ApplyItemStateOnServer(payload);
                 else
-                    CmdSubmitItemState(payload);
+                    CmdSubmitItemState(payload, authoritativeRealmRevision);
             }
             catch (System.Exception exception)
             {
@@ -341,8 +342,10 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         [Command]
-        private void CmdSubmitItemState(byte[] payload)
+        private void CmdSubmitItemState(byte[] payload, uint realmRevision)
         {
+            if (!AcceptWorldSubmission(realmRevision)) return;
+            using var world = NetworkGameplayWorldScope.Use(this);
             ApplyItemStateOnServer(payload);
         }
 
@@ -353,11 +356,13 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             // 拾取已交给服务器结算，确认完成前不能被更早的客户端全量库存覆盖。
-            if (HasServerPickupTransaction) return;
+            if (HasServerPickupTransaction || authoritativeWorldTransferPending) return;
 
             if (!ProtectPendingRollStamina(ref payload)) return;
 
             if (corePlayer == null) return;
+            MaintainPlayerAuthority();
+            if (!coreAvatarIsLocal && !PreserveServerSimulation(ref payload)) return;
             if (!IsInSpace && !authoritativeGroundCombatPending)
             {
                 if (!isOwned)
@@ -371,6 +376,7 @@ namespace FlatWorld.Networking.Gameplay
                     else ApplyRemoteItemState(payload);
                 }
                 authoritativeItemState = payload;
+                PublishServerPlayerState(force: true);
                 return;
             }
             if (!isOwned && !groundCombatFrozen)
@@ -390,8 +396,10 @@ namespace FlatWorld.Networking.Gameplay
             Vector3 requestedPosition,
             Vector2 requestedVelocity,
             bool facingLeft,
-            NetworkPlayerVisualState visualState)
+            NetworkPlayerVisualState visualState, uint realmRevision)
         {
+            if (!AcceptWorldSubmission(realmRevision)) return;
+            using var world = NetworkGameplayWorldScope.Use(this);
             ApplyMotionOnServer(requestedPosition, requestedVelocity, facingLeft, visualState);
         }
 
@@ -402,7 +410,7 @@ namespace FlatWorld.Networking.Gameplay
             bool facingLeft,
             NetworkPlayerVisualState visualState)
         {
-            if (IsInSpace) return;
+            if (IsInSpace || authoritativeWorldTransferPending) return;
             if (!IsValidPosition(requestedPosition))
                 return;
 
@@ -421,6 +429,7 @@ namespace FlatWorld.Networking.Gameplay
                 requestedVelocity = Vector2.zero;
             requestedVelocity = Vector2.ClampMagnitude(requestedVelocity, maxVelocity);
 
+            corePlayer?.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.ApplyNetworkMovementActivity(visualState.IsMoving, visualState.IsRunning);
             authoritativePosition = requestedPosition;
             authoritativeVelocity = requestedVelocity;
             authoritativeFacingLeft = facingLeft;
@@ -565,7 +574,7 @@ namespace FlatWorld.Networking.Gameplay
                 ApplyPickupNonInventoryState(newState);
                 return;
             }
-            if (isOwned && (IsInSpace || authoritativeGroundCombatPending || FlatWorld.Spaceflight.SpaceSession.ClientGroundCombatPending) && corePlayer != null)
+            if (isOwned && corePlayer != null)
                 ApplyOwnedCombatState(newState);
             else if (!isOwned)
                 ApplyRemoteItemState(newState);
@@ -892,7 +901,7 @@ namespace FlatWorld.Networking.Gameplay
                     if (!coreBody.simulated)
                         corePlayer.transform.position = position;
                     coreBody.position = position;
-                    coreBody.velocity = remoteVelocity;
+                    coreBody.velocity = isServer ? Vector2.zero : remoteVelocity;
                 }
                 else
                     corePlayer.transform.position = position;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
@@ -27,7 +27,7 @@ public partial class LiquidContainerState
 /// 可装任意已注册液体的复用容器模块。历史类名仍由现有模块 Prefab 使用，但运行时语义已经是通用液体容器；
 /// 液体属性全部来自 LiquidDefinition，新增 MOD 液体无需新增容器 Item；声明 liquidSurface 的容器 Sprite 由本模块按主色重绘。
 /// </summary>
-public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVessel, IContainerPortProvider
+public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVessel, IContainerPortProvider, ILocalItemUseRequestHandler
 {
     #region 数据与生命周期
 
@@ -258,6 +258,10 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         return item.InHand ? item.Owner == actor :
             item.Owner == null && WorldTopologyRuntime.ShortestDelta(actor.transform.position, item.transform.position).sqrMagnitude <= reach * reach;
     }
+
+    public int LocalUsePriority => 0;
+    public bool CanHandleLocalUse => item?.InHand == true && CanOperate(item.Owner) && !HasCurrentWorldLiquidTarget(item.Owner);
+    public void HandleLocalUse() => OpenPanel(item.Owner);
 
     /// <summary>统一的液体面板打开入口，坩埚模式与普通容器共用同一 UI 事件。</summary>
     public void OpenPanel(Item actor)

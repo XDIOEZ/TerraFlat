@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace FlatWorld.Spaceflight
@@ -70,7 +70,7 @@ namespace FlatWorld.Spaceflight
         // 降落指令在固定步的接触提交阶段生效，按钮点击不直接切场景或改坐标。
         public bool RequestLanding(string consoleId)
         {
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.RequestLanding, consoleId)) return true;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.RequestLanding, consoleId);
             if (!FindPiece(consoleId, out ShipState ship, out ShipPieceState console) ||
                 console.Kind != ShipPieceKind.Console || !IsPowered(ship, console)) return false;
             BodyState body = GetLandingCandidate(ship.ShipId);
@@ -106,7 +106,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool ConfirmNearbyDock(string shipId)
         {
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.ConfirmDock, ResolveConsole(shipId), shipId)) return true;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.ConfirmDock, ResolveConsole(shipId), shipId);
             ShipState ship = GetShip(shipId);
             string consoleId = ResolveConsole(shipId);
             Player actor = ItemMgr.Instance?.User_Player;
@@ -132,7 +132,7 @@ namespace FlatWorld.Spaceflight
         }
         public bool DisconnectDock(string shipId, string portId)
         {
-            if (SubmitLocalIntent(SpaceNetworkIntentKind.DisconnectDock, ResolveConsole(shipId), shipId, portId)) return true;
+            if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.DisconnectDock, ResolveConsole(shipId), shipId, portId);
             foreach (ShipDockingPairState pair in State.Docking)
                 if ((pair.ShipAId == shipId || pair.ShipBId == shipId) &&
                     (pair.PortAId == portId || pair.PortBId == portId))

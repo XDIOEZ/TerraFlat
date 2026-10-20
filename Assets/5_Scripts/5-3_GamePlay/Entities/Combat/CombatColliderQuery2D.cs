@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FlatWorld.Geometry;
 using Unity.Mathematics;
@@ -168,7 +168,7 @@ public sealed class CombatColliderQuery2D : IDisposable
         if (distance <= 0.0001f)
         {
             overlaps.Clear();
-            Physics2D.OverlapBox((Vector2)attack.Center, size, angle, filter, overlaps);
+            GameplayPhysics2D.OverlapBox((Vector2)attack.Center, size, angle, filter, overlaps);
             for (int i = 0; i < overlaps.Count; i++)
             {
                 Collider2D collider = overlaps[i];
@@ -180,7 +180,7 @@ public sealed class CombatColliderQuery2D : IDisposable
 
         casts.Clear();
         Vector2 start = (Vector2)(attack.Center - attack.SweepDelta);
-        Physics2D.BoxCast(start, size, angle, travel / distance, filter, casts, distance);
+        GameplayPhysics2D.BoxCast(start, size, angle, travel / distance, filter, casts, distance);
         for (int i = 0; i < casts.Count; i++)
         {
             RaycastHit2D hit = casts[i];
