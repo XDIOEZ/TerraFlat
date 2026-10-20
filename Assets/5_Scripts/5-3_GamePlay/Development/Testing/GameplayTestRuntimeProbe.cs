@@ -116,7 +116,7 @@ public static partial class GameplayTestRuntimeProbe
             void PressAndRelease()
             {
                 UnityEngine.InputSystem.InputSystem.QueueStateEvent(keyboard,
-                    new UnityEngine.InputSystem.LowLevel.KeyboardState(Key.F));
+                    new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F));
                 UnityEngine.InputSystem.InputSystem.Update();
                 UnityEngine.InputSystem.InputSystem.QueueStateEvent(keyboard,
                     default(UnityEngine.InputSystem.LowLevel.KeyboardState));
