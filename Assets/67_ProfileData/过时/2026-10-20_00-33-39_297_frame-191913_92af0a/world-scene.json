@@ -1,0 +1,6206 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "2026-10-20_00-33-39_297_frame-191913_92af0a",
+  "selectedDisplayFrame": 191913,
+  "capturedAtUtc": "2026-10-19T16:33:40.1964629+00:00",
+  "captureCompletedAtUtc": "2026-10-19T16:33:40.3533840+00:00",
+  "source": "local-editor-loaded-world-at-export",
+  "status": "captured",
+  "editorPlayingAtExport": true,
+  "editorPausedAtExport": true,
+  "unityFrameAtExport": 54531,
+  "activeScene": "sector:0:0/planet:月球",
+  "worldSeed": 1090295771,
+  "loadedScenes": [
+    {
+      "name": "SpacePhysics_-355362_1",
+      "path": "",
+      "loaded": true
+    },
+    {
+      "name": "sector:0:0/planet:月球",
+      "path": "",
+      "loaded": true
+    }
+  ],
+  "environment": {
+    "timeScale": 1.0,
+    "gameTimeSeconds": 533.4929,
+    "weather": "Clear",
+    "weatherIntensity": 0.0
+  },
+  "camera": {
+    "position": {
+      "x": -1006.94873,
+      "y": 13.0172434,
+      "z": -10.0
+    },
+    "orthographic": true,
+    "orthographicSize": 4.927074,
+    "pixelWidth": 2560,
+    "pixelHeight": 1214
+  },
+  "summary": {
+    "worldItemCount": 76,
+    "itemDataCountIncludingContents": 46,
+    "loadedChunkCount": 49,
+    "bySource": [
+      {
+        "name": "natural-ecs",
+        "count": 44
+      },
+      {
+        "name": "loaded-chunk-placement",
+        "count": 30
+      },
+      {
+        "name": "item-gameobject",
+        "count": 2
+      }
+    ],
+    "byDefinition": [
+      {
+        "name": "Mine_Stone",
+        "count": 49
+      },
+      {
+        "name": "Mine_Iron",
+        "count": 25
+      },
+      {
+        "name": "NaturalMineEntrance",
+        "count": 1
+      },
+      {
+        "name": "Player",
+        "count": 1
+      }
+    ]
+  },
+  "chunks": [
+    {
+      "address": "surface:-1024,-96",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-1024,-64",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-1024,-32",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:-1024,0",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:-1024,32",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:-1024,64",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-1024,96",
+      "dimension": "surface",
+      "origin": [
+        -1024,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:-992,-96",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:-992,-64",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-992,-32",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:-992,0",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:-992,32",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:-992,64",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:-992,96",
+      "dimension": "surface",
+      "origin": [
+        -992,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:-960,-96",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:-960,-64",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-960,-32",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:-960,0",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 4
+    },
+    {
+      "address": "surface:-960,32",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-960,64",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:-960,96",
+      "dimension": "surface",
+      "origin": [
+        -960,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:-928,-96",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:-928,-64",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-928,-32",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-928,0",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-928,32",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:-928,64",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:-928,96",
+      "dimension": "surface",
+      "origin": [
+        -928,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:928,-96",
+      "dimension": "surface",
+      "origin": [
+        928,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:928,-64",
+      "dimension": "surface",
+      "origin": [
+        928,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:928,-32",
+      "dimension": "surface",
+      "origin": [
+        928,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:928,0",
+      "dimension": "surface",
+      "origin": [
+        928,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:928,32",
+      "dimension": "surface",
+      "origin": [
+        928,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:928,64",
+      "dimension": "surface",
+      "origin": [
+        928,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:928,96",
+      "dimension": "surface",
+      "origin": [
+        928,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:960,-96",
+      "dimension": "surface",
+      "origin": [
+        960,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:960,-64",
+      "dimension": "surface",
+      "origin": [
+        960,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:960,-32",
+      "dimension": "surface",
+      "origin": [
+        960,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:960,0",
+      "dimension": "surface",
+      "origin": [
+        960,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:960,32",
+      "dimension": "surface",
+      "origin": [
+        960,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 2
+    },
+    {
+      "address": "surface:960,64",
+      "dimension": "surface",
+      "origin": [
+        960,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:960,96",
+      "dimension": "surface",
+      "origin": [
+        960,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:992,-96",
+      "dimension": "surface",
+      "origin": [
+        992,
+        -96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 3
+    },
+    {
+      "address": "surface:992,-64",
+      "dimension": "surface",
+      "origin": [
+        992,
+        -64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:992,-32",
+      "dimension": "surface",
+      "origin": [
+        992,
+        -32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:992,0",
+      "dimension": "surface",
+      "origin": [
+        992,
+        0
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 4
+    },
+    {
+      "address": "surface:992,32",
+      "dimension": "surface",
+      "origin": [
+        992,
+        32
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Active",
+      "presentationStatus": "Bound",
+      "simulationLeases": 1,
+      "presentationLeases": 1,
+      "remainingPlacements": 0
+    },
+    {
+      "address": "surface:992,64",
+      "dimension": "surface",
+      "origin": [
+        992,
+        64
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Bound",
+      "simulationLeases": 0,
+      "presentationLeases": 1,
+      "remainingPlacements": 1
+    },
+    {
+      "address": "surface:992,96",
+      "dimension": "surface",
+      "origin": [
+        992,
+        96
+      ],
+      "dataStatus": "Ready",
+      "simulationStatus": "Dormant",
+      "presentationStatus": "Unbound",
+      "simulationLeases": 0,
+      "presentationLeases": 0,
+      "remainingPlacements": 3
+    }
+  ],
+  "items": [
+    {
+      "guid": 868288931,
+      "definitionId": "NaturalMineEntrance",
+      "sources": [
+        "item-gameobject"
+      ],
+      "position": {
+        "x": -931.5,
+        "y": 15.5,
+        "z": 0.0
+      },
+      "dataRef": "data-1",
+      "gameObject": {
+        "instanceId": -407960,
+        "name": "NaturalMineEntrance",
+        "scene": "sector:0:0/planet:月球",
+        "active": true,
+        "enabled": true,
+        "initialized": true,
+        "updateInterval": 0.0,
+        "ownerGuid": null,
+        "rotation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "runtimeModules": [
+        {
+          "name": "生命值系统模块",
+          "type": "Mod_DamageReceiver",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0
+          }
+        },
+        {
+          "name": "维度入口模块",
+          "type": "Mod_DimensionPortal",
+          "enabled": true,
+          "tickMode": "Disabled",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        }
+      ]
+    },
+    {
+      "guid": 606725931,
+      "definitionId": "Player",
+      "sources": [
+        "item-gameobject"
+      ],
+      "position": {
+        "x": -1006.94873,
+        "y": 13.0172434,
+        "z": 0.0
+      },
+      "dataRef": "data-2",
+      "gameObject": {
+        "instanceId": -402696,
+        "name": "Player",
+        "scene": "sector:0:0/planet:月球",
+        "active": true,
+        "enabled": true,
+        "initialized": true,
+        "updateInterval": 0.0,
+        "ownerGuid": null,
+        "rotation": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0,
+          "w": 1.0
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        }
+      },
+      "runtimeModules": [
+        {
+          "name": "Buff模块",
+          "type": "Mod_BuffManager",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Controller模块",
+          "type": "Mod_GameController",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "CtrlIsDown": false,
+            "EnableGamepadAdapter": true,
+            "UseGamepadVirtualCursor": true,
+            "GamepadCursorSpeed": 1300.0,
+            "GamepadCursorRadius": 120.0,
+            "GamepadCursorDeadZone": 0.08,
+            "CursorClampPadding": 6.0,
+            "MobileCursorMinWorldDistance": 0.0,
+            "MobileCursorMaxWorldDistance": 10.0
+          }
+        },
+        {
+          "name": "GameMCP_LLM",
+          "type": "Mod_GameMCP_LLM",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Mod_DiscardItem",
+          "type": "Mod_DiscardItem",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "parabolaHeight": 2.0,
+            "baseDropDuration": 0.5,
+            "distanceSensitivity": 0.1,
+            "dropRepeatDelay": 0.3,
+            "dropRepeatInterval": 0.1,
+            "defaultMoveMode": "BezierCurve",
+            "bezierOffset": 1.0,
+            "arcHeight": 1.0
+          }
+        },
+        {
+          "name": "Mod_Hand",
+          "type": "Mod_Hand",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Mod_InteractSender",
+          "type": "Mod_InteractSender",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "maxInteractDistance": 2.0
+          }
+        },
+        {
+          "name": "Mod_PlayerAdminController",
+          "type": "Mod_PlayerAdminController",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "timeScale": 1.0,
+            "timeScaleStep": 0.5,
+            "minTimeScale": 0.1,
+            "maxTimeScale": 10.0,
+            "timeScaleHintDuration": 1.0
+          }
+        },
+        {
+          "name": "Mod_PlayerModuleUIController",
+          "type": "Mod_PlayerModuleUIController",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Module_Animator",
+          "type": "Mod_AnimatorController",
+          "enabled": true,
+          "tickMode": "Disabled",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "visualMode": "SingleSprite",
+            "moveDetectSpeed": 0.05,
+            "walkSwingAngle": 8.0,
+            "walkSwingSpeed": 12.0,
+            "walkBobAmount": 0.04,
+            "walkReturnSpeed": 12.0,
+            "runSwingMultiplier": 1.2,
+            "runSpeedMultiplier": 1.5,
+            "idleBreathAmount": 0.008,
+            "attackDashDistance": 0.22,
+            "attackDashForwardTime": 0.06,
+            "attackDashBackTime": 0.12,
+            "autoAttackDirection": true,
+            "attackDirection": {
+              "x": 1.0,
+              "y": 0.0
+            },
+            "jumpHeight": 0.32,
+            "jumpDuration": 0.42,
+            "jumpSquash": 0.08,
+            "deathDuration": 0.76,
+            "deathJumpHeight": 0.35
+          }
+        },
+        {
+          "name": "Module_Bag",
+          "type": "Mod_Inventory",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.25,
+          "runtimeScalars": {},
+          "liveInventories": {
+            "背包模块": {
+              "name": "背包模块",
+              "slotCount": 18,
+              "occupiedSlots": []
+            }
+          }
+        },
+        {
+          "name": "Module_Cam",
+          "type": "Mod_Cam",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "MaxPovValue": 40.0,
+            "MinPovValue": 1.0
+          }
+        },
+        {
+          "name": "Module_ChunkLoder",
+          "type": "Mod_ChunkLoader",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Module_FocusPoint",
+          "type": "Mod_FocusPoint",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Module_Food",
+          "type": "Mod_Food",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "ConsumeKind": "Solid",
+            "ConsumptionEnabled": true,
+            "ConsumeCompleteReplacementItemID": ""
+          }
+        },
+        {
+          "name": "Module_Move",
+          "type": "Mod_Mover",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "speedTransitionDuration": 0.24,
+            "stopTransitionDuration": 0.07,
+            "surfaceAccelerationMultiplier": 1.0,
+            "surfaceDecelerationMultiplier": 1.0,
+            "IsLock": false,
+            "hightReaction": false,
+            "TargetPosition": {
+              "x": 0.0,
+              "y": 0.0
+            },
+            "IsMoving": false,
+            "pushContactRadius": 0.2
+          }
+        },
+        {
+          "name": "Module_Picker",
+          "type": "Mod_ItemPicker",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Module_Setting",
+          "type": "Mod_SettingCanvas",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "PanelName": "设置面板"
+          }
+        },
+        {
+          "name": "Module_Stamina",
+          "type": "Mod_Stamina",
+          "enabled": true,
+          "tickMode": "Disabled",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Module_SweatBalance",
+          "type": "Mod_SweatBalance",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 1.0,
+          "runtimeScalars": {
+            "sweatingTemperature": 30.0,
+            "extraWaterPerSecond": 0.025,
+            "saltBurdenPerSecond": 0.001,
+            "maxCapacityLoss": 0.25,
+            "recoverySeconds": 60.0,
+            "saltRecoveryPerServing": 0.3,
+            "heatstrokeSeconds": 60.0
+          }
+        },
+        {
+          "name": "Module_Temperature",
+          "type": "Mod_Temperature",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.25,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "Module_TileReciver",
+          "type": "Mod_TileEffectReceiver",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "lastGridPos": {}
+          }
+        },
+        {
+          "name": "Module_TurnBack",
+          "type": "Mod_TurnBack",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "DefaultPosition": {
+              "x": 0.5,
+              "y": 0.0
+            },
+            "currentDirection": {
+              "x": -1.0,
+              "y": 0.0
+            },
+            "isTurning": false
+          }
+        },
+        {
+          "name": "PlayerDeathState",
+          "type": "Mod_PlayerDeathState",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "respawnHpRate": 1.0,
+            "dyingPanelPrefabName": "UI_Death"
+          }
+        },
+        {
+          "name": "PlayerTraits",
+          "type": "Mod_PlayerTraits",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "UI_快捷栏",
+          "type": "Mod_HotBar",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "HotBarMaxVolume": 9,
+            "SelectBoxChangeDuration": 0.1
+          }
+        },
+        {
+          "name": "health",
+          "type": "Mod_DamageReceiver",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0
+          }
+        },
+        {
+          "name": "roll",
+          "type": "Mod_Roll",
+          "enabled": true,
+          "tickMode": "EveryFrame",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "Duration": 0.4,
+            "SpeedMultiplier": 2.0,
+            "ColliderScale": 0.5,
+            "Cooldown": 0.0,
+            "StaminaCost": 10.0
+          }
+        },
+        {
+          "name": "大气供氧模块",
+          "type": "Mod_AtmosphericOxygenSupply",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.2,
+          "runtimeScalars": {}
+        },
+        {
+          "name": "工作台模块_手工",
+          "type": "Mod_HandCraftTable",
+          "enabled": true,
+          "tickMode": "Unspecified",
+          "fixedTickInterval": 0.1,
+          "runtimeScalars": {
+            "InventoryPanelPrefabName": "UI_HandCraftTable",
+            "ToggleActionName": "H",
+            "workbenchLevel": 1,
+            "baseClickCount": 6,
+            "clickReductionPerLevel": 1,
+            "minClickCount": 1,
+            "EnableCraftDebug": true
+          }
+        },
+        {
+          "name": "气压生存模块",
+          "type": "Mod_Pressure",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.2,
+          "runtimeScalars": {
+            "SafePressureMinKPa": 50.0,
+            "SafePressureMaxKPa": 150.0,
+            "DangerBufferSeconds": 30.0,
+            "BufferRecoveryPerSecond": 1.0,
+            "DamageIntervalSeconds": 5.0,
+            "LowPressureDamage": 5.0,
+            "HighPressureDamage": 5.0
+          }
+        },
+        {
+          "name": "氧气模块",
+          "type": "Mod_Oxygen",
+          "enabled": true,
+          "tickMode": "FixedInterval",
+          "fixedTickInterval": 0.2,
+          "runtimeScalars": {
+            "oxygenConsumePerSecond": 10.0,
+            "oxygenRecoverPerSecond": 25.0,
+            "hypoxiaDamagePerTick": 10.0
+          }
+        },
+        {
+          "name": "装备模块",
+          "type": "Mod_Equipment_Player",
+          "enabled": true,
+          "tickMode": "Disabled",
+          "fixedTickInterval": 0.2,
+          "runtimeScalars": {
+            "OpenPanelActionName": "P"
+          }
+        }
+      ]
+    },
+    {
+      "guid": 24962,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -948.5,
+        "y": 93.5,
+        "z": 0.0
+      },
+      "dataRef": "data-3",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 293380,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -944.5,
+        "y": -11.5,
+        "z": 0.0
+      },
+      "dataRef": "data-4",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 336883,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 1001.5,
+        "y": 8.5,
+        "z": 0.0
+      },
+      "dataRef": "data-5",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 343848,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -1013.5,
+        "y": -32.5,
+        "z": 0.0
+      },
+      "dataRef": "data-6",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 353014,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 1021.5,
+        "y": 18.5,
+        "z": 0.0
+      },
+      "dataRef": "data-7",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 356435,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 974.5,
+        "y": 83.5,
+        "z": 0.0
+      },
+      "dataRef": "data-8",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 407851,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -945.5,
+        "y": -37.5,
+        "z": 0.0
+      },
+      "dataRef": "data-9",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 486005,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -970.5,
+        "y": -22.5,
+        "z": 0.0
+      },
+      "dataRef": "data-10",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 504876,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 980.5,
+        "y": -56.5,
+        "z": 0.0
+      },
+      "dataRef": "data-11",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 591440,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 1016.5,
+        "y": -1.5,
+        "z": 0.0
+      },
+      "dataRef": "data-12",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 650965,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 982.5,
+        "y": 59.5,
+        "z": 0.0
+      },
+      "dataRef": "data-13",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 695198,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 982.5,
+        "y": -11.5,
+        "z": 0.0
+      },
+      "dataRef": "data-14",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 769270,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -1010.5,
+        "y": -30.5,
+        "z": 0.0
+      },
+      "dataRef": "data-15",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 944173,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -1022.5,
+        "y": 85.5,
+        "z": 0.0
+      },
+      "dataRef": "data-16",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 961201,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -938.5,
+        "y": -13.5,
+        "z": 0.0
+      },
+      "dataRef": "data-17",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1159243,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -982.5,
+        "y": 31.5,
+        "z": 0.0
+      },
+      "dataRef": "data-18",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1265626,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 967.5,
+        "y": -29.5,
+        "z": 0.0
+      },
+      "dataRef": "data-19",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1276282,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -941.5,
+        "y": 76.5,
+        "z": 0.0
+      },
+      "dataRef": "data-20",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1702756,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 962.5,
+        "y": 71.5,
+        "z": 0.0
+      },
+      "dataRef": "data-21",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1804762,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -1015.5,
+        "y": 0.5,
+        "z": 0.0
+      },
+      "dataRef": "data-22",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1843971,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -994.5,
+        "y": 17.5,
+        "z": 0.0
+      },
+      "dataRef": "data-23",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1863925,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -975.5,
+        "y": 5.5,
+        "z": 0.0
+      },
+      "dataRef": "data-24",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1956060,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 993.5,
+        "y": 19.5,
+        "z": 0.0
+      },
+      "dataRef": "data-25",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 1958543,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -962.5,
+        "y": 74.5,
+        "z": 0.0
+      },
+      "dataRef": "data-26",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 2404315,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -939.5,
+        "y": 58.5,
+        "z": 0.0
+      },
+      "dataRef": "data-27",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 2420397,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -989.5,
+        "y": -14.5,
+        "z": 0.0
+      },
+      "dataRef": "data-28",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 2562102,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -986.5,
+        "y": 63.5,
+        "z": 0.0
+      },
+      "dataRef": "data-29",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 2821872,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -993.5,
+        "y": 8.5,
+        "z": 0.0
+      },
+      "dataRef": "data-30",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 2930940,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 987.5,
+        "y": 48.5,
+        "z": 0.0
+      },
+      "dataRef": "data-31",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3000864,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -1000.5,
+        "y": -15.5,
+        "z": 0.0
+      },
+      "dataRef": "data-32",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3144355,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 971.5,
+        "y": 29.5,
+        "z": 0.0
+      },
+      "dataRef": "data-33",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3193312,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -988.5,
+        "y": -55.5,
+        "z": 0.0
+      },
+      "dataRef": "data-34",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3282104,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -963.5,
+        "y": 53.5,
+        "z": 0.0
+      },
+      "dataRef": "data-35",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3292260,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -968.5,
+        "y": 90.5,
+        "z": 0.0
+      },
+      "dataRef": "data-36",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3317780,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -1002.5,
+        "y": -16.5,
+        "z": 0.0
+      },
+      "dataRef": "data-37",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3325970,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -958.5,
+        "y": 20.5,
+        "z": 0.0
+      },
+      "dataRef": "data-38",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3337408,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 980.5,
+        "y": 81.5,
+        "z": 0.0
+      },
+      "dataRef": "data-39",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3456843,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -940.5,
+        "y": 0.5,
+        "z": 0.0
+      },
+      "dataRef": "data-40",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3510314,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -990.5,
+        "y": -7.5,
+        "z": 0.0
+      },
+      "dataRef": "data-41",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3627092,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 1014.5,
+        "y": 24.5,
+        "z": 0.0
+      },
+      "dataRef": "data-42",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3700961,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -933.5,
+        "y": 31.5,
+        "z": 0.0
+      },
+      "dataRef": "data-43",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 3884181,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": -985.5,
+        "y": 76.5,
+        "z": 0.0
+      },
+      "dataRef": "data-44",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 4011247,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 1002.5,
+        "y": -34.5,
+        "z": 0.0
+      },
+      "dataRef": "data-45",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 4145087,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "natural-ecs"
+      ],
+      "position": {
+        "x": 995.5,
+        "y": 83.5,
+        "z": 0.0
+      },
+      "dataRef": "data-46",
+      "naturalRuntime": {
+        "suspended": false,
+        "dead": false
+      }
+    },
+    {
+      "guid": 2326136,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -1017.0,
+        "y": -79.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-1024,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 66685,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -1002.0,
+        "y": 102.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-1024,96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1024876,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -1009.0,
+        "y": 118.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-1024,96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1888650,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -1020.0,
+        "y": 125.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-1024,96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 2103146,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -970.0,
+        "y": 101.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-992,96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 2789969,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -985.0,
+        "y": 109.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-992,96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 441799,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -952.0,
+        "y": -93.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-960,-96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1342352,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -930.0,
+        "y": -83.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-960,-96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 2329108,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -952.0,
+        "y": -70.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-960,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1227177,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -923.0,
+        "y": -37.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-928,-64",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 4062097,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -926.0,
+        "y": -13.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-928,-32",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1123300,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -923.0,
+        "y": 19.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-928,0",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1756775,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": -905.0,
+        "y": 32.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:-928,32",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 2680733,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 943.0,
+        "y": -88.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 3160074,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 930.0,
+        "y": -65.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 474741,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 939.0,
+        "y": -40.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,-64",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 543933,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 942.0,
+        "y": 5.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,0",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 189022,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 940.0,
+        "y": 12.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,0",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 535159,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 941.0,
+        "y": 37.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,32",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 2680074,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 952.0,
+        "y": 96.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 512575,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 950.0,
+        "y": 107.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:928,96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 2917753,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 985.0,
+        "y": -89.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:960,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1743937,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 985.0,
+        "y": -84.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:960,-96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1917700,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 980.0,
+        "y": 108.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:960,96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 4269525,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 998.0,
+        "y": -91.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:992,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 135884,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 1014.0,
+        "y": -87.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:992,-96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1775412,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 1022.0,
+        "y": -80.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:992,-96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 1657391,
+      "definitionId": "Mine_Iron",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 992.0,
+        "y": 100.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:992,96",
+        "ruleId": "surface.stone.iron",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 82304,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 1006.0,
+        "y": 119.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:992,96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    },
+    {
+      "guid": 390427,
+      "definitionId": "Mine_Stone",
+      "sources": [
+        "loaded-chunk-placement"
+      ],
+      "position": {
+        "x": 996.0,
+        "y": 123.0,
+        "z": 0.0
+      },
+      "placement": {
+        "chunk": "surface:992,96",
+        "ruleId": "surface.stone.stone",
+        "hostGuid": 0,
+        "state": "generated-baseline-only"
+      }
+    }
+  ],
+  "itemData": [
+    {
+      "ref": "data-1",
+      "guid": 868288931,
+      "definitionId": "NaturalMineEntrance",
+      "name": "天然矿洞入口",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "维度入口模块",
+          "moduleId": "维度入口模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": null
+        }
+      ]
+    },
+    {
+      "ref": "data-2",
+      "guid": 606725931,
+      "definitionId": "Player",
+      "name": "玩家",
+      "type": "Data_Player",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "Player",
+        "Blood"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": {
+        "flatworld.tutorial": {
+          "version": 1,
+          "eligible": true,
+          "milestones": [
+            "inventory-opened"
+          ],
+          "stage": "GatherSurvivalMaterials",
+          "completed": false
+        },
+        "flatworld.dialogue": {
+          "completed": [
+            "guide.survival.gather-materials.shown",
+            "guide.survival.open-inventory.shown"
+          ]
+        },
+        "flatworld.playerSpawn": {
+          "mainWorldKey": "地球",
+          "position": {
+            "x": -50.5,
+            "y": 214.5,
+            "z": 0.0
+          }
+        },
+        "flatworld.quests": {
+          "version": 1,
+          "quests": {
+            "flatworld:first_chipped_tool": {
+              "definitionVersion": 3,
+              "status": "Active",
+              "currentStageId": "craft_chipped_tool",
+              "objectiveProgress": {
+                "gather_stone/pick_stone": 2.0
+              },
+              "completionCount": 0,
+              "rewardsClaimed": false
+            }
+          }
+        },
+        "flatworld.dimensions": {
+          "surfaceEntranceStates": {
+            "地球": {
+              "-84,241": {
+                "blocked": false,
+                "generated": true
+              }
+            },
+            "sector:0:0/planet:月球": {
+              "-932,15": {
+                "blocked": false,
+                "generated": true
+              }
+            }
+          },
+          "lastPositions": {
+            "地球": {
+              "x": -51.6926,
+              "y": 210.844391,
+              "z": 0.0
+            },
+            "SpaceSector__0__0": {
+              "x": 6490.62061,
+              "y": 28295.5723,
+              "z": 0.0
+            }
+          }
+        }
+      },
+      "modules": [
+        {
+          "name": "Buff模块",
+          "moduleId": "Mod_BuffManager",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AQAAAAA="
+        },
+        {
+          "name": "Controller模块",
+          "moduleId": "Controller模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "GameMCP_LLM",
+          "moduleId": "GameMCP_LLM",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "Mod_DiscardItem",
+          "moduleId": "Mod_DiscardItem",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": []
+        },
+        {
+          "name": "Mod_Hand",
+          "moduleId": "Mod_Hand",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AAAAAA=="
+        },
+        {
+          "name": "Mod_InteractSender",
+          "moduleId": "Mod_InteractSender",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AAAAAA=="
+        },
+        {
+          "name": "Mod_PlayerAdminController",
+          "moduleId": "Mod_PlayerAdminController",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": ""
+        },
+        {
+          "name": "Mod_PlayerModuleUIController",
+          "moduleId": "Mod_PlayerModuleUIController",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": ""
+        },
+        {
+          "name": "Module_Animator",
+          "moduleId": "动画接收模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": ""
+        },
+        {
+          "name": "Module_Bag",
+          "moduleId": "背包模块",
+          "type": "Inventory_ModuleData",
+          "enabled": true,
+          "inventories": {
+            "背包模块": {
+              "name": "背包模块",
+              "slotCount": 18,
+              "occupiedSlots": []
+            }
+          }
+        },
+        {
+          "name": "Module_Cam",
+          "moduleId": "相机模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "PovValue": 4.927074,
+            "UnlimitedViewEnabled": false,
+            "AdminFiniteViewMaxOverride": 0.0
+          }
+        },
+        {
+          "name": "Module_ChunkLoder",
+          "moduleId": "区块加载模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "BAAAAAUAAAACAAAA"
+        },
+        {
+          "name": "Module_FocusPoint",
+          "moduleId": "FaceMouse模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "BgAANEMDAAAA/P///wMAAABTZWUKBQrF/c+Cwvv///8EAAAATW92ZQAAAAAAAAAA+P///wcAAABTa2lsbF8wCgUKxf3PgsIBzczMPQAAAAAAAAAACgUKxf3PgsI="
+        },
+        {
+          "name": "Module_Food",
+          "moduleId": "食物模块",
+          "type": "ModData_FoodData",
+          "enabled": true,
+          "state": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 35.01832,
+                "Max_Carbohydrates": 100.0,
+                "Fat": 50.0,
+                "Max_Fat": 100.0,
+                "Protein": 50.0,
+                "Max_Protein": 100.0,
+                "Water": 122.125435,
+                "Max_Water": 150.0,
+                "Vitamins": 49.7009125,
+                "Max_Vitamins": 100.0
+              },
+              "Max_EatingProgress": 3.0,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.05,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 28.0,
+                "y": 28.0
+              },
+              "WaterConsumeSpeedRate": 0.1,
+              "nutritionConsumeRate": 1.0
+            },
+            "MechanicStates": [],
+            "StableName": "Module_Food",
+            "ModuleId": "食物模块",
+            "Type": "None"
+          }
+        },
+        {
+          "name": "Module_Move",
+          "moduleId": "移动模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "CAYAAGBAAAAAAAAAAAAAAIA/AAAAAAAAYEAAAKBAzczMPQAAAAAAAABAAADAPwAAAABA"
+        },
+        {
+          "name": "Module_Picker",
+          "moduleId": "物品拾取模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AAAAAA=="
+        },
+        {
+          "name": "Module_Setting",
+          "moduleId": "Module_Setting",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": ""
+        },
+        {
+          "name": "Module_Stamina",
+          "moduleId": "耐力模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AgAAyEIAAMhC"
+        },
+        {
+          "name": "Module_SweatBalance",
+          "moduleId": "Mod_SweatBalance",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "BAAAAAAAAAAAAAAAAAAAAAA="
+        },
+        {
+          "name": "Module_Temperature",
+          "moduleId": "体温模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "CAAAoEEAAKBBAAAAAAAAoEAAACBCAABwQgAAgD8AAHBC"
+        },
+        {
+          "name": "Module_TileReciver",
+          "moduleId": "TileReciver",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "Efz//wQAAAA="
+        },
+        {
+          "name": "Module_TurnBack",
+          "moduleId": "Module_TurnBack",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "PlayerDeathState",
+          "moduleId": "PlayerDeathState",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "BQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        },
+        {
+          "name": "PlayerTraits",
+          "moduleId": "PlayerTraits",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "UI_快捷栏",
+          "moduleId": "UI_快捷栏",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AgIAAAAH8////wYAAABVSV/lv6vmjbfmoI8BAAAAAAAAAAAAAAAAAAAAAAAACQAAABMA9v///wkAAABPcmVfU3RvbmXmi9pmAAAgQQAAAIA/AACAPwAAAAAAAAAAAAENtCnC5vlUQwAAAABySl2/4bUAP+lIIjPyx7yyAACAPwAAgD8AAIA/DwAAAAUBFWHMQQAAAAAAAAAAAAIAAAAE+f///wYAAABkYW1hZ2X1////CgAAAE1vZF9EYW1hZ2Xq////FQAAAGNvcmUubW9kdWxlLmJpbmFyeS52MQAAAAAE7P///xMAAABkaXNjYXJkRmxpZ2h0RGFtYWdl6P///xcAAABNb2RfRGlzY2FyZEZsaWdodERhbWFnZer///8VAAAAY29yZS5tb2R1bGUuYmluYXJ5LnYxAAAAAP//////////BAAAAAAAAAATAPr///8FAAAAVHdpbmWfc3RzAACgQQAAAIA/AACAPwAAAAABAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/DwAAAAUAAACgQQAAAAAAAAAAAAEAAAAE8////wQAAADnh4PmlpnmqKHlnZfz////BAAAAOeHg+aWmeaooeWdl+r///8VAAAAY29yZS5tb2R1bGUuYmluYXJ5LnYxDQAAAAIAACBBAAAgQQAAyEP//////////wQAAAAAAAAAEwD1////CgAAAFN0aWNrX1dvb2TIpqPuAAAgQQAAAIA/AACAPwAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAgD8AAIA/DwAAAAUBcufOQQAAAAAAAAAAAAMAAAAE9v///wkAAABhbmltYXRpb27i////HQAAAE1vZHVsZV9XZWFwb25fQW5pbWF0aW9uQWN0aW9u6v///xUAAABjb3JlLm1vZHVsZS5iaW5hcnkudjEAAAAABPn///8GAAAAZGFtYWdl9f///woAAABNb2RfRGFtYWdl6v///xUAAABjb3JlLm1vZHVsZS5iaW5hcnkudjEAAAAABPP///8EAAAA54eD5paZ5qih5Z2X8////wQAAADnh4PmlpnmqKHlnZfq////FQAAAGNvcmUubW9kdWxlLmJpbmFyeS52MQAAAAD//////////wQAAAAAAAAA////////"
+        },
+        {
+          "name": "health",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": true,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 2,
+            "BodyParts": [
+              {
+                "Part": 0,
+                "Hp": 20.0,
+                "MaxHp": 20.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.5,
+                "DepletionBuffIds": [
+                  "core:concussion"
+                ],
+                "AreaRatio": 0.08,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 1,
+                "Hp": 50.0,
+                "MaxHp": 50.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [],
+                "AreaRatio": 0.22,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 2,
+                "Hp": 30.0,
+                "MaxHp": 30.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [],
+                "AreaRatio": 0.16,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 3,
+                "Hp": 25.0,
+                "MaxHp": 25.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [
+                  "core:arm_fracture"
+                ],
+                "AreaRatio": 0.09,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 4,
+                "Hp": 25.0,
+                "MaxHp": 25.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [
+                  "core:arm_fracture"
+                ],
+                "AreaRatio": 0.09,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 5,
+                "Hp": 25.0,
+                "MaxHp": 25.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [],
+                "AreaRatio": 0.1,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 6,
+                "Hp": 25.0,
+                "MaxHp": 25.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [
+                  "core:leg_fracture"
+                ],
+                "AreaRatio": 0.13,
+                "InjuryProbability": 1.0
+              },
+              {
+                "Part": 7,
+                "Hp": 25.0,
+                "MaxHp": 25.0,
+                "DefenseValues": {
+                  "Physical": 0.0
+                },
+                "DamageMultiplier": 1.0,
+                "DepletionBuffIds": [
+                  "core:leg_fracture"
+                ],
+                "AreaRatio": 0.13,
+                "InjuryProbability": 1.0
+              }
+            ],
+            "DefenseValues": {
+              "Physical": 0.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.1,
+            "DestroyDelay": 0.0,
+            "LootTable": []
+          }
+        },
+        {
+          "name": "roll",
+          "moduleId": "Roll",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "大气供氧模块",
+          "moduleId": "大气供氧模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": ""
+        },
+        {
+          "name": "工作台模块_手工",
+          "moduleId": "Module_HandMaker",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "COn///8IAAAA5bel5L2c5Y+w5qih5Z2XX+aJi+W3pe////8QAAAATW9kdWxlX0hhbmRNYWtlcgEAAAAAAgAAAPD///8PAAAAaGFuZGNyYWZ0LmlucHV0CQAAAAAEAAAABP8AAAAAAAAATwAAAAAE/wAAAAAAAABPAQAAAAT/AAAAAAAAAE8CAAAABP8AAAAAAAAATwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADv////EAAAAGhhbmRjcmFmdC5vdXRwdXQJAAAAAAIAAAAE/wAAAAAAAABPAAAAAAT/AAAAAAAAAE8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE="
+        },
+        {
+          "name": "气压生存模块",
+          "moduleId": "气压生存模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AgEAAPBB"
+        },
+        {
+          "name": "氧气模块",
+          "moduleId": "氧气模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "AwAAyEIAAMhCAAAAAA=="
+        },
+        {
+          "name": "装备模块",
+          "moduleId": "装备模块",
+          "type": "Ex_ModData_MemoryPackable",
+          "enabled": true,
+          "binaryStateBase64": "Agfz////BAAAAOijheWkh+aooeWdlwAAAAAAAAAAAAAAAAAAAAAAAAAHAAAA/////////wcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        }
+      ]
+    },
+    {
+      "ref": "data-3",
+      "guid": 24962,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-4",
+      "guid": 293380,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-5",
+      "guid": 336883,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-6",
+      "guid": 343848,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-7",
+      "guid": 353014,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-8",
+      "guid": 356435,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-9",
+      "guid": 407851,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-10",
+      "guid": 486005,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-11",
+      "guid": 504876,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-12",
+      "guid": 591440,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-13",
+      "guid": 650965,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-14",
+      "guid": 695198,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-15",
+      "guid": 769270,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-16",
+      "guid": 944173,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-17",
+      "guid": 961201,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-18",
+      "guid": 1159243,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-19",
+      "guid": 1265626,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-20",
+      "guid": 1276282,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-21",
+      "guid": 1702756,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-22",
+      "guid": 1804762,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-23",
+      "guid": 1843971,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-24",
+      "guid": 1863925,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-25",
+      "guid": 1956060,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-26",
+      "guid": 1958543,
+      "definitionId": "Mine_Iron",
+      "name": "铁矿脉",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "harvestRequirement",
+          "moduleId": "Mod_ResourceHarvest",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": ""
+        },
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 60.0,
+            "MaxHp": 60.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 16.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Iron",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 3,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 1,
+                "MaxAmount": 2,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-27",
+      "guid": 2404315,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-28",
+      "guid": 2420397,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-29",
+      "guid": 2562102,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-30",
+      "guid": 2821872,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-31",
+      "guid": 2930940,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-32",
+      "guid": 3000864,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-33",
+      "guid": 3144355,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-34",
+      "guid": 3193312,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-35",
+      "guid": 3282104,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-36",
+      "guid": 3292260,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-37",
+      "guid": 3317780,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-38",
+      "guid": 3325970,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-39",
+      "guid": 3337408,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-40",
+      "guid": 3456843,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-41",
+      "guid": 3510314,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-42",
+      "guid": 3627092,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-43",
+      "guid": 3700961,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-44",
+      "guid": 3884181,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-45",
+      "guid": 4011247,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "ref": "data-46",
+      "guid": 4145087,
+      "definitionId": "Mine_Stone",
+      "name": "石矿",
+      "type": "Data_GeneralItem",
+      "amount": 1.0,
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "inHand": false,
+      "faction": "",
+      "tags": [
+        "35"
+      ],
+      "matter": {
+        "Initialized": false,
+        "TemperatureCelsius": 20.0,
+        "Moisture": 0.0,
+        "IsBurning": false,
+        "CombustionElapsedSeconds": 0.0
+      },
+      "specialData": "",
+      "modules": [
+        {
+          "name": "生命值系统模块",
+          "moduleId": "生命值系统模块",
+          "type": "Ex_ModData",
+          "enabled": true,
+          "state": {
+            "Hp": 50.0,
+            "MaxHp": 50.0,
+            "CombatBalanceVersion": 1,
+            "UseBodyPartHealth": false,
+            "TwoPartHitChance": 0.25,
+            "HitSizeCoefficientOverride": 0.0,
+            "BodyPartDataVersion": 0,
+            "BodyParts": [],
+            "DefenseValues": {
+              "Physical": 4.0
+            },
+            "AttackersUIDs": [],
+            "DeathCause": null,
+            "DamageInterval": 0.12,
+            "DestroyDelay": 0.0,
+            "LootTable": [
+              {
+                "LootPrefabName": "Ore_Stone",
+                "DropChance": 1.0,
+                "MinAmount": 2,
+                "MaxAmount": 4,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              },
+              {
+                "LootPrefabName": "StoneSlab",
+                "DropChance": 0.2,
+                "MinAmount": 1,
+                "MaxAmount": 1,
+                "AmountDistribution": 0,
+                "PeakAmount": 0
+              }
+            ],
+            "entityResource": {
+              "deathByDamage": false
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "这是导出时本地 Editor 的已加载现场，不是 Profiler 所选历史帧的回放，也不代表远程 Player。",
+    "只采集已存在的运行态和已加载区块，不加载其它区块，不触发保存、暂停、录制或资源刷新。",
+    "items 是世界实体，itemData 还包含容器内物品；dataRef 指向 itemData[].ref，内容不重复计入世界实体数量。",
+    "同一 GUID 的机器、自然物或表现外壳合并为一条，sources 保留数据来源；生成点仅作为补充基线，不等于正在模拟或显示。",
+    "模块 JSON 状态直接展开，未通用解码的二进制模块保留 Base64；普通 Item 的模块持久状态可能尚未同步，runtimeScalars 和 liveInventories 记录当前运行值。",
+    "自然物内置热状态写入独立副本；扩展模块不执行保存回调，保留其最近已有状态。这份诊断 JSON 不提供直接加载还原存档的功能。"
+  ]
+}
