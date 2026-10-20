@@ -1111,7 +1111,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         int worldSeed = GetActiveWorldGenerationSeed();
         ReportWorldEntryProgress("正在进入存档", "正在根据世界种子定位安全出生点…", 0.7f);
 
-        // 读取已加载的 MapCore Prefab 配置做纯采样，不实例化 Map 或 Chunk。
+        // 按正式 WorldModel 生成配置查找陆地，不创建区块表现。
         // 玩家位置设置完成后才触发 Event_PlayerEnterWorld，由 Mod_ChunkLoader 正常流送周围区块。
         bool landFound;
         Vector2Int landPosition;

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 世界物品的短期掉落轨迹模块：只负责抛物线运动与 Chunk 归属。
+/// 世界物品的短期掉落轨迹模块：只负责抛物线运动与世界表现归属。
 /// 轨迹结束后的水体判定统一交给 WorldItemWaterSystem，禁止在此维护浮沉、漂流或水下表现状态。
 /// </summary>
 public class Mod_Droping : Module
@@ -20,8 +20,6 @@ public class Mod_Droping : Module
     /// <summary>资源目录注册 Prefab 时使用的稳定掉落模块 ID，不依赖实例化后的 Awake。</summary>
     public override string CanonicalModuleId => ModText.Drop;
 
-    public Chunk LastChunk; // 上一帧 item 所处的 chunk
-    private bool usesLegacyChunkOwnership;
 
     /// <summary>只要掉落模块仍持有轨迹数据，物品就处于掉落阶段。</summary>
     public static bool IsDropInProgress(Item targetItem)
@@ -63,16 +61,8 @@ public class Mod_Droping : Module
                 return;
         }
 
-        // 掉落物先尝试绑定新版 ChunkView。新区块窗口已启用时，即使当前画面尚未
-        // 完成绑定也不能回退到旧 Chunk 查询，否则灌木死亡掉落会触发同步加载卡顿。
-        bool attachedToWorldModel = item != null &&
+        if (item != null)
             ItemWorldPlacement.TryAttachWorldModelTransientItem(item, item.transform.position);
-        bool worldModelActive = ChunkMgr.ExistingInstance != null &&
-            ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive;
-        usesLegacyChunkOwnership = !attachedToWorldModel && !worldModelActive;
-        LastChunk = usesLegacyChunkOwnership && item != null
-            ? item.GetComponentInParent<Chunk>()
-            : null;
 
         if (drop != null && item?.itemData?.Stack != null)
             item.itemData.Stack.CanBePickedUp = false;
@@ -118,8 +108,7 @@ public class Mod_Droping : Module
 
         // 区块画面可能正在分帧绑定；新版掉落在动画期间重试归属，
         // 仍只访问 WorldModel，不触发旧 Chunk 加载。
-        if (!usesLegacyChunkOwnership &&
-            drop.item.GetComponentInParent<ChunkNaturalItemRenderer>(true) == null)
+        if (drop.item.GetComponentInParent<ChunkNaturalItemRenderer>(true) == null)
         {
             ItemWorldPlacement.TryAttachWorldModelTransientItem(drop.item, ownershipPos);
         }
@@ -134,24 +123,10 @@ public class Mod_Droping : Module
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0f);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
 
-        bool hasTargetChunk = !usesLegacyChunkOwnership ||
-            UpdateChunkOwner(drop.item, ownershipPos);
-
         if (t < 1f)
             return;
 
-        if (usesLegacyChunkOwnership && !hasTargetChunk)
-        {
-            RequestTargetChunk(Chunk.GetChunkPosition(
-                WorldTopologyRuntime.NormalizePosition(drop.endPos)));
-            return;
-        }
-
-        if (usesLegacyChunkOwnership)
-        {
-            // 确保 Chunk 内的位置索引记录最终落点，而不是动画起点。
-            LastChunk.AddItem(drop.item);
-        }
+        ItemWorldPlacement.TryAttachWorldModelTransientItem(drop.item, ownershipPos);
 
         Item landedItem = drop.item;
         WorldItemWaterSystem.EntryResult waterResult =
@@ -183,60 +158,6 @@ public class Mod_Droping : Module
         drop.item = item;
         if (item.itemData != null)
             drop.itemGuid = item.itemData.Guid;
-    }
-
-    /// <summary>更新物品所属的 Chunk。只有确认目标 Chunk 可用后才解除旧归属。</summary>
-    private bool UpdateChunkOwner(Item targetItem, Vector2 ownershipPos)
-    {
-        if (targetItem == null)
-            return false;
-
-        Vector2Int currentChunkPos = Chunk.GetChunkPosition(ownershipPos);
-
-        if (LastChunk == null)
-            LastChunk = targetItem.GetComponentInParent<Chunk>();
-
-        if (IsChunkAtPosition(LastChunk, currentChunkPos))
-        {
-            if (targetItem.itemData != null &&
-                !LastChunk.RunTimeItems.ContainsKey(targetItem.itemData.Guid))
-            {
-                LastChunk.AddItem(targetItem);
-            }
-
-            return true;
-        }
-
-        ChunkMgr chunkMgr = ChunkMgr.Instance;
-        if (chunkMgr == null ||
-            !chunkMgr.TryGetActiveChunkByPos(currentChunkPos, out Chunk newChunk))
-        {
-            return false;
-        }
-
-        LastChunk?.RemoveItem(targetItem);
-        newChunk.AddItem(targetItem);
-        LastChunk = newChunk;
-        return true;
-    }
-
-    private static bool IsChunkAtPosition(Chunk chunk, Vector2Int chunkPos)
-    {
-        if (chunk == null)
-            return false;
-
-        Vector2Int ownerPos = chunk.MapSave?.MapPosition
-            ?? Chunk.GetChunkPosition(chunk.transform.position);
-        return ownerPos == chunkPos;
-    }
-
-    private void RequestTargetChunk(Vector2Int chunkPos)
-    {
-        ChunkMgr chunkMgr = ChunkMgr.Instance;
-        if (chunkMgr == null)
-            return;
-
-        chunkMgr.RequestLoadChunk_By_Position(chunkPos);
     }
 
     protected override void OnSave()

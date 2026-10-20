@@ -110,7 +110,6 @@ namespace FlatWorld.Networking.Gameplay
                 hash = Add(hash, chunkSizeX);
                 hash = Add(hash, chunkSizeY);
                 hash = Add(hash, (int)topologyMode);
-                hash = Add(hash, TerrainGenerationSignature.CalculateDefault());
                 hash = Add(hash, unchecked((uint)generationFingerprint));
                 hash = Add(hash, unchecked((uint)(generationFingerprint >> 32)));
                 return hash;

@@ -69,15 +69,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         return definition != null;
     }
 
-    public string GetActiveMapCorePrefabId()
-    {
-#pragma warning disable 0618 // 旧 ChunkMgr 兼容路径仍需读取旧 MapCore 配置；新版 WorldModel 不使用该入口。
-        return string.IsNullOrWhiteSpace(ActiveDefinition?.MapCorePrefabId)
-            ? "MapCore"
-            : ActiveDefinition.MapCorePrefabId;
-#pragma warning restore 0618
-    }
-
     public ChunkGenerationProfileSO GetActiveGenerationProfile()
     {
         return ActiveDefinition?.GenerationProfile;
@@ -778,7 +769,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             caveExit.Load();
         }
 
-        // 手工矿洞入口对应的出口属于本次洞穴场景运行态，不再挂到旧 Chunk/MapCore。
+        // 手工矿洞入口对应的出口属于本次洞穴场景运行态，由本次维度会话管理。
         caveExit.transform.SetParent(null, true);
         Scene activeScene = SceneManager.GetActiveScene();
         if (caveExit.gameObject.scene != activeScene)

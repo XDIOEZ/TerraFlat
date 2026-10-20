@@ -538,6 +538,9 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
     private static class HydrologyRegionCache
     {
+        // 水文缓存版本只归该缓存自己的算法管理。
+        private const int GenerationSignatureVersion = 7;
+
         private static readonly Dictionary<HydrologyRegionKey, HydrologyRegionEntry> Entries = new();
         private static long _accessSequence;
 
@@ -628,7 +631,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
             ChunkGenerator_Land land)
         {
             uint hash = StructureHashUtility.Begin();
-            hash = StructureHashUtility.Add(hash, TerrainGenerationSignature.CurrentVersion);
+            hash = StructureHashUtility.Add(hash, GenerationSignatureVersion);
             hash = StructureHashUtility.Add(hash, river.seed);
             hash = StructureHashUtility.Add(hash, river.hydrologyRegionSize);
             hash = StructureHashUtility.Add(hash, river.runoffCellSize);

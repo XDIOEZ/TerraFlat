@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Networking.Gameplay
 {
@@ -45,6 +46,9 @@ namespace FlatWorld.Networking.Gameplay
 
             instance.observers.Remove(observer);
             instance.lastObserverSignature = int.MinValue;
+            instance.nextRefreshTime = 0f;
+            if (instance.observers.Count == 0)
+                instance.ReleaseObserverWindows();
         }
 
         public static void RequestImmediateRefresh()
@@ -64,6 +68,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnDisable()
         {
             WorldTopologyRuntime.LocalPlayerWrapped -= RequestImmediateRefresh;
+            ReleaseObserverWindows();
         }
 
         private static void EnsureInstance()
@@ -78,18 +83,38 @@ namespace FlatWorld.Networking.Gameplay
 
         private void Update()
         {
-            if (!NetworkClient.active || Time.unscaledTime < nextRefreshTime)
+            if (!NetworkClient.active)
+            {
+                ReleaseObserverWindows();
                 return;
+            }
+            if (Time.unscaledTime < nextRefreshTime) return;
 
             nextRefreshTime = Time.unscaledTime + refreshInterval;
             observers.RemoveAll(observer => observer == null);
             if (observers.Count == 0 || GameManager.Instance == null || !GameManager.Instance.IsInGameWorld)
+            {
+                ReleaseObserverWindows();
                 return;
+            }
 
             if (ChunkMgr.Instance == null || SaveDataMgr.Instance?.Active_PlanetData == null)
                 return;
 
-            int signature = 17;
+            Transform localAnchor = ResolveLocalObserver();
+            if (localAnchor == null)
+            {
+                ReleaseObserverWindows();
+                return;
+            }
+            Vector3 localPosition = ResolveLogicalObserverPosition(localAnchor);
+            if (!IsValidObserverPosition(localPosition))
+            {
+                ReleaseObserverWindows();
+                return;
+            }
+            Mod_ChunkLoader localLoader = localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
+            int signature = SceneManager.GetActiveScene().handle;
             observerPositions.Clear();
             for (int i = 0; i < observers.Count; i++)
             {
@@ -99,7 +124,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!IsValidObserverPosition(position))
                     continue;
 
-                Vector2Int chunkPosition = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(position));
+                Vector2Int chunkPosition = ChunkMgr.Instance.ResolveRuntimeChunkOrigin(position);
                 observerPositions.Add(position);
                 unchecked
                 {
@@ -109,77 +134,69 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             if (observerPositions.Count == 0)
+            {
+                ReleaseObserverWindows();
                 return;
+            }
 
-            int activeDistance = ResolveLocalLoadDistance();
-            int prefetchDistance = activeDistance + Mathf.Max(1, inactiveDistance - loadDistance);
-            int retainedDistance = prefetchDistance + Mathf.Max(1, destroyDistance - inactiveDistance);
+            int activeDistance = localLoader != null ? localLoader.CurrentLoadChunkDistance : loadDistance;
+            int prefetchDistance = localLoader != null ? localLoader.CurrentUnActiveChunkDistance
+                : activeDistance + Mathf.Max(1, inactiveDistance - loadDistance);
+            int retainedDistance = localLoader != null ? localLoader.CurrentDestroyChunkDistance
+                : prefetchDistance + Mathf.Max(1, destroyDistance - inactiveDistance);
             unchecked
             {
                 signature = signature * 31 + activeDistance;
+                signature = signature * 31 + prefetchDistance;
+                signature = signature * 31 + retainedDistance;
             }
 
-            if (signature == lastObserverSignature)
-                return;
-
+            // 单一区块内移动只改变本机画面优先级，不重新构造所有观察者窗口。
+            ChunkMgr.Instance.UpdateRuntimePresentationPriority(localPosition);
+            if (signature == lastObserverSignature) return;
             lastObserverSignature = signature;
             ChunkMgr.Instance.RefreshChunksAroundObservers(
                 observerPositions,
+                localPosition,
                 activeDistance,
                 prefetchDistance,
                 retainedDistance);
 
-            RefreshLocalNavigationAnchor(activeDistance);
+            RefreshLocalNavigationAnchor(localPosition, activeDistance);
 
             Debug.Log($"[联机区块] 已按 {observerPositions.Count} 个玩家刷新区块窗口");
         }
 
-        /// <summary>联机流送窗口读取本机玩家的区块距离，其他观察者复用该客户端的配置。</summary>
-        private int ResolveLocalLoadDistance()
+        /// <summary>退出联机或失去本机观察者时释放本协调器的需求。</summary>
+        private void ReleaseObserverWindows()
         {
-            for (int i = 0; i < observers.Count; i++)
-            {
-                Transform observer = observers[i];
-                NetworkIdentity identity = observer != null ? observer.GetComponent<NetworkIdentity>() : null;
-                if (identity == null || !identity.isOwned)
-                    continue;
-
-                NetworkWorldPlayer networkPlayer = observer.GetComponent<NetworkWorldPlayer>();
-                if (networkPlayer?.IsInSpace == true) continue;
-                Mod_ChunkLoader loader = networkPlayer?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
-                if (loader != null)
-                    return loader.CurrentLoadChunkDistance;
-            }
-
-            return loadDistance;
+            ChunkMgr.ExistingInstance?.ClearRuntimeObserverWindows();
+            lastObserverSignature = int.MinValue;
+            lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
+            lastNavigationLoadDistance = -1;
         }
 
-        /// <summary>本地导航窗口与联机区块加载距离保持一致。</summary>
-        private void RefreshLocalNavigationAnchor(int activeDistance)
+        #region 本机观察者
+
+        /// <summary>只有本机拥有的地表角色可以决定本机加载蒙版和导航锚点。</summary>
+        private Transform ResolveLocalObserver()
         {
-            Transform anchor = null;
             for (int i = 0; i < observers.Count; i++)
             {
                 Transform observer = observers[i];
                 NetworkIdentity identity = observer != null ? observer.GetComponent<NetworkIdentity>() : null;
-                if (identity != null && identity.isOwned)
-                {
-                    anchor = observer;
-                    break;
-                }
+                NetworkWorldPlayer player = observer != null ? observer.GetComponent<NetworkWorldPlayer>() : null;
+                if (identity != null && identity.isOwned && player != null &&
+                    !player.IsInSpace && player.SharesLocalRealm())
+                    return observer;
             }
+            return null;
+        }
 
-            anchor ??= observers.Count > 0 ? observers[0] : null;
-            if (anchor == null)
-                return;
-
-            if (anchor.GetComponent<NetworkWorldPlayer>()?.IsInSpace == true) return;
-
-            Vector3 logicalPosition = ResolveLogicalObserverPosition(anchor);
-            if (!IsValidObserverPosition(logicalPosition))
-                return;
-
-            Vector2Int anchorChunk = ChunkMgr.NormalizeChunkPosition(Chunk.GetChunkPosition(logicalPosition));
+        /// <summary>本地导航窗口仅跟随本机角色。</summary>
+        private void RefreshLocalNavigationAnchor(Vector3 logicalPosition, int activeDistance)
+        {
+            Vector2Int anchorChunk = ChunkMgr.Instance.ResolveRuntimeChunkOrigin(logicalPosition);
             if (anchorChunk == lastNavigationAnchorChunk && activeDistance == lastNavigationLoadDistance)
                 return;
 
@@ -187,6 +204,8 @@ namespace FlatWorld.Networking.Gameplay
             lastNavigationLoadDistance = activeDistance;
             WorldNavigationManager.Instance?.RefreshLoadedRegion(anchorChunk, activeDistance);
         }
+
+        #endregion
 
         private static bool IsValidObserverPosition(Vector3 position)
         {

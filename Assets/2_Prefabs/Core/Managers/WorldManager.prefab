@@ -721,12 +721,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf2e37602e5361d4db1a8330009483bb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  OnChunkLoadFinish:
-    _PersistentCalls: []
-  OnChunkLoadFailed:
-    _PersistentCalls: []
-  maxChunkLoadPerFrame: 1
-  maxConcurrentChunkLoads: 1
   maxPooledChunkCount: 32
   chunkLoadSpeedMultiplier: 1
   unlimitedChunkLoadSpeed: 0

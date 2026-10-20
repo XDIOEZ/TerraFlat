@@ -360,8 +360,6 @@ public partial class ItemMgr
 
             // 实体注册完成后创建独立阴影；阴影不进入 Item 或 RuntimeEntities 层级。
             ActorShadowManager.GetInstance()?.RegisterActor(item);
-            if (item is Map mapItem)
-                _cachedMap = mapItem;
             RuntimeItemRegistered?.Invoke(item);
             EnsureSpawnRegistrationCurrent(item, registeredData, registrationToken);
             return registrationToken;
@@ -425,8 +423,6 @@ public partial class ItemMgr
         }
         finally
         {
-            if (item is Map)
-                _cachedMap = null;
             RemoveItemFromSpatialIndex(item);
             _perceptionTargets.Remove(item);
             RuntimeItemUnregistered?.Invoke(item);

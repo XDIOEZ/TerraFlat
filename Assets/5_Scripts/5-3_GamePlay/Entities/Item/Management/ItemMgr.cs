@@ -50,8 +50,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         RuntimeItemMoved = null;
     }
 
-    private const string GROUP_MAP_CORE = "MapCore";
-
     [Header("玩家创建配置")]
     [SerializeField] private string defaultPlayerCreationTemplateId;
 
@@ -65,7 +63,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     [ShowInInspector]
     public IReadOnlyDictionary<string, IReadOnlyList<Item>> RuntimeItemsGroup => _runtimeRegistry.Groups;
 
-    private Map _cachedMap;
     private Transform _externalPlayerTransform;
     // 记录实际订阅者，销毁时不再查询可能已经卸载的 GameManager。
     private GameManager _lifecycleGameManager;
@@ -150,21 +147,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     {
         if (_externalPlayerTransform == playerTransform)
             _externalPlayerTransform = null;
-    }
-
-    public Map Map
-    {
-        get
-        {
-            if (_cachedMap == null)
-            {
-                if (RuntimeItemsGroup.TryGetValue(GROUP_MAP_CORE, out var list) && list.Count > 0)
-                {
-                    _cachedMap = (Map)list[0];
-                }
-            }
-            return _cachedMap;
-        }
     }
 
     #endregion
@@ -334,9 +316,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         CleanupRuntimeAiIndex();
         RebuildSpatialIndex();
         _tickScheduler.Rebuild(RuntimeItems);
-
-        // 分组变化后，缓存需要重新计算
-        _cachedMap = null;
     }
 
     public void NotifyItemScheduleChanged(Item item)

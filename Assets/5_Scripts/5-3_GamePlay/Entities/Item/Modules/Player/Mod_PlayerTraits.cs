@@ -467,7 +467,6 @@ public class Mod_PlayerTraits : Module
         }
         target.transform.position = presentationDestination;
         target.Data.transform.position = logicalDestination;
-        ChunkMgr.ExistingInstance?.ResetChunkLoadQueue();
         target.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?.RefreshChunksAroundPlayer();
 
         Debug.Log($"[GM] 玩家已传送到逻辑位置: {logicalDestination}");

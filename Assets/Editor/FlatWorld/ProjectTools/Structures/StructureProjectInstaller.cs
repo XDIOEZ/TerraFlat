@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,33 +7,19 @@ public static class StructureProjectInstaller
     private const string CatalogAssetPath = "Assets/Resources/Config/StructureCatalog_Default.asset";
     private const string SampleDefinitionPath = "Assets/4_ScriptObjects/World/Structures/Definitions/abandoned_camp.asset";
     private const string SampleTemplatePath = "Assets/4_ScriptObjects/World/Structures/Templates/abandoned_camp_template.asset";
-    private const string MapCorePath = "Assets/2_Prefabs/World/Map/MapCore.prefab";
 
     static StructureProjectInstaller()
     {
         EditorApplication.delayCall += InstallOncePerEditorSession;
     }
 
-    [MenuItem("FlatWorld/其他工具/遗迹编辑器/安装或修复项目接入")]
+    [MenuItem("FlatWorld/其他工具/遗迹编辑器/检查目录和示例内容")]
     public static void Install()
     {
         StructureCatalogSO catalog = EnsureDefaultCatalog();
         EnsureSampleContent(catalog);
-        EnsureMapCoreGenerator(catalog);
         AssetDatabase.SaveAssets();
-        Debug.Log("[遗迹系统] 项目接入检查完成");
-    }
-
-    [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/启用单点强制生成")]
-    private static void EnableTestMode()
-    {
-        SetTestMode(true);
-    }
-
-    [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/关闭强制生成")]
-    private static void DisableTestMode()
-    {
-        SetTestMode(false);
+        Debug.Log("[遗迹系统] 目录和示例内容检查完成");
     }
 
     [MenuItem("FlatWorld/其他工具/遗迹编辑器/测试/定位默认Catalog")]
@@ -176,86 +160,6 @@ public static class StructureProjectInstaller
             catalog.Definitions.Add(definition);
             EditorUtility.SetDirty(catalog);
         }
-    }
-
-    private static void EnsureMapCoreGenerator(StructureCatalogSO catalog)
-    {
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MapCorePath);
-        Map map = prefab != null ? prefab.GetComponent<Map>() : null;
-        if (map == null)
-        {
-            Debug.LogError($"[遗迹系统] MapCore中找不到Map组件：{MapCorePath}");
-            return;
-        }
-
-        SerializedObject serializedMap = new(map);
-        SerializedProperty generators = serializedMap.FindProperty("mapGenerators");
-        if (generators == null)
-        {
-            Debug.LogError("[遗迹系统] Map.mapGenerators序列化字段不存在", map);
-            return;
-        }
-
-        for (int i = 0; i < generators.arraySize; i++)
-        {
-            SerializedProperty element = generators.GetArrayElementAtIndex(i);
-            if (element.managedReferenceValue is ChunkGenerator_Structures existing)
-            {
-                existing.Catalog = catalog;
-                serializedMap.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SavePrefabAsset(prefab);
-                return;
-            }
-        }
-
-        int insertIndex = generators.arraySize;
-        for (int i = 0; i < generators.arraySize; i++)
-        {
-            if (generators.GetArrayElementAtIndex(i).managedReferenceValue is ChunkGenerator_SpawnItems)
-            {
-                insertIndex = i;
-                break;
-            }
-        }
-
-        generators.InsertArrayElementAtIndex(insertIndex);
-        SerializedProperty inserted = generators.GetArrayElementAtIndex(insertIndex);
-        inserted.managedReferenceValue = new ChunkGenerator_Structures { Catalog = catalog };
-        serializedMap.ApplyModifiedPropertiesWithoutUndo();
-        PrefabUtility.SavePrefabAsset(prefab);
-        EditorUtility.SetDirty(prefab);
-    }
-
-    private static void SetTestMode(bool enabled)
-    {
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MapCorePath);
-        Map map = prefab != null ? prefab.GetComponent<Map>() : null;
-        if (map == null)
-        {
-            Debug.LogError($"[遗迹系统] MapCore中找不到Map组件：{MapCorePath}");
-            return;
-        }
-
-        SerializedObject serializedMap = new(map);
-        SerializedProperty generators = serializedMap.FindProperty("mapGenerators");
-        for (int i = 0; generators != null && i < generators.arraySize; i++)
-        {
-            SerializedProperty element = generators.GetArrayElementAtIndex(i);
-            if (element.managedReferenceValue is not ChunkGenerator_Structures generator)
-                continue;
-
-            generator.TestMode = enabled;
-            element.managedReferenceValue = generator;
-            serializedMap.ApplyModifiedPropertiesWithoutUndo();
-            PrefabUtility.SavePrefabAsset(prefab);
-            EditorUtility.SetDirty(prefab);
-            Debug.Log(enabled
-                ? "[遗迹系统] 强制测试已开启：只会在世界锚点所在的单个Chunk放置废弃营地。"
-                : "[遗迹系统] 强制测试已关闭：已恢复正常概率生成。");
-            return;
-        }
-
-        Debug.LogError("[遗迹系统] MapCore尚未接入ChunkGenerator_Structures，请先执行“安装或修复项目接入”。");
     }
 
     private static void RepairScriptReference(ScriptableObject asset)

@@ -124,6 +124,7 @@ public partial class ChunkMgr
     private int lastChunkViewPoolRetainedCapacity = -1;
     private Transform runtimeChunkViewRoot;
     private bool runtimeWindowUsesLocalPresentation;
+    private bool runtimeWindowUsesObservers;
     private Rect runtimeActiveWindowBounds;
     private Rect runtimePresentationWindowBounds;
     private readonly ChunkWindowPresentationTransition runtimeWindowTransition = new();
@@ -395,11 +396,22 @@ public partial class ChunkMgr
         Vector2Int destroyDistance, bool includeLocalPresentation,
         Vector2Int? prefetchDistance = null, Vector2Int? presentationDistance = null)
     {
+        RefreshRuntimeWindows(center, activeDistance, destroyDistance, includeLocalPresentation,
+            prefetchDistance, presentationDistance, null);
+    }
+
+    /// <summary>单人和多人共用窗口提交、存档恢复与表现调度。</summary>
+    private void RefreshRuntimeWindows(Vector2 center, Vector2Int activeDistance,
+        Vector2Int destroyDistance, bool includeLocalPresentation,
+        Vector2Int? prefetchDistance, Vector2Int? presentationDistance,
+        IReadOnlyList<Vector3> observerPositions)
+    {
         if (!IsSurfaceStreamingScene) return;
         EnsureWorldRuntime();
         using var windowTiming = WorldRuntime.StreamingDiagnostics.Measure("window.refresh");
         WorldRuntime.StreamingDiagnostics.Count("window.refreshes");
         runtimeWindowUsesLocalPresentation = includeLocalPresentation;
+        runtimeWindowUsesObservers = observerPositions != null;
         activeDistance = new Vector2Int(
             Mathf.Max(1, activeDistance.x),
             Mathf.Max(1, activeDistance.y));
@@ -440,56 +452,66 @@ public partial class ChunkMgr
         runtimeWindowDimensionId = dimensionId;
         SampleRuntimeWindowTransition();
 
+        IReadOnlyList<ChunkWindowRequest> windows = observerPositions != null
+            ? CreateRuntimeObserverWindows(observerPositions, dimensionId, activeDistance,
+                resolvedPresentation, destroyDistance, seed, profile, topology)
+            : new[] { new ChunkWindowRequest(centerAddress,
+                new Int2(activeDistance.x, activeDistance.y),
+                new Int2(destroyDistance.x, destroyDistance.y), includeLocalPresentation,
+                seed, profile, topology,
+                dataDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y),
+                presentationDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y)) };
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
         Vector2Int radius = GetRuntimeWindowChunkRadius(resolvedPresentation);
-        int radiusX = radius.x;
-        int radiusY = radius.y;
-        for (int dx = -radiusX; dx <= radiusX; dx++)
+        for (int windowIndex = 0; windowIndex < windows.Count; windowIndex++)
         {
-            for (int dy = -radiusY; dy <= radiusY; dy++)
+            Int2 windowOrigin = windows[windowIndex].Center.ChunkOrigin;
+            for (int dx = -radius.x; dx <= radius.x; dx++)
             {
-                Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
-                    centerOrigin.x + dx * stepX,
-                    centerOrigin.y + dy * stepY));
-                var address = new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y));
-                runtimeWindowTargets.Add(address);
-                if (Mathf.Abs(dx) < activeDistance.x && Mathf.Abs(dy) < activeDistance.y)
-                    runtimeReadyTargets.Add(address);
-                if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+                for (int dy = -radius.y; dy <= radius.y; dy++)
                 {
-                    binding = new RuntimeChunkBinding();
-                    activeRuntimeBindings.Add(address, binding);
+                    Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
+                        windowOrigin.X + dx * stepX, windowOrigin.Y + dy * stepY));
+                    var address = new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y));
+                    runtimeWindowTargets.Add(address);
+                    if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+                    {
+                        binding = new RuntimeChunkBinding();
+                        activeRuntimeBindings.Add(address, binding);
+                    }
+                    binding.WantsPresentation = includeLocalPresentation;
+                    retiringRuntimeBindings.Remove(address);
                 }
-
-                binding.WantsPresentation = includeLocalPresentation;
-                retiringRuntimeBindings.Remove(address);
             }
         }
+        // 加载页只等待本机活动圈，远处玩家不扩大本机蒙版或重生等待范围。
+        for (int dx = 1 - activeDistance.x; dx < activeDistance.x; dx++)
+            for (int dy = 1 - activeDistance.y; dy < activeDistance.y; dy++)
+            {
+                Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
+                    centerOrigin.x + dx * stepX, centerOrigin.y + dy * stepY));
+                runtimeReadyTargets.Add(new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y)));
+            }
 
         runtimeWindowRemovalBuffer.Clear();
         foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
-        {
             if (!runtimeWindowTargets.Contains(pair.Key))
                 runtimeWindowRemovalBuffer.Add(pair.Key);
-        }
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
             RetireRuntimeBinding(runtimeWindowRemovalBuffer[i]);
 
-        // 雾内旧画面暂留表现租约，完全被遮住后再归还并允许纯模型逐出。
-        runtimeChunkManager.RefreshWindow(new ChunkWindowRequest(centerAddress,
-            new Int2(activeDistance.x, activeDistance.y),
-            new Int2(destroyDistance.x, destroyDistance.y),
-            includeLocalPresentation, seed, profile, topology,
-            dataDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y),
-            presentationDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y)));
+        runtimeChunkManager.RefreshWindows(windows);
         ReconcileRuntimeWindowBindings();
         ReprojectRuntimeChunkViewsToLocalAnchor();
         // 只在流送窗口发生变化时校验一次现有表现，不做定时轮询。
         RepairRuntimeWindowPresentationBackends();
         RebuildRuntimePrefetchQueue(centerOrigin, dimensionId, resolvedPresentation,
-            resolvedPrefetch, stepX, stepY, profile, seed, topology);
+            resolvedPrefetch, stepX, stepY, profile, seed, topology, windows);
     }
+
+    /// <summary>联机观察者在同区块内移动时只更新调度优先级，不裁剪其他玩家的窗口。</summary>
+    public void UpdateRuntimePresentationPriority(Vector2 center) => runtimePresentationPriorityCenter = center;
 
     /// <summary>玩家跨区块时取消未出画面的旧任务，已呈现的旧地面等待雾交接后回收。</summary>
     public void RetargetRuntimePresentationQueue(Vector2 center, Vector2Int presentationDistance)
@@ -648,7 +670,7 @@ public partial class ChunkMgr
     private void RebuildRuntimePrefetchQueue(Vector2Int centerOrigin, string dimensionId,
         Vector2Int activeDistance, Vector2Int prefetchDistance, int stepX, int stepY,
         ChunkGenerationProfileSnapshot profile, int seed,
-        ChunkGenerationTopologySnapshot topology)
+        ChunkGenerationTopologySnapshot topology, IReadOnlyList<ChunkWindowRequest> windows)
     {
         runtimePrefetchQueue.Clear();
         runtimePrefetchTargets.Clear();
@@ -658,25 +680,26 @@ public partial class ChunkMgr
         int prefetchRadiusY = prefetchDistance.y - 1;
         // 视野移动会反复重排，复用临时数组避免每次创建排序列表。
         runtimePrefetchSortBuffer.Clear();
-        for (int dx = -prefetchRadiusX; dx <= prefetchRadiusX; dx++)
+        for (int windowIndex = 0; windowIndex < windows.Count; windowIndex++)
         {
-            for (int dy = -prefetchRadiusY; dy <= prefetchRadiusY; dy++)
+            Int2 windowOrigin = windows[windowIndex].Center.ChunkOrigin;
+            for (int dx = -prefetchRadiusX; dx <= prefetchRadiusX; dx++)
             {
-                int ring = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
-                if (Mathf.Abs(dx) <= activeRadiusX && Mathf.Abs(dy) <= activeRadiusY)
-                    continue;
-
-                Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
-                    centerOrigin.x + dx * stepX,
-                    centerOrigin.y + dy * stepY));
-                var address = new RuntimeWorldAddress(dimensionId,
-                    new Int2(origin.x, origin.y));
-                if (!runtimePrefetchTargets.Add(address) ||
-                    runtimePrefetchInFlight == address ||
-                    TryGetChunkRuntime(address, out ChunkRuntime chunk) &&
-                    chunk.DataStatus == ChunkDataStatus.Ready)
-                    continue;
-                runtimePrefetchSortBuffer.Add(new RuntimePrefetchRequest(address, profile, seed, topology, ring));
+                for (int dy = -prefetchRadiusY; dy <= prefetchRadiusY; dy++)
+                {
+                    if (Mathf.Abs(dx) <= activeRadiusX && Mathf.Abs(dy) <= activeRadiusY)
+                        continue;
+                    Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
+                        windowOrigin.X + dx * stepX, windowOrigin.Y + dy * stepY));
+                    var address = new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y));
+                    if (runtimeWindowTargets.Contains(address) || !runtimePrefetchTargets.Add(address) ||
+                        runtimePrefetchInFlight == address ||
+                        TryGetChunkRuntime(address, out ChunkRuntime chunk) && chunk.DataStatus == ChunkDataStatus.Ready)
+                        continue;
+                    Vector2Int delta = WorldTopologyRuntime.ShortestDelta(centerOrigin, origin);
+                    int ring = Mathf.Max(Mathf.Abs(delta.x) / stepX, Mathf.Abs(delta.y) / stepY);
+                    runtimePrefetchSortBuffer.Add(new RuntimePrefetchRequest(address, profile, seed, topology, ring));
+                }
             }
         }
 
@@ -1403,6 +1426,7 @@ public partial class ChunkMgr
         runtimeReadyTargets.Clear();
         retiringRuntimeBindings.Clear();
         runtimeWindowUsesLocalPresentation = false;
+        runtimeWindowUsesObservers = false;
         runtimeActiveWindowBounds = runtimePresentationWindowBounds = default;
         runtimeWindowTransition.Reset();
         runtimeWindowTransitionFrame = -1;

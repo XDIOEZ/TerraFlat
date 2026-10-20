@@ -328,7 +328,6 @@ public sealed partial class GMReflectionConsole
             }
             player.transform.position = destination;
             player.Data.transform.position = destination;
-            manager.ResetChunkLoadQueue();
             Mod_ChunkLoader loader = player.GetComponentInChildren<Mod_ChunkLoader>(true) ??
                 player.GetComponentInParent<Mod_ChunkLoader>();
             loader?.RefreshChunksAroundPlayer();

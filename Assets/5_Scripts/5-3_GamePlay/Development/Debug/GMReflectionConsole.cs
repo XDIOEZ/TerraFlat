@@ -2062,7 +2062,6 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (player?.Data != null)
             player.Data.transform.position = destination;
 
-        ChunkMgr.Instance?.ResetChunkLoadQueue();
         Mod_ChunkLoader chunkLoader = playerTransform.GetComponentInChildren<Mod_ChunkLoader>(true) ??
                                       playerTransform.GetComponentInParent<Mod_ChunkLoader>();
         chunkLoader?.RefreshChunksAroundPlayer();

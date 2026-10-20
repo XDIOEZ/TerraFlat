@@ -32,6 +32,41 @@ test.system("world_streaming", "commit_snapshot", { tile = 23, level = 3, change
     assert(not data.oldEpochAccepted and data.epochDisposed, "旧世界结果被发布或丢弃后未释放")
 end, "生成结果提交、快照冻结和唯一所有权释放")
 
+test.system("world_streaming", "observer_windows", {}, function(data)
+    assert(data.plan[1].x == 0 and data.plan[1].y == 0 and data.plan[2].x == 8 and data.plan[2].y == 0,
+        "联机窗口计划没有按实际矩形区块尺寸定位每个观察者")
+    assert(data.plan[1].activeX == 2 and data.plan[1].activeY == 1
+        and data.plan[1].presentationX == 3 and data.plan[1].presentationY == 2,
+        "联机窗口计划混淆了横纵距离或活动圈与预加载表现圈")
+    assert(data.merged.chunks == 45 and data.merged.active == 5 and data.merged.simulationLeases == 5
+        and data.merged.presentation == 21 and not data.merged.pending and data.sharedLeaseCount == 1,
+        "重叠或重复观察者没有合并活动/表现/保留窗口，或重叠区块被重复领取模拟租约")
+    assert(data.repeatDemandChanges == 0 and data.repeated.active == 5
+        and data.repeated.simulationLeases == 5 and data.repeated.presentation == 21,
+        "重复提交同一联机窗口造成租约累加或反复发布表现需求")
+    assert(data.removed.chunks == 36 and data.removed.active == 3 and data.removed.simulationLeases == 3
+        and data.removed.presentation == 15 and data.sharedAfterRemoval == 1,
+        "移除一个观察者时误删剩余观察者窗口，或旧模拟租约没有归还")
+    assert(data.retainedDormant == "Dormant" and data.preloadSimulationCount == 0 and data.navigationProtected,
+        "保留圈/表现预加载圈意外继续模拟，或外部导航租约持有的区块被逐出")
+    assert(data.empty.chunks == 1 and data.empty.active == 0 and data.empty.presentation == 0
+        and data.released.chunks == 0 and data.unexpectedGenerationCount == 0,
+        "所有观察者退出后仍有窗口租约/表现需求，或独立规则启动了不必要的地形生成")
+    assert(data.negative[1].x == -4 and data.negative[1].y == -2
+        and data.negative[2].x == 4 and data.negative[2].y == 2,
+        "负坐标或非正方形区块原点没有按地板取整")
+    assert(data.invalidFiltered == 1, "非法网络坐标没有被过滤，或误删了合法观察者")
+    local wrapped = data.wrapped
+    assert(wrapped.plan[1].x == 0 and wrapped.plan[1].y == 0
+        and wrapped.merged.chunks == 12 and wrapped.merged.active == 3
+        and wrapped.merged.simulationLeases == 3 and wrapped.merged.presentation == 12
+        and wrapped.seamLeaseCount == 1,
+        "跨世界接缝的观察者窗口没有归一化合并，或多周别名重复模拟同一区块")
+    assert(wrapped.single.chunks == 12 and wrapped.single.active == 3
+        and wrapped.single.presentation == 12 and wrapped.unexpectedGenerationCount == 0,
+        "移除环绕同址观察者破坏剩余窗口")
+end, "正式联机窗口计划、多观察者并集、离开释放与环绕去重")
+
 test.system("world_streaming", "base_presentation_steps", {}, function(data)
     assert(data.firstYield and data.secondYield and data.initRegistered, "基础地形没有按初始化和扫描步骤推进")
     assert(not data.initReady and not data.partialReady and data.earlyEvents == 0,

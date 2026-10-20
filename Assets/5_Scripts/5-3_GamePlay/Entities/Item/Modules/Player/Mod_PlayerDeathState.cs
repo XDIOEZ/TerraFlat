@@ -498,8 +498,7 @@ public partial class Mod_PlayerDeathState : Module
 
         bool centerWarningLogged = false;
         float warningAt = Time.realtimeSinceStartup + 12f;
-        while (!chunkManager.IsRuntimeEntityPresentationReady(item.transform.position) ||
-               chunkManager.HasPendingChunkLoads)
+        while (!chunkManager.IsRuntimeEntityPresentationReady(item.transform.position))
         {
             displayedProgress = Mathf.MoveTowards(
                 displayedProgress,
@@ -613,15 +612,18 @@ public partial class Mod_PlayerDeathState : Module
             return;
         }
 
-        ChunkMgr.Instance.ResetChunkLoadQueue();
-
         if (_chunkLoader != null)
         {
             _chunkLoader.RefreshChunksAroundPlayer();
             return;
         }
 
-        ChunkMgr.Instance.LoadChunkCloseToPlayer(gameObject, Distance: 1);
+        if (GameNetwork.IsOnline)
+        {
+            FlatWorld.Networking.Gameplay.NetworkChunkStreamingCoordinator.RequestImmediateRefresh();
+            return;
+        }
+        ChunkMgr.Instance.RefreshRuntimeWindow(transform.position, 1, 1, includeLocalPresentation: true);
     }
 
 #endregion

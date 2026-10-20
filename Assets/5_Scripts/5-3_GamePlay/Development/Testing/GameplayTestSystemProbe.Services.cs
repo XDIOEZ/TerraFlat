@@ -38,6 +38,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("world_streaming/chunk_leases", ServiceChunkLeases);
         operations.Add("world_streaming/generation_lifecycle", ServiceGenerationLifecycle);
         operations.Add("world_streaming/commit_snapshot", ServiceCommitSnapshot);
+        operations.Add("world_streaming/observer_windows", ServiceObserverWindows);
         operations.Add("save/snapshot_memory", ServiceSnapshotMemory);
         operations.Add("save/special_namespace", ServiceSpecialNamespace);
         operations.Add("save/space_item_chain", ServiceSpaceItemChain);
