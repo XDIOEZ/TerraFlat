@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
+using UnityEngine.Pool;
 
 namespace FlatWorld.Spaceflight
 {
@@ -29,25 +30,30 @@ namespace FlatWorld.Spaceflight
         public void CommitSurfaceContacts(double seconds)
         {
             if (!GameNetwork.HasStateAuthority || State == null || Universe == null || seconds <= 0d) return;
-            var contacts = new List<QueuedSurfaceContact>(pendingSurfaceContacts.Values);
-            contacts.Sort((left, right) => left.Contact.Fraction.CompareTo(right.Contact.Fraction));
-            pendingSurfaceContacts.Clear();
-            foreach (QueuedSurfaceContact candidate in contacts)
+            if (pendingSurfaceContacts.Count > 0)
             {
-                string id = candidate.Assembly.MemberShipIds[0];
-                ShipState ship = GetShip(id);
-                ShipFlightState flight = GetFlight(id);
-                if (ship == null || flight == null) continue;
-                ShipAssemblyState assembly = GetConnectedAssembly(id);
-                if (assembly == null) continue;
-                if (candidate.IsLanding)
+                // 仅有真实触地事务时租用快照，允许落地回调继续登记下一批接触。
+                using var lease = ListPool<QueuedSurfaceContact>.Get(out var contacts);
+                contacts.AddRange(pendingSurfaceContacts.Values);
+                contacts.Sort((left, right) => left.Contact.Fraction.CompareTo(right.Contact.Fraction));
+                pendingSurfaceContacts.Clear();
+                foreach (QueuedSurfaceContact candidate in contacts)
                 {
-                    if (flight.LandingResolved || flight.Phase is not (ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)) continue;
-                    SurfaceContact contact = candidate.Contact;
-                    contact.RelativeVelocityMetersPerSecond = new SpaceVector2(
-                        Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY),
-                        contact.RelativeVelocityMetersPerSecond.Y);
-                    LandAssembly(assembly, contact, candidate.ApplyImpact);
+                    string id = candidate.Assembly.MemberShipIds[0];
+                    ShipState ship = GetShip(id);
+                    ShipFlightState flight = GetFlight(id);
+                    if (ship == null || flight == null) continue;
+                    ShipAssemblyState assembly = GetConnectedAssembly(id);
+                    if (assembly == null) continue;
+                    if (candidate.IsLanding)
+                    {
+                        if (flight.LandingResolved || flight.Phase is not (ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)) continue;
+                        SurfaceContact contact = candidate.Contact;
+                        contact.RelativeVelocityMetersPerSecond = new SpaceVector2(
+                            Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY),
+                            contact.RelativeVelocityMetersPerSecond.Y);
+                        LandAssembly(assembly, contact, candidate.ApplyImpact);
+                    }
                 }
             }
             // 已接受的降落指令使用本步碰撞后的最终姿态，不因漂出按钮范围或重积轨迹静默丢失。
