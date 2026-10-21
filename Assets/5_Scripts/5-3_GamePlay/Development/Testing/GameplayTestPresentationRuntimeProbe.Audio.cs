@@ -113,7 +113,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool startupServiceStable = ReferenceEquals(service, AudioService.Instance);
             bool startupCatalogStable = ReferenceEquals(startupCatalog, service.Catalog);
             bool startupSettingsStable = startupSettings == JsonUtility.ToJson(service.UserSettings);
-            bool startupUiCueReady = service.TryGetCue("ui.click", out AudioCue click) &&
+            // 点击音效暂时留空，使用确认音效采样 UI 预热能力。
+            bool startupUiCueReady = service.TryGetCue(AudioEventIds.UiConfirm, out AudioCue click) &&
                 click.Clips.Count > 0 && click.Clips.All(clip => clip != null &&
                     clip.loadState == AudioDataLoadState.Loaded);
             AudioCue loop = fixture.CloneCue(AudioEventIds.PlayerWetClothesMoveLoop);
@@ -404,7 +405,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         AudioSource stopSource = PlayPauseVoice(fixture, stopCue, AudioPlayOptions.Global(), out AudioHandle stopHandle);
         fixture.Service.Stop(stopHandle);
         pause["immediateStop"] = CapturePauseVoice(stopHandle, stopSource);
-        AudioCue clickCue = fixture.CloneCue(AudioEventIds.UiClick);
+        AudioCue clickCue = fixture.CloneCue(AudioEventIds.UiConfirm);
         AudioSource clickSource = PlayPauseVoice(fixture, clickCue, AudioPlayOptions.Global(), out AudioHandle clickHandle);
         pause["uiClick"] = CapturePauseVoice(clickHandle, clickSource);
         pause["uiReusedStoppedSource"] = clickSource == stopSource;

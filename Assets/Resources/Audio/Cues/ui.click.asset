@@ -14,10 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: ui.click
   bus: 2
-  clips:
-  - {fileID: 8300000, guid: 0749956df8ed998449e9484826393e3c, type: 3}
-  - {fileID: 8300000, guid: 63d40138943b463c9651e2f96d10b369, type: 3}
-  - {fileID: 8300000, guid: 5079930d8d52417a82887f8d50107a6b, type: 3}
+  clips: []
   selection: 0
   loop: 0
   volume:
