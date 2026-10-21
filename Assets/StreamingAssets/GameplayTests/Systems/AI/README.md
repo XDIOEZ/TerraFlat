@@ -1,5 +1,7 @@
 ﻿# AI 生物测试
 
+2026-10-21 感知排队去重优化：`ItemMgr.QueueDetectorQuery` 用可复用的检测器到列表下标映射替代重复申请时的线性扫描；保留首次排队顺序、最新版本覆盖、无效请求拒绝和批次清理。既有 `stale_perception_batch` 覆盖结果流的过期版本处理，但没有直接覆盖同帧重复排队；本轮不将静态检查视为 Unity/Lua 性能验收。
+
 2026-10-21 GO AI 运行时组件查询优化：`AiRuntimeBackendService` 采用临时 `ListPool<MonoBehaviour>` 代替 `GetComponentsInChildren<MonoBehaviour>(true)` 的数组分配；前进/取消命令与 Actor 身份检查共用本次子组件快照，免去重复的层级扫描，保留首个符合身份的 Actor、首个命令接收器、死亡拒绝及 ECS 后备路由。现有 `advance_navigation` 实际世界 Lua 检查出生、指令/取消和导航，但本轮未执行 Unity 编译或 PlayMode、未量化实际 GC 降幅。
 
 2026-10-19 分帧出生补充：`creature-creation.lua` 的 `ai/incremental_creature_creation` 按真实帧推进正式 `SpawnCreatureInSteps`，检查完成前不交付、最终 AI/注册/激活齐全、模块准备中途取消回滚、提交资格失效不发布、光耀按需建灯及关闭/复用。已通过外部 C# 编译；当前 Unity PlayMode 保持原状，Lua 未执行，也没有优化前后的同场景 Profiler 对比，实际帧耗时由用户验收。自然计划成功扣预算、异步原生克隆中途取消和居民恢复开销仍未直接覆盖。

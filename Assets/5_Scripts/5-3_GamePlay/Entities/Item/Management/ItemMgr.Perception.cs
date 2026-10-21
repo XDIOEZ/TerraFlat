@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using Unity.Burst;
@@ -70,7 +70,7 @@ public partial class ItemMgr
     private const int PerceptionJobBatchSize = 8;
 
     private readonly List<PendingDetectorRequest> _pendingDetectorRequests = new(64);
-    private readonly HashSet<Mod_ItemDetector> _pendingDetectorSet = new();
+    private readonly Dictionary<Mod_ItemDetector, int> _pendingDetectorIndices = new(64);
     private readonly List<Mod_ItemDetector> _inFlightDetectors = new(64);
     private readonly List<long> _inFlightDetectorVersions = new(64);
     private readonly List<DetectorQuerySnapshot> _perceptionQueryData = new(64);
@@ -243,19 +243,15 @@ public partial class ItemMgr
         if (detector == null || requestVersion <= 0)
             return;
 
-        if (!_pendingDetectorSet.Add(detector))
+        // 首次排队只查一次字典，重复申请则直接覆盖原槽位的最新版本。
+        if (_pendingDetectorIndices.TryAdd(detector, _pendingDetectorRequests.Count))
         {
-            for (int i = 0; i < _pendingDetectorRequests.Count; i++)
-            {
-                if (_pendingDetectorRequests[i].Detector != detector)
-                    continue;
-
-                _pendingDetectorRequests[i] = new PendingDetectorRequest(detector, requestVersion);
-                return;
-            }
+            _pendingDetectorRequests.Add(new PendingDetectorRequest(detector, requestVersion));
+            return;
         }
 
-        _pendingDetectorRequests.Add(new PendingDetectorRequest(detector, requestVersion));
+        int index = _pendingDetectorIndices[detector];
+        _pendingDetectorRequests[index] = new PendingDetectorRequest(detector, requestVersion);
     }
 
     /// <summary>冻结本批查询、形状和拓扑，随后统一调度 Burst 精筛。</summary>
@@ -277,7 +273,7 @@ public partial class ItemMgr
         }
 
         _pendingDetectorRequests.Clear();
-        _pendingDetectorSet.Clear();
+        _pendingDetectorIndices.Clear();
         if (_inFlightDetectors.Count == 0)
             return;
 
