@@ -48,15 +48,33 @@ namespace FlatWorld.Networking.Gameplay
             return string.IsNullOrWhiteSpace(observer.WorldKey) ? null : GameplayWorldRegistry.UseWorld(observer.WorldKey);
         }
         // 客户端只提交操作；服务器从当前连接已绑定的玩家读取世界。
-        public static Action<NetworkConnectionToClient, T> Wrap<T>(Action<NetworkConnectionToClient, T> handler) where T : struct, NetworkMessage
+        internal static string GetRequestRejection(bool ready, bool transferring, bool hasObserver,
+            string worldKey, uint? requestRevision, uint realmRevision)
+        {
+            if (!ready) return "玩家尚未完成世界加载";
+            if (transferring) return "正在切换世界，请稍后重试";
+            if (!hasObserver || string.IsNullOrWhiteSpace(worldKey)) return "玩家所在世界尚未就绪";
+            if (requestRevision.HasValue && requestRevision.Value != realmRevision) return "世界状态已更新，请重试操作";
+            return null;
+        }
+
+        public static Action<NetworkConnectionToClient, T> Wrap<T>(Action<NetworkConnectionToClient, T> handler,
+            Action<NetworkConnectionToClient, T, string> rejected = null) where T : struct, NetworkMessage
             => (connection, message) =>
             {
                 NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
-                if (player == null || !connection.isAuthenticated || !connection.isReady || player.IsWorldTransferPending) return;
+                if (player == null || !connection.isAuthenticated) return;
                 // 世界绑定丢失时禁止回落到主机当前世界，也要检查观察者的最新代际。
-                if (!player.TryGetSpaceObserver(out SpaceNetworkObserver observer) ||
-                    string.IsNullOrWhiteSpace(observer.WorldKey)) return;
-                if (message is INetworkWorldRequest request && request.WorldRevision != observer.RealmRevision) return;
+                bool hasObserver = player.TryGetSpaceObserver(out SpaceNetworkObserver observer);
+                string reason = GetRequestRejection(connection.isReady, player.IsWorldTransferPending,
+                    hasObserver, observer.WorldKey, message is INetworkWorldRequest request ? request.WorldRevision : null,
+                    observer.RealmRevision);
+                if (reason != null)
+                {
+                    // 有事务回执的调用方立即收到真实拒绝原因，不把门禁丢包误报成网络超时。
+                    rejected?.Invoke(connection, message, reason);
+                    return;
+                }
                 using (Use(observer)) handler(connection, message);
             };
         #endregion

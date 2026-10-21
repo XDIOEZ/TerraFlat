@@ -56,12 +56,14 @@ public static class ItemInstanceDataFactory
 
     public static Func<ItemData> Compile(ItemData templateData) => CompileCore(templateData, true);
 
-    internal static Func<ItemData> CompileRuntimeCopy(ItemData source) => CompileCore(source, source?.SharedConfiguration != null);
+    internal static Func<ItemData> CompileRuntimeCopy(ItemData source) => CompileCore(source, source?.SharedConfiguration != null, true);
 
-    private static Func<ItemData> CompileCore(ItemData templateData, bool bindConfiguration)
+    private static Func<ItemData> CompileCore(ItemData templateData, bool bindConfiguration, bool preserveConfiguration = false)
     {
         if (templateData == null) throw new ArgumentNullException(nameof(templateData));
-        ItemSharedConfiguration configuration = new(templateData);
+        // 运行态复制保留定义基线，实例新增标签不能变成定义标签而在下次保存时丢失。
+        ItemSharedConfiguration configuration = preserveConfiguration && templateData.SharedConfiguration != null
+            ? templateData.SharedConfiguration : new(templateData);
         var initialState = new RuntimeDefaults(templateData);
         Func<ItemData> createShell = CompileShell(templateData);
         var moduleFactories = new List<Func<ModuleData>>();

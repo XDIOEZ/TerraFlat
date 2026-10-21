@@ -188,6 +188,7 @@ public class Inventory
     // 运行时赋值，不序列化
     GameObject ItemSlot_Prefab;
     Transform ItemSlot_Parent;
+    [NonSerialized] private bool defaultBagPlacementPending;
     [NonSerialized] private InventoryVirtualizedSlotGrid _virtualizedSlotGrid; // UI_Bag 只实例化可视区域附近的槽位。
     [NonSerialized, FastCloner.Code.FastClonerIgnore] private InventoryModuleDataScheduler _moduleDataScheduler;
 
@@ -363,6 +364,9 @@ public class Inventory
         if (_flickTargets != null) _flickTargets.Unbind(this);
         _flickTargets = null;
         BasePanel panel = basePanel;
+        if (panel != null)
+            panel.Opened -= PositionBagAfterFirstOpen;
+        defaultBagPlacementPending = false;
         basePanel = null;
         if (panel != null)
         {
@@ -438,6 +442,36 @@ public class Inventory
         }
     }
 
+    /// <summary>首次可见布局和缩放完成后只定位一次，之后由玩家拖动位置负责。</summary>
+    private void PositionBagAfterFirstOpen()
+    {
+        if (defaultBagPlacementPending && basePanel != null)
+            basePanel.StartCoroutine(PositionFirstBagLayout(basePanel));
+    }
+
+    private IEnumerator PositionFirstBagLayout(BasePanel panel)
+    {
+        int dragRevision = panel.Dragger != null ? panel.Dragger.PositionRevision : 0;
+        yield return null;
+        while (panel != null && panel.IsOpen() && panel.IsVisualTransitioning)
+        {
+            if (panel.Dragger != null && panel.Dragger.IsDragging)
+            {
+                defaultBagPlacementPending = false;
+                yield break;
+            }
+            yield return null;
+        }
+        if (panel == null || !panel.IsOpen() || !defaultBagPlacementPending)
+            yield break;
+        defaultBagPlacementPending = false;
+        if (panel.Dragger != null && (panel.Dragger.IsDragging || panel.Dragger.PositionRevision != dragRevision))
+            yield break;
+        RectTransform rect = panel.Dragger != null ? panel.Dragger.rectTransform : panel.rectTransform;
+        InventoryPanelLayout.ApplyDefaultBagPosition(rect,
+            GetPlayerHotBarInventory()?.basePanel?.transform as RectTransform);
+    }
+
     private static IEnumerator DelayedBringToFront(RectTransform rectTransform)
     {
         yield return null;
@@ -476,6 +510,7 @@ public class Inventory
             ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
             : uiManager.CreatePanelFromGameObject(panelPrefab);
         basePanel = createdPanel.GetComponentInChildren<BasePanel>();
+        basePanel.Opened += PositionBagAfterFirstOpen;
         bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
         // 可开关窗口统一配置，快捷栏和手部只保留常驻 HUD 行为。
         if (usesTogglePanelLifecycle)
@@ -515,7 +550,7 @@ public class Inventory
                 if (!hasSavedPanelPosition &&
                     string.Equals(panelPrefab.name, "UI_Bag", StringComparison.Ordinal))
                 {
-                    InventoryPanelLayout.ApplyDefaultBagPosition(rt);
+                    defaultBagPlacementPending = true;
                 }
             }
         }
@@ -2643,29 +2678,27 @@ public static class InventoryPanelLayout
     private const float DefaultBagWidth = 920f;
     private const float FullScreenCraftingThreshold = 0.65f;
 
-    /// <summary>把背包左边、上边直接贴齐画布，固定占据左上角。</summary>
-    public static void ApplyDefaultBagPosition(RectTransform panel)
+    /// <summary>首次摆放背包时按真实快捷栏上沿对齐，所有坐标统一到安全区父节点。</summary>
+    public static void ApplyDefaultBagPosition(RectTransform panel, RectTransform hotbar = null)
     {
-        if (panel == null)
-            return;
-
-        RectTransform parent = panel.parent as RectTransform;
-        if (parent == null)
+        if (panel == null || panel.parent is not RectTransform parent)
             return;
 
         Canvas.ForceUpdateCanvases();
-
-        Rect parentRect = parent.rect;
-        Vector2 panelSize = panel.rect.size;
-        Vector2 anchorReferenceNormalized = new Vector2(
-            Mathf.Lerp(panel.anchorMin.x, panel.anchorMax.x, panel.pivot.x),
-            Mathf.Lerp(panel.anchorMin.y, panel.anchorMax.y, panel.pivot.y));
-        Vector2 anchorReference = parentRect.min + Vector2.Scale(parentRect.size, anchorReferenceNormalized);
-        Vector2 targetPivot = new Vector2(
-            parentRect.xMin + panelSize.x * panel.pivot.x,
-            parentRect.yMax - panelSize.y * (1f - panel.pivot.y));
-
-        panel.anchoredPosition = targetPivot - anchorReference;
+        Vector3[] corners = new Vector3[4];
+        panel.GetWorldCorners(corners);
+        Vector3 bottomLeft = parent.InverseTransformPoint(corners[0]);
+        Vector3 topRight = parent.InverseTransformPoint(corners[2]);
+        float bottom = parent.rect.yMax - (topRight.y - bottomLeft.y);
+        if (hotbar != null)
+        {
+            hotbar.GetWorldCorners(corners);
+            bottom = Mathf.Max(parent.InverseTransformPoint(corners[1]).y,
+                parent.InverseTransformPoint(corners[2]).y);
+            bottom = Mathf.Min(bottom, parent.rect.yMax - (topRight.y - bottomLeft.y));
+            bottom = Mathf.Max(bottom, parent.rect.yMin);
+        }
+        panel.anchoredPosition += new Vector2(parent.rect.xMin - bottomLeft.x, bottom - bottomLeft.y);
     }
 
     /// <summary>把制作面板放到画布右侧，与背包保持统一间距。</summary>

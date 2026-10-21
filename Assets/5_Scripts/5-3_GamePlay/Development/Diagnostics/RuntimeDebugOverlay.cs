@@ -93,6 +93,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
     /// <summary>玩家输入的最近日志复制条数。</summary>
     [SerializeField] private TMP_InputField copyEntryCountInput;
+    [SerializeField] private Toggle ordinaryLogsToggle;
+    [SerializeField] private Toggle warningLogsToggle;
+    [SerializeField] private Toggle errorLogsToggle;
 
     #endregion
 
@@ -150,6 +153,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         BindButton(closeButton, ClosePanel);
         BindButton(openGmButton, OpenGmPanel);
         BindCopyEntryCountInput();
+        BindFilter(ordinaryLogsToggle);
+        BindFilter(warningLogsToggle);
+        BindFilter(errorLogsToggle);
     }
 
     /// <summary>解除悬浮窗按钮事件，避免禁用或销毁后的重复回调。</summary>
@@ -162,6 +168,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         UnbindButton(closeButton, ClosePanel);
         UnbindButton(openGmButton, OpenGmPanel);
         UnbindCopyEntryCountInput();
+        UnbindFilter(ordinaryLogsToggle);
+        UnbindFilter(warningLogsToggle);
+        UnbindFilter(errorLogsToggle);
     }
 
     /// <summary>清理跨场景单例引用。</summary>
@@ -324,7 +333,10 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
             copyEntryCount,
             out int copiedEntries,
             out int collapsedEntries,
-            out bool truncated);
+            out bool truncated,
+            ordinaryLogsToggle == null || ordinaryLogsToggle.isOn,
+            warningLogsToggle == null || warningLogsToggle.isOn,
+            errorLogsToggle == null || errorLogsToggle.isOn);
         GUIUtility.systemCopyBuffer = snapshot;
         if (statusText != null)
         {
@@ -414,14 +426,19 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         if (logText == null)
             return;
 
-        string snapshot = GameLogManager.GetRuntimeLogSnapshot(DisplayCharacterLimit, out bool truncated);
+        bool followTail = logScrollRect == null || logScrollRect.verticalNormalizedPosition <= 0.02f;
+        float previousPosition = logScrollRect != null ? logScrollRect.verticalNormalizedPosition : 0f;
+        string snapshot = GameLogManager.GetRuntimeLogSnapshot(DisplayCharacterLimit, out bool truncated,
+            ordinaryLogsToggle == null || ordinaryLogsToggle.isOn,
+            warningLogsToggle == null || warningLogsToggle.isOn,
+            errorLogsToggle == null || errorLogsToggle.isOn);
         logText.text = BuildDisplayLog(snapshot);
         if (truncated && statusText != null)
             statusText.text = "页面只显示最近内容；复制条数可在顶部手动设置。";
 
         LayoutRebuilder.MarkLayoutForRebuild(logText.rectTransform);
         if (logScrollRect != null)
-            logScrollRect.verticalNormalizedPosition = 0f;
+            logScrollRect.verticalNormalizedPosition = followTail ? 0f : previousPosition;
     }
 
     // 仅把显示端缺字转成 Unicode 编号，避免缺字警告再次进入日志；复制与磁盘日志保留原文。
@@ -487,6 +504,22 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     #endregion
 
     #region 事件绑定
+
+    private void BindFilter(Toggle toggle)
+    {
+        if (toggle == null)
+            return;
+        toggle.onValueChanged.RemoveListener(HandleFilterChanged);
+        toggle.onValueChanged.AddListener(HandleFilterChanged);
+    }
+
+    private void UnbindFilter(Toggle toggle)
+    {
+        if (toggle != null)
+            toggle.onValueChanged.RemoveListener(HandleFilterChanged);
+    }
+
+    private void HandleFilterChanged(bool _) => RefreshPresentation(force: true);
 
     /// <summary>幂等绑定按钮事件。</summary>
     private static void BindButton(Button button, UnityEngine.Events.UnityAction action)

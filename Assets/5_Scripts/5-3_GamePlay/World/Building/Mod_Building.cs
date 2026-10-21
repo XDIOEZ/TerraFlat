@@ -2135,15 +2135,22 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     public float GetMaxPlacementDistance(Player placementActor = null)
     {
         Player actor = placementActor != null ? placementActor : item?.Owner as Player;
+        return ResolveMaxPlacementDistance(actor, Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance,
+            item?.Owner);
+    }
+
+    /// <summary>预览、手机准星与服务器提交共用玩家实际交互半径。</summary>
+    public static float ResolveMaxPlacementDistance(Player actor, float fallbackDistance, Item owner = null)
+    {
         if (CreativeInventoryState.IsEnabled(actor))
             return float.PositiveInfinity;
 
         Mod_InteractSender interactionSender = actor != null
             ? actor.GetComponentInChildren<Mod_InteractSender>(true)
-            : item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
+            : owner?.GetComponentInChildren<Mod_InteractSender>(true);
         return interactionSender != null
-            ? Mathf.Max(0.01f, interactionSender.maxInteractDistance * 2f)
-            : Mathf.Max(0.01f, (Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance) * 2f);
+            ? Mathf.Max(0.01f, interactionSender.maxInteractDistance)
+            : Mathf.Max(0.01f, fallbackDistance);
     }
 
     #endregion

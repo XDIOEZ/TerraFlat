@@ -673,3 +673,29 @@ test.system("ui_settings", "virtualized_inventory", {}, function(data)
     assert(data.expandedPoolCount == 18 and data.expandedMappingValid,
         "更大视口重新绑定后没有扩充槽位池或丢失数据映射")
 end, "创造背包滚动：保留重叠槽位、复用交互回调与末尾回滚")
+
+
+-- 日志查看和复制共用类型过滤，异常和断言属于报错。
+for mask = 0, 7 do
+    local logs = mask % 2 == 1
+    local warnings = math.floor(mask / 2) % 2 == 1
+    local errors = math.floor(mask / 4) % 2 == 1
+    test.system("ui_settings", "log_filters", {logs = logs, warnings = warnings, errors = errors}, function(data)
+        assert(data.log == logs and data.warning == warnings and data.error == errors)
+        assert(data.exception == errors and data.assert == errors)
+    end, "日志类型过滤组合 " .. mask)
+end
+
+test.system("ui_settings", "world_settings_pages", {}, function(data)
+    assert(data.initialBasic and data.advancedVisible and data.returnedBasic)
+    assert(data.instancesRetained)
+end, "新世界基础高级分页保留实例")
+
+for _, size in ipairs({{2560,1440},{1920,1080},{1600,900},{1280,720},{960,720},{720,1280}}) do
+    for _, scale in ipairs({0.6, 0.85}) do
+        test.system("ui_settings", "bag_hotbar_layout", {width = size[1], height = size[2], scale = scale}, function(data)
+            assert(math.abs(data.gap) < 0.1 and math.abs(data.leftGap) < 0.1)
+            assert(data.insideTop)
+        end, "背包底边避让快捷栏 " .. size[1] .. "x" .. size[2] .. " / " .. scale)
+    end
+end

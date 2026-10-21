@@ -113,6 +113,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         public string ItemId;
         public string Tag;
         public int Amount = 1;
+        public float? MinTemperature;
+        public string ExcludeTag;
 
         public bool IsTag => !string.IsNullOrWhiteSpace(Tag);
         public bool IsEmpty => string.IsNullOrWhiteSpace(ItemId) && string.IsNullOrWhiteSpace(Tag);
@@ -124,7 +126,9 @@ namespace FlatWorld.Editor.ContentWorkshop
             {
                 ItemId = ItemId,
                 Tag = Tag,
-                Amount = Amount
+                Amount = Amount,
+                MinTemperature = MinTemperature,
+                ExcludeTag = ExcludeTag
             };
         }
 
@@ -152,6 +156,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             ItemId = null;
             Tag = null;
             Amount = 1;
+            MinTemperature = null;
+            ExcludeTag = null;
         }
     }
 
@@ -161,13 +167,19 @@ namespace FlatWorld.Editor.ContentWorkshop
     {
         public string ItemId;
         public int Amount = 1;
+        public string CopyInputTag;
+        public bool ReinforceWithAdhesive;
+        public float? DurabilityMultiplier;
 
         public WorkshopOutputDraft Clone()
         {
             return new WorkshopOutputDraft
             {
                 ItemId = ItemId,
-                Amount = Amount
+                Amount = Amount,
+                CopyInputTag = CopyInputTag,
+                ReinforceWithAdhesive = ReinforceWithAdhesive,
+                DurabilityMultiplier = DurabilityMultiplier
             };
         }
     }
@@ -275,7 +287,10 @@ namespace FlatWorld.Editor.ContentWorkshop
                 draft.Outputs.Add(new WorkshopOutputDraft
                 {
                     ItemId = output.ItemId,
-                    Amount = Mathf.Max(1, output.Amount)
+                    Amount = Mathf.Max(1, output.Amount),
+                    CopyInputTag = output.CopyInputTag,
+                    ReinforceWithAdhesive = output.ReinforceWithAdhesive,
+                    DurabilityMultiplier = output.DurabilityMultiplier
                 });
             }
             if (draft.Outputs.Count == 0)
@@ -377,6 +392,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             else
                 ingredient.SetItem(identity);
             ingredient.Amount = Mathf.Max(0, input.Amount);
+            ingredient.MinTemperature = input.MinTemperature;
+            ingredient.ExcludeTag = input.ExcludeTag;
             return true;
         }
 
@@ -428,7 +445,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                 throw new InvalidOperationException("配方稳定 ID 不能为空。");
             if (string.IsNullOrWhiteSpace(DisplayName))
                 throw new InvalidOperationException("请填写玩家看到的配方名称。");
-            if (Outputs.Count == 0 || Outputs.Any(output => string.IsNullOrWhiteSpace(output.ItemId)))
+            if (Outputs.Count == 0 || Outputs.Any(output => string.IsNullOrWhiteSpace(output.ItemId) &&
+                                                          string.IsNullOrWhiteSpace(output.CopyInputTag)))
                 throw new InvalidOperationException("配方至少需要一个有效产物。");
             if (ActiveIngredients.All(ingredient => ingredient.IsEmpty))
                 throw new InvalidOperationException("请至少放入一种材料。");
@@ -444,8 +462,11 @@ namespace FlatWorld.Editor.ContentWorkshop
                 MaxTemperature = IsHeating ? Mathf.Max(Temperature, MaxTemperature) : 2000f,
                 Outputs = Outputs.Select(output => new RecipeOutputDto
                 {
-                    ItemId = output.ItemId.Trim(),
-                    Amount = Mathf.Max(1, output.Amount)
+                    ItemId = output.ItemId?.Trim(),
+                    Amount = Mathf.Max(1, output.Amount),
+                    CopyInputTag = output.CopyInputTag?.Trim(),
+                    ReinforceWithAdhesive = output.ReinforceWithAdhesive,
+                    DurabilityMultiplier = output.DurabilityMultiplier
                 }).ToList(),
                 Actions = Actions.ToList()
             };
@@ -544,7 +565,9 @@ namespace FlatWorld.Editor.ContentWorkshop
                 Match = ingredient.IsTag ? "tag" : "exact_item",
                 ItemId = ingredient.IsTag ? null : ingredient.ItemId?.Trim(),
                 Tag = ingredient.IsTag ? ingredient.Tag?.Trim() : null,
-                Amount = Mathf.Max(0, ingredient.Amount)
+                Amount = Mathf.Max(0, ingredient.Amount),
+                MinTemperature = ingredient.MinTemperature,
+                ExcludeTag = ingredient.ExcludeTag?.Trim()
             };
         }
 

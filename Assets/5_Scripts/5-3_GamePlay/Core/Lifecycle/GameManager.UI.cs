@@ -1250,7 +1250,7 @@ public partial class GameManager
         panel.SetButtonVisible(NewGameIdentityButtonKey, worldSettings);
         panel.RefreshGamepadNavigationState();
 
-        if (!focusFirstControl || !panel.IsOpen() || EventSystem.current == null)
+        if (!EventSystemGuard.IsGamepadMode || !focusFirstControl || !panel.IsOpen() || EventSystem.current == null)
             return;
 
         Selectable target = panel.GetInputField(worldSettings ? NewGameRadiusInputKey : NewGamePlayerInputKey);
@@ -1270,7 +1270,7 @@ public partial class GameManager
         {
             CloseNewGameDifficultyPanel(panel);
             panel.RefreshGamepadNavigationState();
-            if (EventSystem.current != null)
+            if (EventSystemGuard.IsGamepadMode && EventSystem.current != null)
                 EventSystem.current.SetSelectedGameObject(panel.GetButton(NewGameDifficultyButtonKey)?.gameObject);
             return true;
         }
@@ -1640,9 +1640,10 @@ public partial class GameManager
         string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveName + ".bytes");
         if (!SaveDataMgr.Instance.LoadSaveByDisk(path))
         {
-            // 载入失败复用小通知，短暂显示后自动收起且不阻挡操作。
-            saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
-            saveStatusHUD?.ShowTransientMessage("存档加载失败", 3f);
+            SaveDataManager_UI.Instance?.GeneratePlayerButtons();
+            SaveDataManager_UI.Instance?.RefreshWorldGenerationFreezeToggle(selectedSaveName);
+            ShowSaveLoadFailure();
+            return;
         }
 
         SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
@@ -1653,6 +1654,41 @@ public partial class GameManager
             if (!saveList.TrySelectFirstPlayer())
                 saveList.FocusFirstPlayerOrNameInputForGamepad();
         }
+    }
+
+    /// <summary>加载失败必须由玩家确认，复用正式确认窗口且不再继续角色选择。</summary>
+    private void ShowSaveLoadFailure()
+    {
+        const string panelKey = "UI_SaveLoadFailure";
+        UIManager manager = UIManager.Instance;
+        if (!manager.TryGetPanel(panelKey, out BasePanel notice))
+        {
+            GameObject prefab = GameRes.Instance?.GetPrefab(MainMenuExitConfirmationPanelKey, false);
+            if (prefab == null)
+            {
+                Debug.LogError("[GameManager] 存档加载失败，且提示窗口资源缺失。", this);
+                return;
+            }
+            notice = manager.CreatePanelFromGameObject(prefab, panelKey);
+            notice.SetButtonOnClick(MainMenuExitConfirmationCloseButtonKey, notice.Close);
+            notice.SetButtonOnClick(MainMenuExitConfirmationConfirmButtonKey, notice.Close);
+            notice.SetButtonVisible(MainMenuExitConfirmationCancelButtonKey, false);
+            notice.PrepareForGamepadNavigation(MainMenuExitConfirmationConfirmButtonKey);
+        }
+        notice.SetText("退出确认提示", FlatWorldLocalizationService.GetUiText("存档加载失败"));
+        foreach (TextMeshProUGUI text in notice.GetComponentsInChildren<TextMeshProUGUI>(true))
+        {
+            FlatWorld.Localization.LocalizedTextBinder binder = text.GetComponent<FlatWorld.Localization.LocalizedTextBinder>();
+            if (binder != null)
+                binder.enabled = false;
+            if (text.name == "标题文本")
+                text.text = FlatWorldLocalizationService.GetUiText("提示");
+        }
+        Button confirm = notice.GetButton(MainMenuExitConfirmationConfirmButtonKey);
+        TextMeshProUGUI label = confirm?.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = FlatWorldLocalizationService.GetUiText("确定");
+        notice.Open();
     }
 
     public void OnClick_DeleteSave_Button()

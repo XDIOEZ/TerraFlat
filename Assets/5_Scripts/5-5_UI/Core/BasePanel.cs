@@ -732,8 +732,10 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         GameObject restoreTarget = previousSelectedObject;
         previousSelectedObject = null;
+        // 触屏与鼠标关闭窗口时只清理旧焦点，避免重新选中输入框唤起手机键盘。
         eventSystem.SetSelectedGameObject(
-            restoreTarget != null && restoreTarget.activeInHierarchy ? restoreTarget : null);
+            EventSystemGuard.IsGamepadMode && restoreTarget != null && restoreTarget.activeInHierarchy
+                ? restoreTarget : null);
     }
 
     /// <summary>

@@ -63,6 +63,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 `配方目录/物品 processing → Matcher 全部候选 → Controller 选择与进度 → CraftingService → CraftingTransaction → 成功动作/进度信号`
 
 - `Recipes/crafting/handmade_equipment.json` 与 `handmade_utilities.json` 补齐手工制品；审查缺配方须同时检查 Recipes、物品 processing、Mechanical Processes、matter 温度/湿度转化及便携载体映射，天然物、温变产物和内部/GM 变体不机械补普通配方。
+- 实例强化配方材料可声明 `minTemperature/excludeTag`，输出用 `copyInputTag/reinforceWithAdhesive` 复制实际扣料工具，不新造基础工具；温度匹配拒绝未初始化和非有限值，提交再次匹配。热树脂达到200℃或现成Adhesive各消耗一份；先max×1.3再修复新缺损50%，实例 `AdhesiveReinforced` 阻止重复，保留已有品质、GUID和实例标签，快照按定义基线恢复倍率。内容工坊草稿必须保留这些字段；回归 `crafting/tool_reinforcement、reinforcement_editor_roundtrip`。
 - 普通 Crafting 为 unordered：需求是物品/Tag 总量，amount=0 为必须存在但不扣数量的工具；耐久由配方 actions 独立控制，要求原样保留时不配置扣耐久动作。额外材料不屏蔽候选。Exact/Tag 重叠做全局容量分配，选择后按所选 RuntimeRecipe 精确提交。热加工保留有序、镜像和网格语义。
 - 多产物全部放下才提交，失败无扣料或部分产出；非堆叠产物逐件占槽。合法产物来自 GameRes.ItemDefinitions；旧 recipeDict 仅供未迁移熔炼单值索引，普通多候选登记 CraftingRecipeCatalog。被动无配方只清预览。
 - 单原料 processing 不从 parent 继承，经 ItemProcessingResolver 转为 RuntimeRecipe；设备提供 capability/level，材料 minLevel/maxLevel 为闭区间。手工台与工作台互认 handcraft/workbench，固定 4/2 和 5/2 输入输出槽；世界工作台手势数为手工基准 70%，四舍五入至少一次。
@@ -103,3 +104,5 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 植物成长读所在地 `LightLayerMgr` 实时光照，`minimumLightIntensity` 默认 0.2，达到门槛才生长；ECS 与 GO 共用 `EntityPlantRules`。耗水有独立世界秒游标，全天及成熟后持续按 `2 * waterConsumptionMultiplier / DayLength` 扣水，肥力仅成长时消费；野生植物经 `allowNaturalSoil` 读写原地表水肥，不改成耕地、不自动变成栽培作物。当前只控制成长，不交换气体。
 - seedling/growing/mature 三图由 normalizedGrowth 派生，不增加存档阶段。BodyClip 材质的 BodyMinV/BodyMaxV 是本地 Y，主体与描边保留 DisableBatching。伴生物通过 HostGuid 和 INaturalCompanionHostCondition 门禁生成。
 - BerryCrop 使用资源库存/日历生产，DayLength 决定批次，满库存仍走时钟；稳定 GUID 固定产量区间，一次采集一份，不套额外掉落倍率。WildCrop_Base 提供野生成熟初态/受击能力，具体死亡掉落仍由 lootTableId 声明。
+
+- 徒手采集共用 `ManualHarvestWork`，默认五次有效交互才结算一次，GO作物、独立采集物和原生后端保持一致；非法交互不推进，工具攻击继续原伤害/掉落路线，规则 `agriculture/manual_harvest_work`。

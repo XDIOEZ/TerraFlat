@@ -1597,43 +1597,44 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 311290649030656
-    m_Localized: "Display Settings"
+    m_Localized: Display Settings
     m_Metadata:
       m_Items: []
   - m_Id: 311290686779392
-    m_Localized: "Previous Page"
+    m_Localized: Previous Page
     m_Metadata:
       m_Items: []
   - m_Id: 311290686779393
-    m_Localized: "Next Page"
+    m_Localized: Next Page
     m_Metadata:
       m_Items: []
   - m_Id: 311291202678784
-    m_Localized: "Choose how the top-left coordinate card is displayed. Changes apply immediately and are saved automatically."
+    m_Localized: Choose how the top-left coordinate card is displayed. Changes apply
+      immediately and are saved automatically.
     m_Metadata:
       m_Items: []
   - m_Id: 311291206873088
-    m_Localized: "Coordinate Display"
+    m_Localized: Coordinate Display
     m_Metadata:
       m_Items: []
   - m_Id: 311291206873089
-    m_Localized: "Display Mode"
+    m_Localized: Display Mode
     m_Metadata:
       m_Items: []
   - m_Id: 311291206873090
-    m_Localized: "World Coordinates  X / Y"
+    m_Localized: World Coordinates  X / Y
     m_Metadata:
       m_Items: []
   - m_Id: 311291211067392
-    m_Localized: "Longitude / Latitude  Lon / Lat"
+    m_Localized: Longitude / Latitude  Lon / Lat
     m_Metadata:
       m_Items: []
   - m_Id: 311291211067393
-    m_Localized: "Current View: World Coordinates (X / Y)"
+    m_Localized: 'Current View: World Coordinates (X / Y)'
     m_Metadata:
       m_Items: []
   - m_Id: 311291412393984
-    m_Localized: "World Coordinates / POSITION"
+    m_Localized: World Coordinates / POSITION
     m_Metadata:
       m_Items: []
   - m_Id: 318621097046016
@@ -1738,11 +1739,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1682863977750528
-    m_Localized: "DIMENSION TRAVEL"
+    m_Localized: DIMENSION TRAVEL
     m_Metadata:
       m_Items: []
   - m_Id: 1682864132939776
-    m_Localized: "Underground Cave"
+    m_Localized: Underground Cave
     m_Metadata:
       m_Items: []
   - m_Id: 1682864132939777
@@ -1882,19 +1883,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 3772419866714112
-    m_Localized: "Head"
+    m_Localized: Head
     m_Metadata:
       m_Items: []
   - m_Id: 3772420055457792
-    m_Localized: "Torso"
+    m_Localized: Torso
     m_Metadata:
       m_Items: []
   - m_Id: 3772420055457793
-    m_Localized: "Hands"
+    m_Localized: Hands
     m_Metadata:
       m_Items: []
   - m_Id: 3772420059652096
-    m_Localized: "Feet"
+    m_Localized: Feet
     m_Metadata:
       m_Items: []
   - m_Id: 3772420558774272
@@ -1922,51 +1923,51 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6357769873088512
-    m_Localized: "Logs  0"
+    m_Localized: Logs  0
     m_Metadata:
       m_Items: []
   - m_Id: 6357769910837248
-    m_Localized: "Runtime Logs / DEBUG"
+    m_Localized: Runtime Logs / DEBUG
     m_Metadata:
       m_Items: []
   - m_Id: 6357769919225856
-    m_Localized: "0 Entries    0 Errors    0 Warnings"
+    m_Localized: 0 Entries    0 Errors    0 Warnings
     m_Metadata:
       m_Items: []
   - m_Id: 6357769919225857
-    m_Localized: "Copy Slots"
+    m_Localized: Copy Slots
     m_Metadata:
       m_Items: []
   - m_Id: 6357769923420160
-    m_Localized: "Clear"
+    m_Localized: Clear
     m_Metadata:
       m_Items: []
   - m_Id: 6357769923420161
-    m_Localized: "Copy"
+    m_Localized: Copy
     m_Metadata:
       m_Items: []
   - m_Id: 6357769923420162
-    m_Localized: "No runtime logs."
+    m_Localized: No runtime logs.
     m_Metadata:
       m_Items: []
   - m_Id: 6357769923420163
-    m_Localized: "Copies the 50 most recent unique log slots."
+    m_Localized: Copies the 50 most recent unique log slots.
     m_Metadata:
       m_Items: []
   - m_Id: 6357770376404992
-    m_Localized: "Preparing Game"
+    m_Localized: Preparing Game
     m_Metadata:
       m_Items: []
   - m_Id: 6357770376404993
-    m_Localized: "Loading Resources…"
+    m_Localized: "Loading Resources\u2026"
     m_Metadata:
       m_Items: []
   - m_Id: 6357770376404994
-    m_Localized: "Detailed error information appears here if loading fails."
+    m_Localized: Detailed error information appears here if loading fails.
     m_Metadata:
       m_Items: []
   - m_Id: 6357770531594240
-    m_Localized: "Health"
+    m_Localized: Health
     m_Metadata:
       m_Items: []
   - m_Id: 6357770711949312
@@ -2115,7 +2116,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11095675818205184
-    m_Localized: "Empty Vessel  0 / 8 servings"
+    m_Localized: Empty Vessel  0 / 8 servings
     m_Metadata:
       m_Items: []
   - m_Id: 11095675818205185
@@ -2136,7 +2137,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11095676954861568
-    m_Localized: "Open GM Panel"
+    m_Localized: Open GM Panel
     m_Metadata:
       m_Items: []
   - m_Id: 11095677256851456
@@ -2863,2131 +2864,2248 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740060
-    m_Localized: "Change Orientation"
+    m_Localized: Change Orientation
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740061
-    m_Localized: "Automatic Connection"
+    m_Localized: Automatic Connection
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740062
-    m_Localized: "Manual Connection"
+    m_Localized: Manual Connection
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740063
-    m_Localized: "Straight"
+    m_Localized: Straight
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740064
-    m_Localized: "Corner"
+    m_Localized: Corner
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740065
-    m_Localized: "East"
+    m_Localized: East
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740066
-    m_Localized: "North"
+    m_Localized: North
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740067
-    m_Localized: "West"
+    m_Localized: West
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740068
-    m_Localized: "South"
+    m_Localized: South
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740069
-    m_Localized: " \u00b7 {0}: {1} ({2} \u2192 {3})"
+    m_Localized: " \xB7 {0}: {1} ({2} \u2192 {3})"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740070
-    m_Localized: "Spatial Distance Scale"
+    m_Localized: Spatial Distance Scale
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740071
-    m_Localized: "Natural Geography Size"
+    m_Localized: Natural Geography Size
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740072
-    m_Localized: "Fill Held Vessel"
+    m_Localized: Fill Held Vessel
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740073
-    m_Localized: "Drag in another vessel to transfer liquid; drag the vessel to pour."
+    m_Localized: Drag in another vessel to transfer liquid; drag the vessel to pour.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740074
-    m_Localized: "Ship Console"
+    m_Localized: Ship Console
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740075
-    m_Localized: "Ship Status"
+    m_Localized: Ship Status
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740076
-    m_Localized: "Commands & Feedback"
+    m_Localized: Commands & Feedback
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740077
-    m_Localized: "Enter a command; type help for commands"
+    m_Localized: Enter a command; type help for commands
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740078
-    m_Localized: "Navigation / Landing X"
+    m_Localized: Navigation / Landing X
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740079
-    m_Localized: "Navigation / Landing Y"
+    m_Localized: Navigation / Landing Y
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740080
-    m_Localized: "Target Cabin Pressure (kPa)"
+    m_Localized: Target Cabin Pressure (kPa)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740081
-    m_Localized: "Drive"
+    m_Localized: Drive
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740082
-    m_Localized: "Exit Console"
+    m_Localized: Exit Console
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740083
-    m_Localized: "Ignite / Shut Down"
+    m_Localized: Ignite / Shut Down
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740084
-    m_Localized: "Navigate to Coordinates"
+    m_Localized: Navigate to Coordinates
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740085
-    m_Localized: "Pick a Point"
+    m_Localized: Pick a Point
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740086
-    m_Localized: "Cancel Navigation"
+    m_Localized: Cancel Navigation
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740087
-    m_Localized: "Set Landing Point"
+    m_Localized: Set Landing Point
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740088
-    m_Localized: "Confirm Docking"
+    m_Localized: Confirm Docking
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740089
-    m_Localized: "Disconnect Port"
+    m_Localized: Disconnect Port
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740090
-    m_Localized: "Apply Supply Pressure"
+    m_Localized: Apply Supply Pressure
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740091
-    m_Localized: "System"
+    m_Localized: System
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740092
-    m_Localized: "Command"
+    m_Localized: Command
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740093
-    m_Localized: "Rejected"
+    m_Localized: Rejected
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740094
-    m_Localized: "Console connected. Type help for commands; shortcut results are logged here too."
+    m_Localized: Console connected. Type help for commands; shortcut results are
+      logged here too.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740095
-    m_Localized: "Incorrect number of arguments. Type help for command syntax."
+    m_Localized: Incorrect number of arguments. Type help for command syntax.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740096
-    m_Localized: "help: command help\nstatus: current ship status\nclear: clear feedback\ndrive / exit: enter / leave the console\nignite: ignite / shut down engines\nnavigate X Y: navigate using view coordinates\npick: click the view to pick a navigation point\ncancel: cancel navigation\nland: begin landing on a nearby body\ndock / undock: confirm docking / disconnect a port\npressure kPa: set target supply pressure\nWASD applies thrust; release to keep drifting and reverse to brake. The ship always faces up and does not rotate. Shutdown, power loss, or no fuel stops propulsion. Gravity attracts the ship within a body's range; atmosphere gradually slows it, and inertial drift resumes outside that range. Landing uses fuel for a safe touchdown; without fuel, the ship falls and takes impact damage."
+    m_Localized: 'help: command help
+
+      status: current ship status
+
+      clear:
+      clear feedback
+
+      drive / exit: enter / leave the console
+
+      ignite:
+      ignite / shut down engines
+
+      navigate X Y: navigate using view coordinates
+
+      pick:
+      click the view to pick a navigation point
+
+      cancel: cancel navigation
+
+      land:
+      begin landing on a nearby body
+
+      dock / undock: confirm docking / disconnect
+      a port
+
+      pressure kPa: set target supply pressure
+
+      WASD applies
+      thrust; release to keep drifting and reverse to brake. The ship always faces
+      up and does not rotate. Shutdown, power loss, or no fuel stops propulsion.
+      Gravity attracts the ship within a body''s range; atmosphere gradually slows
+      it, and inertial drift resumes outside that range. Landing uses fuel for a
+      safe touchdown; without fuel, the ship falls and takes impact damage.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740097
-    m_Localized: "Feedback cleared."
+    m_Localized: Feedback cleared.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740098
-    m_Localized: "At the controls. WASD moves the ship using available engines and fuel. The ship always faces up. Esc leaves the console; the actual ship position determines the landing site during descent."
+    m_Localized: At the controls. WASD moves the ship using available engines and
+      fuel. The ship always faces up. Esc leaves the console; the actual ship position
+      determines the landing site during descent.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740099
-    m_Localized: "Cannot drive: move near a valid powered console. Ships floating at sea cannot be driven."
+    m_Localized: 'Cannot drive: move near a valid powered console. Ships floating
+      at sea cannot be driven.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740100
-    m_Localized: "Left the controls."
+    m_Localized: Left the controls.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740101
-    m_Localized: "You are not at the controls."
+    m_Localized: You are not at the controls.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740102
-    m_Localized: "Ignition failed: power, valid aviation fuel, and sufficient lift thrust are required."
+    m_Localized: 'Ignition failed: power, valid aviation fuel, and sufficient lift
+      thrust are required.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740103
-    m_Localized: "Engines ignited."
+    m_Localized: Engines ignited.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740104
-    m_Localized: "Engines shut down. The ship continues coasting."
+    m_Localized: Engines shut down. The ship continues coasting.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740105
-    m_Localized: "Navigation target set. Progress will appear on the feedback screen."
+    m_Localized: Navigation target set. Progress will appear on the feedback screen.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740106
-    m_Localized: "Navigation failed: the ship must be in spaceflight, with a powered console and an autopilot block connected by optical fiber."
+    m_Localized: 'Navigation failed: the ship must be in spaceflight, with a powered
+      console and an autopilot block connected by optical fiber.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740107
-    m_Localized: "Click the view to select navigation coordinates; right-click to cancel picking. Reopen the console for navigation feedback."
+    m_Localized: Click the view to select navigation coordinates; right-click to
+      cancel picking. Reopen the console for navigation feedback.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740108
-    m_Localized: "Cannot pick a point: a valid console in space is required."
+    m_Localized: 'Cannot pick a point: a valid console in space is required.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740109
-    m_Localized: "Navigation cancelled."
+    m_Localized: Navigation cancelled.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740110
-    m_Localized: "Landing point recorded. Landing completes on surface contact."
+    m_Localized: Landing point recorded. Landing completes on surface contact.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740111
-    m_Localized: "This ship confirmed its docking port. Connection requires confirmation from both ships."
+    m_Localized: This ship confirmed its docking port. Connection requires confirmation
+      from both ships.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740112
-    m_Localized: "Docking failed: no nearby port meets the alignment, position, and speed requirements."
+    m_Localized: 'Docking failed: no nearby port meets the alignment, position, and
+      speed requirements.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740113
-    m_Localized: "Port disconnected. Reconnection requires confirmation from both ships."
+    m_Localized: Port disconnected. Reconnection requires confirmation from both
+      ships.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740114
-    m_Localized: "Cannot disconnect: use an already connected docking port."
+    m_Localized: 'Cannot disconnect: use an already connected docking port.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740115
-    m_Localized: "Unknown command. Type help for available commands."
+    m_Localized: Unknown command. Type help for available commands.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740116
-    m_Localized: "Enter valid X and Y coordinates, for example navigate 120 -40."
+    m_Localized: Enter valid X and Y coordinates, for example navigate 120 -40.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740117
-    m_Localized: "Enter a valid pressure from 0 to 200000 kPa."
+    m_Localized: Enter a valid pressure from 0 to 200000 kPa.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740118
-    m_Localized: "Set target pressure at a gas supplier."
+    m_Localized: Set target pressure at a gas supplier.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740119
-    m_Localized: "Supply target set to {0:0.###} kPa. Gas supply stops at the target."
+    m_Localized: Supply target set to {0:0.###} kPa. Gas supply stops at the target.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740120
-    m_Localized: "Landed"
+    m_Localized: Landed
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740121
-    m_Localized: "Floating at Sea"
+    m_Localized: Floating at Sea
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740122
-    m_Localized: "Lifting Off"
+    m_Localized: Lifting Off
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740123
-    m_Localized: "Spaceflight"
+    m_Localized: Spaceflight
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740124
-    m_Localized: "Approaching a Body"
+    m_Localized: Approaching a Body
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740125
-    m_Localized: "Landing Site Selection"
+    m_Localized: Landing Site Selection
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740126
-    m_Localized: "Ship ownership changed. Console connected to the current ship."
+    m_Localized: Ship ownership changed. Console connected to the current ship.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740127
-    m_Localized: "Flight phase: {0}"
+    m_Localized: 'Flight phase: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740128
-    m_Localized: "Engine status: ignited."
+    m_Localized: 'Engine status: ignited.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740129
-    m_Localized: "Engine status: shut down."
+    m_Localized: 'Engine status: shut down.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740130
-    m_Localized: "Navigation feedback: {0}"
+    m_Localized: 'Navigation feedback: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740131
-    m_Localized: "Current intact ship parts: {0}"
+    m_Localized: 'Current intact ship parts: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740132
-    m_Localized: "Docking status: {0} port pairs connected."
+    m_Localized: 'Docking status: {0} port pairs connected.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740133
-    m_Localized: "Control status: at the controls."
+    m_Localized: 'Control status: at the controls.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740134
-    m_Localized: "Control status: left the controls."
+    m_Localized: 'Control status: left the controls.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740135
-    m_Localized: "Console power restored."
+    m_Localized: Console power restored.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740136
-    m_Localized: "Console unpowered. Drive and ignition commands are unavailable."
+    m_Localized: Console unpowered. Drive and ignition commands are unavailable.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740137
-    m_Localized: "Ship {0}"
+    m_Localized: Ship {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740138
-    m_Localized: "Flight Phase  {0}"
+    m_Localized: Flight Phase  {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740139
-    m_Localized: "Engines  {0}"
+    m_Localized: Engines  {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740140
-    m_Localized: "Ignited"
+    m_Localized: Ignited
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740141
-    m_Localized: "Shut Down"
+    m_Localized: Shut Down
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740142
-    m_Localized: "Intact Parts  {0}"
+    m_Localized: Intact Parts  {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740143
-    m_Localized: "Mass  {0:0.##} kg\nMoment of Inertia  {1:0.##} kg\u00b7m\u00b2"
+    m_Localized: "Mass  {0:0.##} kg\nMoment of Inertia  {1:0.##} kg\xB7m\xB2"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740144
-    m_Localized: "Speed  {0:0.##} m/s\nAngular Velocity  {1:0.##}\u00b0/s"
+    m_Localized: "Speed  {0:0.##} m/s\nAngular Velocity  {1:0.##}\xB0/s"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740145
-    m_Localized: "Reference Body  {0}"
+    m_Localized: Reference Body  {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740146
-    m_Localized: "Universe Frame"
+    m_Localized: Universe Frame
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740147
-    m_Localized: "Surface Altitude  {0:0.##} m\nVertical Speed  {1:0.##} m/s"
+    m_Localized: 'Surface Altitude  {0:0.##} m
+
+      Vertical Speed  {1:0.##} m/s'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740148
-    m_Localized: "Estimated Touchdown  {0:0.0} s"
+    m_Localized: Estimated Touchdown  {0:0.0} s
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740149
-    m_Localized: "Landing Point  {0}"
+    m_Localized: Landing Point  {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740150
-    m_Localized: "Unset: use a nearby location at touchdown"
+    m_Localized: 'Unset: use a nearby location at touchdown'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740151
-    m_Localized: "Navigation  {0}"
+    m_Localized: Navigation  {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740152
-    m_Localized: "Idle"
+    m_Localized: Idle
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740153
-    m_Localized: "Navigation Target  ({0:0.##}, {1:0.##})"
+    m_Localized: Navigation Target  ({0:0.##}, {1:0.##})
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740154
-    m_Localized: "Sealed Cabin  {0} cells\nPressure  {1:0.##} kPa \u00b7 Temperature  {2:0.#}\u00b0C"
+    m_Localized: "Sealed Cabin  {0} cells\nPressure  {1:0.##} kPa \xB7 Temperature 
+      {2:0.#}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740155
-    m_Localized: "No Valid Ship"
+    m_Localized: No Valid Ship
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740156
-    m_Localized: "No Oxygen"
+    m_Localized: No Oxygen
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740157
-    m_Localized: "Zero Gravity"
+    m_Localized: Zero Gravity
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740158
-    m_Localized: "Powered Consoles {0}/{1} \u00b7 Available Engines {2} \u00b7 Fueled Thrust {3:0.##} N \u00b7 Thrust-to-Weight {4}"
+    m_Localized: "Powered Consoles {0}/{1} \xB7 Available Engines {2} \xB7 Fueled
+      Thrust {3:0.##} N \xB7 Thrust-to-Weight {4}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740159
-    m_Localized: "Stored Gas: Hydrogen {0:0.###} mol / Oxygen {1:0.###} mol \u00b7 H:O Ratio {2} \u00b7 Other Gases {3:0.###} mol"
+    m_Localized: "Stored Gas: Hydrogen {0:0.###} mol / Oxygen {1:0.###} mol \xB7
+      H:O Ratio {2} \xB7 Other Gases {3:0.###} mol"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740160
-    m_Localized: "Manual Control"
+    m_Localized: Manual Control
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740161
-    m_Localized: "Replaced by a New Target"
+    m_Localized: Replaced by a New Target
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740162
-    m_Localized: "Navigating"
+    m_Localized: Navigating
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740163
-    m_Localized: "Cancelled"
+    m_Localized: Cancelled
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740164
-    m_Localized: "Optical Fiber or Autopilot Disconnected; Restart Required"
+    m_Localized: Optical Fiber or Autopilot Disconnected; Restart Required
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740165
-    m_Localized: "Power Lost; Target Retained, Coasting"
+    m_Localized: Power Lost; Target Retained, Coasting
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740166
-    m_Localized: "Holding Navigation Point"
+    m_Localized: Holding Navigation Point
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740167
-    m_Localized: "Insufficient Thrust; Waiting for Available Engines"
+    m_Localized: Insufficient Thrust; Waiting for Available Engines
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740168
-    m_Localized: "Insufficient Fuel; Target Retained, Resume When Available"
+    m_Localized: Insufficient Fuel; Target Retained, Resume When Available
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740169
-    m_Localized: "Limited Control Authority; Best Effort in Progress"
+    m_Localized: Limited Control Authority; Best Effort in Progress
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740170
-    m_Localized: "Ship Split; Navigation Restart Required"
+    m_Localized: Ship Split; Navigation Restart Required
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740171
-    m_Localized: "Universe  X {0:0.000}  Y {1:0.000} km"
+    m_Localized: Universe  X {0:0.000}  Y {1:0.000} km
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740172
-    m_Localized: "Universe  X --  Y -- km"
+    m_Localized: Universe  X --  Y -- km
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740173
-    m_Localized: "Landing accepted: land safely with available fuel; without fuel, descend and take impact damage."
+    m_Localized: 'Landing accepted: land safely with available fuel; without fuel,
+      descend and take impact damage.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740174
-    m_Localized: "Land when close to a target body: fuel enables a safe landing; without fuel, the ship falls."
+    m_Localized: 'Land when close to a target body: fuel enables a safe landing;
+      without fuel, the ship falls.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740175
-    m_Localized: "Landing Body  {0}; fuel enables a safe landing; without fuel, the ship falls."
+    m_Localized: Landing Body  {0}; fuel enables a safe landing; without fuel, the
+      ship falls.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740176
-    m_Localized: "Bodies do not pull in or stop ships; only the Land action takes the ship to the surface."
+    m_Localized: Bodies do not pull in or stop ships; only the Land action takes
+      the ship to the surface.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740177
-    m_Localized: "Unity Stylized"
+    m_Localized: Unity Stylized
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740178
-    m_Localized: "Unity Stylized: soft water colors, flowing ripples and shoreline foam."
+    m_Localized: 'Unity Stylized: soft water colors, flowing ripples and shoreline
+      foam.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740179
-    m_Localized: "Resource Load Failed"
+    m_Localized: Resource Load Failed
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740180
-    m_Localized: "Loading Resources..."
+    m_Localized: Loading Resources...
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740181
-    m_Localized: "Preparing resource load session"
+    m_Localized: Preparing resource load session
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740182
-    m_Localized: "Resources updated in the current world"
+    m_Localized: Resources updated in the current world
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740183
-    m_Localized: "Resource load failed ({0}). Fix the configuration and press Alt+R to retry."
+    m_Localized: Resource load failed ({0}). Fix the configuration and press Alt+R
+      to retry.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740184
-    m_Localized: "Initializing resource catalog"
+    m_Localized: Initializing resource catalog
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740185
-    m_Localized: "Loading essential main menu UI"
+    m_Localized: Loading essential main menu UI
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740186
-    m_Localized: "Loading player creation settings"
+    m_Localized: Loading player creation settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740187
-    m_Localized: "Loading time system settings"
+    m_Localized: Loading time system settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740188
-    m_Localized: "Loading water current settings"
+    m_Localized: Loading water current settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740189
-    m_Localized: "Preparing main menu"
+    m_Localized: Preparing main menu
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740190
-    m_Localized: "Reading item manifest"
+    m_Localized: Reading item manifest
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740191
-    m_Localized: "Loading loot tables"
+    m_Localized: Loading loot tables
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740192
-    m_Localized: "Loading runtime prefabs"
+    m_Localized: Loading runtime prefabs
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740193
-    m_Localized: "Loading terrain tiles"
+    m_Localized: Loading terrain tiles
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740194
-    m_Localized: "Loading tile definitions"
+    m_Localized: Loading tile definitions
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740195
-    m_Localized: "Loading starting inventories"
+    m_Localized: Loading starting inventories
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740196
-    m_Localized: "Loading skills"
+    m_Localized: Loading skills
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740197
-    m_Localized: "Building item definitions"
+    m_Localized: Building item definitions
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740198
-    m_Localized: "Building creature definitions"
+    m_Localized: Building creature definitions
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740199
-    m_Localized: "Loading creature abilities"
+    m_Localized: Loading creature abilities
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740200
-    m_Localized: "Loading creature spawning settings"
+    m_Localized: Loading creature spawning settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740201
-    m_Localized: "Loading natural resource generation rules"
+    m_Localized: Loading natural resource generation rules
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740202
-    m_Localized: "Loading river generation settings"
+    m_Localized: Loading river generation settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740203
-    m_Localized: "Loading crafting recipes"
+    m_Localized: Loading crafting recipes
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740204
-    m_Localized: "Loading status effects"
+    m_Localized: Loading status effects
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740205
-    m_Localized: "Loading liquid definitions"
+    m_Localized: Loading liquid definitions
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740206
-    m_Localized: "Loading industrial fluids and planetary atmospheres"
+    m_Localized: Loading industrial fluids and planetary atmospheres
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740207
-    m_Localized: "Loading star system and planetary surfaces"
+    m_Localized: Loading star system and planetary surfaces
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740208
-    m_Localized: "Loading contamination layers"
+    m_Localized: Loading contamination layers
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740209
-    m_Localized: "Loading quests"
+    m_Localized: Loading quests
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740210
-    m_Localized: "Loading text library"
+    m_Localized: Loading text library
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740211
-    m_Localized: "Loading world generation assets"
+    m_Localized: Loading world generation assets
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740212
-    m_Localized: "Validating built-in assets"
+    m_Localized: Validating built-in assets
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740213
-    m_Localized: "Loading extensions"
+    m_Localized: Loading extensions
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740214
-    m_Localized: "Validating complete asset catalog"
+    m_Localized: Validating complete asset catalog
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740215
-    m_Localized: "Loading world liquid visuals"
+    m_Localized: Loading world liquid visuals
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740216
-    m_Localized: "Prebuilding shared terrain meshes"
+    m_Localized: Prebuilding shared terrain meshes
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740217
-    m_Localized: "Offline: create a host or paste a friend's UDP traversal address"
+    m_Localized: 'Offline: create a host or paste a friend''s UDP traversal address'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740218
-    m_Localized: "Players: {0} / {1}"
+    m_Localized: 'Players: {0} / {1}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740219
-    m_Localized: "Starting multiplayer session"
+    m_Localized: Starting multiplayer session
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740220
-    m_Localized: "Connected; preparing world"
+    m_Localized: Connected; preparing world
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740221
-    m_Localized: "Disconnecting"
+    m_Localized: Disconnecting
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740222
-    m_Localized: "Server started; waiting for players"
+    m_Localized: Server started; waiting for players
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740223
-    m_Localized: "Connected; syncing world data"
+    m_Localized: Connected; syncing world data
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740224
-    m_Localized: "Client stopped"
+    m_Localized: Client stopped
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740225
-    m_Localized: "Server stopped"
+    m_Localized: Server stopped
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740226
-    m_Localized: "Host world ready: {0} / Seed {1}"
+    m_Localized: 'Host world ready: {0} / Seed {1}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740227
-    m_Localized: "Player joined: {0} (returned to space at {1})"
+    m_Localized: 'Player joined: {0} (returned to space at {1})'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740228
-    m_Localized: "Player joined: {0} (spawned on land at {1})"
+    m_Localized: 'Player joined: {0} (spawned on land at {1})'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740229
-    m_Localized: "Player disconnected ({0} players remaining)"
+    m_Localized: Player disconnected ({0} players remaining)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740230
-    m_Localized: "Syncing map to {0} ({1:0.0} KB)"
+    m_Localized: Syncing map to {0} ({1:0.0} KB)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740231
-    m_Localized: "Receiving world snapshot: {0:0.0} KB / {1} chunks"
+    m_Localized: 'Receiving world snapshot: {0:0.0} KB / {1} chunks'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740232
-    m_Localized: "Map synced; entering {0}"
+    m_Localized: Map synced; entering {0}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740233
-    m_Localized: "World ready: {0} / Seed {1}"
+    m_Localized: 'World ready: {0} / Seed {1}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740234
-    m_Localized: "Target Body: {0}\nAltitude {1:0.0} m · Descent Speed {2:0.0} m/s · Touchdown in {3:0.0} s"
+    m_Localized: "Target Body: {0}\nAltitude {1:0.0} m \xB7 Descent Speed {2:0.0}
+      m/s \xB7 Touchdown in {3:0.0} s"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740235
-    m_Localized: "Click the map to choose a nearby landing point (radius {0:0.#} m). Orange marks the landing center."
+    m_Localized: Click the map to choose a nearby landing point (radius {0:0.#} m).
+      Orange marks the landing center.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740236
-    m_Localized: "Center ({0:0.#}, {1:0.#}) · {2}"
+    m_Localized: "Center ({0:0.#}, {1:0.#}) \xB7 {2}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740237
-    m_Localized: "Spacesuit thrusters are disabled during solo descent. The suit absorbs the initial landing impact."
+    m_Localized: Spacesuit thrusters are disabled during solo descent. The suit absorbs
+      the initial landing impact.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740238
-    m_Localized: "Platform at Sea"
+    m_Localized: Platform at Sea
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740239
-    m_Localized: "Platform on Land"
+    m_Localized: Platform on Land
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740240
-    m_Localized: "{0} · Equipment"
+    m_Localized: "{0} \xB7 Equipment"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740241
-    m_Localized: "Head / Hat & Helmet"
+    m_Localized: Head / Hat & Helmet
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740242
-    m_Localized: "Outerwear / Armor"
+    m_Localized: Outerwear / Armor
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740243
-    m_Localized: "Shoes"
+    m_Localized: Shoes
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740244
-    m_Localized: "Innerwear / Clothing"
+    m_Localized: Innerwear / Clothing
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740245
-    m_Localized: "Legs / Pants"
+    m_Localized: Legs / Pants
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740246
-    m_Localized: "Socks"
+    m_Localized: Socks
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740247
-    m_Localized: "Rub"
+    m_Localized: Rub
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740248
-    m_Localized: "Strike"
+    m_Localized: Strike
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740249
-    m_Localized: "Add material, then rub to heat · Maximum {0:0}°C"
+    m_Localized: "Add material, then rub to heat \xB7 Maximum {0:0}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740250
-    m_Localized: "Temperature Pending"
+    m_Localized: Temperature Pending
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740251
-    m_Localized: " / Transforms at {0:0}°C"
+    m_Localized: " / Transforms at {0:0}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740252
-    m_Localized: "Material {0}{1} · Maximum {2:0}°C"
+    m_Localized: "Material {0}{1} \xB7 Maximum {2:0}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740253
-    m_Localized: "Multiplayer protocol mismatch: server={0}, client={1}"
+    m_Localized: 'Multiplayer protocol mismatch: server={0}, client={1}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740254
-    m_Localized: "Invalid snapshot header: bytes={0}, chunks={1}, expected={2}"
+    m_Localized: 'Invalid snapshot header: bytes={0}, chunks={1}, expected={2}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740255
-    m_Localized: "Invalid snapshot chunk: index={0}"
+    m_Localized: 'Invalid snapshot chunk: index={0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740256
-    m_Localized: "Snapshot chunk size mismatch: index={0}, actual={1}, expected={2}"
+    m_Localized: 'Snapshot chunk size mismatch: index={0}, actual={1}, expected={2}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740257
-    m_Localized: "Snapshot integrity check failed: bytes={0}/{1}, hash={2:X8}/{3:X8}"
+    m_Localized: 'Snapshot integrity check failed: bytes={0}/{1}, hash={2:X8}/{3:X8}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740258
-    m_Localized: "Failed to apply world snapshot: {0}"
+    m_Localized: 'Failed to apply world snapshot: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740259
-    m_Localized: "{0}\nActual Power {1:0.#}/{2:0.#} W\nHeating Radius {3:0.#} tiles · Target {4:0.#}°C"
+    m_Localized: "{0}\nActual Power {1:0.#}/{2:0.#} W\nHeating Radius {3:0.#} tiles
+      \xB7 Target {4:0.#}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740260
-    m_Localized: "{0}\nActual Power {1:0.#}/{2:0.#} W\nLighting Radius {3:0.#} tiles"
+    m_Localized: '{0}
+
+      Actual Power {1:0.#}/{2:0.#} W
+
+      Lighting Radius
+      {3:0.#} tiles'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740261
-    m_Localized: " · Grid {0:0.#}V {1:0.#}A · Power {2:0.#}/{3:0.#}W · {4}"
+    m_Localized: " \xB7 Grid {0:0.#}V {1:0.#}A \xB7 Power {2:0.#}/{3:0.#}W \xB7 {4}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740262
-    m_Localized: " · Stored Energy {0:0}/{1:0}J"
+    m_Localized: " \xB7 Stored Energy {0:0}/{1:0}J"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740263
-    m_Localized: "Ambient {0:0.##} kPa · Available {1:0.###} standard L"
+    m_Localized: "Ambient {0:0.##} kPa \xB7 Available {1:0.###} standard L"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740264
-    m_Localized: "Select Treatment Area"
+    m_Localized: Select Treatment Area
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740265
-    m_Localized: "Choose an injured body part. Closing the window or switching supplies cancels without using the item."
+    m_Localized: Choose an injured body part. Closing the window or switching supplies
+      cancels without using the item.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740266
-    m_Localized: "Splinting {0}  {1:0.0} / {2:0.0} s"
+    m_Localized: Splinting {0}  {1:0.0} / {2:0.0} s
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740267
-    m_Localized: "Current View: Longitude / Latitude (Lon / Lat)"
+    m_Localized: 'Current View: Longitude / Latitude (Lon / Lat)'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740268
-    m_Localized: "Cultivation Chamber"
+    m_Localized: Cultivation Chamber
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740269
-    m_Localized: "All key bindings restored to defaults."
+    m_Localized: All key bindings restored to defaults.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740270
-    m_Localized: "Quantity: {0}"
+    m_Localized: 'Quantity: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740271
-    m_Localized: "Weight: {0} kg"
+    m_Localized: 'Weight: {0} kg'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740272
-    m_Localized: "Volume: {0} L"
+    m_Localized: 'Volume: {0} L'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740273
-    m_Localized: "Durability: {0} / {1}"
+    m_Localized: 'Durability: {0} / {1}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740274
-    m_Localized: "Temperature: {0}°C"
+    m_Localized: "Temperature: {0}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740275
-    m_Localized: "Book"
+    m_Localized: Book
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740276
-    m_Localized: "A year lasts {0:0.###} days; seasons follow the orbital period and eccentricity."
+    m_Localized: A year lasts {0:0.###} days; seasons follow the orbital period and
+      eccentricity.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740277
-    m_Localized: "Oxygen Slot (Left) · Thruster Slot (Right)\nPropellant {0:0.###} standard L · Acceleration {1:0.##} m/s²"
+    m_Localized: "Oxygen Slot (Left) \xB7 Thruster Slot (Right)\nPropellant {0:0.###}
+      standard L \xB7 Acceleration {1:0.##} m/s\xB2"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740278
-    m_Localized: "Suit Durability {0:0.#}/{1:0.#} · Max Single-Impact Protection {2:0.#}"
+    m_Localized: "Suit Durability {0:0.#}/{1:0.#} \xB7 Max Single-Impact Protection
+      {2:0.#}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740279
-    m_Localized: "Simulation: Tier 1 {0} tiles / Tier 2 {1} tiles / Tier 3 {2} tiles; paused beyond Tier 3."
+    m_Localized: 'Simulation: Tier 1 {0} tiles / Tier 2 {1} tiles / Tier 3 {2} tiles;
+      paused beyond Tier 3.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740280
-    m_Localized: "Simulation updates less frequently farther from the player. Beyond Tier 3 it pauses; camera zoom does not affect the ranges."
+    m_Localized: Simulation updates less frequently farther from the player. Beyond
+      Tier 3 it pauses; camera zoom does not affect the ranges.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740281
-    m_Localized: "Tier 1 Simulation Range (60 Hz): {0} tiles"
+    m_Localized: 'Tier 1 Simulation Range (60 Hz): {0} tiles'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740282
-    m_Localized: "Tier 2 Simulation Range (30 Hz): {0} tiles"
+    m_Localized: 'Tier 2 Simulation Range (30 Hz): {0} tiles'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740283
-    m_Localized: "Tier 3 Simulation Range (10 Hz): {0} tiles"
+    m_Localized: 'Tier 3 Simulation Range (10 Hz): {0} tiles'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740284
-    m_Localized: "Cast Distance: {0:0.#} tiles   Reel Speed: {1:0.#} tiles/s\nHook: {2}   Bait: {3}\nOne hook and one bait each. Left-click to cast and reel in after a bite."
+    m_Localized: 'Cast Distance: {0:0.#} tiles   Reel Speed: {1:0.#} tiles/s
+
+      Hook:
+      {2}   Bait: {3}
+
+      One hook and one bait each. Left-click to cast and reel
+      in after a bite.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740285
-    m_Localized: "Not Installed"
+    m_Localized: Not Installed
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740286
-    m_Localized: "No Bait"
+    m_Localized: No Bait
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740287
-    m_Localized: "Physical Attack: {0}"
+    m_Localized: 'Physical Attack: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740288
-    m_Localized: "Until Fully Spoiled: {0}"
+    m_Localized: 'Until Fully Spoiled: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740289
-    m_Localized: "{0} h {1} min"
+    m_Localized: '{0} h {1} min'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740290
-    m_Localized: "{0} h"
+    m_Localized: '{0} h'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740291
-    m_Localized: "{0} min {1} s"
+    m_Localized: '{0} min {1} s'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740292
-    m_Localized: "{0} min"
+    m_Localized: '{0} min'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740293
-    m_Localized: "{0} s"
+    m_Localized: '{0} s'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740294
-    m_Localized: "{0} {1:0.###} standard L · Probability {2:0.##}%"
+    m_Localized: "{0} {1:0.###} standard L \xB7 Probability {2:0.##}%"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740295
-    m_Localized: "{0} · Spacesuit"
+    m_Localized: "{0} \xB7 Spacesuit"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740296
-    m_Localized: "{0} size: {1:0}%"
+    m_Localized: '{0} size: {1:0}%'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740297
-    m_Localized: "{0}: {1:0.##} C · {2:0.##}/{3:0.##} kPa\nGas {4:0.###} standard L · Liquid {5:0.###} L · Gas Space {6:0.###} L"
+    m_Localized: "{0}: {1:0.##} C \xB7 {2:0.##}/{3:0.##} kPa\nGas {4:0.###} standard
+      L \xB7 Liquid {5:0.###} L \xB7 Gas Space {6:0.###} L"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740298
-    m_Localized: "{0}: Gas {1:0.###} mol · Liquid {2:0.###} mol"
+    m_Localized: "{0}: Gas {1:0.###} mol \xB7 Liquid {2:0.###} mol"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740299
-    m_Localized: "{0}: Gas {1:0.###} standard L ({2:0.#}%) · Liquid {3:0.###} L ({4:0.#}%)"
+    m_Localized: "{0}: Gas {1:0.###} standard L ({2:0.#}%) \xB7 Liquid {3:0.###}
+      L ({4:0.#}%)"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740300
-    m_Localized: "Atmosphere {0:0.##} kPa · Available {1:0.###}/{2:0.###} standard L"
+    m_Localized: "Atmosphere {0:0.##} kPa \xB7 Available {1:0.###}/{2:0.###} standard
+      L"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740301
-    m_Localized: "Helmet {0} · Suit {1}\nPressure Protection {2} · Ambient {3:0.##} kPa{4}\nBreathing {5} · Tank Oxygen {6:0.###} standard L\nPersonal Oxygen {7:0.#}/{8:0.#}"
+    m_Localized: "Helmet {0} \xB7 Suit {1}\nPressure Protection {2} \xB7 Ambient
+      {3:0.##} kPa{4}\nBreathing {5} \xB7 Tank Oxygen {6:0.###} standard L\nPersonal
+      Oxygen {7:0.#}/{8:0.#}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740302
-    m_Localized: "Safe Pressure {0:0.#}-{1:0.#} kPa"
+    m_Localized: Safe Pressure {0:0.#}-{1:0.#} kPa
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740303
-    m_Localized: "Tool"
+    m_Localized: Tool
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740304
-    m_Localized: "Retained Residue Fraction {0}: {1:0.######} servings"
+    m_Localized: 'Retained Residue Fraction {0}: {1:0.######} servings'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740305
-    m_Localized: "Current furnace temperature {0}°C"
+    m_Localized: "Current furnace temperature {0}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740306
-    m_Localized: "Pending Output {0}: {1} {2:0.######} mol"
+    m_Localized: 'Pending Output {0}: {1} {2:0.######} mol'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740307
-    m_Localized: "Vented {0:0.###} standard L · Retained {1:0.###} · Escaped {2:0.###}"
+    m_Localized: "Vented {0:0.###} standard L \xB7 Retained {1:0.###} \xB7 Escaped
+      {2:0.###}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740308
-    m_Localized: "Unable to open the touch layout editor."
+    m_Localized: Unable to open the touch layout editor.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740309
-    m_Localized: "Editing the touch control layout."
+    m_Localized: Editing the touch control layout.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740310
-    m_Localized: "Pressure {0:0.##}/{1:0.##} kPa"
+    m_Localized: Pressure {0:0.##}/{1:0.##} kPa
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740311
-    m_Localized: "Pressure {0:0.#} kPa · {1}\nSafe {2:0.#}–{3:0.#} kPa · Low +{4:0.#} / High +{5:0.#}\nBreathing {6} · Buffer {7:0.#} s"
+    m_Localized: "Pressure {0:0.#} kPa \xB7 {1}\nSafe {2:0.#}\u2013{3:0.#} kPa \xB7
+      Low +{4:0.#} / High +{5:0.#}\nBreathing {6} \xB7 Buffer {7:0.#} s"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740312
-    m_Localized: "Tank ruptured"
+    m_Localized: Tank ruptured
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740313
-    m_Localized: "Gas {0:0.###} standard L"
+    m_Localized: Gas {0:0.###} standard L
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740314
-    m_Localized: "Oxygen tank empty; personal oxygen is being depleted"
+    m_Localized: Oxygen tank empty; personal oxygen is being depleted
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740315
-    m_Localized: "Water Vessel"
+    m_Localized: Water Vessel
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740316
-    m_Localized: "No atmosphere source"
+    m_Localized: No atmosphere source
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740317
-    m_Localized: "Pipe Pressure {0:0.##} kPa\nCutoff {1:0.##} / Reconnect {2:0.##} kPa\nCurrently {3}"
+    m_Localized: 'Pipe Pressure {0:0.##} kPa
+
+      Cutoff {1:0.##} / Reconnect {2:0.##}
+      kPa
+
+      Currently {3}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740318
-    m_Localized: "Liquid {0:0.###} L · Total Volume {1:0.###} L"
+    m_Localized: "Liquid {0:0.###} L \xB7 Total Volume {1:0.###} L"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740319
-    m_Localized: "Temperature {0:0.##} C"
+    m_Localized: Temperature {0:0.##} C
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740320
-    m_Localized: "Select a control to resize"
+    m_Localized: Select a control to resize
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740321
-    m_Localized: "Empty"
+    m_Localized: Empty
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740322
-    m_Localized: "Tank body temperature {0:0.##} C"
+    m_Localized: Tank body temperature {0:0.##} C
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740323
-    m_Localized: "Health {0:0.#}/{1:0.#}"
+    m_Localized: Health {0:0.#}/{1:0.#}
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740324
-    m_Localized: "The touch layout editor component is missing."
+    m_Localized: The touch layout editor component is missing.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740325
-    m_Localized: "Touch layout resources are not ready yet."
+    m_Localized: Touch layout resources are not ready yet.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740326
-    m_Localized: "Select a gas"
+    m_Localized: Select a gas
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740327
-    m_Localized: "Updating resources {0:0}%"
+    m_Localized: Updating resources {0:0}%
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740328
-    m_Localized: "Outside the initial phase-change curve; current phases retained: {0}"
+    m_Localized: 'Outside the initial phase-change curve; current phases retained:
+      {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740329
-    m_Localized: "Overpressure: tank health falls continuously and it explodes at zero"
+    m_Localized: 'Overpressure: tank health falls continuously and it explodes at
+      zero'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740330
-    m_Localized: "Speed {0:0.#} RPM · Power {1} · Pumping {2:0.#}%"
+    m_Localized: "Speed {0:0.#} RPM \xB7 Power {1} \xB7 Pumping {2:0.#}%"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740331
-    m_Localized: "Output 1: {0}\nOutput 2: Other Gases"
+    m_Localized: 'Output 1: {0}
+
+      Output 2: Other Gases'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740332
-    m_Localized: "Filled with {0}."
+    m_Localized: Filled with {0}.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740333
-    m_Localized: "Harvested {0}."
+    m_Localized: Harvested {0}.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740334
-    m_Localized: " Unbreakable bedrock is now exposed."
+    m_Localized: ' Unbreakable bedrock is now exposed.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740335
-    m_Localized: " {0} layers remain below."
+    m_Localized: ' {0} layers remain below.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740336
-    m_Localized: "Excavation complete: {0} ×{1}.{2}"
+    m_Localized: "Excavation complete: {0} \xD7{1}.{2}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740337
-    m_Localized: "The cave entrance is blocked."
+    m_Localized: The cave entrance is blocked.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740338
-    m_Localized: "Approaching target; slowing down"
+    m_Localized: Approaching target; slowing down
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740339
-    m_Localized: "Out of fuel; braking and waiting for resupply"
+    m_Localized: Out of fuel; braking and waiting for resupply
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740340
-    m_Localized: "Arrived at navigation point"
+    m_Localized: Arrived at navigation point
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740341
-    m_Localized: "A celestial body blocks the route; stopping at a safe distance on its near side"
+    m_Localized: A celestial body blocks the route; stopping at a safe distance on
+      its near side
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740342
-    m_Localized: "Distance Remaining  {0:0.0} m\nCurrent Stopping Distance  {1:0.0} m"
+    m_Localized: 'Distance Remaining  {0:0.0} m
+
+      Current Stopping Distance 
+      {1:0.0} m'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740343
-    m_Localized: "Autopilot stops outside celestial bodies. Approach manually to land."
+    m_Localized: Autopilot stops outside celestial bodies. Approach manually to land.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740344
-    m_Localized: "Low-pressure Bonus"
+    m_Localized: Low-pressure Bonus
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740345
-    m_Localized: "High-pressure Bonus"
+    m_Localized: High-pressure Bonus
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740346
-    m_Localized: "Equipment Settings"
+    m_Localized: Equipment Settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740347
-    m_Localized: "Apply Settings"
+    m_Localized: Apply Settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740348
-    m_Localized: "Rotate"
+    m_Localized: Rotate
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740349
-    m_Localized: "Gas ID / Cutoff Pressure / Fill Pressure"
+    m_Localized: Gas ID / Cutoff Pressure / Fill Pressure
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740350
-    m_Localized: "Reconnect Pressure (kPa)"
+    m_Localized: Reconnect Pressure (kPa)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740351
-    m_Localized: "Select Next Gas"
+    m_Localized: Select Next Gas
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740352
-    m_Localized: "Close Valve"
+    m_Localized: Close Valve
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740353
-    m_Localized: "Open Valve"
+    m_Localized: Open Valve
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740354
-    m_Localized: "Vent Gas"
+    m_Localized: Vent Gas
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740355
-    m_Localized: "Adjust Fill Pressure"
+    m_Localized: Adjust Fill Pressure
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740356
-    m_Localized: "Output Gas Only"
+    m_Localized: Output Gas Only
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740357
-    m_Localized: "Output Liquid Only"
+    m_Localized: Output Liquid Only
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740358
-    m_Localized: "Output Gas and Liquid"
+    m_Localized: Output Gas and Liquid
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740359
-    m_Localized: "Sufficient"
+    m_Localized: Sufficient
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740360
-    m_Localized: "Insufficient"
+    m_Localized: Insufficient
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740361
-    m_Localized: "Connected"
+    m_Localized: Connected
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740362
-    m_Localized: "Gas pump stopped: liquid detected"
+    m_Localized: 'Gas pump stopped: liquid detected'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740363
-    m_Localized: "Waiting for buffered gas to leave"
+    m_Localized: Waiting for buffered gas to leave
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740364
-    m_Localized: "Insufficient mechanical power"
+    m_Localized: Insufficient mechanical power
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740365
-    m_Localized: "No mechanical power"
+    m_Localized: No mechanical power
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740366
-    m_Localized: "No electricity"
+    m_Localized: No electricity
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740367
-    m_Localized: "Heating"
+    m_Localized: Heating
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740368
-    m_Localized: "Heats automatically when powered"
+    m_Localized: Heats automatically when powered
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740369
-    m_Localized: "{0}\nPower supplied {1:0.#}/{2:0.#} W\nHeating radius {3:0.#} tiles · Center temperature increase {4:0.#} C"
+    m_Localized: "{0}\nPower supplied {1:0.#}/{2:0.#} W\nHeating radius {3:0.#} tiles
+      \xB7 Center temperature increase {4:0.#} C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740370
-    m_Localized: "No atmosphere available to pump"
+    m_Localized: No atmosphere available to pump
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740371
-    m_Localized: "Gas pump outlet blocked"
+    m_Localized: Gas pump outlet blocked
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740372
-    m_Localized: "Pumping gas"
+    m_Localized: Pumping gas
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740373
-    m_Localized: "No liquid available in the container"
+    m_Localized: No liquid available in the container
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740374
-    m_Localized: "Pumping liquid from container"
+    m_Localized: Pumping liquid from container
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740375
-    m_Localized: "Liquid inlet blocked"
+    m_Localized: Liquid inlet blocked
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740376
-    m_Localized: "No liquid available at inlet"
+    m_Localized: No liquid available at inlet
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740377
-    m_Localized: "Liquid space full"
+    m_Localized: Liquid space full
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740378
-    m_Localized: "Another substance occupies the liquid slot"
+    m_Localized: Another substance occupies the liquid slot
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740379
-    m_Localized: "Pumping liquid"
+    m_Localized: Pumping liquid
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740380
-    m_Localized: "No gas at inlet"
+    m_Localized: No gas at inlet
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740381
-    m_Localized: "Compressor outlet blocked"
+    m_Localized: Compressor outlet blocked
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740382
-    m_Localized: "Compressing gas"
+    m_Localized: Compressing gas
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740383
-    m_Localized: "Connect fluid to both sides"
+    m_Localized: Connect fluid to both sides
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740384
-    m_Localized: "Exchanging heat"
+    m_Localized: Exchanging heat
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740385
-    m_Localized: "Temperatures are nearly equal"
+    m_Localized: Temperatures are nearly equal
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740386
-    m_Localized: "Fuel, product space, or useful load unavailable"
+    m_Localized: Fuel, product space, or useful load unavailable
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740387
-    m_Localized: "No useful load"
+    m_Localized: No useful load
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740388
-    m_Localized: "Burning fuel to supply power"
+    m_Localized: Burning fuel to supply power
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740389
-    m_Localized: "No electricity or heat"
+    m_Localized: No electricity or heat
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740390
-    m_Localized: "Processing"
+    m_Localized: Processing
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740391
-    m_Localized: "Unsupported input or blocked product outlet"
+    m_Localized: Unsupported input or blocked product outlet
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740392
-    m_Localized: "Pressure probe connected"
+    m_Localized: Pressure probe connected
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740393
-    m_Localized: "Pressure exceeded cutoff; probe disconnected"
+    m_Localized: Pressure exceeded cutoff; probe disconnected
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740394
-    m_Localized: "Transferring"
+    m_Localized: Transferring
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740395
-    m_Localized: "Selected pipe gas vented"
+    m_Localized: Selected pipe gas vented
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740396
-    m_Localized: "This substance cannot pass through a basic pipe"
+    m_Localized: This substance cannot pass through a basic pipe
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740397
-    m_Localized: "This phase cannot leave through this port"
+    m_Localized: This phase cannot leave through this port
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740398
-    m_Localized: "This port rejects this substance"
+    m_Localized: This port rejects this substance
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740399
-    m_Localized: "Select a target gas first"
+    m_Localized: Select a target gas first
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740400
-    m_Localized: "Target container accepts liquid only"
+    m_Localized: Target container accepts liquid only
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740401
-    m_Localized: "Target container lacks room or rejects this liquid"
+    m_Localized: Target container lacks room or rejects this liquid
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740402
-    m_Localized: "The surface cannot accept this liquid"
+    m_Localized: The surface cannot accept this liquid
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740403
-    m_Localized: "Outlet lacks room or its phase slot holds another substance"
+    m_Localized: Outlet lacks room or its phase slot holds another substance
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740404
-    m_Localized: "Another substance occupies the target phase"
+    m_Localized: Another substance occupies the target phase
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740405
-    m_Localized: "Target liquid space is full"
+    m_Localized: Target liquid space is full
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740406
-    m_Localized: "Phase change is below inventory precision"
+    m_Localized: Phase change is below inventory precision
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740407
-    m_Localized: "Active"
+    m_Localized: Active
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740408
-    m_Localized: "Inactive"
+    m_Localized: Inactive
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740409
-    m_Localized: "On"
+    m_Localized: On
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740410
-    m_Localized: "Off"
+    m_Localized: Off
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740411
-    m_Localized: "Complete"
+    m_Localized: Complete
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740412
-    m_Localized: "Incomplete"
+    m_Localized: Incomplete
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740413
-    m_Localized: "Tank Oxygen"
+    m_Localized: Tank Oxygen
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740414
-    m_Localized: "Planet Atmosphere"
+    m_Localized: Planet Atmosphere
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740415
-    m_Localized: "Low Pressure Danger"
+    m_Localized: Low Pressure Danger
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740416
-    m_Localized: "High Pressure Danger"
+    m_Localized: High Pressure Danger
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740417
-    m_Localized: "Safe"
+    m_Localized: Safe
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740418
-    m_Localized: "Remove Helmet"
+    m_Localized: Remove Helmet
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740419
-    m_Localized: "Put Helmet On"
+    m_Localized: Put Helmet On
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740420
-    m_Localized: "Oxygen"
+    m_Localized: Oxygen
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740421
-    m_Localized: "Nitrogen"
+    m_Localized: Nitrogen
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740422
-    m_Localized: "Hydrogen"
+    m_Localized: Hydrogen
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740423
-    m_Localized: "Carbon Dioxide"
+    m_Localized: Carbon Dioxide
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740424
-    m_Localized: "Pure Water"
+    m_Localized: Pure Water
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740425
-    m_Localized: "Filtered Water"
+    m_Localized: Filtered Water
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740426
-    m_Localized: "Salt Water"
+    m_Localized: Salt Water
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740427
-    m_Localized: "Lava"
+    m_Localized: Lava
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740428
-    m_Localized: "Tank rupture is being resolved; wait for the explosions to finish"
+    m_Localized: Tank rupture is being resolved; wait for the explosions to finish
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740429
-    m_Localized: "Empty the gas and liquid from the combined tank first"
+    m_Localized: Empty the gas and liquid from the combined tank first
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740430
-    m_Localized: "Empty the gas and liquid from this device or pipe first"
+    m_Localized: Empty the gas and liquid from this device or pipe first
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740431
-    m_Localized: "Rotation Conflict"
+    m_Localized: Rotation Conflict
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740432
-    m_Localized: "Forward"
+    m_Localized: Forward
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740433
-    m_Localized: "Reverse"
+    m_Localized: Reverse
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740434
-    m_Localized: "Pour from Held Vessel"
+    m_Localized: Pour from Held Vessel
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740435
-    m_Localized: "Use a held water vessel on water to fill it. Dirty fresh water is drinkable or can be boiled; heat seawater to make salt."
+    m_Localized: Use a held water vessel on water to fill it. Dirty fresh water is
+      drinkable or can be boiled; heat seawater to make salt.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740436
-    m_Localized: "Empty the vessel before filling it with a different type of water."
+    m_Localized: Empty the vessel before filling it with a different type of water.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740437
-    m_Localized: "Filled with dirty fresh water. It can be drunk now or boiled first."
+    m_Localized: Filled with dirty fresh water. It can be drunk now or boiled first.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740438
-    m_Localized: "Attack Joystick"
+    m_Localized: Attack Joystick
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740439
-    m_Localized: "Rename"
+    m_Localized: Rename
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740440
-    m_Localized: "Rename Save"
+    m_Localized: Rename Save
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740441
-    m_Localized: "Rename Character"
+    m_Localized: Rename Character
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740442
-    m_Localized: "Enter a new name"
+    m_Localized: Enter a new name
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740443
-    m_Localized: "Name cannot be empty"
+    m_Localized: Name cannot be empty
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740444
-    m_Localized: "Could not rename the save. Check the name or disk status."
+    m_Localized: Could not rename the save. Check the name or disk status.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740445
-    m_Localized: "Could not rename the character. Check the name or disk status."
+    m_Localized: Could not rename the character. Check the name or disk status.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740446
-    m_Localized: "Head hit"
+    m_Localized: Head hit
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740447
-    m_Localized: "Chest hit"
+    m_Localized: Chest hit
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740448
-    m_Localized: "Abdomen hit"
+    m_Localized: Abdomen hit
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740449
-    m_Localized: "Hand hit"
+    m_Localized: Hand hit
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740450
-    m_Localized: "Pelvis hit"
+    m_Localized: Pelvis hit
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740451
-    m_Localized: "Leg hit"
+    m_Localized: Leg hit
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740452
-    m_Localized: "You became a corpse."
+    m_Localized: You became a corpse.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740453
-    m_Localized: "Take what you learned and begin again."
+    m_Localized: Take what you learned and begin again.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740454
-    m_Localized: "Touch Layout"
+    m_Localized: Touch Layout
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740455
-    m_Localized: "Drag fixed joysticks and gameplay buttons; positions adapt to each screen's safe area."
+    m_Localized: Drag fixed joysticks and gameplay buttons; positions adapt to each
+      screen's safe area.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740456
-    m_Localized: "Drag controls, then select Save."
+    m_Localized: Drag controls, then select Save.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740457
-    m_Localized: "Drag buttons and joysticks where you want them; saving applies the layout immediately."
+    m_Localized: Drag buttons and joysticks where you want them; saving applies the
+      layout immediately.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740458
-    m_Localized: "Default layout restored in the preview; select Save to apply it."
+    m_Localized: Default layout restored in the preview; select Save to apply it.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740459
-    m_Localized: "Hunger, temperature, bleeding, and true damage"
+    m_Localized: Hunger, temperature, bleeding, and true damage
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740460
-    m_Localized: "Resources updated"
+    m_Localized: Resources updated
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740461
-    m_Localized: "Update failed; old assets kept"
+    m_Localized: Update failed; old assets kept
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740462
-    m_Localized: "Power {0:0.#}/{1:0.#} W · Irrigation Water {2:0.###} L\nFertilizer Boost Remaining {3:0.#} s\n"
+    m_Localized: "Power {0:0.#}/{1:0.#} W \xB7 Irrigation Water {2:0.###} L\nFertilizer
+      Boost Remaining {3:0.#} s\n"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740463
-    m_Localized: "Empty Slot"
+    m_Localized: Empty Slot
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740464
-    m_Localized: "Waiting for Seeds (No Trees)"
+    m_Localized: Waiting for Seeds (No Trees)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740465
-    m_Localized: "Mature; Ready to Harvest"
+    m_Localized: Mature; Ready to Harvest
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740466
-    m_Localized: "Paused: No Power"
+    m_Localized: 'Paused: No Power'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740467
-    m_Localized: "Paused: No Water"
+    m_Localized: 'Paused: No Water'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740468
-    m_Localized: "Growing"
+    m_Localized: Growing
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740469
-    m_Localized: "{0}: {1} {2:0.#}% · {3}\n"
+    m_Localized: "{0}: {1} {2:0.#}% \xB7 {3}\n"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740470
-    m_Localized: "{0} ({1})"
+    m_Localized: '{0} ({1})'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740471
-    m_Localized: "Category"
+    m_Localized: Category
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740472
-    m_Localized: "Quantity"
+    m_Localized: Quantity
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740473
-    m_Localized: "Electrical Input → Mechanical Output"
+    m_Localized: "Electrical Input \u2192 Mechanical Output"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740474
-    m_Localized: "Waiting for Electrical Input"
+    m_Localized: Waiting for Electrical Input
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740475
-    m_Localized: "Mechanical Input → Electrical Output"
+    m_Localized: "Mechanical Input \u2192 Electrical Output"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740476
-    m_Localized: "Motor Idle"
+    m_Localized: Motor Idle
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740477
-    m_Localized: "Voltage Conflict"
+    m_Localized: Voltage Conflict
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740478
-    m_Localized: "No Power Supply"
+    m_Localized: No Power Supply
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740479
-    m_Localized: "Incompatible Line Voltage"
+    m_Localized: Incompatible Line Voltage
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740480
-    m_Localized: "Add Fuel and Ignite"
+    m_Localized: Add Fuel and Ignite
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740481
-    m_Localized: "Fuel maximum {0:0}°C · use hotter fuel or bellows"
+    m_Localized: "Fuel maximum {0:0}\xB0C \xB7 use hotter fuel or bellows"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740482
-    m_Localized: "Material {0:0}°C / Required {1:0}°C · {2}"
+    m_Localized: "Material {0:0}\xB0C / Required {1:0}\xB0C \xB7 {2}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740483
-    m_Localized: "Processing · Waiting for Output"
+    m_Localized: "Processing \xB7 Waiting for Output"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740484
-    m_Localized: "Materials Ready · Add Fuel and Ignite"
+    m_Localized: "Materials Ready \xB7 Add Fuel and Ignite"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740485
-    m_Localized: "No Smelting Recipe for These Materials"
+    m_Localized: No Smelting Recipe for These Materials
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740486
-    m_Localized: "Material Temperature Too Low"
+    m_Localized: Material Temperature Too Low
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740487
-    m_Localized: "Furnace Temperature Too Low"
+    m_Localized: Furnace Temperature Too Low
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740488
-    m_Localized: "Abdomen"
+    m_Localized: Abdomen
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740489
-    m_Localized: "Pelvis"
+    m_Localized: Pelvis
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740490
-    m_Localized: "Left Hand"
+    m_Localized: Left Hand
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740491
-    m_Localized: "Right Hand"
+    m_Localized: Right Hand
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740492
-    m_Localized: "Left Leg"
+    m_Localized: Left Leg
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740493
-    m_Localized: "Right Leg"
+    m_Localized: Right Leg
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740494
-    m_Localized: "Treatment Cancelled"
+    m_Localized: Treatment Cancelled
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740495
-    m_Localized: "Treatment Session Already Started"
+    m_Localized: Treatment Session Already Started
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740496
-    m_Localized: "Treatment Target No Longer Available"
+    m_Localized: Treatment Target No Longer Available
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740497
-    m_Localized: "Treatment Interrupted; Select a Body Part Again"
+    m_Localized: Treatment Interrupted; Select a Body Part Again
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740498
-    m_Localized: "Hold the Medical Supplies First"
+    m_Localized: Hold the Medical Supplies First
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740499
-    m_Localized: "This Item Cannot Treat That Body Part"
+    m_Localized: This Item Cannot Treat That Body Part
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740500
-    m_Localized: "This Body Part Is Already Fully Healed"
+    m_Localized: This Body Part Is Already Fully Healed
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740501
-    m_Localized: "This Body Part Is Already Recovering"
+    m_Localized: This Body Part Is Already Recovering
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740502
-    m_Localized: "Treatment in Progress; Cancel It First"
+    m_Localized: Treatment in Progress; Cancel It First
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740503
-    m_Localized: "The container is already full."
+    m_Localized: The container is already full.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740504
-    m_Localized: "1 Row"
+    m_Localized: 1 Row
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740505
-    m_Localized: "Graphics Settings"
+    m_Localized: Graphics Settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740506
-    m_Localized: "Tier 1 Simulation Range (60 Hz)"
+    m_Localized: Tier 1 Simulation Range (60 Hz)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740507
-    m_Localized: "Tier 2 Simulation Range (30 Hz)"
+    m_Localized: Tier 2 Simulation Range (30 Hz)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740508
-    m_Localized: "Tier 3 Simulation Range (10 Hz)"
+    m_Localized: Tier 3 Simulation Range (10 Hz)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740509
-    m_Localized: "Chunk Culling"
+    m_Localized: Chunk Culling
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740510
-    m_Localized: "View and Configure Extensions"
+    m_Localized: View and Configure Extensions
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740511
-    m_Localized: "Loading MOD List…"
+    m_Localized: "Loading MOD List\u2026"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740512
-    m_Localized: "No Preview Image"
+    m_Localized: No Preview Image
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740513
-    m_Localized: "Select a MOD on the left to view its details"
+    m_Localized: Select a MOD on the left to view its details
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740514
-    m_Localized: "Enable / Disable"
+    m_Localized: Enable / Disable
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740515
-    m_Localized: "Refresh List"
+    m_Localized: Refresh List
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740516
-    m_Localized: "Open MOD Folder"
+    m_Localized: Open MOD Folder
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740517
-    m_Localized: "Apply and Reload"
+    m_Localized: Apply and Reload
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740518
-    m_Localized: "Difficulty Settings  ·  Level 0"
+    m_Localized: "Difficulty Settings  \xB7  Level 0"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740519
-    m_Localized: "Chunk Width"
+    m_Localized: Chunk Width
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740520
-    m_Localized: "Player Damage\nCreature Damage\nCreature Health"
+    m_Localized: 'Player Damage
+
+      Creature Damage
+
+      Creature Health'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740521
-    m_Localized: "1–256 tiles"
+    m_Localized: "1\u2013256 tiles"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740522
-    m_Localized: "World Seed"
+    m_Localized: World Seed
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740523
-    m_Localized: "Chunk Height"
+    m_Localized: Chunk Height
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740524
-    m_Localized: "Growth Speed\nCrafting Yield"
+    m_Localized: 'Growth Speed
+
+      Crafting Yield'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740525
-    m_Localized: "Hunger Drain\nStamina Drain\nDeath Penalty"
+    m_Localized: 'Hunger Drain
+
+      Stamina Drain
+
+      Death Penalty'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740526
-    m_Localized: "Exploration Range"
+    m_Localized: Exploration Range
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740527
-    m_Localized: "Time Speed\nSpawn Frequency\nLoot Amount"
+    m_Localized: 'Time Speed
+
+      Spawn Frequency
+
+      Loot Amount'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740528
-    m_Localized: "Recommended 16–64"
+    m_Localized: "Recommended 16\u201364"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740529
-    m_Localized: "Burning  Fuel 1440 / 1440 s"
+    m_Localized: Burning  Fuel 1440 / 1440 s
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740530
-    m_Localized: "Empty Vessel  0 / 8 servings"
+    m_Localized: Empty Vessel  0 / 8 servings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740531
-    m_Localized: "Harvested Items"
+    m_Localized: Harvested Items
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740532
-    m_Localized: "Plot 1"
+    m_Localized: Plot 1
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740533
-    m_Localized: "Plot 2"
+    m_Localized: Plot 2
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740534
-    m_Localized: "Plot 3"
+    m_Localized: Plot 3
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740535
-    m_Localized: "Plot 4"
+    m_Localized: Plot 4
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740536
-    m_Localized: "Insert non-tree seeds, connect power, and supply water through a pipe or bucket."
+    m_Localized: Insert non-tree seeds, connect power, and supply water through a
+      pipe or bucket.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740537
-    m_Localized: "Fertilizer (Optional)"
+    m_Localized: Fertilizer (Optional)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740538
-    m_Localized: "Click repeatedly to kindle a fire. Progress gradually falls when idle."
+    m_Localized: Click repeatedly to kindle a fire. Progress gradually falls when
+      idle.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740539
-    m_Localized: "Bait · Maximum One"
+    m_Localized: "Bait \xB7 Maximum One"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740540
-    m_Localized: "Hook · Maximum One"
+    m_Localized: "Hook \xB7 Maximum One"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740541
-    m_Localized: "Fishing Rod Settings"
+    m_Localized: Fishing Rod Settings
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740542
-    m_Localized: "Mechanical Power"
+    m_Localized: Mechanical Power
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740543
-    m_Localized: "Fuel Remaining"
+    m_Localized: Fuel Remaining
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740544
-    m_Localized: "Current Furnace Temperature 0°C"
+    m_Localized: "Current Furnace Temperature 0\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740545
-    m_Localized: "Smelting Progress"
+    m_Localized: Smelting Progress
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740546
-    m_Localized: "Oxygen Tank"
+    m_Localized: Oxygen Tank
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740547
-    m_Localized: "Thruster Tank"
+    m_Localized: Thruster Tank
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740548
-    m_Localized: "Item"
+    m_Localized: Item
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740549
-    m_Localized: "Item Description"
+    m_Localized: Item Description
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740550
-    m_Localized: "The item is outside placement range."
+    m_Localized: The item is outside placement range.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740551
-    m_Localized: "Mixed Liquid"
+    m_Localized: Mixed Liquid
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740552
-    m_Localized: "{0}: {1:0.###} servings ({2:0.#}%)"
+    m_Localized: '{0}: {1:0.###} servings ({2:0.#}%)'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740553
-    m_Localized: "Molten Glass"
+    m_Localized: Molten Glass
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740554
-    m_Localized: "Molten Copper"
+    m_Localized: Molten Copper
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740555
-    m_Localized: "Molten Tin"
+    m_Localized: Molten Tin
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740556
-    m_Localized: "Molten Iron"
+    m_Localized: Molten Iron
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740557
-    m_Localized: "Caustic Solution"
+    m_Localized: Caustic Solution
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740558
-    m_Localized: "This brine contains so much salt that drinking it would dehydrate me."
+    m_Localized: This brine contains so much salt that drinking it would dehydrate
+      me.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740559
-    m_Localized: "This seawater contains so much salt that drinking it would dehydrate me."
+    m_Localized: This seawater contains so much salt that drinking it would dehydrate
+      me.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740560
-    m_Localized: "Running"
+    m_Localized: Running
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740561
-    m_Localized: "Rooted (99)"
+    m_Localized: Rooted (99)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740562
-    m_Localized: "Speed I"
+    m_Localized: Speed I
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740563
-    m_Localized: "Overburdened"
+    m_Localized: Overburdened
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740564
-    m_Localized: "Wet"
+    m_Localized: Wet
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740565
-    m_Localized: "Night Vision"
+    m_Localized: Night Vision
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740566
-    m_Localized: "Head Splint Recovery"
+    m_Localized: Head Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740567
-    m_Localized: "Chest Splint Recovery"
+    m_Localized: Chest Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740568
-    m_Localized: "Abdomen Splint Recovery"
+    m_Localized: Abdomen Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740569
-    m_Localized: "Pelvis Splint Recovery"
+    m_Localized: Pelvis Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740570
-    m_Localized: "Left Hand Splint Recovery"
+    m_Localized: Left Hand Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740571
-    m_Localized: "Right Hand Splint Recovery"
+    m_Localized: Right Hand Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740572
-    m_Localized: "Left Leg Splint Recovery"
+    m_Localized: Left Leg Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740573
-    m_Localized: "Right Leg Splint Recovery"
+    m_Localized: Right Leg Splint Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740574
-    m_Localized: "Concussion"
+    m_Localized: Concussion
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740575
-    m_Localized: "Leg Fracture"
+    m_Localized: Leg Fracture
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740576
-    m_Localized: "Arm Fracture / Dislocation"
+    m_Localized: Arm Fracture / Dislocation
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740577
-    m_Localized: "Damage Reduction"
+    m_Localized: Damage Reduction
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740578
-    m_Localized: "Spicy"
+    m_Localized: Spicy
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740579
-    m_Localized: "Bleeding I"
+    m_Localized: Bleeding I
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740580
-    m_Localized: "Bleeding II"
+    m_Localized: Bleeding II
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740581
-    m_Localized: "Bleeding III"
+    m_Localized: Bleeding III
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740582
-    m_Localized: "Burning"
+    m_Localized: Burning
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740583
-    m_Localized: "Infection"
+    m_Localized: Infection
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740584
-    m_Localized: "Radiance"
+    m_Localized: Radiance
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740585
-    m_Localized: "Health Regeneration (1)"
+    m_Localized: Health Regeneration (1)
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740586
-    m_Localized: "Herbal Recovery"
+    m_Localized: Herbal Recovery
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740587
-    m_Localized: "Hydrated"
+    m_Localized: Hydrated
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740588
-    m_Localized: "Dehydrated"
+    m_Localized: Dehydrated
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740589
-    m_Localized: "Fusion Exposure"
+    m_Localized: Fusion Exposure
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740590
-    m_Localized: "Frostbite"
+    m_Localized: Frostbite
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740591
-    m_Localized: "Heatstroke"
+    m_Localized: Heatstroke
     m_Metadata:
       m_Items: []
   - m_Id: 8109451313713152
@@ -5037,63 +5155,70 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 8109452098048002
-    m_Localized: "Each click has a {0:0}% chance to produce tinder."
+    m_Localized: Each click has a {0:0}% chance to produce tinder.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740592
-    m_Localized: "FLIGHT ALTITUDE"
+    m_Localized: FLIGHT ALTITUDE
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740593
-    m_Localized: "{0} m"
+    m_Localized: '{0} m'
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740594
-    m_Localized: "Near touchdown. The ship will be fixed in place after landing."
+    m_Localized: Near touchdown. The ship will be fixed in place after landing.
     m_Metadata:
       m_Items: []
   - m_Id: 17033120237740595
-    m_Localized: "Landed. The ship is fixed in place."
+    m_Localized: Landed. The ship is fixed in place.
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000000
-    m_Localized: "Flick Transfer Speed"
+    m_Localized: Flick Transfer Speed
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000001
-    m_Localized: "Flick Transfer Distance"
+    m_Localized: Flick Transfer Distance
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000002
-    m_Localized: "Flick Direction Limit"
+    m_Localized: Flick Direction Limit
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000003
-    m_Localized: "Speed and distance: 25%-200%, with 100% as the default. Lower values make flick transfers easier.\nWith the direction limit on, flick toward a target container. With it off, direction still determines the preferred target."
+    m_Localized: 'Speed and distance: 25%-200%, with 100% as the default. Lower values
+      make flick transfers easier.
+
+      With the direction limit on, flick toward
+      a target container. With it off, direction still determines the preferred target.'
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000004
-    m_Localized: "{0:0}%"
+    m_Localized: '{0:0}%'
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000005
-    m_Localized: "Flick Quick Transfer"
+    m_Localized: Flick Quick Transfer
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000006
-    m_Localized: "Induction Stove"
+    m_Localized: Induction Stove
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000007
-    m_Localized: "Power supplied {0:0.#}/{1:0.#} W"
+    m_Localized: Power supplied {0:0.#}/{1:0.#} W
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000008
-    m_Localized: "Heating coefficient {0:0}% \u00b7 {1}"
+    m_Localized: "Heating coefficient {0:0}% \xB7 {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000009
-    m_Localized: "Input weight {0:0.##}/{1:0.##} kg\nInput volume {2:0.##}/{3:0.##} L"
+    m_Localized: 'Input weight {0:0.##}/{1:0.##} kg
+
+      Input volume {2:0.##}/{3:0.##}
+      L'
     m_Metadata:
       m_Items: []
   - m_Id: 8452394532769792
@@ -5101,423 +5226,442 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17033886000000010
-    m_Localized: "Descent controls: WASD moves the ship using power, available engines, and fuel. The ship always faces up; its actual position determines the landing site."
+    m_Localized: 'Descent controls: WASD moves the ship using power, available engines,
+      and fuel. The ship always faces up; its actual position determines the landing
+      site.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923400000000001
-    m_Localized: "Lightweight (Low-end)"
+    m_Localized: Lightweight (Low-end)
     m_Metadata:
       m_Items: []
   - m_Id: 17923400000000002
-    m_Localized: "Lightweight (Low-end): simpler water detail with lower rendering cost."
+    m_Localized: 'Lightweight (Low-end): simpler water detail with lower rendering
+      cost.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000001
-    m_Localized: "Very Low"
+    m_Localized: Very Low
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000002
-    m_Localized: "Very High"
+    m_Localized: Very High
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000003
-    m_Localized: "Ultra"
+    m_Localized: Ultra
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000004
-    m_Localized: "Presets adjust water, shadows, and post-processing together. You can still adjust each setting afterward."
+    m_Localized: Presets adjust water, shadows, and post-processing together. You
+      can still adjust each setting afterward.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000005
-    m_Localized: "Ignition failed: the ship console is no longer valid."
+    m_Localized: 'Ignition failed: the ship console is no longer valid.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000006
-    m_Localized: "Ignition failed: the console has no power or is disabled."
+    m_Localized: 'Ignition failed: the console has no power or is disabled.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000007
-    m_Localized: "Ignition failed: the ship is not ready."
+    m_Localized: 'Ignition failed: the ship is not ready.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000008
-    m_Localized: "Ignition failed: no engines are available. Check engine power, mounting direction, and device condition."
+    m_Localized: 'Ignition failed: no engines are available. Check engine power,
+      mounting direction, and device condition.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000009
-    m_Localized: "Ignition failed: the engines have no usable fuel. Check the fuel mixture, pipes, and valves."
+    m_Localized: 'Ignition failed: the engines have no usable fuel. Check the fuel
+      mixture, pipes, and valves.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000010
-    m_Localized: "Ignition failed: the ship is overweight. Total mass: {0:0.##} kg. Available thrust can support at most {1:0.##} kg under the current gravity. Reduce cargo or increase available thrust."
+    m_Localized: 'Ignition failed: the ship is overweight. Total mass: {0:0.##} kg.
+      Available thrust can support at most {1:0.##} kg under the current gravity.
+      Reduce cargo or increase available thrust.'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000011
-    m_Localized: "Ignition command completed."
+    m_Localized: Ignition command completed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000012
-    m_Localized: "This action belongs to another world and cannot be performed here."
+    m_Localized: This action belongs to another world and cannot be performed here.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000013
-    m_Localized: "Both ships have confirmed. The docking connection is established."
+    m_Localized: Both ships have confirmed. The docking connection is established.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000014
-    m_Localized: "Only a ship flying in space can request landing."
+    m_Localized: Only a ship flying in space can request landing.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000015
-    m_Localized: "The ground launch request has an invalid console ID or operation parameters."
+    m_Localized: The ground launch request has an invalid console ID or operation
+      parameters.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000016
-    m_Localized: "Ground launch requires the player and console to be on the same surface."
+    m_Localized: Ground launch requires the player and console to be on the same
+      surface.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000017
-    m_Localized: "The ships are not in the same world."
+    m_Localized: The ships are not in the same world.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000018
-    m_Localized: "The ships' relative speed is too high to dock."
+    m_Localized: The ships' relative speed is too high to dock.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000019
-    m_Localized: "Both ships need a valid console to dock."
+    m_Localized: Both ships need a valid console to dock.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000020
-    m_Localized: "The docking ports have not made contact."
+    m_Localized: The docking ports have not made contact.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000021
-    m_Localized: "A docking port is no longer valid."
+    m_Localized: A docking port is no longer valid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000022
-    m_Localized: "The docking ports are not facing each other."
+    m_Localized: The docking ports are not facing each other.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000023
-    m_Localized: "The docking record is no longer valid."
+    m_Localized: The docking record is no longer valid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000024
-    m_Localized: "A ship involved in docking is no longer valid."
+    m_Localized: A ship involved in docking is no longer valid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000025
-    m_Localized: "Navigation coordinates must be finite numbers."
+    m_Localized: Navigation coordinates must be finite numbers.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000026
-    m_Localized: "The pending docking confirmation has been withdrawn."
+    m_Localized: The pending docking confirmation has been withdrawn.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000027
-    m_Localized: "The docking connection has been released."
+    m_Localized: The docking connection has been released.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000028
-    m_Localized: "The current hotbar or selected slot is invalid."
+    m_Localized: The current hotbar or selected slot is invalid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000029
-    m_Localized: "This operation is not supported."
+    m_Localized: This operation is not supported.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000030
-    m_Localized: "There is no active navigation task."
+    m_Localized: There is no active navigation task.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000031
-    m_Localized: "This endpoint does not have authority to change the world."
+    m_Localized: This endpoint does not have authority to change the world.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000032
-    m_Localized: "This component has no connected or pending docking port. Operate the corresponding port."
+    m_Localized: This component has no connected or pending docking port. Operate
+      the corresponding port.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000033
-    m_Localized: "This ship does not belong to this pair of docking ports."
+    m_Localized: This ship does not belong to this pair of docking ports.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000034
-    m_Localized: "No optical fiber path connects the console to a powered navigation device."
+    m_Localized: No optical fiber path connects the console to a powered navigation
+      device.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000035
-    m_Localized: "The console is disabled. Enable it first."
+    m_Localized: The console is disabled. Enable it first.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000036
-    m_Localized: "The console is disabled by damage, or the ship is a wreck."
+    m_Localized: The console is disabled by damage, or the ship is a wreck.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000037
-    m_Localized: "The console is not receiving enough power."
+    m_Localized: The console is not receiving enough power.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000038
-    m_Localized: "Another player is using this console."
+    m_Localized: Another player is using this console.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000039
-    m_Localized: "The operation failed without a specific reason."
+    m_Localized: The operation failed without a specific reason.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000040
-    m_Localized: "The target is not a ship door."
+    m_Localized: The target is not a ship door.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000041
-    m_Localized: "The target is no longer valid or does not belong to this ship."
+    m_Localized: The target is no longer valid or does not belong to this ship.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000042
-    m_Localized: "This ship has confirmed docking and is waiting for the other ship."
+    m_Localized: This ship has confirmed docking and is waiting for the other ship.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000043
-    m_Localized: "This ship has no available docking ports."
+    m_Localized: This ship has no available docking ports.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000044
-    m_Localized: "A ship floating at sea cannot be driven."
+    m_Localized: A ship floating at sea cannot be driven.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000045
-    m_Localized: "The player and target are not in the same world."
+    m_Localized: The player and target are not in the same world.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000046
-    m_Localized: "The player is not ready."
+    m_Localized: The player is not ready.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000047
-    m_Localized: "The player or space session is not ready."
+    m_Localized: The player or space session is not ready.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000048
-    m_Localized: "The player's current world is not ready."
+    m_Localized: The player's current world is not ready.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000049
-    m_Localized: "The network connection is not ready. Try again later."
+    m_Localized: The network connection is not ready. Try again later.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000050
-    m_Localized: "Autopilot can only start during spaceflight."
+    m_Localized: Autopilot can only start during spaceflight.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000052
-    m_Localized: "The ship door is no longer valid."
+    m_Localized: The ship door is no longer valid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000053
-    m_Localized: "The doorway is occupied and cannot be closed."
+    m_Localized: The doorway is occupied and cannot be closed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000054
-    m_Localized: "Move closer to the console before taking control."
+    m_Localized: Move closer to the console before taking control.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000055
-    m_Localized: "The target is too far away. Move closer and try again."
+    m_Localized: The target is too far away. Move closer and try again.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000056
-    m_Localized: "The harvesting target is not in the player's current surface world."
+    m_Localized: The harvesting target is not in the player's current surface world.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000057
-    m_Localized: "The harvesting target is no longer valid or cannot currently be harvested."
+    m_Localized: The harvesting target is no longer valid or cannot currently be
+      harvested.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000058
-    m_Localized: "The harvesting target ID is invalid."
+    m_Localized: The harvesting target ID is invalid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000059
-    m_Localized: "No ship console is within reach. Move closer to a console and try again."
+    m_Localized: No ship console is within reach. Move closer to a console and try
+      again.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000060
-    m_Localized: "There are no nearby unoccupied ports that meet the docking conditions."
+    m_Localized: There are no nearby unoccupied ports that meet the docking conditions.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000061
-    m_Localized: "No nearby body is within landing range."
+    m_Localized: No nearby body is within landing range.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000062
-    m_Localized: "The ship console is no longer valid."
+    m_Localized: The ship console is no longer valid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000063
-    m_Localized: "The ship has no navigation device installed."
+    m_Localized: The ship has no navigation device installed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000064
-    m_Localized: "The ship is not ready. Try again later."
+    m_Localized: The ship is not ready. Try again later.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000065
-    m_Localized: "Liquid buffer is full; waiting for output."
+    m_Localized: Liquid buffer is full; waiting for output.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000066
-    m_Localized: "The gas state or compression parameters are invalid."
+    m_Localized: The gas state or compression parameters are invalid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000067
-    m_Localized: "No usable reaction ingredients."
+    m_Localized: No usable reaction ingredients.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000068
-    m_Localized: "Insufficient product space; waiting for output."
+    m_Localized: Insufficient product space; waiting for output.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000069
-    m_Localized: "No usable filter material."
+    m_Localized: No usable filter material.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000070
-    m_Localized: "The reaction was rejected; ingredients were preserved."
+    m_Localized: The reaction was rejected; ingredients were preserved.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000071
-    m_Localized: "Available power is insufficient for this reaction step."
+    m_Localized: Available power is insufficient for this reaction step.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000072
-    m_Localized: "Insufficient space to receive the liquid."
+    m_Localized: Insufficient space to receive the liquid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000073
-    m_Localized: "The container port does not accept this liquid."
+    m_Localized: The container port does not accept this liquid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000074
-    m_Localized: "The container is outside extraction range."
+    m_Localized: The container is outside extraction range.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000075
-    m_Localized: "The container port does not allow machine extraction."
+    m_Localized: The container port does not allow machine extraction.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000076
-    m_Localized: "This peer has no authority to operate containers."
+    m_Localized: This peer has no authority to operate containers.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000077
-    m_Localized: "The container port is no longer valid; waiting to reconnect."
+    m_Localized: The container port is no longer valid; waiting to reconnect.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000078
-    m_Localized: "The container state changed; waiting to retry."
+    m_Localized: The container state changed; waiting to retry.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000079
-    m_Localized: "The container is processing another transfer."
+    m_Localized: The container is processing another transfer.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000080
-    m_Localized: "Cannot transfer within the same liquid storage."
+    m_Localized: Cannot transfer within the same liquid storage.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000081
-    m_Localized: "The container port does not support atomic transfers."
+    m_Localized: The container port does not support atomic transfers.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000082
-    m_Localized: "The liquid transfer failed to commit and was rolled back."
+    m_Localized: The liquid transfer failed to commit and was rolled back.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000083
-    m_Localized: "The liquid transfer parameters are invalid."
+    m_Localized: The liquid transfer parameters are invalid.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000084
-    m_Localized: "The liquid transfer did not complete."
+    m_Localized: The liquid transfer did not complete.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000085
-    m_Localized: "This liquid does not support industrial transport."
+    m_Localized: This liquid does not support industrial transport.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000086
-    m_Localized: "Name cannot exceed 48 characters."
+    m_Localized: Name cannot exceed 48 characters.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000087
-    m_Localized: "No save is loaded. The character name cannot be changed."
+    m_Localized: No save is loaded. The character name cannot be changed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000088
-    m_Localized: "The selected character no longer exists. Select a character again."
+    m_Localized: The selected character no longer exists. Select a character again.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000089
-    m_Localized: "A character with this name already exists in this save."
+    m_Localized: A character with this name already exists in this save.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000090
-    m_Localized: "Failed to write the character name to disk. The original name has been kept."
+    m_Localized: Failed to write the character name to disk. The original name has
+      been kept.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000091
-    m_Localized: "No save is loaded. The save cannot be renamed."
+    m_Localized: No save is loaded. The save cannot be renamed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000092
-    m_Localized: "The selected save has changed. Select a save again."
+    m_Localized: The selected save has changed. Select a save again.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000093
-    m_Localized: "The save name contains characters that cannot be used in a filename, or ends with a period."
+    m_Localized: The save name contains characters that cannot be used in a filename,
+      or ends with a period.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000094
-    m_Localized: "The original save file no longer exists. Refresh the save list."
+    m_Localized: The original save file no longer exists. Refresh the save list.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000095
-    m_Localized: "This name is already used by a save or recovery file."
+    m_Localized: This name is already used by a save or recovery file.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000096
-    m_Localized: "Failed to write the new save file. The original name has been kept."
+    m_Localized: Failed to write the new save file. The original name has been kept.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000097
-    m_Localized: "Failed to update the original save or exit record. Renaming did not complete."
+    m_Localized: Failed to update the original save or exit record. Renaming did
+      not complete.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000098
-    m_Localized: "The save service is not ready."
+    m_Localized: The save service is not ready.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000099
-    m_Localized: "The building material is no longer in the selected hotbar slot. Select it again."
+    m_Localized: The building material is no longer in the selected hotbar slot.
+      Select it again.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000100
-    m_Localized: "New resources were published, but the remaining update did not complete: {0}"
+    m_Localized: 'New resources were published, but the remaining update did not
+      complete: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000101
-    m_Localized: "Resource update failed. Previous resources are still in use: {0}"
+    m_Localized: 'Resource update failed. Previous resources are still in use: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000102
-    m_Localized: "No failure reason was provided. Check the log."
+    m_Localized: No failure reason was provided. Check the log.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000103
-    m_Localized: "The destination area did not finish preparing. Check the log."
+    m_Localized: The destination area did not finish preparing. Check the log.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000104
@@ -5525,95 +5669,129 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000105
-    m_Localized: "Tile teleport did not complete. The destination has not been applied."
+    m_Localized: Tile teleport did not complete. The destination has not been applied.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000106
-    m_Localized: "Timed out waiting for the teleport result. The destination has not been confirmed."
+    m_Localized: Timed out waiting for the teleport result. The destination has not
+      been confirmed.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000107
-    m_Localized: "Tile ({0},{1}) has not loaded"
+    m_Localized: Tile ({0},{1}) has not loaded
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000108
-    m_Localized: "Tile ({0},{1}) does not allow building"
+    m_Localized: Tile ({0},{1}) does not allow building
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000109
-    m_Localized: "Tile ({0},{1}) is impassable"
+    m_Localized: Tile ({0},{1}) is impassable
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000110
-    m_Localized: "The liquid definition for tile ({0},{1}) is missing"
+    m_Localized: The liquid definition for tile ({0},{1}) is missing
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000111
-    m_Localized: "The load capacity definition for tile ({0},{1}) is missing"
+    m_Localized: The load capacity definition for tile ({0},{1}) is missing
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000112
-    m_Localized: "Tile ({0},{1}) is occupied by a building"
+    m_Localized: Tile ({0},{1}) is occupied by a building
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000113
-    m_Localized: "Tile ({0},{1}) supports {2}; the building requires {3}"
+    m_Localized: Tile ({0},{1}) supports {2}; the building requires {3}
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000114
-    m_Localized: "Invalid coordinates"
+    m_Localized: Invalid coordinates
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000115
-    m_Localized: "Not enough building summoners"
+    m_Localized: Not enough building summoners
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000116
-    m_Localized: "The destination is out of building range"
+    m_Localized: The destination is out of building range
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000117
-    m_Localized: "The material has no grid building definition"
+    m_Localized: The material has no grid building definition
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000118
-    m_Localized: "The chunk manager is not ready"
+    m_Localized: The chunk manager is not ready
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000119
-    m_Localized: "This peer has no building authority"
+    m_Localized: This peer has no building authority
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000120
-    m_Localized: "The building material is not in the authoritative inventory slot"
+    m_Localized: The building material is not in the authoritative inventory slot
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000121
-    m_Localized: "The building coordinates are invalid or out of range"
+    m_Localized: The building coordinates are invalid or out of range
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000122
-    m_Localized: "The building backend returned no placement result"
+    m_Localized: The building backend returned no placement result
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000123
-    m_Localized: "Failed to commit the building material inventory transaction"
+    m_Localized: Failed to commit the building material inventory transaction
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000124
-    m_Localized: "Failed to publish the building placement result"
+    m_Localized: Failed to publish the building placement result
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000125
-    m_Localized: "The navigation device is disabled by damage."
+    m_Localized: The navigation device is disabled by damage.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000126
-    m_Localized: "The navigation device is disabled. Enable it first."
+    m_Localized: The navigation device is disabled. Enable it first.
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000000127
-    m_Localized: "The navigation device is not receiving enough power."
+    m_Localized: The navigation device is not receiving enough power.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9591794616537088
+    m_Localized: Notice
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592366316949504
+    m_Localized: Basic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592366396641280
+    m_Localized: Advanced
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592542905536512
+    m_Localized: When disabled, world generation follows the current game version.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592546143539200
+    m_Localized: Info
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592547498299392
+    m_Localized: Warnings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592548626567168
+    m_Localized: Errors
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9592749735055360
+    m_Localized: Food and water consumption and damage from monster attacks are halved,
+      making it easier to learn the world and its systems.
     m_Metadata:
       m_Items: []
   references:

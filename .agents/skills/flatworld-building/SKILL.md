@@ -20,7 +20,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 `真实手持 Summoner → 当前准线/权威格校验 → 可撤销候选 → 扣源槽 → 提交/安装通知`
 
 - BuildingPlacementService.TryPlace 为单机/服务端统一事务；后端提供撤销动作，地形写入前建立撤销位置，机器用 DiscardPlacementCandidate。失败先确认权威候选已撤销再退料；成功发布后的通知异常不撤销结果。
-- BuildingShadow 只显示反馈，不提供安装资格/坐标。范围为交互半径两倍，创造模式无限；预览与提交按目标格最近边缘校验。失败反馈由实际 Install 的语义事件发布，逐帧预览不发提示。
+- BuildingShadow 只显示反馈，不提供安装资格/坐标。生存范围等于玩家实际交互半径（原两倍已减半），创造模式无限；预览与提交按目标格最近边缘校验。失败反馈由实际 Install 的语义事件发布，逐帧预览不发提示。
 - Summoner 来自快捷栏真实 InHand/Owner/CurrentSelectItemSlot；成功扣减经 Inventory_Data 事务，并按实际槽索引 RefreshUI。放置模式拥有使用动作和普通世界交互的优先权。
 - Host 成功回执复用服务端已经提交的共享库存，只收尾预览和同步手持；仅普通客户端按回执写入剩余数量，避免最后一份扣空后重复解析源槽。
 - BuildingRole 区分载体/落地实体，并与当前 SummonerPrefabId/BuildingPrefabId 对齐。无快照从 CreateItemData(BuildingPrefabId) 创建当前本体；有快照先恢复，再用当前载体共享状态覆盖。

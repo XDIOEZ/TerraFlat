@@ -1453,6 +1453,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 86b4bb2d00fb4411a69a90609918ed60
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Skills/Module_BiteAttack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 59468430928f459086d2706d1f909c07
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Skills/Module_ChargeAttack.prefab
     m_ReadOnly: 0

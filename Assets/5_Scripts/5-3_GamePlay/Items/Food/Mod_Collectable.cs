@@ -36,6 +36,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     public string CollectItemId = "Berry";
 
     [Min(1)] public int MaxStock = 12;
+    [Min(1)] public int manualHarvestWorkSteps = ManualHarvestWork.DefaultSteps;
     [Min(0)] public int NaturalInitialStockMin = 1;
     [Min(0)] public int NaturalInitialStockMax = 2;
 
@@ -70,6 +71,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
     private SpriteRenderer ownerRenderer;
     private Mod_Crop cropModule;
+    private int manualHarvestProgress;
 
     public int CurrentStock => Data?.CurrentStock ?? 0;
     public bool CanHarvest
@@ -95,6 +97,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     protected override void OnLoad()
     {
+        manualHarvestProgress = 0;
         EnsureConfiguration();
         EnsureDataContainer();
         Data.CurrentStock = Mathf.Clamp(Data.CurrentStock, 0, Mathf.Max(1, MaxStock));
@@ -208,6 +211,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
             throw new ArgumentNullException(nameof(playerItem));
         if (cropModule != null || !CanHarvest)
             return;
+
+        // 独立采集物与作物使用同样的有效点击计数，不提前扣库存。
+        if (!ManualHarvestWork.Advance(ref manualHarvestProgress, manualHarvestWorkSteps)) return;
 
         SpawnCollectedItem();
     }

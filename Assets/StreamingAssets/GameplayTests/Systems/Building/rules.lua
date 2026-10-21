@@ -24,3 +24,7 @@ test.system("building", "shared_state", {}, function(data)
     assert(data.duplicate == "InvalidOperationException" and data.missing == "InvalidOperationException"
         and data.stacked == "InvalidOperationException", "重复/缺失共享模块或堆叠载体未拒绝")
 end, "载体到建筑模块状态转移与深拷贝隔离")
+test.system("building", "placement_distance", {}, function(data)
+    assert(data.survival == 7.5 and data.fallback == 3.25, "生存放置半径未减半，或忽略玩家实际交互范围")
+    assert(data.creativeUnlimited, "减半半径错误限制了创造放置")
+end, "建筑距离：生存跟随实际交互半径、无玩家回退与创造无限")

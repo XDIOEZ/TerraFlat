@@ -1192,6 +1192,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <param name="enabled">是否启用伤害检测</param>
     public void SetDamageEnabled(bool enabled)
     {
+        if (enabled && ActorActionConstraints.IsAttackBlocked(item != null && item.InHand ? item.Owner ?? item : item)) enabled = false;
         if (enabled && sourceHealth != null && sourceHealth.Hp <= 0f) enabled = false;
         if (damageCollider == null)
         {

@@ -126,6 +126,14 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                // 设置分页和日志筛选的新文案与正式界面一起同步。
+                { "基础", "Basic" },
+                { "高级", "Advanced" },
+                { "普通", "Info" },
+                { "警告", "Warnings" },
+                { "报错", "Errors" },
+                { "提示", "Notice" },
+                { "关闭后，世界生成规则跟随当前版本更新。", "When disabled, world generation follows the current game version." },
                 // 帧率设置的静态标签与动态反馈使用同一份双语文本。
                 { "帧率限制", "Frame Rate Limit" },
                 { "帧数上限", "Frame Rate Limit" },
@@ -706,6 +714,7 @@ namespace FlatWorld.Localization.Editor
                 { "难度 19", "Difficulty 19" },
                 { "难度 20", "Difficulty 20" },
                 { "基础规则，适合熟悉世界与系统。", "Base rules for learning the world and its systems." },
+                { "食物与水分消耗减半，怪物攻击伤害减半，适合熟悉世界与系统。", "Food and water consumption and damage from monster attacks are halved, making it easier to learn the world and its systems." },
                 { "轻度挑战，敌人与生存压力小幅提升。", "A light challenge with slightly stronger enemies and survival pressure." },
                 { "标准挑战，战斗、生存与资源压力同步提高。", "A standard challenge with higher combat, survival, and resource pressure." },
                 { "高强度挑战，死亡惩罚与世界威胁明显增加。", "A high-intensity challenge with harsher death penalties and world threats." },

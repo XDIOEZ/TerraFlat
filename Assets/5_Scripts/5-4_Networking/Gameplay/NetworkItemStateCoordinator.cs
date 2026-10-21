@@ -21,7 +21,6 @@ namespace FlatWorld.Networking.Gameplay
         private const float MaxDropDistance = 12f;
         private const float PickupReservationSeconds = 6f;
         private const float MaxPickupDistance = 5f;
-        private const float MaxBuildingRequestDistance = 12f;
         private const float BuildingRequestTimeout = 8f;
 
         private sealed class StateRecord
@@ -117,8 +116,12 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkItemPickupRequest>(NetworkGameplayWorldScope.Wrap<NetworkItemPickupRequest>(OnServerPickupRequest), false);
             NetworkServer.RegisterHandler<NetworkItemPickupCommit>(NetworkGameplayWorldScope.Wrap<NetworkItemPickupCommit>(OnServerPickupCommit), false);
             NetworkServer.RegisterHandler<NetworkItemPickupApplied>(NetworkGameplayWorldScope.Wrap<NetworkItemPickupApplied>(OnServerPickupApplied), false);
-            NetworkServer.RegisterHandler<NetworkBuildingPlaceRequest>(NetworkGameplayWorldScope.Wrap<NetworkBuildingPlaceRequest>(OnServerBuildingPlaceRequest), false);
-            NetworkServer.RegisterHandler<NetworkBuildingDismantleRequest>(NetworkGameplayWorldScope.Wrap<NetworkBuildingDismantleRequest>(OnServerBuildingDismantleRequest), false);
+            NetworkServer.RegisterHandler<NetworkBuildingPlaceRequest>(NetworkGameplayWorldScope.Wrap<NetworkBuildingPlaceRequest>(
+                OnServerBuildingPlaceRequest, (connection, request, reason) => connection.Send(new NetworkBuildingPlaceResponse
+                { RequestToken = request.RequestToken, SourceItemGuid = request.SourceItemGuid, Accepted = false, Reason = reason })), false);
+            NetworkServer.RegisterHandler<NetworkBuildingDismantleRequest>(NetworkGameplayWorldScope.Wrap<NetworkBuildingDismantleRequest>(
+                OnServerBuildingDismantleRequest, (connection, request, reason) => connection.Send(new NetworkBuildingDismantleResponse
+                { RequestToken = request.RequestToken, BuildingGuid = request.BuildingGuid, Accepted = false, Reason = reason })), false);
             MachineWorld.NodeStateChanged += OnMechanicalStateChanged;
             MachineWorld.NodeRemoved += OnMechanicalRemoved;
             MachineWorld.VisualSpeedChanged += OnMechanicalSpeedChanged;
@@ -992,8 +995,7 @@ namespace FlatWorld.Networking.Gameplay
                     Actor = actor,
                     Position = NormalizeBuildingPosition(request.Position),
                     AuthorityPosition = GetConnectionLogicalPosition(connection),
-                    MaximumDistance = CreativeInventoryState.IsEnabled(actor)
-                        ? float.PositiveInfinity : MaxBuildingRequestDistance,
+                    MaximumDistance = Mod_Building.ResolveMaxPlacementDistance(actor, Mod_InteractSender.DefaultMaxInteractDistance),
                     HorizontalMirrorX = request.HorizontalMirrorX,
                     RotationQuarterTurns = request.RotationQuarterTurns,
                     Extension = BuildingPlacementLifecycle.GetExtension(hotBar.CurentSelectItem),

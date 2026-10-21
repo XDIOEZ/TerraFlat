@@ -55,6 +55,8 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 行为能力与表现
 
+- 狼普通攻击距离2.1米、前摇0.25秒，真实命中盒按原尺寸放大50%；`biteAttackSkill` 组合通用撕咬。活动技能保留Attack状态并禁止普通攻击起手；继承狼外壳的Zombie/SnowLeopard显式移除该模块，由自身定义决定是否复用。
+
 - 狼 `ai` 槽位的能力 ID 必须为 `AI`，`Module_AI_Wolf` 仅为 Prefab 身份；组群、呼叫和编队只接纳已就绪、启用、存活且友好的狼，按持久 Guid 选同一头狼。两只起协同追击，独狼避让、双狼低血撤退规则保留；回归 `ai/wolf_pack` 使用正式定义注册身份后调用真实决策。
 - 狼的一轮状态评估先筛选有效同伴，再复用同一列表计算追击编队；新一轮和卸载时清空，支援呼叫仍实时复核资格。
 - 狼群追击编队单次刷新冻结 `WorldTopologyDomain`，左右翼分配、同伴分离和站位归一化共用这份拓扑；同伴位置和路径可走性仍实时读取，回归 `ai/wolf_formation_topology`。

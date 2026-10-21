@@ -153,6 +153,7 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnStopClient()
         {
+            ReleaseNetworkActionConstraints();
             UnbindTeleport();
             RestoreSinglePlayerStreaming();
             UnbindNetworkRoll(endSession: true);
@@ -194,6 +195,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             UpdateNetworkCombat();
             UpdateNetworkRoll();
+            UpdateNetworkActionConstraints();
             if (!NetworkClient.active)
                 return;
 
@@ -215,6 +217,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void UpdateOwnedMovement()
         {
+            if (authoritativeForcedFollowing) return;
             if (pendingTeleportRequest != 0 || authoritativeWorldTransferPending) return;
             if (IsInSpace)
             {
@@ -411,6 +414,12 @@ namespace FlatWorld.Networking.Gameplay
             NetworkPlayerVisualState visualState)
         {
             if (IsInSpace || authoritativeWorldTransferPending) return;
+            // 强制移动使用服务器技能租约的位置，客户端旧移动包不能挣脱控制。
+            if (ActorActionConstraints.TryGetForcedPosition(corePlayer, out Vector3 forcedPosition))
+            {
+                requestedPosition = forcedPosition;
+                requestedVelocity = Vector2.zero;
+            }
             if (!IsValidPosition(requestedPosition))
                 return;
 

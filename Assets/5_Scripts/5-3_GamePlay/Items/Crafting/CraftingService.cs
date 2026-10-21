@@ -51,9 +51,9 @@ public static class CraftingService
     }
 
     /// <summary>只创建配方产物数据，供候选列表和输出槽展示，不检查库存空间。</summary>
-    public static CraftingResult DescribeRecipe(RuntimeRecipe recipe)
+    public static CraftingResult DescribeRecipe(RuntimeRecipe recipe, Inventory input = null)
     {
-        return TryPrepareOutputs(recipe, out List<ItemData> outputs, out CraftingResult failure)
+        return TryPrepareOutputs(recipe, out List<ItemData> outputs, out CraftingResult failure, inputInventory: input)
             ? CraftingResult.Succeeded(recipe, outputs)
             : failure;
     }
@@ -266,7 +266,7 @@ public static class CraftingService
         if (suppliedOutputs == null)
         {
             if (!TryPrepareOutputs(match.Recipe, out outputs, out CraftingResult outputFailure,
-                    capabilities?.ApplyDifficultyOutputMultiplier ?? true)) return outputFailure;
+                    capabilities?.ApplyDifficultyOutputMultiplier ?? true, inputInventory, match)) return outputFailure;
         }
         else
         {
@@ -363,7 +363,7 @@ public static class CraftingService
         RuntimeRecipe recipe,
         out List<ItemData> outputs,
         out CraftingResult failure,
-        bool applyDifficultyMultiplier = true)
+        bool applyDifficultyMultiplier = true, Inventory inputInventory = null, CraftingRecipeMatch match = null)
     {
         outputs = new List<ItemData>();
         failure = null;
@@ -375,6 +375,13 @@ public static class CraftingService
 
         foreach (RuntimeRecipeResult output in recipe.outputs.results)
         {
+            if (output != null && !string.IsNullOrWhiteSpace(output.CopyInputTag))
+            {
+                if (!CraftingInstanceOutput.TryCreate(inputInventory, recipe, match, output, out ItemData copied, out string error))
+                { failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, recipe); return false; }
+                outputs.Add(copied);
+                continue;
+            }
             if (output == null || string.IsNullOrWhiteSpace(output.ItemName) || output.amount <= 0)
             {
                 failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "配方包含无效产物", recipe);

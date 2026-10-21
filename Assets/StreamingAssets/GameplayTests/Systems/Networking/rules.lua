@@ -1,4 +1,16 @@
 -- 正式端点解析和网络物品字节协议无需创建 Host/Client。
+test.system("networking", "world_request_gate", {}, function(data)
+    assert(data.valid and data.unversioned, "合法世界请求被门禁拒绝")
+    for _, key in ipairs({ "notReady", "transferring", "missingObserver", "missingWorld", "staleRevision" }) do
+        assert(type(data[key]) == "string" and #data[key] > 0, "世界门禁拒绝缺少即时原因：" .. key)
+    end
+end, "建造与拆除：世界门禁提供真实拒绝原因")
+
+test.system("networking", "local_observer_window", {}, function(data)
+    assert(data.localX == 16.5 and data.remoteX == 15.5, "本机预测跨块时仍使用旧服务器窗口，或远端误用预测")
+    assert(data.invalidX == 15.5 and data.wrappedX == -31.5, "非法预测没有回退，或环绕后窗口没有跟随本机")
+end, "联机流送：本机预测跨块、远端权威与接缝窗口")
+
 for _, row in ipairs({
     { address = "localhost", fallbackPort = 7777, host = "localhost", port = 7777 },
     { address = " kcp://example.com:9000 ", fallbackPort = 7777, host = "example.com", port = 9000 },

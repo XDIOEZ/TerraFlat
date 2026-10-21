@@ -22,6 +22,9 @@ public interface IAnimalCombatSkill
     void ResetRuntime();
 }
 
+/// <summary>动物向组合技能暴露当前普通攻击距离，技能不识别具体物种。</summary>
+public interface IAnimalAttackRangeSource { float AttackRange { get; } }
+
 /// <summary>动物技能组合器：按模块顺序寻找可用技能，不包含具体技能玩法。</summary>
 public sealed class AI_AnimalSkillController
 {
@@ -117,6 +120,14 @@ public sealed class AnimalSkillCatalog
 public sealed class AnimalSkillDefinition
 {
     public const string ChargeAttackType = "chargeAttack";
+    public const string BiteAttackType = "biteAttack";
+
+    [JsonProperty("durationSeconds")] public float DurationSeconds = 9f;
+    [JsonProperty("tickIntervalSeconds")] public float TickIntervalSeconds = 3f;
+    [JsonProperty("holdDamage")] public float HoldDamage = 5f;
+    [JsonProperty("carryDamage")] public float CarryDamage = 6f;
+    [JsonProperty("targetSlowFraction")] public float TargetSlowFraction = .25f;
+    [JsonProperty("casterSlowFraction")] public float CasterSlowFraction = .5f;
 
     [JsonProperty("id")]
     public string Id;
@@ -244,6 +255,20 @@ public static class AnimalSkillCatalogLoader
                 throw new InvalidDataException($"动物技能模板 {i} 缺少 id");
             if (!ids.Add(skill.Id.Trim()))
                 throw new InvalidDataException($"动物技能 ID 重复：{skill.Id}");
+            if (string.Equals(skill.Type, AnimalSkillDefinition.BiteAttackType, StringComparison.OrdinalIgnoreCase))
+            {
+                RequirePositive(skill.DurationSeconds, skill.Id, "durationSeconds");
+                RequirePositive(skill.TickIntervalSeconds, skill.Id, "tickIntervalSeconds");
+                RequireNonNegative(skill.CooldownSeconds, skill.Id, "cooldownSeconds");
+                RequireNonNegative(skill.TriggerDistance, skill.Id, "triggerDistance");
+                RequirePositive(skill.HoldDamage, skill.Id, "holdDamage");
+                RequirePositive(skill.CarryDamage, skill.Id, "carryDamage");
+                RequireNonNegative(skill.TargetSlowFraction, skill.Id, "targetSlowFraction");
+                RequireNonNegative(skill.CasterSlowFraction, skill.Id, "casterSlowFraction");
+                if (skill.TargetSlowFraction >= 1f || skill.CasterSlowFraction >= 1f)
+                    throw new InvalidDataException($"动物技能 {skill.Id} 的减速必须小于 100%。");
+                continue;
+            }
             if (!string.Equals(skill.Type, AnimalSkillDefinition.ChargeAttackType,
                 StringComparison.OrdinalIgnoreCase))
             {

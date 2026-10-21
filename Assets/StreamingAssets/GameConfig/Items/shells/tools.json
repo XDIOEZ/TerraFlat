@@ -13,7 +13,7 @@
       "volume": 0.15,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Scissors/Scissors_Icon.png"
       },
@@ -750,9 +750,7 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Axe"
-      ],
+      "tags": ["Axe", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
         "rendererLocalPosition": {
@@ -930,9 +928,7 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Axe"
-      ],
+      "tags": ["Axe", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_366.png",
         "rendererLocalPosition": {
@@ -1110,9 +1106,7 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Axe"
-      ],
+      "tags": ["Axe", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_376.png",
         "rendererLocalPosition": {
@@ -1290,9 +1284,7 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Axe"
-      ],
+      "tags": ["Axe", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_032.png",
         "rendererLocalPosition": {
@@ -1471,9 +1463,7 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Axe"
-      ],
+      "tags": ["Axe", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_371.png",
         "rendererLocalPosition": {
@@ -1651,9 +1641,7 @@
       "volume": 3.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Axe"
-      ],
+      "tags": ["Axe", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_033.png",
         "rendererLocalPosition": {
@@ -1854,9 +1842,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Modern"
-      ],
+      "tags": ["Modern", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_363.png",
         "rendererLocalPosition": {
@@ -2030,11 +2016,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Pickaxe",
-        "Copper",
-        "Modern"
-      ],
+      "tags": ["Pickaxe", "Copper", "Modern", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_373.png",
         "rendererLocalPosition": {
@@ -2214,9 +2196,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "36"
-      ],
+      "tags": ["36", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_020.png",
         "rendererLocalPosition": {
@@ -2396,11 +2376,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Pickaxe",
-        "RawIron",
-        "Modern"
-      ],
+      "tags": ["Pickaxe", "RawIron", "Modern", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_368.png",
         "rendererLocalPosition": {
@@ -2580,11 +2556,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Pickaxe",
-        "Iron",
-        "Modern"
-      ],
+      "tags": ["Pickaxe", "Iron", "Modern", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_021.png",
         "rendererLocalPosition": {
@@ -2776,7 +2748,7 @@
       "volume": 2.5,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodHammer/WoodHammer_Icon.png"
       },
@@ -2807,6 +2779,7 @@
     },
     {
       "id": "StoneHammer",
+      "tags": ["Tool"],
       "parent": "WoodHammer",
       "gameName": "石锤",
       "description": "以石头制成锤头、木棍作为握柄的重型锤子。比木锤威力更高，但每次挥击会消耗更多体力。",

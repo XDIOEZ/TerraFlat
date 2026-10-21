@@ -111,9 +111,14 @@ public partial class Mod_Mover
                 sample.Terrain, sample.LocalCell.x, sample.LocalCell.y,
                 seasonalSnow, baselineOffset);
         }
-        bool onSupport = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0;
+        int supportTileId = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
+        bool onSupport = supportTileId != 0;
+        string surfaceCue = null;
+        if (GameRes.ExistingInstance?.TryGetTileDefinition(
+                onSupport ? supportTileId : sample.Cell.GroundTileId, out RuntimeTileDefinition definition) == true)
+            surfaceCue = definition.FootstepCueId;
         byte grass = sample.Terrain.GetGrass(sample.LocalCell.x, sample.LocalCell.y);
-        string cueId = ResolveFootstepCue(sample.Cell.BiomeId, waterDepth, snowDepth, onSupport, grass);
+        string cueId = ResolveFootstepCue(sample.Cell.BiomeId, waterDepth, snowDepth, onSupport, grass, surfaceCue);
         depthVolume = ResolveFootstepDepthVolume(cueId, waterDepth, snowDepth);
         depthPitch = ResolveFootstepDepthPitch(cueId, snowDepth);
         return cueId;
@@ -145,7 +150,7 @@ public partial class Mod_Mover
 
     // 纯地表选择规则与声源播放分开，可由 Lua 规则直接校验边界。
     internal static string ResolveFootstepCue(
-        int biomeId, float waterDepth, float snowDepth, bool hasSupport, byte grass)
+        int biomeId, float waterDepth, float snowDepth, bool hasSupport, byte grass, string surfaceCue = null)
     {
         if (waterDepth > DeepWaterThreshold)
             return null;
@@ -153,6 +158,8 @@ public partial class Mod_Mover
             return AudioEventIds.FootstepWater;
         if (snowDepth > .05f)
             return AudioEventIds.FootstepSnow;
+        if (!string.IsNullOrWhiteSpace(surfaceCue))
+            return surfaceCue;
         if (hasSupport || biomeId == (int)SurfaceBiomeKind.Stone)
             return AudioEventIds.FootstepStone;
         if (biomeId == (int)SurfaceBiomeKind.Desert ||

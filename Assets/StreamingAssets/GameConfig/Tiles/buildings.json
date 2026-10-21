@@ -65,6 +65,7 @@
     },
     {
       "id": "Tile_WaterPlatform",
+      "footstepCueId": "player.footstep.wood",
       "runtimeTileId": 13,
       "loadCapacity": 5,
       "displayName": "水上平台",
@@ -246,6 +247,7 @@
     },
     {
       "id": "Tile_Floor_Wood",
+      "footstepCueId": "player.footstep.wood",
       "runtimeTileId": 23,
       "loadCapacity": 5,
       "displayName": "木地板",

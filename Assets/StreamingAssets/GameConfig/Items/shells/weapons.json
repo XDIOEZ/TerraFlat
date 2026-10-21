@@ -12,10 +12,7 @@
       "volume": 0.8,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [
-        "Knife",
-        "Modern"
-      ],
+      "tags": ["Knife", "Modern", "Tool"],
       "processingCapabilities": {
         "cut": { "level": 1 }
       },
@@ -1257,11 +1254,7 @@
       "volume": 4.0,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Bow",
-        "RangedWeapon",
-        "Wood"
-      ],
+      "tags": ["Bow", "RangedWeapon", "Wood", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/WoodBow_Icon.png",
         "flipX": true
@@ -1304,6 +1297,7 @@
     },
     {
       "id": "Bow_Recurve",
+      "tags": ["Bow", "RangedWeapon", "Wood", "Tool"],
       "parent": "Bow_Wood",
       "gameName": "反曲弓",
       "description": "采用反曲弓臂设计的强化弓。操作方式与木弓相同，但同等蓄力下可让箭矢造成更高伤害。",
@@ -1328,11 +1322,7 @@
       "description": "手持吹箭筒。按住攻击键蓄力并对麦克风吹气，松开后消耗同一库存中的一支箭；吹气越响，箭矢飞得越快并额外造成最多 100% 伤害。",
       "weight": 0.5,
       "volume": 2.0,
-      "tags": [
-        "Blowgun",
-        "RangedWeapon",
-        "Wood"
-      ],
+      "tags": ["Blowgun", "RangedWeapon", "Wood", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Archery/Blowgun_Wood_Icon.png",
         "flipX": false
@@ -1388,11 +1378,7 @@
       "volume": 0.8,
       "stackable": false,
       "canBePickedUp": true,
-      "tags": [
-        "Sling",
-        "RangedWeapon",
-        "Leather"
-      ],
+      "tags": ["Sling", "RangedWeapon", "Leather", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Sling/Sling_Icon.png",
         "color": {"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0},

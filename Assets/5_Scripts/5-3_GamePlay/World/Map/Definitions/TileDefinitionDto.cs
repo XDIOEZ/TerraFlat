@@ -48,6 +48,7 @@ public sealed class TileDefinitionDto
     [JsonProperty("minimumSurfaceDepth")] public int MinimumSurfaceDepth; // 该底材露出时至少位于地表下多少层。
     // 自然作物可以把该地块视为可生长基质；生态规则只依赖这个能力，不写死具体地块 ID。
     [JsonProperty("naturalPlantable")] public bool NaturalPlantable;
+    [JsonProperty("footstepCueId")] public string FootstepCueId; // 地表自行声明踩踏音色，供平台和 MOD 复用。
     [JsonProperty("data", Required = Required.Always)] public TileComponentDefinitionDto Data;
     [JsonProperty("behaviours")] public List<TileComponentDefinitionDto> Behaviours = new();
     [JsonProperty("damageProfile")] public TileBuildingDamageProfile DamageProfile = new();

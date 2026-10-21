@@ -495,7 +495,7 @@ public sealed class CraftingTransaction
 
         private static ItemData Clone(ItemData itemData)
         {
-            return itemData == null ? null : FastCloner.FastCloner.DeepClone(itemData);
+            return itemData == null ? null : ItemInstanceDataFactory.CloneRuntime(itemData);
         }
 
         private static List<ItemData> CloneItems(IReadOnlyList<ItemData> source)

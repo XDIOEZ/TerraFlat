@@ -8,7 +8,7 @@
       },
       "weight": 70.0,
       "parent": "Wolf",
-      "removeModules": ["animalAudio"],
+      "removeModules": ["animalAudio", "biteAttackSkill"],
       "lootTableId": "",
       "gameName": "丧尸",
       "description": "用于尸潮的基础敌对生物，当前使用 GameObject AI，保留可选 ECS 配置。",

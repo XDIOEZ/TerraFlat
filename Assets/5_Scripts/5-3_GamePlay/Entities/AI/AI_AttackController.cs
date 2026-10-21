@@ -21,6 +21,7 @@ public class AI_AttackController
 {
 #region Fields
 	private readonly List<Mod_Damage> _damageMods = new List<Mod_Damage>();
+	private Item _owner;
 	private float _cooldownTimer;
 	private float _windupTimer;
 	private float _windowRemainTimer;
@@ -97,6 +98,7 @@ public class AI_AttackController
 	/// </summary>
 	public void Bind(Item item)
 	{
+		_owner = item;
 		_damageMods.Clear();
 		Mod_Damage[] damageModules = item.GetComponentsInChildren<Mod_Damage>(true);
 		for (int i = 0; i < damageModules.Length; i++)
@@ -214,7 +216,7 @@ public class AI_AttackController
 		string attackAnimName,
 		Vector2 attackDirection)
 	{
-		if (IsAttackLocked)
+		if (IsAttackLocked || ActorActionConstraints.IsAttackBlocked(_owner))
 		{
 			return;
 		}

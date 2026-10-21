@@ -37,32 +37,18 @@ RATE = sfx.RATE
 def specs():
     tone, noise = sfx.layer, sfx.noise
     return [
-        dict(cue="player.footstep.dirt", name="泥土脚步", seconds=.23, variants=3, peakDb=-17, rmsDb=-32,
-             layers=[tone(key=27, levels=(63, 18, 9), coarse=(0, 11, 24),
-                          decay=.065, cutoff=1350, volume=36),
-                     noise(1250, .006, .07, volume=47),
-                     noise(3300, .002, .025, volume=29, delay=.019)]),
-        dict(cue="player.footstep.grass", name="草地脚步", seconds=.42, variants=3,
-             peakDb=-17, rmsDb=-31, recording="grass"),
-        dict(cue="player.footstep.sand", name="沙地脚步", seconds=.3, variants=3, peakDb=-17, rmsDb=-32,
-             layers=[noise(3600, .009, .105, volume=43,
-                           repeats=((.052, .21),)),
-                     noise(950, .015, .095, volume=44),
-                     tone(key=25, levels=(57, 10, 6), decay=.065, cutoff=900, volume=25)]),
-        dict(cue="player.footstep.stone", name="石地脚步", seconds=.21, variants=3, peakDb=-16, rmsDb=-31,
-             layers=[tone(key=41, levels=(66, 23, 8), coarse=(0, 17, 28),
-                          decay=.051, cutoff=3100, volume=43),
-                     noise(3900, .001, .038, volume=45),
-                     tone(key=52, levels=(41, 17, 6), decay=.032,
-                          cutoff=3600, volume=19, delay=.025)]),
-        dict(cue="player.footstep.snow", name="雪地脚步", seconds=.51, variants=3, peakDb=-7, rmsDb=-22,
+        dict(cue="player.footstep.dirt", name="泥土脚步", seconds=0.23, variants=3, peakDb=-17, rmsDb=-32,
+             externalManifest="SoundDesign/Footsteps_CC0/manifest.json"),
+        dict(cue="player.footstep.grass", name="草地脚步", seconds=0.42, variants=3, peakDb=-17, rmsDb=-31,
+             externalManifest="SoundDesign/Footsteps_CC0/manifest.json"),
+        dict(cue="player.footstep.sand", name="沙地脚步", seconds=0.3, variants=3, peakDb=-17, rmsDb=-32,
+             externalManifest="SoundDesign/Footsteps_CC0/manifest.json"),
+        dict(cue="player.footstep.stone", name="石地脚步", seconds=0.21, variants=3, peakDb=-16, rmsDb=-31,
+             externalManifest="SoundDesign/Footsteps_CC0/manifest.json"),
+        dict(cue="player.footstep.snow", name="雪地脚步", seconds=0.51, variants=3, peakDb=-7, rmsDb=-22,
              externalManifest="SoundDesign/Snow_Footsteps/manifest.json"),
-        dict(cue="player.footstep.water", name="浅水脚步", seconds=.37, variants=3, peakDb=-15, rmsDb=-30,
-             layers=[tone(key=38, levels=(62, 14, 8), coarse=(0, 8, 17),
-                          fine=(0, -17, 27), decay=.092, cutoff=1150, volume=34),
-                     noise(2350, .01, .135, volume=47),
-                     noise(750, .026, .15, volume=36, delay=.04,
-                           repeats=((.082, .32),))]),
+        dict(cue="player.footstep.water", name="浅水脚步", seconds=0.37, variants=3, peakDb=-15, rmsDb=-30,
+             externalManifest="SoundDesign/Footsteps_CC0/manifest.json"),
         dict(cue="fishing.cast", name="抛竿甩线", seconds=.45, variants=2, peakDb=-10, rmsDb=-26,
              layers=[noise(3700, .037, .16, volume=57),
                      noise(1000, .02, .14, volume=27, delay=.048),
@@ -91,7 +77,7 @@ def external_sound(cue, variant):
     if "externalManifest" not in sound:
         return None
     path = PROJECT / sound["externalManifest"]
-    assert path.is_file(), f"Run SoundDesign/Snow_Footsteps/prepare_snow.py prepare first: {path}"
+    assert path.is_file(), f"Prepare the external recorded footsteps first: {path}"
     manifest = json.loads(path.read_text(encoding="utf-8"))
     entry = next(entry for entry in manifest["sounds"] if entry["cue"] == cue and entry["variant"] == variant)
     asset = PROJECT / entry["file"]

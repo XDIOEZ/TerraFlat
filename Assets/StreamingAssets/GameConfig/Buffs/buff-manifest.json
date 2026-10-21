@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "packages": [
+    {"id":"bite_conditions", "path":"bite_conditions.json", "enabled":true},
     {
       "id": "food_effects",
       "path": "food_effects.json",

@@ -200,7 +200,7 @@ public sealed class SettingsExitConfirmationController : MonoBehaviour, IPointer
 
     private static void Focus(Selectable selectable)
     {
-        if (selectable == null || !selectable.IsActive() || !selectable.IsInteractable() ||
+        if (!EventSystemGuard.IsGamepadMode || selectable == null || !selectable.IsActive() || !selectable.IsInteractable() ||
             EventSystem.current == null)
         {
             return;

@@ -1,4 +1,19 @@
 -- 阵营查询沿用正式服务，额外 GC 断言仅在计数器可用时执行。
+test.system("combat", "bite_attack", {}, function(data)
+    assert(data.equalHalfUsesA and data.lighterUsesB and data.heavierUsesA, "撕咬身体质量分界错误")
+    assert(data.bodyWeight == 40 and data.rangeUsesAttackRange, "撕咬没有使用身体重量或普通攻击范围")
+    assert(data.duration == 9 and data.interval == 3 and data.cooldown == 180,
+        "撕咬时长、周期或冷却不符合配置")
+    assert(data.holdDamage == 5 and data.carryDamage == 6 and data.targetSlow == .25 and data.casterSlow == .5,
+        "撕咬伤害或减速配置错误")
+    assert(math.abs(data.oneSlow - 3) < .001 and math.abs(data.twoSlows - 2.25) < .001 and
+        math.abs(data.oneRemaining - 3) < .001 and math.abs(data.restored - 4) < .001,
+        "多来源减速叠加、单来源释放或全部释放错误")
+    assert(data.blockedStart and data.retainedBlock and data.releasedBlock, "普通攻击限制没有阻止前摇或独立释放")
+    assert(data.persistedCooldown == 123, "剩余冷却快照没有保留")
+    assert(data.invalidTimingRejected and data.invalidSlowRejected, "无效周期或100%减速配置未被拒绝")
+end, "撕咬身体质量、配置与多来源动作租约")
+
 test.system("combat", "faction_relation_lookup", {}, function(data)
     assert(data.sameFactionFriendly and data.differentFactionHostile and data.neutralFactionNeutral
         and data.emptyFactionHostile, "阵营默认关系或大小写、空值规则变化")

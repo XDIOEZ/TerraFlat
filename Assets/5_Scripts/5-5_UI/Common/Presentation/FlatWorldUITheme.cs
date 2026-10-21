@@ -136,7 +136,7 @@ public static class FlatWorldUITheme
         ("UI_FireDrill", "钻木取火", string.Empty),
         ("UI_FlintStrike", "燧石取火", string.Empty),
         ("UI_ModuleList", "生存状态", string.Empty),
-        ("UI_ActionList", "功能列表", string.Empty),
+        ("UI_ActionList", "设置", string.Empty),
         ("UI_Debug", "调试面板", string.Empty)
     };
 
@@ -1480,7 +1480,8 @@ public static class FlatWorldUITheme
                 "界面遮罩",
                 "全屏背景遮罩",
                 "二次确认界面",
-                "保存退出确认层"))
+                "保存退出确认层",
+                "新世界难度设置面板"))
         {
             return true;
         }

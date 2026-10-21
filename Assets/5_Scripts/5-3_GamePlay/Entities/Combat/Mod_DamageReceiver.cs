@@ -687,7 +687,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             ruleMultiplier *= multiplier;
         }
 
-        return HurtContext(context, ruleMultiplier, damageSender, targetPart);
+        return HurtContext(context, ruleMultiplier, damageSender, targetPart, ignoreInterval: damageSender is IPeriodicDamageSource);
     }
 
     /// <summary>数据后端的正式入口；使用真实来源身份与模拟时钟，不伪造 Item 或 IDamageSender。</summary>

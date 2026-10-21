@@ -25,7 +25,7 @@ public enum WolfState
 /// 狼 AI：支持群体协作（呼叫同伴、集火）、攻击伤害窗口、逃跑/避让等行为。
 /// 状态优先级：逃跑 > 攻击 > 追击 > 避让 > 警觉 > 移动 > 待机
 /// </summary>
-public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IAIAdvanceCommandCancellationReceiver
+public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IAIAdvanceCommandCancellationReceiver, IAnimalAttackRangeSource
 {
 #region SaveData
 	[Serializable]
@@ -137,7 +137,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	public float chaseTriggerDistance = 28f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("攻击距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float attackTriggerDistance = 1.4f;
+	public float attackTriggerDistance = 2.1f;
 	[HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("追击放弃"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float chaseLossDistance = 44f;
 	/// <summary>狼接受新追击路线的总代价上限，不包含上限本身。</summary>
@@ -151,7 +151,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	[HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("伤害窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
 	public float attackDamageWindow = 0.33333334f;
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("攻击前摇"), SuffixLabel("秒", true), MinValue(0f)]
-	public float attackDamageStartDelay = 0.5f;
+	public float attackDamageStartDelay = 0.25f;
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("攻击后摇"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackRecoveryDuration = 0.35f;
 
@@ -397,6 +397,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 	internal int ValidatedPackAllyCount => _packAllies.Count;
 	public AI_Wolf PackLeader => _alphaWolf;
 	public Item CurrentThreat => _currentThreat;
+	public float AttackRange => attackTriggerDistance;
 	public bool HasAdvanceCommand => Data?.HasAdvanceCommand == true;
 	public Vector3 AdvanceTargetPosition => Data?.AdvanceTargetPosition ?? transform.position;
 
@@ -518,6 +519,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 #region StateMachine
 	protected override WolfState EvaluateNextState()
 	{
+		if (_animalSkills.IsAnyActive) return WolfState.Attack;
 		if (ShouldFlee())     return WolfState.Flee;
 		if (ShouldAttack())   return WolfState.Attack;
 		if (ShouldChase())    return WolfState.Chase;
@@ -576,6 +578,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver, IA
 
 	private void TickAttack()
 	{
+		// 持续技能独占攻击动作，普通攻击窗口不能在技能期间重新打开。
+		if (_animalSkills.IsAnyActive) { _attack.StopWindow(); return; }
+		if (!_attack.IsAttackLocked && _animalSkills.TryStart(_currentThreat)) { _attack.StopWindow(); return; }
 		if (_currentThreat == null)
 		{
 			_attack.StopWindow();

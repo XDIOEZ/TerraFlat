@@ -66,6 +66,32 @@ public static partial class RuntimeUIPrefabBuilder
 
     #region 重建入口
 
+    /// <summary>版本号使用安全区右下角的透明文本，自动读取构建版本。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Refresh Version Label UI")]
+    public static void RefreshVersionLabelUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        UpdateExistingPrefab(UIRootPrefab, root =>
+        {
+            Transform parent = FindTransform(root.transform, "SafeAreaRoot") ?? root.transform;
+            TextMeshProUGUI label = FindTransform(parent, "FWUI_Version")?.GetComponent<TextMeshProUGUI>();
+            if (label == null)
+                label = CreateText("FWUI_Version", parent, string.Empty, 17f, Muted);
+            label.text = $"v{PlayerSettings.bundleVersion}";
+            label.raycastTarget = false;
+            label.alignment = TextAlignmentOptions.BottomRight;
+            RectTransform rect = label.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(1f, 0f);
+            rect.anchoredPosition = new Vector2(-14f, 8f);
+            rect.sizeDelta = new Vector2(180f, 28f);
+            if (label.GetComponent<ApplicationVersionLabel>() == null)
+                label.gameObject.AddComponent<ApplicationVersionLabel>();
+        });
+        AssetDatabase.SaveAssets();
+    }
+
+
     /// <summary>只重建设置主面板与分页容器，不重建设置页资产。</summary>
     [MenuItem("FlatWorld/其他工具/UI/Rebuild Settings Action List UI")]
     public static void RebuildSettingsActionListUI()
@@ -85,6 +111,8 @@ public static partial class RuntimeUIPrefabBuilder
         SaveMainMenuSettingsPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
+            "设置", "视觉特效", "显示设置", "镜头控制", "语言", "提示", "存档加载失败", "确定");
         Debug.Log("[Runtime UI] 已固化游戏内设置主界面，并同步主菜单客户端设置子集。");
     }
 
@@ -1058,6 +1086,10 @@ public static partial class RuntimeUIPrefabBuilder
         SetTopLeft(openGmButton.GetComponent<RectTransform>(), 24f, 80f, 220f, 60f);
         SetButtonLabelSize(openGmButton, 19f);
 
+        Toggle ordinaryLogs = CreateLogFilterToggle(panel.transform, "普通日志过滤", "普通", 284f);
+        Toggle warningLogs = CreateLogFilterToggle(panel.transform, "警告日志过滤", "警告", 500f);
+        Toggle errorLogs = CreateLogFilterToggle(panel.transform, "错误日志过滤", "报错", 716f);
+
         Image divider = CreateImage("页头分隔线", panel.transform, new Color(0.83f, 0.49f, 0.23f, 0.72f));
         divider.raycastTarget = false;
         RectTransform dividerRect = divider.rectTransform;
@@ -1142,10 +1174,26 @@ public static partial class RuntimeUIPrefabBuilder
         serializedController.FindProperty("statusText").objectReferenceValue = status;
         serializedController.FindProperty("logScrollRect").objectReferenceValue = scrollRect;
         serializedController.FindProperty("copyEntryCountInput").objectReferenceValue = copyEntryCountInput;
+        serializedController.FindProperty("ordinaryLogsToggle").objectReferenceValue = ordinaryLogs;
+        serializedController.FindProperty("warningLogsToggle").objectReferenceValue = warningLogs;
+        serializedController.FindProperty("errorLogsToggle").objectReferenceValue = errorLogs;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 
         panel.SetActive(false);
         return root;
+    }
+
+    /// <summary>过滤勾选保留60像素触控区域，正文与复制共用其状态。</summary>
+    private static Toggle CreateLogFilterToggle(Transform parent, string name, string caption, float left)
+    {
+        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(caption);
+        Toggle toggle = CreateToggle(name, parent);
+        SetTopLeft(toggle.GetComponent<RectTransform>(), left, 80f, 60f, 60f);
+        toggle.SetIsOnWithoutNotify(true);
+        TextMeshProUGUI label = CreateText(name + "标签", parent, caption, 20f, Cream);
+        SetTopLeft(label.rectTransform, left + 72f, 92f, 108f, 36f);
+        FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { label });
+        return toggle;
     }
 
     /// <summary>构建主菜单启动阶段使用的资源加载面板，确保长错误信息在手机上可读。</summary>
@@ -2376,6 +2424,7 @@ public static partial class RuntimeUIPrefabBuilder
             FindTransform(root.transform, SettingsActionListPagination.TabBarName),
             SettingsActionListPagination.GraphicsTabButtonName,
             "画质设置");
+        ConfigureGroupedSettingsNavigation(root);
     }
 
     /// <summary>主菜单和游戏内设置共用六档整体画质入口。</summary>
@@ -2554,6 +2603,52 @@ public static partial class RuntimeUIPrefabBuilder
 
         Transform close = FindTransform(root.transform, GameManager.MainMenuSettingsCloseButtonKey);
         close?.SetAsLastSibling();
+        ConfigureGroupedSettingsNavigation(root);
+    }
+
+    /// <summary>相近设置通过页内入口访问，顶部只保留常用大类。</summary>
+    private static void ConfigureGroupedSettingsNavigation(GameObject root)
+    {
+        BasePanel panel = root.GetComponent<BasePanel>();
+        if (panel != null)
+            panel.CanDrag = false;
+        foreach (UI_Drag drag in root.GetComponentsInChildren<UI_Drag>(true))
+            drag.enabled = false;
+
+        Transform tabs = FindTransform(root.transform, SettingsActionListPagination.TabBarName);
+        string[] hidden = { "显示设置", "镜头控制", "视觉特效", SettingsActionListPagination.LanguageTabButtonName };
+        foreach (string name in hidden)
+            FindTransform(tabs, name)?.gameObject.SetActive(false);
+
+        Transform graphics = FindTransform(root.transform, SettingsActionListPagination.GraphicsPageName);
+        MoveEntryToPage(root.transform, graphics, "打开视觉特效");
+        MoveEntryToPage(root.transform, graphics, "打开显示设置");
+        SetButtonCaption(FindTransform(graphics, "打开视觉特效")?.GetComponent<Button>(), "视觉特效");
+        SetButtonCaption(FindTransform(graphics, "打开显示设置")?.GetComponent<Button>(), "显示设置");
+
+        Transform input = FindTransform(root.transform, SettingsActionListPagination.InputBindingPageName);
+        Transform inputOptions = FindTransform(input, "操作选项");
+        if (inputOptions != null)
+        {
+            MoveEntryToPage(root.transform, inputOptions, "打开镜头控制");
+            SetButtonCaption(FindTransform(inputOptions, "打开镜头控制")?.GetComponent<Button>(), "镜头控制");
+        }
+
+        Transform language = FindTransform(root.transform, SettingsActionListPagination.LanguagePageName);
+        Transform ui = FindTransform(root.transform, SettingsActionListPagination.InterfacePageName);
+        ScrollRect uiScroll = ui != null ? ui.GetComponentInChildren<ScrollRect>(true) : null;
+        if (language != null && uiScroll?.content != null)
+        {
+            MoveEntryToPage(root.transform, uiScroll.content, "打开语言设置");
+            SetButtonCaption(FindTransform(uiScroll.content, "打开语言设置")?.GetComponent<Button>(), "语言");
+        }
+    }
+
+    private static void SetButtonCaption(Button button, string caption)
+    {
+        TextMeshProUGUI label = button != null ? button.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+        if (label != null)
+            label.text = caption;
     }
 
     /// <summary>删除指定父节点的直属子节点。</summary>

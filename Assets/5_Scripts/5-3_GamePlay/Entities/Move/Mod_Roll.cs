@@ -139,7 +139,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
         catch { CancelRoll(); throw; }
         finally { starting = false; }
     }
-    private bool CanStartRoll() => !starting && !IsRolling && CooldownRemaining <= 0f && CanContinueRoll() &&
+    private bool CanStartRoll() => !starting && !IsRolling && !ActorActionConstraints.IsForcedFollowing(item) && CooldownRemaining <= 0f && CanContinueRoll() &&
         (IsRuntimeLoaded || networkAuthority) && stamina != null && stamina.Data != null &&
         (IsServerRemoteAuthority || !mover.HasDrivenMotion) && CanUsePresentation();
     private bool CanContinueRoll() => isActiveAndEnabled && Enabled && player != null &&

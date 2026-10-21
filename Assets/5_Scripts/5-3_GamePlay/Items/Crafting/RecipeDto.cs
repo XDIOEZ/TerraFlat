@@ -107,6 +107,10 @@ public sealed class RecipeDto
 [Serializable]
 public sealed class RecipeIngredientDto
 {
+    [JsonProperty("minTemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public float? MinTemperature;
+    [JsonProperty("excludeTag", NullValueHandling = NullValueHandling.Ignore)]
+    public string ExcludeTag;
     // 热加工可指定位置，普通合成只写物品身份与数量。
     [JsonProperty("slot", NullValueHandling = NullValueHandling.Ignore)]
     public int? Slot;
@@ -127,6 +131,10 @@ public sealed class RecipeIngredientDto
 [Serializable]
 public sealed class RecipeOutputDto
 {
+    [JsonProperty("copyInputTag", NullValueHandling = NullValueHandling.Ignore)]
+    public string CopyInputTag;
+    [JsonProperty("reinforceWithAdhesive", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool ReinforceWithAdhesive;
     [JsonProperty("itemId")]
     public string ItemId;
 

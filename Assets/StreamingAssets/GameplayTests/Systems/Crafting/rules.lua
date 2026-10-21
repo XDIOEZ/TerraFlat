@@ -128,3 +128,50 @@ for _, case in ipairs(transactions) do
         assert(data.inputFinal == case.finalInput and data.outputFinal == case.finalOutput, "事务最终结果或回滚错误")
     end, "制作原子事务：" .. case.name)
 end
+-- 强化复用正式配方、候选预检、实例克隆、原子扣料和快照恢复。
+test.system("crafting", "tool_reinforcement_catalog", {}, function(data)
+    assert(#data.tools == data.expectedCount, "正式工具目录缺少强化覆盖样本")
+    for _, row in ipairs(data.tools) do
+        assert(row.tool and not row.stackable and row.maximum > 0, "子定义标签覆盖导致工具无法强化：" .. row.id)
+    end
+end, "工具强化：正式斧镐刀弓铲锄鱼竿的标签继承与单件身份")
+
+for _, args in ipairs({ {}, { workbench = true }, { adhesive = true, temperature = 20 } }) do
+    test.system("crafting", "tool_reinforcement", args, function(data)
+        assert(#data.warnings == 0 and data.matched and data.preview and data.success, "合法工具强化失败")
+        assert(data.sourceUnchangedAfterPreview, "强化预览提前修改工具或消耗胶水")
+        assert(data.toolRemaining == 0 and data.glueRemaining == 2 and data.outputAmount == 1, "强化没有恰好消耗工具和一份胶水")
+        assert(data.outputGuid == 17001 and math.abs(data.maximum - 130) < 0.001 and math.abs(data.durability - 75) < 0.001,
+            "强化复制了新工具身份，或提高上限后修复一半缺损的计算错误")
+        assert(data.snapshotTags and data.snapshotIdentity and data.repeatRejected, "强化或原实例标签/身份未保存，或允许再次强化")
+        assert(math.abs(data.restoredMaximum - 130) < 0.001 and math.abs(data.restoredDurability - 75) < 0.001,
+            "强化读档后倍率叠乘或耐久改变")
+    end, "工具强化：" .. (args.adhesive and "其他胶水" or args.workbench and "合成台" or "手工"))
+end
+
+for _, row in ipairs({
+    { name = "低于200度隐藏", args = { temperature = 199.9 }, matched = false },
+    { name = "未初始化温度拒绝", args = { uninitialized = true }, matched = false },
+    { name = "非法温度拒绝", args = { invalidTemperature = true }, matched = false },
+    { name = "已强化工具拒绝", args = { reinforced = true }, matched = false },
+    { name = "堆叠工具不复制", args = { stackedTool = true }, matched = true },
+    { name = "满输出原子保留材料", args = { full = true }, matched = true },
+    { name = "预览后降温提交拒绝", args = { coolBeforeCommit = true }, matched = true }
+}) do
+    test.system("crafting", "tool_reinforcement", row.args, function(data)
+        assert(data.matched == row.matched and not data.success, "非法强化被提交或候选条件错误")
+        assert(data.toolRemaining == (row.args.stackedTool and 2 or 1) and data.glueRemaining == 3,
+            "强化拒绝仍扣工具或胶水")
+        assert(data.outputAmount == 0 and data.sourceUnchangedAfterPreview, "拒绝或预览产生了强化工具")
+        if row.args.coolBeforeCommit then
+            assert(data.preview and not data.matchedBeforeCommit and data.dataNotifications == 1,
+                "降温后的材料状态未通知候选或提交未复核温度")
+        end
+        if row.args.full then assert(data.outputStillBlocked, "满输出失败改变原槽位") end
+    end, "工具强化边界：" .. row.name)
+end
+
+test.system("crafting", "reinforcement_editor_roundtrip", {}, function(data)
+    assert(data.temperature == 200 and data.excludeTag == "AdhesiveReinforced", "编辑保存丢失温度或重复强化限制")
+    assert(data.copyInputTag == "Tool" and data.reinforce and data.outputAmount == 1, "编辑保存破坏实例强化输出")
+end, "内容工坊：强化配方字段往返")

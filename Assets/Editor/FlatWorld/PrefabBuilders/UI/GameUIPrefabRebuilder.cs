@@ -1739,7 +1739,7 @@ public static class GameUIPrefabRebuilder
             root,
             1440f,
             810f,
-            "功能列表",
+            "设置",
             string.Empty,
             string.Empty);
         ConfigureResponsiveActionListFrame(root, frame);

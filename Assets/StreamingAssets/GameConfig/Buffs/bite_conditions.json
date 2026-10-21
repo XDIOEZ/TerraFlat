@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "core:bite_hold",
+      "displayName": "被撕咬",
+      "description": "被咬住，每个来源使移动速度降低25%，并周期受到物理伤害。",
+      "durationSeconds": null,
+      "effects": []
+    },
+    {
+      "id": "core:bite_carried",
+      "displayName": "被拖行",
+      "description": "被撕咬者拖行，暂时不能自主移动，也不能再次成为撕咬目标。",
+      "durationSeconds": null,
+      "effects": []
+    },
+    {
+      "id": "core:bite_drag",
+      "displayName": "拖行猎物",
+      "description": "正在撕咬并拖行猎物，移动速度降低50%，期间不能普通攻击。",
+      "durationSeconds": null,
+      "effects": []
+    }
+  ]
+}

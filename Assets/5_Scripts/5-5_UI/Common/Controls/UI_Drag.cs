@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -47,6 +47,9 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// 是否正在拖拽状态
     /// </summary>
     public bool IsDragging = false;
+
+    /// <summary>手动拖动修订号供首次自动布局识别玩家已接管窗口位置。</summary>
+    public int PositionRevision { get; private set; }
 
     /// <summary>独立子节点上的窗口拖动命中面。</summary>
     private UIWindowDragSurface dragSurface;
@@ -200,7 +203,12 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
             eventData.pressEventCamera,
             out localPointerPosition))
         {
-            rectTransform.anchoredPosition = localPointerPosition + offset;
+            Vector2 position = localPointerPosition + offset;
+            if (rectTransform.anchoredPosition != position)
+            {
+                rectTransform.anchoredPosition = position;
+                PositionRevision++;
+            }
         }
     }
 

@@ -112,17 +112,17 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         0,
         1,
         2,
-        3,
-        4,
+        9,
+        2,
         5,
-        6,
+        9,
         8,
         0,
         0,
         0,
         0,
         9,
-        10,
+        1,
         7,
         11
     };
@@ -251,7 +251,16 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         }
 
         GraphicsSettingsPanelLauncher.Ensure(pages[FindPageIndex(GraphicsPageName)]);
+        // 设置主窗口固定在安全区内，拖动仅留给库存等玩法窗口。
+        basePanel.CanDrag = false;
+        foreach (UI_Drag drag in GetComponentsInChildren<UI_Drag>(true))
+            drag.enabled = false;
         BindTabButtons();
+        BindPageButton(pages[12], "打开视觉特效", VisualEffectsPageName);
+        BindPageButton(pages[12], "打开显示设置", DisplayPageName);
+        BindPageButton(pages[2], "打开镜头控制", CameraPageName);
+        if (panelContext == SettingsPanelContext.MainMenu)
+            BindPageButton(pages[1], "打开语言设置", LanguagePageName);
         if (panelContext == SettingsPanelContext.InGame)
             BindWorldDetailButtons();
         BindPanelLifecycle();
@@ -479,7 +488,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>分页改变后把手柄焦点转到新页首项。</summary>
     private void FocusCurrentPageFirstSelectable()
     {
-        if (basePanel == null || !basePanel.IsOpen() || EventSystem.current == null)
+        if (!EventSystemGuard.IsGamepadMode || basePanel == null || !basePanel.IsOpen() || EventSystem.current == null)
             return;
 
         Selectable selectable = firstSelectables[currentPageIndex];
@@ -533,6 +542,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>判断当前环境是否应绑定指定顶部页签。</summary>
     private bool IsTabIncluded(int tabIndex)
     {
+        if (tabIndex == 3 || tabIndex == 4 || tabIndex == 6 || tabIndex == 10)
+            return false;
         if (tabIndex == 11)
             return true;
 

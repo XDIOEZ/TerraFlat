@@ -20,6 +20,7 @@ namespace FlatWorld.NaturalEntities
         public List<Mod_Production.ItemProductionData> Production;
         public float ProductionSpeed = 1f;
         public bool ProductionUsesGrowthDifficulty, AllowCultivatedHarvest;
+        public int ManualHarvestWorkSteps = ManualHarvestWork.DefaultSteps;
         public string TreeFoodId, TreeSeedId;
         public int TreeFoodMinimum, TreeFoodMaximum;
         public EntityPlantSoil Soil;
@@ -73,6 +74,7 @@ namespace FlatWorld.NaturalEntities
             float duration = p.Value<float?>("growthDurationSeconds") ?? 500f;
             if (!FinitePositive(duration)) { reason = "作物成熟时间必须为有限正数。"; return false; }
             profile.CropModuleName = module.StableName;
+            profile.ManualHarvestWorkSteps = Mathf.Max(1, p.Value<int?>("manualHarvestWorkSteps") ?? ManualHarvestWork.DefaultSteps);
             profile.CropDefaults = DeserializeConfiguration<CropRuntimeData>(p["Data"]) ?? new CropRuntimeData();
             profile.GrowthDefaults = new GrowData
             {
@@ -106,6 +108,7 @@ namespace FlatWorld.NaturalEntities
             reason = null;
             if (profile.Collection != null) { reason = "资源库存能力重复。"; return false; }
             profile.Collection = DeserializeConfiguration<ResourceCollectionDefinition>(ParseParameters(module, out reason));
+            profile.ManualHarvestWorkSteps = Mathf.Max(1, ParseParameters(module, out reason)?.Value<int?>("manualHarvestWorkSteps") ?? ManualHarvestWork.DefaultSteps);
             profile.StockModuleName = module.StableName;
             return profile.Collection != null;
         }

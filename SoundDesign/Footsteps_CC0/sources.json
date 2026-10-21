@@ -1,0 +1,206 @@
+{
+  "verifiedOn": "2026-10-21",
+  "recordings": {
+    "kenney": {
+      "title": "Impact Sounds (1.0)",
+      "author": "Kenney",
+      "sourcePage": "https://kenney.nl/assets/impact-sounds",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "fantozzi": {
+      "title": "Fantozzi's Footsteps (Grass/Sand & Stone)",
+      "author": "Fantozzi; cut and distributed by qubodup",
+      "sourcePage": "https://opengameart.org/content/fantozzis-footsteps-grasssand-stone",
+      "downloadUrl": "https://opengameart.org/sites/default/files/Fantozzi-footsteps.7z",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "dirt": {
+      "title": "Different steps on wood, stone, leaves, gravel and mud",
+      "author": "TinyWorlds; edited from pdsounds.org recordings",
+      "sourcePage": "https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud",
+      "downloadUrl": "https://opengameart.org/sites/default/files/%5Bkdd%5DDifferentSteps_0.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    "water": {
+      "title": "Water Splash",
+      "author": "Sara Lana; uploaded by felix.blume",
+      "sourcePage": "https://freesound.org/people/felix.blume/sounds/434978/",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "preparedSource": "SoundDesign/Swimming_SFX_LMMS/sources.json",
+      "use": "Reuse existing recorded close-pool splash segments as shallow-water footstep splashes"
+    }
+  },
+  "processing": "Mono 48kHz PCM16, highpass 60Hz, remove DC and silent head/tail, 3ms head and 25ms tail fade, peak -12dB. No synthesized layers.",
+  "segments": [
+    {
+      "cue": "player.footstep.grass",
+      "variant": 1,
+      "recording": "kenney",
+      "originalFile": "footstep_grass_000.ogg",
+      "source": "Sources/grass_01.ogg",
+      "sourceSha256": "9d49497777405d78d7cf7f2888e28277f3a23192300cfd1d79d54876b20f479f",
+      "file": "Assets/Audio/Generated/player.footstep.grass__01.wav"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 2,
+      "recording": "kenney",
+      "originalFile": "footstep_grass_001.ogg",
+      "source": "Sources/grass_02.ogg",
+      "sourceSha256": "fb28781bd22b2eefdc14077f1adf5c94d7fe9c3a130194633b55f3e0d39d9f04",
+      "file": "Assets/Audio/Generated/player.footstep.grass__02.wav"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 3,
+      "recording": "kenney",
+      "originalFile": "footstep_grass_002.ogg",
+      "source": "Sources/grass_03.ogg",
+      "sourceSha256": "73a520139f5be716a403bfe9c80e0e94d1e61d8e9de04a354b336392164b53dc",
+      "file": "Assets/Audio/Generated/player.footstep.grass__03.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 1,
+      "recording": "kenney",
+      "originalFile": "footstep_concrete_000.ogg",
+      "source": "Sources/stone_01.ogg",
+      "sourceSha256": "d7267e183067757c92c169de2a379abea592cfca6b39bb2e8feea15221ad79fe",
+      "file": "Assets/Audio/Generated/player.footstep.stone__01.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 2,
+      "recording": "kenney",
+      "originalFile": "footstep_concrete_001.ogg",
+      "source": "Sources/stone_02.ogg",
+      "sourceSha256": "507a75eb19b897087855a3be3cf11a12d7fa37d143ad535eeebe0b8031c7325d",
+      "file": "Assets/Audio/Generated/player.footstep.stone__02.wav"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 3,
+      "recording": "kenney",
+      "originalFile": "footstep_concrete_002.ogg",
+      "source": "Sources/stone_03.ogg",
+      "sourceSha256": "b21fa546d74941196b25da8a20b7010abd8c05c4fcf93545d1f344e66a664e13",
+      "file": "Assets/Audio/Generated/player.footstep.stone__03.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 1,
+      "recording": "kenney",
+      "originalFile": "footstep_wood_000.ogg",
+      "source": "Sources/wood_01.ogg",
+      "sourceSha256": "5f1c252942a220d658121bd9417448cd19649ded9fff2ff15f6e50899373ce8e",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.wood__01.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 2,
+      "recording": "kenney",
+      "originalFile": "footstep_wood_001.ogg",
+      "source": "Sources/wood_02.ogg",
+      "sourceSha256": "e4f68e1c9fd55b4dc8ca89ed2bbab6f200171bc54bdc18aa96b80d8e7336f462",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.wood__02.wav"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 3,
+      "recording": "kenney",
+      "originalFile": "footstep_wood_002.ogg",
+      "source": "Sources/wood_03.ogg",
+      "sourceSha256": "9ff095b05cee5eec40b081defe3f0eef7232bb16d4865ce03b9f6dbab875cfdd",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.wood__03.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 1,
+      "recording": "fantozzi",
+      "originalFile": "Fantozzi-SandL1.flac",
+      "source": "Sources/sand_01.flac",
+      "sourceSha256": "93a2630579a82507e3c6ceab9b012f71a50cf8922f4beadb14057dcc0636b099",
+      "file": "Assets/Audio/Generated/player.footstep.sand__01.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 2,
+      "recording": "fantozzi",
+      "originalFile": "Fantozzi-SandL2.flac",
+      "source": "Sources/sand_02.flac",
+      "sourceSha256": "9bb57478cc96e1410cae27d926aa8d77d5f2d368d9776822f63cf0b37c6d2faf",
+      "file": "Assets/Audio/Generated/player.footstep.sand__02.wav"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 3,
+      "recording": "fantozzi",
+      "originalFile": "Fantozzi-SandR1.flac",
+      "source": "Sources/sand_03.flac",
+      "sourceSha256": "3514d12f3369297233e915814364ed02902003d4103b010371c2ac15c2aa48fe",
+      "file": "Assets/Audio/Generated/player.footstep.sand__03.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 1,
+      "recording": "dirt",
+      "originalFile": "mud02.ogg",
+      "source": "Sources/dirt_01.ogg",
+      "sourceSha256": "354682c2cb340cd787d892d31beb87c45dda94ca6e8363b16828ab2f1d129b82",
+      "file": "Assets/Audio/Generated/player.footstep.dirt__01.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 2,
+      "recording": "dirt",
+      "originalFile": "gravel.ogg",
+      "source": "Sources/dirt_02.ogg",
+      "sourceSha256": "34e6057ec1581b5cb8802e4942952b00b1dac235bfcb0ed8cff0ceb15a3ebbbf",
+      "file": "Assets/Audio/Generated/player.footstep.dirt__02.wav"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 3,
+      "recording": "dirt",
+      "originalFile": "leaves01.ogg",
+      "source": "Sources/dirt_03.ogg",
+      "sourceSha256": "93b3bbcd06380eec54335d1869924db6ff2cc6c1cb103502133d78484c5ca836",
+      "file": "Assets/Audio/Generated/player.footstep.dirt__03.wav"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 1,
+      "recording": "water",
+      "originalFile": "exit_01.wav",
+      "source": "Sources/water_01.wav",
+      "sourceSha256": "c689494d3ce1ec1272740b1bfd1d5e50032b30c5495fd4a547296a5b673caf18",
+      "file": "Assets/Audio/Generated/player.footstep.water__01.wav",
+      "maxSeconds": 0.48
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 2,
+      "recording": "water",
+      "originalFile": "exit_02.wav",
+      "source": "Sources/water_02.wav",
+      "sourceSha256": "a51694dc9a4cbdf0e3e2d5d4fe4234f21d2a158e658c0ecbb3ff1d40b7b1be2e",
+      "file": "Assets/Audio/Generated/player.footstep.water__02.wav",
+      "maxSeconds": 0.48
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 3,
+      "recording": "water",
+      "originalFile": "exit_03.wav",
+      "source": "Sources/water_03.wav",
+      "sourceSha256": "29e70059501ab4755cfbc76e5fd210313c340c4ee268c920d88b77cd6c0aed54",
+      "file": "Assets/Audio/Generated/player.footstep.water__03.wav",
+      "maxSeconds": 0.48
+    }
+  ]
+}

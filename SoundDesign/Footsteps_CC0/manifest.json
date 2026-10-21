@@ -1,0 +1,205 @@
+{
+  "engine": "CC0 recordings; trim, mono conversion, resampling and gain only",
+  "sampleRate": 48000,
+  "channels": 1,
+  "sounds": [
+    {
+      "cue": "player.footstep.grass",
+      "variant": 1,
+      "file": "Assets/Audio/Generated/player.footstep.grass__01.wav",
+      "seconds": 0.14410416666666667,
+      "guid": "d276610294124c55b04b9e2b5738c0a9",
+      "peakDb": -12.0,
+      "rmsDb": -29.84,
+      "sha256": "a2997198a7d75fac115a4ac7aeedef0eaec19349f87e8ab2ed25752ca5d28ab4",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 2,
+      "file": "Assets/Audio/Generated/player.footstep.grass__02.wav",
+      "seconds": 0.1694375,
+      "guid": "6b15d57c367e4a2baf5d5b13d8711613",
+      "peakDb": -12.0,
+      "rmsDb": -28.48,
+      "sha256": "589c2a60c4e6e4fc50a9d6b527d8a2015a9ba7b59f7f733cf77fdb555574b142",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.grass",
+      "variant": 3,
+      "file": "Assets/Audio/Generated/player.footstep.grass__03.wav",
+      "seconds": 0.17191666666666666,
+      "guid": "6b95181fe8a842bc8be2a404c70dd542",
+      "peakDb": -12.0,
+      "rmsDb": -29.72,
+      "sha256": "34982714e95982b8955b5911495600c3cd96f87f76325f6f37e28ded1fa39373",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 1,
+      "file": "Assets/Audio/Generated/player.footstep.stone__01.wav",
+      "seconds": 0.1059375,
+      "guid": "db590298e81641e5b830e7c2a3231a6f",
+      "peakDb": -12.0,
+      "rmsDb": -30.18,
+      "sha256": "99477c82fd37daf0b5ec42e2e255262bc55805dc29923d5768304d3a82d7bc25",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 2,
+      "file": "Assets/Audio/Generated/player.footstep.stone__02.wav",
+      "seconds": 0.0828125,
+      "guid": "6a423ecacd6b4d90b1bcd9219ec3f185",
+      "peakDb": -12.0,
+      "rmsDb": -27.94,
+      "sha256": "fc4436492d9ed567de14ad1559852cadf68021381e0fd4b8f5cf2c129b8a4ab0",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.stone",
+      "variant": 3,
+      "file": "Assets/Audio/Generated/player.footstep.stone__03.wav",
+      "seconds": 0.08460416666666666,
+      "guid": "4a8064a2d2d24203898168a080669324",
+      "peakDb": -12.0,
+      "rmsDb": -27.36,
+      "sha256": "60e27407c3a3214f3508b15d6cc0b79330b98f4cf6fde84ee479c8a92aedce1d",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 1,
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.wood__01.wav",
+      "seconds": 0.08183333333333333,
+      "guid": "389a4f87a1f94301be838fa24beff512",
+      "peakDb": -12.0,
+      "rmsDb": -26.76,
+      "sha256": "f00f2e946cdbf838ff8aca19d09ba7826085688a214747bf6aee86c84fc50a18",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 2,
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.wood__02.wav",
+      "seconds": 0.0814375,
+      "guid": "7b4f7e3940f24729b7bb9d3892cae6dd",
+      "peakDb": -12.0,
+      "rmsDb": -26.75,
+      "sha256": "d8aee422f1671ae114f351ba4bf3f1331a4c61fec13d15c5b5d7c8a1927f004f",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.wood",
+      "variant": 3,
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.wood__03.wav",
+      "seconds": 0.08160416666666667,
+      "guid": "37be851728a64a3fb784295b6b75a2f9",
+      "peakDb": -12.0,
+      "rmsDb": -26.13,
+      "sha256": "3702b6a83bd1f4b4d7a8c51d8c7ccc01a1e6ba9a19ed981ff1a463f058e64f04",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 1,
+      "file": "Assets/Audio/Generated/player.footstep.sand__01.wav",
+      "seconds": 0.44254166666666667,
+      "guid": "faf44dfc04d84c229ce5f11882fb85e9",
+      "peakDb": -12.0,
+      "rmsDb": -36.25,
+      "sha256": "7f1d54ac28c643d72cb39de1716ee3ebef6fcaab5468864aa402fca0051b3bf9",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 2,
+      "file": "Assets/Audio/Generated/player.footstep.sand__02.wav",
+      "seconds": 0.3196041666666667,
+      "guid": "3b82548c8f7b41828bede5c56376e1a5",
+      "peakDb": -12.0,
+      "rmsDb": -35.7,
+      "sha256": "b9b0a0c286ecb55bd18d82617ff89402826f25aac61bd7ab54c9eb2cf35c5230",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.sand",
+      "variant": 3,
+      "file": "Assets/Audio/Generated/player.footstep.sand__03.wav",
+      "seconds": 0.40577083333333336,
+      "guid": "baf457e721564e3e99217e6e74598a04",
+      "peakDb": -12.0,
+      "rmsDb": -37.71,
+      "sha256": "22122e047783a1a896abb61a3c8f05c3bf98dd038242d5635e20c12acaedbc09",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 1,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__01.wav",
+      "seconds": 0.2599375,
+      "guid": "38fdc3492dc0475f80ca9df33abc1144",
+      "peakDb": -12.0,
+      "rmsDb": -36.19,
+      "sha256": "28bd503eb4b0d8cd4d05771199d34f37e8a0a2d9c651bd4c08d7b8c8a8143992",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 2,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__02.wav",
+      "seconds": 0.6967708333333333,
+      "guid": "99078484192748d4a8792555e1e3e0f4",
+      "peakDb": -12.0,
+      "rmsDb": -40.42,
+      "sha256": "ecc770fff6a933d5fc51d243834ea4c273f7e78f4e38d44d969edb34e2596396",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.dirt",
+      "variant": 3,
+      "file": "Assets/Audio/Generated/player.footstep.dirt__03.wav",
+      "seconds": 0.39127083333333335,
+      "guid": "34f7969c300c46b6948f1b7b0fb5e2c6",
+      "peakDb": -12.0,
+      "rmsDb": -35.87,
+      "sha256": "466aabf1827e426dc8deee079489ab52203c472116778d0f48fc1c9504c2c086",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 1,
+      "file": "Assets/Audio/Generated/player.footstep.water__01.wav",
+      "seconds": 0.48,
+      "guid": "58c4910c874448fe9709067e83d97711",
+      "peakDb": -12.0,
+      "rmsDb": -23.33,
+      "sha256": "e3e23581627007fa2b9def0da4cc6a74af784a162077c98ea4743e3959e40257",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 2,
+      "file": "Assets/Audio/Generated/player.footstep.water__02.wav",
+      "seconds": 0.48,
+      "guid": "b3f02d05e00d4c3ea5e06c90207e1a75",
+      "peakDb": -12.0,
+      "rmsDb": -24.49,
+      "sha256": "adb19fbe3ea8b3df8314a2e2a0368ace42f17d09432c3a2771b571ddaded6eed",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    },
+    {
+      "cue": "player.footstep.water",
+      "variant": 3,
+      "file": "Assets/Audio/Generated/player.footstep.water__03.wav",
+      "seconds": 0.48,
+      "guid": "5e00511f187d41a7bd3b5af76e7c227e",
+      "peakDb": -12.0,
+      "rmsDb": -26.81,
+      "sha256": "614e945a61dd527cd40d9871967570a2d6a928a452da0ef4b80f626f3ad79fe9",
+      "externalManifest": "SoundDesign/Footsteps_CC0/manifest.json"
+    }
+  ]
+}

@@ -21,10 +21,34 @@ namespace FlatWorld.Networking.Gameplay
             GameplayTestSystemProbe.Register("networking", "roll_snapshot", CaptureSnapshot);
             GameplayTestSystemProbe.Register("networking", "roll_stamina_handoff", CaptureStaminaHandoff);
             GameplayTestSystemProbe.Register("networking", "initial_sync_gate", CaptureInitialSyncGate);
+            GameplayTestSystemProbe.Register("networking", "world_request_gate", CaptureWorldRequestGate);
+            GameplayTestSystemProbe.Register("networking", "local_observer_window", CaptureLocalObserverWindow);
         }
         #endregion
 
         #region 正式协议与体力保护采样
+        private static JObject CaptureWorldRequestGate(JObject args) => new()
+        {
+            ["valid"] = NetworkGameplayWorldScope.GetRequestRejection(true, false, true, "planet", 7, 7) == null,
+            ["notReady"] = NetworkGameplayWorldScope.GetRequestRejection(false, false, true, "planet", 7, 7),
+            ["transferring"] = NetworkGameplayWorldScope.GetRequestRejection(true, true, true, "planet", 7, 7),
+            ["missingObserver"] = NetworkGameplayWorldScope.GetRequestRejection(true, false, false, "planet", 7, 7),
+            ["missingWorld"] = NetworkGameplayWorldScope.GetRequestRejection(true, false, true, "", 7, 7),
+            ["staleRevision"] = NetworkGameplayWorldScope.GetRequestRejection(true, false, true, "planet", 6, 7),
+            ["unversioned"] = NetworkGameplayWorldScope.GetRequestRejection(true, false, true, "planet", null, 7) == null
+        };
+
+        private static JObject CaptureLocalObserverWindow(JObject args)
+        {
+            Vector3 authority = new(15.5f, 0f);
+            Vector3 predicted = new(16.5f, 0f);
+            Vector3 local = NetworkChunkStreamingCoordinator.ResolveObserverWindowPosition(true, predicted, authority);
+            Vector3 remote = NetworkChunkStreamingCoordinator.ResolveObserverWindowPosition(false, predicted, authority);
+            Vector3 invalid = NetworkChunkStreamingCoordinator.ResolveObserverWindowPosition(true, new(float.NaN, 0f), authority);
+            Vector3 wrapped = NetworkChunkStreamingCoordinator.ResolveObserverWindowPosition(true, new(-31.5f, 0f), new(31.5f, 0f));
+            return new JObject { ["localX"] = local.x, ["remoteX"] = remote.x, ["invalidX"] = invalid.x, ["wrappedX"] = wrapped.x };
+        }
+
         private static JObject CaptureInitialSyncGate(JObject args) => new()
         {
             ["valid"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(true, true, false, "planet", "planet"),

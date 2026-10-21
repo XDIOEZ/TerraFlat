@@ -38,6 +38,7 @@ namespace FlatWorld.NaturalEntities
             public Bounds HitBounds, BodyBounds, VisualBounds;
             public bool BlocksMovement;
             public bool HitColliderEnabled;
+            public int ManualHarvestProgress;
             public Vector3 WorldPosition
             {
                 get { using var scope = UseHandle(Handle); return WorldLocalPresentation.ProjectPosition(Snapshot.transform.position); }
@@ -652,6 +653,8 @@ namespace FlatWorld.NaturalEntities
             float reach = sender != null ? sender.maxInteractDistance : Mod_InteractSender.DefaultMaxInteractDistance;
             if (chunks == null || chunks.ResolveWorldAddress(actorPosition).DimensionId != record.DimensionId ||
                 WorldTopologyRuntime.Distance(actorPosition, record.Snapshot.transform.position) > reach) return false;
+            // 仅权威有效点击推进；未完成时不生成产物、不扣采集库存。
+            if (!ManualHarvestWork.Advance(ref record.ManualHarvestProgress, record.Profile.ManualHarvestWorkSteps)) return true;
             record.Busy = true;
             var spawned = new List<DroppedItemHandle>();
             try

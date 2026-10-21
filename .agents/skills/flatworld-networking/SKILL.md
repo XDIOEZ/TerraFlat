@@ -22,6 +22,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 ## 权威与坐标
 
 - `NetworkChunkStreamingCoordinator` 将观察者并集交给正式 WorldModel 窗口；外管中的 `Mod_ChunkLoader` 只发刷新请求，本机锚点决定蒙版和导航，失去观察者只撤网络窗口，不清已交回单人的窗口。
+- 本机观察窗口与雾窗共用本机预测逻辑位置，远端观察者仍取服务器位置；预测非法时回退权威位置。建造/拆除通过世界门禁拒绝时立即发送同 token 的真实原因回执，迁移、未就绪或过期代际不得静默等到超时。规则 `networking/local_observer_window、world_request_gate`。
 - 区块窗口签名与真实 `GameplayWorldRuntime` 实例共同校验：同名世界重建要重新提交窗口；无观察者的世界在准备完成后清理缓存。本地导航锚点按对应 `WorldNavigationManager` 实例缓存，离开地表后回到同一格也需刷新。
 
 - 服务端结算生成、伤害、死亡、建筑及持久状态；远程视觉副本不进入本地 Item Tick、AI 感知、教程、对话或存档索引。只有 owned 玩家驱动本地输入、导航窗口和 HUD；玩家加载、提升和远程配置显式设置 ProfileContext。

@@ -44,8 +44,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 818a288dde5ed484ebb221ca065c59f9, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &621153831357500893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68,10 +68,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0be56da7e8f144db8eb8ea236f4a9db3, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   _catalog: {fileID: 11400000, guid: 540ea69333b635d43a589273ec4c1fe0, type: 2}
-  _simulationHz: 30
 --- !u!1 &2048257428238950690
 GameObject:
   m_ObjectHideFlags: 0
@@ -118,6 +117,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   UserSavePath: 
   SaveData:
+    Mechanical:
+      NextPressureExplosionId: 0
+      PressureExplosions: []
+      RecentPressureExplosionSources: []
+      PendingPressureLiquidSpills: []
+      Version: 1
     saveName: defaultSaveName
     SaveSeed: 0
     Seed: 0
@@ -140,8 +145,11 @@ MonoBehaviour:
     CustomCropGrowthMultiplier: 1
     CustomFuelConsumptionMultiplier: 1
     CustomCraftingOutputMultiplier: 1
+    DimensionStateJson: '{}'
     GameEventData:
       ActiveEvents: []
+    WorldGenerationConfigMode: 0
+    SpaceStateJson: 
   CurrentContrrolPlayerName: 
 --- !u!1 &2247533266257833999
 GameObject:
@@ -188,6 +196,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LoadedCount: 0
+  worldAuthoringResourcePaths:
+  - Config/WorldModel/ChunkGenerationProfile_Surface
+  - Config/WorldModel/ChunkGenerationProfile_Cave
+  - Config/WorldModel/ChunkTilePalette_Default
   resourceLoadingPrefab: {fileID: 5552011803808462458, guid: 63c6695ef248a43479328512440e2b8c, type: 3}
 --- !u!1 &3563432657672857351
 GameObject:
@@ -249,8 +261,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0454bcaf5a6745408d20de11b5b3a4eb, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   gameManager: {fileID: 2341746562113399121}
 --- !u!1 &4147786669370695384
 GameObject:
@@ -296,25 +308,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56ba77687be176a4eb928751444bc0d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rainEventConfig:
-    DailyRainChance: 0.05
-    MinRainDurationDays: 0.5
-    MaxRainDurationDays: 1
-    ForecastDuration: 90
-    RainStartingDuration: 45
-    HeavyRainDuration: 150
-    RainEndingDuration: 60
-    RecoveryDuration: 90
-    ForecastIntensity: 0.3
-    StartingRainIntensity: 0.35
-    SteadyRainIntensity: 0.65
-    HeavyRainIntensity: 1
-    EndingRainIntensity: 0.3
-    RecoveryIntensity: 0.15
   _deterministicSeedOverride: 0
-  _weatherTransitionSeconds: 3
-  _precipitationTransitionSeconds: 12
   EnableDebugLog: 0
+  _cloudyAmbientLightMultiplier: 0.65
+  _cloudySunLightMultiplier: 0.15
   _toggleDebugPanelInputKey: 105
   _debugPanelVisible: 0
   _debugWindowRect:
@@ -326,6 +323,12 @@ MonoBehaviour:
   _debugWindowMinSize: {x: 320, y: 240}
   _debugWindowMaxSize: {x: 760, y: 640}
   _lockWindowInsideScreen: 1
+  _weatherTransitionSeconds: 3
+  _precipitationTransitionSeconds: 12
+  surfaceRainWaterPerSecond: 0.02
+  meltWaterPerSnowDepth: 5
+  lightningDamageRadius: 1.5
+  lightningMaximumDamage: 40
 --- !u!1 &4565539948505994440
 GameObject:
   m_ObjectHideFlags: 0
@@ -349,33 +352,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &838629431320725304
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef4964bd394a48d291f28b5c5736c922, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  damageTextPrefab: {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
-  textScale: 0.65
-  textWidthMultiplier: 4
---- !u!114 &8897026105265421041
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4565539948505994440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 44ea79331a8b4ad49fd9ec5f19f1e8dc, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
 --- !u!4 &891121404665747283
 Transform:
   m_ObjectHideFlags: 0
@@ -414,6 +390,177 @@ MonoBehaviour:
   SunAndMoonPrefab: {fileID: 8214005867498760089, guid: 5de7be0374cdef34fb44ea8b4db43440, type: 3}
   NavigationSystem: {fileID: 8923630362666243623}
   ReadyPlanetData:
+    AtmosphereProfileId: core:temperate
+    Atmosphere:
+      DefinitionId: 
+      ReferencePressureKPa: 0
+      TemperatureKelvin: 0
+      Gases: []
+    SeasonalSnow:
+      Coverage:
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      Initialized: 0
+      LastTotalTime: 0
     Name: "\u5730\u7403"
     Radius: 1000
     SpatialDistanceScale: 1
@@ -448,17 +595,21 @@ MonoBehaviour:
         NumericParameters: []
         TextParameters: []
         CaveResourceRules: []
+    RegionalWeatherStates: []
     name: 
     BodyId: 
     PrefabName: 
-    OrbitCenterBodyId: 
-    OrbitRadius: 20
-    OrbitHeight: 0
-    OrbitAngularSpeed: 8
-    OrbitStartAngle: 0
-    OrbitClockwise: 0
     SelfRotateSpeed: 20
+    SurfaceGenerationProfileId: 
+    PhysicalRadiusMeters: 2000
+    SurfaceGravityMetersPerSecondSquared: 9.81
   ReadyGameSaveData:
+    Mechanical:
+      NextPressureExplosionId: 0
+      PressureExplosions: []
+      RecentPressureExplosionSources: []
+      PendingPressureLiquidSpills: []
+      Version: 1
     saveName: defaultSaveName
     SaveSeed: 0
     Seed: 0
@@ -481,8 +632,11 @@ MonoBehaviour:
     CustomCropGrowthMultiplier: 1
     CustomFuelConsumptionMultiplier: 1
     CustomCraftingOutputMultiplier: 1
+    DimensionStateJson: '{}'
     GameEventData:
       ActiveEvents: []
+    WorldGenerationConfigMode: 0
+    SpaceStateJson: 
   spawnLandMaxSearchRadius: 512
   spawnTerrainSampleBudget: 4096
   spawnSeedAnchorRange: 512
@@ -505,7 +659,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   toggleEnvironmentInfoInputKey: 96
-  setClearWeatherInputKey: 99
   setRainWeatherInputKey: 100
   createOnFirstToggle: 1
   cleanupDuplicateDisplaysOnToggle: 1
@@ -558,6 +711,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f352f64487f7ede4b8069e0d3a2c9513, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &8897026105265421041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44ea79331a8b4ad49fd9ec5f19f1e8dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &838629431320725304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef4964bd394a48d291f28b5c5736c922, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  damageTextPrefab: {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
+  textScale: 0.65
+  textWidthMultiplier: 4
 --- !u!1 &5482967027949208378
 GameObject:
   m_ObjectHideFlags: 0
@@ -677,6 +857,7 @@ MonoBehaviour:
   goalFieldLifetime: 3
   nearestWalkableSearchRadius: 4
   EnableDebugLogs: 0
+  maxPortalPathsPerBatch: 64
 --- !u!1 &9093236261903728204
 GameObject:
   m_ObjectHideFlags: 0
@@ -722,6 +903,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxPooledChunkCount: 32
+  enableExperimentalLiquidFlow: 0
+  experimentalLiquidFlowSettings:
+    TickRate: 5
+    FlowSpeed: 0.5
+    SurfaceEpsilon: 0.0005
+    SleepTicks: 3
+    DenseThreshold: 0.5
+    RegionRadiusChunks: 2
+    MaxActiveChunks: 25
+    MaxPendingLoads: 2
   chunkLoadSpeedMultiplier: 1
   unlimitedChunkLoadSpeed: 0
   maxChunkPresentationsPerFrame: 64

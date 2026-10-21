@@ -150,6 +150,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
 
     protected override void OnLoad()
     {
+        manualHarvestProgress = 0;
         item ??= GetComponentInParent<Item>();
         if (item == null)
             throw new MissingComponentException("[Mod_Crop] 未找到所属 Item。");
@@ -432,6 +433,9 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
         if (!CanInteract(playerItem))
             return;
 
+        // 徒手采收累计有效点击，工具攻击仍沿原伤害和掉落规则完成采收。
+        if (!ManualHarvestWork.Advance(ref manualHarvestProgress, manualHarvestWorkSteps)) return;
+
         bool preserveCrop = harvestPolicy?.PreserveCropAfterHarvest ?? false;
         harvestInProgress = true;
         if (!preserveCrop)
@@ -466,6 +470,9 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTime
     public void OnInteractCancel(Item playerItem)
     {
     }
+
+    [Min(1)] public int manualHarvestWorkSteps = ManualHarvestWork.DefaultSteps;
+    private int manualHarvestProgress;
 
     #endregion
 

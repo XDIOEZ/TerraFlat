@@ -57,6 +57,8 @@ public sealed class RuntimeRecipeInput
 
 public sealed class RuntimeRecipeIngredient
 {
+    public float? MinTemperature;
+    public string ExcludeTag;
     public MatchMode matchMode = MatchMode.ExactItem;
     public string ItemName = string.Empty;
     public string Tag = string.Empty;
@@ -95,6 +97,8 @@ public sealed class RuntimeLiquidOutput
 
 public sealed class RuntimeRecipeResult
 {
+    public string CopyInputTag;
+    public bool ReinforceWithAdhesive;
     public string ItemName = string.Empty;
     public int amount = 1;
     public float durabilityMultiplier = CraftedDurabilityQuality.DefaultMultiplier;

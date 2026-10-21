@@ -723,7 +723,8 @@ public static partial class GameplayTestSystemProbe
             waterDepth,
             snowDepth,
             Flag(args, "support", false),
-            (byte)Math.Clamp((int)Number(args, "grass", 0), 0, 255));
+            (byte)Math.Clamp((int)Number(args, "grass", 0), 0, 255),
+            Text(args, "surfaceCue", null));
         return new JObject
         {
             ["cue"] = cueId ?? string.Empty,

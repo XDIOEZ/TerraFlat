@@ -105,7 +105,10 @@ namespace FlatWorld.Networking.Gameplay
                 NetworkWorldPlayer player = observers[i].GetComponent<NetworkWorldPlayer>();
                 if (player == null || player.IsInSpace || !NetworkServer.active && !player.SharesLocalRealm() ||
                     !player.TryGetSpaceObserver(out FlatWorld.Spaceflight.SpaceNetworkObserver realm) || string.IsNullOrWhiteSpace(realm.WorldKey)) continue;
-                Vector3 point = realm.Position.LocalMeters.ToVector2();
+                // 本机雾窗和区块需求都跟随同一个预测位置，不能等旧服务器位置跨块才补地形。
+                bool ownsLocalSurface = player.isOwned && player.CorePlayer?.Data?.CurrentSceneName == realm.WorldKey;
+                Vector3 point = ResolveObserverWindowPosition(ownsLocalSurface,
+                    ownsLocalSurface ? player.ObserverLogicalPosition : default, realm.Position.LocalMeters.ToVector2());
                 if (!IsValidObserverPosition(point)) continue;
                 if (!worldObservers.TryGetValue(realm.WorldKey, out List<Vector3> positions)) worldObservers.Add(realm.WorldKey, positions = new List<Vector3>());
                 positions.Add(point);
@@ -217,6 +220,9 @@ namespace FlatWorld.Networking.Gameplay
                    Mathf.Abs(position.x) <= MaxSupportedWorldCoordinate &&
                    Mathf.Abs(position.y) <= MaxSupportedWorldCoordinate;
         }
+
+        internal static Vector3 ResolveObserverWindowPosition(bool ownsLocalSurface, Vector3 predicted, Vector3 authoritative)
+            => ownsLocalSurface && IsValidObserverPosition(predicted) ? predicted : authoritative;
 
         /// <summary>客户端网络 Transform 可处于局部表现镜像；区块与导航只消费规范逻辑坐标。</summary>
         private static Vector3 ResolveLogicalObserverPosition(Transform observer)

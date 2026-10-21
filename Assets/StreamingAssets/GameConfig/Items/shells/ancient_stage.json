@@ -568,7 +568,7 @@
       "removeModules": [ "resourceTool" ],
       "abstract": true,
       "sourcePrefab": null,
-      "tags": [ "Shovel" ],
+      "tags": ["Shovel", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/StoneShovel/StoneShovel_Icon.png"
       },

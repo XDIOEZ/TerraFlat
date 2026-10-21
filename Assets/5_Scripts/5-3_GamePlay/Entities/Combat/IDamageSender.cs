@@ -13,6 +13,9 @@ public interface IDamageSender
     public Item attacker { get; set; }
 }
 
+/// <summary>独立周期效果各自结算，不争用普通攻击的目标受击间隔。</summary>
+public interface IPeriodicDamageSource { }
+
 /// <summary>
 /// 建筑伤害来源能力：倍率只应用在目标防御结算完成之后，不能用于提高破甲等级。
 /// </summary>

@@ -12,7 +12,7 @@ public static class GameSavePrefabBuilder
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
     private const string GenerationFreezeTitle = "冻结世界生成规则";
     private const string GenerationFreezeDescription =
-        "开启：保持存档原有生成规则。关闭：跟随当前版本并升级生成基线；已探索与未探索区域的基础地形和自然生成都可能变化，玩家差量仍保留。重新开启后会在下次进入世界重新冻结。";
+        "关闭后，世界生成规则跟随当前版本更新。";
 
     private static Color Ink => FlatWorldUITheme.Canvas;
     private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
@@ -191,6 +191,7 @@ public static class GameSavePrefabBuilder
         SetRect(panel.rectTransform, new Vector2(582f, -150f), new Vector2(816f, 520f), new Vector2(0f, 1f));
 
         TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 18f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
+        currentLabel.gameObject.SetActive(false);
         SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 28f), new Vector2(0f, 1f));
 
         TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, GameManager.GameSaveNoSelectionText, font, 36f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -214,6 +215,7 @@ public static class GameSavePrefabBuilder
         TMP_Text playerHeading = CreateText("角色列表标题", panel.transform, "可用角色", font, 26f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(playerHeading.rectTransform, new Vector2(24f, -204f), new Vector2(330f, 36f), new Vector2(0f, 1f));
         TMP_Text playerHint = CreateText("角色列表提示", panel.transform, "载入存档后选择角色", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        playerHint.gameObject.SetActive(false);
         SetRect(playerHint.rectTransform, new Vector2(24f, -242f), new Vector2(330f, 28f), new Vector2(0f, 1f));
         Transform playerContent = CreateScrollList("存档中的玩家列表", panel.transform, new Vector2(24f, -278f), new Vector2(368f, 214f));
 
@@ -221,6 +223,7 @@ public static class GameSavePrefabBuilder
         SetRect(identity.rectTransform, new Vector2(-24f, -204f), new Vector2(400f, 288f), new Vector2(1f, 1f));
 
         TMP_Text identityHeading = CreateText("角色身份标题", identity.transform, "本次角色", font, 26f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        identityHeading.gameObject.SetActive(false);
         SetRect(identityHeading.rectTransform, new Vector2(20f, -58f), new Vector2(300f, 36f), new Vector2(0f, 1f));
         TMP_Text nameLabel = CreateText("玩家名称标签", identity.transform, "玩家名称", font, 18f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(nameLabel.rectTransform, new Vector2(20f, -106f), new Vector2(360f, 28f), new Vector2(0f, 1f));

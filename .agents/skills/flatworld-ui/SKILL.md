@@ -56,6 +56,11 @@ description: "FlatWorld uGUI 面板生命周期、Prefab/公共控件、主题�
 - 槽间快速转移图标由 `InventoryQuickTransferAnimation` 消费已提交事务，独立顶层 Canvas、无射线、非缩放时间飞行 0.24 秒，鼠标和触屏甩动从反馈中的松手屏幕坐标接续、Shift 快速转移从源格出发；两端必须是真实可见且绑定未换代的槽位，父级缩放通过实际图标世界角点换算，关闭/卸载取消，最多并发 32 个；不延迟库存事务或禁用输入。
 - 交互滑块与只读进度条为不同资产；滑块根为透明命中区，Background/Fill/Handle 持有外观，进度条禁交互/导航。动态 Content 引用来自所属容器，EventSystem 反馈持有唯一非缩放 Tween。
 
+- 设置窗口固定不拖动；显示/视觉特效走画质页内入口，镜头走按键绑定页内入口，主菜单语言走界面页内入口。`SettingsActionListPagination` 保留各子页生命周期与Provider，切页焦点只在手柄模式自动设置；关闭恢复也不为触屏/鼠标自动选中输入框。
+- 新世界世界参数由 `NewWorldSettingsPagination` 分基础/高级页，切页只改显隐；难度覆盖层保持透明，主题不能把 `新世界难度设置面板` 染成灰幕。加载存档失败使用正式确认Prefab提示并停止后续角色选择。
+- 背包无保存位置时，在首次可见动画布局结束后按真实快捷栏上沿只定位一次；手动拖动修订后让出位置。`ApplicationVersionLabel` 属于UI根静态内容，热更新保留，场景根副本不重复显示。
+- 日志悬浮窗三个Toggle对查看与复制共用 `GameLogManager.MatchesRuntimeLogFilter`，Exception/Assert归错误；筛选不改磁盘日志。
+
 ## 设置数据
 
 - Data 契约仅含元数据/读写能力；功能管理器实现 `ISettingsProvider` 及 Toggle/Slider/Dropdown/Switch 能力，在自身生命周期注册。UI 按稳定 ProviderId/Key 绑定；选项身份为 SettingOption.Id，写入返回校验结果。

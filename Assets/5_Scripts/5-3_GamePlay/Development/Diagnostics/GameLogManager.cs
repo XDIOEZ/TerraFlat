@@ -97,7 +97,8 @@ public sealed class GameLogManager : MonoBehaviour
     }
 
     /// <summary>生成最近运行日志的文本快照，并把输出严格限制在指定字符数内。</summary>
-    public static string GetRuntimeLogSnapshot(int maxCharacters, out bool truncated)
+    public static string GetRuntimeLogSnapshot(int maxCharacters, out bool truncated,
+        bool includeLogs = true, bool includeWarnings = true, bool includeErrors = true)
     {
         int boundedCharacters = Math.Max(1, Math.Min(maxCharacters, MaxRuntimeSnapshotCharacters));
         lock (WriteLock)
@@ -107,7 +108,8 @@ public sealed class GameLogManager : MonoBehaviour
             builder.AppendLine();
 
             foreach (RuntimeLogEntry entry in RuntimeEntries)
-                builder.Append(entry.Text);
+                if (MatchesRuntimeLogFilter(entry.Type, includeLogs, includeWarnings, includeErrors))
+                    builder.Append(entry.Text);
 
             if (builder.Length <= boundedCharacters)
             {
@@ -133,12 +135,13 @@ public sealed class GameLogManager : MonoBehaviour
         int maxEntries,
         out int copiedEntries,
         out int collapsedEntries,
-        out bool truncated)
+        out bool truncated,
+        bool includeLogs = true, bool includeWarnings = true, bool includeErrors = true)
     {
         int boundedEntries = Math.Max(1, Math.Min(maxEntries, MaxRuntimeLogEntries));
         lock (WriteLock)
         {
-            List<RuntimeLogCopyGroup> groups = BuildRuntimeLogCopyGroupsNoLock();
+            List<RuntimeLogCopyGroup> groups = BuildRuntimeLogCopyGroupsNoLock(includeLogs, includeWarnings, includeErrors);
             copiedEntries = Math.Min(boundedEntries, groups.Count);
             int skippedGroups = groups.Count - copiedEntries;
             truncated = skippedGroups > 0;
@@ -171,12 +174,15 @@ public sealed class GameLogManager : MonoBehaviour
     }
 
     /// <summary>按最后出现顺序合并相同级别、正文和堆栈的日志，供复制快照按槽位截取。</summary>
-    private static List<RuntimeLogCopyGroup> BuildRuntimeLogCopyGroupsNoLock()
+    private static List<RuntimeLogCopyGroup> BuildRuntimeLogCopyGroupsNoLock(
+        bool includeLogs, bool includeWarnings, bool includeErrors)
     {
         List<RuntimeLogCopyGroup> groups = new List<RuntimeLogCopyGroup>();
         int entryIndex = 0;
         foreach (RuntimeLogEntry entry in RuntimeEntries)
         {
+            if (!MatchesRuntimeLogFilter(entry.Type, includeLogs, includeWarnings, includeErrors))
+                continue;
             RuntimeLogCopyGroup matchedGroup = null;
             for (int i = 0; i < groups.Count; i++)
             {
@@ -203,6 +209,12 @@ public sealed class GameLogManager : MonoBehaviour
 
         groups.Sort((left, right) => left.LatestIndex.CompareTo(right.LatestIndex));
         return groups;
+    }
+
+    /// <summary>查看和复制共享同一类型过滤规则，异常与断言归入错误。</summary>
+    public static bool MatchesRuntimeLogFilter(LogType type, bool logs, bool warnings, bool errors)
+    {
+        return IsErrorType(type) ? errors : type == LogType.Warning ? warnings : logs;
     }
 
     /// <summary>写入运行时日志快照的统一会话头。</summary>

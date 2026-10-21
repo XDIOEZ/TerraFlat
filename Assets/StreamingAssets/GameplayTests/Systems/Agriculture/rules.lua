@@ -106,3 +106,14 @@ for _, row in ipairs({
         end
     end, "单格与批量共用补水规则：" .. input.label)
 end
+test.system("agriculture", "manual_harvest_work", {}, function(data)
+    assert(data.defaultSteps == 5, "徒手默认采集次数不是五次")
+    for i = 1, 10 do
+        assert(data.completed[i] == (i == 5 or i == 10), "未完成五次就采出物品，或完成后未重置")
+        assert(data.progress[i] == i % 5, "徒手进度没有按有效交互累积")
+    end
+end, "徒手采集：作物和两个实体后端共用五次工作规则")
+
+test.system("agriculture", "manual_harvest_work", { steps = 0 }, function(data)
+    for _, complete in ipairs(data.completed) do assert(complete, "非法采集配置没有钳制到至少一次") end
+end, "徒手采集：工作次数配置下限")

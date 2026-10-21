@@ -22,6 +22,13 @@ public static class CraftingIngredientMatcher
     {
         if (required == null || actual == null)
             return false;
+        // 材料温度和实例标签属于匹配条件，候选发现和提交复核共用这一入口。
+        if (!string.IsNullOrWhiteSpace(required.ExcludeTag) && actual.Tags?.Contains(required.ExcludeTag) == true)
+            return false;
+        if (required.MinTemperature.HasValue &&
+            (actual.MatterState?.Initialized != true || !float.IsFinite(actual.MatterState.TemperatureCelsius) ||
+             actual.MatterState.TemperatureCelsius < required.MinTemperature.Value))
+            return false;
 
         if (required.matchMode == MatchMode.ByTag)
         {

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:tool_reinforcement_hot_resin",
+      "displayName": "热树脂强化工具",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "tag",
+          "tag": "Tool",
+          "excludeTag": "AdhesiveReinforced",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Resin",
+          "amount": 1,
+          "minTemperature": 200
+        }
+      ],
+      "outputs": [
+        {
+          "copyInputTag": "Tool",
+          "reinforceWithAdhesive": true,
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "core:tool_reinforcement_adhesive",
+      "displayName": "胶水强化工具",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "tag",
+          "tag": "Tool",
+          "excludeTag": "AdhesiveReinforced",
+          "amount": 1
+        },
+        {
+          "match": "tag",
+          "tag": "Adhesive",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "copyInputTag": "Tool",
+          "reinforceWithAdhesive": true,
+          "amount": 1
+        }
+      ]
+    }
+  ]
+}

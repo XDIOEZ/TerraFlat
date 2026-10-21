@@ -405,6 +405,7 @@
       "weight": 55.0,
       "lootTableId": "SnowLeopard_Default",
       "parent": "Wolf",
+      "removeModules": ["biteAttackSkill"],
       "shellPrefab": "CoreActor.SnowLeopard.Shell",
       "shellAddress": "flatworld.actor.shell.snowleopard",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",

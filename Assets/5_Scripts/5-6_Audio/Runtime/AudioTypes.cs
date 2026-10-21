@@ -241,6 +241,7 @@ namespace FlatWorld.Audio
         public const string FootstepGrass = "player.footstep.grass";
         public const string FootstepSand = "player.footstep.sand";
         public const string FootstepStone = "player.footstep.stone";
+        public const string FootstepWood = "player.footstep.wood";
         public const string FootstepSnow = "player.footstep.snow";
         public const string FootstepWater = "player.footstep.water";
         public const string FishingCast = "fishing.cast";

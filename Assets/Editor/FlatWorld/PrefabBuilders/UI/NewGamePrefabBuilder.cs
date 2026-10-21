@@ -66,6 +66,8 @@ public static class NewGamePrefabBuilder
         var localizationTexts = new List<string>
         {
             "世界设置",
+            "基础",
+            "高级",
             "返回名称设置",
             "规则修改",
             "相对于难度 0",
@@ -238,13 +240,17 @@ public static class NewGamePrefabBuilder
         SetRect(panel.rectTransform, new Vector2((FlatWorldUIPanelMetrics.SharedModalCardSize.x - ContentPageWidth) * 0.5f, -150f), new Vector2(ContentPageWidth, 520f), new Vector2(0f, 1f));
 
         TMP_Text heading = CreateText("世界参数标题", panel.transform, "世界设置", font, 34f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(40f, -28f), new Vector2(ContentInnerWidth, 44f), new Vector2(0f, 1f));
+        SetRect(heading.rectTransform, new Vector2(40f, -28f), new Vector2(360f, 44f), new Vector2(0f, 1f));
 
         RectTransform content = BuildWorldSettingsScrollView(panel.transform);
+        Transform basic = CreateWorldSettingsPage(content, "基础世界设置");
+        Transform advanced = CreateWorldSettingsPage(content, "高级世界设置");
+        Button basicTab = CreateButton(panel.transform, font, "基础世界设置分页", "基础", new Vector2(500f, -20f), new Vector2(300f, 60f), InkSoft, 22f, new Vector2(0f, 1f));
+        Button advancedTab = CreateButton(panel.transform, font, "高级世界设置分页", "高级", new Vector2(820f, -20f), new Vector2(300f, 60f), InkSoft, 22f, new Vector2(0f, 1f));
 
         string defaultRadius = PlanetData.DefaultRadius.ToString(CultureInfo.InvariantCulture);
         CreateWorldSettingInputRow(
-            content,
+            basic,
             font,
             "星球半径设置项",
             "星球半径",
@@ -256,7 +262,7 @@ public static class NewGamePrefabBuilder
 
         string defaultSpatialDistanceScale = PlanetData.DefaultSpatialDistanceScale.ToString("0.##", CultureInfo.InvariantCulture);
         CreateWorldSettingInputRow(
-            content,
+            advanced,
             font,
             "空间距离倍率设置项",
             "空间距离倍率",
@@ -268,7 +274,7 @@ public static class NewGamePrefabBuilder
 
         string defaultChunkSize = NewWorldUserSettings.DefaultChunkDimension.ToString(CultureInfo.InvariantCulture);
         CreateWorldSettingInputRow(
-            content,
+            advanced,
             font,
             "区块宽度设置项",
             "区块宽度",
@@ -278,7 +284,7 @@ public static class NewGamePrefabBuilder
             defaultChunkSize,
             TMP_InputField.ContentType.IntegerNumber);
         CreateWorldSettingInputRow(
-            content,
+            advanced,
             font,
             "区块高度设置项",
             "区块高度",
@@ -289,7 +295,7 @@ public static class NewGamePrefabBuilder
             TMP_InputField.ContentType.IntegerNumber);
 
         Toggle topologyToggle = CreateToggle(
-            content,
+            basic,
             font,
             GameManager.NewGameTopologyToggleKey,
             "有限循环世界",
@@ -301,7 +307,7 @@ public static class NewGamePrefabBuilder
         topologyToggle.isOn = true;
 
         CreateWorldSettingInputRow(
-            content,
+            basic,
             font,
             "世界种子设置项",
             "世界种子",
@@ -310,7 +316,24 @@ public static class NewGamePrefabBuilder
             string.Empty,
             string.Empty,
             TMP_InputField.ContentType.Standard);
+        content.gameObject.AddComponent<NewWorldSettingsPagination>().Configure(
+            basic.gameObject, advanced.gameObject, basicTab, advancedTab);
         panel.gameObject.SetActive(false);
+    }
+
+    /// <summary>子分页的纵向布局提供实际首选高度，外层滚动区负责限幅。</summary>
+    private static Transform CreateWorldSettingsPage(Transform parent, string name)
+    {
+        GameObject page = new GameObject(name, typeof(RectTransform), typeof(VerticalLayoutGroup));
+        page.layer = LayerMask.NameToLayer("UI");
+        page.transform.SetParent(parent, false);
+        VerticalLayoutGroup layout = page.GetComponent<VerticalLayoutGroup>();
+        layout.spacing = 12f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        return page.transform;
     }
 
     /// <summary>世界设置正文使用正式滚动列表，后续新增设置只需要继续向 Content 追加条目。</summary>

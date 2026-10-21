@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "skills": [
     {
+      "id": "animal.bite_attack", "type": "biteAttack", "triggerDistance": 0,
+      "durationSeconds": 9, "tickIntervalSeconds": 3, "cooldownSeconds": 180,
+      "holdDamage": 5, "carryDamage": 6, "targetSlowFraction": 0.25, "casterSlowFraction": 0.5
+    },
+    {
       "id": "animal.charge_attack",
       "type": "chargeAttack",
       "chargeDurationSeconds": 3.0,

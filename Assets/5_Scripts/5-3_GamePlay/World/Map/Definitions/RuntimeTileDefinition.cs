@@ -21,6 +21,7 @@ public sealed class RuntimeTileDefinition
     public int MinimumSurfaceDepth { get; }
     /// <summary>自然作物是否允许把该地块作为生长基质。</summary>
     public bool NaturalPlantable { get; }
+    public string FootstepCueId { get; }
     public TileBase TileBase { get; }
     public TileData TileDataTemplate { get; }
     public IReadOnlyList<TileBlockBehaviour> Behaviours { get; }
@@ -40,6 +41,7 @@ public sealed class RuntimeTileDefinition
         LoadCapacity = dto.LoadCapacity;
         MinimumSurfaceDepth = dto.MinimumSurfaceDepth;
         NaturalPlantable = dto.NaturalPlantable;
+        FootstepCueId = dto.FootstepCueId;
         TileBase = tile;
         TileDataTemplate = template;
         Behaviours = behaviours.AsReadOnly();

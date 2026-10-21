@@ -1130,7 +1130,7 @@ public class UIManager : MonoBehaviour
             for (int i = safeRoot.childCount - 1; i >= 0; i--)
             {
                 Transform child = safeRoot.GetChild(i);
-                if (child != null)
+                if (child != null && child.GetComponent<IUiRootStaticContent>() == null)
                     Destroy(child.gameObject);
             }
         }
@@ -1141,7 +1141,7 @@ public class UIManager : MonoBehaviour
             for (int i = root.childCount - 1; i >= 0; i--)
             {
                 Transform child = root.GetChild(i);
-                if (child == null || child == safeRoot)
+                if (child == null || child == safeRoot || child.GetComponent<IUiRootStaticContent>() != null)
                     continue;
 
                 Destroy(child.gameObject);

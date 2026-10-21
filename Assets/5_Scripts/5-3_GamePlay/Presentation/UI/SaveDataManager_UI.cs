@@ -982,7 +982,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     private static bool FocusGamepadControl(BasePanel panel, Selectable selectable)
     {
-        if (panel == null || selectable == null || !panel.IsOpen() ||
+        if (!EventSystemGuard.IsGamepadMode || panel == null || selectable == null || !panel.IsOpen() ||
             !panel.IsGamepadNavigationPrepared || !selectable.IsInteractable() ||
             FlatWorldUITheme.IsGamepadNavigationExcluded(selectable))
         {

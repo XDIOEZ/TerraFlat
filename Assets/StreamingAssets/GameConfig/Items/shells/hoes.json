@@ -12,9 +12,7 @@
       "durability": 1,
       "maxDurability": 1,
       "canBePickedUp": true,
-      "tags": [
-        "Tool"
-      ],
+      "tags": ["Tool"],
       "visual": {
         "rendererPath": "Render/GameObject",
         "rendererLocalEulerAngles": {

@@ -70,16 +70,23 @@ public static class RecipeRuntimeFactory
         {
             if (output == null)
                 continue;
-            string itemId = NormalizeRequired(output.ItemId, $"配方 {id} 输出 itemId");
+            string copyInputTag = output.CopyInputTag?.Trim();
+            string itemId = string.IsNullOrWhiteSpace(copyInputTag)
+                ? NormalizeRequired(output.ItemId, $"配方 {id} 输出 itemId") : output.ItemId?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(copyInputTag) && (output.Amount != 1 ||
+                !inputs.RowItems_List.Any(value => value.matchMode == MatchMode.ByTag && value.Tag == copyInputTag && value.amount == 1)))
+                throw new InvalidDataException($"配方 {id} 的实例产物必须复制消耗一件的标签材料。");
             if (output.Amount <= 0)
                 throw new InvalidDataException($"配方 {id} 的输出 {itemId} 数量必须大于 0");
             float durabilityMultiplier = output.DurabilityMultiplier ?? CraftedDurabilityQuality.DefaultMultiplier;
             if (!CraftedDurabilityQuality.IsValidMultiplier(durabilityMultiplier))
                 throw new InvalidDataException($"配方 {id} 的输出 {itemId} durabilityMultiplier 必须是大于 0 的有限数值");
-            ValidateItemReference(itemId, itemExists, $"配方 {id} 输出", warnings);
+            if (itemId.Length > 0) ValidateItemReference(itemId, itemExists, $"配方 {id} 输出", warnings);
             recipe.outputs.results.Add(new RuntimeRecipeResult
             {
                 ItemName = itemId,
+                CopyInputTag = copyInputTag,
+                ReinforceWithAdhesive = output.ReinforceWithAdhesive,
                 amount = output.Amount,
                 durabilityMultiplier = durabilityMultiplier
             });
@@ -227,6 +234,8 @@ public static class RecipeRuntimeFactory
         if (input.Amount < 0)
             throw new InvalidDataException($"配方 {id} 的{location}数量不能小于 0");
         bool isEmpty = itemId.Length == 0 && tag.Length == 0 && input.Amount == 0;
+        if (input.MinTemperature.HasValue && !float.IsFinite(input.MinTemperature.Value))
+            throw new InvalidDataException($"配方 {id} 的材料温度必须为有限数值。");
         if (matchMode == MatchMode.ExactItem && !isEmpty)
         {
             if (itemId.Length == 0)
@@ -242,6 +251,8 @@ public static class RecipeRuntimeFactory
             matchMode = matchMode,
             ItemName = itemId,
             Tag = tag,
+            MinTemperature = input.MinTemperature,
+            ExcludeTag = input.ExcludeTag?.Trim(),
             amount = input.Amount
         };
     }

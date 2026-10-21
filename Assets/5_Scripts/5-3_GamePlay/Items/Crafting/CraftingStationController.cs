@@ -396,7 +396,7 @@ public sealed class CraftingStationController : IDisposable
             selectedRecipe);
         craftButton.interactable = preview.Success;
 
-        CraftingResult description = CraftingService.DescribeRecipe(selectedRecipe);
+        CraftingResult description = CraftingService.DescribeRecipe(selectedRecipe, inputInventory);
         if (description.Success)
         {
             int requiredClicks = Mathf.Max(1, requiredClickCount());
@@ -546,7 +546,7 @@ public sealed class CraftingStationController : IDisposable
         public void Show(RuntimeRecipe recipe)
         {
             Recipe = recipe ?? throw new ArgumentNullException(nameof(recipe));
-            CraftingResult description = CraftingService.DescribeRecipe(recipe);
+            CraftingResult description = CraftingService.DescribeRecipe(recipe, inputInventory);
             ItemData primaryOutput = description.PrimaryOutput;
             string itemId = primaryOutput?.IDName ?? recipe.outputs?.results?[0]?.ItemName;
 

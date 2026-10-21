@@ -423,3 +423,16 @@ for _, row in ipairs({
         assert(math.abs(data.pitch - row.pitch) < 0.00001, "雪层音高或非雪脚步原音高错误")
     end, "雪声量化与材质隔离：雪=" .. tostring(row.snow) .. "，水=" .. tostring(row.water or 0))
 end
+-- 人工地表声明自己的音色，水和雪仍覆盖地板材质。
+for _, row in ipairs({
+    { support = true, surfaceCue = "player.footstep.wood", cue = "player.footstep.wood" },
+    { support = true, surfaceCue = "player.footstep.stone", cue = "player.footstep.stone" },
+    { surfaceCue = "mod:surface.footstep", cue = "mod:surface.footstep" },
+    { support = true, surfaceCue = "player.footstep.wood", water = 0.1, cue = "player.footstep.water" },
+    { support = true, surfaceCue = "player.footstep.wood", snow = 0.5, cue = "player.footstep.snow" },
+    { support = true, surfaceCue = "player.footstep.wood", water = 0.31, cue = "" }
+}) do
+    test.system("audio", "footstep_surface", row, function(data)
+        assert(data.cue == row.cue, "地板脚步音色或水雪优先级错误")
+    end, "地表声明脚步音色：" .. row.cue)
+end

@@ -235,6 +235,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>按下攻击时只在同库存存在弹药的情况下开始蓄力并搭箭。</summary>
     private void BeginCharge()
     {
+        if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) return;
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 0, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (item?.Owner is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return;
@@ -269,6 +270,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     /// <summary>松开攻击时消费同库存的一支箭并按当前蓄力发射。</summary>
     private void ReleaseCharge()
     {
+        if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) { CancelCharge(); return; }
         if (FlatWorld.Spaceflight.SpaceSession.SubmitNetworkAttack(item, 1, _controller != null ? _controller.GetAimWorldPosition(8192f) : item.transform.position)) return;
         if (!_charging)
             return;

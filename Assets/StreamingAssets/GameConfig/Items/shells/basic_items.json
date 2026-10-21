@@ -6324,7 +6324,7 @@
       "volume": 0.25,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Adhesive"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png",
         "collider": {

@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "packages": [
+    { "id": "crafting/tool_reinforcement", "path": "crafting/tool_reinforcement.json", "enabled": true },
     {
       "id": "crafting/induction_stove",
       "path": "crafting/induction_stove.json",

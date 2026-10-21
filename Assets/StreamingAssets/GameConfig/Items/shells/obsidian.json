@@ -88,7 +88,7 @@
       "weight": 0.55,
       "volume": 0.8,
       "stackable": false,
-      "tags": ["Knife", "Obsidian", "Modern"],
+      "tags": ["Knife", "Obsidian", "Modern", "Tool"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Combat/Dagger_Obsidian/Dagger_Obsidian_Icon.png",
         "rendererLocalEulerAngles": { "x": 0, "y": 0, "z": 0 },
