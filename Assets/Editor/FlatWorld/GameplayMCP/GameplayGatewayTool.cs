@@ -43,6 +43,7 @@ namespace FlatWorld.GameplayMCP
             new("chunks", "diagnostics", "gameplay_chunk_render_debug"),
             new("hydrology", "diagnostics", "gameplay_hydrology_debug"),
             new("spawner", "diagnostics", "gameplay_spawner_debug"),
+            new("profiler", "diagnostics", "gameplay_profiler"),
             new("tests", "testing", "gameplay_test_pipeline"),
             new("capabilities", "protocol", "gameplay_capabilities")
         };

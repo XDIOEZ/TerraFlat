@@ -28,6 +28,10 @@ namespace FlatWorld.GameplayMCP
             var catalog = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject())).Data;
             var uiContract = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["operation"] = "ui" })).Data;
             var uiMetadata = discovery.GetToolMetadata("gameplay_ui");
+            // 只读正式发现契约，规则采样不启动录制或导出。
+            var profilerContract = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["operation"] = "profiler" })).Data;
+            var diagnostics = (JObject)((SuccessResponse)GameplayGatewayTool.Discover(new JObject { ["domain"] = "diagnostics" })).Data;
+            var profilerMetadata = discovery.GetToolMetadata("gameplay_profiler");
             var unknown = GameplayGatewayTool.HandleCommand(new JObject { ["operation"] = "read_console" }).GetAwaiter().GetResult();
             var malformed = GameplayGatewayTool.HandleCommand(new JObject { ["operation"] = "ui", ["arguments"] = new JArray() }).GetAwaiter().GetResult();
             CommandRegistry.Initialize();
@@ -42,6 +46,14 @@ namespace FlatWorld.GameplayMCP
                 ["legacyHandlerRegistered"] = CommandRegistry.GetHandler("gameplay_observe") != null,
                 ["catalogHasNoContracts"] = catalog["domains"] is JArray && catalog["inputSchema"] == null && catalog["operations"] == null,
                 ["schemaUsesLiveMetadata"] = JToken.DeepEquals(uiContract["inputSchema"], GameplayGatewayTool.BuildInputSchema(uiMetadata)),
+                ["profilerContract"] = profilerContract,
+                ["profilerHidden"] = profilerMetadata?.Discoverable == false &&
+                    !advertised.Any(tool => tool.Value<string>("name") == "gameplay_profiler") &&
+                    !registered.Any(tool => tool.Name == "gameplay_profiler"),
+                ["profilerInDiagnostics"] = diagnostics["operations"] is JArray diagnosticOperations &&
+                    diagnosticOperations.Any(operation => operation.Value<string>() == "profiler"),
+                ["profilerSchemaUsesLiveMetadata"] = JToken.DeepEquals(profilerContract["inputSchema"], GameplayGatewayTool.BuildInputSchema(profilerMetadata)),
+                ["profilerHandlerRegistered"] = CommandRegistry.GetHandler("gameplay_profiler") != null,
                 ["unknownRejected"] = unknown is ErrorResponse unknownError && unknownError.Code.StartsWith("unknown_operation:"),
                 ["malformedRejected"] = malformed is ErrorResponse malformedError && malformedError.Code.StartsWith("invalid_arguments:"),
                 ["unknownDomainRejected"] = GameplayGatewayTool.Discover(new JObject { ["domain"] = "unregistered" }) is ErrorResponse,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using PuertsUnityMcp.Editor;
@@ -19,7 +20,7 @@ namespace FlatWorld.Automation
         private static readonly Type ToolbarType = typeof(Editor).Assembly.GetType("UnityEditor.Toolbar");
         private static bool exporting;
 
-        private static string ReportsRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "67_ProfileData"));
+        public static string ReportsRoot => Path.GetFullPath(Path.Combine(Application.dataPath, "67_ProfileData"));
 
         static ProfilerSnapshotToolbar()
         {
@@ -94,14 +95,12 @@ namespace FlatWorld.Automation
                 EditorUtility.DisplayDialog("性能 JSON", "请先打开 Profiler，录制并选中要分析的帧。", "知道了");
                 return;
             }
-            exporting = true;
             try
             {
                 long selected = profiler.selectedFrameIndex;
                 if (selected < 0 || selected > int.MaxValue)
                     throw new InvalidOperationException("请先在 Profiler 曲线上点选要分析的帧。");
-                string directory = UnityMcpProfilerSnapshot.ExportSelectedFrame((int)selected, ReportsRoot,
-                    exportAdditionalFiles: WorldSceneSnapshotExporter.Export);
+                string directory = ExportFrame((int)selected);
                 EditorGUIUtility.systemCopyBuffer = directory;
                 profiler.ShowNotification(new GUIContent("性能、日志、世界现场与整屏截图已导出，文件夹路径已复制"), 5d);
                 Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 67_ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
@@ -111,10 +110,26 @@ namespace FlatWorld.Automation
                 var cause = exception.GetBaseException();
                 EditorUtility.DisplayDialog("性能 JSON 导出失败", cause.Message, "知道了");
             }
-            finally
+        }
+
+        // 菜单与 MCP 共用无弹窗导出入口，现场和采集说明一起发布到正式目录。
+        public static string ExportFrame(int frameIndex, int contextFrameRadius = 30,
+            Func<string, string, int, string[]> exportAdditionalFiles = null)
+        {
+            if (exporting) throw new InvalidOperationException("profiler_export_busy: 正在导出性能报告。");
+            exporting = true;
+            try
             {
-                exporting = false;
+                return UnityMcpProfilerSnapshot.ExportSelectedFrame(frameIndex, ReportsRoot, contextFrameRadius,
+                    (directory, snapshotId, displayFrame) =>
+                    {
+                        var files = new List<string>(WorldSceneSnapshotExporter.Export(directory, snapshotId, displayFrame));
+                        if (exportAdditionalFiles != null)
+                            files.AddRange(exportAdditionalFiles(directory, snapshotId, displayFrame));
+                        return files.ToArray();
+                    });
             }
+            finally { exporting = false; }
         }
 
         [MenuItem("FlatWorld/性能分析/打开性能报告目录")]

@@ -33,6 +33,22 @@ test.system("testing", "gameplay_gateway", {}, function(data)
         "隐藏玩法接口仍通过元数据公开，或旧命令路由被删除")
     assert(data.catalogHasNoContracts and data.schemaUsesLiveMetadata,
         "默认目录展开全部契约，或按需契约没有沿用真实操作元数据")
+    local profiler = data.profilerContract
+    assert(data.profilerHidden and data.profilerInDiagnostics and data.profilerHandlerRegistered
+        and data.profilerSchemaUsesLiveMetadata and profiler.operation == "profiler" and profiler.domain == "diagnostics",
+        "性能采集入口未隐藏、未登记诊断目录/路由，或按需契约未沿用真实元数据")
+    local properties = profiler.inputSchema.properties
+    assert(profiler.defaultOutput == "compact" and properties.action.default == "status",
+        "性能采集契约的默认操作或输出模式变化")
+    for _, action in ipairs({"status", "start", "stop", "cancel", "export"}) do
+        assert(string.find(properties.action.description, action, 1, true), "性能采集契约遗漏操作：" .. action)
+    end
+    assert(properties.seconds.type == "number" and properties.seconds.default == 10
+        and properties.enableStatistics.type == "boolean" and properties.enableStatistics.default == true
+        and properties.frame.type == "string" and properties.frame.default == "latest"
+        and properties.displayFrame.type == "integer" and properties.contextFrameRadius.type == "integer"
+        and properties.contextFrameRadius.default == 30,
+        "性能采集契约遗漏时长、统计开关、选帧或上下文半径参数")
     assert(data.unknownRejected and data.malformedRejected and data.unknownDomainRejected,
         "网关没有在执行前拒绝未知操作、错误参数或未知能力域")
     assert(data.publicMetadataChars > 0 and data.publicMetadataChars < data.internalMetadataChars,

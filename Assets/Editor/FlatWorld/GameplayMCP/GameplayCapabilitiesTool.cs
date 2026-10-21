@@ -36,6 +36,7 @@ namespace FlatWorld.GameplayMCP
                     gameplayActions = GameplayMcpActionRegistry.ActionNames,
                     gmCommands = GameplayMcpGmCommandRegistry.CommandNames,
                     observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug", "gameplay_chunk_render_debug", "gameplay_hydrology_debug", "gameplay_spawner_debug" },
+                    diagnosticTools = new[] { "gameplay_profiler" },
                     uiActions = GameplayUiTool.ActionNames,
                     io = new { output = "compact|full", fields = "comma-separated data fields", observe = true, uiTreeAfter = true, batchMaxSteps = 8 }
                 });
@@ -46,6 +47,7 @@ namespace FlatWorld.GameplayMCP
                 sessionActions = new[] { "status", "list_saves", "continue_save", "create_world", "reload_resources", "save_exit" },
                 controlActions = new[] { "status", "acquire", "release" },
                 observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug", "gameplay_chunk_render_debug", "gameplay_hydrology_debug", "gameplay_spawner_debug" },
+                diagnosticTools = new[] { "gameplay_profiler" },
                 uiTool = "gameplay_ui",
                 uiActions = GameplayUiTool.ActionNames,
                 gmTool = "gameplay_gm",

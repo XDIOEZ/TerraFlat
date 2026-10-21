@@ -2085,7 +2085,8 @@ namespace FlatWorld.GameplayMCP
                     "aborted", "valid", "errors", "warnings", "issues", "source", "offset", "limit", "truncated",
                     "next_offset", "returned_count", "total_count", "executed", "remaining", "results", "observation",
                     "active", "owned", "owner", "timeScale", "isolated", "profilerEnabled", "deepProfiling",
-                    "elapsed", "frameSamples", "invalidReason", "completed" })
+                    "elapsed", "frameSamples", "invalidReason", "completed", "jobId", "state", "seconds",
+                    "elapsedSeconds", "reportPath", "files", "error" })
                     wanted.Add(key);
                 var missing = new JArray(fields.Split(',').Select(name => name.Trim()).Distinct().Where(name => !data.ContainsKey(name)));
                 foreach (JProperty property in data.Properties().ToArray())

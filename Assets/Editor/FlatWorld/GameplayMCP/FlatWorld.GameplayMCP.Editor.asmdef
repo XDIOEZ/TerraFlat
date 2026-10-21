@@ -3,6 +3,7 @@
     "rootNamespace": "FlatWorld.GameplayMCP",
     "references": [
         "MCPForUnity.Editor",
+        "FlatWorld.Automation.Editor",
         "UnityEditor.TestRunner",
         "GamePlay",
         "FlatWorld.Networking.Core",
