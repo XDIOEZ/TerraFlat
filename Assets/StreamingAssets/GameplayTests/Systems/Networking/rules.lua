@@ -34,6 +34,14 @@ test.system("networking", "item_payload", { guid = 143, amount = 3 }, function(d
     assert(data.sourceAmount == 3, "网络捕获修改了源物品")
 end, "网络实例身份与协议头拒绝")
 
+test.system("networking", "initial_sync_gate", {}, function(data)
+    assert(data.valid, "世界和网络玩家就绪后仍无法发起首次同步")
+    assert(not data.beforeReady and not data.beforeSpawn and not data.duringTransfer,
+        "网络未就绪、未出生或迁移中提前发送了首次同步")
+    assert(not data.otherWorld and not data.missingWorld,
+        "跨世界或没有世界身份时提前消耗了首次同步机会")
+end, "联机首次物品与天气状态：世界身份就绪门禁")
+
 test.system("networking", "roll_snapshot", {}, function(data)
     assert(data.protocol >= 19 and data.roundtrip and data.remainingBytes == 0, "翻滚协议版本或动作快照往返错误")
     assert(math.abs(data.delayedElapsed - 0.25) < 0.00001, "远端没有按服务器 double 时标补齐动作进度")

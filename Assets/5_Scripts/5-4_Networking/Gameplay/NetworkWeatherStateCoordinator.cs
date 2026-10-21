@@ -74,6 +74,8 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             if (SaveDataMgr.Instance?.Active_PlanetData == null)
                 return;
+            if (!NetworkGameplayWorldScope.TryGetReadyLocalSurface(out _))
+                return;
 
             string world = GameplayWorldRegistry.LocalPresentationWorldKey;
             if (!string.Equals(requestedWorld, world, System.StringComparison.Ordinal))

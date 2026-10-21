@@ -217,11 +217,11 @@ namespace FlatWorld.Networking.Gameplay
                 FlushMechanicalStates();
             }
 
-            if (!NetworkServer.active && NetworkClient.active && !requestedInitialState &&
-                GameManager.Instance != null && GameManager.Instance.IsInGameWorld)
+            if (clientHandlersRegistered && !requestedInitialState &&
+                NetworkGameplayWorldScope.TryGetReadyLocalSurface(out uint readyRealmRevision))
             {
                 requestedInitialState = true;
-                NetworkClient.Send(new NetworkItemStateRequest { RealmRevision = NetworkGameplayWorldScope.LocalRevision });
+                NetworkClient.Send(new NetworkItemStateRequest { RealmRevision = readyRealmRevision });
             }
 
             ApplyPendingClientStates();

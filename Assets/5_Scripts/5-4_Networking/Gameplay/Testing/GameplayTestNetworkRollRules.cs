@@ -20,10 +20,21 @@ namespace FlatWorld.Networking.Gameplay
         {
             GameplayTestSystemProbe.Register("networking", "roll_snapshot", CaptureSnapshot);
             GameplayTestSystemProbe.Register("networking", "roll_stamina_handoff", CaptureStaminaHandoff);
+            GameplayTestSystemProbe.Register("networking", "initial_sync_gate", CaptureInitialSyncGate);
         }
         #endregion
 
         #region 正式协议与体力保护采样
+        private static JObject CaptureInitialSyncGate(JObject args) => new()
+        {
+            ["valid"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(true, true, false, "planet", "planet"),
+            ["beforeReady"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(false, true, false, "planet", "planet"),
+            ["beforeSpawn"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(true, false, false, "planet", "planet"),
+            ["duringTransfer"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(true, true, true, "planet", "planet"),
+            ["otherWorld"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(true, true, false, "planet", "other"),
+            ["missingWorld"] = NetworkGameplayWorldScope.CanRequestInitialSurfaceState(true, true, false, "", "")
+        };
+
         private static JObject CaptureSnapshot(JObject args)
         {
             var state = new NetworkPlayerRollState

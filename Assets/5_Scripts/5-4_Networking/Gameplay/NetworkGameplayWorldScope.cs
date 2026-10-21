@@ -9,6 +9,31 @@ namespace FlatWorld.Networking.Gameplay
     {
         #region 连接绑定的世界上下文
         public static uint LocalRevision => NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.RealmRevision ?? 0;
+        // 首次同步只能在本地网络角色与服务器世界身份完全对应后发送。
+        internal static bool CanRequestInitialSurfaceState(bool clientReady, bool playerReady,
+            bool worldTransferPending, string remoteWorld, string localWorld)
+            => clientReady && playerReady && !worldTransferPending &&
+               !string.IsNullOrWhiteSpace(remoteWorld) &&
+               string.Equals(remoteWorld, localWorld, StringComparison.Ordinal);
+
+        public static bool TryGetReadyLocalSurface(out uint realmRevision)
+        {
+            realmRevision = 0;
+            if (!NetworkClient.active || NetworkServer.active ||
+                GameManager.ExistingInstance?.IsInGameWorld != true)
+                return false;
+
+            NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
+            if (player == null || !player.TryGetSpaceObserver(out SpaceNetworkObserver observer)) return false;
+            bool playerReady = player.CorePlayer?.IsInitialized == true && !player.IsInSpace && !observer.InSpace &&
+                player.CorePlayer.Data?.CurrentSceneName == observer.WorldKey &&
+                player.RealmRevision == observer.RealmRevision;
+            if (!CanRequestInitialSurfaceState(NetworkClient.ready, playerReady, player.IsWorldTransferPending,
+                    observer.WorldKey, GameplayWorldRegistry.LocalPresentationWorldKey)) return false;
+
+            realmRevision = observer.RealmRevision;
+            return true;
+        }
         public static bool OwnsItem(NetworkConnectionToClient connection, Item item)
             => item != null && connection?.identity?.GetComponent<NetworkWorldPlayer>()?.TryGetSpaceObserver(out SpaceNetworkObserver observer) == true &&
                 !observer.InSpace && item.gameObject.scene.name == observer.WorldKey;
