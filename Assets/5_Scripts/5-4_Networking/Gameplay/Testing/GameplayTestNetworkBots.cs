@@ -111,6 +111,44 @@ namespace FlatWorld.Networking.Gameplay
             ItemMgr.Instance.ReleaseNetworkPlayer(occupied, persistData: false);
             yield return world.Join(90, local.ProfileName);
             result["localNameCollision"] = BotSample(world.Core(90), local);
+            // 同一连接先验证正常世界请求，再移走观察者验证不会在主机世界误处理。
+            NetworkWorldPlayer scopedBot = world.Core(90);
+            int resetCountBefore = world.Transport.Read<NetworkMechanicalNodeMessage>(90).Count(message => message.Reset);
+            bool validDispatched = world.Transport.Receive(90,
+                new NetworkItemStateRequest { RealmRevision = scopedBot.RealmRevision });
+            yield return Wait(() => world.Transport.Read<NetworkMechanicalNodeMessage>(90)
+                .Count(message => message.Reset) > resetCountBefore, "有效世界物品同步请求");
+            int resetCountAfterValid = world.Transport.Read<NetworkMechanicalNodeMessage>(90).Count(message => message.Reset);
+            SpacePassengerState detached = world.Session.State.Passengers.Find(value => value.ProfileId == scopedBot.DisplayName);
+            if (detached == null) throw new InvalidOperationException("假人缺少可用于隔离验证的世界观察者");
+            bool invalidDispatched;
+            world.Session.State.Passengers.Remove(detached);
+            try
+            {
+                result["observerMissingDuringRequest"] = !scopedBot.TryGetSpaceObserver(out _);
+                invalidDispatched = world.Transport.Receive(90,
+                    new NetworkItemStateRequest { RealmRevision = scopedBot.RealmRevision });
+                Vector3 beforeMotion = scopedBot.AuthoritativeLogicalPosition;
+                bool staleMotionSent = SendBotMotion(world, 90, scopedBot,
+                    WorldTopologyRuntime.NormalizePosition(beforeMotion + Vector3.right * 0.4f), Vector2.right * 3f);
+                result["missingObserverMotionRejected"] = staleMotionSent &&
+                    WorldTopologyRuntime.ShortestDelta(beforeMotion, scopedBot.AuthoritativeLogicalPosition).sqrMagnitude < 0.000001f;
+            }
+            finally { world.Session.State.Passengers.Add(detached); }
+            // 用后续合法请求作可靠通道屏障，避免未刷新的违规回复造成假通过。
+            bool barrierDispatched = world.Transport.Receive(90,
+                new NetworkItemStateRequest { RealmRevision = scopedBot.RealmRevision });
+            yield return Wait(() => world.Transport.Read<NetworkMechanicalNodeMessage>(90)
+                .Count(message => message.Reset) > resetCountAfterValid, "观察者恢复后的物品同步请求");
+            int resetCountAfterMissing = world.Transport.Read<NetworkMechanicalNodeMessage>(90).Count(message => message.Reset);
+            result["worldScopeDispatch"] = new JObject
+            {
+                ["validRequestSent"] = validDispatched,
+                ["validRequestHandled"] = resetCountAfterValid > resetCountBefore,
+                ["missingObserverRequestSent"] = invalidDispatched,
+                ["barrierRequestSent"] = barrierDispatched,
+                ["missingObserverRejected"] = resetCountAfterMissing == resetCountAfterValid + 1
+            };
             result["liveConnections"] = NetworkServer.connections.Count;
             world.Dispose();
             yield return null;
@@ -419,6 +457,8 @@ namespace FlatWorld.Networking.Gameplay
                     Manager.onlineScene = ""; Manager.offlineScene = ""; Manager.maxConnections = 16;
                     NetworkStartResult start = Manager.StartServer(Manager.GetComponent<kcp2k.KcpTransport>().Port);
                     if (!start.Success) throw new InvalidOperationException("隔离服务器未启动：" + start.Error);
+                    // 假人模拟真实远端加入，必须走公开会话入口；内存传输不会监听局域网端口。
+                    Manager.PublishSession();
                 }
                 catch { Dispose(); throw; }
             }

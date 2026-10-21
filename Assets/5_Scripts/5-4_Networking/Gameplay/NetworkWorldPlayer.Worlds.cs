@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Spaceflight;
 using Mirror;
 
@@ -41,7 +41,14 @@ namespace FlatWorld.Networking.Gameplay
                     incoming.ModuleDataDic[module.StableName] = data;
             return ItemNetworkStateSerialization.TrySerializeItemData(incoming, out payload);
         }
-        private bool AcceptWorldSubmission(uint realm) => !authoritativeWorldTransferPending && realm == authoritativeRealmRevision;
+        private bool AcceptWorldSubmission(uint realm)
+        {
+            // 移动、库存、翻滚与传送同样必须持有仍存在的权威世界观察者。
+            if (authoritativeWorldTransferPending || realm != authoritativeRealmRevision ||
+                !TryGetSpaceObserver(out SpaceNetworkObserver observer) || string.IsNullOrWhiteSpace(observer.WorldKey))
+                return false;
+            return observer.RealmRevision == realm;
+        }
         #endregion
     }
 }

@@ -77,6 +77,15 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
         "请求本地档案名称的远端连接抢占了本地主角")
     assert(not profiles[collision.profile] and not net_ids[collision.netId] and not guids[collision.guid],
         "本地名称冲突连接复用了已有假人的档案或身份")
+    local scope = data.worldScopeDispatch
+    assert(scope and scope.validRequestSent and scope.validRequestHandled,
+        "有效世界请求没有进入正式服务器物品同步处理器")
+    assert(data.observerMissingDuringRequest,
+        "移除权威乘员后服务端仍从旧 SyncVar 返回过期的世界观察者")
+    assert(data.missingObserverMotionRejected,
+        "失去权威世界观察者后客户端移动命令仍能改动服务端角色坐标")
+    assert(scope.missingObserverRequestSent and scope.barrierRequestSent and scope.missingObserverRejected,
+        "失去世界观察者后旧请求仍在主机当前世界触发了物品同步")
     local occupied = data.occupiedNameCollision
     assert(not data.occupiedCoreReused and occupied.profile ~= data.occupiedProfile
         and occupied.profileBound and occupied.indexed and not occupied.isLocalProfile,

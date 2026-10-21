@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
 using Mirror;
@@ -261,7 +261,14 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
         public bool TryGetSpaceObserver(out SpaceNetworkObserver observer)
         {
-            if (isServer && SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out observer)) return true;
+            // 服务端观察者丢失必须拒绝请求，不能退回旧 SyncVar 假装仍在原世界。
+            if (isServer)
+            {
+                if (SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out observer))
+                    return true;
+                observer = default;
+                return false;
+            }
             observer = new SpaceNetworkObserver { InSpace = IsInSpace, Position = AuthoritativeSpacePosition,
                 Velocity = new SpaceVector2(authoritativeSpaceVelocityX, authoritativeSpaceVelocityY),
                 ShipId = authoritativeShipId, WorldKey = authoritativeWorldKey, RealmRevision = authoritativeRealmRevision };

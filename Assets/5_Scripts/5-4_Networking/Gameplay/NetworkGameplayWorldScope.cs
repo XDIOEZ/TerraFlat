@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Spaceflight;
 using Mirror;
 
@@ -15,6 +15,10 @@ namespace FlatWorld.Networking.Gameplay
         public static IDisposable Use(NetworkWorldPlayer player)
         {
             if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true) return null;
+            return Use(observer);
+        }
+        private static IDisposable Use(SpaceNetworkObserver observer)
+        {
             if (observer.InSpace) return GameplayWorldRegistry.UseSpaceScene(SpaceSectorCoordinates.SceneKey(observer.Position.Sector));
             return string.IsNullOrWhiteSpace(observer.WorldKey) ? null : GameplayWorldRegistry.UseWorld(observer.WorldKey);
         }
@@ -24,8 +28,11 @@ namespace FlatWorld.Networking.Gameplay
             {
                 NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
                 if (player == null || !connection.isAuthenticated || !connection.isReady || player.IsWorldTransferPending) return;
-                if (message is INetworkWorldRequest request && request.WorldRevision != player.RealmRevision) return;
-                using (Use(player)) handler(connection, message);
+                // 世界绑定丢失时禁止回落到主机当前世界，也要检查观察者的最新代际。
+                if (!player.TryGetSpaceObserver(out SpaceNetworkObserver observer) ||
+                    string.IsNullOrWhiteSpace(observer.WorldKey)) return;
+                if (message is INetworkWorldRequest request && request.WorldRevision != observer.RealmRevision) return;
+                using (Use(observer)) handler(connection, message);
             };
         #endregion
     }
