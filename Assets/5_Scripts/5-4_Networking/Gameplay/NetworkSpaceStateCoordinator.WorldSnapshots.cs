@@ -84,9 +84,12 @@ namespace FlatWorld.Networking.Gameplay
             if (incomingWorld == null || message.Sequence != incomingWorld.Header.Sequence || (uint)message.Index >= (uint)incomingWorld.Parts.Length) return;
             int expected = Math.Min(NetworkGameplayProtocol.SnapshotChunkBytes,
                 incomingWorld.Header.CompressedBytes - message.Index * NetworkGameplayProtocol.SnapshotChunkBytes);
-            if (message.Data?.Length != expected || incomingWorld.Parts[message.Index] != null)
-            { RejectWorldSnapshot("目标世界分片长度或顺序无效。"); return; }
+            if (message.Data?.Length != expected)
+            { RejectWorldSnapshot("目标世界分片长度无效。"); return; }
+            // 已接收的分片以首份为准，整包哈希负责完整性；重复分片不应中断下载。
+            if (incomingWorld.Parts[message.Index] != null) return;
             incomingWorld.Parts[message.Index] = message.Data;
+            incomingWorld.Deadline = Time.unscaledTime + 30f;
             if (++incomingWorld.Received < incomingWorld.Parts.Length) return;
             worldIncoming = null;
             try

@@ -357,6 +357,8 @@ namespace FlatWorld.Networking.Gameplay
             { RejectSnapshot("太空快照分片序号或长度无效"); return; }
             if (value.Parts[chunk.Index] != null) return;
             value.Parts[chunk.Index] = chunk.Data;
+            // 接收超时只检测分片停滞，持续传输的大快照不能因总时长超过五秒被丢弃。
+            value.Deadline = Time.unscaledTime + TransferTimeout;
             if (++value.Received != value.Parts.Length) return;
             incoming = null;
             byte[] compressed = new byte[value.Header.CompressedBytes];
