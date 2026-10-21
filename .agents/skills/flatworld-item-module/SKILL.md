@@ -44,6 +44,7 @@ description: "FlatWorld 物品与模块的组合、生命周期、调度、对�
 ## 调度与空间
 
 - 覆写 `ModUpdate` 的模块显式选择 EveryFrame/FixedInterval/Disabled；启停、结构、配置、池复用使调度失效，事件能力状态切换用 `MarkModuleScheduleDirty`。投掷伤害可用 `SetIdleTickSuppressed`，手持武器保持完整更新。
+- 调度变更通知只更新已注册的世界 Item；独立冷宿主与测试夹具卸载时只标记自身 dirty，不能反向进入世界 Tick 调度器。
 - Tick 捕获注册令牌及 Item/Module 代际，回调后复核。重建保留未变模块时钟；休眠不补算。Profiler 标记为 `FlatWorld.Module.<类型名>`。
 - Tick 峰值先读原始帧子标记；`FlatWorld.Hive.SpawnResident` 区分真实成员生成，不能把合法实例化峰当成调度频率问题。水生线路保留 0.2 米采样，只在单次调用内合并连续相同规范液体格，不跨调用缓存水态。
 - 距离档按同场景最近玩家及循环最短距离限制 ItemMgr Tick，不提高模块自身频率。玩家、地图、手持物保持完整更新；Owner 不代表豁免。`ItemSimulationRangeIndex` 使用近档集合、到期堆及区域判档。

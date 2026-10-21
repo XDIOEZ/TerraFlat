@@ -35,7 +35,9 @@ public static class GameplayTestInputLifecycleRuntimeProbe
             controller == null || controller.IsGameplayInputLocked)
             throw new InvalidOperationException("交互卸载回归需要已加载且未锁定的正式交互模块。");
         var action = controller._inputActions.Win10.E;
-        var host = new GameObject("[InteractionUnload]") { hideFlags = HideFlags.HideAndDontSave };
+        var host = new GameObject("[InteractionUnload]");
+        // 与隔离玩家共用世界场景，保证正式交互查询能命中本次目标。
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(host, player.gameObject.scene);
         var target = host.AddComponent<GameplayTestLifecycleInteractionTarget>();
         Keyboard keyboard = null;
         int bindingIndex = action.bindings.Count;

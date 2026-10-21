@@ -194,7 +194,18 @@ public sealed partial class GameplayTestSpaceScenario
                 { if (inspectPreparation) latestBeforeCommit = ShipSnapshot(ship); return false; }
                 return GroundBuildingsRestored(ids, expectedWorld);
             },
-            90d, "飞船未完成正式降落及普通地面建筑移交。");
+            90d, "飞船未完成正式降落及普通地面建筑移交。", () =>
+                new JObject
+                {
+                    ["scene"] = SceneManager.GetActiveScene().name,
+                    ["expectedWorld"] = expectedWorld,
+                    ["worldReady"] = Ready(),
+                    ["spaceView"] = session.IsSpaceView,
+                    ["shipPresent"] = session.GetShip(ship.ShipId) != null,
+                    ["buildingsRestored"] = GroundBuildingsRestored(ids, expectedWorld),
+                    ["flightPhase"] = session.GetFlight(ship.ShipId)?.Phase.ToString(),
+                    ["ship"] = ShipSnapshot(ship)
+                }.ToString(Newtonsoft.Json.Formatting.None));
         IsMigrationExpected = false;
         JObject landed = GroundBuildingSnapshot(ids);
         landed["flightRemoved"] = session.GetFlight(ship.ShipId) == null;

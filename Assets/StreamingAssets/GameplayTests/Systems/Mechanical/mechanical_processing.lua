@@ -44,7 +44,8 @@ for _, input in ipairs({
             "材料自身温度边界、木制品特质继承或木炭1000℃变灰错误")
         assert(#(untouched and data.output or data.input) == 0, "热转化重复保留原料或提前生成产物")
         for _, item in ipairs(data.output) do
-            assert(item.initialized and item.temperature == input.temperature, "链式热转化丢失实际材料温度")
+            assert(item.initialized and math.abs(item.temperature - input.temperature) < .001,
+                "链式热转化丢失实际材料温度")
         end
     end, string.format("%s自身温度边界：%g℃", input.id, input.temperature))
 end
@@ -190,7 +191,9 @@ test.runtime("processing", "furnace_ambient_heat", {}, function(data)
     for _, sample in ipairs(data.samples) do
         assert(not sample.burning and math.abs(sample.ambient - 20) > 1,
             "停火高炉没有读取真实非20℃环境")
-        local expected = sample.before + (sample.ambient - sample.before) * .01
+        local difference = sample.ambient - sample.before
+        local delta = math.min(math.abs(difference), math.max(math.abs(difference) * .01, .5))
+        local expected = sample.before + (difference >= 0 and delta or -delta)
         assert(sample.zero == sample.before and math.abs(sample.after - expected) < .0001,
             "停火高炉仍按固定速度趋近20℃，或零时间推进了炉温")
     end

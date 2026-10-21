@@ -671,6 +671,9 @@ public sealed class GameplayTestLuaRunner : IDisposable
             player = current;
             if (!TryAcquireControl(out string error)) throw new InvalidOperationException(error);
         }
+        else if (controller != null && !controller.IsExternalGameplayControlOwner(this) &&
+                 !controller.TryAcquireExternalGameplayControl(this))
+            throw new InvalidOperationException("维度现场结束后无法恢复原测试玩家的控制租约。");
         record("runtime_sample", command.Label + "（实际采样）", true, sample.ToString(Newtonsoft.Json.Formatting.None));
         ValidateSystemSample(command, sample);
     }

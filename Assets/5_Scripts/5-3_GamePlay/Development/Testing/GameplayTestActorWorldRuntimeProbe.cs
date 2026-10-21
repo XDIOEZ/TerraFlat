@@ -411,6 +411,12 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         GameRes resources = GameRes.ExistingInstance;
         RuntimeRecipe recipe = resources.GetRecipe("core:藤蔓=绳子")
             ?? throw new InvalidOperationException("正式手工配方目录缺少藤蔓制绳配方。");
+        if (recipe.inputs?.RowItems_List?.Count != 1 ||
+            recipe.inputs.RowItems_List[0].matchMode != MatchMode.ExactItem ||
+            recipe.inputs.RowItems_List[0].ItemName != "Twine" ||
+            recipe.inputs.RowItems_List[0].amount <= 0)
+            throw new InvalidOperationException("藤蔓制绳配方的正式输入契约已改变，请更新测试夹具。");
+        int requiredMaterialAmount = recipe.inputs.RowItems_List[0].amount;
         table.I_ShowPanel();
         if (table.workButton == null) throw new InvalidOperationException("正式手工面板没有合成按钮。");
         ItemData material = resources.CreateItemData("Twine");
@@ -419,7 +425,8 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         var result = new JObject
         {
             ["materialInserted"] = inserted, ["panelOpen"] = table.IsPanelOpen,
-            ["recipeId"] = recipe.Id, ["buttonInteractable"] = table.workButton.interactable,
+            ["recipeId"] = recipe.Id, ["recipeInputAmount"] = requiredMaterialAmount,
+            ["buttonInteractable"] = table.workButton.interactable,
             ["inputBefore"] = Count(table.inputInventory, "Twine"), ["outputBefore"] = Count(table.outputInventory, "Rope"),
             ["carryBefore"] = own.CarryBefore.DeepClone(), ["carryWithInput"] = CaptureHandcraftCarry(player, table)
         };
@@ -453,6 +460,8 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         result["expectedOutput"] = GameDifficultyService.ScaleCount(1,
             GameDifficultyService.Current.Production.CraftingOutputMultiplier, 1);
 
+        // 首次合成可能剩余材料，满槽拒绝场景必须使用全新的自有三份材料。
+        ClearInventory(table.inputInventory);
         ClearInventory(table.outputInventory);
         foreach (ItemSlot slot in table.outputInventory.Data.itemSlots)
         {

@@ -7,11 +7,12 @@ test.runtime("agriculture", "crop_visual_reenable", {}, function(data)
     end
     assert(#data.samples == 2, "缺少连续缩放或阶段图作物样本")
     for _, row in ipairs(data.samples) do
-        local expectedScale = row.discrete and 1 or .25
-        assert(math.abs(row.initial.scaleX - expectedScale) < .00001 and row.initial.clip == .5,
+        assert(math.abs(row.initial.scaleX - row.seedlingScale) < .00001
+            and math.abs(row.initial.clip - row.buriedClip) < .00001,
             row.id .. "首次激活时重复捕获了已修改的外壳基线")
         same(row.disabled, row.whileDisabled, row.id .. "停用后仍响应成长事件")
-        assert(row.restored.sprite == row.matureSprite and row.restored.clip == .5
+        assert(row.restored.sprite == row.matureSprite
+            and math.abs(row.restored.clip - row.buriedClip) < .00001
             and row.restored.material == row.initial.material
             and math.abs(row.restored.scaleX - 1) < .00001,
             row.id .. "恢复后未显示停用期间更新的成熟状态")

@@ -1,4 +1,4 @@
-﻿-- 真实迁移保留同一个主角和网络身份，等待完整活动窗口与正式呈现完成。
+-- 真实迁移保留同一个主角和网络身份，等待完整活动窗口与正式呈现完成。
 test.check("world_ready", "地表隔离世界就绪")
 test.check("player_ready", "地表主角就绪")
 test.runtime("dimension", "cave_roundtrip", {}, function(data)

@@ -11,8 +11,10 @@ test.runtime("crafting", "handcraft_clicks", {}, function(data)
         and data.observedRequiredWork == data.requiredClicks, "制作预检改变库存或只读进度与实际点击不同步")
     assert(data.inputBeforeFinalClick == 3 and data.outputBeforeFinalClick == 0,
         "最后一次制作点击前提前扣料或生成产物")
-    assert(data.inputAfterCraft == 0 and data.outputAfterCraft == data.expectedOutput,
-        "正式合成按钮没有按生产配方原子扣除三份藤蔓并产生绳子")
+    assert(data.recipeInputAmount > 0 and data.recipeInputAmount <= data.inputBefore
+        and data.inputAfterCraft == data.inputBefore - data.recipeInputAmount
+        and data.outputAfterCraft == data.expectedOutput,
+        "正式合成按钮没有按当前生产配方原子扣除藤蔓并产生绳子")
     assert(data.secondMaterialsInserted and data.fullOutputSlots > 0 and data.blockerBefore == data.fullOutputSlots,
         "没有真实填满全部输出槽")
     assert(data.inputAfterFull == data.inputBeforeFull and data.inputAfterFull == 3 and

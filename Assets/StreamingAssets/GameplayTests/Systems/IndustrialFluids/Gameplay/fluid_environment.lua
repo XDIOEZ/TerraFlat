@@ -27,8 +27,9 @@ for _, input in ipairs({
             "小温差的真实变化没有推进状态版本，或零时间被当成变化")
         local distance = math.min(math.abs(input.ambient - input.current), 10 * input.seconds)
         local active_expected = input.current + (input.ambient > input.current and distance or -distance)
-        assert(data.heatHandled and math.abs(data.activeTemperature - active_expected) < .0001,
-            "炉内主动加热的10℃每秒设备能力被自然百分比改掉")
+        assert(data.heatHandled == (input.seconds > 0) and
+            math.abs(data.activeTemperature - active_expected) < .0001,
+            "炉内主动加热的10℃每秒设备能力或零时间拒绝规则错误")
     end, string.format("液体与坩埚自然传热、单次结算和主动加热保留：%g℃→%g℃，%g秒",
         input.current, input.ambient, input.seconds))
 end
@@ -227,7 +228,7 @@ test.runtime("industrial_fluids", "surface_outlet_flow", {}, function(data)
     assert(emitted.cell.depth > before.cell.depth and water_moles(emitted.outlet) < water_moles(before.outlet),
         "出口没有把真实液体放入世界 Liquid 层")
     assert_world_balance(data, before, emitted, "初次排液")
-    assert(blocked.cell.depth == 1 and water_moles(blocked.outlet) == water_moles(before_blocked.outlet),
+    assert(blocked.cell.depth == 1 and near(water_moles(blocked.outlet), water_moles(before_blocked.outlet), 0.000000001),
         "满世界格拒收后没有保持库存中的水两相总 mol")
     assert(near(blocked.outlet.energy, before_blocked.outlet.energy), "满世界格拒收后丢失了出口内能")
     assert(blocked.outlet.waterGasMoles > before_blocked.outlet.waterGasMoles

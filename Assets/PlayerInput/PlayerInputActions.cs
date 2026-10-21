@@ -1034,8 +1034,7 @@ namespace InputSystem
             ]
         }
     ]
-}
-");
+}");
             // Win10
             m_Win10 = asset.FindActionMap("Win10", throwIfNotFound: true);
             m_Win10_Move_Player = m_Win10.FindAction("Move_Player", throwIfNotFound: true);
@@ -1553,8 +1552,11 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnMove_Player(InputAction.CallbackContext context);
             /// <summary>
-            /// Method invoked when associated input action "Roll" changes phase.
+            /// Method invoked when associated input action "Roll" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnRoll(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "RotateBuilding" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.

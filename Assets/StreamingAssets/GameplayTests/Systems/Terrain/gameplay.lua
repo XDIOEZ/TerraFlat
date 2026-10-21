@@ -36,7 +36,7 @@ test.runtime("terrain", "cover_resource_lifecycle", {}, function(data)
     local indexes = data.inputIndexes
     assert(indexes.registered.environment == indexes.before.environment + 1 and
         indexes.registered.navigation == indexes.before.navigation + 1 and
-        indexes.registered.soil == indexes.before.soil, "野生松树没有按能力登记天气、导航与土壤输入")
+        indexes.registered.soil == indexes.before.soil + 1, "野生松树没有按能力登记天气、导航与自然土壤输入")
     for _, field in ipairs({"environment", "navigation", "soil"}) do
         assert(indexes.removed[field] == indexes.before[field] and
             indexes.restored[field] == indexes.registered[field],

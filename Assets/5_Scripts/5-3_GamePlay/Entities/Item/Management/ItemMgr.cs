@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using Unity.Profiling;
@@ -321,7 +321,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     public void NotifyItemScheduleChanged(Item item)
     {
-        _tickScheduler.NotifyChanged(item);
+        // 独立夹具和未提交的冷物品不属于世界调度，注册时会统一建立调度状态。
+        if (item != null && _runtimeRegistry.Contains(item))
+            _tickScheduler.NotifyChanged(item);
     }
 
     #endregion

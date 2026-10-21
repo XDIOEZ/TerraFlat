@@ -724,14 +724,24 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         if (!string.IsNullOrEmpty(controlledConsole)) session.ClearControl(controlledConsole);
         if (SceneManager.GetActiveScene().name != home.WorldKey)
         {
-            // 用例清理复用中立乘员迁移事务，不把清理传送计作降落验证。
+            // 活着的测试玩家必须走正式星球落地，死亡重生入口会拒绝本次回程。
             IsMigrationExpected = true;
             try
             {
-                if (!session.TryBeginRespawnTransition(CurrentPlayer(), home, homePosition, () => { }))
+                Player traveller = CurrentPlayer();
+                SpacePassengerState passenger = session.GetPassenger(traveller);
+                bool wasInSpace = passenger.IsInSpace;
+                passenger.IsInSpace = false;
+                if (!DimensionManager.Instance.TryBeginPlanetLanding(traveller, home, homePosition))
+                {
+                    passenger.IsInSpace = wasInSpace;
                     throw new InvalidOperationException("正式清理迁移被拒绝。");
+                }
                 yield return WaitUntil(() => Ready() && SceneManager.GetActiveScene().name == home.WorldKey,
-                    120d, "无法恢复本用例起始测试世界。");
+                    120d, "无法恢复本用例起始测试世界。", () =>
+                        $"当前场景={SceneManager.GetActiveScene().name}，目标={home.WorldKey}，" +
+                        $"迁移中={DimensionManager.ExistingInstance?.IsTransitioning}，玩家就绪={Ready()}。");
+                session.ResetPassengerForRespawn(CurrentPlayer());
             }
             finally { IsMigrationExpected = false; }
         }

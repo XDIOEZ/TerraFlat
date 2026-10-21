@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Networking.Gameplay
 {
@@ -15,12 +14,13 @@ namespace FlatWorld.Networking.Gameplay
         private static NetworkChunkStreamingCoordinator instance;
 
         private readonly List<Transform> observers = new List<Transform>();
-        private readonly List<Vector3> observerPositions = new List<Vector3>();
         private readonly Dictionary<string, List<Vector3>> worldObservers = new(System.StringComparer.Ordinal);
         private readonly Dictionary<string, int> worldSignatures = new(System.StringComparer.Ordinal);
-        private int lastObserverSignature;
+        private readonly Dictionary<string, GameplayWorldRuntime> signatureWorlds = new(System.StringComparer.Ordinal);
+        private readonly List<string> inactiveWorldKeys = new();
         private Vector2Int lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
         private int lastNavigationLoadDistance = -1;
+        private WorldNavigationManager lastNavigationManager;
         private float nextRefreshTime;
 
         [SerializeField, Min(1)] private int loadDistance = 2;
@@ -37,7 +37,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!instance.observers.Contains(observer))
             {
                 instance.observers.Add(observer);
-                instance.lastObserverSignature = int.MinValue;
+                instance.worldSignatures.Clear();
             }
         }
 
@@ -47,7 +47,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             instance.observers.Remove(observer);
-            instance.lastObserverSignature = int.MinValue;
+            instance.worldSignatures.Clear();
             instance.nextRefreshTime = 0f;
             if (instance.observers.Count == 0)
                 instance.ReleaseObserverWindows();
@@ -58,7 +58,7 @@ namespace FlatWorld.Networking.Gameplay
             if (instance == null)
                 return;
 
-            instance.lastObserverSignature = int.MinValue;
+            instance.worldSignatures.Clear();
             instance.nextRefreshTime = 0f;
         }
 
@@ -94,6 +94,7 @@ namespace FlatWorld.Networking.Gameplay
             observers.RemoveAll(observer => observer == null);
             if (GameManager.Instance?.IsInGameWorld != true || SaveDataMgr.Instance?.SaveData?.PlanetData_Dict == null) return;
             foreach (List<Vector3> positions in worldObservers.Values) positions.Clear();
+            inactiveWorldKeys.Clear();
             Transform localAnchor = ResolveLocalObserver();
             Mod_ChunkLoader loader = localAnchor?.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
             int active = loader != null ? loader.CurrentLoadChunkDistance : loadDistance;
@@ -114,9 +115,16 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (pair.Value.Count == 0)
                 {
-                    if (GameplayWorldRegistry.TryGet(pair.Key, out GameplayWorldRuntime oldWorld) && oldWorld.PreparationCount == 0)
+                    // 目标维度仍在准备时保留待清理键，避免误撤准备窗口。
+                    bool hasWorld = GameplayWorldRegistry.TryGet(pair.Key, out GameplayWorldRuntime oldWorld);
+                    if (hasWorld && oldWorld.PreparationCount > 0)
+                        continue;
+                    if (hasWorld)
                         using (GameplayWorldRegistry.UseWorld(pair.Key)) oldWorld.Chunks.ClearRuntimeObserverWindows();
-                    worldSignatures.Remove(pair.Key); continue;
+                    inactiveWorldKeys.Add(pair.Key);
+                    worldSignatures.Remove(pair.Key);
+                    signatureWorlds.Remove(pair.Key);
+                    continue;
                 }
                 GameplayWorldRuntime world = GameplayWorldRegistry.GetOrCreate(pair.Key);
                 using (GameplayWorldRegistry.UseWorld(pair.Key))
@@ -126,19 +134,30 @@ namespace FlatWorld.Networking.Gameplay
                     int signature = active * 31 + prefetch * 17 + retained;
                     foreach (Vector3 point in pair.Value) unchecked { signature = signature * 31 + world.Chunks.ResolveRuntimeChunkOrigin(point).GetHashCode(); }
                     world.Chunks.UpdateRuntimePresentationPriority(anchor);
-                    if (!worldSignatures.TryGetValue(pair.Key, out int previous) || previous != signature)
+                    // 同名维度重建后的窗口必须重新提交，不能复用旧实例的签名。
+                    if (!signatureWorlds.TryGetValue(pair.Key, out GameplayWorldRuntime cachedWorld) ||
+                        !ReferenceEquals(cachedWorld, world) ||
+                        !worldSignatures.TryGetValue(pair.Key, out int previous) || previous != signature)
                     {
-                        worldSignatures[pair.Key] = signature;
                         world.Chunks.RefreshChunksAroundObservers(pair.Value, anchor, active, prefetch, retained);
+                        worldSignatures[pair.Key] = signature;
+                        signatureWorlds[pair.Key] = world;
                     }
                 }
             }
+            for (int i = 0; i < inactiveWorldKeys.Count; i++)
+                worldObservers.Remove(inactiveWorldKeys[i]);
             if (localAnchor != null)
             {
                 string key = localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.Data?.CurrentSceneName;
                 if (GameplayWorldRegistry.TryGet(key, out _))
+                {
                     using (GameplayWorldRegistry.UseWorld(key)) RefreshLocalNavigationAnchor(ResolveLogicalObserverPosition(localAnchor), active);
+                    return;
+                }
             }
+            // 离开地表或本地世界不可用时，重进同一格也必须恢复导航窗口。
+            lastNavigationManager = null;
         }
 
         /// <summary>退出联机或失去本机观察者时释放本协调器的需求。</summary>
@@ -148,9 +167,12 @@ namespace FlatWorld.Networking.Gameplay
                 if (GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime world) && world.PreparationCount == 0)
                     using (GameplayWorldRegistry.UseWorld(key)) world.Chunks.ClearRuntimeObserverWindows();
             worldSignatures.Clear();
-            lastObserverSignature = int.MinValue;
+            signatureWorlds.Clear();
+            worldObservers.Clear();
+            inactiveWorldKeys.Clear();
             lastNavigationAnchorChunk = new Vector2Int(int.MinValue, int.MinValue);
             lastNavigationLoadDistance = -1;
+            lastNavigationManager = null;
         }
 
         #region 本机观察者
@@ -173,13 +195,17 @@ namespace FlatWorld.Networking.Gameplay
         /// <summary>本地导航窗口仅跟随本机角色。</summary>
         private void RefreshLocalNavigationAnchor(Vector3 logicalPosition, int activeDistance)
         {
+            WorldNavigationManager navigation = WorldNavigationManager.Instance;
+            if (navigation == null) return;
             Vector2Int anchorChunk = ChunkMgr.Instance.ResolveRuntimeChunkOrigin(logicalPosition);
-            if (anchorChunk == lastNavigationAnchorChunk && activeDistance == lastNavigationLoadDistance)
+            if (ReferenceEquals(navigation, lastNavigationManager) &&
+                anchorChunk == lastNavigationAnchorChunk && activeDistance == lastNavigationLoadDistance)
                 return;
 
             lastNavigationAnchorChunk = anchorChunk;
             lastNavigationLoadDistance = activeDistance;
-            WorldNavigationManager.Instance?.RefreshLoadedRegion(anchorChunk, activeDistance);
+            lastNavigationManager = navigation;
+            navigation.RefreshLoadedRegion(anchorChunk, activeDistance);
         }
 
         #endregion

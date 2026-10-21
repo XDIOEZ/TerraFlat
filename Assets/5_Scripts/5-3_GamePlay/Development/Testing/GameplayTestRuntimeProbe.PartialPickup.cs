@@ -43,7 +43,9 @@ public static partial class GameplayTestRuntimeProbe
     {
         if (!GameRes.ExistingInstance.TryGetItemDefinition("Log", out RuntimeItemDefinition definition))
             throw new InvalidOperationException("部分拾取采样缺少正式原木定义。");
-        var root = new GameObject("[LuaPartialPickup]") { hideFlags = HideFlags.HideAndDontSave };
+        var root = new GameObject("[LuaPartialPickup]");
+        // 部分拾取运行时需要有效场景，临时拾取器与掉落物统一归属隔离玩家的世界。
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
         root.SetActive(false);
         var originalSceneRoots = new HashSet<GameObject>(root.scene.GetRootGameObjects());
         DroppedItemRuntime runtime = null;

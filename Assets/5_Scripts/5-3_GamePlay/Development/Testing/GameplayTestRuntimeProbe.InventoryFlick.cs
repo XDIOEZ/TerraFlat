@@ -179,6 +179,8 @@ public static partial class GameplayTestRuntimeProbe
             {
                 RectTransform rect = MakeRect("window", panelObject.transform, position, size);
                 RectTransform surface = MakeRect("dragSurface", rect, position, size);
+                // MaskableGraphic 在 RectMask2D 裁剪时必须有真实 CanvasRenderer。
+                surface.gameObject.AddComponent<CanvasRenderer>();
                 surface.gameObject.AddComponent<UIWindowDragSurface>().Configure(rect);
                 return rect;
             }

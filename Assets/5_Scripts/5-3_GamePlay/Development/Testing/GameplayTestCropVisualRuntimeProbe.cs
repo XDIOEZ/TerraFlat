@@ -27,11 +27,14 @@ public static class GameplayTestCropVisualRuntimeProbe
             if (item == null) throw new InvalidOperationException("无法创建正式回归作物：" + id);
             try
             {
+                // 实例化仅负责注册，现场必须先正式加载模块再检查表现启停。
+                if (!item.IsInitialized) item.Load();
                 Mod_Crop crop = item.GetComponentInChildren<Mod_Crop>(true);
                 Mod_CropVisual visual = item.GetComponentInChildren<Mod_CropVisual>(true);
                 SpriteRenderer renderer = item.Sprite;
                 if (crop == null || visual == null || renderer == null || !visual.IsRuntimeLoaded)
-                    throw new InvalidOperationException("正式作物缺少已加载的成长或表现模块：" + id);
+                    throw new InvalidOperationException($"正式作物缺少已加载的成长或表现模块：{id}，" +
+                        $"成长={crop != null}，表现={visual != null}，贴图={renderer != null}，表现已加载={visual?.IsRuntimeLoaded}");
                 RuntimeItemDefinition definition = GameRes.Instance.ItemDefinitions[id];
                 bool discrete = definition.TryGetVisualStateSprite("mature", out Sprite matureSprite);
                 uint generation = visual.RuntimeGeneration;

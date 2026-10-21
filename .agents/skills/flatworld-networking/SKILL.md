@@ -22,6 +22,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 ## 权威与坐标
 
 - `NetworkChunkStreamingCoordinator` 将观察者并集交给正式 WorldModel 窗口；外管中的 `Mod_ChunkLoader` 只发刷新请求，本机锚点决定蒙版和导航，失去观察者只撤网络窗口，不清已交回单人的窗口。
+- 区块窗口签名与真实 `GameplayWorldRuntime` 实例共同校验：同名世界重建要重新提交窗口；无观察者的世界在准备完成后清理缓存。本地导航锚点按对应 `WorldNavigationManager` 实例缓存，离开地表后回到同一格也需刷新。
 
 - 服务端结算生成、伤害、死亡、建筑及持久状态；远程视觉副本不进入本地 Item Tick、AI 感知、教程、对话或存档索引。只有 owned 玩家驱动本地输入、导航窗口和 HUD；玩家加载、提升和远程配置显式设置 ProfileContext。
 - 地表翻滚经 `NetworkWorldPlayer.Roll.cs` 请求服务器，校验角色状态、冷却与体力后才启用无敌；远端服务器只推进动作态，不获取 Mover 物理租约或解除远端移动锁。owned 收到许可后推进剩余移动，其他副本按同一 double 时标旋转与恢复碰撞；网络动作序号在 NetworkIdentity 内保持递增。扣费交接期间保护 Stamina 模块，确认 applied 回执后恢复既有地表状态流；普通地表生命、体力、营养、氧气与环境模块同样由服务器持续结算，客户端输入/动画/HUD保留本机驱动。

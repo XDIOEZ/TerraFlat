@@ -48,6 +48,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同档案、同 Data_Player 的隔离角色。
 - 新主题更新本系统清单和README后运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总清单与映射；新系统登记sourcePaths/dependsOn。Lua组合无需编译，新增C#操作仍需编译。
 - `--systems` 精确选择；`--changed` 根据源码归属包含使用它的系统，未登记路径报错，测试框架改动选全部规则。影响实际链路再加 `--integration`，现场子集一次建世界。没有现场入口返回4；已有入口也须检查README中的缺口。
+- 交互注册表与掉落回滚句柄会核对世界场景；临时现场夹具须将 GameObject 根移入隔离玩家的 `player.gameObject.scene`，不要默认使用 Editor 活动场景。
 - 用户明确不需要验证时仅静态修改，未编译/未运行写清楚；其他任务在Unity未处于PlayMode时执行对应范围并读取真实报告，不能用静态检查冒充通过。
 
 ## 编写与截图
@@ -79,6 +80,7 @@ python Tools/GameplayTesting/run_suite.py --list-systems
 - 太空迁移恢复会重建玩家；宿主的`player_ready`按本轮同档案和隔离存档边界重绑ItemMgr当前本地玩家。下一条玩法命令前恢复现场，再显式检查world/player，保证后续Lua不因旧对象引用被跳过。
 - 失败先看首个失败步骤、原始采样及堆栈，再修复并重跑相关范围；用户要求循环时逐轮推进，不以删除、禁用或放宽断言换取通过。未执行、环境阻塞和视觉/联机未验收应如实区分。
 - 编辑态 UI 夹具用临时 ExecuteAlways 子类实际登记 EventSystem/Raycaster，清理时仅恢复存活的原事件系统；下拉模板必须先激活再调用布局入口，否则 LayoutUtility 会忽略隐藏行的首选高度，产生并非正式展开行为的假失败。
+- 现场 UI 夹具手动添加 `UIWindowDragSurface` 等 `MaskableGraphic` 时须同时挂 `CanvasRenderer`；`RectMask2D` 会实际裁剪，不能用只有 `RectTransform` 的裸节点代替。
 - 空地夹具按 ChunkTerrainData.GrassPresent 判断有草；GrassEmpty 为 1，不能把非零全部当作有草。冷生成等同步长步骤计入整场超时；应按预算拆分专项现场，记录未执行案例，不能把超时后的跳过计作通过。
 - 固定步采样等待正式 `SpaceSession.State.SimulationSeconds` 达到目标，同时保留真实时间超时；慢帧或编辑器操作耗时不能计作物理推进。无外力惯性使用空星区自有夹具，同时检查位移、停推和燃料；星体引力或大气阻力范围内不能断言总速度不变。太空跨区另核验 UI 根身份、统一时间源与实际采光，防止逻辑通过但画面失效。
 

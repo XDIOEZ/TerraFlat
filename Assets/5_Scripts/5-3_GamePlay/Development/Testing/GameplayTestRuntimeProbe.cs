@@ -97,7 +97,9 @@ public static partial class GameplayTestRuntimeProbe
             controller == null || controller.IsGameplayInputLocked)
             throw new InvalidOperationException("交互按键回归需要已加载且未锁定的正式交互模块。");
         var action = controller._inputActions.Win10.E;
-        var host = new GameObject("[InteractionInputReenable]") { hideFlags = HideFlags.HideAndDontSave };
+        var host = new GameObject("[InteractionInputReenable]");
+        // 临时交互目标必须和隔离玩家同场景，避免被正式空间查询过滤。
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(host, player.gameObject.scene);
         GameplayTestSpatialInteractionTarget target = host.AddComponent<GameplayTestSpatialInteractionTarget>();
         UnityEngine.InputSystem.Keyboard keyboard = null;
         int bindingIndex = action.bindings.Count;

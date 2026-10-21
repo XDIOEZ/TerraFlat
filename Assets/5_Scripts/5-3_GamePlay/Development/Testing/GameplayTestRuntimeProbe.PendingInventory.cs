@@ -46,9 +46,11 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 桥与生成接管仅在自有对象的同步调用期间替换，finally 恢复，不驱动当前测试玩家。
-    private static JObject CapturePendingPickupGuards(Player _, JObject args)
+    private static JObject CapturePendingPickupGuards(Player player, JObject args)
     {
-        var root = new GameObject("[LuaPendingPickupGuards]") { hideFlags = HideFlags.HideAndDontSave };
+        var root = new GameObject("[LuaPendingPickupGuards]");
+        // 模拟丢弃的回滚句柄需要归属于隔离玩家的真实世界场景。
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
         root.SetActive(false);
         Func<bool> previousPending = ItemNetworkStateSerialization.IsLocalInventoryTransactionPending;
         IDisposable spawnLease = null;
