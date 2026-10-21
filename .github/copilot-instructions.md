@@ -872,3 +872,549 @@
   - Tag: Untagged
   - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: FWUI_DragSurface
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_PanelBackground
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_Bag
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: SafeAreaRoot
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: PanelRoot
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GM Safe Area
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GM Canvas
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Image_1
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: 输出
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GM Canvas
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: GM Safe Area
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: PanelRoot
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: SafeAreaRoot
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_Bag
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_PanelBackground
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: FWUI_DragSurface
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: FWUI_Chrome
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: FWUI_Shadow
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: FWUI_Body
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_NetworkMode
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: 联机界面遮罩
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: UI_ItemTooltip
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Scroll View
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Viewport
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Content
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: Image_1
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: DepthMesh_0_GasTankBlock_Steel_Idle
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: DepthMesh_1_UnityWhite
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: DepthMesh_0_ShipNavigation_Idle
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: DontDestroyOnLoad
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: 玩家名称
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime, MechanicalShaft
+- Active game object:
+  - Name: DepthMesh_0_GasTankBlock_Steel_Idle
+  - Tag: Untagged
+  - Layer: Default
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
