@@ -91,7 +91,8 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             DimensionManager manager = DimensionManager.ExistingInstance;
             if (!manager.TryGetDefinition(WorldAddress.CaveDimensionId, out DimensionDefinition definition))
                 throw new InvalidOperationException("正式维度目录没有洞穴定义。");
-            Item entrance = ItemMgr.Instance.InstantiateItem("MineEntrance", player.transform.position + Vector3.right * 2f);
+            // 保留在正式交互半径内，避免玩家与服务器权威位置的微小偏差导致入口拒绝。
+            Item entrance = ItemMgr.Instance.InstantiateItem("MineEntrance", player.transform.position + Vector3.right);
             if (entrance == null) throw new InvalidOperationException("正式入口资源无法创建。");
             entranceGuid = entrance.itemData.Guid;
             Mod_Building.SetInstalledDataState(entrance.itemData);

@@ -62,6 +62,8 @@ public static class GameplayTestCropVisualRuntimeProbe
                 samples.Add(new JObject
                 {
                     ["id"] = id, ["discrete"] = discrete,
+                    ["seedlingScale"] = visual.SeedlingScale,
+                    ["buriedClip"] = Mathf.Clamp01(visual.buriedClip),
                     ["matureSprite"] = discrete ? matureSprite.GetInstanceID() : renderer.sprite.GetInstanceID(),
                     ["initial"] = initial, ["disabled"] = disabled, ["whileDisabled"] = whileDisabled,
                     ["restored"] = restored, ["afterGrowthEvent"] = afterGrowthEvent, ["repeated"] = repeated,

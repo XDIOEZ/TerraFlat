@@ -47,6 +47,9 @@ public sealed class Mod_CropVisual : Module
     [SerializeField, Range(0.01f, 1f)]
     private float seedlingScale = 0.25f;
 
+    // 供外部核对正式表现配置，禁止直接修改成长缩放参数。
+    public float SeedlingScale => seedlingScale;
+
     [SerializeField, Min(0.01f)]
     private float matureScale = 1f;
 

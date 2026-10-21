@@ -140,7 +140,10 @@ internal static class GameplayTestFluidSurface
             for (int attempt = 0; cell.Level == 0 && attempt < 32; attempt++) f.Step();
             result["emitted"] = OutletSample(f, cell, outlet);
             cell.Set(10);
-            Require(inventory.TryAdd(FluidInventory.CreateBatch(water, 0, FluidUnits.ServingsToMol(water, 1m), 293.15),
+            // 堵塞阶段从独立温水库存开始，避免上一阶段残留水蒸气先凝结而掩盖蒸发断言。
+            inventory.Drain();
+            // 蒸发会令液相略低于整份数量；三份温水可独立验证拒收、部分提交和解除堵塞续送。
+            Require(inventory.TryAdd(FluidInventory.CreateBatch(water, 0, FluidUnits.ServingsToMol(water, 3m), 293.15),
                 GetFluidVolumeLiters(outlet), GetFluidMinimumGasSpaceLiters(outlet)), "堵塞测试装料");
             result["beforeBlocked"] = OutletSample(f, cell, outlet);
             f.Step();
