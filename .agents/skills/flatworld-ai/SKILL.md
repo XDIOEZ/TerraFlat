@@ -22,6 +22,8 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 后端与生命周期
 
+- `AiRuntimeBackendService` 的 GO Actor 身份、前进与取消命令查询使用 `ListPool<MonoBehaviour>` 和 `GetComponentsInChildren(true, list)`，避免每次查询创建子组件数组；指令先按原顺序检查绑定到本 Item 的真实 Actor，再用同一份即时组件列表寻找首个接收器。列表调用结束即回池，不缓存模块结构/代际，不改变 ECS 后端回退和死亡拒绝规则。
+
 - GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。

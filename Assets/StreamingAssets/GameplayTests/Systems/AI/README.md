@@ -1,5 +1,7 @@
 # AI 生物测试
 
+2026-10-21 GO AI 运行时组件查询优化：`AiRuntimeBackendService` 采用临时 `ListPool<MonoBehaviour>` 代替 `GetComponentsInChildren<MonoBehaviour>(true)` 的数组分配；前进/取消命令与 Actor 身份检查共用本次子组件快照，免去重复的层级扫描，保留首个符合身份的 Actor、首个命令接收器、死亡拒绝及 ECS 后备路由。现有 `advance_navigation` 实际世界 Lua 检查出生、指令/取消和导航，但本轮未执行 Unity 编译或 PlayMode、未量化实际 GC 降幅。
+
 2026-10-19 分帧出生补充：`creature-creation.lua` 的 `ai/incremental_creature_creation` 按真实帧推进正式 `SpawnCreatureInSteps`，检查完成前不交付、最终 AI/注册/激活齐全、模块准备中途取消回滚、提交资格失效不发布、光耀按需建灯及关闭/复用。已通过外部 C# 编译；当前 Unity PlayMode 保持原状，Lua 未执行，也没有优化前后的同场景 Profiler 对比，实际帧耗时由用户验收。自然计划成功扣预算、异步原生克隆中途取消和居民恢复开销仍未直接覆盖。
 
 2026-10-18 狼群协作与成批生成补充，**仅编写，未编译、未运行**：`rules.lua` 的 `ai/wolf_pack` 从正式 Manifest 最终继承配置读取狼的 AI/检测/生命模块，按 `BindRuntimeIdentity→ModuleInit→ItemMods.AddMod` 注册独立数据，子类仅开放原有绑定与决策钩子。Lua 检查 4/3/2 只互认、重复候选去重、持久 Guid 统一头狼、公开呼叫接口下的共同威胁与追击选择、攻击距离内的状态选择，并保留独狼避让和双狼低血撤退；死亡/禁用/未就绪/敌对阵营成员不计数也不响应支援。显式错误能力 ID 仍按精确查询拒绝，不被默认身份掩盖。`spawn-countdown.lua` 的 `ai/spawn_batches` 调用正式数量抽样、倒计时、整批门槛与落点规则，检查狼 1/2 只各 5%、3/4 只各 45%，频率倍率只改间隔、受阻不重抽、存档保留同批锚点/剩余数、3 格半径、不重复落格、环绕接缝、非法参数拒绝及原固定数量规则。规则夹具不加载或激活真实狼、不推进自然 Tick 自动呼叫、真实编队站位、导航或伤害窗口，也不实际跑自然选点、预算扣减或分帧出生；实际围攻、地形/视线、数量分布与画面由用户验收，当前 PlayMode 不暂停或刷新。

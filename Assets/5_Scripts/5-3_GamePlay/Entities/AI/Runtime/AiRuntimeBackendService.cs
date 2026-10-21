@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Pool;
 
 #region ECS 生物后端契约
 
@@ -168,8 +169,19 @@ public static class AiRuntimeBackendService
     public static bool TryGetGameObjectActor(Item item, out IAIActor actor)
     {
         actor = null;
+        // 纯 ECS 身份没有 GO Item，直接回退，不为缺失对象租用列表。
         if (item == null || item.DestructionHandled || !item.IsInitialized) return false;
-        foreach (MonoBehaviour behaviour in item.GetComponentsInChildren<MonoBehaviour>(true))
+        using var lease = ListPool<MonoBehaviour>.Get(out var behaviours);
+        return TryGetGameObjectActor(item, behaviours, out actor);
+    }
+
+    /// <summary>命令路径与只读查询共用当前组件快照，避免一次指令扫描同一层级两遍。</summary>
+    private static bool TryGetGameObjectActor(Item item, List<MonoBehaviour> behaviours, out IAIActor actor)
+    {
+        actor = null;
+        if (item == null || item.DestructionHandled || !item.IsInitialized) return false;
+        item.GetComponentsInChildren(true, behaviours);
+        foreach (MonoBehaviour behaviour in behaviours)
             if (behaviour is IAIActor candidate && ReferenceEquals(candidate.ActorItem, item))
             { actor = candidate; return true; }
         return false;
@@ -192,10 +204,13 @@ public static class AiRuntimeBackendService
     public static bool TrySetAdvanceCommand(int actorGuid, AIAdvanceCommand command)
     {
         Item item = ItemMgr.Instance?.GetItemByGuid(actorGuid);
-        if (TryGetGameObjectActor(item, out IAIActor actor))
+        if (item == null || item.DestructionHandled || !item.IsInitialized)
+            return _ecology?.TrySetAdvanceCommand(actorGuid, command) == true;
+        using var lease = ListPool<MonoBehaviour>.Get(out var behaviours);
+        if (TryGetGameObjectActor(item, behaviours, out IAIActor actor))
         {
             if (!actor.IsAlive) return false;
-            foreach (MonoBehaviour behaviour in item.GetComponentsInChildren<MonoBehaviour>(true))
+            foreach (MonoBehaviour behaviour in behaviours)
                 if (behaviour is IAIAdvanceCommandReceiver receiver)
                 { receiver.BeginAdvance(command); return true; }
             return false;
@@ -206,9 +221,12 @@ public static class AiRuntimeBackendService
     public static bool TryClearAdvanceCommand(int actorGuid)
     {
         Item item = ItemMgr.Instance?.GetItemByGuid(actorGuid);
-        if (TryGetGameObjectActor(item, out _))
+        if (item == null || item.DestructionHandled || !item.IsInitialized)
+            return _ecology?.TryClearAdvanceCommand(actorGuid) == true;
+        using var lease = ListPool<MonoBehaviour>.Get(out var behaviours);
+        if (TryGetGameObjectActor(item, behaviours, out _))
         {
-            foreach (MonoBehaviour behaviour in item.GetComponentsInChildren<MonoBehaviour>(true))
+            foreach (MonoBehaviour behaviour in behaviours)
                 if (behaviour is IAIAdvanceCommandCancellationReceiver receiver)
                 { receiver.CancelAdvance(); return true; }
             return false;
