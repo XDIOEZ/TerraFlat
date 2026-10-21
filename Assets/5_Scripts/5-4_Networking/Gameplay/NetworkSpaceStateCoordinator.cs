@@ -128,6 +128,8 @@ namespace FlatWorld.Networking.Gameplay
         public void RemoveConnection(NetworkConnectionToClient connection)
         {
             RemoveFixedShipConnection(connection);
+            // 请求表按连接对象做键，断线立即释放，旧连接清理也不会影响复用同 ID 的新连接。
+            if (connection != null) dimensionRequests.Remove(connection);
             // 只清理由原连接持有的输入与攻击状态，防止过期断线回调误删新连接。
             if (connection == null || !connections.TryGetValue(connection.connectionId, out ConnectionState state) ||
                 !ReferenceEquals(state.Connection, connection)) return;

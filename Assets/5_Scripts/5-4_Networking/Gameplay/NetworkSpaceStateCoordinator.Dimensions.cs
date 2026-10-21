@@ -183,11 +183,23 @@ namespace FlatWorld.Networking.Gameplay
         }
         private void OnDimensionRequest(NetworkConnectionToClient connection, NetworkDimensionRequest request)
         {
-            if (!ResolveConnection(connection, out _, out NetworkWorldPlayer player) ||
-                request.Sequence == 0 || (request.TargetDimension?.Length ?? 0) > 128 || (request.SourceWorldKey?.Length ?? 0) > 128 ||
-                player.RealmRevision != request.RealmRevision || player.TryGetSpaceObserver(out SpaceNetworkObserver source) != true ||
-                source.InSpace || source.WorldKey != request.SourceWorldKey ||
-                dimensionRequests.TryGetValue(connection, out uint previous) && !IsNewer(request.Sequence, previous)) return;
+            if (!ResolveConnection(connection, out _, out NetworkWorldPlayer player) || request.Sequence == 0) return;
+            // 已受理的重复序号不能再发送拒绝回执，否则会抢先结束仍在执行的合法迁移。
+            if (dimensionRequests.TryGetValue(connection, out uint previous) && !IsNewer(request.Sequence, previous)) return;
+            if (string.IsNullOrWhiteSpace(request.TargetDimension) || request.TargetDimension.Length > 128 ||
+                string.IsNullOrWhiteSpace(request.SourceWorldKey) || request.SourceWorldKey.Length > 128)
+            {
+                ReplyDimension(connection, request.Sequence, false, "维度切换请求地址无效。", null, default, null);
+                return;
+            }
+            // 迟到的旧世界请求应立即拒绝并解锁客户端，不得让合法玩家等待百秒超时。
+            if (player.RealmRevision != request.RealmRevision ||
+                !player.TryGetSpaceObserver(out SpaceNetworkObserver source) ||
+                source.RealmRevision != request.RealmRevision || source.InSpace || source.WorldKey != request.SourceWorldKey)
+            {
+                ReplyDimension(connection, request.Sequence, false, "玩家所在世界已变化，请重新交互。", null, default, null);
+                return;
+            }
             dimensionRequests[connection] = request.Sequence;
             StartCoroutine(ExecuteDimensionTransition(connection, player.CorePlayer, request, null));
         }

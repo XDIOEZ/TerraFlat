@@ -325,6 +325,55 @@ namespace FlatWorld.Networking.Gameplay
                 world.Transport.Count<NetworkSpaceIntentResponse>(62) > 0, "各连接独立意图回复");
             result["intentA"] = new JArray(world.Transport.Read<NetworkSpaceIntentResponse>(61).Select(IntentSample));
             result["intentB"] = new JArray(world.Transport.Read<NetworkSpaceIntentResponse>(62).Select(IntentSample));
+            // 迟到维度请求必须立刻回执，拒绝请求不能占用序号或污染其它玩家。
+            NetworkWorldPlayer dimensionPlayerA = world.Core(61);
+            NetworkWorldPlayer dimensionPlayerB = world.Core(62);
+            if (!dimensionPlayerA.TryGetSpaceObserver(out SpaceNetworkObserver realmA) ||
+                !dimensionPlayerB.TryGetSpaceObserver(out SpaceNetworkObserver realmB))
+                throw new InvalidOperationException("维度请求回归缺少服务端世界观察者");
+            const uint dimensionRequestSequence = 77;
+            int beforeDimensionA = world.Transport.Count<NetworkDimensionResponse>(61);
+            int beforeDimensionB = world.Transport.Count<NetworkDimensionResponse>(62);
+            bool staleDimensionSent = world.Transport.Receive(61, new NetworkDimensionRequest
+            {
+                Sequence = dimensionRequestSequence, TargetDimension = "cave", SourceWorldKey = realmA.WorldKey,
+                RealmRevision = unchecked(realmA.RealmRevision + 1)
+            });
+            yield return Wait(() => world.Transport.Count<NetworkDimensionResponse>(61) > beforeDimensionA,
+                "旧世界维度请求的拒绝回执");
+            bool wrongWorldSent = world.Transport.Receive(61, new NetworkDimensionRequest
+            {
+                Sequence = dimensionRequestSequence, TargetDimension = "cave",
+                SourceWorldKey = realmA.WorldKey + "__invalid", RealmRevision = realmA.RealmRevision
+            });
+            yield return Wait(() => world.Transport.Count<NetworkDimensionResponse>(61) > beforeDimensionA + 1,
+                "错误来源世界的维度拒绝回执");
+            bool longTargetSent = world.Transport.Receive(61, new NetworkDimensionRequest
+            {
+                Sequence = dimensionRequestSequence, TargetDimension = new string('x', 129),
+                SourceWorldKey = realmA.WorldKey, RealmRevision = realmA.RealmRevision
+            });
+            yield return Wait(() => world.Transport.Count<NetworkDimensionResponse>(61) > beforeDimensionA + 2,
+                "超长目标维度的拒绝回执");
+            bool independentSent = world.Transport.Receive(62, new NetworkDimensionRequest
+            {
+                Sequence = dimensionRequestSequence, TargetDimension = "cave", SourceWorldKey = realmB.WorldKey,
+                RealmRevision = unchecked(realmB.RealmRevision + 1)
+            });
+            yield return Wait(() => world.Transport.Count<NetworkDimensionResponse>(62) > beforeDimensionB,
+                "另一连接独立的维度拒绝回执");
+            result["dimensionRejections"] = new JObject
+            {
+                ["allSent"] = staleDimensionSent && wrongWorldSent && longTargetSent && independentSent,
+                ["a"] = new JArray(world.Transport.Read<NetworkDimensionResponse>(61)
+                    .Skip(beforeDimensionA).Select(DimensionReplySample)),
+                ["b"] = new JArray(world.Transport.Read<NetworkDimensionResponse>(62)
+                    .Skip(beforeDimensionB).Select(DimensionReplySample)),
+                ["worldUnchanged"] = dimensionPlayerA.TryGetSpaceObserver(out SpaceNetworkObserver afterA) &&
+                    dimensionPlayerB.TryGetSpaceObserver(out SpaceNetworkObserver afterB) &&
+                    realmA.WorldKey == afterA.WorldKey && realmA.RealmRevision == afterA.RealmRevision &&
+                    realmB.WorldKey == afterB.WorldKey && realmB.RealmRevision == afterB.RealmRevision
+            };
             // 等待正式 Update 清零最后输入，以状态为条件而非固定延时冒充结果。
             yield return Wait(() => world.Session.TryGetNetworkPassengerInput(a, out var input) && input.MoveX == 0f && input.MoveY == 0f,
                 "失联输入超时清零");
@@ -351,6 +400,8 @@ namespace FlatWorld.Networking.Gameplay
                 ["turn"] = input.Turn, ["thrust"] = input.Thrust };
         }
         private static JObject IntentSample(NetworkSpaceIntentResponse reply) => new()
+        { ["sequence"] = reply.Sequence, ["accepted"] = reply.Accepted, ["reason"] = reply.Reason ?? "" };
+        private static JObject DimensionReplySample(NetworkDimensionResponse reply) => new()
         { ["sequence"] = reply.Sequence, ["accepted"] = reply.Accepted, ["reason"] = reply.Reason ?? "" };
         #endregion
 

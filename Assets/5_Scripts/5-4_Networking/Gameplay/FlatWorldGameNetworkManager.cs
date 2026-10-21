@@ -39,13 +39,18 @@ namespace FlatWorld.Networking.Gameplay
             public uint PayloadHash;
             public byte[][] Chunks;
             public int ReceivedChunks;
+            public float LastReceivedTime;
         }
+        private const float SnapshotReceiveIdleTimeoutSeconds = 30f;
 
         #region 单人私有会话与公开加入
         public bool IsPrivateSession { get; private set; } = true;
         public void PublishSession(ushort port = 7777)
         {
             if (!NetworkServer.active) throw new InvalidOperationException("本机房间尚未启动。");
+            // 已经监听的 KCP 端口不能热改；直接提示重开公开，避免界面端口与真实监听不符。
+            if (transport.ServerActive() && transport is kcp2k.KcpTransport currentKcp && currentKcp.Port != port)
+                throw new InvalidOperationException("房间已在其它端口公开，请先关闭公开再用新端口发布。");
             if (!transport.ServerActive())
             {
                 if (transport is kcp2k.KcpTransport kcp) kcp.Port = port;
@@ -227,11 +232,12 @@ namespace FlatWorld.Networking.Gameplay
 
         public override void OnServerDisconnect(NetworkConnectionToClient connection)
         {
+            // 各子系统按连接引用清理；即使 ID 已复用也需释放旧连接独立的请求表。
+            spaceStateCoordinator?.RemoveConnection(connection);
             // 连接 ID 复用时旧回调只能释放旧连接，不得清空新连接的握手和出生登记。
             if (!NetworkServer.connections.TryGetValue(connection.connectionId, out NetworkConnectionToClient current) ||
                 ReferenceEquals(current, connection))
             {
-                spaceStateCoordinator?.RemoveConnection(connection);
                 pendingPlayerNames.Remove(connection.connectionId);
                 clientProtocolHellos.Remove(connection.connectionId);
                 pendingPlayerSpawns.Remove(connection.connectionId);
@@ -461,6 +467,7 @@ namespace FlatWorld.Networking.Gameplay
                 CompressedBytes = begin.CompressedBytes,
                 PayloadHash = begin.PayloadHash,
                 Chunks = new byte[begin.ChunkCount][],
+                LastReceivedTime = Time.unscaledTime,
                 Metadata = new NetworkWorldSnapshot
                 {
                     PlanetName = begin.PlanetName,
@@ -476,7 +483,23 @@ namespace FlatWorld.Networking.Gameplay
                 }
             };
 
+            // 只监测分片接收是否停滞，不限制大世界正常持续传输的总用时。
+            StartCoroutine(WatchIncomingWorldSnapshot(incomingWorldSnapshot));
             SetGameplayStatus("正在接收世界快照：{0:0.0} KB / {1} 片", begin.CompressedBytes / 1024f, begin.ChunkCount);
+        }
+
+        private IEnumerator WatchIncomingWorldSnapshot(IncomingWorldSnapshot transfer)
+        {
+            WaitForSecondsRealtime checkInterval = new WaitForSecondsRealtime(1f);
+            while (NetworkClient.active && ReferenceEquals(incomingWorldSnapshot, transfer))
+            {
+                if (Time.unscaledTime - transfer.LastReceivedTime >= SnapshotReceiveIdleTimeoutSeconds)
+                {
+                    FailIncomingSnapshot("世界快照接收中断：超过30秒没有收到新分片，请重新加入。");
+                    yield break;
+                }
+                yield return checkInterval;
+            }
         }
 
         private void OnClientWorldSnapshotChunk(NetworkWorldSnapshotChunk chunk)
@@ -506,6 +529,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             incoming.Chunks[chunk.ChunkIndex] = chunk.Data;
+            incoming.LastReceivedTime = Time.unscaledTime;
             incoming.ReceivedChunks++;
             if (incoming.ReceivedChunks != incoming.Chunks.Length)
                 return;

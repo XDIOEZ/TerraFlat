@@ -30,6 +30,20 @@ test.runtime("networking", "bots_input", {}, function(data)
         assert(reply.sequence == 1 and not reply.accepted and type(reply.reason) == "string" and #reply.reason > 0,
             name .. "没有用真实回复拒绝非法或不存在的操作目标")
     end
+    local dimension = data.dimensionRejections
+    assert(dimension and dimension.allSent and dimension.worldUnchanged,
+        "维度拒绝请求未进入正式 Mirror 收包，或误改服务器玩家世界")
+    assert(#dimension.a == 3 and #dimension.b == 1,
+        "过期世界、错误来源和无效维度没有逐个回执，或不同玩家的拒绝被吞掉")
+    for _, replies in ipairs({ dimension.a, dimension.b }) do
+        for _, reply in ipairs(replies) do
+            assert(reply.sequence == 77 and not reply.accepted
+                and type(reply.reason) == "string" and #reply.reason > 0,
+                "维度拒绝回执未携带原序号和明确原因，客户端可能等待100秒")
+        end
+    end
+    assert(dimension.a[1].reason ~= dimension.a[3].reason,
+        "过期世界与错误目标地址未区分拒绝原因")
     assert_input(data.timeoutA, 0, 0, "输入失联后正式 Update 清零")
     assert(not data.disconnectedA.present and not data.oldSpawnPresent and not data.oldRuntimePresent,
         "A 断线后旧输入、网络出生对象或实际角色仍存在")
