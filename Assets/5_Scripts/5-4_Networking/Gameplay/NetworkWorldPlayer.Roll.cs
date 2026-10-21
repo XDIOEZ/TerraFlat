@@ -56,7 +56,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private bool RequestNetworkRoll(Vector2 direction)
         {
-            if (!isOwned || coreRoll == null || coreRoll.IsRolling || coreRoll.CooldownRemaining > 0f ||
+            if (!isOwned || authoritativeWorldTransferPending || coreRoll == null || coreRoll.IsRolling || coreRoll.CooldownRemaining > 0f ||
                 pendingRollRequestId != 0 || !IsValidVelocity(direction) || direction.sqrMagnitude < .0001f)
                 return false;
             if (isServer)
@@ -67,13 +67,20 @@ namespace FlatWorld.Networking.Gameplay
             nextRollRequestId++;
             if (nextRollRequestId == 0) nextRollRequestId++;
             pendingRollRequestId = nextRollRequestId;
-            CmdRequestRoll(pendingRollRequestId, direction.normalized, baseline);
+            CmdRequestRoll(pendingRollRequestId, direction.normalized, baseline, authoritativeRealmRevision);
             return true;
         }
 
         [Command]
-        private void CmdRequestRoll(uint request, Vector2 direction, byte[] baseline)
+        private void CmdRequestRoll(uint request, Vector2 direction, byte[] baseline, uint realmRevision)
         {
+            // 旧世界的动作不能在新世界扣体力或激活无敌；拒绝回执释放客户端待确认请求。
+            if (!AcceptWorldSubmission(realmRevision))
+            {
+                TargetRollResult(connectionToClient, request, false, authoritativeRoll, 0f);
+                return;
+            }
+            using var worldScope = NetworkGameplayWorldScope.Use(this);
             BindNetworkRoll();
             bool fresh = request != 0 && unchecked((int)(request - lastServerRollRequestId)) > 0;
             if (fresh) lastServerRollRequestId = request;
@@ -103,7 +110,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private bool TryStartServerRoll(Vector2 direction)
         {
-            if (!isServer || coreRoll == null || rollStamina == null || rollHealth == null ||
+            if (!isServer || authoritativeWorldTransferPending || coreRoll == null || rollStamina == null || rollHealth == null ||
                 !IsValidVelocity(direction) || direction.sqrMagnitude < .0001f) return false;
             ReadServerRollStamina();
             if (!coreAvatarIsLocal && !rollHealth.IsRuntimeLoaded)

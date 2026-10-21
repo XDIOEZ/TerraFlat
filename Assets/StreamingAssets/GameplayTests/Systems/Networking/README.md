@@ -1,5 +1,7 @@
 # 联机与同步
 
+2026-10-21：修复跨维度/重生时旧 GM 传送或翻滚 Command 在新世界生效的风险，服务端使用请求 `RealmRevision` 与迁移门禁，拒绝仍发送回执；远端传送在连接世界作用域中应用，防止借主机当前拓扑归一化。Gameplay 协议从 22 升至 23；`bots_teleport`、`bots_roll` 假人现场补旧代际拒绝、同序号有效请求恢复断言。尚未执行 Unity 编译、Mirror PlayMode 或独立 Host/Client 延迟测试。
+
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
 快速入口：`rules.lua`；操作：`networking/endpoint、item_payload、roll_snapshot、roll_stamina_handoff`。

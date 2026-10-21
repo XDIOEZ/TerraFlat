@@ -11,7 +11,7 @@ namespace FlatWorld.Networking.Gameplay
     {
         #region 联机翻滚正式命令夹具
         private const string RollCommandName =
-            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdRequestRoll(System.UInt32,UnityEngine.Vector2,System.Byte[])";
+            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdRequestRoll(System.UInt32,UnityEngine.Vector2,System.Byte[],System.UInt32)";
         private const string RollStaminaAckCommandName =
             "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdAcknowledgeRollStamina(System.UInt32,System.Single)";
         private const string ItemStateCommandName =
@@ -26,12 +26,13 @@ namespace FlatWorld.Networking.Gameplay
         private static void RegisterRoll() => GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_roll", CaptureRoll);
 
         private static bool SendRollCommand(BotWorld world, NetworkWorldPlayer actor, int botId,
-            uint request, Vector2 direction, byte[] baseline)
+            uint request, Vector2 direction, byte[] baseline, uint? realm = null)
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
             writer.WriteUInt(request);
             writer.WriteVector2(direction);
             writer.WriteBytesAndSize(baseline);
+            writer.WriteUInt(realm ?? actor.RealmRevision);
             return SendRollCommandBytes(world, actor, botId, RollCommandName, writer);
         }
 
@@ -81,6 +82,11 @@ namespace FlatWorld.Networking.Gameplay
             bool originalSimulation = body.simulated, originalMoveLock = mover.IsLock;
             var result = new JObject { ["transport"] = "mirror-in-memory", ["scope"] = "live-isolated-world",
                 ["beforeStamina"] = before, ["cost"] = roll.StaminaCost, ["moduleInitiallyLoaded"] = roll.IsRuntimeLoaded };
+
+            SendRollCommand(world, actor, botId, 1, Vector2.right, beforeRoll, unchecked(actor.RealmRevision - 1));
+            yield return null;
+            result["oldRealmRejected"] = !roll.IsRolling && stamina.CurrentValue == before &&
+                !health.IsTemporarilyInvulnerable;
 
             SendRollCommand(world, actor, botId, 1, Vector2.right, beforeRoll);
             yield return Wait(() => roll.IsRolling, "正式请求启动服务器翻滚", 2d);

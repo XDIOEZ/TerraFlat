@@ -23,7 +23,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private bool RequestSurfaceTeleport(Player player, Vector3 destination, Action<bool> completed)
         {
-            if (!isOwned || !NetworkClient.ready || player != corePlayer || IsInSpace ||
+            if (!isOwned || !NetworkClient.ready || player != corePlayer || IsInSpace || authoritativeWorldTransferPending ||
                 pendingTeleportRequest != 0 || !IsValidPosition(destination))
                 return false;
 
@@ -34,14 +34,15 @@ namespace FlatWorld.Networking.Gameplay
             if (isServer)
                 CompleteSurfaceTeleport(ApplySurfaceTeleportOnServer(pendingTeleportRequest, destination));
             else
-                CmdRequestGmTeleport(pendingTeleportRequest, destination);
+                CmdRequestGmTeleport(pendingTeleportRequest, destination, authoritativeRealmRevision);
             return true;
         }
 
         [Command]
-        private void CmdRequestGmTeleport(uint request, Vector3 destination)
+        private void CmdRequestGmTeleport(uint request, Vector3 destination, uint realmRevision)
         {
-            bool accepted = ApplySurfaceTeleportOnServer(request, destination);
+            // 跨维度或重生后的迟到请求不能改变新世界位置，拒绝时仍回执解除客户端等待。
+            bool accepted = AcceptWorldSubmission(realmRevision) && ApplySurfaceTeleportOnServer(request, destination);
             TargetCompleteGmTeleport(connectionToClient, request, accepted, authoritativePosition);
         }
 
@@ -49,14 +50,16 @@ namespace FlatWorld.Networking.Gameplay
         private bool ApplySurfaceTeleportOnServer(uint request, Vector3 destination)
         {
             if (request == 0 || unchecked((int)(request - lastServerTeleportRequest)) <= 0 ||
-                IsInSpace || corePlayer?.Data == null || !IsValidPosition(destination) ||
+                IsInSpace || authoritativeWorldTransferPending || corePlayer?.Data == null || !IsValidPosition(destination) ||
                 GameManager.ExistingInstance?.IsGameplayReady != true)
                 return false;
 
+            using var worldScope = NetworkGameplayWorldScope.Use(this);
             SpaceSession session = SpaceSessionForNetwork;
             string world = corePlayer.Data.CurrentSceneName;
-            if (session == null || !session.CanTransferToNetworkSurface(world, out _) ||
-                session.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) && observer.InSpace)
+            if (session == null || !session.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) ||
+                observer.InSpace || !string.Equals(observer.WorldKey, world, StringComparison.Ordinal) ||
+                !session.CanTransferToNetworkSurface(world, out _))
                 return false;
 
             lastServerTeleportRequest = request;

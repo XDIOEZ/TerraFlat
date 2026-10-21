@@ -4,6 +4,7 @@ test.check("player_ready", "联机翻滚本地主角就绪")
 
 test.runtime("networking", "bots_roll", {}, function(data)
     assert(data.transport == "mirror-in-memory" and data.scope == "live-isolated-world", "翻滚没有经过隔离世界正式网络入口")
+    assert(data.oldRealmRejected, "过期世界翻滚请求在服务器扣费或取得无敌，或吞掉同序号新请求")
     assert(not data.moduleInitiallyLoaded and data.started and data.invulnerable,
         "未完整加载的服务器远端玩家不能合法翻滚，或没有取得无敌")
     assert(data.paidStamina < data.beforeStamina and data.cost == 10, "服务器没有按正式体力入口支付翻滚费用")

@@ -60,6 +60,8 @@ test.runtime("networking", "bots_teleport", {}, function(data)
         "传送没有刷新地表归属或清零速度")
     assert_position(data.afterRejected, data.targetX, data.targetY, "重复、非法或其他连接的传送请求")
     assert(data.afterRejected.revision == data.teleported.revision, "拒绝的请求重复执行了传送")
+    assert_position(data.afterFresh, data.otherX, data.otherY, "旧世界请求拒绝后的新世界合法传送")
+    assert(data.afterFresh.revision > data.afterRejected.revision, "旧世界拒绝后当前世界传送没有刷新代际")
     assert(near(data.witnessBefore.x, data.witnessAfter.x) and near(data.witnessBefore.y, data.witnessAfter.y),
         "传送影响了另一名玩家")
     assert_position(data.afterMove, data.nextX, data.nextY, "传送后的普通移动")

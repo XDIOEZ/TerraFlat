@@ -13,7 +13,7 @@ namespace FlatWorld.Networking.Gameplay
         #region GM 传送正式命令夹具
 
         private const string TeleportCommandName =
-            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdRequestGmTeleport(System.UInt32,UnityEngine.Vector3)";
+            "System.Void FlatWorld.Networking.Gameplay.NetworkWorldPlayer::CmdRequestGmTeleport(System.UInt32,UnityEngine.Vector3,System.UInt32)";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void RegisterTeleportRuntime() => RegisterTeleport();
@@ -23,11 +23,12 @@ namespace FlatWorld.Networking.Gameplay
 #endif
         private static void RegisterTeleport() => GameplayTestRuntimeProbe.RegisterAsync("networking", "bots_teleport", CaptureTeleport);
 
-        private static bool SendBotTeleport(BotWorld world, int botId, NetworkWorldPlayer actor, uint request, Vector3 target)
+        private static bool SendBotTeleport(BotWorld world, int botId, NetworkWorldPlayer actor, uint request, Vector3 target, uint? realm = null)
         {
             using NetworkWriterPooled writer = NetworkWriterPool.Get();
             writer.WriteUInt(request);
             writer.WriteVector3(target);
+            writer.WriteUInt(realm ?? actor.RealmRevision);
             return world.Transport.Receive(botId, new CommandMessage
             {
                 netId = actor.netId, componentIndex = actor.ComponentIndex,
@@ -58,6 +59,7 @@ namespace FlatWorld.Networking.Gameplay
             yield return world.Join(93, world.Prefix + "传送乙");
             NetworkWorldPlayer actor = world.Core(92), witness = world.Core(93);
             Vector3 start = actor.AuthoritativeLogicalPosition;
+            uint oldRealm = actor.RealmRevision;
             Vector3 destination = WorldTopologyRuntime.NormalizePosition(start + Vector3.right * 48f);
             var result = new JObject
             {
@@ -77,6 +79,10 @@ namespace FlatWorld.Networking.Gameplay
             result["teleported"] = TeleportSample(actor);
 
             Vector3 other = WorldTopologyRuntime.NormalizePosition(destination + Vector3.up * 12f);
+            result["otherX"] = other.x;
+            result["otherY"] = other.y;
+            // 较早世界的合法序号也必须拒绝，且不能消耗新世界的同一序号。
+            SendBotTeleport(world, 92, actor, 2, other, oldRealm);
             SendBotTeleport(world, 92, actor, 1, other);
             SendBotTeleport(world, 92, actor, 0, other);
             SendBotTeleport(world, 92, actor, 2, new Vector3(float.NaN, 0f));
@@ -86,7 +92,12 @@ namespace FlatWorld.Networking.Gameplay
             result["afterRejected"] = TeleportSample(actor);
             result["witnessAfter"] = TeleportSample(witness);
 
-            Vector3 next = WorldTopologyRuntime.NormalizePosition(destination + Vector3.right * .25f);
+            SendBotTeleport(world, 92, actor, 2, other);
+            yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, other).sqrMagnitude < .00001f,
+                "旧世界请求拒绝后新世界同序号可以传送");
+            result["afterFresh"] = TeleportSample(actor);
+
+            Vector3 next = WorldTopologyRuntime.NormalizePosition(other + Vector3.right * .25f);
             SendBotMotion(world, 92, actor, next, Vector2.zero);
             yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, next).sqrMagnitude < .00001f &&
                 SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver moved) &&
