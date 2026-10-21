@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using PuertsUnityMcp.Editor;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -16,7 +17,7 @@ namespace FlatWorld.Automation
         #region 编辑器顶栏按钮
 
         private const string ButtonName = "FlatWorldProfilerSnapshot";
-        private const string ExportMenu = "FlatWorld/性能分析/导出选中帧与控制台 JSON";
+        private const string ExportMenu = "FlatWorld/性能分析/导出选中或最新帧与控制台 JSON";
         private static readonly Type ToolbarType = typeof(Editor).Assembly.GetType("UnityEditor.Toolbar");
         private static bool exporting;
 
@@ -51,7 +52,7 @@ namespace FlatWorld.Automation
                     {
                         name = ButtonName,
                         text = "性能 JSON",
-                        tooltip = "导出 Profiler 选中帧、附近帧耗时、当前 Console 日志、已加载世界物品现场 JSON 和整个桌面截图到 67_ProfileData；右键打开目录。"
+                        tooltip = "Profiler 有选中帧时导出该帧及附近帧，否则导出最近帧及附近帧；同时保存 Console、世界现场和整屏截图到 67_ProfileData；右键打开目录。"
                     };
                     button.style.minWidth = 88;
                     button.style.flexShrink = 0;
@@ -84,25 +85,25 @@ namespace FlatWorld.Automation
         public static void ExportSelectedFrame()
         {
             if (exporting) return;
-            var profiler = EditorWindow.focusedWindow as ProfilerWindow;
-            if (profiler == null)
-            {
-                var windows = Resources.FindObjectsOfTypeAll<ProfilerWindow>();
-                if (windows.Length > 0) profiler = windows[0];
-            }
-            if (profiler == null)
-            {
-                EditorUtility.DisplayDialog("性能 JSON", "请先打开 Profiler，录制并选中要分析的帧。", "知道了");
-                return;
-            }
             try
             {
-                long selected = profiler.selectedFrameIndex;
-                if (selected < 0 || selected > int.MaxValue)
-                    throw new InvalidOperationException("请先在 Profiler 曲线上点选要分析的帧。");
-                string directory = ExportFrame((int)selected);
+                // Profiler 未打开或没有有效选中帧时，直接使用缓冲区最新一帧。
+                int first = ProfilerDriver.firstFrameIndex;
+                int last = ProfilerDriver.lastFrameIndex;
+                if (first < 0 || last < first)
+                    throw new InvalidOperationException("Profiler 暂无可导出的帧，请先录制一些帧。");
+                var profiler = EditorWindow.focusedWindow as ProfilerWindow;
+                if (profiler == null)
+                {
+                    var windows = Resources.FindObjectsOfTypeAll<ProfilerWindow>();
+                    if (windows.Length > 0) profiler = windows[0];
+                }
+                long selected = profiler != null ? profiler.selectedFrameIndex : -1;
+                int frameIndex = selected >= first && selected <= last ? (int)selected : last;
+                string directory = ExportFrame(frameIndex);
                 EditorGUIUtility.systemCopyBuffer = directory;
-                profiler.ShowNotification(new GUIContent("性能、日志、世界现场与整屏截图已导出，文件夹路径已复制"), 5d);
+                if (profiler != null)
+                    profiler.ShowNotification(new GUIContent("性能、日志、世界现场与整屏截图已导出，文件夹路径已复制"), 5d);
                 Debug.Log("[性能 JSON] 本次最新报告：" + directory + "\n包含性能、日志、world-scene.json 与 screen.png；可以继续游戏，让 AI 先读 67_ProfileData 根目录的 00-READ-ME-FIRST.md，再分析此报告。");
             }
             catch (Exception exception)
